@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 #![allow(dead_code)]
-use {crate::ie, anyhow::format_err, fidl_fuchsia_wlan_common as fidl_common, std::fmt};
+use {
+    crate::ie, anyhow::format_err, banjo_fuchsia_wlan_common as banjo_common,
+    fidl_fuchsia_wlan_common as fidl_common, std::fmt,
+};
 
 // IEEE Std 802.11-2016, Annex E
 // Note the distinction of index for primary20 and index for center frequency.
@@ -41,6 +44,19 @@ impl Cbw {
             Cbw::Cbw160 => (fidl_common::ChannelBandwidth::Cbw160, 0),
             Cbw::Cbw80P80 { secondary80 } => {
                 (fidl_common::ChannelBandwidth::Cbw80P80, *secondary80)
+            }
+        }
+    }
+
+    pub fn to_banjo(&self) -> (banjo_common::ChannelBandwidth, u8) {
+        match self {
+            Cbw::Cbw20 => (banjo_common::ChannelBandwidth::CBW20, 0),
+            Cbw::Cbw40 => (banjo_common::ChannelBandwidth::CBW40, 0),
+            Cbw::Cbw40Below => (banjo_common::ChannelBandwidth::CBW40BELOW, 0),
+            Cbw::Cbw80 => (banjo_common::ChannelBandwidth::CBW80, 0),
+            Cbw::Cbw160 => (banjo_common::ChannelBandwidth::CBW160, 0),
+            Cbw::Cbw80P80 { secondary80 } => {
+                (banjo_common::ChannelBandwidth::CBW80P80, *secondary80)
             }
         }
     }
@@ -306,18 +322,12 @@ impl From<&fidl_common::WlanChannel> for Channel {
 ///
 /// Primary channel is extracted from HT op, DSSS param set, or `rx_primary_channel`,
 /// in descending priority.
-///
-/// The channel bandwidth is derived based on IEEE 802.11-2016, Table 11-24
-/// Also see section 11.40.1 about VHT STA.
 pub fn derive_channel(
     rx_primary_channel: u8,
     dsss_channel: Option<u8>,
     ht_op: Option<ie::HtOperation>,
     vht_op: Option<ie::VhtOperation>,
 ) -> fidl_common::WlanChannel {
-    use ie::StaChanWidth as Scw;
-    use ie::VhtChannelBandwidth as Vcb;
-
     let primary = ht_op
         .as_ref()
         .map(|ht_op| ht_op.primary_channel)
@@ -328,32 +338,50 @@ pub fn derive_channel(
     let vht_cbw_and_segs =
         vht_op.map(|vht_op| (vht_op.vht_cbw, vht_op.center_freq_seg0, vht_op.center_freq_seg1));
 
-    let (cbw, secondary80) = match (ht_op_cbw, vht_cbw_and_segs) {
-        (Some(Scw::ANY), Some((Vcb::CBW_80_160_80P80, _, 0))) => {
-            (fidl_common::ChannelBandwidth::Cbw80, 0)
+    let (cbw, secondary80) = match ht_op_cbw {
+        // Inspect vht/ht op parameters to determine the channel width.
+        Some(ie::StaChanWidth::ANY) => {
+            // Safe to unwrap `ht_op` because `ht_op_cbw` is only Some(_) if `ht_op` has a value.
+            let sec_chan_offset = { ht_op.unwrap().ht_op_info_head }.secondary_chan_offset();
+            derive_wide_channel_bandwidth(vht_cbw_and_segs, sec_chan_offset)
         }
-        (Some(Scw::ANY), Some((Vcb::CBW_80_160_80P80, seg0, seg1))) if abs_sub(seg0, seg1) == 8 => {
-            (fidl_common::ChannelBandwidth::Cbw160, 0)
-        }
-        (Some(Scw::ANY), Some((Vcb::CBW_80_160_80P80, seg0, seg1))) if abs_sub(seg0, seg1) > 16 => {
+        // Default to Cbw20 if HT CBW field is set to 0 or not present.
+        _ => Cbw::Cbw20,
+    }
+    .to_fidl();
+
+    fidl_common::WlanChannel { primary, cbw, secondary80 }
+}
+
+/// Derive a CBW for a primary channel or channel switch.
+/// VHT parameter derivation is defined identically by:
+///     IEEE Std 802.11-2016 9.4.2.159 Table 9-252 for channel switching
+///     IEEE Std 802.11-2016 11.40.1 Table 11-24 for VHT operation
+/// SecChanOffset is defined identially by:
+///     IEEE Std 802.11-2016 9.4.2.20 for channel switching
+///     IEEE Std 802.11-2016 9.4.2.57 Table 9-168 for HT operation
+pub fn derive_wide_channel_bandwidth(
+    vht_cbw_and_segs: Option<(ie::VhtChannelBandwidth, u8, u8)>,
+    sec_chan_offset: ie::SecChanOffset,
+) -> Cbw {
+    use ie::VhtChannelBandwidth as Vcb;
+    match vht_cbw_and_segs {
+        Some((Vcb::CBW_80_160_80P80, _, 0)) => Cbw::Cbw80,
+        Some((Vcb::CBW_80_160_80P80, seg0, seg1)) if abs_sub(seg0, seg1) == 8 => Cbw::Cbw160,
+        Some((Vcb::CBW_80_160_80P80, seg0, seg1)) if abs_sub(seg0, seg1) > 16 => {
             // See IEEE 802.11-2016, Table 9-252, about channel center frequency segment 1
-            (fidl_common::ChannelBandwidth::Cbw80P80, seg1)
+            Cbw::Cbw80P80 { secondary80: seg1 }
         }
         // Use HT CBW if
         // - VHT op is not present,
         // - VHT op has deprecated parameters sets, or
         // - VHT CBW field is set to 0
-        // Safe to unwrap `ht_op` because `ht_op_cbw` is only Some(_) if `ht_op` has a value.
-        (Some(Scw::ANY), _) => match { ht_op.unwrap().ht_op_info_head }.secondary_chan_offset() {
-            ie::SecChanOffset::SECONDARY_ABOVE => (fidl_common::ChannelBandwidth::Cbw40, 0),
-            ie::SecChanOffset::SECONDARY_BELOW => (fidl_common::ChannelBandwidth::Cbw40Below, 0),
-            ie::SecChanOffset::SECONDARY_NONE | _ => (fidl_common::ChannelBandwidth::Cbw20, 0),
+        _ => match sec_chan_offset {
+            ie::SecChanOffset::SECONDARY_ABOVE => Cbw::Cbw40,
+            ie::SecChanOffset::SECONDARY_BELOW => Cbw::Cbw40Below,
+            ie::SecChanOffset::SECONDARY_NONE | _ => Cbw::Cbw20,
         },
-        // Default to Cbw20 if HT CBW field is set to 0 or not present.
-        (Some(Scw::TWENTY_MHZ), _) | _ => (fidl_common::ChannelBandwidth::Cbw20, 0),
-    };
-
-    fidl_common::WlanChannel { primary, cbw, secondary80 }
+    }
 }
 
 fn abs_sub(v1: u8, v2: u8) -> u8 {

@@ -58,6 +58,7 @@ rustc_library("wlan-mlme") {
     "src/buffer.rs",
     "src/client/channel_listener.rs",
     "src/client/channel_scheduler.rs",
+    "src/client/channel_switch.rs",
     "src/client/convert_beacon.rs",
     "src/client/lost_bss.rs",
     "src/client/mod.rs",

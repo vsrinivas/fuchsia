@@ -971,7 +971,7 @@ pub struct ExtendedChannelSwitchAnnouncement {
 #[repr(C, packed)]
 #[derive(Clone, Copy, Debug, AsBytes, FromBytes)]
 pub struct WideBandwidthChannelSwitch {
-    pub new_width: u8,
+    pub new_width: VhtChannelBandwidth,
     pub new_center_freq_seg0: u8,
     pub new_center_freq_seg1: u8,
 }

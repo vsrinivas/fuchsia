@@ -4,6 +4,7 @@
 
 mod channel_listener;
 mod channel_scheduler;
+mod channel_switch;
 mod convert_beacon;
 mod lost_bss;
 mod scanner;

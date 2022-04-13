@@ -504,10 +504,10 @@ mod tests {
 
     #[test]
     pub fn wide_bandwidth_channel_switch() {
-        let raw_wbcs = [40, 10, 20];
+        let raw_wbcs = [0, 10, 20];
         let wbcs = parse_wide_bandwidth_channel_switch(&raw_wbcs[..])
             .expect("valid WBCS should result in OK");
-        assert_eq!(wbcs.new_width, 40);
+        assert_eq!(wbcs.new_width, VhtChannelBandwidth::CBW_20_40);
         assert_eq!(wbcs.new_center_freq_seg0, 10);
         assert_eq!(wbcs.new_center_freq_seg1, 20);
     }
@@ -598,7 +598,7 @@ mod tests {
         #[rustfmt::skip]
         let raw_csw = [
             Id::COUNTRY.0, 3, b'U', b'S', b'O',
-            Id::WIDE_BANDWIDTH_CHANNEL_SWITCH.0, 3, 40, 10, 20,
+            Id::WIDE_BANDWIDTH_CHANNEL_SWITCH.0, 3, 0, 10, 20,
             Id::TRANSMIT_POWER_ENVELOPE.0, 2, 0b00_000_000, 20,
         ];
         let csw =
@@ -607,7 +607,7 @@ mod tests {
         assert_eq!(country.country_code, [b'U', b'S']);
         assert_eq!(country.environment, CountryEnvironment::OUTDOOR);
         assert_variant!(csw.wide_bandwidth_channel_switch, Some(wbcs) => {
-            assert_eq!(wbcs.new_width, 40);
+            assert_eq!(wbcs.new_width, VhtChannelBandwidth::CBW_20_40);
             assert_eq!(wbcs.new_center_freq_seg0, 10);
             assert_eq!(wbcs.new_center_freq_seg1, 20);
         });
@@ -622,13 +622,13 @@ mod tests {
     pub fn partial_channel_switch_wrapper_view() {
         #[rustfmt::skip]
         let raw_csw = [
-            Id::WIDE_BANDWIDTH_CHANNEL_SWITCH.0, 3, 40, 10, 20,
+            Id::WIDE_BANDWIDTH_CHANNEL_SWITCH.0, 3, 0, 10, 20,
         ];
         let csw =
             parse_channel_switch_wrapper(&raw_csw[..]).expect("valid CSW should result in OK");
         assert!(csw.new_country.is_none());
         assert_variant!(csw.wide_bandwidth_channel_switch, Some(wbcs) => {
-            assert_eq!(wbcs.new_width, 40);
+            assert_eq!(wbcs.new_width, VhtChannelBandwidth::CBW_20_40);
             assert_eq!(wbcs.new_center_freq_seg0, 10);
             assert_eq!(wbcs.new_center_freq_seg1, 20);
         });
