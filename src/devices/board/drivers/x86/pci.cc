@@ -427,8 +427,9 @@ zx_status_t pci_root_host_init(acpi::Acpi* acpi) {
   return ZX_OK;
 }
 
-zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* info,
-                     acpi::Manager* manager, std::vector<pci_bdf_t> acpi_bdfs) {
+zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object,
+                     acpi::UniquePtr<ACPI_DEVICE_INFO> info, acpi::Manager* manager,
+                     std::vector<pci_bdf_t> acpi_bdfs) {
   zx_status_t status = pci_root_host_init(manager->acpi());
   if (status != ZX_OK) {
     zxlogf(ERROR, "Error initializing PCI root host: %s", zx_status_get_string(status));
@@ -441,9 +442,9 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
   x64Pciroot::Context dev_ctx = {};
   dev_ctx.platform_bus = parent;
   dev_ctx.acpi_object = object;
-  dev_ctx.acpi_device_info = *info;
+  dev_ctx.acpi_device_info = std::move(info);
   // ACPI names are stored as 4 bytes in a u32
-  memcpy(dev_ctx.name, &info->Name, 4);
+  memcpy(dev_ctx.name, &dev_ctx.acpi_device_info->Name, 4);
 
   status = pci_init_segment_and_ecam(manager->acpi(), object, &dev_ctx);
   if (status != ZX_OK) {

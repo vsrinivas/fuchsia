@@ -550,8 +550,9 @@ zx_protocol_device_t acpi_device_proto = [] {
 
 // This pci_init initializes the kernel pci driver and is not compiled in at the same time as the
 // userspace pci driver under development.
-zx_status_t pci_init(zx_device_t* platform_bus, ACPI_HANDLE object, ACPI_DEVICE_INFO* info,
-                     acpi::Manager* manager, std::vector<pci_bdf_t> acpi_bdfs) {
+zx_status_t pci_init(zx_device_t* platform_bus, ACPI_HANDLE object,
+                     acpi::UniquePtr<ACPI_DEVICE_INFO> info, acpi::Manager* manager,
+                     std::vector<pci_bdf_t> acpi_bdfs) {
   // Report current resources to kernel PCI driver
   // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx_status_t status = pci_report_current_resources(manager->acpi(), get_root_resource());

@@ -51,7 +51,7 @@ class x64Pciroot : public PcirootBase {
   struct Context {
     char name[ACPI_NAMESEG_SIZE];
     ACPI_HANDLE acpi_object;
-    ACPI_DEVICE_INFO acpi_device_info;
+    acpi::UniquePtr<ACPI_DEVICE_INFO> acpi_device_info;
     zx_device_t* platform_bus;
     std::unordered_map<uint32_t, acpi_legacy_irq> irqs;
     std::vector<zx::resource> irq_resources;

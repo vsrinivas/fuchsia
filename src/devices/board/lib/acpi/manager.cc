@@ -234,7 +234,7 @@ acpi::status<> Manager::PublishPciBus(zx_device_t* platform_bus, DeviceBuilder* 
     }
   }
 
-  if (pci_init(platform_bus, device->handle(), info.value().get(), this, std::move(bdfs)) ==
+  if (pci_init(platform_bus, device->handle(), std::move(info.value()), this, std::move(bdfs)) ==
       ZX_OK) {
     published_pci_bus_ = true;
   }
