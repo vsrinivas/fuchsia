@@ -20,6 +20,9 @@ def print_fences():
     """
     All fences are emitted from here.
     """
+    print(
+        "ninja complains about a cyclic dependency in //examples/components/config/integration_test (http://fxbug.dev/97837)"
+    )
     pass
 
 
