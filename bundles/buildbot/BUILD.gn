@@ -42,7 +42,6 @@ group("no_e2e_dep") {
     # The following groups have known e2e tests explicitly excluded.
     "//bundles/fidl:tests_no_e2e",
     "//sdk:tests_no_e2e",
-    "//sdk/cts:cts_no_e2e",
     "//src:src_no_e2e",
     "//tools:tests_no_e2e",
   ]
@@ -65,7 +64,6 @@ group("core") {
     # Add in e2e tests excluded from `no_e2e`.
     "//bundles/fidl:tests",
     "//sdk:tests",
-    "//sdk/cts",
     "//src",
     "//tools",
 
