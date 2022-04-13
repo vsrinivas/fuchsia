@@ -797,7 +797,8 @@ class SimpleProtocolProxy extends $fidl.AsyncProxy<SimpleProtocol>
     switch ($message.ordinal) {
       case _kSimpleProtocol_Add_Ordinal:
         final String _name = _kSimpleProtocol_Add_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kSimpleProtocol_Add_Type.response!;
           // ignore: prefer_const_declarations
@@ -807,7 +808,7 @@ class SimpleProtocolProxy extends $fidl.AsyncProxy<SimpleProtocol>
               $types[0]);
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       default:
         ctrl.proxyError(

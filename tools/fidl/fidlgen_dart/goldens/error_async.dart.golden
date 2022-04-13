@@ -265,7 +265,8 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
     switch ($message.ordinal) {
       case _kExample_foo_Ordinal:
         final String _name = _kExample_foo_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types = _kExample_foo_Type.response!;
           // ignore: prefer_const_declarations
           final ExampleFooResult $response = $fidl.decodeMessage(
@@ -278,7 +279,7 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
-        }, 'method response');
+        });
         break;
       default:
         ctrl.proxyError(

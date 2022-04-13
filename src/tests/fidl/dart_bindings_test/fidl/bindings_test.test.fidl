@@ -227,6 +227,14 @@ protocol TestServer {
     EventEvent(resource struct {
         h zx.handle:EVENT;
     });
+
+    SendErrorEvent(strict union {
+        1: result string;
+        2: err int32;
+    });
+    -> ErrorEvent(struct {
+        result string;
+    }) error int32;
 };
 
 protocol HandleRightsTestServer {

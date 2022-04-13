@@ -221,12 +221,15 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
   {{- if .HasResponse }}
       case {{ .OrdinalName }}:
         final String _name = {{ .TypeSymbol }}.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
-          final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
-          _{{ .Name }}EventStreamController.add(
-            {{- template "DecodeResponse" . -}}
-          );
-        }, 'event');
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, 'event', 
+          _{{ .Name }}EventStreamController.addError,
+          () {
+            final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
+            // ignore: prefer_const_declarations
+            final {{ .ResponseMessageType }} $response = {{- template "DecodeResponse" . -}};
+
+            {{ .AddEventResponse }}
+          });
         break;
   {{- end }}
 {{- end }}
@@ -254,13 +257,15 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
     {{- if .HasResponse }}
       case {{ .OrdinalName }}:
         final String _name = {{ .TypeSymbol }}.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
-          final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
-          // ignore: prefer_const_declarations
-          final {{ .ResponseMessageType }} $response = {{- template "DecodeResponse" . -}};
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, 'method response', 
+          $completer.completeError,
+          () {
+            final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
+            // ignore: prefer_const_declarations
+            final {{ .ResponseMessageType }} $response = {{- template "DecodeResponse" . -}};
 
-          {{ .AsyncResponseCompleter }}
-        }, 'method response');
+            {{ .AsyncResponseCompleter }}
+          });
         break;
     {{- end }}
   {{- end }}
@@ -335,13 +340,32 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
           {{- if not .HasRequest }}
             final _{{ .Name }}_stream = impl.{{ .Name }};
             if (_{{ .Name }}_stream != null) {
-              $subscriptions.add(_{{ .Name }}_stream.listen(($response) {
-                final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-                $encoder.encodeMessageHeader({{ .OrdinalName }}, 0);
-                final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
-                {{ template "EncodeResponse" . }}
-                sendMessage($encoder.message);
-              }));
+              $subscriptions.add(_{{ .Name }}_stream
+              {{- if .Response.HasError }}
+                .transform($async.StreamTransformer.fromHandlers(
+                  handleData: ({{ .AsyncResponseType }} $responseValue, $async.EventSink<{{ .Response.ResultTypeName }}> $sink) {
+                    $sink.add({{ .AsyncResultResponse }});
+                  },
+                  handleError: (Object $error, StackTrace $stackTrace, $async.EventSink<{{ .Response.ResultTypeName }}> $sink) {
+                    if ($error is $fidl.MethodException) {
+                      $sink.add({{ .Response.ResultTypeName }}.withErr($error.value));
+                    } else {
+                      $sink.addError($error, $stackTrace);
+                    }
+                  }))
+              {{- end }}
+                .listen(($response) {
+                  final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+                  $encoder.encodeMessageHeader({{ .OrdinalName }}, 0);
+                  final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
+                  {{ template "EncodeResponse" . }}
+                  sendMessage($encoder.message);
+                },
+                // TODO: was ignoring errors intentional here? For methods, the
+                // channel gets closed on error.
+                onError: (_e) {
+                  $fidl.handleException({{ .TypeSymbol }}.name, _e, close);
+                }));
             }
           {{- end }}
         {{- end }}
@@ -380,7 +404,7 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
                 $future
                 {{ if .Response.HasError }}
                 .then(($responseValue) {
-                  {{ .AsyncResultResponse }}
+                  return {{ .AsyncResultResponse }};
                 }, onError: ($error) {
                   if ($error is $fidl.MethodException) {
                     return {{ .Response.ResultTypeName }}.withErr($error.value);

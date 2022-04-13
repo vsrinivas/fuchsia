@@ -108,7 +108,8 @@ class SubProxy extends $fidl.AsyncProxy<Sub> implements Sub {
     switch ($message.ordinal) {
       case _kSub_foo_Ordinal:
         final String _name = _kSub_foo_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types = _kSub_foo_Type.response!;
           // ignore: prefer_const_declarations
           final $response = $fidl.decodeMessage(
@@ -117,7 +118,7 @@ class SubProxy extends $fidl.AsyncProxy<Sub> implements Sub {
               $types[0]);
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       default:
         ctrl.proxyError(
@@ -260,7 +261,8 @@ class SuperProxy extends $fidl.AsyncProxy<Super> implements Super {
     switch ($message.ordinal) {
       case _kSuper_foo_Ordinal:
         final String _name = _kSuper_foo_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types = _kSuper_foo_Type.response!;
           // ignore: prefer_const_declarations
           final $response = $fidl.decodeMessage(
@@ -269,7 +271,7 @@ class SuperProxy extends $fidl.AsyncProxy<Super> implements Super {
               $types[0]);
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       default:
         ctrl.proxyError(

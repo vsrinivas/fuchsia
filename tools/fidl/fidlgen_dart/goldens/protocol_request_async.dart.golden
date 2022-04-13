@@ -219,7 +219,8 @@ class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
     switch ($message.ordinal) {
       case _kParent_GetChild_Ordinal:
         final String _name = _kParent_GetChild_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kParent_GetChild_Type.response!;
           // ignore: prefer_const_declarations
@@ -229,11 +230,12 @@ class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
               $types[0]);
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       case _kParent_GetChildRequest_Ordinal:
         final String _name = _kParent_GetChildRequest_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kParent_GetChildRequest_Type.response!;
           // ignore: prefer_const_declarations
@@ -244,7 +246,7 @@ class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
               $types[0]);
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       default:
         ctrl.proxyError(

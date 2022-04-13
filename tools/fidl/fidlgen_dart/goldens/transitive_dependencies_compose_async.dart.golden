@@ -106,7 +106,8 @@ class TopProxy extends $fidl.AsyncProxy<Top> implements Top {
     switch ($message.ordinal) {
       case _kTop_GetFoo_Ordinal:
         final String _name = _kTop_GetFoo_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types = _kTop_GetFoo_Type.response!;
           // ignore: prefer_const_declarations
           final $response = $fidl.decodeMessage(
@@ -115,7 +116,7 @@ class TopProxy extends $fidl.AsyncProxy<Top> implements Top {
               $types[0]);
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       default:
         ctrl.proxyError(

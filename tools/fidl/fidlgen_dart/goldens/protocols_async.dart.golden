@@ -1082,10 +1082,12 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
     switch ($message.ordinal) {
       case _kChannelProtocol_EventA_Ordinal:
         final String _name = _kChannelProtocol_EventA_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'event', _eventAEventStreamController.addError, () {
           final List<$fidl.MemberType> $types =
               _kChannelProtocol_EventA_Type.response!;
-          _eventAEventStreamController.add($fidl
+          // ignore: prefer_const_declarations
+          final ChannelProtocol$EventA$Response $response = $fidl
               .decodeMessageWithCallback<ChannelProtocol$EventA$Response>(
                   $message,
                   _kChannelProtocol_EventA_Type.responseInlineSize(
@@ -1094,8 +1096,10 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
               $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
               $types[1].decode(decoder, $fidl.kMessageHeaderSize, 1),
             );
-          }));
-        }, 'event');
+          });
+
+          _eventAEventStreamController.add($response);
+        });
         break;
       default:
         ctrl.proxyError(
@@ -1118,7 +1122,8 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
     switch ($message.ordinal) {
       case _kChannelProtocol_MethodB_Ordinal:
         final String _name = _kChannelProtocol_MethodB_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kChannelProtocol_MethodB_Type.response!;
           // ignore: prefer_const_declarations
@@ -1129,22 +1134,24 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
               $types[0]);
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       case _kChannelProtocol_TakeHandle_Ordinal:
         final String _name = _kChannelProtocol_TakeHandle_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kChannelProtocol_TakeHandle_Type.response!;
           // ignore: prefer_const_declarations
           final $response = null;
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       case _kChannelProtocol_MutateSocket_Ordinal:
         final String _name = _kChannelProtocol_MutateSocket_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kChannelProtocol_MutateSocket_Type.response!;
           // ignore: prefer_const_declarations
@@ -1155,7 +1162,7 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
               $types[0]);
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       default:
         ctrl.proxyError(
@@ -1294,6 +1301,12 @@ class ChannelProtocolBinding extends $fidl.AsyncBinding<ChannelProtocol> {
                   .encode($encoder, $response.b, $fidl.kMessageHeaderSize, 1);
             });
             sendMessage($encoder.message);
+          },
+              // TODO: was ignoring errors intentional here? For methods, the
+              // channel gets closed on error.
+              onError: (_e) {
+            $fidl.handleException(
+                _kChannelProtocol_EventA_Type.name, _e, close);
           }));
         }
       }
@@ -1646,15 +1659,19 @@ class HandleRightsProtocolProxy extends $fidl.AsyncProxy<HandleRightsProtocol>
     switch ($message.ordinal) {
       case _kHandleRightsProtocol_AnEvent_Ordinal:
         final String _name = _kHandleRightsProtocol_AnEvent_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'event', _anEventEventStreamController.addError, () {
           final List<$fidl.MemberType> $types =
               _kHandleRightsProtocol_AnEvent_Type.response!;
-          _anEventEventStreamController.add($fidl.decodeMessage(
+          // ignore: prefer_const_declarations
+          final $response = $fidl.decodeMessage(
               $message,
               _kHandleRightsProtocol_AnEvent_Type
                   .responseInlineSize($message.wireFormat),
-              $types[0]));
-        }, 'event');
+              $types[0]);
+
+          _anEventEventStreamController.add($response);
+        });
         break;
       default:
         ctrl.proxyError(
@@ -1677,7 +1694,8 @@ class HandleRightsProtocolProxy extends $fidl.AsyncProxy<HandleRightsProtocol>
     switch ($message.ordinal) {
       case _kHandleRightsProtocol_ResponseMethod_Ordinal:
         final String _name = _kHandleRightsProtocol_ResponseMethod_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kHandleRightsProtocol_ResponseMethod_Type.response!;
           // ignore: prefer_const_declarations
@@ -1688,7 +1706,7 @@ class HandleRightsProtocolProxy extends $fidl.AsyncProxy<HandleRightsProtocol>
               $types[0]);
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       default:
         ctrl.proxyError(
@@ -1782,6 +1800,12 @@ class HandleRightsProtocolBinding
                 $types[0],
                 $response);
             sendMessage($encoder.message);
+          },
+              // TODO: was ignoring errors intentional here? For methods, the
+              // channel gets closed on error.
+              onError: (_e) {
+            $fidl.handleException(
+                _kHandleRightsProtocol_AnEvent_Type.name, _e, close);
           }));
         }
       }
@@ -2270,14 +2294,18 @@ class TransitionalProxy extends $fidl.AsyncProxy<Transitional>
     switch ($message.ordinal) {
       case _kTransitional_Event_Ordinal:
         final String _name = _kTransitional_Event_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'event', _eventEventStreamController.addError, () {
           final List<$fidl.MemberType> $types =
               _kTransitional_Event_Type.response!;
-          _eventEventStreamController.add($fidl.decodeMessage(
+          // ignore: prefer_const_declarations
+          final $response = $fidl.decodeMessage(
               $message,
               _kTransitional_Event_Type.responseInlineSize($message.wireFormat),
-              $types[0]));
-        }, 'event');
+              $types[0]);
+
+          _eventEventStreamController.add($response);
+        });
         break;
       default:
         ctrl.proxyError(
@@ -2300,7 +2328,8 @@ class TransitionalProxy extends $fidl.AsyncProxy<Transitional>
     switch ($message.ordinal) {
       case _kTransitional_Request_Ordinal:
         final String _name = _kTransitional_Request_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kTransitional_Request_Type.response!;
           // ignore: prefer_const_declarations
@@ -2311,7 +2340,7 @@ class TransitionalProxy extends $fidl.AsyncProxy<Transitional>
               $types[0]);
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       default:
         ctrl.proxyError(
@@ -2393,6 +2422,11 @@ class TransitionalBinding extends $fidl.AsyncBinding<Transitional> {
                 $types[0],
                 $response);
             sendMessage($encoder.message);
+          },
+              // TODO: was ignoring errors intentional here? For methods, the
+              // channel gets closed on error.
+              onError: (_e) {
+            $fidl.handleException(_kTransitional_Event_Type.name, _e, close);
           }));
         }
       }
@@ -2652,24 +2686,33 @@ class WithAndWithoutRequestResponseProxy
       case _kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal:
         final String _name =
             _kWithAndWithoutRequestResponse_OnEmptyResponse_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, 'event',
+            _onEmptyResponseEventStreamController.addError, () {
           final List<$fidl.MemberType> $types =
               _kWithAndWithoutRequestResponse_OnEmptyResponse_Type.response!;
-          _onEmptyResponseEventStreamController.add(null);
-        }, 'event');
+          // ignore: prefer_const_declarations
+          final $response = null;
+
+          _onEmptyResponseEventStreamController.add($response);
+        });
         break;
       case _kWithAndWithoutRequestResponse_OnWithResponse_Ordinal:
         final String _name =
             _kWithAndWithoutRequestResponse_OnWithResponse_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'event', _onWithResponseEventStreamController.addError,
+            () {
           final List<$fidl.MemberType> $types =
               _kWithAndWithoutRequestResponse_OnWithResponse_Type.response!;
-          _onWithResponseEventStreamController.add($fidl.decodeMessage(
+          // ignore: prefer_const_declarations
+          final $response = $fidl.decodeMessage(
               $message,
               _kWithAndWithoutRequestResponse_OnWithResponse_Type
                   .responseInlineSize($message.wireFormat),
-              $types[0]));
-        }, 'event');
+              $types[0]);
+
+          _onWithResponseEventStreamController.add($response);
+        });
         break;
       default:
         ctrl.proxyError(
@@ -2693,7 +2736,8 @@ class WithAndWithoutRequestResponseProxy
       case _kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal:
         final String _name =
             _kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Type
                   .response!;
@@ -2701,12 +2745,13 @@ class WithAndWithoutRequestResponseProxy
           final $response = null;
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       case _kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal:
         final String _name =
             _kWithAndWithoutRequestResponse_NoRequestWithResponse_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kWithAndWithoutRequestResponse_NoRequestWithResponse_Type
                   .response!;
@@ -2718,12 +2763,13 @@ class WithAndWithoutRequestResponseProxy
               $types[0]);
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       case _kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal:
         final String _name =
             _kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Type
                   .response!;
@@ -2731,12 +2777,13 @@ class WithAndWithoutRequestResponseProxy
           final $response = null;
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       case _kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal:
         final String _name =
             _kWithAndWithoutRequestResponse_WithRequestWithResponse_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kWithAndWithoutRequestResponse_WithRequestWithResponse_Type
                   .response!;
@@ -2748,7 +2795,7 @@ class WithAndWithoutRequestResponseProxy
               $types[0]);
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       default:
         ctrl.proxyError(
@@ -2916,6 +2963,14 @@ class WithAndWithoutRequestResponseBinding
                 _kWithAndWithoutRequestResponse_OnEmptyResponse_Type.response!;
 
             sendMessage($encoder.message);
+          },
+              // TODO: was ignoring errors intentional here? For methods, the
+              // channel gets closed on error.
+              onError: (_e) {
+            $fidl.handleException(
+                _kWithAndWithoutRequestResponse_OnEmptyResponse_Type.name,
+                _e,
+                close);
           }));
         }
         final _onWithResponse_stream = impl.onWithResponse;
@@ -2934,6 +2989,14 @@ class WithAndWithoutRequestResponseBinding
                 $types[0],
                 $response);
             sendMessage($encoder.message);
+          },
+              // TODO: was ignoring errors intentional here? For methods, the
+              // channel gets closed on error.
+              onError: (_e) {
+            $fidl.handleException(
+                _kWithAndWithoutRequestResponse_OnWithResponse_Type.name,
+                _e,
+                close);
           }));
         }
       }
@@ -3263,7 +3326,8 @@ class WithErrorSyntaxProxy extends $fidl.AsyncProxy<WithErrorSyntax>
     switch ($message.ordinal) {
       case _kWithErrorSyntax_ResponseAsStruct_Ordinal:
         final String _name = _kWithErrorSyntax_ResponseAsStruct_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kWithErrorSyntax_ResponseAsStruct_Type.response!;
           // ignore: prefer_const_declarations
@@ -3284,11 +3348,12 @@ class WithErrorSyntaxProxy extends $fidl.AsyncProxy<WithErrorSyntax>
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
-        }, 'method response');
+        });
         break;
       case _kWithErrorSyntax_ErrorAsPrimitive_Ordinal:
         final String _name = _kWithErrorSyntax_ErrorAsPrimitive_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kWithErrorSyntax_ErrorAsPrimitive_Type.response!;
           // ignore: prefer_const_declarations
@@ -3305,11 +3370,12 @@ class WithErrorSyntaxProxy extends $fidl.AsyncProxy<WithErrorSyntax>
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
-        }, 'method response');
+        });
         break;
       case _kWithErrorSyntax_ErrorAsEnum_Ordinal:
         final String _name = _kWithErrorSyntax_ErrorAsEnum_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kWithErrorSyntax_ErrorAsEnum_Type.response!;
           // ignore: prefer_const_declarations
@@ -3325,11 +3391,12 @@ class WithErrorSyntaxProxy extends $fidl.AsyncProxy<WithErrorSyntax>
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
-        }, 'method response');
+        });
         break;
       case _kWithErrorSyntax_HandleInResult_Ordinal:
         final String _name = _kWithErrorSyntax_HandleInResult_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kWithErrorSyntax_HandleInResult_Type.response!;
           // ignore: prefer_const_declarations
@@ -3346,7 +3413,7 @@ class WithErrorSyntaxProxy extends $fidl.AsyncProxy<WithErrorSyntax>
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
-        }, 'method response');
+        });
         break;
       default:
         ctrl.proxyError(
@@ -3724,7 +3791,8 @@ class WithProtocolEndsProxy extends $fidl.AsyncProxy<WithProtocolEnds>
     switch ($message.ordinal) {
       case _kWithProtocolEnds_ClientEnds_Ordinal:
         final String _name = _kWithProtocolEnds_ClientEnds_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kWithProtocolEnds_ClientEnds_Type.response!;
           // ignore: prefer_const_declarations
@@ -3735,11 +3803,12 @@ class WithProtocolEndsProxy extends $fidl.AsyncProxy<WithProtocolEnds>
               $types[0]);
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       case _kWithProtocolEnds_ServerEnds_Ordinal:
         final String _name = _kWithProtocolEnds_ServerEnds_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kWithProtocolEnds_ServerEnds_Type.response!;
           // ignore: prefer_const_declarations
@@ -3750,11 +3819,12 @@ class WithProtocolEndsProxy extends $fidl.AsyncProxy<WithProtocolEnds>
               $types[0]);
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       case _kWithProtocolEnds_StructContainingEnds_Ordinal:
         final String _name = _kWithProtocolEnds_StructContainingEnds_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kWithProtocolEnds_StructContainingEnds_Type.response!;
           // ignore: prefer_const_declarations
@@ -3765,7 +3835,7 @@ class WithProtocolEndsProxy extends $fidl.AsyncProxy<WithProtocolEnds>
               $types[0]);
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       default:
         ctrl.proxyError(

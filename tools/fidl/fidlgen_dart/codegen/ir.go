@@ -284,6 +284,8 @@ func (m Method) ResponseMessageType() string {
 	return m.AsyncResponseClass
 }
 
+// AsyncResultCompleter provides the appropriate value to $completer.complete
+// based on the types of the arguments and whether the method uses error syntax.
 func (m Method) AsyncResponseCompleter() string {
 	if !m.HasResponse || !m.Response.HasError {
 		return "$completer.complete($response);"
@@ -316,13 +318,15 @@ func (m Method) AsyncResponseCompleter() string {
 	return out.String()
 }
 
+// AsyncResultResponse produces code to convert the result of an error-syntax
+// method into the appropriate result union.
 func (m Method) AsyncResultResponse() string {
 	if !m.HasResponse || !m.Response.HasError {
 		return ""
 	}
 
 	var out strings.Builder
-	fmt.Fprintf(&out, "return %s.withResponse(\n", m.Response.ResultTypeName)
+	fmt.Fprintf(&out, "%s.withResponse(\n", m.Response.ResultTypeName)
 	switch len(m.Response.MethodParameters) {
 	case 0:
 		fmt.Fprintf(&out, `%s()`, m.Response.ValueType.Decl)
@@ -341,7 +345,41 @@ func (m Method) AsyncResultResponse() string {
 		out.WriteString(")")
 	}
 
-	out.WriteString(");")
+	out.WriteString(")")
+	return out.String()
+}
+
+// AddEventResponse provides the appropriate value to the EventStreamController
+// for an event, based on whether the event uses error syntax.
+func (m Method) AddEventResponse() string {
+	if !m.HasResponse || !m.Response.HasError {
+		return fmt.Sprintf("_%sEventStreamController.add($response);", m.Name)
+	}
+
+	var out strings.Builder
+	fmt.Fprintf(&out, `if ($response.$tag == %s.response) {
+		_%sEventStreamController.add(`, m.Response.ResultTypeTagName, m.Name)
+	switch len(m.Response.MethodParameters) {
+	case 0:
+		out.WriteString("null);")
+	case 1:
+		param := m.Response.MethodParameters[0]
+		if param.Flattened {
+			fmt.Fprintf(&out, "$response.response!.%s);", param.Name)
+		} else {
+			out.WriteString("$response.response!);")
+		}
+	default:
+		out.WriteString(m.AsyncResponseClass + "(")
+		for _, p := range m.Response.MethodParameters {
+			fmt.Fprintf(&out, "$response.response!.%s, ", p.Name)
+		}
+		out.WriteString("));")
+	}
+
+	fmt.Fprintf(&out, `} else {
+		_%sEventStreamController.addError($fidl.MethodException($response.err));
+	}`, m.Name)
 	return out.String()
 }
 

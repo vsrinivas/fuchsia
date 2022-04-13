@@ -1251,7 +1251,8 @@ class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
     switch ($message.ordinal) {
       case _kDenyEachBinding_OnlyDenyCpp_Ordinal:
         final String _name = _kDenyEachBinding_OnlyDenyCpp_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kDenyEachBinding_OnlyDenyCpp_Type.response!;
           // ignore: prefer_const_declarations
@@ -1267,11 +1268,12 @@ class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
-        }, 'method response');
+        });
         break;
       case _kDenyEachBinding_OnlyDenyGo_Ordinal:
         final String _name = _kDenyEachBinding_OnlyDenyGo_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kDenyEachBinding_OnlyDenyGo_Type.response!;
           // ignore: prefer_const_declarations
@@ -1286,11 +1288,12 @@ class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
-        }, 'method response');
+        });
         break;
       case _kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal:
         final String _name = _kDenyEachBinding_OnlyDenyLibfuzzer_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kDenyEachBinding_OnlyDenyLibfuzzer_Type.response!;
           // ignore: prefer_const_declarations
@@ -1307,11 +1310,12 @@ class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
-        }, 'method response');
+        });
         break;
       case _kDenyEachBinding_OnlyDenyRust_Ordinal:
         final String _name = _kDenyEachBinding_OnlyDenyRust_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kDenyEachBinding_OnlyDenyRust_Type.response!;
           // ignore: prefer_const_declarations
@@ -1327,11 +1331,12 @@ class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
-        }, 'method response');
+        });
         break;
       case _kDenyEachBinding_OnlyDenySyzkaller_Ordinal:
         final String _name = _kDenyEachBinding_OnlyDenySyzkaller_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kDenyEachBinding_OnlyDenySyzkaller_Type.response!;
           // ignore: prefer_const_declarations
@@ -1348,7 +1353,7 @@ class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
-        }, 'method response');
+        });
         break;
       default:
         ctrl.proxyError(

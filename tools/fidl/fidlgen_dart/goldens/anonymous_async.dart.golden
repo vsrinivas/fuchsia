@@ -956,7 +956,8 @@ class SomeProtocolProxy extends $fidl.AsyncProxy<SomeProtocol>
     switch ($message.ordinal) {
       case _kSomeProtocol_SomeMethod_Ordinal:
         final String _name = _kSomeProtocol_SomeMethod_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kSomeProtocol_SomeMethod_Type.response!;
           // ignore: prefer_const_declarations
@@ -971,7 +972,7 @@ class SomeProtocolProxy extends $fidl.AsyncProxy<SomeProtocol>
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
-        }, 'method response');
+        });
         break;
       default:
         ctrl.proxyError(

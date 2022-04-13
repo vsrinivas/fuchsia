@@ -313,19 +313,29 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
     switch ($message.ordinal) {
       case _kExample_StrictEvent_Ordinal:
         final String _name = _kExample_StrictEvent_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'event', _strictEventEventStreamController.addError,
+            () {
           final List<$fidl.MemberType> $types =
               _kExample_StrictEvent_Type.response!;
-          _strictEventEventStreamController.add(null);
-        }, 'event');
+          // ignore: prefer_const_declarations
+          final $response = null;
+
+          _strictEventEventStreamController.add($response);
+        });
         break;
       case _kExample_FlexibleEvent_Ordinal:
         final String _name = _kExample_FlexibleEvent_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'event', _flexibleEventEventStreamController.addError,
+            () {
           final List<$fidl.MemberType> $types =
               _kExample_FlexibleEvent_Type.response!;
-          _flexibleEventEventStreamController.add(null);
-        }, 'event');
+          // ignore: prefer_const_declarations
+          final $response = null;
+
+          _flexibleEventEventStreamController.add($response);
+        });
         break;
       default:
         ctrl.proxyError(
@@ -348,18 +358,20 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
     switch ($message.ordinal) {
       case _kExample_StrictTwoWay_Ordinal:
         final String _name = _kExample_StrictTwoWay_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kExample_StrictTwoWay_Type.response!;
           // ignore: prefer_const_declarations
           final $response = null;
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       case _kExample_FlexibleTwoWay_Ordinal:
         final String _name = _kExample_FlexibleTwoWay_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kExample_FlexibleTwoWay_Type.response!;
           // ignore: prefer_const_declarations
@@ -370,7 +382,7 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
               $types[0]);
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       default:
         ctrl.proxyError(
@@ -475,6 +487,11 @@ class ExampleBinding extends $fidl.AsyncBinding<Example> {
                 _kExample_StrictEvent_Type.response!;
 
             sendMessage($encoder.message);
+          },
+              // TODO: was ignoring errors intentional here? For methods, the
+              // channel gets closed on error.
+              onError: (_e) {
+            $fidl.handleException(_kExample_StrictEvent_Type.name, _e, close);
           }));
         }
         final _flexibleEvent_stream = impl.flexibleEvent;
@@ -487,6 +504,11 @@ class ExampleBinding extends $fidl.AsyncBinding<Example> {
                 _kExample_FlexibleEvent_Type.response!;
 
             sendMessage($encoder.message);
+          },
+              // TODO: was ignoring errors intentional here? For methods, the
+              // channel gets closed on error.
+              onError: (_e) {
+            $fidl.handleException(_kExample_FlexibleEvent_Type.name, _e, close);
           }));
         }
       }

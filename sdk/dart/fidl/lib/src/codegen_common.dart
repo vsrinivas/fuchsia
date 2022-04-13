@@ -32,12 +32,17 @@ void performWithExceptionHandling(
 
 /// Wraps work with common try/catch behaviour and timeline events.
 void performCtrlWithExceptionHandling(
-    String name, dynamic ctrl, void Function() work, String type) {
+    String name,
+    dynamic ctrl,
+    String type,
+    void Function(Object error, StackTrace? stackTrace) additionalErrorListener,
+    void Function() work) {
   try {
     Timeline.startSync(name);
     work();
-  } catch (_e) {
+  } catch (_e, _st) {
     ctrl.proxyError(FidlError('Exception handling $type $name: $_e'));
+    additionalErrorListener(_e, _st);
     rethrow;
   } finally {
     Timeline.finishSync();

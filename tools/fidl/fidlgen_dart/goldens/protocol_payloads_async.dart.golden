@@ -1299,34 +1299,55 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
     switch ($message.ordinal) {
       case _kMainProtocol_OnComposed_Ordinal:
         final String _name = _kMainProtocol_OnComposed_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'event', _onComposedEventStreamController.addError,
+            () {
           final List<$fidl.MemberType> $types =
               _kMainProtocol_OnComposed_Type.response!;
-          _onComposedEventStreamController.add($fidl.decodeMessage(
+          // ignore: prefer_const_declarations
+          final $response = $fidl.decodeMessage(
               $message,
               _kMainProtocol_OnComposed_Type
                   .responseInlineSize($message.wireFormat),
-              $types[0]));
-        }, 'event');
+              $types[0]);
+
+          _onComposedEventStreamController.add($response);
+        });
         break;
       case _kMainProtocol_OnComposedWithError_Ordinal:
         final String _name = _kMainProtocol_OnComposedWithError_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, 'event',
+            _onComposedWithErrorEventStreamController.addError, () {
           final List<$fidl.MemberType> $types =
               _kMainProtocol_OnComposedWithError_Type.response!;
-          _onComposedWithErrorEventStreamController.add($fidl.decodeMessage(
-              $message,
-              _kMainProtocol_OnComposedWithError_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]));
-        }, 'event');
+          // ignore: prefer_const_declarations
+          final lib$test_protocolpayloads_imported
+                  .ComposedProtocolOnComposedWithErrorResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kMainProtocol_OnComposedWithError_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
+
+          if ($response.$tag ==
+              lib$test_protocolpayloads_imported
+                  .ComposedProtocolOnComposedWithErrorResultTag.response) {
+            _onComposedWithErrorEventStreamController
+                .add($response.response!.a);
+          } else {
+            _onComposedWithErrorEventStreamController
+                .addError($fidl.MethodException($response.err));
+          }
+        });
         break;
       case _kMainProtocol_OnLocal_Ordinal:
         final String _name = _kMainProtocol_OnLocal_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'event', _onLocalEventStreamController.addError, () {
           final List<$fidl.MemberType> $types =
               _kMainProtocol_OnLocal_Type.response!;
-          _onLocalEventStreamController.add($fidl
+          // ignore: prefer_const_declarations
+          final MainProtocol$OnLocal$Response $response = $fidl
               .decodeMessageWithCallback<MainProtocol$OnLocal$Response>(
                   $message,
                   _kMainProtocol_OnLocal_Type.responseInlineSize(
@@ -1335,51 +1356,85 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
               $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
               $types[1].decode(decoder, $fidl.kMessageHeaderSize, 1),
             );
-          }));
-        }, 'event');
+          });
+
+          _onLocalEventStreamController.add($response);
+        });
         break;
       case _kMainProtocol_OnLocalWithError_Ordinal:
         final String _name = _kMainProtocol_OnLocalWithError_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, 'event',
+            _onLocalWithErrorEventStreamController.addError, () {
           final List<$fidl.MemberType> $types =
               _kMainProtocol_OnLocalWithError_Type.response!;
-          _onLocalWithErrorEventStreamController.add($fidl.decodeMessage(
-              $message,
-              _kMainProtocol_OnLocalWithError_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]));
-        }, 'event');
+          // ignore: prefer_const_declarations
+          final MainProtocolOnLocalWithErrorResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kMainProtocol_OnLocalWithError_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
+
+          if ($response.$tag ==
+              MainProtocolOnLocalWithErrorResultTag.response) {
+            _onLocalWithErrorEventStreamController
+                .add(MainProtocol$OnLocalWithError$Response(
+              $response.response!.a,
+              $response.response!.b,
+            ));
+          } else {
+            _onLocalWithErrorEventStreamController
+                .addError($fidl.MethodException($response.err));
+          }
+        });
         break;
       case _kMainProtocol_OnImport_Ordinal:
         final String _name = _kMainProtocol_OnImport_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'event', _onImportEventStreamController.addError, () {
           final List<$fidl.MemberType> $types =
               _kMainProtocol_OnImport_Type.response!;
-          _onImportEventStreamController.add($fidl.decodeMessage(
+          // ignore: prefer_const_declarations
+          final $response = $fidl.decodeMessage(
               $message,
               _kMainProtocol_OnImport_Type
                   .responseInlineSize($message.wireFormat),
-              $types[0]));
-        }, 'event');
+              $types[0]);
+
+          _onImportEventStreamController.add($response);
+        });
         break;
       case _kMainProtocol_OnImportWithError_Ordinal:
         final String _name = _kMainProtocol_OnImportWithError_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, 'event',
+            _onImportWithErrorEventStreamController.addError, () {
           final List<$fidl.MemberType> $types =
               _kMainProtocol_OnImportWithError_Type.response!;
-          _onImportWithErrorEventStreamController.add($fidl.decodeMessage(
-              $message,
-              _kMainProtocol_OnImportWithError_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]));
-        }, 'event');
+          // ignore: prefer_const_declarations
+          final MainProtocolOnImportWithErrorResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kMainProtocol_OnImportWithError_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
+
+          if ($response.$tag ==
+              MainProtocolOnImportWithErrorResultTag.response) {
+            _onImportWithErrorEventStreamController.add($response.response!.a);
+          } else {
+            _onImportWithErrorEventStreamController
+                .addError($fidl.MethodException($response.err));
+          }
+        });
         break;
       case _kMainProtocol_OnAnon_Ordinal:
         final String _name = _kMainProtocol_OnAnon_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'event', _onAnonEventStreamController.addError, () {
           final List<$fidl.MemberType> $types =
               _kMainProtocol_OnAnon_Type.response!;
-          _onAnonEventStreamController.add($fidl
+          // ignore: prefer_const_declarations
+          final MainProtocol$OnAnon$Response $response = $fidl
               .decodeMessageWithCallback<MainProtocol$OnAnon$Response>(
                   $message,
                   _kMainProtocol_OnAnon_Type.responseInlineSize(
@@ -1388,20 +1443,36 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
               $types[0].decode(decoder, $fidl.kMessageHeaderSize, 1),
               $types[1].decode(decoder, $fidl.kMessageHeaderSize, 1),
             );
-          }));
-        }, 'event');
+          });
+
+          _onAnonEventStreamController.add($response);
+        });
         break;
       case _kMainProtocol_OnAnonWithError_Ordinal:
         final String _name = _kMainProtocol_OnAnonWithError_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, 'event',
+            _onAnonWithErrorEventStreamController.addError, () {
           final List<$fidl.MemberType> $types =
               _kMainProtocol_OnAnonWithError_Type.response!;
-          _onAnonWithErrorEventStreamController.add($fidl.decodeMessage(
-              $message,
-              _kMainProtocol_OnAnonWithError_Type
-                  .responseInlineSize($message.wireFormat),
-              $types[0]));
-        }, 'event');
+          // ignore: prefer_const_declarations
+          final MainProtocolOnAnonWithErrorResult $response =
+              $fidl.decodeMessage(
+                  $message,
+                  _kMainProtocol_OnAnonWithError_Type
+                      .responseInlineSize($message.wireFormat),
+                  $types[0]);
+
+          if ($response.$tag == MainProtocolOnAnonWithErrorResultTag.response) {
+            _onAnonWithErrorEventStreamController
+                .add(MainProtocol$OnAnonWithError$Response(
+              $response.response!.a,
+              $response.response!.b,
+            ));
+          } else {
+            _onAnonWithErrorEventStreamController
+                .addError($fidl.MethodException($response.err));
+          }
+        });
         break;
       default:
         ctrl.proxyError(
@@ -1424,7 +1495,8 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
     switch ($message.ordinal) {
       case _kMainProtocol_TwoWayComposed_Ordinal:
         final String _name = _kMainProtocol_TwoWayComposed_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kMainProtocol_TwoWayComposed_Type.response!;
           // ignore: prefer_const_declarations
@@ -1435,11 +1507,12 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
               $types[0]);
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       case _kMainProtocol_TwoWayComposedWithError_Ordinal:
         final String _name = _kMainProtocol_TwoWayComposedWithError_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kMainProtocol_TwoWayComposedWithError_Type.response!;
           // ignore: prefer_const_declarations
@@ -1458,11 +1531,12 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
-        }, 'method response');
+        });
         break;
       case _kMainProtocol_TwoWayLocal_Ordinal:
         final String _name = _kMainProtocol_TwoWayLocal_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kMainProtocol_TwoWayLocal_Type.response!;
           // ignore: prefer_const_declarations
@@ -1478,11 +1552,12 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
           });
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       case _kMainProtocol_TwoWayLocalWithError_Ordinal:
         final String _name = _kMainProtocol_TwoWayLocalWithError_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kMainProtocol_TwoWayLocalWithError_Type.response!;
           // ignore: prefer_const_declarations
@@ -1502,11 +1577,12 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
-        }, 'method response');
+        });
         break;
       case _kMainProtocol_TwoWayImport_Ordinal:
         final String _name = _kMainProtocol_TwoWayImport_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kMainProtocol_TwoWayImport_Type.response!;
           // ignore: prefer_const_declarations
@@ -1517,11 +1593,12 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
               $types[0]);
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       case _kMainProtocol_TwoWayImportWithError_Ordinal:
         final String _name = _kMainProtocol_TwoWayImportWithError_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kMainProtocol_TwoWayImportWithError_Type.response!;
           // ignore: prefer_const_declarations
@@ -1538,11 +1615,12 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
-        }, 'method response');
+        });
         break;
       case _kMainProtocol_TwoWayAnon_Ordinal:
         final String _name = _kMainProtocol_TwoWayAnon_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kMainProtocol_TwoWayAnon_Type.response!;
           // ignore: prefer_const_declarations
@@ -1558,11 +1636,12 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
           });
 
           $completer.complete($response);
-        }, 'method response');
+        });
         break;
       case _kMainProtocol_TwoWayAnonWithError_Ordinal:
         final String _name = _kMainProtocol_TwoWayAnonWithError_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kMainProtocol_TwoWayAnonWithError_Type.response!;
           // ignore: prefer_const_declarations
@@ -1582,7 +1661,7 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
-        }, 'method response');
+        });
         break;
       default:
         ctrl.proxyError(
@@ -1949,11 +2028,43 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
                 $types[0],
                 $response);
             sendMessage($encoder.message);
+          },
+              // TODO: was ignoring errors intentional here? For methods, the
+              // channel gets closed on error.
+              onError: (_e) {
+            $fidl.handleException(
+                _kMainProtocol_OnComposed_Type.name, _e, close);
           }));
         }
         final _onComposedWithError_stream = impl.onComposedWithError;
         if (_onComposedWithError_stream != null) {
-          $subscriptions.add(_onComposedWithError_stream.listen(($response) {
+          $subscriptions.add(_onComposedWithError_stream
+              .transform($async.StreamTransformer.fromHandlers(handleData:
+                  (int $responseValue,
+                      $async.EventSink<
+                              lib$test_protocolpayloads_imported
+                                  .ComposedProtocolOnComposedWithErrorResult>
+                          $sink) {
+            $sink.add(lib$test_protocolpayloads_imported
+                    .ComposedProtocolOnComposedWithErrorResult
+                .withResponse(
+                    lib$test_protocolpayloads_imported.ImportStructPayload(
+                        a: $responseValue)));
+          }, handleError: (Object $error,
+                  StackTrace $stackTrace,
+                  $async.EventSink<
+                          lib$test_protocolpayloads_imported
+                              .ComposedProtocolOnComposedWithErrorResult>
+                      $sink) {
+            if ($error is $fidl.MethodException) {
+              $sink.add(lib$test_protocolpayloads_imported
+                      .ComposedProtocolOnComposedWithErrorResult
+                  .withErr($error.value));
+            } else {
+              $sink.addError($error, $stackTrace);
+            }
+          }))
+              .listen(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
@@ -1967,6 +2078,12 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
                 $types[0],
                 $response);
             sendMessage($encoder.message);
+          },
+                  // TODO: was ignoring errors intentional here? For methods, the
+                  // channel gets closed on error.
+                  onError: (_e) {
+            $fidl.handleException(
+                _kMainProtocol_OnComposedWithError_Type.name, _e, close);
           }));
         }
         final _onLocal_stream = impl.onLocal;
@@ -1987,11 +2104,35 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
                   .encode($encoder, $response.b, $fidl.kMessageHeaderSize, 1);
             });
             sendMessage($encoder.message);
+          },
+              // TODO: was ignoring errors intentional here? For methods, the
+              // channel gets closed on error.
+              onError: (_e) {
+            $fidl.handleException(_kMainProtocol_OnLocal_Type.name, _e, close);
           }));
         }
         final _onLocalWithError_stream = impl.onLocalWithError;
         if (_onLocalWithError_stream != null) {
-          $subscriptions.add(_onLocalWithError_stream.listen(($response) {
+          $subscriptions.add(_onLocalWithError_stream
+              .transform($async.StreamTransformer.fromHandlers(handleData:
+                  (MainProtocol$OnLocalWithError$Response $responseValue,
+                      $async.EventSink<MainProtocolOnLocalWithErrorResult>
+                          $sink) {
+            $sink.add(MainProtocolOnLocalWithErrorResult.withResponse(
+                LocalStructPayload(
+              a: $responseValue.a,
+              b: $responseValue.b,
+            )));
+          }, handleError: (Object $error, StackTrace $stackTrace,
+                  $async.EventSink<MainProtocolOnLocalWithErrorResult> $sink) {
+            if ($error is $fidl.MethodException) {
+              $sink.add(
+                  MainProtocolOnLocalWithErrorResult.withErr($error.value));
+            } else {
+              $sink.addError($error, $stackTrace);
+            }
+          }))
+              .listen(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
@@ -2005,6 +2146,12 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
                 $types[0],
                 $response);
             sendMessage($encoder.message);
+          },
+                  // TODO: was ignoring errors intentional here? For methods, the
+                  // channel gets closed on error.
+                  onError: (_e) {
+            $fidl.handleException(
+                _kMainProtocol_OnLocalWithError_Type.name, _e, close);
           }));
         }
         final _onImport_stream = impl.onImport;
@@ -2022,11 +2169,32 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
                 $types[0],
                 $response);
             sendMessage($encoder.message);
+          },
+              // TODO: was ignoring errors intentional here? For methods, the
+              // channel gets closed on error.
+              onError: (_e) {
+            $fidl.handleException(_kMainProtocol_OnImport_Type.name, _e, close);
           }));
         }
         final _onImportWithError_stream = impl.onImportWithError;
         if (_onImportWithError_stream != null) {
-          $subscriptions.add(_onImportWithError_stream.listen(($response) {
+          $subscriptions.add(_onImportWithError_stream
+              .transform($async.StreamTransformer.fromHandlers(handleData: (int
+                      $responseValue,
+                  $async.EventSink<MainProtocolOnImportWithErrorResult> $sink) {
+            $sink.add(MainProtocolOnImportWithErrorResult.withResponse(
+                lib$test_protocolpayloads_imported.ImportStructPayload(
+                    a: $responseValue)));
+          }, handleError: (Object $error, StackTrace $stackTrace,
+                  $async.EventSink<MainProtocolOnImportWithErrorResult> $sink) {
+            if ($error is $fidl.MethodException) {
+              $sink.add(
+                  MainProtocolOnImportWithErrorResult.withErr($error.value));
+            } else {
+              $sink.addError($error, $stackTrace);
+            }
+          }))
+              .listen(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
@@ -2040,6 +2208,12 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
                 $types[0],
                 $response);
             sendMessage($encoder.message);
+          },
+                  // TODO: was ignoring errors intentional here? For methods, the
+                  // channel gets closed on error.
+                  onError: (_e) {
+            $fidl.handleException(
+                _kMainProtocol_OnImportWithError_Type.name, _e, close);
           }));
         }
         final _onAnon_stream = impl.onAnon;
@@ -2060,11 +2234,35 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
                   .encode($encoder, $response.b, $fidl.kMessageHeaderSize, 1);
             });
             sendMessage($encoder.message);
+          },
+              // TODO: was ignoring errors intentional here? For methods, the
+              // channel gets closed on error.
+              onError: (_e) {
+            $fidl.handleException(_kMainProtocol_OnAnon_Type.name, _e, close);
           }));
         }
         final _onAnonWithError_stream = impl.onAnonWithError;
         if (_onAnonWithError_stream != null) {
-          $subscriptions.add(_onAnonWithError_stream.listen(($response) {
+          $subscriptions.add(_onAnonWithError_stream
+              .transform($async.StreamTransformer.fromHandlers(handleData:
+                  (MainProtocol$OnAnonWithError$Response $responseValue,
+                      $async.EventSink<MainProtocolOnAnonWithErrorResult>
+                          $sink) {
+            $sink.add(MainProtocolOnAnonWithErrorResult.withResponse(
+                MainProtocolOnAnonWithErrorResponse(
+              a: $responseValue.a,
+              b: $responseValue.b,
+            )));
+          }, handleError: (Object $error, StackTrace $stackTrace,
+                  $async.EventSink<MainProtocolOnAnonWithErrorResult> $sink) {
+            if ($error is $fidl.MethodException) {
+              $sink
+                  .add(MainProtocolOnAnonWithErrorResult.withErr($error.value));
+            } else {
+              $sink.addError($error, $stackTrace);
+            }
+          }))
+              .listen(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
@@ -2078,6 +2276,12 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
                 $types[0],
                 $response);
             sendMessage($encoder.message);
+          },
+                  // TODO: was ignoring errors intentional here? For methods, the
+                  // channel gets closed on error.
+                  onError: (_e) {
+            $fidl.handleException(
+                _kMainProtocol_OnAnonWithError_Type.name, _e, close);
           }));
         }
       }

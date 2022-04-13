@@ -1292,6 +1292,20 @@
         },
         "performCtrlWithExceptionHandling": {
           "SimpleFormalParameterImpl": {
+            "additionalErrorListener": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "additionalErrorListener",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "void Function(Object error, StackTrace? stackTrace)"
+            },
             "ctrl": {
               "isConst": false,
               "isFinal": false,

@@ -310,7 +310,8 @@ class ExampleUseOfErrorSyntaxProxy extends $fidl
       case _kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal:
         final String _name =
             _kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Type.response!;
           // ignore: prefer_const_declarations
@@ -330,12 +331,13 @@ class ExampleUseOfErrorSyntaxProxy extends $fidl
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
-        }, 'method response');
+        });
         break;
       case _kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal:
         final String _name =
             _kExampleUseOfErrorSyntax_CallWhichMayFail_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'method response', $completer.completeError, () {
           final List<$fidl.MemberType> $types =
               _kExampleUseOfErrorSyntax_CallWhichMayFail_Type.response!;
           // ignore: prefer_const_declarations
@@ -352,7 +354,7 @@ class ExampleUseOfErrorSyntaxProxy extends $fidl
           } else {
             $completer.completeError($fidl.MethodException($response.err));
           }
-        }, 'method response');
+        });
         break;
       default:
         ctrl.proxyError(

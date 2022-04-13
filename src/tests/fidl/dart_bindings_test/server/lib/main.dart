@@ -258,6 +258,23 @@ class TestServerImpl extends TestServer {
   Future<Handle> echoChannelAsEvent(Channel h) async => h.handle;
   @override
   Future<void> eventEvent(Handle h) => null;
+
+  @override
+  Future<void> sendErrorEvent(TestServerSendErrorEventRequest request) async {
+    switch (request.$tag) {
+      case TestServerSendErrorEventRequestTag.result:
+        _errorEventController.add(request.result);
+        break;
+      case TestServerSendErrorEventRequestTag.err:
+        _errorEventController.addError(MethodException(request.err));
+        break;
+    }
+  }
+
+  final StreamController<String> _errorEventController =
+      StreamController.broadcast();
+  @override
+  Stream<String> get errorEvent => _errorEventController.stream;
 }
 
 ComponentContext _context;

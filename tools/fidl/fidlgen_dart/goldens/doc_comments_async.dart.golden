@@ -631,11 +631,15 @@ class InterfaceProxy extends $fidl.AsyncProxy<Interface> implements Interface {
     switch ($message.ordinal) {
       case _kInterface_OnEvent_Ordinal:
         final String _name = _kInterface_OnEvent_Type.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, () {
+        $fidl.performCtrlWithExceptionHandling(
+            _name, ctrl, 'event', _onEventEventStreamController.addError, () {
           final List<$fidl.MemberType> $types =
               _kInterface_OnEvent_Type.response!;
-          _onEventEventStreamController.add(null);
-        }, 'event');
+          // ignore: prefer_const_declarations
+          final $response = null;
+
+          _onEventEventStreamController.add($response);
+        });
         break;
       default:
         ctrl.proxyError(
@@ -714,6 +718,11 @@ class InterfaceBinding extends $fidl.AsyncBinding<Interface> {
                 _kInterface_OnEvent_Type.response!;
 
             sendMessage($encoder.message);
+          },
+              // TODO: was ignoring errors intentional here? For methods, the
+              // channel gets closed on error.
+              onError: (_e) {
+            $fidl.handleException(_kInterface_OnEvent_Type.name, _e, close);
           }));
         }
       }

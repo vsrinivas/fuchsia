@@ -7,6 +7,7 @@
 
 import 'dart:typed_data';
 
+import 'package:fidl/fidl.dart' show MethodException;
 import 'package:fidl_fidl_test_dartbindingstest/fidl_async.dart';
 import 'package:server_test/server.dart';
 import 'package:test/test.dart';
@@ -52,6 +53,20 @@ void main() async {
     test('multiple events', () async {
       expect(server.proxy.multipleEvent, emitsInOrder([1, 2, 3, 4, 5]));
       await server.proxy.sendMultipleEvents(5, 0.02);
+    });
+
+    test('error event success', () async {
+      expect(server.proxy.errorEvent, emits('Guten tag!'));
+      await server.proxy.sendErrorEvent(
+          TestServerSendErrorEventRequest.withResult('Guten tag!'));
+    });
+    test('error event error', () async {
+      expect(
+          server.proxy.errorEvent,
+          emitsError(isA<MethodException<int>>()
+              .having((e) => e.value, 'value', equals(3494))));
+      await server.proxy
+          .sendErrorEvent(TestServerSendErrorEventRequest.withErr(3494));
     });
   });
 }
