@@ -9,6 +9,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/debugdata/datasink.h>
 #include <lib/debugdata/debugdata.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
@@ -187,14 +188,6 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
   debugdata::DataSinkCallback on_data_collection_warning_callback =
       [&](const std::string& warning) { fprintf(stderr, "WARNING: %s\n", warning.c_str()); };
 
-  // Export the root namespace.
-  fdio_flat_namespace_t* flat;
-  if (zx_status_t status = fdio_ns_export_root(&flat); status != ZX_OK) {
-    fprintf(stderr, "FAILURE: Could not export root namespace: %s\n", zx_status_get_string(status));
-    return std::make_unique<Result>(path, FAILED_UNKNOWN, 0, 0);
-  }
-  auto auto_fdio_free_flat_ns = fit::defer([&flat]() { fdio_ns_free_flat_ns(flat); });
-
   auto action_ns_entry = [](const char* prefix, zx_handle_t handle) {
     return fdio_spawn_action{
         .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
@@ -234,48 +227,60 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
                                                   on_data_collection_warning_callback);
         });
 
-    zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-    if (endpoints.is_error()) {
-      fprintf(stderr, "FAILURE: Could not create endpoints: %s\n", endpoints.status_string());
-      return std::make_unique<Result>(path, FAILED_UNKNOWN, 0, 0);
-    }
-
-    fidl::ClientEnd<fuchsia_io::Directory> svc_handle;
-    for (size_t i = 0; i < flat->count; ++i) {
-      if (!strcmp(flat->path[i], "/svc")) {
-        // Save the current /svc handle...
-        svc_handle.reset(flat->handle[i]);
-        // ...and replace it with the proxy /svc.
-        fdio_actions.push_back(
-            action_ns_entry("/svc", std::move(endpoints->client).TakeChannel().release()));
-      } else {
-        fdio_actions.push_back(action_ns_entry(flat->path[i], flat->handle[i]));
-      }
-    }
-
-    // Setup proxy dir.
-    fbl::RefPtr proxy_dir = fbl::MakeRefCounted<ServiceProxyDir>(std::move(svc_handle));
     auto node = fbl::MakeRefCounted<fs::Service>(
         [dispatcher = loop.dispatcher(),
          &debug_data_publisher](fidl::ServerEnd<fuchsia_debugdata::Publisher> channel) {
           debug_data_publisher->Bind(std::move(channel), dispatcher);
           return ZX_OK;
         });
-    proxy_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_debugdata::Publisher>, node);
-
     auto deprecated_node = fbl::MakeRefCounted<fs::Service>(
         [dispatcher = loop.dispatcher(),
          &debug_data_publisher](fidl::ServerEnd<fuchsia_debugdata::DebugData> channel) {
           debug_data_publisher->BindDeprecatedDebugData(std::move(channel), dispatcher);
           return ZX_OK;
         });
-    proxy_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_debugdata::DebugData>,
-                        deprecated_node);
 
-    // Setup VFS.
     vfs.emplace(loop.dispatcher());
-    vfs->ServeDirectory(std::move(proxy_dir), std::move(endpoints->server),
-                        fs::Rights::ReadWrite());
+
+    std::tuple<const char*, int> map[] = {
+        {"/boot", O_RDONLY},
+        {"/svc", O_RDONLY},
+        {"/tmp", O_RDWR},
+    };
+    for (auto [path, flags] : map) {
+      fbl::unique_fd fd{open(path, flags | O_DIRECTORY)};
+      if (!fd) {
+        fprintf(stderr, "FAILURE: Could not open directory %s: %s\n", path, strerror(errno));
+        return std::make_unique<Result>(path, FAILED_UNKNOWN, 0, 0);
+      }
+      fdio_cpp::FdioCaller caller(std::move(fd));
+      zx::status result = caller.take_directory();
+      if (result.is_error()) {
+        fprintf(stderr, "FAILURE: Could not take directory %s channel: %s\n", path,
+                result.status_string());
+        return std::make_unique<Result>(path, FAILED_UNKNOWN, 0, 0);
+      }
+      fidl::ClientEnd client_end = std::move(result).value();
+
+      if (strcmp(path, "/svc") == 0) {
+        zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+        if (endpoints.is_error()) {
+          fprintf(stderr, "FAILURE: Could not create endpoints: %s\n", endpoints.status_string());
+          return std::make_unique<Result>(path, FAILED_UNKNOWN, 0, 0);
+        }
+
+        fbl::RefPtr proxy_dir = fbl::MakeRefCounted<ServiceProxyDir>(std::move(client_end));
+        proxy_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_debugdata::Publisher>, node);
+        proxy_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_debugdata::DebugData>,
+                            deprecated_node);
+
+        vfs->ServeDirectory(std::move(proxy_dir), std::move(endpoints->server), fs::Rights::All());
+
+        fdio_actions.push_back(action_ns_entry(path, endpoints->client.channel().release()));
+      } else {
+        fdio_actions.push_back(action_ns_entry(path, client_end.TakeChannel().release()));
+      }
+    }
   }
 
   zx_status_t status;
