@@ -18,7 +18,13 @@
 
 namespace {
 
-std::array<uint8_t, 4> kRequestPayload = {1, 2, 3, 4};
+// The payload will be sent as a vector.
+// This has 10 elements because the iovec implementation has special handling
+// on the last aligned 8-byte region due to padding. At least in the current
+// implementation, this forces an extra iovec to be produced if there is
+// sufficient space in the iovec buffer. This tests driver behavior in this
+// case.
+std::array<uint8_t, 10> kRequestPayload = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
 struct TestServer : public fdf::WireServer<test_transport::OneWayTest> {
   void OneWay(OneWayRequestView request, fdf::Arena& arena,

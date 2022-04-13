@@ -42,6 +42,7 @@ void(close_handle_many)(const fidl_handle_t* handles, size_t num_handles) {
 
 struct TestTransport {
   using HandleMetadata = TestHandleMetadata;
+  static constexpr uint32_t kNumIovecs = 1;
   static constexpr const fidl::internal::CodingConfig EncodingConfiguration = {
       .max_iovecs_write = 256,
       .handle_metadata_stride = sizeof(TestHandleMetadata),

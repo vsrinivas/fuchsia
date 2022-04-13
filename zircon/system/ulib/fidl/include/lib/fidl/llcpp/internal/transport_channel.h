@@ -52,7 +52,10 @@ struct ChannelTransport {
   using IncomingTransportContextType = struct {};
   using OutgoingTransportContextType = struct {};
 
-  static constexpr bool TransportProvidesReadBuffer = false;
+  static constexpr bool kTransportProvidesReadBuffer = false;
+  // This is chosen for performance reasons. It should generally be the same as kIovecChunkSize in
+  // the kernel.
+  static constexpr uint32_t kNumIovecs = 16;
 
   static const TransportVTable VTable;
   static const CodingConfig EncodingConfiguration;

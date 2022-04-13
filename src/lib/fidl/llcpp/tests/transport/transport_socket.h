@@ -44,7 +44,8 @@ struct SocketTransport {
   template <typename Protocol>
   using ServerBindingRef = fidl::socket::ServerBindingRef<Protocol>;
 
-  static constexpr bool TransportProvidesReadBuffer = false;
+  static constexpr bool kTransportProvidesReadBuffer = false;
+  static constexpr uint32_t kNumIovecs = 1;
 
   static const TransportVTable VTable;
   static const CodingConfig EncodingConfiguration;

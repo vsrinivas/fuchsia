@@ -38,11 +38,6 @@ namespace internal {
 
 constexpr WireFormatVersion kLLCPPWireFormatVersion = WireFormatVersion::kV2;
 
-// This is chosen for performance reasons. It should generally be the same as kIovecChunkSize in
-// the kernel.
-constexpr uint32_t IovecBufferSize = 16;
-using IovecBuffer = zx_channel_iovec_t[IovecBufferSize];
-
 // Marker to allow references/pointers to the unowned input objects in OwnedEncodedMessage.
 // This enables iovec optimizations but requires the input objects to stay in scope until the
 // encoded result has been consumed.
@@ -221,7 +216,7 @@ class OutgoingMessage : public ::fidl::Status {
 
   template <typename FidlType, typename TransportObject,
             typename = std::enable_if_t<
-                !internal::AssociatedTransport<TransportObject>::TransportProvidesReadBuffer>>
+                !internal::AssociatedTransport<TransportObject>::kTransportProvidesReadBuffer>>
   void Call(TransportObject&& transport, uint8_t* result_bytes, uint32_t result_byte_capacity,
             CallOptions options = {}) {
     fidl_handle_t result_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
@@ -236,7 +231,7 @@ class OutgoingMessage : public ::fidl::Status {
 
   template <typename FidlType, typename TransportObject,
             typename = std::enable_if_t<
-                internal::AssociatedTransport<TransportObject>::TransportProvidesReadBuffer>>
+                internal::AssociatedTransport<TransportObject>::kTransportProvidesReadBuffer>>
   void Call(TransportObject&& transport, uint8_t** out_bytes, uint32_t* out_num_bytes,
             CallOptions options = {}) {
     CallImplForTransportProvidedBuffer(
@@ -688,12 +683,12 @@ template <typename FidlType, typename Transport = internal::ChannelTransport>
 class UnownedEncodedMessage final {
  public:
   UnownedEncodedMessage(uint8_t* backing_buffer, uint32_t backing_buffer_size, FidlType* response)
-      : UnownedEncodedMessage(::fidl::internal::IovecBufferSize, backing_buffer,
-                              backing_buffer_size, response) {}
+      : UnownedEncodedMessage(Transport::kNumIovecs, backing_buffer, backing_buffer_size,
+                              response) {}
   UnownedEncodedMessage(fidl::internal::WireFormatVersion wire_format_version,
                         uint8_t* backing_buffer, uint32_t backing_buffer_size, FidlType* response)
-      : UnownedEncodedMessage(wire_format_version, ::fidl::internal::IovecBufferSize,
-                              backing_buffer, backing_buffer_size, response) {}
+      : UnownedEncodedMessage(wire_format_version, Transport::kNumIovecs, backing_buffer,
+                              backing_buffer_size, response) {}
   UnownedEncodedMessage(uint32_t iovec_capacity, uint8_t* backing_buffer,
                         uint32_t backing_buffer_size, FidlType* response)
       : UnownedEncodedMessage(fidl::internal::kLLCPPWireFormatVersion, iovec_capacity,
@@ -702,8 +697,7 @@ class UnownedEncodedMessage final {
   // Encodes |value| by allocating a backing buffer from |backing_buffer_allocator|.
   UnownedEncodedMessage(fidl::internal::AnyBufferAllocator& backing_buffer_allocator,
                         uint32_t backing_buffer_size, FidlType* value)
-      : UnownedEncodedMessage(::fidl::internal::kLLCPPWireFormatVersion,
-                              ::fidl::internal::IovecBufferSize,
+      : UnownedEncodedMessage(::fidl::internal::kLLCPPWireFormatVersion, Transport::kNumIovecs,
                               backing_buffer_allocator.TryAllocate(backing_buffer_size), value) {}
 
   // Encodes |value| using an existing |backing_buffer|.
@@ -766,7 +760,7 @@ class UnownedEncodedMessage final {
       fidl::internal::ClampedHandleCount<FidlType, fidl::MessageDirection::kSending>();
   std::array<zx_handle_t, kNumHandles> handle_storage_;
   std::array<typename Transport::HandleMetadata, kNumHandles> handle_metadata_storage_;
-  fidl::internal::IovecBuffer iovecs_;
+  zx_channel_iovec_t iovecs_[Transport::kNumIovecs];
   fidl::OutgoingMessage message_;
   fidl::internal::WireFormatVersion wire_format_version_;
 };
@@ -786,12 +780,12 @@ class OwnedEncodedMessage final {
   // Internal constructor.
   explicit OwnedEncodedMessage(::fidl::internal::AllowUnownedInputRef allow_unowned,
                                FidlType* response)
-      : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+      : message_(Transport::kNumIovecs, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), response) {}
   explicit OwnedEncodedMessage(::fidl::internal::AllowUnownedInputRef allow_unowned,
                                fidl::internal::WireFormatVersion wire_format_version,
                                FidlType* response)
-      : message_(wire_format_version, ::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+      : message_(wire_format_version, Transport::kNumIovecs, backing_buffer_.data(),
                  static_cast<uint32_t>(backing_buffer_.size()), response) {}
   OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
   OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;

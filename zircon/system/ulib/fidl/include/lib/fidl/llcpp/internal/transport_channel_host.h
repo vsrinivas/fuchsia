@@ -12,6 +12,8 @@ namespace fidl::internal {
 struct ChannelTransport {
   using HandleMetadata = fidl_channel_handle_metadata_t;
 
+  static constexpr uint32_t kNumIovecs = 16;
+
   static const TransportVTable VTable;
   static const CodingConfig EncodingConfiguration;
 };

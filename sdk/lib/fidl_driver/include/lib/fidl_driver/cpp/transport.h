@@ -50,7 +50,8 @@ struct DriverTransport {
   template <typename FidlMethod>
   using Result = fdf::Result<FidlMethod>;
 
-  static constexpr bool TransportProvidesReadBuffer = true;
+  static constexpr bool kTransportProvidesReadBuffer = true;
+  static constexpr uint32_t kNumIovecs = 1;
 
   static const TransportVTable VTable;
   static const CodingConfig EncodingConfiguration;
