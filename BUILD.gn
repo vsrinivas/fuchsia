@@ -674,6 +674,21 @@ build_api_module("tests") {
   }
 }
 
+# The output location of test-list.json.
+#
+#   Creates a stable build API that users can use to programmatically retrieve
+#   test-list.json without having to hardcode the location of the file.
+#
+# Type: list(string): Each entry will be the location of a test-list.json file.
+build_api_module("test_list_location") {
+  testonly = true
+  data_keys = [ "test_list" ]
+  deps = [
+    # Pull in the actual test-list target.
+    "//:test-list",
+  ]
+}
+
 # test-list.json contains the set of tests in the build along with arbitrary
 # test metadata attached to each test.
 compiled_action("test-list") {
@@ -684,6 +699,10 @@ compiled_action("test-list") {
   inputs = [ "$root_build_dir/tests.json" ]
   outputs = [ "$root_build_dir/test-list.json" ]
   depfile = "$root_build_dir/test-list.json.d"
+
+  metadata = {
+    test_list = [ rebase_path(outputs[0], root_out_dir) ]
+  }
 
   deps = [ ":tests" ]
 
