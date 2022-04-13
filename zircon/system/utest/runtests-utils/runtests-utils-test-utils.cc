@@ -45,7 +45,7 @@ PackagedScriptFile::PackagedScriptFile(const std::string_view path) {
   ZX_ASSERT_MSG(-1 != close(fd), "%s", strerror(errno));
 }
 
-PackagedScriptFile::~PackagedScriptFile() {}
+PackagedScriptFile::~PackagedScriptFile() = default;
 
 std::string_view PackagedScriptFile::path() const { return path_; }
 
@@ -150,16 +150,18 @@ bool GetOutputFileRelPath(std::string_view output_dir, std::string_view test_pat
 
 namespace {
 
+constexpr char kTmp[] = "/tmp";
+
 // This ensures that ScopedTestDir, ScopedTestFile, and ScopedStubFile, which we
 // make heavy use of in these tests, are indeed scoped and tear down without
 // error.
 TEST(TestHelpers, ScopedDirsAndFilesAreIndeedScoped) {
-  // Entering a test case, test_dir.path() should be empty.
-  EXPECT_EQ(0, NumEntriesInDir(kMemFsRoot));
+  const int baseEntries = NumEntriesInDir(kTmp);
 
   {
-    ScopedTestDir dir;
-    EXPECT_EQ(1, NumEntriesInDir(kMemFsRoot));
+    ScopedTestDir dir(kTmp);
+    EXPECT_EQ(1 + baseEntries, NumEntriesInDir(kTmp));
+
     EXPECT_EQ(0, NumEntriesInDir(dir.path()));
     {
       fbl::String file_name1 = JoinPath(dir.path(), "a.sh");
@@ -177,16 +179,16 @@ TEST(TestHelpers, ScopedDirsAndFilesAreIndeedScoped) {
     EXPECT_EQ(0, NumEntriesInDir(dir.path()));
   }
 
-  EXPECT_EQ(0, NumEntriesInDir(kMemFsRoot));
+  EXPECT_EQ(baseEntries, NumEntriesInDir(kTmp));
 
   {
-    ScopedTestDir dir1;
-    ScopedTestDir dir2;
-    ScopedTestDir dir3;
-    EXPECT_EQ(3, NumEntriesInDir(kMemFsRoot));
+    ScopedTestDir dir1(kTmp);
+    ScopedTestDir dir2(kTmp);
+    ScopedTestDir dir3(kTmp);
+    EXPECT_EQ(3 + baseEntries, NumEntriesInDir(kTmp));
   }
 
-  EXPECT_EQ(0, NumEntriesInDir(kMemFsRoot));
+  EXPECT_EQ(baseEntries, NumEntriesInDir(kTmp));
 }
 
 }  // namespace

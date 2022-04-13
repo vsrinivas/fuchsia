@@ -57,20 +57,20 @@ TEST(SetUpForTestComponent, SetUpForTestComponentPath) {
   EXPECT_EQ(component_executor.length(), 0);
 }
 
-static fbl::String PublishDataHelperDir() {
-  return JoinPath(packaged_script_dir(), "publish-data");
-}
+fbl::String PublishDataHelperDir() { return JoinPath(packaged_script_dir(), "publish-data"); }
 
-static fbl::String PublishDataHelperBin() {
+fbl::String PublishDataHelperBin() {
   return JoinPath(PublishDataHelperDir(), "publish-data-helper");
 }
 
-static fbl::String ProfileHelperDir() { return JoinPath(packaged_script_dir(), "profile"); }
+fbl::String ProfileHelperDir() { return JoinPath(packaged_script_dir(), "profile"); }
 
-static fbl::String ProfileHelperBin() { return JoinPath(ProfileHelperDir(), "profile-helper"); }
+fbl::String ProfileHelperBin() { return JoinPath(ProfileHelperDir(), "profile-helper"); }
+
+constexpr char kTmp[] = "/tmp";
 
 TEST(RunTests, RunTestDontPublishData) {
-  ScopedTestDir test_dir;
+  ScopedTestDir test_dir(kTmp);
   fbl::String test_name = PublishDataHelperBin();
 
   const char* argv[] = {test_name.c_str(), nullptr};
@@ -82,7 +82,7 @@ TEST(RunTests, RunTestDontPublishData) {
 }
 
 TEST(RunTests, RunTestPublishData) {
-  ScopedTestDir test_dir;
+  ScopedTestDir test_dir(kTmp);
   fbl::String test_name = PublishDataHelperBin();
 
   const char* argv[] = {test_name.c_str(), nullptr};
@@ -96,7 +96,7 @@ TEST(RunTests, RunTestPublishData) {
 }
 
 TEST(RunTests, RunTestsPublishData) {
-  ScopedTestDir test_dir;
+  ScopedTestDir test_dir(kTmp);
   fbl::String test_name = PublishDataHelperBin();
   int num_failed = 0;
   fbl::Vector<std::unique_ptr<Result>> results;
@@ -109,7 +109,7 @@ TEST(RunTests, RunTestsPublishData) {
 }
 
 TEST(RunTests, RunDuplicateTestsPublishData) {
-  ScopedTestDir test_dir;
+  ScopedTestDir test_dir(kTmp);
   fbl::String test_name = PublishDataHelperBin();
   int num_failed = 0;
   fbl::Vector<std::unique_ptr<Result>> results;
@@ -125,7 +125,7 @@ TEST(RunTests, RunDuplicateTestsPublishData) {
 }
 
 TEST(RunTests, RunAllTestsPublishData) {
-  ScopedTestDir test_dir;
+  ScopedTestDir test_dir(kTmp);
   fbl::String test_containing_dir = PublishDataHelperDir();
   fbl::String test_name = PublishDataHelperBin();
 
@@ -174,7 +174,7 @@ TEST(RunTests, RunAllTestsPublishData) {
 }
 
 TEST(RunTests, RunProfileMergeData) {
-  ScopedTestDir test_dir;
+  ScopedTestDir test_dir(kTmp);
   fbl::String test_name = ProfileHelperBin();
   int num_failed = 0;
   fbl::Vector<std::unique_ptr<Result>> results;
@@ -206,7 +206,7 @@ TEST(RunTests, RunTestRootDir) {
   PackagedScriptFile test_script("test-root-dir.sh");
   fbl::String test_name = test_script.path();
   const char* argv[] = {test_name.c_str(), nullptr};
-  ScopedTestDir test_dir;
+  ScopedTestDir test_dir(kTmp);
 
   // This test should have gotten TEST_ROOT_DIR. Confirm that we can find our
   // artifact in the "testdata/" directory under TEST_ROOT_DIR.

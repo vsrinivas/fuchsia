@@ -5,9 +5,6 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/memfs/memfs.h>
 #include <libgen.h>
 #include <limits.h>
 #include <stdio.h>
@@ -29,7 +26,7 @@
 namespace runtests {
 namespace {
 
-static constexpr size_t kOneMegabyte = 1 << 20;
+constexpr size_t kOneMegabyte = 1 << 20;
 
 TEST(ParseTestNames, ParseTestNamesEmptyStr) {
   fbl::String input("");
@@ -86,8 +83,11 @@ TEST(MkDirAll, MkDirAllTooLong) {
   too_long[PATH_MAX + 1] = '\0';
   EXPECT_EQ(ENAMETOOLONG, MkDirAll(too_long));
 }
+
+constexpr char kTmp[] = "/tmp";
+
 TEST(MkDirAll, MkDirAllAlreadyExists) {
-  ScopedTestDir test_dir;
+  ScopedTestDir test_dir(kTmp);
   const fbl::String already = JoinPath(test_dir.path(), "already");
   const fbl::String exists = JoinPath(already, "exists");
   ASSERT_EQ(0, mkdir(already.c_str(), 0755));
@@ -95,7 +95,7 @@ TEST(MkDirAll, MkDirAllAlreadyExists) {
   EXPECT_EQ(0, MkDirAll(exists));
 }
 TEST(MkDirAll, MkDirAllParentAlreadyExists) {
-  ScopedTestDir test_dir;
+  ScopedTestDir test_dir(kTmp);
   const fbl::String parent = JoinPath(test_dir.path(), "existing-parent");
   const fbl::String child = JoinPath(parent, "child");
   ASSERT_EQ(0, mkdir(parent.c_str(), 0755));
@@ -104,7 +104,7 @@ TEST(MkDirAll, MkDirAllParentAlreadyExists) {
   EXPECT_EQ(0, stat(child.c_str(), &s));
 }
 TEST(MkDirAll, MkDirAllParentDoesNotExist) {
-  ScopedTestDir test_dir;
+  ScopedTestDir test_dir(kTmp);
   const fbl::String parent = JoinPath(test_dir.path(), "not-existing-parent");
   const fbl::String child = JoinPath(parent, "child");
   struct stat s;
@@ -176,7 +176,7 @@ TEST(WriteSummaryJSON, WriteSummaryJSONSucceedsWithoutSyslogPath) {
 }
 
 TEST(ResolveGlobs, ResolveGlobsNoMatches) {
-  ScopedTestDir test_dir;
+  ScopedTestDir test_dir(kTmp);
   fbl::Vector<fbl::String> resolved;
   fbl::String test_fs_glob = JoinPath(test_dir.path(), "bar*");
   const fbl::Vector<fbl::String> globs = {"/foo/bar/*", test_fs_glob};
@@ -185,7 +185,7 @@ TEST(ResolveGlobs, ResolveGlobsNoMatches) {
 }
 
 TEST(ResolveGlobs, ResolveGlobsMultipleMatches) {
-  ScopedTestDir test_dir;
+  ScopedTestDir test_dir(kTmp);
   fbl::String existing_dir_path = JoinPath(test_dir.path(), "existing-dir/prefix-suffix");
   fbl::String existing_file_path = JoinPath(test_dir.path(), "existing-file");
   fbl::String existing_dir_glob = JoinPath(test_dir.path(), "existing-dir/prefix*");
@@ -234,7 +234,7 @@ TEST(RunTest, RunTestTimeout) {
 }
 
 TEST(RunTest, RunTestFailure) {
-  ScopedTestDir test_dir;
+  ScopedTestDir test_dir(kTmp);
   PackagedScriptFile script_file("expect-this-failure.sh");
   fbl::String test_name = script_file.path();
   const char* argv[] = {test_name.c_str(), nullptr};
@@ -255,7 +255,7 @@ TEST(RunTest, RunTestFailureToLoadFile) {
 }
 
 TEST(DiscoverTestsInDirGlobs, DiscoverTestsInDirGlobsBasic) {
-  ScopedTestDir test_dir;
+  ScopedTestDir test_dir(kTmp);
 
   const fbl::String a_file_name = JoinPath(test_dir.path(), "a.sh");
   const fbl::String b_file_name = JoinPath(test_dir.path(), "b.sh");
@@ -281,7 +281,7 @@ TEST(DiscoverTestsInDirGlobs, DiscoverTestsInDirGlobsBasic) {
 }
 
 TEST(DiscoverTestsInDirGlobs, DiscoverTestsInDirGlobsFilter) {
-  ScopedTestDir test_dir;
+  ScopedTestDir test_dir(kTmp);
   const char kHopefullyUniqueFileBasename[] = "e829cea9919fe045ca199945db7ac99a";
   const fbl::String unique_file_name = JoinPath(test_dir.path(), kHopefullyUniqueFileBasename);
   ScopedStubFile unique_file(unique_file_name);
@@ -291,14 +291,14 @@ TEST(DiscoverTestsInDirGlobs, DiscoverTestsInDirGlobsFilter) {
   ScopedStubFile fail_file(other_file_name);
 
   fbl::Vector<fbl::String> discovered_paths;
-  EXPECT_EQ(0, DiscoverTestsInDirGlobs({JoinPath(kMemFsRoot, "*")}, nullptr,
+  EXPECT_EQ(0, DiscoverTestsInDirGlobs({JoinPath(kTmp, "*")}, nullptr,
                                        {kHopefullyUniqueFileBasename}, &discovered_paths));
   EXPECT_EQ(1, discovered_paths.size());
   EXPECT_STREQ(unique_file_name.c_str(), discovered_paths[0].c_str());
 }
 
 TEST(DiscoverTestsInDirGlobs, DiscoverTestsInDirGlobsIgnore) {
-  ScopedTestDir test_dir_a, test_dir_b;
+  ScopedTestDir test_dir_a(kTmp), test_dir_b(kTmp);
   const fbl::String a_name = JoinPath(test_dir_a.path(), "foo.sh");
   ScopedStubFile a_file(a_name);
   const fbl::String b_name = JoinPath(test_dir_b.path(), "foo.sh");
@@ -311,7 +311,7 @@ TEST(DiscoverTestsInDirGlobs, DiscoverTestsInDirGlobsIgnore) {
 }
 
 TEST(RunTests, RunTestsWithArguments) {
-  ScopedTestDir test_dir;
+  ScopedTestDir test_dir(kTmp);
   PackagedScriptFile succeed_script("succeed-with-echo.sh");
   const fbl::String succeed_file_name = succeed_script.path();
   int num_failed = 0;
@@ -346,7 +346,7 @@ TEST(DiscoverAndRunTests, DiscoverAndRunTestsBasicFail) {
 }
 
 TEST(DiscoverAndRunTests, DiscoverAndRunTestsFailsWithNoTestOrDefaultDirs) {
-  ScopedTestDir test_dir;
+  ScopedTestDir test_dir(kTmp);
   const fbl::String succeed_file_name = JoinPath(test_dir.path(), "succeed.sh");
   ScopedStubFile succeed_file(succeed_file_name);
   const char* const argv[] = {"./runtests"};
@@ -384,7 +384,7 @@ TEST(DiscoverAndRunTests, DiscoverAndRunTestsWithOutput) {
   fbl::String all_scripts_dir = packaged_script_dir();
   fbl::String script_dir = JoinPath(all_scripts_dir, "testwithoutput");
 
-  ScopedTestDir test_dir;
+  ScopedTestDir test_dir(kTmp);
 
   const fbl::String succeed_file_name = JoinPath(script_dir, "test-with-output-succeed.sh");
   const fbl::String fail_file_name = JoinPath(script_dir, "test-with-output-fail.sh");
@@ -445,7 +445,7 @@ TEST(DiscoverAndRunTests, DiscoverAndRunTestsWithSyslogOutput) {
   fbl::String all_scripts_dir = packaged_script_dir();
   fbl::String script_dir = JoinPath(all_scripts_dir, "testwithoutput");
 
-  ScopedTestDir test_dir;
+  ScopedTestDir test_dir(kTmp);
   const fbl::String succeed_file_name = JoinPath(script_dir, "test-with-output-succeed.sh");
   const fbl::String fail_file_name = JoinPath(script_dir, "test-with-output-fail.sh");
   const fbl::String output_dir = JoinPath(test_dir.path(), "run-all-tests-output-2");
@@ -487,28 +487,3 @@ TEST(DiscoverAndRunTests, DiscoverAndRunTestsWithSyslogOutput) {
 }
 }  // namespace
 }  // namespace runtests
-
-int main(int argc, char** argv) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  if (zx_status_t status = loop.StartThread(); status != ZX_OK) {
-    fprintf(stderr, "Error: Cannot initialize local memfs loop: %s\n",
-            zx_status_get_string(status));
-    return -1;
-  }
-
-  memfs_filesystem_t* fs;
-  if (zx_status_t status = memfs_install_at(loop.dispatcher(), runtests::kMemFsRoot, &fs);
-      status != ZX_OK) {
-    fprintf(stderr, "Error: Cannot install local memfs: %s\n", zx_status_get_string(status));
-    return -1;
-  }
-
-  const int result = zxtest::RunAllTests(argc, argv);
-
-  sync_completion_t unmounted;
-  memfs_free_filesystem(fs, &unmounted);
-  sync_completion_wait(&unmounted, zx::duration::infinite().get());
-
-  loop.Shutdown();
-  return result;
-}

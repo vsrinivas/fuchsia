@@ -24,8 +24,6 @@
 #include <zxtest/zxtest.h>
 
 namespace runtests {
-// Root directory of memfs installed for duration of test.
-static constexpr char kMemFsRoot[] = "/test-memfs";
 
 static constexpr char kExpectedJSONOutputPrefix[] = "{\n  \"tests\": [\n";
 // We don't want to count the null terminator.
@@ -37,7 +35,7 @@ fbl::String packaged_script_dir();
 // target directory.
 class PackagedScriptFile {
  public:
-  PackagedScriptFile(const std::string_view path);
+  explicit PackagedScriptFile(std::string_view path);
   ~PackagedScriptFile();
   std::string_view path() const;
 
@@ -48,7 +46,7 @@ class PackagedScriptFile {
 // Creates an empty file and deletes it in its destructor.
 class ScopedStubFile {
  public:
-  ScopedStubFile(const std::string_view path);
+  explicit ScopedStubFile(std::string_view path);
   ~ScopedStubFile();
 
  private:
@@ -59,9 +57,10 @@ class ScopedStubFile {
 // in its destructor.
 class ScopedTestFile {
  public:
-  // |path| is the path of the file to be created. Should start with kMemFsPath.
+  // |path| is the path of the file to be created.
+  //
   // |contents| are the script contents. Shebang line will be added automatically.
-  ScopedTestFile(const std::string_view path, const std::string_view file);
+  ScopedTestFile(std::string_view path, std::string_view file);
   ~ScopedTestFile();
   std::string_view path() const;
 
@@ -69,11 +68,12 @@ class ScopedTestFile {
   const std::string_view path_;
 };
 
-// Creates a subdirectory of kMemFsRoot in its constructor and deletes it in
+// Creates a subdirectory of |parent| in its constructor and deletes it in
 // its destructor.
 class ScopedTestDir {
  public:
-  ScopedTestDir() : basename_(NextBasename()), path_(JoinPath(kMemFsRoot, basename_)) {
+  explicit ScopedTestDir(const char* parent)
+      : basename_(NextBasename()), path_(JoinPath(parent, basename_)) {
     if (mkdir(path_.c_str(), 0755)) {
       printf("FAILURE: mkdir failed to open %s: %s\n", path_.c_str(), strerror(errno));
       exit(1);
@@ -84,7 +84,7 @@ class ScopedTestDir {
   const char* path() { return path_.c_str(); }
 
  private:
-  fbl::String NextBasename() {
+  static fbl::String NextBasename() {
     // More than big enough to print INT_MAX.
     char buf[64];
     sprintf(buf, "%d", num_test_dirs_created_++);
@@ -121,7 +121,7 @@ class ScopedTestDir {
   const fbl::String basename_;
   const fbl::String path_;
 
-  // Used to generate unique subdirectories of kMemFsRoot.
+  // Used to generate unique subdirectories of |parent|.
   static int num_test_dirs_created_;
 };
 

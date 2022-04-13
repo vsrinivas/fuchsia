@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/logger/c/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
 #include <lib/fidl/txn_header.h>
 
 #include <utility>
