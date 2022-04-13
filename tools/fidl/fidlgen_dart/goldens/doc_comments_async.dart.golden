@@ -442,6 +442,14 @@ class Struct extends $fidl.Struct {
           field: field ?? $orig.field,
         );
 
+  Struct $cloneWith({
+    int? field,
+  }) {
+    return Struct(
+      field: field ?? this.field,
+    );
+  }
+
   /// struct member comment #1
   ///
   /// struct member comment #3

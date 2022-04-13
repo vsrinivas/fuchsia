@@ -50,6 +50,14 @@ class Payload extends $fidl.Struct {
           value: value ?? $orig.value,
         );
 
+  Payload $cloneWith({
+    int? value,
+  }) {
+    return Payload(
+      value: value ?? this.value,
+    );
+  }
+
   final int value;
 
   @override

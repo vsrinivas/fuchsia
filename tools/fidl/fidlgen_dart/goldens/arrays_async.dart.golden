@@ -198,6 +198,14 @@ class StructLargeArray extends $fidl.Struct {
           a: a ?? $orig.a,
         );
 
+  StructLargeArray $cloneWith({
+    Uint32List? a,
+  }) {
+    return StructLargeArray(
+      a: a ?? this.a,
+    );
+  }
+
   final Uint32List a;
 
   @override
@@ -257,6 +265,14 @@ class StructSmallArray extends $fidl.Struct {
   }) : this(
           a: a ?? $orig.a,
         );
+
+  StructSmallArray $cloneWith({
+    Uint32List? a,
+  }) {
+    return StructSmallArray(
+      a: a ?? this.a,
+    );
+  }
 
   final Uint32List a;
 

@@ -51,6 +51,14 @@ class DocCommentWithQuotes extends $fidl.Struct {
           reserved: reserved ?? $orig.reserved,
         );
 
+  DocCommentWithQuotes $cloneWith({
+    int? reserved,
+  }) {
+    return DocCommentWithQuotes(
+      reserved: reserved ?? this.reserved,
+    );
+  }
+
   final int reserved;
 
   @override

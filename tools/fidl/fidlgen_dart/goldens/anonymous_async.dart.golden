@@ -534,6 +534,20 @@ class OverrideTest extends $fidl.Struct {
           right: right ? null : $orig.right,
         );
 
+  OverrideTest $cloneWith({
+    Op? op,
+    $fidl.OptionalNullable<Expression?> left =
+        const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<Expression?> right =
+        const $fidl.OptionalNullable.undefined(),
+  }) {
+    return OverrideTest(
+      op: op ?? this.op,
+      left: left.or(this.left),
+      right: right.or(this.right),
+    );
+  }
+
   final Op op;
   final Expression? left;
   final Expression? right;
@@ -609,6 +623,14 @@ class SomeProtocolSomeMethodResponse extends $fidl.Struct {
           bitsMember: bitsMember ?? $orig.bitsMember,
         );
 
+  SomeProtocolSomeMethodResponse $cloneWith({
+    BitsMember? bitsMember,
+  }) {
+    return SomeProtocolSomeMethodResponse(
+      bitsMember: bitsMember ?? this.bitsMember,
+    );
+  }
+
   final BitsMember bitsMember;
 
   @override
@@ -668,6 +690,14 @@ class TableData extends $fidl.Struct {
   }) : this(
           data: data ?? $orig.data,
         );
+
+  TableData $cloneWith({
+    int? data,
+  }) {
+    return TableData(
+      data: data ?? this.data,
+    );
+  }
 
   final int data;
 

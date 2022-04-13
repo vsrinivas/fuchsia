@@ -1979,6 +1979,14 @@ class Empty extends $fidl.Struct {
           reserved: reserved ?? $orig.reserved,
         );
 
+  Empty $cloneWith({
+    int? reserved,
+  }) {
+    return Empty(
+      reserved: reserved ?? this.reserved,
+    );
+  }
+
   final int reserved;
 
   @override
@@ -2043,6 +2051,15 @@ class NullableUnionStruct extends $fidl.Struct {
           theUnion: theUnion ? null : $orig.theUnion,
         );
 
+  NullableUnionStruct $cloneWith({
+    $fidl.OptionalNullable<Union?> theUnion =
+        const $fidl.OptionalNullable.undefined(),
+  }) {
+    return NullableUnionStruct(
+      theUnion: theUnion.or(this.theUnion),
+    );
+  }
+
   final Union? theUnion;
 
   @override
@@ -2102,6 +2119,14 @@ class Pasta extends $fidl.Struct {
           sauce: sauce ?? $orig.sauce,
         );
 
+  Pasta $cloneWith({
+    String? sauce,
+  }) {
+    return Pasta(
+      sauce: sauce ?? this.sauce,
+    );
+  }
+
   final String sauce;
 
   @override
@@ -2154,6 +2179,14 @@ class Pizza extends $fidl.Struct {
   }) : this(
           toppings: toppings ?? $orig.toppings,
         );
+
+  Pizza $cloneWith({
+    List<String>? toppings,
+  }) {
+    return Pizza(
+      toppings: toppings ?? this.toppings,
+    );
+  }
 
   final List<String> toppings;
 
@@ -2219,6 +2252,15 @@ class StructWithNullableXUnion extends $fidl.Struct {
           x1: x1 ? null : $orig.x1,
         );
 
+  StructWithNullableXUnion $cloneWith({
+    $fidl.OptionalNullable<OlderSimpleUnion?> x1 =
+        const $fidl.OptionalNullable.undefined(),
+  }) {
+    return StructWithNullableXUnion(
+      x1: x1.or(this.x1),
+    );
+  }
+
   final OlderSimpleUnion? x1;
 
   @override
@@ -2283,6 +2325,18 @@ class UnionSandwich extends $fidl.Struct {
           u: u ?? $orig.u,
           b: b ?? $orig.b,
         );
+
+  UnionSandwich $cloneWith({
+    int? a,
+    ExplicitXUnion? u,
+    int? b,
+  }) {
+    return UnionSandwich(
+      a: a ?? this.a,
+      u: u ?? this.u,
+      b: b ?? this.b,
+    );
+  }
 
   final int a;
   final ExplicitXUnion u;

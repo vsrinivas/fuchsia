@@ -51,6 +51,14 @@ class Foo extends $fidl.Struct {
           field: field ?? $orig.field,
         );
 
+  Foo $cloneWith({
+    lib$test_dependent.MyEnum? field,
+  }) {
+    return Foo(
+      field: field ?? this.field,
+    );
+  }
+
   final lib$test_dependent.MyEnum field;
 
   @override

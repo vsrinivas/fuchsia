@@ -13,7 +13,7 @@ import 'package:test/test.dart';
 
 void main() {
   print('clone-test');
-  group('clone struct', () {
+  group('clone and cloneWithout struct', () {
     test('exact', () {
       final s1 = ExampleStruct(foo: 'test', bar: 42);
       final s2 = ExampleStruct.clone(s1);
@@ -44,7 +44,38 @@ void main() {
     });
   });
 
-  group('clone table', () {
+  group('struct cloneWith', () {
+    test('exact', () {
+      final s1 = ExampleStruct(foo: 'test', bar: 42);
+      final s2 = s1.$cloneWith();
+      expect(s2.foo, equals('test'));
+      expect(s2.bar, equals(42));
+      expect(s2.baz, equals(null));
+    });
+    test('modify field', () {
+      final s1 = ExampleStruct(foo: 'test', bar: 42);
+      final s2 = s1.$cloneWith(foo: 'hello');
+      expect(s2.foo, equals('hello'));
+      expect(s2.bar, equals(42));
+      expect(s2.baz, equals(null));
+    });
+    test('set field', () {
+      final s1 = ExampleStruct(foo: 'test', bar: 42);
+      final s2 = s1.$cloneWith(baz: Some(Uint8List(10)));
+      expect(s2.foo, equals('test'));
+      expect(s2.bar, equals(42));
+      expect(s2.baz?.length, equals(10));
+    });
+    test('unset field', () {
+      final s1 = ExampleStruct(foo: 'test', bar: 42, baz: Uint8List(10));
+      final s2 = s1.$cloneWith(baz: None());
+      expect(s2.foo, equals('test'));
+      expect(s2.bar, equals(42));
+      expect(s2.baz, equals(null));
+    });
+  });
+
+  group('table cloneWith()', () {
     test('exact', () {
       final t1 = ExampleTable(foo: 'foo', bar: 3);
       final t2 = t1.$cloneWith();

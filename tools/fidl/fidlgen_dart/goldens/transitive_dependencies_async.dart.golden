@@ -51,6 +51,14 @@ class Baz extends $fidl.Struct {
           g: g ?? $orig.g,
         );
 
+  Baz $cloneWith({
+    lib$test_middle.Bar? g,
+  }) {
+    return Baz(
+      g: g ?? this.g,
+    );
+  }
+
   final lib$test_middle.Bar g;
 
   @override

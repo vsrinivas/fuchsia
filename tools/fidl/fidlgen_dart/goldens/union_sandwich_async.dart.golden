@@ -352,6 +352,18 @@ class SandwichUnionSize12Alignment4 extends $fidl.Struct {
           after: after ?? $orig.after,
         );
 
+  SandwichUnionSize12Alignment4 $cloneWith({
+    int? before,
+    UnionSize12Alignment4? union,
+    int? after,
+  }) {
+    return SandwichUnionSize12Alignment4(
+      before: before ?? this.before,
+      union: union ?? this.union,
+      after: after ?? this.after,
+    );
+  }
+
   final int before;
   final UnionSize12Alignment4 union;
   final int after;
@@ -436,6 +448,18 @@ class SandwichUnionSize24Alignment8 extends $fidl.Struct {
           union: union ?? $orig.union,
           after: after ?? $orig.after,
         );
+
+  SandwichUnionSize24Alignment8 $cloneWith({
+    int? before,
+    UnionSize24Alignment8? union,
+    int? after,
+  }) {
+    return SandwichUnionSize24Alignment8(
+      before: before ?? this.before,
+      union: union ?? this.union,
+      after: after ?? this.after,
+    );
+  }
 
   final int before;
   final UnionSize24Alignment8 union;
@@ -522,6 +546,18 @@ class SandwichUnionSize36Alignment4 extends $fidl.Struct {
           after: after ?? $orig.after,
         );
 
+  SandwichUnionSize36Alignment4 $cloneWith({
+    int? before,
+    UnionSize36Alignment4? union,
+    int? after,
+  }) {
+    return SandwichUnionSize36Alignment4(
+      before: before ?? this.before,
+      union: union ?? this.union,
+      after: after ?? this.after,
+    );
+  }
+
   final int before;
   final UnionSize36Alignment4 union;
   final int after;
@@ -607,6 +643,18 @@ class SandwichUnionSize8Alignment4 extends $fidl.Struct {
           after: after ?? $orig.after,
         );
 
+  SandwichUnionSize8Alignment4 $cloneWith({
+    int? before,
+    UnionSize8Alignment4? union,
+    int? after,
+  }) {
+    return SandwichUnionSize8Alignment4(
+      before: before ?? this.before,
+      union: union ?? this.union,
+      after: after ?? this.after,
+    );
+  }
+
   final int before;
   final UnionSize8Alignment4 union;
   final int after;
@@ -688,6 +736,16 @@ class StructSize16Alignment8 extends $fidl.Struct {
           f1: f1 ?? $orig.f1,
           f2: f2 ?? $orig.f2,
         );
+
+  StructSize16Alignment8 $cloneWith({
+    int? f1,
+    int? f2,
+  }) {
+    return StructSize16Alignment8(
+      f1: f1 ?? this.f1,
+      f2: f2 ?? this.f2,
+    );
+  }
 
   final int f1;
   final int f2;

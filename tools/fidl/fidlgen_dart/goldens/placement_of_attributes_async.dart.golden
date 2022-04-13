@@ -288,6 +288,14 @@ class ExampleStruct extends $fidl.Struct {
           member: member ?? $orig.member,
         );
 
+  ExampleStruct $cloneWith({
+    int? member,
+  }) {
+    return ExampleStruct(
+      member: member ?? this.member,
+    );
+  }
+
   final int member;
 
   @override

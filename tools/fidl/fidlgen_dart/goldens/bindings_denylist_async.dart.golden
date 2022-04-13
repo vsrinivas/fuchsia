@@ -559,6 +559,14 @@ class DenyEachBindingOnlyDenyCppResponse extends $fidl.Struct {
           b: b ?? $orig.b,
         );
 
+  DenyEachBindingOnlyDenyCppResponse $cloneWith({
+    int? b,
+  }) {
+    return DenyEachBindingOnlyDenyCppResponse(
+      b: b ?? this.b,
+    );
+  }
+
   final int b;
 
   @override
@@ -618,6 +626,14 @@ class DenyEachBindingOnlyDenyGoResponse extends $fidl.Struct {
   }) : this(
           b: b ?? $orig.b,
         );
+
+  DenyEachBindingOnlyDenyGoResponse $cloneWith({
+    int? b,
+  }) {
+    return DenyEachBindingOnlyDenyGoResponse(
+      b: b ?? this.b,
+    );
+  }
 
   final int b;
 
@@ -679,6 +695,14 @@ class DenyEachBindingOnlyDenyLibfuzzerResponse extends $fidl.Struct {
           b: b ?? $orig.b,
         );
 
+  DenyEachBindingOnlyDenyLibfuzzerResponse $cloneWith({
+    int? b,
+  }) {
+    return DenyEachBindingOnlyDenyLibfuzzerResponse(
+      b: b ?? this.b,
+    );
+  }
+
   final int b;
 
   @override
@@ -738,6 +762,14 @@ class DenyEachBindingOnlyDenyRustResponse extends $fidl.Struct {
   }) : this(
           b: b ?? $orig.b,
         );
+
+  DenyEachBindingOnlyDenyRustResponse $cloneWith({
+    int? b,
+  }) {
+    return DenyEachBindingOnlyDenyRustResponse(
+      b: b ?? this.b,
+    );
+  }
 
   final int b;
 
@@ -799,6 +831,14 @@ class DenyEachBindingOnlyDenySyzkallerResponse extends $fidl.Struct {
           b: b ?? $orig.b,
         );
 
+  DenyEachBindingOnlyDenySyzkallerResponse $cloneWith({
+    int? b,
+  }) {
+    return DenyEachBindingOnlyDenySyzkallerResponse(
+      b: b ?? this.b,
+    );
+  }
+
   final int b;
 
   @override
@@ -858,6 +898,14 @@ class MemberOnlyAppearsInImportingLibrary extends $fidl.Struct {
   }) : this(
           a: a ?? $orig.a,
         );
+
+  MemberOnlyAppearsInImportingLibrary $cloneWith({
+    bool? a,
+  }) {
+    return MemberOnlyAppearsInImportingLibrary(
+      a: a ?? this.a,
+    );
+  }
 
   final bool a;
 
@@ -920,6 +968,16 @@ class OnlyAppearsInImportingLibrary extends $fidl.Struct {
               memberOnlyAppearsInImportingLibrary ??
                   $orig.memberOnlyAppearsInImportingLibrary,
         );
+
+  OnlyAppearsInImportingLibrary $cloneWith({
+    MemberOnlyAppearsInImportingLibrary? memberOnlyAppearsInImportingLibrary,
+  }) {
+    return OnlyAppearsInImportingLibrary(
+      memberOnlyAppearsInImportingLibrary:
+          memberOnlyAppearsInImportingLibrary ??
+              this.memberOnlyAppearsInImportingLibrary,
+    );
+  }
 
   final MemberOnlyAppearsInImportingLibrary memberOnlyAppearsInImportingLibrary;
 

@@ -53,6 +53,16 @@ class Padding1ByteEnd extends $fidl.Struct {
           b: b ?? $orig.b,
         );
 
+  Padding1ByteEnd $cloneWith({
+    int? a,
+    int? b,
+  }) {
+    return Padding1ByteEnd(
+      a: a ?? this.a,
+      b: b ?? this.b,
+    );
+  }
+
   final int a;
   final int b;
 
@@ -123,6 +133,16 @@ class Padding1ByteMiddle extends $fidl.Struct {
           a: a ?? $orig.a,
           b: b ?? $orig.b,
         );
+
+  Padding1ByteMiddle $cloneWith({
+    int? a,
+    int? b,
+  }) {
+    return Padding1ByteMiddle(
+      a: a ?? this.a,
+      b: b ?? this.b,
+    );
+  }
 
   final int a;
   final int b;
@@ -197,6 +217,18 @@ class Padding2ByteAlignmentLength6 extends $fidl.Struct {
           b: b ?? $orig.b,
           c: c ?? $orig.c,
         );
+
+  Padding2ByteAlignmentLength6 $cloneWith({
+    int? a,
+    int? b,
+    int? c,
+  }) {
+    return Padding2ByteAlignmentLength6(
+      a: a ?? this.a,
+      b: b ?? this.b,
+      c: c ?? this.c,
+    );
+  }
 
   final int a;
   final int b;
@@ -280,6 +312,16 @@ class Padding2ByteEnd extends $fidl.Struct {
           b: b ?? $orig.b,
         );
 
+  Padding2ByteEnd $cloneWith({
+    int? a,
+    int? b,
+  }) {
+    return Padding2ByteEnd(
+      a: a ?? this.a,
+      b: b ?? this.b,
+    );
+  }
+
   final int a;
   final int b;
 
@@ -350,6 +392,16 @@ class Padding2ByteMiddle extends $fidl.Struct {
           a: a ?? $orig.a,
           b: b ?? $orig.b,
         );
+
+  Padding2ByteMiddle $cloneWith({
+    int? a,
+    int? b,
+  }) {
+    return Padding2ByteMiddle(
+      a: a ?? this.a,
+      b: b ?? this.b,
+    );
+  }
 
   final int a;
   final int b;
@@ -422,6 +474,16 @@ class Padding3ByteEnd extends $fidl.Struct {
           b: b ?? $orig.b,
         );
 
+  Padding3ByteEnd $cloneWith({
+    int? a,
+    int? b,
+  }) {
+    return Padding3ByteEnd(
+      a: a ?? this.a,
+      b: b ?? this.b,
+    );
+  }
+
   final int a;
   final int b;
 
@@ -492,6 +554,16 @@ class Padding3ByteMiddle extends $fidl.Struct {
           a: a ?? $orig.a,
           b: b ?? $orig.b,
         );
+
+  Padding3ByteMiddle $cloneWith({
+    int? a,
+    int? b,
+  }) {
+    return Padding3ByteMiddle(
+      a: a ?? this.a,
+      b: b ?? this.b,
+    );
+  }
 
   final int a;
   final int b;
@@ -569,6 +641,20 @@ class Padding4ByteAlignmentLength12 extends $fidl.Struct {
           c: c ?? $orig.c,
           d: d ?? $orig.d,
         );
+
+  Padding4ByteAlignmentLength12 $cloneWith({
+    int? a,
+    int? b,
+    int? c,
+    int? d,
+  }) {
+    return Padding4ByteAlignmentLength12(
+      a: a ?? this.a,
+      b: b ?? this.b,
+      c: c ?? this.c,
+      d: d ?? this.d,
+    );
+  }
 
   final int a;
   final int b;
@@ -659,6 +745,16 @@ class Padding4ByteEnd extends $fidl.Struct {
           b: b ?? $orig.b,
         );
 
+  Padding4ByteEnd $cloneWith({
+    int? a,
+    int? b,
+  }) {
+    return Padding4ByteEnd(
+      a: a ?? this.a,
+      b: b ?? this.b,
+    );
+  }
+
   final int a;
   final int b;
 
@@ -729,6 +825,16 @@ class Padding4ByteMiddle extends $fidl.Struct {
           a: a ?? $orig.a,
           b: b ?? $orig.b,
         );
+
+  Padding4ByteMiddle $cloneWith({
+    int? a,
+    int? b,
+  }) {
+    return Padding4ByteMiddle(
+      a: a ?? this.a,
+      b: b ?? this.b,
+    );
+  }
 
   final int a;
   final int b;
@@ -803,6 +909,18 @@ class Padding5ByteEnd extends $fidl.Struct {
           b: b ?? $orig.b,
           c: c ?? $orig.c,
         );
+
+  Padding5ByteEnd $cloneWith({
+    int? a,
+    int? b,
+    int? c,
+  }) {
+    return Padding5ByteEnd(
+      a: a ?? this.a,
+      b: b ?? this.b,
+      c: c ?? this.c,
+    );
+  }
 
   final int a;
   final int b;
@@ -885,6 +1003,18 @@ class Padding5ByteMiddle extends $fidl.Struct {
           c: c ?? $orig.c,
         );
 
+  Padding5ByteMiddle $cloneWith({
+    int? a,
+    int? b,
+    int? c,
+  }) {
+    return Padding5ByteMiddle(
+      a: a ?? this.a,
+      b: b ?? this.b,
+      c: c ?? this.c,
+    );
+  }
+
   final int a;
   final int b;
   final int c;
@@ -963,6 +1093,16 @@ class Padding6ByteEnd extends $fidl.Struct {
           b: b ?? $orig.b,
         );
 
+  Padding6ByteEnd $cloneWith({
+    int? a,
+    int? b,
+  }) {
+    return Padding6ByteEnd(
+      a: a ?? this.a,
+      b: b ?? this.b,
+    );
+  }
+
   final int a;
   final int b;
 
@@ -1033,6 +1173,16 @@ class Padding6ByteMiddle extends $fidl.Struct {
           a: a ?? $orig.a,
           b: b ?? $orig.b,
         );
+
+  Padding6ByteMiddle $cloneWith({
+    int? a,
+    int? b,
+  }) {
+    return Padding6ByteMiddle(
+      a: a ?? this.a,
+      b: b ?? this.b,
+    );
+  }
 
   final int a;
   final int b;
@@ -1105,6 +1255,16 @@ class Padding7ByteEnd extends $fidl.Struct {
           b: b ?? $orig.b,
         );
 
+  Padding7ByteEnd $cloneWith({
+    int? a,
+    int? b,
+  }) {
+    return Padding7ByteEnd(
+      a: a ?? this.a,
+      b: b ?? this.b,
+    );
+  }
+
   final int a;
   final int b;
 
@@ -1175,6 +1335,16 @@ class Padding7ByteMiddle extends $fidl.Struct {
           a: a ?? $orig.a,
           b: b ?? $orig.b,
         );
+
+  Padding7ByteMiddle $cloneWith({
+    int? a,
+    int? b,
+  }) {
+    return Padding7ByteMiddle(
+      a: a ?? this.a,
+      b: b ?? this.b,
+    );
+  }
 
   final int a;
   final int b;

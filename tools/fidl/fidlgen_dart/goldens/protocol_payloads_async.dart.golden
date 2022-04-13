@@ -615,6 +615,16 @@ class LocalStructPayload extends $fidl.Struct {
           b: b ?? $orig.b,
         );
 
+  LocalStructPayload $cloneWith({
+    int? a,
+    int? b,
+  }) {
+    return LocalStructPayload(
+      a: a ?? this.a,
+      b: b ?? this.b,
+    );
+  }
+
   final int a;
   final int b;
 
@@ -683,6 +693,16 @@ class MainProtocolOnAnonWithErrorResponse extends $fidl.Struct {
           a: a ?? $orig.a,
           b: b ?? $orig.b,
         );
+
+  MainProtocolOnAnonWithErrorResponse $cloneWith({
+    int? a,
+    int? b,
+  }) {
+    return MainProtocolOnAnonWithErrorResponse(
+      a: a ?? this.a,
+      b: b ?? this.b,
+    );
+  }
 
   final int a;
   final int b;
@@ -753,6 +773,16 @@ class MainProtocolTwoWayAnonWithErrorResponse extends $fidl.Struct {
           a: a ?? $orig.a,
           b: b ?? $orig.b,
         );
+
+  MainProtocolTwoWayAnonWithErrorResponse $cloneWith({
+    int? a,
+    int? b,
+  }) {
+    return MainProtocolTwoWayAnonWithErrorResponse(
+      a: a ?? this.a,
+      b: b ?? this.b,
+    );
+  }
 
   final int a;
   final int b;

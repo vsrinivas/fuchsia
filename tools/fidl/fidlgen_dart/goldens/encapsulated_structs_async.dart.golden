@@ -51,6 +51,14 @@ class ArrayInt16Int8 extends $fidl.Struct {
           arr: arr ?? $orig.arr,
         );
 
+  ArrayInt16Int8 $cloneWith({
+    List<Int16Int8>? arr,
+  }) {
+    return ArrayInt16Int8(
+      arr: arr ?? this.arr,
+    );
+  }
+
   final List<Int16Int8> arr;
 
   @override
@@ -113,6 +121,16 @@ class Int16Int8 extends $fidl.Struct {
           a: a ?? $orig.a,
           b: b ?? $orig.b,
         );
+
+  Int16Int8 $cloneWith({
+    int? a,
+    int? b,
+  }) {
+    return Int16Int8(
+      a: a ?? this.a,
+      b: b ?? this.b,
+    );
+  }
 
   final int a;
   final int b;
@@ -181,6 +199,16 @@ class Int8Int32 extends $fidl.Struct {
           a: a ?? $orig.a,
           b: b ?? $orig.b,
         );
+
+  Int8Int32 $cloneWith({
+    int? a,
+    int? b,
+  }) {
+    return Int8Int32(
+      a: a ?? this.a,
+      b: b ?? this.b,
+    );
+  }
 
   final int a;
   final int b;
@@ -257,6 +285,17 @@ class NonInlineStructTestStruct extends $fidl.Struct {
           element: element ? null : $orig.element,
           h: $orig.h,
         );
+
+  NonInlineStructTestStruct $cloneWith({
+    $fidl.OptionalNullable<Int16Int8?> element =
+        const $fidl.OptionalNullable.undefined(),
+    $zircon.Handle? h,
+  }) {
+    return NonInlineStructTestStruct(
+      element: element.or(this.element),
+      h: h ?? this.h,
+    );
+  }
 
   final Int16Int8? element;
   final $zircon.Handle h;
@@ -335,6 +374,18 @@ class StructPaddingTestStruct extends $fidl.Struct {
           array: array ?? $orig.array,
         );
 
+  StructPaddingTestStruct $cloneWith({
+    Int16Int8? trailing,
+    Int8Int32? inner,
+    ArrayInt16Int8? array,
+  }) {
+    return StructPaddingTestStruct(
+      trailing: trailing ?? this.trailing,
+      inner: inner ?? this.inner,
+      array: array ?? this.array,
+    );
+  }
+
   final Int16Int8 trailing;
   final Int8Int32 inner;
   final ArrayInt16Int8 array;
@@ -410,6 +461,16 @@ class TopLevelStruct extends $fidl.Struct {
           a: a ?? $orig.a,
           b: b ?? $orig.b,
         );
+
+  TopLevelStruct $cloneWith({
+    StructPaddingTestStruct? a,
+    NonInlineStructTestStruct? b,
+  }) {
+    return TopLevelStruct(
+      a: a ?? this.a,
+      b: b ?? this.b,
+    );
+  }
 
   final StructPaddingTestStruct a;
   final NonInlineStructTestStruct b;

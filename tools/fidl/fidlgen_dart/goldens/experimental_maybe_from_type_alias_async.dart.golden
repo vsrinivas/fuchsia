@@ -166,6 +166,70 @@ class Testing extends $fidl.Struct {
           aa3: $orig.aa3,
         );
 
+  Testing $cloneWith({
+    int? u1,
+    Uint64List? u2,
+    Uint64List? u3,
+    List<Uint64List>? u4,
+    List<Uint64List>? u5,
+    List<Uint64List>? u6,
+    List<Uint64List>? u7,
+    $fidl.OptionalNullable<Uint64List?> v1 =
+        const $fidl.OptionalNullable.undefined(),
+    List<Uint64List?>? v2,
+    List<Uint64List?>? v3,
+    Uint64List? a1,
+    List<Uint64List>? a2,
+    List<Uint64List>? a3,
+    $fidl.OptionalNullable<$fidl.InterfaceRequest<MyProtocol>?> r1 =
+        const $fidl.OptionalNullable.undefined(),
+    List<$fidl.InterfaceRequest<MyProtocol>?>? r2,
+    List<$fidl.InterfaceRequest<MyProtocol>?>? r3,
+    Uint8List? b1,
+    List<Uint8List>? b2,
+    List<Uint8List>? b3,
+    String? s1,
+    List<String>? s2,
+    List<String>? s3,
+    Uint64List? vv1,
+    List<Uint64List>? vv2,
+    List<Uint64List>? vv3,
+    Uint64List? aa1,
+    List<Uint64List>? aa2,
+    List<Uint64List>? aa3,
+  }) {
+    return Testing(
+      u1: u1 ?? this.u1,
+      u2: u2 ?? this.u2,
+      u3: u3 ?? this.u3,
+      u4: u4 ?? this.u4,
+      u5: u5 ?? this.u5,
+      u6: u6 ?? this.u6,
+      u7: u7 ?? this.u7,
+      v1: v1.or(this.v1),
+      v2: v2 ?? this.v2,
+      v3: v3 ?? this.v3,
+      a1: a1 ?? this.a1,
+      a2: a2 ?? this.a2,
+      a3: a3 ?? this.a3,
+      r1: r1.or(this.r1),
+      r2: r2 ?? this.r2,
+      r3: r3 ?? this.r3,
+      b1: b1 ?? this.b1,
+      b2: b2 ?? this.b2,
+      b3: b3 ?? this.b3,
+      s1: s1 ?? this.s1,
+      s2: s2 ?? this.s2,
+      s3: s3 ?? this.s3,
+      vv1: vv1 ?? this.vv1,
+      vv2: vv2 ?? this.vv2,
+      vv3: vv3 ?? this.vv3,
+      aa1: aa1 ?? this.aa1,
+      aa2: aa2 ?? this.aa2,
+      aa3: aa3 ?? this.aa3,
+    );
+  }
+
   final int u1;
   final Uint64List u2;
   final Uint64List u3;

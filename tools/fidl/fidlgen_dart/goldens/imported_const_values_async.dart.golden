@@ -55,6 +55,14 @@ class MyStruct extends $fidl.Struct {
           reserved: reserved ?? $orig.reserved,
         );
 
+  MyStruct $cloneWith({
+    int? reserved,
+  }) {
+    return MyStruct(
+      reserved: reserved ?? this.reserved,
+    );
+  }
+
   final int reserved;
 
   @override

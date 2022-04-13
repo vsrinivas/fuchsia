@@ -210,6 +210,14 @@ class Struct extends $fidl.Struct {
           x: x ?? $orig.x,
         );
 
+  Struct $cloneWith({
+    int? x,
+  }) {
+    return Struct(
+      x: x ?? this.x,
+    );
+  }
+
   final int x;
 
   @override

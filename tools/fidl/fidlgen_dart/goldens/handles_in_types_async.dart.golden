@@ -188,6 +188,25 @@ class HandlesInTypes extends $fidl.Struct {
           unionWithHandle: unionWithHandle ?? $orig.unionWithHandle,
         );
 
+  HandlesInTypes $cloneWith({
+    $zircon.Vmo? normalHandle,
+    List<$zircon.Vmo>? handleInVec,
+    List<$zircon.Vmo>? handleInArray,
+    List<List<$zircon.Vmo>>? handleInMixedVecArray,
+    TableWithHandle? tableWithHandle,
+    UnionWithHandle? unionWithHandle,
+  }) {
+    return HandlesInTypes(
+      normalHandle: normalHandle ?? this.normalHandle,
+      handleInVec: handleInVec ?? this.handleInVec,
+      handleInArray: handleInArray ?? this.handleInArray,
+      handleInMixedVecArray:
+          handleInMixedVecArray ?? this.handleInMixedVecArray,
+      tableWithHandle: tableWithHandle ?? this.tableWithHandle,
+      unionWithHandle: unionWithHandle ?? this.unionWithHandle,
+    );
+  }
+
   final $zircon.Vmo normalHandle;
   final List<$zircon.Vmo> handleInVec;
   final List<$zircon.Vmo> handleInArray;

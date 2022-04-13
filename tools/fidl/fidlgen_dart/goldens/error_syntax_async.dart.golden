@@ -146,6 +146,14 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResponse extends $fidl.Struct {
           value: value ?? $orig.value,
         );
 
+  ExampleUseOfErrorSyntaxCallWhichMayFailResponse $cloneWith({
+    int? value,
+  }) {
+    return ExampleUseOfErrorSyntaxCallWhichMayFailResponse(
+      value: value ?? this.value,
+    );
+  }
+
   final int value;
 
   @override

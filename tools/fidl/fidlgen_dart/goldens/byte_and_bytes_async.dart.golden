@@ -69,6 +69,21 @@ class ByteAndBytes extends $fidl.Struct {
           optOnlyOneKBytes: optOnlyOneKBytes ? null : $orig.optOnlyOneKBytes,
         );
 
+  ByteAndBytes $cloneWith({
+    int? singleByte,
+    Uint8List? manyBytes,
+    Uint8List? onlyOneKBytes,
+    $fidl.OptionalNullable<Uint8List?> optOnlyOneKBytes =
+        const $fidl.OptionalNullable.undefined(),
+  }) {
+    return ByteAndBytes(
+      singleByte: singleByte ?? this.singleByte,
+      manyBytes: manyBytes ?? this.manyBytes,
+      onlyOneKBytes: onlyOneKBytes ?? this.onlyOneKBytes,
+      optOnlyOneKBytes: optOnlyOneKBytes.or(this.optOnlyOneKBytes),
+    );
+  }
+
   final int singleByte;
   final Uint8List manyBytes;
   final Uint8List onlyOneKBytes;

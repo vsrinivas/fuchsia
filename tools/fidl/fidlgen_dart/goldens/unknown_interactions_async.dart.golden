@@ -143,6 +143,14 @@ class ExampleFlexibleTwoWayResponse extends $fidl.Struct {
           reserved: reserved ?? $orig.reserved,
         );
 
+  ExampleFlexibleTwoWayResponse $cloneWith({
+    int? reserved,
+  }) {
+    return ExampleFlexibleTwoWayResponse(
+      reserved: reserved ?? this.reserved,
+    );
+  }
+
   final int reserved;
 
   @override

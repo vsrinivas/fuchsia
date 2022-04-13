@@ -138,6 +138,14 @@ class ExampleFooResponse extends $fidl.Struct {
           y: y ?? $orig.y,
         );
 
+  ExampleFooResponse $cloneWith({
+    int? y,
+  }) {
+    return ExampleFooResponse(
+      y: y ?? this.y,
+    );
+  }
+
   final int y;
 
   @override

@@ -139,6 +139,14 @@ class Int32Wrapper extends $fidl.Struct {
           val: val ?? $orig.val,
         );
 
+  Int32Wrapper $cloneWith({
+    int? val,
+  }) {
+    return Int32Wrapper(
+      val: val ?? this.val,
+    );
+  }
+
   final int val;
 
   @override
@@ -204,6 +212,15 @@ class StructWithNullableHandle extends $fidl.Struct {
   }) : this(
           val: val ? null : $orig.val,
         );
+
+  StructWithNullableHandle $cloneWith({
+    $fidl.OptionalNullable<$zircon.Vmo?> val =
+        const $fidl.OptionalNullable.undefined(),
+  }) {
+    return StructWithNullableHandle(
+      val: val.or(this.val),
+    );
+  }
 
   final $zircon.Vmo? val;
 
@@ -271,6 +288,15 @@ class StructWithNullableProtocol extends $fidl.Struct {
   }) : this(
           val: val ? null : $orig.val,
         );
+
+  StructWithNullableProtocol $cloneWith({
+    $fidl.OptionalNullable<$fidl.InterfaceHandle<SimpleProtocol>?> val =
+        const $fidl.OptionalNullable.undefined(),
+  }) {
+    return StructWithNullableProtocol(
+      val: val.or(this.val),
+    );
+  }
 
   final $fidl.InterfaceHandle<SimpleProtocol>? val;
 
@@ -340,6 +366,15 @@ class StructWithNullableRequest extends $fidl.Struct {
           val: val ? null : $orig.val,
         );
 
+  StructWithNullableRequest $cloneWith({
+    $fidl.OptionalNullable<$fidl.InterfaceRequest<SimpleProtocol>?> val =
+        const $fidl.OptionalNullable.undefined(),
+  }) {
+    return StructWithNullableRequest(
+      val: val.or(this.val),
+    );
+  }
+
   final $fidl.InterfaceRequest<SimpleProtocol>? val;
 
   @override
@@ -408,6 +443,15 @@ class StructWithNullableString extends $fidl.Struct {
           val: val ? null : $orig.val,
         );
 
+  StructWithNullableString $cloneWith({
+    $fidl.OptionalNullable<String?> val =
+        const $fidl.OptionalNullable.undefined(),
+  }) {
+    return StructWithNullableString(
+      val: val.or(this.val),
+    );
+  }
+
   final String? val;
 
   @override
@@ -473,6 +517,15 @@ class StructWithNullableStruct extends $fidl.Struct {
   }) : this(
           val: val ? null : $orig.val,
         );
+
+  StructWithNullableStruct $cloneWith({
+    $fidl.OptionalNullable<Int32Wrapper?> val =
+        const $fidl.OptionalNullable.undefined(),
+  }) {
+    return StructWithNullableStruct(
+      val: val.or(this.val),
+    );
+  }
 
   final Int32Wrapper? val;
 
@@ -541,6 +594,15 @@ class StructWithNullableUnion extends $fidl.Struct {
           val: val ? null : $orig.val,
         );
 
+  StructWithNullableUnion $cloneWith({
+    $fidl.OptionalNullable<SimpleUnion?> val =
+        const $fidl.OptionalNullable.undefined(),
+  }) {
+    return StructWithNullableUnion(
+      val: val.or(this.val),
+    );
+  }
+
   final SimpleUnion? val;
 
   @override
@@ -606,6 +668,15 @@ class StructWithNullableVector extends $fidl.Struct {
   }) : this(
           val: val ? null : $orig.val,
         );
+
+  StructWithNullableVector $cloneWith({
+    $fidl.OptionalNullable<Int32List?> val =
+        const $fidl.OptionalNullable.undefined(),
+  }) {
+    return StructWithNullableVector(
+      val: val.or(this.val),
+    );
+  }
 
   final Int32List? val;
 

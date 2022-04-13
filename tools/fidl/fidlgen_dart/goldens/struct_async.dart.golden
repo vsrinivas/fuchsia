@@ -53,6 +53,16 @@ class BasicStruct extends $fidl.Struct {
           y: y ?? $orig.y,
         );
 
+  BasicStruct $cloneWith({
+    int? x,
+    String? y,
+  }) {
+    return BasicStruct(
+      x: x ?? this.x,
+      y: y ?? this.y,
+    );
+  }
+
   final int x;
   final String y;
 
@@ -123,6 +133,16 @@ class Simple extends $fidl.Struct {
           f1: f1 ?? $orig.f1,
           f2: f2 ?? $orig.f2,
         );
+
+  Simple $cloneWith({
+    int? f1,
+    bool? f2,
+  }) {
+    return Simple(
+      f1: f1 ?? this.f1,
+      f2: f2 ?? this.f2,
+    );
+  }
 
   final int f1;
   final bool f2;

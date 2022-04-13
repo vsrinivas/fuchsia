@@ -42,6 +42,23 @@ class {{ .Name }} extends $fidl.Struct {
       );
   {{ end }}
 
+  {{ .Name }} $cloneWith({
+  {{- range .Members }}
+    {{ if .Type.Nullable }}$fidl.OptionalNullable<{{ .Type.Decl }}> {{ .Name }} =
+      const $fidl.OptionalNullable.undefined(),
+    {{- else }}{{ .Type.Decl }}? {{ .Name }},
+    {{- end }}
+  {{- end }}
+  }) {
+    return {{ .Name }}(
+  {{- range .Members }}
+      {{ if .Type.Nullable }}{{ .Name }}: {{ .Name }}.or(this.{{ .Name }}),
+      {{- else }}{{ .Name }}: {{ .Name }} ?? this.{{ .Name }},
+      {{- end }}
+  {{- end }}
+    );
+  }
+
 {{- range .Members }}
   {{- range .Doc }}
   ///{{ . -}}

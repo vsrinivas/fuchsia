@@ -54,6 +54,16 @@ class ExampleUseOfVectors extends $fidl.Struct {
               vectorOfVectorOfBool ?? $orig.vectorOfVectorOfBool,
         );
 
+  ExampleUseOfVectors $cloneWith({
+    Uint8List? vectorOfUint8,
+    List<List<bool>>? vectorOfVectorOfBool,
+  }) {
+    return ExampleUseOfVectors(
+      vectorOfUint8: vectorOfUint8 ?? this.vectorOfUint8,
+      vectorOfVectorOfBool: vectorOfVectorOfBool ?? this.vectorOfVectorOfBool,
+    );
+  }
+
   final Uint8List vectorOfUint8;
   final List<List<bool>> vectorOfVectorOfBool;
 

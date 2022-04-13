@@ -50,6 +50,14 @@ class Empty extends $fidl.Struct {
           reserved: reserved ?? $orig.reserved,
         );
 
+  Empty $cloneWith({
+    int? reserved,
+  }) {
+    return Empty(
+      reserved: reserved ?? this.reserved,
+    );
+  }
+
   final int reserved;
 
   @override

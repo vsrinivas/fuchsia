@@ -562,6 +562,22 @@ class ProtocolEnds extends $fidl.Struct {
           serverOpt: serverOpt ? null : $orig.serverOpt,
         );
 
+  ProtocolEnds $cloneWith({
+    $fidl.InterfaceHandle<DiscoverableProtocol>? client,
+    $fidl.InterfaceRequest<DiscoverableProtocol>? server,
+    $fidl.OptionalNullable<$fidl.InterfaceHandle<DiscoverableProtocol>?>
+        clientOpt = const $fidl.OptionalNullable.undefined(),
+    $fidl.OptionalNullable<$fidl.InterfaceRequest<DiscoverableProtocol>?>
+        serverOpt = const $fidl.OptionalNullable.undefined(),
+  }) {
+    return ProtocolEnds(
+      client: client ?? this.client,
+      server: server ?? this.server,
+      clientOpt: clientOpt.or(this.clientOpt),
+      serverOpt: serverOpt.or(this.serverOpt),
+    );
+  }
+
   final $fidl.InterfaceHandle<DiscoverableProtocol> client;
   final $fidl.InterfaceRequest<DiscoverableProtocol> server;
   final $fidl.InterfaceHandle<DiscoverableProtocol>? clientOpt;
@@ -644,6 +660,14 @@ class WithErrorSyntaxErrorAsEnumResponse extends $fidl.Struct {
           reserved: reserved ?? $orig.reserved,
         );
 
+  WithErrorSyntaxErrorAsEnumResponse $cloneWith({
+    int? reserved,
+  }) {
+    return WithErrorSyntaxErrorAsEnumResponse(
+      reserved: reserved ?? this.reserved,
+    );
+  }
+
   final int reserved;
 
   @override
@@ -706,6 +730,14 @@ class WithErrorSyntaxErrorAsPrimitiveResponse extends $fidl.Struct {
           reserved: reserved ?? $orig.reserved,
         );
 
+  WithErrorSyntaxErrorAsPrimitiveResponse $cloneWith({
+    int? reserved,
+  }) {
+    return WithErrorSyntaxErrorAsPrimitiveResponse(
+      reserved: reserved ?? this.reserved,
+    );
+  }
+
   final int reserved;
 
   @override
@@ -767,6 +799,14 @@ class WithErrorSyntaxHandleInResultResponse extends $fidl.Struct {
   }) : this(
           h: h ?? $orig.h,
         );
+
+  WithErrorSyntaxHandleInResultResponse $cloneWith({
+    $zircon.Handle? h,
+  }) {
+    return WithErrorSyntaxHandleInResultResponse(
+      h: h ?? this.h,
+    );
+  }
 
   final $zircon.Handle h;
 
@@ -834,6 +874,18 @@ class WithErrorSyntaxResponseAsStructResponse extends $fidl.Struct {
           b: b ?? $orig.b,
           c: c ?? $orig.c,
         );
+
+  WithErrorSyntaxResponseAsStructResponse $cloneWith({
+    int? a,
+    int? b,
+    int? c,
+  }) {
+    return WithErrorSyntaxResponseAsStructResponse(
+      a: a ?? this.a,
+      b: b ?? this.b,
+      c: c ?? this.c,
+    );
+  }
 
   final int a;
   final int b;

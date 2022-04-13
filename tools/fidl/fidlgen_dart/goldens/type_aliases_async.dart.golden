@@ -137,6 +137,33 @@ class ExampleOfUseOfAliases extends $fidl.Struct {
               fieldOfNullableClientEnd ? null : $orig.fieldOfNullableClientEnd,
         );
 
+  ExampleOfUseOfAliases $cloneWith({
+    int? fieldOfU32,
+    List<String>? fieldOfVecOfStrings,
+    List<String>? fieldOfVecOfStringsAtMostNine,
+    List<String>? fieldOfVecOfStringsAtMost5,
+    List<lib$test_someotherlibrary.ReferenceMe>? fieldOfVecOfRefMeAtMost5,
+    $zircon.Channel? fieldOfChannel,
+    $zircon.Channel? fieldOfClientEnd,
+    $fidl.OptionalNullable<$zircon.Channel?> fieldOfNullableClientEnd =
+        const $fidl.OptionalNullable.undefined(),
+  }) {
+    return ExampleOfUseOfAliases(
+      fieldOfU32: fieldOfU32 ?? this.fieldOfU32,
+      fieldOfVecOfStrings: fieldOfVecOfStrings ?? this.fieldOfVecOfStrings,
+      fieldOfVecOfStringsAtMostNine:
+          fieldOfVecOfStringsAtMostNine ?? this.fieldOfVecOfStringsAtMostNine,
+      fieldOfVecOfStringsAtMost5:
+          fieldOfVecOfStringsAtMost5 ?? this.fieldOfVecOfStringsAtMost5,
+      fieldOfVecOfRefMeAtMost5:
+          fieldOfVecOfRefMeAtMost5 ?? this.fieldOfVecOfRefMeAtMost5,
+      fieldOfChannel: fieldOfChannel ?? this.fieldOfChannel,
+      fieldOfClientEnd: fieldOfClientEnd ?? this.fieldOfClientEnd,
+      fieldOfNullableClientEnd:
+          fieldOfNullableClientEnd.or(this.fieldOfNullableClientEnd),
+    );
+  }
+
   final int fieldOfU32;
   final List<String> fieldOfVecOfStrings;
   final List<String> fieldOfVecOfStringsAtMostNine;
