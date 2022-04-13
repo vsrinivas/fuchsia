@@ -96,7 +96,10 @@ foreach(pkg, test_packages) {
   name = "pm_${pkg_}_test"
   go_test(name) {
     gopackages = [ "go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/${pkg}" ]
-    deps = [ ":pm_lib" ]
+    deps = [
+      ":pm_lib",
+      "//third_party/golibs:github.com/google/go-cmp",
+    ]
   }
 
   test_labels += [ ":$name" ]

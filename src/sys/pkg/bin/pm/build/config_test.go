@@ -5,10 +5,8 @@
 package build
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -24,12 +22,8 @@ func TestRepository(t *testing.T) {
 
 	// Read repository field in the manifest.
 	manifestDir := filepath.Join(cfg.OutputDir, "package_manifest.json")
-	manifest, err := ioutil.ReadFile(manifestDir)
+	packageManifest, err := LoadPackageManifest(manifestDir)
 	if err != nil {
-		t.Fatal(err)
-	}
-	var packageManifest PackageManifest
-	if err := json.Unmarshal(manifest, &packageManifest); err != nil {
 		t.Fatal(err)
 	}
 

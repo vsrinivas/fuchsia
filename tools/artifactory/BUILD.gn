@@ -57,8 +57,6 @@ go_library("lib") {
     "images_test.go",
     "modules.go",
     "modules_test.go",
-    "package_manifest.go",
-    "package_manifest_test.go",
     "product_bundle.go",
     "product_bundle_test.go",
     "sdk_archives.go",

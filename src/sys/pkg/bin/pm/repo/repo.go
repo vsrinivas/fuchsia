@@ -358,17 +358,9 @@ func (r *Repo) PublishManifest(path string) ([]string, error) {
 // all input files involved, or an error.
 func (r *Repo) publishManifest(path string, targets tufData.TargetFiles) ([]string, error) {
 	deps := []string{path}
-	f, err := os.Open(path)
+	packageManifest, err := build.LoadPackageManifest(path)
 	if err != nil {
 		return nil, err
-	}
-	defer f.Close()
-	var packageManifest build.PackageManifest
-	if err := json.NewDecoder(f).Decode(&packageManifest); err != nil {
-		return nil, err
-	}
-	if packageManifest.Version != "1" {
-		return nil, fmt.Errorf("unknown version %q, can't publish", packageManifest.Version)
 	}
 
 	// first collect all the deps, and extract the package merkle root

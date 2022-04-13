@@ -58,7 +58,7 @@ func loadBlobsFromPackageManifests(paths []string) ([]pm.PackageBlobInfo, error)
 		}
 
 		// Collect the blobs from this package manifest.
-		pkgManifest, err := loadPackageManifest(path)
+		pkgManifest, err := pm.LoadPackageManifest(path)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse package manifest: %w", err)
 		}

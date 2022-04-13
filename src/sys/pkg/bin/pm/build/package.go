@@ -37,6 +37,25 @@ type PackageManifest struct {
 	Blobs      []PackageBlobInfo `json:"blobs"`
 }
 
+// LoadPackageManifest parses the package manifest for a particular package.
+func LoadPackageManifest(packageManifestPath string) (*PackageManifest, error) {
+	fileContents, err := ioutil.ReadFile(packageManifestPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read %s: %w", packageManifestPath, err)
+	}
+
+	manifest := &PackageManifest{}
+	if err := json.Unmarshal(fileContents, manifest); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal %s: %w", packageManifestPath, err)
+	}
+
+	if manifest.Version != "1" {
+		return nil, fmt.Errorf("unknown version %q, can't load manifest", manifest.Version)
+	}
+
+	return manifest, nil
+}
+
 // Init initializes package metadata in the output directory. A manifest
 // is generated with a name matching the output directory name.
 func Init(cfg *Config) error {
