@@ -226,10 +226,10 @@ abstract class SimpleFidlType<T> extends FidlType<T, List<T>> {
 
   @override
   List<T> decodeArray(Decoder decoder, int count, int offset, int depth) =>
-      List<T>.generate(
+      List<T>.unmodifiable(Iterable<T>.generate(
           count,
           (int i) => decode(
-              decoder, offset + i * inlineSize(decoder.wireFormat), depth));
+              decoder, offset + i * inlineSize(decoder.wireFormat), depth)));
 }
 
 /// This encodes/decodes the UnknowRawData assuming it is in an envelope, i.e.
@@ -256,8 +256,9 @@ class UnknownRawDataType extends SimpleFidlType<UnknownRawData> {
     for (var i = 0; i < numBytes; i++) {
       data[i] = decoder.decodeUint8(offset + i);
     }
-    final handleInfos =
-        List<HandleInfo>.generate(numHandles, (int i) => decoder.claimHandle());
+    final handleInfos = List<HandleInfo>.unmodifiable(
+        Iterable<HandleInfo>.generate(
+            numHandles, (int i) => decoder.claimHandle()));
     return UnknownRawData(
         data, handleInfos.map((handleInfo) => handleInfo.handle).toList());
   }

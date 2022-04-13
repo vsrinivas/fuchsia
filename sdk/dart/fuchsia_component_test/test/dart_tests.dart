@@ -436,7 +436,6 @@ void main() {
     });
 
     test('replace component decl', () async {
-      final eventStreamBinding = fsys2.EventStreamBinding();
       RealmInstance? realmInstance;
       try {
         final builder = await RealmBuilder.create();
@@ -447,6 +446,11 @@ void main() {
           echoServerName,
           v2EchoServerUrl,
         );
+
+/*
+        If the Dart FIDL decoder is changed to decode arrays/vectors as
+        List.unmodifiable(), the call to `decl.exposes!.add()` still compiles, but now
+        generates a runtime exception.
 
         var decl = await builder.getComponentDecl(v2EchoServer);
 
@@ -460,6 +464,32 @@ void main() {
             ),
           ),
         );
+
+INFO: 00:00 +13 -1: realm builder tests replace component decl [E]
+INFO:   Unsupported operation: Cannot add to an unmodifiable list
+INFO:   Unsupported operation: Cannot add to an unmodifiable list
+INFO:   dart:_internal/list.dart 114:5                                                 UnmodifiableListMixin.add
+INFO:   package:fuchsia_component_test_dart_tests_test_package/dart_tests.dart 461:23  main.<fn>.<fn>
+
+        The preferred alternative, using fidl.Table.$cloneWith(), is:
+*/
+
+        var decl = await builder.getComponentDecl(v2EchoServer);
+
+        final exposes =
+            (decl.exposes != null ? decl.exposes!.toList() : <fdecl.Expose>[])
+              ..add(
+                fdecl.Expose.withProtocol(
+                  fdecl.ExposeProtocol(
+                    source: fdecl.Ref.withSelf(fdecl.SelfRef()),
+                    sourceName: fecho.Echo.$serviceName,
+                    target: fdecl.Ref.withParent(fdecl.ParentRef()),
+                    targetName: 'renamedEchoService',
+                  ),
+                ),
+              );
+
+        decl = decl.$cloneWith(exposes: fidl.Some(exposes));
 
         await builder.replaceComponentDecl(v2EchoServer, decl);
 
@@ -494,7 +524,6 @@ void main() {
         if (realmInstance != null) {
           realmInstance.root.close();
         }
-        eventStreamBinding.close();
       }
     });
 
