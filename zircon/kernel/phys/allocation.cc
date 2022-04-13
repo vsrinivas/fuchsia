@@ -6,16 +6,16 @@
 
 #include "phys/allocation.h"
 
-#include <lib/arch/sysreg.h>
-#include <lib/arch/x86/system.h>
 #include <lib/fitx/result.h>
 #include <lib/memalloc/pool.h>
 #include <zircon/assert.h>
 
 #include <fbl/no_destructor.h>
+#include <ktl/array.h>
 #include <ktl/byte.h>
 #include <ktl/move.h>
 #include <ktl/string_view.h>
+#include <phys/arch/arch-allocation.h>
 #include <phys/main.h>
 
 #include <ktl/enforce.h>
@@ -28,12 +28,25 @@ memalloc::Pool& Allocation::GetPool() {
   return *allocator;
 }
 
+void Allocation::Init(ktl::span<memalloc::Range> mem_ranges,
+                      ktl::span<memalloc::Range> special_ranges) {
+  auto& pool = Allocation::GetPool();
+  ktl::array ranges{mem_ranges, special_ranges};
+  // kAllocationMinAddr is defined in arch-allocation.h.
+  auto init_result = kAllocationMinAddr  // ktl::nullopt if don't care.
+                         ? pool.Init(ranges, *kAllocationMinAddr)
+                         : pool.Init(ranges);
+  ZX_ASSERT(init_result.is_ok());
+}
+
 // This is where actual allocation happens.
 // The returned object is default-constructed if it fails.
 Allocation Allocation::New(fbl::AllocChecker& ac, memalloc::Type type, size_t size,
-                           size_t alignment) {
+                           size_t alignment, ktl::optional<uint64_t> min_addr,
+                           ktl::optional<uint64_t> max_addr) {
   Allocation alloc;
-  fitx::result<fitx::failed, uint64_t> result = GetPool().Allocate(type, size, alignment);
+  fitx::result<fitx::failed, uint64_t> result =
+      GetPool().Allocate(type, size, alignment, min_addr, max_addr);
   ac.arm(size, result.is_ok());
   if (result.is_ok()) {
     alloc.data_ = {reinterpret_cast<ktl::byte*>(result.value()), size};

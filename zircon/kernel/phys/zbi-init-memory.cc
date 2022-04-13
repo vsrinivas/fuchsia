@@ -45,15 +45,12 @@ void ZbiInitMemory(void* zbi, ktl::span<zbi_mem_range_t> mem_config,
     special_ranges = special_ranges.subspan(0, special_ranges.size() - 1);
   }
 
-  auto& pool = Allocation::GetPool();
-
-  auto init_result = pool.Init(ktl::array{zbi_ranges, special_ranges});
-  ZX_ASSERT(init_result.is_ok());
+  Allocation::Init(zbi_ranges, special_ranges);
 
   // Set up our own address space.
   ArchSetUpAddressSpaceEarly();
 
   if (gBootOptions->phys_verbose) {
-    pool.PrintMemoryRanges(ProgramName());
+    Allocation::GetPool().PrintMemoryRanges(ProgramName());
   }
 }

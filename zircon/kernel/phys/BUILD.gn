@@ -285,7 +285,10 @@ if (toolchain_environment == "kernel.phys" ||
 
   source_set("allocation") {
     public = [ "include/phys/allocation.h" ]
-    sources = [ "allocation.cc" ]
+    sources = [
+      "//zircon/kernel/arch/$zircon_cpu/phys/include/phys/arch/arch-allocation.h",
+      "allocation.cc",
+    ]
     deps = [
       ":main",
       "//zircon/kernel/phys/lib/memalloc",

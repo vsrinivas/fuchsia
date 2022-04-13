@@ -92,11 +92,6 @@ void LegacyBootInitMemory() {
     ranges[num_ranges++] = as_memrange(gLegacyBoot.mem_config);
   }
 
-  ktl::array all_ranges = {
-      memalloc::AsRanges(gLegacyBoot.mem_config),
-      ktl::span<memalloc::Range>({ranges}).subspan(0, num_ranges),
-  };
-
-  auto& pool = Allocation::GetPool();
-  ZX_ASSERT(pool.Init(all_ranges).is_ok());
+  Allocation::Init(memalloc::AsRanges(gLegacyBoot.mem_config),
+                   ktl::span(ranges).subspan(0, num_ranges));
 }

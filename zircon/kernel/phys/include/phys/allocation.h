@@ -13,6 +13,7 @@
 #include <ktl/algorithm.h>
 #include <ktl/byte.h>
 #include <ktl/move.h>
+#include <ktl/optional.h>
 #include <ktl/span.h>
 #include <ktl/string_view.h>
 
@@ -20,6 +21,7 @@ namespace memalloc {
 
 // Forward-declared; declared in <lib/memalloc/range.h>.
 enum class Type : uint64_t;
+struct Range;
 
 // Forward-declared; declared in <lib/memalloc/pool.h>.
 class Pool;
@@ -65,10 +67,16 @@ class Allocation {
 
   explicit operator bool() const { return !data_.empty(); }
 
+  // This must be called exactly once before using GetPool or New.
+  static void Init(ktl::span<memalloc::Range> mem_ranges,
+                   ktl::span<memalloc::Range> special_ranges);
+
   // If allocation fails, operator bool will return false later.
   // The AllocChecker must be checked after construction, too.
   static Allocation New(fbl::AllocChecker& ac, memalloc::Type type, size_t size,
-                        size_t alignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__);
+                        size_t alignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__,
+                        ktl::optional<uint64_t> min_addr = ktl::nullopt,
+                        ktl::optional<uint64_t> max_addr = ktl::nullopt);
 
   // Get the memalloc::Pool instance used to construct Allocation objects.
   // Every call returns the same object, but the first may initialize it.  Note
