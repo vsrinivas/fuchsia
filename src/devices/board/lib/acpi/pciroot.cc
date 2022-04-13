@@ -22,26 +22,16 @@
 #include "src/devices/board/lib/acpi/pci-internal.h"
 #include "src/devices/lib/iommu/iommu.h"
 
-static zx_status_t pciroot_op_get_bti(void* /*context*/, uint32_t bdf, uint32_t index,
-                                      zx_handle_t* bti) {
-  // The x86 IOMMU world uses PCI BDFs as the hardware identifiers, so there
-  // will only be one BTI per device.
+#ifdef ENABLE_USER_PCI
+zx_status_t AcpiPciroot::PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {
+  // x86 uses PCI BDFs as hardware identifiers, and ARM uses PCI root complexes. There will be at
+  // most one BTI per device.
   if (index != 0) {
     return ZX_ERR_OUT_OF_RANGE;
   }
-  // For dummy IOMMUs, the bti_id just needs to be unique.  For Intel IOMMUs,
-  // the bti_ids correspond to PCI BDFs.
-  zx_handle_t iommu_handle;
-  zx_status_t status = iommu_manager_iommu_for_bdf(bdf, &iommu_handle);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return zx_bti_create(iommu_handle, 0, bdf, bti);
-}
 
-#ifdef ENABLE_USER_PCI
-zx_status_t AcpiPciroot::PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {
-  return pciroot_op_get_bti(nullptr, bdf, index, bti->reset_and_get_address());
+  auto iommu = context_.iommu->IommuForBdf(bdf);
+  return zx_bti_create(iommu->get(), 0, bdf, bti->reset_and_get_address());
 }
 
 zx_status_t AcpiPciroot::PcirootGetPciPlatformInfo(pci_platform_info_t* info) {
@@ -92,6 +82,24 @@ zx_status_t AcpiPciroot::Create(PciRootHost* root_host, AcpiPciroot::Context ctx
 }
 
 #else  // TODO(cja): remove after the switch to userspace pci
+#include "src/devices/lib/iommu/iommu-x86.h"
+static zx_status_t pciroot_op_get_bti(void* /*context*/, uint32_t bdf, uint32_t index,
+                                      zx_handle_t* bti) {
+  // The x86 IOMMU world uses PCI BDFs as the hardware identifiers, so there
+  // will only be one BTI per device.
+  if (index != 0) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  // For dummy IOMMUs, the bti_id just needs to be unique.  For Intel IOMMUs,
+  // the bti_ids correspond to PCI BDFs.
+  zx_handle_t iommu_handle;
+  zx_status_t status = iommu_manager_iommu_for_bdf(bdf, &iommu_handle);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return zx_bti_create(iommu_handle, 0, bdf, bti);
+}
+
 static zx_status_t pciroot_op_get_pci_platform_info(void* ctx, pci_platform_info_t* info) {
   acpi::Device* device = static_cast<acpi::Device*>(ctx);
   memset(info, 0, sizeof(*info));

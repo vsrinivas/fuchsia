@@ -7,8 +7,8 @@ import("//build/testing/bootfs_test.gni")
 
 source_set("iommu") {
   sources = [
-    "iommu.cc",
-    "iommu.h",
+    "iommu-x86.cc",
+    "iommu-x86.h",
   ]
 
   deps = [
@@ -18,16 +18,18 @@ source_set("iommu") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/syslog:syslog-headers",
     "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxc",
   ]
 }
 
 test("iommu-test") {
-  sources = [ "iommu-test.cc" ]
+  sources = [ "iommu-x86-test.cc" ]
   deps = [
     "//src/devices/lib/iommu",
     "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
     "//third_party/acpica",
+    "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",
   ]
 }

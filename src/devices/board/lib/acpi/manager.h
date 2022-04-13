@@ -15,14 +15,16 @@
 #include "src/devices/board/lib/acpi/acpi.h"
 #include "src/devices/board/lib/acpi/bus-type.h"
 #include "src/devices/board/lib/acpi/device-builder.h"
+#include "src/devices/lib/iommu/iommu.h"
 
 namespace acpi {
 
 // Class that manages ACPI device discovery and publishing.
 class Manager {
  public:
-  explicit Manager(Acpi* acpi, zx_device_t* acpi_root)
+  explicit Manager(Acpi* acpi, iommu::IommuManagerBase* iommu, zx_device_t* acpi_root)
       : acpi_(acpi),
+        iommu_manager_(iommu),
         acpi_root_(acpi_root),
         loop_(&kAsyncLoopConfigNeverAttachToThread),
         executor_(loop_.dispatcher()) {}
@@ -45,6 +47,7 @@ class Manager {
 
   Acpi* acpi() { return acpi_; }
   zx_device_t* acpi_root() { return acpi_root_; }
+  iommu::IommuManagerBase* iommu_manager() { return iommu_manager_; }
 
   async_dispatcher_t* fidl_dispatcher() { return loop_.dispatcher(); }
   async::Executor& executor() { return executor_; }
@@ -58,6 +61,7 @@ class Manager {
   acpi::status<> PublishPciBus(zx_device_t* platform_bus, DeviceBuilder* device);
 
   Acpi* acpi_;
+  iommu::IommuManagerBase* iommu_manager_;
   zx_device_t* acpi_root_;
   std::unordered_map<ACPI_HANDLE, DeviceBuilder> devices_;
   std::unordered_map<ACPI_HANDLE, zx_device_t*> zx_devices_;
