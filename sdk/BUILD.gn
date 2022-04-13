@@ -604,6 +604,7 @@ sdk("ddk") {
     ":ddk_host_tools",
     "//sdk/lib/driver_runtime:driver_runtime_cpp_sdk",
     "//sdk/lib/driver_runtime:driver_runtime_sdk",
+    "//src/devices/lib/mmio:mmio_sdk",
 
     # V1 APIs, to be removed before updating category to partner:
     ":banjo",
