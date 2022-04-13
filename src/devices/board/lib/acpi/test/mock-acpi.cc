@@ -94,7 +94,8 @@ acpi::status<acpi::UniquePtr<ACPI_DEVICE_INFO>> MockAcpi::GetObjectInfo(ACPI_HAN
     valid |= ACPI_VALID_HID;
     const std::string& value = d->hid().value();
     ZX_ASSERT(value.size() < std::numeric_limits<uint32_t>::max());
-    info->HardwareId.Length = static_cast<uint32_t>(value.size());
+    // Include the terminating NULL.
+    info->HardwareId.Length = static_cast<uint32_t>(value.size()) + 1;
     info->HardwareId.String = const_cast<char*>(value.data());
     if (value == kPciPnpID || value == kPciePnpID) {
       info->Flags |= ACPI_PCI_ROOT_BRIDGE;
@@ -110,7 +111,8 @@ acpi::status<acpi::UniquePtr<ACPI_DEVICE_INFO>> MockAcpi::GetObjectInfo(ACPI_HAN
     for (size_t i = 0; i < d->cids().size(); i++) {
       const std::string& cid = d->cids()[i];
       ZX_ASSERT(cid.size() < std::numeric_limits<uint32_t>::max());
-      info->CompatibleIdList.Ids[i].Length = static_cast<uint32_t>(cid.size());
+      // Include the terminating NULL.
+      info->CompatibleIdList.Ids[i].Length = static_cast<uint32_t>(cid.size()) + 1;
       info->CompatibleIdList.Ids[i].String = const_cast<char*>(cid.data());
       if (cid == kPciPnpID || cid == kPciePnpID) {
         info->Flags |= ACPI_PCI_ROOT_BRIDGE;
@@ -136,11 +138,15 @@ acpi::status<ACPI_HANDLE> MockAcpi::GetHandle(ACPI_HANDLE parent, const char* pa
 
 acpi::status<acpi::UniquePtr<ACPI_OBJECT>> MockAcpi::EvaluateObject(
     ACPI_HANDLE object, const char* pathname, std::optional<std::vector<ACPI_OBJECT>> args) {
-  if (pathname[0] == '^' || pathname[0] == '\\') {
+  if (pathname[0] == '^') {
     return acpi::error(AE_NOT_IMPLEMENTED);
   }
   if (object == nullptr) {
     object = ACPI_ROOT_OBJECT;
+  }
+  if (pathname[0] == '\\') {
+    object = ACPI_ROOT_OBJECT;
+    pathname++;
   }
   Device* device = ToDevice(object);
 

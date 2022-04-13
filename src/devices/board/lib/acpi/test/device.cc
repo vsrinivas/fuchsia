@@ -89,6 +89,10 @@ acpi::status<acpi::UniquePtr<ACPI_OBJECT>> Device::EvaluateObject(
     return d->EvaluateObject(pathname.substr(pos + 1), std::move(args));
   }
 
+  if (methods_.find(pathname) != methods_.end()) {
+    return methods_.find(pathname)->second(std::move(args));
+  }
+
   if (pathname == "_DSD") {
     // Number of objects we need to create: one for each UUID, one for each set of values.
     size_t object_count = dsd_.size() * 2;

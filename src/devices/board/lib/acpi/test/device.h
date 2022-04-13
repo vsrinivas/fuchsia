@@ -22,7 +22,12 @@ namespace acpi::test {
 
 class Device {
  public:
-  explicit Device(std::string name) : name_(std::move(name)) {}
+  using EvaluateObjectCallback = std::function<acpi::status<acpi::UniquePtr<ACPI_OBJECT>>(
+      std::optional<std::vector<ACPI_OBJECT>>)>;
+
+  explicit Device(std::string name) : name_(std::move(name)) {
+    ZX_ASSERT_MSG(name_.size() <= 4, "%s too long: %zu", name_.data(), name_.size());
+  }
 
   void SetAdr(uint64_t val) { adr_ = val; }
   void SetHid(std::string hid) { hid_ = std::move(hid); }
@@ -37,6 +42,10 @@ class Device {
   void AddChild(std::unique_ptr<Device> c) {
     c->parent_ = this;
     children_.emplace_back(std::move(c));
+  }
+
+  void AddMethodCallback(std::string name, EvaluateObjectCallback cb) {
+    methods_.emplace(std::move(name), std::move(cb));
   }
 
   // Add a resource to this device.
@@ -126,6 +135,8 @@ class Device {
 
   // _DSD, map of uuid to values.
   std::unordered_map<acpi::Uuid, std::vector<ACPI_OBJECT>> dsd_;
+
+  std::unordered_map<std::string, EvaluateObjectCallback> methods_;
 
   Acpi::NotifyHandlerCallable notify_handler_ = nullptr;
   void* notify_handler_ctx_ = nullptr;

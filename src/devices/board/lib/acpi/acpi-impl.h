@@ -50,6 +50,11 @@ class AcpiImpl : public Acpi {
                                             void* context) override;
   acpi::status<> RemoveAddressSpaceHandler(ACPI_HANDLE object, ACPI_ADR_SPACE_TYPE space_id,
                                            AddressSpaceHandler handler) override;
+
+  acpi::status<> InitializeAcpi() override;
+
+  acpi::status<> SetupGpeForWake(ACPI_HANDLE wake_dev, ACPI_HANDLE gpe_dev,
+                                 uint32_t gpe_num) override;
 };
 }  // namespace acpi
 

@@ -55,6 +55,7 @@ source_set("acpi") {
 
 test("acpi-test") {
   sources = [
+    "acpi-test.cc",
     "acpi.cc",
     "device-builder.cc",
     "device-test.cc",
