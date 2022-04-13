@@ -813,7 +813,7 @@ def main():
         # When recursively copying a directory, shutil.copy_tree first recursively
         # deletes the old files. It has to read directories to delete all the files
         # in them, and those files arent listed in the generated depfile.
-        "copy_tree.py",
+        "copy_tree_wrapper.sh",
     }
     if os.path.basename(script) in ignored_scripts:
         return retval
