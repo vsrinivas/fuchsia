@@ -8,23 +8,25 @@
 #include <lib/arch/zbi-boot.h>
 #include <lib/memalloc/pool.h>
 #include <lib/memalloc/range.h>
+#include <lib/zbitl/error-stdio.h>
 #include <lib/zbitl/item.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string-file.h>
 #include <zircon/assert.h>
 #include <zircon/boot/image.h>
 #include <zircon/boot/multiboot.h>
 
-#include <cstdio>
-#include <cstdlib>
-#include <limits>
-
 #include <fbl/alloc_checker.h>
+#include <ktl/array.h>
 #include <ktl/iterator.h>
 #include <ktl/limits.h>
 #include <ktl/string_view.h>
 #include <ktl/unique_ptr.h>
 #include <phys/allocation.h>
 #include <phys/boot-zbi.h>
+#include <phys/main.h>
 #include <phys/new.h>
 #include <phys/stdio.h>
 #include <phys/symbolize.h>
@@ -41,17 +43,33 @@
 const char* kTestName = "trampoline-boot-shim-test";
 
 namespace {
+// User argument for setting the seed to use in the first iteration.
+constexpr ktl::string_view kUserSeedOpt = "trampoline.user_seed=";
 
-// When set, dictates random decisions done by the trampoline boot test.
-constexpr ktl::string_view kSeedOpt = "trampoline.seed=";
+// User argument for setting the number of iterations to perform.
+constexpr ktl::string_view kUserTotalIterationsOpt = "trampoline.user_total_iters=";
+
+// Internal arguments for communicating state throughout each iteration, for validation purposes.
+
+// Used to communicate to the next kernel item what the seed to use is.
+constexpr ktl::string_view kSeedOpt = "trampoline.state.seed=";
 
 // Used to communicate to the next kernel item what the expected load address is.
 // If provided, will fix the value to a specific load address.
-constexpr ktl::string_view kKernelLoadAddressOpt = "trampoline.kernel_load_address=";
+constexpr ktl::string_view kKernelLoadAddressOpt = "trampoline.state.kernel_load_address=";
 
 // Used to communicate to the next kernel item what the expected address of the data ZBI is.
 // If provided, will fix the the value to a specific load address.
-constexpr ktl::string_view kDataLoadAddressOpt = "trampoline.data_load_address=";
+constexpr ktl::string_view kDataLoadAddressOpt = "trampoline.state.data_load_address=";
+
+// Keeps track of the total number of iterations to perform.
+// If not set, will default to one.
+constexpr ktl::string_view kRemainingIterationsOpt = "trampoline.state.remaining_iterations=";
+
+// This is used as a marker to notify that user arguments have been parsed,
+// and that trampoline state is present in the last command line item.
+// If not set, will default to false.
+constexpr ktl::string_view kIsReadyOpt = "trampoline.state.ready=";
 
 struct RangeCollection {
   RangeCollection() = delete;
@@ -140,12 +158,13 @@ RangeCollection FindCandidateRanges(const RangeCollection& allocable_ranges, siz
     candidate_range.addr = aligned_addr;
     candidate_range.size = size_slack - unaligned_bytes;
   }
+
   ZX_ASSERT(!ranges.view().empty());
   return ranges;
 }
 
 // Pick an allocation range from available ranges in the |memalloc::Pool|.
-// Coalesce all allocatable ranges, that is, any non null region, reserved or peripheral range.
+// Coalesce all allocatable ranges, that is any non reserved or peripheral range.
 uint64_t GetRandomAlignedMemoryRange(memalloc::Pool& pool, BootZbi::Size size, uint64_t& seed) {
   // Each candidate range represents a valid starting point, and a wiggle room, that is,
   // how many bytes can an allocation be shifted.
@@ -173,78 +192,169 @@ uint64_t GetRandomAlignedMemoryRange(memalloc::Pool& pool, BootZbi::Size size, u
   return target_address;
 }
 
+uint64_t GetMemoryAddress(BootZbi::Size size, uint64_t& seed) {
+  uint64_t address = GetRandomAlignedMemoryRange(Allocation::GetPool(), size, seed);
+  ZX_ASSERT_MSG(address % size.alignment == 0,
+                "memory address(0x%016" PRIx64 ") is not aligned at boundary(0x%016" PRIx64 ")",
+                address, size.alignment);
+  return address;
+}
+
+constexpr uint64_t HexOptionSize(ktl::string_view name) {
+  // 'opt=0x0000000 '
+  return name.length() + 16 + 2;
+}
+
+constexpr uint32_t GetCommandLinePayloadLength() {
+  // opt=value opt2=value2 ....
+  constexpr size_t cmdline_payload_length =
+      HexOptionSize(kKernelLoadAddressOpt) + HexOptionSize(kDataLoadAddressOpt) +
+      HexOptionSize(kRemainingIterationsOpt) + HexOptionSize(kSeedOpt) + kIsReadyOpt.length() +
+      ktl::string_view("true").length() + 4;
+
+  constexpr uint32_t length = static_cast<uint32_t>(cmdline_payload_length);
+  static_assert(length == cmdline_payload_length);
+  return length;
+}
+
+constexpr uint64_t GetCommandLineItemLength() {
+  // Aligned zbi_header | payload.
+  return sizeof(zbi_header_t) + ZBI_ALIGN(GetCommandLinePayloadLength());
+}
+
+void UpdateCommandLineZbiItem(uint64_t kernel_load_address, uint64_t data_load_address,
+                              uint64_t seed, uint64_t iteration, ktl::span<ktl::byte> payload) {
+  // Add an extra imaginary byte, so we dont need to reserve for a nul byte.
+  // Calling |take| here would cause a segfault, it is ok for payload not to be nul terminated.
+  StringFile writer({reinterpret_cast<char*>(payload.data()), payload.size_bytes() + 1});
+
+  auto append_kv = [&writer](ktl::string_view option, uint64_t value) {
+    writer.Write(option);
+    fprintf(&writer, "0x%016" PRIx64 " ", value);
+  };
+
+  append_kv(kKernelLoadAddressOpt, kernel_load_address);
+  append_kv(kDataLoadAddressOpt, data_load_address);
+  append_kv(kSeedOpt, seed);
+  append_kv(kRemainingIterationsOpt, iteration);
+  writer.Write(kIsReadyOpt);
+  writer.Write("true");
+
+  // Payload takes into account the null terminator while the written bytes do not.
+  ZX_ASSERT_MSG(writer.used_region().size() == GetCommandLinePayloadLength(),
+                "written_bytes %zu payload_length %" PRIu32, writer.used_region().size(),
+                GetCommandLinePayloadLength());
+}
+
+uint64_t GetOptionOrDefault(ktl::string_view option_name,
+                            ktl::optional<ktl::string_view> maybe_option, uint64_t default_value) {
+  if (maybe_option) {
+    auto maybe_value = TurduckenTestBase::ParseUint(*maybe_option);
+    ZX_ASSERT_MSG(maybe_value, "%*.s is invalid value for %*.s\n", span_arg(maybe_option.value()),
+                  span_arg(option_name));
+    return *maybe_value;
+  }
+  return default_value;
+}
+
+uint64_t ParseHex(ktl::optional<ktl::string_view> maybe_opt) {
+  ZX_ASSERT(maybe_opt);
+  ZX_ASSERT(maybe_opt->length() <= 18);
+  ktl::array<char, 19> hex_str = {};
+  memcpy(hex_str.data(), maybe_opt->data(), maybe_opt->length());
+  return strtoul(hex_str.data(), nullptr, 16);
+}
+
+template <typename Result>
+void CheckError(Result res) {
+  if (res.is_error()) {
+    zbitl::PrintViewError(res.error_value());
+    ZX_PANIC("Encountered Error.");
+  }
+}
+
 }  // namespace
 
 int TurduckenTest::Main(Zbi::iterator kernel_item) {
-  auto seed_opt = OptionWithPrefix(kSeedOpt);
-  uint64_t kernel_load_address = 0;
-  uint64_t data_load_address = 0;
   uint64_t seed = 0;
+  uint64_t remaining_iterations = 0;
+  uint32_t extra_capacity = 0;
 
-  if (seed_opt) {
-    if (auto seed_val = ParseUint(seed_opt.value())) {
-      seed = *seed_val;
+  bool is_ready = OptionWithPrefix(kIsReadyOpt).has_value();
+  debugf("%s: is_ready: %s\n", test_name(), is_ready ? "true" : "false");
+  auto total_iterations =
+      GetOptionOrDefault(kUserTotalIterationsOpt, OptionWithPrefix(kUserTotalIterationsOpt), 1);
+  if (!is_ready) {
+    remaining_iterations = total_iterations;
+    seed = GetOptionOrDefault(kUserSeedOpt, OptionWithPrefix(kUserSeedOpt), rand_r(&seed));
+
+    // The loaded ZBI needs to account for a command line item that will contain the propagated
+    // state between iterations.
+    extra_capacity = GetCommandLineItemLength();
+  } else {
+    // This is non-bootstrap iteration, and we need to load the state and validate invariants.
+    seed = ParseHex(OptionWithPrefix(kSeedOpt));
+    remaining_iterations = ParseHex(OptionWithPrefix(kRemainingIterationsOpt)) - 1;
+
+    auto check = [this](ktl::string_view option, uint64_t actual) {
+      auto expected = ParseHex(OptionWithPrefix(option));
+      ZX_ASSERT_MSG(actual == expected,
+                    "%.*s (0x%016" PRIx64 ") != expected_load_address (0x%016" PRIx64 ")",
+                    span_arg(option), actual, expected);
+    };
+    check(kKernelLoadAddressOpt, reinterpret_cast<uintptr_t>(PHYS_LOAD_ADDRESS));
+    check(kDataLoadAddressOpt, reinterpret_cast<uintptr_t>(boot_zbi().storage().data()));
+  }
+
+  debugf("%s: random_seed: %" PRIu64 "\n", test_name(), seed);
+  debugf("%s: remaining_iterations: %" PRIu64 "\n", test_name(), remaining_iterations);
+  debugf("%s: total_iterations: %" PRIu64 "\n", test_name(), total_iterations);
+
+  if (remaining_iterations == 0) {
+    debugf("%s: All iterations completed.\n", test_name());
+    return 0;
+  }
+
+  Load(kernel_item, kernel_item, boot_zbi().end(), extra_capacity);
+
+  ktl::span<ktl::byte> cmdline_item_payload;
+
+  if (!is_ready) {
+    // We've allocated enough space for this command line item, now we can just extend it.
+    uint32_t payload_length = GetCommandLinePayloadLength();
+    auto it_or = loaded_zbi().Append({.type = ZBI_TYPE_CMDLINE, .length = payload_length});
+    CheckError(it_or);
+    cmdline_item_payload = it_or->payload;
+  } else {
+    // Find the last item from the command line item, whose payload length matches the
+    // state payload length.
+    auto zbi = loaded_zbi();
+    for (auto& [h, payload] : zbi) {
+      if (h->type == ZBI_TYPE_CMDLINE && payload.size() == GetCommandLinePayloadLength()) {
+        cmdline_item_payload = payload;
+      }
     }
-  } else {
-    seed = rand_r(&seed);
-    debugf("%s: random_seed: %" PRIu64 "\n", test_name(), seed);
+    ZX_ASSERT(!cmdline_item_payload.empty());
+    CheckError(zbi.take_error());
   }
 
-  // Accommodate for snprintf writing a null terminator, instead of truncating the string.
-  // Hex string: 16
-  // 0x prefix: 2
-  // NUL termination: 1
-  // whitespace option separation: 1
-  uint32_t load_address_str_length =
-      kKernelLoadAddressOpt.length() + kDataLoadAddressOpt.length() + 2 * (16 + 2) + 1 + 1;
-  uint32_t cmdline_item_length =
-      ZBI_ALIGN(static_cast<uint32_t>(sizeof(zbi_header_t)) + load_address_str_length);
-  Load(kernel_item, kernel_item, boot_zbi().end(), cmdline_item_length);
+  // Pick random valid memory ranges.
+  uint64_t kernel_load_address =
+      GetMemoryAddress(BootZbi::GetKernelAllocationSize(kernel_item), seed);
+  uint64_t data_load_address =
+      GetMemoryAddress(BootZbi::Size{.size = loaded_zbi().storage().size(),
+                                     .alignment = arch::kZbiBootDataAlignment},
+                       seed);
 
-  if (auto kernel_load_addr_opt = OptionWithPrefix(kKernelLoadAddressOpt)) {
-    auto maybe_load_addr = pretty::ParseSizeBytes(kernel_load_addr_opt.value());
-    ZX_ASSERT_MSG(maybe_load_addr, "%.*s contains invalid value %.*s",
-                  span_arg(kKernelLoadAddressOpt), span_arg(kernel_load_addr_opt.value()));
-    kernel_load_address = *maybe_load_addr;
-  } else {
-    auto alloc = BootZbi::GetKernelAllocationSize(kernel_item);
-    kernel_load_address = GetRandomAlignedMemoryRange(Allocation::GetPool(), alloc, seed);
-  }
-  ZX_ASSERT_MSG(kernel_load_address % arch::kZbiBootKernelAlignment == 0,
-                "kernel_load_address(0x%016" PRIx64 ") must be aligned(0x%016" PRIx64 ")",
-                kernel_load_address, arch::kZbiBootKernelAlignment);
-  debugf("%s: kernel_load_address: 0x%016" PRIx64 "\n", test_name(), kernel_load_address);
   set_kernel_load_address(kernel_load_address);
-
-  if (auto data_load_addr_opt = OptionWithPrefix(kDataLoadAddressOpt)) {
-    auto maybe_load_addr = pretty::ParseSizeBytes(data_load_addr_opt.value());
-    ZX_ASSERT_MSG(maybe_load_addr, "%.*s contains invalid value %.*s",
-                  span_arg(kDataLoadAddressOpt), span_arg(data_load_addr_opt.value()));
-    data_load_address = *maybe_load_addr;
-  } else {
-    auto alloc = BootZbi::Size{.size = loaded_zbi().storage().size_bytes(),
-                               .alignment = arch::kZbiBootDataAlignment};
-    data_load_address = GetRandomAlignedMemoryRange(Allocation::GetPool(), alloc, seed);
-  }
-  ZX_ASSERT_MSG(data_load_address % arch::kZbiBootDataAlignment == 0,
-                "data_load_address(0x%016" PRIx64 ") must be aligned(0x%016" PRIx64 ")",
-                data_load_address, arch::kZbiBootDataAlignment);
-  debugf("%s: data_load_address: 0x%016" PRIx64 "\n", test_name(), kernel_load_address);
   set_data_load_address(data_load_address);
 
-  // Append the new option.
-  auto it_or = loaded_zbi().Append(
-      {.type = ZBI_TYPE_CMDLINE, .length = static_cast<uint32_t>(load_address_str_length)});
-  ZX_ASSERT(it_or.is_ok());
-  auto buffer = it_or->payload;
-  uint32_t written_bytes =
-      snprintf(reinterpret_cast<char*>(buffer.data()), buffer.size(),
-               "%.*s0x%016" PRIx64 " %.*s0x%016" PRIx64, span_arg(kKernelLoadAddressOpt),
-               kernel_load_address, span_arg(kDataLoadAddressOpt), data_load_address);
-  // Remove the extra char to accommodate the added null terminator.
-  ZX_ASSERT_MSG(written_bytes == load_address_str_length - 1,
-                "written_bytes %" PRIu32 " load_address_str_length %" PRIu32, written_bytes,
-                load_address_str_length);
+  debugf("%s: kernel_load_address: 0x%016" PRIx64 "\n", test_name(), kernel_load_address);
+  debugf("%s: data_load_address: 0x%016" PRIx64 "\n", test_name(), data_load_address);
+
+  // Overwrite the state payload with the updated state.
+  UpdateCommandLineZbiItem(kernel_load_address, data_load_address, seed, remaining_iterations,
+                           cmdline_item_payload);
   Boot();
   /*NOTREACHED*/
 }

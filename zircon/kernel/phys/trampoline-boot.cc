@@ -183,19 +183,16 @@ class TrampolineBoot::Trampoline {
             )"""
 #endif
         : [code] "=r"(code), [size] "=r"(size)
-        : [kernel_backwards] "i"(offsetof(TrampolineArgs, kernel) +
-                                 offsetof(RelocateTarget, backwards)),                         //
-          [kernel_dst] "i"(offsetof(TrampolineArgs, kernel) + offsetof(RelocateTarget, dst)),  //
-          [kernel_src] "i"(offsetof(TrampolineArgs, kernel) + offsetof(RelocateTarget, src)),  //
-          [kernel_count] "i"(offsetof(TrampolineArgs, kernel) +
-                             offsetof(RelocateTarget, count)),                               //
-          [zbi_dst] "i"(offsetof(TrampolineArgs, zbi) + offsetof(RelocateTarget, dst)),      //
-          [zbi_src] "i"(offsetof(TrampolineArgs, zbi) + offsetof(RelocateTarget, src)),      //
-          [zbi_count] "i"(offsetof(TrampolineArgs, zbi) + offsetof(RelocateTarget, count)),  //
-          [zbi_backwards] "i"(offsetof(TrampolineArgs, zbi) +
-                              offsetof(RelocateTarget, backwards)),    //
-          [zbi_relocate] "i"(offsetof(TrampolineArgs, zbi_relocate)),  //
-          [data_zbi] "i"(offsetof(TrampolineArgs, data_zbi)),          //
+        : [kernel_backwards] "i"(offsetof(TrampolineArgs, kernel.backwards)),  //
+          [kernel_dst] "i"(offsetof(TrampolineArgs, kernel.dst)),              //
+          [kernel_src] "i"(offsetof(TrampolineArgs, kernel.src)),              //
+          [kernel_count] "i"(offsetof(TrampolineArgs, kernel.count)),          //
+          [zbi_dst] "i"(offsetof(TrampolineArgs, zbi.dst)),                    //
+          [zbi_src] "i"(offsetof(TrampolineArgs, zbi.src)),                    //
+          [zbi_count] "i"(offsetof(TrampolineArgs, zbi.count)),                //
+          [zbi_backwards] "i"(offsetof(TrampolineArgs, zbi.backwards)),        //
+          [zbi_relocate] "i"(offsetof(TrampolineArgs, zbi_relocate)),          //
+          [data_zbi] "i"(offsetof(TrampolineArgs, data_zbi)),                  //
           [entry] "i"(offsetof(TrampolineArgs, entry)));
     return {code, size};
   }

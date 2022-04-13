@@ -411,23 +411,8 @@ if (current_toolchain != default_toolchain) {
     ]
   }
 
-  # TODO(fxbug.dev/88583): remove usage of legacy ZBI when TrampolineBoot allows arbitrary
-  # addresses.
-  zbi_executable("trampoline-boot-test") {
-    testonly = true
-    sources = [ "trampoline-boot-test.cc" ]
-    deps = [
-      ":turducken",
-      ":zbi-test-main",
-      "..:stdio",
-      "//src/lib/elfldltl",
-      "//zircon/kernel/lib/libc",
-      "//zircon/system/ulib/pretty",
-    ]
-  }
-
   # turkey
-  zbi_executable("trampoline-boot-test-shim") {
+  zbi_executable("trampoline-boot-test") {
     testonly = true
     sources = [ "trampoline-boot-test-shim.cc" ]
     deps = [
@@ -442,14 +427,16 @@ if (current_toolchain != default_toolchain) {
   }
 
   kernel_cmdline("trampoline-cmdline") {
-    args = [ "trampoline.seed=12345" ]
+    testonly = true
+    visibility = [ ":*" ]
+    args = [
+      "trampoline.user_seed=12345",
+      "trampoline.user_total_iters=100",
+    ]
   }
 
-  turducken_zbi_test("trampoline-boot-zbi-test") {
-    kernel = ":trampoline-boot-test-shim"
-
-    sources = get_target_outputs(":trampoline-boot-test")
-    data_deps = [ ":trampoline-boot-test" ]
+  mobius_turducken_test("trampoline-boot-zbi-test") {
+    kernel = ":trampoline-boot-test"
   }
 
   group("test") {
