@@ -34,7 +34,7 @@ impl CodecInterface {
     pub fn connect(&mut self) -> Result<(), Error> {
         let path = self.path.to_str().ok_or(format_err!("invalid codec path"))?;
         let (codec_connect_proxy, codec_connect_server) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_audio::CodecConnectMarker>()?;
+            fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_audio::CodecConnectorMarker>()?;
         fdio::service_connect_at(
             self.dev_proxy.as_channel().as_ref(),
             path,

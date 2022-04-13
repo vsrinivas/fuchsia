@@ -236,9 +236,9 @@ pub fn test_digital_audio_interface(as_input: bool) -> (DigitalAudioInterface, T
     (DigitalAudioInterface::from_proxy(proxy), handle)
 }
 
-async fn handle_dai_connect_requests(as_input: bool, mut stream: DaiConnectRequestStream) {
+async fn handle_dai_connect_requests(as_input: bool, mut stream: DaiConnectorRequestStream) {
     while let Some(request) = stream.next().await {
-        if let Ok(DaiConnectRequest::Connect { dai_protocol, .. }) = request {
+        if let Ok(DaiConnectorRequest::Connect { dai_protocol, .. }) = request {
             let (handler, _test_handle) =
                 mock_dai_device(as_input, dai_protocol.into_stream().unwrap());
             fasync::Task::spawn(handler).detach();
@@ -252,10 +252,12 @@ pub fn mock_dai_dev_with_io_devices(input: String, output: String) -> Arc<dyn Di
         "class" => mut_pseudo_directory! {
             "dai" => mut_pseudo_directory! {
                 &input => service::host(
-                    move |stream: DaiConnectRequestStream| handle_dai_connect_requests(true, stream)
+                    move |stream: DaiConnectorRequestStream| handle_dai_connect_requests(true,
+                                                                                         stream)
                 ),
                 &output => service::host(
-                    move |stream: DaiConnectRequestStream| handle_dai_connect_requests(false, stream)
+                    move |stream: DaiConnectorRequestStream| handle_dai_connect_requests(false,
+                                                                                         stream)
                 ),
             }
         }

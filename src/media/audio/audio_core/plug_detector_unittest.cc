@@ -22,29 +22,48 @@ namespace {
 
 // A minimal |fuchsia::hardware::audio::Device| that we can use to emulate a fake devfs directory
 // for testing.
-class FakeAudioDevice : public fuchsia::hardware::audio::Device {
+class FakeAudioDevice : public fuchsia::hardware::audio::StreamConfigConnector,
+                        public fuchsia::hardware::audio::StreamConfig {
  public:
-  FakeAudioDevice() { FX_CHECK(zx::channel::create(0, &client_, &server_) == ZX_OK); }
+  FakeAudioDevice() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+    loop_.StartThread("fake-audio-device-loop");
+  }
+  ~FakeAudioDevice() { loop_.Shutdown(); }
 
   fbl::RefPtr<fs::Service> AsService() {
     return fbl::MakeRefCounted<fs::Service>([this](zx::channel c) {
-      binding_.Bind(std::move(c));
+      connector_binding_.Bind(std::move(c));
       return ZX_OK;
     });
   }
 
-  bool is_bound() const { return !client_; }
+  bool is_bound() const { return stream_config_binding_->is_bound(); }
 
  private:
-  void GetChannel(GetChannelCallback callback) override {
-    FX_CHECK(client_);
-    fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config = {};
-    stream_config.set_channel(std::move(client_));
-    callback(std::move(stream_config));
+  // FIDL method for fuchsia.hardware.audio.StreamConfigConnector.
+  void Connect(fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> server) override {
+    stream_config_binding_.emplace(this, std::move(server), loop_.dispatcher());
   }
 
-  zx::channel client_, server_;
-  fidl::Binding<fuchsia::hardware::audio::Device> binding_{this};
+  // FIDL methods for fuchsia.hardware.audio.StreamConfig.
+  void GetProperties(GetPropertiesCallback callback) override { callback({}); }
+  void GetSupportedFormats(GetSupportedFormatsCallback callback) override { callback({}); }
+  void CreateRingBuffer(
+      ::fuchsia::hardware::audio::Format format,
+      ::fidl::InterfaceRequest<::fuchsia::hardware::audio::RingBuffer> intf) override {}
+  void WatchGainState(WatchGainStateCallback callback) override { callback({}); }
+  void SetGain(::fuchsia::hardware::audio::GainState target_state) override {}
+  void WatchPlugState(WatchPlugStateCallback callback) override { callback({}); }
+  void GetHealthState(GetHealthStateCallback callback) override { callback({}); }
+  void SignalProcessingConnect(
+      fidl::InterfaceRequest<fuchsia::hardware::audio::signalprocessing::SignalProcessing>
+          signal_processing) override {
+    signal_processing.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  async::Loop loop_;
+  std::optional<fidl::Binding<fuchsia::hardware::audio::StreamConfig>> stream_config_binding_;
+  fidl::Binding<fuchsia::hardware::audio::StreamConfigConnector> connector_binding_{this};
 };
 
 class DeviceTracker {
@@ -59,6 +78,13 @@ class DeviceTracker {
                      fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig>)>
   GetHandler() {
     return [this](auto name, auto is_input, auto stream_config) {
+      // To make sure the 1-way Connect call is completed in the StreamConfigConnector server,
+      // make a 2-way call. Since StreamConfigConnector does not have a 2-way call, we use
+      // StreamConfig synchronously.
+      fidl::SynchronousInterfacePtr client = stream_config.BindSync();
+      fuchsia::hardware::audio::StreamProperties unused_properties;
+      client->GetProperties(&unused_properties);
+      stream_config = client.Unbind();
       devices_.emplace_back(DeviceConnection{std::move(name), is_input, std::move(stream_config)});
     };
   }

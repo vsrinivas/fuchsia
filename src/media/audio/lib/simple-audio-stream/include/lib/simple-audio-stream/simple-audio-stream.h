@@ -58,8 +58,8 @@ struct SimpleAudioStreamProtocol : public ddk::internal::base_protocol {
 
 class SimpleAudioStream;
 using SimpleAudioStreamBase =
-    ddk::Device<SimpleAudioStream, ddk::Messageable<audio_fidl::Device>::Mixin, ddk::Suspendable,
-                ddk::Unbindable>;
+    ddk::Device<SimpleAudioStream, ddk::Messageable<audio_fidl::StreamConfigConnector>::Mixin,
+                ddk::Suspendable, ddk::Unbindable>;
 
 // The SimpleAudioStream server (thread compatible) implements fidl::WireServer<Device> and
 // fidl::WireServer<RingBuffer>.
@@ -406,8 +406,8 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   // publish the stream device node.
   zx_status_t PublishInternal();
 
-  // fuchsia hardware audio Device Interface
-  void GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) override;
+  // fuchsia hardware audio Connector Interface
+  void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override;
 
   // fuchsia hardware audio RingBuffer Interface
   void GetProperties(GetPropertiesRequestView request,

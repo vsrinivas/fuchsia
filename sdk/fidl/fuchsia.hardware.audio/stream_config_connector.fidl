@@ -5,9 +5,10 @@ library fuchsia.hardware.audio;
 
 /// For an overview see
 /// [Audio Driver Streaming Interface](https://fuchsia.dev/fuchsia-src/concepts/drivers/driver_architectures/audio_drivers/audio_streaming).
-protocol Device {
-    /// This method obtains a channel in order to serve FIDL over it outside the devhost's control.
-    GetChannel() -> (resource struct {
-        channel client_end:StreamConfig;
+protocol StreamConfigConnector {
+    /// Connect to a `StreamConfig` protocol.
+    /// This method allows a component to serve FIDL outside the devhost's control.
+    Connect(resource struct {
+        protocol server_end:StreamConfig;
     });
 };
