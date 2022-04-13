@@ -32,9 +32,10 @@ using DeviceType = ddk::Device<NandDevice, ddk::GetSizable, ddk::Suspendable>;
 
 class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::base_protocol> {
  public:
-  // If we're going to experience device level failures that result in data loss
-  // or corruption, let's be very sure.
-  static constexpr size_t kNandReadRetries = 100;
+  // Based on field metrics, this is estimated to recover for 99.5% of the failed reads that recover
+  // at 100 retries while reducing the read disturb on the pages 10x to prevent tipping into
+  // undetected ECC failures which makes debugging and triage difficult.
+  static constexpr size_t kNandReadRetries = 10;
 
   explicit NandDevice(zx_device_t* parent) : DeviceType(parent), raw_nand_(parent) {}
 
