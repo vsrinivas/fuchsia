@@ -26,6 +26,7 @@
         // These system capabilities are offered for use by the cts tests.
         {
             protocol: [
+                "fuchsia.hwinfo.Product",
                 "fuchsia.media.ProfileProvider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.vulkan.loader.Loader",
