@@ -17,6 +17,7 @@ if (is_host) {
       "//src/developer/ffx/lib/errors:lib",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:glob",
+      "//third_party/rust_crates:home",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
     ]

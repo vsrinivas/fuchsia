@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, bail, Context, Result},
+    anyhow::{anyhow, bail, Result},
     errors::ffx_error,
     glob::glob as _glob,
     serde::{Deserialize, Serialize},
@@ -15,7 +15,8 @@ use {
 };
 
 pub fn global_symbol_index_path() -> Result<String> {
-    Ok(std::env::var("HOME").context("getting $HOME")? + "/.fuchsia/debug/symbol-index.json")
+    Ok(pathbuf_to_string(home::home_dir().ok_or(anyhow!("cannot find home directory"))?)?
+        + "/.fuchsia/debug/symbol-index.json")
 }
 
 // Ensures that symbols in sdk.root are registered in the global symbol index.
