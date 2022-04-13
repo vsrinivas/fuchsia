@@ -112,7 +112,6 @@ template("rustc_staticlib") {
                                "test_configs",
                                "test_deps",
                              ])
-      disable_clippy = true  # TODO(josephry): remove this
       output_name = invoker.target_name + "_staticlib_test"
       if (defined(invoker.output_name)) {
         output_name = invoker.output_name + "_staticlib_test"
@@ -191,10 +190,9 @@ template("rustc_staticlib") {
       deps += invoker.non_rust_deps
     }
 
-    disable_clippy = true  # TODO(josephry): remove this
     forward_variables_from(invoker,
                            [
-                             # "disable_clippy",
+                             "disable_clippy",
                              "features",
                              "edition",
                              "inputs",

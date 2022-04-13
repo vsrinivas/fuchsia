@@ -6,6 +6,7 @@ use std::ffi::CString;
 use std::os::raw::c_char;
 
 #[no_mangle]
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub extern "C" fn fuchsia_decode_log_message_to_json(msg: *const u8, size: usize) -> *mut c_char {
     let managed_ptr;
     unsafe {
@@ -21,6 +22,7 @@ pub extern "C" fn fuchsia_decode_log_message_to_json(msg: *const u8, size: usize
 }
 
 #[no_mangle]
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub extern "C" fn fuchsia_free_decoded_log_message(msg: *mut c_char) {
     let str_to_free;
     unsafe {

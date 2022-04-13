@@ -37,6 +37,7 @@ if (is_host) {
     name = "config_proc_macros"
     version = "0.1.0"
     edition = "2018"
+    disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
 
     configs += [ ":env" ]
 

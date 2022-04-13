@@ -83,5 +83,17 @@ template("clippy") {
       ]
     }
     args += invoker.rustflags
+
+    # Search the list of configs for the "proc macro test" one, and if it's present,
+    # apply the same flags it would have applied because clippy doesn't have access
+    # to GN configs.
+    _proc_macro = "//build/config/rust:proc_macro_test"
+    if (invoker.configs + [ _proc_macro ] - [ _proc_macro ] !=
+        invoker.configs || invoker.clippy_crate_type == "proc-macro") {
+      args += [
+        "--extern",
+        "proc_macro",
+      ]
+    }
   }
 }

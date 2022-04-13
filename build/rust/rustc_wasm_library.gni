@@ -167,10 +167,9 @@ template("rustc_wasm_library") {
       deps += invoker.non_rust_deps
     }
 
-    disable_clippy = true  # TODO(josephry): remove this
     forward_variables_from(invoker,
                            [
-                             # "disable_clippy",
+                             "disable_clippy",
                              "edition",
                              "features",
                              "inputs",

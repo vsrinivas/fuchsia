@@ -211,7 +211,7 @@ fn merge_generic_args(state_list: &[&StateArgs]) -> TokenStream2 {
     let mut merged = vec![];
     state_list.iter().for_each(|state| {
         if let Some(generic) = state.generic_args.as_ref() {
-            generic.args.pairs().for_each(|pair| merged.push(pair.value().clone()))
+            generic.args.iter().for_each(|node| merged.push(node.clone()))
         }
     });
     // We use an alphabetical sort to remove duplicates and place lifetimes first.
@@ -220,7 +220,7 @@ fn merge_generic_args(state_list: &[&StateArgs]) -> TokenStream2 {
     if merged.is_empty() {
         quote!()
     } else {
-        let mut punctuated = Punctuated::<&GenericArgument, token::Comma>::new();
+        let mut punctuated = Punctuated::<GenericArgument, token::Comma>::new();
         merged.into_iter().for_each(|arg| punctuated.push(arg));
         quote!(<#punctuated>)
     }

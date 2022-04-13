@@ -134,6 +134,7 @@ pub extern "C" fn str_property_with_enum(
 // |bytecode_sz| must match the size of |bytecode_c|. |properties_sz| must
 // match the size o |properties_c|.
 #[no_mangle]
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub extern "C" fn match_bind_rules(
     bytecode_c: *const u8,
     bytecode_sz: libc::size_t,
