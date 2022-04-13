@@ -31,7 +31,8 @@ class TrampolineBoot : public BootZbi {
   }
 
   fitx::result<Error> Load(uint32_t extra_data_capacity = 0,
-                           ktl::optional<uint64_t> kernel_load_address = ktl::nullopt);
+                           ktl::optional<uint64_t> kernel_load_address = ktl::nullopt,
+                           ktl::optional<uint64_t> data_load_address = ktl::nullopt);
 
   [[noreturn]] void Boot(ktl::optional<void*> argument = {});
 
@@ -49,6 +50,7 @@ class TrampolineBoot : public BootZbi {
   void SetKernelAddresses();
 
   ktl::optional<uint64_t> kernel_load_address_;
+  ktl::optional<uint64_t> data_load_address_;
   uint64_t kernel_entry_address_ = 0;
   Trampoline* trampoline_ = nullptr;
 };

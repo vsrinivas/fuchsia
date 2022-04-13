@@ -29,12 +29,12 @@ const char* kTestName = "trampoline-boot-test";
 
 namespace {
 
-constexpr ktl::string_view kLoadAddressOpt = "trampoline.load_address=";
+constexpr ktl::string_view kKernelLoadAddressOpt = "trampoline.kernel_load_address=";
 
 }  // namespace
 
 int TurduckenTest::Main(Zbi::iterator kernel_item) {
-  auto load_addr_opt = OptionWithPrefix(kLoadAddressOpt);
+  auto load_addr_opt = OptionWithPrefix(kKernelLoadAddressOpt);
 
   ZX_ASSERT(load_addr_opt);
   ZX_ASSERT(load_addr_opt->length() <= 19);

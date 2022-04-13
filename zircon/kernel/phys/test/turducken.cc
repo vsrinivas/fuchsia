@@ -185,7 +185,14 @@ void TurduckenTestBase::Boot() {
     printf("%s: BootZbi::Init OK\n", test_name());
   }
 
+// TODO(fxbug.dev/88583): Needed to keep arm building. ARM uses BootZbi while x86 uses trampoline
+// boot.
+#if defined(__x86_64__) || defined(__i386__)
+  result = boot.Load(0, kernel_load_address_, data_load_address_);
+#else   // arm
   result = boot.Load(0, kernel_load_address_);
+#endif  // __x86_64__
+
   if (result.is_error()) {
     printf("%s: cannot load embedded ZBI: ", test_name());
     zbitl::PrintViewCopyError(result.error_value());

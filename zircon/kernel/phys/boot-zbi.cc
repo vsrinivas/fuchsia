@@ -186,7 +186,8 @@ bool BootZbi::FixedKernelOverlapsData(uint64_t kernel_load_address) const {
 }
 
 fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
-                                           ktl::optional<uintptr_t> kernel_load_address) {
+                                           ktl::optional<uintptr_t> kernel_load_address,
+                                           ktl::optional<uintptr_t> data_load_address) {
   ZX_ASSERT(data_.storage().empty());
 
   auto input_address = reinterpret_cast<uintptr_t>(zbi_.storage().data());
@@ -346,7 +347,14 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
     data_.storage() = {};
   }
 
-  if (!KernelCanLoadInPlace() || !data_.storage().empty()) {
+  // If we are relocating the data zbi, and the destination data overlaps with the kernel current
+  // location, we need to relocate the kernel image, to avoid clubbering the kernel data, by copying
+  // the data zbi over it.
+  bool relocated_data_overlaps_with_kernel =
+      data_load_address.has_value() &&
+      *data_load_address >= KernelLoadAddress() + KernelLoadSize() - DataLoadSize();
+
+  if (!KernelCanLoadInPlace() || !data_.storage().empty() || relocated_data_overlaps_with_kernel) {
     // Allocate space for the kernel image and copy it in.
     fbl::AllocChecker ac;
     kernel_buffer_ =

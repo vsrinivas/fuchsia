@@ -57,11 +57,11 @@ class TrampolineBoot::Trampoline {
   [[noreturn]] void Boot(const zircon_kernel_t* kernel, uint32_t kernel_size, uint64_t load_address,
                          uint64_t entry_address, void* zbi) {
     TrampolineArgs args = {
-        .dst = load_address,
-        .src = reinterpret_cast<uintptr_t>(kernel),
-        .count = kernel_size,
+        .kernel_dst = load_address,
+        .kernel_src = reinterpret_cast<uintptr_t>(kernel),
+        .kernel_count = kernel_size,
+        .zbi_dst = reinterpret_cast<uintptr_t>(zbi),
         .entry = entry_address,
-        .zbi = reinterpret_cast<uintptr_t>(zbi),
     };
     args.SetDirection();
     ZX_ASSERT(args.entry == entry_address);
@@ -76,22 +76,30 @@ class TrampolineBoot::Trampoline {
     // direction flag is set for REP MOVSB and the starting pointers are at the
     // laste byte rather than the first.
     void SetDirection() {
-      backwards = dst > src && dst - src < count;
-      if (backwards) {
-        dst += count - 1;
-        src += count - 1;
+      kernel_backwards = kernel_dst > kernel_src && kernel_dst - kernel_src < kernel_count;
+      if (kernel_backwards) {
+        kernel_dst += kernel_count - 1;
+        kernel_src += kernel_count - 1;
       }
     }
 
-    uint64_t dst;
-    uint64_t src;
-    uint64_t count;
+    uint64_t kernel_dst;
+    uint64_t kernel_src;
+    uint64_t kernel_count;
+    uint64_t zbi_dst;
+    uint64_t zbi_src;
+    uint64_t zbi_count;
     uint64_t entry;
-    uint64_t zbi;
-    bool backwards;
+    bool kernel_backwards;
+    bool zbi_backwards;
+    bool zbi_relocate;
   };
 
-  [[gnu::const]] static zbitl::ByteView TrampolineCode() {
+  // We must require the compiler not to inline |TrampolineCode| to prevent
+  // more that one instance of |TrampolineCode| to exist. The real issue,
+  // is that inlining may introduce alignment or jump relaxation between
+  // instances causing the size of the assembler code to be different.
+  [[gnu::const, gnu::noinline]] static zbitl::ByteView TrampolineCode() {
     // This tiny bit of code will be copied someplace out of the way.  Then it
     // will be entered with %rsi pointing at TrampolineArgs, which can be on
     // the stack since it's read immediately.  Since this code is safely out of
@@ -113,12 +121,12 @@ class TrampolineBoot::Trampoline {
 .code64
 .pushsection .rodata.trampoline, "a?", %%progbits
 0:
-  mov %c[backwards](%%rsi), %%al
+  mov %c[kernel_backwards](%%rsi), %%al
   mov %c[entry](%%rsi), %%rbx
-  mov %c[count](%%rsi), %%rcx
-  mov %c[zbi](%%rsi), %%rdx
-  mov %c[dst](%%rsi), %%rdi
-  mov %c[src](%%rsi), %%rsi
+  mov %c[kernel_count](%%rsi), %%rcx
+  mov %c[zbi_dst](%%rsi), %%rdx
+  mov %c[kernel_dst](%%rsi), %%rdi
+  mov %c[kernel_src](%%rsi), %%rsi
   testb %%al, %%al
   jz 1f
   std
@@ -146,11 +154,11 @@ class TrampolineBoot::Trampoline {
             )"""
 #endif
             : [code] "=r"(code), [size] "=r"(size)
-            : [backwards] "i"(offsetof(TrampolineArgs, backwards)),  //
-              [dst] "i"(offsetof(TrampolineArgs, dst)),              //
-              [src] "i"(offsetof(TrampolineArgs, src)),              //
-              [count] "i"(offsetof(TrampolineArgs, count)),          //
-              [zbi] "i"(offsetof(TrampolineArgs, zbi)),              //
+            : [kernel_backwards] "i"(offsetof(TrampolineArgs, kernel_backwards)),  //
+              [kernel_dst] "i"(offsetof(TrampolineArgs, kernel_dst)),              //
+              [kernel_src] "i"(offsetof(TrampolineArgs, kernel_src)),              //
+              [kernel_count] "i"(offsetof(TrampolineArgs, kernel_count)),          //
+              [zbi_dst] "i"(offsetof(TrampolineArgs, zbi_dst)),                    //
               [entry] "i"(offsetof(TrampolineArgs, entry)));
     return {code, size};
   }
@@ -168,9 +176,14 @@ void TrampolineBoot::SetKernelAddresses() {
 }
 
 fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity,
-                                                  ktl::optional<uint64_t> kernel_load_address) {
+                                                  ktl::optional<uint64_t> kernel_load_address,
+                                                  ktl::optional<uint64_t> data_load_address) {
   if (kernel_load_address) {
     set_kernel_load_address(*kernel_load_address);
+  }
+
+  if (data_load_address) {
+    data_load_address_ = data_load_address;
   }
 
   if (!kernel_load_address_) {
@@ -178,15 +191,21 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity,
     return BootZbi::Load(extra_data_capacity);
   }
 
-  auto load_address = *kernel_load_address_;
-
   // Now we know how much space the kernel image needs.
   // Reserve it at the fixed load address.
   auto& pool = Allocation::GetPool();
-  if (auto result = pool.UpdateFreeRamSubranges(memalloc::Type::kFixedAddressKernel, load_address,
-                                                KernelMemorySize());
+  if (auto result = pool.UpdateFreeRamSubranges(memalloc::Type::kFixedAddressKernel,
+                                                *kernel_load_address_, KernelMemorySize());
       result.is_error()) {
     return fitx::error{BootZbi::Error{.zbi_error = "unable to reserve kernel's load image"sv}};
+  }
+
+  if (data_load_address_) {
+    if (auto result = pool.UpdateFreeRamSubranges(memalloc::Type::kDataZbi, *data_load_address_,
+                                                  DataLoadSize() + extra_data_capacity);
+        result.is_error()) {
+      return fitx::error{BootZbi::Error{.zbi_error = "unable to reserve data ZBI's load image"sv}};
+    }
   }
 
   // The trampoline needs someplace safely neither in the kernel image, nor in
@@ -197,7 +216,7 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity,
   // the data and kernel image memory and from this shim's own image, but as
   // soon as we boot into the new kernel it will be reclaimable memory.
   if (auto result = BootZbi::Load(extra_data_capacity + static_cast<uint32_t>(Trampoline::size()),
-                                  load_address);
+                                  kernel_load_address_);
       result.is_error()) {
     return result.take_error();
   }
@@ -276,6 +295,11 @@ void TrampolineBoot::LogFixedAddresses() const {
   const uint64_t kernel = kernel_load_address_.value();
   const uint64_t bss = kernel + KernelLoadSize();
   const uint64_t end = kernel + KernelMemorySize();
-  debugf("%s: Relocated @ [" ADDR ", " ADDR ")\n", ProgramName(), kernel, bss);
+  debugf("%s: Relocated\n", ProgramName());
+  debugf("%s:    Kernel @ [" ADDR ", " ADDR ")\n", ProgramName(), kernel, bss);
   debugf("%s:       BSS @ [" ADDR ", " ADDR ")\n", ProgramName(), bss, end);
+  if (data_load_address_) {
+    debugf("%s:       ZBI @ [" ADDR ", " ADDR ")\n", ProgramName(), *data_load_address_,
+           *data_load_address_ + DataLoadSize());
+  }
 }

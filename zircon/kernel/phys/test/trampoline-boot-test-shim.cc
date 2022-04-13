@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
+#include <lib/arch/zbi-boot.h>
 #include <lib/memalloc/pool.h>
 #include <lib/memalloc/range.h>
 #include <lib/zbitl/item.h>
@@ -46,7 +47,11 @@ constexpr ktl::string_view kSeedOpt = "trampoline.seed=";
 
 // Used to communicate to the next kernel item what the expected load address is.
 // If provided, will fix the value to a specific load address.
-constexpr ktl::string_view kLoadAddressOpt = "trampoline.load_address=";
+constexpr ktl::string_view kKernelLoadAddressOpt = "trampoline.kernel_load_address=";
+
+// Used to communicate to the next kernel item what the expected address of the data ZBI is.
+// If provided, will fix the the value to a specific load address.
+constexpr ktl::string_view kDataLoadAddressOpt = "trampoline.data_load_address=";
 
 struct RangeCollection {
   RangeCollection() = delete;
@@ -76,6 +81,11 @@ RangeCollection FindAllocableRanges(memalloc::Pool& pool) {
   for (auto& range : pool) {
     // Special ranges.
     if (range.type == memalloc::Type::kReserved || range.type == memalloc::Type::kPeripheral) {
+      continue;
+    }
+
+    // Skip allocations for the payloads of this test.
+    if (range.type == memalloc::Type::kZbiTestPayload) {
       continue;
     }
 
@@ -156,6 +166,10 @@ uint64_t GetRandomAlignedMemoryRange(memalloc::Pool& pool, BootZbi::Size size, u
     target_address += selected_slot * size.alignment;
   }
 
+  ZX_ASSERT_MSG(
+      pool.UpdateFreeRamSubranges(memalloc::Type::kZbiTestPayload, target_address, size.size)
+          .is_ok(),
+      "Insufficient bookkeeping to track new ranges.");
   return target_address;
 }
 
@@ -163,16 +177,9 @@ uint64_t GetRandomAlignedMemoryRange(memalloc::Pool& pool, BootZbi::Size size, u
 
 int TurduckenTest::Main(Zbi::iterator kernel_item) {
   auto seed_opt = OptionWithPrefix(kSeedOpt);
-  uint64_t load_address = 0;
+  uint64_t kernel_load_address = 0;
+  uint64_t data_load_address = 0;
   uint64_t seed = 0;
-
-  auto load_addr_opt = OptionWithPrefix(kLoadAddressOpt);
-  if (load_addr_opt) {
-    auto maybe_load_addr = pretty::ParseSizeBytes(load_addr_opt.value());
-    ZX_ASSERT_MSG(maybe_load_addr, "%.*s contains invalid value %.*s", span_arg(kLoadAddressOpt),
-                  span_arg(load_addr_opt.value()));
-    load_address = *maybe_load_addr;
-  }
 
   if (seed_opt) {
     if (auto seed_val = ParseUint(seed_opt.value())) {
@@ -183,32 +190,57 @@ int TurduckenTest::Main(Zbi::iterator kernel_item) {
     debugf("%s: random_seed: %" PRIu64 "\n", test_name(), seed);
   }
 
-  auto alloc = BootZbi::GetKernelAllocationSize(kernel_item);
-
-  if (!load_addr_opt) {
-    load_address = GetRandomAlignedMemoryRange(Allocation::GetPool(), alloc, seed);
-    debugf("%s: kernel_load_address: 0x%016" PRIx64 "\n", test_name(), load_address);
-  }
-
   // Accommodate for snprintf writing a null terminator, instead of truncating the string.
   // Hex string: 16
   // 0x prefix: 2
   // NUL termination: 1
-  uint32_t load_address_str_length = kLoadAddressOpt.length() + 16 + 2 + 1;
+  // whitespace option separation: 1
+  uint32_t load_address_str_length =
+      kKernelLoadAddressOpt.length() + kDataLoadAddressOpt.length() + 2 * (16 + 2) + 1 + 1;
   uint32_t cmdline_item_length =
       ZBI_ALIGN(static_cast<uint32_t>(sizeof(zbi_header_t)) + load_address_str_length);
-
-  set_kernel_load_address(load_address);
   Load(kernel_item, kernel_item, boot_zbi().end(), cmdline_item_length);
+
+  if (auto kernel_load_addr_opt = OptionWithPrefix(kKernelLoadAddressOpt)) {
+    auto maybe_load_addr = pretty::ParseSizeBytes(kernel_load_addr_opt.value());
+    ZX_ASSERT_MSG(maybe_load_addr, "%.*s contains invalid value %.*s",
+                  span_arg(kKernelLoadAddressOpt), span_arg(kernel_load_addr_opt.value()));
+    kernel_load_address = *maybe_load_addr;
+  } else {
+    auto alloc = BootZbi::GetKernelAllocationSize(kernel_item);
+    kernel_load_address = GetRandomAlignedMemoryRange(Allocation::GetPool(), alloc, seed);
+  }
+  ZX_ASSERT_MSG(kernel_load_address % arch::kZbiBootKernelAlignment == 0,
+                "kernel_load_address(0x%016" PRIx64 ") must be aligned(0x%016" PRIx64 ")",
+                kernel_load_address, arch::kZbiBootKernelAlignment);
+  debugf("%s: kernel_load_address: 0x%016" PRIx64 "\n", test_name(), kernel_load_address);
+  set_kernel_load_address(kernel_load_address);
+
+  if (auto data_load_addr_opt = OptionWithPrefix(kDataLoadAddressOpt)) {
+    auto maybe_load_addr = pretty::ParseSizeBytes(data_load_addr_opt.value());
+    ZX_ASSERT_MSG(maybe_load_addr, "%.*s contains invalid value %.*s",
+                  span_arg(kDataLoadAddressOpt), span_arg(data_load_addr_opt.value()));
+    data_load_address = *maybe_load_addr;
+  } else {
+    auto alloc = BootZbi::Size{.size = loaded_zbi().storage().size_bytes(),
+                               .alignment = arch::kZbiBootDataAlignment};
+    data_load_address = GetRandomAlignedMemoryRange(Allocation::GetPool(), alloc, seed);
+  }
+  ZX_ASSERT_MSG(data_load_address % arch::kZbiBootDataAlignment == 0,
+                "data_load_address(0x%016" PRIx64 ") must be aligned(0x%016" PRIx64 ")",
+                data_load_address, arch::kZbiBootDataAlignment);
+  debugf("%s: data_load_address: 0x%016" PRIx64 "\n", test_name(), kernel_load_address);
+  set_data_load_address(data_load_address);
 
   // Append the new option.
   auto it_or = loaded_zbi().Append(
       {.type = ZBI_TYPE_CMDLINE, .length = static_cast<uint32_t>(load_address_str_length)});
   ZX_ASSERT(it_or.is_ok());
   auto buffer = it_or->payload;
-  uint32_t written_bytes = snprintf(reinterpret_cast<char*>(buffer.data()), buffer.size(),
-                                    "%.*s0x%016" PRIx64, span_arg(kLoadAddressOpt), load_address);
-
+  uint32_t written_bytes =
+      snprintf(reinterpret_cast<char*>(buffer.data()), buffer.size(),
+               "%.*s0x%016" PRIx64 " %.*s0x%016" PRIx64, span_arg(kKernelLoadAddressOpt),
+               kernel_load_address, span_arg(kDataLoadAddressOpt), data_load_address);
   // Remove the extra char to accommodate the added null terminator.
   ZX_ASSERT_MSG(written_bytes == load_address_str_length - 1,
                 "written_bytes %" PRIu32 " load_address_str_length %" PRIu32, written_bytes,

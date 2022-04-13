@@ -82,7 +82,8 @@ class BootZbi {
   // ready for Boot().  The data image can be modified in place between Load
   // and Boot but no more shuffling of memory is expected after Load succeeds.
   fitx::result<Error> Load(uint32_t extra_data_capacity = 0,
-                           ktl::optional<uintptr_t> kernel_load_address = {});
+                           ktl::optional<uintptr_t> kernel_load_address = ktl::nullopt,
+                           ktl::optional<uintptr_t> data_load_address = ktl::nullopt);
 
   // Boot into the kernel loaded by Load(), which must have been called first.
   // This cannot fail and never returns.  If the optional pointer argument is

@@ -97,6 +97,7 @@ class TurduckenTestBase {
   [[noreturn]] void Boot();
 
   void set_kernel_load_address(uint64_t load_address) { kernel_load_address_ = load_address; }
+  void set_data_load_address(uint64_t load_address) { data_load_address_ = load_address; }
 
  private:
   arch::EarlyTicks entry_ticks_;
@@ -104,6 +105,7 @@ class TurduckenTestBase {
   Allocation loaded_;
   uint32_t embedded_type_;
   ktl::optional<uint64_t> kernel_load_address_;
+  ktl::optional<uint64_t> data_load_address_;
 };
 
 // The TestMain in the library calls TurduckenTest::Main.
