@@ -45,6 +45,7 @@ void AcpiArm64::DdkInit(ddk::InitTxn txn) {
       txn.Reply(ZX_OK);
     }
 
+    SysmemInit();
     auto result = manager_->DiscoverDevices();
     if (result.is_error()) {
       zxlogf(INFO, "discover devices failed");
