@@ -5,6 +5,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>
+#include <lib/fdf/dispatcher.h>
 
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_bind.h"
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_device_impl.h"
@@ -41,8 +42,9 @@ zx_status_t VirtualAudioControlImpl::DdkBind(void* ctx, zx_device_t* parent_bus)
 
   zxlogf(INFO, "*** %s: added device '%s': %d", __func__, args.name, status);
 
-  // Use the dispatcher supplied by the DDK.
-  control->dispatcher_ = device_get_dispatcher(control->dev_node());
+  // Use the dispatcher supplied by the driver runtime.
+  control->dispatcher_ =
+      fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_get_current_dispatcher());
 
   // On successful Add, Devmgr takes ownership (relinquished on DdkRelease), so transfer our
   // ownership to a local var, and let it go out of scope.

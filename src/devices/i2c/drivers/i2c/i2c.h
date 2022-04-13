@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_I2C_DRIVERS_I2C_I2C_H_
 #define SRC_DEVICES_I2C_DRIVERS_I2C_I2C_H_
 
+#include <lib/async/dispatcher.h>
 #include <lib/ddk/platform-defs.h>
 
 #include <ddktl/device.h>
@@ -25,13 +26,14 @@ class I2cDevice : public I2cDeviceType {
       : I2cDeviceType(parent), i2c_(i2c) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
+  static zx_status_t Create(void* ctx, zx_device_t* parent, async_dispatcher_t* dispatcher);
 
   void DdkRelease();
   void DdkUnbind(ddk::UnbindTxn txn);
 
  private:
   zx_status_t Init(ddk::I2cImplProtocolClient i2c);
-  void AddChildren();
+  void AddChildren(async_dispatcher_t* dispatcher);
 
   const ddk::I2cImplProtocolClient i2c_;
   uint32_t first_bus_id_;

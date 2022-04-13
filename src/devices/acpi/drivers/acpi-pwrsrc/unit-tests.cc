@@ -35,10 +35,10 @@ class AcpiPwrsrcTest : public zxtest::Test {
     auto client = fake_acpi_.CreateClient(loop_.dispatcher());
     ASSERT_OK(client.status_value());
 
-    auto pwrsrc = std::make_unique<AcpiPwrsrc>(fake_root_.get(), std::move(client.value()));
+    auto pwrsrc = std::make_unique<AcpiPwrsrc>(fake_root_.get(), std::move(client.value()),
+                                               loop_.dispatcher());
     ASSERT_OK(pwrsrc->Bind());
     AcpiPwrsrc* ptr = pwrsrc.release();
-    ptr->zxdev()->SetDispatcher(loop_.dispatcher());
 
     ptr->zxdev()->InitOp();
     ASSERT_OK(ptr->zxdev()->WaitUntilInitReplyCalled(zx::time::infinite()));

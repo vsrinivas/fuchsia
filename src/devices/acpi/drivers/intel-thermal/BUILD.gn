@@ -23,7 +23,7 @@ common_deps = [
   ":bind",
   "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_llcpp",
   "//src/devices/lib/acpi",
-  "//src/devices/lib/driver",
+  "//src/devices/lib/driver:driver_runtime",
   "//src/lib/ddktl",
   "//zircon/system/ulib/fbl",
   "//zircon/system/ulib/inspect",
@@ -33,7 +33,7 @@ common_deps = [
 fuchsia_driver("driver") {
   output_name = "intel-thermal"
   sources = [ "intel_thermal.cc" ]
-  deps = common_deps
+  deps = common_deps + [ "//src/devices/lib/driver" ]
 }
 
 fuchsia_driver_component("component") {

@@ -8,6 +8,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>
+#include <lib/fdf/dispatcher.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
 #include <zircon/types.h>
@@ -38,6 +39,11 @@ void I2cDevice::DdkRelease() {
 }
 
 zx_status_t I2cDevice::Create(void* ctx, zx_device_t* parent) {
+  return Create(ctx, parent,
+                fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_get_current_dispatcher()));
+}
+
+zx_status_t I2cDevice::Create(void* ctx, zx_device_t* parent, async_dispatcher_t* dispatcher) {
   i2c_impl_protocol_t i2c;
   auto status = device_get_protocol(parent, ZX_PROTOCOL_I2C_IMPL, &i2c);
   if (status != ZX_OK) {
@@ -60,7 +66,7 @@ zx_status_t I2cDevice::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  device->AddChildren();
+  device->AddChildren(dispatcher);
 
   __UNUSED auto* dummy = device.release();
 
@@ -97,7 +103,7 @@ zx_status_t I2cDevice::Init(ddk::I2cImplProtocolClient i2c) {
   return ZX_OK;
 }
 
-void I2cDevice::AddChildren() {
+void I2cDevice::AddChildren(async_dispatcher_t* dispatcher) {
   auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_i2c_businfo::wire::I2CBusMetadata>(
       zxdev(), DEVICE_METADATA_I2C_CHANNELS);
   if (!decoded.is_ok()) {
@@ -120,8 +126,8 @@ void I2cDevice::AddChildren() {
     }
 
     const uint32_t bus_index = bus_id - first_bus_id_;
-    zx_status_t status = I2cChild::CreateAndAddDevice(zxdev(), channel, i2c_buses_[bus_index],
-                                                      device_get_dispatcher(parent()));
+    zx_status_t status =
+        I2cChild::CreateAndAddDevice(zxdev(), channel, i2c_buses_[bus_index], dispatcher);
     if (status != ZX_OK) {
       return;
     }

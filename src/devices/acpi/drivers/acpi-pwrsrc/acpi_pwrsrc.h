@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.hardware.acpi/cpp/markers.h>
 #include <fidl/fuchsia.hardware.power/cpp/wire.h>
 #include <fidl/fuchsia.hardware.power/cpp/wire_types.h>
+#include <lib/async/dispatcher.h>
 #include <lib/inspect/cpp/inspect.h>
 
 #include <ddktl/device.h>
@@ -23,8 +24,8 @@ using DeviceType = ddk::Device<AcpiPwrsrc, ddk::Initializable,
                                ddk::Messageable<fuchsia_hardware_power::Source>::Mixin>;
 class AcpiPwrsrc : public DeviceType, fidl::WireServer<fuchsia_hardware_acpi::NotifyHandler> {
  public:
-  explicit AcpiPwrsrc(zx_device_t* parent, acpi::Client acpi)
-      : DeviceType(parent), acpi_(std::move(acpi)) {}
+  explicit AcpiPwrsrc(zx_device_t* parent, acpi::Client acpi, async_dispatcher_t* dispatcher)
+      : DeviceType(parent), acpi_(std::move(acpi)), dispatcher_(dispatcher) {}
   virtual ~AcpiPwrsrc() = default;
 
   static zx_status_t Bind(void* ctx, zx_device_t* dev);
@@ -44,6 +45,7 @@ class AcpiPwrsrc : public DeviceType, fidl::WireServer<fuchsia_hardware_acpi::No
 
  private:
   acpi::Client acpi_;
+  async_dispatcher_t* dispatcher_ = nullptr;
 
   zx::event state_event_;
   bool online_ __TA_GUARDED(lock_) = false;

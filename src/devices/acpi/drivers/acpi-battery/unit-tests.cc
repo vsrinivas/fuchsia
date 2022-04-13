@@ -52,11 +52,11 @@ class AcpiBatteryTest : public InspectTestHelper, public zxtest::Test {
     ASSERT_OK(client.status_value());
 
     // Run bind() and DdkInit().
-    auto battery = std::make_unique<AcpiBattery>(fake_root_.get(), std::move(client.value()));
+    auto battery = std::make_unique<AcpiBattery>(fake_root_.get(), std::move(client.value()),
+                                                 loop_.dispatcher());
     ASSERT_OK(battery->Bind());
     AcpiBattery* ptr = battery.release();
 
-    ptr->zxdev()->SetDispatcher(loop_.dispatcher());
     ptr->zxdev()->InitOp();
     ASSERT_OK(ptr->zxdev()->WaitUntilInitReplyCalled(zx::time::infinite()));
     device_ = ptr->zxdev();

@@ -413,11 +413,6 @@ zx_status_t device_connect_fidl_protocol(zx_device_t* device, const char* protoc
 zx_status_t device_connect_fragment_fidl_protocol(zx_device_t* device, const char* fragment_name,
                                                   const char* protocol_name, zx_handle_t request);
 
-// Returns an async dispatcher. It may be multithreaded, so user must take care to not assume
-// callbacks will be serialized in a single thread. All outstanding waits will be canceled once
-// device_unbind_reply is called.
-async_dispatcher_t* device_get_dispatcher(zx_device_t* device);
-
 // Returns a string containing the variable for the given |name|. If |out| is not large enough,
 // |size_actual| will contain the size of the required buffer. |out| is guaranateed to be null
 // terminated.

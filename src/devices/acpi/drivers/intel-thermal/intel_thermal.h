@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.hardware.acpi/cpp/markers.h>
 #include <fidl/fuchsia.hardware.thermal/cpp/wire.h>
 #include <fidl/fuchsia.hardware.thermal/cpp/wire_types.h>
+#include <lib/async/dispatcher.h>
 #include <lib/inspect/cpp/inspect.h>
 
 #include <ddktl/device.h>
@@ -24,8 +25,8 @@ using DeviceType = ddk::Device<IntelThermal, ddk::Initializable,
                                ddk::Messageable<fuchsia_hardware_thermal::Device>::Mixin>;
 class IntelThermal : public DeviceType, fidl::WireServer<fuchsia_hardware_acpi::NotifyHandler> {
  public:
-  explicit IntelThermal(zx_device_t* parent, acpi::Client acpi)
-      : DeviceType(parent), acpi_(std::move(acpi)) {}
+  explicit IntelThermal(zx_device_t* parent, acpi::Client acpi, async_dispatcher_t* dispatcher)
+      : DeviceType(parent), acpi_(std::move(acpi)), dispatcher_(dispatcher) {}
   virtual ~IntelThermal() = default;
 
   static zx_status_t Bind(void* ctx, zx_device_t* dev);
@@ -62,6 +63,7 @@ class IntelThermal : public DeviceType, fidl::WireServer<fuchsia_hardware_acpi::
  private:
   inspect::Inspector inspect_;
   acpi::Client acpi_;
+  async_dispatcher_t* dispatcher_ = nullptr;
   zx::event event_;
   uint32_t trip_point_count_ __TA_GUARDED(lock_);
   bool have_trip_[fuchsia_hardware_thermal::wire::kMaxTripPoints] __TA_GUARDED(lock_) = {false};

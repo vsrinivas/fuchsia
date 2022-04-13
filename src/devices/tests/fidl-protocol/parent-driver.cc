@@ -34,7 +34,8 @@ class Device : public DeviceParent, public fidl::WireServer<fidl_examples_echo::
       return endpoints.status_value();
     }
 
-    auto device = std::make_unique<Device>(parent, device_get_dispatcher(parent));
+    auto* dispatcher = fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_get_current_dispatcher());
+    auto device = std::make_unique<Device>(parent, dispatcher);
 
     device->outgoing_dir_.svc_dir()->AddEntry(
         fidl::DiscoverableProtocolName<fidl_examples_echo::Echo>,
@@ -75,8 +76,9 @@ class Device : public DeviceParent, public fidl::WireServer<fidl_examples_echo::
 
  private:
   void Bind(fidl::ServerEnd<fidl_examples_echo::Echo> request) {
-    fidl::BindServer<fidl::WireServer<fidl_examples_echo::Echo>>(device_get_dispatcher(parent()),
-                                                                 std::move(request), this);
+    auto* dispatcher = fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_get_current_dispatcher());
+    fidl::BindServer<fidl::WireServer<fidl_examples_echo::Echo>>(dispatcher, std::move(request),
+                                                                 this);
   }
   void EchoString(EchoStringRequestView request, EchoStringCompleter::Sync& completer) override {
     completer.Reply(request->value);

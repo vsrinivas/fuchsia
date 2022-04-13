@@ -25,7 +25,11 @@ zx_status_t AcpiBattery::Bind(void* ctx, zx_device_t* parent) {
     zxlogf(ERROR, "Failed to get ACPI device: %s", zx_status_get_string(acpi.error_value()));
     return acpi.error_value();
   }
-  auto device = std::make_unique<AcpiBattery>(parent, std::move(acpi.value()));
+
+  async_dispatcher_t* dispatcher =
+      fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_get_current_dispatcher());
+
+  auto device = std::make_unique<AcpiBattery>(parent, std::move(acpi.value()), dispatcher);
   auto status = device->Bind();
   if (status == ZX_OK) {
     // The DDK takes ownership of the device.
@@ -73,9 +77,8 @@ void AcpiBattery::DdkInit(ddk::InitTxn txn) {
     return;
   }
 
-  async_dispatcher_t* dispatcher = device_get_dispatcher(zxdev());
   fidl::BindServer<fidl::WireServer<fuchsia_hardware_acpi::NotifyHandler>>(
-      dispatcher, std::move(endpoints->server), this);
+      dispatcher_, std::move(endpoints->server), this);
 
   auto result = acpi_.borrow()->InstallNotifyHandler(facpi::NotificationMode::kDevice,
                                                      std::move(endpoints->client));

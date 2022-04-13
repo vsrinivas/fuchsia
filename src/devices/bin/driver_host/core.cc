@@ -629,13 +629,6 @@ void DriverHostContext::DeviceUnbindReply(const fbl::RefPtr<zx_device_t>& dev) {
          dev.get(), dev->vnode->GetInflightTransactions());
   }
 
-  // Unfortunately, because of the incorrect direction of unbind, child devices may still attempt to
-  // use the device after unbind is replied to, so we cannot cut off it's connection to parent
-  // devices, which may be done through waits on the async dispatcher.
-  //
-  // TODO: Do this when unbind flow is reversed.
-  // dev->CancelWaitsandTasks();
-
   VLOGD(1, *dev, "Device %p unbind completed", dev.get());
   if (dev->unbind_cb) {
     dev->CloseAllConnections();

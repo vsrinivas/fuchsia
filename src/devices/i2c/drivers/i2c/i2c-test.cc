@@ -105,9 +105,8 @@ TEST_F(I2cMetadataTest, ProvidesMetadataToChildren) {
   channels.emplace_back(MakeChannel(arena, 0, 0xb));
 
   auto impl = FakeI2cImpl::Create(fake_root_.get(), std::move(channels));
-  impl->zxdev()->SetDispatcher(loop_.dispatcher());
   // Make the fake I2C driver.
-  ASSERT_OK(i2c::I2cDevice::Create(nullptr, impl->zxdev()));
+  ASSERT_OK(i2c::I2cDevice::Create(nullptr, impl->zxdev(), loop_.dispatcher()));
 
   // Check the number of devices we have makes sense.
   ASSERT_EQ(impl->zxdev()->child_count(), 1);

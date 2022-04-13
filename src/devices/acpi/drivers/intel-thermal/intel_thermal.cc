@@ -38,7 +38,9 @@ zx_status_t IntelThermal::Bind(void* ctx, zx_device_t* dev) {
     return client.error_value();
   }
 
-  auto device = std::make_unique<IntelThermal>(dev, std::move(client.value()));
+  async_dispatcher_t* dispatcher =
+      fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_get_current_dispatcher());
+  auto device = std::make_unique<IntelThermal>(dev, std::move(client.value()), dispatcher);
   zx_status_t status = device->Bind();
   if (status == ZX_OK) {
     // The DDK takes ownership of the device.
@@ -117,9 +119,8 @@ void IntelThermal::DdkInit(ddk::InitTxn txn) {
     return;
   }
 
-  async_dispatcher_t* dispatcher = device_get_dispatcher(zxdev());
   fidl::BindServer<fidl::WireServer<fuchsia_hardware_acpi::NotifyHandler>>(
-      dispatcher, std::move(endpoints->server), this);
+      dispatcher_, std::move(endpoints->server), this);
 
   auto result = acpi_.borrow()->InstallNotifyHandler(facpi::NotificationMode::kDevice,
                                                      std::move(endpoints->client));

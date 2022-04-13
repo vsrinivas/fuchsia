@@ -10,6 +10,7 @@
 
 #include <ddktl/device.h>
 
+#include "lib/fidl/llcpp/internal/transport.h"
 #include "src/devices/lib/acpi/client.h"
 
 namespace acpi_battery {
@@ -66,8 +67,8 @@ using DeviceType = ddk::Device<AcpiBattery, ddk::Initializable,
 // ACPI.
 class AcpiBattery : public DeviceType, fidl::WireServer<fuchsia_hardware_acpi::NotifyHandler> {
  public:
-  explicit AcpiBattery(zx_device_t* parent, acpi::Client acpi)
-      : DeviceType(parent), acpi_(std::move(acpi)) {}
+  explicit AcpiBattery(zx_device_t* parent, acpi::Client acpi, async_dispatcher_t* dispatcher)
+      : DeviceType(parent), acpi_(std::move(acpi)), dispatcher_(dispatcher) {}
 
   static zx_status_t Bind(void* ctx, zx_device_t* dev);
   zx_status_t Bind();
@@ -102,6 +103,8 @@ class AcpiBattery : public DeviceType, fidl::WireServer<fuchsia_hardware_acpi::N
  private:
   inspect::Inspector inspect_;
   acpi::Client acpi_;
+
+  async_dispatcher_t* dispatcher_ = nullptr;
 
   std::mutex lock_;
   zx::event state_event_ __TA_GUARDED(lock_);

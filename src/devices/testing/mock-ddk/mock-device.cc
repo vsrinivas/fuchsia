@@ -311,12 +311,6 @@ size_t MockDevice::descendant_count() const {
   return count;
 }
 
-void MockDevice::SetDispatcher(async_dispatcher_t* dispatcher) {
-  ZX_ASSERT_MSG(dispatcher_ == nullptr, "Dispatcher for '%s' cannot be changed after it is set.",
-                name());
-  dispatcher_ = dispatcher;
-}
-
 // helper functions:
 namespace {
 

@@ -36,8 +36,6 @@ zx_status_t zx_device::Create(DriverHostContext* ctx, std::string name, fbl::Ref
                               fbl::RefPtr<zx_device>* out_dev) {
   *out_dev = fbl::AdoptRef(new zx_device(ctx, name, driver));
   (*out_dev)->vnode = fbl::MakeRefCounted<DevfsVnode>(*out_dev);
-  auto loop_name = name + "-async-loop";
-  (*out_dev)->loop_.StartThread(loop_name.c_str());
   return ZX_OK;
 }
 

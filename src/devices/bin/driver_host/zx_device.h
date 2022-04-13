@@ -523,9 +523,6 @@ struct zx_device
   DeviceInspect& inspect() { return *inspect_; }
   void FreeInspect() { inspect_.reset(); }
 
-  async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
-  void CancelWaitsAndTasks() { loop_.Shutdown(); }
-
  private:
   explicit zx_device(DriverHostContext* ctx, std::string name, fbl::RefPtr<Driver> driver);
 
@@ -608,9 +605,6 @@ struct zx_device
 
   DriverHostContext* const driver_host_context_;
   std::optional<DeviceInspect> inspect_;
-
-  // Temporary until we implement a better option.
-  async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
 };
 
 // zx_device_t objects must be created or initialized by the driver manager's

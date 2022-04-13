@@ -531,10 +531,6 @@ __EXPORT zx_status_t device_connect_fragment_fidl_protocol(zx_device_t* device,
   return device_connect_fidl_protocol(fragment, protocol_name, request);
 }
 
-__EXPORT async_dispatcher_t* device_get_dispatcher(zx_device_t* device) {
-  return device->dispatcher();
-}
-
 __EXPORT zx_status_t device_get_variable(zx_device_t* device, const char* name, char* out,
                                          size_t out_size, size_t* size_actual) {
   char* variable = getenv(name);

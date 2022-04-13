@@ -223,12 +223,6 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
   // Convenience version which takes string:
   void SetFirmware(std::string firmware, std::string_view path = {});
 
-  // device_get_dispatcher support.
-  async_dispatcher_t* dispatcher() { return dispatcher_; }
-  // Set the dispatcher for this device. The mock ddk does not take ownership of the dispatcher. The
-  // caller is responsible for shutting down the async loop appropriately.
-  void SetDispatcher(async_dispatcher_t* dispatcher);
-
   zx::channel&& TakeClientRemote() { return std::move(client_remote_); }
 
  private:
@@ -317,7 +311,6 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
   std::vector<zx_device_prop_t> props_;
   std::vector<zx_device_str_prop_t> str_props_;
   zx::vmo inspect_;
-  async_dispatcher_t* dispatcher_ = nullptr;
   zx::channel client_remote_;
 };
 

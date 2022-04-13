@@ -22,7 +22,8 @@ zx_status_t AcpiPwrsrc::Bind(void* ctx, zx_device_t* dev) {
     return acpi.error_value();
   }
 
-  auto pwrsrc = std::make_unique<AcpiPwrsrc>(dev, std::move(acpi.value()));
+  auto* dispatcher = fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_get_current_dispatcher());
+  auto pwrsrc = std::make_unique<AcpiPwrsrc>(dev, std::move(acpi.value()), dispatcher);
   zx_status_t status = pwrsrc->Bind();
   if (status == ZX_OK) {
     // The DDK takes ownership of the device.
@@ -49,7 +50,7 @@ void AcpiPwrsrc::DdkInit(ddk::InitTxn txn) {
   }
 
   fidl::BindServer<fidl::WireServer<fuchsia_hardware_acpi::NotifyHandler>>(
-      device_get_dispatcher(zxdev()), std::move(endpoints->server), this);
+      dispatcher_, std::move(endpoints->server), this);
 
   auto result = acpi_.borrow()->InstallNotifyHandler(facpi::NotificationMode::kDevice,
                                                      std::move(endpoints->client));
@@ -108,8 +109,7 @@ void AcpiPwrsrc::Handle(HandleRequestView request, HandleCompleter::Sync& comple
     // Instead, we must delay the PSR evaluation so as to allow time for the
     // actual state to update following the 0x80 event notification.
     async::PostDelayedTask(
-        device_get_dispatcher(zxdev()), [this]() { __UNUSED auto result = CheckOnline(); },
-        zx::msec(200));
+        dispatcher_, [this]() { __UNUSED auto result = CheckOnline(); }, zx::msec(200));
   }
 
   completer.Reply();

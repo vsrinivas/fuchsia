@@ -49,10 +49,10 @@ class IntelThermalTest : public InspectTestHelper, public zxtest::Test {
     auto client = fake_acpi_.CreateClient(loop_.dispatcher());
     ASSERT_OK(client.status_value());
 
-    auto thermal = std::make_unique<IntelThermal>(fake_root_.get(), std::move(client.value()));
+    auto thermal = std::make_unique<IntelThermal>(fake_root_.get(), std::move(client.value()),
+                                                  loop_.dispatcher());
     ASSERT_OK(thermal->Bind());
     IntelThermal* ptr = thermal.release();
-    ptr->zxdev()->SetDispatcher(loop_.dispatcher());
 
     ptr->zxdev()->InitOp();
     ASSERT_OK(ptr->zxdev()->WaitUntilInitReplyCalled(zx::time::infinite()));
