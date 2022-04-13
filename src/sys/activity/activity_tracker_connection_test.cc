@@ -166,7 +166,7 @@ TEST_F(ActivityTrackerConnectionTest, StartOngoingActivity_OutOfOrder) {
 
   auto old_time = Now() - zx::duration(zx::sec(5));
   client_->StartOngoingActivity(1234, OngoingActivity(), old_time.get(),
-                                []() { ASSERT_FALSE("Callback was unexpectedly invoked"); });
+                                []() { FAIL() << "Callback was unexpectedly invoked"; });
   RunLoopUntilIdle();
   EXPECT_EQ(driver_.GetState(), fuchsia::ui::activity::State::ACTIVE);
   ASSERT_TRUE(epitaph);
