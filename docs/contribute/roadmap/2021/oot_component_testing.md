@@ -277,8 +277,9 @@ component instances but rather the entire system under test. As such they differ
 in many ways from component tests such as in developer needs and use cases, and
 in the platform's ability to offer isolation between e2e tests.
 
-The current popular solution for e2e tests is [SL4F] (Scripting Layer for
-Fuchsia). The implementation includes a target-side daemon that is included in
+The current popular solution for e2e tests is
+[SL4F (Scripting Layer for Fuchsia)][sl4f].
+The implementation includes a target-side daemon that is included in
 some Fuchsia images and can perform a documented set of system automation tasks,
 and a [client library written in Dart][sl4f-client] that is available in the
 Fuchsia SDK.
