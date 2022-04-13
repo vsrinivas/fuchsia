@@ -25,6 +25,7 @@ unsafe impl ot::Boxable for Instance {
     type OtType = otInstance;
     unsafe fn finalize(&mut self) {
         trace!("Instance::finalize(): Finalizing otInstance");
+        self.srp_server_set_enabled(false);
         otInstanceFinalize(self.as_ot_ptr());
         InstanceBacking::drop_singleton();
     }
