@@ -9,10 +9,11 @@ use lowpan_driver_common::lowpan_fidl::*;
 use lowpan_driver_common::AsyncConditionWait;
 use lowpan_driver_common::ZxResult;
 
-impl<OT, NI> OtDriver<OT, NI>
+impl<OT, NI, BI> OtDriver<OT, NI, BI>
 where
     OT: Send + ot::InstanceInterface,
     NI: NetworkInterface,
+    BI: BackboneInterface,
 {
     pub(super) fn joiner_start(
         &self,

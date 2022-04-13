@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod backbone;
 mod debug;
 mod iface;
 mod matcher;
@@ -20,6 +21,7 @@ use packet_formats::udp::*;
 use std::collections::HashSet;
 use std::net::Ipv6Addr;
 
+pub use backbone::*;
 pub use debug::*;
 pub use iface::*;
 pub use matcher::*;

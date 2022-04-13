@@ -27,7 +27,7 @@ pub use convert::*;
 use driver_state::*;
 pub use error_adapter::*;
 pub use host_to_thread::*;
-use lowpan_driver_common::net::NetworkInterface;
+use lowpan_driver_common::net::{BackboneInterface, NetworkInterface};
 use lowpan_driver_common::AsyncCondition;
 pub use srp_proxy::*;
 pub use thread_to_host::*;
@@ -50,7 +50,7 @@ const SCAN_EXTRA_TIMEOUT: Duration = Duration::from_seconds(10);
 const STD_IPV6_NET_PREFIX_LEN: u8 = 64;
 
 #[derive(Debug)]
-pub struct OtDriver<OT, NI> {
+pub struct OtDriver<OT, NI, BI> {
     /// Internal, mutex-protected driver state.
     driver_state: parking_lot::Mutex<DriverState<OT>>,
 
@@ -60,12 +60,15 @@ pub struct OtDriver<OT, NI> {
     /// Network Interface. Provides the interface to netstack.
     net_if: NI,
 
+    /// Backbone Interface. Provides support of bouder routing and TREL.
+    backbone_if: BI,
+
     /// Output receiver for OpenThread CLI
     cli_output_receiver: futures::lock::Mutex<futures::channel::mpsc::UnboundedReceiver<String>>,
 }
 
-impl<OT: ot::Cli, NI> OtDriver<OT, NI> {
-    pub fn new(ot_instance: OT, net_if: NI) -> Self {
+impl<OT: ot::Cli, NI, BI> OtDriver<OT, NI, BI> {
+    pub fn new(ot_instance: OT, net_if: NI, backbone_if: BI) -> Self {
         let (cli_output_sender, cli_output_receiver) = futures::channel::mpsc::unbounded();
 
         ot_instance.cli_init(move |c_str| {
@@ -76,6 +79,7 @@ impl<OT: ot::Cli, NI> OtDriver<OT, NI> {
             driver_state: parking_lot::Mutex::new(DriverState::new(ot_instance)),
             driver_state_change: AsyncCondition::new(),
             net_if,
+            backbone_if,
             cli_output_receiver: futures::lock::Mutex::new(cli_output_receiver),
         }
     }

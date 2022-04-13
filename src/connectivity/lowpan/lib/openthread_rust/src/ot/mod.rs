@@ -109,6 +109,9 @@ pub use udp::*;
 mod border_agent;
 pub use border_agent::*;
 
+mod infra_if;
+pub use infra_if::*;
+
 pub mod message;
 pub use message::{Message, MessageBuffer};
 

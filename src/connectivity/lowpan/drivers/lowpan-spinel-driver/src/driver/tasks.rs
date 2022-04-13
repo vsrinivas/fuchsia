@@ -311,6 +311,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
             NetworkInterfaceEvent::RouteToSubnetRevoked(x) => {
                 self.handle_netstack_removed_route(x).await?
             }
+            _ => (),
         })
     }
 

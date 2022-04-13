@@ -58,6 +58,7 @@ rustc_library("lowpan_driver_common") {
     "src/dummy_device.rs",
     "src/lib.rs",
     "src/lowpan_device.rs",
+    "src/net/backbone.rs",
     "src/net/debug.rs",
     "src/net/iface.rs",
     "src/net/matcher.rs",

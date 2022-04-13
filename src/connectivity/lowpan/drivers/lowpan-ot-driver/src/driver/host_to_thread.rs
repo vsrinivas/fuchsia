@@ -20,10 +20,11 @@ use packet_formats::ip::{IpPacket, IpProto, Ipv6Proto};
 use packet_formats::ipv6::Ipv6Packet;
 
 /// Callbacks from netstack and other on-host systems.
-impl<OT, NI> OtDriver<OT, NI>
+impl<OT, NI, BI> OtDriver<OT, NI, BI>
 where
     OT: ot::InstanceInterface + Send,
     NI: NetworkInterface,
+    BI: BackboneInterface,
 {
     pub(crate) async fn on_regulatory_region_changed(&self, region: String) -> Result<(), Error> {
         fx_log_info!("Got region code {:?}", region);
@@ -66,6 +67,7 @@ where
             NetworkInterfaceEvent::RouteToSubnetRevoked(x) => {
                 self.on_netstack_removed_route(x).await?
             }
+            _ => {}
         })
     }
 
@@ -213,10 +215,11 @@ where
 }
 
 /// Outbound (Host-to-Thread) Traffic Handling.
-impl<OT, NI> OtDriver<OT, NI>
+impl<OT, NI, BI> OtDriver<OT, NI, BI>
 where
     OT: ot::InstanceInterface + Send,
     NI: NetworkInterface,
+    BI: BackboneInterface,
 {
     /// Packet pump stream that pulls packets from the network interface,
     /// processes them, and then sends them to OpenThread.

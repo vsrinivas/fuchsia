@@ -173,7 +173,7 @@ where
     }
 }
 
-impl<OT, NI> OtDriver<OT, NI>
+impl<OT, NI, BI> OtDriver<OT, NI, BI>
 where
     OT: Send + ot::InstanceInterface,
 {

@@ -11,13 +11,16 @@ use futures::never::Never;
 use futures::prelude::*;
 use lowpan_driver_common::lowpan_fidl::ConnectivityState;
 
+use lowpan_driver_common::net::BackboneInterface;
 use lowpan_driver_common::spinel::Canceled;
 use lowpan_driver_common::FutureExt;
+use openthread::ot::InfraInterface;
 
-impl<OT, NI> OtDriver<OT, NI>
+impl<OT, NI, BI> OtDriver<OT, NI, BI>
 where
     OT: Send + ot::InstanceInterface + AsRef<ot::Instance>,
     NI: NetworkInterface,
+    BI: BackboneInterface,
 {
     /// Main Loop Stream.
     ///
@@ -85,6 +88,22 @@ where
             .take_event_stream()
             .and_then(move |event| self.on_network_interface_event(event));
 
+        let backbone_if_event_stream =
+            self.backbone_if.event_stream().map(move |event| match event {
+                Ok(is_running) => {
+                    self.driver_state
+                        .lock()
+                        .ot_instance
+                        .as_ref()
+                        .platform_infra_if_on_state_changed(
+                            self.backbone_if.get_nicid().try_into().unwrap(),
+                            is_running,
+                        );
+                    Result::<_, Error>::Ok(())
+                }
+                Err(x) => Err(x),
+            });
+
         // Stream for handling our state machine.
         let state_machine_stream = futures::stream::try_unfold((), move |_| {
             self.state_machine_single()
@@ -100,6 +119,7 @@ where
             regulatory_region_stream.boxed(),
             state_change_stream.boxed(),
             net_if_event_stream.boxed(),
+            backbone_if_event_stream.boxed(),
             state_machine_stream.boxed(),
             discovery_proxy_stream.boxed(),
         ]))

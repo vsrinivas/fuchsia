@@ -8,13 +8,14 @@ use async_trait::async_trait;
 use core::future::ready;
 use fuchsia_zircon::Duration;
 use lowpan_driver_common::lowpan_fidl::*;
+use lowpan_driver_common::net::BackboneInterface;
 use lowpan_driver_common::AsyncConditionWait;
 use lowpan_driver_common::Driver as LowpanDriver;
 use lowpan_driver_common::ZxResult;
 use std::ffi::CString;
 
 /// Helpers for API-related tasks.
-impl<OT: Send, NI> OtDriver<OT, NI> {
+impl<OT: Send, NI, BI: Send> OtDriver<OT, NI, BI> {
     /// Helper function for methods that return streams. Allows you
     /// to have an initialization method that returns a lock which can be
     /// held while another stream is running.
@@ -87,10 +88,11 @@ impl<OT: Send, NI> OtDriver<OT, NI> {
 
 /// API-related tasks. Implementation of [`lowpan_driver_common::Driver`].
 #[async_trait]
-impl<OT, NI> LowpanDriver for OtDriver<OT, NI>
+impl<OT, NI, BI> LowpanDriver for OtDriver<OT, NI, BI>
 where
     OT: Send + ot::InstanceInterface,
     NI: NetworkInterface,
+    BI: BackboneInterface,
 {
     async fn provision_network(&self, params: ProvisioningParams) -> ZxResult<()> {
         debug!("Got provision command: {:?}", params);

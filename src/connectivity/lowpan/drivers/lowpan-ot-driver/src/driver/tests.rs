@@ -40,7 +40,7 @@ const DEFAULT_TEST_TIMEOUT: Duration = Duration::from_seconds(45);
 /// the program flow to be tested in a fairly straightforward manner.
 fn test_harness<'a, Fun, Fut>(fun: Fun) -> impl Future<Output = ()> + Send + 'a
 where
-    Fun: FnOnce(Arc<OtDriver<OtInstanceBox, DummyNetworkInterface>>) -> Fut,
+    Fun: FnOnce(Arc<OtDriver<OtInstanceBox, DummyNetworkInterface, DummyBackboneInterface>>) -> Fut,
     Fut: Future<Output = ()> + Send + 'a,
 {
     // Since OpenThread is a singleton, we can't create more than once instance at a time.
@@ -60,6 +60,7 @@ where
     let ncp_task = fasync::Task::spawn(ncp_task);
 
     let network_interface = DummyNetworkInterface::default();
+    let backbone_interface = DummyBackboneInterface::default();
 
     // Queue a network event that indicates we are enabled.
     network_interface.set_enabled(true).now_or_never().unwrap().unwrap();
@@ -72,7 +73,7 @@ where
 
     ot::set_logging_level(ot::LogLevel::Crit);
 
-    let driver = Arc::new(OtDriver::new(instance, network_interface));
+    let driver = Arc::new(OtDriver::new(instance, network_interface, backbone_interface));
 
     // Note that we cannot move this into an async block because
     // `fun` itself doesn't implement `Send`.

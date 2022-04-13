@@ -8,7 +8,7 @@ use futures::prelude::*;
 
 use lowpan_driver_common::spinel::Subnet;
 
-impl<OT, NI> OtDriver<OT, NI>
+impl<OT, NI, BI> OtDriver<OT, NI, BI>
 where
     OT: Send + ot::InstanceInterface,
     NI: NetworkInterface,

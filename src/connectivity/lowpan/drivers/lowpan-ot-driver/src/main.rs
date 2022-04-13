@@ -220,12 +220,8 @@ impl Config {
             .await
             .expect("Unable to enable ipv6 packet forwarding on lowapn interface");
 
-        // TODO (fxbug.dev/94129): Handle removal/re-add of backbone interface device
-        // This is needed for now due to the removal of backbone when its region code is set.
-        info!("Wait for 20s before getting backbone interface {:?}", self.backbone_name);
-        std::thread::sleep(std::time::Duration::from_secs(20));
-
         let backbone_netif_index = self.get_backbone_netif_index();
+        let backbone_if = BackboneNetworkInterface::new(backbone_netif_index.unwrap_or(0).into());
 
         if let Some(index) = backbone_netif_index {
             builder = builder.backbone_netif_index(index);
@@ -253,27 +249,30 @@ impl Config {
             connect_to_protocol_at::<FactoryRegisterMarker>(self.service_prefix.as_str()).ok(),
             ot_instance,
             netif,
+            backbone_if,
         );
 
         Ok(driver_future)
     }
 }
 
-async fn run_driver<N, RP, RFP, NI>(
+async fn run_driver<N, RP, RFP, NI, BI>(
     name: N,
     registry: RP,
     factory_registry: Option<RFP>,
     ot_instance: OtInstanceBox,
     net_if: NI,
+    backbone_if: BI,
 ) -> Result<(), Error>
 where
     N: AsRef<str>,
     RP: RegisterProxyInterface,
     RFP: FactoryRegisterProxyInterface,
     NI: NetworkInterface + Debug,
+    BI: BackboneInterface,
 {
     let name = name.as_ref();
-    let driver = OtDriver::new(ot_instance, net_if);
+    let driver = OtDriver::new(ot_instance, net_if, backbone_if);
     let driver_ref = &driver;
 
     let lowpan_device_task = register_and_serve_driver(name, registry, driver_ref).boxed();

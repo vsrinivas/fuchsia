@@ -16,6 +16,8 @@ pub enum NetworkInterfaceEvent {
     AddressWasRemoved(Subnet),
     RouteToSubnetProvided(Subnet),
     RouteToSubnetRevoked(Subnet),
+    InterfaceRemoved(),
+    InterfaceAdded(),
 }
 
 #[async_trait()]

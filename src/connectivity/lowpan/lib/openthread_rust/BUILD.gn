@@ -40,6 +40,7 @@ rustc_library("openthread") {
     "src/ot/dataset.rs",
     "src/ot/dnssd.rs",
     "src/ot/error.rs",
+    "src/ot/infra_if.rs",
     "src/ot/ip6.rs",
     "src/ot/joiner.rs",
     "src/ot/link.rs",
