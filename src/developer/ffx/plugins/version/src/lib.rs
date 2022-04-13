@@ -28,6 +28,17 @@ fn format_version_info<O: Offset + Display>(
         return build_version;
     }
 
+    // Convert the ABI revision back to hex string so that it matches
+    // the format in //sdk/version_history.json.
+    let abi_revision = match info.abi_revision {
+        Some(abi) => format!("{:#X}", abi),
+        None => String::from("(unknown ABI revision)"),
+    };
+    let api_level = match info.api_level {
+        Some(api) => format!("{}", api),
+        None => String::from("(unknown API level)"),
+    };
+
     let hash = info.commit_hash.clone().unwrap_or(UNKNOWN_BUILD_HASH.to_string());
     let timestamp_str = match info.commit_timestamp {
         Some(t) => tz.timestamp(t as i64, 0).to_rfc2822(),
@@ -37,10 +48,12 @@ fn format_version_info<O: Offset + Display>(
     return format!(
         "\
 {}:
+  abi-revision: {},
+  api-level: {},
   build-version: {}
   integration-commit-hash: {}
   integration-commit-time: {}",
-        header, build_version, hash, timestamp_str
+        header, abi_revision, api_level, build_version, hash, timestamp_str
     );
 }
 
@@ -105,12 +118,17 @@ mod test {
     const FAKE_FRONTEND_BUILD_VERSION: &str = "fake frontend build";
     const TIMESTAMP: u64 = 1604080617;
     const TIMESTAMP_STR: &str = "Fri, 30 Oct 2020 17:56:57 +0000";
+    const FAKE_ABI_REVISION: u64 = 17063755220075245312;
+    const ABI_REVISION_STR: &str = "0xECCEA2F70ACD6F00";
+    const FAKE_API_LEVEL: u64 = 7;
 
     fn daemon_info() -> VersionInfo {
         VersionInfo {
             commit_hash: Some(FAKE_DAEMON_HASH.to_string()),
             commit_timestamp: Some(TIMESTAMP),
             build_version: Some(FAKE_DAEMON_BUILD_VERSION.to_string()),
+            abi_revision: Some(FAKE_ABI_REVISION),
+            api_level: Some(FAKE_API_LEVEL),
             ..VersionInfo::EMPTY
         }
     }
@@ -120,6 +138,8 @@ mod test {
             commit_hash: Some(FAKE_FRONTEND_HASH.to_string()),
             commit_timestamp: Some(TIMESTAMP),
             build_version: Some(FAKE_FRONTEND_BUILD_VERSION.to_string()),
+            abi_revision: Some(FAKE_ABI_REVISION),
+            api_level: Some(FAKE_API_LEVEL),
             ..VersionInfo::EMPTY
         }
     }
@@ -229,11 +249,15 @@ mod test {
             output,
             vec![
                 "ffx:".to_string(),
+                format!("  abi-revision: {}", ABI_REVISION_STR),
+                format!("  api-level: {}", FAKE_API_LEVEL),
                 format!("  build-version: {}", FAKE_FRONTEND_BUILD_VERSION),
                 format!("  integration-commit-hash: {}", FAKE_FRONTEND_HASH),
                 format!("  integration-commit-time: {}", TIMESTAMP_STR),
                 String::default(),
                 "daemon:".to_string(),
+                format!("  abi-revision: {}", ABI_REVISION_STR),
+                format!("  api-level: {}", FAKE_API_LEVEL),
                 format!("  build-version: {}", FAKE_DAEMON_BUILD_VERSION),
                 format!("  integration-commit-hash: {}", FAKE_DAEMON_HASH),
                 format!("  integration-commit-time: {}", TIMESTAMP_STR),
@@ -252,6 +276,8 @@ mod test {
             output,
             vec![
                 "ffx:".to_string(),
+                format!("  abi-revision: {}", ABI_REVISION_STR),
+                format!("  api-level: {}", FAKE_API_LEVEL),
                 format!("  build-version: {}", FAKE_FRONTEND_BUILD_VERSION),
                 format!("  integration-commit-hash: {}", FAKE_FRONTEND_HASH),
                 format!("  integration-commit-time: {}", TIMESTAMP_STR),
@@ -274,6 +300,8 @@ mod test {
             output,
             vec![
                 "ffx:".to_string(),
+                format!("  abi-revision: {}", ABI_REVISION_STR),
+                format!("  api-level: {}", FAKE_API_LEVEL),
                 format!("  build-version: {}", FAKE_FRONTEND_BUILD_VERSION),
                 format!("  integration-commit-hash: {}", FAKE_FRONTEND_HASH),
                 format!("  integration-commit-time: {}", TIMESTAMP_STR),
@@ -293,11 +321,15 @@ mod test {
             output,
             vec![
                 "ffx:".to_string(),
+                "  abi-revision: (unknown ABI revision)".to_string(),
+                "  api-level: (unknown API level)".to_string(),
                 "  build-version: (unknown build version)".to_string(),
                 "  integration-commit-hash: (unknown)".to_string(),
                 "  integration-commit-time: (unknown commit time)".to_string(),
                 String::default(),
                 "daemon:".to_string(),
+                "  abi-revision: (unknown ABI revision)".to_string(),
+                "  api-level: (unknown API level)".to_string(),
                 "  build-version: (unknown build version)".to_string(),
                 "  integration-commit-hash: (unknown)".to_string(),
                 "  integration-commit-time: (unknown commit time)".to_string(),

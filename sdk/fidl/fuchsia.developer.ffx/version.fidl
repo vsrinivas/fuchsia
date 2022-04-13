@@ -7,10 +7,24 @@ const MAX_GIT_COMMIT_LENGTH uint16 = 40;
 const MAX_BUILD_VERSION_LENGTH uint16 = 100;
 
 type VersionInfo = table {
-    // Git commit hash of HEAD at build time.
+    /// Git commit hash of HEAD at build time.
     1: commit_hash string:MAX_GIT_COMMIT_LENGTH;
-    // UTC timestamp of the HEAD commit in seconds.
+
+    /// UTC timestamp of the HEAD commit in seconds.
     2: commit_timestamp uint64;
-    // The build version, pulled from //build/info
+
+    /// The build version, pulled from //build/info.
     3: build_version string:MAX_BUILD_VERSION_LENGTH;
+
+    /// The ABI revision denotes the semantics of the Fuchsia System Interface
+    /// that an application expects the platform to provide. The number
+    /// has no ordering relationship (higher is not newer or older).
+    /// Can be mapped to an api_level using //sdk/version_history.json.
+    4: abi_revision uint64;
+
+    /// The API level denotes a set of APIs available when building an
+    /// application for a given release of the FUCHSIA IDK. Higher number
+    /// means newer.
+    /// Can be mapped to an abi_revision using //sdk/version_history.json.
+    5: api_level uint64;
 };

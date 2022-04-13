@@ -89,11 +89,14 @@ fn build_info_impl(raw_version_info: String, raw_build_version: String) -> Versi
     let hash_opt = if raw_hash.is_empty() { None } else { Some(raw_hash) };
     let timestamp_str = split.get(1).unwrap();
     let timestamp = timestamp_str.parse::<u64>().ok();
+    let vh = version_history::LATEST_VERSION;
 
     return VersionInfo {
         commit_hash: hash_opt,
         commit_timestamp: timestamp,
         build_version: Some(raw_build_version.trim().to_string()),
+        abi_revision: Some(vh.abi_revision),
+        api_level: Some(vh.api_level),
         ..VersionInfo::EMPTY
     };
 }
@@ -105,6 +108,8 @@ mod test {
     const HASH: &str = "hashyhashhash";
     const TIMESTAMP: u64 = 12345689;
     const FAKE_BUILD_VERSION: &str = "20201118";
+    const ABI_REVISION: u64 = version_history::LATEST_VERSION.abi_revision;
+    const API_LEVEL: u64 = version_history::LATEST_VERSION.api_level;
 
     #[test]
     fn test_valid_string_dirty() {
@@ -117,6 +122,8 @@ mod test {
                 commit_hash: Some(HASH.to_string()),
                 commit_timestamp: Some(TIMESTAMP),
                 build_version: Some(FAKE_BUILD_VERSION.to_string()),
+                abi_revision: Some(ABI_REVISION),
+                api_level: Some(API_LEVEL),
                 ..VersionInfo::EMPTY
             }
         );
@@ -133,6 +140,8 @@ mod test {
                 commit_hash: Some(HASH.to_string()),
                 commit_timestamp: Some(TIMESTAMP),
                 build_version: Some(FAKE_BUILD_VERSION.to_string()),
+                abi_revision: Some(ABI_REVISION),
+                api_level: Some(API_LEVEL),
                 ..VersionInfo::EMPTY
             }
         );
@@ -148,6 +157,8 @@ mod test {
                 commit_hash: None,
                 commit_timestamp: None,
                 build_version: Some(FAKE_BUILD_VERSION.to_string()),
+                abi_revision: None,
+                api_level: None,
                 ..VersionInfo::EMPTY
             }
         );
@@ -163,6 +174,8 @@ mod test {
                 commit_hash: None,
                 commit_timestamp: None,
                 build_version: Some(FAKE_BUILD_VERSION.to_string()),
+                abi_revision: None,
+                api_level: None,
                 ..VersionInfo::EMPTY
             }
         );
@@ -178,6 +191,8 @@ mod test {
                 commit_hash: None,
                 commit_timestamp: Some(TIMESTAMP),
                 build_version: Some(FAKE_BUILD_VERSION.to_string()),
+                abi_revision: Some(ABI_REVISION),
+                api_level: Some(API_LEVEL),
                 ..VersionInfo::EMPTY
             }
         );
@@ -193,6 +208,8 @@ mod test {
                 commit_hash: None,
                 commit_timestamp: None,
                 build_version: Some(FAKE_BUILD_VERSION.to_string()),
+                abi_revision: None,
+                api_level: None,
                 ..VersionInfo::EMPTY
             }
         );
