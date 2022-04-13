@@ -162,6 +162,11 @@ __EXPORT void fdf_internal_pop_driver() { driver_context::PopDriver(); }
 __EXPORT const void* fdf_internal_get_current_driver() {
   return driver_context::GetCurrentDriver();
 }
+
+__EXPORT void fdf_internal_destroy_all_dispatchers() {
+  return driver_runtime::DispatcherCoordinator::DestroyAllDispatchers();
+}
+
 __EXPORT fdf_status_t fdf_internal_wait_until_dispatcher_idle(fdf_dispatcher_t* dispatcher) {
   return dispatcher->WaitUntilIdle();
 }
@@ -173,6 +178,10 @@ __EXPORT fdf_status_t fdf_internal_shutdown_dispatchers_async(
 
 __EXPORT fdf_status_t fdf_internal_wait_until_all_dispatchers_idle() {
   return driver_runtime::DispatcherCoordinator::WaitUntilDispatchersIdle();
+}
+
+__EXPORT void fdf_internal_wait_until_all_dispatchers_destroyed() {
+  return driver_runtime::DispatcherCoordinator::WaitUntilDispatchersDestroyed();
 }
 
 __EXPORT bool fdf_internal_dispatcher_has_queued_tasks(fdf_dispatcher_t* dispatcher) {

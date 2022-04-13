@@ -53,6 +53,11 @@ void fdf_internal_pop_driver();
 // Returns NULL if no drivers are on the stack.
 const void* fdf_internal_get_current_driver();
 
+// Destroys all dispatchers in the process.
+// This should only be used by the driver host after it has successfully shutdown
+// all dispatchers and stopped all drivers.
+void fdf_internal_destroy_all_dispatchers();
+
 // Blocks the current thread until |dispatcher| is idle.
 // This is useful for testing.
 // This should not be called from a thread managed by the driver runtime,
@@ -72,6 +77,13 @@ bool fdf_internal_dispatcher_has_queued_tasks(fdf_dispatcher_t* dispatcher);
 // This should not be called from a thread managed by the driver runtime,
 // such as from tasks or ChannelRead callbacks.
 fdf_status_t fdf_internal_wait_until_all_dispatchers_idle();
+
+// Blocks the current thread until each runtime dispatcher in the process
+// is observed to have been destroyed.
+// This is useful for testing.
+// This should not be called from a thread managed by the driver runtime,
+// such as from tasks or ChannelRead callbacks.
+void fdf_internal_wait_until_all_dispatchers_destroyed();
 
 // Asynchronously shuts down all dispatchers owned by |driver|.
 // |observer| will be notified once shutdown completes. This is guaranteed to be

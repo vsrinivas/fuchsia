@@ -12,7 +12,6 @@
 #include <lib/ddk/device.h>
 #include <lib/fdf/dispatcher.h>
 #include <lib/fit/defer.h>
-#include <lib/sync/completion.h>
 #include <stdlib.h>
 #include <threads.h>
 #include <zircon/assert.h>
@@ -823,6 +822,16 @@ fdf_status_t DispatcherCoordinator::WaitUntilDispatchersIdle() {
 }
 
 // static
+void DispatcherCoordinator::WaitUntilDispatchersDestroyed() {
+  auto& coordinator = GetDispatcherCoordinator();
+  fbl::AutoLock lock(&coordinator.lock_);
+  if (coordinator.drivers_.size() == 0) {
+    return;
+  }
+  coordinator.drivers_destroyed_event_.Wait(&coordinator.lock_);
+}
+
+// static
 fdf_status_t DispatcherCoordinator::ShutdownDispatchersAsync(
     const void* driver, fdf_internal_driver_shutdown_observer_t* observer) {
   std::vector<fbl::RefPtr<Dispatcher>> dispatchers;
@@ -851,6 +860,24 @@ fdf_status_t DispatcherCoordinator::ShutdownDispatchersAsync(
                     [driver, observer]() { observer->handler(driver, observer); });
   }
   return ZX_OK;
+}
+
+// static
+void DispatcherCoordinator::DestroyAllDispatchers() {
+  std::vector<fbl::RefPtr<Dispatcher>> dispatchers;
+  {
+    fbl::AutoLock lock(&(GetDispatcherCoordinator().lock_));
+
+    for (auto& driver_state : GetDispatcherCoordinator().drivers_) {
+      // We should have already shutdown all dispatchers.
+      ZX_ASSERT(driver_state.CompletedShutdown());
+      driver_state.GetShutdownDispatchers(dispatchers);
+    }
+  }
+
+  for (auto& dispatcher : dispatchers) {
+    dispatcher->Destroy();
+  }
 }
 
 fdf_status_t DispatcherCoordinator::AddDispatcher(fbl::RefPtr<Dispatcher> dispatcher) {
@@ -899,6 +926,10 @@ void DispatcherCoordinator::NotifyShutdown(Dispatcher& dispatcher) {
   if (observer) {
     observer->handler(dispatcher.owner(), observer);
   }
+  fbl::AutoLock lock(&lock_);
+  if (drivers_.size() == 0) {
+    drivers_destroyed_event_.Broadcast();
+  }
 }
 
 void DispatcherCoordinator::RemoveDispatcher(Dispatcher& dispatcher) {
@@ -912,6 +943,9 @@ void DispatcherCoordinator::RemoveDispatcher(Dispatcher& dispatcher) {
   // the driver state can also be destroyed.
   if (!driver_state->HasDispatchers() && !driver_state->IsShuttingDown()) {
     drivers_.erase(driver_state);
+  }
+  if (drivers_.size() == 0) {
+    drivers_destroyed_event_.Broadcast();
   }
 }
 

@@ -1878,6 +1878,116 @@ TEST_F(DispatcherTest, ShutdownAllDispatchersCurrentlyInShutdownCallback) {
   ASSERT_OK(driver_shutdown_completion.Wait());
 }
 
+TEST_F(DispatcherTest, DestroyAllDispatchers) {
+  // Create drivers which leak their dispatchers.
+  auto fake_driver = CreateFakeDriver();
+  {
+    driver_context::PushDriver(fake_driver);
+    auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+    auto dispatcher = fdf::Dispatcher::Create(0, [](fdf_dispatcher_t* dispatcher) {});
+    ASSERT_FALSE(dispatcher.is_error());
+    dispatcher->release();
+  }
+
+  auto fake_driver2 = CreateFakeDriver();
+  {
+    driver_context::PushDriver(fake_driver2);
+    auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+    auto dispatcher2 = fdf::Dispatcher::Create(0, [](fdf_dispatcher_t* dispatcher) {});
+    ASSERT_FALSE(dispatcher2.is_error());
+    dispatcher2->release();
+  }
+
+  // Driver host shuts down all drivers.
+  fdf_internal::DriverShutdown driver_shutdown;
+  libsync::Completion driver_shutdown_completion;
+  ASSERT_OK(driver_shutdown.Begin(fake_driver, [&](const void* driver) {
+    ASSERT_EQ(fake_driver, driver);
+    driver_shutdown_completion.Signal();
+  }));
+  ASSERT_OK(driver_shutdown_completion.Wait());
+  driver_shutdown_completion.Reset();
+
+  ASSERT_OK(driver_shutdown.Begin(fake_driver2, [&](const void* driver) {
+    ASSERT_EQ(fake_driver2, driver);
+    driver_shutdown_completion.Signal();
+  }));
+  ASSERT_OK(driver_shutdown_completion.Wait());
+
+  // This will stop memory from leaking.
+  fdf_internal_destroy_all_dispatchers();
+}
+
+TEST_F(DispatcherTest, WaitUntilAllDispatchersDestroyed) {
+  // No dispatchers, should immediately return.
+  fdf_internal_wait_until_all_dispatchers_destroyed();
+
+  constexpr uint32_t kNumDispatchers = 4;
+  fdf_dispatcher_t* dispatchers[kNumDispatchers];
+
+  for (uint32_t i = 0; i < kNumDispatchers; i++) {
+    auto fake_driver = CreateFakeDriver();
+    driver_context::PushDriver(fake_driver);
+    auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
+    auto dispatcher = fdf::Dispatcher::Create(
+        0, [&](fdf_dispatcher_t* dispatcher) { fdf_dispatcher_destroy(dispatcher); });
+    ASSERT_FALSE(dispatcher.is_error());
+    dispatchers[i] = dispatcher->release();  // Destroyed in shutdown handler.
+  }
+
+  libsync::Completion thread_started;
+  std::atomic_bool wait_complete = false;
+  std::thread thread = std::thread([&]() {
+    thread_started.Signal();
+    fdf_internal_wait_until_all_dispatchers_destroyed();
+    wait_complete = true;
+  });
+
+  ASSERT_OK(thread_started.Wait());
+  for (uint32_t i = 0; i < kNumDispatchers; i++) {
+    // Not all dispatchers have been destroyed yet.
+    ASSERT_FALSE(wait_complete);
+    dispatchers[i]->ShutdownAsync();
+  }
+  thread.join();
+  ASSERT_TRUE(wait_complete);
+}
+
+// Tests waiting for all dispatchers to be destroyed when a driver shutdown
+// observer is also registered.
+TEST_F(DispatcherTest, WaitUntilAllDispatchersDestroyedHasDriverShutdownObserver) {
+  auto fake_driver = CreateFakeDriver();
+  driver_context::PushDriver(fake_driver);
+  auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
+  auto dispatcher = fdf::Dispatcher::Create(
+      0, [&](fdf_dispatcher_t* dispatcher) { fdf_dispatcher_destroy(dispatcher); });
+  ASSERT_FALSE(dispatcher.is_error());
+  dispatcher->release();  // Destroyed in the shutdown handler.
+
+  libsync::Completion thread_started;
+  std::atomic_bool wait_complete = false;
+  std::thread thread = std::thread([&]() {
+    thread_started.Signal();
+    fdf_internal_wait_until_all_dispatchers_destroyed();
+    wait_complete = true;
+  });
+
+  ASSERT_OK(thread_started.Wait());
+
+  fdf_internal::DriverShutdown driver_shutdown;
+  libsync::Completion driver_shutdown_completion;
+  ASSERT_OK(driver_shutdown.Begin(fake_driver, [&](const void* driver) {
+    ASSERT_EQ(fake_driver, driver);
+    driver_shutdown_completion.Signal();
+  }));
+  ASSERT_OK(driver_shutdown_completion.Wait());
+
+  thread.join();
+  ASSERT_TRUE(wait_complete);
+}
+
 //
 // Error handling
 //

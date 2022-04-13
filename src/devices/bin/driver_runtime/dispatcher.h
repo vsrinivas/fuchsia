@@ -10,12 +10,14 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
+#include <lib/sync/cpp/completion.h>
 #include <lib/zx/status.h>
 
 #include <vector>
 
 #include <fbl/auto_lock.h>
 #include <fbl/canary.h>
+#include <fbl/condition_variable.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>
@@ -352,7 +354,9 @@ class DispatcherCoordinator {
   // We default to one thread, and start additional threads when blocking dispatchers are created.
   DispatcherCoordinator() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) { loop_.StartThread(); }
 
+  static void DestroyAllDispatchers();
   static fdf_status_t WaitUntilDispatchersIdle();
+  static void WaitUntilDispatchersDestroyed();
   static fdf_status_t ShutdownDispatchersAsync(const void* driver,
                                                fdf_internal_driver_shutdown_observer_t* observer);
 
@@ -390,6 +394,13 @@ class DispatcherCoordinator {
     void GetDispatchers(std::vector<fbl::RefPtr<driver_runtime::Dispatcher>>& dispatchers) {
       dispatchers.reserve(dispatchers.size() + dispatchers_.size_slow());
       for (auto& dispatcher : dispatchers_) {
+        dispatchers.emplace_back(fbl::RefPtr<Dispatcher>(&dispatcher));
+      }
+    }
+
+    // Appends reference pointers of the driver's shutdown dispatchers to the |dispatchers| vector.
+    void GetShutdownDispatchers(std::vector<fbl::RefPtr<driver_runtime::Dispatcher>>& dispatchers) {
+      for (auto& dispatcher : shutdown_dispatchers_) {
         dispatchers.emplace_back(fbl::RefPtr<Dispatcher>(&dispatcher));
       }
     }
@@ -435,6 +446,8 @@ class DispatcherCoordinator {
   fbl::Mutex lock_;
   // Maps from driver owner to driver state.
   fbl::WAVLTree<const void*, std::unique_ptr<DriverState>> drivers_ __TA_GUARDED(&lock_);
+  // Notified when all drivers are destroyed.
+  fbl::ConditionVariable drivers_destroyed_event_ __TA_GUARDED(&lock_);
 
   async::Loop loop_;
 };
