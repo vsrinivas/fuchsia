@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 fn main() {
-    let num = 9;
-    #[allow(clippy::while_immutable_condition)] // TODO(fxbug.dev/95052)
-    while num >= 10 {}
+    let mut num = 9;
+    while num >= 10 {
+        num -= 1;
+    }
 }
