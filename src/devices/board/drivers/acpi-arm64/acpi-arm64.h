@@ -10,6 +10,7 @@
 
 #include "src/devices/board/lib/acpi/acpi-impl.h"
 #include "src/devices/board/lib/acpi/manager.h"
+#include "src/devices/lib/iommu/iommu-arm.h"
 
 namespace acpi_arm64 {
 
@@ -30,6 +31,7 @@ class AcpiArm64 : public DeviceType {
  private:
   std::optional<acpi::Manager> manager_;
   acpi::AcpiImpl acpi_;
+  iommu::ArmIommuManager iommu_manager_;
   ddk::PBusProtocolClient pbus_;
 
   std::thread init_thread_;

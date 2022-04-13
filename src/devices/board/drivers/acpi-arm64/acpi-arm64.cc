@@ -11,6 +11,7 @@
 #include "src/devices/board/drivers/acpi-arm64/acpi-arm64-bind.h"
 #include "src/devices/board/lib/acpi/acpi-impl.h"
 #include "src/devices/board/lib/acpi/pci.h"
+#include "zircon/status.h"
 
 zx_handle_t root_resource_handle;
 
@@ -32,7 +33,14 @@ zx_status_t AcpiArm64::Create(void *ctx, zx_device_t *parent) {
 }
 
 void AcpiArm64::DdkInit(ddk::InitTxn txn) {
-  manager_.emplace(&acpi_, zxdev_);
+  // TODO(simonshields): add the spiel here.
+  zx_status_t status = iommu_manager_.Init(zx::unowned_resource(get_root_resource()));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "failed to init iommu manager: %s", zx_status_get_string(status));
+    txn.Reply(status);
+    return;
+  }
+  manager_.emplace(&acpi_, &iommu_manager_, zxdev_);
 
   // TODO(simonshields): add the spiel here.
   root_resource_handle = get_root_resource();
