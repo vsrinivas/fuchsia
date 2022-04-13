@@ -56,9 +56,6 @@ pub struct RequestParams {
     /// If true, the request should set the "updatedisabled" property for all apps in the update
     /// check request.
     pub disable_updates: bool,
-
-    /// if true, the request will be decorated with CUPv2 query parameters. Defaults to false.
-    pub cup_sign_requests: bool,
 }
 
 /// The AppEntry holds the data for the app whose request is currently being constructed.  An app
@@ -299,8 +296,8 @@ impl<'a> RequestBuilder<'a> {
             },
         };
 
-        let request_metadata = match (cup_handler.as_ref(), self.params.cup_sign_requests) {
-            (Some(handler), true) => Some(handler.decorate_request(&mut intermediate)?),
+        let request_metadata = match cup_handler.as_ref() {
+            Some(handler) => Some(handler.decorate_request(&mut intermediate)?),
             _ => None,
         };
 

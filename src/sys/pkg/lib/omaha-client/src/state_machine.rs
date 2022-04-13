@@ -1180,7 +1180,6 @@ where
             source: InstallSource::ScheduledTask,
             use_configured_proxies: true,
             disable_updates: false,
-            cup_sign_requests: false,
         };
         let config = self.config.clone();
         let mut request_builder = RequestBuilder::new(&config, &request_params);
@@ -4012,7 +4011,7 @@ mod tests {
                 StateMachineBuilder::new_stub()
                     .http(http)
                     .cup_handler(Some(stub_cup_handler))
-                    .oneshot(RequestParams { cup_sign_requests: true, ..RequestParams::default() })
+                    .oneshot(RequestParams::default())
                     .await,
                 Err(UpdateCheckError::OmahaRequest(OmahaRequestError::CupDecoration(
                     CupDecorationError::ParseError(url::ParseError::EmptyHost)
@@ -4035,7 +4034,7 @@ mod tests {
                 StateMachineBuilder::new_stub()
                     .http(http)
                     .cup_handler(Some(stub_cup_handler))
-                    .oneshot(RequestParams { cup_sign_requests: true, ..RequestParams::default() })
+                    .oneshot(RequestParams::default())
                     .await,
                 Err(UpdateCheckError::OmahaRequest(OmahaRequestError::CupValidation(
                     CupVerificationError::EtagHeaderMissing
@@ -4055,7 +4054,7 @@ mod tests {
                 StateMachineBuilder::new_stub()
                     .http(http)
                     // Default stub_cup_handler, which is permissive.
-                    .oneshot(RequestParams { cup_sign_requests: true, ..RequestParams::default() })
+                    .oneshot(RequestParams::default())
                     .await,
                 Ok(_)
             );

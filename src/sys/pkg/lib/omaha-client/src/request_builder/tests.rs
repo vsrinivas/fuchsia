@@ -27,11 +27,7 @@ fn test_simple_request() {
 
     let (intermediate, _request_metadata) = RequestBuilder::new(
         &config,
-        &RequestParams {
-            source: InstallSource::OnDemand,
-            cup_sign_requests: true,
-            ..RequestParams::default()
-        },
+        &RequestParams { source: InstallSource::OnDemand, ..RequestParams::default() },
     )
     .add_update_check(
         &App::builder("app id", [5, 6, 7, 8])
@@ -77,8 +73,7 @@ fn test_simple_request() {
     assert!(headers.contains(&(HEADER_APP_ID, "app id".to_string())));
     assert!(headers.contains(&(HEADER_INTERACTIVITY, "fg".to_string())));
 
-    // Assert that the cup2key query parameter was set, since
-    // |cup_sign_requests| is true.
+    // Assert that the cup2key query parameter was set.
     let parsed_uri = Url::parse(&intermediate.uri).unwrap();
     let mut query_pairs = parsed_uri.query_pairs();
     assert_eq!(query_pairs.next().unwrap().0, "cup2key");
@@ -174,11 +169,7 @@ fn test_single_request() {
 
     let (http_request, _request_metadata) = RequestBuilder::new(
         &config,
-        &RequestParams {
-            source: InstallSource::OnDemand,
-            cup_sign_requests: true,
-            ..RequestParams::default()
-        },
+        &RequestParams { source: InstallSource::OnDemand, ..RequestParams::default() },
     )
     .add_update_check(
         &App::builder("app id", [5, 6, 7, 8]).with_cohort(Cohort::new("some-channel")).build(),
@@ -587,34 +578,4 @@ fn test_event_added_to_second_app_update_entry() {
     assert_eq!(event.event_type, EventType::UpdateDownloadFinished);
     assert_eq!(event.event_result, EventResult::Success);
     assert_eq!(event.errorcode, Some(EventErrorCode::Installation));
-}
-
-/// This test sets |cup_sign_requests| false and asserts that the outgoing
-/// request is not decorated with cup2key parameters.
-#[test]
-fn test_simple_request_without_cup() {
-    let cup_handler = make_cup_handler_for_test();
-    let config = config_generator();
-
-    let (intermediate, _request_metadata) = RequestBuilder::new(
-        &config,
-        &RequestParams {
-            source: InstallSource::OnDemand,
-            cup_sign_requests: false,
-            ..RequestParams::default()
-        },
-    )
-    .add_update_check(
-        &App::builder("app id", [5, 6, 7, 8])
-            .with_fingerprint("fp")
-            .with_cohort(Cohort::new("some-channel"))
-            .build(),
-    )
-    .session_id(GUID::from_u128(1))
-    .request_id(GUID::from_u128(2))
-    .build_intermediate(Some(&cup_handler))
-    .unwrap();
-
-    // Assert that the cup2key query parameter was not set.
-    assert_eq!(Url::parse(&intermediate.uri).unwrap().query_pairs().next(), None);
 }

@@ -168,7 +168,6 @@ impl Policy for FuchsiaPolicy {
                 source: InstallSource::OnDemand,
                 use_configured_proxies: true,
                 disable_updates,
-                cup_sign_requests: false,
             })
         } else {
             match scheduling.next_update_time {
@@ -180,7 +179,6 @@ impl Policy for FuchsiaPolicy {
                             source: InstallSource::ScheduledTask,
                             use_configured_proxies: true,
                             disable_updates,
-                            cup_sign_requests: false,
                         })
                     } else {
                         CheckDecision::TooSoon
@@ -1234,7 +1232,6 @@ mod tests {
             source: check_options.source,
             use_configured_proxies: true,
             disable_updates: false,
-            cup_sign_requests: false,
         });
         assert_eq!(result, expected);
     }
@@ -1336,7 +1333,6 @@ mod tests {
                     source: check_options.source.clone(),
                     use_configured_proxies: true,
                     disable_updates: false,
-                    cup_sign_requests: false,
                 })
             );
 
@@ -1422,7 +1418,6 @@ mod tests {
             source: check_options.source,
             use_configured_proxies: true,
             disable_updates: true,
-            cup_sign_requests: false,
         });
         assert_eq!(result, expected);
     }

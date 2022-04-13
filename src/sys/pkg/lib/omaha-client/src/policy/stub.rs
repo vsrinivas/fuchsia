@@ -43,7 +43,6 @@ impl<P: Plan> Policy for StubPolicy<P> {
             source: check_options.source.clone(),
             use_configured_proxies: true,
             disable_updates: false,
-            cup_sign_requests: false,
         })
     }
 
@@ -190,7 +189,6 @@ mod tests {
             source: check_options.source,
             use_configured_proxies: true,
             disable_updates: false,
-            cup_sign_requests: false,
         });
         assert_eq!(result, expected);
     }
@@ -211,7 +209,6 @@ mod tests {
             source: check_options.source,
             use_configured_proxies: true,
             disable_updates: false,
-            cup_sign_requests: false,
         });
         assert_eq!(result, expected);
     }

@@ -928,7 +928,6 @@ mod stub {
                 source: check_options.source.clone(),
                 use_configured_proxies: true,
                 disable_updates: false,
-                cup_sign_requests: false,
             }))
             .boxed()
         }
