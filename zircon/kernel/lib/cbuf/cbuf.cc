@@ -26,7 +26,7 @@
 // disabled.
 void Cbuf::Initialize(size_t len, void* buf) TA_NO_THREAD_SAFETY_ANALYSIS {
   DEBUG_ASSERT(len > 0);
-  DEBUG_ASSERT(cpp20::has_single_bit(len));
+  DEBUG_ASSERT(ktl::has_single_bit(len));
 
   len_pow2_ = log2_ulong_floor(len);
   buf_ = static_cast<char*>(buf);

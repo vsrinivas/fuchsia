@@ -13,6 +13,7 @@
 #include <zircon/assert.h>
 
 #include <ktl/algorithm.h>
+#include <ktl/span.h>
 #include <ktl/string_view.h>
 #include <phys/allocation.h>
 #include <phys/boot-zbi.h>
@@ -65,7 +66,7 @@ ktl::span<zbi_mem_range_t> GetMemoryRanges(const MemRangeTable& table) {
 MemRangeTable FindIncomingMemoryTable(BootZbi::InputZbi zbi) {
   MemRangeTable table;
 
-  cpp20::span<ktl::byte> mutable_zbi{
+  ktl::span<ktl::byte> mutable_zbi{
       const_cast<ktl::byte*>(zbi.storage().data()),
       zbi.size_bytes(),
   };

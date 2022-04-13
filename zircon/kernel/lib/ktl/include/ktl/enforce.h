@@ -28,4 +28,10 @@
 // but we can live without kernel code being able to use that one name.
 #pragma GCC poison std
 
+// Also poison the stdcompat namespaces, as the same rules for ktl wrappers
+// apply to those as std proper.
+#pragma GCC poison cpp17
+#pragma GCC poison cpp20
+#pragma GCC poison cpp23
+
 #endif  // ZIRCON_KERNEL_LIB_KTL_INCLUDE_KTL_ENFORCE_H_

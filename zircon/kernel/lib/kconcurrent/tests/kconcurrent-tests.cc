@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <lib/kconcurrent/seqlock.h>
-#include <lib/stdcompat/bit.h>
 #include <lib/unittest/unittest.h>
 
 #include <kernel/mp.h>
+#include <ktl/bit.h>
 #include <ktl/type_traits.h>
 
 #include <ktl/enforce.h>
@@ -198,7 +198,7 @@ static bool ContestedTest() {
   // simply no way with a runtime unit-test to _prove_ that exclusion will occur
   // until the lock is released.
   //
-  if (uint32_t cpus_online = cpp20::popcount(mp_get_online_mask()); cpus_online < 2) {
+  if (uint32_t cpus_online = ktl::popcount(mp_get_online_mask()); cpus_online < 2) {
     printf("Skipping Contested %s SeqLock test.  There is only %u CPU online\n",
            SharedTest ? "Read" : "Write", cpus_online);
   } else {
