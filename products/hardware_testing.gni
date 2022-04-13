@@ -12,6 +12,7 @@ cache_package_labels += [
   "//bundles/drivers:utils",
   "//garnet/packages/prod:hwstress",
   "//garnet/packages/prod:sbase",
+  "//src/devices/radar/bin/radarutil",
   "//src/ui/light/bin/lights-cli",
   "//src/ui/tools/print-input-report",
 ]
