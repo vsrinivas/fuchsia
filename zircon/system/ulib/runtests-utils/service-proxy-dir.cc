@@ -23,6 +23,7 @@ ServiceProxyDir::ServiceProxyDir(fidl::ClientEnd<fio::Directory> proxy_dir)
     : proxy_dir_(std::move(proxy_dir)) {}
 
 void ServiceProxyDir::AddEntry(std::string name, fbl::RefPtr<fs::Vnode> node) {
+  std::lock_guard lock(lock_);
   entries_[std::move(name)] = std::move(node);
 }
 
@@ -44,9 +45,9 @@ zx_status_t ServiceProxyDir::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodePr
 fs::VnodeProtocolSet ServiceProxyDir::GetProtocols() const { return fs::VnodeProtocol::kDirectory; }
 
 zx_status_t ServiceProxyDir::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out) {
-  std::unique_lock lock(lock_);
   auto entry_name = std::string(name.data(), name.length());
 
+  std::lock_guard lock(lock_);
   auto entry = entries_.find(entry_name);
   if (entry != entries_.end()) {
     *out = entry->second;

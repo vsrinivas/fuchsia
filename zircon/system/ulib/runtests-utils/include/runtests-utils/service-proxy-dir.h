@@ -35,8 +35,8 @@ class ServiceProxyDir : public fs::Vnode {
 
  private:
   const fidl::ClientEnd<fuchsia_io::Directory> proxy_dir_;
-  std::unordered_map<std::string, fbl::RefPtr<fs::Vnode>> entries_;
   std::mutex lock_;
+  std::unordered_map<std::string, fbl::RefPtr<fs::Vnode>> entries_ __TA_GUARDED(lock_);
 };
 
 }  // namespace runtests
