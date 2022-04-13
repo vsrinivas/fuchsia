@@ -12,6 +12,8 @@
 #include <lib/async/dispatcher.h>
 #include <lib/sync/cpp/completion.h>
 #include <lib/zx/status.h>
+#include <lib/zx/time.h>
+#include <zircon/compiler.h>
 
 #include <vector>
 
@@ -272,6 +274,63 @@ class Dispatcher : public async_dispatcher_t,
     zx_packet_signal_t signal_packet_ = {};
   };
 
+  // A task which will be triggered at some point in the future.
+  struct DelayedTask : public CallbackRequest {
+    DelayedTask(zx::time deadline)
+        : CallbackRequest(CallbackRequest::RequestType::kTask), deadline(deadline) {}
+    zx::time deadline;
+  };
+
+  // A timer primitive built on top of an async task.
+  class Timer {
+   public:
+    Timer(Dispatcher* dispatcher) : dispatcher_(dispatcher) {}
+
+    zx_status_t BeginWait(async_dispatcher_t* dispatcher, zx::time deadline) {
+      ZX_ASSERT(is_armed() == false);
+      zx_status_t status = task_.PostForTime(dispatcher, deadline);
+      if (status == ZX_OK) {
+        current_deadline_ = deadline;
+      }
+      return status;
+    }
+
+    bool is_armed() const { return current_deadline_ != zx::time::infinite(); }
+
+    zx_status_t Cancel() {
+      if (!is_armed()) {
+        // Nothing to cancel.
+        return ZX_OK;
+      }
+      zx_status_t status = task_.Cancel();
+      // ZX_ERR_NOT_FOUND can happen here when a pending timer fires and
+      // the packet is picked up by port_wait in another thread but has
+      // not reached dispatch.
+      ZX_ASSERT(status == ZX_OK || status == ZX_ERR_NOT_FOUND);
+      if (status == ZX_OK) {
+        current_deadline_ = zx::time::infinite();
+      }
+      return status;
+    }
+
+    zx::time current_deadline() const { return current_deadline_; }
+
+   private:
+    void Handler();
+
+    async::TaskClosureMethod<Timer, &Timer::Handler> task_{this};
+    // zx::time::infinite() means we are not scheduled.
+    zx::time current_deadline_ = zx::time::infinite();
+    Dispatcher* dispatcher_;
+  };
+
+  zx::time GetNextTimeoutLocked() const __TA_REQUIRES(&callback_lock_);
+  void ResetTimerLocked() __TA_REQUIRES(&callback_lock_);
+  void InsertDelayedTaskSortedLocked(std::unique_ptr<DelayedTask> task)
+      __TA_REQUIRES(&callback_lock_);
+  void CheckDelayedTasks() __TA_EXCLUDES(&callback_lock_);
+  void CheckDelayedTasksLocked() __TA_REQUIRES(&callback_lock_);
+
   // Calls |callback_request|.
   void DispatchCallback(std::unique_ptr<driver_runtime::CallbackRequest> callback_request);
   // Calls the callbacks in |callback_queue_|.
@@ -328,6 +387,13 @@ class Dispatcher : public async_dispatcher_t,
   // |registered_callbacks_| queue once completed. They are tracked so that they may be canceled
   // during |Destroy| prior to calling |CompleteDestroy|.
   fbl::TaggedDoublyLinkedList<std::unique_ptr<AsyncWait>, AsyncWaitTag> waits_
+      __TA_GUARDED(&callback_lock_);
+
+  Timer timer_ __TA_GUARDED(&callback_lock_);
+
+  // Tasks which should move into callback_queue as soon as they are ready.
+  // Sorted by earliest deadline first.
+  fbl::DoublyLinkedList<std::unique_ptr<CallbackRequest>> delayed_tasks_
       __TA_GUARDED(&callback_lock_);
 
   // True if currently dispatching a message.

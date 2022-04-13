@@ -20,7 +20,9 @@
 
 #include <zxtest/zxtest.h>
 
+#include "lib/async/cpp/task.h"
 #include "lib/fdf/dispatcher.h"
+#include "lib/zx/time.h"
 #include "src/devices/bin/driver_runtime/driver_context.h"
 #include "src/devices/bin/driver_runtime/runtime_test_case.h"
 
@@ -1148,6 +1150,20 @@ TEST_F(DispatcherTest, AsyncDispatcher) {
   ASSERT_OK(sync_completion_wait(&completion, ZX_TIME_INFINITE));
 }
 
+TEST_F(DispatcherTest, DelayedTask) {
+  fdf_dispatcher_t* dispatcher;
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &dispatcher));
+
+  async_dispatcher_t* async_dispatcher = fdf_dispatcher_get_async_dispatcher(dispatcher);
+  ASSERT_NOT_NULL(async_dispatcher);
+
+  sync_completion_t completion;
+  ASSERT_OK(async::PostTaskForTime(
+      async_dispatcher, [&completion] { sync_completion_signal(&completion); },
+      zx::deadline_after(zx::msec(10))));
+  ASSERT_OK(sync_completion_wait(&completion, ZX_TIME_INFINITE));
+}
+
 TEST_F(DispatcherTest, FromAsyncDispatcher) {
   fdf_dispatcher_t* dispatcher;
   ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &dispatcher));
@@ -1172,6 +1188,24 @@ TEST_F(DispatcherTest, CancelTask) {
   async::TaskClosure task;
   task.set_handler([] { ASSERT_FALSE(true); });
   ASSERT_OK(task.Post(async_dispatcher));
+
+  ASSERT_OK(task.Cancel());  // Task should not be running yet.
+}
+
+TEST_F(DispatcherTest, CancelDelayedTask) {
+  loop_.Quit();
+  loop_.JoinThreads();
+  loop_.ResetQuit();
+
+  fdf_dispatcher_t* dispatcher;
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &dispatcher));
+
+  async_dispatcher_t* async_dispatcher = fdf_dispatcher_get_async_dispatcher(dispatcher);
+  ASSERT_NOT_NULL(async_dispatcher);
+
+  async::TaskClosure task;
+  task.set_handler([] { ASSERT_FALSE(true); });
+  ASSERT_OK(task.PostForTime(async_dispatcher, zx::deadline_after(zx::sec(100))));
 
   ASSERT_OK(task.Cancel());  // Task should not be running yet.
 }

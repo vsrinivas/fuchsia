@@ -12,17 +12,20 @@
 #include <lib/ddk/device.h>
 #include <lib/fdf/dispatcher.h>
 #include <lib/fit/defer.h>
+#include <lib/zx/clock.h>
 #include <stdlib.h>
 #include <threads.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/listnode.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 
 #include <memory>
 #include <string>
 
 #include <fbl/auto_lock.h>
+#include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 
 #include "src/devices/bin/driver_runtime/callback_request.h"
@@ -183,6 +186,7 @@ Dispatcher::Dispatcher(uint32_t options, bool unsynchronized, bool allow_sync_ca
       allow_sync_calls_(allow_sync_calls),
       owner_(owner),
       process_shared_dispatcher_(process_shared_dispatcher),
+      timer_(this),
       shutdown_observer_(observer) {}
 
 // static
@@ -302,6 +306,9 @@ void Dispatcher::ShutdownAsync() {
       }
     }
 
+    timer_.Cancel();
+    shutdown_queue_.splice(shutdown_queue_.end(), delayed_tasks_);
+
     // To avoid race conditions with attempting to cancel a wait that might be scheduled to
     // run, we will cancel the event waiter in the |CompleteShutdown| callback. This is as
     // |async::Wait::Cancel| is not thread safe.
@@ -335,6 +342,7 @@ void Dispatcher::CompleteShutdown() {
     fbl::AutoLock lock(&callback_lock_);
 
     ZX_ASSERT(state_ == DispatcherState::kShuttingDown);
+    ZX_ASSERT(timer_.is_armed() == false);
 
     if (event_waiter_) {
       ZX_ASSERT(IsIdleLocked());
@@ -417,23 +425,114 @@ zx_status_t Dispatcher::CancelWait(async_wait_t* wait) {
   return callback_request ? ZX_OK : ZX_ERR_NOT_FOUND;
 }
 
+zx::time Dispatcher::GetNextTimeoutLocked() const {
+  // Check delayed tasks only when callback_queue_ is empty. We will routinely check if delayed
+  // tasks can be moved into the callback queue anyways and reset the timer whenever callback queue
+  // is empty.
+  if (callback_queue_.is_empty()) {
+    if (delayed_tasks_.is_empty()) {
+      return zx::time::infinite();
+    }
+    return static_cast<const DelayedTask*>(&delayed_tasks_.front())->deadline;
+  }
+  return zx::time::infinite();
+}
+
+void Dispatcher::ResetTimerLocked() {
+  zx::time deadline = GetNextTimeoutLocked();
+  if (deadline == zx::time::infinite()) {
+    // Nothing is left on the queue to fire.
+    timer_.Cancel();
+    return;
+  }
+
+  // The tradeoff of using a task instead of a dedicated timer is that we need to cancel the task
+  // every time a task with a shorter deadline comes in. This isn't really too bad, assuming there
+  // is at least two delayed tasks scheduled, otherwise the timer will be canceled. If we used a
+  // custom implementation for our shared process loop, then we could also have an
+  // "UpdateTaskDeadline" method on tasks which would allow us to shift the deadline as necessary,
+  // without risking the need to cancel the task.
+
+  if (timer_.current_deadline() > deadline && timer_.Cancel() == ZX_OK) {
+    timer_.BeginWait(process_shared_dispatcher_, deadline);
+  }
+}
+
+void Dispatcher::InsertDelayedTaskSortedLocked(std::unique_ptr<DelayedTask> task) {
+  // Find the first node that is bigger and insert before it. fbl::DoublyLinkedList handles all of
+  // the edge cases for us.
+  auto iter = delayed_tasks_.find_if([&](const CallbackRequest& other) {
+    return static_cast<const DelayedTask*>(&other)->deadline > task->deadline;
+  });
+  delayed_tasks_.insert(iter, std::move(task));
+}
+
+void Dispatcher::CheckDelayedTasksLocked() {
+  if (!IsRunningLocked()) {
+    IdleCheckLocked();
+    return;
+  }
+  zx::time now = zx::clock::get_monotonic();
+  auto iter = delayed_tasks_.find_if([&](const CallbackRequest& task) {
+    return static_cast<const DelayedTask*>(&task)->deadline > now;
+  });
+  if (iter != delayed_tasks_.begin()) {
+    fbl::DoublyLinkedList<std::unique_ptr<CallbackRequest>> done_tasks;
+    done_tasks = delayed_tasks_.split_after(--iter);
+    // split_after removes the tasks which are *not* done, so we must swap the lists to get desired
+    // result.
+    std::swap(delayed_tasks_, done_tasks);
+    callback_queue_.splice(callback_queue_.end(), done_tasks);
+    if (event_waiter_ && !event_waiter_->signaled()) {
+      event_waiter_->signal();
+    }
+  } else {
+    ResetTimerLocked();
+  }
+}
+
+void Dispatcher::CheckDelayedTasks() {
+  fbl::AutoLock al(&callback_lock_);
+  CheckDelayedTasksLocked();
+}
+
+void Dispatcher::Timer::Handler() {
+  current_deadline_ = zx::time::infinite();
+  dispatcher_->CheckDelayedTasks();
+}
+
 zx_status_t Dispatcher::PostTask(async_task_t* task) {
-  // TODO(92740): we should do something more efficient rather than creating a new
-  // callback request each time.
-  auto callback_request =
-      std::make_unique<driver_runtime::CallbackRequest>(CallbackRequest::RequestType::kTask);
   driver_runtime::Callback callback =
       [this, task](std::unique_ptr<driver_runtime::CallbackRequest> callback_request,
                    fdf_status_t status) { task->handler(this, task, status); };
-  callback_request->SetCallback(static_cast<fdf_dispatcher_t*>(this), std::move(callback), task);
-  CallbackRequest* callback_ptr = callback_request.get();
-  // TODO(92878): handle task deadlines.
-  callback_request = RegisterCallbackWithoutQueueing(std::move(callback_request));
-  // Dispatcher returned callback request as queueing failed.
-  if (callback_request) {
-    return ZX_ERR_BAD_STATE;
+
+  const zx::time now = zx::clock::get_monotonic();
+  if (zx::time(task->deadline) <= now) {
+    // TODO(92740): we should do something more efficient rather than creating a new
+    // callback request each time.
+    auto callback_request =
+        std::make_unique<driver_runtime::CallbackRequest>(CallbackRequest::RequestType::kTask);
+    callback_request->SetCallback(static_cast<fdf_dispatcher_t*>(this), std::move(callback), task);
+    CallbackRequest* callback_ptr = callback_request.get();
+    // TODO(92878): handle task deadlines.
+    callback_request = RegisterCallbackWithoutQueueing(std::move(callback_request));
+    // Dispatcher returned callback request as queueing failed.
+    if (callback_request) {
+      return ZX_ERR_BAD_STATE;
+    }
+    QueueRegisteredCallback(callback_ptr, ZX_OK);
+  } else {
+    if (task->deadline == ZX_TIME_INFINITE) {
+      // Tasks must complete.
+      return ZX_ERR_INVALID_ARGS;
+    }
+    auto delayed_task = std::make_unique<DelayedTask>(zx::time(task->deadline));
+    delayed_task->SetCallback(static_cast<fdf_dispatcher_t*>(this), std::move(callback), task);
+
+    fbl::AutoLock al(&callback_lock_);
+    InsertDelayedTaskSortedLocked(std::move(delayed_task));
+    ResetTimerLocked();
   }
-  QueueRegisteredCallback(callback_ptr, ZX_OK);
   return ZX_OK;
 }
 
@@ -595,9 +694,19 @@ bool Dispatcher::SetCallbackReason(CallbackRequest* callback_to_update,
 
 std::unique_ptr<CallbackRequest> Dispatcher::CancelAsyncOperation(void* operation) {
   fbl::AutoLock lock(&callback_lock_);
-  return callback_queue_.erase_if([operation](const CallbackRequest& callback_request) {
+  auto iter = callback_queue_.erase_if([operation](const CallbackRequest& callback_request) {
     return callback_request.holds_async_operation(operation);
   });
+  if (iter) {
+    return iter;
+  }
+  iter = delayed_tasks_.erase_if([operation](const CallbackRequest& callback_request) {
+    return callback_request.holds_async_operation(operation);
+  });
+  if (iter) {
+    ResetTimerLocked();
+  }
+  return iter;
 }
 
 void Dispatcher::DispatchCallback(
@@ -692,6 +801,7 @@ void Dispatcher::DispatchCallbacks(std::unique_ptr<EventWaiter> event_waiter,
       return;
     }
     dispatching_sync_ = false;
+    ResetTimerLocked();
     if (callback_queue_.is_empty() && event_waiter->signaled()) {
       event_waiter->designal();
     }
@@ -725,7 +835,7 @@ fdf_status_t Dispatcher::WaitUntilIdle() {
 bool Dispatcher::IsIdleLocked() {
   // If the event waiter was signaled, the thread will be scheduled to run soon.
   return (num_active_threads_ == 0) && callback_queue_.is_empty() &&
-         (!event_waiter_ || !event_waiter_->signaled()) && waits_.is_empty();
+         (!event_waiter_ || !event_waiter_->signaled()) && waits_.is_empty() && !timer_.is_armed();
 }
 
 void Dispatcher::IdleCheckLocked() {
