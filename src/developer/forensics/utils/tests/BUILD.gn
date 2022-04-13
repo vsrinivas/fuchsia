@@ -266,14 +266,11 @@ resource("test_data_zip") {
 ###############################################################################
 # COMPONENTS
 ###############################################################################
-fuchsia_component("archive_unittest") {
-  testonly = true
-
-  manifest = "meta/archive_unittest.cml"
-
+fuchsia_unittest_component("archive_unittest") {
   deps = [
     ":archive_unittest_exe",
     ":test_data_zip",
+    "//src/sys/test_runners:tmp_storage",
   ]
 }
 
@@ -293,12 +290,11 @@ fuchsia_unittest_component("cobalt_unittest") {
   deps = [ ":cobalt_unittest_exe" ]
 }
 
-fuchsia_component("component_unittest") {
-  testonly = true
-
-  manifest = "meta/component_unittest.cml"
-
-  deps = [ ":component_unittest_exe" ]
+fuchsia_unittest_component("component_unittest") {
+  deps = [
+    ":component_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
 fuchsia_unittest_component("hanging_get_ptr_unittest") {

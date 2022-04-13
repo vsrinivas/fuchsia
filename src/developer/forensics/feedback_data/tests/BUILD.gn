@@ -462,12 +462,11 @@ fuchsia_component("data_provider_unittest") {
   ]
 }
 
-fuchsia_component("data_provider_controller_unittest") {
-  testonly = true
-
-  manifest = "meta/data_provider_controller_unittest.cml"
-
-  deps = [ ":data_provider_controller_unittest_exe" ]
+fuchsia_unittest_component("data_provider_controller_unittest") {
+  deps = [
+    ":data_provider_controller_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
 fuchsia_component("datastore_unittest") {
@@ -478,20 +477,18 @@ fuchsia_component("datastore_unittest") {
   deps = [ ":datastore_unittest_exe" ]
 }
 
-fuchsia_component("default_annotations_unittest") {
-  testonly = true
-
-  manifest = "meta/default_annotations_unittest.cml"
-
-  deps = [ ":default_annotations_unittest_exe" ]
+fuchsia_unittest_component("default_annotations_unittest") {
+  deps = [
+    ":default_annotations_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
-fuchsia_component("inspect_data_budget_unittest") {
-  testonly = true
-
-  manifest = "meta/inspect_data_budget_unittest.cml"
-
-  deps = [ ":inspect_data_budget_unittest_exe" ]
+fuchsia_unittest_component("inspect_data_budget_unittest") {
+  deps = [
+    ":inspect_data_budget_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
 fuchsia_component("inspect_unittest") {

@@ -323,20 +323,18 @@ fuchsia_unittest_component("annotation_map_unittest") {
   deps = [ ":annotation_map_unittest_exe" ]
 }
 
-fuchsia_component("config_unittest") {
-  testonly = true
-
-  manifest = "meta/config_unittest.cml"
-
-  deps = [ ":config_unittest_exe" ]
+fuchsia_unittest_component("config_unittest") {
+  deps = [
+    ":config_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
-fuchsia_component("crash_register_unittest") {
-  testonly = true
-
-  manifest = "meta/crash_register_unittest.cml"
-
-  deps = [ ":crash_register_unittest_exe" ]
+fuchsia_unittest_component("crash_register_unittest") {
+  deps = [
+    ":crash_register_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
 fuchsia_component("crash_reporter_unittest") {
@@ -355,12 +353,11 @@ fuchsia_unittest_component("dart_module_parser_unittest") {
   deps = [ ":dart_module_parser_unittest_exe" ]
 }
 
-fuchsia_component("default_annotations_unittest") {
-  testonly = true
-
-  manifest = "meta/default_annotations_unittest.cml"
-
-  deps = [ ":default_annotations_unittest_exe" ]
+fuchsia_unittest_component("default_annotations_unittest") {
+  deps = [
+    ":default_annotations_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
 fuchsia_unittest_component("inspect_manager_unittest") {
@@ -391,28 +388,25 @@ fuchsia_unittest_component("sized_data_reader_unittest") {
   deps = [ ":sized_data_reader_unittest_exe" ]
 }
 
-fuchsia_component("snapshot_manager_unittest") {
-  testonly = true
-
-  manifest = "meta/snapshot_manager_unittest.cml"
-
-  deps = [ ":snapshot_manager_unittest_exe" ]
+fuchsia_unittest_component("snapshot_manager_unittest") {
+  deps = [
+    ":snapshot_manager_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
-fuchsia_component("store_metadata_unittest") {
-  testonly = true
-
-  manifest = "meta/store_metadata_unittest.cml"
-
-  deps = [ ":store_metadata_unittest_exe" ]
+fuchsia_unittest_component("store_metadata_unittest") {
+  deps = [
+    ":store_metadata_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
-fuchsia_component("store_unittest") {
-  testonly = true
-
-  manifest = "meta/store_unittest.cml"
-
-  deps = [ ":store_unittest_exe" ]
+fuchsia_unittest_component("store_unittest") {
+  deps = [
+    ":store_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
 ###############################################################################

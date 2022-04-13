@@ -326,28 +326,25 @@ fuchsia_component("annotation_manager_unittest") {
   deps = [ ":annotation_manager_unittest_exe" ]
 }
 
-fuchsia_component("config_unittest") {
-  testonly = true
-
-  manifest = "meta/config_unittest.cml"
-
-  deps = [ ":config_unittest_exe" ]
+fuchsia_unittest_component("config_unittest") {
+  deps = [
+    ":config_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
-fuchsia_component("data_register_unittest") {
-  testonly = true
-
-  manifest = "meta/data_register_unittest.cml"
-
-  deps = [ ":data_register_unittest_exe" ]
+fuchsia_unittest_component("data_register_unittest") {
+  deps = [
+    ":data_register_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
-fuchsia_component("device_id_provider_unittest") {
-  testonly = true
-
-  manifest = "meta/device_id_provider_unittest.cml"
-
-  deps = [ ":device_id_provider_unittest_exe" ]
+fuchsia_unittest_component("device_id_provider_unittest") {
+  deps = [
+    ":device_id_provider_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
 fuchsia_component("feedback_integration_test") {
@@ -384,12 +381,11 @@ fuchsia_component(
   ]
 }
 
-fuchsia_component("feedback_data_unittest") {
-  testonly = true
-
-  manifest = "meta/feedback_data_unittest.cml"
-
-  deps = [ ":feedback_data_unittest_exe" ]
+fuchsia_unittest_component("feedback_data_unittest") {
+  deps = [
+    ":feedback_data_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
 fuchsia_component("inspect_test_app") {
@@ -400,12 +396,11 @@ fuchsia_component("inspect_test_app") {
   deps = [ ":inspect_exe" ]
 }
 
-fuchsia_component("last_reboot_unittest") {
-  testonly = true
-
-  manifest = "meta/last_reboot_unittest.cml"
-
-  deps = [ ":last_reboot_unittest_exe" ]
+fuchsia_unittest_component("last_reboot_unittest") {
+  deps = [
+    ":last_reboot_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
 fuchsia_component("main_service_unittest") {
@@ -416,20 +411,18 @@ fuchsia_component("main_service_unittest") {
   deps = [ ":main_service_unittest_exe" ]
 }
 
-fuchsia_component("namespace_init_unittest") {
-  testonly = true
-
-  manifest = "meta/namespace_init_unittest.cml"
-
-  deps = [ ":namespace_init_unittest_exe" ]
+fuchsia_unittest_component("namespace_init_unittest") {
+  deps = [
+    ":namespace_init_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
-fuchsia_component("redactor_factory_unittest") {
-  testonly = true
-
-  manifest = "meta/redactor_factory_unittest.cml"
-
-  deps = [ ":redactor_factory_unittest_exe" ]
+fuchsia_unittest_component("redactor_factory_unittest") {
+  deps = [
+    ":redactor_factory_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
 fuchsia_unittest_component("startup_annotations_unittest") {

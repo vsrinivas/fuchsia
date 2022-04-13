@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/components/fuchsia_unittest_component.gni")
 
 ###############################################################################
 # GROUPS
@@ -91,36 +92,32 @@ executable("migrate_unittest_exe") {
 ###############################################################################
 # COMPONENTS
 ###############################################################################
-fuchsia_component("directory_migrator_ptr_unittest") {
-  testonly = true
-
-  manifest = "meta/directory_migrator_ptr_unittest.cml"
-
-  deps = [ ":directory_migrator_ptr_unittest_exe" ]
+fuchsia_unittest_component("directory_migrator_ptr_unittest") {
+  deps = [
+    ":directory_migrator_ptr_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
-fuchsia_component("file_utils_unittest") {
-  testonly = true
-
-  manifest = "meta/file_utils_unittest.cml"
-
-  deps = [ ":file_utils_unittest_exe" ]
+fuchsia_unittest_component("file_utils_unittest") {
+  deps = [
+    ":file_utils_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
-fuchsia_component("log_unittest") {
-  testonly = true
-
-  manifest = "meta/log_unittest.cml"
-
-  deps = [ ":log_unittest_exe" ]
+fuchsia_unittest_component("log_unittest") {
+  deps = [
+    ":log_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
-fuchsia_component("migrate_unittest") {
-  testonly = true
-
-  manifest = "meta/migrate_unittest.cml"
-
-  deps = [ ":migrate_unittest_exe" ]
+fuchsia_unittest_component("migrate_unittest") {
+  deps = [
+    ":migrate_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
 ###############################################################################

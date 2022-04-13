@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/components/fuchsia_unittest_component.gni")
 
 visibility = [ ":*" ]
 
@@ -74,28 +75,22 @@ executable("reporter_unittest_exe") {
 ###############################################################################
 # COMPONENTS
 ###############################################################################
-fuchsia_component("last_reboot_info_provider_unittest") {
-  testonly = true
-
-  manifest = "meta/last_reboot_info_provider_unittest.cml"
-
+fuchsia_unittest_component("last_reboot_info_provider_unittest") {
   deps = [ ":last_reboot_info_provider_unittest_exe" ]
 }
 
-fuchsia_component("reboot_watcher_unittest") {
-  testonly = true
-
-  manifest = "meta/reboot_watcher_unittest.cml"
-
-  deps = [ ":reboot_watcher_unittest_exe" ]
+fuchsia_unittest_component("reboot_watcher_unittest") {
+  deps = [
+    ":reboot_watcher_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
-fuchsia_component("reporter_unittest") {
-  testonly = true
-
-  manifest = "meta/reporter_unittest.cml"
-
-  deps = [ ":reporter_unittest_exe" ]
+fuchsia_unittest_component("reporter_unittest") {
+  deps = [
+    ":reporter_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
 ###############################################################################

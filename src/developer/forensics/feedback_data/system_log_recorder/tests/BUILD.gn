@@ -118,28 +118,25 @@ fuchsia_unittest_component("lz4_encoding_unittest") {
   deps = [ ":lz4_encoding_unittest_exe" ]
 }
 
-fuchsia_component("reader_unittest") {
-  testonly = true
-
-  manifest = "meta/reader_unittest.cml"
-
-  deps = [ ":reader_unittest_exe" ]
+fuchsia_unittest_component("reader_unittest") {
+  deps = [
+    ":reader_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
-fuchsia_component("system_log_recorder_unittest") {
-  testonly = true
-
-  manifest = "meta/system_log_recorder_unittest.cml"
-
-  deps = [ ":system_log_recorder_unittest_exe" ]
+fuchsia_unittest_component("system_log_recorder_unittest") {
+  deps = [
+    ":system_log_recorder_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
-fuchsia_component("writer_unittest") {
-  testonly = true
-
-  manifest = "meta/writer_unittest.cml"
-
-  deps = [ ":writer_unittest_exe" ]
+fuchsia_unittest_component("writer_unittest") {
+  deps = [
+    ":writer_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
 ###############################################################################

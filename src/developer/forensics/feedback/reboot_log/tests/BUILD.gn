@@ -63,20 +63,18 @@ fuchsia_unittest_component("graceful_reboot_reason_unittest") {
   deps = [ ":graceful_reboot_reason_unittest_exe" ]
 }
 
-fuchsia_component("reboot_log_unittest") {
-  testonly = true
-
-  manifest = "meta/reboot_log_unittest.cml"
-
-  deps = [ ":reboot_log_unittest_exe" ]
+fuchsia_unittest_component("reboot_log_unittest") {
+  deps = [
+    ":reboot_log_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
-fuchsia_component("reboot_reason_unittest") {
-  testonly = true
-
-  manifest = "meta/reboot_reason_unittest.cml"
-
-  deps = [ ":reboot_reason_unittest_exe" ]
+fuchsia_unittest_component("reboot_reason_unittest") {
+  deps = [
+    ":reboot_reason_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
 ###############################################################################
