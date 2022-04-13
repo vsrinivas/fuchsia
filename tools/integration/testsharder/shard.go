@@ -140,7 +140,11 @@ type ShardOptions struct {
 
 // MakeShards returns the list of shards associated with a given build.
 // A single output shard will contain only tests that have the same environment.
-func MakeShards(specs []build.TestSpec, opts *ShardOptions) []*Shard {
+func MakeShards(specs []build.TestSpec, testListEntries map[string]build.TestListEntry, opts *ShardOptions) []*Shard {
+	// We don't want to crash if we've passed a nil testListEntries map.
+	if testListEntries == nil {
+		testListEntries = make(map[string]build.TestListEntry)
+	}
 	// Collect the order of the shards so our shard ordering is deterministic with
 	// respect to the input.
 	envToSuites := newEnvMap()
@@ -166,6 +170,7 @@ func MakeShards(specs []build.TestSpec, opts *ShardOptions) []*Shard {
 			envToSuites.set(env, append(specs, spec))
 		}
 	}
+
 	shards := make([]*Shard, 0, len(envs))
 	for _, env := range envs {
 		specs, _ := envToSuites.get(env)
@@ -175,6 +180,10 @@ func MakeShards(specs []build.TestSpec, opts *ShardOptions) []*Shard {
 		tests := []Test{}
 		for _, spec := range specs {
 			test := Test{Test: spec.Test, Runs: 1}
+			testListEntry, exists := testListEntries[spec.Test.Name]
+			if exists {
+				test.applyTestListTags(testListEntry)
+			}
 			if spec.Test.Isolated {
 				shards = append(shards, &Shard{
 					Name:  fmt.Sprintf("%s-%s", environmentName(env), normalizeTestName(spec.Test.Name)),

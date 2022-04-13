@@ -7,6 +7,8 @@ package runtests
 
 import (
 	"time"
+
+	"go.fuchsia.dev/fuchsia/tools/build"
 )
 
 // TODO(olivernewman): Move the contents of this file into a separate library as
@@ -97,6 +99,9 @@ type TestDetails struct {
 	// Affected indicates whether the test is affected by the change under test.
 	// It will only be set for tests running within tryjobs.
 	Affected bool `json:"affected"`
+
+	// Tags contain test metadata.
+	Tags []build.TestTag `json:"tags"`
 }
 
 // TestCaseResult contains the details of a single test case, nested within a

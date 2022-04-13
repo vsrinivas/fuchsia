@@ -154,13 +154,19 @@ func testDetailsToResultSink(tags []*resultpb.StringPair, testDetail *runtests.T
 		log.Printf("[ERROR] Skip uploading to ResultDB due to test_id exceeding %d bytes max limit: %q", MAX_TEST_ID_SIZE_BYTES, testDetail.Name)
 		return nil, testsSkipped, fmt.Errorf("The test name exceeds %d bytes max limit: %q ", MAX_TEST_ID_SIZE_BYTES, testDetail.Name)
 	}
+	testTags := append([]*resultpb.StringPair{
+		{Key: "gn_label", Value: testDetail.GNLabel},
+		{Key: "test_case_count", Value: strconv.Itoa(len(testDetail.Cases))},
+		{Key: "affected", Value: strconv.FormatBool(testDetail.Affected)},
+	}, tags...)
+	for _, tag := range testDetail.Tags {
+		testTags = append(testTags, &resultpb.StringPair{
+			Key: tag.Key, Value: tag.Value,
+		})
+	}
 	r := sinkpb.TestResult{
 		TestId: testDetail.Name,
-		Tags: append([]*resultpb.StringPair{
-			{Key: "gn_label", Value: testDetail.GNLabel},
-			{Key: "test_case_count", Value: strconv.Itoa(len(testDetail.Cases))},
-			{Key: "affected", Value: strconv.FormatBool(testDetail.Affected)},
-		}, tags...),
+		Tags:   testTags,
 	}
 	testStatus, err := resultDBStatus(testDetail.Result)
 	if err != nil {

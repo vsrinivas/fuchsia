@@ -118,6 +118,7 @@ func BaseTestResultFromTest(test testsharder.Test) *TestResult {
 		GNLabel:   test.Label,
 		Result:    runtests.TestFailure,
 		DataSinks: runtests.DataSinkReference{},
+		Tags:      test.Tags,
 	}
 }
 

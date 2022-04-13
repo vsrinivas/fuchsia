@@ -40,6 +40,8 @@ go_library("build") {
     "sdk_archives.go",
     "test_durations.go",
     "test_durations_test.go",
+    "test_list.go",
+    "test_list_test.go",
     "tests.go",
     "tests_test.go",
     "tools.go",

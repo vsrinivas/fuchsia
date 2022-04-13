@@ -15,6 +15,7 @@ go_library("runtests") {
   deps = [
     "//third_party/golibs:github.com/pkg/sftp",
     "//tools/botanist:botanist_lib",
+    "//tools/build",
     "//tools/lib/iomisc",
     "//tools/lib/logger",
     "//tools/lib/osmisc",

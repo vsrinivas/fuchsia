@@ -8,6 +8,7 @@ package testrunner
 import (
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
@@ -48,6 +49,9 @@ type TestResult struct {
 
 	StartTime time.Time
 	EndTime   time.Time
+
+	// Tags contain test metadata.
+	Tags []build.TestTag
 }
 
 // Passed indicates whether the test completed successfully. This will be false

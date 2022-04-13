@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -133,7 +134,12 @@ func execute(ctx context.Context) error {
 		Mode: mode,
 		Tags: tags,
 	}
-	shards := testsharder.MakeShards(m.TestSpecs(), opts)
+	// Pass in the test-list to carry over tags to the shards.
+	testListEntries, err := build.LoadTestList(filepath.Join(buildDir, build.TestListManifest))
+	if err != nil {
+		return err
+	}
+	shards := testsharder.MakeShards(m.TestSpecs(), testListEntries, opts)
 
 	if perTestTimeout > 0 {
 		testsharder.ApplyTestTimeouts(shards, perTestTimeout)

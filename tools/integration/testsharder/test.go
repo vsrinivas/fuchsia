@@ -49,6 +49,9 @@ type Test struct {
 	// Affected indicates whether the test is affected by the change under test.
 	// It will only be set for tests running within tryjobs.
 	Affected bool `json:"affected,omitempty"`
+
+	// Tags are test metadata copied over from test-list.json.
+	Tags []build.TestTag `json:"tags,omitempty"`
 }
 
 func (t *Test) applyModifier(m TestModifier) {
@@ -67,4 +70,8 @@ func (t *Test) minRequiredRuns() int {
 		return t.Runs
 	}
 	return 1
+}
+
+func (t *Test) applyTestListTags(tl build.TestListEntry) {
+	t.Tags = tl.Tags
 }

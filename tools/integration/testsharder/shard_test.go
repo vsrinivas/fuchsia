@@ -94,6 +94,7 @@ func TestMakeShards(t *testing.T) {
 	t.Run("tests of same environment are grouped", func(t *testing.T) {
 		actual := MakeShards(
 			[]build.TestSpec{spec(1, env1, env2), spec(2, env1, env3), spec(3, env3)},
+			nil,
 			basicOpts,
 		)
 		expected := []*Shard{fuchsiaShard(env1, 1, 2), fuchsiaShard(env2, 1), fuchsiaShard(env3, 2, 3)}
@@ -103,6 +104,7 @@ func TestMakeShards(t *testing.T) {
 	t.Run("there is no deduplication of tests", func(t *testing.T) {
 		actual := MakeShards(
 			[]build.TestSpec{spec(1, env1), spec(1, env1), spec(1, env1)},
+			nil,
 			basicOpts,
 		)
 		expected := []*Shard{fuchsiaShard(env1, 1, 1, 1)}
@@ -115,6 +117,7 @@ func TestMakeShards(t *testing.T) {
 	t.Run("shards are ordered", func(t *testing.T) {
 		actual := MakeShards(
 			[]build.TestSpec{spec(1, env2, env3), spec(2, env1), spec(3, env3)},
+			nil,
 			basicOpts,
 		)
 		expected := []*Shard{fuchsiaShard(env2, 1), fuchsiaShard(env3, 1, 3), fuchsiaShard(env1, 2)}
@@ -136,6 +139,7 @@ func TestMakeShards(t *testing.T) {
 				spec(4, tagger(env3, "C", "A")),
 				spec(5, tagger(env3, "A", "C")),
 			},
+			nil,
 			&ShardOptions{
 				Mode: Normal,
 				Tags: []string{"A", "C"},
@@ -161,6 +165,7 @@ func TestMakeShards(t *testing.T) {
 				spec(1, withAcct(env1, "acct1")),
 				spec(1, withAcct(env1, "acct2")),
 			},
+			nil,
 			basicOpts,
 		)
 		expected := []*Shard{
@@ -184,6 +189,7 @@ func TestMakeShards(t *testing.T) {
 				spec(2, withAcct(env1, "acct1")),
 				spec(3, withAcct(env1, "acct2")),
 			},
+			nil,
 			&ShardOptions{
 				Mode: Restricted,
 				Tags: []string{},
@@ -207,6 +213,7 @@ func TestMakeShards(t *testing.T) {
 				spec(1, env1),
 				spec(1, withNetboot(env1)),
 			},
+			nil,
 			basicOpts,
 		)
 		expected := []*Shard{
@@ -229,6 +236,7 @@ func TestMakeShards(t *testing.T) {
 				spec(1, env1),
 				spec(2, withEnvNameKeys(env1, keys)),
 			},
+			nil,
 			basicOpts,
 		)
 		expected := []*Shard{
@@ -254,6 +262,7 @@ func TestMakeShards(t *testing.T) {
 				spec(3, env1),
 				isolate(spec(4, env2)),
 			},
+			nil,
 			basicOpts,
 		)
 
@@ -269,6 +278,47 @@ func TestMakeShards(t *testing.T) {
 			fuchsiaShard(env1, 2, 3),
 			isolateShard(fuchsiaShard(env2, 1), 1),
 			isolateShard(fuchsiaShard(env2, 4), 2),
+		}
+		assertEqual(t, expected, actual)
+	})
+
+	t.Run("tags from test-list.json are copied over", func(t *testing.T) {
+		testListEntry := build.TestListEntry{
+			Name: fullTestName(1, "fuchsia"),
+			Tags: []build.TestTag{
+				{
+					Key:   "key",
+					Value: "value",
+				},
+			},
+		}
+		actual := MakeShards(
+			[]build.TestSpec{
+				spec(1, env1, env2),
+				spec(2, env1),
+				spec(3, env2),
+			},
+			map[string]build.TestListEntry{
+				fullTestName(1, "fuchsia"): testListEntry,
+			},
+			basicOpts,
+		)
+
+		makeTestWithTags := func(id int, tags []build.TestTag) Test {
+			test := makeTest(id, "fuchsia")
+			test.Tags = tags
+			return test
+		}
+		expected := []*Shard{
+			{
+				Name:  environmentName(env1),
+				Tests: []Test{makeTestWithTags(1, testListEntry.Tags), makeTest(2, "fuchsia")},
+				Env:   env1,
+			}, {
+				Name:  environmentName(env2),
+				Tests: []Test{makeTestWithTags(1, testListEntry.Tags), makeTest(3, "fuchsia")},
+				Env:   env2,
+			},
 		}
 		assertEqual(t, expected, actual)
 	})
