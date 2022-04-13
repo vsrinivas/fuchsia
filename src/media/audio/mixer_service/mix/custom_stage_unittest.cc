@@ -22,7 +22,6 @@
 #include "lib/fidl/llcpp/object_view.h"
 #include "lib/fidl/llcpp/vector_view.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/mixer_service/common/basic_types.h"
 #include "src/media/audio/mixer_service/common/thread_checker.h"
@@ -213,7 +212,7 @@ class CustomStageTestProcessor : public fidl::WireServer<Processor> {
                                   [](CustomStageTestProcessor* impl, fidl::UnbindInfo info,
                                      fidl::ServerEnd<Processor> server_end) {
                                     if (!info.is_user_initiated() && !info.is_peer_closed()) {
-                                      FX_PLOGS(ERROR, info.status())
+                                      FX_PLOGS(WARNING, info.status())
                                           << "Client disconnected unexpectedly: " << info;
                                     }
                                   })),
@@ -227,7 +226,7 @@ class CustomStageTestProcessor : public fidl::WireServer<Processor> {
   CustomStage::FidlBuffers buffers_;
 };
 
-class CustomStageTest : public gtest::TestLoopFixture {
+class CustomStageTest : public testing::Test {
  public:
   template <class ProcessorType>
   struct ProcessorInfo {
@@ -236,10 +235,7 @@ class CustomStageTest : public gtest::TestLoopFixture {
     ProcessorConfiguration config;
   };
 
-  void SetUp() override {
-    gtest::TestLoopFixture::SetUp();
-    fidl_loop_.StartThread("fidl");
-  }
+  CustomStageTest() { fidl_loop_.StartThread("fidl"); }
 
   template <class ProcessorType>
   ProcessorInfo<ProcessorType> MakeProcessor(ConfigOptions options) {
@@ -382,11 +378,8 @@ class AddOneProcessor : public CustomStageTestProcessor {
   void Process(ProcessRequestView request, ProcessCompleter::Sync& completer) override {
     float* input = input_data();
     float* output = output_data();
-    auto num_frames = request->num_frames;
-    for (; num_frames > 0; num_frames--) {
-      for (uint32_t k = 0; k < num_channels_; k++, input++, output++) {
-        *output = (*input) + 1;
-      }
+    for (uint64_t i = 0; i < num_channels_ * request->num_frames; ++i) {
+      output[i] = input[i] + 1;
     }
     completer.ReplySuccess(fidl::VectorView<fuchsia_audio_effects::wire::ProcessMetrics>());
   }
@@ -661,10 +654,9 @@ class AddOneAndDupChannelProcessor : public CustomStageTestProcessor {
   void Process(ProcessRequestView request, ProcessCompleter::Sync& completer) override {
     float* input = input_data();
     float* output = output_data();
-    auto num_frames = request->num_frames;
-    for (; num_frames > 0; num_frames--, input++, output += 2) {
-      output[0] = input[0] + 1;
-      output[1] = input[0] + 1;
+    for (uint64_t i = 0; i < request->num_frames; ++i) {
+      output[2 * i] = input[i] + 1;
+      output[2 * i + 1] = input[i] + 1;
     }
     completer.ReplySuccess(fidl::VectorView<fuchsia_audio_effects::wire::ProcessMetrics>());
   }
@@ -701,9 +693,8 @@ class AddOneAndRemoveChannelProcessor : public CustomStageTestProcessor {
   void Process(ProcessRequestView request, ProcessCompleter::Sync& completer) override {
     float* input = input_data();
     float* output = output_data();
-    auto num_frames = request->num_frames;
-    for (; num_frames > 0; num_frames--, input += 2, output++) {
-      output[0] = input[0] + 1;
+    for (uint64_t i = 0; i < request->num_frames; ++i) {
+      output[i] = input[2 * i] + 1;
     }
     completer.ReplySuccess(fidl::VectorView<fuchsia_audio_effects::wire::ProcessMetrics>());
   }
