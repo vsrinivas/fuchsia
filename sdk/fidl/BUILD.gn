@@ -130,6 +130,9 @@ sdk_fidl_targets = [
   "//sdk/fidl/fuchsia.wlan.product.deprecatedconfiguration:fuchsia.wlan.product.deprecatedconfiguration",
 ]
 
+# The list of FIDLs to include in the core testing IDK.
+sdk_fidl_testing_targets = [ "//sdk/fidl/fuchsia.test:fuchsia.test" ]
+
 # The FIDL portion of the platform surface area (plasa).
 sdk_molecule("plasa") {
   testonly = true
@@ -150,6 +153,21 @@ sdk_molecule("fidl") {
 
   deps = []
   foreach(target, sdk_fidl_targets) {
+    deps += [ "${target}_sdk($fidl_toolchain)" ]
+  }
+}
+
+# Fuchsia IDL (FIDL) files defining testing API for the SDK.
+sdk_molecule("fidl_testing") {
+  testonly = true
+  visibility = [
+    ":*",
+    "//build/fidl:sdk_fidl",
+    "//sdk:*",
+  ]
+
+  deps = []
+  foreach(target, sdk_fidl_testing_targets) {
     deps += [ "${target}_sdk($fidl_toolchain)" ]
   }
 }
