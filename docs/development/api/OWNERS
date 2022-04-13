@@ -1,2 +1,2 @@
-# The Rust API rubric is currently maintained by the Rust on Fuchsia Working Group.
-per-file rust.md = adamperry@google.com, tmandry@google.com
+# Rust API rubric proposals are facilitated and approved by the Rust on Fuchsia team.
+per-file rust.md = tmandry@google.com, computerdruid@google.com, dkoloski@google.com, josephry@google.com

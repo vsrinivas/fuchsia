@@ -448,11 +448,28 @@ See [C-STRUCT-BOUNDS](https://rust-lang.github.io/api-guidelines/future-proofing
 
 ## Updating the guidelines
 
-This rubric is currently maintained by the Rust on Fuchsia Working Group. To propose additions or
-modifications, open a CL and cc [`fuchsia-rust-api-rubric@google.com`][rubric-group] to ensure it
-is reviewed.
+To propose additions or modifications, open a CL and cc
+[`fuchsia-rust-api-rubric@google.com`] to ensure it is reviewed. Use any
+feedback to iterate on the proposal.
 
-[rubric-group]: mailto:fuchsia-rust-api-rubric@google.com
+Once feedback has been addressed, any one of the [OWNERS] of this file who is
+not the proposal author may act as facilitator and move the proposal to last
+call. The facilitator will send an email to [`fuchsia-rust-api-rubric@google.com`]
+announcing last call on the proposal. The proposal will be open for feedback
+for 7 calendar days.
+
+At the end of the last call period and once relevant concerns have been
+discussed or addressed, a facilitator will comment on the CL with a final
+decision based on the review feedback and discussion. Any controversial
+decisions should be made with adequate public discussion of the relevant issues,
+and should include the rationale in the CL comment. The decision outcome should
+also be sent to the email thread.
+
+If a proposal is accepted, the facilitator will leave a +2 and the author can
+then submit it.
+
+[`fuchsia-rust-api-rubric@google.com`]: mailto:fuchsia-rust-api-rubric@google.com
+[OWNERS]: https://cs.opensource.google/fuchsia/fuchsia/+/master:docs/development/api/OWNERS
 
 ### Pending Topics
 
