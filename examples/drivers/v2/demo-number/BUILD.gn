@@ -24,9 +24,10 @@ fuchsia_driver("driver") {
     ":bind",
     ":fuchsia.hardware.demo_llcpp",
     "//sdk/lib/sys/component/llcpp",
-    "//src/devices/lib/compat",
+    "//src/devices/lib/driver2:devfs_exporter",
     "//src/devices/lib/driver2:inspect",
     "//src/devices/lib/driver2:llcpp",
+    "//src/devices/misc/drivers/compat/fidl:fuchsia.driver.compat_llcpp",
   ]
 }
 

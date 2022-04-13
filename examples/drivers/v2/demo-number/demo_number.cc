@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.driver.compat/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <fidl/fuchsia.hardware.demo/cpp/wire.h>
 #include <lib/async/cpp/executor.h>
@@ -9,8 +10,6 @@
 #include <lib/sys/component/llcpp/outgoing_directory.h>
 #include <zircon/errors.h>
 
-#include "src/devices/lib/compat/compat.h"
-#include "src/devices/lib/compat/symbols.h"
 #include "src/devices/lib/driver2/devfs_exporter.h"
 #include "src/devices/lib/driver2/inspect.h"
 #include "src/devices/lib/driver2/namespace.h"
@@ -23,12 +22,39 @@ namespace fio = fuchsia_io;
 
 namespace {
 
+zx::status<fidl::ClientEnd<fuchsia_driver_compat::Device>> ConnectToParentDevice(
+    const driver::Namespace* ns, std::string_view name) {
+  auto result = ns->OpenService<fuchsia_driver_compat::Service>(name);
+  if (result.is_error()) {
+    return result.take_error();
+  }
+  return result.value().connect_device();
+}
+
+zx::status<driver::DevfsExporter> ConnectToDevfsExporter(async_dispatcher_t* dispatcher,
+                                                         const driver::Namespace* ns,
+                                                         component::OutgoingDirectory* outgoing) {
+  // Connect to DevfsExporter.
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
+  }
+  // Serve a connection to outgoing.
+  auto status = outgoing->Serve(std::move(endpoints->server));
+  if (status.is_error()) {
+    return status.take_error();
+  }
+
+  return driver::DevfsExporter::Create(
+      *ns, dispatcher, fidl::WireSharedClient(std::move(endpoints->client), dispatcher));
+}
+
 class DemoNumber : public fidl::WireServer<fuchsia_hardware_demo::Demo> {
  public:
   DemoNumber(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf2::Node> node,
-             driver::Namespace ns, driver::Logger logger)
+             driver::Namespace ns, component::OutgoingDirectory outgoing, driver::Logger logger)
       : dispatcher_(dispatcher),
-        outgoing_(dispatcher),
+        outgoing_(std::move(outgoing)),
         node_(std::move(node)),
         ns_(std::move(ns)),
         logger_(std::move(logger)),
@@ -41,8 +67,9 @@ class DemoNumber : public fidl::WireServer<fuchsia_hardware_demo::Demo> {
                                                        fidl::WireSharedClient<fdf2::Node> node,
                                                        driver::Namespace ns,
                                                        driver::Logger logger) {
-    auto driver =
-        std::make_unique<DemoNumber>(dispatcher, std::move(node), std::move(ns), std::move(logger));
+    auto outgoing = component::OutgoingDirectory::Create(dispatcher);
+    auto driver = std::make_unique<DemoNumber>(dispatcher, std::move(node), std::move(ns),
+                                               std::move(outgoing), std::move(logger));
 
     auto result = driver->Run(std::move(start_args.outgoing_dir()));
     if (result.is_error()) {
@@ -53,55 +80,40 @@ class DemoNumber : public fidl::WireServer<fuchsia_hardware_demo::Demo> {
 
  private:
   zx::status<> Run(fidl::ServerEnd<fio::Directory> outgoing_dir) {
-    auto interop = compat::Interop::Create(dispatcher_, &ns_, &outgoing_);
-    if (interop.is_error()) {
-      return interop.take_error();
+    // Connect to DevfsExporter.
+    auto exporter = ConnectToDevfsExporter(dispatcher_, &ns_, &outgoing_);
+    if (exporter.is_error()) {
+      return exporter.take_error();
     }
-    interop_ = std::move(*interop);
+    exporter_ = std::move(*exporter);
 
-    auto parent_client = compat::ConnectToParentDevice(dispatcher_, &ns_);
-    if (parent_client.is_error()) {
-      FDF_LOG(WARNING, "Connecting to compat service failed with %s",
-              zx_status_get_string(parent_client.error_value()));
-      return parent_client.take_error();
+    auto parent = ConnectToParentDevice(&ns_, "default");
+    if (parent.status_value() != ZX_OK) {
+      return parent.take_error();
     }
-    parent_client_ = std::move(parent_client.value());
 
-    auto compat_connect =
-        fpromise::make_result_promise<void, zx_status_t>(fpromise::ok())
-            // Get our parent's topological path.
-            .and_then([this]() {
-              fpromise::bridge<void, zx_status_t> topo_bridge;
-              parent_client_->GetTopologicalPath().Then(
-                  [this, completer = std::move(topo_bridge.completer)](
-                      fidl::WireUnownedResult<fuchsia_driver_compat::Device::GetTopologicalPath>&
-                          result) mutable {
-                    if (!result.ok()) {
-                      completer.complete_error(result.status());
-                      return;
-                    }
-                    auto* response = result.Unwrap();
-                    parent_topo_path_ = std::string(response->path.data(), response->path.size());
-                    completer.complete_ok();
-                  });
-              return topo_bridge.consumer.promise_or(fpromise::error(ZX_ERR_CANCELED));
-            })
-            // Create our child device and FIDL server.
-            .and_then([this]() {
-              auto protocol = fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
-                fidl::BindServer<fidl::WireServer<fuchsia_hardware_demo::Demo>>(
-                    dispatcher_, fidl::ServerEnd<fuchsia_hardware_demo::Demo>(std::move(channel)),
-                    this);
-                return ZX_OK;
-              });
-              child_ = compat::Child(Name(), 0, parent_topo_path_ + "/" + Name(), {});
-              return interop_.ExportChild(&child_.value(), protocol);
-            })
-            // Error handling.
+    auto result = fidl::WireCall(*parent)->GetTopologicalPath();
+    if (!result.ok()) {
+      return zx::error(result.status());
+    }
+
+    std::string path(result->path.data(), result->path.size());
+
+    auto status = outgoing_.AddProtocol<fuchsia_hardware_demo::Demo>(this);
+    if (status.status_value() != ZX_OK) {
+      return status;
+    }
+
+    path.append("/");
+    path.append(Name());
+
+    FDF_LOG(INFO, "Exporting device to: %s", path.data());
+    auto task =
+        exporter_.Export("svc/fuchsia.hardware.demo.Demo", path, 0)
             .or_else([this](zx_status_t& result) {
               FDF_LOG(WARNING, "Device setup failed with: %s", zx_status_get_string(result));
             });
-    executor_.schedule_task(std::move(compat_connect));
+    executor_.schedule_task(std::move(task));
 
     return outgoing_.Serve(std::move(outgoing_dir));
   }
@@ -112,15 +124,15 @@ class DemoNumber : public fidl::WireServer<fuchsia_hardware_demo::Demo> {
   }
 
   async_dispatcher_t* dispatcher_;
-  service::OutgoingDirectory outgoing_;
+  component::OutgoingDirectory outgoing_;
+
   fidl::WireSharedClient<fdf2::Node> node_;
+
   driver::Namespace ns_;
   driver::Logger logger_;
   async::Executor executor_;
-  fidl::WireSharedClient<fuchsia_driver_compat::Device> parent_client_;
+  driver::DevfsExporter exporter_;
 
-  compat::Interop interop_;
-  std::optional<compat::Child> child_;
   std::string parent_topo_path_;
   uint32_t current_number = 0;
 
