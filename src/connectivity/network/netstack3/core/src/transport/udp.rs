@@ -6,12 +6,13 @@
 
 use alloc::collections::HashSet;
 use core::{
-    marker::PhantomData,
+    hash::Hash,
     mem,
     num::{NonZeroU16, NonZeroUsize},
     ops::RangeInclusive,
 };
 
+use derivative::Derivative;
 use log::trace;
 use net_types::{
     ip::{Ip, IpAddress, IpVersionMarker, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
@@ -79,7 +80,7 @@ impl UdpStateBuilder {
         self
     }
 
-    pub(crate) fn build<I: IpExt, D>(self) -> UdpState<I, D> {
+    pub(crate) fn build<I: IpExt, D: IpDeviceId>(self) -> UdpState<I, D> {
         UdpState {
             unbound: IdMap::default(),
             conn_state: UdpConnectionState::default(),
@@ -92,7 +93,7 @@ impl UdpStateBuilder {
 /// The state associated with the UDP protocol.
 ///
 /// `D` is the device ID type.
-pub struct UdpState<I: IpExt, D> {
+pub struct UdpState<I: IpExt, D: IpDeviceId> {
     conn_state: UdpConnectionState<I, D, IpSock<I, D>>,
     unbound: IdMap<()>,
     /// lazy_port_alloc is lazy-initialized when it's used.
@@ -100,7 +101,7 @@ pub struct UdpState<I: IpExt, D> {
     send_port_unreachable: bool,
 }
 
-impl<I: IpExt, D> Default for UdpState<I, D> {
+impl<I: IpExt, D: IpDeviceId> Default for UdpState<I, D> {
     fn default() -> UdpState<I, D> {
         UdpStateBuilder::default().build()
     }
@@ -110,30 +111,70 @@ impl<I: IpExt, D> Default for UdpState<I, D> {
 ///
 /// `UdpConnectionState` provides a [`PortAllocImpl`] implementation to
 /// allocate unused local ports.
-struct UdpConnectionState<I: Ip, D, S> {
+#[derive(Derivative)]
+#[derivative(Default(bound = ""))]
+struct UdpConnectionState<I: Ip, D: IpDeviceId, S> {
     bound: BoundSocketMap<Self>,
-    _device_marker: PhantomData<D>,
 }
 
+/// An address vector for all possible UDP socket addresses.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-enum UdpAddrVec<A: IpAddress> {
-    Listener(ListenerAddr<A>),
-    Connected(ConnAddr<A>),
+enum UdpAddrVec<A: IpAddress, D> {
+    Listener(ListenerAddr<A, D>),
+    Connected(ConnAddr<A, D>),
 }
 
-impl<A: IpAddress> From<ListenerAddr<A>> for UdpAddrVec<A> {
-    fn from(listener: ListenerAddr<A>) -> Self {
+/// An address vector containing the IP addresses and ports in a UDP socket
+/// address.
+#[derive(Copy, Clone)]
+enum UdpIpAddrVec<A: IpAddress> {
+    Listener(ListenerIpAddr<A>),
+    Connected(ConnIpAddr<A>),
+}
+
+impl<A: IpAddress> UdpIpAddrVec<A> {
+    fn with_device<D>(self, device: Option<D>) -> UdpAddrVec<A, D> {
+        match self {
+            UdpIpAddrVec::Listener(l) => UdpAddrVec::Listener(ListenerAddr(l, device)),
+            UdpIpAddrVec::Connected(c) => UdpAddrVec::Connected(ConnAddr(c, device)),
+        }
+    }
+}
+
+impl<A: IpAddress, D: IpDeviceId> From<UdpAddrVec<A, D>> for UdpIpAddrVec<A> {
+    fn from(a: UdpAddrVec<A, D>) -> Self {
+        match a {
+            UdpAddrVec::Connected(c) => UdpIpAddrVec::Connected(c.into()),
+            UdpAddrVec::Listener(l) => UdpIpAddrVec::Listener(l.into()),
+        }
+    }
+}
+
+impl<A: IpAddress, D: IpDeviceId> From<ListenerAddr<A, D>> for UdpAddrVec<A, D> {
+    fn from(listener: ListenerAddr<A, D>) -> Self {
         Self::Listener(listener)
     }
 }
 
-impl<A: IpAddress> From<ConnAddr<A>> for UdpAddrVec<A> {
-    fn from(conn: ConnAddr<A>) -> Self {
+impl<A: IpAddress, D: IpDeviceId> From<ConnAddr<A, D>> for UdpAddrVec<A, D> {
+    fn from(conn: ConnAddr<A, D>) -> Self {
         Self::Connected(conn)
     }
 }
 
-impl<A: IpAddress> UdpAddrVec<A> {
+impl<A: IpAddress> From<ConnIpAddr<A>> for UdpIpAddrVec<A> {
+    fn from(conn: ConnIpAddr<A>) -> Self {
+        Self::Connected(conn)
+    }
+}
+
+impl<A: IpAddress> From<ListenerIpAddr<A>> for UdpIpAddrVec<A> {
+    fn from(listener: ListenerIpAddr<A>) -> Self {
+        Self::Listener(listener)
+    }
+}
+
+impl<A: IpAddress> UdpIpAddrVec<A> {
     /// Returns the next smallest address vector that would receive all the same
     /// packets as this one.
     ///
@@ -142,76 +183,128 @@ impl<A: IpAddress> UdpAddrVec<A> {
     /// smallest of the set of shadows of `self`.
     fn widen(self) -> Option<Self> {
         match self {
-            UdpAddrVec::Listener(ListenerAddr { addr: None, port }) => {
+            UdpIpAddrVec::Listener(ListenerIpAddr { addr: None, port }) => {
                 let _: NonZeroU16 = port;
                 None
             }
-            UdpAddrVec::Listener(ListenerAddr { addr: Some(_), port }) => {
-                Some(UdpAddrVec::Listener(ListenerAddr { addr: None, port }))
-            }
-            UdpAddrVec::Connected(ConnAddr { local_ip, local_port, remote_ip, remote_port }) => {
+            UdpIpAddrVec::Connected(ConnIpAddr {
+                local_ip,
+                local_port,
+                remote_ip,
+                remote_port,
+            }) => {
                 let _: (SpecifiedAddr<A>, NonZeroU16) = (remote_ip, remote_port);
-                Some(UdpAddrVec::Listener(ListenerAddr { addr: Some(local_ip), port: local_port }))
+                Some(ListenerIpAddr { addr: Some(local_ip), port: local_port })
+            }
+            UdpIpAddrVec::Listener(ListenerIpAddr { addr: Some(_addr), port }) => {
+                let _: SpecifiedAddr<A> = _addr;
+                Some(ListenerIpAddr { addr: None, port })
             }
         }
+        .map(UdpIpAddrVec::Listener)
     }
 }
 
-enum AddrVecIter<A: IpAddress> {
-    Next(UdpAddrVec<A>),
+/// An iterator over UDP socket addresses.
+///
+/// The generated address vectors are ordered according to the following
+/// rules (ordered by precedence):
+///   - a connected address is preferred over a listening address,
+///   - a listening address for a specific IP address is preferred over one
+///     for all addresses,
+///   - an address with a specific device is preferred over one for all
+///     devices.
+///
+/// The first yielded address is always the one provided via
+/// [`AddrVecIter::new`].
+enum AddrVecIter<A: IpAddress, D> {
+    WithDevice { device: D, emitted_device: bool, addr: UdpIpAddrVec<A> },
+    NoDevice { addr: UdpIpAddrVec<A> },
     Done,
 }
 
-impl<A: IpAddress> AddrVecIter<A> {
-    fn new(v: UdpAddrVec<A>) -> Self {
-        AddrVecIter::Next(v)
+impl<A: IpAddress, D: IpDeviceId> AddrVecIter<A, D> {
+    fn with_device(addr: UdpIpAddrVec<A>, device: D) -> Self {
+        AddrVecIter::WithDevice { device, emitted_device: false, addr }
+    }
+
+    fn without_device(addr: UdpIpAddrVec<A>) -> Self {
+        AddrVecIter::NoDevice { addr }
     }
 }
 
-impl<A: IpAddress> Iterator for AddrVecIter<A> {
-    type Item = UdpAddrVec<A>;
+impl<A: IpAddress, D: IpDeviceId> Iterator for AddrVecIter<A, D> {
+    type Item = UdpAddrVec<A, D>;
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            Self::Next(addr) => {
-                let r = addr.clone();
-                *self = addr.widen().map_or(Self::Done, Self::Next);
+            AddrVecIter::Done => None,
+            AddrVecIter::WithDevice { device, emitted_device, addr } => {
+                if !*emitted_device {
+                    *emitted_device = true;
+                    Some(addr.with_device(Some(*device)))
+                } else {
+                    let r = addr.with_device(None);
+                    if let Some(next) = addr.widen() {
+                        *addr = next;
+                        *emitted_device = false;
+                    } else {
+                        *self = AddrVecIter::Done;
+                    }
+                    Some(r)
+                }
+            }
+            AddrVecIter::NoDevice { addr } => {
+                let r = addr.with_device(None);
+                if let Some(next) = addr.widen() {
+                    *addr = next;
+                } else {
+                    *self = AddrVecIter::Done
+                }
                 Some(r)
             }
-            Self::Done => None,
         }
     }
 }
 
-impl<A: IpAddress> IterShadows for UdpAddrVec<A> {
-    type IterShadows = AddrVecIter<A>;
+/// Produces an iterator over eligible receiving socket addresses.
+fn iter_receiving_addrs<A: IpAddress, D: IpDeviceId>(
+    addr: ConnIpAddr<A>,
+    device: D,
+) -> impl Iterator<Item = UdpAddrVec<A, D>> {
+    AddrVecIter::with_device(addr.into(), device)
+}
+
+impl<A: IpAddress, D: IpDeviceId> IterShadows for UdpAddrVec<A, D> {
+    type IterShadows = AddrVecIter<A, D>;
 
     fn iter_shadows(&self) -> Self::IterShadows {
-        let mut iter = AddrVecIter::new(*self);
-        // Skip the first element, which is always *self.
+        let (socket_ip_addr, device) = match *self {
+            UdpAddrVec::Connected(ConnAddr(c, device)) => (c.into(), device),
+            UdpAddrVec::Listener(ListenerAddr(l, device)) => (l.into(), device),
+        };
+        let mut iter = match device {
+            Some(device) => AddrVecIter::with_device(socket_ip_addr, device),
+            None => AddrVecIter::without_device(socket_ip_addr),
+        };
+        // Skip the first element, which is always `*self`.
         assert_eq!(iter.next(), Some(*self));
         iter
     }
 }
 
-impl<I: Ip, D, S> SocketMapSpec for UdpConnectionState<I, D, S> {
-    type ListenerAddr = ListenerAddr<I::Addr>;
-    type ConnAddr = ConnAddr<I::Addr>;
-    type AddrVec = UdpAddrVec<I::Addr>;
+impl<I: Ip, D: IpDeviceId, S> SocketMapSpec for UdpConnectionState<I, D, S> {
+    type ListenerAddr = ListenerAddr<I::Addr, D>;
+    type ConnAddr = ConnAddr<I::Addr, D>;
+    type AddrVec = UdpAddrVec<I::Addr, D>;
     type ListenerId = UdpListenerId<I>;
     type ConnId = UdpConnId<I>;
     type ListenerState = ();
     type ConnState = S;
 }
 
-impl<I: Ip, D, S> Default for UdpConnectionState<I, D, S> {
-    fn default() -> UdpConnectionState<I, D, S> {
-        UdpConnectionState { bound: BoundSocketMap::default(), _device_marker: PhantomData }
-    }
-}
-
-enum LookupResult<I: Ip> {
-    Conn(UdpConnId<I>, ConnAddr<I::Addr>),
-    Listener(UdpListenerId<I>, ListenerAddr<I::Addr>),
+enum LookupResult<I: Ip, D> {
+    Conn(UdpConnId<I>, ConnAddr<I::Addr, D>),
+    Listener(UdpListenerId<I>, ListenerAddr<I::Addr, D>),
 }
 
 impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
@@ -221,20 +314,18 @@ impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
         remote_ip: SpecifiedAddr<I::Addr>,
         local_port: NonZeroU16,
         remote_port: NonZeroU16,
-        // TODO(https://fxbug.dev/96573): use this to match on device when that
-        // is part of the address vector.
-        _device: D,
-    ) -> Option<LookupResult<I>> {
-        let Self { bound, _device_marker } = self;
-        let addr: UdpAddrVec<_> = ConnAddr { local_ip, remote_ip, local_port, remote_port }.into();
-        core::iter::once(addr).chain(addr.iter_shadows()).find_map(|addr| match addr {
-            UdpAddrVec::Listener(l) => {
-                bound.get_listener_by_addr(&l).map(|id| LookupResult::Listener(*id, l))
-            }
-            UdpAddrVec::Connected(c) => {
-                bound.get_conn_by_addr(&c).map(|id| LookupResult::Conn(*id, c))
-            }
-        })
+        device: D,
+    ) -> Option<LookupResult<I, D>> {
+        let Self { bound } = self;
+        iter_receiving_addrs(ConnIpAddr { local_ip, remote_ip, local_port, remote_port }, device)
+            .find_map(|addr| match addr {
+                UdpAddrVec::Listener(l) => {
+                    bound.get_listener_by_addr(&l).map(|id| LookupResult::Listener(*id, l))
+                }
+                UdpAddrVec::Connected(c) => {
+                    bound.get_conn_by_addr(&c).map(|id| LookupResult::Conn(*id, c))
+                }
+            })
     }
 
     /// Collects the currently used local ports into a [`HashSet`].
@@ -246,14 +337,14 @@ impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
         &self,
         addrs: impl ExactSizeIterator<Item = &'a SpecifiedAddr<I::Addr>> + Clone,
     ) -> HashSet<NonZeroU16> {
-        let Self { bound, _device_marker } = self;
+        let Self { bound } = self;
         let all_addrs = bound.iter_addrs();
         if addrs.len() == 0 {
             // For wildcard addresses, collect ALL local ports.
             all_addrs
                 .map(|addr| match addr {
-                    UdpAddrVec::Listener(l) => l.port,
-                    UdpAddrVec::Connected(c) => c.local_port,
+                    UdpAddrVec::Listener(ListenerAddr(l, _device)) => l.port,
+                    UdpAddrVec::Connected(ConnAddr(c, _device)) => c.local_port,
                 })
                 .collect()
         } else {
@@ -261,13 +352,15 @@ impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
             // local addresses, or all addresses.
             all_addrs
                 .filter_map(|addr| match addr {
-                    UdpAddrVec::Connected(c) => {
+                    UdpAddrVec::Connected(ConnAddr(c, _device)) => {
                         addrs.clone().any(|a| a == &c.local_ip).then(|| c.local_port)
                     }
-                    UdpAddrVec::Listener(ListenerAddr { addr, port }) => match addr {
-                        Some(local_ip) => addrs.clone().any(|a| a == local_ip).then(|| *port),
-                        None => Some(*port),
-                    },
+                    UdpAddrVec::Listener(ListenerAddr(ListenerIpAddr { addr, port }, _device)) => {
+                        match addr {
+                            Some(local_ip) => addrs.clone().any(|a| a == local_ip).then(|| *port),
+                            None => Some(*port),
+                        }
+                    }
                 })
                 .collect()
         }
@@ -310,48 +403,63 @@ fn try_alloc_listen_port<I: IpExt, C: UdpStateContext<I>>(
     None
 }
 
-impl<I: Ip, D, S> PortAllocImpl for UdpConnectionState<I, D, S> {
+impl<I: Ip, D: IpDeviceId, S> PortAllocImpl for UdpConnectionState<I, D, S> {
     const TABLE_SIZE: NonZeroUsize = nonzero!(20usize);
     const EPHEMERAL_RANGE: RangeInclusive<u16> = 49152..=65535;
     type Id = ProtocolFlowId<I::Addr>;
 
     fn is_port_available(&self, id: &Self::Id, port: u16) -> bool {
-        let Self { bound, _device_marker } = self;
+        let Self { bound } = self;
         // We can safely unwrap here, because the ports received in
         // `is_port_available` are guaranteed to be in `EPHEMERAL_RANGE`.
         let port = NonZeroU16::new(port).unwrap();
-        // Check if we have any listeners. Return true if we have no listeners
-        // or active connections using the selected local port.
-        bound.get_listener_by_addr(&ListenerAddr { addr: Some(*id.local_addr()), port }).is_none()
-            && bound.get_listener_by_addr(&ListenerAddr { addr: None, port }).is_none()
-            && bound
-                .get_conn_by_addr(&ConnAddr::from_protocol_flow_and_local_port(id, port))
-                .is_none()
+        let conn = ConnAddr::from_protocol_flow_and_local_port(id, port);
+
+        // A port is free if there are no sockets currently using it, and if
+        // there are no sockets that are shadowing it.
+        UdpAddrVec::<_, _>::from(conn).iter_shadows().all(|a| match a {
+            UdpAddrVec::Listener(l) => bound.get_listener_by_addr(&l).is_none(),
+            UdpAddrVec::Connected(c) => bound.get_conn_by_addr(&c).is_none(),
+        } && bound.get_shadower_counts(&a) == 0)
+    }
+}
+
+/// The address vector of a connected UDP socket.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+struct ConnAddr<A: IpAddress, D>(ConnIpAddr<A>, Option<D>);
+
+impl<'a, A: IpAddress, D: Clone> From<&'a ConnAddr<A, D>> for ConnAddr<A, D> {
+    fn from(c: &'a ConnAddr<A, D>) -> Self {
+        c.clone()
     }
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-struct ConnAddr<A: IpAddress> {
+/// The IP addresses and port of a connected UDP socket.
+struct ConnIpAddr<A: IpAddress> {
     local_ip: SpecifiedAddr<A>,
     local_port: NonZeroU16,
     remote_ip: SpecifiedAddr<A>,
     remote_port: NonZeroU16,
 }
 
-impl<'a, A: IpAddress> From<&'a ConnAddr<A>> for ConnAddr<A> {
-    fn from(c: &'a ConnAddr<A>) -> Self {
-        c.clone()
+impl<A: IpAddress, D> From<ConnAddr<A, D>> for ConnIpAddr<A> {
+    fn from(ConnAddr(c, _device): ConnAddr<A, D>) -> Self {
+        c
     }
 }
 
-impl<A: IpAddress> ConnAddr<A> {
+impl<A: IpAddress, D> ConnAddr<A, D> {
     fn from_protocol_flow_and_local_port(id: &ProtocolFlowId<A>, local_port: NonZeroU16) -> Self {
-        Self {
-            local_ip: *id.local_addr(),
-            local_port,
-            remote_ip: *id.remote_addr(),
-            remote_port: id.remote_port(),
-        }
+        Self(
+            ConnIpAddr {
+                local_ip: *id.local_addr(),
+                local_port,
+                remote_ip: *id.remote_addr(),
+                remote_port: id.remote_port(),
+            },
+            None,
+        )
     }
 }
 
@@ -368,18 +476,30 @@ pub struct UdpConnInfo<A: IpAddress> {
     pub remote_port: NonZeroU16,
 }
 
-impl<A: IpAddress> From<ConnAddr<A>> for UdpConnInfo<A> {
-    fn from(c: ConnAddr<A>) -> Self {
-        let ConnAddr { local_ip, local_port, remote_ip, remote_port } = c;
+impl<A: IpAddress> From<ConnIpAddr<A>> for UdpConnInfo<A> {
+    fn from(c: ConnIpAddr<A>) -> Self {
+        let ConnIpAddr { local_ip, local_port, remote_ip, remote_port } = c;
         Self { local_ip, local_port, remote_ip, remote_port }
     }
 }
 
+/// The address vector of a listening UDP socket.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-struct ListenerAddr<A: IpAddress> {
+struct ListenerAddr<A: IpAddress, D>(ListenerIpAddr<A>, Option<D>);
+
+/// The IP addresses and port of a listening UDP socket.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+
+struct ListenerIpAddr<A: IpAddress> {
     /// The specific address being listened on, or `None` for all addresses.
     addr: Option<SpecifiedAddr<A>>,
     port: NonZeroU16,
+}
+
+impl<A: IpAddress, D> From<ListenerAddr<A, D>> for ListenerIpAddr<A> {
+    fn from(ListenerAddr(l, _device): ListenerAddr<A, D>) -> Self {
+        l
+    }
 }
 
 /// Information associated with a UDP listener
@@ -391,8 +511,8 @@ pub struct UdpListenerInfo<A: IpAddress> {
     pub local_port: NonZeroU16,
 }
 
-impl<A: IpAddress> From<ListenerAddr<A>> for UdpListenerInfo<A> {
-    fn from(l: ListenerAddr<A>) -> Self {
+impl<A: IpAddress, D> From<ListenerAddr<A, D>> for UdpListenerInfo<A> {
+    fn from(ListenerAddr(l, _device): ListenerAddr<A, D>) -> Self {
         Self { local_ip: l.addr, local_port: l.port }
     }
 }
@@ -825,7 +945,7 @@ impl<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>> BufferIpTransportCo
             })
         {
             match socket {
-                LookupResult::Conn(id, conn) => {
+                LookupResult::Conn(id, ConnAddr(conn, _device)) => {
                     mem::drop(packet);
                     sync_ctx.receive_udp_from_conn(
                         id,
@@ -935,10 +1055,10 @@ pub fn send_udp_conn<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>(
     body: B,
 ) -> Result<(), (B, IpSockSendError)> {
     let state = sync_ctx.get_first_state();
-    let UdpConnectionState { ref bound, _device_marker } = state.conn_state;
+    let UdpConnectionState { ref bound } = state.conn_state;
     let (sock, addr) = bound.get_conn_by_id(&conn).expect("no such connection");
     let sock = sock.clone();
-    let ConnAddr { local_ip, local_port, remote_ip, remote_port } = *addr;
+    let ConnAddr(ConnIpAddr { local_ip, local_port, remote_ip, remote_port }, _device) = *addr;
 
     sync_ctx
         .send_ip_packet(
@@ -993,8 +1113,8 @@ pub fn send_udp_listener<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>
     // Also, if the local IP address is a multicast address this function should
     // probably fail and `send_udp` must be used instead.
     let state = sync_ctx.get_first_state();
-    let UdpConnectionState { ref bound, _device_marker } = state.conn_state;
-    let ((), ListenerAddr { addr: local_ip, port: local_port }) =
+    let UdpConnectionState { ref bound } = state.conn_state;
+    let ((), ListenerAddr(ListenerIpAddr { addr: local_ip, port: local_port }, _device)) =
         *bound.get_listener_by_id(&listener).expect("specified listener not found");
 
     let sock = match sync_ctx.new_ip_socket(
@@ -1112,10 +1232,9 @@ fn create_udp_conn<I: IpExt, C: UdpStateContext<I>>(
         try_alloc_local_port(sync_ctx, &ProtocolFlowId::new(local_ip, remote_ip, remote_port))
             .ok_or(UdpSockCreationError::CouldNotAllocateLocalPort)?
     };
-    let UdpConnectionState { ref mut bound, _device_marker } =
-        sync_ctx.get_first_state_mut().conn_state;
+    let UdpConnectionState { ref mut bound } = sync_ctx.get_first_state_mut().conn_state;
 
-    let c = ConnAddr { local_ip, local_port, remote_ip, remote_port };
+    let c = ConnAddr(ConnIpAddr { local_ip, local_port, remote_ip, remote_port }, None);
     bound
         .try_insert_conn(c, ip_sock)
         .map_err(|_: InsertConnError| UdpSockCreationError::SockAddrConflict)
@@ -1134,10 +1253,10 @@ pub fn remove_udp_conn<I: IpExt, C: UdpStateContext<I>>(
     sync_ctx: &mut C,
     id: UdpConnId<I>,
 ) -> UdpConnInfo<I::Addr> {
-    let UdpConnectionState { ref mut bound, _device_marker } =
-        sync_ctx.get_first_state_mut().conn_state;
+    let UdpConnectionState { ref mut bound } = sync_ctx.get_first_state_mut().conn_state;
     let (_state, addr) = bound.remove_conn_by_id(id.into()).expect("UDP connection not found");
-    addr.into()
+    let ConnAddr(addr, _device) = addr;
+    addr.clone().into()
 }
 
 /// Gets the [`UdpConnInfo`] associated with the UDP connection referenced by [`id`].
@@ -1149,8 +1268,9 @@ pub fn get_udp_conn_info<I: IpExt, C: UdpStateContext<I>>(
     sync_ctx: &C,
     id: UdpConnId<I>,
 ) -> UdpConnInfo<I::Addr> {
-    let UdpConnectionState { ref bound, _device_marker } = sync_ctx.get_first_state().conn_state;
+    let UdpConnectionState { ref bound } = sync_ctx.get_first_state().conn_state;
     let (_state, addr) = bound.get_conn_by_id(&id).expect("UDP connection not found");
+    let ConnAddr(addr, _device) = addr;
     addr.clone().into()
 }
 
@@ -1199,9 +1319,9 @@ pub fn listen_udp<I: IpExt, C: UdpStateContext<I>>(
         IdMapEntry::Occupied(o) => o,
     };
 
-    let UdpConnectionState { ref mut bound, _device_marker } = conn_state;
+    let UdpConnectionState { ref mut bound } = conn_state;
     bound
-        .try_insert_listener(ListenerAddr { addr, port }, ())
+        .try_insert_listener(ListenerAddr(ListenerIpAddr { addr, port }, None), ())
         .map(|l| {
             unbound_entry.remove();
             l
@@ -1222,8 +1342,7 @@ pub fn remove_udp_listener<I: IpExt, C: UdpStateContext<I>>(
     sync_ctx: &mut C,
     id: UdpListenerId<I>,
 ) -> UdpListenerInfo<I::Addr> {
-    let UdpConnectionState { ref mut bound, _device_marker } =
-        sync_ctx.get_first_state_mut().conn_state;
+    let UdpConnectionState { ref mut bound } = sync_ctx.get_first_state_mut().conn_state;
     let (_state, addr) = bound.remove_listener_by_id(id).expect("Invalid UDP listener ID");
     addr.into()
 }
@@ -1238,7 +1357,7 @@ pub fn get_udp_listener_info<I: IpExt, C: UdpStateContext<I>>(
     sync_ctx: &C,
     id: UdpListenerId<I>,
 ) -> UdpListenerInfo<I::Addr> {
-    let UdpConnectionState { ref bound, _device_marker } = sync_ctx.get_first_state().conn_state;
+    let UdpConnectionState { ref bound } = sync_ctx.get_first_state().conn_state;
     let ((), addr) = bound.get_listener_by_id(&id).expect("UDP listener not found");
     addr.clone().into()
 }
@@ -1262,6 +1381,7 @@ pub enum UdpSockCreationError {
 mod tests {
     use alloc::{borrow::ToOwned, vec, vec::Vec};
 
+    use assert_matches::assert_matches;
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr};
     use packet::{Buf, InnerPacketBuilder, ParsablePacket, Serializer};
     use packet_formats::{
@@ -1487,9 +1607,9 @@ mod tests {
         }
     }
 
-    impl<I: Ip, D, S> UdpConnectionState<I, D, S> {
-        fn iter_conn_addrs(&self) -> impl Iterator<Item = &ConnAddr<I::Addr>> {
-            let Self { bound, _device_marker } = self;
+    impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
+        fn iter_conn_addrs(&self) -> impl Iterator<Item = &ConnAddr<I::Addr, D>> {
+            let Self { bound } = self;
             bound.iter_addrs().filter_map(|a| match a {
                 UdpAddrVec::Connected(c) => Some(c),
                 UdpAddrVec::Listener(_) => None,
@@ -1527,31 +1647,79 @@ mod tests {
     const LOCAL_PORT: NonZeroU16 = nonzero!(100u16);
     const REMOTE_PORT: NonZeroU16 = nonzero!(200u16);
 
-    fn conn_addr<I: Ip + TestIpExt>() -> ConnAddr<I::Addr> {
-        let local_ip = local_ip::<I>();
-        let remote_ip = remote_ip::<I>();
-        ConnAddr { local_ip, remote_ip, local_port: LOCAL_PORT, remote_port: REMOTE_PORT }
+    fn conn_addr<A>(device: Option<DummyDeviceId>) -> UdpAddrVec<A, DummyDeviceId>
+    where
+        A: IpAddress,
+        A::Version: TestIpExt,
+    {
+        let local_ip = local_ip::<A::Version>();
+        let remote_ip = remote_ip::<A::Version>();
+        ConnAddr(
+            ConnIpAddr { local_ip, remote_ip, local_port: LOCAL_PORT, remote_port: REMOTE_PORT },
+            device,
+        )
+        .into()
     }
 
-    fn local_listener<I: Ip + TestIpExt>() -> ListenerAddr<I::Addr> {
-        let local_ip = local_ip::<I>();
-        ListenerAddr { port: LOCAL_PORT, addr: Some(local_ip) }
+    fn local_listener<A>(device: Option<DummyDeviceId>) -> UdpAddrVec<A, DummyDeviceId>
+    where
+        A: IpAddress,
+        A::Version: TestIpExt,
+    {
+        let local_ip = local_ip::<A::Version>();
+        ListenerAddr(ListenerIpAddr { port: LOCAL_PORT, addr: Some(local_ip) }, device).into()
     }
 
-    fn wildcard_listener<I: Ip + TestIpExt>() -> ListenerAddr<I::Addr> {
-        ListenerAddr { port: LOCAL_PORT, addr: None }
+    fn wildcard_listener<A>(device: Option<DummyDeviceId>) -> UdpAddrVec<A, DummyDeviceId>
+    where
+        A: IpAddress,
+        A::Version: TestIpExt,
+    {
+        ListenerAddr(ListenerIpAddr { port: LOCAL_PORT, addr: None }, device).into()
     }
 
-    #[test_case(conn_addr::<Ipv4>().into(),
-        [local_listener::<Ipv4>().into(), wildcard_listener::<Ipv4>().into()]; "for conn")]
-    #[test_case(local_listener::<Ipv4>().into(),
-        [wildcard_listener::<Ipv4>().into()]; "for local listener")]
-    #[test_case(wildcard_listener::<Ipv4>().into(), []; "for wildcard listener")]
-    fn test_udp_addr_vec_iter_shadows_conn<const N: usize>(
-        addr: UdpAddrVec<Ipv4Addr>,
-        expected_shadows: [UdpAddrVec<Ipv4Addr>; N],
+    #[test_case(conn_addr(Some(DummyDeviceId)), [
+            conn_addr(None), local_listener(Some(DummyDeviceId)), local_listener(None),
+            wildcard_listener(Some(DummyDeviceId)), wildcard_listener(None)
+        ]; "conn with device")]
+    #[test_case(local_listener(Some(DummyDeviceId)),
+        [local_listener(None), wildcard_listener(Some(DummyDeviceId)), wildcard_listener(None)];
+        "local listener with device")]
+    #[test_case(wildcard_listener(Some(DummyDeviceId)), [wildcard_listener(None)];
+        "wildcard listener with device")]
+    #[test_case(conn_addr(None), [local_listener(None), wildcard_listener(None)]; "conn no device")]
+    #[test_case(local_listener(None), [wildcard_listener(None)]; "local listener no device")]
+    #[test_case(wildcard_listener(None), []; "wildcard listener no device")]
+    fn test_udp_addr_vec_iter_shadows_conn<D: IpDeviceId, const N: usize>(
+        addr: UdpAddrVec<Ipv4Addr, D>,
+        expected_shadows: [UdpAddrVec<Ipv4Addr, D>; N],
     ) {
         assert_eq!(addr.iter_shadows().collect::<HashSet<_>>(), HashSet::from(expected_shadows));
+    }
+
+    #[ip_test]
+    fn test_iter_receiving_addrs<I: Ip + TestIpExt>() {
+        let addr = ConnIpAddr {
+            local_ip: local_ip::<I>(),
+            local_port: LOCAL_PORT,
+            remote_ip: remote_ip::<I>(),
+            remote_port: REMOTE_PORT,
+        };
+        assert_eq!(
+            iter_receiving_addrs(addr, DummyDeviceId).collect::<Vec<_>>(),
+            vec![
+                // A socket connected on exactly the receiving vector has precedence.
+                conn_addr(Some(DummyDeviceId)),
+                // Connected takes precedence over listening with device match.
+                conn_addr(None),
+                local_listener(Some(DummyDeviceId)),
+                // Specific IP takes precedence over device match.
+                local_listener(None),
+                wildcard_listener(Some(DummyDeviceId)),
+                // Fallback to least specific
+                wildcard_listener(None)
+            ]
+        );
     }
 
     /// Tests UDP listeners over different IP versions.
@@ -2293,17 +2461,25 @@ mod tests {
         )
         .expect("connect_udp failed");
         let UdpState {
-            conn_state: UdpConnectionState { bound, _device_marker },
+            conn_state: UdpConnectionState { bound },
             unbound: _,
             lazy_port_alloc: _,
             send_port_unreachable: _,
         } = &ctx.get_ref().state;
         let (_state, addr) = bound.get_conn_by_id(&conn).unwrap();
 
-        assert_eq!(addr.local_ip, local_ip::<I>());
-        assert_eq!(addr.local_port, local_port);
-        assert_eq!(addr.remote_ip, remote_ip::<I>());
-        assert_eq!(addr.remote_port, remote_port);
+        assert_eq!(
+            addr,
+            &ConnAddr(
+                ConnIpAddr {
+                    local_ip: local_ip::<I>(),
+                    local_port: local_port,
+                    remote_ip: remote_ip::<I>(),
+                    remote_port: remote_port,
+                },
+                None
+            )
+        );
     }
 
     /// Tests local port allocation for [`connect_udp`].
@@ -2368,16 +2544,21 @@ mod tests {
         let bound = &ctx.get_ref().state.conn_state.bound;
         let valid_range =
             &UdpConnectionState::<I, DummyDeviceId, IpSock<I, DummyDeviceId>>::EPHEMERAL_RANGE;
-        let port_a = bound.get_conn_by_id(&conn_a).unwrap().1.local_port.get();
+        let port_a = assert_matches!(bound.get_conn_by_id(&conn_a),
+            Some((_state, ConnAddr(ConnIpAddr{local_port, ..}, _device))) => local_port)
+        .get();
         assert!(valid_range.contains(&port_a));
-        let port_b = bound.get_conn_by_id(&conn_b).unwrap().1.local_port.get();
-        assert!(valid_range.contains(&port_b));
+        let port_b = assert_matches!(bound.get_conn_by_id(&conn_b),
+            Some((_state, ConnAddr(ConnIpAddr{local_port, ..}, _device))) => local_port)
+        .get();
         assert_ne!(port_a, port_b);
-        let port_c = bound.get_conn_by_id(&conn_c).unwrap().1.local_port.get();
-        assert!(valid_range.contains(&port_c));
+        let port_c = assert_matches!(bound.get_conn_by_id(&conn_c),
+            Some((_state, ConnAddr(ConnIpAddr{local_port, ..}, _device))) => local_port)
+        .get();
         assert_ne!(port_a, port_c);
-        let port_d = bound.get_conn_by_id(&conn_d).unwrap().1.local_port.get();
-        assert!(valid_range.contains(&port_d));
+        let port_d = assert_matches!(bound.get_conn_by_id(&conn_d),
+            Some((_state, ConnAddr(ConnIpAddr{local_port, ..}, _device))) => local_port)
+        .get();
         assert_ne!(port_a, port_d);
     }
 
@@ -2540,8 +2721,10 @@ mod tests {
 
         let conn_state =
             &DualStateContext::<UdpState<I, DummyDeviceId>, _>::get_first_state(&ctx).conn_state;
-        let wildcard_port = conn_state.bound.get_listener_by_id(&wildcard_list).unwrap().1.port;
-        let specified_port = conn_state.bound.get_listener_by_id(&specified_list).unwrap().1.port;
+        let wildcard_port = assert_matches!(conn_state.bound.get_listener_by_id(&wildcard_list),
+            Some(((), ListenerAddr(ListenerIpAddr {port, addr: None}, None))) => port);
+        let specified_port = assert_matches!(conn_state.bound.get_listener_by_id(&specified_list),
+            Some(((), ListenerAddr(ListenerIpAddr {port, addr: _}, None))) => port);
         assert!(UdpConnectionState::<I, DummyDeviceId, IpSock<I, DummyDeviceId>>::EPHEMERAL_RANGE
             .contains(&wildcard_port.get()));
         assert!(UdpConnectionState::<I, DummyDeviceId, IpSock<I, DummyDeviceId>>::EPHEMERAL_RANGE

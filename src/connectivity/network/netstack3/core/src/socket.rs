@@ -288,6 +288,11 @@ impl<S: SocketMapSpec> BoundSocketMap<S> {
             (state, addr)
         })
     }
+
+    pub(crate) fn get_shadower_counts(&self, addr: &S::AddrVec) -> usize {
+        let Self { listener_id_to_sock: _, conn_id_to_sock: _, addr_to_id } = self;
+        addr_to_id.descendant_counts(&addr).map(|(_tag, size)| size.get()).sum()
+    }
 }
 
 enum InsertError {
