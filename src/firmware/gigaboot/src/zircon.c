@@ -313,6 +313,24 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
     }
   }
 
+  // Assemble a GIC config if one exists.
+  dcfg_arm_gicv2_driver_t v2_gic_cfg;
+  dcfg_arm_gicv3_driver_t v3_gic_cfg;
+  uint8_t gic_version = gic_driver_from_madt(madt, &v2_gic_cfg, &v3_gic_cfg);
+  if (gic_version == 2) {
+    result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2, 0,
+                                           &v2_gic_cfg, sizeof(v2_gic_cfg));
+    if (result != ZBI_RESULT_OK) {
+      return -1;
+    }
+  } else if (gic_version == 3) {
+    result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3, 0,
+                                           &v3_gic_cfg, sizeof(v3_gic_cfg));
+    if (result != ZBI_RESULT_OK) {
+      return -1;
+    }
+  }
+
   // pass SMBIOS entry point pointer
   uint64_t smbios = find_smbios(img, sys);
   if (smbios != 0) {
@@ -420,6 +438,48 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
         .type = ZBI_MEM_RANGE_PERIPHERAL,
     };
     ranges[num_ranges] = range;
+    num_ranges += 1;
+  }
+
+  // We must also map in the GIC MMIO addresses.
+  if (gic_version == 0x2) {
+    // This memory range must encompass the GICC and GICD register ranges.
+    // Each of these generally encompass a page, but some systems like QEMU
+    // allocate 64K to make it easier when working with 64kb pages. Since we
+    // use 4K pages, we allocate 16 pages here just to be safe.
+    ranges[num_ranges] = (zbi_mem_range_t){
+        .paddr = v2_gic_cfg.mmio_phys,
+        .length = 16 * ZX_PAGE_SIZE,
+        .type = ZBI_MEM_RANGE_PERIPHERAL,
+    };
+    num_ranges += 1;
+    ranges[num_ranges] = (zbi_mem_range_t){
+        .paddr = v2_gic_cfg.mmio_phys + v2_gic_cfg.gicd_offset + v2_gic_cfg.gicc_offset,
+        .length = 16 * ZX_PAGE_SIZE,
+        .type = ZBI_MEM_RANGE_PERIPHERAL,
+    };
+    num_ranges += 1;
+    if (v2_gic_cfg.use_msi) {
+      ranges[num_ranges] = (zbi_mem_range_t){
+          .paddr = v2_gic_cfg.msi_frame_phys,
+          .length = 16 * ZX_PAGE_SIZE,
+          .type = ZBI_MEM_RANGE_PERIPHERAL,
+      };
+      num_ranges += 1;
+    }
+  } else if (gic_version == 0x3) {
+    // This memory range must encompass the GICD and GICR register ranges.
+    ranges[num_ranges] = (zbi_mem_range_t){
+        .paddr = v3_gic_cfg.mmio_phys,
+        .length = 16 * ZX_PAGE_SIZE,
+        .type = ZBI_MEM_RANGE_PERIPHERAL,
+    };
+    num_ranges += 1;
+    ranges[num_ranges] = (zbi_mem_range_t){
+        .paddr = v3_gic_cfg.mmio_phys + v3_gic_cfg.gicd_offset + v3_gic_cfg.gicr_offset,
+        .length = 16 * ZX_PAGE_SIZE,
+        .type = ZBI_MEM_RANGE_PERIPHERAL,
+    };
     num_ranges += 1;
   }
 

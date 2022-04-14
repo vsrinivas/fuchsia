@@ -20,6 +20,18 @@ const uint8_t kSpcrSignature[ACPI_TABLE_SIGNATURE_SIZE] = "SPCR";
 const uint8_t kMadtSignature[ACPI_TABLE_SIGNATURE_SIZE] = "APIC";
 const uint8_t kInterruptControllerTypeGicc = 0xb;
 const uint8_t kInterruptControllerTypeGicd = 0xc;
+const uint8_t kInterruptControllerTypeGicMsiFrame = 0xd;
+const uint8_t kInterruptControllerTypeGicr = 0xe;
+// The ARM GICv3 spec states that 0x20000 is the default GICR stride.
+const uint64_t kGicv3rDefaultStride = 0x20000;
+
+// Returns the minimum of the two 64 bit physical addresses.
+uint64_t min(uint64_t first, uint64_t second) {
+  if (first < second) {
+    return first;
+  }
+  return second;
+}
 
 // Computes the checksum of an ACPI table, which is just the sum of the bytes
 // in the table. The table is valid if the checksum is zero.
@@ -216,4 +228,80 @@ uint8_t topology_from_madt(const acpi_madt_t* madt, zbi_topology_node_t* nodes, 
         (interrupt_controller_hdr_t*)(((uint8_t*)current_entry) + current_entry->length);
   }
   return num_nodes;
+}
+
+uint8_t gic_driver_from_madt(const acpi_madt_t* madt, dcfg_arm_gicv2_driver_t* v2_cfg,
+                             dcfg_arm_gicv3_driver_t* v3_cfg) {
+  memset(v2_cfg, 0x0, sizeof(dcfg_arm_gicv2_driver_t));
+  memset(v3_cfg, 0x0, sizeof(dcfg_arm_gicv3_driver_t));
+  const uint8_t* madt_end = (uint8_t*)madt + madt->hdr.length;
+  // The list of interrupt controller structures is located at the end of MADT,
+  // and each one starts with a type and a length.
+  typedef struct __attribute__((packed)) {
+    uint8_t type;
+    uint8_t length;
+  } interrupt_controller_hdr_t;
+  const interrupt_controller_hdr_t* current_entry = (interrupt_controller_hdr_t*)(madt + 1);
+
+  // Assemble the correct set of interrupt controller structures needed to
+  // construct a GIC configuration.
+  acpi_madt_gicc_t* gicc = NULL;
+  acpi_madt_gicd_t* gicd = NULL;
+  acpi_madt_gic_msi_t* gic_msi = NULL;
+  acpi_madt_gicr_t* gicr = NULL;
+  while ((uint8_t*)current_entry < madt_end) {
+    switch (current_entry->type) {
+      case kInterruptControllerTypeGicc:
+        gicc = (acpi_madt_gicc_t*)current_entry;
+        break;
+      case kInterruptControllerTypeGicd:
+        gicd = (acpi_madt_gicd_t*)current_entry;
+        break;
+      case kInterruptControllerTypeGicr:
+        gicr = (acpi_madt_gicr_t*)current_entry;
+        break;
+      case kInterruptControllerTypeGicMsiFrame:
+        gic_msi = (acpi_madt_gic_msi_t*)current_entry;
+        break;
+    }
+    current_entry =
+        (interrupt_controller_hdr_t*)(((uint8_t*)current_entry) + current_entry->length);
+  }
+
+  // GICD structures are required whenever utilizing a GIC, so return early if
+  // one wasn't found.
+  if (gicd == NULL) {
+    printf("GICD structure was not found\n");
+    return 0;
+  }
+  switch (gicd->gic_version) {
+    case 0x02:
+      if (gicc == NULL) {
+        printf("GICC structure was not found\n");
+        return 0;
+      }
+      v2_cfg->mmio_phys = min(gicc->physical_base_address, gicd->physical_base_address);
+      v2_cfg->gicc_offset = gicc->physical_base_address - v2_cfg->mmio_phys;
+      v2_cfg->gicd_offset = gicd->physical_base_address - v2_cfg->mmio_phys;
+      if (gic_msi != NULL) {
+        v2_cfg->use_msi = true;
+        v2_cfg->msi_frame_phys = gic_msi->physical_base_address;
+      }
+      v2_cfg->ipi_base = 0;
+      v2_cfg->optional = true;
+      break;
+    case 0x03:
+      if (gicr == NULL) {
+        printf("GICR structure was not found\n");
+        return 0;
+      }
+      v3_cfg->mmio_phys = min(gicr->discovery_range_base_address, gicd->physical_base_address);
+      v3_cfg->gicr_offset = gicr->discovery_range_base_address - v3_cfg->mmio_phys;
+      v3_cfg->gicd_offset = gicd->physical_base_address - v3_cfg->mmio_phys;
+      v3_cfg->gicr_stride = kGicv3rDefaultStride;
+      v3_cfg->ipi_base = 0;
+      v3_cfg->optional = true;
+      break;
+  }
+  return gicd->gic_version;
 }
