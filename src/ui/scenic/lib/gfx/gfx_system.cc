@@ -13,6 +13,8 @@
 
 #include <set>
 
+#include <vulkan/vulkan.h>
+
 #include "src/ui/lib/escher/escher_process_init.h"
 #include "src/ui/lib/escher/fs/hack_filesystem.h"
 #include "src/ui/lib/escher/hmd/pose_buffer_latching_shader.h"
@@ -102,6 +104,7 @@ escher::EscherUniquePtr GfxSystem::CreateEscher(sys::ComponentContext* app_conte
            VK_KHR_MAINTENANCE1_EXTENSION_NAME,
            VK_KHR_BIND_MEMORY_2_EXTENSION_NAME,
            VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
+           VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME,
        },
        {
            VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME,

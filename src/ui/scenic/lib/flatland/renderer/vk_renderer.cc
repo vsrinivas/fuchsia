@@ -496,8 +496,9 @@ void VkRenderer::Render(const ImageMetadata& render_target,
   for (auto target_id : local_pending_render_targets) {
     FX_DCHECK(local_render_target_map.find(target_id) != local_render_target_map.end());
     const auto target = local_render_target_map.at(target_id);
-    command_buffer->impl()->TransitionImageLayout(target, vk::ImageLayout::eUndefined,
-                                                  vk::ImageLayout::eColorAttachmentOptimal);
+    command_buffer->impl()->TransitionImageLayout(
+        target, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal,
+        VK_QUEUE_FAMILY_FOREIGN_EXT, escher_->device()->vk_main_queue_family());
   }
 
   std::vector<const escher::TexturePtr> textures;
@@ -517,9 +518,21 @@ void VkRenderer::Render(const ImageMetadata& render_target,
   const auto output_image = local_render_target_map.at(render_target.identifier);
   const auto depth_texture = local_depth_target_map.at(render_target.identifier);
 
+  // Transition to eColorAttachmentOptimal for rendering.  Note the src queue family is FOREIGN,
+  // since we assume that this image was previously presented to the display controller.
+  command_buffer->impl()->TransitionImageLayout(
+      output_image, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal,
+      VK_QUEUE_FAMILY_FOREIGN_EXT, escher_->device()->vk_main_queue_family());
+
   // Now the compositor can finally draw.
   compositor_.DrawBatch(command_buffer, rectangles, textures, color_data, output_image,
                         depth_texture, apply_color_conversion);
+
+  // Having drawn, we transition to eGeneral on the FOREIGN target queue, so that we can present the
+  // the image to the display controller.
+  command_buffer->impl()->TransitionImageLayout(
+      output_image, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eGeneral,
+      escher_->device()->vk_main_queue_family(), VK_QUEUE_FAMILY_FOREIGN_EXT);
 
   // Create vk::semaphores from the zx::events.
   std::vector<escher::SemaphorePtr> semaphores;

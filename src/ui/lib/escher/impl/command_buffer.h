@@ -85,7 +85,9 @@ class CommandBuffer {
   // Transition the image between the two layouts; see section 11.4 of the
   // Vulkan spec.  Retain image in used_resources.
   void TransitionImageLayout(const ImagePtr& image, vk::ImageLayout old_layout,
-                             vk::ImageLayout new_layout);
+                             vk::ImageLayout new_layout,
+                             uint32_t src_queue_family_index = VK_QUEUE_FAMILY_IGNORED,
+                             uint32_t dst_queue_family_index = VK_QUEUE_FAMILY_IGNORED);
 
   // Convenient way to begin a render-pass that renders to the whole framebuffer
   // (i.e. width/height of viewport and scissors are obtained from framebuffer).

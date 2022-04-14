@@ -255,7 +255,7 @@ void RectangleCompositor::DrawBatch(CommandBuffer* cmd_buf,
                                     const std::vector<ColorData>& color_data,
                                     const ImagePtr& output_image, const TexturePtr& depth_buffer,
                                     bool apply_color_conversion) {
-  // TODO (fxr/43278): Add custom clear colors. We could either pass in another parameter to
+  // TODO(fxbug.dev/43278): Add custom clear colors. We could either pass in another parameter to
   // this function or try to embed clear-data into the existing api. For example, one could
   // check to see if the back rectangle is fullscreen and solid-color, in which case we can
   // treat it as a clear instead of rendering it as a renderable.

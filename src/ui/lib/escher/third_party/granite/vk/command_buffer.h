@@ -132,8 +132,11 @@ class CommandBuffer : public Reffable {
   // Transition the image between the two layouts; see section 11.4 of the
   // Vulkan spec.  Retain image in used_resources.
   void TransitionImageLayout(const ImagePtr& image, vk::ImageLayout old_layout,
-                             vk::ImageLayout new_layout) {
-    impl_->TransitionImageLayout(image, old_layout, new_layout);
+                             vk::ImageLayout new_layout,
+                             uint32_t src_queue_family_index = VK_QUEUE_FAMILY_IGNORED,
+                             uint32_t dst_queue_family_index = VK_QUEUE_FAMILY_IGNORED) {
+    impl_->TransitionImageLayout(image, old_layout, new_layout, src_queue_family_index,
+                                 dst_queue_family_index);
   }
 
   // Submits the command buffer on the appropriate queue: the main queue for
@@ -163,7 +166,9 @@ class CommandBuffer : public Reffable {
   // VkImageMemoryBarrier.  Keeps |image| alive while command buffer is pending.
   void ImageBarrier(const ImagePtr& image, vk::ImageLayout old_layout, vk::ImageLayout new_layout,
                     vk::PipelineStageFlags src_stages, vk::AccessFlags src_access,
-                    vk::PipelineStageFlags dst_stages, vk::AccessFlags dst_access);
+                    vk::PipelineStageFlags dst_stages, vk::AccessFlags dst_access,
+                    uint32_t src_queue_family_index = VK_QUEUE_FAMILY_IGNORED,
+                    uint32_t dst_queue_family_index = VK_QUEUE_FAMILY_IGNORED);
 
   // Defers call to vkCmdPushConstants() via kDirtyPushConstantsBit.
   void PushConstants(const void* data, vk::DeviceSize offset, vk::DeviceSize range);

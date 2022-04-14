@@ -107,8 +107,8 @@ VulkanDeviceQueues::ProcAddrs PopulateProcAddrs(vk::Device device,
 // only if device is non-null.  Otherwise, no suitable device was found.
 struct SuitablePhysicalDeviceAndQueueFamilies {
   vk::PhysicalDevice physical_device;
-  uint32_t main_queue_family;
-  uint32_t transfer_queue_family;
+  uint32_t main_queue_family = VK_QUEUE_FAMILY_IGNORED;
+  uint32_t transfer_queue_family = VK_QUEUE_FAMILY_IGNORED;
 };
 
 SuitablePhysicalDeviceAndQueueFamilies FindSuitablePhysicalDeviceAndQueueFamilies(
@@ -172,7 +172,7 @@ SuitablePhysicalDeviceAndQueueFamilies FindSuitablePhysicalDeviceAndQueueFamilie
       }
     }
   }
-  return {vk::PhysicalDevice(), 0, 0};
+  return {vk::PhysicalDevice(), VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED};
 }
 
 // Helper for ValidateExtensions().
@@ -226,12 +226,14 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(VulkanInstancePtr instan
 #endif
 
   vk::PhysicalDevice physical_device;
-  uint32_t main_queue_family;
-  uint32_t transfer_queue_family;
+  uint32_t main_queue_family = VK_QUEUE_FAMILY_IGNORED;
+  uint32_t transfer_queue_family = VK_QUEUE_FAMILY_IGNORED;
   {
     SuitablePhysicalDeviceAndQueueFamilies result =
         FindSuitablePhysicalDeviceAndQueueFamilies(instance, params);
     FX_CHECK(result.physical_device) << "Unable to find a suitable physical device.";
+    FX_CHECK(result.main_queue_family != VK_QUEUE_FAMILY_IGNORED);
+    FX_CHECK(result.transfer_queue_family != VK_QUEUE_FAMILY_IGNORED);
     physical_device = result.physical_device;
     main_queue_family = result.main_queue_family;
     transfer_queue_family = result.transfer_queue_family;

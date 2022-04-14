@@ -43,7 +43,7 @@ void CommandBuffer::Begin(uint64_t sequence_number) {
 bool CommandBuffer::Submit(vk::Queue queue, CommandBufferFinishedCallback callback) {
   // NOTE: this name is important for benchmarking.  Do not remove or modify it
   // without also updating the "process_gfx_trace.go" script.
-  TRACE_DURATION("gfx", "escher::CommandBuffer::Submit");
+  TRACE_DURATION("gfx", "escher::CommandBuffer::Submit", "ptr", TA_POINTER(this));
 
   FX_DCHECK(is_active_ && !is_submitted_);
   is_submitted_ = true;
@@ -161,7 +161,9 @@ void CommandBuffer::CopyBufferAfterBarrier(const BufferPtr& src, const BufferPtr
 // TODO(fxbug.dev/41296): Move this function out to a separated utility function, rather
 // than part of impl::CommandBuffer.
 void CommandBuffer::TransitionImageLayout(const ImagePtr& image, vk::ImageLayout old_layout,
-                                          vk::ImageLayout new_layout) {
+                                          vk::ImageLayout new_layout,
+                                          uint32_t src_queue_family_index,
+                                          uint32_t dst_queue_family_index) {
   KeepAlive(image);
 
   vk::PipelineStageFlags src_stage_mask;
@@ -170,8 +172,8 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image, vk::ImageLayout
   vk::ImageMemoryBarrier barrier;
   barrier.oldLayout = old_layout;
   barrier.newLayout = new_layout;
-  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.srcQueueFamilyIndex = src_queue_family_index;
+  barrier.dstQueueFamilyIndex = dst_queue_family_index;
   barrier.image = image->vk();
 
   if (image->has_depth() || image->has_stencil()) {
@@ -362,10 +364,10 @@ bool CommandBuffer::Retire() {
     }
   }
   is_active_ = is_submitted_ = false;
-  ESCHER_DCHECK_VK_RESULT(device_.resetFences(1, &fence_));
+  ESCHER_CHECKED_VK_RESULT(device_.resetFences(1, &fence_));
 
   if (callback_) {
-    TRACE_DURATION("gfx", "escher::CommandBuffer::Retire::callback");
+    TRACE_DURATION("gfx", "escher::CommandBuffer::Retire::callback", "ptr", TA_POINTER(this));
     callback_();
     callback_ = nullptr;
   }

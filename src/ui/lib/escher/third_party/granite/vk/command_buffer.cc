@@ -256,7 +256,8 @@ void CommandBuffer::BufferBarrier(const BufferPtr& buffer, vk::PipelineStageFlag
 void CommandBuffer::ImageBarrier(const ImagePtr& image, vk::ImageLayout old_layout,
                                  vk::ImageLayout new_layout, vk::PipelineStageFlags src_stages,
                                  vk::AccessFlags src_access, vk::PipelineStageFlags dst_stages,
-                                 vk::AccessFlags dst_access) {
+                                 vk::AccessFlags dst_access, uint32_t src_queue_family_index,
+                                 uint32_t dst_queue_family_index) {
   // Render passes may also cause image layout transitions.  We haven't worked
   // through all of the corner cases with respect to our per-image layout
   // tracking.  Therefore, since we don't currently need image barriers during
@@ -279,8 +280,8 @@ void CommandBuffer::ImageBarrier(const ImagePtr& image, vk::ImageLayout old_layo
       image_utils::FormatToColorOrDepthStencilAspectFlags(image->format());
   barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
   barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.srcQueueFamilyIndex = src_queue_family_index;
+  barrier.dstQueueFamilyIndex = dst_queue_family_index;
 
   image->set_layout(new_layout);
 
