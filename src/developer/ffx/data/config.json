@@ -8,7 +8,9 @@
             "$FFX_LOG_ENABLED",
             true
         ],
-        "level": "Debug"
+        "level": "Debug",
+        "rotations": 5,
+        "rotate_size": 104857600
     },
     "proxy": {
         "timeout_secs": 10.0

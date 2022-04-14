@@ -5,13 +5,16 @@
 use {
     anyhow::{Context as _, Result},
     simplelog::{CombinedLogger, Config, ConfigBuilder, LevelFilter, SimpleLogger, WriteLogger},
-    std::fs::{create_dir_all, File, OpenOptions},
+    std::fs::{create_dir_all, remove_file, rename, File, OpenOptions},
+    std::io::{ErrorKind, Read, Seek, SeekFrom, Write},
     std::path::PathBuf,
     std::str::FromStr,
     std::sync::atomic::{AtomicBool, Ordering},
 };
 
 const LOG_DIR: &str = "log.dir";
+const LOG_ROTATIONS: &str = "log.rotations";
+const LOG_ROTATE_SIZE: &str = "log.rotate_size";
 const LOG_ENABLED: &str = "log.enabled";
 const LOG_LEVEL: &str = "log.level";
 pub const LOG_PREFIX: &str = "ffx";
@@ -83,10 +86,91 @@ impl simplelog::SharedLogger for DisableableSimpleLogger {
     }
 }
 
-pub async fn log_file(name: &str) -> Result<std::fs::File> {
+pub async fn log_file(name: &str, rotate: bool) -> Result<std::fs::File> {
     let mut log_path: PathBuf = super::get(LOG_DIR).await?;
+    let log_rotations: Option<u64> = super::get(LOG_ROTATIONS).await?;
+    let log_rotations = log_rotations.unwrap_or(0);
     create_dir_all(&log_path)?;
     log_path.push(format!("{}.log", name));
+
+    if rotate && log_rotations > 0 {
+        let mut rot_path = log_path.clone();
+
+        let log_rotate_size: Option<u64> = super::get(LOG_ROTATE_SIZE).await?;
+        if let Some(log_rotate_size) = log_rotate_size {
+            // log.rotate_size was set. We only rotate if the current file is bigger than that size,
+            // so open the current file and, if it's smaller than that size, return it.
+            match OpenOptions::new().write(true).append(true).create(false).open(&log_path) {
+                Ok(mut f) => {
+                    if f.seek(SeekFrom::End(0)).context("checking log file size")? < log_rotate_size
+                    {
+                        return Ok(f);
+                    }
+                }
+                Err(e) if e.kind() == ErrorKind::NotFound => (),
+                other => {
+                    other.context("opening log file")?;
+                    unreachable!();
+                }
+            }
+        }
+
+        rot_path.set_file_name(format!("{}.log.{}", name, log_rotations - 1));
+        match remove_file(&rot_path) {
+            Err(e) if e.kind() == ErrorKind::NotFound => (),
+            other => other.context("deleting stale logs")?,
+        }
+
+        for rotation in (0..log_rotations - 1).rev() {
+            let prev_path = rot_path.clone();
+            rot_path.set_file_name(format!("{}.log.{}", name, rotation));
+            match rename(&rot_path, prev_path) {
+                Err(e) if e.kind() == ErrorKind::NotFound => (),
+                other => other.context("rotating log files")?,
+            }
+        }
+
+        if let Some(log_rotate_size) = log_rotate_size {
+            // When we move the most recent log into rotation, truncate it if it is larger than the
+            // rotation length.
+            match OpenOptions::new().read(true).create(false).open(&log_path) {
+                Ok(mut f) => {
+                    f.seek(SeekFrom::End(-(log_rotate_size as i64)))
+                        .context("seeking through old log file")?;
+                    let mut new = OpenOptions::new()
+                        .write(true)
+                        .create(true)
+                        .open(rot_path)
+                        .context("opening rotating log file")?;
+                    new.write_all(b"<truncated for length>")
+                        .context("writing log truncation notice")?;
+                    let mut buf = [0; 4096];
+                    loop {
+                        let got = f.read(&mut buf).context("reading old log file")?;
+                        if got == 0 {
+                            break;
+                        }
+                        new.write_all(&buf[..got]).context("writing truncated log file")?;
+                    }
+                    match remove_file(&log_path) {
+                        Err(e) if e.kind() == ErrorKind::NotFound => (),
+                        other => other.context("deleting stale untruncated log")?,
+                    }
+                }
+                Err(e) if e.kind() == ErrorKind::NotFound => (),
+                other => {
+                    other.context("opening old log file")?;
+                    unreachable!();
+                }
+            }
+        } else {
+            match rename(&log_path, rot_path) {
+                Err(e) if e.kind() == ErrorKind::NotFound => (),
+                other => other.context("rotating log files")?,
+            }
+        }
+    }
+
     OpenOptions::new()
         .write(true)
         .append(true)
@@ -111,8 +195,11 @@ pub async fn filter_level() -> LevelFilter {
 }
 
 pub async fn init(log_to_stdio: bool, log_to_file: bool) -> Result<()> {
-    let file: Option<File> =
-        if log_to_file && is_enabled().await { Some(log_file(LOG_PREFIX).await?) } else { None };
+    let file: Option<File> = if log_to_file && is_enabled().await {
+        Some(log_file(LOG_PREFIX, true).await?)
+    } else {
+        None
+    };
 
     let level = filter_level().await;
 
