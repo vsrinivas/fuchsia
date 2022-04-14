@@ -10,6 +10,8 @@
 
 namespace fidl::internal {
 
+void ptr_noop(void*) {}
+
 namespace {
 
 const size_t kSmallAllocSize = 512;
@@ -22,21 +24,11 @@ size_t Align(size_t size) {
 
 }  // namespace
 
-NaturalEncoder::NaturalEncoder(const CodingConfig* coding_config,
-                               fidl_handle_metadata_t* handle_metadata,
-                               uint32_t handle_metadata_capacity)
-    : coding_config_(coding_config),
-      handle_metadata_(handle_metadata),
-      handle_metadata_capacity_(handle_metadata_capacity) {}
+NaturalEncoder::NaturalEncoder(const CodingConfig* coding_config) : coding_config_(coding_config) {}
 
 NaturalEncoder::NaturalEncoder(const CodingConfig* coding_config,
-                               fidl_handle_metadata_t* handle_metadata,
-                               uint32_t handle_metadata_capacity,
                                internal::WireFormatVersion wire_format)
-    : coding_config_(coding_config),
-      handle_metadata_(handle_metadata),
-      handle_metadata_capacity_(handle_metadata_capacity),
-      wire_format_(wire_format) {}
+    : coding_config_(coding_config), wire_format_(wire_format) {}
 
 size_t NaturalEncoder::Alloc(size_t size) {
   size_t offset = bytes_.size();
@@ -59,14 +51,18 @@ void NaturalEncoder::EncodeHandle(fidl_handle_t handle, HandleAttributes attr, s
   if (handle) {
     *GetPtr<zx_handle_t>(offset) = FIDL_HANDLE_PRESENT;
 
-    ZX_ASSERT(handles_.size() < handle_metadata_capacity_);
     uint32_t handle_index = static_cast<uint32_t>(handles_.size());
     handles_.push_back(handle);
 
     if (coding_config_->encode_process_handle) {
+      if (handle_metadata_ == nullptr && coding_config_->handle_metadata_stride != 0) {
+        handle_metadata_ = MallocedUniquePtr(
+            malloc(ZX_CHANNEL_MAX_MSG_HANDLES * coding_config_->handle_metadata_stride), free);
+      }
+
       const char* error;
       zx_status_t status =
-          coding_config_->encode_process_handle(attr, handle_index, handle_metadata_, &error);
+          coding_config_->encode_process_handle(attr, handle_index, handle_metadata_.get(), &error);
       ZX_ASSERT_MSG(ZX_OK == status, "error in encode_process_handle: %s", error);
     }
   } else {
@@ -76,13 +72,6 @@ void NaturalEncoder::EncodeHandle(fidl_handle_t handle, HandleAttributes attr, s
     }
     *GetPtr<zx_handle_t>(offset) = FIDL_HANDLE_ABSENT;
   }
-}
-
-void NaturalBodyEncoder::MoveImpl(NaturalBodyEncoder&& other) {
-  vtable_ = other.vtable_;
-  // Our |handles_metadata_| have already been copied over using the base class
-  // move constructor.
-  other.handle_metadata_ = nullptr;
 }
 
 NaturalBodyEncoder::~NaturalBodyEncoder() { Reset(); }
@@ -115,7 +104,7 @@ fitx::result<fidl::Error, NaturalBodyEncoder::BodyView> NaturalBodyEncoder::GetB
   BodyView chunk = {
       .bytes = cpp20::span<uint8_t>(bytes_),
       .handles = handles_.data(),
-      .handle_metadata = reinterpret_cast<fidl_handle_metadata_t*>(handle_metadata_),
+      .handle_metadata = static_cast<fidl_handle_metadata_t*>(handle_metadata_.get()),
       .num_handles = static_cast<uint32_t>(handles_.size()),
       .vtable = vtable_,
   };
@@ -123,24 +112,11 @@ fitx::result<fidl::Error, NaturalBodyEncoder::BodyView> NaturalBodyEncoder::GetB
   return fitx::ok(chunk);
 }
 
-fidl_handle_metadata_t* NaturalBodyEncoder::AllocateHandleMetadata(const TransportVTable* vtable) {
-  if (vtable->encoding_configuration->handle_metadata_stride == 0) {
-    ZX_DEBUG_ASSERT(vtable->encoding_configuration->decode_process_handle == nullptr);
-    ZX_DEBUG_ASSERT(vtable->encoding_configuration->encode_process_handle == nullptr);
-    return nullptr;
-  }
-  return static_cast<fidl_handle_metadata_t*>(
-      calloc(kHandleMetadataCapacity, vtable->encoding_configuration->handle_metadata_stride));
-}
-
 void NaturalBodyEncoder::Reset() {
   bytes_.clear();
   vtable_->encoding_configuration->close_many(handles_.data(), handles_.size());
   handles_.clear();
-  if (handle_metadata_) {
-    free(handle_metadata_);
-  }
-  handle_metadata_ = nullptr;
+  handle_metadata_.reset();
   handles_staging_area_.clear();
 }
 

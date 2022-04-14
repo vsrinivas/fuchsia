@@ -16,16 +16,19 @@
 
 namespace fidl::internal {
 
+// Used in the default constructor of MallocedUniquePtr below to do nothing in the case that
+// no handle metadata is allocated.
+void ptr_noop(void*);
+
 class NaturalEncoder {
+  using MallocedUniquePtr = std::unique_ptr<void, void (*)(void*)>;
+
  public:
-  NaturalEncoder(const CodingConfig* coding_config, fidl_handle_metadata_t* handle_metadata,
-                 uint32_t handle_metadata_capacity);
-  NaturalEncoder(const CodingConfig* coding_config, fidl_handle_metadata_t* handle_metadata,
-                 uint32_t handle_metadata_capacity, internal::WireFormatVersion wire_format);
+  explicit NaturalEncoder(const CodingConfig* coding_config);
+  NaturalEncoder(const CodingConfig* coding_config, internal::WireFormatVersion wire_format);
 
   NaturalEncoder(NaturalEncoder&&) noexcept = default;
   NaturalEncoder& operator=(NaturalEncoder&&) noexcept = default;
-
   ~NaturalEncoder() = default;
 
   size_t Alloc(size_t size);
@@ -67,8 +70,7 @@ class NaturalEncoder {
   // storage alive. This is done by moving the vector buffer to a second vector
   // which does not close handles.
   std::vector<fidl_handle_t> handles_staging_area_;
-  fidl_handle_metadata_t* handle_metadata_;
-  uint32_t handle_metadata_capacity_;
+  MallocedUniquePtr handle_metadata_ = MallocedUniquePtr(nullptr, ptr_noop);
   internal::WireFormatVersion wire_format_ = internal::WireFormatVersion::kV2;
   zx_status_t status_ = ZX_OK;
   const char* error_ = nullptr;
@@ -79,23 +81,10 @@ class NaturalEncoder {
 class NaturalBodyEncoder final : public NaturalEncoder {
  public:
   NaturalBodyEncoder(const TransportVTable* vtable, internal::WireFormatVersion wire_format)
-      : NaturalEncoder(vtable->encoding_configuration, AllocateHandleMetadata(vtable),
-                       kHandleMetadataCapacity, wire_format),
-        vtable_(vtable) {}
+      : NaturalEncoder(vtable->encoding_configuration, wire_format), vtable_(vtable) {}
 
-  NaturalBodyEncoder(NaturalBodyEncoder&& other) noexcept
-      : NaturalEncoder(std::move(static_cast<NaturalEncoder&>(other))) {
-    MoveImpl(std::move(other));
-  }
-
-  NaturalBodyEncoder& operator=(NaturalBodyEncoder&& other) noexcept {
-    if (this != &other) {
-      Reset();
-      NaturalEncoder::operator=(std::move(static_cast<NaturalEncoder&>(other)));
-      MoveImpl(std::move(other));
-    }
-    return *this;
-  }
+  NaturalBodyEncoder(NaturalBodyEncoder&& other) = default;
+  NaturalBodyEncoder& operator=(NaturalBodyEncoder&& other) noexcept = default;
 
   ~NaturalBodyEncoder();
 
@@ -108,8 +97,6 @@ class NaturalBodyEncoder final : public NaturalEncoder {
   void Reset();
 
  private:
-  static constexpr uint32_t kHandleMetadataCapacity = ZX_CHANNEL_MAX_MSG_HANDLES;
-
   friend class NaturalMessageEncoder;
 
   struct BodyView {
@@ -124,10 +111,6 @@ class NaturalBodyEncoder final : public NaturalEncoder {
   // Caller takes ownership of the handles.
   // Do not encode another value until the previous message is sent.
   fitx::result<fidl::Error, BodyView> GetBodyView() &&;
-
-  static fidl_handle_metadata_t* AllocateHandleMetadata(const TransportVTable* vtable);
-
-  void MoveImpl(NaturalBodyEncoder&& other);
 
   const TransportVTable* vtable_;
 };
