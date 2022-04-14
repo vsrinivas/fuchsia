@@ -415,6 +415,11 @@ async fn add_iface(
         Err(e) => return AddIfaceResult::from_error(e.into(), zx::sys::ZX_ERR_PEER_CLOSED),
     };
 
+    let spectrum_management_support = match mlme_proxy.query_spectrum_management_support().await {
+        Ok(support) => support,
+        Err(e) => return AddIfaceResult::from_error(e.into(), zx::sys::ZX_ERR_PEER_CLOSED),
+    };
+
     let serve_sme_fut = match device::create_and_serve_sme(
         cfg.clone(),
         id,
@@ -425,6 +430,7 @@ async fn add_iface(
         iface_tree_holder,
         device_info,
         mac_sublayer_support,
+        spectrum_management_support,
         dev_monitor_proxy,
         persistence_req_sender,
     ) {
@@ -998,6 +1004,15 @@ mod tests {
             responder.send(&mut fake_mac_sublayer_support()).expect("failed to send MLME response");
         });
 
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // The future should have requested the spectrum management features.
+        assert_variant!(
+            exec.run_until_stalled(&mut mlme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_mlme::MlmeRequest::QuerySpectrumManagementSupport { responder }))) => {
+            responder.send(&mut fake_spectrum_management_support()).expect("failed to send MLME response");
+        });
+
         // The future should complete successfully.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(result) => {
             assert!(result.result.is_ok());
@@ -1101,6 +1116,16 @@ mod tests {
             // A device that is synthetic but not softmac is currently invalid (but this may change in the future.)
             support.device.is_synthetic = true;
             support.device.mac_implementation_type = fidl_common::MacImplementationType::Fullmac;
+            responder.send(&mut support).expect("failed to send MLME response");
+        });
+
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // The future should have requested the spectrum management features.
+        assert_variant!(
+            exec.run_until_stalled(&mut mlme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_mlme::MlmeRequest::QuerySpectrumManagementSupport { responder }))) => {
+            let mut support = fake_spectrum_management_support();
             responder.send(&mut support).expect("failed to send MLME response");
         });
 

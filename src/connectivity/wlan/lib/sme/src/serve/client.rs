@@ -31,6 +31,7 @@ pub async fn serve(
     proxy: MlmeProxy,
     device_info: fidl_mlme::DeviceInfo,
     mac_sublayer_support: fidl_common::MacSublayerSupport,
+    spectrum_management_support: fidl_common::SpectrumManagementSupport,
     event_stream: MlmeEventStream,
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
@@ -50,6 +51,7 @@ pub async fn serve(
         hasher,
         persistence_req_sender,
         mac_sublayer_support,
+        spectrum_management_support,
     );
     let sme = Arc::new(Mutex::new(sme));
     let mlme_sme =

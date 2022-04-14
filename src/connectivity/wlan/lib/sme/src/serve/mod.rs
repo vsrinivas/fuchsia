@@ -36,6 +36,7 @@ pub fn create_sme(
     mlme_proxy: fidl_mlme::MlmeProxy,
     device_info: &fidl_mlme::DeviceInfo,
     mac_sublayer_support: fidl_common::MacSublayerSupport,
+    spectrum_management_support: fidl_common::SpectrumManagementSupport,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     hasher: WlanHasher,
     persistence_req_sender: auto_persist::PersistenceReqSender,
@@ -51,6 +52,7 @@ pub fn create_sme(
                 mlme_proxy,
                 device_info,
                 mac_sublayer_support,
+                spectrum_management_support,
                 event_stream,
                 receiver,
                 iface_tree_holder,
@@ -156,7 +158,12 @@ mod tests {
         futures::task::Poll,
         pin_utils::pin_mut,
         std::sync::Arc,
-        wlan_common::{assert_variant, test_utils::fake_features::fake_mac_sublayer_support},
+        wlan_common::{
+            assert_variant,
+            test_utils::fake_features::{
+                fake_mac_sublayer_support, fake_spectrum_management_support_empty,
+            },
+        },
         wlan_inspect::IfaceTreeHolder,
     };
 
@@ -177,6 +184,7 @@ mod tests {
             mlme_proxy,
             &test_utils::fake_device_info([0; 6]),
             fake_mac_sublayer_support(),
+            fake_spectrum_management_support_empty(),
             Arc::new(iface_tree_holder),
             WlanHasher::new(PLACEHOLDER_HASH_KEY),
             persistence_req_sender,
@@ -207,6 +215,7 @@ mod tests {
             mlme_proxy,
             &test_utils::fake_device_info([0; 6]),
             fake_mac_sublayer_support(),
+            fake_spectrum_management_support_empty(),
             Arc::new(iface_tree_holder),
             WlanHasher::new(PLACEHOLDER_HASH_KEY),
             persistence_req_sender,

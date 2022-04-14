@@ -54,6 +54,7 @@ pub struct ScanScheduler<T> {
     // Pending discovery requests from the user
     pending_discovery: Vec<DiscoveryScan<T>>,
     device_info: Arc<fidl_mlme::DeviceInfo>,
+    spectrum_management_support: fidl_common::SpectrumManagementSupport,
     last_mlme_txn_id: u64,
 }
 
@@ -75,11 +76,15 @@ pub struct ScanEnd<T> {
 }
 
 impl<T> ScanScheduler<T> {
-    pub fn new(device_info: Arc<fidl_mlme::DeviceInfo>) -> Self {
+    pub fn new(
+        device_info: Arc<fidl_mlme::DeviceInfo>,
+        spectrum_management_support: fidl_common::SpectrumManagementSupport,
+    ) -> Self {
         ScanScheduler {
             current: ScanState::NotScanning,
             pending_discovery: Vec::new(),
             device_info,
+            spectrum_management_support,
             last_mlme_txn_id: 0,
         }
     }
@@ -153,8 +158,12 @@ impl<T> ScanScheduler<T> {
         (matches!(self.current, ScanState::NotScanning) && has_pending).then(|| {
             self.last_mlme_txn_id += 1;
             let scan_cmd = self.pending_discovery.remove(0);
-            let request =
-                new_discovery_scan_request(self.last_mlme_txn_id, &scan_cmd, &self.device_info);
+            let request = new_discovery_scan_request(
+                self.last_mlme_txn_id,
+                &scan_cmd,
+                &self.device_info,
+                self.spectrum_management_support,
+            );
             self.current = ScanState::ScanningToDiscover {
                 cmd: scan_cmd,
                 mlme_txn_id: self.last_mlme_txn_id,
@@ -220,13 +229,18 @@ fn new_scan_request(
     scan_request: fidl_sme::ScanRequest,
     ssid_list: Vec<Ssid>,
     device_info: &fidl_mlme::DeviceInfo,
+    spectrum_management_support: fidl_common::SpectrumManagementSupport,
 ) -> fidl_mlme::ScanRequest {
     let scan_req = fidl_mlme::ScanRequest {
         txn_id: mlme_txn_id,
         scan_type: fidl_mlme::ScanTypes::Passive,
         probe_delay: 0,
         // TODO(fxbug.dev/88658): SME silently ignores unsupported channels
-        channel_list: get_channels_to_scan(&device_info, &scan_request),
+        channel_list: get_channels_to_scan(
+            &device_info,
+            spectrum_management_support,
+            &scan_request,
+        ),
         ssid_list: ssid_list.into_iter().map(Ssid::into).collect(),
         min_channel_time: PASSIVE_SCAN_CHANNEL_MS,
         max_channel_time: PASSIVE_SCAN_CHANNEL_MS,
@@ -248,8 +262,15 @@ fn new_discovery_scan_request<T>(
     mlme_txn_id: u64,
     discovery_scan: &DiscoveryScan<T>,
     device_info: &fidl_mlme::DeviceInfo,
+    spectrum_management_support: fidl_common::SpectrumManagementSupport,
 ) -> fidl_mlme::ScanRequest {
-    new_scan_request(mlme_txn_id, discovery_scan.scan_request.clone(), vec![], device_info)
+    new_scan_request(
+        mlme_txn_id,
+        discovery_scan.scan_request.clone(),
+        vec![],
+        device_info,
+        spectrum_management_support,
+    )
 }
 
 // TODO(fxbug.dev/88658): SME silently ignores unsupported channels
@@ -273,13 +294,13 @@ fn new_discovery_scan_request<T>(
 /// Active   | N                  | [1]
 fn get_channels_to_scan(
     device_info: &fidl_mlme::DeviceInfo,
+    spectrum_management_support: fidl_common::SpectrumManagementSupport,
     scan_request: &fidl_sme::ScanRequest,
 ) -> Vec<u8> {
     let mut operating_channels: HashSet<u8> = HashSet::new();
     for band in &device_info.bands {
         operating_channels.extend(&band.operating_channels);
     }
-    let supports_dfs = device_info.driver_features.contains(&fidl_common::DriverFeature::Dfs);
 
     SUPPORTED_20_MHZ_CHANNELS
         .iter()
@@ -288,7 +309,7 @@ fn get_channels_to_scan(
             if let &fidl_sme::ScanRequest::Passive(_) = scan_request {
                 return true;
             };
-            if supports_dfs {
+            if spectrum_management_support.dfs.supported {
                 return true;
             };
             !Channel::new(**channel, Cbw::Cbw20).is_dfs()
@@ -328,8 +349,12 @@ mod tests {
     use itertools;
     use std::convert::TryFrom;
     use wlan_common::{
-        assert_variant, fake_fidl_bss_description, hasher::WlanHasher,
-        test_utils::fake_capabilities::fake_5ghz_band_capability,
+        assert_variant, fake_fidl_bss_description,
+        hasher::WlanHasher,
+        test_utils::{
+            fake_capabilities::fake_5ghz_band_capability,
+            fake_features::fake_spectrum_management_support_empty,
+        },
     };
 
     const CLIENT_ADDR: MacAddr = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
@@ -556,7 +581,8 @@ mod tests {
     #[test]
     fn test_active_discovery_scan_args_empty() {
         let device_info = device_info_with_channel(vec![1, 36, 165]);
-        let mut sched: ScanScheduler<i32> = ScanScheduler::new(Arc::new(device_info));
+        let mut sched: ScanScheduler<i32> =
+            ScanScheduler::new(Arc::new(device_info), fake_spectrum_management_support_empty());
         let scan_cmd = DiscoveryScan::new(
             10,
             fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
@@ -578,7 +604,8 @@ mod tests {
     #[test]
     fn test_active_discovery_scan_args_filled() {
         let device_info = device_info_with_channel(vec![1, 36, 165]);
-        let mut sched: ScanScheduler<i32> = ScanScheduler::new(Arc::new(device_info));
+        let mut sched: ScanScheduler<i32> =
+            ScanScheduler::new(Arc::new(device_info), fake_spectrum_management_support_empty());
         let ssid1: Vec<u8> = Ssid::try_from("ssid1").unwrap().into();
         let ssid2: Vec<u8> = Ssid::try_from("ssid2").unwrap().into();
         let scan_cmd = DiscoveryScan::new(
@@ -862,7 +889,10 @@ mod tests {
     }
 
     fn create_sched() -> ScanScheduler<i32> {
-        ScanScheduler::new(Arc::new(test_utils::fake_device_info(CLIENT_ADDR)))
+        ScanScheduler::new(
+            Arc::new(test_utils::fake_device_info(CLIENT_ADDR)),
+            fake_spectrum_management_support_empty(),
+        )
     }
 
     fn device_info_with_channel(operating_channels: Vec<u8>) -> fidl_mlme::DeviceInfo {

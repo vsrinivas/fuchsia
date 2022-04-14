@@ -85,6 +85,7 @@ pub fn create_and_serve_sme(
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     device_info: fidl_mlme::DeviceInfo,
     mac_sublayer_support: fidl_common::MacSublayerSupport,
+    spectrum_management_support: fidl_common::SpectrumManagementSupport,
     dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
     persistence_req_sender: auto_persist::PersistenceReqSender,
 ) -> Result<impl Future<Output = Result<(), Error>>, Error> {
@@ -94,6 +95,7 @@ pub fn create_and_serve_sme(
         mlme_proxy.clone(),
         &device_info,
         mac_sublayer_support,
+        spectrum_management_support,
         iface_tree_holder.clone(),
         inspect_tree.hasher.clone(),
         persistence_req_sender,
@@ -145,10 +147,21 @@ pub fn create_and_serve_sme(
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::test_helper, fidl::endpoints::create_proxy, fidl_mlme::MlmeMarker,
-        fuchsia_async as fasync, fuchsia_inspect::assert_data_tree, futures::channel::mpsc,
-        futures::future::join, futures::sink::SinkExt, futures::task::Poll, futures::StreamExt,
-        pin_utils::pin_mut, wlan_common::assert_variant,
+        super::*,
+        crate::test_helper,
+        fidl::endpoints::create_proxy,
+        fidl_mlme::MlmeMarker,
+        fuchsia_async as fasync,
+        fuchsia_inspect::assert_data_tree,
+        futures::channel::mpsc,
+        futures::future::join,
+        futures::sink::SinkExt,
+        futures::task::Poll,
+        futures::StreamExt,
+        pin_utils::pin_mut,
+        wlan_common::{
+            assert_variant, test_utils::fake_features::fake_spectrum_management_support_empty,
+        },
     };
 
     fn fake_device_info() -> fidl_mlme::DeviceInfo {
@@ -205,6 +218,7 @@ mod tests {
             iface_tree_holder,
             fake_device_info(),
             fake_mac_sublayer_support(),
+            fake_spectrum_management_support_empty(),
             dev_monitor_proxy,
             persistence_req_sender,
         )
@@ -292,6 +306,7 @@ mod tests {
             iface_tree_holder,
             fake_device_info(),
             fake_mac_sublayer_support(),
+            fake_spectrum_management_support_empty(),
             dev_monitor_proxy,
             persistence_req_sender,
         )
