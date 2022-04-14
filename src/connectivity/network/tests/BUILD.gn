@@ -205,7 +205,6 @@ group("tests") {
     ":netstack-c-api-tests",
     "benchmarks:tests",
     "connect:tests",
-    "dhcp_interop:dhcp_integration_tests",
     "external_network:tests",
     "fidl:tests",
     "getifaddrs:tests",
