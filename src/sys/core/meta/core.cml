@@ -646,6 +646,12 @@
             subdir: "class/input-report",
         },
         {
+            protocol: "fuchsia.ui.display.internal.DisplayPower",
+            from: "self",
+            to: "#brightness_manager",
+            dependency: "weak",
+        },
+        {
             directory: "dev",
             from: "parent",
             to: "#sysmem_connector",

@@ -75,7 +75,7 @@ cache_package_labels += [
   "//src/media/playback/bundles:services",
   "//src/media/playback/bundles:audio_consumer_config",
   "//src/session",
-  "//src/ui/bin/brightness_manager",
+  "//src/ui/bin/brightness_manager:brightness_manager_without_display_power",
   "//src/ui/bin/screensaver",
   "//src/ui/bin/shortcut",
   "//src/ui/bin/terminal",

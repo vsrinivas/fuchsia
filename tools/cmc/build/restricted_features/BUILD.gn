@@ -53,6 +53,7 @@ group("structured_config") {
     "//src/proc/bin/starnix:*",
     "//src/session/bin/session_manager:*",
     "//src/storage/fshost:*",
+    "//src/ui/bin/brightness_manager:*",
 
     # locations where assemble_system() (transitively) invokes generated_fshost_config()
     # (generating an fshost configuration file requires access to a compiled manifest, which

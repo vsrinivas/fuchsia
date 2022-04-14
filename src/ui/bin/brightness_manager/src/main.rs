@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use anyhow::{Context as _, Error};
+use brightness_manager_config::Config;
 use fuchsia_component::server::ServiceObjLocal;
+use fuchsia_inspect::component::inspector;
 use futures::lock::Mutex;
 use futures::prelude::*;
 use std::pin::Pin;
@@ -124,7 +126,6 @@ where
 async fn get_initial_value(control: Arc<Mutex<dyn ControlTrait>>) -> Result<(f32, bool), Error> {
     let mut control = control.lock().await;
     let (backlight, auto_brightness_on) = control.get_backlight_and_auto_brightness_on();
-    let backlight = backlight.lock().await;
     let initial_brightness = backlight.get_brightness().await.unwrap_or_else(|e| {
         fx_log_warn!("Didn't get the initial brightness in watch due to err {}, assuming 1.0.", e);
         1.0
@@ -153,13 +154,22 @@ async fn run_brightness_service(
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["brightness"])?;
     fx_log_info!("Started");
+    let config = Config::from_args().record_to_inspect(inspector().root());
 
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(|stream: ControlRequestStream| stream);
     fs.take_and_serve_directory_handle()?;
 
-    let backlight = Backlight::new().await?;
-    let backlight = Arc::new(Mutex::new(backlight));
+    let inspector = inspector();
+    inspect_runtime::serve(inspector, &mut fs)?;
+
+    let backlight = if config.manage_display_power {
+        Backlight::with_display_power(config.power_off_delay_millis, config.power_on_delay_millis)
+            .await?
+    } else {
+        Backlight::without_display_power()?
+    };
+    let backlight = Arc::new(backlight);
 
     let sensor = Sensor::new().await;
     let sensor = Arc::new(Mutex::new(sensor));

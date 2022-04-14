@@ -1,0 +1,9 @@
+{
+    manage_display_power: false,
+
+    // Unused
+    power_on_delay_millis: 0,
+
+    // Unused
+    power_off_delay_millis: 0,
+}

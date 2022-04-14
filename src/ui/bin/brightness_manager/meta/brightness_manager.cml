@@ -1,6 +1,6 @@
 {
     include: [
-        // Enable system logging
+        "inspect/client.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
@@ -27,6 +27,7 @@
             storage: "data",
             path: "/data",
         },
+        { protocol: "fuchsia.ui.display.internal.DisplayPower" },
     ],
     expose: [
         {
@@ -34,4 +35,9 @@
             from: "self",
         },
     ],
+    config: {
+        manage_display_power: { type: "bool" },
+        power_on_delay_millis: { type: "uint16" },
+        power_off_delay_millis: { type: "uint16" },
+    },
 }

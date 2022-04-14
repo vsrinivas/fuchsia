@@ -1,0 +1,5 @@
+{
+    manage_display_power: true,
+    power_on_delay_millis: 35,
+    power_off_delay_millis: 85,
+}

@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 
 rustc_binary("bin") {
   name = "brightness_manager"
@@ -12,10 +13,14 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
+    ":brightness_manager_config",
     "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness-rustc",
+    "//sdk/fidl/fuchsia.ui.display.internal:fuchsia.ui.display.internal-rustc",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//src/lib/diagnostics/inspect/runtime/rust",
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -27,6 +32,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:derivative",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:futures-core",
     "//third_party/rust_crates:futures-util",
@@ -39,6 +45,12 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
+  test_deps = [
+    ":test-helpers",
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:assert_matches",
+  ]
+
   sources = [
     "src/backlight.rs",
     "src/control.rs",
@@ -48,14 +60,76 @@ rustc_binary("bin") {
   ]
 }
 
-fuchsia_component("brightness_manager_cm") {
+rustc_library("test-helpers") {
+  testonly = true
+  name = "test_helpers"
+  with_unit_tests = true
+  edition = "2018"
+
+  visibility = [ ":*" ]
+
+  source_root = "src/test_helpers.rs"
+  sources = [ "src/test_helpers.rs" ]
+
+  deps = [
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  test_deps = [
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:assert_matches",
+  ]
+}
+
+fuchsia_unittest_package("test-helpers-tests") {
+  deps = [ ":test-helpers_test" ]
+}
+
+fuchsia_component_manifest("brightness_manager_manifest") {
   component_name = "brightness_manager"
   manifest = "meta/brightness_manager.cml"
+  restricted_features = [ "structured_config" ]
+}
+
+fuchsia_component("brightness_manager_component") {
+  cm_label = ":brightness_manager_manifest"
   deps = [ ":bin" ]
 }
 
-fuchsia_package("brightness_manager") {
-  deps = [ ":brightness_manager_cm" ]
+fuchsia_structured_config_values("config_with_display_power") {
+  cm_label = ":brightness_manager_manifest"
+  values_source = "config/with-display-power.json5"
+}
+
+fuchsia_structured_config_values("config_without_display_power") {
+  cm_label = ":brightness_manager_manifest"
+  values_source = "config/without-display-power.json5"
+}
+
+fuchsia_structured_config_rust_lib("brightness_manager_config") {
+  cm_label = ":brightness_manager_manifest"
+}
+
+fuchsia_package("brightness_manager_with_display_power") {
+  package_name = "brightness_manager"
+  deps = [
+    ":brightness_manager_component",
+    ":config_with_display_power",
+  ]
+}
+
+fuchsia_package("brightness_manager_without_display_power") {
+  package_name = "brightness_manager"
+  deps = [
+    ":brightness_manager_component",
+    ":config_without_display_power",
+  ]
+}
+
+# Temporarily an alias for ":brightness_manager_without_display_power".
+group("brightness_manager") {
+  deps = [ ":brightness_manager_without_display_power" ]
 }
 
 fuchsia_component("brightness_manager_test_driver") {
@@ -73,4 +147,17 @@ fuchsia_component("brightness_manager_test") {
 fuchsia_test_package("brightness_manager_tests") {
   test_components = [ ":brightness_manager_test" ]
   deps = [ ":brightness_manager_test_driver" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":brightness_manager_tests",
+    ":test-helpers-tests",
+  ]
 }

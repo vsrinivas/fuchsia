@@ -148,7 +148,7 @@ impl Sender<f32> for WatcherAdjustmentResponder {
 #[derive(Debug)]
 pub struct Control {
     sensor: Arc<Mutex<dyn SensorControl>>,
-    backlight: Arc<Mutex<dyn BacklightControl>>,
+    backlight: Arc<dyn BacklightControl>,
     set_brightness_abort_handle: Arc<Mutex<Option<AbortHandle>>>,
     auto_brightness_abort_handle: Option<AbortHandle>,
     spline: Spline<f32, f32>,
@@ -160,7 +160,7 @@ pub struct Control {
 impl Control {
     pub async fn new(
         sensor: Arc<Mutex<dyn SensorControl>>,
-        backlight: Arc<Mutex<dyn BacklightControl>>,
+        backlight: Arc<dyn BacklightControl>,
         current_sender_channel: Arc<Mutex<SenderChannel<f32>>>,
         auto_sender_channel: Arc<Mutex<SenderChannel<bool>>>,
         adjustment_sender_channel: Arc<Mutex<SenderChannel<f32>>>,
@@ -294,9 +294,7 @@ impl Control {
         self.adjustment_sender_channel.lock().await.add_sender_channel(sender).await;
     }
 
-    pub fn get_backlight_and_auto_brightness_on(
-        &mut self,
-    ) -> (Arc<Mutex<dyn BacklightControl>>, bool) {
+    pub fn get_backlight_and_auto_brightness_on(&mut self) -> (Arc<dyn BacklightControl>, bool) {
         (self.backlight.clone(), self.auto_brightness_abort_handle.is_some())
     }
 
@@ -338,7 +336,6 @@ impl Control {
                     let backlight = backlight.clone();
                     let max_brightness = {
                         let backlight = backlight.clone();
-                        let backlight = backlight.lock().await;
                         let max_result = backlight.get_max_absolute_brightness();
                         match max_result.await {
                             Ok(max_value) => max_value,
@@ -501,8 +498,7 @@ impl Control {
     }
 
     async fn get_max_absolute_brightness(&mut self) -> Result<f64, Error> {
-        let backlight = self.backlight.lock().await;
-        backlight.get_max_absolute_brightness().await
+        self.backlight.get_max_absolute_brightness().await
     }
 }
 
@@ -518,7 +514,7 @@ pub trait ControlTrait {
     async fn add_current_sender_channel(&mut self, sender: UnboundedSender<f32>);
     async fn add_auto_sender_channel(&mut self, sender: UnboundedSender<bool>);
     async fn add_adjustment_sender_channel(&mut self, sender: UnboundedSender<f32>);
-    fn get_backlight_and_auto_brightness_on(&mut self) -> (Arc<Mutex<dyn BacklightControl>>, bool);
+    fn get_backlight_and_auto_brightness_on(&mut self) -> (Arc<dyn BacklightControl>, bool);
 }
 
 #[async_trait(? Send)]
@@ -551,7 +547,7 @@ impl ControlTrait for Control {
         self.add_adjustment_sender_channel(sender).await;
     }
 
-    fn get_backlight_and_auto_brightness_on(&mut self) -> (Arc<Mutex<dyn BacklightControl>>, bool) {
+    fn get_backlight_and_auto_brightness_on(&mut self) -> (Arc<dyn BacklightControl>, bool) {
         self.get_backlight_and_auto_brightness_on()
     }
 }
@@ -585,8 +581,7 @@ fn generate_spline(table: &BrightnessTable) -> Spline<f32, f32> {
 // Then we won't need all these global locked variables.
 /// Runs the main auto-brightness code.
 
-async fn get_current_brightness(backlight: Arc<Mutex<dyn BacklightControl>>) -> f32 {
-    let backlight = backlight.lock().await;
+async fn get_current_brightness(backlight: Arc<dyn BacklightControl>) -> f32 {
     let fut = backlight.get_brightness();
     // TODO(lingxueluo) Deal with this in backlight.rs later.
     match fut.await {
@@ -601,11 +596,11 @@ async fn get_current_brightness(backlight: Arc<Mutex<dyn BacklightControl>>) -> 
     }
 }
 
-async fn set_current_brightness(backlight: Arc<Mutex<dyn BacklightControl>>, value: f64) {
-    let mut backlight = backlight.lock().await;
+async fn set_current_brightness(backlight: Arc<dyn BacklightControl>, value: f64) {
     backlight
         .set_brightness(value)
-        .unwrap_or_else(|e| fx_log_err!("Failed to set backlight: {}", e));
+        .await
+        .unwrap_or_else(|e| fx_log_err!("Failed to set backlight: {}", e))
 }
 
 async fn read_sensor_and_get_brightness(
@@ -640,7 +635,7 @@ async fn brightness_curve_lux_to_nits(lux: f32, spline: &Spline<f32, f32>) -> f3
 async fn set_brightness(
     value: f32,
     set_brightness_abort_handle: Arc<Mutex<Option<AbortHandle>>>,
-    backlight: Arc<Mutex<dyn BacklightControl>>,
+    backlight: Arc<dyn BacklightControl>,
     current_sender_channel: Arc<Mutex<SenderChannel<f32>>>,
 ) {
     let value = num_traits::clamp(value, 0.0, 1.0);
@@ -669,7 +664,7 @@ async fn set_brightness(
 
 async fn set_brightness_impl(
     value: f32,
-    backlight: Arc<Mutex<dyn BacklightControl>>,
+    backlight: Arc<dyn BacklightControl>,
     current_sender_channel: Arc<Mutex<SenderChannel<f32>>>,
 ) {
     let current_value = get_current_brightness(backlight.clone()).await;
@@ -688,7 +683,7 @@ async fn set_brightness_impl(
 async fn set_brightness_slowly(
     current_value: f32,
     to_value: f32,
-    backlight: Arc<Mutex<dyn BacklightControl>>,
+    backlight: Arc<dyn BacklightControl>,
     duration: Duration,
     current_sender_channel: Arc<Mutex<SenderChannel<f32>>>,
 ) {
@@ -757,7 +752,19 @@ mod tests {
         }
     }
 
+    #[derive(Debug, Clone)]
     struct MockBacklight {
+        inner: Arc<Mutex<Inner>>,
+    }
+
+    impl MockBacklight {
+        fn new(valid_backlight: bool, value: f64, max_brightness: f64) -> Self {
+            Self { inner: Arc::new(Mutex::new(Inner { valid_backlight, value, max_brightness })) }
+        }
+    }
+
+    #[derive(Debug)]
+    struct Inner {
         valid_backlight: bool,
         value: f64,
         max_brightness: f64,
@@ -766,44 +773,43 @@ mod tests {
     #[async_trait]
     impl BacklightControl for MockBacklight {
         async fn get_brightness(&self) -> Result<f64, Error> {
-            if self.valid_backlight {
-                Ok(self.value)
+            let inner = self.inner.lock().await;
+            if inner.valid_backlight {
+                Ok(inner.value)
             } else {
                 Err(format_err!("Get brightness failed."))
             }
         }
 
-        fn set_brightness(&mut self, value: f64) -> Result<(), Error> {
-            self.value = value;
+        async fn set_brightness(&self, value: f64) -> Result<(), Error> {
+            self.inner.lock().await.value = value;
             Ok(())
         }
 
         async fn get_max_absolute_brightness(&self) -> Result<f64, Error> {
-            Ok(self.max_brightness)
+            Ok(self.inner.lock().await.max_brightness)
         }
     }
 
     fn set_mocks(
         sensor: f32,
         backlight: f64,
-    ) -> (Arc<Mutex<impl SensorControl>>, Arc<Mutex<impl BacklightControl>>) {
+    ) -> (Arc<Mutex<impl SensorControl>>, Arc<impl BacklightControl>) {
         let sensor = MockSensor { illuminence: sensor };
         let sensor = Arc::new(Mutex::new(sensor));
-        let backlight =
-            MockBacklight { valid_backlight: true, value: backlight, max_brightness: 250.0 };
-        let backlight = Arc::new(Mutex::new(backlight));
+        let backlight = MockBacklight::new(true, backlight, 250.0);
+        let backlight = Arc::new(backlight);
         (sensor, backlight)
     }
 
     fn set_mocks_not_valid(
         sensor: f32,
         backlight: f64,
-    ) -> (Arc<Mutex<impl SensorControl>>, Arc<Mutex<impl BacklightControl>>) {
+    ) -> (Arc<Mutex<impl SensorControl>>, Arc<impl BacklightControl>) {
         let sensor = MockSensor { illuminence: sensor };
         let sensor = Arc::new(Mutex::new(sensor));
-        let backlight =
-            MockBacklight { valid_backlight: false, value: backlight, max_brightness: 250.0 };
-        let backlight = Arc::new(Mutex::new(backlight));
+        let backlight = MockBacklight::new(false, backlight, 250.0);
+        let backlight = Arc::new(backlight);
         (sensor, backlight)
     }
 
@@ -1186,8 +1192,6 @@ mod tests {
         // It should not have reached the final value yet.
         // We know that set_brightness_slowly, at the bottom of the task, finishes at the correct
         // value from other tests if it has sufficient time.
-        let backlight = backlight.lock().await;
-
         assert_ne!(cmp_float(0.04, backlight.get_brightness().await.unwrap() as f32), true);
     }
 
@@ -1197,7 +1201,6 @@ mod tests {
         let (_sensor, backlight) = set_mocks(0.0, 0.0);
         let backlight_clone = backlight.clone();
         set_brightness_impl(0.3, backlight_clone, control.current_sender_channel).await;
-        let backlight = backlight.lock().await;
         assert_eq!(cmp_float(0.3, backlight.get_brightness().await.unwrap() as f32), true);
     }
 
@@ -1290,12 +1293,10 @@ mod tests {
             exec.run_singlethreaded(&mut func_fut2);
         }
         let _ = exec.run_until_stalled(&mut future::pending::<()>());
-        let func_fut3 = control.backlight.lock();
+        let backlight = control.backlight;
+        let func_fut3 = backlight.get_brightness();
         futures::pin_mut!(func_fut3);
-        let backlight = exec.run_singlethreaded(&mut func_fut3);
-        let func_fut4 = backlight.get_brightness();
-        futures::pin_mut!(func_fut4);
-        let value = exec.run_singlethreaded(&mut func_fut4);
+        let value = exec.run_singlethreaded(&mut func_fut3);
         assert_eq!(cmp_float(0.6, value.unwrap() as f32), true);
     }
 
@@ -1316,12 +1317,10 @@ mod tests {
             exec.run_singlethreaded(&mut func_fut2);
         }
         let _ = exec.run_until_stalled(&mut future::pending::<()>());
-        let func_fut3 = control.backlight.lock();
+        let backlight = control.backlight;
+        let func_fut3 = backlight.get_brightness();
         futures::pin_mut!(func_fut3);
-        let backlight = exec.run_singlethreaded(&mut func_fut3);
-        let func_fut4 = backlight.get_brightness();
-        futures::pin_mut!(func_fut4);
-        let value = exec.run_singlethreaded(&mut func_fut4);
+        let value = exec.run_singlethreaded(&mut func_fut3);
         let brightness_value = value.unwrap() as f32;
         assert_eq!(TARGET_BRIGHTNESS, brightness_value);
     }
