@@ -27,6 +27,22 @@ lazy_static! {
         | fio::Operations::WRITE_BYTES
         | fio::Operations::MODIFY_DIRECTORY
         | fio::Operations::UPDATE_ATTRIBUTES;
+    /// All rights corresponding to x*.
+    pub static ref EXECUTE_RIGHTS: fio::Operations =
+        fio::Operations::CONNECT
+        | fio::Operations::ENUMERATE
+        | fio::Operations::TRAVERSE
+        | fio::Operations::EXECUTE;
+    /// All rights corresponding to rw*.
+    pub static ref READ_WRITE_RIGHTS: fio::Operations =
+        fio::Operations::CONNECT
+        | fio::Operations::ENUMERATE
+        | fio::Operations::TRAVERSE
+        | fio::Operations::READ_BYTES
+        | fio::Operations::WRITE_BYTES
+        | fio::Operations::MODIFY_DIRECTORY
+        | fio::Operations::GET_ATTRIBUTES
+        | fio::Operations::UPDATE_ATTRIBUTES;
 
     /// All the fio rights required to represent fio::OpenFlags::RIGHT_READABLE.
     static ref LEGACY_READABLE_RIGHTS: fio::Operations =

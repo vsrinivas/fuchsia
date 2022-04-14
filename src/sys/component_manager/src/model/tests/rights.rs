@@ -193,7 +193,7 @@ async fn framework_directory_incompatible_rights() {
                     source: UseSource::Parent,
                     source_name: "foo_data".into(),
                     target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                    rights: *routing::rights::READ_RIGHTS | *routing::rights::WRITE_RIGHTS,
+                    rights: *routing::rights::EXECUTE_RIGHTS,
                     subdir: None,
                 }))
                 .build(),

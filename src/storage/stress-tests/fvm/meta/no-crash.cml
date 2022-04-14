@@ -22,12 +22,11 @@
         },
     ],
     use: [
-        // Used to access the /dev directory of driver-test-realm
         {
-            directory: "hub",
-            from: "framework",
-            rights: [ "r*" ],
-            path: "/hub",
+            directory: "dev",
+            from: "#driver-test-realm",
+            rights: [ "rw*" ],
+            path: "/dev",
         },
     ],
     offer: [
@@ -38,13 +37,6 @@
             ],
             from: "parent",
             to: [ "#driver-test-realm" ],
-        },
-    ],
-    expose: [
-        // Makes it easier to access the /dev directory of driver-test-realm from the hub
-        {
-            directory: "dev",
-            from: "#driver-test-realm",
         },
     ],
 }

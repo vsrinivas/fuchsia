@@ -22,7 +22,7 @@
         {
             directory: "hub",
             from: "framework",
-            rights: [ "r*" ],
+            rights: [ "rw*" ],
             path: "/hub",
         },
     ],

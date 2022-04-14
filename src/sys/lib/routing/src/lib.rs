@@ -29,7 +29,7 @@ use {
         error::RoutingError,
         event::EventFilter,
         path::PathBufExt,
-        rights::{Rights, READ_RIGHTS, WRITE_RIGHTS},
+        rights::{Rights, READ_RIGHTS, READ_WRITE_RIGHTS, WRITE_RIGHTS},
         router::{
             AllowedSourcesBuilder, CapabilityVisitor, ErrorNotFoundFromParent,
             ErrorNotFoundInChild, ExposeVisitor, OfferVisitor, RoutingStrategy, Sources,
@@ -491,7 +491,7 @@ impl OfferVisitor for DirectoryState {
 
     fn visit(&mut self, offer: &OfferDirectoryDecl) -> Result<(), RoutingError> {
         match offer.source {
-            OfferSource::Framework => self.finalize(*READ_RIGHTS, offer.subdir.clone()),
+            OfferSource::Framework => self.finalize(*READ_WRITE_RIGHTS, offer.subdir.clone()),
             _ => self.advance(offer.rights.clone(), offer.subdir.clone()),
         }
     }
@@ -502,7 +502,7 @@ impl ExposeVisitor for DirectoryState {
 
     fn visit(&mut self, expose: &ExposeDirectoryDecl) -> Result<(), RoutingError> {
         match expose.source {
-            ExposeSource::Framework => self.finalize(*READ_RIGHTS, expose.subdir.clone()),
+            ExposeSource::Framework => self.finalize(*READ_WRITE_RIGHTS, expose.subdir.clone()),
             _ => self.advance(expose.rights.clone(), expose.subdir.clone()),
         }
     }
@@ -539,7 +539,7 @@ where
         _ => {
             let mut state = DirectoryState::new(use_decl.rights.clone(), use_decl.subdir.clone());
             if let UseSource::Framework = &use_decl.source {
-                state.finalize(*READ_RIGHTS, None)?;
+                state.finalize(*READ_WRITE_RIGHTS, None)?;
             }
             let allowed_sources = AllowedSourcesBuilder::new()
                 .framework(InternalCapability::Directory)

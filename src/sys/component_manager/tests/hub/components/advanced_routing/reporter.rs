@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_zircon as zx;
 use hub_report::*;
+use io_util::{open_directory_in_namespace, OpenFlags};
 
 #[fuchsia::main]
 async fn main() {
@@ -87,4 +89,23 @@ async fn main() {
         "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/echo_server.cm",
     )
     .await;
+
+    // Verify that the a read-only hub cannot be opened as RW.
+    //
+    // The call to `open_directory_in_namespace` will not fail because fdio does not wait for
+    // an OnOpen event. However the channel to the hub will still be closed with an `ACCESS_DENIED`
+    // epitaph.
+    //
+    // We should be able to see that the channel is closed by trying to making a Describe call on it,
+    // which should fail.
+    let ro_hub = open_directory_in_namespace(
+        "/read_only_hub",
+        OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
+    )
+    .unwrap();
+    let err = ro_hub.describe().await.unwrap_err();
+    match err {
+        fidl::Error::ClientChannelClosed { status: zx::Status::ACCESS_DENIED, .. } => {}
+        err => panic!("Unexpected error: {:?}", err),
+    }
 }

@@ -50,7 +50,7 @@
         },
         {
             directory: "hub",
-            rights: [ "r*" ],
+            rights: [ "rw*" ],
             path: "/hub-v2",
         },
         {

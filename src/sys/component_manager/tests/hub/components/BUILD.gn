@@ -12,7 +12,10 @@ rustc_binary("advanced_routing_reporter_bin") {
   testonly = true
   deps = [
     ":hub_report_lib",
+    "//garnet/lib/rust/io_util",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
+    "//src/lib/zircon/rust:fuchsia-zircon",
   ]
 
   sources = [ "advanced_routing/reporter.rs" ]

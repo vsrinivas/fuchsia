@@ -24,18 +24,9 @@ use {
 };
 
 // These are the paths associated with isolated-devmgr's dev directory.
-//
-// We make some assumptions when using these paths:
-// * there exists an isolated-devmgr component that is a child of the test
-// * that component exposes its /dev directory
-// * the test exposes the /dev directory from isolated-devmgr
-//
-// The test can then access /dev of isolated-devmgr by accessing its own expose
-// directory from the hub. Touching /dev will cause isolated-devmgr to be started
-// by component manager.
-pub const DEV_PATH: &'static str = "/hub/exec/expose/dev";
-pub const BLOCK_PATH: &'static str = "/hub/exec/expose/dev/class/block";
-pub const RAMCTL_PATH: &'static str = "/hub/exec/expose/dev/sys/platform/00:00:2d/ramctl";
+pub const DEV_PATH: &'static str = "/dev";
+pub const BLOCK_PATH: &'static str = "/dev/class/block";
+pub const RAMCTL_PATH: &'static str = "/dev/sys/platform/00:00:2d/ramctl";
 
 #[link(name = "fvm")]
 extern "C" {
