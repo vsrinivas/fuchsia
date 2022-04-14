@@ -331,6 +331,19 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
     }
   }
 
+  // Assemble a PSCI config if needed on this architecture.
+  acpi_fadt_t* fadt = (acpi_fadt_t*)load_table_with_signature(rsdp, (uint8_t*)kFadtSignature);
+  if (fadt != 0) {
+    dcfg_arm_psci_driver_t psci_cfg;
+    if (!psci_driver_from_fadt(fadt, &psci_cfg)) {
+      result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_PSCI, 0,
+                                             &psci_cfg, sizeof(psci_cfg));
+      if (result != ZBI_RESULT_OK) {
+        return -1;
+      }
+    }
+  }
+
   // pass SMBIOS entry point pointer
   uint64_t smbios = find_smbios(img, sys);
   if (smbios != 0) {

@@ -19,12 +19,15 @@ extern const uint8_t kAcpiRsdpSignature[8];
 extern const uint8_t kRsdtSignature[ACPI_TABLE_SIGNATURE_SIZE];
 extern const uint8_t kXsdtSignature[ACPI_TABLE_SIGNATURE_SIZE];
 extern const uint8_t kSpcrSignature[ACPI_TABLE_SIGNATURE_SIZE];
+extern const uint8_t kFadtSignature[ACPI_TABLE_SIGNATURE_SIZE];
 extern const uint8_t kMadtSignature[ACPI_TABLE_SIGNATURE_SIZE];
 extern const uint8_t kInterruptControllerTypeGicc;
 extern const uint8_t kInterruptControllerTypeGicd;
 extern const uint8_t kInterruptControllerTypeGicMsiFrame;
 extern const uint8_t kInterruptControllerTypeGicr;
 extern const uint64_t kGicv3rDefaultStride;
+extern const uint8_t kPsciCompliant;
+extern const uint8_t kPsciUseHvc;
 
 __BEGIN_CDECLS
 
@@ -154,6 +157,67 @@ typedef struct __attribute__((packed)) {
 } acpi_madt_gicr_t;
 _Static_assert(sizeof(acpi_madt_gicr_t) == 16, "MADT GICR is the wrong size");
 
+typedef struct __attribute__((packed)) {
+  acpi_sdt_hdr_t hdr;
+  uint32_t firmware_ctrl;
+  uint32_t dsdt;
+  uint8_t reserved;
+  uint8_t preferred_pm_profile;
+  uint16_t sci_int;
+  uint32_t smi_cmd;
+  uint8_t acpi_enable;
+  uint8_t acpi_disable;
+  uint8_t s4bios_req;
+  uint8_t pstate_cnt;
+  uint32_t pm1a_evt_blk;
+  uint32_t pm1b_evt_blk;
+  uint32_t pm1a_cnt_blk;
+  uint32_t pm1b_cnt_blk;
+  uint32_t pm2_cnt_blk;
+  uint32_t pm_tmr_blk;
+  uint32_t gpe0_blk;
+  uint32_t gpe1_blk;
+  uint8_t pm1_evt_len;
+  uint8_t pm1_cnt_len;
+  uint8_t pm2_cnt_len;
+  uint8_t pm_tmr_len;
+  uint8_t gpe0_blk_len;
+  uint8_t gpe1_blk_len;
+  uint8_t gpe1_base;
+  uint8_t cst_cnt;
+  uint16_t p_lvl2_lat;
+  uint16_t p_lvl3_lat;
+  uint16_t flush_size;
+  uint16_t flush_stride;
+  uint8_t duty_offset;
+  uint8_t duty_width;
+  uint8_t day_alrm;
+  uint8_t mon_alrm;
+  uint8_t century;
+  uint16_t iapc_boot_arch;
+  uint8_t reserved2;
+  uint32_t flags;
+  uint8_t reset_reg[12];
+  uint8_t reset_value;
+  uint16_t arm_boot_arch;
+  uint8_t fadt_minor_version;
+  uint64_t x_firmware_ctrl;
+  uint64_t x_dsdt;
+  acpi_gas_t x_pm1a_evt_blk;
+  acpi_gas_t x_pm1b_evt_blk;
+  acpi_gas_t x_pm1a_cnt_blk;
+  acpi_gas_t x_pm1b_cnt_blk;
+  acpi_gas_t x_pm2_cnt_blk;
+  acpi_gas_t x_pm_tmr_blk;
+  acpi_gas_t x_gpe0_blk;
+  acpi_gas_t x_gpe1_blk;
+  acpi_gas_t sleep_control_reg;
+  acpi_gas_t sleep_status_reg;
+  uint64_t hypervisor_vendory_identity;
+
+} acpi_fadt_t;
+_Static_assert(sizeof(acpi_fadt_t) == 276, "FADT is the wrong size");
+
 // Loads the Root System Description Pointer from UEFI.
 // Returns NULL if UEFI contains no such entry in its configuration table.
 acpi_rsdp_t* load_acpi_rsdp(efi_configuration_table* entries, size_t num_entries);
@@ -176,6 +240,11 @@ uint8_t topology_from_madt(const acpi_madt_t* madt, zbi_topology_node_t* nodes, 
 // Returns the version of the GIC that was found, 0 if there was an error.
 uint8_t gic_driver_from_madt(const acpi_madt_t* madt, dcfg_arm_gicv2_driver_t* v2_cfg,
                              dcfg_arm_gicv3_driver_t* v3_cfg);
+
+// Uses the data in the FADT table to construct a PSCI configuration.
+// Returns -1 if the architecture does not support PSCI.
+// Note that this currently only sets the use_hvc field of the PSCI driver.
+int psci_driver_from_fadt(const acpi_fadt_t* fadt, dcfg_arm_psci_driver_t* cfg);
 
 __END_CDECLS
 

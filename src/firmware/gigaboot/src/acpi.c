@@ -18,12 +18,15 @@ const uint8_t kRsdtSignature[ACPI_TABLE_SIGNATURE_SIZE] = "RSDT";
 const uint8_t kXsdtSignature[ACPI_TABLE_SIGNATURE_SIZE] = "XSDT";
 const uint8_t kSpcrSignature[ACPI_TABLE_SIGNATURE_SIZE] = "SPCR";
 const uint8_t kMadtSignature[ACPI_TABLE_SIGNATURE_SIZE] = "APIC";
+const uint8_t kFadtSignature[ACPI_TABLE_SIGNATURE_SIZE] = "FACP";
 const uint8_t kInterruptControllerTypeGicc = 0xb;
 const uint8_t kInterruptControllerTypeGicd = 0xc;
 const uint8_t kInterruptControllerTypeGicMsiFrame = 0xd;
 const uint8_t kInterruptControllerTypeGicr = 0xe;
 // The ARM GICv3 spec states that 0x20000 is the default GICR stride.
 const uint64_t kGicv3rDefaultStride = 0x20000;
+const uint8_t kPsciCompliant = 0x1;
+const uint8_t kPsciUseHvc = 0x2;
 
 // Returns the minimum of the two 64 bit physical addresses.
 uint64_t min(uint64_t first, uint64_t second) {
@@ -304,4 +307,13 @@ uint8_t gic_driver_from_madt(const acpi_madt_t* madt, dcfg_arm_gicv2_driver_t* v
       break;
   }
   return gicd->gic_version;
+}
+
+int psci_driver_from_fadt(const acpi_fadt_t* fadt, dcfg_arm_psci_driver_t* cfg) {
+  memset(cfg, 0x0, sizeof(dcfg_arm_psci_driver_t));
+  if ((fadt->arm_boot_arch & kPsciCompliant) == 0) {
+    return -1;
+  }
+  cfg->use_hvc = fadt->arm_boot_arch & kPsciUseHvc;
+  return 0;
 }
