@@ -35,10 +35,10 @@ source_set("lib") {
   ]
   deps = [ "//src/devices/lib/compat" ]
   public_deps = [
-    "fidl:fuchsia.driver.compat_llcpp",
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.driver.compat:fuchsia.driver.compat_llcpp",
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_llcpp",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//sdk/lib/stdcompat",

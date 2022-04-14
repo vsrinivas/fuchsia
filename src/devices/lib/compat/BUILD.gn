@@ -9,9 +9,9 @@ source_set("compat") {
     "symbols.h",
   ]
   public_deps = [
+    "//sdk/fidl/fuchsia.driver.compat:fuchsia.driver.compat_llcpp",
     "//src/devices/lib/driver2:devfs_exporter",
     "//src/devices/lib/driver2:llcpp",
-    "//src/devices/misc/drivers/compat/fidl:fuchsia.driver.compat_llcpp",
     "//zircon/system/ulib/service:service-llcpp",
   ]
 }
