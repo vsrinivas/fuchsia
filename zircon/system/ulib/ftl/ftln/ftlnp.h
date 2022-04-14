@@ -31,7 +31,7 @@
 // Prefer to use this function rather than #if FTLN_DEBUG directly because this will
 // ensure what's within will actually build whilst any reasonable compiler will ensure
 // the code is not actually included.
-__UNUSED static inline int ftln_debug() { return FTLN_DEBUG; }
+__UNUSED static inline int ftln_debug(void) { return FTLN_DEBUG; }
 
 //
 // Symbol Definitions.

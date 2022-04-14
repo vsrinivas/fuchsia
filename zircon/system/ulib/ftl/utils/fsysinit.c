@@ -25,7 +25,7 @@ int FsError2(int fs_err_code, int errno_code) {
   return -1;
 }
 
-int GetFsErrCode() { return g_fs_error; }
+int GetFsErrCode(void) { return g_fs_error; }
 
 void SetFsErrCode(int error) { g_fs_error = error; }
 
