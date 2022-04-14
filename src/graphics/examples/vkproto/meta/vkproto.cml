@@ -1,0 +1,35 @@
+{
+    include: [
+        "//src/lib/vulkan/vulkan-test.shard.cml",
+        "sys/testing/elf_test_runner.shard.cml",
+        "syslog/client.shard.cml",
+        "vulkan/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/vkproto",
+        args: [ "-offscreen" ],
+    },
+    children: [
+        {
+            name: "fake_display_provider",
+            url: "#meta/hdcp.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.hardware.display.Provider" ],
+            from: "#fake_display_provider",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#fake_display_provider" ],
+        },
+    ],
+}

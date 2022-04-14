@@ -8,7 +8,7 @@ import("//src/lib/vulkan/build/config.gni")
 import("//src/lib/vulkan/build/vulkan_targets.gni")
 
 fuchsia_component("vkproto_cmp") {
-  manifest = "meta/vkproto.cmx"
+  manifest = "meta/vkproto.cml"
 
   deps = [
     ":bin",
@@ -29,6 +29,7 @@ resource("shaders") {
 fuchsia_test_package("vkproto-pkg") {
   test_components = [ ":vkproto_cmp" ]
 
+  deps = [ "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component" ]
   test_specs = {
     environments = magma_libvulkan_hardware_envs
   }
