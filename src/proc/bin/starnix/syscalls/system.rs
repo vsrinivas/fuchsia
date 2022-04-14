@@ -144,10 +144,14 @@ pub fn sys_nanosleep(
     let deadline = zx::Time::after(duration_from_timespec(request)?);
     match Waiter::new().wait_until(&current_task, deadline) {
         Err(err) if err == EINTR => {
-            let now = zx::Time::get_monotonic();
-            let remaining =
-                timespec_from_duration(std::cmp::max(zx::Duration::from_nanos(0), deadline - now));
-            current_task.mm.write_object(user_remaining, &remaining)?;
+            if !user_remaining.is_null() {
+                let now = zx::Time::get_monotonic();
+                let remaining = timespec_from_duration(std::cmp::max(
+                    zx::Duration::from_nanos(0),
+                    deadline - now,
+                ));
+                current_task.mm.write_object(user_remaining, &remaining)?;
+            }
         }
         Err(err) if err == ETIMEDOUT => return Ok(()),
         non_eintr => non_eintr?,
@@ -235,5 +239,39 @@ fn get_dynamic_clock(current_task: &CurrentTask, which_clock: i32) -> Result<i64
         get_thread_cpu_time(current_task, pid)
     } else {
         get_process_cpu_time(current_task, pid)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::testing::*;
+
+    #[::fuchsia::test]
+    fn test_nanosleep_without_remainder() {
+        let (_kernel, current_task) = create_kernel_and_task();
+
+        let task_clone = current_task.task_arc_clone();
+
+        let thread = std::thread::spawn(move || {
+            // Wait until the task is in nanosleep, and interrupt it.
+            while !task_clone.interrupt() {
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+        });
+
+        let duration = timespec_from_duration(zx::Duration::from_seconds(60));
+        let address = map_memory(
+            &current_task,
+            UserAddress::default(),
+            std::mem::size_of::<timespec>() as u64,
+        );
+        current_task.mm.write_object(address.into(), &duration).expect("write_object");
+
+        // nanosleep will be interrupted by the current thread and should not fail because the
+        // remainder pointer is null.
+        assert_eq!(sys_nanosleep(&current_task, address.into(), UserRef::default()), Ok(()));
+
+        thread.join().expect("join");
     }
 }

@@ -385,20 +385,25 @@ impl Task {
     ///
     /// This will interrupt any blocking syscalls if the task is blocked on one.
     ///
+    /// Returns whether the task was interrupted.
+    ///
     /// If one has a lock on [signals] when calling this, one should call
     /// [interrupt_with_signal_state] instead.
     ///
     /// TODO(qsr): This should also interrupt any running code.
-    pub fn interrupt(&self) {
-        self.interrupt_with_signal_state(&self.signals.read());
+    pub fn interrupt(&self) -> bool {
+        self.interrupt_with_signal_state(&self.signals.read())
     }
 
     /// Interrupts the current task.
     ///
     /// See [interrupt]. Should be used when one have a lock on [signals].
-    pub fn interrupt_with_signal_state(&self, signal_state: &SignalState) {
+    pub fn interrupt_with_signal_state(&self, signal_state: &SignalState) -> bool {
         if let Some(waiter) = &signal_state.waiter {
             waiter.interrupt();
+            true
+        } else {
+            false
         }
     }
 }
