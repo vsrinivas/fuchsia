@@ -60,6 +60,7 @@ rustc_library("input-synthesis") {
 }
 
 rustc_binary("input-synthesis-bin") {
+  output_name = "input_synthesis_bin"
   testonly = true
   edition = "2018"
   deps = [

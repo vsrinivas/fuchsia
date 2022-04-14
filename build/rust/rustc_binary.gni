@@ -167,6 +167,9 @@ template("rustc_binary") {
   if (defined(invoker.output_name)) {
     _output_name = invoker.output_name
   } else {
+    assert(
+        _crate_name == package_name,
+        "rustc_binary will soon change to allow binaries with `-` in the name. To disambiguate in the meantime, please set output_name fxbug.dev/64100")
     _output_name = _crate_name
   }
 

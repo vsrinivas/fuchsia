@@ -6,7 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
-  name = "ssh-key-manager"
+  output_name = "ssh_key_manager"
 
   with_unit_tests = true
 

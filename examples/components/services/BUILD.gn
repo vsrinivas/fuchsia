@@ -38,6 +38,7 @@ rustc_test("branch-bin") {
 }
 
 rustc_binary("provider-bin") {
+  output_name = "provider_bin"
   deps = [
     ":fuchsia.examples.services-rustc",
     "//src/lib/fuchsia",
