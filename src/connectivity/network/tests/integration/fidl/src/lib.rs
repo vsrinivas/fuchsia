@@ -172,8 +172,9 @@ async fn test_no_duplicate_interface_names() {
     assert_eq!(result, Err(fuchsia_zircon::Status::ALREADY_EXISTS));
 }
 
-// TODO(https://fxbug.dev/75553): Remove this test when fuchsia.net.interfaces is supported in N3
-// and test_add_remove_interface can be parameterized on Netstack.
+// TODO(https://fxbug.dev/88796): Remove this test when fuchsia.net.interfaces
+// is supported in N3 and test_add_remove_interface can be parameterized on
+// Netstack.
 #[variants_test]
 async fn add_ethernet_interface<N: Netstack>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");

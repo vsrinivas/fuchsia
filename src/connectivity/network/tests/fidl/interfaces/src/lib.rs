@@ -21,6 +21,7 @@ use netstack_testing_common::{
 use netstack_testing_macros::variants_test;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto as _;
+use test_case::test_case;
 
 #[variants_test]
 async fn watcher_existing<N: Netstack>(name: &str) {
@@ -298,6 +299,9 @@ async fn watcher_after_state_closed<N: Netstack>(name: &str) {
 }
 
 /// Tests that adding an interface causes an interface changed event.
+//
+// TODO(https://fxbug.dev/88796): Run this against netstack3 when
+// `fuchsia.net.interfaces.admin` is supported.
 #[variants_test]
 async fn test_add_remove_interface<E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
@@ -344,7 +348,20 @@ async fn test_add_remove_interface<E: netemul::Endpoint>(name: &str) {
 /// Tests that if a device closes (is removed from the system), the
 /// corresponding Netstack interface is deleted.
 /// if `enabled` is `true`, enables the interface before closing the device.
-async fn test_close_interface<E: netemul::Endpoint>(enabled: bool, name: &str) {
+//
+// TODO(https://fxbug.dev/88796): Run this against netstack3 when
+// `fuchsia.net.interfaces.admin` is supported.
+#[variants_test]
+#[test_case("disabled", false; "disabled")]
+#[test_case("enabled", true ; "enabled")]
+async fn test_close_interface<E: netemul::Endpoint>(
+    test_name: &str,
+    sub_test_name: &str,
+    enabled: bool,
+) {
+    let name = format!("{}_{}", test_name, sub_test_name);
+    let name = name.as_str();
+
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
     let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
@@ -393,17 +410,10 @@ async fn test_close_interface<E: netemul::Endpoint>(enabled: bool, name: &str) {
     .expect("observe interface removal");
 }
 
-#[variants_test]
-async fn test_close_disabled_interface<E: netemul::Endpoint>(name: &str) {
-    test_close_interface::<E>(false, name).await
-}
-
-#[variants_test]
-async fn test_close_enabled_interface<E: netemul::Endpoint>(name: &str) {
-    test_close_interface::<E>(true, name).await
-}
-
 /// Tests races between device link down and close.
+//
+// TODO(https://fxbug.dev/88796): Run this against netstack3 when
+// `fuchsia.net.interfaces.admin` is supported.
 #[variants_test]
 async fn test_down_close_race<E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
@@ -469,6 +479,9 @@ async fn test_down_close_race<E: netemul::Endpoint>(name: &str) {
 }
 
 /// Tests races between data traffic and closing a device.
+//
+// TODO(https://fxbug.dev/88796): Run this against netstack3 when
+// `fuchsia.net.interfaces.admin` is supported.
 #[variants_test]
 async fn test_close_data_race<E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
@@ -584,12 +597,14 @@ async fn test_close_data_race<E: netemul::Endpoint>(name: &str) {
 
 /// Tests that toggling interface enabled repeatedly results in every change
 /// in the boolean value being observable.
+//
+// TODO(https://fxbug.dev/88796): Run this against netstack3 when
+// `fuchsia.net.interfaces.admin` is supported.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_watcher_online_edges() {
+    let name = "test_watcher_online_edges";
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox
-        .create_netstack_realm::<Netstack2, _>("watcher_online_edges")
-        .expect("create netstack realm");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create netstack realm");
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
@@ -733,12 +748,14 @@ async fn test_watcher_online_edges() {
 
 /// Tests that competing interface change events are reported by
 /// fuchsia.net.interfaces/Watcher in the correct order.
+//
+// TODO(https://fxbug.dev/88796): Run this against netstack3 when
+// `fuchsia.net.interfaces.admin` is supported.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_watcher_race() {
+    let name = "test_watcher_race";
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox
-        .create_netstack_realm::<Netstack2, _>("interfaces_watcher_race")
-        .expect("create netstack realm");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create netstack realm");
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .expect("connect to protocol");
@@ -934,11 +951,14 @@ async fn test_watcher_race() {
 }
 
 /// Test interface changes are reported through the interface watcher.
+//
+// TODO(https://fxbug.dev/88796): Run this against netstack3 when
+// `fuchsia.net.interfaces.admin` is supported.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_watcher() {
+    let name = "test_watcher";
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm =
-        sandbox.create_netstack_realm::<Netstack2, _>("test_watcher").expect("create realm");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
     let stack =
         realm.connect_to_protocol::<fnet_stack::StackMarker>().expect("connect to protocol");
 
