@@ -73,7 +73,6 @@ where
                     Ok(config) => {
                         // Success path.
                         config_load_info = Some(ConfigLoadInfo {
-                            path: path.clone(),
                             status: config::base::ConfigLoadStatus::Success,
                             contents: if let Some(ref payload) = config {
                                 Some(format!("{:?}", payload))
@@ -87,7 +86,6 @@ where
                         // Found file, but failed to parse.
                         let err_msg = format!("unable to parse config: {:?}", e);
                         config_load_info = Some(ConfigLoadInfo {
-                            path: path.clone(),
                             status: config::base::ConfigLoadStatus::ParseFailure(err_msg.clone()),
                             contents: None,
                         });
@@ -98,7 +96,6 @@ where
             Err(..) => {
                 // No file found.
                 config_load_info = Some(ConfigLoadInfo {
-                    path: path.clone(),
                     status: config::base::ConfigLoadStatus::UsingDefaults(
                         "File not found, using defaults".to_string(),
                     ),
@@ -108,7 +105,7 @@ where
             }
         };
         if let Some(config_load_info) = config_load_info {
-            self.write_config_load_to_inspect(config_load_info);
+            self.write_config_load_to_inspect(path, config_load_info);
         } else {
             fx_log_err!("Could not load config for {:?}", path);
         }
@@ -117,10 +114,14 @@ where
     }
 
     /// Attempts to write the config load to inspect.
-    fn write_config_load_to_inspect(&mut self, config_load_info: config::base::ConfigLoadInfo) {
+    fn write_config_load_to_inspect(
+        &mut self,
+        path: String,
+        config_load_info: config::base::ConfigLoadInfo,
+    ) {
         let config_logger = self.config_logger.clone();
         fasync::Task::spawn(async move {
-            config_logger.lock().await.write_config_load_to_inspect(config_load_info);
+            config_logger.lock().await.write_config_load_to_inspect(path, config_load_info);
         })
         .detach();
     }
@@ -220,7 +221,7 @@ pub(crate) mod testing {
                 "nuthatch": {
                     "count": AnyProperty,
                     "timestamp": "0.000000000",
-                    "value": "ConfigLoadInfo {\n    path: \"nuthatch\",\n    status: UsingDefaults(\n        \"File not found, using defaults\",\n    ),\n    contents: None,\n}",
+                    "value": "ConfigLoadInfo {\n    status: UsingDefaults(\n        \"File not found, using defaults\",\n    ),\n    contents: None,\n}",
                 }
             }
         });

@@ -71,33 +71,30 @@ impl InspectConfigLogger {
         }
     }
 
-    pub fn write_config_load_to_inspect(&mut self, config_load_info: config::base::ConfigLoadInfo) {
+    pub fn write_config_load_to_inspect(
+        &mut self,
+        path: String,
+        config_load_info: config::base::ConfigLoadInfo,
+    ) {
         let timestamp = clock::inspect_format_now();
-        let config::base::ConfigLoadInfo { path, status, contents } = config_load_info;
+        let config::base::ConfigLoadInfo { status, contents } = config_load_info;
 
         match self.config_load_values.get_mut(&path) {
             Some(config_inspect_info) => {
                 config_inspect_info.timestamp.set(&timestamp);
-                config_inspect_info.value.set(&format!(
-                    "{:#?}",
-                    config::base::ConfigLoadInfo { path, status, contents }
-                ));
+                config_inspect_info
+                    .value
+                    .set(&format!("{:#?}", config::base::ConfigLoadInfo { status, contents }));
                 config_inspect_info.count.add(1u64);
             }
             None => {
-                let _ = self.config_load_values.set(
-                    path.clone(),
-                    ConfigInspectInfo::new(
-                        timestamp,
-                        format!(
-                            "{:#?}",
-                            // TODO(fxb/97286): remove path.
-                            config::base::ConfigLoadInfo { path: path.clone(), status, contents }
-                        ),
-                        &self.inspect_node,
-                        &path,
-                    ),
+                let config_inspect_info = ConfigInspectInfo::new(
+                    timestamp,
+                    format!("{:#?}", config::base::ConfigLoadInfo { status, contents }),
+                    &self.inspect_node,
+                    &path,
                 );
+                let _ = self.config_load_values.set(path, config_inspect_info);
             }
         }
     }

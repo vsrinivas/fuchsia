@@ -25,8 +25,6 @@ pub enum Event {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ConfigLoadInfo {
-    /// The path at which the config was loaded.
-    pub path: String,
     /// The status of the load.
     pub status: ConfigLoadStatus,
     /// The contents of the loaded config file.
