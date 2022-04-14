@@ -8,9 +8,10 @@ use crate::error::Error;
 use crate::types::ModelId;
 
 // TODO(fxbug.dev/97159): Load this from the structured configuration library.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Config {
     pub model_id: ModelId,
+    pub firmware_revision: String,
 }
 
 impl Config {
@@ -20,6 +21,9 @@ impl Config {
     }
 
     pub fn example_config() -> Self {
-        Self { model_id: ModelId::try_from(1).expect("valid ID") }
+        Self {
+            model_id: ModelId::try_from(1).expect("valid ID"),
+            firmware_revision: "1.0.0".to_string(),
+        }
     }
 }

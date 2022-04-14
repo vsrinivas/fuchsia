@@ -199,6 +199,10 @@ impl GattService {
                 let model_id_bytes: [u8; 3] = self.config.model_id.into();
                 let _ = responder.send(&mut Ok(model_id_bytes.to_vec()));
             }
+            FIRMWARE_REVISION_CHARACTERISTIC_HANDLE => {
+                let firmware_revision_bytes = self.config.firmware_revision.clone().into_bytes();
+                let _ = responder.send(&mut Ok(firmware_revision_bytes));
+            }
             h => {
                 warn!("Received unsupported read request for handle: {:?}", h);
                 let _ = responder.send(&mut Err(gatt::Error::InvalidHandle));
@@ -386,6 +390,43 @@ mod tests {
             .expect("response is ready")
             .expect("fidl result is Ok");
         assert_eq!(read_result, Ok(expected_model_id_bytes));
+    }
+
+    #[fuchsia::test]
+    fn read_firmware_revision_characteristic_success() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let (gatt_service, upstream_service_client) = exec.run_singlethreaded(setup_gatt_service());
+        pin_mut!(gatt_service);
+
+        let _ = exec
+            .run_until_stalled(&mut gatt_service.next())
+            .expect_pending("stream active with no items");
+
+        // Simulate a peer's read request for the Model ID.
+        let mut handle = FIRMWARE_REVISION_CHARACTERISTIC_HANDLE.clone();
+        let read_request_fut = upstream_service_client.read_value(
+            &mut PeerId(123).into(),
+            &mut handle,
+            /* offset */ 0,
+        );
+        pin_mut!(read_request_fut);
+        let _ = exec
+            .run_until_stalled(&mut read_request_fut)
+            .expect_pending("waiting for FIDL response");
+
+        // Read request should be received by the GATT Server. No additional information is needed
+        // so no stream items.
+        let _ = exec
+            .run_until_stalled(&mut gatt_service.next())
+            .expect_pending("stream active with no items");
+
+        // A version of "1.0.0" is specified in `Config::example_config`.
+        let expected_version_bytes = vec![0x31, 0x2E, 0x30, 0x2E, 0x30];
+        let read_result = exec
+            .run_until_stalled(&mut read_request_fut)
+            .expect("response is ready")
+            .expect("fidl result is Ok");
+        assert_eq!(read_result, Ok(expected_version_bytes));
     }
 
     #[fuchsia::test]
