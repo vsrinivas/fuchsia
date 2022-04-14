@@ -13,7 +13,7 @@ use {
     },
     fuchsia_async as fasync,
     futures::{channel::mpsc, future::join_all, prelude::*, stream::FuturesUnordered, StreamExt},
-    log::{debug, error, warn},
+    log::{debug, error, info, warn},
     std::collections::{HashMap, HashSet, VecDeque},
     std::convert::TryInto,
     std::fmt,
@@ -32,7 +32,7 @@ mod stream_util;
 pub use error::{RunTestSuiteError, UnexpectedEventError};
 use {
     artifact::Artifact,
-    cancel::{Cancelled, NamedFutureExt, OrCancel},
+    cancel::{Cancelled, OrCancel},
     output::{
         ArtifactType, CaseId, DirectoryArtifactType, RunReporter, SuiteId, SuiteReporter, Timestamp,
     },
@@ -158,7 +158,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
     let mut tasks = vec![];
 
     let colect_results_fut = async {
-        while let Some(event_result) = running_suite.next_event().named("next_event").await {
+        while let Some(event_result) = running_suite.next_event().await {
             match event_result {
                 Err(e) => {
                     suite_reporter
@@ -215,19 +215,18 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
                                 let reporter = test_case_reporters.get(&identifier).unwrap();
                                 let mut stdout =
                                     reporter.new_artifact(&ArtifactType::Stdout).await?;
-                                let stdout_fut = async move {
+                                let stdout_task = fuchsia_async::Task::spawn(async move {
                                     while let Some(msg) = recv.next().await {
                                         stdout.write_all(msg.as_bytes())?;
                                     }
                                     stdout.flush()?;
                                     t.await?;
                                     Result::Ok::<(), anyhow::Error>(())
-                                }
-                                .named("stdout");
+                                });
                                 test_cases_output
                                     .entry(identifier)
                                     .or_insert(vec![])
-                                    .push(fasync::Task::spawn(stdout_fut));
+                                    .push(stdout_task);
                             }
                             ftest_manager::Artifact::Stderr(socket) => {
                                 let (sender, mut recv) = mpsc::channel(1024);
@@ -239,19 +238,18 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
                                 let reporter = test_case_reporters.get_mut(&identifier).unwrap();
                                 let mut stderr =
                                     reporter.new_artifact(&ArtifactType::Stderr).await?;
-                                let stderr_fut = async move {
+                                let stderr_task = fuchsia_async::Task::spawn(async move {
                                     while let Some(msg) = recv.next().await {
                                         stderr.write_all(msg.as_bytes())?;
                                     }
                                     stderr.flush()?;
                                     t.await?;
                                     Result::Ok::<(), anyhow::Error>(())
-                                }
-                                .named("stderr");
+                                });
                                 test_cases_output
                                     .entry(identifier)
                                     .or_insert(vec![])
-                                    .push(fasync::Task::spawn(stderr_fut));
+                                    .push(stderr_task);
                             }
                             ftest_manager::Artifact::Log(_) => {
                                 warn!("WARN: per test case logs not supported yet")
@@ -331,7 +329,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
                                     let mut log_artifact =
                                         suite_reporter.new_artifact(&ArtifactType::Syslog).await?;
                                     let log_opts_clone = log_opts.clone();
-                                    let log_fut = async move {
+                                    suite_log_tasks.push(fuchsia_async::Task::spawn(async move {
                                         let (send, mut recv) = mpsc::channel(32);
                                         let fut_1 = diagnostics::collect_logs(
                                             log_stream,
@@ -350,9 +348,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
                                         let (outcome, _) =
                                             futures::future::join(fut_1, fut_2).await;
                                         outcome
-                                    }
-                                    .named("syslog");
-                                    suite_log_tasks.push(log_fut);
+                                    }));
                                 }
                                 ftest_manager::Artifact::Custom(
                                     ftest_manager::CustomArtifact {
@@ -375,7 +371,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
                                             )
                                             .await?;
 
-                                        let custom_fut = async move {
+                                        tasks.push(fasync::Task::spawn(async move {
                                             if let Err(e) = read_custom_artifact_directory(
                                                 directory,
                                                 directory_artifact,
@@ -394,10 +390,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
                                                 fidl::Signals::empty(),
                                                 fidl::Signals::USER_0,
                                             );
-                                        }
-                                        .named("custom_artifacts");
-
-                                        tasks.push(fasync::Task::spawn(custom_fut));
+                                        }));
                                     }
                                 }
                                 ftest_manager::ArtifactUnknown!() => {
@@ -656,21 +649,17 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
         let mut stopped_prematurely = false;
         // for now, we assume that suites are run serially.
         loop {
-            let (running_suite, suite_id) = match suite_start_futs
-                .next()
-                .named("suite_start")
-                .or_cancelled(cancel_fut.clone())
-                .await
-            {
-                Ok(Some((running_suite, suite_id))) => (running_suite, suite_id),
-                // normal completion.
-                Ok(None) => break,
-                Err(Cancelled) => {
-                    stopped_prematurely = true;
-                    final_outcome = Some(Outcome::Cancelled);
-                    break;
-                }
-            };
+            let (running_suite, suite_id) =
+                match suite_start_futs.next().or_cancelled(cancel_fut.clone()).await {
+                    Ok(Some((running_suite, suite_id))) => (running_suite, suite_id),
+                    // normal completion.
+                    Ok(None) => break,
+                    Err(Cancelled) => {
+                        stopped_prematurely = true;
+                        final_outcome = Some(Outcome::Cancelled);
+                        break;
+                    }
+                };
 
             let suite_reporter = suite_reporters.remove(&suite_id).unwrap();
 
@@ -737,8 +726,10 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
 
     let handle_run_events_fut = async move {
         loop {
-            let events = run_controller_ref.get_events().named("run_event").await?;
+            info!("Waiting for run events!");
+            let events = run_controller_ref.get_events().await?;
             if events.len() == 0 {
+                info!("Done collecting run events!");
                 return Ok(());
             }
 
@@ -804,7 +795,7 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
                                     })
                                     .collect::<Vec<_>>()
                                     .await;
-                                join_all(data_futs).named("debug_data").await;
+                                join_all(data_futs).await;
                                 debug!("All profiles downloaded");
                             }
                             ftest_manager::Artifact::Custom(val) => {
@@ -823,9 +814,7 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
                                         .await?;
 
                                     if let Err(e) =
-                                        read_custom_artifact_directory(directory, out_dir)
-                                            .named("run_custom_artifact")
-                                            .await
+                                        read_custom_artifact_directory(directory, out_dir).await
                                     {
                                         warn!("Error reading run artifact directory: {:?}", e);
                                     }
