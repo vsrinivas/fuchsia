@@ -8,11 +8,13 @@ use {
     crate::{gcs::fetch_from_gcs, repo_info::RepoInfo},
     anyhow::{bail, Context, Result},
     fms::{find_product_bundle, Entries},
-    sdk_metadata::Metadata,
+    sdk_metadata::{Metadata, ProductBundleV1},
     std::{
+        collections::HashMap,
         io::Write,
         path::{Path, PathBuf},
     },
+    url::Url,
 };
 
 pub(crate) const CONFIG_METADATA: &str = "pbms.metadata";
@@ -227,6 +229,11 @@ where
     writeln!(writer, "Getting package data for {:?}", product_bundle.name)?;
     let local_dir = local_repo_dir.join(&product_bundle.name).join("packages");
     async_fs::create_dir_all(&local_dir).await.context("create directory")?;
+
+    // TODO(fxbug.dev/89775): Replace this with the library from fxbug.dev/89775.
+    fetch_package_tgz(verbose, writer, &local_dir, &product_bundle).await?;
+
+    /*
     for package in &product_bundle.packages {
         if verbose {
             writeln!(writer, "    package: {:?}", package.repo_uri)?;
@@ -240,6 +247,8 @@ where
             .await
             .with_context(|| format!("Packages for {}.", product_bundle.name))?;
     }
+    */
+
     writeln!(writer, "Download of product data for {:?} is complete.", product_bundle.name)?;
     if verbose {
         if let Some(parent) = local_dir.parent() {
@@ -259,6 +268,160 @@ fn pb_dir_name(gcs_url: &url::Url) -> String {
     let mut s = DefaultHasher::new();
     gcs_url.as_str().hash(&mut s);
     format!("{}", s.finish())
+}
+
+/// Download and extract the packages tarball.
+async fn fetch_package_tgz<W>(
+    verbose: bool,
+    writer: &mut W,
+    local_dir: &Path,
+    product_bundle: &ProductBundleV1,
+) -> Result<()>
+where
+    W: Write + Sync,
+{
+    use ffx_config::sdk::SdkVersion;
+    let sdk = ffx_config::get_sdk().await.context("PBMS ffx config get sdk")?;
+    let version = match sdk.get_version() {
+        SdkVersion::Version(version) => version,
+        SdkVersion::InTree => "",
+        SdkVersion::Unknown => bail!("Unable to determine SDK version vs. in-tree"),
+    };
+
+    let file_name = format!("{}-release.tar.gz", product_bundle.name);
+    let url = Url::parse(&format!("gs://fuchsia/development/{}/packages/{}", version, file_name))?;
+
+    // Download the package tgz into a temp directory.
+    let temp_dir = tempfile::TempDir::new_in(&local_dir).context("temp dir")?;
+    match fetch_by_format(&"tgz", &url, &temp_dir.path(), verbose, writer).await {
+        Ok(()) => {}
+        Err(err) => {
+            // Since we're hardcoding the bucket to download artifacts from, it's possible the
+            // actual SDK bucket might not match the hardcoded one. If this happens, emit a warning,
+            // rather than error out.
+            writeln!(
+                writer,
+                "WARNING: Unable to fetch {}: {:?}\n\
+                 Maybe package artifacts are stored in a different bucket?",
+                url, err
+            )?;
+            return Ok(());
+        }
+    }
+
+    // Open the archive. This is typically compressed with parallel gzip streams, so we need to use
+    // the multiple-stream-aware gzip decoder.
+    let archive_path = temp_dir.path().join(&file_name);
+    let file = std::fs::File::open(&archive_path)
+        .with_context(|| format!("open archive {}", file_name))?;
+    let file = flate2::read::MultiGzDecoder::new(file);
+    let mut archive = tar::Archive::new(file);
+
+    // Extract all the "amber-files/" entries into the temp directory.
+    let archive_dir = temp_dir.path().join("archive");
+    for entry in archive
+        .entries()
+        .with_context(|| format!("reading package archive entries from {}", file_name))?
+    {
+        let mut entry =
+            entry.with_context(|| format!("reading package entry from {}", file_name))?;
+
+        let path =
+            entry.path().with_context(|| format!("reading entry path from {}", file_name))?;
+
+        if path.starts_with("amber-files") {
+            let path = path.to_path_buf();
+
+            if verbose {
+                writeln!(writer, "    Extract {}:{}", file_name, path.display())?;
+            } else {
+                write!(writer, ".")?;
+                writer.flush()?;
+            }
+
+            entry
+                .unpack_in(&archive_dir)
+                .with_context(|| format!("unpacking {}", path.display()))?;
+        }
+    }
+
+    // Now that we've fully extracted the archive, we need to move the files into the destination.
+    // This is easy if the destination does not exist.
+    let amber_files_dir = archive_dir.join("amber-files");
+    if !local_dir.exists() {
+        std::fs::rename(&amber_files_dir, &local_dir)?;
+        return Ok(());
+    }
+
+    // FIXME(http://fxbug.dev/81098): It's a little more complicated if the directory already
+    // exists. We could rename the old directory out of the way, then move the new directory in
+    // place, but that would confuse the package server. The package server uses a system file
+    // watcher to watch for changes to metadata, but unfortunately it follows the directory inode
+    // if it's moved to another location. So it would not serve any updated artifacts to a device.
+    //
+    // To avoid this, we'll instead move each file over to the new location.
+    let src_entries = get_directory_entries(&amber_files_dir)?;
+    let mut dst_entries = get_directory_entries(&local_dir)?;
+
+    for (rel_path, src_path) in src_entries {
+        let dst_path = if let Some(dst_path) = dst_entries.remove(&rel_path) {
+            dst_path
+        } else {
+            let dst_path = local_dir.join(rel_path);
+            if let Some(parent) = dst_path.parent() {
+                async_fs::create_dir_all(&parent)
+                    .await
+                    .with_context(|| format!("creating directory {}", parent.display()))?;
+            }
+            dst_path
+        };
+
+        if verbose {
+            writeln!(writer, "    Move {} to {}", src_path.display(), dst_path.display())?;
+        } else {
+            write!(writer, ".")?;
+            writer.flush()?;
+        }
+
+        std::fs::rename(&src_path, &dst_path)
+            .with_context(|| format!("moving {} to {}", src_path.display(), dst_path.display()))?;
+    }
+
+    // Remove any old files left in the destination.
+    for dst_path in dst_entries.values() {
+        // The temp directory is in the `local_dir`, so ignore those paths.
+        if dst_path.starts_with(&temp_dir.path()) {
+            continue;
+        }
+
+        if verbose {
+            writeln!(writer, "    Remove {}", dst_path.display())?;
+        } else {
+            write!(writer, ".")?;
+            writer.flush()?;
+        }
+        std::fs::remove_file(&dst_path)
+            .with_context(|| format!("removing {}", dst_path.display()))?;
+    }
+
+    Ok(())
+}
+
+fn get_directory_entries(root: &Path) -> Result<HashMap<PathBuf, PathBuf>> {
+    let mut entries = HashMap::new();
+    for entry in walkdir::WalkDir::new(&root) {
+        let entry = entry.context("walking directory")?;
+        let path = entry.path();
+
+        if path.is_file() {
+            let rel_path = path
+                .strip_prefix(&root)
+                .with_context(|| format!("stripping {} from {}", root.display(), path.display()))?;
+
+            entries.insert(rel_path.to_path_buf(), path.to_path_buf());
+        }
+    }
+    Ok(entries)
 }
 
 /// Download and expand data.
