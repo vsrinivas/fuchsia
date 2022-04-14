@@ -10,8 +10,8 @@ use core::{
 use fidl::endpoints::{create_request_stream, ControlHandle, RequestStream};
 use fidl_fuchsia_bluetooth_gatt2::{
     self as gatt, AttributePermissions, Characteristic, CharacteristicPropertyBits, Handle,
-    LocalServiceMarker, LocalServiceRequest, LocalServiceRequestStream, SecurityRequirements,
-    Server_Marker, Server_Proxy, ServiceInfo,
+    LocalServiceMarker, LocalServiceReadValueResponder, LocalServiceRequest,
+    LocalServiceRequestStream, SecurityRequirements, Server_Marker, Server_Proxy, ServiceInfo,
 };
 use fuchsia_bluetooth::types::Uuid;
 use fuchsia_component::client::connect_to_protocol;
@@ -20,6 +20,7 @@ use futures::stream::{FusedStream, Stream, StreamExt};
 use std::str::FromStr;
 use tracing::{trace, warn};
 
+use crate::config::Config;
 use crate::error::Error;
 
 /// The UUID of the Fast Pair Service.
@@ -61,6 +62,8 @@ pub struct GattService {
     /// The stream associated with the published Fast Pair GATT Service. Receives GATT requests
     /// initiated by the remote peer.
     local_service_server: LocalServiceRequestStream,
+    /// The configuration of the local Fast Pair component.
+    config: Config,
 }
 
 impl std::fmt::Debug for GattService {
@@ -71,15 +74,15 @@ impl std::fmt::Debug for GattService {
 
 impl GattService {
     /// Builds and returns a published Fast Pair Provider GATT service.
-    pub async fn new() -> Result<Self, Error> {
+    pub async fn new(config: Config) -> Result<Self, Error> {
         let gatt_server_proxy =
             connect_to_protocol::<Server_Marker>().context("Can't connect to gatt2.Server")?;
-        Self::from_proxy(gatt_server_proxy).await
+        Self::from_proxy(gatt_server_proxy, config).await
     }
 
-    async fn from_proxy(proxy: Server_Proxy) -> Result<Self, Error> {
+    async fn from_proxy(proxy: Server_Proxy, config: Config) -> Result<Self, Error> {
         let local_service = Self::publish_service(&proxy).await?;
-        Ok(Self { server_svc: proxy, local_service_server: local_service })
+        Ok(Self { server_svc: proxy, local_service_server: local_service, config })
     }
 
     // Builds and returns the characteristics associated with the Fast Pair Provider GATT service.
@@ -189,12 +192,26 @@ impl GattService {
         Ok(service_stream)
     }
 
+    /// Handle an incoming GATT read request for the local GATT characteristic at `handle`.
+    fn handle_read_request(&self, handle: Handle, responder: LocalServiceReadValueResponder) {
+        match handle {
+            MODEL_ID_CHARACTERISTIC_HANDLE => {
+                let model_id_bytes: [u8; 3] = self.config.model_id.into();
+                let _ = responder.send(&mut Ok(model_id_bytes.to_vec()));
+            }
+            h => {
+                warn!("Received unsupported read request for handle: {:?}", h);
+                let _ = responder.send(&mut Err(gatt::Error::InvalidHandle));
+            }
+        }
+    }
+
     /// Handle an incoming FIDL request for the local GATT service.
     fn handle_service_request(&mut self, request: LocalServiceRequest) -> Option<GattRequest> {
         // TODO(fxbug.dev/95542): Handle each GATT request type.
         match request {
-            LocalServiceRequest::ReadValue { responder, .. } => {
-                let _ = responder.send(&mut Err(gatt::Error::UnlikelyError));
+            LocalServiceRequest::ReadValue { handle, responder, .. } => {
+                self.handle_read_request(handle, responder);
             }
             LocalServiceRequest::WriteValue { responder, .. } => {
                 let _ = responder.send(&mut Err(gatt::Error::UnlikelyError));
@@ -253,6 +270,7 @@ mod tests {
     use async_utils::PollExt;
     use fidl_fuchsia_bluetooth_gatt2::LocalServiceProxy;
     use fuchsia_async as fasync;
+    use fuchsia_bluetooth::types::PeerId;
     use futures::{future::Either, pin_mut, stream::StreamExt};
 
     #[fuchsia::test]
@@ -265,7 +283,7 @@ mod tests {
         pin_mut!(gatt_server_fut);
         let _ = exec.run_until_stalled(&mut gatt_server_fut).expect_pending("Upstream still ok");
 
-        let publish_fut = GattService::from_proxy(gatt_client);
+        let publish_fut = GattService::from_proxy(gatt_client, Config::example_config());
         pin_mut!(publish_fut);
         let _ =
             exec.run_until_stalled(&mut publish_fut).expect_pending("Waiting for publish response");
@@ -291,7 +309,7 @@ mod tests {
         let (gatt_server_client, mut gatt_server) =
             fidl::endpoints::create_proxy_and_stream::<Server_Marker>().unwrap();
 
-        let publish_fut = GattService::from_proxy(gatt_server_client);
+        let publish_fut = GattService::from_proxy(gatt_server_client, Config::example_config());
         let gatt_server_fut = gatt_server.select_next_some();
         pin_mut!(publish_fut);
         pin_mut!(gatt_server_fut);
@@ -331,5 +349,77 @@ mod tests {
             exec.run_until_stalled(&mut gatt_service.next()).expect("stream item should resolve");
         assert_matches!(result, None);
         assert!(gatt_service.is_terminated());
+    }
+
+    #[fuchsia::test]
+    fn read_model_id_characteristic_success() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let (gatt_service, upstream_service_client) = exec.run_singlethreaded(setup_gatt_service());
+        pin_mut!(gatt_service);
+
+        let _ = exec
+            .run_until_stalled(&mut gatt_service.next())
+            .expect_pending("stream active with no items");
+
+        // Simulate a peer's read request for the Model ID.
+        let mut handle = MODEL_ID_CHARACTERISTIC_HANDLE.clone();
+        let read_request_fut = upstream_service_client.read_value(
+            &mut PeerId(123).into(),
+            &mut handle,
+            /* offset */ 0,
+        );
+        pin_mut!(read_request_fut);
+        let _ = exec
+            .run_until_stalled(&mut read_request_fut)
+            .expect_pending("waiting for FIDL response");
+
+        // Read request should be received by the GATT Server. No additional information is needed
+        // so no stream items.
+        let _ = exec
+            .run_until_stalled(&mut gatt_service.next())
+            .expect_pending("stream active with no items");
+
+        // A 24-bit Model ID of 1 is used in `setup_gatt_service` (see Config::example_config).
+        let expected_model_id_bytes = vec![0x00, 0x00, 0x01];
+        let read_result = exec
+            .run_until_stalled(&mut read_request_fut)
+            .expect("response is ready")
+            .expect("fidl result is Ok");
+        assert_eq!(read_result, Ok(expected_model_id_bytes));
+    }
+
+    #[fuchsia::test]
+    fn read_invalid_characteristic_returns_error() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let (gatt_service, upstream_service_client) = exec.run_singlethreaded(setup_gatt_service());
+        pin_mut!(gatt_service);
+
+        let _ = exec
+            .run_until_stalled(&mut gatt_service.next())
+            .expect_pending("stream active with no items");
+
+        // Simulate a peer's read request for a random, unsupported, characteristic.
+        let read_request_fut = upstream_service_client.read_value(
+            &mut PeerId(123).into(),
+            &mut Handle { value: 999 },
+            /* offset */ 0,
+        );
+        pin_mut!(read_request_fut);
+        let _ = exec
+            .run_until_stalled(&mut read_request_fut)
+            .expect_pending("waiting for FIDL response");
+
+        // Read request should be received by the GATT Server. Should be handled with no further
+        // action.
+        let _ = exec
+            .run_until_stalled(&mut gatt_service.next())
+            .expect_pending("stream active with no items");
+
+        // Client end of GATT connection should receive the error.
+        let read_result = exec
+            .run_until_stalled(&mut read_request_fut)
+            .expect("response is ready")
+            .expect("fidl result is Ok");
+        assert_matches!(read_result, Err(gatt::Error::InvalidHandle));
     }
 }

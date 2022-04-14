@@ -7,7 +7,7 @@ use std::convert::TryFrom;
 use crate::error::Error;
 
 /// Represents the 24-bit Model ID assigned to a Fast Pair device upon registration.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct ModelId(u32);
 
 impl TryFrom<u32> for ModelId {
