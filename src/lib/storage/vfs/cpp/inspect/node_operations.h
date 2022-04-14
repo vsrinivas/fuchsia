@@ -15,34 +15,34 @@ namespace fs_inspect {
 
 // Common node operations most filesystems implement.
 struct NodeOperations {
-  OperationTracker close;
-  OperationTracker read;
-  OperationTracker write;
   OperationTracker append;
-  OperationTracker truncate;
-  OperationTracker set_attr;
-  OperationTracker get_attr;
-  OperationTracker sync;
-  OperationTracker read_dir;
-  OperationTracker look_up;
+  OperationTracker close;
   OperationTracker create;
+  OperationTracker get_attr;
   OperationTracker link;
+  OperationTracker lookup;
+  OperationTracker read;
+  OperationTracker read_dir;
+  OperationTracker set_attr;
+  OperationTracker sync;
+  OperationTracker truncate;
   OperationTracker unlink;
+  OperationTracker write;
 
   explicit NodeOperations(inspect::Node& root_node)
-      : close(OperationTracker(root_node, "close")),
-        read(OperationTracker(root_node, "read")),
-        write(OperationTracker(root_node, "write")),
-        append(OperationTracker(root_node, "append")),
-        truncate(OperationTracker(root_node, "truncate")),
-        set_attr(OperationTracker(root_node, "set_attr")),
-        get_attr(OperationTracker(root_node, "get_attr")),
-        sync(OperationTracker(root_node, "sync")),
-        read_dir(OperationTracker(root_node, "read_dir")),
-        look_up(OperationTracker(root_node, "look_up")),
+      : append(OperationTracker(root_node, "append")),
+        close(OperationTracker(root_node, "close")),
         create(OperationTracker(root_node, "create")),
+        get_attr(OperationTracker(root_node, "get_attr")),
         link(OperationTracker(root_node, "link")),
-        unlink(OperationTracker(root_node, "unlink")) {}
+        lookup(OperationTracker(root_node, "lookup")),
+        read(OperationTracker(root_node, "read")),
+        read_dir(OperationTracker(root_node, "read_dir")),
+        set_attr(OperationTracker(root_node, "set_attr")),
+        sync(OperationTracker(root_node, "sync")),
+        truncate(OperationTracker(root_node, "truncate")),
+        unlink(OperationTracker(root_node, "unlink")),
+        write(OperationTracker(root_node, "write")) {}
 };
 
 }  // namespace fs_inspect

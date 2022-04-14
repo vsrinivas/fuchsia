@@ -62,7 +62,7 @@ zx_status_t Directory::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out
 
   assert(memchr(name.data(), '/', name.length()) == nullptr);
 
-  return blobfs_->GetNodeOperations()->look_up.Track([&] {
+  return blobfs_->GetNodeOperations()->lookup.Track([&] {
     if (name == ".") {
       // Special case: Accessing root directory via '.'
       *out = fbl::RefPtr<Directory>(this);
