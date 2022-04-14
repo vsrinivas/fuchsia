@@ -65,7 +65,7 @@ func (c *stringInLogCheck) Check(to *TestingOutputs) bool {
 
 	if c.Type == swarmingOutputType && c.AttributeToTest {
 		for _, testLog := range to.SwarmingOutputPerTest {
-			if c.checkBytes(testLog.Bytes) {
+			if c.checkBytes(to.SwarmingOutput, testLog.Index, testLog.Index+len(testLog.Bytes)) {
 				c.testName = testLog.TestName
 				c.outputFile = testLog.FilePath
 				return true
@@ -83,19 +83,20 @@ func (c *stringInLogCheck) Check(to *TestingOutputs) bool {
 		toCheck = to.Syslog
 	}
 
-	return c.checkBytes(toCheck)
+	return c.checkBytes(toCheck, 0, len(toCheck))
 }
 
-func (c *stringInLogCheck) checkBytes(toCheck []byte) bool {
-	if c.ExceptString != "" && bytes.Contains(toCheck, []byte(c.ExceptString)) {
+func (c *stringInLogCheck) checkBytes(toCheck []byte, start int, end int) bool {
+	toCheckBlock := toCheck[start:end]
+	if c.ExceptString != "" && bytes.Contains(toCheckBlock, []byte(c.ExceptString)) {
 		return false
 	}
 	stringBytes := []byte(c.String)
 	if len(c.ExceptBlocks) == 0 {
-		return bytes.Contains(toCheck, stringBytes)
+		return bytes.Contains(toCheckBlock, stringBytes)
 	}
-	index := bytes.Index(toCheck, stringBytes)
-	for index >= 0 {
+	index := bytes.Index(toCheckBlock, stringBytes) + start
+	for index >= start && index < end {
 		foundString := true
 		beforeBlock := toCheck[:index]
 		nextStartIndex := index + len(stringBytes)

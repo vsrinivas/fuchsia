@@ -64,6 +64,8 @@ type TestLog struct {
 	TestName string
 	Bytes    []byte
 	FilePath string
+	// Index represents the start index of the log within the larger log.
+	Index int
 }
 
 // splitLogsByTest expects the standard output of a Fuchsia test Swarming task
@@ -149,7 +151,7 @@ func splitLogByTest(input []byte, testNames []string) ([]TestLog, error) {
 						continue
 					}
 				}
-				ret = append(ret, TestLog{testName, input[i : i+advance], ""})
+				ret = append(ret, TestLog{testName, input[i : i+advance], "", i})
 				testsSeen += 1
 				break
 			}

@@ -130,16 +130,41 @@ func TestCheck(t *testing.T) {
 			name:            "should match per test swarming output",
 			attributeToTest: true,
 			testingOutputs: TestingOutputs{
+				SwarmingOutput: []byte(killerString),
 				SwarmingOutputPerTest: []TestLog{
 					{
 						TestName: "foo-test",
 						Bytes:    []byte(killerString),
 						FilePath: "foo/log.txt",
+						Index:    0,
 					},
 				},
 			},
 			shouldMatch: true,
 			wantName:    path.Join(wantName, "foo-test"),
+		},
+		{
+			name:            "should respect except block even if split across tests",
+			attributeToTest: true,
+			testingOutputs: TestingOutputs{
+				SwarmingOutput: []byte(fmt.Sprintf("%s %s %s %s", exceptBlock.startString, killerString, exceptBlock.endString, killerString)),
+				SwarmingOutputPerTest: []TestLog{
+					{
+						TestName: "foo-test",
+						Bytes:    []byte(fmt.Sprintf("%s %s", exceptBlock.startString, killerString)),
+						FilePath: "foo/log.txt",
+						Index:    0,
+					},
+					{
+						TestName: "bar-test",
+						Bytes:    []byte(fmt.Sprintf("%s %s", exceptBlock.endString, killerString)),
+						FilePath: "bar/log.txt",
+						Index:    len(exceptBlock.startString) + len(killerString) + 2,
+					},
+				},
+			},
+			shouldMatch: true,
+			wantName:    path.Join(wantName, "bar-test"),
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

@@ -96,22 +96,22 @@ func TestSplitLogByTest(t *testing.T) {
 			expectedOutput: []TestLog{
 				{"Test/1", []byte("Test/1 output line 1\n" +
 					"Test/1 output line 2\n" +
-					"ok 1 Test/1 (12.6s)\n"), ""},
-				{"Test2", []byte("not ok 2 Test2 (44.511025786s)\n"), ""},
+					"ok 1 Test/1 (12.6s)\n"), "", 222},
+				{"Test2", []byte("not ok 2 Test2 (44.511025786s)\n"), "", 284},
 				{"Test3", []byte("Test3 output line 1\n" +
 					"Test3 output line 2\n" +
 					"Tests took 41 seconds.\n" +
-					"ok 3 Test3 (27.90584341s)\n"), ""},
+					"ok 3 Test3 (27.90584341s)\n"), "", 315},
 				{"Test4", []byte("Test4 output line 1\n" +
 					"Test4 output line 2\n" +
-					"Test4 output mixed with testrunner output not ok 4 Test4 (88.8s)\n"), ""},
+					"Test4 output mixed with testrunner output not ok 4 Test4 (88.8s)\n"), "", 404},
 				{"Test5", []byte("Test5 output line 1\n" +
 					"fail message\n" +
 					"Test5 failed\n" +
-					"not ok 5 Test5 (27.90584341s)\n"), ""},
+					"not ok 5 Test5 (27.90584341s)\n"), "", 509},
 				{"Test5", []byte("Test5 output\n" +
 					"2020/03/20 22:57:53.569095 botanist attempting to close SSH session due to: context canceled\n" +
-					"ok 6 Test5 (9s)\n"), ""},
+					"ok 6 Test5 (9s)\n"), "", 585},
 			},
 		}, {
 			name:       "log with ffx tests",
@@ -123,25 +123,25 @@ func TestSplitLogByTest(t *testing.T) {
 					"ffxTest1 output line 1\n" +
 					"Running test 'ffxTest1.testcase1'\n" +
 					"ffxTest1 output line 2\n" +
-					"ffxTest1 completed with result: PASSED\n"), ""},
+					"ffxTest1 completed with result: PASSED\n"), "", 222},
 				{"ffxTest2", []byte("Running test 'ffxTest2'\n" +
 					"ffxTest2 completed with result: FAILED\n" +
 					"ok 1 ffxTest1 (12.6s)\n" +
-					"not ok 2 ffxTest2 (44.511025786s)\n"), ""},
+					"not ok 2 ffxTest2 (44.511025786s)\n"), "", 383},
 				{"v1Test3", []byte("testrunner output\n" +
 					"Running test 'v1Test3'\n" +
 					"v1Test3 output line 1\n" +
 					"ok 3 fakelog\n" +
 					"v1Test3 output line 2\n" +
 					"Tests took 41 seconds.\n" +
-					"ok 3 v1Test3 (27.90584341s)\n"), ""},
+					"ok 3 v1Test3 (27.90584341s)\n"), "", 502},
 				{"hostTest4", []byte("hostTest4 output line 1\n" +
 					"hostTest4 output line 2\n" +
 					"Running test 'test5' inside host test\n" +
 					"test5 completed with result: PASSED\n" +
-					"hostTest4 output mixed with testrunner output not ok 4 hostTest4 (88.8s)\n"), ""},
+					"hostTest4 output mixed with testrunner output not ok 4 hostTest4 (88.8s)\n"), "", 651},
 				{"test5", []byte("Running test 'test5'\n" +
-					"ok 5 test5 (7s)\n"), ""},
+					"ok 5 test5 (7s)\n"), "", 846},
 			},
 		},
 	}
@@ -180,7 +180,7 @@ func TestSplitTruncatedLog(t *testing.T) {
 	}
 	wantOutput := []TestLog{
 		0: {"Test1", []byte("Test1 output line 1\n" +
-			"ok 1 Test1 (12.6s)\n"), ""},
+			"ok 1 Test1 (12.6s)\n"), "", 20},
 	}
 	if diff := cmp.Diff(wantOutput, output); diff != "" {
 		t.Errorf("splitLogByTest() returned wrong output (-want +got):\n%s", diff)
