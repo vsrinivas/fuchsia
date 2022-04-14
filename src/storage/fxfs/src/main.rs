@@ -12,8 +12,8 @@ use {
     fuchsia_syslog, fuchsia_zircon as zx,
     fxfs::{
         crypt::{Crypt, InsecureCrypt},
-        filesystem::OpenOptions,
-        mkfs, mount,
+        filesystem::{FxFilesystem, OpenOptions},
+        mkfs,
         object_store::fsck::{self},
         remote_crypt::RemoteCrypt,
         serialized_types::LATEST_VERSION,
@@ -107,7 +107,7 @@ async fn main() -> Result<(), Error> {
             Ok(())
         }
         TopLevel { nested: SubCommand::Mount(MountSubCommand { readonly }), verbose } => {
-            let fs = mount::mount_with_options(
+            let fs = FxFilesystem::open_with_options(
                 DeviceHolder::new(BlockDevice::new(Box::new(client), readonly).await?),
                 OpenOptions { trace: verbose, read_only: readonly, ..Default::default() },
             )
@@ -119,7 +119,7 @@ async fn main() -> Result<(), Error> {
             server.run(zx::Channel::from(startup_handle)).await
         }
         TopLevel { nested: SubCommand::Fsck(_), verbose } => {
-            let fs = mount::mount_with_options(
+            let fs = FxFilesystem::open_with_options(
                 DeviceHolder::new(BlockDevice::new(Box::new(client), true).await?),
                 OpenOptions { read_only: true, trace: verbose, ..Default::default() },
             )

@@ -8,8 +8,8 @@ use {
     chrono::Local,
     fxfs::{
         crypt::{Crypt, InsecureCrypt},
+        filesystem::FxFilesystem,
         mkfs,
-        mount::mount,
         serialized_types::LATEST_VERSION,
     },
     std::{
@@ -90,7 +90,7 @@ pub async fn create_image() -> Result<(), Error> {
     }
     let device_holder = DeviceHolder::new(load_device(&path).await?);
     let device = device_holder.clone();
-    let fs = mount(device_holder).await?;
+    let fs = FxFilesystem::open(device_holder).await?;
     let vol = ops::open_volume(&fs, crypt.clone()).await?;
     ops::mkdir(&fs, &vol, Path::new("some")).await?;
     ops::put(&fs, &vol, &Path::new("some/file.txt"), EXPECTED_FILE_CONTENT.to_vec()).await?;
@@ -127,12 +127,12 @@ async fn check_image(path: &Path) -> Result<(), Error> {
     let crypt: Arc<dyn Crypt> = Arc::new(InsecureCrypt::new());
     {
         let device = DeviceHolder::new(load_device(path).await?);
-        let fs = mount(device).await?;
+        let fs = FxFilesystem::open(device).await?;
         ops::fsck(&fs, crypt.clone(), true).await.context("fsck failed")?;
     }
     {
         let device = DeviceHolder::new(load_device(path).await?);
-        let fs = mount(device).await?;
+        let fs = FxFilesystem::open(device).await?;
         let vol = ops::open_volume(&fs, crypt.clone()).await?;
         if ops::get(&vol, &Path::new("some/file.txt")).await? != EXPECTED_FILE_CONTENT.to_vec() {
             bail!("Expected file content incorrect.");

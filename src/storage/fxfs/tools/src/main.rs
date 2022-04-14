@@ -8,7 +8,8 @@ use {
     fuchsia_async as fasync,
     fxfs::{
         crypt::{Crypt, InsecureCrypt},
-        mkfs, mount,
+        filesystem::FxFilesystem,
+        mkfs,
         object_store::fsck::{self},
     },
     std::{io::Read, path::Path, sync::Arc},
@@ -178,14 +179,14 @@ async fn main() -> Result<(), Error> {
             ));
             match cmd.subcommand {
                 ImageSubCommand::Rm(rmargs) => {
-                    let fs = mount::mount(device).await?;
+                    let fs = FxFilesystem::open(device).await?;
                     let vol = ops::open_volume(&fs, crypt.clone()).await?;
                     ops::unlink(&fs, &vol, &Path::new(&rmargs.path)).await?;
                     fs.close().await?;
                     ops::fsck(&fs, crypt, args.verbose).await
                 }
                 ImageSubCommand::Get(getargs) => {
-                    let fs = mount::mount(device).await?;
+                    let fs = FxFilesystem::open(device).await?;
                     let vol = ops::open_volume(&fs, crypt).await?;
                     let data = ops::get(&vol, &Path::new(&getargs.src)).await?;
                     let mut reader = std::io::Cursor::new(&data);
@@ -194,7 +195,7 @@ async fn main() -> Result<(), Error> {
                     Ok(())
                 }
                 ImageSubCommand::Put(putargs) => {
-                    let fs = mount::mount(device).await?;
+                    let fs = FxFilesystem::open(device).await?;
                     let vol = ops::open_volume(&fs, crypt.clone()).await?;
                     let mut data = Vec::new();
                     std::fs::File::open(&putargs.src)?.read_to_end(&mut data)?;
@@ -209,7 +210,7 @@ async fn main() -> Result<(), Error> {
                 }
                 ImageSubCommand::Fsck(_) => {
                     log::set_max_level(log::LevelFilter::Info);
-                    let fs = mount::mount(device).await?;
+                    let fs = FxFilesystem::open(device).await?;
                     let options = fsck::FsckOptions {
                         fail_on_warning: false,
                         halt_on_error: false,
@@ -220,21 +221,21 @@ async fn main() -> Result<(), Error> {
                     fsck::fsck_with_options(&fs, Some(crypt), options).await
                 }
                 ImageSubCommand::Ls(lsargs) => {
-                    let fs = mount::mount(device).await?;
+                    let fs = FxFilesystem::open(device).await?;
                     let vol = ops::open_volume(&fs, crypt).await?;
                     let dir = ops::walk_dir(&vol, &Path::new(&lsargs.path)).await?;
                     ops::print_ls(&dir).await?;
                     Ok(())
                 }
                 ImageSubCommand::Mkdir(mkdirargs) => {
-                    let fs = mount::mount(device).await?;
+                    let fs = FxFilesystem::open(device).await?;
                     let vol = ops::open_volume(&fs, crypt.clone()).await?;
                     ops::mkdir(&fs, &vol, &Path::new(&mkdirargs.path)).await?;
                     fs.close().await?;
                     ops::fsck(&fs, crypt, args.verbose).await
                 }
                 ImageSubCommand::Rmdir(rmdirargs) => {
-                    let fs = mount::mount(device).await?;
+                    let fs = FxFilesystem::open(device).await?;
                     let vol = ops::open_volume(&fs, crypt.clone()).await?;
                     ops::unlink(&fs, &vol, &Path::new(&rmdirargs.path)).await?;
                     fs.close().await?;
