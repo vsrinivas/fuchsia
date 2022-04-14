@@ -58,6 +58,29 @@ impl<'a, T: Copy + IntoIterator<Item = &'a TargetAddr>> SshAddrFetcher for &'a T
     }
 }
 
+fn nodename_to_string(index: Option<usize>, nodename: Option<String>) -> String {
+    match nodename {
+        Some(name) => name,
+        None => match index {
+            Some(index) => format!("<unknown-{}>", index),
+            None => UNKNOWN.to_string(),
+        },
+    }
+}
+
+fn has_multiple_unknown_targets(targets: &Vec<bridge::TargetInfo>) -> bool {
+    let mut unknown_count = 0;
+    for target in targets.iter() {
+        if target.nodename.is_none() {
+            unknown_count += 1;
+        }
+        if unknown_count > 1 {
+            return true;
+        }
+    }
+    false
+}
+
 /// Simple trait for a target formatter.
 pub trait TargetFormatter {
     fn lines(&self, default_nodename: Option<&str>) -> Vec<String>;
@@ -112,11 +135,11 @@ impl TargetFormatter for AddressesTargetFormatter {
 
 pub struct NameOnlyTarget(String);
 
-impl TryFrom<bridge::TargetInfo> for NameOnlyTarget {
+impl TryFrom<(Option<usize>, bridge::TargetInfo)> for NameOnlyTarget {
     type Error = Error;
 
-    fn try_from(t: bridge::TargetInfo) -> Result<Self> {
-        let name = t.nodename.unwrap_or(UNKNOWN.to_string());
+    fn try_from((index, target): (Option<usize>, bridge::TargetInfo)) -> Result<Self> {
+        let name = nodename_to_string(index, target.nodename);
         Ok(Self(name))
     }
 }
@@ -129,7 +152,13 @@ impl TryFrom<Vec<bridge::TargetInfo>> for NameOnlyTargetFormatter {
     type Error = Error;
 
     fn try_from(targets: Vec<bridge::TargetInfo>) -> Result<Self> {
-        let targets = targets.into_iter().flat_map(NameOnlyTarget::try_from).collect::<Vec<_>>();
+        let use_index = has_multiple_unknown_targets(&targets);
+        let targets = targets
+            .into_iter()
+            .enumerate()
+            .map(|(i, t)| (if use_index { Some(i) } else { None }, t))
+            .flat_map(NameOnlyTarget::try_from)
+            .collect::<Vec<_>>();
         Ok(Self { targets })
     }
 }
@@ -181,7 +210,13 @@ impl TryFrom<Vec<bridge::TargetInfo>> for JsonTargetFormatter {
     type Error = Error;
 
     fn try_from(targets: Vec<bridge::TargetInfo>) -> Result<Self> {
-        let targets = targets.into_iter().flat_map(JsonTarget::try_from).collect::<Vec<_>>();
+        let use_index = has_multiple_unknown_targets(&targets);
+        let targets = targets
+            .into_iter()
+            .enumerate()
+            .map(|(i, t)| (if use_index { Some(i) } else { None }, t))
+            .flat_map(JsonTarget::try_from)
+            .collect::<Vec<_>>();
         Ok(Self { targets })
     }
 }
@@ -409,17 +444,17 @@ impl StringifiedTarget {
     }
 }
 
-impl TryFrom<bridge::TargetInfo> for StringifiedTarget {
+impl TryFrom<(Option<usize>, bridge::TargetInfo)> for StringifiedTarget {
     type Error = StringifyError;
 
-    fn try_from(target: bridge::TargetInfo) -> Result<Self, Self::Error> {
+    fn try_from((index, target): (Option<usize>, bridge::TargetInfo)) -> Result<Self, Self::Error> {
         let target_type = StringifiedTarget::from_target_type(
             target.board_config.as_deref(),
             target.product_config.as_deref(),
             target.target_type.ok_or(StringifyError::MissingTargetType)?,
         );
         Ok(Self {
-            nodename: StringifiedField::String(target.nodename.unwrap_or(UNKNOWN.to_string())),
+            nodename: StringifiedField::String(nodename_to_string(index, target.nodename)),
             serial: StringifiedField::String(target.serial_number.unwrap_or(UNKNOWN.to_string())),
             addresses: StringifiedTarget::field_from_addresses(
                 target.addresses.ok_or(StringifyError::MissingAddresses)?,
@@ -436,12 +471,12 @@ impl TryFrom<bridge::TargetInfo> for StringifiedTarget {
     }
 }
 
-impl TryFrom<bridge::TargetInfo> for JsonTarget {
+impl TryFrom<(Option<usize>, bridge::TargetInfo)> for JsonTarget {
     type Error = StringifyError;
 
-    fn try_from(target: bridge::TargetInfo) -> Result<Self, Self::Error> {
+    fn try_from((index, target): (Option<usize>, bridge::TargetInfo)) -> Result<Self, Self::Error> {
         Ok(Self {
-            nodename: json!(target.nodename.unwrap_or(UNKNOWN.to_string())),
+            nodename: json!(nodename_to_string(index, target.nodename)),
             serial: json!(target.serial_number.unwrap_or(UNKNOWN.to_string())),
             addresses: json!(target
                 .addresses
@@ -499,8 +534,10 @@ impl TryFrom<Vec<bridge::TargetInfo>> for TabularTargetFormatter {
         limits.update(&mut initial[0]);
 
         let acc = Self { targets: initial, limits };
-        Ok(targets.drain(..).try_fold(acc, |mut a, t| {
-            let mut s = StringifiedTarget::try_from(t)?;
+        let use_index = has_multiple_unknown_targets(&targets);
+        Ok(targets.drain(..).enumerate().try_fold(acc, |mut a, (index, t)| {
+            let index = if use_index { Some(index) } else { None };
+            let mut s = StringifiedTarget::try_from((index, t))?;
             a.limits.update(&mut s);
             a.targets.push(s);
             Ok(a)
@@ -524,12 +561,16 @@ mod test {
             include_str!("../test_data/target_formatter_one_target_no_default_golden");
         static ref EMPTY_NODENAME_WITH_DEFAULT_GOLDEN: &'static str =
             include_str!("../test_data/target_formatter_empty_nodename_with_default_golden");
+        static ref EMPTY_NODENAME_WITH_DEFAULT_MULTIPLE_UNKNOWN_GOLDEN: &'static str =
+            include_str!("../test_data/target_formatter_empty_nodename_with_default_multiple_unknown_golden");
         static ref EMPTY_NODENAME_NO_DEFAULT_GOLDEN: &'static str =
             include_str!("../test_data/target_formatter_empty_nodename_no_default_golden");
         static ref SIMPLE_FORMATTER_WITH_DEFAULT_GOLDEN: &'static str =
             include_str!("../test_data/target_formatter_simple_formatter_with_default_golden");
         static ref NAME_ONLY_FORMATTER_WITH_DEFAULT_GOLDEN: &'static str =
             include_str!("../test_data/target_formatter_name_only_formatter_with_default_golden");
+        static ref NAME_ONLY_FORMATTER_MULTIPLE_UNKNOWN_WITH_DEFAULT_GOLDEN: &'static str =
+            include_str!("../test_data/target_formatter_name_only_multiple_unknown_formatter_with_default_golden");
         static ref DEVICE_FINDER_FORMAT_GOLDEN: &'static str =
             include_str!("../test_data/target_formatter_device_finder_format_golden");
         static ref ADDRESSES_FORMAT_GOLDEN: &'static str =
@@ -642,6 +683,47 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_formatter_multiple_empty_nodename() {
+        let formatter = TabularTargetFormatter::try_from(vec![
+            make_valid_target(),
+            bridge::TargetInfo {
+                nodename: None,
+                addresses: Some(vec![bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+                    ip: IpAddress::Ipv6(Ipv6Address {
+                        addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
+                    }),
+                    scope_id: 137,
+                })]),
+                rcs_state: Some(bridge::RemoteControlState::Unknown),
+                target_type: Some(bridge::TargetType::Unknown),
+                target_state: Some(bridge::TargetState::Unknown),
+                serial_number: Some("cereal".to_owned()),
+                ..bridge::TargetInfo::EMPTY
+            },
+            bridge::TargetInfo {
+                nodename: None,
+                addresses: Some(vec![bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+                    ip: IpAddress::Ipv6(Ipv6Address {
+                        addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0],
+                    }),
+                    scope_id: 42,
+                })]),
+                rcs_state: Some(bridge::RemoteControlState::Unknown),
+                target_type: Some(bridge::TargetType::Unknown),
+                target_state: Some(bridge::TargetState::Unknown),
+                ..bridge::TargetInfo::EMPTY
+            },
+        ])
+        .unwrap();
+        let lines = formatter.lines(Some("fooberdoober"));
+        assert_eq!(lines.len(), 4);
+        assert_eq!(
+            lines.join("\n"),
+            EMPTY_NODENAME_WITH_DEFAULT_MULTIPLE_UNKNOWN_GOLDEN.to_string()
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_simple_formatter() {
         let formatter = SimpleTargetFormatter::try_from(vec![
             make_valid_target(),
@@ -718,6 +800,53 @@ mod test {
         assert_eq!(lines.join("\n"), NAME_ONLY_FORMATTER_WITH_DEFAULT_GOLDEN.to_string());
     }
 
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_name_only_multiple_unknown_formatter() {
+        let formatter = NameOnlyTargetFormatter::try_from(vec![
+            make_valid_target(),
+            bridge::TargetInfo {
+                nodename: None,
+                addresses: Some(vec![bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+                    ip: IpAddress::Ipv6(Ipv6Address {
+                        addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1],
+                    }),
+                    scope_id: 137,
+                })]),
+                rcs_state: Some(bridge::RemoteControlState::Unknown),
+                target_type: Some(bridge::TargetType::Unknown),
+                target_state: Some(bridge::TargetState::Unknown),
+                ..bridge::TargetInfo::EMPTY
+            },
+            bridge::TargetInfo {
+                nodename: None,
+                addresses: Some(vec![bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+                    ip: IpAddress::Ipv6(Ipv6Address {
+                        addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1],
+                    }),
+                    scope_id: 42,
+                })]),
+                rcs_state: Some(bridge::RemoteControlState::Unknown),
+                target_type: Some(bridge::TargetType::Unknown),
+                target_state: Some(bridge::TargetState::Unknown),
+                ..bridge::TargetInfo::EMPTY
+            },
+        ])
+        .unwrap();
+        let lines = formatter.lines(Some("fooberdoober"));
+        assert_eq!(lines.len(), 3);
+        assert_eq!(
+            lines.join("\n"),
+            NAME_ONLY_FORMATTER_MULTIPLE_UNKNOWN_WITH_DEFAULT_GOLDEN.to_string()
+        );
+
+        let lines = formatter.lines(None);
+        assert_eq!(lines.len(), 3);
+        assert_eq!(
+            lines.join("\n"),
+            NAME_ONLY_FORMATTER_MULTIPLE_UNKNOWN_WITH_DEFAULT_GOLDEN.to_string()
+        );
+    }
+
     #[test]
     fn test_name_only_formatter_with_invalid() {
         let names =
@@ -744,35 +873,35 @@ mod test {
     fn test_stringified_target_missing_state() {
         let mut t = make_valid_target();
         t.target_state = None;
-        assert_eq!(StringifiedTarget::try_from(t), Err(StringifyError::MissingTargetState));
+        assert_eq!(StringifiedTarget::try_from((None, t)), Err(StringifyError::MissingTargetState));
     }
 
     #[test]
     fn test_stringified_target_missing_target_type() {
         let mut t = make_valid_target();
         t.target_type = None;
-        assert_eq!(StringifiedTarget::try_from(t), Err(StringifyError::MissingTargetType));
+        assert_eq!(StringifiedTarget::try_from((None, t)), Err(StringifyError::MissingTargetType));
     }
 
     #[test]
     fn test_stringified_target_missing_rcs_state() {
         let mut t = make_valid_target();
         t.rcs_state = None;
-        assert_eq!(StringifiedTarget::try_from(t), Err(StringifyError::MissingRcsState));
+        assert_eq!(StringifiedTarget::try_from((None, t)), Err(StringifyError::MissingRcsState));
     }
 
     #[test]
     fn test_stringified_target_missing_addresses() {
         let mut t = make_valid_target();
         t.addresses = None;
-        assert_eq!(StringifiedTarget::try_from(t), Err(StringifyError::MissingAddresses));
+        assert_eq!(StringifiedTarget::try_from((None, t)), Err(StringifyError::MissingAddresses));
     }
 
     #[test]
     fn test_stringified_target_missing_nodename() {
         let mut t = make_valid_target();
         t.nodename = None;
-        assert!(StringifiedTarget::try_from(t).is_ok());
+        assert!(StringifiedTarget::try_from((None, t)).is_ok());
     }
 
     #[test]
@@ -858,28 +987,28 @@ mod test {
     fn test_stringified_product_state() {
         let mut t = make_valid_target();
         t.target_state = Some(bridge::TargetState::Product);
-        assert!(StringifiedTarget::try_from(t).is_ok());
+        assert!(StringifiedTarget::try_from((None, t)).is_ok());
     }
 
     #[test]
     fn test_stringified_fastboot_state() {
         let mut t = make_valid_target();
         t.target_state = Some(bridge::TargetState::Fastboot);
-        assert!(StringifiedTarget::try_from(t).is_ok());
+        assert!(StringifiedTarget::try_from((None, t)).is_ok());
     }
 
     #[test]
     fn test_stringified_unknown_state() {
         let mut t = make_valid_target();
         t.target_state = Some(bridge::TargetState::Unknown);
-        assert!(StringifiedTarget::try_from(t).is_ok());
+        assert!(StringifiedTarget::try_from((None, t)).is_ok());
     }
 
     #[test]
     fn test_stringified_disconnected_state() {
         let mut t = make_valid_target();
         t.target_state = Some(bridge::TargetState::Disconnected);
-        assert!(StringifiedTarget::try_from(t).is_ok());
+        assert!(StringifiedTarget::try_from((None, t)).is_ok());
     }
 
     #[test]
