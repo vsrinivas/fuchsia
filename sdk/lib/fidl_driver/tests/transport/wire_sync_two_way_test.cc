@@ -155,7 +155,7 @@ TEST(DriverTransport, WireTwoWaySyncViaAsyncClient) {
   client_dispatcher->ShutdownAsync();
   server_dispatcher->ShutdownAsync();
   ASSERT_OK(dispatcher_shutdown.Wait());
-  ASSERT_OK(server_dispatcher_shutdown.Wait());
+  ASSERT_OK(client_dispatcher_shutdown.Wait());
   ASSERT_OK(server_dispatcher_shutdown.Wait());
 }
 
