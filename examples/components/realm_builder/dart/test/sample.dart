@@ -39,7 +39,7 @@ void main() {
       );
 
       // Add a child component to the realm using a relative URL. The child is
-      // not exposing a service, but the `eager` option ensures the child starts
+      // not exposing a service, so the `eager` option ensures the child starts
       // when the realm is built.
       final echoClient = await builder.addChild(
         'echo_client',

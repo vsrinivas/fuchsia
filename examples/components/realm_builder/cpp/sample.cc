@@ -36,8 +36,11 @@ TEST_F(RealmBuilderTest, RoutesFromEcho) {
   // Add component server to the realm, which is fetched using a URL.
   builder.AddChild("echo_server",
                    "fuchsia-pkg://fuchsia.com/realm-builder-examples#meta/echo_server.cm");
-  // Add component client to the realm, which is fetched using a relative URL.
-  builder.AddChild("echo_client", "#meta/echo_client.cm");
+  // Add component to the realm, which is fetched using a relative URL. The
+  // child is not exposing a service, so the `EAGER` option ensures the child
+  // starts when the realm is built.
+  builder.AddChild("echo_client", "#meta/echo_client.cm",
+                   ChildOptions{.startup_mode = StartupMode::EAGER});
   // [END add_component_cpp]
 
   // [START route_between_children_cpp]

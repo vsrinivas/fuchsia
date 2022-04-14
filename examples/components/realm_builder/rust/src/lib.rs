@@ -36,9 +36,12 @@ async fn routes_from_echo() -> Result<(), Error> {
             ChildOptions::new(),
         )
         .await?;
-    // Add component to the realm, which is fetched using a relative URL.
-    let echo_client =
-        builder.add_child("echo_client", "#meta/echo_client.cm", ChildOptions::new()).await?;
+    // Add component to the realm, which is fetched using a relative URL. The
+    // child is not exposing a service, so the `eager` option ensures the child
+    // starts when the realm is built.
+    let echo_client = builder
+        .add_child("echo_client", "#meta/echo_client.cm", ChildOptions::new().eager())
+        .await?;
     // [END add_component_rust]
 
     // [START route_between_children_rust]
