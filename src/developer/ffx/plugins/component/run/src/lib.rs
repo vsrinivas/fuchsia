@@ -111,8 +111,16 @@ async fn run_impl<W: std::io::Write>(
         .await
         .map_err(|e| ffx_error!("FIDL error while starting the component instance: {}", e))?;
 
-    if let Err(e) = start_result {
-        ffx_bail!("Lifecycle protocol could not start the component instance: {:?}", e);
+    match start_result {
+        Ok(fsys::StartResult::Started) => {
+            writeln!(writer, "Success! The component instance has been started.")?;
+        }
+        Ok(fsys::StartResult::AlreadyStarted) => {
+            writeln!(writer, "The component instance was already started.")?;
+        }
+        Err(e) => {
+            ffx_bail!("Lifecycle protocol could not start the component instance: {:?}", e);
+        }
     }
 
     Ok(())
