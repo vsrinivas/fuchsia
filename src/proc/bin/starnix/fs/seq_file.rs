@@ -101,6 +101,7 @@ impl<C: Default> SeqFileState<C> {
             self.buf.0.drain(..to_drain);
             self.byte_offset += to_drain;
         }
+        std::mem::drop(iter);
 
         // 2. Write out as much of the buffer as possible and shift the rest down
         let written = current_task.mm.write_all(data, &self.buf.0)?;

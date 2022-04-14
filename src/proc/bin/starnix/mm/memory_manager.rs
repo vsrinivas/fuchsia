@@ -1373,10 +1373,8 @@ impl FileOps for ProcMapsFile {
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
         let state = self.task.mm.state.read();
-        let mut seq = self.seq.lock();
-        let mut iter = None;
-        let iter = |cursor: UserAddress, sink: &mut SeqFileBuf| {
-            let iter = iter.get_or_insert_with(|| state.mappings.iter_starting_at(&cursor));
+        let iter = move |cursor: UserAddress, sink: &mut SeqFileBuf| {
+            let mut iter = state.mappings.iter_starting_at(&cursor);
             if let Some((range, map)) = iter.next() {
                 let line_length = write!(
                     sink,
@@ -1406,7 +1404,7 @@ impl FileOps for ProcMapsFile {
             }
             Ok(None)
         };
-        seq.read_at(current_task, iter, offset, data)
+        self.seq.lock().read_at(current_task, iter, offset, data)
     }
 
     fn write_at(
