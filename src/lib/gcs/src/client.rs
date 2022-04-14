@@ -114,7 +114,8 @@ impl Client {
                 };
 
                 if let Some(parent) = output_path.parent() {
-                    create_dir_all(&parent).context(format!("create dir all for {:?}", parent))?;
+                    create_dir_all(&parent)
+                        .with_context(|| format!("create dir all for {:?}", parent))?;
                 }
                 let mut file = File::create(output_path).context("create file")?;
                 if verbose {
