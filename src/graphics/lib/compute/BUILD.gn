@@ -17,7 +17,6 @@ group("compute") {
     "hotsort",
     "rive-rs",
     "spinel",
-    "spinel-rs",
     "spinel-rs-sys",
     "spinel/platforms/vk",
     "spinel2/platforms/vk",
@@ -53,7 +52,6 @@ group("tests") {
     ":graphics-compute-unittests",
     "forma:forma-tests",
     "rive-rs:rive-rs-tests",
-    "spinel-rs:spinel-rs-tests",
     "spinel-rs-sys:tests",
     "surpass:surpass-tests",
   ]
