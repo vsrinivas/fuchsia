@@ -54,6 +54,8 @@ Future main(List<String> args) async {
   }
   await stats.addManifest(
       '${prefix}obj/build/images/fuchsia/fuchsia/gen', 'blob.manifest');
+  await stats.addImageAssembly(
+      '${prefix}obj/build/images/fuchsia/fuchsia/image_assembly.json');
   await stats
       .addBlobSizes('${prefix}obj/build/images/fuchsia/fuchsia/gen/blobs.json');
   await stats.computePackagesInParallel(Platform.numberOfProcessors);

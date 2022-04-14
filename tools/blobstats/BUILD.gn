@@ -33,6 +33,7 @@ dart_test("blobstats_tests") {
   deps = [
     ":blobstats_dart_library",
     "//third_party/dart-pkg/pub/meta",
+    "//third_party/dart-pkg/pub/path",
     "//third_party/dart-pkg/pub/test",
   ]
 }

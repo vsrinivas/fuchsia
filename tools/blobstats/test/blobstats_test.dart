@@ -11,6 +11,7 @@ import 'package:blobstats/blob.dart';
 import 'package:blobstats/blobstats.dart';
 import 'package:blobstats/package.dart';
 import 'package:test/test.dart';
+import 'package:path/path.dart' as p;
 
 void main() {
   group('blobstats tests', () {
@@ -80,6 +81,39 @@ void main() {
       expect(lines[1], equals('256,12,2,ABC'));
       expect(lines[2], equals('123,3,1,package1'));
       expect(lines[3], equals('16,1,4,another_package'));
+    });
+    test('correctly parse image_assembly.json', () async {
+      var tmpDir = Directory.systemTemp.createTempSync();
+      var imageAssemblyFilePath = p.join(tmpDir.path, 'abc.json');
+      await File(imageAssemblyFilePath).writeAsString('''
+{
+  "system": [
+    "path/to/foo"
+  ],
+  "ignored": [
+    "xzwv"
+  ],
+  "base": [
+    "obj/build/test",
+    "a/b/c"
+  ],
+  "cache": [
+    "qwerty"
+  ]
+}
+''');
+      var stats = BlobStats(tmpDir, tmpDir, '');
+      await stats.addImageAssembly(imageAssemblyFilePath);
+      stats.pendingPackages.sort();
+      // All items under "system", "base", and "cache" should be included.
+      // Blobstats also automatically adds this entry: obj/build/images/fuchsia/fuchsia/base/package_manifest.json
+      expect(stats.pendingPackages.length, 5);
+      expect(stats.pendingPackages[0], 'a/b/c');
+      expect(stats.pendingPackages[1],
+          'obj/build/images/fuchsia/fuchsia/base/package_manifest.json');
+      expect(stats.pendingPackages[2], 'obj/build/test');
+      expect(stats.pendingPackages[3], 'path/to/foo');
+      expect(stats.pendingPackages[4], 'qwerty');
     });
   });
 }

@@ -22,11 +22,22 @@ class BlobStats {
   Map<String, Blob> blobsByHash = <String, Blob>{};
   int duplicatedSize = 0;
   int deduplicatedSize = 0;
-  List<File> pendingPackages = <File>[];
+  List<String> pendingPackages = <String>[];
   List<Package> packages = <Package>[];
 
   BlobStats(this.buildDir, this.outputDir, this.suffix,
       {this.humanReadable = false});
+
+  Future addImageAssembly(String path) async {
+    var imageAssembly = json.decode(await File(path).readAsString());
+    for (var key in ['system', 'base', 'cache']) {
+      imageAssembly[key].forEach(pendingPackages.add);
+    }
+    // Base's package manifest is not listed in image_assembly.json so it
+    // needs to be hard-coded here.
+    pendingPackages
+        .add('obj/build/images/fuchsia/fuchsia/base/package_manifest.json');
+  }
 
   Future addManifest(String dir, String name) async {
     var lines = await File(p.join(buildDir.path, dir, name)).readAsLines();
@@ -36,9 +47,6 @@ class BlobStats {
       // Path entries are specified relative to the directory containing the manifest.
       var entryPath = p.join(dir, parts[1]);
       var file = File(entryPath);
-      if (entryPath.endsWith('meta.far')) {
-        pendingPackages.add(file);
-      }
 
       if (suffix != null && !entryPath.endsWith(suffix)) {
         continue;
@@ -119,22 +127,6 @@ class BlobStats {
         '   $percent% ${formatSize(deduplicatedSize)} / ${formatSize(duplicatedSize)}');
   }
 
-  String metaFarToPackageManifest(String farPath) {
-    // Assumes details of the build, namely that it generates
-    //   <build-dir>/.../<package>/meta.far
-    // and puts a package_manifest.json file into
-    //   <build-dir>/.../<package>/package_manifest.json
-    if (!farPath.endsWith('/meta.far')) {
-      throw ArgumentError('Build details have changed');
-    }
-    String path = '${removeSuffix(farPath, 'meta.far')}package_manifest.json';
-    if (!File(path).existsSync()) {
-      throw ArgumentError(
-          'Build details have changed - path to package_manifest.json $path not found for $farPath');
-    }
-    return path;
-  }
-
   Future computePackagesInParallel(int jobs) async {
     var tasks = <Future>[];
     for (var i = 0; i < jobs; i++) {
@@ -145,9 +137,9 @@ class BlobStats {
 
   Future computePackages() async {
     while (pendingPackages.isNotEmpty) {
-      File far = pendingPackages.removeLast();
+      String packageManifestFile = pendingPackages.removeLast();
 
-      var package = Package()..path = far.path;
+      var package = Package()..path = packageManifestFile;
       var parts = package.path.split('/');
       package
         ..name = removeSuffix(
@@ -158,8 +150,8 @@ class BlobStats {
         ..blobCount = 0
         ..blobsByPath = <String, Blob>{};
 
-      var packageManifest = json.decode(
-          await File(metaFarToPackageManifest(far.path)).readAsString());
+      var packageManifest =
+          json.decode(await File(packageManifestFile).readAsString());
       var blobs = packageManifest['blobs'];
 
       for (var blob in blobs) {
@@ -168,7 +160,7 @@ class BlobStats {
         var b = blobsByHash[hash];
         if (b == null) {
           print(
-              '$path $hash is in a package manifest but not the final manifest');
+              'Blob $path $hash is in a package manifest $packageManifestFile but not the final manifest');
           continue;
         }
         b.count++;
