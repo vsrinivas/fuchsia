@@ -22,7 +22,7 @@ void StringVAppendfHelper(std::string* dest, const char* format, va_list ap) {
   // |result| is the number of characters that would have been written if kStackBufferSize were
   // sufficiently large, not counting the terminating null character.
   // |vsnprintf()| always null-terminates!
-  size_t result = vsnprintf(stack_buf, kStackBufferSize, format, ap);
+  int result = vsnprintf(stack_buf, kStackBufferSize, format, ap);
   if (result < 0) {
     // As far as I can tell, we'd only get |EOVERFLOW| if the result is so large
     // that it can't be represented by an |int| (in which case retrying would be
@@ -33,7 +33,7 @@ void StringVAppendfHelper(std::string* dest, const char* format, va_list ap) {
   // Only append what fit into our stack buffer.
   // Strings that are too long will be truncated.
   size_t actual_len_excluding_null = result;
-  if (result > kStackBufferSize - 1) {
+  if (actual_len_excluding_null > kStackBufferSize - 1) {
     actual_len_excluding_null = kStackBufferSize - 1;
   }
   dest->append(stack_buf, actual_len_excluding_null);
