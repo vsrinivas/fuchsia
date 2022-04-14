@@ -495,12 +495,6 @@ class DispatcherCoordinator {
       return ZX_OK;
     }
 
-    fdf_internal_driver_shutdown_observer_t* TakeShutdownObserver() {
-      auto observer = shutdown_observer_;
-      shutdown_observer_ = nullptr;
-      return observer;
-    }
-
     // Returns whether all dispatchers owned by the driver have completed shutdown.
     bool CompletedShutdown() { return dispatchers_.is_empty(); }
 
@@ -509,6 +503,10 @@ class DispatcherCoordinator {
 
     // Returns whether there are dispatchers that have not yet been removed with |RemoveDispatcher|.
     bool HasDispatchers() { return !dispatchers_.is_empty() || !shutdown_dispatchers_.is_empty(); }
+
+    void ClearShutdownObserver() { shutdown_observer_ = nullptr; }
+
+    fdf_internal_driver_shutdown_observer_t* shutdown_observer() { return shutdown_observer_; }
 
    private:
     const void* driver_ = nullptr;

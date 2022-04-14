@@ -2030,6 +2030,48 @@ TEST_F(DispatcherTest, WaitUntilAllDispatchersDestroyedHasDriverShutdownObserver
   ASSERT_TRUE(wait_complete);
 }
 
+TEST_F(DispatcherTest, WaitUntilAllDispatchersDestroyedDuringDriverShutdownHandler) {
+  auto fake_driver = CreateFakeDriver();
+  driver_context::PushDriver(fake_driver);
+  auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
+  auto dispatcher = fdf::Dispatcher::Create(
+      0, [&](fdf_dispatcher_t* dispatcher) { fdf_dispatcher_destroy(dispatcher); });
+  ASSERT_FALSE(dispatcher.is_error());
+  dispatcher->release();  // Destroyed in shutdown handler.
+
+  // Block in the driver shutdown handler until we signal.
+  fdf_internal::DriverShutdown driver_shutdown;
+  libsync::Completion driver_shutdown_started;
+  libsync::Completion complete_driver_shutdown;
+  ASSERT_OK(driver_shutdown.Begin(fake_driver, [&](const void* driver) {
+    ASSERT_EQ(fake_driver, driver);
+    driver_shutdown_started.Signal();
+    ASSERT_OK(complete_driver_shutdown.Wait());
+  }));
+
+  ASSERT_OK(driver_shutdown_started.Wait());
+
+  // Start waiting for all dispatchers to be destroyed. This should not complete
+  // until the shutdown handler completes.
+  libsync::Completion thread_started;
+  std::atomic_bool wait_complete = false;
+  std::thread thread = std::thread([&]() {
+    thread_started.Signal();
+    fdf_internal_wait_until_all_dispatchers_destroyed();
+    wait_complete = true;
+  });
+
+  ASSERT_OK(thread_started.Wait());
+
+  // Shutdown handler has not returned yet.
+  ASSERT_FALSE(wait_complete);
+  complete_driver_shutdown.Signal();
+
+  thread.join();
+  ASSERT_TRUE(wait_complete);
+}
+
 //
 // Error handling
 //

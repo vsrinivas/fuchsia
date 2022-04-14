@@ -1028,17 +1028,30 @@ void DispatcherCoordinator::NotifyShutdown(Dispatcher& dispatcher) {
     if ((driver_state == drivers_.end()) || !driver_state->CompletedShutdown()) {
       return;
     }
-    observer = driver_state->TakeShutdownObserver();
-    // If the driver has completely shutdown, and all dispatchers have been destroyed,
-    // the driver state can also be destroyed.
-    if (!driver_state->HasDispatchers() && !driver_state->IsShuttingDown()) {
-      drivers_.erase(driver_state);
-    }
+
+    observer = driver_state->shutdown_observer();
+    // We should not clear |observer| from the driver state yet, as that would make
+    // it appear to other threads checking the driver state that the shutdown
+    // observer had already completed.
   }
+
   if (observer) {
     observer->handler(dispatcher.owner(), observer);
   }
+
   fbl::AutoLock lock(&lock_);
+
+  // Since the driver state was still set to shutting down, the driver state should
+  // not have been removed from drivers_ in the meanwhile.
+  auto driver_state = drivers_.find(dispatcher.owner());
+  ZX_ASSERT(driver_state != drivers_.end());
+
+  driver_state->ClearShutdownObserver();
+  // If the driver has completely shutdown, and all dispatchers have been destroyed,
+  // the driver state can also be destroyed.
+  if (!driver_state->HasDispatchers() && !driver_state->IsShuttingDown()) {
+    drivers_.erase(driver_state);
+  }
   if (drivers_.size() == 0) {
     drivers_destroyed_event_.Broadcast();
   }
