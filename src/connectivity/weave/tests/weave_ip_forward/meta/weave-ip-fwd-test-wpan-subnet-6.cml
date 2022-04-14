@@ -1,0 +1,75 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//src/connectivity/weave/tests/weave_ip_forward/meta/weave-ip-fwd-test.shard.cml" ],
+    program: {
+        netstacks: [
+            {
+                name: "fuchsia",
+                interfaces: [
+                    {
+                        name: "weave-f-ep",
+                        static_ips: [ "fdce:da10:7616:6::abcd" ],
+                        enable_ipv6_forwarding: "true",
+                    },
+                    {
+                        name: "wlan-f-ep",
+                        static_ips: [ "fdce:da10:7616:1::abcd" ],
+                        enable_ipv6_forwarding: "true",
+                    },
+                    {
+                        name: "wpan-f-ep",
+                        static_ips: [ "fdce:da10:7616:6:6617::abcd" ],
+                        enable_ipv6_forwarding: "true",
+                    },
+                ],
+            },
+            {
+                name: "weave",
+                interfaces: [
+                    {
+                        name: "weave-n-ep1",
+                        static_ips: [ "fdce:da10:7616:6:6616:6600:4734:b051/80" ],
+                        gateway: "fdce:da10:7616:6::abcd",
+                    },
+                    {
+                        name: "weave-n-ep2",
+                        static_ips: [ "fdce:da10:7616:7:6616:6600:4734:b052/80" ],
+                        gateway: "fdce:da10:7616:6::abcd",
+                    },
+                ],
+            },
+            {
+                name: "wlan",
+                interfaces: [
+                    {
+                        name: "wlan-n-ep",
+                        static_ips: [ "fdce:da10:7616:1:6616:6600:4734:1234/64" ],
+                        gateway: "fdce:da10:7616:1::abcd",
+                    },
+                ],
+            },
+            {
+                name: "wpan",
+                interfaces: [
+                    {
+                        name: "wpan-n-ep",
+                        static_ips: [ "fdce:da10:7616:6:6617:6600:4734:b053/80" ],
+                        gateway: "fdce:da10:7616:6:6617::abcd",
+                    },
+                ],
+            },
+        ],
+    },
+    children: [
+        {
+            name: "wlan-node",
+            url: "#meta/wlan-node-subnet-6.cm",
+        },
+        {
+            name: "wpan-node",
+            url: "#meta/wpan-node-subnet-6.cm",
+        },
+    ],
+}

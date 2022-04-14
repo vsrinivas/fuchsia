@@ -1,0 +1,154 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/connectivity/network/testing/netemul-v2/runner/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        networks: [
+            {
+                name: "weave-net",
+                endpoints: [
+                    { name: "weave-f-ep" },
+                    { name: "weave-n-ep1" },
+                    { name: "weave-n-ep2" },
+                ],
+            },
+            {
+                name: "wlan-net",
+                endpoints: [
+                    { name: "wlan-f-ep" },
+                    { name: "wlan-n-ep" },
+                ],
+            },
+            {
+                name: "wpan-net",
+                endpoints: [
+                    { name: "wpan-f-ep" },
+                    { name: "wpan-n-ep" },
+                ],
+            },
+        ],
+        start: [
+            "weave-node",
+            "wlan-node",
+            "wpan-node",
+        ],
+    },
+    children: [
+        {
+            name: "sync-manager",
+            url: "#meta/sync-manager.cm",
+        },
+
+        // ================== fuchsia node ==================
+        {
+            name: "fuchsia-node",
+            url: "#meta/fuchsia-node.cm",
+        },
+        {
+            name: "fuchsia-netstack",
+            url: "#meta/configurable-netstack.cm",
+        },
+
+        // =================== weave node ===================
+        {
+            name: "weave-node",
+            url: "#meta/weave-node.cm",
+        },
+        {
+            name: "weave-netstack",
+            url: "#meta/configurable-netstack.cm",
+        },
+
+        // =================== wlan node ====================
+        {
+            name: "wlan-netstack",
+            url: "#meta/configurable-netstack.cm",
+        },
+
+        // =================== wpan node ====================
+        {
+            name: "wpan-netstack",
+            url: "#meta/configurable-netstack.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#fuchsia-node",
+        },
+        {
+            protocol: "fuchsia.netemul.ConfigurableNetstack",
+            from: "#fuchsia-netstack",
+            path: "/svc/fuchsia",
+        },
+        {
+            protocol: "fuchsia.netemul.ConfigurableNetstack",
+            from: "#weave-netstack",
+            path: "/svc/weave",
+        },
+        {
+            protocol: "fuchsia.netemul.ConfigurableNetstack",
+            from: "#wlan-netstack",
+            path: "/svc/wlan",
+        },
+        {
+            protocol: "fuchsia.netemul.ConfigurableNetstack",
+            from: "#wpan-netstack",
+            path: "/svc/wpan",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#fuchsia-netstack",
+                "#fuchsia-node",
+                "#sync-manager",
+                "#weave-netstack",
+                "#weave-node",
+                "#wlan-netstack",
+                "#wlan-node",
+                "#wpan-netstack",
+                "#wpan-node",
+            ],
+        },
+        {
+            protocol: "fuchsia.netemul.sync.SyncManager",
+            from: "#sync-manager",
+            to: [
+                "#fuchsia-node",
+                "#weave-node",
+                "#wlan-node",
+                "#wpan-node",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.stack.Stack",
+            ],
+            from: "#fuchsia-netstack",
+            to: "#fuchsia-node",
+        },
+        {
+            protocol: "fuchsia.posix.socket.Provider",
+            from: "#weave-netstack",
+            to: "#weave-node",
+        },
+        {
+            protocol: "fuchsia.posix.socket.Provider",
+            from: "#wlan-netstack",
+            to: "#wlan-node",
+        },
+        {
+            protocol: "fuchsia.posix.socket.Provider",
+            from: "#wpan-netstack",
+            to: "#wpan-node",
+        },
+    ],
+}

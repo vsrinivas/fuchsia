@@ -1,0 +1,24 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/elf_stdio.shard.cml" ],
+    program: {
+        binary: "bin/weave_ip_forward",
+        args: [
+            "wlan-node",
+            "[fdce:da10:7616:6:6616:6600:4734:b051]:8080",
+            "[fdce:da10:7616:7:6616:6600:4734:b052]:8081",
+            "[fdce:da10:7616:6:6617:6600:4734:b053]:8002",
+        ],
+    },
+    use: [
+        {
+            protocol: [
+                "fuchsia.netemul.sync.SyncManager",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "parent",
+        },
+    ],
+}

@@ -29,34 +29,63 @@ rustc_binary("bin") {
   ]
 }
 
-fuchsia_component("weave-ip-forward") {
-  testonly = true
-  manifest = "meta/weave_ip_forward.cmx"
+fuchsia_test_component("fuchsia-node") {
+  manifest = "meta/fuchsia-node.cml"
   deps = [ ":bin" ]
 }
 
-fuchsia_component("weave-ip-fwd-test-wpan-subnet-6") {
-  testonly = true
-  manifest = "meta/weave_ip_fwd_test_wpan_subnet_6.cmx"
-  deps = [ ":weave-ip-forward" ]
+fuchsia_test_component("weave-node") {
+  manifest = "meta/weave-node.cml"
+  deps = [ ":bin" ]
 }
 
-fuchsia_component("weave-ip-fwd-test-wpan-non-subnet-6") {
-  testonly = true
-  manifest = "meta/weave_ip_fwd_test_wpan_non_subnet_6.cmx"
-  deps = [ ":weave-ip-forward" ]
+fuchsia_test_component("wlan-node-non-subnet-6") {
+  manifest = "meta/wlan-node-non-subnet-6.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_test_component("wpan-node-non-subnet-6") {
+  manifest = "meta/wpan-node-non-subnet-6.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_test_component("weave-ip-fwd-test-wpan-non-subnet-6") {
+  manifest = "meta/weave-ip-fwd-test-wpan-non-subnet-6.cml"
+  deps = [
+    ":fuchsia-node",
+    ":weave-node",
+    ":wlan-node-non-subnet-6",
+    ":wpan-node-non-subnet-6",
+    "//src/connectivity/network/testing/netemul-v2/configurable-netstack",
+    "//src/connectivity/network/testing/netemul-v2/sync-manager",
+  ]
+}
+
+fuchsia_test_component("wlan-node-subnet-6") {
+  manifest = "meta/wlan-node-subnet-6.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_test_component("wpan-node-subnet-6") {
+  manifest = "meta/wpan-node-subnet-6.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_test_component("weave-ip-fwd-test-wpan-subnet-6") {
+  manifest = "meta/weave-ip-fwd-test-wpan-subnet-6.cml"
+  deps = [
+    ":fuchsia-node",
+    ":weave-node",
+    ":wlan-node-subnet-6",
+    ":wpan-node-subnet-6",
+    "//src/connectivity/network/testing/netemul-v2/configurable-netstack",
+    "//src/connectivity/network/testing/netemul-v2/sync-manager",
+  ]
 }
 
 fuchsia_test_package("weave-ip-fwd-tests") {
   test_components = [
     ":weave-ip-fwd-test-wpan-non-subnet-6",
     ":weave-ip-fwd-test-wpan-subnet-6",
-  ]
-  deps = [
-    # netstack is under test.
-    "//src/connectivity/network/netstack:component-debug-legacy",
-
-    # netstack-cfg is used to set up test environments.
-    "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
   ]
 }
