@@ -170,6 +170,7 @@ if (toolchain_environment == "kernel.phys32") {
       "//zircon/kernel/lib/acpi_lite",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/boot-options",
+      "//zircon/kernel/phys:acpi",
       "//zircon/kernel/phys:main",
       "//zircon/kernel/phys:page-table",
       "//zircon/kernel/phys:symbolize",

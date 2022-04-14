@@ -8,35 +8,16 @@
 
 #include <lib/acpi_lite.h>
 
+#include <phys/acpi.h>
 #include <phys/symbolize.h>
 
 #include "legacy-boot-shim.h"
 
 void InitAcpi(LegacyBootShim& shim) {
-  class PhysPhysMemReader final : public acpi_lite::PhysMemReader {
-   public:
-    constexpr PhysPhysMemReader() = default;
-
-    zx::status<const void*> PhysToPtr(uintptr_t phys, size_t length) final {
-      return zx::success(reinterpret_cast<const void*>(phys));
-    }
-  };
-
-  // If the RSDP address is 0, AcpiParser::Init will try to find it by magic.
-  uint64_t rsdp = gLegacyBoot.acpi_rsdp;
-
-  if (static_cast<uintptr_t>(rsdp) != rsdp) {
-    printf("%s: ACPI tables (%#" PRIx64 ") were reportedly not found within the lower 4GiB\n",
-           ProgramName(), rsdp);
-    return;
-  }
-
-  PhysPhysMemReader mem_reader;
-  auto acpi_parser = acpi_lite::AcpiParser::Init(mem_reader, static_cast<zx_paddr_t>(rsdp));
-  if (acpi_parser.is_ok()) {
-    shim.InitAcpi(acpi_parser.value());
+  if (auto acpi_parser_or = MakeAcpiParser(gLegacyBoot.acpi_rsdp); acpi_parser_or.is_ok()) {
+    shim.InitAcpi(*acpi_parser_or);
   } else {
     printf("%s: Cannot find ACPI tables (%" PRId32 ") from %#" PRIx64 "\n", ProgramName(),
-           acpi_parser.error_value(), rsdp);
+           acpi_parser_or.error_value(), gLegacyBoot.acpi_rsdp);
   }
 }

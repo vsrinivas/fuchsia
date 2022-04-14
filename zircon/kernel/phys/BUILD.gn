@@ -257,6 +257,23 @@ if (toolchain_environment == "kernel.phys" ||
     sources = [ "stdio.cc" ]
   }
 
+  source_set("acpi") {
+    sources = [ "acpi.cc" ]
+    public = [ "include/phys/acpi.h" ]
+    public_deps = [
+      "//zircon/kernel/lib/acpi_lite",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+      "//zircon/system/ulib/zxc",
+    ]
+    public_configs = [ ":includes" ]
+
+    deps = [
+      ":symbolize",
+      "//zircon/system/ulib/fbl",
+    ]
+  }
+
   source_set("uart") {
     public = [ "include/phys/uart.h" ]
 
