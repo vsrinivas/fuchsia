@@ -151,6 +151,29 @@ Do the following:
    cd getting-started
    ```
 
+1. To verify the Fuchsia SDK environment setup, build the sample components:
+
+   Note: If it doesn't exist already, the `bazel build` command below creates the
+   `~/.package_repos/sdk-samples` directory on your host machine. This directory is used
+   for storing and serving Fuchsia packages in this guide.
+
+   ```posix-terminal
+   bazel build --config=fuchsia_x64 //src/hello_world:pkg --publish_to=$HOME/.package_repos/sdk-samples
+   ```
+
+   The first build may take a few minutes to download dependencies,
+   such as [Clang][clang]{:.external} and [Fuchsia IDK][fuchsia-idk].
+
+   When finished successfully, it prints output similar to the following in the end:
+
+   ```none {:.devsite-disable-click-to-copy}
+   $ bazel build --config=fuchsia_x64 //src/hello_world:pkg --publish_to=$HOME/.package_repos/sdk-samples
+   ...
+   INFO: Elapsed time: 70.715s, Critical Path: 1.87s
+   INFO: 43 processes: 28 internal, 13 linux-sandbox, 2 local.
+   INFO: Build completed successfully, 43 total actions
+   ```
+
 1. To verify that you can use the `ffx` tool in your environment,
    run the following command:
 
@@ -181,29 +204,6 @@ Do the following:
    located (for instance, `export PATH="$PATH:$HOME/getting-started/tools"`).
    Otherwise, use the fully-qualified path to the `ffx` that is bundled with the
    samples to ensure you’re running the right tools.
-
-1. To verify the Fuchsia SDK environment setup, build the sample components:
-
-   Note: If it doesn't exist already, the `bazel build` command below creates the
-   `~/.package_repos/sdk-samples` directory on your host machine. This directory is used
-   for storing and serving Fuchsia packages in this guide.
-
-   ```posix-terminal
-   bazel build --config=fuchsia_x64 //src/hello_world:pkg --publish_to=$HOME/.package_repos/sdk-samples
-   ```
-
-   The first build may take a few minutes to download dependencies,
-   such as [Clang][clang]{:.external} and [Fuchsia IDK][fuchsia-idk].
-
-   When finished successfully, it prints output similar to the following in the end:
-
-   ```none {:.devsite-disable-click-to-copy}
-   $ bazel build --config=fuchsia_x64 //src/hello_world:pkg --publish_to=$HOME/.package_repos/sdk-samples
-   ...
-   INFO: Elapsed time: 70.715s, Critical Path: 1.87s
-   INFO: 43 processes: 28 internal, 13 linux-sandbox, 2 local.
-   INFO: Build completed successfully, 43 total actions
-   ```
 
 ## 3. Start the emulator {:#start-the-emulator}
 
