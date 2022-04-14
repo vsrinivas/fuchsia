@@ -40,6 +40,19 @@ namespace test_driveroneway {
 
 #ifdef __Fuchsia__
 }  // namespace test_driveroneway
+::fidl::Status
+fidl::internal::WireWeakOnewayClientImpl<::test_driveroneway::OneWay>::Send(
+    const ::test_driveroneway::wire::Payload& payload) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>
+      _request_object{payload};
+  ::fidl::unstable::OwnedEncodedMessage<
+      ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>,
+      ::fidl::internal::DriverTransport>
+      _request_message(::fidl::internal::AllowUnownedInputRef{},
+                       &_request_object);
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
+}
 ::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_driveroneway::OneWay>::Send(const ::test_driveroneway::wire::Payload&
                                            payload) {

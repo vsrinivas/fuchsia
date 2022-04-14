@@ -299,6 +299,30 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 };
+
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_driveroneway::OneWay>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  WireWeakOnewayClientImpl(fidl::internal::ClientBase* client_base,
+                           const fdf::Arena& arena)
+      : ClientImplBase(client_base), arena_(arena) {}
+
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::Status Send(const ::test_driveroneway::wire::Payload& payload);
+
+ protected:
+  const ::fdf::Arena& arena_;
+};
+
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<::test_driveroneway::OneWay>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_driveroneway::OneWay> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+};
 namespace fidl {
 #endif  // __Fuchsia__
 

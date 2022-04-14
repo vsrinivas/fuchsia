@@ -69,6 +69,20 @@ fidl::internal::WireWeakAsyncBufferClientImpl<::test_drivertwoway::TwoWay>::Add(
   return ::fidl::internal::WireBufferThenable<::test_drivertwoway::TwoWay::Add>{
       _client_base(), std::move(_options), _buffer, _buffer_size, &_request};
 }
+
+::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add>
+fidl::internal::WireWeakSyncClientImpl<::test_drivertwoway::TwoWay>::Add(
+    uint16_t addend1, uint16_t addend2) {
+  return _client_base()->MakeSyncCallWith(
+      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+        ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>
+            _request{addend1, addend2};
+        return ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add>(
+            ::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay>(
+                _transport->get<::fidl::internal::DriverTransport>()),
+            arena_, &_request);
+      });
+}
 namespace test_drivertwoway {
 #endif  // __Fuchsia__
 

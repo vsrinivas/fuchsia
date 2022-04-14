@@ -1,0 +1,33 @@
+{{/*
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+*/}}
+
+{{- define "Method:WireWeakSyncClientImpl:driver/WireMessagingHeader" }}
+  {{- .Docs }}
+  {{ if .DocComments }}
+    //
+  {{- end }}
+  // {{- template "Method:ClientAllocationComment:Helper" . }}
+  {{ .WireUnownedResult }} {{ .Name }}({{ RenderParams .RequestArgs }});
+{{- end }}
+
+
+
+{{- define "Method:WireWeakSyncClientImpl:driver/WireMessagingSource" }}
+  {{ EnsureNamespace "" }}
+
+  {{ .WireUnownedResult }}
+  {{ .Protocol.WireWeakSyncClientImpl.NoLeading }}::{{ .Name }}({{ RenderParams .RequestArgs }}) {
+    return _client_base()->MakeSyncCallWith(
+        [&] (std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
+          {{ .WireTransactionalRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
+          {{- $transport := (printf
+              "::%s::UnownedClientEnd<%s>(_transport->get<%s>())"
+              .Transport.Namespace .Protocol .Transport.Type) }}
+          return {{ .WireUnownedResult }}({{- RenderForwardParams (List $transport "arena_" "&_request") }});
+        });
+  }
+
+{{- end }}

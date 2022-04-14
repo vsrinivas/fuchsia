@@ -26,6 +26,24 @@
 
 namespace fdf {
 
+namespace internal {
+
+// Helper to chain .sync().buffer(*)->Foo(..)
+template <typename Protocol>
+class WireSyncBufferNeededVeneer {
+ public:
+  explicit WireSyncBufferNeededVeneer(fidl::internal::ClientBase* client_base)
+      : client_base_(client_base) {}
+  auto buffer(const fdf::Arena& arena) const {
+    return fidl::internal::Arrow<fidl::internal::WireWeakSyncClientImpl<Protocol>>{client_base_,
+                                                                                   arena};
+  }
+
+ private:
+  fidl::internal::ClientBase* client_base_;
+};
+}  // namespace internal
+
 // |fdf::WireClient| is a client for sending and receiving FIDL wire messages
 // over the driver transport. It exposes similar looking interfaces as
 // |fidl::WireClient|, but has driver-specific concepts such as arenas and
@@ -157,6 +175,16 @@ class WireClient {
     ZX_ASSERT(is_valid());
     return fidl::internal::Arrow<fidl::internal::WireWeakAsyncBufferClientImpl<Protocol>>(&get(),
                                                                                           arena);
+  }
+
+  // Returns a veneer object exposing synchronous calls. Example:
+  //
+  //     fdf::WireClient client(std::move(client_end), some_dispatcher);
+  //     fdf::WireResult result = client.sync().buffer(...)->FooMethod(args);
+  //
+  auto sync() const {
+    ZX_ASSERT(is_valid());
+    return fdf::internal::WireSyncBufferNeededVeneer<Protocol>(&get());
   }
 
  private:
@@ -350,6 +378,16 @@ class WireSharedClient final {
     ZX_ASSERT(is_valid());
     return fidl::internal::Arrow<fidl::internal::WireWeakAsyncBufferClientImpl<Protocol>>(&get(),
                                                                                           arena);
+  }
+
+  // Returns a veneer object exposing synchronous calls. Example:
+  //
+  //     fidl::WireClient client(std::move(client_end), some_dispatcher);
+  //     fidl::WireResult result = client.sync().buffer(...)->FooMethod(args);
+  //
+  auto sync() const {
+    ZX_ASSERT(is_valid());
+    return fdf::internal::WireSyncBufferNeededVeneer<Protocol>(&get());
   }
 
  private:

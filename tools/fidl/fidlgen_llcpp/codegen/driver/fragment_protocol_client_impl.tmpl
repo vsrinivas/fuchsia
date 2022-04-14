@@ -28,6 +28,30 @@ class {{ .WireWeakAsyncBufferClientImpl }} final : public {{ .WireWeakOnewayBuff
   {{- end }}
 };
 
+template<>
+class {{ .WireWeakOnewayClientImpl }} : public ::fidl::internal::ClientImplBase {
+ public:
+  WireWeakOnewayClientImpl(fidl::internal::ClientBase* client_base, const fdf::Arena& arena)
+    : ClientImplBase(client_base), arena_(arena) {}
+
+  {{- range .OneWayMethods }}
+    {{- template "Method:WireWeakOnewayClientImpl:WireMessagingHeader" . }}
+  {{- end }}
+
+  protected:
+  const ::fdf::Arena& arena_;
+};
+
+template<>
+class {{ .WireWeakSyncClientImpl }} final : public {{ .WireWeakOnewayClientImpl }} {
+ public:
+  using {{ .WireWeakOnewayClientImpl.Self }}::{{ .WireWeakOnewayClientImpl.Self }};
+
+  {{- range .TwoWayMethods }}
+    {{- template "Method:WireWeakSyncClientImpl:driver/WireMessagingHeader" . }}
+  {{- end }}
+};
+
 {{- EndifFuchsia -}}
 {{- end }}
 
@@ -38,10 +62,17 @@ class {{ .WireWeakAsyncBufferClientImpl }} final : public {{ .WireWeakOnewayBuff
   {{ EnsureNamespace ""}}
 
   {{- range .OneWayMethods }}
+    {{- template "Method:WireWeakOnewayClientImpl:WireMessagingSource" . }}
+  {{- end }}
+  {{- range .OneWayMethods }}
     {{- template "Method:ClientImplOnewayBuffer:driver/MessagingSource" . }}
   {{- end }}
   {{- range .TwoWayMethods }}
     {{- template "Method:ClientImplAsyncBuffer:driver/MessagingSource" . }}
+  {{- end }}
+
+  {{- range .TwoWayMethods }}
+    {{- template "Method:WireWeakSyncClientImpl:driver/WireMessagingSource" . }}
   {{- end }}
 
   {{- EndifFuchsia -}}

@@ -520,6 +520,31 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
   ::fidl::internal::WireBufferThenable<::test_drivertwoway::TwoWay::Add> Add(
       uint16_t addend1, uint16_t addend2);
 };
+
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_drivertwoway::TwoWay>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  WireWeakOnewayClientImpl(fidl::internal::ClientBase* client_base,
+                           const fdf::Arena& arena)
+      : ClientImplBase(client_base), arena_(arena) {}
+
+ protected:
+  const ::fdf::Arena& arena_;
+};
+
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<::test_drivertwoway::TwoWay>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_drivertwoway::TwoWay> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> Add(
+      uint16_t addend1, uint16_t addend2);
+};
 namespace fidl {
 #endif  // __Fuchsia__
 

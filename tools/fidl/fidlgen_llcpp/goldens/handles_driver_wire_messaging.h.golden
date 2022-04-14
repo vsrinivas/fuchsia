@@ -162,6 +162,26 @@ class ::fidl::internal::WireWeakAsyncBufferClientImpl<
  public:
   using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 };
+
+template <>
+class ::fidl::internal::WireWeakOnewayClientImpl<::test_handles::DriverProtocol>
+    : public ::fidl::internal::ClientImplBase {
+ public:
+  WireWeakOnewayClientImpl(fidl::internal::ClientBase* client_base,
+                           const fdf::Arena& arena)
+      : ClientImplBase(client_base), arena_(arena) {}
+
+ protected:
+  const ::fdf::Arena& arena_;
+};
+
+template <>
+class ::fidl::internal::WireWeakSyncClientImpl<::test_handles::DriverProtocol>
+    final : public ::fidl::internal::WireWeakOnewayClientImpl<
+                ::test_handles::DriverProtocol> {
+ public:
+  using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
+};
 namespace fidl {
 #endif  // __Fuchsia__
 
