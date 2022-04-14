@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        mode_management::iface_manager::wpa3_in_features, regulatory_manager::REGION_CODE_LEN,
-    },
+    crate::{mode_management::iface_manager::wpa3_supported, regulatory_manager::REGION_CODE_LEN},
     async_trait::async_trait,
     eui48::MacAddress,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_device_service as fidl_service,
@@ -49,9 +47,9 @@ pub enum CreateClientIfacesReason {
 /// Stores information about a WLAN PHY and any interfaces that belong to it.
 pub(crate) struct PhyContainer {
     supported_mac_roles: HashSet<fidl_common::WlanMacRole>,
-    // Driver features are tracked for each interface so that callers can request an interface
-    // based on capabilities.
-    client_ifaces: HashMap<u16, Vec<fidl_common::DriverFeature>>,
+    // Security support is tracked for each interface so that callers can request an interface
+    // based on security features (e.g. for WPA3).
+    client_ifaces: HashMap<u16, fidl_common::SecuritySupport>,
     ap_ifaces: HashSet<u16>,
 }
 
@@ -230,19 +228,19 @@ impl PhyManager {
             .collect()
     }
 
-    async fn get_iface_driver_features(
+    async fn get_iface_security_support(
         &self,
         iface_id: u16,
-    ) -> Result<Vec<fidl_common::DriverFeature>, PhyManagerError> {
-        // Get the driver features for this iface.
-        let (status, iface_info) = self
+    ) -> Result<fidl_common::SecuritySupport, PhyManagerError> {
+        let (status, security_support) = self
             .device_service
-            .query_iface(iface_id)
+            .query_security_support(iface_id)
             .await
             .map_err(|_| PhyManagerError::IfaceQueryFailure)?;
         fuchsia_zircon::ok(status).map_err(|_| PhyManagerError::IfaceQueryFailure)?;
-        let iface_info = iface_info.ok_or_else(|| PhyManagerError::IfaceQueryFailure)?;
-        Ok(iface_info.driver_features)
+        let security_support =
+            security_support.ok_or_else(|| PhyManagerError::IfaceQueryFailure)?;
+        Ok(*security_support)
     }
 }
 
@@ -291,10 +289,9 @@ impl PhyManagerApi for PhyManager {
                 NULL_MAC_ADDR,
             )
             .await?;
-            // Find out the capabilities of the iface.
-            let driver_features = self.get_iface_driver_features(iface_id).await?;
-            if let Some(_) = phy_container.client_ifaces.insert(iface_id, driver_features) {
-                warn!("Unexpectedly replaced existing iface information for id {}", iface_id);
+            let security_support = self.get_iface_security_support(iface_id).await?;
+            if let Some(_) = phy_container.client_ifaces.insert(iface_id, security_support) {
+                warn!("Unexpectedly replaced existing iface security support for id {}", iface_id);
             };
         }
 
@@ -320,17 +317,17 @@ impl PhyManagerApi for PhyManager {
 
     async fn on_iface_added(&mut self, iface_id: u16) -> Result<(), PhyManagerError> {
         if let Some(query_iface_response) = self.query_iface(iface_id).await? {
-            let phy = self.ensure_phy(query_iface_response.phy_id).await?;
             let iface_id = query_iface_response.id;
-            let driver_features = query_iface_response.driver_features;
+            let security_support = query_security_support(&self.device_service, iface_id).await?;
+            let phy = self.ensure_phy(query_iface_response.phy_id).await?;
 
             match query_iface_response.role {
                 fidl_common::WlanMacRole::Client => {
-                    if let Some(old_driver_features) =
-                        phy.client_ifaces.insert(iface_id, driver_features.clone())
+                    if let Some(old_security_support) =
+                        phy.client_ifaces.insert(iface_id, security_support)
                     {
-                        if old_driver_features != driver_features {
-                            warn!("Driver features changed unexpectedly for id {}", iface_id);
+                        if old_security_support != security_support {
+                            warn!("Security support changed unexpectedly for id {}", iface_id);
                         }
                     } else {
                         // The iface wasn't in the hashmap, so it was created by someone else
@@ -405,13 +402,19 @@ impl PhyManagerApi for PhyManager {
                             continue;
                         }
                     };
-                    let driver_features = get_iface_driver_features(&self.device_service, iface_id)
+                    let security_support = query_security_support(&self.device_service, iface_id)
                         .await
                         .unwrap_or_else(|e| {
-                            error!("Error occurred getting iface driver features: {}", e);
-                            Vec::new()
+                            error!("Error occurred getting iface security support: {}", e);
+                            fidl_common::SecuritySupport {
+                                sae: fidl_common::SaeFeature {
+                                    driver_handler_supported: false,
+                                    sme_handler_supported: false,
+                                },
+                                mfp: fidl_common::MfpFeature { supported: false },
+                            }
                         });
-                    let _ = phy_container.client_ifaces.insert(iface_id, driver_features);
+                    let _ = phy_container.client_ifaces.insert(iface_id, security_support);
                 }
 
                 // Regardless of whether or not new interfaces were created or existing interfaces
@@ -445,12 +448,12 @@ impl PhyManagerApi for PhyManager {
             // Continue tracking interface IDs for which deletion fails.
             let mut lingering_ifaces = HashMap::new();
 
-            for (iface_id, driver_features) in phy_container.client_ifaces.drain() {
+            for (iface_id, security_support) in phy_container.client_ifaces.drain() {
                 match destroy_iface(&self.device_monitor, iface_id).await {
                     Ok(()) => {}
                     Err(e) => {
                         result = Err(e);
-                        if let Some(_) = lingering_ifaces.insert(iface_id, driver_features) {
+                        if let Some(_) = lingering_ifaces.insert(iface_id, security_support) {
                             warn!("Unexpected duplicate lingering iface for id {}", iface_id);
                         };
                     }
@@ -481,10 +484,10 @@ impl PhyManagerApi for PhyManager {
     }
 
     fn get_wpa3_capable_client(&mut self) -> Option<u16> {
-        // Search phys for a client iface with the driver feature indicating WPA3 support.
+        // Search phys for a client iface with security support indicating WPA3 support.
         for (_, phy) in self.phys.iter() {
-            for (iface_id, driver_features) in phy.client_ifaces.iter() {
-                if wpa3_in_features(&driver_features) {
+            for (iface_id, security_support) in phy.client_ifaces.iter() {
+                if wpa3_supported(*security_support) {
                     return Some(*iface_id);
                 }
             }
@@ -610,10 +613,10 @@ impl PhyManagerApi for PhyManager {
 
     // Returns whether at least one of phy's iface supports WPA3.
     fn has_wpa3_client_iface(&self) -> bool {
-        // Search phys for a client iface with the driver feature indicating WPA3 support.
+        // Search phys for a client iface with security support indicating WPA3 support.
         for (_, phy) in self.phys.iter() {
-            for (_, driver_features) in phy.client_ifaces.iter() {
-                if wpa3_in_features(driver_features) {
+            for (_, security_support) in phy.client_ifaces.iter() {
+                if wpa3_supported(*security_support) {
                     return true;
                 }
             }
@@ -684,16 +687,22 @@ async fn destroy_iface(
     }
 }
 
-async fn get_iface_driver_features(
+async fn query_security_support(
     proxy: &fidl_service::DeviceServiceProxy,
     iface_id: u16,
-) -> Result<Vec<fidl_common::DriverFeature>, PhyManagerError> {
-    // Get the driver features for this iface.
-    let (status, iface_info) =
-        proxy.query_iface(iface_id).await.map_err(|_| PhyManagerError::IfaceQueryFailure)?;
+) -> Result<fidl_common::SecuritySupport, PhyManagerError> {
+    let (status, security_support) = proxy
+        .query_security_support(iface_id)
+        .await
+        .map_err(|_| PhyManagerError::IfaceQueryFailure)?;
     fuchsia_zircon::ok(status).map_err(|_| PhyManagerError::IfaceQueryFailure)?;
-    let iface_info = iface_info.ok_or_else(|| PhyManagerError::IfaceQueryFailure)?;
-    Ok(iface_info.driver_features)
+    match security_support {
+        Some(security_support) => Ok(*security_support),
+        None => {
+            warn!("Security support unavailable for iface {}", iface_id);
+            Err(PhyManagerError::IfaceQueryFailure)
+        }
+    }
 }
 
 async fn set_phy_country_code(
@@ -829,6 +838,26 @@ mod tests {
         );
     }
 
+    /// Serve the given security support for unit testing.
+    #[track_caller]
+    fn send_security_support(
+        exec: &mut TestExecutor,
+        server: &mut fidl_service::DeviceServiceRequestStream,
+        security_support: Option<&mut fidl_common::SecuritySupport>,
+    ) {
+        assert_variant!(
+            exec.run_until_stalled(&mut server.next()),
+            Poll::Ready(Some(Ok(
+                fidl_service::DeviceServiceRequest::QuerySecuritySupport {
+                    iface_id: _,
+                    responder,
+                }
+            ))) => {
+                responder.send(ZX_OK, security_support).expect("sending fake security support");
+            }
+        );
+    }
+
     /// Handles the service side of a DeviceMonitor::CreateIface request by replying with the
     /// provided optional iface ID.
     #[track_caller]
@@ -888,7 +917,6 @@ mod tests {
         phy_id: u16,
         phy_assigned_id: u16,
         mac: [u8; 6],
-        driver_features: Vec<fidl_common::DriverFeature>,
     ) -> fidl_service::QueryIfaceResponse {
         fidl_service::QueryIfaceResponse {
             role: role,
@@ -896,7 +924,18 @@ mod tests {
             phy_id: phy_id,
             phy_assigned_id: phy_assigned_id,
             sta_addr: mac,
-            driver_features,
+            driver_features: Vec::new(),
+        }
+    }
+
+    /// Create an empty security support structure.
+    fn fake_security_support() -> fidl_common::SecuritySupport {
+        fidl_common::SecuritySupport {
+            mfp: fidl_common::MfpFeature { supported: false },
+            sae: fidl_common::SaeFeature {
+                driver_handler_supported: false,
+                sme_handler_supported: false,
+            },
         }
     }
 
@@ -1032,18 +1071,6 @@ mod tests {
         let fake_phy_id = 1;
         let fake_mac_roles = vec![fidl_common::WlanMacRole::Client];
 
-        let fake_phy_assigned_id = 0;
-        let fake_sta_addr = [0, 0, 0, 0, 0, 0];
-        let driver_features = vec![fidl_common::DriverFeature::SaeDriverAuth];
-        let mut iface_response = create_iface_response(
-            fidl_common::WlanMacRole::Client,
-            fake_iface_id,
-            fake_phy_id,
-            fake_phy_assigned_id,
-            fake_sta_addr,
-            driver_features.clone(),
-        );
-
         {
             let start_connections_fut = phy_manager
                 .create_all_client_ifaces(CreateClientIfacesReason::StartClientConnections);
@@ -1074,10 +1101,10 @@ mod tests {
 
             assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
 
-            send_query_iface_response(
+            send_security_support(
                 &mut exec,
                 &mut test_values.dev_svc_stream,
-                Some(&mut iface_response),
+                Some(&mut fake_security_support()),
             );
 
             assert!(exec.run_until_stalled(&mut add_phy_fut).is_ready());
@@ -1086,7 +1113,7 @@ mod tests {
         assert!(phy_manager.phys.contains_key(&fake_phy_id));
         let phy_container = phy_manager.phys.get(&fake_phy_id).unwrap();
         assert!(phy_container.client_ifaces.contains_key(&fake_iface_id));
-        assert_eq!(phy_container.client_ifaces.get(&fake_iface_id), Some(&driver_features));
+        assert_eq!(phy_container.client_ifaces.get(&fake_iface_id), Some(&fake_security_support()));
     }
 
     /// Tests the case where a new PHY is discovered after the country code has been set.
@@ -1201,14 +1228,12 @@ mod tests {
         let fake_iface_id = 1;
         let fake_phy_assigned_id = 1;
         let fake_sta_addr = [0, 1, 2, 3, 4, 5];
-        let driver_features = Vec::new();
         let mut iface_response = create_iface_response(
             fake_role,
             fake_iface_id,
             fake_phy_id,
             fake_phy_assigned_id,
             fake_sta_addr,
-            driver_features,
         );
 
         {
@@ -1224,6 +1249,14 @@ mod tests {
                 &mut exec,
                 &mut test_values.dev_svc_stream,
                 Some(&mut iface_response),
+            );
+
+            assert!(exec.run_until_stalled(&mut on_iface_added_fut).is_pending());
+
+            send_security_support(
+                &mut exec,
+                &mut test_values.dev_svc_stream,
+                Some(&mut fake_security_support()),
             );
 
             // Wait for the PhyManager to finish processing the received iface information
@@ -1257,14 +1290,12 @@ mod tests {
         let fake_iface_id = 1;
         let fake_phy_assigned_id = 1;
         let fake_sta_addr = [0, 1, 2, 3, 4, 5];
-        let driver_features = Vec::new();
         let mut iface_response = create_iface_response(
             fake_role,
             fake_iface_id,
             fake_phy_id,
             fake_phy_assigned_id,
             fake_sta_addr,
-            driver_features,
         );
 
         {
@@ -1282,6 +1313,14 @@ mod tests {
                 &mut exec,
                 &mut test_values.dev_svc_stream,
                 Some(&mut iface_response),
+            );
+
+            assert!(exec.run_until_stalled(&mut on_iface_added_fut).is_pending());
+
+            send_security_support(
+                &mut exec,
+                &mut test_values.dev_svc_stream,
+                Some(&mut fake_security_support()),
             );
 
             // And then the PHY information is queried.
@@ -1329,14 +1368,12 @@ mod tests {
         let fake_iface_id = 1;
         let fake_phy_assigned_id = 1;
         let fake_sta_addr = [0, 1, 2, 3, 4, 5];
-        let driver_features = Vec::new();
         let mut iface_response = create_iface_response(
             fake_role,
             fake_iface_id,
             fake_phy_id,
             fake_phy_assigned_id,
             fake_sta_addr,
-            driver_features,
         );
 
         // Add the same iface ID twice
@@ -1350,6 +1387,14 @@ mod tests {
                 &mut exec,
                 &mut test_values.dev_svc_stream,
                 Some(&mut iface_response),
+            );
+
+            assert!(exec.run_until_stalled(&mut on_iface_added_fut).is_pending());
+
+            send_security_support(
+                &mut exec,
+                &mut test_values.dev_svc_stream,
+                Some(&mut fake_security_support()),
             );
 
             // Wait for the PhyManager to finish processing the received iface information
@@ -1407,8 +1452,7 @@ mod tests {
         // Inject the fake PHY information
         let mut phy_container = PhyContainer::new(fake_mac_roles);
         let fake_iface_id = 1;
-        let driver_features = Vec::new();
-        let _ = phy_container.client_ifaces.insert(fake_iface_id, driver_features);
+        let _ = phy_container.client_ifaces.insert(fake_iface_id, fake_security_support());
 
         let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
@@ -1438,8 +1482,8 @@ mod tests {
 
         // Inject the fake PHY information
         let mut phy_container = PhyContainer::new(fake_mac_roles);
-        let _ = phy_container.client_ifaces.insert(present_iface_id, Vec::new());
-        let _ = phy_container.client_ifaces.insert(removed_iface_id, Vec::new());
+        let _ = phy_container.client_ifaces.insert(present_iface_id, fake_security_support());
+        let _ = phy_container.client_ifaces.insert(removed_iface_id, fake_security_support());
         let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
         phy_manager.on_iface_removed(removed_iface_id);
 
@@ -1504,8 +1548,7 @@ mod tests {
         // Insert the fake iface
         let fake_iface_id = 1;
         let phy_container = phy_manager.phys.get_mut(&fake_phy_id).unwrap();
-        let driver_features = Vec::new();
-        let _ = phy_container.client_ifaces.insert(fake_iface_id, driver_features);
+        let _ = phy_container.client_ifaces.insert(fake_iface_id, fake_security_support());
 
         // Retrieve the client ID
         let client = phy_manager.get_client();
@@ -1555,8 +1598,7 @@ mod tests {
         let fake_phy_id_client = 2;
         let fake_mac_roles_client = vec![fidl_common::WlanMacRole::Client];
         let mut phy_container_client = PhyContainer::new(fake_mac_roles_client);
-        let driver_features = Vec::new();
-        let _ = phy_container_client.client_ifaces.insert(2, driver_features);
+        let _ = phy_container_client.client_ifaces.insert(2, fake_security_support());
         let _ = phy_manager.phys.insert(fake_phy_id_client, phy_container_client);
 
         // Retrieve the client ID
@@ -1567,10 +1609,19 @@ mod tests {
     /// Tests the response of the PhyManager when a wpa3 capable client iface is requested and
     /// a matching client iface is present.  The expectation is that the PhyManager should reply
     /// with the iface ID of the client iface.
-    #[test_case(vec![fidl_common::DriverFeature::SaeDriverAuth, fidl_common::DriverFeature::Mfp])]
-    #[test_case(vec![fidl_common::DriverFeature::SaeSmeAuth, fidl_common::DriverFeature::Mfp])]
+    #[test_case(true, true, false)]
+    #[test_case(true, false, true)]
+    #[test_case(true, true, true)]
     #[fuchsia::test(add_test_attr = false)]
-    fn get_configured_wpa3_client(wpa3_features: Vec<fidl_common::DriverFeature>) {
+    fn get_configured_wpa3_client(
+        mfp_supported: bool,
+        sae_driver_handler_supported: bool,
+        sae_sme_handler_supported: bool,
+    ) {
+        let mut security_support = fake_security_support();
+        security_support.mfp.supported = mfp_supported;
+        security_support.sae.driver_handler_supported = sae_driver_handler_supported;
+        security_support.sae.sme_handler_supported = sae_sme_handler_supported;
         let _exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let mut phy_manager =
@@ -1584,7 +1635,7 @@ mod tests {
         // Insert the fake iface
         let fake_iface_id = 1;
 
-        let _ = phy_container.client_ifaces.insert(fake_iface_id, wpa3_features);
+        let _ = phy_container.client_ifaces.insert(fake_iface_id, security_support);
 
         let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
@@ -1609,7 +1660,7 @@ mod tests {
         let fake_phy_id = 1;
         let fake_mac_roles = vec![fidl_common::WlanMacRole::Client];
         let mut phy_container = PhyContainer::new(fake_mac_roles);
-        let _ = phy_container.client_ifaces.insert(1, vec![]);
+        let _ = phy_container.client_ifaces.insert(1, fake_security_support());
         let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
         // Try to get a client interface.  No interface should be returned since client connections
@@ -1639,8 +1690,7 @@ mod tests {
 
             // Insert the fake iface
             let phy_container = phy_manager.phys.get_mut(&fake_phy_id).unwrap();
-            let driver_features = Vec::new();
-            let _ = phy_container.client_ifaces.insert(fake_iface_id, driver_features);
+            let _ = phy_container.client_ifaces.insert(fake_iface_id, fake_security_support());
 
             // Stop client connections
             let stop_clients_future = phy_manager.destroy_all_client_ifaces();
@@ -1951,13 +2001,12 @@ mod tests {
 
         {
             let phy_container = PhyContainer::new(fake_mac_roles);
-            let driver_features = Vec::new();
 
             let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
             // Insert the fake iface
             let phy_container = phy_manager.phys.get_mut(&fake_phy_id).unwrap();
-            let _ = phy_container.client_ifaces.insert(fake_iface_id, driver_features);
+            let _ = phy_container.client_ifaces.insert(fake_iface_id, fake_security_support());
 
             // Stop all AP ifaces
             let destroy_ap_iface_future = phy_manager.destroy_all_ap_ifaces();
@@ -1986,14 +2035,13 @@ mod tests {
         let fake_iface_id = 1;
         let fake_phy_id = 1;
         let fake_mac_roles = vec![fidl_common::WlanMacRole::Ap];
-        let driver_features = Vec::new();
         let phy_container = PhyContainer::new(fake_mac_roles.clone());
 
         let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
         // Insert the fake iface
         let phy_container = phy_manager.phys.get_mut(&fake_phy_id).unwrap();
-        let _ = phy_container.client_ifaces.insert(fake_iface_id, driver_features);
+        let _ = phy_container.client_ifaces.insert(fake_iface_id, fake_security_support());
 
         // Suggest an AP MAC
         let mac = MacAddress::from_bytes(&[1, 2, 3, 4, 5, 6]).unwrap();
@@ -2033,7 +2081,6 @@ mod tests {
         // iface is added.
         let fake_iface_id = 1;
         let fake_phy_id = 1;
-        let fake_mac_role = fidl_common::WlanMacRole::Client;
         let fake_mac_roles = vec![fidl_common::WlanMacRole::Client];
         let phy_container = PhyContainer::new(fake_mac_roles.clone());
 
@@ -2064,24 +2111,15 @@ mod tests {
                 responder.send(ZX_OK, response).expect("sending fake iface id");
             }
         );
-        // Expect an IfaceQuery to get driver features. and send back a response
+        // Expect an iface security support query, and send back a response
         assert_variant!(exec.run_until_stalled(&mut start_client_future), Poll::Pending);
-        let fake_phy_assigned_id = 1;
-        let fake_sta_addr = [0, 1, 2, 3, 4, 5];
-        let driver_features = Vec::new();
-        let mut iface_response = create_iface_response(
-            fake_mac_role,
-            fake_iface_id,
-            fake_phy_id,
-            fake_phy_assigned_id,
-            fake_sta_addr,
-            driver_features,
-        );
-        send_query_iface_response(
+
+        send_security_support(
             &mut exec,
             &mut test_values.dev_svc_stream,
-            Some(&mut iface_response),
+            Some(&mut fake_security_support()),
         );
+
         assert_variant!(exec.run_until_stalled(&mut start_client_future), Poll::Ready(_));
     }
 
@@ -2339,7 +2377,7 @@ mod tests {
             // Give the 0th and 2nd PHYs have client interfaces.
             if phy_id % 2 == 0 {
                 let phy_container = phy_manager.phys.get_mut(&phy_id).expect("missing PHY");
-                let _ = phy_container.client_ifaces.insert(phy_id, Vec::new());
+                let _ = phy_container.client_ifaces.insert(phy_id, fake_security_support());
             }
         }
 
@@ -2381,20 +2419,13 @@ mod tests {
                     let response = Some(&mut response);
                     responder.send(ZX_OK, response).expect("sending fake iface id");
 
-                    // Expect and respond to a QueryIface request.
-                    let mut iface_response = create_iface_response(
-                        fidl_common::WlanMacRole::Client,
-                        req.phy_id,
-                        req.phy_id,
-                        0,
-                        [0; 6],
-                        Vec::new(),
-                    );
                     assert_variant!(exec.run_until_stalled(&mut recovery_fut), Poll::Pending);
-                    send_query_iface_response(
+
+                    send_security_support(
                         &mut exec,
                         &mut test_values.dev_svc_stream,
-                        Some(&mut iface_response));
+                        Some(&mut fake_security_support()),
+                    );
                 });
             }
         }
@@ -2476,21 +2507,14 @@ mod tests {
                     }
                 );
 
-                // If creating the iface succeeded, respond to the QueryIface request
-                if let Some(iface_id) = created_iface_id {
-                    let mut iface_response = create_iface_response(
-                        fidl_common::WlanMacRole::Client,
-                        iface_id,
-                        iface_id,
-                        0,
-                        [0; 6],
-                        Vec::new(),
-                    );
+                // If creating the iface succeeded, respond to the security support query.
+                if let Some(_iface_id) = created_iface_id {
                     assert_variant!(exec.run_until_stalled(&mut recovery_fut), Poll::Pending);
-                    send_query_iface_response(
+
+                    send_security_support(
                         &mut exec,
                         &mut test_values.dev_svc_stream,
-                        Some(&mut iface_response),
+                        Some(&mut fake_security_support()),
                     );
                 }
             }
@@ -2560,8 +2584,7 @@ mod tests {
         let mut phy_container = PhyContainer::new(fake_mac_roles);
         // Insert the fake iface
         let fake_iface_id = 1;
-        let driver_features = vec![];
-        let _ = phy_container.client_ifaces.insert(fake_iface_id, driver_features);
+        let _ = phy_container.client_ifaces.insert(fake_iface_id, fake_security_support());
         let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
         // Try creating all client interfaces due to recovery and ensure that no interfaces are
@@ -2591,25 +2614,25 @@ mod tests {
         }
     }
 
-    #[test_case(fidl_common::DriverFeature::SaeDriverAuth)]
-    #[test_case(fidl_common::DriverFeature::SaeSmeAuth)]
+    #[test_case(true, false)]
+    #[test_case(false, true)]
+    #[test_case(true, true)]
     #[fuchsia::test(add_test_attr = false)]
-    fn has_wpa3_client_iface(wpa3_feature: fidl_common::DriverFeature) {
+    fn has_wpa3_client_iface(driver_handler_supported: bool, sme_handler_supported: bool) {
         let _exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
 
-        // Create a phy with the feature that indicates WPA3 support.
-        let driver_features = vec![
-            fidl_common::DriverFeature::ScanOffload,
-            fidl_common::DriverFeature::Mfp,
-            wpa3_feature,
-        ];
+        // Create a phy with the security features that indicate WPA3 support.
+        let mut security_support = fake_security_support();
+        security_support.mfp.supported = true;
+        security_support.sae.driver_handler_supported = driver_handler_supported;
+        security_support.sae.sme_handler_supported = sme_handler_supported;
         let fake_phy_id = 0;
 
         let mut phy_manager =
             PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
         let mut phy_container = PhyContainer::new(vec![]);
-        let _ = phy_container.client_ifaces.insert(0, driver_features);
+        let _ = phy_container.client_ifaces.insert(0, security_support);
         let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
         // Check that has_wpa3_client_iface recognizes that WPA3 is supported
@@ -2628,12 +2651,10 @@ mod tests {
     fn has_no_wpa3_capable_client_iface() {
         let _exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        // Create a phy with driver features, but not the one that indicates WPA3 support.
-        let driver_features =
-            vec![fidl_common::DriverFeature::ScanOffload, fidl_common::DriverFeature::Dfs];
+        // Create a phy without security features that indicate WPA3 support.
         let fake_phy_id = 0;
         let mut phy_container = PhyContainer::new(vec![]);
-        let _ = phy_container.client_ifaces.insert(0, driver_features);
+        let _ = phy_container.client_ifaces.insert(0, fake_security_support());
 
         let mut phy_manager =
             PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);

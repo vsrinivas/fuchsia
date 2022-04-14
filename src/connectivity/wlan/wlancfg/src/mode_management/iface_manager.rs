@@ -24,7 +24,8 @@ use {
     },
     anyhow::{format_err, Error},
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_wlan_policy, fidl_fuchsia_wlan_sme, fuchsia_async as fasync,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy, fidl_fuchsia_wlan_sme,
+    fuchsia_async as fasync,
     fuchsia_cobalt::CobaltSender,
     fuchsia_zircon as zx,
     futures::{
@@ -62,7 +63,7 @@ struct ClientIfaceContainer {
     sme_proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy,
     config: Option<ap_types::NetworkIdentifier>,
     client_state_machine: Option<Box<dyn client_fsm::ClientApi + Send>>,
-    driver_features: Vec<fidl_fuchsia_wlan_common::DriverFeature>,
+    security_support: fidl_common::SecuritySupport,
     /// The time of the last scan for roaming or new connection on this iface.
     last_roam_time: fasync::Time,
 }
@@ -228,7 +229,7 @@ impl IfaceManagerService {
                 // ifaces, use the first available unconfigured iface.
                 if let Some(removal_index) = self.clients.iter().position(|client_container| {
                     client_container.config.is_none()
-                        && wpa3_in_features(&client_container.driver_features)
+                        && wpa3_supported(client_container.security_support)
                 }) {
                     return Ok(self.clients.remove(removal_index));
                 }
@@ -264,18 +265,18 @@ impl IfaceManagerService {
         let status = self.dev_svc_proxy.get_client_sme(iface_id, remote).await?;
         fuchsia_zircon::ok(status)?;
 
-        // Get the driver features for this iface.
-        let (status, iface_info) = self.dev_svc_proxy.query_iface(iface_id).await?;
+        // Get the security support for this iface.
+        let (status, security_support) =
+            self.dev_svc_proxy.query_security_support(iface_id).await?;
         fuchsia_zircon::ok(status)?;
-        let iface_info = iface_info
-            .ok_or_else(|| format_err!("Error occurred getting iface's driver features"))?;
-
+        let security_support = *security_support
+            .ok_or_else(|| format_err!("Error occurred getting iface's security support"))?;
         Ok(ClientIfaceContainer {
             iface_id: iface_id,
             sme_proxy,
             config: None,
             client_state_machine: None,
-            driver_features: iface_info.driver_features,
+            security_support,
             last_roam_time: fasync::Time::now(),
         })
     }
@@ -929,12 +930,11 @@ impl IfaceManagerService {
     }
 }
 
-/// Returns whether the list of DriverFeatures indicates WPA3 support.
-pub fn wpa3_in_features(driver_features: &Vec<fidl_fuchsia_wlan_common::DriverFeature>) -> bool {
-    driver_features.iter().any(|feature| {
-        feature == &fidl_fuchsia_wlan_common::DriverFeature::SaeDriverAuth
-            || feature == &fidl_fuchsia_wlan_common::DriverFeature::SaeSmeAuth
-    }) && driver_features.contains(&fidl_fuchsia_wlan_common::DriverFeature::Mfp)
+/// Returns whether the security support indicates WPA3 support.
+pub fn wpa3_supported(security_support: fidl_common::SecuritySupport) -> bool {
+    security_support.mfp.supported
+        && (security_support.sae.driver_handler_supported
+            || security_support.sae.sme_handler_supported)
 }
 
 async fn initiate_network_selection(
@@ -1354,8 +1354,7 @@ mod tests {
         eui48::MacAddress,
         fidl::endpoints::create_proxy,
         fidl_fuchsia_cobalt::CobaltEvent,
-        fidl_fuchsia_stash as fidl_stash,
-        fidl_fuchsia_wlan_common::{self as fidl_common, DriverFeature},
+        fidl_fuchsia_stash as fidl_stash, fidl_fuchsia_wlan_common as fidl_common,
         fuchsia_async::TestExecutor,
         fuchsia_inspect::{self as inspect},
         futures::{
@@ -1712,7 +1711,7 @@ mod tests {
             sme_proxy,
             config: None,
             client_state_machine: None,
-            driver_features: Vec::new(),
+            security_support: fake_security_support(),
             last_roam_time: fasync::Time::now(),
         };
         let phy_manager = FakePhyManager {
@@ -2120,29 +2119,54 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn test_wpa3_in_features() {
+    fn test_wpa3_supported() {
         // Valid WPA3 feature sets
-        assert!(wpa3_in_features(&vec![DriverFeature::SaeDriverAuth, DriverFeature::Mfp]));
-        assert!(wpa3_in_features(&vec![DriverFeature::SaeSmeAuth, DriverFeature::Mfp]));
-        assert!(wpa3_in_features(&vec![
-            DriverFeature::SaeSmeAuth,
-            DriverFeature::SaeDriverAuth,
-            DriverFeature::Mfp
-        ]));
+        let mut driver_handler_mfp = fake_security_support();
+        driver_handler_mfp.sae.driver_handler_supported = true;
+        driver_handler_mfp.mfp.supported = true;
+        assert!(wpa3_supported(driver_handler_mfp));
+
+        let mut sme_handler_mfp = fake_security_support();
+        sme_handler_mfp.sae.sme_handler_supported = true;
+        sme_handler_mfp.mfp.supported = true;
+        assert!(wpa3_supported(sme_handler_mfp));
+
+        let mut driver_and_sme_handler_mfp = fake_security_support();
+        driver_and_sme_handler_mfp.sae.driver_handler_supported = true;
+        driver_and_sme_handler_mfp.sae.sme_handler_supported = true;
+        driver_and_sme_handler_mfp.mfp.supported = true;
+        assert!(wpa3_supported(driver_and_sme_handler_mfp));
 
         // Invalid WPA3 feature sets
-        assert!(!wpa3_in_features(&vec![DriverFeature::SaeDriverAuth]));
-        assert!(!wpa3_in_features(&vec![DriverFeature::SaeSmeAuth]));
-        assert!(!wpa3_in_features(&vec![DriverFeature::Mfp]));
-        assert!(!wpa3_in_features(&vec![DriverFeature::SaeSmeAuth, DriverFeature::SaeDriverAuth]));
+        let mut driver_handler_only = fake_security_support();
+        driver_handler_only.sae.driver_handler_supported = true;
+        assert!(!wpa3_supported(driver_handler_only));
+
+        let mut sme_handler_only = fake_security_support();
+        sme_handler_only.sae.sme_handler_supported = true;
+        assert!(!wpa3_supported(sme_handler_only));
+
+        let mut driver_and_sme_handler_only = fake_security_support();
+        driver_and_sme_handler_only.sae.driver_handler_supported = true;
+        driver_and_sme_handler_only.sae.sme_handler_supported = true;
+        assert!(!wpa3_supported(driver_and_sme_handler_only));
+
+        let mut mfp_only = fake_security_support();
+        mfp_only.mfp.supported = true;
+        assert!(!wpa3_supported(mfp_only));
     }
 
     /// Tests the case where connect is called for a WPA3 connection an there is an unconfigured
     /// WPA3 iface available.
-    #[test_case(vec![DriverFeature::SaeDriverAuth, DriverFeature::Mfp])]
-    #[test_case(vec![DriverFeature::SaeSmeAuth, DriverFeature::Mfp])]
+    #[test_case(true, true, false)]
+    #[test_case(true, false, true)]
+    #[test_case(true, true, true)]
     #[fuchsia::test(add_test_attr = false)]
-    fn test_connect_with_unconfigured_wpa3_iface(wpa3_features: Vec<DriverFeature>) {
+    fn test_connect_with_unconfigured_wpa3_iface(
+        mfp_supported: bool,
+        sae_driver_handler_supported: bool,
+        sae_sme_handler_supported: bool,
+    ) {
         let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
 
         let mut test_values = test_setup(&mut exec);
@@ -2151,7 +2175,11 @@ mod tests {
         // PhyManager for an iface.
         let (mut iface_manager, mut _sme_stream) =
             create_iface_manager_with_client(&test_values, false);
-        iface_manager.clients[0].driver_features.extend(wpa3_features.iter());
+        let mut security_support = fake_security_support();
+        security_support.mfp.supported = mfp_supported;
+        security_support.sae.driver_handler_supported = sae_driver_handler_supported;
+        security_support.sae.sme_handler_supported = sae_sme_handler_supported;
+        iface_manager.clients[0].security_support = security_support;
 
         let (saved_networks, mut stash_server) =
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server());
@@ -3043,24 +3071,16 @@ mod tests {
                 }
             );
 
-            // There will be a final query to determine the interface properties.
+            // There will be a security support query.
             assert_variant!(exec.run_until_stalled(&mut start_fut), Poll::Pending);
             assert_variant!(
                 exec.run_until_stalled(&mut test_values.device_service_stream.next()),
-                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QueryIface {
+                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QuerySecuritySupport {
                     iface_id: TEST_CLIENT_IFACE_ID, responder
                 }))) => {
-                    let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
-                        role: fidl_fuchsia_wlan_common::WlanMacRole::Client,
-                        id: TEST_CLIENT_IFACE_ID,
-                        phy_id: 0,
-                        phy_assigned_id: 0,
-                        sta_addr: [0; 6],
-                        driver_features: Vec::new(),
-                    };
                     responder
-                        .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
-                        .expect("Failed to send iface response");
+                        .send(fuchsia_zircon::sys::ZX_OK, Some(&mut fake_security_support()))
+                        .expect("Failed to send security support response");
                 }
             );
 
@@ -3503,24 +3523,16 @@ mod tests {
                 }
             );
 
-            // Expected a DeviceService request to get driver features
+            // Expected a DeviceService request to get iface info.
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
             assert_variant!(
                 exec.run_until_stalled(&mut test_values.device_service_stream.next()),
-                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QueryIface {
+                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QuerySecuritySupport {
                     iface_id: TEST_CLIENT_IFACE_ID, responder
                 }))) => {
-                    let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
-                        role: fidl_fuchsia_wlan_common::WlanMacRole::Client,
-                        id: TEST_CLIENT_IFACE_ID,
-                        phy_id: 0,
-                        phy_assigned_id: 0,
-                        sta_addr: [0; 6],
-                        driver_features: Vec::new(),
-                    };
                     responder
-                        .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
-                        .expect("Failed to send iface response");
+                        .send(fuchsia_zircon::sys::ZX_OK, Some(&mut fake_security_support()))
+                        .expect("Failed to send security support response");
                 }
             );
 
@@ -3740,24 +3752,15 @@ mod tests {
                 }
             );
 
-            // Expect a QueryIface request for the new iface's driver features and respond to it.
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
             assert_variant!(
                 poll_device_service_req(&mut exec, &mut device_service_fut),
-                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QueryIface {
+                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QuerySecuritySupport {
                     iface_id: TEST_CLIENT_IFACE_ID, responder
                 }) => {
-                    let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
-                        role: fidl_fuchsia_wlan_common::WlanMacRole::Client,
-                        id: TEST_CLIENT_IFACE_ID,
-                        phy_id: 0,
-                        phy_assigned_id: 0,
-                        sta_addr: [0; 6],
-                        driver_features: Vec::new(),
-                    };
                     responder
-                        .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
-                        .expect("Sending iface response");
+                        .send(fuchsia_zircon::sys::ZX_OK, Some(&mut fake_security_support()))
+                        .expect("Failed to send security support response");
                 }
             );
 
@@ -4550,20 +4553,12 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(
             poll_device_service_req(&mut exec, &mut device_service_fut),
-            Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QueryIface {
+            Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QuerySecuritySupport {
                 iface_id: TEST_CLIENT_IFACE_ID, responder
             }) => {
-                let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
-                    role: fidl_fuchsia_wlan_common::WlanMacRole::Client,
-                    id: TEST_CLIENT_IFACE_ID,
-                    phy_id: 0,
-                    phy_assigned_id: 0,
-                    sta_addr: [0; 6],
-                    driver_features: Vec::new(),
-                };
                 responder
-                    .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
-                    .expect("Sending iface response");
+                    .send(fuchsia_zircon::sys::ZX_OK, Some(&mut fake_security_support()))
+                    .expect("Failed to send security support response");
             }
         );
 
@@ -5724,6 +5719,17 @@ mod tests {
             code: fidl_fuchsia_wlan_ieee80211::StatusCode::Success,
             is_credential_rejected: false,
             is_reconnect: false,
+        }
+    }
+
+    /// Create an empty security support structure.
+    fn fake_security_support() -> fidl_common::SecuritySupport {
+        fidl_common::SecuritySupport {
+            mfp: fidl_common::MfpFeature { supported: false },
+            sae: fidl_common::SaeFeature {
+                driver_handler_supported: false,
+                sme_handler_supported: false,
+            },
         }
     }
 }
