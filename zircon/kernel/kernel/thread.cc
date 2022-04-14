@@ -1662,6 +1662,11 @@ void GetBacktraceCommon(Thread* thread, vaddr_t fp, Backtrace& out_bt) {
 void Thread::Current::GetBacktrace(Backtrace& out_bt) {
   auto fp = reinterpret_cast<vaddr_t>(__GET_FRAME(0));
   GetBacktraceCommon(Thread::Current::Get(), fp, out_bt);
+
+  // (fxbug.dev/97528): Force the function to not tail call GetBacktraceCommon.
+  // This will make sure the frame pointer we grabbed at the top
+  // of the function is still valid across the call.
+  asm("");
 }
 
 void Thread::Current::GetBacktrace(vaddr_t fp, Backtrace& out_bt) {

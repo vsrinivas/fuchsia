@@ -838,11 +838,12 @@ bool backtrace_static_method_test() {
   Backtrace bt;
   Thread::Current::GetBacktrace(bt);
 
-  ASSERT_GT(bt.size(), 0u);
+  // Make sure we have at least one frames worth.
+  ASSERT_GT(bt.size(), 1u);
 
   bt.reset();
   Thread::Current::GetBacktrace(reinterpret_cast<vaddr_t>(__GET_FRAME(0)), bt);
-  ASSERT_GT(bt.size(), 0u);
+  ASSERT_GT(bt.size(), 1u);
 
   // See that we don't crash.
   bt.reset();
