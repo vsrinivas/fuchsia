@@ -8,7 +8,7 @@ Component resolvers extend the component framework through an
 
 Component manager resolves component URLs by finding a resolver that supports a
 matching URL scheme in the relevant environment and sending a request using the
-[`fuchsia.sys2.ComponentResolver`][fidl-resolver] protocol.
+[`fuchsia.component.resolution.Resolver`][fidl-resolver] protocol.
 
 If resolution succeeds, the component resolver returns a
 [`ComponentDecl`][fidl-decl], the FIDL representation of a
@@ -20,7 +20,7 @@ an associated package, the component resolver also returns a
 
 To provide a resolver capability, a component must declare a `resolver`
 capability, whose `path` designates a FIDL protocol implementing
-[`fuchsia.sys2.ComponentResolver`][fidl-resolver] served from the component's
+[`fuchsia.component.resolution.Resolver`][fidl-resolver] served from the component's
 [outgoing directory][glossary.outgoing-directory].
 
 ```json5
@@ -28,7 +28,7 @@ capability, whose `path` designates a FIDL protocol implementing
     capabilities: [
         {
             resolver: "my_resolver",
-            path: "/svc/fuchsia.sys2.ComponentResolver",
+            path: "/svc/fuchsia.component.resolution.Resolver",
         },
     ],
 }

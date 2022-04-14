@@ -11,7 +11,8 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     fidl::endpoints::{ClientEnd, Proxy},
-    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_resolution as fresolution,
+    fidl_fuchsia_io as fio,
     fuchsia_url::boot_url::BootUrl,
     futures::TryStreamExt,
     routing::capability_source::InternalCapability,
@@ -64,45 +65,49 @@ impl FuchsiaBootResolver {
     async fn resolve_async(
         &self,
         component_url: &str,
-    ) -> Result<fsys::Component, fsys::ResolverError> {
+    ) -> Result<fresolution::Component, fresolution::ResolverError> {
         // Parse URL.
-        let url = BootUrl::parse(component_url).map_err(|_| fsys::ResolverError::InvalidArgs)?;
+        let url =
+            BootUrl::parse(component_url).map_err(|_| fresolution::ResolverError::InvalidArgs)?;
 
         // Package path is 'canonicalized' to ensure that it is relative, since absolute paths will
         // be (inconsistently) rejected by fuchsia.io methods.
         let package_path = io_util::canonicalize_path(url.path());
-        let res = url.resource().ok_or(fsys::ResolverError::InvalidArgs)?;
+        let res = url.resource().ok_or(fresolution::ResolverError::InvalidArgs)?;
         let cm_path = if package_path == "." {
             res.to_string()
         } else {
             // Until packages are formally supported in bootfs, including a package path
             // is an invalid fuchsia-boot url.
             // TODO(fxb/92916)
-            return Err(fsys::ResolverError::InvalidArgs);
+            return Err(fresolution::ResolverError::InvalidArgs);
         };
 
         // Read the component manifest (.cm file) from the bootfs directory.
         let data = mem_util::open_file_data(&self.boot_proxy, &cm_path)
             .await
-            .map_err(|_| fsys::ResolverError::ManifestNotFound)?;
-        let decl_bytes = mem_util::bytes_from_data(&data).map_err(|_| fsys::ResolverError::Io)?;
+            .map_err(|_| fresolution::ResolverError::ManifestNotFound)?;
+        let decl_bytes =
+            mem_util::bytes_from_data(&data).map_err(|_| fresolution::ResolverError::Io)?;
         let decl: fdecl::Component = fidl::encoding::decode_persistent(&decl_bytes[..])
-            .map_err(|_| fsys::ResolverError::InvalidManifest)?;
+            .map_err(|_| fresolution::ResolverError::InvalidManifest)?;
 
         let config_values = if let Some(config_decl) = decl.config.as_ref() {
             // if we have a config declaration, we need to read the value file from the package dir
-            let strategy =
-                config_decl.value_source.as_ref().ok_or(fsys::ResolverError::InvalidManifest)?;
+            let strategy = config_decl
+                .value_source
+                .as_ref()
+                .ok_or(fresolution::ResolverError::InvalidManifest)?;
             let config_path = match strategy {
                 fdecl::ConfigValueSource::PackagePath(path) => path,
                 fdecl::ConfigValueSourceUnknown!() => {
-                    return Err(fsys::ResolverError::InvalidManifest);
+                    return Err(fresolution::ResolverError::InvalidManifest);
                 }
             };
             Some(
                 mem_util::open_file_data(&self.boot_proxy, &config_path)
                     .await
-                    .map_err(|_| fsys::ResolverError::ConfigValuesNotFound)?,
+                    .map_err(|_| fresolution::ResolverError::ConfigValuesNotFound)?,
             )
         } else {
             None
@@ -114,20 +119,20 @@ impl FuchsiaBootResolver {
             package_path,
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )
-        .map_err(|_| fsys::ResolverError::Internal)?;
+        .map_err(|_| fresolution::ResolverError::Internal)?;
 
-        Ok(fsys::Component {
-            resolved_url: Some(component_url.into()),
+        Ok(fresolution::Component {
+            url: Some(component_url.into()),
             decl: Some(data),
-            package: Some(fsys::Package {
-                package_url: Some(url.root_url().to_string()),
-                package_dir: Some(ClientEnd::new(
+            package: Some(fresolution::Package {
+                url: Some(url.root_url().to_string()),
+                directory: Some(ClientEnd::new(
                     path_proxy.into_channel().unwrap().into_zx_channel(),
                 )),
-                ..fsys::Package::EMPTY
+                ..fresolution::Package::EMPTY
             }),
             config_values,
-            ..fsys::Component::EMPTY
+            ..fresolution::Component::EMPTY
         })
     }
 }
@@ -139,9 +144,9 @@ impl Resolver for FuchsiaBootResolver {
         component_url: &str,
         _target: &Arc<ComponentInstance>,
     ) -> Result<ResolvedComponent, ResolverError> {
-        let fsys::Component { resolved_url, decl, package, config_values, .. } =
+        let fresolution::Component { url, decl, package, config_values, .. } =
             self.resolve_async(component_url).await?;
-        let resolved_url = resolved_url.unwrap();
+        let resolved_url = url.unwrap();
         let decl = decl.ok_or_else(|| {
             ResolverError::ManifestInvalid(
                 anyhow::format_err!("missing manifest from resolved component").into(),
@@ -165,13 +170,13 @@ impl Resolver for FuchsiaBootResolver {
 #[async_trait]
 impl BuiltinCapability for FuchsiaBootResolver {
     const NAME: &'static str = "boot_resolver";
-    type Marker = fsys::ComponentResolverMarker;
+    type Marker = fresolution::ResolverMarker;
 
     async fn serve(
         self: Arc<Self>,
-        mut stream: fsys::ComponentResolverRequestStream,
+        mut stream: fresolution::ResolverRequestStream,
     ) -> Result<(), Error> {
-        while let Some(fsys::ComponentResolverRequest::Resolve { component_url, responder }) =
+        while let Some(fresolution::ResolverRequest::Resolve { component_url, responder }) =
             stream.try_next().await?
         {
             responder.send(&mut self.resolve_async(&component_url).await)?;
