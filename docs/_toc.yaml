@@ -13,6 +13,7 @@ toc:
     path: /docs
   - title: "Glossary"
     path: /docs/glossary/README.md
+  - include: /docs/get-started/sdk/_toc.yaml
 - name: "Concepts"
   contents:
   - include: /docs/concepts/_toc.yaml
