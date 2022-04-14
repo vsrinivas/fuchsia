@@ -46,6 +46,14 @@ Afterwards, you should add the GN dependency for your test's language:
     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/cpp/BUILD.gn" region_tag="realm_builder_dep_cpp" adjust_indentation="auto" %}
     ```
 
+* {Dart}
+
+    **Add the Dart Realm Builder library to your `BUILD.gn` file**
+
+    ```gn
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/dart/BUILD.gn" region_tag="realm_builder_dep_dart" adjust_indentation="auto" %}
+    ```
+
 ## Initialize Realm Builder {#init-realm}
 
 After adding the necessary dependencies, initialize Realm Builder inside your
@@ -119,6 +127,39 @@ test component.
     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/cpp/sample.cc" region_tag="init_realm_builder_cpp" adjust_indentation="auto" %}
     ```
 
+* {Dart}
+
+    This section assumes that you are using the Dart test framework, and that
+    some part of your component looks similar to this:
+
+    ```dart
+    import 'package:test/test.dart';
+
+    void main() {
+      // This test demonstrates constructing a realm with two child components
+      // and verifying the `fidl.examples.routing.Echo` protocol.
+      test('routes_from_echo', () async {
+        // ...
+      });
+    }
+    ```
+
+    **Import Realm Builder library**
+
+    ```dart
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/dart/test/sample.dart" region_tag="import_statement_dart" adjust_indentation="auto" %}
+    ```
+
+    **Initialize `RealmBuilder` struct**
+
+    Create a new `RealmBuilder` instance for each test case in your test. This
+    creates a unique, isolated, child realm that ensures that the side-effects
+    of one test case do not affect the others.
+
+    ```dart
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/dart/test/sample.dart" region_tag="init_realm_builder_dart" adjust_indentation="auto" %}
+    ```
+
 ## Construct Realm {#construct-realm}
 
 With the constructed Realm Builder object for your target, you can now begin
@@ -153,6 +194,12 @@ The example below adds two static child components to the created realm:
     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/cpp/sample.cc" region_tag="add_component_cpp" adjust_indentation="auto" %}
     ```
 
+* {Dart}
+
+    ```dart
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/dart/test/sample.dart" region_tag="add_component_dart" adjust_indentation="auto" %}
+    ```
+
 Note: Realm Builder interprets component sources defined using a relative URL
 to be contained in the same package as the test component.
 
@@ -172,14 +219,20 @@ Realm Builder also supports adding Legacy Components to your realm:
     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/cpp/sample.cc" region_tag="add_legacy_component_cpp" adjust_indentation="auto" %}
     ```
 
+* {Dart}
+
+    ```dart
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/dart/test/sample.dart" region_tag="add_legacy_component_dart" adjust_indentation="auto" %}
+    ```
+
 ### Adding Mock Components {#mock-components}
 
-Mock components allow tests to supply a local function that behaves as a
+Mock components allow tests to supply a local implementation that behaves as a
 dedicated component. Realm Builder implements the protocols that enables the
-component framework to treat the local function as a component and handle
-incoming FIDL connections. The local function can hold state specific to the
-test case where it is used, allowing each constructed realm to have a mock for
-its specific use case.
+component framework to treat the local implementation as a component and handle
+incoming FIDL connections. The local implementation can hold state specific to
+the test case where it is used, allowing each constructed realm to have a mock
+for its specific use case.
 
 The following example demonstrates a mock component that implements the
 `fidl.examples.routing.echo.Echo` protocol.
@@ -230,6 +283,34 @@ First, you must implement your mock component.
     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/cpp/sample.cc" region_tag="mock_component_impl_cpp" adjust_indentation="auto" %}
     ```
 
+* {Dart}
+
+    In Dart, a mock component starts from an `onRun` function with the following
+    signature:
+
+    ```dart
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="sdk/dart/fuchsia_component_test/lib/src/realm_builder.dart" region_tag="mock_interface_dart" adjust_indentation="auto" %}
+    ```
+
+    When called, the function will typically expose one or more services with
+    handlers, to bind a given interface request to an implementation of the
+    corresponding service.
+
+    The `onRun` function can then `await onStop.future` to keep the component
+    alive until stopped or destroyed. `LocalComponentHandles` is a class
+    containing handles to the component's controller, and its incoming and
+    outgoing capabilities:
+
+    ```dart
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="sdk/dart/fuchsia_component_test/lib/src/local_component_handles.dart" region_tag="mock_handles_dart" adjust_indentation="auto" %}
+    ```
+
+    An implementation for a mock component would look like:
+
+    ```dart
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/dart/test/sample.dart" region_tag="mock_component_impl_dart" adjust_indentation="auto" %}
+    ```
+
 After your mock implementation is complete, you may add it your realm:
 
 * {Rust}
@@ -242,6 +323,12 @@ After your mock implementation is complete, you may add it your realm:
 
     ```cpp
     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/cpp/sample.cc" region_tag="add_mock_component_cpp" adjust_indentation="auto" %}
+    ```
+
+* {Dart}
+
+    ```dart
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/dart/test/sample.dart" region_tag="add_mock_component_dart" adjust_indentation="auto" %}
     ```
 
 ## Route Capabilities {#routing}
@@ -268,6 +355,12 @@ The following example adds a capability route to [offer][offer] component
     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/cpp/sample.cc" region_tag="route_between_children_cpp" adjust_indentation="auto" %}
     ```
 
+* {Dart}
+
+    ```dart
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/dart/test/sample.dart" region_tag="route_between_children_dart" adjust_indentation="auto" %}
+    ```
+
 ### Exposing realm capabilities {#routing-from-realm}
 
 To route capabilities provided from inside the created realm to the test component,
@@ -288,6 +381,12 @@ the parent test component:
 
     ```cpp
     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/cpp/sample.cc" region_tag="route_to_test_cpp" adjust_indentation="auto" %}
+    ```
+
+* {Dart}
+
+    ```dart
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/dart/test/sample.dart" region_tag="route_to_test_dart" adjust_indentation="auto" %}
     ```
 
 ### Offering test capabilities {#routing-from-test}
@@ -315,6 +414,12 @@ from the test component to the child components of the realm:
     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/cpp/sample.cc" region_tag="route_from_test_cpp" adjust_indentation="auto" %}
     ```
 
+* {Dart}
+
+    ```dart
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/dart/test/sample.dart" region_tag="route_from_test_dart" adjust_indentation="auto" %}
+    ```
+
 ## Creating the realm {#create-realm}
 
 After you have added all the components and routes needed for the test case,
@@ -333,6 +438,12 @@ execute.
     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/cpp/sample.cc" region_tag="build_realm_cpp" adjust_indentation="auto" %}
     ```
 
+* {Dart}
+
+    ```dart
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/dart/test/sample.dart" region_tag="build_realm_dart" adjust_indentation="auto" %}
+    ```
+
 Note: The constructed realm instance is immutable. You cannot change components
 or routes after calling the build method.
 
@@ -346,18 +457,34 @@ routed using `parent` are now accessible by the test.
     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/rust/src/lib.rs" region_tag="call_echo_rust" adjust_indentation="auto" %}
     ```
 
+    When the realm object goes out of scope, Component Manager destroys the
+    realm and its children.
+
 * {C++}
 
     ```cpp
     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/cpp/sample.cc" region_tag="call_echo_cpp" adjust_indentation="auto" %}
     ```
 
-When the realm object goes out of scope, Component Manager destroys the realm
-and its children.
+    When the realm object goes out of scope, Component Manager destroys the
+    realm and its children.
+
+* {Dart}
+
+    ```dart
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/dart/test/sample.dart" region_tag="call_echo_dart" adjust_indentation="auto" %}
+    ```
+
+    To ensure Component Manager destroys the realm and its children when the
+    realm object is no longer needed, call `close()` on the realm root.
+
+    ```dart
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/dart/test/sample.dart" region_tag="finally_close_realm" adjust_indentation="auto" %}
+    ```
 
 ## Advanced Configuration {#advanced}
 
-### Modifying generated manifests (Rust only) {#modifying-manifests}
+### Modifying generated manifests (Rust and Dart only) {#modifying-manifests}
 
 For cases where the capability routing features supported by the add route
 method are not sufficient, you can manually adjust the manifest declarations.
@@ -372,18 +499,36 @@ After [constructing the realm](#construct-realm):
     child's manifest.
 1.  Modify the appropriate manifest attributes.
 1.  Substitute the updated manifest for the component by calling the
-    set decl method.
+    replace decl method.
 
 * {Rust}
 
     ```rust
-    let mut root_manifest = builder.get_decl(Moniker::root()).await?;
+    let mut root_manifest = builder.get_realm_decl().await?;
     // root_manifest is mutated in whatever way is needed
-    builder.set_decl(Moniker::root(), root_manifest).await?;
+    builder.replace_realm_decl(root_manifest).await?;
 
-    let mut a_manifest = builder.get_decl("a").await?;
+    let mut a_manifest = builder.get_component_decl("a").await?;
     // a_manifest is mutated in whatever way is needed
-    builder.set_decl("a", a_manifest).await?;
+    builder.replace_component_decl("a", a_manifest).await?;
+    ```
+
+* {Dart}
+
+    ```dart
+    var rootManifest = await builder.getRealmDecl();
+    // ...
+    // Clone and modify the rootManifest as needed, for example, after updating
+    // the `children` list:
+    rootManifest = rootManifest.$cloneWith(children: fidl.Some(children));
+    await builder.replaceRealmDecl(rootManifest);
+
+    var aManifest = await builder.getComponentDecl("a");
+    // ...
+    // Clone and modify the aManifest as needed, for example, after updating
+    // exposed capabilities:
+    aManifest = aManifest.$cloneWith(exposes: fidl.Some(exposes));
+    await builder.replaceComponentDecl("a", aManifest);
     ```
 
 When [adding routes](#routing) for modified components, add them directly to
@@ -422,6 +567,12 @@ To obtain the child name invoke the following method on the constructed Realm:
     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/cpp/sample.cc" region_tag="get_child_name_cpp" adjust_indentation="auto" %}
     ```
 
+* {Dart}
+
+    ```dart
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/dart/test/sample.dart" region_tag="get_child_name_dart" adjust_indentation="auto" %}
+    ```
+
 ## Troubleshooting {#troubleshoot}
 
 ### Invalid capability routes {#invalid-routes}
@@ -444,13 +595,12 @@ controller, see [offering test capabilities](#routing-from-test).
 
 ## Language feature matrix {#language-feature-matrix}
 
-|                             | Rust | C++  |
-| --------------------------- |:----:|:----:|
-| Legacy components           |    Y |    Y |
-| Mock components             |    Y |    Y |
-| Overriding config values    |    Y |    Y |
-| Manipulating component decl |    Y |    N |
-
+|                             | Rust | C++  | Dart |
+| --------------------------- |:----:|:----:|:----:|
+| Legacy components           |    Y |    Y |    Y |
+| Mock components             |    Y |    Y |    Y |
+| Overriding config values    |    Y |    Y |    Y |
+| Manipulating component decl |    Y |    N |    Y |
 
 [cap-routes]: /docs/concepts/components/v2/capabilities/README.md#routing
 [children]: https://fuchsia.dev/reference/cml#children

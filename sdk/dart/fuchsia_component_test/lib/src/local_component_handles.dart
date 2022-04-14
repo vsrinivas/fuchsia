@@ -37,6 +37,7 @@ import 'package:fidl_fuchsia_io/fidl_async.dart' as fio;
 
 /// The handles from the framework over which the local component should
 /// interact with other components.
+// [START mock_handles_dart]
 class LocalComponentHandles {
   final fcrunner.ComponentControllerBinding controllerBinding;
 
@@ -45,6 +46,7 @@ class LocalComponentHandles {
   /// The outgoing directory handle for a local component. This can be used to
   /// run a [ServiceFs] for the component.
   final fidl.InterfaceRequest<fio.Directory> outgoingDir;
+// [END mock_handles_dart]
 
   LocalComponentHandles(
     this.controllerBinding,

@@ -4,150 +4,195 @@
 
 import 'dart:async';
 
+// [START import_statement_dart]
 import 'package:fuchsia_component_test/realm_builder.dart';
+// [END import_statement_dart]
 
 import 'package:fidl/fidl.dart' as fidl;
 import 'package:fidl_fidl_examples_routing_echo/fidl_async.dart' as fecho;
-import 'package:fidl_fuchsia_component/fidl_async.dart' as fcomponent;
-import 'package:fidl_fuchsia_component_test/fidl_async.dart' as fctest;
+import 'package:fidl_fuchsia_io/fidl_async.dart' as fio;
 import 'package:fidl_fuchsia_logger/fidl_async.dart' as flogger;
-import 'package:fidl_fuchsia_sys2/fidl_async.dart' as fsys2;
 
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart' as services;
 
 import 'package:test/test.dart';
 
-const String v2EchoClientUrl = '#meta/echo_client.cm';
-const String v2EchoServerUrl = '#meta/echo_server.cm';
-
-void checkCommonExceptions(Exception err, StackTrace stacktrace) {
-  if (err is fidl.MethodException<fcomponent.Error>) {
-    late final String errorName;
-    for (final name in fcomponent.Error.$valuesMap.keys) {
-      if (err.value == fcomponent.Error.$valuesMap[name]) {
-        errorName = name;
-        break;
-      }
-    }
-    log.warning('fidl.$err: fuchsia.component.Error.$errorName');
-  } else if (err is fidl.MethodException<fctest.RealmBuilderError2>) {
-    late final String errorName;
-    for (final name in fctest.RealmBuilderError2.$valuesMap.keys) {
-      if (err.value == fctest.RealmBuilderError2.$valuesMap[name]) {
-        errorName = name;
-        break;
-      }
-    }
-    log.warning('fidl.$err: fuchsia.component.test.Error.$errorName');
-  } else if (err is fidl.MethodException) {
-    log.warning('fidl.MethodException<${err.value.runtimeType}>($err)');
-  } else if (err is fidl.FidlError) {
-    log.warning('fidl.${err.runtimeType}($err), FidlErrorCode: ${err.code}');
-  } else {
-    log.warning('caught exception: ${err.runtimeType}($err)');
-  }
-  log.warning('stacktrace (if available)...\n${stacktrace.toString()}');
-}
-
 void main() {
-  setupLogger(name: 'sample');
+  setupLogger(name: 'dart-sample-test');
 
-  test('route echo between two v2 components', () async {
-    final eventStreamBinding = fsys2.EventStreamBinding();
-    RealmInstance? realmInstance;
+  // This test demonstrates constructing a realm with two child components
+  // and verifying the `fidl.examples.routing.Echo` protocol.
+  test('routes_from_echo', () async {
+    RealmInstance? realm;
     try {
+      // [START init_realm_builder_dart]
       final builder = await RealmBuilder.create();
+      // [END init_realm_builder_dart]
 
-      const echoServerName = 'v2EchoServer';
-      const echoClientName = 'v2EchoClient';
-
-      final v2EchoServer = await builder.addChild(
-        echoServerName,
-        v2EchoServerUrl,
+      // [START add_component_dart]
+      // Add a server component to the realm, which is fetched using an
+      // absolute `fuchsia-pkg://` URL.
+      final echoServer = await builder.addChild(
+        'echo_server',
+        'fuchsia-pkg://fuchsia.com/realm-builder-examples#meta/echo_server.cm',
       );
-      final v2EchoClient = await builder.addChild(
-        echoClientName,
-        v2EchoClientUrl,
+
+      // Add a child component to the realm using a relative URL. The child is
+      // not exposing a service, but the `eager` option ensures the child starts
+      // when the realm is built.
+      final echoClient = await builder.addChild(
+        'echo_client',
+        '#meta/echo_client.cm',
         ChildOptions()..eager(),
       );
+      // [END add_component_dart]
 
-      // Route logging to children
+      // [START route_between_children_dart]
+      await builder.addRoute(Route()
+        ..capability(ProtocolCapability(fecho.Echo.$serviceName))
+        ..from(Ref.child(echoServer))
+        ..to(Ref.child(echoClient)));
+      // [END route_between_children_dart]
+
+      // [START route_to_test_dart]
+      await builder.addRoute(Route()
+        ..capability(ProtocolCapability(fecho.Echo.$serviceName))
+        ..from(Ref.child(echoServer))
+        ..to(Ref.parent()));
+      // [END route_to_test_dart]
+
+      // [START route_from_test_dart]
       await builder.addRoute(Route()
         ..capability(ProtocolCapability(flogger.LogSink.$serviceName))
         ..from(Ref.parent())
-        ..to(Ref.child(v2EchoServer))
-        ..to(Ref.child(v2EchoClient)));
+        ..to(Ref.child(echoServer))
+        ..to(Ref.child(echoClient)));
+      // [END route_from_test_dart]
 
-      // Route the echo service from server to client
+      // [START build_realm_dart]
+      realm = await builder.build();
+      // [END build_realm_dart]
+
+      // [START get_child_name_dart]
+      print('Child Name: ${realm.root.childName}');
+      // [END get_child_name_dart]
+
+      // [START call_echo_dart]
+      final echo = realm.root.connectToProtocolAtExposedDir(fecho.EchoProxy());
+      expect(await echo.echoString('hello'), 'hello');
+      // [END call_echo_dart]
+
+      // [START finally_close_realm]
+    } finally {
+      if (realm != null) {
+        realm.root.close();
+      }
+    }
+    // [END finally_close_realm]
+  });
+
+// This test demonstrates constructing a realm with a single legacy component
+// implementation of the `fidl.examples.routing.Echo` protocol.
+  test('routes_from_legacy_echo', () async {
+    RealmInstance? realm;
+    try {
+      final builder = await RealmBuilder.create();
+
+      // [START add_legacy_component_dart]
+      // Add component to the realm, which is fetched using a legacy URL.
+      final echoServer = await builder.addLegacyChild(
+        'echo_server',
+        'fuchsia-pkg://fuchsia.com/realm-builder-examples#meta/echo_server.cmx',
+      );
+      // [END add_legacy_component_dart]
+
+      await builder.addRoute(Route()
+        ..capability(ProtocolCapability(flogger.LogSink.$serviceName))
+        ..from(Ref.parent())
+        ..to(Ref.child(echoServer)));
+
       await builder.addRoute(Route()
         ..capability(ProtocolCapability(fecho.Echo.$serviceName))
-        ..from(Ref.child(v2EchoServer))
-        ..to(Ref.child(v2EchoClient)));
-
-      // Route the framework's EventSource so the test can await the echo
-      // client's termination and verify a successful exit status.
-      await builder.addRoute(Route()
-        ..capability(ProtocolCapability(fsys2.EventSource.$serviceName))
-        ..from(Ref.framework())
+        ..from(Ref.child(echoServer))
         ..to(Ref.parent()));
 
-      // Connect to the framework's EventSource.
-      final eventSource = fsys2.EventSourceProxy();
-      await (services.Incoming.fromSvcPath()..connectToService(eventSource))
-          .close();
+      realm = await builder.build();
 
-      // Register a callback for stopped events, and complete a Future when
-      // the event client stops.
-      final completeWaitForStop = Completer<int>();
-      final eventStreamClientEnd = eventStreamBinding.wrap(
-        OnEvent(stopped: (String moniker, int status) {
-          // Since EchoClient is [eager()], it may start and stop before the
-          // async [builder.build()] completes. [realmInstance.root.childName]
-          // would not be known before this stopped event is received, so
-          // [endsWith()] is the best solution here.
-          if (moniker.endsWith('/$echoClientName')) {
-            completeWaitForStop.complete(status);
-          }
-        }),
-      );
-
-      // Subscribe for "stopped" events.
-      //
-      // NOTE: This requires the test CML include a `use` for the subscribed
-      // event type(s), for example:
-      //
-      // ```cml
-      //   use: [
-      //     { protocol: "fuchsia.sys2.EventSource" },
-      //     {
-      //         event: [
-      //             "started",
-      //             "stopped",
-      //         ],
-      //         from: "framework",
-      //     },
-      //   ],
-      // ```
-      await eventSource.subscribe(
-        [fsys2.EventSubscription(eventName: 'stopped')],
-        eventStreamClientEnd,
-      );
-
-      // Start the realm instance.
-      realmInstance = await builder.build();
-
-      // Wait for the client to stop, and check for a successful exit status.
-      final stoppedStatus = await completeWaitForStop.future;
-      expect(stoppedStatus, 0);
-    } on Exception catch (err, stacktrace) {
-      checkCommonExceptions(err, stacktrace);
-      rethrow;
+      final echo = realm.root.connectToProtocolAtExposedDir(fecho.EchoProxy());
+      expect(await echo.echoString('hello'), 'hello');
     } finally {
-      if (realmInstance != null) {
-        realmInstance.root.close();
+      if (realm != null) {
+        realm.root.close();
       }
-      eventStreamBinding.close();
+    }
+  });
+
+  // This test demonstrates constructing a realm with a mocked LocalComponent
+  // implementation of the `fidl.examples.routing.Echo` protocol.
+  test('routes_from_mock_echo', () async {
+    RealmInstance? realm;
+    try {
+      final builder = await RealmBuilder.create();
+
+      // [START add_mock_component_dart]
+      final echoServer = await builder.addLocalChild(
+        'echo_server',
+        onRun: (handles, onStop) async {
+          EchoServerMock(handles);
+
+          // Keep the component alive until the test is complete
+          await onStop.future;
+        },
+      );
+      // [END add_mock_component_dart]
+
+      await builder.addRoute(Route()
+        ..capability(ProtocolCapability(flogger.LogSink.$serviceName))
+        ..from(Ref.parent())
+        ..to(Ref.child(echoServer)));
+
+      await builder.addRoute(Route()
+        ..capability(ProtocolCapability(fecho.Echo.$serviceName))
+        ..from(Ref.child(echoServer))
+        ..to(Ref.parent()));
+
+      realm = await builder.build();
+
+      final echo = realm.root.connectToProtocolAtExposedDir(fecho.EchoProxy());
+      expect(await echo.echoString('hello'), 'hello');
+    } finally {
+      if (realm != null) {
+        realm.root.close();
+      }
     }
   });
 }
+
+// [START mock_component_impl_dart]
+class EchoServerMock extends fecho.Echo {
+  final LocalComponentHandles handles;
+
+  final echoBinding = fecho.EchoBinding();
+
+  EchoServerMock(this.handles) {
+    // Serve the provided outgoing directory for the mock
+    services.Outgoing()
+      ..serve(
+          fidl.InterfaceRequest<fio.Node>(handles.outgoingDir.passChannel()!))
+
+      // Expose the Echo protocol as a public service
+      ..addPublicService(
+        (fidl.InterfaceRequest<fecho.Echo> connector) {
+          echoBinding.bind(this, connector);
+        },
+        fecho.Echo.$serviceName,
+      );
+  }
+
+  @override
+  Future<String?> echoString(String? str) async {
+    return str;
+  }
+}
+// [END mock_component_impl_dart]

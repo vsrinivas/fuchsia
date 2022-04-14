@@ -412,21 +412,22 @@ void main() {
     test('replace realm decl', () async {
       try {
         final builder = await RealmBuilder.create();
-        var origRootDecl = await builder.getRealmDecl();
-        expect(origRootDecl, fdecl.Component());
-        // TODO(fxbug.dev/96610): FIDL Table bindings for Dart declare fields
-        // `final` and the default fdecl.Component sets children to null. Since
-        // the above `expect()` guarantees the Component is equal to the default
-        // constructor result, we don't have to copy fields from the original,
-        // in THIS case. But we need a way to modify Dart FIDL Table bindings.
-        final rootDecl = fdecl.Component(
-          children: [],
-        );
-        rootDecl.children!.add(fdecl.Child(
-          name: 'example-child',
-          url: 'example://url',
-          startup: fdecl.StartupMode.eager,
-        ));
+        var rootDecl = await builder.getRealmDecl();
+        expect(rootDecl, fdecl.Component());
+
+        final children = (rootDecl.children != null
+            ? rootDecl.children!.toList()
+            : <fdecl.Child>[])
+          ..add(
+            fdecl.Child(
+              name: 'example-child',
+              url: 'example://url',
+              startup: fdecl.StartupMode.eager,
+            ),
+          );
+
+        rootDecl = rootDecl.$cloneWith(children: fidl.Some(children));
+
         await builder.replaceRealmDecl(rootDecl);
         expect(rootDecl, await builder.getRealmDecl());
       } on Exception catch (err, stacktrace) {
@@ -446,33 +447,6 @@ void main() {
           echoServerName,
           v2EchoServerUrl,
         );
-
-/*
-        If the Dart FIDL decoder is changed to decode arrays/vectors as
-        List.unmodifiable(), the call to `decl.exposes!.add()` still compiles, but now
-        generates a runtime exception.
-
-        var decl = await builder.getComponentDecl(v2EchoServer);
-
-        decl.exposes!.add(
-          fdecl.Expose.withProtocol(
-            fdecl.ExposeProtocol(
-              source: fdecl.Ref.withSelf(fdecl.SelfRef()),
-              sourceName: fecho.Echo.$serviceName,
-              target: fdecl.Ref.withParent(fdecl.ParentRef()),
-              targetName: 'renamedEchoService',
-            ),
-          ),
-        );
-
-INFO: 00:00 +13 -1: realm builder tests replace component decl [E]
-INFO:   Unsupported operation: Cannot add to an unmodifiable list
-INFO:   Unsupported operation: Cannot add to an unmodifiable list
-INFO:   dart:_internal/list.dart 114:5                                                 UnmodifiableListMixin.add
-INFO:   package:fuchsia_component_test_dart_tests_test_package/dart_tests.dart 461:23  main.<fn>.<fn>
-
-        The preferred alternative, using fidl.Table.$cloneWith(), is:
-*/
 
         var decl = await builder.getComponentDecl(v2EchoServer);
 

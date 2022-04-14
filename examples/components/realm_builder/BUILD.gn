@@ -20,7 +20,7 @@ fuchsia_component("cpp-component") {
 dart_test_wrapper_component("dart-test-wrapper-component") {
   wrapper_binary = "sample_realm_dart_test_wrapper"
   manifest = "dart/meta/sample_realm_dart_test_wrapper.cml"
-  dart_test_component_name = "sample-test"
+  dart_test_component_name = "dart-sample-test"
 }
 
 fuchsia_component("rust-component") {
@@ -68,6 +68,6 @@ fuchsia_test_package("package") {
     ":echo_client_legacy_component",
     ":echo_server_component",
     ":echo_server_legacy_component",
-    "dart:sample-test",
+    "dart:dart-sample-test",
   ]
 }

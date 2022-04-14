@@ -741,11 +741,16 @@ class Route {
   int get hashCode => _capabilities.hashCode + _from.hashCode + _to.hashCode;
 }
 
-typedef OnRun = Future<void> Function(LocalComponentHandles, Completer);
-typedef OnKill = Future<void> Function(LocalComponentHandles);
+// [START mock_interface_dart]
+typedef OnRun = Future<void> Function(
+  LocalComponentHandles handles,
+  Completer onStop,
+);
+// [END mock_interface_dart]
+typedef OnKill = Future<void> Function(LocalComponentHandles handles);
 typedef OnOnPublishDiagnostics = Stream<fdiagtypes.ComponentDiagnostics>
-    Function(LocalComponentHandles);
-typedef OnStop = Future<void> Function(LocalComponentHandles);
+    Function(LocalComponentHandles handles);
+typedef OnStop = Future<void> Function(LocalComponentHandles handles);
 
 /// A running instance of a created realm. Important: When a RealmInstance is no
 /// longer needed, the root [ScopedInstance] must be closed--by calling
