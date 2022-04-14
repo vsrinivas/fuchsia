@@ -72,7 +72,8 @@
                                     "-e",
                                     "weave-f-ep",
                                     "-i",
-                                    "fdce:da10:7616:6::abcd"
+                                    "fdce:da10:7616:6::abcd",
+                                    "--enable-ipv6-forwarding"
                                 ],
                                 "url": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-cfg.cmx"
                             },
@@ -81,7 +82,8 @@
                                     "-e",
                                     "wlan-f-ep",
                                     "-i",
-                                    "fdce:da10:7616:1::abcd"
+                                    "fdce:da10:7616:1::abcd",
+                                    "--enable-ipv6-forwarding"
                                 ],
                                 "url": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-cfg.cmx"
                             },
@@ -90,7 +92,8 @@
                                     "-e",
                                     "wpan-f-ep",
                                     "-i",
-                                    "fdce:da10:7616:6:6617::abcd"
+                                    "fdce:da10:7616:6:6617::abcd",
+                                    "--enable-ipv6-forwarding"
                                 ],
                                 "url": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-cfg.cmx"
                             }
@@ -118,7 +121,7 @@
                             "-e",
                             "weave-n-ep1",
                             "-i",
-                            "fdce:da10:7616:6:6616:6600:4734:b051/48",
+                            "fdce:da10:7616:6:6616:6600:4734:b051/80",
                             "-g",
                             "fdce:da10:7616:6::abcd"
                         ],
@@ -129,7 +132,7 @@
                             "-e",
                             "weave-n-ep2",
                             "-i",
-                            "fdce:da10:7616:7:6616:6600:4734:b052/48",
+                            "fdce:da10:7616:7:6616:6600:4734:b052/80",
                             "-g",
                             "fdce:da10:7616:6::abcd"
                         ],
