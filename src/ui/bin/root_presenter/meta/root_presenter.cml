@@ -10,7 +10,6 @@
     capabilities: [
         {
             protocol: [
-                "fuchsia.recovery.FactoryResetStateNotifier",
                 "fuchsia.recovery.ui.FactoryResetCountdown",
                 "fuchsia.ui.accessibility.view.Registry",
                 "fuchsia.ui.brightness.ColorAdjustmentHandler",
@@ -56,7 +55,6 @@
     expose: [
         {
             protocol: [
-                "fuchsia.recovery.FactoryResetStateNotifier",
                 "fuchsia.recovery.ui.FactoryResetCountdown",
                 "fuchsia.ui.accessibility.view.Registry",
                 "fuchsia.ui.brightness.ColorAdjustmentHandler",
