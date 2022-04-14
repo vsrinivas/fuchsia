@@ -302,7 +302,7 @@ enclosing type.
  * Never use tabs.
  * Avoid trailing whitespace.
  * Separate declarations for `bits`, `enum`, `protocol`, `struct`, `table`,
-   `table`, and `union` constructs from other declarations with
+   and `union` constructs from other declarations with
    one blank line (two consecutive newline characters).
  * End files with exactly one newline character.
 
