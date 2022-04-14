@@ -147,9 +147,9 @@ class StreamSinkImpl : public fuchsia::media2::StreamSink {
     stream_queue_->end();
   }
 
-  void Clear(bool hold_last_frame, zx::handle completion_fence) override {
+  void Clear(bool hold_last_frame, zx::eventpair completion_fence) override {
     FX_CHECK(stream_queue_);
-    stream_queue_->clear(ClearRequest(hold_last_frame, zx::eventpair(completion_fence.release())));
+    stream_queue_->clear(ClearRequest(hold_last_frame, std::move(completion_fence)));
   }
 
   fidl::Binding<fuchsia::media2::StreamSink> binding_;

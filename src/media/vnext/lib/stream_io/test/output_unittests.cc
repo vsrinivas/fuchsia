@@ -158,10 +158,10 @@ class FakeStreamSink : public fuchsia::media2::StreamSink {
 
   void End() override { received_.push(Other::kEnded); }
 
-  void Clear(bool hold_last_frame, zx::handle completion_fence) override {
+  void Clear(bool hold_last_frame, zx::eventpair completion_fence) override {
     // Note we don't actually clear here. |received_| is a log of what has arrived over a
     // |StreamSink| channel, not a real |StreamQueue|.
-    received_.push(ClearRequest(hold_last_frame, zx::eventpair(completion_fence.get())));
+    received_.push(ClearRequest(hold_last_frame, std::move(completion_fence)));
   }
 
  private:
