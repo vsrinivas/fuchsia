@@ -183,7 +183,6 @@ group("tests") {
     ":mdns-fuzzers",
     ":mdns-netemul-tests",
     ":mdns-tests",
-    "//src/connectivity/network/testing/netemul/runner/runner:netemul-runner",
   ]
 }
 

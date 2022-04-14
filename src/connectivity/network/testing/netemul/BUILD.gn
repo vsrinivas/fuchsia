@@ -2,34 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("netemul") {
-  testonly = true
-  deps = [
-    "runner:netemul-sandbox",
-    "runner/runner:netemul-runner",
-
-    # Netemul uses network-tun to create virtual devices
-    "//src/connectivity/network/tun/network-tun",
-  ]
-}
-
-group("guest") {
-  testonly = true
-  deps = [
-    ":netemul",
-
-    # The following packages are needed to run the netemul guest integration test.
-    "//src/virtualization",
-    "//src/virtualization/lib/guest_interaction",
-  ]
-}
-
 group("tests") {
   testonly = true
-  deps = [
-    ":guest",
-    ":netemul",
-    "lib:netemul-lib-tests",
-    "runner/test",
-  ]
+  deps = [ "lib:netemul-lib-tests" ]
 }

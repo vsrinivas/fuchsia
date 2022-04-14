@@ -127,8 +127,6 @@ group("core_base_packages") {
     "//src/connectivity/lowpan/drivers/lowpan-dummy-driver:lowpan-dummy-driver",
     "//src/connectivity/lowpan/service:lowpanservice",
     "//src/connectivity/lowpan/tools/lowpanctl:lowpanctl",
-    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox",
-    "//src/connectivity/network/testing/netemul/runner/runner:netemul-runner",
     "//src/connectivity/network/tun/network-tun:network-tun",
     "//src/connectivity/telephony/ril-at:ril-at",
     "//src/connectivity/telephony/ril-qmi:ril-qmi",
