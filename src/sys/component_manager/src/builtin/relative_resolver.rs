@@ -199,7 +199,7 @@ mod tests {
             fdecl::OnTerminate::None,
             WeakModelContext::new(Weak::new()),
             WeakExtendedInstance::Component(WeakComponentInstance::from(&root)),
-            Arc::new(Hooks::new(None)),
+            Arc::new(Hooks::new()),
             None,
         );
 
@@ -245,7 +245,7 @@ mod tests {
             fdecl::OnTerminate::None,
             WeakModelContext::new(Weak::new()),
             WeakExtendedInstance::Component(WeakComponentInstance::from(&root)),
-            Arc::new(Hooks::new(None)),
+            Arc::new(Hooks::new()),
             None,
         );
 
@@ -257,7 +257,7 @@ mod tests {
             fdecl::OnTerminate::None,
             WeakModelContext::new(Weak::new()),
             WeakExtendedInstance::Component(WeakComponentInstance::from(&child_one)),
-            Arc::new(Hooks::new(None)),
+            Arc::new(Hooks::new()),
             None,
         );
 
@@ -303,7 +303,7 @@ mod tests {
             fdecl::OnTerminate::None,
             WeakModelContext::new(Weak::new()),
             WeakExtendedInstance::Component(WeakComponentInstance::from(&root)),
-            Arc::new(Hooks::new(None)),
+            Arc::new(Hooks::new()),
             None,
         );
 
@@ -340,7 +340,7 @@ mod tests {
             fdecl::OnTerminate::None,
             WeakModelContext::new(Weak::new()),
             WeakExtendedInstance::Component(WeakComponentInstance::from(&root)),
-            Arc::new(Hooks::new(None)),
+            Arc::new(Hooks::new()),
             None,
         );
 

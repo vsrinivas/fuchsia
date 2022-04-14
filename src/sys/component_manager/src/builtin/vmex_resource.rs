@@ -145,7 +145,7 @@ mod tests {
         }
 
         let vmex_resource = VmexResource::new(get_vmex_resource().await?);
-        let hooks = Hooks::new(None);
+        let hooks = Hooks::new();
         hooks.install(vmex_resource.hooks()).await;
 
         let provider = Arc::new(Mutex::new(None));

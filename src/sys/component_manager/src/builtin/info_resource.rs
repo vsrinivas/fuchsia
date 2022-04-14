@@ -145,7 +145,7 @@ mod tests {
         }
 
         let info_resource = InfoResource::new(get_info_resource().await?);
-        let hooks = Hooks::new(None);
+        let hooks = Hooks::new();
         hooks.install(info_resource.hooks()).await;
 
         let provider = Arc::new(Mutex::new(None));

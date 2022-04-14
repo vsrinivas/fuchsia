@@ -362,7 +362,7 @@ impl ComponentInstance {
             fdecl::OnTerminate::None,
             WeakModelContext::new(context),
             WeakExtendedInstance::AboveRoot(component_manager_instance),
-            Arc::new(Hooks::new(None)),
+            Arc::new(Hooks::new()),
             None,
         )
     }
@@ -1594,7 +1594,7 @@ impl ResolvedInstanceState {
             child.on_terminate.unwrap_or(fdecl::OnTerminate::None),
             component.context.clone(),
             WeakExtendedInstance::Component(WeakComponentInstance::from(component)),
-            Arc::new(Hooks::new(Some(component.hooks.clone()))),
+            component.hooks.clone(),
             numbered_handles,
         );
         self.children.insert(instanced_moniker, child.clone());
@@ -3007,7 +3007,7 @@ pub mod tests {
             fdecl::OnTerminate::None,
             WeakModelContext::new(Weak::new()),
             WeakExtendedInstanceInterface::AboveRoot(Weak::new()),
-            Arc::new(Hooks::new(None)),
+            Arc::new(Hooks::new()),
             None,
         )
     }

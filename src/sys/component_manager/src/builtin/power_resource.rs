@@ -147,7 +147,7 @@ mod tests {
         }
 
         let power_resource = PowerResource::new(get_power_resource().await?);
-        let hooks = Hooks::new(None);
+        let hooks = Hooks::new();
         hooks.install(power_resource.hooks()).await;
 
         let provider = Arc::new(Mutex::new(None));

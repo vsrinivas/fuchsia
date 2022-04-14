@@ -216,7 +216,7 @@ mod tests {
         let builtin_runner =
             Arc::new(BuiltinRunner::new("elf".into(), runner.clone(), Arc::downgrade(&config)));
 
-        let hooks = Hooks::new(None);
+        let hooks = Hooks::new();
         hooks.install(builtin_runner.hooks()).await;
 
         // Ensure we see the start events and that an appropriate PolicyChecker was provided to the

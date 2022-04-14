@@ -71,7 +71,7 @@ mod tests {
     #[fuchsia::test]
     async fn can_connect() -> Result<(), Error> {
         let root_resource = RootResource::new(Resource::from(zx::Handle::invalid()));
-        let hooks = Hooks::new(None);
+        let hooks = Hooks::new();
         hooks.install(root_resource.hooks()).await;
 
         let provider = Arc::new(Mutex::new(None));

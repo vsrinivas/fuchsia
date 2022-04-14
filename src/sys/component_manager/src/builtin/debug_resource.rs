@@ -147,7 +147,7 @@ mod tests {
         }
 
         let debug_resource = DebugResource::new(get_debug_resource().await?);
-        let hooks = Hooks::new(None);
+        let hooks = Hooks::new();
         hooks.install(debug_resource.hooks()).await;
 
         let provider = Arc::new(Mutex::new(None));

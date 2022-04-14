@@ -18,8 +18,8 @@ use {
     cm_util::io::clone_dir,
     config_encoder::ConfigFields,
     fidl_fuchsia_diagnostics_types as fdiagnostics, fidl_fuchsia_io as fio,
-    fidl_fuchsia_sys2 as fsys, fuchsia_trace as trace, fuchsia_zircon as zx,
-    futures::{channel::oneshot, future::BoxFuture, lock::Mutex},
+    fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
+    futures::{channel::oneshot, lock::Mutex},
     rand::random,
     routing::component_instance::ComponentInstanceInterface,
     std::{
@@ -256,18 +256,17 @@ pub trait Hook: Send + Sync {
 /// strong references.
 #[derive(Clone)]
 pub struct HooksRegistration {
-    name: &'static str,
     events: Vec<EventType>,
     callback: Weak<dyn Hook>,
 }
 
 impl HooksRegistration {
     pub fn new(
-        name: &'static str,
+        _name: &'static str,
         events: Vec<EventType>,
         callback: Weak<dyn Hook>,
     ) -> HooksRegistration {
-        Self { name, events, callback }
+        Self { events, callback }
     }
 }
 
@@ -549,106 +548,44 @@ impl fmt::Display for Event {
 
 /// This is a collection of hooks to component manager events.
 pub struct Hooks {
-    parent: Option<Arc<Hooks>>,
-    hooks_map: Mutex<HashMap<EventType, Vec<HookEntry>>>,
+    hooks_map: Mutex<HashMap<EventType, Vec<Weak<dyn Hook>>>>,
 }
 
 impl Hooks {
-    pub fn new(parent: Option<Arc<Hooks>>) -> Self {
-        Self { parent, hooks_map: Mutex::new(HashMap::new()) }
+    pub fn new() -> Self {
+        Self { hooks_map: Mutex::new(HashMap::new()) }
     }
 
     pub async fn install(&self, hooks: Vec<HooksRegistration>) {
         let mut hooks_map = self.hooks_map.lock().await;
         for hook in hooks {
-            'event_type: for event in hook.events {
-                let existing_hooks = &mut hooks_map.entry(event).or_insert(vec![]);
-
-                for existing_hook in existing_hooks.iter() {
-                    // If this hook has already been installed, skip to next event type.
-                    if existing_hook.callback.ptr_eq(&hook.callback) {
-                        break 'event_type;
-                    }
-                }
-
-                existing_hooks.push(HookEntry { name: hook.name, callback: hook.callback.clone() });
+            for event in hook.events {
+                let existing_hooks = hooks_map.entry(event).or_insert(vec![]);
+                existing_hooks.push(hook.callback.clone());
             }
         }
     }
 
-    pub fn dispatch<'a>(&'a self, event: &'a Event) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async move {
-            // Trace event dispatch
-            let event_type = format!("{:?}", event.event_type());
-            let target_moniker = event.target_moniker.to_string();
-            trace::duration!(
-                "component_manager",
-                "hooks:dispatch",
-                "event_type" => event_type.as_str(),
-                "target_moniker" => target_moniker.as_str()
-            );
-
-            let hooks = {
-                trace::duration!(
-                   "component_manager",
-                   "hooks:upgrade_dedup",
-                   "event_type" => event_type.as_ref(),
-                   "target_moniker" => target_moniker.as_ref()
-                );
-                // We must upgrade our weak references to hooks to strong ones before we can
-                // call out to them. Since hooks are deduped at install time, we do not need
-                // to worry about that here.
-                let mut strong_hooks = vec![];
-                let mut hooks_map = self.hooks_map.lock().await;
-                if let Some(hooks) = hooks_map.get_mut(&event.event_type()) {
-                    hooks.retain(|hook| {
-                        if let Some(callback) = hook.callback.upgrade() {
-                            strong_hooks.push(StrongHookEntry { name: hook.name, callback });
-                            true
-                        } else {
-                            false
-                        }
-                    });
+    pub async fn dispatch(&self, event: &Event) -> Result<(), ModelError> {
+        let mut hooks_map = self.hooks_map.lock().await;
+        if let Some(hooks) = hooks_map.get_mut(&event.event_type()) {
+            // We must upgrade our weak references to hooks to strong ones before we can
+            // call out to them.
+            let mut strong_hooks = vec![];
+            hooks.retain(|hook| {
+                if let Some(hook) = hook.upgrade() {
+                    strong_hooks.push(hook);
+                    true
+                } else {
+                    false
                 }
-                strong_hooks
-            };
-            for hook in hooks.into_iter() {
-                trace::duration!(
-                    "component_manager",
-                    "hooks:on",
-                    "event_type" => event_type.as_ref(),
-                    "target_moniker" => target_moniker.as_ref(),
-                    "name" => (*hook.name).as_ref()
-                );
-                hook.callback.on(event).await?;
+            });
+            for hook in strong_hooks {
+                hook.on(event).await?;
             }
-
-            if let Some(parent) = &self.parent {
-                trace::duration!(
-                    "component_manager",
-                    "hooks:parent_dispatch",
-                    "event_type" => event_type.as_ref(),
-                    "target_moniker" => target_moniker.as_ref()
-                );
-                parent.dispatch(event).await?;
-            }
-
-            Ok(())
-        })
+        }
+        Ok(())
     }
-}
-
-// Holds a Weak pointer to the Hook.
-struct HookEntry {
-    pub name: &'static str,
-    pub callback: Weak<dyn Hook>,
-}
-
-// Holds a Strong pointer to the Hook. This is produced on dispatch when upgrading
-// Weak pointers.
-struct StrongHookEntry {
-    pub name: &'static str,
-    pub callback: Arc<dyn Hook>,
 }
 
 #[cfg(test)]
@@ -746,98 +683,6 @@ mod tests {
         v.iter().map(|s| s.to_string()).collect()
     }
 
-    // This test verifies that a hook cannot be installed twice.
-    #[fuchsia::test]
-    async fn install_hook_twice() {
-        // CallCounter counts the number of DynamicChildAdded events it receives.
-        // It should only ever receive one.
-        let call_counter = CallCounter::new("CallCounter", None);
-        let hooks = Hooks::new(None);
-
-        // Attempt to install CallCounter twice.
-        hooks
-            .install(vec![HooksRegistration::new(
-                "FirstInstall",
-                vec![EventType::Discovered],
-                Arc::downgrade(&call_counter) as Weak<dyn Hook>,
-            )])
-            .await;
-        hooks
-            .install(vec![HooksRegistration::new(
-                "SecondInstall",
-                vec![EventType::Discovered],
-                Arc::downgrade(&call_counter) as Weak<dyn Hook>,
-            )])
-            .await;
-
-        let event = Event::new_for_test(
-            InstancedAbsoluteMoniker::root(),
-            "fuchsia-pkg://root",
-            Ok(EventPayload::Discovered),
-        );
-        hooks.dispatch(&event).await.expect("Unable to call hooks.");
-        assert_eq!(1, call_counter.count().await);
-    }
-
-    // This test verifies that events propagate from child_hooks to parent_hooks.
-    #[fuchsia::test]
-    async fn event_propagation() {
-        let parent_hooks = Arc::new(Hooks::new(None));
-        let child_hooks = Hooks::new(Some(parent_hooks.clone()));
-
-        let event_log = EventLog::new();
-        let parent_call_counter = CallCounter::new("ParentCallCounter", Some(event_log.clone()));
-        parent_hooks
-            .install(vec![HooksRegistration::new(
-                "ParentHook",
-                vec![EventType::Discovered],
-                Arc::downgrade(&parent_call_counter) as Weak<dyn Hook>,
-            )])
-            .await;
-
-        let child_call_counter = CallCounter::new("ChildCallCounter", Some(event_log.clone()));
-        child_hooks
-            .install(vec![HooksRegistration::new(
-                "ChildHook",
-                vec![EventType::Discovered],
-                Arc::downgrade(&child_call_counter) as Weak<dyn Hook>,
-            )])
-            .await;
-
-        assert_eq!(1, Arc::strong_count(&parent_call_counter));
-        assert_eq!(1, Arc::strong_count(&child_call_counter));
-
-        let event = Event::new_for_test(
-            InstancedAbsoluteMoniker::root(),
-            "fuchsia-pkg://root",
-            Ok(EventPayload::Discovered),
-        );
-        child_hooks.dispatch(&event).await.expect("Unable to call hooks.");
-        // parent_call_counter gets informed of the event on child_hooks even though it has
-        // been installed on parent_hooks.
-        assert_eq!(1, parent_call_counter.count().await);
-        // child_call_counter should be called only once.
-        assert_eq!(1, child_call_counter.count().await);
-
-        // Dropping the child_call_counter should drop the weak pointer to it in hooks
-        // as well.
-        drop(child_call_counter);
-
-        // Dispatching an event on child_hooks will not call out to child_call_counter
-        // because it has been destroyed by the call to drop above.
-        child_hooks.dispatch(&event).await.expect("Unable to call hooks.");
-
-        // ChildCallCounter should be called before ParentCallCounter.
-        assert_eq!(
-            log(vec![
-                "[ChildCallCounter] Ok: discovered",
-                "[ParentCallCounter] Ok: discovered",
-                "[ParentCallCounter] Ok: discovered",
-            ]),
-            event_log.get().await
-        );
-    }
-
     // This test verifies that a hook can receive errors.
     #[fuchsia::test]
     async fn error_event() {
@@ -845,7 +690,7 @@ mod tests {
         // It should only ever receive one.
         let event_log = EventLog::new();
         let call_counter = CallCounter::new("CallCounter", Some(event_log.clone()));
-        let hooks = Hooks::new(None);
+        let hooks = Hooks::new();
 
         // Attempt to install CallCounter twice.
         hooks

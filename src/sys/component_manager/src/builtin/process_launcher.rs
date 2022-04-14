@@ -429,7 +429,7 @@ mod tests {
     async fn serve_launcher(
     ) -> Result<(fproc::LauncherProxy, Arc<ProcessLauncher>, TaskScope), Error> {
         let process_launcher = Arc::new(ProcessLauncher::new());
-        let hooks = Hooks::new(None);
+        let hooks = Hooks::new();
         hooks.install(process_launcher.hooks()).await;
 
         let capability_provider = Arc::new(Mutex::new(None));

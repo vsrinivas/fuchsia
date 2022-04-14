@@ -149,7 +149,7 @@ mod tests {
         }
 
         let hypervisor_resource = HypervisorResource::new(get_hypervisor_resource().await?);
-        let hooks = Hooks::new(None);
+        let hooks = Hooks::new();
         hooks.install(hypervisor_resource.hooks()).await;
 
         let provider = Arc::new(Mutex::new(None));

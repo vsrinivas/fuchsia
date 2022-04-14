@@ -144,7 +144,7 @@ mod tests {
         }
 
         let mmio_resource = MmioResource::new(get_mmio_resource().await?);
-        let hooks = Hooks::new(None);
+        let hooks = Hooks::new();
         hooks.install(mmio_resource.hooks()).await;
 
         let provider = Arc::new(Mutex::new(None));

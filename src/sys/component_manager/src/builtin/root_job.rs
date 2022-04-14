@@ -86,7 +86,7 @@ mod tests {
     #[fuchsia::test]
     async fn can_connect() -> Result<(), Error> {
         let root_job = RootJob::new(&ROOT_JOB_CAPABILITY_NAME, zx::Rights::SAME_RIGHTS);
-        let hooks = Hooks::new(None);
+        let hooks = Hooks::new();
         hooks.install(root_job.hooks()).await;
 
         let provider = Arc::new(Mutex::new(None));

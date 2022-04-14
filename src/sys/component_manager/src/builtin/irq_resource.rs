@@ -143,7 +143,7 @@ mod tests {
         }
 
         let irq_resource = IrqResource::new(get_irq_resource().await?);
-        let hooks = Hooks::new(None);
+        let hooks = Hooks::new();
         hooks.install(irq_resource.hooks()).await;
 
         let provider = Arc::new(Mutex::new(None));

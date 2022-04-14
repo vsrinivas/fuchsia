@@ -46,7 +46,7 @@ impl GlobalPolicyCheckerTest<ComponentInstance> for GlobalPolicyCheckerTestForCm
             fdecl::OnTerminate::None,
             WeakModelContext::default(),
             WeakExtendedInstance::Component(WeakComponentInstance::default()),
-            Arc::new(Hooks::new(None)),
+            Arc::new(Hooks::new()),
             None,
         )
     }

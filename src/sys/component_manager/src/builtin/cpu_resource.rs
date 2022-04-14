@@ -144,7 +144,7 @@ mod tests {
         }
 
         let cpu_resource = CpuResource::new(get_cpu_resource().await?);
-        let hooks = Hooks::new(None);
+        let hooks = Hooks::new();
         hooks.install(cpu_resource.hooks()).await;
 
         let provider = Arc::new(Mutex::new(None));

@@ -159,7 +159,7 @@ mod tests {
         }
         let resource = get_root_resource().await?;
         let read_only_log = ReadOnlyLog::new(resource);
-        let hooks = Hooks::new(None);
+        let hooks = Hooks::new();
         hooks.install(read_only_log.hooks()).await;
 
         let provider = Arc::new(Mutex::new(None));
@@ -226,7 +226,7 @@ mod tests {
         let resource = Resource::from(zx::Handle::invalid());
         let write_only_log =
             WriteOnlyLog::new(zx::DebugLog::create(&resource, zx::DebugLogOpts::empty()).unwrap());
-        let hooks = Hooks::new(None);
+        let hooks = Hooks::new();
         hooks.install(write_only_log.hooks()).await;
 
         let provider = Arc::new(Mutex::new(None));
