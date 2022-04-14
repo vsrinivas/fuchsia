@@ -114,17 +114,7 @@ struct BudgetResult {
 /// Verifies that no budget is exceeded.
 pub fn verify_budgets(args: SizeCheckArgs) -> Result<()> {
     let sdk_tools = SdkToolProvider::try_new().context("Getting SDK tools")?;
-
-    // Convert budget failure errors to a warning log.
-    // This is necessary so that we can run size checks as part of the build, and check the result
-    // post-build.
-    match verify_budgets_with_tools(args, Box::new(sdk_tools)) {
-        Ok(_) => Ok(()),
-        err => {
-            println!("Size Checker Failed: {:?}", err);
-            Ok(())
-        }
-    }
+    verify_budgets_with_tools(args, Box::new(sdk_tools))
 }
 
 fn verify_budgets_with_tools(args: SizeCheckArgs, tools: Box<dyn ToolProvider>) -> Result<()> {
@@ -164,6 +154,24 @@ fn verify_budgets_with_tools(args: SizeCheckArgs, tools: Box<dyn ToolProvider>) 
         write_json_file(&out_path, &to_json_output(&results)?)?;
     }
 
+    // Ensure that the sum of all the budgets equals total budget bytes.
+    if let Some(total) = config.total_budget_bytes {
+        let mut sum_of_budgets = 0u64;
+        for budget in &config.package_set_budgets {
+            sum_of_budgets += budget.budget_bytes;
+        }
+        for budget in &config.resource_budgets {
+            sum_of_budgets += budget.budget_bytes;
+        }
+        if sum_of_budgets != total {
+            anyhow::bail!(
+                "Sum of budgets doesn't match total budget bytes: sum={}, total={}",
+                sum_of_budgets,
+                total
+            );
+        }
+    }
+
     // Print a text report for each overrun budget.
     let over_budget = results.iter().filter(|e| e.used_bytes > e.budget_bytes).count();
 
@@ -182,25 +190,6 @@ fn verify_budgets_with_tools(args: SizeCheckArgs, tools: Box<dyn ToolProvider>) 
         }
         if let Some(out_path) = &args.gerrit_output {
             println!("Report written to {}", out_path.to_string_lossy());
-        }
-        anyhow::bail!(errors::ffx_error_with_code!(2, "FAILED: Size budget(s) exceeded"));
-    }
-
-    // Ensure that the sum of all the budgets equals total budget bytes.
-    if let Some(total) = config.total_budget_bytes {
-        let mut sum_of_budgets = 0u64;
-        for budget in &config.package_set_budgets {
-            sum_of_budgets += budget.budget_bytes;
-        }
-        for budget in &config.resource_budgets {
-            sum_of_budgets += budget.budget_bytes;
-        }
-        if sum_of_budgets != total {
-            anyhow::bail!(
-                "Sum of budgets doesn't match total budget bytes: sum={}, total={}",
-                sum_of_budgets,
-                total
-            );
         }
     }
 
@@ -807,8 +796,8 @@ mod tests {
                 "Software Deliver.owner": "http://go/fuchsia-size-stats/single_component/?f=component%3Ain%3ASoftware+Deliver"
             }),
         );
-        assert_eq!(res.exit_code(), 2);
-        assert_failed(res, "FAILED: Size budget(s) exceeded");
+        // Exceeding budgets does not fail the build.
+        assert!(matches!(res, Ok(())));
     }
 
     #[test]
