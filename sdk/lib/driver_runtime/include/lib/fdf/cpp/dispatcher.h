@@ -6,6 +6,7 @@
 #define LIB_DRIVER_RUNTIME_INCLUDE_LIB_FDF_CPP_DISPATCHER_H_
 
 #include <lib/async/dispatcher.h>
+#include <lib/fdf/cpp/unowned.h>
 #include <lib/fdf/dispatcher.h>
 #include <lib/fit/function.h>
 #include <lib/stdcompat/string_view.h>
@@ -14,8 +15,6 @@
 #include <string>
 
 namespace fdf {
-
-class UnownedDispatcher;
 
 // Usage Notes:
 //
@@ -47,6 +46,8 @@ class UnownedDispatcher;
 //
 class Dispatcher {
  public:
+  using HandleType = fdf_dispatcher_t*;
+
   // Called when the asynchronous shutdown for |dispatcher| has completed.
   using ShutdownHandler = fit::callback<void(fdf_dispatcher_t* dispatcher)>;
 
@@ -80,6 +81,10 @@ class Dispatcher {
     }
     dispatcher_shutdown_context.release();
     return zx::ok(Dispatcher(dispatcher));
+  }
+
+  static Unowned<Dispatcher> From(async_dispatcher_t* async_dispatcher) {
+    return Unowned<Dispatcher>(fdf_dispatcher_from_async_dispatcher(async_dispatcher));
   }
 
   explicit Dispatcher(fdf_dispatcher_t* dispatcher = nullptr) : dispatcher_(dispatcher) {}
@@ -135,7 +140,7 @@ class Dispatcher {
   }
 
   // Gets the dispatcher's asynchronous dispatch interface.
-  async_dispatcher_t* async_dispatcher() {
+  async_dispatcher_t* async_dispatcher() const {
     return dispatcher_ ? fdf_dispatcher_get_async_dispatcher(dispatcher_) : nullptr;
   }
 
@@ -144,7 +149,7 @@ class Dispatcher {
     return dispatcher_ ? std::optional(fdf_dispatcher_get_options(dispatcher_)) : std::nullopt;
   }
 
-  fdf::UnownedDispatcher borrow() const;
+  Unowned<Dispatcher> borrow() const { return Unowned<Dispatcher>(dispatcher_); }
 
  protected:
   fdf_dispatcher_t* dispatcher_;
@@ -172,21 +177,7 @@ class Dispatcher {
   };
 };
 
-class UnownedDispatcher : public Dispatcher {
- public:
-  // Will assert if |dispatcher| isn't retrieved via the `async_dispatcher` method.
-  UnownedDispatcher(async_dispatcher_t* dispatcher)
-      : Dispatcher(fdf_dispatcher_from_async_dispatcher(dispatcher)) {}
-
-  UnownedDispatcher(fdf_dispatcher_t* dispatcher) : Dispatcher(dispatcher) {}
-
-  UnownedDispatcher(UnownedDispatcher&&) = default;
-  UnownedDispatcher& operator=(UnownedDispatcher&&) = default;
-
-  ~UnownedDispatcher() { dispatcher_ = nullptr; }
-};
-
-inline UnownedDispatcher Dispatcher::borrow() const { return UnownedDispatcher(dispatcher_); }
+using UnownedDispatcher = Unowned<Dispatcher>;
 
 }  // namespace fdf
 

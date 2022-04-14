@@ -64,7 +64,7 @@ zx_status_t Device::DdkServiceConnect(const char* service_name, fdf::Channel cha
     return ZX_ERR_NOT_SUPPORTED;
   }
   fdf::ServerEnd<fdtt::DriverTransportProtocol> server_end(std::move(channel));
-  fdf::BindServer<fdf::WireServer<fdtt::DriverTransportProtocol>>(dispatcher_.get(),
+  fdf::BindServer<fdf::WireServer<fdtt::DriverTransportProtocol>>(dispatcher_->get(),
                                                                   std::move(server_end), this);
   return ZX_OK;
 }

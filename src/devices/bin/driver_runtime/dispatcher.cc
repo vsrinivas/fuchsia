@@ -268,7 +268,7 @@ Dispatcher* Dispatcher::FromAsyncDispatcher(async_dispatcher_t* dispatcher) {
 
 async_dispatcher_t* Dispatcher::GetAsyncDispatcher() {
   // Note: We inherit from async_t so we can upcast to it.
-  return (async_dispatcher_t*)this;
+  return static_cast<async_dispatcher_t*>(this);
 }
 
 void Dispatcher::ShutdownAsync() {

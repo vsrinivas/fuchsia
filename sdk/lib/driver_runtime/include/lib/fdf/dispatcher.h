@@ -102,7 +102,7 @@ fdf_dispatcher_t* fdf_dispatcher_from_async_dispatcher(async_dispatcher_t* async
 fdf_dispatcher_t* fdf_dispatcher_get_current_dispatcher();
 
 // Returns the options set for this dispatcher.
-uint32_t fdf_dispatcher_get_options(fdf_dispatcher_t* dispatcher);
+uint32_t fdf_dispatcher_get_options(const fdf_dispatcher_t* dispatcher);
 
 // Shutting down a dispatcher is an asynchronous operation.
 //

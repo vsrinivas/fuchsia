@@ -130,7 +130,7 @@ struct zx_device
   void InitOp() {
     libsync::Completion completion;
 
-    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+    async::PostTask(driver->dispatcher()->async_dispatcher(), [&]() {
       TraceLabelBuffer trace_label;
       TRACE_DURATION("driver_host:driver-hooks", get_trace_label("init", &trace_label));
       Dispatch(ops_->init);
@@ -144,7 +144,7 @@ struct zx_device
     libsync::Completion completion;
     zx_status_t status;
 
-    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+    async::PostTask(driver->dispatcher()->async_dispatcher(), [&]() {
       TraceLabelBuffer trace_label;
       TRACE_DURATION("driver_host:driver-hooks", get_trace_label("open", &trace_label));
       status = Dispatch(ops_->open, ZX_OK, dev_out, flags);
@@ -159,7 +159,7 @@ struct zx_device
     libsync::Completion completion;
     zx_status_t status;
 
-    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+    async::PostTask(driver->dispatcher()->async_dispatcher(), [&]() {
       TraceLabelBuffer trace_label;
       TRACE_DURATION("driver_host:driver-hooks", get_trace_label("close", &trace_label));
       status = Dispatch(ops_->close, ZX_OK, flags);
@@ -173,7 +173,7 @@ struct zx_device
   void UnbindOp() {
     libsync::Completion completion;
 
-    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+    async::PostTask(driver->dispatcher()->async_dispatcher(), [&]() {
       TraceLabelBuffer trace_label;
       TRACE_DURATION("driver_host:driver-hooks", get_trace_label("unbind", &trace_label));
       Dispatch(ops_->unbind);
@@ -187,7 +187,7 @@ struct zx_device
     libsync::Completion completion;
     zx_status_t status;
 
-    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+    async::PostTask(driver->dispatcher()->async_dispatcher(), [&]() {
       status = Dispatch(ops_->service_connect, ZX_OK, service_name, channel);
       completion.Signal();
     });
@@ -199,7 +199,7 @@ struct zx_device
   void ReleaseOp() {
     libsync::Completion completion;
 
-    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+    async::PostTask(driver->dispatcher()->async_dispatcher(), [&]() {
       TraceLabelBuffer trace_label;
       TRACE_DURATION("driver_host:driver-hooks", get_trace_label("release", &trace_label));
       Dispatch(ops_->release);
@@ -212,7 +212,7 @@ struct zx_device
   void SuspendNewOp(uint8_t requested_state, bool enable_wake, uint8_t suspend_reason) {
     libsync::Completion completion;
 
-    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+    async::PostTask(driver->dispatcher()->async_dispatcher(), [&]() {
       TraceLabelBuffer trace_label;
       TRACE_DURATION("driver_host:driver-hooks", get_trace_label("suspend", &trace_label));
       Dispatch(ops_->suspend, requested_state, enable_wake, suspend_reason);
@@ -226,7 +226,7 @@ struct zx_device
     libsync::Completion completion;
     zx_status_t status;
 
-    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+    async::PostTask(driver->dispatcher()->async_dispatcher(), [&]() {
       TraceLabelBuffer trace_label;
       TRACE_DURATION("driver_host:driver-hooks",
                      get_trace_label("set_performance_state", &trace_label));
@@ -243,7 +243,7 @@ struct zx_device
     libsync::Completion completion;
     zx_status_t status;
 
-    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+    async::PostTask(driver->dispatcher()->async_dispatcher(), [&]() {
       TraceLabelBuffer trace_label;
       TRACE_DURATION("driver_host:driver-hooks",
                      get_trace_label("conf_auto_suspend", &trace_label));
@@ -259,7 +259,7 @@ struct zx_device
   void ResumeNewOp(uint32_t requested_state) {
     libsync::Completion completion;
 
-    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+    async::PostTask(driver->dispatcher()->async_dispatcher(), [&]() {
       TraceLabelBuffer trace_label;
       TRACE_DURATION("driver_host:driver-hooks", get_trace_label("resume", &trace_label));
       Dispatch(ops_->resume, requested_state);
@@ -273,7 +273,7 @@ struct zx_device
     libsync::Completion completion;
     zx_status_t status;
 
-    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+    async::PostTask(driver->dispatcher()->async_dispatcher(), [&]() {
       TraceLabelBuffer trace_label;
       TRACE_DURATION("driver_host:driver-hooks", get_trace_label("read", &trace_label));
       inspect_->ReadOpStats().Update();
@@ -289,7 +289,7 @@ struct zx_device
     libsync::Completion completion;
     zx_status_t status;
 
-    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+    async::PostTask(driver->dispatcher()->async_dispatcher(), [&]() {
       TraceLabelBuffer trace_label;
       TRACE_DURATION("driver_host:driver-hooks", get_trace_label("write", &trace_label));
       inspect_->WriteOpStats().Update();
@@ -305,7 +305,7 @@ struct zx_device
     libsync::Completion completion;
     zx_off_t size;
 
-    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+    async::PostTask(driver->dispatcher()->async_dispatcher(), [&]() {
       TraceLabelBuffer trace_label;
       TRACE_DURATION("driver_host:driver-hooks", get_trace_label("get_size", &trace_label));
       size = Dispatch(ops_->get_size, 0lu);
@@ -320,7 +320,7 @@ struct zx_device
     libsync::Completion completion;
     zx_status_t status;
 
-    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+    async::PostTask(driver->dispatcher()->async_dispatcher(), [&]() {
       TraceLabelBuffer trace_label;
       TRACE_DURATION("driver_host:driver-hooks", get_trace_label("message", &trace_label));
       inspect_->MessageOpStats().Update();
@@ -335,7 +335,7 @@ struct zx_device
   void ChildPreReleaseOp(void* child_ctx) {
     libsync::Completion completion;
 
-    async::PostTask(driver->dispatcher().async_dispatcher(), [&]() {
+    async::PostTask(driver->dispatcher()->async_dispatcher(), [&]() {
       TraceLabelBuffer trace_label;
       TRACE_DURATION("driver_host:driver-hooks",
                      get_trace_label("child_pre_release", &trace_label));

@@ -141,7 +141,7 @@ __EXPORT fdf_dispatcher_t* fdf_dispatcher_from_async_dispatcher(async_dispatcher
   return static_cast<fdf_dispatcher*>(fdf_dispatcher::FromAsyncDispatcher(dispatcher));
 }
 
-__EXPORT uint32_t fdf_dispatcher_get_options(fdf_dispatcher_t* dispatcher) {
+__EXPORT uint32_t fdf_dispatcher_get_options(const fdf_dispatcher_t* dispatcher) {
   return dispatcher->options();
 }
 

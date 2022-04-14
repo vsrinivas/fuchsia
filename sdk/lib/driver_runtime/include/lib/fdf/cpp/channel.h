@@ -7,6 +7,7 @@
 
 #include <lib/fdf/channel.h>
 #include <lib/fdf/cpp/arena.h>
+#include <lib/fdf/cpp/unowned.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zx/status.h>
 #include <lib/zx/time.h>
@@ -45,6 +46,8 @@ namespace fdf {
 //
 class Channel {
  public:
+  using HandleType = fdf_handle_t;
+
   Channel() : channel_(FDF_HANDLE_INVALID) {}
   explicit Channel(fdf_handle_t channel) : channel_(channel) {}
 
@@ -232,55 +235,6 @@ class ChannelPair {
 
   Channel end0;
   Channel end1;
-};
-
-// Wraps a handle to an object to provide type-safe access to its operations
-// but does not take ownership of it.  The handle is not closed when the
-// wrapper is destroyed.
-//
-// All use of Unowned<Object<T>> as an Object<T> is via a dereference operator,
-// as illustrated below:
-//
-// void do_something(const fdf::Channel& channel);
-//
-// void example(fdf_handle_t channel_handle) {
-//     do_something(*fdf::Unowned<Channel>(channel_handle));
-// }
-template <typename T>
-class Unowned final {
- public:
-  explicit Unowned(fdf_handle_t h) : value_(h) {}
-  explicit Unowned(const T& owner) : Unowned(owner.get()) {}
-  explicit Unowned(const Unowned& other) : Unowned(*other) {}
-  constexpr Unowned() = default;
-  Unowned(Unowned&& other) = default;
-
-  ~Unowned() { release_value(); }
-
-  Unowned& operator=(const Unowned& other) {
-    if (&other == this) {
-      return *this;
-    }
-
-    *this = Unowned(other);
-    return *this;
-  }
-  Unowned& operator=(Unowned&& other) {
-    release_value();
-    value_ = static_cast<T&&>(other.value_);
-    return *this;
-  }
-
-  const T& operator*() const { return value_; }
-  const T* operator->() const { return &value_; }
-
- private:
-  void release_value() {
-    fdf_handle_t h = value_.release();
-    static_cast<void>(h);
-  }
-
-  T value_;
 };
 
 using UnownedChannel = fdf::Unowned<Channel>;
