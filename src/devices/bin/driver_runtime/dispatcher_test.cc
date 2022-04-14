@@ -2095,3 +2095,77 @@ TEST_F(DispatcherTest, CreateDispatcherOnNonRuntimeThreadFails) {
   ASSERT_NE(ZX_OK,
             fdf_dispatcher::Create(0, "scheduler_role", 0, observer.fdf_observer(), &dispatcher));
 }
+
+namespace driver_runtime {
+extern DispatcherCoordinator& GetDispatcherCoordinator();
+}
+
+// Tests that we don't spawn more threads than we need.
+TEST_F(DispatcherTest, ExtraThreadIsReused) {
+  {
+    void* driver = reinterpret_cast<void*>(uintptr_t(1));
+    fdf_internal_push_driver(driver);
+    auto deferred = fit::defer([]() { fdf_internal_pop_driver(); });
+
+    ASSERT_EQ(driver_runtime::GetDispatcherCoordinator().num_threads(), 1);
+
+    // Create first dispatcher
+    driver_runtime::Dispatcher* dispatcher;
+    DispatcherShutdownObserver observer;
+    ASSERT_OK(fdf_dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "scheduler_role", 0,
+                                     observer.fdf_observer(), &dispatcher));
+    ASSERT_EQ(driver_runtime::GetDispatcherCoordinator().num_threads(), 2);
+
+    dispatcher->ShutdownAsync();
+    ASSERT_OK(observer.WaitUntilShutdown());
+    dispatcher->Destroy();
+
+    // Create second dispatcher
+    DispatcherShutdownObserver observer2;
+    ASSERT_OK(fdf_dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "scheduler_role", 0,
+                                     observer2.fdf_observer(), &dispatcher));
+    // Note that we are still at 2 threads.
+    ASSERT_EQ(driver_runtime::GetDispatcherCoordinator().num_threads(), 2);
+
+    dispatcher->ShutdownAsync();
+    ASSERT_OK(observer2.WaitUntilShutdown());
+    dispatcher->Destroy();
+
+    // Ideally we would be back down 1 thread at this point, but that is challenging. A future
+    // change may rememdy this.
+    ASSERT_EQ(driver_runtime::GetDispatcherCoordinator().num_threads(), 2);
+  }
+
+  driver_runtime::GetDispatcherCoordinator().Reset();
+  ASSERT_EQ(driver_runtime::GetDispatcherCoordinator().num_threads(), 1);
+}
+
+TEST_F(DispatcherTest, MaximumTenThreads) {
+  {
+    void* driver = reinterpret_cast<void*>(uintptr_t(1));
+    fdf_internal_push_driver(driver);
+    auto deferred = fit::defer([]() { fdf_internal_pop_driver(); });
+
+    ASSERT_EQ(driver_runtime::GetDispatcherCoordinator().num_threads(), 1);
+
+    constexpr uint32_t kNumDispatchers = 11;
+
+    std::array<driver_runtime::Dispatcher*, kNumDispatchers> dispatchers;
+    std::array<DispatcherShutdownObserver, kNumDispatchers> observers;
+    for (uint32_t i = 0; i < kNumDispatchers; i++) {
+      ASSERT_OK(fdf_dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "scheduler_role", 0,
+                                       observers[i].fdf_observer(), &dispatchers[i]));
+      ASSERT_EQ(driver_runtime::GetDispatcherCoordinator().num_threads(), std::min(i + 2, 10u));
+    }
+
+    ASSERT_EQ(driver_runtime::GetDispatcherCoordinator().num_threads(), 10);
+
+    for (uint32_t i = 0; i < kNumDispatchers; i++) {
+      dispatchers[i]->ShutdownAsync();
+      ASSERT_OK(observers[i].WaitUntilShutdown());
+      dispatchers[i]->Destroy();
+    }
+  }
+
+  driver_runtime::GetDispatcherCoordinator().Reset();
+}

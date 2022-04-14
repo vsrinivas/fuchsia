@@ -14,17 +14,18 @@
 #include <lib/zx/status.h>
 #include <lib/zx/time.h>
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #include <vector>
 
 #include <fbl/auto_lock.h>
 #include <fbl/canary.h>
 #include <fbl/condition_variable.h>
+#include <fbl/intrusive_container_utils.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_counted.h>
 
-#include "fbl/intrusive_container_utils.h"
 #include "src/devices/bin/driver_runtime/async_loop_owned_event_handler.h"
 #include "src/devices/bin/driver_runtime/callback_request.h"
 #include "src/devices/bin/driver_runtime/driver_context.h"
@@ -38,11 +39,25 @@ class Dispatcher : public async_dispatcher_t,
   class AsyncWait;
 
  public:
+  using ThreadAdder = fit::callback<zx_status_t()>;
+
   // Public for std::make_unique.
   // Use |Create| or |CreateWithLoop| instead of calling directly.
   Dispatcher(uint32_t options, bool unsynchronized, bool allow_sync_calls, const void* owner,
              async_dispatcher_t* process_shared_dispatcher,
              fdf_dispatcher_shutdown_observer_t* observer);
+
+  // Creates a dispatcher which is backed by |dispatcher|.
+  // |adder| should add additional threads to back the dispatcher when invoked.
+  //
+  // Returns ownership of the dispatcher in |out_dispatcher|. The caller should call
+  // |Destroy| once they are done using the dispatcher. Once |Destroy| is called,
+  // the dispatcher will be deleted once all callbacks canclled or completed by the dispatcher.
+  static fdf_status_t CreateWithAdder(uint32_t options, const char* scheduler_role,
+                                      size_t scheduler_role_len, const void* owner,
+                                      async_dispatcher_t* dispatcher, ThreadAdder adder,
+                                      fdf_dispatcher_shutdown_observer_t*,
+                                      Dispatcher** out_dispatcher);
 
   // Creates a dispatcher which is backed by |loop|.
   // |loop| can be the |ProcessSharedLoop|, or a private async loop created by a test.
@@ -147,6 +162,8 @@ class Dispatcher : public async_dispatcher_t,
 
   // Returns the driver which owns this dispatcher.
   const void* owner() const { return owner_; }
+
+  const async_dispatcher_t* process_shared_dispatcher() const { return process_shared_dispatcher_; }
 
   // For use by testing only.
   size_t callback_queue_size_slow() {
@@ -431,7 +448,9 @@ class Dispatcher : public async_dispatcher_t,
 class DispatcherCoordinator {
  public:
   // We default to one thread, and start additional threads when blocking dispatchers are created.
-  DispatcherCoordinator() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) { loop_.StartThread(); }
+  DispatcherCoordinator() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+    loop_.StartThread("fdf-dispatcher-0");
+  }
 
   static void DestroyAllDispatchers();
   static void WaitUntilDispatchersIdle();
@@ -448,7 +467,20 @@ class DispatcherCoordinator {
   void NotifyShutdown(driver_runtime::Dispatcher& dispatcher);
   void RemoveDispatcher(Dispatcher& dispatcher);
 
+  zx_status_t AddThread();
+
+  // Resets back down to 1 thread.
+  // Must only be called when there are no outstanding dispatchers.
+  // Must not be called from within a driver_runtime managed thread as that will result in a
+  // deadlock.
+  void Reset();
+
   async::Loop* loop() { return &loop_; }
+
+  uint32_t num_threads() {
+    fbl::AutoLock al(&lock_);
+    return number_threads_;
+  }
 
  private:
   // Tracks the dispatchers owned by a driver.
@@ -525,6 +557,12 @@ class DispatcherCoordinator {
   fbl::WAVLTree<const void*, std::unique_ptr<DriverState>> drivers_ __TA_GUARDED(&lock_);
   // Notified when all drivers are destroyed.
   fbl::ConditionVariable drivers_destroyed_event_ __TA_GUARDED(&lock_);
+
+  // Tracks the number of threads we've spawned via |loop_|.
+  uint32_t number_threads_ __TA_GUARDED(&lock_) = 1;
+  // Tracks the number of dispatchers which have sync calls allowed. We will only spawn additional
+  // threads if this number exceeds |number_threads_|.
+  uint32_t dispatcher_threads_needed_ __TA_GUARDED(&lock_) = 1;
 
   async::Loop loop_;
 };

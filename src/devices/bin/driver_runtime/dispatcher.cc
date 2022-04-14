@@ -190,11 +190,11 @@ Dispatcher::Dispatcher(uint32_t options, bool unsynchronized, bool allow_sync_ca
       shutdown_observer_(observer) {}
 
 // static
-fdf_status_t Dispatcher::CreateWithLoop(uint32_t options, const char* scheduler_role,
-                                        size_t scheduler_role_len, const void* owner,
-                                        async::Loop* loop,
-                                        fdf_dispatcher_shutdown_observer_t* observer,
-                                        Dispatcher** out_dispatcher) {
+fdf_status_t Dispatcher::CreateWithAdder(uint32_t options, const char* scheduler_role,
+                                         size_t scheduler_role_len, const void* owner,
+                                         async_dispatcher_t* parent_dispatcher, ThreadAdder adder,
+                                         fdf_dispatcher_shutdown_observer_t* observer,
+                                         Dispatcher** out_dispatcher) {
   ZX_DEBUG_ASSERT(out_dispatcher);
 
   bool unsynchronized = options & FDF_DISPATCHER_OPTION_UNSYNCHRONIZED;
@@ -206,16 +206,14 @@ fdf_status_t Dispatcher::CreateWithLoop(uint32_t options, const char* scheduler_
     return ZX_ERR_INVALID_ARGS;
   }
   if (allow_sync_calls) {
-    static int number = 0;
-    auto name = "fdf-dispatcher-thread-" + std::to_string(number++);
-    zx_status_t status = loop->StartThread(name.c_str());
+    zx_status_t status = adder();
     if (status != ZX_OK) {
       return status;
     }
   }
 
   auto dispatcher = fbl::MakeRefCounted<Dispatcher>(options, unsynchronized, allow_sync_calls,
-                                                    owner, loop->dispatcher(), observer);
+                                                    owner, parent_dispatcher, observer);
 
   zx::event event;
   if (zx_status_t status = zx::event::create(0, &event); status != ZX_OK) {
@@ -247,6 +245,16 @@ fdf_status_t Dispatcher::CreateWithLoop(uint32_t options, const char* scheduler_
   return ZX_OK;
 }
 
+fdf_status_t Dispatcher::CreateWithLoop(uint32_t options, const char* scheduler_role,
+                                        size_t scheduler_role_len, const void* owner,
+                                        async::Loop* loop,
+                                        fdf_dispatcher_shutdown_observer_t* observer,
+                                        Dispatcher** out_dispatcher) {
+  return CreateWithAdder(
+      options, scheduler_role, scheduler_role_len, owner, loop->dispatcher(),
+      [&]() { return loop->StartThread(); }, observer, out_dispatcher);
+}
+
 // fdf_dispatcher_t implementation
 
 // static
@@ -254,9 +262,10 @@ fdf_status_t Dispatcher::Create(uint32_t options, const char* scheduler_role,
                                 size_t scheduler_role_len,
                                 fdf_dispatcher_shutdown_observer_t* observer,
                                 Dispatcher** out_dispatcher) {
-  return CreateWithLoop(options, scheduler_role, scheduler_role_len,
-                        driver_context::GetCurrentDriver(), GetDispatcherCoordinator().loop(),
-                        observer, out_dispatcher);
+  return CreateWithAdder(
+      options, scheduler_role, scheduler_role_len, driver_context::GetCurrentDriver(),
+      GetDispatcherCoordinator().loop()->dispatcher(),
+      []() { return GetDispatcherCoordinator().AddThread(); }, observer, out_dispatcher);
 }
 
 // static
@@ -1066,6 +1075,11 @@ void DispatcherCoordinator::RemoveDispatcher(Dispatcher& dispatcher) {
   auto driver_state = drivers_.find(dispatcher.owner());
   ZX_ASSERT(driver_state != drivers_.end());
 
+  // We need to check the process shared dispatcher matches as tests inject their own.
+  if (dispatcher.allow_sync_calls() &&
+      dispatcher.process_shared_dispatcher() == loop_.dispatcher()) {
+    dispatcher_threads_needed_--;
+  }
   driver_state->RemoveDispatcher(dispatcher);
   // If the driver has completely shutdown, and all dispatchers have been destroyed,
   // the driver state can also be destroyed.
@@ -1075,6 +1089,42 @@ void DispatcherCoordinator::RemoveDispatcher(Dispatcher& dispatcher) {
   if (drivers_.size() == 0) {
     drivers_destroyed_event_.Broadcast();
   }
+}
+
+zx_status_t DispatcherCoordinator::AddThread() {
+  fbl::AutoLock lock(&lock_);
+  dispatcher_threads_needed_++;
+  // TODO(surajmalhotra): We are clamping number_threads_ to 10 to avoid spawning too many threads.
+  // Technically this can result in a deadlock scenario in a very complex driver host. We need
+  // better support for dynamically starting threads as necessary.
+  if (number_threads_ >= dispatcher_threads_needed_ || number_threads_ == 10) {
+    return ZX_OK;
+  }
+  auto name = "fdf-dispatcher-thread-" + std::to_string(number_threads_);
+  zx_status_t status = loop_.StartThread(name.c_str());
+  if (status == ZX_OK) {
+    number_threads_++;
+  }
+  return status;
+}
+
+void DispatcherCoordinator::Reset() {
+  {
+    fbl::AutoLock al(&lock_);
+    ZX_ASSERT(drivers_.is_empty());
+    ZX_ASSERT(dispatcher_threads_needed_ == 1);
+  }
+
+  loop_.Quit();
+  loop_.JoinThreads();
+  loop_.ResetQuit();
+  loop_.RunUntilIdle();
+
+  fbl::AutoLock al(&lock_);
+  number_threads_ = 1;
+  dispatcher_threads_needed_ = 1;
+
+  loop_.StartThread("fdf-dispatcher-thread-0");
 }
 
 }  // namespace driver_runtime
