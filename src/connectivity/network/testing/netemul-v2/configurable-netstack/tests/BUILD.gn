@@ -29,6 +29,7 @@ rustc_test("client") {
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.debug:fuchsia.net.debug-rustc",
     "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
+    "//sdk/fidl/fuchsia.net.interfaces.admin:fuchsia.net.interfaces.admin-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/lib/net-types",
@@ -37,6 +38,7 @@ rustc_test("client") {
     "//src/lib/network/fidl_fuchsia_net_ext",
     "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
     "//third_party/rust_crates:futures-util",
+    "//third_party/rust_crates:test-case",
   ]
   source_root = "src/client.rs"
   sources = [ "src/client.rs" ]

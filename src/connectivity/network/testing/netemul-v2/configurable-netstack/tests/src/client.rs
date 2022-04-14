@@ -9,6 +9,7 @@ use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_ext as fnet_ext;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
+use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
 use fidl_fuchsia_net_stack as fnet_stack;
 use fuchsia_component::client::connect_to_protocol;
@@ -18,6 +19,7 @@ use std::{
     collections::HashMap,
     io::{Read as _, Write as _},
 };
+use test_case::test_case;
 
 pub const CLIENT_NAME: &str = "client";
 
@@ -108,4 +110,67 @@ async fn default_gateway() {
         },
     );
     assert!(found, "could not find default route to gateway {:?}", GATEWAY);
+}
+
+const IPV4_FWD_ENABLED_MAC_ADDR: fnet::MacAddress = fidl_mac!("bb:cc:dd:ee:ff:aa");
+const IPV6_FWD_ENABLED_MAC_ADDR: fnet::MacAddress = fidl_mac!("cc:dd:ee:ff:aa:bb");
+
+#[test_case(
+    IPV4_FWD_ENABLED_MAC_ADDR,
+    true,
+    false;
+    "interface with IPv4 forwarding enabled"
+)]
+#[test_case(
+    IPV6_FWD_ENABLED_MAC_ADDR,
+    false,
+    true;
+    "interface with IPv6 forwarding enabled"
+)]
+#[fuchsia_async::run_singlethreaded(test)]
+async fn enable_forwarding(
+    interface_mac_address: fnet::MacAddress,
+    expected_ipv4_forwarding: bool,
+    expected_ipv6_forwarding: bool,
+) {
+    let state = connect_to_protocol::<fnet_interfaces::StateMarker>().expect("connect to protocol");
+    let stream = fnet_interfaces_ext::event_stream_from_state(&state)
+        .expect("event stream from interfaces state");
+    let interfaces = fnet_interfaces_ext::existing(stream, HashMap::new())
+        .await
+        .expect("list existing interfaces")
+        .into_keys();
+    let debug = connect_to_protocol::<fnet_debug::InterfacesMarker>().expect("connect to protocol");
+
+    // Find the interface that corresponds to `interface_mac_address` by querying
+    // `fuchsia.net.debug/Interfaces.GetMac` with the ID of each existing interface.
+    let matching_interface = futures_util::stream::iter(interfaces).filter_map(|id| {
+        let debug = &debug;
+        async move {
+            match debug.get_mac(id).await.expect("get mac") {
+                Err(fnet_debug::InterfacesGetMacError::NotFound) => None,
+                Ok(mac_address) => {
+                    let mac_address = mac_address.expect("mac address not set");
+                    (mac_address.octets == interface_mac_address.octets).then(|| id)
+                }
+            }
+        }
+    });
+    futures_util::pin_mut!(matching_interface);
+    let id = matching_interface.next().await.expect("could not find interface");
+    let (control, server_end) =
+        fnet_interfaces_ext::admin::Control::create_endpoints().expect("create endpoints");
+    debug.get_admin(id, server_end).expect("get control handle to interface");
+
+    let fnet_interfaces_admin::Configuration { ipv4, ipv6, .. } = control
+        .get_configuration()
+        .await
+        .expect("call get configuration")
+        .expect("get interface configuration");
+    let fnet_interfaces_admin::Ipv4Configuration { forwarding: ipv4_forwarding, .. } =
+        ipv4.expect("extract ipv4 configuration");
+    let fnet_interfaces_admin::Ipv6Configuration { forwarding: ipv6_forwarding, .. } =
+        ipv6.expect("extract ipv6 configuration");
+    assert_eq!(ipv4_forwarding, Some(expected_ipv4_forwarding));
+    assert_eq!(ipv6_forwarding, Some(expected_ipv6_forwarding));
 }

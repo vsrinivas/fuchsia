@@ -48,6 +48,14 @@ protocol ConfigurableNetstack {
             ///
             /// If not set, no default route will be added to the netstack.
             5: gateway fuchsia.net.IpAddress;
+            /// Whether to enable IPv4 forwarding on the interface.
+            ///
+            /// If not set, interpreted as false.
+            6: enable_ipv4_forwarding bool;
+            /// Whether to enable IPv6 forwarding on the interface.
+            ///
+            /// If not set, interpreted as false.
+            7: enable_ipv6_forwarding bool;
         };
     }) -> (struct {}) error @generated_name("ConfigurationError") strict enum {
         INVALID_ARGUMENTS = 1;
