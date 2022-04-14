@@ -186,9 +186,6 @@ zx_status_t FsManager::Initialize(
   }
 
   fbl::RefPtr<fs::Vnode> vn;
-  if ((status = global_root_->Create("boot", S_IFDIR, &vn)) != ZX_OK) {
-    return status;
-  }
   if ((status = global_root_->Create("tmp", S_IFDIR, &vn)) != ZX_OK) {
     return status;
   }
