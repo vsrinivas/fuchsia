@@ -56,14 +56,14 @@ where
     s.parse().map_err(de::Error::custom)
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PublicKeyAndId {
     #[serde(deserialize_with = "from_pem")]
     pub key: PublicKey,
     pub id: PublicKeyId,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PublicKeys {
     /// The latest public key will be used when decorating requests.
     pub latest: PublicKeyAndId,

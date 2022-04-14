@@ -8,7 +8,7 @@ import json
 import urllib.parse
 
 
-def generate_omaha_client_config(configs):
+def generate_omaha_client_config(configs, key_config):
     packages = []
 
     for config in configs:
@@ -42,6 +42,27 @@ def generate_omaha_client_config(configs):
                         'appid': realm['app_id'],
                     })
 
+        if 'service_url' in config:
+            service_url = config['service_url']
+            package['service_url'] = service_url
+
+            if service_url in key_config:
+                latest = key_config[service_url]['latest']
+                historical = key_config[service_url]['historical']
+                package['public_keys'] = {
+                    "latest": {
+                        'key': latest['key'],
+                        'id': int(latest['id']),
+                    },
+                    "historical":
+                        [
+                            {
+                                'key': s['key'],
+                                'id': int(s['id']),
+                            } for s in historical
+                        ],
+                }
+
         package['channel_config'] = channel_config
 
         packages.append(package)
@@ -49,7 +70,8 @@ def generate_omaha_client_config(configs):
     return {'packages': packages}
 
 
-def generate_pkg_resolver_config(configs):
+def generate_pkg_resolver_config(configs, key_config):
+    del key_config  # unused for now.
     packages = []
 
     for config in configs:
@@ -77,18 +99,25 @@ def main():
         help="path to the generated eager package config file for pkg-resolver",
     )
     parser.add_argument(
+        "--key-config-file",
+        type=argparse.FileType(
+            'r',
+            help="JSON key config file, with map from service URL to public keys"
+        ))
+    parser.add_argument(
         "eager_package_config_files",
         nargs='+',
         type=argparse.FileType('r'),
         help="JSON config files, one for each eager package",
     )
     args = parser.parse_args()
+    key_config = json.load(args.key_config_file)
     configs = [json.load(f) for f in args.eager_package_config_files]
 
-    omaha_client_config = generate_omaha_client_config(configs)
+    omaha_client_config = generate_omaha_client_config(configs, key_config)
     json.dump(omaha_client_config, args.out_omaha_client_config, sort_keys=True)
 
-    pkg_resolver_config = generate_pkg_resolver_config(configs)
+    pkg_resolver_config = generate_pkg_resolver_config(configs, key_config)
     json.dump(pkg_resolver_config, args.out_pkg_resolver_config, sort_keys=True)
 
 

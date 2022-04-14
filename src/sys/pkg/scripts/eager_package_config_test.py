@@ -11,40 +11,67 @@ from eager_package_config import generate_omaha_client_config, generate_pkg_reso
 class TestEagerPackageConfig(unittest.TestCase):
     maxDiff = None
 
-    configs = [
-        {
-            "url":
-                "fuchsia-pkg://example.com/package",
-            "default_channel":
-                "stable",
-            "flavor":
-                "debug",
-            "executable":
-                True,
-            "realms":
-                [
-                    {
-                        "app_id": "1a2b3c4d",
-                        "channels": ["stable", "beta", "alpha"],
+    def makeKeyConfig(self):
+        return {
+            "https://example.com":
+                {
+                    "latest": {
+                        "id": 123,
+                        "key": "foo",
                     },
-                    {
-                        "app_id": "2b3c4d5e",
-                        "channels": ["test"],
-                    },
-                ],
-        },
-        {
-            "url": "fuchsia-pkg://example.com/package2",
-            "realms": [{
-                "app_id": "3c4d5e6f",
-                "channels": ["stable"],
-            }],
-        },
-    ]
+                    "historical":
+                        [
+                            {
+                                # Allow the public key ID to be a string.
+                                # This is an easy mistake to make when
+                                # writing a config, so we want to make sure
+                                # we handle it correctly, i.e. cast string
+                                # to int or fail.
+                                "id": "246",
+                                "key": "bar",
+                            },
+                            {
+                                "id": 369,
+                                "key": "baz",
+                            },
+                        ],
+                },
+        }
+
+    def makeConfigs(self):
+        return [
+            {
+                "url": "fuchsia-pkg://example.com/package",
+                "default_channel": "stable",
+                "flavor": "debug",
+                "executable": True,
+                "realms":
+                    [
+                        {
+                            "app_id": "1a2b3c4d",
+                            "channels": ["stable", "beta", "alpha"],
+                        },
+                        {
+                            "app_id": "2b3c4d5e",
+                            "channels": ["test"],
+                        },
+                    ],
+                "service_url": "https://example.com",
+            },
+            {
+                "url": "fuchsia-pkg://example.com/package2",
+                "realms": [{
+                    "app_id": "3c4d5e6f",
+                    "channels": ["stable"],
+                }],
+            },
+        ]
 
     def test_generate_omaha_client_config(self):
+        configs = self.makeConfigs()
+        key_config = self.makeKeyConfig()
         self.assertEqual(
-            generate_omaha_client_config(self.configs), {
+            generate_omaha_client_config(configs, key_config), {
                 "packages":
                     [
                         {
@@ -76,7 +103,26 @@ class TestEagerPackageConfig(unittest.TestCase):
                                             },
                                         ],
                                     "default_channel": "stable",
-                                }
+                                },
+                            'service_url': 'https://example.com',
+                            'public_keys':
+                                {
+                                    'latest': {
+                                        'id': 123,
+                                        'key': 'foo',
+                                    },
+                                    'historical':
+                                        [
+                                            {
+                                                'id': 246,
+                                                'key': 'bar',
+                                            },
+                                            {
+                                                'id': 369,
+                                                'key': 'baz',
+                                            },
+                                        ],
+                                },
                         },
                         {
                             "url": "fuchsia-pkg://example.com/package2",
@@ -111,12 +157,15 @@ class TestEagerPackageConfig(unittest.TestCase):
                     ]
             }
         ]
+        key_config = self.makeKeyConfig()
         with self.assertRaises(AssertionError):
-            generate_omaha_client_config(configs)
+            generate_omaha_client_config(configs, key_config)
 
     def test_generate_pkg_resolver_config(self):
+        configs = self.makeConfigs()
+        key_config = self.makeKeyConfig()
         self.assertEqual(
-            generate_pkg_resolver_config(self.configs), {
+            generate_pkg_resolver_config(configs, key_config), {
                 "packages":
                     [
                         {
@@ -143,5 +192,6 @@ class TestEagerPackageConfig(unittest.TestCase):
                     ]
             }
         ]
+        key_config = self.makeKeyConfig()
         with self.assertRaises(ValueError):
-            generate_omaha_client_config(configs)
+            generate_omaha_client_config(configs, key_config)

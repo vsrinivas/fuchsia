@@ -5,6 +5,7 @@
 use crate::channel::ChannelConfigs;
 use anyhow::{Context as _, Error};
 use fuchsia_url::pkg_url::PkgUrl;
+use omaha_client::cup_ecdsa::PublicKeys;
 use serde::Deserialize;
 use std::io;
 
@@ -15,6 +16,8 @@ pub struct EagerPackageConfig {
     pub url: PkgUrl,
     pub flavor: Option<String>,
     pub channel_config: ChannelConfigs,
+    pub service_url: Option<String>,
+    pub omaha_public_keys: Option<PublicKeys>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
@@ -137,6 +140,8 @@ mod tests {
                                 },
                             ]
                         },
+                        service_url: None,
+                        omaha_public_keys: None,
                     },
                     EagerPackageConfig {
                         url: PkgUrl::parse("fuchsia-pkg://example.com/package2").unwrap(),
@@ -150,6 +155,8 @@ mod tests {
                                 check_interval_secs: None,
                             },]
                         },
+                        service_url: None,
+                        omaha_public_keys: None,
                     },
                 ]
             }
