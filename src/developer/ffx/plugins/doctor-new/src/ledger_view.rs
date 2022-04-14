@@ -15,6 +15,7 @@ pub trait LedgerView: fmt::Display {
 }
 
 pub enum LedgerViewOutcome {
+    Info,
     Success,
     Warning,
     Failure,
@@ -24,6 +25,7 @@ pub enum LedgerViewOutcome {
 impl From<LedgerOutcome> for LedgerViewOutcome {
     fn from(view: LedgerOutcome) -> LedgerViewOutcome {
         match view {
+            LedgerOutcome::Info => LedgerViewOutcome::Info,
             LedgerOutcome::Success => LedgerViewOutcome::Success,
             LedgerOutcome::Warning => LedgerViewOutcome::Warning,
             LedgerOutcome::SoftWarning => LedgerViewOutcome::Warning,
@@ -36,6 +38,7 @@ impl From<LedgerOutcome> for LedgerViewOutcome {
 impl LedgerViewOutcome {
     pub fn format(&self, with_color: bool) -> String {
         let (symbol, color) = match self {
+            LedgerViewOutcome::Info => ("i".to_string(), format!("{}", color::Fg(color::Green))),
             LedgerViewOutcome::Success => ("✓".to_string(), format!("{}", color::Fg(color::Green))),
             LedgerViewOutcome::Warning => ("!".to_string(), format!("{}", color::Fg(color::Black))),
             LedgerViewOutcome::Failure => ("✗".to_string(), format!("{}", color::Fg(color::Red))),
