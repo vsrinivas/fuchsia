@@ -51,7 +51,7 @@ static inline uint32_t PayloadOffset(uint32_t num_handles) {
 // Returns ZX_OK on success.
 //
 // static
-inline zx_status_t MessagePacket::CreateCommon(uint32_t data_size, uint32_t num_handles,
+inline zx_status_t MessagePacket::CreateCommon(size_t data_size, size_t num_handles,
                                                MessagePacketPtr* msg) {
   if (unlikely(data_size > kMaxMessageSize || num_handles > kMaxMessageHandles)) {
     return ZX_ERR_OUT_OF_RANGE;

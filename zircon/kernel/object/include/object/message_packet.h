@@ -125,7 +125,7 @@ class MessagePacket final : public fbl::DoublyLinkedListable<MessagePacketPtr> {
   static zx_status_t CreateIovecUnbounded(user_in_ptr<const zx_channel_iovec_t> iovecs,
                                           uint32_t num_iovecs, uint32_t num_handles,
                                           MessagePacketPtr* msg);
-  static zx_status_t CreateCommon(uint32_t data_size, uint32_t num_handles, MessagePacketPtr* msg);
+  static zx_status_t CreateCommon(size_t data_size, size_t num_handles, MessagePacketPtr* msg);
 
   void set_data_size(uint32_t data_size) { data_size_ = data_size; }
 
