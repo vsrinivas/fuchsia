@@ -153,7 +153,7 @@ fn dispatch_signal_handler(
         .write_memory(UserAddress::from(stack_pointer), &signal_stack_frame.as_bytes())
         .unwrap();
 
-    signal_state.mask = action.sa_mask;
+    signal_state.set_signal_mask(action.sa_mask);
 
     current_task.registers.rsp = stack_pointer;
     current_task.registers.rdi = siginfo.signal.number() as u64;

@@ -42,6 +42,14 @@ impl SignalActions {
     pub fn fork(&self) -> Arc<SignalActions> {
         Arc::new(SignalActions { actions: RwLock::new(self.actions.read().clone()) })
     }
+
+    pub fn reset_for_exec(&self) {
+        for action in self.actions.write().iter_mut() {
+            if action.sa_handler != SIG_DFL && action.sa_handler != SIG_IGN {
+                action.sa_handler = SIG_DFL;
+            }
+        }
+    }
 }
 
 /// Per-task signal handling state.

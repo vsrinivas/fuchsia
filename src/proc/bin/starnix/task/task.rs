@@ -305,7 +305,10 @@ impl Task {
             self.thread_group.add(&child)?;
         } else {
             pids.add_thread_group(&child.thread_group);
-            child.signals.write().alt_stack = self.signals.read().alt_stack;
+            let signals = self.signals.read();
+            let mut child_signals = child.signals.write();
+            child_signals.alt_stack = signals.alt_stack;
+            child_signals.mask = signals.mask;
             self.mm.snapshot_to(&child.mm)?;
         }
 
@@ -750,7 +753,10 @@ impl CurrentTask {
         self.registers = start_info.to_registers();
         self.dt_debug_address = start_info.dt_debug_address;
 
+        self.thread_group.signal_actions.reset_for_exec();
         self.signals.write().alt_stack = None;
+
+        // TODO: The termination signal is reset to SIGCHLD.
 
         // TODO: All threads other than the calling thread are destroyed.
 
@@ -765,12 +771,7 @@ impl CurrentTask {
         // For now, we do not implement that behavior.
         self.files.exec();
 
-        // TODO: The dispositions of any signals that are being caught are
-        //       reset to the default.
-
         // TODO: POSIX timers are not preserved.
-
-        // TODO: The termination signal is reset to SIGCHLD.
 
         self.thread_group.set_name(&path)?;
         *self.thread_group.did_exec.write() = true;

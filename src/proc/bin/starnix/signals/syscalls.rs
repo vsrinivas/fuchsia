@@ -95,7 +95,7 @@ pub fn sys_rt_sigprocmask(
         SIG_UNBLOCK => signal_mask & !new_mask,
         SIG_SETMASK => new_mask,
         // Arguments have already been verified, this should never match.
-        _ => signal_mask,
+        _ => return error!(EINVAL),
     };
     signal_state.set_signal_mask(signal_mask);
 
