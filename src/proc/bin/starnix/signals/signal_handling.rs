@@ -287,6 +287,11 @@ pub fn dequeue_signal(current_task: &mut CurrentTask) {
                 drop(signal_state);
                 current_task.thread_group.exit(ExitStatus::Kill(siginfo.signal))
             }
+            DeliveryAction::CoreDump => {
+                // TODO(tbodt): Trigger crashsvc somehow
+                drop(signal_state);
+                current_task.thread_group.exit(ExitStatus::CoreDump(siginfo.signal))
+            }
             DeliveryAction::Ignore => {}
             action => not_implemented!("Unimplemented signal delivery action {:?}", action),
         };

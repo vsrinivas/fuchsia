@@ -1203,13 +1203,12 @@ mod tests {
         assert_eq!(wait_on_pid(&current_task, ProcessSelector::Any, 0), Ok(Some(zombie)));
     }
 
-    #[::fuchsia::test]
-    fn test_exit_status() {
+    fn test_exit_status_for_signal(sig: Signal, wait_status: i32) {
         let (_kernel, current_task) = create_kernel_and_task();
         let mut child = current_task.clone_task_for_test(0);
 
-        // Send SigKill to the child.
-        send_signal(&child, SignalInfo::default(SIGKILL));
+        // Send the signal to the child.
+        send_signal(&child, SignalInfo::default(sig));
         dequeue_signal(&mut child);
         std::mem::drop(child);
 
@@ -1220,7 +1219,15 @@ mod tests {
         sys_wait4(&current_task, -1, address_ref, 0, UserRef::default()).expect("wait4");
         let mut wstatus: i32 = 0;
         current_task.mm.read_object(address_ref, &mut wstatus).expect("read memory");
-        assert_eq!(wstatus, SIGKILL.number() as i32);
+        assert_eq!(wstatus, wait_status);
+    }
+
+    #[::fuchsia::test]
+    fn test_exit_status() {
+        // Default action is Terminate
+        test_exit_status_for_signal(SIGKILL, SIGKILL.number() as i32);
+        // Default action is CoreDump
+        test_exit_status_for_signal(SIGSEGV, (SIGSEGV.number() as i32) | 0x80);
     }
 
     #[::fuchsia::test]

@@ -67,6 +67,7 @@ impl std::ops::Deref for CurrentTask {
 pub enum ExitStatus {
     Exit(u8),
     Kill(Signal),
+    CoreDump(Signal),
 }
 impl ExitStatus {
     /// Converts the given exit status to a status code suitable for returning from wait syscalls.
@@ -74,6 +75,7 @@ impl ExitStatus {
         match self {
             ExitStatus::Exit(status) => (*status as i32) << 8,
             ExitStatus::Kill(signal) => signal.number() as i32,
+            ExitStatus::CoreDump(signal) => (signal.number() as i32) | 0x80,
         }
     }
 }
