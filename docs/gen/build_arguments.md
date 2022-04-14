@@ -983,14 +983,14 @@ Set this in args.gn to override the greeting emitted by this example.
 
 **Current value (from the default):** `"World"`
 
-From //examples/components/config/cpp/BUILD.gn:9
+From //examples/components/config/cpp/BUILD.gn:10
 
 ### config_example_rust_greeting
 Set this in args.gn to override the greeting emitted by this example.
 
 **Current value (from the default):** `"World"`
 
-From //examples/components/config/rust/BUILD.gn:10
+From //examples/components/config/rust/BUILD.gn:11
 
 ### config_have_heap
 Tells openweave to include files that require heap access.
@@ -1109,7 +1109,7 @@ From //build/images/custom_signing.gni:21
 
 **Current value (from the default):** `""`
 
-From [//third_party/Vulkan-Loader/BUILD.gn:22](https://fuchsia.googlesource.com/third_party/Vulkan-Loader/+/8905d7a24eb7de2c06c36f0b0b24efbba32e37db/BUILD.gn#22)
+From [//third_party/Vulkan-Loader/BUILD.gn:22](https://fuchsia.googlesource.com/third_party/Vulkan-Loader/+/a0ee5ed4a208c4b707b15ec3e4239cea7ab24c9d/BUILD.gn#22)
 
 ### dart_aot_debug_build_cfg
 Builds the component in a non-product AOT build. This will
