@@ -10,9 +10,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
 )
 
-// TestListManifest is the name of the test-list manifest.
-const TestListManifest = "test-list.json"
-
 // TestList contains the list of tests in the build along with
 // arbitrary test metadata.
 type TestList struct {

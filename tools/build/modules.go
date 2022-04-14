@@ -34,6 +34,7 @@ type Modules struct {
 	platforms             []DimensionSet
 	prebuiltBinarySets    []PrebuiltBinarySet
 	sdkArchives           []SDKArchive
+	testListLocation      []string
 	testSpecs             []TestSpec
 	testDurations         []TestDuration
 	tools                 Tools
@@ -60,6 +61,7 @@ func NewModules(buildDir string) (*Modules, error) {
 		"sdk_archives.json":               &m.sdkArchives,
 		"tests.json":                      &m.testSpecs,
 		"test_durations.json":             &m.testDurations,
+		"test_list_location.json":         &m.testListLocation,
 		"tool_paths.json":                 &m.tools,
 		"zbi_tests.json":                  &m.zbiTests,
 	}
@@ -140,6 +142,10 @@ func (m Modules) SDKArchives() []SDKArchive {
 
 func (m Modules) TestDurations() []TestDuration {
 	return m.testDurations
+}
+
+func (m Modules) TestListLocation() []string {
+	return m.testListLocation
 }
 
 func (m Modules) TestSpecs() []TestSpec {

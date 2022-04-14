@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -135,7 +134,7 @@ func execute(ctx context.Context) error {
 		Tags: tags,
 	}
 	// Pass in the test-list to carry over tags to the shards.
-	testListEntries, err := build.LoadTestList(filepath.Join(buildDir, build.TestListManifest))
+	testListEntries, err := build.LoadTestList(m.TestListLocation()[0])
 	if err != nil {
 		return err
 	}
