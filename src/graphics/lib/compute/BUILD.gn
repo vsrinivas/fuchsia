@@ -5,8 +5,9 @@
 import("gn/build_rules.gni")
 
 # Ensure that host tests are always rebuilt with device ones on Linux hosts.
-_build_host_tests =
-    is_fuchsia && target_cpu == "x64" && host_os == "linux"  # b/48603
+_build_host_tests = is_fuchsia &&  #
+                    target_cpu == "x64" &&  #
+                    host_os == "linux"  # b/48603
 
 group("compute") {
   deps = [
@@ -25,9 +26,9 @@ group("compute") {
   ]
 }
 
-# IMPORTANT: Most graphics compute tests cannot run on the CQ for now due to
-# a missing appropriate bot configuration (see fxbug.dev/25516 for details). Thus tests
-# are spread over two targets.
+# IMPORTANT: Most graphics compute tests cannot run on the CQ for now
+# due to a missing appropriate bot configuration (see fxbug.dev/25516
+# for details). Thus tests are spread over two targets.
 #
 #   tests: A group that lists all the tests to build by default, and which
 #          will be run during continuous integration, since this is reachable
@@ -37,14 +38,15 @@ group("compute") {
 #              and test packages that should not or cannot run during
 #              continuous integration.
 #
-# 'fx test <name>' or 'fx run-host-tests <name>' can be used to manually
-# launch a test that was defined with graphics_compute_test_package() or
+# 'fx test <name>' or 'fx run-host-tests <name>' can be used to
+# manually launch a test that was defined with
+# graphics_compute_test_package() or
 # graphics_compute_unittests_package().
 #
-# Other programs (e.g. graphics_compute_executable() targets) can be run with
-# "fx shell run <name>" or "out/default/host_x64/<name>" instead.
+# Other programs (e.g. graphics_compute_executable() targets) can be
+# run with "fx shell run <name>" or "out/default/host_x64/<name>"
+# instead.
 #
-
 group("tests") {
   testonly = true
   public_deps = [
@@ -79,7 +81,6 @@ group("all_tests") {
   public_deps = [
     ":graphics-compute-vk-unittests",
     ":tests",
-    "examples",
     "hotsort:tests",
     "tests:tests",
   ]
