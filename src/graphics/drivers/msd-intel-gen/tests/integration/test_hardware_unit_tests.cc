@@ -33,6 +33,7 @@ TEST(HardwareUnitTests, All) {
 
   auto result = fidl::WireCall<fuchsia_gpu_magma::Device>(test_base->channel()->borrow())
                     ->GetUnitTestStatus();
+
   EXPECT_EQ(ZX_OK, result.status()) << "Device connection lost, check syslog for any errors.";
   EXPECT_EQ(ZX_OK, result->status) << "Tests reported errors, check syslog.";
 
@@ -40,7 +41,7 @@ TEST(HardwareUnitTests, All) {
   test_base.reset();
 
   // Reload the production driver so later tests shouldn't be affected.
-  const char* kDriverPath = "/system/driver/libmsd_intel.so";
+  const char* kDriverPath = "fuchsia-pkg://fuchsia.com/msd-intel-gen#driver/libmsd_intel.so";
   magma::TestDeviceBase::BindDriver(parent_device, kDriverPath);
 #else
   GTEST_SKIP();
