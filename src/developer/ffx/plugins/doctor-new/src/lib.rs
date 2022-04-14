@@ -809,18 +809,13 @@ async fn doctor_summary<W: Write>(
     }
 
     match default_target {
-        Ok(t) => {
-            let default_target_display = {
-                if t.is_none() || t.as_ref().unwrap().is_empty() {
-                    "(none)".to_string()
-                } else {
-                    t.clone().unwrap()
-                }
-            };
-            let node = ledger.add_node(
-                &format!("Default target: {}", default_target_display),
-                LedgerMode::Verbose,
-            )?;
+        Ok(Some(target_name)) => {
+            let node = ledger
+                .add_node(&format!("Default target: {}", target_name), LedgerMode::Verbose)?;
+            ledger.set_outcome(node, LedgerOutcome::Success)?;
+        }
+        Ok(_) => {
+            let node = ledger.add_node("Default target: (none)", LedgerMode::Verbose)?;
             ledger.set_outcome(node, LedgerOutcome::Success)?;
         }
         Err(e) => {
@@ -1841,56 +1836,6 @@ mod test {
                 FRONTEND_VERSION,
                 ffx_path(),
                 DAEMON_VERSION
-            )
-        );
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_single_try_daemon_running_no_targets_default_target_empty() {
-        let fake = FakeDaemonManager::new(
-            vec![true],
-            vec![],
-            vec![],
-            vec![Ok(setup_responsive_daemon_server())],
-            vec![Ok(vec![1])],
-        );
-        let mut handler = FakeStepHandler::new();
-        let ledger_view = Box::new(FakeLedgerView::new());
-        let mut ledger = DoctorLedger::<MockWriter>::new(
-            MockWriter::new(),
-            ledger_view,
-            LedgerViewMode::Verbose,
-        );
-
-        doctor(
-            &mut handler,
-            &mut ledger,
-            &fake,
-            "",
-            1,
-            DEFAULT_RETRY_DELAY,
-            false,
-            version_str(),
-            Ok(Some("".to_string())),
-            record_params_no_record(),
-        )
-        .await
-        .unwrap();
-
-        assert_eq!(
-            ledger.writer.get_data(),
-            format!(
-                "\
-                   \n[✓] FFX doctor\
-                   \n    [✓] Frontend version: {}\
-                   \n[✓] Checking daemon\
-                   \n    [✓] Daemon found: [1]\
-                   \n    [✓] Connecting to daemon\
-                   \n    [✓] Daemon version: {}\
-                   \n    [✓] Default target: (none)\
-                   \n[✗] Searching for targets\
-                   \n    [✗] No targets found!\n",
-                FRONTEND_VERSION, DAEMON_VERSION
             )
         );
     }
