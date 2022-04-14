@@ -180,6 +180,9 @@ class UnownedDispatcher : public Dispatcher {
 
   UnownedDispatcher(fdf_dispatcher_t* dispatcher) : Dispatcher(dispatcher) {}
 
+  UnownedDispatcher(UnownedDispatcher&&) = default;
+  UnownedDispatcher& operator=(UnownedDispatcher&&) = default;
+
   ~UnownedDispatcher() { dispatcher_ = nullptr; }
 };
 
