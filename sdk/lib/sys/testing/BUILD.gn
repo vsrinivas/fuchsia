@@ -9,6 +9,7 @@ sdk_component_manifests("testing_sdk") {
   manifests = [
     "elf_test_runner.shard.cml",
     "hermetic-tier-2-test.shard.cml",
+    "system-test.shard.cml",
   ]
   category = "partner"
 }
