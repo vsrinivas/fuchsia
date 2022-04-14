@@ -40,7 +40,7 @@ class hashablelist(list):
         return hash(tuple(sorted(self)))
 
     def __eq__(self, other):
-        return other.__hash__() == self.__hash__()
+        return sorted(self) == sorted(other)
 
 
 # A dictionary that is hashable so it can be added to a set.
@@ -52,9 +52,6 @@ class hashabledict(dict):
 
     def __hash__(self):
         return hash(tuple(sorted(self.items())))
-
-    def __eq__(self, other):
-        return other.__hash__() == self.__hash__()
 
 
 # Loads a set of items from a json file and optionally, uses |key| to get the list.
