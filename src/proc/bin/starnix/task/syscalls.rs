@@ -153,14 +153,66 @@ pub fn sys_getresuid(
 
 pub fn sys_getresgid(
     current_task: &CurrentTask,
-    ruid_addr: UserRef<uid_t>,
-    euid_addr: UserRef<uid_t>,
-    suid_addr: UserRef<uid_t>,
+    rgid_addr: UserRef<gid_t>,
+    egid_addr: UserRef<gid_t>,
+    sgid_addr: UserRef<gid_t>,
 ) -> Result<(), Errno> {
     let creds = current_task.creds.read();
-    current_task.mm.write_object(ruid_addr, &creds.uid)?;
-    current_task.mm.write_object(euid_addr, &creds.euid)?;
-    current_task.mm.write_object(suid_addr, &creds.saved_uid)?;
+    current_task.mm.write_object(rgid_addr, &creds.gid)?;
+    current_task.mm.write_object(egid_addr, &creds.egid)?;
+    current_task.mm.write_object(sgid_addr, &creds.saved_gid)?;
+    Ok(())
+}
+
+pub fn sys_setresuid(
+    current_task: &CurrentTask,
+    ruid: uid_t,
+    euid: uid_t,
+    suid: uid_t,
+) -> Result<(), Errno> {
+    let mut creds = current_task.creds.write();
+    if !creds.has_capability(CAP_SETUID) {
+        let allowed =
+            |uid| uid == u32::MAX || [creds.uid, creds.euid, creds.saved_uid].contains(&uid);
+        if !allowed(ruid) || !allowed(euid) || !allowed(suid) {
+            return error!(EPERM);
+        }
+    }
+    if ruid != u32::MAX {
+        creds.uid = ruid;
+    }
+    if euid != u32::MAX {
+        creds.euid = euid;
+    }
+    if suid != u32::MAX {
+        creds.saved_uid = suid;
+    }
+    Ok(())
+}
+
+pub fn sys_setresgid(
+    current_task: &CurrentTask,
+    rgid: gid_t,
+    egid: gid_t,
+    sgid: gid_t,
+) -> Result<(), Errno> {
+    let mut creds = current_task.creds.write();
+    if !creds.has_capability(CAP_SETGID) {
+        let allowed =
+            |gid| gid == u32::MAX || [creds.gid, creds.egid, creds.saved_gid].contains(&gid);
+        if !allowed(rgid) || !allowed(egid) || !allowed(sgid) {
+            return error!(EPERM);
+        }
+    }
+    if rgid != u32::MAX {
+        creds.gid = rgid;
+    }
+    if egid != u32::MAX {
+        creds.egid = egid;
+    }
+    if sgid != u32::MAX {
+        creds.saved_gid = sgid;
+    }
     Ok(())
 }
 

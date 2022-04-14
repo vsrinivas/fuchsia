@@ -2,7 +2,7 @@
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
         binary: "data/tests/uidgid_test",
-        args: [ "--gunit_filter=*.Setgroups" ],
+        args: [ "--gunit_filter=-*.Getgroups:*.Setuid*:*.Setgid*:*.Setreuid:*.Setregid" ],
         user: "root:x:0:0",
     },
 }

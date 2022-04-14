@@ -70,4 +70,13 @@ impl Credentials {
     pub fn is_superuser(&self) -> bool {
         self.euid == 0
     }
+
+    /// Returns whether or not the task has the given `capability`.
+    ///
+    // TODO(lindkvist): This should do a proper check for the capability in the namespace.
+    // TODO(lindkvist): `capability` should be a type, just like we do for signals.
+    pub fn has_capability(&self, _capability: u32) -> bool {
+        // TODO(qsr): For now, implements root has all capability.
+        self.is_superuser()
+    }
 }

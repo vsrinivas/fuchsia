@@ -513,7 +513,7 @@ impl ThreadGroup {
             return error!(EINVAL);
         }
 
-        let has_admin = current_task.has_capability(CAP_SYS_ADMIN);
+        let has_admin = current_task.creds.read().has_capability(CAP_SYS_ADMIN);
 
         // "If this terminal is already the controlling terminal of a different
         // session group, then the ioctl fails with EPERM, unless the caller

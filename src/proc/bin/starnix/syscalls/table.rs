@@ -178,6 +178,8 @@ pub fn dispatch_syscall(
         setgroups[2],
         setitimer[3],
         setpgid[2],
+        setresgid[3],
+        setresuid[3],
         setsid[0],
         setsockopt[5],
         setxattr[5],

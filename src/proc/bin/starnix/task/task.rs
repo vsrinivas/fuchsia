@@ -375,15 +375,6 @@ impl Task {
         ucred { pid: self.get_pid(), uid: creds.uid, gid: creds.gid }
     }
 
-    /// Returns whether or not the task has the given `capability`.
-    ///
-    // TODO(lindkvist): This should do a proper check for the capability in the namespace.
-    // TODO(lindkvist): `capability` should be a type, just like we do for signals.
-    pub fn has_capability(&self, _capability: u32) -> bool {
-        // TODO(qsr): For now, implements root has all capability.
-        self.creds.read().is_superuser()
-    }
-
     pub fn can_signal(&self, target: &Task, unchecked_signal: &UncheckedSignal) -> bool {
         // If both the tasks share a thread group the signal can be sent. This is not documented
         // in kill(2) because kill does not support task-level granularity in signal sending.
@@ -391,7 +382,7 @@ impl Task {
             return true;
         }
 
-        if self.has_capability(CAP_KILL) {
+        if self.creds.read().has_capability(CAP_KILL) {
             return true;
         }
 
@@ -861,9 +852,9 @@ mod test {
         let (_kernel, current_task) = create_kernel_and_task();
         *current_task.creds.write() =
             Credentials::from_passwd("root:x:0:0").expect("Credentials::from_passwd");
-        assert!(current_task.has_capability(CAP_SYS_ADMIN));
+        assert!(current_task.creds.read().has_capability(CAP_SYS_ADMIN));
         *current_task.creds.write() =
             Credentials::from_passwd("foo:x:1:1").expect("Credentials::from_passwd");
-        assert!(!current_task.has_capability(CAP_SYS_ADMIN));
+        assert!(!current_task.creds.read().has_capability(CAP_SYS_ADMIN));
     }
 }
