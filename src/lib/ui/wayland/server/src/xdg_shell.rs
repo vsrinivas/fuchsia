@@ -1203,8 +1203,14 @@ impl XdgToplevel {
     }
 
     /// Sets the maximum size for this `XdgToplevel`.
-    fn set_max_size(&mut self, max_size: Size) {
-        self.max_size = max_size;
+    ///
+    /// Returns true iff the new size is different from the previous value.
+    fn set_max_size(&mut self, max_size: Size) -> bool {
+        if max_size != self.max_size {
+            self.max_size = max_size;
+            return true;
+        }
+        false
     }
 
     fn close(this: ObjectRef<Self>, client: &mut Client) -> Result<(), Error> {
@@ -1593,8 +1599,9 @@ impl RequestReceiver<xdg_shell::XdgToplevel> for XdgToplevel {
             XdgToplevelRequest::Resize { .. } => {}
             XdgToplevelRequest::SetMaxSize { width, height } => {
                 let toplevel = this.get_mut(client)?;
-                toplevel.set_max_size(Size { width, height });
-                if !toplevel.waiting_for_initial_commit {
+                if toplevel.set_max_size(Size { width, height })
+                    && !toplevel.waiting_for_initial_commit
+                {
                     XdgSurface::configure(toplevel.xdg_surface_ref, client)?;
                 }
             }
