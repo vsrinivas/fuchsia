@@ -67,23 +67,15 @@ group("tests") {
       "tools:tests",
     ]
   }
-
-  if (_build_host_tests) {
-    data_deps = [
-      ":tests($host_toolchain)",
-      "tests/common/svg:spn_svg_dump($host_toolchain)",
-    ]
-  }
 }
 
 group("all_tests") {
   testonly = true
   public_deps = [
     ":graphics-compute-vk-unittests",
-    ":tests",
     "hotsort:tests",
-    "tests:tests",
   ]
+
   if (_build_host_tests) {
     data_deps = [ ":all_tests($host_toolchain)" ]
   }
@@ -95,22 +87,13 @@ group("all_tests") {
 graphics_compute_unittests_package("graphics-compute-unittests") {
   deps = [
     "common:common_unittests",
-    "spinel:spinel_ext_unittests",
     "svg:svg_unittests",
-    "tests:common_unittests",
-    "tests/common/spinel:unittests",
-    "tests/common/svg:unittests",
-    "tests/mock_spinel:mock_spinel_unittests",
   ]
 }
 
 # A target used to group all graphics compute unit-tests that depend
 # on a working Vulkan environment and that link against the Spinel library.
 graphics_compute_unittests_package("graphics-compute-vk-unittests") {
-  deps = [
-    "spinel:vk_unittests",
-    "tests:common_vk_unittests",
-    "tests/common/spinel_vk:unittests",
-  ]
+  deps = [ "spinel:vk_unittests" ]
   needs_vulkan = true
 }
