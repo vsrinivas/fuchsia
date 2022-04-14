@@ -566,8 +566,7 @@ async fn get_installation_paths(app_sender: AppSender, view_key: ViewKey) -> Res
     }
 
     // Send error if no destinations found
-    #[allow(clippy::absurd_extreme_comparisons)] // TODO(fxbug.dev/95032)
-    if destinations.len() <= 0 {
+    if destinations.is_empty() {
         return Err(anyhow!("Found no block devices for installation."));
     };
 
