@@ -4,7 +4,7 @@
 
 use {
     anyhow::Result,
-    ffx_component_data_args::{DataCommand, Provider, StorageCommand},
+    ffx_component_data_args::{DataCommand, StorageCommand},
     ffx_component_storage::storage,
     ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
@@ -12,6 +12,13 @@ use {
 
 #[ffx_plugin()]
 pub async fn data(remote_proxy: RemoteControlProxy, args: DataCommand) -> Result<()> {
-    storage(remote_proxy, StorageCommand { subcommand: args.subcommand, provider: Provider::Data })
-        .await
+    storage(
+        remote_proxy,
+        StorageCommand {
+            subcommand: args.subcommand,
+            capability: "data".to_string(),
+            provider: "/core".to_string(),
+        },
+    )
+    .await
 }

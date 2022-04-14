@@ -73,4 +73,16 @@ protocol LifecycleController {
         moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
         is_recursive bool;
     }) -> (struct {}) error fuchsia.component.Error;
+
+    /// Retrieves the storage admin using the parent moniker and the capability
+    /// name
+    ///
+    /// The function returns once the storage admin has been served, or the
+    /// operation fails.
+    /// TODO(http://fxbug.dev/97774): Move `GetStorageAdmin` out of `lifecycle_controller`
+    GetStorageAdmin(resource struct {
+        moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
+        capability string:MAX_CAPABILITY_ID_LENGTH;
+        admin_server server_end:StorageAdmin;
+    }) -> (struct {}) error fuchsia.component.Error;
 };

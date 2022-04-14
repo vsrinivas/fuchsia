@@ -121,7 +121,7 @@ impl StorageAdmin {
         )]
     }
 
-    async fn extract_storage_decl(
+    pub async fn extract_storage_decl(
         source_capability: &ComponentCapability,
         component: WeakComponentInstance,
     ) -> Result<Option<StorageDecl>, ModelError> {
@@ -169,7 +169,7 @@ impl StorageAdmin {
         Ok(None)
     }
 
-    async fn serve(
+    pub async fn serve(
         self: Arc<Self>,
         storage_decl: StorageDecl,
         component: WeakComponentInstance,

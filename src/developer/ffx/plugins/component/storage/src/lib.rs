@@ -3,31 +3,42 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context, Result},
+    anyhow::Result,
+    errors::ffx_error,
+    ffx_component::connect_to_lifecycle_controller,
     ffx_component::storage::{copy, list, make_directory},
-    ffx_component_storage_args::{Provider, StorageCommand, SubcommandEnum},
+    ffx_component_storage_args::{StorageCommand, SubcommandEnum},
     ffx_core::ffx_plugin,
+    fidl::endpoints::ServerEnd,
     fidl::handle::Channel,
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     fidl_fuchsia_sys2::StorageAdminProxy,
-    selectors::{self, VerboseError},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::io::{stdout, Write},
 };
 
 #[ffx_plugin()]
 pub async fn storage(remote_proxy: RemoteControlProxy, args: StorageCommand) -> Result<()> {
+    let moniker = AbsoluteMoniker::parse_str(args.provider.as_str())
+        .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?
+        .to_string();
+
     let mut write = Box::new(stdout());
     let writer = &mut write;
-    let selector = selectors::parse_selector::<VerboseError>(match args.provider {
-        Provider::Data => &"core:expose:fuchsia.sys2.StorageAdmin"[..],
-        Provider::Cache => &"core:expose:fuchsia.sys2.StorageAdmin.cache"[..],
-        Provider::Temp => &"core:expose:fuchsia.sys2.StorageAdmin.tmp"[..],
-    })
-    .unwrap();
 
+    let lifecycle_controller = connect_to_lifecycle_controller(&remote_proxy).await?;
     let (client, server) = Channel::create()?;
 
-    match remote_proxy.connect(selector, server).await.context("awaiting connect call")? {
+    let server_end = ServerEnd::new(server);
+
+    // LifecycleController accepts RelativeMonikers only
+    let parent_moniker = format!(".{}", moniker.to_string());
+
+    let res = lifecycle_controller
+        .get_storage_admin(&parent_moniker, args.capability.as_str(), server_end)
+        .await?;
+
+    match res {
         Ok(_) => {
             let storage_admin =
                 StorageAdminProxy::new(fidl::AsyncChannel::from_channel(client).unwrap());

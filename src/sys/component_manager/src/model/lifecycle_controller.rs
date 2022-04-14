@@ -8,8 +8,11 @@ use {
         component::{ComponentInstance, StartReason, WeakComponentInstance},
         error::ModelError,
         model::Model,
+        storage::admin_protocol::StorageAdmin,
     },
-    ::routing::error::ComponentInstanceError,
+    ::routing::{component_instance::ComponentInstanceInterface, error::ComponentInstanceError},
+    cm_rust::CapabilityName,
+    fidl::endpoints::ServerEnd,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_sys2 as fsys,
     futures::prelude::*,
@@ -145,6 +148,45 @@ impl LifecycleController {
         RealmCapabilityHost::destroy_child(&parent_component, child).await
     }
 
+    async fn get_storage_admin(
+        &self,
+        moniker: String,
+        capability: String,
+        admin_server: ServerEnd<fsys::StorageAdminMarker>,
+    ) -> Result<(), fcomponent::Error> {
+        let component = self.resolve_component(&moniker).await?;
+        let storage_admin = StorageAdmin::new(self.model.clone());
+        let task_scope = component.task_scope();
+
+        let storage_decl = {
+            let locked_component = component.lock_resolved_state().await.map_err(|e| {
+                debug!("lifecycle controller failed to lock component resolved state: {:?}", e);
+                fcomponent::Error::Internal
+            })?;
+
+            locked_component
+                .decl()
+                .find_storage_source(&CapabilityName::from(capability.as_str()))
+                .ok_or_else(|| {
+                    debug!("lifecycle controller could not find the storage source for component {} and capability name {}", moniker, capability);
+                    fcomponent::Error::ResourceNotFound
+                })?
+                .clone()
+        };
+
+        task_scope
+            .add_task(async move {
+                if let Err(e) = Arc::new(storage_admin)
+                    .serve(storage_decl, component.as_weak(), admin_server.into_channel().into())
+                    .await
+                {
+                    warn!("failed to serve storage admin protocol: {:?}", e);
+                };
+            })
+            .await;
+        Ok(())
+    }
+
     pub async fn serve(&self, mut stream: fsys::LifecycleControllerRequestStream) {
         while let Ok(Some(operation)) = stream.try_next().await {
             match operation {
@@ -188,6 +230,18 @@ impl LifecycleController {
                         .send(&mut res)
                         .unwrap_or_else(|e| warn!("response send failed: {}", e));
                 }
+
+                fsys::LifecycleControllerRequest::GetStorageAdmin {
+                    moniker,
+                    capability,
+                    admin_server,
+                    responder,
+                } => {
+                    let mut res = self.get_storage_admin(moniker, capability, admin_server).await;
+                    responder
+                        .send(&mut res)
+                        .unwrap_or_else(|e| warn!("response send failed: {}", e))
+                }
             }
         }
     }
@@ -198,10 +252,18 @@ mod tests {
     use {
         super::*,
         crate::model::testing::test_helpers::{TestEnvironmentBuilder, TestModelResult},
+        cm_rust::{
+            CapabilityPath, DirectoryDecl, ExposeDecl, ExposeDirectoryDecl, ExposeSource,
+            ExposeTarget, StorageDecl, StorageDirectorySource,
+        },
         cm_rust_testing::{CollectionDeclBuilder, ComponentDeclBuilder},
+        fidl::endpoints::create_proxy,
         fidl::endpoints::create_proxy_and_stream,
+        fidl::handle::Channel,
         fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_component_decl::{ChildRef, CollectionRef},
+        fidl_fuchsia_io::Operations,
+        fidl_fuchsia_sys2::StorageAdminProxy,
         fuchsia_async as fasync,
         std::sync::Arc,
     };
@@ -373,5 +435,79 @@ mod tests {
             lifecycle_proxy.resolve("./coll:child").await.unwrap(),
             Err(fcomponent::Error::InstanceNotFound)
         );
+    }
+
+    #[fuchsia::test]
+    async fn lifecycle_get_storage_admin_test() {
+        let components = vec![
+            (
+                "root",
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .storage(StorageDecl {
+                        name: CapabilityName("data".to_string()),
+                        source: StorageDirectorySource::Child("a".to_string()),
+                        backing_dir: CapabilityName("fs".to_string()),
+                        subdir: Some("persistent".into()),
+                        storage_id:
+                            fidl_fuchsia_component_decl::StorageId::StaticInstanceIdOrMoniker,
+                    })
+                    .build(),
+            ),
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .directory(DirectoryDecl {
+                        name: CapabilityName("fs".to_string()),
+                        source_path: Some(CapabilityPath {
+                            basename: "data".to_string(),
+                            dirname: "/fs".to_string(),
+                        }),
+                        rights: Operations::all(),
+                    })
+                    .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source_name: CapabilityName("fs".to_string()),
+                        target_name: CapabilityName("fs".to_string()),
+                        subdir: None,
+                        source: ExposeSource::Self_,
+                        target: ExposeTarget::Parent,
+                        rights: None,
+                    }))
+                    .build(),
+            ),
+        ];
+
+        let test_model_result =
+            TestEnvironmentBuilder::new().set_components(components).build().await;
+
+        let lifecycle_controller =
+            LifecycleController::new(Arc::downgrade(&test_model_result.model), vec![].into());
+
+        let (lifecycle_proxy, lifecycle_request_stream) =
+            create_proxy_and_stream::<fsys::LifecycleControllerMarker>().unwrap();
+
+        // async move {} is used here because we want this to own the lifecycle_controller
+        let _lifecycle_server_task = fasync::Task::local(async move {
+            lifecycle_controller.serve(lifecycle_request_stream).await
+        });
+
+        let (client, server) = Channel::create().unwrap();
+
+        let server_end = ServerEnd::new(server);
+
+        let res = lifecycle_proxy.get_storage_admin("./", "data", server_end).await.unwrap();
+
+        assert_eq!(res, Ok(()));
+
+        let (it_proxy, it_server) =
+            create_proxy::<fsys::StorageIteratorMarker>().expect("create iterator");
+
+        let storage_admin =
+            StorageAdminProxy::new(fidl::AsyncChannel::from_channel(client).unwrap());
+
+        storage_admin.list_storage_in_realm("./", it_server).await.unwrap().unwrap();
+
+        let res = it_proxy.next().await.unwrap();
+        assert!(res.is_empty());
     }
 }

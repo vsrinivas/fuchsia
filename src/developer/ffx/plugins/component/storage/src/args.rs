@@ -2,43 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, ffx_core::ffx_command, std::str::FromStr};
+use {argh::FromArgs, ffx_core::ffx_command};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "storage", description = "Manages persistent data storage of components")]
+#[argh(subcommand, name = "storage", description = "Manages storage capabilities of components")]
 pub struct StorageCommand {
     #[argh(subcommand)]
     pub subcommand: SubcommandEnum,
 
-    #[argh(option, default = "Provider::Data")]
-    /// the storage provider to use.
-    /// Options: [data, cache, temp].
-    /// Defaults to 'data'
-    pub provider: Provider,
-}
+    #[argh(option, default = "String::from(\"/core\")")]
+    /// the moniker of the storage provider component.
+    /// Defaults to "/core"
+    pub provider: String,
 
-#[derive(PartialEq, Debug)]
-pub enum Provider {
-    Data,
-    Cache,
-    Temp,
-}
-
-impl FromStr for Provider {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "data" => Ok(Provider::Data),
-            "cache" => Ok(Provider::Cache),
-            "temp" | "tmp" => Ok(Provider::Temp),
-            _ => Err(format!(
-                "'{}' is not a valid storage provider: Must be one of 'data', 'cache' or 'temp'",
-                s
-            )),
-        }
-    }
+    #[argh(option, default = "String::from(\"data\")")]
+    /// the capability name of the storage to use.
+    /// Examples: "data", "cache", "tmp"
+    /// Defaults to "data"
+    pub capability: String,
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -62,6 +44,10 @@ To list the contents of the root directory of a component's persistent data stor
 
     $ ffx component storage list 2042425d4b16ac396ebdb70e40845dc51516dd25754741a209d1972f126a7520::/
 
+To list the contents of a directory using a different provider and capability:
+
+    $ ffx component storage --provider /core/test_manager --capability data list f1a52f7b4d7081060a3295fd36df7b68fb0518f80aae0eae8a3fc1d55231375f::/
+
 Note: 2042425d4b16ac396ebdb70e40845dc51516dd25754741a209d1972f126a7520 is the instance ID of
 the component whose persistent data storage is being accessed.
 
@@ -82,6 +68,10 @@ pub struct ListArgs {
 
     $ ffx component storage make-directory 2042425d4b16ac396ebdb70e40845dc51516dd25754741a209d1972f126a7520::settings
 
+To make a `settings` directory in a storage from a different provider and capability:
+
+    $ ffx component storage --provider /core/test_manager --capability data make-directory f1a52f7b4d7081060a3295fd36df7b68fb0518f80aae0eae8a3fc1d55231375f::settings
+
 Note: 2042425d4b16ac396ebdb70e40845dc51516dd25754741a209d1972f126a7520 is the instance ID of
 the component whose persistent data storage is being accessed.
 
@@ -101,6 +91,10 @@ pub struct MakeDirectoryArgs {
     example = "To copy `credentials.json` from the current working directory on the host to the `settings` directory of a component's persistent data storage:
 
     $ ffx component storage copy ./credentials.json 2042425d4b16ac396ebdb70e40845dc51516dd25754741a209d1972f126a7520::settings/credentials.json
+
+To copy `credentials.json` from the current working directory on the host to the `settings` directory from a different provider and capability:
+
+    $ ffx component storage --provider /core/test_manager --capability data copy ./credentials.json f1a52f7b4d7081060a3295fd36df7b68fb0518f80aae0eae8a3fc1d55231375f::settings/credentials.json
 
 Note: 2042425d4b16ac396ebdb70e40845dc51516dd25754741a209d1972f126a7520 is the instance ID of
 the component whose persistent data storage is being accessed.

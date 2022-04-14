@@ -4,7 +4,7 @@
 
 use {argh::FromArgs, ffx_core::ffx_command};
 
-pub use ffx_component_storage_args::{Provider, StorageCommand, SubcommandEnum};
+pub use ffx_component_storage_args::{StorageCommand, SubcommandEnum};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
