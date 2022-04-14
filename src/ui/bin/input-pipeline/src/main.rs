@@ -34,6 +34,7 @@ enum ExposedServices {
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["input-pipeline"]).expect("Failed to init syslog");
+    fuchsia_trace_provider::trace_provider_create_with_fdio();
 
     // Expose InputDeviceRegistry to allow input injection for testing.
     let mut fs = ServiceFs::new_local();
