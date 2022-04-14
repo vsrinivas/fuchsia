@@ -10,6 +10,7 @@
 #include <iconv.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
+#include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fit/defer.h>
 #include <zircon/types.h>
 
@@ -38,8 +39,7 @@ zx_status_t IntelThermal::Bind(void* ctx, zx_device_t* dev) {
     return client.error_value();
   }
 
-  async_dispatcher_t* dispatcher =
-      fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_get_current_dispatcher());
+  async_dispatcher_t* dispatcher = fdf::Dispatcher::GetCurrent()->async_dispatcher();
   auto device = std::make_unique<IntelThermal>(dev, std::move(client.value()), dispatcher);
   zx_status_t status = device->Bind();
   if (status == ZX_OK) {

@@ -85,7 +85,7 @@ void Device::TransmitData(TransmitDataRequestView request, fdf::Arena& arena,
 
 // static
 zx_status_t Device::Bind(void* ctx, zx_device_t* device) {
-  fdf::UnownedDispatcher dispatcher(fdf_dispatcher_get_current_dispatcher());
+  auto dispatcher = fdf::Dispatcher::GetCurrent();
   auto dev = std::make_unique<Device>(device, std::move(dispatcher));
   auto status = dev->DdkAdd("parent");
   if (status == ZX_OK) {

@@ -10,6 +10,7 @@
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/fdf/cpp/dispatcher.h>
 #include <lib/svc/outgoing.h>
 
 #include <optional>
@@ -81,8 +82,7 @@ class I2cFidlChild : public I2cFidlChildType, public I2cChild {
  private:
   void Bind(fidl::ServerEnd<fidl_i2c::Device2> request) {
     fidl::BindServer<fidl::WireServer<fidl_i2c::Device2>>(
-        fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_get_current_dispatcher()),
-        std::move(request), this);
+        fdf::Dispatcher::GetCurrent()->async_dispatcher(), std::move(request), this);
   }
 
   std::optional<svc::Outgoing> outgoing_dir_;

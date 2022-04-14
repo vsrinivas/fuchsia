@@ -19,6 +19,7 @@
 #include <fbl/mutex.h>
 
 #include "i2c-child.h"
+#include "lib/fdf/cpp/dispatcher.h"
 #include "src/devices/i2c/drivers/i2c/i2c_bind.h"
 
 namespace i2c {
@@ -39,8 +40,7 @@ void I2cDevice::DdkRelease() {
 }
 
 zx_status_t I2cDevice::Create(void* ctx, zx_device_t* parent) {
-  return Create(ctx, parent,
-                fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_get_current_dispatcher()));
+  return Create(ctx, parent, fdf::Dispatcher::GetCurrent()->async_dispatcher());
 }
 
 zx_status_t I2cDevice::Create(void* ctx, zx_device_t* parent, async_dispatcher_t* dispatcher) {

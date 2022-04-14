@@ -49,7 +49,7 @@ class Device : public fidl::WireServer<fidl_examples_echo::Echo> {
     // asynchronous work on the same thread as other drivers. You may opt to
     // create your own dispatcher which is serviced on a thread you spawn if you
     // desire instead.
-    auto* dispatcher = fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_get_current_dispatcher());
+    auto* dispatcher = fdf::Dispatcher::GetCurrent()->async_dispatcher();
     auto device = std::make_unique<Device>(parent, dispatcher);
 
     // We start by creating a pair of endpoints. These are equivalent to a

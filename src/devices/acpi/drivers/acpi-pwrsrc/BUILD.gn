@@ -22,6 +22,7 @@ driver_bind_rules("bind") {
 common_deps = [
   ":bind",
   "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_llcpp",
+  "//sdk/lib/driver_runtime:driver_runtime_cpp",
   "//src/devices/lib/acpi",
   "//src/devices/lib/driver:driver_runtime",
   "//src/lib/ddktl",

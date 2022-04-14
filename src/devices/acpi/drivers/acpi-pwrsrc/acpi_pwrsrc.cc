@@ -9,6 +9,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
+#include <lib/fdf/cpp/dispatcher.h>
 
 #include "src/devices/acpi/drivers/acpi-pwrsrc/acpi_pwrsrc-bind.h"
 #include "src/devices/lib/acpi/client.h"
@@ -22,7 +23,7 @@ zx_status_t AcpiPwrsrc::Bind(void* ctx, zx_device_t* dev) {
     return acpi.error_value();
   }
 
-  auto* dispatcher = fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_get_current_dispatcher());
+  async_dispatcher_t* dispatcher = fdf::Dispatcher::GetCurrent()->async_dispatcher();
   auto pwrsrc = std::make_unique<AcpiPwrsrc>(dev, std::move(acpi.value()), dispatcher);
   zx_status_t status = pwrsrc->Bind();
   if (status == ZX_OK) {

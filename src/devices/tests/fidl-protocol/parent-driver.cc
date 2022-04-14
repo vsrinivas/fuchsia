@@ -8,6 +8,8 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/fdf/cpp/dispatcher.h>
+#include <lib/fidl/llcpp/channel.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/svc/outgoing.h>
 #include <lib/zx/channel.h>
@@ -18,7 +20,6 @@
 #include <ddktl/unbind-txn.h>
 #include <fbl/ref_ptr.h>
 
-#include "lib/fidl/llcpp/channel.h"
 #include "src/devices/tests/fidl-protocol/parent-driver-bind.h"
 
 namespace {
@@ -34,7 +35,7 @@ class Device : public DeviceParent, public fidl::WireServer<fidl_examples_echo::
       return endpoints.status_value();
     }
 
-    auto* dispatcher = fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_get_current_dispatcher());
+    auto* dispatcher = fdf::Dispatcher::GetCurrent()->async_dispatcher();
     auto device = std::make_unique<Device>(parent, dispatcher);
 
     device->outgoing_dir_.svc_dir()->AddEntry(
@@ -76,7 +77,7 @@ class Device : public DeviceParent, public fidl::WireServer<fidl_examples_echo::
 
  private:
   void Bind(fidl::ServerEnd<fidl_examples_echo::Echo> request) {
-    auto* dispatcher = fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_get_current_dispatcher());
+    auto* dispatcher = fdf::Dispatcher::GetCurrent()->async_dispatcher();
     fidl::BindServer<fidl::WireServer<fidl_examples_echo::Echo>>(dispatcher, std::move(request),
                                                                  this);
   }

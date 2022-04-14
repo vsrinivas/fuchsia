@@ -61,6 +61,7 @@ fuchsia_driver("parent-driver") {
     ":echo_llcpp",
     ":parent-driver-bind",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//src/devices/lib/driver",
     "//src/devices/lib/driver:driver_runtime",
     "//src/lib/ddk",

@@ -42,6 +42,7 @@ fuchsia_driver("virtual_audio_driver-driver") {
     ":virtual_audio_bind",
     "//sdk/fidl/fuchsia.virtualaudio",
     "//sdk/fidl/fuchsia.virtualaudio:fuchsia.virtualaudio_c",
+    "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//src/devices/lib/driver",
     "//src/devices/lib/driver:driver_runtime",
     "//src/lib/ddk",

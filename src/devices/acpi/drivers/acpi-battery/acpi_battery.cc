@@ -7,6 +7,7 @@
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <fidl/fuchsia.hardware.power/cpp/wire.h>
 #include <lib/ddk/debug.h>
+#include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fit/defer.h>
 #include <lib/zx/clock.h>
 #include <zircon/types.h>
@@ -26,8 +27,7 @@ zx_status_t AcpiBattery::Bind(void* ctx, zx_device_t* parent) {
     return acpi.error_value();
   }
 
-  async_dispatcher_t* dispatcher =
-      fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_get_current_dispatcher());
+  async_dispatcher_t* dispatcher = fdf::Dispatcher::GetCurrent()->async_dispatcher();
 
   auto device = std::make_unique<AcpiBattery>(parent, std::move(acpi.value()), dispatcher);
   auto status = device->Bind();
