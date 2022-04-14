@@ -8,8 +8,8 @@ group("drivers") {
 
   if (target_cpu == "arm64") {
     deps += [
-      "//src/media/drivers/amlogic_decoder:amlogic_decoder_test",
-      "//src/media/drivers/amlogic_decoder:amlogic_video_decoder",
+      "//src/media/drivers/amlogic_decoder:amlogic_decoder_test-component",
+      "//src/media/drivers/amlogic_decoder:amlogic_video_decoder-component",
     ]
   }
 }

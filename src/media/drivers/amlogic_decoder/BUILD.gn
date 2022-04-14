@@ -14,24 +14,32 @@ declare_args() {
 
 # These targets only compile for arm64.
 if (target_cpu == "arm64") {
+  # internal access is needed to get the firmware from the default path.
+  _has_decoder_firmware = internal_access || amlogic_decoder_firmware_path != ""
+
   group("amlogic_decoder") {
-    deps = [
-      ":amlogic_decoder_firmware",
-      ":amlogic_decoder_package",
-    ]
+    deps = []
+    if (_has_decoder_firmware) {
+      deps += [ ":amlogic_decoder-package" ]
+    }
   }
 
   group("tests") {
     testonly = true
 
     deps = [
-      ":amlogic_decoder_firmware",
-      ":amlogic_decoder_test_package",
       ":amlogic_video_bind_test",
       ":test_amlogic_codec_factory_package",
       "tests/runner:amlogic_decoder_integration_tests",
       "tests/unit_tests:amlogic-decoder-unittest",
     ]
+
+    if (_has_decoder_firmware) {
+      deps += [
+        ":amlogic_decoder_firmware",
+        ":amlogic_decoder_test-package",
+      ]
+    }
   }
 
   driver_bind_rules("amlogic_video_bind") {
@@ -62,7 +70,7 @@ if (target_cpu == "arm64") {
     sources = [ "binding.c" ]
   }
 
-  fuchsia_driver_component("amlogic_video_decoder") {
+  fuchsia_driver_component("amlogic_video_decoder-component") {
     component_name = "amlogic_video_decoder"
     deps = [ ":amlogic_video_decoder-driver" ]
     info = "amlogic_video_decoder-info.json"
@@ -90,7 +98,7 @@ if (target_cpu == "arm64") {
     ]
   }
 
-  fuchsia_driver_component("amlogic_decoder_test") {
+  fuchsia_driver_component("amlogic_decoder_test-component") {
     testonly = true
     component_name = "amlogic_video_decoder_test"
     deps = [ ":amlogic_decoder_test-driver" ]
@@ -270,13 +278,8 @@ if (target_cpu == "arm64") {
     outputs = [ "lib/firmware/video_test_data/{{source_file_part}}" ]
   }
 
-  # internal access is needed to get the firmware from the default path.
-  _has_decoder_firmware =
-      target_cpu == "arm64" &&
-      (internal_access || amlogic_decoder_firmware_path != "")
-
   if (_has_decoder_firmware) {
-    resource("decoder_firmware") {
+    resource("amlogic_decoder_firmware") {
       if (amlogic_decoder_firmware_path != "") {
         sources = [ amlogic_decoder_firmware_path ]
       } else {
@@ -287,27 +290,15 @@ if (target_cpu == "arm64") {
     }
   }
 
-  fuchsia_system_package("amlogic_decoder_firmware") {
-    if (_has_decoder_firmware) {
-      deps = [ ":decoder_firmware" ]
-    }
+  fuchsia_driver_package("amlogic_decoder-package") {
+    driver_components = [ ":amlogic_video_decoder-component" ]
+    deps = [ ":amlogic_decoder_firmware" ]
   }
 
-  fuchsia_system_package("amlogic_decoder_package") {
-    if (_has_decoder_firmware) {
-      deps = [ ":amlogic_video_decoder" ]
-    }
-  }
-
-  fuchsia_system_package("amlogic_decoder_test_package") {
-    if (_has_decoder_firmware) {
-      testonly = true
-
-      deps = [
-        ":amlogic_decoder_test",
-        ":test_files",
-      ]
-    }
+  fuchsia_driver_package("amlogic_decoder_test-package") {
+    testonly = true
+    driver_components = [ ":amlogic_decoder_test-component" ]
+    deps = [ ":test_files" ]
   }
 
   #
