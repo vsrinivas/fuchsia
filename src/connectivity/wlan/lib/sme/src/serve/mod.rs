@@ -35,6 +35,7 @@ pub fn create_sme(
     cfg: crate::Config,
     mlme_proxy: fidl_mlme::MlmeProxy,
     device_info: &fidl_mlme::DeviceInfo,
+    mac_sublayer_support: fidl_common::MacSublayerSupport,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     hasher: WlanHasher,
     persistence_req_sender: auto_persist::PersistenceReqSender,
@@ -49,6 +50,7 @@ pub fn create_sme(
                 cfg,
                 mlme_proxy,
                 device_info,
+                mac_sublayer_support,
                 event_stream,
                 receiver,
                 iface_tree_holder,
@@ -145,9 +147,16 @@ fn forward_mlme_request(req: MlmeRequest, proxy: &MlmeProxy) -> Result<(), fidl:
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::test_utils, fidl::endpoints::create_proxy, fidl_mlme::MlmeMarker,
-        fuchsia_async as fasync, fuchsia_inspect::Inspector, futures::task::Poll,
-        pin_utils::pin_mut, std::sync::Arc, wlan_common::assert_variant,
+        super::*,
+        crate::test_utils,
+        fidl::endpoints::create_proxy,
+        fidl_mlme::MlmeMarker,
+        fuchsia_async as fasync,
+        fuchsia_inspect::Inspector,
+        futures::task::Poll,
+        pin_utils::pin_mut,
+        std::sync::Arc,
+        wlan_common::{assert_variant, test_utils::fake_features::fake_mac_sublayer_support},
         wlan_inspect::IfaceTreeHolder,
     };
 
@@ -167,6 +176,7 @@ mod tests {
             crate::Config::default(),
             mlme_proxy,
             &test_utils::fake_device_info([0; 6]),
+            fake_mac_sublayer_support(),
             Arc::new(iface_tree_holder),
             WlanHasher::new(PLACEHOLDER_HASH_KEY),
             persistence_req_sender,
@@ -196,6 +206,7 @@ mod tests {
             crate::Config::default(),
             mlme_proxy,
             &test_utils::fake_device_info([0; 6]),
+            fake_mac_sublayer_support(),
             Arc::new(iface_tree_holder),
             WlanHasher::new(PLACEHOLDER_HASH_KEY),
             persistence_req_sender,

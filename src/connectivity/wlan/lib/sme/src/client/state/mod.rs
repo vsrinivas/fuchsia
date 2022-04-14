@@ -17,7 +17,8 @@ use {
         mlme_event_name, MlmeRequest, MlmeSink,
     },
     anyhow::bail,
-    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+    fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent},
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_inspect_contrib::{inspect_log, log::InspectBytes},
@@ -929,7 +930,10 @@ impl ClientState {
             }
         };
 
-        let capability_info = if context.is_softmac { Some(capability_info) } else { None };
+        let capability_info = match context.mac_sublayer_support.device.mac_implementation_type {
+            fidl_common::MacImplementationType::Softmac => Some(capability_info),
+            _ => None,
+        };
 
         // Derive RSN (for WPA2) or Vendor IEs (for WPA1) or neither(WEP/non-protected).
         let protection_ie = match build_protection_ie(&cmd.protection) {
@@ -1346,7 +1350,7 @@ mod tests {
             fake_ies::{fake_probe_resp_wsc_ie_bytes, get_vendor_ie_bytes_for_wsc_ie},
             rsn::rsne::Rsne,
         },
-        test_utils::fake_stas::IesOverrides,
+        test_utils::{fake_features::fake_mac_sublayer_support, fake_stas::IesOverrides},
         timer,
     };
     use wlan_rsn::{key::exchange::Key, rsna::SecAssocStatus};
@@ -2449,7 +2453,8 @@ mod tests {
 
         let mut h = TestHelper::new();
         // set as full mac
-        h.context.is_softmac = false;
+        h.context.mac_sublayer_support.device.mac_implementation_type =
+            fidl_common::MacImplementationType::Fullmac;
 
         let state = idle_state().connect(command, &mut h.context);
 
@@ -2474,7 +2479,8 @@ mod tests {
         let (command, _connect_txn_stream) = connect_command_one();
         let mut h = TestHelper::new();
         // set full mac
-        h.context.is_softmac = false;
+        h.context.mac_sublayer_support.device.mac_implementation_type =
+            fidl_common::MacImplementationType::Fullmac;
         let state = idle_state().connect(command, &mut h.context);
 
         // State changed to Joining, capabilities discarded as FullMAC ignore them anyway.
@@ -2836,7 +2842,7 @@ mod tests {
                 timer,
                 att_id: 0,
                 inspect: Arc::new(inspect::SmeTree::new(inspector.root(), hasher)),
-                is_softmac: true,
+                mac_sublayer_support: fake_mac_sublayer_support(),
             };
             TestHelper {
                 mlme_stream,

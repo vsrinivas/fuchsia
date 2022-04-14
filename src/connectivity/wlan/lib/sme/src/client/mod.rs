@@ -22,6 +22,7 @@ use {
         state::{ClientState, ConnectCommand},
     },
     crate::{responder::Responder, Config, MlmeRequest, MlmeSink, MlmeStream},
+    fidl_fuchsia_wlan_common as fidl_common,
     fidl_fuchsia_wlan_common_security::Authentication,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_sme as fidl_sme,
@@ -59,7 +60,7 @@ mod internal {
             client::{event::Event, inspect, ConnectionAttemptId},
             MlmeSink,
         },
-        fidl_fuchsia_wlan_mlme as fidl_mlme,
+        fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
         std::sync::Arc,
         wlan_common::timer::Timer,
     };
@@ -70,7 +71,7 @@ mod internal {
         pub(crate) timer: Timer<Event>,
         pub att_id: ConnectionAttemptId,
         pub(crate) inspect: Arc<inspect::SmeTree>,
-        pub(crate) is_softmac: bool,
+        pub mac_sublayer_support: fidl_common::MacSublayerSupport,
     }
 }
 
@@ -440,7 +441,7 @@ impl ClientSme {
         iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
         hasher: WlanHasher,
         persistence_req_sender: auto_persist::PersistenceReqSender,
-        is_softmac: bool,
+        mac_sublayer_support: fidl_common::MacSublayerSupport,
     ) -> (Self, MlmeStream, TimeStream) {
         let device_info = Arc::new(info);
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
@@ -471,7 +472,7 @@ impl ClientSme {
                     timer,
                     att_id: 0,
                     inspect,
-                    is_softmac,
+                    mac_sublayer_support,
                 },
             },
             mlme_stream,
@@ -723,7 +724,7 @@ mod tests {
         fake_bss_description, fake_fidl_bss_description,
         ie::{fake_ht_cap_bytes, fake_vht_cap_bytes, /*rsn::akm,*/ IeType},
         security::{wep::WEP40_KEY_BYTES, wpa::credential::PSK_SIZE_BYTES, SecurityAuthenticator},
-        test_utils::fake_stas::IesOverrides,
+        test_utils::{fake_features::fake_mac_sublayer_support, fake_stas::IesOverrides},
     };
 
     use super::test_utils::{create_on_wmm_status_resp, fake_wmm_param, fake_wmm_status_resp};
@@ -1050,7 +1051,7 @@ mod tests {
             Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
             WlanHasher::new(DUMMY_HASH_KEY),
             persistence_req_sender,
-            true, // is_softmac
+            fake_mac_sublayer_support(),
         );
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
@@ -1552,7 +1553,7 @@ mod tests {
             Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
             WlanHasher::new(DUMMY_HASH_KEY),
             persistence_req_sender,
-            true, // is_softmac
+            fake_mac_sublayer_support(),
         );
         assert_eq!(ClientSmeStatus::Idle, sme.status());
 
@@ -1650,7 +1651,7 @@ mod tests {
             Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
             WlanHasher::new(DUMMY_HASH_KEY),
             persistence_req_sender,
-            true, // is_softmac
+            fake_mac_sublayer_support(),
         )
     }
 }

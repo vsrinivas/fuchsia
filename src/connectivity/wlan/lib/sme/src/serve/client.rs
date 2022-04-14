@@ -30,6 +30,7 @@ pub async fn serve(
     cfg: crate::Config,
     proxy: MlmeProxy,
     device_info: fidl_mlme::DeviceInfo,
+    mac_sublayer_support: fidl_common::MacSublayerSupport,
     event_stream: MlmeEventStream,
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
@@ -42,9 +43,14 @@ pub async fn serve(
                 || f == &fidl_common::DriverFeature::SaeDriverAuth
         }) && device_info.driver_features.contains(&fidl_common::DriverFeature::Mfp);
     let cfg = client_sme::ClientConfig::from_config(cfg, wpa3_supported);
-    let is_softmac = device_info.driver_features.contains(&fidl_common::DriverFeature::TempSoftmac);
-    let (sme, mlme_stream, time_stream) =
-        Sme::new(cfg, device_info, iface_tree_holder, hasher, persistence_req_sender, is_softmac);
+    let (sme, mlme_stream, time_stream) = Sme::new(
+        cfg,
+        device_info,
+        iface_tree_holder,
+        hasher,
+        persistence_req_sender,
+        mac_sublayer_support,
+    );
     let sme = Arc::new(Mutex::new(sme));
     let mlme_sme =
         super::serve_mlme_sme(proxy, event_stream, Arc::clone(&sme), mlme_stream, time_stream);

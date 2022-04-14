@@ -93,6 +93,7 @@ pub fn create_and_serve_sme(
         cfg.into(),
         mlme_proxy.clone(),
         &device_info,
+        mac_sublayer_support,
         iface_tree_holder.clone(),
         inspect_tree.hasher.clone(),
         persistence_req_sender,
