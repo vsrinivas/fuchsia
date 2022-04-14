@@ -35,7 +35,7 @@ These files contain the following:
 
 The `fuchsia_authorized_keys` file must include the public SSH key in
 `fuchsia_ed25519.pub`. During the flashing process, the `fuchsia_authorized_keys`
-file gets uploaded from the host machine to a Fuchsia device.
+file gets uploaded from the host machine to the Fuchsia device.
 
 If you have multiple development machines,
 it's recommended that the Fuchsia SSH keys are synchronized across
@@ -55,10 +55,25 @@ during development. Generating these SSH keys won't alter your current SSH setti
     ssh-keygen -P "" -t ed25519 -f "${HOME}/.ssh/fuchsia_ed25519" -C "${USER}@$(hostname -f) Shared SSH Key for Fuchsia"
     ```
 
-2.  Generate a `fuchsia_authorized_keys` file:
+1.  Generate a `fuchsia_authorized_keys` file:
 
     ```posix-terminal
     ssh-keygen -y -f "${HOME}/.ssh/fuchsia_ed25519" > "${HOME}/.ssh/fuchsia_authorized_keys"
+    ```
+
+1.  Verify that Fuchsia-specific SSH keys are generated:
+
+    ```posix-terminal
+    ls ~/.ssh | grep fuchsia
+    ```
+
+    This command prints output similar to the following:
+
+    ```none {:.devsite-disable-click-to-copy}
+    $ ls ~/.ssh | grep fuchsia
+    fuchsia_authorized_keys
+    fuchsia_ed25519
+    fuchsia_ed25519.pub
     ```
 
 After creating new SSH keys, you'd need to
