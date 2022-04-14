@@ -17,5 +17,5 @@ executable("bin") {
 fuchsia_package_with_single_component("fidlc_microbenchmarks") {
   testonly = true
   deps = [ ":bin" ]
-  manifest = "meta/fidlc_microbenchmarks.cmx"
+  manifest = "meta/fidlc_microbenchmarks.cml"
 }
