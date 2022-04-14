@@ -115,6 +115,8 @@ fbl::String GetTestFilter() {
     return "*Eve*";
   } else if (!strcmp(board_name, "NUC7i5DNB")) {
     return "*Nuc*";
+  } else if (!strcmp(board_name, "Atlas")) {
+    return "*Atlas*";
   } else if (!strcmp(board_name, "Standard PC (Q35 + ICH9, 2009)")) {
     // QEMU and AEMU with emulated Q35 boards have this board name.
     return "*QemuX64Q35*";
@@ -552,6 +554,15 @@ TEST_F(DeviceEnumerationTest, NucTest) {
       // "pci-00:1f.3/intel-hda-000",
       // "pci-00:1f.3/intel-hda-controller",
       "pci-00:1f.6/e1000",
+  };
+
+  ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
+}
+
+TEST_F(DeviceEnumerationTest, AtlasTest) {
+  static const char* kDevicePaths[] = {
+      "pci-01:00.0/iwlwifi-wlanphyimpl",
+      "pci-01:00.0/iwlwifi-wlanphyimpl/wlanphy",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
