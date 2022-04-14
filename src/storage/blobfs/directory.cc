@@ -148,18 +148,21 @@ zx_status_t Directory::Unlink(std::string_view name, bool must_be_dir) {
 }
 
 void Directory::Sync(SyncCallback closure) {
-  blobfs_->Sync([this, cb = std::move(closure)](zx_status_t status) mutable {
-    // This callback will be issued on the journal thread in the normal case. This is important
-    // because the flush must happen there or it will block the main thread which would block
-    // processing other requests.
-    //
-    // If called during shutdown this may get issued on the main thread but then the flush
-    // transaction should be a no-op.
-    if (status == ZX_OK) {
-      status = blobfs_->Flush();
-    }
-    cb(status);
-  });
+  auto event = blobfs_->GetNodeOperations()->sync.NewEvent();
+  blobfs_->Sync(
+      [this, cb = std::move(closure), event = std::move(event)](zx_status_t status) mutable {
+        // This callback will be issued on the journal thread in the normal case. This is important
+        // because the flush must happen there or it will block the main thread which would block
+        // processing other requests.
+        //
+        // If called during shutdown this may get issued on the main thread but then the flush
+        // transaction should be a no-op.
+        if (status == ZX_OK) {
+          status = blobfs_->Flush();
+        }
+        cb(status);
+        event.SetStatus(status);
+      });
 }
 
 void Directory::HandleFsSpecificMessage(fidl::IncomingMessage& msg, fidl::Transaction* txn) {
