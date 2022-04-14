@@ -120,7 +120,7 @@ pub async fn start_component(
 
     execute_task(current_task, |result| {
         // TODO(fxb/74803): Using the component controller's epitaph may not be the best way to
-        // communicate the exit code. The component manager could interpret certain epitaphs as starnix
+        // communicate the exit status. The component manager could interpret certain epitaphs as starnix
         // being unstable, and chose to terminate starnix as a result.
         // Errors when closing the controller with an epitaph are disregarded, since there are
         // legitimate reasons for this to fail (like the client having closed the channel).
@@ -128,7 +128,7 @@ pub async fn start_component(
             let _ = shell_controller.close_with_epitaph(zx::Status::OK);
         }
         let _ = match result {
-            Ok(0) => controller.close_with_epitaph(zx::Status::OK),
+            Ok(ExitStatus::Exit(0)) => controller.close_with_epitaph(zx::Status::OK),
             _ => controller.close_with_epitaph(zx::Status::from_raw(
                 fcomponent::Error::InstanceDied.into_primitive() as i32,
             )),
@@ -251,9 +251,7 @@ mod test {
         let (_kernel, current_task) = create_kernel_and_task();
         let (mut sender, mut receiver) = futures::channel::mpsc::unbounded();
 
-        let init_task = current_task
-            .clone_task(CLONE_FS as u64, UserRef::default(), UserRef::default())
-            .expect("failed to clone task");
+        let init_task = current_task.clone_task_for_test(CLONE_FS as u64);
         let path = "/path";
 
         fasync::Task::local(async move {

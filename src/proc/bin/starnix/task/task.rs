@@ -63,6 +63,21 @@ impl std::ops::Deref for CurrentTask {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum ExitStatus {
+    Exit(u8),
+    Kill(Signal),
+}
+impl ExitStatus {
+    /// Converts the given exit status to a status code suitable for returning from wait syscalls.
+    pub fn wait_status(&self) -> i32 {
+        match self {
+            ExitStatus::Exit(status) => (*status as i32) << 8,
+            ExitStatus::Kill(signal) => signal.number() as i32,
+        }
+    }
+}
+
 pub struct Task {
     pub id: pid_t,
 
@@ -103,8 +118,8 @@ pub struct Task {
     /// The signal this task generates on exit.
     pub exit_signal: Option<Signal>,
 
-    /// The exit status that this task exited with. See waitpid(2).
-    pub exit_status: Mutex<Option<i32>>,
+    /// The exit status that this task exited with.
+    pub exit_status: Mutex<Option<ExitStatus>>,
 }
 
 impl Task {
@@ -305,6 +320,12 @@ impl Task {
         }
 
         Ok(child)
+    }
+
+    #[cfg(test)]
+    pub fn clone_task_for_test(&self, flags: u64) -> CurrentTask {
+        self.clone_task(flags, UserRef::default(), UserRef::default())
+            .expect("failed to create task in test")
     }
 
     /// If needed, clear the child tid for this task.
@@ -820,24 +841,13 @@ mod test {
     #[::fuchsia::test]
     fn test_clone_pid_and_parent_pid() {
         let (_kernel, current_task) = create_kernel_and_task();
-        let thread = current_task
-            .clone_task(
-                (CLONE_THREAD | CLONE_VM | CLONE_SIGHAND) as u64,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone thread");
+        let thread =
+            current_task.clone_task_for_test((CLONE_THREAD | CLONE_VM | CLONE_SIGHAND) as u64);
         assert_eq!(current_task.get_pid(), thread.get_pid());
         assert_ne!(current_task.get_tid(), thread.get_tid());
         assert_eq!(current_task.thread_group.leader, thread.thread_group.leader);
 
-        let child_task = current_task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
+        let child_task = current_task.clone_task_for_test(0);
         assert_ne!(current_task.get_pid(), child_task.get_pid());
         assert_ne!(current_task.get_tid(), child_task.get_tid());
         assert_eq!(current_task.get_pid(), *child_task.thread_group.parent.read());

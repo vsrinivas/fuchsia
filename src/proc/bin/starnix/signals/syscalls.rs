@@ -499,7 +499,7 @@ pub fn sys_wait4(
     };
 
     if let Some(zombie_process) = wait_on_pid(current_task, selector, options)? {
-        let status = zombie_process.wait_status;
+        let status = zombie_process.exit_status.wait_status();
 
         if !user_rusage.is_null() {
             let usage = rusage::default();
@@ -976,21 +976,9 @@ mod tests {
     #[::fuchsia::test]
     fn test_kill_own_thread_group() {
         let (_kernel, init_task) = create_kernel_and_task();
-        let task1 = init_task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
+        let task1 = init_task.clone_task_for_test(0);
         task1.thread_group.setsid().expect("setsid");
-        let task2 = task1
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
+        let task2 = task1.clone_task_for_test(0);
 
         assert_eq!(sys_kill(&task1, 0, SIGINT.into()), Ok(()));
         assert_eq!(task1.signals.read().queued_count(SIGINT), 1);
@@ -1002,21 +990,9 @@ mod tests {
     #[::fuchsia::test]
     fn test_kill_thread_group() {
         let (_kernel, init_task) = create_kernel_and_task();
-        let task1 = init_task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
+        let task1 = init_task.clone_task_for_test(0);
         task1.thread_group.setsid().expect("setsid");
-        let task2 = task1
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
+        let task2 = task1.clone_task_for_test(0);
 
         assert_eq!(sys_kill(&task1, -task1.id, SIGINT.into()), Ok(()));
         assert_eq!(task1.signals.read().queued_count(SIGINT), 1);
@@ -1028,21 +1004,9 @@ mod tests {
     #[::fuchsia::test]
     fn test_kill_all() {
         let (_kernel, init_task) = create_kernel_and_task();
-        let task1 = init_task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
+        let task1 = init_task.clone_task_for_test(0);
         task1.thread_group.setsid().expect("setsid");
-        let task2 = task1
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
+        let task2 = task1.clone_task_for_test(0);
 
         assert_eq!(sys_kill(&task1, -1, SIGINT.into()), Ok(()));
         assert_eq!(task1.signals.read().queued_count(SIGINT), 0);
@@ -1065,13 +1029,7 @@ mod tests {
         // Task must not have the kill capability.
         *task1.creds.write() =
             Credentials::from_passwd("foo:x:1:1").expect("Credentials::from_passwd");
-        let task2 = task1
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
+        let task2 = task1.clone_task_for_test(0);
         *task2.creds.write() = Credentials::from_passwd("bin:x:2:2:bin:/bin:/usr/sbin/nologin")
             .expect("build credentials");
 
@@ -1084,21 +1042,9 @@ mod tests {
     #[::fuchsia::test]
     fn test_kill_invalid_task_in_thread_group() {
         let (_kernel, init_task) = create_kernel_and_task();
-        let task1 = init_task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
+        let task1 = init_task.clone_task_for_test(0);
         task1.thread_group.setsid().expect("setsid");
-        let task2 = task1
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
+        let task2 = task1.clone_task_for_test(0);
         task2.thread_group.setsid().expect("setsid");
         *task2.creds.write() = Credentials::from_passwd("bin:x:2:2:bin:/bin:/usr/sbin/nologin")
             .expect("build credentials");
@@ -1252,7 +1198,7 @@ mod tests {
         assert!(
             sys_kill(&current_task, current_task.get_pid(), UncheckedSignal::from(SIGCHLD)).is_ok()
         );
-        let zombie = ZombieProcess { pid: 0, pgid: 0, uid: 0, wait_status: 1 << 8 };
+        let zombie = ZombieProcess { pid: 0, pgid: 0, uid: 0, exit_status: ExitStatus::Exit(1) };
         current_task.thread_group.zombie_children.lock().push(zombie.clone());
         assert_eq!(wait_on_pid(&current_task, ProcessSelector::Any, 0), Ok(Some(zombie)));
     }
@@ -1260,13 +1206,7 @@ mod tests {
     #[::fuchsia::test]
     fn test_exit_status() {
         let (_kernel, current_task) = create_kernel_and_task();
-        let mut child = current_task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
+        let mut child = current_task.clone_task_for_test(0);
 
         // Send SigKill to the child.
         send_signal(&child, SignalInfo::default(SIGKILL));
@@ -1280,32 +1220,20 @@ mod tests {
         sys_wait4(&current_task, -1, address_ref, 0, UserRef::default()).expect("wait4");
         let mut wstatus: i32 = 0;
         current_task.mm.read_object(address_ref, &mut wstatus).expect("read memory");
-        assert_eq!(wstatus, 128 + SIGKILL.number() as i32);
+        assert_eq!(wstatus, SIGKILL.number() as i32);
     }
 
     #[::fuchsia::test]
     fn test_wait4_by_pgid() {
         let (_kernel, current_task) = create_kernel_and_task();
-        let child1 = current_task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("new process");
+        let child1 = current_task.clone_task_for_test(0);
         let child1_pid = child1.id;
-        child1.thread_group.exit(42);
+        child1.thread_group.exit(ExitStatus::Exit(42));
         std::mem::drop(child1);
-        let child2 = current_task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("new process");
+        let child2 = current_task.clone_task_for_test(0);
         child2.thread_group.setsid().expect("setsid");
         let child2_pid = child2.id;
-        child2.thread_group.exit(42);
+        child2.thread_group.exit(ExitStatus::Exit(42));
         std::mem::drop(child2);
 
         assert_eq!(
@@ -1321,26 +1249,14 @@ mod tests {
     #[::fuchsia::test]
     fn test_waitid_by_pgid() {
         let (_kernel, current_task) = create_kernel_and_task();
-        let child1 = current_task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("new process");
+        let child1 = current_task.clone_task_for_test(0);
         let child1_pid = child1.id;
-        child1.thread_group.exit(42);
+        child1.thread_group.exit(ExitStatus::Exit(42));
         std::mem::drop(child1);
-        let child2 = current_task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("new process");
+        let child2 = current_task.clone_task_for_test(0);
         child2.thread_group.setsid().expect("setsid");
         let child2_pid = child2.id;
-        child2.thread_group.exit(42);
+        child2.thread_group.exit(ExitStatus::Exit(42));
         std::mem::drop(child2);
 
         let address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE as u64);

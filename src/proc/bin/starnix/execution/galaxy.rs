@@ -95,8 +95,8 @@ pub fn create_galaxy(
     // to initialize the system up until this point, regardless of whether or not there is an
     // actual init to be run.
     let init_task = if CONFIG.init.is_empty() {
-        // A task must have an exit code, so set it here to simulate the init task having run.
-        *init_task.exit_status.lock() = Some(0);
+        // A task must have an exit status, so set it here to simulate the init task having run.
+        *init_task.exit_status.lock() = Some(ExitStatus::Exit(0));
         None
     } else {
         let argv: Vec<_> = CONFIG.init.iter().map(to_cstr).collect();

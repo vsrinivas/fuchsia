@@ -34,13 +34,13 @@ use crate::types::*;
 /// # Parameters
 /// - `current_task`: The task to start executing.
 /// - `task_complete`: A function that is called when the task finishes executing. The result
-///                    contains the exit code of the task.
+///                    contains the exit status of the task.
 pub fn execute_task<F>(mut current_task: CurrentTask, task_complete: F)
 where
-    F: FnOnce(Result<i32, Error>) + Send + Sync + 'static,
+    F: FnOnce(Result<ExitStatus, Error>) + Send + Sync + 'static,
 {
     std::thread::spawn(move || {
-        task_complete(|| -> Result<i32, Error> {
+        task_complete(|| -> Result<ExitStatus, Error> {
             let exceptions = start_task_thread(&current_task)?;
             // Unwrap the error because if we don't, we'll panic anyway from destroying the task
             // without having previous called sys_exit(), and that will swallow the actual error.
@@ -90,12 +90,12 @@ fn start_task_thread(current_task: &CurrentTask) -> Result<zx::Channel, zx::Stat
 ///   - setting the thread's registers to their post-syscall values
 ///   - setting the exception state to `ZX_EXCEPTION_STATE_HANDLED`
 ///
-/// Once this function has completed, the process' exit code (if one is available) can be read from
-/// `process_context.exit_code`.
+/// Once this function has completed, the process' exit status is returned and can be read from
+/// `process_context.exit_status`.
 fn run_exception_loop(
     current_task: &mut CurrentTask,
     exceptions: zx::Channel,
-) -> Result<i32, Error> {
+) -> Result<ExitStatus, Error> {
     let mut buffer = zx::MessageBuf::new();
     loop {
         read_channel_sync(&exceptions, &mut buffer)?;
@@ -177,7 +177,7 @@ fn run_exception_loop(
         dequeue_signal(current_task);
 
         if let Some(exit_status) = *current_task.exit_status.lock() {
-            strace!(current_task, "exiting with status {:#x}", exit_status);
+            strace!(current_task, "exiting with status {:?}", exit_status);
             exception.set_exception_state(&ZX_EXCEPTION_STATE_THREAD_EXIT)?;
             return Ok(exit_status);
         }

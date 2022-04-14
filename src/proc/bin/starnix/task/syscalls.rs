@@ -12,7 +12,7 @@ use crate::execution::*;
 use crate::logging::{not_implemented, strace};
 use crate::mm::*;
 use crate::syscalls::*;
-use crate::task::Task;
+use crate::task::{ExitStatus, Task};
 use crate::types::*;
 
 pub fn sys_clone(
@@ -164,17 +164,18 @@ pub fn sys_getresgid(
     Ok(())
 }
 
-pub fn sys_exit(current_task: &CurrentTask, exit_code: i32) -> Result<(), Errno> {
-    info!(target: "exit", "{:?} exit({})", current_task, exit_code);
+pub fn sys_exit(current_task: &CurrentTask, code: i32) -> Result<(), Errno> {
+    info!(target: "exit", "{:?} exit({})", current_task, code);
     // Only change the current exit status if this has not been already set by exit_group, as
-    // otherwise it is prioritary.
-    let _: i32 = *current_task.exit_status.lock().get_or_insert((exit_code & 0xff) << 8);
+    // otherwise it has priority.
+    let _: ExitStatus =
+        *current_task.exit_status.lock().get_or_insert(ExitStatus::Exit(code as u8));
     Ok(())
 }
 
-pub fn sys_exit_group(current_task: &CurrentTask, exit_code: i32) -> Result<(), Errno> {
-    info!(target: "exit", "{:?} exit_group({})", current_task, exit_code);
-    current_task.thread_group.exit((exit_code & 0xff) << 8);
+pub fn sys_exit_group(current_task: &CurrentTask, code: i32) -> Result<(), Errno> {
+    info!(target: "exit", "{:?} exit_group({})", current_task, code);
+    current_task.thread_group.exit(ExitStatus::Exit(code as u8));
     Ok(())
 }
 

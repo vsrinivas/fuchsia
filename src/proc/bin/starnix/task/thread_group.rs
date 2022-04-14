@@ -9,7 +9,6 @@ use std::collections::HashSet;
 use std::ffi::CStr;
 use std::sync::Arc;
 
-use crate::auth::Credentials;
 use crate::device::terminal::*;
 use crate::signals::*;
 use crate::task::*;
@@ -92,25 +91,19 @@ pub struct ZombieProcess {
     pub pid: pid_t,
     pub pgid: pid_t,
     pub uid: uid_t,
-    /// This is the value returned by waitpid(2).
-    pub wait_status: i32,
+    pub exit_status: ExitStatus,
 }
 
 impl ZombieProcess {
-    pub fn new(thread_group: &ThreadGroup, credentials: &Credentials, wait_status: i32) -> Self {
-        ZombieProcess {
-            pid: thread_group.leader,
-            pgid: thread_group.process_group.read().leader,
-            uid: credentials.uid,
-            wait_status,
-        }
-    }
-
     pub fn as_signal_info(&self) -> SignalInfo {
         SignalInfo::new(
             SIGCHLD,
             CLD_EXITED,
-            SignalDetail::SigChld { pid: self.pid, uid: self.uid, status: self.wait_status },
+            SignalDetail::SigChld {
+                pid: self.pid,
+                uid: self.uid,
+                status: self.exit_status.wait_status(),
+            },
         )
     }
 }
@@ -153,7 +146,7 @@ impl ThreadGroup {
         }
     }
 
-    pub fn exit(&self, exit_status: i32) {
+    pub fn exit(&self, exit_status: ExitStatus) {
         let mut terminating = self.terminating.lock();
         if *terminating {
             // The thread group is already terminating and all threads in the thread group have
@@ -280,13 +273,18 @@ impl ThreadGroup {
         tasks.remove(&task.id);
 
         if task.id == self.leader {
-            // Return a default exit status of -1 is the task has no exit status.
-            const DEFAULT_EXIT_STATUS: i32 = (-1 & 0xff) << 8;
-            *self.zombie_leader.lock() = Some(ZombieProcess::new(
-                self,
-                &task.creds.read(),
-                task.exit_status.lock().unwrap_or(DEFAULT_EXIT_STATUS),
-            ));
+            let exit_status = *task.exit_status.lock();
+            #[cfg(not(test))]
+            let exit_status =
+                exit_status.expect("a process should not be exiting without an exit status");
+            #[cfg(test)]
+            let exit_status = exit_status.unwrap_or(ExitStatus::Exit(0));
+            *self.zombie_leader.lock() = Some(ZombieProcess {
+                pid: self.leader,
+                pgid: self.process_group.read().leader,
+                uid: task.creds.read().uid,
+                exit_status,
+            });
         }
 
         tasks.is_empty()
@@ -627,13 +625,7 @@ mod test {
         let (_kernel, current_task) = create_kernel_and_task();
         assert_eq!(current_task.thread_group.setsid(), error!(EPERM));
 
-        let child_task = current_task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
+        let child_task = current_task.clone_task_for_test(0);
         assert_eq!(
             current_task.thread_group.process_group.read().session.leader,
             child_task.thread_group.process_group.read().session.leader
@@ -651,16 +643,13 @@ mod test {
     #[::fuchsia::test]
     fn test_exit_status() {
         let (_kernel, current_task) = create_kernel_and_task();
-        let child = current_task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
-        child.thread_group.exit(42);
+        let child = current_task.clone_task_for_test(0);
+        child.thread_group.exit(ExitStatus::Exit(42));
         std::mem::drop(child);
-        assert_eq!(current_task.thread_group.zombie_children.lock()[0].wait_status, 42);
+        assert_eq!(
+            current_task.thread_group.zombie_children.lock()[0].exit_status,
+            ExitStatus::Exit(42)
+        );
     }
 
     #[::fuchsia::test]
@@ -668,35 +657,11 @@ mod test {
         let (_kernel, current_task) = create_kernel_and_task();
         assert_eq!(current_task.thread_group.setsid(), error!(EPERM));
 
-        let child_task1 = current_task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
-        let child_task2 = current_task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
-        let execd_child_task = current_task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
+        let child_task1 = current_task.clone_task_for_test(0);
+        let child_task2 = current_task.clone_task_for_test(0);
+        let execd_child_task = current_task.clone_task_for_test(0);
         *execd_child_task.thread_group.did_exec.write() = true;
-        let other_session_child_task = current_task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
+        let other_session_child_task = current_task.clone_task_for_test(0);
         assert_eq!(other_session_child_task.thread_group.setsid(), Ok(()));
 
         assert_eq!(child_task1.thread_group.setpgid(&current_task, 0), error!(ESRCH));
@@ -747,7 +712,7 @@ mod test {
 
         assert_eq!(*task3.thread_group.parent.read(), task2.id);
 
-        task2.thread_group.exit(0);
+        task2.thread_group.exit(ExitStatus::Exit(0));
         std::mem::drop(task2);
 
         // Task3 parent should be current_task.

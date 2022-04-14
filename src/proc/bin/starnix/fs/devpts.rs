@@ -622,13 +622,7 @@ mod tests {
     #[::fuchsia::test]
     fn test_attach_terminal() {
         let (kernel, task1) = create_kernel_and_task();
-        let task2 = task1
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
+        let task2 = task1.clone_task_for_test(0);
         task2.thread_group.setsid().expect("setsid");
 
         let fs = dev_pts_fs(&kernel);
@@ -657,13 +651,7 @@ mod tests {
         let (kernel, task1) = create_kernel_and_task();
         *task1.creds.write() = Credentials::from_passwd("nobody:x:1:1").expect("credentials");
 
-        let task2 = task1
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
+        let task2 = task1.clone_task_for_test(0);
 
         let fs = dev_pts_fs(&kernel);
         let _opened_main = open_ptmx_and_unlock(&task1, &fs).expect("ptmx");
@@ -714,21 +702,9 @@ mod tests {
     #[::fuchsia::test]
     fn test_set_foreground_process() {
         let (kernel, init) = create_kernel_and_task();
-        let task1 = init
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
+        let task1 = init.clone_task_for_test(0);
         task1.thread_group.setsid().expect("setsid");
-        let task2 = task1
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
+        let task2 = task1.clone_task_for_test(0);
         task2.thread_group.setpgid(&task2, 0).expect("setpgid");
         let task2_pgid = task2.thread_group.process_group.read().leader;
 
@@ -793,13 +769,7 @@ mod tests {
     #[::fuchsia::test]
     fn test_detach_session() {
         let (kernel, task1) = create_kernel_and_task();
-        let task2 = task1
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
+        let task2 = task1.clone_task_for_test(0);
         task2.thread_group.setsid().expect("setsid");
 
         let fs = dev_pts_fs(&kernel);
