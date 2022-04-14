@@ -1,5 +1,6 @@
 {
     include: [
+        "//src/lib/storage/fs_management/client.shard.cml",
         "//src/storage/testing/driver_test_realm/meta/client.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
         "inspect/client.shard.cml",
@@ -8,31 +9,11 @@
     program: {
         binary: "test/blobfs_component_test",
     },
-    collections: [
-        {
-            name: "blobfs-collection",
-            durability: "transient",
-        },
-    ],
-    use: [
-        {
-            protocol: "fuchsia.component.Realm",
-            from: "framework",
-        },
-    ],
     offer: [
-        {
-            protocol: [
-                "fuchsia.boot.WriteOnlyLog",
-                "fuchsia.logger.LogSink",
-            ],
-            from: "parent",
-            to: [ "#blobfs-collection" ],
-        },
         {
             directory: "dev",
             from: "#storage_driver_test_realm",
-            to: [ "#blobfs-collection" ],
+            to: [ "#fs-collection" ],
         },
     ],
 }

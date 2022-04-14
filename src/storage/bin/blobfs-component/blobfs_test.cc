@@ -22,7 +22,7 @@ constexpr uint32_t kBlockCount = 1024 * 256;
 constexpr uint32_t kBlockSize = 512;
 
 const fuchsia_component_decl::wire::ChildRef kBlobfsChildRef{.name = "test-blobfs",
-                                                             .collection = "blobfs-collection"};
+                                                             .collection = "fs-collection"};
 
 class BlobfsComponentTest : public testing::Test {
  public:
@@ -36,11 +36,12 @@ class BlobfsComponentTest : public testing::Test {
     realm_ = fidl::BindSyncClient(std::move(*realm_client_end));
 
     fidl::Arena allocator;
-    fuchsia_component_decl::wire::CollectionRef collection_ref{.name = "blobfs-collection"};
-    fuchsia_component_decl::wire::Child child_decl(allocator);
-    child_decl.set_name(allocator, allocator, "test-blobfs")
-        .set_url(allocator, allocator, "fuchsia-boot:///#meta/blobfs.cm")
-        .set_startup(fuchsia_component_decl::wire::StartupMode::kLazy);
+    fuchsia_component_decl::wire::CollectionRef collection_ref{.name = "fs-collection"};
+    auto child_decl = fuchsia_component_decl::wire::Child::Builder(allocator)
+                          .name("test-blobfs")
+                          .url("fuchsia-boot:///#meta/blobfs.cm")
+                          .startup(fuchsia_component_decl::wire::StartupMode::kLazy)
+                          .Build();
     fuchsia_component::wire::CreateChildArgs child_args;
     auto create_res = realm_->CreateChild(collection_ref, child_decl, child_args);
     ASSERT_EQ(create_res.status(), ZX_OK);
