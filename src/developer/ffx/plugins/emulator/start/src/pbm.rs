@@ -25,11 +25,12 @@ pub(crate) async fn make_configs(
     cmd: &StartCommand,
     ffx_config: &FfxConfigWrapper,
 ) -> Result<EmulatorConfiguration> {
-    let mut writer = Box::new(std::io::stdout());
-    let fms_entries = pbms::get_pbms(/*update_metadata=*/ false, cmd.verbose, &mut writer)
-        .await
-        .context("problem with fms_entries")?;
-    let product_bundle = fms::find_product_bundle(&fms_entries, &cmd.product_bundle)
+    let product_url =
+        pbms::select_product_bundle(&cmd.product_bundle).await.context("select product bundle")?;
+    let name = product_url.fragment().expect("product name is required");
+
+    let fms_entries = pbms::fms_entries_from(&product_url).await.context("get fms entries")?;
+    let product_bundle = fms::find_product_bundle(&fms_entries, &Some(name.to_string()))
         .context("problem with product_bundle")?;
     let virtual_device = fms::find_virtual_device(&fms_entries, &product_bundle.device_refs)
         .context("problem with virtual device")?;
@@ -40,13 +41,11 @@ pub(crate) async fn make_configs(
         );
     }
 
-    let data_root = pbms::get_data_dir(&product_bundle.name).await?;
-    let metadata_root = pbms::get_metadata_dir(&product_bundle.name).await?;
+    let data_root = pbms::get_data_dir(&product_url).await.context("data dir")?;
 
     // Apply the values from the manifest to an emulation configuration.
-    let mut emu_config =
-        convert_bundle_to_configs(product_bundle, virtual_device, &data_root, &metadata_root)
-            .context("problem with convert_bundle_to_configs")?;
+    let mut emu_config = convert_bundle_to_configs(product_bundle, virtual_device, &data_root)
+        .context("problem with convert_bundle_to_configs")?;
 
     // Integrate the values from command line flags into the emulation configuration, and
     // return the result to the caller.

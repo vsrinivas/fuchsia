@@ -14,12 +14,10 @@ use std::path::PathBuf;
 /// - `data_root` is a path to a directory. When working in-tree it's the path
 ///   to build output dir; when using the SDK it's the path to the downloaded
 ///   images directory.
-/// - `metadata_root` is a path to a directory containing the metadata files.
 pub fn convert_bundle_to_configs(
     product_bundle: &ProductBundleV1,
     virtual_device: &VirtualDeviceV1,
     data_root: &PathBuf,
-    metadata_root: &PathBuf,
 ) -> Result<EmulatorConfiguration> {
     let mut emulator_configuration: EmulatorConfiguration = EmulatorConfiguration::default();
 
@@ -38,7 +36,7 @@ pub fn convert_bundle_to_configs(
     };
 
     if let Some(template) = &virtual_device.start_up_args_template {
-        emulator_configuration.runtime.template = metadata_root.join(&template);
+        emulator_configuration.runtime.template = data_root.join(&template);
     }
 
     if let Some(ports) = &virtual_device.ports {
@@ -120,10 +118,9 @@ mod tests {
         };
 
         let sdk_root = PathBuf::from("/some/sdk-root");
-        let fms_path = PathBuf::from("/some/sdk-path/fms-path");
 
         // Run the conversion, then assert everything in the config matches the manifest data.
-        let config = convert_bundle_to_configs(&pb, &device, &sdk_root, &fms_path)?;
+        let config = convert_bundle_to_configs(&pb, &device, &sdk_root)?;
         assert_eq!(config.device.audio, device.hardware.audio);
         assert_eq!(config.device.cpu.architecture, device.hardware.cpu.arch);
         assert_eq!(config.device.memory, device.hardware.memory);
@@ -168,7 +165,7 @@ mod tests {
         ports.insert("debug".to_string(), 2345);
         device.ports = Some(ports);
 
-        let mut config = convert_bundle_to_configs(&pb, &device, &sdk_root, &fms_path)?;
+        let mut config = convert_bundle_to_configs(&pb, &device, &sdk_root)?;
 
         // Verify that all of the new values are loaded and match the new manifest data.
         assert_eq!(config.device.audio, device.hardware.audio);

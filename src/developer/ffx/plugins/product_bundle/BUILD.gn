@@ -21,6 +21,7 @@ ffx_plugin("ffx_product_bundle") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:url",
   ]
 
   sources = [

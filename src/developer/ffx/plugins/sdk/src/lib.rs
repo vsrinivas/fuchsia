@@ -13,8 +13,7 @@ use {
         ListCommand, ListSubCommand, SdkCommand, SetCommand, SetRootCommand, SetSubCommand,
         SubCommand,
     },
-    pbms::get_pbms,
-    sdk_metadata::Metadata,
+    pbms::{product_bundle_urls, update_metadata},
     std::io::{stdout, Write},
 };
 
@@ -62,14 +61,10 @@ async fn exec_list<W: Write + Sync>(writer: &mut W, _sdk: Sdk, cmd: &ListCommand
 ///
 /// The list will be written to `writer`.
 async fn exec_list_pbms<W: Write + Sync>(writer: &mut W) -> Result<()> {
-    let entries = get_pbms(/*update_metadata=*/ true, /*verbose=*/ false, writer)
-        .await
-        .context("get pbms entries")?;
+    update_metadata(/*verbose=*/ false, writer).await?;
+    let entries = product_bundle_urls().await.context("get pbms entries")?;
     for entry in entries.iter() {
-        match entry {
-            Metadata::ProductBundleV1(bundle) => writeln!(writer, "{}", bundle.name)?,
-            _ => {}
-        }
+        writeln!(writer, "{}", entry)?;
     }
     Ok(())
 }

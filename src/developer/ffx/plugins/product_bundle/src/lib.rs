@@ -12,8 +12,7 @@ use {
     ffx_product_bundle_args::{
         CreateCommand, GetCommand, ListCommand, ProductBundleCommand, SubCommand,
     },
-    pbms::{get_pbms, get_product_data, is_pb_ready},
-    sdk_metadata::Metadata,
+    pbms::{get_product_data, is_pb_ready, product_bundle_urls, update_metadata},
     std::io::{stdout, Write},
 };
 
@@ -44,20 +43,13 @@ where
 
 /// `ffx product-bundle list` sub-command.
 async fn pb_list<W: Write + Sync>(writer: &mut W, cmd: &ListCommand) -> Result<()> {
-    let entries = get_pbms(/*update_metadata=*/ !cmd.cached, /*verbose=*/ false, writer)
-        .await
-        .context("list pbms")?;
-    let mut entry_names = entries
-        .iter()
-        .filter(|entry| match entry {
-            Metadata::ProductBundleV1(_) => true,
-            _ => false,
-        })
-        .map(|entry| entry.name().to_owned())
-        .collect::<Vec<_>>();
-    entry_names.sort();
+    if !cmd.cached {
+        update_metadata(/*verbose=*/ false, writer).await?;
+    }
+    let mut entries = product_bundle_urls().await.context("list pbms")?;
+    entries.sort();
     writeln!(writer, "")?;
-    for entry in entry_names {
+    for entry in entries {
         let ready = if is_pb_ready(&entry).await? { "*" } else { "" };
         writeln!(writer, "{}{}", entry, ready)?;
     }
@@ -73,7 +65,9 @@ async fn pb_list<W: Write + Sync>(writer: &mut W, cmd: &ListCommand) -> Result<(
 
 /// `ffx product-bundle get` sub-command.
 async fn pb_get<W: Write + Sync>(writer: &mut W, cmd: &GetCommand) -> Result<()> {
-    get_product_data(&cmd.product_bundle_name, cmd.verbose, writer).await
+    let product_url = pbms::select_product_bundle(&cmd.product_bundle_name).await?;
+    get_product_data(&product_url, cmd.verbose, writer).await?;
+    Ok(())
 }
 
 /// `ffx product-bundle create` sub-command.
