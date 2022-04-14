@@ -21,7 +21,7 @@ performance analysis. (For more information on Perfetto, see this
 By default, the `ffx trace start` command attempts to collect trace data from a
 predefined set of trace categories (run `ffx trace start --help` to see the default
 categories). However, `ffx trace start` also allows you to
-[select trace catatories](#view-trace-categories) for collecting trace data.
+[select trace categories](#view-trace-categories) for collecting trace data.
 
 Only one trace session can be running on a Fuchsia device at a time, and only a single
 trace can be recorded on an output file. In the examples below, all output files default
