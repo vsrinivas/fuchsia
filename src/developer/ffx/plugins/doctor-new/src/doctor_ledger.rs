@@ -227,7 +227,6 @@ impl LedgerNodeOp for LedgerNode {
 #[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq)]
 pub enum LedgerOutcome {
     ValidRangeStart,
-    Info,
     Success,
     Warning,
     Failure,
@@ -412,16 +411,13 @@ mod test {
         ledger.set_outcome(main_node, LedgerOutcome::Warning)?;
         main_node = ledger.add(LedgerNode::new("c".to_string(), MODE_VERBOSE))?;
         ledger.set_outcome(main_node, LedgerOutcome::Failure)?;
-        main_node = ledger.add(LedgerNode::new("d".to_string(), MODE_VERBOSE))?;
-        ledger.set_outcome(main_node, LedgerOutcome::Info)?;
 
         assert_eq!(
             doctorledger_debug(&ledger),
             "\
                 \n[✓] a\
                 \n[!] b\
-                \n[✗] c\
-                \n[i] d\n"
+                \n[✗] c\n"
         );
         Ok(())
     }
@@ -439,8 +435,6 @@ mod test {
         ledger.set_outcome(main_node, LedgerOutcome::Failure)?;
         main_node = ledger.add(LedgerNode::new("e".to_string(), MODE_NORMAL))?;
         ledger.set_outcome(main_node, LedgerOutcome::Success)?;
-        main_node = ledger.add(LedgerNode::new("f".to_string(), MODE_NORMAL))?;
-        ledger.set_outcome(main_node, LedgerOutcome::Info)?;
         Ok(())
     }
 
@@ -458,7 +452,6 @@ mod test {
                 \n[✗] c\
                 \n[✗] d\
                 \n[✓] e\
-                \n[i] f\
                 \n"
         );
         Ok(())
@@ -476,7 +469,7 @@ mod test {
                 \n[!] b\
                 \n[✗] c\
                 \n[✓] e\
-                \n[i] f\n"
+                \n"
         );
         Ok(())
     }
