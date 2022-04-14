@@ -25,7 +25,6 @@
                 "fuchsia.component.runner.RealmBuilder",
                 "fuchsia.process.Launcher",
                 "fuchsia.sys.Loader",
-                "fuchsia.tracing.provider.Registry",
             ],
         },
     ],

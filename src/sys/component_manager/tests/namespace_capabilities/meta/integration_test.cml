@@ -45,7 +45,6 @@
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
                 "fuchsia.sys.Loader",
-                "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
             to: [ "#nested_component_manager" ],

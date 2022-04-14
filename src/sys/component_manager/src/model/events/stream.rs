@@ -13,7 +13,6 @@ use {
     },
     cm_moniker::{InstancedAbsoluteMoniker, InstancedExtendedMoniker},
     cm_rust::EventMode,
-    fuchsia_trace as trace,
     futures::{channel::mpsc, StreamExt},
     std::sync::{Arc, Weak},
 };
@@ -54,7 +53,6 @@ impl EventStream {
 
     /// Receives the next event from the sender.
     pub async fn next(&mut self) -> Option<Event> {
-        trace::duration!("component_manager", "events:next");
         self.rx.next().await
     }
 

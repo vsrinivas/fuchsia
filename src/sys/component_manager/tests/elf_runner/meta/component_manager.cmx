@@ -9,8 +9,7 @@
         "services": [
             "fidl.test.args.Report",
             "fuchsia.process.Launcher",
-            "fuchsia.sys.Loader",
-            "fuchsia.tracing.provider.Registry"
+            "fuchsia.sys.Loader"
         ]
     }
 }

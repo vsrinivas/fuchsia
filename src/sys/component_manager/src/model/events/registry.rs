@@ -26,7 +26,6 @@ use {
     async_trait::async_trait,
     cm_moniker::{InstancedAbsoluteMoniker, InstancedExtendedMoniker},
     cm_rust::{CapabilityName, EventMode, UseDecl, UseEventDecl},
-    fuchsia_trace as trace,
     futures::lock::Mutex,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::{
@@ -309,9 +308,7 @@ impl EventRegistry {
                     // events. So we force each future to return a success. This
                     // ensures that all the futures can be driven to completion.
                     let responder_channel = async move {
-                        trace::duration!("component_manager", "events:wait_for_resume");
                         responder_channel.await.unwrap_or(()); // Ignore cancellation.
-                        trace::flow_end!("component_manager", "event", event.id);
                     };
                     responder_channels.push(responder_channel);
                 }
@@ -330,7 +327,6 @@ impl EventRegistry {
 
         // Wait until all tasks have used the responder to unblock.
         {
-            trace::duration!("component_manager", "events:wait_for_all_resume");
             futures::future::join_all(responder_channels).await;
         }
 

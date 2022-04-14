@@ -26,7 +26,7 @@ use {
     fidl::endpoints::{ProtocolMarker, ServerEnd},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2::LifecycleControllerMarker,
-    fuchsia_trace as trace, fuchsia_zircon as zx,
+    fuchsia_zircon as zx,
     futures::lock::Mutex,
     moniker::{AbsoluteMonikerBase, ChildMonikerBase},
     rand::Rng,
@@ -190,7 +190,6 @@ impl Hub {
         component_url: String,
         instance_map: &mut HashMap<InstancedAbsoluteMoniker, Instance>,
     ) -> Result<Option<(u128, Directory)>, ModelError> {
-        trace::duration!("component_manager", "hub:add_instance_if_necessary");
         if instance_map.contains_key(&instanced_moniker) {
             return Ok(None);
         }
@@ -293,7 +292,6 @@ impl Hub {
         if let (Some(leaf), Some(parent_moniker)) =
             (instanced_moniker.leaf(), instanced_moniker.parent())
         {
-            trace::duration!("component_manager", "hub:add_instance_to_parent");
             match instance_map.get_mut(&parent_moniker) {
                 Some(instance) => {
                     let child_moniker = leaf.to_child_moniker();
@@ -391,8 +389,6 @@ impl Hub {
         parent_directory: Directory,
         target_moniker: &InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        trace::duration!("component_manager", "hub:add_debug_directory");
-
         let mut debug_dir = pfs::simple();
 
         let lifecycle_controller_path =
@@ -430,7 +426,6 @@ impl Hub {
         target_moniker: &InstancedAbsoluteMoniker,
         target: WeakComponentInstance,
     ) -> Result<(), ModelError> {
-        trace::duration!("component_manager", "hub:add_expose_directory");
         let tree = DirTree::build_from_exposes(route_expose_fn, target, component_decl);
         let mut expose_dir = pfs::simple();
         tree.install(target_moniker, &mut expose_dir)?;
@@ -443,7 +438,6 @@ impl Hub {
         outgoing_dir: Option<fio::DirectoryProxy>,
         target_moniker: &InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        trace::duration!("component_manager", "hub:add_out_directory");
         if let Some(out_dir) = outgoing_dir {
             execution_directory.add_node("out", remote_dir(out_dir), target_moniker)?;
         }
@@ -455,7 +449,6 @@ impl Hub {
         runtime_dir: Option<fio::DirectoryProxy>,
         instanced_moniker: &InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        trace::duration!("component_manager", "hub:add_runtime_directory");
         if let Some(runtime_dir) = runtime_dir {
             execution_directory.add_node("runtime", remote_dir(runtime_dir), instanced_moniker)?;
         }
@@ -481,7 +474,6 @@ impl Hub {
         target_moniker: &InstancedAbsoluteMoniker,
         target: WeakComponentInstance,
     ) -> Result<(), ModelError> {
-        trace::duration!("component_manager", "hub:add_instance_id_file");
         if let Some(instance_id) = target.upgrade()?.instance_id() {
             directory.add_node(
                 "instance_id",
@@ -552,8 +544,6 @@ impl Hub {
         component_decl: &'a ComponentDecl,
         start_reason: &StartReason,
     ) -> Result<(), ModelError> {
-        trace::duration!("component_manager", "hub:on_start_instance_async");
-
         let mut instance_map = self.instances.lock().await;
 
         let instance = instance_map
@@ -564,8 +554,6 @@ impl Hub {
         if instance.has_execution_directory {
             return Ok(());
         }
-
-        trace::duration!("component_manager", "hub:create_execution");
 
         let execution_directory = pfs::simple();
 
@@ -615,8 +603,6 @@ impl Hub {
         target_moniker: &InstancedAbsoluteMoniker,
         component_url: String,
     ) -> Result<(), ModelError> {
-        trace::duration!("component_manager", "hub:on_discovered_async");
-
         let lifecycle_controller =
             self.lifecycle_controller_factory.create(&target_moniker.to_absolute_moniker());
 
@@ -636,7 +622,6 @@ impl Hub {
         &self,
         target_moniker: &InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        trace::duration!("component_manager", "hub:on_purged_async");
         let mut instance_map = self.instances.lock().await;
         instance_map
             .remove(&target_moniker)
@@ -648,7 +633,6 @@ impl Hub {
         &self,
         target_moniker: &InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        trace::duration!("component_manager", "hub:on_stopped_async");
         let mut instance_map = self.instances.lock().await;
         let mut instance = instance_map
             .get_mut(target_moniker)
@@ -666,7 +650,6 @@ impl Hub {
         &self,
         target_moniker: &InstancedAbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        trace::duration!("component_manager", "hub:on_destroyed_async");
         let parent_moniker = target_moniker.parent().expect("A root component cannot be destroyed");
         let mut instance_map = self.instances.lock().await;
 
@@ -708,7 +691,6 @@ impl Hub {
         source: CapabilitySource,
         capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
     ) -> Result<(), ModelError> {
-        trace::duration!("component_manager", "hub:on_capability_routed_async");
         // If this is a scoped framework directory capability, then check the source path
         if let CapabilitySource::Framework {
             capability: InternalCapability::Directory(source_name),

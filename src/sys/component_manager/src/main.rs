@@ -16,7 +16,7 @@ use {
     },
     fidl_fuchsia_component_internal as finternal, fuchsia_async as fasync,
     fuchsia_runtime::{job_default, process_self},
-    fuchsia_syslog as syslog, fuchsia_trace_provider as trace_provider,
+    fuchsia_syslog as syslog,
     fuchsia_zircon::JobCriticalOptions,
     log::*,
     std::path::PathBuf,
@@ -70,9 +70,6 @@ fn main() {
         ))
     };
     drop(ldsvc);
-
-    // Enable tracing in Component Manager
-    trace_provider::trace_provider_create_with_fdio();
 
     let (runtime_config, bootfs_svc, boot_defaults) = build_runtime_config();
 

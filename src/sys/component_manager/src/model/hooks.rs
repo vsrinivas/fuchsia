@@ -20,7 +20,6 @@ use {
     fidl_fuchsia_diagnostics_types as fdiagnostics, fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
     futures::{channel::oneshot, lock::Mutex},
-    rand::random,
     routing::component_instance::ComponentInstanceInterface,
     std::{
         collections::HashMap,
@@ -378,9 +377,6 @@ pub type EventResult = Result<EventPayload, EventError>;
 
 #[derive(Clone, Debug)]
 pub struct Event {
-    /// Each event has a unique 64-bit integer assigned to it
-    pub id: u64,
-
     /// Moniker of component that this event applies to
     pub target_moniker: InstancedExtendedMoniker,
 
@@ -449,9 +445,7 @@ impl Event {
         timestamp: zx::Time,
         result: EventResult,
     ) -> Self {
-        // Generate a random 64-bit integer to identify this event
-        let id = random::<u64>();
-        Self { id, target_moniker, component_url, timestamp, result }
+        Self { target_moniker, component_url, timestamp, result }
     }
 }
 
@@ -500,7 +494,6 @@ impl HasEventType for Event {
 impl TransferEvent for Event {
     async fn transfer(&self) -> Self {
         Self {
-            id: self.id,
             target_moniker: self.target_moniker.clone(),
             component_url: self.component_url.clone(),
             result: self.result.transfer().await,

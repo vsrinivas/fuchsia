@@ -4,7 +4,7 @@
 
 use {
     crate::model::hooks::Event as ComponentEvent, cm_moniker::InstancedExtendedMoniker,
-    cm_rust::EventMode, fuchsia_trace as trace, futures::channel::oneshot,
+    cm_rust::EventMode, futures::channel::oneshot,
 };
 
 /// Created for a particular component event.
@@ -36,8 +36,6 @@ impl Event {
     }
 
     pub fn resume(self) {
-        trace::duration!("component_manager", "events:resume");
-        trace::flow_step!("component_manager", "event", self.event.id);
         if let Some(responder) = self.responder {
             // If this returns an error, there isn't much we can do, presumably
             // the caller hoping to resume the component manager has other

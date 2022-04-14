@@ -9,15 +9,13 @@ use {
             registry::{ExecutionMode, SubscriptionOptions, SubscriptionType},
         },
         hooks::{
-            Event as ComponentEvent, EventError, EventErrorPayload, EventPayload, HasEventType,
-            TransferEvent,
+            Event as ComponentEvent, EventError, EventErrorPayload, EventPayload, TransferEvent,
         },
     },
     ::routing::event::EventFilter,
     anyhow::Error,
     cm_moniker::InstancedExtendedMoniker,
     cm_rust::{DictionaryValue, EventMode},
-    fuchsia_trace as trace,
     futures::{
         channel::{mpsc, oneshot},
         lock::Mutex,
@@ -82,17 +80,6 @@ impl EventDispatcher {
         }
 
         let scope_moniker = maybe_scope.unwrap().moniker.clone();
-
-        trace::duration!("component_manager", "events:send");
-        let event_type = format!("{:?}", event.event_type());
-        let target_moniker = event.target_moniker.to_string();
-        trace::flow_begin!(
-            "component_manager",
-            "event",
-            event.id,
-            "event_type" => event_type.as_str(),
-            "target_moniker" => target_moniker.as_str()
-        );
 
         let (maybe_responder_tx, maybe_responder_rx) = match self.mode {
             EventMode::Async => (None, None),

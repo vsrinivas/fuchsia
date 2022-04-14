@@ -8,7 +8,6 @@
             protocol: [
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
-                "fuchsia.tracing.provider.Registry",
 
                 // Injected for test
                 "fidl.examples.routing.echo.Echo",

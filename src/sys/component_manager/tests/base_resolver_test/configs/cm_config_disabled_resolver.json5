@@ -10,7 +10,6 @@
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
-                "fuchsia.tracing.provider.Registry",
             ],
         },
     ],

@@ -15,8 +15,7 @@
         ],
         "services": [
             "fuchsia.process.Launcher",
-            "fuchsia.sys.Loader",
-            "fuchsia.tracing.provider.Registry"
+            "fuchsia.sys.Loader"
         ]
     }
 }
