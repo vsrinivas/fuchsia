@@ -31,11 +31,11 @@ Creates a new VMAR within the one specified by *parent_vmar*.
   within the newly created subregion should be kept close together.   See the
   NOTES section below for discussion.
 - **ZX_VM_SPECIFIC**  Use the *offset* to place the mapping, invalid if
-  vmar does not have the **ZX_VM_CAN_MAP_SPECIFIC** permission.  *offset*
+  *parent_vmar* does not have the **ZX_VM_CAN_MAP_SPECIFIC** permission.  *offset*
   is an offset relative to the base address of the parent region.  It is an error
   to specify an address range that overlaps with another VMAR or mapping.
 - **ZX_VM_OFFSET_IS_UPPER_LIMIT**  Interpret the *offset* as an upper limit
-  to constrain the selection of the offset by the kernel, invalid if *handle*
+  to constrain the selection of the offset by the kernel, invalid if *parent_vmar*
   does not have the **ZX_VM_CAN_MAP_SPECIFIC** permission. The resulting mapping
   will have an offset + *size* that is <= *offset*. This option cannot be
   specified if **ZX_VM_SPECIFIC** is used.
