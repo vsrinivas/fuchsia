@@ -5,9 +5,24 @@
 import("//build/components.gni")
 import("//build/dart/dart_library.gni")
 
+# TODO(fxb/98123): Rename this "fuchsia_component_test"
+group("fuchsia_component_test_from_dart_test_runner") {
+  testonly = true
+  deps = [
+    ":includes",
+    "//src/lib/fuchsia-component-test/realm_builder_server:realm_builder_server_component",
+  ]
+  public_deps = [ ":fuchsia_component_test" ]
+}
+
+# TODO(fxb/98123): Rename this "fuchsia-component-test-lib"
 dart_library("fuchsia_component_test") {
   package_name = "fuchsia_component_test"
+  testonly = true
   null_safe = true
+
+  # TODO(fxb/98123): Make visibility private to this build file. (e.g. visibility = [ ":*" ])
+  visibility = [ "*" ]
 
   sources = [
     "realm_builder.dart",
@@ -35,6 +50,10 @@ dart_library("fuchsia_component_test") {
     "//sdk/fidl/fuchsia.sys2",
     "//third_party/dart-pkg/pub/collection",
   ]
+}
+
+expect_includes("includes") {
+  includes = [ "//sdk/lib/sys/component/realm_builder.shard.cml" ]
 }
 
 group("tests") {
