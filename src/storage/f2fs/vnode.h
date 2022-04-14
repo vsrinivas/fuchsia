@@ -121,18 +121,22 @@ class VnodeF2fs : public fs::Vnode,
   void UpdateInode(Page *node_page);
   zx_status_t WriteInode(bool is_reclaim = false);
   zx_status_t DoTruncate(size_t len);
-  int TruncateDataBlocksRange(DnodeOfData *dn, int count);
-  void TruncateDataBlocks(DnodeOfData *dn);
+  // Caller should ensure node_page is locked.
+  int TruncateDataBlocksRange(NodePage &node_page, uint32_t ofs_in_node, uint32_t count);
+  // Caller should ensure node_page is locked.
+  void TruncateDataBlocks(NodePage &node_page);
   void TruncatePartialDataPage(uint64_t from);
   zx_status_t TruncateBlocks(uint64_t from);
   zx_status_t TruncateHole(pgoff_t pg_start, pgoff_t pg_end);
   void TruncateToSize();
   void EvictVnode();
 
-  void SetDataBlkaddr(DnodeOfData *dn, block_t new_addr);
-  zx_status_t ReserveNewBlock(DnodeOfData *dn);
+  // Caller should ensure node_page is locked.
+  void SetDataBlkaddr(NodePage &node_page, uint32_t ofs_in_node, block_t new_addr);
+  // Caller should ensure node_page is locked.
+  zx_status_t ReserveNewBlock(NodePage &node_page, uint32_t ofs_in_node);
 
-  void UpdateExtentCache(block_t blk_addr, DnodeOfData *dn);
+  void UpdateExtentCache(block_t blk_addr, pgoff_t fofs);
   zx_status_t FindDataPage(pgoff_t index, fbl::RefPtr<Page> *out);
   zx_status_t GetLockDataPage(pgoff_t index, fbl::RefPtr<Page> *out);
   zx_status_t GetNewDataPage(pgoff_t index, bool new_i_size, fbl::RefPtr<Page> *out);

@@ -257,8 +257,9 @@ void F2fs::DoRecoverData(VnodeF2fs *vnode, NodePage *page, block_t blkaddr) {
 
     if (src != dest && dest != kNewAddr && dest != kNullAddr) {
       if (src == kNullAddr) {
-        zx_status_t err = vnode->ReserveNewBlock(&dn);
+        zx_status_t err = vnode->ReserveNewBlock(*dn.node_page, dn.ofs_in_node);
         ZX_ASSERT(err == ZX_OK);
+        dn.data_blkaddr = kNewAddr;
       }
 
       // Check the previous node page having this index
@@ -268,7 +269,8 @@ void F2fs::DoRecoverData(VnodeF2fs *vnode, NodePage *page, block_t blkaddr) {
 
       // write dummy data page
       GetSegmentManager().RecoverDataPage(nullptr, &sum, src, dest);
-      vnode->UpdateExtentCache(dest, &dn);
+      vnode->SetDataBlkaddr(*dn.node_page, dn.ofs_in_node, dest);
+      vnode->UpdateExtentCache(dest, page->StartBidxOfNode());
     }
     ++dn.ofs_in_node;
   }

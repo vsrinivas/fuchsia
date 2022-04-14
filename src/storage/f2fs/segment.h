@@ -243,8 +243,8 @@ class SegmentManager {
   zx_status_t WriteMetaPage(fbl::RefPtr<Page> page, bool is_reclaim = false);
   zx_status_t WriteNodePage(fbl::RefPtr<Page> page, uint32_t nid, block_t old_blkaddr,
                             block_t *new_blkaddr);
-  zx_status_t WriteDataPage(VnodeF2fs *vnode, fbl::RefPtr<Page> page, DnodeOfData *dn,
-                            block_t old_blkaddr, block_t *new_blkaddr);
+  zx_status_t WriteDataPage(VnodeF2fs *vnode, fbl::RefPtr<Page> page, nid_t nid,
+                            uint32_t ofs_in_node, block_t old_blkaddr, block_t *new_blkaddr);
   zx_status_t RewriteDataPage(fbl::RefPtr<Page> page, block_t old_blk_addr);
   void RewriteNodePage(fbl::RefPtr<NodePage> page, Summary *sum, block_t old_blkaddr,
                        block_t new_blkaddr);

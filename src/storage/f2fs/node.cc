@@ -490,7 +490,7 @@ zx_status_t NodeManager::GetDnodeOfData(DnodeOfData &dn, pgoff_t index, bool rea
       }
 
       dn.nid = nids[i];
-      if (zx_status_t err = NewNodePage(dn, noffset[i], &npage[i]); err != ZX_OK) {
+      if (zx_status_t err = NewNodePage(*dn.vnode, dn.nid, noffset[i], &npage[i]); err != ZX_OK) {
         AllocNidFailed(nids[i]);
         return err;
       }
@@ -523,9 +523,9 @@ zx_status_t NodeManager::GetDnodeOfData(DnodeOfData &dn, pgoff_t index, bool rea
   return ZX_OK;
 }
 
-void NodeManager::TruncateNode(DnodeOfData &dn) {
+void NodeManager::TruncateNode(VnodeF2fs &vnode, nid_t nid, NodePage &node_page) {
   NodeInfo ni;
-  GetNodeInfo(dn.nid, ni);
+  GetNodeInfo(nid, ni);
   ZX_ASSERT(ni.blk_addr != kNullAddr);
 
   if (ni.blk_addr != kNullAddr) {
@@ -533,31 +533,29 @@ void NodeManager::TruncateNode(DnodeOfData &dn) {
   }
 
   // Deallocate node address
-  DecValidNodeCount(dn.vnode, 1);
+  DecValidNodeCount(&vnode, 1);
   SetNodeAddr(ni, kNullAddr);
 
-  if (dn.nid == dn.vnode->Ino()) {
-    fs_->RemoveOrphanInode(dn.nid);
+  if (nid == vnode.Ino()) {
+    fs_->RemoveOrphanInode(nid);
     fs_->DecValidInodeCount();
   } else {
-    dn.vnode->MarkInodeDirty();
+    vnode.MarkInodeDirty();
   }
 
-  dn.node_page->Invalidate();
+  node_page.Invalidate();
   GetSuperblockInfo().SetDirty();
-
-  Page::PutPage(std::move(dn.node_page), true);
 }
 
-zx::status<uint32_t> NodeManager::TruncateDnode(DnodeOfData &dn) {
+zx::status<uint32_t> NodeManager::TruncateDnode(VnodeF2fs &vnode, nid_t nid) {
   fbl::RefPtr<NodePage> page;
 
-  if (dn.nid == 0) {
+  if (nid == 0) {
     return zx::ok(1);
   }
 
   // get direct node
-  if (auto err = fs_->GetNodeManager().GetNodePage(dn.nid, &page); err != ZX_OK) {
+  if (auto err = fs_->GetNodeManager().GetNodePage(nid, &page); err != ZX_OK) {
     // It is already invalid.
     if (err == ZX_ERR_NOT_FOUND) {
       return zx::ok(1);
@@ -565,27 +563,25 @@ zx::status<uint32_t> NodeManager::TruncateDnode(DnodeOfData &dn) {
     return zx::error(err);
   }
 
-  dn.node_page = page;
-  dn.ofs_in_node = 0;
-  dn.vnode->TruncateDataBlocks(&dn);
-  TruncateNode(dn);
+  vnode.TruncateDataBlocks(*page);
+  TruncateNode(vnode, nid, *page);
+  Page::PutPage(std::move(page), true);
   return zx::ok(1);
 }
 
-zx::status<uint32_t> NodeManager::TruncateNodes(DnodeOfData &dn, uint32_t nofs, int32_t ofs,
-                                                int32_t depth) {
-  if (dn.nid == 0) {
+zx::status<uint32_t> NodeManager::TruncateNodes(VnodeF2fs &vnode, nid_t start_nid, uint32_t nofs,
+                                                int32_t ofs, int32_t depth) {
+  if (start_nid == 0) {
     return zx::ok(kNidsPerBlock + 1);
   }
 
   fbl::RefPtr<NodePage> page;
-  if (auto ret = fs_->GetNodeManager().GetNodePage(dn.nid, &page); ret != ZX_OK) {
+  if (auto ret = fs_->GetNodeManager().GetNodePage(start_nid, &page); ret != ZX_OK) {
     return zx::error(ret);
   }
 
   uint32_t child_nofs = 0, freed = 0;
   nid_t child_nid;
-  DnodeOfData rdn = dn;
   Node *rn = page->GetAddress<Node>();
   if (depth < 3) {
     for (auto i = ofs; i < kNidsPerBlock; ++i, ++freed) {
@@ -593,8 +589,7 @@ zx::status<uint32_t> NodeManager::TruncateNodes(DnodeOfData &dn, uint32_t nofs, 
       if (child_nid == 0) {
         continue;
       }
-      rdn.nid = child_nid;
-      if (auto ret = TruncateDnode(rdn); ret.is_error()) {
+      if (auto ret = TruncateDnode(vnode, child_nid); ret.is_error()) {
         Page::PutPage(std::move(page), true);
         return ret;
       }
@@ -608,8 +603,7 @@ zx::status<uint32_t> NodeManager::TruncateNodes(DnodeOfData &dn, uint32_t nofs, 
         child_nofs += kNidsPerBlock + 1;
         continue;
       }
-      rdn.nid = child_nid;
-      auto freed_or = TruncateNodes(rdn, child_nofs, 0, depth - 1);
+      auto freed_or = TruncateNodes(vnode, child_nid, child_nofs, 0, depth - 1);
       if (freed_or.is_error()) {
         if (freed_or.error_value() != ZX_ERR_NOT_FOUND) {
           Page::PutPage(std::move(page), true);
@@ -624,18 +618,15 @@ zx::status<uint32_t> NodeManager::TruncateNodes(DnodeOfData &dn, uint32_t nofs, 
   }
 
   if (!ofs) {
-    // remove current indirect node
-    dn.node_page = std::move(page);
-    TruncateNode(dn);
+    TruncateNode(vnode, start_nid, *page);
     ++freed;
-  } else {
-    Page::PutPage(std::move(page), true);
   }
+  Page::PutPage(std::move(page), true);
   return zx::ok(freed);
 }
 
-zx_status_t NodeManager::TruncatePartialNodes(DnodeOfData &dn, Inode &ri, int32_t (&offset)[4],
-                                              int32_t depth) {
+zx_status_t NodeManager::TruncatePartialNodes(VnodeF2fs &vnode, const Inode &ri,
+                                              const int32_t (&offset)[4], int32_t depth) {
   fbl::RefPtr<NodePage> pages[2];
   nid_t nid[3];
   auto idx = depth - 2;
@@ -655,6 +646,7 @@ zx_status_t NodeManager::TruncatePartialNodes(DnodeOfData &dn, Inode &ri, int32_
   for (auto i = 0; i < idx + 1; ++i) {
     pages[i] = nullptr;
     if (auto ret = fs_->GetNodeManager().GetNodePage(nid[i], &pages[i]); ret != ZX_OK) {
+      // idx will be used in free_pages
       idx = i - 1;
       return ret;
     }
@@ -666,22 +658,17 @@ zx_status_t NodeManager::TruncatePartialNodes(DnodeOfData &dn, Inode &ri, int32_
     nid_t child_nid = pages[idx]->GetNid(i, false);
     if (!child_nid)
       continue;
-    dn.nid = child_nid;
-    if (auto ret = TruncateDnode(dn); ret.is_error()) {
+    if (auto ret = TruncateDnode(vnode, child_nid); ret.is_error()) {
       return ret.error_value();
     }
     pages[idx]->SetNid(i, 0, false);
   }
 
   if (offset[idx + 1] == 0) {
-    dn.node_page = std::move(pages[idx]);
-    dn.nid = nid[idx];
-    TruncateNode(dn);
-  } else {
-    Page::PutPage(std::move(pages[idx]), true);
+    TruncateNode(vnode, nid[idx], *pages[idx]);
   }
-  ++offset[idx];
-  offset[idx + 1] = 0;
+  Page::PutPage(std::move(pages[idx]), true);
+  // idx will be used in free_pages
   --idx;
   return ZX_OK;
 }
@@ -695,11 +682,9 @@ zx_status_t NodeManager::TruncateInodeBlocks(VnodeF2fs &vnode, pgoff_t from) {
     return node_path.error_value();
 
   fbl::RefPtr<NodePage> ipage;
-  DnodeOfData dn;
   if (auto ret = GetNodePage(vnode.Ino(), &ipage); ret != ZX_OK) {
     return ret;
   }
-  SetNewDnode(dn, &vnode, ipage, nullptr, 0);
   ipage->Unlock();
 
   auto level = *node_path;
@@ -714,11 +699,13 @@ zx_status_t NodeManager::TruncateInodeBlocks(VnodeF2fs &vnode, pgoff_t from) {
       if (!offset[level - 1]) {
         break;
       }
-      if (auto ret = TruncatePartialNodes(dn, rn->i, offset, level);
+      if (auto ret = TruncatePartialNodes(vnode, rn->i, offset, level);
           ret != ZX_OK && ret != ZX_ERR_NOT_FOUND) {
         Page::PutPage(std::move(ipage), false);
         return ret;
       }
+      ++offset[level - 2];
+      offset[level - 1] = 0;
       nofs += 1 + kNidsPerBlock;
       break;
     case 3:
@@ -726,11 +713,13 @@ zx_status_t NodeManager::TruncateInodeBlocks(VnodeF2fs &vnode, pgoff_t from) {
       if (!offset[level - 1]) {
         break;
       }
-      if (auto ret = TruncatePartialNodes(dn, rn->i, offset, level);
+      if (auto ret = TruncatePartialNodes(vnode, rn->i, offset, level);
           ret != ZX_OK && ret != ZX_ERR_NOT_FOUND) {
         Page::PutPage(std::move(ipage), false);
         return ret;
       }
+      ++offset[level - 2];
+      offset[level - 1] = 0;
       break;
     default:
       ZX_ASSERT(0);
@@ -739,20 +728,20 @@ zx_status_t NodeManager::TruncateInodeBlocks(VnodeF2fs &vnode, pgoff_t from) {
   bool run = true;
   while (run) {
     zx::status<uint32_t> freed_or;
-    dn.nid = LeToCpu(rn->i.i_nid[offset[0] - kNodeDir1Block]);
+    nid_t nid = LeToCpu(rn->i.i_nid[offset[0] - kNodeDir1Block]);
     switch (offset[0]) {
       case kNodeDir1Block:
       case kNodeDir2Block:
-        freed_or = TruncateDnode(dn);
+        freed_or = TruncateDnode(vnode, nid);
         break;
 
       case kNodeInd1Block:
       case kNodeInd2Block:
-        freed_or = TruncateNodes(dn, nofs, offset[1], 2);
+        freed_or = TruncateNodes(vnode, nid, nofs, offset[1], 2);
         break;
 
       case kNodeDIndBlock:
-        freed_or = TruncateNodes(dn, nofs, offset[1], 3);
+        freed_or = TruncateNodes(vnode, nid, nofs, offset[1], 3);
         run = false;
         break;
 
@@ -785,7 +774,6 @@ zx_status_t NodeManager::TruncateInodeBlocks(VnodeF2fs &vnode, pgoff_t from) {
 zx_status_t NodeManager::RemoveInodePage(VnodeF2fs *vnode) {
   fbl::RefPtr<NodePage> ipage;
   nid_t ino = vnode->Ino();
-  DnodeOfData dn;
   zx_status_t err = 0;
 
   err = GetNodePage(ino, &ipage);
@@ -800,13 +788,12 @@ zx_status_t NodeManager::RemoveInodePage(VnodeF2fs *vnode) {
     }
 
     vnode->ClearXattrNid();
-    SetNewDnode(dn, vnode, ipage, node_page, nid);
-    TruncateNode(dn);
+    TruncateNode(*vnode, nid, *node_page);
+    Page::PutPage(std::move(node_page), true);
   }
   if (vnode->GetBlocks() == 1) {
-    SetNewDnode(dn, vnode, ipage, ipage, ino);
-    // internally call Page::PutPage() w/ dn.node_page
-    TruncateNode(dn);
+    TruncateNode(*vnode, ino, *ipage);
+    Page::PutPage(std::move(ipage), true);
   } else if (vnode->GetBlocks() == 0) {
     NodeInfo ni;
     GetNodeInfo(vnode->Ino(), ni);
@@ -820,11 +807,9 @@ zx_status_t NodeManager::RemoveInodePage(VnodeF2fs *vnode) {
 
 zx_status_t NodeManager::NewInodePage(Dir *parent, VnodeF2fs *child) {
   fbl::RefPtr<NodePage> page;
-  DnodeOfData dn;
 
   // allocate inode page for new inode
-  SetNewDnode(dn, child, nullptr, nullptr, child->Ino());
-  if (zx_status_t ret = NewNodePage(dn, 0, &page); ret != ZX_OK) {
+  if (zx_status_t ret = NewNodePage(*child, child->Ino(), 0, &page); ret != ZX_OK) {
     return ret;
   }
   parent->InitDentInode(child, page.get());
@@ -834,27 +819,29 @@ zx_status_t NodeManager::NewInodePage(Dir *parent, VnodeF2fs *child) {
   return ZX_OK;
 }
 
-zx_status_t NodeManager::NewNodePage(DnodeOfData &dn, uint32_t ofs, fbl::RefPtr<NodePage> *out) {
+zx_status_t NodeManager::NewNodePage(VnodeF2fs &vnode, nid_t nid, uint32_t ofs,
+                                     fbl::RefPtr<NodePage> *out) {
   NodeInfo old_ni, new_ni;
 
-  if (dn.vnode->TestFlag(InodeInfoFlag::kNoAlloc)) {
+  if (vnode.TestFlag(InodeInfoFlag::kNoAlloc)) {
     return ZX_ERR_ACCESS_DENIED;
   }
 
-  if (zx_status_t ret = fs_->GetNodeVnode().GrabCachePage(dn.nid, out); ret != ZX_OK) {
+  if (zx_status_t ret = fs_->GetNodeVnode().GrabCachePage(nid, out); ret != ZX_OK) {
     return ZX_ERR_NO_MEMORY;
   }
-  GetNodeInfo(dn.nid, old_ni);
+
+  GetNodeInfo(nid, old_ni);
 
   (*out)->SetUptodate();
-  (*out)->FillNodeFooter(dn.nid, dn.vnode->Ino(), ofs, true);
+  (*out)->FillNodeFooter(nid, vnode.Ino(), ofs, true);
 
   // Reinitialize old_ni with new node page
   ZX_ASSERT(old_ni.blk_addr == kNullAddr);
   new_ni = old_ni;
-  new_ni.ino = dn.vnode->Ino();
+  new_ni.ino = vnode.Ino();
 
-  if (!IncValidNodeCount(dn.vnode, 1)) {
+  if (!IncValidNodeCount(&vnode, 1)) {
     (*out)->ClearUptodate();
     Page::PutPage(std::move(*out), true);
 #ifdef __Fuchsia__
@@ -864,11 +851,10 @@ zx_status_t NodeManager::NewNodePage(DnodeOfData &dn, uint32_t ofs, fbl::RefPtr<
   }
   SetNodeAddr(new_ni, kNewAddr);
 
-  dn.node_page = *out;
-  dn.vnode->MarkInodeDirty();
+  vnode.MarkInodeDirty();
 
   (*out)->SetDirty();
-  (*out)->SetColdNode(*dn.vnode);
+  (*out)->SetColdNode(vnode);
   if (ofs == 0)
     fs_->IncValidInodeCount();
 

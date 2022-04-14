@@ -159,11 +159,12 @@ zx_status_t Dir::ConvertInlineDir() {
   }
 
   if (dn.data_blkaddr == kNullAddr) {
-    if (zx_status_t err = ReserveNewBlock(&dn); err != ZX_OK) {
-      Page::PutPage(std::move(page), true);
+    if (zx_status_t err = ReserveNewBlock(*dn.node_page, dn.ofs_in_node); err != ZX_OK) {
       F2fsPutDnode(&dn);
+      Page::PutPage(std::move(page), true);
       return err;
     }
+    dn.data_blkaddr = kNewAddr;
   }
 
   page->WaitOnWriteback();
@@ -186,9 +187,10 @@ zx_status_t Dir::ConvertInlineDir() {
   if (page->ClearDirtyForIo(true)) {
     page->SetWriteback();
     fbl::RefPtr<Page> written_page = page;
-    Vfs()->GetSegmentManager().WriteDataPage(this, std::move(written_page), &dn, dn.data_blkaddr,
-                                             &dn.data_blkaddr);
-    UpdateExtentCache(dn.data_blkaddr, &dn);
+    Vfs()->GetSegmentManager().WriteDataPage(this, std::move(written_page), dn.nid, dn.ofs_in_node,
+                                             dn.data_blkaddr, &dn.data_blkaddr);
+    SetDataBlkaddr(*dn.node_page, dn.ofs_in_node, dn.data_blkaddr);
+    UpdateExtentCache(dn.data_blkaddr, 0);
     UpdateVersion();
   }
   // clear inline dir and flag after data writeback
@@ -436,9 +438,9 @@ zx_status_t File::ConvertInlineData() {
   }
 
   if (dn.data_blkaddr == kNullAddr) {
-    if (zx_status_t err = ReserveNewBlock(&dn); err != ZX_OK) {
-      Page::PutPage(std::move(page), true);
+    if (zx_status_t err = ReserveNewBlock(*dn.node_page, dn.ofs_in_node); err != ZX_OK) {
       F2fsPutDnode(&dn);
+      Page::PutPage(std::move(page), true);
       return err;
     }
   }

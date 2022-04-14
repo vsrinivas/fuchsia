@@ -35,6 +35,9 @@ constexpr size_t kNodeInd1Block = kAddrsPerInode + 3;
 constexpr size_t kNodeInd2Block = kAddrsPerInode + 4;
 constexpr size_t kNodeDIndBlock = kAddrsPerInode + 5;
 
+// maximum node block level of data block
+constexpr uint32_t kMaxNodeBlockLevel = 4;
+
 // For node information
 struct NodeInfo {
   nid_t nid = 0;         // node id
@@ -202,13 +205,18 @@ class NodeManager {
   void SetNodeAddr(NodeInfo &ni, block_t new_blkaddr);
   int TryToFreeNats(int nr_shrink);
 
-  zx::status<int32_t> GetNodePath(VnodeF2fs &vnode, pgoff_t block, int32_t (&offset)[4],
-                                  uint32_t (&noffset)[4]);
-  void TruncateNode(DnodeOfData &dn);
-  zx::status<uint32_t> TruncateDnode(DnodeOfData &dn);
-  zx::status<uint32_t> TruncateNodes(DnodeOfData &dn, uint32_t nofs, int32_t ofs, int32_t depth);
-  zx_status_t TruncatePartialNodes(DnodeOfData &dn, Inode &ri, int32_t (&offset)[4], int32_t depth);
-  zx_status_t NewNodePage(DnodeOfData &dn, uint32_t ofs, fbl::RefPtr<NodePage> *out);
+  zx::status<int32_t> GetNodePath(VnodeF2fs &vnode, pgoff_t block,
+                                  int32_t (&offset)[kMaxNodeBlockLevel],
+                                  uint32_t (&noffset)[kMaxNodeBlockLevel]);
+
+  // Caller should ensure node_page is locked.
+  void TruncateNode(VnodeF2fs &vnode, nid_t nid, NodePage &node_page);
+  zx::status<uint32_t> TruncateDnode(VnodeF2fs &vnode, nid_t nid);
+  zx::status<uint32_t> TruncateNodes(VnodeF2fs &vnode, nid_t start_nid, uint32_t nofs, int32_t ofs,
+                                     int32_t depth);
+  zx_status_t TruncatePartialNodes(VnodeF2fs &vnode, const Inode &ri,
+                                   const int32_t (&offset)[kMaxNodeBlockLevel], int32_t depth);
+  zx_status_t NewNodePage(VnodeF2fs &vnode, nid_t nid, uint32_t ofs, fbl::RefPtr<NodePage> *out);
 
 #if 0  // Use xxColdxx and RA when gc impl.
   static int IsColdData(Page &page);

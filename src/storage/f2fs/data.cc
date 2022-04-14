@@ -10,29 +10,32 @@ namespace f2fs {
 // ->data_page
 //  ->node_page
 //    update block addresses in the node page
-void VnodeF2fs::SetDataBlkaddr(DnodeOfData *dn, block_t new_addr) {
-  Page *node_page = dn->node_page.get();
-  uint32_t ofs_in_node = dn->ofs_in_node;
-
-  node_page->WaitOnWriteback();
-
-  Node *rn = node_page->GetAddress<Node>();
-
+void VnodeF2fs::SetDataBlkaddr(NodePage &node_page, uint32_t ofs_in_node, block_t new_addr) {
+  node_page.WaitOnWriteback();
+  Node *rn = node_page.GetAddress<Node>();
   // Get physical address of data block
   uint32_t *addr_array = BlkaddrInNode(*rn);
+
+  if (new_addr == kNewAddr) {
+    ZX_DEBUG_ASSERT(addr_array[ofs_in_node] == kNullAddr);
+  } else {
+    ZX_DEBUG_ASSERT(addr_array[ofs_in_node] != kNullAddr);
+  }
+
   addr_array[ofs_in_node] = CpuToLe(new_addr);
-  node_page->SetDirty();
+  node_page.SetDirty();
 }
 
-zx_status_t VnodeF2fs::ReserveNewBlock(DnodeOfData *dn) {
-  if (dn->vnode->TestFlag(InodeInfoFlag::kNoAlloc))
+zx_status_t VnodeF2fs::ReserveNewBlock(NodePage &node_page, uint32_t ofs_in_node) {
+  if (TestFlag(InodeInfoFlag::kNoAlloc)) {
     return ZX_ERR_ACCESS_DENIED;
-  if (zx_status_t ret = Vfs()->IncValidBlockCount(dn->vnode, 1); ret != ZX_OK)
+  }
+  if (zx_status_t ret = Vfs()->IncValidBlockCount(this, 1); ret != ZX_OK) {
     return ret;
+  }
 
-  SetDataBlkaddr(dn, kNewAddr);
-  dn->data_blkaddr = kNewAddr;
-  dn->vnode->MarkInodeDirty();
+  SetDataBlkaddr(node_page, ofs_in_node, kNewAddr);
+  MarkInodeDirty();
   return ZX_OK;
 }
 
@@ -78,16 +81,12 @@ zx_status_t VnodeF2fs::ReserveNewBlock(DnodeOfData *dn) {
 // }
 #endif
 
-void VnodeF2fs::UpdateExtentCache(block_t blk_addr, DnodeOfData *dn) {
-  InodeInfo *fi = &dn->vnode->fi_;
-  pgoff_t fofs, start_fofs, end_fofs;
+void VnodeF2fs::UpdateExtentCache(block_t blk_addr, pgoff_t file_offset) {
+  InodeInfo *fi = &fi_;
+  pgoff_t start_fofs, end_fofs;
   block_t start_blkaddr, end_blkaddr;
 
-  ZX_ASSERT(blk_addr != kNewAddr);
-  fofs = dn->node_page->StartBidxOfNode() + dn->ofs_in_node;
-
-  /* Update the page address in the parent node */
-  SetDataBlkaddr(dn, blk_addr);
+  ZX_DEBUG_ASSERT(blk_addr != kNewAddr);
 
   do {
     std::lock_guard ext_lock(fi->ext.ext_lock);
@@ -98,13 +97,13 @@ void VnodeF2fs::UpdateExtentCache(block_t blk_addr, DnodeOfData *dn) {
     end_blkaddr = fi->ext.blk_addr + fi->ext.len - 1;
 
     /* Drop and initialize the matched extent */
-    if (fi->ext.len == 1 && fofs == start_fofs)
+    if (fi->ext.len == 1 && file_offset == start_fofs)
       fi->ext.len = 0;
 
     /* Initial extent */
     if (fi->ext.len == 0) {
       if (blk_addr != kNullAddr) {
-        fi->ext.fofs = fofs;
+        fi->ext.fofs = file_offset;
         fi->ext.blk_addr = blk_addr;
         fi->ext.len = 1;
       }
@@ -112,7 +111,7 @@ void VnodeF2fs::UpdateExtentCache(block_t blk_addr, DnodeOfData *dn) {
     }
 
     /* Frone merge */
-    if (fofs == start_fofs - 1 && blk_addr == start_blkaddr - 1) {
+    if (file_offset == start_fofs - 1 && blk_addr == start_blkaddr - 1) {
       --fi->ext.fofs;
       --fi->ext.blk_addr;
       ++fi->ext.len;
@@ -120,26 +119,26 @@ void VnodeF2fs::UpdateExtentCache(block_t blk_addr, DnodeOfData *dn) {
     }
 
     /* Back merge */
-    if (fofs == end_fofs + 1 && blk_addr == end_blkaddr + 1) {
+    if (file_offset == end_fofs + 1 && blk_addr == end_blkaddr + 1) {
       ++fi->ext.len;
       break;
     }
 
     /* Split the existing extent */
-    if (fi->ext.len > 1 && fofs >= start_fofs && fofs <= end_fofs) {
-      if ((end_fofs - fofs) < (fi->ext.len >> 1)) {
-        fi->ext.len = static_cast<uint32_t>(fofs - start_fofs);
+    if (fi->ext.len > 1 && file_offset >= start_fofs && file_offset <= end_fofs) {
+      if ((end_fofs - file_offset) < (fi->ext.len >> 1)) {
+        fi->ext.len = static_cast<uint32_t>(file_offset - start_fofs);
       } else {
-        fi->ext.fofs = fofs + 1;
-        fi->ext.blk_addr = static_cast<uint32_t>(start_blkaddr + fofs - start_fofs + 1);
-        fi->ext.len -= fofs - start_fofs + 1;
+        fi->ext.fofs = file_offset + 1;
+        fi->ext.blk_addr = static_cast<uint32_t>(start_blkaddr + file_offset - start_fofs + 1);
+        fi->ext.len -= file_offset - start_fofs + 1;
       }
       break;
     }
     return;
   } while (false);
 
-  dn->vnode->MarkInodeDirty();
+  MarkInodeDirty();
 }
 
 zx_status_t VnodeF2fs::FindDataPage(pgoff_t index, fbl::RefPtr<Page> *out) {
@@ -227,10 +226,11 @@ zx_status_t VnodeF2fs::GetNewDataPage(pgoff_t index, bool new_i_size, fbl::RefPt
   }
 
   if (dn.data_blkaddr == kNullAddr) {
-    if (zx_status_t ret = ReserveNewBlock(&dn); ret != ZX_OK) {
+    if (zx_status_t ret = ReserveNewBlock(*dn.node_page, dn.ofs_in_node); ret != ZX_OK) {
       F2fsPutDnode(&dn);
       return ret;
     }
+    dn.data_blkaddr = kNewAddr;
   }
   F2fsPutDnode(&dn);
 
@@ -342,9 +342,11 @@ zx_status_t VnodeF2fs::DoWriteDataPage(fbl::RefPtr<Page> page) {
     Vfs()->GetSegmentManager().RewriteDataPage(std::move(page), old_blk_addr);
   } else {
     block_t new_blk_addr;
-    Vfs()->GetSegmentManager().WriteDataPage(this, std::move(page), &dn, old_blk_addr,
-                                             &new_blk_addr);
-    UpdateExtentCache(new_blk_addr, &dn);
+    pgoff_t file_offset = page->GetIndex();
+    Vfs()->GetSegmentManager().WriteDataPage(this, std::move(page), dn.nid, dn.ofs_in_node,
+                                             old_blk_addr, &new_blk_addr);
+    SetDataBlkaddr(*dn.node_page, dn.ofs_in_node, new_blk_addr);
+    UpdateExtentCache(new_blk_addr, file_offset);
     UpdateVersion();
   }
 
@@ -418,11 +420,12 @@ zx_status_t VnodeF2fs::WriteBegin(size_t pos, size_t len, fbl::RefPtr<Page> *out
     }
 
     if (dn.data_blkaddr == kNullAddr) {
-      if (zx_status_t err = ReserveNewBlock(&dn); err != ZX_OK) {
+      if (zx_status_t err = ReserveNewBlock(*dn.node_page, dn.ofs_in_node); err != ZX_OK) {
         F2fsPutDnode(&dn);
         Page::PutPage(std::move(*out), true);
         return err;
       }
+      dn.data_blkaddr = kNewAddr;
     }
     F2fsPutDnode(&dn);
   } while (false);

@@ -945,14 +945,15 @@ zx_status_t SegmentManager::WriteNodePage(fbl::RefPtr<Page> page, uint32_t nid, 
   return DoWritePage(std::move(page), old_blkaddr, new_blkaddr, &sum, PageType::kNode);
 }
 
-zx_status_t SegmentManager::WriteDataPage(VnodeF2fs *vnode, fbl::RefPtr<Page> page, DnodeOfData *dn,
-                                          block_t old_blkaddr, block_t *new_blkaddr) {
+zx_status_t SegmentManager::WriteDataPage(VnodeF2fs *vnode, fbl::RefPtr<Page> page, nid_t nid,
+                                          uint32_t ofs_in_node, block_t old_blkaddr,
+                                          block_t *new_blkaddr) {
   Summary sum;
   NodeInfo ni;
 
   ZX_ASSERT(old_blkaddr != kNullAddr);
-  fs_->GetNodeManager().GetNodeInfo(dn->nid, ni);
-  SetSummary(&sum, dn->nid, dn->ofs_in_node, ni.version);
+  fs_->GetNodeManager().GetNodeInfo(nid, ni);
+  SetSummary(&sum, nid, ofs_in_node, ni.version);
 
   return DoWritePage(std::move(page), old_blkaddr, new_blkaddr, &sum, PageType::kData);
 }

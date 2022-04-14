@@ -406,32 +406,34 @@ zx_status_t VnodeF2fs::DoTruncate(size_t len) {
   return ret;
 }
 
-int VnodeF2fs::TruncateDataBlocksRange(DnodeOfData *dn, int count) {
-  int nr_free = 0, ofs = dn->ofs_in_node;
-  Node *raw_node = dn->node_page->GetAddress<Node>();
-  uint32_t *addr = BlkaddrInNode(*raw_node) + ofs;
-  pgoff_t start = dn->node_page->StartBidxOfNode() + ofs;
+int VnodeF2fs::TruncateDataBlocksRange(NodePage &node_page, uint32_t ofs_in_node, uint32_t count) {
+  int nr_free = 0;
+  Node *raw_node = node_page.GetAddress<Node>();
+  pgoff_t start = node_page.StartBidxOfNode() + ofs_in_node;
   pgoff_t end = start + count;
 
-  for (; count > 0; --count, ++addr, ++dn->ofs_in_node) {
+  for (; count > 0; --count, ++ofs_in_node) {
+    uint32_t *addr = BlkaddrInNode(*raw_node) + ofs_in_node;
     block_t blkaddr = LeToCpu(*addr);
     if (blkaddr == kNullAddr)
       continue;
-    UpdateExtentCache(kNullAddr, dn);
+    SetDataBlkaddr(node_page, ofs_in_node, kNullAddr);
+    UpdateExtentCache(kNullAddr, node_page.StartBidxOfNode() + ofs_in_node);
     Vfs()->GetSegmentManager().InvalidateBlocks(blkaddr);
-    Vfs()->DecValidBlockCount(dn->vnode, 1);
+    Vfs()->DecValidBlockCount(this, 1);
     ++nr_free;
   }
   if (nr_free) {
     InvalidatePages(start, end);
-    dn->node_page->SetDirty();
-    dn->vnode->MarkInodeDirty();
+    node_page.SetDirty();
+    MarkInodeDirty();
   }
-  dn->ofs_in_node = ofs;
   return nr_free;
 }
 
-void VnodeF2fs::TruncateDataBlocks(DnodeOfData *dn) { TruncateDataBlocksRange(dn, kAddrsPerBlock); }
+void VnodeF2fs::TruncateDataBlocks(NodePage &node_page) {
+  TruncateDataBlocksRange(node_page, 0, kAddrsPerBlock);
+}
 
 void VnodeF2fs::TruncatePartialDataPage(uint64_t from) {
   size_t offset = from & (kPageSize - 1);
@@ -485,7 +487,7 @@ zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
       ZX_ASSERT(count >= 0);
 
       if (dn.ofs_in_node || IsInode(*(dn.node_page))) {
-        TruncateDataBlocksRange(&dn, count);
+        TruncateDataBlocksRange(*dn.node_page, dn.ofs_in_node, count);
         free_from += count;
       }
 
@@ -513,7 +515,7 @@ zx_status_t VnodeF2fs::TruncateHole(pgoff_t pg_start, pgoff_t pg_end) {
     }
 
     if (dn.data_blkaddr != kNullAddr) {
-      TruncateDataBlocksRange(&dn, 1);
+      TruncateDataBlocksRange(*dn.node_page, dn.ofs_in_node, 1);
     }
     F2fsPutDnode(&dn);
   }
