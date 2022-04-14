@@ -63,15 +63,15 @@ impl StashInspectLogger {
 
     /// Records a write failure for the given setting.
     // TODO(fxb/97284): Change to take String.
-    pub fn record_flush_failure(&mut self, key: &String) {
-        match self.flush_failure_counts.get_mut(key) {
+    pub fn record_flush_failure(&mut self, key: String) {
+        match self.flush_failure_counts.get_mut(&key) {
             Some(stash_inspect_info) => {
                 stash_inspect_info.count.add(1u64);
             }
             None => {
                 let _ = self
                     .flush_failure_counts
-                    .set(key.to_string(), StashInspectInfo::new(&self.inspect_node, key));
+                    .set(key.clone(), StashInspectInfo::new(&self.inspect_node, &key));
             }
         }
     }

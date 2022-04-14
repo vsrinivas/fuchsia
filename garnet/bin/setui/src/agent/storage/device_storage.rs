@@ -281,7 +281,7 @@ impl DeviceStorage {
                                         DeviceStorage::stash_flush(
                                             &stash_proxy_clone,
                                             Arc::clone(&inspect_handle),
-                                            &key.to_string()).await;
+                                            key.to_string()).await;
                                         last_flush = Instant::now();
                                         has_pending_flush = false;
                                     }
@@ -318,7 +318,7 @@ impl DeviceStorage {
     async fn stash_flush(
         stash_proxy: &StoreAccessorProxy,
         inspect_handle: Arc<Mutex<StashInspectLogger>>,
-        setting_key: &String,
+        setting_key: String,
     ) {
         if matches!(stash_proxy.flush().await, Ok(Err(_)) | Err(_)) {
             // TODO(fxbug.dev/89083): save a record of the recent error messages as well.
@@ -372,7 +372,7 @@ impl DeviceStorage {
                 DeviceStorage::stash_flush(
                     &cached_storage.stash_proxy,
                     Arc::clone(&self.inspect_handle),
-                    &key,
+                    key,
                 )
                 .await;
             } else {
