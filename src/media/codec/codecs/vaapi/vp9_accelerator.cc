@@ -158,7 +158,7 @@ VP9Accelerator::Status VP9Accelerator::SubmitDecode(
   VABufferID encoded_data_buffer_id;
   status = vaCreateBuffer(VADisplayWrapper::GetSingleton()->display(), adapter_->context_id(),
                           VASliceDataBufferType, static_cast<unsigned int>(frame_hdr->frame_size),
-                          1, nullptr, &encoded_data_buffer_id);
+                          1, const_cast<uint8_t*>(frame_hdr->data), &encoded_data_buffer_id);
 
   if (status != VA_STATUS_SUCCESS) {
     FX_LOGS(WARNING) << "vaCreateBuffer for encoded_data failed: " << vaErrorStr(status);
