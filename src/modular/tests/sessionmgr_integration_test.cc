@@ -157,6 +157,8 @@ class MockAdmin : public fuchsia::hardware::power::statecontrol::testing::Admin_
  public:
   bool reboot_called() { return reboot_called_; }
 
+  void Reset() { reboot_called_ = false; }
+
  private:
   void Reboot(fuchsia::hardware::power::statecontrol::RebootReason reason,
               RebootCallback callback) override {
@@ -528,6 +530,9 @@ TEST_F(SessionmgrIntegrationTest, SessionShellReceivesComponentArgsFromConfig) {
 }
 
 TEST_F(SessionmgrIntegrationTest, RebootCalledIfSessionmgrCrashNumberReachesRetryLimit) {
+  // Max number of session shell crashes allowed before a reboot is triggered.
+  static constexpr size_t kMaxSessionRetries = 4;
+
   MockAdmin mock_admin;
   fidl::BindingSet<fuchsia::hardware::power::statecontrol::Admin> admin_bindings;
 
@@ -537,16 +542,26 @@ TEST_F(SessionmgrIntegrationTest, RebootCalledIfSessionmgrCrashNumberReachesRetr
   builder.AddService(admin_bindings.GetHandler(&mock_admin));
   builder.BuildAndRun(test_harness());
 
-  // kill session_shell
-  for (int i = 0; i < 4; i++) {
-    RunLoopUntil([&] { return session_shell->is_running(); });
-    session_shell->Exit(0);
-    RunLoopUntil([&] { return !session_shell->is_running(); });
-  }
-  // Validate suspend is invoked
+  auto crash_session_shell = [this, &session_shell]() {
+    // kill session_shell
+    for (size_t i = 0; i < kMaxSessionRetries; i++) {
+      RunLoopUntil([&] { return session_shell->is_running(); });
+      session_shell->Exit(0);
+      RunLoopUntil([&] { return !session_shell->is_running(); });
+    }
+  };
+
+  crash_session_shell();
 
   RunLoopUntil([&] { return mock_admin.reboot_called(); });
   EXPECT_TRUE(mock_admin.reboot_called());
+
+  mock_admin.Reset();
+  crash_session_shell();
+
+  RunLoopUntil([&] { return !session_shell->is_running(); });
+  RunLoopUntil([&] { return session_shell->is_running(); });
+  EXPECT_FALSE(mock_admin.reboot_called());
 }
 
 TEST_F(SessionmgrIntegrationTest, RestartSession) {

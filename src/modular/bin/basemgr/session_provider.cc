@@ -11,6 +11,7 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
+#include "src/modular/bin/basemgr/reboot_rate_limiter.h"
 #include "src/modular/lib/fidl/clone.h"
 #include "src/modular/lib/modular_config/modular_config.h"
 #include "src/modular/lib/modular_config/modular_config_constants.h"
@@ -28,7 +29,8 @@ SessionProvider::SessionProvider(Delegate* const delegate, fuchsia::sys::Launche
                                  const modular::ModularConfigAccessor* const config_accessor,
                                  fuchsia::sys::ServiceList v2_services_for_sessionmgr,
                                  vfs::PseudoDir* outgoing_dir_root,
-                                 fit::function<void()> on_zero_sessions)
+                                 fit::function<void()> on_zero_sessions,
+                                 std::string reboot_tracker_file_path)
     : delegate_(delegate),
       launcher_(launcher),
       administrator_(administrator),
@@ -36,7 +38,8 @@ SessionProvider::SessionProvider(Delegate* const delegate, fuchsia::sys::Launche
       on_zero_sessions_(std::move(on_zero_sessions)),
       v2_services_for_sessionmgr_names_(std::move(v2_services_for_sessionmgr.names)),
       v2_services_for_sessionmgr_dir_(std::move(v2_services_for_sessionmgr.host_directory)),
-      outgoing_dir_root_(outgoing_dir_root) {
+      outgoing_dir_root_(outgoing_dir_root),
+      reboot_rate_limiter_(std::move(reboot_tracker_file_path)) {
   last_crash_time_ = zx::clock::get_monotonic();
 }
 
@@ -111,31 +114,13 @@ void SessionProvider::RestartSession(fit::function<void()> on_restart_complete) 
   session_context_->Shutdown(ShutDownReason::CLIENT_REQUEST, std::move(on_restart_complete));
 }
 
-void SessionProvider::OnSessionShutdown(SessionContextImpl::ShutDownReason shutdown_reason) {
-  if (shutdown_reason == SessionContextImpl::ShutDownReason::CRITICAL_FAILURE) {
-    if (session_crash_recovery_counter_ != 0) {
-      zx::duration duration = zx::clock::get_monotonic() - last_crash_time_;
-      // If last retry is 1 hour ago, the counter will be reset
-      if (duration > kMaxCrashRecoveryDuration) {
-        session_crash_recovery_counter_ = 1;
-      }
-    }
+void SessionProvider::MarkClockAsStarted() { clock_started_ = true; }
 
-    // Check if max retry limit is reached
-    if (session_crash_recovery_counter_ == kMaxCrashRecoveryLimit) {
-      FX_LOGS(ERROR) << "Sessionmgr restart limit reached. Considering "
-                        "this an unrecoverable failure.";
-      administrator_->Reboot(
-          fuchsia::hardware::power::statecontrol::RebootReason::SESSION_FAILURE,
-          [](fuchsia::hardware::power::statecontrol::Admin_Reboot_Result status) {
-            if (status.is_err()) {
-              FX_PLOGS(FATAL, status.err()) << "Failed to reboot";
-            }
-          });
-      return;
-    }
-    session_crash_recovery_counter_ += 1;
-    last_crash_time_ = zx::clock::get_monotonic();
+void SessionProvider::OnSessionShutdown(SessionContextImpl::ShutDownReason shutdown_reason) {
+  if (ShouldReboot(shutdown_reason)) {
+    FX_LOGS(ERROR) << "Sessionmgr restart limit reached. Considering this an "
+                      "unrecoverable failure.";
+    TriggerReboot();
   }
 
   auto delete_session_context = [this] {
@@ -144,6 +129,61 @@ void SessionProvider::OnSessionShutdown(SessionContextImpl::ShutDownReason shutd
   };
 
   delete_session_context();
+}
+
+void SessionProvider::TriggerReboot() {
+  zx::status<bool> can_reboot_or = reboot_rate_limiter_.CanReboot();
+  if (can_reboot_or.is_error()) {
+    FX_LOGS(ERROR) << "Failed to read reboot tracking file: "
+                   << zx_status_get_string(can_reboot_or.status_value());
+  } else if (can_reboot_or.value()) {
+    // Only update tracking file if UTC clock has started. The reason we do this
+    // is that before the UTC clock has started, the time fetched comes from the
+    // system monotonic clock. For tracking reboots across device reboots, UTC
+    // timestamps are used. Therefore, we skip updating the tracking file, lest
+    // we risk corrupting the last reboot time with a monotonic timestamp.
+    if (clock_started_) {
+      auto status = reboot_rate_limiter_.UpdateTrackingFile();
+      if (status.is_error()) {
+        FX_LOGS(ERROR) << "Failed to update reboot tracking file: "
+                       << zx_status_get_string(status.status_value());
+      }
+    }
+
+    FX_LOGS(ERROR) << "Triggering a reboot.";
+    administrator_->Reboot(fuchsia::hardware::power::statecontrol::RebootReason::SESSION_FAILURE,
+                           [](fuchsia::hardware::power::statecontrol::Admin_Reboot_Result status) {
+                             if (status.is_err()) {
+                               FX_PLOGS(FATAL, status.err()) << "Failed to reboot.";
+                             }
+                           });
+  } else {
+    session_crash_recovery_counter_ = 1;
+    FX_LOGS(INFO)
+        << "Too early to reboot. Resetting crash recovery counter and restarting session.";
+  }
+}
+
+bool SessionProvider::ShouldReboot(SessionContextImpl::ShutDownReason shutdown_reason) {
+  if (shutdown_reason != SessionContextImpl::ShutDownReason::CRITICAL_FAILURE) {
+    return false;
+  }
+
+  if (session_crash_recovery_counter_ == 0) {
+    ++session_crash_recovery_counter_;
+    last_crash_time_ = zx::clock::get_monotonic();
+    return false;
+  }
+
+  zx::duration duration = zx::clock::get_monotonic() - last_crash_time_;
+  // If last retry is 1 hour ago, the counter will be reset
+  if (duration > kMaxCrashRecoveryDuration) {
+    session_crash_recovery_counter_ = 1;
+  }
+
+  ++session_crash_recovery_counter_;
+  last_crash_time_ = zx::clock::get_monotonic();
+  return session_crash_recovery_counter_ == kMaxCrashRecoveryLimit;
 }
 
 }  // namespace modular

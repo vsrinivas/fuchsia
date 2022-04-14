@@ -101,6 +101,8 @@ source_set("lib") {
     "inspector.h",
     "presentation_container.cc",
     "presentation_container.h",
+    "reboot_rate_limiter.cc",
+    "reboot_rate_limiter.h",
     "session_context_impl.cc",
     "session_context_impl.h",
     "session_provider.cc",
@@ -214,6 +216,40 @@ fuchsia_unittest_component("basemgr-impl-unittest") {
 fuchsia_unittest_component("basemgr-v2-to-v1-unittest") {
   manifest = "meta/basemgr-v2-to-v1-unittest.cml"
   deps = [ ":basemgr_v2_to_v1_unittest" ]
+}
+
+executable("session_provider_unittest") {
+  testonly = true
+  sources = [ "session_provider_unittest.cc" ]
+  deps = [
+    ":lib",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/files",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture:gtest",
+  ]
+}
+
+fuchsia_unittest_component("session-provider-unittest") {
+  manifest = "meta/session-provider-unittest.cml"
+  deps = [ ":session_provider_unittest" ]
+}
+
+executable("reboot_rate_limiter_unittest") {
+  testonly = true
+  sources = [ "reboot_rate_limiter_unittest.cc" ]
+  deps = [
+    ":lib",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/files",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_unittest_component("reboot-rate-limiter-unittest") {
+  manifest = "meta/reboot-rate-limiter-unittest.cml"
+  deps = [ ":reboot_rate_limiter_unittest" ]
 }
 
 rustc_test("basemgr_v1_to_v2_test_realm_bin") {
@@ -333,6 +369,8 @@ fuchsia_test_package("basemgr_unittests") {
     ":session-context-impl-unittest",
     ":bounded-inspect-list-node-unittest",
     ":basemgr-inspector-unittest",
+    ":reboot-rate-limiter-unittest",
+    ":session-provider-unittest",
   ]
   deps = [
     ":v1_echo_server_component",

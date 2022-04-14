@@ -10,9 +10,14 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <zircon/status.h>
 #include <zircon/time.h>
+#include <zircon/types.h>
+#include <zircon/utc.h>
 
 #include "fuchsia/session/cpp/fidl.h"
+#include "lib/fpromise/promise.h"
+#include "lib/zx/handle.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/modular/bin/basemgr/child_listener.h"
@@ -192,6 +197,20 @@ void BasemgrImpl::CreateSessionProvider(const ModularConfigAccessor* const confi
           FX_PLOGS(FATAL, start_session_result.error()) << "Could not restart session";
         }
       }));
+
+  FX_LOGS(INFO) << "Waiting for clock started signal.";
+  auto fp =
+      executor_.MakePromiseWaitHandle(zx::unowned_handle(zx_utc_reference_get()), ZX_CLOCK_STARTED)
+          .then([this](fpromise::result<zx_packet_signal_t, zx_status_t>& result) {
+            if (result.is_error()) {
+              FX_LOGS(ERROR) << "System clock failed to send start signal: "
+                             << zx_status_get_string(result.take_error());
+            } else {
+              FX_LOGS(INFO) << "System clock has started.";
+              session_provider_->MarkClockAsStarted();
+            }
+          });
+  executor_.schedule_task(fpromise::pending_task(std::move(fp)));
 }
 
 BasemgrImpl::StartSessionResult BasemgrImpl::StartSession() {
