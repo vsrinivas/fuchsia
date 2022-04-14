@@ -21,7 +21,7 @@ use std::sync::Arc;
 
 use crate::{
     credential_manager::CredentialManager,
-    diagnostics::InspectDiagnostics,
+    diagnostics::{InspectDiagnostics, INSPECTOR},
     lookup_table::{PersistentLookupTable, LOOKUP_TABLE_PATH},
     pinweaver::PinWeaver,
 };
@@ -38,6 +38,9 @@ async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
     info!("Starting credential manager");
 
+    info!("Initializing diagnostics");
+    let diagnostics = Arc::new(InspectDiagnostics::new(INSPECTOR.root()));
+
     info!("Connecting to cr50_agent PinWeaver protocol");
     let pinweaver_proxy = connect_to_protocol::<PinWeaverMarker>()
         .context("Failed to connect to cr50_agent PinWeaver protocol")?;
@@ -52,7 +55,6 @@ async fn main() -> Result<(), Error> {
     )?;
     let lookup_table = PersistentLookupTable::new(cred_data);
     let pinweaver = PinWeaver::new(pinweaver_proxy);
-    let diagnostics = Arc::new(InspectDiagnostics::new_at_root());
     let credential_manager =
         CredentialManager::new(HASH_TREE_PATH, pinweaver, lookup_table, diagnostics)
             .await
@@ -60,6 +62,7 @@ async fn main() -> Result<(), Error> {
 
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(Services::CredentialManager);
+    inspect_runtime::serve(&INSPECTOR, &mut fs)?;
     fs.take_and_serve_directory_handle().context("serving directory handle")?;
     // It is important that this remains `for_each` to create a sequential queue and prevent
     // subsequent requests being serviced before the first finishes.

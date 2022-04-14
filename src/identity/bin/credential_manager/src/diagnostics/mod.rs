@@ -13,7 +13,7 @@ pub use self::inspect::{InspectDiagnostics, INSPECTOR};
 use fidl_fuchsia_identity_credential::CredentialError;
 
 /// The different RPC methods that may be called on a CredentialManager.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum RpcMethod {
     AddCredential,
     RemoveCredential,
