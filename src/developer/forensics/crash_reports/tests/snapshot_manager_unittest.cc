@@ -78,7 +78,7 @@ class SnapshotManagerTest : public UnitTestFixture {
         clock_(),
         executor_(dispatcher()),
         snapshot_manager_(nullptr),
-        annotation_manager_({kManagedAnnotationsKeys[0], kManagedAnnotationsKeys[1]},
+        annotation_manager_(dispatcher(), {kManagedAnnotationsKeys[0], kManagedAnnotationsKeys[1]},
                             {
                                 {kManagedAnnotationsKeys[0], kManagedAnnotationsValues[0]},
                                 {kManagedAnnotationsKeys[1], kManagedAnnotationsValues[1]},

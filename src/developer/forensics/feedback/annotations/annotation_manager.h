@@ -5,10 +5,15 @@
 #ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_ANNOTATIONS_ANNOTATION_MANAGER_H_
 #define SRC_DEVELOPER_FORENSICS_FEEDBACK_ANNOTATIONS_ANNOTATION_MANAGER_H_
 
+#include <lib/async/dispatcher.h>
+#include <lib/fpromise/promise.h>
+#include <lib/zx/time.h>
+
 #include <vector>
 
 #include "src/developer/forensics/feedback/annotations/provider.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace forensics::feedback {
 
@@ -20,9 +25,17 @@ class AnnotationManager {
   // Allowlist dictates which messages can be extracted from the manager's interface.
   //
   // Annotations not in the allowlist or not explicitly exempted won't be returned.
-  AnnotationManager(std::set<std::string> allowlist, Annotations static_annotations = {},
+  AnnotationManager(async_dispatcher_t* dispatcher, std::set<std::string> allowlist,
+                    Annotations static_annotations = {},
                     NonPlatformAnnotationProvider* non_platform_provider = nullptr,
-                    std::vector<DynamicSyncAnnotationProvider*> dynamic_sync_providers = {});
+                    std::vector<DynamicSyncAnnotationProvider*> dynamic_sync_providers = {},
+                    std::vector<StaticAsyncAnnotationProvider*> static_async_providers = {});
+
+  // Returns all annotations collected by the manager in a promise that is guaranteed to complete
+  // before |timeout| expires.
+  //
+  // Note: currently only immediately available annotations are returned.
+  ::fpromise::promise<Annotations> GetAll(zx::duration timeout);
 
   // Returns the annotations that are immediately available regardless of whether they're static or
   // dynamic.
@@ -39,10 +52,18 @@ class AnnotationManager {
   void InsertStatic(const Annotations& annotations);
 
  private:
+  async_dispatcher_t* dispatcher_;
+
   std::set<std::string> allowlist_;
   Annotations static_annotations_;
   NonPlatformAnnotationProvider* non_platform_provider_;
   std::vector<DynamicSyncAnnotationProvider*> dynamic_sync_providers_;
+  std::vector<StaticAsyncAnnotationProvider*> static_async_providers_;
+
+  // Calls to GetAll that have not yet completed.
+  std::vector<std::function<void()>> waiting_for_static_;
+
+  fxl::WeakPtrFactory<AnnotationManager> ptr_factory_{this};
 };
 
 }  // namespace forensics::feedback

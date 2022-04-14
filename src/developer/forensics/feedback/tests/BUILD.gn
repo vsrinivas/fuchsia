@@ -19,6 +19,7 @@ executable("annotation_manager_unittest_exe") {
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback/annotations",
     "//src/developer/forensics/testing:gmatchers",
+    "//src/developer/forensics/testing:unit_test_fixture",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

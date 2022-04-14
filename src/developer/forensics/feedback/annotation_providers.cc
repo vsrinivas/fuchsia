@@ -19,7 +19,8 @@ AnnotationProviders::AnnotationProviders(async_dispatcher_t* dispatcher,
       data_register_(kMaxNumNonPlatformAnnotations, kReservedAnnotationNamespaces,
                      kDataRegisterPath),
       time_provider_(std::make_unique<timekeeper::SystemClock>()),
-      annotation_manager_(allowlist, static_annotations, &data_register_, {&time_provider_}) {}
+      annotation_manager_(dispatcher_, allowlist, static_annotations, &data_register_,
+                          {&time_provider_}) {}
 
 void AnnotationProviders::Handle(
     ::fidl::InterfaceRequest<fuchsia::feedback::ComponentDataRegister> request,

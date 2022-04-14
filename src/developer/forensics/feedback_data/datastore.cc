@@ -84,6 +84,12 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
   }
 
   std::vector<::fpromise::promise<Annotations>> annotations;
+
+  // We seed the returned annotations with the annotations from the annotation manager.
+  //
+  // The number of platform and non-platform annotations are capped so this is safe to do.
+  annotations.push_back(annotation_manager_->GetAll(timeout));
+
   for (auto& provider : reusable_annotation_providers_) {
     annotations.push_back(provider->GetAnnotations(timeout, annotation_allowlist_));
   }
@@ -95,10 +101,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
   return ::fpromise::join_promise_vector(std::move(annotations))
       .and_then([this](std::vector<::fpromise::result<Annotations>>& annotations)
                     -> ::fpromise::result<Annotations> {
-        // We seed the returned annotations with the annotations that are available immediately.
-        //
-        // The number of platform and non-platform annotations are capped so this is safe to do.
-        Annotations ok_annotations(annotation_manager_->ImmediatelyAvailable());
+        Annotations ok_annotations;
 
         // We then augment the returned annotations with the dynamic platform annotations.
         for (auto& result : annotations) {

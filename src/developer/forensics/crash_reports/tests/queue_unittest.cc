@@ -131,7 +131,8 @@ class TestReportingPolicyWatcher : public ReportingPolicyWatcher {
 
 class QueueTest : public UnitTestFixture {
  public:
-  QueueTest() : network_watcher_(dispatcher(), *services()), annotation_manager_({}) {}
+  QueueTest()
+      : network_watcher_(dispatcher(), *services()), annotation_manager_(dispatcher(), {}) {}
 
   void SetUp() override {
     info_context_ =

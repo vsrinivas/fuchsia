@@ -99,7 +99,7 @@ class DatastoreTest : public UnitTestFixture {
       allowlist.insert(k);
     }
     annotation_manager_ =
-        std::make_unique<feedback::AnnotationManager>(allowlist, startup_annotations);
+        std::make_unique<feedback::AnnotationManager>(dispatcher(), allowlist, startup_annotations);
     datastore_ = std::make_unique<Datastore>(dispatcher(), services(), cobalt_.get(), &redactor_,
                                              annotation_allowlist, attachment_allowlist,
                                              annotation_manager_.get(), device_id_provider_.get(),

@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_ANNOTATIONS_PROVIDER_H_
 #define SRC_DEVELOPER_FORENSICS_FEEDBACK_ANNOTATIONS_PROVIDER_H_
 
+#include <lib/fit/function.h>
 #include <lib/fpromise/promise.h>
 
 #include <set>
@@ -12,6 +13,18 @@
 #include "src/developer/forensics/feedback/annotations/types.h"
 
 namespace forensics::feedback {
+
+// Collects safe-to-cache annotations asynchronously.
+class StaticAsyncAnnotationProvider {
+ public:
+  // Returns the annotation keys a provider will collect.
+  virtual std::set<std::string> GetKeys() const = 0;
+
+  // Returns the annotations this provider collects via |callback|.
+  //
+  // Note: this method will be called once.
+  virtual void GetOnce(::fit::callback<void(Annotations)> callback) = 0;
+};
 
 // Collects unsafe-to-cache annotations synchronously.
 //

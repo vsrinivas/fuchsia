@@ -160,6 +160,7 @@ class CrashReporterTest : public UnitTestFixture {
       Config config, const std::vector<CrashServer::UploadStatus>& upload_attempt_results = {}) {
     FX_CHECK(data_provider_server_);
     annotation_manager_ = std::make_unique<feedback::AnnotationManager>(
+        dispatcher(),
         std::set<std::string>{
             feedback::kBuildVersionKey,
             feedback::kBuildBoardKey,

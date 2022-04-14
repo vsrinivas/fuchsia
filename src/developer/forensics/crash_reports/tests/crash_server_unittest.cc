@@ -38,7 +38,7 @@ class CrashServerTest : public UnitTestFixture {
  protected:
   CrashServerTest()
       : data_provider_server_(std::make_unique<stubs::DataProviderReturnsEmptySnapshot>()),
-        annotation_manager_({}),
+        annotation_manager_(dispatcher(), {}),
         snapshot_manager_(dispatcher(), &clock_, data_provider_server_.get(), &annotation_manager_,
                           zx::min(0), kGarbageCollectedSnapshotsPath, StorageSize::Bytes(0u),
                           StorageSize::Bytes(0u)),

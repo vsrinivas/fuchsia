@@ -27,6 +27,8 @@ source_set("annotations") {
   public_deps = [
     "//src/developer/forensics/feedback/reboot_log",
     "//src/developer/forensics/utils:errors",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/async",
   ]
 
   deps = [
@@ -35,7 +37,6 @@ source_set("annotations") {
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback:constants",
     "//src/lib/files",
-    "//src/lib/fxl",
   ]
 }
 
