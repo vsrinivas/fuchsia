@@ -36,10 +36,10 @@ pub enum CreationManifestError {
     #[error("io error")]
     IoError(#[from] io::Error),
 
-    #[error("error occured when traverse the contents of a directory")]
+    #[error("error occurred when traverse the contents of a directory")]
     WalkDir(#[from] walkdir::Error),
 
-    #[error("error occured when strip prefix from the path")]
+    #[error("error occurred when strip prefix from the path")]
     StripPrefixError(#[from] std::path::StripPrefixError),
 
     #[error("the resource path is empty")]

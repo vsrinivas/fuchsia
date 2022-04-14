@@ -42,7 +42,7 @@ void InitMemory(void* zbi) {
   }
   if (auto result = view.take_error(); result.is_error()) {
     zbitl::PrintViewError(result.error_value());
-    ZX_PANIC("error occured while parsing the data ZBI");
+    ZX_PANIC("error occurred while parsing the data ZBI");
   }
 
   ZX_ASSERT_MSG(!zbi_ranges.empty(), "no MEM_CONFIG item found in the data ZBI");

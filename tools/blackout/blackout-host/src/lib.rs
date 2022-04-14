@@ -36,7 +36,7 @@ fn box_message(message: String) -> String {
     )
 }
 
-/// An error occured running a command on the target system. Contains the exit status, stdout, and
+/// An error occurred running a command on the target system. Contains the exit status, stdout, and
 /// stderr of the command.
 #[derive(Debug, Error)]
 #[error(
@@ -61,14 +61,14 @@ impl From<Output> for CommandError {
     }
 }
 
-/// An error occured while attempting to reboot the system.
+/// An error occurred while attempting to reboot the system.
 #[derive(Debug, Error)]
 pub enum RebootError {
     /// The path to the relay device required for hard-rebooting the target doesn't exist.
     #[error("device does not exist: {:?}", _0)]
     MissingDevice(PathBuf),
 
-    /// An io error occured during rebooting. Maybe we failed to write to the device.
+    /// An io error occurred during rebooting. Maybe we failed to write to the device.
     #[error("io error: {:?}", _0)]
     IoError(#[from] std::io::Error),
 

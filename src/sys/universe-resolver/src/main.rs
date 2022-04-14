@@ -131,7 +131,7 @@ async fn resolve_package(
 
 #[derive(Error, Debug)]
 enum ResolverError {
-    #[error("an unexpected error ocurred")]
+    #[error("an unexpected error occurred")]
     Internal,
     #[error("invalid component URL: {}", .0)]
     InvalidUrl(#[from] PkgUrlParseError),

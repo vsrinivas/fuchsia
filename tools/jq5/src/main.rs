@@ -125,7 +125,7 @@ async fn run(
             Err(err) => {
                 return Err(anyhow::anyhow!(
                     r"jq5 encountered an error processing at least one of the provided json5 objects.
-                    The first error occured while processing file'{}':
+                    The first error occurred while processing file'{}':
 
                     {}",
                     files[i].as_path().to_str().unwrap(),

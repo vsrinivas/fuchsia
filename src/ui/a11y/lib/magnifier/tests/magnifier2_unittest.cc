@@ -222,7 +222,7 @@ TEST_F(Magnifier2Test, TwoFingerDrag) {
     // user's fingers moves with the centroid of the two-finger drag. Since the
     // drag started with a centroid of (.3, .4) and now has a centroid of (.2,
     // 3.), applying the transform to the point in unscaled NDC space that
-    // corresponds to (.3, .4) in the default zoom space shoud yield (.2, .3).
+    // corresponds to (.3, .4) in the default zoom space should yield (.2, .3).
     // We can find the NDC point that corresponds to (.3, .4) by simply applying
     // the inverse of the transform for that space, which we verified previously
     // had a scale of kDefaultScale 4, and a translation of (-1.2, -1.5). So,

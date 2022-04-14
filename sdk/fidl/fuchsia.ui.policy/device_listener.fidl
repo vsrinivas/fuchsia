@@ -19,7 +19,7 @@ protocol DeviceListenerRegistry {
     /// Registers a listener to receive media button related events, such as
     /// changes from volume buttons and mute switches.
     /// On registration, the `listener` receives the last media button event that
-    /// occured, if one exists, and all media button events going forward.
+    /// occurred, if one exists, and all media button events going forward.
     @transitional
     RegisterListener(resource struct {
         listener client_end:MediaButtonsListener;

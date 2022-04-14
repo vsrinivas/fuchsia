@@ -88,7 +88,7 @@ bool DebugAdapterServer::Accept(fbl::unique_fd& client) {
       server_socket_.get() > exit_pipe_[0].get() ? server_socket_.get() : exit_pipe_[0].get();
   auto status = select(nfds + 1, &read_set, NULL, NULL, NULL);
   if (status <= 0) {
-    // An error or timeout occured.
+    // An error or timeout occurred.
     return false;
   }
 

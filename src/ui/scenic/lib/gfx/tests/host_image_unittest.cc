@@ -207,7 +207,7 @@ VK_TEST_F(HostImageTest, BgraImport) {
   EXPECT_FALSE(image_resource->GetEscherImage());
   // Updating shouldn't crash when passesd a null gpu_uploader, but it should
   // also keep the image dirty, because the copy from CPU to GPU memory has not
-  // occured yet.
+  // occurred yet.
   image_resource->UpdateEscherImage(/* gpu_uploader */ nullptr,
                                     /* image_layout_uploader */ nullptr);
   // Because we did not provide a valid batch uploader, the image is still dirty

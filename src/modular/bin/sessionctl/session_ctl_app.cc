@@ -221,7 +221,7 @@ std::vector<fuchsia::modular::StoryCommand> SessionCtlApp::MakeAddModCommands(
   fuchsia::modular::AddMod add_mod;
   add_mod.mod_name_transitional = mod_name;
   intent.Clone(&add_mod.intent);
-  // TODO(fxbug.dev/16775): Sessionctl takes in inital intent and other fields.
+  // TODO(fxbug.dev/16775): Sessionctl takes in initial intent and other fields.
 
   command.set_add_mod(std::move(add_mod));
   commands.push_back(std::move(command));

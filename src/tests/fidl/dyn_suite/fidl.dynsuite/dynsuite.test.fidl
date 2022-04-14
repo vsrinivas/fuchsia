@@ -134,7 +134,7 @@ type Observation = strict union {
     /// to the harness of the destruction sequence.
     5: on_complete struct {};
 
-    /// The [`on_error`] variant indicates that some error occured in the
+    /// The [`on_error`] variant indicates that some error occurred in the
     /// bindings under test. The `context` string is depedendant on the kind
     /// of bindings being tested, and is provided for informational purposes.
     6: on_error struct {

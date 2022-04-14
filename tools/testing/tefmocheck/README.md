@@ -1,8 +1,8 @@
 # Tefmocheck
 
 Tefmocheck (Testing Failure Mode Checker) analyzes the outputs of a testing
-Swarming task and determines whether various failures modes occured. It produces
-a testing summary file (summmary.json) that contains all of the tests in the
+Swarming task and determines whether various failures modes occurred. It produces
+a testing summary file (summary.json) that contains all of the tests in the
 input summary, as well as a synthetic test for each failure mode starting with
 "testing_failure_mode/".
 

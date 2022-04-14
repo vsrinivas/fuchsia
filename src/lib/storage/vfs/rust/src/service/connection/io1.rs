@@ -36,7 +36,7 @@ enum ConnectionState {
     /// Connection is still alive.
     Alive,
     /// Connection have received Node::Close message, it was dropped by the peer, or an error had
-    /// occured.  As we do not perform any actions, except for closing our end we do not distiguish
+    /// occurred.  As we do not perform any actions, except for closing our end we do not distiguish
     /// those cases, unlike file and directory connections.
     Closed,
 }

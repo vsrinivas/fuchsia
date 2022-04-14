@@ -255,7 +255,7 @@ bool Port::Complete() {
       // Timed out.
       zx::duration delta = now - txn->timeout;
       zxlogf(ERROR, "ahci: txn time out on port %d txn %p (%ld ms)", num_, txn, delta.to_msecs());
-      txn->timeout = zx::time::infinite_past();  // Signal that timeout occured.
+      txn->timeout = zx::time::infinite_past();  // Signal that timeout occurred.
     }
     // Completed or timed out.
     commands_[slot] = nullptr;

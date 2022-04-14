@@ -176,7 +176,7 @@ bool WavWriter<enabled>::Initialize(const char* const file_name,
   bits_per_sample_ = bits_per_sample;
   payload_written_ = 0;
 
-  // Write inital WAV header
+  // Write initial WAV header
   zx_status_t status =
       WriteNewHeader(file_.get(), sample_format_, channel_count_, frame_rate_, bits_per_sample_);
   if (status != ZX_OK) {

@@ -36,7 +36,7 @@ type LaunchError = flexible enum {
     /// Failed to enumerate tests.
     CASE_ENUMERATION = 5;
 
-    /// Some internal error occured. Something wrong with test manager setup.
+    /// Some internal error occurred. Something wrong with test manager setup.
     /// Check logs and report bug.
     INTERNAL_ERROR = 6;
 

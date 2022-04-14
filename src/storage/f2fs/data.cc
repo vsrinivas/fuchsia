@@ -288,7 +288,7 @@ zx_status_t VnodeF2fs::GetNewDataPage(pgoff_t index, bool new_i_size, fbl::RefPt
 //   /* When reading holes, we need its node page */
 //   //TODO(unknown): inode should be replaced with vnodef2fs
 //   //SetNewDnode(&dn, inode, nullptr, nullptr, 0);
-//   // TODO(unknown): shoud be replaced with NodeManager->GetDnodeOfData
+//   // TODO(unknown): should be replaced with NodeManager->GetDnodeOfData
 //   /*err = get_DnodeOfData(&dn, pgofs, kRdOnlyNode);
 //   if (err)
 //     return (err == ZX_ERR_NOT_FOUND) ? 0 : err; */

@@ -1561,7 +1561,7 @@ mod tests {
             empty_hierarchy.clone()
         );
 
-        // Selecting a property on the root, even if it doesnt exist, should produce the empty tree.
+        // Selecting a property on the root, even if it doesn't exist, should produce the empty tree.
         let fake_property_selector = vec!["*:root:blorp"];
         assert_eq!(
             parse_selectors_and_filter_hierarchy(empty_hierarchy.clone(), fake_property_selector),

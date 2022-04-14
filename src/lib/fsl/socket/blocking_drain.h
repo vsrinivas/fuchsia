@@ -16,7 +16,7 @@ namespace fsl {
 
 // Drain the given socket and call |write_bytes| with pieces of data.
 // |write_bytes| must return the number of bytes consumed. Returns |true| if the
-// socket has been drained, |false| if an error occured.
+// socket has been drained, |false| if an error occurred.
 FXL_EXPORT bool BlockingDrainFrom(zx::socket source,
                                   fit::function<size_t(const void*, uint32_t)> write_bytes);
 

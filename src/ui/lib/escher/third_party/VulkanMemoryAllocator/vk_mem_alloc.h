@@ -7597,7 +7597,7 @@ public:
     Returns:
     - `VK_SUCCESS` if succeeded and object can be destroyed immediately.
     - `VK_NOT_READY` if succeeded but the object must remain alive until vmaDefragmentationEnd().
-    - Negative value if error occured and object can be destroyed immediately.
+    - Negative value if error occurred and object can be destroyed immediately.
     */
     VkResult Defragment(
         VkDeviceSize maxCpuBytesToMove, uint32_t maxCpuAllocationsToMove,

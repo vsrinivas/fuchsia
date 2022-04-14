@@ -64,7 +64,7 @@ type AllowInputState = strict enum : int32 {
 
 /// Represents the return status of a [`Frame`] method.
 type FrameError = strict enum : int32 {
-    /// An internal error occured.
+    /// An internal error occurred.
     INTERNAL_ERROR = 1;
 
     /// The provided buffer is not UTF-8 encoded.
@@ -216,7 +216,7 @@ protocol Frame {
     /// meaning that document may modify variables, classes, or objects set by
     /// the script in arbitrary or unpredictable ways.
     ///
-    /// If an error occured, the FrameError will be set to one of these values:
+    /// If an error occurred, the FrameError will be set to one of these values:
     /// - `BUFFER_NOT_UTF8`: `script` is not UTF-8 encoded.
     /// - `INVALID_ORIGIN`: The [`Frame`]'s current URL does not match any of the values in
     ///   `origins` or `origins` is an empty vector.
@@ -248,7 +248,7 @@ protocol Frame {
     /// At least one `origins` entry must be specified. If a wildcard `"*"` is specified in
     /// `origins`, then the script will be evaluated unconditionally.
     ///
-    /// If an error occured, the [`FrameError`] will be set to one of these values:
+    /// If an error occurred, the [`FrameError`] will be set to one of these values:
     /// - `BUFFER_NOT_UTF8`: `script` is not UTF-8 encoded.
     /// - `INVALID_ORIGIN`: `origins` is an empty vector.
     AddBeforeLoadJavaScript(resource struct {
@@ -271,7 +271,7 @@ protocol Frame {
     /// [HTML spec](https://html.spec.whatwg.org/multipage/web-messaging.html#posting-messages)
     /// section 9.4.3 for more details on how the target origin policy is applied.
     ///
-    /// If an error occured, the [`FrameError`] will be set to one of these values:
+    /// If an error occurred, the [`FrameError`] will be set to one of these values:
     /// - `INTERNAL_ERROR`: The WebEngine failed to create a message pipe.
     /// - `BUFFER_NOT_UTF8`: The script in `message`'s `data` property is not UTF-8 encoded.
     /// - `INVALID_ORIGIN`: `origins` is an empty vector.
@@ -485,7 +485,7 @@ protocol MessagePort {
     /// time. It is not necessary for the caller to wait for the completion callback before calling
     /// [`MessagePort.PostMessage`] again.
     ///
-    /// If an error occured, the [`FrameError`] will be set to one of these value:
+    /// If an error occurred, the [`FrameError`] will be set to one of these value:
     /// - `BUFFER_NOT_UTF8`: The script in `message`'s `data` property is not UTF-8 encoded.
     /// - `NO_DATA_IN_MESSAGE`: The `data` property is missing in `message`.
     PostMessage(resource struct {

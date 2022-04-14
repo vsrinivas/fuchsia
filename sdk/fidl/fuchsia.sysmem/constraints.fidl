@@ -163,7 +163,7 @@ type BufferCollectionInfo_2 = resource struct {
     /// The total number of buffers.
     buffer_count uint32;
 
-    /// These settings apply to all the buffers in the inital buffer allocation.
+    /// These settings apply to all the buffers in the initial buffer allocation.
     settings SingleBufferSettings;
 
     /// VMO handles (and vmo_usable_start offset) for each buffer in the

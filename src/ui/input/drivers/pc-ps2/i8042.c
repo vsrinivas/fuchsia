@@ -163,7 +163,7 @@ static inline void i8042_write_command(int val) { outp(I8042_COMMAND_REG, val); 
 #define I8042_CMD_CTL_MOUSE_TEST 0x01a9
 
 /*
- * used for flushing buffers. the i8042 internal buffer shoudn't exceed this.
+ * used for flushing buffers. the i8042 internal buffer shouldn't exceed this.
  */
 #define I8042_BUFFER_LENGTH 32
 

@@ -1010,7 +1010,7 @@ mod tests {
         let inspect = fuchsia_inspect::Inspector::new().root().create_child(TEST_INSPECT_ROOT);
         let accessor = create_stash_accessor(name).await.expect("failed to create StashAccessor");
 
-        // Insert intial bonding data values into stash
+        // Insert initial bonding data values into stash
         for (id, mut entry) in entries {
             accessor.set_value(id, &mut entry).expect("failed to set value");
         }

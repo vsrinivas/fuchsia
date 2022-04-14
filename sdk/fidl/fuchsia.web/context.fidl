@@ -238,7 +238,7 @@ protocol Context {
     /// Waits until debugging is available on one or more Frames, and returns the DevTools port
     /// number. Multiple calls may be queued to received the port number.
     ///
-    /// If an error occured, the [`ContextError`] will be set to this value:
+    /// If an error occurred, the [`ContextError`] will be set to this value:
     /// - `REMOTE_DEBUGGING_PORT_NOT_OPENED`: `remote_debugging_port` was not set in
     ///   [`CreateContextParams`] or the remote debugging service failed to start.
     GetRemoteDebuggingPort() -> (struct {

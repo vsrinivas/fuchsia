@@ -51,7 +51,7 @@ protocol NavigationController {
     /// - `params`: Additional parameters that affect how the resource will be  loaded (e.g.
     ///   cookies, HTTP headers, etc.)
     ///
-    /// If an error occured, the [`NavigationControllerError`] will be set to one of these values:
+    /// If an error occurred, the [`NavigationControllerError`] will be set to one of these values:
     /// - `INVALID_URL`: The `url` parameter is invalid.
     /// - `INVALID_HEADER`: At least one of the headers in [`LoadUrlParams.headers`] is invalid.
     LoadUrl(resource struct {

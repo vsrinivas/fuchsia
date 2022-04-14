@@ -1124,7 +1124,7 @@ pub mod capability_util {
             io_util::OpenFlags::RIGHT_READABLE,
         )
         .await
-        .expect_err("open_directory shouldnt have succeeded");
+        .expect_err("open_directory shouldn't have succeeded");
         assert_eq!(
             format!("{:?}", res),
             format!("{:?}", io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND))

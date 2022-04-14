@@ -159,7 +159,7 @@ TEST(RegisterStateTest, SegmentSelectorsZeroedOnContextSwitch) {
 
   // Now that all the registers have now been set to 1, sleep repeatedly until
   // the segment selector registers have been cleared. Of course it's possible
-  // that a context switch has already occured and cleared some or all of them
+  // that a context switch has already occurred and cleared some or all of them
   // so be sure to only terminate the loop once we have observed the last one
   // set (ds) was cleared.
   //

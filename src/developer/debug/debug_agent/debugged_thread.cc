@@ -198,7 +198,7 @@ void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
     //       case), it produces a window between resuming the exception and suspending the thread
     //       to reinstall the breakpointer, which could make the thread miss the exception. By
     //       keeping the exception until *after* the breakpoint has been told to step over, we
-    //       ensure that any installs have already occured and thus the thread won't miss any
+    //       ensure that any installs have already occurred and thus the thread won't miss any
     //       breakpoints.
     current_breakpoint_->EndStepOver(this);
     current_breakpoint_ = nullptr;

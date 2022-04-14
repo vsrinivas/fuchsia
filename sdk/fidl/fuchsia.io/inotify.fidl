@@ -13,7 +13,7 @@ protocol Inotifier {};
 
 /// Used by InotifyAddWatch to indicate the server the events to be watched on.
 /// Also used by [`Node.Inotify`] to indicate the types of events
-/// that occured on server side, to be notified to clients. See InotifyEvent.
+/// that occurred on server side, to be notified to clients. See InotifyEvent.
 type InotifyWatchMask = strict bits : uint32 {
     // Events to watch in inotify
     ACCESS = 0x00000001; // File was accessed.

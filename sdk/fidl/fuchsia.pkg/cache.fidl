@@ -79,10 +79,10 @@ type OpenBlobError = strict enum {
     /// This blob is already open for write by another cache operation.
     CONCURRENT_WRITE = 2;
 
-    /// An unspecified error occured during underlying I/O.
+    /// An unspecified error occurred during underlying I/O.
     UNSPECIFIED_IO = 3;
 
-    /// An unspecified error occured.
+    /// An unspecified error occurred.
     INTERNAL = 4;
 };
 

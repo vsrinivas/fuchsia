@@ -737,7 +737,7 @@ a:b:c
         let test_cases = vec![
             // Failing because it's missing a required "d" directory node in the string.
             (r#"echo.cmx:a/*/d/*/f:*"#, vec!["a", "b", "c", "e", "f"]),
-            // Failing because the match string doesnt end at the c node.
+            // Failing because the match string doesn't end at the c node.
             (r#"echo.cmx:a/*/*/*/*/*/c:*"#, vec!["a", "b", "g", "e", "d", "f"]),
             (r#"echo.cmx:a/b/c"#, vec!["a", "b"]),
             (r#"echo.cmx:a/b/c"#, vec!["a", "b", "card"]),

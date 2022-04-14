@@ -158,7 +158,7 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
 
     // Generate the list of test variations we will generate.
     //
-    // The intial variation has no replacements or suffix.
+    // The initial variation has no replacements or suffix.
     let test_variations = variants.into_iter().fold(vec![TestVariation::default()], |acc, v| {
         // If the test is not generic over `v`, then skip `v`.
         if !type_generics.iter().any(|gtype| has_type_bound(gtype.bounds.iter(), &v.trait_bound)) {

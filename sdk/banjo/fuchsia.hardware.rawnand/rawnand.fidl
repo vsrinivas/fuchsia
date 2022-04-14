@@ -23,7 +23,7 @@ protocol RawNand {
 
     /// Write one NAND page and its out-of-band data with hardware ECC.
     ///
-    /// Should return ZX_ERR_IO *only* when an error ocurred due to underlying hardware.
+    /// Should return ZX_ERR_IO *only* when an error occurred due to underlying hardware.
     WritePageHwecc(struct {
         @buffer
         data vector<uint8>:MAX;
@@ -36,7 +36,7 @@ protocol RawNand {
 
     /// Erase NAND block.
     ///
-    /// Should return ZX_ERR_IO *only* when error ocurred due to underlying hardware.
+    /// Should return ZX_ERR_IO *only* when error occurred due to underlying hardware.
     EraseBlock(struct {
         nandpage uint32;
     }) -> (struct {

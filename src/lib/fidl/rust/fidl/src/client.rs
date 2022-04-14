@@ -639,7 +639,7 @@ impl ClientInner {
     ///
     /// Returns the epitaph (or PEER_CLOSED) if the channel was closed, and None otherwise.
     fn recv_all(&self) -> Result<Option<zx_status::Status>, Error> {
-        // TODO(cramertj) return errors if one has occured _ever_ in recv_all, not just if
+        // TODO(cramertj) return errors if one has occurred _ever_ in recv_all, not just if
         // one happens on this call.
         loop {
             // Acquire a mutex so that only one thread can read from the underlying channel

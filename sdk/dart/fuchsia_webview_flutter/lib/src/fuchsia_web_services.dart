@@ -158,7 +158,7 @@ class FuchsiaWebServices {
   /// meaning that document may modify variables, classes, or objects set by
   /// the script in arbitrary or unpredictable ways.
   ///
-  /// If an error occured, the FrameError will be set to one of these values:
+  /// If an error occurred, the FrameError will be set to one of these values:
   /// BUFFER_NOT_UTF8: [script] is not UTF-8 encoded.
   /// INVALID_ORIGIN: The Frame's current URL does not match any of the
   ///                 values in [origins] or [origins] is an empty vector.
@@ -179,7 +179,7 @@ class FuchsiaWebServices {
   /// meaning that document may modify variables, classes, or objects set by
   /// the script in arbitrary or unpredictable ways.
   ///
-  /// If an error occured, the FrameError will be set to one of these values:
+  /// If an error occurred, the FrameError will be set to one of these values:
   /// BUFFER_NOT_UTF8: [script] is not UTF-8 encoded.
   /// INVALID_ORIGIN: The Frame's current URL does not match any of the
   ///                 values in [origins] or [origins] is an empty vector.
@@ -208,7 +208,7 @@ class FuchsiaWebServices {
   /// At least one `origins` entry must be specified. If a wildcard `"*"` is specified in
   /// `origins`, then the script will be evaluated unconditionally.
   ///
-  /// If an error occured, the [`fidl_fuchsia_web.FrameError`] will be set to one of these values:
+  /// If an error occurred, the [`fidl_fuchsia_web.FrameError`] will be set to one of these values:
   /// - `BUFFER_NOT_UTF8`: `script` is not UTF-8 encoded.
   /// - `INVALID_ORIGIN`: `origins` is an empty vector.
   Future<void> runJavascriptBeforeLoad(

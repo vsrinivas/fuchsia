@@ -283,7 +283,7 @@ impl<T: 'static + EventTrait> Queue<T> {
         handlers.push(dispatcher);
     }
 
-    /// Waits for an event to occur. An event has occured when the closure
+    /// Waits for an event to occur. An event has occurred when the closure
     /// passed to this function evaluates to `true`.
     ///
     /// If timeout is `None`, this will run forever, else this will return an

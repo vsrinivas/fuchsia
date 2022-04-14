@@ -248,7 +248,7 @@ class View {
     std::string_view zbi_error{};
 
     /// This is the offset into the storage object at which a read error
-    /// occured. This field is expected to be unset in the case of a write
+    /// occurred. This field is expected to be unset in the case of a write
     /// error.
     uint32_t read_offset = 0;
 
@@ -258,7 +258,7 @@ class View {
     std::optional<typename Traits::error_type> read_error{};
 
     /// This is the offset into the storage object at which a write error
-    /// occured. This field is expected to be unset in the case of a read
+    /// occurred. This field is expected to be unset in the case of a read
     /// error.
     uint32_t write_offset = 0;
 

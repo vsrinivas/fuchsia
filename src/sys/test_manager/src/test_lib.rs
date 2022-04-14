@@ -628,7 +628,7 @@ pub enum SuiteLaunchError {
     #[error("resource unavailable")]
     ResourceUnavailable,
 
-    #[error("Some internal error ocurred. Please file bug")]
+    #[error("Some internal error occurred. Please file bug")]
     InternalError,
 
     #[error("No test cases matched the provided filters")]

@@ -62,7 +62,7 @@ sample rate frequency. For this reason, keeping our 48 kHz sample rate in mind, 
 instead of 40 Hz, 997 Hz instead of 1000, and so on.
 
 These reference frequencies are stored in the array kReferenceFreqs. Because the summary frequencies
-will always be found in the reference frequencies, we store the sumary frequencies as an array of
+will always be found in the reference frequencies, we store the summary frequencies as an array of
 the specific kReferenceFreqs indices that are also used in the summary tests.
 
 A bool __UseFullFrequencySet__ specifies whether the full frequency range should be used. This is

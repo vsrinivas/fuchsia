@@ -52,7 +52,7 @@ class BlockWatcher {
 
   // Returns kSignalWatcherPaused if the watcher is paused, ZX_CHANNEL_PEER_CLOSED if the watcher
   // channel was closed, and ZX_CHANNEL_READABLE if data was read, and 0 if some other error
-  // occured. |buf| should be a buffer of size |buf_len|. |read_len| will be updated to contain the
+  // occurred. |buf| should be a buffer of size |buf_len|. |read_len| will be updated to contain the
   // actual number of bytes read.
   zx_signals_t WaitForWatchMessages(cpp20::span<Watcher> watchers, cpp20::span<uint8_t>& buf,
                                     Watcher** selected);

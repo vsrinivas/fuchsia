@@ -70,7 +70,7 @@ class Incident {
     }
   }
 
-  // If this Incident is in inital state (!occurred()), this method makes this
+  // If this Incident is in initial state (!occurred()), this method makes this
   // Incident occur, executing and deleting all its consequences. Otherwise,
   // does nothing.
   void Occur();
@@ -126,7 +126,7 @@ class ThreadsafeIncident {
     consequence();
   }
 
-  // If this ThreadsafeIncident is in inital state (!occurred()), this method
+  // If this ThreadsafeIncident is in initial state (!occurred()), this method
   // makes this ThreadsafeIncident occur, executing and deleting all its
   // consequences. Otherwise, does nothing.
   void Occur();

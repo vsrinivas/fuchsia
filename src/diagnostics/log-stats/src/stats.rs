@@ -116,7 +116,7 @@ impl Default for LogStatsByComponent {
 }
 
 /// Holds up to 3 buckets, each bucket containing statistics for error & fatal log messages that
-/// occured during an interval of length BUCKET_INTERVAL_IN_MINUTES. Logs with the same file and
+/// occurred during an interval of length BUCKET_INTERVAL_IN_MINUTES. Logs with the same file and
 /// line number are considered to be the same (even if their messages are not identical) and their
 /// count will be exposed in inspect. Logs without file and line number are ignored.
 #[derive(Default, Inspect)]

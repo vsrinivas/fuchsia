@@ -18,7 +18,7 @@ namespace json_parser {
 
 // Error for `InitSchema` function.
 struct InitSchemaError {
-  // Offset in schema json where error occured.
+  // Offset in schema json where error occurred.
   size_t offset;
 
   // Call `rapidjson::GetParseError_En` on error code to get string representation.

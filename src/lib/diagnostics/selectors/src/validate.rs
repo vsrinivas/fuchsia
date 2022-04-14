@@ -434,7 +434,7 @@ mod tests {
     fn tree_selector_validator_test() {
         let unique_failing_test_cases = vec![
             // All failing validators due to property selectors are
-            // unique since the component validator doesnt look at them.
+            // unique since the component validator doesn't look at them.
             (vec![r#"a"#], r#"**"#),
             (vec![r#"a"#], r#"/"#),
         ];

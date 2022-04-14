@@ -568,7 +568,7 @@ pub struct PinweaverGetLogEntry {
     pub root: [u8; HASH_SIZE as usize],
     /// Label of the leaf that was operated on.
     pub label: u64,
-    /// Action that occured.
+    /// Action that occurred.
     /// One of PW_INSERT_LEAF, PW_REMOVE_LEAF, PW_TRY_AUTH, or PW_RESET_AUTH.
     pub action: GetLogEntryData,
 }

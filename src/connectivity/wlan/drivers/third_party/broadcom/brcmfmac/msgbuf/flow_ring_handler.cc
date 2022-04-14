@@ -349,7 +349,7 @@ void FlowRingHandler::SubmitToFlowRings() {
       submit_queue_.pop_front();
 
       if (status != ZX_OK) {
-        // Some error occured; add this flow ring to the error queue.
+        // Some error occurred; add this flow ring to the error queue.
         BRCMF_ERR("Flow ring interface %d index %d failed to submit: %s",
                   flow_ring_state.flow_ring.interface_index(),
                   flow_ring_state.flow_ring.flow_ring_index(), zx_status_get_string(status));

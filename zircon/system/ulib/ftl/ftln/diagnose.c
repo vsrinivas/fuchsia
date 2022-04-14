@@ -99,7 +99,7 @@ char* FtlnDiagnoseIssues(FTLN ftl) {
   KnownIssue issues[] = {
       {
           &PartialPageWrites,
-          "Block count in the billions. Partial Page Writes occured. fxbug.dev/87629\n",
+          "Block count in the billions. Partial Page Writes occurred. fxbug.dev/87629\n",
           false,
       },
       {

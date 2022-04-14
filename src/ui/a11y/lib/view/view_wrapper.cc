@@ -190,7 +190,7 @@ std::optional<SemanticTransform> ViewWrapper::GetNodeToRootTransform(uint32_t no
       node_to_root_transform.ChainLocalTransform(current_node->transform());
     }
 
-    // Once we have applied the root node's tranform, we shoud exit the loop.
+    // Once we have applied the root node's tranform, we should exit the loop.
     if (current_node_id == 0) {
       break;
     }

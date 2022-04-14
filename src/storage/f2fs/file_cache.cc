@@ -477,7 +477,7 @@ pgoff_t FileCache::Writeback(WritebackOperation &operation) {
         if (page->IsUptodate()) {
           // In case of failure, we just redirty it.
           page->SetDirty();
-          FX_LOGS(WARNING) << "[f2fs] A unexpected error occured during writing Pages: " << ret;
+          FX_LOGS(WARNING) << "[f2fs] A unexpected error occurred during writing Pages: " << ret;
         }
       }
       page->ClearWriteback();

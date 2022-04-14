@@ -21,7 +21,7 @@ protocol Verifier {
     Verify(struct {
         options @generated_name("VerifyOptions") table {};
     }) -> (struct {}) error @generated_name("VerifyError") flexible enum {
-        /// A problem occured when doing update verification.
+        /// A problem occurred when doing update verification.
         INTERNAL = 1;
     };
 };

@@ -93,7 +93,7 @@ void ValidateFoo(const Foo& foo);
 
 TEST(FooTestCase, FooIsBar) {
     Foo foo(true);\
-    // Call helper method, and aborts if any error ocurred printing the formatted message.
+    // Call helper method, and aborts if any error occurred printing the formatted message.
     ASSERT_NO_FATAL_FAILURES(ValidateFoo(foo), "Foo is invalid %s", foo.ToString().c_str());
     ASSERT_TRUE(foo.IsBar());
 }

@@ -36,7 +36,7 @@ func main() {
 
 func mainImpl() error {
 	flag.Var(&summaries, "summary", "Repeated flag, file location to summary.json."+
-		" To pass in multiple files do '--summary file1.json --sumary file2.json'")
+		" To pass in multiple files do '--summary file1.json --summary file2.json'")
 	flag.Var(&tags, "tag", "Repeated flag, add tag to all test case and test suites."+
 		" Uses the format key:value. To pass in multiple tags do '--tag key1:val1 --tag key2:val2'")
 	flag.StringVar(&outputRoot, "output", "",

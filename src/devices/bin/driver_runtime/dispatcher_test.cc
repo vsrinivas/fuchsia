@@ -225,7 +225,7 @@ TEST_F(DispatcherTest, SyncDispatcherCallOnLoop) {
 }
 
 // Tests that a synchronous dispatcher only allows one callback to be running at a time.
-// We will register a callback that blocks and one that doesnt. We will then send
+// We will register a callback that blocks and one that doesn't. We will then send
 // 2 requests, and check that the second callback is not run until the first returns.
 TEST_F(DispatcherTest, SyncDispatcherDisallowsParallelCallbacks) {
   const void* driver = CreateFakeDriver();

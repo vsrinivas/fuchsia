@@ -1026,7 +1026,7 @@ where
             }
             // When the closure above finishes, that means `self` goes out of
             // scope and is dropped, meaning that the event stream's underlying
-            // channel is closed. If any errors occured as a result of the
+            // channel is closed. If any errors occurred as a result of the
             // closure, we just log them.
             .unwrap_or_else(|e: fidl::Error| error!("socket control request error: {:?}", e)),
         )

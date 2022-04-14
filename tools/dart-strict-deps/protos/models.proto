@@ -55,7 +55,7 @@ message ImportResult {
     NOT_FOUND = 1;
     // Package imported and file exists but file was not in GN sources list.
     MISSING_FROM_PACKAGE_SOURCES = 2;
-    // Package was imported but file doesnt exist.
+    // Package was imported but file doesn't exist.
     FILE_MISSING = 3;
   }
   // State of the check.

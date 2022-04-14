@@ -4470,14 +4470,14 @@ mod tests {
             (
                 (100, 160, 0, 0),
                 (120, 180, 0, 0),
-                v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(50).expect("shoud succeed")),
-                v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(80).expect("shoud succeed")),
+                v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(50).expect("should succeed")),
+                v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(80).expect("should succeed")),
             ),
             (
                 (INFINITY, INFINITY, 0, 0),
                 (120, 180, 0, 0),
-                v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(60).expect("shoud succeed")),
-                v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(96).expect("shoud succeed")),
+                v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(60).expect("should succeed")),
+                v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(96).expect("should succeed")),
             ),
             // If T1/T2 are 0, and the minimum preferred lifetime, is infinity,
             // T1/T2 should also be infinity.
@@ -4494,8 +4494,8 @@ mod tests {
             (
                 (100, 160, 40, 70),
                 (120, 180, 50, 80),
-                v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(40).expect("shoud succeed")),
-                v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(70).expect("shoud succeed")),
+                v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(40).expect("should succeed")),
+                v6::NonZeroTimeValue::Finite(v6::NonZeroOrMaxU32::new(70).expect("should succeed")),
             ),
         ] {
             let client_id = v6::duid_uuid();

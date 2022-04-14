@@ -1708,7 +1708,7 @@ pub enum StopRequestSuccess {
     /// timeout was reached.
     KilledAfterTimeout,
     /// The component had no Controller, no request was sent, and therefore no
-    /// error occured in the send process.
+    /// error occurred in the send process.
     NoController,
     /// The component stopped within the timeout.
     Stopped,
@@ -2102,7 +2102,7 @@ pub mod tests {
                 panic!("unexpected error stopping component {:?}", e);
             }
             Poll::Pending => {
-                panic!("future shoud have completed!");
+                panic!("future should have completed!");
             }
         }
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// Number of polls taken to produce the intial sample.
+/// Number of polls taken to produce the initial sample.
 pub const INITIAL_SAMPLE_POLLS: usize = 3;
 /// Number of polls to produce all subsequent samples.
 pub const SAMPLE_POLLS: usize = 5;

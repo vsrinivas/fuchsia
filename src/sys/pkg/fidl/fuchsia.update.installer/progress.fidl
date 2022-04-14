@@ -122,19 +122,19 @@ type State = strict union {
     ///
     7: complete CompleteData;
 
-    /// An error occured while preparing the install.
+    /// An error occurred while preparing the install.
     ///
     /// **This is a terminal state**
     ///
     8: fail_prepare FailPrepareData;
 
-    /// An error occured while fetching the required artifacts.
+    /// An error occurred while fetching the required artifacts.
     ///
     /// **This is a terminal state**
     ///
     9: fail_fetch FailFetchData;
 
-    /// An error occured while staging the new OS.
+    /// An error occurred while staging the new OS.
     ///
     /// **This is a terminal state**
     ///

@@ -279,7 +279,7 @@ func (f *filterVisitor) VisitDump(elem *DumpfileElement) {
 }
 
 func (f *filterVisitor) VisitReset(elem *ResetElement) {
-	// TODO: Check if Reset had an effect and output that a pid reuse occured.
+	// TODO: Check if Reset had an effect and output that a pid reuse occurred.
 	f.filter.reset()
 }
 

@@ -62,8 +62,8 @@ var (
 	// ErrNotSupported indicates that the requested operation is not supported
 	ErrNotSupported = errors.New("operation not supported")
 
-	// ErrIO indicates that an otherwise unspecified error occured during an I/O operation.
-	ErrIO = errors.New("error occured during I/O")
+	// ErrIO indicates that an otherwise unspecified error occurred during an I/O operation.
+	ErrIO = errors.New("error occurred during I/O")
 )
 
 // FileType describes the type of a given file.

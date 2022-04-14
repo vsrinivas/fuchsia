@@ -448,10 +448,10 @@ pub enum OpenBlobError {
     #[error("this blob is already open for write by another cache operation")]
     ConcurrentWrite,
 
-    #[error("an unspecified error occured during underlying I/O")]
+    #[error("an unspecified error occurred during underlying I/O")]
     UnspecifiedIo,
 
-    #[error("an unspecified error occured")]
+    #[error("an unspecified error occurred")]
     Internal,
 
     #[error("transport error")]
