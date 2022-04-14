@@ -1,0 +1,61 @@
+// TODO(fxbug.dev/98006): Once we are able to define these out of tree this
+// definition should be moved to indivisual products.
+{
+    collections: [
+        {
+            name: "google-tests",
+            environment: "#legacy-test-env",
+            durability: "transient",
+        },
+    ],
+    offer: [
+        {
+            // These hermetic protocols are offered to be used by tests.
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys2.EventSource",
+
+                // Tests can produce traces.
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#google-tests" ],
+        },
+
+        // These system capabilities are offered for use by the google tests.
+        {
+            protocol: [
+                "fuchsia.mediacodec.CodecFactory",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
+
+                // TODO: add any other required capabilities
+            ],
+            from: "parent",
+            to: "#google-tests",
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: [ "#google-tests" ],
+        },
+        {
+            storage: "tmp",
+            from: "self",
+            to: [ "#google-tests" ],
+        },
+        {
+            storage: "cache",
+            from: "self",
+            to: [ "#google-tests" ],
+        },
+        {
+            storage: "custom_artifacts",
+            from: "self",
+            to: "#google-tests",
+        },
+    ],
+}

@@ -57,5 +57,12 @@
             from: "#codec_factory",
             to: "#session-manager",
         },
+
+        // needed for certain non-hermetic tests.
+        {
+            protocol: [ "fuchsia.mediacodec.CodecFactory" ],
+            from: "#codec_factory",
+            to: [ "#test_manager" ],
+        },
     ],
 }
