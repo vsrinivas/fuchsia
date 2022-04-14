@@ -14,6 +14,8 @@ toc:
   path: /docs/contribute/governance/rfcs/create_rfc.md
 - title: "RFC template"
   path: /docs/contribute/governance/rfcs/TEMPLATE.md
+- title: "Best practices"
+  path: /docs/contribute/governance/rfcs/best_practices.md
 - heading: Proposals
 - title: "RFC-0001: RFC Process"
   path: /docs/contribute/governance/rfcs/0001_rfc_process.md

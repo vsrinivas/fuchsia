@@ -16,7 +16,8 @@ form](rfc_process.md). It is also summarized below.
 - Socialize your proposal.
 - [Draft](rfc_process.md#draft) your RFC using this [template](TEMPLATE.md).
   When ready to iterate, upload your CL and share it broadly to
-  <eng-council-discuss@fuchsia.dev>. See also [creating an RFC](create_rfc.md).
+  <eng-council-discuss@fuchsia.dev>. See also [creating an RFC](create_rfc.md)
+  and [RFC best practices](best_practices.md).
 - [Iterate](rfc_process.md#iterate) on your proposal with appropriate
   stakeholders.
 - As conversations on your proposal converge, and stakeholders indicate their

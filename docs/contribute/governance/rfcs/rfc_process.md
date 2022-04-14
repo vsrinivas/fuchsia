@@ -205,6 +205,9 @@ with the experts in their RFC [area](/docs/contribute/governance/areas). The set
 of stakeholders may initially be left empty or incomplete. If there is any
 ambiguity, they should consult FEC for assistance identifying stakeholders.
 
+> *Tip.* Consult the [RFC best practices doc](best_practices.md) for advice
+> about drafting and iterating on your RFC.
+
 > *Suggestion.* Consider marking the CL containing your RFC as a
 > "work-in-progress" until you are ready for feedback.
 

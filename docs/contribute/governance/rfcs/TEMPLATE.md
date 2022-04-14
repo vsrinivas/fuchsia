@@ -163,6 +163,12 @@ example, do we need to add or remove an entry from the project roadmap? Do we
 need to change the architecture document? Would end-developers benefit from
 documentation related to this proposal?
 
+[Don't use the RFC itself as documentation for your feature.][rfcs-vs-docs]
+Documentation needs to kept up-to-date, and RFCs shouldn't change once they're
+accepted.
+
+[rfcs-vs-docs]: best_practices.md#rfcs-vs-docs
+
 _Area: FIDL_
 
 There are potentially several kinds of documentation to address.
