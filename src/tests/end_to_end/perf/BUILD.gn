@@ -131,8 +131,10 @@ shards = [
   "5",
   "6",
   "7",
+  "8",
+  "9",
 ]
-total_shards = "8"
+total_shards = "10"
 shard_test_list = [
   "fidl_microbenchmarks_test",
   "netstack_iperf_test",
