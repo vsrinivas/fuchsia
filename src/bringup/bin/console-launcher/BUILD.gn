@@ -24,8 +24,6 @@ group("tests") {
 
 source_set("lib") {
   sources = [
-    "autorun.cc",
-    "autorun.h",
     "console_launcher.cc",
     "console_launcher.h",
     "virtcon-setup.cc",
@@ -37,6 +35,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zircon-internal",
@@ -52,10 +51,6 @@ source_set("lib") {
     # console_launcher.h has #include <fbl/unique_fd.h>
     # console_launcher.h has #include <lib/zx/status.h>
     "//zircon/system/ulib/fbl",
-
-    # autorun.h has #include <lib/zx/job.h>
-    "//zircon/system/ulib/zx",
-    "//zircon/system/ulib/zxc",
   ]
 }
 
@@ -68,7 +63,10 @@ executable("bin") {
     ":lib",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl",
     "//src/sys/lib/stdout-to-debuglog/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
   ]
@@ -86,7 +84,6 @@ executable("unittests") {
 
   deps = [
     ":lib",
-    "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async",
@@ -119,7 +116,6 @@ test("virtcon-setup-unittests") {
   sources = [ "virtcon-setup-unittests.cc" ]
   deps = [
     ":lib",
-    "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/mock-boot-arguments",

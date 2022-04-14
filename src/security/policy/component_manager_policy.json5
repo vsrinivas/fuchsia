@@ -216,7 +216,7 @@
             {
                 source_moniker: "/bootstrap/fshost",
                 source: "component",
-                source_name: "bin-not-delayed",
+                source_name: "bin",
                 capability: "directory",
                 target_monikers: [
                     "/bootstrap/console-launcher",
@@ -244,6 +244,7 @@
                 capability: "directory",
                 target_monikers: [
                     "/bootstrap",
+                    "/bootstrap/console-launcher",
                     "/bootstrap/driver_manager",
                     "/bootstrap/fshost",
                     "/core",
@@ -254,35 +255,16 @@
             {
                 source_moniker: "/bootstrap/fshost",
                 source: "component",
-                source_name: "pkgfs-not-delayed",
-                capability: "directory",
-                target_monikers: [
-                    "/bootstrap/console-launcher",
-                    "/bootstrap/fshost",
-                ],
-            },
-            {
-                source_moniker: "/bootstrap/fshost",
-                source: "component",
                 source_name: "minfs",
                 capability: "directory",
                 target_monikers: [
                     "/bootstrap",
+                    "/bootstrap/console-launcher",
                     "/bootstrap/fshost",
                     "/core",
                     "/core/appmgr",
                     "/core/minfs",
                     "/core/ssh-key-manager",
-                ],
-            },
-            {
-                source_moniker: "/bootstrap/fshost",
-                source: "component",
-                source_name: "minfs-not-delayed",
-                capability: "directory",
-                target_monikers: [
-                    "/bootstrap/console-launcher",
-                    "/bootstrap/fshost",
                 ],
             },
             {
@@ -299,16 +281,6 @@
                     "/core/appmgr",
                     "/core/system-updater",
                     "/core/system-update-checker",
-                ],
-            },
-            {
-                source_moniker: "/bootstrap/fshost",
-                source: "component",
-                source_name: "system-not-delayed",
-                capability: "directory",
-                target_monikers: [
-                    "/bootstrap/console-launcher",
-                    "/bootstrap/fshost",
                 ],
             },
             {

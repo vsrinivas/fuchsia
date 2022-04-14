@@ -537,14 +537,13 @@
         },
         {
             directory: [
-                "bin-not-delayed",
+                "bin",
                 "blob",
                 "install",
-                "minfs-not-delayed",
+                "minfs",
                 "mnt",
-                "pkgfs-not-delayed",
+                "pkgfs",
                 "system",
-                "system-not-delayed",
             ],
             from: "#fshost",
             to: [ "#console-launcher" ],

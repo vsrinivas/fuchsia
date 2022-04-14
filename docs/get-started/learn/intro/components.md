@@ -98,6 +98,7 @@ The command outputs the following report:
                         fuchsia.tracing.provider.Registry
                         svc_blobfs
   Exposed Capabilities: bin
+                        bin-not-delayed
                         blob
                         build-info
                         config-data
@@ -106,20 +107,20 @@ The command outputs the following report:
                         factory
                         fuchsia.fshost.Admin
                         fuchsia.fshost.BlockWatcher
-                        fuchsia.fshost.Loader
                         fuchsia.update.verify.BlobfsVerifier
                         install
                         minfs
+                        minfs-not-delayed
                         mnt
                         pkgfs
-                        pkgfs-delayed
-                        pkgfs-packages-delayed
+                        pkgfs-not-delayed
+                        pkgfs-packages
                         root-ssl-certificates
                         system
-                        system-delayed
+                        system-not-delayed
                         tmp
        Execution State: Running
-          Start reason: '/bootstrap/base_resolver' requested capability 'pkgfs-packages-delayed'
+          Start reason: '/bootstrap/base_resolver' requested capability 'pkgfs-packages'
            Running for: 1807734933 ticks
                 Job ID: 2546
             Process ID: 2716

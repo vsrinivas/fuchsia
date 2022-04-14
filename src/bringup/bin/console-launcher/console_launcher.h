@@ -6,6 +6,7 @@
 #define SRC_BRINGUP_BIN_CONSOLE_LAUNCHER_CONSOLE_LAUNCHER_H_
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/status.h>
@@ -31,7 +32,7 @@ zx::status<Arguments> GetArguments(const fidl::ClientEnd<fuchsia_boot::Arguments
 class ConsoleLauncher {
  public:
   static zx::status<ConsoleLauncher> Create();
-  zx_status_t LaunchShell(const Arguments& args);
+  zx_status_t LaunchShell(const Arguments& args, fidl::ClientEnd<fuchsia_io::Directory> root);
   zx_status_t WaitForShellExit();
 
   zx::job& shell_job() { return shell_job_; }

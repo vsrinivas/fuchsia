@@ -102,9 +102,9 @@ driver host and then executed.
 
 The drivers stored in packages aren't available when driver manager starts, as
 those are stored on disk and drivers must be running before block devices for
-filesystems can appear. driver manager starts a thread that
-[waits on a synchronous open to the /system-delayed handle][wait-for-system],
-and once this open call succeeds it loads the drivers in the system package.
+filesystems can appear. driver manager starts a thread that [waits on a
+synchronous open to the /system handle][wait-for-system], and once this open
+call succeeds it loads the drivers in the system package.
 
 #### fshost
 
@@ -126,25 +126,12 @@ usable. Once fvm and zxcrypt are loaded, fshost will find the appropriate block
 devices and start the [minfs][minfs] and [blobfs][blobfs] filesystems, which are
 needed for a fully functioning system.
 
-Currently fshost runs a [memfs][memfs] for its [outgoing directory][glossary.outgoing-directory],
-and [mounts][fs-mount] handles into this memfs as filesystems come online. This
-means that attempting to access a fshost-provided directory too early will
-result in components seeing an empty directory. The requests are not pipelined
-in such a way that they are ignored until the given filesystem is available.
-
-To work around this fshost provides two directories,
-[`/pkgfs-delayed`][pkgfs-delayed] and [`/system-delayed`][system-delayed], which
-do ignore requests until they are able to properly service them.
-
-The `/pkgfs-delayed` handle is provided to component manager, which uses it to
-load components that are stored in packages.
-
 #### appmgr
 
-[Appmgr][glossary.appmgr] runs the legacy component framework.
-Appmgr is [stored in a package][appmgr-pkg], unlike fshost and driver manager,
-which are stored in bootfs, so component manager uses the `/pkgfs-delayed`
-handle from fshost to load appmgr.
+[Appmgr][glossary.appmgr] runs the legacy component framework. Appmgr is [stored
+in a package][appmgr-pkg], unlike fshost and driver manager, which are stored in
+bootfs, so component manager uses the `/pkgfs` handle from fshost to load
+appmgr.
 
 Appmgr coordinates with component manager to share capabilities between legacy
 components and the rest of the system. Component manager forwards external
@@ -160,19 +147,19 @@ parent starts.
 
 In order to get the system running, appmgr is [marked as an eager
 component][appmgr-is-eager]. Since appmgr is stored in a package this causes
-component manager to attempt to load appmgr, and thus access the /pkgfs-delayed
-handle from fshost, causing fshost to be started.
+component manager to attempt to load appmgr, and thus access the `/pkgfs` handle
+from fshost, causing fshost to be started.
 
 Once running, fshost attempts to access the `/dev` handle from driver manager,
 which causes driver manager to start. Together they bring up drivers and
 filesystems, eventually culminating in pkgfs running. At this point fshost
-starts responding to requests on the `/pkgfs-delayed` handle, and component
-manager finishes loading appmgr and starts it.
+starts responding to requests on the `/pkgfs` handle, and component manager
+finishes loading appmgr and starts it.
 
 ![A sequence diagram showing that appmgr loading begins due to it being an eager
-component, fshost starting due to the /pkgfs-delayed handle, driver manager
-starting due to the /dev handle, block devices appearing, filesystems appearing,
-and then appmgr successfully starting.](images/boot-sequence-diagram.png)
+component, fshost starting due to the /pkgfs handle, driver manager starting due
+to the /dev handle, block devices appearing, filesystems appearing, and then
+appmgr successfully starting.](images/boot-sequence-diagram.png)
 
 ## Legacy component framework {#v1-components}
 
@@ -231,13 +218,11 @@ appmgr.
 [memfs]: /docs/concepts/filesystems/filesystems.md#memfs_an_in-memory_filesystem
 [micro-kernel]: https://en.wikipedia.org/wiki/Microkernel
 [minfs]: /docs/concepts/filesystems/minfs.md
-[pkgfs-delayed]: https://fuchsia.googlesource.com/fuchsia/+/5a6fe7db58d2869ccfbb22caf53343d40e57c6ba/src/sys/root/meta/fshost.cml#18
 [process-bootstrap]: /docs/concepts/process/program_loading.md
 [sysmgr-config]: https://fuchsia.googlesource.com/fuchsia/+/5a6fe7db58d2869ccfbb22caf53343d40e57c6ba/src/sys/sysmgr/sysmgr-configuration.md
 [sysmgr]: https://fuchsia.googlesource.com/fuchsia/+/7cf46e0c7a8e5e4c78dba846f867ab96bcce5c5b/src/sys/sysmgr/README.md
-[system-delayed]: https://fuchsia.googlesource.com/fuchsia/+/5a6fe7db58d2869ccfbb22caf53343d40e57c6ba/src/sys/root/meta/fshost.cml#19
 [userboot-loading]: /docs/concepts/process/userboot.md#kernel_loads_userboot
 [userboot]: /docs/concepts/process/userboot.md
 [userspace]: https://en.wikipedia.org/wiki/User_space
-[wait-for-system]: https://fuchsia.googlesource.com/fuchsia/+/5a6fe7db58d2869ccfbb22caf53343d40e57c6ba/src/devices/driver_manager/system-instance.cc#726
+[wait-for-system]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/devices/bin/driver_manager/driver_loader.cc;l=123;drc=62174108e02c85feb7a18df5cc03dcf8ec7d8625
 [zxcrypt]: /docs/concepts/filesystems/zxcrypt.md

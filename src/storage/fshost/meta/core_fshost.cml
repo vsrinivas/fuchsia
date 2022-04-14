@@ -34,6 +34,11 @@
             path: "/fs/bin",
         },
         {
+            directory: "bin",
+            rights: [ "rx*" ],
+            path: "/delayed/fs/bin",
+        },
+        {
             directory: "minfs-not-delayed",
             rights: [ "rw*" ],
             path: "/fs/data",
@@ -120,6 +125,7 @@
         },
         {
             directory: [
+                "bin",
                 "bin-not-delayed",
                 "build-info",
                 "config-data",

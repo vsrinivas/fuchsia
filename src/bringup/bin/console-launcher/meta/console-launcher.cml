@@ -12,14 +12,8 @@
         binary: "bin/console-launcher",
     },
     use: [
-        // console-launcher adds all of its namespace entries (except for system-delayed) to the
-        // shell's namespace. The "not-delayed" versions of the pkgfs and minfs directories are used
-        // so that interacting with them before they start serving will not hang the shell (e.g.
-        // running `ls /data` if minfs is not serving will return empty instead of hanging).
-        // The pkgfs directories will not start serving if e.g. an FVM block device is not mounted
-        // (and therefore blobfs is not started).
         {
-            directory: "bin-not-delayed",
+            directory: "bin",
             rights: [ "rx*" ],
             path: "/bin",
         },
@@ -34,7 +28,7 @@
             path: "/blob",
         },
         {
-            directory: "minfs-not-delayed",
+            directory: "minfs",
             rights: [ "rw*" ],
             path: "/data",
         },
@@ -64,19 +58,14 @@
             path: "/mnt",
         },
         {
-            directory: "pkgfs-not-delayed",
+            directory: "pkgfs",
             rights: [ "rx*" ],
             path: "/pkgfs",
         },
         {
-            directory: "system-not-delayed",
+            directory: "system",
             rights: [ "rx*" ],
             path: "/system",
-        },
-        {
-            directory: "system",
-            rights: [ "r*" ],
-            path: "/system-delayed",
         },
         {
             directory: "tmp",

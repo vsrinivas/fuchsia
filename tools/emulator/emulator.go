@@ -834,11 +834,7 @@ func (i *Instance) checkForLogMessages(b *bufio.Reader, msgs []string) error {
 
 		// Drop the clearing preamble as it makes it difficult to see output
 		// when there's multiple emulator runs in a single binary.
-		toPrint := line
-		if strings.HasPrefix(toPrint, emuClearPrefix) {
-			toPrint = toPrint[len(emuClearPrefix):]
-		}
-		fmt.Print(toPrint)
+		fmt.Print(strings.TrimPrefix(line, emuClearPrefix))
 		for i, msg := range msgs {
 			if strings.Contains(line, msg) {
 				msgs = append(msgs[:i], msgs[i+1:]...)

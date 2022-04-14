@@ -10,10 +10,8 @@
 #include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fd.h>
-#include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fit/defer.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zircon-internal/paths.h>
@@ -148,7 +146,8 @@ zx::status<Arguments> GetArguments(const fidl::ClientEnd<fuchsia_boot::Arguments
   return zx::ok(ret);
 }
 
-zx_status_t ConsoleLauncher::LaunchShell(const Arguments& args) {
+zx_status_t ConsoleLauncher::LaunchShell(const Arguments& args,
+                                         fidl::ClientEnd<fuchsia_io::Directory> root) {
   if (zx_status_t status = WaitForFile(args.device.c_str(), zx::time::infinite());
       status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "failed to wait for console '" << args.device << "'";
@@ -192,48 +191,36 @@ zx_status_t ConsoleLauncher::LaunchShell(const Arguments& args) {
   const char* argv[] = {ZX_SHELL_DEFAULT, nullptr};
   const char* environ[] = {args.term.c_str(), nullptr};
 
-  std::vector<fdio_spawn_action_t> actions;
-  // Add an action to set the new process name.
-  actions.emplace_back(fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_SET_NAME,
-      .name =
-          {
-              .data = "sh:console",
-          },
-  });
+  fdio_spawn_action_t actions[] = {
+      // Add an action to set the new process name.
+      {
+          .action = FDIO_SPAWN_ACTION_SET_NAME,
+          .name =
+              {
+                  .data = "sh:console",
+              },
+      },
 
-  // Get our current namespace so we can pass it to the shell process.
-  fdio_flat_namespace_t* flat = nullptr;
-  if (zx_status_t status = fdio_ns_export_root(&flat); status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "failed to get namespace root";
-    return status;
-  }
-  auto free_flat = fit::defer([&flat]() { fdio_ns_free_flat_ns(flat); });
+      // Add an action to mount the pseudo directory in the shell's namespace.
+      {
+          .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+          .ns =
+              {
+                  .prefix = "/",
+                  .handle = root.TakeChannel().release(),
+              },
+      },
 
-  // Go through each directory in our namespace and copy all of them except /system-delayed.
-  for (size_t i = 0; i < flat->count; i++) {
-    if (strcmp(flat->path[i], "/system-delayed") == 0) {
-      continue;
-    }
-    actions.emplace_back(fdio_spawn_action_t{
-        .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-        .ns =
-            {
-                .prefix = flat->path[i],
-                .handle = flat->handle[i],
-            },
-    });
-  }
-
-  // Add an action to transfer the STDIO handle.
-  actions.emplace_back(fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_TRANSFER_FD,
-      .fd =
-          {
-              .local_fd = fd.release(),
-              .target_fd = FDIO_FLAG_USE_FOR_STDIO,
-          },
-  });
+      // Add an action to transfer the STDIO handle.
+      {
+          .action = FDIO_SPAWN_ACTION_TRANSFER_FD,
+          .fd =
+              {
+                  .local_fd = fd.release(),
+                  .target_fd = FDIO_FLAG_USE_FOR_STDIO,
+              },
+      },
+  };
 
   constexpr uint32_t flags =
       FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO & ~FDIO_SPAWN_CLONE_NAMESPACE;
@@ -241,8 +228,8 @@ zx_status_t ConsoleLauncher::LaunchShell(const Arguments& args) {
   FX_LOGS(INFO) << "launching " << argv[0] << " (" << actions[0].name.data << ")";
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   if (zx_status_t status =
-          fdio_spawn_etc(shell_job_.get(), flags, argv[0], argv, environ, actions.size(),
-                         actions.data(), shell_process_.reset_and_get_address(), err_msg);
+          fdio_spawn_etc(shell_job_.get(), flags, argv[0], argv, environ, std::size(actions),
+                         actions, shell_process_.reset_and_get_address(), err_msg);
       status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "failed to launch console shell: " << err_msg;
     return status;
