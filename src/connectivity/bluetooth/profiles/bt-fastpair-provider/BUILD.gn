@@ -11,8 +11,10 @@ rustc_binary("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.gatt2:fuchsia.bluetooth.gatt2-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
     "//src/connectivity/bluetooth/lib/async-helpers",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//src/lib/async-utils",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
@@ -31,6 +33,7 @@ rustc_binary("bin") {
   sources = [
     "src/error.rs",
     "src/gatt_service.rs",
+    "src/host_watcher.rs",
     "src/main.rs",
     "src/types.rs",
   ]

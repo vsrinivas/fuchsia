@@ -7,6 +7,7 @@ use tracing::info;
 
 mod error;
 mod gatt_service;
+mod host_watcher;
 mod types;
 
 use gatt_service::GattService;

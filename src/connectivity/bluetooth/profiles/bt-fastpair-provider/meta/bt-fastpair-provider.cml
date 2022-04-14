@@ -9,7 +9,10 @@
     },
     use: [
         {
-            protocol: [ "fuchsia.bluetooth.gatt2.Server" ],
+            protocol: [
+                "fuchsia.bluetooth.gatt2.Server",
+                "fuchsia.bluetooth.sys.HostWatcher",
+            ],
             from: "parent",
         },
     ],
