@@ -17,7 +17,6 @@
 #include <acpica/acpi.h>
 #include <acpica/actypes.h>
 
-#include "acpi-private.h"
 #include "src/devices/board/lib/acpi/acpi.h"
 #include "src/devices/board/lib/acpi/pci.h"
 
@@ -82,9 +81,11 @@ class x64Pciroot : public PcirootBase {
 
 namespace acpi {
 
-ACPI_STATUS GetPciRootIrqRouting(ACPI_HANDLE root_obj, x64Pciroot::Context* context);
+ACPI_STATUS GetPciRootIrqRouting(acpi::Acpi* acpi, ACPI_HANDLE root_obj,
+                                 x64Pciroot::Context* context);
 
 }  // namespace acpi
 
 __END_CDECLS
-#endif  // SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_PCI_H_
+
+#endif

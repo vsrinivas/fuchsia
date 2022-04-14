@@ -25,6 +25,7 @@ shared_deps = [
   "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
   "//src/devices/lib/acpi",
   "//src/devices/lib/iommu",
+  "//src/devices/pci/lib/pci",
   "//src/lib/ddk:ddk-deprecated-binding-headers",
   "//third_party/acpica",
   "//zircon/system/ulib/fbl",
@@ -45,6 +46,16 @@ source_set("acpi") {
     "manager.cc",
     "resources.cc",
   ]
+
+  if (platform_enable_user_pci) {
+    sources += [
+      "pci.cc",
+      "pci_irqs.cc",
+      "pciroot.cc",
+    ]
+    defines = [ "ENABLE_USER_PCI" ]
+  }
+
   public_deps = shared_public_deps
   deps = shared_deps + [ "//src/lib/ddk" ]
 

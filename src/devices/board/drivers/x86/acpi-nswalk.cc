@@ -27,7 +27,6 @@
 #include "dev.h"
 #include "errors.h"
 #include "methods.h"
-#include "pci.h"
 #include "power.h"
 #include "src/devices/board/lib/acpi/device.h"
 #include "src/devices/board/lib/acpi/manager.h"

@@ -95,7 +95,6 @@ fuchsia_driver("platform-bus-x86-driver") {
     "init.cc",
     "iommu-driver-tests.cc",
     "methods.cc",
-    "pciroot.cc",
     "power.cc",
     "sysmem.cc",
     "x86-driver-tests.cc",
@@ -106,12 +105,7 @@ fuchsia_driver("platform-bus-x86-driver") {
   # Userspace PCI feature flag.  The scaffolding for the userspace pci bus
   # driver is in pci.cpp.  If not enabled then the kernel pci bus driver
   # initialization code in ACPI (kpci.cc) will be built instead.
-  if (platform_enable_user_pci) {
-    sources += [
-      "pci.cc",
-      "pci_irqs.cc",
-    ]
-  } else {
+  if (!platform_enable_user_pci) {
     sources += [ "kpci.cc" ]
   }
   configs += [ ":config" ]

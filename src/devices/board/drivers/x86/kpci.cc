@@ -15,11 +15,11 @@
 
 #include "acpi-private.h"
 #include "methods.h"
-#include "pci.h"
 #include "src/devices/board/lib/acpi/acpi.h"
 #include "src/devices/board/lib/acpi/device.h"
 #include "src/devices/board/lib/acpi/resources.h"
 #include "src/devices/board/lib/acpi/status.h"
+#include "src/devices/lib/iommu/iommu.h"
 
 #define PCI_HID ((char*)"PNP0A03")
 #define PCIE_HID ((char*)"PNP0A08")
@@ -609,3 +609,79 @@ zx_status_t pci_init(zx_device_t* platform_bus, ACPI_HANDLE object,
 
   return ZX_OK;
 }
+
+static zx_status_t pciroot_op_get_bti(void* /*context*/, uint32_t bdf, uint32_t index,
+                                      zx_handle_t* bti) {
+  // The x86 IOMMU world uses PCI BDFs as the hardware identifiers, so there
+  // will only be one BTI per device.
+  if (index != 0) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  // For dummy IOMMUs, the bti_id just needs to be unique.  For Intel IOMMUs,
+  // the bti_ids correspond to PCI BDFs.
+  zx_handle_t iommu_handle;
+  zx_status_t status = iommu_manager_iommu_for_bdf(bdf, &iommu_handle);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return zx_bti_create(iommu_handle, 0, bdf, bti);
+}
+
+static zx_status_t pciroot_op_get_pci_platform_info(void* ctx, pci_platform_info_t* info) {
+  acpi::Device* device = static_cast<acpi::Device*>(ctx);
+  memset(info, 0, sizeof(*info));
+  info->acpi_bdfs_count = device->pci_bdfs().size();
+  info->acpi_bdfs_list = device->pci_bdfs().data();
+  return ZX_OK;
+}
+
+static bool pciroot_op_driver_should_proxy_config(void* /*ctx*/) { return false; }
+
+static zx_status_t pciroot_op_config_read8(void*, const pci_bdf_t*, uint16_t, uint8_t*) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t pciroot_op_config_read16(void*, const pci_bdf_t*, uint16_t, uint16_t*) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t pciroot_op_config_read32(void*, const pci_bdf_t*, uint16_t, uint32_t*) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t pciroot_op_config_write8(void*, const pci_bdf_t*, uint16_t, uint8_t) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t pciroot_op_config_write16(void*, const pci_bdf_t*, uint16_t, uint16_t) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t pciroot_op_config_write32(void*, const pci_bdf_t*, uint16_t, uint32_t) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t pciroot_op_allocate_msi(void*, uint32_t, bool, zx_handle_t*) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+static zx_status_t pciroot_op_get_address_space(void*, size_t, zx_paddr_t, pci_address_space_t,
+                                                bool, zx_paddr_t*, zx_handle_t*, zx_handle_t*) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+static pciroot_protocol_ops_t pciroot_proto = {
+    .get_bti = pciroot_op_get_bti,
+    .get_pci_platform_info = pciroot_op_get_pci_platform_info,
+    .driver_should_proxy_config = pciroot_op_driver_should_proxy_config,
+    .config_read8 = pciroot_op_config_read8,
+    .config_read16 = pciroot_op_config_read16,
+    .config_read32 = pciroot_op_config_read32,
+    .config_write8 = pciroot_op_config_write8,
+    .config_write16 = pciroot_op_config_write16,
+    .config_write32 = pciroot_op_config_write32,
+    .get_address_space = pciroot_op_get_address_space,
+    .allocate_msi = pciroot_op_allocate_msi,
+};
+
+pciroot_protocol_ops_t* get_pciroot_ops(void) { return &pciroot_proto; }
