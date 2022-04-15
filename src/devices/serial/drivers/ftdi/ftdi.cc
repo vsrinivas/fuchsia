@@ -243,7 +243,6 @@ zx_status_t FtdiDevice::SetBaudrate(uint32_t baudrate) {
     case kFtdiType2232c:
     case kFtdiTypeBm:
       CalcDividers(&baudrate, kFtdiCClk, 16, &whole, &fraction);
-      baudrate_ = baudrate;
       break;
     default:
       return ZX_ERR_INVALID_ARGS;
