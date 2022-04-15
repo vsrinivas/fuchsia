@@ -617,7 +617,7 @@ impl InputDispatcher {
                 &self.pointers,
                 time_in_ms,
                 wl_pointer::Axis::VerticalScroll,
-                *scroll_v as f32,
+                -(*scroll_v as f32),
             )?;
             needs_frame = true;
         }
