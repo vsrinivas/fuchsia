@@ -1089,6 +1089,10 @@ Do the following:
 
 **Congratulations! You're now all set with the Fuchsia SDK!**
 
+## Next steps {:#next-steps}
+
+Learn more about the Fuchsia platform and tools in [Fuchsia SDK Fundamentals][fundamentals].
+
 ## Appendices
 
 ### Clean up the environment before and after walkthrough {:#clean-up-the-environment-before-and-after-walkthrough}
@@ -1186,3 +1190,4 @@ is available for the Fuchsia package server.
 [inspect-overview]: /docs/development/diagnostics/inspect/README.md
 [google-test]: https://google.github.io/googletest/
 [ffx]: https://fuchsia.dev/reference/tools/sdk/ffx
+[fundamentals]: /docs/get-started/sdk/learn/README.md
