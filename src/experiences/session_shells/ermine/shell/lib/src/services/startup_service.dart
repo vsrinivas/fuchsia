@@ -186,11 +186,13 @@ class StartupService extends activity.Listener {
             .subtract(Duration(seconds: 5))
             .isAfter(_lastActivityReport!)) {
       _lastActivityReport = DateTime.now();
-      _activityTracker.reportDiscreteActivity(
-        activity.DiscreteActivity.withGeneric(
-            activity.GenericActivity(label: type)),
-        eventTime,
-      );
+      _activityTracker
+          .reportDiscreteActivity(
+            activity.DiscreteActivity.withGeneric(
+                activity.GenericActivity(label: type)),
+            eventTime,
+          )
+          .catchError((e) => log.shout('Failed to report $type activity: $e'));
     }
     // Also exit from idle state.
     onIdle(idle: false);
