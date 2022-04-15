@@ -4,12 +4,14 @@
 # found in the LICENSE file.
 
 import argparse
+import collections
 import json
 import urllib.parse
 
 
 def generate_omaha_client_config(configs, key_config):
-    packages = []
+    packages_by_service_url = collections.defaultdict(list)
+    server_by_service_url = {}
 
     for config in configs:
         package = {}
@@ -41,15 +43,22 @@ def generate_omaha_client_config(configs, key_config):
                         'repo': channel,
                         'appid': realm['app_id'],
                     })
+        package['channel_config'] = channel_config
 
-        if 'service_url' in config:
-            service_url = config['service_url']
-            package['service_url'] = service_url
+        service_url = config.get('service_url', None)
+        packages_by_service_url[service_url].append(package)
 
-            if service_url in key_config:
-                latest = key_config[service_url]['latest']
-                historical = key_config[service_url]['historical']
-                package['public_keys'] = {
+    for service_url in packages_by_service_url:
+        if service_url is None:
+            continue
+
+        latest = key_config[service_url]['latest']
+        historical = key_config[service_url]['historical']
+
+        server_by_service_url[service_url] = {
+            'service_url': service_url,
+            'public_keys':
+                {
                     "latest": {
                         'key': latest['key'],
                         'id': int(latest['id']),
@@ -62,12 +71,20 @@ def generate_omaha_client_config(configs, key_config):
                             } for s in historical
                         ],
                 }
+        }
 
-        package['channel_config'] = channel_config
-
-        packages.append(package)
-
-    return {'packages': packages}
+    return {
+        'eager_package_configs':
+            [
+                {
+                    "server":
+                        server_by_service_url[service_url]
+                        if service_url else None,
+                    "packages":
+                        packages
+                } for service_url, packages in packages_by_service_url.items()
+            ]
+    }
 
 
 def generate_pkg_resolver_config(configs, key_config):

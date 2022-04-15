@@ -41,7 +41,7 @@ class TestEagerPackageConfig(unittest.TestCase):
     def makeConfigs(self):
         return [
             {
-                "url": "fuchsia-pkg://example.com/package",
+                "url": "fuchsia-pkg://example.com/package_service_1",
                 "default_channel": "stable",
                 "flavor": "debug",
                 "executable": True,
@@ -59,9 +59,24 @@ class TestEagerPackageConfig(unittest.TestCase):
                 "service_url": "https://example.com",
             },
             {
-                "url": "fuchsia-pkg://example.com/package2",
+                "url": "fuchsia-pkg://example.com/package_service_2",
+                "realms": [{
+                    "app_id": "5c6d7e8f",
+                    "channels": ["stable"],
+                }],
+                "service_url": "https://example.com",
+            },
+            {
+                "url": "fuchsia-pkg://example.com/package_noservice_1",
                 "realms": [{
                     "app_id": "3c4d5e6f",
+                    "channels": ["stable"],
+                }],
+            },
+            {
+                "url": "fuchsia-pkg://example.com/package_noservice_2",
+                "realms": [{
+                    "app_id": "4c5d6e7f",
                     "channels": ["stable"],
                 }],
             },
@@ -72,72 +87,118 @@ class TestEagerPackageConfig(unittest.TestCase):
         key_config = self.makeKeyConfig()
         self.assertEqual(
             generate_omaha_client_config(configs, key_config), {
-                "packages":
+                "eager_package_configs":
                     [
                         {
-                            "url": "fuchsia-pkg://example.com/package",
-                            "flavor": "debug",
-                            "channel_config":
+                            "server":
                                 {
-                                    "channels":
-                                        [
-                                            {
-                                                "name": "stable",
-                                                "repo": "stable",
-                                                "appid": "1a2b3c4d",
+                                    'service_url': 'https://example.com',
+                                    'public_keys':
+                                        {
+                                            'latest': {
+                                                'id': 123,
+                                                'key': 'foo',
                                             },
-                                            {
-                                                "name": "beta",
-                                                "repo": "beta",
-                                                "appid": "1a2b3c4d",
-                                            },
-                                            {
-                                                "name": "alpha",
-                                                "repo": "alpha",
-                                                "appid": "1a2b3c4d",
-                                            },
-                                            {
-                                                "name": "test",
-                                                "repo": "test",
-                                                "appid": "2b3c4d5e",
-                                            },
-                                        ],
-                                    "default_channel": "stable",
+                                            'historical':
+                                                [
+                                                    {
+                                                        'id': 246,
+                                                        'key': 'bar',
+                                                    }, {
+                                                        'id': 369,
+                                                        'key': 'baz',
+                                                    }
+                                                ],
+                                        }
                                 },
-                            'service_url': 'https://example.com',
-                            'public_keys':
-                                {
-                                    'latest': {
-                                        'id': 123,
-                                        'key': 'foo',
-                                    },
-                                    'historical':
-                                        [
+                            "packages":
+                                [
+                                    {
+                                        "url":
+                                            "fuchsia-pkg://example.com/package_service_1",
+                                        "flavor":
+                                            "debug",
+                                        "channel_config":
                                             {
-                                                'id': 246,
-                                                'key': 'bar',
-                                            },
-                                            {
-                                                'id': 369,
-                                                'key': 'baz',
-                                            },
-                                        ],
-                                },
-                        },
-                        {
-                            "url": "fuchsia-pkg://example.com/package2",
-                            "channel_config":
-                                {
-                                    "channels":
-                                        [
-                                            {
-                                                "name": "stable",
-                                                "repo": "stable",
-                                                "appid": "3c4d5e6f",
+                                                "channels":
+                                                    [
+                                                        {
+                                                            "name": "stable",
+                                                            "repo": "stable",
+                                                            "appid": "1a2b3c4d",
+                                                        },
+                                                        {
+                                                            "name": "beta",
+                                                            "repo": "beta",
+                                                            "appid": "1a2b3c4d",
+                                                        },
+                                                        {
+                                                            "name": "alpha",
+                                                            "repo": "alpha",
+                                                            "appid": "1a2b3c4d",
+                                                        },
+                                                        {
+                                                            "name": "test",
+                                                            "repo": "test",
+                                                            "appid": "2b3c4d5e",
+                                                        },
+                                                    ],
+                                                "default_channel": "stable",
                                             }
-                                        ],
-                                }
-                        },
+                                    },
+                                    {
+                                        "url":
+                                            "fuchsia-pkg://example.com/package_service_2",
+                                        "channel_config":
+                                            {
+                                                "channels":
+                                                    [
+                                                        {
+                                                            "name": "stable",
+                                                            "repo": "stable",
+                                                            "appid": "5c6d7e8f",
+                                                        },
+                                                    ],
+                                            }
+                                    },
+                                ]
+                        }, {
+                            "server":
+                                None,
+                            "packages":
+                                [
+                                    {
+                                        "url":
+                                            "fuchsia-pkg://example.com/package_noservice_1",
+                                        "channel_config":
+                                            {
+                                                "channels":
+                                                    [
+                                                        {
+                                                            "name": "stable",
+                                                            "repo": "stable",
+                                                            "appid": "3c4d5e6f",
+                                                        }
+                                                    ],
+                                            }
+                                    },
+                                    {
+                                        "url":
+                                            "fuchsia-pkg://example.com/package_noservice_2",
+                                        "channel_config":
+                                            {
+                                                "channels":
+                                                    [
+                                                        {
+                                                            "name": "stable",
+                                                            "repo": "stable",
+                                                            "appid": "4c5d6e7f",
+                                                        }
+                                                    ],
+                                            }
+                                    },
+                                ]
+                        }
                     ]
             })
 
@@ -145,7 +206,7 @@ class TestEagerPackageConfig(unittest.TestCase):
         configs = [
             {
                 "url":
-                    "fuchsia-pkg://example.com/package",
+                    "fuchsia-pkg://example.com/package_service_1",
                 "default_channel":
                     "wrong",
                 "realms":
@@ -169,11 +230,22 @@ class TestEagerPackageConfig(unittest.TestCase):
                 "packages":
                     [
                         {
-                            "url": "fuchsia-pkg://example.com/package",
-                            "executable": True,
+                            "url":
+                                "fuchsia-pkg://example.com/package_service_1",
+                            "executable":
+                                True,
                         },
                         {
-                            "url": "fuchsia-pkg://example.com/package2",
+                            "url":
+                                "fuchsia-pkg://example.com/package_service_2",
+                        },
+                        {
+                            "url":
+                                "fuchsia-pkg://example.com/package_noservice_1",
+                        },
+                        {
+                            "url":
+                                "fuchsia-pkg://example.com/package_noservice_2",
                         },
                     ]
             })

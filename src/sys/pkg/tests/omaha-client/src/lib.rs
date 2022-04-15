@@ -824,38 +824,42 @@ async fn test_omaha_client_update_multi_app() {
         ])
         .eager_package_config(json!(
         {
-            "packages":
-            [
+            "eager_package_configs": [
                 {
-                    "url": "fuchsia-pkg://example.com/package",
-                    "flavor": "debug",
-                    "channel_config":
+                    "packages":
+                    [
                         {
-                            "channels":
-                                [
-                                    {
-                                        "name": "stable",
-                                        "repo": "stable",
-                                        "appid": "foo"
-                                    },
-                                ],
-                            "default_channel": "stable"
-                        }
-                },
-                {
-                    "url": "fuchsia-pkg://example.com/package2",
-                    "channel_config":
+                            "url": "fuchsia-pkg://example.com/package",
+                            "flavor": "debug",
+                            "channel_config":
+                                {
+                                    "channels":
+                                        [
+                                            {
+                                                "name": "stable",
+                                                "repo": "stable",
+                                                "appid": "foo"
+                                            },
+                                        ],
+                                    "default_channel": "stable"
+                                }
+                        },
                         {
-                            "channels":
-                                [
-                                    {
-                                        "name": "stable",
-                                        "repo": "stable",
-                                        "appid": "bar"
-                                    }
-                                ],
-                            "default_channel": "stable"
+                            "url": "fuchsia-pkg://example.com/package2",
+                            "channel_config":
+                                {
+                                    "channels":
+                                        [
+                                            {
+                                                "name": "stable",
+                                                "repo": "stable",
+                                                "appid": "bar"
+                                            }
+                                        ],
+                                    "default_channel": "stable"
+                                }
                         }
+                    ]
                 }
             ]
         }))

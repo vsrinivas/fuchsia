@@ -605,6 +605,7 @@ mod tests {
         let system_app = App::builder("system_app_id", [1]).build();
         let mut app_set = FuchsiaAppSet::new(system_app.clone());
         let config = EagerPackageConfigs {
+            server: None,
             packages: vec![
                 EagerPackageConfig {
                     url: PkgUrl::parse("fuchsia-pkg://example.com/package").unwrap(),
@@ -638,8 +639,6 @@ mod tests {
                             },
                         ],
                     },
-                    service_url: None,
-                    omaha_public_keys: None,
                 },
                 EagerPackageConfig {
                     url: PkgUrl::parse("fuchsia-pkg://example.com/package2").unwrap(),
@@ -653,8 +652,6 @@ mod tests {
                             check_interval_secs: None,
                         }],
                     },
-                    service_url: None,
-                    omaha_public_keys: None,
                 },
             ],
         };
@@ -737,8 +734,6 @@ mod tests {
                 default_channel: Some("stable".into()),
                 known_channels: vec![stable_channel_config.clone()],
             },
-            service_url: None,
-            omaha_public_keys: None,
         };
         // unknown channel or invalid version fallback to default
         let ((channel_config, version), ()) = future::join(
