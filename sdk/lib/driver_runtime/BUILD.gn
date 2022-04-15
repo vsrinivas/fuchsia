@@ -39,6 +39,7 @@ sdk_source_set("driver_runtime_cpp") {
     "include/lib/fdf/cpp/channel.h",
     "include/lib/fdf/cpp/channel_read.h",
     "include/lib/fdf/cpp/dispatcher.h",
+    "include/lib/fdf/cpp/unowned.h",
   ]
   public_configs = [ ":include" ]
   public_deps = [
