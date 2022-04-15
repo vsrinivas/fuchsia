@@ -20,7 +20,7 @@ use {
         path::PathBuf,
     },
     structopt::StructOpt,
-    test_list::{TestList, TestListEntry, TestTag},
+    test_list::{ExecutionEntry, FuchsiaComponentExecutionEntry, TestList, TestListEntry, TestTag},
 };
 
 const META_FAR_PREFIX: &'static str = "meta/";
@@ -45,6 +45,18 @@ struct TestEntry {
     os: String,
     package_url: Option<String>,
     package_manifests: Option<Vec<String>>,
+    log_settings: Option<LogSettings>,
+}
+
+#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
+struct LogSettings {
+    max_severity: Option<diagnostics_data::Severity>,
+}
+
+impl TestEntry {
+    fn get_max_log_severity(&self) -> Option<diagnostics_data::Severity> {
+        self.log_settings.as_ref().map(|settings| settings.max_severity).unwrap_or(None)
+    }
 }
 
 fn find_meta_far(build_dir: &PathBuf, manifest_path: String) -> Result<PathBuf, Error> {
@@ -103,6 +115,19 @@ fn tags_from_facets(facets: &fdata::Dictionary) -> Result<Vec<TestTag>, Error> {
 }
 
 fn to_test_list_entry(test_entry: &TestEntry) -> TestListEntry {
+    let execution = match &test_entry.package_url {
+        Some(url) => Some(ExecutionEntry::FuchsiaComponent(FuchsiaComponentExecutionEntry {
+            component_url: url.to_string(),
+            test_args: vec![],
+            timeout: None,
+            test_filters: None,
+            also_run_disabled_tests: false,
+            parallel: None,
+            max_severity_logs: test_entry.get_max_log_severity(),
+        })),
+        None => None,
+    };
+
     TestListEntry {
         name: test_entry.name.clone(),
         labels: vec![test_entry.label.clone()],
@@ -110,6 +135,7 @@ fn to_test_list_entry(test_entry: &TestEntry) -> TestListEntry {
             TestTag { key: "cpu".to_string(), value: test_entry.cpu.clone() },
             TestTag { key: "os".to_string(), value: test_entry.os.clone() },
         ],
+        execution,
     }
 }
 
@@ -308,11 +334,11 @@ mod tests {
 
     #[test]
     fn test_to_test_list_entry() {
-        let test_entry = TestEntry {
+        let make_test_entry = |log_settings| TestEntry {
             name: "test-name".to_string(),
             label: "test-label".to_string(),
             cpu: "x64".to_string(),
-            os: "linux".to_string(),
+            os: "fuchsia".to_string(),
             package_url: Some(
                 "fuchsia-pkg://fuchsia.com/echo-integration-test#meta/echo-client-test.cm"
                     .to_string(),
@@ -321,8 +347,59 @@ mod tests {
                 "obj/build/components/tests/echo-integration-test/package_manifest.json"
                     .to_string(),
             ]),
+            log_settings,
         };
-        let test_list_entry = to_test_list_entry(&test_entry);
+
+        let host_test_entry = TestEntry {
+            name: "test-name".to_string(),
+            label: "test-label".to_string(),
+            cpu: "x64".to_string(),
+            os: "linux".to_string(),
+            log_settings: None,
+            package_url: None,
+            package_manifests: None,
+        };
+
+        let make_expected_test_list_entry = |max_severity_logs| TestListEntry {
+            name: "test-name".to_string(),
+            labels: vec!["test-label".to_string()],
+            tags: vec![
+                TestTag { key: "cpu".to_string(), value: "x64".to_string() },
+                TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
+            ],
+            execution: Some(ExecutionEntry::FuchsiaComponent(FuchsiaComponentExecutionEntry {
+                component_url:
+                    "fuchsia-pkg://fuchsia.com/echo-integration-test#meta/echo-client-test.cm"
+                        .to_string(),
+                test_args: vec![],
+                timeout: None,
+                test_filters: None,
+                also_run_disabled_tests: false,
+                parallel: None,
+                max_severity_logs,
+            })),
+        };
+
+        // Default severity.
+        let test_list_entry = to_test_list_entry(&make_test_entry(None));
+        assert_eq!(test_list_entry, make_expected_test_list_entry(None),);
+
+        // Inner default severity.
+        let test_list_entry =
+            to_test_list_entry(&make_test_entry(Some(LogSettings { max_severity: None })));
+        assert_eq!(test_list_entry, make_expected_test_list_entry(None),);
+
+        // Explicit severity
+        let test_list_entry = to_test_list_entry(&make_test_entry(Some(LogSettings {
+            max_severity: Some(diagnostics_data::Severity::Error),
+        })));
+        assert_eq!(
+            test_list_entry,
+            make_expected_test_list_entry(Some(diagnostics_data::Severity::Error))
+        );
+
+        // Host test
+        let test_list_entry = to_test_list_entry(&host_test_entry);
         assert_eq!(
             test_list_entry,
             TestListEntry {
@@ -332,6 +409,7 @@ mod tests {
                     TestTag { key: "cpu".to_string(), value: "x64".to_string() },
                     TestTag { key: "os".to_string(), value: "linux".to_string() },
                 ],
+                execution: None,
             }
         )
     }
@@ -374,6 +452,7 @@ mod tests {
                         package_manifests: Some(vec![
                             "obj/build/components/tests/echo-integration-test/package_manifest.json".to_string(),
                         ]),
+                        log_settings: Some(LogSettings { max_severity: Some(diagnostics_data::Severity::Warn) }),
                     },
                 }
             ],

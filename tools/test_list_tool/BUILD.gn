@@ -12,6 +12,7 @@ rustc_binary("test_list_tool") {
   deps = [
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//src/lib/diagnostics/data/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-url",
     "//src/lib/testing/test_list",
