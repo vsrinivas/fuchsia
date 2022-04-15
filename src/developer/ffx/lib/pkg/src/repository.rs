@@ -16,7 +16,7 @@ use {
         future::{join_all, try_join_all},
         io::Cursor,
         stream::BoxStream,
-        AsyncReadExt,
+        AsyncReadExt as _,
     },
     io_util::file::Adapter,
     parking_lot::Mutex as SyncMutex,
@@ -184,8 +184,15 @@ pub struct Repository {
     drop_handlers: SyncMutex<Vec<Box<dyn FnOnce() + Send + Sync>>>,
 
     /// The TUF client for this repository
-    client:
-        Arc<AsyncMutex<Client<Json, EphemeralRepository<Json>, Box<dyn RepositoryProvider<Json>>>>>,
+    client: Arc<
+        AsyncMutex<
+            Client<
+                Json,
+                EphemeralRepository<Json>,
+                Box<dyn RepositoryProvider<Json> + Send + Sync>,
+            >,
+        >,
+    >,
 }
 
 impl Repository {
@@ -222,9 +229,14 @@ impl Repository {
         &self.name
     }
 
-    /// Get a [RepositorySpec] for this [Repository]
+    /// Get a [RepositorySpec] for this [Repository].
     pub fn spec(&self) -> RepositorySpec {
         self.backend.spec()
+    }
+
+    /// get a [tuf::RepositoryProvider] for this [Repository].
+    pub fn get_tuf_repo(&self) -> Result<Box<dyn RepositoryProvider<Json> + Send + Sync>, Error> {
+        self.backend.get_tuf_repo()
     }
 
     /// Returns if the repository supports watching for timestamp changes.
@@ -547,29 +559,34 @@ impl Drop for Repository {
     }
 }
 
-async fn get_tuf_client(
-    tuf_repo: Box<dyn RepositoryProvider<Json>>,
-) -> Result<Client<Json, EphemeralRepository<Json>, Box<dyn RepositoryProvider<Json>>>, Error> {
+pub(crate) async fn get_tuf_client<R>(
+    tuf_repo: R,
+) -> Result<Client<Json, EphemeralRepository<Json>, R>, anyhow::Error>
+where
+    R: RepositoryProvider<Json> + Sync,
+{
     let metadata_repo = EphemeralRepository::<Json>::new();
 
     let raw_signed_meta = {
         // FIXME(http://fxbug.dev/92126) we really should be initializing trust, rather than just
         // trusting 1.root.json.
-        let md = tuf_repo
+        let root = tuf_repo
             .fetch_metadata(&MetadataPath::from_role(&Role::Root), MetadataVersion::Number(1))
             .await;
 
-        let mut metadata = match md {
-            Err(_) => {
+        // If we couldn't find 1.root.json, see if root.json exists and try to initialize trust with it.
+        let mut root = match root {
+            Err(tuf::Error::NotFound) => {
                 tuf_repo
                     .fetch_metadata(&MetadataPath::from_role(&Role::Root), MetadataVersion::None)
                     .await?
             }
-            Ok(meta) => meta,
+            Err(err) => return Err(err.into()),
+            Ok(root) => root,
         };
 
         let mut buf = Vec::new();
-        metadata.read_to_end(&mut buf).await.context("reading metadata")?;
+        root.read_to_end(&mut buf).await.context("reading metadata")?;
 
         RawSignedMetadata::<Json, _>::new(buf)
     };
@@ -606,7 +623,7 @@ pub trait RepositoryBackend: std::fmt::Debug {
     async fn blob_modification_time(&self, path: &str) -> anyhow::Result<Option<SystemTime>>;
 
     /// Produces the backing TUF [RepositoryProvider] for this repository.
-    fn get_tuf_repo(&self) -> Result<Box<dyn RepositoryProvider<Json>>, Error>;
+    fn get_tuf_repo(&self) -> Result<Box<dyn RepositoryProvider<Json> + Send + Sync>, Error>;
 }
 
 #[cfg(test)]
@@ -817,11 +834,12 @@ mod test {
             .unwrap();
 
         let backend = PmRepository::new(dir.to_path_buf());
-        assert!(Repository::new("name", Box::new(backend)).await.is_ok());
+        let _repo = Repository::new("name", Box::new(backend)).await.unwrap();
 
         std::fs::remove_file(dir.join("repository").join("1.root.json")).unwrap();
+
         let backend = PmRepository::new(dir.to_path_buf());
-        assert!(Repository::new("name", Box::new(backend)).await.is_ok());
+        let _repo = Repository::new("name", Box::new(backend)).await.unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

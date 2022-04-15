@@ -164,14 +164,16 @@ where
         self.fetch_from(&self.blob_repo_url, resource_path, range).await
     }
 
-    fn get_tuf_repo(&self) -> Result<Box<(dyn RepositoryProvider<Json> + 'static)>, Error> {
+    fn get_tuf_repo(
+        &self,
+    ) -> Result<Box<(dyn RepositoryProvider<Json> + Send + Sync + 'static)>, Error> {
         Ok(Box::new(
             TufHttpRepositoryBuilder::<_, Json>::new(
                 self.metadata_repo_url.clone().into(),
                 self.client.clone(),
             )
             .build(),
-        ) as Box<dyn RepositoryProvider<Json>>)
+        ))
     }
 
     async fn blob_modification_time(&self, _path: &str) -> Result<Option<SystemTime>> {

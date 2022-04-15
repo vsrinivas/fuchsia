@@ -184,7 +184,9 @@ impl RepositoryBackend for FileSystemRepository {
         Ok(Some(async_fs::metadata(&file_path).await?.modified()?))
     }
 
-    fn get_tuf_repo(&self) -> Result<Box<(dyn RepositoryProvider<Json> + 'static)>, Error> {
+    fn get_tuf_repo(
+        &self,
+    ) -> Result<Box<(dyn RepositoryProvider<Json> + Send + Sync + 'static)>, Error> {
         let repo =
             TufFileSystemRepositoryBuilder::<Json>::new(self.metadata_repo_path.clone()).build()?;
 
