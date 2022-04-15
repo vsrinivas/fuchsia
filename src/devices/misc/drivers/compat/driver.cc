@@ -76,6 +76,7 @@ Driver::Driver(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf::Node>
       ns_(std::move(ns)),
       logger_(std::move(logger)),
       url_(url),
+      inner_logger_(),
       device_(device, ops, this, std::nullopt, inner_logger_, dispatcher),
       sysmem_(this) {
   device_.Bind(std::move(node));

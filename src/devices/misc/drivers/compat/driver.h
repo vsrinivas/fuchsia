@@ -100,6 +100,7 @@ class Driver {
   driver::Logger logger_;
 
   const std::string url_;
+  driver::Logger inner_logger_;
   Device device_;
   // TODO(fxbug.dev/93333): remove this once we have proper composite support.
   Sysmem sysmem_;
@@ -109,7 +110,6 @@ class Driver {
   void* context_ = nullptr;
 
   // API resources.
-  driver::Logger inner_logger_;
   zx::resource root_resource_;
 
   Interop interop_;
