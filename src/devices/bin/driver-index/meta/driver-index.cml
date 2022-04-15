@@ -14,6 +14,7 @@
             protocol: [
                 "fuchsia.driver.development.DriverIndex",
                 "fuchsia.driver.framework.DriverIndex",
+                "fuchsia.driver.registrar.DriverRegistrar",
             ],
         },
     ],
@@ -29,7 +30,14 @@
             path: "/boot",
         },
         {
-            protocol: [ "fuchsia.boot.Arguments" ],
+            protocol: [
+                "fuchsia.boot.Arguments",
+
+                // This is only used when the kernel commandline flag devmgr.enable-ephemeral
+                // is set, which enables loading drivers ephemerally. This is intended for
+                // eng builds only.
+                "fuchsia.pkg.PackageResolver",
+            ],
         },
     ],
     expose: [
@@ -37,6 +45,7 @@
             protocol: [
                 "fuchsia.driver.development.DriverIndex",
                 "fuchsia.driver.framework.DriverIndex",
+                "fuchsia.driver.registrar.DriverRegistrar",
             ],
             from: "self",
         },

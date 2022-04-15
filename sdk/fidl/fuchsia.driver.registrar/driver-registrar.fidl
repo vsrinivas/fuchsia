@@ -14,6 +14,8 @@ protocol DriverRegistrar {
     /// * error a zx_status value indicating failure. One of the following:
     ///     * `ZX_ERR_ACCESS_DENIED` if the device does not have permissions
     ///       to fetch the package.
+    ///     * `ZX_ERR_ALREADY_EXISTS` if the driver component being registered
+    ///       already exists in the boot or base drivers list.
     ///     * `ZX_ERR_NOT_FOUND` if the package does not exist.
     ///     * `ZX_ERR_IO` if there is some other unspecified error during I/O.
     ///     * `ZX_ERR_ADDRESS_UNREACHABLE` if the package resolver does not

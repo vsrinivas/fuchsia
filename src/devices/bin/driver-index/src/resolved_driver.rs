@@ -12,7 +12,18 @@ use {
     cm_rust::FidlIntoNative,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_driver_development as fdd,
     fidl_fuchsia_driver_framework as fdf, fidl_fuchsia_io as fio,
+    futures::TryFutureExt,
 };
+
+// Cached drivers don't exist yet so we allow dead code.
+#[derive(Copy, Clone, Debug)]
+#[allow(dead_code)]
+pub enum DriverPackageType {
+    Boot = 0,
+    Base = 1,
+    Cached = 2,
+    Universe = 3,
+}
 
 // TODO(fxbug.dev/92329): Use `fallback` and remove dead code attribute.
 #[allow(dead_code)]
@@ -22,6 +33,7 @@ pub struct ResolvedDriver {
     pub bind_rules: DecodedRules,
     pub colocate: bool,
     pub fallback: bool,
+    pub package_type: DriverPackageType,
 }
 
 impl std::fmt::Display for ResolvedDriver {
@@ -34,22 +46,40 @@ impl ResolvedDriver {
     pub async fn resolve(
         component_url: url::Url,
         resolver: &fidl_fuchsia_pkg::PackageResolverProxy,
-    ) -> Result<ResolvedDriver, anyhow::Error> {
-        let (dir, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
+        package_type: DriverPackageType,
+    ) -> Result<ResolvedDriver, fuchsia_zircon::Status> {
+        let (dir, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+            .map_err(|e| {
+                log::warn!("Failed to create DirectoryMarker Proxy: {}", e);
+                fuchsia_zircon::Status::INTERNAL
+            })?;
         let mut base_url = component_url.clone();
         base_url.set_fragment(None);
 
-        let res = resolver.resolve(&base_url.as_str(), dir_server_end);
-        res.await?.map_err(|e| {
-            anyhow::anyhow!("{}: Failed to resolve package: {:?}", component_url.as_str(), e)
+        let res = resolver
+            .resolve(&base_url.as_str(), dir_server_end)
+            .map_err(|e| {
+                log::warn!("Resolve call failed: {}", e);
+                fuchsia_zircon::Status::INTERNAL
+            })
+            .await?;
+
+        res.map_err(|e| {
+            log::warn!("{}: Failed to resolve package: {:?}", component_url.as_str(), e);
+            map_resolve_err_to_zx_status(e)
         })?;
 
-        let driver = load_driver(&dir, component_url.clone()).await?;
+        let driver = load_driver(&dir, component_url.clone(), package_type)
+            .map_err(|e| {
+                log::warn!("Could not load driver: {}", e);
+                fuchsia_zircon::Status::INTERNAL
+            })
+            .await?;
 
-        return driver.ok_or(anyhow::anyhow!(
-            "{}: Component was not a driver-component",
-            component_url.as_str()
-        ));
+        return driver.ok_or({
+            log::warn!("{}: Component was not a driver-component", component_url.as_str());
+            fuchsia_zircon::Status::INTERNAL
+        });
     }
 
     pub fn matches(
@@ -122,6 +152,7 @@ impl ResolvedDriver {
             url: Some(self.component_url.as_str().to_string()),
             driver_url: self.get_driver_url(),
             colocate: Some(self.colocate),
+            package_type: fdf::DriverPackageType::from_primitive(self.package_type as u8),
             ..fdf::MatchedDriverInfo::EMPTY
         }
     }
@@ -140,6 +171,7 @@ impl ResolvedDriver {
             url: Some(self.component_url.clone().to_string()),
             libname: Some(libname.to_string()),
             bind_rules: bind_rules,
+            package_type: fdf::DriverPackageType::from_primitive(self.package_type as u8),
             ..fdd::DriverInfo::EMPTY
         }
     }
@@ -179,6 +211,7 @@ fn matches_composite_device(
 pub async fn load_driver(
     dir: &fio::DirectoryProxy,
     component_url: url::Url,
+    package_type: DriverPackageType,
 ) -> Result<Option<ResolvedDriver>, anyhow::Error> {
     let component = io_util::open_file(
         &dir,
@@ -192,7 +225,7 @@ pub async fn load_driver(
     let component: fdecl::Component = io_util::read_file_fidl(&component)
         .await
         .with_context(|| format!("{}: Failed to read component", component_url.as_str()))?;
-    let component = component.fidl_into_native();
+    let component: cm_rust::ComponentDecl = component.fidl_into_native();
 
     let runner = match component.get_runner() {
         Some(r) => r,
@@ -231,6 +264,7 @@ pub async fn load_driver(
         bind_rules: bind,
         colocate: colocate,
         fallback,
+        package_type,
     }))
 }
 
@@ -248,4 +282,23 @@ fn get_rules_string_value(component: &cm_rust::ComponentDecl, key: &str) -> Opti
         }
     }
     return None;
+}
+
+fn map_resolve_err_to_zx_status(
+    resolve_error: fidl_fuchsia_pkg::ResolveError,
+) -> fuchsia_zircon::Status {
+    match resolve_error {
+        fidl_fuchsia_pkg::ResolveError::Internal => fuchsia_zircon::Status::INTERNAL,
+        fidl_fuchsia_pkg::ResolveError::AccessDenied => fuchsia_zircon::Status::ACCESS_DENIED,
+        fidl_fuchsia_pkg::ResolveError::Io => fuchsia_zircon::Status::IO,
+        fidl_fuchsia_pkg::ResolveError::BlobNotFound => fuchsia_zircon::Status::NOT_FOUND,
+        fidl_fuchsia_pkg::ResolveError::PackageNotFound => fuchsia_zircon::Status::NOT_FOUND,
+        fidl_fuchsia_pkg::ResolveError::RepoNotFound => fuchsia_zircon::Status::NOT_FOUND,
+        fidl_fuchsia_pkg::ResolveError::NoSpace => fuchsia_zircon::Status::NO_SPACE,
+        fidl_fuchsia_pkg::ResolveError::UnavailableBlob => fuchsia_zircon::Status::UNAVAILABLE,
+        fidl_fuchsia_pkg::ResolveError::UnavailableRepoMetadata => {
+            fuchsia_zircon::Status::UNAVAILABLE
+        }
+        fidl_fuchsia_pkg::ResolveError::InvalidUrl => fuchsia_zircon::Status::INVALID_ARGS,
+    }
 }

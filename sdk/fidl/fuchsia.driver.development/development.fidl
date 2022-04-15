@@ -33,6 +33,9 @@ type DriverInfo = table {
     /// determine whether the driver indexer should bind this driver to a
     /// device.
     4: bind_rules BindRulesBytecode;
+
+    /// Which type of package this driver is in.
+    5: package_type fuchsia.driver.framework.DriverPackageType;
 };
 
 type DeviceFlags = strict bits : uint32 {

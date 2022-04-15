@@ -307,6 +307,54 @@
                     },
                 },
                 {
+                    using_node: "/bootstrap/driver_index",
+                    capability: "fuchsia.pkg.PackageResolver",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    policy_error: {
+                                        capability_use_disallowed: {
+                                            cap: "fuchsia.pkg.PackageResolver",
+                                            source_moniker: {
+                                                component_instance: {
+                                                    path: [
+                                                        {
+                                                            name: "core",
+                                                            collection: null,
+                                                            rep: "core",
+                                                        },
+                                                        {
+                                                            name: "pkg-resolver",
+                                                            collection: null,
+                                                            rep: "pkg-resolver",
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                            target_moniker: {
+                                                path: [
+                                                    {
+                                                        name: "bootstrap",
+                                                        collection: null,
+                                                        rep: "bootstrap",
+                                                    },
+                                                    {
+                                                        name: "driver_index",
+                                                        collection: null,
+                                                        rep: "driver_index",
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        message: "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core/pkg-resolver\" being used at \"/bootstrap/driver_index\"",
+                    },
+                },
+                {
                     using_node: "/bootstrap/driver_manager",
                     capability: "fuchsia.pkg.PackageResolver",
                     error: {

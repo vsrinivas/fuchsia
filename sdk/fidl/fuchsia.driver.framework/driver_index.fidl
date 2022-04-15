@@ -7,6 +7,18 @@ using fuchsia.url;
 
 using zx;
 
+/// The type of Fuchsia package that a driver component is inside of.
+type DriverPackageType = flexible enum : uint8 {
+    /// BOOT packages are inside the Zircon boot image.
+    BOOT = 0;
+    /// BASE packages are included in the Fuchsia build as static local packages.
+    BASE = 1;
+    /// CACHED packages are BASE packages that can be updated during a resolve.
+    CACHED = 2;
+    /// UNIVERSE packages get onto the device only when resolved by the package resolver.
+    UNIVERSE = 3;
+};
+
 /// Information for a driver matched by the driver index. This is used by
 /// normal and composite drivers.
 type MatchedDriverInfo = table {
@@ -19,6 +31,9 @@ type MatchedDriverInfo = table {
 
     /// If this is true then the driver should be colocated in its parent's DriverHost.
     3: colocate bool;
+
+    /// The type of package this driver is in.
+    4: package_type DriverPackageType;
 };
 
 /// Information for a composite driver matched by the driver index.

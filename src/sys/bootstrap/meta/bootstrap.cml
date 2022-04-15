@@ -192,7 +192,14 @@
             to: "#console-launcher",
         },
         {
-            protocol: [ "fuchsia.boot.Arguments" ],
+            protocol: [
+                "fuchsia.boot.Arguments",
+
+                // This is only used when the kernel commandline flag devmgr.enable-ephemeral
+                // is set, which enables loading drivers ephemerally. This is intended for
+                // eng builds only.
+                "fuchsia.pkg.PackageResolver",
+            ],
             from: "parent",
             to: [ "#driver_index" ],
         },

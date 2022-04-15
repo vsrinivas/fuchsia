@@ -5,12 +5,13 @@
 use {
     crate::device_group::DeviceGroup,
     crate::match_common::node_to_device_property,
-    crate::resolved_driver::{load_driver, ResolvedDriver},
+    crate::resolved_driver::{load_driver, DriverPackageType, ResolvedDriver},
     anyhow::{self, Context},
     fidl_fuchsia_boot as fboot, fidl_fuchsia_driver_development as fdd,
     fidl_fuchsia_driver_framework as fdf,
     fidl_fuchsia_driver_framework::{DriverIndexRequest, DriverIndexRequestStream},
-    fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fidl_fuchsia_driver_registrar as fdr, fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fuchsia_component::client,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::Status,
     futures::prelude::*,
@@ -54,6 +55,7 @@ fn log_error(err: anyhow::Error) -> anyhow::Error {
 enum IncomingRequest {
     DriverIndexProtocol(DriverIndexRequestStream),
     DriverDevelopmentProtocol(fdd::DriverIndexRequestStream),
+    DriverRegistrarProtocol(fdr::DriverRegistrarRequestStream),
 }
 
 async fn load_boot_drivers(
@@ -75,7 +77,7 @@ async fn load_boot_drivers(
     {
         let url_string = "fuchsia-boot:///#meta/".to_string() + &entry.name;
         let url = url::Url::parse(&url_string)?;
-        let driver = load_driver(&dir, url).await;
+        let driver = load_driver(&dir, url, DriverPackageType::Boot).await;
         if let Err(e) = driver {
             log::error!("Failed to load boot driver: {}: {}", url_string, e);
             continue;
@@ -116,6 +118,11 @@ struct Indexer {
     // Whether /system is required. Used to determine if the indexer should
     // return fallback drivers that match.
     require_system: bool,
+
+    // Contains the ephemeral drivers. This is wrapped in a RefCell since the
+    // ephemeral drivers are added after the driver index server has started
+    // through the FIDL API, fuchsia.driver.registrar.Register.
+    ephemeral_drivers: RefCell<HashMap<fidl_fuchsia_pkg::PackageUrl, ResolvedDriver>>,
 }
 
 impl Indexer {
@@ -125,6 +132,7 @@ impl Indexer {
             base_repo: RefCell::new(base_repo),
             device_groups: RefCell::new(HashMap::new()),
             require_system,
+            ephemeral_drivers: RefCell::new(HashMap::new()),
         }
     }
 
@@ -168,6 +176,7 @@ impl Indexer {
         let fallback_boot_drivers = boot_drivers.filter(|&driver| driver.fallback);
         let fallback_base_drivers = base_drivers.filter(|&driver| driver.fallback);
 
+        let ephemeral = self.ephemeral_drivers.borrow();
         // Iterate over all drivers. Match non-fallback boot drivers, then
         // non-fallback base drivers, then fallback boot drivers, then fallback
         // base drivers.
@@ -179,6 +188,7 @@ impl Indexer {
             .iter()
             .filter(|&driver| !driver.fallback)
             .chain(base_repo_iter.filter(|&driver| !driver.fallback))
+            .chain(ephemeral.values())
             .chain(fallback_boot_drivers)
             .chain(fallback_base_drivers)
             .filter_map(|driver| {
@@ -228,6 +238,8 @@ impl Indexer {
         let fallback_boot_drivers = boot_drivers.filter(|&driver| driver.fallback);
         let fallback_base_drivers = base_drivers.filter(|&driver| driver.fallback);
 
+        let ephemeral = self.ephemeral_drivers.borrow();
+
         // Iterate over all drivers. Match non-fallback boot drivers, then
         // non-fallback base drivers, then fallback boot drivers, then fallback
         // base drivers.
@@ -236,6 +248,7 @@ impl Indexer {
             .iter()
             .filter(|&driver| !driver.fallback)
             .chain(base_repo_iter.filter(|&driver| !driver.fallback))
+            .chain(ephemeral.values())
             .chain(fallback_boot_drivers)
             .chain(fallback_base_drivers)
             .filter_map(|driver| driver.matches(&properties).ok())
@@ -287,7 +300,68 @@ impl Indexer {
             }
         }
 
+        let ephemeral = self.ephemeral_drivers.borrow();
+        for driver in ephemeral.values() {
+            if driver_filter.len() == 0
+                || driver_filter.iter().any(|f| f == driver.component_url.as_str())
+            {
+                driver_info.push(driver.create_driver_info());
+            }
+        }
+
         driver_info
+    }
+
+    async fn register_driver(
+        &self,
+        pkg_url: fidl_fuchsia_pkg::PackageUrl,
+        resolver: &fidl_fuchsia_pkg::PackageResolverProxy,
+    ) -> fdr::DriverRegistrarRegisterResult {
+        for boot_driver in self.boot_repo.iter() {
+            if boot_driver.component_url.as_str() == pkg_url.url.as_str() {
+                log::warn!("Driver being registered already exists in boot list.");
+                return Err(Status::ALREADY_EXISTS.into_raw());
+            }
+        }
+
+        match self.base_repo.borrow().deref() {
+            BaseRepo::Resolved(resolved_base_drivers) => {
+                for base_driver in resolved_base_drivers {
+                    if base_driver.component_url.as_str() == pkg_url.url.as_str() {
+                        log::warn!("Driver being registered already exists in base list.");
+                        return Err(Status::ALREADY_EXISTS.into_raw());
+                    }
+                }
+            }
+            _ => (),
+        };
+
+        let url = match url::Url::parse(&pkg_url.url) {
+            Ok(u) => Ok(u),
+            Err(e) => {
+                log::error!("Couldn't parse driver url: {}: error: {}", &pkg_url.url, e);
+                Err(Status::ADDRESS_UNREACHABLE.into_raw())
+            }
+        }?;
+
+        let resolve = ResolvedDriver::resolve(url, &resolver, DriverPackageType::Universe).await;
+
+        if resolve.is_err() {
+            return Err(resolve.err().unwrap().into_raw());
+        }
+
+        let resolved_driver = resolve.unwrap();
+
+        let mut ephemeral_drivers = self.ephemeral_drivers.borrow_mut();
+        let existing = ephemeral_drivers.insert(pkg_url.clone(), resolved_driver);
+
+        if let Some(existing_driver) = existing {
+            log::info!("Updating existing ephemeral driver {}.", existing_driver);
+        } else {
+            log::info!("Registered driver successfully: {}.", pkg_url.url);
+        }
+
+        Ok(())
     }
 }
 
@@ -345,6 +419,40 @@ async fn run_driver_development_server(
     Ok(())
 }
 
+async fn run_driver_registrar_server(
+    indexer: Rc<Indexer>,
+    stream: fdr::DriverRegistrarRequestStream,
+    universe_resolver: &Option<fidl_fuchsia_pkg::PackageResolverProxy>,
+) -> Result<(), anyhow::Error> {
+    stream
+        .map(|result| result.context("failed request"))
+        .try_for_each(|request| async {
+            let indexer = indexer.clone();
+            match request {
+                fdr::DriverRegistrarRequest::Register { package_url, responder } => {
+                    match universe_resolver {
+                        None => {
+                            responder
+                                .send(&mut Err(Status::PROTOCOL_NOT_SUPPORTED.into_raw()))
+                                .or_else(ignore_peer_closed)
+                                .context("error responding to Register")?;
+                        }
+                        Some(resolver) => {
+                            let mut result = indexer.register_driver(package_url, resolver).await;
+                            responder
+                                .send(&mut result)
+                                .or_else(ignore_peer_closed)
+                                .context("error responding to Register")?;
+                        }
+                    }
+                }
+            }
+            Ok(())
+        })
+        .await?;
+    Ok(())
+}
+
 async fn run_index_server(
     indexer: Rc<Indexer>,
     stream: DriverIndexRequestStream,
@@ -394,7 +502,7 @@ async fn run_index_server(
 
 async fn load_base_drivers(
     indexer: Rc<Indexer>,
-    resolver: fidl_fuchsia_pkg::PackageResolverProxy,
+    resolver: &fidl_fuchsia_pkg::PackageResolverProxy,
     eager_drivers: &HashSet<url::Url>,
     disabled_drivers: &HashSet<url::Url>,
 ) -> Result<(), anyhow::Error> {
@@ -419,13 +527,13 @@ async fn load_base_drivers(
                 continue;
             }
         };
-        let mut resolved_driver = match ResolvedDriver::resolve(url, &resolver).await {
-            Ok(r) => r,
-            Err(e) => {
-                log::error!("Error resolving base driver url: {}: error: {}", driver.driver_url, e);
-                continue;
-            }
-        };
+        let resolve = ResolvedDriver::resolve(url, &resolver, DriverPackageType::Base).await;
+
+        if resolve.is_err() {
+            continue;
+        }
+
+        let mut resolved_driver = resolve.unwrap();
         if disabled_drivers.contains(&resolved_driver.component_url) {
             log::info!("Skipping base driver: {}", resolved_driver.component_url.to_string());
             continue;
@@ -449,14 +557,30 @@ async fn main() -> Result<(), anyhow::Error> {
 
     service_fs.dir("svc").add_fidl_service(IncomingRequest::DriverIndexProtocol);
     service_fs.dir("svc").add_fidl_service(IncomingRequest::DriverDevelopmentProtocol);
+    service_fs.dir("svc").add_fidl_service(IncomingRequest::DriverRegistrarProtocol);
     service_fs.take_and_serve_directory_handle().context("failed to serve outgoing namespace")?;
 
-    let (resolver, resolver_stream) =
+    let (pkgfs_resolver, pkgfs_resolver_stream) =
         fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_pkg::PackageResolverMarker>()
             .unwrap();
 
-    let boot_args = fuchsia_component::client::connect_to_protocol::<fboot::ArgumentsMarker>()
+    let boot_args = client::connect_to_protocol::<fboot::ArgumentsMarker>()
         .context("Failed to connect to boot arguments service")?;
+
+    let enable_ephemeral = boot_args
+        .get_bool("devmgr.enable-ephemeral", false)
+        .await
+        .context("Failed to get devmgr.enable-ephemeral from boot arguments")?;
+
+    let universe_resolver = if enable_ephemeral {
+        let package_resolver_client =
+            client::connect_to_protocol::<fidl_fuchsia_pkg::PackageResolverMarker>()
+                .context("Failed to connect to universe package resolver")?;
+        Some(package_resolver_client)
+    } else {
+        None
+    };
+
     let eager_drivers: HashSet<url::Url> = boot_args
         .get_string("devmgr.bind-eager")
         .await
@@ -505,14 +629,14 @@ async fn main() -> Result<(), anyhow::Error> {
     let index = Rc::new(Indexer::new(drivers, BaseRepo::NotResolved(std::vec![]), require_system));
     let (res1, res2, _) = futures::future::join3(
         async {
-            package_resolver::serve(resolver_stream)
+            package_resolver::serve(pkgfs_resolver_stream)
                 .await
                 .context("Error running package resolver")
                 .map_err(log_error)
         },
         async {
             if should_load_base_drivers {
-                load_base_drivers(index.clone(), resolver, &eager_drivers, &disabled_drivers)
+                load_base_drivers(index.clone(), &pkgfs_resolver, &eager_drivers, &disabled_drivers)
                     .await
                     .context("Error loading base packages")
                     .map_err(log_error)
@@ -530,6 +654,10 @@ async fn main() -> Result<(), anyhow::Error> {
                         }
                         IncomingRequest::DriverDevelopmentProtocol(stream) => {
                             run_driver_development_server(index.clone(), stream).await
+                        }
+                        IncomingRequest::DriverRegistrarProtocol(stream) => {
+                            run_driver_registrar_server(index.clone(), stream, &universe_resolver)
+                                .await
                         }
                     }
                     .unwrap_or_else(|e| log::error!("Error running index_server: {:?}", e))
@@ -564,13 +692,38 @@ mod tests {
         url: String,
         driver_url: String,
         colocate: bool,
+        package_type: DriverPackageType,
     ) -> fdf::MatchedDriverInfo {
         fdf::MatchedDriverInfo {
             url: Some(url),
             driver_url: Some(driver_url),
             colocate: Some(colocate),
+            package_type: fdf::DriverPackageType::from_primitive(package_type as u8),
             ..fdf::MatchedDriverInfo::EMPTY
         }
+    }
+
+    async fn get_driver_info_proxy(
+        development_proxy: &fdd::DriverIndexProxy,
+        driver_filter: &[&str],
+    ) -> Vec<fdd::DriverInfo> {
+        let (info_iterator, info_iterator_server) =
+            fidl::endpoints::create_proxy::<fdd::DriverInfoIteratorMarker>().unwrap();
+
+        development_proxy
+            .get_driver_info(&mut driver_filter.iter().map(|i| *i), info_iterator_server)
+            .unwrap();
+
+        let mut driver_infos = Vec::new();
+        loop {
+            let mut driver_info = info_iterator.get_next().await.unwrap();
+            if driver_info.len() == 0 {
+                break;
+            }
+            driver_infos.append(&mut driver_info)
+        }
+
+        return driver_infos;
     }
 
     async fn run_resolver_server(
@@ -654,7 +807,7 @@ mod tests {
 
         // Run two tasks: the fake resolver and the task that loads the base drivers.
         let load_base_drivers_task =
-            load_base_drivers(index.clone(), resolver, &eager_drivers, &disabled_drivers).fuse();
+            load_base_drivers(index.clone(), &resolver, &eager_drivers, &disabled_drivers).fuse();
         let resolver_task = run_resolver_server(resolver_stream).fuse();
         futures::pin_mut!(load_base_drivers_task, resolver_task);
         futures::select! {
@@ -688,6 +841,7 @@ mod tests {
                 expected_url,
                 expected_driver_url,
                 true,
+                DriverPackageType::Base,
             ));
             assert_eq!(expected_result, result);
 
@@ -711,6 +865,7 @@ mod tests {
                 expected_url,
                 expected_driver_url,
                 false,
+                DriverPackageType::Base,
             ));
             assert_eq!(expected_result, result);
 
@@ -763,6 +918,7 @@ mod tests {
             bind_rules: always_match.clone(),
             colocate: false,
             fallback: false,
+            package_type: DriverPackageType::Base,
         },]);
 
         let (proxy, stream) =
@@ -785,6 +941,7 @@ mod tests {
             let expected_result = vec![fdf::MatchedDriver::Driver(fdf::MatchedDriverInfo {
                 url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
                 colocate: Some(false),
+                package_type: Some(fdf::DriverPackageType::Base),
                 ..fdf::MatchedDriverInfo::EMPTY
             })];
 
@@ -828,6 +985,7 @@ mod tests {
             bind_rules: always_match.clone(),
             colocate: false,
             fallback: false,
+            package_type: DriverPackageType::Base,
         },]);
 
         let (proxy, stream) =
@@ -850,6 +1008,7 @@ mod tests {
             let expected_result = vec![fdf::MatchedDriver::Driver(fdf::MatchedDriverInfo {
                 url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
                 colocate: Some(false),
+                package_type: Some(fdf::DriverPackageType::Base),
                 ..fdf::MatchedDriverInfo::EMPTY
             })];
 
@@ -890,6 +1049,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 colocate: false,
                 fallback: false,
+                package_type: DriverPackageType::Base,
             },
             ResolvedDriver {
                 component_url: url::Url::parse(
@@ -900,6 +1060,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 colocate: false,
                 fallback: false,
+                package_type: DriverPackageType::Base,
             }
         ]);
 
@@ -934,11 +1095,13 @@ mod tests {
                     expected_url_1,
                     expected_driver_url_1,
                     false,
+                    DriverPackageType::Base,
                 )),
                 fdf::MatchedDriver::Driver(create_matched_driver_info(
                     expected_url_2,
                     expected_driver_url_2,
                     false,
+                    DriverPackageType::Base,
                 )),
             ];
 
@@ -975,6 +1138,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 colocate: false,
                 fallback: false,
+                package_type: DriverPackageType::Boot,
             },
             ResolvedDriver {
                 component_url: url::Url::parse("fuchsia-boot:///#meta/driver-2.cm").unwrap(),
@@ -982,6 +1146,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 colocate: false,
                 fallback: false,
+                package_type: DriverPackageType::Boot,
             },
         ];
 
@@ -1042,6 +1207,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 colocate: false,
                 fallback: true,
+                package_type: DriverPackageType::Boot,
             },
             ResolvedDriver {
                 component_url: url::Url::parse(NON_FALLBACK_BOOT_DRIVER_COMPONENT_URL).unwrap(),
@@ -1049,6 +1215,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 colocate: false,
                 fallback: false,
+                package_type: DriverPackageType::Boot,
             },
         ];
 
@@ -1076,6 +1243,7 @@ mod tests {
                     NON_FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH
                 ),
                 false,
+                DriverPackageType::Boot,
             ));
 
             // The non-fallback boot driver should be returned and not the
@@ -1122,6 +1290,7 @@ mod tests {
             bind_rules: always_match.clone(),
             colocate: false,
             fallback: true,
+            package_type: DriverPackageType::Boot,
         }];
 
         let base_repo = BaseRepo::Resolved(std::vec![
@@ -1131,6 +1300,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 colocate: false,
                 fallback: true,
+                package_type: DriverPackageType::Base,
             },
             ResolvedDriver {
                 component_url: url::Url::parse(NON_FALLBACK_BASE_DRIVER_COMPONENT_URL).unwrap(),
@@ -1138,6 +1308,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 colocate: false,
                 fallback: false,
+                package_type: DriverPackageType::Base,
             },
         ]);
 
@@ -1165,6 +1336,7 @@ mod tests {
                     NON_FALLBACK_BASE_DRIVER_V1_DRIVER_PATH
                 ),
                 false,
+                DriverPackageType::Base,
             ));
 
             // The non-fallback base driver should be returned and not the
@@ -1209,6 +1381,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 colocate: false,
                 fallback: true,
+                package_type: DriverPackageType::Boot,
             },
             ResolvedDriver {
                 component_url: url::Url::parse(NON_FALLBACK_BOOT_DRIVER_COMPONENT_URL).unwrap(),
@@ -1216,6 +1389,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 colocate: false,
                 fallback: false,
+                package_type: DriverPackageType::Boot,
             },
         ];
 
@@ -1241,11 +1415,13 @@ mod tests {
                     NON_FALLBACK_BOOT_DRIVER_COMPONENT_URL.to_owned(),
                     format!("fuchsia-boot:///#{}", NON_FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
                     false,
+                    DriverPackageType::Boot,
                 )),
                 fdf::MatchedDriver::Driver(create_matched_driver_info(
                     FALLBACK_BOOT_DRIVER_COMPONENT_URL.to_owned(),
                     format!("fuchsia-boot:///#{}", FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
                     false,
+                    DriverPackageType::Boot,
                 )),
             ];
 
@@ -1292,6 +1468,7 @@ mod tests {
             bind_rules: always_match.clone(),
             colocate: false,
             fallback: true,
+            package_type: DriverPackageType::Boot,
         }];
 
         let base_repo = BaseRepo::Resolved(std::vec![
@@ -1301,6 +1478,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 colocate: false,
                 fallback: true,
+                package_type: DriverPackageType::Base,
             },
             ResolvedDriver {
                 component_url: url::Url::parse(NON_FALLBACK_BASE_DRIVER_COMPONENT_URL).unwrap(),
@@ -1308,6 +1486,7 @@ mod tests {
                 bind_rules: always_match.clone(),
                 colocate: false,
                 fallback: false,
+                package_type: DriverPackageType::Base,
             },
         ]);
 
@@ -1336,11 +1515,13 @@ mod tests {
                         NON_FALLBACK_BASE_DRIVER_V1_DRIVER_PATH
                     ),
                     false,
+                    DriverPackageType::Base,
                 )),
                 fdf::MatchedDriver::Driver(create_matched_driver_info(
                     FALLBACK_BOOT_DRIVER_COMPONENT_URL.to_owned(),
                     format!("fuchsia-boot:///#{}", FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
                     false,
+                    DriverPackageType::Boot,
                 )),
                 fdf::MatchedDriver::Driver(create_matched_driver_info(
                     FALLBACK_BASE_DRIVER_COMPONENT_URL.to_owned(),
@@ -1349,6 +1530,7 @@ mod tests {
                         FALLBACK_BASE_DRIVER_V1_DRIVER_PATH
                     ),
                     false,
+                    DriverPackageType::Base,
                 )),
             ];
 
@@ -1375,8 +1557,10 @@ mod tests {
         let pkg = io_util::open_directory_in_namespace("/pkg", fio::OpenFlags::RIGHT_READABLE)
             .context("Failed to open /pkg")
             .unwrap();
-        let fallback_driver =
-            load_driver(&pkg, driver_url).await.unwrap().expect("Fallback driver was not loaded");
+        let fallback_driver = load_driver(&pkg, driver_url, DriverPackageType::Boot)
+            .await
+            .unwrap()
+            .expect("Fallback driver was not loaded");
         assert!(fallback_driver.fallback);
     }
 
@@ -1421,7 +1605,7 @@ mod tests {
         let disabled_drivers = HashSet::new();
 
         let load_base_drivers_task =
-            load_base_drivers(Rc::clone(&index), resolver, &eager_drivers, &disabled_drivers)
+            load_base_drivers(Rc::clone(&index), &resolver, &eager_drivers, &disabled_drivers)
                 .fuse();
         let resolver_task = run_resolver_server(resolver_stream).fuse();
         futures::pin_mut!(load_base_drivers_task, resolver_task);
@@ -1489,7 +1673,7 @@ mod tests {
         let disabled_drivers = HashSet::from([disabled_driver_component_url.clone()]);
 
         let load_base_drivers_task =
-            load_base_drivers(Rc::clone(&index), resolver, &eager_drivers, &disabled_drivers)
+            load_base_drivers(Rc::clone(&index), &resolver, &eager_drivers, &disabled_drivers)
                 .fuse();
         let resolver_task = run_resolver_server(resolver_stream).fuse();
         futures::pin_mut!(load_base_drivers_task, resolver_task);
@@ -1525,6 +1709,7 @@ mod tests {
             bind_rules: always_match.clone(),
             colocate: false,
             fallback: true,
+            package_type: DriverPackageType::Boot,
         }];
         let index = Indexer::new(boot_repo, BaseRepo::NotResolved(vec![]), true);
         let (proxy, stream) =
@@ -1557,6 +1742,7 @@ mod tests {
             bind_rules: always_match.clone(),
             colocate: false,
             fallback: true,
+            package_type: DriverPackageType::Boot,
         }];
         let index = Indexer::new(boot_repo, BaseRepo::NotResolved(vec![]), false);
         let (proxy, stream) =
@@ -1576,6 +1762,7 @@ mod tests {
                 FALLBACK_BOOT_DRIVER_COMPONENT_URL.to_owned(),
                 format!("fuchsia-boot:///#{}", FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
                 false,
+                DriverPackageType::Boot,
             ));
             assert_eq!(result, expected_result);
         })
@@ -1591,6 +1778,7 @@ mod tests {
             bind_rules: always_match.clone(),
             colocate: false,
             fallback: true,
+            package_type: DriverPackageType::Boot,
         }];
         let index = Indexer::new(boot_repo, BaseRepo::NotResolved(vec![]), true);
         let (proxy, stream) =
@@ -1623,6 +1811,7 @@ mod tests {
             bind_rules: always_match.clone(),
             colocate: false,
             fallback: true,
+            package_type: DriverPackageType::Boot,
         }];
         let index = Indexer::new(boot_repo, BaseRepo::NotResolved(vec![]), false);
         let (proxy, stream) =
@@ -1642,6 +1831,7 @@ mod tests {
                 FALLBACK_BOOT_DRIVER_COMPONENT_URL.to_owned(),
                 format!("fuchsia-boot:///#{}", FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
                 false,
+                DriverPackageType::Boot,
             ))];
             assert_eq!(result, expected_result);
         })
@@ -1680,6 +1870,7 @@ mod tests {
                 expected_url,
                 expected_driver_url,
                 true,
+                DriverPackageType::Boot,
             ));
             assert_eq!(expected_result, result);
 
@@ -1699,6 +1890,7 @@ mod tests {
                 expected_url,
                 expected_driver_url,
                 false,
+                DriverPackageType::Boot,
             ));
             assert_eq!(expected_result, result);
 
@@ -1776,6 +1968,7 @@ mod tests {
             bind_rules: rules,
             colocate: false,
             fallback: false,
+            package_type: DriverPackageType::Base,
         },]);
 
         let (proxy, stream) =
@@ -1799,6 +1992,7 @@ mod tests {
             let expected_driver_info = fdf::MatchedDriverInfo {
                 url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
                 colocate: Some(false),
+                package_type: Some(fdf::DriverPackageType::Base),
                 ..fdf::MatchedDriverInfo::EMPTY
             };
             let expected_result = fdf::MatchedDriver::CompositeDriver(fdf::MatchedCompositeInfo {
@@ -1833,6 +2027,7 @@ mod tests {
             let expected_driver_info = fdf::MatchedDriverInfo {
                 url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
                 colocate: Some(false),
+                package_type: Some(fdf::DriverPackageType::Base),
                 ..fdf::MatchedDriverInfo::EMPTY
             };
             let expected_result = fdf::MatchedDriver::CompositeDriver(fdf::MatchedCompositeInfo {
@@ -1968,6 +2163,7 @@ mod tests {
             bind_rules: always_match,
             colocate: false,
             fallback: false,
+            package_type: DriverPackageType::Base,
         },]);
 
         let (proxy, stream) =
@@ -2025,6 +2221,7 @@ mod tests {
                             "fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()
                         ),
                         colocate: Some(false),
+                        package_type: Some(fdf::DriverPackageType::Base),
                         ..fdf::MatchedDriverInfo::EMPTY
                     }),
                     fdf::MatchedDriver::DeviceGroup(fdf::MatchedDeviceGroupInfo {
@@ -2061,6 +2258,7 @@ mod tests {
                 vec![fdf::MatchedDriver::Driver(fdf::MatchedDriverInfo {
                     url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
                     colocate: Some(false),
+                    package_type: Some(fdf::DriverPackageType::Base),
                     ..fdf::MatchedDriverInfo::EMPTY
                 }),],
                 result
@@ -2096,6 +2294,7 @@ mod tests {
             bind_rules: always_match,
             colocate: false,
             fallback: false,
+            package_type: DriverPackageType::Base,
         },]);
 
         let (proxy, stream) =
@@ -2172,6 +2371,7 @@ mod tests {
             bind_rules: always_match,
             colocate: false,
             fallback: false,
+            package_type: DriverPackageType::Base,
         },]);
 
         let (proxy, stream) =
@@ -2210,6 +2410,280 @@ mod tests {
         futures::select! {
             result = index_task => {
                 panic!("Index task finished: {:?}", result);
+            },
+            () = test_task => {},
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_register_and_match_ephemeral_driver() {
+        fuchsia_syslog::init().unwrap();
+
+        let component_manifest_url =
+            "fuchsia-pkg://fuchsia.com/driver-index-unittests#meta/test-bind-component.cm";
+        let driver_library_url =
+            "fuchsia-pkg://fuchsia.com/driver-index-unittests#driver/fake-driver.so";
+
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+
+        let (registrar_proxy, registrar_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdr::DriverRegistrarMarker>().unwrap();
+
+        let (resolver, resolver_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_pkg::PackageResolverMarker>()
+                .unwrap();
+
+        let universe_resolver = Some(resolver);
+
+        let base_repo = BaseRepo::Resolved(std::vec![]);
+        let index = Rc::new(Indexer::new(std::vec![], base_repo, false));
+
+        let resolver_task = run_resolver_server(resolver_stream).fuse();
+        let index_task = run_index_server(index.clone(), stream).fuse();
+        let registrar_task =
+            run_driver_registrar_server(index.clone(), registrar_stream, &universe_resolver).fuse();
+        let test_task = async move {
+            // Short delay since the resolver server is starting up at the same time.
+            fasync::Timer::new(std::time::Duration::from_millis(100)).await;
+
+            // These properties match the bind rules for the "test-bind-componenet.cm".
+            let property = fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::IntValue(bind::ddk_bind_constants::BIND_PROTOCOL)),
+                value: Some(fdf::NodePropertyValue::IntValue(1)),
+                ..fdf::NodeProperty::EMPTY
+            };
+            let args =
+                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+
+            // First attempt should fail since we haven't registered it.
+            let result = proxy.match_driver(args.clone()).await.unwrap();
+            assert_eq!(result, Err(Status::NOT_FOUND.into_raw()));
+            let result = proxy.match_drivers_v1(args.clone()).await.unwrap().unwrap();
+            assert_eq!(result.len(), 0);
+
+            // Now register the ephemeral driver.
+            let mut pkg_url =
+                fidl_fuchsia_pkg::PackageUrl { url: component_manifest_url.to_string() };
+            registrar_proxy.register(&mut pkg_url).await.unwrap().unwrap();
+
+            // Match succeeds now.
+            let result = proxy.match_driver(args.clone()).await.unwrap().unwrap();
+            let result_v1 = proxy.match_drivers_v1(args.clone()).await.unwrap().unwrap();
+            let expected_url = component_manifest_url.to_string();
+            let expected_driver_url = driver_library_url.to_string();
+            let expected_result = fdf::MatchedDriver::Driver(create_matched_driver_info(
+                expected_url,
+                expected_driver_url,
+                true,
+                DriverPackageType::Universe,
+            ));
+            assert_eq!(expected_result, result);
+            assert_eq!(result_v1.len(), 1);
+            assert_eq!(expected_result, result_v1[0]);
+        }
+        .fuse();
+
+        futures::pin_mut!(resolver_task, index_task, registrar_task, test_task);
+        futures::select! {
+            result = resolver_task => {
+                panic!("Resolver task finished: {:?}", result);
+            },
+            result = index_task => {
+                panic!("Index task finished: {:?}", result);
+            },
+            result = registrar_task => {
+                panic!("Registrar task finished: {:?}", result);
+            },
+            () = test_task => {},
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_register_and_get_ephemeral_driver() {
+        fuchsia_syslog::init().unwrap();
+
+        let component_manifest_url =
+            "fuchsia-pkg://fuchsia.com/driver-index-unittests#meta/test-bind-component.cm";
+        let driver_library_url =
+            "fuchsia-pkg://fuchsia.com/driver-index-unittests#driver/fake-driver.so";
+
+        let (registrar_proxy, registrar_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdr::DriverRegistrarMarker>().unwrap();
+
+        let (resolver, resolver_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_pkg::PackageResolverMarker>()
+                .unwrap();
+
+        let (development_proxy, development_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdd::DriverIndexMarker>().unwrap();
+
+        let universe_resolver = Some(resolver);
+
+        let base_repo = BaseRepo::Resolved(std::vec![]);
+        let index = Rc::new(Indexer::new(std::vec![], base_repo, false));
+
+        let resolver_task = run_resolver_server(resolver_stream).fuse();
+        let development_task =
+            run_driver_development_server(index.clone(), development_stream).fuse();
+        let registrar_task =
+            run_driver_registrar_server(index.clone(), registrar_stream, &universe_resolver).fuse();
+        let test_task = async move {
+            // We should not find this before registering it.
+            let driver_infos =
+                get_driver_info_proxy(&development_proxy, &[component_manifest_url]).await;
+            assert_eq!(0, driver_infos.len());
+
+            // Short delay since the resolver server starts at the same time.
+            fasync::Timer::new(std::time::Duration::from_millis(100)).await;
+
+            // Register the ephemeral driver.
+            let mut pkg_url =
+                fidl_fuchsia_pkg::PackageUrl { url: component_manifest_url.to_string() };
+            registrar_proxy.register(&mut pkg_url).await.unwrap().unwrap();
+
+            // Now that it's registered we should find it.
+            let driver_infos =
+                get_driver_info_proxy(&development_proxy, &[component_manifest_url]).await;
+            assert_eq!(1, driver_infos.len());
+            assert_eq!(&driver_library_url.to_string(), driver_infos[0].libname.as_ref().unwrap());
+        }
+        .fuse();
+
+        futures::pin_mut!(resolver_task, development_task, registrar_task, test_task);
+        futures::select! {
+            result = resolver_task => {
+                panic!("Resolver task finished: {:?}", result);
+            },
+            result = development_task => {
+                panic!("Development task finished: {:?}", result);
+            },
+            result = registrar_task => {
+                panic!("Registrar task finished: {:?}", result);
+            },
+            () = test_task => {},
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_register_exists_in_base() {
+        let always_match_rules = bind::compiler::BindRules {
+            instructions: vec![],
+            symbol_table: std::collections::HashMap::new(),
+            use_new_bytecode: true,
+        };
+        let always_match = DecodedRules::new(
+            bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match_rules).unwrap(),
+        )
+        .unwrap();
+
+        let component_manifest_url =
+            "fuchsia-pkg://fuchsia.com/driver-index-unittests#meta/test-bind-component.cm";
+
+        let (registrar_proxy, registrar_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdr::DriverRegistrarMarker>().unwrap();
+
+        let (resolver, resolver_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_pkg::PackageResolverMarker>()
+                .unwrap();
+
+        let universe_resolver = Some(resolver);
+
+        let boot_repo = std::vec![];
+        let base_repo = BaseRepo::Resolved(vec![ResolvedDriver {
+            component_url: url::Url::parse(component_manifest_url).unwrap(),
+            v1_driver_path: Some("meta/fake-driver.so".to_string()),
+            bind_rules: always_match.clone(),
+            colocate: false,
+            fallback: false,
+            package_type: DriverPackageType::Base,
+        }]);
+
+        let index = Rc::new(Indexer::new(boot_repo, base_repo, false));
+
+        let resolver_task = run_resolver_server(resolver_stream).fuse();
+        let registrar_task =
+            run_driver_registrar_server(index.clone(), registrar_stream, &universe_resolver).fuse();
+        let test_task = async move {
+            // Try to register the driver.
+            let mut pkg_url =
+                fidl_fuchsia_pkg::PackageUrl { url: component_manifest_url.to_string() };
+            let register_result = registrar_proxy.register(&mut pkg_url).await.unwrap();
+
+            // The register should have failed.
+            assert_eq!(fuchsia_zircon::sys::ZX_ERR_ALREADY_EXISTS, register_result.err().unwrap());
+        }
+        .fuse();
+
+        futures::pin_mut!(resolver_task, registrar_task, test_task);
+        futures::select! {
+            result = resolver_task => {
+                panic!("Resolver task finished: {:?}", result);
+            },
+            result = registrar_task => {
+                panic!("Registrar task finished: {:?}", result);
+            },
+            () = test_task => {},
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_register_exists_in_boot() {
+        let always_match_rules = bind::compiler::BindRules {
+            instructions: vec![],
+            symbol_table: std::collections::HashMap::new(),
+            use_new_bytecode: true,
+        };
+        let always_match = DecodedRules::new(
+            bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match_rules).unwrap(),
+        )
+        .unwrap();
+
+        let component_manifest_url =
+            "fuchsia-pkg://fuchsia.com/driver-index-unittests#meta/test-bind-component.cm";
+
+        let (registrar_proxy, registrar_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdr::DriverRegistrarMarker>().unwrap();
+
+        let (resolver, resolver_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_pkg::PackageResolverMarker>()
+                .unwrap();
+
+        let universe_resolver = Some(resolver);
+
+        let boot_repo = vec![ResolvedDriver {
+            component_url: url::Url::parse(component_manifest_url).unwrap(),
+            v1_driver_path: Some("meta/fake-driver.so".to_string()),
+            bind_rules: always_match.clone(),
+            colocate: false,
+            fallback: false,
+            package_type: DriverPackageType::Boot,
+        }];
+
+        let base_repo = BaseRepo::Resolved(std::vec![]);
+        let index = Rc::new(Indexer::new(boot_repo, base_repo, false));
+
+        let resolver_task = run_resolver_server(resolver_stream).fuse();
+        let registrar_task =
+            run_driver_registrar_server(index.clone(), registrar_stream, &universe_resolver).fuse();
+        let test_task = async move {
+            // Try to register the driver.
+            let mut pkg_url =
+                fidl_fuchsia_pkg::PackageUrl { url: component_manifest_url.to_string() };
+            let register_result = registrar_proxy.register(&mut pkg_url).await.unwrap();
+
+            // The register should have failed.
+            assert_eq!(fuchsia_zircon::sys::ZX_ERR_ALREADY_EXISTS, register_result.err().unwrap());
+        }
+        .fuse();
+
+        futures::pin_mut!(resolver_task, registrar_task, test_task);
+        futures::select! {
+            result = resolver_task => {
+                panic!("Resolver task finished: {:?}", result);
+            },
+            result = registrar_task => {
+                panic!("Registrar task finished: {:?}", result);
             },
             () = test_task => {},
         }
