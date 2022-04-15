@@ -581,6 +581,7 @@ sdk_molecule("ddk_fidl") {
   visibility = [ ":*" ]
   deps = [
     "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.driver.compat:fuchsia.driver.compat_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_sdk($fidl_toolchain)",

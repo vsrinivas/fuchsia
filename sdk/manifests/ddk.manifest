@@ -11,6 +11,7 @@ sdk://fidl/fuchsia.data
 sdk://fidl/fuchsia.device.fs
 sdk://fidl/fuchsia.diagnostics.types
 sdk://fidl/fuchsia.driver.framework
+sdk://fidl/fuchsia.driver.compat
 sdk://fidl/fuchsia.hardware.ftdi
 sdk://fidl/fuchsia.hardware.i2c
 sdk://fidl/fuchsia.hardware.i2cimpl
