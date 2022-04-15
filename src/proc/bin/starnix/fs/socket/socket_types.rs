@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use bitflags::bitflags;
+use zerocopy::AsBytes;
 
 use crate::fs::*;
 use crate::types::*;
@@ -48,12 +49,16 @@ pub enum SocketDomain {
     /// The `Unix` socket domain contains sockets that were created with the `AF_UNIX` domain. These
     /// sockets communicate locally, with other sockets on the same host machine.
     Unix,
+
+    /// An AF_VSOCK socket for communication from a controlling operating system
+    Vsock,
 }
 
 impl SocketDomain {
     pub fn from_raw(raw: u16) -> Option<SocketDomain> {
         match raw {
             AF_UNIX => Some(SocketDomain::Unix),
+            AF_VSOCK => Some(SocketDomain::Vsock),
             _ => None,
         }
     }
@@ -96,6 +101,9 @@ pub enum SocketAddress {
 
     /// A `Unix` socket address contains the filesystem path that was used to bind the socket.
     Unix(FsString),
+
+    /// An AF_VSOCK socket is just referred to by its listening port on the client
+    Vsock(u32),
 }
 
 pub const SA_FAMILY_SIZE: usize = std::mem::size_of::<uapi::__kernel_sa_family_t>();
@@ -104,6 +112,7 @@ impl SocketAddress {
     pub fn default_for_domain(domain: SocketDomain) -> SocketAddress {
         match domain {
             SocketDomain::Unix => SocketAddress::Unix(FsString::new()),
+            SocketDomain::Vsock => SocketAddress::Vsock(0xffff),
         }
     }
 
@@ -111,6 +120,7 @@ impl SocketAddress {
         match self {
             SocketAddress::Unspecified => false,
             SocketAddress::Unix(_) => domain == SocketDomain::Unix,
+            SocketAddress::Vsock(_) => domain == SocketDomain::Vsock,
         }
     }
 
@@ -129,6 +139,12 @@ impl SocketAddress {
                 } else {
                     AF_UNIX.to_ne_bytes().to_vec()
                 }
+            }
+            SocketAddress::Vsock(port) => {
+                let mut bytes = vec![0u8; std::mem::size_of::<sockaddr_vm>()];
+                let vm_addr = sockaddr_vm::new(*port);
+                vm_addr.write_to(&mut bytes[..]);
+                bytes
             }
         }
     }

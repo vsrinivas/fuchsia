@@ -43,20 +43,20 @@ impl FileOps for SocketFile {
     fn wait_async(
         &self,
         _file: &FileObject,
-        _current_task: &CurrentTask,
+        current_task: &CurrentTask,
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
     ) -> WaitKey {
-        self.socket.wait_async(waiter, events, handler)
+        self.socket.wait_async(current_task, waiter, events, handler)
     }
 
-    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Arc<Waiter>, key: WaitKey) {
-        self.socket.cancel_wait(key);
+    fn cancel_wait(&self, current_task: &CurrentTask, waiter: &Arc<Waiter>, key: WaitKey) {
+        self.socket.cancel_wait(current_task, waiter, key);
     }
 
-    fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {
-        self.socket.query_events()
+    fn query_events(&self, current_task: &CurrentTask) -> FdEvents {
+        self.socket.query_events(current_task)
     }
 
     fn close(&self, _file: &FileObject) {

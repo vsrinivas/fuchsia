@@ -358,7 +358,7 @@ impl SocketOps for UnixSocket {
         let unix_socket = downcast_socket_to_unix(socket);
         let mut inner = unix_socket.lock();
         let is_bound = inner.address.is_some();
-        let backlog = if backlog < 0 { 1024 } else { backlog as usize };
+        let backlog = if backlog < 0 { DEFAULT_LISTEN_BAKCKLOG } else { backlog as usize };
         match &mut inner.state {
             UnixSocketState::Disconnected if is_bound => {
                 inner.state = UnixSocketState::Listening(AcceptQueue::new(backlog));
@@ -389,24 +389,32 @@ impl SocketOps for UnixSocket {
         Ok(socket)
     }
 
+    fn remote_connection(&self, _socket: &Socket, _file: FileHandle) -> Result<(), Errno> {
+        error!(EOPNOTSUPP)
+    }
+
     fn bind(&self, _socket: &Socket, socket_address: SocketAddress) -> Result<(), Errno> {
+        match socket_address {
+            SocketAddress::Unix(_) => {}
+            _ => return error!(EINVAL),
+        }
         self.lock().bind(socket_address)
     }
 
     fn read(
         &self,
         socket: &Socket,
-        task: &Task,
+        current_task: &CurrentTask,
         user_buffers: &mut UserBufferIterator<'_>,
         flags: SocketMessageFlags,
     ) -> Result<MessageReadInfo, Errno> {
-        self.lock().read(task, user_buffers, socket.socket_type, flags)
+        self.lock().read(current_task, user_buffers, socket.socket_type, flags)
     }
 
     fn write(
         &self,
         socket: &Socket,
-        task: &Task,
+        current_task: &CurrentTask,
         user_buffers: &mut UserBufferIterator<'_>,
         dest_address: &mut Option<SocketAddress>,
         ancillary_data: &mut Vec<AncillaryData>,
@@ -431,18 +439,22 @@ impl SocketOps for UnixSocket {
                 ancillary_data
                     .push(AncillaryData::Unix(UnixControlData::Credentials(creds.clone())));
             } else {
-                let credentials = task.creds.read();
-                let creds =
-                    ucred { pid: task.get_pid(), uid: credentials.uid, gid: credentials.gid };
+                let credentials = current_task.creds.read();
+                let creds = ucred {
+                    pid: current_task.get_pid(),
+                    uid: credentials.uid,
+                    gid: credentials.gid,
+                };
                 ancillary_data.push(AncillaryData::Unix(UnixControlData::Credentials(creds)));
             }
         }
-        peer.write(task, user_buffers, local_address, ancillary_data, socket.socket_type)
+        peer.write(current_task, user_buffers, local_address, ancillary_data, socket.socket_type)
     }
 
     fn wait_async(
         &self,
         _socket: &Socket,
+        _current_task: &CurrentTask,
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
@@ -457,12 +469,18 @@ impl SocketOps for UnixSocket {
         }
     }
 
-    fn cancel_wait(&self, _socket: &Socket, key: WaitKey) -> bool {
+    fn cancel_wait(
+        &self,
+        _socket: &Socket,
+        _current_task: &CurrentTask,
+        _waiter: &Arc<Waiter>,
+        key: WaitKey,
+    ) {
         let mut inner = self.lock();
-        inner.waiters.cancel_wait(key)
+        inner.waiters.cancel_wait(key);
     }
 
-    fn query_events(&self, _socket: &Socket) -> FdEvents {
+    fn query_events(&self, _socket: &Socket, _current_task: &CurrentTask) -> FdEvents {
         // Note that self.lock() must be dropped before acquiring peer.inner.lock() to avoid
         // potential deadlocks.
         let (mut present_events, peer) = {
@@ -697,7 +715,7 @@ impl UnixSocketInner {
     /// read from the socket.
     fn read(
         &mut self,
-        task: &Task,
+        current_task: &CurrentTask,
         user_buffers: &mut UserBufferIterator<'_>,
         socket_type: SocketType,
         flags: SocketMessageFlags,
@@ -710,15 +728,15 @@ impl UnixSocketInner {
         }
         let info = if socket_type == SocketType::Stream {
             if flags.contains(SocketMessageFlags::PEEK) {
-                self.messages.peek_stream(task, user_buffers)?
+                self.messages.peek_stream(current_task, user_buffers)?
             } else {
-                self.messages.read_stream(task, user_buffers)?
+                self.messages.read_stream(current_task, user_buffers)?
             }
         } else {
             if flags.contains(SocketMessageFlags::PEEK) {
-                self.messages.peek_datagram(task, user_buffers)?
+                self.messages.peek_datagram(current_task, user_buffers)?
             } else {
-                self.messages.read_datagram(task, user_buffers)?
+                self.messages.read_datagram(current_task, user_buffers)?
             }
         };
         if info.message_length == 0 && !self.is_shutdown {
@@ -762,7 +780,7 @@ impl UnixSocketInner {
     /// Returns the number of bytes that were written to the socket.
     fn write(
         &mut self,
-        task: &Task,
+        current_task: &CurrentTask,
         user_buffers: &mut UserBufferIterator<'_>,
         address: Option<SocketAddress>,
         ancillary_data: &mut Vec<AncillaryData>,
@@ -772,9 +790,9 @@ impl UnixSocketInner {
             return error!(EPIPE);
         }
         let bytes_written = if socket_type == SocketType::Stream {
-            self.messages.write_stream(task, user_buffers, address, ancillary_data)?
+            self.messages.write_stream(current_task, user_buffers, address, ancillary_data)?
         } else {
-            self.messages.write_datagram(task, user_buffers, address, ancillary_data)?
+            self.messages.write_datagram(current_task, user_buffers, address, ancillary_data)?
         };
         if bytes_written > 0 {
             self.waiters.notify_events(FdEvents::POLLIN);

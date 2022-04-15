@@ -60,6 +60,14 @@ impl<'a> UserBufferIterator<'a> {
         }
         Some(result)
     }
+
+    pub fn drain_to_vec(&mut self) -> Vec<UserBuffer> {
+        let mut buffers = Vec::<UserBuffer>::new();
+        while let Some(buffer) = self.next(usize::MAX) {
+            buffers.push(buffer);
+        }
+        buffers
+    }
 }
 
 #[cfg(test)]

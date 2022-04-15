@@ -15,6 +15,8 @@ use crate::types::*;
 
 use std::sync::Arc;
 
+pub const DEFAULT_LISTEN_BAKCKLOG: usize = 1024;
+
 pub trait SocketOps: Send + Sync + AsAny {
     /// Connect the `socket` to the listening `peer`. On success
     /// a new socket is created and added to the accept queue.
@@ -31,6 +33,16 @@ pub trait SocketOps: Send + Sync + AsAny {
     /// Returns the eariest socket on the accept queue of this
     /// listening socket. Returns EAGAIN if the queue is empty.
     fn accept(&self, socket: &Socket, credentials: ucred) -> Result<SocketHandle, Errno>;
+
+    /// Used for connecting Zircon-based objects, such as RemotePipeObject
+    /// to listening sockets. This differs from connect, in that the `socket`
+    /// handed to `connect` is retained by the caller and used for communicating
+    ///
+    /// # Parameters
+    ///
+    /// - `socket`: A listening socket (for streams) or a datagram socket
+    /// - `local_handle`: our side of a remote socket connection
+    fn remote_connection(&self, socket: &Socket, local_handle: FileHandle) -> Result<(), Errno>;
 
     /// Binds this socket to a `socket_address`.
     ///
@@ -49,7 +61,7 @@ pub trait SocketOps: Send + Sync + AsAny {
     fn read(
         &self,
         socket: &Socket,
-        task: &Task,
+        current_task: &CurrentTask,
         user_buffers: &mut UserBufferIterator<'_>,
         flags: SocketMessageFlags,
     ) -> Result<MessageReadInfo, Errno>;
@@ -66,7 +78,7 @@ pub trait SocketOps: Send + Sync + AsAny {
     fn write(
         &self,
         socket: &Socket,
-        task: &Task,
+        current_task: &CurrentTask,
         user_buffers: &mut UserBufferIterator<'_>,
         dest_address: &mut Option<SocketAddress>,
         ancillary_data: &mut Vec<AncillaryData>,
@@ -86,6 +98,7 @@ pub trait SocketOps: Send + Sync + AsAny {
     fn wait_async(
         &self,
         socket: &Socket,
+        current_task: &CurrentTask,
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
@@ -94,10 +107,16 @@ pub trait SocketOps: Send + Sync + AsAny {
     /// Cancel a wait previously set up with `wait_async`.
     /// Returns `true` if the wait was actually cancelled.
     /// If the wait has already been triggered, this returns `false`.
-    fn cancel_wait(&self, socket: &Socket, key: WaitKey) -> bool;
+    fn cancel_wait(
+        &self,
+        socket: &Socket,
+        current_task: &CurrentTask,
+        waiter: &Arc<Waiter>,
+        key: WaitKey,
+    );
 
     /// Return the events that are currently active on the `socket`.
-    fn query_events(&self, socket: &Socket) -> FdEvents;
+    fn query_events(&self, socket: &Socket, current_task: &CurrentTask) -> FdEvents;
 
     /// Shuts down this socket according to how, preventing any future reads and/or writes.
     ///
@@ -163,6 +182,7 @@ pub type SocketHandle = Arc<Socket>;
 fn create_socket_ops(domain: SocketDomain, socket_type: SocketType) -> Box<dyn SocketOps> {
     match domain {
         SocketDomain::Unix => Box::new(UnixSocket::new(socket_type)),
+        SocketDomain::Vsock => Box::new(VsockSocket::new(socket_type)),
     }
 }
 
@@ -247,13 +267,18 @@ impl Socket {
         self.ops.accept(self, credentials)
     }
 
+    #[allow(dead_code)]
+    pub fn remote_connection(&self, file: FileHandle) -> Result<(), Errno> {
+        self.ops.remote_connection(self, file)
+    }
+
     pub fn read(
         &self,
-        task: &Task,
+        current_task: &CurrentTask,
         user_buffers: &mut UserBufferIterator<'_>,
         flags: SocketMessageFlags,
     ) -> Result<MessageReadInfo, Errno> {
-        self.ops.read(self, task, user_buffers, flags)
+        self.ops.read(self, current_task, user_buffers, flags)
     }
 
     /// Reads all the available messages out of this socket, blocking if no messages are immediately
@@ -270,12 +295,12 @@ impl Socket {
 
     pub fn write(
         &self,
-        task: &Task,
+        current_task: &CurrentTask,
         user_buffers: &mut UserBufferIterator<'_>,
         dest_address: &mut Option<SocketAddress>,
         ancillary_data: &mut Vec<AncillaryData>,
     ) -> Result<usize, Errno> {
-        self.ops.write(self, task, user_buffers, dest_address, ancillary_data)
+        self.ops.write(self, current_task, user_buffers, dest_address, ancillary_data)
     }
 
     /// Writes the provided message into this socket. If the write succeeds, all the bytes were
@@ -295,19 +320,20 @@ impl Socket {
 
     pub fn wait_async(
         &self,
+        current_task: &CurrentTask,
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
     ) -> WaitKey {
-        self.ops.wait_async(self, waiter, events, handler)
+        self.ops.wait_async(self, current_task, waiter, events, handler)
     }
 
-    pub fn cancel_wait(&self, key: WaitKey) -> bool {
-        self.ops.cancel_wait(self, key)
+    pub fn cancel_wait(&self, current_task: &CurrentTask, waiter: &Arc<Waiter>, key: WaitKey) {
+        self.ops.cancel_wait(self, current_task, waiter, key)
     }
 
-    pub fn query_events(&self) -> FdEvents {
-        self.ops.query_events(self)
+    pub fn query_events(&self, current_task: &CurrentTask) -> FdEvents {
+        self.ops.query_events(self, current_task)
     }
 
     pub fn shutdown(&self, how: SocketShutdownFlags) -> Result<(), Errno> {
@@ -349,12 +375,12 @@ mod tests {
         let socket = Socket::new(SocketDomain::Unix, SocketType::Stream);
         socket.bind(SocketAddress::Unix(b"\0".to_vec())).expect("Failed to bind socket.");
         socket.listen(10).expect("Failed to listen.");
-        assert_eq!(FdEvents::empty(), socket.query_events());
+        assert_eq!(FdEvents::empty(), socket.query_events(&current_task));
         let connecting_socket = Socket::new(SocketDomain::Unix, SocketType::Stream);
         connecting_socket
             .connect(&socket, current_task.as_ucred())
             .expect("Failed to connect socket.");
-        assert_eq!(FdEvents::POLLIN, socket.query_events());
+        assert_eq!(FdEvents::POLLIN, socket.query_events(&current_task));
         let server_socket = socket.accept(current_task.as_ucred()).unwrap();
 
         let message = Message::new(vec![1, 2, 3].into(), None, vec![]);
@@ -372,7 +398,7 @@ mod tests {
         // The thread should finish now that messages have been written.
         handle.join().expect("failed to join thread");
 
-        assert_eq!(FdEvents::POLLHUP, server_socket.query_events());
+        assert_eq!(FdEvents::POLLHUP, server_socket.query_events(&current_task));
     }
 
     #[::fuchsia::test]

@@ -171,6 +171,7 @@ pub fn sys_bind(
                     .map_err(|errno| if errno == EEXIST { errno!(EADDRINUSE) } else { errno })?;
             }
         }
+        SocketAddress::Vsock(_) => todo!(),
     }
 
     Ok(())
@@ -256,6 +257,7 @@ pub fn sys_connect(
                 name.entry.node.socket().ok_or_else(|| errno!(ECONNREFUSED))?.clone()
             }
         }
+        SocketAddress::Vsock(_) => todo!(),
     };
 
     // TODO(tbodt): Support blocking when the UNIX domain socket queue fills up. This one's weird

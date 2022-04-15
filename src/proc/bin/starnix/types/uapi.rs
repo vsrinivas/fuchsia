@@ -108,6 +108,7 @@ pub const SIG_ERR: UserAddress = UserAddress::from(u64::MAX);
 pub const AF_UNSPEC: uapi::__kernel_sa_family_t = 0;
 pub const AF_UNIX: uapi::__kernel_sa_family_t = 1;
 pub const AF_INET: uapi::__kernel_sa_family_t = 2;
+pub const AF_VSOCK: uapi::__kernel_sa_family_t = 40;
 
 pub const SOCK_CLOEXEC: u32 = O_CLOEXEC;
 pub const SOCK_NONBLOCK: u32 = O_NONBLOCK;
@@ -160,6 +161,28 @@ pub struct sockaddr_un {
 impl Default for sockaddr_un {
     fn default() -> Self {
         sockaddr_un { sun_family: 0, sun_path: [0; 108] }
+    }
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
+pub struct sockaddr_vm {
+    pub svm_family: uapi::__kernel_sa_family_t,
+    _svm_reserved: u16,
+    pub svm_port: u32,
+    _svm_cid: u32,
+    _svm_zero: [u8; 4],
+}
+
+impl sockaddr_vm {
+    pub fn new(port: u32) -> Self {
+        sockaddr_vm {
+            svm_family: AF_VSOCK,
+            _svm_reserved: 0,
+            svm_port: port,
+            _svm_cid: 0,
+            _svm_zero: [0u8; 4],
+        }
     }
 }
 
