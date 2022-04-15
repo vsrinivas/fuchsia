@@ -120,7 +120,7 @@ zx_status_t ram_crashlog_stow(void* buf, size_t buf_len, const void* payload, ui
 
   // Finally, toggle the magic number value in order to activate our new header.
   log.magic = next_magic;
-  clean_cache_range(&log.magic, sizeof(&log.magic));
+  clean_cache_range(&log.magic, sizeof(log.magic));
 
   return ZX_OK;
 }
