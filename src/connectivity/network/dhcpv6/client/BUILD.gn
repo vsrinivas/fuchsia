@@ -42,24 +42,10 @@ rustc_binary("dhcpv6_client") {
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
-fuchsia_component("component-legacy") {
-  component_name = "dhcpv6-client"
-  manifest = "meta/dhcpv6-client.cmx"
-  deps = [ ":dhcpv6_client" ]
-}
-
 fuchsia_component("component") {
   component_name = "dhcpv6-client"
   manifest = "meta/dhcpv6-client.cml"
   deps = [ ":dhcpv6_client" ]
-}
-
-fuchsia_package("dhcpv6-client") {
-  deps = [ ":component-legacy" ]
-}
-
-group("client") {
-  deps = [ ":dhcpv6-client" ]
 }
 
 fuchsia_component("dhcpv6-client-test") {
