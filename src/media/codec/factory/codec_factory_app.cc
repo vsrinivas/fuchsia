@@ -287,7 +287,7 @@ void CodecFactoryApp::DiscoverMediaCodecDriversAndListenForMoreAsync() {
 }
 
 void CodecFactoryApp::TeardownMagmaCodec(
-    std::shared_ptr<fuchsia::gpu::magma::DevicePtr> magma_device) {
+    std::shared_ptr<fuchsia::gpu::magma::IcdLoaderDevicePtr> magma_device) {
   // Any given magma device won't be in both lists, but will be in one or
   // the other by the time this error handler runs.
   device_discovery_queue_.remove_if(
@@ -315,7 +315,7 @@ void CodecFactoryApp::DiscoverMagmaCodecDriversAndListenForMoreAsync() {
       kGpuDeviceClass,
       [this](int dir_fd, std::string filename) {
         std::string device_path = std::string(kGpuDeviceClass) + "/" + filename;
-        auto magma_device = std::make_shared<fuchsia::gpu::magma::DevicePtr>();
+        auto magma_device = std::make_shared<fuchsia::gpu::magma::IcdLoaderDevicePtr>();
         zx_status_t status = fdio_service_connect(
             device_path.c_str(), magma_device->NewRequest().TakeChannel().release());
         if (status != ZX_OK) {

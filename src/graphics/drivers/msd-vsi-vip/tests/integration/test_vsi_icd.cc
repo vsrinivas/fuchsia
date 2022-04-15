@@ -17,7 +17,8 @@
 TEST(TestIcd, IcdList) {
   magma::TestDeviceBase test_device(MAGMA_VENDOR_ID_VSI);
 
-  auto rsp = fidl::WireCall<fuchsia_gpu_magma::Device>(test_device.channel())->GetIcdList();
+  auto rsp =
+      fidl::WireCall<fuchsia_gpu_magma::IcdLoaderDevice>(test_device.channel())->GetIcdList();
   EXPECT_TRUE(rsp.ok());
   EXPECT_EQ(rsp->icd_list.count(), 2u);
 

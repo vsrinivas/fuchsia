@@ -81,18 +81,27 @@ protocol Device {
         primary_channel client_end:Primary;
         notification_channel zx.handle:CHANNEL;
     });
+};
 
+/// Methods used to expose diagnostics from the Magma device.
+protocol DiagnosticDevice {
     /// Dumps driver and hardware state to the log.
     DumpState(struct {
         dump_type uint32;
     });
+};
 
+/// Methods implemented by an MSD and exposed for use of an ICD loader.
+protocol IcdLoaderDevice {
     /// Returns a list of ICDs that can be used with this Magma device. The list is sorted in
     /// descending order of preference.
     GetIcdList() -> (struct {
         icd_list vector<IcdInfo>:MAX_ICD_COUNT;
     });
+};
 
+/// Methods are exposed for the purposes of testing the MSD and should not be used by ICDs.
+protocol TestDevice {
     /// Tears down and restarts the Magma Device. For testing only; if run on a non-test build of
     /// the driver this will be a no-op.
     TestRestart();
@@ -101,6 +110,15 @@ protocol Device {
     GetUnitTestStatus() -> (struct {
         status zx.status;
     });
+};
+
+/// A combination of all the |Device| protocols. This protocol is implemented on the Magma service
+/// side and should not be used by clients.
+protocol CombinedDevice {
+    compose Device;
+    compose DiagnosticDevice;
+    compose IcdLoaderDevice;
+    compose TestDevice;
 };
 
 type ObjectType = strict enum {

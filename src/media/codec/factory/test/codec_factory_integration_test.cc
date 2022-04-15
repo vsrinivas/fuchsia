@@ -47,7 +47,7 @@ class MockSysInfoComponent : public LocalComponent {
   std::unique_ptr<LocalComponentHandles> handles_;
 };
 
-class FakeMagmaDevice : public fuchsia::gpu::magma::testing::Device_TestBase {
+class FakeMagmaDevice : public fuchsia::gpu::magma::testing::CombinedDevice_TestBase {
  public:
   void NotImplemented_(const std::string& name) override {
     fprintf(stderr, "Magma doing notimplemented with %s\n", name.c_str());
@@ -64,7 +64,7 @@ class FakeMagmaDevice : public fuchsia::gpu::magma::testing::Device_TestBase {
     callback(std::move(vec));
   }
 
-  fidl::InterfaceRequestHandler<fuchsia::gpu::magma::Device> GetHandler() {
+  fidl::InterfaceRequestHandler<fuchsia::gpu::magma::CombinedDevice> GetHandler() {
     return bindings_.GetHandler(this);
   }
 
@@ -73,7 +73,7 @@ class FakeMagmaDevice : public fuchsia::gpu::magma::testing::Device_TestBase {
   void set_has_icds(bool has_icds) { has_icds_ = has_icds; }
 
  private:
-  fidl::BindingSet<fuchsia::gpu::magma::Device> bindings_;
+  fidl::BindingSet<fuchsia::gpu::magma::CombinedDevice> bindings_;
   bool has_icds_ = true;
 };
 
@@ -93,7 +93,7 @@ class MockGpuComponent : public LocalComponent {
       gpu_root->AddEntry(
           "000", fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
             magma_device_.GetHandler()(
-                fidl::InterfaceRequest<fuchsia::gpu::magma::Device>(std::move(channel)));
+                fidl::InterfaceRequest<fuchsia::gpu::magma::CombinedDevice>(std::move(channel)));
             return ZX_OK;
           }));
 

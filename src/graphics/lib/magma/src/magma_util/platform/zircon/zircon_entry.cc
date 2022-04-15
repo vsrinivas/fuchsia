@@ -41,7 +41,7 @@ class GpuDevice;
 using DdkDeviceType =
     ddk::Device<GpuDevice, ddk::MessageableManual, ddk::Unbindable, ddk::Initializable>;
 
-class GpuDevice : public fidl::WireServer<fuchsia_gpu_magma::Device>,
+class GpuDevice : public fidl::WireServer<fuchsia_gpu_magma::CombinedDevice>,
                   public magma::MagmaDependencyInjectionDevice::Owner,
                   public DdkDeviceType,
                   public ddk::EmptyProtocol<ZX_PROTOCOL_GPU> {
@@ -307,7 +307,7 @@ void GpuDevice::DdkUnbind(ddk::UnbindTxn txn) {
 }
 
 void GpuDevice::DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn) {
-  fidl::WireDispatch<fuchsia_gpu_magma::Device>(this, std::move(msg), &txn);
+  fidl::WireDispatch<fuchsia_gpu_magma::CombinedDevice>(this, std::move(msg), &txn);
 }
 
 void GpuDevice::DdkRelease() {

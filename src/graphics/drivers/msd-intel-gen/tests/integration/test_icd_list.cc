@@ -19,7 +19,8 @@ namespace {
 
 TEST(Intel, IcdList) {
   magma::TestDeviceBase test_device(MAGMA_VENDOR_ID_INTEL);
-  auto rsp = fidl::WireCall<fuchsia_gpu_magma::Device>(test_device.channel())->GetIcdList();
+  auto rsp =
+      fidl::WireCall<fuchsia_gpu_magma::IcdLoaderDevice>(test_device.channel())->GetIcdList();
   EXPECT_TRUE(rsp.ok());
   EXPECT_EQ(rsp->icd_list.count(), 3u);
   auto& icd_item = rsp->icd_list[0];

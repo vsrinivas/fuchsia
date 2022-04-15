@@ -33,7 +33,7 @@
 
 class LoaderUnittest : public gtest::RealLoopFixture {};
 
-class FakeMagmaDevice : public fuchsia::gpu::magma::testing::Device_TestBase {
+class FakeMagmaDevice : public fuchsia::gpu::magma::testing::CombinedDevice_TestBase {
  public:
   void NotImplemented_(const std::string& name) override { EXPECT_TRUE(false) << name; }
   void GetIcdList(GetIcdListCallback callback) override {
@@ -47,14 +47,14 @@ class FakeMagmaDevice : public fuchsia::gpu::magma::testing::Device_TestBase {
     vec.push_back(std::move(info));
     callback(std::move(vec));
   }
-  fidl::InterfaceRequestHandler<fuchsia::gpu::magma::Device> GetHandler() {
+  fidl::InterfaceRequestHandler<fuchsia::gpu::magma::CombinedDevice> GetHandler() {
     return bindings_.GetHandler(this);
   }
 
   void CloseAll() { bindings_.CloseAll(); }
 
  private:
-  fidl::BindingSet<fuchsia::gpu::magma::Device> bindings_;
+  fidl::BindingSet<fuchsia::gpu::magma::CombinedDevice> bindings_;
 };
 
 TEST_F(LoaderUnittest, MagmaDevice) {

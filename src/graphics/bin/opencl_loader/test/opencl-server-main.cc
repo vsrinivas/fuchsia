@@ -23,7 +23,7 @@
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 
-class FakeMagmaDevice : public fuchsia::gpu::magma::testing::Device_TestBase {
+class FakeMagmaDevice : public fuchsia::gpu::magma::testing::CombinedDevice_TestBase {
  public:
   void NotImplemented_(const std::string& name) override {
     FX_LOGS(ERROR) << "Magma doing notimplemented with " << name;
@@ -47,14 +47,14 @@ class FakeMagmaDevice : public fuchsia::gpu::magma::testing::Device_TestBase {
     callback(std::move(result));
   }
 
-  fidl::InterfaceRequestHandler<fuchsia::gpu::magma::Device> GetHandler() {
+  fidl::InterfaceRequestHandler<fuchsia::gpu::magma::CombinedDevice> GetHandler() {
     return bindings_.GetHandler(this);
   }
 
   void CloseAll() { bindings_.CloseAll(); }
 
  private:
-  fidl::BindingSet<fuchsia::gpu::magma::Device> bindings_;
+  fidl::BindingSet<fuchsia::gpu::magma::CombinedDevice> bindings_;
 };
 class LifecycleHandler : public fuchsia::process::lifecycle::Lifecycle {
  public:
@@ -102,7 +102,7 @@ int main(int argc, const char* const* argv) {
   dev_gpu_dir->AddEntry(
       "000", fbl::MakeRefCounted<fs::Service>([&magma_device](zx::channel channel) {
         magma_device.GetHandler()(
-            fidl::InterfaceRequest<fuchsia::gpu::magma::Device>(std::move(channel)));
+            fidl::InterfaceRequest<fuchsia::gpu::magma::CombinedDevice>(std::move(channel)));
         return ZX_OK;
       }));
 

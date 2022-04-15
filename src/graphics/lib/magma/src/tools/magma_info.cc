@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  auto result = fidl::WireCall<fuchsia_gpu_magma::Device>(
+  auto result = fidl::WireCall<fuchsia_gpu_magma::DiagnosticDevice>(
                     zx::unowned_channel(fdio_unsafe_borrow_channel(fdio)))
                     ->DumpState(dump_type);
   fdio_unsafe_release(fdio);

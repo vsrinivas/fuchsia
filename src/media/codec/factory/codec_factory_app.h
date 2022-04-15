@@ -57,7 +57,7 @@ class CodecFactoryApp {
     // other code (not posted; not sent across threads).
     std::shared_ptr<fuchsia::mediacodec::CodecFactoryPtr> factory;
 
-    std::shared_ptr<fuchsia::gpu::magma::DevicePtr> magma_device;
+    std::shared_ptr<fuchsia::gpu::magma::IcdLoaderDevicePtr> magma_device;
   };
 
   void DiscoverMagmaCodecDriversAndListenForMoreAsync();
@@ -70,7 +70,7 @@ class CodecFactoryApp {
   void IdledCodecDiscovery();
   // Remove a magma codec from the discovery queue and codec lists and ensure
   // the discovery queue is processed correctly.
-  void TeardownMagmaCodec(std::shared_ptr<fuchsia::gpu::magma::DevicePtr> magma_device);
+  void TeardownMagmaCodec(std::shared_ptr<fuchsia::gpu::magma::IcdLoaderDevicePtr> magma_device);
 
   [[nodiscard]] std::string GetBoardName();
 
@@ -144,7 +144,7 @@ class CodecFactoryApp {
     // itself.
     std::shared_ptr<fuchsia::mediacodec::CodecFactoryPtr> codec_factory;
 
-    std::shared_ptr<fuchsia::gpu::magma::DevicePtr> magma_device;
+    std::shared_ptr<fuchsia::gpu::magma::IcdLoaderDevicePtr> magma_device;
 
     std::string component_url;
 

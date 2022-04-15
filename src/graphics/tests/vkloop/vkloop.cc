@@ -343,7 +343,7 @@ bool VkLoopTest::Exec(bool kill_driver, AllowSuccess allow_success,
   if (kill_driver) {
     // TODO: Unbind and rebind driver once that supports forcibly tearing down client connections.
     auto result =
-        fidl::WireCall<fuchsia_gpu_magma::Device>(zx::unowned_channel(magma_device_channel))
+        fidl::WireCall<fuchsia_gpu_magma::TestDevice>(zx::unowned_channel(magma_device_channel))
             ->TestRestart();
     EXPECT_EQ(ZX_OK, result.status());
   }

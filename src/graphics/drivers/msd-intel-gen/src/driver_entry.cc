@@ -40,7 +40,7 @@
 zx_status_t magma_indriver_test(magma::PlatformPciDevice* platform_device);
 #endif
 
-struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::Device> {
+struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::CombinedDevice> {
  public:
   template <typename T>
   bool CheckSystemDevice(T& completer) MAGMA_REQUIRES(magma_mutex) {
@@ -243,7 +243,7 @@ static zx_status_t sysdrv_gpu_message(void* context, fidl_incoming_msg_t* messag
                                       fidl_txn_t* transaction) {
   sysdrv_device_t* device = get_device(context);
   DdkTransaction ddk_transaction(transaction);
-  fidl::WireDispatch<fuchsia_gpu_magma::Device>(
+  fidl::WireDispatch<fuchsia_gpu_magma::CombinedDevice>(
       device, fidl::IncomingMessage::FromEncodedCMessage(message), &ddk_transaction);
   return ddk_transaction.Status();
 }

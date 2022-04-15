@@ -32,7 +32,7 @@ class MagmaDevice : public GpuDevice {
   FIT_DECLARE_THREAD_CHECKER(main_thread_)
   IcdList icd_list_;
 
-  fuchsia::gpu::magma::DevicePtr device_;
+  fuchsia::gpu::magma::IcdLoaderDevicePtr device_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(MagmaDevice);
 };

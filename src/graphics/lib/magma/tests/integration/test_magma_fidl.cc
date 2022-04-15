@@ -25,7 +25,7 @@ inline uint64_t page_size() { return sysconf(_SC_PAGESIZE); }
 // should be fully specified.  These tests ensure that.
 //
 
-using DeviceClient = fidl::WireSyncClient<fuchsia_gpu_magma::Device>;
+using DeviceClient = fidl::WireSyncClient<fuchsia_gpu_magma::CombinedDevice>;
 using PrimaryClient = fidl::WireClient<fuchsia_gpu_magma::Primary>;
 
 class TestAsyncHandler : public fidl::WireAsyncEventHandler<fuchsia_gpu_magma::Primary> {
@@ -63,7 +63,7 @@ class TestMagmaFidl : public gtest::RealLoopFixture {
     for (auto& p : std::filesystem::directory_iterator(kDevicePathFuchsia)) {
       ASSERT_FALSE(device_.is_valid()) << " More than one GPU device found, specify --vendor-id";
 
-      auto endpoints = fidl::CreateEndpoints<fuchsia_gpu_magma::Device>();
+      auto endpoints = fidl::CreateEndpoints<fuchsia_gpu_magma::CombinedDevice>();
       ASSERT_TRUE(endpoints.is_ok());
 
       zx_status_t zx_status =

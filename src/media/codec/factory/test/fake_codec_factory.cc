@@ -61,7 +61,7 @@ int main(int argc, const char* const* argv) {
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   // Validate that /dev/class/gpu is accessible.
-  fuchsia::gpu::magma::DeviceSyncPtr device;
+  fuchsia::gpu::magma::IcdLoaderDeviceSyncPtr device;
   fdio_service_connect("/dev/class/gpu/000", device.NewRequest().TakeChannel().release());
   std::vector<fuchsia::gpu::magma::IcdInfo> list;
   zx_status_t status = device->GetIcdList(&list);
