@@ -11,6 +11,7 @@
 
 #include "src/media/audio/audio_core/active_stream_count_reporter.h"
 #include "src/media/audio/audio_core/context.h"
+#include "src/media/audio/audio_core/logging_flags.h"
 #include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 
@@ -24,13 +25,13 @@ bool IdlePolicy::use_all_ultrasonic_channels_ = true;
 //
 // Will be called on the FIDL thread
 void IdlePolicy::OnActiveRenderCountChanged(RenderUsage usage, uint32_t count) {
-  if (!IdlePolicy::idle_countdown_duration().has_value()) {
-    if constexpr (IdlePolicy::kLogIdlePolicyCounts) {
-      FX_LOGS(INFO) << __FUNCTION__ << " exiting early (policy disabled)";
+  if (!IdlePolicy::idle_countdown_duration().has_value() || IdlePolicy::kDisableIdlePolicy) {
+    if constexpr (kLogIdlePolicyCounts) {
+      FX_LOGS(INFO) << __FUNCTION__ << " exiting early (idle policy disabled)";
     }
     return;
   }
-  if constexpr (IdlePolicy::kLogIdlePolicyCounts) {
+  if constexpr (kLogIdlePolicyCounts) {
     FX_LOGS(INFO) << __FUNCTION__ << "(" << RenderUsageToString(usage) << ", " << count << ")";
   }
 
@@ -52,7 +53,7 @@ void IdlePolicy::OnActiveRenderCountChanged(RenderUsage usage, uint32_t count) {
 //
 // Will be called on the FIDL thread
 void IdlePolicy::AddDeviceToRoutes(AudioDevice* device) {
-  if constexpr (IdlePolicy::kLogIdlePolicyCounts) {
+  if constexpr (kLogIdlePolicyCounts) {
     FX_LOGS(INFO) << __FUNCTION__ << "(" << device << ")";
   }
 
@@ -66,7 +67,7 @@ void IdlePolicy::AddDeviceToRoutes(AudioDevice* device) {
 
 // Will be called on the FIDL thread
 void IdlePolicy::RemoveDeviceFromRoutes(AudioDevice* device) {
-  if constexpr (IdlePolicy::kLogIdlePolicyCounts) {
+  if constexpr (kLogIdlePolicyCounts) {
     FX_LOGS(INFO) << __FUNCTION__ << "(" << device << ")";
   }
 
@@ -84,14 +85,14 @@ void IdlePolicy::PrepareForRoutingChange(bool device_is_input, RoutingScope scop
     return;
   }
 
-  if (!IdlePolicy::idle_countdown_duration().has_value()) {
-    if constexpr (IdlePolicy::kLogIdlePolicyCounts) {
+  if (!IdlePolicy::idle_countdown_duration().has_value() || IdlePolicy::kDisableIdlePolicy) {
+    if constexpr (kLogIdlePolicyCounts) {
       FX_LOGS(INFO) << __FUNCTION__ << ": not caching routing state (idle policy disabled)";
     }
     return;
   }
 
-  if constexpr (IdlePolicy::kLogIdlePolicyCounts) {
+  if constexpr (kLogIdlePolicyCounts) {
     FX_LOGS(INFO) << __FUNCTION__ << ": caching state before RouteGraph::AddDeviceToRoutes";
   }
 
@@ -110,8 +111,8 @@ void IdlePolicy::DigestRoutingChange(bool device_is_input, RoutingScope scope) {
     return;
   }
 
-  if (!IdlePolicy::idle_countdown_duration().has_value()) {
-    if constexpr (IdlePolicy::kLogIdlePolicyCounts) {
+  if (!IdlePolicy::idle_countdown_duration().has_value() || IdlePolicy::kDisableIdlePolicy) {
+    if constexpr (kLogIdlePolicyCounts) {
       FX_LOGS(INFO) << __FUNCTION__ << ": not changing active channels (idle policy disabled)";
     }
     return;
@@ -126,7 +127,7 @@ void IdlePolicy::DigestRoutingChange(bool device_is_input, RoutingScope scope) {
         audible_devices_after.erase(dev);  // still active after, so remove it from our attention
         continue;
       }
-      if constexpr (IdlePolicy::kLogIdlePolicyCounts) {
+      if constexpr (kLogIdlePolicyCounts) {
         FX_LOGS(INFO) << __FUNCTION__ << " calling StartCountdownToDisableAudible";
       }
       if (IdlePolicy::idle_countdown_duration().has_value()) {
@@ -137,7 +138,7 @@ void IdlePolicy::DigestRoutingChange(bool device_is_input, RoutingScope scope) {
 
     // Only devices remaining are ones that are newly targeted by an active RenderUsage
     for (auto& dev : audible_devices_after) {
-      if constexpr (IdlePolicy::kLogIdlePolicyCounts) {
+      if constexpr (kLogIdlePolicyCounts) {
         FX_LOGS(INFO) << __FUNCTION__ << " calling EnableAudible";
       }
       dev->EnableAudible();
@@ -152,7 +153,7 @@ void IdlePolicy::DigestRoutingChange(bool device_is_input, RoutingScope scope) {
         ultrasonic_devices_after.erase(dev);
         continue;
       }
-      if constexpr (IdlePolicy::kLogIdlePolicyCounts) {
+      if constexpr (kLogIdlePolicyCounts) {
         FX_LOGS(INFO) << __FUNCTION__ << " calling StartCountdownToDisableUltrasonic";
       }
       if (IdlePolicy::idle_countdown_duration().has_value()) {
@@ -163,7 +164,7 @@ void IdlePolicy::DigestRoutingChange(bool device_is_input, RoutingScope scope) {
     ultrasonic_devices_before_device_change_.clear();
 
     for (auto& dev : ultrasonic_devices_after) {
-      if constexpr (IdlePolicy::kLogIdlePolicyCounts) {
+      if constexpr (kLogIdlePolicyCounts) {
         FX_LOGS(INFO) << __FUNCTION__ << " calling EnableUltrasonic";
       }
       dev->EnableUltrasonic();

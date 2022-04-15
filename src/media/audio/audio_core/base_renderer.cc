@@ -10,6 +10,7 @@
 
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/audio_output.h"
+#include "src/media/audio/audio_core/logging_flags.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
@@ -26,9 +27,6 @@ constexpr size_t kMaxPacketAllocatorSlabs = 4;
 
 // Assert our implementation-defined limit is compatible with the FIDL limit.
 static_assert(fuchsia::media::MAX_FRAMES_PER_RENDERER_PACKET <= Fixed::Max().Floor());
-
-// Log the creation of this renderer's AudioClock
-constexpr bool kLogClockConstruction = false;
 
 }  // namespace
 
@@ -93,7 +91,7 @@ fpromise::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::Ini
     clock_for_packet_queue =
         context_.clock_factory()->CreateClientAdjustable(adjustable_duplicate_result.take_value());
     adjustable_clock_is_allocated_ = true;
-    if constexpr (kLogClockConstruction) {
+    if constexpr (kLogRendererClockConstruction) {
       FX_LOGS(INFO) << "Renderer " << this << " created ClientAdjustable AudioClock 0x" << std::hex
                     << clock_for_packet_queue.get();
     }
@@ -106,7 +104,7 @@ fpromise::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::Ini
 
     clock_for_packet_queue =
         context_.clock_factory()->CreateClientFixed(readable_clock_result.take_value());
-    if constexpr (kLogClockConstruction) {
+    if constexpr (kLogRendererClockConstruction) {
       FX_LOGS(INFO) << "Renderer " << this << " created ClientFixed AudioClock 0x" << std::hex
                     << clock_for_packet_queue.get();
     }

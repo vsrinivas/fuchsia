@@ -150,6 +150,8 @@ fpromise::promise<void, zx_status_t> AudioDeviceManager::UpdatePipelineConfig(
   // protects from devices being plugged or unplugged during update of the PipelineConfig,
   // as well as ensures only one update to the PipelineConfig will be processed at a time.
   if (!device->routable()) {
+    FX_LOGS(INFO) << "Device unroutable BAD_STATE (token_id " << dev->token_id << ", unique_id '"
+                  << device_id << "')";
     return fpromise::make_error_promise(ZX_ERR_BAD_STATE);
   }
 
@@ -464,7 +466,7 @@ void AudioDeviceManager::AddDeviceByChannel(
     std::string device_name, bool is_input,
     fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config) {
   TRACE_DURATION("audio", "AudioDeviceManager::AddDeviceByChannel");
-  FX_LOGS(INFO) << "Adding " << (is_input ? "input" : "output") << " '" << device_name << "'";
+  FX_LOGS(INFO) << __FUNCTION__ << (is_input ? ": Input '" : ": Output '") << device_name << "'";
 
   // Hand the stream off to the proper type of class to manage.
   std::shared_ptr<AudioDevice> new_device;

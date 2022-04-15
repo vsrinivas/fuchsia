@@ -7,8 +7,10 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
+#include <sstream>
 
 #include "src/media/audio/audio_core/audio_driver.h"
+#include "src/media/audio/audio_core/logging_flags.h"
 
 namespace media::audio {
 namespace {
@@ -58,15 +60,23 @@ void RouteGraph::SetThrottleOutput(ThreadingModel* threading_model,
 
 void RouteGraph::AddDeviceToRoutes(AudioDevice* device) {
   TRACE_DURATION("audio", "RouteGraph::AddDeviceToRoutes");
-  FX_LOGS(DEBUG) << "Added device to route graph: " << device;
 
   devices_.push_front(device);
+
+  if constexpr (kLogRoutingChanges) {
+    FX_LOGS(INFO) << "Added device " << device << " (" << (device->is_input() ? "input" : "output")
+                  << ") to route graph";
+    DisplayDevices();
+  }
   UpdateGraphForDeviceChange();
 }
 
 void RouteGraph::RemoveDeviceFromRoutes(AudioDevice* device) {
   TRACE_DURATION("audio", "RouteGraph::RemoveDeviceFromRoutes");
-  FX_LOGS(DEBUG) << "Removing device from graph: " << device;
+  if constexpr (kLogRoutingChanges) {
+    FX_LOGS(INFO) << "Removing device " << device << " ("
+                  << (device->is_input() ? "input" : "output") << ") from route graph";
+  }
 
   auto it = std::find(devices_.begin(), devices_.end(), device);
   if (it == devices_.end()) {
@@ -78,22 +88,29 @@ void RouteGraph::RemoveDeviceFromRoutes(AudioDevice* device) {
   link_matrix_.Unlink(*device);
 
   devices_.erase(it);
+  if constexpr (kLogRoutingChanges) {
+    DisplayDevices();
+  }
   UpdateGraphForDeviceChange();
 }
 
 bool RouteGraph::ContainsDevice(const AudioDevice* device) {
-  TRACE_DURATION("audio", "RouteGraph::ContainsDevice");
-  auto it = std::find(devices_.begin(), devices_.end(), device);
-  return (it == devices_.end() ? false : true);
+  return (std::find(devices_.begin(), devices_.end(), device) != devices_.end());
 }
 
 void RouteGraph::AddRenderer(std::shared_ptr<AudioObject> renderer) {
   TRACE_DURATION("audio", "RouteGraph::AddRenderer");
   FX_DCHECK(throttle_output_);
   FX_DCHECK(renderer->is_audio_renderer());
-  FX_LOGS(DEBUG) << "Adding renderer route graph: " << renderer.get();
-
+  if constexpr (kLogRoutingChanges) {
+    FX_LOGS(INFO) << "Adding renderer " << renderer.get() << " (" << renderer->usage()->ToString()
+                  << ") to route graph";
+  }
   renderers_.insert({renderer.get(), RoutableOwnedObject{std::move(renderer), {}}});
+
+  if constexpr (kLogRoutingChanges) {
+    DisplayRenderers();
+  }
 }
 
 void RouteGraph::SetRendererRoutingProfile(const AudioObject& renderer, RoutingProfile profile) {
@@ -128,29 +145,48 @@ void RouteGraph::SetRendererRoutingProfile(const AudioObject& renderer, RoutingP
   link_matrix_.Unlink(*it->second.ref);
 
   link_matrix_.LinkObjects(it->second.ref, output.device->shared_from_this(), output.transform);
+  if constexpr (kLogRoutingChanges) {
+    FX_LOGS(INFO) << "Setting renderer route profile: " << &renderer;
+    DisplayRenderers();
+    link_matrix_.DisplayCurrentRouting();
+  }
 }
 
 void RouteGraph::RemoveRenderer(const AudioObject& renderer) {
   TRACE_DURATION("audio", "RouteGraph::RemoveRenderer");
   FX_DCHECK(renderer.is_audio_renderer());
-  FX_LOGS(DEBUG) << "Removing renderer from route graph: " << &renderer;
 
   auto it = renderers_.find(&renderer);
   if (it == renderers_.end()) {
-    FX_LOGS(DEBUG) << "Renderer " << &renderer << " was not present in graph.";
+    FX_LOGS(INFO) << "Renderer " << &renderer << " was not present in graph.";
     return;
   }
 
   link_matrix_.Unlink(*it->second.ref);
+
   renderers_.erase(it);
+  if constexpr (kLogRoutingChanges) {
+    FX_LOGS(INFO) << "Removed renderer from route graph: " << &renderer << " ("
+                  << renderer.usage()->ToString() << ")";
+    DisplayRenderers();
+    link_matrix_.DisplayCurrentRouting();
+  }
 }
 
 void RouteGraph::AddCapturer(std::shared_ptr<AudioObject> capturer) {
   TRACE_DURATION("audio", "RouteGraph::AddCapturer");
   FX_DCHECK(capturer->is_audio_capturer());
-  FX_LOGS(DEBUG) << "Adding capturer to route graph: " << capturer.get();
+
+  if constexpr (kLogRoutingChanges) {
+    FX_LOGS(INFO) << "Adding capturer " << capturer.get() << " (" << capturer->usage()->ToString()
+                  << ") to route graph";
+  }
 
   capturers_.insert({capturer.get(), RoutableOwnedObject{std::move(capturer), {}}});
+
+  if constexpr (kLogRoutingChanges) {
+    DisplayCapturers();
+  }
 }
 
 void RouteGraph::SetCapturerRoutingProfile(const AudioObject& capturer, RoutingProfile profile) {
@@ -160,7 +196,7 @@ void RouteGraph::SetCapturerRoutingProfile(const AudioObject& capturer, RoutingP
 
   auto it = capturers_.find(&capturer);
   if (it == capturers_.end()) {
-    FX_LOGS(WARNING) << "Tried to set routing policy for an unregistered renderer.";
+    FX_LOGS(WARNING) << "Tried to set routing policy for an unregistered capturer.";
     return;
   }
 
@@ -185,12 +221,16 @@ void RouteGraph::SetCapturerRoutingProfile(const AudioObject& capturer, RoutingP
   link_matrix_.Unlink(*it->second.ref);
 
   link_matrix_.LinkObjects(target.device->shared_from_this(), it->second.ref, target.transform);
+  if constexpr (kLogRoutingChanges) {
+    FX_LOGS(INFO) << "Setting capturer route profile: " << &capturer;
+    DisplayCapturers();
+    link_matrix_.DisplayCurrentRouting();
+  }
 }
 
 void RouteGraph::RemoveCapturer(const AudioObject& capturer) {
   TRACE_DURATION("audio", "RouteGraph::RemoveCapturer");
   FX_DCHECK(capturer.is_audio_capturer());
-  FX_LOGS(DEBUG) << "Removing capturer from route graph: " << &capturer;
 
   auto it = capturers_.find(&capturer);
   if (it == capturers_.end()) {
@@ -199,7 +239,14 @@ void RouteGraph::RemoveCapturer(const AudioObject& capturer) {
   }
 
   link_matrix_.Unlink(*it->second.ref);
+
   capturers_.erase(it);
+  if constexpr (kLogRoutingChanges) {
+    FX_LOGS(INFO) << "Removed capturer " << &capturer << " (" << capturer.usage()->ToString()
+                  << ") from route graph";
+    DisplayCapturers();
+    link_matrix_.DisplayCurrentRouting();
+  }
 }
 
 void RouteGraph::UpdateGraphForDeviceChange() {
@@ -236,6 +283,12 @@ void RouteGraph::UpdateGraphForDeviceChange() {
       link_matrix_.LinkObjects(target.device->shared_from_this(), capturer.second.ref,
                                target.transform);
     });
+  }
+  if constexpr (kLogRoutingChanges) {
+    DisplayRenderers();
+    DisplayCapturers();
+    DisplayDevices();
+    link_matrix_.DisplayCurrentRouting();
   }
 }
 
@@ -306,7 +359,7 @@ std::unordered_set<AudioDevice*> RouteGraph::TargetsForRenderUsage(const RenderU
     return {};
   }
 
-  if constexpr (IdlePolicy::kLogIdlePolicyCounts) {
+  if constexpr (kLogIdlePolicyCounts) {
     FX_LOGS(INFO) << __FUNCTION__ << " (" << RenderUsageToString(usage) << ") returning "
                   << target.device;
   }
@@ -315,6 +368,52 @@ std::unordered_set<AudioDevice*> RouteGraph::TargetsForRenderUsage(const RenderU
 
 std::shared_ptr<LoudnessTransform> RouteGraph::LoudnessTransformForUsage(const StreamUsage& usage) {
   return TargetForUsage(usage).transform;
+}
+
+void RouteGraph::DisplayRenderers() {
+  std::stringstream stream;
+  stream << "Renderers:";
+  if (renderers_.empty()) {
+    stream << " <empty>";
+  } else {
+    for (const auto& renderer : renderers_) {
+      stream << " " << renderer.first;
+    }
+  }
+  FX_LOGS(INFO) << stream.str();
+}
+
+void RouteGraph::DisplayCapturers() {
+  std::stringstream stream;
+  stream << "Capturers:";
+  if (capturers_.empty()) {
+    stream << " <empty>";
+  } else {
+    for (const auto& capturer : capturers_) {
+      stream << " " << capturer.first;
+    }
+  }
+  FX_LOGS(INFO) << stream.str();
+
+  std::stringstream().swap(stream);
+  stream << "Loopbacks:";
+  if (loopback_capturers_.empty()) {
+    stream << " <empty>";
+  } else {
+    for (const auto& capturer : loopback_capturers_) {
+      stream << " " << capturer.first;
+    }
+  }
+  FX_LOGS(INFO) << stream.str();
+}
+
+void RouteGraph::DisplayDevices() {
+  std::stringstream stream;
+  stream << "Devices:";
+  for (const auto& device : devices_) {
+    stream << " " << device;
+  }
+  FX_LOGS(INFO) << stream.str();
 }
 
 }  // namespace media::audio

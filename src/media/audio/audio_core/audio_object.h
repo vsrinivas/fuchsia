@@ -83,7 +83,8 @@ class AudioObject {
 
   bool format_valid() const { return format().has_value(); }
 
-  Type type() const { return type_; }
+  AudioObject::Type type() const { return type_; }
+
   bool is_output() const { return type() == Type::Output; }
   bool is_input() const { return type() == Type::Input; }
   bool is_audio_renderer() const { return type() == Type::AudioRenderer; }
@@ -95,6 +96,19 @@ class AudioObject {
  private:
   const Type type_;
 };
+
+inline std::ostream& operator<<(std::ostream& out, const AudioObject::Type& type) {
+  switch (type) {
+    case AudioObject::Type::AudioCapturer:
+      return (out << "capturer");
+    case AudioObject::Type::AudioRenderer:
+      return (out << "renderer");
+    case AudioObject::Type::Input:
+      return (out << " input  ");
+    case AudioObject::Type::Output:
+      return (out << " output ");
+  }
+}
 
 }  // namespace media::audio
 

@@ -140,6 +140,11 @@ class RouteGraph : public DeviceRouter {
   // TODO(fxbug.dev/13339): Remove throttle_output_.
   std::optional<fpromise::completer<void, void>> throttle_release_fence_;
   std::shared_ptr<AudioOutput> throttle_output_;
+
+  // For debugging purposes only
+  void DisplayRenderers();
+  void DisplayCapturers();
+  void DisplayDevices();
 };
 
 }  // namespace media::audio

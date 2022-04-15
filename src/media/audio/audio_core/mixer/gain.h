@@ -13,15 +13,10 @@
 #include <cmath>
 
 #include "src/media/audio/audio_core/mixer/constants.h"
+#include "src/media/audio/audio_core/mixer/logging_flags.h"
 #include "src/media/audio/lib/timeline/timeline_rate.h"
 
 namespace media::audio {
-
-constexpr bool kLogSetGain = false;
-constexpr bool kLogSetMute = false;
-constexpr bool kLogSetRamp = false;
-constexpr bool kLogRampAdvance = false;
-constexpr bool kLogGainScaleCalculation = false;
 
 // A class containing factors used for software scaling in the mixer pipeline.
 // Not thread safe.
@@ -168,7 +163,12 @@ class Gain {
     source_.SetGainWithRamp(gain_db, duration, ramp_type);
   }
 
-  void CompleteSourceRamp() { source_.CompleteRamp(); }
+  void CompleteSourceRamp() {
+    if constexpr (kLogGainRampAdvance) {
+      FX_LOGS(INFO) << "Gain(" << this << "): " << __func__;
+    }
+    source_.CompleteRamp();
+  }
 
   // Manipulates the Dest control.
   void SetDestGain(float gain_db) { dest_.SetGain(gain_db); }
@@ -179,7 +179,12 @@ class Gain {
     dest_.SetGainWithRamp(gain_db, duration, ramp_type);
   }
 
-  void CompleteDestRamp() { dest_.CompleteRamp(); }
+  void CompleteDestRamp() {
+    if constexpr (kLogGainRampAdvance) {
+      FX_LOGS(INFO) << __func__;
+    }
+    dest_.CompleteRamp();
+  }
 
   // Manipulates the Adjustment control.
   void SetGainAdjustment(float gain_db) { adjustment_.SetGain(gain_db); }
@@ -217,7 +222,7 @@ class Gain {
     bool IsRampingDown() const { return IsRamping() && ramp_start_gain_db_ > ramp_end_gain_db_; }
 
     void SetGain(float gain_db) {
-      if constexpr (kLogSetGain) {
+      if constexpr (kLogGainSetGain) {
         FX_LOGS(INFO) << "Gain(" << this << "): " << name_ << ".SetGain(" << gain_db
                       << "), was gain_db " << gain_db_ << ", start_db " << ramp_start_gain_db_
                       << ", end_db " << ramp_end_gain_db_;
@@ -227,7 +232,7 @@ class Gain {
     }
 
     void SetMute(bool mute) {
-      if constexpr (kLogSetMute) {
+      if constexpr (kLogGainSetMute) {
         FX_LOGS(INFO) << "Gain(" << this << "): " << name_ << ".SetMute(" << std::boolalpha << mute
                       << "), was " << mute_;
       }
@@ -238,7 +243,7 @@ class Gain {
                          fuchsia::media::audio::RampType ramp_type);
 
     void CompleteRamp() {
-      if constexpr (kLogRampAdvance) {
+      if constexpr (kLogGainRampAdvance) {
         FX_LOGS(INFO) << "Gain(" << this << "): " << name_ << ".CompleteRamp()";
       }
       if (ramp_duration_ != zx::nsec(0)) {

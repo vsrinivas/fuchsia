@@ -97,6 +97,7 @@ source_set("audio_core_lib") {
     "idle_policy.h",
     "link_matrix.cc",
     "link_matrix.h",
+    "logging_flags.h",
     "loudness_transform.cc",
     "loudness_transform.h",
     "mix_profile_config.h",

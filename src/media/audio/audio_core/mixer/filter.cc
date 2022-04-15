@@ -12,6 +12,7 @@
 #include <mutex>
 
 #include "src/media/audio/audio_core/mixer/coefficient_table.h"
+#include "src/media/audio/audio_core/mixer/logging_flags.h"
 
 namespace media::audio::mixer {
 
@@ -44,9 +45,6 @@ void Filter::DisplayTable(const CoefficientTable& filter_coefficients) {
   FX_LOGS(INFO) << " **************************************************************";
 }
 
-// Used to debug computation of output values (ComputeSample), from coefficients and input values.
-constexpr bool kTraceComputation = false;
-
 // For frac_offset in [0.0, 1.0) we require source frames on each side depending on filter length.
 // Source frames are at integral positions, but we treat frac_offset as filter center, so source
 // frames appear to be fractionally positioned.
@@ -63,7 +61,7 @@ constexpr bool kTraceComputation = false;
 float Filter::ComputeSampleFromTable(const CoefficientTable& filter_coefficients,
                                      int64_t frac_offset, float* center) {
   FX_DCHECK(frac_offset <= frac_size_) << frac_offset;
-  if constexpr (kTraceComputation) {
+  if constexpr (kTraceFilterComputation) {
     FX_LOGS(INFO) << "For frac_offset 0x" << std::hex << frac_offset << " ("
                   << (static_cast<double>(frac_offset) / static_cast<double>(frac_size_)) << "):";
   }
@@ -84,7 +82,7 @@ float Filter::ComputeSampleFromTable(const CoefficientTable& filter_coefficients
 
     for (int64_t source_idx = 0; source_idx < source_frames; ++source_idx) {
       auto contribution = (*sample_ptr) * coefficient_ptr[source_idx];
-      if constexpr (kTraceComputation) {
+      if constexpr (kTraceFilterComputation) {
         FX_LOGS(INFO) << "Adding source[" << -static_cast<ssize_t>(source_idx) << "] "
                       << (*sample_ptr) << " x " << coefficient_ptr[source_idx] << " = "
                       << contribution;
@@ -107,7 +105,7 @@ float Filter::ComputeSampleFromTable(const CoefficientTable& filter_coefficients
 
     for (int64_t source_idx = 0; source_idx < source_frames; ++source_idx) {
       auto contribution = sample_ptr[source_idx] * coefficient_ptr[source_idx];
-      if constexpr (kTraceComputation) {
+      if constexpr (kTraceFilterComputation) {
         FX_LOGS(INFO) << "Adding source[" << 1 + source_idx << "] " << std::setprecision(13)
                       << sample_ptr[source_idx] << " x " << coefficient_ptr[source_idx] << " = "
                       << contribution;
@@ -116,7 +114,7 @@ float Filter::ComputeSampleFromTable(const CoefficientTable& filter_coefficients
     }
   }
 
-  if constexpr (kTraceComputation) {
+  if constexpr (kTraceFilterComputation) {
     FX_LOGS(INFO) << "... to get " << std::setprecision(13) << result;
   }
   return result;

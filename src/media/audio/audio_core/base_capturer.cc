@@ -17,20 +17,12 @@
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/audio_driver.h"
+#include "src/media/audio/audio_core/logging_flags.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
 
 namespace media::audio {
 namespace {
-
-// To what extent should client-side overflows be logged? (A "client-side overflow" refers to when
-// part of a data section is discarded because its start timestamp had passed.) For each Capturer,
-// we will log the first overflow. For subsequent occurrences, depending on audio_core's logging
-// level, we throttle how frequently these are displayed. If log_level is set to TRACE or DEBUG, all
-// client-side overflows are logged. If set to INFO or higher, we log less often.
-static constexpr bool kLogCaptureOverflow = true;
-static constexpr uint16_t kCaptureOverflowInfoInterval = 10;
-static constexpr uint16_t kCaptureOverflowWarningInterval = 100;
 
 // Currently, the time we spend mixing must also be taken into account when reasoning about the
 // capture presentation delay. Today (before any attempt at optimization), a particularly heavy mix

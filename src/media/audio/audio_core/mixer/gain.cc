@@ -6,6 +6,8 @@
 
 #include <lib/trace/event.h>
 
+#include "src/media/audio/audio_core/mixer/logging_flags.h"
+
 namespace media::audio {
 
 void Gain::Control::SetGainWithRamp(float target_gain_db, zx::duration duration,
@@ -24,7 +26,7 @@ void Gain::Control::SetGainWithRamp(float target_gain_db, zx::duration duration,
   }
 
   if (target_gain_db == gain_db_) {
-    if constexpr (kLogSetRamp) {
+    if constexpr (kLogGainSetRamp) {
       FX_LOGS(WARNING) << "Gain::Control(" << this << "): " << name_
                        << ".SetSourceGainWithRamp is no-change (already " << target_gain_db
                        << " dB); " << duration.to_usecs() << "-usec ramp is ignored";
@@ -34,7 +36,7 @@ void Gain::Control::SetGainWithRamp(float target_gain_db, zx::duration duration,
   }
 
   if (target_gain_db <= kMinGainDb && gain_db_ <= kMinGainDb) {
-    if constexpr (kLogSetRamp) {
+    if constexpr (kLogGainSetRamp) {
       FX_LOGS(WARNING) << "Gain::Control(" << this << "): " << name_
                        << ".SetSourceGainWithRamp starts at (" << gain_db_ << " dB) and ends at ("
                        << target_gain_db << " dB), below min gain (" << kMinGainDb << " dB); "
@@ -44,7 +46,7 @@ void Gain::Control::SetGainWithRamp(float target_gain_db, zx::duration duration,
     return;
   }
 
-  if constexpr (kLogSetRamp) {
+  if constexpr (kLogGainSetRamp) {
     FX_LOGS(WARNING) << "Gain::Control(" << this << "): " << name_ << ".SetSourceGainWithRamp("
                      << target_gain_db << " dB, " << duration.to_usecs() << " usec)";
   }
@@ -77,7 +79,7 @@ void Gain::Control::Advance(int64_t num_frames,
   zx::duration duration_ramped_so_far =
       zx::nsec(destination_frames_per_reference_tick.Inverse().Scale(frames_ramped_so_far_));
 
-  if constexpr (kLogRampAdvance) {
+  if constexpr (kLogGainRampAdvance) {
     FX_LOGS(WARNING) << "Gain::Control(" << this << "): " << name_ << ".Advance for ramp ["
                      << ramp_start_gain_db_ << "dB -> " << ramp_end_gain_db_ << "dB for "
                      << ramp_duration_.to_usecs() << " usec];"
@@ -100,7 +102,7 @@ void Gain::Control::Advance(int64_t num_frames,
     gain_db_ = ramp_end_gain_db_;
   }
 
-  if constexpr (kLogRampAdvance) {
+  if constexpr (kLogGainRampAdvance) {
     FX_LOGS(WARNING) << "Gain::Control(" << this << "): " << name_ << ".Advance gain is now "
                      << gain_db_ << "dB";
   }

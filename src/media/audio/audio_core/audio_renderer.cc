@@ -12,6 +12,7 @@
 
 #include "fuchsia/media/cpp/fidl.h"
 #include "src/media/audio/audio_core/audio_admin.h"
+#include "src/media/audio/audio_core/logging_flags.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
@@ -20,16 +21,6 @@
 namespace media::audio {
 
 namespace {
-
-// Log volume changes, incoming gain/mute requests, or the subsequent gain/mute actions taken.
-constexpr bool kLogUsageVolumeGainActions = true;
-constexpr bool kLogSetGainMuteRampCalls = false;
-constexpr bool kLogSetGainMuteRampActions = false;
-
-// For debugging purposes, log all incoming calls to Play(including timestamps) and Pause().
-constexpr bool kLogPlayCalls = false;
-constexpr bool kLogPauseCalls = false;
-constexpr bool kLogDtorCalls = false;
 
 // Constants used when using dropout checks
 constexpr bool kEnableDropoutChecks = false;
@@ -64,8 +55,8 @@ AudioRenderer::AudioRenderer(
 }
 
 AudioRenderer::~AudioRenderer() {
-  if constexpr (kLogDtorCalls) {
-    FX_LOGS(WARNING) << "************ Renderer(" << this << ") destructor ************";
+  if constexpr (kLogRendererDtorCalls) {
+    FX_LOGS(INFO) << "Renderer(" << this << ") destructor";
   }
 
   // We (not ~BaseRenderer) must call this, because our ReportStop is gone when parent dtor runs
@@ -289,8 +280,8 @@ constexpr zx::duration kRampDownOnPauseDuration = zx::msec(5);
 
 void AudioRenderer::PlayInternal(zx::time reference_time, zx::time media_time,
                                  PlayCallback callback) {
-  if constexpr (kLogPlayCalls) {
-    FX_LOGS(INFO) << "************ Renderer(" << this << ") Play(ref time "
+  if constexpr (kLogRendererPlayCalls) {
+    FX_LOGS(INFO) << "Renderer(" << this << ") Play(ref time "
                   << (reference_time.get() == fuchsia::media::NO_TIMESTAMP
                           ? "NO_TIMESTAMP"
                           : std::to_string(reference_time.get()))
@@ -298,7 +289,7 @@ void AudioRenderer::PlayInternal(zx::time reference_time, zx::time media_time,
                   << (media_time.get() == fuchsia::media::NO_TIMESTAMP
                           ? "NO_TIMESTAMP"
                           : std::to_string(media_time.get()))
-                  << ") ************";
+                  << ")";
   }
 
   if constexpr (kEnableRampDownOnPause) {
@@ -325,8 +316,8 @@ void AudioRenderer::PlayInternal(zx::time reference_time, zx::time media_time,
 }
 
 void AudioRenderer::PauseInternal(PauseCallback callback) {
-  if constexpr (kLogPauseCalls) {
-    FX_LOGS(WARNING) << "************ Renderer(" << this << ") Pause ************";
+  if constexpr (kLogRendererPauseCalls) {
+    FX_LOGS(INFO) << "Renderer(" << this << ") Pause";
   }
 
   if constexpr (!kEnableRampDownOnPause) {
@@ -416,7 +407,7 @@ void AudioRenderer::RealizeVolume(VolumeCommand volume_command) {
             GainDbFsValue{volume_command.gain_db_adjustment},
         });
 
-        if constexpr (kLogUsageVolumeGainActions) {
+        if constexpr (kLogRenderUsageVolumeGainActions) {
           // TODO(fxbug.dev/51049) Swap this logging for inspect or other real-time gain observation
           FX_LOGS(INFO) << static_cast<const void*>(this) << " (mixer "
                         << static_cast<const void*>(link.mixer.get()) << ") "
@@ -447,7 +438,7 @@ void AudioRenderer::PostStreamGainMute(StreamGainCommand gain_command) {
                                                      LinkMatrix::LinkHandle link) mutable {
     FX_CHECK(link.mix_domain) << "Renderer dest link should have a defined mix_domain";
 
-    if constexpr (kLogSetGainMuteRampActions) {
+    if constexpr (kLogRendererSetGainMuteRampActions) {
       // TODO(fxbug.dev/51049) Swap this logging for inspect or other real-time gain observation
       std::stringstream stream;
       stream << static_cast<const void*>(this) << " (mixer "
@@ -516,7 +507,7 @@ void AudioRenderer::SetGain(float gain_db) {
 
 void AudioRenderer::SetGainInternal(float gain_db) {
   TRACE_DURATION("audio", "AudioRenderer::SetGain");
-  if constexpr (kLogSetGainMuteRampCalls) {
+  if constexpr (kLogRendererSetGainMuteRampCalls) {
     FX_LOGS(INFO) << __FUNCTION__ << "(" << gain_db << " dB)";
   }
 
@@ -546,7 +537,7 @@ void AudioRenderer::SetGainWithRamp(float gain_db, int64_t duration_ns,
 void AudioRenderer::SetGainWithRampInternal(float gain_db, int64_t duration_ns,
                                             fuchsia::media::audio::RampType ramp_type) {
   TRACE_DURATION("audio", "AudioRenderer::SetGainWithRamp");
-  if constexpr (kLogSetGainMuteRampCalls) {
+  if constexpr (kLogRendererSetGainMuteRampCalls) {
     FX_LOGS(INFO) << __FUNCTION__ << "(to " << gain_db << " dB over " << duration_ns / 1000
                   << " usec)";
   }
@@ -580,7 +571,7 @@ void AudioRenderer::SetMute(bool mute) {
 
 void AudioRenderer::SetMuteInternal(bool mute) {
   TRACE_DURATION("audio", "AudioRenderer::SetMute");
-  if constexpr (kLogSetGainMuteRampCalls) {
+  if constexpr (kLogRendererSetGainMuteRampCalls) {
     FX_LOGS(INFO) << __FUNCTION__ << "(" << mute << ")";
   }
   // Only do the work if the request represents a change in state.

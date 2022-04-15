@@ -58,8 +58,8 @@ class PlugDetectorImpl : public PlugDetector {
       if (watcher != nullptr) {
         watchers_.emplace_back(std::move(watcher));
       } else {
-        FX_LOGS(DEBUG) << "PlugDetectorImpl failed to create DeviceWatcher for \"" << devnode.path
-                       << "\".";
+        FX_LOGS(ERROR) << "PlugDetectorImpl failed to create DeviceWatcher for '" << devnode.path
+                       << "'.";
       }
     }
 
@@ -89,8 +89,8 @@ class PlugDetectorImpl : public PlugDetector {
     fbl::unique_fd dev_node(openat(dir_fd, name.c_str(), O_RDONLY));
     if (!dev_node.is_valid()) {
       Reporter::Singleton().FailedToOpenDevice(name, is_input, errno);
-      FX_LOGS(ERROR) << "PlugDetectorImpl failed to open device node at \"" << name << "\". ("
-                     << strerror(errno) << " : " << errno << ")";
+      FX_LOGS(ERROR) << "PlugDetectorImpl failed to open device node at '" << name << "'. ("
+                     << strerror(errno) << ": " << errno << ")";
       return;
     }
 
@@ -101,7 +101,8 @@ class PlugDetectorImpl : public PlugDetector {
     if (res != ZX_OK) {
       Reporter::Singleton().FailedToObtainFdioServiceChannel(name, is_input, res);
       FX_PLOGS(ERROR, res) << "Failed to obtain FDIO service channel to audio "
-                           << (is_input ? "input" : "output");
+                           << (is_input ? "input" : "output") << " '" << name << "'";
+
       return;
     }
 
@@ -111,7 +112,8 @@ class PlugDetectorImpl : public PlugDetector {
                       .Bind();
     device.set_error_handler([name, is_input](zx_status_t res) {
       Reporter::Singleton().FailedToObtainStreamChannel(name, is_input, res);
-      FX_PLOGS(ERROR, res) << "Failed to open channel to audio " << (is_input ? "input" : "output");
+      FX_PLOGS(ERROR, res) << "Failed to open channel to audio " << (is_input ? "input" : "output")
+                           << " '" << name << "'";
     });
     fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config_client;
     fidl::InterfaceRequest<fuchsia::hardware::audio::StreamConfig> stream_config_server =

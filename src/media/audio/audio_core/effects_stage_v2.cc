@@ -10,6 +10,7 @@
 
 #include <fbl/algorithm.h>
 
+#include "src/media/audio/audio_core/logging_flags.h"
 #include "src/media/audio/audio_core/mixer/intersect.h"
 #include "src/media/audio/audio_core/silence_padding_stream.h"
 #include "src/media/audio/audio_core/threading_model.h"

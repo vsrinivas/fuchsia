@@ -20,15 +20,13 @@
 #include <audio-proto-utils/format-utils.h>
 #include <fbl/algorithm.h>
 
+#include "src/media/audio/audio_core/logging_flags.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/format/driver_format.h"
 
 namespace media::audio {
 namespace {
-
-// For non-zero value N, log every Nth position notification. If 0, don't log any.
-static constexpr uint16_t kPositionNotificationDisplayInterval = 0;
 
 // TODO(fxbug.dev/39092): Log a cobalt metric for this.
 void LogMissedCommandDeadline(zx::duration delay) {
@@ -72,6 +70,9 @@ zx_status_t AudioDriver::Init(zx::channel stream_channel) {
   }
   stream_config_fidl_.set_error_handler([this](zx_status_t status) -> void {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
+    if constexpr (kLogAudioDriverCallbacks) {
+      FX_LOGS(INFO) << "stream_config error_handler (driver " << this << ")";
+    }
     ShutdownSelf("Stream channel closed", status);
   });
 
@@ -226,8 +227,8 @@ zx_status_t AudioDriver::GetDriverInfo() {
 bool AudioDriver::ValidatePcmSupportedFormats(
     std::vector<fuchsia::hardware::audio::PcmSupportedFormats>& formats, bool is_input) {
   for (size_t format_index = 0u; format_index < formats.size(); ++format_index) {
-    if constexpr (IdlePolicy::kLogChannelFrequencyRanges) {
-      FX_LOGS(INFO) << __FUNCTION__ << ": " << (is_input ? " Input" : "Output")
+    if constexpr (kLogIdlePolicyChannelFrequencies) {
+      FX_LOGS(INFO) << "AudioDriver::" << __FUNCTION__ << ": " << (is_input ? " Input" : "Output")
                     << " PcmSupportedFormats[" << format_index << "] for "
                     << (is_input ? " Input" : "Output");
     }
@@ -255,7 +256,7 @@ bool AudioDriver::ValidatePcmSupportedFormats(
         return false;
       }
 
-      if constexpr (IdlePolicy::kLogChannelFrequencyRanges) {
+      if constexpr (kLogIdlePolicyChannelFrequencies) {
         auto& chan_set_attribs = channel_set.attributes();
         for (size_t channel_index = 0u; channel_index < chan_set_attribs.size(); ++channel_index) {
           if (!chan_set_attribs[channel_index].has_min_frequency()) {
@@ -356,7 +357,7 @@ zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_b
     configured_channel_config_.swap(channel_config);
   }
 
-  if constexpr (IdlePolicy::kLogChannelFrequencyRanges) {
+  if constexpr (kLogIdlePolicyChannelFrequencies) {
     if (channels != configured_channel_config_.size()) {
       FX_LOGS(WARNING) << "Logic error, retrieved a channel_config of incorrect length (wanted "
                        << channels << ", got " << configured_channel_config_.size();
@@ -411,6 +412,9 @@ zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_b
     return ZX_ERR_INTERNAL;
   }
   ring_buffer_fidl_.set_error_handler([this](zx_status_t status) -> void {
+    if constexpr (kLogAudioDriverCallbacks) {
+      FX_LOGS(INFO) << "ring_buffer error_handler (driver " << this << ")";
+    }
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
     ShutdownSelf("Ring buffer channel closed unexpectedly", status);
   });
@@ -421,6 +425,10 @@ zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_b
   SetupCommandTimeout();
 
   ring_buffer_fidl_->GetProperties([this](fuchsia::hardware::audio::RingBufferProperties props) {
+    if constexpr (kLogAudioDriverCallbacks) {
+      FX_LOGS(INFO) << "AudioDriver::ring_buffer_fidl::GetProperties callback";
+    }
+
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
     external_delay_ = zx::nsec(props.has_external_delay() ? props.external_delay() : 0);
     turn_on_delay_ = zx::nsec(props.has_turn_on_delay() ? props.turn_on_delay() : 0);
@@ -434,13 +442,16 @@ zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_b
     fifo_depth_duration_ =
         zx::nsec(TimelineRate(ZX_SEC(1), frames_per_second).Scale(fifo_depth_frames_));
 
-    FX_LOGS(DEBUG) << "Received external_delay " << std::setw(5) << external_delay_.to_usecs()
-                   << " usec (" << (owner_->is_input() ? " Input" : "Output") << ")";
-    FX_LOGS(DEBUG) << "Received turn_on_delay  " << std::setw(5) << turn_on_delay_.to_usecs()
-                   << " usec (" << (owner_->is_input() ? " Input" : "Output") << ")";
-    FX_LOGS(DEBUG) << "Received fifo_depth_dur " << std::setw(5) << fifo_depth_duration_.to_usecs()
-                   << " usec (" << (owner_->is_input() ? " Input" : "Output") << ") or "
-                   << fifo_depth_frames_ << " frames (" << fifo_depth_bytes << " bytes)";
+    if constexpr (kLogDriverDelayProperties) {
+      FX_LOGS(INFO) << "Received external_delay " << std::setw(5) << external_delay_.to_usecs()
+                    << " usec (" << (owner_->is_input() ? " Input" : "Output") << ")";
+      FX_LOGS(INFO) << "Received turn_on_delay  " << std::setw(5) << turn_on_delay_.to_usecs()
+                    << " usec (" << (owner_->is_input() ? " Input" : "Output") << ")";
+      FX_LOGS(INFO) << "Received fifo_depth_dur " << std::setw(5) << fifo_depth_duration_.to_usecs()
+                    << " usec (" << (owner_->is_input() ? " Input" : "Output") << ") based on "
+                    << fifo_depth_bytes << " bytes, " << bytes_per_frame << " bytes/frame, "
+                    << frames_per_second << " frames/sec (" << fifo_depth_frames_ << " frames)";
+    }
 
     // Figure out how many frames we need in our ring buffer.
     TimelineRate bytes_per_nanosecond(bytes_per_frame * frames_per_second, ZX_SEC(1));
@@ -471,6 +482,10 @@ zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_b
     ring_buffer_fidl_->GetVmo(
         static_cast<uint32_t>(min_frames_64), num_notifications_per_ring,
         [this](fuchsia::hardware::audio::RingBuffer_GetVmo_Result result) {
+          if constexpr (kLogAudioDriverCallbacks) {
+            FX_LOGS(INFO) << "AudioDriver::ring_buffer_fidl::GetVmo callback";
+          }
+
           OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
           {
             std::lock_guard<std::mutex> lock(ring_buffer_state_lock_);
@@ -528,6 +543,10 @@ zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_b
 
 void AudioDriver::RequestNextPlugStateChange() {
   stream_config_fidl_->WatchPlugState([this](fuchsia::hardware::audio::PlugState state) {
+    if constexpr (kLogAudioDriverCallbacks) {
+      FX_LOGS(INFO) << "AudioDriver::WatchPlugState callback";
+    }
+
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
     // Wardware reporting hardwired but notifies unplugged.
     if (pd_hardwired_ && !state.plugged()) {
@@ -572,8 +591,8 @@ void AudioDriver::ClockRecoveryUpdate(fuchsia::hardware::audio::RingBufferPositi
 
   auto curr_error = predicted_mono_time - actual_mono_time;
 
-  if constexpr (kPositionNotificationDisplayInterval > 0) {
-    if (position_notification_count_ % kPositionNotificationDisplayInterval == 0) {
+  if constexpr (kDriverPositionNotificationDisplayInterval > 0) {
+    if (position_notification_count_ % kDriverPositionNotificationDisplayInterval == 0) {
       FX_LOGS(INFO) << static_cast<void*>(this) << (owner_->is_output() ? " Output" : " Input ")
                     << " notification #" << position_notification_count_ << " [" << info.timestamp
                     << ", " << std::setw(6) << info.position << "] run_pos_bytes "
@@ -620,6 +639,10 @@ zx_status_t AudioDriver::Start() {
   SetupCommandTimeout();
 
   ring_buffer_fidl_->Start([this](int64_t start_time) {
+    if constexpr (kLogAudioDriverCallbacks) {
+      FX_LOGS(INFO) << "AudioDriver::ring_buffer_fidl::Start callback";
+    }
+
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
     if (state_ != State::Starting) {
       FX_LOGS(ERROR) << "Received unexpected start response while in state "
@@ -666,6 +689,18 @@ zx_status_t AudioDriver::Start() {
           ref_start_time_.get(),                  // start time
           frac_fps                                // fps in fractional frames
       );
+
+      if constexpr (kLogDriverDelayProperties) {
+        FX_LOGS(INFO)
+            << "Setting OUTPUT ref_time_to_frac_presentation_frame_, based on 0 first frac-frame, "
+            << ref_start_time_.get() / 1000 << "-usec ref_start_time + " << std::setw(5)
+            << external_delay_.to_usecs() << "-usec external delay, and frac-fps "
+            << frac_fps.subject_delta() << "/" << frac_fps.reference_delta();
+        FX_LOGS(INFO) << "Setting ref_time_to_frac_safe_read_or_write_frame_, based on "
+                      << Fixed(fifo_depth_frames_).raw_value() << " first frac-frame, "
+                      << ref_start_time_.get() / 1000 << "-usec ref_start_time, and frac-fps "
+                      << frac_fps.subject_delta() << "/" << frac_fps.reference_delta();
+      }
     } else {
       // The capture buffer works in a similar way, with three analogous pointers:
       //
@@ -696,6 +731,18 @@ zx_status_t AudioDriver::Start() {
           ref_start_time_.get(),                   // start time
           frac_fps                                 // fps in fractional frames
       );
+
+      if constexpr (kLogDriverDelayProperties) {
+        FX_LOGS(INFO)
+            << "Setting INPUT ref_time_to_frac_presentation_frame_, based on 0 first frac-frame, "
+            << ref_start_time_.get() / 1000 << "-usec ref_start_time - " << std::setw(5)
+            << external_delay_.to_usecs() << "-usec external delay, and frac-fps "
+            << frac_fps.subject_delta() << "/" << frac_fps.reference_delta();
+        FX_LOGS(INFO) << "Setting ref_time_to_frac_safe_read_or_write_frame_, based on "
+                      << -Fixed(fifo_depth_frames_).raw_value() << " first frac-frame, "
+                      << ref_start_time_.get() / 1000 << "-usec ref_start_time, and frac-fps "
+                      << frac_fps.subject_delta() << "/" << frac_fps.reference_delta();
+      }
     }
 
     versioned_ref_time_to_frac_presentation_frame_->Update(ref_time_to_frac_presentation_frame_);
@@ -738,6 +785,10 @@ zx_status_t AudioDriver::Stop() {
   SetupCommandTimeout();
 
   ring_buffer_fidl_->Stop([this]() {
+    if constexpr (kLogAudioDriverCallbacks) {
+      FX_LOGS(INFO) << "AudioDriver::ring_buffer_fidl::Stop callback";
+    }
+
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
     // We are now stopped and in Configured state. Let our owner know about this important
     // milestone.
@@ -911,7 +962,7 @@ zx_status_t AudioDriver::SetActiveChannels(uint64_t chan_bit_mask) {
   }
 
   if (set_active_channels_err_ != ZX_OK) {
-    if constexpr (IdlePolicy::kLogSetActiveChannelsCalls) {
+    if constexpr (kLogSetActiveChannelsCalls) {
       FX_LOGS(INFO) << "ring_buffer_fidl->SetActiveChannels(0x" << std::hex << chan_bit_mask
                     << ") NOT called by AudioDriver because of previous set_active_channels_err_ "
                     << std::dec << set_active_channels_err_;
@@ -919,7 +970,7 @@ zx_status_t AudioDriver::SetActiveChannels(uint64_t chan_bit_mask) {
     return set_active_channels_err_;
   }
 
-  if constexpr (IdlePolicy::kLogSetActiveChannelsCalls) {
+  if constexpr (kLogSetActiveChannelsCalls) {
     FX_LOGS(INFO) << "ring_buffer_fidl->SetActiveChannels(0x" << std::hex << chan_bit_mask
                   << ") called by AudioDriver";
   }
@@ -940,7 +991,7 @@ zx_status_t AudioDriver::SetActiveChannels(uint64_t chan_bit_mask) {
         }
         int64_t set_active_channels_time = result.response().set_time;
 
-        if constexpr (IdlePolicy::kLogSetActiveChannelsCalls) {
+        if constexpr (kLogSetActiveChannelsActions) {
           FX_LOGS(INFO) << "ring_buffer_fidl->SetActiveChannels(0x" << std::hex << chan_bit_mask
                         << ") received callback with set_time " << std::dec
                         << set_active_channels_time;

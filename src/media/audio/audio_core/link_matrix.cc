@@ -4,6 +4,12 @@
 
 #include "src/media/audio/audio_core/link_matrix.h"
 
+#include <map>
+#include <ostream>
+#include <set>
+#include <unordered_map>
+#include <utility>
+
 namespace media::audio {
 namespace {
 
@@ -168,9 +174,68 @@ bool LinkMatrix::AreLinked(const AudioObject& source, AudioObject& dest) FXL_LOC
   std::lock_guard<std::mutex> lock(lock_);
 
   auto dests = DestLinkSet(&source);
+  bool forward_linked = std::any_of(dests.begin(), dests.end(),
+                                    [&dest](auto candidate) { return candidate.key == &dest; });
 
-  return std::any_of(dests.begin(), dests.end(),
-                     [&dest](auto candidate) { return candidate.key == &dest; });
+  auto sources = SourceLinkSet(&dest);
+  bool backward_linked = std::any_of(sources.begin(), sources.end(), [&source](auto candidate) {
+    return candidate.key == &source;
+  });
+  FX_CHECK(forward_linked == backward_linked)
+      << "Routing inconsistency " << (forward_linked ? "forward" : "backward") << "-linked but not "
+      << (forward_linked ? "backward" : "forward") << "-linked";
+
+  return forward_linked;
+}
+
+std::string UsageStrFromPair(const AudioObject* source, const AudioObject* dest) {
+  if (source && (source->is_audio_capturer() || source->is_audio_renderer())) {
+    return source->usage() ? source->usage()->ToString() : "Unknown source usage";
+  }
+  return (dest && dest->usage()) ? dest->usage()->ToString() : "Unknown dest usage";
+}
+
+std::ostream& operator<<(std::ostream& out, const AudioObject* object) {
+  out << static_cast<const void*>(object) << " ";
+  if (object) {
+    if (object->is_audio_capturer() || object->is_audio_renderer()) {
+      out << "(" << object->usage()->ToString() << ")";
+    } else {
+      out << "(" << object->type() << ")";
+    }
+  }
+  return out;
+}
+
+void LinkMatrix::DisplayCurrentRouting() {
+  std::lock_guard<std::mutex> lock(lock_);
+
+  FX_LOGS(INFO) << "******************************************************************************";
+  FX_LOGS(INFO) << "Per-source routing:";
+  std::ostringstream out;
+  for (const auto& [source, dests_for_source] : dests_) {
+    out << "    " << source << " -> {";
+    for (const auto& dest : dests_for_source) {
+      FX_LOGS(INFO) << out.str();
+      std::ostringstream().swap(out);
+      out << "                                               " << dest.key << ",";
+    }
+    FX_LOGS(INFO) << out.str() << " }";
+    std::ostringstream().swap(out);
+  }
+  FX_LOGS(INFO) << "Per-dest routing:";
+  for (const auto& [dest, sources_for_dest] : sources_) {
+    out << "  { ";
+    for (const auto& source : sources_for_dest) {
+      out << source.key << ",";
+      FX_LOGS(INFO) << out.str();
+      std::ostringstream().swap(out);
+      out << "    ";
+    }
+    FX_LOGS(INFO) << out.str() << "                                      } -> " << dest;
+    std::ostringstream().swap(out);
+  }
+  FX_LOGS(INFO) << "******************************************************************************";
 }
 
 void LinkMatrix::OnlyStrongLinks(LinkSet& link_set, std::vector<LinkHandle>* store) {

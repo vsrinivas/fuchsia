@@ -10,30 +10,13 @@
 #include <iomanip>
 
 #include "src/media/audio/audio_core/audio_object.h"
+#include "src/media/audio/audio_core/logging_flags.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/mixer/intersect.h"
 #include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/format/format.h"
 
 namespace media::audio {
-namespace {
-
-// To what extent should client-side underflows be logged? (A "client-side underflow" refers to when
-// all or part of a packet's data is discarded because its start timestamp has already passed.)
-// For each packet queue, we will log the first underflow. For subsequent occurrences, depending on
-// audio_core's logging level, we throttle how frequently these are displayed. If log_level is set
-// to TRACE or DEBUG, all client-side underflows are logged -- at log_level -1: VLOG TRACE -- as
-// specified by kUnderflowTraceInterval. If set to INFO, we log less often, at log_level 1: INFO,
-// throttling by the factor kUnderflowInfoInterval. If set to WARNING or higher, we throttle these
-// even more, specified by kUnderflowWarningInterval. Note: by default we set NDEBUG builds to
-// WARNING and DEBUG builds to INFO. To disable all logging of client-side underflows, set
-// kLogUnderflow to false.
-static constexpr bool kLogUnderflow = true;
-static constexpr uint16_t kUnderflowTraceInterval = 1;
-static constexpr uint16_t kUnderflowInfoInterval = 10;
-static constexpr uint16_t kUnderflowWarningInterval = 100;
-
-}  // namespace
 
 PacketQueue::PacketQueue(Format format, std::unique_ptr<AudioClock> audio_clock)
     : PacketQueue(format, nullptr, std::move(audio_clock)) {}
@@ -219,7 +202,7 @@ void PacketQueue::ReportUnderflow(const fbl::RefPtr<Packet>& packet, Fixed under
     underflow_reporter_(duration);
   }
 
-  if constexpr (kLogUnderflow) {
+  if constexpr (kLogPacketQueueUnderflow) {
     auto underflow_msec = static_cast<double>(duration.to_nsecs()) / ZX_MSEC(1);
 
 #define LOG_UNDERFLOW(where, interval)                                                   \
@@ -228,17 +211,17 @@ void PacketQueue::ReportUnderflow(const fbl::RefPtr<Packet>& packet, Fixed under
                  << packet->end() << "] arrived late by " << underflow_msec << " ms ("   \
                  << underflow_frames << " frames)"
 
-    if ((kUnderflowWarningInterval > 0) &&
-        ((underflow_count_ - 1) % kUnderflowWarningInterval == 0)) {
-      LOG_UNDERFLOW(WARNING, kUnderflowWarningInterval);
+    if ((kPacketQueueUnderflowWarningInterval > 0) &&
+        ((underflow_count_ - 1) % kPacketQueueUnderflowWarningInterval == 0)) {
+      LOG_UNDERFLOW(WARNING, kPacketQueueUnderflowWarningInterval);
 
-    } else if ((kUnderflowInfoInterval > 0) &&
-               ((underflow_count_ - 1) % kUnderflowInfoInterval == 0)) {
-      LOG_UNDERFLOW(INFO, kUnderflowInfoInterval);
+    } else if ((kPacketQueueUnderflowInfoInterval > 0) &&
+               ((underflow_count_ - 1) % kPacketQueueUnderflowInfoInterval == 0)) {
+      LOG_UNDERFLOW(INFO, kPacketQueueUnderflowInfoInterval);
 
-    } else if ((kUnderflowTraceInterval > 0) &&
-               ((underflow_count_ - 1) % kUnderflowTraceInterval == 0)) {
-      LOG_UNDERFLOW(TRACE, kUnderflowTraceInterval);
+    } else if ((kPacketQueueUnderflowTraceInterval > 0) &&
+               ((underflow_count_ - 1) % kPacketQueueUnderflowTraceInterval == 0)) {
+      LOG_UNDERFLOW(TRACE, kPacketQueueUnderflowTraceInterval);
     }
   }
 }

@@ -14,6 +14,7 @@
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/audio_policy.h"
 #include "src/media/audio/audio_core/device_registry.h"
+#include "src/media/audio/audio_core/logging_flags.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 
 namespace media::audio {
@@ -22,13 +23,7 @@ class AudioDevice;
 
 class IdlePolicy : public ActiveStreamCountReporter, public DeviceRouter {
  public:
-  // Informational logging for various aspects of the idle power-conservation mechanism
-  static constexpr bool kLogChannelFrequencyRanges = false;
-  static constexpr bool kLogStaticConfigValues = false;
-  static constexpr bool kLogIdlePolicyCounts = false;
-  static constexpr bool kLogIdleTimers = false;
-  static constexpr bool kLogSetActiveChannelsSupport = false;
-  static constexpr bool kLogSetActiveChannelsCalls = true;
+  static constexpr bool kDisableIdlePolicy = false;
 
   explicit IdlePolicy(Context* context = nullptr) : ActiveStreamCountReporter(), context_(context) {
     active_render_usages_.clear();
@@ -45,7 +40,7 @@ class IdlePolicy : public ActiveStreamCountReporter, public DeviceRouter {
     idle_countdown_duration_ = options.idle_countdown_duration;
     startup_idle_countdown_duration_ = options.startup_idle_countdown_duration;
     use_all_ultrasonic_channels_ = options.use_all_ultrasonic_channels;
-    if constexpr (kLogStaticConfigValues) {
+    if constexpr (kLogIdlePolicyStaticConfigValues) {
       FX_LOGS(INFO) << "idle_countdown_duration: "
                     << idle_countdown_duration_.value_or(zx::duration(-1)).get()
                     << ", startup_idle_countdown_duration: "

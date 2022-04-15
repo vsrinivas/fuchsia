@@ -13,6 +13,7 @@
 #include <unordered_set>
 
 #include "src/media/audio/audio_core/audio_object.h"
+#include "src/media/audio/audio_core/logging_flags.h"
 #include "src/media/audio/audio_core/loudness_transform.h"
 #include "src/media/audio/audio_core/threading_model.h"
 
@@ -51,6 +52,9 @@ class LinkMatrix {
 
   // Returns true iff the source and dest are linked.
   bool AreLinked(const AudioObject& source, AudioObject& dest);
+
+  // For debugging purposes.
+  void DisplayCurrentRouting() FXL_LOCKS_EXCLUDED(lock_);
 
  private:
   struct Link {

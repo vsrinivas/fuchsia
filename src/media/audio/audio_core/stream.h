@@ -13,6 +13,7 @@
 
 #include <fbl/static_vector.h>
 
+#include "src/media/audio/audio_core/logging_flags.h"
 #include "src/media/audio/audio_core/packet.h"
 #include "src/media/audio/audio_core/stage_metrics.h"
 #include "src/media/audio/audio_core/stream_usage.h"
@@ -25,8 +26,6 @@ namespace media::audio {
 
 class BaseStream {
  public:
-  static constexpr bool kLogPresentationDelay = false;
-
   BaseStream(std::string_view name, Format format) : name_(name), format_(format) {}
   virtual ~BaseStream() = default;
 

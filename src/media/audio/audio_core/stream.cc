@@ -8,20 +8,11 @@
 
 #include <mutex>
 
+#include "src/media/audio/audio_core/logging_flags.h"
 #include "src/media/audio/audio_core/mixer/intersect.h"
 #include "src/media/audio/lib/format/constants.h"
 
 namespace {
-
-#ifdef NDEBUG
-// These should be false in production builds.
-constexpr bool kLogReadLocks = false;
-constexpr bool kLogTrims = false;
-#else
-// Keep to true in debug builds so we have verbose logs on FX_CHECK failures in tests.
-constexpr bool kLogReadLocks = true;
-constexpr bool kLogTrims = true;
-#endif
 
 // "ReadLock [start_frame, end_frame) stream_name (this-ptr)"
 #define VERBOSE_READ_LOCK_PREFIX                                                              \

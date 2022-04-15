@@ -10,14 +10,13 @@
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/audio_output.h"
+#include "src/media/audio/audio_core/logging_flags.h"
 #include "src/media/audio/audio_core/utils.h"
 
 namespace media::audio {
 namespace {
 
-constexpr bool kLogSetGainMuteActions = false;
-
-constexpr float kDefaultDeviceGain = 0.;
+constexpr float kDefaultDeviceGain = 0.0;
 
 }  // namespace
 
@@ -145,7 +144,7 @@ void AudioDevice::SetSoftwareGainInfo(const fuchsia::media::AudioGainInfo& info)
     FX_DCHECK(is_input());
     link_matrix_.ForEachDestLink(*this, [&info, muted](LinkMatrix::LinkHandle link) {
       if (link.object->type() == AudioObject::Type::AudioCapturer) {
-        if (kLogSetGainMuteActions) {
+        if constexpr (kLogSetDeviceGainMuteActions) {
           if (muted) {
             FX_LOGS(WARNING) << "Source device is muted";
           } else {
@@ -275,6 +274,11 @@ fpromise::promise<void> AudioDevice::Shutdown() {
 }
 
 bool AudioDevice::UpdatePlugState(bool plugged, zx::time plug_time) {
+  if constexpr (kLogAudioDevice || kLogDevicePlugUnplug) {
+    FX_LOGS(INFO) << "AudioDevice::" << __FUNCTION__ << ": " << (plugged ? "PLUGGED" : "UNPLUGGED")
+                  << " (device " << this << ")";
+  }
+
   TRACE_DURATION("audio", "AudioDevice::UpdatePlugState");
   if ((plugged != plugged_) && (plug_time >= plug_time_)) {
     plugged_ = plugged;
@@ -286,6 +290,11 @@ bool AudioDevice::UpdatePlugState(bool plugged, zx::time plug_time) {
 }
 
 void AudioDevice::UpdateRoutableState(bool routable) {
+  if constexpr (kLogAudioDevice || kLogRoutingChanges) {
+    FX_LOGS(INFO) << "AudioDevice::" << __FUNCTION__ << ": "
+                  << (routable ? "ROUTABLE" : "UNROUTABLE") << " (device " << this << ")";
+  }
+
   TRACE_INSTANT("audio", "AudioDevice::UpdateRoutableState", TRACE_SCOPE_PROCESS, "Routable",
                 routable);
   routable_ = routable;
@@ -312,6 +321,10 @@ fuchsia::media::AudioDeviceInfo AudioDevice::GetDeviceInfo() const {
 
   FX_DCHECK(device_settings_);
 
+  if constexpr (kLogAudioDevice) {
+    FX_LOGS(INFO) << "AudioDevice::" << __FUNCTION__ << " (" << (is_input() ? "input " : "output ")
+                  << this << "): '" << UniqueIdToString(driver()->persistent_unique_id()) << "'";
+  }
   return {
       .name = driver()->manufacturer_name() + ' ' + driver()->product_name(),
       .unique_id = UniqueIdToString(driver()->persistent_unique_id()),

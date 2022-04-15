@@ -14,6 +14,8 @@
 
 #include "lib/syslog/cpp/macros.h"
 #include "src/media/audio/audio_core/audio_driver.h"
+#include "src/media/audio/audio_core/idle_policy.h"
+#include "src/media/audio/audio_core/logging_flags.h"
 #include "src/media/audio/audio_core/reporter.h"
 
 constexpr bool VERBOSE_TIMING_DEBUG = false;
@@ -623,12 +625,13 @@ void DriverOutput::OnDriverStartComplete() {
   state_ = State::Started;
 
   // Once we are Started, begin the device-startup idle countdown
-  if (IdlePolicy::startup_idle_countdown_duration().has_value()) {
+  if (IdlePolicy::startup_idle_countdown_duration().has_value() &&
+      !IdlePolicy::kDisableIdlePolicy) {
     StartCountdownToDisableAudible(*IdlePolicy::startup_idle_countdown_duration());
     StartCountdownToDisableUltrasonic(*IdlePolicy::startup_idle_countdown_duration());
   } else {
-    if constexpr (IdlePolicy::kLogIdleTimers) {
-      FX_LOGS(INFO) << __FUNCTION__ << " not starting idle countdowns (policy disabled)";
+    if constexpr (kLogIdleTimers) {
+      FX_LOGS(INFO) << __FUNCTION__ << " not starting idle countdowns (idle policy disabled)";
     }
   }
 
@@ -649,14 +652,18 @@ zx_status_t DriverOutput::EnableAudible() {
       audible_enabled_ = supports_audible_;
       UpdateActiveChannels();
 
-      if constexpr (IdlePolicy::kLogIdleTimers) {
+      if constexpr (kLogIdleTimers) {
         FX_LOGS(INFO) << "mix_domain task from DriverOutput::EnableAudible completed";
       }
     });
   }
 
-  if constexpr (IdlePolicy::kLogSetActiveChannelsSupport) {
-    FX_LOGS(WARNING) << "DriverOutput::" << __func__ << " returned " << status;
+  if constexpr (kLogSetActiveChannelsSupport) {
+    if (status == ZX_OK) {
+      FX_LOGS(INFO) << "DriverOutput(" << this << ")::" << __func__ << " returned " << status;
+    } else {
+      FX_LOGS(WARNING) << "DriverOutput(" << this << ")::" << __func__ << " returned " << status;
+    }
   }
   return status;
 }
@@ -675,14 +682,18 @@ zx_status_t DriverOutput::EnableUltrasonic() {
       ultrasonic_enabled_ = supports_ultrasonic_;
       UpdateActiveChannels();
 
-      if constexpr (IdlePolicy::kLogIdleTimers) {
+      if constexpr (kLogIdleTimers) {
         FX_LOGS(INFO) << "mix_domain task from DriverOutput::EnableUltrasonic completed";
       }
     });
   }
 
-  if constexpr (IdlePolicy::kLogSetActiveChannelsSupport) {
-    FX_LOGS(WARNING) << "DriverOutput::" << __func__ << " returned " << status;
+  if constexpr (kLogSetActiveChannelsSupport) {
+    if (status == ZX_OK) {
+      FX_LOGS(INFO) << "DriverOutput(" << this << ")::" << __func__ << " returned " << status;
+    } else {
+      FX_LOGS(WARNING) << "DriverOutput(" << this << ")::" << __func__ << " returned " << status;
+    }
   }
   return status;
 }
@@ -700,9 +711,14 @@ zx_status_t DriverOutput::StartCountdownToDisableAudible(zx::duration countdown)
     status = audible_countdown_.PostDelayed(mix_domain().dispatcher(), countdown);
   }
 
-  if constexpr (IdlePolicy::kLogIdleTimers) {
-    FX_LOGS(INFO) << "DriverOutput::" << __func__ << "(" << countdown.get() / ZX_MSEC(1)
-                  << " ms) returned " << status;
+  if constexpr (kLogIdleTimers) {
+    if (status == ZX_OK) {
+      FX_LOGS(INFO) << "DriverOutput(" << this << ")::" << __func__ << "("
+                    << countdown.get() / ZX_MSEC(1) << " ms)";
+    } else {
+      FX_PLOGS(WARNING, status) << "DriverOutput(" << this << ")::" << __func__ << "("
+                                << countdown.get() / ZX_MSEC(1) << " ms)";
+    }
   }
   return status;
 }
@@ -718,17 +734,22 @@ zx_status_t DriverOutput::StartCountdownToDisableUltrasonic(zx::duration countdo
     status = ultrasonic_countdown_.PostDelayed(mix_domain().dispatcher(), countdown);
   }
 
-  if constexpr (IdlePolicy::kLogIdleTimers) {
-    FX_LOGS(INFO) << "DriverOutput::" << __func__ << "(" << countdown.get() / ZX_MSEC(1)
-                  << " ms) returned " << status;
+  if constexpr (kLogIdleTimers) {
+    if (status == ZX_OK) {
+      FX_LOGS(INFO) << "DriverOutput(" << this << ")::" << __func__ << "("
+                    << countdown.get() / ZX_MSEC(1) << " ms)";
+    } else {
+      FX_PLOGS(WARNING, status) << "DriverOutput(" << this << ")::" << __func__ << "("
+                                << countdown.get() / ZX_MSEC(1) << " ms)";
+    }
   }
   return status;
 }
 
 // Must be called from the same thread that posts the task (device's Mix thread)
 zx_status_t DriverOutput::CancelCountdownAudible() {
-  if constexpr (IdlePolicy::kLogIdleTimers) {
-    FX_LOGS(INFO) << "DriverOutput::" << __func__;
+  if constexpr (kLogIdleTimers) {
+    FX_LOGS(INFO) << "DriverOutput(" << this << ")::" << __FUNCTION__;
   }
 
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
@@ -746,8 +767,8 @@ zx_status_t DriverOutput::CancelCountdownAudible() {
 
 // Must be called from the same thread that posts the task (device's Mix thread)
 zx_status_t DriverOutput::CancelCountdownUltrasonic() {
-  if constexpr (IdlePolicy::kLogIdleTimers) {
-    FX_LOGS(INFO) << "DriverOutput::" << __func__;
+  if constexpr (kLogIdleTimers) {
+    FX_LOGS(INFO) << "DriverOutput(" << this << ")::" << __FUNCTION__;
   }
 
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
@@ -765,8 +786,8 @@ zx_status_t DriverOutput::CancelCountdownUltrasonic() {
 
 // Must be called from the same thread that posts the task (device's Mix thread)
 void DriverOutput::CountdownExpiredAudible() {
-  if constexpr (IdlePolicy::kLogIdleTimers) {
-    FX_LOGS(INFO) << "DriverOutput::" << __func__;
+  if constexpr (kLogIdleTimers) {
+    FX_LOGS(INFO) << "DriverOutput(" << this << ")::" << __FUNCTION__;
   }
 
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
@@ -777,8 +798,8 @@ void DriverOutput::CountdownExpiredAudible() {
 
 // Called from this device's Mix thread
 void DriverOutput::CountdownExpiredUltrasonic() {
-  if constexpr (IdlePolicy::kLogIdleTimers) {
-    FX_LOGS(INFO) << "DriverOutput::" << __func__;
+  if constexpr (kLogIdleTimers) {
+    FX_LOGS(INFO) << "DriverOutput(" << this << ")::" << __FUNCTION__;
   }
 
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
@@ -811,21 +832,22 @@ uint64_t DriverOutput::UpdateActiveChannels() {
   }
 
   if (current_active_channel_mask_ != active_channel_mask) {
-    if constexpr (IdlePolicy::kLogSetActiveChannelsSupport) {
-      FX_LOGS(INFO) << "DriverOutput::" << __func__ << " calling driver->SetActiveChannels(0x"
-                    << std::hex << active_channel_mask << ")";
+    if constexpr (kLogSetActiveChannelsSupport) {
+      FX_LOGS(INFO) << "DriverOutput(" << this << ")::" << __func__
+                    << " calling driver->SetActiveChannels(0x" << std::hex << active_channel_mask
+                    << ")";
     }
 
     zx_status_t status = driver()->SetActiveChannels(active_channel_mask);
 
     if (status != ZX_OK) {
-      FX_LOGS(WARNING) << "driver->SetActiveChannels(0x" << std::hex << active_channel_mask
-                       << ") returned " << std::dec << status;
+      FX_PLOGS(WARNING, status) << this << ": driver->SetActiveChannels(0x" << std::hex
+                                << active_channel_mask << ")";
       // We only lightly complain on error (like ZX_ERR_NOT_SUPPORTED), but we won't call again
       supports_set_active_channels_ = false;
-    } else if constexpr (IdlePolicy::kLogSetActiveChannelsSupport) {
-      FX_LOGS(INFO) << "driver->SetActiveChannels(0x" << std::hex << active_channel_mask
-                    << ") returned " << std::dec << status;
+    } else if constexpr (kLogSetActiveChannelsSupport) {
+      FX_LOGS(INFO) << this << ": driver->SetActiveChannels(0x" << std::hex << active_channel_mask
+                    << ")";
     }
 
     current_active_channel_mask_ = active_channel_mask;

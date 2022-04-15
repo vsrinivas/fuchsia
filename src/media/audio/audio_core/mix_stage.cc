@@ -19,6 +19,7 @@
 #include <ffl/string.h>
 
 #include "src/media/audio/audio_core/base_renderer.h"
+#include "src/media/audio/audio_core/logging_flags.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
 #include "src/media/audio/audio_core/reporter.h"
@@ -51,22 +52,6 @@ zx::duration LeadTimeForMixer(const Format& format, const Mixer& mixer) {
 // For reference, micro-SRC can smoothly eliminate errors of this duration in less than 1 sec (at
 // kMicroSrcAdjustmentPpmMax). If adjusting a zx::clock, this will take approx. 2 seconds.
 constexpr zx::duration kMaxErrorThresholdDuration = zx::msec(2);
-
-// To what extent should jam-synchronizations be logged? Worst-case logging can exceed 100/sec.
-// We log each MixStage's first occurrence; for subsequent instances, depending on audio_core's
-// logging level, we throttle the logging frequency depending on log_level.
-// By default NDEBUG builds are WARNING, and DEBUG builds INFO. To disable jam-sync logging for a
-// certain level, set the interval to 0. To disable all jam-sync logging, set kLogJamSyncs to false.
-constexpr bool kLogJamSyncs = true;
-constexpr uint16_t kJamSyncWarningInterval = 200;  // Log 1 of every 200 jam-syncs at WARNING
-constexpr uint16_t kJamSyncInfoInterval = 20;      // Log 1 of every 20 jam-syncs at INFO
-constexpr uint16_t kJamSyncTraceInterval = 1;      // Log all remaining jam-syncs at TRACE
-
-constexpr bool kLogReconciledTimelineFunctions = false;
-constexpr bool kLogInitialPositionSync = false;
-constexpr bool kLogDestDiscontinuities = true;
-// Use logging strides that are prime, to avoid seeing only certain message cadences.
-constexpr int kPositionLogStride = 997;
 
 }  // namespace
 
@@ -683,7 +668,7 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
         std::abs(dest_frame - info.next_dest_frame), TimelineRate::RoundingMode::Ceiling));
     if constexpr (kLogDestDiscontinuities) {
       static int dest_discontinuity_count = 0;
-      if (dest_discontinuity_count % kPositionLogStride == 0) {
+      if (dest_discontinuity_count % kLogDestDiscontinuitiesStride == 0) {
         FX_LOGS(WARNING) << "MixStage(" << this << "), stream(" << &stream
                          << "): " << (source_clock.is_device_clock() ? "Device" : "Client")
                          << (source_clock.is_adjustable() ? "Adjustable" : "Fixed") << "("
@@ -696,7 +681,7 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
                          << (dest_gap_duration < kMaxErrorThresholdDuration ? "NOT" : "")
                          << " SyncSourcePositionFromClocks **********";
       }
-      dest_discontinuity_count = (dest_discontinuity_count + 1) % kPositionLogStride;
+      dest_discontinuity_count = (dest_discontinuity_count + 1) % kLogDestDiscontinuitiesStride;
     }
 
     // If dest position discontinuity exceeds threshold, reset positions and rate adjustments.
@@ -792,7 +777,7 @@ void MixStage::SyncSourcePositionFromClocks(AudioClock& source_clock, AudioClock
   AudioClock::ResetRateAdjustments(source_clock, dest_clock, mono_now_from_dest);
 
   if constexpr (kLogJamSyncs) {
-    if (timeline_changed && !kLogInitialPositionSync) {
+    if (!kLogInitialPositionSync && timeline_changed) {
       return;
     }
 
