@@ -6,6 +6,7 @@
 mod testing_utilities;
 mod fake_input_device_binding;
 mod fake_input_handler;
+mod mouse_config;
 mod utils;
 
 pub mod consumer_controls_binding;
@@ -21,6 +22,7 @@ pub mod display_ownership;
 pub mod factory_reset_handler;
 pub mod gfx_touch_handler;
 pub mod ime_handler;
+pub mod immersive_mode_shortcut_handler;
 pub mod input_handler;
 pub mod inspect_handler;
 pub mod keymap_handler;

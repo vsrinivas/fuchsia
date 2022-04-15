@@ -126,6 +126,26 @@ impl KeyboardEvent {
         self.modifiers
     }
 
+    /// Returns the currently applicable modifiers, with the sided modifiers removed.
+    ///
+    /// For example, if LEFT_SHIFT is pressed, returns SHIFT, rather than SHIFT | LEFT_SHIFT
+    pub fn get_unsided_modifiers(&self) -> fidl_fuchsia_ui_input3::Modifiers {
+        use fidl_fuchsia_ui_input3::Modifiers;
+        let mut modifiers = self.modifiers.unwrap_or(Modifiers::empty());
+        modifiers.set(
+            Modifiers::LEFT_ALT
+                | Modifiers::LEFT_CTRL
+                | Modifiers::LEFT_SHIFT
+                | Modifiers::LEFT_META
+                | Modifiers::RIGHT_ALT
+                | Modifiers::RIGHT_CTRL
+                | Modifiers::RIGHT_SHIFT
+                | Modifiers::RIGHT_META,
+            false,
+        );
+        modifiers
+    }
+
     /// Converts [KeyboardEvent] into the same one, but with the specified lock state.
     pub fn into_with_lock_state(self, lock_state: Option<fidl_ui_input3::LockState>) -> Self {
         Self { lock_state, ..self }
@@ -629,5 +649,25 @@ mod tests {
             device_descriptor: descriptor,
             device_type: KeyboardBinding,
         );
+    }
+
+    #[fuchsia::test]
+    fn get_unsided_modifiers() {
+        use fidl_ui_input3::Modifiers;
+        let event = KeyboardEvent::new(fidl_fuchsia_input::Key::A, KeyEventType::Pressed)
+            .into_with_modifiers(Some(Modifiers::all()));
+        assert_eq!(
+            event.get_unsided_modifiers(),
+            Modifiers::CAPS_LOCK
+                | Modifiers::NUM_LOCK
+                | Modifiers::SCROLL_LOCK
+                | Modifiers::FUNCTION
+                | Modifiers::SYMBOL
+                | Modifiers::SHIFT
+                | Modifiers::ALT
+                | Modifiers::ALT_GRAPH
+                | Modifiers::META
+                | Modifiers::CTRL
+        )
     }
 }

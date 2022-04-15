@@ -16,6 +16,7 @@ enum EventType {
     ConsumerControls,
     Mouse,
     Touch,
+    MouseConfig,
     #[cfg(test)]
     Fake,
 }
@@ -27,6 +28,7 @@ impl std::fmt::Display for EventType {
             EventType::ConsumerControls => write!(f, "{}", "consumer_controls"),
             EventType::Mouse => write!(f, "{}", "mouse"),
             EventType::Touch => write!(f, "{}", "touch"),
+            EventType::MouseConfig => write!(f, "{}", "mouse_config"),
             #[cfg(test)]
             EventType::Fake => write!(f, "{}", "fake"),
         }
@@ -41,6 +43,7 @@ impl EventType {
             InputDeviceEvent::ConsumerControls(_) => EventType::ConsumerControls,
             InputDeviceEvent::Mouse(_) => EventType::Mouse,
             InputDeviceEvent::Touch(_) => EventType::Touch,
+            InputDeviceEvent::MouseConfig(_) => EventType::MouseConfig,
             #[cfg(test)]
             InputDeviceEvent::Fake => EventType::Fake,
         }
@@ -155,6 +158,7 @@ impl InspectHandler {
         EventCounters::add_new_into(&mut events_by_type, &node, EventType::ConsumerControls);
         EventCounters::add_new_into(&mut events_by_type, &node, EventType::Mouse);
         EventCounters::add_new_into(&mut events_by_type, &node, EventType::Touch);
+        EventCounters::add_new_into(&mut events_by_type, &node, EventType::MouseConfig);
         #[cfg(test)]
         EventCounters::add_new_into(&mut events_by_type, &node, EventType::Fake);
 
@@ -216,6 +220,12 @@ mod tests {
                      last_generated_timestamp_ns: 0i64,
                      last_seen_timestamp_ns: 0i64,
                 },
+                mouse_config: {
+                    events_count: 0u64,
+                    handled_events_count: 0u64,
+                    last_generated_timestamp_ns: 0i64,
+                    last_seen_timestamp_ns: 0i64,
+                },
                 touch: {
                      events_count: 0u64,
                      handled_events_count: 0u64,
@@ -259,6 +269,12 @@ mod tests {
                      handled_events_count: 0u64,
                      last_generated_timestamp_ns: 0i64,
                      last_seen_timestamp_ns: 0i64,
+                },
+                mouse_config: {
+                    events_count: 0u64,
+                    handled_events_count: 0u64,
+                    last_generated_timestamp_ns: 0i64,
+                    last_seen_timestamp_ns: 0i64,
                 },
                 touch: {
                      events_count: 0u64,
@@ -304,6 +320,12 @@ mod tests {
                      last_generated_timestamp_ns: 0i64,
                      last_seen_timestamp_ns: 0i64,
                 },
+                mouse_config: {
+                    events_count: 0u64,
+                    handled_events_count: 0u64,
+                    last_generated_timestamp_ns: 0i64,
+                    last_seen_timestamp_ns: 0i64,
+                },
                 touch: {
                      events_count: 0u64,
                      handled_events_count: 0u64,
@@ -347,6 +369,12 @@ mod tests {
                      handled_events_count: 0u64,
                      last_generated_timestamp_ns: 0i64,
                      last_seen_timestamp_ns: 0i64,
+                },
+                mouse_config: {
+                    events_count: 0u64,
+                    handled_events_count: 0u64,
+                    last_generated_timestamp_ns: 0i64,
+                    last_seen_timestamp_ns: 0i64,
                 },
                 touch: {
                      events_count: 0u64,

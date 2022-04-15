@@ -6,6 +6,7 @@ use {
     crate::input_device,
     crate::input_handler::InputHandler,
     crate::mouse_binding,
+    crate::mouse_config,
     crate::utils::{CursorMessage, Position, Size},
     anyhow::{anyhow, Context, Error, Result},
     async_trait::async_trait,
@@ -128,39 +129,24 @@ impl InputHandler for MouseInjectorHandler {
                 }
             }
             input_device::InputEvent {
-                device_event: input_device::InputDeviceEvent::Keyboard(ref keyboard_device_event),
-                device_descriptor: input_device::InputDeviceDescriptor::Keyboard(_),
+                device_event:
+                    input_device::InputDeviceEvent::MouseConfig(
+                        mouse_config::MouseConfigEvent::ToggleImmersiveMode,
+                    ),
+                device_descriptor: input_device::InputDeviceDescriptor::MouseConfig,
                 event_time: _,
                 handled: _,
             } => {
-                // Alt+Shift+I toggles immersive mode.
-                //
                 // Immersive mode hides the cursor and is a temporary workaround
                 // until we have a cursor API that makes it possible for UI
                 // components to control the appearance of the cursor.
                 //
                 // TODO(fxbug.dev/90290): Remove this workaround when we have a
                 // proper cursor API.
-                if keyboard_device_event.get_event_type()
-                    == fidl_fuchsia_ui_input3::KeyEventType::Pressed
-                    && keyboard_device_event.get_key() == fidl_fuchsia_input::Key::I
-                    && keyboard_device_event
-                        .get_modifiers()
-                        .filter(|m| {
-                            m.contains(
-                                fidl_fuchsia_ui_input3::Modifiers::ALT
-                                    | fidl_fuchsia_ui_input3::Modifiers::SHIFT,
-                            )
-                        })
-                        .is_some()
-                {
-                    if let Err(e) = self.toggle_immersive_mode().await {
-                        fx_log_err!("update_cursor_visibility failed: {}", e);
-                    }
-
-                    // Consume the input event.
-                    input_event.handled = input_device::Handled::Yes
+                if let Err(e) = self.toggle_immersive_mode().await {
+                    fx_log_err!("update_cursor_visibility failed: {}", e);
                 }
+                input_event.handled = input_device::Handled::Yes
             }
             _ => {}
         }
@@ -2089,9 +2075,7 @@ mod tests {
 
         // Touch event should hide the cursor.
         match receiver.next().await {
-            Some(CursorMessage::SetVisibility(visible)) => {
-                assert_eq!(visible, false)
-            }
+            Some(CursorMessage::SetVisibility(visible)) => assert_eq!(visible, false),
             _ => panic!("Touch event did not hide the cursor."),
         };
     }

@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::{consumer_controls_binding, keyboard_binding, mouse_binding, touch_binding},
+    crate::{
+        consumer_controls_binding, keyboard_binding, mouse_binding, mouse_config, touch_binding,
+    },
     anyhow::{format_err, Error},
     async_trait::async_trait,
     async_utils::hanging_get::client::HangingGetStream,
@@ -71,6 +73,7 @@ pub enum InputDeviceEvent {
     ConsumerControls(consumer_controls_binding::ConsumerControlsEvent),
     Mouse(mouse_binding::MouseEvent),
     Touch(touch_binding::TouchEvent),
+    MouseConfig(mouse_config::MouseConfigEvent),
     #[cfg(test)]
     Fake,
 }
@@ -90,6 +93,7 @@ pub enum InputDeviceDescriptor {
     ConsumerControls(consumer_controls_binding::ConsumerControlsDeviceDescriptor),
     Mouse(mouse_binding::MouseDeviceDescriptor),
     Touch(touch_binding::TouchDeviceDescriptor),
+    MouseConfig,
     #[cfg(test)]
     Fake,
 }
@@ -103,7 +107,7 @@ pub enum InputDeviceType {
 }
 
 // Whether the event is consumed by an [`InputHandler`].
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Handled {
     // The event has been handled.
     Yes,

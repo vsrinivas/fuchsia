@@ -18,6 +18,7 @@ use {
     input_pipeline::{
         self, dead_keys_handler,
         ime_handler::ImeHandler,
+        immersive_mode_shortcut_handler::ImmersiveModeShortcutHandler,
         input_device,
         input_pipeline::{InputDeviceBindingHashMap, InputPipeline, InputPipelineAssembly},
         keymap_handler,
@@ -165,6 +166,7 @@ async fn build_input_pipeline_assembly(
         assembly = add_keymap_handler(assembly);
         assembly = assembly.add_autorepeater();
         assembly = add_dead_keys_handler(assembly, icu_data_loader);
+        assembly = add_immersive_mode_shortcut_handler(assembly);
         // Shortcut needs to go before IME.
         assembly = add_shortcut_handler(assembly).await;
         assembly = add_ime(assembly).await;
@@ -292,6 +294,10 @@ fn add_pointer_motion_display_scale_handler(
             assembly
         }
     }
+}
+
+fn add_immersive_mode_shortcut_handler(assembly: InputPipelineAssembly) -> InputPipelineAssembly {
+    assembly.add_handler(ImmersiveModeShortcutHandler::new())
 }
 
 pub async fn handle_input_device_registry_request_streams(
