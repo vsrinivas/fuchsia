@@ -14,6 +14,7 @@ group("integration") {
     ":fidl_llcpp_gen_api_tests",
     ":fidl_llcpp_handle_raii_tests",
     ":fidl_llcpp_handle_rights_tests",
+    ":fidl_llcpp_header_coding_tests",
     ":fidl_llcpp_protocol_tests",
     ":fidl_llcpp_transitional_tests",
     ":fidl_llcpp_v2_integration_tests",
@@ -226,4 +227,22 @@ test("fidl_llcpp_v2_integration_tests_bin") {
 
 fuchsia_unittest_package("fidl_llcpp_v2_integration_tests") {
   deps = [ ":fidl_llcpp_v2_integration_tests_bin" ]
+}
+
+test("fidl_llcpp_header_coding_tests_bin") {
+  output_name = "fidl_llcpp_header_coding_tests"
+  sources = [ "header_coding_test.cc" ]
+  deps = [
+    ":fidl.test.coding.fuchsia_llcpp",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/sync:sync-cpp",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("fidl_llcpp_header_coding_tests") {
+  deps = [ ":fidl_llcpp_header_coding_tests_bin" ]
 }
