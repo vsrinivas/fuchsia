@@ -85,11 +85,21 @@ struct HeapAllocator {
 
  private:
   friend fidl::AnyMemoryResource MakeFidlAnyMemoryResource(HeapAllocator& a) {
-    return [&a](uint32_t num_bytes) {
-      uint8_t* allocation = new uint8_t[num_bytes];
-      a.allocations_.push_back(allocation);
-      return allocation;
+    class HeapAllocatorMemoryResource : public fidl::MemoryResource {
+     public:
+      explicit HeapAllocatorMemoryResource(HeapAllocator& a) : a_(&a) {}
+
+      uint8_t* Allocate(uint32_t num_bytes) final {
+        uint8_t* allocation = new uint8_t[num_bytes];
+        a_->allocations_.push_back(allocation);
+        return allocation;
+      }
+
+     private:
+      HeapAllocator* a_;
     };
+
+    return fidl::AnyMemoryResource(cpp17::in_place_type_t<HeapAllocatorMemoryResource>{}, a);
   }
 
   std::vector<uint8_t*> allocations_;

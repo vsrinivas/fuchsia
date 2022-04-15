@@ -34,7 +34,6 @@ test("fidl_llcpp_dispatcher_tests_bin") {
   output_name = "fidl_llcpp_dispatcher_tests"
   public = [ "mock_client_impl.h" ]
   sources = [
-    "any_test.cc",
     "bind_server_overloads_test.cc",
     "client_base_test.cc",
     "client_continuation_test.cc",

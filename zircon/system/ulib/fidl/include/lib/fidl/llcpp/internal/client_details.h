@@ -93,7 +93,8 @@ class IncomingEventDispatcherBase {
   AsyncEventHandler* event_handler_;
 };
 
-using AnyIncomingEventDispatcher = Any<IncomingEventDispatcherBase>;
+using AnyIncomingEventDispatcher =
+    fit::inline_any<IncomingEventDispatcherBase, /* Reserve = */ 16, /* Align = */ 8>;
 
 // |IncomingEventDispatcher| is the corresponding event dispatcher for a
 // protocol whose event handler is of type |EventHandler|. The generated code

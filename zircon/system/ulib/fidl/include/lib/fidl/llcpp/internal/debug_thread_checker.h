@@ -5,10 +5,10 @@
 #ifndef LIB_FIDL_LLCPP_INTERNAL_DEBUG_THREAD_CHECKER_H_
 #define LIB_FIDL_LLCPP_INTERNAL_DEBUG_THREAD_CHECKER_H_
 
-#include <lib/fidl/llcpp/internal/any.h>
 #include <lib/fidl/llcpp/internal/arrow.h>
 #include <lib/fidl/llcpp/internal/thread_checker.h>
 #include <lib/fidl/llcpp/internal/transport.h>
+#include <lib/fit/inline_any.h>
 #include <lib/fit/thread_checker.h>
 #include <zircon/compiler.h>
 
@@ -27,10 +27,15 @@ class __TA_CAPABILITY("mutex") DebugOnlyThreadChecker {
  public:
 #ifndef NDEBUG
   using CheckerType = AnyThreadChecker;
-  explicit DebugOnlyThreadChecker(AnyThreadChecker checker) : checker_(std::move(checker)) {}
+
+  template <typename T, typename... Args>
+  explicit DebugOnlyThreadChecker(cpp17::in_place_type_t<T>, Args&&... args)
+      : checker_(cpp17::in_place_type_t<T>{}, std::forward<Args>(args)...) {}
 #else
   using CheckerType = Arrow<NoopThreadChecker>;
-  explicit DebugOnlyThreadChecker(AnyThreadChecker checker) : checker_() {}
+
+  template <typename T, typename... Args>
+  explicit DebugOnlyThreadChecker(cpp17::in_place_type_t<T>, Args&&... args) {}
 #endif
 
   DebugOnlyThreadChecker(const TransportVTable* vtable, async_dispatcher_t* dispatcher,

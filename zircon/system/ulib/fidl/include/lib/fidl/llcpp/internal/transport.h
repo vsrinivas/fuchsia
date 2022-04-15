@@ -6,10 +6,10 @@
 #define LIB_FIDL_LLCPP_INTERNAL_TRANSPORT_H_
 
 #include <lib/fidl/coding.h>
-#include <lib/fidl/llcpp/internal/any.h>
 #include <lib/fidl/llcpp/internal/thread_checker.h>
 #include <lib/fidl/llcpp/status.h>
 #include <lib/fit/function.h>
+#include <lib/fit/thread_checker.h>
 #include <zircon/assert.h>
 #include <zircon/fidl.h>
 
@@ -191,7 +191,8 @@ struct TransportWaiter {
 // Storage for |TransportWaiter|.
 // This avoids heap allocation while using a virtual waiter interface.
 // |kCapacity| must be larger than the sizes of all of the individual transport waiters.
-using AnyTransportWaiter = NonMovableAny<TransportWaiter, /* kCapacity= */ 256ull>;
+using AnyTransportWaiter =
+    fit::pinned_inline_any<TransportWaiter, /* Reserve = */ 256, /* Align = */ 16>;
 
 // Function receiving notification of successful waits on a TransportWaiter.
 using TransportWaitSuccessHandler =

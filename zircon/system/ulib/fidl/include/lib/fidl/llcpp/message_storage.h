@@ -30,20 +30,29 @@
 
 namespace fidl {
 
+class MemoryResource {
+ public:
+  MemoryResource() = default;
+  virtual ~MemoryResource() = default;
+
+  // Allocates a |num_bytes| sized buffer, aligned to |FIDL_ALIGNMENT|.
+  //
+  // If the buffer resource cannot satisfy the allocation, it should return
+  // nullptr, and preserve its original state before the allocation.
+  //
+  // |num_bytes| represents the size of the allocation request.
+  virtual uint8_t* Allocate(uint32_t num_bytes) = 0;
+};
+
 // An |AnyMemoryResource| is a type-erased object that responds to allocation
 // commands and updates the state of the underlying memory resource referenced
-// by it. It is similar to a reducer in functional-reactive programming.
+// by it.
 //
-// If the memory resource cannot satisfy the allocation, it should return
-// nullptr, and preserve its original state before the allocation.
-//
-// Using |inline_function| ensures that there is no heap allocation, which would
+// Using |inline_any| ensures that there is no heap allocation, which would
 // otherwise defeat the purpose of caller-allocating flavors.
 //
-// |num_bytes| represents the size of the allocation request.
-//
 // See |AnyBufferAllocator|.
-using AnyMemoryResource = fit::inline_function<uint8_t*(uint32_t num_bytes)>;
+using AnyMemoryResource = fit::inline_any<MemoryResource, /* Reserve */ 24, /* Align */ 8>;
 
 // Holds a reference to any storage buffer. This is independent of the allocation.
 struct BufferSpan {
@@ -154,7 +163,7 @@ class AnyBufferAllocator {
   //
   // If the underlying memory resource cannot satisfy the allocation, it should
   // return nullptr, and preserve its original state before the allocation.
-  uint8_t* Allocate(uint32_t num_bytes) { return memory_resource_(num_bytes); }
+  uint8_t* Allocate(uint32_t num_bytes) { return memory_resource_->Allocate(num_bytes); }
 
   // Attempt to allocate |size| bytes from the allocator, returning a view when
   // successful and an error otherwise.

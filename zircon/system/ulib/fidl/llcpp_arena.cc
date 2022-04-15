@@ -61,9 +61,18 @@ uint8_t* ArenaBase::Allocate(size_t size, size_t count,
 }
 
 AnyMemoryResource MakeFidlAnyMemoryResource(AnyArena& arena) {
-  return [&arena](uint32_t num_bytes) mutable -> uint8_t* {
-    return arena.AllocateVector<uint8_t>(num_bytes);
+  class ArenaMemoryResource : public MemoryResource {
+   public:
+    explicit ArenaMemoryResource(AnyArena& arena) : arena_(&arena) {}
+
+    uint8_t* Allocate(uint32_t num_bytes) final {
+      return arena_->AllocateVector<uint8_t>(num_bytes);
+    }
+
+   private:
+    AnyArena* arena_;
   };
+  return AnyMemoryResource(cpp17::in_place_type_t<ArenaMemoryResource>{}, arena);
 }
 
 }  // namespace fidl

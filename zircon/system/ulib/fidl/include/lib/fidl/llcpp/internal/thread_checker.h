@@ -5,8 +5,8 @@
 #ifndef LIB_FIDL_LLCPP_INTERNAL_THREAD_CHECKER_H_
 #define LIB_FIDL_LLCPP_INTERNAL_THREAD_CHECKER_H_
 
-#include <lib/fidl/llcpp/internal/any.h>
 #include <lib/fidl/llcpp/internal/arrow.h>
+#include <lib/fit/inline_any.h>
 #include <lib/fit/thread_checker.h>
 #include <zircon/compiler.h>
 
@@ -63,7 +63,7 @@ class __TA_CAPABILITY("mutex") ThreadChecker {
   const ThreadingPolicy policy_;
 };
 
-using AnyThreadChecker = Any<ThreadChecker, 24>;
+using AnyThreadChecker = fit::pinned_inline_any<ThreadChecker, /* Reserve = */ 24, /* Align = */ 8>;
 
 }  // namespace internal
 }  // namespace fidl

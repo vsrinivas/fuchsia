@@ -13,10 +13,9 @@
 // |ThreadChecker| should check that it is always used from the same thread in
 // debug builds.
 TEST(ThreadChecker, CheckInDebug) {
-  fidl::internal::AnyThreadChecker any_checker;
-  any_checker.emplace<fidl::internal::ZirconThreadChecker>(
-      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromDispatcherThread);
-  fidl::internal::DebugOnlyThreadChecker checker{std::move(any_checker)};
+  fidl::internal::DebugOnlyThreadChecker checker{
+      cpp17::in_place_type_t<fidl::internal::ZirconThreadChecker>{},
+      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromDispatcherThread};
   std::thread thread(
       [&] { ASSERT_DEATH([&] { fidl::internal::ScopedThreadGuard guard(checker); }); });
   thread.join();
@@ -24,10 +23,9 @@ TEST(ThreadChecker, CheckInDebug) {
 
 // It is possible to configure whether to skip the check.
 TEST(ThreadChecker, SkipCheckUsingPolicy) {
-  fidl::internal::AnyThreadChecker any_checker;
-  any_checker.emplace<fidl::internal::ZirconThreadChecker>(
-      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
-  fidl::internal::DebugOnlyThreadChecker checker{std::move(any_checker)};
+  fidl::internal::DebugOnlyThreadChecker checker{
+      cpp17::in_place_type_t<fidl::internal::ZirconThreadChecker>{},
+      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread};
   std::thread thread(
       [&] { ASSERT_NO_DEATH([&] { fidl::internal::ScopedThreadGuard guard(checker); }); });
   thread.join();
@@ -37,10 +35,9 @@ TEST(ThreadChecker, SkipCheckUsingPolicy) {
 
 // |ThreadChecker| should not perform any assertions in release builds.
 TEST(ThreadChecker, NoCheckInRelease) {
-  fidl::internal::AnyThreadChecker any_checker;
-  any_checker.emplace<fidl::internal::ZirconThreadChecker>(
-      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
-  fidl::internal::DebugOnlyThreadChecker checker{std::move(any_checker)};
+  fidl::internal::DebugOnlyThreadChecker checker{
+      cpp17::in_place_type_t<fidl::internal::ZirconThreadChecker>{},
+      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromDispatcherThread};
   std::thread thread(
       [&] { ASSERT_NO_DEATH([&] { fidl::internal::ScopedThreadGuard guard(checker); }); });
   thread.join();

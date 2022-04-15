@@ -9,24 +9,33 @@
 namespace fidl {
 
 AnyMemoryResource MakeFidlAnyMemoryResource(fidl::BufferSpan buffer_span) {
-  uint8_t* data = buffer_span.data;
-  uint32_t capacity = buffer_span.capacity;
-  uint32_t used = 0;
+  class BufferSpanMemoryResource : public MemoryResource {
+   public:
+    explicit BufferSpanMemoryResource(fidl::BufferSpan buffer_span)
+        : data_(buffer_span.data), capacity_(buffer_span.capacity) {}
 
-  return [data, capacity, used](uint32_t num_bytes) mutable -> uint8_t* {
-    uint32_t used_original = used;
-    if (unlikely(add_overflow(used, num_bytes, &used))) {
-      // Allocation overflowed, revert to previous state.
-      used = used_original;
-      return nullptr;
+    uint8_t* Allocate(uint32_t num_bytes) final {
+      uint32_t used_original = used_;
+      if (unlikely(add_overflow(used_, num_bytes, &used_))) {
+        // Allocation overflowed, revert to previous state.
+        used_ = used_original;
+        return nullptr;
+      }
+      if (used_ > capacity_) {
+        // Allocation failed, revert to previous state.
+        used_ = used_original;
+        return nullptr;
+      }
+      return &data_[used_original];
     }
-    if (used > capacity) {
-      // Allocation failed, revert to previous state.
-      used = used_original;
-      return nullptr;
-    }
-    return &data[used_original];
+
+   private:
+    uint8_t* data_;
+    uint32_t capacity_;
+    uint32_t used_ = 0;
   };
+
+  return AnyMemoryResource(cpp17::in_place_type_t<BufferSpanMemoryResource>{}, buffer_span);
 }
 
 namespace internal {
