@@ -236,6 +236,21 @@ Do the following:
    tools/ffx product-bundle list
    ```
 
+   This command prints output similar to the following:
+
+   ```none {:.devsite-disable-click-to-copy}
+   $ tools/ffx product-bundle list
+   Getting product metadata.
+   .
+
+   terminal.arm64
+   terminal.qemu-arm64
+   terminal.qemu-x64
+   terminal.x64
+   workstation.qemu-x64*
+   ...
+   ```
+
 1. Download the latest Fuchsia Workstation prebuilt image for the emulator
    (`workstation.qemu-x64`):
 
@@ -422,7 +437,7 @@ Do the following:
 
    This command exits silently without output.
 
-1. Verify that the new package repository is created:
+1. Verify that the new package repository (`fuchsiasamples.com`) is created:
 
    ```posix-terminal
    tools/ffx repository list
@@ -441,6 +456,11 @@ Do the following:
    +----------------------+------+-----------------------------------------------+
    ```
 
+   The `workstation.qemu-x64` repository is created when you run the
+   `ffx product-bundle get` command (previously in the
+   [Start the emulator](#start-the-emulator) section above). This repository
+   contains additional system packages for the `workstation.qemu-x64` prebuilt image.
+
 1. Start the Fuchsia package server:
 
    ```posix-terminal
@@ -454,20 +474,20 @@ Do the following:
    server is listening on [::]:8083
    ```
 
-1. Register the repository with the prebuilt system packages to the target
-   device (that is, the emulator instance) as `fuchsia.com`:
+1. Register the `fuchsiasamples.com` repository to the target device
+   (that is, the emulator instance):
 
    ```posix-terminal
-   tools/ffx target repository register -r workstation.qemu-x64 --alias fuchsia.com
+   tools/ffx target repository register -r fuchsiasamples.com
    ```
 
    This command exits silently without output.
 
-1. Register the repository to the target device (that is, the emulator instance)
-   as `fuchsiasamples.com`:
+1. Register the `workstation.qemu-x64` repository to the target device
+   as `fuchsia.com`:
 
    ```posix-terminal
-   tools/ffx target repository register -r fuchsiasamples.com
+   tools/ffx target repository register -r workstation.qemu-x64 --alias fuchsia.com
    ```
 
    This command exits silently without output.
@@ -501,13 +521,13 @@ Do the following:
 1. Run the sample component:
 
    ```posix-terminal
-   tools/ffx component run fuchsia-pkg://fuchsiasamples.com/hello_world#meta/hello_world.cm
+   tools/ffx component run "fuchsia-pkg://fuchsiasamples.com/hello_world#meta/hello_world.cm"
    ```
 
    This command prints output similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ tools/ffx component run fuchsia-pkg://fuchsiasamples.com/hello_world#meta/hello_world.cm
+   $ tools/ffx component run "fuchsia-pkg://fuchsiasamples.com/hello_world#meta/hello_world.cm"
    URL: fuchsia-pkg://fuchsiasamples.com/hello_world#meta/hello_world.cm
    Moniker: /core/ffx-laboratory:hello_world
    Creating component instance...
@@ -580,7 +600,7 @@ Do the following:
 1. Run the sample component again (notice the `--recreate` flag this time):
 
    ```posix-terminal
-   tools/ffx component run fuchsia-pkg://fuchsiasamples.com/hello_world#meta/hello_world.cm --recreate
+   tools/ffx component run "fuchsia-pkg://fuchsiasamples.com/hello_world#meta/hello_world.cm" --recreate
    ```
 
 1. Verify the `Hello again, World!` message in the device logs:
@@ -652,7 +672,7 @@ Do the following:
 1. Run the updated sample component:
 
    ```posix-terminal
-   tools/ffx component run fuchsia-pkg://fuchsiasamples.com/hello_world#meta/hello_world.cm --recreate
+   tools/ffx component run "fuchsia-pkg://fuchsiasamples.com/hello_world#meta/hello_world.cm" --recreate
    ```
 
 1. Verify that the sample component's crash stack is symbolized in the kernel logs:
@@ -748,7 +768,7 @@ Do the following:
    directory (for instance,  `cd $HOME/getting-started`).
 
    ```posix-terminal
-   tools/ffx component run fuchsia-pkg://fuchsiasamples.com/hello_world#meta/hello_world.cm --recreate
+   tools/ffx component run "fuchsia-pkg://fuchsiasamples.com/hello_world#meta/hello_world.cm" --recreate
    ```
 
    In the `zxdb` terminal, the sample component is paused
@@ -963,7 +983,7 @@ Do the following:
 1. Verify that the basic `hello_test` passes:
 
    ```posix-terminal
-   tools/ffx test run fuchsia-pkg://fuchsiasamples.com/hello_test#meta/hello_test.cm
+   tools/ffx test run "fuchsia-pkg://fuchsiasamples.com/hello_test#meta/hello_test.cm"
    ```
 
    This command prints output similar to the following:
@@ -982,7 +1002,7 @@ Do the following:
 1. Verify that the [GoogleTest][google-test]{:.external} (`gtest`) test passes:
 
    ```posix-terminal
-   tools/ffx test run fuchsia-pkg://fuchsiasamples.com/hello_test#meta/hello_gtest.cm
+   tools/ffx test run "fuchsia-pkg://fuchsiasamples.com/hello_test#meta/hello_gtest.cm"
    ```
 
    This command prints output similar to the following:
@@ -1031,7 +1051,7 @@ Do the following:
 1. Verify that the `gtest` test now fails:
 
    ```posix-terminal
-   tools/ffx test run fuchsia-pkg://fuchsiasamples.com/hello_test#meta/hello_gtest.cm
+   tools/ffx test run "fuchsia-pkg://fuchsiasamples.com/hello_test#meta/hello_gtest.cm"
    ```
 
    This command prints output similar to the following:
@@ -1072,6 +1092,10 @@ tools/ffx repository server stop
 
 ```posix-terminal
 tools/ffx repository remove fuchsiasamples.com
+```
+
+```posix-terminal
+tools/ffx repository remove workstation.qemu-x64
 ```
 
 ```posix-terminal
