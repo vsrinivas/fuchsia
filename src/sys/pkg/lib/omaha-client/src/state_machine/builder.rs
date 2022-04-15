@@ -5,7 +5,7 @@
 use crate::{
     app_set::{AppSet, AppSetExt as _},
     configuration::Config,
-    cup_ecdsa::{Cupv2Handler, StandardCupv2Handler},
+    cup_ecdsa::Cupv2Handler,
     http_request::HttpRequest,
     installer::{Installer, Plan},
     metrics::MetricsReporter,
@@ -56,8 +56,7 @@ where
     cup_handler: Option<CH>,
 }
 
-impl<'a, PE, HR, IN, TM, MR, ST, AS>
-    StateMachineBuilder<PE, HR, IN, TM, MR, ST, AS, StandardCupv2Handler>
+impl<'a, PE, HR, IN, TM, MR, ST, AS, CH> StateMachineBuilder<PE, HR, IN, TM, MR, ST, AS, CH>
 where
     PE: 'a + PolicyEngine,
     HR: 'a + HttpRequest,
@@ -66,6 +65,7 @@ where
     MR: 'a + MetricsReporter,
     ST: 'a + Storage,
     AS: 'a + AppSet,
+    CH: 'a + Cupv2Handler,
 {
     /// Creates a new `StateMachineBuilder` using the given trait implementations.
     #[allow(clippy::too_many_arguments)]
@@ -78,6 +78,7 @@ where
         storage: Rc<Mutex<ST>>,
         config: Config,
         app_set: Rc<Mutex<AS>>,
+        cup_handler: Option<CH>,
     ) -> Self {
         Self {
             policy_engine,
@@ -88,7 +89,7 @@ where
             storage,
             config,
             app_set,
-            cup_handler: None,
+            cup_handler,
         }
     }
 }
@@ -372,7 +373,7 @@ impl
             Rc::new(Mutex::new(StubStorage)),
             config,
             Rc::new(Mutex::new(app_set)),
+            Some(MockCupv2Handler::new()),
         )
-        .cup_handler(Some(MockCupv2Handler::new()))
     }
 }

@@ -123,8 +123,8 @@ where
         storage,
         config,
         Rc::new(Mutex::new(app_set)),
-    )
-    .cup_handler(cup_handler);
+        cup_handler,
+    );
 
     let stream: Vec<StateMachineEvent> = state_machine.oneshot_check().await.collect().await;
 

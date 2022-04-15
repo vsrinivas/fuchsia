@@ -124,12 +124,20 @@ impl ClientConfiguration {
             .build();
         let mut app_set = FuchsiaAppSet::new(app);
 
+        let mut platform_config = get_config(&version).await;
+
         match EagerPackageConfigs::from_namespace() {
             Ok(eager_package_configs) => {
                 let proxy = fuchsia_component::client::connect_to_protocol::<CupMarker>()
                     .map_err(|e| error!("Failed to connect to Cup protocol {:#}", anyhow!(e)))
                     .ok();
-                Self::add_eager_packages(&mut app_set, eager_package_configs, proxy).await
+                Self::add_eager_packages(
+                    &mut app_set,
+                    &mut platform_config,
+                    eager_package_configs,
+                    proxy,
+                )
+                .await
             }
             Err(e) => {
                 match e.downcast_ref::<std::io::Error>() {
@@ -145,7 +153,7 @@ impl ClientConfiguration {
         }
 
         ClientConfiguration {
-            platform_config: get_config(&version).await,
+            platform_config,
             app_set,
             channel_data: ChannelData {
                 source: channel_source,
@@ -157,11 +165,17 @@ impl ClientConfiguration {
     }
 
     /// Add all eager packages in eager package config to app set.
+    /// Also adds Omaha config to platform_config.
     async fn add_eager_packages(
         app_set: &mut FuchsiaAppSet,
+        platform_config: &mut Config,
         eager_package_configs: EagerPackageConfigs,
         cup: Option<CupProxy>,
     ) {
+        if let Some(server) = eager_package_configs.server {
+            platform_config.service_url = server.service_url;
+            platform_config.omaha_public_keys = Some(server.public_keys);
+        }
         for package in eager_package_configs.packages {
             let (channel_config, version) =
                 Self::get_eager_package_channel_and_version(&package, &cup).await;
@@ -315,14 +329,18 @@ async fn get_service_url_from_vbmeta_impl(proxy: ArgumentsProxy) -> Result<Optio
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::eager_package_config::EagerPackageConfig;
+    use crate::eager_package_config::{EagerPackageConfig, OmahaServer};
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_boot::ArgumentsRequest;
     use fidl_fuchsia_pkg::CupRequest;
     use fuchsia_async as fasync;
     use fuchsia_url::pkg_url::PkgUrl;
     use futures::prelude::*;
-    use omaha_client::app_set::AppSet;
+    use omaha_client::{
+        app_set::AppSet,
+        cup_ecdsa::{PublicKey, PublicKeyAndId, PublicKeys},
+    };
+    use std::{convert::TryInto, str::FromStr};
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_config() {
@@ -602,10 +620,30 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_add_eager_packages() {
+        let mut platform_config = get_config("1.0.0.0").await;
         let system_app = App::builder("system_app_id", [1]).build();
         let mut app_set = FuchsiaAppSet::new(system_app.clone());
+
+        let public_keys = PublicKeys {
+            latest: PublicKeyAndId {
+                id: 123.try_into().unwrap(),
+                key: PublicKey::from_str(
+                    r#"-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
+7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==
+-----END PUBLIC KEY-----"#,
+                )
+                .unwrap(),
+            },
+            historical: vec![],
+        };
+
+        assert!(platform_config.omaha_public_keys.is_none());
         let config = EagerPackageConfigs {
-            server: None,
+            server: Some(OmahaServer {
+                service_url: "https://example.com".into(),
+                public_keys: public_keys.clone(),
+            }),
             packages: vec![
                 EagerPackageConfig {
                     url: PkgUrl::parse("fuchsia-pkg://example.com/package").unwrap(),
@@ -656,7 +694,16 @@ mod tests {
             ],
         };
         // without CUP
-        ClientConfiguration::add_eager_packages(&mut app_set, config.clone(), None).await;
+        ClientConfiguration::add_eager_packages(
+            &mut app_set,
+            &mut platform_config,
+            config.clone(),
+            None,
+        )
+        .await;
+
+        assert_eq!(platform_config.omaha_public_keys, Some(public_keys));
+
         let package_app = App::builder("1a2b3c4d", MINIMUM_VALID_VERSION)
             .with_cohort(Cohort {
                 hint: Some("stable".into()),
@@ -688,7 +735,12 @@ mod tests {
                 }
             }
         };
-        let fut = ClientConfiguration::add_eager_packages(&mut app_set, config, Some(proxy));
+        let fut = ClientConfiguration::add_eager_packages(
+            &mut app_set,
+            &mut platform_config,
+            config,
+            Some(proxy),
+        );
         future::join(fut, stream_fut).await;
         let package_app = App::builder("1a2b3c4d", [1, 2, 3, 0])
             .with_cohort(Cohort {

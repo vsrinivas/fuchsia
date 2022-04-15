@@ -704,6 +704,7 @@ mod stub {
     use futures::future::BoxFuture;
     use omaha_client::{
         common::{App, CheckTiming, ProtocolState, UpdateCheckSchedule},
+        cup_ecdsa::StandardCupv2Handler,
         http_request::StubHttpRequest,
         installer::stub::{StubInstaller, StubPlan},
         metrics::StubMetricsReporter,
@@ -822,6 +823,10 @@ mod stub {
         pub async fn build(self) -> Rc<RefCell<StubFidlServer>> {
             let config = configuration::get_config("0.1.2").await;
             let storage_ref = Rc::new(Mutex::new(MemStorage::new()));
+
+            let cup_handler: Option<StandardCupv2Handler> =
+                config.omaha_public_keys.as_ref().map(StandardCupv2Handler::new);
+
             let app_set = self
                 .app_set
                 .unwrap_or_else(|| FuchsiaAppSet::new(App::builder("id", [1, 0]).build()));
@@ -839,6 +844,7 @@ mod stub {
                 Rc::clone(&storage_ref),
                 config,
                 Rc::clone(&app_set),
+                cup_handler,
             )
             .start()
             .await;

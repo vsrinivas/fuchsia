@@ -8,7 +8,8 @@ use futures::{lock::Mutex, prelude::*, stream::FuturesUnordered};
 use http_request::FuchsiaHyperHttpRequest;
 use log::info;
 use omaha_client::{
-    app_set::AppSet as _, state_machine::StateMachineBuilder, time::StandardTimeSource,
+    app_set::AppSet as _, cup_ecdsa::StandardCupv2Handler, state_machine::StateMachineBuilder,
+    time::StandardTimeSource,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -89,6 +90,9 @@ async fn main_inner() -> Result<(), Error> {
     // HTTP
     let http = FuchsiaHyperHttpRequest::new();
 
+    let cup_handler: Option<StandardCupv2Handler> =
+        platform_config.omaha_public_keys.as_ref().map(StandardCupv2Handler::new);
+
     let app_set = Rc::new(Mutex::new(app_set));
 
     // Installer
@@ -126,9 +130,8 @@ async fn main_inner() -> Result<(), Error> {
         Rc::clone(&stash_ref),
         platform_config.clone(),
         Rc::clone(&app_set),
+        cup_handler,
     )
-    // TODO: add .cup_handler(..) here in order to enable CUPv2 protocol
-    // validation.
     .start()
     .await;
 
