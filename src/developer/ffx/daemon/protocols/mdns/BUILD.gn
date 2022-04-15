@@ -13,6 +13,7 @@ if (is_host) {
     deps = [
       "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
       "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+      "//src/developer/ffx/config:lib",
       "//src/developer/ffx/lib/netext:lib",
       "//src/developer/ffx/lib/protocols:lib",
       "//src/developer/ffx/lib/stream_util:lib",

@@ -2,6 +2,9 @@
     "discovery": {
         "zedboot": {
             "enabled": false
+        },
+        "mdns": {
+            "enabled": true
         }
     },
     "fastboot": {
