@@ -172,20 +172,22 @@ zx::status<fdio_ptr> fdio::create_with_on_open(fidl::ClientEnd<fio::Node> node) 
       }
     }
 
-    zx_status_t Unknown() override { return ZX_ERR_IO; }
-
    private:
     fidl::ClientEnd<fio::Node> client_end_;
     zx::status<fdio_ptr> result_ = zx::error(ZX_ERR_INTERNAL);
   };
 
   EventHandler event_handler(std::move(node));
-  zx_status_t status = event_handler.HandleOneEvent(event_handler.client_end()).status();
-  if (status != ZX_OK) {
-    if (status == ZX_ERR_NOT_SUPPORTED) {
-      status = ZX_ERR_IO;
+  const fidl::Status status = event_handler.HandleOneEvent(event_handler.client_end());
+  if (!status.ok()) {
+    // TODO(https://fxbug.dev/30921): This should probably be ZX_ERR_IO (EIO in
+    // POSIX) or the transformation to errno should happen differently. This
+    // behavior is kept to avoid breaking tests that check for EPIPE when
+    // talking to a closed server endpoint.
+    if (status.is_peer_closed()) {
+      return zx::error(ZX_ERR_PEER_CLOSED);
     }
-    return zx::error(status);
+    return zx::error(ZX_ERR_IO);
   }
   return event_handler.result();
 }

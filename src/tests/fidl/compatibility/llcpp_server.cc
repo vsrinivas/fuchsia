@@ -43,13 +43,13 @@ class EchoClientApp {
     return client_->EchoMinimalWithError(std::move(forward_to_server), result_variant);
   }
 
-  zx_status_t EchoMinimalNoRetVal(::fidl::StringView forward_to_server,
-                                  fidl::WireSyncEventHandler<Echo>& event_handler) {
+  fidl::Status EchoMinimalNoRetVal(::fidl::StringView forward_to_server,
+                                   fidl::WireSyncEventHandler<Echo>& event_handler) {
     auto result = client_->EchoMinimalNoRetVal(std::move(forward_to_server));
-    if (result.status() != ZX_OK) {
-      return result.status();
+    if (!result.ok()) {
+      return result;
     }
-    return client_.HandleOneEvent(event_handler).status();
+    return client_.HandleOneEvent(event_handler);
   }
 
   fidl::WireResult<Echo::EchoStruct> EchoStruct(wire::Struct value,
@@ -69,14 +69,14 @@ class EchoClientApp {
                                              result_variant);
   }
 
-  zx_status_t EchoNamedStructNoRetVal(fidl_test_imported::wire::SimpleStruct value,
-                                      ::fidl::StringView forward_to_server,
-                                      fidl::WireSyncEventHandler<Echo>& event_handler) {
+  fidl::Status EchoNamedStructNoRetVal(fidl_test_imported::wire::SimpleStruct value,
+                                       ::fidl::StringView forward_to_server,
+                                       fidl::WireSyncEventHandler<Echo>& event_handler) {
     auto result = client_->EchoNamedStructNoRetVal(std::move(value), std::move(forward_to_server));
-    if (result.status() != ZX_OK) {
-      return result.status();
+    if (!result.ok()) {
+      return result;
     }
-    return client_.HandleOneEvent(event_handler).status();
+    return client_.HandleOneEvent(event_handler);
   }
 
   fidl::WireResult<Echo::EchoStructWithError> EchoStructWithError(
@@ -86,13 +86,13 @@ class EchoClientApp {
                                         result_variant);
   }
 
-  zx_status_t EchoStructNoRetVal(wire::Struct value, ::fidl::StringView forward_to_server,
-                                 fidl::WireSyncEventHandler<Echo>& event_handler) {
+  fidl::Status EchoStructNoRetVal(wire::Struct value, ::fidl::StringView forward_to_server,
+                                  fidl::WireSyncEventHandler<Echo>& event_handler) {
     auto result = client_->EchoStructNoRetVal(std::move(value), std::move(forward_to_server));
-    if (result.status() != ZX_OK) {
-      return result.status();
+    if (!result.ok()) {
+      return result;
     }
-    return client_.HandleOneEvent(event_handler).status();
+    return client_.HandleOneEvent(event_handler);
   }
 
   fidl::WireUnownedResult<Echo::EchoArrays> EchoArrays(::fidl::BufferSpan buffer,
@@ -155,13 +155,13 @@ class EchoClientApp {
     return client_->EchoTablePayloadWithError(std::move(payload));
   }
 
-  zx_status_t EchoTablePayloadNoRetVal(fidl_test_compatibility::wire::RequestTable payload,
-                                       fidl::WireSyncEventHandler<Echo>& event_handler) {
+  fidl::Status EchoTablePayloadNoRetVal(fidl_test_compatibility::wire::RequestTable payload,
+                                        fidl::WireSyncEventHandler<Echo>& event_handler) {
     auto result = client_->EchoTablePayloadNoRetVal(std::move(payload));
-    if (result.status() != ZX_OK) {
-      return result.status();
+    if (!result.ok()) {
+      return result;
     }
-    return client_.HandleOneEvent(event_handler).status();
+    return client_.HandleOneEvent(event_handler);
   }
 
   fidl::WireResult<Echo::EchoTableRequestComposed> EchoTableRequestComposed(
@@ -179,13 +179,13 @@ class EchoClientApp {
     return client_->EchoUnionPayloadWithError(std::move(payload));
   }
 
-  zx_status_t EchoUnionPayloadNoRetVal(fidl_test_compatibility::wire::RequestUnion payload,
-                                       fidl::WireSyncEventHandler<Echo>& event_handler) {
+  fidl::Status EchoUnionPayloadNoRetVal(fidl_test_compatibility::wire::RequestUnion payload,
+                                        fidl::WireSyncEventHandler<Echo>& event_handler) {
     auto result = client_->EchoUnionPayloadNoRetVal(std::move(payload));
-    if (result.status() != ZX_OK) {
-      return result.status();
+    if (!result.ok()) {
+      return result;
     }
-    return client_.HandleOneEvent(event_handler).status();
+    return client_.HandleOneEvent(event_handler);
   }
 
   fidl::WireResult<Echo::EchoUnionResponseWithErrorComposed> EchoUnionResponseWithErrorComposed(
@@ -273,11 +273,6 @@ class EchoConnection final : public fidl::WireServer<Echo> {
           result_ = fidl::WireSendEvent(connection_->server_binding_.value())->EchoMinimalEvent();
         }
 
-        zx_status_t Unknown() override {
-          ZX_PANIC("Received unexpected event");
-          return ZX_ERR_INVALID_ARGS;
-        }
-
        private:
         EchoConnection* const connection_;
         fidl::Status result_ = fidl::Status::Ok();
@@ -285,9 +280,9 @@ class EchoConnection final : public fidl::WireServer<Echo> {
 
       EchoClientApp app(request->forward_to_server);
       EventHandler event_handler(this);
-      zx_status_t status = app.EchoMinimalNoRetVal("", event_handler);
-      ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed direct: %s",
-                    zx_status_get_string(status));
+      fidl::Status status = app.EchoMinimalNoRetVal("", event_handler);
+      ZX_ASSERT_MSG(status.ok(), "Replying with event failed direct: %s",
+                    status.FormatDescription().c_str());
       ZX_ASSERT_MSG(event_handler.result().ok(), "Replying with event failed indirect: %s",
                     event_handler.result().FormatDescription().c_str());
     }
@@ -342,11 +337,6 @@ class EchoConnection final : public fidl::WireServer<Echo> {
                         ->EchoEvent(std::move(event->value));
         }
 
-        zx_status_t Unknown() override {
-          ZX_PANIC("Received unexpected event");
-          return ZX_ERR_INVALID_ARGS;
-        }
-
        private:
         EchoConnection* const connection_;
         fidl::Status result_ = fidl::Status::Ok();
@@ -354,9 +344,9 @@ class EchoConnection final : public fidl::WireServer<Echo> {
 
       EchoClientApp app(request->forward_to_server);
       EventHandler event_handler(this);
-      zx_status_t status = app.EchoStructNoRetVal(std::move(request->value), "", event_handler);
-      ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed direct: %s",
-                    zx_status_get_string(status));
+      fidl::Status status = app.EchoStructNoRetVal(std::move(request->value), "", event_handler);
+      ZX_ASSERT_MSG(status.ok(), "Replying with event failed direct: %s",
+                    status.FormatDescription().c_str());
       ZX_ASSERT_MSG(event_handler.result().ok(), "Replying with event failed indirect: %s",
                     event_handler.result().FormatDescription().c_str());
     }
@@ -535,11 +525,6 @@ class EchoConnection final : public fidl::WireServer<Echo> {
                         ->OnEchoNamedEvent(std::move(event->value));
         }
 
-        zx_status_t Unknown() override {
-          ZX_PANIC("Received unexpected event");
-          return ZX_ERR_INVALID_ARGS;
-        }
-
        private:
         EchoConnection* const connection_;
         fidl::Status result_ = fidl::Status::Ok();
@@ -547,10 +532,9 @@ class EchoConnection final : public fidl::WireServer<Echo> {
 
       EchoClientApp app(request->forward_to_server);
       EventHandler event_handler(this);
-      zx_status_t status =
-          app.EchoNamedStructNoRetVal(std::move(request->value), "", event_handler);
-      ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed direct: %s",
-                    zx_status_get_string(status));
+      fidl::Status status = app.EchoNamedStructNoRetVal(request->value, "", event_handler);
+      ZX_ASSERT_MSG(status.ok(), "Replying with event failed direct: %s",
+                    status.FormatDescription().c_str());
       ZX_ASSERT_MSG(event_handler.result().ok(), "Replying with event failed indirect: %s",
                     event_handler.result().FormatDescription().c_str());
     }
@@ -628,12 +612,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
         void OnEchoTablePayloadEvent(
             fidl::WireEvent<Echo::OnEchoTablePayloadEvent>* event) override {
           result_ = fidl::WireSendEvent(connection_->server_binding_.value())
-                        ->OnEchoTablePayloadEvent(std::move(*event));
-        }
-
-        zx_status_t Unknown() override {
-          ZX_PANIC("Received unexpected event");
-          return ZX_ERR_INVALID_ARGS;
+                        ->OnEchoTablePayloadEvent(*event);
         }
 
        private:
@@ -644,10 +623,10 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       EchoClientApp app(request->forward_to_server());
       EventHandler event_handler(this);
       fidl::Arena allocator;
-      zx_status_t status = app.EchoTablePayloadNoRetVal(
+      fidl::Status status = app.EchoTablePayloadNoRetVal(
           wire::RequestTable::Builder(allocator).value(request->value()).Build(), event_handler);
-      ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed direct: %s",
-                    zx_status_get_string(status));
+      ZX_ASSERT_MSG(status.ok(), "Replying with event failed direct: %s",
+                    status.FormatDescription().c_str());
       ZX_ASSERT_MSG(event_handler.result().ok(), "Replying with event failed indirect: %s",
                     event_handler.result().FormatDescription().c_str());
     }
@@ -781,12 +760,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
         void OnEchoUnionPayloadEvent(
             fidl::WireEvent<Echo::OnEchoUnionPayloadEvent>* event) override {
           result_ = fidl::WireSendEvent(connection_->server_binding_.value())
-                        ->OnEchoUnionPayloadEvent(std::move(*event));
-        }
-
-        zx_status_t Unknown() override {
-          ZX_PANIC("Received unexpected event");
-          return ZX_ERR_INVALID_ARGS;
+                        ->OnEchoUnionPayloadEvent(*event);
         }
 
        private:
@@ -808,9 +782,9 @@ class EchoConnection final : public fidl::WireServer<Echo> {
                                                                          request->unsigned_());
         req.unsigned_().forward_to_server = "";
       }
-      zx_status_t status = app.EchoUnionPayloadNoRetVal(std::move(req), event_handler);
-      ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed direct: %s",
-                    zx_status_get_string(status));
+      fidl::Status status = app.EchoUnionPayloadNoRetVal(req, event_handler);
+      ZX_ASSERT_MSG(status.ok(), "Replying with event failed direct: %s",
+                    status.FormatDescription().c_str());
       ZX_ASSERT_MSG(event_handler.result().ok(), "Replying with event failed indirect: %s",
                     event_handler.result().FormatDescription().c_str());
     }

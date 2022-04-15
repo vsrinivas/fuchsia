@@ -159,7 +159,9 @@ fidl::WireSyncEventHandler<::test_inheritance::Super>::HandleOneEvent(
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Status::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kErrorSyncEventBufferTooSmall);
   }
   if (!msg.ok()) {
     return msg;
@@ -167,7 +169,7 @@ fidl::WireSyncEventHandler<::test_inheritance::Super>::HandleOneEvent(
   fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     default: {
-      return ::fidl::Status::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnknownOrdinal();
     }
   }
 }
@@ -445,7 +447,9 @@ fidl::WireSyncEventHandler<::test_inheritance::Sub>::HandleOneEvent(
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Status::UnexpectedMessage(Unknown());
+    return ::fidl::Status::UnexpectedMessage(
+        ZX_ERR_BUFFER_TOO_SMALL,
+        ::fidl::internal::kErrorSyncEventBufferTooSmall);
   }
   if (!msg.ok()) {
     return msg;
@@ -453,7 +457,7 @@ fidl::WireSyncEventHandler<::test_inheritance::Sub>::HandleOneEvent(
   fidl_message_header_t* hdr = msg.header();
   switch (hdr->ordinal) {
     default: {
-      return ::fidl::Status::UnexpectedMessage(Unknown());
+      return ::fidl::Status::UnknownOrdinal();
     }
   }
 }

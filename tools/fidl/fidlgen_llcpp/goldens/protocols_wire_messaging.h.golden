@@ -2015,10 +2015,6 @@ class ::fidl::WireSyncEventHandler<
  public:
   WireSyncEventHandler() = default;
 
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
-
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
@@ -3136,10 +3132,6 @@ class ::fidl::WireSyncEventHandler<::test_protocols::Transitional>
  public:
   WireSyncEventHandler() = default;
 
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
-
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
@@ -3519,10 +3511,6 @@ class ::fidl::WireSyncEventHandler<::test_protocols::MethodWithUnion>
           ::test_protocols::MethodWithUnion> {
  public:
   WireSyncEventHandler() = default;
-
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
 
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
@@ -4985,10 +4973,6 @@ class ::fidl::WireSyncEventHandler<::test_protocols::WithProtocolEnds>
  public:
   WireSyncEventHandler() = default;
 
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
-
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
@@ -5543,10 +5527,6 @@ class ::fidl::WireSyncEventHandler<::test_protocols::ManyParameters>
           ::test_protocols::ManyParameters> {
  public:
   WireSyncEventHandler() = default;
-
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
 
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
@@ -6460,10 +6440,6 @@ class ::fidl::WireSyncEventHandler<::test_protocols::HandleRightsProtocol>
           ::test_protocols::HandleRightsProtocol> {
  public:
   WireSyncEventHandler() = default;
-
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
 
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
@@ -8204,10 +8180,6 @@ class ::fidl::WireSyncEventHandler<::test_protocols::WithErrorSyntax>
  public:
   WireSyncEventHandler() = default;
 
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
-
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
@@ -8782,10 +8754,6 @@ class ::fidl::WireSyncEventHandler<::test_protocols::DiscoverableProtocol>
           ::test_protocols::DiscoverableProtocol> {
  public:
   WireSyncEventHandler() = default;
-
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
 
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
@@ -10261,10 +10229,6 @@ class ::fidl::WireSyncEventHandler<::test_protocols::ChannelProtocol>
           ::test_protocols::ChannelProtocol> {
  public:
   WireSyncEventHandler() = default;
-
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
 
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the

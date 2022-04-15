@@ -87,8 +87,6 @@ class ZirconPlatformPerfCountPoolClient : public PlatformPerfCountPoolClient {
         *result_flags_out_ = static_cast<uint32_t>(event->flags);
       }
 
-      zx_status_t Unknown() override { return ZX_ERR_INTERNAL; }
-
      private:
       uint32_t* const trigger_id_out_;
       uint64_t* const buffer_id_out_;
@@ -99,8 +97,13 @@ class ZirconPlatformPerfCountPoolClient : public PlatformPerfCountPoolClient {
 
     EventHandler event_handler(trigger_id_out, buffer_id_out, buffer_offset_out, time_out,
                                result_flags_out);
-    magma_status_t magma_status =
-        magma::FromZxStatus(perf_counter_events_.HandleOneEvent(event_handler).status()).get();
+    fidl::Status event_status = perf_counter_events_.HandleOneEvent(event_handler);
+    if (!event_status.ok() && event_status.reason() == fidl::Reason::kUnexpectedMessage) {
+      status = ZX_ERR_INTERNAL;
+    } else {
+      status = event_status.status();
+    }
+    magma_status_t magma_status = magma::FromZxStatus(status).get();
     return DRET(magma_status);
   }
 

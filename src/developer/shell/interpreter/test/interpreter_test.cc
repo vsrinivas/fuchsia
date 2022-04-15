@@ -207,8 +207,6 @@ void InterpreterTest::Run(FinishAction action) {
       test_->results_.emplace_back(deserialize.Deserialize(event->nodes));
     }
 
-    zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
-
    private:
     InterpreterTest* const test_;
     const FinishAction action_;

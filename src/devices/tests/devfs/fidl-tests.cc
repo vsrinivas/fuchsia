@@ -39,11 +39,6 @@ void FidlOpenValidator(const fidl::ClientEnd<fio::Directory>& directory, const c
       }
     }
 
-    zx_status_t Unknown() override {
-      EXPECT_TRUE(false);
-      return ZX_OK;
-    }
-
    private:
     std::optional<zx_status_t> status_;
     std::optional<fio::wire::NodeInfo::Tag> tag_;

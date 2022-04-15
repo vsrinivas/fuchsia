@@ -464,8 +464,8 @@ class WireSyncClient {
   // Handle all possible events defined in this protocol.
   //
   // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-  // method defined in |event_handler|. The return status of the handler function is folded with
-  // any transport-level errors and returned.
+  // method defined in |event_handler|. If the message was unknown or malformed, returns an
+  // error without calling any virtual method.
   ::fidl::Status HandleOneEvent(fidl::WireSyncEventHandler<FidlProtocol>& event_handler) const {
     return event_handler.HandleOneEvent(client_end());
   }

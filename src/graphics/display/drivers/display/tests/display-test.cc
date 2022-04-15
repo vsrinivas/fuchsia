@@ -54,8 +54,6 @@ TEST(DisplayTest, ClientVSyncOk) {
       }
     }
 
-    zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
-
     bool vsync_handled_ = false;
     fuchsia_hardware_display::wire::ConfigStamp expected_config_stamp_ =
         fuchsia_hardware_display::wire::kInvalidConfigStampFidl;

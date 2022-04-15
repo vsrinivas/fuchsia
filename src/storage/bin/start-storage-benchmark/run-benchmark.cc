@@ -63,8 +63,6 @@ class ComponentControllerEventHandler
     status_ = zx::make_status(status);
   }
 
-  zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
-
   // Returns true if the component has stopped.
   bool terminated() const { return status_.has_value(); }
 

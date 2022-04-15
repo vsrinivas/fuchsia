@@ -45,8 +45,6 @@ class EventHandler : public fidl::WireSyncEventHandler<fuchsia_io::Directory> {
 
   void OnOpen(fidl::WireEvent<fuchsia_io::Directory::OnOpen>* event) override { fn_(event); }
 
-  zx_status_t Unknown() override { return ZX_OK; }
-
  private:
   F fn_;
 };

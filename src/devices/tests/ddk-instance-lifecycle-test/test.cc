@@ -86,8 +86,6 @@ void InstanceLifecycleTest::WaitForEvent(fidl::UnownedClientEnd<Lifecycle> lifec
       ok_ = expected_event_ == Event::Release;
     }
 
-    zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
-
    private:
     const Event expected_event_;
     bool ok_ = false;

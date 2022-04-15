@@ -914,9 +914,6 @@ event. In this example, it consists of the following member:
 
 * `virtual void OnOpponentMove(fidl::WireEvent<TicTacToe::OnOpponentMove>*
   event) = 0`: The handle for the OnOpponentMove event.
-* `virtual zx_status_t Unknown() { return ZX_ERR_NOT_SUPPORTED; }`: The status
-  to be returned by `HandleOneEvent` if an unknown event is found. This method
-  should be overridden only if a specific status is needed.
 
 To be able to handle events, a class that inherits from `SyncEventHandler` must
 be defined. This class must define the virtual methods for the events it wants
@@ -927,22 +924,20 @@ There are two ways to handle one event. Each one use an instance of the user
 defined event handler class:
 
 * `::fidl::Status fidl::WireSyncClient<TicTacToe>::HandleOneEvent(
-       SyncEventHandler& event_handler)`:
-  A bound version for sync clients.
+       SyncEventHandler& event_handler)`: A bound version for sync clients.
 * `::fidl::Status fidl::WireSyncEventHandler<TicTacToe>::HandleOneEvent(
-       fidl::UnownedClientEnd<TicTacToe> client_end)`:
-  An unbound version that
-  uses an `fidl::UnownedClientEnd<TicTacToe>` to handle one event for a
-  specific handler.
+       fidl::UnownedClientEnd<TicTacToe> client_end)`: An unbound version that
+  uses an `fidl::UnownedClientEnd<TicTacToe>` to handle one event for a specific
+  handler.
 
 For each call to `HandleOneEvent`, the method waits on the channel for exactly
-one incoming message. Then the message is decoded. If the result is ZX_OK then
-exactly one virtual method has been called. If not no virtual method has been
-called and the status indicates the error.
+one incoming message. Then the message is decoded. If the result is
+`fidl::Status::Ok()` then exactly one virtual method has been called. Otherwise,
+no virtual method has been called and the status indicates the error.
 
 If the handlers are always the same (from one call to `HandleOneEvent` to the
-other), the `SyncEventHandler` object should be constructed once and used each time
-you need to call `HandleOneEvent`.
+other), the `SyncEventHandler` object should be constructed once and used each
+time you need to call `HandleOneEvent`.
 
 If an event is marked as transitional, then a default implementation is
 provided (instead of the pure virtual).

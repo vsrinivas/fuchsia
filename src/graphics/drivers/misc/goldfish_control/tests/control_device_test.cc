@@ -184,7 +184,6 @@ class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> 
         handler(message);
       }
     }
-    zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
     void SetOnRegisterHandler(
         fit::function<void(fidl::WireEvent<fuchsia_sysmem2::Heap::OnRegister>*)> new_handler) {
       handler = std::move(new_handler);

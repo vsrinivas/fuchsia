@@ -589,17 +589,6 @@ void OtStackApp::OnError(fidl::WireEvent<fidl_spinel::Device::OnError>* event) {
       fidl::WireSendEvent(*binding_)->OnError(event->error, event->did_close).status();
 }
 
-zx_status_t OtStackApp::Unknown() {
-  const fidl::Status result =
-      fidl::WireSendEvent(*binding_)->OnError(fidl_spinel::wire::Error::kIoError, true);
-  if (!result.ok()) {
-    return result.status();
-  }
-
-  DisconnectDevice();
-  return ZX_ERR_IO;
-}
-
 void OtStackApp::EventThread() {
   while (true) {
     zx_port_packet_t packet = {};
@@ -613,9 +602,9 @@ void OtStackApp::EventThread() {
         ::fidl::Status result = HandleOneEvent(device_client_ptr_.client_end());
         if (!result.ok() || (handler_status_ != ZX_OK)) {
           FX_PLOGS(ERROR, result.ok() ? handler_status_ : result.status())
-              << "error calling fidl::WireSyncClient<fidl_spinel::Device>::HandleEvents(), "
-                 "terminating event "
-                 "thread";
+              << "error calling fidl::WireSyncClient<fidl_spinel::Device>::HandleOneEvent(), "
+                 "terminating event thread";
+          (void)fidl::WireSendEvent(*binding_)->OnError(fidl_spinel::wire::Error::kIoError, true);
           DisconnectDevice();
           loop_.Shutdown();
           return;

@@ -138,8 +138,6 @@ zx_status_t AwaitIoOnOpenStatus(fidl::UnownedClientEnd<fuchsia_io::Node> node) {
       status_ = event->s;
     }
 
-    zx_status_t Unknown() override { return ZX_ERR_PROTOCOL_NOT_SUPPORTED; }
-
     bool call_was_successful_ = false;
     zx_status_t status_ = ZX_OK;
   };

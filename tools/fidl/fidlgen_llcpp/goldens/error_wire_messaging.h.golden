@@ -419,10 +419,6 @@ class ::fidl::WireSyncEventHandler<::test_error::Example>
  public:
   WireSyncEventHandler() = default;
 
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
-
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.

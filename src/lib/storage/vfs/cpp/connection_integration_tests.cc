@@ -72,8 +72,6 @@ zx::status<fio::wire::NodeInfo> GetOnOpenResponse(fidl::UnownedClientEnd<fio::No
 
       fidl::WireEvent<fio::Node::OnOpen> GetResponse() { return std::move(response_); }
 
-      zx_status_t Unknown() override { return ZX_ERR_UNAVAILABLE; }
-
      private:
       fidl::WireEvent<fio::Node::OnOpen> response_;
     };

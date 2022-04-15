@@ -265,11 +265,6 @@ TEST_F(CloneTest, Reopen) {
       on_open_received_ = true;
     }
 
-    zx_status_t Unknown() final {
-      ADD_FAILURE("Unexpected event received.");
-      return ZX_ERR_IO;
-    }
-
    private:
     fidl::ClientEnd<fio::Node> client_end_;
     bool& on_open_received_;
@@ -277,7 +272,9 @@ TEST_F(CloneTest, Reopen) {
 
   bool on_open_received = false;
   EventHandler event_handler(std::move(clone_client), on_open_received);
-  EXPECT_OK(event_handler.HandleOneEvent(event_handler.client_end()).status());
+  fidl::Status event_handling_status = event_handler.HandleOneEvent(event_handler.client_end());
+  EXPECT_OK(event_handling_status.status(), "%s",
+            event_handling_status.FormatDescription().c_str());
   EXPECT_TRUE(on_open_received);
 }
 

@@ -219,15 +219,12 @@ TEST(MagicNumberTest, EventRead) {
     EventHandler() = default;
 
     void Hrob(fidl::WireEvent<test::Frobinator::Hrob>* event) override { EXPECT_TRUE(false); }
-
-    zx_status_t Unknown() override {
-      EXPECT_TRUE(false);
-      return ZX_OK;
-    }
   };
 
   EventHandler event_handler;
-  ASSERT_EQ(event_handler.HandleOneEvent(local).status(), ZX_ERR_PROTOCOL_NOT_SUPPORTED);
+  fidl::Status status = event_handler.HandleOneEvent(local);
+  ASSERT_EQ(status.status(), ZX_ERR_PROTOCOL_NOT_SUPPORTED);
+  ASSERT_EQ(status.reason(), fidl::Reason::kUnexpectedMessage);
 }
 
 TEST(SyncClientTest, DefaultInitializationError) {

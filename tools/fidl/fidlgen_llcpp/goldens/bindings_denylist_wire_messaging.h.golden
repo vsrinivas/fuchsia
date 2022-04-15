@@ -87,10 +87,6 @@ class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::Allowed>
  public:
   WireSyncEventHandler() = default;
 
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
-
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
@@ -510,10 +506,6 @@ class ::fidl::WireSyncEventHandler<
  public:
   WireSyncEventHandler() = default;
 
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
-
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
@@ -744,10 +736,6 @@ class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::OnlyCppAndDeps>
           ::test_bindingsdenylist::OnlyCppAndDeps> {
  public:
   WireSyncEventHandler() = default;
-
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
 
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
@@ -1154,10 +1142,6 @@ class ::fidl::WireSyncEventHandler<
           ::test_bindingsdenylist::ImportsSameNameContext> {
  public:
   WireSyncEventHandler() = default;
-
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
 
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
@@ -3484,10 +3468,6 @@ class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::DenyEachBinding>
           ::test_bindingsdenylist::DenyEachBinding> {
  public:
   WireSyncEventHandler() = default;
-
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
 
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the

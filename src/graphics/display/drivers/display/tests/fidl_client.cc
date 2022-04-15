@@ -157,8 +157,6 @@ bool TestFidlClient::Bind(async_dispatcher_t* dispatcher) {
         client_->has_ownership_ = event->has_ownership;
       }
 
-      zx_status_t Unknown() override { return ZX_ERR_STOP; }
-
      private:
       TestFidlClient* const client_;
       bool ok_ = true;
@@ -212,8 +210,6 @@ void TestFidlClient::OnEventMsgAsync(async_dispatcher_t* dispatcher, async::Wait
     void OnClientOwnershipChange(
         fidl::WireEvent<fhd::Controller::OnClientOwnershipChange>* message) override {}
 
-    zx_status_t Unknown() override { return ZX_ERR_STOP; }
-
    private:
     TestFidlClient* const client_;
   };
@@ -222,7 +218,7 @@ void TestFidlClient::OnEventMsgAsync(async_dispatcher_t* dispatcher, async::Wait
   auto result = dc_.HandleOneEvent(event_handler);
 
   if (!result.ok()) {
-    zxlogf(ERROR, "Failed to handle events: %d", result.status());
+    zxlogf(ERROR, "Failed to handle events: %s", result.FormatDescription().c_str());
     return;
   }
 

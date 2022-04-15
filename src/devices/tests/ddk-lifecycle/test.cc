@@ -86,8 +86,6 @@ void LifecycleTest::WaitPreRelease(uint64_t child_id) {
       removed_ = true;
     }
 
-    zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
-
    private:
     bool removed_ = false;
     uint64_t device_id_ = 0;

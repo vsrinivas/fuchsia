@@ -47,8 +47,6 @@ int main(int argc, const char** argv) {
         std::string reply_string(event->response.data(), event->response.size());
         std::cout << "Got event: " << reply_string << std::endl;
       }
-
-      zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
     };
 
     // Block to receive exactly one event from the server, which is handled using

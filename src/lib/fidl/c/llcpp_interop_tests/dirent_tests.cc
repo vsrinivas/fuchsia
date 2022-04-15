@@ -587,11 +587,6 @@ void AssertReadOnDirentsEvent(zx::channel chan, const DirentArray& expected_dire
       }
     }
 
-    zx_status_t Unknown() override {
-      ADD_FAILURE("unknown event received; expected OnDirents");
-      return ZX_ERR_INVALID_ARGS;
-    }
-
    private:
     const DirentArray& expected_dirents_;
     zx_status_t status_ = ZX_OK;

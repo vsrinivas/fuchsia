@@ -127,8 +127,6 @@ void CoreDisplayTest::SetUp() {
     void OnClientOwnershipChange(
         fidl::WireEvent<fhd::Controller::OnClientOwnershipChange>* event) override {}
 
-    zx_status_t Unknown() override { return ZX_ERR_STOP; }
-
    private:
     bool has_display_ = false;
     fbl::Vector<fhd::wire::Info> displays_tmp_;

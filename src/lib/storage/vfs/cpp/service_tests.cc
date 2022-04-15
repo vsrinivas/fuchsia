@@ -145,8 +145,6 @@ TEST(Service, ServiceNodeIsNotDirectory) {
       EXPECT_EQ(ZX_ERR_NOT_DIR, event->s);
       EXPECT_TRUE(event->info.has_invalid_tag());
     }
-
-    zx_status_t Unknown() override { return ZX_ERR_INVALID_ARGS; }
   };
 
   EventHandler event_handler;

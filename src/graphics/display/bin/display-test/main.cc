@@ -148,8 +148,6 @@ static bool bind_display(const char* controller, fbl::Vector<Display>* displays)
       has_ownership_ = event->has_ownership;
     }
 
-    zx_status_t Unknown() override { return ZX_ERR_STOP; }
-
    private:
     fbl::Vector<Display>* const displays_;
     bool& has_ownership_;
@@ -290,16 +288,20 @@ zx_status_t wait_for_vsync(fhd::wire::ConfigStamp expected_stamp) {
       status_ = ZX_ERR_NEXT;
     }
 
-    zx_status_t Unknown() override { return ZX_ERR_STOP; }
-
    private:
     fhd::wire::ConfigStamp expected_stamp_;
     zx_status_t status_ = ZX_OK;
   };
 
   EventHandler event_handler(expected_stamp);
-  zx_status_t status = dc.HandleOneEvent(event_handler).status();
-  return (status == ZX_OK) ? event_handler.status() : status;
+  const fidl::Status status = dc.HandleOneEvent(event_handler);
+  if (!status.ok()) {
+    if (status.reason() == fidl::Reason::kUnexpectedMessage) {
+      return ZX_ERR_STOP;
+    }
+    return status.status();
+  }
+  return event_handler.status();
 }
 
 zx_status_t set_minimum_rgb(uint8_t min_rgb) {

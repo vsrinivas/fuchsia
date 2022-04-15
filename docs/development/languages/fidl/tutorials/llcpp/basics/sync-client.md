@@ -155,9 +155,9 @@ events of the protocol, plus a `Unknown` handler for when an unknown event
 is received.
 
 The code defines a handler, which prints the contents of an `OnString` event,
-then calls `client.HandleOneEvent()` to block until an event is received. If an
-unknown event is received, its return value becomes the return value of the
-`HandleOneEvent` call:
+then calls `client.HandleOneEvent()` to block until an event is received. If a
+recognized event was received and successfully decoded, `HandleOneEvent` returns
+`fidl::Status::Ok()`. Otherwise, it returns an appropriate error:
 
 ```cpp
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client_sync/main.cc" region_tag="main" highlight="29,30,31,32,33,34,35,36,37,38,39,41,42,43,44" %}

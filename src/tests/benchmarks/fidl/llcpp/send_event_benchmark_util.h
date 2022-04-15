@@ -43,8 +43,6 @@ bool SendEventBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
       completion_.Signal();
     }
 
-    zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
-
    private:
     perftest::RepeatState* state_;
     libsync::Completion& completion_;

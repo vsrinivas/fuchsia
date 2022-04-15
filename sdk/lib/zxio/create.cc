@@ -71,8 +71,6 @@ class ZxioCreateOnOpenEventHandler final : public fidl::WireSyncEventHandler<fio
     status_ = zxio_create_with_nodeinfo(std::move(node_), event->info, storage_);
   }
 
-  zx_status_t Unknown() final { return ZX_ERR_IO; }
-
  private:
   fidl::ClientEnd<fio::Node> node_;
   zxio_storage_t* storage_;
@@ -157,9 +155,12 @@ zx_status_t zxio_create_with_on_open(zx_handle_t raw_handle, zxio_storage_t* sto
   fidl::UnownedClientEnd unowned_node = node.borrow();
   zx_status_t handler_status;
   ZxioCreateOnOpenEventHandler handler(std::move(node), storage, handler_status);
-  zx_status_t status = handler.HandleOneEvent(unowned_node).status();
-  if (status != ZX_OK) {
-    return status;
+  const fidl::Status status = handler.HandleOneEvent(unowned_node);
+  if (!status.ok()) {
+    if (status.reason() == fidl::Reason::kUnexpectedMessage) {
+      return ZX_ERR_IO;
+    }
+    return status.status();
   }
   return handler_status;
 }

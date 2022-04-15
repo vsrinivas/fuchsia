@@ -42,8 +42,6 @@ class EventHandler : public fidl::WireSyncEventHandler<fuchsia_power_button::Mon
   }
 
   PwrButtonEvent e = PwrButtonEvent::Unknown();
-
-  zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
 };
 
 TEST_F(MonitorTest, TestSetAction) {

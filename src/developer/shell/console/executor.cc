@@ -88,8 +88,6 @@ Err Executor::Execute(std::unique_ptr<Command> command,
       }
     }
 
-    zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
-
    private:
     fit::function<void(const std::string&)>& out_callback_;
     fit::function<void(const std::string&)>& err_callback_;
