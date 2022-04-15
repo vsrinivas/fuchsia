@@ -30,6 +30,8 @@ namespace sysmem_driver {
 zx::duration kGuardCheckInterval = zx::sec(5);
 namespace {
 
+constexpr uint64_t kMiB = 1024ull * 1024;
+
 fuchsia_sysmem2::wire::HeapProperties BuildHeapProperties(fidl::AnyArena& allocator,
                                                           bool is_cpu_accessible) {
   using fuchsia_sysmem2::wire::CoherencyDomainSupport;
@@ -125,6 +127,15 @@ ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(
   last_failed_guard_region_check_timestamp_ns_property_ =
       node_.CreateUint("last_failed_guard_region_check_timestamp_ns", 0);
   large_contiguous_region_sum_property_ = node_.CreateUint("large_contiguous_region_sum", 0);
+
+  // CMM/PCMM properties - these values aren't quite true yet, but will be soon.
+  loanable_efficiency_property_ =
+      node_.CreateDouble("loanable_efficiency", is_ever_cpu_accessible_ ? 1.0 : 0.0);
+  loanable_ratio_property_ =
+      node_.CreateDouble("loanable_ratio", is_ever_cpu_accessible_ ? 1.0 : 0.0);
+  loanable_bytes_property_ = node_.CreateUint("loanable_bytes", is_ever_cpu_accessible_ ? size : 0);
+  loanable_mebibytes_property_ =
+      node_.CreateUint("loanable_mebibytes", is_ever_cpu_accessible_ ? size / kMiB : 0);
 
   if (dispatcher) {
     zx_status_t status = zx::event::create(0, &trace_observer_event_);
@@ -533,8 +544,9 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size,
   data.ptr = std::move(region);
   regions_.emplace(std::make_pair(result_parent_vmo.get(), std::move(data)));
 
-  LOG(DEBUG, "Allocate() - loaned ratio: %g loaning efficiency: %g", GetLoanedRatio(),
-      GetEfficiency());
+  UpdateLoanableMetrics();
+  LOG(DEBUG, "Allocate() - loaned ratio: %g loaning efficiency: %g", GetLoanableRatio(),
+      GetLoanableEfficiency());
 
   *parent_vmo = std::move(result_parent_vmo);
   return ZX_OK;
@@ -568,8 +580,11 @@ void ContiguousPooledMemoryAllocator::Delete(zx::vmo parent_vmo) {
   // region_data now invalid
   parent_vmo.reset();
   TracePoolSize(false);
-  LOG(DEBUG, "Delete() - loaned ratio: %g loaning efficiency: %g", GetLoanedRatio(),
-      GetEfficiency());
+
+  UpdateLoanableMetrics();
+  LOG(DEBUG, "Delete() - loaned ratio: %g loaning efficiency: %g", GetLoanableRatio(),
+      GetLoanableEfficiency());
+
   if (is_empty()) {
     parent_device_->CheckForUnbind();
   }
@@ -771,15 +786,16 @@ void ContiguousPooledMemoryAllocator::StepTowardOptimalProtectedRanges(
   zx::time now = zx::clock::get_monotonic();
   if (now >= step_toward_optimal_protected_ranges_min_time_) {
     bool done = protected_ranges_->StepTowardOptimalRanges();
+    UpdateLoanableMetrics();
     if (done) {
       LOG(INFO,
           "StepTowardOptimalProtectedRanges() - done: %d loaned ratio: %g loaning efficiency: %g",
-          done, GetLoanedRatio(), GetEfficiency());
+          done, GetLoanableRatio(), GetLoanableEfficiency());
       return;
     } else {
       LOG(DEBUG,
           "StepTowardOptimalProtectedRanges() - done: %d loaned ratio: %g loaning efficiency: %g",
-          done, GetLoanedRatio(), GetEfficiency());
+          done, GetLoanableRatio(), GetLoanableEfficiency());
     }
     step_toward_optimal_protected_ranges_min_time_ = now + kStepTowardOptimalProtectedRangesPeriod;
   }
@@ -1204,6 +1220,18 @@ void ContiguousPooledMemoryAllocator::TracePoolSize(bool initial_trace) {
   }
 }
 
+void ContiguousPooledMemoryAllocator::UpdateLoanableMetrics() {
+  double efficiency = GetLoanableEfficiency();
+  if (efficiency < min_efficiency_) {
+    min_efficiency_ = efficiency;
+  }
+  loanable_efficiency_property_.Set(efficiency);
+  loanable_ratio_property_.Set(GetLoanableRatio());
+  uint64_t loanable_bytes = GetLoanableBytes();
+  loanable_bytes_property_.Set(loanable_bytes);
+  loanable_mebibytes_property_.Set(loanable_bytes / kMiB);
+}
+
 uint64_t ContiguousPooledMemoryAllocator::GetVmoRegionOffsetForTest(const zx::vmo& vmo) {
   return regions_[vmo.get()].ptr->base + guard_region_size_;
 }
@@ -1347,7 +1375,7 @@ zx_status_t ContiguousPooledMemoryAllocator::CommitRegion(const ralloc_region_t&
 }
 
 // loanable pages / un-used pages
-double ContiguousPooledMemoryAllocator::GetEfficiency() {
+double ContiguousPooledMemoryAllocator::GetLoanableEfficiency() {
   if (protected_ranges_) {
     return protected_ranges_->GetEfficiency();
   } else {
@@ -1360,15 +1388,27 @@ double ContiguousPooledMemoryAllocator::GetEfficiency() {
 }
 
 // loanable pages / total pages
-double ContiguousPooledMemoryAllocator::GetLoanedRatio() {
+double ContiguousPooledMemoryAllocator::GetLoanableRatio() {
   if (protected_ranges_) {
-    return protected_ranges_->GetLoanedRatio();
+    return protected_ranges_->GetLoanableRatio();
   } else {
     if (is_ever_cpu_accessible_) {
       uint64_t loanable_bytes = size_ - allocated_bytes_;
       return static_cast<double>(loanable_bytes) / static_cast<double>(size_);
     } else {
       return 0.0;
+    }
+  }
+}
+
+uint64_t ContiguousPooledMemoryAllocator::GetLoanableBytes() {
+  if (protected_ranges_) {
+    return protected_ranges_->GetLoanableBytes();
+  } else {
+    if (is_ever_cpu_accessible_) {
+      return size_ - allocated_bytes_;
+    } else {
+      return 0;
     }
   }
 }

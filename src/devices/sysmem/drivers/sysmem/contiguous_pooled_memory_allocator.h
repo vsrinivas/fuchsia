@@ -98,14 +98,20 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   // loanable pages / un-used pages
   //
   // We count pages we choose to pattern instead of loan as loanable, despite not actually loaning
-  // those pages.
-  double GetEfficiency();
+  // those pages.  In other words we don't count patterned pages against efficiency.
+  double GetLoanableEfficiency();
 
   // loanable pages / total pages
   //
   // We count pages we choose to pattern instead of loan as loanable, despite not actually loaning
-  // those pages.
-  double GetLoanedRatio();
+  // those pages.  In other words we don't count patterned pages against the loaned ratio.
+  double GetLoanableRatio();
+
+  // loanable bytes
+  //
+  // We count pages we choose to pattern instead of loan as loanable, despite not actually loaning
+  // those pages.  In other words we don't count patterned pages against the loaned ratio.
+  uint64_t GetLoanableBytes();
 
   static constexpr zx::duration kDefaultUnusedPageCheckCyclePeriod = zx::sec(600);
 
@@ -179,6 +185,7 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   void DumpPoolHighWaterMark();
   void TracePoolSize(bool initial_trace);
   uint64_t CalculateLargeContiguousRegionSize();
+  void UpdateLoanableMetrics();
 
   // This method iterates over all the sub-regions of an unused region.  The sub-regions are regions
   // we need to pattern and keep, loan to zircon, or zero.  Any given page that's unused will always
@@ -310,6 +317,15 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   inspect::UintProperty last_failed_guard_region_check_timestamp_ns_property_;
   // This tracks the sum of the size of the 10 largest free regions.
   inspect::UintProperty large_contiguous_region_sum_property_;
+
+  // CMM / PCMM properties regarding loaning of pages to Zircon.
+  //
+  // The minimum efficiency since this class was created.
+  double min_efficiency_ = 1.0;
+  inspect::DoubleProperty loanable_efficiency_property_;
+  inspect::DoubleProperty loanable_ratio_property_;
+  inspect::UintProperty loanable_bytes_property_;
+  inspect::UintProperty loanable_mebibytes_property_;
 
   zx::event trace_observer_event_;
   async::WaitMethod<ContiguousPooledMemoryAllocator,

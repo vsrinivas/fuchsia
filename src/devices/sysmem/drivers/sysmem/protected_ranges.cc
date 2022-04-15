@@ -1307,15 +1307,17 @@ double ProtectedRanges::GetEfficiency() {
 }
 
 // un-covered pages / total pages
-double ProtectedRanges::GetLoanedRatio() {
+double ProtectedRanges::GetLoanableRatio() {
   // un-covered bytes
-  uint64_t un_covered_bytes = ranges_control_->GetSize() - ranges_bytes_;
+  uint64_t un_covered_bytes = GetLoanableBytes();
 
   // total bytes
   uint64_t total_bytes = ranges_control_->GetSize();
 
   return static_cast<double>(un_covered_bytes) / static_cast<double>(total_bytes);
 }
+
+uint64_t ProtectedRanges::GetLoanableBytes() { return ranges_control_->GetSize() - ranges_bytes_; }
 
 bool Range::IsOverlap(const Range& a, const Range& b) {
   if (a.end() <= b.begin()) {

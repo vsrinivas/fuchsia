@@ -615,7 +615,10 @@ class ProtectedRanges {
   //
   // 1.0 - all protected pages loaned
   // 0.0 - no protected pages loaned
-  double GetLoanedRatio();
+  double GetLoanableRatio();
+
+  // un-covered bytes
+  uint64_t GetLoanableBytes();
 
  private:
   using RangesByLength = std::multiset<Range, CompareRangeByLength>;
