@@ -11,5 +11,5 @@ You declare components using component manifest language (CML) files. At build
 time, the Component Manifest Compiler (`cmc`) tool validates and compiles the
 manifest source into a binary format (`.cm`) and stores it in the component's
 package. At runtime, component resolvers load the binary manifest into a
-[ComponentDecl](https://fuchsia.dev/reference/fidl/fuchsia.sys2#ComponentDecl)
+[ComponentDecl](https://fuchsia.dev/reference/fidl/fuchsia.component.decl#Component)
 FIDL structure for [Component Manager](/docs/glossary/README.md#Component-Manager).

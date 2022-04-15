@@ -2,7 +2,7 @@ The Fuchsia **Test Runner Framework** enables developers to build tests for
 components using a variety of languages and runtimes and execute them on a
 target device. The framework provides **test runner** components that implement
 the `fuchsia.test.Suite` protocol and integrate with common language-specific
-testing frameworks such as GoogleTest (C++) or built-in Rust test modules.
+testing frameworks such as GoogleTest (C++).
 
 The `test_manager` component is responsible for running tests on a Fuchsia
 device. It examines components implementing the test suite protocol and launches

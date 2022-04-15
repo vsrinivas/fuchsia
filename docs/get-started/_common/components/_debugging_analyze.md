@@ -65,7 +65,7 @@ end of symbolized stack
 
 <aside class="key-point">
 If you have a manually captured backtrace, you can run the same process by
-passing the content through the <code>fx symbolize</code> command.
+passing the content through the <code>ffx debug symbolize</code> command.
 </aside>
 
 With a properly symbolized backtrace, you can directly discover the site of a

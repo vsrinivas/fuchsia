@@ -1,3 +1,16 @@
 toc:
+- heading: Quickstart
 - title: Get started with the Fuchsia SDK
   path: /docs/get-started/sdk/index.md
+- heading: Fuchsia SDK fundamentals
+- title: Overview
+  path: /docs/get-started/sdk/learn/README.md
+- title: Introduction to Fuchsia
+  section:
+  - include: /docs/get-started/sdk/learn/intro/_toc.yaml
+- title: Fuchsia components
+  section:
+  - include: /docs/get-started/sdk/learn/components/_toc.yaml
+- title: Fuchsia interfaces
+  section:
+  - include: /docs/get-started/sdk/learn/fidl/_toc.yaml

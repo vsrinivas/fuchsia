@@ -6,6 +6,12 @@
 
 <<../../_common/components/_declaring_shards.md>>
 
+<aside class="key-point">
+To review the merged CML output with all includes resolved, run the
+<code>fx cmc include</code> command with your manifest. For more details, see
+the <a href="/docs/reference/tools/sdk/cmc.md"> reference documentation</a>.
+</aside>
+
 ## Building components
 
 The Fuchsia build system provides templates as GN imports in

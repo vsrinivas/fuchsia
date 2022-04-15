@@ -9,7 +9,7 @@ This means that **any HTTP server can serve a TUF repository** without the need
 for transport-level security, **_including a developer's workstation!_**
 
 <aside class="key-point">
-Developer tools such as <code>fx serve</code> host a simple HTTP server locally
+Developer tools such as <code>ffx</code> host a simple HTTP server locally
 serving a static tree of files formatted as a TUF repository.
 </aside>
 

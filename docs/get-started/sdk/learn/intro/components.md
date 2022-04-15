@@ -1,12 +1,12 @@
 # Component-based software
 
-<<../../_common/intro/_components_intro.md>>
+<<../../../_common/intro/_components_intro.md>>
 
-<<../../_common/intro/_components_manager.md>>
+<<../../../_common/intro/_components_manager.md>>
 
-<<../../_common/intro/_components_capabilities.md>>
+<<../../../_common/intro/_components_capabilities.md>>
 
-<<../../_common/intro/_components_organization.md>>
+<<../../../_common/intro/_components_organization.md>>
 
 ## Exercise: Components
 

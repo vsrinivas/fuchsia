@@ -33,7 +33,7 @@ Note: For more details on component manifests, see
 
 * `program`: Describes the executable information such as the binary file,
   program arguments, and the associated runtime. In this example, a binary
-  written in C++ or Rust is compiled as an ELF executable and uses the built-in
+  is compiled as an ELF executable and uses the built-in
   [ELF runner](/docs/concepts/components/v2/elf_runner.md).
 * `use`: Declares the capabilities this component requires to run. In this
   example, the `fuchsia.logger.LogSink` protocol enables the component to write
