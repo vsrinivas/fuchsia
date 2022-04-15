@@ -23,9 +23,12 @@
 #include <zircon/errors.h>
 #include <zircon/limits.h>
 #include <zircon/pixelformat.h>
+#include <zircon/syscalls.h>
 #include <zircon/types.h>
 
 #include <limits>
+#include <map>
+#include <random>
 #include <string>
 #include <thread>
 #include <vector>
@@ -33,6 +36,8 @@
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
+
+#include "lib/zx/object.h"
 
 // To dump a corpus file for sysmem_fuzz.cc test, enable SYSMEM_FUZZ_CORPUS. Files can be found
 // under /data/cache/r/sys/fuchsia.com:sysmem-test:0#meta:sysmem.cmx/ on the device.
@@ -277,7 +282,8 @@ void nanosleep_duration(zx::duration duration) {
 // because maybe it goes into CPU cache without faulting because 34580?
 class SecureVmoReadTester {
  public:
-  SecureVmoReadTester(zx::vmo secure_vmo);
+  explicit SecureVmoReadTester(zx::vmo secure_vmo);
+  explicit SecureVmoReadTester(zx::unowned_vmo unowned_secure_vmo);
   ~SecureVmoReadTester();
   bool IsReadFromSecureAThing();
   // When we're trying to read from an actual secure VMO, expect_read_success is false.
@@ -285,7 +291,10 @@ class SecureVmoReadTester {
   void AttemptReadFromSecure(bool expect_read_success = false);
 
  private:
-  zx::vmo secure_vmo_;
+  void Init();
+
+  zx::vmo secure_vmo_to_delete_;
+  zx::unowned_vmo unowned_secure_vmo_;
   zx::vmar child_vmar_;
   // volatile only so reads in the code actually read despite the value being
   // discarded.
@@ -295,9 +304,24 @@ class SecureVmoReadTester {
   std::atomic<bool> is_read_from_secure_a_thing_ = false;
   std::thread let_die_thread_;
   std::atomic<bool> is_let_die_started_ = false;
+
+  std::uint64_t kSeed = 0;
+  std::mt19937_64 prng_{kSeed};
+  std::uniform_int_distribution<uint32_t> distribution_{0, std::numeric_limits<uint32_t>::max()};
 };
 
-SecureVmoReadTester::SecureVmoReadTester(zx::vmo secure_vmo) : secure_vmo_(std::move(secure_vmo)) {
+SecureVmoReadTester::SecureVmoReadTester(zx::vmo secure_vmo_to_delete)
+    : secure_vmo_to_delete_(std::move(secure_vmo_to_delete)),
+      unowned_secure_vmo_(secure_vmo_to_delete_) {
+  Init();
+}
+
+SecureVmoReadTester::SecureVmoReadTester(zx::unowned_vmo unowned_secure_vmo)
+    : unowned_secure_vmo_(std::move(unowned_secure_vmo)) {
+  Init();
+}
+
+void SecureVmoReadTester::Init() {
   // We need a child VMAR so we can clean up robustly without relying on a fault
   // to occur at location where a VMO was recently mapped but which
   // theoretically something else could be mapped unless we're specific with a
@@ -308,15 +332,24 @@ SecureVmoReadTester::SecureVmoReadTester(zx::vmo secure_vmo) : secure_vmo_(std::
       zx_system_get_page_size(), &child_vmar_, &child_vaddr);
   ZX_ASSERT(status == ZX_OK);
 
+  uint64_t vmo_size;
+  zx_status_t get_size_status = unowned_secure_vmo_->get_size(&vmo_size);
+  ZX_ASSERT(get_size_status == ZX_OK);
+  ZX_ASSERT(vmo_size % zx_system_get_page_size() == 0);
+  uint64_t vmo_offset =
+      (distribution_(prng_) % (vmo_size / zx_system_get_page_size())) * zx_system_get_page_size();
+
   uintptr_t map_addr_raw;
-  status = child_vmar_.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC | ZX_VM_MAP_RANGE, 0,
-                           secure_vmo_, 0, zx_system_get_page_size(), &map_addr_raw);
+  status =
+      child_vmar_.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC | ZX_VM_MAP_RANGE, 0,
+                      *unowned_secure_vmo_, vmo_offset, zx_system_get_page_size(), &map_addr_raw);
   ZX_ASSERT(status == ZX_OK);
   map_addr_ = reinterpret_cast<uint8_t*>(map_addr_raw);
   ZX_ASSERT(reinterpret_cast<uint8_t*>(child_vaddr) == map_addr_);
 
-  status =
-      secure_vmo_.op_range(ZX_VMO_OP_CACHE_INVALIDATE, 0, zx_system_get_page_size(), nullptr, 0);
+  // No data should be in CPU cache for a secure VMO; no fault should happen here.
+  status = unowned_secure_vmo_->op_range(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, vmo_offset,
+                                         zx_system_get_page_size(), nullptr, 0);
   ZX_ASSERT(status == ZX_OK);
 
   // But currently the read doesn't visibly fault while the vaddr is mapped to
@@ -375,10 +408,9 @@ void SecureVmoReadTester::AttemptReadFromSecure(bool expect_read_success) {
   ZX_ASSERT(is_let_die_started_);
   ZX_ASSERT(!is_read_from_secure_attempted_);
   is_read_from_secure_attempted_ = true;
-  // This attempt to read from a vaddr that's mapped to a secure paddr won't
-  // succeed.  For now the read gets stuck while mapped to secure memory, and
-  // then faults when we've unmapped the VMO.  This address is in a child VMAR
-  // so we know nothing else will be getting mapped to the vaddr.
+  // This attempt to read from a vaddr that's mapped to a secure paddr won't succeed.  For now the
+  // read gets stuck while mapped to secure memory, and then faults when we've unmapped the VMO.
+  // This address is in a child VMAR so we know nothing else will be getting mapped to the vaddr.
   //
   // The loop is mainly for the benefit of debugging/fixing the test should the very first write,
   // flush, read not force and fence a fault.
@@ -845,7 +877,7 @@ bool AttachTokenSucceeds(
     }
 
     // The collection_client_3_set_constraints() above closed the old collection_client_3, which the
-    // sysmem server treats as a client 3 failure, but becuase client 3 was created via
+    // sysmem server treats as a client 3 failure, but because client 3 was created via
     // AttachToken(), the failure of client 3 doesn't cause failure of the LogicalBufferCollection.
     //
     // Give some time to fail if it were going to (but it shouldn't).
@@ -3089,6 +3121,257 @@ TEST(Sysmem, HeapAmlogicSecure) {
   }
 }
 
+TEST(Sysmem, HeapAmlogicSecureMiniStress) {
+  if (!is_board_with_amlogic_secure()) {
+    return;
+  }
+
+  // 256 64 KiB chunks, and well below protected_memory_size, even accounting for fragmentation.
+  const uint32_t kBlockSize = 64 * 1024;
+  const uint32_t kTotalSizeThreshold = 256 * kBlockSize;
+
+  // For generating different sequences of random ranges, but still being able to easily repro any
+  // failure by putting the uint64_t seed inside the {} here.
+  static constexpr std::optional<uint64_t> kForcedSeed{};
+  std::random_device random_device;
+  std::uint_fast64_t seed{kForcedSeed ? *kForcedSeed : random_device()};
+  std::mt19937_64 prng{seed};
+  std::uniform_int_distribution<uint32_t> op_distribution(0, 104);
+  std::uniform_int_distribution<uint32_t> key_distribution(0, std::numeric_limits<uint32_t>::max());
+  // Buffers aren't required to be block aligned.
+  const uint32_t max_buffer_size = 4 * kBlockSize;
+  std::uniform_int_distribution<uint32_t> size_distribution(0, max_buffer_size);
+
+  struct Vmo {
+    uint32_t size;
+    zx::vmo vmo;
+  };
+  using BufferMap = std::multimap<uint32_t, Vmo>;
+  BufferMap buffers;
+  // random enough for this test; buffers at the end of a big gap are more likely to be selected,
+  // but that's fine since which buffers those are is also random due to random key when the buffer
+  // is added; still, not claiming this is rigorously random
+  auto get_random_buffer = [&key_distribution, &prng, &buffers]() -> BufferMap::iterator {
+    if (buffers.empty()) {
+      return buffers.end();
+    }
+    uint32_t key = key_distribution(prng);
+    auto iter = buffers.upper_bound(key);
+    if (iter == buffers.end()) {
+      iter = buffers.begin();
+    }
+    return iter;
+  };
+
+  uint32_t total_size = 0;
+  auto add = [&key_distribution, &size_distribution, &prng, &total_size, &buffers] {
+    uint32_t size = fbl::round_up(size_distribution(prng), zx_system_get_page_size());
+    total_size += size;
+
+    auto collection = make_single_participant_collection();
+    fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
+    constraints.usage.video = fuchsia_sysmem::wire::kVideoUsageHwDecoder;
+    constexpr uint32_t kBufferCount = 1;
+    constraints.min_buffer_count_for_camping = 1;
+    constraints.has_buffer_memory_constraints = true;
+    constraints.buffer_memory_constraints = fuchsia_sysmem::wire::BufferMemoryConstraints{
+        .min_size_bytes = size,
+        .max_size_bytes = size,
+        .physically_contiguous_required = true,
+        .secure_required = true,
+        .ram_domain_supported = false,
+        .cpu_domain_supported = false,
+        .inaccessible_domain_supported = true,
+        .heap_permitted_count = 1,
+        .heap_permitted = {fuchsia_sysmem::wire::HeapType::kAmlogicSecure},
+    };
+    ZX_DEBUG_ASSERT(constraints.image_format_constraints_count == 0);
+
+    ASSERT_OK(collection->SetConstraints(true, std::move(constraints)));
+
+    // This is the first round-trip to/from sysmem.  A failure here can be due
+    // to any step above failing async.
+    auto allocate_result = collection->WaitForBuffersAllocated();
+
+    ASSERT_OK(allocate_result);
+    ASSERT_OK(allocate_result->status);
+    auto buffer_collection_info = &allocate_result->buffer_collection_info;
+    EXPECT_EQ(buffer_collection_info->buffer_count, kBufferCount, "");
+    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, size, "");
+    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, true, "");
+    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, true, "");
+    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
+              fuchsia_sysmem::wire::CoherencyDomain::kInaccessible, "");
+    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.heap,
+              fuchsia_sysmem::wire::HeapType::kAmlogicSecure, "");
+    EXPECT_EQ(buffer_collection_info->settings.has_image_format_constraints, false, "");
+    EXPECT_EQ(buffer_collection_info->buffers[0].vmo_usable_start, 0);
+
+    zx::vmo buffer = std::move(buffer_collection_info->buffers[0].vmo);
+
+    buffers.emplace(
+        std::make_pair(key_distribution(prng), Vmo{.size = size, .vmo = std::move(buffer)}));
+  };
+  auto remove = [&get_random_buffer, &buffers, &total_size] {
+    auto random_buffer = get_random_buffer();
+    ZX_ASSERT(random_buffer != buffers.end());
+    total_size -= random_buffer->second.size;
+    buffers.erase(random_buffer);
+  };
+  auto check_random_buffer_page = [&get_random_buffer] {
+    auto random_buffer_iter = get_random_buffer();
+    SecureVmoReadTester tester(zx::unowned_vmo(random_buffer_iter->second.vmo));
+    ASSERT_DEATH(([&] { tester.AttemptReadFromSecure(); }));
+    ASSERT_FALSE(tester.IsReadFromSecureAThing());
+  };
+
+  const uint32_t kIterations = 1000;
+  for (uint32_t i = 0; i < kIterations; ++i) {
+    if (i % 100 == 0) {
+      printf("iteration: %u\n", i);
+    }
+    while (total_size > kTotalSizeThreshold) {
+      remove();
+    }
+    uint32_t roll = op_distribution(prng);
+    switch (roll) {
+      // add
+      case 0 ... 48:
+        add();
+        break;
+      // fill
+      case 49:
+        while (total_size < kTotalSizeThreshold) {
+          add();
+        }
+        break;
+      // remove
+      case 50 ... 98:
+        if (total_size) {
+          remove();
+        }
+        break;
+      // clear
+      case 99:
+        while (total_size) {
+          remove();
+        }
+        break;
+      case 100 ... 104:
+        if (total_size) {
+          check_random_buffer_page();
+        }
+        break;
+    }
+  }
+
+  for (uint32_t i = 0; i < 64; ++i) {
+    bool need_aux = (i % 4 == 0);
+    bool allow_aux = (i % 2 == 0);
+    auto collection = make_single_participant_collection();
+
+    if (need_aux) {
+      fuchsia_sysmem::wire::BufferCollectionConstraintsAuxBuffers aux_constraints;
+      aux_constraints.need_clear_aux_buffers_for_secure = true;
+      aux_constraints.allow_clear_aux_buffers_for_secure = true;
+      ASSERT_OK(collection->SetConstraintsAuxBuffers(std::move(aux_constraints)));
+    }
+
+    fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
+    constraints.usage.video = fuchsia_sysmem::wire::kVideoUsageHwDecoder;
+    constexpr uint32_t kBufferCount = 4;
+    constraints.min_buffer_count_for_camping = kBufferCount;
+    constraints.has_buffer_memory_constraints = true;
+    constexpr uint32_t kBufferSizeBytes = 64 * 1024;
+    constraints.buffer_memory_constraints = fuchsia_sysmem::wire::BufferMemoryConstraints{
+        .min_size_bytes = kBufferSizeBytes,
+        .max_size_bytes = 128 * 1024,
+        .physically_contiguous_required = true,
+        .secure_required = true,
+        .ram_domain_supported = false,
+        .cpu_domain_supported = false,
+        .inaccessible_domain_supported = true,
+        .heap_permitted_count = 1,
+        .heap_permitted = {fuchsia_sysmem::wire::HeapType::kAmlogicSecure},
+    };
+    ZX_DEBUG_ASSERT(constraints.image_format_constraints_count == 0);
+
+    ASSERT_OK(collection->SetConstraints(true, std::move(constraints)));
+
+    auto allocate_result = collection->WaitForBuffersAllocated();
+    // This is the first round-trip to/from sysmem.  A failure here can be due
+    // to any step above failing async.
+    ASSERT_OK(allocate_result);
+    ASSERT_OK(allocate_result->status);
+    auto buffer_collection_info = &allocate_result->buffer_collection_info;
+    EXPECT_EQ(buffer_collection_info->buffer_count, kBufferCount, "");
+    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, kBufferSizeBytes, "");
+    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, true, "");
+    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, true, "");
+    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
+              fuchsia_sysmem::wire::CoherencyDomain::kInaccessible, "");
+    EXPECT_EQ(buffer_collection_info->settings.buffer_settings.heap,
+              fuchsia_sysmem::wire::HeapType::kAmlogicSecure, "");
+    EXPECT_EQ(buffer_collection_info->settings.has_image_format_constraints, false, "");
+
+    fuchsia_sysmem::wire::BufferCollectionInfo2 aux_buffer_collection_info;
+    if (need_aux || allow_aux) {
+      auto aux_result = collection->GetAuxBuffers();
+      ASSERT_OK(aux_result);
+      ASSERT_OK(aux_result->status);
+
+      EXPECT_EQ(aux_result->buffer_collection_info_aux_buffers.buffer_count,
+                buffer_collection_info->buffer_count, "");
+      aux_buffer_collection_info = std::move(aux_result->buffer_collection_info_aux_buffers);
+    }
+
+    for (uint32_t i = 0; i < 64; ++i) {
+      if (i < kBufferCount) {
+        EXPECT_NE(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+        uint64_t size_bytes = 0;
+        auto status = zx_vmo_get_size(buffer_collection_info->buffers[i].vmo.get(), &size_bytes);
+        ASSERT_EQ(status, ZX_OK, "");
+        EXPECT_EQ(size_bytes, kBufferSizeBytes, "");
+        if (need_aux) {
+          EXPECT_NE(aux_buffer_collection_info.buffers[i].vmo, ZX_HANDLE_INVALID, "");
+          uint64_t aux_size_bytes = 0;
+          status =
+              zx_vmo_get_size(aux_buffer_collection_info.buffers[i].vmo.get(), &aux_size_bytes);
+          ASSERT_EQ(status, ZX_OK, "");
+          EXPECT_EQ(aux_size_bytes, kBufferSizeBytes, "");
+        } else if (allow_aux) {
+          // This is how v1 indicates that aux buffers weren't allocated.
+          EXPECT_EQ(aux_buffer_collection_info.buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+        }
+      } else {
+        EXPECT_EQ(buffer_collection_info->buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+        if (need_aux) {
+          EXPECT_EQ(aux_buffer_collection_info.buffers[i].vmo.get(), ZX_HANDLE_INVALID, "");
+        }
+      }
+    }
+
+    zx::vmo the_vmo = std::move(buffer_collection_info->buffers[0].vmo);
+    buffer_collection_info->buffers[0].vmo = zx::vmo();
+    SecureVmoReadTester tester(std::move(the_vmo));
+    ASSERT_DEATH(([&] { tester.AttemptReadFromSecure(); }));
+    ASSERT_FALSE(tester.IsReadFromSecureAThing());
+
+    if (need_aux) {
+      zx::vmo aux_vmo = std::move(aux_buffer_collection_info.buffers[0].vmo);
+      aux_buffer_collection_info.buffers[0].vmo = zx::vmo();
+      SecureVmoReadTester aux_tester(std::move(aux_vmo));
+      // This shouldn't crash for the aux VMO.
+      aux_tester.AttemptReadFromSecure(/*expect_read_success=*/true);
+      // Read from aux VMO using REE (rich execution environment, in contrast to the TEE (trusted
+      // execution environment)) CPU should work.  In actual usage, only the non-encrypted parts of
+      // the data will be present in the VMO, and the encrypted parts will be all 0xFF.  The point
+      // of the aux VMO is to allow reading and parsing the non-encrypted parts using REE CPU.
+      ASSERT_TRUE(aux_tester.IsReadFromSecureAThing());
+    }
+  }
+}
+
 TEST(Sysmem, HeapAmlogicSecureOnlySupportsInaccessible) {
   if (!is_board_with_amlogic_secure()) {
     return;
@@ -3904,7 +4187,7 @@ TEST(Sysmem, SetDispensable) {
     auto allocate_result_1 = collection_1->WaitForBuffersAllocated();
 
     if (variant == Variant::kDispensableFailureBeforeAllocation) {
-      // The LogicalBufferCollection will be failed, becuase client 2 failed before providing
+      // The LogicalBufferCollection will be failed, because client 2 failed before providing
       // constraints.
       ASSERT_EQ(allocate_result_1.status(), ZX_ERR_PEER_CLOSED, "");
       // next variant, if any

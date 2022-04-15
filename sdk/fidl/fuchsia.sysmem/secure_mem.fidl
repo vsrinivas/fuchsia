@@ -46,67 +46,244 @@ protocol SecureMem {
     ///  * other errors are possible, such as from communication failures or
     ///    server propagation of zx_status_t failures
     GetPhysicalSecureHeaps() -> (struct {
-        heaps PhysicalSecureHeaps;
+        heaps SecureHeapsAndRanges;
     }) error zx.status;
 
-    /// This request from sysmem to the securemem driver lets the TEE know the
-    /// physical memory address and length of any secure heap whose location is
-    /// configured/established via sysmem.
+    /// This request from sysmem to the securemem driver gets the properties of
+    /// a protected/secure heap.
+    GetPhysicalSecureHeapProperties(struct {
+        heap HeapType;
+    }) -> (struct {
+        properties SecureHeapProperties;
+    }) error zx.status;
+
+    /// This request from sysmem to the securemem driver conveys a physical
+    /// range to add, for a heap whose physical range(s) are set up via
+    /// sysmem.
     ///
     /// Only sysmem can call this because only sysmem is handed the client end
     /// of a FIDL channel serving this protocol, via RegisterSecureMem().  The
     /// securemem driver is the server end of this protocol.
     ///
-    /// Presently, these physical ranges will be dynamically-allocated by sysmem
-    /// early during boot.
+    /// The securemem driver must configure all the covered offsets as protected
+    /// before responding to this message with success.
     ///
-    /// The heap ID is included in case that's relevant to the securemem driver,
-    /// for more informative log messages, and for consistency with
-    /// GetPhysicalSecureHeaps().
+    /// On failure, the securemem driver must ensure the protected range was not
+    /// created.
     ///
-    /// The securemem driver must configure all the provided ranges as secure
-    /// with the TEE before responding to this message with success.
+    /// Sysmem must only call this up to once if dynamic_protection_ranges
+    /// false.
     ///
-    /// For heaps configured via sysmem, both the HeapType and heap location are
-    /// configured via sysmem, and ZX_ERR_INVALID_ARGS will be the result if the
-    /// securemem driver determines that the number of heaps or HeapType(s) are
-    /// not what's supported by the securemem driver.  Typically these aspects
-    /// are essentially fixed for a given device, so this error would typically
-    /// imply a configuration or plumbing problem.
+    /// If dynamic_protection_ranges is true, sysmem can call this multiple
+    /// times as long as the current number of ranges never exceeds
+    /// max_protected_range_count.
     ///
-    /// Sysmem should only call this once.
+    /// The caller must not attempt to add a range that matches an
+    /// already-existing range.  Added ranges can overlap each other as long as
+    /// no two ranges match exactly.
     ///
     /// Errors:
-    ///  * ZX_ERR_BAD_STATE - called more than once
-    ///  * ZX_ERR_INVALID_ARGS - unexpected heap count or unexpected heap
-    ///  * ZX_ERR_INTERNAL - generic internal error (such as in communication
-    ///    with TEE which doesn't generate zx_status_t errors).
-    ///  * other errors are possible, such as from communication failures or
-    ///    server propagation of zx_status_t failures
-    SetPhysicalSecureHeaps(struct {
-        heaps PhysicalSecureHeaps;
+    ///   * ZX_ERR_BAD_STATE - called more than once when
+    ///     !dynamic_protection_ranges.  Adding a heap that would cause overall
+    ///     heap count to exceed max_protected_range_count.
+    ///   * ZX_ERR_INVALID_ARGS - unexpected heap, or range that doesn't conform
+    ///     to protected_range_granularity.
+    ///   * ZX_ERR_INTERNAL - generic internal error (such as in communication
+    ///     with TEE which doesn't generate zx_status_t errors).
+    ///   * other errors are possible, such as from communication failures or
+    ///     server propagation of zx_status_t failures.
+    AddSecureHeapPhysicalRange(struct {
+        heap_range SecureHeapAndRange;
+    }) -> (struct {}) error zx.status;
+
+    /// This request from sysmem to the securemem driver conveys a physical
+    /// range to delete, for a heap whose physical range(s) are set up via
+    /// sysmem.
+    ///
+    /// Only sysmem can call this because only sysmem is handed the client end
+    /// of a FIDL channel serving this protocol, via RegisterSecureMem().  The
+    /// securemem driver is the server end of this protocol.
+    ///
+    /// The securemem driver must configure all the covered offsets as not
+    /// protected before responding to this message with success.
+    ///
+    /// On failure, the securemem driver must ensure the protected range was not
+    /// deleted.
+    ///
+    /// Sysmem must not call this if dynamic_protection_ranges false.
+    ///
+    /// If dynamic_protection_ranges is true, sysmem can call this repeatedly,
+    /// on various ranges that exist at the time of the call.
+    ///
+    /// If any portion of the range being deleted is not also covered by another
+    /// protected range, then any ongoing DMA to any part of the entire range
+    /// may be interrupted / may fail, potentially in a way that's disruptive to
+    /// the entire system (bus lockup or similar, depending on device details).
+    /// Therefore, the caller must ensure that no ongoing DMA is occurring to
+    /// any portion of the range being deleted, unless the caller has other
+    /// active ranges covering every block of the range being deleted.  Ongoing
+    /// DMA to/from blocks outside the range being deleted is never impacted by
+    /// the deletion.
+    ///
+    /// Errors:
+    ///   * ZX_ERR_BAD_STATE - called when !dynamic_protection_ranges.
+    ///   * ZX_ERR_INVALID_ARGS - unexpected heap, or range that doesn't conform
+    ///     to protected_range_granularity.
+    ///   * ZX_ERR_INTERNAL - generic internal error (such as in communication
+    ///     with TEE which doesn't generate zx_status_t errors).
+    ///   * ZX_ERR_NOT_FOUND - the specified range is not found.
+    ///   * other errors are possible, such as from communication failures or
+    ///     server propagation of zx_status_t failures.
+    DeleteSecureHeapPhysicalRange(struct {
+        heap_range SecureHeapAndRange;
+    }) -> (struct {}) error zx.status;
+
+    /// This request from sysmem to the securemem driver conveys a physical
+    /// range to modify and its new base and length, for a heap whose physical
+    /// range(s) are set up via sysmem.
+    ///
+    /// Only sysmem can call this because only sysmem is handed the client end
+    /// of a FIDL channel serving this protocol, via RegisterSecureMem().  The
+    /// securemem driver is the server end of this protocol.
+    ///
+    /// The securemem driver must configure the range to cover only the new
+    /// offsets before responding to this message with success.
+    ///
+    /// On failure, the securemem driver must ensure the range was not changed.
+    ///
+    /// Sysmem must not call this if dynamic_protection_ranges false.  Sysmem
+    /// must not call this if !is_mod_protected_range_available.
+    ///
+    /// If dynamic_protection_ranges is true, sysmem can call this repeatedly,
+    /// on various ranges that exist at the time of the call.
+    ///
+    /// The range must only be modified at one end or the other, but not both.
+    /// If the range is getting shorter, and the un-covered blocks are not
+    /// covered by other active ranges, any ongoing DMA to the entire range
+    /// that's geting shorter may fail in a way that disrupts the entire system
+    /// (bus lockup or similar), so the caller must ensure that no DMA is
+    /// ongoing to any portion of a range that is getting shorter, unless the
+    /// blocks being un-covered by the modification to this range are all
+    /// covered by other active ranges, in which case no disruption to ongoing
+    /// DMA will occur.
+    ///
+    /// If a range is modified to become <= zero length, the range is deleted.
+    ///
+    /// Errors:
+    ///   * ZX_ERR_BAD_STATE - called when !dynamic_protection_ranges.
+    ///   * ZX_ERR_INVALID_ARGS - unexpected heap, or old_range or new_range
+    ///     that doesn't conform to protected_range_granularity, or old_range
+    ///     and new_range differ in both begin and end (disallowed).
+    ///   * ZX_ERR_INTERNAL - generic internal error (such as in communication
+    ///     with TEE which doesn't generate zx_status_t errors).
+    ///   * ZX_ERR_NOT_FOUND - the specified range is not found.
+    ///   * other errors are possible, such as from communication failures or
+    ///     server propagation of zx_status_t failures.
+    ModifySecureHeapPhysicalRange(struct {
+        range_modification SecureHeapAndRangeModification;
+    }) -> (struct {}) error zx.status;
+
+    /// Zero a sub-range of a currently-existing physical range added via
+    /// AddSecureHeapPhysicalRange().  The sub-range must be fully covered by
+    /// exactly one physical range, and must not overlap with any other
+    /// physical range.
+    ///
+    /// is_covering_range_explicit - When true, the covering range must be one
+    ///     of the ranges explicitly created via AddSecureHeapPhysicalRange(),
+    ///     possibly modified since.  When false, the covering range must not
+    ///     be one of the ranges explicitly created via
+    ///     AddSecureHeapPhysicalRange(), but the covering range must exist as
+    ///     a covering range not created via AddSecureHeapPhysicalRange().  The
+    ///     covering range is typically the entire physical range (or a range
+    ///     which covers even more) of a heap configured by the TEE and whose
+    ///     configuration is conveyed to sysmem via GetPhysicalSecureHeaps().
+    ///
+    /// Ongoing DMA is not disrupted by this request.
+    ZeroSubRange(struct {
+        is_covering_range_explicit bool;
+        heap_range SecureHeapAndRange;
     }) -> (struct {}) error zx.status;
 };
 
-type PhysicalSecureHeap = struct {
-    /// This must be a HeapType that is secure/protected.
-    heap HeapType;
-    /// Must be at least PAGE_SIZE aligned.
-    physical_address uint64;
-    /// Must be at least PAGE_SIZE aligned.
-    size_bytes uint64;
+type SecureHeapProperties = table {
+    /// The HeapType is repeated here for convenience.
+    1: heap HeapType;
+
+    /// If true, more than one call to SetPhysicalSecureHeap() for the same
+    /// heap is allowed.  If false, only one SetPhyscialSecureHeap() call is
+    /// allowed, and no calls to DeleteSecureHeapPhysicalRange() or
+    /// ModifySecureHeapPhysicalRange() are allowed.  Even when this is false,
+    /// the SecureMem server (driver) is still responsible for de-protecting
+    /// just before warm reboot if protected ranges would not otherwise be
+    /// cleaned up during a warm reboot.
+    2: dynamic_protection_ranges bool;
+
+    /// The granularity of protection ranges.  If the granularity of start is
+    /// different than granularity of end or length, then this is the max
+    /// granularity value among those values.
+    ///
+    /// This must be a power of 2.  The client must not request ranges that
+    /// specify smaller granularity.
+    ///
+    /// This must be at least zx_system_page_size() even if the HW can do
+    /// smaller granularity.
+    3: protected_range_granularity uint32;
+
+    /// The SecureMem server should not count reserved ranges that the SecureMem
+    /// server uses internally to get from range set A to range set B, if the
+    /// SecureMem server needs to do any emulation of that sort.  Normally such
+    /// emulation by the SecureMem server is unnecessary.  If any ranges are
+    /// reserved by the SecureMem server, those reserved ranges are not
+    /// available for use by the SecureMem client.
+    ///
+    /// If the number of ranges is limited only by available memory, it's ok for
+    /// the SecureMem server to report 0xFFFFFFFFFFFFFFFF for this value.  The
+    /// field must still be set.  As usual, the SecureMem server should ensure
+    /// that SetPhysicalSecureHeapRanges() succeeds or fails atomically (either
+    /// fully updates or rolls back before completing).
+    4: max_protected_range_count uint64;
+
+    /// Iff true, ModifySecureHeapPhysicalRange() is implemented.  Calling
+    /// ModifySecureHeapPhysicalRange() when is_mod_protected_range_available
+    /// is false is prohibited.  Don't attempt to detect availability of
+    /// ModifySecureHeapPhysicalRange() by calling it to see if it fails; it
+    /// may ZX_PANIC().
+    5: is_mod_protected_range_available bool;
 };
 
-// Sysmem uses layout=Simple, which requires picking a specific array size.
-// Each heap consumes ~24 bytes on the stack, so we limit to a number that
-// exceeds the needs of any current use case (1 heap in each direction so far),
-// without over-alias stack space (24 bytes * 32 == 768 bytes).
 const MAX_HEAPS_COUNT uint32 = 32;
+const MAX_RANGES_COUNT uint32 = 128;
 
-// In this struct we use array instead of vector because layout=Simple.
-type PhysicalSecureHeaps = struct {
-    /// Must be <= MAX_HEAPS_COUNT.
-    heaps_count uint32;
-    /// Only the first heaps_count are meaningful.  The rest are ignored.
-    heaps array<PhysicalSecureHeap, MAX_HEAPS_COUNT>;
+type SecureHeapRange = table {
+    /// Must be aligned to at least heap_range_granularity.
+    1: physical_address uint64;
+
+    /// Must be aligned to at least heap_range_granularity.
+    2: size_bytes uint64;
+};
+
+type SecureHeapAndRanges = table {
+    /// This is which secure/protected heap.
+    1: heap HeapType;
+
+    /// The list of physical ranges.  This list must be sorted by
+    /// physical_address (lower first), and must not have any overlapping
+    /// ranges.  Ranges that are directly adjacent are allowed (not
+    /// overlapping).
+    2: ranges vector<SecureHeapRange>:MAX_RANGES_COUNT;
+};
+
+type SecureHeapsAndRanges = table {
+    1: heaps vector<SecureHeapAndRanges>:MAX_HEAPS_COUNT;
+};
+
+type SecureHeapAndRange = table {
+    1: heap HeapType;
+    2: range SecureHeapRange;
+};
+
+type SecureHeapAndRangeModification = table {
+    1: heap HeapType;
+    2: old_range SecureHeapRange;
+    3: new_range SecureHeapRange;
 };

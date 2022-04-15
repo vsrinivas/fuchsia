@@ -164,7 +164,7 @@ int decoder_conformance_test(int argc, char* argv[], UseVideoDecoderFunction use
       // The handling for odd width _has_ successfully matched MD5s from the VP9 decoder conformance
       // spreadsheet (when height is even).
       //
-      // Odd stride is not handled, becuase we don't know what that would mean for stride of u and
+      // Odd stride is not handled, because we don't know what that would mean for stride of u and
       // v, and we don't have any examples so far where handling odd stride is necessary.
       ZX_ASSERT(stride % 2 == 0);
       ZX_DEBUG_ASSERT(width <= stride);

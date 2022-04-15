@@ -9,6 +9,7 @@
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/event.h>
+#include <zircon/errors.h>
 #include <zircon/limits.h>
 
 #include <fbl/algorithm.h>
@@ -16,6 +17,7 @@
 #include <region-alloc/region-alloc.h>
 
 #include "allocator.h"
+#include "protected_ranges.h"
 
 namespace sysmem_driver {
 
@@ -23,8 +25,9 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
  public:
   ContiguousPooledMemoryAllocator(Owner* parent_device, const char* allocation_name,
                                   inspect::Node* parent_node, uint64_t pool_id, uint64_t size,
-                                  bool is_cpu_accessible, bool is_ready, bool can_be_torn_down,
-                                  async_dispatcher_t* dispatcher = nullptr);
+                                  bool is_always_cpu_accessible, bool is_ever_cpu_accessible,
+                                  bool is_ready, bool can_be_torn_down,
+                                  async_dispatcher_t* dispatcher);
 
   ~ContiguousPooledMemoryAllocator();
 
@@ -40,13 +43,14 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
                        bool crash_on_guard_failure, async_dispatcher_t* dispatcher);
   void FillUnusedRangeWithGuard(uint64_t start_offset, uint64_t size);
 
-  // Call after InitGuardRegion() (if any), but during the same dispatcher call-out, before
-  // returning to the dispatcher.
+  // If is_cpu_accessibe_, called after InitGuardRegion() (if any), but during the same dispatcher
+  // call-out, before returning to the dispatcher, because is_ready_ is already true.
+  //
+  // If !is_cpu_accessibe_, called during set_ready().
   void SetupUnusedPages();
 
-  // TODO(fxbug.dev/13609): Use this for VDEC.
-  //
-  // This uses a physical VMO as the parent VMO.
+  // This uses a physical VMO as the parent VMO.  This is used for VDEC as we learn the physical
+  // range of VDEC from the TEE.
   zx_status_t InitPhysical(zx_paddr_t paddr);
 
   zx_status_t Allocate(uint64_t size, std::optional<std::string> name,
@@ -87,10 +91,28 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   }
   bool is_bti_fake() { return is_bti_fake_; }
 
+  fuchsia_sysmem2::wire::HeapType heap_type() {
+    return static_cast<fuchsia_sysmem2::wire::HeapType>(pool_id_);
+  }
+
+  // loanable pages / un-used pages
+  //
+  // We count pages we choose to pattern instead of loan as loanable, despite not actually loaning
+  // those pages.
+  double GetEfficiency();
+
+  // loanable pages / total pages
+  //
+  // We count pages we choose to pattern instead of loan as loanable, despite not actually loaning
+  // those pages.
+  double GetLoanedRatio();
+
   static constexpr zx::duration kDefaultUnusedPageCheckCyclePeriod = zx::sec(600);
 
   static constexpr zx::duration kUnusedRecentlyPageCheckPeriod = zx::sec(2);
   static constexpr zx::duration kUnusedRecentlyAgeThreshold = zx::sec(5);
+
+  static constexpr zx::duration kStepTowardOptimalProtectedRangesPeriod = zx::msec(1000);
 
   // Keep < 1% of pages aside for being unused page guard pattern.  The rest get loaned back to
   // Zircon.
@@ -110,6 +132,30 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
     ralloc_region_t region;
     zx::time when_freed;
     std::string name;
+  };
+
+  class RangesControl : public protected_ranges::ProtectedRangesControl {
+   public:
+    RangesControl(ContiguousPooledMemoryAllocator* parent) : parent_(parent) {}
+
+    // protected_ranges::ProtectedRangesControl implementation
+    bool IsDynamic() override;
+    uint64_t MaxRangeCount() override;
+    uint64_t GetRangeGranularity() override;
+    bool HasModProtectedRange() override;
+    void AddProtectedRange(const protected_ranges::Range& range) override;
+    void DelProtectedRange(const protected_ranges::Range& range) override;
+    void ModProtectedRange(const protected_ranges::Range& old_range,
+                           const protected_ranges::Range& new_range) override;
+    void ZeroProtectedSubRange(bool is_covering_range_explicit,
+                               const protected_ranges::Range& range) override;
+    uint64_t GetBase() override;
+    uint64_t GetSize() override;
+    bool UseRange(const protected_ranges::Range& range) override;
+    void UnUseRange(const protected_ranges::Range& range) override;
+
+   private:
+    ContiguousPooledMemoryAllocator* parent_{};
   };
 
   zx_status_t InitCommon(zx::vmo local_contiguous_vmo);
@@ -148,10 +194,17 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   // loaned, or zeroed.  For example, write the pattern or check the pattern, loan the page or
   // un-loan the page, zero the page or nop.
   //
+  // If a page is protected it'll be skipped, and not processed by any of the passed-in funcs.
+  //
   // All the funcs take const ralloc_region_t&.
   template <typename F1, typename F2, typename F3>
   void ForUnusedGuardPatternRanges(const ralloc_region_t& region, F1 pattern_func, F2 loan_func,
                                    F3 zero_func);
+
+  // This handles the unprotected portions of the region passed to ForUnusedGuardPatternRanges().
+  template <typename F1, typename F2, typename F3>
+  void ForUnusedGuardPatternRangesInternal(const ralloc_region_t& region, F1 pattern_func,
+                                           F2 loan_func, F3 zero_func);
 
   void StashDeletedRegion(const RegionData& region_data);
   DeletedRegion* FindMostRecentDeletedRegion(uint64_t offset);
@@ -165,7 +218,14 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   void OnRegionUnused(const ralloc_region_t& region);
   zx_status_t CommitRegion(const ralloc_region_t& region);
 
+  void EnsureSteppingTowardOptimalProtectedRanges();
+  void StepTowardOptimalProtectedRanges(async_dispatcher_t* dispatcher, async::TaskBase* task,
+                                        zx_status_t status);
+
+  void DumpRanges() const;
+
   Owner* const parent_device_{};
+  async_dispatcher_t* dispatcher_{};
   const char* const allocation_name_{};
   const uint64_t pool_id_{};
   char child_name_[ZX_MAX_NAME_LEN] = {};
@@ -184,17 +244,45 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   zx::vmo contiguous_vmo_;
   zx::pmt pool_pmt_;
   RegionAllocator region_allocator_;
+  uint64_t allocated_bytes_ = 0;
+
+  // We run protected_ranges_ in the same [0, size_) space as region_allocator_, and convert to
+  // physical ranges in protected_ranges_control_ (adding phys_start_).
+  std::optional<protected_ranges::ProtectedRanges> protected_ranges_;
+  // When allocating/deallocating a buffer, we immediately make the necessary/possible changes via
+  // protection_ranges_ to make that buffer space usable/best-effort-reclaimable, but to really
+  // optimize the protection ranges we need to spread out the changes in time to avoid churning all
+  // the loaned pages at once.  This timer does that.
+  async::TaskMethod<ContiguousPooledMemoryAllocator,
+                    &ContiguousPooledMemoryAllocator::StepTowardOptimalProtectedRanges>
+      step_toward_optimal_protected_ranges_{this};
+  // We effectively reset the timer any time there's new allocate/deallocate activity, since that
+  // activity is also churn in some sense, so we avoid compounding that churn with optimizing
+  // steps until more time has passed, even if the timer had previously been set to go off soon.
+  zx::time step_toward_optimal_protected_ranges_min_time_ = zx::time::infinite_past();
+  // The bottom edge of protected_ranges_ uses protected_ranges_control_ to effect actual changes.
+  // This delegates to ContiguousPooledMemoryAllocator or Device (and then SecureMem) to do the
+  // changes.
+  std::optional<RangesControl> protected_ranges_control_;
+
   // From parent_vmo handle to std::unique_ptr<>
   std::map<zx_handle_t, RegionData> regions_;
   zx_paddr_t phys_start_{};
   uint64_t size_{};
-  bool is_cpu_accessible_{};
-  // Based on the VMO being a normal contiguous VMO (not a physical VMO), and the VMO being
-  // CPU-accessible (for now).
+  // True if the CPU can always touch these pages.  False if these pages are under a HW protected
+  // range at least sometimes.
+  bool is_always_cpu_accessible_{};
+  // True if the CPU can sometimes touch these pages.  False if these pages are under a HW protected
+  // range 100% of the time).
+  bool is_ever_cpu_accessible_{};
+  // True if the VMO is a normal contiguous VMO.  False if the VMO is a physical VMO, which doesn't
+  // support decommit (and we don't need it to, since a physical VMO is only use when
+  // !is_ever_cpu_accessible_).
   bool can_decommit_{};
   bool is_ready_{};
   // True if the allocator can be deleted after it's marked ready.
   bool can_be_torn_down_{};
+  bool is_setup_unused_pages_called_{};
 
   uint64_t failed_guard_region_checks_{};
 
@@ -245,7 +333,6 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   bool unused_pages_guarded_ = false;
   zx::duration unused_page_check_cycle_period_ = kDefaultUnusedPageCheckCyclePeriod;
   uint64_t unused_check_phase_ = 0;
-  uint8_t* unused_check_mapping_ = nullptr;
   async::TaskMethod<ContiguousPooledMemoryAllocator,
                     &ContiguousPooledMemoryAllocator::CheckUnusedPagesCallback>
       unused_checker_{this};
@@ -253,6 +340,11 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
                     &ContiguousPooledMemoryAllocator::CheckUnusedRecentlyPagesCallback>
       unused_recently_checker_{this};
   SysmemMetrics& metrics_;
+
+  // Regardless of is_ever_cpu_accessible_, we create a mapping of the whole vmo.  When
+  // is_always_cpu_accessible_ we can use the mapping to zero new buffers.  When
+  // is_ever_cpu_accessible_ we can use the mapping to write and check patterns in unused pages.
+  uint8_t* mapping_ = nullptr;
 
   // While we'll typically pattern only 1 page per pattern period and adjust the pattern period to
   // get the % we want, being able to vary this might potentially help catch a suspected problem
@@ -275,6 +367,11 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   int32_t deleted_regions_next_ = 0;
   // Only allocate if we'll be checking unused pages.
   std::vector<DeletedRegion> deleted_regions_;
+
+  // This is Zircon's zero page mapped a few times, read-only.
+  uint64_t zero_page_vmo_size_ = fbl::round_up(64ull * 1024, zx_system_get_page_size());
+  zx::vmo zero_page_vmo_;
+  uint8_t* zero_page_vmo_base_ = nullptr;
 };
 
 }  // namespace sysmem_driver

@@ -33,7 +33,11 @@
 #include "contiguous_pooled_memory_allocator.h"
 #include "driver.h"
 #include "external_memory_allocator.h"
+#include "fidl/fuchsia.sysmem/cpp/markers.h"
+#include "fidl/fuchsia.sysmem/cpp/wire_types.h"
+#include "lib/ddk/debug.h"
 #include "lib/ddk/driver.h"
+#include "lib/fidl/llcpp/arena.h"
 #include "macros.h"
 #include "src/devices/sysmem/metrics/metrics.cb.h"
 
@@ -362,8 +366,122 @@ TableSet& Device::table_set() { return table_set_; }
 
 SysmemMetrics& Device::metrics() { return metrics_; }
 
+protected_ranges::ProtectedRangesCoreControl& Device::protected_ranges_core_control(
+    fuchsia_sysmem2::wire::HeapType heap_type) {
+  std::lock_guard checker(*loop_checker_);
+  ZX_DEBUG_ASSERT(secure_mem_controls_.find(heap_type) != secure_mem_controls_.end());
+  return secure_mem_controls_[heap_type];
+}
+
+bool Device::SecureMemControl::IsDynamic() { return is_dynamic; }
+
+uint64_t Device::SecureMemControl::GetRangeGranularity() { return range_granularity; }
+
+uint64_t Device::SecureMemControl::MaxRangeCount() { return max_range_count; }
+
+bool Device::SecureMemControl::HasModProtectedRange() { return has_mod_protected_range; }
+
+void Device::SecureMemControl::AddProtectedRange(const protected_ranges::Range& range) {
+  std::lock_guard checker(*parent->loop_checker_);
+  ZX_DEBUG_ASSERT(parent->secure_mem_);
+  fidl::Arena allocator;
+  fuchsia_sysmem::wire::SecureHeapAndRange secure_heap_and_range(allocator);
+  secure_heap_and_range.set_heap(allocator, static_cast<fuchsia_sysmem::wire::HeapType>(heap_type));
+  fuchsia_sysmem::wire::SecureHeapRange secure_heap_range(allocator);
+  secure_heap_range.set_physical_address(allocator, range.begin());
+  secure_heap_range.set_size_bytes(allocator, range.length());
+  secure_heap_and_range.set_range(allocator, std::move(secure_heap_range));
+  auto result =
+      fidl::WireCall<fuchsia_sysmem::SecureMem>(zx::unowned_channel(parent->secure_mem_->channel()))
+          ->AddSecureHeapPhysicalRange(std::move(secure_heap_and_range));
+  // If we lose the ability to control protected memory ranges ... reboot.
+  ZX_ASSERT(result.ok());
+  if (result->result.is_err()) {
+    LOG(ERROR, "AddSecureHeapPhysicalRange() failed - status: %d", result->result.err());
+  }
+  ZX_ASSERT(!result->result.is_err());
+}
+
+void Device::SecureMemControl::DelProtectedRange(const protected_ranges::Range& range) {
+  std::lock_guard checker(*parent->loop_checker_);
+  ZX_DEBUG_ASSERT(parent->secure_mem_);
+  fidl::Arena allocator;
+  fuchsia_sysmem::wire::SecureHeapAndRange secure_heap_and_range(allocator);
+  secure_heap_and_range.set_heap(allocator, static_cast<fuchsia_sysmem::wire::HeapType>(heap_type));
+  fuchsia_sysmem::wire::SecureHeapRange secure_heap_range(allocator);
+  secure_heap_range.set_physical_address(allocator, range.begin());
+  secure_heap_range.set_size_bytes(allocator, range.length());
+  secure_heap_and_range.set_range(allocator, std::move(secure_heap_range));
+  auto result =
+      fidl::WireCall<fuchsia_sysmem::SecureMem>(zx::unowned_channel(parent->secure_mem_->channel()))
+          ->DeleteSecureHeapPhysicalRange(std::move(secure_heap_and_range));
+  // If we lose the ability to control protected memory ranges ... reboot.
+  ZX_ASSERT(result.ok());
+  if (result->result.is_err()) {
+    LOG(ERROR, "DeleteSecureHeapPhysicalRange() failed - status: %d", result->result.err());
+  }
+  ZX_ASSERT(!result->result.is_err());
+}
+
+void Device::SecureMemControl::ModProtectedRange(const protected_ranges::Range& old_range,
+                                                 const protected_ranges::Range& new_range) {
+  if (new_range.end() != old_range.end() && new_range.begin() != old_range.begin()) {
+    LOG(INFO,
+        "new_range.end(): %" PRIx64 " old_range.end(): %" PRIx64 " new_range.begin(): %" PRIx64
+        " old_range.begin(): %" PRIx64,
+        new_range.end(), old_range.end(), new_range.begin(), old_range.begin());
+    ZX_PANIC("INVALID RANGE MODIFICATION\n");
+  }
+
+  std::lock_guard checker(*parent->loop_checker_);
+  ZX_DEBUG_ASSERT(parent->secure_mem_);
+  fidl::Arena allocator;
+  fuchsia_sysmem::wire::SecureHeapAndRangeModification modification(allocator);
+  modification.set_heap(allocator, static_cast<fuchsia_sysmem::wire::HeapType>(heap_type));
+  fuchsia_sysmem::wire::SecureHeapRange range_old(allocator);
+  range_old.set_physical_address(allocator, old_range.begin());
+  range_old.set_size_bytes(allocator, old_range.length());
+  fuchsia_sysmem::wire::SecureHeapRange range_new(allocator);
+  range_new.set_physical_address(allocator, new_range.begin());
+  range_new.set_size_bytes(allocator, new_range.length());
+  modification.set_old_range(allocator, std::move(range_old));
+  modification.set_new_range(allocator, std::move(range_new));
+  auto result =
+      fidl::WireCall<fuchsia_sysmem::SecureMem>(zx::unowned_channel(parent->secure_mem_->channel()))
+          ->ModifySecureHeapPhysicalRange(std::move(modification));
+  // If we lose the ability to control protected memory ranges ... reboot.
+  ZX_ASSERT(result.ok());
+  if (result->result.is_err()) {
+    LOG(ERROR, "ModifySecureHeapPhysicalRange() failed - status: %d", result->result.err());
+  }
+  ZX_ASSERT(!result->result.is_err());
+}
+
+void Device::SecureMemControl::ZeroProtectedSubRange(bool is_covering_range_explicit,
+                                                     const protected_ranges::Range& range) {
+  std::lock_guard checker(*parent->loop_checker_);
+  ZX_DEBUG_ASSERT(parent->secure_mem_);
+  fidl::Arena allocator;
+  fuchsia_sysmem::wire::SecureHeapAndRange secure_heap_and_range(allocator);
+  secure_heap_and_range.set_heap(allocator, static_cast<fuchsia_sysmem::wire::HeapType>(heap_type));
+  fuchsia_sysmem::wire::SecureHeapRange secure_heap_range(allocator);
+  secure_heap_range.set_physical_address(allocator, range.begin());
+  secure_heap_range.set_size_bytes(allocator, range.length());
+  secure_heap_and_range.set_range(allocator, std::move(secure_heap_range));
+  auto result =
+      fidl::WireCall<fuchsia_sysmem::SecureMem>(zx::unowned_channel(parent->secure_mem_->channel()))
+          ->ZeroSubRange(is_covering_range_explicit, std::move(secure_heap_and_range));
+  // If we lose the ability to control protected memory ranges ... reboot.
+  ZX_ASSERT(result.ok());
+  if (result->result.is_err()) {
+    LOG(ERROR, "ZeroSubRange() failed - status: %d", result->result.err());
+  }
+  ZX_ASSERT(!result->result.is_err());
+}
+
 zx_status_t Device::Bind() {
   std::lock_guard checker(*loop_checker_);
+
   // Put everything under a node called "sysmem" because there's currently there's not a simple way
   // to distinguish (using a selector) which driver inspect information is coming from.
   sysmem_root_ = inspector_.GetRoot().CreateChild("sysmem");
@@ -438,12 +556,14 @@ zx_status_t Device::Bind() {
   }
 
   if (contiguous_memory_size) {
-    constexpr bool kIsCpuAccessible = true;
+    constexpr bool kIsAlwaysCpuAccessible = true;
+    constexpr bool kIsEverCpuAccessible = true;
     constexpr bool kIsReady = true;
     constexpr bool kCanBeTornDown = true;
     auto pooled_allocator = std::make_unique<ContiguousPooledMemoryAllocator>(
         this, "SysmemContiguousPool", &heaps_, fuchsia_sysmem_HeapType_SYSTEM_RAM,
-        contiguous_memory_size, kIsCpuAccessible, kIsReady, kCanBeTornDown, loop_.dispatcher());
+        contiguous_memory_size, kIsAlwaysCpuAccessible, kIsEverCpuAccessible, kIsReady,
+        kCanBeTornDown, loop_.dispatcher());
     if (pooled_allocator->Init() != ZX_OK) {
       DRIVER_ERROR("Contiguous system ram allocator initialization failed");
       return ZX_ERR_NO_MEMORY;
@@ -468,13 +588,15 @@ zx_status_t Device::Bind() {
 
   // TODO: Separate protected memory allocator into separate driver or library
   if (pdev_device_info_vid_ == PDEV_VID_AMLOGIC && protected_memory_size > 0) {
-    constexpr bool kIsCpuAccessible = false;
+    constexpr bool kIsAlwaysCpuAccessible = false;
+    constexpr bool kIsEverCpuAccessible = true;
     constexpr bool kIsReady = false;
     // We have no way to tear down secure memory.
     constexpr bool kCanBeTornDown = false;
     auto amlogic_allocator = std::make_unique<ContiguousPooledMemoryAllocator>(
         this, "SysmemAmlogicProtectedPool", &heaps_, fuchsia_sysmem_HeapType_AMLOGIC_SECURE,
-        protected_memory_size, kIsCpuAccessible, kIsReady, kCanBeTornDown, loop_.dispatcher());
+        protected_memory_size, kIsAlwaysCpuAccessible, kIsEverCpuAccessible, kIsReady,
+        kCanBeTornDown, loop_.dispatcher());
     // Request 64kB alignment because the hardware can only modify protections along 64kB
     // boundaries.
     status = amlogic_allocator->Init(16);
@@ -482,7 +604,8 @@ zx_status_t Device::Bind() {
       DRIVER_ERROR("Failed to init allocator for amlogic protected memory: %d", status);
       return status;
     }
-    amlogic_allocator->SetupUnusedPages();
+    // For !is_cpu_accessible_, we don't call amlogic_allocator->SetupUnusedPages() until the start
+    // of set_ready().
     secure_allocators_[fuchsia_sysmem2::wire::HeapType::kAmlogicSecure] = amlogic_allocator.get();
     allocators_[fuchsia_sysmem2::wire::HeapType::kAmlogicSecure] = std::move(amlogic_allocator);
   }
@@ -655,8 +778,9 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
                 // listens for suspend(mexec) so that soft reboot can succeed.  If that driver has
                 // failed, intentionally force a hard reboot here to get back to a known-good state.
                 //
-                // TODO(dustingreen): If there's any more direct way to intentionally trigger a hard
-                // reboot, that would probably be better here.
+                // TODO(fxbug.dev/98039): When there's any more direct/immediate way to
+                // intentionally trigger a hard reboot, switch to that (or just remove this TODO
+                // when sysmem terminating directly leads to a hard reboot).
                 ZX_PANIC(
                     "secure_mem_ connection unexpectedly lost; secure mem in unknown state; hard "
                     "reboot");
@@ -679,48 +803,44 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
         ZX_DEBUG_ASSERT(secure_mem_);
 
         // At this point secure_allocators_ has only the secure heaps that are configured via sysmem
-        // (not those configured via the TEE), and the memory for these is not yet protected.  Tell
-        // the TEE about these.
-        fuchsia_sysmem::wire::PhysicalSecureHeaps sysmem_configured_heaps;
+        // (not those configured via the TEE), and the memory for these is not yet protected.  Get
+        // the SecureMem properties for these.  At some point in the future it _may_ make sense to
+        // have connections to more than one SecureMem driver, but for now we assume that a single
+        // SecureMem connection is handling all the secure heaps.  We don't actually protect any
+        // range(s) until later.
         for (const auto& [heap_type, allocator] : secure_allocators_) {
-          uint64_t base;
-          uint64_t size;
-          status = allocator->GetPhysicalMemoryInfo(&base, &size);
-          // Should be impossible for this to fail for now.
-          ZX_ASSERT(status == ZX_OK);
-          LOG(DEBUG,
-              "allocator.GetPhysicalMemoryInfo() heap_type: %08lx base: %016" PRIx64
-              " size: %016" PRIx64,
-              static_cast<uint64_t>(heap_type), base, size);
-
-          fuchsia_sysmem::wire::PhysicalSecureHeap& heap =
-              sysmem_configured_heaps.heaps[sysmem_configured_heaps.heaps_count];
-          heap.heap = static_cast<fuchsia_sysmem::wire::HeapType>(heap_type);
-          heap.physical_address = base;
-          heap.size_bytes = size;
-          ++sysmem_configured_heaps.heaps_count;
-        }
-        auto set_result =
-            fidl::WireCall<fuchsia_sysmem::SecureMem>(zx::unowned_channel(secure_mem_->channel()))
-                ->SetPhysicalSecureHeaps(std::move(sysmem_configured_heaps));
-        // For now the FIDL IPC failing is fatal.  Among the reasons is without that
-        // call succeeding, we haven't told the HW to secure/protect the physical
-        // range. However we still allow it to fail if the secure mem device
-        // unregistered itself.
-        // For now it could return an error on sherlock if the bootloader is old, so
-        // in that case just don't mark the allocators as ready.
-        if (!set_result.ok()) {
-          ZX_ASSERT(!*close_is_abort);
-          return;
-        }
-        if (set_result->result.is_err()) {
-          LOG(WARNING, "Unable to set physical secure heaps. Status: %d", set_result->result.err());
-          return;
-        }
-
-        for (const auto& [heap_type, allocator] : secure_allocators_) {
-          // The TEE has now told the HW about this heap's physical range being secure/protected.
-          allocator->set_ready();
+          auto get_properties_result =
+              fidl::WireCall<fuchsia_sysmem::SecureMem>(zx::unowned_channel(secure_mem_->channel()))
+                  ->GetPhysicalSecureHeapProperties(
+                      static_cast<fuchsia_sysmem::wire::HeapType>(heap_type));
+          if (!get_properties_result.ok()) {
+            ZX_ASSERT(!*close_is_abort);
+            return;
+          }
+          if (get_properties_result->result.is_err()) {
+            LOG(WARNING, "GetPhysicalSecureHeapProperties() failed - status: %d",
+                get_properties_result->result.err());
+            // Don't call set_ready() on secure_allocators_.  Eg. this can happen if securemem TA is
+            // not found.
+            return;
+          }
+          ZX_ASSERT(get_properties_result->result.is_response());
+          const fuchsia_sysmem::wire::SecureHeapProperties& properties =
+              get_properties_result->result.response().properties;
+          ZX_ASSERT(properties.has_heap());
+          ZX_ASSERT(properties.heap() == static_cast<fuchsia_sysmem::wire::HeapType>(heap_type));
+          ZX_ASSERT(properties.has_dynamic_protection_ranges());
+          ZX_ASSERT(properties.has_protected_range_granularity());
+          ZX_ASSERT(properties.has_max_protected_range_count());
+          ZX_ASSERT(properties.has_is_mod_protected_range_available());
+          SecureMemControl control;
+          control.heap_type = heap_type;
+          control.parent = this;
+          control.is_dynamic = properties.dynamic_protection_ranges();
+          control.max_range_count = properties.max_protected_range_count();
+          control.range_granularity = properties.protected_range_granularity();
+          control.has_mod_protected_range = properties.is_mod_protected_range_available();
+          secure_mem_controls_.emplace(std::make_pair<>(heap_type, std::move(control)));
         }
 
         // Now we get the secure heaps that are configured via the TEE.
@@ -728,35 +848,73 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
             fidl::WireCall<fuchsia_sysmem::SecureMem>(zx::unowned_channel(secure_mem_->channel()))
                 ->GetPhysicalSecureHeaps();
         if (!get_result.ok()) {
-          // For now this is fatal, since this case is very unexpected, and in this case rebooting
-          // is the most plausible way to get back to a working state anyway.
+          // For now this is fatal unless explicitly unregistered, since this case is very
+          // unexpected, and in this case rebooting is the most plausible way to get back to a
+          // working state anyway.
           ZX_ASSERT(!*close_is_abort);
           return;
         }
+        if (get_result->result.is_err()) {
+          LOG(WARNING, "GetPhysicalSecureHeaps() failed - status: %d", get_result->result.err());
+          // Don't call set_ready() on secure_allocators_.  Eg. this can happen if securemem TA is
+          // not found.
+          return;
+        }
         ZX_ASSERT(get_result->result.is_response());
-        const fuchsia_sysmem::wire::PhysicalSecureHeaps& tee_configured_heaps =
+        const fuchsia_sysmem::wire::SecureHeapsAndRanges& tee_configured_heaps =
             get_result->result.response().heaps;
-
-        for (uint32_t heap_index = 0; heap_index < tee_configured_heaps.heaps_count; ++heap_index) {
-          const fuchsia_sysmem::wire::PhysicalSecureHeap& heap =
-              tee_configured_heaps.heaps[heap_index];
-          constexpr bool kIsCpuAccessible = false;
-          constexpr bool kIsReady = true;
+        ZX_ASSERT(tee_configured_heaps.has_heaps());
+        ZX_ASSERT(tee_configured_heaps.heaps().count() != 0);
+        for (uint32_t heap_index = 0; heap_index < tee_configured_heaps.heaps().count();
+             ++heap_index) {
+          const fuchsia_sysmem::wire::SecureHeapAndRanges& heap =
+              tee_configured_heaps.heaps()[heap_index];
+          ZX_ASSERT(heap.has_heap());
+          ZX_ASSERT(heap.has_ranges());
+          // A tee-configured heap with multiple ranges can be specified by the protocol but is not
+          // currently supported by sysmem.
+          ZX_ASSERT(heap.ranges().count() == 1);
+          // For now we assume that all TEE-configured heaps are protected full-time, and that they
+          // start fully protected.
+          constexpr bool kIsAlwaysCpuAccessible = false;
+          constexpr bool kIsEverCpuAccessible = false;
+          constexpr bool kIsReady = false;
           constexpr bool kCanBeTornDown = true;
+          const fuchsia_sysmem::wire::SecureHeapRange& heap_range = heap.ranges()[0];
           auto secure_allocator = std::make_unique<ContiguousPooledMemoryAllocator>(
-              this, "tee_secure", &heaps_, static_cast<uint64_t>(heap.heap), heap.size_bytes,
-              kIsCpuAccessible, kIsReady, kCanBeTornDown, loop_.dispatcher());
-          status = secure_allocator->InitPhysical(heap.physical_address);
+              this, "tee_secure", &heaps_, static_cast<uint64_t>(heap.heap()),
+              heap_range.size_bytes(), kIsAlwaysCpuAccessible, kIsEverCpuAccessible, kIsReady,
+              kCanBeTornDown, loop_.dispatcher());
+          status = secure_allocator->InitPhysical(heap_range.physical_address());
           // A failing status is fatal for now.
           ZX_ASSERT(status == ZX_OK);
           LOG(DEBUG,
               "created secure allocator: heap_type: %08lx base: %016" PRIx64 " size: %016" PRIx64,
-              static_cast<uint64_t>(heap.heap), heap.physical_address, heap.size_bytes);
-          auto heap_type = static_cast<fuchsia_sysmem2::wire::HeapType>(heap.heap);
+              static_cast<uint64_t>(heap.heap()), heap_range.physical_address(),
+              heap_range.size_bytes());
+          auto heap_type = static_cast<fuchsia_sysmem2::wire::HeapType>(heap.heap());
+
+          // The only usage of SecureMemControl for a TEE-configured heap is to do ZeroSubRange(),
+          // so field values of this SecureMemControl are somewhat degenerate (eg. VDEC).
+          SecureMemControl control;
+          control.heap_type = heap_type;
+          control.parent = this;
+          control.is_dynamic = false;
+          control.max_range_count = 0;
+          control.range_granularity = 0;
+          control.has_mod_protected_range = false;
+          secure_mem_controls_.emplace(std::make_pair<>(heap_type, std::move(control)));
+
           ZX_ASSERT(secure_allocators_.find(heap_type) == secure_allocators_.end());
           secure_allocators_[heap_type] = secure_allocator.get();
           ZX_ASSERT(allocators_.find(heap_type) == allocators_.end());
           allocators_[heap_type] = std::move(secure_allocator);
+        }
+
+        for (const auto& [heap_type, allocator] : secure_allocators_) {
+          // The secure_mem_ connection is ready to protect ranges on demand to cover this heap's
+          // used ranges.  There are no used ranges yet since the heap wasn't ready until now.
+          allocator->set_ready();
         }
 
         LOG(DEBUG, "sysmem RegisterSecureMem() done (async)");

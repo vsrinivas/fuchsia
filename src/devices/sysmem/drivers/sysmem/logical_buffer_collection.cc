@@ -1729,6 +1729,7 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
       }
     }
   }
+
   return true;
 }
 
@@ -2788,7 +2789,7 @@ fpromise::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
   //
   // If we find this is taking too long, we could ask the allocator if it's already providing
   // pre-zeroed VMOs.  And/or zero allocator backing space async during deallocation, but wait on
-  // deallocations to be done before failing an new allocation.
+  // deallocations to be done before failing a new allocation.
   //
   // TODO(fxbug.dev/34590): Zero secure/protected VMOs.
   const auto& heap_properties = allocator->heap_properties();

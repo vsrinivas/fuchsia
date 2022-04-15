@@ -201,13 +201,7 @@ const fuchsia.sysmem/MAX_COUNT_BUFFER_MEMORY_CONSTRAINTS_HEAP_PERMITTED uint32 3
 const fuchsia.sysmem/MAX_COUNT_DUPLICATES uint32 64
 const fuchsia.sysmem/MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES uint32 32
 const fuchsia.sysmem/MAX_HEAPS_COUNT uint32 32
-struct/member fuchsia.sysmem/PhysicalSecureHeap.heap fuchsia.sysmem/HeapType
-struct/member fuchsia.sysmem/PhysicalSecureHeap.physical_address uint64
-struct/member fuchsia.sysmem/PhysicalSecureHeap.size_bytes uint64
-struct fuchsia.sysmem/PhysicalSecureHeap
-struct/member fuchsia.sysmem/PhysicalSecureHeaps.heaps array<fuchsia.sysmem/PhysicalSecureHeap,32>
-struct/member fuchsia.sysmem/PhysicalSecureHeaps.heaps_count uint32
-struct fuchsia.sysmem/PhysicalSecureHeaps
+const fuchsia.sysmem/MAX_RANGES_COUNT uint32 128
 struct/member fuchsia.sysmem/PixelFormat.format_modifier fuchsia.sysmem/FormatModifier
 struct/member fuchsia.sysmem/PixelFormat.has_format_modifier bool
 struct/member fuchsia.sysmem/PixelFormat.type fuchsia.sysmem/PixelFormatType
@@ -231,18 +225,60 @@ enum/member fuchsia.sysmem/PixelFormatType.RGB565 109
 enum/member fuchsia.sysmem/PixelFormatType.YUY2 105
 enum/member fuchsia.sysmem/PixelFormatType.YV12 107
 strict enum fuchsia.sysmem/PixelFormatType uint32
+table/member fuchsia.sysmem/SecureHeapAndRange.heap fuchsia.sysmem/HeapType
+table/member fuchsia.sysmem/SecureHeapAndRange.range fuchsia.sysmem/SecureHeapRange
+table fuchsia.sysmem/SecureHeapAndRange
+table/member fuchsia.sysmem/SecureHeapAndRangeModification.heap fuchsia.sysmem/HeapType
+table/member fuchsia.sysmem/SecureHeapAndRangeModification.new_range fuchsia.sysmem/SecureHeapRange
+table/member fuchsia.sysmem/SecureHeapAndRangeModification.old_range fuchsia.sysmem/SecureHeapRange
+table fuchsia.sysmem/SecureHeapAndRangeModification
+table/member fuchsia.sysmem/SecureHeapAndRanges.heap fuchsia.sysmem/HeapType
+table/member fuchsia.sysmem/SecureHeapAndRanges.ranges vector<fuchsia.sysmem/SecureHeapRange>:128
+table fuchsia.sysmem/SecureHeapAndRanges
+table/member fuchsia.sysmem/SecureHeapProperties.dynamic_protection_ranges bool
+table/member fuchsia.sysmem/SecureHeapProperties.heap fuchsia.sysmem/HeapType
+table/member fuchsia.sysmem/SecureHeapProperties.is_mod_protected_range_available bool
+table/member fuchsia.sysmem/SecureHeapProperties.max_protected_range_count uint64
+table/member fuchsia.sysmem/SecureHeapProperties.protected_range_granularity uint32
+table fuchsia.sysmem/SecureHeapProperties
+table/member fuchsia.sysmem/SecureHeapRange.physical_address uint64
+table/member fuchsia.sysmem/SecureHeapRange.size_bytes uint64
+table fuchsia.sysmem/SecureHeapRange
+table/member fuchsia.sysmem/SecureHeapsAndRanges.heaps vector<fuchsia.sysmem/SecureHeapAndRanges>:32
+table fuchsia.sysmem/SecureHeapsAndRanges
+protocol/member fuchsia.sysmem/SecureMem.AddSecureHeapPhysicalRange(fuchsia.sysmem/SecureHeapAndRange heap_range) -> (fuchsia.sysmem/SecureMem_AddSecureHeapPhysicalRange_Result result)
+protocol/member fuchsia.sysmem/SecureMem.DeleteSecureHeapPhysicalRange(fuchsia.sysmem/SecureHeapAndRange heap_range) -> (fuchsia.sysmem/SecureMem_DeleteSecureHeapPhysicalRange_Result result)
+protocol/member fuchsia.sysmem/SecureMem.GetPhysicalSecureHeapProperties(fuchsia.sysmem/HeapType heap) -> (fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Result result)
 protocol/member fuchsia.sysmem/SecureMem.GetPhysicalSecureHeaps() -> (fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Result result)
-protocol/member fuchsia.sysmem/SecureMem.SetPhysicalSecureHeaps(fuchsia.sysmem/PhysicalSecureHeaps heaps) -> (fuchsia.sysmem/SecureMem_SetPhysicalSecureHeaps_Result result)
+protocol/member fuchsia.sysmem/SecureMem.ModifySecureHeapPhysicalRange(fuchsia.sysmem/SecureHeapAndRangeModification range_modification) -> (fuchsia.sysmem/SecureMem_ModifySecureHeapPhysicalRange_Result result)
+protocol/member fuchsia.sysmem/SecureMem.ZeroSubRange(bool is_covering_range_explicit,fuchsia.sysmem/SecureHeapAndRange heap_range) -> (fuchsia.sysmem/SecureMem_ZeroSubRange_Result result)
 protocol fuchsia.sysmem/SecureMem
-struct/member fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Response.heaps fuchsia.sysmem/PhysicalSecureHeaps
+struct fuchsia.sysmem/SecureMem_AddSecureHeapPhysicalRange_Response
+union/member fuchsia.sysmem/SecureMem_AddSecureHeapPhysicalRange_Result.err int32
+union/member fuchsia.sysmem/SecureMem_AddSecureHeapPhysicalRange_Result.response fuchsia.sysmem/SecureMem_AddSecureHeapPhysicalRange_Response
+strict union fuchsia.sysmem/SecureMem_AddSecureHeapPhysicalRange_Result
+struct fuchsia.sysmem/SecureMem_DeleteSecureHeapPhysicalRange_Response
+union/member fuchsia.sysmem/SecureMem_DeleteSecureHeapPhysicalRange_Result.err int32
+union/member fuchsia.sysmem/SecureMem_DeleteSecureHeapPhysicalRange_Result.response fuchsia.sysmem/SecureMem_DeleteSecureHeapPhysicalRange_Response
+strict union fuchsia.sysmem/SecureMem_DeleteSecureHeapPhysicalRange_Result
+struct/member fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Response.properties fuchsia.sysmem/SecureHeapProperties
+struct fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Response
+union/member fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Result.err int32
+union/member fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Result.response fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Response
+strict union fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Result
+struct/member fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Response.heaps fuchsia.sysmem/SecureHeapsAndRanges
 struct fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Response
 union/member fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Result.err int32
 union/member fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Result.response fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Response
 strict union fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Result
-struct fuchsia.sysmem/SecureMem_SetPhysicalSecureHeaps_Response
-union/member fuchsia.sysmem/SecureMem_SetPhysicalSecureHeaps_Result.err int32
-union/member fuchsia.sysmem/SecureMem_SetPhysicalSecureHeaps_Result.response fuchsia.sysmem/SecureMem_SetPhysicalSecureHeaps_Response
-strict union fuchsia.sysmem/SecureMem_SetPhysicalSecureHeaps_Result
+struct fuchsia.sysmem/SecureMem_ModifySecureHeapPhysicalRange_Response
+union/member fuchsia.sysmem/SecureMem_ModifySecureHeapPhysicalRange_Result.err int32
+union/member fuchsia.sysmem/SecureMem_ModifySecureHeapPhysicalRange_Result.response fuchsia.sysmem/SecureMem_ModifySecureHeapPhysicalRange_Response
+strict union fuchsia.sysmem/SecureMem_ModifySecureHeapPhysicalRange_Result
+struct fuchsia.sysmem/SecureMem_ZeroSubRange_Response
+union/member fuchsia.sysmem/SecureMem_ZeroSubRange_Result.err int32
+union/member fuchsia.sysmem/SecureMem_ZeroSubRange_Result.response fuchsia.sysmem/SecureMem_ZeroSubRange_Response
+strict union fuchsia.sysmem/SecureMem_ZeroSubRange_Result
 struct/member fuchsia.sysmem/SingleBufferInfo.buffer fuchsia.sysmem/VmoBuffer
 struct/member fuchsia.sysmem/SingleBufferInfo.settings fuchsia.sysmem/SingleBufferSettings
 resource struct fuchsia.sysmem/SingleBufferInfo

@@ -40,6 +40,7 @@ source_set("sysmem_common_srcs") {
     "node.cc",
     "node_properties.cc",
     "orphaned_node.cc",
+    "protected_ranges.cc",
     "sysmem_metrics.cc",
     "table_holder.cc",
     "table_set.cc",
@@ -144,6 +145,7 @@ test("sysmem-unittest-bin") {
     "test/contiguous_pooled_memory_allocator_test.cc",
     "test/device_test.cc",
     "test/pixel_format_cost_test.cc",
+    "test/protected_ranges_test.cc",
   ]
   include_dirs = [ "." ]
   deps = [

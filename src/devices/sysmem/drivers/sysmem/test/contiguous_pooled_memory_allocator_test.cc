@@ -48,9 +48,11 @@ class ContiguousPooledSystem : public zxtest::Test {
  public:
   ContiguousPooledSystem()
       : allocator_(&fake_owner_, kVmoName, &inspector_.GetRoot(), 0u, kVmoSize * kVmoCount,
-                   true,    // is_cpu_accessible
-                   false,   // is_ready
-                   true) {  // can_be_torn_down
+                   true,       // is_always_cpu_accessible
+                   true,       // is_ever_cpu_accessible
+                   false,      // is_ready
+                   true,       // can_be_torn_down
+                   nullptr) {  // dispatcher
     // nothing else to do here
   }
 
@@ -321,7 +323,8 @@ TEST_F(ContiguousPooledSystem, UnusedGuardPages) {
   // of just asserting that alignment.  For now this will be true based on internal behavior of
   // RegionAllocator, but that's not guaranteed by the RegionAllocator interface contract.
   EXPECT_EQ(0, allocator_.GetVmoRegionOffsetForTest(vmo) %
-               (ContiguousPooledMemoryAllocator::kUnusedGuardPatternPeriodPages * zx_system_get_page_size()));
+                   (ContiguousPooledMemoryAllocator::kUnusedGuardPatternPeriodPages *
+                    zx_system_get_page_size()));
 
   printf("check for spurious pattern check failure...\n");
 
@@ -340,12 +343,16 @@ TEST_F(ContiguousPooledSystem, UnusedGuardPages) {
   uint64_t just_outside_vmo_offset;
   // pick an offset we know is inside the overall allocator space.
   if (vmo_offset) {
-    just_outside_vmo_offset = vmo_offset -
+    just_outside_vmo_offset =
+        vmo_offset -
         ContiguousPooledMemoryAllocator::kUnusedGuardPatternPeriodPages * zx_system_get_page_size();
   } else {
     just_outside_vmo_offset = vmo_offset + kBigVmoSize;
   }
-  ZX_ASSERT(just_outside_vmo_offset % (ContiguousPooledMemoryAllocator::kUnusedGuardPatternPeriodPages * zx_system_get_page_size()) == 0);
+  ZX_ASSERT(just_outside_vmo_offset %
+                (ContiguousPooledMemoryAllocator::kUnusedGuardPatternPeriodPages *
+                 zx_system_get_page_size()) ==
+            0);
   ZX_ASSERT(just_outside_vmo_offset >= 0 && just_outside_vmo_offset < kVmoSize * kVmoCount);
   EXPECT_OK(allocator_.GetPoolVmoForTest().write(&data_to_write, just_outside_vmo_offset,
                                                  sizeof(data_to_write)));

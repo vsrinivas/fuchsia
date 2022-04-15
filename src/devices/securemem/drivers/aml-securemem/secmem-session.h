@@ -24,8 +24,18 @@ class SecmemSession {
 
   ~SecmemSession();
 
-  [[nodiscard]] TEEC_Result ProtectMemoryRange(uint32_t start, uint32_t length, bool is_enable);
+  [[nodiscard]] bool DetectIsAdjustAndSkipDeviceSecureModeUpdateAvailable();
+  // If !DetectIsAdjustAndSkipDeviceSecureModeUpdateAvailable(), is_skip_device_secure_mode_update
+  // must be false.
+  [[nodiscard]] TEEC_Result ProtectMemoryRange(uint32_t start, uint32_t length,
+                                               bool is_enable_protection);
+  [[nodiscard]] TEEC_Result AdjustMemoryRange(uint32_t start, uint32_t length,
+                                              uint32_t adjustment_magnitude, bool at_start,
+                                              bool longer);
+  [[nodiscard]] TEEC_Result ZeroSubRange(bool is_covering_range_explicit, uint32_t start,
+                                         uint32_t length);
   [[nodiscard]] TEEC_Result AllocateSecureMemory(uint32_t* start, uint32_t* length);
+  void DumpRanges();
 
  private:
   static constexpr uint64_t kParameterAlignment = 32u;
@@ -41,9 +51,14 @@ class SecmemSession {
   void OpenSession();
   [[nodiscard]] TEEC_Result InvokeSecmemCommand(uint32_t command,
                                                 std::vector<uint8_t>* cmd_buffer_vec);
+  [[nodiscard]] TEEC_Result InvokeProtectMemory(uint32_t start, uint32_t length,
+                                                uint32_t enable_flags);
 
   uint32_t session_id_;
   fuchsia::tee::ApplicationSyncPtr tee_connection_;
+
+  bool is_detect_called_ = false;
+  bool is_adjust_known_available_ = false;
 };
 
 #endif  // SRC_DEVICES_SECUREMEM_DRIVERS_AML_SECUREMEM_SECMEM_SESSION_H_

@@ -208,8 +208,9 @@ zx_status_t InternalBuffer::Init(const char* name, fuchsia::sysmem::AllocatorSyn
 
   constraints.buffer_memory_constraints.heap_permitted_count = 1;
   if (is_secure_) {
-    // AMLOGIC_SECURE_VDEC is only ever allocated for input buffers, never for internal buffers.
-    // This is "normal" non-VDEC secure memory.  See also secmem TA's ProtectMemory / sysmem.
+    // AMLOGIC_SECURE_VDEC is only ever allocated for input/output buffers, never for internal
+    // buffers.  This is "normal" non-VDEC secure memory.  See also secmem TA's ProtectMemory /
+    // sysmem.
     constraints.buffer_memory_constraints.heap_permitted[0] =
         fuchsia::sysmem::HeapType::AMLOGIC_SECURE;
   } else {

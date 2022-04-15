@@ -89,6 +89,8 @@ class Device final : public DdkDeviceType,
   void CheckForUnbind() override;
   TableSet& table_set() override;
   SysmemMetrics& metrics() override;
+  protected_ranges::ProtectedRangesCoreControl& protected_ranges_core_control(
+      fuchsia_sysmem2::wire::HeapType heap_type) override;
 
   inspect::Node* heap_node() override { return &heaps_; }
 
@@ -218,6 +220,40 @@ class Device final : public DdkDeviceType,
   //
   // TODO(dustingreen): Consider unordered_map for this and some of above.
   std::map<fuchsia_sysmem2::wire::HeapType, MemoryAllocator*> secure_allocators_
+      __TA_GUARDED(*loop_checker_);
+
+  struct SecureMemControl : public protected_ranges::ProtectedRangesCoreControl {
+    // ProtectedRangesCoreControl implementation.  These are essentially backed by
+    // parent->secure_mem_.
+    //
+    // cached
+    bool IsDynamic() override;
+    // cached
+    uint64_t MaxRangeCount() override;
+    // cached
+    uint64_t GetRangeGranularity() override;
+    // cached
+    bool HasModProtectedRange() override;
+    // calls SecureMem driver
+    void AddProtectedRange(const protected_ranges::Range& range) override;
+    // calls SecureMem driver
+    void DelProtectedRange(const protected_ranges::Range& range) override;
+    // calls SecureMem driver
+    void ModProtectedRange(const protected_ranges::Range& old_range,
+                           const protected_ranges::Range& new_range) override;
+    // calls SecureMem driver
+    void ZeroProtectedSubRange(bool is_covering_range_explicit,
+                               const protected_ranges::Range& range) override;
+
+    fuchsia_sysmem2::wire::HeapType heap_type;
+    Device* parent{};
+    bool is_dynamic{};
+    uint64_t range_granularity{};
+    uint64_t max_range_count{};
+    bool has_mod_protected_range{};
+  };
+  // This map has the secure_mem_ properties for each HeapType in secure_allocators_.
+  std::map<fuchsia_sysmem2::wire::HeapType, SecureMemControl> secure_mem_controls_
       __TA_GUARDED(*loop_checker_);
 
   // This flag is used to determine if the closing of the current secure mem

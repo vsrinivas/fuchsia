@@ -14,6 +14,7 @@
 
 #include <map>
 
+#include "protected_ranges.h"
 #include "table_holder.h"
 #include "table_set.h"
 
@@ -34,6 +35,11 @@ class MemoryAllocator {
     virtual void CheckForUnbind() {}
     virtual TableSet& table_set() = 0;
     virtual SysmemMetrics& metrics() = 0;
+    virtual protected_ranges::ProtectedRangesCoreControl& protected_ranges_core_control(
+        fuchsia_sysmem2::wire::HeapType heap_type) {
+      // Avoid requiring unrelated tests to implement.
+      ZX_PANIC("protected_ranges_core_control() not implemented by subclass");
+    }
   };
 
   explicit MemoryAllocator(TableSet& table_set, fuchsia_sysmem2::wire::HeapProperties properties);
