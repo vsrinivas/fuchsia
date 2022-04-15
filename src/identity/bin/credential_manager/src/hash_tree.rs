@@ -211,11 +211,30 @@ impl HashTree {
         }
         sparse_leaf_nodes
     }
+}
 
+pub trait HashTreeStorage {
+    /// Load the hash tree from some internal storage.
+    fn load(&self) -> Result<HashTree, HashTreeError>;
+    /// Store the hash tree in some internal storage.
+    fn store(&self, hash_tree: &HashTree) -> Result<(), HashTreeError>;
+}
+
+pub struct HashTreeStorageCbor {
+    path: String,
+}
+
+impl HashTreeStorageCbor {
+    pub fn new(path: &str) -> Self {
+        Self { path: path.into() }
+    }
+}
+
+impl HashTreeStorage for HashTreeStorageCbor {
     /// Attempts to deserialize the HashTree from the supplied path.
     /// If no file does not exist or is corrupted an error is returned.
-    pub fn load(path: &str) -> Result<HashTree, HashTreeError> {
-        let file = File::open(path).map_err(|_| HashTreeError::DataStoreNotFound)?;
+    fn load(&self) -> Result<HashTree, HashTreeError> {
+        let file = File::open(&self.path).map_err(|_| HashTreeError::DataStoreNotFound)?;
         let format: StoreHashTree =
             serde_cbor::from_reader(file).map_err(|_| HashTreeError::DeserializationFailed)?;
         let mut hash_tree = HashTree::new(format.height, format.children_per_node)?;
@@ -229,11 +248,11 @@ impl HashTree {
         Ok(hash_tree)
     }
 
-    /// Attempts to store the HashTree at the supplied path.
+    /// Attempts to store the HashTree |hash_tree| at the supplied path.
     /// This function only fails if it fails to serialize or write the data.
-    pub fn store(&self, path: &str) -> Result<(), HashTreeError> {
-        let file = File::create(path).map_err(|_| HashTreeError::DataStoreNotFound)?;
-        let format = StoreHashTree::from(self);
+    fn store(&self, hash_tree: &HashTree) -> Result<(), HashTreeError> {
+        let file = File::create(&self.path).map_err(|_| HashTreeError::DataStoreNotFound)?;
+        let format = StoreHashTree::from(hash_tree);
         serde_cbor::to_writer(file, &format).map_err(|_| HashTreeError::SerializationFailed)
     }
 }
@@ -818,7 +837,8 @@ mod test {
         tree.update_leaf_hash(&node_label, hash.clone()).unwrap();
         let tmp_dir = TempDir::new().unwrap();
         let path = tmp_dir.path().join("hash_tree");
-        tree.store(path.to_str().unwrap()).expect("could not store tree");
+        let store = HashTreeStorageCbor::new(path.to_str().unwrap());
+        store.store(&tree).expect("could not store tree");
         let serialized_output = std::fs::read(path.to_str().unwrap()).unwrap();
         assert_eq!(
             serialized_output,
@@ -841,8 +861,9 @@ mod test {
         tree.update_leaf_hash(&node_label, hash.clone()).unwrap();
         let tmp_dir = TempDir::new().unwrap();
         let path = tmp_dir.path().join("hash_tree");
-        tree.store(path.to_str().unwrap()).expect("could not store tree");
-        let loaded_tree = HashTree::load(path.to_str().unwrap()).unwrap();
+        let store = HashTreeStorageCbor::new(path.to_str().unwrap());
+        store.store(&tree).expect("could not store tree");
+        let loaded_tree = store.load().unwrap();
         assert_eq!(loaded_tree.get_leaf_hash(&node_label).expect("hash node"), &hash);
     }
 }

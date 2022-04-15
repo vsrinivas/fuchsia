@@ -7,6 +7,7 @@ mod hash_tree;
 mod label_generator;
 mod lookup_table;
 mod pinweaver;
+mod provision;
 
 use anyhow::{Context, Error};
 use fidl_fuchsia_identity_credential::CredentialManagerRequestStream;
@@ -22,8 +23,10 @@ use std::sync::Arc;
 use crate::{
     credential_manager::CredentialManager,
     diagnostics::{InspectDiagnostics, INSPECTOR},
+    hash_tree::HashTreeStorageCbor,
     lookup_table::{PersistentLookupTable, LOOKUP_TABLE_PATH},
     pinweaver::PinWeaver,
+    provision::provision,
 };
 
 /// The path where the hash tree is stored on disk.
@@ -53,12 +56,16 @@ async fn main() -> Result<(), Error> {
             | fio::OpenFlags::DIRECTORY
             | fio::OpenFlags::CREATE,
     )?;
-    let lookup_table = PersistentLookupTable::new(cred_data);
+
+    let mut lookup_table = PersistentLookupTable::new(cred_data);
     let pinweaver = PinWeaver::new(pinweaver_proxy);
+    let hash_tree_store = HashTreeStorageCbor::new(HASH_TREE_PATH);
+    let hash_tree = provision(&hash_tree_store, &mut lookup_table, &pinweaver)
+        .await
+        .expect("failed to provision credential manager");
     let credential_manager =
-        CredentialManager::new(HASH_TREE_PATH, pinweaver, lookup_table, diagnostics)
-            .await
-            .expect("failed to provision credential manager");
+        CredentialManager::new(pinweaver, hash_tree, lookup_table, hash_tree_store, diagnostics)
+            .await;
 
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(Services::CredentialManager);
@@ -73,9 +80,4 @@ async fn main() -> Result<(), Error> {
     })
     .await;
     Ok(())
-}
-
-#[cfg(test)]
-mod test {
-    // Add tests once we have behavior to test.
 }

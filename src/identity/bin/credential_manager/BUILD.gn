@@ -53,6 +53,7 @@ rustc_binary("bin") {
     "src/lookup_table.rs",
     "src/main.rs",
     "src/pinweaver.rs",
+    "src/provision.rs",
   ]
 }
 

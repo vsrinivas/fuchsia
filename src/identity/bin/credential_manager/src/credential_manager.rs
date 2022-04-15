@@ -5,9 +5,7 @@
 use {
     crate::{
         diagnostics::{Diagnostics, IncomingMethod},
-        hash_tree::{
-            HashTree, HashTreeError, BITS_PER_LEVEL, CHILDREN_PER_NODE, LABEL_LENGTH, TREE_HEIGHT,
-        },
+        hash_tree::{HashTree, HashTreeStorage, LABEL_LENGTH},
         label_generator::Label,
         lookup_table::LookupTable,
         pinweaver::{CredentialMetadata, Hash, Mac, PinWeaverProtocol},
@@ -18,7 +16,7 @@ use {
     },
     fidl_fuchsia_tpm_cr50::TryAuthResponse,
     futures::{lock::Mutex, prelude::*},
-    log::{error, info},
+    log::error,
     std::cell::{RefCell, RefMut},
     std::sync::Arc,
 };
@@ -31,42 +29,44 @@ use {
 /// maintain a |hash_tree| which contains the merkle tree required for
 /// communicating over the PinWeaver protocol. The |hash_tree| is synced to
 /// disk after each operation.
-pub struct CredentialManager<PW, LT, D>
+pub struct CredentialManager<PW, LT, HS, D>
 where
     PW: PinWeaverProtocol,
     LT: LookupTable,
+    HS: HashTreeStorage,
     D: Diagnostics,
 {
     pinweaver: Mutex<PW>,
     hash_tree: RefCell<HashTree>,
     lookup_table: RefCell<LT>,
-    hash_tree_path: String,
+    hash_tree_storage: HS,
     diagnostics: Arc<D>,
 }
 
-impl<PW, LT, D> CredentialManager<PW, LT, D>
+impl<PW, LT, HS, D> CredentialManager<PW, LT, HS, D>
 where
     PW: PinWeaverProtocol,
     LT: LookupTable,
+    HS: HashTreeStorage,
     D: Diagnostics,
 {
     /// Constructs a new |CredentialManager| that communicates with the |PinWeaverProxy|
     /// to add, delete and check credentials storing the relevant data in the |hash_tree|
     /// and |lookup_table|.
     pub async fn new(
-        hash_tree_path: &str,
         pinweaver: PW,
-        mut lookup_table: LT,
+        hash_tree: HashTree,
+        lookup_table: LT,
+        hash_tree_storage: HS,
         diagnostics: Arc<D>,
-    ) -> Result<Self, CredentialError> {
-        let hash_tree = Self::provision(hash_tree_path, &mut lookup_table, &pinweaver).await?;
-        Ok(Self {
+    ) -> Self {
+        Self {
             pinweaver: Mutex::new(pinweaver),
             hash_tree: RefCell::new(hash_tree),
             lookup_table: RefCell::new(lookup_table),
-            hash_tree_path: hash_tree_path.to_string(),
+            hash_tree_storage,
             diagnostics,
-        })
+        }
     }
 
     /// Serially process a stream of incoming CredentialManager FIDL requests.
@@ -180,7 +180,9 @@ where
         pinweaver.remove_leaf(&label, mac, h_aux).await?;
         self.lookup_table().delete(&label).await.map_err(|_| CredentialError::InternalError)?;
         self.hash_tree().delete_leaf(&label).map_err(|_| CredentialError::InternalError)?;
-        self.hash_tree().store(&self.hash_tree_path).map_err(|_| CredentialError::InternalError)?;
+        self.hash_tree_storage
+            .store(&self.hash_tree.borrow())
+            .map_err(|_| CredentialError::InternalError)?;
         Ok(())
     }
 
@@ -233,48 +235,10 @@ where
             .write(&label, cred_metadata)
             .await
             .map_err(|_| CredentialError::InternalError)?;
-        self.hash_tree().store(&self.hash_tree_path).map_err(|_| CredentialError::InternalError)?;
+        self.hash_tree_storage
+            .store(&self.hash_tree.borrow())
+            .map_err(|_| CredentialError::InternalError)?;
         Ok(())
-    }
-
-    /// Detects if there is an existing |hash_tree| in which case it will
-    /// load it from disk. If no |hash_tree| exists the |CredentialManager| will
-    /// reset the CR50 via |pinweaver| and create and store a new |hash_tree|.
-    async fn provision(
-        hash_tree_path: &str,
-        lookup_table: &mut LT,
-        pinweaver: &PW,
-    ) -> Result<HashTree, CredentialError> {
-        match HashTree::load(hash_tree_path) {
-            Ok(hash_tree) => Ok(hash_tree),
-            Err(HashTreeError::DataStoreNotFound) => {
-                info!("Could not read hash tree file, resetting");
-                Self::reset_hash_tree(hash_tree_path, lookup_table, pinweaver).await
-            }
-            Err(err) => {
-                // If the existing hash tree fails to deserialize return a fatal error rather than
-                // resetting so we don't destroy data that would be helpful to isolate the problem.
-                // TODO(benwright,jsankey): Reconsider this decision once the system is more mature.
-                error!("Error loading hash tree: {:?}", err);
-                Err(CredentialError::InternalError)
-            }
-        }
-    }
-
-    /// Provisions a new |hash_tree|. This clears the lookup table and then
-    /// calls |PinWeaverProtocol::reset_tree| to reset the CR50. It then
-    /// constructs a new |hash_tree| and persists it to disk.
-    async fn reset_hash_tree(
-        hash_tree_path: &str,
-        lookup_table: &mut LT,
-        pinweaver: &PW,
-    ) -> Result<HashTree, CredentialError> {
-        let hash_tree =
-            HashTree::new(TREE_HEIGHT, CHILDREN_PER_NODE).expect("Unable to create hash tree");
-        lookup_table.reset().await.map_err(|_| CredentialError::InternalError)?;
-        pinweaver.reset_tree(BITS_PER_LEVEL, TREE_HEIGHT).await?;
-        hash_tree.store(hash_tree_path).map_err(|_| CredentialError::InternalError)?;
-        Ok(hash_tree)
     }
 
     /// Convenience function that returns a RefMut to the |hash_tree|.
@@ -294,6 +258,7 @@ mod test {
         super::*,
         crate::{
             diagnostics::FakeDiagnostics,
+            hash_tree::{HashTreeStorageCbor, CHILDREN_PER_NODE, TREE_HEIGHT},
             lookup_table::{LookupTableError, MockLookupTable, ReadResult},
             pinweaver::MockPinWeaverProtocol,
         },
@@ -308,22 +273,27 @@ mod test {
     struct TestParams {
         pub lookup_table: MockLookupTable,
         pub pinweaver: MockPinWeaverProtocol,
+        pub hash_tree: HashTree,
         pub dir: TempDir,
     }
 
     impl TestParams {
         fn default() -> Self {
             let dir = TempDir::new().unwrap();
-            let mut lookup_table = MockLookupTable::new();
-            let mut pinweaver = MockPinWeaverProtocol::new();
-            pinweaver.expect_reset_tree().times(1).returning(|_, _| Ok(Hash::default()));
-            lookup_table.expect_reset().times(1).returning(|| Ok(()));
-            Self { lookup_table, pinweaver, dir }
+            let lookup_table = MockLookupTable::new();
+            let pinweaver = MockPinWeaverProtocol::new();
+            let hash_tree = HashTree::new(TREE_HEIGHT, CHILDREN_PER_NODE).unwrap();
+            Self { lookup_table, pinweaver, hash_tree, dir }
         }
     }
 
     struct TestHarness {
-        cm: CredentialManager<MockPinWeaverProtocol, MockLookupTable, FakeDiagnostics>,
+        cm: CredentialManager<
+            MockPinWeaverProtocol,
+            MockLookupTable,
+            HashTreeStorageCbor,
+            FakeDiagnostics,
+        >,
         diag: Arc<FakeDiagnostics>,
         _dir: TempDir,
     }
@@ -331,15 +301,16 @@ mod test {
     impl TestHarness {
         async fn create(params: TestParams) -> Self {
             let path = params.dir.path().join("hash_tree");
+            let hash_tree_storage = HashTreeStorageCbor::new(path.to_str().unwrap());
             let diag = Arc::new(FakeDiagnostics::new());
             let cm = CredentialManager::new(
-                path.to_str().unwrap(),
                 params.pinweaver,
+                params.hash_tree,
                 params.lookup_table,
+                hash_tree_storage,
                 Arc::clone(&diag),
             )
-            .await
-            .expect("failed to create credential manager");
+            .await;
             Self { cm, diag, _dir: params.dir }
         }
     }
