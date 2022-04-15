@@ -14,6 +14,7 @@ ffx_plugin("ffx_product_bundle") {
 
   deps = [
     "//build/sdk/meta:rust",
+    "//src/developer/ffx/lib/fidl-fuchsia-developer-ffx-ext",
     "//src/developer/ffx/lib/fms:lib",
     "//src/developer/ffx/lib/pbms:lib",
     "//src/lib/gcs:lib",

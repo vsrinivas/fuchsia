@@ -40,6 +40,8 @@ mod gcs;
 mod pbms;
 mod repo_info;
 
+pub use pbms::ProductBundle;
+
 /// For each non-local URL in ffx CONFIG_METADATA, fetch updated info.
 pub async fn update_metadata<W>(verbose: bool, writer: &mut W) -> Result<()>
 where
@@ -168,20 +170,22 @@ pub async fn get_product_data<W>(
     product_url: &url::Url,
     verbose: bool,
     writer: &mut W,
-) -> Result<()>
+) -> Result<Option<ProductBundle>>
 where
     W: Write + Sync,
 {
     if product_url.scheme() == "file" {
         writeln!(writer, "There's no data download necessary for local products.")?;
-        return Ok(());
+        return Ok(None);
     }
     if product_url.scheme() != GS_SCHEME {
         writeln!(writer, "Only GCS downloads are supported at this time.")?;
-        return Ok(());
+        return Ok(None);
     }
-    get_product_data_from_gcs(product_url, verbose, writer).await.context("read pbms entries")?;
-    Ok(())
+    let pb = get_product_data_from_gcs(product_url, verbose, writer)
+        .await
+        .context("read pbms entries")?;
+    Ok(Some(pb))
 }
 
 /// Determine the path to the product data.

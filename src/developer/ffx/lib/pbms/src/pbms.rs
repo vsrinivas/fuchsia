@@ -182,12 +182,22 @@ pub(crate) fn url_sans_fragment(product_url: &url::Url) -> Result<url::Url> {
     Ok(product_url)
 }
 
+/// Description of the product that we downloaded.
+#[derive(Clone, Debug)]
+pub struct ProductBundle {
+    /// The product name.
+    pub product_name: String,
+
+    /// The path to the package repository artifacts.
+    pub repository_path: PathBuf,
+}
+
 /// Helper for `get_product_data()`, see docs there.
 pub(crate) async fn get_product_data_from_gcs<W>(
     product_url: &url::Url,
     verbose: bool,
     writer: &mut W,
-) -> Result<()>
+) -> Result<ProductBundle>
 where
     W: Write + Sync,
 {
@@ -255,7 +265,8 @@ where
             writeln!(writer, "Data written to \"{}\".", parent.display())?;
         }
     }
-    Ok(())
+
+    Ok(ProductBundle { product_name: product_name.to_string(), repository_path: local_dir })
 }
 
 /// Generate a (likely) unique name for the URL.
