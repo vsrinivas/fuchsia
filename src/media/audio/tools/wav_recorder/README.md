@@ -42,7 +42,10 @@ WavWriter class to record a waveform audio file.
     --duration[=<SECS>]    Specify a fixed duration rather than waiting for keystroke
                            (min 0.0, max 86400.0, default 2.0)
 
-    --ultrasound           Capture from an ultrasound capturer
+      By default, capture using the 'FOREGROUND' capture usage
+    --usage=<USAGE>	       Set stream capture usage. USAGE must be one of:
+                           BACKGROUND, FOREGROUND, SYSTEM_AGENT, COMMUNICATION
+    --ultrasound		       Capture from an ultrasound capturer
 
     --v                    Display per-packet information
     --help, --?            Show this message

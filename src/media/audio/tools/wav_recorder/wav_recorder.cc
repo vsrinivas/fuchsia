@@ -32,16 +32,27 @@ constexpr char kClockRateAdjustOption[] = "rate-adjust";
 constexpr char kClockRateAdjustDefault[] = "-75";
 constexpr char kPacketDurationOption[] = "packet-ms";
 constexpr char kFileDurationOption[] = "duration";
+constexpr char kCaptureUsageOption[] = "usage";
 constexpr char kUltrasoundOption[] = "ultrasound";
 constexpr char kVerboseOption[] = "v";
 constexpr char kShowUsageOption1[] = "help";
 constexpr char kShowUsageOption2[] = "?";
 
-constexpr std::array<const char*, 12> kUltrasoundInvalidOptions = {
+constexpr std::array<const char*, 13> kUltrasoundInvalidOptions = {
     kLoopbackOption,       kChannelsOption,       kFrameRateOption,   k24In32FormatOption,
     kPacked24FormatOption, kInt16FormatOption,    kGainOption,        kMuteOption,
     kFlexibleClockOption,  kMonotonicClockOption, kCustomClockOption, kClockRateAdjustOption,
+    kCaptureUsageOption,
 };
+
+constexpr std::array<std::pair<const char*, fuchsia::media::AudioCaptureUsage>,
+                     fuchsia::media::CAPTURE_USAGE_COUNT>
+    kCaptureUsages = {{
+        {"BACKGROUND", fuchsia::media::AudioCaptureUsage::BACKGROUND},
+        {"FOREGROUND", fuchsia::media::AudioCaptureUsage::FOREGROUND},
+        {"SYSTEM_AGENT", fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT},
+        {"COMMUNICATION", fuchsia::media::AudioCaptureUsage::COMMUNICATION},
+    }};
 
 constexpr uint32_t kPayloadBufferId = 0;
 
@@ -67,23 +78,23 @@ void WavRecorder::Run(sys::ComponentContext* app_context) {
   if (ultrasound_) {
     for (auto& invalid_option : kUltrasoundInvalidOptions) {
       if (cmd_line_.HasOption(std::string(invalid_option))) {
-        fprintf(stderr, "--ultrasound cannot be used with --%s\n", invalid_option);
+        fprintf(stderr, "--%s cannot be used with --%s\n", kUltrasoundOption, invalid_option);
         Usage();
         exit(1);
       }
     }
+  }
+
+  // If user erroneously specifies 24-bit AND 16-bit, prefer 24-bit.
+  if (cmd_line_.HasOption(kPacked24FormatOption)) {
+    pack_24bit_samples_ = true;
+    sample_format_ = fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
+  } else if (cmd_line_.HasOption(k24In32FormatOption)) {
+    sample_format_ = fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
+  } else if (cmd_line_.HasOption(kInt16FormatOption)) {
+    sample_format_ = fuchsia::media::AudioSampleFormat::SIGNED_16;
   } else {
-    // If user erroneously specifies 24-bit AND 16-bit, prefer 24-bit.
-    if (cmd_line_.HasOption(kPacked24FormatOption)) {
-      pack_24bit_samples_ = true;
-      sample_format_ = fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
-    } else if (cmd_line_.HasOption(k24In32FormatOption)) {
-      sample_format_ = fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
-    } else if (cmd_line_.HasOption(kInt16FormatOption)) {
-      sample_format_ = fuchsia::media::AudioSampleFormat::SIGNED_16;
-    } else {
-      sample_format_ = fuchsia::media::AudioSampleFormat::FLOAT;
-    }
+    sample_format_ = fuchsia::media::AudioSampleFormat::FLOAT;
   }
 
   std::string opt;
@@ -128,6 +139,19 @@ void WavRecorder::Run(sys::ComponentContext* app_context) {
                                                          << " and "
                                                          << ZX_CLOCK_UPDATE_MAX_RATE_ADJUST);
     }
+  }
+
+  if (cmd_line_.HasOption(kCaptureUsageOption)) {
+    cmd_line_.GetOptionValue(kCaptureUsageOption, &opt);
+    auto it = std::find_if(
+        kCaptureUsages.cbegin(), kCaptureUsages.cend(),
+        [&opt](auto usage_string_and_usage) { return opt == usage_string_and_usage.first; });
+    if (it == kCaptureUsages.cend()) {
+      fprintf(stderr, "Unrecognized AudioRenderUsage %s\n\n", opt.c_str());
+      Usage();
+      exit(1);
+    }
+    usage_ = *it;
   }
 
   CLI_CHECK(pos_args.size() >= 1, "No filename specified");
@@ -230,7 +254,18 @@ void WavRecorder::Usage() {
   printf("\t\t\t(min 0.0, max %.1f, default %.1f)\n", kMaxFileDurationSecs,
          kDefaultFileDurationSecs);
 
-  printf("\n  --%s\t\tCapture from an ultrasound capturer\n", kUltrasoundOption);
+  printf("\n    By default, capture using the 'FOREGROUND' capture usage\n");
+  printf("  --%s=<USAGE>\tSet stream capture usage. USAGE must be one of:\n\t\t\t",
+         kCaptureUsageOption);
+  for (auto it = kCaptureUsages.cbegin(); it != kCaptureUsages.cend(); ++it) {
+    printf("%s", it->first);
+    if (it + 1 != kCaptureUsages.cend()) {
+      printf(", ");
+    } else {
+      printf("\n");
+    }
+  }
+  printf("  --%s\t\tCapture from an ultrasound capturer\n", kUltrasoundOption);
 
   printf("\n  --%s\t\t\tDisplay per-packet information\n", kVerboseOption);
   printf("  --%s, --%s\t\tShow this message\n", kShowUsageOption1, kShowUsageOption2);
@@ -361,6 +396,10 @@ void WavRecorder::ReceiveClockAndContinue(
 
   if (verbose_) {
     audio::clock::GetAndDisplayClockDetails(reference_clock_);
+  }
+
+  if (usage_) {
+    audio_capturer_->SetUsage(usage_->second);
   }
 
   if (stream_type) {
@@ -532,6 +571,10 @@ void WavRecorder::OnDefaultFormatFetched(const fuchsia::media::AudioStreamType& 
   }
   printf("from %s into '%s'%s\n", loopback_ ? "loopback" : "default input", filename_,
          duration_str.c_str());
+
+  if (usage_) {
+    printf("using audio capture usage '%s'\n", usage_->first);
+  }
 
   if (clock_type_ == ClockType::Flexible) {
     printf("using AudioCore's flexible clock as the reference");

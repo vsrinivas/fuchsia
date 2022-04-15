@@ -100,6 +100,8 @@ class WavRecorder {
   uint32_t outstanding_capture_jobs_ = 0;
   int64_t frames_received_ = 0;
 
+  std::optional<std::pair<const char*, fuchsia::media::AudioCaptureUsage>> usage_ = std::nullopt;
+
   bool ultrasound_ = false;
   fuchsia::ultrasound::FactoryPtr ultrasound_factory_;
 };
