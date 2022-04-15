@@ -3,14 +3,56 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result, ffx_core::ffx_plugin, ffx_packaging_download_args::DownloadCommand,
-    fuchsia_hyper::new_https_client, pkg::repository::package_download,
+    anyhow::Result,
+    ffx_core::ffx_plugin,
+    ffx_packaging_download_args::DownloadCommand,
+    fuchsia_hyper::new_https_client,
+    fuchsia_pkg::PackageManifest,
+    pkg::{
+        repository::{HttpRepository, Repository},
+        resolve::resolve_package,
+    },
+    std::fs::File,
+    url::Url,
 };
+
+const DOWNLOAD_CONCURRENCY: usize = 5;
 
 #[ffx_plugin("ffx_package")]
 pub async fn cmd_download(cmd: DownloadCommand) -> Result<()> {
     let client = new_https_client();
-    package_download(client, cmd.tuf_url, cmd.blob_url, cmd.target_path, cmd.output_path).await?;
+
+    let backend = Box::new(HttpRepository::new(
+        client,
+        Url::parse(&cmd.tuf_url)?,
+        Url::parse(&cmd.blob_url)?,
+    ));
+    let repo = Repository::new("repo", backend).await?;
+
+    let blobs_dir = cmd.output_path.join("blobs");
+    std::fs::create_dir_all(&blobs_dir)?;
+
+    // Download the package blobs.
+    let meta_far_hash =
+        resolve_package(&repo, &cmd.target_path, &blobs_dir, DOWNLOAD_CONCURRENCY).await?;
+
+    // Construct a manifest from the blobs.
+    let manifest = PackageManifest::from_blobs_dir(&blobs_dir, meta_far_hash)?;
+
+    // FIXME(http://fxbug.dev/97061): When this function was written, we downloaded the meta.far
+    // blob to a toplevel file `meta.far`, rather than writing it into the `blobs/` directory. Lets
+    // preserve this behavior for now until we can change downstream users from relying on this
+    // functionality.
+    std::fs::copy(
+        cmd.output_path.join("blobs").join(meta_far_hash.to_string()),
+        cmd.output_path.join("meta.far"),
+    )?;
+
+    // Write the manifest.
+    let manifest_path = cmd.output_path.join("package_manifest.json");
+    let mut file = File::create(&manifest_path)?;
+    serde_json::to_writer(&mut file, &manifest)?;
+
     Ok(())
 }
 
@@ -20,12 +62,11 @@ mod tests {
         super::*,
         camino::Utf8Path,
         fuchsia_async as fasync,
-        fuchsia_pkg::PackageManifest,
         pkg::{
             manager::RepositoryManager, server::RepositoryServer, test_utils::make_pm_repository,
         },
         pretty_assertions::assert_eq,
-        std::{collections::BTreeSet, fs::File, net::Ipv4Addr, sync::Arc},
+        std::{collections::BTreeSet, net::Ipv4Addr, sync::Arc},
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -83,7 +124,7 @@ mod tests {
             ])
         );
 
-        // Check that the manifest was correctly written.
+        // Check that the produced manifest is parseable.
         let f = File::open(output_path.join("package_manifest.json")).unwrap();
         let _manifest: PackageManifest = serde_json::from_reader(f).unwrap();
 

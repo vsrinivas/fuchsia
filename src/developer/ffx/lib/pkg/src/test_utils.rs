@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::repository::{PmRepository, Repository, RepositoryKeyConfig},
+    crate::repository::{FileSystemRepository, PmRepository, Repository, RepositoryKeyConfig},
     anyhow::{anyhow, Context, Result},
     camino::Utf8PathBuf,
     fuchsia_pkg::PackageBuilder,
@@ -187,5 +187,18 @@ pub async fn make_pm_repository(name: &str, dir: impl Into<Utf8PathBuf>) -> Repo
     make_repository(metadata_dir.as_std_path(), blobs_dir.as_std_path()).await;
 
     let backend = PmRepository::new(dir);
+    Repository::new(name, Box::new(backend)).await.unwrap()
+}
+
+pub async fn make_file_system_repository(
+    name: &str,
+    metadata_dir: impl Into<Utf8PathBuf>,
+    blobs_dir: impl Into<Utf8PathBuf>,
+) -> Repository {
+    let metadata_dir = metadata_dir.into();
+    let blobs_dir = blobs_dir.into();
+    make_repository(metadata_dir.as_std_path(), blobs_dir.as_std_path()).await;
+
+    let backend = FileSystemRepository::new(metadata_dir, blobs_dir);
     Repository::new(name, Box::new(backend)).await.unwrap()
 }

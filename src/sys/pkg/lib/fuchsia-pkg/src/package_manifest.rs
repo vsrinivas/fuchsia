@@ -3,8 +3,18 @@
 // found in the LICENSE file.
 
 use {
-    crate::{MetaPackage, Package, PackageManifestError, PackageName, PackagePath, PackageVariant},
+    crate::{
+        MetaContents, MetaPackage, Package, PackageManifestError, PackageName, PackagePath,
+        PackageVariant,
+    },
+    fuchsia_hash::Hash,
     serde::{Deserialize, Serialize},
+    std::{
+        collections::BTreeMap,
+        fs::{self, File},
+        io,
+        path::Path,
+    },
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -39,16 +49,82 @@ impl PackageManifest {
         }
     }
 
+    /// Create a `PackageManifest` from a blobs directory and the meta.far hash.
+    ///
+    /// This directory must be a flat file that contains all the package blobs.
+    pub fn from_blobs_dir(dir: &Path, meta_far_hash: Hash) -> Result<Self, PackageManifestError> {
+        let meta_far_path = dir.join(meta_far_hash.to_string());
+
+        let mut meta_far_file = File::open(&meta_far_path)?;
+        let meta_far_size = meta_far_file.metadata()?.len();
+
+        let mut meta_far = fuchsia_archive::Reader::new(&mut meta_far_file)?;
+
+        let meta_contents = meta_far.read_file("meta/contents")?;
+        let meta_contents = MetaContents::deserialize(meta_contents.as_slice())?.into_contents();
+
+        // The meta contents are unordered, so sort them to keep things consistent.
+        let meta_contents = meta_contents.into_iter().collect::<BTreeMap<_, _>>();
+
+        let meta_package = meta_far.read_file("meta/package")?;
+        let meta_package = MetaPackage::deserialize(meta_package.as_slice())?;
+
+        // Build the PackageManifest of this package.
+        let mut builder = PackageManifestBuilder::new(meta_package);
+
+        for (blob_path, merkle) in meta_contents.into_iter() {
+            let source_path = dir.join(&merkle.to_string()).canonicalize()?;
+
+            if !source_path.exists() {
+                return Err(PackageManifestError::IoErrorWithPath {
+                    cause: io::ErrorKind::NotFound.into(),
+                    path: source_path,
+                });
+            }
+
+            let size = fs::metadata(&source_path)?.len();
+
+            builder = builder.add_blob(BlobInfo {
+                source_path: source_path.into_os_string().into_string().map_err(|source_path| {
+                    PackageManifestError::InvalidBlobPath {
+                        merkle,
+                        source_path: source_path.into(),
+                    }
+                })?,
+                path: blob_path,
+                merkle,
+                size,
+            });
+        }
+
+        // Add the meta.far blob.
+        builder = builder.add_blob(BlobInfo {
+            source_path: meta_far_path.into_os_string().into_string().map_err(|source_path| {
+                PackageManifestError::InvalidBlobPath {
+                    merkle: meta_far_hash,
+                    source_path: source_path.into(),
+                }
+            })?,
+            path: "meta/".into(),
+            merkle: meta_far_hash,
+            size: meta_far_size,
+        });
+
+        Ok(builder.build())
+    }
+
     pub fn from_package(package: Package) -> Result<Self, PackageManifestError> {
         let mut blobs = Vec::with_capacity(package.blobs().len());
         for (merkle, blob_entry) in package.blobs().iter() {
+            let source_path = blob_entry.source_path();
+
             blobs.push(BlobInfo {
-                source_path: blob_entry.source_path().into_os_string().into_string().map_err(
-                    |source_path| PackageManifestError::InvalidBlobPath {
+                source_path: source_path.into_os_string().into_string().map_err(|source_path| {
+                    PackageManifestError::InvalidBlobPath {
                         merkle: *merkle,
-                        source_path,
-                    },
-                )?,
+                        source_path: source_path.into(),
+                    }
+                })?,
                 path: blob_entry.blob_path().to_string(),
                 merkle: *merkle,
                 size: blob_entry.size(),
@@ -278,11 +354,15 @@ pub mod host {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use fuchsia_merkle::Hash;
-    use serde_json::json;
-    use std::path::PathBuf;
-    use std::str::FromStr;
+    use {
+        super::*,
+        crate::CreationManifest,
+        fuchsia_merkle::Hash,
+        pretty_assertions::assert_eq,
+        serde_json::json,
+        std::{path::PathBuf, str::FromStr},
+        tempfile::TempDir,
+    };
 
     #[test]
     fn test_version1_serialization() {
@@ -459,6 +539,97 @@ mod tests {
         let package = package_builder.build().unwrap();
         let package_manifest = PackageManifest::from_package(package).unwrap();
         assert_eq!(&"package-name".parse::<PackageName>().unwrap(), package_manifest.name());
+    }
+
+    #[test]
+    fn test_from_blobs_dir() {
+        let temp = TempDir::new().unwrap();
+        let gen_dir = temp.path().join("gen");
+        std::fs::create_dir_all(&gen_dir).unwrap();
+
+        let blobs_dir = temp.path().join("blobs");
+        std::fs::create_dir_all(&blobs_dir).unwrap();
+
+        // Helper to write some content into a blob.
+        let write_blob = |contents| {
+            let mut builder = fuchsia_merkle::MerkleTreeBuilder::new();
+            builder.write(contents);
+            let hash = builder.finish().root();
+
+            let path = blobs_dir.join(hash.to_string());
+            std::fs::write(&path, contents).unwrap();
+
+            (path.to_str().unwrap().to_string(), hash)
+        };
+
+        // Create a package.
+        let (file1_path, file1_hash) = write_blob(b"file 1");
+        let (file2_path, file2_hash) = write_blob(b"file 2");
+
+        std::fs::create_dir_all(gen_dir.join("meta")).unwrap();
+        let meta_package_path = gen_dir.join("meta").join("package");
+        std::fs::write(&meta_package_path, "{\"name\":\"package\",\"version\":\"0\"}").unwrap();
+
+        let external_contents = BTreeMap::from([
+            ("file-1".into(), file1_path.clone()),
+            ("file-2".into(), file2_path.clone()),
+        ]);
+
+        let far_contents = BTreeMap::from([(
+            "meta/package".into(),
+            meta_package_path.to_str().unwrap().to_string(),
+        )]);
+
+        let creation_manifest =
+            CreationManifest::from_external_and_far_contents(external_contents, far_contents)
+                .unwrap();
+
+        let gen_meta_far_path = temp.path().join("meta.far");
+        let _package_manifest =
+            crate::build::build(&creation_manifest, &gen_meta_far_path, "package");
+
+        // Compute the meta.far hash, and copy it into the blobs/ directory.
+        let meta_far_bytes = std::fs::read(&gen_meta_far_path).unwrap();
+        let mut merkle_builder = fuchsia_merkle::MerkleTreeBuilder::new();
+        merkle_builder.write(&meta_far_bytes);
+        let meta_far_hash = merkle_builder.finish().root();
+
+        let meta_far_path = blobs_dir.join(meta_far_hash.to_string());
+        std::fs::write(&meta_far_path, &meta_far_bytes).unwrap();
+
+        // We should be able to create a manifest from the blob directory that matches the one
+        // created by the builder.
+        assert_eq!(
+            PackageManifest::from_blobs_dir(&blobs_dir, meta_far_hash).unwrap(),
+            PackageManifest(VersionedPackageManifest::Version1(PackageManifestV1 {
+                package: PackageMetadata {
+                    name: "package".parse().unwrap(),
+                    version: PackageVariant::zero(),
+                },
+                blobs: vec![
+                    BlobInfo {
+                        source_path: file1_path,
+                        path: "file-1".into(),
+                        merkle: file1_hash,
+                        size: 6,
+                    },
+                    BlobInfo {
+                        source_path: file2_path,
+                        path: "file-2".into(),
+                        merkle: file2_hash,
+                        size: 6,
+                    },
+                    BlobInfo {
+                        source_path: meta_far_path.to_str().unwrap().to_string(),
+                        path: "meta/".into(),
+                        merkle: meta_far_hash,
+                        size: 12288,
+                    },
+                ],
+                repository: None,
+                blob_sources_relative: RelativeTo::WorkingDir,
+            }))
+        );
     }
 }
 

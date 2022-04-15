@@ -44,15 +44,14 @@ use {
 };
 
 mod file_system;
+mod http_repository;
 mod pm;
-
-pub mod http_repository;
 
 #[cfg(test)]
 pub(crate) mod repo_tests;
 
 pub use file_system::FileSystemRepository;
-pub use http_repository::{package_download, HttpRepository};
+pub use http_repository::HttpRepository;
 pub use pm::PmRepository;
 
 /// A unique ID which is given to every repository.
@@ -350,7 +349,6 @@ impl Repository {
         Ok(Some(components))
     }
 
-    // TODO(fxbug.dev/79915) add tests for this method.
     pub async fn list_packages(
         &self,
         include_fields: ListFields,

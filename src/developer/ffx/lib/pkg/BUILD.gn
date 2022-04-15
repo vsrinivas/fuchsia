@@ -87,6 +87,7 @@ rustc_library("pkg") {
     "src/repository/http_repository.rs",
     "src/repository/pm.rs",
     "src/repository/repo_tests.rs",
+    "src/resolve.rs",
     "src/resource.rs",
     "src/server.rs",
     "src/test_utils.rs",

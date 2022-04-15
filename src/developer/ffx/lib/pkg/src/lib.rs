@@ -6,6 +6,7 @@ pub mod config;
 pub mod manager;
 pub mod range;
 pub mod repository;
+pub mod resolve;
 pub mod resource;
 pub mod server;
 pub mod test_utils;

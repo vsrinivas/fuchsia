@@ -5,7 +5,7 @@
 use {
     fuchsia_merkle::Hash,
     fuchsia_url::errors::{PackagePathSegmentError, ResourcePathError},
-    std::io,
+    std::{io, path::PathBuf},
     thiserror::Error,
 };
 
@@ -52,10 +52,25 @@ pub enum CreationManifestError {
     FileDirectoryCollision { path: String },
 }
 
-#[derive(Debug, Error, Eq, PartialEq)]
+#[derive(Debug, Error)]
 pub enum PackageManifestError {
     #[error("package contains an invalid blob source path '{source_path:?}'. {merkle}")]
-    InvalidBlobPath { merkle: Hash, source_path: std::ffi::OsString },
+    InvalidBlobPath { merkle: Hash, source_path: PathBuf },
+
+    #[error("io error {}", _0)]
+    IoError(#[from] io::Error),
+
+    #[error("io error {cause}: '{path}'")]
+    IoErrorWithPath { cause: io::Error, path: PathBuf },
+
+    #[error("meta contents: {}", _0)]
+    MetaContents(#[from] MetaContentsError),
+
+    #[error("meta package: {}", _0)]
+    MetaPackage(#[from] MetaPackageError),
+
+    #[error("archive: {}", _0)]
+    Archive(#[from] fuchsia_archive::Error),
 }
 
 #[derive(Debug, Error)]
