@@ -17,8 +17,8 @@ Note: To ensure that you’re using the right version of `ffx` and `fssh` (which
  need to match the version of the SDK), consider updating your `PATH` to include
  the SDK's `tools` directory (for instance, `export
  PATH="$PATH:$HOME/getting-started/tools"`). However, if you don't wish to
- update your `PATH`, ensure that you specify the relative (`tools/ffx` or
- `tools/fssh`) or absolute path (for instance, `~/getting-started/tools/ffx`) to
+ update your `PATH`, ensure that you specify the relative path (for instance,
+ `tools/ffx`) or absolute path (for instance, `~/getting-started/tools/ffx`) to
  the tools in the [SDK samples repository][clone-the-sdk] whenever you run these
  commands.
 
