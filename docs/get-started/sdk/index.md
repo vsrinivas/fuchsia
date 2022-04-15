@@ -200,11 +200,12 @@ Do the following:
    At this point, you only need to confirm that you can run this `ffx` command
    without any errors.
 
-   Note: To ensure that you’re using the right version of `ffx` during development,
-   consider updating your `PATH` to include the `tools` directory where `ffx` is
-   located (for instance, `export PATH="$PATH:$HOME/getting-started/tools"`).
-   Otherwise, use the fully-qualified path to the `ffx` that is bundled with the
-   samples to ensure you’re running the right tools.
+   Note: To ensure that you’re using the right version of `ffx` (which needs to
+   match the version of the SDK), consider updating your `PATH` to include the
+   SDK's `tools` directory where `ffx` is located (for instance,
+   `export PATH="$PATH:$HOME/getting-started/tools"`). However, if you don't
+   wish to update your `PATH`, ensure that you specify the relative path to
+   this `ffx` tool (`tools/ffx`) whenever you run `ffx` commands.
 
 ## 3. Start the emulator {:#start-the-emulator}
 
@@ -524,7 +525,6 @@ Do the following:
                            pkg
               Merkle root: b44de670cf30c77c55823af0fea67d19e0fabc86ddd0946646512be12eeb8dc0
           Execution State: Stopped
-    
    ```
 
    The output shows that the `hello_world` component has run and is now terminated (`Stopped`).
@@ -600,7 +600,7 @@ stack traces) of a crashed component.
 The tasks include:
 
 *   Update the sample component to crash when it's started.
-*   Build the sample component, which generates and registers the debug symbol
+*   Build the sample component, which generates and registers the debug symbols
     of the component.
 *   Run the updated sample component.
 *   Verify that the crashed component's logs are in symbolized format.
