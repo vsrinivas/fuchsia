@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod mock_cr50_agent;
+
 use {
     anyhow::{anyhow, Error},
     fidl::{
@@ -15,20 +17,26 @@ use {
     fidl_fuchsia_identity_account::{
         AccountManagerMarker, AccountManagerProxy, AccountMetadata, AccountProxy,
     },
+    fidl_fuchsia_identity_credential::CredentialManagerMarker,
     fidl_fuchsia_io as fio,
+    fidl_fuchsia_tpm_cr50::PinWeaverMarker,
     fuchsia_async::{
         self as fasync,
         futures::{FutureExt as _, StreamExt as _},
         DurationExt as _, TimeoutExt as _,
     },
+    fuchsia_component_test::LocalComponentHandles,
     fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     fuchsia_zircon::{self as zx, sys::zx_status_t, Status},
     ramdevice_client::{RamdiskClient, RamdiskClientBuilder},
     rand::{rngs::SmallRng, Rng, SeedableRng},
+    std::collections::VecDeque,
     std::{fs, os::raw::c_int, time::Duration},
     storage_isolated_driver_manager::bind_fvm,
 };
+
+use crate::mock_cr50_agent::{mock, MockCr50AgentBuilder, MockResponse};
 
 // Canonically defined in //zircon/system/public/zircon/hw/gpt.h
 const FUCHSIA_DATA_GUID_VALUE: [u8; 16] = [
@@ -62,7 +70,6 @@ extern "C" {
 }
 
 enum Config {
-    #[allow(unused)]
     PinweaverOrScrypt,
     ScryptOrNull,
     ScryptOnly,
@@ -74,12 +81,19 @@ struct TestEnv {
 
 impl TestEnv {
     async fn build(config: Config) -> TestEnv {
+        TestEnv::build_with_cr50_mock(config, None).await
+    }
+
+    async fn build_with_cr50_mock(
+        config: Config,
+        maybe_mock_cr50: Option<VecDeque<MockResponse>>,
+    ) -> TestEnv {
         let builder = RealmBuilder::new().await.unwrap();
         builder.driver_test_realm_setup().await.unwrap();
         let manifest = match config {
-            Config::PinweaverOrScrypt => "fuchsia-pkg://fuchsia.com/password-authenticator-integration-tests#meta/password-authenticator-pinweaver-or-scrypt.cm",
-            Config::ScryptOrNull => "fuchsia-pkg://fuchsia.com/password-authenticator-integration-tests#meta/password-authenticator-scrypt-or-null.cm",
-            Config::ScryptOnly => "fuchsia-pkg://fuchsia.com/password-authenticator-integration-tests#meta/password-authenticator-scrypt.cm",
+            Config::PinweaverOrScrypt => "#meta/password-authenticator-pinweaver-or-scrypt.cm",
+            Config::ScryptOrNull => "#meta/password-authenticator-scrypt-or-null.cm",
+            Config::ScryptOnly => "#meta/password-authenticator-scrypt.cm",
         };
         let password_authenticator = builder
             .add_child("password_authenticator", manifest, ChildOptions::new())
@@ -93,6 +107,52 @@ impl TestEnv {
                     .capability(Capability::storage("data"))
                     .from(Ref::parent())
                     .to(&password_authenticator),
+            )
+            .await
+            .unwrap();
+
+        let credential_manager = builder
+            .add_child("credential_manager", "fuchsia-pkg://fuchsia.com/password-authenticator-integration-tests#meta/credential-manager.cm", ChildOptions::new()).await.unwrap();
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                    .capability(Capability::protocol_by_name("fuchsia.process.Launcher"))
+                    .capability(Capability::storage("data"))
+                    .from(Ref::parent())
+                    .to(&credential_manager),
+            )
+            .await
+            .unwrap();
+
+        // Expose CredentialManager to PasswordAuthenticator.
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol::<CredentialManagerMarker>())
+                    .from(&credential_manager)
+                    .to(&password_authenticator),
+            )
+            .await
+            .unwrap();
+
+        // Set up mock Cr50Agent.
+        let mocks = maybe_mock_cr50.unwrap_or(VecDeque::new());
+        let cr50 = builder
+            .add_local_child(
+                "mock_cr50",
+                move |handles: LocalComponentHandles| Box::pin(mock(mocks.clone(), handles)),
+                ChildOptions::new(),
+            )
+            .await
+            .unwrap();
+
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol::<PinWeaverMarker>())
+                    .from(&cr50)
+                    .to(&credential_manager),
             )
             .await
             .unwrap();
@@ -723,4 +783,48 @@ async fn remove_account_succeeds_and_terminates_clients() {
     let account_ids =
         account_manager.get_account_ids().await.expect("get account ids after second provision");
     assert_eq!(account_ids, vec![1]);
+}
+
+#[fuchsia::test]
+async fn test_pinweaver_provision_and_remove_account() {
+    // Set up the mock cr50 responses.
+    let mocks = MockCr50AgentBuilder::new()
+        .add_reset_tree_response([0; 32])
+        // During account provisioning PwAuth also makes an InsertLeaf and a TryAuth call.
+        .add_insert_leaf_response([0; 32], [1; 32], vec![0, 1, 2, 3])
+        .add_try_auth_success_response([0; 32], vec![0, 1, 2, 3], [1; 32])
+        // Remove the provisioned account.
+        .add_remove_leaf_response([0; 32])
+        .build();
+    let env = TestEnv::build_with_cr50_mock(Config::PinweaverOrScrypt, Some(mocks)).await;
+    let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
+    let account_manager = env.account_manager();
+
+    // Provision an account.
+    let (account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
+    account_manager
+        .deprecated_provision_new_account(
+            REAL_PASSWORD,
+            AccountMetadata { name: Some("test".to_string()), ..AccountMetadata::EMPTY },
+            server_end,
+        )
+        .await
+        .expect("deprecated_new_provision FIDL")
+        .expect("deprecated provision new account");
+
+    let account_ids = account_manager.get_account_ids().await.expect("get account ids");
+    assert_eq!(account_ids, vec![1]);
+
+    // Remove the account.
+    account_manager
+        .remove_account(account_ids[0], false)
+        .await
+        .expect("remove_account FIDL")
+        .expect("remove_account");
+
+    wait_for_account_close(&account_proxy).await.expect("remove_account closes channel");
+
+    let account_ids_after =
+        account_manager.get_account_ids().await.expect("get account ids after remove");
+    assert_eq!(account_ids_after, Vec::<u64>::new());
 }
