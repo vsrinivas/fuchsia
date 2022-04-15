@@ -1,7 +1,6 @@
 # Fuchsia SDK
 
-This section is for developing Fuchsia software or Fuchsia products
-using the Fuchsia SDK.
+This section is for developing Fuchsia software using the Fuchsia SDK.
 
 Important: The Fuchsia SDK is in active development. At the moment, Fuchsia
 does not support general public usage of the Fuchsia SDK. The APIs in the SDK
@@ -16,14 +15,7 @@ environment. With the Fuchsia SDK, developers can create, build, run, test, and 
 without needing to set up a [Fuchsia source checkout][fuchsia-platform]
 (`fuchsia.git`) on the host machine.
 
-## Developing a product with the Fuchsia SDK
-
-Fuchsia products in general include software that runs on top of the
-Fuchsia platform and operating system. Using the Fuchsia SDK, developers can
-combine the Fuchsia operating system with a customized blend of software to
-assemble and produce a new Fuchsia-based product.
-
-## Bazel build system
+## Build system support
 
 The Fuchsia SDK supports [Bazel][bazel]{:.external} as  an
 out-of-the-box solution for building and testing software. However, Bazel is not
