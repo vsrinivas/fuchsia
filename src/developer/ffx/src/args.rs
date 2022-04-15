@@ -38,11 +38,8 @@ pub struct Ffx {
 
     #[argh(option, short = 'l', long = "log-level")]
     #[ffx_config_default(key = "log.level", default = "Debug")]
-    /// sets the log level for ffx output. This can be set to anything supported by
-    /// `simplelog::LevelFilter`, which includes "Off", "Error", "Warn", "Info", "Debug", "Trace",
-    /// in order of verbosity. If set to "Info", for example, this will print everything else
-    /// behind it in verbosity, which includes "Warn", and "Error". This can be set in `ffx config`
-    /// under "log.level" if you wish to preserve this between `ffx` invocations.
+    /// sets the log level for ffx output (default = Debug). Other possible values are Info, Error,
+    /// Warn, and Trace. Can be persisted via log.level config setting.
     pub log_level: Option<String>,
 
     #[argh(switch, short = 'v', long = "verbose")]
