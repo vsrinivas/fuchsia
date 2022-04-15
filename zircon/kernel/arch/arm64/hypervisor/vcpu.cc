@@ -212,7 +212,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   return ZX_OK;
 }
 
-Vcpu::Vcpu(Guest* guest, uint8_t vpid, Thread* thread)
+Vcpu::Vcpu(Guest* guest, uint16_t vpid, Thread* thread)
     : guest_(guest), vpid_(vpid), last_cpu_(thread->LastCpu()), thread_(thread) {
   thread->set_vcpu(true);
   // We have to disable thread safety analysis because it's not smart enough to

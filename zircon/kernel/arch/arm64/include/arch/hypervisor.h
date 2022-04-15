@@ -123,7 +123,7 @@ class Vcpu {
 
  private:
   Guest* const guest_;
-  const uint8_t vpid_;
+  const uint16_t vpid_;
   cpu_num_t last_cpu_ TA_GUARDED(ThreadLock::Get());
   // |thread_| will be set to nullptr when the thread exits.
   ktl::atomic<Thread*> thread_;
@@ -135,7 +135,7 @@ class Vcpu {
   GichState gich_state_;
   uint64_t hcr_;
 
-  Vcpu(Guest* guest, uint8_t vpid, Thread* thread);
+  Vcpu(Guest* guest, uint16_t vpid, Thread* thread);
 
   void MigrateCpu(Thread* thread, Thread::MigrateStage stage) TA_REQ(ThreadLock::Get());
 };
