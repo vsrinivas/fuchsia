@@ -17,6 +17,8 @@
 namespace soundplayer {
 namespace test {
 
+constexpr uint64_t kMinLeadTime = zx::msec(30).to_nsecs();
+
 FakeAudioRenderer::FakeAudioRenderer() : binding_(this) {}
 
 FakeAudioRenderer::~FakeAudioRenderer() {}
@@ -33,6 +35,16 @@ void FakeAudioRenderer::Bind(fidl::InterfaceRequest<fuchsia::media::AudioRendere
         binding_.Unbind();
         handler(status);
       });
+}
+
+void FakeAudioRenderer::ChangeMinLeadTime(zx::duration min_lead_time) {
+  if (enable_min_lead_time_events_called_) {
+    if (min_lead_time != zx::duration()) {
+      nonzero_min_lead_time_reported_ = true;
+    }
+
+    binding_.events().OnMinLeadTimeChanged(min_lead_time.to_nsecs());
+  }
 }
 
 void FakeAudioRenderer::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type) {
@@ -153,7 +165,16 @@ void FakeAudioRenderer::BindGainControl(
   FX_NOTIMPLEMENTED();
 }
 
-void FakeAudioRenderer::EnableMinLeadTimeEvents(bool enabled) { FX_NOTIMPLEMENTED(); }
+void FakeAudioRenderer::EnableMinLeadTimeEvents(bool enabled) {
+  enable_min_lead_time_events_called_ = true;
+
+  if (defer_min_lead_time_event_) {
+    return;
+  }
+
+  nonzero_min_lead_time_reported_ = true;
+  binding_.events().OnMinLeadTimeChanged(kMinLeadTime);
+}
 
 void FakeAudioRenderer::GetMinLeadTime(GetMinLeadTimeCallback callback) { FX_NOTIMPLEMENTED(); }
 

@@ -48,7 +48,13 @@ class FakeAudio : public fuchsia::media::Audio {
     EXPECT_FALSE(expecations_iter_ == expectations_.end());
 
     auto renderer = std::make_unique<FakeAudioRenderer>();
-    renderer->SetExpectations(*expecations_iter_);
+    if (warmup_renderer_created_) {
+      renderer->SetExpectations(*expecations_iter_);
+      ++expecations_iter_;
+    } else {
+      renderer->ExpectWarmup(block_warmup_);
+      warmup_renderer_created_ = true;
+    }
 
     auto raw_renderer = renderer.get();
     renderer->Bind(std::move(request), [this, raw_renderer](zx_status_t status) {
@@ -57,8 +63,6 @@ class FakeAudio : public fuchsia::media::Audio {
       renderers_.erase(raw_renderer);
     });
     renderers_.emplace(raw_renderer, std::move(renderer));
-
-    ++expecations_iter_;
   }
 
   void CreateAudioCapturer(fidl::InterfaceRequest<fuchsia::media::AudioCapturer> request,
@@ -66,10 +70,20 @@ class FakeAudio : public fuchsia::media::Audio {
     FX_NOTIMPLEMENTED();
   }
 
+  // Prevents warmup from completing until |ChangeMinLeadTime| is called with a non-zero
+  // duration.
+  void SetBlockWarmup() { block_warmup_ = true; }
+
   // Sets expectations for renderers.
   void SetRendererExpectations(const std::vector<FakeAudioRenderer::Expectations>& expectations) {
     expectations_ = expectations;
     expecations_iter_ = expectations_.begin();
+  }
+
+  void ChangeMinLeadTime(zx::duration min_lead_time) {
+    for (auto& pair : renderers_) {
+      pair.second->ChangeMinLeadTime(min_lead_time);
+    }
   }
 
   bool renderers_completed() const { return renderers_.empty(); }
@@ -79,6 +93,8 @@ class FakeAudio : public fuchsia::media::Audio {
   std::unordered_map<FakeAudioRenderer*, std::unique_ptr<FakeAudioRenderer>> renderers_;
   std::vector<FakeAudioRenderer::Expectations> expectations_;
   std::vector<FakeAudioRenderer::Expectations>::iterator expecations_iter_;
+  bool warmup_renderer_created_ = false;
+  bool block_warmup_ = false;
 };
 
 class SoundPlayerTests : public gtest::RealLoopFixture {
@@ -87,12 +103,22 @@ class SoundPlayerTests : public gtest::RealLoopFixture {
       : ptr_to_under_test_(), under_test_(fake_audio_.NewPtr(), ptr_to_under_test_.NewRequest()) {}
 
  protected:
+  // Prevents warmup from completing until |ChangeMinLeadTime| is called with a non-zero
+  // duration.
+  void SetBlockWarmup() { fake_audio_.SetBlockWarmup(); }
+
   // Sets expectations for renderers.
   void SetRendererExpectations(const std::vector<FakeAudioRenderer::Expectations>& expectations) {
     fake_audio_.SetRendererExpectations(expectations);
   }
 
+  void ChangeMinLeadTime(zx::duration min_lead_time) {
+    fake_audio_.ChangeMinLeadTime(min_lead_time);
+  }
+
   SoundPlayerImpl& under_test() { return under_test_; }
+
+  fuchsia::media::sounds::PlayerPtr& under_test_ptr() { return ptr_to_under_test_; }
 
   bool renderers_completed() const { return fake_audio_.renderers_completed(); }
 
@@ -544,5 +570,44 @@ TEST_F(SoundPlayerTests, FileOggOpus) {
   under_test().RemoveSound(0);
   RunLoopUntilIdle();
 }
+
+// Tests that play is deferred until the audio service is ready.
+TEST_F(SoundPlayerTests, WhenReady) {
+  auto [buffer, koid, stream_type] = CreateTestSound(kPayloadSize);
+
+  SetBlockWarmup();
+  SetRendererExpectations({{
+      .payload_buffer_ = koid,
+      .packets_ = {{.pts = fuchsia::media::NO_TIMESTAMP,
+                    .payload_buffer_id = 0,
+                    .payload_offset = 0,
+                    .payload_size = kPayloadSize,
+                    .flags = 0,
+                    .buffer_config = 0,
+                    .stream_segment_id = 0}},
+      .stream_type_ = fidl::Clone(stream_type),
+      .usage_ = kUsage,
+      .block_completion_ = false,
+  }});
+
+  // We use |under_test_ptr()| here, because invocation of methods is deferred by deferring
+  // the channel bind. If we call the implementation directly, we bypass the warmup.
+  under_test_ptr()->AddSoundBuffer(0, std::move(buffer), std::move(stream_type));
+  bool play_sound_completed = false;
+  under_test_ptr()->PlaySound(
+      0, kUsage, [&play_sound_completed](fuchsia::media::sounds::Player_PlaySound_Result result) {
+        EXPECT_TRUE(result.is_response());
+        play_sound_completed = true;
+      });
+  RunLoopUntilIdle();
+  EXPECT_FALSE(play_sound_completed);
+  ChangeMinLeadTime(zx::msec(10));
+
+  RunLoopUntil([&play_sound_completed]() { return play_sound_completed; });
+  RunLoopUntil([this]() { return renderers_completed(); });
+  under_test_ptr()->RemoveSound(0);
+  RunLoopUntilIdle();
+}
+
 }  // namespace test
 }  // namespace soundplayer

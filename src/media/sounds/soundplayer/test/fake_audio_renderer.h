@@ -27,17 +27,37 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer {
 
   ~FakeAudioRenderer() override;
 
+  void ExpectWarmup(bool defer_min_lead_time_event) {
+    is_warmup_ = true;
+    defer_min_lead_time_event_ = defer_min_lead_time_event;
+    expectations_ = Expectations{
+        .payload_buffer_ = ZX_KOID_INVALID,
+        .packets_ = {},
+        .stream_type_ = fidl::Clone(fuchsia::media::AudioStreamType{
+            .sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16,
+            .channels = 1,
+            .frames_per_second = 48000}),
+        .usage_ = fuchsia::media::AudioRenderUsage::BACKGROUND,
+        .block_completion_ = false,
+    };
+  }
+
   // Sets expectations.
   void SetExpectations(const Expectations& expectations) {
     expectations_ = expectations;
     expected_packets_iterator_ = expectations_.packets_.begin();
   }
 
-  bool completed() const { return play_no_reply_called_; }
+  bool completed() const {
+    return is_warmup_ ? nonzero_min_lead_time_reported_ : play_no_reply_called_;
+  }
 
   // Binds the renderer.
   void Bind(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> request,
             fit::function<void(zx_status_t)> error_handler);
+
+  // Fires the |OnMinLeadTimeChanged| event.
+  void ChangeMinLeadTime(zx::duration min_lead_time);
 
   // AudioRenderer implementation.
   void SetPcmStreamType(fuchsia::media::AudioStreamType format) override;
@@ -84,6 +104,8 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer {
  private:
   fidl::Binding<fuchsia::media::AudioRenderer> binding_;
 
+  bool is_warmup_ = false;
+  bool defer_min_lead_time_event_ = false;
   Expectations expectations_;
   std::vector<fuchsia::media::StreamPacket>::const_iterator expected_packets_iterator_;
   SendPacketCallback send_packet_callback_;
@@ -91,6 +113,8 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer {
   bool set_pcm_stream_type_called_ = false;
   bool add_payload_buffer_called_ = false;
   bool play_no_reply_called_ = false;
+  bool enable_min_lead_time_events_called_ = false;
+  bool nonzero_min_lead_time_reported_ = false;
 };
 
 }  // namespace soundplayer::test

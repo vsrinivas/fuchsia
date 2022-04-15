@@ -60,6 +60,10 @@ class SoundPlayerImpl : public fuchsia::media::sounds::Player {
     PlaySoundCallback play_sound_callback_;
   };
 
+  void DeleteThis();
+
+  void WhenAudioServiceIsWarm(fit::closure callback);
+
   fpromise::result<Sound, zx_status_t> SoundFromFile(fidl::InterfaceHandle<fuchsia::io::File> file);
 
   fidl::Binding<fuchsia::media::sounds::Player> binding_;
@@ -67,6 +71,9 @@ class SoundPlayerImpl : public fuchsia::media::sounds::Player {
   std::unordered_map<uint32_t, std::unique_ptr<Sound>> sounds_by_id_;
   std::unordered_map<Renderer*, std::unique_ptr<Renderer>> renderers_;
   std::unordered_map<uint32_t, Renderer*> renderers_by_sound_id_;
+
+  // Used only in |WhenAudioServiceIsWarm|.
+  fuchsia::media::AudioRendererPtr audio_renderer_;
 
  public:
   // Disallow copy, assign and move.

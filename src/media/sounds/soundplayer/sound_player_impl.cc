@@ -18,13 +18,21 @@ namespace soundplayer {
 
 SoundPlayerImpl::SoundPlayerImpl(fuchsia::media::AudioPtr audio_service,
                                  fidl::InterfaceRequest<fuchsia::media::sounds::Player> request)
-    : binding_(this, std::move(request)), audio_service_(std::move(audio_service)) {
-  FX_CHECK(binding_.is_bound());
+    : binding_(this), audio_service_(std::move(audio_service)) {
+  FX_CHECK(request);
   FX_CHECK(audio_service_);
 
-  binding_.set_error_handler([this](zx_status_t status) {
-    binding_.Unbind();
-    delete this;
+  audio_service_.set_error_handler([this](zx_status_t status) {
+    FX_LOGS(WARNING) << "SoundPlayerImpl: fuchsia.media.Audio connection closed, status " << status;
+    DeleteThis();
+  });
+
+  WhenAudioServiceIsWarm([this, request = std::move(request)]() mutable {
+    binding_.Bind(std::move(request));
+    binding_.set_error_handler([this](zx_status_t status) {
+      FX_LOGS(WARNING) << "SoundPlayerImpl: client connection closed, status " << status;
+      DeleteThis();
+    });
   });
 }
 
@@ -34,10 +42,10 @@ void SoundPlayerImpl::AddSoundFromFile(uint32_t id,
                                        fidl::InterfaceHandle<class fuchsia::io::File> file,
                                        AddSoundFromFileCallback callback) {
   if (sounds_by_id_.find(id) != sounds_by_id_.end()) {
-    FX_LOGS(WARNING) << "AddSoundFromFile called with id " << id << " already in use";
-    binding_.set_error_handler(nullptr);
-    binding_.Unbind();
-    delete this;
+    FX_LOGS(WARNING) << "AddSoundFromFile called with id " << id
+                     << " already in use, closing client connection";
+    DeleteThis();
+    return;
   }
 
   auto result = SoundFromFile(std::move(file));
@@ -57,10 +65,10 @@ void SoundPlayerImpl::AddSoundFromFile(uint32_t id,
 void SoundPlayerImpl::AddSoundBuffer(uint32_t id, fuchsia::mem::Buffer buffer,
                                      fuchsia::media::AudioStreamType stream_type) {
   if (sounds_by_id_.find(id) != sounds_by_id_.end()) {
-    FX_LOGS(WARNING) << "AddSoundBuffer called with id " << id << " already in use";
-    binding_.set_error_handler(nullptr);
-    binding_.Unbind();
-    delete this;
+    FX_LOGS(WARNING) << "AddSoundBuffer called with id " << id
+                     << " already in use, closing client connection";
+    DeleteThis();
+    return;
   }
 
   sounds_by_id_.emplace(
@@ -111,6 +119,42 @@ void SoundPlayerImpl::StopPlayingSound(uint32_t id) {
   }
 
   iter->second->StopPlayingSound();
+}
+
+void SoundPlayerImpl::DeleteThis() {
+  audio_service_.set_error_handler(nullptr);
+  audio_service_ = nullptr;
+
+  binding_.set_error_handler(nullptr);
+  binding_.Unbind();
+
+  delete this;
+}
+
+void SoundPlayerImpl::WhenAudioServiceIsWarm(fit::closure callback) {
+  audio_service_->CreateAudioRenderer(audio_renderer_.NewRequest());
+
+  audio_renderer_->SetPcmStreamType(
+      fuchsia::media::AudioStreamType{.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16,
+                                      .channels = 1,
+                                      .frames_per_second = 48000});
+
+  audio_renderer_->EnableMinLeadTimeEvents(true);
+  audio_renderer_.events().OnMinLeadTimeChanged =
+      [this, callback = std::move(callback)](int64_t min_lead_time_nsec) {
+        if (min_lead_time_nsec > 0) {
+          callback();
+          audio_renderer_ = nullptr;
+        }
+      };
+
+  audio_renderer_.set_error_handler([this](zx_status_t status) {
+    FX_LOGS(WARNING) << "fuchsia.media.AudioRenderer connection closed waiting for warm-up, "
+                        "closing client connection.";
+    audio_renderer_.set_error_handler(nullptr);
+    audio_renderer_ = nullptr;
+    DeleteThis();
+  });
 }
 
 fpromise::result<Sound, zx_status_t> SoundPlayerImpl::SoundFromFile(
