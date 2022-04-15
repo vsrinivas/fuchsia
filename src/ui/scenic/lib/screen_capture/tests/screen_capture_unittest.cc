@@ -49,19 +49,20 @@ class ScreenCaptureTest : public gtest::TestLoopFixture {
 
   void TearDown() override { RunLoopUntilIdle(); }
 
-  fit::result<FrameInfo, ScreenCaptureError> CaptureScreen(screen_capture::ScreenCapture& sc) {
+  fpromise::result<FrameInfo, ScreenCaptureError> CaptureScreen(screen_capture::ScreenCapture& sc) {
     GetNextFrameArgs frame_args;
     zx::event event;
     zx::event::create(0, &event);
     frame_args.set_event(std::move(event));
 
-    fit::result<FrameInfo, ScreenCaptureError> response;
+    fpromise::result<FrameInfo, ScreenCaptureError> response;
     bool alloc_result = false;
-    sc.GetNextFrame(std::move(frame_args),
-                    [&response, &alloc_result](fit::result<FrameInfo, ScreenCaptureError> result) {
-                      response = std::move(result);
-                      alloc_result = true;
-                    });
+    sc.GetNextFrame(
+        std::move(frame_args),
+        [&response, &alloc_result](fpromise::result<FrameInfo, ScreenCaptureError> result) {
+          response = std::move(result);
+          alloc_result = true;
+        });
     RunLoopUntilIdle();
     EXPECT_TRUE(alloc_result);
     return response;
@@ -99,7 +100,7 @@ TEST_F(ScreenCaptureTest, ConfigureSingleImporterSuccess) {
       .WillRepeatedly(testing::Return(true));
 
   bool configure = false;
-  sc.Configure(std::move(args), [&configure](fit::result<void, ScreenCaptureError> result) {
+  sc.Configure(std::move(args), [&configure](fpromise::result<void, ScreenCaptureError> result) {
     EXPECT_FALSE(result.is_error());
     configure = true;
   });
@@ -128,7 +129,7 @@ TEST_F(ScreenCaptureTest, ConfigureSingleImporterFailure) {
       .WillRepeatedly(testing::Return(false));
 
   ScreenCaptureError error;
-  sc.Configure(std::move(args), [&error](fit::result<void, ScreenCaptureError> result) {
+  sc.Configure(std::move(args), [&error](fpromise::result<void, ScreenCaptureError> result) {
     EXPECT_TRUE(result.is_error());
     error = result.error();
   });
@@ -162,7 +163,7 @@ TEST_F(ScreenCaptureTest, ConfigureMultipleImportersSuccess) {
       .WillRepeatedly(testing::Return(true));
 
   bool configure = false;
-  sc.Configure(std::move(args), [&configure](fit::result<void, ScreenCaptureError> result) {
+  sc.Configure(std::move(args), [&configure](fpromise::result<void, ScreenCaptureError> result) {
     EXPECT_FALSE(result.is_error());
     configure = true;
   });
@@ -201,7 +202,7 @@ TEST_F(ScreenCaptureTest, ConfigureMultipleImportersImportFailure) {
 
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_));
 
-  sc.Configure(std::move(args), [](fit::result<void, ScreenCaptureError> result) {
+  sc.Configure(std::move(args), [](fpromise::result<void, ScreenCaptureError> result) {
     EXPECT_TRUE(result.is_error());
     EXPECT_EQ(result.error(), ScreenCaptureError::BAD_OPERATION);
   });
@@ -212,7 +213,7 @@ TEST_F(ScreenCaptureTest, ConfigureWithMissingArguments) {
   fuchsia::ui::composition::ScreenCapturePtr screencapturer;
   screen_capture::ScreenCapture sc(screencapturer.NewRequest(), {}, nullptr,
                                    [this]() { return this->GetRenderables(); });
-  sc.Configure({}, [](fit::result<void, ScreenCaptureError> result) {
+  sc.Configure({}, [](fpromise::result<void, ScreenCaptureError> result) {
     EXPECT_TRUE(result.is_error());
     EXPECT_EQ(result.error(), ScreenCaptureError::MISSING_ARGS);
   });
@@ -236,7 +237,7 @@ TEST_F(ScreenCaptureTest, ConfigureNoBuffers) {
   EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_))
       .WillRepeatedly(testing::Return(true));
 
-  sc.Configure(std::move(args), [](fit::result<void, ScreenCaptureError> result) {
+  sc.Configure(std::move(args), [](fpromise::result<void, ScreenCaptureError> result) {
     EXPECT_TRUE(result.is_error());
     EXPECT_EQ(result.error(), ScreenCaptureError::INVALID_ARGS);
   });
@@ -262,10 +263,11 @@ TEST_F(ScreenCaptureTest, ConfigureTwice) {
       .WillRepeatedly(testing::Return(true));
 
   bool alloc_result = false;
-  sc.Configure(std::move(args1), [&alloc_result](fit::result<void, ScreenCaptureError> result) {
-    EXPECT_FALSE(result.is_error());
-    alloc_result = true;
-  });
+  sc.Configure(std::move(args1),
+               [&alloc_result](fpromise::result<void, ScreenCaptureError> result) {
+                 EXPECT_FALSE(result.is_error());
+                 alloc_result = true;
+               });
   RunLoopUntilIdle();
   EXPECT_TRUE(alloc_result);
 
@@ -293,10 +295,11 @@ TEST_F(ScreenCaptureTest, ConfigureTwice) {
       .WillRepeatedly(testing::Return(true));
 
   alloc_result = false;
-  sc.Configure(std::move(args2), [&alloc_result](fit::result<void, ScreenCaptureError> result) {
-    EXPECT_FALSE(result.is_error());
-    alloc_result = true;
-  });
+  sc.Configure(std::move(args2),
+               [&alloc_result](fpromise::result<void, ScreenCaptureError> result) {
+                 EXPECT_FALSE(result.is_error());
+                 alloc_result = true;
+               });
   RunLoopUntilIdle();
   EXPECT_TRUE(alloc_result);
 
@@ -348,7 +351,7 @@ TEST_F(ScreenCaptureTest, GetNextFrameSuccess) {
       .WillRepeatedly(testing::Return(true));
 
   bool configure = false;
-  sc.Configure(std::move(args), [&configure](fit::result<void, ScreenCaptureError> result) {
+  sc.Configure(std::move(args), [&configure](fpromise::result<void, ScreenCaptureError> result) {
     EXPECT_FALSE(result.is_error());
     configure = true;
   });
@@ -383,7 +386,7 @@ TEST_F(ScreenCaptureTest, GetNextFrameBufferFullError) {
       .WillRepeatedly(testing::Return(true));
 
   bool configure = false;
-  sc.Configure(std::move(args), [&configure](fit::result<void, ScreenCaptureError> result) {
+  sc.Configure(std::move(args), [&configure](fpromise::result<void, ScreenCaptureError> result) {
     EXPECT_FALSE(result.is_error());
     configure = true;
   });
@@ -424,7 +427,7 @@ TEST_F(ScreenCaptureTest, GetNextFrameMultipleBuffers) {
       .WillRepeatedly(testing::Return(true));
 
   bool configure = false;
-  sc.Configure(std::move(args), [&configure](fit::result<void, ScreenCaptureError> result) {
+  sc.Configure(std::move(args), [&configure](fpromise::result<void, ScreenCaptureError> result) {
     EXPECT_FALSE(result.is_error());
     configure = true;
   });
@@ -468,7 +471,7 @@ TEST_F(ScreenCaptureTest, GetNextFrameMissingArgs) {
       .WillRepeatedly(testing::Return(true));
 
   bool configure = false;
-  sc.Configure(std::move(args), [&configure](fit::result<void, ScreenCaptureError> result) {
+  sc.Configure(std::move(args), [&configure](fpromise::result<void, ScreenCaptureError> result) {
     EXPECT_FALSE(result.is_error());
     configure = true;
   });
@@ -480,7 +483,7 @@ TEST_F(ScreenCaptureTest, GetNextFrameMissingArgs) {
   // Request a frame. We have not set the frame args so we expect an error.
   bool alloc_result = false;
   sc.GetNextFrame(std::move(frame_args),
-                  [&alloc_result](fit::result<FrameInfo, ScreenCaptureError> result) {
+                  [&alloc_result](fpromise::result<FrameInfo, ScreenCaptureError> result) {
                     EXPECT_TRUE(result.is_error());
                     EXPECT_EQ(result.error(), ScreenCaptureError::MISSING_ARGS);
                     alloc_result = true;
@@ -510,7 +513,7 @@ TEST_F(ScreenCaptureTest, ReleaseAvailableFrame) {
       .WillRepeatedly(testing::Return(true));
 
   bool alloc_result = false;
-  sc.Configure(std::move(args), [&alloc_result](fit::result<void, ScreenCaptureError> result) {
+  sc.Configure(std::move(args), [&alloc_result](fpromise::result<void, ScreenCaptureError> result) {
     EXPECT_FALSE(result.is_error());
     alloc_result = true;
   });
@@ -519,11 +522,12 @@ TEST_F(ScreenCaptureTest, ReleaseAvailableFrame) {
 
   // Attempt to release a frame that is not used.
   alloc_result = false;
-  sc.ReleaseFrame(/*buffer_id=*/0, [&alloc_result](fit::result<void, ScreenCaptureError> result) {
-    EXPECT_TRUE(result.is_error());
-    EXPECT_EQ(result.error(), ScreenCaptureError::INVALID_ARGS);
-    alloc_result = true;
-  });
+  sc.ReleaseFrame(/*buffer_id=*/0,
+                  [&alloc_result](fpromise::result<void, ScreenCaptureError> result) {
+                    EXPECT_TRUE(result.is_error());
+                    EXPECT_EQ(result.error(), ScreenCaptureError::INVALID_ARGS);
+                    alloc_result = true;
+                  });
   RunLoopUntilIdle();
   EXPECT_TRUE(alloc_result);
 
@@ -549,7 +553,7 @@ TEST_F(ScreenCaptureTest, ReleaseOutOfRangeFrame) {
       .WillRepeatedly(testing::Return(true));
 
   bool alloc_result = false;
-  sc.Configure(std::move(args), [&alloc_result](fit::result<void, ScreenCaptureError> result) {
+  sc.Configure(std::move(args), [&alloc_result](fpromise::result<void, ScreenCaptureError> result) {
     EXPECT_FALSE(result.is_error());
     alloc_result = true;
   });
@@ -559,11 +563,12 @@ TEST_F(ScreenCaptureTest, ReleaseOutOfRangeFrame) {
   // Attempt to release an index that is not within the range of valid indices for the buffer
   // collection.
   alloc_result = false;
-  sc.ReleaseFrame(/*buffer_id=*/1, [&alloc_result](fit::result<void, ScreenCaptureError> result) {
-    EXPECT_TRUE(result.is_error());
-    EXPECT_EQ(result.error(), ScreenCaptureError::INVALID_ARGS);
-    alloc_result = true;
-  });
+  sc.ReleaseFrame(/*buffer_id=*/1,
+                  [&alloc_result](fpromise::result<void, ScreenCaptureError> result) {
+                    EXPECT_TRUE(result.is_error());
+                    EXPECT_EQ(result.error(), ScreenCaptureError::INVALID_ARGS);
+                    alloc_result = true;
+                  });
   RunLoopUntilIdle();
   EXPECT_TRUE(alloc_result);
 
@@ -591,7 +596,7 @@ TEST_F(ScreenCaptureTest, ReleaseFrameFromFullBuffer) {
       .WillRepeatedly(testing::Return(true));
 
   bool configure = false;
-  sc.Configure(std::move(args), [&configure](fit::result<void, ScreenCaptureError> result) {
+  sc.Configure(std::move(args), [&configure](fpromise::result<void, ScreenCaptureError> result) {
     EXPECT_FALSE(result.is_error());
     configure = true;
   });
@@ -615,7 +620,7 @@ TEST_F(ScreenCaptureTest, ReleaseFrameFromFullBuffer) {
   // fill the buffer we released.
   bool alloc_result = false;
   sc.ReleaseFrame(/*buffer_id=*/kFreedBufferId,
-                  [&alloc_result](fit::result<void, ScreenCaptureError> result) {
+                  [&alloc_result](fpromise::result<void, ScreenCaptureError> result) {
                     EXPECT_TRUE(result.is_ok());
                     alloc_result = true;
                   });

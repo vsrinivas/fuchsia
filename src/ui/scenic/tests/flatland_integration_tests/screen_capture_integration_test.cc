@@ -218,7 +218,7 @@ class ScreenCaptureIntegrationTest : public gtest::RealLoopFixture {
   }
 
   // This function calls GetNextFrame().
-  fit::result<FrameInfo, ScreenCaptureError> CaptureScreen(
+  fpromise::result<FrameInfo, ScreenCaptureError> CaptureScreen(
       fuchsia::ui::composition::ScreenCapturePtr& screencapturer) {
     zx::event event;
     zx::event dup;
@@ -229,11 +229,11 @@ class ScreenCaptureIntegrationTest : public gtest::RealLoopFixture {
     GetNextFrameArgs gnf_args;
     gnf_args.set_event(std::move(dup));
 
-    fit::result<FrameInfo, ScreenCaptureError> response;
+    fpromise::result<FrameInfo, ScreenCaptureError> response;
     bool alloc_result = false;
     screencapturer->GetNextFrame(
         std::move(gnf_args),
-        [&response, &alloc_result](fit::result<FrameInfo, ScreenCaptureError> result) {
+        [&response, &alloc_result](fpromise::result<FrameInfo, ScreenCaptureError> result) {
           response = std::move(result);
           alloc_result = true;
         });
@@ -355,7 +355,7 @@ void WriteToSysmemBuffer(const std::vector<uint32_t>& write_values,
 
 // This function returns a linear buffer of pixels of size width * height.
 std::vector<uint32_t> ExtractScreenCapture(
-    const fit::result<FrameInfo, ScreenCaptureError>& frame_result,
+    const fpromise::result<FrameInfo, ScreenCaptureError>& frame_result,
     fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info, uint32_t kBytesPerPixel,
     uint32_t render_target_width, uint32_t render_target_height) {
   EXPECT_FALSE(frame_result.is_error());
@@ -444,7 +444,7 @@ TEST_F(ScreenCaptureIntegrationTest, SingleColorUnrotatedScreenshot) {
 
   bool alloc_result = false;
   screen_capture_->Configure(std::move(sc_args),
-                             [&alloc_result](fit::result<void, ScreenCaptureError> result) {
+                             [&alloc_result](fpromise::result<void, ScreenCaptureError> result) {
                                EXPECT_FALSE(result.is_error());
                                alloc_result = true;
                              });
@@ -535,7 +535,7 @@ TEST_F(ScreenCaptureIntegrationTest, MultiColor180DegreeRotationScreenshot) {
 
   bool alloc_result = false;
   screen_capture_->Configure(std::move(sc_args),
-                             [&alloc_result](fit::result<void, ScreenCaptureError> result) {
+                             [&alloc_result](fpromise::result<void, ScreenCaptureError> result) {
                                EXPECT_FALSE(result.is_error());
                                alloc_result = true;
                              });
@@ -668,7 +668,7 @@ TEST_F(ScreenCaptureIntegrationTest, MultiColor90DegreeRotationScreenshot) {
 
   bool alloc_result = false;
   screen_capture_->Configure(std::move(sc_args),
-                             [&alloc_result](fit::result<void, ScreenCaptureError> result) {
+                             [&alloc_result](fpromise::result<void, ScreenCaptureError> result) {
                                EXPECT_FALSE(result.is_error());
                                alloc_result = true;
                              });
@@ -821,7 +821,7 @@ TEST_F(ScreenCaptureIntegrationTest, MultiColor270DegreeRotationScreenshot) {
 
   bool alloc_result = false;
   screen_capture_->Configure(std::move(sc_args),
-                             [&alloc_result](fit::result<void, ScreenCaptureError> result) {
+                             [&alloc_result](fpromise::result<void, ScreenCaptureError> result) {
                                EXPECT_FALSE(result.is_error());
                                alloc_result = true;
                              });
@@ -914,7 +914,7 @@ TEST_F(ScreenCaptureIntegrationTest, FilledRectScreenshot) {
 
   bool alloc_result = false;
   screen_capture_->Configure(std::move(sc_args),
-                             [&alloc_result](fit::result<void, ScreenCaptureError> result) {
+                             [&alloc_result](fpromise::result<void, ScreenCaptureError> result) {
                                EXPECT_FALSE(result.is_error());
                                alloc_result = true;
                              });
@@ -980,7 +980,7 @@ TEST_F(ScreenCaptureIntegrationTest, ChangeFilledRectScreenshots) {
 
   bool alloc_result = false;
   screen_capture_->Configure(std::move(sc_args),
-                             [&alloc_result](fit::result<void, ScreenCaptureError> result) {
+                             [&alloc_result](fpromise::result<void, ScreenCaptureError> result) {
                                EXPECT_FALSE(result.is_error());
                                alloc_result = true;
                              });

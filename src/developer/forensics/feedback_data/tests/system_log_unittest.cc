@@ -231,7 +231,7 @@ TEST_F(CollectLogDataTest, Succeed_AppliesRedaction) {
 }
 
 LogSink::MessageOr ToMessage(const std::string& msg) {
-  return ::fit::ok(fuchsia::logger::LogMessage{
+  return ::fpromise::ok(fuchsia::logger::LogMessage{
       .pid = 100,
       .tid = 101,
       .time = (zx::sec(1) + zx::msec(10)).get(),
@@ -243,7 +243,7 @@ LogSink::MessageOr ToMessage(const std::string& msg) {
 }
 
 LogSink::MessageOr ToMessage(const std::string& msg, const zx::duration time) {
-  return ::fit::ok(fuchsia::logger::LogMessage{
+  return ::fpromise::ok(fuchsia::logger::LogMessage{
       .pid = 100,
       .tid = 101,
       .time = time.get(),
@@ -254,7 +254,7 @@ LogSink::MessageOr ToMessage(const std::string& msg, const zx::duration time) {
   });
 }
 
-LogSink::MessageOr ToError(const std::string& error) { return ::fit::error(error); }
+LogSink::MessageOr ToError(const std::string& error) { return ::fpromise::error(error); }
 
 TEST(LogBufferTest, AddDoesNotReachCapcity) {
   IdentityRedactor redactor(inspect::BoolProperty{});

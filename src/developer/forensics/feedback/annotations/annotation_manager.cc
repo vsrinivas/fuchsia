@@ -5,8 +5,8 @@
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/fit/bridge.h>
-#include <lib/fit/promise.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <map>
@@ -120,7 +120,7 @@ void AnnotationManager::InsertStatic(const Annotations& annotations) {
   return bridge.consumer.promise_or(::fpromise::error())
       .and_then([self] {
         if (!self) {
-          return ::fit::ok(Annotations{});
+          return ::fpromise::ok(Annotations{});
         }
 
         Annotations annotations = self->ImmediatelyAvailable();
@@ -128,11 +128,11 @@ void AnnotationManager::InsertStatic(const Annotations& annotations) {
           InsertMissing(p->GetKeys(), Error::kTimeout, self->allowlist_, &annotations);
         }
 
-        return ::fit::ok(std::move(annotations));
+        return ::fpromise::ok(std::move(annotations));
       })
       .or_else([] {
         FX_LOGS(FATAL) << "Promise for waiting on annotations was incorrectly dropped";
-        return ::fit::ok(Annotations{});
+        return ::fpromise::ok(Annotations{});
       });
 }
 
