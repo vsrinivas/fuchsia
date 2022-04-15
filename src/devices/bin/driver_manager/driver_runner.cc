@@ -361,7 +361,7 @@ fidl::VectorView<fdecl::wire::Offer> Node::CreateOffers(fidl::AnyArena& arena) c
     // Find a parent node with a collection. This indicates that a driver has
     // been bound to the node, and the driver is running within the collection.
     auto source_node = parent;
-    for (; source_node->collection_ == Collection::kNone && source_node != nullptr;
+    for (; source_node != nullptr && source_node->collection_ == Collection::kNone;
          source_node = PrimaryParent(source_node->parents_)) {
     }
     // If this is a composite node, then the offers come from the parent nodes.
