@@ -35,5 +35,5 @@ fuchsia_package_with_single_component("audio_mixer_profiler") {
   testonly = true
 
   deps = [ ":profiler_bin" ]
-  manifest = "meta/audio_mixer_profiler.cmx"
+  manifest = "meta/audio_mixer_profiler.cml"
 }
