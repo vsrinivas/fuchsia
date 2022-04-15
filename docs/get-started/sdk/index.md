@@ -213,19 +213,13 @@ Start the Fuchsia emulator on the host machine.
 
 The tasks include:
 
-*   Configure your environment to enable the Fuchsia emulator.
+*   Configure your network environment for the Fuchsia emulator.
 *   Download one of Fuchsia's prebuilt images from Google Cloud Storage.
 *   Start the Fuchsia emulator to run the downloaded Fuchsia prebuilt image.
 *   Set the emulator instance as the default target device.
 *   Verify that various `ffx` commands can connect to the emulator instance.
 
 Do the following:
-
-1. Enable the experimental product bundle features on `ffx`:
-
-   ```posix-terminal
-   tools/ffx config set product-bundle.experimental true
-   ```
 
 1. Configure Tun/Tap:
 
@@ -234,6 +228,12 @@ Do the following:
 
    ```posix-terminal
    sudo ip tuntap add dev qemu mode tap user $USER && sudo ip link set qemu up
+   ```
+
+1. List all available Fuchsia prebuilt images:
+
+   ```posix-terminal
+   tools/ffx product-bundle list
    ```
 
 1. Download the latest Fuchsia Workstation prebuilt image for the emulator
@@ -388,20 +388,16 @@ packages in this guide.
 
 The tasks include:
 
-*   Configure your environment to enable the Fuchsia package repository features.
+*   Configure your environment to enable the Fuchsia package server features.
 *   Create a new Fuchsia package repository.
 *   Start the Fuchsia package server.
 *   Register the new repository to the target device (that is, the emulator instance).
 
 Do the following:
 
-1. Enable the new `ffx repository` features:
+1. Enable the new `ffx repository` server features:
 
    Note: You only need to do this once.
-
-   ```posix-terminal
-   tools/ffx config set ffx_repository true
-   ```
 
    ```posix-terminal
    tools/ffx config set repository.server.mode ffx
@@ -436,11 +432,13 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx repository list
-   +---------------------+------+------------------------------------------+
-   | NAME                | TYPE | EXTRA                                    |
-   +=====================+======+==========================================+
-   | fuchsiasamples.com* | pm   | /home/alice/.package_repos/sdk-samples   |
-   +---------------------+------+------------------------------------------+
+   +----------------------+------+-----------------------------------------------+
+   | NAME                 | TYPE | EXTRA                                         |
+   +======================+======+===============================================+
+   | fuchsiasamples.com*  | pm   | /home/alice/.package_repos/sdk-samples        |
+   +----------------------+------+-----------------------------------------------+
+   | workstation.qemu-x64 | pm   | /home/alice/.local/share/Fuchsia/.../packages |
+   +----------------------+------+-----------------------------------------------+
    ```
 
 1. Start the Fuchsia package server:
@@ -455,6 +453,15 @@ Do the following:
    $ tools/ffx repository server start
    server is listening on [::]:8083
    ```
+
+1. Register the repository with the prebuilt system packages to the target
+   device (that is, the emulator instance) as `fuchsia.com`:
+
+   ```posix-terminal
+   tools/ffx target repository register -r workstation.qemu-x64 --alias fuchsia.com
+   ```
+
+   This command exits silently without output.
 
 1. Register the repository to the target device (that is, the emulator instance)
    as `fuchsiasamples.com`:
@@ -1075,10 +1082,6 @@ Remove the `getting-started` directory and its artifacts:
 
 ```posix-terminal
 rm -rf ~/getting-started
-```
-
-```posix-terminal
-rm -fr ~/.package_repos/sdk-samples
 ```
 
 ```posix-terminal
