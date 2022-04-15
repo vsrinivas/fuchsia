@@ -116,12 +116,7 @@ Add the following `BUILD.bazel` rules to build and package the server component:
 `echo-server/BUILD.bazel`:
 
 ```bazel
-load(
-    "@rules_fuchsia//fuchsia:defs.bzl",
-    "fuchsia_cc_binary",
-    "fuchsia_component",
-    "fuchsia_component_manifest",
-)
+{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/cpp/echo_server/BUILD.bazel" region_tag="imports" adjust_indentation="auto" %}
 
 fuchsia_cc_binary(
     name = "echo_server_cpp",
@@ -142,25 +137,7 @@ fuchsia_cc_binary(
     ],
 )
 
-fuchsia_component_manifest(
-    name = "manifest",
-    src = "meta/echo_server.cml",
-    component_name = "echo_server_component",
-    includes = [
-        "@fuchsia_sdk//pkg/syslog:client",
-        "@fuchsia_sdk//pkg/inspect:client",
-    ],
-)
-
-fuchsia_component(
-    name = "echo_server_component",
-    component_name = "echo_server_component",
-    deps = [
-        ':echo_server_cpp',
-    ],
-    manifest = ":manifest",
-    visibility = ["//visibility:public"],
-)
+{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/cpp/echo_server/BUILD.bazel" region_tag="component" adjust_indentation="auto" %}
 ```
 
 ### Implement the server
@@ -235,12 +212,7 @@ Add the following `BUILD.bazel` rules to build and package the server component:
 `echo-client/BUILD.bazel`:
 
 ```bazel
-load(
-    "@rules_fuchsia//fuchsia:defs.bzl",
-    "fuchsia_cc_binary",
-    "fuchsia_component",
-    "fuchsia_component_manifest",
-)
+{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/cpp/echo_client/BUILD.bazel" region_tag="imports" adjust_indentation="auto" %}
 
 fuchsia_cc_binary(
     name = "echo_client_cpp",
@@ -259,22 +231,7 @@ fuchsia_cc_binary(
     ],
 )
 
-fuchsia_component_manifest(
-    name = "manifest",
-    src = "meta/echo_client.cml",
-    component_name = "echo_client_component",
-    includes = ["@fuchsia_sdk//pkg/syslog:client"],
-)
-
-fuchsia_component(
-    name = "echo_client_component",
-    component_name = "echo_client_component",
-    deps = [
-        ':echo_client_cpp',
-    ],
-    manifest = ":manifest",
-    visibility = ["//visibility:public"],
-)
+{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/cpp/echo_client/BUILD.bazel" region_tag="component" adjust_indentation="auto" %}
 ```
 
 ### Implement the client
@@ -340,27 +297,10 @@ Fuchsia package containing the server and client:
 
 `echo-realm/BUILD.bazel`:
 
-```
-load(
-    "@rules_fuchsia//fuchsia:defs.bzl",
-    "fuchsia_component",
-    "fuchsia_component_manifest",
-    "fuchsia_package",
-    "fuchsia_test_component",
-)
+```bazel
+{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/BUILD.bazel" region_tag="imports" adjust_indentation="auto" %}
 
-fuchsia_component_manifest(
-    name = "manifest",
-    src = "meta/echo_realm.cml",
-    component_name = "echo_realm",
-)
-
-fuchsia_component(
-    name = "echo_realm",
-    component_name = "echo_realm",
-    manifest = ":manifest",
-    visibility = ["//visibility:public"],
-)
+{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/BUILD.bazel" region_tag="component" adjust_indentation="auto" %}
 
 fuchsia_package(
     name = "pkg",

@@ -119,6 +119,10 @@ Add your tests to the build configuration:
 `BUILD.bazel`:
 
 ```bazel
+{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/echo/BUILD.bazel" region_tag="imports" adjust_indentation="auto" %}
+
+# ...
+
 {% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/echo/BUILD.bazel" region_tag="unittest" adjust_indentation="auto" %}
 ```
 

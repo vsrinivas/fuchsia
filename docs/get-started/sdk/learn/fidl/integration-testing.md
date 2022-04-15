@@ -134,16 +134,7 @@ test component:
 `echo-integration/BUILD.bazel`:
 
 ```bazel
-load(
-    "@rules_fuchsia//fuchsia:defs.bzl",
-    "fuchsia_cc_binary",
-    "fuchsia_component",
-    "fuchsia_component_manifest",
-    "fuchsia_package",
-    "fuchsia_test_component",
-)
-
-package(default_visibility = ["//visibility:public"])
+{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/integration_tests/BUILD.bazel" region_tag="imports" adjust_indentation="auto" %}
 
 cc_test(
     name = "echo_integration_test",
@@ -163,36 +154,7 @@ cc_test(
     ],
 )
 
-filegroup(
-    name = "common_libs",
-    srcs = [
-        "@fuchsia_sdk//:arch/x64/sysroot/dist/lib/ld.so.1",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-fuchsia_component_manifest(
-    name = "test_manifest",
-    src = "meta/echo_integration_test.cml",
-    component_name = "echo_integration_test_component",
-    includes = [
-        "@fuchsia_sdk//pkg/syslog:client",
-        "@fuchsia_sdk//pkg/sys/testing:elf_test_runner",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-fuchsia_test_component(
-    name = "echo_integration_test_component",
-    manifest = ":test_manifest",
-    test_name = "echo_integration_test",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":common_libs",
-        ":echo_integration_test",
-        "@fuchsia_clang//:dist",
-    ],
-)
+{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/integration_tests/BUILD.bazel" region_tag="component" adjust_indentation="auto" %}
 
 fuchsia_package(
     name = "test_pkg",

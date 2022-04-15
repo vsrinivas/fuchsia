@@ -163,14 +163,7 @@ Add your new component to the build configuration:
 `BUILD.bazel`:
 
 ```bazel
-load(
-    "@rules_fuchsia//fuchsia:defs.bzl",
-    "fuchsia_cc_binary",
-    "fuchsia_component",
-    "fuchsia_component_manifest",
-    "fuchsia_package",
-    "fuchsia_test_component",
-)
+{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/echo/BUILD.bazel" region_tag="imports" adjust_indentation="auto" %}
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/echo/BUILD.bazel" region_tag="echo" adjust_indentation="auto" %}
 ```
