@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_HWSTRESS_STATUS_H_
-#define GARNET_BIN_HWSTRESS_STATUS_H_
+#ifndef SRC_ZIRCON_BIN_HWSTRESS_STATUS_H_
+#define SRC_ZIRCON_BIN_HWSTRESS_STATUS_H_
 
 #include <zircon/compiler.h>
 
@@ -73,4 +73,4 @@ class StatusLine {
 
 }  // namespace hwstress
 
-#endif  // GARNET_BIN_HWSTRESS_STATUS_H_
+#endif  // SRC_ZIRCON_BIN_HWSTRESS_STATUS_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_HWSTRESS_LIGHT_STRESS_H_
-#define GARNET_BIN_HWSTRESS_LIGHT_STRESS_H_
+#ifndef SRC_ZIRCON_BIN_HWSTRESS_LIGHT_STRESS_H_
+#define SRC_ZIRCON_BIN_HWSTRESS_LIGHT_STRESS_H_
 
 #include <fuchsia/hardware/light/cpp/fidl.h>
 #include <lib/zx/status.h>
@@ -42,4 +42,4 @@ zx::status<> TurnOffLight(const fuchsia::hardware::light::LightSyncPtr& light, u
 
 }  // namespace hwstress
 
-#endif  // GARNET_BIN_HWSTRESS_LIGHT_STRESS_H_
+#endif  // SRC_ZIRCON_BIN_HWSTRESS_LIGHT_STRESS_H_

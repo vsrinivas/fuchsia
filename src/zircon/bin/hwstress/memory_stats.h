@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_ZIRCON_BIN_HWSTRESS_MEMORY_STATS_H_
+#define SRC_ZIRCON_BIN_HWSTRESS_MEMORY_STATS_H_
 
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <lib/zx/status.h>
@@ -13,3 +14,5 @@ namespace hwstress {
 zx::status<fuchsia::kernel::MemoryStats> GetMemoryStats();
 
 }  // namespace hwstress
+
+#endif  // SRC_ZIRCON_BIN_HWSTRESS_MEMORY_STATS_H_

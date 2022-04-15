@@ -24,8 +24,6 @@ config("fidl-deprecated-c-bindings") {
   #
   # and replace the contents of `visibility` with the script output.
   visibility = [
-    "//garnet/bin/hwstress:hwstress_v2_test",
-    "//garnet/bin/hwstress:lib",
     "//garnet/bin/ktrace_provider:bin",
     "//src/bringup/bin/bootsvc:bin",
     "//src/bringup/bin/bootsvc/integration_test:bootsvc-integration-test",
@@ -338,6 +336,8 @@ config("fidl-deprecated-c-bindings") {
     "//src/ui/lib/display:hdcp_service",
     "//src/virtualization/bin/vmm/device:block",
     "//src/virtualization/bin/vmm/device:magma_image",
+    "//src/zircon/bin/hwstress:hwstress_v2_test",
+    "//src/zircon/bin/hwstress:lib",
     "//src/zircon/bin/kstress:kstress",
     "//src/zircon/testing/mutex_pi_exerciser:mutex_pi_exerciser",
     "//src/zircon/tests/profile:profile",

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_HWSTRESS_DEVICE_H_
-#define GARNET_BIN_HWSTRESS_DEVICE_H_
+#ifndef SRC_ZIRCON_BIN_HWSTRESS_DEVICE_H_
+#define SRC_ZIRCON_BIN_HWSTRESS_DEVICE_H_
 
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
@@ -18,4 +18,4 @@ zx::status<zx::channel> OpenDeviceChannel(std::string_view path);
 
 }  // namespace hwstress
 
-#endif  // GARNET_BIN_HWSTRESS_DEVICE_H_
+#endif  // SRC_ZIRCON_BIN_HWSTRESS_DEVICE_H_

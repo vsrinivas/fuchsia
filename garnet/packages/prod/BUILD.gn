@@ -33,7 +33,6 @@ group("all") {
     "//garnet/packages/prod:debug_agent",
     "//garnet/packages/prod:drivers-system",
     "//garnet/packages/prod:far",
-    "//garnet/packages/prod:hwstress",
     "//garnet/packages/prod:insntrace",
     "//garnet/packages/prod:run",
     "//garnet/packages/prod:sbase",
@@ -55,6 +54,7 @@ group("all") {
     "//src/fonts",
     "//src/power:battery",
     "//src/ui/a11y:a11y",
+    "//src/zircon/bin/hwstress",
   ]
 }
 
@@ -151,9 +151,9 @@ group("cmdutils") {
     "//examples/cowsay",
     "//garnet/bin/time",
     "//garnet/bin/uname",
-    "//garnet/packages/prod:hwstress",
     "//garnet/packages/prod:sbase",
     "//garnet/packages/prod:sched",
+    "//src/zircon/bin/hwstress",
   ]
 }
 
@@ -193,11 +193,6 @@ group("far") {
     "//src/sys/pkg/bin/far",
     "//src/sys/pkg/bin/far:host",
   ]
-}
-
-group("hwstress") {
-  testonly = true
-  public_deps = [ "//garnet/bin/hwstress" ]
 }
 
 group("insntrace") {

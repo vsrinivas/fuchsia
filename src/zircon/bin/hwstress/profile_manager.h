@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_HWSTRESS_PROFILE_MANAGER_H_
-#define GARNET_BIN_HWSTRESS_PROFILE_MANAGER_H_
+#ifndef SRC_ZIRCON_BIN_HWSTRESS_PROFILE_MANAGER_H_
+#define SRC_ZIRCON_BIN_HWSTRESS_PROFILE_MANAGER_H_
 
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/sys/cpp/service_directory.h>
@@ -94,4 +94,4 @@ zx_status_t ProfileManager::CreateAndApplyProfile(
 
 }  // namespace hwstress
 
-#endif  // GARNET_BIN_HWSTRESS_PROFILE_MANAGER_H_
+#endif  // SRC_ZIRCON_BIN_HWSTRESS_PROFILE_MANAGER_H_

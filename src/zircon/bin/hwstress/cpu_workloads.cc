@@ -234,7 +234,7 @@ class MixedWorkload final : public Workload {
 
 // Convert the given Workload into a CpuWorkload.
 template <typename W>
-auto IterateWorkload() -> auto {
+auto IterateWorkload() -> auto{
   return [](WorkIndicator indicator) {
     W workload{};
     do {

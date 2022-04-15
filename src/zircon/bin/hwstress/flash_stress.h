@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_HWSTRESS_FLASH_STRESS_H_
-#define GARNET_BIN_HWSTRESS_FLASH_STRESS_H_
+#ifndef SRC_ZIRCON_BIN_HWSTRESS_FLASH_STRESS_H_
+#define SRC_ZIRCON_BIN_HWSTRESS_FLASH_STRESS_H_
 
 #include <fuchsia/hardware/block/cpp/fidl.h>
 #include <lib/zx/fifo.h>
@@ -78,4 +78,4 @@ zx_status_t FlashIo(const BlockDevice& device, size_t bytes_to_test, size_t tran
 
 }  // namespace hwstress
 
-#endif  // GARNET_BIN_HWSTRESS_FLASH_STRESS_H_
+#endif  // SRC_ZIRCON_BIN_HWSTRESS_FLASH_STRESS_H_

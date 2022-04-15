@@ -181,7 +181,8 @@ fitx::result<std::string, CommandLineArgs> ParseArgs(cpp20::span<const char* con
 
   std::unique_ptr<cmdline::ArgsParser<CommandLineArgs>> parser = GetParser();
   std::vector<std::string> params;
-  cmdline::Status status = parser->Parse(static_cast<int>(other_args.size()), other_args.data(), &result, &params);
+  cmdline::Status status =
+      parser->Parse(static_cast<int>(other_args.size()), other_args.data(), &result, &params);
   if (!status.ok()) {
     return fitx::error(status.error_message().c_str());
   }

@@ -277,7 +277,8 @@ fitx::result<std::string, size_t> GetMemoryToTest(const CommandLineArgs& args) {
   if (args.ram_to_test_percent.has_value()) {
     uint64_t total_bytes = maybe_stats->total_bytes();
     auto test_bytes =
-        static_cast<uint64_t>(static_cast<double>(total_bytes) * (static_cast<double>(args.ram_to_test_percent.value()) / 100.));
+        static_cast<uint64_t>(static_cast<double>(total_bytes) *
+                              (static_cast<double>(args.ram_to_test_percent.value()) / 100.));
     return fitx::ok(RoundUp(test_bytes, zx_system_get_page_size()));
   }
 
@@ -353,7 +354,8 @@ bool StressMemory(StatusLine* status, const CommandLineArgs& args, zx::duration 
     status->Log(bytes_to_test.error_value());
     return false;
   }
-  status->Log("Testing %0.2fMiB of memory.", static_cast<double>(bytes_to_test.value()) / static_cast<double>(MiB(1)));
+  status->Log("Testing %0.2fMiB of memory.",
+              static_cast<double>(bytes_to_test.value()) / static_cast<double>(MiB(1)));
 
   // Create a profile manager.
   std::unique_ptr<ProfileManager> profile_manager = ProfileManager::CreateFromEnvironment();
@@ -396,9 +398,9 @@ bool StressMemory(StatusLine* status, const CommandLineArgs& args, zx::duration 
     // Calculate test time and throughput.
     std::string throughput;
     if (next.workload.report_throughput) {
-      throughput =
-          fxl::StringPrintf(", throughput: %0.2f MiB/s",
-                            static_cast<double>(memory->size_bytes()) / DurationToSecs(test_duration) / 1024. / 1024.);
+      throughput = fxl::StringPrintf(", throughput: %0.2f MiB/s",
+                                     static_cast<double>(memory->size_bytes()) /
+                                         DurationToSecs(test_duration) / 1024. / 1024.);
     }
     status->Log("Test %4ld: CPU %2d : %s: %0.3fs%s", num_tests, next.cpu,
                 next.workload.name.c_str(), DurationToSecs(test_duration), throughput.c_str());

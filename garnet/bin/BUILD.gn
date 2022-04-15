@@ -12,7 +12,6 @@ group("bin") {
     # TODO(fxbug.dev/49942): temporarily disable while flake is investigated.
     # "fidl_compatibility_test",
     "glob",
-    "hwstress",
     "insntrace",
     "ktrace_provider",
     "run_test_component",

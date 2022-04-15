@@ -21,7 +21,6 @@ group("all") {
     "//garnet/bin/cpuperf/tests",
     "//garnet/bin/cpuperf_provider:cpuperf_provider_tests",
     "//garnet/bin/glob",
-    "//garnet/bin/hwstress:tests",
     "//garnet/bin/insntrace/tests",
     "//garnet/bin/ktrace_provider:ktrace_provider_tests",
     "//garnet/bin/run_test_component:tests",
