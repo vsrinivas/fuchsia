@@ -122,7 +122,7 @@ Note: Support for installing the SDK by itself, without a samples repository, is
 The tasks include:
 
 *   Bootstrap the SDK samples repository.
-*   Verify that you can build the sample components.
+*   Verify that you can build the sample components and run [`ffx`][ffx] commands.
 
 Do the following:
 
@@ -162,7 +162,8 @@ Do the following:
    ```
 
    The first build may take a few minutes to download dependencies,
-   such as [Clang][clang]{:.external} and [Fuchsia IDK][fuchsia-idk].
+   such as [Clang][clang]{:.external} and [Fuchsia IDK][fuchsia-idk] (which
+   includes the `ffx` tool).
 
    When finished successfully, it prints output similar to the following in the end:
 
@@ -189,7 +190,7 @@ Do the following:
      build-version: 2022-04-12T01:17:14+00:00
      integration-commit-hash: 19cd0be96c90e3083efc4a17db9ae4171527cab4
      integration-commit-time: Tue, 12 Apr 2022 01:17:14 +0000
-   
+
    daemon:
      build-version: 2022-04-12T01:17:14+00:00
      integration-commit-hash: 19cd0be96c90e3083efc4a17db9ae4171527cab4
@@ -1038,7 +1039,7 @@ Do the following:
      "hello"
      "world"
    [FAILED]	   HelloTest.BasicAssertions
-   
+
    Failed tests: HelloTest.BasicAssertions
    0 out of 1 tests passed...
    fuchsia-pkg://fuchsiasamples.com/hello_test#meta/hello_gtest.cm completed with result: FAILED
@@ -1144,3 +1145,4 @@ is available for the Fuchsia package server.
 [zxdb-user-guide]: /docs/development/debugger/README.md
 [inspect-overview]: /docs/development/diagnostics/inspect/README.md
 [google-test]: https://google.github.io/googletest/
+[ffx]: https://fuchsia.dev/reference/tools/sdk/ffx
