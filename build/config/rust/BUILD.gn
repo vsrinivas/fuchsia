@@ -202,6 +202,7 @@ config("allow_unused_results") {
     "//src/tests/*",
     "//src/ui/*",
     "//src/virtualization/*",
+    "//src/zircon/*",
     "//third_party/*",
     "//tools/*",
     "//vendor/*",

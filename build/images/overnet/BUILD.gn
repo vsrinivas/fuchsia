@@ -31,7 +31,6 @@ assemble_system("overnet") {
     ":core",
     "//src/sys/tools/run",
     "//garnet/bin/trace",
-    "//garnet/bin/vsock_service:vsock_service",
     "//src/sys/appmgr",
     "//src/sys/appmgr:appmgr_scheme_config",
     "//src/sys/appmgr:component_id_index_no_restrict_storage",
@@ -44,6 +43,7 @@ assemble_system("overnet") {
     "//src/sys/pkg/bin/system-updater",
     "//src/sys/pkg/bin/system-update-checker",
     "//src/sys/pkg/bin/system-update-committer",
+    "//src/zircon/bin/vsock_service:vsock_service",
   ]
   bootfs_labels = [
     ":root",

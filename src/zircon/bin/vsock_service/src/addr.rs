@@ -66,12 +66,6 @@ impl Clone for Vsock {
 
 impl Vsock {
     pub fn new(local_port: u32, remote_port: u32, remote_cid: u32) -> Vsock {
-        Vsock {
-            inner: Raw {
-                local_port,
-                remote_port,
-                remote_cid,
-            },
-        }
+        Vsock { inner: Raw { local_port, remote_port, remote_cid } }
     }
 }

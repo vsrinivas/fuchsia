@@ -31,7 +31,6 @@ assemble_system("guest") {
     "//src/sys/tools/run",
     "//garnet/bin/sysmgr",
     "//garnet/bin/trace",
-    "//garnet/bin/vsock_service:vsock_service",
     "//src/diagnostics/log-stats:package",
     "//src/sys/appmgr:appmgr_scheme_config",
     "//src/sys/appmgr:component_id_index_no_restrict_storage",
@@ -44,6 +43,7 @@ assemble_system("guest") {
     "//src/sys/pkg/bin/system-update-committer",
     "//src/virtualization/packages/zircon_guest:services_config",
     "//src/virtualization/tests:virtualization_test_utils_pkg",
+    "//src/zircon/bin/vsock_service:vsock_service",
   ]
 
   bootfs_labels = [

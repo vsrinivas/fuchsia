@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
   deps = [
     "bin/hwstress:tests",
+    "bin/vsock_service:vsock_service-tests",
     "tests",
   ]
 }

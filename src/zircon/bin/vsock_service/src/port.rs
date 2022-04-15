@@ -37,10 +37,7 @@ impl Tracker {
         self.next_allocation = std::cmp::min(self.next_allocation, port);
     }
     pub fn new() -> Self {
-        Tracker {
-            used: HashSet::new(),
-            next_allocation: EPHEMERAL_PORT_RANGE.start,
-        }
+        Tracker { used: HashSet::new(), next_allocation: EPHEMERAL_PORT_RANGE.start }
     }
 }
 
