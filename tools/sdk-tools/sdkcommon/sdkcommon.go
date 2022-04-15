@@ -76,7 +76,7 @@ const (
 	FFXIsolatedEnvKey = "FFX_ISOLATED_CONFIG"
 
 	sleepTimeInSeconds = 5
-	unknownTargetName  = "<unknown>"
+	UnknownTargetName  = "unknown"
 	maxRetryCount      = 3
 )
 
@@ -362,10 +362,10 @@ func (f *FuchsiaDevice) getIPAddressAndPort() (string, string) {
 	return host, port
 }
 
-// isUnknownInListOutput returns true if <unknown> is in the ffx output.
+// isUnknownInListOutput returns true if unknown is in the ffx output.
 func (sdk SDKProperties) isUnknownInListOutput(discoveredDevices []*deviceInfo) bool {
 	for _, currentDevice := range discoveredDevices {
-		if unknownTargetName == strings.TrimSpace(currentDevice.Nodename) {
+		if strings.Contains(strings.TrimSpace(currentDevice.Nodename), UnknownTargetName) {
 			return true
 		}
 	}
@@ -393,9 +393,9 @@ func (sdk SDKProperties) listDevicesWithFFX() ([]*deviceInfo, error) {
 func (sdk SDKProperties) listDevices() ([]*FuchsiaDevice, error) {
 	var discoveredDevices []*deviceInfo
 	var err error
-	// List the devices using ffx. If <unknown> is in the output from ffx, we will try
+	// List the devices using ffx. If unknown is in the output from ffx, we will try
 	// `maxRetryCount` so that the device will show up with the name.
-	// If after the `maxRetryCount` is reached and <unknown> is still in the output, the device
+	// If after the `maxRetryCount` is reached and unknown is still in the output, the device
 	// is unreachable.
 	for tries := 0; tries < maxRetryCount; tries++ {
 		discoveredDevices, err = sdk.listDevicesWithFFX()
@@ -405,7 +405,7 @@ func (sdk SDKProperties) listDevices() ([]*FuchsiaDevice, error) {
 		if !sdk.isUnknownInListOutput(discoveredDevices) {
 			break
 		}
-		// This should only occur when the device is in <unknown> state, usually in the first
+		// This should only occur when the device is in unknown state, usually in the first
 		// invocation of any of the f* tools.
 		time.Sleep(sleepTimeInSeconds * time.Second)
 	}

@@ -161,7 +161,7 @@ func handleGetAll(sdk SDKProvider, deviceName string) {
 // printJson() is a custom json encoder. This is needed because <device>
 // will be escaped if using json.MarshalIndent().
 func printJson(config sdkcommon.DeviceConfig) {
-	if config.DeviceName == "<unknown>" {
+	if strings.Contains(config.DeviceName, sdkcommon.UnknownTargetName) {
 		return
 	}
 	buf := new(bytes.Buffer)
