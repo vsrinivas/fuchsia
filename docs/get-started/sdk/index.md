@@ -230,27 +230,6 @@ Do the following:
    sudo ip tuntap add dev qemu mode tap user $USER && sudo ip link set qemu up
    ```
 
-1. List all available Fuchsia prebuilt images:
-
-   ```posix-terminal
-   tools/ffx product-bundle list
-   ```
-
-   This command prints output similar to the following:
-
-   ```none {:.devsite-disable-click-to-copy}
-   $ tools/ffx product-bundle list
-   Getting product metadata.
-   .
-
-   gs://fuchsia/development/7.20220415.2.1/sdk/product_bundles.json#terminal.arm64
-   gs://fuchsia/development/7.20220415.2.1/sdk/product_bundles.json#terminal.qemu-arm64
-   gs://fuchsia/development/7.20220415.2.1/sdk/product_bundles.json#terminal.qemu-x64
-   gs://fuchsia/development/7.20220415.2.1/sdk/product_bundles.json#terminal.x64
-   gs://fuchsia/development/7.20220415.2.1/sdk/product_bundles.json#workstation.qemu-x64*
-   ...
-   ```
-
 1. Download the latest Fuchsia Workstation prebuilt image for the emulator
    (`workstation.qemu-x64`):
 
