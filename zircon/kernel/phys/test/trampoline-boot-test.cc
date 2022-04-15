@@ -5,7 +5,9 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
+#include <lib/arch/random.h>
 #include <lib/arch/zbi-boot.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/memalloc/pool.h>
 #include <lib/memalloc/range.h>
 #include <lib/zbitl/error-stdio.h>
@@ -273,6 +275,43 @@ void CheckError(Result res) {
   }
 }
 
+template <typename Zbi>
+uint64_t GetRandomSeed(Zbi& zbi) {
+  if (arch::Random<true>::Supported()) {
+    while (true) {
+      if (auto seed = arch::Random<true>::Get()) {
+        return *seed;
+      }
+    }
+  }
+
+  if (arch::Random<false>::Supported()) {
+    while (true) {
+      if (auto seed = arch::Random<false>::Get()) {
+        return *seed;
+      }
+    }
+  }
+
+  // Then there must be entropy item.
+  for (auto [h, p] : zbi) {
+    if (h->type == ZBI_TYPE_SECURE_ENTROPY && p.size() >= sizeof(uint64_t)) {
+      uint64_t seed = 0;
+      memcpy(&seed, reinterpret_cast<const void*>(p.data()), sizeof(seed));
+      zbi.ignore_error();
+      return seed;
+    }
+  }
+
+  // Or through the cmdline.
+  if (gBootOptions->entropy_mixin.len > 0) {
+    return ParseHex(ktl::string_view{gBootOptions->entropy_mixin.c_str(),
+                                     ktl::min<size_t>(16, gBootOptions->entropy_mixin.len)});
+  }
+
+  ZX_PANIC("No source of entropy available.");
+}
+
 }  // namespace
 
 int TurduckenTest::Main(Zbi::iterator kernel_item) {
@@ -286,7 +325,8 @@ int TurduckenTest::Main(Zbi::iterator kernel_item) {
       GetOptionOrDefault(kUserTotalIterationsOpt, OptionWithPrefix(kUserTotalIterationsOpt), 1);
   if (!is_ready) {
     remaining_iterations = total_iterations;
-    seed = GetOptionOrDefault(kUserSeedOpt, OptionWithPrefix(kUserSeedOpt), rand_r(&seed));
+    seed =
+        GetOptionOrDefault(kUserSeedOpt, OptionWithPrefix(kUserSeedOpt), GetRandomSeed(boot_zbi()));
 
     // The loaded ZBI needs to account for a command line item that will contain the propagated
     // state between iterations.

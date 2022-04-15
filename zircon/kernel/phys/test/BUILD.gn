@@ -419,6 +419,7 @@ if (current_toolchain != default_toolchain) {
       ":turducken",
       "..:new",
       "..:trampoline-boot",
+      "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/lib/libc",
       "//zircon/system/ulib/pretty",
       "//zircon/system/ulib/zxc",
@@ -429,10 +430,11 @@ if (current_toolchain != default_toolchain) {
   kernel_cmdline("trampoline-cmdline") {
     testonly = true
     visibility = [ ":*" ]
-    args = [
-      "trampoline.user_seed=12345",
-      "trampoline.user_total_iters=100",
-    ]
+
+    # Number of times to perform chain loading after initial bootstrapping.
+    # Currently in x86(with kvm) it takes ~40 secs to chain load 100 times,
+    # the biggest time consumption being printing to serial.
+    args = [ "trampoline.user_total_iters=100" ]
   }
 
   mobius_turducken_test("trampoline-boot-zbi-test") {
