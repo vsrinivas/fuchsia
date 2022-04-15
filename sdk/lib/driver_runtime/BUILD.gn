@@ -59,6 +59,7 @@ sdk_source_set("driver_runtime_internal") {
     "//sdk/lib/driver_runtime/*",
     "//sdk/lib/fidl_driver/tests/transport/*",
     "//src/devices/bin/driver_host/*",
+    "//src/devices/bin/driver_host2/*",
     "//src/devices/bin/driver_runtime/*",
 
     # This should be migrated to mock_ddk to avoid this.

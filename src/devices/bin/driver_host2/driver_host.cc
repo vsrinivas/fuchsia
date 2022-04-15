@@ -6,7 +6,10 @@
 
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fdf/cpp/dispatcher.h>
+#include <lib/fdf/cpp/internal.h>
 #include <lib/fdio/directory.h>
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/sys/component/llcpp/outgoing_directory.h>
 #include <zircon/dlfcn.h>
@@ -15,7 +18,12 @@
 #include "src/devices/lib/log/log.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 
-namespace fdf = fuchsia_driver_framework;
+// The driver runtime libraries use the fdf namespace, but we would also like to use fdf
+// as an alias for the fdf FIDL library.
+namespace fdf {
+using namespace fuchsia_driver_framework;
+}  // namespace fdf
+
 namespace fio = fuchsia_io;
 namespace frunner = fuchsia_component_runner;
 
@@ -79,13 +87,15 @@ void Driver::set_binding(fidl::ServerBindingRef<fuchsia_driver_framework::Driver
 
 void Driver::Stop(StopRequestView request, StopCompleter::Sync& completer) { binding_->Unbind(); }
 
-zx::status<> Driver::Start(fidl::IncomingMessage& start_args,
-                           async_dispatcher_t* driver_dispatcher) {
+zx::status<> Driver::Start(fidl::IncomingMessage& start_args, fdf_dispatcher_t* driver_dispatcher) {
   // After calling |record_->start|, we assume it has taken ownership of
   // the handles from |start_args|, and can therefore relinquish ownership.
   fidl_incoming_msg_t c_msg = std::move(start_args).ReleaseToEncodedCMessage();
   void* opaque = nullptr;
-  zx_status_t status = record_->start(&c_msg, driver_dispatcher, &opaque);
+  // TODO(fxbug.dev/87162): change |start| to take in a fdf_dispatcher_t* rather than
+  // an async_dispatcher_t*.
+  zx_status_t status =
+      record_->start(&c_msg, fdf_dispatcher_get_async_dispatcher(driver_dispatcher), &opaque);
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -94,9 +104,7 @@ zx::status<> Driver::Start(fidl::IncomingMessage& start_args,
   return zx::ok();
 }
 
-DriverHost::DriverHost(inspect::Inspector& inspector, async::Loop& loop,
-                       async_dispatcher_t* driver_dispatcher)
-    : loop_(loop), driver_dispatcher_(driver_dispatcher) {
+DriverHost::DriverHost(inspect::Inspector& inspector, async::Loop& loop) : loop_(loop) {
   inspector.GetRoot().CreateLazyNode(
       "drivers", [this] { return Inspect(); }, &inspector);
 }
@@ -235,17 +243,46 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
       return;
     }
 
+    fdf::Dispatcher driver_dispatcher;
+    {
+      // Let the driver runtime know which driver this dispatcher is for.
+      // Since we haven't entered the driver yet, the runtime cannot detect
+      // which driver this dispatcher is associated with.
+      fdf_internal_push_driver((*driver).get());
+      auto pop_driver = fit::defer([]() { fdf_internal_pop_driver(); });
+
+      auto dispatcher = fdf::Dispatcher::Create(
+          0, [&](fdf_dispatcher_t* dispatcher) { fdf_dispatcher_destroy(dispatcher); });
+      if (dispatcher.is_error()) {
+        completer.Close(dispatcher.status_value());
+        return;
+      }
+      driver_dispatcher = *std::move(dispatcher);
+    }
+    async_dispatcher_t* driver_async_dispatcher = driver_dispatcher.async_dispatcher();
+
     // Task to start the driver. Post this to the driver dispatcher thread.
     auto start_task = [this, request = std::move(request), completer = std::move(completer),
                        converted_message = std::move(converted_message),
-                       driver = std::move(*driver)]() mutable {
-      auto start = driver->Start(converted_message->incoming_message(), driver_dispatcher_);
+                       driver = std::move(*driver),
+                       driver_dispatcher = std::move(driver_dispatcher)]() mutable {
+      auto start = driver->Start(converted_message->incoming_message(), driver_dispatcher.get());
       if (start.is_error()) {
         LOGF(ERROR, "Failed to start driver '%s': %s", driver->url().data(), start.status_string());
         completer.Close(start.error_value());
+        // Since we didn't successfully start the driver, we won't be calling
+        // |fdf_internal::DriverShutdown|, so shut down the dispatcher now.
+        driver_dispatcher.ShutdownAsync();
+        // The dispatcher will be destroyed in the shutdown callback.
+        driver_dispatcher.release();
         return;
       }
       LOGF(INFO, "Started '%s'", driver->url().data());
+
+      // We will automatically shutdown all dispatchers using |fdf_internal::DriverShutdown|,
+      // and destroy the dispatcher in the dispatcher's shutdown callback.
+      // Release it now so we don't double destroy it.
+      driver_dispatcher.release();
 
       auto unbind_callback = [this](Driver* driver, fidl::UnbindInfo info,
                                     fidl::ServerEnd<fuchsia_driver_framework::Driver> server) {
@@ -253,9 +290,18 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
           LOGF(WARNING, "Unexpected stop of driver '%s': %s", driver->url().data(),
                info.FormatDescription().data());
         }
-        // Task to stop the driver. Post this to the driver dispatcher thread.
-        auto stop_task = [this, driver, server = std::move(server)]() mutable {
+
+        // Request the driver runtime shutdown all dispatchers owned by the driver.
+        // Once we get the callback, we will stop the driver.
+        auto driver_shutdown = std::make_unique<fdf_internal::DriverShutdown>();
+        auto driver_shutdown_ptr = driver_shutdown.get();
+        auto shutdown_callback = [this, driver_shutdown = std::move(driver_shutdown), driver,
+                                  server = std::move(server)](const void* shutdown_driver) mutable {
+          ZX_ASSERT(driver == shutdown_driver);
+
           std::lock_guard<std::mutex> lock(mutex_);
+          // This removes the driver's unique_ptr from the list, which will
+          // run the destructor and call the driver's Stop hook.
           drivers_.erase(*driver);
 
           // Send the epitath to the driver runner letting it know we stopped
@@ -267,7 +313,9 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
             loop_.Quit();
           }
         };
-        async::PostTask(driver_dispatcher_, std::move(stop_task));
+        // We always expect this call to succeed, as we should be the only entity
+        // that attempts to forcibly shutdown drivers.
+        ZX_ASSERT(ZX_OK == driver_shutdown_ptr->Begin(driver, std::move(shutdown_callback)));
       };
       auto bind = fidl::BindServer(loop_.dispatcher(), std::move(request), driver.get(),
                                    std::move(unbind_callback));
@@ -276,7 +324,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
       std::lock_guard<std::mutex> lock(mutex_);
       drivers_.push_back(std::move(driver));
     };
-    async::PostTask(driver_dispatcher_, std::move(start_task));
+    async::PostTask(driver_async_dispatcher, std::move(start_task));
   };
   file->GetBackingMemory(fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kExecute |
                          fio::wire::VmoFlags::kPrivateClone)

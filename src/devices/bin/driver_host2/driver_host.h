@@ -7,6 +7,7 @@
 
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fdf/dispatcher.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/sys/component/llcpp/outgoing_directory.h>
 #include <lib/zx/status.h>
@@ -33,7 +34,7 @@ class Driver : public fidl::WireServer<fuchsia_driver_framework::Driver>,
   // Starts the driver.
   //
   // The handles in `message` will be consumed.
-  zx::status<> Start(fidl::IncomingMessage& message, async_dispatcher_t* driver_dispatcher);
+  zx::status<> Start(fidl::IncomingMessage& message, fdf_dispatcher_t* driver_dispatcher);
 
  private:
   std::string url_;
@@ -47,8 +48,7 @@ class DriverHost : public fidl::WireServer<fuchsia_driver_framework::DriverHost>
  public:
   // DriverHost does not take ownership of `loop`, and `loop` must outlive
   // DriverHost.
-  DriverHost(inspect::Inspector& inspector, async::Loop& loop,
-             async_dispatcher_t* driver_dispatcher);
+  DriverHost(inspect::Inspector& inspector, async::Loop& loop);
 
   fpromise::promise<inspect::Inspector> Inspect();
   zx::status<> PublishDriverHost(component::OutgoingDirectory& outgoing_directory);
@@ -61,7 +61,6 @@ class DriverHost : public fidl::WireServer<fuchsia_driver_framework::DriverHost>
                       GetProcessKoidCompleter::Sync& completer) override;
 
   async::Loop& loop_;
-  async_dispatcher_t* driver_dispatcher_;
   std::mutex mutex_;
   fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers_ __TA_GUARDED(mutex_);
 };

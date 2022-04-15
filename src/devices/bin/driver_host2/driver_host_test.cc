@@ -8,6 +8,7 @@
 #include <fuchsia/io/cpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fdf/internal.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/inspect/cpp/reader.h>
@@ -198,6 +199,7 @@ class DriverHostTest : public testing::Test {
       driver_host().Start(&request, completer);
     }
     EXPECT_EQ(ZX_OK, loop().RunUntilIdle());
+    fdf_internal_wait_until_all_dispatchers_idle();
     EXPECT_EQ(expected_epitaph, epitaph);
 
     return {
@@ -216,8 +218,7 @@ class DriverHostTest : public testing::Test {
   inspect::Inspector inspector_;
   async::Loop second_loop_{&kAsyncLoopConfigNeverAttachToThread};
   async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
-  std::unique_ptr<DriverHost> driver_host_ =
-      std::make_unique<DriverHost>(inspector_, loop_, loop_.dispatcher());
+  std::unique_ptr<DriverHost> driver_host_ = std::make_unique<DriverHost>(inspector_, loop_);
   fs::SynchronousVfs vfs_{loop_.dispatcher()};
   fbl::RefPtr<fs::PseudoDir> svc_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
 };
@@ -229,6 +230,12 @@ TEST_F(DriverHostTest, Start_SingleDriver) {
   // Stop the driver. As it's the last driver in the driver host, this will
   // cause the driver host to stop.
   driver.reset();
+  // This will schedule the Stop task on the driver's dispatcher.
+  // We do not check the return value of |RunUntilIdle|, as we cannot
+  // guarantee that the Stop task will or will not complete (and quit the loop)
+  // by the time |RunUntilIdle| returns.
+  loop().RunUntilIdle();
+  fdf_internal_wait_until_all_dispatchers_destroyed();
   EXPECT_EQ(ZX_ERR_CANCELED, loop().RunUntilIdle());
   EXPECT_EQ(ASYNC_LOOP_QUIT, loop().GetState());
 }
@@ -240,9 +247,13 @@ TEST_F(DriverHostTest, Start_MultipleDrivers) {
 
   driver_1.reset();
   EXPECT_EQ(ZX_OK, loop().RunUntilIdle());
+  fdf_internal_wait_until_all_dispatchers_idle();
+  EXPECT_EQ(ZX_OK, loop().RunUntilIdle());
   EXPECT_EQ(ASYNC_LOOP_RUNNABLE, loop().GetState());
 
   driver_2.reset();
+  loop().RunUntilIdle();
+  fdf_internal_wait_until_all_dispatchers_destroyed();
   EXPECT_EQ(ZX_ERR_CANCELED, loop().RunUntilIdle());
   EXPECT_EQ(ASYNC_LOOP_QUIT, loop().GetState());
 }
@@ -271,10 +282,14 @@ TEST_F(DriverHostTest, Start_OutgoingServices) {
   EventHandler event_handler;
   fidl::WireClient<ftest::Outgoing> outgoing(std::move(*client_end), loop().dispatcher(),
                                              &event_handler);
-  EXPECT_EQ(ZX_OK, loop().RunUntilIdle());
+  while (event_handler.status() == ZX_ERR_INVALID_ARGS) {
+    EXPECT_EQ(ZX_OK, loop().RunUntilIdle());
+  }
   EXPECT_EQ(ZX_ERR_STOP, event_handler.status());
 
   driver.reset();
+  loop().RunUntilIdle();
+  fdf_internal_wait_until_all_dispatchers_destroyed();
   EXPECT_EQ(ZX_ERR_CANCELED, loop().RunUntilIdle());
   EXPECT_EQ(ASYNC_LOOP_QUIT, loop().GetState());
 }
@@ -287,9 +302,12 @@ TEST_F(DriverHostTest, Start_IncomingServices) {
     return ZX_OK;
   });
   auto [driver, outgoing_dir] = StartDriver();
+  EXPECT_EQ(ZX_OK, loop().RunUntilIdle());
   EXPECT_TRUE(connected);
 
   driver.reset();
+  loop().RunUntilIdle();
+  fdf_internal_wait_until_all_dispatchers_destroyed();
   EXPECT_EQ(ZX_ERR_CANCELED, loop().RunUntilIdle());
   EXPECT_EQ(ASYNC_LOOP_QUIT, loop().GetState());
 }
@@ -305,6 +323,8 @@ TEST_F(DriverHostTest, Start_ReturnError) {
   auto [driver, outgoing_dir] = StartDriver(std::move(symbols), nullptr, error);
 
   driver.reset();
+  loop().RunUntilIdle();
+  fdf_internal_wait_until_all_dispatchers_idle();
   EXPECT_EQ(ZX_OK, loop().RunUntilIdle());
   // We never started our first driver, so the driver host would not attempt to
   // quit the loop after the last driver has stopped.
@@ -325,29 +345,37 @@ TEST_F(DriverHostTest, Start_NodeSymbols) {
   EXPECT_TRUE(called);
 
   driver.reset();
+  loop().RunUntilIdle();
+  fdf_internal_wait_until_all_dispatchers_destroyed();
   EXPECT_EQ(ZX_ERR_CANCELED, loop().RunUntilIdle());
   EXPECT_EQ(ASYNC_LOOP_QUIT, loop().GetState());
 }
 
-// Start a single driver, and verify that a different dispatcher is used.
+// Start two drivers, and verify that different dispatchers are used.
 TEST_F(DriverHostTest, Start_DifferentDispatcher) {
-  inspect::Inspector inspector;
-  auto driver_host = std::make_unique<DriverHost>(inspector, loop(), second_loop().dispatcher());
-  set_driver_host(std::move(driver_host));
+  async_dispatcher_t* dispatcher_1 = nullptr;
+  fidl::Arena arena_1;
+  fidl::VectorView<fdf::wire::NodeSymbol> symbols_1(arena_1, 1);
+  symbols_1[0].Allocate(arena_1);
+  symbols_1[0].set_name(arena_1, "dispatcher");
+  symbols_1[0].set_address(arena_1, reinterpret_cast<zx_vaddr_t>(&dispatcher_1));
+  auto [driver_1, outgoing_dir_1] = StartDriver(std::move(symbols_1));
 
-  async_dispatcher_t* dispatcher = nullptr;
-  fidl::Arena arena;
-  fidl::VectorView<fdf::wire::NodeSymbol> symbols(arena, 1);
-  symbols[0].Allocate(arena);
-  symbols[0].set_name(arena, "dispatcher");
-  symbols[0].set_address(arena, reinterpret_cast<zx_vaddr_t>(&dispatcher));
-  auto [driver, outgoing_dir] = StartDriver(std::move(symbols));
-  EXPECT_EQ(ZX_OK, second_loop().RunUntilIdle());
-  EXPECT_EQ(second_loop().dispatcher(), dispatcher);
+  async_dispatcher_t* dispatcher_2 = nullptr;
+  fidl::Arena arena_2;
+  fidl::VectorView<fdf::wire::NodeSymbol> symbols_2(arena_2, 1);
+  symbols_2[0].Allocate(arena_2);
+  symbols_2[0].set_name(arena_2, "dispatcher");
+  symbols_2[0].set_address(arena_2, reinterpret_cast<zx_vaddr_t>(&dispatcher_2));
+  auto [driver_2, outgoing_dir_2] = StartDriver(std::move(symbols_2));
 
-  driver.reset();
-  EXPECT_EQ(ZX_OK, loop().RunUntilIdle());
-  EXPECT_EQ(ZX_OK, second_loop().RunUntilIdle());
+  EXPECT_NE(dispatcher_1, dispatcher_2);
+
+  driver_1.reset();
+  driver_2.reset();
+  loop().RunUntilIdle();
+  fdf_internal_wait_until_all_dispatchers_destroyed();
+  EXPECT_EQ(ZX_ERR_CANCELED, loop().RunUntilIdle());
   EXPECT_EQ(ASYNC_LOOP_QUIT, loop().GetState());
 }
 
@@ -523,6 +551,8 @@ TEST_F(DriverHostTest, StartAndInspect) {
 
   driver_1.reset();
   driver_2.reset();
+  loop().RunUntilIdle();
+  fdf_internal_wait_until_all_dispatchers_destroyed();
   EXPECT_EQ(ZX_ERR_CANCELED, loop().RunUntilIdle());
   EXPECT_EQ(ASYNC_LOOP_QUIT, loop().GetState());
 }
