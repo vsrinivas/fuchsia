@@ -69,6 +69,9 @@ import("//build/rust/rustc_test.gni")
 #   disable_rbe (optional)
 #     Set to true to force this target to build locally, overriding the global `enable_rbe`.
 #
+#   disable_clippy (optional)
+#     Don't run clippy on this target.
+#
 # Example of usage:
 #   if (current_toolchain == unknown_wasm32_toolchain) {
 #     rustc_wasm_library("foo-bar") {
