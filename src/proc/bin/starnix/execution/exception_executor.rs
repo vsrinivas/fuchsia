@@ -78,6 +78,20 @@ fn start_task_thread(current_task: &CurrentTask) -> Result<zx::Channel, zx::Stat
     Ok(exceptions)
 }
 
+/// Block the exception handler as long as the task is stopped and not terminated.
+fn block_while_stopped(task: &Task) {
+    loop {
+        if task.exit_status.lock().is_some() {
+            return;
+        }
+        if !task.thread_group.running_status.read().stopped {
+            return;
+        }
+        // Result is not needed, as this is not in a syscall.
+        let _: Result<(), Errno> = Waiter::new_for_stopped_thread().wait(task);
+    }
+}
+
 /// Runs an exception handling loop for the given task.
 ///
 /// The task is expected to already have been started. This function listens to
@@ -174,12 +188,16 @@ fn run_exception_loop(
             }
         }
 
-        dequeue_signal(current_task);
+        block_while_stopped(current_task);
 
-        if let Some(exit_status) = *current_task.exit_status.lock() {
+        if current_task.exit_status.lock().is_none() {
+            dequeue_signal(current_task);
+        }
+
+        if let Some(exit_status) = current_task.exit_status.lock().as_ref() {
             strace!(current_task, "exiting with status {:?}", exit_status);
             exception.set_exception_state(&ZX_EXCEPTION_STATE_THREAD_EXIT)?;
-            return Ok(exit_status);
+            return Ok(exit_status.clone());
         }
 
         // Handle the debug address after the thread is set up to continue, because
@@ -274,5 +292,73 @@ fn read_channel_sync(chan: &zx::Channel, buf: &mut zx::MessageBuf) -> Result<(),
         chan.read(buf)
     } else {
         res
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::testing::*;
+
+    #[::fuchsia::test]
+    fn test_block_while_stopped_stop_and_continue() {
+        let (_kernel, task) = create_kernel_and_task();
+
+        // block_while_stopped must immediately returned if the task is not stopped.
+        block_while_stopped(&task);
+
+        // Stop the task.
+        task.thread_group.set_stopped(true, SignalInfo::default(SIGSTOP));
+
+        let cloned_task = task.task_arc_clone();
+        let thread = std::thread::spawn(move || {
+            // Block until continued.
+            block_while_stopped(&cloned_task);
+        });
+
+        // Wait for the task to have a waiter.
+        while task.signals.read().waiter.is_none() {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+
+        // Continue the task.
+        task.thread_group.set_stopped(false, SignalInfo::default(SIGCONT));
+
+        // Join the task, which will ensure block_while_stopped terminated.
+        thread.join().expect("joined");
+
+        // The task should not be blocked anymore.
+        block_while_stopped(&task);
+    }
+
+    #[::fuchsia::test]
+    fn test_block_while_stopped_stop_and_exit() {
+        let (_kernel, task) = create_kernel_and_task();
+
+        // block_while_stopped must immediately returned if the task is neither stopped nor exited.
+        block_while_stopped(&task);
+
+        // Stop the task.
+        task.thread_group.set_stopped(true, SignalInfo::default(SIGSTOP));
+
+        let cloned_task = task.task_arc_clone();
+        let thread = std::thread::spawn(move || {
+            // Block until continued.
+            block_while_stopped(&cloned_task);
+        });
+
+        // Wait for the task to have a waiter.
+        while task.signals.read().waiter.is_none() {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+
+        // exit the task.
+        task.thread_group.exit(ExitStatus::Exit(1));
+
+        // Join the task, which will ensure block_while_stopped terminated.
+        thread.join().expect("joined");
+
+        // The task should not be blocked because it is stopped.
+        block_while_stopped(&task);
     }
 }

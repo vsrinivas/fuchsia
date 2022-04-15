@@ -10,7 +10,7 @@ use crate::types::*;
 
 /// An unchecked signal represents a signal that has not been through verification, and may
 /// represent an invalid signal number.
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct UncheckedSignal(u64);
 
 impl UncheckedSignal {

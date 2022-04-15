@@ -245,6 +245,7 @@ fn get_dynamic_clock(current_task: &CurrentTask, which_clock: i32) -> Result<i64
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::task::*;
     use crate::testing::*;
 
     #[::fuchsia::test]
@@ -255,7 +256,7 @@ mod test {
 
         let thread = std::thread::spawn(move || {
             // Wait until the task is in nanosleep, and interrupt it.
-            while !task_clone.interrupt() {
+            while !task_clone.interrupt(InterruptionType::Signal) {
                 std::thread::sleep(std::time::Duration::from_millis(10));
             }
         });

@@ -138,7 +138,7 @@ pub struct SignalInfoHeader {
 
 pub const SI_HEADER_SIZE: usize = std::mem::size_of::<SignalInfoHeader>();
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SignalInfo {
     pub signal: Signal,
     pub errno: i32,
@@ -200,7 +200,7 @@ impl SignalInfo {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum SignalDetail {
     None,
     SigChld { pid: pid_t, uid: uid_t, status: i32 },

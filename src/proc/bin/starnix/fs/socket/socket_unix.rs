@@ -318,7 +318,7 @@ impl UnixSocket {
                 WaitCallback::none(),
             );
             drop(inner);
-            waiter.wait_kernel(zx::Time::INFINITE)?;
+            waiter.wait_kernel()?;
         }
     }
 

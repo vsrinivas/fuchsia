@@ -93,8 +93,7 @@ gvisor_tests = [
   "sigaction_test",
   "sigprocmask_test",
   "sigaltstack_test",
-
-  # "sigstop_test",
+  "sigstop_test",
   "socket_abstract_test",
   "socket_test",
   "socket_unix_dgram_local_test",

@@ -4,7 +4,8 @@
 
 use crate::fs::FdEvents;
 use crate::logging::*;
-use crate::task::CurrentTask;
+use crate::signals::SignalState;
+use crate::task::Task;
 use crate::types::Errno;
 use crate::types::*;
 use fuchsia_zircon as zx;
@@ -43,62 +44,125 @@ impl WaitCallback {
     }
 }
 
+/// Reason for interrupting a waiter.
+#[derive(PartialEq, Copy, Clone)]
+pub enum InterruptionType {
+    Signal,
+    Exit,
+    Continue,
+    ChildChange,
+}
+
+impl InterruptionType {
+    /// Returns whether the interruption is already triggered on the given task.
+    pub fn is_triggered(&self, task: &Task, signal_state: &SignalState) -> bool {
+        match self {
+            InterruptionType::Signal => signal_state.is_any_pending(),
+            InterruptionType::Exit => task.exit_status.lock().is_some(),
+            InterruptionType::Continue => !task.thread_group.running_status.read().stopped,
+            InterruptionType::ChildChange => false,
+        }
+    }
+}
+
 /// A type that can put a thread to sleep waiting for a condition.
 pub struct Waiter {
     /// The underlying Zircon port that the thread sleeps in.
     port: zx::Port,
     key_map: Mutex<HashMap<u64, WaitCallback>>, // the key 0 is reserved for 'no handler'
     next_key: AtomicU64,
+    interruption_filter: Vec<InterruptionType>,
 }
 
 impl Waiter {
-    /// Create a new waiter object.
-    pub fn new() -> Arc<Waiter> {
-        Arc::new(Waiter {
+    /// Internal constructor.
+    fn new_with_interruption_filter(interruption_filter: Vec<InterruptionType>) -> Arc<Self> {
+        Arc::new(Self {
             port: zx::Port::create().map_err(impossible_error).unwrap(),
             key_map: Mutex::new(HashMap::new()),
             next_key: AtomicU64::new(1),
+            interruption_filter,
         })
+    }
+    /// Create a new waiter object.
+    pub fn new() -> Arc<Self> {
+        Self::new_with_interruption_filter(vec![InterruptionType::Exit, InterruptionType::Signal])
+    }
+
+    /// Create a new waiter object for a thread waiting to be continued.
+    pub fn new_for_stopped_thread() -> Arc<Waiter> {
+        Self::new_with_interruption_filter(vec![InterruptionType::Exit, InterruptionType::Continue])
+    }
+
+    /// Create a new waiter object for a thread waiting for a child status to change.
+    pub fn new_for_wait_on_child_thread() -> Arc<Waiter> {
+        Self::new_with_interruption_filter(vec![
+            InterruptionType::Exit,
+            InterruptionType::Signal,
+            InterruptionType::ChildChange,
+        ])
     }
 
     /// Wait until the waiter is woken up.
     ///
     /// If the wait is interrupted (see [`Waiter::interrupt`]), this function returns
     /// EINTR.
-    pub fn wait(self: &Arc<Self>, current_task: &CurrentTask) -> Result<(), Errno> {
-        self.wait_until(current_task, zx::Time::INFINITE)
+    pub fn wait(self: &Arc<Self>, task: &Task) -> Result<(), Errno> {
+        self.wait_until(task, zx::Time::INFINITE)
+    }
+
+    /// Register this waiter on the given task.
+    ///
+    /// The returned guard must be kept for as long as the waiter must be registered.
+    ///
+    /// This method will return an EINTR error if the condition for the waiter is already reached.
+    pub fn register_waiter<'a>(
+        self: &Arc<Self>,
+        task: &'a Task,
+    ) -> Result<scopeguard::ScopeGuard<&'a Task, impl FnOnce(&'a Task), scopeguard::Always>, Errno>
+    {
+        {
+            let mut signal_state = task.signals.write();
+            assert!(signal_state.waiter.is_none());
+
+            if self.interruption_filter.iter().any(|f| f.is_triggered(task, &signal_state)) {
+                return error!(EINTR);
+            }
+            signal_state.waiter = Some(Arc::clone(self));
+        }
+
+        let waiter_copy = Arc::clone(self);
+        return Ok(scopeguard::guard(&task, move |task| {
+            let mut signal_state = task.signals.write();
+            assert!(
+                Arc::ptr_eq(signal_state.waiter.as_ref().unwrap(), &waiter_copy),
+                "SignalState waiter changed while waiting!"
+            );
+            signal_state.waiter = None;
+        }));
     }
 
     /// Wait until the given deadline has passed or the waiter is woken up.
     ///
     /// If the wait is interrupted (see [`Waiter::interrupt`]), this function returns
     /// EINTR.
-    pub fn wait_until(
-        self: &Arc<Self>,
-        current_task: &CurrentTask,
-        deadline: zx::Time,
-    ) -> Result<(), Errno> {
-        {
-            let mut signal_state = current_task.signals.write();
-            if signal_state.is_any_pending() {
-                return error!(EINTR);
-            }
-            signal_state.waiter = Some(Arc::clone(self));
-        }
+    pub fn wait_until(self: &Arc<Self>, task: &Task, deadline: zx::Time) -> Result<(), Errno> {
+        let _guard = self.register_waiter(task)?;
 
-        scopeguard::defer! {
-            let mut signal_state = current_task.signals.write();
-            assert!(Arc::ptr_eq(signal_state.waiter.as_ref().unwrap(), self), "SignalState waiter changed while waiting!");
-            signal_state.waiter = None;
-        }
+        self.wait_kernel_until(deadline)
+    }
 
-        self.wait_kernel(deadline)
+    /// Waits until the waiter is woken up.
+    ///
+    /// This method allows the kernel to wait without a specific task at hand.
+    pub fn wait_kernel(self: &Arc<Self>) -> Result<(), Errno> {
+        self.wait_kernel_until(zx::Time::INFINITE)
     }
 
     /// Waits until the given deadline has passed or the waiter is woken up.
     ///
     /// This method allows the kernel to wait without a specific task at hand.
-    pub fn wait_kernel(self: &Arc<Self>, deadline: zx::Time) -> Result<(), Errno> {
+    pub fn wait_kernel_until(self: &Arc<Self>, deadline: zx::Time) -> Result<(), Errno> {
         match self.port.wait(deadline) {
             Ok(packet) => match packet.status() {
                 zx::sys::ZX_OK => {
@@ -209,8 +273,14 @@ impl Waiter {
     /// Used to break the waiter out of its sleep, for example to deliver an
     /// async signal. The wait operation will return EINTR, and unwind until
     /// the thread can process the async signal.
-    pub fn interrupt(&self) {
+    ///
+    /// Returns whether the waiter was interrupted.
+    pub fn interrupt(&self, interruption_type: InterruptionType) -> bool {
+        if !self.interruption_filter.contains(&interruption_type) {
+            return false;
+        }
         self.queue_user_packet(zx::sys::ZX_ERR_CANCELED);
+        true
     }
 
     /// Queue a packet to the underlying Zircon port, which will cause the
@@ -298,6 +368,7 @@ impl WaitQueue {
     ///
     /// This function does not actually block the waiter. To block the waiter,
     /// call the [`Waiter::wait`] function on the waiter.
+    #[cfg(test)]
     pub fn wait_async(&mut self, waiter: &Arc<Waiter>) -> WaitKey {
         self.wait_async_mask(waiter, u32::MAX, WaitCallback::none())
     }

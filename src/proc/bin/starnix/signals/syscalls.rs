@@ -386,6 +386,54 @@ where
     }
 }
 
+/// The generic options for both waitid and wait4.
+pub struct WaitingOptions {
+    /// Wait for a process that has exited.
+    pub wait_for_exited: bool,
+    /// Wait for a process in the stop state.
+    pub wait_for_stopped: bool,
+    /// Wait for a process that was continued.
+    pub wait_for_continued: bool,
+    /// Block the wait until a process matches.
+    pub block: bool,
+    /// Do not clear the waitable state.
+    pub keep_waitable_state: bool,
+}
+
+impl WaitingOptions {
+    fn new(options: u32) -> Self {
+        assert!(WUNTRACED == WSTOPPED);
+        Self {
+            wait_for_exited: options & WEXITED > 0,
+            wait_for_stopped: options & WSTOPPED > 0,
+            wait_for_continued: options & WCONTINUED > 0,
+            block: options & WNOHANG == 0,
+            keep_waitable_state: options & WNOWAIT > 0,
+        }
+    }
+
+    /// Build a `WaitingOptions` from the waiting flags of waitid.
+    pub fn new_for_waitid(options: u32) -> Result<Self, Errno> {
+        if options & !(WNOHANG | WNOWAIT | WSTOPPED | WEXITED | WCONTINUED) != 0 {
+            not_implemented!("unsupported waitid options: {:#x}", options);
+            return error!(EINVAL);
+        }
+        if options & (WEXITED | WSTOPPED | WCONTINUED) == 0 {
+            return error!(EINVAL);
+        }
+        Ok(Self::new(options))
+    }
+
+    /// Build a `WaitingOptions` from the waiting flags of wait4.
+    pub fn new_for_wait4(options: u32) -> Result<Self, Errno> {
+        if options & !(WNOHANG | WUNTRACED | WCONTINUED) != 0 {
+            not_implemented!("unsupported waitid options: {:#x}", options);
+            return error!(EINVAL);
+        }
+        Ok(Self::new(options | WEXITED))
+    }
+}
+
 /// Waits on the task with `pid` to exit.
 ///
 /// WNOHANG and WNOWAIT are implemented flags for `options`. WUNTRACED, WEXITED and WCONTINUED are
@@ -396,42 +444,33 @@ where
 /// - `pid`: The id of the task to wait on.
 /// - `options`: The options passed to the wait syscall.
 fn wait_on_pid(
-    current_task: &CurrentTask,
+    task: &Task,
     selector: ProcessSelector,
-    options: u32,
+    options: &WaitingOptions,
 ) -> Result<Option<ZombieProcess>, Errno> {
-    if options & !(WNOHANG | WNOWAIT) != 0 {
-        not_implemented!("unsupported wait options: {:#x}", options);
-        if options & !(WUNTRACED | WEXITED | WCONTINUED | WNOHANG | WNOWAIT) != 0 {
-            return error!(EINVAL);
-        }
-    }
-
-    let waiter = Waiter::new();
+    let waiter = Waiter::new_for_wait_on_child_thread();
     let mut wait_result = Ok(());
+    let mut _guard = waiter.register_waiter(task);
     loop {
-        let mut wait_queue = current_task.thread_group.child_exit_waiters.lock();
-        let has_child = current_task.thread_group.has_child(selector);
-        if let Some(zombie) =
-            current_task.thread_group.get_zombie_child(selector, options & WNOWAIT == 0)
-        {
-            return Ok(Some(zombie));
+        let child = task.thread_group.get_waitable_child(selector, options)?;
+        match child {
+            WaitableChild::Available(zombie) => {
+                return Ok(Some(zombie));
+            }
+            WaitableChild::Pending => {}
+            WaitableChild::NotFound => {
+                return error!(ECHILD);
+            }
         }
 
-        if !has_child {
-            return error!(ECHILD);
-        }
-
-        if options & WNOHANG != 0 {
+        if !options.block {
             return Ok(None);
         }
         // Return any error encountered during previous iteration's wait. This is done after the
         // zombie process has been dequeued to make sure that the zombie process is returned even
         // if the wait was interrupted.
         wait_result?;
-        wait_queue.wait_async(&waiter);
-        std::mem::drop(wait_queue);
-        wait_result = waiter.wait(current_task);
+        wait_result = waiter.wait_kernel();
     }
 }
 
@@ -442,16 +481,7 @@ pub fn sys_waitid(
     user_info: UserAddress,
     options: u32,
 ) -> Result<(), Errno> {
-    // waitid requires at least one of these options.
-    if options & (WEXITED | WSTOPPED | WCONTINUED) == 0 {
-        return error!(EINVAL);
-    }
-    // WUNTRACED is not supported (only allowed for waitpid).
-    if options & WUNTRACED != 0 {
-        return error!(EINVAL);
-    }
-    // TODO(tbodt): don't allow WEXITED or WSTOPPED in any other wait syscalls, according to the
-    // manpage they should be valid only in waitid.
+    let waiting_options = WaitingOptions::new_for_waitid(options)?;
 
     let task_selector = match id_type {
         P_PID => ProcessSelector::Pid(id),
@@ -470,8 +500,8 @@ pub fn sys_waitid(
 
     // wait_on_pid returns None if the task was not waited on. In that case, we don't write out a
     // siginfo. This seems weird but is the correct behavior according to the waitid(2) man page.
-    if let Some(zombie_process) = wait_on_pid(current_task, task_selector, options)? {
-        let siginfo = zombie_process.as_signal_info();
+    if let Some(waitable_process) = wait_on_pid(current_task, task_selector, &waiting_options)? {
+        let siginfo = waitable_process.as_signal_info();
         current_task.mm.write_memory(user_info, &siginfo.as_siginfo_bytes())?;
     }
 
@@ -485,6 +515,8 @@ pub fn sys_wait4(
     options: u32,
     user_rusage: UserRef<rusage>,
 ) -> Result<pid_t, Errno> {
+    let waiting_options = WaitingOptions::new_for_wait4(options)?;
+
     let selector = if pid == 0 {
         ProcessSelector::Pgid(current_task.thread_group.process_group.read().leader)
     } else if pid == -1 {
@@ -498,8 +530,8 @@ pub fn sys_wait4(
         return error!(ENOSYS);
     };
 
-    if let Some(zombie_process) = wait_on_pid(current_task, selector, options)? {
-        let status = zombie_process.exit_status.wait_status();
+    if let Some(waitable_process) = wait_on_pid(current_task, selector, &waiting_options)? {
+        let status = waitable_process.exit_status.wait_status();
 
         if !user_rusage.is_null() {
             let usage = rusage::default();
@@ -512,7 +544,7 @@ pub fn sys_wait4(
             current_task.mm.write_object(user_wstatus, &status)?;
         }
 
-        Ok(zombie_process.pid)
+        Ok(waitable_process.pid)
     } else {
         Ok(0)
     }
@@ -1140,7 +1172,7 @@ mod tests {
             let addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
             let user_ref = UserRef::<sigset_t>::new(addr);
 
-            let sigset: sigset_t = !SIGCONT.mask();
+            let sigset: sigset_t = !SIGHUP.mask();
             current_task.mm.write_object(user_ref, &sigset).expect("failed to set action");
 
             assert_eq!(
@@ -1158,13 +1190,69 @@ mod tests {
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
 
-        // Signal the suspended task with a signal that is not blocked (only SIGIO in this test).
-        let _ = sys_kill(&current_task, first_task_id, UncheckedSignal::from(SIGCONT));
+        // Signal the suspended task with a signal that is not blocked (only SIGHUP in this test).
+        let _ = sys_kill(&current_task, first_task_id, UncheckedSignal::from(SIGHUP));
 
         // Wait for the sigsuspend to complete.
         let _ = thread.join();
 
         assert!(first_task_clone.signals.read().waiter.is_none());
+    }
+
+    #[::fuchsia::test]
+    fn test_stop_cont() {
+        let (_kernel, task) = create_kernel_and_task();
+        let mut child = task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+
+        assert_eq!(sys_kill(&task, child.id, UncheckedSignal::from(SIGSTOP)), Ok(()));
+        // Child should be stopped immediately.
+        assert_eq!(child.thread_group.running_status.read().stopped, true);
+        dequeue_signal(&mut child);
+
+        // Child is now waitable using WUNTRACED.
+        assert_eq!(
+            sys_wait4(&task, child.id, UserRef::default(), WNOHANG | WUNTRACED, UserRef::default()),
+            Ok(child.id)
+        );
+        // The same wait does not happen twice.
+        assert_eq!(
+            sys_wait4(&task, child.id, UserRef::default(), WNOHANG | WUNTRACED, UserRef::default()),
+            Ok(0)
+        );
+
+        assert_eq!(sys_kill(&task, child.id, UncheckedSignal::from(SIGCONT)), Ok(()));
+        // Child should be restarted immediately.
+        assert_eq!(child.thread_group.running_status.read().stopped, false);
+        dequeue_signal(&mut child);
+
+        // Child is now waitable using WUNTRACED.
+        assert_eq!(
+            sys_wait4(
+                &task,
+                child.id,
+                UserRef::default(),
+                WNOHANG | WCONTINUED,
+                UserRef::default()
+            ),
+            Ok(child.id)
+        );
+        // The same wait does not happen twice.
+        assert_eq!(
+            sys_wait4(
+                &task,
+                child.id,
+                UserRef::default(),
+                WNOHANG | WCONTINUED,
+                UserRef::default()
+            ),
+            Ok(0)
+        );
     }
 
     /// Waitid does not support all options.
@@ -1174,7 +1262,26 @@ mod tests {
         let id = 1;
         assert_eq!(sys_waitid(&current_task, P_PID, id, UserAddress::default(), 0), Err(EINVAL));
         assert_eq!(
-            sys_waitid(&current_task, P_PID, id, UserAddress::default(), WEXITED | WSTOPPED),
+            sys_waitid(&current_task, P_PID, id, UserAddress::default(), 0xffff),
+            Err(EINVAL)
+        );
+    }
+
+    /// Wait4 does not support all options.
+    #[::fuchsia::test]
+    fn test_wait4_options() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let id = 1;
+        assert_eq!(
+            sys_wait4(&current_task, id, UserRef::default(), WEXITED, UserRef::default()),
+            Err(EINVAL)
+        );
+        assert_eq!(
+            sys_wait4(&current_task, id, UserRef::default(), WNOWAIT, UserRef::default()),
+            Err(EINVAL)
+        );
+        assert_eq!(
+            sys_wait4(&current_task, id, UserRef::default(), 0xffff, UserRef::default()),
             Err(EINVAL)
         );
     }
@@ -1188,7 +1295,14 @@ mod tests {
         );
         // Verify that ECHILD is returned because there is no zombie process and no children to
         // block waiting for.
-        assert_eq!(wait_on_pid(&current_task, ProcessSelector::Any, 0), Err(ECHILD));
+        assert_eq!(
+            wait_on_pid(
+                &current_task,
+                ProcessSelector::Any,
+                &WaitingOptions::new_for_wait4(0).expect("WaitingOptions")
+            ),
+            Err(ECHILD)
+        );
     }
 
     #[::fuchsia::test]
@@ -1200,7 +1314,83 @@ mod tests {
         );
         let zombie = ZombieProcess { pid: 0, pgid: 0, uid: 0, exit_status: ExitStatus::Exit(1) };
         current_task.thread_group.zombie_children.lock().push(zombie.clone());
-        assert_eq!(wait_on_pid(&current_task, ProcessSelector::Any, 0), Ok(Some(zombie)));
+        assert_eq!(
+            wait_on_pid(
+                &current_task,
+                ProcessSelector::Any,
+                &WaitingOptions::new_for_wait4(0).expect("WaitingOptions")
+            ),
+            Ok(Some(zombie))
+        );
+    }
+
+    #[::fuchsia::test]
+    fn test_waiting_for_child() {
+        let (_kernel, task) = create_kernel_and_task();
+        let child = task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+
+        let task_clone = task.task_arc_clone();
+        let child_id = child.id;
+        let thread = std::thread::spawn(move || {
+            // Block until child is terminated.
+            assert_eq!(
+                wait_on_pid(
+                    &task_clone,
+                    ProcessSelector::Any,
+                    &WaitingOptions::new_for_wait4(WNOHANG).expect("WaitingOptions")
+                ),
+                Ok(None)
+            );
+            let waited_child = wait_on_pid(
+                &task_clone,
+                ProcessSelector::Any,
+                &WaitingOptions::new_for_wait4(0).expect("WaitingOptions"),
+            )
+            .expect("wait_on_pid")
+            .unwrap();
+            assert_eq!(waited_child.pid, child_id);
+        });
+
+        // Wait for the thread to be blocked on waiting for a child.
+        while task.signals.read().waiter.is_none() {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        child.thread_group.exit(ExitStatus::Exit(0));
+        std::mem::drop(child);
+
+        // Child is deleted, the thread must be able to terminate.
+        thread.join().expect("join");
+    }
+
+    #[::fuchsia::test]
+    fn test_sigkill() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let child = current_task
+            .clone_task(
+                0,
+                UserRef::new(UserAddress::default()),
+                UserRef::new(UserAddress::default()),
+            )
+            .expect("clone process");
+
+        // Send SigKill to the child. As kill is handled immediately, no need to dequeue signals.
+        send_signal(&child, SignalInfo::default(SIGKILL));
+        std::mem::drop(child);
+
+        // Retrieve the exit status.
+        let address =
+            map_memory(&current_task, UserAddress::default(), std::mem::size_of::<i32>() as u64);
+        let address_ref = UserRef::<i32>::new(address);
+        sys_wait4(&current_task, -1, address_ref, 0, UserRef::default()).expect("wait4");
+        let mut wstatus: i32 = 0;
+        current_task.mm.read_object(address_ref, &mut wstatus).expect("read memory");
+        assert_eq!(wstatus, SIGKILL.number() as i32);
     }
 
     fn test_exit_status_for_signal(sig: Signal, wait_status: i32) {
@@ -1225,7 +1415,7 @@ mod tests {
     #[::fuchsia::test]
     fn test_exit_status() {
         // Default action is Terminate
-        test_exit_status_for_signal(SIGKILL, SIGKILL.number() as i32);
+        test_exit_status_for_signal(SIGTERM, SIGTERM.number() as i32);
         // Default action is CoreDump
         test_exit_status_for_signal(SIGSEGV, (SIGSEGV.number() as i32) | 0x80);
     }

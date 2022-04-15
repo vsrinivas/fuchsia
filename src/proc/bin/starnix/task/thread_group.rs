@@ -9,10 +9,24 @@ use std::collections::HashSet;
 use std::ffi::CStr;
 use std::sync::Arc;
 
+use crate::auth::Credentials;
 use crate::device::terminal::*;
+use crate::signals::syscalls::WaitingOptions;
 use crate::signals::*;
 use crate::task::*;
 use crate::types::*;
+
+/// The running status of the process (whether it is stopped or not), as well as an eventual
+/// SignalInfo to returns for waitid and wait4.
+pub struct RunningStatus {
+    /// Whether the process is currently stopped.
+    pub stopped: bool,
+
+    /// Whether the process is currently waitable via waitid and waitpid for either WSTOPPED or
+    /// WCONTINUED, depending on the value of `stopped`. If not None, contains the SignalInfo to
+    /// return.
+    pub waitable: Option<SignalInfo>,
+}
 
 pub struct ThreadGroup {
     /// The kernel to which this thread group belongs.
@@ -57,15 +71,15 @@ pub struct ThreadGroup {
 
     zombie_leader: Mutex<Option<ZombieProcess>>,
 
-    /// WaitQueue for updates to the zombie_children lists of tasks in this group.
-    pub child_exit_waiters: Mutex<WaitQueue>,
-
     terminating: Mutex<bool>,
 
     pub did_exec: RwLock<bool>,
 
     /// The signal actions that are registered for this process.
     pub signal_actions: Arc<SignalActions>,
+
+    /// The running status of the process.
+    pub running_status: RwLock<RunningStatus>,
 }
 
 impl PartialEq for ThreadGroup {
@@ -95,17 +109,46 @@ pub struct ZombieProcess {
 }
 
 impl ZombieProcess {
-    pub fn as_signal_info(&self) -> SignalInfo {
-        SignalInfo::new(
-            SIGCHLD,
-            CLD_EXITED,
-            SignalDetail::SigChld {
-                pid: self.pid,
-                uid: self.uid,
-                status: self.exit_status.wait_status(),
-            },
-        )
+    pub fn new(
+        thread_group: &ThreadGroup,
+        credentials: &Credentials,
+        exit_status: ExitStatus,
+    ) -> Self {
+        ZombieProcess {
+            pid: thread_group.leader,
+            pgid: thread_group.process_group.read().leader,
+            uid: credentials.uid,
+            exit_status,
+        }
     }
+
+    pub fn as_signal_info(&self) -> SignalInfo {
+        match &self.exit_status {
+            ExitStatus::Exit(_) => SignalInfo::new(
+                SIGCHLD,
+                CLD_EXITED,
+                SignalDetail::SigChld {
+                    pid: self.pid,
+                    uid: self.uid,
+                    status: self.exit_status.wait_status(),
+                },
+            ),
+            ExitStatus::Kill(si)
+            | ExitStatus::CoreDump(si)
+            | ExitStatus::Stop(si)
+            | ExitStatus::Continue(si) => si.clone(),
+        }
+    }
+}
+
+/// Return value of `get_waitable_child`/
+pub enum WaitableChild {
+    /// The given child matches the given option.
+    Available(ZombieProcess),
+    /// No child currently matches the given option, but some child may in the future.
+    Pending,
+    /// No child matches the given option, nor may in the future.
+    NotFound,
 }
 
 impl ThreadGroup {
@@ -139,10 +182,10 @@ impl ThreadGroup {
             itimers: Default::default(),
             zombie_children: Mutex::new(vec![]),
             zombie_leader: Mutex::new(None),
-            child_exit_waiters: Mutex::default(),
             terminating: Mutex::new(false),
             did_exec: RwLock::new(false),
             signal_actions,
+            running_status: RwLock::new(RunningStatus { stopped: false, waitable: None }),
         }
     }
 
@@ -159,8 +202,8 @@ impl ThreadGroup {
         let pids = self.kernel.pids.read();
         for tid in &*self.tasks.read() {
             if let Some(task) = pids.get_task(*tid) {
-                *task.exit_status.lock() = Some(exit_status);
-                task.interrupt();
+                *task.exit_status.lock() = Some(exit_status.clone());
+                task.interrupt(InterruptionType::Exit);
             }
         }
     }
@@ -247,6 +290,33 @@ impl ThreadGroup {
         Ok(())
     }
 
+    /// Set the stop status of the process.
+    pub fn set_stopped(&self, stopped: bool, siginfo: SignalInfo) {
+        let mut running_status_writer = self.running_status.write();
+        if stopped != running_status_writer.stopped {
+            // TODO(qsr): When task can be running_status inside user code, task will need to be
+            // either restarted or running_status here.
+            running_status_writer.stopped = stopped;
+            running_status_writer.waitable = Some(siginfo);
+            if !stopped {
+                self.interrupt(InterruptionType::Continue);
+            }
+            if let Some(parent) = self.get_parent(&self.kernel.pids.read()) {
+                parent.interrupt(InterruptionType::ChildChange);
+            }
+        }
+    }
+
+    /// Returns the parent of the process, if it exists.
+    fn get_parent(&self, pids: &PidTable) -> Option<Arc<ThreadGroup>> {
+        let parent_pid = *self.parent.read();
+        if self.leader == parent_pid {
+            None
+        } else {
+            pids.get_thread_group(parent_pid)
+        }
+    }
+
     fn set_process_group(&self, process_group: Arc<ProcessGroup>) {
         let mut process_group_writer = self.process_group.write();
         if *process_group_writer == process_group {
@@ -273,7 +343,7 @@ impl ThreadGroup {
         tasks.remove(&task.id);
 
         if task.id == self.leader {
-            let exit_status = *task.exit_status.lock();
+            let exit_status = task.exit_status.lock().clone();
             #[cfg(not(test))]
             let exit_status =
                 exit_status.expect("a process should not be exiting without an exit status");
@@ -360,7 +430,7 @@ impl ThreadGroup {
                 if let Some(signal_target) = get_signal_target(&parent, &SIGCHLD.into()) {
                     send_signal(&signal_target, SignalInfo::default(SIGCHLD));
                 }
-                parent.child_exit_waiters.lock().notify_all();
+                parent.interrupt(InterruptionType::ChildChange);
             }
 
             // TODO: Set the error_code on the Zircon process object. Currently missing a way
@@ -388,50 +458,119 @@ impl ThreadGroup {
         }
     }
 
-    /// Removes and returns any zombie task with the specified `pid`, if such a zombie exists.
-    pub fn get_zombie_child(
-        &self,
-        selector: ProcessSelector,
-        should_remove_zombie: bool,
-    ) -> Option<ZombieProcess> {
-        let mut zombie_children = self.zombie_children.lock();
-        match selector {
-            ProcessSelector::Any => {
-                if zombie_children.len() > 0 {
-                    Some(zombie_children.len() - 1)
-                } else {
-                    None
-                }
-            }
-            ProcessSelector::Pgid(pid) => {
-                zombie_children.iter().position(|zombie| zombie.pgid == pid)
-            }
-            ProcessSelector::Pid(pid) => {
-                zombie_children.iter().position(|zombie| zombie.pid == pid)
+    /// Returns a task in the current thread group.
+    fn get_task(&self) -> Result<Arc<Task>, Errno> {
+        let pids = self.kernel.pids.read();
+        if let Some(task) = pids.get_task(self.leader) {
+            return Ok(task);
+        }
+        for pid in self.children.read().iter() {
+            if let Some(task) = pids.get_task(*pid) {
+                return Ok(task);
             }
         }
-        .map(|pos| {
-            if should_remove_zombie {
-                zombie_children.remove(pos)
-            } else {
-                zombie_children[pos].clone()
-            }
-        })
+        error!(ESRCH)
     }
 
-    /// Checks whether the thread group has child thread group identified by `selector`.
-    pub fn has_child(&self, selector: ProcessSelector) -> bool {
-        match selector {
-            ProcessSelector::Any => !self.children.read().is_empty(),
-            ProcessSelector::Pid(pid) => self.children.read().get(&pid).is_some(),
-            ProcessSelector::Pgid(pgid) => {
-                if let Some(process_group) = self.kernel.pids.read().get_process_group(pgid) {
-                    !self.children.read().is_disjoint(&process_group.thread_groups.read())
+    /// Returns any waitable child matching the given `selector` and `options`.
+    ///
+    ///Will remove the waitable status from the child depending on `options`.
+    pub fn get_waitable_child(
+        &self,
+        selector: ProcessSelector,
+        options: &WaitingOptions,
+    ) -> Result<WaitableChild, Errno> {
+        let pids = self.kernel.pids.read();
+        let mut zombie_children = self.zombie_children.lock();
+        let children = self.children.read();
+
+        if options.wait_for_exited {
+            if let Some(child) = match selector {
+                ProcessSelector::Any => {
+                    if zombie_children.len() > 0 {
+                        Some(zombie_children.len() - 1)
+                    } else {
+                        None
+                    }
+                }
+                ProcessSelector::Pgid(pid) => {
+                    zombie_children.iter().position(|zombie| zombie.pgid == pid)
+                }
+                ProcessSelector::Pid(pid) => {
+                    zombie_children.iter().position(|zombie| zombie.pid == pid)
+                }
+            }
+            .map(|pos| {
+                if options.keep_waitable_state {
+                    zombie_children[pos].clone()
                 } else {
-                    false
+                    zombie_children.remove(pos)
+                }
+            }) {
+                return Ok(WaitableChild::Available(child));
+            }
+        }
+
+        // The vector of potential matches.
+        let selected_children = {
+            fn to_thread_group(
+                tg_pids: impl Iterator<Item = pid_t>,
+                pids: &PidTable,
+            ) -> Vec<Arc<ThreadGroup>> {
+                tg_pids.flat_map(|pid| pids.get_thread_group(pid)).collect()
+            }
+
+            match selector {
+                ProcessSelector::Any => to_thread_group(children.iter().copied(), &pids),
+                ProcessSelector::Pid(pid) => {
+                    to_thread_group(children.get(&pid).copied().iter().copied(), &pids)
+                }
+                ProcessSelector::Pgid(pgid) => pids
+                    .get_process_group(pgid)
+                    .map(|process_group| {
+                        to_thread_group(
+                            children.intersection(&process_group.thread_groups.read()).copied(),
+                            &pids,
+                        )
+                    })
+                    .unwrap_or_default(),
+            }
+        };
+
+        if selected_children.is_empty() {
+            return Ok(WaitableChild::NotFound);
+        }
+        for child in selected_children.iter() {
+            let mut running_status = child.running_status.write();
+            if running_status.waitable.is_some() {
+                if !running_status.stopped && options.wait_for_continued {
+                    let siginfo = if options.keep_waitable_state {
+                        running_status.waitable.clone().unwrap()
+                    } else {
+                        running_status.waitable.take().unwrap()
+                    };
+                    return Ok(WaitableChild::Available(ZombieProcess::new(
+                        child,
+                        &child.get_task()?.creds.read(),
+                        ExitStatus::Continue(siginfo),
+                    )));
+                }
+                if running_status.stopped && options.wait_for_stopped {
+                    let siginfo = if options.keep_waitable_state {
+                        running_status.waitable.clone().unwrap()
+                    } else {
+                        running_status.waitable.take().unwrap()
+                    };
+                    return Ok(WaitableChild::Available(ZombieProcess::new(
+                        child,
+                        &child.get_task()?.creds.read(),
+                        ExitStatus::Stop(siginfo),
+                    )));
                 }
             }
         }
+
+        return Ok(WaitableChild::Pending);
     }
 
     /// Returns whether |session| is the controlling session inside of |controlling_session|.
@@ -578,6 +717,18 @@ impl ThreadGroup {
         }
 
         Ok(())
+    }
+
+    /// Interrupt the thread group.
+    ///
+    /// This will interrupt every task in the thread group.
+    fn interrupt(&self, interruption_type: InterruptionType) {
+        let pids = self.kernel.pids.read();
+        for pid in self.tasks.read().iter() {
+            if let Some(task) = pids.get_task(*pid) {
+                task.interrupt(interruption_type);
+            }
+        }
     }
 }
 

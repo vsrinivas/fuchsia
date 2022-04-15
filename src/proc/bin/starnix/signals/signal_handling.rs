@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use crate::logging::{not_implemented, strace};
+use crate::logging::strace;
 use crate::signals::*;
 use crate::task::*;
 use crate::types::*;
@@ -208,13 +208,26 @@ pub fn send_signal(task: &Task, siginfo: SignalInfo) {
     let mut signal_state = task.signals.write();
     signal_state.enqueue(siginfo.clone());
 
-    if !siginfo.signal.is_in_set(signal_state.mask)
-        && action_for_signal(&siginfo, task.thread_group.signal_actions.get(siginfo.signal))
-            != DeliveryAction::Ignore
-    {
+    let action_is_masked = siginfo.signal.is_in_set(signal_state.mask);
+    let action = action_for_signal(&siginfo, task.thread_group.signal_actions.get(siginfo.signal));
+    drop(signal_state);
+
+    // SIGKILL is handled without waiting to the signal to be dequeued.
+    if siginfo.signal == SIGKILL {
+        task.thread_group.exit(ExitStatus::Kill(siginfo));
+        return;
+    }
+
+    // When receiving SIGCONT or any signal that must block the process, the task state must be updated immediately.
+    if siginfo.signal == SIGCONT || (!action_is_masked && action == DeliveryAction::Stop) {
+        let stopped = siginfo.signal != SIGCONT;
+        task.thread_group.set_stopped(stopped, siginfo);
+    }
+
+    if !action_is_masked && action.must_interrupt() {
         // Wake the task. Note that any potential signal handler will be executed before
         // the task returns from the suspend (from the perspective of user space).
-        task.interrupt_with_signal_state(&signal_state);
+        task.interrupt(InterruptionType::Signal);
     }
 }
 
@@ -247,6 +260,19 @@ enum DeliveryAction {
     CoreDump,
     Stop,
     Continue,
+}
+
+impl DeliveryAction {
+    /// Returns whether the targe task must be interrupted to execute the action.
+    fn must_interrupt(&self) -> bool {
+        match *self {
+            // These actions must interrupt any blocking syscalls.
+            DeliveryAction::CallHandler | DeliveryAction::Terminate | DeliveryAction::CoreDump => {
+                true
+            }
+            _ => false,
+        }
+    }
 }
 
 fn action_for_signal(siginfo: &SignalInfo, sigaction: sigaction_t) -> DeliveryAction {
@@ -285,15 +311,17 @@ pub fn dequeue_signal(current_task: &mut CurrentTask) {
                 // Release the signals lock. [`ThreadGroup::exit`] sends signals to threads which
                 // will include this one and cause a deadlock re-acquiring the signals lock.
                 drop(signal_state);
-                current_task.thread_group.exit(ExitStatus::Kill(siginfo.signal))
+                current_task.thread_group.exit(ExitStatus::Kill(siginfo));
             }
             DeliveryAction::CoreDump => {
                 // TODO(tbodt): Trigger crashsvc somehow
                 drop(signal_state);
-                current_task.thread_group.exit(ExitStatus::CoreDump(siginfo.signal))
+                current_task.thread_group.exit(ExitStatus::CoreDump(siginfo));
             }
             DeliveryAction::Ignore => {}
-            action => not_implemented!("Unimplemented signal delivery action {:?}", action),
+            DeliveryAction::Continue | DeliveryAction::Stop => {
+                // Nothing to do. Effect already happened when the signal was raised.
+            }
         };
     }
 }

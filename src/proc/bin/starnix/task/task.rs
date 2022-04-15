@@ -63,19 +63,23 @@ impl std::ops::Deref for CurrentTask {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ExitStatus {
     Exit(u8),
-    Kill(Signal),
-    CoreDump(Signal),
+    Kill(SignalInfo),
+    CoreDump(SignalInfo),
+    Stop(SignalInfo),
+    Continue(SignalInfo),
 }
 impl ExitStatus {
     /// Converts the given exit status to a status code suitable for returning from wait syscalls.
     pub fn wait_status(&self) -> i32 {
         match self {
             ExitStatus::Exit(status) => (*status as i32) << 8,
-            ExitStatus::Kill(signal) => signal.number() as i32,
-            ExitStatus::CoreDump(signal) => (signal.number() as i32) | 0x80,
+            ExitStatus::Kill(siginfo) => siginfo.signal.number() as i32,
+            ExitStatus::CoreDump(siginfo) => (siginfo.signal.number() as i32) | 0x80,
+            ExitStatus::Continue(_) => 0xffff,
+            ExitStatus::Stop(siginfo) => 0x7f + ((siginfo.signal.number() as i32) << 8),
         }
     }
 }
@@ -401,24 +405,14 @@ impl Task {
     /// Interrupts the current task.
     ///
     /// This will interrupt any blocking syscalls if the task is blocked on one.
+    /// The signal_state of the task must not be locked.
     ///
     /// Returns whether the task was interrupted.
     ///
-    /// If one has a lock on [signals] when calling this, one should call
-    /// [interrupt_with_signal_state] instead.
-    ///
     /// TODO(qsr): This should also interrupt any running code.
-    pub fn interrupt(&self) -> bool {
-        self.interrupt_with_signal_state(&self.signals.read())
-    }
-
-    /// Interrupts the current task.
-    ///
-    /// See [interrupt]. Should be used when one have a lock on [signals].
-    pub fn interrupt_with_signal_state(&self, signal_state: &SignalState) -> bool {
-        if let Some(waiter) = &signal_state.waiter {
-            waiter.interrupt();
-            true
+    pub fn interrupt(&self, interruption_type: InterruptionType) -> bool {
+        if let Some(waiter) = &self.signals.read().waiter {
+            waiter.interrupt(interruption_type)
         } else {
             false
         }
