@@ -10,10 +10,10 @@ import "go.fuchsia.dev/fuchsia/tools/testing/runtests"
 type TestingOutputs struct {
 	TestSummary           *runtests.TestSummary
 	SwarmingSummary       *SwarmingTaskSummary
-	SerialLog             []byte
+	SerialLogs            [][]byte
 	SwarmingOutput        []byte
 	SwarmingOutputPerTest []TestLog
-	Syslog                []byte
+	Syslogs               [][]byte
 }
 
 type logType string

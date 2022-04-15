@@ -22,9 +22,10 @@ import (
 )
 
 var (
-	summaries  flagmisc.StringsValue
-	tags       flagmisc.StringsValue
-	outputRoot string
+	summaries           flagmisc.StringsValue
+	tags                flagmisc.StringsValue
+	outputRoot          string
+	invocationArtifacts flagmisc.StringsValue
 )
 
 func main() {
@@ -41,6 +42,7 @@ func mainImpl() error {
 		" Uses the format key:value. To pass in multiple tags do '--tag key1:val1 --tag key2:val2'")
 	flag.StringVar(&outputRoot, "output", "",
 		"Output root path to be joined with 'output_file' field in summary.json. If not set, current directory will be used.")
+	flag.Var(&invocationArtifacts, "invocation-artifact", "Repeated flag, path of file to upload as an invocation-level artifact.")
 
 	flag.Parse()
 
@@ -64,7 +66,7 @@ func mainImpl() error {
 	}
 
 	invocationRequest := &sinkpb.ReportInvocationLevelArtifactsRequest{
-		Artifacts: invocationLevelArtifacts(outputRoot),
+		Artifacts: invocationLevelArtifacts(outputRoot, invocationArtifacts),
 	}
 
 	client := &http.Client{}

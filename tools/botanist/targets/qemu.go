@@ -333,6 +333,9 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 		if err != nil {
 			return fmt.Errorf("cannot get absolute path for %q: %w", t.config.Logfile, err)
 		}
+		if err := os.MkdirAll(filepath.Dir(logfile), os.ModePerm); err != nil {
+			return fmt.Errorf("failed to make parent dirs of %q: %w", logfile, err)
+		}
 		chardev.Logfile = logfile
 	}
 	qemuCmd.AddSerial(chardev)

@@ -73,17 +73,22 @@ func (c *stringInLogCheck) Check(to *TestingOutputs) bool {
 		}
 	}
 
-	var toCheck []byte
+	var toCheck [][]byte
 	switch c.Type {
 	case serialLogType:
-		toCheck = to.SerialLog
+		toCheck = to.SerialLogs
 	case swarmingOutputType:
-		toCheck = to.SwarmingOutput
+		toCheck = [][]byte{to.SwarmingOutput}
 	case syslogType:
-		toCheck = to.Syslog
+		toCheck = to.Syslogs
 	}
 
-	return c.checkBytes(toCheck, 0, len(toCheck))
+	for _, file := range toCheck {
+		if c.checkBytes(file, 0, len(file)) {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *stringInLogCheck) checkBytes(toCheck []byte, start int, end int) bool {
@@ -137,6 +142,8 @@ func (c *stringInLogCheck) checkBytes(toCheck []byte, start int, end int) bool {
 }
 
 func (c *stringInLogCheck) Name() string {
+	// TODO(fxbug.dev/71529): With multi-device logs, the file names may be different than
+	// the log type. Consider using the actual filename of the log.
 	return path.Join("string_in_log", string(c.Type), strings.ReplaceAll(c.String, " ", "_"), c.testName)
 }
 

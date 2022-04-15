@@ -163,7 +163,8 @@ func TestIsReadable(t *testing.T) {
 }
 
 func TestInvocationLevelArtifacts(t *testing.T) {
-	artifacts := invocationLevelArtifacts(*testDataDir)
+	invocationLogs := []string{"syslog.txt", "serial_log.txt", "nonexistent_log.txt"}
+	artifacts := invocationLevelArtifacts(*testDataDir, invocationLogs)
 	foundSyslog := false
 	foundSerial := false
 	for logName := range artifacts {

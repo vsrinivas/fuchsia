@@ -45,6 +45,7 @@ go_library("main") {
   ]
   deps = [
     ":lib",
+    "//tools/lib/flagmisc",
     "//tools/testing/runtests",
   ]
 }

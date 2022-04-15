@@ -42,6 +42,7 @@ func TestCheck(t *testing.T) {
 		name                string
 		attributeToTest     bool
 		testingOutputs      TestingOutputs
+		typeToCheck         logType
 		states              []string
 		swarmingResultState string
 		shouldMatch         bool
@@ -64,7 +65,7 @@ func TestCheck(t *testing.T) {
 		{
 			name: "should not match if string in other log",
 			testingOutputs: TestingOutputs{
-				SerialLog:      []byte(killerString),
+				SerialLogs:     [][]byte{[]byte(killerString)},
 				SwarmingOutput: []byte("gentle string"),
 			},
 		},
@@ -166,6 +167,16 @@ func TestCheck(t *testing.T) {
 			shouldMatch: true,
 			wantName:    path.Join(wantName, "bar-test"),
 		},
+		{
+			name:            "should check all syslogs",
+			attributeToTest: true,
+			testingOutputs: TestingOutputs{
+				Syslogs: [][]byte{[]byte("gentle string"), []byte(killerString)},
+			},
+			shouldMatch: true,
+			typeToCheck: syslogType,
+			wantName:    "string_in_log/syslog.txt/KILLER_STRING",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			c := c // Make a copy to avoid modifying shared state.
@@ -177,9 +188,12 @@ func TestCheck(t *testing.T) {
 				},
 			}
 			c.OnlyOnStates = tc.states
+			if tc.typeToCheck != "" {
+				c.Type = tc.typeToCheck
+			}
 			if c.Check(&tc.testingOutputs) != tc.shouldMatch {
 				t.Errorf("c.Check(%q) returned %t, expected %t",
-					string(tc.testingOutputs.SerialLog), !tc.shouldMatch, tc.shouldMatch)
+					string(tc.testingOutputs.SerialLogs[0]), !tc.shouldMatch, tc.shouldMatch)
 			}
 			gotName := c.Name()
 			if tc.wantName != "" && gotName != tc.wantName {

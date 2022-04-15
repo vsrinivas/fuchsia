@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/tefmocheck"
@@ -65,8 +66,10 @@ func main() {
 	swarmingHost := flag.String("swarming-host", "", "Swarming server host. Optional.")
 	inputSummaryPath := flag.String("test-summary-json", "", "Path to test summary file. Optional.")
 	swarmingOutputPath := flag.String("swarming-output", "", "Path to a file containing the stdout and stderr of the Swarming task. Optional.")
-	syslogPath := flag.String("syslog", "", "Path to a file containing the syslog. Optional.")
-	serialLogPath := flag.String("serial-log", "", "Path to a file containing the serial log. Optional.")
+	var syslogPaths flagmisc.StringsValue
+	flag.Var(&syslogPaths, "syslog", "Repeated flag, path to a file containing the syslog. Optional.")
+	var serialLogPaths flagmisc.StringsValue
+	flag.Var(&serialLogPaths, "serial-log", "Repeated flag, path to a file containing the serial log. Optional.")
 	outputsDir := flag.String("outputs-dir", "", "If set, will produce text output files for the produced tests in this dir. Optional.")
 	jsonOutput := flag.String("json-output", "", "Output summary.json to this path.")
 	flag.Parse()
@@ -91,12 +94,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var serialLog []byte
-	if *serialLogPath != "" {
-		serialLog, err = ioutil.ReadFile(*serialLogPath)
+	var serialLogs [][]byte
+	for _, serialLogPath := range serialLogPaths {
+		serialLog, err := ioutil.ReadFile(serialLogPath)
 		if err != nil {
-			log.Fatalf("failed to read serial log from %s: %e", *serialLogPath, err)
+			log.Fatalf("failed to read serial log from %s: %e", serialLogPath, err)
 		}
+		serialLogs = append(serialLogs, serialLog)
 	}
 
 	var swarmingOutput []byte
@@ -141,21 +145,22 @@ func main() {
 		}
 	}
 
-	var syslog []byte
-	if *syslogPath != "" {
-		syslog, err = ioutil.ReadFile(*syslogPath)
+	var syslogs [][]byte
+	for _, syslogPath := range syslogPaths {
+		syslog, err := ioutil.ReadFile(syslogPath)
 		if err != nil {
-			log.Fatalf("failed to read syslog from %s: %e", *syslogPath, err)
+			log.Fatalf("failed to read syslog from %s: %e", syslogPath, err)
 		}
+		syslogs = append(syslogs, syslog)
 	}
 
 	testingOutputs := tefmocheck.TestingOutputs{
 		TestSummary:           inputSummary,
 		SwarmingSummary:       swarmingSummary,
-		SerialLog:             serialLog,
+		SerialLogs:            serialLogs,
 		SwarmingOutput:        swarmingOutput,
 		SwarmingOutputPerTest: swarmingOutputPerTest,
-		Syslog:                syslog,
+		Syslogs:               syslogs,
 	}
 
 	// These should be ordered from most specific to least specific. If an earlier

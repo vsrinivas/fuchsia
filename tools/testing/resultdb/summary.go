@@ -64,26 +64,28 @@ func SummaryToResultSink(s *runtests.TestSummary, tags []*resultpb.StringPair, o
 	return r, ts
 }
 
-// invocationLevelArtifacts creates resultdb artifacts for syslog and serial log to be sent to ResultDB.
-func invocationLevelArtifacts(outputRoot string) map[string]*sinkpb.Artifact {
+// invocationLevelArtifacts creates resultdb artifacts for invocation-level files to be sent to ResultDB.
+func invocationLevelArtifacts(outputRoot string, invocationArtifacts []string) map[string]*sinkpb.Artifact {
 	if len(outputRoot) == 0 {
 		outputRoot, _ = os.Getwd()
 	}
 	rootPath, _ := filepath.Abs(outputRoot)
 	artifacts := map[string]*sinkpb.Artifact{}
 
-	// TODO(yuanzhi) Make this an argument that the recipe can pass to the resultdb uploader
-	// instead of hardcoding here.
-	for _, invocationLog := range [...]string{
-		"infra_and_test_std_and_klog.txt",
-		"serial_log.txt",
-		"syslog.txt",
-		"triage_output",
-	} {
-		logFile := filepath.Join(rootPath, invocationLog)
-		if isReadable(logFile) {
-			artifacts[invocationLog] = &sinkpb.Artifact{
-				Body:        &sinkpb.Artifact_FilePath{FilePath: logFile},
+	// TODO(ihuh): Remove once these are passed in through recipes.
+	if len(invocationArtifacts) == 0 {
+		invocationArtifacts = []string{
+			"infra_and_test_std_and_klog.txt",
+			"serial_log.txt",
+			"syslog.txt",
+			"triage_output",
+		}
+	}
+	for _, invocationArtifact := range invocationArtifacts {
+		artifactFile := filepath.Join(rootPath, invocationArtifact)
+		if isReadable(artifactFile) {
+			artifacts[invocationArtifact] = &sinkpb.Artifact{
+				Body:        &sinkpb.Artifact_FilePath{FilePath: artifactFile},
 				ContentType: "text/plain",
 			}
 		}
