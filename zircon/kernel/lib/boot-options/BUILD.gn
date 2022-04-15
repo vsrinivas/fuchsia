@@ -27,12 +27,17 @@ if (current_toolchain == default_toolchain) {
   }
 
   action("check-markdown") {
+    # Suppress the check for absolute paths passed to the script; these need to
+    # be absolute to produce a universally executable command-line, and are not
+    # baked into any build artifacts.
+    no_output_dir_leaks = false
+
     script = "check-markdown.sh"
     deps = [ ":markdown" ]
     outputs = [ "$target_out_dir/$target_name.txt" ]
     sources = get_target_outputs(":markdown") +
               [ "//zircon/../docs/gen/boot-options.md" ]
-    args = rebase_path(sources + outputs, root_build_dir)
+    args = rebase_path(sources + outputs)
   }
 }
 
