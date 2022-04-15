@@ -1,0 +1,100 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    // TODO(fxbug.dev/97903): including the below conflicts with using
+    // svc_from_sys as /svc.
+    // Once svc_from_sys is removed, uncomment the below.
+    // include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/sshd-host",
+    },
+    use: [
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+
+        // Derived from legacy appmgr "deprecated-shell".
+        // See: fxbug.dev/35365
+        // TODO(fxbug.dev/97903): try to remove each one of the below.
+        // TODO(fxbug.dev/98086): specifically reduce /bin.
+        {
+            directory: "bin-not-delayed",
+            rights: [ "rx*" ],
+            path: "/bin",
+        },
+        {
+            directory: "blob",
+            rights: [ "rw*" ],
+            path: "/blob",
+        },
+        {
+            directory: "boot",
+            rights: [ "rx*" ],
+            path: "/boot",
+        },
+        {
+            directory: "build-info",
+            rights: [ "r*" ],
+            path: "/config/build-info",
+        },
+        {
+            directory: "root-ssl-certificates",
+            rights: [ "r*" ],
+            path: "/config/ssl",
+        },
+        {
+            directory: "minfs-not-delayed",
+            rights: [ "rw*" ],
+            path: "/data",
+        },
+        {
+            directory: "dev",
+            rights: [ "rw*" ],
+            path: "/dev",
+        },
+        {
+            directory: "hub-legacy",
+            rights: [ "rw*" ],
+            path: "/hub",
+        },
+        {
+            directory: "hub",
+            rights: [ "r*" ],
+            path: "/hub-v2",
+        },
+        {
+            directory: "mnt",
+            rights: [ "rw*" ],
+            path: "/mnt",
+        },
+        {
+            directory: "pkgfs-not-delayed",
+            rights: [ "rx*" ],
+            path: "/pkgfs",
+        },
+        {
+            directory: "system-not-delayed",
+            rights: [ "rx*" ],
+            path: "/system",
+        },
+        {
+            directory: "tmp",
+            rights: [ "rw*" ],
+            path: "/tmp",
+        },
+
+        // Put everything from the legacy sysmgr realm in /svc.
+        // This is consistent with legacy sshd-host behavior.
+        // TODO(fxbug.dev/97903): break this out into protocol capabilities
+        // specific to whatever supported shell utilities actually use.
+        {
+            directory: "svc_from_sys",
+            rights: [ "r*" ],
+            path: "/svc",
+        },
+    ],
+}

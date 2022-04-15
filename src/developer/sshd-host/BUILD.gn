@@ -42,18 +42,38 @@ executable("bin") {
   ]
 }
 
-fuchsia_package_with_single_component("sshd-host") {
+fuchsia_component("cmx") {
+  component_name = "sshd-host"
   manifest = "meta/sshd-host.cmx"
-  deps = [
-    ":bin",
+  deps = [ ":bin" ]
+}
 
-    # Used by programs that need to load ICU locale data, such as tz-util.
-    "//build/validate:non_production_tag",
-    "//src/intl:icudtl",
+fuchsia_component("cml") {
+  component_name = "sshd-host"
+  manifest = "meta/sshd-host.cml"
+  deps = [ ":bin" ]
+
+  # TODO(fxbug.dev/97903): remove the below after removing svc_from_sys from
+  # sshd-host.cml.
+  check_includes = false
+}
+
+fuchsia_package("sshd-host") {
+  deps = [
+    # TODO(fxbug.dev/90440): create separate sshd-host package for cmx and
+    # cml to ensure we only ever ship one flavor of the component.
+    ":cml",
+    ":cmx",
     "//third_party/openssh-portable:hostkeygen",
     "//third_party/openssh-portable:scp",
     "//third_party/openssh-portable:sftp-server",
     "//third_party/openssh-portable:sshd",
+
+    # Used by programs that need to load ICU locale data, such as tz-util.
+    "//src/intl:icudtl",
+
+    # Ensure this isn't included in production
+    "//build/validate:non_production_tag",
   ]
 }
 

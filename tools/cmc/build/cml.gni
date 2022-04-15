@@ -54,6 +54,13 @@ template("cm") {
 
   # for the profile variant we need to inject a use clause for DebugData.
   needs_debugdata = is_coverage
+  if (needs_debugdata &&
+      get_path_info(invoker.manifest, "name") == "sshd-host") {
+    # TODO(fxbug.dev/97903): delete this hack after sshd-host.cml no longer
+    # uses svc_from_sys. Installing svc_from_sys under /svc causes a namespace
+    # conflict with merging with debugdata.cml below.
+    needs_debugdata = false
+  }
 
   if (needs_debugdata) {
     cmc_merge("${target_name}_merge") {
