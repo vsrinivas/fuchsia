@@ -136,8 +136,6 @@ if (is_host) {
   host_test_data("rust_coverage_test_deps") {
     sources = [
       "$host_out_dir/covargs",
-      "$rust_sysroot/lib",
-      "$rustc_prefix/llvm-profdata",
       "//prebuilt/third_party/clang/${host_platform}/bin/llvm-cov",
       "rust_golden_coverage.json",
       rust_coverage_test_binary_path,
