@@ -49,6 +49,8 @@ test("fit") {
     "function_examples.cc",
     "function_tests.cc",
     "function_traits_tests.cc",
+    "inline_any_multi_inheritance_tests.cc",
+    "inline_any_tests.cc",
     "nullable_tests.cc",
     "thread_checker_tests.cc",
     "traits_tests.cc",

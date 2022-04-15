@@ -19,6 +19,8 @@ zx_library("fit") {
     "lib/fit/thread_safety.h",
     "lib/fit/traits.h",
     "lib/fit/utility_internal.h",
+    "lib/fit/inline_any.h",
+    "lib/fit/inline_any_internal.h",
   ]
 
   sources = []
