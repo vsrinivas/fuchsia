@@ -112,7 +112,8 @@ Fuchsia emulator (FEMU) using the same commands as above. See
 
 #### Integration Tests
 
-See the [Integration Test README](tests/integration/README.md)
+See the [Integration Test README](tests/integration/README.md). TODO(fxbug.dev/96421): This link is
+very outdated, rewrite and update.
 
 ### Controlling Log Verbosity
 

@@ -72,7 +72,7 @@ rustc_library("bt-test-harness") {
     "src/host_driver/v2.rs",
     "src/host_watcher.rs",
     "src/host_watcher_v2.rs",
-    "src/inspect.rs",
+    "src/inspect_v2.rs",
     "src/lib.rs",
     "src/low_energy_central_v2.rs",
     "src/low_energy_peripheral_v2.rs",

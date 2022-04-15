@@ -18,10 +18,10 @@ group("tests") {
     "bt-bonding-integration:bt-bonding-integration-tests",
     "bt-bootstrap-integration:bt-bootstrap-integration-tests",
     "bt-host-integration:bt-host-integration-tests",
+    "bt-inspect-integration:bt-inspect-integration-tests",
     "bt-le-integration:bt-le-integration-tests",
     "bt-manifest-integration-tests:tests",
     "bt-profile-integration:bt-profile-integration-tests",
-    "integration:bt-integration-tests",
     "//src/connectivity/bluetooth/core/bt-host:bt_host_bind_test",
   ]
 }

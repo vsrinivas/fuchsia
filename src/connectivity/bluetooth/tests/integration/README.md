@@ -1,4 +1,7 @@
-# Bluetooth Integration Tests
+# Bluetooth Integration Tests - DEPRECATED
+## TODO(fxbug.dev/96421): The information in this document is deprecated - it does not accurately
+## depict the current core stack integration tests. It wil be removed when updated documentation
+## is written.
 
 This module defines integration tests for the Fuchsia Bluetooth stack. Tests are written in Rust and run as Fuchsia components. Components under test are imported into the test component sandbox and exercised via FIDL.
 
