@@ -233,7 +233,7 @@ mod test {
     use futures::{channel::mpsc, SinkExt, StreamExt};
 
     use crate::features::CodecId;
-    use crate::sco_connector::parameters_for_codec;
+    use crate::sco_connector::parameter_sets_for_codec;
 
     use super::*;
 
@@ -330,7 +330,9 @@ mod test {
         let (output, _output_handle) = dai::test::test_digital_audio_interface(false);
         let mut audio = DaiAudioControl::setup(vec![input, output], proxy.clone()).await.unwrap();
 
-        let result = audio.start(PeerId(0), parameters_for_codec(CodecId::CVSD));
+        let sco_params = parameter_sets_for_codec(CodecId::CVSD).pop().unwrap();
+
+        let result = audio.start(PeerId(0), sco_params.clone());
         result.expect("audio should start okay");
 
         // Expect new audio devices that are output and input.
@@ -338,7 +340,7 @@ mod test {
         let audio_client_two = new_client_recv.next().await.expect("new audio device");
         assert!(audio_client_one.is_input != audio_client_two.is_input, "input and output");
 
-        let result = audio.start(PeerId(0), parameters_for_codec(CodecId::CVSD));
+        let result = audio.start(PeerId(0), sco_params);
         let _ = result.expect_err("Starting an already started source is an error");
     }
 
@@ -357,7 +359,8 @@ mod test {
 
         let _ = audio.stop().expect_err("stopping without starting is an error");
 
-        let result = audio.start(PeerId(0), parameters_for_codec(CodecId::CVSD));
+        let sco_params = parameter_sets_for_codec(CodecId::CVSD).pop().unwrap();
+        let result = audio.start(PeerId(0), sco_params);
         result.expect("audio should start okay");
 
         // Expect a new audio devices that we can start.

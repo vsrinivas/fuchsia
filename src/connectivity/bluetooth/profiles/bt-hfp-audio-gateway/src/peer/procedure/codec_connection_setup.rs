@@ -37,15 +37,11 @@ fn setup_request() -> ProcedureRequest {
 }
 
 fn select_codec(supported: Vec<CodecId>) -> CodecId {
-    // Prefer SBD over CVSD if it is supported, as it's higher quality.
-    #[allow(clippy::if_same_then_else)] // TODO(fxbug.dev/95033)
+    // Prefer mSBC over CVSD if it is supported, as it's higher quality.
     if supported.contains(&CodecId::MSBC) {
-        // TODO(fxbug.dev/81374): Re-enable MSBC when it's working again.
-        // CodecId::MSBC
-        CodecId::CVSD
-    } else {
-        CodecId::CVSD
+        return CodecId::MSBC;
     }
+    CodecId::CVSD
 }
 
 impl Procedure for CodecConnectionSetupProcedure {
@@ -178,8 +174,7 @@ mod tests {
 
     #[test]
     fn codec_negotiation_chooses_best_supported() {
-        // TODO(fxbug.dev/81374): This should request MSBC if it's supported
-        expect_codec_negotiation_codec(vec![CodecId::MSBC, CodecId::CVSD], CodecId::CVSD);
+        expect_codec_negotiation_codec(vec![CodecId::MSBC, CodecId::CVSD], CodecId::MSBC);
         expect_codec_negotiation_codec(vec![CodecId::CVSD, 0xf0.into()], CodecId::CVSD);
     }
 
@@ -219,18 +214,20 @@ mod tests {
         let mut procedure = CodecConnectionSetupProcedure::new();
 
         let request = procedure.hf_update(at::Command::Bcc {}, &mut slc_state);
-        // TODO(fxbug.dev/81374): This should request MSBC if it's supported
         let expected_messages =
-            vec![at::Response::Ok, at::success(at::Success::Bcs { codec: CodecId::CVSD.into() })];
+            vec![at::Response::Ok, at::success(at::Success::Bcs { codec: CodecId::MSBC.into() })];
         assert_matches!(request, ProcedureRequest::SendMessages(m) if m == expected_messages);
+        // Before the confirmation, we don't set the codec.
+        assert_eq!(slc_state.selected_codec, None);
 
         let request =
-            procedure.hf_update(at::Command::Bcs { codec: CodecId::CVSD.into() }, &mut slc_state);
+            procedure.hf_update(at::Command::Bcs { codec: CodecId::MSBC.into() }, &mut slc_state);
         assert_matches!(
             request,
             ProcedureRequest::Request(SlcRequest::SynchronousConnectionSetup { .. })
         );
-
+        // After confirmation, we set the selected codec.
+        assert_eq!(slc_state.selected_codec, Some(CodecId::MSBC));
         // We require two Oks, of which the first one is just an OK response to the codec request,
         // and the second represents the result of setting up the SCO and Audio.
         let request = procedure.ag_update(AgUpdate::Ok, &mut slc_state);

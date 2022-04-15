@@ -691,7 +691,13 @@ impl PeerTask {
 
         let previous_sco_state = &*self.sco_state;
 
-        info!("Updating SCO state for peer {}.  Call active: {}, Call transferred: {}, Previous SCO state: {:?}", self.id, call_active, call_transferred, previous_sco_state);
+        info!(
+            %self.id,
+            ?previous_sco_state,
+            "update_sco_state: active: {}, transferred: {}",
+            call_active,
+            call_transferred
+        );
 
         if call_active {
             match previous_sco_state {
@@ -714,40 +720,21 @@ impl PeerTask {
                 | ScoState::Active(_) => {},
             }
         } else if call_transferred {
-            match previous_sco_state {
-            // A call was just started transferred to the AG, so wait for SCO to be set up by the
-            // HF.
-            ScoState::Inactive
-            // A call was in codec negotiation when transferred to the AG, so wait for SCO to be 
-            // set up by the HF.
-            | ScoState::SettingUp
-            // The HF tore down the SCO connection so a call was transferred to the HF and the call
-            // manager has acknowledged that, so wait for SCO to be set up by the HF.
-            | ScoState::TearingDown
-            // A call was active and has just been transferred to the HF, so wait for the SCO
-            // connection to be set up by the HF.
-            | ScoState::Active(_) => {
-               let codecs = self.get_codecs();
-               let sco_connector = self.sco_connector.clone();
-               let id = self.id.clone();
-               let fut = async move {
-                sco_connector.accept(id, codecs).await
-               };
-               self.sco_state.iset(ScoState::AwaitingRemote(Box::pin(fut)));
+            // If a call is transferred to the AG, we should be waiting for a connection from the
+            // HF to transfer it back.
+            if let ScoState::AwaitingRemote(_) = previous_sco_state {
+                // Already waiting for a SCO connection, nothing to do.
+                info!("update_sco_state: already awaiting");
+                return Ok(());
             }
-            // A call is transferred to the HF and we are waiting for SCO to be set up by the HF,
-            // so do nothing.
-            ScoState::AwaitingRemote(_) => {}
-        }
+            let fut = self.sco_connector.accept(self.id.clone(), self.get_codecs());
+            self.sco_state.iset(ScoState::AwaitingRemote(Box::pin(fut)));
         } else {
             /* No call in progress */
             self.sco_state.iset(ScoState::Inactive);
         };
 
-        info!(
-            "Finished updating SCO state for peer {}; SCO state is now {:?}",
-            self.id, self.sco_state
-        );
+        info!(%self.id, ?self.sco_state, "update_sco_state: finished");
 
         Ok(())
     }
@@ -766,11 +753,10 @@ impl PeerTask {
                 Some(token)
             }
         };
-        let params = sco_connection.params.clone();
         {
             let mut audio = self.audio_control.lock();
             // Start the DAI with the given parameters
-            if let Err(e) = audio.start(self.id.clone(), params.into()) {
+            if let Err(e) = audio.start(self.id.clone(), sco_connection.params.clone().into()) {
                 // Cancel the SCO connection, we can't send audio.
                 // TODO(fxbug.dev/79784): this probably means we should just cancel out of HFP and
                 // this peer's connection entirely.
@@ -1853,10 +1839,6 @@ mod tests {
                         continue;
                     };
                     assert!(params.len() >= 1);
-                    let param_set = params[0].parameter_set.unwrap();
-                    // TODO(fxbug.dev/81374): Remove when mSBC is enabled again.
-                    assert!(param_set != bredr::HfpParameterSet::MsbcT1);
-                    assert!(param_set != bredr::HfpParameterSet::MsbcT2);
                     receiver.into_proxy().unwrap()
                 }
                 x => panic!("Unexpected request to profile stream: {:?}", x),
@@ -1899,7 +1881,10 @@ mod tests {
         peer: &mut PeerTask,
         profile_requests: &mut ProfileRequestStream,
     ) -> bredr::ScoConnectionRequestStream {
-        let codecs = peer.connection.get_selected_codec().map_or(vec![CodecId::CVSD], |c| vec![c]);
+        let codecs = peer
+            .connection
+            .get_selected_codec()
+            .map_or(vec![CodecId::MSBC, CodecId::CVSD], |c| vec![c]);
         let sco_connector = peer.sco_connector.clone();
         let audio_connection_fut = sco_connector.connect(peer.id.clone(), codecs).fuse();
         pin_mut!(audio_connection_fut);

@@ -4,9 +4,9 @@
 
 use fuchsia_inspect as inspect;
 use fuchsia_inspect_derive::{IValue, Unit};
-use futures::future::{Fuse, FusedFuture, Future};
+use futures::future::{BoxFuture, Fuse, FusedFuture, Future};
 use futures::FutureExt;
-use std::{fmt, pin::Pin};
+use std::fmt;
 use vigil::Vigil;
 
 use crate::{a2dp, error::ScoConnectError, sco_connector::ScoConnection};
@@ -28,7 +28,6 @@ impl Unit for ScoActive {
     }
 }
 
-pub type ScoStateFuture<T> = Pin<Box<dyn Future<Output = Result<T, ScoConnectError>>>>;
 pub enum ScoState {
     /// No call is in progress.
     Inactive,
@@ -41,7 +40,7 @@ pub enum ScoState {
     /// by the call manager, so the peer task attempts to mark the call as inactive a second time.
     TearingDown,
     /// A call is transferred to the AG and we are waiting for the HF to initiate a SCO connection.
-    AwaitingRemote(ScoStateFuture<ScoConnection>),
+    AwaitingRemote(BoxFuture<'static, Result<ScoConnection, ScoConnectError>>),
     /// A call is active an dso is the SCO connection.
     Active(Vigil<ScoActive>),
 }
