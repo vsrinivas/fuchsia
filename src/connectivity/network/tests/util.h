@@ -50,6 +50,14 @@ bool IsRoot();
 // Assumes that `fd` was previously connected to `peer_fd`.
 void fill_stream_send_buf(int fd, int peer_fd, ssize_t* out_bytes_written);
 
+#define RECV_IO_METHOD_OPS                                                             \
+  IOMethod::Op::READ, IOMethod::Op::READV, IOMethod::Op::RECV, IOMethod::Op::RECVFROM, \
+      IOMethod::Op::RECVMSG
+
+#define ALL_IO_METHOD_OPS                                                            \
+  RECV_IO_METHOD_OPS, IOMethod::Op::WRITE, IOMethod::Op::WRITEV, IOMethod::Op::SEND, \
+      IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG
+
 class IOMethod {
  public:
   enum class Op {

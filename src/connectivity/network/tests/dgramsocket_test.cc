@@ -271,12 +271,7 @@ TEST_P(IOMethodTest, NullptrFaultDGRAM) {
   DoNullPtrIO(fd, fd, GetParam(), true);
 }
 
-INSTANTIATE_TEST_SUITE_P(IOMethodTests, IOMethodTest,
-                         testing::Values(IOMethod::Op::READ, IOMethod::Op::READV,
-                                         IOMethod::Op::RECV, IOMethod::Op::RECVFROM,
-                                         IOMethod::Op::RECVMSG, IOMethod::Op::WRITE,
-                                         IOMethod::Op::WRITEV, IOMethod::Op::SEND,
-                                         IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
+INSTANTIATE_TEST_SUITE_P(IOMethodTests, IOMethodTest, testing::Values(ALL_IO_METHOD_OPS),
                          [](const auto info) { return info.param.IOMethodToString(); });
 
 class IOReadingMethodTest : public testing::TestWithParam<IOMethod> {};
@@ -342,9 +337,7 @@ TEST_P(IOReadingMethodTest, DatagramSocketErrorWhileBlocked) {
 }
 
 INSTANTIATE_TEST_SUITE_P(IOReadingMethodTests, IOReadingMethodTest,
-                         testing::Values(IOMethod::Op::READ, IOMethod::Op::READV,
-                                         IOMethod::Op::RECV, IOMethod::Op::RECVFROM,
-                                         IOMethod::Op::RECVMSG),
+                         testing::Values(RECV_IO_METHOD_OPS),
                          [](const testing::TestParamInfo<IOMethod>& info) {
                            return info.param.IOMethodToString();
                          });
@@ -468,14 +461,10 @@ std::string NonBlockingOptionIOParamsToString(
   return s.str();
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    NetDatagramTest, NonBlockingOptionIOTest,
-    testing::Combine(testing::Values(IOMethod::Op::READ, IOMethod::Op::READV, IOMethod::Op::RECV,
-                                     IOMethod::Op::RECVFROM, IOMethod::Op::RECVMSG,
-                                     IOMethod::Op::WRITE, IOMethod::Op::WRITEV, IOMethod::Op::SEND,
-                                     IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
-                     testing::Values(false, true)),
-    NonBlockingOptionIOParamsToString);
+INSTANTIATE_TEST_SUITE_P(NetDatagramTest, NonBlockingOptionIOTest,
+                         testing::Combine(testing::Values(ALL_IO_METHOD_OPS),
+                                          testing::Values(false, true)),
+                         NonBlockingOptionIOParamsToString);
 
 class DatagramSendTest : public testing::TestWithParam<IOMethod> {};
 

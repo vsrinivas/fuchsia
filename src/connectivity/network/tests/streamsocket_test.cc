@@ -577,12 +577,7 @@ TEST_P(StopListenWhileConnect, Shutdown) {
   });
 }
 
-INSTANTIATE_TEST_SUITE_P(NetStreamTest, StopListenWhileConnect,
-                         testing::Values(IOMethod::Op::READ, IOMethod::Op::READV,
-                                         IOMethod::Op::RECV, IOMethod::Op::RECVFROM,
-                                         IOMethod::Op::RECVMSG, IOMethod::Op::WRITE,
-                                         IOMethod::Op::WRITEV, IOMethod::Op::SEND,
-                                         IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
+INSTANTIATE_TEST_SUITE_P(NetStreamTest, StopListenWhileConnect, testing::Values(ALL_IO_METHOD_OPS),
                          [](const testing::TestParamInfo<IOMethod>& info) {
                            return info.param.IOMethodToString();
                          });
@@ -774,14 +769,10 @@ std::string ConnectingIOParamsToString(const testing::TestParamInfo<ConnectingIO
   return s.str();
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    NetStreamTest, ConnectingIOTest,
-    testing::Combine(testing::Values(IOMethod::Op::READ, IOMethod::Op::READV, IOMethod::Op::RECV,
-                                     IOMethod::Op::RECVFROM, IOMethod::Op::RECVMSG,
-                                     IOMethod::Op::WRITE, IOMethod::Op::WRITEV, IOMethod::Op::SEND,
-                                     IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
-                     testing::Values(false, true)),
-    ConnectingIOParamsToString);
+INSTANTIATE_TEST_SUITE_P(NetStreamTest, ConnectingIOTest,
+                         testing::Combine(testing::Values(ALL_IO_METHOD_OPS),
+                                          testing::Values(false, true)),
+                         ConnectingIOParamsToString);
 
 class TimeoutSockoptsTest : public testing::TestWithParam<int /* optname */> {};
 
@@ -1498,15 +1489,11 @@ std::string BlockedIOParamsToString(const testing::TestParamInfo<BlockedIOParams
   return s.str();
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    NetStreamTest, BlockedIOTest,
-    testing::Combine(testing::Values(IOMethod::Op::READ, IOMethod::Op::READV, IOMethod::Op::RECV,
-                                     IOMethod::Op::RECVFROM, IOMethod::Op::RECVMSG,
-                                     IOMethod::Op::WRITE, IOMethod::Op::WRITEV, IOMethod::Op::SEND,
-                                     IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
-                     testing::Values(CloseTarget::CLIENT, CloseTarget::SERVER),
-                     testing::Values(false, true)),
-    BlockedIOParamsToString);
+INSTANTIATE_TEST_SUITE_P(NetStreamTest, BlockedIOTest,
+                         testing::Combine(testing::Values(ALL_IO_METHOD_OPS),
+                                          testing::Values(CloseTarget::CLIENT, CloseTarget::SERVER),
+                                          testing::Values(false, true)),
+                         BlockedIOParamsToString);
 
 // Note: we choose 100 because the max number of fds per process is limited to
 // 256.
@@ -2267,12 +2254,7 @@ TEST_P(IOMethodTest, NullptrFaultSTREAM) {
   DoNullPtrIO(client, server, GetParam(), false);
 }
 
-INSTANTIATE_TEST_SUITE_P(IOMethodTests, IOMethodTest,
-                         testing::Values(IOMethod::Op::READ, IOMethod::Op::READV,
-                                         IOMethod::Op::RECV, IOMethod::Op::RECVFROM,
-                                         IOMethod::Op::RECVMSG, IOMethod::Op::WRITE,
-                                         IOMethod::Op::WRITEV, IOMethod::Op::SEND,
-                                         IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
+INSTANTIATE_TEST_SUITE_P(IOMethodTests, IOMethodTest, testing::Values(ALL_IO_METHOD_OPS),
                          [](const auto info) { return info.param.IOMethodToString(); });
 
 }  // namespace
