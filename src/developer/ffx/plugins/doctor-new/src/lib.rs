@@ -236,11 +236,11 @@ pub async fn doctor_cmd_impl<W: Write + Send + Sync + 'static>(
                     color::Fg(color::Red), style::Reset
                 )?;
                 writeln!(&mut writer,
-                    "ffx doctor will proceed, but if you want to enable logs, you can do so by running:"
+                    "ffx doctor-new will proceed, but if you want to enable logs, you can do so by running:"
                 )?;
                 writeln!(&mut writer, "  ffx config set log.enabled true")?;
                 writeln!(&mut writer, "You will then need to restart the ffx daemon:")?;
-                writeln!(&mut writer, "  ffx doctor --force-restart\n\n")?;
+                writeln!(&mut writer, "  ffx doctor-new --force-restart\n\n")?;
                 fuchsia_async::Timer::new(Duration::from_millis(10000)).await;
             }
 
@@ -662,8 +662,10 @@ async fn daemon_restart<W: Write>(
             return Ok(());
         }
         Err(_) => {
-            let node =
-                ledger.add_node("Timeout while connecting to daemon", LedgerMode::Automatic)?;
+            let node = ledger.add_node(
+                "Timeout while connecting to daemon. Run `ffx doctor-new --restart-daemon`",
+                LedgerMode::Automatic,
+            )?;
             ledger.set_outcome(node, LedgerOutcome::Failure)?;
             ledger.close(main_node)?;
             return Ok(());
@@ -748,7 +750,7 @@ async fn doctor_summary<W: Write>(
         ledger.set_outcome(node, LedgerOutcome::Success)?;
     } else {
         let node = ledger.add_node(
-            "No running daemons found. Run `ffx doctor --restart-daemon`",
+            "No running daemons found. Run `ffx doctor-new --restart-daemon`",
             LedgerMode::Automatic,
         )?;
         ledger.set_outcome(node, LedgerOutcome::Failure)?;
@@ -770,8 +772,10 @@ async fn doctor_summary<W: Write>(
             return Ok(());
         }
         Err(_) => {
-            let node =
-                ledger.add_node("Timeout while connecting to daemon", LedgerMode::Automatic)?;
+            let node = ledger.add_node(
+                "Timeout while connecting to daemon. Run `ffx doctor-new --restart-daemon`",
+                LedgerMode::Automatic,
+            )?;
             ledger.set_outcome(node, LedgerOutcome::Failure)?;
             ledger.close(main_node)?;
             return Ok(());
@@ -1012,7 +1016,7 @@ async fn doctor_summary<W: Write>(
             let msg = match ledger.get_ledger_mode() {
                 LedgerViewMode::Normal => String::from(
                     "Doctor found issues in one or more categories; \
-                    run 'ffx doctor -v' for more details.",
+                    run 'ffx doctor-new -v' for more details.",
                 ),
                 _ => String::from("Doctor found issues in one or more categories."),
             };
@@ -1766,7 +1770,7 @@ mod test {
                    \n[✓] FFX doctor\
                    \n    [✓] Frontend version: {}\
                    \n[✗] Checking daemon\
-                   \n    [✗] No running daemons found. Run `ffx doctor --restart-daemon`\n",
+                   \n    [✗] No running daemons found. Run `ffx doctor-new --restart-daemon`\n",
                 FRONTEND_VERSION
             )
         );
@@ -2492,7 +2496,7 @@ mod test {
             \n    [!] Skipping target without node name\
             \n    [✗] Target: {}\
             \n[✗] Doctor found issues in one or more categories; \
-            run 'ffx doctor -v' for more details.\n",
+            run 'ffx doctor-new -v' for more details.\n",
                 UNRESPONSIVE_NODENAME,
             )
         );
