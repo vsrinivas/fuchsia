@@ -615,7 +615,12 @@ void Dispatcher::QueueRegisteredCallback(driver_runtime::CallbackRequest* reques
 
     // Synchronous dispatchers do not allow parallel callbacks.
     // Blocking dispatchers are required to queue all callbacks onto the async loop.
-    if (unsynchronized_ || (!dispatching_sync_ && !allow_sync_calls_)) {
+    // TODO(fxbug.dev/98168): we should be able to remove the task check once we track
+    // drivers through banjo calls, or start each DFv2 driver with a ALLOW_SYNC_CALLS
+    // dispatcher.
+    if (unsynchronized_ ||
+        (!dispatching_sync_ && !allow_sync_calls_ &&
+         (callback_request->request_type() != CallbackRequest::RequestType::kTask))) {
       // Check if the call would be reentrant, in which case we will queue it up to be run
       // later.
       //

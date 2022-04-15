@@ -1161,6 +1161,28 @@ TEST_F(DispatcherTest, DelayedTask) {
   ASSERT_OK(sync_completion_wait(&completion, ZX_TIME_INFINITE));
 }
 
+TEST_F(DispatcherTest, TasksDoNotCallDirectly) {
+  fdf_dispatcher_t* dispatcher;
+  ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &dispatcher));
+
+  async_dispatcher_t* async_dispatcher = fdf_dispatcher_get_async_dispatcher(dispatcher);
+  ASSERT_NOT_NULL(async_dispatcher);
+
+  loop_.Quit();
+  loop_.JoinThreads();
+  loop_.ResetQuit();
+
+  driver_context::PushDriver(CreateFakeDriver());
+  auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
+  libsync::Completion completion;
+  ASSERT_OK(async::PostTask(async_dispatcher, [&completion] { completion.Signal(); }));
+  ASSERT_FALSE(completion.signaled());
+
+  loop_.StartThread();
+  completion.Wait();
+}
+
 TEST_F(DispatcherTest, FromAsyncDispatcher) {
   fdf_dispatcher_t* dispatcher;
   ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &dispatcher));
