@@ -30,7 +30,7 @@ if (is_host) {
 group("temp_test_env") {
   testonly = true
 
-  deps = [ ":lib($host_toolchain)" ]
+  public_deps = [ ":lib($host_toolchain)" ]
 }
 
 group("tests") {
