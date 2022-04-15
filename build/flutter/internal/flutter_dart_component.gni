@@ -7,6 +7,7 @@ import("//build/dart/config.gni")
 import("//build/dart/dart.gni")
 import("//build/dart/dart_package_config.gni")
 import("//build/dart/kernel/dart_kernel.gni")
+import("//build/flutter/config.gni")
 import("//tools/cmc/build/cmc.gni")
 
 # Creates a flutter asset manifest from the pubspec.yaml file.

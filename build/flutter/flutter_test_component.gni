@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/dart/dart_build_config.gni")
+import("//build/flutter/flutter_build_config.gni")
 import("//build/flutter/internal/flutter_dart_test_component.gni")
 
 # Defines a component which runs tests in the flutter test harness
@@ -77,7 +77,7 @@ template("flutter_test_component") {
   if (defined(invoker.build_cfg)) {
     _build_cfg = invoker.build_cfg
   } else {
-    _build_cfg = dart_default_build_cfg
+    _build_cfg = flutter_default_build_cfg
   }
 
   flutter_dart_test_component(target_name) {
