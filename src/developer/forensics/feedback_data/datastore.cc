@@ -40,10 +40,11 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       redactor_(redactor),
       annotation_allowlist_(annotation_allowlist),
       attachment_allowlist_(attachment_allowlist),
+      annotation_metrics_(cobalt_),
       annotation_manager_(annotation_manager),
       static_attachments_(feedback_data::GetStaticAttachments(attachment_allowlist_)),
       reusable_annotation_providers_(
-          GetReusableProviders(dispatcher_, services_, device_id_provider, cobalt_)),
+          GetReusableProviders(dispatcher_, services_, device_id_provider)),
       inspect_data_budget_(inspect_data_budget) {
   FX_CHECK(annotation_allowlist_.size() <= kMaxNumPlatformAnnotations)
       << "Requesting more platform annotations than the maximum number of platform annotations "
@@ -71,12 +72,13 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       redactor_(nullptr /*TODO*/),
       annotation_allowlist_({}),
       attachment_allowlist_({}),
+      annotation_metrics_(cobalt_),
       // Somewhat risky, but the AnnotationManager depends on a bunch of stuff and this constructor
       // is intended for tests.
       annotation_manager_(nullptr),
       static_attachments_({}),
       reusable_annotation_providers_(
-          GetReusableProviders(dispatcher_, services_, device_id_provider, cobalt_)) {}
+          GetReusableProviders(dispatcher_, services_, device_id_provider)) {}
 
 ::fpromise::promise<Annotations> Datastore::GetAnnotations(const zx::duration timeout) {
   if (annotation_allowlist_.empty()) {
@@ -94,7 +96,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
     annotations.push_back(provider->GetAnnotations(timeout, annotation_allowlist_));
   }
 
-  for (auto& provider : GetSingleUseProviders(dispatcher_, services_, cobalt_)) {
+  for (auto& provider : GetSingleUseProviders(dispatcher_, services_)) {
     annotations.push_back(provider->GetAnnotations(timeout, annotation_allowlist_));
   }
 
@@ -118,6 +120,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
             ok_annotations.insert({key, Error::kMissingValue});
           }
         }
+        annotation_metrics_.LogMetrics(ok_annotations);
 
         return ::fpromise::ok(ok_annotations);
       });

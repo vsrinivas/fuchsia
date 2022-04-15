@@ -13,6 +13,7 @@
 #include <memory>
 
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
+#include "src/developer/forensics/feedback/annotations/metrics.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/annotation_provider.h"
@@ -77,6 +78,7 @@ class Datastore {
   const AnnotationKeys annotation_allowlist_;
   AttachmentKeys attachment_allowlist_;
 
+  feedback::AnnotationMetrics annotation_metrics_;
   feedback::AnnotationManager* annotation_manager_;
   Attachments static_attachments_;
 

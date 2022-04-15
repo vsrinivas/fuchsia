@@ -13,7 +13,6 @@
 
 #include "src/developer/forensics/feedback_data/annotations/annotation_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/types.h"
-#include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/fidl/caching_ptr.h"
 #include "src/developer/forensics/utils/fit/timeout.h"
 #include "src/lib/fxl/macros.h"
@@ -25,8 +24,8 @@ namespace feedback_data {
 class BoardInfoProvider : public AnnotationProvider {
  public:
   // fuchsia.hwinfo.Board is expected to be in |services|.
-  BoardInfoProvider(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                    cobalt::Logger* cobalt);
+  BoardInfoProvider(async_dispatcher_t* dispatcher,
+                    std::shared_ptr<sys::ServiceDirectory> services);
 
   ::fpromise::promise<Annotations> GetAnnotations(zx::duration timeout,
                                                   const AnnotationKeys& allowlist) override;
@@ -36,7 +35,6 @@ class BoardInfoProvider : public AnnotationProvider {
 
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
-  cobalt::Logger* cobalt_;
 
   fidl::CachingPtr<fuchsia::hwinfo::Board, Annotations> board_ptr_;
 };

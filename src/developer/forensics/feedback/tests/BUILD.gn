@@ -192,6 +192,22 @@ executable("main_service_unittest_exe") {
   ]
 }
 
+executable("metrics_unittest_exe") {
+  testonly = true
+
+  sources = [ "metrics_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/feedback/annotations",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:cobalt",
+    "//src/lib/timekeeper:testing",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("namespace_init_unittest_exe") {
   testonly = true
 
@@ -412,6 +428,10 @@ fuchsia_component("main_service_unittest") {
   deps = [ ":main_service_unittest_exe" ]
 }
 
+fuchsia_unittest_component("metrics_unittest") {
+  deps = [ ":metrics_unittest_exe" ]
+}
+
 fuchsia_unittest_component("namespace_init_unittest") {
   deps = [
     ":namespace_init_unittest_exe",
@@ -445,6 +465,7 @@ fuchsia_test_package("feedback-tests") {
     ":feedback_data_unittest",
     ":last_reboot_unittest",
     ":main_service_unittest",
+    ":metrics_unittest",
     ":namespace_init_unittest",
     ":redactor_factory_unittest",
     ":startup_annotations_unittest",

@@ -25,9 +25,8 @@ const AnnotationKeys kSupportedAnnotations = {
 }  // namespace
 
 ChannelProvider::ChannelProvider(async_dispatcher_t* dispatcher,
-                                 std::shared_ptr<sys::ServiceDirectory> services,
-                                 cobalt::Logger* cobalt)
-    : dispatcher_(dispatcher), services_(services), cobalt_(cobalt) {}
+                                 std::shared_ptr<sys::ServiceDirectory> services)
+    : dispatcher_(dispatcher), services_(services) {}
 
 ::fpromise::promise<Annotations> ChannelProvider::GetAnnotations(zx::duration timeout,
                                                                  const AnnotationKeys& allowlist) {
@@ -40,7 +39,7 @@ ChannelProvider::ChannelProvider(async_dispatcher_t* dispatcher,
   return ::fpromise::join_promises(
              fidl::GetCurrentChannel(dispatcher_, services_, fit::Timeout(timeout)),
              fidl::GetTargetChannel(dispatcher_, services_, fit::Timeout(timeout)))
-      .and_then([this, to_get](std::tuple<Result, Result>& results) {
+      .and_then([to_get](std::tuple<Result, Result>& results) {
         Annotations annotations({
             {kAnnotationSystemUpdateChannelCurrent, std::get<0>(results)},
             {kAnnotationSystemUpdateChannelTarget, std::get<1>(results)},
@@ -50,7 +49,6 @@ ChannelProvider::ChannelProvider(async_dispatcher_t* dispatcher,
               const auto& value = annotation.second;
               return !value.HasValue() && value.Error() == Error::kTimeout;
             }) != annotations.end()) {
-          cobalt_->LogOccurrence(cobalt::TimedOutData::kChannel);
         }
 
         return ::fpromise::ok(ExtractAllowlisted(to_get, annotations));

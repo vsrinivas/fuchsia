@@ -12,7 +12,6 @@
 #include <zircon/time.h>
 
 #include "src/developer/forensics/feedback_data/annotations/annotation_provider.h"
-#include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/fidl/caching_ptr.h"
 #include "src/developer/forensics/utils/fit/timeout.h"
 #include "src/lib/fxl/macros.h"
@@ -25,7 +24,7 @@ class ProductInfoProvider : public AnnotationProvider {
  public:
   // fuchsia.hwinfo.Product is expected to be in |services|.
   ProductInfoProvider(async_dispatcher_t* dispatcher,
-                      std::shared_ptr<sys::ServiceDirectory> services, cobalt::Logger* cobalt);
+                      std::shared_ptr<sys::ServiceDirectory> services);
 
   ::fpromise::promise<Annotations> GetAnnotations(zx::duration timeout,
                                                   const AnnotationKeys& allowlist) override;
@@ -35,7 +34,6 @@ class ProductInfoProvider : public AnnotationProvider {
 
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
-  cobalt::Logger* cobalt_;
 
   fidl::CachingPtr<fuchsia::hwinfo::Product, Annotations> product_ptr_;
 };

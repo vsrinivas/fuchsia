@@ -40,11 +40,9 @@ const AnnotationKeys kSupportedAnnotations = {
 }  // namespace
 
 ProductInfoProvider::ProductInfoProvider(async_dispatcher_t* dispatcher,
-                                         std::shared_ptr<sys::ServiceDirectory> services,
-                                         cobalt::Logger* cobalt)
+                                         std::shared_ptr<sys::ServiceDirectory> services)
     : dispatcher_(dispatcher),
       services_(services),
-      cobalt_(cobalt),
       product_ptr_(dispatcher_, services_, [this] { GetInfo(); }) {}
 
 ::fpromise::promise<Annotations> ProductInfoProvider::GetAnnotations(
@@ -54,8 +52,7 @@ ProductInfoProvider::ProductInfoProvider(async_dispatcher_t* dispatcher,
     return ::fpromise::make_result_promise<Annotations>(::fpromise::ok<Annotations>({}));
   }
 
-  auto on_timeout = [this] { cobalt_->LogOccurrence(cobalt::TimedOutData::kProductInfo); };
-  return product_ptr_.GetValue(fit::Timeout(timeout, std::move(on_timeout)))
+  return product_ptr_.GetValue(fit::Timeout(timeout))
       .then([to_get](const ::fpromise::result<Annotations, Error>& result) {
         Annotations annotations = (result.is_error()) ? WithError(to_get, result.error())
                                                       : ExtractAllowlisted(to_get, result.value());

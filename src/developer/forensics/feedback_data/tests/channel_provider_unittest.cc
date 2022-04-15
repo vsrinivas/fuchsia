@@ -19,9 +19,7 @@
 #include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/testing/stubs/channel_control.h"
-#include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
-#include "src/developer/forensics/utils/cobalt/event.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/lib/timekeeper/test_clock.h"
 
@@ -48,10 +46,7 @@ class ChannelProviderTest : public UnitTestFixture {
   Annotations GetChannels(const AnnotationKeys& allowlist = {kAnnotationSystemUpdateChannelCurrent,
                                                              kAnnotationSystemUpdateChannelTarget},
                           const zx::duration timeout = zx::sec(1)) {
-    SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
-    cobalt::Logger cobalt(dispatcher(), services(), &clock_);
-
-    ChannelProvider provider(dispatcher(), services(), &cobalt);
+    ChannelProvider provider(dispatcher(), services());
     auto promise = provider.GetAnnotations(timeout, allowlist);
 
     bool was_called = false;
@@ -176,9 +171,6 @@ TEST_F(ChannelProviderTest, Fail_ChannelProviderServerNeverReturns) {
                           Pair(kAnnotationSystemUpdateChannelCurrent, Error::kTimeout),
                           Pair(kAnnotationSystemUpdateChannelTarget, Error::kTimeout),
                       }));
-  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
-                                          cobalt::Event(cobalt::TimedOutData::kChannel),
-                                      }));
 }
 
 }  // namespace

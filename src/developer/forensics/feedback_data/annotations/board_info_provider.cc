@@ -32,11 +32,9 @@ const AnnotationKeys kSupportedAnnotations = {
 }  // namespace
 
 BoardInfoProvider::BoardInfoProvider(async_dispatcher_t* dispatcher,
-                                     std::shared_ptr<sys::ServiceDirectory> services,
-                                     cobalt::Logger* cobalt)
+                                     std::shared_ptr<sys::ServiceDirectory> services)
     : dispatcher_(dispatcher),
       services_(services),
-      cobalt_(cobalt),
       board_ptr_(dispatcher_, services_, [this] { GetInfo(); }) {}
 
 ::fpromise::promise<Annotations> BoardInfoProvider::GetAnnotations(
@@ -46,8 +44,7 @@ BoardInfoProvider::BoardInfoProvider(async_dispatcher_t* dispatcher,
     return ::fpromise::make_result_promise<Annotations>(::fpromise::ok<Annotations>({}));
   }
 
-  auto on_timeout = [this] { cobalt_->LogOccurrence(cobalt::TimedOutData::kBoardInfo); };
-  return board_ptr_.GetValue(fit::Timeout(timeout, std::move(on_timeout)))
+  return board_ptr_.GetValue(fit::Timeout(timeout))
       .then([=](const ::fpromise::result<Annotations, Error>& result) {
         Annotations annotations = (result.is_error()) ? WithError(to_get, result.error())
                                                       : ExtractAllowlisted(to_get, result.value());

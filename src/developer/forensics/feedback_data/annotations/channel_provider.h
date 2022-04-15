@@ -13,7 +13,6 @@
 
 #include "src/developer/forensics/feedback_data/annotations/annotation_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/types.h"
-#include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/lib/fxl/macros.h"
 
 namespace forensics {
@@ -22,8 +21,7 @@ namespace feedback_data {
 class ChannelProvider : public AnnotationProvider {
  public:
   // fuchsia.update.channelcontrol.ChannelControl is expected to be in |services|.
-  ChannelProvider(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                  cobalt::Logger* cobalt);
+  ChannelProvider(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
 
   ::fpromise::promise<Annotations> GetAnnotations(zx::duration timeout,
                                                   const AnnotationKeys& allowlist) override;
@@ -31,7 +29,6 @@ class ChannelProvider : public AnnotationProvider {
  private:
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
-  cobalt::Logger* cobalt_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ChannelProvider);
 };

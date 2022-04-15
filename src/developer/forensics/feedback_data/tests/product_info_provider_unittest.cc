@@ -20,11 +20,8 @@
 
 #include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
-#include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/stubs/product_info_provider.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
-#include "src/developer/forensics/utils/cobalt/event.h"
-#include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/timekeeper/test_clock.h"
@@ -59,10 +56,7 @@ class ProductInfoProviderTest
 
   Annotations GetProductInfo(const AnnotationKeys& allowlist = {},
                              const zx::duration timeout = zx::sec(1)) {
-    SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
-    cobalt::Logger cobalt(dispatcher(), services(), &clock_);
-
-    ProductInfoProvider provider(dispatcher(), services(), &cobalt);
+    ProductInfoProvider provider(dispatcher(), services());
     auto promise = provider.GetAnnotations(timeout, allowlist);
 
     Annotations annotations;
@@ -194,21 +188,6 @@ TEST_F(ProductInfoProviderTest, Succeed_NoRequestedKeysInAllowlist) {
   });
 
   EXPECT_THAT(product_info, IsEmpty());
-}
-
-TEST_F(ProductInfoProviderTest, Check_CobaltLogsTimeout) {
-  SetUpProductProviderServer(std::make_unique<stubs::ProductInfoProviderNeverReturns>());
-
-  auto product_info = GetProductInfo(/*allowlist=*/{
-      kAnnotationHardwareProductSKU,
-  });
-
-  EXPECT_THAT(product_info, ElementsAreArray({
-                                Pair(kAnnotationHardwareProductSKU, Error::kTimeout),
-                            }));
-  EXPECT_THAT(ReceivedCobaltEvents(), ElementsAreArray({
-                                          cobalt::Event(cobalt::TimedOutData::kProductInfo),
-                                      }));
 }
 
 const std::map<AnnotationKey, std::string> ProductInfoValues = {

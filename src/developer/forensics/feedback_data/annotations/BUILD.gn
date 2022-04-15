@@ -55,7 +55,6 @@ source_set("board_info_provider") {
     ":types",
     "//sdk/fidl/fuchsia.hwinfo",
     "//src/developer/forensics/utils:errors",
-    "//src/developer/forensics/utils/cobalt",
     "//src/developer/forensics/utils/fidl:caching_ptr",
   ]
 
@@ -84,7 +83,6 @@ source_set("channel_provider") {
     ":types",
     "//sdk/fidl/fuchsia.update.channel",
     "//sdk/lib/sys/cpp",
-    "//src/developer/forensics/utils/cobalt",
     "//src/lib/fxl",
     "//zircon/system/ulib/async",
     "//zircon/system/ulib/zx",
@@ -113,7 +111,6 @@ source_set("product_info_provider") {
     ":types",
     "//sdk/fidl/fuchsia.hwinfo",
     "//src/developer/forensics/utils:errors",
-    "//src/developer/forensics/utils/cobalt",
     "//src/developer/forensics/utils/fidl:caching_ptr",
   ]
 
