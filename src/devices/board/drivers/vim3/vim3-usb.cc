@@ -177,7 +177,6 @@ static pbus_metadata_t usb_metadata[] = {
 
 static const pbus_boot_metadata_t usb_boot_metadata[] = {
     {
-        // Use Bluetooth MAC address for USB ethernet as well.
         .zbi_type = DEVICE_METADATA_MAC_ADDRESS,
         .zbi_extra = MACADDR_WIFI,
     },
