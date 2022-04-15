@@ -111,16 +111,19 @@ blobfs::MountOptions ReadOnlyOptions() {
 
 zx::status<std::unique_ptr<blobfs::Blobfs>> FsWalker::CreateBlobfs(async_dispatcher_t* dispatcher) {
   zx::channel root_client;
-  zx_status_t status = fdio_fd_clone(input_fd_.get(), root_client.reset_and_get_address());
-  if (status != ZX_OK) {
+  if (zx_status_t status = fdio_fd_clone(input_fd_.get(), root_client.reset_and_get_address());
+      status != ZX_OK) {
     std::cerr << "Error transferring input fd to channel" << std::endl;
     std::cerr << "Status: " << status << std::endl;
     return zx::error(status);
   }
+
   std::unique_ptr<block_client::RemoteBlockDevice> device;
   if (zx_status_t status =
           block_client::RemoteBlockDevice::Create(std::move(root_client), &device) != ZX_OK) {
     std::cerr << "Error creating Remote Block Device";
+    std::cerr << "Status: " << status << std::endl;
+    return zx::error(status);
   }
 
   vfs_ = std::make_unique<fs::PagedVfs>(dispatcher);
