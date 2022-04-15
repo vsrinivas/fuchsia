@@ -530,6 +530,61 @@ TEST(AnalysisHelpers, FindImpulseLeadingEdge) {
   EXPECT_EQ(*result, 6);
 }
 
+TEST(AnalysisHelpers, FindImpulse) {
+  auto format = Format::Create<ASF::FLOAT>(1, 48000 /* unused */).take_value();
+  auto reals = AudioBuffer(format, 12);
+
+  // Silent audio should return nullopt.
+  auto result = FindImpulse(AudioBufferSlice(&reals), 0);
+  EXPECT_FALSE(result);
+
+  // Audio entirely below the noise floor should be considered silent.
+  reals.samples()[1] = 0.09f;
+  reals.samples()[2] = -0.09f;
+  result = FindImpulse(AudioBufferSlice(&reals), 0.1f);
+  EXPECT_FALSE(result);
+
+  // Impulse with exactly one frame.
+  reals.samples()[1] = 0;
+  reals.samples()[2] = 0;
+  reals.samples()[5] = 0.7f;
+  result = FindImpulse(AudioBufferSlice(&reals), 0);
+  EXPECT_TRUE(result);
+  EXPECT_EQ(result->leading_edge, 5);
+  EXPECT_EQ(result->max, 5);
+  EXPECT_EQ(result->center, 5);
+  EXPECT_EQ(result->trailing_edge, 5);
+
+  // Impulse with ramp in/out. The leading edge occurs at the largest sample such that there is no
+  // value 50% larger. In the samples below, the edges occurs at 0.10f (no sample is larger than
+  // 0.15) and 0.11f (no sample is larger than 0.165). The center (which would be index 8.5) is
+  // rounded up to 9 because the trailing value 0.11 is larger than the leading value 0.10.
+  reals.samples() = {
+      0.0f,  0.01f, 0.04f, 0.08f,  0.09f, 0.10f, 0.125f, 0.12f,
+      0.13f, 0.14f, 0.13f, 0.145f, 0.11f, 0.08f, 0.02f,  0.0f,
+  };
+  result = FindImpulse(AudioBufferSlice(&reals), 0.01f);
+  EXPECT_EQ(result->leading_edge, 5);
+  EXPECT_EQ(result->center, 9);
+  EXPECT_EQ(result->max, 11);
+  EXPECT_EQ(result->trailing_edge, 12);
+
+  // Impulse with ramp in/out, mixed signs. The leading edge occurs at the largest sample such that
+  // there is no value 50% larger. In the samples below, the edges occurs at 0.10f (no sample is
+  // larger than 0.15) and -0.11f (no sample is larger than 0.165). The center (which would be
+  // index 8.5) is rounded up to 9 because the trailing value 0.11 is larger than the leading value
+  // 0.10. The max value in this case is negative (-0.145).
+  reals.samples() = {
+      0.0f,  0.01f,  -0.04f, 0.08f,   -0.09f, 0.10f, -0.125f, -0.12f,
+      0.13f, -0.14f, 0.13f,  -0.145f, -0.11f, 0.08f, -0.02f,  0.0f,
+  };
+  result = FindImpulse(AudioBufferSlice(&reals), 0.01f);
+  EXPECT_EQ(result->leading_edge, 5);
+  EXPECT_EQ(result->center, 9);
+  EXPECT_EQ(result->max, 11);
+  EXPECT_EQ(result->trailing_edge, 12);
+}
+
 TEST(AnalysisHelpers, MultiplyByTukeyWindow) {
   auto format = Format::Create<ASF::FLOAT>(1, 48000 /* unused */).take_value();
   auto input = AudioBuffer(format, 13);

@@ -133,13 +133,20 @@ std::optional<int64_t> FindImpulseLeadingEdge(
   return std::nullopt;
 }
 
+struct Impulse {
+  int64_t leading_edge;
+  int64_t max;
+  int64_t center;
+  int64_t trailing_edge;
+};
+
 // Locate the center of the impulse in the given slice, ignoring samples quieter than the given
 // noise floor. Returns the frame index if found, and std::nullopt otherwise.
 // This function requires a one-channel slice, and it assumes there is exactly one impulse.
+// Unlike FindImpulseLeadingEdge, this func ignores sign: center/edges can be positive or negative.
 template <fuchsia::media::AudioSampleFormat SampleFormat>
-std::optional<int64_t> FindImpulseCenter(
-    AudioBufferSlice<SampleFormat> slice,
-    typename SampleFormatTraits<SampleFormat>::SampleT noise_floor) {
+std::optional<Impulse> FindImpulse(AudioBufferSlice<SampleFormat> slice,
+                                   typename SampleFormatTraits<SampleFormat>::SampleT noise_floor) {
   constexpr bool kDisplayEdgesAndCenter = false;
 
   FX_CHECK(slice.format().channels() == 1);
@@ -157,12 +164,17 @@ std::optional<int64_t> FindImpulseCenter(
   // We do this by finding the first and last values such that there does not exist a
   // value more than 50% larger.
   float max_value = 0.0f;
+  int64_t max_idx;
   for (int64_t idx = 0; idx < slice.NumFrames(); idx++) {
     float val = std::abs(normalize(slice.SampleAt(idx, 0)));
     if (val <= static_cast<float>(noise_floor)) {
       continue;
     }
-    max_value = std::max(max_value, val);
+    if (val > max_value) {
+      // Store the index and value (ignoring sign) of the largest value in this slice.
+      max_value = val;
+      max_idx = idx;
+    }
   }
   if (max_value == 0.0f) {
     return std::nullopt;
@@ -171,8 +183,8 @@ std::optional<int64_t> FindImpulseCenter(
   int64_t leading_idx = 0;
   float leading_val = 0.0f;
   for (int64_t idx = 0; idx < slice.NumFrames(); ++idx) {
-    float val = normalize(slice.SampleAt(idx, 0));
-    if (1.5 * std::abs(val) > max_value) {
+    float val = std::abs(normalize(slice.SampleAt(idx, 0)));
+    if (1.5 * val > max_value) {
       leading_idx = idx;
       leading_val = val;
       break;
@@ -182,8 +194,8 @@ std::optional<int64_t> FindImpulseCenter(
   int64_t trailing_idx = slice.NumFrames() - 1;
   float trailing_val = 0.0f;
   for (int64_t idx = slice.NumFrames() - 1; idx >= 0; --idx) {
-    float val = normalize(slice.SampleAt(idx, 0));
-    if (1.5 * std::abs(val) > max_value) {
+    float val = std::abs(normalize(slice.SampleAt(idx, 0)));
+    if (1.5 * val > max_value) {
       trailing_idx = idx;
       trailing_val = val;
       break;
@@ -191,7 +203,10 @@ std::optional<int64_t> FindImpulseCenter(
   }
   int64_t sum_idx = leading_idx + trailing_idx;
   int64_t center_idx = sum_idx / 2;
-  center_idx += ((sum_idx & 0x01) && leading_val < trailing_val) ? 1 : 0;
+  // Round center_idx toward the greater of (leading_val, trailing_val), ignoring signs.
+  if ((sum_idx & 0x01) && trailing_val > leading_val) {
+    center_idx++;
+  }
 
   if constexpr (kDisplayEdgesAndCenter) {
     std::stringstream edge_values;
@@ -207,7 +222,12 @@ std::optional<int64_t> FindImpulseCenter(
                   << slice.start_frame() + trailing_idx << "]" << std::setw(10) << trailing_val;
   }
 
-  return center_idx;
+  return {{
+      .leading_edge = leading_idx,
+      .max = max_idx,
+      .center = center_idx,
+      .trailing_edge = trailing_idx,
+  }};
 }
 
 // Multiply the input buffer by a Tukey window, producing a new output buffer. A Tukey window

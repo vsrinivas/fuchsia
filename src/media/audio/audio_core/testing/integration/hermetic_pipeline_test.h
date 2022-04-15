@@ -26,25 +26,35 @@ class HermeticPipelineTest : public HermeticAudioTest {
   }
 
   struct PipelineConstants {
-    // The pipeline's positive and negative filter widths, in units of source frames.
-    // These correspond to the sum of widths for all output pipeline components.
+    // The pipeline's transition widths, in units of source frames.
+    // These correspond to the sum of widths for all output (or input) pipeline components.
     //
-    // These two durations lead to the "cross-fade" observed in an output, at transitions between
-    // input signals or between silence and signal. Some call these output intervals (respectively)
-    // "pre-ramp"/"ring in" (before transition) and "post-ramp"/"ring out" (after transition).
+    // The first two durations encompass the "fade-in" observed in an output, when the input signal
+    // transitions from silence to signal. This transition is divided into the pre-transition
+    // "ramp-in" and the post-transition "stabilization".
     //
-    // For a signal Input that extends from frame X to frame Y, it is only for source positions
-    // [X+neg_filter_width, Y-pos_filter_width] that corresponding Output is based PURELY on Input
-    // content. Outside this, Output is also affected by what is immediately before/after Input.
+    // The next two durations encompass the "fade-out" observed in an output, when the input signal
+    // transitions from signal to silence. This transition is divided into the pre-transition
+    // "destabilization" and the post-transition "decay".
+    //
+    // For an Input signal extending from frame X to frame Y, we expect the following in the Output:
+    // - silence for positions corresponding to source positions before X-ramp_in_width;
+    // - transitional values corresponding to source range [X-ramp_in_width, X+stabilization_width];
+    // - pure "signal" values ONLY for output positions corresponding to source position range
+    //   [X+stabilization_width, Y-destabilization_width];
+    // - transitional values corresponding to source range [Y-destabilization_width, Y+decay_width];
+    // - silence for positions corresponding to source positions after Y+decay_width.
     //
     // Restated, producing Output that corresponds to source frame range [X, Y] will actually depend
-    // on the content of Input frames [X-neg_filter_width, Y+pos_filter_width].
+    // on the content of Input frames [X-decay_width, Y+ramp_in_width].
     //
     // These should be upper-bounds; they don't need to be exact.
+    size_t ramp_in_width = 0;
+    size_t stabilization_width = 0;
+    size_t destabilization_width = 0;
+    size_t decay_width = 0;
 
-    // TODO(fxbug.dev/89247): Refactor pos_filter_width and neg_filter_width into four fields:
-    // ramp_in, stabilization, post_stabilization and ring_out.
-
+    // These fields are present for legacy reasons; they will be removed.
     size_t pos_filter_width = 0;
     size_t neg_filter_width = 0;
 

@@ -35,9 +35,14 @@ void HermeticImpulseTest::Run(const HermeticImpulseTest::TestCase<InputFormat, O
   }
 
   // Compute the number of input frames.
-  auto start_of_last_impulse = tc.impulse_locations_in_frames.back();
-  auto num_input_frames = start_of_last_impulse + tc.impulse_width_in_frames +
-                          tc.pipeline.pos_filter_width + tc.pipeline.neg_filter_width;
+  auto first_impulse = tc.impulse_locations_in_frames.front();
+  auto first_impulse_to_last_impulse = tc.impulse_locations_in_frames.back();
+
+  auto input_impulse_pre_pad = std::max(tc.pipeline.ramp_in_width, tc.pipeline.pos_filter_width);
+  auto input_impulse_post_pad = std::max(tc.pipeline.decay_width, tc.pipeline.neg_filter_width);
+
+  auto num_input_frames = input_impulse_pre_pad + first_impulse + first_impulse_to_last_impulse +
+                          tc.impulse_width_in_frames + input_impulse_post_pad;
 
   // Helper to translate from an input frame number to an output frame number.
   auto input_frame_to_output_frame = [&tc](int64_t input_frame) {
@@ -56,10 +61,9 @@ void HermeticImpulseTest::Run(const HermeticImpulseTest::TestCase<InputFormat, O
   // Write all of the impulses to an input buffer so we can easily write the full
   // input to a WAV file for debugging. Include silence at the beginning to account
   // for ring in; this allows us to align the input and output WAV files.
-  auto input_impulse_start = tc.pipeline.neg_filter_width;
   AudioBuffer<InputFormat> input(tc.input_format, num_input_frames);
   for (auto start_frame : tc.impulse_locations_in_frames) {
-    start_frame += input_impulse_start;
+    start_frame += input_impulse_pre_pad;
     for (auto f = start_frame; f < start_frame + tc.impulse_width_in_frames; f++) {
       for (auto chan = 0; chan < tc.input_format.channels(); chan++) {
         input.samples()[input.SampleIndex(f, chan)] = tc.impulse_magnitude;
@@ -74,6 +78,12 @@ void HermeticImpulseTest::Run(const HermeticImpulseTest::TestCase<InputFormat, O
   renderer->WaitForPackets(this, packets);
 
   auto ring_buffer = device->SnapshotRingBuffer();
+  // If underflows occurred during our testing, SKIP (don't pass or fail).
+  // TODO(fxbug.dev/80003): Remove workarounds when underflow conditions are fixed.
+  if (DeviceHasUnderflows(device)) {
+    GTEST_SKIP() << "Skipping impulse position checks due to underflows";
+    __builtin_unreachable();
+  }
 
   // The ring buffer should contain the expected sequence of impulses.
   // Due to smoothing effects, the detected leading edge of each impulse might be offset
@@ -88,8 +98,8 @@ void HermeticImpulseTest::Run(const HermeticImpulseTest::TestCase<InputFormat, O
     // End this search halfway between impulses k and k+1.
     int64_t input_next_midpoint_frame;
     if (k + 1 < static_cast<int64_t>(tc.impulse_locations_in_frames.size())) {
-      auto curr = input_impulse_start + tc.impulse_locations_in_frames[k];
-      auto next = input_impulse_start + tc.impulse_locations_in_frames[k + 1];
+      auto curr = input_impulse_pre_pad + tc.impulse_locations_in_frames[k];
+      auto next = input_impulse_pre_pad + tc.impulse_locations_in_frames[k + 1];
       input_next_midpoint_frame = curr + (next - curr) / 2;
     } else {
       input_next_midpoint_frame = num_input_frames;
@@ -101,8 +111,8 @@ void HermeticImpulseTest::Run(const HermeticImpulseTest::TestCase<InputFormat, O
     constexpr auto kNoiseFloor = 0;
 
     // Impulse should be at this frame +/- max_impulse_offset_frames.
-    auto expected_output_frame =
-        input_frame_to_output_frame(input_impulse_start + tc.impulse_locations_in_frames[k]);
+    auto expected_first_center =
+        input_frame_to_output_frame(input_impulse_pre_pad + tc.impulse_locations_in_frames[k]);
 
     // Test each channel.
     for (auto chan : chans_to_test) {
@@ -112,29 +122,45 @@ void HermeticImpulseTest::Run(const HermeticImpulseTest::TestCase<InputFormat, O
       SCOPED_TRACE(testing::Message() << "Seeking an impulse in channel " << chan);
       auto output_chan = AudioBufferSlice<OutputFormat>(&ring_buffer).GetChannel(chan);
       auto slice = AudioBufferSlice(&output_chan, search_start_frame, search_end_frame);
-      auto relative_output_frame = FindImpulseLeadingEdge(slice, kNoiseFloor);
-      if (!relative_output_frame) {
-        ADD_FAILURE() << "Could not find impulse #" << k << " in ring buffer\n"
-                      << "Expected at ring buffer frame " << expected_output_frame << "\n"
-                      << "Ring buffer is:";
+      auto relative_output_impulse_frames = FindImpulse(slice, kNoiseFloor);
+      if (!relative_output_impulse_frames) {
         output_chan.Display(search_start_frame, search_end_frame);
+        ADD_FAILURE() << "Could not find impulse #" << k << " in ring buffer\n"
+                      << "Expected at frame index " << expected_first_center;
         continue;
       }
-      int64_t output_frame = *relative_output_frame + search_start_frame;
+      int64_t actual_center = relative_output_impulse_frames->center + search_start_frame;
+      int64_t actual_leading_edge =
+          relative_output_impulse_frames->leading_edge + search_start_frame;
+      int64_t actual_max = relative_output_impulse_frames->max + search_start_frame;
+      int64_t actual_trailing_edge =
+          relative_output_impulse_frames->trailing_edge + search_start_frame;
       if (k == 0) {
         // First impulse decides the offset.
-        int64_t offset = output_frame - expected_output_frame;
-        EXPECT_LE(std::abs(offset), max_impulse_offset_frames)
-            << "Found impulse #" << k << " at an unexpected location: at frame " << output_frame
-            << ", expected within " << max_impulse_offset_frames << " frames of "
-            << expected_output_frame;
+        int64_t offset = actual_center - expected_first_center;
+        if (std::abs(offset) > max_impulse_offset_frames) {
+          output_chan.Display(std::min(expected_first_center - 32, actual_leading_edge),
+                              std::max(expected_first_center + 32, actual_trailing_edge),
+                              fxl::StringPrintf("Chan %u, impulse %zd", chan, k));
+          ADD_FAILURE() << "Found impulse #" << k << " (channel " << chan
+                        << ") at unexpected frame index " << actual_center << "(first "
+                        << actual_leading_edge << ", max " << actual_max << ", last "
+                        << actual_trailing_edge << "): expected within "
+                        << max_impulse_offset_frames << " frames of " << expected_first_center;
+        }
         first_impulse_offset_per_channel[chan] = offset;
       } else {
         // Other impulses should have the same offset.
-        auto expected_offset = first_impulse_offset_per_channel[chan];
-        EXPECT_EQ(expected_output_frame + expected_offset, output_frame)
-            << "Found impulse #" << k << " at an unexpected location; expected_offset is "
-            << expected_offset;
+        auto expected_center = expected_first_center + first_impulse_offset_per_channel[chan];
+        if (expected_center != actual_center) {
+          output_chan.Display(std::min(expected_center - 32, actual_leading_edge),
+                              std::max(expected_center + 32, actual_trailing_edge),
+                              fxl::StringPrintf("Chan %u, impulse %zd", chan, k));
+          ADD_FAILURE() << "Found impulse #" << k << " (channel " << chan
+                        << ") at unexpected frame index " << actual_center << "(first "
+                        << actual_leading_edge << ", max " << actual_max << ", last "
+                        << actual_trailing_edge << "): expected at frame index " << expected_center;
+        }
       }
     }
   }

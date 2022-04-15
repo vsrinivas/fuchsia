@@ -218,7 +218,7 @@ std::vector<HermeticFidelityTest::Frequency> HermeticFidelityTest::GetTestFreque
     // If not, round down to a lower frequency that is, and use those results.
     size_t freq_idx;
     for (freq_idx = 0u; freq_idx < kNumReferenceFreqs - 1; ++freq_idx) {
-      if (freq_display_val <= kReferenceFrequencies[freq_idx + 1]) {
+      if (freq_display_val < kReferenceFrequencies[freq_idx + 1]) {
         break;
       }
     }
@@ -344,10 +344,7 @@ AudioBuffer<OutputFormat> HermeticFidelityTest::GetRendererOutput(
 // 4: final stabilization                                             44444                       .
 // 5: final silence                                                        555555555555555555555  .
 //
-// Test writers use HermeticPipelineTest::PipelineConstants to convey these transition widths
-// (pos_filter_width and neg_filter_width). For now we use pos_filter_width for initial-silence /
-// ramp-in AND final-stabilization, and neg_filter_width for initial-stabilization AND ramp-out.
-// TODO(fxbug.dev/89247): Refactor pos_filter_width and neg_filter_width into four pipeline widths.
+// Test writers use HermeticPipelineTest::PipelineConstants to convey these transition widths.
 
 // static
 // Input buffer should contain exact silence for first/last sections and immediate continuous signal
@@ -554,18 +551,15 @@ void HermeticFidelityTest::Run(
       static_cast<int64_t>(std::ceil(input_signal_frames_to_measure_double));
 
   // Compute lengths of the other portions of our full input signal, so that we generate an output
-  // signal with a fully-stabilized steady-state analysis section. The input signal should include
-  // (1) enough silent frames for a complete output ramp-in, then
-  // (2) enough signal frames for output "post-signal-start stabilization", then
-  // (3) the input frames that become the output section that we actually analyze, then
-  // (4) enough additional input frames to postpone the output's "pre-signal-end destabilization"
-  //     section until after the analysis section.
-  // (5) for now, we also include final silence, as this seems to make results more stable. This
-  //     SHOULD not be needed and thus needs to be investigated and more fully understood.
-  auto init_silence_len = static_cast<int64_t>(tc.pipeline.pos_filter_width);
-  auto init_stabilization_len = static_cast<int64_t>(tc.pipeline.neg_filter_width);
-  auto final_stabilization_len = static_cast<int64_t>(tc.pipeline.pos_filter_width);
-  auto final_silence_len = static_cast<int64_t>(tc.pipeline.neg_filter_width);
+  // signal with a fully-stabilized steady-state analysis section.
+  auto init_silence_len =
+      static_cast<int64_t>(std::max(tc.pipeline.ramp_in_width, tc.pipeline.pos_filter_width));
+  auto init_stabilization_len =
+      static_cast<int64_t>(std::max(tc.pipeline.stabilization_width, tc.pipeline.neg_filter_width));
+  auto final_stabilization_len = static_cast<int64_t>(
+      std::max(tc.pipeline.destabilization_width, tc.pipeline.pos_filter_width));
+  auto final_silence_len =
+      static_cast<int64_t>(std::max(tc.pipeline.decay_width, tc.pipeline.neg_filter_width));
 
   auto input_type_mono =
       Format::Create<InputFormat>(1, tc.input_format.frames_per_second()).take_value();
