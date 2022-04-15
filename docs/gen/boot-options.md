@@ -451,7 +451,9 @@ When disabled, certain debugging-related syscalls will fail with
 * `zx_ktrace_control()`
 * `zx_ktrace_init()`
 * `zx_ktrace_read()`
+* `zx_ktrace_write()`
 * `zx_mtrace_control()`
+* `zx_object_get_property()` with `ZX_PROP_PROCESS_HW_TRACE_CONTEXT_ID`
 * `zx_process_write_memory()`
 * `zx_system_mexec()`
 * `zx_system_mexec_payload_get()`
