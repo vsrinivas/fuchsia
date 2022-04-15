@@ -414,7 +414,7 @@ if (current_toolchain != default_toolchain) {
   # turkey
   zbi_executable("trampoline-boot-test") {
     testonly = true
-    sources = [ "trampoline-boot-test-shim.cc" ]
+    sources = [ "trampoline-boot-test.cc" ]
     deps = [
       ":turducken",
       "..:new",

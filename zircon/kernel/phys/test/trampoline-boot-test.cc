@@ -40,7 +40,7 @@
 #define span_arg(s) static_cast<int>(s.size()), reinterpret_cast<const char*>(s.data())
 
 // Declared in turducken.h.
-const char* kTestName = "trampoline-boot-shim-test";
+const char* kTestName = "trampoline-boot-test";
 
 namespace {
 // User argument for setting the seed to use in the first iteration.
