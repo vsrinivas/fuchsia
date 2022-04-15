@@ -34,6 +34,10 @@ pub struct ListCommand {
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "get")]
 pub struct GetCommand {
+    /// do no network IO, use the locally cached version or fail.
+    #[argh(switch)]
+    pub cached: bool,
+
     /// get (and cache) data for specific product bundle.
     #[argh(positional)]
     pub product_bundle_name: Option<String>,

@@ -78,6 +78,9 @@ async fn pb_get<W: Write + Sync>(
     cmd: &GetCommand,
     repos: RepositoryRegistryProxy,
 ) -> Result<()> {
+    if !cmd.cached {
+        update_metadata(cmd.verbose, writer).await?;
+    }
     let product_url = pbms::select_product_bundle(&cmd.product_bundle_name).await?;
 
     let pb = if let Some(pb) = get_product_data(&product_url, cmd.verbose, writer).await? {
