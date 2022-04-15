@@ -31,7 +31,6 @@ mod stream_util;
 
 pub use error::{RunTestSuiteError, UnexpectedEventError};
 use {
-    artifact::Artifact,
     cancel::{Cancelled, NamedFutureExt, OrCancel},
     output::{
         ArtifactType, CaseId, DirectoryArtifactType, RunReporter, SuiteId, SuiteReporter, Timestamp,
@@ -326,33 +325,16 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
                                     warn!("suite level stderr not supported yet");
                                 }
                                 ftest_manager::Artifact::Log(syslog) => {
-                                    let log_stream =
-                                        test_diagnostics::LogStream::from_syslog(syslog)?;
-                                    let mut log_artifact =
-                                        suite_reporter.new_artifact(&ArtifactType::Syslog).await?;
-                                    let log_opts_clone = log_opts.clone();
-                                    let log_fut = async move {
-                                        let (send, mut recv) = mpsc::channel(32);
-                                        let fut_1 = diagnostics::collect_logs(
-                                            log_stream,
-                                            send.into(),
-                                            log_opts_clone,
-                                        );
-                                        let fut_2 = async move {
-                                            while let Some(artifact) = recv.next().await {
-                                                let artifact_string = match artifact {
-                                                    Artifact::SuiteLogMessage(s) => s,
-                                                };
-                                                writeln!(log_artifact, "{}", artifact_string)?;
-                                            }
-                                            Result::<_, std::io::Error>::Ok(())
-                                        };
-                                        let (outcome, _) =
-                                            futures::future::join(fut_1, fut_2).await;
-                                        outcome
-                                    }
-                                    .named("syslog");
-                                    suite_log_tasks.push(fasync::Task::spawn(log_fut));
+                                    suite_log_tasks.push(fasync::Task::spawn(
+                                        diagnostics::collect_logs(
+                                            test_diagnostics::LogStream::from_syslog(syslog)?,
+                                            suite_reporter
+                                                .new_artifact(&ArtifactType::Syslog)
+                                                .await?,
+                                            log_opts.clone(),
+                                        )
+                                        .named("syslog"),
+                                    ));
                                 }
                                 ftest_manager::Artifact::Custom(
                                     ftest_manager::CustomArtifact {

@@ -8,8 +8,9 @@ use {
     artifact::ArtifactSender,
     diagnostics_data::{LogsData, Severity},
     fidl_fuchsia_test_manager::LogsIteratorOption,
-    futures::{Stream, TryStreamExt},
+    futures::{channel::mpsc, Stream, StreamExt, TryStreamExt},
     log::error,
+    std::io::Write,
 };
 
 // TODO(fxbug.dev/54198, fxbug.dev/70581): deprecate this when implementing metadata selectors for
@@ -49,7 +50,31 @@ impl From<Vec<String>> for LogCollectionOutcome {
     }
 }
 
-pub(crate) async fn collect_logs<S>(
+pub(crate) async fn collect_logs<S, W>(
+    syslog: S,
+    mut log_artifact: W,
+    options: LogCollectionOptions,
+) -> Result<LogCollectionOutcome, Error>
+where
+    S: Stream<Item = Result<LogsData, Error>> + Unpin,
+    W: Write,
+{
+    let (send, mut recv) = mpsc::channel(32);
+    let fut_1 = collect_logs_inner(syslog, send.into(), options);
+    let fut_2 = async move {
+        while let Some(artifact) = recv.next().await {
+            let artifact_string = match artifact {
+                artifact::Artifact::SuiteLogMessage(s) => s,
+            };
+            writeln!(log_artifact, "{}", artifact_string)?;
+        }
+        Result::<_, std::io::Error>::Ok(())
+    };
+    let (outcome, _) = futures::future::join(fut_1, fut_2).await;
+    outcome
+}
+
+async fn collect_logs_inner<S>(
     mut stream: S,
     mut artifact_sender: ArtifactSender,
     options: LogCollectionOptions,
@@ -94,4 +119,174 @@ pub fn get_type() -> LogsIteratorOption {
 #[cfg(not(target_os = "fuchsia"))]
 pub fn get_type() -> LogsIteratorOption {
     LogsIteratorOption::ArchiveIterator
+}
+
+#[cfg(test)]
+mod test {
+    use {
+        super::*,
+        diagnostics_data::{BuilderArgs, LogsDataBuilder},
+    };
+
+    #[fuchsia::test]
+    async fn simplify_log_moniker() {
+        let unaltered_logs = vec![
+            LogsDataBuilder::new(BuilderArgs {
+                moniker: "test_root".into(),
+                timestamp_nanos: 0i64.into(),
+                component_url: "test-root-url".to_string().into(),
+                severity: Severity::Info,
+            })
+            .set_message("my info log")
+            .build(),
+            LogsDataBuilder::new(BuilderArgs {
+                moniker: "test_root/child".into(),
+                timestamp_nanos: 1000i64.into(),
+                component_url: "test-child-url".to_string().into(),
+                severity: Severity::Warn,
+            })
+            .set_message("my warn log")
+            .build(),
+        ];
+        let altered_moniker_logs = vec![
+            LogsDataBuilder::new(BuilderArgs {
+                moniker: "<root>".into(),
+                timestamp_nanos: 0i64.into(),
+                component_url: "test-root-url".to_string().into(),
+                severity: Severity::Info,
+            })
+            .set_message("my info log")
+            .build(),
+            LogsDataBuilder::new(BuilderArgs {
+                moniker: "child".into(),
+                timestamp_nanos: 1000i64.into(),
+                component_url: "test-child-url".to_string().into(),
+                severity: Severity::Warn,
+            })
+            .set_message("my warn log")
+            .build(),
+        ];
+
+        let mut log_artifact = vec![];
+        assert_eq!(
+            collect_logs(
+                futures::stream::iter(unaltered_logs.into_iter().map(Ok)),
+                &mut log_artifact,
+                LogCollectionOptions { min_severity: None, max_severity: None }
+            )
+            .await
+            .unwrap(),
+            LogCollectionOutcome::Passed
+        );
+        assert_eq!(
+            String::from_utf8(log_artifact).unwrap(),
+            altered_moniker_logs
+                .iter()
+                .map(|log| format!("{}\n", log))
+                .collect::<Vec<_>>()
+                .concat()
+        );
+    }
+
+    #[fuchsia::test]
+    async fn filter_low_severity() {
+        let input_logs = vec![
+            LogsDataBuilder::new(BuilderArgs {
+                moniker: "test_root".into(),
+                timestamp_nanos: 0i64.into(),
+                component_url: "test-root-url".to_string().into(),
+                severity: Severity::Info,
+            })
+            .set_message("my info log")
+            .build(),
+            LogsDataBuilder::new(BuilderArgs {
+                moniker: "test_root/child".into(),
+                timestamp_nanos: 1000i64.into(),
+                component_url: "test-child-url".to_string().into(),
+                severity: Severity::Warn,
+            })
+            .set_message("my info log")
+            .build(),
+        ];
+        let displayed_logs = vec![LogsDataBuilder::new(BuilderArgs {
+            moniker: "child".into(),
+            timestamp_nanos: 1000i64.into(),
+            component_url: "test-child-url".to_string().into(),
+            severity: Severity::Warn,
+        })
+        .set_message("my info log")
+        .build()];
+
+        let mut log_artifact = vec![];
+        assert_eq!(
+            collect_logs(
+                futures::stream::iter(input_logs.into_iter().map(Ok)),
+                &mut log_artifact,
+                LogCollectionOptions { min_severity: Severity::Warn.into(), max_severity: None }
+            )
+            .await
+            .unwrap(),
+            LogCollectionOutcome::Passed
+        );
+        assert_eq!(
+            String::from_utf8(log_artifact).unwrap(),
+            displayed_logs.iter().map(|log| format!("{}\n", log)).collect::<Vec<_>>().concat()
+        );
+    }
+
+    #[fuchsia::test]
+    async fn display_restricted_logs() {
+        let input_logs = vec![
+            LogsDataBuilder::new(BuilderArgs {
+                moniker: "test_root".into(),
+                timestamp_nanos: 0i64.into(),
+                component_url: "test-root-url".to_string().into(),
+                severity: Severity::Info,
+            })
+            .set_message("my info log")
+            .build(),
+            LogsDataBuilder::new(BuilderArgs {
+                moniker: "test_root/child".into(),
+                timestamp_nanos: 1000i64.into(),
+                component_url: "test-child-url".to_string().into(),
+                severity: Severity::Error,
+            })
+            .set_message("my error log")
+            .build(),
+        ];
+        let displayed_logs = vec![
+            LogsDataBuilder::new(BuilderArgs {
+                moniker: "<root>".into(),
+                timestamp_nanos: 0i64.into(),
+                component_url: "test-root-url".to_string().into(),
+                severity: Severity::Info,
+            })
+            .set_message("my info log")
+            .build(),
+            LogsDataBuilder::new(BuilderArgs {
+                moniker: "child".into(),
+                timestamp_nanos: 1000i64.into(),
+                component_url: "test-child-url".to_string().into(),
+                severity: Severity::Error,
+            })
+            .set_message("my error log")
+            .build(),
+        ];
+
+        let mut log_artifact = vec![];
+        assert_eq!(
+            collect_logs(
+                futures::stream::iter(input_logs.into_iter().map(Ok)),
+                &mut log_artifact,
+                LogCollectionOptions { min_severity: None, max_severity: Severity::Warn.into() }
+            )
+            .await
+            .unwrap(),
+            LogCollectionOutcome::Error { restricted_logs: vec![format!("{}", displayed_logs[1])] }
+        );
+        assert_eq!(
+            String::from_utf8(log_artifact).unwrap(),
+            displayed_logs.iter().map(|log| format!("{}\n", log)).collect::<Vec<_>>().concat()
+        );
+    }
 }
