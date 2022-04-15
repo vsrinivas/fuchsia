@@ -29,14 +29,14 @@ use {
 
 // TODO(fxbug.dev/91272) Add trackpad support
 #[derive(Debug, PartialEq)]
-pub struct PointerMotionScaleHandler {
+pub struct PointerMotionDisplayScaleHandler {
     /// The amount by which motion will be scaled up. E.g., a `scale_factor`
     /// of 2 means that all motion will be multiplied by 2.
     scale_factor: f32,
 }
 
 #[async_trait(?Send)]
-impl UnhandledInputHandler for PointerMotionScaleHandler {
+impl UnhandledInputHandler for PointerMotionDisplayScaleHandler {
     async fn handle_unhandled_input_event(
         self: Rc<Self>,
         unhandled_input_event: input_device::UnhandledInputEvent,
@@ -79,8 +79,8 @@ impl UnhandledInputHandler for PointerMotionScaleHandler {
     }
 }
 
-impl PointerMotionScaleHandler {
-    /// Creates a new [`PointerMotionScaleHandler`].
+impl PointerMotionDisplayScaleHandler {
+    /// Creates a new [`PointerMotionDisplayScaleHandler`].
     ///
     /// Returns
     /// * `Ok(Rc<Self>)` if `scale_factor` is finite and >= 1.0, and
@@ -160,13 +160,13 @@ mod tests {
     #[test_case(              0.5 => matches Err(_); "yields err for downscale")]
     #[test_case(              1.0 => matches Ok(_);  "yields handler for unit scale")]
     #[test_case(              1.5 => matches Ok(_);  "yields handler for upscale")]
-    fn new(scale_factor: f32) -> Result<Rc<PointerMotionScaleHandler>, Error> {
-        PointerMotionScaleHandler::new(scale_factor)
+    fn new(scale_factor: f32) -> Result<Rc<PointerMotionDisplayScaleHandler>, Error> {
+        PointerMotionDisplayScaleHandler::new(scale_factor)
     }
 
     #[fuchsia::test(allow_stalls = false)]
     async fn applies_scale() {
-        let handler = PointerMotionScaleHandler::new(2.0).expect("failed to make handler");
+        let handler = PointerMotionDisplayScaleHandler::new(2.0).expect("failed to make handler");
         let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 1.5, y: 4.5 }),
             wheel_delta_v: None,
@@ -191,7 +191,7 @@ mod tests {
 
     #[fuchsia::test(allow_stalls = false)]
     async fn does_not_consume_event() {
-        let handler = PointerMotionScaleHandler::new(2.0).expect("failed to make handler");
+        let handler = PointerMotionDisplayScaleHandler::new(2.0).expect("failed to make handler");
         let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 1.5, y: 4.5 }),
             wheel_delta_v: None,
@@ -211,7 +211,7 @@ mod tests {
     #[test_case(hashset! {1, 2, 3}; "multiple buttons")]
     #[fuchsia::test(allow_stalls = false)]
     async fn preserves_buttons(input_buttons: HashSet<u8>) {
-        let handler = PointerMotionScaleHandler::new(2.0).expect("failed to make handler");
+        let handler = PointerMotionDisplayScaleHandler::new(2.0).expect("failed to make handler");
         let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 1.5, y: 4.5 }),
             wheel_delta_v: None,
@@ -232,7 +232,7 @@ mod tests {
 
     #[fuchsia::test(allow_stalls = false)]
     async fn preserves_descriptor() {
-        let handler = PointerMotionScaleHandler::new(2.0).expect("failed to make handler");
+        let handler = PointerMotionDisplayScaleHandler::new(2.0).expect("failed to make handler");
         let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 1.5, y: 4.5 }),
             wheel_delta_v: None,
@@ -249,7 +249,7 @@ mod tests {
 
     #[fuchsia::test(allow_stalls = false)]
     async fn preserves_event_time() {
-        let handler = PointerMotionScaleHandler::new(2.0).expect("failed to make handler");
+        let handler = PointerMotionDisplayScaleHandler::new(2.0).expect("failed to make handler");
         let mut input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Position { x: 1.5, y: 4.5 }),
             wheel_delta_v: None,

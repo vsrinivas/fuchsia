@@ -183,7 +183,7 @@ async fn build_input_pipeline_assembly(
         //   mouse events should be scaled.
         let pointer_scale =
             scene_manager.lock().await.get_display_metrics().physical_pixel_ratio().max(1.0);
-        assembly = add_pointer_motion_scale_handler(assembly, pointer_scale);
+        assembly = add_pointer_motion_display_scale_handler(assembly, pointer_scale);
 
         if use_flatland {
             assembly = add_flatland_touch_handler(scene_manager.clone(), assembly).await;
@@ -280,11 +280,11 @@ fn add_click_drag_handler(assembly: InputPipelineAssembly) -> InputPipelineAssem
     ))
 }
 
-fn add_pointer_motion_scale_handler(
+fn add_pointer_motion_display_scale_handler(
     assembly: InputPipelineAssembly,
     scale_factor: f32,
 ) -> InputPipelineAssembly {
-    match input_pipeline::pointer_motion_scale_handler::PointerMotionScaleHandler::new(scale_factor)
+    match input_pipeline::pointer_motion_display_scale_handler::PointerMotionDisplayScaleHandler::new(scale_factor)
     {
         Ok(handler) => assembly.add_handler(handler),
         Err(e) => {
