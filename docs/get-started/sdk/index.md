@@ -418,10 +418,10 @@ Do the following:
    tools/ffx config set repository.server.mode ffx
    ```
 
-1. For the new `ffx` settings to take effect, restart the `ffx` daemon:
+1. For the new `ffx` settings to take effect, stop the `ffx` daemon:
 
    ```posxi-terminal
-   tools/ffx doctor --restart-daemon
+   tools/ffx daemon stop
    ```
 
 1. Create a new Fuchsia package repository (and map it to the
