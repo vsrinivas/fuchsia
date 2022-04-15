@@ -24,13 +24,13 @@ enum EventType {
 impl std::fmt::Display for EventType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &*self {
-            EventType::Keyboard => write!(f, "{}", "keyboard"),
-            EventType::ConsumerControls => write!(f, "{}", "consumer_controls"),
-            EventType::Mouse => write!(f, "{}", "mouse"),
-            EventType::Touch => write!(f, "{}", "touch"),
-            EventType::MouseConfig => write!(f, "{}", "mouse_config"),
+            EventType::Keyboard => write!(f, "keyboard"),
+            EventType::ConsumerControls => write!(f, "consumer_controls"),
+            EventType::Mouse => write!(f, "mouse"),
+            EventType::Touch => write!(f, "touch"),
+            EventType::MouseConfig => write!(f, "mouse_config"),
             #[cfg(test)]
-            EventType::Fake => write!(f, "{}", "fake"),
+            EventType::Fake => write!(f, "fake"),
         }
     }
 }
