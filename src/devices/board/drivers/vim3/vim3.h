@@ -35,10 +35,12 @@ enum {
   BTI_VIDEO,
 };
 
-// MAC address metadata indices
+// MAC address metadata indices.
+// Currently the bootloader only sets up a single MAC zbi entry, we'll use it for both the WiFi and
+// BT radio MACs.
 enum {
   MACADDR_WIFI = 0,
-  MACADDR_BLUETOOTH = 1,
+  MACADDR_BLUETOOTH = 0,
 };
 
 class Vim3;
