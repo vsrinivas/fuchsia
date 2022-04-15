@@ -29,6 +29,12 @@ template("cts_element") {
       inputs += [ sdk_manifest ]
     }
 
+    metadata = {
+      # expect_includes are not relevant for dependency verification, so disarm
+      # them here to avoid spurious include errors.
+      expect_includes_barrier = []
+    }
+
     testonly = true
 
     script = "//sdk/cts/build/scripts/verify_cts_deps.py"

@@ -4,7 +4,6 @@
 {
     include: [
         "//src/sys/test_runners/rust/default.shard.cml",
-        "inspect/client.shard.cml",
         "sys/component/realm_builder.shard.cml",
         "sys/testing/hermetic-tier-2-test.shard.cml",
     ],
