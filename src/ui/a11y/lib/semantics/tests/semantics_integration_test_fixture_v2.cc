@@ -42,78 +42,6 @@ using component_testing::Protocol;
 using component_testing::Route;
 using fuchsia::accessibility::semantics::Node;
 
-void AddBaseComponents(RealmBuilder* realm_builder) {
-  FX_LOGS(INFO) << "Add root presenter";
-  realm_builder->AddLegacyChild(
-      SemanticsIntegrationTestV2::kRootPresenter,
-      "fuchsia-pkg://fuchsia.com/semantics-integration-tests#meta/root_presenter.cmx");
-  FX_LOGS(INFO) << "Add scenic";
-  realm_builder->AddLegacyChild(SemanticsIntegrationTestV2::kScenic,
-                                "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx");
-  FX_LOGS(INFO) << "Add cobalt";
-  realm_builder->AddLegacyChild(SemanticsIntegrationTestV2::kMockCobalt,
-                                "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx");
-  FX_LOGS(INFO) << "Add hdcp";
-  realm_builder->AddLegacyChild(
-      SemanticsIntegrationTestV2::kHdcp,
-      "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx");
-}
-
-void AddBaseRoutes(RealmBuilder* realm_builder) {
-  // Capabilities routed from test_manager to components in realm.
-  FX_LOGS(INFO) << "Add fuchsia::vulkan::loader::Loader";
-  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::vulkan::loader::Loader::Name_}},
-                                .source = ParentRef(),
-                                .targets = {SemanticsIntegrationTestV2::kScenicRef}});
-  FX_LOGS(INFO) << "Add fuchsia::scheduler::ProfileProvider";
-  realm_builder->AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::scheduler::ProfileProvider::Name_}},
-            .source = ParentRef(),
-            .targets = {SemanticsIntegrationTestV2::kScenicRef}});
-  FX_LOGS(INFO) << "Add fuchsia::sysmem::Allocator";
-  realm_builder->AddRoute(Route{
-      .capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},
-      .source = ParentRef(),
-      .targets = {SemanticsIntegrationTestV2::kScenicRef, SemanticsIntegrationTestV2::kHdcpRef}});
-  FX_LOGS(INFO) << "Add fuchsia::tracing::provider::Registry";
-  realm_builder->AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_}},
-            .source = ParentRef(),
-            .targets = {SemanticsIntegrationTestV2::kScenicRef,
-                        SemanticsIntegrationTestV2::kRootPresenterRef,
-                        SemanticsIntegrationTestV2::kHdcpRef}});
-
-  // Capabilities routed between siblings in realm.
-  FX_LOGS(INFO) << "Add fuchsia::cobalt::LoggerFactory";
-  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::cobalt::LoggerFactory::Name_}},
-                                .source = SemanticsIntegrationTestV2::kMockCobaltRef,
-                                .targets = {SemanticsIntegrationTestV2::kScenicRef}});
-  FX_LOGS(INFO) << "Add fuchsia::hardware::display::Provider";
-  realm_builder->AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::hardware::display::Provider::Name_}},
-            .source = SemanticsIntegrationTestV2::kHdcpRef,
-            .targets = {SemanticsIntegrationTestV2::kScenicRef}});
-  FX_LOGS(INFO) << "Add fuchsia::ui::scenic::Scenic";
-  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-                                .source = SemanticsIntegrationTestV2::kScenicRef,
-                                .targets = {SemanticsIntegrationTestV2::kRootPresenterRef}});
-  FX_LOGS(INFO) << "Add fuchsia::ui::pointerinjector::Registry";
-  realm_builder->AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::ui::pointerinjector::Registry::Name_}},
-            .source = SemanticsIntegrationTestV2::kScenicRef,
-            .targets = {SemanticsIntegrationTestV2::kRootPresenterRef}});
-
-  // Capabilities routed up to test driver (this component).
-  FX_LOGS(INFO) << "Add fuchsia::ui::policy::Presenter";
-  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::policy::Presenter::Name_}},
-                                .source = SemanticsIntegrationTestV2::kRootPresenterRef,
-                                .targets = {ParentRef()}});
-  FX_LOGS(INFO) << "Add fuchsia::ui::scenic::Scenic";
-  realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-                                .source = SemanticsIntegrationTestV2::kScenicRef,
-                                .targets = {ParentRef()}});
-}
-
 void SemanticsManagerProxy::Start(std::unique_ptr<LocalComponentHandles> mock_handles) {
   FX_CHECK(mock_handles->outgoing()->AddPublicService(
                fidl::InterfaceRequestHandler<fuchsia::accessibility::semantics::SemanticsManager>(
@@ -133,6 +61,29 @@ void SemanticsManagerProxy::RegisterViewForSemantics(
 
 void SemanticsIntegrationTestV2::SetUp() {
   FX_LOGS(INFO) << "Setting up test fixture";
+
+  // Initialize ui test manager.
+  ui_testing::UITestManager::Config config;
+  config.scene_owner = ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER;
+  config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
+  ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(config);
+
+  // Initialize ui test realm.
+  BuildRealm();
+
+  // Launch client view, and wait until it's attached to proceed with the test.
+  ui_test_manager_->InitializeScene();
+  RunLoopUntil([this]() { return ui_test_manager_->ClientViewIsAttached(); });
+
+  auto view_ref_koid = ui_test_manager_->ClientViewRefKoid();
+  ASSERT_TRUE(view_ref_koid.has_value());
+  view_ref_koid_ = *view_ref_koid;
+}
+
+void SemanticsIntegrationTestV2::BuildRealm() {
+  FX_LOGS(INFO) << "Building realm";
+  realm_ = std::make_unique<Realm>(ui_test_manager_->AddSubrealm());
+
   view_manager_ = std::make_unique<a11y::ViewManager>(
       std::make_unique<a11y::SemanticTreeServiceFactory>(),
       std::make_unique<MockViewSemanticsFactory>(), std::make_unique<MockAnnotationViewFactory>(),
@@ -140,125 +91,16 @@ void SemanticsIntegrationTestV2::SetUp() {
       std::make_unique<a11y::A11ySemanticsEventManager>(),
       std::make_unique<MockAccessibilityView>(), context_.get(), context_->outgoing()->debug_dir());
 
-  BuildRealm();
-
-  // Wait until scenic is initialized to continue.
-  FX_LOGS(INFO) << "Waiting for scenic to be initialized";
-  scenic_ = realm()->Connect<fuchsia::ui::scenic::Scenic>();
-  scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) { QuitLoop(); });
-  RunLoop();
-}
-
-void SemanticsIntegrationTestV2::LaunchClient(std::string debug_name) {
-  FX_LOGS(INFO) << "Launching client: " << debug_name;
-  auto tokens_rt = scenic::ViewTokenPair::New();  // Root Presenter -> Test
-  auto tokens_tf = scenic::ViewTokenPair::New();  // Test -> Client
-
-  // Instruct Root Presenter to present test's View.
-  auto root_presenter = realm()->Connect<fuchsia::ui::policy::Presenter>();
-  root_presenter->PresentOrReplaceView(std::move(tokens_rt.view_holder_token),
-                                       /* presentation */ nullptr);
-
-  // Set up test's View, to harvest the client view's view_state.is_rendering signal.
-  auto session_pair = scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get());
-  session_ = std::make_unique<scenic::Session>(std::move(session_pair.first),
-                                               std::move(session_pair.second));
-  session_->SetDebugName(debug_name);
-  bool client_view_connected = false, test_view_attached_to_scene = false;
-  session_->set_event_handler(
-      [this, debug_name, &client_view_connected,
-       &test_view_attached_to_scene](const std::vector<fuchsia::ui::scenic::Event>& events) {
-        for (const auto& event : events) {
-          if (!event.is_gfx())
-            continue;  // skip non-gfx events
-
-          if (event.gfx().is_view_properties_changed()) {
-            FX_LOGS(INFO) << "View properties changed";
-            const auto properties = event.gfx().view_properties_changed().properties;
-            FX_CHECK(view_holder_) << "Expect that view holder is already set up.";
-            view_holder_->SetViewProperties(properties);
-            session_->Present2(/*when*/ zx::clock::get_monotonic().get(), /*span*/ 0, [](auto) {});
-          } else if (event.gfx().is_view_connected()) {
-            FX_LOGS(INFO) << "Client view connected";
-            client_view_connected = true;
-          } else if (event.gfx().is_view_disconnected()) {
-            FX_LOGS(INFO) << "Client view disconnected";
-            client_view_connected = false;
-          } else if (event.gfx().is_view_attached_to_scene()) {
-            FX_LOGS(INFO) << "Test view attached to scene";
-            test_view_attached_to_scene = true;
-          } else if (event.gfx().is_view_detached_from_scene()) {
-            FX_LOGS(INFO) << "Test view detached from scene";
-            test_view_attached_to_scene = false;
-          }
-        }
-      });
-
-  view_holder_ = std::make_unique<scenic::ViewHolder>(
-      session_.get(), std::move(tokens_tf.view_holder_token), "test's view holder");
-  view_ = std::make_unique<scenic::View>(session_.get(), std::move(tokens_rt.view_token),
-                                         "test's view");
-  view_->AddChild(*view_holder_);
-
-  // Request to make test's view; this will trigger dispatch of view properties.
-  session_->Present2(/*when*/ zx::clock::get_monotonic().get(), /*span*/ 0,
-                     [](auto) { FX_VLOGS(1) << "test's view and view holder created by Scenic."; });
-
-  // Start client app inside the test environment.
-  // Note well. There is a significant difference in how ViewProvider is
-  // vended and used, between CF v1 and CF v2. This test follows the CF v2
-  // style: the realm specifies a component C that can serve ViewProvider, and
-  // when the test runner asks for that protocol, C is launched by Component
-  // Manager. In contrast, production uses CF v1 style, where a parent
-  // component P launches a child component C directly, and P connects to C's
-  // ViewProvider directly. However, this difference does not impact the
-  // testing logic.
-  auto view_provider = realm()->Connect<fuchsia::ui::app::ViewProvider>();
-  auto [client_control_ref, client_view_ref] = scenic::ViewRefPair::New();
-  view_ref_koid_ = fsl::GetKoid(client_view_ref.reference.get());
-  view_provider->CreateViewWithViewRef(std::move(tokens_tf.view_token.value),
-                                       std::move(client_control_ref), std::move(client_view_ref));
-
-  FX_LOGS(INFO) << "Waiting for scene to be ready";
-  RunLoopUntil([&test_view_attached_to_scene, &client_view_connected] {
-    return test_view_attached_to_scene && client_view_connected;
-  });
-  FX_LOGS(INFO) << "Scene is ready";
-
-  // Reset the event handler without capturing the stack variables.
-  session_->set_event_handler(
-      [this, debug_name](const std::vector<fuchsia::ui::scenic::Event>& events) {
-        for (const auto& event : events) {
-          if (!event.is_gfx())
-            continue;  // skip non-gfx events
-
-          if (event.gfx().is_view_properties_changed()) {
-            const auto properties = event.gfx().view_properties_changed().properties;
-            FX_CHECK(view_holder_) << "Expect that view holder is already set up.";
-            view_holder_->SetViewProperties(properties);
-            session_->Present2(/*when*/ zx::clock::get_monotonic().get(), /*span*/ 0, [](auto) {});
-          }
-        }
-      });
-}
-
-void SemanticsIntegrationTestV2::BuildRealm() {
-  FX_LOGS(INFO) << "Building realm";
-  semantics_manager_proxy_ = std::make_unique<SemanticsManagerProxy>(view_manager(), dispatcher());
-  builder()->AddLocalChild(SemanticsIntegrationTestV2::kSemanticsManager,
-                           semantics_manager_proxy());
-
-  // Add all components shared by each test to the realm.
-  AddBaseComponents(builder());
+  semantics_manager_proxy_ =
+      std::make_unique<SemanticsManagerProxy>(view_manager_.get(), dispatcher());
+  realm_->AddLocalChild(SemanticsIntegrationTestV2::kSemanticsManager, semantics_manager_proxy());
 
   // Let subclass configure Realm beyond this base setup.
-  ConfigureRealm(builder());
+  ConfigureRealm();
 
-  // Add the necessary routing for each of the base components added above.
-  AddBaseRoutes(builder());
+  ui_test_manager_->BuildRealm();
 
-  // Finally, build the realm using the provided components and routes.
-  realm_ = std::make_unique<RealmRoot>(builder()->Build());
+  realm_exposed_services_ = ui_test_manager_->TakeExposedServicesDirectory();
 }
 
 const Node* SemanticsIntegrationTestV2::FindNodeWithLabel(const Node* node, zx_koid_t view_ref_koid,

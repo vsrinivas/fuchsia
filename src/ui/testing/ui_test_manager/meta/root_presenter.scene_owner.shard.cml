@@ -1,0 +1,39 @@
+{
+    children: [
+        {
+            name: "root-presenter",
+            url: "#meta/root_presenter.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "parent",
+            to: "#root-presenter",
+        },
+        {
+            protocol: [
+                "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.pointerinjector.Registry",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "#scenic",
+            to: "#root-presenter",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.recovery.FactoryResetStateNotifier",
+                "fuchsia.recovery.ui.FactoryResetCountdown",
+                "fuchsia.ui.accessibility.view.Registry",
+                "fuchsia.ui.brightness.ColorAdjustmentHandler",
+                "fuchsia.ui.input.InputDeviceRegistry",
+                "fuchsia.ui.policy.DeviceListenerRegistry",
+                "fuchsia.ui.policy.DisplayBacklight",
+                "fuchsia.ui.policy.Presenter",
+            ],
+            from: "#root-presenter",
+        },
+    ],
+}

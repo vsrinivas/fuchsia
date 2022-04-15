@@ -24,6 +24,7 @@
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_injector_factory.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
 #include "src/ui/a11y/lib/view/view_manager.h"
+#include "src/ui/testing/ui_test_manager/ui_test_manager.h"
 
 namespace accessibility_test {
 
@@ -33,7 +34,7 @@ using fuchsia::accessibility::semantics::Node;
 using component_testing::ChildRef;
 using component_testing::LocalComponent;
 using component_testing::LocalComponentHandles;
-using component_testing::RealmRoot;
+using component_testing::Realm;
 
 using RealmBuilder = component_testing::RealmBuilder;
 
@@ -67,35 +68,21 @@ class SemanticsIntegrationTestV2 : public gtest::RealLoopFixture {
  public:
   static constexpr auto kSemanticsManager = "semantics_manager";
   static constexpr auto kSemanticsManagerRef = ChildRef{kSemanticsManager};
-  static constexpr auto kRootPresenter = "root_presenter";
-  static constexpr auto kRootPresenterRef = ChildRef{kRootPresenter};
-  static constexpr auto kScenic = "scenic";
-  static constexpr auto kScenicRef = ChildRef{kScenic};
-  static constexpr auto kMockCobalt = "cobalt";
-  static constexpr auto kMockCobaltRef = ChildRef{kMockCobalt};
-  static constexpr auto kHdcp = "hdcp";
-  static constexpr auto kHdcpRef = ChildRef{kHdcp};
-  static constexpr auto kNetstack = "netstack";
-  static constexpr auto kNetstackRef = ChildRef{kNetstack};
 
-  SemanticsIntegrationTestV2()
-      : context_(sys::ComponentContext::Create()),
-        realm_builder_(std::make_unique<RealmBuilder>(RealmBuilder::Create())) {}
+  SemanticsIntegrationTestV2() : context_(sys::ComponentContext::Create()) {}
 
   ~SemanticsIntegrationTestV2() override = default;
 
   void SetUp() override;
 
-  // Subclass should implement this method if it wishes to modify the realm
-  // beyond the base setup that this class does.
-  virtual void ConfigureRealm(RealmBuilder* realm_builder) {}
+  virtual void ConfigureRealm() {}
 
  protected:
   sys::ComponentContext* context() { return context_.get(); }
-  RealmBuilder* builder() { return realm_builder_.get(); }
-  RealmRoot* realm() { return realm_.get(); }
   a11y::ViewManager* view_manager() { return view_manager_.get(); }
   SemanticsManagerProxy* semantics_manager_proxy() { return semantics_manager_proxy_.get(); }
+  Realm* realm() { return realm_.get(); }
+  sys::ServiceDirectory* svc() { return realm_exposed_services_.get(); }
   zx_koid_t view_ref_koid() const { return view_ref_koid_; }
 
   // Launches the test client by connecting to fuchsia.ui.app.ViewProvider protocol.
@@ -128,18 +115,13 @@ class SemanticsIntegrationTestV2 : public gtest::RealLoopFixture {
  private:
   void BuildRealm();
 
+  zx_koid_t view_ref_koid_;
   std::unique_ptr<sys::ComponentContext> context_;
-  std::unique_ptr<RealmBuilder> realm_builder_;
-  std::unique_ptr<RealmRoot> realm_;
+  std::unique_ptr<Realm> realm_;
+  std::unique_ptr<sys::ServiceDirectory> realm_exposed_services_;
   std::unique_ptr<a11y::ViewManager> view_manager_;
   std::unique_ptr<SemanticsManagerProxy> semantics_manager_proxy_;
-  fuchsia::ui::scenic::ScenicPtr scenic_;
-  std::unique_ptr<scenic::Session> session_;
-
-  // Test view and client view's ViewHolder.
-  std::unique_ptr<scenic::ViewHolder> view_holder_;
-  std::unique_ptr<scenic::View> view_;
-  zx_koid_t view_ref_koid_;
+  std::unique_ptr<ui_testing::UITestManager> ui_test_manager_;
 };
 
 }  // namespace accessibility_test

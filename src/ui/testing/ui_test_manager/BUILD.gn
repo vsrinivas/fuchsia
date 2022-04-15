@@ -2,22 +2,59 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
+
 source_set("ui_test_manager") {
   testonly = true
 
   sources = [
     "flatland_scene_manager_scene.h",
     "flatland_test_manager_scene.h",
+    "gfx_root_presenter_scene.cc",
     "gfx_root_presenter_scene.h",
     "gfx_scene_manager_scene.h",
     "gfx_test_manager_scene.h",
+    "ui_test_manager.cc",
     "ui_test_manager.h",
     "ui_test_scene.h",
   ]
 
   public_deps = [
+    ":test_realms",
+    "//sdk/fidl/fuchsia.logger",
+    "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/fidl/fuchsia.tracing.provider",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.composition",
+    "//sdk/fidl/fuchsia.ui.focus",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/fidl/fuchsia.vulkan.loader",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl",
+  ]
+}
+
+group("test_realms") {
+  testonly = true
+
+  deps = [ ":root_presenter_scene" ]
+}
+
+fuchsia_component("root_presenter_scene") {
+  testonly = true
+
+  component_name = "root_presenter_scene"
+  manifest = "meta/root_presenter_scene.cml"
+  deps = [
+    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+    "//src/ui/a11y/bin/a11y_manager:component_v2",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
+    "//src/ui/bin/root_presenter:component_v2",
+    "//src/ui/scenic:component_v2",
   ]
 }

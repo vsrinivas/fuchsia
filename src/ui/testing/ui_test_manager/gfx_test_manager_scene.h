@@ -29,19 +29,27 @@ class GfxTestManagerScene : public UITestScene {
   // Expects |realm| to expose the following services:
   // * fuchsia.ui.app.ViewProvider
   // * fuchsia.ui.scenic.Scenic
-  explicit GfxTestManagerScene(component_testing::RealmRoot* realm);
+  GfxTestManagerScene();
   ~GfxTestManagerScene() override = default;
 
   // Creates scene root.
-  void Initialize() override;
+  void Initialize(component_testing::RealmRoot* realm) override;
 
-  // Creates client view holder, and attaches client view using
-  // fuchsia.ui.app.ViewProvider.
-  void AttachClientView() override;
-
-  // Uses fuchsia.ui.observation.test.Registry to determine when the client view
-  // has been attached to the scene.
+  // Returns true if the client view is connected to the scene.
+  // This object can only observe signals on the ui test manager view and the
+  // client view holder. It considers the client view attached to the scene when
+  // both of the following events have been received:
+  //  1. ViewAttachedToScene for ui test manager view.
+  //  2. ViewConnected for client view holder.
   bool ClientViewIsAttached() override;
+
+  // Returns true if the is_rendering signal has been received for the client
+  // view.
+  bool ClientViewIsRendering() override;
+
+  // Returns the view ref koid for the client view if it's been attached to the
+  // scene, and std::nullopt otherwise.
+  std::optional<zx_koid_t> ClientViewRefKoid() override;
 
  private:
   // Service handles, scenic session resources, etc.

@@ -57,6 +57,7 @@ source_set("semantics_integration_test_fixture_v2") {
     "//src/ui/a11y/lib/semantics/util",
     "//src/ui/a11y/lib/view",
     "//src/ui/a11y/lib/view/tests/mocks",
+    "//src/ui/testing/ui_test_manager",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -202,6 +203,7 @@ executable("flutter_semantics_tests_bin") {
 
 executable("web_semantics_tests_bin") {
   testonly = true
+
   sources = [ "web_semantics_tests.cc" ]
   deps = [
     ":semantics_integration_test_fixture_v2",

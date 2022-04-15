@@ -37,44 +37,34 @@ class FlutterSemanticsTests : public SemanticsIntegrationTestV2 {
     SemanticsIntegrationTestV2::SetUp();
 
     view_manager()->SetSemanticsEnabled(true);
-    FX_LOGS(INFO) << "Launching client view";
-    LaunchClient("flutter");
-    FX_LOGS(INFO) << "Client view launched";
     RunLoopUntil([&] {
       auto node = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
       return node != nullptr && node->has_attributes() && node->attributes().has_label();
     });
   }
 
-  void ConfigureRealm(RealmBuilder* realm_builder) override {
+  void ConfigureRealm() override {
     // First, add all child components of this test suite.
-    realm_builder->AddLegacyChild(kFlutter, kClientUrl);
+    realm()->AddLegacyChild(kFlutter, kClientUrl);
 
     // Second, add all necessary routing.
-    realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
-                                  .source = kFlutterRef,
-                                  .targets = {ParentRef()}});
-    realm_builder->AddRoute(Route{
+    realm()->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
+                            .source = kFlutterRef,
+                            .targets = {ParentRef()}});
+    realm()->AddRoute(Route{
         .capabilities = {Protocol{fuchsia::accessibility::semantics::SemanticsManager::Name_}},
         .source = kSemanticsManagerRef,
         .targets = {kFlutterRef}});
-    realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-                                  .source = kScenicRef,
-                                  .targets = {kFlutterRef}});
-    realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::sys::Environment::Name_}},
-                                  .source = ParentRef(),
-                                  .targets = {kFlutterRef}});
-    realm_builder->AddRoute(
-        Route{.capabilities = {Protocol{fuchsia::vulkan::loader::Loader::Name_}},
-              .source = ParentRef(),
-              .targets = {kFlutterRef}});
-    realm_builder->AddRoute(
-        Route{.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_}},
-              .source = ParentRef(),
-              .targets = {kFlutterRef}});
-    realm_builder->AddRoute(Route{.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},
-                                  .source = ParentRef(),
-                                  .targets = {kFlutterRef}});
+
+    // Required services are routed through ui test manager realm to client
+    // subrealm. Consume them from parent.
+    realm()->AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_},
+                                             Protocol{fuchsia::sys::Environment::Name_},
+                                             Protocol{fuchsia::vulkan::loader::Loader::Name_},
+                                             Protocol{fuchsia::tracing::provider::Registry::Name_},
+                                             Protocol{fuchsia::sysmem::Allocator::Name_}},
+                            .source = ParentRef(),
+                            .targets = {kFlutterRef}});
   }
 };
 
