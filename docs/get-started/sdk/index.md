@@ -515,11 +515,15 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx component show hello_world
-               Moniker: /core/ffx-laboratory:hello_world
-                   URL: fuchsia-pkg://fuchsiasamples.com/hello_world#meta/hello_world.cm
-                  Type: CML dynamic component
-       Component State: Unresolved
-       Execution State: Stopped
+                  Moniker: /core/ffx-laboratory:hello_world
+                      URL: fuchsia-pkg://fuchsiasamples.com/hello_world#meta/hello_world.cm
+                     Type: CML dynamic component
+          Component State: Resolved
+    Incoming Capabilities: fuchsia.logger.LogSink
+                           pkg
+              Merkle root: b44de670cf30c77c55823af0fea67d19e0fabc86ddd0946646512be12eeb8dc0
+          Execution State: Stopped
+    
    ```
 
    The output shows that the `hello_world` component has run and is now terminated (`Stopped`).
