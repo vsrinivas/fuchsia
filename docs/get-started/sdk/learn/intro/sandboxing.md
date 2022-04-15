@@ -37,9 +37,14 @@ fssh ls /hub-v2/children/core/children
 ```
 
 ```none {:.devsite-disable-click-to-copy}
+account
 activity
+agis
 appmgr
+battery_manager
+bluetooth-core
 brightness_manager
+bt-a2dp
 bt-avrcp
 build-info
 ...
@@ -55,6 +60,7 @@ fssh ls /hub-v2/children/core/children/network/children/http-client
 ```
 
 ```none {:.devsite-disable-click-to-copy}
+client
 children
 component_type
 debug

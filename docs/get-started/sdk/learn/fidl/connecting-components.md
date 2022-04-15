@@ -105,7 +105,7 @@ fuchsia-codelab/echo-server
 Declare the `Echo` protocol as a capability provided by the server component,
 and expose it for use by the parent realm:
 
-`echo-server/echo_server.cml`:
+`echo-server/meta/echo_server.cml`:
 
 ```json5
 {% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/cpp/echo_server/meta/echo_server.cml" region_tag="example_snippet" adjust_indentation="auto" %}
@@ -201,7 +201,7 @@ fuchsia-codelab/echo-client
 Configure the client's component manifest to request the
 `fidl.examples.routing.echo.Echo` capability exposed by the server:
 
-`echo-client/echo_client.cml`:
+`echo-client/meta/echo_client.cml`:
 
 ```json5
 {% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/cpp/echo_client/meta/echo_client.cml" region_tag="example_snippet" adjust_indentation="auto" %}
@@ -239,7 +239,7 @@ fuchsia_cc_binary(
 Similar to `echo`, the client passes the program arguments as a message
 to the server. Add the following program arguments to `echo_client.cml`:
 
-`echo-client/echo_client.cml`:
+`echo-client/meta/echo_client.cml`:
 
 ```json5
 {% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/cpp/echo_client/meta/echo_client.cml" region_tag="program_args" adjust_indentation="auto" %}
@@ -276,7 +276,7 @@ to act as the parent and manage capability routing.
 Create a new project directory for the realm component definition:
 
 ```posix-terminal
-mkdir -p fuchsia-codelab/echo-realm
+mkdir -p fuchsia-codelab/echo-realm/meta
 ```
 
 Create a new component manifest file `meta/echo_realm.cml` with the

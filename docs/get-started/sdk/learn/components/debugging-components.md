@@ -152,7 +152,7 @@ Configure the debugger to attach to the `echo` component:
 Start a new instance of the component:
 
 ```posix-terminal
-ffx component run fuchsia-pkg://fuchsiasamples.com/echo-example#meta/echo.cm
+ffx component run fuchsia-pkg://fuchsiasamples.com/echo-example#meta/echo.cm --recreate
 ```
 
 This time, the debugger detects that an exception was thrown and halts execution:

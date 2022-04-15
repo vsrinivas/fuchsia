@@ -149,7 +149,7 @@ fssh pkgctl open ef65e2ed...
 ```
 
 ```none {:.devsite-disable-click-to-copy}
-opening ef65e2ed... with the selectors []
+opening ef65e2ed...
 package contents:
 /bin/bouncing_ball
 /lib/ld.so.1

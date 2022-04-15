@@ -20,6 +20,20 @@ You can use `fidlcat` to monitor and debug the FIDL connections in your
 components. Launch `ffx debug fidl` and configure it to monitor the echo server
 component:
 
+First, create a new instance of the realm from the previous step:
+
+```posix-terminal
+ffx component run fuchsia-pkg://fuchsiasamples.com/echo-realm#meta/echo_realm.cm --name echo-realm
+```
+
+Note: `ffx debug fidl` looks for symbols on a remote server, so you'll need to authenticate (with any account). Feel free to revoke this authentication when you're done with this.
+
+```
+To authenticate gs://fuchsia-artifacts/debug, please supply an authentication token. You can retrieve a token from:
+https://accounts.google.com/o/oauth2/v2/auth?client_
+...
+```
+
 ```posix-terminal
 ffx debug fidl --remote-name echo_server.cm --fidl-ir-path bazel-bin/
 ```
@@ -192,7 +206,7 @@ Create a new `echo-realm` component containing the updated `echo-server`:
 
 ```posix-terminal
 ffx component run fuchsia-pkg://fuchsiasamples.com/echo-realm#meta/echo_realm.cm \
-    --name echo-realm
+    --name echo-realm --recreate
 ```
 
 Run the echo client component multiple times. This causes the request count in
