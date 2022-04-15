@@ -7,6 +7,8 @@ import pathlib
 import subprocess
 import sys
 
+from run_assembly import run_product_assembly
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -40,22 +42,12 @@ def main():
         help="Path to stampfile for telling ninja we're done.")
     args = parser.parse_args()
 
-    output = subprocess.run(
-        [
-            args.ffx_bin,
-            "--config",
-            "assembly_enabled=true",
-            "--config",
-            "assembly_example_enabled=true",
-            "assembly",
-            "product",
-            "--product",
-            args.product_assembly_config,
-            "--input-bundles-dir",
-            args.input_bundles_dir,
-            "--outdir",
-            args.outdir,
-        ])
+    output = run_product_assembly(
+        ffx_bin=args.ffx_bin,
+        product=args.product_assembly_config,
+        input_bundles=args.input_bundles_dir,
+        outdir=args.outdir,
+        extra_config=["assembly_example_enabled=true"])
     output.check_returncode()
     with open(args.stamp, 'w') as f:
         pass  # creates the file

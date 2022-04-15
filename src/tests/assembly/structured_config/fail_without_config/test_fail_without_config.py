@@ -10,6 +10,8 @@ import sys
 PACKAGE = "configured_by_assembly"
 COMPONENT = "to_configure.cm"
 
+from run_assembly import run_product_assembly
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -43,21 +45,11 @@ def main():
         help="Path to stampfile for telling ninja we're done.")
     args = parser.parse_args()
 
-    output = subprocess.run(
-        [
-            args.ffx_bin,
-            "--config",
-            "assembly_enabled=true",
-            "assembly",
-            "product",
-            "--product",
-            args.product_assembly_config,
-            "--input-bundles-dir",
-            args.input_bundles_dir,
-            "--outdir",
-            args.outdir,
-        ],
-        capture_output=True)
+    output = run_product_assembly(
+        ffx_bin=args.ffx_bin,
+        product=args.product_assembly_config,
+        input_bundles=args.input_bundles_dir,
+        outdir=args.outdir)
     stdout, stderr = (
         output.stdout.decode("UTF-8"), output.stderr.decode("UTF-8"))
 

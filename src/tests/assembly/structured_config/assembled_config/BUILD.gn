@@ -12,6 +12,7 @@ python_binary("bin") {
   testonly = true
   main_source = "test_assembled_config.py"
   sources = []
+  deps = [ "//src/tests/assembly/lib/run_assembly" ]
 }
 
 generated_file("config") {
