@@ -103,10 +103,8 @@ fssh pkgctl resolve fuchsia-pkg://fuchsia.com/bouncing_ball
 Notice the new lines added to the log output for `pkg-resolver`:
 
 ```none {:.devsite-disable-click-to-copy}
-[core/pkg-resolver][pkg-resolver][I] Fetching blobs for fuchsia-pkg://google3-devhost/bouncing_ball: [
-    e57c05aa909bcb38ca452d31abfbf9cc1d099751c9cd644b4d40cbf64e2af48b,
-]
-[core/pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://fuchsia.com/bouncing_ball as fuchsia-pkg://google3-devhost/bouncing_ball to 4ca324998ae9679241c74d2d9d9779fe86c79e2fa1f1627d941a37e987215895 with TUF
+[379.465][core/pkg-resolver][pkg-resolver][I] Fetching blobs for fuchsia-pkg://workstation.qemu-x64/bouncing_ball: []
+[379.465][core/pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://fuchsia.com/bouncing_ball as fuchsia-pkg://workstation.qemu-x64/bouncing_ball to bb0515ee231c3b07da82234d015508f8799ed26b828e8dae16b3e9c59bd87cf2 with TUF
 ```
 
 From the device shell prompt, check the package status again on the device:
