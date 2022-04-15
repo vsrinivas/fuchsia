@@ -243,11 +243,11 @@ Do the following:
    Getting product metadata.
    .
 
-   terminal.arm64
-   terminal.qemu-arm64
-   terminal.qemu-x64
-   terminal.x64
-   workstation.qemu-x64*
+   gs://fuchsia/development/7.20220415.2.1/sdk/product_bundles.json#terminal.arm64
+   gs://fuchsia/development/7.20220415.2.1/sdk/product_bundles.json#terminal.qemu-arm64
+   gs://fuchsia/development/7.20220415.2.1/sdk/product_bundles.json#terminal.qemu-x64
+   gs://fuchsia/development/7.20220415.2.1/sdk/product_bundles.json#terminal.x64
+   gs://fuchsia/development/7.20220415.2.1/sdk/product_bundles.json#workstation.qemu-x64*
    ...
    ```
 
@@ -450,7 +450,7 @@ Do the following:
    +----------------------+------+-----------------------------------------------+
    | NAME                 | TYPE | EXTRA                                         |
    +======================+======+===============================================+
-   | fuchsiasamples.com*  | pm   | /home/alice/.package_repos/sdk-samples        |
+   | fuchsiasamples.com   | pm   | /home/alice/.package_repos/sdk-samples        |
    +----------------------+------+-----------------------------------------------+
    | workstation.qemu-x64 | pm   | /home/alice/.local/share/Fuchsia/.../packages |
    +----------------------+------+-----------------------------------------------+
@@ -980,6 +980,16 @@ Do the following:
    bazel build --config=fuchsia_x64 //src/hello_world:test_pkg --publish_to=$HOME/.package_repos/sdk-samples
    ```
 
+   When the build is successful, this command prints output similar to the following
+   in the end:
+
+   ```none {:.devsite-disable-click-to-copy}
+   $ bazel build --config=fuchsia_x64 //src/hello_world:test_pkg --publish_to=$HOME/.package_repos/sdk-samples
+   ...
+   INFO: Elapsed time: 5.027s, Critical Path: 4.53s
+   INFO: 98 processes: 44 internal, 52 linux-sandbox, 2 local.
+   INFO: Build completed successfully, 98 total actions
+   ```
 1. Verify that the basic `hello_test` passes:
 
    ```posix-terminal
@@ -989,11 +999,12 @@ Do the following:
    This command prints output similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
+   $ tools/ffx test run "fuchsia-pkg://fuchsiasamples.com/hello_test#meta/hello_test.cm"
    Running test 'fuchsia-pkg://fuchsiasamples.com/hello_test#meta/hello_test.cm'
-   [RUNNING]  main
+   [RUNNING]       main
    [stdout - main]
    Hello Test!
-   [PASSED]   main
+   [PASSED]        main
 
    1 out of 1 tests passed...
    fuchsia-pkg://fuchsiasamples.com/hello_test#meta/hello_test.cm completed with result: PASSED
@@ -1008,11 +1019,12 @@ Do the following:
    This command prints output similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
+   $ tools/ffx test run "fuchsia-pkg://fuchsiasamples.com/hello_test#meta/hello_gtest.cm"
    Running test 'fuchsia-pkg://fuchsiasamples.com/hello_test#meta/hello_gtest.cm'
-   [RUNNING]  HelloTest.BasicAssertions
+   [RUNNING]       HelloTest.BasicAssertions
    [stdout - HelloTest.BasicAssertions]
    Running main() from gmock_main.cc
-   [PASSED]   HelloTest.BasicAssertions
+   [PASSED]        HelloTest.BasicAssertions
 
    1 out of 1 tests passed...
    fuchsia-pkg://fuchsiasamples.com/hello_test#meta/hello_gtest.cm completed with result: PASSED
@@ -1057,21 +1069,22 @@ Do the following:
    This command prints output similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
+   $ tools/ffx test run "fuchsia-pkg://fuchsiasamples.com/hello_test#meta/hello_gtest.cm"
    Running test 'fuchsia-pkg://fuchsiasamples.com/hello_test#meta/hello_gtest.cm'
-   [RUNNING]	   HelloTest.BasicAssertions
+   [RUNNING]       HelloTest.BasicAssertions
    [stdout - HelloTest.BasicAssertions]
    Running main() from gmock_main.cc
    src/hello_world/hello_gtest.cc:11: Failure
    Expected equality of these values:
      "hello"
      "world"
-   [FAILED]	   HelloTest.BasicAssertions
+   [FAILED]        HelloTest.BasicAssertions
 
    Failed tests: HelloTest.BasicAssertions
    0 out of 1 tests passed...
    fuchsia-pkg://fuchsiasamples.com/hello_test#meta/hello_gtest.cm completed with result: FAILED
    One or more test runs failed.
-   Tests failed.
+   Tests failed
    ```
 
 **Congratulations! You're now all set with the Fuchsia SDK!**
