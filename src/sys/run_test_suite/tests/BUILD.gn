@@ -13,6 +13,7 @@ rustc_test("tests_bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
+    "//src/lib/async-utils",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
@@ -54,6 +55,16 @@ rustc_test("logging_test_bin") {
   sources = [ "logging_test.rs" ]
 }
 
+rustc_test("log_then_hang_test_bin") {
+  source_root = "log_then_hang.rs"
+  name = "log_then_hang_test"
+  deps = [
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:tracing",
+  ]
+  sources = [ "log_then_hang.rs" ]
+}
+
 rustc_test("stdout_ansi_test_bin") {
   source_root = "stdout_ansi_test.rs"
   name = "stdout_ansi_test"
@@ -88,6 +99,12 @@ fuchsia_component("logging_test") {
   manifest = "meta/logging_test.cml"
 }
 
+fuchsia_component("log_then_hang_test") {
+  testonly = true
+  deps = [ ":log_then_hang_test_bin" ]
+  manifest = "meta/log_then_hang_test.cml"
+}
+
 fuchsia_component("stdout_ansi_test") {
   testonly = true
   deps = [ ":stdout_ansi_test_bin" ]
@@ -104,6 +121,7 @@ fuchsia_unittest_package("run_test_suite_integration_tests") {
   manifest = "meta/run_test_suite_integration_tests.cml"
   deps = [
     ":error_logging_test",
+    ":log_then_hang_test",
     ":logging_test",
     ":long_running_test",
     ":stdout_ansi_test",

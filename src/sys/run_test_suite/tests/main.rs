@@ -1825,3 +1825,61 @@ async fn test_terminate_signal_multiple_suites(
         );
     });
 }
+
+async fn wait_until_contains(output: &TestOutputView, contents: &str) {
+    loop {
+        if String::from_utf8(output.lock().clone()).unwrap().contains(contents) {
+            break;
+        }
+        fuchsia_async::Timer::new(std::time::Duration::from_millis(250)).await;
+    }
+}
+
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+async fn test_collect_stream_artifacts_from_hung_test(
+    reporter: TestMuxMuxReporter,
+    output: TestOutputView,
+    _: tempfile::TempDir,
+) {
+    // This test verifies that artifacts that need to be shown to a developer in realtime are
+    // streamed, even if the test hangs. For example, this test would fail submission of a change
+    // that made log collection occur once, after the suite completed.
+    const SUITE_NAME: &'static str =
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/log_then_hang_test.cm";
+    let reporter = output::RunReporter::new(reporter);
+    let cancel_event = async_utils::event::Event::new();
+    let cancel_waiter = cancel_event.wait();
+
+    let run_fut = run_test_suite_lib::run_tests_and_get_outcome(
+        fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
+            .expect("connecting to RunBuilderProxy"),
+        vec![new_test_params(SUITE_NAME)],
+        new_run_params(),
+        None,
+        reporter,
+        cancel_waiter,
+    );
+    let observer_fut = async move {
+        // check that test started, and we can observe streamed artifacts before run completes
+        futures::future::join4(
+            wait_until_contains(&output, "[RUNNING]\tlog_then_hang"),
+            wait_until_contains(&output, "stdout from hanging test"),
+            wait_until_contains(&output, "stderr from hanging test"),
+            wait_until_contains(&output, "syslog from hanging test"),
+        )
+        .await;
+
+        // Verify that the test hasn't finished.
+        let contents = String::from_utf8(output.lock().clone()).unwrap();
+        assert!(!contents.contains("cancelled before completion"));
+
+        // Cancel the test, then verify test stops
+        cancel_event.signal();
+        wait_until_contains(&output, "cancelled before completion").await;
+        let contents = String::from_utf8(output.lock().clone()).unwrap();
+        assert!(contents.contains("cancelled before completion"));
+    };
+    let (outcome, ()) = futures::future::join(run_fut, observer_fut).await;
+    assert_matches!(outcome, Outcome::Cancelled);
+}
