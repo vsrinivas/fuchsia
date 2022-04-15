@@ -26,6 +26,20 @@ executable("annotation_manager_unittest_exe") {
   ]
 }
 
+executable("board_info_provider_unittest_exe") {
+  testonly = true
+
+  sources = [ "board_info_provider_unittest.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.hwinfo",
+    "//src/developer/forensics/feedback/annotations:board_info_provider",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("config_unittest_exe") {
   testonly = true
 
@@ -128,6 +142,22 @@ executable("feedback_data_unittest_exe") {
     "//src/developer/forensics/utils/cobalt",
     "//src/lib/files",
     "//src/lib/timekeeper:testing",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("fidl_provider_unittest_exe") {
+  testonly = true
+
+  sources = [ "fidl_provider_unittest.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.update.channelcontrol",
+    "//src/developer/forensics/feedback/annotations:fidl_provider",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:channel_control",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
@@ -343,6 +373,10 @@ fuchsia_component("annotation_manager_unittest") {
   deps = [ ":annotation_manager_unittest_exe" ]
 }
 
+fuchsia_unittest_component("board_info_provider_unittest") {
+  deps = [ ":board_info_provider_unittest_exe" ]
+}
+
 fuchsia_unittest_component("config_unittest") {
   deps = [
     ":config_unittest_exe",
@@ -405,6 +439,10 @@ fuchsia_unittest_component("feedback_data_unittest") {
   ]
 }
 
+fuchsia_unittest_component("fidl_provider_unittest") {
+  deps = [ ":fidl_provider_unittest_exe" ]
+}
+
 fuchsia_component("inspect_test_app") {
   testonly = true
 
@@ -456,6 +494,7 @@ fuchsia_unittest_component("startup_annotations_unittest") {
 fuchsia_test_package("feedback-tests") {
   test_components = [
     ":annotation_manager_unittest",
+    ":board_info_provider_unittest",
     ":config_unittest",
     ":data_register_unittest",
     ":device_id_provider_unittest",
@@ -463,6 +502,7 @@ fuchsia_test_package("feedback-tests") {
     ":feedback_integration_test_invalid_crash_reports_override_config",
     ":feedback_integration_test_valid_crash_reports_override_config",
     ":feedback_data_unittest",
+    ":fidl_provider_unittest",
     ":last_reboot_unittest",
     ":main_service_unittest",
     ":metrics_unittest",

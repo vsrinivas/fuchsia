@@ -44,6 +44,19 @@ source_set("annotations") {
   ]
 }
 
+source_set("board_info_provider") {
+  sources = [
+    "board_info_provider.cc",
+    "board_info_provider.h",
+  ]
+
+  public_deps = [
+    ":fidl_provider",
+    "//sdk/fidl/fuchsia.hwinfo",
+    "//src/developer/forensics/feedback/annotations",
+  ]
+}
+
 source_set("data_register") {
   sources = [
     "data_register.cc",
@@ -58,6 +71,20 @@ source_set("data_register") {
   ]
 
   deps = [ "//sdk/lib/syslog/cpp" ]
+}
+
+source_set("fidl_provider") {
+  sources = [ "fidl_provider.h" ]
+
+  public_deps = [
+    "//sdk/lib/fit",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/feedback/annotations",
+    "//src/lib/backoff",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/async",
+  ]
 }
 
 source_set("time_provider") {

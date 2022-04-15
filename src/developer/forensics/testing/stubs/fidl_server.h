@@ -68,7 +68,7 @@ class MultiBindingFidlServer : public TestBase {
 
   void CloseAllConnections() { bindings_.CloseAll(); }
 
-  size_t NumConnections() { bindings_.size(); }
+  size_t NumConnections() { return bindings_.size(); }
 
   // |TestBase|
   void NotImplemented_(const std::string& name) override {

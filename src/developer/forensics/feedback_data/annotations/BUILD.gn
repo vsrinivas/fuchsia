@@ -22,7 +22,6 @@ source_set("annotation_providers") {
   ]
 
   deps = [
-    ":board_info_provider",
     ":channel_provider",
     ":product_info_provider",
     ":timezone_provider",
@@ -38,34 +37,6 @@ source_set("annotation_providers") {
     "//src/lib/fxl",
     "//src/lib/timekeeper",
     "//src/lib/timekeeper:system",
-  ]
-}
-
-# Exposed separately for unit test purposes.
-source_set("board_info_provider") {
-  public = [ "board_info_provider.h" ]
-
-  sources = [
-    "annotation_provider.h",
-    "board_info_provider.cc",
-    "board_info_provider.h",
-  ]
-
-  public_deps = [
-    ":types",
-    "//sdk/fidl/fuchsia.hwinfo",
-    "//src/developer/forensics/utils:errors",
-    "//src/developer/forensics/utils/fidl:caching_ptr",
-  ]
-
-  deps = [
-    ":utils",
-    "//sdk/lib/fit-promise",
-    "//sdk/lib/sys/cpp",
-    "//src/developer/forensics/feedback_data:constants",
-    "//src/developer/forensics/utils:errors",
-    "//src/developer/forensics/utils/fit",
-    "//src/lib/fxl",
   ]
 }
 

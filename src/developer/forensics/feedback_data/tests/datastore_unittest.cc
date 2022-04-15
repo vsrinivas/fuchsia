@@ -29,7 +29,6 @@
 #include "src/developer/forensics/testing/gmatchers.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/log_message.h"
-#include "src/developer/forensics/testing/stubs/board_info_provider.h"
 #include "src/developer/forensics/testing/stubs/channel_control.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/stubs/device_id_provider.h"
@@ -104,13 +103,6 @@ class DatastoreTest : public UnitTestFixture {
                                              annotation_allowlist, attachment_allowlist,
                                              annotation_manager_.get(), device_id_provider_.get(),
                                              inspect_data_budget_.get());
-  }
-
-  void SetUpBoardProviderServer(std::unique_ptr<stubs::BoardInfoProviderBase> server) {
-    board_provider_server_ = std::move(server);
-    if (board_provider_server_) {
-      InjectServiceProvider(board_provider_server_.get());
-    }
   }
 
   void SetUpChannelProviderServer(std::unique_ptr<stubs::ChannelControlBase> server) {
@@ -195,7 +187,6 @@ class DatastoreTest : public UnitTestFixture {
   std::unique_ptr<InspectDataBudget> inspect_data_budget_;
 
   // Stubs servers.
-  std::unique_ptr<stubs::BoardInfoProviderBase> board_provider_server_;
   std::unique_ptr<stubs::ChannelControlBase> channel_provider_server_;
   std::unique_ptr<stubs::DeviceIdProviderBase> device_id_provider_server_;
   std::unique_ptr<stubs::DiagnosticsArchiveBase> diagnostics_server_;
@@ -258,28 +249,6 @@ TEST_F(DatastoreTest, GetAnnotationsAndAttachments_SmokeTest) {
   GetStaticAttachments();
   GetAnnotations();
   GetAttachments();
-}
-
-TEST_F(DatastoreTest, GetAnnotations_BoardInfo) {
-  fuchsia::hwinfo::BoardInfo info;
-  info.set_name("my-board-name");
-  info.set_revision("my-revision");
-  SetUpBoardProviderServer(std::make_unique<stubs::BoardInfoProvider>(std::move(info)));
-  SetUpDatastore(
-      {
-          kAnnotationHardwareBoardName,
-          kAnnotationHardwareBoardRevision,
-      },
-      kDefaultAttachmentsToAvoidSpuriousLogs);
-
-  ::fpromise::result<Annotations> annotations = GetAnnotations();
-  ASSERT_TRUE(annotations.is_ok());
-  EXPECT_THAT(annotations.take_value(), ElementsAreArray({
-                                            Pair(kAnnotationHardwareBoardName, "my-board-name"),
-                                            Pair(kAnnotationHardwareBoardRevision, "my-revision"),
-                                        }));
-
-  EXPECT_THAT(GetImmediatelyAvailableAnnotations(), IsEmpty());
 }
 
 TEST_F(DatastoreTest, GetAnnotations_Channels) {

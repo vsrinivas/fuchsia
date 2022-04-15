@@ -31,26 +31,6 @@ executable("archive_accessor_ptr_unittest_exe") {
   ]
 }
 
-executable("board_info_provider_unittest_exe") {
-  testonly = true
-
-  sources = [ "board_info_provider_unittest.cc" ]
-
-  deps = [
-    "//src/developer/forensics/feedback_data:constants",
-    "//src/developer/forensics/feedback_data/annotations:board_info_provider",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:board_info_provider",
-    "//src/lib/fxl",
-    "//src/lib/timekeeper:testing",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/zx",
-  ]
-}
-
 executable("channel_provider_unittest_exe") {
   testonly = true
 
@@ -164,7 +144,6 @@ executable("datastore_unittest_exe") {
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:log_message",
     "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:board_info_provider",
     "//src/developer/forensics/testing/stubs:channel_control",
     "//src/developer/forensics/testing/stubs:cobalt",
     "//src/developer/forensics/testing/stubs:device_id_provider",
@@ -429,10 +408,6 @@ fuchsia_unittest_component("archive_accessor_ptr_unittest") {
   deps = [ ":archive_accessor_ptr_unittest_exe" ]
 }
 
-fuchsia_unittest_component("board_info_provider_unittest") {
-  deps = [ ":board_info_provider_unittest_exe" ]
-}
-
 fuchsia_component("channel_provider_unittest") {
   testonly = true
 
@@ -542,7 +517,6 @@ fuchsia_unittest_component("timezone_provider_unittest") {
 fuchsia_test_package("feedback-data-tests") {
   test_components = [
     ":archive_accessor_ptr_unittest",
-    ":board_info_provider_unittest",
     ":channel_provider_unittest",
     ":config_unittest",
     ":data_provider_unittest",

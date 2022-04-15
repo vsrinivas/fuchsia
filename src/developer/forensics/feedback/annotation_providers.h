@@ -9,8 +9,12 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/sys/cpp/service_directory.h>
+
+#include <memory>
 
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
+#include "src/developer/forensics/feedback/annotations/board_info_provider.h"
 #include "src/developer/forensics/feedback/annotations/data_register.h"
 #include "src/developer/forensics/feedback/annotations/time_provider.h"
 
@@ -19,8 +23,9 @@ namespace forensics::feedback {
 // Wraps the annotations providers Feedback uses and the component's AnnotationManager.
 class AnnotationProviders {
  public:
-  AnnotationProviders(async_dispatcher_t* dispatcher, std::set<std::string> allowlist,
-                      Annotations static_annotations);
+  AnnotationProviders(async_dispatcher_t* dispatcher,
+                      std::shared_ptr<sys::ServiceDirectory> services,
+                      std::set<std::string> allowlist, Annotations static_annotations);
 
   AnnotationManager* GetAnnotationManager() { return &annotation_manager_; }
 
@@ -32,6 +37,7 @@ class AnnotationProviders {
 
   DataRegister data_register_;
   TimeProvider time_provider_;
+  BoardInfoProvider board_info_provider_;
 
   AnnotationManager annotation_manager_;
 
