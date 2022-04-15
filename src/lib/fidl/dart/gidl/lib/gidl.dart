@@ -33,7 +33,7 @@ List<T> _reorderList<T>(List<T> data, List<int> order) =>
 
 fidl.OutgoingMessage _encode<T, I extends Iterable<T>>(
     fidl.Encoder encoder, fidl.FidlType<T, I> type, T value) {
-  encoder.encodeMessageHeader(0, 0);
+  encoder.encodeMessageHeader(0, 0, fidl.CallStrictness.strict);
   fidl.MemberType member = fidl.MemberType(
     type: type,
     offsetV1: 0,

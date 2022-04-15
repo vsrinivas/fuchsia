@@ -531,9 +531,8 @@ const $fidl.StructType<Handles> kHandles_Type = $fidl.StructType<Handles>(
 
 abstract class SomeProtocol {
   $fidl.ServiceData? get $serviceData => SomeProtocolData();
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class SomeProtocolData implements $fidl.ServiceData<SomeProtocol> {
   const SomeProtocolData();
 

@@ -151,9 +151,8 @@ abstract class EmptyProtocol {
   $async.Future<void> send(Empty e);
   $async.Stream<Empty>? get receive;
   $async.Future<Empty> sendAndReceive(Empty e);
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class EmptyProtocolData implements $fidl.ServiceData<EmptyProtocol> {
   const EmptyProtocolData();
 
@@ -250,7 +249,8 @@ class EmptyProtocolProxy extends $fidl.AsyncProxy<EmptyProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kEmptyProtocol_Send_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kEmptyProtocol_Send_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types = _kEmptyProtocol_Send_Type.request!;
     $fidl.encodeMessageWithCallback($encoder,
         _kEmptyProtocol_Send_Type.requestInlineSize($encoder.wireFormat), () {
@@ -275,7 +275,8 @@ class EmptyProtocolProxy extends $fidl.AsyncProxy<EmptyProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kEmptyProtocol_SendAndReceive_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kEmptyProtocol_SendAndReceive_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kEmptyProtocol_SendAndReceive_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -308,7 +309,8 @@ class EmptyProtocolBinding extends $fidl.AsyncBinding<EmptyProtocol> {
           $subscriptions.add(_receive_stream.listen(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(_kEmptyProtocol_Receive_Ordinal, 0);
+            $encoder.encodeMessageHeader(_kEmptyProtocol_Receive_Ordinal, 0,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kEmptyProtocol_Receive_Type.response!;
             $fidl.encodeMessage(
@@ -371,8 +373,8 @@ class EmptyProtocolBinding extends $fidl.AsyncBinding<EmptyProtocol> {
           $future.then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kEmptyProtocol_SendAndReceive_Ordinal, $message.txid);
+            $encoder.encodeMessageHeader(_kEmptyProtocol_SendAndReceive_Ordinal,
+                $message.txid, $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kEmptyProtocol_SendAndReceive_Type.response!;
             $fidl.encodeMessage(

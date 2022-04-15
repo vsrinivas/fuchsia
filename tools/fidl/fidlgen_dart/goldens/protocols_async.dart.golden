@@ -1048,9 +1048,8 @@ abstract class ChannelProtocol {
   $async.Future<int> methodB(int a, int b);
   $async.Future<void> takeHandle($zircon.Handle h);
   $async.Future<$zircon.Socket> mutateSocket($zircon.Socket a);
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class ChannelProtocolData implements $fidl.ServiceData<ChannelProtocol> {
   const ChannelProtocolData();
 
@@ -1180,7 +1179,8 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kChannelProtocol_MethodA_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kChannelProtocol_MethodA_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kChannelProtocol_MethodA_Type.request!;
     $fidl.encodeMessageWithCallback($encoder,
@@ -1209,7 +1209,8 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kChannelProtocol_MethodB_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kChannelProtocol_MethodB_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kChannelProtocol_MethodB_Type.request!;
     $fidl.encodeMessageWithCallback($encoder,
@@ -1232,7 +1233,8 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kChannelProtocol_TakeHandle_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kChannelProtocol_TakeHandle_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kChannelProtocol_TakeHandle_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -1255,7 +1257,8 @@ class ChannelProtocolProxy extends $fidl.AsyncProxy<ChannelProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kChannelProtocol_MutateSocket_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kChannelProtocol_MutateSocket_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kChannelProtocol_MutateSocket_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -1288,7 +1291,8 @@ class ChannelProtocolBinding extends $fidl.AsyncBinding<ChannelProtocol> {
           $subscriptions.add(_eventA_stream.listen(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(_kChannelProtocol_EventA_Ordinal, 0);
+            $encoder.encodeMessageHeader(_kChannelProtocol_EventA_Ordinal, 0,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kChannelProtocol_EventA_Type.response!;
             $fidl.encodeMessageWithCallback(
@@ -1357,8 +1361,8 @@ class ChannelProtocolBinding extends $fidl.AsyncBinding<ChannelProtocol> {
           $future.then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kChannelProtocol_MethodB_Ordinal, $message.txid);
+            $encoder.encodeMessageHeader(_kChannelProtocol_MethodB_Ordinal,
+                $message.txid, $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kChannelProtocol_MethodB_Type.response!;
             $fidl.encodeMessage(
@@ -1392,8 +1396,8 @@ class ChannelProtocolBinding extends $fidl.AsyncBinding<ChannelProtocol> {
           $future.then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kChannelProtocol_TakeHandle_Ordinal, $message.txid);
+            $encoder.encodeMessageHeader(_kChannelProtocol_TakeHandle_Ordinal,
+                $message.txid, $fidl.CallStrictness.strict);
             $respond($encoder.message);
           }, onError: (_e) {
             $fidl.handleException(_name, _e, close);
@@ -1419,8 +1423,8 @@ class ChannelProtocolBinding extends $fidl.AsyncBinding<ChannelProtocol> {
           $future.then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kChannelProtocol_MutateSocket_Ordinal, $message.txid);
+            $encoder.encodeMessageHeader(_kChannelProtocol_MutateSocket_Ordinal,
+                $message.txid, $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kChannelProtocol_MutateSocket_Type.response!;
             $fidl.encodeMessage(
@@ -1459,9 +1463,8 @@ abstract class DiscoverableProtocol extends $fidl.Service {
   @override
   $fidl.ServiceData? get $serviceData => DiscoverableProtocolData();
   $async.Future<void> method();
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class DiscoverableProtocolData
     implements $fidl.ServiceData<DiscoverableProtocol> {
   const DiscoverableProtocolData();
@@ -1525,7 +1528,8 @@ class DiscoverableProtocolProxy extends $fidl.AsyncProxy<DiscoverableProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kDiscoverableProtocol_Method_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kDiscoverableProtocol_Method_Ordinal, 0, $fidl.CallStrictness.strict);
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);
     });
@@ -1624,9 +1628,8 @@ abstract class HandleRightsProtocol {
   $async.Future<void> noResponseMethod($zircon.Socket h);
   $async.Future<$zircon.Socket> responseMethod($zircon.Socket h);
   $async.Stream<$zircon.Socket>? get anEvent;
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class HandleRightsProtocolData
     implements $fidl.ServiceData<HandleRightsProtocol> {
   const HandleRightsProtocolData();
@@ -1725,7 +1728,9 @@ class HandleRightsProtocolProxy extends $fidl.AsyncProxy<HandleRightsProtocol>
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(
-        _kHandleRightsProtocol_NoResponseMethod_Ordinal, 0);
+        _kHandleRightsProtocol_NoResponseMethod_Ordinal,
+        0,
+        $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kHandleRightsProtocol_NoResponseMethod_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -1748,8 +1753,8 @@ class HandleRightsProtocolProxy extends $fidl.AsyncProxy<HandleRightsProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(
-        _kHandleRightsProtocol_ResponseMethod_Ordinal, 0);
+    $encoder.encodeMessageHeader(_kHandleRightsProtocol_ResponseMethod_Ordinal,
+        0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kHandleRightsProtocol_ResponseMethod_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -1789,8 +1794,8 @@ class HandleRightsProtocolBinding
           $subscriptions.add(_anEvent_stream.listen(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kHandleRightsProtocol_AnEvent_Ordinal, 0);
+            $encoder.encodeMessageHeader(_kHandleRightsProtocol_AnEvent_Ordinal,
+                0, $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kHandleRightsProtocol_AnEvent_Type.response!;
             $fidl.encodeMessage(
@@ -1856,7 +1861,9 @@ class HandleRightsProtocolBinding
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
-                _kHandleRightsProtocol_ResponseMethod_Ordinal, $message.txid);
+                _kHandleRightsProtocol_ResponseMethod_Ordinal,
+                $message.txid,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kHandleRightsProtocol_ResponseMethod_Type.response!;
             $fidl.encodeMessage(
@@ -1924,9 +1931,8 @@ abstract class ManyParameters {
       bool p13,
       bool p14,
       bool p15);
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class ManyParametersData implements $fidl.ServiceData<ManyParameters> {
   const ManyParametersData();
 
@@ -2003,7 +2009,8 @@ class ManyParametersProxy extends $fidl.AsyncProxy<ManyParameters>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kManyParameters_Fifteen_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kManyParameters_Fifteen_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kManyParameters_Fifteen_Type.request!;
     $fidl.encodeMessageWithCallback($encoder,
@@ -2094,9 +2101,8 @@ const $fidl.MethodType _kMethodWithUnion_UnionMethod_Type = $fidl.MethodType(
 abstract class MethodWithUnion {
   $fidl.ServiceData? get $serviceData => MethodWithUnionData();
   $async.Future<void> unionMethod(TheUnion u);
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class MethodWithUnionData implements $fidl.ServiceData<MethodWithUnion> {
   const MethodWithUnionData();
 
@@ -2158,7 +2164,8 @@ class MethodWithUnionProxy extends $fidl.AsyncProxy<MethodWithUnion>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kMethodWithUnion_UnionMethod_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kMethodWithUnion_UnionMethod_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kMethodWithUnion_UnionMethod_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -2260,9 +2267,8 @@ abstract class Transitional {
   $async.Stream<int>? get event {
     return $async.Stream.empty();
   }
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class TransitionalData implements $fidl.ServiceData<Transitional> {
   const TransitionalData();
 
@@ -2358,7 +2364,8 @@ class TransitionalProxy extends $fidl.AsyncProxy<Transitional>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kTransitional_Request_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kTransitional_Request_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types = _kTransitional_Request_Type.request!;
     $fidl.encodeMessageWithCallback($encoder,
         _kTransitional_Request_Type.requestInlineSize($encoder.wireFormat), () {
@@ -2378,7 +2385,8 @@ class TransitionalProxy extends $fidl.AsyncProxy<Transitional>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kTransitional_OneWay_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kTransitional_OneWay_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types = _kTransitional_OneWay_Type.request!;
     $fidl.encodeMessageWithCallback($encoder,
         _kTransitional_OneWay_Type.requestInlineSize($encoder.wireFormat), () {
@@ -2412,7 +2420,8 @@ class TransitionalBinding extends $fidl.AsyncBinding<Transitional> {
           $subscriptions.add(_event_stream.listen(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(_kTransitional_Event_Ordinal, 0);
+            $encoder.encodeMessageHeader(
+                _kTransitional_Event_Ordinal, 0, $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kTransitional_Event_Type.response!;
             $fidl.encodeMessage(
@@ -2457,8 +2466,8 @@ class TransitionalBinding extends $fidl.AsyncBinding<Transitional> {
           $future.then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kTransitional_Request_Ordinal, $message.txid);
+            $encoder.encodeMessageHeader(_kTransitional_Request_Ordinal,
+                $message.txid, $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kTransitional_Request_Type.response!;
             $fidl.encodeMessage(
@@ -2648,9 +2657,8 @@ abstract class WithAndWithoutRequestResponse {
   $async.Future<String> withRequestWithResponse(String arg);
   $async.Stream<void>? get onEmptyResponse;
   $async.Stream<String>? get onWithResponse;
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class WithAndWithoutRequestResponseData
     implements $fidl.ServiceData<WithAndWithoutRequestResponse> {
   const WithAndWithoutRequestResponseData();
@@ -2814,7 +2822,9 @@ class WithAndWithoutRequestResponseProxy
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(
-        _kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal, 0);
+        _kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal,
+        0,
+        $fidl.CallStrictness.strict);
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);
     });
@@ -2830,7 +2840,9 @@ class WithAndWithoutRequestResponseProxy
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(
-        _kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal, 0);
+        _kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal,
+        0,
+        $fidl.CallStrictness.strict);
     final $completer = $async.Completer<void>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
@@ -2846,7 +2858,9 @@ class WithAndWithoutRequestResponseProxy
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(
-        _kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal, 0);
+        _kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal,
+        0,
+        $fidl.CallStrictness.strict);
     final $completer = $async.Completer<String>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
@@ -2862,7 +2876,9 @@ class WithAndWithoutRequestResponseProxy
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(
-        _kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal, 0);
+        _kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal,
+        0,
+        $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kWithAndWithoutRequestResponse_WithRequestNoResponse_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -2886,7 +2902,9 @@ class WithAndWithoutRequestResponseProxy
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(
-        _kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal, 0);
+        _kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal,
+        0,
+        $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -2910,7 +2928,9 @@ class WithAndWithoutRequestResponseProxy
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(
-        _kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal, 0);
+        _kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal,
+        0,
+        $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kWithAndWithoutRequestResponse_WithRequestWithResponse_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -2958,7 +2978,9 @@ class WithAndWithoutRequestResponseBinding
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
-                _kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal, 0);
+                _kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal,
+                0,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kWithAndWithoutRequestResponse_OnEmptyResponse_Type.response!;
 
@@ -2979,7 +3001,9 @@ class WithAndWithoutRequestResponseBinding
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
-                _kWithAndWithoutRequestResponse_OnWithResponse_Ordinal, 0);
+                _kWithAndWithoutRequestResponse_OnWithResponse_Ordinal,
+                0,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kWithAndWithoutRequestResponse_OnWithResponse_Type.response!;
             $fidl.encodeMessage(
@@ -3048,7 +3072,8 @@ class WithAndWithoutRequestResponseBinding
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
                 _kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal,
-                $message.txid);
+                $message.txid,
+                $fidl.CallStrictness.strict);
             $respond($encoder.message);
           }, onError: (_e) {
             $fidl.handleException(_name, _e, close);
@@ -3077,7 +3102,8 @@ class WithAndWithoutRequestResponseBinding
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
                 _kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal,
-                $message.txid);
+                $message.txid,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kWithAndWithoutRequestResponse_NoRequestWithResponse_Type
                     .response!;
@@ -3138,7 +3164,8 @@ class WithAndWithoutRequestResponseBinding
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
                 _kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal,
-                $message.txid);
+                $message.txid,
+                $fidl.CallStrictness.strict);
             $respond($encoder.message);
           }, onError: (_e) {
             $fidl.handleException(_name, _e, close);
@@ -3169,7 +3196,8 @@ class WithAndWithoutRequestResponseBinding
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
                 _kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal,
-                $message.txid);
+                $message.txid,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kWithAndWithoutRequestResponse_WithRequestWithResponse_Type
                     .response!;
@@ -3276,9 +3304,8 @@ abstract class WithErrorSyntax {
   $async.Future<void> errorAsPrimitive();
   $async.Future<void> errorAsEnum();
   $async.Future<$zircon.Handle> handleInResult();
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class WithErrorSyntaxData implements $fidl.ServiceData<WithErrorSyntax> {
   const WithErrorSyntaxData();
 
@@ -3431,7 +3458,8 @@ class WithErrorSyntaxProxy extends $fidl.AsyncProxy<WithErrorSyntax>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kWithErrorSyntax_ResponseAsStruct_Ordinal, 0);
+    $encoder.encodeMessageHeader(_kWithErrorSyntax_ResponseAsStruct_Ordinal, 0,
+        $fidl.CallStrictness.strict);
     final $completer =
         $async.Completer<WithErrorSyntax$ResponseAsStruct$Response>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
@@ -3447,7 +3475,8 @@ class WithErrorSyntaxProxy extends $fidl.AsyncProxy<WithErrorSyntax>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kWithErrorSyntax_ErrorAsPrimitive_Ordinal, 0);
+    $encoder.encodeMessageHeader(_kWithErrorSyntax_ErrorAsPrimitive_Ordinal, 0,
+        $fidl.CallStrictness.strict);
     final $completer = $async.Completer<void>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
@@ -3462,7 +3491,8 @@ class WithErrorSyntaxProxy extends $fidl.AsyncProxy<WithErrorSyntax>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kWithErrorSyntax_ErrorAsEnum_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kWithErrorSyntax_ErrorAsEnum_Ordinal, 0, $fidl.CallStrictness.strict);
     final $completer = $async.Completer<void>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
@@ -3477,7 +3507,8 @@ class WithErrorSyntaxProxy extends $fidl.AsyncProxy<WithErrorSyntax>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kWithErrorSyntax_HandleInResult_Ordinal, 0);
+    $encoder.encodeMessageHeader(_kWithErrorSyntax_HandleInResult_Ordinal, 0,
+        $fidl.CallStrictness.strict);
     final $completer = $async.Completer<$zircon.Handle>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
@@ -3524,7 +3555,9 @@ class WithErrorSyntaxBinding extends $fidl.AsyncBinding<WithErrorSyntax> {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
-                _kWithErrorSyntax_ResponseAsStruct_Ordinal, $message.txid);
+                _kWithErrorSyntax_ResponseAsStruct_Ordinal,
+                $message.txid,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kWithErrorSyntax_ResponseAsStruct_Type.response!;
             $fidl.encodeMessage(
@@ -3567,7 +3600,9 @@ class WithErrorSyntaxBinding extends $fidl.AsyncBinding<WithErrorSyntax> {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
-                _kWithErrorSyntax_ErrorAsPrimitive_Ordinal, $message.txid);
+                _kWithErrorSyntax_ErrorAsPrimitive_Ordinal,
+                $message.txid,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kWithErrorSyntax_ErrorAsPrimitive_Type.response!;
             $fidl.encodeMessage(
@@ -3608,8 +3643,8 @@ class WithErrorSyntaxBinding extends $fidl.AsyncBinding<WithErrorSyntax> {
           }).then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kWithErrorSyntax_ErrorAsEnum_Ordinal, $message.txid);
+            $encoder.encodeMessageHeader(_kWithErrorSyntax_ErrorAsEnum_Ordinal,
+                $message.txid, $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kWithErrorSyntax_ErrorAsEnum_Type.response!;
             $fidl.encodeMessage(
@@ -3651,7 +3686,9 @@ class WithErrorSyntaxBinding extends $fidl.AsyncBinding<WithErrorSyntax> {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
-                _kWithErrorSyntax_HandleInResult_Ordinal, $message.txid);
+                _kWithErrorSyntax_HandleInResult_Ordinal,
+                $message.txid,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kWithErrorSyntax_HandleInResult_Type.response!;
             $fidl.encodeMessage(
@@ -3741,9 +3778,8 @@ abstract class WithProtocolEnds {
   $async.Future<$fidl.InterfaceRequest<DiscoverableProtocol>> serverEnds(
       $fidl.InterfaceRequest<DiscoverableProtocol>? in$);
   $async.Future<ProtocolEnds> structContainingEnds(ProtocolEnds in$);
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class WithProtocolEndsData implements $fidl.ServiceData<WithProtocolEnds> {
   const WithProtocolEndsData();
 
@@ -3854,7 +3890,8 @@ class WithProtocolEndsProxy extends $fidl.AsyncProxy<WithProtocolEnds>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kWithProtocolEnds_ClientEnds_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kWithProtocolEnds_ClientEnds_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kWithProtocolEnds_ClientEnds_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -3879,7 +3916,8 @@ class WithProtocolEndsProxy extends $fidl.AsyncProxy<WithProtocolEnds>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kWithProtocolEnds_ServerEnds_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kWithProtocolEnds_ServerEnds_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kWithProtocolEnds_ServerEnds_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -3904,7 +3942,9 @@ class WithProtocolEndsProxy extends $fidl.AsyncProxy<WithProtocolEnds>
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(
-        _kWithProtocolEnds_StructContainingEnds_Ordinal, 0);
+        _kWithProtocolEnds_StructContainingEnds_Ordinal,
+        0,
+        $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kWithProtocolEnds_StructContainingEnds_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -3947,8 +3987,8 @@ class WithProtocolEndsBinding extends $fidl.AsyncBinding<WithProtocolEnds> {
           $future.then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kWithProtocolEnds_ClientEnds_Ordinal, $message.txid);
+            $encoder.encodeMessageHeader(_kWithProtocolEnds_ClientEnds_Ordinal,
+                $message.txid, $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kWithProtocolEnds_ClientEnds_Type.response!;
             $fidl.encodeMessage(
@@ -3984,8 +4024,8 @@ class WithProtocolEndsBinding extends $fidl.AsyncBinding<WithProtocolEnds> {
           $future.then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kWithProtocolEnds_ServerEnds_Ordinal, $message.txid);
+            $encoder.encodeMessageHeader(_kWithProtocolEnds_ServerEnds_Ordinal,
+                $message.txid, $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kWithProtocolEnds_ServerEnds_Type.response!;
             $fidl.encodeMessage(
@@ -4021,7 +4061,9 @@ class WithProtocolEndsBinding extends $fidl.AsyncBinding<WithProtocolEnds> {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
-                _kWithProtocolEnds_StructContainingEnds_Ordinal, $message.txid);
+                _kWithProtocolEnds_StructContainingEnds_Ordinal,
+                $message.txid,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kWithProtocolEnds_StructContainingEnds_Type.response!;
             $fidl.encodeMessage(

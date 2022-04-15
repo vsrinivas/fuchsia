@@ -4,12 +4,6 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Params" -}}
-  {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end -}}{{ $param.Type.Decl }} {{ $param.Name }}
-  {{- end -}}
-{{ end }}
-
 {{/* Generate a parameter list (eg "int foo, String baz") with AsyncDecl types */}}
 {{- define "AsyncParams" -}}
   {{- range $index, $param := . -}}
@@ -75,7 +69,7 @@ $async.Future<void>
   This template expands to a statement.
 */}}
 {{- define "EncodeResponse" -}}
-  {{- if (and .AsyncResponseClass (not .Response.HasError)) -}}
+  {{- if (and .AsyncResponseClass (not (or .Response.HasError .Response.HasTransportError))) -}}
 		$fidl.encodeMessageWithCallback(
 			$encoder,
 			{{ .TypeSymbol }}.responseInlineSize($encoder.wireFormat),
@@ -125,12 +119,12 @@ class {{ .AsyncResponseClass }} {
 ///{{ . -}}
 {{- end }}
 abstract class {{ .Name }}
-{{- if .ServiceName }}
+{{- if .GetServiceName }}
       extends $fidl.Service
 {{- end }}
       {
-  {{- if .ServiceName }}
-    static const String $serviceName = {{ .ServiceName }};
+  {{- if .GetServiceName }}
+    static const String $serviceName = {{ .GetServiceName }};
     @override
   {{- end }}
   $fidl.ServiceData? get $serviceData => {{ .ServiceData }}();
@@ -160,6 +154,16 @@ abstract class {{ .Name }}
 {{- end }}
 }
 
+{{- if .OneWayUnknownInteractions }}
+abstract class {{ .Name }}Server extends {{ .Name }} {
+  $async.Future<void> $unknownOneWay(int ordinal);
+
+  {{- if .TwoWayUnknownInteractions }}
+  $async.Future<void> $unknownTwoWay(int ordinal);
+  {{ end }}
+}
+{{ end -}}
+
 // TODO: Remove ServiceData for non-service
 class {{ .ServiceData }} implements $fidl.ServiceData<{{ .Name }}> {
 
@@ -167,7 +171,7 @@ class {{ .ServiceData }} implements $fidl.ServiceData<{{ .Name }}> {
 
   @override
   String getName() {
-    {{- if .ServiceName }}
+    {{- if .GetServiceName }}
     return {{ .Name }}.$serviceName;
     {{- else }}
     return "";
@@ -186,14 +190,14 @@ class {{ .ServiceData }} implements $fidl.ServiceData<{{ .Name }}> {
 class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
     implements {{ .Name }} {
   {{ .ProxyName }}() : super($fidl.AsyncProxyController<{{ .Name }}>(
-      {{- if .ServiceName }}
-        $serviceName: {{ .ServiceName }},
+      {{- if .GetServiceName }}
+        $serviceName: {{ .GetServiceName }},
       {{- end }}
       $interfaceName: r'{{ .Name }}')
     ) {
     ctrl.onResponse = _handleResponse;
 
-    {{- if .HasEvents }}
+    {{- if or .HasEvents .OneWayUnknownInteractions }}
       ctrl.whenClosed.then((_) {
         {{- range .Methods }}
           {{- if not .HasRequest }}
@@ -202,11 +206,14 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
             {{- end }}
           {{- end }}
         {{- end }}
+        {{- if .OneWayUnknownInteractions }}
+          _$unknownEventStreamController.close();
+        {{- end }}
       }, onError: (_) { });
     {{- end }}
   }
 
-  {{- if .ServiceName }}
+  {{- if .GetServiceName }}
     @override
     $fidl.ServiceData get $serviceData => {{ .ServiceData }}();
   {{- else }}
@@ -221,7 +228,7 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
   {{- if .HasResponse }}
       case {{ .OrdinalName }}:
         final String _name = {{ .TypeSymbol }}.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, 'event', 
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, 'event',
           _{{ .Name }}EventStreamController.addError,
           () {
             final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
@@ -235,7 +242,23 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
 {{- end }}
 {{- end }}
       default:
+        {{ if .OneWayUnknownInteractions -}}
+        switch ($message.strictness) {
+          case $fidl.CallStrictness.flexible:
+            const String _name = "{{ .Name }} [UnknownEvent]";
+            $fidl.performCtrlWithExceptionHandling(_name, ctrl, 'event',
+              _$unknownEventStreamController.addError,
+              () {
+                _$unknownEventStreamController.add($fidl.UnknownEvent($message.ordinal));
+              });
+            break;
+          case $fidl.CallStrictness.strict:
+            ctrl.proxyError($fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+            break;
+        }
+        {{- else -}}
         ctrl.proxyError($fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
+        {{- end }}
         break;
     }
   }
@@ -257,7 +280,7 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
     {{- if .HasResponse }}
       case {{ .OrdinalName }}:
         final String _name = {{ .TypeSymbol }}.name;
-        $fidl.performCtrlWithExceptionHandling(_name, ctrl, 'method response', 
+        $fidl.performCtrlWithExceptionHandling(_name, ctrl, 'method response',
           $completer.completeError,
           () {
             final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
@@ -288,7 +311,7 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
       }
 
       final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-      $encoder.encodeMessageHeader({{ .OrdinalName }}, 0);
+      $encoder.encodeMessageHeader({{ .OrdinalName }}, 0, {{ .MessageHeaderStrictness }});
       {{- if .Request }}
         final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.request!;
 				$fidl.encodeMessageWithCallback(
@@ -321,9 +344,15 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
     $async.Stream<{{ .AsyncResponseType }}> get {{ .Name }} => _{{ .Name }}EventStreamController.stream;
   {{ end }}
 {{- end }}
+
+{{- if .OneWayUnknownInteractions }}
+  final _$unknownEventStreamController = $async.StreamController<$fidl.UnknownEvent>.broadcast();
+  @override
+  $async.Stream<$fidl.UnknownEvent> get $unknownEvents => _$unknownEventStreamController.stream;
+{{ end -}}
 }
 
-class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
+class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .ServerName }}> {
   {{ .BindingName }}() : super(r"{{ .Name }}")
   {{- if .HasEvents }} {
     final List<$async.StreamSubscription<dynamic>> $subscriptions = [];
@@ -356,7 +385,7 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
               {{- end }}
                 .listen(($response) {
                   final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-                  $encoder.encodeMessageHeader({{ .OrdinalName }}, 0);
+                  $encoder.encodeMessageHeader({{ .OrdinalName }}, 0, {{ .MessageHeaderStrictness }});
                   final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
                   {{ template "EncodeResponse" . }}
                   sendMessage($encoder.message);
@@ -412,10 +441,14 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
                     return Future.error($error, StackTrace.current);
                   }
                 })
+                {{ else if .HasTransportError }}
+                .then(($responseValue) {
+                  return {{ .AsyncResultResponse }};
+                })
                 {{ end }}
                 .then(($response) {
                   final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-                  $encoder.encodeMessageHeader({{ .OrdinalName }}, $message.txid);
+                  $encoder.encodeMessageHeader({{ .OrdinalName }}, $message.txid, {{ .MessageHeaderStrictness }});
                   {{- if .Response.WireParameters }}
                     final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
                     {{ template "EncodeResponse" . -}}
@@ -430,7 +463,45 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
       {{- end }}
     {{- end }}
       default:
+        {{ if .TwoWayUnknownInteractions -}}
+        switch ($message.strictness) {
+          case $fidl.CallStrictness.flexible:
+            if ($message.txid == 0) {
+              impl!.$unknownOneWay($message.ordinal).catchError((_e) {
+                $fidl.handleException("unknown one-way", _e, close);
+              });
+            } else {
+              final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+              $encoder.encodeUnknownMethodResponse($message.ordinal, $message.txid);
+              $respond($encoder.message);
+              impl!.$unknownTwoWay($message.ordinal).catchError((_e) {
+                $fidl.handleException("unknown one-way", _e, close);
+              });
+            }
+            break;
+          case $fidl.CallStrictness.strict:
+            throw $fidl.FidlError(r'Unexpected message name for {{ .BindingName }}');
+        }
+        break;
+        {{- else if .OneWayUnknownInteractions -}}
+        switch ($message.strictness) {
+          case $fidl.CallStrictness.flexible:
+            if ($message.txid == 0) {
+              impl!.$unknownOneWay($message.ordinal).catchError((_e) {
+                $fidl.handleException("unknown one-way", _e, close);
+              });
+              break;
+            } else {
+              continue $flexibleTwoWay;
+            }
+          $flexibleTwoWay:
+          case $fidl.CallStrictness.strict:
+            throw $fidl.FidlError(r'Unexpected message name for {{ .BindingName }}');
+        }
+        break;
+        {{- else -}}
         throw $fidl.FidlError(r'Unexpected message name for {{ .BindingName }}');
+        {{- end }}
     }
   }
 }
@@ -441,7 +512,7 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
 
 {{- define "ProtocolTestDeclaration" -}}
 
-class {{ .Name }}$TestBase extends {{ .Name }} {
+class {{ .Name }}$TestBase extends {{ .ServerName }} {
   {{- $protocolName := .Name }}
   {{- range .Methods }}
   {{- $exceptionMessage := printf "r'%s not implemented on %s test base. Please implement.'"  .Name  $protocolName }}
@@ -457,8 +528,17 @@ class {{ .Name }}$TestBase extends {{ .Name }} {
   {{- end }}
 {{- end }}
 
+  {{- if .OneWayUnknownInteractions }}
+  $async.Future<void> $unknownOneWay(int ordinal) {
+    return $async.Future.error(UnimplementedError({{ printf "r'$unknownOneWay not implemented on %s test base. Please implement.'"  .Name }}), StackTrace.current);
+  }
+
+  {{- if .TwoWayUnknownInteractions }}
+  $async.Future<void> $unknownTwoWay(int ordinal) {
+    return $async.Future.error(UnimplementedError({{ printf "r'$unknownTwoWay not implemented on %s test base. Please implement.'"  .Name }}), StackTrace.current);
+  }
+  {{ end }}
+  {{ end -}}
 }
 
 {{ end }}
-
-

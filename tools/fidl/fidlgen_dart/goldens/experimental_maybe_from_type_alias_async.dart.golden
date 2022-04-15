@@ -528,9 +528,8 @@ const $fidl.StructType<Testing> kTesting_Type = $fidl.StructType<Testing>(
 
 abstract class MyProtocol {
   $fidl.ServiceData? get $serviceData => MyProtocolData();
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class MyProtocolData implements $fidl.ServiceData<MyProtocol> {
   const MyProtocolData();
 

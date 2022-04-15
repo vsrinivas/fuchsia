@@ -212,12 +212,12 @@ type TableMember struct {
 
 // Protocol represents an protocol declaration.
 type Protocol struct {
-	fidlgen.Attributes
+	fidlgen.Protocol
 	Name        string
-	ServiceName string
 	ServiceData string
 	ProxyName   string
 	BindingName string
+	ServerName  string
 	EventsName  string
 	Methods     []Method
 	HasEvents   bool
@@ -247,6 +247,7 @@ type MethodResponse struct {
 	// fields of a successful response.
 	MethodParameters  []Parameter
 	HasError          bool
+	HasTransportError bool
 	ResultTypeName    string
 	ResultTypeTagName string
 	ValueType         Type
@@ -255,6 +256,7 @@ type MethodResponse struct {
 
 // Method represents a method declaration within an protocol declaration.
 type Method struct {
+	fidlgen.Method
 	Ordinal     uint64
 	OrdinalName string
 	Name        string
@@ -278,7 +280,7 @@ func (m Method) ResponseMessageType() string {
 	if !m.HasResponse {
 		return "void"
 	}
-	if m.Response.HasError {
+	if m.Response.HasError || m.Response.HasTransportError {
 		return m.Response.ResultTypeName
 	}
 	return m.AsyncResponseClass
@@ -287,7 +289,7 @@ func (m Method) ResponseMessageType() string {
 // AsyncResultCompleter provides the appropriate value to $completer.complete
 // based on the types of the arguments and whether the method uses error syntax.
 func (m Method) AsyncResponseCompleter() string {
-	if !m.HasResponse || !m.Response.HasError {
+	if !m.HasResponse || (!m.Response.HasError && !m.Response.HasTransportError) {
 		return "$completer.complete($response);"
 	}
 
@@ -312,16 +314,33 @@ func (m Method) AsyncResponseCompleter() string {
 		out.WriteString("));")
 	}
 
-	out.WriteString(`} else {
-		$completer.completeError($fidl.MethodException($response.err));
-	}`)
+	if m.Response.HasError && m.Response.HasTransportError {
+		fmt.Fprintf(&out, "} else if ($response.$tag == %s.err) {", m.Response.ResultTypeTagName)
+		out.WriteString(`
+			$completer.completeError($fidl.MethodException($response.err));
+		} else if ($response.transportErr == $zircon.ZX.ERR_NOT_SUPPORTED) {
+			$completer.completeError(const $fidl.UnknownMethodException());
+		} else {
+			$completer.completeError($fidl.FidlUnrecognizedTransportErrorError($response.transportErr!));
+		}`)
+	} else if m.Response.HasError {
+		out.WriteString(`} else {
+			$completer.completeError($fidl.MethodException($response.err));
+		}`)
+	} else { // m.Response.HasTransportError
+		out.WriteString(`} else if ($response.transportErr == $zircon.ZX.ERR_NOT_SUPPORTED) {
+			$completer.completeError(const $fidl.UnknownMethodException());
+		} else {
+			$completer.completeError($fidl.FidlUnrecognizedTransportErrorError($response.transportErr!));
+		}`)
+	}
 	return out.String()
 }
 
 // AsyncResultResponse produces code to convert the result of an error-syntax
 // method into the appropriate result union.
 func (m Method) AsyncResultResponse() string {
-	if !m.HasResponse || !m.Response.HasError {
+	if !m.HasResponse || (!m.Response.HasError && !m.Response.HasTransportError) {
 		return ""
 	}
 
@@ -381,6 +400,14 @@ func (m Method) AddEventResponse() string {
 		_%sEventStreamController.addError($fidl.MethodException($response.err));
 	}`, m.Name)
 	return out.String()
+}
+
+// MessageHeaderStrictness setting to use for encodeMessageHeader arguments.
+func (m Method) MessageHeaderStrictness() string {
+	if m.IsStrict() {
+		return "$fidl.CallStrictness.strict"
+	}
+	return "$fidl.CallStrictness.flexible"
 }
 
 // Import describes another FIDL library that will be imported.
@@ -1052,16 +1079,20 @@ func (c *compiler) compileBits(val fidlgen.Bits) Bits {
 }
 
 func (c *compiler) compileMethodResponse(method fidlgen.Method) MethodResponse {
-	if method.HasError {
-		return MethodResponse{
+	if method.HasError || method.HasTransportError() {
+		response := MethodResponse{
 			WireParameters:    c.compileParameters(method.ResponsePayload),
 			MethodParameters:  c.compileParameters(method.ValueType),
-			HasError:          true,
+			HasError:          method.HasError,
+			HasTransportError: method.HasTransportError(),
 			ResultTypeName:    c.compileUpperCamelCompoundIdentifier(method.ResultType.Identifier.Parse(), "", declarationContext),
 			ResultTypeTagName: c.compileUpperCamelCompoundIdentifier(method.ResultType.Identifier.Parse(), "Tag", declarationContext),
 			ValueType:         c.compileType(*method.ValueType),
-			ErrorType:         c.compileType(*method.ErrorType),
 		}
+		if method.HasError {
+			response.ErrorType = c.compileType(*method.ErrorType)
+		}
+		return response
 	}
 
 	response := c.compileParameters(method.ResponsePayload)
@@ -1100,6 +1131,7 @@ func (c *compiler) compileMethod(val fidlgen.Method, protocol Protocol, fidlProt
 
 	_, transitional := val.LookupAttribute("transitional")
 	return Method{
+		Method:             val,
 		Ordinal:            val.Ordinal,
 		OrdinalName:        fmt.Sprintf("_k%s_%s_Ordinal", protocol.Name, val.Name),
 		Name:               name,
@@ -1120,16 +1152,19 @@ func (c *compiler) compileMethod(val fidlgen.Method, protocol Protocol, fidlProt
 func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 	ci := val.Name.Parse()
 	r := Protocol{
-		val.Attributes,
-		c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext),
-		val.GetServiceName(),
-		c.compileUpperCamelCompoundIdentifier(ci, "Data", declarationContext),
-		c.compileUpperCamelCompoundIdentifier(ci, "Proxy", declarationContext),
-		c.compileUpperCamelCompoundIdentifier(ci, "Binding", declarationContext),
-		c.compileUpperCamelCompoundIdentifier(ci, "Events", declarationContext),
-		[]Method{},
-		false,
-		docString(val),
+		Protocol:    val,
+		Name:        c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext),
+		ServiceData: c.compileUpperCamelCompoundIdentifier(ci, "Data", declarationContext),
+		ProxyName:   c.compileUpperCamelCompoundIdentifier(ci, "Proxy", declarationContext),
+		BindingName: c.compileUpperCamelCompoundIdentifier(ci, "Binding", declarationContext),
+		ServerName:  c.compileUpperCamelCompoundIdentifier(ci, "Server", declarationContext),
+		EventsName:  c.compileUpperCamelCompoundIdentifier(ci, "Events", declarationContext),
+		Methods:     []Method{},
+		HasEvents:   false,
+		Documented:  docString(val),
+	}
+	if !val.OneWayUnknownInteractions() {
+		r.ServerName = r.Name
 	}
 
 	for _, v := range val.Methods {

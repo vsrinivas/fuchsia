@@ -982,6 +982,20 @@
                   "type": "SimpleFormalParameterImpl",
                   "varType": "int"
                 },
+                "strictness": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "strictness",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "CallStrictness"
+                },
                 "txid": {
                   "isConst": false,
                   "isFinal": false,
@@ -1163,6 +1177,46 @@
               "isSetter": false,
               "isStatic": false,
               "name": "encodeUint8",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            },
+            "encodeUnknownMethodResponse": {
+              "SimpleFormalParameterImpl": {
+                "methodOrdinal": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "methodOrdinal",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "txid": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "txid",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "encodeUnknownMethodResponse",
               "returnType": "void",
               "type": "MethodDeclarationImpl"
             },
@@ -1620,6 +1674,60 @@
           "name": "FidlRangeCheckError",
           "type": "ClassDeclarationImpl"
         },
+        "FidlUnrecognizedTransportErrorError": {
+          "ConstructorDeclarationImpl": {
+            "FidlUnrecognizedTransportErrorError": {
+              "FieldFormalParameterImpl": {
+                "this.transportErr": {
+                  "name": "this.transportErr",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "FidlUnrecognizedTransportErrorError",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ImplementsClause": {
+            "FidlError": {
+              "name": "FidlError",
+              "type": "interface"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "code": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "code",
+              "returnType": "FidlErrorCode",
+              "type": "MethodDeclarationImpl"
+            },
+            "message": {
+              "isAbstract": false,
+              "isGetter": true,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "message",
+              "returnType": "String",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "transportErr": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "transportErr",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            }
+          },
+          "name": "FidlUnrecognizedTransportErrorError",
+          "type": "ClassDeclarationImpl"
+        },
         "MethodException": {
           "ConstructorDeclarationImpl": {
             "MethodException": {
@@ -1674,6 +1782,34 @@
             }
           },
           "name": "MethodException",
+          "type": "ClassDeclarationImpl"
+        },
+        "UnknownMethodException": {
+          "ConstructorDeclarationImpl": {
+            "UnknownMethodException": {
+              "name": "UnknownMethodException",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ImplementsClause": {
+            "Exception": {
+              "name": "Exception",
+              "type": "interface"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "toString": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "toString",
+              "returnType": "String",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "UnknownMethodException",
           "type": "ClassDeclarationImpl"
         }
       },
@@ -1778,6 +1914,10 @@
             },
             "fidlUnknownMagic": {
               "name": "fidlUnknownMagic",
+              "type": "EnumConstantDeclarationImpl"
+            },
+            "fidlUnrecognizedTransportErr": {
+              "name": "fidlUnrecognizedTransportErr",
               "type": "EnumConstantDeclarationImpl"
             },
             "unknown": {
@@ -2709,6 +2849,32 @@
           },
           "name": "ProxyError",
           "type": "ClassDeclarationImpl"
+        },
+        "UnknownEvent": {
+          "ConstructorDeclarationImpl": {
+            "UnknownEvent": {
+              "FieldFormalParameterImpl": {
+                "this.ordinal": {
+                  "name": "this.ordinal",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "UnknownEvent",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "ordinal": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "ordinal",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            }
+          },
+          "name": "UnknownEvent",
+          "type": "ClassDeclarationImpl"
         }
       },
       "VariableDeclarationImpl": {
@@ -3559,6 +3725,22 @@
           "type": "ClassDeclarationImpl"
         }
       },
+      "EnumDeclarationImpl": {
+        "CallStrictness": {
+          "EnumConstantDeclarationImpl": {
+            "flexible": {
+              "name": "flexible",
+              "type": "EnumConstantDeclarationImpl"
+            },
+            "strict": {
+              "name": "strict",
+              "type": "EnumConstantDeclarationImpl"
+            }
+          },
+          "name": "CallStrictness",
+          "type": "EnumDeclarationImpl"
+        }
+      },
       "FunctionDeclarationImpl": {
         "decodeMessage": {
           "SimpleFormalParameterImpl": {
@@ -3827,6 +4009,52 @@
           "name": "encodeMessageWithCallback",
           "returnType": "void",
           "type": "FunctionDeclarationImpl"
+        },
+        "strictnessFromFlags": {
+          "SimpleFormalParameterImpl": {
+            "dynamicFlags": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "dynamicFlags",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "int"
+            }
+          },
+          "isGetter": false,
+          "isSetter": false,
+          "name": "strictnessFromFlags",
+          "returnType": "CallStrictness",
+          "type": "FunctionDeclarationImpl"
+        },
+        "strictnessToFlags": {
+          "SimpleFormalParameterImpl": {
+            "strictness": {
+              "isConst": false,
+              "isFinal": false,
+              "isOptional": false,
+              "isOptionalNamed": false,
+              "isOptionalPositional": false,
+              "isPositional": true,
+              "isRequired": true,
+              "isRequiredNamed": false,
+              "isRequiredPositional": true,
+              "name": "strictness",
+              "type": "SimpleFormalParameterImpl",
+              "varType": "CallStrictness"
+            }
+          },
+          "isGetter": false,
+          "isSetter": false,
+          "name": "strictnessToFlags",
+          "returnType": "int",
+          "type": "FunctionDeclarationImpl"
         }
       },
       "VariableDeclarationImpl": {
@@ -3835,6 +4063,14 @@
           "isFinal": false,
           "isLate": false,
           "name": "kMagicNumberInitial",
+          "type": "VariableDeclarationImpl",
+          "varType": "int"
+        },
+        "kMessageDyanmicFlagOffset": {
+          "isConst": true,
+          "isFinal": false,
+          "isLate": false,
+          "name": "kMessageDyanmicFlagOffset",
           "type": "VariableDeclarationImpl",
           "varType": "int"
         },

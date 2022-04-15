@@ -74,7 +74,7 @@ void main() {
       TestAsyncBinding().bind(EmptyImpl(), InterfaceRequest(pair.second));
 
       final encoder = Encoder(kWireFormatDefault)
-        ..encodeMessageHeader(0, 0)
+        ..encodeMessageHeader(0, 0, CallStrictness.strict)
         ..encodeUint8(0, kMessageMagicOffset);
       client.writeEtc(encoder.message.data, encoder.message.handleDispositions);
     });

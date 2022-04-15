@@ -82,14 +82,39 @@ class Encoder {
     _handleDispositions.add(value);
   }
 
-  void encodeMessageHeader(int ordinal, int txid) {
+  void encodeMessageHeader(int ordinal, int txid, CallStrictness strictness) {
     alloc(kMessageHeaderSize, 0);
     encodeUint32(txid, kMessageTxidOffset);
     encodeUint8(kWireFormatV2FlagMask, kMessageFlagOffset);
     encodeUint8(0, kMessageFlagOffset + 1);
-    encodeUint8(0, kMessageFlagOffset + 2);
+    encodeUint8(strictnessToFlags(strictness), kMessageDyanmicFlagOffset);
     encodeUint8(kMagicNumberInitial, kMessageMagicOffset);
     encodeUint64(ordinal, kMessageOrdinalOffset);
+  }
+
+  /// Produces a response for an UnknownMethod which was called with the given
+  /// ordinal value for the method and the given transaction ID. This produces
+  /// both a message header and an encoded body. The header will have the
+  /// provided ordinal and txid and CallStrictness.flexible (this should never
+  /// be used with a strict method). The body will contain a union with ordinal
+  /// 3 and a value of type zx_status with the NOT_SUPPORTED error code.
+  void encodeUnknownMethodResponse(int methodOrdinal, int txid) {
+    encodeMessageHeader(methodOrdinal, txid, CallStrictness.flexible);
+
+    const int kUnknownMethodInlineSize = 16;
+    const int kEnvelopeOffset = kMessageHeaderSize + 8;
+    const int kTransportErrOrdinal = 3;
+    alloc(kUnknownMethodInlineSize, 0);
+    // Union header.
+    // transport_err value for the union's ordinal.
+    encodeUint64(kTransportErrOrdinal, kMessageHeaderSize);
+    // Inline value of the zx_status.
+    encodeInt32(ZX.ERR_NOT_SUPPORTED, kEnvelopeOffset);
+    // Number of handles in the envelope.
+    encodeUint16(0, kEnvelopeOffset + 4);
+    // Flags field, with tag indicating the value is stored in-line (in what
+    // would otherwise be the size field).
+    encodeUint16(kEnvelopeInlineMarker, kEnvelopeOffset + 6);
   }
 
   void encodeBool(bool value, int offset) {

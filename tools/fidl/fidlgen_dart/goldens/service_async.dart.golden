@@ -54,9 +54,8 @@ const $fidl.MethodType _kFirstProtocol_MethodOnFirst_Type = $fidl.MethodType(
 abstract class FirstProtocol {
   $fidl.ServiceData? get $serviceData => FirstProtocolData();
   $async.Future<void> methodOnFirst();
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class FirstProtocolData implements $fidl.ServiceData<FirstProtocol> {
   const FirstProtocolData();
 
@@ -118,7 +117,8 @@ class FirstProtocolProxy extends $fidl.AsyncProxy<FirstProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kFirstProtocol_MethodOnFirst_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kFirstProtocol_MethodOnFirst_Ordinal, 0, $fidl.CallStrictness.strict);
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);
     });
@@ -170,9 +170,8 @@ const $fidl.MethodType _kSecondProtocol_MethodOnSecond_Type = $fidl.MethodType(
 abstract class SecondProtocol {
   $fidl.ServiceData? get $serviceData => SecondProtocolData();
   $async.Future<void> methodOnSecond();
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class SecondProtocolData implements $fidl.ServiceData<SecondProtocol> {
   const SecondProtocolData();
 
@@ -234,7 +233,8 @@ class SecondProtocolProxy extends $fidl.AsyncProxy<SecondProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kSecondProtocol_MethodOnSecond_Ordinal, 0);
+    $encoder.encodeMessageHeader(_kSecondProtocol_MethodOnSecond_Ordinal, 0,
+        $fidl.CallStrictness.strict);
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);
     });

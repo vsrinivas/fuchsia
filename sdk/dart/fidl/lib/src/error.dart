@@ -32,6 +32,7 @@ enum FidlErrorCode {
   fidlInvalidInlineBitInEnvelope,
   fidlCountExceedsLimit,
   fidlInvalidPaddingByte,
+  fidlUnrecognizedTransportErr,
 }
 
 class FidlError implements Exception {
@@ -57,6 +58,19 @@ class FidlRangeCheckError implements FidlError {
   FidlErrorCode get code => FidlErrorCode.fidlIntOutOfRange;
 }
 
+class FidlUnrecognizedTransportErrorError implements FidlError {
+  FidlUnrecognizedTransportErrorError(this.transportErr);
+
+  final int transportErr;
+
+  @override
+  String get message => 'FidlUnrecognizedTransportErrorError: $transportErr';
+  @override
+  FidlErrorCode get code => FidlErrorCode.fidlUnrecognizedTransportErr;
+}
+
+/// If a FIDL method defines an application-level error, this exception will be
+/// thrown with the error as its value.
 class MethodException<T> implements Exception {
   MethodException(this.value);
 
@@ -64,4 +78,11 @@ class MethodException<T> implements Exception {
 
   @override
   String toString() => 'MethodException: $value';
+}
+
+class UnknownMethodException implements Exception {
+  const UnknownMethodException();
+
+  @override
+  String toString() => 'UnknownMethodException';
 }

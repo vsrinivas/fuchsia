@@ -2447,9 +2447,8 @@ abstract class TestProtocol {
       strictXUnionHenceResponseMayBeStackAllocated();
   $async.Future<OlderSimpleUnion>
       flexibleXUnionHenceResponseMustBeHeapAllocated();
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class TestProtocolData implements $fidl.ServiceData<TestProtocol> {
   const TestProtocolData();
 
@@ -2551,7 +2550,9 @@ class TestProtocolProxy extends $fidl.AsyncProxy<TestProtocol>
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(
-        _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal, 0);
+        _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal,
+        0,
+        $fidl.CallStrictness.strict);
     final $completer = $async.Completer<StrictBoundedXUnion>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
@@ -2569,7 +2570,8 @@ class TestProtocolProxy extends $fidl.AsyncProxy<TestProtocol>
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(
         _kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal,
-        0);
+        0,
+        $fidl.CallStrictness.strict);
     final $completer = $async.Completer<OlderSimpleUnion>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
@@ -2607,7 +2609,8 @@ class TestProtocolBinding extends $fidl.AsyncBinding<TestProtocol> {
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
                 _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal,
-                $message.txid);
+                $message.txid,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Type
                     .response!;
@@ -2647,7 +2650,8 @@ class TestProtocolBinding extends $fidl.AsyncBinding<TestProtocol> {
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
                 _kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal,
-                $message.txid);
+                $message.txid,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Type
                     .response!;

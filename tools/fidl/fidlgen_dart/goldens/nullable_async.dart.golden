@@ -747,9 +747,8 @@ const $fidl.MethodType _kSimpleProtocol_Add_Type = $fidl.MethodType(
 abstract class SimpleProtocol {
   $fidl.ServiceData? get $serviceData => SimpleProtocolData();
   $async.Future<int> add(int a, int b);
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class SimpleProtocolData implements $fidl.ServiceData<SimpleProtocol> {
   const SimpleProtocolData();
 
@@ -826,7 +825,8 @@ class SimpleProtocolProxy extends $fidl.AsyncProxy<SimpleProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kSimpleProtocol_Add_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kSimpleProtocol_Add_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types = _kSimpleProtocol_Add_Type.request!;
     $fidl.encodeMessageWithCallback($encoder,
         _kSimpleProtocol_Add_Type.requestInlineSize($encoder.wireFormat), () {
@@ -866,8 +866,8 @@ class SimpleProtocolBinding extends $fidl.AsyncBinding<SimpleProtocol> {
           $future.then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kSimpleProtocol_Add_Ordinal, $message.txid);
+            $encoder.encodeMessageHeader(_kSimpleProtocol_Add_Ordinal,
+                $message.txid, $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kSimpleProtocol_Add_Type.response!;
             $fidl.encodeMessage(

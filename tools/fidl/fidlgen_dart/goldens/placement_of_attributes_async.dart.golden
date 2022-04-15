@@ -418,9 +418,8 @@ const $fidl.MethodType _kExampleProtocol_Method_Type = $fidl.MethodType(
 abstract class ExampleProtocol {
   $fidl.ServiceData? get $serviceData => ExampleProtocolData();
   $async.Future<void> method(lib$test_exampleusing.Empty arg);
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class ExampleProtocolData implements $fidl.ServiceData<ExampleProtocol> {
   const ExampleProtocolData();
 
@@ -482,7 +481,8 @@ class ExampleProtocolProxy extends $fidl.AsyncProxy<ExampleProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kExampleProtocol_Method_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kExampleProtocol_Method_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kExampleProtocol_Method_Type.request!;
     $fidl.encodeMessageWithCallback($encoder,

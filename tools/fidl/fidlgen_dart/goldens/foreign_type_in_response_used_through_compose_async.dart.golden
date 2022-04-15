@@ -59,9 +59,8 @@ const $fidl.MethodType _kTop_GetFoo_Type = $fidl.MethodType(
 abstract class Top {
   $fidl.ServiceData? get $serviceData => TopData();
   $async.Future<lib$test_bottom.Foo> getFoo();
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class TopData implements $fidl.ServiceData<Top> {
   const TopData();
 
@@ -134,7 +133,8 @@ class TopProxy extends $fidl.AsyncProxy<Top> implements Top {
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kTop_GetFoo_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kTop_GetFoo_Ordinal, 0, $fidl.CallStrictness.strict);
     final $completer = $async.Completer<lib$test_bottom.Foo>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
@@ -164,7 +164,8 @@ class TopBinding extends $fidl.AsyncBinding<Top> {
           $future.then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(_kTop_GetFoo_Ordinal, $message.txid);
+            $encoder.encodeMessageHeader(_kTop_GetFoo_Ordinal, $message.txid,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types = _kTop_GetFoo_Type.response!;
             $fidl.encodeMessage(
                 $encoder,

@@ -61,44 +61,44 @@ type FlexibleBits = flexible bits {
 };
 
 @discoverable
-protocol TestServer {
-    OneWayNoArgs();
-    ReceivedOneWayNoArgs() -> (struct {
+closed protocol TestServer {
+    strict OneWayNoArgs();
+    strict ReceivedOneWayNoArgs() -> (struct {
         received bool;
     });
 
-    OneWayStringArg(struct {
+    strict OneWayStringArg(struct {
         value string;
     });
-    ReceivedOneWayString() -> (struct {
+    strict ReceivedOneWayString() -> (struct {
         value string;
     });
 
-    OneWayThreeArgs(struct {
+    strict OneWayThreeArgs(struct {
         x int32;
         y uint64;
         z NoHandleStruct;
     });
-    ReceivedOneWayThreeArgs() -> (struct {
+    strict ReceivedOneWayThreeArgs() -> (struct {
         x int32;
         y uint64;
         z NoHandleStruct;
     });
 
-    OneWayExampleTable(struct {
+    strict OneWayExampleTable(struct {
         value ExampleTable;
     });
-    ReceivedOneWayExampleTable() -> (struct {
+    strict ReceivedOneWayExampleTable() -> (struct {
         received ExampleTable;
     });
 
-    TwoWayNoArgs() -> ();
-    TwoWayStringArg(struct {
+    strict TwoWayNoArgs() -> ();
+    strict TwoWayStringArg(struct {
         value string;
     }) -> (struct {
         value string;
     });
-    TwoWayThreeArgs(struct {
+    strict TwoWayThreeArgs(struct {
         x int32;
         y uint64;
         z NoHandleStruct;
@@ -107,12 +107,12 @@ protocol TestServer {
         y uint64;
         z NoHandleStruct;
     });
-    TwoWayOneHandleArg(resource struct {
+    strict TwoWayOneHandleArg(resource struct {
         h1 HandleStruct;
     }) -> (resource struct {
         h1 HandleStruct;
     });
-    TwoWayTwoHandleArgs(resource struct {
+    strict TwoWayTwoHandleArgs(resource struct {
         h1 HandleStruct;
         h2 HandleStruct;
     }) -> (resource struct {
@@ -120,66 +120,66 @@ protocol TestServer {
         h2 HandleStruct;
     });
 
-    OneWayExampleXunion(resource struct {
+    strict OneWayExampleXunion(resource struct {
         value ExampleXunion;
     });
-    ReceivedOneWayExampleXunion() -> (resource struct {
+    strict ReceivedOneWayExampleXunion() -> (resource struct {
         received ExampleXunion;
     });
 
-    OneWayExampleBits(struct {
+    strict OneWayExampleBits(struct {
         value ExampleBits;
     });
-    ReceivedOneWayExampleBits() -> (struct {
+    strict ReceivedOneWayExampleBits() -> (struct {
         received ExampleBits;
     });
 
-    SendEmptyEvent();
-    -> EmptyEvent();
+    strict SendEmptyEvent();
+    strict -> EmptyEvent();
 
-    SendStringEvent(struct {
+    strict SendStringEvent(struct {
         value string;
     });
-    -> StringEvent(struct {
+    strict -> StringEvent(struct {
         value string;
     });
 
-    SendThreeArgEvent(struct {
+    strict SendThreeArgEvent(struct {
         x int32;
         y uint64;
         z NoHandleStruct;
     });
-    -> ThreeArgEvent(struct {
+    strict -> ThreeArgEvent(struct {
         x int32;
         y uint64;
         z NoHandleStruct;
     });
 
-    SendMultipleEvents(struct {
+    strict SendMultipleEvents(struct {
         count int32;
         intervalSeconds float64;
     });
-    -> MultipleEvent(struct {
+    strict -> MultipleEvent(struct {
         index int32;
     });
 
-    ReplySlowly(struct {
+    strict ReplySlowly(struct {
         value string;
         delaySeconds float64;
     }) -> (struct {
         value string;
     });
 
-    ReplyWithErrorZero(struct {
+    strict ReplyWithErrorZero(struct {
         with_error bool;
     }) -> (struct {}) error uint32;
-    ReplyWithErrorOne(struct {
+    strict ReplyWithErrorOne(struct {
         with_error bool;
         value string;
     }) -> (struct {
         value string;
     }) error uint32;
-    ReplyWithErrorMore(struct {
+    strict ReplyWithErrorMore(struct {
         with_error bool;
         value string;
         other_value bool;
@@ -188,16 +188,16 @@ protocol TestServer {
         other_value bool;
     }) error uint32;
 
-    ReplyWithErrorEnumZero(struct {
+    strict ReplyWithErrorEnumZero(struct {
         with_error bool;
     }) -> (struct {}) error EnumOne;
-    ReplyWithErrorEnumOne(struct {
+    strict ReplyWithErrorEnumOne(struct {
         with_error bool;
         value string;
     }) -> (struct {
         value string;
     }) error EnumOne;
-    ReplyWithErrorEnumMore(struct {
+    strict ReplyWithErrorEnumMore(struct {
         with_error bool;
         value string;
         other_value bool;
@@ -206,42 +206,42 @@ protocol TestServer {
         other_value bool;
     }) error EnumOne;
 
-    CloseConnection(struct {
+    strict CloseConnection(struct {
         delaySeconds float64;
     });
-    CloseConnectionWithEpitaph(struct {
+    strict CloseConnectionWithEpitaph(struct {
         status int32;
         delaySeconds float64;
     });
 
-    -> NeverEvent();
+    strict -> NeverEvent();
 
-    SendEvent(resource struct {
+    strict SendEvent(resource struct {
         h zx.handle:EVENT;
     });
-    EchoChannelAsEvent(resource struct {
+    strict EchoChannelAsEvent(resource struct {
         h zx.handle:CHANNEL;
     }) -> (resource struct {
         h zx.handle:EVENT;
     });
-    EventEvent(resource struct {
+    strict EventEvent(resource struct {
         h zx.handle:EVENT;
     });
 
-    SendErrorEvent(strict union {
+    strict SendErrorEvent(strict union {
         1: result string;
         2: err int32;
     });
-    -> ErrorEvent(struct {
+    strict -> ErrorEvent(struct {
         result string;
     }) error int32;
 };
 
-protocol HandleRightsTestServer {
-    SendEvent(resource struct {
+closed protocol HandleRightsTestServer {
+    strict SendEvent(resource struct {
         h zx.handle:EVENT;
     });
-    SendChannel(resource struct {
+    strict SendChannel(resource struct {
         h zx.handle:CHANNEL;
     });
 };
@@ -286,8 +286,8 @@ type UnionTwo = strict union {
     3: baz uint32;
 };
 
-protocol SimpleServer {
-    Ping() -> ();
+closed protocol SimpleServer {
+    strict Ping() -> ();
 };
 
 type ChannelWithDefaultRights = resource struct {

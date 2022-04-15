@@ -16,11 +16,39 @@ import 'wire_format.dart';
 const int kMessageHeaderSize = 16;
 const int kMessageTxidOffset = 0;
 const int kMessageFlagOffset = 4;
+const int kMessageDyanmicFlagOffset = 6;
 const int kMessageMagicOffset = 7;
 const int kMessageOrdinalOffset = 8;
 
 const int kMagicNumberInitial = 1;
 const int kWireFormatV2FlagMask = 2;
+
+const int _kDynamicFlagsFlexible = 0x80;
+
+enum CallStrictness {
+  strict,
+  flexible,
+}
+
+/// Convert CallStrictness to a byte that can be inserted into the dynamic flags
+/// portion of a message.
+int strictnessToFlags(CallStrictness strictness) {
+  switch (strictness) {
+    case CallStrictness.strict:
+      return 0x00;
+    case CallStrictness.flexible:
+      return _kDynamicFlagsFlexible;
+  }
+}
+
+/// Extract the CallStrictness from the dynamic flags byte of the message
+/// header.
+CallStrictness strictnessFromFlags(int dynamicFlags) {
+  if ((dynamicFlags & _kDynamicFlagsFlexible) != 0) {
+    return CallStrictness.flexible;
+  }
+  return CallStrictness.strict;
+}
 
 class _BaseMessage {
   _BaseMessage(this.data);
@@ -36,6 +64,9 @@ class _BaseMessage {
     }
     return WireFormat.v1;
   }
+
+  CallStrictness get strictness =>
+      strictnessFromFlags(data.getUint8(kMessageDyanmicFlagOffset));
 
   bool isCompatible() => magic == kMagicNumberInitial;
 

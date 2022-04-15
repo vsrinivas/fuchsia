@@ -72,9 +72,8 @@ abstract class Child {
   $fidl.ServiceData? get $serviceData => ChildData();
   $async.Future<void> first($fidl.InterfaceRequest<Parent> request);
   $async.Future<void> second($fidl.InterfaceRequest<Parent> request);
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class ChildData implements $fidl.ServiceData<Child> {
   const ChildData();
 
@@ -134,7 +133,8 @@ class ChildProxy extends $fidl.AsyncProxy<Child> implements Child {
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kChild_First_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kChild_First_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types = _kChild_First_Type.request!;
     $fidl.encodeMessageWithCallback(
         $encoder, _kChild_First_Type.requestInlineSize($encoder.wireFormat),
@@ -155,7 +155,8 @@ class ChildProxy extends $fidl.AsyncProxy<Child> implements Child {
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kChild_Second_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kChild_Second_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types = _kChild_Second_Type.request!;
     $fidl.encodeMessageWithCallback(
         $encoder, _kChild_Second_Type.requestInlineSize($encoder.wireFormat),
@@ -231,9 +232,8 @@ const $fidl.MethodType _kParent_First_Type = $fidl.MethodType(
 abstract class Parent {
   $fidl.ServiceData? get $serviceData => ParentData();
   $async.Future<void> first($fidl.InterfaceRequest<Parent> request);
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class ParentData implements $fidl.ServiceData<Parent> {
   const ParentData();
 
@@ -293,7 +293,8 @@ class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kParent_First_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kParent_First_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types = _kParent_First_Type.request!;
     $fidl.encodeMessageWithCallback(
         $encoder, _kParent_First_Type.requestInlineSize($encoder.wireFormat),

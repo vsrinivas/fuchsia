@@ -643,3 +643,11 @@ class Proxy<T> {
   // class. Names added to this class have to be mangled by bindings generation
   // to avoid name conflicts.
 }
+
+/// Event used when an unknown, flexible event is received.
+class UnknownEvent {
+  UnknownEvent(this.ordinal);
+
+  /// Ordinal of the event.
+  final int ordinal;
+}

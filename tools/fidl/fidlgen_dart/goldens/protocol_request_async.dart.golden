@@ -41,9 +41,8 @@ import 'package:zircon/zircon.dart' as $zircon;
 
 abstract class Child {
   $fidl.ServiceData? get $serviceData => ChildData();
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class ChildData implements $fidl.ServiceData<Child> {
   const ChildData();
 
@@ -171,9 +170,8 @@ abstract class Parent {
   $async.Future<$fidl.InterfaceRequest<Child>> getChildRequest();
   $async.Future<void> takeChild($fidl.InterfaceHandle<Child> c);
   $async.Future<void> takeChildRequest($fidl.InterfaceRequest<Child> r);
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class ParentData implements $fidl.ServiceData<Parent> {
   const ParentData();
 
@@ -264,7 +262,8 @@ class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kParent_GetChild_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kParent_GetChild_Ordinal, 0, $fidl.CallStrictness.strict);
     final $completer = $async.Completer<$fidl.InterfaceHandle<Child>>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
@@ -279,7 +278,8 @@ class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kParent_GetChildRequest_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kParent_GetChildRequest_Ordinal, 0, $fidl.CallStrictness.strict);
     final $completer = $async.Completer<$fidl.InterfaceRequest<Child>>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
@@ -294,7 +294,8 @@ class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kParent_TakeChild_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kParent_TakeChild_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types = _kParent_TakeChild_Type.request!;
     $fidl.encodeMessageWithCallback($encoder,
         _kParent_TakeChild_Type.requestInlineSize($encoder.wireFormat), () {
@@ -314,7 +315,8 @@ class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kParent_TakeChildRequest_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kParent_TakeChildRequest_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kParent_TakeChildRequest_Type.request!;
     $fidl.encodeMessageWithCallback($encoder,
@@ -351,8 +353,8 @@ class ParentBinding extends $fidl.AsyncBinding<Parent> {
           $future.then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kParent_GetChild_Ordinal, $message.txid);
+            $encoder.encodeMessageHeader(_kParent_GetChild_Ordinal,
+                $message.txid, $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kParent_GetChild_Type.response!;
             $fidl.encodeMessage(
@@ -384,8 +386,8 @@ class ParentBinding extends $fidl.AsyncBinding<Parent> {
           $future.then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kParent_GetChildRequest_Ordinal, $message.txid);
+            $encoder.encodeMessageHeader(_kParent_GetChildRequest_Ordinal,
+                $message.txid, $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kParent_GetChildRequest_Type.response!;
             $fidl.encodeMessage(

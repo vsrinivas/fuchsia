@@ -100,6 +100,7 @@ dart_test_component("bindings-test-component") {
     "tostring_test.dart",
     "twoway_test.dart",
     "union_test.dart",
+    "unknown_interactions_test.dart",
   ]
 
   deps = [

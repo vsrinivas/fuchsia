@@ -1258,9 +1258,8 @@ abstract class MainProtocol {
       int a, int b);
   $async.Stream<MainProtocol$OnAnon$Response>? get onAnon;
   $async.Stream<MainProtocol$OnAnonWithError$Response>? get onAnonWithError;
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class MainProtocolData implements $fidl.ServiceData<MainProtocol> {
   const MainProtocolData();
 
@@ -1679,7 +1678,8 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kMainProtocol_OneWayComposed_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kMainProtocol_OneWayComposed_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kMainProtocol_OneWayComposed_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -1702,7 +1702,8 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kMainProtocol_TwoWayComposed_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kMainProtocol_TwoWayComposed_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kMainProtocol_TwoWayComposed_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -1725,8 +1726,8 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(
-        _kMainProtocol_TwoWayComposedWithError_Ordinal, 0);
+    $encoder.encodeMessageHeader(_kMainProtocol_TwoWayComposedWithError_Ordinal,
+        0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kMainProtocol_TwoWayComposedWithError_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -1760,7 +1761,8 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kMainProtocol_OneWayLocal_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kMainProtocol_OneWayLocal_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kMainProtocol_OneWayLocal_Type.request!;
     $fidl.encodeMessageWithCallback($encoder,
@@ -1783,7 +1785,8 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kMainProtocol_TwoWayLocal_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kMainProtocol_TwoWayLocal_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kMainProtocol_TwoWayLocal_Type.request!;
     $fidl.encodeMessageWithCallback($encoder,
@@ -1807,8 +1810,8 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(
-        _kMainProtocol_TwoWayLocalWithError_Ordinal, 0);
+    $encoder.encodeMessageHeader(_kMainProtocol_TwoWayLocalWithError_Ordinal, 0,
+        $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kMainProtocol_TwoWayLocalWithError_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -1845,7 +1848,8 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kMainProtocol_OneWayImport_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kMainProtocol_OneWayImport_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kMainProtocol_OneWayImport_Type.request!;
     $fidl.encodeMessageWithCallback($encoder,
@@ -1867,7 +1871,8 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kMainProtocol_TwoWayImport_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kMainProtocol_TwoWayImport_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kMainProtocol_TwoWayImport_Type.request!;
     $fidl.encodeMessageWithCallback($encoder,
@@ -1889,8 +1894,8 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(
-        _kMainProtocol_TwoWayImportWithError_Ordinal, 0);
+    $encoder.encodeMessageHeader(_kMainProtocol_TwoWayImportWithError_Ordinal,
+        0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kMainProtocol_TwoWayImportWithError_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -1924,7 +1929,8 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kMainProtocol_OneWayAnon_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kMainProtocol_OneWayAnon_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kMainProtocol_OneWayAnon_Type.request!;
     $fidl.encodeMessageWithCallback($encoder,
@@ -1947,7 +1953,8 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kMainProtocol_TwoWayAnon_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kMainProtocol_TwoWayAnon_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kMainProtocol_TwoWayAnon_Type.request!;
     $fidl.encodeMessageWithCallback($encoder,
@@ -1971,7 +1978,8 @@ class MainProtocolProxy extends $fidl.AsyncProxy<MainProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kMainProtocol_TwoWayAnonWithError_Ordinal, 0);
+    $encoder.encodeMessageHeader(_kMainProtocol_TwoWayAnonWithError_Ordinal, 0,
+        $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kMainProtocol_TwoWayAnonWithError_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -2018,7 +2026,8 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
           $subscriptions.add(_onComposed_stream.listen(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(_kMainProtocol_OnComposed_Ordinal, 0);
+            $encoder.encodeMessageHeader(_kMainProtocol_OnComposed_Ordinal, 0,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kMainProtocol_OnComposed_Type.response!;
             $fidl.encodeMessage(
@@ -2068,7 +2077,9 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
-                _kMainProtocol_OnComposedWithError_Ordinal, 0);
+                _kMainProtocol_OnComposedWithError_Ordinal,
+                0,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kMainProtocol_OnComposedWithError_Type.response!;
             $fidl.encodeMessage(
@@ -2091,7 +2102,8 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
           $subscriptions.add(_onLocal_stream.listen(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(_kMainProtocol_OnLocal_Ordinal, 0);
+            $encoder.encodeMessageHeader(
+                _kMainProtocol_OnLocal_Ordinal, 0, $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kMainProtocol_OnLocal_Type.response!;
             $fidl.encodeMessageWithCallback(
@@ -2136,7 +2148,9 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
-                _kMainProtocol_OnLocalWithError_Ordinal, 0);
+                _kMainProtocol_OnLocalWithError_Ordinal,
+                0,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kMainProtocol_OnLocalWithError_Type.response!;
             $fidl.encodeMessage(
@@ -2159,7 +2173,8 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
           $subscriptions.add(_onImport_stream.listen(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(_kMainProtocol_OnImport_Ordinal, 0);
+            $encoder.encodeMessageHeader(_kMainProtocol_OnImport_Ordinal, 0,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kMainProtocol_OnImport_Type.response!;
             $fidl.encodeMessage(
@@ -2198,7 +2213,9 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
-                _kMainProtocol_OnImportWithError_Ordinal, 0);
+                _kMainProtocol_OnImportWithError_Ordinal,
+                0,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kMainProtocol_OnImportWithError_Type.response!;
             $fidl.encodeMessage(
@@ -2221,7 +2238,8 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
           $subscriptions.add(_onAnon_stream.listen(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(_kMainProtocol_OnAnon_Ordinal, 0);
+            $encoder.encodeMessageHeader(
+                _kMainProtocol_OnAnon_Ordinal, 0, $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kMainProtocol_OnAnon_Type.response!;
             $fidl.encodeMessageWithCallback(
@@ -2265,8 +2283,8 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
               .listen(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kMainProtocol_OnAnonWithError_Ordinal, 0);
+            $encoder.encodeMessageHeader(_kMainProtocol_OnAnonWithError_Ordinal,
+                0, $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kMainProtocol_OnAnonWithError_Type.response!;
             $fidl.encodeMessage(
@@ -2330,8 +2348,8 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
           $future.then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kMainProtocol_TwoWayComposed_Ordinal, $message.txid);
+            $encoder.encodeMessageHeader(_kMainProtocol_TwoWayComposed_Ordinal,
+                $message.txid, $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kMainProtocol_TwoWayComposed_Type.response!;
             $fidl.encodeMessage(
@@ -2380,7 +2398,9 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
-                _kMainProtocol_TwoWayComposedWithError_Ordinal, $message.txid);
+                _kMainProtocol_TwoWayComposedWithError_Ordinal,
+                $message.txid,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kMainProtocol_TwoWayComposedWithError_Type.response!;
             $fidl.encodeMessage(
@@ -2435,8 +2455,8 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
           $future.then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kMainProtocol_TwoWayLocal_Ordinal, $message.txid);
+            $encoder.encodeMessageHeader(_kMainProtocol_TwoWayLocal_Ordinal,
+                $message.txid, $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kMainProtocol_TwoWayLocal_Type.response!;
             $fidl.encodeMessageWithCallback(
@@ -2490,7 +2510,9 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
-                _kMainProtocol_TwoWayLocalWithError_Ordinal, $message.txid);
+                _kMainProtocol_TwoWayLocalWithError_Ordinal,
+                $message.txid,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kMainProtocol_TwoWayLocalWithError_Type.response!;
             $fidl.encodeMessage(
@@ -2542,8 +2564,8 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
           $future.then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kMainProtocol_TwoWayImport_Ordinal, $message.txid);
+            $encoder.encodeMessageHeader(_kMainProtocol_TwoWayImport_Ordinal,
+                $message.txid, $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kMainProtocol_TwoWayImport_Type.response!;
             $fidl.encodeMessage(
@@ -2589,7 +2611,9 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
-                _kMainProtocol_TwoWayImportWithError_Ordinal, $message.txid);
+                _kMainProtocol_TwoWayImportWithError_Ordinal,
+                $message.txid,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kMainProtocol_TwoWayImportWithError_Type.response!;
             $fidl.encodeMessage(
@@ -2644,8 +2668,8 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
           $future.then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kMainProtocol_TwoWayAnon_Ordinal, $message.txid);
+            $encoder.encodeMessageHeader(_kMainProtocol_TwoWayAnon_Ordinal,
+                $message.txid, $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kMainProtocol_TwoWayAnon_Type.response!;
             $fidl.encodeMessageWithCallback(
@@ -2698,7 +2722,9 @@ class MainProtocolBinding extends $fidl.AsyncBinding<MainProtocol> {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
-                _kMainProtocol_TwoWayAnonWithError_Ordinal, $message.txid);
+                _kMainProtocol_TwoWayAnonWithError_Ordinal,
+                $message.txid,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kMainProtocol_TwoWayAnonWithError_Type.response!;
             $fidl.encodeMessage(

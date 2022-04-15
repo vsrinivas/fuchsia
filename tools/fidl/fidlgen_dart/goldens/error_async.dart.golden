@@ -217,9 +217,8 @@ const $fidl.MethodType _kExample_foo_Type = $fidl.MethodType(
 abstract class Example {
   $fidl.ServiceData? get $serviceData => ExampleData();
   $async.Future<int> foo(String s);
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class ExampleData implements $fidl.ServiceData<Example> {
   const ExampleData();
 
@@ -297,7 +296,8 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kExample_foo_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kExample_foo_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types = _kExample_foo_Type.request!;
     $fidl.encodeMessageWithCallback(
         $encoder, _kExample_foo_Type.requestInlineSize($encoder.wireFormat),
@@ -343,7 +343,8 @@ class ExampleBinding extends $fidl.AsyncBinding<Example> {
           }).then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(_kExample_foo_Ordinal, $message.txid);
+            $encoder.encodeMessageHeader(_kExample_foo_Ordinal, $message.txid,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types = _kExample_foo_Type.response!;
             $fidl.encodeMessage(
                 $encoder,

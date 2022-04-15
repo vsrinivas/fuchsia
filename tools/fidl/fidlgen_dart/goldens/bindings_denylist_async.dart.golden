@@ -1034,9 +1034,8 @@ const $fidl.StructType<OnlyAppearsInImportingLibrary>
 
 abstract class Allowed {
   $fidl.ServiceData? get $serviceData => AllowedData();
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class AllowedData implements $fidl.ServiceData<Allowed> {
   const AllowedData();
 
@@ -1201,9 +1200,8 @@ abstract class DenyEachBinding {
   $async.Future<int> onlyDenyLibfuzzer(bool a);
   $async.Future<int> onlyDenyRust(bool a);
   $async.Future<int> onlyDenySyzkaller(bool a);
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class DenyEachBindingData implements $fidl.ServiceData<DenyEachBinding> {
   const DenyEachBindingData();
 
@@ -1371,7 +1369,8 @@ class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kDenyEachBinding_OnlyDenyCpp_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kDenyEachBinding_OnlyDenyCpp_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kDenyEachBinding_OnlyDenyCpp_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -1394,7 +1393,8 @@ class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kDenyEachBinding_OnlyDenyGo_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kDenyEachBinding_OnlyDenyGo_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kDenyEachBinding_OnlyDenyGo_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -1417,8 +1417,8 @@ class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(
-        _kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal, 0);
+    $encoder.encodeMessageHeader(_kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal, 0,
+        $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kDenyEachBinding_OnlyDenyLibfuzzer_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -1441,7 +1441,8 @@ class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kDenyEachBinding_OnlyDenyRust_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kDenyEachBinding_OnlyDenyRust_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kDenyEachBinding_OnlyDenyRust_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -1464,8 +1465,8 @@ class DenyEachBindingProxy extends $fidl.AsyncProxy<DenyEachBinding>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(
-        _kDenyEachBinding_OnlyDenySyzkaller_Ordinal, 0);
+    $encoder.encodeMessageHeader(_kDenyEachBinding_OnlyDenySyzkaller_Ordinal, 0,
+        $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kDenyEachBinding_OnlyDenySyzkaller_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -1515,8 +1516,8 @@ class DenyEachBindingBinding extends $fidl.AsyncBinding<DenyEachBinding> {
           }).then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kDenyEachBinding_OnlyDenyCpp_Ordinal, $message.txid);
+            $encoder.encodeMessageHeader(_kDenyEachBinding_OnlyDenyCpp_Ordinal,
+                $message.txid, $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kDenyEachBinding_OnlyDenyCpp_Type.response!;
             $fidl.encodeMessage(
@@ -1559,8 +1560,8 @@ class DenyEachBindingBinding extends $fidl.AsyncBinding<DenyEachBinding> {
           }).then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kDenyEachBinding_OnlyDenyGo_Ordinal, $message.txid);
+            $encoder.encodeMessageHeader(_kDenyEachBinding_OnlyDenyGo_Ordinal,
+                $message.txid, $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kDenyEachBinding_OnlyDenyGo_Type.response!;
             $fidl.encodeMessage(
@@ -1605,7 +1606,9 @@ class DenyEachBindingBinding extends $fidl.AsyncBinding<DenyEachBinding> {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
-                _kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal, $message.txid);
+                _kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal,
+                $message.txid,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kDenyEachBinding_OnlyDenyLibfuzzer_Type.response!;
             $fidl.encodeMessage(
@@ -1648,8 +1651,8 @@ class DenyEachBindingBinding extends $fidl.AsyncBinding<DenyEachBinding> {
           }).then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kDenyEachBinding_OnlyDenyRust_Ordinal, $message.txid);
+            $encoder.encodeMessageHeader(_kDenyEachBinding_OnlyDenyRust_Ordinal,
+                $message.txid, $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kDenyEachBinding_OnlyDenyRust_Type.response!;
             $fidl.encodeMessage(
@@ -1694,7 +1697,9 @@ class DenyEachBindingBinding extends $fidl.AsyncBinding<DenyEachBinding> {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
-                _kDenyEachBinding_OnlyDenySyzkaller_Ordinal, $message.txid);
+                _kDenyEachBinding_OnlyDenySyzkaller_Ordinal,
+                $message.txid,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kDenyEachBinding_OnlyDenySyzkaller_Type.response!;
             $fidl.encodeMessage(
@@ -1747,9 +1752,8 @@ abstract class ImportsSameNameContext {
   $fidl.ServiceData? get $serviceData => ImportsSameNameContextData();
   $async.Future<void> unattributed();
   $async.Future<void> alwaysAppearsInImportingLibrary();
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class ImportsSameNameContextData
     implements $fidl.ServiceData<ImportsSameNameContext> {
   const ImportsSameNameContextData();
@@ -1812,8 +1816,8 @@ class ImportsSameNameContextProxy extends $fidl
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(
-        _kImportsSameNameContext_Unattributed_Ordinal, 0);
+    $encoder.encodeMessageHeader(_kImportsSameNameContext_Unattributed_Ordinal,
+        0, $fidl.CallStrictness.strict);
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);
     });
@@ -1829,7 +1833,9 @@ class ImportsSameNameContextProxy extends $fidl
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(
-        _kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal, 0);
+        _kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal,
+        0,
+        $fidl.CallStrictness.strict);
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);
     });

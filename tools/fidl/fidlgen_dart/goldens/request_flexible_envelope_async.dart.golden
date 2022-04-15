@@ -259,9 +259,8 @@ abstract class Protocol {
   $fidl.ServiceData? get $serviceData => ProtocolData();
   $async.Future<FlexibleFoo> requestStrictResponseFlexible(StrictFoo s);
   $async.Future<StrictFoo> requestFlexibleResponseStrict(FlexibleFoo s);
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class ProtocolData implements $fidl.ServiceData<Protocol> {
   const ProtocolData();
 
@@ -355,7 +354,9 @@ class ProtocolProxy extends $fidl.AsyncProxy<Protocol> implements Protocol {
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(
-        _kProtocol_RequestStrictResponseFlexible_Ordinal, 0);
+        _kProtocol_RequestStrictResponseFlexible_Ordinal,
+        0,
+        $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kProtocol_RequestStrictResponseFlexible_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -379,7 +380,9 @@ class ProtocolProxy extends $fidl.AsyncProxy<Protocol> implements Protocol {
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(
-        _kProtocol_RequestFlexibleResponseStrict_Ordinal, 0);
+        _kProtocol_RequestFlexibleResponseStrict_Ordinal,
+        0,
+        $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kProtocol_RequestFlexibleResponseStrict_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -423,7 +426,8 @@ class ProtocolBinding extends $fidl.AsyncBinding<Protocol> {
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
                 _kProtocol_RequestStrictResponseFlexible_Ordinal,
-                $message.txid);
+                $message.txid,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kProtocol_RequestStrictResponseFlexible_Type.response!;
             $fidl.encodeMessage(
@@ -460,7 +464,8 @@ class ProtocolBinding extends $fidl.AsyncBinding<Protocol> {
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
                 _kProtocol_RequestFlexibleResponseStrict_Ordinal,
-                $message.txid);
+                $message.txid,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kProtocol_RequestFlexibleResponseStrict_Type.response!;
             $fidl.encodeMessage(

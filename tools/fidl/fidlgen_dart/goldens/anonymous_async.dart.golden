@@ -906,9 +906,8 @@ abstract class SomeProtocol {
   $fidl.ServiceData? get $serviceData => SomeProtocolData();
   $async.Future<BitsMember> someMethod(
       UnionMember unionMember, TableMember tableMember);
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class SomeProtocolData implements $fidl.ServiceData<SomeProtocol> {
   const SomeProtocolData();
 
@@ -991,7 +990,8 @@ class SomeProtocolProxy extends $fidl.AsyncProxy<SomeProtocol>
     }
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
-    $encoder.encodeMessageHeader(_kSomeProtocol_SomeMethod_Ordinal, 0);
+    $encoder.encodeMessageHeader(
+        _kSomeProtocol_SomeMethod_Ordinal, 0, $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kSomeProtocol_SomeMethod_Type.request!;
     $fidl.encodeMessageWithCallback($encoder,
@@ -1042,8 +1042,8 @@ class SomeProtocolBinding extends $fidl.AsyncBinding<SomeProtocol> {
           }).then(($response) {
             final $fidl.Encoder $encoder =
                 $fidl.Encoder($fidl.kWireFormatDefault);
-            $encoder.encodeMessageHeader(
-                _kSomeProtocol_SomeMethod_Ordinal, $message.txid);
+            $encoder.encodeMessageHeader(_kSomeProtocol_SomeMethod_Ordinal,
+                $message.txid, $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kSomeProtocol_SomeMethod_Type.response!;
             $fidl.encodeMessage(

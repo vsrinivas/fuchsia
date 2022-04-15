@@ -258,9 +258,8 @@ abstract class ExampleUseOfErrorSyntax {
   $fidl.ServiceData? get $serviceData => ExampleUseOfErrorSyntaxData();
   $async.Future<int> composedCallWhichMayFail(String s);
   $async.Future<int> callWhichMayFail(String s);
-}
+} // TODO: Remove ServiceData for non-service
 
-// TODO: Remove ServiceData for non-service
 class ExampleUseOfErrorSyntaxData
     implements $fidl.ServiceData<ExampleUseOfErrorSyntax> {
   const ExampleUseOfErrorSyntaxData();
@@ -373,7 +372,9 @@ class ExampleUseOfErrorSyntaxProxy extends $fidl
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(
-        _kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal, 0);
+        _kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal,
+        0,
+        $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -397,7 +398,9 @@ class ExampleUseOfErrorSyntaxProxy extends $fidl
 
     final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(
-        _kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal, 0);
+        _kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal,
+        0,
+        $fidl.CallStrictness.strict);
     final List<$fidl.MemberType> $types =
         _kExampleUseOfErrorSyntax_CallWhichMayFail_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -457,7 +460,8 @@ class ExampleUseOfErrorSyntaxBinding
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
                 _kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal,
-                $message.txid);
+                $message.txid,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Type
                     .response!;
@@ -507,7 +511,8 @@ class ExampleUseOfErrorSyntaxBinding
                 $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
                 _kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal,
-                $message.txid);
+                $message.txid,
+                $fidl.CallStrictness.strict);
             final List<$fidl.MemberType> $types =
                 _kExampleUseOfErrorSyntax_CallWhichMayFail_Type.response!;
             $fidl.encodeMessage(
