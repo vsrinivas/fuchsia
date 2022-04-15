@@ -18,6 +18,7 @@ extend uint fuchsia.BIND_PCI_VID {
   BROADCOM = 0x14e4,
   ATHEROS = 0x168c,
   INTEL = 0x8086,
+  QEMU_TEST = 0x1234,
 };
 
 extend uint fuchsia.BIND_PCI_DID {
@@ -41,6 +42,7 @@ extend uint fuchsia.BIND_PCI_DID {
   RTL8111 = 0x8168,
   INTEL_SPT_SPI0 = 0x9d29,
   GOOGLE_GRAPHICS_ADAPTER = 0xa002,
+  QEMU_EDU = 0x11e8,
 };
 
 extend uint fuchsia.BIND_PCI_CLASS {

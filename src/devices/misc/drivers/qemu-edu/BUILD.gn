@@ -1,0 +1,43 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+
+driver_bind_rules("qemu_edu_bind") {
+  rules = "qemu-edu.bind"
+  header_output = "qemu_edu_bind.h"
+  tests = "bind_tests.json"
+  deps = [ "//src/devices/bind/fuchsia.pci" ]
+}
+
+common_deps = [
+  ":qemu_edu_bind",
+  "//src/devices/lib/driver",
+  "//src/lib/ddktl",
+  "//zircon/system/ulib/inspect",
+]
+
+fuchsia_driver("driver") {
+  output_name = "qemu-edu"
+  deps = common_deps
+  sources = [ "qemu-edu.cc" ]
+}
+
+fuchsia_driver_component("driver_component") {
+  component_name = "qemu-edu"
+  deps = [ ":driver" ]
+  info = "driver-info.json"
+}
+
+fuchsia_driver_package("qemu-edu") {
+  package_name = "qemu-edu"
+  driver_components = [ ":driver_component" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":qemu_edu_bind_test" ]
+}

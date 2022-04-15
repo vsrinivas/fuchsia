@@ -1,0 +1,9 @@
+{
+    "short_description": "QEMU Edu Device Driver",
+    "manufacturer": "QEMU",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Misc"
+    ]
+}
