@@ -5,8 +5,8 @@
 use {
     crate::{
         manager::RepositoryManager,
+        range::Range,
         repository::{Error, Repository, RepositoryId},
-        resource::{Resource, ResourceRange},
     },
     anyhow::Result,
     async_net::{TcpListener, TcpStream},
@@ -19,7 +19,7 @@ use {
         header::RANGE,
         server::{accept::from_stream, Server},
         service::{make_service_fn, service_fn},
-        HeaderMap, Request, Response, StatusCode,
+        Request, Response, StatusCode,
     },
     log::{error, info, warn},
     parking_lot::RwLock,
@@ -162,13 +162,18 @@ impl RepositoryServerBuilder {
 
             let server = Server::builder(from_stream(receiver))
                 .executor(fuchsia_hyper::LocalExecutor)
-                .serve(make_svc)
-                .with_graceful_shutdown(
-                    rx_stop.map(|res| res.unwrap_or_else(|futures::channel::oneshot::Canceled| ())),
-                )
-                .unwrap_or_else(|e| panic!("unable to start server: {}", e));
+                .serve(make_svc);
 
-            server.await
+            // Register a future that resolves when we want to shut down the server. This will
+            // trigger the server to stop accepting new connections.
+            let server_fut = server.with_graceful_shutdown(async {
+                rx_stop.await.ok();
+            });
+
+            // Wait for the server to shut down.
+            if let Err(err) = server_fut.await {
+                panic!("unable to stop server: {}", err);
+            }
         };
 
         Ok((server_fut, sender, RepositoryServer { local_addr, stop }))
@@ -217,11 +222,14 @@ async fn handle_request(
         return status_response(StatusCode::NOT_FOUND);
     };
     let headers = req.headers();
-    let range = extract_range_from_range_header(headers);
-    let range = if let Ok(range) = range {
-        range
+    let range = if let Some(header) = headers.get(RANGE) {
+        if let Ok(range) = Range::from_http_range_header(header) {
+            range
+        } else {
+            return status_response(StatusCode::RANGE_NOT_SATISFIABLE);
+        }
     } else {
-        return status_response(StatusCode::RANGE_NOT_SATISFIABLE);
+        Range::Full
     };
 
     let resource = match resource_path {
@@ -262,59 +270,19 @@ async fn handle_request(
         }
     };
 
-    generate_response_from_range(range, resource)
-}
+    // Send the response back to the caller.
+    let mut builder = Response::builder()
+        .header("Accept-Ranges", "bytes")
+        .header("Content-Length", resource.content_len());
 
-fn generate_response_from_range(range: ResourceRange, resource: Resource) -> Response<Body> {
-    match range {
-        ResourceRange::RangeFull => Response::builder()
-            .status(200)
-            .header("Content-Length", resource.content_len)
-            .header("Accept-Ranges", "bytes")
-            .body(Body::wrap_stream(resource.stream))
-            .unwrap(),
-        ResourceRange::RangeFrom { start } => Response::builder()
-            .status(206)
-            .header("Content-Length", resource.content_len - start)
-            .header("Content-Range", format!("bytes={}-/{}", start, resource.total_len))
-            .body(Body::wrap_stream(resource.stream))
-            .unwrap(),
-        ResourceRange::Range { start, end } => Response::builder()
-            .status(206)
-            .header("Content-Length", end - start)
-            .header("Content-Range", format!("bytes={}-{}/{}", start, end, resource.total_len))
-            .body(Body::wrap_stream(resource.stream))
-            .unwrap(),
-        ResourceRange::RangeTo { end } => Response::builder()
-            .status(206)
-            .header("Content-Length", end)
-            .header("Content-Range", format!("bytes=-{}/{}", end, resource.total_len))
-            .body(Body::wrap_stream(resource.stream))
-            .unwrap(),
-    }
-}
+    // If we requested a subset of the file, respond with the partial content headers.
+    builder = if let Some(content_range) = resource.content_range.to_http_content_range_header() {
+        builder.header("Content-Range", content_range).status(StatusCode::PARTIAL_CONTENT)
+    } else {
+        builder.status(StatusCode::OK)
+    };
 
-fn extract_range_from_range_header(headers: &HeaderMap) -> Result<ResourceRange, Error> {
-    if !headers.contains_key(RANGE) {
-        return Ok(ResourceRange::RangeFull);
-    }
-    let range = headers[RANGE].to_str()?;
-    let mut range_split = range.split("=");
-    if range_split.next() != Some("bytes") {
-        return Err(Error::RangeNotSatisfiable);
-    }
-    let mut vec = range_split.next().ok_or(Error::RangeNotSatisfiable)?.split("-");
-    let start_str = vec.next().ok_or(Error::RangeNotSatisfiable)?;
-    let end_str = vec.next().ok_or(Error::RangeNotSatisfiable)?;
-    match (start_str.is_empty(), end_str.is_empty()) {
-        (true, true) => Ok(ResourceRange::RangeFrom { start: 0 }),
-        (false, false) => Ok(ResourceRange::Range {
-            start: start_str.parse::<u64>()?,
-            end: end_str.parse::<u64>()?,
-        }),
-        (false, true) => Ok(ResourceRange::RangeFrom { start: start_str.parse::<u64>()? }),
-        (true, false) => Ok(ResourceRange::RangeTo { end: end_str.parse::<u64>()? }),
-    }
+    builder.body(Body::wrap_stream(resource.stream)).unwrap()
 }
 
 async fn handle_auto(
@@ -568,19 +536,22 @@ mod tests {
         url: impl AsRef<str> + std::fmt::Debug,
         start: Option<u64>,
         end: Option<u64>,
-        length: u64,
+        total_len: u64,
     ) -> Result<Bytes> {
         let response = get_range(url, start, end).await?;
         assert_eq!(response.status(), StatusCode::PARTIAL_CONTENT);
-        let start_str = start.map(|i| i.to_string()).unwrap_or("".to_owned());
-        let end_str = end.map(|i| i.to_string()).unwrap_or("".to_owned());
 
-        let len = end.unwrap_or(length) - start.unwrap_or(0);
-        assert_eq!(response.headers()["Content-Length"], len.to_string());
+        // http ranges are inclusive, so we need to add one to `end` to compute the content length.
+        let content_len = end.map(|end| end + 1).unwrap_or(total_len) - start.unwrap_or(0);
+        assert_eq!(response.headers()["Content-Length"], content_len.to_string());
+
+        let start_str = start.map(|i| i.to_string()).unwrap_or_else(String::new);
+        let end_str = end.map(|i| i.to_string()).unwrap_or_else(String::new);
         assert_eq!(
             response.headers()["Content-Range"],
-            format!("bytes={}-{}/{}", start_str, end_str, length.to_string())
+            format!("bytes {}-{}/{}", start_str, end_str, total_len)
         );
+
         Ok(hyper::body::to_bytes(response).await?)
     }
 
@@ -694,7 +665,18 @@ mod tests {
             for (devhost, bodies) in &test_cases {
                 for body in &bodies[..] {
                     let url = format!("{}/{}/{}", server_url, devhost, body);
-                    assert_matches!(get_bytes_range(&url, Some(1), Some(2), body.chars().count().try_into().unwrap()).await, Ok(bytes) if bytes == &body[1..2]);
+
+                    assert_eq!(
+                        &body[1..=2],
+                        get_bytes_range(
+                            &url,
+                            Some(1),
+                            Some(2),
+                            body.chars().count().try_into().unwrap(),
+                        )
+                        .await
+                        .unwrap()
+                    );
                 }
             }
         })

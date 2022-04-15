@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::resource::{Resource, ResourceRange},
-    anyhow::{anyhow, Context, Result},
+    crate::{range::Range, resource::Resource},
+    anyhow::{anyhow, Context as _, Result},
     async_lock::Mutex as AsyncMutex,
     camino::Utf8PathBuf,
     fidl_fuchsia_developer_ffx::{ListFields, PackageEntry, RepositoryPackage},
@@ -47,6 +47,9 @@ mod file_system;
 mod pm;
 
 pub mod http_repository;
+
+#[cfg(test)]
+pub(crate) mod repo_tests;
 
 pub use file_system::FileSystemRepository;
 pub use http_repository::{package_download, HttpRepository};
@@ -237,29 +240,21 @@ impl Repository {
 
     /// Return a stream of bytes for the metadata resource.
     pub async fn fetch_metadata(&self, path: &str) -> Result<Resource, Error> {
-        self.fetch_metadata_range(path, ResourceRange::RangeFull).await
+        self.fetch_metadata_range(path, Range::Full).await
     }
 
     /// Return a stream of bytes for the metadata resource in given range.
-    pub async fn fetch_metadata_range(
-        &self,
-        path: &str,
-        range: ResourceRange,
-    ) -> Result<Resource, Error> {
+    pub async fn fetch_metadata_range(&self, path: &str, range: Range) -> Result<Resource, Error> {
         self.backend.fetch_metadata(path, range).await
     }
 
     /// Return a stream of bytes for the blob resource.
     pub async fn fetch_blob(&self, path: &str) -> Result<Resource, Error> {
-        self.fetch_blob_range(path, ResourceRange::RangeFull).await
+        self.fetch_blob_range(path, Range::Full).await
     }
 
     /// Return a stream of bytes for the blob resource in given range.
-    pub async fn fetch_blob_range(
-        &self,
-        path: &str,
-        range: ResourceRange,
-    ) -> Result<Resource, Error> {
+    pub async fn fetch_blob_range(&self, path: &str, range: Range) -> Result<Resource, Error> {
         self.backend.fetch_blob(path, range).await
     }
 
@@ -389,7 +384,7 @@ impl Repository {
                     let size = size
                         + try_join_all(contents.contents().into_iter().map(
                             |(_, hash)| async move {
-                                self.fetch_blob(&hash.to_string()).await.map(|x| x.content_len)
+                                self.fetch_blob(&hash.to_string()).await.map(|x| x.total_len())
                             },
                         ))
                         .await?
@@ -518,7 +513,7 @@ impl Repository {
                 let contents = MetaContents::deserialize(c.as_slice())?;
                 for (name, hash) in contents.contents() {
                     let hash_string = hash.to_string();
-                    let size = self.fetch_blob(&hash_string).await?.content_len;
+                    let size = self.fetch_blob(&hash_string).await?.total_len();
                     let modified = self
                         .backend
                         .blob_modification_time(&hash_string)
@@ -594,10 +589,10 @@ pub trait RepositoryBackend: std::fmt::Debug {
     fn spec(&self) -> RepositorySpec;
 
     /// Fetch a metadata [Resource] from this repository.
-    async fn fetch_metadata(&self, path: &str, range: ResourceRange) -> Result<Resource, Error>;
+    async fn fetch_metadata(&self, path: &str, range: Range) -> Result<Resource, Error>;
 
     /// Fetch a blob [Resource] from this repository.
-    async fn fetch_blob(&self, path: &str, range: ResourceRange) -> Result<Resource, Error>;
+    async fn fetch_blob(&self, path: &str, range: Range) -> Result<Resource, Error>;
 
     /// Whether or not the backend supports watching for file changes.
     fn supports_watch(&self) -> bool {

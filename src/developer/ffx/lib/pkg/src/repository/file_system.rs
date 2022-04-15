@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    super::{Error, RepositoryBackend, Resource, ResourceRange},
+    crate::{
+        range::{ContentRange, Range},
+        repository::{Error, RepositoryBackend, Resource},
+    },
     anyhow::Result,
     bytes::{Bytes, BytesMut},
     camino::{Utf8Component, Utf8Path, Utf8PathBuf},
@@ -35,7 +38,9 @@ use {
 };
 
 /// Read files in chunks of this size off the local storage.
-const CHUNK_SIZE: usize = 8_192;
+// Note: this is internally public to allow repository tests to check they work across chunks.
+pub(crate) const CHUNK_SIZE: usize = 8_192;
+
 /// Serve a repository from the file system.
 #[derive(Debug)]
 pub struct FileSystemRepository {
@@ -53,39 +58,57 @@ impl FileSystemRepository {
         &self,
         repo_path: &Utf8Path,
         resource_path: &str,
-        range: ResourceRange,
+        range: Range,
     ) -> Result<Resource, Error> {
         let file_path = sanitize_path(repo_path, resource_path)?;
         let mut file = async_fs::File::open(&file_path).await?;
         let total_len = file.metadata().await?.len();
 
-        match range {
-            ResourceRange::Range { start, end: _ } => file.seek(SeekFrom::Start(start)).await?,
-            ResourceRange::RangeFrom { start } => file.seek(SeekFrom::Start(start)).await?,
-            ResourceRange::RangeFull | ResourceRange::RangeTo { .. } => total_len,
-        };
-
-        let content_len = match range {
-            ResourceRange::Range { start, end } => {
-                if start > end || end > total_len {
+        let content_range = match range {
+            Range::Full => ContentRange::Full { complete_len: total_len },
+            Range::Inclusive { first_byte_pos, last_byte_pos } => {
+                if first_byte_pos > last_byte_pos
+                    || first_byte_pos >= total_len
+                    || last_byte_pos >= total_len
+                {
                     return Err(Error::RangeNotSatisfiable);
                 }
-                end - start
+
+                file.seek(SeekFrom::Start(first_byte_pos)).await?;
+
+                ContentRange::Inclusive { first_byte_pos, last_byte_pos, complete_len: total_len }
             }
-            ResourceRange::RangeTo { end } => {
-                if end > total_len {
+            Range::From { first_byte_pos } => {
+                if first_byte_pos >= total_len {
                     return Err(Error::RangeNotSatisfiable);
                 }
-                end
+
+                file.seek(SeekFrom::Start(first_byte_pos)).await?;
+
+                ContentRange::Inclusive {
+                    first_byte_pos,
+                    last_byte_pos: total_len - 1,
+                    complete_len: total_len,
+                }
             }
-            ResourceRange::RangeFull | ResourceRange::RangeFrom { .. } => total_len,
+            Range::Suffix { len } => {
+                if len > total_len {
+                    return Err(Error::RangeNotSatisfiable);
+                }
+                let start = total_len - len;
+                file.seek(SeekFrom::Start(start)).await?;
+
+                ContentRange::Inclusive {
+                    first_byte_pos: start,
+                    last_byte_pos: total_len - 1,
+                    complete_len: total_len,
+                }
+            }
         };
 
-        Ok(Resource {
-            content_len,
-            total_len,
-            stream: Box::pin(file_stream(file_path, content_len as usize, file)),
-        })
+        let content_len = content_range.content_len();
+
+        Ok(Resource { content_range, stream: Box::pin(file_stream(file_path, content_len, file)) })
     }
 }
 
@@ -98,19 +121,11 @@ impl RepositoryBackend for FileSystemRepository {
         }
     }
 
-    async fn fetch_metadata(
-        &self,
-        resource_path: &str,
-        range: ResourceRange,
-    ) -> Result<Resource, Error> {
+    async fn fetch_metadata(&self, resource_path: &str, range: Range) -> Result<Resource, Error> {
         self.fetch(&self.metadata_repo_path, resource_path, range).await
     }
 
-    async fn fetch_blob(
-        &self,
-        resource_path: &str,
-        range: ResourceRange,
-    ) -> Result<Resource, Error> {
+    async fn fetch_blob(&self, resource_path: &str, range: Range) -> Result<Resource, Error> {
         self.fetch(&self.blob_repo_path, resource_path, range).await
     }
 
@@ -215,7 +230,7 @@ fn sanitize_path(repo_path: &Utf8Path, resource_path: &str) -> Result<Utf8PathBu
 /// Read a file and return a stream of [Bytes].
 fn file_stream(
     path: Utf8PathBuf,
-    mut len: usize,
+    mut len: u64,
     mut file: async_fs::File,
 ) -> impl Stream<Item = io::Result<Bytes>> {
     let mut buf = BytesMut::new();
@@ -225,11 +240,11 @@ fn file_stream(
             return Poll::Ready(None);
         }
 
-        buf.resize(min(CHUNK_SIZE, len), 0);
+        buf.resize(min(CHUNK_SIZE, len as usize), 0);
 
         // Read a chunk from the file.
         let n = match ready!(Pin::new(&mut file).poll_read(cx, &mut buf)) {
-            Ok(n) => n,
+            Ok(n) => n as u64,
             Err(err) => {
                 return Poll::Ready(Some(Err(err)));
             }
@@ -244,9 +259,9 @@ fn file_stream(
         // Return the chunk read from the file. The file may have changed size during streaming, so
         // it's possible we could have read more than expected. If so, truncate the result to the
         // limited size.
-        let mut chunk = buf.split_to(n).freeze();
+        let mut chunk = buf.split_to(n as usize).freeze();
         if n > len {
-            chunk = chunk.split_to(len);
+            chunk = chunk.split_to(len as usize);
             len = 0;
         } else {
             len -= n;
@@ -260,6 +275,7 @@ fn file_stream(
 mod tests {
     use {
         super::*,
+        crate::repository::repo_tests::{self, TestEnv as _},
         assert_matches::assert_matches,
         fuchsia_async as fasync,
         futures::{FutureExt, StreamExt},
@@ -288,14 +304,17 @@ mod tests {
                 repo: FileSystemRepository::new(metadata_path, blob_path),
             }
         }
+    }
 
-        async fn read_metadata(&self, path: &str, range: ResourceRange) -> Result<Vec<u8>, Error> {
+    #[async_trait::async_trait]
+    impl repo_tests::TestEnv for TestEnv {
+        async fn read_metadata(&self, path: &str, range: Range) -> Result<Vec<u8>, Error> {
             let mut body = vec![];
             self.repo.fetch_metadata(path, range).await?.read_to_end(&mut body).await?;
             Ok(body)
         }
 
-        async fn read_blob(&self, path: &str, range: ResourceRange) -> Result<Vec<u8>, Error> {
+        async fn read_blob(&self, path: &str, range: Range) -> Result<Vec<u8>, Error> {
             let mut body = vec![];
             self.repo.fetch_blob(path, range).await?.read_to_end(&mut body).await?;
             Ok(body)
@@ -317,30 +336,41 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_fetch_missing() {
         let env = TestEnv::new();
-
-        assert_matches!(
-            env.read_metadata("meta-does-not-exist", ResourceRange::RangeFull).await,
-            Err(Error::NotFound)
-        );
-        assert_matches!(
-            env.read_blob("blob-does-not-exist", ResourceRange::RangeFull).await,
-            Err(Error::NotFound)
-        );
+        repo_tests::check_fetch_missing(&env).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_fetch_empty() {
         let env = TestEnv::new();
-
-        env.write_metadata("empty-meta", b"");
-        env.write_blob("empty-blob", b"");
-
-        assert_matches!(env.read_metadata("empty-meta", ResourceRange::RangeFull).await, Ok(body) if body == b"");
-        assert_matches!(env.read_blob("empty-blob", ResourceRange::RangeFull).await, Ok(body) if body == b"");
+        repo_tests::check_fetch_empty(&env).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_timestamp() {
+    async fn test_fetch_small() {
+        let env = TestEnv::new();
+        repo_tests::check_fetch_small(&env).await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_fetch_range_small() {
+        let env = TestEnv::new();
+        repo_tests::check_fetch_range_small(&env).await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_fetch() {
+        let env = TestEnv::new();
+        repo_tests::check_fetch(&env).await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_fetch_range_not_satisifiable() {
+        let env = TestEnv::new();
+        repo_tests::check_fetch_range_not_satisfiable(&env).await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_blob_modification_time() {
         let env = TestEnv::new();
 
         let f = File::create(env.blob_path.join("empty-blob")).unwrap();
@@ -354,121 +384,13 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch_small() {
-        let env = TestEnv::new();
-
-        env.write_metadata("small-meta", b"hello meta");
-        env.write_blob("small-blob", b"hello blob");
-
-        assert_matches!(
-            env.read_metadata("small-meta", ResourceRange::RangeFull).await,
-            Ok(b) if b == b"hello meta"
-        );
-        assert_matches!(
-            env.read_blob("small-blob", ResourceRange::RangeFull).await,
-            Ok(b) if b == b"hello blob"
-        );
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch_metadata_range_small() {
-        let env = TestEnv::new();
-
-        let meta_body = b"hello meta";
-        let blob_body = b"hello blob";
-        env.write_metadata("small-meta", meta_body);
-        env.write_blob("small-blob", blob_body);
-
-        assert_matches!(
-            env.read_metadata("small-meta", ResourceRange::Range { start: 1, end: 7 }).await,
-            Ok(b) if b == b"ello m"
-        );
-        assert_matches!(
-            env.read_blob("small-blob", ResourceRange::Range { start: 1, end: 7 }).await,
-            Ok(b) if b == b"ello b"
-        );
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_range_fetch_small_get_err() {
-        let env = TestEnv::new();
-
-        let meta_body = b"hello meta";
-        let blob_body = b"hello blob";
-        env.write_metadata("small-meta", meta_body);
-        env.write_blob("small-blob", blob_body);
-
-        assert_matches!(
-            env.read_metadata("small-meta", ResourceRange::Range { start: 4, end: 3 }).await,
-            Err(Error::RangeNotSatisfiable)
-        );
-        assert_matches!(
-            env.read_blob("small-blob", ResourceRange::Range { start: 4, end: 3 }).await,
-            Err(Error::RangeNotSatisfiable)
-        );
-
-        assert_matches!(
-            env.read_metadata("small-meta", ResourceRange::RangeTo { end: 12 }).await,
-            Err(Error::RangeNotSatisfiable)
-        );
-        assert_matches!(
-            env.read_blob("small-blob", ResourceRange::RangeTo { end: 12 }).await,
-            Err(Error::RangeNotSatisfiable)
-        );
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch_chunks() {
-        let env = TestEnv::new();
-
-        let chunks = [0, 1, CHUNK_SIZE - 1, CHUNK_SIZE, CHUNK_SIZE + 1, CHUNK_SIZE * 2 + 1];
-        for size in &chunks {
-            let path = format!("{}", size);
-            let body = vec![0; *size];
-            env.write_metadata(&path, &body);
-            env.write_blob(&path, &body);
-
-            assert_matches!(
-                env.read_metadata(&path, ResourceRange::RangeFull).await,
-                Ok(b) if b == body
-            );
-            assert_matches!(
-                env.read_blob(&path, ResourceRange::RangeFull).await,
-                Ok(b) if b == body
-            );
-        }
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_fetch_range_chunks() {
-        let env = TestEnv::new();
-
-        let chunks = [1, CHUNK_SIZE - 1, CHUNK_SIZE, CHUNK_SIZE + 1, CHUNK_SIZE * 2 + 1];
-        for size in &chunks {
-            let path = format!("{}", size);
-            let body = vec![0; *size];
-            env.write_metadata(&path, &body);
-            env.write_blob(&path, &body);
-
-            assert_matches!(
-                env.read_metadata(&path, ResourceRange::RangeFrom { start: 1 }).await,
-                Ok(b) if b == body[1..]
-            );
-            assert_matches!(
-                env.read_blob(&path, ResourceRange::RangeFrom { start: 1 }).await,
-                Ok(b) if b == body[1..]
-            );
-        }
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_reject_invalid_paths() {
         let env = TestEnv::new();
         env.write_metadata("empty", b"");
 
-        assert_matches!(env.read_metadata("empty", ResourceRange::RangeFull).await, Ok(body) if body == b"");
+        assert_matches!(env.read_metadata("empty", Range::Full).await, Ok(body) if body == b"");
         assert_matches!(
-            env.read_metadata("subdir/../empty", ResourceRange::RangeFull).await,
+            env.read_metadata("subdir/../empty", Range::Full).await,
             Err(Error::InvalidPath(path)) if path == Utf8Path::new("subdir/../empty")
         );
     }
@@ -476,6 +398,9 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_watch() {
         let env = TestEnv::new();
+
+        // We support watch.
+        assert!(env.repo.supports_watch());
 
         let mut watch_stream = env.repo.watch().unwrap();
 

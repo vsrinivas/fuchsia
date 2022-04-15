@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    super::{
-        Error, FileSystemRepository, RepositoryBackend, RepositorySpec, Resource, ResourceRange,
+    crate::{
+        range::Range,
+        repository::{Error, FileSystemRepository, RepositoryBackend, RepositorySpec},
+        resource::Resource,
     },
     anyhow::Result,
     camino::Utf8PathBuf,
@@ -36,19 +38,11 @@ impl RepositoryBackend for PmRepository {
         RepositorySpec::Pm { path: self.pm_repo_path.clone() }
     }
 
-    async fn fetch_metadata(
-        &self,
-        resource_path: &str,
-        range: ResourceRange,
-    ) -> Result<Resource, Error> {
+    async fn fetch_metadata(&self, resource_path: &str, range: Range) -> Result<Resource, Error> {
         self.repo.fetch_metadata(resource_path, range).await
     }
 
-    async fn fetch_blob(
-        &self,
-        resource_path: &str,
-        range: ResourceRange,
-    ) -> Result<Resource, Error> {
+    async fn fetch_blob(&self, resource_path: &str, range: Range) -> Result<Resource, Error> {
         self.repo.fetch_blob(resource_path, range).await
     }
 

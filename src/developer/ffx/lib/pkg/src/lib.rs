@@ -4,6 +4,7 @@
 
 pub mod config;
 pub mod manager;
+pub mod range;
 pub mod repository;
 pub mod resource;
 pub mod server;
