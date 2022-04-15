@@ -13,6 +13,15 @@
 Let's explore some of these fundamental concepts on a running system. In
 this exercise, you'll see how jobs and processes interact to form a tree.
 
+Note: To ensure that you’re using the right version of `ffx` and `fssh` (which
+ need to match the version of the SDK), consider updating your `PATH` to include
+ the SDK's `tools` directory (for instance, `export
+ PATH="$PATH:$HOME/getting-started/tools"`). However, if you don't wish to
+ update your `PATH`, ensure that you specify the relative (`tools/ffx` or
+ `tools/fssh`) or absolute path (for instance, `~/getting-started/tools/ffx`) to
+ the tools in the [SDK samples repository][clone-the-sdk] whenever you run these
+ commands.
+
 <<../_common/_start_femu.md>>
 
 ### Dump the process list
@@ -87,3 +96,7 @@ security model.
   device startup</a> and map how the initial processes align with the
   <code>ps</code> output on the emulator.</p>
 </aside>
+
+<!-- Reference links -->
+
+[clone-the-sdk]: /docs/get-started/sdk/index.md#clone-the-sdk-samples-repository
