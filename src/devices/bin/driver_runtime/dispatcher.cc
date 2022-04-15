@@ -311,7 +311,7 @@ void Dispatcher::ShutdownAsync() {
       } else {
         // We weren't successful, |wait| is being run or queued to run and will want to remove this
         // from the |waits_| list.
-        waits.push_back(std::move(wait));
+        waits_.push_back(std::move(wait));
       }
     }
 
@@ -346,7 +346,6 @@ void Dispatcher::ShutdownAsync() {
 }
 
 void Dispatcher::CompleteShutdown() {
-  fbl::DoublyLinkedList<std::unique_ptr<CallbackRequest>> to_cancel;
   {
     fbl::AutoLock lock(&callback_lock_);
 
@@ -362,15 +361,23 @@ void Dispatcher::CompleteShutdown() {
       ZX_ASSERT(event_waiter_->Cancel() != nullptr);
       event_waiter_ = nullptr;
     }
-    to_cancel = std::move(shutdown_queue_);
   }
 
-  // Call the callbacks outside the lock.
-  while (!to_cancel.is_empty()) {
-    auto callback_request = to_cancel.pop_front();
+  // We remove one item at a time from the shutdown queue, in case someone
+  // tries to cancel a wait (which has not been canceled yet) from within a
+  // canceled callback. We don't use fbl::AutoLock as we want to be able to
+  // release and re-acquire the lock in the loop.
+  callback_lock_.Acquire();
+  while (!shutdown_queue_.is_empty()) {
+    auto callback_request = shutdown_queue_.pop_front();
     ZX_ASSERT(callback_request);
+    // Call the callbacks outside the lock.
+    callback_lock_.Release();
     callback_request->Call(std::move(callback_request), ZX_ERR_CANCELED);
+    callback_lock_.Acquire();
   }
+  callback_lock_.Release();
+
   fdf_dispatcher_shutdown_observer_t* shutdown_observer = nullptr;
   {
     fbl::AutoLock lock(&callback_lock_);
@@ -708,6 +715,12 @@ bool Dispatcher::SetCallbackReason(CallbackRequest* callback_to_update,
 std::unique_ptr<CallbackRequest> Dispatcher::CancelAsyncOperation(void* operation) {
   fbl::AutoLock lock(&callback_lock_);
   auto iter = callback_queue_.erase_if([operation](const CallbackRequest& callback_request) {
+    return callback_request.holds_async_operation(operation);
+  });
+  if (iter) {
+    return iter;
+  }
+  iter = shutdown_queue_.erase_if([operation](const CallbackRequest& callback_request) {
     return callback_request.holds_async_operation(operation);
   });
   if (iter) {

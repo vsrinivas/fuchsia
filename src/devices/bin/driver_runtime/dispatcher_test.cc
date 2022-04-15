@@ -1303,6 +1303,45 @@ TEST_F(DispatcherTest, CancelWait) {
   ASSERT_OK(wait.Cancel());
 }
 
+TEST_F(DispatcherTest, CancelWaitFromWithinCanceledWait) {
+  auto fake_driver = CreateFakeDriver();
+  driver_context::PushDriver(fake_driver);
+  auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
+  auto dispatcher = fdf::Dispatcher::Create(0, [](fdf_dispatcher_t* dispatcher) {});
+  ASSERT_FALSE(dispatcher.is_error());
+
+  async_dispatcher_t* async_dispatcher = dispatcher->async_dispatcher();
+  ASSERT_NOT_NULL(async_dispatcher);
+
+  zx::event event;
+  ASSERT_OK(zx::event::create(0, &event));
+
+  async::WaitOnce wait(event.get(), ZX_USER_SIGNAL_0);
+  async::WaitOnce wait2(event.get(), ZX_USER_SIGNAL_0);
+
+  ASSERT_OK(wait.Begin(async_dispatcher, [&](async_dispatcher_t* dispatcher, async::WaitOnce* wait,
+                                             zx_status_t status, const zx_packet_signal_t* signal) {
+    ASSERT_EQ(status, ZX_ERR_CANCELED);
+    wait2.Cancel();
+  }));
+
+  // We will cancel this wait from wait's handler, so we never expect it to complete.
+  ASSERT_OK(wait2.Begin(async_dispatcher, [](async_dispatcher_t* dispatcher, async::WaitOnce* wait,
+                                             zx_status_t status, const zx_packet_signal_t* signal) {
+    ZX_ASSERT(false);
+  }));
+
+  fdf_internal::DriverShutdown driver_shutdown;
+  libsync::Completion driver_shutdown_completion;
+  ASSERT_OK(driver_shutdown.Begin(fake_driver, [&](const void* driver) {
+    ASSERT_EQ(fake_driver, driver);
+    driver_shutdown_completion.Signal();
+  }));
+
+  ASSERT_OK(driver_shutdown_completion.Wait());
+}
+
 TEST_F(DispatcherTest, GetCurrentDispatcherInWait) {
   fdf_dispatcher_t* dispatcher;
   ASSERT_NO_FATAL_FAILURE(CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &dispatcher));
