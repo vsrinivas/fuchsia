@@ -35,7 +35,7 @@ pub fn read_from_disk_untyped(instance_directory: &PathBuf) -> Result<serde_json
     // Read the engine.json file and deserialize it from disk into a new TypedEngine instance
     if filepath.exists() {
         let file = File::open(&filepath)
-            .expect(&format!("Unable to open file {:?} for deserialization", filepath));
+            .context(format!("Unable to open file {:?} for deserialization", filepath))?;
         let value: serde_json::Value = serde_json::from_reader(file)
             .context(format!("Invalid JSON syntax in {:?}", filepath))?;
         Ok(value)
@@ -52,7 +52,7 @@ pub trait SerializingEngine: Serialize {
 
         // Create the engine.json file to hold the serialized data, and write it out to disk,
         let file = File::create(&filepath)
-            .expect(&format!("Unable to create file {:?} for serialization", filepath));
+            .context(format!("Unable to create file {:?} for serialization", filepath))?;
         log::debug!("Writing serialized engine out to {:?}", filepath);
         match serde_json::to_writer(file, self) {
             Ok(_) => Ok(()),

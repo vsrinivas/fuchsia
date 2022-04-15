@@ -36,7 +36,7 @@ impl EmulatorEngine for FemuEngine {
                 &self.ffx_config,
             )
             .await
-            .expect("could not stage image files");
+            .context("could not stage image files")?;
 
         let aemu = match self.ffx_config.get_host_tool(config::FEMU_TOOL).await {
             Ok(aemu_path) => aemu_path.canonicalize().context(format!(

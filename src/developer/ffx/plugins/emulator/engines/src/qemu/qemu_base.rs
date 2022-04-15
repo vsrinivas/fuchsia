@@ -81,7 +81,8 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         if kernel_path.exists() && reuse {
             log::debug!("Using existing file for {:?}", kernel_path.file_name().unwrap());
         } else {
-            fs::copy(&guest_config.kernel_image, &kernel_path).expect("cannot stage kernel file");
+            fs::copy(&guest_config.kernel_image, &kernel_path)
+                .context("cannot stage kernel file")?;
         }
 
         let zbi_path = instance_root
@@ -94,7 +95,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
             // the guest.
             Self::embed_authorized_keys(&guest_config.zbi_image, &zbi_path, config)
                 .await
-                .expect("cannot embed authorized keys");
+                .context("cannot embed authorized keys")?;
         }
 
         let fvm_path = match &guest_config.fvm_image {
@@ -104,7 +105,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                 if fvm_path.exists() && reuse {
                     log::debug!("Using existing file for {:?}", fvm_path.file_name().unwrap());
                 } else {
-                    fs::copy(src_fvm, &fvm_path).expect("cannot stage fvm file");
+                    fs::copy(src_fvm, &fvm_path).context("cannot stage fvm file")?;
 
                     // Resize the fvm image if needed.
                     let image_size = format!(
@@ -115,7 +116,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                     let fvm_tool = config
                         .get_host_tool(config::FVM_HOST_TOOL)
                         .await
-                        .expect("cannot locate fvm tool");
+                        .context("cannot locate fvm tool")?;
                     let resize_result = Command::new(fvm_tool)
                         .arg(&fvm_path)
                         .arg("extend")
@@ -143,8 +144,12 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         dest: &PathBuf,
         config: &FfxConfigWrapper,
     ) -> Result<()> {
-        let zbi_tool = config.get_host_tool(config::ZBI_HOST_TOOL).await?;
-        let auth_keys = config.file(config::SSH_PUBLIC_KEY).await?;
+        let zbi_tool =
+            config.get_host_tool(config::ZBI_HOST_TOOL).await.context("ZBI tool is missing")?;
+        let auth_keys = config
+            .file(config::SSH_PUBLIC_KEY)
+            .await
+            .context("Fuchsia authorized keys are missing.")?;
 
         if src == dest {
             return Err(anyhow!("source and dest zbi paths cannot be the same."));
@@ -205,7 +210,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
 
         if self.emu_config().runtime.console == ConsoleType::None {
             let stdout = File::create(&self.emu_config().host.log)
-                .expect(&format!("Couldn't open log life {:?}", &self.emu_config().host.log));
+                .context(format!("Couldn't open log file {:?}", &self.emu_config().host.log))?;
             let stderr = stdout
                 .try_clone()
                 .context("Failed trying to clone stdout for the emulator process.")?;

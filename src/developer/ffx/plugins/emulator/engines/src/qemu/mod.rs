@@ -44,7 +44,7 @@ impl EmulatorEngine for QemuEngine {
                 &self.ffx_config,
             )
             .await
-            .expect("could not stage image files");
+            .context("could not stage image files")?;
 
         let qemu = match self.ffx_config.get_host_tool(QEMU_TOOL).await {
             Ok(qemu_path) => qemu_path.canonicalize().context(format!(
