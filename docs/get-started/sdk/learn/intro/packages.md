@@ -17,29 +17,30 @@ on a Fuchsia device.
 
 ### Register a new package server
 
-Create a package repository to host the packages provided with the `workstation`
-product bundle:
+List the package repositories configured in your package server:
 
-1.  Download the product packages matching your SDK version
+```posix-terminal
+ffx repository list
+```
 
-    ```posix-terminal
-    gsutil cp gs://fuchsia/development/$(ffx sdk version)/packages/workstation.qemu-x64-release.tar.gz ~/workstation.qemu-x64-release.tar.gz
-    ```
+This command prints output similar to the following:
 
-1.  Extract the packages bundle into a local directory
+```none {:.devsite-disable-click-to-copy}
++----------------------+------+-----------------------------------------------+
+| NAME                 | TYPE | EXTRA                                         |
++======================+======+===============================================+
+| fuchsiasamples.com   | pm   | /home/alice/.package_repos/sdk-samples        |
++----------------------+------+-----------------------------------------------+
+| workstation.qemu-x64 | pm   | /home/alice/.local/share/Fuchsia/.../packages |
++----------------------+------+-----------------------------------------------+
+```
 
-    ```posix-terminal
-    mkdir -p workstation_pkgs && tar xzf ~/workstation.qemu-x64-release.tar.gz -C workstation_pkgs
-    ```
+The workstation.qemu-x64 repository is created when you run the
+`ffx product-bundle get` command (previously in "Get started with the Fuchsia SDK"
+quickstart guide).
+This repository contains additional system packages for the workstation.qemu-x64 prebuilt image.
 
-1.  Add the local packages to `ffx` as a repository
-
-    ```posix-terminal
-    ffx repository add-from-pm -r fuchsia.com workstation_pkgs/amber-files
-    ```
-
-With the repository created, start a local package server instance to begin
-serving these packages:
+Start a local package server instance to begin serving these packages:
 
 ```posix-terminal
 ffx repository server start
@@ -53,7 +54,7 @@ Configure the emulator to resolve package URLs for `fuchsia.com` from the local
 package server:
 
 ```posix-terminal
-ffx target repository register -r fuchsia.com
+ffx target repository register -r workstation.qemu-x64 --alias fuchsia.com
 ```
 
 ### Examine the package server
@@ -62,7 +63,7 @@ With the local package server running, you can explore the list of packages that
 are available in the repository:
 
 ```posix-terminal
-ffx repository package list -r fuchsia.com
+ffx repository package list -r workstation.qemu-x64
 ```
 
 This command prints additional details about each package in the repository,
@@ -103,8 +104,10 @@ fssh pkgctl resolve fuchsia-pkg://fuchsia.com/bouncing_ball
 Notice the new lines added to the log output for `pkg-resolver`:
 
 ```none {:.devsite-disable-click-to-copy}
-[379.465][core/pkg-resolver][pkg-resolver][I] Fetching blobs for fuchsia-pkg://workstation.qemu-x64/bouncing_ball: []
-[379.465][core/pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://fuchsia.com/bouncing_ball as fuchsia-pkg://workstation.qemu-x64/bouncing_ball to bb0515ee231c3b07da82234d015508f8799ed26b828e8dae16b3e9c59bd87cf2 with TUF
+[128.297][core/pkg-resolver][pkg-resolver][I] Fetching blobs for fuchsia-pkg://workstation.qemu-x64/bouncing_ball: [
+    9575f44e2e3eaa25d4e97864abc9e308ee83d2abfda836e3fd4454999b2166a9,
+]
+[128.386][core/pkg-resolver][pkg-resolver][I] resolved fuchsia-pkg://fuchsia.com/bouncing_ball as fuchsia-pkg://workstation.qemu-x64/bouncing_ball to bb0515ee231c3b07da82234d015508f8799ed26b828e8dae16b3e9c59bd87cf2 with TUF
 ```
 
 From the device shell prompt, check the package status again on the device:
@@ -160,10 +163,11 @@ package contents:
 /meta/bouncing_ball.cmx
 /meta/contents
 /meta/package
+/meta/fuchsia.abi/abi-revision
 ```
 
 This lists the package metadata and each of the content BLOBs in the package.
-You can `bin/` entries for executables, `lib/` entries for shared library
+You can see `bin/` entries for executables, `lib/` entries for shared library
 dependencies, additional metadata and resources.
 
 ## What's Next?
