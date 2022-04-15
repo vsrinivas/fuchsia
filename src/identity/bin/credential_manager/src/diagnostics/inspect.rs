@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::diagnostics::{Diagnostics, RpcMethod},
+    crate::diagnostics::{Diagnostics, IncomingMethod},
     fidl_fuchsia_identity_credential::CredentialError,
     fuchsia_inspect::{Inspector, Node, NumericProperty, UintProperty},
     fuchsia_zircon as zx,
@@ -17,7 +17,7 @@ lazy_static! {
 }
 
 /// A record in inspect of the success count and failure counts for a particular RPC method.
-struct RpcMethodNode {
+struct IncomingMethodNode {
     /// The count of successful calls.
     success_property: UintProperty,
     /// A map from (observed) errors to the count of that error.
@@ -26,8 +26,8 @@ struct RpcMethodNode {
     node: Node,
 }
 
-impl RpcMethodNode {
-    /// Create a new `RpcMethodNode` at the supplied inspect `Node`.
+impl IncomingMethodNode {
+    /// Create a new `IncomingMethodNode` at the supplied inspect `Node`.
     fn new(node: Node) -> Self {
         let success_property = node.create_uint("Ok", 0);
         let error_properties = HashMap::new();
@@ -53,7 +53,7 @@ impl RpcMethodNode {
 /// The complete set of CredentialManager information exported through Inspect.
 pub struct InspectDiagnostics {
     /// Counters of success and failures for each RPC.
-    rpc_outcomes: Mutex<HashMap<RpcMethod, RpcMethodNode>>,
+    incoming_outcomes: Mutex<HashMap<IncomingMethod, IncomingMethodNode>>,
     /// The inspect node used to export the contents of this `InspectDiagnostics`.
     node: Node,
 }
@@ -64,16 +64,18 @@ impl InspectDiagnostics {
         // Record the initialization time, mainly so we always have some content.
         node.record_int("initialization_time_nanos", zx::Time::get_monotonic().into_nanos());
         // All other nodes are created later when they are needed.
-        Self { rpc_outcomes: Mutex::new(HashMap::new()), node: node.clone_weak() }
+        Self { incoming_outcomes: Mutex::new(HashMap::new()), node: node.clone_weak() }
     }
 }
 
 impl Diagnostics for InspectDiagnostics {
-    fn rpc_outcome(&self, method: RpcMethod, result: Result<(), CredentialError>) {
-        self.rpc_outcomes
+    fn incoming_outcome(&self, method: IncomingMethod, result: Result<(), CredentialError>) {
+        self.incoming_outcomes
             .lock()
             .entry(method)
-            .or_insert_with(|| RpcMethodNode::new(self.node.create_child(format!("{:?}", method))))
+            .or_insert_with(|| {
+                IncomingMethodNode::new(self.node.create_child(format!("{:?}", method)))
+            })
             .increment(result);
     }
 }
@@ -82,6 +84,7 @@ impl Diagnostics for InspectDiagnostics {
 mod tests {
     use {
         super::*,
+        fidl_fuchsia_identity_credential::CredentialError as CE,
         fuchsia_inspect::{assert_data_tree, testing::AnyProperty},
     };
 
@@ -98,15 +101,15 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn rpc_outcomes() {
+    fn incoming_outcomes() {
         let inspector = Inspector::new();
         let diagnostics = InspectDiagnostics::new(&inspector.root());
-        diagnostics.rpc_outcome(RpcMethod::AddCredential, Ok(()));
-        diagnostics.rpc_outcome(RpcMethod::RemoveCredential, Err(CredentialError::InvalidLabel));
-        diagnostics.rpc_outcome(RpcMethod::CheckCredential, Ok(()));
-        diagnostics.rpc_outcome(RpcMethod::AddCredential, Err(CredentialError::NoFreeLabel));
-        diagnostics.rpc_outcome(RpcMethod::AddCredential, Err(CredentialError::InternalError));
-        diagnostics.rpc_outcome(RpcMethod::RemoveCredential, Err(CredentialError::InvalidLabel));
+        diagnostics.incoming_outcome(IncomingMethod::AddCredential, Ok(()));
+        diagnostics.incoming_outcome(IncomingMethod::RemoveCredential, Err(CE::InvalidLabel));
+        diagnostics.incoming_outcome(IncomingMethod::CheckCredential, Ok(()));
+        diagnostics.incoming_outcome(IncomingMethod::AddCredential, Err(CE::NoFreeLabel));
+        diagnostics.incoming_outcome(IncomingMethod::AddCredential, Err(CE::InternalError));
+        diagnostics.incoming_outcome(IncomingMethod::RemoveCredential, Err(CE::InvalidLabel));
 
         assert_data_tree!(
             inspector,

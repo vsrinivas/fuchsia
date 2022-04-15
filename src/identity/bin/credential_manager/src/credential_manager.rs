@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        diagnostics::{Diagnostics, RpcMethod},
+        diagnostics::{Diagnostics, IncomingMethod},
         hash_tree::{
             HashTree, HashTreeError, BITS_PER_LEVEL, CHILDREN_PER_NODE, LABEL_LENGTH, TREE_HEIGHT,
         },
@@ -92,17 +92,18 @@ where
             CredentialManagerRequest::AddCredential { params, responder } => {
                 let mut resp = self.add_credential(&params).await;
                 responder.send(&mut resp).context("sending AddCredential response")?;
-                self.diagnostics.rpc_outcome(RpcMethod::AddCredential, resp.map(|_| ()));
+                self.diagnostics.incoming_outcome(IncomingMethod::AddCredential, resp.map(|_| ()));
             }
             CredentialManagerRequest::RemoveCredential { label, responder } => {
                 let mut resp = self.remove_credential(label).await;
                 responder.send(&mut resp).context("sending RemoveLabel response")?;
-                self.diagnostics.rpc_outcome(RpcMethod::RemoveCredential, resp);
+                self.diagnostics.incoming_outcome(IncomingMethod::RemoveCredential, resp);
             }
             CredentialManagerRequest::CheckCredential { params, responder } => {
                 let mut resp = self.check_credential(&params).await;
                 responder.send(&mut resp).context("sending CheckCredential response")?;
-                self.diagnostics.rpc_outcome(RpcMethod::CheckCredential, resp.map(|_| ()));
+                self.diagnostics
+                    .incoming_outcome(IncomingMethod::CheckCredential, resp.map(|_| ()));
             }
         }
         Ok(())
@@ -675,9 +676,9 @@ mod test {
         .detach();
 
         test.cm.handle_requests_for_stream(request_stream).await;
-        test.diag.assert_rpc_outcomes(&[
-            (RpcMethod::AddCredential, Ok(())),
-            (RpcMethod::RemoveCredential, Err(CredentialError::InvalidLabel)),
+        test.diag.assert_incoming_outcomes(&[
+            (IncomingMethod::AddCredential, Ok(())),
+            (IncomingMethod::RemoveCredential, Err(CredentialError::InvalidLabel)),
         ]);
     }
 }

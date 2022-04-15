@@ -14,7 +14,7 @@ use fidl_fuchsia_identity_credential::CredentialError;
 
 /// The different RPC methods that may be called on a CredentialManager.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum RpcMethod {
+pub enum IncomingMethod {
     AddCredential,
     RemoveCredential,
     CheckCredential,
@@ -22,6 +22,6 @@ pub enum RpcMethod {
 
 /// A standard interface for systems that record CredentialManger events for diagnostics purposes.
 pub trait Diagnostics {
-    /// Records the result of a CredentialManager RPC.
-    fn rpc_outcome(&self, method: RpcMethod, result: Result<(), CredentialError>);
+    /// Records the result of an incoming CredentialManager RPC.
+    fn incoming_outcome(&self, method: IncomingMethod, result: Result<(), CredentialError>);
 }

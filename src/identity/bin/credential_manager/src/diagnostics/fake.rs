@@ -3,33 +3,37 @@
 // found in the LICENSE file.
 
 use {
-    crate::diagnostics::{Diagnostics, RpcMethod},
+    crate::diagnostics::{Diagnostics, IncomingMethod},
     fidl_fuchsia_identity_credential::CredentialError,
     parking_lot::Mutex,
 };
 
 /// A fake `Diagnostics` implementation useful for verifying unittest.
 pub struct FakeDiagnostics {
-    /// An ordered list of the RPC events received.
-    rpc_outcomes: Mutex<Vec<(RpcMethod, Result<(), CredentialError>)>>,
+    /// An ordered list of the incoming RPC events received.
+    incoming_outcomes: Mutex<Vec<(IncomingMethod, Result<(), CredentialError>)>>,
 }
 
 impl FakeDiagnostics {
     /// Constructs a new `FakeDiagnostics`.
     pub fn new() -> Self {
-        FakeDiagnostics { rpc_outcomes: Mutex::new(Vec::new()) }
+        FakeDiagnostics { incoming_outcomes: Mutex::new(Vec::new()) }
     }
 
-    /// Panics if the supplied slice does not match the received rpc_outcomes.
-    pub fn assert_rpc_outcomes(&self, expected: &[(RpcMethod, Result<(), CredentialError>)]) {
-        let actual: &[(RpcMethod, Result<(), CredentialError>)] = &*self.rpc_outcomes.lock();
+    /// Panics if the supplied slice does not match the received incoming_outcomes.
+    pub fn assert_incoming_outcomes(
+        &self,
+        expected: &[(IncomingMethod, Result<(), CredentialError>)],
+    ) {
+        let actual: &[(IncomingMethod, Result<(), CredentialError>)] =
+            &*self.incoming_outcomes.lock();
         assert_eq!(actual, expected);
     }
 }
 
 impl Diagnostics for FakeDiagnostics {
-    fn rpc_outcome(&self, method: RpcMethod, result: Result<(), CredentialError>) {
-        self.rpc_outcomes.lock().push((method, result));
+    fn incoming_outcome(&self, method: IncomingMethod, result: Result<(), CredentialError>) {
+        self.incoming_outcomes.lock().push((method, result));
     }
 }
 
@@ -38,19 +42,21 @@ mod test {
     use super::*;
 
     #[fuchsia::test]
-    fn log_and_assert_rpc_outcomes() {
+    fn log_and_assert_incoming_outcomes() {
         let diagnostics = FakeDiagnostics::new();
 
-        diagnostics.rpc_outcome(RpcMethod::AddCredential, Ok(()));
-        diagnostics.rpc_outcome(RpcMethod::RemoveCredential, Err(CredentialError::InvalidLabel));
-        diagnostics.rpc_outcome(RpcMethod::CheckCredential, Ok(()));
-        diagnostics.rpc_outcome(RpcMethod::AddCredential, Err(CredentialError::NoFreeLabel));
+        diagnostics.incoming_outcome(IncomingMethod::AddCredential, Ok(()));
+        diagnostics
+            .incoming_outcome(IncomingMethod::RemoveCredential, Err(CredentialError::InvalidLabel));
+        diagnostics.incoming_outcome(IncomingMethod::CheckCredential, Ok(()));
+        diagnostics
+            .incoming_outcome(IncomingMethod::AddCredential, Err(CredentialError::NoFreeLabel));
 
-        diagnostics.assert_rpc_outcomes(&[
-            (RpcMethod::AddCredential, Ok(())),
-            (RpcMethod::RemoveCredential, Err(CredentialError::InvalidLabel)),
-            (RpcMethod::CheckCredential, Ok(())),
-            (RpcMethod::AddCredential, Err(CredentialError::NoFreeLabel)),
+        diagnostics.assert_incoming_outcomes(&[
+            (IncomingMethod::AddCredential, Ok(())),
+            (IncomingMethod::RemoveCredential, Err(CredentialError::InvalidLabel)),
+            (IncomingMethod::CheckCredential, Ok(())),
+            (IncomingMethod::AddCredential, Err(CredentialError::NoFreeLabel)),
         ]);
     }
 }
