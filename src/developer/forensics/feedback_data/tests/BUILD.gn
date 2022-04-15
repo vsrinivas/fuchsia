@@ -444,7 +444,7 @@ fuchsia_unittest_component("data_provider_controller_unittest") {
 fuchsia_component("datastore_unittest") {
   testonly = true
 
-  manifest = "meta/datastore_unittest.cmx"
+  manifest = "meta/datastore_unittest.cml"
 
   deps = [ ":datastore_unittest_exe" ]
 }
@@ -466,7 +466,7 @@ fuchsia_unittest_component("inspect_data_budget_unittest") {
 fuchsia_component("inspect_unittest") {
   testonly = true
 
-  manifest = "meta/inspect_unittest.cmx"
+  manifest = "meta/inspect_unittest.cml"
 
   deps = [ ":inspect_unittest_exe" ]
 }

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/components/fuchsia_unittest_component.gni")
 
 visibility = [ ":*" ]
 
@@ -224,11 +225,7 @@ fuchsia_component("process_launch_failure_unittest") {
   ]
 }
 
-fuchsia_component("limbo_client_unittest") {
-  testonly = true
-
-  manifest = "meta/limbo_client_unittest.cmx"
-
+fuchsia_unittest_component("limbo_client_unittest") {
   deps = [ ":limbo_client_unittest_exe" ]
 }
 
