@@ -117,14 +117,14 @@ namespace. This capability is
 
 As fshost finds block devices, it
 [reads headers from each device][fshost-magic-headers] to detect the filesystem
-type. It will initially find the [fvm][glossary.fvm] block, which contains
-partitions for other block devices. Fshost will use devfs to cause driver manager
-to run the fvm driver for this block device, which causes other block devices to
-appear for fshost to inspect. It does a similar thing when it discovers a
-[zxcrypt][zxcrypt] partition, as the disk will need to be decrypted to be
-usable. Once fvm and zxcrypt are loaded, fshost will find the appropriate block
-devices and start the [minfs][minfs] and [blobfs][blobfs] filesystems, which are
-needed for a fully functioning system.
+type. It will initially find the [Fuchsia Volume Manager][glossary.fuchsia-volume-manager]
+(fvm) block, which points to partitions for other block devices. Fshost will
+use devfs to cause driver manager to run the fvm driver for this block device,
+which causes other block devices to appear for fshost to inspect. It does a
+similar thing when it discovers a [zxcrypt][zxcrypt] partition, as the disk will
+need to be decrypted to be usable. Once fvm and zxcrypt are loaded, fshost will
+find the appropriate block devices and start the [minfs][minfs] and
+[blobfs][blobfs] filesystems, which are needed for a fully functioning system.
 
 #### appmgr
 

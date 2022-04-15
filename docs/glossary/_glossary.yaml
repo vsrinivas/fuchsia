@@ -700,7 +700,7 @@ environment to form a full <a href=\"/docs/glossary#fuchsia-sdk\">Fuchsia SDK</a
   allocated groups of blocks known as slices into a virtual block address space.
   The FVM partitions provide a block interface enabling filesystems to interact
   with it in a manner largely consistent with a regular block device."
-  see_also: ["<a href=\"/docs/concepts/filesystems/filesystems.md\">Filesystems</a>"]
+  see_also: ["<a href=\"/docs/concepts/filesystems/filesystems.md#fvm\">Filesystems</a>"]
   related_guides: [""]
   area: ["General", "Storage"]
 
