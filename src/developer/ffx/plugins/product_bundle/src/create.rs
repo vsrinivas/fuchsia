@@ -6,19 +6,17 @@
 //! line args pass in through `CreateCommand`.
 
 use {
-    anyhow::{anyhow, Result},
+    anyhow::Result,
     errors::ffx_error,
     ffx_product_bundle_args::{CreateCommand, ProductBundleType},
-    pathdiff::diff_paths,
+    fs_extra::dir::CopyOptions,
     sdk_metadata::{
         ElementType, EmuManifest, Envelope, FlashManifest, ImageBundle, Manifests, MetadataValue,
         PackageBundle, ProductBundleV1,
     },
     serde::{Deserialize, Serialize},
-    std::fs::{File, OpenOptions},
+    std::fs::{create_dir_all, File, OpenOptions},
     std::io::BufReader,
-    std::path::Path,
-    std::path::PathBuf,
 };
 
 /// Description of the build info. This is part of product-bundle metadata.
@@ -42,12 +40,10 @@ pub async fn create_product_bundle(cmd: &CreateCommand) -> Result<()> {
     );
     let name = format!("{}.{}", &build_info.product, &build_info.board).to_owned();
     let device_refs = vec![cmd.device_name.clone()];
-    let images_vec = vec![ImageBundle {
-        base_uri: format!("file:/{}", path_relative_to_dir(&cmd.images, &cmd.out)),
-        format: "files".to_owned(),
-    }];
+    let images_vec =
+        vec![ImageBundle { base_uri: "file:/images".to_owned(), format: "files".to_owned() }];
     let packages_vec = vec![PackageBundle {
-        repo_uri: format!("file:/{}", path_relative_to_dir(&cmd.packages, &cmd.out)),
+        repo_uri: "file:/packages".to_owned(),
         format: "files".to_owned(),
         blob_uri: None,
     }];
@@ -60,12 +56,11 @@ pub async fn create_product_bundle(cmd: &CreateCommand) -> Result<()> {
 
     let mut manifests = Manifests::default();
     if cmd.types.contains(ProductBundleType::EMU) {
-        manifests.emu = Some(create_product_bundle_for_emu(
-            &cmd.disk_image,
-            &cmd.zbi,
-            &cmd.multiboot_bin,
-            &cmd.images,
-        ));
+        manifests.emu = Some(EmuManifest {
+            disk_images: vec!["fvm.blk".to_owned()],
+            initial_ramdisk: "fuchsia.zbi".to_owned(),
+            kernel: "multiboot.bin".to_owned(),
+        });
     }
     if cmd.types.contains(ProductBundleType::FLASH) {
         manifests.flash = Some(create_product_bundle_for_flash(&cmd.flash_manifest)?);
@@ -73,7 +68,7 @@ pub async fn create_product_bundle(cmd: &CreateCommand) -> Result<()> {
 
     let product_bundle = ProductBundleV1 {
         description,
-        name,
+        name: name.clone(),
         device_refs,
         images: images_vec,
         packages: packages_vec,
@@ -82,48 +77,36 @@ pub async fn create_product_bundle(cmd: &CreateCommand) -> Result<()> {
         kind: ElementType::ProductBundle,
     };
 
-    let file =
-        OpenOptions::new().create(true).write(true).truncate(true).open(cmd.out.clone()).map_err(
-            |e| ffx_error!(r#"Cannot create product bundle file "{}": {}"#, cmd.out.display(), e),
-        )?;
+    let product_dir = cmd.out.join(&name);
+    let image_dir = product_dir.join("image");
+    let package_dir = product_dir.join("packages");
+    create_dir_all(&image_dir)?;
+    create_dir_all(&package_dir)?;
+    let file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(cmd.out.join("product_bundle.json"))
+        .map_err(|e| {
+            ffx_error!(r#"Cannot create product bundle file "{}": {}"#, cmd.out.display(), e)
+        })?;
     let envelope = Envelope::<ProductBundleV1>::from(product_bundle)?;
 
     serde_json::to_writer_pretty(&file, &envelope)?;
 
-    Ok(())
-}
+    // Copy images and package directory to the output directory.
+    let options = CopyOptions { copy_inside: true, ..CopyOptions::new() };
+    fs_extra::copy_items(&vec![&cmd.images], &image_dir, &options)?;
+    fs_extra::copy_items(&vec![&cmd.packages], &package_dir, &options)?;
+    fs_extra::copy_items(&vec![cmd.multiboot_bin.clone()], &image_dir, &options)?;
 
-fn create_product_bundle_for_emu(
-    disk_image: &str,
-    zbi: &str,
-    multiboot_bin: &str,
-    images: &str,
-) -> EmuManifest {
-    EmuManifest {
-        disk_images: vec![path_relative_to_dir(disk_image, images)],
-        initial_ramdisk: path_relative_to_dir(zbi, images),
-        kernel: path_relative_to_dir(multiboot_bin, images),
-    }
+    Ok(())
 }
 
 fn create_product_bundle_for_flash(flash_manifest: &str) -> Result<FlashManifest> {
     let flash: FlashManifest =
         File::open(flash_manifest).map(BufReader::new).map(serde_json::from_reader)??;
     Ok(flash)
-}
-
-/// Rebase |path| onto |dir| even if |dir| is not in the current working directory.
-fn path_relative_to_dir<P, Q>(path: P, dir: Q) -> String
-where
-    P: AsRef<Path> + std::fmt::Debug,
-    Q: AsRef<Path> + std::fmt::Debug,
-{
-    // Rebase the paths.
-    let path = diff_paths(&path, &dir)
-        .ok_or(anyhow!("Failed to get relative path for file: {:?}", path))
-        .unwrap_or(PathBuf::from(path.as_ref()));
-
-    path.display().to_string()
 }
 
 #[cfg(test)]
@@ -187,24 +170,28 @@ mod test {
     async fn test_pbm_for_emu() {
         let tempdir = tempfile::tempdir().unwrap();
         let root = tempdir.path();
-        let out_filename = root.join("product_bundle.json");
+        let out_dir = root.join("out");
         let build_info_path = root.join("build_info.json");
         create_build_info(build_info_path.clone());
+        let images = root.join("images");
+        let packages = root.join("amber-files");
+        create_dir_all(&images).unwrap();
+        create_dir_all(&packages).unwrap();
+        let multiboot_bin = images.join("multiboot.bin");
+        write_file(multiboot_bin.clone(), "".as_bytes());
 
         let cmd = CreateCommand {
             types: ProductBundleTypes { types: vec![ProductBundleType::EMU] },
-            packages: String::from("../amber-files"),
-            images: String::from("../images"),
-            multiboot_bin: String::from("../images/multiboot.bin"),
+            packages: packages.into_os_string().into_string().unwrap(),
+            images: images.into_os_string().into_string().unwrap(),
+            multiboot_bin: multiboot_bin.into_os_string().into_string().unwrap(),
             device_name: String::from("x64"),
-            disk_image: String::from("../images/fvm.blk"),
-            zbi: String::from("../images/fuchsia.zbi"),
             build_info: build_info_path.into_os_string().into_string().unwrap(),
             flash_manifest: String::from(""),
-            out: out_filename.clone(),
+            out: out_dir.clone(),
         };
         create_product_bundle(&cmd).await.unwrap();
-        let envelope: Envelope<ProductBundleV1> = File::open(&out_filename)
+        let envelope: Envelope<ProductBundleV1> = File::open(&out_dir.join("product_bundle.json"))
             .map(BufReader::new)
             .map(serde_json::from_reader)
             .unwrap()
@@ -222,7 +209,13 @@ mod test {
     async fn test_pbm_for_flash() {
         let tempdir = tempfile::tempdir().unwrap();
         let root = tempdir.path();
-        let out_filename = root.join("product_bundle.json");
+        let out_dir = root.join("out");
+        let images = root.join("images");
+        let packages = root.join("amber-files");
+        create_dir_all(&images).unwrap();
+        create_dir_all(&packages).unwrap();
+        let multiboot_bin = images.join("multiboot.bin");
+        write_file(multiboot_bin.clone(), "".as_bytes());
 
         let flash_manifest_path = root.join("flash_manifest.json");
         create_flash_manifest(flash_manifest_path.clone());
@@ -232,18 +225,16 @@ mod test {
 
         let cmd = CreateCommand {
             types: ProductBundleTypes { types: vec![ProductBundleType::FLASH] },
-            packages: String::from("../amber-files"),
-            images: String::from("../images"),
-            multiboot_bin: String::from("../images/multiboot.bin"),
+            packages: packages.into_os_string().into_string().unwrap(),
+            images: images.into_os_string().into_string().unwrap(),
+            multiboot_bin: multiboot_bin.into_os_string().into_string().unwrap(),
             device_name: String::from("x64"),
-            disk_image: String::from("../images/fvm.blk"),
-            zbi: String::from("../images/fuchsia.zbi"),
             build_info: build_info_path.into_os_string().into_string().unwrap(),
             flash_manifest: flash_manifest_path.into_os_string().into_string().unwrap(),
-            out: out_filename.clone(),
+            out: out_dir.clone(),
         };
         create_product_bundle(&cmd).await.unwrap();
-        let envelope: Envelope<ProductBundleV1> = File::open(&out_filename)
+        let envelope: Envelope<ProductBundleV1> = File::open(&out_dir.join("product_bundle.json"))
             .map(BufReader::new)
             .map(serde_json::from_reader)
             .unwrap()

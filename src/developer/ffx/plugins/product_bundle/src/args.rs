@@ -111,14 +111,6 @@ pub struct CreateCommand {
     #[argh(option, short = 'd', default = "String::from(\"\")")]
     pub device_name: String,
 
-    /// path to fvm.blk file.
-    #[argh(option, short = 'k', default = "String::from(\"\")")]
-    pub disk_image: String,
-
-    /// path to fuchsia.zbi file.
-    #[argh(option, short = 'z', default = "String::from(\"\")")]
-    pub zbi: String,
-
     /// path to build_info.json file.
     #[argh(option, short = 'b')]
     pub build_info: String,
@@ -127,7 +119,7 @@ pub struct CreateCommand {
     #[argh(option, short = 'f', default = "String::from(\"\")")]
     pub flash_manifest: String,
 
-    /// path to output product_bundle.json.
-    #[argh(option, short = 'o', default = "PathBuf::from(\"./product_bundle.json\")")]
+    /// path to output directory.
+    #[argh(option, short = 'o', default = "PathBuf::from(\".\")")]
     pub out: PathBuf,
 }
