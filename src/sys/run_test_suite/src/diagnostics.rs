@@ -3,13 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::artifact,
     anyhow::Error,
-    artifact::ArtifactSender,
     diagnostics_data::{LogsData, Severity},
     fidl_fuchsia_test_manager::LogsIteratorOption,
-    futures::{channel::mpsc, Stream, StreamExt, TryStreamExt},
-    log::error,
+    futures::{Stream, TryStreamExt},
     std::io::Write,
 };
 
@@ -50,37 +47,16 @@ impl From<Vec<String>> for LogCollectionOutcome {
     }
 }
 
+/// Collects logs from |stream|, filters out low severity logs, and stores the results
+/// in |log_artifact|. Returns any high severity restricted logs that are encountered.
 pub(crate) async fn collect_logs<S, W>(
-    syslog: S,
+    mut stream: S,
     mut log_artifact: W,
     options: LogCollectionOptions,
 ) -> Result<LogCollectionOutcome, Error>
 where
     S: Stream<Item = Result<LogsData, Error>> + Unpin,
     W: Write,
-{
-    let (send, mut recv) = mpsc::channel(32);
-    let fut_1 = collect_logs_inner(syslog, send.into(), options);
-    let fut_2 = async move {
-        while let Some(artifact) = recv.next().await {
-            let artifact_string = match artifact {
-                artifact::Artifact::SuiteLogMessage(s) => s,
-            };
-            writeln!(log_artifact, "{}", artifact_string)?;
-        }
-        Result::<_, std::io::Error>::Ok(())
-    };
-    let (outcome, _) = futures::future::join(fut_1, fut_2).await;
-    outcome
-}
-
-async fn collect_logs_inner<S>(
-    mut stream: S,
-    mut artifact_sender: ArtifactSender,
-    options: LogCollectionOptions,
-) -> Result<LogCollectionOutcome, Error>
-where
-    S: Stream<Item = Result<LogsData, Error>> + Unpin,
 {
     let mut restricted_logs = vec![];
     while let Some(mut log) = stream.try_next().await? {
@@ -98,10 +74,7 @@ where
         let log_repr = format!("{}", log);
 
         if should_display {
-            artifact_sender
-                .send_suite_log_msg(&log_repr)
-                .await
-                .unwrap_or_else(|e| error!("Failed to write log: {:?}", e));
+            writeln!(log_artifact, "{}", log_repr)?;
         }
 
         if is_restricted {

@@ -60,7 +60,6 @@ rustc_library("lib") {
   }
 
   sources = [
-    "src/artifact.rs",
     "src/cancel.rs",
     "src/diagnostics.rs",
     "src/error.rs",

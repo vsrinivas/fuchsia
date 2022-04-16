@@ -22,7 +22,6 @@ use {
     std::sync::Arc,
 };
 
-mod artifact;
 mod cancel;
 pub mod diagnostics;
 mod error;
