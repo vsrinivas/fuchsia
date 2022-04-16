@@ -884,7 +884,8 @@ int main(int argc, char** argv) {
       snprintf(block_device_path, sizeof(block_device_path), block_device_path_template, tmpdir);
       int fd = mkstemp(block_device_path);
       modify_partition_table_info_t info = {};
-      strncpy(info.block_device_path, wipe_partition_tables_device_path, ZX_MAX_NAME_LEN);
+      strncpy(info.block_device_path, wipe_partition_tables_device_path,
+              sizeof(info.block_device_path) - 1);
       int written = write(fd, &info, sizeof(info));
       status = written == sizeof(info) ? 0 : -1;
       if (status == 0) {
@@ -898,7 +899,8 @@ int main(int argc, char** argv) {
       snprintf(block_device_path, sizeof(block_device_path), block_device_path_template, tmpdir);
       int fd = mkstemp(block_device_path);
       modify_partition_table_info_t info = {};
-      strncpy(info.block_device_path, init_partition_tables_device_path, ZX_MAX_NAME_LEN);
+      strncpy(info.block_device_path, init_partition_tables_device_path,
+              sizeof(info.block_device_path) - 1);
       int written = write(fd, &info, sizeof(info));
       status = written == sizeof(info) ? 0 : -1;
       if (status == 0) {
