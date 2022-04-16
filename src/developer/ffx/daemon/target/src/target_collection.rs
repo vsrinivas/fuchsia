@@ -77,6 +77,10 @@ impl TargetCollection {
         }
     }
 
+    pub fn remove_ephemeral_target(&self, target: Rc<Target>) -> bool {
+        self.targets.borrow_mut().remove(&target.id()).is_some()
+    }
+
     fn find_matching_target(&self, new_target: &Target) -> Option<Rc<Target>> {
         // Look for a target by primary ID first
         let new_ids = new_target.ids();

@@ -183,9 +183,18 @@ protocol TargetCollection {
         target_handle server_end:Target;
     }) -> (struct {}) error OpenTargetError;
 
-    /// Manually adds a target that cannot be discovered via mDNS.
+    /// Manually adds a target that cannot be discovered via mDNS. This target
+    /// will be retained indefinitely, including across daemon restarts.
     AddTarget(struct {
         ip TargetAddrInfo;
+    }) -> ();
+
+    /// Manually adds a target that cannot be discovered via mDNS. This target
+    /// will be retained in the target collection until it establishes an RCS
+    /// connection, or until the associated connection timeout has elapsed.
+    AddEphemeralTarget(struct {
+        ip TargetAddrInfo;
+        connect_timeout_seconds uint64;
     }) -> ();
 
     /// Manually remove a target from the target list.

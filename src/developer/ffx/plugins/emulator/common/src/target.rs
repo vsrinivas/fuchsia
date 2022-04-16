@@ -8,6 +8,18 @@ use fidl_fuchsia_net as net;
 use std::time::Duration;
 use timeout::timeout;
 
+// This is the duration for which the FFX daemon's target collection will retain the manual entry
+// for this emulator before it's allowed to expire. The value of this timeout is based on these
+// requirements:
+//   A typical FEMU boot time is on the order of 30-60 seconds.
+//   The manual entry should not expire while the emulator is still booting.
+//   Once the emulator makes an RCS connection with the daemon, it should be allowed to expire on
+//       disconnect.
+//   If the emulator fails to boot, the entry should expire in a reasonable amount of time.
+// Based on these, we provide a timeout of 120 seconds, to allow for unexpectedly long boot times
+// while also removing it promptly on failure.
+const TARGET_LIFETIME: Duration = Duration::from_secs(120);
+
 /// Equivalent to a call to `ffx target add`. This adds a target at `127.0.0.1:ssh_port`.
 /// At this time, this is restricted to IPV4 only, as QEMU's DHCP server gets in the way of port
 /// mapping on IPV6.
@@ -20,7 +32,7 @@ pub async fn add_target(proxy: &bridge::TargetCollectionProxy, ssh_port: u16) ->
         scope_id: 0,
     });
 
-    proxy.add_target(&mut addr).await?;
+    proxy.add_ephemeral_target(&mut addr, TARGET_LIFETIME.as_secs()).await?;
     log::debug!("[emulator] Added target {:?}", &addr);
     Ok(())
 }
@@ -91,8 +103,13 @@ mod test {
         test: T,
     ) -> TargetCollectionProxy {
         setup_fake_target_proxy(move |req| match req {
-            TargetCollectionRequest::AddTarget { ip, responder } => {
+            TargetCollectionRequest::AddEphemeralTarget {
+                ip,
+                connect_timeout_seconds,
+                responder,
+            } => {
                 test(ip);
+                assert_eq!(connect_timeout_seconds, TARGET_LIFETIME.as_secs());
                 responder.send().unwrap();
             }
             _ => assert!(false),

@@ -6,8 +6,7 @@ use anyhow::{anyhow, Context as _, Result};
 use async_lock::Mutex;
 use async_trait::async_trait;
 use ffx_config::{self, api::ConfigError, ConfigLevel};
-use std::collections::HashSet;
-use std::iter::FromIterator;
+use serde_json::{json, Map, Value};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[cfg(test)]
@@ -17,32 +16,26 @@ const MANUAL_TARGETS: &'static str = "targets.manual";
 
 #[async_trait(?Send)]
 pub trait ManualTargets: Sync {
-    async fn storage_set(&self, targets: Vec<String>) -> Result<()>;
-    async fn storage_get(&self) -> Result<Vec<String>>;
+    async fn storage_set(&self, targets: Value) -> Result<()>;
+    async fn storage_get(&self) -> Result<Value>;
 
-    async fn get(&self) -> Result<Vec<String>> {
+    async fn get(&self) -> Result<Value> {
         self.storage_get().await
     }
 
-    async fn get_or_default(&self) -> Vec<String> {
-        self.get().await.unwrap_or(Vec::new())
+    async fn get_or_default(&self) -> Map<String, Value> {
+        self.get().await.unwrap_or(Value::default()).as_object().unwrap_or(&Map::new()).clone()
     }
 
-    async fn add(&self, target: String) -> Result<()> {
+    async fn add(&self, target: String, expiry: Option<u64>) -> Result<()> {
         let mut targets = self.get_or_default().await;
-        if !targets.contains(&target) {
-            targets.push(target);
-            self.storage_set(targets.into()).await
-        } else {
-            Ok(())
-        }
+        targets.insert(target, json!(expiry));
+        self.storage_set(targets.into()).await
     }
 
     async fn remove(&self, target: String) -> Result<()> {
-        let targets = self.get_or_default().await;
-        let mut set = HashSet::<String>::from_iter(targets.into_iter());
-        set.remove(&target);
-        let targets = set.into_iter().collect::<Vec<String>>();
+        let mut targets = self.get_or_default().await;
+        targets.remove(&target);
         self.storage_set(targets.into()).await
     }
 }
@@ -52,24 +45,24 @@ pub struct Config();
 
 #[async_trait(?Send)]
 impl ManualTargets for Config {
-    async fn storage_get(&self) -> Result<Vec<String>> {
+    async fn storage_get(&self) -> Result<Value> {
         ffx_config::get((MANUAL_TARGETS, ConfigLevel::User)).await.context("manual_targets::get")
     }
 
-    async fn storage_set(&self, targets: Vec<String>) -> Result<()> {
+    async fn storage_set(&self, targets: Value) -> Result<()> {
         ffx_config::set((MANUAL_TARGETS, ConfigLevel::User), targets.into()).await
     }
 }
 
 #[derive(Default)]
 pub struct Mock {
-    targets: Mutex<Option<Vec<String>>>,
+    targets: Mutex<Option<Value>>,
     set_count: AtomicUsize,
 }
 
 #[async_trait(?Send)]
 impl ManualTargets for Mock {
-    async fn storage_get(&self) -> Result<Vec<String>> {
+    async fn storage_get(&self) -> Result<Value> {
         self.targets
             .lock()
             .await
@@ -78,8 +71,13 @@ impl ManualTargets for Mock {
             .unwrap_or(Err(anyhow::Error::new(ConfigError::new(anyhow!("value missing")))))
     }
 
-    async fn storage_set(&self, targets: Vec<String>) -> Result<()> {
-        self.set_count.fetch_add(1, Ordering::SeqCst);
+    async fn storage_set(&self, targets: Value) -> Result<()> {
+        let _ = self
+            .set_count
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |_| {
+                Some(targets.as_object().unwrap().len())
+            })
+            .expect("Couldn't update target count for Mock.");
         self.targets.lock().await.replace(targets);
         Ok(())
     }
@@ -87,8 +85,8 @@ impl ManualTargets for Mock {
 
 impl Mock {
     #[cfg(test)]
-    pub fn new(targets: Vec<String>) -> Self {
-        Self { targets: Mutex::new(Some(targets)), ..Self::default() }
+    pub fn new(targets: Map<String, Value>) -> Self {
+        Self { targets: Mutex::new(Some(Value::from(targets))), ..Self::default() }
     }
 }
 
@@ -99,6 +97,7 @@ mod test {
 
     mod real_impl {
         use super::*;
+        use serde_json::json;
         use serial_test::serial;
 
         #[fuchsia_async::run_singlethreaded(test)]
@@ -108,15 +107,16 @@ mod test {
 
             ffx_config::set(
                 (MANUAL_TARGETS, ConfigLevel::User),
-                vec!["127.0.0.1:8022".to_string(), "127.0.0.1:8023".to_string()].into(),
+                json!({"127.0.0.1:8022": 0, "127.0.0.1:8023": 12345}),
             )
             .await
             .unwrap();
 
             let mt = Config::default();
-            let targets = mt.get().await.unwrap();
-            assert!(targets.contains(&"127.0.0.1:8022".to_string()));
-            assert!(targets.contains(&"127.0.0.1:8023".to_string()));
+            let value = mt.get().await.unwrap();
+            let targets = value.as_object().unwrap();
+            assert!(targets.contains_key("127.0.0.1:8022"));
+            assert!(targets.contains_key("127.0.0.1:8023"));
         }
 
         #[fuchsia_async::run_singlethreaded(test)]
@@ -125,14 +125,16 @@ mod test {
             ffx_config::init(&[], None, None).unwrap();
 
             let mt = Config::default();
-            mt.add("127.0.0.1:8022".to_string()).await.unwrap();
+            mt.add("127.0.0.1:8022".to_string(), None).await.unwrap();
+            mt.add("127.0.0.1:8023".to_string(), Some(12345)).await.unwrap();
             // duplicate additions are ignored
-            mt.add("127.0.0.1:8022".to_string()).await.unwrap();
-            mt.add("127.0.0.1:8023".to_string()).await.unwrap();
+            mt.add("127.0.0.1:8022".to_string(), None).await.unwrap();
+            mt.add("127.0.0.1:8023".to_string(), Some(12345)).await.unwrap();
 
-            let targets = mt.get().await.unwrap();
-            assert!(targets.contains(&"127.0.0.1:8022".to_string()));
-            assert!(targets.contains(&"127.0.0.1:8023".to_string()));
+            let value = mt.get().await.unwrap();
+            let targets = value.as_object().unwrap();
+            assert!(targets.contains_key("127.0.0.1:8022"));
+            assert!(targets.contains_key("127.0.0.1:8023"));
         }
 
         #[fuchsia_async::run_singlethreaded(test)]
@@ -142,19 +144,22 @@ mod test {
 
             ffx_config::set(
                 (MANUAL_TARGETS, ConfigLevel::User),
-                vec!["127.0.0.1:8022".to_string()].into(),
+                json!({"127.0.0.1:8022": 0, "127.0.0.1:8023": 12345}),
             )
             .await
             .unwrap();
 
             let mt = Config::default();
-            let targets = mt.get().await.unwrap();
-            assert_eq!(targets, vec!["127.0.0.1:8022"]);
+            let value = mt.get().await.unwrap();
+            let targets = value.as_object().unwrap();
+            assert!(targets.contains_key("127.0.0.1:8022"));
+            assert!(targets.contains_key("127.0.0.1:8023"));
 
             mt.remove("127.0.0.1:8022".to_string()).await.unwrap();
+            mt.remove("127.0.0.1:8023".to_string()).await.unwrap();
 
             let targets = mt.get_or_default().await;
-            assert_eq!(targets, Vec::<String>::new());
+            assert_eq!(targets, Map::<String, Value>::new());
         }
     }
 
@@ -163,61 +168,77 @@ mod test {
 
         #[fuchsia_async::run_singlethreaded(test)]
         async fn test_new() {
-            let mt = Mock::new(vec!["127.0.0.1:8022".to_string()]);
-            assert_eq!(mt.get().await.unwrap(), vec!["127.0.0.1:8022".to_string()]);
+            let mut map = Map::new();
+            map.insert("127.0.0.1:8022".to_string(), json!(0));
+            let mt = Mock::new(map);
+            let value = mt.get().await.unwrap();
+            let targets = value.as_object().unwrap();
+            assert!(targets.contains_key("127.0.0.1:8022"));
         }
 
         #[fuchsia_async::run_singlethreaded(test)]
         async fn test_default() {
             let mt = Mock::default();
-            assert_eq!(mt.get_or_default().await, Vec::<String>::new());
+            assert_eq!(mt.get_or_default().await, Map::<String, Value>::new());
         }
 
         #[fuchsia_async::run_singlethreaded(test)]
         async fn test_get_manual_targets() {
-            let mt = Mock::new(vec!["127.0.0.1:8022".to_string(), "127.0.0.1:8023".to_string()]);
-            let targets = mt.get().await.unwrap();
-            assert!(targets.contains(&"127.0.0.1:8022".to_string()));
-            assert!(targets.contains(&"127.0.0.1:8023".to_string()));
+            let mut map = Map::new();
+            map.insert("127.0.0.1:8022".to_string(), json!(0));
+            map.insert("127.0.0.1:8023".to_string(), json!(0));
+            let mt = Mock::new(map);
+            let value = mt.get().await.unwrap();
+            let targets = value.as_object().unwrap();
+            assert!(targets.contains_key("127.0.0.1:8022"));
+            assert!(targets.contains_key("127.0.0.1:8023"));
         }
 
         #[fuchsia_async::run_singlethreaded(test)]
         async fn test_add_manual_target() {
             let mt = Mock::default();
-            mt.add("127.0.0.1:8022".to_string()).await.unwrap();
+            mt.add("127.0.0.1:8022".to_string(), None).await.unwrap();
+            mt.add("127.0.0.1:8023".to_string(), Some(12345)).await.unwrap();
             // duplicate additions are ignored
-            mt.add("127.0.0.1:8022".to_string()).await.unwrap();
-            mt.add("127.0.0.1:8023".to_string()).await.unwrap();
+            mt.add("127.0.0.1:8022".to_string(), None).await.unwrap();
+            mt.add("127.0.0.1:8023".to_string(), Some(12345)).await.unwrap();
 
-            let targets = mt.get().await.unwrap();
-            assert!(targets.contains(&"127.0.0.1:8022".to_string()));
-            assert!(targets.contains(&"127.0.0.1:8023".to_string()));
+            let value = mt.get().await.unwrap();
+            let targets = value.as_object().unwrap();
+            assert!(targets.contains_key("127.0.0.1:8022"));
+            assert!(targets.contains_key("127.0.0.1:8023"));
         }
 
         #[fuchsia_async::run_singlethreaded(test)]
         async fn test_remove_manual_target() {
-            let mt = Mock::new(vec!["127.0.0.1:8022".to_string()]);
-            let targets = mt.get().await.unwrap();
-            assert_eq!(targets, vec!["127.0.0.1:8022"]);
+            let mut map = Map::new();
+            map.insert("127.0.0.1:8022".to_string(), json!(0));
+            map.insert("127.0.0.1:8023".to_string(), json!(12345));
+            let mt = Mock::new(map);
+            let value = mt.get().await.unwrap();
+            let targets = value.as_object().unwrap();
+            assert!(targets.contains_key("127.0.0.1:8022"));
+            assert!(targets.contains_key("127.0.0.1:8023"));
 
             mt.remove("127.0.0.1:8022".to_string()).await.unwrap();
+            mt.remove("127.0.0.1:8023".to_string()).await.unwrap();
 
             let targets = mt.get_or_default().await;
-            assert_eq!(targets, Vec::<String>::new());
+            assert!(targets.is_empty());
         }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     #[serial]
     async fn test_repeated_adds_do_not_rewrite_storage() {
-        let mt = Mock::new(vec![]);
-        mt.add("127.0.0.1:8022".to_string()).await.unwrap();
+        let mt = Mock::new(Map::new());
+        mt.add("127.0.0.1:8022".to_string(), None).await.unwrap();
         assert_eq!(mt.set_count.load(Ordering::SeqCst), 1);
-        mt.add("127.0.0.1:8022".to_string()).await.unwrap();
+        mt.add("127.0.0.1:8022".to_string(), None).await.unwrap();
         assert_eq!(mt.set_count.load(Ordering::SeqCst), 1);
-        mt.add("127.0.0.1:8023".to_string()).await.unwrap();
+        mt.add("127.0.0.1:8023".to_string(), Some(12345)).await.unwrap();
         assert_eq!(mt.set_count.load(Ordering::SeqCst), 2);
-        mt.add("127.0.0.1:8023".to_string()).await.unwrap();
+        mt.add("127.0.0.1:8023".to_string(), Some(12345)).await.unwrap();
         assert_eq!(mt.set_count.load(Ordering::SeqCst), 2);
     }
 }

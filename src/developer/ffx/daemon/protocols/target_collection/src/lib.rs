@@ -20,7 +20,7 @@ use {
     protocols::prelude::*,
     std::net::SocketAddr,
     std::rc::Rc,
-    std::time::Instant,
+    std::time::{Duration, Instant, SystemTime, UNIX_EPOCH},
     tasks::TaskManager,
 };
 
@@ -51,22 +51,42 @@ impl Default for TargetCollectionProtocol {
 }
 
 impl TargetCollectionProtocol {
-    async fn add_manual_target(&self, tc: &TargetCollection, addr: SocketAddr) {
-        let tae = TargetAddrEntry::new(addr.into(), Utc::now(), TargetAddrType::Manual);
-        let _ = self.manual_targets.add(format!("{}", addr)).await.map_err(|e| {
+    async fn add_manual_target(
+        &self,
+        tc: &TargetCollection,
+        addr: SocketAddr,
+        lifetime: Option<Duration>,
+    ) {
+        // Expiry is the SystemTime (represented as seconds after the UNIX_EPOCH) at which a manual
+        // target is allowed to expire and enter the Disconnected state. If no lifetime is given,
+        // the target is allowed to persist indefinitely. This is persisted in FFX config.
+        // Timeout is the number of seconds until the expiry is met; it is used in-memory only.
+        let (timeout, expiry, last_seen) = if lifetime.is_none() {
+            (None, None, None)
+        } else {
+            let timeout = SystemTime::now() + lifetime.unwrap();
+            let expiry = timeout.duration_since(UNIX_EPOCH).unwrap_or(Duration::ZERO).as_secs();
+            (Some(timeout), Some(expiry), Some(Instant::now()))
+        };
+
+        let tae = TargetAddrEntry::new(addr.into(), Utc::now(), TargetAddrType::Manual(timeout));
+        let _ = self.manual_targets.add(format!("{}", addr), expiry).await.map_err(|e| {
             log::error!("Unable to persist manual target: {:?}", e);
         });
         let target = Target::new_with_addr_entries(Option::<String>::None, Some(tae).into_iter());
         if addr.port() != 0 {
             target.set_ssh_port(Some(addr.port()));
         }
-        target.update_connection_state(|_| TargetConnectionState::Manual);
+
+        target.update_connection_state(|_| TargetConnectionState::Manual(last_seen));
         let target = tc.merge_insert(target);
         target.run_host_pipe();
     }
 
     async fn load_manual_targets(&self, tc: &TargetCollection) {
-        for str in self.manual_targets.get_or_default().await {
+        // The FFX config value for a manual target contains a target ID (typically the IP:PORT
+        // combo) and a timeout (which is None, if the target is indefinitely persistent).
+        for (str, val) in self.manual_targets.get_or_default().await {
             let sa = match str.parse::<std::net::SocketAddr>() {
                 Ok(sa) => sa,
                 Err(e) => {
@@ -74,7 +94,26 @@ impl TargetCollectionProtocol {
                     continue;
                 }
             };
-            self.add_manual_target(tc, sa).await;
+            let secs = val.as_u64();
+            if secs.is_some() {
+                // If the manual target has a lifetime specified, check to see if it's passed. If
+                // so, we remove it from the collection instead of reloading it.
+                let lifetime_from_epoch = Duration::from_secs(secs.unwrap());
+                let now = SystemTime::now();
+                if let Ok(elapsed) = now.duration_since(UNIX_EPOCH) {
+                    if elapsed < lifetime_from_epoch {
+                        let remaining = lifetime_from_epoch - elapsed;
+                        self.add_manual_target(tc, sa, Some(remaining)).await;
+                    } else {
+                        let _ = self.manual_targets.remove(format!("{}", sa)).await.map_err(|e| {
+                            log::error!("Unable to remove persisted manual target: {:?}", e);
+                        });
+                    }
+                }
+            } else {
+                // Manual targets without a lifetime are always reloaded.
+                self.add_manual_target(tc, sa, None).await;
+            }
         }
     }
 }
@@ -143,12 +182,26 @@ impl FidlProtocol for TargetCollectionProtocol {
             }
             bridge::TargetCollectionRequest::AddTarget { ip, responder } => {
                 // TODO(awdavies): The related tests for this are still implemented in
-                // daemon/src/daaemon.rs and should be migrated here once:
+                // daemon/src/daemon.rs and should be migrated here once:
                 // a.) The previous AddTargets function is deprecated, and
                 // b.) All references to manual_targets are moved here instead
                 //     of in the daemon.
                 let addr = target_addr_info_to_socketaddr(ip);
-                self.add_manual_target(&target_collection, addr).await;
+                self.add_manual_target(&target_collection, addr, None).await;
+                responder.send().map_err(Into::into)
+            }
+            bridge::TargetCollectionRequest::AddEphemeralTarget {
+                ip,
+                connect_timeout_seconds,
+                responder,
+            } => {
+                let addr = target_addr_info_to_socketaddr(ip);
+                self.add_manual_target(
+                    &target_collection,
+                    addr,
+                    Some(Duration::from_secs(connect_timeout_seconds)),
+                )
+                .await;
                 responder.send().map_err(Into::into)
             }
             bridge::TargetCollectionRequest::RemoveTarget { target_id, responder } => {
@@ -288,6 +341,7 @@ mod tests {
     use async_channel::{Receiver, Sender};
     use fidl_fuchsia_net::{IpAddress, Ipv6Address};
     use protocols::testing::FakeDaemonBuilder;
+    use serde_json::{json, Map, Value};
     use std::cell::RefCell;
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -521,16 +575,31 @@ mod tests {
             .register_fidl_protocol::<FakeFastboot>()
             .inject_fidl_protocol(tc_impl.clone())
             .build();
-        tc_impl.borrow().manual_targets.add("127.0.0.1:8022".to_string()).await.unwrap();
+        // Set one timeout 1 hour in the future; the other will have no timeout.
+        let expiry = (SystemTime::now() + Duration::from_secs(3600))
+            .duration_since(UNIX_EPOCH)
+            .expect("Problem getting a duration relative to epoch.")
+            .as_secs();
+        tc_impl.borrow().manual_targets.add("127.0.0.1:8022".to_string(), None).await.unwrap();
+        tc_impl
+            .borrow()
+            .manual_targets
+            .add("127.0.0.1:8023".to_string(), Some(expiry))
+            .await
+            .unwrap();
         let target_collection =
             Context::new(fake_daemon.clone()).get_target_collection().await.unwrap();
         tc_impl.borrow().load_manual_targets(&target_collection).await;
         let proxy = fake_daemon.open_proxy::<bridge::TargetCollectionMarker>().await;
         let res = list_targets(None, &proxy).await;
-        assert_eq!(1, res.len());
+        assert_eq!(2, res.len());
         assert!(proxy.remove_target("127.0.0.1:8022").await.unwrap());
+        assert!(proxy.remove_target("127.0.0.1:8023").await.unwrap());
         assert_eq!(0, list_targets(None, &proxy).await.len());
-        assert_eq!(tc_impl.borrow().manual_targets.get_or_default().await, Vec::<String>::new());
+        assert_eq!(
+            tc_impl.borrow().manual_targets.get_or_default().await,
+            Map::<String, Value>::new()
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -550,6 +619,22 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_add_ephemeral_target() {
+        let fake_daemon = FakeDaemonBuilder::new()
+            .register_fidl_protocol::<FakeMdns>()
+            .register_fidl_protocol::<FakeFastboot>()
+            .register_fidl_protocol::<TargetCollectionProtocol>()
+            .build();
+        let target_addr = TargetAddr::new("[::1]:0").unwrap();
+        let proxy = fake_daemon.open_proxy::<bridge::TargetCollectionMarker>().await;
+        proxy.add_ephemeral_target(&mut target_addr.into(), 3600).await.unwrap();
+        let target_collection = Context::new(fake_daemon).get_target_collection().await.unwrap();
+        let target = target_collection.get(target_addr.to_string()).unwrap();
+        assert_eq!(target.addrs().len(), 1);
+        assert_eq!(target.addrs().into_iter().next(), Some(target_addr));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_add_target_with_port() {
         let fake_daemon = FakeDaemonBuilder::new()
             .register_fidl_protocol::<FakeMdns>()
@@ -559,6 +644,22 @@ mod tests {
         let target_addr = TargetAddr::new("[::1]:8022").unwrap();
         let proxy = fake_daemon.open_proxy::<bridge::TargetCollectionMarker>().await;
         proxy.add_target(&mut target_addr.into()).await.unwrap();
+        let target_collection = Context::new(fake_daemon).get_target_collection().await.unwrap();
+        let target = target_collection.get(target_addr.to_string()).unwrap();
+        assert_eq!(target.addrs().len(), 1);
+        assert_eq!(target.addrs().into_iter().next(), Some(target_addr));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_add_ephemeral_target_with_port() {
+        let fake_daemon = FakeDaemonBuilder::new()
+            .register_fidl_protocol::<FakeMdns>()
+            .register_fidl_protocol::<FakeFastboot>()
+            .register_fidl_protocol::<TargetCollectionProtocol>()
+            .build();
+        let target_addr = TargetAddr::new("[::1]:8022").unwrap();
+        let proxy = fake_daemon.open_proxy::<bridge::TargetCollectionMarker>().await;
+        proxy.add_ephemeral_target(&mut target_addr.into(), 3600).await.unwrap();
         let target_collection = Context::new(fake_daemon).get_target_collection().await.unwrap();
         let target = target_collection.get(target_addr.to_string()).unwrap();
         assert_eq!(target.addrs().len(), 1);
@@ -586,7 +687,47 @@ mod tests {
             .unwrap();
         let target_collection = Context::new(fake_daemon).get_target_collection().await.unwrap();
         assert_eq!(1, target_collection.targets().len());
-        assert_eq!(tc_impl.borrow().manual_targets.get().await.unwrap(), vec!["[fe80::1%1]:8022"]);
+        let mut map = Map::<String, Value>::new();
+        map.insert("[fe80::1%1]:8022".to_string(), Value::Null);
+        assert_eq!(tc_impl.borrow().manual_targets.get().await.unwrap(), json!(map));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_persisted_ephemeral_target_add() {
+        let tc_impl = Rc::new(RefCell::new(TargetCollectionProtocol::default()));
+        let fake_daemon = FakeDaemonBuilder::new()
+            .register_fidl_protocol::<FakeMdns>()
+            .register_fidl_protocol::<FakeFastboot>()
+            .inject_fidl_protocol(tc_impl.clone())
+            .build();
+        let proxy = fake_daemon.open_proxy::<bridge::TargetCollectionMarker>().await;
+        proxy
+            .add_ephemeral_target(
+                &mut bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {
+                    ip: IpAddress::Ipv6(Ipv6Address {
+                        addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                    }),
+                    port: 8022,
+                    scope_id: 1,
+                }),
+                3600,
+            )
+            .await
+            .unwrap();
+        let target_collection = Context::new(fake_daemon).get_target_collection().await.unwrap();
+        assert_eq!(1, target_collection.targets().len());
+        assert!(tc_impl.borrow().manual_targets.get().await.unwrap().is_object());
+        let value = tc_impl.borrow().manual_targets.get().await.unwrap();
+        assert!(value.is_object());
+        let map = value.as_object().unwrap();
+        assert!(map.contains_key("[fe80::1%1]:8022"));
+        let target = map.get(&"[fe80::1%1]:8022".to_string());
+        assert!(target.is_some());
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Couldn't get duration from epoch.")
+            .as_secs();
+        assert!(target.unwrap().as_u64().unwrap() > now);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -597,7 +738,29 @@ mod tests {
             .register_fidl_protocol::<FakeFastboot>()
             .inject_fidl_protocol(tc_impl.clone())
             .build();
-        tc_impl.borrow().manual_targets.add("127.0.0.1:8022".to_string()).await.unwrap();
+        // We attempt to load three targets:
+        // - One with no timeout, should load,
+        // - One with an expired timeout, should not load, and
+        // - One with a future timeout, should load.
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Couldn't load duration since epoch.")
+            .as_secs();
+        let expired = now - 3600;
+        let future = now + 3600;
+        tc_impl.borrow().manual_targets.add("127.0.0.1:8022".to_string(), None).await.unwrap();
+        tc_impl
+            .borrow()
+            .manual_targets
+            .add("127.0.0.1:8023".to_string(), Some(expired))
+            .await
+            .unwrap();
+        tc_impl
+            .borrow()
+            .manual_targets
+            .add("127.0.0.1:8024".to_string(), Some(future))
+            .await
+            .unwrap();
 
         let target_collection = Context::new(fake_daemon).get_target_collection().await.unwrap();
         // This happens in FidlProtocol::start(), but we want to avoid binding the
@@ -606,5 +769,9 @@ mod tests {
 
         let target = target_collection.get("127.0.0.1:8022".to_string()).unwrap();
         assert_eq!(target.ssh_address(), Some("127.0.0.1:8022".parse::<SocketAddr>().unwrap()));
+        let target = target_collection.get("127.0.0.1:8023".to_string());
+        assert!(target.is_none());
+        let target = target_collection.get("127.0.0.1:8024".to_string()).unwrap();
+        assert_eq!(target.ssh_address(), Some("127.0.0.1:8024".parse::<SocketAddr>().unwrap()));
     }
 }

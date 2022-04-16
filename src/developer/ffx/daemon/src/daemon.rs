@@ -401,6 +401,11 @@ impl Daemon {
                                 target.run_host_pipe();
                             }
                             target.expire_state();
+                            if target.is_manual() && !target.is_connected() {
+                                // If a manual target has been allowed to transition to the
+                                // "disconnected" state, it should be removed from the collection.
+                                target_collection.remove_ephemeral_target(target);
+                            }
                         }
                     }
                     None => return,
@@ -661,6 +666,9 @@ mod test {
         super::*,
         addr::TargetAddr,
         assert_matches::assert_matches,
+        chrono::Utc,
+        ffx_daemon_target::target::TargetAddrEntry,
+        ffx_daemon_target::target::TargetAddrType,
         fidl_fuchsia_developer_ffx::{DaemonMarker, DaemonProxy},
         fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
         fidl_fuchsia_overnet_protocol::PeerDescription,
@@ -668,6 +676,7 @@ mod test {
         std::cell::RefCell,
         std::collections::BTreeSet,
         std::iter::FromIterator,
+        std::time::SystemTime,
     };
 
     fn spawn_test_daemon() -> (DaemonProxy, Daemon, Task<Result<()>>) {
@@ -769,6 +778,59 @@ mod test {
         }
 
         assert_eq!(TargetConnectionState::Disconnected, target.get_connection_state());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_ephemeral_target_expiry() {
+        let mut daemon = Daemon::new();
+        let expiring_target = Target::new_with_addr_entries(
+            Some("goodbye-world"),
+            vec![TargetAddrEntry {
+                addr: TargetAddr::new("127.0.0.1:8088").unwrap(),
+                timestamp: Utc::now(),
+                addr_type: TargetAddrType::Manual(Some(SystemTime::now())),
+            }]
+            .into_iter(),
+        );
+        expiring_target.set_ssh_port(Some(8022));
+
+        let persistent_target = Target::new_with_addr_entries(
+            Some("i-will-stick-around"),
+            vec![TargetAddrEntry {
+                addr: TargetAddr::new("127.0.0.1:8089").unwrap(),
+                timestamp: Utc::now(),
+                addr_type: TargetAddrType::Manual(None),
+            }]
+            .into_iter(),
+        );
+        persistent_target.set_ssh_port(Some(8023));
+
+        let then = Instant::now() - Duration::from_secs(10);
+        expiring_target.update_connection_state(|_| TargetConnectionState::Mdns(then));
+        persistent_target.update_connection_state(|_| TargetConnectionState::Mdns(then));
+
+        assert!(daemon.target_collection.is_empty());
+
+        daemon.target_collection.merge_insert(expiring_target.clone());
+        daemon.target_collection.merge_insert(persistent_target.clone());
+
+        assert_eq!(TargetConnectionState::Mdns(then), expiring_target.get_connection_state());
+        assert_eq!(TargetConnectionState::Mdns(then), persistent_target.get_connection_state());
+
+        daemon.start_target_expiry(Duration::from_millis(1));
+
+        while expiring_target.get_connection_state() == TargetConnectionState::Mdns(then) {
+            futures_lite::future::yield_now().await
+        }
+        while persistent_target.get_connection_state() == TargetConnectionState::Mdns(then) {
+            futures_lite::future::yield_now().await
+        }
+        assert_eq!(TargetConnectionState::Disconnected, expiring_target.get_connection_state());
+        assert_matches!(
+            persistent_target.get_connection_state(),
+            TargetConnectionState::Manual(None)
+        );
+        assert_eq!(daemon.target_collection.targets().len(), 1);
     }
 
     struct NullDaemonEventSynthesizer();

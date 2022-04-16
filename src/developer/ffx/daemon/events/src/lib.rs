@@ -83,10 +83,14 @@ pub enum TargetConnectionState {
     Mdns(Instant),
     /// Contains an actual connection to RCS.
     Rcs(RcsConnection),
-    /// Target was manually added. Targets that are manual never enter
-    /// the "disconnected" state, as they are not discoverable, instead
-    /// they return to the "manual" state on disconnection.
-    Manual,
+    /// Target was manually added. A Manual target may have an associated
+    /// timeout, which is a time after which the target is allowed to
+    /// expire. A Manual target with no timeout will never enter the
+    /// "disconnected" state, as they are not discoverable, instead
+    /// they return to the "manual" state on disconnection. A Manual target
+    /// with a timeout will only enter the disconnected state after that
+    /// timeout has elapsed and the target has become non-responsive.
+    Manual(Option<Instant>),
     /// Contains the last known interface update with a Fastboot serial number.
     Fastboot(Instant),
     /// Contains the last known interface update with a Fastboot serial number.
@@ -115,7 +119,7 @@ impl TargetConnectionState {
     }
 
     pub fn is_manual(&self) -> bool {
-        matches!(self, Self::Manual)
+        matches!(self, Self::Manual(_))
     }
 
     pub fn is_product(&self) -> bool {

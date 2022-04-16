@@ -34,7 +34,7 @@ use {
     std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
     std::rc::{Rc, Weak},
     std::sync::Arc,
-    std::time::{Duration, Instant},
+    std::time::{Duration, Instant, SystemTime},
     timeout::timeout,
     usb_bulk::AsyncInterface as Interface,
 };
@@ -45,7 +45,7 @@ const DEFAULT_SSH_PORT: u16 = 22;
 #[derive(Debug, Clone, Hash)]
 pub enum TargetAddrType {
     Ssh,
-    Manual,
+    Manual(Option<SystemTime>),
     Netsvc,
     Fastboot(FastbootInterface),
 }
@@ -401,9 +401,9 @@ impl Target {
             match (&e1.addr_type, &e2.addr_type) {
                 // Note: for manually added addresses, they are ordered strictly
                 // by recency, not link-local first.
-                (TargetAddrType::Manual, TargetAddrType::Manual) => recency(e1, e2),
-                (TargetAddrType::Manual, TargetAddrType::Ssh) => Ordering::Less,
-                (TargetAddrType::Ssh, TargetAddrType::Manual) => Ordering::Greater,
+                (TargetAddrType::Manual(_), TargetAddrType::Manual(_)) => recency(e1, e2),
+                (TargetAddrType::Manual(_), TargetAddrType::Ssh) => Ordering::Less,
+                (TargetAddrType::Ssh, TargetAddrType::Manual(_)) => Ordering::Greater,
                 (TargetAddrType::Ssh, TargetAddrType::Ssh) => link_local_recency(e1, e2),
                 _ => Ordering::Less, // Should not get here due to filtering in next line.
             }
@@ -414,7 +414,7 @@ impl Target {
             .borrow()
             .iter()
             .filter(|t| match t.addr_type {
-                TargetAddrType::Manual | TargetAddrType::Ssh => true,
+                TargetAddrType::Manual(_) | TargetAddrType::Ssh => true,
                 _ => false,
             })
             .sorted_by(|e1, e2| manual_link_local_recency(e1, e2))
@@ -561,13 +561,23 @@ impl Target {
             // the manual state.
             TargetConnectionState::Disconnected => {
                 if self.is_manual() {
-                    new_state = TargetConnectionState::Manual;
+                    let timeout = self.get_manual_timeout();
+                    let last_seen = if timeout.is_some() { Some(Instant::now()) } else { None };
+                    if former_state.is_rcs() {
+                        self.update_last_response(Utc::now());
+                        new_state = TargetConnectionState::Manual(last_seen)
+                    } else {
+                        let current = SystemTime::now();
+                        if timeout.is_none() || current < timeout.unwrap() {
+                            new_state = TargetConnectionState::Manual(last_seen)
+                        }
+                    }
                 }
             }
             // If a target is observed over mdns, as happens regularly due to broadcasts, or it is
             // re-added manually, if the target is presently in an RCS state, that state is
             // preserved, and the last response time is just adjusted to represent the observation.
-            TargetConnectionState::Mdns(_) | TargetConnectionState::Manual => {
+            TargetConnectionState::Mdns(_) | TargetConnectionState::Manual(_) => {
                 // Do not transition connection state for RCS -> MDNS.
                 if former_state.is_rcs() {
                     self.update_last_response(Utc::now());
@@ -640,7 +650,7 @@ impl Target {
             .clone()
             .into_iter()
             .filter(|entry| match (&entry.addr_type, &entry.addr.ip()) {
-                (TargetAddrType::Manual, _) => true,
+                (TargetAddrType::Manual(_), _) => true,
                 (_, IpAddr::V6(v)) => entry.addr.scope_id() != 0 || !v.is_link_local_addr(),
                 _ => true,
             })
@@ -654,7 +664,7 @@ impl Target {
             .clone()
             .into_iter()
             .filter(|entry| match (&entry.addr_type, &entry.addr.ip()) {
-                (TargetAddrType::Manual, _) => true,
+                (TargetAddrType::Manual(_), _) => true,
                 (_, IpAddr::V4(v)) => !v.is_loopback(),
                 _ => true,
             })
@@ -685,7 +695,7 @@ impl Target {
             .borrow()
             .iter()
             .filter_map(|entry| match entry.addr_type {
-                TargetAddrType::Manual => Some(entry.addr.clone()),
+                TargetAddrType::Manual(_) => Some(entry.addr.clone()),
                 _ => None,
             })
             .collect()
@@ -913,6 +923,7 @@ impl Target {
                 TargetConnectionState::Mdns(_) => MDNS_MAX_AGE,
                 TargetConnectionState::Fastboot(_) => FASTBOOT_MAX_AGE,
                 TargetConnectionState::Zedboot(_) => ZEDBOOT_MAX_AGE,
+                TargetConnectionState::Manual(_) => MDNS_MAX_AGE,
                 _ => Duration::default(),
             };
 
@@ -922,6 +933,17 @@ impl Target {
                 | TargetConnectionState::Zedboot(ref last_seen) => {
                     if last_seen.elapsed() > expire_duration {
                         Some(TargetConnectionState::Disconnected)
+                    } else {
+                        None
+                    }
+                }
+                TargetConnectionState::Manual(ref last_seen) => {
+                    if let Some(time) = last_seen {
+                        if time.elapsed() > expire_duration {
+                            Some(TargetConnectionState::Disconnected)
+                        } else {
+                            None
+                        }
                     } else {
                         None
                     }
@@ -951,7 +973,22 @@ impl Target {
         self.addrs
             .borrow()
             .iter()
-            .any(|addr_entry| matches!(addr_entry.addr_type, TargetAddrType::Manual))
+            .any(|addr_entry| matches!(addr_entry.addr_type, TargetAddrType::Manual(_)))
+    }
+
+    pub fn get_manual_timeout(&self) -> Option<SystemTime> {
+        let addrs = self.addrs.borrow();
+        let entry = addrs
+            .iter()
+            .find(|addr_entry| matches!(addr_entry.addr_type, TargetAddrType::Manual(_)));
+        if let Some(entry) = entry {
+            match entry.addr_type {
+                TargetAddrType::Manual(timeout) => timeout,
+                _ => None,
+            }
+        } else {
+            None
+        }
     }
 
     pub fn disconnect(&self) {
@@ -990,7 +1027,7 @@ impl From<&Target> for bridge::TargetInfo {
             rcs_state: Some(target.rcs_state()),
             target_state: Some(match target.state() {
                 TargetConnectionState::Disconnected => TargetState::Disconnected,
-                TargetConnectionState::Manual
+                TargetConnectionState::Manual(_)
                 | TargetConnectionState::Mdns(_)
                 | TargetConnectionState::Rcs(_) => TargetState::Product,
                 TargetConnectionState::Fastboot(_) => TargetState::Fastboot,
@@ -1356,7 +1393,7 @@ mod test {
 
         // Attempt to set the state to TargetConnectionState::Manual, this transition should fail, as in
         // this transition RCS should be retained.
-        t.update_connection_state(|_| TargetConnectionState::Manual);
+        t.update_connection_state(|_| TargetConnectionState::Manual(None));
 
         assert_eq!(t.get_connection_state(), rcs_state);
     }
@@ -1585,7 +1622,7 @@ mod test {
             TargetAddrEntry::new(
                 ("2000::1".parse().unwrap(), 0).into(),
                 (start - Duration::from_secs(1)).into(),
-                TargetAddrType::Manual,
+                TargetAddrType::Manual(None),
             ),
         ]);
         assert_eq!(
@@ -1619,7 +1656,7 @@ mod test {
             TargetAddrEntry::new(
                 ("2000::1".parse().unwrap(), 0).into(),
                 (start - Duration::from_secs(1)).into(),
-                TargetAddrType::Manual,
+                TargetAddrType::Manual(None),
             ),
         ]);
 
@@ -1781,7 +1818,7 @@ mod test {
         target.addrs_insert_entry(TargetAddrEntry::new(
             ("::1".parse().unwrap(), 0).into(),
             Utc::now(),
-            TargetAddrType::Manual,
+            TargetAddrType::Manual(None),
         ));
         assert!(target.is_manual());
 
@@ -1790,18 +1827,43 @@ mod test {
     }
 
     #[test]
+    fn test_target_get_manual_timeout() {
+        let target = Target::new();
+        assert_eq!(target.get_manual_timeout(), None);
+
+        target.addrs_insert_entry(TargetAddrEntry::new(
+            ("::1".parse().unwrap(), 0).into(),
+            Utc::now(),
+            TargetAddrType::Manual(None),
+        ));
+        assert!(target.is_manual());
+        assert_eq!(target.get_manual_timeout(), None);
+
+        let target = Target::new();
+        let now = SystemTime::now();
+        target.addrs_insert_entry(TargetAddrEntry::new(
+            ("::1".parse().unwrap(), 0).into(),
+            Utc::now(),
+            TargetAddrType::Manual(Some(now)),
+        ));
+        assert!(target.is_manual());
+        assert_eq!(target.get_manual_timeout(), Some(now));
+    }
+
+    #[test]
     fn test_update_connection_state_manual_disconnect() {
         let target = Target::new();
         target.addrs_insert_entry(TargetAddrEntry::new(
             ("::1".parse().unwrap(), 0).into(),
             Utc::now(),
-            TargetAddrType::Manual,
+            TargetAddrType::Manual(None),
         ));
-        target.set_state(TargetConnectionState::Manual);
+        target.set_state(TargetConnectionState::Manual(None));
 
-        // Attempting to transition a manual target into the disconnected state remains in manual.
+        // Attempting to transition a manual target into the disconnected state remains in manual,
+        // if the target has no timeout set.
         target.update_connection_state(|_| TargetConnectionState::Disconnected);
-        assert_eq!(target.get_connection_state(), TargetConnectionState::Manual);
+        assert_matches!(target.get_connection_state(), TargetConnectionState::Manual(_));
 
         let conn = RcsConnection::new_with_proxy(
             setup_fake_remote_control_service(false, "abc".to_owned()),
@@ -1813,7 +1875,63 @@ mod test {
 
         // A manual target exiting the RCS state to disconnected returns to manual instead.
         target.update_connection_state(|_| TargetConnectionState::Disconnected);
-        assert_eq!(target.get_connection_state(), TargetConnectionState::Manual);
+        assert_matches!(target.get_connection_state(), TargetConnectionState::Manual(_));
+    }
+
+    #[test]
+    fn test_update_connection_state_expired_ephemeral_disconnect() {
+        let target = Target::new();
+        target.addrs_insert_entry(TargetAddrEntry::new(
+            ("::1".parse().unwrap(), 0).into(),
+            Utc::now(),
+            TargetAddrType::Manual(Some(SystemTime::now() - Duration::from_secs(3600))),
+        ));
+        target.set_state(TargetConnectionState::Manual(Some(Instant::now())));
+
+        // Attempting to transition a manual target into the disconnected state can disconnect,
+        // if the target has a timeout set and it's expired.
+        target.update_connection_state(|_| TargetConnectionState::Disconnected);
+        assert_matches!(target.get_connection_state(), TargetConnectionState::Disconnected);
+
+        let conn = RcsConnection::new_with_proxy(
+            setup_fake_remote_control_service(false, "abc".to_owned()),
+            &NodeId { id: 1234 },
+        );
+        // A manual target can enter the RCS state.
+        target.update_connection_state(|_| TargetConnectionState::Rcs(conn));
+        assert_matches!(target.get_connection_state(), TargetConnectionState::Rcs(_));
+
+        // A manual target exiting the RCS state to disconnected returns to manual instead.
+        target.update_connection_state(|_| TargetConnectionState::Disconnected);
+        assert_matches!(target.get_connection_state(), TargetConnectionState::Manual(_));
+    }
+
+    #[test]
+    fn test_update_connection_state_ephemeral_disconnect() {
+        let target = Target::new();
+        target.addrs_insert_entry(TargetAddrEntry::new(
+            ("::1".parse().unwrap(), 0).into(),
+            Utc::now(),
+            TargetAddrType::Manual(Some(SystemTime::now() + Duration::from_secs(3600))),
+        ));
+        target.set_state(TargetConnectionState::Manual(Some(Instant::now())));
+
+        // Attempting to transition a manual target into the disconnected state returns to manual
+        // if the target has a timeout set but there's still time before expiry.
+        target.update_connection_state(|_| TargetConnectionState::Disconnected);
+        assert_matches!(target.get_connection_state(), TargetConnectionState::Manual(_));
+
+        let conn = RcsConnection::new_with_proxy(
+            setup_fake_remote_control_service(false, "abc".to_owned()),
+            &NodeId { id: 1234 },
+        );
+        // A manual target can enter the RCS state.
+        target.update_connection_state(|_| TargetConnectionState::Rcs(conn));
+        assert_matches!(target.get_connection_state(), TargetConnectionState::Rcs(_));
+
+        // A manual target exiting the RCS state to disconnected returns to manual instead.
+        target.update_connection_state(|_| TargetConnectionState::Disconnected);
+        assert_matches!(target.get_connection_state(), TargetConnectionState::Manual(_));
     }
 
     #[test]
