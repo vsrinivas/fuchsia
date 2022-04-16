@@ -27,6 +27,7 @@ test_list = [
   "microbenchmarks_test",
   "netstack_benchmarks_test",
   "network_device_microbenchmarks_test",
+  "perftest_trace_events_test",
   "storage_benchmarks_test",
   "rust_inspect_benchmarks_test",
   "rust_inspect_reader_benchmarks_test",

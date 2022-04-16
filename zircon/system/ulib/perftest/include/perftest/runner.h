@@ -43,6 +43,8 @@ struct CommandArgs {
 
 void ParseCommandArgs(int argc, char** argv, CommandArgs* dest);
 
+void StartTraceProvider();
+
 }  // namespace internal
 }  // namespace perftest
 

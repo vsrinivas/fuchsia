@@ -5,11 +5,6 @@
 #include <getopt.h>
 
 #if defined(__Fuchsia__)
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/trace-engine/context.h>
-#include <lib/trace-engine/instrumentation.h>
-#include <lib/trace-provider/provider.h>
 #include <lib/trace/event.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
@@ -19,7 +14,6 @@
 
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <pthread.h>
 #include <regex.h>
 
 #include <algorithm>
@@ -505,30 +499,13 @@ void ParseCommandArgs(int argc, char** argv, CommandArgs* dest) {
 
 }  // namespace internal
 
-#if defined(__Fuchsia__)
-static void* TraceProviderThread(void* thread_arg) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  trace::TraceProviderWithFdio provider(loop.dispatcher());
-  loop.Run();
-  return nullptr;
-}
-
-static void StartTraceProvider() {
-  pthread_t tid;
-  int err = pthread_create(&tid, nullptr, TraceProviderThread, nullptr);
-  ZX_ASSERT(err == 0);
-  err = pthread_detach(tid);
-  ZX_ASSERT(err == 0);
-}
-#endif
-
 static bool PerfTestMode(const char* test_suite, int argc, char** argv) {
   internal::CommandArgs args;
   internal::ParseCommandArgs(argc, argv, &args);
 
 #if defined(__Fuchsia__)
   if (args.enable_tracing) {
-    StartTraceProvider();
+    internal::StartTraceProvider();
   }
   zx_duration_t duration = static_cast<zx_duration_t>(ZX_SEC(1) * args.startup_delay_seconds);
   zx_nanosleep(zx_deadline_after(duration));
