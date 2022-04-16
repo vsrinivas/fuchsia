@@ -14,12 +14,12 @@ void PipelineStage::Advance(Fixed frame) {
   // TODO(fxbug.dev/87651): Add more logging and tracing etc (similar to `ReadableStream`).
   FX_CHECK(!is_locked_);
 
-  // Advance the next read frame.
-  if (next_read_frame_ && frame <= *next_read_frame_) {
+  // Advance the next readable frame.
+  if (next_readable_frame_ && frame <= *next_readable_frame_) {
     // Next read frame is already passed the advanced point.
     return;
   }
-  next_read_frame_ = frame;
+  next_readable_frame_ = frame;
 
   if (cached_packet_ && frame < cached_packet_->end()) {
     // Cached packet is still in use.
@@ -34,7 +34,7 @@ std::optional<PipelineStage::Packet> PipelineStage::Read(Fixed start_frame, int6
   FX_CHECK(!is_locked_);
 
   // Once a frame has been consumed, it cannot be locked again, we cannot travel backwards in time.
-  FX_CHECK(!next_read_frame_ || start_frame >= *next_read_frame_);
+  FX_CHECK(!next_readable_frame_ || start_frame >= *next_readable_frame_);
 
   // Check if we can reuse the cached packet.
   if (auto out_packet = ReadFromCachedPacket(start_frame, frame_count)) {

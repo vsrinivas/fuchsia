@@ -157,10 +157,10 @@ class PipelineStage {
   // Returns the stage's format.
   const Format& format() const { return format_; }
 
-  // Returns the stage's next read frame.
-  std::optional<Fixed> next_read_frame() { return next_read_frame_; }
+  // Returns the stage's next readable frame.
+  std::optional<Fixed> next_readable_frame() { return next_readable_frame_; }
 
-  // Sets the stage's thread. It is safe to call this method on any thread.
+  // Sets the stage's thread.
   void set_thread(ThreadPtr thread) { std::atomic_store(&thread_, std::move(thread)); }
 
   // Returns the thread which currently controls this stage.
@@ -245,8 +245,8 @@ class PipelineStage {
   // reaches the end of the packet.
   std::optional<Packet> cached_packet_ = std::nullopt;
 
-  // Next read frame.
-  std::optional<Fixed> next_read_frame_ = std::nullopt;
+  // Next readable frame.
+  std::optional<Fixed> next_readable_frame_ = std::nullopt;
 
   // Denotes whether the stage stream is currently _locked_ or not.
   bool is_locked_ = false;

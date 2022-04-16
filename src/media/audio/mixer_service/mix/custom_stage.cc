@@ -87,9 +87,9 @@ std::optional<PipelineStage::Packet> CustomStage::ReadImpl(Fixed start_frame, in
   // However, if the source has no data for the range [0, 30), the first `Read` call will return
   // `std::nullopt`. At the second call, we shouldn't ask the source for any frames before frame 30
   // because we already know that range is empty.
-  if (const auto next_read_frame = source_->next_read_frame()) {
+  if (const auto next_readable_frame = source_->next_readable_frame()) {
     // SampleAndHold: source frame 1.X overlaps dest frame 2.0, so always round up.
-    const int64_t frames_to_advance = next_read_frame->Ceiling() - start_frame.Floor();
+    const int64_t frames_to_advance = next_readable_frame->Ceiling() - start_frame.Floor();
     if (frames_to_advance > 0) {
       frame_count -= frames_to_advance;
       start_frame += Fixed(frames_to_advance);
