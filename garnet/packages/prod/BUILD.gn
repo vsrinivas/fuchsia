@@ -149,10 +149,10 @@ group("cmdutils") {
   testonly = true
   public_deps = [
     "//examples/cowsay",
-    "//garnet/bin/time",
     "//garnet/packages/prod:sbase",
     "//garnet/packages/prod:sched",
     "//src/zircon/bin/hwstress",
+    "//src/zircon/bin/time",
     "//src/zircon/bin/uname",
   ]
 }

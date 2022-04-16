@@ -20,7 +20,6 @@ group("bin") {
     "setui_client",
     "sshd-host",
     "sysmgr",
-    "time",
     "trace",
     "trace2json",
     "trace_manager",
