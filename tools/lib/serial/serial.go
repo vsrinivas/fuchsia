@@ -120,6 +120,7 @@ func NewSocketWithIOTimeout(ctx context.Context, socketPath string, ioTimeout ti
 		ctx, cancel := context.WithTimeout(ctx, 45*time.Second)
 		defer cancel()
 		if _, err = iomisc.ReadUntilMatchString(ctx, socket, consoleCursor); err != nil {
+			socket.Close()
 			return nil, fmt.Errorf("%s: %w", constants.FailedToFindCursorMsg, err)
 		}
 	}

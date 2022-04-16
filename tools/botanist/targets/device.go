@@ -125,6 +125,11 @@ func NewDeviceTarget(ctx context.Context, config DeviceConfig, opts Options) (*D
 				return nil, fmt.Errorf("unable to open: %s: %w", config.SerialMux, err)
 			}
 		}
+		// After we've made a serial connection to determine the device is ready,
+		// we should close this socket since it is no longer needed. New interactions
+		// with the device over serial will create new connections with the serial mux.
+		s.Close()
+		s = nil
 	} else if config.Serial != "" {
 		s, err = serial.Open(config.Serial)
 		if err != nil {
