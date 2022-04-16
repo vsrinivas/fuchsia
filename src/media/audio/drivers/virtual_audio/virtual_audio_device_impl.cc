@@ -16,9 +16,13 @@ class VirtualAudioStreamIn;
 class VirtualAudioStreamOut;
 
 // static methods
-std::unique_ptr<VirtualAudioDeviceImpl> VirtualAudioDeviceImpl::Create(
+std::shared_ptr<VirtualAudioDeviceImpl> VirtualAudioDeviceImpl::Create(
     VirtualAudioControlImpl* owner, bool is_input) {
-  return std::unique_ptr<VirtualAudioDeviceImpl>(new VirtualAudioDeviceImpl(owner, is_input));
+  struct MakePublicCtor : public VirtualAudioDeviceImpl {
+    MakePublicCtor(VirtualAudioControlImpl* owner, bool is_input)
+        : VirtualAudioDeviceImpl(owner, is_input) {}
+  };
+  return std::make_shared<MakePublicCtor>(owner, is_input);
 }
 
 // Don't initialize here or in ctor; do it all in Init() so ResetConfiguration has same effect.
@@ -70,7 +74,7 @@ void VirtualAudioDeviceImpl::Init() {
 // ControlImpl has already associated us with the binding: when it closes we will auto-destruct.
 void VirtualAudioDeviceImpl::SetBinding(
     fidl::Binding<fuchsia::virtualaudio::Input,
-                  std::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding) {
+                  std::shared_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding) {
   ZX_ASSERT(is_input_);
   ZX_ASSERT(output_binding_ == nullptr);
 
@@ -82,7 +86,7 @@ void VirtualAudioDeviceImpl::SetBinding(
 // ControlImpl has already associated us with the binding: when it closes we will auto-destruct.
 void VirtualAudioDeviceImpl::SetBinding(
     fidl::Binding<fuchsia::virtualaudio::Output,
-                  std::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding) {
+                  std::shared_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding) {
   ZX_ASSERT(!is_input_);
   ZX_ASSERT(input_binding_ == nullptr);
 
@@ -296,7 +300,7 @@ void VirtualAudioDeviceImpl::Add() {
   // DeviceImpl makes those calls on the FIDL thread (task_queue_'s destination thread); all are
   // enqueued and subsequently discarded (via StopAndClear) upon RemoveStream. Stream makes those
   // calls in its execution domain, which is synchronously deactivated during its DdkUnbind.
-  task_queue_.emplace(owner_->dispatcher());
+  task_queue_ = std::make_shared<TaskQueue>(owner_->dispatcher());
   if (!CreateStream(owner_->dev_node())) {
     zxlogf(ERROR, "CreateStream failed");
     task_queue_->StopAndClear();
@@ -336,13 +340,18 @@ void VirtualAudioDeviceImpl::GetFormat(
 // Deliver SetFormat notification on binding's thread, if binding is valid.
 void VirtualAudioDeviceImpl::NotifySetFormat(uint32_t frames_per_second, uint32_t sample_format,
                                              uint32_t num_channels, zx_duration_t external_delay) {
-  PostToDispatcher([this, frames_per_second, sample_format, num_channels, external_delay]() {
-    if (input_binding_ && input_binding_->is_bound()) {
-      input_binding_->events().OnSetFormat(frames_per_second, sample_format, num_channels,
-                                           external_delay);
-    } else if (output_binding_ && output_binding_->is_bound()) {
-      output_binding_->events().OnSetFormat(frames_per_second, sample_format, num_channels,
-                                            external_delay);
+  PostToDispatcher([this, self = shared_from_this(), frames_per_second, sample_format, num_channels,
+                    external_delay]() {
+    if (input_binding_) {
+      if (input_binding_->is_bound()) {
+        input_binding_->events().OnSetFormat(frames_per_second, sample_format, num_channels,
+                                             external_delay);
+      }
+    } else if (output_binding_) {
+      if (output_binding_->is_bound()) {
+        output_binding_->events().OnSetFormat(frames_per_second, sample_format, num_channels,
+                                              external_delay);
+      }
     }
   });
 }
@@ -359,11 +368,15 @@ void VirtualAudioDeviceImpl::GetGain(fuchsia::virtualaudio::Device::GetGainCallb
 // Deliver SetGain notification on binding's thread, if binding is valid.
 void VirtualAudioDeviceImpl::NotifySetGain(bool current_mute, bool current_agc,
                                            float current_gain_db) {
-  PostToDispatcher([this, current_mute, current_agc, current_gain_db]() {
-    if (input_binding_ && input_binding_->is_bound()) {
-      input_binding_->events().OnSetGain(current_mute, current_agc, current_gain_db);
-    } else if (output_binding_ && output_binding_->is_bound()) {
-      output_binding_->events().OnSetGain(current_mute, current_agc, current_gain_db);
+  PostToDispatcher([this, self = shared_from_this(), current_mute, current_agc, current_gain_db]() {
+    if (input_binding_) {
+      if (input_binding_->is_bound()) {
+        input_binding_->events().OnSetGain(current_mute, current_agc, current_gain_db);
+      }
+    } else if (output_binding_) {
+      if (output_binding_->is_bound()) {
+        output_binding_->events().OnSetGain(current_mute, current_agc, current_gain_db);
+      }
     }
   });
 }
@@ -382,14 +395,18 @@ void VirtualAudioDeviceImpl::GetBuffer(
 void VirtualAudioDeviceImpl::NotifyBufferCreated(zx::vmo ring_buffer_vmo,
                                                  uint32_t num_ring_buffer_frames,
                                                  uint32_t notifications_per_ring) {
-  PostToDispatcher([this, ring_buffer_vmo = std::move(ring_buffer_vmo), num_ring_buffer_frames,
-                    notifications_per_ring]() mutable {
-    if (input_binding_ && input_binding_->is_bound()) {
-      input_binding_->events().OnBufferCreated(std::move(ring_buffer_vmo), num_ring_buffer_frames,
-                                               notifications_per_ring);
-    } else if (output_binding_ && output_binding_->is_bound()) {
-      output_binding_->events().OnBufferCreated(std::move(ring_buffer_vmo), num_ring_buffer_frames,
-                                                notifications_per_ring);
+  PostToDispatcher([this, self = shared_from_this(), ring_buffer_vmo = std::move(ring_buffer_vmo),
+                    num_ring_buffer_frames, notifications_per_ring]() mutable {
+    if (input_binding_) {
+      if (input_binding_->is_bound()) {
+        input_binding_->events().OnBufferCreated(std::move(ring_buffer_vmo), num_ring_buffer_frames,
+                                                 notifications_per_ring);
+      }
+    } else if (output_binding_) {
+      if (output_binding_->is_bound()) {
+        output_binding_->events().OnBufferCreated(std::move(ring_buffer_vmo),
+                                                  num_ring_buffer_frames, notifications_per_ring);
+      }
     }
   });
 }
@@ -408,26 +425,34 @@ void VirtualAudioDeviceImpl::SetNotificationFrequency(uint32_t notifications_per
 
 // Deliver Start notification on binding's thread, if binding is valid.
 void VirtualAudioDeviceImpl::NotifyStart(zx_time_t start_time) {
-  PostToDispatcher([this, start_time]() {
+  PostToDispatcher([this, self = shared_from_this(), start_time]() {
     if (is_input_) {
-      ZX_ASSERT(input_binding_ && input_binding_->is_bound());
-      input_binding_->events().OnStart(start_time);
+      ZX_ASSERT(input_binding_);
+      if (input_binding_->is_bound()) {
+        input_binding_->events().OnStart(start_time);
+      }
     } else {
-      ZX_ASSERT(output_binding_ && output_binding_->is_bound());
-      output_binding_->events().OnStart(start_time);
+      ZX_ASSERT(output_binding_);
+      if (output_binding_->is_bound()) {
+        output_binding_->events().OnStart(start_time);
+      }
     }
   });
 }
 
 // Deliver Stop notification on binding's thread, if binding is valid.
 void VirtualAudioDeviceImpl::NotifyStop(zx_time_t stop_time, uint32_t ring_buffer_position) {
-  PostToDispatcher([this, stop_time, ring_buffer_position]() {
+  PostToDispatcher([this, self = shared_from_this(), stop_time, ring_buffer_position]() {
     if (is_input_) {
-      ZX_ASSERT(input_binding_ && input_binding_->is_bound());
-      input_binding_->events().OnStop(stop_time, ring_buffer_position);
+      ZX_ASSERT(input_binding_);
+      if (input_binding_->is_bound()) {
+        input_binding_->events().OnStop(stop_time, ring_buffer_position);
+      }
     } else {
-      ZX_ASSERT(output_binding_ && output_binding_->is_bound());
-      output_binding_->events().OnStop(stop_time, ring_buffer_position);
+      ZX_ASSERT(output_binding_);
+      if (output_binding_->is_bound()) {
+        output_binding_->events().OnStop(stop_time, ring_buffer_position);
+      }
     }
   });
 }
@@ -445,13 +470,17 @@ void VirtualAudioDeviceImpl::GetPosition(
 // Deliver Position notification on binding's thread, if binding is valid.
 void VirtualAudioDeviceImpl::NotifyPosition(zx_time_t monotonic_time,
                                             uint32_t ring_buffer_position) {
-  PostToDispatcher([this, monotonic_time, ring_buffer_position]() {
+  PostToDispatcher([this, self = shared_from_this(), monotonic_time, ring_buffer_position]() {
     if (is_input_) {
-      ZX_ASSERT(input_binding_ && input_binding_->is_bound());
-      input_binding_->events().OnPositionNotify(monotonic_time, ring_buffer_position);
+      ZX_ASSERT(input_binding_);
+      if (input_binding_->is_bound()) {
+        input_binding_->events().OnPositionNotify(monotonic_time, ring_buffer_position);
+      }
     } else {
-      ZX_ASSERT(output_binding_ && output_binding_->is_bound());
-      output_binding_->events().OnPositionNotify(monotonic_time, ring_buffer_position);
+      ZX_ASSERT(output_binding_);
+      if (output_binding_->is_bound()) {
+        output_binding_->events().OnPositionNotify(monotonic_time, ring_buffer_position);
+      }
     }
   });
 }

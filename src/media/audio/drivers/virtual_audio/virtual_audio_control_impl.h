@@ -57,9 +57,9 @@ class VirtualAudioControlImpl : public fuchsia::virtualaudio::Control {
   bool enabled_ = true;
 
   fidl::BindingSet<fuchsia::virtualaudio::Control> bindings_;
-  fidl::BindingSet<fuchsia::virtualaudio::Input, std::unique_ptr<VirtualAudioDeviceImpl>>
+  fidl::BindingSet<fuchsia::virtualaudio::Input, std::shared_ptr<VirtualAudioDeviceImpl>>
       input_bindings_;
-  fidl::BindingSet<fuchsia::virtualaudio::Output, std::unique_ptr<VirtualAudioDeviceImpl>>
+  fidl::BindingSet<fuchsia::virtualaudio::Output, std::shared_ptr<VirtualAudioDeviceImpl>>
       output_bindings_;
 };
 

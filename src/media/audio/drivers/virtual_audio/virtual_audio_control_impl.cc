@@ -150,13 +150,22 @@ zx_status_t VirtualAudioControlImpl::SendInput(zx::channel input_request_channel
   // Create an VirtualAudioDeviceImpl for this binding; save it in our list. Using the default
   // dispatcher means that we will be running on the same that drives all of our peer devices in the
   // /dev/test device host. We should be mindful of this if doing long VirtualAudioInput operations.
+  auto device = VirtualAudioDeviceImpl::Create(this, true);
   input_bindings_.AddBinding(
-      VirtualAudioDeviceImpl::Create(this, true),
+      device,
       fidl::InterfaceRequest<fuchsia::virtualaudio::Input>(std::move(input_request_channel)),
-      dispatcher_);
+      dispatcher_, [this, device](zx_status_t status) {
+        if (status != ZX_ERR_PEER_CLOSED) {
+          zxlogf(ERROR, "input device %p closed with status %d", device.get(), status);
+        } else {
+          zxlogf(TRACE, "input device %p closed with status %d", device.get(), status);
+        }
+        input_bindings_.RemoveBinding(device);
+        device->RemoveStream();
+      });
 
   auto* binding = input_bindings_.bindings().back().get();
-  binding->impl()->SetBinding(binding);
+  device->SetBinding(binding);
 
   return ZX_OK;
 }
@@ -171,13 +180,22 @@ zx_status_t VirtualAudioControlImpl::SendOutput(zx::channel output_request_chann
   // dispatcher means that we will be running on the same that drives all of our peer devices in the
   // /dev/test device host. We should be mindful of this if doing long VirtualAudioOutput
   // operations.
+  auto device = VirtualAudioDeviceImpl::Create(this, false);
   output_bindings_.AddBinding(
-      VirtualAudioDeviceImpl::Create(this, false),
+      device,
       fidl::InterfaceRequest<fuchsia::virtualaudio::Output>(std::move(output_request_channel)),
-      dispatcher_);
+      dispatcher_, [this, device](zx_status_t status) {
+        if (status != ZX_ERR_PEER_CLOSED) {
+          zxlogf(ERROR, "output device closed with status %d", status);
+        } else {
+          zxlogf(TRACE, "output device closed with status %d", status);
+        }
+        output_bindings_.RemoveBinding(device);
+        device->RemoveStream();
+      });
 
   auto* binding = output_bindings_.bindings().back().get();
-  binding->impl()->SetBinding(binding);
+  device->SetBinding(binding);
 
   return ZX_OK;
 }
