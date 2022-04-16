@@ -777,6 +777,7 @@ async fn connected_state(
                             // triggered.
                             let (_bss_score, roam_reasons) = bss_selection::evaluate_current_bss(bss_quality_data.clone());
                             if !roam_reasons.is_empty() {
+                                common_options.telemetry_sender.send(TelemetryEvent::RoamingScan);
                                 // TODO(haydennix): Trigger roaming future, which must be idempotent
                                 // since repeated calls are likely.
                             }
@@ -4036,6 +4037,54 @@ mod tests {
         assert_eq!(stats.quality_data.past_connections_list, past_connections);
         // Check that the channel is included.
         assert_eq!(stats.quality_data.channel, bss_description.channel);
+    }
+
+    #[fuchsia::test]
+    fn connected_state_should_roam() {
+        let mut exec =
+            fasync::TestExecutor::new_with_fake_time().expect("failed to create an executor");
+        exec.set_fake_time(fasync::Time::from_nanos(0));
+
+        let test_values = test_setup();
+        let mut telemetry_receiver = test_values.telemetry_receiver;
+
+        let network_ssid = types::Ssid::try_from("test").unwrap();
+        let init_rssi = -75;
+        let init_snr = 30;
+        let bss_description = random_bss_description!(
+            Wpa2,
+            ssid: network_ssid.clone(),
+            rssi_dbm: init_rssi,
+            snr_db: init_snr,
+        );
+
+        // Set up the state machine, starting at the connected state.
+        let (initial_state, connect_txn_stream) =
+            connected_state_setup(test_values.common_options, bss_description.clone());
+        let connect_txn_handle = connect_txn_stream.control_handle();
+        let fut = run_state_machine(initial_state);
+        pin_mut!(fut);
+
+        // Send a signal report indicating the connection is weak.
+        let rssi_1 = -90;
+        let snr_1 = 25;
+        let mut fidl_signal_report =
+            fidl_internal::SignalReportIndication { rssi_dbm: rssi_1, snr_db: snr_1 };
+        connect_txn_handle
+            .send_on_signal_report(&mut fidl_signal_report)
+            .expect("failed to send signal report");
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Verify that telemetry events are sent for the signal report and a Roam Scan.
+        assert_variant!(
+            telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::OnSignalReport {ind, rssi_velocity})) => {
+                assert_eq!(ind, fidl_signal_report);
+                // verify that RSSI velocity is negative since the signal report RSSI is lower.
+                assert_lt!(rssi_velocity, 0);
+            }
+        );
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(TelemetryEvent::RoamingScan {})));
     }
 
     #[fuchsia::test]
