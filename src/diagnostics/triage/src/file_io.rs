@@ -45,16 +45,17 @@ fn diagnostic_from_file(
     DiagnosticData::new(file_path, *source, contents)
 }
 
-pub fn config_from_files(
-    config_files: &Vec<String>,
+pub fn config_from_files<T: AsRef<Path>>(
+    config_files: &[T],
     action_tag_directive_from_tags: &ActionTagDirective,
 ) -> Result<ParseResult, Error> {
     let mut config_file_map: HashMap<String, String> = HashMap::new();
     for file_name in config_files {
-        let file_data = match fs::read_to_string(file_name.clone()) {
+        let file_name = file_name.as_ref();
+        let file_data = match fs::read_to_string(file_name) {
             Ok(data) => data,
             Err(e) => {
-                bail!("Couldn't read config file '{}' to string, {}", file_name, e);
+                bail!("Couldn't read config file '{}' to string, {}", file_name.display(), e);
             }
         };
 
@@ -71,7 +72,7 @@ pub fn config_from_files(
                                     config_file_map.insert(name.to_string(), content.to_string());
                                 }
                                 _ => {
-                                    bail!("File {} looks like a bundle, but key {} must contain a string.", file_name, name);
+                                    bail!("File {} looks like a bundle, but key {} must contain a string.", file_name.display(), name);
                                 }
                             }
                         }
@@ -79,7 +80,7 @@ pub fn config_from_files(
                     _ => {
                         bail!(
                             "File {} looks like a bundle, but key 'files' is not an object.",
-                            file_name
+                            file_name.display()
                         );
                     }
                 }
@@ -87,7 +88,7 @@ pub fn config_from_files(
             // The file does not look like a bundle.
             // Get the base name of the file as the namesapce, and add it to the config file set.
             _ => {
-                let namespace = base_name(&file_name)?;
+                let namespace = base_name(file_name)?;
                 config_file_map.insert(namespace, file_data);
             }
         }
@@ -96,14 +97,13 @@ pub fn config_from_files(
     ParseResult::new(&config_file_map, &action_tag_directive_from_tags)
 }
 
-fn base_name(path: &String) -> Result<String, Error> {
-    let file_path = Path::new(path);
-    if let Some(s) = file_path.file_stem() {
+fn base_name(path: &Path) -> Result<String, Error> {
+    if let Some(s) = path.file_stem() {
         if let Some(s) = s.to_str() {
             return Ok(s.to_owned());
         }
     }
-    bail!("Bad path {} - can't find file_stem", path)
+    bail!("Bad path {} - can't find file_stem", path.display())
 }
 
 #[cfg(test)]
@@ -112,7 +112,7 @@ mod test {
 
     #[fuchsia::test]
     fn base_name_works() -> Result<(), Error> {
-        assert_eq!(base_name(&"foo/bar/baz.ext".to_string())?, "baz".to_string());
+        assert_eq!(base_name(Path::new("foo/bar/baz.ext"))?, "baz".to_string());
         Ok(())
     }
 }

@@ -8,7 +8,40 @@ ffx_plugin("ffx_triage") {
   version = "0.0.1"
   edition = "2018"
   with_unit_tests = true
-  deps = []
-  sources = [ "src/lib.rs" ]
+  deps = [
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/developer/ffx/plugins/target/snapshot:ffx_snapshot",
+    "//src/developer/ffx/plugins/target/snapshot:ffx_snapshot_args",
+    "//src/diagnostics/lib/triage",
+    "//src/diagnostics/triage:triage_app_lib",
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:pretty_assertions",
+    "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:zip",
+  ]
+
+  sources = [
+    "src/config.rs",
+    "src/lib.rs",
+    "src/snapshot.rs",
+  ]
+
   args_sources = [ "src/args.rs" ]
+
+  inputs = [
+    "//src/diagnostics/triage/test_data/config/sample_bundle_file_type_error.json",
+    "//src/diagnostics/triage/test_data/config/sample_bundle_files_error.json",
+    "//src/diagnostics/triage/test_data/snapshot/inspect.json",
+    "//src/diagnostics/triage/test_data/config/sample.triage",
+    "//src/diagnostics/triage/test_data/config/map_fold.triage",
+    "//src/diagnostics/triage/test_data/config/other.triage",
+    "//src/diagnostics/triage/test_data/snapshot/annotations.json",
+    "//src/diagnostics/triage/test_data/config/sample_bundle.json",
+    "//src/diagnostics/triage/test_data/config/error_rate.triage",
+    "//src/diagnostics/triage/test_data/config/log_tests.triage",
+    "//src/diagnostics/triage/test_data/config/sample_tags.triage",
+    "//src/diagnostics/triage/test_data/config/annotation_tests.triage",
+  ]
 }
