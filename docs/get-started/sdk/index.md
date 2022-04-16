@@ -49,13 +49,18 @@ To install these dependencies, do the following:
 
 Note: You only need to do this once on your host machine.
 
-1. Install Git, for example:
+1. Install Git:
 
    ```posix-terminal
    sudo apt-get install git
    ```
 
-1. To install Bazel, visit the [Installing Bazel][bazel-install]{:.external}
+2. Install Bazel:
+
+   ```posix-terminal
+   sudo apt-get install bazel
+   ```
+   Or visit the [Installing Bazel][bazel-install]{:.external}
    page and follow the installation instructions specific to your host machine.
 
 ### Generate Fuchsia-specific SSH keys {:#generate-fuchsia-specific-ssh-keys}
