@@ -41,10 +41,9 @@ pub fn get_categories() -> HashMap<String, HashSet<String>> {
     let output = String::from_utf8_lossy(&output.stdout);
     let mut lines = output.lines().map(str::trim).filter(|l| !l.is_empty());
     lines
-        .find(|s| !s.starts_with("Lint groups provided by plugins"))
+        .find(|s| s.starts_with("Lint groups provided by plugins"))
         .expect("Couldn't parse clippy-driver help output");
     lines
-        .skip(1)
         .map(|line| {
             if let [category, lints] = line.splitn(2, ' ').collect::<Vec<_>>()[..] {
                 (
