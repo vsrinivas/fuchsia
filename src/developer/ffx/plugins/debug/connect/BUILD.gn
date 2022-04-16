@@ -22,6 +22,7 @@ ffx_plugin("ffx_debug_connect") {
     "//third_party/rust_crates:async-net",
     "//third_party/rust_crates:futures-util",
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:signal-hook",
   ]
 
   data_deps = [ "//src/developer/debug/zxdb" ]

@@ -40,7 +40,7 @@ pub async fn core(rcs: RemoteControlProxy, cmd: ffx_debug_core_args::CoreCommand
     if let Some(exit_code) = unblock(move || cmd.wait()).await?.code() {
         Ok(exit_code)
     } else {
-        Err(anyhow!("zxdb terminated by signal"))
+        Err(ffx_error!("zxdb terminated by signal").into())
     }
 }
 

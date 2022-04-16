@@ -1,5 +1,25 @@
 # Developing and debugging zxdb
 
+## Simple method
+
+It's possible to ask `ffx debug` to launch zxdb in another debugger and/or with extra debug logs.
+
+```posix-terminal
+ffx debug connect --debugger lldb -- --debug-mode
+```
+
+This command will bring the lldb shell and you can use "run" to start the zxdb.
+
+The "lldb" in the command can be substituted by "gdb".  However, using gdb might bring several
+issues including
+
+  * Older versions of gdb may not support all DWARF 5 standard, and some information might be
+    missing such as source file listing.
+  * Ctrl-C will not bring you back from zxdb to gdb. A workaround is to use `pkill -INT zxdb`
+    in another window to stop the zxdb.
+
+## Manual steps
+
 ### Client
 
 For developers working on the debugger, you can activate the `--debug-mode` flag that will activate
@@ -48,6 +68,8 @@ symbolized file in `exe_unstripped` directly, but some tests require data files
 at a certain place relative to the test binary and these will fail.
 
 ### Debug Agent
+
+<!-- TODO(dangyi): update the document after the debug_agent is migrated to v2. -->
 
 Similar as with the client, the debug agent is programmed to log many debug statements when run with
 the `--debug-mode` flag:
