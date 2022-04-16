@@ -24,17 +24,27 @@ const PipelineConfig::MixGroup* FindUltrasoundGroup(const PipelineConfig::MixGro
 }
 }  // namespace
 
+constexpr bool kLogUltrasoundRendererCtorDtor = false;
+
 UltrasoundRenderer::UltrasoundRenderer(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> request, Context* context,
     fuchsia::ultrasound::Factory::CreateRendererCallback callback)
     : BaseRenderer(std::move(request), context), create_callback_(std::move(callback)) {
   FX_DCHECK(create_callback_);
   reporter().SetUsage(RenderUsage::ULTRASOUND);
+
+  if constexpr (kLogUltrasoundRendererCtorDtor) {
+    FX_LOGS(INFO) << __FUNCTION__ << " (" << this << ") *****";
+  }
 }
 
 UltrasoundRenderer::~UltrasoundRenderer() {
   // We (not ~BaseRenderer) must call this, because our ReportStop is gone when parent dtor runs
   ReportStopIfStarted();
+
+  if constexpr (kLogUltrasoundRendererCtorDtor) {
+    FX_LOGS(INFO) << __FUNCTION__ << " (" << this << ") *****";
+  }
 }
 
 fpromise::result<std::shared_ptr<ReadableStream>, zx_status_t>

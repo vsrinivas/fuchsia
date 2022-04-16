@@ -218,8 +218,8 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
               LaunchInfoWithIsolatedDevmgrForUrl(thermal_test_control_url, devmgr_services_),
           .service_names =
               {
-                  fuchsia::thermal::Controller::Name_,
-                  ::test::thermal::Control::Name_,
+                  fuchsia::thermal::ClientStateConnector::Name_,
+                  ::test::thermal::ClientStateControl::Name_,
               },
       },
   };

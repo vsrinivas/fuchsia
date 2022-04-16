@@ -91,7 +91,7 @@ constexpr int64_t kFreqTestBufSize = 65536;
 // also sets the digits of precision for 'expected' values, when stored or displayed.
 constexpr double kFidelityDbTolerance = 0.001;
 // If kDisplayAnalysisDataOnFailureDbTolerance, display freq bins with magnitude >= this val.
-constexpr double kMinAnalysisMagnitudeToDisplay = 4e-7;
+constexpr double kMinAnalysisMagnitudeToDisplay = 4e-6;
 
 // For each test_name|channel, we maintain two results arrays: Frequency Response and
 // Signal-to-Noise-and-Distortion (SiNAD). A map of array results is saved as a function-local

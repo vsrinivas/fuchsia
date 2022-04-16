@@ -52,11 +52,17 @@ AudioRenderer::AudioRenderer(
       mix_profile_period_(context->process_config().mix_profile_config().period) {
   context->volume_manager().AddStream(this);
   reporter().SetUsage(RenderUsageFromFidlRenderUsage(usage_));
+
+  if constexpr (kLogRendererCtorDtorCalls) {
+    FX_LOGS(INFO) << __FUNCTION__ << " (" << this << ") *****";
+  }
 }
 
 AudioRenderer::~AudioRenderer() {
-  if constexpr (kLogRendererDtorCalls) {
-    FX_LOGS(INFO) << "Renderer(" << this << ") destructor";
+  if constexpr (kLogRendererCtorDtorCalls) {
+    FX_LOGS(INFO) << __FUNCTION__ << " (" << this
+                  << ") usage:" << RenderUsageToString(RenderUsageFromFidlRenderUsage(usage_))
+                  << " *****";
   }
 
   // We (not ~BaseRenderer) must call this, because our ReportStop is gone when parent dtor runs
@@ -90,6 +96,13 @@ void AudioRenderer::SetUsage(fuchsia::media::AudioRenderUsage usage) {
     return;
   }
   reporter().SetUsage(RenderUsageFromFidlRenderUsage(usage));
+
+  if constexpr (kLogAudioRendererSetUsageCalls) {
+    FX_LOGS(INFO) << __FUNCTION__ << " (" << this << ") changed from "
+                  << RenderUsageToString(RenderUsageFromFidlRenderUsage(usage_)) << " to "
+                  << RenderUsageToString(RenderUsageFromFidlRenderUsage(usage)) << " *****";
+  }
+
   usage_ = usage;
 }
 

@@ -231,7 +231,17 @@ HermeticAudioRealm::CtorArgs HermeticAudioRealm::BuildRealm(Options options,
       .targets = {ChildRef{kAudioCore}},
   });
   builder.AddRoute({
+      .capabilities = {Protocol{"fuchsia.thermal.ClientStateConnector"}},
+      .source = ChildRef{kThermalTestControl},
+      .targets = {ChildRef{kAudioCore}},
+  });
+  builder.AddRoute({
       .capabilities = {Protocol{"test.thermal.Control"}},
+      .source = ChildRef{kThermalTestControl},
+      .targets = {ParentRef()},
+  });
+  builder.AddRoute({
+      .capabilities = {Protocol{"test.thermal.ClientStateControl"}},
       .source = ChildRef{kThermalTestControl},
       .targets = {ParentRef()},
   });

@@ -140,7 +140,12 @@ class HermeticAudioTest : public TestFixture {
   fuchsia::media::AudioCorePtr audio_core_;
   fuchsia::media::AudioDeviceEnumeratorPtr audio_dev_enum_;
 
-  ::test::thermal::ControlSyncPtr& thermal_test_control() { return thermal_test_control_sync_; }
+  fuchsia::thermal::ClientStateConnectorPtr& thermal_client_state_connector() {
+    return thermal_client_state_connector_;
+  }
+  ::test::thermal::ClientStateControlSyncPtr& thermal_test_client_state_control() {
+    return thermal_test_client_state_control_sync_;
+  }
   fuchsia::media::audio::EffectsControllerSyncPtr& effects_controller() {
     return effects_controller_;
   }
@@ -181,8 +186,10 @@ class HermeticAudioTest : public TestFixture {
 
   std::unique_ptr<HermeticAudioRealm> realm_;
   fuchsia::virtualaudio::ControlSyncPtr virtual_audio_control_sync_;
-  fuchsia::thermal::ControllerPtr thermal_controller_;
-  ::test::thermal::ControlSyncPtr thermal_test_control_sync_;
+
+  fuchsia::thermal::ClientStateConnectorPtr thermal_client_state_connector_;
+  ::test::thermal::ClientStateControlSyncPtr thermal_test_client_state_control_sync_;
+
   fuchsia::ultrasound::FactoryPtr ultrasound_factory_;
   fuchsia::media::audio::EffectsControllerSyncPtr effects_controller_;
 

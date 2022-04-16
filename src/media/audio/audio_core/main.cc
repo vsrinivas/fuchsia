@@ -15,7 +15,7 @@
 #include "src/media/audio/audio_core/process_config_loader.h"
 #include "src/media/audio/audio_core/profile_provider.h"
 #include "src/media/audio/audio_core/reporter.h"
-#include "src/media/audio/audio_core/thermal_agent.h"
+#include "src/media/audio/audio_core/thermal_watcher.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/audio_core/ultrasound_factory.h"
 #include "src/media/audio/lib/clock/audio_clock_factory.h"
@@ -55,7 +55,7 @@ static int StartAudioCore(const fxl::CommandLine& cl) {
                                  std::make_shared<AudioClockFactory>());
   context->PublishOutgoingServices();
 
-  auto thermal_agent = ThermalAgent::CreateAndServe(context.get());
+  auto thermal_watcher = ThermalWatcher::CreateAndWatch(*context);
   auto ultrasound_factory = UltrasoundFactory::CreateAndServe(context.get());
 
   ProfileProvider profile_provider(context->component_context(),

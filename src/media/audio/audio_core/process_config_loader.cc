@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
+#include <optional>
 #include <sstream>
 #include <string_view>
 
@@ -52,15 +53,11 @@ constexpr char kJsonKeyEligibleForLoopback[] = "eligible_for_loopback";
 constexpr char kJsonKeyIndependentVolumeControl[] = "independent_volume_control";
 constexpr char kJsonKeyDriverGainDb[] = "driver_gain_db";
 constexpr char kJsonKeySoftwareGainDb[] = "software_gain_db";
-constexpr char kJsonKeyThermalPolicy[] = "thermal_policy";
-constexpr char kJsonKeyTargetName[] = "target_name";
-constexpr char kJsonKeyTripPoint[] = "trip_point";
-constexpr char kJsonKeyTripPointDeactivateBelow[] = "deactivate_below";
-constexpr char kJsonKeyTripPointActivateAt[] = "activate_at";
-constexpr char kJsonKeyStateTransitions[] = "state_transitions";
 constexpr char kJsonKeyMinGainDb[] = "min_gain_db";
 constexpr char kJsonKeyMaxGainDb[] = "max_gain_db";
-constexpr char kJsonKeyNominalConfig[] = "nominal_config";
+constexpr char kJsonKeyThermalStates[] = "thermal_states";
+constexpr char kJsonKeyThermalStateNumber[] = "state_number";
+constexpr char kJsonKeyThermalEffectConfigs[] = "effect_configs";
 
 void CountLoopbackStages(const PipelineConfig::MixGroup& mix_group, uint32_t* count) {
   if (mix_group.loopback) {
@@ -461,78 +458,6 @@ ParseOutputDeviceProfileFromJsonObject(const rapidjson::Value& value,
                                         /*software_gain_db=*/0)));
 }
 
-ThermalConfig::Entry ParseThermalPolicyEntryFromJsonObject(const rapidjson::Value& value) {
-  FX_CHECK(value.IsObject());
-
-  auto trip_point_it = value.FindMember(kJsonKeyTripPoint);
-  FX_CHECK(trip_point_it != value.MemberEnd());
-
-  FX_CHECK(trip_point_it->value.IsObject());
-  auto deactivate_below_it = trip_point_it->value.FindMember(kJsonKeyTripPointDeactivateBelow);
-  FX_CHECK(deactivate_below_it != trip_point_it->value.MemberEnd());
-  FX_CHECK(deactivate_below_it->value.IsUint());
-  uint32_t deactivate_below = deactivate_below_it->value.GetUint();
-  auto activate_at_it = trip_point_it->value.FindMember(kJsonKeyTripPointActivateAt);
-  FX_CHECK(activate_at_it != trip_point_it->value.MemberEnd());
-  FX_CHECK(activate_at_it->value.IsUint());
-  uint32_t activate_at = activate_at_it->value.GetUint();
-  FX_CHECK(deactivate_below >= 1);
-  FX_CHECK(activate_at <= 100);
-
-  auto transitions_it = value.FindMember(kJsonKeyStateTransitions);
-  FX_CHECK(transitions_it != value.MemberEnd());
-  FX_CHECK(transitions_it->value.IsArray());
-
-  std::vector<ThermalConfig::StateTransition> transitions;
-  for (const auto& transition : transitions_it->value.GetArray()) {
-    FX_CHECK(transition.IsObject());
-    auto target_name_it = transition.FindMember(kJsonKeyTargetName);
-    FX_CHECK(target_name_it != value.MemberEnd());
-    FX_CHECK(target_name_it->value.IsString());
-    const auto* target_name = target_name_it->value.GetString();
-
-    auto config_it = transition.FindMember(kJsonKeyConfig);
-    FX_CHECK(config_it != transition.MemberEnd());
-    rapidjson::StringBuffer config_buf;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(config_buf);
-    config_it->value.Accept(writer);
-
-    transitions.emplace_back(target_name, config_buf.GetString());
-  }
-
-  return ThermalConfig::Entry(
-      ThermalConfig::TripPoint{.deactivate_below = deactivate_below, .activate_at = activate_at},
-      transitions);
-}
-
-std::vector<ThermalConfig::StateTransition> ParseThermalNominalStateFromJsonObject(
-    const rapidjson::Value& value) {
-  FX_CHECK(value.IsObject());
-
-  auto transitions_it = value.FindMember(kJsonKeyStateTransitions);
-  FX_CHECK(transitions_it != value.MemberEnd());
-  FX_CHECK(transitions_it->value.IsArray());
-
-  std::vector<ThermalConfig::StateTransition> transitions;
-  for (const auto& transition : transitions_it->value.GetArray()) {
-    FX_CHECK(transition.IsObject());
-    auto target_name_it = transition.FindMember(kJsonKeyTargetName);
-    FX_CHECK(target_name_it != value.MemberEnd());
-    FX_CHECK(target_name_it->value.IsString());
-    const auto* target_name = target_name_it->value.GetString();
-
-    auto config_it = transition.FindMember(kJsonKeyConfig);
-    FX_CHECK(config_it != transition.MemberEnd());
-    rapidjson::StringBuffer config_buf;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(config_buf);
-    config_it->value.Accept(writer);
-
-    transitions.emplace_back(target_name, config_buf.GetString());
-  }
-
-  return transitions;
-}
-
 fpromise::result<void, std::string> ParseOutputDevicePoliciesFromJsonObject(
     const rapidjson::Value& output_device_profiles, ProcessConfigBuilder* config_builder) {
   FX_CHECK(output_device_profiles.IsArray());
@@ -619,21 +544,124 @@ fpromise::result<> ParseInputDevicePoliciesFromJsonObject(
   return fpromise::ok();
 }
 
-void ParseThermalPolicyFromJsonObject(const rapidjson::Value& value,
-                                      ProcessConfigBuilder* config_builder) {
-  FX_CHECK(value.IsArray());
-  for (const auto& thermal_policy_entry : value.GetArray()) {
-    auto nominal_config_it = thermal_policy_entry.FindMember(kJsonKeyNominalConfig);
-    if (nominal_config_it == thermal_policy_entry.MemberEnd()) {
-      config_builder->AddThermalPolicyEntry(
-          ParseThermalPolicyEntryFromJsonObject(thermal_policy_entry));
+fpromise::result<std::vector<ThermalConfig::EffectConfig>, std::string>
+ParseEffectConfigsFromJsonObject(const rapidjson::Value& json_entry) {
+  std::vector<ThermalConfig::EffectConfig> effect_configs;
+
+  if (!json_entry.IsObject()) {
+    return fpromise::error("Parse error: effect_config entry value must be an object");
+  }
+  const auto effect_configs_object = json_entry.GetObject();
+  if (effect_configs_object.ObjectEmpty()) {
+    return fpromise::error("Parse error: effect_config object must not be empty");
+  }
+
+  for (const auto& effect_config_entry : effect_configs_object) {
+    if (!effect_config_entry.name.IsString()) {
+      return fpromise::error("Parse error: effect_config key must be a string");
+    }
+    const auto effect_config_name = effect_config_entry.name.GetString();
+
+    if (!effect_config_entry.value.IsObject()) {
+      return fpromise::error("Parse error: effect_config value must be an object");
+    }
+    rapidjson::StringBuffer config_buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(config_buffer);
+    effect_config_entry.value.Accept(writer);
+    const auto config_string = config_buffer.GetString();
+
+    effect_configs.emplace_back(effect_config_name, config_string);
+  }
+  return fpromise::ok(effect_configs);
+}
+
+fpromise::result<ThermalConfig::State, std::string> ParseThermalStateFromJsonObject(
+    const rapidjson::Value& json_entry) {
+  if (!json_entry.IsObject()) {
+    return fpromise::error("Parse error: thermal state entry must be an object");
+  }
+
+  // validate state_number
+  auto thermal_state_number_key = json_entry.FindMember(kJsonKeyThermalStateNumber);
+  if (thermal_state_number_key == json_entry.MemberEnd()) {
+    return fpromise::error("Parse error: thermal state entry must contain state_number key");
+  }
+  if (!thermal_state_number_key->value.IsUint64()) {
+    return fpromise::error("Parse error: thermal state_number key must be uint64");
+  }
+  const auto state_number = thermal_state_number_key->value.GetUint64();
+
+  // get effect_configs dictionary
+  auto effect_configs_key = json_entry.FindMember(kJsonKeyThermalEffectConfigs);
+  if (effect_configs_key == json_entry.MemberEnd()) {
+    return fpromise::error("Parse error: thermal state entry must contain effect_configs key");
+  }
+
+  auto result = ParseEffectConfigsFromJsonObject(effect_configs_key->value);
+  if (result.is_error()) {
+    return fpromise::error(result.error());
+  }
+
+  // create ThermalConfig::State
+  return fpromise::ok(ThermalConfig::State{state_number, result.value()});
+}
+
+fpromise::result<void, std::string> ParseThermalStatesFromJsonObject(
+    const rapidjson::Value& json_entry, ProcessConfigBuilder* config_builder) {
+  if (!json_entry.IsArray()) {
+    return fpromise::error("Parse error: thermal_states must be an array");
+  }
+  const auto& json_entries = json_entry.GetArray();
+  if (json_entries.Empty()) {
+    return fpromise::error("Parse error: thermal_states array cannot be empty");
+  }
+
+  // As we parse each thermal state, ensure that state[0] is specified, and that every thermal
+  // state configures an identical set of effects.
+  bool state0_found = false;
+  std::optional<uint64_t> first_state_number;
+  std::unordered_set<std::string> effect_config_names;
+
+  for (const auto& json_state : json_entry.GetArray()) {
+    auto result = ParseThermalStateFromJsonObject(json_state);
+    if (result.is_error()) {
+      return fpromise::error(result.error());
+    }
+    auto thermal_state_number = result.value().thermal_state_number();
+    if (thermal_state_number == 0) {
+      state0_found = true;
+    }
+    auto configs = result.value().effect_configs();
+    if (!first_state_number.has_value()) {
+      first_state_number = thermal_state_number;
+      for (const auto& config : configs) {
+        effect_config_names.insert(config.name());
+      }
     } else {
-      auto nominal_states = ParseThermalNominalStateFromJsonObject(thermal_policy_entry);
-      for (auto nominal_state : nominal_states) {
-        config_builder->AddThermalNominalState(std::move(nominal_state));
+      std::ostringstream error_str;
+      if (configs.size() != effect_config_names.size()) {
+        error_str << "First thermal state [" << *first_state_number << "] contains "
+                  << effect_config_names.size() << " effect configs, but state ["
+                  << thermal_state_number << "] contains " << configs.size() << " effect configs";
+        return fpromise::error(error_str.str());
+      }
+      for (const auto& config : configs) {
+        if (effect_config_names.find(config.name()) == effect_config_names.end()) {
+          error_str << "Thermal state [" << thermal_state_number << "] contains effect config '"
+                    << config.name() << "' which is not specified in state [" << *first_state_number
+                    << "]";
+          return fpromise::error(error_str.str());
+        }
       }
     }
+    config_builder->AddThermalConfigState(result.take_value());
   }
+
+  if (!state0_found) {
+    return fpromise::error("Thermal configuration must contain an entry for state 0");
+  }
+
+  return fpromise::ok();
 }
 
 }  // namespace
@@ -715,9 +743,15 @@ fpromise::result<ProcessConfig, std::string> ProcessConfigLoader::ParseProcessCo
     }
   }
 
-  auto thermal_policy_it = doc.FindMember(kJsonKeyThermalPolicy);
-  if (thermal_policy_it != doc.MemberEnd()) {
-    ParseThermalPolicyFromJsonObject(thermal_policy_it->value, &config_builder);
+  auto thermal_states_it = doc.FindMember(kJsonKeyThermalStates);
+  if (thermal_states_it != doc.MemberEnd()) {
+    auto result = ParseThermalStatesFromJsonObject(thermal_states_it->value, &config_builder);
+    if (result.is_error()) {
+      return fpromise::error(std::string("Failed to parse thermal state policies: ") +
+                             result.take_error());
+    }
+  } else {
+    FX_LOGS(INFO) << "This configuration contains no thermal state specification";
   }
 
   return fpromise::ok(config_builder.Build());

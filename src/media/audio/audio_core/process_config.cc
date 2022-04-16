@@ -58,19 +58,9 @@ ProcessConfigBuilder& ProcessConfigBuilder::SetMixProfile(MixProfileConfig mix_p
   return *this;
 }
 
-ProcessConfigBuilder& ProcessConfigBuilder::AddThermalPolicyEntry(
-    ThermalConfig::Entry thermal_policy_entry) {
-  thermal_config_entries_.push_back(std::move(thermal_policy_entry));
-  return *this;
-}
-
-ProcessConfigBuilder& ProcessConfigBuilder::AddThermalNominalState(
-    ThermalConfig::StateTransition nominal_state) {
-  for (auto& state : thermal_nominal_states_) {
-    FX_CHECK(nominal_state.target_name() != state.target_name())
-        << "Only one nominal state per target allowed";
-  }
-  thermal_nominal_states_.push_back(std::move(nominal_state));
+ProcessConfigBuilder& ProcessConfigBuilder::AddThermalConfigState(
+    ThermalConfig::State thermal_config_state) {
+  thermal_config_states_.push_back(std::move(thermal_config_state));
   return *this;
 }
 
@@ -80,8 +70,7 @@ ProcessConfig ProcessConfigBuilder::Build() {
       std::move(*default_volume_curve_),
       DeviceConfig(std::move(output_device_profiles_), std::move(default_output_device_profile_),
                    std::move(input_device_profiles_), std::move(default_input_device_profile_)),
-      mix_profile_config_,
-      ThermalConfig(std::move(thermal_config_entries_), std::move(thermal_nominal_states_)));
+      mix_profile_config_, ThermalConfig(std::move(thermal_config_states_)));
 }
 
 }  // namespace media::audio

@@ -7,6 +7,7 @@
 #include <lib/zx/time.h>
 
 #include <iostream>
+#include <ostream>
 
 #include <gtest/gtest.h>
 
@@ -112,7 +113,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicy) {
     ],
     "output_devices": [
       {
-        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "device_id": "34384e7da9d52c8062a9765baeb6053a",
         "supported_stream_types": [
           "render:media",
           "render:interruption",
@@ -175,13 +176,13 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingMultipleDeviceIds) {
     ],
     "output_devices": [
       {
-        "device_id" : ["34384e7da9d52c8062a9765baeb6053a", "34384e7da9d52c8062a9765baeb6053b" ],
+        "device_id": ["34384e7da9d52c8062a9765baeb6053a", "34384e7da9d52c8062a9765baeb6053b" ],
         "supported_stream_types": [
           "render:media"
         ]
       },
       {
-        "device_id" : "*",
+        "device_id": "*",
         "supported_stream_types": [
           "render:media",
           "render:interruption",
@@ -235,7 +236,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyNoDefault) {
     ],
     "output_devices": [
       {
-        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "device_id": "34384e7da9d52c8062a9765baeb6053a",
         "supported_stream_types": [
           "render:media",
           "render:interruption",
@@ -285,7 +286,7 @@ TEST(ProcessConfigLoaderTest, RejectConfigWithUnknownStreamTypes) {
     ],
     "output_devices": [
       {
-        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "device_id": "34384e7da9d52c8062a9765baeb6053a",
         "supported_stream_types": [
           "render:media",
           "render:interruption",
@@ -325,7 +326,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyInsufficientCove
     ],
     "output_devices": [
       {
-        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "device_id": "34384e7da9d52c8062a9765baeb6053a",
         "supported_stream_types": [
           "render:media",
           "render:interruption",
@@ -360,7 +361,7 @@ TEST(ProcessConfigLoaderTest, AllowConfigWithoutUltrasound) {
     ],
     "output_devices": [
       {
-        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "device_id": "34384e7da9d52c8062a9765baeb6053a",
         "supported_stream_types": [
           "render:media",
           "render:interruption",
@@ -394,7 +395,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithOutputGains) {
     ],
     "output_devices": [
       {
-        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "device_id": "34384e7da9d52c8062a9765baeb6053a",
         "supported_stream_types": [
           "render:media",
           "render:interruption",
@@ -439,7 +440,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithInputGains) {
     ],
     "input_devices": [
       {
-        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "device_id": "34384e7da9d52c8062a9765baeb6053a",
         "supported_stream_types": [
           "capture:background"
         ],
@@ -483,7 +484,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithInputDevices) {
     ],
     "input_devices": [
       {
-        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "device_id": "34384e7da9d52c8062a9765baeb6053a",
         "supported_stream_types": [
           "capture:background"
         ],
@@ -543,7 +544,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffectsV1) {
     ],
     "output_devices": [
       {
-        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "device_id": "34384e7da9d52c8062a9765baeb6053a",
         "supported_stream_types": [
           "render:media",
           "render:interruption",
@@ -761,7 +762,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffectsV2) {
     ],
     "output_devices": [
       {
-        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "device_id": "34384e7da9d52c8062a9765baeb6053a",
         "supported_stream_types": [
           "render:media",
           "render:interruption",
@@ -977,7 +978,7 @@ TEST(ProcessConfigLoaderTest, RejectConfigWithMultipleLoopbackStages) {
     ],
     "output_devices": [
       {
-        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "device_id": "34384e7da9d52c8062a9765baeb6053a",
         "supported_stream_types": [
           "render:media",
           "render:interruption",
@@ -1032,7 +1033,7 @@ TEST(ProcessConfigLoaderTest, RejectConfigWithoutLoopbackPointSpecified) {
     ],
     "output_devices": [
       {
-        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "device_id": "34384e7da9d52c8062a9765baeb6053a",
         "supported_stream_types": [
           "render:media",
           "render:interruption",
@@ -1079,7 +1080,7 @@ TEST(ProcessConfigLoaderTest, RejectConfigWithInvalidChannelCount) {
       ],
       "output_devices": [
         {
-          "device_id" : "*",
+          "device_id": "*",
           "supported_stream_types": [
             "render:media",
             "render:interruption",
@@ -1150,8 +1151,8 @@ TEST(ProcessConfigLoaderTest, RejectConfigWithInvalidDefaultVolumeRenderUsages) 
   ASSERT_TRUE(result.is_error());
 }
 
-TEST(ProcessConfigLoaderTest, LoadProcessConfigWithThermalPolicy) {
-  static const std::string kConfigWithThermalPolicy =
+TEST(ProcessConfigLoaderTest, LoadThermalConfigWithStates) {
+  static const std::string kConfigWithThermalStates =
       R"JSON({
     "volume_curve": [
         {
@@ -1163,102 +1164,237 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithThermalPolicy) {
             "db": 0.0
         }
     ],
-    "thermal_policy" : [
+    "thermal_states": [
         {
-            "nominal_config": true,
-            "state_transitions": [
-                {
-                    "target_name": "target name 0",
-                    "config": {
-                        "value": "nominal config 0"
-                    }
-                }
-            ]
-        },
-        {
-            "trip_point": {
-                "deactivate_below": 23,
-                "activate_at": 25
-            },
-            "state_transitions": [
-                {
-                    "target_name": "target name 0",
-                    "config": {
-                      "value": "config 0 trip point 0"
-                    }
+            "state_number": 0,
+            "effect_configs": {
+                "target name A": {
+                  "value": "state 0 config A"
                 },
-                {
-                    "target_name": "target name 1",
-                    "config": {
-                      "value": "config 1 trip point 0"
-                    }
+                "target name B": {
+                  "value": "state 0 config B"
                 }
-            ]
+            }
         },
         {
-            "trip_point": {
-                "deactivate_below": 48,
-                "activate_at": 50
-            },
-            "state_transitions": [
-                {
-                    "target_name": "target name 1",
-                    "config": {
-                      "value": "config 1 trip point 1"
-                    }
+            "state_number": 1,
+            "effect_configs": {
+                "target name A": {
+                  "value": "state 1 config A"
+                },
+                "target name B": {
+                  "value": "state 1 config B"
                 }
-            ]
+            }
         },
         {
-            "trip_point": {
-                "deactivate_below": 73,
-                "activate_at": 75
-            },
-            "state_transitions": [
-                {
-                    "target_name": "target name 0",
-                    "config": {
-                      "value": "config 0 trip point 2"
-                    }
+            "state_number": 2,
+            "effect_configs": {
+                "target name A": {
+                  "value": "state 2 config A"
+                },
+                "target name B": {
+                  "value": "state 2 config B"
                 }
-            ]
+            }
         }
     ]
   })JSON";
-  ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithThermalPolicy.data(),
-                               kConfigWithThermalPolicy.size()));
+  ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithThermalStates.data(),
+                               kConfigWithThermalStates.size()));
 
   auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
   ASSERT_TRUE(result.is_ok()) << result.error();
 
   auto config = result.value();
-  const auto& entries = config.thermal_config().entries();
-  EXPECT_EQ(3u, entries.size());
+  const auto& states = config.thermal_config().states();
+  EXPECT_EQ(3u, states.size());
 
-  EXPECT_EQ(23u, entries[0].trip_point().deactivate_below);
-  EXPECT_EQ(25u, entries[0].trip_point().activate_at);
-  EXPECT_EQ(2u, entries[0].state_transitions().size());
-  EXPECT_EQ("target name 0", entries[0].state_transitions()[0].target_name());
-  EXPECT_EQ("{\"value\":\"config 0 trip point 0\"}", entries[0].state_transitions()[0].config());
-  EXPECT_EQ("target name 1", entries[0].state_transitions()[1].target_name());
-  EXPECT_EQ("{\"value\":\"config 1 trip point 0\"}", entries[0].state_transitions()[1].config());
+  EXPECT_EQ(0u, states[0].thermal_state_number());
+  EXPECT_EQ(2u, states[0].effect_configs().size());
 
-  EXPECT_EQ(48u, entries[1].trip_point().deactivate_below);
-  EXPECT_EQ(50u, entries[1].trip_point().activate_at);
-  EXPECT_EQ(1u, entries[1].state_transitions().size());
-  EXPECT_EQ("target name 1", entries[1].state_transitions()[0].target_name());
-  EXPECT_EQ("{\"value\":\"config 1 trip point 1\"}", entries[1].state_transitions()[0].config());
+  EXPECT_EQ("target name A", states[0].effect_configs()[0].name());
+  EXPECT_EQ("{\"value\":\"state 0 config A\"}", states[0].effect_configs()[0].config_string());
+  EXPECT_EQ("target name B", states[0].effect_configs()[1].name());
+  EXPECT_EQ("{\"value\":\"state 0 config B\"}", states[0].effect_configs()[1].config_string());
 
-  EXPECT_EQ(73u, entries[2].trip_point().deactivate_below);
-  EXPECT_EQ(75u, entries[2].trip_point().activate_at);
-  EXPECT_EQ(1u, entries[2].state_transitions().size());
-  EXPECT_EQ("target name 0", entries[2].state_transitions()[0].target_name());
-  EXPECT_EQ("{\"value\":\"config 0 trip point 2\"}", entries[2].state_transitions()[0].config());
+  EXPECT_EQ(2u, states[1].effect_configs().size());
+  EXPECT_EQ("target name A", states[1].effect_configs()[0].name());
+  EXPECT_EQ("{\"value\":\"state 1 config A\"}", states[1].effect_configs()[0].config_string());
+  EXPECT_EQ("target name B", states[1].effect_configs()[1].name());
+  EXPECT_EQ("{\"value\":\"state 1 config B\"}", states[1].effect_configs()[1].config_string());
 
-  const auto& nominal_states = config.thermal_config().nominal_states();
-  EXPECT_EQ(1u, config.thermal_config().nominal_states().size());
-  EXPECT_EQ("target name 0", nominal_states[0].target_name());
-  EXPECT_EQ("{\"value\":\"nominal config 0\"}", nominal_states[0].config());
+  EXPECT_EQ(2u, states[2].effect_configs().size());
+  EXPECT_EQ("target name A", states[2].effect_configs()[0].name());
+  EXPECT_EQ("{\"value\":\"state 2 config A\"}", states[2].effect_configs()[0].config_string());
+  EXPECT_EQ("target name B", states[2].effect_configs()[1].name());
+  EXPECT_EQ("{\"value\":\"state 2 config B\"}", states[2].effect_configs()[1].config_string());
+}
+
+// Attempt bad thermal configs of various types. All should return an error result.
+TEST(ProcessConfigLoaderTest, MalformedThermalConfigs) {
+  std::vector<std::pair<std::string, std::string>> kMalformedThermalConfigs{
+      {"thermal_states is not an array",
+       R"JSON({
+    "volume_curve": [ { "level": 0.0, "db": -160.0 }, { "level": 1.0, "db": 0.0 } ],
+    "thermal_states": "not an array"
+    })JSON"},
+      /*
+      // thermal_states is empty array
+      R"JSON({
+    "volume_curve": [ { "level": 0.0, "db": -160.0 }, { "level": 1.0, "db": 0.0 } ],
+    "thermal_states": []
+    })JSON",
+      // thermal state entry is not an object
+      R"JSON({
+    "volume_curve": [ { "level": 0.0, "db": -160.0 }, { "level": 1.0, "db": 0.0 } ],
+    "thermal_states": [
+        "not an object"
+    ]
+    })JSON",
+      // thermal state entry has no state_number key
+      R"JSON({
+    "volume_curve": [ { "level": 0.0, "db": -160.0 }, { "level": 1.0, "db": 0.0 } ],
+    "thermal_states": [
+        {
+            "effect_configs": { "config_key": "config_value" }
+        }
+    ]
+    })JSON",
+      // state_number is not an integer
+      R"JSON({
+    "volume_curve": [ { "level": 0.0, "db": -160.0 }, { "level": 1.0, "db": 0.0 } ],
+    "thermal_states": [
+        {
+            "state_number": 1.5,
+            "effect_configs": { "key": "value" }
+        }
+    ]
+    })JSON",
+      // state_number is negative
+      R"JSON({
+    "volume_curve": [ { "level": 0.0, "db": -160.0 }, { "level": 1.0, "db": 0.0 } ],
+    "thermal_states": [
+        {
+            "state_number": -42,
+            "effect_configs": { "key": "value" }
+        }
+    ]
+    })JSON",
+      // state_number 0 not found
+      R"JSON({
+    "volume_curve": [ { "level": 0.0, "db": -160.0 }, { "level": 1.0, "db": 0.0 } ],
+    "thermal_states": [
+        {
+            "state_number": 1,
+            "effect_configs": { "effect_key": "effect_value" },
+        }
+    ]
+    })JSON",
+      // no effect_configs key
+      R"JSON({
+    "volume_curve": [ { "level": 0.0, "db": -160.0 }, { "level": 1.0, "db": 0.0 } ],
+    "thermal_states": [
+        {
+            "state_number": 0,
+        }
+    ]
+    })JSON",
+      // effect_configs is not an object
+      R"JSON({
+    "volume_curve": [ { "level": 0.0, "db": -160.0 }, { "level": 1.0, "db": 0.0 } ],
+    "thermal_states": [
+        {
+            "state_number": 0,
+            "effect_configs": "not an object"
+        }
+    ]
+    })JSON",
+      // effect_configs object has no keys
+      R"JSON({
+    "volume_curve": [ { "level": 0.0, "db": -160.0 }, { "level": 1.0, "db": 0.0 } ],
+    "thermal_states": [
+        {
+            "state_number": 0,
+            "effect_configs": {}
+        }
+    ]
+    })JSON",
+      // effect_configs entry: key is not a string
+      R"JSON({
+    "volume_curve": [ { "level": 0.0, "db": -160.0 }, { "level": 1.0, "db": 0.0 } ],
+    "thermal_states": [
+        {
+            "state_number": 0,
+            "effect_configs": {
+                0: {}
+            }
+        }
+    ]
+    })JSON",
+      // effect_config entry: val is not an object
+      R"JSON({
+    "volume_curve": [ { "level": 0.0, "db": -160.0 }, { "level": 1.0, "db": 0.0 } ],
+    "thermal_states": [
+        {
+            "state_number": 0,
+            "effect_configs": {
+                "config_key": "not an object"
+            }
+        }
+    ]
+    })JSON",
+      // states with different number of effect_configs
+      R"JSON({
+    "volume_curve": [ { "level": 0.0, "db": -160.0 }, { "level": 1.0, "db": 0.0 } ],
+    "thermal_states": [
+        {
+            "state_number": 0,
+            "effect_configs": { "effect1_key": "effect1_value1", "effect2_key": "effect2_value" },
+        },
+        {
+            "state_number": 1,
+            "effect_configs": { "effect1_key": "effect1_value2" },
+        }
+    ]
+    })JSON",
+      // states with different effect_config names
+      R"JSON({
+    "volume_curve": [ { "level": 0.0, "db": -160.0 }, { "level": 1.0, "db": 0.0 } ],
+    "thermal_states": [
+        {
+            "state_number": 0,
+            "effect_configs": { "effect1_key": "effect1_value" },
+        },
+        {
+            "state_number": 1,
+            "effect_configs": { "effect2_key": "effect2_value" },
+        }
+    ]
+    })JSON",
+      // unexpected additional key in thermal_states
+      R"JSON({
+    "volume_curve": [ { "level": 0.0, "db": -160.0 }, { "level": 1.0, "db": 0.0 } ],
+    "thermal_states": [
+        {
+            "state_number": 0,
+            "effect_configs": { "effect_key": "config_value" },
+            "not_effect_configs":  { "key": "value" }
+        }
+    ]
+    })JSON",
+    */
+  };
+
+  for (auto idx = 0u; idx < kMalformedThermalConfigs.size(); ++idx) {
+    const auto [bad_case_name, bad_config] = kMalformedThermalConfigs[idx];
+    ASSERT_TRUE(
+        files::WriteFile(kTestAudioCoreConfigFilename, bad_config.data(), bad_config.size()))
+        << "case " << idx << " (" << bad_case_name << ") could not write file" << std::endl;
+
+    auto result = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
+    EXPECT_TRUE(result.is_error()) << "'" << bad_case_name << "': " << result.error();
+  }
 }
 
 TEST(ProcessConfigLoaderTest, LoadOutputDevicePolicyWithDefaultPipeline) {
@@ -1276,7 +1412,7 @@ TEST(ProcessConfigLoaderTest, LoadOutputDevicePolicyWithDefaultPipeline) {
     ],
     "output_devices": [
       {
-        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "device_id": "34384e7da9d52c8062a9765baeb6053a",
         "supported_stream_types": [
           "capture:loopback",
           "render:media"
@@ -1330,7 +1466,7 @@ TEST(ProcessConfigLoaderTest, LoadOutputDevicePolicyWithNoSupportedStreamTypes) 
     ],
     "output_devices": [
       {
-        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "device_id": "34384e7da9d52c8062a9765baeb6053a",
         "supported_stream_types": []
       },
       {
@@ -1387,7 +1523,7 @@ TEST(ProcessConfigLoaderTest, LoadOutputDevicePolicyVolumeCurve) {
     ],
     "output_devices": [
       {
-        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "device_id": "34384e7da9d52c8062a9765baeb6053a",
         "supported_stream_types": []
       },
       {

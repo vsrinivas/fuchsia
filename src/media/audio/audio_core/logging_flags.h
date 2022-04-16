@@ -12,10 +12,11 @@ namespace media::audio {
 // Render-related logging
 //
 // Timing and lifetime for AudioRenderers (including timestamps).
+inline constexpr bool kLogRendererCtorDtorCalls = false;
 inline constexpr bool kLogRendererClockConstruction = false;
+inline constexpr bool kLogAudioRendererSetUsageCalls = false;
 inline constexpr bool kLogRendererPlayCalls = false;
 inline constexpr bool kLogRendererPauseCalls = false;
-inline constexpr bool kLogRendererDtorCalls = false;
 
 // Loudness calls and actions for AudioRenderers.
 inline constexpr bool kLogRenderUsageVolumeGainActions = true;

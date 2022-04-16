@@ -110,8 +110,8 @@ void HermeticAudioTest::SetUpRealm() {
     virtual_audio_control_sync_->Enable();
   }
 
-  realm_->Connect(thermal_controller_.NewRequest());
-  realm_->Connect(thermal_test_control_sync_.NewRequest());
+  realm_->Connect(thermal_client_state_connector_.NewRequest());
+  realm_->Connect(thermal_test_client_state_control_sync_.NewRequest());
 }
 
 void HermeticAudioTest::TearDownRealm() { realm_ = nullptr; }
@@ -475,47 +475,35 @@ fuchsia::media::AudioDeviceEnumeratorPtr HermeticAudioTest::TakeOwnershipOfAudio
 // thermal_test_control is synchronous: when SetThermalState returns, a change is committed.
 zx_status_t HermeticAudioTest::ConfigurePipelineForThermal(uint32_t thermal_state) {
   constexpr size_t kMaxRetries = 100;
-  constexpr zx::duration kRetryPeriod = zx::msec(10);
+  constexpr auto kAudioClientType = "audio";
+  constexpr auto kClientStateRetryPeriod = zx::msec(50);
 
-  std::optional<size_t> audio_subscriber;
-
-  std::vector<::test::thermal::SubscriberInfo> subscriber_data;
-  // We might query thermal::test::Control before AudioCore has subscribed, so wait for it.
+  bool audio_is_connected = false;
   for (size_t retries = 0u; retries < kMaxRetries; ++retries) {
-    auto status = thermal_test_control()->GetSubscriberInfo(&subscriber_data);
+    auto status = thermal_test_client_state_control()->IsClientTypeConnected(kAudioClientType,
+                                                                             &audio_is_connected);
     if (status != ZX_OK) {
-      ADD_FAILURE() << "GetSubscriberInfo failed: " << status;
+      ADD_FAILURE() << "test::thermal::ClientStateControl::IsClientConnected failed: " << status;
       return status;
     }
 
-    // There is only one thermal subscriber for audio; there might be others of non-audio types.
-    for (auto subscriber_num = 0u; subscriber_num < subscriber_data.size(); ++subscriber_num) {
-      if (subscriber_data[subscriber_num].actor_type == fuchsia::thermal::ActorType::AUDIO) {
-        audio_subscriber = subscriber_num;
-        break;
-      }
-    }
-    if (audio_subscriber.has_value()) {
+    if (audio_is_connected) {
       break;
     }
-    zx::nanosleep(zx::deadline_after(kRetryPeriod));
+
+    FX_LOGS(INFO) << "Waiting " << kClientStateRetryPeriod.to_msecs() << " ms, for a '"
+                  << kAudioClientType << "' watcher to connect";
+    zx::nanosleep(zx::deadline_after(kClientStateRetryPeriod));
   }
 
-  if (!audio_subscriber.has_value()) {
-    ADD_FAILURE() << "No audio-related thermal subscribers. "
-                     "Don't set thermal_state if a pipeline has no thermal support";
+  if (!audio_is_connected) {
+    ADD_FAILURE() << "No audio-related thermal client state watchers. "
+                     "We should not set thermal_state if a pipeline has no thermal support";
     return ZX_ERR_TIMED_OUT;
   }
 
-  auto max_thermal_state = subscriber_data[audio_subscriber.value()].num_thermal_states - 1;
-  if (thermal_state > max_thermal_state) {
-    ADD_FAILURE() << "Subscriber cannot be put into thermal_state " << thermal_state << " (max "
-                  << max_thermal_state << ")";
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  auto status = this->thermal_test_control()->SetThermalState(
-      static_cast<int32_t>(audio_subscriber.value()), thermal_state);
+  auto status =
+      this->thermal_test_client_state_control()->SetThermalState(kAudioClientType, thermal_state);
   if (status != ZX_OK) {
     ADD_FAILURE() << "SetThermalState failed: " << status;
     return status;

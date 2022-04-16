@@ -13,51 +13,50 @@ namespace media::audio {
 
 // Represents the thermal policy configuration found in an audio_core configuration file.
 //
-// ThermalConfig is conceptually of the form [Entry(TripPoint, [StateTransition])]. When the
-// outer list contains N entries, it specifies N+1 thermal states. Each Entry specifies
-// the transitions in effect states that occur when its TripPoint is activated. The unactivated
-// state configuration is represented by the `nominal_states` vector, one entry per target.
+// Changing the thermal state for audio might require multiple effects to be updated. Here, each
+// State represents a set of effects configurations. Each EffectConfig specifies how a specific
+// named effect should be configured, when changed to that thermal state. The normal (unthrottled)
+// State is designated by `kNominalThermalState`.
 class ThermalConfig {
  public:
-  using TripPoint = fuchsia::thermal::TripPoint;
+  static constexpr uint64_t kNominalThermalState = 0;
 
-  class StateTransition {
+  explicit operator bool() const { return !states_.empty(); }
+
+  class EffectConfig {
    public:
-    StateTransition(const char* target_name, const char* config)
-        : target_name_(target_name), config_(config) {}
+    EffectConfig(const char* name, const char* config_string)
+        : name_(name), config_string_(config_string) {}
 
-    const std::string& target_name() const { return target_name_; }
-    const std::string& config() const { return config_; }
+    const std::string& name() const { return name_; }
+    const std::string& config_string() const { return config_string_; }
 
    private:
-    std::string target_name_;
-    std::string config_;
+    std::string name_;
+    std::string config_string_;
   };
 
-  class Entry {
+  class State {
    public:
-    Entry(const TripPoint& trip_point, std::vector<StateTransition> state_transitions)
-        : trip_point_(trip_point), state_transitions_(std::move(state_transitions)) {}
+    State(uint64_t thermal_state_number, std::vector<EffectConfig> effect_configs)
+        : thermal_state_number_(thermal_state_number), effect_configs_(std::move(effect_configs)) {}
 
-    const TripPoint& trip_point() const { return trip_point_; }
-    const std::vector<StateTransition>& state_transitions() const { return state_transitions_; }
+    uint64_t thermal_state_number() const { return thermal_state_number_; }
+    const std::vector<EffectConfig>& effect_configs() const { return effect_configs_; }
 
    private:
-    TripPoint trip_point_;
-    std::vector<StateTransition> state_transitions_;
+    uint64_t thermal_state_number_;
+    std::vector<EffectConfig> effect_configs_;
   };
 
-  explicit ThermalConfig(std::vector<Entry> entries, std::vector<StateTransition> nominal_states)
-      : entries_(std::move(entries)), nominal_states_(std::move(nominal_states)) {}
+  explicit ThermalConfig(std::vector<State> states) : states_(std::move(states)) {}
 
-  const std::vector<Entry>& entries() const { return entries_; }
-  const std::vector<StateTransition>& nominal_states() const { return nominal_states_; }
+  const std::vector<State>& states() const { return states_; }
 
  private:
   friend class ProcessConfigBuilder;
 
-  std::vector<Entry> entries_;
-  std::vector<StateTransition> nominal_states_;
+  std::vector<State> states_;
 };
 
 }  // namespace media::audio

@@ -4,7 +4,9 @@
     ],
     "program": {
         "binary": "bin/audio_core",
-        "args": ["--disable-cobalt"]
+        "args": [
+            "--disable-cobalt"
+        ]
     },
     "sandbox": {
         "features": [
@@ -12,9 +14,11 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.media.audio.EffectsController",
             "fuchsia.audio.effects.ProcessorCreator",
+            "fuchsia.media.audio.EffectsController",
             "fuchsia.scheduler.ProfileProvider",
+            "fuchsia.thermal.ClientStateConnector",
+            "fuchsia.thermal.ClientStateWatcher",
             "fuchsia.thermal.Controller",
             "fuchsia.tracing.provider.Registry"
         ]
