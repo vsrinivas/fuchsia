@@ -14,6 +14,10 @@ _rustc_version = read_file(
         "json")
 default_rustc_version_string = _rustc_version.instance_id
 
+_version_file_dir =
+    get_label_info("//build/rust:rust_toolchain_version", "target_out_dir")
+rustc_version_file = "$_version_file_dir/rustc_version_file"
+
 declare_args() {
   # Sets a custom base directory for `rustc` and `cargo`.
   # This can be used to test custom Rust toolchains.
@@ -89,6 +93,8 @@ if (is_fuchsia) {
   # Always use panic=unwind on host, or proc macros won't work.
   rust_panic = "unwind"
 }
+
+write_file(rustc_version_file, rustc_version_string)
 
 assert(
     current_os == "mac" || current_os == "linux" || current_os == "fuchsia" ||

@@ -176,15 +176,12 @@ template("rust_config_client_lib_source") {
 
     tool = "//tools/configc"
     tool_output_name = "configc"
-    _version_dir =
-        get_label_info("//build/rust:rust_toolchain_version($host_toolchain)",
-                       "target_out_dir")
 
     inputs = [
       compiled_manifest,
       "//rustfmt.toml",
       "$rustc_prefix/rustfmt",
-      "$_version_dir/rust_toolchain_version",
+      rustc_version_file,
     ]
 
     source_file_path = "${target_out_dir}/${target_name}.rs"

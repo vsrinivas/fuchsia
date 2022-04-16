@@ -144,8 +144,6 @@ if (is_host) {
     deps = [ ":make_toolchain_host_binaries" ]
     sources = [ "$root_build_dir/$out_rust_sysroot" ]
   }
-
-  write_file("$target_out_dir/rust_toolchain_version", rustc_version_string)
 }
 
 group("tests") {
