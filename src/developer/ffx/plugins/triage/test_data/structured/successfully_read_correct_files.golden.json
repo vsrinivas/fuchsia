@@ -1,0 +1,389 @@
+{
+    "actions": {
+        "other": {
+            "act1": {
+                "type": "Warning",
+                "trigger": {
+                    "metric": {
+                        "Eval": {
+                            "raw_expression": "sample::c1",
+                            "parsed_expression": {
+                                "Variable": {
+                                    "name": "sample::c1"
+                                }
+                            }
+                        }
+                    },
+                    "cached_value": {
+                        "Bool": true
+                    }
+                },
+                "print": "yes on A!",
+                "file_bug": null,
+                "tag": null
+            }
+        },
+        "sample": {
+            "unhealthy": {
+                "type": "Warning",
+                "trigger": {
+                    "metric": {
+                        "Eval": {
+                            "raw_expression": "not_healthy",
+                            "parsed_expression": {
+                                "Variable": {
+                                    "name": "not_healthy"
+                                }
+                            }
+                        }
+                    },
+                    "cached_value": {
+                        "Problem": {
+                            "Missing": "Every value was missing"
+                        }
+                    }
+                },
+                "print": "foo is not healthy",
+                "file_bug": null,
+                "tag": null
+            },
+            "act2": {
+                "type": "Warning",
+                "trigger": {
+                    "metric": {
+                        "Eval": {
+                            "raw_expression": "c2",
+                            "parsed_expression": {
+                                "Variable": {
+                                    "name": "c2"
+                                }
+                            }
+                        }
+                    },
+                    "cached_value": {
+                        "Bool": false
+                    }
+                },
+                "print": "yes on A!",
+                "file_bug": null,
+                "tag": null
+            },
+            "some_disk": {
+                "type": "Warning",
+                "trigger": {
+                    "metric": {
+                        "Eval": {
+                            "raw_expression": "tiny",
+                            "parsed_expression": {
+                                "Variable": {
+                                    "name": "tiny"
+                                }
+                            }
+                        }
+                    },
+                    "cached_value": {
+                        "Bool": true
+                    }
+                },
+                "print": "Used some of disk",
+                "file_bug": null,
+                "tag": null
+            },
+            "more_disk": {
+                "type": "Warning",
+                "trigger": {
+                    "metric": {
+                        "Eval": {
+                            "raw_expression": "small",
+                            "parsed_expression": {
+                                "Variable": {
+                                    "name": "small"
+                                }
+                            }
+                        }
+                    },
+                    "cached_value": {
+                        "Bool": false
+                    }
+                },
+                "print": "Used more of the disk",
+                "file_bug": null,
+                "tag": null
+            }
+        }
+    },
+    "metrics": {
+        "sample": {
+            "small": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "ratio > 0.001",
+                        "parsed_expression": {
+                            "Function": [
+                                {
+                                    "Math": "Greater"
+                                },
+                                [
+                                    {
+                                        "Variable": {
+                                            "name": "ratio"
+                                        }
+                                    },
+                                    {
+                                        "Value": {
+                                            "Float": 0.001
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": false
+                }
+            },
+            "foo_health": {
+                "metric": {
+                    "Selector": [
+                        {
+                            "full_selector": "INSPECT:missing.cmx:root:not_found",
+                            "selector_type": "Inspect",
+                            "body": "missing.cmx:root:not_found"
+                        },
+                        {
+                            "full_selector": "INSPECT:not_found.cmx:root/fuchsia.inspect.Health:status",
+                            "selector_type": "Inspect",
+                            "body": "not_found.cmx:root/fuchsia.inspect.Health:status"
+                        }
+                    ]
+                },
+                "cached_value": {
+                    "Problem": {
+                        "Missing": "Every value was missing"
+                    }
+                }
+            },
+            "used": {
+                "metric": {
+                    "Selector": [
+                        {
+                            "full_selector": "INSPECT:bootstrap/bar:root/data_stats/stats:used_bytes",
+                            "selector_type": "Inspect",
+                            "body": "bootstrap/bar:root/data_stats/stats:used_bytes"
+                        }
+                    ]
+                },
+                "cached_value": {
+                    "Vector": [
+                        {
+                            "Int": 704512
+                        }
+                    ]
+                }
+            },
+            "tiny": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "ratio > 0.00000001",
+                        "parsed_expression": {
+                            "Function": [
+                                {
+                                    "Math": "Greater"
+                                },
+                                [
+                                    {
+                                        "Variable": {
+                                            "name": "ratio"
+                                        }
+                                    },
+                                    {
+                                        "Value": {
+                                            "Float": 1e-08
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "total": {
+                "metric": {
+                    "Selector": [
+                        {
+                            "full_selector": "INSPECT:bootstrap/bar:root/data_stats/stats:total_bytes",
+                            "selector_type": "Inspect",
+                            "body": "bootstrap/bar:root/data_stats/stats:total_bytes"
+                        }
+                    ]
+                },
+                "cached_value": {
+                    "Vector": [
+                        {
+                            "Int": 120057757696
+                        }
+                    ]
+                }
+            },
+            "not_healthy": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "foo_health != 'OK'",
+                        "parsed_expression": {
+                            "Function": [
+                                "NotEq",
+                                [
+                                    {
+                                        "Variable": {
+                                            "name": "foo_health"
+                                        }
+                                    },
+                                    {
+                                        "Value": {
+                                            "String": "OK"
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Problem": {
+                        "Missing": "Every value was missing"
+                    }
+                }
+            },
+            "c2": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "other::m > 1",
+                        "parsed_expression": {
+                            "Function": [
+                                {
+                                    "Math": "Greater"
+                                },
+                                [
+                                    {
+                                        "Variable": {
+                                            "name": "other::m"
+                                        }
+                                    },
+                                    {
+                                        "Value": {
+                                            "Int": 1
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": false
+                }
+            },
+            "ratio": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "used / (total + 0.0)",
+                        "parsed_expression": {
+                            "Function": [
+                                {
+                                    "Math": "FloatDiv"
+                                },
+                                [
+                                    {
+                                        "Variable": {
+                                            "name": "used"
+                                        }
+                                    },
+                                    {
+                                        "Function": [
+                                            {
+                                                "Math": "Add"
+                                            },
+                                            [
+                                                {
+                                                    "Variable": {
+                                                        "name": "total"
+                                                    }
+                                                },
+                                                {
+                                                    "Value": {
+                                                        "Float": 0.0
+                                                    }
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Float": 5.868108929569592e-06
+                }
+            },
+            "c1": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "other::m == 1",
+                        "parsed_expression": {
+                            "Function": [
+                                "Equals",
+                                [
+                                    {
+                                        "Variable": {
+                                            "name": "other::m"
+                                        }
+                                    },
+                                    {
+                                        "Value": {
+                                            "Int": 1
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            }
+        },
+        "other": {
+            "m": {
+                "metric": {
+                    "Selector": [
+                        {
+                            "full_selector": "INSPECT:foo_agent.cmx:root:current_num_connections",
+                            "selector_type": "Inspect",
+                            "body": "foo_agent.cmx:root:current_num_connections"
+                        }
+                    ]
+                },
+                "cached_value": {
+                    "Vector": [
+                        {
+                            "Int": 1
+                        }
+                    ]
+                }
+            }
+        }
+    },
+    "plugin_results": {
+        "sandbox_errors": [],
+        "routing_errors": [],
+        "crashes": [],
+        "memory": []
+    },
+    "triage_errors": []
+}

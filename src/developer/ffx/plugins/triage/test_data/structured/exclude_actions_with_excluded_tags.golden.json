@@ -1,0 +1,45 @@
+{
+    "actions": {
+        "sample_tags": {}
+    },
+    "metrics": {
+        "sample_tags": {
+            "c": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "100 > 1",
+                        "parsed_expression": {
+                            "Function": [
+                                {
+                                    "Math": "Greater"
+                                },
+                                [
+                                    {
+                                        "Value": {
+                                            "Int": 100
+                                        }
+                                    },
+                                    {
+                                        "Value": {
+                                            "Int": 1
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            }
+        }
+    },
+    "plugin_results": {
+        "routing_errors": [],
+        "sandbox_errors": [],
+        "memory": [],
+        "crashes": []
+    },
+    "triage_errors": []
+}

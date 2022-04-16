@@ -1,0 +1,67 @@
+{
+    "actions": {
+        "sample_tags": {
+            "act1": {
+                "type": "Warning",
+                "trigger": {
+                    "metric": {
+                        "Eval": {
+                            "raw_expression": "c",
+                            "parsed_expression": {
+                                "Variable": {
+                                    "name": "c"
+                                }
+                            }
+                        }
+                    },
+                    "cached_value": {
+                        "Bool": true
+                    }
+                },
+                "print": "trigger foo tag",
+                "file_bug": null,
+                "tag": "foo"
+            }
+        }
+    },
+    "metrics": {
+        "sample_tags": {
+            "c": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "100 > 1",
+                        "parsed_expression": {
+                            "Function": [
+                                {
+                                    "Math": "Greater"
+                                },
+                                [
+                                    {
+                                        "Value": {
+                                            "Int": 100
+                                        }
+                                    },
+                                    {
+                                        "Value": {
+                                            "Int": 1
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            }
+        }
+    },
+    "plugin_results": {
+        "crashes": [],
+        "routing_errors": [],
+        "sandbox_errors": [],
+        "memory": []
+    },
+    "triage_errors": []
+}

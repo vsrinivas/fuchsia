@@ -1,0 +1,86 @@
+{
+    "actions": {
+        "file_2": {},
+        "file_1": {},
+        "together": {
+            "gauge": {
+                "type": "Gauge",
+                "value": {
+                    "metric": {
+                        "Eval": {
+                            "raw_expression": "file_1::var * file_2::var",
+                            "parsed_expression": {
+                                "Function": [
+                                    {
+                                        "Math": "Mul"
+                                    },
+                                    [
+                                        {
+                                            "Variable": {
+                                                "name": "file_1::var"
+                                            }
+                                        },
+                                        {
+                                            "Variable": {
+                                                "name": "file_2::var"
+                                            }
+                                        }
+                                    ]
+                                ]
+                            }
+                        }
+                    },
+                    "cached_value": {
+                        "Int": 120
+                    }
+                },
+                "format": null,
+                "tag": null
+            }
+        }
+    },
+    "metrics": {
+        "together": {},
+        "file_2": {
+            "var": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "12",
+                        "parsed_expression": {
+                            "Value": {
+                                "Int": 12
+                            }
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Int": 12
+                }
+            }
+        },
+        "file_1": {
+            "var": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "10",
+                        "parsed_expression": {
+                            "Value": {
+                                "Int": 10
+                            }
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Int": 10
+                }
+            }
+        }
+    },
+    "plugin_results": {
+        "memory": [],
+        "crashes": [],
+        "routing_errors": [],
+        "sandbox_errors": []
+    },
+    "triage_errors": []
+}

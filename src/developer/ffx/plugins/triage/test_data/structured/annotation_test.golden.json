@@ -1,0 +1,103 @@
+{
+    "actions": {
+        "annotation_tests": {
+            "test_not_chromebook": {
+                "type": "Warning",
+                "trigger": {
+                    "metric": {
+                        "Eval": {
+                            "raw_expression": "Not(Annotation('build.board') == 'chromebook-x64')",
+                            "parsed_expression": {
+                                "Function": [
+                                    "Not",
+                                    [
+                                        {
+                                            "Function": [
+                                                "Equals",
+                                                [
+                                                    {
+                                                        "Function": [
+                                                            "Annotation",
+                                                            [
+                                                                {
+                                                                    "Value": {
+                                                                        "String": "build.board"
+                                                                    }
+                                                                }
+                                                            ]
+                                                        ]
+                                                    },
+                                                    {
+                                                        "Value": {
+                                                            "String": "chromebook-x64"
+                                                        }
+                                                    }
+                                                ]
+                                            ]
+                                        }
+                                    ]
+                                ]
+                            }
+                        }
+                    },
+                    "cached_value": {
+                        "Bool": false
+                    }
+                },
+                "print": "Not using a chromebook",
+                "file_bug": null,
+                "tag": null
+            },
+            "test_is_chromebook": {
+                "type": "Warning",
+                "trigger": {
+                    "metric": {
+                        "Eval": {
+                            "raw_expression": "Annotation('build.board') == 'chromebook-x64'",
+                            "parsed_expression": {
+                                "Function": [
+                                    "Equals",
+                                    [
+                                        {
+                                            "Function": [
+                                                "Annotation",
+                                                [
+                                                    {
+                                                        "Value": {
+                                                            "String": "build.board"
+                                                        }
+                                                    }
+                                                ]
+                                            ]
+                                        },
+                                        {
+                                            "Value": {
+                                                "String": "chromebook-x64"
+                                            }
+                                        }
+                                    ]
+                                ]
+                            }
+                        }
+                    },
+                    "cached_value": {
+                        "Bool": true
+                    }
+                },
+                "print": "Running on a chromebook",
+                "file_bug": null,
+                "tag": null
+            }
+        }
+    },
+    "metrics": {
+        "annotation_tests": {}
+    },
+    "plugin_results": {
+        "routing_errors": [],
+        "memory": [],
+        "crashes": [],
+        "sandbox_errors": []
+    },
+    "triage_errors": []
+}

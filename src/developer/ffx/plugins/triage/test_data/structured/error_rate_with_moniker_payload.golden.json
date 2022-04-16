@@ -1,0 +1,117 @@
+{
+    "actions": {
+        "error_rate": {
+            "error_rate_too_high": {
+                "type": "Warning",
+                "trigger": {
+                    "metric": {
+                        "Eval": {
+                            "raw_expression": "error_rate > 0.9",
+                            "parsed_expression": {
+                                "Function": [
+                                    {
+                                        "Math": "Greater"
+                                    },
+                                    [
+                                        {
+                                            "Variable": {
+                                                "name": "error_rate"
+                                            }
+                                        },
+                                        {
+                                            "Value": {
+                                                "Float": 0.9
+                                            }
+                                        }
+                                    ]
+                                ]
+                            }
+                        }
+                    },
+                    "cached_value": {
+                        "Bool": true
+                    }
+                },
+                "print": "Error rate for app.cmx is too high",
+                "file_bug": null,
+                "tag": null
+            }
+        }
+    },
+    "metrics": {
+        "error_rate": {
+            "error_rate": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "errors / requests",
+                        "parsed_expression": {
+                            "Function": [
+                                {
+                                    "Math": "FloatDiv"
+                                },
+                                [
+                                    {
+                                        "Variable": {
+                                            "name": "errors"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "requests"
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Float": 0.95
+                }
+            },
+            "errors": {
+                "metric": {
+                    "Selector": [
+                        {
+                            "full_selector": "INSPECT:session-*/app.cmx:root:errors",
+                            "selector_type": "Inspect",
+                            "body": "session-*/app.cmx:root:errors"
+                        }
+                    ]
+                },
+                "cached_value": {
+                    "Vector": [
+                        {
+                            "Int": 95
+                        }
+                    ]
+                }
+            },
+            "requests": {
+                "metric": {
+                    "Selector": [
+                        {
+                            "full_selector": "INSPECT:session-*/app.cmx:root:requests",
+                            "selector_type": "Inspect",
+                            "body": "session-*/app.cmx:root:requests"
+                        }
+                    ]
+                },
+                "cached_value": {
+                    "Vector": [
+                        {
+                            "Int": 100
+                        }
+                    ]
+                }
+            }
+        }
+    },
+    "plugin_results": {
+        "crashes": [],
+        "routing_errors": [],
+        "sandbox_errors": [],
+        "memory": []
+    },
+    "triage_errors": []
+}

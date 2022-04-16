@@ -11,6 +11,7 @@ ffx_plugin("ffx_triage") {
   deps = [
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/developer/ffx/lib/writer:lib",
     "//src/developer/ffx/plugins/target/snapshot:ffx_snapshot",
     "//src/developer/ffx/plugins/target/snapshot:ffx_snapshot_args",
     "//src/diagnostics/lib/triage",
@@ -18,6 +19,7 @@ ffx_plugin("ffx_triage") {
     "//src/lib/fuchsia",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:pretty_assertions",
+    "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:zip",
   ]
@@ -31,17 +33,36 @@ ffx_plugin("ffx_triage") {
   args_sources = [ "src/args.rs" ]
 
   inputs = [
-    "//src/diagnostics/triage/test_data/config/sample_bundle_file_type_error.json",
-    "//src/diagnostics/triage/test_data/config/sample_bundle_files_error.json",
-    "//src/diagnostics/triage/test_data/snapshot/inspect.json",
-    "//src/diagnostics/triage/test_data/config/sample.triage",
-    "//src/diagnostics/triage/test_data/config/map_fold.triage",
-    "//src/diagnostics/triage/test_data/config/other.triage",
-    "//src/diagnostics/triage/test_data/snapshot/annotations.json",
-    "//src/diagnostics/triage/test_data/config/sample_bundle.json",
-    "//src/diagnostics/triage/test_data/config/error_rate.triage",
-    "//src/diagnostics/triage/test_data/config/log_tests.triage",
+    # Test config files.
     "//src/diagnostics/triage/test_data/config/sample_tags.triage",
+    "//src/diagnostics/triage/test_data/config/other.triage",
+    "//src/diagnostics/triage/test_data/config/sample_bundle_files_error.json",
+    "//src/diagnostics/triage/test_data/config/error_rate.triage",
+    "//src/diagnostics/triage/test_data/config/map_fold.triage",
+    "//src/diagnostics/triage/test_data/config/sample_bundle_file_type_error.json",
     "//src/diagnostics/triage/test_data/config/annotation_tests.triage",
+    "//src/diagnostics/triage/test_data/config/sample.triage",
+    "//src/diagnostics/triage/test_data/config/sample_bundle.json",
+    "//src/diagnostics/triage/test_data/config/log_tests.triage",
+
+    # Test snapshot files.
+    "//src/diagnostics/triage/test_data/snapshot/annotations.json",
+    "//src/diagnostics/triage/test_data/snapshot/inspect.json",
+
+    # Expected Structured output golden files.
+    "test_data/structured/error_rate_with_moniker_payload.golden.json",
+    "test_data/structured/included_tags_override_excludes.golden.json",
+    "test_data/structured/include_tagged_actions.golden.json",
+    "test_data/structured/annotation_test.golden.json",
+    "test_data/structured/log_tests.golden.json",
+    "test_data/structured/fail_on_missing_namespace.golden.json",
+    "test_data/structured/use_namespace_in_actions.golden.json",
+    "test_data/structured/bundle_test.golden.json",
+    "test_data/structured/exclude_actions_with_excluded_tags.golden.json",
+    "test_data/structured/use_namespace_in_metrics.golden.json",
+    "test_data/structured/annotation_test2.golden.json",
+    "test_data/structured/successfully_read_correct_files.golden.json",
+    "test_data/structured/map_fold_test.golden.json",
+    "test_data/structured/only_runs_included_actions.golden.json",
   ]
 }

@@ -3,14 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context, Result},
+    anyhow::{anyhow, Context, Result},
     errors::FfxError,
     ffx_core::ffx_plugin,
     ffx_triage_args::TriageCommand,
+    ffx_writer::Writer,
     fidl_fuchsia_feedback::DataProviderProxy,
     std::{io::Write, path::PathBuf},
     tempfile::tempdir,
-    triage::{analyze, ActionResultFormatter, ActionTagDirective},
+    triage::{analyze, analyze_structured, ActionResultFormatter, ActionTagDirective},
     triage_app_lib::file_io::{config_from_files, diagnostics_from_directory},
 };
 
@@ -19,14 +20,18 @@ mod snapshot;
 pub use snapshot::create_snapshot;
 
 #[ffx_plugin("triage.enabled", DataProviderProxy = "core/appmgr:out:fuchsia.feedback.DataProvider")]
-pub async fn triage(data_provider_proxy: DataProviderProxy, cmd: TriageCommand) -> Result<()> {
-    triage_impl(data_provider_proxy, cmd, &mut std::io::stdout()).await.map_err(flatten_error)
+pub async fn triage(
+    data_provider_proxy: Option<DataProviderProxy>,
+    #[ffx(machine = TriageOutput)] writer: Writer,
+    cmd: TriageCommand,
+) -> Result<()> {
+    triage_impl(data_provider_proxy, cmd, writer).await.map_err(flatten_error)
 }
 
-async fn triage_impl<W: Write>(
-    data_provider_proxy: DataProviderProxy,
+async fn triage_impl(
+    data_provider_proxy: Option<DataProviderProxy>,
     cmd: TriageCommand,
-    writer: &mut W,
+    mut writer: Writer,
 ) -> Result<()> {
     let TriageCommand { config, data, tags, exclude_tags } = cmd;
 
@@ -37,8 +42,14 @@ async fn triage_impl<W: Write>(
         None => {
             let snapshot_tempdir =
                 tempdir().context("Unable to create temporary snapshot directory.")?;
-            let _ = snapshot::create_snapshot(data_provider_proxy, snapshot_tempdir.path(), writer)
-                .await?;
+            let data_provider_proxy =
+                data_provider_proxy.ok_or(anyhow!("Unable to get data provider."))?;
+            let _ = snapshot::create_snapshot(
+                data_provider_proxy,
+                snapshot_tempdir.path(),
+                &mut writer,
+            )
+            .await?;
             snapshot_tempdir.into_path()
         }
     };
@@ -47,12 +58,12 @@ async fn triage_impl<W: Write>(
 }
 
 /// Analyze snapshot in the data_directory using config_files.
-fn analyze_snapshot<W: Write>(
+fn analyze_snapshot(
     config_files: Vec<PathBuf>,
     data_directory: PathBuf,
     tags: Vec<String>,
     exclude_tags: Vec<String>,
-    writer: &mut W,
+    mut writer: Writer,
 ) -> Result<()> {
     let parse_result =
         config_from_files(&config_files, &ActionTagDirective::from_tags(tags, exclude_tags))
@@ -62,15 +73,25 @@ fn analyze_snapshot<W: Write>(
     let diagnostic_data = diagnostics_from_directory(&data_directory)
         .context("Unable to process disagnostics data.")?;
 
-    let action_results =
-        analyze(&diagnostic_data, &parse_result).context("Unable to analyze data.")?;
+    if writer.is_machine() {
+        let triage_output = analyze_structured(&diagnostic_data, &parse_result)
+            .context("Unable to analyze data.")?;
 
-    let results_formatter = ActionResultFormatter::new(&action_results);
+        writer
+            .machine(&triage_output)
+            .context("Unable to write structured output to destination.")?;
+    } else {
+        let action_results =
+            analyze(&diagnostic_data, &parse_result).context("Unable to analyze data.")?;
 
-    // TODO(fxbug.dev/95665): take format as cmdline argument.
-    let output = results_formatter.to_text();
+        let results_formatter = ActionResultFormatter::new(&action_results);
 
-    writer.write_fmt(format_args!("{}\n", output)).context("Unable to write to destination.")?;
+        let output = results_formatter.to_text();
+
+        writer
+            .write_fmt(format_args!("{}\n", output))
+            .context("Unable to write to destination.")?;
+    }
     Ok(())
 }
 
@@ -94,9 +115,10 @@ fn flatten_error(e: anyhow::Error) -> anyhow::Error {
 mod tests {
     use super::*;
     use anyhow::Result;
+    use ffx_writer::Format;
     use fidl_fuchsia_feedback::{DataProviderProxy, DataProviderRequest, Snapshot};
     use lazy_static::lazy_static;
-    use std::{collections::HashMap, fs, io::Write, path::Path};
+    use std::{collections::HashMap, fs, path::Path};
     use tempfile::tempdir;
 
     macro_rules! test_file {
@@ -118,6 +140,12 @@ mod tests {
                 m
             }
         }
+    }
+
+    macro_rules! structured_output {
+        ($filename: literal) => {
+            include_str!(concat!("../test_data/structured/", $filename, ".golden.json"))
+        };
     }
 
     lazy_static! {
@@ -154,9 +182,24 @@ mod tests {
         });
     }
 
-    async fn run_triage_test<W: Write>(cmd: TriageCommand, writer: &mut W) {
+    fn match_structured_output(output: &str, expected: &str) {
+        let expected_output: serde_json::Value =
+            serde_json::from_str(expected).expect("Unable to deserialize expected output.");
+        let actual_output: serde_json::Value =
+            serde_json::from_str(output).expect("Unable to deserialize actual output.");
+
+        pretty_assertions::assert_eq!(
+            actual_output,
+            expected_output,
+            "Structured output does not match golden."
+        );
+    }
+
+    async fn run_triage_test(cmd: TriageCommand, mut writer: Writer) {
         let data_provider_proxy = setup_fake_data_provider_server();
-        let result = triage_impl(data_provider_proxy, cmd, writer).await.map_err(flatten_error);
+        let result = triage_impl(Some(data_provider_proxy), cmd, writer.clone())
+            .await
+            .map_err(flatten_error);
 
         if let Err(e) = result {
             writer.write_fmt(format_args!("{}", e)).expect("Failed to write to destination.")
@@ -170,7 +213,8 @@ mod tests {
          $(tags: $($tag: literal), + $(,)?)?
          $(exclude_tags: $($exclude_tag: literal), + $(,)?)?
          substring: $substring: literal,
-         $should_contain: expr
+         $(golden_structured_outfile: $golden_structured_outfile: literal)?
+         should_contain: $should_contain: expr
          ) => {
             // TODO(fxbug.dev/77647): use fuchsia::test
             #[fuchsia_async::run_singlethreaded(test)]
@@ -193,21 +237,41 @@ mod tests {
                 let snapshot_tempdir = tempdir()?;
                 create_test_snapshot(snapshot_tempdir.path());
 
-                let mut writer = Vec::new();
+                let tags = vec![$($($tag.into()),+)?];
+                let exclude_tags =vec![$($($exclude_tag.into()),+)?];
+
+                // Test unstructured output.
+                let writer = Writer::new_test(None);
 
                 run_triage_test(TriageCommand {
-                    config: config_files,
+                    config: config_files.clone(),
                     data: Some(snapshot_tempdir.path().to_string_lossy().into()),
-                    tags: vec![$($($tag.into()),+)?],
-                    exclude_tags: vec![$($($exclude_tag.into()),+)?],
-                },&mut writer).await;
+                    tags: tags.clone(),
+                    exclude_tags: exclude_tags.clone(),
+                },writer.clone()).await;
 
-                let output = String::from_utf8(writer).unwrap();
+                let output = writer.test_output()?;
 
                 pretty_assertions::assert_eq!(
                     output.contains($substring),
                     $should_contain,
                     "{} does not contain: {}", output, $substring);
+
+                $(
+                // Test structured output only if golden_structured_outfile is provided.
+                let writer = Writer::new_test(Some(Format::Json));
+
+                run_triage_test(TriageCommand {
+                    config: config_files,
+                    data: Some(snapshot_tempdir.path().to_string_lossy().into()),
+                    tags: tags.clone(),
+                    exclude_tags: exclude_tags.clone(),
+                },writer.clone()).await;
+
+                let output = writer.test_output()?;
+
+                match_structured_output(&output, structured_output!($golden_structured_outfile));
+                )?
 
                 Ok(())
             }
@@ -216,7 +280,8 @@ mod tests {
          $(configs: $($config: literal), + $(,)?)?
          $(tags: $($tag: literal), + $(,)?)?
          $(exclude_tags: $($exclude_tag: literal), + $(,)?)?
-         substring: $substring: literal
+         substring: $substring: literal,
+         $(golden_structured_outfile: $golden_structured_outfile: literal)?
          ) => {
             triage_integration_test!(
                 @internal
@@ -225,15 +290,16 @@ mod tests {
                 $(tags: $($tag),+)?
                 $(exclude_tags: $($exclude_tag),+)?
                 substring: $substring,
-                true);
+                $(golden_structured_outfile: $golden_structured_outfile)?
+                should_contain: true);
         };
-
         ($name: ident,
          $(configs: $($config: literal), + $(,)?)?
          $(tags: $($tag: literal), + $(,)?)?
          $(exclude_tags: $($exclude_tag: literal), + $(,)?)?
-         substring: not_contains $substring: literal
-         ) => {
+         substring: not_contains $substring: literal,
+         $(golden_structured_outfile: $golden_structured_outfile: literal)?
+        )=> {
             triage_integration_test!(
                 @internal
                 $name,
@@ -241,46 +307,53 @@ mod tests {
                 $(tags: $($tag),+)?
                 $(exclude_tags: $($exclude_tag),+)?
                 substring: $substring,
-                false);
+                $(golden_structured_outfile: $golden_structured_outfile)?
+                should_contain: false);
         };
     }
 
     triage_integration_test!(
         successfully_read_correct_files,
         configs: "other.triage", "sample.triage",
-        substring: not_contains "Couldn't"
+        substring: not_contains "Couldn't",
+        golden_structured_outfile: "successfully_read_correct_files"
     );
 
     triage_integration_test!(
         use_namespace_in_actions,
         configs: "other.triage", "sample.triage",
-        substring: "[WARNING] yes on A!"
+        substring: "[WARNING] yes on A!",
+        golden_structured_outfile: "use_namespace_in_actions"
     );
 
     triage_integration_test!(
         use_namespace_in_metrics,
         configs: "other.triage", "sample.triage",
-        substring: "[WARNING] Used some of disk"
+        substring: "[WARNING] Used some of disk",
+        golden_structured_outfile: "use_namespace_in_metrics"
     );
 
     triage_integration_test!(
         fail_on_missing_namespace,
         configs: "sample.triage",
-        substring: "Bad namespace"
+        substring: "Bad namespace",
+        golden_structured_outfile: "fail_on_missing_namespace"
     );
 
     triage_integration_test!(
         include_tagged_actions,
         configs: "sample_tags.triage",
         tags: "foo",
-        substring: "[WARNING] trigger foo tag"
+        substring: "[WARNING] trigger foo tag",
+        golden_structured_outfile: "include_tagged_actions"
     );
 
     triage_integration_test!(
         only_runs_included_actions,
         configs: "sample_tags.triage",
         tags: "not_included",
-        substring :""
+        substring: "",
+        golden_structured_outfile: "only_runs_included_actions"
     );
 
     triage_integration_test!(
@@ -288,53 +361,69 @@ mod tests {
         configs: "sample_tags.triage",
         tags: "foo",
         exclude_tags: "foo",
-        substring :"[WARNING] trigger foo tag"
+        substring: "[WARNING] trigger foo tag",
+        golden_structured_outfile: "included_tags_override_excludes"
     );
 
     triage_integration_test!(
         exclude_actions_with_excluded_tags,
         configs: "sample_tags.triage",
         exclude_tags: "foo",
-        substring: ""
+        substring: "",
+        golden_structured_outfile: "exclude_actions_with_excluded_tags"
     );
 
     triage_integration_test!(
         error_rate_with_moniker_payload,
         configs: "error_rate.triage",
-        substring: "[WARNING] Error rate for app.cmx is too high"
+        substring: "[WARNING] Error rate for app.cmx is too high",
+        golden_structured_outfile: "error_rate_with_moniker_payload"
     );
 
     triage_integration_test!(
         annotation_test,
         configs: "annotation_tests.triage",
-        substring: "[WARNING] Running on a chromebook"
+        substring: "[WARNING] Running on a chromebook",
+        golden_structured_outfile: "annotation_test"
     );
 
     triage_integration_test!(
         annotation_test2,
         configs: "annotation_tests.triage",
-        substring: not_contains "[WARNING] Not using a chromebook"
+        substring: not_contains "[WARNING] Not using a chromebook",
+        golden_structured_outfile: "annotation_test2"
     );
 
     triage_integration_test!(
         map_fold_test,
         configs: "map_fold.triage",
-        substring: "Everything worked as expected"
+        substring: "Everything worked as expected",
+        golden_structured_outfile: "map_fold_test"
     );
 
-    triage_integration_test!(log_tests, configs: "log_tests.triage", substring: "");
+    triage_integration_test!(
+        log_tests,
+        configs: "log_tests.triage",
+        substring: "",
+        golden_structured_outfile: "log_tests"
+    );
 
-    triage_integration_test!(bundle_test, configs: "sample_bundle.json",substring :"gauge: 120");
+    triage_integration_test!(
+        bundle_test,
+        configs: "sample_bundle.json",
+        substring: "gauge: 120",
+        golden_structured_outfile: "bundle_test"
+    );
 
     triage_integration_test!(
         bundle_files_error_test,
         configs: "sample_bundle_files_error.json",
-        substring: "looks like a bundle, but key 'files' is not an object"
+        substring: "looks like a bundle, but key 'files' is not an object",
     );
 
     triage_integration_test!(
         bundle_file_type_error_test,
         configs: "sample_bundle_file_type_error.json",
-        substring :"looks like a bundle, but key file2 must contain a string"
+        substring: "looks like a bundle, but key file2 must contain a string",
     );
 }

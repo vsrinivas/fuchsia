@@ -1,0 +1,2197 @@
+{
+    "actions": {
+        "map_fold": {
+            "map": {
+                "type": "Gauge",
+                "value": {
+                    "metric": {
+                        "Eval": {
+                            "raw_expression": "[map_ok, map_ok1, map_ok2, map_ok3, map_ok4, map_ok5]",
+                            "parsed_expression": {
+                                "Vector": [
+                                    {
+                                        "Variable": {
+                                            "name": "map_ok"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "map_ok1"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "map_ok2"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "map_ok3"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "map_ok4"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "map_ok5"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "cached_value": {
+                        "Vector": [
+                            {
+                                "Bool": true
+                            },
+                            {
+                                "Bool": true
+                            },
+                            {
+                                "Bool": true
+                            },
+                            {
+                                "Bool": true
+                            },
+                            {
+                                "Bool": true
+                            },
+                            {
+                                "Bool": true
+                            }
+                        ]
+                    }
+                },
+                "format": null,
+                "tag": null
+            },
+            "count": {
+                "type": "Gauge",
+                "value": {
+                    "metric": {
+                        "Eval": {
+                            "raw_expression": "[count_ok, count_ok1, count_ok2, count_ok3, count_ok4]",
+                            "parsed_expression": {
+                                "Vector": [
+                                    {
+                                        "Variable": {
+                                            "name": "count_ok"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "count_ok1"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "count_ok2"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "count_ok3"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "count_ok4"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "cached_value": {
+                        "Vector": [
+                            {
+                                "Bool": true
+                            },
+                            {
+                                "Bool": true
+                            },
+                            {
+                                "Bool": true
+                            },
+                            {
+                                "Bool": true
+                            },
+                            {
+                                "Bool": true
+                            }
+                        ]
+                    }
+                },
+                "format": null,
+                "tag": null
+            },
+            "basics": {
+                "type": "Gauge",
+                "value": {
+                    "metric": {
+                        "Eval": {
+                            "raw_expression": "[basics_ok, basics_ok1, basics_ok2, basics_ok3, basics_ok4, basics_ok5, basics_ok6]",
+                            "parsed_expression": {
+                                "Vector": [
+                                    {
+                                        "Variable": {
+                                            "name": "basics_ok"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "basics_ok1"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "basics_ok2"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "basics_ok3"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "basics_ok4"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "basics_ok5"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "basics_ok6"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "cached_value": {
+                        "Vector": [
+                            {
+                                "Bool": true
+                            },
+                            {
+                                "Bool": true
+                            },
+                            {
+                                "Bool": true
+                            },
+                            {
+                                "Bool": true
+                            },
+                            {
+                                "Bool": true
+                            },
+                            {
+                                "Bool": true
+                            },
+                            {
+                                "Bool": true
+                            }
+                        ]
+                    }
+                },
+                "format": null,
+                "tag": null
+            },
+            "all_ok": {
+                "type": "Warning",
+                "trigger": {
+                    "metric": {
+                        "Eval": {
+                            "raw_expression": "And(basics_ok, map_ok, fold_ok, count_ok, filter_ok)",
+                            "parsed_expression": {
+                                "Function": [
+                                    "And",
+                                    [
+                                        {
+                                            "Variable": {
+                                                "name": "basics_ok"
+                                            }
+                                        },
+                                        {
+                                            "Variable": {
+                                                "name": "map_ok"
+                                            }
+                                        },
+                                        {
+                                            "Variable": {
+                                                "name": "fold_ok"
+                                            }
+                                        },
+                                        {
+                                            "Variable": {
+                                                "name": "count_ok"
+                                            }
+                                        },
+                                        {
+                                            "Variable": {
+                                                "name": "filter_ok"
+                                            }
+                                        }
+                                    ]
+                                ]
+                            }
+                        }
+                    },
+                    "cached_value": {
+                        "Bool": true
+                    }
+                },
+                "print": "Everything worked as expected.",
+                "file_bug": null,
+                "tag": null
+            },
+            "filter": {
+                "type": "Gauge",
+                "value": {
+                    "metric": {
+                        "Eval": {
+                            "raw_expression": "[filter_ok, filter_ok1, filter_ok2, filter_ok3, filter_ok4]",
+                            "parsed_expression": {
+                                "Vector": [
+                                    {
+                                        "Variable": {
+                                            "name": "filter_ok"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "filter_ok1"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "filter_ok2"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "filter_ok3"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "filter_ok4"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "cached_value": {
+                        "Vector": [
+                            {
+                                "Bool": true
+                            },
+                            {
+                                "Bool": true
+                            },
+                            {
+                                "Bool": true
+                            },
+                            {
+                                "Bool": true
+                            },
+                            {
+                                "Bool": true
+                            }
+                        ]
+                    }
+                },
+                "format": null,
+                "tag": null
+            },
+            "fold": {
+                "type": "Gauge",
+                "value": {
+                    "metric": {
+                        "Eval": {
+                            "raw_expression": "[fold_ok, fold_ok1, fold_ok2]",
+                            "parsed_expression": {
+                                "Vector": [
+                                    {
+                                        "Variable": {
+                                            "name": "fold_ok"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "fold_ok1"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "fold_ok2"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "cached_value": {
+                        "Vector": [
+                            {
+                                "Bool": true
+                            },
+                            {
+                                "Bool": true
+                            },
+                            {
+                                "Bool": true
+                            }
+                        ]
+                    }
+                },
+                "format": null,
+                "tag": null
+            }
+        }
+    },
+    "metrics": {
+        "map_fold": {
+            "basics_ok6": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Problem(syntax_error)",
+                        "parsed_expression": {
+                            "Function": [
+                                "Problem",
+                                [
+                                    {
+                                        "Variable": {
+                                            "name": "syntax_error"
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "filter_ok": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "And(filter_ok1, filter_ok2, filter_ok3, filter_ok4)",
+                        "parsed_expression": {
+                            "Function": [
+                                "And",
+                                [
+                                    {
+                                        "Variable": {
+                                            "name": "filter_ok1"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "filter_ok2"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "filter_ok3"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "filter_ok4"
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "basics_ok": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "And(basics_ok1, basics_ok2, basics_ok3, basics_ok4, basics_ok5, basics_ok6)",
+                        "parsed_expression": {
+                            "Function": [
+                                "And",
+                                [
+                                    {
+                                        "Variable": {
+                                            "name": "basics_ok1"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "basics_ok2"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "basics_ok3"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "basics_ok4"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "basics_ok5"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "basics_ok6"
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "map_ok1": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Map(double, [1, 2, 3]) == [2, 4, 6]",
+                        "parsed_expression": {
+                            "Function": [
+                                "Equals",
+                                [
+                                    {
+                                        "Function": [
+                                            "Map",
+                                            [
+                                                {
+                                                    "Variable": {
+                                                        "name": "double"
+                                                    }
+                                                },
+                                                {
+                                                    "Vector": [
+                                                        {
+                                                            "Value": {
+                                                                "Int": 1
+                                                            }
+                                                        },
+                                                        {
+                                                            "Value": {
+                                                                "Int": 2
+                                                            }
+                                                        },
+                                                        {
+                                                            "Value": {
+                                                                "Int": 3
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "Vector": [
+                                            {
+                                                "Value": {
+                                                    "Int": 2
+                                                }
+                                            },
+                                            {
+                                                "Value": {
+                                                    "Int": 4
+                                                }
+                                            },
+                                            {
+                                                "Value": {
+                                                    "Int": 6
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "zip2": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Fn([a, b], [a, b])",
+                        "parsed_expression": {
+                            "Function": [
+                                "Lambda",
+                                [
+                                    {
+                                        "Vector": [
+                                            {
+                                                "Variable": {
+                                                    "name": "a"
+                                                }
+                                            },
+                                            {
+                                                "Variable": {
+                                                    "name": "b"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "Vector": [
+                                            {
+                                                "Variable": {
+                                                    "name": "a"
+                                                }
+                                            },
+                                            {
+                                                "Variable": {
+                                                    "name": "b"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Lambda": {
+                        "parameters": [
+                            "a",
+                            "b"
+                        ],
+                        "body": {
+                            "Vector": [
+                                {
+                                    "Variable": {
+                                        "name": "a"
+                                    }
+                                },
+                                {
+                                    "Variable": {
+                                        "name": "b"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "basics_ok5": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Missing( [missing] )",
+                        "parsed_expression": {
+                            "Function": [
+                                "Missing",
+                                [
+                                    {
+                                        "Vector": [
+                                            {
+                                                "Variable": {
+                                                    "name": "missing"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "map_ok2": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Map(zip2, [1, 2], [3, 4]) == [[1, 3], [2, 4]]",
+                        "parsed_expression": {
+                            "Function": [
+                                "Equals",
+                                [
+                                    {
+                                        "Function": [
+                                            "Map",
+                                            [
+                                                {
+                                                    "Variable": {
+                                                        "name": "zip2"
+                                                    }
+                                                },
+                                                {
+                                                    "Vector": [
+                                                        {
+                                                            "Value": {
+                                                                "Int": 1
+                                                            }
+                                                        },
+                                                        {
+                                                            "Value": {
+                                                                "Int": 2
+                                                            }
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "Vector": [
+                                                        {
+                                                            "Value": {
+                                                                "Int": 3
+                                                            }
+                                                        },
+                                                        {
+                                                            "Value": {
+                                                                "Int": 4
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "Vector": [
+                                            {
+                                                "Vector": [
+                                                    {
+                                                        "Value": {
+                                                            "Int": 1
+                                                        }
+                                                    },
+                                                    {
+                                                        "Value": {
+                                                            "Int": 3
+                                                        }
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "Vector": [
+                                                    {
+                                                        "Value": {
+                                                            "Int": 2
+                                                        }
+                                                    },
+                                                    {
+                                                        "Value": {
+                                                            "Int": 4
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "filter_ok4": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Missing(Count(with_missing_element))",
+                        "parsed_expression": {
+                            "Function": [
+                                "Missing",
+                                [
+                                    {
+                                        "Function": [
+                                            "Count",
+                                            [
+                                                {
+                                                    "Variable": {
+                                                        "name": "with_missing_element"
+                                                    }
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "double": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Fn([a], a * 2)",
+                        "parsed_expression": {
+                            "Function": [
+                                "Lambda",
+                                [
+                                    {
+                                        "Vector": [
+                                            {
+                                                "Variable": {
+                                                    "name": "a"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "Function": [
+                                            {
+                                                "Math": "Mul"
+                                            },
+                                            [
+                                                {
+                                                    "Variable": {
+                                                        "name": "a"
+                                                    }
+                                                },
+                                                {
+                                                    "Value": {
+                                                        "Int": 2
+                                                    }
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Lambda": {
+                        "parameters": [
+                            "a"
+                        ],
+                        "body": {
+                            "Function": [
+                                {
+                                    "Math": "Mul"
+                                },
+                                [
+                                    {
+                                        "Variable": {
+                                            "name": "a"
+                                        }
+                                    },
+                                    {
+                                        "Value": {
+                                            "Int": 2
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                }
+            },
+            "basics_ok2": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "[1, 2, 'c'] != [1, 2, 'd']",
+                        "parsed_expression": {
+                            "Function": [
+                                "NotEq",
+                                [
+                                    {
+                                        "Vector": [
+                                            {
+                                                "Value": {
+                                                    "Int": 1
+                                                }
+                                            },
+                                            {
+                                                "Value": {
+                                                    "Int": 2
+                                                }
+                                            },
+                                            {
+                                                "Value": {
+                                                    "String": "c"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "Vector": [
+                                            {
+                                                "Value": {
+                                                    "Int": 1
+                                                }
+                                            },
+                                            {
+                                                "Value": {
+                                                    "Int": 2
+                                                }
+                                            },
+                                            {
+                                                "Value": {
+                                                    "String": "d"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "syntax_error": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "variable_will_not_be_found",
+                        "parsed_expression": {
+                            "Variable": {
+                                "name": "variable_will_not_be_found"
+                            }
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Problem": {
+                        "SyntaxError": "Metric 'variable_will_not_be_found' Not Found in 'map_fold'"
+                    }
+                }
+            },
+            "filter_ok3": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Apply(count_with_missing, [only_missing_element]) == 1",
+                        "parsed_expression": {
+                            "Function": [
+                                "Equals",
+                                [
+                                    {
+                                        "Function": [
+                                            "Apply",
+                                            [
+                                                {
+                                                    "Variable": {
+                                                        "name": "count_with_missing"
+                                                    }
+                                                },
+                                                {
+                                                    "Vector": [
+                                                        {
+                                                            "Variable": {
+                                                                "name": "only_missing_element"
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "Value": {
+                                            "Int": 1
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "filter_ok1": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Filter(even, [1, 2, 3, 4, 5]) == [2, 4]",
+                        "parsed_expression": {
+                            "Function": [
+                                "Equals",
+                                [
+                                    {
+                                        "Function": [
+                                            "Filter",
+                                            [
+                                                {
+                                                    "Variable": {
+                                                        "name": "even"
+                                                    }
+                                                },
+                                                {
+                                                    "Vector": [
+                                                        {
+                                                            "Value": {
+                                                                "Int": 1
+                                                            }
+                                                        },
+                                                        {
+                                                            "Value": {
+                                                                "Int": 2
+                                                            }
+                                                        },
+                                                        {
+                                                            "Value": {
+                                                                "Int": 3
+                                                            }
+                                                        },
+                                                        {
+                                                            "Value": {
+                                                                "Int": 4
+                                                            }
+                                                        },
+                                                        {
+                                                            "Value": {
+                                                                "Int": 5
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "Vector": [
+                                            {
+                                                "Value": {
+                                                    "Int": 2
+                                                }
+                                            },
+                                            {
+                                                "Value": {
+                                                    "Int": 4
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "count_with_missing": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Fn([v], Count(Map(Fn([a], Missing(a)), v)))",
+                        "parsed_expression": {
+                            "Function": [
+                                "Lambda",
+                                [
+                                    {
+                                        "Vector": [
+                                            {
+                                                "Variable": {
+                                                    "name": "v"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "Function": [
+                                            "Count",
+                                            [
+                                                {
+                                                    "Function": [
+                                                        "Map",
+                                                        [
+                                                            {
+                                                                "Function": [
+                                                                    "Lambda",
+                                                                    [
+                                                                        {
+                                                                            "Vector": [
+                                                                                {
+                                                                                    "Variable": {
+                                                                                        "name": "a"
+                                                                                    }
+                                                                                }
+                                                                            ]
+                                                                        },
+                                                                        {
+                                                                            "Function": [
+                                                                                "Missing",
+                                                                                [
+                                                                                    {
+                                                                                        "Variable": {
+                                                                                            "name": "a"
+                                                                                        }
+                                                                                    }
+                                                                                ]
+                                                                            ]
+                                                                        }
+                                                                    ]
+                                                                ]
+                                                            },
+                                                            {
+                                                                "Variable": {
+                                                                    "name": "v"
+                                                                }
+                                                            }
+                                                        ]
+                                                    ]
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Lambda": {
+                        "parameters": [
+                            "v"
+                        ],
+                        "body": {
+                            "Function": [
+                                "Count",
+                                [
+                                    {
+                                        "Function": [
+                                            "Map",
+                                            [
+                                                {
+                                                    "Function": [
+                                                        "Lambda",
+                                                        [
+                                                            {
+                                                                "Vector": [
+                                                                    {
+                                                                        "Variable": {
+                                                                            "name": "a"
+                                                                        }
+                                                                    }
+                                                                ]
+                                                            },
+                                                            {
+                                                                "Function": [
+                                                                    "Missing",
+                                                                    [
+                                                                        {
+                                                                            "Variable": {
+                                                                                "name": "a"
+                                                                            }
+                                                                        }
+                                                                    ]
+                                                                ]
+                                                            }
+                                                        ]
+                                                    ]
+                                                },
+                                                {
+                                                    "Variable": {
+                                                        "name": "v"
+                                                    }
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                }
+            },
+            "count_ok3": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Problem(Count(5))",
+                        "parsed_expression": {
+                            "Function": [
+                                "Problem",
+                                [
+                                    {
+                                        "Function": [
+                                            "Count",
+                                            [
+                                                {
+                                                    "Value": {
+                                                        "Int": 5
+                                                    }
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "map_ok3": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Map(zip2, [1, 2], 3) == [[1, 3], [2, 3]]",
+                        "parsed_expression": {
+                            "Function": [
+                                "Equals",
+                                [
+                                    {
+                                        "Function": [
+                                            "Map",
+                                            [
+                                                {
+                                                    "Variable": {
+                                                        "name": "zip2"
+                                                    }
+                                                },
+                                                {
+                                                    "Vector": [
+                                                        {
+                                                            "Value": {
+                                                                "Int": 1
+                                                            }
+                                                        },
+                                                        {
+                                                            "Value": {
+                                                                "Int": 2
+                                                            }
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "Value": {
+                                                        "Int": 3
+                                                    }
+                                                }
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "Vector": [
+                                            {
+                                                "Vector": [
+                                                    {
+                                                        "Value": {
+                                                            "Int": 1
+                                                        }
+                                                    },
+                                                    {
+                                                        "Value": {
+                                                            "Int": 3
+                                                        }
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "Vector": [
+                                                    {
+                                                        "Value": {
+                                                            "Int": 2
+                                                        }
+                                                    },
+                                                    {
+                                                        "Value": {
+                                                            "Int": 3
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "filter_ok2": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Apply(count_with_missing, [with_missing_element]) == 3",
+                        "parsed_expression": {
+                            "Function": [
+                                "Equals",
+                                [
+                                    {
+                                        "Function": [
+                                            "Apply",
+                                            [
+                                                {
+                                                    "Variable": {
+                                                        "name": "count_with_missing"
+                                                    }
+                                                },
+                                                {
+                                                    "Vector": [
+                                                        {
+                                                            "Variable": {
+                                                                "name": "with_missing_element"
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "Value": {
+                                            "Int": 3
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "count_ok2": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Count([]) == 0",
+                        "parsed_expression": {
+                            "Function": [
+                                "Equals",
+                                [
+                                    {
+                                        "Function": [
+                                            "Count",
+                                            [
+                                                {
+                                                    "Vector": []
+                                                }
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "Value": {
+                                            "Int": 0
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "count_ok1": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Count([1, 'b', 2 == 2]) == 3",
+                        "parsed_expression": {
+                            "Function": [
+                                "Equals",
+                                [
+                                    {
+                                        "Function": [
+                                            "Count",
+                                            [
+                                                {
+                                                    "Vector": [
+                                                        {
+                                                            "Value": {
+                                                                "Int": 1
+                                                            }
+                                                        },
+                                                        {
+                                                            "Value": {
+                                                                "String": "b"
+                                                            }
+                                                        },
+                                                        {
+                                                            "Function": [
+                                                                "Equals",
+                                                                [
+                                                                    {
+                                                                        "Value": {
+                                                                            "Int": 2
+                                                                        }
+                                                                    },
+                                                                    {
+                                                                        "Value": {
+                                                                            "Int": 2
+                                                                        }
+                                                                    }
+                                                                ]
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "Value": {
+                                            "Int": 3
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "basics_ok4": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Problem(missing == missing)",
+                        "parsed_expression": {
+                            "Function": [
+                                "Problem",
+                                [
+                                    {
+                                        "Function": [
+                                            "Equals",
+                                            [
+                                                {
+                                                    "Variable": {
+                                                        "name": "missing"
+                                                    }
+                                                },
+                                                {
+                                                    "Variable": {
+                                                        "name": "missing"
+                                                    }
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "fold_ok2": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Fold(Fn([a, b], a + b), [1, 2, 3], 9) == 15",
+                        "parsed_expression": {
+                            "Function": [
+                                "Equals",
+                                [
+                                    {
+                                        "Function": [
+                                            "Fold",
+                                            [
+                                                {
+                                                    "Function": [
+                                                        "Lambda",
+                                                        [
+                                                            {
+                                                                "Vector": [
+                                                                    {
+                                                                        "Variable": {
+                                                                            "name": "a"
+                                                                        }
+                                                                    },
+                                                                    {
+                                                                        "Variable": {
+                                                                            "name": "b"
+                                                                        }
+                                                                    }
+                                                                ]
+                                                            },
+                                                            {
+                                                                "Function": [
+                                                                    {
+                                                                        "Math": "Add"
+                                                                    },
+                                                                    [
+                                                                        {
+                                                                            "Variable": {
+                                                                                "name": "a"
+                                                                            }
+                                                                        },
+                                                                        {
+                                                                            "Variable": {
+                                                                                "name": "b"
+                                                                            }
+                                                                        }
+                                                                    ]
+                                                                ]
+                                                            }
+                                                        ]
+                                                    ]
+                                                },
+                                                {
+                                                    "Vector": [
+                                                        {
+                                                            "Value": {
+                                                                "Int": 1
+                                                            }
+                                                        },
+                                                        {
+                                                            "Value": {
+                                                                "Int": 2
+                                                            }
+                                                        },
+                                                        {
+                                                            "Value": {
+                                                                "Int": 3
+                                                            }
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "Value": {
+                                                        "Int": 9
+                                                    }
+                                                }
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "Value": {
+                                            "Int": 15
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "map_ok5": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Map(zip2, 1, 3) == []",
+                        "parsed_expression": {
+                            "Function": [
+                                "Equals",
+                                [
+                                    {
+                                        "Function": [
+                                            "Map",
+                                            [
+                                                {
+                                                    "Variable": {
+                                                        "name": "zip2"
+                                                    }
+                                                },
+                                                {
+                                                    "Value": {
+                                                        "Int": 1
+                                                    }
+                                                },
+                                                {
+                                                    "Value": {
+                                                        "Int": 3
+                                                    }
+                                                }
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "Vector": []
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "map_ok4": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Map(zip2, [1, 2], [3]) == [[1, 3]]",
+                        "parsed_expression": {
+                            "Function": [
+                                "Equals",
+                                [
+                                    {
+                                        "Function": [
+                                            "Map",
+                                            [
+                                                {
+                                                    "Variable": {
+                                                        "name": "zip2"
+                                                    }
+                                                },
+                                                {
+                                                    "Vector": [
+                                                        {
+                                                            "Value": {
+                                                                "Int": 1
+                                                            }
+                                                        },
+                                                        {
+                                                            "Value": {
+                                                                "Int": 2
+                                                            }
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "Vector": [
+                                                        {
+                                                            "Value": {
+                                                                "Int": 3
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "Vector": [
+                                            {
+                                                "Vector": [
+                                                    {
+                                                        "Value": {
+                                                            "Int": 1
+                                                        }
+                                                    },
+                                                    {
+                                                        "Value": {
+                                                            "Int": 3
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "even": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Fn([a], a // 2 * 2 == a)",
+                        "parsed_expression": {
+                            "Function": [
+                                "Lambda",
+                                [
+                                    {
+                                        "Vector": [
+                                            {
+                                                "Variable": {
+                                                    "name": "a"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "Function": [
+                                            "Equals",
+                                            [
+                                                {
+                                                    "Function": [
+                                                        {
+                                                            "Math": "Mul"
+                                                        },
+                                                        [
+                                                            {
+                                                                "Function": [
+                                                                    {
+                                                                        "Math": "IntDiv"
+                                                                    },
+                                                                    [
+                                                                        {
+                                                                            "Variable": {
+                                                                                "name": "a"
+                                                                            }
+                                                                        },
+                                                                        {
+                                                                            "Value": {
+                                                                                "Int": 2
+                                                                            }
+                                                                        }
+                                                                    ]
+                                                                ]
+                                                            },
+                                                            {
+                                                                "Value": {
+                                                                    "Int": 2
+                                                                }
+                                                            }
+                                                        ]
+                                                    ]
+                                                },
+                                                {
+                                                    "Variable": {
+                                                        "name": "a"
+                                                    }
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Lambda": {
+                        "parameters": [
+                            "a"
+                        ],
+                        "body": {
+                            "Function": [
+                                "Equals",
+                                [
+                                    {
+                                        "Function": [
+                                            {
+                                                "Math": "Mul"
+                                            },
+                                            [
+                                                {
+                                                    "Function": [
+                                                        {
+                                                            "Math": "IntDiv"
+                                                        },
+                                                        [
+                                                            {
+                                                                "Variable": {
+                                                                    "name": "a"
+                                                                }
+                                                            },
+                                                            {
+                                                                "Value": {
+                                                                    "Int": 2
+                                                                }
+                                                            }
+                                                        ]
+                                                    ]
+                                                },
+                                                {
+                                                    "Value": {
+                                                        "Int": 2
+                                                    }
+                                                }
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "a"
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                }
+            },
+            "fold_ok": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "And(fold_ok1, fold_ok2)",
+                        "parsed_expression": {
+                            "Function": [
+                                "And",
+                                [
+                                    {
+                                        "Variable": {
+                                            "name": "fold_ok1"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "fold_ok2"
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "fold_ok1": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Fold(Fn([a, b], a), [4, 8]) == 4",
+                        "parsed_expression": {
+                            "Function": [
+                                "Equals",
+                                [
+                                    {
+                                        "Function": [
+                                            "Fold",
+                                            [
+                                                {
+                                                    "Function": [
+                                                        "Lambda",
+                                                        [
+                                                            {
+                                                                "Vector": [
+                                                                    {
+                                                                        "Variable": {
+                                                                            "name": "a"
+                                                                        }
+                                                                    },
+                                                                    {
+                                                                        "Variable": {
+                                                                            "name": "b"
+                                                                        }
+                                                                    }
+                                                                ]
+                                                            },
+                                                            {
+                                                                "Variable": {
+                                                                    "name": "a"
+                                                                }
+                                                            }
+                                                        ]
+                                                    ]
+                                                },
+                                                {
+                                                    "Vector": [
+                                                        {
+                                                            "Value": {
+                                                                "Int": 4
+                                                            }
+                                                        },
+                                                        {
+                                                            "Value": {
+                                                                "Int": 8
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "Value": {
+                                            "Int": 4
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "map_ok": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "And(map_ok1, map_ok2, map_ok3, map_ok4, map_ok5)",
+                        "parsed_expression": {
+                            "Function": [
+                                "And",
+                                [
+                                    {
+                                        "Variable": {
+                                            "name": "map_ok1"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "map_ok2"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "map_ok3"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "map_ok4"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "map_ok5"
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "count_ok": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "And(count_ok1, count_ok2, count_ok3, count_ok4)",
+                        "parsed_expression": {
+                            "Function": [
+                                "And",
+                                [
+                                    {
+                                        "Variable": {
+                                            "name": "count_ok1"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "count_ok2"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "count_ok3"
+                                        }
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "count_ok4"
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "with_missing_element": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Filter(even, [1, 2, missing, 4, 5])",
+                        "parsed_expression": {
+                            "Function": [
+                                "Filter",
+                                [
+                                    {
+                                        "Variable": {
+                                            "name": "even"
+                                        }
+                                    },
+                                    {
+                                        "Vector": [
+                                            {
+                                                "Value": {
+                                                    "Int": 1
+                                                }
+                                            },
+                                            {
+                                                "Value": {
+                                                    "Int": 2
+                                                }
+                                            },
+                                            {
+                                                "Variable": {
+                                                    "name": "missing"
+                                                }
+                                            },
+                                            {
+                                                "Value": {
+                                                    "Int": 4
+                                                }
+                                            },
+                                            {
+                                                "Value": {
+                                                    "Int": 5
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Vector": [
+                        {
+                            "Int": 2
+                        },
+                        {
+                            "Problem": {
+                                "Multiple": [
+                                    {
+                                        "Missing": "Every value was missing"
+                                    },
+                                    {
+                                        "Missing": "Every value was missing"
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "Int": 4
+                        }
+                    ]
+                }
+            },
+            "count_ok4": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Problem(Count([1, 'b', 2 == 2, missing]))",
+                        "parsed_expression": {
+                            "Function": [
+                                "Problem",
+                                [
+                                    {
+                                        "Function": [
+                                            "Count",
+                                            [
+                                                {
+                                                    "Vector": [
+                                                        {
+                                                            "Value": {
+                                                                "Int": 1
+                                                            }
+                                                        },
+                                                        {
+                                                            "Value": {
+                                                                "String": "b"
+                                                            }
+                                                        },
+                                                        {
+                                                            "Function": [
+                                                                "Equals",
+                                                                [
+                                                                    {
+                                                                        "Value": {
+                                                                            "Int": 2
+                                                                        }
+                                                                    },
+                                                                    {
+                                                                        "Value": {
+                                                                            "Int": 2
+                                                                        }
+                                                                    }
+                                                                ]
+                                                            ]
+                                                        },
+                                                        {
+                                                            "Variable": {
+                                                                "name": "missing"
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "basics_ok3": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Missing(missing)",
+                        "parsed_expression": {
+                            "Function": [
+                                "Missing",
+                                [
+                                    {
+                                        "Variable": {
+                                            "name": "missing"
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "missing": {
+                "metric": {
+                    "Selector": [
+                        {
+                            "full_selector": "INSPECT:invalid-moniker:path-not:found",
+                            "selector_type": "Inspect",
+                            "body": "invalid-moniker:path-not:found"
+                        }
+                    ]
+                },
+                "cached_value": {
+                    "Problem": {
+                        "Missing": "Every value was missing"
+                    }
+                }
+            },
+            "basics_ok1": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "[1, 2, 'c'] == [1, 2, 'c']",
+                        "parsed_expression": {
+                            "Function": [
+                                "Equals",
+                                [
+                                    {
+                                        "Vector": [
+                                            {
+                                                "Value": {
+                                                    "Int": 1
+                                                }
+                                            },
+                                            {
+                                                "Value": {
+                                                    "Int": 2
+                                                }
+                                            },
+                                            {
+                                                "Value": {
+                                                    "String": "c"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "Vector": [
+                                            {
+                                                "Value": {
+                                                    "Int": 1
+                                                }
+                                            },
+                                            {
+                                                "Value": {
+                                                    "Int": 2
+                                                }
+                                            },
+                                            {
+                                                "Value": {
+                                                    "String": "c"
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Bool": true
+                }
+            },
+            "only_missing_element": {
+                "metric": {
+                    "Eval": {
+                        "raw_expression": "Filter(Fn([a], Missing(a)), with_missing_element)",
+                        "parsed_expression": {
+                            "Function": [
+                                "Filter",
+                                [
+                                    {
+                                        "Function": [
+                                            "Lambda",
+                                            [
+                                                {
+                                                    "Vector": [
+                                                        {
+                                                            "Variable": {
+                                                                "name": "a"
+                                                            }
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "Function": [
+                                                        "Missing",
+                                                        [
+                                                            {
+                                                                "Variable": {
+                                                                    "name": "a"
+                                                                }
+                                                            }
+                                                        ]
+                                                    ]
+                                                }
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "Variable": {
+                                            "name": "with_missing_element"
+                                        }
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                },
+                "cached_value": {
+                    "Vector": [
+                        {
+                            "Problem": {
+                                "Multiple": [
+                                    {
+                                        "Missing": "Every value was missing"
+                                    },
+                                    {
+                                        "Missing": "Every value was missing"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    },
+    "plugin_results": {
+        "memory": [],
+        "routing_errors": [],
+        "crashes": [],
+        "sandbox_errors": []
+    },
+    "triage_errors": []
+}

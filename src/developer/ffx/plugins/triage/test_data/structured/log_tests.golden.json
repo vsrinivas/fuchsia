@@ -1,0 +1,100 @@
+{
+    "actions": {
+        "log_tests": {
+            "klog_foo": {
+                "type": "Warning",
+                "trigger": {
+                    "metric": {
+                        "Eval": {
+                            "raw_expression": "KlogHas('foo')",
+                            "parsed_expression": {
+                                "Function": [
+                                    "KlogHas",
+                                    [
+                                        {
+                                            "Value": {
+                                                "String": "foo"
+                                            }
+                                        }
+                                    ]
+                                ]
+                            }
+                        }
+                    },
+                    "cached_value": {
+                        "Bool": false
+                    }
+                },
+                "print": "Error rate for app.cmx is too high",
+                "file_bug": null,
+                "tag": null
+            },
+            "syslog_foo": {
+                "type": "Warning",
+                "trigger": {
+                    "metric": {
+                        "Eval": {
+                            "raw_expression": "SyslogHas('foo')",
+                            "parsed_expression": {
+                                "Function": [
+                                    "SyslogHas",
+                                    [
+                                        {
+                                            "Value": {
+                                                "String": "foo"
+                                            }
+                                        }
+                                    ]
+                                ]
+                            }
+                        }
+                    },
+                    "cached_value": {
+                        "Bool": false
+                    }
+                },
+                "print": "Error rate for app.cmx is too high",
+                "file_bug": null,
+                "tag": null
+            },
+            "bootlog_foo": {
+                "type": "Warning",
+                "trigger": {
+                    "metric": {
+                        "Eval": {
+                            "raw_expression": "BootlogHas('foo')",
+                            "parsed_expression": {
+                                "Function": [
+                                    "BootlogHas",
+                                    [
+                                        {
+                                            "Value": {
+                                                "String": "foo"
+                                            }
+                                        }
+                                    ]
+                                ]
+                            }
+                        }
+                    },
+                    "cached_value": {
+                        "Bool": false
+                    }
+                },
+                "print": "Error rate for app.cmx is too high",
+                "file_bug": null,
+                "tag": null
+            }
+        }
+    },
+    "metrics": {
+        "log_tests": {}
+    },
+    "plugin_results": {
+        "crashes": [],
+        "sandbox_errors": [],
+        "memory": [],
+        "routing_errors": []
+    },
+    "triage_errors": []
+}
