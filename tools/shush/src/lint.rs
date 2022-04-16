@@ -75,7 +75,7 @@ pub fn filter_lints<R: BufRead>(input: &mut R, filter: &[String]) -> HashMap<Str
     let mut files: HashMap<String, Vec<Lint>> = HashMap::new();
     serde_json::Deserializer::from_reader(input)
         .into_iter::<Diagnostic>()
-        .filter_map(Result::ok)
+        .map(|result| result.expect("parsing diagnostic"))
         .filter_map(|d| d.code.as_ref().map(|c| filter_lints.contains(&c.code).then(|| d.clone())))
         .flatten()
         .for_each(|lint| {
