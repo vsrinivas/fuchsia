@@ -3237,7 +3237,9 @@ TEST(Sysmem, HeapAmlogicSecureMiniStress) {
     switch (roll) {
       // add
       case 0 ... 48:
-        add();
+        if (total_size < kTotalSizeThreshold) {
+          add();
+        }
         break;
       // fill
       case 49:
