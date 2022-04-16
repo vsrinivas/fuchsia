@@ -25,7 +25,9 @@ use {
     fuchsia_async::{futures::select, TimeoutExt},
     futures::FutureExt,
     std::default::Default,
+    std::fs::File,
     std::future::Future,
+    std::io::Write,
     std::path::PathBuf,
     std::str::FromStr,
     std::time::{Duration, Instant},
@@ -350,6 +352,19 @@ async fn report_log_hint(writer: &mut dyn std::io::Write) {
     }
 }
 
+fn stamp_file(stamp: &Option<String>) -> Result<Option<File>> {
+    if let Some(stamp) = stamp {
+        Ok(Some(File::create(stamp)?))
+    } else {
+        Ok(None)
+    }
+}
+
+fn write_exit_code<T, W: Write>(res: &Result<T>, out: &mut W) -> Result<()> {
+    write!(out, "{}\n", res.exit_code())?;
+    Ok(())
+}
+
 async fn run() -> Result<i32> {
     hoist::disable_autoconnect();
     let app: Ffx = from_env();
@@ -407,6 +422,7 @@ async fn run() -> Result<i32> {
 
     let command_start = Instant::now();
 
+    let stamp = stamp_file(&app.stamp)?;
     let res = if is_schema(&app.subcommand) {
         ffx_lib_suite::ffx_plugin_writer_all_output(0);
         Ok(0)
@@ -444,6 +460,13 @@ async fn run() -> Result<i32> {
         &command_duration,
         (analytics_done - analytics_start).as_secs_f32()
     );
+
+    // Write to our stamp file if it was requested
+    if let Some(mut stamp) = stamp {
+        write_exit_code(&res, &mut stamp)?;
+        stamp.sync_all()?;
+    }
+
     res
 }
 
@@ -486,6 +509,7 @@ mod test {
     use futures::AsyncReadExt;
     use futures::TryStreamExt;
     use hoist::OvernetInstance;
+    use std::io::BufWriter;
     use std::path::PathBuf;
     use std::sync::Arc;
     use tempfile;
@@ -673,5 +697,34 @@ mod test {
         let str = format!("{:?}", err);
         assert!(str.contains("Timed out"));
         assert!(str.contains("ffx doctor"));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_stamp_file_creation() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("stamp").into_os_string().into_string().ok();
+        let stamp = stamp_file(&path);
+
+        assert!(stamp.unwrap().is_some());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_stamp_file_no_create() {
+        let no_stamp = stamp_file(&None);
+        assert!(no_stamp.unwrap().is_none());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_write_exit_code() {
+        let mut out = BufWriter::new(Vec::new());
+        write_exit_code(&Ok(0), &mut out).unwrap();
+        assert_eq!(String::from_utf8(out.into_inner().unwrap()).unwrap(), "0\n");
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_write_exit_code_on_failure() {
+        let mut out = BufWriter::new(Vec::new());
+        write_exit_code(&Result::<()>::Err(anyhow::anyhow!("fail")), &mut out).unwrap();
+        assert_eq!(String::from_utf8(out.into_inner().unwrap()).unwrap(), "1\n")
     }
 }

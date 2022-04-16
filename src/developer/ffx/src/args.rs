@@ -26,6 +26,10 @@ pub struct Ffx {
     /// produce output for a machine in the specified format; available formats: "json"
     pub machine: Option<Format>,
 
+    #[argh(option)]
+    /// create a stamp file at the given path containing the exit code
+    pub stamp: Option<String>,
+
     #[argh(option, short = 't')]
     #[ffx_config_default("target.default")]
     /// apply operations across single or multiple targets
