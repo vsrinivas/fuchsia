@@ -415,6 +415,11 @@ async fn add_iface(
         Err(e) => return AddIfaceResult::from_error(e.into(), zx::sys::ZX_ERR_PEER_CLOSED),
     };
 
+    let security_support = match mlme_proxy.query_security_support().await {
+        Ok(support) => support,
+        Err(e) => return AddIfaceResult::from_error(e.into(), zx::sys::ZX_ERR_PEER_CLOSED),
+    };
+
     let spectrum_management_support = match mlme_proxy.query_spectrum_management_support().await {
         Ok(support) => support,
         Err(e) => return AddIfaceResult::from_error(e.into(), zx::sys::ZX_ERR_PEER_CLOSED),
@@ -430,6 +435,7 @@ async fn add_iface(
         iface_tree_holder,
         device_info,
         mac_sublayer_support,
+        security_support,
         spectrum_management_support,
         dev_monitor_proxy,
         persistence_req_sender,
@@ -1006,6 +1012,15 @@ mod tests {
 
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
+        // The future should have requested the security features.
+        assert_variant!(
+            exec.run_until_stalled(&mut mlme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_mlme::MlmeRequest::QuerySecuritySupport { responder }))) => {
+            responder.send(&mut fake_security_support()).expect("failed to send MLME response");
+        });
+
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
         // The future should have requested the spectrum management features.
         assert_variant!(
             exec.run_until_stalled(&mut mlme_stream.next()),
@@ -1117,6 +1132,15 @@ mod tests {
             support.device.is_synthetic = true;
             support.device.mac_implementation_type = fidl_common::MacImplementationType::Fullmac;
             responder.send(&mut support).expect("failed to send MLME response");
+        });
+
+        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // The future should have requested the security features.
+        assert_variant!(
+            exec.run_until_stalled(&mut mlme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_mlme::MlmeRequest::QuerySecuritySupport { responder }))) => {
+            responder.send(&mut fake_security_support()).expect("failed to send MLME response");
         });
 
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);

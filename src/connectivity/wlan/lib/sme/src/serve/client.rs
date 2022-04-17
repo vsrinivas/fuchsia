@@ -31,6 +31,7 @@ pub async fn serve(
     proxy: MlmeProxy,
     device_info: fidl_mlme::DeviceInfo,
     mac_sublayer_support: fidl_common::MacSublayerSupport,
+    security_support: fidl_common::SecuritySupport,
     spectrum_management_support: fidl_common::SpectrumManagementSupport,
     event_stream: MlmeEventStream,
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
@@ -38,11 +39,9 @@ pub async fn serve(
     hasher: WlanHasher,
     persistence_req_sender: auto_persist::PersistenceReqSender,
 ) -> Result<(), anyhow::Error> {
-    let wpa3_supported =
-        device_info.driver_features.iter().any(|f| {
-            f == &fidl_common::DriverFeature::SaeSmeAuth
-                || f == &fidl_common::DriverFeature::SaeDriverAuth
-        }) && device_info.driver_features.contains(&fidl_common::DriverFeature::Mfp);
+    let wpa3_supported = security_support.mfp.supported
+        && (security_support.sae.driver_handler_supported
+            || security_support.sae.sme_handler_supported);
     let cfg = client_sme::ClientConfig::from_config(cfg, wpa3_supported);
     let (sme, mlme_stream, time_stream) = Sme::new(
         cfg,
@@ -51,6 +50,7 @@ pub async fn serve(
         hasher,
         persistence_req_sender,
         mac_sublayer_support,
+        security_support,
         spectrum_management_support,
     );
     let sme = Arc::new(Mutex::new(sme));

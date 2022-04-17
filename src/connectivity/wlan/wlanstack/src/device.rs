@@ -85,6 +85,7 @@ pub fn create_and_serve_sme(
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     device_info: fidl_mlme::DeviceInfo,
     mac_sublayer_support: fidl_common::MacSublayerSupport,
+    security_support: fidl_common::SecuritySupport,
     spectrum_management_support: fidl_common::SpectrumManagementSupport,
     dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
     persistence_req_sender: auto_persist::PersistenceReqSender,
@@ -95,6 +96,7 @@ pub fn create_and_serve_sme(
         mlme_proxy.clone(),
         &device_info,
         mac_sublayer_support,
+        security_support,
         spectrum_management_support,
         iface_tree_holder.clone(),
         inspect_tree.hasher.clone(),
@@ -190,6 +192,17 @@ mod tests {
         }
     }
 
+    // Matches fake_device_info() driver_features field.
+    fn fake_security_support() -> fidl_common::SecuritySupport {
+        fidl_common::SecuritySupport {
+            mfp: fidl_common::MfpFeature { supported: false },
+            sae: fidl_common::SaeFeature {
+                driver_handler_supported: false,
+                sme_handler_supported: false,
+            },
+        }
+    }
+
     #[test]
     fn query_serve_with_sme_channel() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
@@ -218,6 +231,7 @@ mod tests {
             iface_tree_holder,
             fake_device_info(),
             fake_mac_sublayer_support(),
+            fake_security_support(),
             fake_spectrum_management_support_empty(),
             dev_monitor_proxy,
             persistence_req_sender,
@@ -306,6 +320,7 @@ mod tests {
             iface_tree_holder,
             fake_device_info(),
             fake_mac_sublayer_support(),
+            fake_security_support(),
             fake_spectrum_management_support_empty(),
             dev_monitor_proxy,
             persistence_req_sender,

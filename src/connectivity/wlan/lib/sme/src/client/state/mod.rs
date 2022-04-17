@@ -1350,7 +1350,10 @@ mod tests {
             fake_ies::{fake_probe_resp_wsc_ie_bytes, get_vendor_ie_bytes_for_wsc_ie},
             rsn::rsne::Rsne,
         },
-        test_utils::{fake_features::fake_mac_sublayer_support, fake_stas::IesOverrides},
+        test_utils::{
+            fake_features::{fake_mac_sublayer_support, fake_security_support},
+            fake_stas::IesOverrides,
+        },
         timer,
     };
     use wlan_rsn::{key::exchange::Key, rsna::SecAssocStatus};
@@ -2843,6 +2846,7 @@ mod tests {
                 att_id: 0,
                 inspect: Arc::new(inspect::SmeTree::new(inspector.root(), hasher)),
                 mac_sublayer_support: fake_mac_sublayer_support(),
+                security_support: fake_security_support(),
             };
             TestHelper {
                 mlme_stream,

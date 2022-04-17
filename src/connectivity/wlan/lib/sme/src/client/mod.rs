@@ -72,6 +72,7 @@ mod internal {
         pub att_id: ConnectionAttemptId,
         pub(crate) inspect: Arc<inspect::SmeTree>,
         pub mac_sublayer_support: fidl_common::MacSublayerSupport,
+        pub security_support: fidl_common::SecuritySupport,
     }
 }
 
@@ -442,6 +443,7 @@ impl ClientSme {
         hasher: WlanHasher,
         persistence_req_sender: auto_persist::PersistenceReqSender,
         mac_sublayer_support: fidl_common::MacSublayerSupport,
+        security_support: fidl_common::SecuritySupport,
         spectrum_management_support: fidl_common::SpectrumManagementSupport,
     ) -> (Self, MlmeStream, TimeStream) {
         let device_info = Arc::new(info);
@@ -476,6 +478,7 @@ impl ClientSme {
                     att_id: 0,
                     inspect,
                     mac_sublayer_support,
+                    security_support,
                 },
             },
             mlme_stream,
@@ -728,7 +731,10 @@ mod tests {
         ie::{fake_ht_cap_bytes, fake_vht_cap_bytes, /*rsn::akm,*/ IeType},
         security::{wep::WEP40_KEY_BYTES, wpa::credential::PSK_SIZE_BYTES, SecurityAuthenticator},
         test_utils::{
-            fake_features::{fake_mac_sublayer_support, fake_spectrum_management_support_empty},
+            fake_features::{
+                fake_mac_sublayer_support, fake_security_support,
+                fake_spectrum_management_support_empty,
+            },
             fake_stas::IesOverrides,
         },
     };
@@ -1058,6 +1064,7 @@ mod tests {
             WlanHasher::new(DUMMY_HASH_KEY),
             persistence_req_sender,
             fake_mac_sublayer_support(),
+            fake_security_support(),
             fake_spectrum_management_support_empty(),
         );
         assert_eq!(ClientSmeStatus::Idle, sme.status());
@@ -1561,6 +1568,7 @@ mod tests {
             WlanHasher::new(DUMMY_HASH_KEY),
             persistence_req_sender,
             fake_mac_sublayer_support(),
+            fake_security_support(),
             fake_spectrum_management_support_empty(),
         );
         assert_eq!(ClientSmeStatus::Idle, sme.status());
@@ -1660,6 +1668,7 @@ mod tests {
             WlanHasher::new(DUMMY_HASH_KEY),
             persistence_req_sender,
             fake_mac_sublayer_support(),
+            fake_security_support(),
             fake_spectrum_management_support_empty(),
         )
     }
