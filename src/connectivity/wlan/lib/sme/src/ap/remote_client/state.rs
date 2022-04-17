@@ -173,42 +173,43 @@ impl Authenticated {
             reason_code: fidl_ieee80211::ReasonCode::UnspecifiedReason,
         })?;
 
-        let (capabilities, rates) =
-            if ctx.device_info.driver_features.contains(&fidl_common::DriverFeature::TempSoftmac) {
-                let capabilities = CapabilityInfo(client_capablities & ap_capabilities.raw());
+        let (capabilities, rates) = if ctx.mac_sublayer_support.device.mac_implementation_type
+            == fidl_common::MacImplementationType::Softmac
+        {
+            let capabilities = CapabilityInfo(client_capablities & ap_capabilities.raw());
 
-                // The IEEE 802.11 standard doesn't really specify what happens if the client rates
-                // mismatch the AP rates at this point: the client should have already determined
-                // the appropriate rates via the beacon or probe response frames. However, just to
-                // be safe, we intersect these rates here.
-                let rates = intersect::intersect_rates(
-                    intersect::ApRates(ap_rates),
-                    intersect::ClientRates(client_rates),
-                )
-                .map_err(|error| AssociationError {
-                    error: format_err!(
-                        "could not intersect rates ({:?} + {:?}): {:?}",
-                        ap_rates,
-                        client_rates,
-                        error
-                    ),
-                    result_code: match error {
-                        intersect::IntersectRatesError::BasicRatesMismatch => {
-                            fidl_mlme::AssociateResultCode::RefusedBasicRatesMismatch
-                        }
-                        intersect::IntersectRatesError::NoApRatesSupported => {
-                            fidl_mlme::AssociateResultCode::RefusedCapabilitiesMismatch
-                        }
-                    },
-                    reason_code: fidl_ieee80211::ReasonCode::ReasonInvalidElement,
-                })?;
+            // The IEEE 802.11 standard doesn't really specify what happens if the client rates
+            // mismatch the AP rates at this point: the client should have already determined
+            // the appropriate rates via the beacon or probe response frames. However, just to
+            // be safe, we intersect these rates here.
+            let rates = intersect::intersect_rates(
+                intersect::ApRates(ap_rates),
+                intersect::ClientRates(client_rates),
+            )
+            .map_err(|error| AssociationError {
+                error: format_err!(
+                    "could not intersect rates ({:?} + {:?}): {:?}",
+                    ap_rates,
+                    client_rates,
+                    error
+                ),
+                result_code: match error {
+                    intersect::IntersectRatesError::BasicRatesMismatch => {
+                        fidl_mlme::AssociateResultCode::RefusedBasicRatesMismatch
+                    }
+                    intersect::IntersectRatesError::NoApRatesSupported => {
+                        fidl_mlme::AssociateResultCode::RefusedCapabilitiesMismatch
+                    }
+                },
+                reason_code: fidl_ieee80211::ReasonCode::ReasonInvalidElement,
+            })?;
 
-                (capabilities, rates)
-            } else {
-                // If we are using a FullMAC driver, don't do the intersection and just pass the
-                // client rates back: they won't be used meaningfully anyway.
-                (CapabilityInfo(client_capablities), client_rates.to_vec())
-            };
+            (capabilities, rates)
+        } else {
+            // If we are using a FullMAC driver, don't do the intersection and just pass the
+            // client rates back: they won't be used meaningfully anyway.
+            (CapabilityInfo(client_capablities), client_rates.to_vec())
+        };
 
         Ok(Association {
             capabilities: capabilities
@@ -835,6 +836,7 @@ mod tests {
                 cipher::{CIPHER_CCMP_128, CIPHER_GCMP_256},
                 rsne::Rsne,
             },
+            test_utils::fake_features::fake_mac_sublayer_support,
             timer,
         },
         wlan_rsn::key::exchange::Key,
@@ -849,9 +851,15 @@ mod tests {
 
     fn make_env() -> (Context, MlmeStream, TimeStream) {
         let device_info = test_utils::fake_device_info(AP_ADDR);
+        let mac_sublayer_support = fake_mac_sublayer_support();
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
         let (timer, time_stream) = timer::create_timer();
-        let ctx = Context { device_info, mlme_sink: MlmeSink::new(mlme_sink), timer };
+        let ctx = Context {
+            device_info,
+            mac_sublayer_support,
+            mlme_sink: MlmeSink::new(mlme_sink),
+            timer,
+        };
         (ctx, mlme_stream, time_stream)
     }
 
@@ -1150,6 +1158,9 @@ mod tests {
         let (mut ctx, mut mlme_stream, _) = make_env();
 
         ctx.device_info.driver_features = vec![];
+        ctx.mac_sublayer_support = fake_mac_sublayer_support();
+        ctx.mac_sublayer_support.device.mac_implementation_type =
+            fidl_common::MacImplementationType::Fullmac;
 
         let state: States =
             State::new(Authenticating).transition_to(Authenticated { timeout_event_id: 1 }).into();

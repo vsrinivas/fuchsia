@@ -65,7 +65,8 @@ pub fn create_sme(
         }
         fidl_common::WlanMacRole::Ap => {
             let (sender, receiver) = mpsc::unbounded();
-            let fut = ap::serve(mlme_proxy, device_info, event_stream, receiver);
+            let fut =
+                ap::serve(mlme_proxy, device_info, mac_sublayer_support, event_stream, receiver);
             (SmeServer::Ap(sender), FutureObj::new(Box::new(fut)))
         }
         fidl_common::WlanMacRole::Mesh => {

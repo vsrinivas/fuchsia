@@ -121,11 +121,7 @@ pub fn fake_device_info(sta_addr: MacAddr) -> fidl_mlme::DeviceInfo {
             fake_2ghz_band_capability_vht(),
             fake_5ghz_band_capability_vht(ChanWidthSet::TWENTY_FORTY),
         ],
-        driver_features: vec![
-            fidl_common::DriverFeature::Mfp,
-            fidl_common::DriverFeature::SaeSmeAuth,
-            fidl_common::DriverFeature::TempSoftmac,
-        ],
+        driver_features: vec![],
         softmac_hardware_capability: fidl_common::WlanSoftmacHardwareCapabilityBit::ShortPreamble
             .into_primitive(),
         qos_capable: true,

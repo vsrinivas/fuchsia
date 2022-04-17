@@ -97,6 +97,7 @@ struct InfraBss {
 
 pub struct Context {
     device_info: DeviceInfo,
+    mac_sublayer_support: fidl_common::MacSublayerSupport,
     mlme_sink: MlmeSink,
     timer: Timer<Event>,
 }
@@ -117,12 +118,20 @@ pub enum StartResult {
 }
 
 impl ApSme {
-    pub fn new(device_info: DeviceInfo) -> (Self, crate::MlmeStream, TimeStream) {
+    pub fn new(
+        device_info: DeviceInfo,
+        mac_sublayer_support: fidl_common::MacSublayerSupport,
+    ) -> (Self, crate::MlmeStream, TimeStream) {
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
         let (timer, time_stream) = timer::create_timer();
         let sme = ApSme {
             state: Some(State::Idle {
-                ctx: Context { device_info, mlme_sink: MlmeSink::new(mlme_sink), timer },
+                ctx: Context {
+                    device_info,
+                    mac_sublayer_support,
+                    mlme_sink: MlmeSink::new(mlme_sink),
+                    timer,
+                },
             }),
         };
         (sme, mlme_stream, time_stream)
@@ -879,9 +888,12 @@ mod tests {
             assert_variant,
             channel::Cbw,
             mac::Aid,
-            test_utils::fake_capabilities::{
-                fake_2ghz_band_capability_vht, fake_5ghz_band_capability,
-                fake_5ghz_band_capability_ht_cbw,
+            test_utils::{
+                fake_capabilities::{
+                    fake_2ghz_band_capability_vht, fake_5ghz_band_capability,
+                    fake_5ghz_band_capability_ht_cbw,
+                },
+                fake_features::fake_mac_sublayer_support,
             },
             RadioConfig,
         },
@@ -1622,6 +1634,6 @@ mod tests {
     }
 
     fn create_sme(_exec: &fasync::TestExecutor) -> (ApSme, MlmeStream, TimeStream) {
-        ApSme::new(fake_device_info(AP_ADDR))
+        ApSme::new(fake_device_info(AP_ADDR), fake_mac_sublayer_support())
     }
 }

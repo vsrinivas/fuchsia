@@ -26,11 +26,18 @@ pub fn fake_mac_sublayer_support() -> fidl_common::MacSublayerSupport {
 }
 
 pub fn fake_security_support() -> fidl_common::SecuritySupport {
+    let mut support = fake_security_support_empty();
+    support.mfp.supported = true;
+    support.sae.sme_handler_supported = true;
+    support
+}
+
+pub fn fake_security_support_empty() -> fidl_common::SecuritySupport {
     fidl_common::SecuritySupport {
-        mfp: fidl_common::MfpFeature { supported: true },
+        mfp: fidl_common::MfpFeature { supported: false },
         sae: fidl_common::SaeFeature {
             driver_handler_supported: false,
-            sme_handler_supported: true,
+            sme_handler_supported: false,
         },
     }
 }

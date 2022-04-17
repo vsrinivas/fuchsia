@@ -5,13 +5,12 @@
 use {
     crate::client::{rsn::Rsna, ClientConfig},
     anyhow::{format_err, Error},
-    fidl_fuchsia_wlan_common::DriverFeature,
+    fidl_fuchsia_wlan_common as fidl_common,
     fidl_fuchsia_wlan_common_security::{
         Authentication, Credentials, Protocol, WepCredentials, WpaCredentials,
     },
     fidl_fuchsia_wlan_mlme::DeviceInfo,
     fidl_fuchsia_wlan_sme::Credential,
-    itertools::Itertools as _,
     std::convert::{TryFrom, TryInto},
     wlan_common::{
         bss::{self, BssDescription},
@@ -138,6 +137,7 @@ impl CredentialExt for Credential {
 /// let protection = Protection::try_from(SecurityContext {
 ///     security: &authenticator,
 ///     device: &device, // Device information.
+///     security_support: &security_support, // Security features.
 ///     config: &config, // Client configuration.
 ///     bss: &bss, // BSS description.
 /// })?;
@@ -147,6 +147,7 @@ pub struct SecurityContext<'a, C> {
     /// Contextual security data. This field has security-related
     pub security: &'a C,
     pub device: &'a DeviceInfo,
+    pub security_support: &'a fidl_common::SecuritySupport,
     pub config: &'a ClientConfig,
     pub bss: &'a BssDescription,
 }
@@ -157,6 +158,7 @@ impl<'a, C> SecurityContext<'a, C> {
         SecurityContext {
             security: subject,
             device: self.device,
+            security_support: self.security_support,
             config: self.config,
             bss: self.bss,
         }
@@ -189,7 +191,7 @@ impl<'a> SecurityContext<'a, wpa::Wpa2PersonalCredentials> {
             .ok_or_else(|| format_err!("WPA2 requested but RSNE is not present in BSS."))?;
         let (_, a_rsne) = rsne::from_bytes(a_rsne_ie)
             .map_err(|error| format_err!("Invalid RSNE IE {:02x?}: {:?}", a_rsne_ie, error))?;
-        let s_rsne = a_rsne.derive_wpa2_s_rsne(&self.device.driver_features)?;
+        let s_rsne = a_rsne.derive_wpa2_s_rsne(&self.security_support)?;
         Ok((a_rsne, s_rsne))
     }
 
@@ -208,41 +210,29 @@ impl<'a> SecurityContext<'a, wpa::Wpa3PersonalCredentials> {
             .ok_or_else(|| format_err!("WPA3 requested but RSNE is not present in BSS."))?;
         let (_, a_rsne) = rsne::from_bytes(a_rsne_ie)
             .map_err(|error| format_err!("Invalid RSNE IE {:02x?}: {:?}", a_rsne_ie, error))?;
-        let s_rsne = a_rsne.derive_wpa3_s_rsne(&self.device.driver_features)?;
+        let s_rsne = a_rsne.derive_wpa3_s_rsne(&self.security_support)?;
         Ok((a_rsne, s_rsne))
     }
 
     /// Gets the SAE used to authenticate via WPA3 Personal.
     fn authentication_config(&self) -> Result<auth::Config, Error> {
-        use itertools::FoldWhile::{Continue, Done};
-
         match self.security {
             wpa::Wpa3PersonalCredentials::Passphrase(ref passphrase) => {
                 // Prefer SAE in SME.
-                match self
-                    .device
-                    .driver_features
-                    .iter()
-                    .fold_while(None, |sae, feature| match feature {
-                        DriverFeature::SaeSmeAuth => Done(Some(feature)),
-                        DriverFeature::SaeDriverAuth => Continue(Some(feature)),
-                        _ => Continue(sae),
-                    })
-                    .into_inner()
-                {
-                    Some(DriverFeature::SaeSmeAuth) => Ok(auth::Config::Sae {
+                if self.security_support.sae.sme_handler_supported {
+                    Ok(auth::Config::Sae {
                         ssid: self.bss.ssid.clone(),
                         password: passphrase.clone().into(),
                         mac: self.device.sta_addr.clone(),
                         peer_mac: self.bss.bssid.0,
-                    }),
-                    Some(DriverFeature::SaeDriverAuth) => {
-                        Ok(auth::Config::DriverSae { password: passphrase.clone().into() })
-                    }
-                    _ => Err(format_err!(
+                    })
+                } else if self.security_support.sae.driver_handler_supported {
+                    Ok(auth::Config::DriverSae { password: passphrase.clone().into() })
+                } else {
+                    Err(format_err!(
                         "Failed to generate WPA3 authentication config: no SAE SME nor driver \
-                         feature"
-                    )),
+                         handler"
+                    ))
                 }
             }
         }
@@ -498,7 +488,6 @@ mod tests {
     use {
         super::*,
         crate::client::{self, rsn::Rsna},
-        fidl_fuchsia_wlan_common as fidl_common,
         wlan_common::{
             assert_variant, fake_bss_description,
             ie::{
@@ -509,6 +498,7 @@ mod tests {
                 wep::{WEP104_KEY_BYTES, WEP40_KEY_BYTES},
                 wpa::credential::PSK_SIZE_BYTES,
             },
+            test_utils::fake_features::{fake_security_support, fake_security_support_empty},
         },
         wlan_rsn::{rsna::NegotiatedProtection, ProtectionInfo},
     };
@@ -557,12 +547,14 @@ mod tests {
     #[test]
     fn protection_from_wep40() {
         let device = crate::test_utils::fake_device_info([1u8; 6]);
+        let security_support = fake_security_support();
         let config = Default::default();
         let bss = fake_bss_description!(Wep);
         let authenticator = wep::WepAuthenticator { key: WepKey::from([1u8; WEP40_KEY_BYTES]) };
         let protection = Protection::try_from(SecurityContext {
             security: &authenticator,
             device: &device,
+            security_support: &security_support,
             config: &config,
             bss: &bss,
         })
@@ -573,12 +565,14 @@ mod tests {
     #[test]
     fn protection_from_wep104() {
         let device = crate::test_utils::fake_device_info([1u8; 6]);
+        let security_support = fake_security_support();
         let config = Default::default();
         let bss = fake_bss_description!(Wep);
         let authenticator = wep::WepAuthenticator { key: WepKey::from([1u8; WEP104_KEY_BYTES]) };
         let protection = Protection::try_from(SecurityContext {
             security: &authenticator,
             device: &device,
+            security_support: &security_support,
             config: &config,
             bss: &bss,
         })
@@ -589,12 +583,14 @@ mod tests {
     #[test]
     fn protection_from_wpa1_psk() {
         let device = crate::test_utils::fake_device_info([1u8; 6]);
+        let security_support = fake_security_support();
         let config = Default::default();
         let bss = fake_bss_description!(Wpa1);
         let credentials = wpa::Wpa1Credentials::Psk([1u8; PSK_SIZE_BYTES].into());
         let protection = Protection::try_from(SecurityContext {
             security: &credentials,
             device: &device,
+            security_support: &security_support,
             config: &config,
             bss: &bss,
         })
@@ -605,12 +601,14 @@ mod tests {
     #[test]
     fn protection_from_wpa2_personal_psk() {
         let device = crate::test_utils::fake_device_info([1u8; 6]);
+        let security_support = fake_security_support();
         let config = Default::default();
         let bss = fake_bss_description!(Wpa2);
         let credentials = wpa::Wpa2PersonalCredentials::Psk([1u8; PSK_SIZE_BYTES].into());
         let protection = Protection::try_from(SecurityContext {
             security: &credentials,
             device: &device,
+            security_support: &security_support,
             config: &config,
             bss: &bss,
         })
@@ -621,6 +619,7 @@ mod tests {
     #[test]
     fn protection_from_wpa2_personal_passphrase() {
         let device = crate::test_utils::fake_device_info([1u8; 6]);
+        let security_support = fake_security_support();
         let config = Default::default();
         let bss = fake_bss_description!(Wpa2);
         let credentials =
@@ -628,6 +627,7 @@ mod tests {
         let protection = Protection::try_from(SecurityContext {
             security: &credentials,
             device: &device,
+            security_support: &security_support,
             config: &config,
             bss: &bss,
         })
@@ -637,13 +637,8 @@ mod tests {
 
     #[test]
     fn protection_from_wpa3_personal_passphrase() {
-        let device = DeviceInfo {
-            driver_features: vec![
-                fidl_common::DriverFeature::Mfp,
-                fidl_common::DriverFeature::SaeSmeAuth,
-            ],
-            ..crate::test_utils::fake_device_info([1u8; 6])
-        };
+        let device = crate::test_utils::fake_device_info([1u8; 6]);
+        let security_support = fake_security_support();
         let config = ClientConfig { wpa3_supported: true, ..Default::default() };
         let bss = fake_bss_description!(Wpa3);
         let credentials =
@@ -651,6 +646,7 @@ mod tests {
         let protection = Protection::try_from(SecurityContext {
             security: &credentials,
             device: &device,
+            security_support: &security_support,
             config: &config,
             bss: &bss,
         })
@@ -661,6 +657,7 @@ mod tests {
     #[test]
     fn protection_from_wpa1_passphrase_with_open_bss() {
         let device = crate::test_utils::fake_device_info([1u8; 6]);
+        let security_support = fake_security_support();
         let config = Default::default();
         let bss = fake_bss_description!(Open);
         let credentials =
@@ -668,6 +665,7 @@ mod tests {
         Protection::try_from(SecurityContext {
             security: &credentials,
             device: &device,
+            security_support: &security_support,
             config: &config,
             bss: &bss,
         })
@@ -677,6 +675,7 @@ mod tests {
     #[test]
     fn protection_from_open_authenticator_with_wpa1_bss() {
         let device = crate::test_utils::fake_device_info([1u8; 6]);
+        let security_support = fake_security_support();
         let config = Default::default();
         let bss = fake_bss_description!(Wpa1);
         // Note that there is no credentials type associated with an open authenticator, so an
@@ -685,6 +684,7 @@ mod tests {
         Protection::try_from(SecurityContext {
             security: &authenticator,
             device: &device,
+            security_support: &security_support,
             config: &config,
             bss: &bss,
         })
@@ -693,13 +693,8 @@ mod tests {
 
     #[test]
     fn protection_from_wpa2_personal_passphrase_with_wpa3_bss() {
-        let device = DeviceInfo {
-            driver_features: vec![
-                fidl_common::DriverFeature::Mfp,
-                fidl_common::DriverFeature::SaeSmeAuth,
-            ],
-            ..crate::test_utils::fake_device_info([1u8; 6])
-        };
+        let device = crate::test_utils::fake_device_info([1u8; 6]);
+        let security_support = fake_security_support();
         let config = ClientConfig { wpa3_supported: true, ..Default::default() };
         let bss = fake_bss_description!(Wpa3);
         let credentials =
@@ -707,6 +702,7 @@ mod tests {
         Protection::try_from(SecurityContext {
             security: &credentials,
             device: &device,
+            security_support: &security_support,
             config: &config,
             bss: &bss,
         })
@@ -716,11 +712,17 @@ mod tests {
     #[test]
     fn wpa1_psk_rsna() {
         let device = crate::test_utils::fake_device_info([1u8; 6]);
+        let security_support = fake_security_support();
         let config = Default::default();
         let bss = fake_bss_description!(Wpa1);
         let credentials = wpa::Wpa1Credentials::Psk([1u8; PSK_SIZE_BYTES].into());
-        let context =
-            SecurityContext { security: &credentials, device: &device, config: &config, bss: &bss };
+        let context = SecurityContext {
+            security: &credentials,
+            device: &device,
+            security_support: &security_support,
+            config: &config,
+            bss: &bss,
+        };
         assert!(context.authenticator_supplicant_ie().is_ok());
         assert!(matches!(context.authentication_config(), auth::Config::ComputedPsk(_)));
 
@@ -733,11 +735,17 @@ mod tests {
     #[test]
     fn wpa2_personal_psk_rsna() {
         let device = crate::test_utils::fake_device_info([1u8; 6]);
+        let security_support = fake_security_support();
         let config = Default::default();
         let bss = fake_bss_description!(Wpa2);
         let credentials = wpa::Wpa2PersonalCredentials::Psk([1u8; PSK_SIZE_BYTES].into());
-        let context =
-            SecurityContext { security: &credentials, device: &device, config: &config, bss: &bss };
+        let context = SecurityContext {
+            security: &credentials,
+            device: &device,
+            security_support: &security_support,
+            config: &config,
+            bss: &bss,
+        };
         assert!(context.authenticator_supplicant_rsne().is_ok());
         assert!(matches!(context.authentication_config(), auth::Config::ComputedPsk(_)));
 
@@ -749,19 +757,19 @@ mod tests {
 
     #[test]
     fn wpa3_personal_passphrase_rsna_sme_auth() {
-        let device = DeviceInfo {
-            driver_features: vec![
-                fidl_common::DriverFeature::Mfp,
-                fidl_common::DriverFeature::SaeSmeAuth,
-            ],
-            ..crate::test_utils::fake_device_info([1u8; 6])
-        };
+        let device = crate::test_utils::fake_device_info([1u8; 6]);
+        let security_support = fake_security_support();
         let config = ClientConfig { wpa3_supported: true, ..Default::default() };
         let bss = fake_bss_description!(Wpa3);
         let credentials =
             wpa::Wpa3PersonalCredentials::Passphrase("password".as_bytes().try_into().unwrap());
-        let context =
-            SecurityContext { security: &credentials, device: &device, config: &config, bss: &bss };
+        let context = SecurityContext {
+            security: &credentials,
+            device: &device,
+            security_support: &security_support,
+            config: &config,
+            bss: &bss,
+        };
         assert!(context.authenticator_supplicant_rsne().is_ok());
         assert!(matches!(context.authentication_config(), Ok(auth::Config::Sae { .. })));
 
@@ -773,19 +781,21 @@ mod tests {
 
     #[test]
     fn wpa3_personal_passphrase_rsna_driver_auth() {
-        let device = DeviceInfo {
-            driver_features: vec![
-                fidl_common::DriverFeature::Mfp,
-                fidl_common::DriverFeature::SaeDriverAuth,
-            ],
-            ..crate::test_utils::fake_device_info([1u8; 6])
-        };
+        let device = crate::test_utils::fake_device_info([1u8; 6]);
+        let mut security_support = fake_security_support_empty();
+        security_support.mfp.supported = true;
+        security_support.sae.driver_handler_supported = true;
         let config = ClientConfig { wpa3_supported: true, ..Default::default() };
         let bss = fake_bss_description!(Wpa3);
         let credentials =
             wpa::Wpa3PersonalCredentials::Passphrase("password".as_bytes().try_into().unwrap());
-        let context =
-            SecurityContext { security: &credentials, device: &device, config: &config, bss: &bss };
+        let context = SecurityContext {
+            security: &credentials,
+            device: &device,
+            security_support: &security_support,
+            config: &config,
+            bss: &bss,
+        };
         assert!(context.authenticator_supplicant_rsne().is_ok());
         assert!(matches!(context.authentication_config(), Ok(auth::Config::DriverSae { .. })));
 
@@ -797,33 +807,40 @@ mod tests {
 
     #[test]
     fn wpa3_personal_passphrase_prefer_sme_auth() {
-        let device = DeviceInfo {
-            driver_features: vec![
-                fidl_common::DriverFeature::Mfp,
-                fidl_common::DriverFeature::SaeDriverAuth,
-                fidl_common::DriverFeature::SaeSmeAuth,
-            ],
-            ..crate::test_utils::fake_device_info([1u8; 6])
-        };
+        let device = crate::test_utils::fake_device_info([1u8; 6]);
+        let mut security_support = fake_security_support_empty();
+        security_support.mfp.supported = true;
+        security_support.sae.driver_handler_supported = true;
+        security_support.sae.sme_handler_supported = true;
         let config = ClientConfig { wpa3_supported: true, ..Default::default() };
         let bss = fake_bss_description!(Wpa3);
         let credentials =
             wpa::Wpa3PersonalCredentials::Passphrase("password".as_bytes().try_into().unwrap());
-        let context =
-            SecurityContext { security: &credentials, device: &device, config: &config, bss: &bss };
+        let context = SecurityContext {
+            security: &credentials,
+            device: &device,
+            security_support: &security_support,
+            config: &config,
+            bss: &bss,
+        };
         assert!(matches!(context.authentication_config(), Ok(auth::Config::Sae { .. })));
     }
 
     #[test]
-    fn wpa3_personal_passphrase_no_device_features() {
-        let device =
-            DeviceInfo { driver_features: vec![], ..crate::test_utils::fake_device_info([1u8; 6]) };
+    fn wpa3_personal_passphrase_no_security_support_features() {
+        let device = crate::test_utils::fake_device_info([1u8; 6]);
+        let security_support = fake_security_support_empty();
         let config = Default::default();
         let bss = fake_bss_description!(Wpa3);
         let credentials =
             wpa::Wpa3PersonalCredentials::Passphrase("password".as_bytes().try_into().unwrap());
-        let context =
-            SecurityContext { security: &credentials, device: &device, config: &config, bss: &bss };
+        let context = SecurityContext {
+            security: &credentials,
+            device: &device,
+            security_support: &security_support,
+            config: &config,
+            bss: &bss,
+        };
         context
             .authentication_config()
             .expect_err("created WPA3 auth config for incompatible device");

@@ -8,7 +8,7 @@ use {
         cipher::{CIPHER_CCMP_128, CIPHER_TKIP},
         rsne::Rsne,
     },
-    fidl_fuchsia_wlan_common::DriverFeature,
+    fidl_fuchsia_wlan_common as fidl_common,
 };
 
 pub fn fake_wpa2_a_rsne() -> Rsne {
@@ -20,8 +20,15 @@ pub fn fake_wpa2_a_rsne() -> Rsne {
     }
 }
 
+static EMPTY_SECURITY_SUPPORT: fidl_common::SecuritySupport = fidl_common::SecuritySupport {
+    mfp: fidl_common::MfpFeature { supported: false },
+    sae: fidl_common::SaeFeature { driver_handler_supported: false, sme_handler_supported: true },
+};
+
 pub fn fake_wpa2_s_rsne() -> Rsne {
-    fake_wpa2_a_rsne().derive_wpa2_s_rsne(&vec![]).expect("Unable to derive supplicant RSNE")
+    fake_wpa2_a_rsne()
+        .derive_wpa2_s_rsne(&EMPTY_SECURITY_SUPPORT)
+        .expect("Unable to derive supplicant RSNE")
 }
 
 pub fn fake_wpa3_a_rsne() -> Rsne {
@@ -29,7 +36,9 @@ pub fn fake_wpa3_a_rsne() -> Rsne {
 }
 
 pub fn fake_wpa3_s_rsne() -> Rsne {
+    let mut security_support = EMPTY_SECURITY_SUPPORT;
+    security_support.mfp.supported = true;
     fake_wpa3_a_rsne()
-        .derive_wpa3_s_rsne(&vec![DriverFeature::Mfp])
+        .derive_wpa3_s_rsne(&security_support)
         .expect("Unable to derive supplicant RSNE")
 }

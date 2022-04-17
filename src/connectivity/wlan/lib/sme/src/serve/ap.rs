@@ -4,6 +4,7 @@
 
 use crate::ap as ap_sme;
 use anyhow::format_err;
+use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEventStream, MlmeProxy};
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use futures::channel::mpsc;
@@ -23,10 +24,11 @@ type Sme = ap_sme::ApSme;
 pub async fn serve(
     proxy: MlmeProxy,
     device_info: fidl_mlme::DeviceInfo,
+    mac_sublayer_support: fidl_common::MacSublayerSupport,
     event_stream: MlmeEventStream,
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
 ) -> Result<(), anyhow::Error> {
-    let (sme, mlme_stream, time_stream) = Sme::new(device_info);
+    let (sme, mlme_stream, time_stream) = Sme::new(device_info, mac_sublayer_support);
     let sme = Arc::new(Mutex::new(sme));
     let mlme_sme =
         super::serve_mlme_sme(proxy, event_stream, Arc::clone(&sme), mlme_stream, time_stream);

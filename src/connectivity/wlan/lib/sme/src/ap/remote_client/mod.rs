@@ -213,7 +213,9 @@ mod tests {
         super::*,
         crate::{ap::TimeStream, test_utils, MlmeSink, MlmeStream},
         futures::channel::mpsc,
-        wlan_common::{assert_variant, timer},
+        wlan_common::{
+            assert_variant, test_utils::fake_features::fake_mac_sublayer_support, timer,
+        },
     };
 
     const AP_ADDR: MacAddr = [6u8; 6];
@@ -225,9 +227,15 @@ mod tests {
 
     fn make_env() -> (Context, MlmeStream, TimeStream) {
         let device_info = test_utils::fake_device_info(AP_ADDR);
+        let mac_sublayer_support = fake_mac_sublayer_support();
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
         let (timer, time_stream) = timer::create_timer();
-        let ctx = Context { device_info, mlme_sink: MlmeSink::new(mlme_sink), timer };
+        let ctx = Context {
+            device_info,
+            mac_sublayer_support,
+            mlme_sink: MlmeSink::new(mlme_sink),
+            timer,
+        };
         (ctx, mlme_stream, time_stream)
     }
 
