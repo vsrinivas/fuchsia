@@ -13,11 +13,8 @@
 #include "src/devices/lib/compat/compat.h"
 #include "src/devices/lib/compat/symbols.h"
 #include "src/devices/lib/driver2/devfs_exporter.h"
+#include "src/devices/lib/driver2/driver2.h"
 #include "src/devices/lib/driver2/inspect.h"
-#include "src/devices/lib/driver2/namespace.h"
-#include "src/devices/lib/driver2/record_cpp.h"
-#include "src/devices/lib/driver2/start_args.h"
-#include "src/devices/lib/driver2/structured_logger.h"
 #include "src/ui/input/drivers/hid-input-report/input-report.h"
 
 namespace fdf2 = fuchsia_driver_framework;

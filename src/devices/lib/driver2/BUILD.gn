@@ -52,6 +52,7 @@ sdk_source_set("llcpp") {
   include_base = "//src/devices"
 
   sources = [
+    "driver2.h",
     "logger.cc",
     "logger.h",
     "logger_internal.h",
