@@ -14,9 +14,6 @@ namespace {
 
 class VerbAttach : public AttachCommandTest {};
 
-// This should match ZX_MAX_NAME_LEN, but we don't want to include zircon headers here.
-constexpr size_t kZirconMaxNameLength = 32;
-
 }  // namespace
 
 TEST_F(VerbAttach, Bad) {
