@@ -26,6 +26,7 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 			in: Struct{
 				TypeShapeV1: TypeShape{
 					InlineSize: 8,
+					Alignment:  8,
 				},
 				Members: []StructMember{
 					{
@@ -49,6 +50,7 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 			in: Struct{
 				TypeShapeV1: TypeShape{
 					InlineSize: 4,
+					Alignment:  4,
 				},
 				Members: []StructMember{
 					{
@@ -72,6 +74,7 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 			in: Struct{
 				TypeShapeV1: TypeShape{
 					InlineSize: 2,
+					Alignment:  2,
 				},
 				Members: []StructMember{
 					{
@@ -95,6 +98,7 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 			in: Struct{
 				TypeShapeV1: TypeShape{
 					InlineSize: 1,
+					Alignment:  1,
 				},
 				Members: []StructMember{
 					{
@@ -112,6 +116,7 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 			in: Struct{
 				TypeShapeV1: TypeShape{
 					InlineSize: 8,
+					Alignment:  8,
 				},
 				Members: []StructMember{
 					{
@@ -140,6 +145,7 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 			in: Struct{
 				TypeShapeV1: TypeShape{
 					InlineSize: 4,
+					Alignment:  4,
 				},
 				Members: []StructMember{
 					{
@@ -168,6 +174,7 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 			in: Struct{
 				TypeShapeV1: TypeShape{
 					InlineSize: 2,
+					Alignment:  2,
 				},
 				Members: []StructMember{
 					{
@@ -190,6 +197,7 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 			in: Struct{
 				TypeShapeV1: TypeShape{
 					InlineSize: 16,
+					Alignment:  8,
 				},
 				Members: []StructMember{
 					{
@@ -224,6 +232,7 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 			in: Struct{
 				TypeShapeV1: TypeShape{
 					InlineSize: 4,
+					Alignment:  4,
 				},
 				Members: []StructMember{
 					{
@@ -252,6 +261,7 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 			in: Struct{
 				TypeShapeV1: TypeShape{
 					InlineSize: 16,
+					Alignment:  8,
 				},
 				Members: []StructMember{
 					{
@@ -280,6 +290,7 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 			in: Struct{
 				TypeShapeV1: TypeShape{
 					InlineSize: 12,
+					Alignment:  4,
 				},
 				Members: []StructMember{
 					{
@@ -308,6 +319,7 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 			in: Struct{
 				TypeShapeV1: TypeShape{
 					InlineSize: 10,
+					Alignment:  2,
 				},
 				Members: []StructMember{
 					{
@@ -345,6 +357,7 @@ func TestBuildPaddingMarkersFlatteningStruct(t *testing.T) {
 	innerStruct := Struct{
 		TypeShapeV1: TypeShape{
 			InlineSize: 4,
+			Alignment:  4,
 		},
 		Members: []StructMember{
 			{
@@ -358,6 +371,7 @@ func TestBuildPaddingMarkersFlatteningStruct(t *testing.T) {
 	input := Struct{
 		TypeShapeV1: TypeShape{
 			InlineSize: 8,
+			Alignment:  4,
 		},
 		Members: []StructMember{
 			{
@@ -381,7 +395,11 @@ func TestBuildPaddingMarkersFlatteningStruct(t *testing.T) {
 	expected := []PaddingMarker{
 		{
 			Offset: 0,
-			Mask:   []byte{0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+			Mask:   []byte{0x00, 0xff, 0xff, 0xff},
+		},
+		{
+			Offset: 4,
+			Mask:   []byte{0xff, 0xff, 0xff, 0xff},
 		},
 	}
 	if diff := cmp.Diff(expected, out); diff != "" {
@@ -394,6 +412,7 @@ func TestBuildPaddingMarkersFlatteningArray(t *testing.T) {
 	innerStruct := Struct{
 		TypeShapeV1: TypeShape{
 			InlineSize: 4,
+			Alignment:  4,
 		},
 		Members: []StructMember{
 			{
@@ -408,6 +427,7 @@ func TestBuildPaddingMarkersFlatteningArray(t *testing.T) {
 	input := Struct{
 		TypeShapeV1: TypeShape{
 			InlineSize: 12,
+			Alignment:  4,
 		},
 		Members: []StructMember{
 			{
@@ -435,7 +455,11 @@ func TestBuildPaddingMarkersFlatteningArray(t *testing.T) {
 	expected := []PaddingMarker{
 		{
 			Offset: 0,
-			Mask:   []byte{0x00, 0xff, 0xff, 0xff, 0x00, 0xff, 0xff, 0xff},
+			Mask:   []uint8{0x00, 0x0ff, 0xff, 0xff},
+		},
+		{
+			Offset: 4,
+			Mask:   []uint8{0x00, 0xff, 0xff, 0xff},
 		},
 		{
 			Offset: 8,

@@ -225,3 +225,29 @@ type UnionInlinePadding = strict union {
 type UnionInlinePaddingStruct = struct {
     u UnionInlinePadding;
 };
+
+// Bindings might generate an 4 byte padding mask for this struct,
+// which is wrong because the struct has alignment 2 and might
+// be used at a non 4 byte aligned offset.
+type PaddingAlignment2MaskMayBe4Bytes = struct {
+    a uint8;
+    b uint16;
+    c uint16;
+};
+
+type PaddingAlignment2MaskMayBe4BytesVector = struct {
+    v vector<PaddingAlignment2MaskMayBe4Bytes>;
+};
+
+// Bindings might generate an 8 byte padding mask for this struct,
+// which is wrong because the struct has alignment 4 and might
+// be used at a non 8 byte aligned offset.
+type PaddingAlignment4MaskMayBe8Bytes = struct {
+    a uint8;
+    b uint32;
+    c uint32;
+};
+
+type PaddingAlignment4MaskMayBe8BytesVector = struct {
+    v vector<PaddingAlignment4MaskMayBe8Bytes>;
+};

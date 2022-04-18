@@ -44,25 +44,35 @@ fidl_struct_copy! {
   ],
   padding_v1: [
   {
-      ty: u64,
-      offset: 0,
-      mask: 0xff000000ff000000u64,
+      ty: u16,
+      offset: 2,
+      mask: 0xff00u16,
   },
   {
-      ty: u32,
-      offset: 8,
-      mask: 0xff000000u32,
+      ty: u16,
+      offset: 6,
+      mask: 0xff00u16,
+  },
+  {
+      ty: u16,
+      offset: 10,
+      mask: 0xff00u16,
   },],
   padding_v2: [
   {
-      ty: u64,
-      offset: 0,
-      mask: 0xff000000ff000000u64,
+      ty: u16,
+      offset: 2,
+      mask: 0xff00u16,
   },
   {
-      ty: u32,
-      offset: 8,
-      mask: 0xff000000u32,
+      ty: u16,
+      offset: 6,
+      mask: 0xff00u16,
+  },
+  {
+      ty: u16,
+      offset: 10,
+      mask: 0xff00u16,
   },],
   size_v1: 12,
   size_v2: 12,
@@ -95,15 +105,15 @@ fidl_struct_copy! {
   ],
   padding_v1: [
   {
-      ty: u32,
-      offset: 0,
-      mask: 0xff000000u32,
+      ty: u16,
+      offset: 2,
+      mask: 0xff00u16,
   },],
   padding_v2: [
   {
-      ty: u32,
-      offset: 0,
-      mask: 0xff000000u32,
+      ty: u16,
+      offset: 2,
+      mask: 0xff00u16,
   },],
   size_v1: 4,
   size_v2: 4,
@@ -136,15 +146,15 @@ fidl_struct_copy! {
   ],
   padding_v1: [
   {
-      ty: u64,
+      ty: u32,
       offset: 0,
-      mask: 0x00000000ffffff00u64,
+      mask: 0xffffff00u32,
   },],
   padding_v2: [
   {
-      ty: u64,
+      ty: u32,
       offset: 0,
-      mask: 0x00000000ffffff00u64,
+      mask: 0xffffff00u32,
   },],
   size_v1: 8,
   size_v2: 8,
@@ -225,35 +235,55 @@ fidl_struct_copy! {
   ],
   padding_v1: [
   {
-      ty: u64,
+      ty: u32,
       offset: 0,
-      mask: 0xffffff00ff000000u64,
+      mask: 0xff000000u32,
   },
   {
-      ty: u64,
-      offset: 8,
-      mask: 0xff00000000000000u64,
+      ty: u32,
+      offset: 4,
+      mask: 0xffffff00u32,
   },
   {
-      ty: u64,
+      ty: u32,
+      offset: 12,
+      mask: 0xff000000u32,
+  },
+  {
+      ty: u32,
       offset: 16,
-      mask: 0xff000000ff000000u64,
+      mask: 0xff000000u32,
+  },
+  {
+      ty: u32,
+      offset: 20,
+      mask: 0xff000000u32,
   },],
   padding_v2: [
   {
-      ty: u64,
+      ty: u32,
       offset: 0,
-      mask: 0xffffff00ff000000u64,
+      mask: 0xff000000u32,
   },
   {
-      ty: u64,
-      offset: 8,
-      mask: 0xff00000000000000u64,
+      ty: u32,
+      offset: 4,
+      mask: 0xffffff00u32,
   },
   {
-      ty: u64,
+      ty: u32,
+      offset: 12,
+      mask: 0xff000000u32,
+  },
+  {
+      ty: u32,
       offset: 16,
-      mask: 0xff000000ff000000u64,
+      mask: 0xff000000u32,
+  },
+  {
+      ty: u32,
+      offset: 20,
+      mask: 0xff000000u32,
   },],
   size_v1: 24,
   size_v2: 24,

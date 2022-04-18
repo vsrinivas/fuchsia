@@ -1584,3 +1584,54 @@ decode_failure("BadPaddedVector_UpperByte") {
     },
     err = INVALID_PADDING_BYTE,
 }
+
+success("PaddingAlignment2MaskMayBe4Bytes") {
+    value = PaddingAlignment2MaskMayBe4BytesVector{
+        v: [
+            PaddingAlignment2MaskMayBe4Bytes{
+                a: 1,
+                b: 2,
+                c: 3,
+            },
+            PaddingAlignment2MaskMayBe4Bytes{
+                a: 4,
+                b: 5,
+                c: 6,
+            },
+        ],
+    },
+    bytes = {
+        v1, v2 = [
+            num(2):8,
+            repeat(0xff):8,
+            num(1):1, padding:1, num(2):2, num(3):2, // 6 bytes
+            num(4):1, padding:1, num(5):2, num(6):2, // 6 bytes
+            padding:4,
+        ],
+    },
+}
+
+success("PaddingAlignment4MaskMayBe8Bytes") {
+    value = PaddingAlignment4MaskMayBe8BytesVector{
+        v: [
+            PaddingAlignment4MaskMayBe8Bytes{
+                a: 1,
+                b: 2,
+                c: 3,
+            },
+            PaddingAlignment4MaskMayBe8Bytes{
+                a: 4,
+                b: 5,
+                c: 6,
+            },
+        ],
+    },
+    bytes = {
+        v1, v2 = [
+            num(2):8,
+            repeat(0xff):8,
+            num(1):1, padding:3, num(2):4, num(3):4, // 12 bytes
+            num(4):1, padding:3, num(5):4, num(6):4, // 12 bytes
+        ],
+    },
+}

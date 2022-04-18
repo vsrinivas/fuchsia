@@ -184,14 +184,14 @@ class Int8Int32 {
           Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::b, 4, 4});
   static constexpr auto kPaddingV1 =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
+      std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
           .offset = 0,
-          .mask = 0x00000000ffffff00ull,
+          .mask = 0xffffff00,
       });
   static constexpr auto kPaddingV2 =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint64_t>{
+      std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
           .offset = 0,
-          .mask = 0x00000000ffffff00ull,
+          .mask = 0xffffff00,
       });
 };
 
@@ -266,14 +266,14 @@ class Int16Int8 {
           Storage_, int8_t, fidl::internal::NaturalCodingConstraintEmpty>{
           &Storage_::b, 2, 2});
   static constexpr auto kPaddingV1 =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
-          .offset = 0,
-          .mask = 0xff000000,
+      std::make_tuple(::fidl::internal::NaturalStructPadding<uint16_t>{
+          .offset = 2,
+          .mask = 0xff00,
       });
   static constexpr auto kPaddingV2 =
-      std::make_tuple(::fidl::internal::NaturalStructPadding<uint32_t>{
-          .offset = 0,
-          .mask = 0xff000000,
+      std::make_tuple(::fidl::internal::NaturalStructPadding<uint16_t>{
+          .offset = 2,
+          .mask = 0xff00,
       });
 };
 

@@ -9,6 +9,9 @@ import (
 	"fmt"
 )
 
+// In the masks used in the following functions, bytes requiring padding are marked 0xff and
+// bytes not requiring padding are marked 0x00.
+
 func (s Struct) populateFullStructMaskForStruct(mask []byte, flatten bool, getTypeShape func(Struct) TypeShape, getFieldShape func(StructMember) FieldShape, resolveStruct func(identifier EncodedCompoundIdentifier) *Struct) {
 	paddingEnd := getTypeShape(s).InlineSize - 1
 	for i := len(s.Members) - 1; i >= 0; i-- {
@@ -76,25 +79,29 @@ func (s Struct) buildPaddingMarkers(flatten bool, getTypeShape func(Struct) Type
 			s[i] = 0
 		}
 	}
-	for _, i := range extractNonzeroSliceOffsets(8) {
-		s := fullStructMask[i : i+8]
-		m := make([]byte, 8)
-		copy(m, s)
-		paddingMarkers = append(paddingMarkers, PaddingMarker{
-			Offset: i,
-			Mask:   m,
-		})
-		zeroSlice(s) // Reset the buffer for the next iteration.
+	if getTypeShape(s).Alignment >= 8 {
+		for _, i := range extractNonzeroSliceOffsets(8) {
+			s := fullStructMask[i : i+8]
+			m := make([]byte, 8)
+			copy(m, s)
+			paddingMarkers = append(paddingMarkers, PaddingMarker{
+				Offset: i,
+				Mask:   m,
+			})
+			zeroSlice(s) // Reset the buffer for the next iteration.
+		}
 	}
-	for _, i := range extractNonzeroSliceOffsets(4) {
-		s := fullStructMask[i : i+4]
-		m := make([]byte, 4)
-		copy(m, s)
-		paddingMarkers = append(paddingMarkers, PaddingMarker{
-			Offset: i,
-			Mask:   m,
-		})
-		zeroSlice(s) // Reset the buffer for the next iteration.
+	if getTypeShape(s).Alignment >= 4 {
+		for _, i := range extractNonzeroSliceOffsets(4) {
+			s := fullStructMask[i : i+4]
+			m := make([]byte, 4)
+			copy(m, s)
+			paddingMarkers = append(paddingMarkers, PaddingMarker{
+				Offset: i,
+				Mask:   m,
+			})
+			zeroSlice(s) // Reset the buffer for the next iteration.
+		}
 	}
 	for _, i := range extractNonzeroSliceOffsets(2) {
 		s := fullStructMask[i : i+2]
