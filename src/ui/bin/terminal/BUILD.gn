@@ -154,7 +154,7 @@ config_data("tiles_config") {
 
 fuchsia_test_component("terminal_tests_component") {
   component_name = "terminal_tests"
-  manifest = "meta/terminal_tests.cmx"
+  manifest = "meta/terminal_tests.cml"
   deps = [
     ":bold_font",
     ":bold_italic_font",
@@ -170,12 +170,6 @@ fuchsia_test_package("terminal_tests") {
   test_components = [ ":terminal_tests_component" ]
 }
 
-fuchsia_test_component("term_model_tests_component") {
-  component_name = "term_model_tests"
-  manifest = "meta/term_model_lib_test.cmx"
+fuchsia_unittest_package("term_model_tests") {
   deps = [ "//third_party/alacritty/alacritty_terminal:term-model_test" ]
-}
-
-fuchsia_test_package("term_model_tests") {
-  test_components = [ ":term_model_tests_component" ]
 }

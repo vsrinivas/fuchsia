@@ -191,6 +191,10 @@
                 "fuchsia.boot.ReadOnlyLog",
                 "fuchsia.boot.RootResource",
                 "fuchsia.exception.Handler",
+
+                // fuchsia.hardware.pty.Device is needed for terminal_tests.
+                // TODO(fxbug.dev/97992): Remove this once the test is hermetic.
+                "fuchsia.hardware.pty.Device",
                 "fuchsia.kernel.Counter",
                 "fuchsia.kernel.CpuResource",
                 "fuchsia.kernel.DebugResource",

@@ -1,0 +1,32 @@
+{
+    include: [
+        // Depends on fuchsia.hardware.pty.Device which is a system capability.
+        // TODO(fxbug.dev/97992): Remove this once the test is hermetic.
+        "//src/sys/test_manager/system-test.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/terminal_lib_lib_test",
+    },
+    use: [
+        {
+            directory: "boot",
+            rights: [ "rx*" ],
+            path: "/boot/bin",
+            subdir: "bin",
+        },
+        {
+            protocol: [
+                "fuchsia.hardware.pty.Device",
+                "fuchsia.process.Launcher",
+                "fuchsia.process.Resolver",
+                "fuchsia.sys.Environment",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+        },
+    ],
+}
