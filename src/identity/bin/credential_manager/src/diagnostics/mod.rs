@@ -10,15 +10,33 @@ mod inspect;
 pub use self::fake::FakeDiagnostics;
 pub use self::inspect::{InspectDiagnostics, INSPECTOR};
 
-use fidl_fuchsia_identity_credential::CredentialError;
+use {fidl_fuchsia_identity_credential::CredentialError, paste::paste, std::collections::HashMap};
 
-/// The different RPC methods that may be called on a CredentialManager.
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum IncomingMethod {
-    AddCredential,
-    RemoveCredential,
-    CheckCredential,
+// Create an enum with a `name_map` method that returns a map of every value to its snake_case name.
+macro_rules! mapped_enum {
+    ($name:ident { $($field:ident),* }) => {
+        #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+        pub enum $name {
+            $(
+                $field,
+            )*
+        }
+
+        impl $name {
+            pub fn name_map() -> HashMap<Self, &'static str> {
+                paste! {
+                    HashMap::from([
+                        $(
+                            ($name::$field, stringify!([< $field:snake >])),
+                        )*
+                    ])
+                }
+            }
+        }
+    }
 }
+
+mapped_enum!(IncomingMethod { AddCredential, RemoveCredential, CheckCredential });
 
 /// A standard interface for systems that record CredentialManger events for diagnostics purposes.
 pub trait Diagnostics {

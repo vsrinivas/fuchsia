@@ -16,34 +16,43 @@ lazy_static! {
     pub static ref INSPECTOR: Inspector = Inspector::new();
 }
 
-/// A record in inspect of the success count and failure counts for a particular RPC method.
+/// A record in inspect of the success count and failure counts for an incoming RPC method.
 struct IncomingMethodNode {
+    /// The inspect node used to export this information.
+    _node: Node,
     /// The count of successful calls.
-    success_property: UintProperty,
+    success_count: UintProperty,
+    /// The count of failed calls.
+    error_count: UintProperty,
+    /// The inpect node used to report counts of each error.
+    error_node: Node,
     /// A map from (observed) errors to the count of that error.
-    error_properties: HashMap<CredentialError, UintProperty>,
-    /// The inspect node used to export the success and failure counters.
-    node: Node,
+    per_error_counts: HashMap<CredentialError, UintProperty>,
 }
 
 impl IncomingMethodNode {
     /// Create a new `IncomingMethodNode` at the supplied inspect `Node`.
     fn new(node: Node) -> Self {
-        let success_property = node.create_uint("Ok", 0);
-        let error_properties = HashMap::new();
-        Self { success_property, error_properties, node }
+        Self {
+            success_count: node.create_uint("success_count", 0),
+            error_count: node.create_uint("error_count", 0),
+            error_node: node.create_child("errors"),
+            per_error_counts: HashMap::new(),
+            _node: node,
+        }
     }
 
-    /// Increments the success counter if result is Ok or a failure counter if result is an Err,
-    /// creating a new failure counter if this is the first time the error has been observed.
-    fn increment(&mut self, result: Result<(), CredentialError>) {
+    /// Increments either the success or the error counters, creating a new error counter if
+    /// this is the first time the error has been observed.
+    fn record(&mut self, result: Result<(), CredentialError>) {
         match result {
-            Ok(()) => self.success_property.add(1),
+            Ok(()) => self.success_count.add(1),
             Err(error) => {
-                let node = &self.node;
-                self.error_properties
+                let error_node = &self.error_node;
+                self.error_count.add(1);
+                self.per_error_counts
                     .entry(error)
-                    .or_insert_with(|| node.create_uint(format!("{:?}", error), 0))
+                    .or_insert_with(|| error_node.create_uint(format!("{:?}", error), 0))
                     .add(1);
             }
         }
@@ -52,19 +61,28 @@ impl IncomingMethodNode {
 
 /// The complete set of CredentialManager information exported through Inspect.
 pub struct InspectDiagnostics {
-    /// Counters of success and failures for each RPC.
+    /// Counters of success and failures for each incoming RPC.
     incoming_outcomes: Mutex<HashMap<IncomingMethod, IncomingMethodNode>>,
-    /// The inspect node used to export the contents of this `InspectDiagnostics`.
-    node: Node,
+    /// A vector of inspect nodes that must be kept in scope for the lifetime of this object.
+    _nodes: Vec<Node>,
 }
 
 impl InspectDiagnostics {
     /// Construct a new `InspectDiagnostics` exporting at the supplied `Node`.
     pub fn new(node: &Node) -> Self {
-        // Record the initialization time, mainly so we always have some content.
+        // Record the initialization time.
         node.record_int("initialization_time_nanos", zx::Time::get_monotonic().into_nanos());
-        // All other nodes are created later when they are needed.
-        Self { incoming_outcomes: Mutex::new(HashMap::new()), node: node.clone_weak() }
+        // Add new nodes for each incoming RPC.
+        let incoming_node = node.create_child("incoming");
+        let mut incoming_map = HashMap::new();
+        for (method, name) in IncomingMethod::name_map().iter() {
+            incoming_map
+                .insert(*method, IncomingMethodNode::new(incoming_node.create_child(*name)));
+        }
+        Self {
+            incoming_outcomes: Mutex::new(incoming_map),
+            _nodes: vec![node.clone_weak(), incoming_node],
+        }
     }
 }
 
@@ -72,11 +90,9 @@ impl Diagnostics for InspectDiagnostics {
     fn incoming_outcome(&self, method: IncomingMethod, result: Result<(), CredentialError>) {
         self.incoming_outcomes
             .lock()
-            .entry(method)
-            .or_insert_with(|| {
-                IncomingMethodNode::new(self.node.create_child(format!("{:?}", method)))
-            })
-            .increment(result);
+            .get_mut(&method)
+            .expect("Incoming RPC method missing from auto-generated map")
+            .record(result);
     }
 }
 
@@ -95,7 +111,24 @@ mod tests {
         assert_data_tree!(
             inspector,
             root: {
-                initialization_time_nanos: AnyProperty
+                initialization_time_nanos: AnyProperty,
+                incoming: {
+                    add_credential: {
+                        success_count: 0u64,
+                        error_count: 0u64,
+                        errors: {},
+                    },
+                    check_credential: {
+                        success_count: 0u64,
+                        error_count: 0u64,
+                        errors: {},
+                    },
+                    remove_credential: {
+                        success_count: 0u64,
+                        error_count: 0u64,
+                        errors: {},
+                    },
+                }
             }
         );
     }
@@ -115,18 +148,28 @@ mod tests {
             inspector,
             root: {
                 initialization_time_nanos: AnyProperty,
-                AddCredential: {
-                    Ok: 1u64,
-                    NoFreeLabel: 1u64,
-                    InternalError: 1u64,
-                },
-                CheckCredential: {
-                    Ok: 1u64,
-                },
-                RemoveCredential: {
-                    Ok: 0u64,
-                    InvalidLabel: 2u64,
-                },
+                incoming: {
+                    add_credential: {
+                        success_count: 1u64,
+                        error_count: 2u64,
+                        errors: {
+                            NoFreeLabel: 1u64,
+                            InternalError: 1u64,
+                        },
+                    },
+                    check_credential: {
+                        success_count: 1u64,
+                        error_count: 0u64,
+                        errors: {},
+                    },
+                    remove_credential: {
+                        success_count: 0u64,
+                        error_count: 2u64,
+                        errors: {
+                            InvalidLabel: 2u64,
+                        },
+                    },
+                }
             }
         );
     }
