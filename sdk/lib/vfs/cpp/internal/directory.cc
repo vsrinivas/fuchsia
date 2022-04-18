@@ -245,7 +245,7 @@ void Directory::Open(fuchsia::io::OpenFlags open_flags, fuchsia::io::OpenFlags p
   if (n->IsRemote() && new_path_len > 0) {
     fuchsia::io::DirectoryPtr temp_dir;
     status = n->Serve(open_flags | fuchsia::io::OpenFlags::DIRECTORY,
-                      temp_dir.NewRequest().TakeChannel());
+                      temp_dir.NewRequest(dispatcher).TakeChannel());
     if (status != ZX_OK) {
       return SendOnOpenEventOnError(open_flags, std::move(request), status);
     }
