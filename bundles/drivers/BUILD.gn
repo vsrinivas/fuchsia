@@ -23,6 +23,7 @@ group("bootstrap") {
 
 group("bootstrap-dfv2") {
   deps = [
+    "//products/kernel_cmdline:devmgr.enable-ephemeral--true",
     "//products/kernel_cmdline:driver_manager.root-meta--platform-bus.cm",
     "//products/kernel_cmdline:driver_manager.use_driver_framework_v2--true",
   ]
