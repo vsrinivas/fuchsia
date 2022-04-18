@@ -7,7 +7,7 @@ use assembly_validate_product::{validate_package, PackageValidationError};
 use fuchsia_archive::Reader;
 use fuchsia_pkg::{BlobInfo, PackageManifest};
 use maplit::btreemap;
-use std::{fs::File, io::Cursor};
+use std::io::Cursor;
 use tempfile::TempDir;
 
 const PASS_WITH_CONFIG: &str = "meta/pass_with_config.cm";
@@ -17,7 +17,7 @@ const FAIL_MISSING_CONFIG: &str = "meta/fail_missing_config.cm";
 const TEST_MANIFEST_PATH: &str = env!("TEST_MANIFEST_PATH");
 
 fn test_package_manifest() -> PackageManifest {
-    serde_json::from_reader(File::open(TEST_MANIFEST_PATH).unwrap()).unwrap()
+    PackageManifest::try_load_from(TEST_MANIFEST_PATH).unwrap()
 }
 
 fn test_meta_far() -> Reader<Cursor<Vec<u8>>> {
@@ -68,8 +68,7 @@ fn repackaging_with_no_config_produces_identical_manifest() {
     let repackager = Repackager::new(original_manifest.clone(), temp.path()).unwrap();
     let new_manifest_path = repackager.build().unwrap();
 
-    let new_manifest: PackageManifest =
-        serde_json::from_reader(File::open(&new_manifest_path).unwrap()).unwrap();
+    let new_manifest = PackageManifest::try_load_from(new_manifest_path).unwrap();
 
     assert_eq!(original_manifest.name(), new_manifest.name(), "repackaging must re-use pkg name");
     assert_eq!(

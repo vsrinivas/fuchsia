@@ -104,8 +104,7 @@ mod tests {
         let manifest_path = builder.build(&outdir).unwrap();
 
         // Read the package manifest back in.
-        let config_data_manifest: PackageManifest =
-            serde_json::from_reader(File::open(manifest_path).unwrap()).unwrap();
+        let config_data_manifest = PackageManifest::try_load_from(manifest_path).unwrap();
         assert_eq!(config_data_manifest.name().as_ref(), "config-data");
 
         let mut config_data_metafar = File::open(config_data_metafar_path).unwrap();

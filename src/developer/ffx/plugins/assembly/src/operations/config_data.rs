@@ -352,8 +352,7 @@ mod tests {
         assert!(package_manifest_path.exists());
         assert!(metadata(&package_manifest_path).unwrap().is_file());
 
-        let content = std::fs::read_to_string(package_manifest_path).unwrap();
-        let package_manifest = serde_json::from_str::<PackageManifest>(&content).unwrap();
+        let package_manifest = PackageManifest::try_load_from(package_manifest_path).unwrap();
 
         assert_eq!("config-data/0".to_owned(), package_manifest.package_path().to_string());
     }

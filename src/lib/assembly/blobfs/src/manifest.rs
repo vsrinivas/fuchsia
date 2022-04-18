@@ -97,7 +97,7 @@ fn path_relative_to_dir(path: impl AsRef<Path>, dir: impl AsRef<Path>) -> Result
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
+    use fuchsia_pkg::{BlobInfo, MetaPackage, PackageManifest, PackageManifestBuilder};
     use tempfile::{NamedTempFile, TempDir};
 
     #[test]
@@ -131,7 +131,7 @@ mod tests {
         write!(file, "Council of Ricks").unwrap();
 
         // Create a test package manifest.
-        let package = generate_test_manifest("package", "0", Some(file.path()));
+        let package = generate_test_manifest("package", Some(file.path()));
 
         // Put the package in the manifest.
         let mut manifest = BlobManifest::default();
@@ -158,7 +158,7 @@ mod tests {
         write!(file, "Council of Ricks").unwrap();
 
         // Create a test package manifest.
-        let package = generate_test_manifest("package", "0", Some(file.path()));
+        let package = generate_test_manifest("package", Some(file.path()));
 
         // Add them both to the manifest.
         let mut manifest = BlobManifest::default();
@@ -216,34 +216,20 @@ mod tests {
     // names to make each manifest somewhat unique. If supplied, `file_path` will be used as the
     // non-meta-far blob source path, which allows the tests to use a real file.
     // TODO(fxbug.dev/76993): See if we can share this with BasePackage.
-    fn generate_test_manifest(
-        name: &str,
-        version: &str,
-        file_path: Option<impl AsRef<Path>>,
-    ) -> PackageManifest {
+    fn generate_test_manifest(name: &str, file_path: Option<impl AsRef<Path>>) -> PackageManifest {
         let file_source = match file_path {
             Some(path) => path.as_ref().to_string_lossy().into_owned(),
             _ => format!("path/to/{}/file.txt", name),
         };
-        serde_json::from_value::<PackageManifest>(json!(
-            {
-                "version": "1",
-                "repository": "testrepository.com",
-                "package": {
-                    "name": name,
-                    "version": version,
-                },
-                "blobs": [
-                    {
-                        "source_path": file_source,
-                        "path": "data/file.txt",
-                        "merkle":
-                            "0000000000000000000000000000000000000000000000000000000000000000",
-                        "size": 1
-                    },
-                ]
-            }
-        ))
-        .expect("valid json")
+        let builder = PackageManifestBuilder::new(MetaPackage::from_name(name.parse().unwrap()));
+        let builder = builder.add_blob(BlobInfo {
+            source_path: file_source,
+            path: "data/file.txt".into(),
+            merkle: "0000000000000000000000000000000000000000000000000000000000000000"
+                .parse()
+                .unwrap(),
+            size: 1,
+        });
+        builder.build()
     }
 }

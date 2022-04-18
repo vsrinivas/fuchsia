@@ -225,7 +225,7 @@ impl PartialEq<Vec<(String, Hash)>> for PackageList {
 mod tests {
     use super::*;
     use fuchsia_archive::Reader;
-    use serde_json::json;
+    use fuchsia_pkg::{BlobInfo, MetaPackage, PackageManifest, PackageManifestBuilder};
     use std::path::Path;
     use tempfile::{NamedTempFile, TempDir};
 
@@ -245,9 +245,9 @@ mod tests {
 
     #[test]
     fn test_add_package_to() {
-        let system_image = generate_test_manifest("system_image", "0", None);
-        let update = generate_test_manifest("update", "0", None);
-        let valid = generate_test_manifest("valid", "0", None);
+        let system_image = generate_test_manifest("system_image", None);
+        let update = generate_test_manifest("update", None);
+        let valid = generate_test_manifest("valid", None);
         let mut packages = PackageList::default();
         assert!(add_package_to(&mut packages, system_image).is_err());
         assert!(add_package_to(&mut packages, update).is_err());
@@ -257,10 +257,8 @@ mod tests {
     #[test]
     fn build_with_unsupported_packages() {
         let mut builder = BasePackageBuilder::default();
-        assert!(builder
-            .add_base_package(generate_test_manifest("system_image", "0", None))
-            .is_err());
-        assert!(builder.add_base_package(generate_test_manifest("update", "0", None)).is_err());
+        assert!(builder.add_base_package(generate_test_manifest("system_image", None)).is_err());
+        assert!(builder.add_base_package(generate_test_manifest("update", None)).is_err());
     }
 
     #[test]
@@ -271,13 +269,9 @@ mod tests {
         // Build the base package with an extra file, a base package, and a cache package.
         let mut builder = BasePackageBuilder::default();
         let test_file = NamedTempFile::new().unwrap();
-        builder.add_files_from_package(generate_test_manifest(
-            "package",
-            "0",
-            Some(test_file.path()),
-        ));
-        builder.add_base_package(generate_test_manifest("base_package", "0", None)).unwrap();
-        builder.add_cache_package(generate_test_manifest("cache_package", "0", None)).unwrap();
+        builder.add_files_from_package(generate_test_manifest("package", Some(test_file.path())));
+        builder.add_base_package(generate_test_manifest("base_package", None)).unwrap();
+        builder.add_cache_package(generate_test_manifest("cache_package", None)).unwrap();
 
         let gendir = TempDir::new().unwrap();
         let build_results =
@@ -336,43 +330,29 @@ mod tests {
     // Generates a package manifest to be used for testing. The `name` is used in the blob file
     // names to make each manifest somewhat unique. If supplied, `file_path` will be used as the
     // non-meta-far blob source path, which allows the tests to use a real file.
-    fn generate_test_manifest(
-        name: &str,
-        version: &str,
-        file_path: Option<&Path>,
-    ) -> PackageManifest {
+    fn generate_test_manifest(name: &str, file_path: Option<&Path>) -> PackageManifest {
         let meta_source = format!("path/to/{}/meta.far", name);
         let file_source = match file_path {
             Some(path) => path.to_string_lossy().into_owned(),
             _ => format!("path/to/{}/file.txt", name),
         };
-        serde_json::from_value::<PackageManifest>(json!(
-            {
-                "version": "1",
-                "repository": "testrepository.com",
-                "package": {
-                    "name": name,
-                    "version": version,
-                },
-                "blobs": [
-                    {
-                        "source_path": meta_source,
-                        "path": "meta/",
-                        "merkle":
-                            "0000000000000000000000000000000000000000000000000000000000000000",
-                        "size": 1
-                    },
-
-                    {
-                        "source_path": file_source,
-                        "path": "data/file.txt",
-                        "merkle":
-                            "1111111111111111111111111111111111111111111111111111111111111111",
-                        "size": 1
-                    },
-                ]
-            }
-        ))
-        .expect("valid json")
+        let builder = PackageManifestBuilder::new(MetaPackage::from_name(name.parse().unwrap()));
+        let builder = builder.add_blob(BlobInfo {
+            source_path: meta_source,
+            path: "meta/".into(),
+            merkle: "0000000000000000000000000000000000000000000000000000000000000000"
+                .parse()
+                .unwrap(),
+            size: 1,
+        });
+        let builder = builder.add_blob(BlobInfo {
+            source_path: file_source,
+            path: "data/file.txt".into(),
+            merkle: "1111111111111111111111111111111111111111111111111111111111111111"
+                .parse()
+                .unwrap(),
+            size: 1,
+        });
+        builder.build()
     }
 }

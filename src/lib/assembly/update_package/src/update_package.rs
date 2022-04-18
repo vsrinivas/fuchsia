@@ -355,8 +355,7 @@ mod tests {
 
         // Read the package manifest and ensure it contains the updated name.
         let manifest_path = outdir.path().join("update_package_manifest.json");
-        let manifest_file = File::open(manifest_path).unwrap();
-        let manifest: PackageManifest = serde_json::from_reader(manifest_file).unwrap();
+        let manifest = PackageManifest::try_load_from(manifest_path).unwrap();
         assert_eq!("update_2", manifest.name().as_ref());
     }
 

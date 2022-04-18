@@ -14,6 +14,7 @@ rustc_library("fuchsia-pkg") {
   deps = [
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/assembly/util",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-url",
     "//src/sys/pkg/lib/far/rust:fuchsia-archive",
@@ -28,9 +29,6 @@ rustc_library("fuchsia-pkg") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:walkdir",
   ]
-  if (is_host) {
-    deps += [ "//src/lib/assembly/util" ]
-  }
 
   test_deps = [
     "//src/lib/fuchsia-async",

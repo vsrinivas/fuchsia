@@ -142,8 +142,9 @@ impl Package {
     ///
     /// Does not include the meta.far, see `meta_far()` and `meta_far_merkle_root()`, instead.
     pub fn content_blob_files(&self) -> impl Iterator<Item = BlobFile> {
-        let bytes = fs::read(self.artifacts().join("manifest.json")).expect("read manifest blob");
-        let manifest: fuchsia_pkg::PackageManifest = serde_json::from_slice(&bytes).unwrap();
+        let manifest =
+            fuchsia_pkg::PackageManifest::try_load_from(self.artifacts().join("manifest.json"))
+                .unwrap();
         struct Blob {
             merkle: fuchsia_merkle::Hash,
             path: PathBuf,

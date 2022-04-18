@@ -60,9 +60,8 @@ impl TestEntry {
 }
 
 fn find_meta_far(build_dir: &PathBuf, manifest_path: String) -> Result<PathBuf, Error> {
-    let mut buffer = String::new();
-    fs::File::open(build_dir.join(&manifest_path))?.read_to_string(&mut buffer)?;
-    let package_manifest: fuchsia_pkg::PackageManifest = serde_json::from_str(&buffer)?;
+    let package_manifest =
+        fuchsia_pkg::PackageManifest::try_load_from(build_dir.join(&manifest_path))?;
 
     for blob in package_manifest.blobs() {
         if blob.path.eq(META_FAR_PREFIX) {

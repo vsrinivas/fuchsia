@@ -125,8 +125,8 @@ mod tests {
         );
 
         // Check that the produced manifest is parseable.
-        let f = File::open(output_path.join("package_manifest.json")).unwrap();
-        let _manifest: PackageManifest = serde_json::from_reader(f).unwrap();
+        let _manifest =
+            PackageManifest::try_load_from(output_path.join("package_manifest.json")).unwrap();
 
         server.stop();
         task.await;

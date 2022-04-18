@@ -17,7 +17,7 @@ use {
     },
 };
 
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(transparent)]
 pub struct PackageManifest(VersionedPackageManifest);
 
@@ -185,12 +185,6 @@ enum VersionedPackageManifest {
     Version1(PackageManifestV1),
 }
 
-impl From<PackageManifestV1> for PackageManifest {
-    fn from(manifest: PackageManifestV1) -> Self {
-        PackageManifest(VersionedPackageManifest::Version1(manifest))
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 struct PackageManifestV1 {
     package: PackageMetadata,
@@ -247,7 +241,6 @@ pub struct BlobInfo {
     pub size: u64,
 }
 
-#[cfg(not(target_os = "fuchsia"))]
 pub mod host {
     use super::*;
     use crate::PathToStringExt;
@@ -263,24 +256,26 @@ pub mod host {
             let manifest_str = manifest_path.path_to_string()?;
             let file = File::open(manifest_path)
                 .context(format!("Opening package manifest: {}", &manifest_str))?;
-            let manifest: Self = serde_json::from_reader(BufReader::new(file))
+            let versioned: VersionedPackageManifest = serde_json::from_reader(BufReader::new(file))
                 .context(format!("Reading package manifest: {}", &manifest_str))?;
-            match manifest.0 {
-                VersionedPackageManifest::Version1(manifest) => {
-                    Ok(manifest.resolve_blob_source_paths(manifest_path)?.into())
-                }
-            }
+            let versioned = match versioned {
+                VersionedPackageManifest::Version1(manifest) => VersionedPackageManifest::Version1(
+                    manifest.resolve_blob_source_paths(&manifest_path)?,
+                ),
+            };
+            Ok(Self(versioned))
         }
 
         pub fn write_with_relative_blob_paths(
             self,
             path: impl AsRef<Path>,
         ) -> anyhow::Result<Self> {
-            match self.0 {
-                VersionedPackageManifest::Version1(manifest) => {
-                    manifest.write_with_relative_blob_paths(path).map(Into::into)
-                }
-            }
+            let versioned = match self.0 {
+                VersionedPackageManifest::Version1(manifest) => VersionedPackageManifest::Version1(
+                    manifest.write_with_relative_blob_paths(path)?,
+                ),
+            };
+            Ok(PackageManifest(versioned))
         }
     }
 
@@ -447,7 +442,7 @@ mod tests {
 
     #[test]
     fn test_version1_deserialization() {
-        let manifest = serde_json::from_value::<PackageManifest>(json!(
+        let manifest = serde_json::from_value::<VersionedPackageManifest>(json!(
             {
                 "version": "1",
                 "repository": "testrepository.org",
@@ -468,7 +463,7 @@ mod tests {
 
         assert_eq!(
             manifest,
-            PackageManifest(VersionedPackageManifest::Version1(PackageManifestV1 {
+            VersionedPackageManifest::Version1(PackageManifestV1 {
                 package: PackageMetadata {
                     name: "example".parse().unwrap(),
                     version: "0".parse().unwrap(),
@@ -483,10 +478,10 @@ mod tests {
                 }],
                 repository: Some("testrepository.org".into()),
                 blob_sources_relative: Default::default(),
-            }))
+            })
         );
 
-        let manifest = serde_json::from_value::<PackageManifest>(json!(
+        let manifest = serde_json::from_value::<VersionedPackageManifest>(json!(
             {
                 "version": "1",
                 "package": {
@@ -507,7 +502,7 @@ mod tests {
 
         assert_eq!(
             manifest,
-            PackageManifest(VersionedPackageManifest::Version1(PackageManifestV1 {
+            VersionedPackageManifest::Version1(PackageManifestV1 {
                 package: PackageMetadata {
                     name: "example".parse().unwrap(),
                     version: "0".parse().unwrap(),
@@ -522,7 +517,7 @@ mod tests {
                 }],
                 repository: None,
                 blob_sources_relative: RelativeTo::File,
-            }))
+            })
         )
     }
 
