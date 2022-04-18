@@ -41,7 +41,7 @@ pub(crate) async fn make_configs(
         );
     }
 
-    let data_root = pbms::get_data_dir(&product_url).await.context("data dir")?;
+    let data_root = pbms::get_images_dir(&product_url).await.context("images dir")?;
 
     // Apply the values from the manifest to an emulation configuration.
     let mut emu_config = convert_bundle_to_configs(product_bundle, virtual_device, &data_root)

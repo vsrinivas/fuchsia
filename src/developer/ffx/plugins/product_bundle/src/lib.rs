@@ -82,28 +82,27 @@ async fn pb_get<W: Write + Sync>(
         update_metadata(cmd.verbose, writer).await?;
     }
     let product_url = pbms::select_product_bundle(&cmd.product_bundle_name).await?;
+    get_product_data(&product_url, cmd.verbose, writer).await?;
 
-    let pb = if let Some(pb) = get_product_data(&product_url, cmd.verbose, writer).await? {
-        pb
-    } else {
-        return Ok(());
-    };
+    // Register a repository with the daemon if we downloaded any packaging artifacts.
+    if let Some(product_name) = product_url.fragment() {
+        if let Ok(repo_path) = pbms::get_packages_dir(&product_url).await {
+            if repo_path.exists() {
+                let repo_path = repo_path
+                    .canonicalize()
+                    .with_context(|| format!("canonicalizing {:?}", repo_path))?;
 
-    if pb.repository_path.exists() {
-        let repo_path = pb
-            .repository_path
-            .canonicalize()
-            .with_context(|| format!("canonicalizing {:?}", pb.repository_path))?;
+                let repo_spec = RepositorySpec::Pm { path: repo_path.try_into()? };
+                repos
+                    .add_repository(&product_name, &mut repo_spec.into())
+                    .await
+                    .context("communicating with ffx daemon")?
+                    .map_err(RepositoryError::from)
+                    .with_context(|| format!("registering repository {}", product_name))?;
 
-        let repo_spec = RepositorySpec::Pm { path: repo_path.try_into()? };
-        repos
-            .add_repository(&pb.product_name, &mut repo_spec.into())
-            .await
-            .context("communicating with ffx daemon")?
-            .map_err(RepositoryError::from)
-            .with_context(|| format!("registering repository {}", pb.product_name))?;
-
-        writeln!(writer, "Created repository named '{}'", pb.product_name)?;
+                writeln!(writer, "Created repository named '{}'", product_name)?;
+            }
+        }
     }
 
     Ok(())

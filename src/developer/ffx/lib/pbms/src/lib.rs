@@ -40,8 +40,6 @@ mod gcs;
 mod pbms;
 mod repo_info;
 
-pub use pbms::ProductBundle;
-
 /// For each non-local URL in ffx CONFIG_METADATA, fetch updated info.
 pub async fn update_metadata<W>(verbose: bool, writer: &mut W) -> Result<()>
 where
@@ -155,7 +153,7 @@ pub async fn select_product_bundle(looking_for: &Option<String>) -> Result<url::
 /// used.
 pub async fn is_pb_ready(product_url: &url::Url) -> Result<bool> {
     assert!(product_url.as_str().contains("#"));
-    Ok(get_data_dir(product_url).await.context("get data dir")?.is_dir())
+    Ok(get_images_dir(product_url).await.context("get images dir")?.is_dir())
 }
 
 /// Download data related to the product.
@@ -170,31 +168,38 @@ pub async fn get_product_data<W>(
     product_url: &url::Url,
     verbose: bool,
     writer: &mut W,
-) -> Result<Option<ProductBundle>>
+) -> Result<()>
 where
     W: Write + Sync,
 {
     if product_url.scheme() == "file" {
         writeln!(writer, "There's no data download necessary for local products.")?;
-        return Ok(None);
+        return Ok(());
     }
     if product_url.scheme() != GS_SCHEME {
         writeln!(writer, "Only GCS downloads are supported at this time.")?;
-        return Ok(None);
+        return Ok(());
     }
-    let pb = get_product_data_from_gcs(product_url, verbose, writer)
-        .await
-        .context("read pbms entries")?;
-    Ok(Some(pb))
+    get_product_data_from_gcs(product_url, verbose, writer).await.context("read pbms entries")?;
+    Ok(())
 }
 
-/// Determine the path to the product data.
-pub async fn get_data_dir(product_url: &url::Url) -> Result<PathBuf> {
+/// Determine the path to the product images data.
+pub async fn get_images_dir(product_url: &url::Url) -> Result<PathBuf> {
     assert!(!product_url.as_str().is_empty());
     let name = product_url.fragment().expect("a URI fragment is required");
     assert!(!name.is_empty());
     assert!(!name.contains("/"));
     local_path_helper(product_url, &format!("{}/images", name), /*dir=*/ true).await
+}
+
+/// Determine the path to the product packages data.
+pub async fn get_packages_dir(product_url: &url::Url) -> Result<PathBuf> {
+    assert!(!product_url.as_str().is_empty());
+    let name = product_url.fragment().expect("a URI fragment is required");
+    assert!(!name.is_empty());
+    assert!(!name.contains("/"));
+    local_path_helper(product_url, &format!("{}/packages", name), /*dir=*/ true).await
 }
 
 /// Determine the path to the local product metadata directory.
