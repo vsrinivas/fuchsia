@@ -90,8 +90,8 @@ In this section, you'll use the generated FIDL bindings for
 Begin by creating a new component project to implement the echo server. This
 component will serve the `Echo` protocol and handle incoming requests.
 
-Create the following project directory structure for a new component called
-`echo_server`:
+Create the following project directory structure in your Bazel workspace for a
+new component called `echo_server`:
 
 ```none {:.devsite-disable-click-to-copy}
 fuchsia-codelab/echo-server
@@ -186,8 +186,8 @@ This code performs the following steps to serve the `Echo` protocol:
 Create another new component project to implement the echo client. This
 component will connect to the protocol implementation and send requests.
 
-Create the following project directory structure for a new component called
-`echo_client`:
+Create the following project directory structure in your Bazel workspace for a
+new component called `echo_client`:
 
 ```none {:.devsite-disable-click-to-copy}
 fuchsia-codelab/echo-client

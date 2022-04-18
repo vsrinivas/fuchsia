@@ -84,7 +84,11 @@ fssh pkgctl pkg-status fuchsia-pkg://fuchsia.com/bouncing_ball
 ```none {:.devsite-disable-click-to-copy}
 Package in registered TUF repo: yes (merkle=ef65e2ed...)
 Package on disk: no
+fssh ERROR: Error running ssh: exit status 2
 ```
+
+Note: The `pkgctl` command returns an error status when the package is not
+present on disk.
 
 Open a new terminal and begin streaming the device logs for `pkg-resolver`:
 

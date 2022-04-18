@@ -114,7 +114,8 @@ Add the following unit test functions to validate the behavior of the
 
 ### Run the unit tests
 
-Add your tests to the build configuration:
+Add the following to your `BUILD.bazel` file to include your tests in the build
+configuration:
 
 `BUILD.bazel`:
 

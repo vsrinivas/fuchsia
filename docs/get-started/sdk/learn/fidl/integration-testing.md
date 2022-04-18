@@ -100,7 +100,7 @@ Framework and run those tests in a FEMU environment.
 
 ### Add an integration test component
 
-To begin, create a new project directory structure under
+To begin, create a new project directory structure in your Bazel workspace under
 `fuchsia-codelab/echo-integration`:
 
 ```none {:.devsite-disable-click-to-copy}
@@ -114,9 +114,8 @@ fuchsia-codelab/echo-integration
 
 ### Update the test component manifest
 
-Update the `echo_integration_test.cml` file to declare the `echo-server`
-component as a child and route the `Echo` protocol capability to the test
-component.
+Update the test component manifest to declare the `echo-server` component as a
+child and route the `Echo` protocol capability to the test component.
 
 `echo-integration/meta/echo_integration_test.cml`:
 
@@ -128,8 +127,8 @@ Notice that the `echo-server` instance comes from the same package as the
 integration test. This practice promotes test packages that are **hermetic** by
 avoiding dependencies on components from other packages.
 
-Add the necessary Bazel rules to the build configuration for the integration
-test component:
+Add the following rules to your `BUILD.bazel` file to include the integration
+test component in the build configuration:
 
 `echo-integration/BUILD.bazel`:
 

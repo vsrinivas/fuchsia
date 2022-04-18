@@ -66,8 +66,8 @@ This file contains the following main elements:
 In this exercise, you'll build and run a basic component that reads the program
 arguments and echoes a greeting out the system log.
 
-To begin, create the following project directory structure for a new component
-called `echo`:
+To begin, create the following project directory structure in your Bazel workspace
+for a new component called `echo`:
 
 ```none {:.devsite-disable-click-to-copy}
 fuchsia-codelab/echo
@@ -147,9 +147,9 @@ on the length of the list.
 <aside class="key-point">
   <b>Logging and standard streams</b>
   <p>Fuchsia has two main logging buffers; the system log (<code>syslog</code>)
-  and debug log (<code>klog</code>). By default, components do not have stream
-  handles for stdout and stderr available to record log messages from your code.
-  Instead, you must use one of Fuchsia's logging libraries or redirect these
+  and kernel's debug log (<code>klog</code>). By default, components do not have
+  stream handles for stdout and stderr available to record log messages from your
+  code. Instead, you must use one of Fuchsia's logging libraries or redirect these
   streams to a Fuchsia log buffer.</p>
 
   <p>For more details on logging from your code, see
@@ -158,7 +158,8 @@ on the length of the list.
 
 ### Add to the build configuration
 
-Add your new component to the build configuration:
+Add the following to your `BUILD.bazel` file to include the new component in the
+build configuration:
 
 `BUILD.bazel`:
 
