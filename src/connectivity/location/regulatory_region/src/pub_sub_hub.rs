@@ -511,7 +511,6 @@ mod tests {
         assert_eq!(hub.get_value(), Some("US".to_string()));
     }
 
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95051)
     #[test]
     fn load_as_none_if_cache_file_is_bad() {
         let temp_dir = TempDir::new_in("/cache/").expect("failed to create temporary directory");
@@ -519,7 +518,7 @@ mod tests {
         assert!(!path.exists());
         let mut file = File::create(&path).expect("failed to create file");
         let bad_contents = b"{\"region_code\": ";
-        file.write(bad_contents).expect("failed to write to file");
+        file.write_all(bad_contents).expect("failed to write to file");
         file.flush().expect("failed to flush file");
 
         // Check that PubSubHub is initialized with an unset value.
