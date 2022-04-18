@@ -84,7 +84,6 @@ config("compiler") {
   ]
 
   # TODO(fxbug.dev/53078): Eventually the default in the compler driver.
-  ldflags += [ "-Wl,-z,rel" ]
   rustflags += [ "-Clink-arg=-zrel" ]
 
   if (build_id_format != "") {

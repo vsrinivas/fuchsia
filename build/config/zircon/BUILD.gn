@@ -102,7 +102,6 @@ config("compiler") {
     ldflags += [
       "-Wl,-z,combreloc",
       "-Wl,-z,relro",
-      "-Wl,-z,now",
       "-Wl,-z,text",
     ]
 
@@ -117,6 +116,7 @@ config("compiler") {
         "-Wl,--build-id",
         "-Wl,--eh-frame-hdr",
         "-Wl,--hash-style=gnu",
+        "-Wl,-z,now",
       ]
 
       # In the Clang toolchain assembly files with no explicit marker don't
@@ -133,12 +133,6 @@ config("compiler") {
       # Enable sized-deallocation for the kernel, so the heap implementation can
       # optimize for or check generated sizes.
       cflags += [ "-fsized-deallocation" ]
-
-      # TODO(mcgrathr): This should be default in the compiler driver.
-      ldflags += [ "-Wl,--pack-dyn-relocs=relr" ]
-
-      # TODO(fxbug.dev/53078): Eventually the default in the compler driver.
-      ldflags += [ "-Wl,-z,rel" ]
     }
   } else if (current_os == "win") {
     # This enables build ID-like PDB UUIDs without timestamp.
