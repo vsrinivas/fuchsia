@@ -34,6 +34,9 @@ type MatchedDriverInfo = table {
 
     /// The type of package this driver is in.
     4: package_type DriverPackageType;
+
+    /// If this is true then the driver is a fallback driver.
+    5: is_fallback bool;
 };
 
 /// Information for a composite driver matched by the driver index.

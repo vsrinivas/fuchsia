@@ -693,12 +693,14 @@ mod tests {
         driver_url: String,
         colocate: bool,
         package_type: DriverPackageType,
+        fallback: bool,
     ) -> fdf::MatchedDriverInfo {
         fdf::MatchedDriverInfo {
             url: Some(url),
             driver_url: Some(driver_url),
             colocate: Some(colocate),
             package_type: fdf::DriverPackageType::from_primitive(package_type as u8),
+            is_fallback: Some(fallback),
             ..fdf::MatchedDriverInfo::EMPTY
         }
     }
@@ -842,6 +844,7 @@ mod tests {
                 expected_driver_url,
                 true,
                 DriverPackageType::Base,
+                false,
             ));
             assert_eq!(expected_result, result);
 
@@ -866,6 +869,7 @@ mod tests {
                 expected_driver_url,
                 false,
                 DriverPackageType::Base,
+                false,
             ));
             assert_eq!(expected_result, result);
 
@@ -942,6 +946,7 @@ mod tests {
                 url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
                 colocate: Some(false),
                 package_type: Some(fdf::DriverPackageType::Base),
+                is_fallback: Some(false),
                 ..fdf::MatchedDriverInfo::EMPTY
             })];
 
@@ -1009,6 +1014,7 @@ mod tests {
                 url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
                 colocate: Some(false),
                 package_type: Some(fdf::DriverPackageType::Base),
+                is_fallback: Some(false),
                 ..fdf::MatchedDriverInfo::EMPTY
             })];
 
@@ -1096,12 +1102,14 @@ mod tests {
                     expected_driver_url_1,
                     false,
                     DriverPackageType::Base,
+                    false,
                 )),
                 fdf::MatchedDriver::Driver(create_matched_driver_info(
                     expected_url_2,
                     expected_driver_url_2,
                     false,
                     DriverPackageType::Base,
+                    false,
                 )),
             ];
 
@@ -1244,6 +1252,7 @@ mod tests {
                 ),
                 false,
                 DriverPackageType::Boot,
+                false,
             ));
 
             // The non-fallback boot driver should be returned and not the
@@ -1337,6 +1346,7 @@ mod tests {
                 ),
                 false,
                 DriverPackageType::Base,
+                false,
             ));
 
             // The non-fallback base driver should be returned and not the
@@ -1416,12 +1426,14 @@ mod tests {
                     format!("fuchsia-boot:///#{}", NON_FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
                     false,
                     DriverPackageType::Boot,
+                    false,
                 )),
                 fdf::MatchedDriver::Driver(create_matched_driver_info(
                     FALLBACK_BOOT_DRIVER_COMPONENT_URL.to_owned(),
                     format!("fuchsia-boot:///#{}", FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
                     false,
                     DriverPackageType::Boot,
+                    true,
                 )),
             ];
 
@@ -1516,12 +1528,14 @@ mod tests {
                     ),
                     false,
                     DriverPackageType::Base,
+                    false,
                 )),
                 fdf::MatchedDriver::Driver(create_matched_driver_info(
                     FALLBACK_BOOT_DRIVER_COMPONENT_URL.to_owned(),
                     format!("fuchsia-boot:///#{}", FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
                     false,
                     DriverPackageType::Boot,
+                    true,
                 )),
                 fdf::MatchedDriver::Driver(create_matched_driver_info(
                     FALLBACK_BASE_DRIVER_COMPONENT_URL.to_owned(),
@@ -1531,6 +1545,7 @@ mod tests {
                     ),
                     false,
                     DriverPackageType::Base,
+                    true,
                 )),
             ];
 
@@ -1763,6 +1778,7 @@ mod tests {
                 format!("fuchsia-boot:///#{}", FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
                 false,
                 DriverPackageType::Boot,
+                true,
             ));
             assert_eq!(result, expected_result);
         })
@@ -1832,6 +1848,7 @@ mod tests {
                 format!("fuchsia-boot:///#{}", FALLBACK_BOOT_DRIVER_V1_DRIVER_PATH),
                 false,
                 DriverPackageType::Boot,
+                true,
             ))];
             assert_eq!(result, expected_result);
         })
@@ -1871,6 +1888,7 @@ mod tests {
                 expected_driver_url,
                 true,
                 DriverPackageType::Boot,
+                false,
             ));
             assert_eq!(expected_result, result);
 
@@ -1891,6 +1909,7 @@ mod tests {
                 expected_driver_url,
                 false,
                 DriverPackageType::Boot,
+                false,
             ));
             assert_eq!(expected_result, result);
 
@@ -1993,6 +2012,7 @@ mod tests {
                 url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
                 colocate: Some(false),
                 package_type: Some(fdf::DriverPackageType::Base),
+                is_fallback: Some(false),
                 ..fdf::MatchedDriverInfo::EMPTY
             };
             let expected_result = fdf::MatchedDriver::CompositeDriver(fdf::MatchedCompositeInfo {
@@ -2028,6 +2048,7 @@ mod tests {
                 url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
                 colocate: Some(false),
                 package_type: Some(fdf::DriverPackageType::Base),
+                is_fallback: Some(false),
                 ..fdf::MatchedDriverInfo::EMPTY
             };
             let expected_result = fdf::MatchedDriver::CompositeDriver(fdf::MatchedCompositeInfo {
@@ -2222,6 +2243,7 @@ mod tests {
                         ),
                         colocate: Some(false),
                         package_type: Some(fdf::DriverPackageType::Base),
+                        is_fallback: Some(false),
                         ..fdf::MatchedDriverInfo::EMPTY
                     }),
                     fdf::MatchedDriver::DeviceGroup(fdf::MatchedDeviceGroupInfo {
@@ -2259,6 +2281,7 @@ mod tests {
                     url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
                     colocate: Some(false),
                     package_type: Some(fdf::DriverPackageType::Base),
+                    is_fallback: Some(false),
                     ..fdf::MatchedDriverInfo::EMPTY
                 }),],
                 result
@@ -2477,6 +2500,7 @@ mod tests {
                 expected_driver_url,
                 true,
                 DriverPackageType::Universe,
+                false,
             ));
             assert_eq!(expected_result, result);
             assert_eq!(result_v1.len(), 1);

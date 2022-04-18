@@ -153,6 +153,7 @@ impl ResolvedDriver {
             driver_url: self.get_driver_url(),
             colocate: Some(self.colocate),
             package_type: fdf::DriverPackageType::from_primitive(self.package_type as u8),
+            is_fallback: Some(self.fallback),
             ..fdf::MatchedDriverInfo::EMPTY
         }
     }
