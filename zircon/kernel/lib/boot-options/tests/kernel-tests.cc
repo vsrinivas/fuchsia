@@ -6,9 +6,11 @@
 
 #include <lib/boot-options/boot-options.h>
 #include <lib/unittest/unittest.h>
+#include <string-file.h>
 
 #include <fbl/alloc_checker.h>
 #include <ktl/algorithm.h>
+#include <ktl/array.h>
 #include <ktl/string_view.h>
 #include <ktl/unique_ptr.h>
 
@@ -25,23 +27,22 @@ constexpr size_t kFileSizeMax = 64;
 
 // Can be wrapped by FILE to give a file pointer whose contents may be
 // trivially accessed.
-class CapturedFile {
+class CapturedFile : public StringFile {
  public:
-  int Write(ktl::string_view s) {
-    size_t wrote = s.copy(buffer_ + write_, ktl::min(s.size(), kFileSizeMax - write_));
-    write_ += wrote;
-    if (wrote < s.size()) {
-      s.remove_prefix(wrote);
-      printf("failed to write \"%.*s\" to file\n", static_cast<int>(s.size()), s.data());
+  CapturedFile() : StringFile(buffer_) {}
+
+  bool ContentsMatchExactly(ktl::string_view expected) const {
+    auto actual = used_region();
+    if (actual.size() != expected.size()) {
+      return false;
     }
-    return static_cast<int>(wrote);
+    return ktl::string_view(actual.data(), actual.size()) == expected;
   }
 
-  ktl::string_view contents() { return {buffer_, write_}; }
+  bool IsEmpty() const { return used_region().empty(); }
 
  private:
-  char buffer_[kFileSizeMax];
-  size_t write_ = 0;
+  ktl::array<char, kFileSizeMax> buffer_ = {};
 };
 
 #ifdef _KERNEL
@@ -86,48 +87,44 @@ bool ParseBool() {
 
   // true.
   {
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
     options->test_bool = false;
     options->SetMany("test.option.bool=true", &file);
     EXPECT_TRUE(options->test_bool);
-    EXPECT_EQ(0u, captured.contents().size());
+    EXPECT_TRUE(file.IsEmpty());
   }
 
   // false.
   {
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
     options->test_bool = true;
     options->SetMany("test.option.bool=false", &file);
     EXPECT_FALSE(options->test_bool);
-    EXPECT_EQ(0u, captured.contents().size());
+    EXPECT_TRUE(file.IsEmpty());
   }
 
   {  // "0" should be falsey.
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
     options->test_bool = true;
     options->SetMany("test.option.bool=0", &file);
     EXPECT_FALSE(options->test_bool);
-    EXPECT_EQ(0u, captured.contents().size());
+    EXPECT_TRUE(file.IsEmpty());
   }
 
   {  // "off" should be falsey.
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
     options->test_bool = true;
     options->SetMany("test.option.bool=off", &file);
     EXPECT_FALSE(options->test_bool);
-    EXPECT_EQ(0u, captured.contents().size());
+    EXPECT_TRUE(file.IsEmpty());
   }
 
   END_TEST;
@@ -143,11 +140,9 @@ bool UnparseBool() {
     options->test_bool = true;
 
     constexpr ktl::string_view kExpected = "test.option.bool=true\n";
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     ASSERT_EQ(0, options->Show("test.option.bool", false, &file));
-    ASSERT_EQ(kExpected.size(), captured.contents().size());
-    EXPECT_EQ(0, memcmp(kExpected.data(), captured.contents().data(), kExpected.size()));
+    ASSERT_TRUE(file.ContentsMatchExactly(kExpected));
   }
 
   // false.
@@ -157,11 +152,9 @@ bool UnparseBool() {
     options->test_bool = false;
 
     constexpr ktl::string_view kExpected = "test.option.bool=false\n";
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     ASSERT_EQ(0, options->Show("test.option.bool", false, &file));
-    ASSERT_EQ(kExpected.size(), captured.contents().size());
-    EXPECT_EQ(0, memcmp(kExpected.data(), captured.contents().data(), kExpected.size()));
+    ASSERT_TRUE(file.ContentsMatchExactly(kExpected));
   }
 
   END_TEST;
@@ -181,60 +174,55 @@ bool ParseUint32() {
   {
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     options->test_uint32 = 0u;
     options->SetMany("test.option.uint32=321", &file);
     EXPECT_EQ(321u, options->test_uint32);
-    EXPECT_EQ(0u, captured.contents().size());
+    EXPECT_TRUE(file.IsEmpty());
   }
 
   // 0x123: hex notation is kosher.
   {
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     options->test_uint32 = 0u;
     options->SetMany("test.option.uint32=0x123", &file);
     EXPECT_EQ(0x123u, options->test_uint32);
-    EXPECT_EQ(0u, captured.contents().size());
+    EXPECT_TRUE(file.IsEmpty());
   };
 
   // -123.
   {
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     options->test_uint32 = 0u;
     options->SetMany("test.option.uint32=-123", &file);
     EXPECT_EQ(~uint32_t{123u} + 1, options->test_uint32);
-    EXPECT_EQ(0u, captured.contents().size());
+    EXPECT_TRUE(file.IsEmpty());
   };
 
   // Unparsable values are reset to default.
   {
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     options->test_uint32 = 456;
     options->SetMany("test.option.uint32=not-a-uint32", &file);
     EXPECT_EQ(123u, options->test_uint32);
-    EXPECT_EQ(0u, captured.contents().size());
+    EXPECT_TRUE(file.IsEmpty());
   };
 
   // Bits after 32 are truncated.
   {
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     options->test_uint32 = 0u;
     options->SetMany("test.option.uint32=0x987654321", &file);
     EXPECT_EQ(uint32_t{0x87654321}, options->test_uint32);
-    EXPECT_EQ(0u, captured.contents().size());
+    EXPECT_TRUE(file.IsEmpty());
   };
 
   END_TEST;
@@ -247,15 +235,12 @@ bool UnparseUint32() {
   {
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
-    ;
     options->test_uint32 = 123u;
 
     constexpr ktl::string_view kExpected = "test.option.uint32=0x7b\n";
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     ASSERT_EQ(0, options->Show("test.option.uint32", false, &file));
-    ASSERT_EQ(kExpected.size(), captured.contents().size());
-    EXPECT_EQ(0, memcmp(kExpected.data(), captured.contents().data(), kExpected.size()));
+    ASSERT_TRUE(file.ContentsMatchExactly(kExpected));
   }
 
   // 0x123.
@@ -265,11 +250,9 @@ bool UnparseUint32() {
     options->test_uint32 = 0x123u;
 
     constexpr ktl::string_view kExpected = "test.option.uint32=0x123\n";
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     ASSERT_EQ(0, options->Show("test.option.uint32", false, &file));
-    ASSERT_EQ(kExpected.size(), captured.contents().size());
-    EXPECT_EQ(0, memcmp(kExpected.data(), captured.contents().data(), kExpected.size()));
+    ASSERT_TRUE(file.ContentsMatchExactly(kExpected));
   }
 
   // -123.
@@ -279,11 +262,9 @@ bool UnparseUint32() {
     options->test_uint32 = ~uint32_t{123u} + 1;
 
     constexpr ktl::string_view kExpected = "test.option.uint32=0xffffff85\n";
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     ASSERT_EQ(0, options->Show("test.option.uint32", false, &file));
-    ASSERT_EQ(kExpected.size(), captured.contents().size());
-    EXPECT_EQ(0, memcmp(kExpected.data(), captured.contents().data(), kExpected.size()));
+    ASSERT_TRUE(file.ContentsMatchExactly(kExpected));
   }
 
   END_TEST;
@@ -303,60 +284,55 @@ bool ParseUint64() {
   {
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     options->test_uint64 = 0u;
     options->SetMany("test.option.uint64=654", &file);
     EXPECT_EQ(654u, options->test_uint64);
-    EXPECT_EQ(0u, captured.contents().size());
+    EXPECT_TRUE(file.IsEmpty());
   }
 
   // 0x456: hex notation is kosher.
   {
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     options->test_uint64 = 0u;
     options->SetMany("test.option.uint64=0x456", &file);
     EXPECT_EQ(0x456u, options->test_uint64);
-    EXPECT_EQ(0u, captured.contents().size());
+    EXPECT_TRUE(file.IsEmpty());
   };
 
   // -456.
   {
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     options->test_uint64 = 0u;
     options->SetMany("test.option.uint64=-456", &file);
     EXPECT_EQ(~uint64_t{456u} + 1, options->test_uint64);
-    EXPECT_EQ(0u, captured.contents().size());
+    EXPECT_TRUE(file.IsEmpty());
   };
 
   // Unparsable values reset value to default.
   {
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     options->test_uint64 = 1234;
     options->SetMany("test.option.uint64=not-a-uint64", &file);
     EXPECT_EQ(456u, options->test_uint64);
-    EXPECT_EQ(0u, captured.contents().size());
+    EXPECT_TRUE(file.IsEmpty());
   };
 
   // Bits after 64 are truncated.
   {
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     options->test_uint64 = 0u;
     options->SetMany("test.option.uint64=0x87654321012345678", &file);
     EXPECT_EQ(uint64_t{0x7654321012345678}, options->test_uint64);
-    EXPECT_EQ(0u, captured.contents().size());
+    EXPECT_TRUE(file.IsEmpty());
   };
 
   END_TEST;
@@ -372,11 +348,9 @@ bool UnparseUint64() {
     options->test_uint32 = 456u;
 
     constexpr ktl::string_view kExpected = "test.option.uint64=0x1c8\n";
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     ASSERT_EQ(0, options->Show("test.option.uint64", false, &file));
-    ASSERT_EQ(kExpected.size(), captured.contents().size());
-    EXPECT_EQ(0, memcmp(kExpected.data(), captured.contents().data(), kExpected.size()));
+    ASSERT_TRUE(file.ContentsMatchExactly(kExpected));
   }
 
   // 0x456u.
@@ -386,11 +360,9 @@ bool UnparseUint64() {
     options->test_uint64 = 0x456u;
 
     constexpr ktl::string_view kExpected = "test.option.uint64=0x456\n";
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     ASSERT_EQ(0, options->Show("test.option.uint64", false, &file));
-    ASSERT_EQ(kExpected.size(), captured.contents().size());
-    EXPECT_EQ(0, memcmp(kExpected.data(), captured.contents().data(), kExpected.size()));
+    ASSERT_TRUE(file.ContentsMatchExactly(kExpected));
   }
 
   // -456u.
@@ -400,12 +372,10 @@ bool UnparseUint64() {
     options->test_uint64 = ~uint64_t{456u} + 1;
 
     constexpr ktl::string_view kExpected = "test.option.uint64=0xfffffffffffffe38\n";
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     ASSERT_EQ(0, options->Show("test.option.uint64", false, &file));
 
-    ASSERT_EQ(kExpected.size(), captured.contents().size());
-    EXPECT_EQ(0, memcmp(kExpected.data(), captured.contents().data(), kExpected.size()));
+    ASSERT_TRUE(file.ContentsMatchExactly(kExpected));
   }
 
   END_TEST;
@@ -429,26 +399,24 @@ bool ParseSmallString() {
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
     constexpr SmallString kNew = {'n', 'e', 'w', '-', 'v', 'a', 'l', 'u', 'e', '\0'};
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     options->test_smallstring = {};
     options->SetMany("test.option.smallstring=new-value", &file);
     ASSERT_EQ(options->test_smallstring.data()[options->test_smallstring.size() - 1], '\0');
     EXPECT_EQ(0, strcmp(kNew.data(), options->test_smallstring.data()));
-    EXPECT_EQ(0u, captured.contents().size());
+    EXPECT_TRUE(file.IsEmpty());
   }
 
   {  // Multi-world values are not permitted.
     constexpr SmallString kFirst = {'f', 'i', 'r', 's', 't', '\0'};
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     options->test_smallstring = {};
     options->SetMany("test.option.smallstring=first second", &file);
     ASSERT_EQ(options->test_smallstring.data()[options->test_smallstring.size() - 1], '\0');
     EXPECT_EQ(0, strcmp(kFirst.data(), options->test_smallstring.data()));
-    EXPECT_GT(captured.contents().size(), 0u);  // File your complaints here.
+    EXPECT_FALSE(file.IsEmpty());  // File your complaints here.
   }
 
   {  // Too big.
@@ -473,8 +441,7 @@ bool ParseSmallString() {
     // clang-format on
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     options->test_smallstring = {};
     options->SetMany(
         "test.option.smallstring="  // Seven alphabets.
@@ -488,7 +455,7 @@ bool ParseSmallString() {
         &file);
     ASSERT_EQ(options->test_smallstring.data()[options->test_smallstring.size() - 1], '\0');
     EXPECT_EQ(0, strcmp(kSevenAlphabetsTruncated.data(), options->test_smallstring.data()));
-    EXPECT_EQ(0u, captured.contents().size());  // Silently truncate.
+    EXPECT_TRUE(file.IsEmpty());
   }
 
   END_TEST;
@@ -504,11 +471,9 @@ bool UnparseSmallString() {
     options->test_smallstring = {'n', 'e', 'w', '-', 'v', 'a', 'l', 'u', 'e', '\0'};
 
     constexpr ktl::string_view kExpected = "test.option.smallstring=new-value\n";
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     ASSERT_EQ(0, options->Show("test.option.smallstring", false, &file));
-    ASSERT_EQ(kExpected.size(), captured.contents().size());
-    EXPECT_EQ(0, memcmp(kExpected.data(), captured.contents().data(), kExpected.size()));
+    ASSERT_TRUE(file.ContentsMatchExactly(kExpected));
   }
 
   END_TEST;
@@ -528,36 +493,33 @@ bool ParseEnum() {
   {
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     options->test_enum = TestEnum::kDefault;
     options->SetMany("test.option.enum=value1", &file);
     EXPECT_EQ(TestEnum::kValue1, options->test_enum);
-    EXPECT_EQ(0u, captured.contents().size());
+    EXPECT_TRUE(file.IsEmpty());
   }
 
   // kValue2.
   {
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     options->test_enum = TestEnum::kDefault;
     options->SetMany("test.option.enum=value2", &file);
     EXPECT_EQ(TestEnum::kValue2, options->test_enum);
-    EXPECT_EQ(0u, captured.contents().size());
+    EXPECT_TRUE(file.IsEmpty());
   }
 
   // Unparsable values reset value to default.
   {
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     options->test_enum = TestEnum::kValue2;
     options->SetMany("test.option.enum=unknown", &file);
     EXPECT_EQ(TestEnum::kDefault, options->test_enum);
-    EXPECT_EQ(0u, captured.contents().size());
+    EXPECT_TRUE(file.IsEmpty());
   }
 
   END_TEST;
@@ -573,11 +535,10 @@ bool UnparseEnum() {
     options->test_enum = TestEnum::kDefault;
 
     constexpr ktl::string_view kExpected = "test.option.enum=default\n";
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     ASSERT_EQ(0, options->Show("test.option.enum", false, &file));
-    ASSERT_EQ(kExpected.size(), captured.contents().size());
-    EXPECT_EQ(0, memcmp(kExpected.data(), captured.contents().data(), kExpected.size()));
+    ASSERT_TRUE(file.ContentsMatchExactly(kExpected));
+    ;
   }
 
   // kValue1.
@@ -587,11 +548,9 @@ bool UnparseEnum() {
     options->test_enum = TestEnum::kValue1;
 
     constexpr ktl::string_view kExpected = "test.option.enum=value1\n";
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     ASSERT_EQ(0, options->Show("test.option.enum", false, &file));
-    ASSERT_EQ(kExpected.size(), captured.contents().size());
-    EXPECT_EQ(0, memcmp(kExpected.data(), captured.contents().data(), kExpected.size()));
+    ASSERT_TRUE(file.ContentsMatchExactly(kExpected));
   }
 
   // kValue2.
@@ -601,11 +560,9 @@ bool UnparseEnum() {
     options->test_enum = TestEnum::kValue2;
 
     constexpr ktl::string_view kExpected = "test.option.enum=value2\n";
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     ASSERT_EQ(0, options->Show("test.option.enum", false, &file));
-    ASSERT_EQ(kExpected.size(), captured.contents().size());
-    EXPECT_EQ(0, memcmp(kExpected.data(), captured.contents().data(), kExpected.size()));
+    ASSERT_TRUE(file.ContentsMatchExactly(kExpected));
   }
 
   END_TEST;
@@ -624,26 +581,25 @@ bool ParseStruct() {
   // Basic value.
   {
     auto options = MakeBootOptions();
-    ASSERT_TRUE(options) CapturedFile captured;
-    FILE file{&captured};
+    ASSERT_TRUE(options);
+    CapturedFile file;
 
     options->test_struct = TestStruct{};
     options->SetMany("test.option.struct=test", &file);
     EXPECT_TRUE(TestStruct{.present = true} == options->test_struct);
-    EXPECT_EQ(0u, captured.contents().size());
+    EXPECT_TRUE(file.IsEmpty());
   }
 
   // Unparsable values reset value to default.
   {
     auto options = MakeBootOptions();
     ASSERT_TRUE(options);
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
 
     options->test_struct = TestStruct{.present = true};
     options->SetMany("test.option.struct=unparsable", &file);
     EXPECT_TRUE(TestStruct{} == options->test_struct);  // No change.
-    EXPECT_EQ(0u, captured.contents().size());
+    EXPECT_TRUE(file.IsEmpty());
   }
 
   END_TEST;
@@ -659,11 +615,10 @@ bool UnparseStruct() {
     options->test_struct = {};
 
     constexpr ktl::string_view kExpected = "test.option.struct=test\n";
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     ASSERT_EQ(0, options->Show("test.option.struct", false, &file));
-    ASSERT_EQ(kExpected.size(), captured.contents().size());
-    EXPECT_EQ(0, memcmp(kExpected.data(), captured.contents().data(), kExpected.size()));
+    ASSERT_TRUE(file.ContentsMatchExactly(kExpected));
+    ;
   }
 
   // Basic value.
@@ -673,11 +628,10 @@ bool UnparseStruct() {
     options->test_struct = {.present = true};
 
     constexpr ktl::string_view kExpected = "test.option.struct=test\n";
-    CapturedFile captured;
-    FILE file{&captured};
+    CapturedFile file;
     ASSERT_EQ(0, options->Show("test.option.struct", false, &file));
-    ASSERT_EQ(kExpected.size(), captured.contents().size());
-    EXPECT_EQ(0, memcmp(kExpected.data(), captured.contents().data(), kExpected.size()));
+    ASSERT_TRUE(file.ContentsMatchExactly(kExpected));
+    ;
   }
 
   END_TEST;
