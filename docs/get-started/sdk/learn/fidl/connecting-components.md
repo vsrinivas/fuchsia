@@ -151,6 +151,20 @@ following code:
 {% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/cpp/echo_server/main.cc" region_tag="imports" adjust_indentation="auto" %}
 ```
 
+Add the following code to implement the protocol request handler:
+
+`echo-server/main.cc`:
+
+```cpp
+{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/cpp/echo_server/main.cc" region_tag="handler" adjust_indentation="auto" %}
+```
+
+Each `Echo` protocol method has a corresponding override function
+(`EchoString()`) and includes a callback interface to send back the return value.
+
+This implementation simply "echoes" the same string value from the request back
+in the response payload.
+
 Add the following code to `main()` to serve the `Echo` protocol:
 
 `echo-server/main.cc`:
@@ -166,20 +180,6 @@ This code performs the following steps to serve the `Echo` protocol:
 1.  Serve the directory and begin listening for incoming connections.
 1.  Attach the `EchoImplementation` instance as a request handler for any
     matching `Echo` requests.
-
-Add the following code to implement the protocol request handler:
-
-`echo-server/main.cc`:
-
-```cpp
-{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/cpp/echo_server/main.cc" region_tag="handler" adjust_indentation="auto" %}
-```
-
-Each `Echo` protocol method has a corresponding override function
-(`EchoString()`) and includes a callback interface to send back the return value.
-
-This implementation simply "echoes" the same string value from the request back
-in the response payload.
 
 ### Create the client component
 
@@ -237,12 +237,13 @@ fuchsia_cc_binary(
 ### Implement the client
 
 Similar to `echo`, the client passes the program arguments as a message
-to the server. Add the following program arguments to `echo_client.cml`:
+to the server. Recall that the arguments are described in the `program` block of
+`echo_client.cml`:
 
 `echo-client/meta/echo_client.cml`:
 
-```json5
-{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/cpp/echo_client/meta/echo_client.cml" region_tag="program_args" adjust_indentation="auto" %}
+```json5 {:.devsite-disable-click-to-copy}
+{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/cpp/echo_client/meta/echo_client.cml" region_tag="program_args" adjust_indentation="auto" highlight="9,10" %}
 ```
 
 Open the main source file and replace the import statements with the
