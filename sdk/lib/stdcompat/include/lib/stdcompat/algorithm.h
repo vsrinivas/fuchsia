@@ -16,6 +16,9 @@ namespace cpp20 {
 using std::is_sorted;
 using std::sort;
 
+using std::remove;
+using std::remove_if;
+
 #else
 
 template <typename RandomIterator, typename Comparator = std::less<>>
@@ -43,6 +46,9 @@ constexpr bool is_sorted(ForwardIt first, ForwardIt end, Comparator comp = Compa
 #endif  // LIB_STDCOMPAT_CONSTEVAL_SUPPORT
   return cpp20::internal::is_sorted(first, end, comp);
 }
+
+using internal::remove;
+using internal::remove_if;
 
 #endif
 

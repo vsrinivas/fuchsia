@@ -14,6 +14,7 @@
 #include <iostream>
 #include <vector>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 namespace {
@@ -142,6 +143,44 @@ TEST(IsSortedTest, ElemenstAreSorted) {
                 "");
   ASSERT_TRUE(std::is_sorted(kDataWithRepeatedElements.begin(), kDataWithRepeatedElements.end() - 1,
                              std::greater{}));
+}
+
+TEST(RemoveIfTest, ElementsAreRemoved) {
+  std::vector<int> container = {1, 2, 3, 4, 5, 1, 2, 3, 4, 5};
+  std::vector<int> expected = {2, 3, 4, 5, 2, 3, 4, 5};
+  size_t expected_size = container.size();
+
+  auto new_end =
+      cpp20::remove_if(container.begin(), container.end(), [](const auto& a) { return a == 1; });
+
+  ASSERT_EQ(container.size(), expected_size);
+  ASSERT_THAT(expected, testing::UnorderedElementsAreArray(container.begin(), new_end));
+}
+
+TEST(RemoveTest, ElementsAreRemoved) {
+  std::vector<int> container = {1, 2, 3, 4, 5, 1, 2, 3, 4, 5};
+  std::vector<int> expected = {2, 3, 4, 5, 2, 3, 4, 5};
+  size_t expected_size = container.size();
+
+  auto new_end = cpp20::remove(container.begin(), container.end(), 1);
+
+  ASSERT_EQ(container.size(), expected_size);
+  ASSERT_THAT(expected, testing::UnorderedElementsAreArray(container.begin(), new_end));
+}
+
+TEST(RemoveTest, IsAliasWhenStdIsAvailable) {
+  auto check = [](auto&& container) {
+    constexpr auto predicate = [](auto& a) { return true; };
+    using pred = decltype(predicate);
+    using it = decltype(std::declval<decltype(container)>().begin());
+    constexpr it (*cpp20_remove_if)(it, it, pred) = cpp20::remove_if;
+    constexpr it (*std_remove_if)(it, it, pred) = cpp20::remove_if;
+
+    static_assert(cpp20_remove_if == std_remove_if, "");
+  };
+
+  check(std::vector<int>());
+  check(std::array<int, 4>());
 }
 
 #if __cpp_lib_constexpr_algorithms >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)

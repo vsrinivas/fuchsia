@@ -113,6 +113,24 @@ constexpr bool is_sorted(ForwardIt start, ForwardIt end, Comparator comp) {
   return true;
 }
 
+template <typename ForwardIt, typename Pred>
+constexpr ForwardIt remove_if(ForwardIt begin, ForwardIt end, Pred pred) {
+  auto remaining_end = begin;
+  for (auto it = begin; it != end; ++it) {
+    auto& value = *it;
+    if (!pred(cpp17::as_const(value))) {
+      *remaining_end = std::move(value);
+      ++remaining_end;
+    }
+  }
+  return remaining_end;
+}
+
+template <typename ForwardIt, typename T>
+constexpr ForwardIt remove(ForwardIt begin, ForwardIt end, const T& val) {
+  return cpp20::internal::remove_if(begin, end, [&val](const auto& a) { return a == val; });
+}
+
 }  // namespace internal
 }  // namespace cpp20
 

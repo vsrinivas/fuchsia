@@ -34,6 +34,7 @@ stdcompat_test_sources = [
   "utility_internal_test.cc",
   "utility_test.cc",
   "variant_test.cc",
+  "vector_test.cc",
   "version_test.cc",
 ]
 

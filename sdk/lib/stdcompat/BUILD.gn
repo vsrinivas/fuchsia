@@ -30,6 +30,7 @@ zx_library("stdcompat") {
     "lib/stdcompat/type_traits.h",
     "lib/stdcompat/utility.h",
     "lib/stdcompat/variant.h",
+    "lib/stdcompat/vector.h",
     "lib/stdcompat/version.h",
 
     # Due to a bug in the SDK bazel generation, private headers in sources are
@@ -41,6 +42,7 @@ zx_library("stdcompat") {
     "lib/stdcompat/internal/bit.h",
     "lib/stdcompat/internal/constructors.h",
     "lib/stdcompat/internal/functional.h",
+    "lib/stdcompat/internal/erase.h",
     "lib/stdcompat/internal/exception.h",
     "lib/stdcompat/internal/span.h",
     "lib/stdcompat/internal/storage.h",
