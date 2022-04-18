@@ -96,7 +96,13 @@ const TYPE_SIMPLE uint32 = 0;
 // Intentionally left some gap between Simple and Capture types.
 const TYPE_CAPTURE uint32 = 10; //The image is used for capture
 
-// Rotations are applied counter-clockwise, and are applied before reflections.
+// Rotations are applied counter-clockwise, and are applied before reflections.  Note: this doesn't
+// affect the output region on the physical display; use the layer's `dest_frame` for that.  In
+// other words, if you have a 600x300 image that you want to rotate 90 degrees without changing the
+// aspect ratio, you need to use `ROT_90`, and also use a `dest_frame` of 300x600.
+//
+// The reflection enums refer to the axis across which reflection occurs.  For example, `REFLECT_X`
+// means a reflection across the X-axis.  In other words: bottom becomes top.
 type Transform = strict enum : uint8 {
     IDENTITY = 0;
     REFLECT_X = 1;
