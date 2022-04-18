@@ -28,8 +28,11 @@
                 "fuchsia.hwinfo.Device",
                 "fuchsia.hwinfo.Product",
 
-                // Used by DriverTestRealm.
+                // Used by DriverTestRealm and fdio tests.
                 "fuchsia.process.Launcher",
+
+                // Used by the fdio tests
+                "fuchsia.process.Resolver",
 
                 // used for privacy settings cts tests.
                 "fuchsia.settings.Privacy",

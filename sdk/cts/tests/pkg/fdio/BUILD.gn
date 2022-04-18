@@ -32,7 +32,7 @@ cts_executable("fdio-spawn-tests-bin") {
 
 cts_fuchsia_component("fdio-spawn-tests-component") {
   testonly = true
-  manifest = "meta/fdio-spawn-tests-component.cmx"
+  manifest = "meta/fdio-spawn-tests-component.cml"
   deps = [ ":fdio-spawn-tests-bin" ]
 }
 
@@ -48,7 +48,7 @@ cts_executable("spawn-child-util-bin") {
 
 cts_fuchsia_component("spawn-child-util-component") {
   testonly = true
-  manifest = "meta/spawn-child-util-component.cmx"
+  manifest = "meta/spawn-child-util-component.cml"
   deps = [ ":spawn-child-util-bin" ]
 }
 
@@ -67,7 +67,7 @@ cts_executable("fake-launcher-util-bin") {
 
 cts_fuchsia_component("fake-launcher-util-component") {
   testonly = true
-  manifest = "meta/fake-launcher-util-component.cmx"
+  manifest = "meta/fake-launcher-util-component.cml"
   deps = [ ":fake-launcher-util-bin" ]
 }
 
@@ -80,7 +80,7 @@ cts_executable("return-arg-test-util-bin") {
 
 cts_fuchsia_component("return-arg-test-util-component") {
   testonly = true
-  manifest = "meta/return-arg-test-util-component.cmx"
+  manifest = "meta/return-arg-test-util-component.cml"
   deps = [ ":return-arg-test-util-bin" ]
 }
 
@@ -92,7 +92,7 @@ cts_executable("echo-arguments-bin") {
 
 cts_fuchsia_component("echo-arguments-bin-component") {
   testonly = true
-  manifest = "meta/echo-arguments-bin-component.cmx"
+  manifest = "meta/echo-arguments-bin-component.cml"
   deps = [ ":echo-arguments-bin" ]
 }
 
@@ -112,7 +112,7 @@ cts_resource("resolve-once-bin") {
 
 cts_fuchsia_component("resolve-once-component") {
   testonly = true
-  manifest = "meta/resolve-once-component.cmx"
+  manifest = "meta/resolve-once-component.cml"
   deps = [ ":resolve-once-bin" ]
 }
 
@@ -130,7 +130,7 @@ cts_resource("resolve-twice-bin") {
 
 cts_fuchsia_component("resolve-twice-component") {
   testonly = true
-  manifest = "meta/resolve-twice-component.cmx"
+  manifest = "meta/resolve-twice-component.cml"
   deps = [ ":resolve-twice-bin" ]
 }
 
@@ -148,7 +148,7 @@ cts_resource("resolve-infinite-loop-bin") {
 
 cts_fuchsia_component("resolve-infinite-loop-component") {
   testonly = true
-  manifest = "meta/resolve-infinite-loop-component.cmx"
+  manifest = "meta/resolve-infinite-loop-component.cml"
   deps = [ ":resolve-infinite-loop-bin" ]
 }
 
@@ -160,7 +160,7 @@ cts_resource("resolve-to-not-found-bin") {
 
 cts_fuchsia_component("resolve-to-not-found-component") {
   testonly = true
-  manifest = "meta/resolve-to-not-found-component.cmx"
+  manifest = "meta/resolve-to-not-found-component.cml"
   deps = [ ":resolve-to-not-found-bin" ]
 }
 
@@ -172,7 +172,7 @@ cts_resource("shebang-echo-arguments-bin") {
 
 cts_fuchsia_component("shebang-echo-arguments-component") {
   testonly = true
-  manifest = "meta/shebang-echo-arguments-component.cmx"
+  manifest = "meta/shebang-echo-arguments-component.cml"
   deps = [ ":shebang-echo-arguments-bin" ]
 }
 
@@ -184,7 +184,7 @@ cts_resource("use-script-as-interpreter-bin") {
 
 cts_fuchsia_component("use-script-as-interpreter-component") {
   testonly = true
-  manifest = "meta/use-script-as-interpreter-component.cmx"
+  manifest = "meta/use-script-as-interpreter-component.cml"
   deps = [ ":use-script-as-interpreter-bin" ]
 }
 
@@ -196,7 +196,7 @@ cts_resource("shebang-infinite-loop-bin") {
 
 cts_fuchsia_component("shebang-infinite-loop-component") {
   testonly = true
-  manifest = "meta/shebang-infinite-loop-component.cmx"
+  manifest = "meta/shebang-infinite-loop-component.cml"
   deps = [ ":shebang-infinite-loop-bin" ]
 }
 
@@ -208,7 +208,7 @@ cts_resource("attempt-use-shell-outside-package-script") {
 
 cts_fuchsia_component("attempt-use-shell-outside-package-component") {
   testonly = true
-  manifest = "meta/attempt-use-shell-outside-package-component.cmx"
+  manifest = "meta/attempt-use-shell-outside-package-component.cml"
   deps = [ ":attempt-use-shell-outside-package-script" ]
 }
 
@@ -220,7 +220,7 @@ cts_resource("too-long-shebang-bin") {
 
 cts_fuchsia_component("too-long-shebang-component") {
   testonly = true
-  manifest = "meta/too-long-shebang-component.cmx"
+  manifest = "meta/too-long-shebang-component.cml"
   deps = [ ":too-long-shebang-bin" ]
 }
 
@@ -232,7 +232,7 @@ cts_resource("use-resolve-from-shebang-bin") {
 
 cts_fuchsia_component("use-resolve-from-shebang-component") {
   testonly = true
-  manifest = "meta/use-resolve-from-shebang-component.cmx"
+  manifest = "meta/use-resolve-from-shebang-component.cml"
   deps = [ ":use-resolve-from-shebang-bin" ]
 }
 
@@ -250,7 +250,7 @@ cts_resource("use-shebang-from-resolve-bin") {
 
 cts_fuchsia_component("use-shebang-from-resolve-component") {
   testonly = true
-  manifest = "meta/use-shebang-from-resolve-component.cmx"
+  manifest = "meta/use-shebang-from-resolve-component.cml"
   deps = [ ":use-shebang-from-resolve-bin" ]
 }
 

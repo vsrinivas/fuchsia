@@ -26,12 +26,14 @@ Below is the list of capabilities provided to CTS tests:
 Protocols:
 
 ```text
-fuchsia.logger.LogSink
-fuchsia.sys2.EventSource
 fuchsia.hwinfo.Board
 fuchsia.hwinfo.Device
 fuchsia.hwinfo.Product
+fuchsia.logger.LogSink
+fuchsia.process.Launcher
+fuchsia.process.Resolver
 fuchsia.settings.Privacy
+fuchsia.sys2.EventSource
 ```
 
 Storage:

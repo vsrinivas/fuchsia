@@ -228,6 +228,7 @@ TEST(SpawnTest, SpawnFlags) {
 
   {
     // Redundant CLONE_STDIO vs individual fd actions should work.
+    ASSERT_EQ(0, dup2(1, 0));
     const char* argv[] = {bin_path, "--flags", "stdio", nullptr};
     char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
     const fdio_spawn_action_t actions[] = {
@@ -791,6 +792,7 @@ TEST(SpawnTest, SpawnErrors) {
   }
 
   {
+    ASSERT_EQ(0, dup2(1, 0));
     ASSERT_EQ(30, dup2(0, 30));
     ASSERT_EQ(31, dup2(0, 31));
     const fdio_spawn_action_t actions[] = {

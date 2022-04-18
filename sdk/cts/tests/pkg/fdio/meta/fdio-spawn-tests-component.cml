@@ -1,0 +1,23 @@
+{
+    include: [
+        "inspect/client.shard.cml",
+        "sys/testing/elf_test_runner.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/fdio-spawn-tests-bin",
+        forward_stderr_to: "log",
+        forward_stdout_to: "log",
+    },
+    use: [
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.process.Resolver",
+            ],
+        },
+    ],
+    facets: {
+        "fuchsia.test": { type: "cts" },
+    },
+}

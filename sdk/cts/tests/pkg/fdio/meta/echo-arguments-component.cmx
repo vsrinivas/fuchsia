@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "bin/echo_arguments.sh"
-    }
-}
