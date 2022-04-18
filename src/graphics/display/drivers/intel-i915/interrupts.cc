@@ -171,7 +171,7 @@ zx_status_t Interrupts::Init(PipeVsyncCallback pipe_vsync_callback,
     return ZX_ERR_INTERNAL;
   }
 
-  if ((status = pci.MapInterrupt(0, &irq_) != ZX_OK)) {
+  if ((status = pci.MapInterrupt(0, &irq_)) != ZX_OK) {
     zxlogf(ERROR, "Failed to map interrupt (%d)", status);
     return status;
   }
