@@ -212,8 +212,6 @@ function diff_file_relpath() {
       ;;
     *.json.formatted) expect=ignore ;;  # This is remant from an earlier diff.
 
-    system.snapshot) expect=diff; diff_text "$left" "$right" ;;  # hashes
-
     # recovery things
     recovery-eng_devmgr_config.txt) expect=diff; diff_text "$left" "$right" ;;  # hashes
     recovery-eng_pkgsvr_index) expect=diff; diff_text "$left" "$right" ;;  # hashes

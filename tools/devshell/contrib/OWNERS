@@ -8,7 +8,6 @@ per-file component-surveyor=geb@google.com
 per-file cpu-stats=crjohns@google.com
 per-file dart-remote-test=zra@google.com
 per-file debug=brettw@google.com,dangyi@google.com
-per-file delta,save-package-stats=kevinwells@google.com
 per-file disk-extract-serial-log=csuter@google.com
 per-file arm-esr.fx=maniscalco@google.com
 per-file exec-host-tests=joshuaseaton@google.com

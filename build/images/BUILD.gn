@@ -1110,96 +1110,6 @@ copy("root_component_index_metadata") {
   deps = [ ":component_index_metadata" ]
 }
 
-# The system index is the index of all universe packages, naming each
-# blobs.json file instead of its merkleroot, and including a tag of the package
-# set the package is a part of (base/cache/universe). Additionally the
-# system_index has the system package itself, and the system update package.
-system_index = "$target_out_dir/system_index"
-
-tagged_snapshot_manifests = [
-  {
-    tag = "monolith"
-    deps = [
-      labels.base_packages,
-      labels.meta_packages,
-      labels.images,
-      labels.images_prime,
-    ]
-  },
-  {
-    tag = "preinstall"
-    deps = [ labels.cache_packages ]
-  },
-  {
-    tag = "available"
-    deps = [ ":universe_packages" ]
-  },
-]
-
-all_snapshot_entries = []
-foreach(manifest, tagged_snapshot_manifests) {
-  untagged_entries = "${manifest.tag}.snapshot_entries.untagged"
-  generate_package_metadata(untagged_entries) {
-    testonly = true
-    outputs = [ target_gen_dir + "/" + target_name ]
-    deps = manifest.deps
-    data_keys = [ "snapshot_entries" ]
-  }
-
-  tagged_entries = "${manifest.tag}.snapshot_entries"
-  action(tagged_entries) {
-    testonly = true
-    deps = [ ":" + untagged_entries ]
-    script = "add_tag_to_manifest.sh"
-    inputs = [ "$target_gen_dir/$untagged_entries" ]
-    outputs = [ "$root_build_dir/$target_name" ]
-    args = [
-      manifest.tag,
-      rebase_path(inputs[0], root_build_dir),
-      rebase_path(outputs[0], root_build_dir),
-    ]
-  }
-  all_snapshot_entries += [ tagged_entries ]
-}
-
-action("system_index") {
-  visibility = [ ":system_snapshot" ]
-  testonly = true
-
-  script = "//build/cat.sh"
-  sources = []
-  outputs = [ "$target_out_dir/$target_name" ]
-  args = rebase_path(outputs, root_build_dir)
-  deps = []
-  foreach(entry, all_snapshot_entries) {
-    args += [ entry ]
-    deps += [ ":" + entry ]
-    sources += [ "$root_build_dir/$entry" ]
-  }
-}
-
-compiled_action("system_snapshot") {
-  tool = "//src/sys/pkg/bin/pm:pm_bin"
-  tool_output_name = "pm"
-
-  visibility = [ ":updates" ]
-  testonly = true
-
-  deps = [ ":system_index" ]
-
-  inputs = [ system_index ]
-
-  outputs = [ "$target_out_dir/system.snapshot" ]
-
-  args = [
-    "snapshot",
-    "--manifest",
-    rebase_path(inputs[0], root_build_dir),
-    "--output",
-    rebase_path(outputs[0], root_build_dir),
-  ]
-}
-
 # initialize and prepare the package repository.
 pm_prepare_publish("prepare_publish") {
   testonly = true
@@ -1221,7 +1131,6 @@ group("updates") {
     ":package_lists",
     ":publish",
     ":root_component_index_metadata",
-    ":system_snapshot",
   ]
 
   if (!is_coverage) {
