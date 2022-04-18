@@ -14,7 +14,7 @@ config("config") {
 #
 # Spinel headers
 #
-source_set("spinel2_headers") {
+source_set("headers") {
   public_configs = [ ":config" ]
   public = [
     "include/spinel/spinel.h",
@@ -56,7 +56,7 @@ source_set("spinel2") {
     "weakref.c",
     "weakref.h",
   ]
-  public_deps = [ ":spinel2_headers" ]
+  public_deps = [ ":headers" ]
   deps = [ "${graphics_compute_dir}/common" ]
 
   #

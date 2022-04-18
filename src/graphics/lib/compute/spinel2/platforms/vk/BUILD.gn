@@ -29,7 +29,7 @@ config("config_disable_trace") {
 #
 # Spinel headers
 #
-source_set("vk_headers") {
+source_set("headers") {
   public_configs = [
     ":config",
     ":config_debug_utils",
@@ -85,7 +85,7 @@ source_set("vk") {
   ]
   include_dirs = [ "${graphics_compute_dir}/spinel2" ]
   public_deps = [
-    ":vk_headers",
+    ":headers",
     "${graphics_compute_dir}/spinel2:spinel2",
     graphics_compute_vulkan_loader_target,
   ]
