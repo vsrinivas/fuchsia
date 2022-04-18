@@ -399,7 +399,7 @@ Do the following:
 
 1. For the new `ffx` settings to take effect, stop the `ffx` daemon:
 
-   ```posxi-terminal
+   ```posix-terminal
    tools/ffx daemon stop
    ```
 
