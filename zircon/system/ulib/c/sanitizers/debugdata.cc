@@ -35,7 +35,6 @@ _fuchsia_io_DirectoryOpen(zx_handle_t channel, uint32_t flags, uint32_t mode, co
   FIDL_ALIGNDECL char wr_bytes[sizeof(fuchsia_io_DirectoryOpenRequest) + fuchsia_io_MAX_PATH] = {};
   fuchsia_io_DirectoryOpenRequest* request = (fuchsia_io_DirectoryOpenRequest*)wr_bytes;
   // TODO(fxbug.dev/38643) use fidl_init_txn_header once it is inline
-  memset(&request->hdr, 0, sizeof(request->hdr));
   request->hdr.magic_number = kFidlWireFormatMagicNumberInitial;
   request->hdr.ordinal = fuchsia_io_DirectoryOpenOrdinal;
   request->flags = flags;
@@ -54,21 +53,20 @@ _fuchsia_io_DirectoryOpen(zx_handle_t channel, uint32_t flags, uint32_t mode, co
 [[clang::no_sanitize("address")]]
 #endif
 zx_status_t
-_fuchsia_debugdata_DebugDataPublish(zx_handle_t debug_data_channel, const char* data_sink_data,
+_fuchsia_debugdata_PublisherPublish(zx_handle_t debug_data_channel, const char* data_sink_data,
                                     size_t data_sink_size, zx_handle_t data,
                                     zx_handle_t vmo_token) {
   if (data_sink_size > fuchsia_debugdata_MAX_NAME) {
     _zx_handle_close(data);
     return ZX_ERR_INVALID_ARGS;
   }
-  FIDL_ALIGNDECL char wr_bytes[sizeof(fuchsia_debugdata_DebugDataPublishRequestMessage) +
+  FIDL_ALIGNDECL char wr_bytes[sizeof(fuchsia_debugdata_PublisherPublishRequestMessage) +
                                fuchsia_debugdata_MAX_NAME] = {};
-  fuchsia_debugdata_DebugDataPublishRequestMessage* request =
-      (fuchsia_debugdata_DebugDataPublishRequestMessage*)wr_bytes;
+  fuchsia_debugdata_PublisherPublishRequestMessage* request =
+      (fuchsia_debugdata_PublisherPublishRequestMessage*)wr_bytes;
   // TODO(fxbug.dev/38643) use fidl_init_txn_header once it is inline
-  memset(&request->hdr, 0, sizeof(request->hdr));
   request->hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  request->hdr.ordinal = fuchsia_debugdata_DebugDataPublishOrdinal;
+  request->hdr.ordinal = fuchsia_debugdata_PublisherPublishOrdinal;
   request->data_sink.data = (char*)FIDL_ALLOC_PRESENT;
   request->data_sink.size = data_sink_size;
   request->data = FIDL_HANDLE_PRESENT;
@@ -79,7 +77,7 @@ _fuchsia_debugdata_DebugDataPublish(zx_handle_t debug_data_channel, const char* 
   memcpy(&wr_bytes[sizeof(*request)], data_sink_data, data_sink_size);
   return _zx_channel_write(
       debug_data_channel, 0u, wr_bytes,
-      static_cast<uint32_t>(sizeof(fuchsia_debugdata_DebugDataPublishRequestMessage) +
+      static_cast<uint32_t>(sizeof(fuchsia_debugdata_PublisherPublishRequestMessage) +
                             FIDL_ALIGN(data_sink_size)),
       handles, std::size(handles));
 }
@@ -96,7 +94,7 @@ zx_handle_t sanitizer_debugdata_connect() {
 
   status = _fuchsia_io_DirectoryOpen(
       __zircon_namespace_svc, fuchsia_io_OPEN_RIGHT_READABLE | fuchsia_io_OPEN_RIGHT_WRITABLE, 0,
-      fuchsia_debugdata_DebugData_Name, strlen(fuchsia_debugdata_DebugData_Name), h0);
+      fuchsia_debugdata_Publisher_Name, strlen(fuchsia_debugdata_Publisher_Name), h0);
   if (status != ZX_OK) {
     constexpr const char kErrorDirectoryOpen[] = "Failed to open service namespace";
     __sanitizer_log_write(kErrorDirectoryOpen, sizeof(kErrorDirectoryOpen) - 1);
@@ -117,16 +115,17 @@ zx_handle_t __sanitizer_publish_data(const char* sink_name, zx_handle_t vmo) {
   }
 
   zx_handle_t vmo_token_client, vmo_token_server;
-  if (_zx_channel_create(0, &vmo_token_client, &vmo_token_server) != ZX_OK) {
-    constexpr const char kErrorChannelCreate[] = "Failed to create channel for debugdata VMO token";
-    __sanitizer_log_write(kErrorChannelCreate, sizeof(kErrorChannelCreate) - 1);
+  if (_zx_eventpair_create(0, &vmo_token_client, &vmo_token_server) != ZX_OK) {
+    constexpr char kErrorEventPairCreate[] = "Failed to create eventpair for debugdata VMO token";
+    __sanitizer_log_write(kErrorEventPairCreate, sizeof(kErrorEventPairCreate) - 1);
     return ZX_HANDLE_INVALID;
   }
 
   zx_handle_t debugdata_channel = sanitizer_debugdata_connect();
-  zx_status_t status = _fuchsia_debugdata_DebugDataPublish(
+  zx_status_t status = _fuchsia_debugdata_PublisherPublish(
       debugdata_channel, sink_name, strlen(sink_name), vmo, vmo_token_server);
   _zx_handle_close(debugdata_channel);
+  _zx_handle_close(vmo_token_client);
 
   if (status != ZX_OK) {
     constexpr const char kErrorPublish[] = "Failed to publish data";

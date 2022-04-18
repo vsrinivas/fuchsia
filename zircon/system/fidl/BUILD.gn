@@ -8,7 +8,18 @@ import("//build/zircon/fidl_c_header.gni")
 # still needed in the ZN build.
 
 fidl_c_header("fuchsia-debugdata") {
-  sources = [ "../../../sdk/fidl/fuchsia.debugdata/debugdata.fidl" ]
+  sources = [
+    "../../../sdk/fidl/fuchsia.debugdata/debugdata.fidl",
+    "../../../sdk/fidl/fuchsia.debugdata/publisher.fidl",
+  ]
+  deps = [
+    ":fuchsia.io",
+    ":zx",
+  ]
+}
+
+fidl_c_header("fuchsia.io") {
+  sources = [ "../../../sdk/fidl/fuchsia.io/io.fidl" ]
   deps = [ ":zx" ]
 }
 

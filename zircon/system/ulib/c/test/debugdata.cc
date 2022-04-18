@@ -41,34 +41,7 @@ namespace {
 constexpr char kTestHelper[] = "/pkg/bin/debugdata-test-helper";
 
 struct Publisher : public fidl::WireServer<fuchsia_debugdata::Publisher> {
- private:
-  struct DebugData : public fidl::WireServer<fuchsia_debugdata::DebugData> {
-    std::unordered_map<std::string, zx::vmo> data;
-    std::unordered_map<std::string, zx::vmo> configs;
-    Publisher* parent_;
-
-    explicit DebugData(Publisher* parent) : parent_(parent) {}
-
-    void Publish(PublishRequestView request, PublishCompleter::Sync&) override {
-      std::string name(request->data_sink.data(), request->data_sink.size());
-      parent_->data.emplace(name, std::move(request->data));
-    }
-
-    void LoadConfig(LoadConfigRequestView request, LoadConfigCompleter::Sync& completer) override {
-      std::string name(request->config_name.data(), request->config_name.size());
-      if (auto it = configs.find(name); it != configs.end()) {
-        completer.Reply(std::move(it->second));
-      } else {
-        completer.Close(ZX_ERR_NOT_FOUND);
-      }
-    }
-  };
-
- public:
   std::unordered_map<std::string, zx::vmo> data;
-  DebugData deprecated_service_;
-
-  Publisher() : deprecated_service_(this) {}
 
   void Publish(PublishRequestView request, PublishCompleter::Sync&) override {
     std::string name(request->data_sink.data(), request->data_sink.size());
@@ -82,13 +55,7 @@ struct Publisher : public fidl::WireServer<fuchsia_debugdata::Publisher> {
         [dispatcher, this](fidl::ServerEnd<fuchsia_debugdata::Publisher> server_end) {
           return fidl::BindSingleInFlightOnly(dispatcher, std::move(server_end), this);
         });
-    auto deprecated_node = fbl::MakeRefCounted<fs::Service>(
-        [dispatcher, this](fidl::ServerEnd<fuchsia_debugdata::DebugData> server_end) {
-          return fidl::BindSingleInFlightOnly(dispatcher, std::move(server_end),
-                                              &deprecated_service_);
-        });
     dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_debugdata::Publisher>, node);
-    dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_debugdata::DebugData>, deprecated_node);
 
     zx::status server_end = fidl::CreateEndpoints(client_end);
     ASSERT_OK(server_end.status_value());

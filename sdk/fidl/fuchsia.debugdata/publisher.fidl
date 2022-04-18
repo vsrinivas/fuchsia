@@ -7,6 +7,7 @@ using zx;
 using fuchsia.io;
 
 /// Publisher defines the interface for publishing instrumentation data.
+@for_deprecated_c_bindings
 @discoverable
 protocol Publisher {
     /// The program runtime sends a string naming a `data_sink` and transfers
