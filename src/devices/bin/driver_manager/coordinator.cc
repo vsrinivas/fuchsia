@@ -244,10 +244,10 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
     : config_(std::move(config)),
       dispatcher_(dispatcher),
       base_resolver_(config_.boot_args),
-      driver_loader_(config_.boot_args, std::move(config_.driver_index), &base_resolver_,
-                     dispatcher, config_.require_system),
       inspect_manager_(inspect_manager),
-      package_resolver_(config.boot_args) {
+      package_resolver_(config_.boot_args),
+      driver_loader_(config_.boot_args, std::move(config_.driver_index), &base_resolver_,
+                     dispatcher, config_.require_system, &package_resolver_) {
   if (config_.oom_event) {
     wait_on_oom_event_.set_object(config_.oom_event.get());
     wait_on_oom_event_.set_trigger(ZX_EVENT_SIGNALED);
@@ -1283,6 +1283,17 @@ zx::status<> Coordinator::PublishDriverDevelopmentService(
   return zx::make_status(status);
 }
 
+zx::status<> Coordinator::PublishDriverRegistrarService(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
+  const auto driver_registrar = [this](fidl::ServerEnd<fdr::DriverRegistrar> request) {
+    driver_registrar_binding_ = fidl::BindServer<fidl::WireServer<fdr::DriverRegistrar>>(
+        dispatcher_, std::move(request), this);
+    return ZX_OK;
+  };
+  zx_status_t status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdr::DriverRegistrar>,
+                                         fbl::MakeRefCounted<fs::Service>(driver_registrar));
+  return zx::make_status(status);
+}
+
 zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
   const auto admin = [this](fidl::ServerEnd<fdm::Administrator> request) {
     fidl::BindServer<fidl::WireServer<fdm::Administrator>>(dispatcher_, std::move(request), this);
@@ -1311,19 +1322,6 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
     LOGF(ERROR, "Failed to add entry in service directory for '%s': %s",
          fidl::DiscoverableProtocolName<fdm::SystemStateTransition>, zx_status_get_string(status));
     return status;
-  }
-
-  if (config_.enable_ephemeral) {
-    const auto driver_registrar = [this](fidl::ServerEnd<fdr::DriverRegistrar> request) {
-      driver_registrar_binding_ = fidl::BindServer<fidl::WireServer<fdr::DriverRegistrar>>(
-          dispatcher_, std::move(request), this);
-      return ZX_OK;
-    };
-    status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdr::DriverRegistrar>,
-                               fbl::MakeRefCounted<fs::Service>(driver_registrar));
-    if (status != ZX_OK) {
-      return status;
-    }
   }
 
   const auto debug = [this](fidl::ServerEnd<fdm::DebugDumper> request) {

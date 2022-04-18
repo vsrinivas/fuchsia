@@ -105,6 +105,11 @@ zx::status<MatchedDeviceGroupInfo> CreateMatchedDeviceGroupInfo(
   });
 }
 
+bool ShouldUseUniversalResolver(fdf::wire::DriverPackageType package_type) {
+  return package_type == fdf::wire::DriverPackageType::kUniverse ||
+         package_type == fdf::wire::DriverPackageType::kCached;
+}
+
 }  // namespace
 
 DriverLoader::~DriverLoader() {
@@ -194,15 +199,22 @@ void DriverLoader::WaitForBaseDrivers(fit::callback<void()> callback) {
       });
 }
 
-const Driver* DriverLoader::LoadDriverUrl(const std::string& driver_url) {
+const Driver* DriverLoader::LoadDriverUrl(const std::string& driver_url,
+                                          bool use_universe_resolver) {
   // Check if we've already loaded this driver. If we have then return it.
   auto driver = LibnameToDriver(driver_url);
   if (driver != nullptr) {
     return driver;
   }
 
+  // Pick the correct package resolver to use.
+  auto resolver = base_resolver_;
+  if (use_universe_resolver && universe_resolver_) {
+    resolver = universe_resolver_;
+  }
+
   // We've never seen the driver before so add it, then return it.
-  auto fetched_driver = base_resolver_->FetchDriver(driver_url);
+  auto fetched_driver = resolver->FetchDriver(driver_url);
   if (fetched_driver.is_error()) {
     LOGF(ERROR, "Error fetching driver: %s: %d", driver_url.data(), fetched_driver.error_value());
     return nullptr;
@@ -382,7 +394,12 @@ const std::vector<MatchedDriver> DriverLoader::MatchPropertiesDriverIndex(
     }
 
     std::string driver_url(fidl_driver_info->driver_url().get());
-    auto loaded_driver = LoadDriverUrl(driver_url);
+    bool use_universe_resolver = false;
+    if (fidl_driver_info->has_package_type()) {
+      use_universe_resolver = ShouldUseUniversalResolver(fidl_driver_info->package_type());
+    }
+
+    auto loaded_driver = LoadDriverUrl(driver_url, use_universe_resolver);
     if (!loaded_driver) {
       continue;
     }
@@ -469,8 +486,14 @@ std::vector<const Driver*> DriverLoader::GetAllDriverIndexDrivers() {
       if (!driver.has_libname()) {
         continue;
       }
+
       std::string url(driver.libname().data(), driver.libname().size());
-      const Driver* drv = LoadDriverUrl(url);
+      bool use_universe_resolver = false;
+      if (driver.has_package_type()) {
+        use_universe_resolver = ShouldUseUniversalResolver(driver.package_type());
+      }
+
+      const Driver* drv = LoadDriverUrl(url, use_universe_resolver);
       if (drv) {
         drivers.push_back(drv);
       }

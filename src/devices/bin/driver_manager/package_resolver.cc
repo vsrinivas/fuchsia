@@ -40,7 +40,7 @@ zx::status<std::unique_ptr<Driver>> PackageResolver::FetchDriver(const std::stri
   Driver* driver = nullptr;
   DriverLoadCallback callback = [&driver](Driver* d, const char* version) mutable { driver = d; };
 
-  zx_status_t status = load_driver_vmo(boot_args_, std::string_view(parsed_url.resource_path()),
+  zx_status_t status = load_driver_vmo(boot_args_, std::string_view(parsed_url.ToString()),
                                        std::move(driver_vmo_result.value()), std::move(callback));
   if (status != ZX_OK) {
     return zx::error(status);

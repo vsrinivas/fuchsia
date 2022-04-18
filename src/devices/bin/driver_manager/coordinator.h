@@ -140,6 +140,7 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   zx_status_t InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
   zx::status<> PublishDriverDevelopmentService(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
+  zx::status<> PublishDriverRegistrarService(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
 
   // Initialization functions for DFv1. InitCoreDevices() is public for testing only.
   void LoadV1Drivers(std::string_view sys_device_driver,
@@ -296,7 +297,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   fidl::WireSharedClient<fuchsia_power_manager::DriverManagerRegistration> power_manager_client_;
 
   internal::BasePackageResolver base_resolver_;
-  DriverLoader driver_loader_;
 
   // All Drivers
   fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers_;
@@ -317,6 +317,7 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   cpp17::optional<fidl::ServerBindingRef<fuchsia_driver_registrar::DriverRegistrar>>
       driver_registrar_binding_;
   internal::PackageResolver package_resolver_;
+  DriverLoader driver_loader_;
 
   std::unique_ptr<DebugDump> debug_dump_;
 

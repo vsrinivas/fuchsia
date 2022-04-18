@@ -25,10 +25,12 @@ class DriverLoader {
   explicit DriverLoader(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args,
                         fidl::WireSharedClient<fdf::DriverIndex> driver_index,
                         internal::PackageResolverInterface* base_resolver,
-                        async_dispatcher_t* dispatcher, bool require_system)
+                        async_dispatcher_t* dispatcher, bool require_system,
+                        internal::PackageResolverInterface* universe_resolver)
       : base_resolver_(base_resolver),
         driver_index_(std::move(driver_index)),
-        include_fallback_drivers_(!require_system) {}
+        include_fallback_drivers_(!require_system),
+        universe_resolver_(universe_resolver) {}
 
   ~DriverLoader();
 
@@ -61,7 +63,7 @@ class DriverLoader {
 
   const Driver* LibnameToDriver(std::string_view libname) const;
 
-  const Driver* LoadDriverUrl(const std::string& driver_url);
+  const Driver* LoadDriverUrl(const std::string& driver_url, bool use_universe_resolver = false);
 
   // This API is used for debugging, for GetDriverInfo and DumpDrivers.
   std::vector<const Driver*> GetAllDriverIndexDrivers();
@@ -79,6 +81,10 @@ class DriverLoader {
   // When this is true we will return DriverIndex fallback drivers.
   // This is true after the system is loaded (or if require_system is false)
   bool include_fallback_drivers_;
+
+  // The universe package resolver.
+  // Currently used only for ephemeral drivers.
+  internal::PackageResolverInterface* universe_resolver_;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_LOADER_H_
