@@ -1,6 +1,7 @@
-# Fuchsia platform
+# Contribute to the open source platform
 
-This section is for developing the Fuchsia platform and operating system.
+This section is for contributing to the Fuchsia open source platform and
+operating system.
 
 ## Basic workflows
 

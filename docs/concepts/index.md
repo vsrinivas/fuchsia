@@ -1,35 +1,29 @@
-# Overview
+# About Fuchsia
 
-Fuchsia is a new open source operating system created at Google
-that is currently under active development.
-We are building Fuchsia from the kernel up
-to meet the needs of today’s growing ecosystem of connected devices.
+You can learn more about Fuchsia by diving deeper into the concepts driving its
+design. Fuchsia  is still evolving rapidly, but the underlying principles and
+values of the system have remained relatively constant throughout the project. 
 
-Fuchsia is still evolving rapidly,
-but the underlying principles and values of the system
-have remained relatively constant throughout the project.
-The core architectural principles guiding Fuchsia’s design and development are:
-secure, updatable, inclusive, and pragmatic.
+## Principles
 
-## [Secure](/docs/concepts/principles/secure.md)
+The core principles guiding Fuchsia’s design and development are simple, secure,
+updatable, and performant.
 
-All software that runs on Fuchsia receives the least privilege it needs
-to perform its job,
-and gains access only to information it needs to know.
+### Simple
 
-## [Updatable](/docs/concepts/principles/updatable.md)
+Fuchsia makes it easy to create, maintain, and integrate software and hardware
+across a wide range of devices.
 
-Much like the web,
-software on Fuchsia is designed to come and go as needed,
-and security patches can be pushed to all products on demand.
+### Secure
 
-## [Inclusive](/docs/concepts/principles/inclusive.md)
+Fuchsia has a kernel and software model designed for modern computing.
 
-Fuchsia is an open source project that currently supports a variety
-of languages and runtimes, including C++, Web, Rust, Go, Flutter, and Dart.
+### Updatable
 
-## [Pragmatic](/docs/concepts/principles/pragmatic.md)
+As a modular operating system, Fuchsia allows the kernel, drivers, and software
+components to be independently updatable.
 
-Fuchsia is not a science experiment,
-it’s a production-grade operating system that must adhere to fundamentals,
-like performance.
+### Performant
+
+Fuchsia is designed for real world product requirements and optimized for
+performance.

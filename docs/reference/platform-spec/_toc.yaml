@@ -6,8 +6,6 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Glossary"
-  path: /docs/glossary/README.md
 - heading: "Component Framework"
 - title: "Component manifest (.cml)"
   path: /reference/cml.md

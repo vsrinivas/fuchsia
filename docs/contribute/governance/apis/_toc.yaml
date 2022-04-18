@@ -8,9 +8,11 @@
 toc:
 - title: "Overview"
   path: /docs/contribute/governance/apis
-- title: "Scenic Allocator"
-  path: /docs/contribute/governance/apis/scenic_allocator.md
-- title: "Flatland"
-  path: /docs/contribute/governance/apis/flatland.md
-- title: "Test Suite"
-  path: /docs/contribute/governance/apis/test_suite.md
+- title: "Proposals"
+  section:
+  - title: "Scenic Allocator"
+    path: /docs/contribute/governance/apis/scenic_allocator.md
+  - title: "Flatland"
+    path: /docs/contribute/governance/apis/flatland.md
+  - title: "Test Suite"
+    path: /docs/contribute/governance/apis/test_suite.md

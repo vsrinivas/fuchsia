@@ -1,4 +1,7 @@
 toc:
 - title: Overview
   path: /docs/development/sdk/index.md
+- heading: Quickstart
+- title: "Get started with the Fuchsia SDK"
+  path: /docs/get-started/sdk/index.md
 - include: /docs/development/sdk/ffx/_toc.yaml

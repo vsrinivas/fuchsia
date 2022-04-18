@@ -6,7 +6,7 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as a reviewer.
 toc:
-- title: "Contributing to documentation"
+- title: "Overview"
   path: /docs/contribute/docs/README.md
 - heading: "Style"
 - title: "Documentation standards"

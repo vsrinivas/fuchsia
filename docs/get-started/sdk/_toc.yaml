@@ -1,8 +1,12 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Please, read https://fuchsia.dev/fuchsia-src/contribute/docs/documentation-navigation-toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
 toc:
-- heading: Quickstart
-- title: Get started with the Fuchsia SDK
-  path: /docs/get-started/sdk/index.md
-- heading: Fuchsia SDK fundamentals
+- heading: "SDK fundamentals"
 - title: Overview
   path: /docs/get-started/sdk/learn/README.md
 - title: Introduction to Fuchsia

@@ -8,6 +8,8 @@
 toc:
 - title: "Overview"
   path: /docs/development/README.md
+- heading: "Quickstart"
+- include: /docs/get-started/_toc.yaml
 - heading: "Set up devices"
 - title: "Fuchsia hardware"
   section:
