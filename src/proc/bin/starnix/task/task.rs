@@ -601,12 +601,6 @@ impl CurrentTask {
         let name = self.resolve_open_path(&mut context, dir, path, mode, flags)?;
 
         // Be sure not to reference the mode argument after this point.
-        // Below, we shadow the mode argument with the mode of the file we are
-        // opening. This line of code will hopefully catch future bugs if we
-        // refactor this function.
-        #[allow(clippy::drop_copy)] // TODO(fxbug.dev/95057)
-        std::mem::drop(mode);
-
         let mode = name.entry.node.info().mode;
         if nofollow && mode.is_lnk() {
             return error!(ELOOP);

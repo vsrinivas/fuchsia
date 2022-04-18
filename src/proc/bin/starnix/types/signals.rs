@@ -4,7 +4,6 @@
 
 use std::convert::TryFrom;
 use std::fmt;
-use std::hash::{Hash, Hasher};
 
 use crate::types::*;
 
@@ -30,16 +29,9 @@ impl From<u32> for UncheckedSignal {
 }
 
 /// The `Signal` struct represents a valid signal.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Signal {
     number: u32,
-}
-
-#[allow(clippy::derive_hash_xor_eq)] // TODO(fxbug.dev/95057)
-impl Hash for Signal {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.number.hash(state);
-    }
 }
 
 impl Signal {
