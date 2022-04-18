@@ -48,6 +48,7 @@ source_set("flatland") {
     "//src/ui/scenic/lib/view_tree:view_tree_snapshot",
     "//third_party/glm",
     "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/zircon-internal",
   ]
 
   deps = [

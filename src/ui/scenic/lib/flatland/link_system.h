@@ -8,6 +8,7 @@
 #include <fuchsia/ui/composition/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <functional>
 #include <optional>
@@ -286,16 +287,32 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   GetChildViewWatcherToParentViewportWatcherMapping();
 
  private:
+  TransformHandle CreateTransformLocked() {
+    TransformHandle transform;
+    {
+      std::scoped_lock lock(mutex_);
+      transform = link_graph_.CreateTransform();
+    }
+    return transform;
+  }
+
   TransformHandle::InstanceId instance_id_;
-  TransformGraph link_graph_;
+
+  // |link_graph_|, an instance of a TransformGraph, is not thread safe, as it is designed to be
+  // used by individual Flatland instances. However, this class is shared across all Flatland
+  // instances, and therefore different threads. Therefore, access to |link_graph_| should be
+  // guarded by |mutex_|.
+  TransformGraph link_graph_ TA_GUARDED(mutex_);
 
   std::shared_ptr<ObjectLinker> linker_;
 
+  // |mutex_| guards access to |link_graph_| and |link_topologies_|.
+  //
   // TODO(fxbug.dev/44335): These maps are modified at Link creation and destruction time (within
   // the ObjectLinker closures) as well as within UpdateLinks, which is called by the core render
   // loop. This produces a possible priority inversion between the Flatland instance threads and the
   // (possibly deadline scheduled) render thread.
-  std::mutex map_mutex_;
+  std::mutex mutex_;
 
   // A ParentViewportWatcherImpl and the |link_origin| of the child Flatland instance the impl
   // serves.
@@ -308,8 +325,8 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   // Keyed by the transform in the child instance.
   std::unordered_map<TransformHandle, std::shared_ptr<ChildViewWatcherImpl>>
       child_view_watcher_map_;
-  // The set of current link topologies. Access is managed by |map_mutex_|.
-  GlobalTopologyData::LinkTopologyMap link_topologies_;
+  // The set of current link topologies. Access is managed by |mutex_|.
+  GlobalTopologyData::LinkTopologyMap link_topologies_ TA_GUARDED(mutex_);
 };
 
 }  // namespace flatland

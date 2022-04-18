@@ -41,7 +41,7 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
 
   auto impl = std::make_shared<ChildViewWatcherImpl>(dispatcher_holder,
                                                      std::move(child_view_watcher), error_callback);
-  const TransformHandle link_handle = link_graph_.CreateTransform();
+  const TransformHandle link_handle = CreateTransformLocked();
 
   ObjectLinker::ImportLink importer = linker_->CreateImport(
       ChildLinkInfo{.parent_viewport_watcher_handle = parent_viewport_watcher_handle,
@@ -58,7 +58,7 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
         if (info.view_ref != nullptr) {
           impl->SetViewRef({.reference = utils::CopyEventpair(info.view_ref->reference)});
         }
-        std::scoped_lock lock(ref->map_mutex_);
+        std::scoped_lock lock(ref->mutex_);
         ref->child_view_watcher_map_[*child_view_watcher_map_key] = impl;
       },
       /* link_invalidated = */
@@ -66,7 +66,7 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
         // We expect |child_view_watcher_map_key| to be assigned by the "link_resolved" closure, but
         // this might not happen if the link is being destroyed before it was resolved.
         FX_DCHECK(child_view_watcher_map_key || on_link_destruction);
-        std::scoped_lock lock(ref->map_mutex_);
+        std::scoped_lock lock(ref->mutex_);
         ref->child_view_watcher_map_.erase(*child_view_watcher_map_key);
       },
       dispatcher_holder);
@@ -109,7 +109,7 @@ LinkSystem::ParentLink LinkSystem::CreateParentLink(
         *parent_viewport_watcher_map_key = info.parent_viewport_watcher_handle;
         *topology_map_key = info.link_handle;
 
-        std::scoped_lock lock(ref->map_mutex_);
+        std::scoped_lock lock(ref->mutex_);
         // TODO(fxbug.dev/80603): When the same parent relinks to different children, we might be
         // using an outdated logical_size here. It will be corrected in UpdateLinks(), but we should
         // figure out a way to set the previous ParentViewportWatcherImpl's size here.
@@ -133,7 +133,7 @@ LinkSystem::ParentLink LinkSystem::CreateParentLink(
         // "link_resolved" closure, but this might not happen if the link is being destroyed before
         // it was resolved.
         FX_DCHECK((parent_viewport_watcher_map_key && topology_map_key) || on_link_destruction);
-        std::scoped_lock lock(ref->map_mutex_);
+        std::scoped_lock map_lock(ref->mutex_);
         ref->parent_viewport_watcher_map_.erase(*parent_viewport_watcher_map_key);
 
         ref->link_topologies_.erase(*topology_map_key);
@@ -152,7 +152,7 @@ void LinkSystem::UpdateLinks(const GlobalTopologyData::TopologyVector& global_to
                              const GlobalMatrixVector& global_matrices,
                              const glm::vec2& display_pixel_scale,
                              const UberStruct::InstanceMap& uber_structs) {
-  std::scoped_lock lock(map_mutex_);
+  std::scoped_lock lock(mutex_);
 
   // Since the global topology may not contain every Flatland instance, manually update the
   // ParentViewportStatus of every ParentViewportWatcher.
@@ -233,7 +233,7 @@ GlobalTopologyData::LinkTopologyMap LinkSystem::GetResolvedTopologyLinks() {
 
   // Acquire the lock and copy.
   {
-    std::scoped_lock lock(map_mutex_);
+    std::scoped_lock lock(mutex_);
     copy = link_topologies_;
   }
   return copy;
