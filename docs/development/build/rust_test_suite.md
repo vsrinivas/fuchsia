@@ -55,14 +55,14 @@ required for running the test suite.
    ( \
      source $DEV_ROOT/rust/fuchsia-env.sh && \
      $DEV_ROOT/rust/x.py \
-      --config $DEV_ROOT/rust/fuchsia-config.toml --stage=2 \
-      test {{ '<var>' }}TEST_SUITE{{ '</var>' }} \
-      --target {{ '<var>' }}x86_64|aarch64{{ '</var>' }}-fuchsia \
-      --run=always --jobs 1 --test-args "--target-panic=abort
-      --remote-test-client $TEST_TOOLCHAIN" \
-      --rustc-args "-C panic=abort -Zpanic_abort_tests
-      -L $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/sysroot/lib
-      -L $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/lib" \
+       --config $DEV_ROOT/rust/fuchsia-config.toml --stage=2 \
+       test {{ '<var>' }}TEST_SUITE{{ '</var>' }} \
+       --target {{ '<var>' }}x86_64|aarch64{{ '</var>' }}-fuchsia \
+       --run=always --jobs 1 --test-args "--target-panic=abort
+       --remote-test-client $TEST_TOOLCHAIN" \
+       --rustc-args "-C panic=abort -Zpanic_abort_tests
+       -L $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/sysroot/lib
+       -L $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/lib" \
    )
    ```
 
@@ -122,8 +122,24 @@ environments.
      --test {{ '<var>' }}TEST_PATH{{ '</var>' }}
    ```
 
-   Then set any relevant breakpoints and run the test. `zxdb` will catch any
-   crashes and break at any breakpoints you define.
+   Then set any relevant breakpoints and run the test with:
+
+   ( \
+     source $DEV_ROOT/rust/fuchsia-env.sh && \
+     $DEV_ROOT/rust/x.py \
+       --config $DEV_ROOT/rust/fuchsia-config.toml --stage=2 \
+       test {{ '<var>' }}TEST_SUITE{{ '</var>' }} \
+       --target {{ '<var>' }}x86_64|aarch64{{ '</var>' }}-fuchsia \
+       --run=always --jobs 1 --test-args "--target-panic=abort
+       --remote-test-client $TEST_TOOLCHAIN" --rustc-args "-C debuginfo=2
+       -C opt-level=0 -C panic=abort -Zpanic_abort_tests
+       -L $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/sysroot/lib
+       -L $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/lib" \
+   )
+
+   and `zxdb` will catch any crashes and break at any breakpoints you define.
+   This command is the same as the one above with the additional
+   `-C debuginfo=2 -C opt-level=0` flags for debugging.
 
    Note: If you have the Fuchsia source available, you can additionally pass
    `--fuchsia-src` with the Fuchsia source path and `zxdb` will include source
