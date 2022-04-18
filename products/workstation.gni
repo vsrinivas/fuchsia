@@ -81,6 +81,9 @@ cache_package_labels += [
   "//src/ui/bin/terminal",
   "//src/ui/scenic",
   "//src/ui:workstation",
+
+  # Fake build info service
+  "//src/developer/build_info/testing:testing",
 ]
 
 # Add Bluetooth packages

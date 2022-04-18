@@ -54,6 +54,9 @@ cache_package_labels += [
 
   # CFv2 test framework.
   "//src/sys/run_test_suite",
+
+  # Fake build info service
+  "//src/developer/build_info/testing:testing",
 ]
 
 # Add SDK tools set to "cache" so these tools are automatically available in
