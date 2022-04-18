@@ -114,6 +114,9 @@ pub struct Task {
     /// The namespace for abstract AF_UNIX sockets for this task.
     pub abstract_socket_namespace: Arc<AbstractUnixSocketNamespace>,
 
+    /// The namespace for AF_VSOCK for this task.
+    pub abstract_vsock_namespace: Arc<AbstractVsockSocketNamespace>,
+
     // See https://man7.org/linux/man-pages/man2/set_tid_address.2.html
     pub clear_child_tid: Mutex<UserRef<pid_t>>,
 
@@ -146,6 +149,7 @@ impl Task {
         fs: Arc<FsContext>,
         creds: Credentials,
         abstract_socket_namespace: Arc<AbstractUnixSocketNamespace>,
+        abstract_vsock_namespace: Arc<AbstractVsockSocketNamespace>,
         exit_signal: Option<Signal>,
     ) -> CurrentTask {
         CurrentTask::new(Task {
@@ -159,6 +163,7 @@ impl Task {
             fs,
             creds: RwLock::new(creds),
             abstract_socket_namespace,
+            abstract_vsock_namespace,
             clear_child_tid: Mutex::new(UserRef::default()),
             signals: Default::default(),
             exit_signal,
@@ -201,6 +206,7 @@ impl Task {
             root_fs,
             Credentials::default(),
             Arc::clone(&kernel.default_abstract_socket_namespace),
+            Arc::clone(&kernel.default_abstract_vsock_namespace),
             None,
         );
 
@@ -301,6 +307,7 @@ impl Task {
             fs,
             self.creds.read().clone(),
             self.abstract_socket_namespace.clone(),
+            self.abstract_vsock_namespace.clone(),
             child_exit_signal,
         );
         pids.add_task(&child.task);

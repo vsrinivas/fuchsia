@@ -337,9 +337,16 @@ mod tests {
         const VSOCK_PORT: u32 = 5555;
 
         let listen_socket = Socket::new(SocketDomain::Vsock, SocketType::Stream);
-        listen_socket.bind(SocketAddress::Vsock(VSOCK_PORT)).expect("Failed to bind socket.");
+        current_task
+            .abstract_vsock_namespace
+            .bind(VSOCK_PORT, &listen_socket)
+            .expect("Failed to bind socket.");
         listen_socket.listen(10).expect("Failed to listen.");
 
+        let listen_socket = current_task
+            .abstract_vsock_namespace
+            .lookup(&VSOCK_PORT)
+            .expect("Failed to look up listening socket.");
         let remote = create_fuchsia_pipe(&kernel, fs2).unwrap();
         listen_socket.remote_connection(remote).unwrap();
 

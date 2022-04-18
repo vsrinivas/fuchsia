@@ -171,7 +171,9 @@ pub fn sys_bind(
                     .map_err(|errno| if errno == EEXIST { errno!(EADDRINUSE) } else { errno })?;
             }
         }
-        SocketAddress::Vsock(_) => todo!(),
+        SocketAddress::Vsock(port) => {
+            current_task.abstract_vsock_namespace.bind(port, socket)?;
+        }
     }
 
     Ok(())
@@ -257,7 +259,8 @@ pub fn sys_connect(
                 name.entry.node.socket().ok_or_else(|| errno!(ECONNREFUSED))?.clone()
             }
         }
-        SocketAddress::Vsock(_) => todo!(),
+        // Connect not available for AF_VSOCK
+        SocketAddress::Vsock(_) => return error!(ENOSYS),
     };
 
     // TODO(tbodt): Support blocking when the UNIX domain socket queue fills up. This one's weird

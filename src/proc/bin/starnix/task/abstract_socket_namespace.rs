@@ -23,6 +23,7 @@ pub struct AbstractSocketNamespace<K> {
 }
 
 pub type AbstractUnixSocketNamespace = AbstractSocketNamespace<Vec<u8>>;
+pub type AbstractVsockSocketNamespace = AbstractSocketNamespace<u32>;
 
 impl<K> AbstractSocketNamespace<K>
 where

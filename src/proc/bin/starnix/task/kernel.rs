@@ -31,6 +31,9 @@ pub struct Kernel {
     /// object because some Task objects might have a non-default namespace.
     pub default_abstract_socket_namespace: Arc<AbstractUnixSocketNamespace>,
 
+    /// The default namespace for abstract AF_VSOCK sockets in this kernel.
+    pub default_abstract_vsock_namespace: Arc<AbstractVsockSocketNamespace>,
+
     /// The kernel command line. Shows up in /proc/cmdline.
     pub cmdline: Vec<u8>,
 
@@ -64,6 +67,7 @@ pub struct Kernel {
 impl Kernel {
     pub fn new(name: &CStr) -> Result<Kernel, zx::Status> {
         let unix_address_maker = Box::new(|x: Vec<u8>| -> SocketAddress { SocketAddress::Unix(x) });
+        let vsock_address_maker = Box::new(|x: u32| -> SocketAddress { SocketAddress::Vsock(x) });
         let job = fuchsia_runtime::job_default().create_child_job()?;
         job.set_name(&name)?;
 
@@ -71,6 +75,9 @@ impl Kernel {
             job,
             pids: RwLock::new(PidTable::new()),
             default_abstract_socket_namespace: AbstractUnixSocketNamespace::new(unix_address_maker),
+            default_abstract_vsock_namespace: AbstractVsockSocketNamespace::new(
+                vsock_address_maker,
+            ),
             cmdline: Vec::new(),
             anon_fs: OnceCell::new(),
             pipe_fs: OnceCell::new(),
