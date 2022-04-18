@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <fuchsia/hardware/ethernet/c/banjo.h>
+#include <lib/ddk/binding_priv.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/io-buffer.h>
 #include <lib/fit/defer.h>
@@ -226,7 +227,16 @@ zx_status_t EthernetDevice::Init() {
   StartIrqThread();
 
   // Initialize the zx_device and publish us
+  // TODO(fxbug.dev/93333): Remove this #ifdef once GND is ready everywhere.
+#ifdef ENABLE_DFV2
+  zx_device_str_prop_t props[] = {{
+      .key = "fuchsia.ethernet.NETDEVICE_MIGRATION",
+      .property_value = str_prop_bool_val(true),
+  }};
+  auto status = DdkAdd(ddk::DeviceAddArgs("virtio-net").set_str_props(props));
+#else
   auto status = DdkAdd("virtio-net");
+#endif
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to add device: %s", zx_status_get_string(rc));
     return status;

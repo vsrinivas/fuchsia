@@ -8,12 +8,14 @@ import("x64.gni")
 board_configs += [ "//build/drivers:enable_dfv2" ]
 
 board_bootfs_labels -= [
+  "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet",
   "//src/devices/usb/drivers/xhci",
   "//src/devices/block/drivers/pci-sdhci",
   "//src/ui/input/drivers/pc-ps2",
 ]
 
 board_bootfs_labels += [
+  "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet_dfv2",
   "//src/devices/usb/drivers/xhci:xhci-dfv2",
   "//src/devices/block/drivers/pci-sdhci:pci-sdhci-dfv2",
   "//src/ui/input/drivers/pc-ps2:pc-ps2-dfv2",
