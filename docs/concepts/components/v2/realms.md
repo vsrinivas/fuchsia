@@ -200,7 +200,7 @@ definitions for full documentation.
 [offer]: https://fuchsia.dev/reference/cml#offer
 [framework-protocols]: ./capabilities/protocol.md#framework
 [monikers]: ./identifiers.md#monikers
-[realm.fidl]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#Realm
+[realm.fidl]: https://fuchsia.dev/reference/fidl/fuchsia.component#Realm
 [runners]: ./capabilities/runners.md
 [topology-instance-tree]: ./topology.md#component-instance-tree
 [use]: https://fuchsia.dev/reference/cml#use
