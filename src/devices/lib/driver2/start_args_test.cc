@@ -15,10 +15,11 @@ TEST(StartArgsTest, SymbolValue) {
   fidl::VectorView<fdf::wire::NodeSymbol> symbol_entries(arena, 1);
   symbol_entries[0].Allocate(arena);
   symbol_entries[0].set_name(arena, "sym").set_address(arena, 0xfeed);
+  fdf::wire::DriverStartArgs args(arena);
+  args.set_symbols(arena, symbol_entries);
 
-  EXPECT_EQ(0xfeedu, *driver::SymbolValue<zx_vaddr_t>(symbol_entries, "sym"));
-  EXPECT_EQ(ZX_ERR_NOT_FOUND,
-            driver::SymbolValue<zx_vaddr_t>(symbol_entries, "unknown").error_value());
+  EXPECT_EQ(0xfeedu, *driver::SymbolValue<zx_vaddr_t>(args, "sym"));
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, driver::SymbolValue<zx_vaddr_t>(args, "unknown").error_value());
 }
 
 TEST(StartArgsTest, ProgramValue) {

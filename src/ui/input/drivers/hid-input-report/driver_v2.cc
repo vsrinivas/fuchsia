@@ -42,12 +42,7 @@ class InputReportDriver {
     auto outgoing = component::OutgoingDirectory::Create(dispatcher);
     auto driver = std::make_unique<InputReportDriver>(dispatcher, std::move(node), std::move(ns),
                                                       std::move(outgoing), std::move(logger));
-    fidl::VectorView<fdf2::wire::NodeSymbol> symbols;
-    if (start_args.has_symbols()) {
-      symbols = start_args.symbols();
-    }
-
-    auto parent_symbol = driver::GetSymbol<compat::device_t*>(symbols, compat::kDeviceSymbol);
+    auto parent_symbol = driver::GetSymbol<compat::device_t*>(start_args, compat::kDeviceSymbol);
 
     hid_device_protocol_t proto = {};
     if (parent_symbol->proto_ops.id != ZX_PROTOCOL_HID_DEVICE) {

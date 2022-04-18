@@ -20,20 +20,19 @@ class TestDriver {
       : dispatcher_(dispatcher), outgoing_(component::OutgoingDirectory::Create(dispatcher)) {}
 
   zx::status<> Init(fdf::wire::DriverStartArgs* start_args) {
-    auto error = driver::SymbolValue<zx_status_t*>(start_args->symbols(), "error");
+    auto error = driver::SymbolValue<zx_status_t*>(*start_args, "error");
     if (error.is_ok()) {
       return zx::error(**error);
     }
 
     // Call the "func" driver symbol.
-    auto func = driver::SymbolValue<void (*)()>(start_args->symbols(), "func");
+    auto func = driver::SymbolValue<void (*)()>(*start_args, "func");
     if (func.is_ok()) {
       (*func)();
     }
 
     // Set the "dispatcher" driver symbol.
-    auto dispatcher =
-        driver::SymbolValue<async_dispatcher_t**>(start_args->symbols(), "dispatcher");
+    auto dispatcher = driver::SymbolValue<async_dispatcher_t**>(*start_args, "dispatcher");
     if (dispatcher.is_ok()) {
       **dispatcher = dispatcher_;
     }

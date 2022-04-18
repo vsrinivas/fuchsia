@@ -13,9 +13,12 @@
 namespace driver {
 
 template <typename T>
-zx::status<T> SymbolValue(
-    const fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol>& symbols,
-    std::string_view name) {
+zx::status<T> SymbolValue(const fuchsia_driver_framework::wire::DriverStartArgs& args,
+                          std::string_view name) {
+  if (!args.has_symbols()) {
+    return zx::error(ZX_ERR_NOT_FOUND);
+  }
+  const fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol>& symbols = args.symbols();
   static_assert(sizeof(T) == sizeof(zx_vaddr_t), "T must match zx_vaddr_t in size");
   for (auto& symbol : symbols) {
     if (std::equal(name.begin(), name.end(), symbol.name().begin())) {
@@ -28,9 +31,9 @@ zx::status<T> SymbolValue(
 }
 
 template <typename T>
-T GetSymbol(const fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol>& symbols,
-            std::string_view name, T default_value = nullptr) {
-  auto value = driver::SymbolValue<T>(symbols, name);
+T GetSymbol(const fuchsia_driver_framework::wire::DriverStartArgs& args, std::string_view name,
+            T default_value = nullptr) {
+  auto value = driver::SymbolValue<T>(args, name);
   return value.is_ok() ? *value : default_value;
 }
 

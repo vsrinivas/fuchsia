@@ -95,12 +95,10 @@ zx::status<std::unique_ptr<Driver>> Driver::Start(fdf::wire::DriverStartArgs& st
                                                   async_dispatcher_t* dispatcher,
                                                   fidl::WireSharedClient<fdf::Node> node,
                                                   driver::Namespace ns, driver::Logger logger) {
-  fidl::VectorView<fdf::wire::NodeSymbol> symbols;
-  if (start_args.has_symbols()) {
-    symbols = start_args.symbols();
-  }
-  auto compat_device = driver::GetSymbol<const device_t*>(symbols, kDeviceSymbol, &kDefaultDevice);
-  const zx_protocol_device_t* ops = driver::GetSymbol<const zx_protocol_device_t*>(symbols, kOps);
+  auto compat_device =
+      driver::GetSymbol<const device_t*>(start_args, kDeviceSymbol, &kDefaultDevice);
+  const zx_protocol_device_t* ops =
+      driver::GetSymbol<const zx_protocol_device_t*>(start_args, kOps);
 
   // Open the compat driver's binary within the package.
   auto compat = driver::ProgramValue(start_args.program(), "compat");
