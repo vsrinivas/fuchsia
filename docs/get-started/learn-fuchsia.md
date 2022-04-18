@@ -19,7 +19,7 @@ software that will run on Fuchsia. Before you begin building your software, it
 is recommended you learn about the fundamentals of using the Fuchsia SDK.
 
 <a class="button button-primary"
-    href="/docs/get-started/sdk/">Fundamentals for SDK</a>
+    href="/docs/get-started/sdk/learn">Fundamentals for SDK</a>
 
 ## Source tree - Contribute to Fuchsia
 
