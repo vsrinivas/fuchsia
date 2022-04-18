@@ -2,7 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("llcpp") {
+import("//build/cpp/sdk_source_set.gni")
+
+sdk_source_set("llcpp") {
+  category = "experimental"
+  sdk_name = "sys_component_llcpp"
+  include_base = "//sdk"
+
   sources = [
     "constants.h",
     "handlers.h",

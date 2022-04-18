@@ -39,6 +39,7 @@ sdk://fidl/fuchsia.wlan.internal
 sdk://fidl/zx
 sdk://pkg/async
 sdk://pkg/async-cpp
+sdk://pkg/async-default
 sdk://pkg/ddk
 sdk://pkg/ddk-platform-defs
 sdk://pkg/ddktl-experimental-driver-only
@@ -57,7 +58,9 @@ sdk://pkg/fitx-experimental-driver-only
 sdk://pkg/mmio
 sdk://pkg/mmio-ptr
 sdk://pkg/stdcompat
+sdk://pkg/svc
 sdk://pkg/sync
+sdk://pkg/sys_component_llcpp
 sdk://pkg/syslog-headers
 sdk://pkg/syslog_structured_backend
 sdk://pkg/trace

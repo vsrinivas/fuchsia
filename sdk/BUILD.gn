@@ -606,6 +606,7 @@ sdk("ddk") {
     ":ddk_host_tools",
     "//sdk/lib/driver_runtime:driver_runtime_cpp_sdk",
     "//sdk/lib/driver_runtime:driver_runtime_sdk",
+    "//sdk/lib/sys/component/llcpp:llcpp_sdk",
     "//src/devices/lib/driver2:llcpp_sdk",
     "//src/devices/lib/mmio:mmio_sdk",
 
