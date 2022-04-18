@@ -634,9 +634,9 @@ mod test {
     async fn test_end_to_end_tuf() {
         let manager = RepositoryManager::new();
         let tempdir = tempfile::tempdir().unwrap();
-        let root = tempdir.path().join("artifact_store");
+        let root = tempdir.path().join("artifact-store");
         let repo =
-            make_writable_empty_repository("artifact_store", root.clone().try_into().unwrap())
+            make_writable_empty_repository("artifact-store", root.clone().try_into().unwrap())
                 .await
                 .unwrap();
         let out_filename = tempdir.path().join("artifact_lock.json");
@@ -659,7 +659,7 @@ mod test {
         // Run the server in the background.
         let task = fasync::Task::local(server_fut);
 
-        let tuf_repo_url = server.local_url() + "/artifact_store";
+        let tuf_repo_url = server.local_url() + "/artifact-store";
 
         // write artifact_groups.json to server.
         let tuf_dir = root.join("repository").join("targets/");

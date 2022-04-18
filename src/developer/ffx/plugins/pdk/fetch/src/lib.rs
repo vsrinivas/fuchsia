@@ -329,7 +329,7 @@ mod test {
         let tempdir = tempfile::tempdir().unwrap();
         let root = tempdir.path().join("artifact_store");
         let repo =
-            make_writable_empty_repository("artifact_store", root.clone().try_into().unwrap())
+            make_writable_empty_repository("artifact-store", root.clone().try_into().unwrap())
                 .await
                 .unwrap();
 
@@ -352,7 +352,7 @@ mod test {
         // Run the server in the background.
         let task = fasync::Task::local(server_fut);
 
-        let blob_url = server.local_url() + "/artifact_store/blobs";
+        let blob_url = server.local_url() + "/artifact-store/blobs";
 
         let artifact_lock_path = tempdir.path().join("artifact_lock.json");
         create_artifact_lock(artifact_lock_path.clone(), blob_url.clone());
@@ -386,9 +386,9 @@ mod test {
         let manager = RepositoryManager::new();
 
         let tempdir = tempfile::tempdir().unwrap();
-        let root = tempdir.path().join("artifact_store");
+        let root = tempdir.path().join("artifact-store");
         let repo =
-            make_writable_empty_repository("artifact_store", root.clone().try_into().unwrap())
+            make_writable_empty_repository("artifact-store", root.clone().try_into().unwrap())
                 .await
                 .unwrap();
 
@@ -411,7 +411,7 @@ mod test {
         // Run the server in the background.
         let task = fasync::Task::local(server_fut);
 
-        let blob_url = server.local_url() + "/artifact_store/blobs";
+        let blob_url = server.local_url() + "/artifact-store/blobs";
 
         let artifact_lock_path = tempdir.path().join("artifact_lock.json");
         create_artifact_lock(artifact_lock_path.clone(), blob_url.clone());
@@ -442,9 +442,9 @@ mod test {
         let manager = RepositoryManager::new();
 
         let tempdir = tempfile::tempdir().unwrap();
-        let root = tempdir.path().join("artifact_store");
+        let root = tempdir.path().join("artifact-store");
         let repo =
-            make_writable_empty_repository("artifact_store", root.clone().try_into().unwrap())
+            make_writable_empty_repository("artifact-store", root.clone().try_into().unwrap())
                 .await
                 .unwrap();
 
@@ -467,7 +467,7 @@ mod test {
         // Run the server in the background.
         let task = fasync::Task::local(server_fut);
 
-        let blob_url = server.local_url() + "/artifact_store/blobs";
+        let blob_url = server.local_url() + "/artifact-store/blobs";
 
         let artifact_lock_path = tempdir.path().join("artifact_lock.json");
         create_artifact_lock(artifact_lock_path.clone(), blob_url.clone());

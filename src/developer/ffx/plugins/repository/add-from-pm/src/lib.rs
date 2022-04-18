@@ -4,16 +4,22 @@
 
 use {
     anyhow::{Context, Result},
-    errors::ffx_bail,
+    errors::{ffx_bail, ffx_error},
     ffx_core::ffx_plugin,
     ffx_repository_add_from_pm_args::AddFromPmCommand,
     fidl_fuchsia_developer_ffx::RepositoryRegistryProxy,
     fidl_fuchsia_developer_ffx_ext::{RepositoryError, RepositorySpec},
+    fuchsia_url::pkg_url::RepoUrl,
     std::convert::TryInto,
 };
 
 #[ffx_plugin(RepositoryRegistryProxy = "daemon::protocol")]
 pub async fn add_from_pm(cmd: AddFromPmCommand, repos: RepositoryRegistryProxy) -> Result<()> {
+    // Validate that we can construct a valid repository url from the name.
+    let repo_url = RepoUrl::new(cmd.repository.to_string())
+        .map_err(|err| ffx_error!("invalid repository name for {:?}: {}", cmd.repository, err))?;
+    let repo_name = repo_url.host();
+
     let full_path = cmd
         .pm_repo_path
         .canonicalize()
@@ -21,19 +27,23 @@ pub async fn add_from_pm(cmd: AddFromPmCommand, repos: RepositoryRegistryProxy) 
 
     let repo_spec = RepositorySpec::Pm { path: full_path.try_into()? };
 
-    match repos.add_repository(&cmd.repository, &mut repo_spec.into()).await? {
-        Ok(()) => Ok(()),
+    match repos.add_repository(repo_name, &mut repo_spec.into()).await? {
+        Ok(()) => {
+            println!("added repository {}", repo_name);
+            Ok(())
+        }
         Err(err) => {
             let err = RepositoryError::from(err);
-            ffx_bail!("Adding repository {:} failed: {}", cmd.repository, err);
+            ffx_bail!("Adding repository {} failed: {}", repo_name, err);
         }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use {
+        super::*,
+        assert_matches::assert_matches,
         fidl_fuchsia_developer_ffx::{PmRepositorySpec, RepositoryRegistryRequest, RepositorySpec},
         fuchsia_async as fasync,
         futures::channel::oneshot::channel,
@@ -55,7 +65,7 @@ mod test {
 
         add_from_pm(
             AddFromPmCommand {
-                repository: "MyRepo".to_owned(),
+                repository: "my-repo".to_owned(),
                 pm_repo_path: tmp.path().to_path_buf(),
             },
             repos,
@@ -67,12 +77,34 @@ mod test {
         assert_eq!(
             got,
             (
-                "MyRepo".to_owned(),
+                "my-repo".to_owned(),
                 RepositorySpec::Pm(PmRepositorySpec {
                     path: Some(tmp.path().canonicalize().unwrap().to_str().unwrap().to_string()),
                     ..PmRepositorySpec::EMPTY
                 })
             )
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_add_from_pm_rejects_invalid_names() {
+        let tmp = tempfile::tempdir().unwrap();
+
+        let repos =
+            setup_fake_repos(move |req| panic!("should not receive any requests: {:?}", req));
+
+        for name in ["", "my_repo", "MyRepo", "😀"] {
+            assert_matches!(
+                add_from_pm(
+                    AddFromPmCommand {
+                        repository: name.to_owned(),
+                        pm_repo_path: tmp.path().to_path_buf(),
+                    },
+                    repos.clone(),
+                )
+                .await,
+                Err(_)
+            );
+        }
     }
 }

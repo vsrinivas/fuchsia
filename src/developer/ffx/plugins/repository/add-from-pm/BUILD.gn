@@ -11,9 +11,13 @@ ffx_plugin("ffx_repository_add_from_pm") {
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//src/developer/ffx/lib/fidl-fuchsia-developer-ffx-ext",
+    "//src/lib/fuchsia-url",
     "//third_party/rust_crates:futures",
   ]
-  test_deps = [ "//third_party/rust_crates:tempfile" ]
+  test_deps = [
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:tempfile",
+  ]
 
   args_sources = [ "src/args.rs" ]
 

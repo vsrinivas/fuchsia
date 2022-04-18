@@ -12,6 +12,7 @@ use {
     fidl_fuchsia_pkg as pkg,
     fuchsia_archive::AsyncReader,
     fuchsia_pkg::MetaContents,
+    fuchsia_url::pkg_url::RepoUrl,
     futures::{
         future::{join_all, try_join_all},
         io::Cursor,
@@ -22,7 +23,7 @@ use {
     parking_lot::Mutex as SyncMutex,
     serde::{Deserialize, Serialize},
     std::{
-        io,
+        fmt, io,
         sync::{
             atomic::{AtomicUsize, Ordering},
             Arc,
@@ -195,16 +196,30 @@ pub struct Repository {
     >,
 }
 
+impl fmt::Debug for Repository {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Repository")
+            .field("name", &self.name)
+            .field("id", &self.id)
+            .field("backend", &self.backend)
+            .finish_non_exhaustive()
+    }
+}
+
 impl Repository {
     pub async fn new(
         name: &str,
         backend: Box<dyn RepositoryBackend + Send + Sync>,
     ) -> Result<Self, Error> {
+        // Validate that the name can be used as a repo url.
+        let repo_url = RepoUrl::new(name.to_string()).context("creating repository")?;
+        let name = repo_url.host().to_string();
+
         let tuf_repo = backend.get_tuf_repo()?;
         let tuf_client = get_tuf_client(tuf_repo).await?;
 
         Ok(Self {
-            name: name.to_string(),
+            name,
             id: RepositoryId::new(),
             backend,
             client: Arc::new(AsyncMutex::new(tuf_client)),
@@ -627,13 +642,14 @@ pub trait RepositoryBackend: std::fmt::Debug {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use {
         super::*,
         crate::test_utils::{
-            make_pm_repository, make_readonly_empty_repository, repo_key, repo_private_key,
-            PKG1_BIN_HASH, PKG1_HASH, PKG1_LIB_HASH, PKG2_HASH,
+            make_pm_repository, make_readonly_empty_repository, make_repository, repo_key,
+            repo_private_key, PKG1_BIN_HASH, PKG1_HASH, PKG1_LIB_HASH, PKG2_HASH,
         },
+        assert_matches::assert_matches,
         camino::Utf8Path,
         pretty_assertions::assert_eq,
         std::fs::create_dir_all,
@@ -653,6 +669,36 @@ mod test {
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
             .as_secs()
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_constructor_accepts_valid_names() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
+        let metadata_dir = dir.join("metadata");
+        let blobs_dir = dir.join("blobs");
+        make_repository(metadata_dir.as_std_path(), blobs_dir.as_std_path()).await;
+
+        for name in ["fuchsia.com", "my-repository", "hello.there.world"] {
+            let backend = FileSystemRepository::new(metadata_dir.clone(), blobs_dir.clone());
+
+            assert_matches!(Repository::new(name, Box::new(backend)).await, Ok(_))
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_constructor_rejects_invalid_names() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = Utf8Path::from_path(tmp.path()).unwrap();
+        let metadata_dir = dir.join("metadata");
+        let blobs_dir = dir.join("blobs");
+        make_repository(metadata_dir.as_std_path(), blobs_dir.as_std_path()).await;
+
+        for name in ["", "my_repo", "MyRepo", "😀"] {
+            let backend = FileSystemRepository::new(metadata_dir.clone(), blobs_dir.clone());
+
+            assert_matches!(Repository::new(name, Box::new(backend)).await, Err(_))
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

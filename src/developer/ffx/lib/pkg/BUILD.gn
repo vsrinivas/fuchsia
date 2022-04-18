@@ -34,6 +34,7 @@ rustc_library("pkg") {
     "//src/developer/ffx/lib/timeout:lib",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-hyper",
+    "//src/lib/fuchsia-url",
     "//src/lib/http-sse:http_sse",
     "//src/sys/pkg/lib/far/rust:fuchsia-archive",
     "//src/sys/pkg/lib/fuchsia-merkle",
