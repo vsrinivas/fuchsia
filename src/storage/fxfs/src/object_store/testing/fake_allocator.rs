@@ -7,7 +7,6 @@ use {
         filesystem::{ApplyContext, Mutations},
         object_store::{
             allocator::{Allocator, AllocatorInfo, Reservation, ReservationOwner},
-            journal::checksum_list::ChecksumList,
             transaction::{AssocObj, Mutation, Transaction},
         },
     },
@@ -110,15 +109,6 @@ impl Allocator for FakeAllocator {
 
     fn get_used_bytes(&self) -> u64 {
         self.get_allocated_bytes()
-    }
-
-    async fn validate_mutation(
-        &self,
-        _journal_offset: u64,
-        _mutation: &Mutation,
-        _checksum_list: &mut ChecksumList,
-    ) -> Result<bool, Error> {
-        Ok(true)
     }
 }
 

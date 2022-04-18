@@ -29,9 +29,9 @@ use {
         metrics::{traits::Metric as _, UintMetric},
         object_handle::ObjectHandle,
         object_store::{
-            allocator::{Allocator, SimpleAllocator},
+            allocator::{Allocator, AllocatorItem, AllocatorKey, AllocatorValue, SimpleAllocator},
             constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
-            extent_record::{ExtentKey, DEFAULT_DATA_ATTRIBUTE_ID},
+            extent_record::{Checksums, ExtentKey, ExtentValue, DEFAULT_DATA_ATTRIBUTE_ID},
             graveyard::Graveyard,
             journal::{
                 checksum_list::ChecksumList,
@@ -41,13 +41,14 @@ use {
                 writer::JournalWriter,
             },
             object_manager::ObjectManager,
-            object_record::{AttributeKey, ObjectKey, ObjectKeyData},
+            object_record::{AttributeKey, ObjectKey, ObjectKeyData, ObjectValue},
             transaction::{
-                Mutation, ObjectStoreMutation, Options, Transaction, TxnMutation,
-                TRANSACTION_MAX_JOURNAL_USAGE,
+                AllocatorMutation, Mutation, ObjectStoreMutation, Options, Transaction,
+                TxnMutation, TRANSACTION_MAX_JOURNAL_USAGE,
             },
             HandleOptions, Item, LockState, NewChildStoreOptions, ObjectStore, StoreObjectHandle,
         },
+        range::RangeExt,
         round::{round_down, round_up},
         serialized_types::{Version, Versioned, LATEST_VERSION},
         trace_duration,
@@ -62,6 +63,7 @@ use {
     static_assertions::const_assert,
     std::{
         clone::Clone,
+        convert::TryFrom as _,
         convert::TryInto as _,
         ops::Bound,
         sync::{
@@ -299,6 +301,115 @@ impl Journal {
         self.inner.lock().unwrap().super_block.super_block_journal_file_offset
     }
 
+    /// Used during replay to validate a mutation.  This should return false if the mutation is not
+    /// valid and should not be applied.  This could be for benign reasons: e.g. the device flushed
+    /// data out-of-order, or because of a malicious actor.
+    fn validate_mutation(&self, mutation: &Mutation) -> Result<bool, Error> {
+        match mutation {
+            Mutation::ObjectStore(ObjectStoreMutation {
+                item:
+                    Item {
+                        key:
+                            ObjectKey {
+                                data:
+                                    ObjectKeyData::Attribute(
+                                        _,
+                                        AttributeKey::Extent(ExtentKey { range }),
+                                    ),
+                                ..
+                            },
+                        value:
+                            ObjectValue::Extent(ExtentValue::Some {
+                                checksums: Checksums::Fletcher(checksums),
+                                ..
+                            }),
+                        ..
+                    },
+                ..
+            }) => {
+                if checksums.len() == 0 {
+                    return Ok(false);
+                }
+                let len = if let Ok(l) = usize::try_from(range.length()?) {
+                    l
+                } else {
+                    return Ok(false);
+                };
+                if len % checksums.len() != 0 {
+                    return Ok(false);
+                }
+                if (len / checksums.len()) % 4 != 0 {
+                    return Ok(false);
+                }
+            }
+            Mutation::ObjectStore(_) => {}
+            Mutation::EncryptedObjectStore(_) => {}
+            Mutation::Allocator(AllocatorMutation(AllocatorItem {
+                key: AllocatorKey { device_range },
+                ..
+            })) => {
+                if !device_range.valid() {
+                    return Ok(false);
+                }
+            }
+            Mutation::BeginFlush => {}
+            Mutation::EndFlush => {}
+            Mutation::UpdateBorrowed(_) => {}
+        }
+        Ok(true)
+    }
+
+    fn update_checksum_list(
+        &self,
+        journal_offset: u64,
+        mutation: &Mutation,
+        checksum_list: &mut ChecksumList,
+    ) -> Result<(), Error> {
+        match mutation {
+            Mutation::ObjectStore(ObjectStoreMutation {
+                item:
+                    Item {
+                        key:
+                            ObjectKey {
+                                data:
+                                    ObjectKeyData::Attribute(
+                                        _,
+                                        AttributeKey::Extent(ExtentKey { range }),
+                                    ),
+                                ..
+                            },
+                        value:
+                            ObjectValue::Extent(ExtentValue::Some {
+                                device_offset,
+                                checksums: Checksums::Fletcher(checksums),
+                                ..
+                            }),
+                        ..
+                    },
+                ..
+            }) => {
+                checksum_list.push(
+                    journal_offset,
+                    *device_offset..*device_offset + range.length()?,
+                    checksums,
+                );
+            }
+            Mutation::ObjectStore(_) => {}
+            Mutation::Allocator(AllocatorMutation(AllocatorItem {
+                key: AllocatorKey { device_range },
+                value,
+                ..
+            })) => match value {
+                AllocatorValue::None => {
+                    checksum_list.mark_deallocated(journal_offset, device_range.clone());
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+        Ok(())
+    }
+
     /// Reads the latest super-block, and then replays journaled records.
     pub async fn replay(
         &self,
@@ -497,21 +608,13 @@ impl Journal {
         let mut checksum_list = ChecksumList::new(device_flushed_offset);
         let mut valid_to = reader.journal_file_checkpoint().file_offset;
         for (checkpoint, mutations, _) in &transactions {
-            for (object_id, mutation) in mutations {
-                if !self
-                    .objects
-                    .validate_mutation(
-                        checkpoint.file_offset,
-                        *object_id,
-                        &mutation,
-                        &mut checksum_list,
-                    )
-                    .await?
-                {
+            for (_object_id, mutation) in mutations {
+                if !self.validate_mutation(&mutation)? {
                     log::info!("Stopping replay at bad mutation: {:?}", mutation);
                     valid_to = checkpoint.file_offset;
                     break;
                 }
+                self.update_checksum_list(checkpoint.file_offset, &mutation, &mut checksum_list)?;
             }
         }
 

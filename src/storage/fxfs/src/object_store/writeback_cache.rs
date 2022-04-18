@@ -598,8 +598,7 @@ mod tests {
             filesystem::Mutations,
             object_store::{
                 allocator::{Allocator, AllocatorInfo, Reservation, ReservationOwner},
-                journal::checksum_list::ChecksumList,
-                transaction::{Mutation, Transaction},
+                transaction::Transaction,
             },
             round::round_up,
             testing::fake_object::{FakeObject, FakeObjectHandle},
@@ -752,15 +751,6 @@ mod tests {
 
         fn get_used_bytes(&self) -> u64 {
             unreachable!();
-        }
-
-        async fn validate_mutation(
-            &self,
-            _journal_offset: u64,
-            _mutation: &Mutation,
-            _checksum_list: &mut ChecksumList,
-        ) -> Result<bool, Error> {
-            unreachable!()
         }
     }
 

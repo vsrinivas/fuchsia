@@ -41,9 +41,9 @@ use {
         metrics::{traits::Metric, StringMetric, UintMetric},
         object_handle::{ObjectHandle, ObjectHandleExt, WriteObjectHandle, INVALID_OBJECT_ID},
         object_store::{
-            extent_record::{Checksums, DEFAULT_DATA_ATTRIBUTE_ID},
+            extent_record::DEFAULT_DATA_ATTRIBUTE_ID,
             graveyard::Graveyard,
-            journal::{checksum_list::ChecksumList, JournalCheckpoint},
+            journal::JournalCheckpoint,
             object_manager::{ObjectManager, ReservationUpdate},
             object_record::{AttributeKey, EncryptionKeys, ObjectKeyData, ObjectKind},
             store_object_handle::DirectWriter,
@@ -52,7 +52,6 @@ use {
                 Options, Transaction,
             },
         },
-        range::RangeExt,
         serialized_types::{Versioned, VersionedLatest},
         trace_duration,
     },
@@ -63,7 +62,6 @@ use {
     serde::{Deserialize, Serialize},
     std::{
         collections::VecDeque,
-        convert::TryFrom,
         ops::Bound,
         sync::{
             atomic::{AtomicBool, Ordering},
@@ -1110,59 +1108,6 @@ impl ObjectStore {
         if object_id > *last_object_id {
             *last_object_id = object_id;
         }
-    }
-
-    async fn validate_mutation(
-        journal_offset: u64,
-        mutation: &Mutation,
-        checksum_list: &mut ChecksumList,
-    ) -> Result<bool, Error> {
-        match mutation {
-            Mutation::ObjectStore(ObjectStoreMutation {
-                item:
-                    Item {
-                        key:
-                            ObjectKey {
-                                object_id: _object_id,
-                                data:
-                                    ObjectKeyData::Attribute(
-                                        _attribute_id,
-                                        AttributeKey::Extent(ExtentKey { range }),
-                                    ),
-                            },
-                        value:
-                            ObjectValue::Extent(ExtentValue::Some {
-                                device_offset,
-                                checksums: Checksums::Fletcher(checksums),
-                                key_id: _key_id,
-                            }),
-                        sequence: _sequence,
-                    },
-                ..
-            }) => {
-                if checksums.len() == 0 {
-                    return Ok(false);
-                }
-                let len = if let Ok(l) = usize::try_from(range.length()?) {
-                    l
-                } else {
-                    return Ok(false);
-                };
-                if len % checksums.len() != 0 {
-                    return Ok(false);
-                }
-                if (len / checksums.len()) % 4 != 0 {
-                    return Ok(false);
-                }
-                checksum_list.push(
-                    journal_offset,
-                    *device_offset..*device_offset + range.length()?,
-                    checksums,
-                );
-            }
-            _ => {}
-        }
-        Ok(true)
     }
 
     /// Adds the specified object to the graveyard.

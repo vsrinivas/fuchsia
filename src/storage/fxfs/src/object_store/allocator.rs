@@ -22,7 +22,6 @@ use {
         object_handle::{ObjectHandle, ObjectHandleExt, INVALID_OBJECT_ID},
         object_store::{
             constants::MAX_SERIALIZED_RECORD_SIZE,
-            journal::checksum_list::ChecksumList,
             object_manager::ReservationUpdate,
             store_object_handle::DirectWriter,
             transaction::{AllocatorMutation, AssocObj, LockKey, Mutation, Options, Transaction},
@@ -114,16 +113,6 @@ pub trait Allocator: ReservationOwner {
 
     /// Returns the number of allocated and reserved bytes.
     fn get_used_bytes(&self) -> u64;
-
-    /// Used during replay to validate a mutation.  This should return false if the mutation is not
-    /// valid and should not be applied.  This could be for benign reasons: e.g. the device flushed
-    /// data out-of-order, or because of a malicious actor.
-    async fn validate_mutation(
-        &self,
-        journal_offset: u64,
-        mutation: &Mutation,
-        checksum_list: &mut ChecksumList,
-    ) -> Result<bool, Error>;
 }
 
 /// This trait is implemented by things that own reservations.
@@ -870,33 +859,6 @@ impl Allocator for SimpleAllocator {
     fn get_used_bytes(&self) -> u64 {
         let inner = self.inner.lock().unwrap();
         inner.allocated_bytes as u64 + inner.reserved_bytes
-    }
-
-    async fn validate_mutation(
-        &self,
-        journal_offset: u64,
-        mutation: &Mutation,
-        checksum_list: &mut ChecksumList,
-    ) -> Result<bool, Error> {
-        match mutation {
-            Mutation::Allocator(AllocatorMutation(AllocatorItem {
-                key: AllocatorKey { device_range },
-                value,
-                ..
-            })) => {
-                if !device_range.valid() {
-                    return Ok(false);
-                }
-                match value {
-                    AllocatorValue::None => {
-                        checksum_list.mark_deallocated(journal_offset, device_range.clone());
-                    }
-                    _ => {}
-                }
-            }
-            _ => {}
-        }
-        Ok(true)
     }
 }
 
