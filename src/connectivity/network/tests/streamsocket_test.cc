@@ -577,7 +577,7 @@ TEST_P(StopListenWhileConnect, Shutdown) {
   });
 }
 
-INSTANTIATE_TEST_SUITE_P(NetStreamTest, StopListenWhileConnect, testing::Values(ALL_IO_METHOD_OPS),
+INSTANTIATE_TEST_SUITE_P(NetStreamTest, StopListenWhileConnect, testing::ValuesIn(kAllIOMethods),
                          [](const testing::TestParamInfo<IOMethod>& info) {
                            return info.param.IOMethodToString();
                          });
@@ -770,7 +770,7 @@ std::string ConnectingIOParamsToString(const testing::TestParamInfo<ConnectingIO
 }
 
 INSTANTIATE_TEST_SUITE_P(NetStreamTest, ConnectingIOTest,
-                         testing::Combine(testing::Values(ALL_IO_METHOD_OPS),
+                         testing::Combine(testing::ValuesIn(kAllIOMethods),
                                           testing::Values(false, true)),
                          ConnectingIOParamsToString);
 
@@ -1490,7 +1490,7 @@ std::string BlockedIOParamsToString(const testing::TestParamInfo<BlockedIOParams
 }
 
 INSTANTIATE_TEST_SUITE_P(NetStreamTest, BlockedIOTest,
-                         testing::Combine(testing::Values(ALL_IO_METHOD_OPS),
+                         testing::Combine(testing::ValuesIn(kAllIOMethods),
                                           testing::Values(CloseTarget::CLIENT, CloseTarget::SERVER),
                                           testing::Values(false, true)),
                          BlockedIOParamsToString);
@@ -2254,7 +2254,7 @@ TEST_P(IOMethodTest, NullptrFaultSTREAM) {
   DoNullPtrIO(client, server, GetParam(), false);
 }
 
-INSTANTIATE_TEST_SUITE_P(IOMethodTests, IOMethodTest, testing::Values(ALL_IO_METHOD_OPS),
+INSTANTIATE_TEST_SUITE_P(IOMethodTests, IOMethodTest, testing::ValuesIn(kAllIOMethods),
                          [](const auto info) { return info.param.IOMethodToString(); });
 
 }  // namespace

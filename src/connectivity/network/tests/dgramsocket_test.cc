@@ -271,7 +271,7 @@ TEST_P(IOMethodTest, NullptrFaultDGRAM) {
   DoNullPtrIO(fd, fd, GetParam(), true);
 }
 
-INSTANTIATE_TEST_SUITE_P(IOMethodTests, IOMethodTest, testing::Values(ALL_IO_METHOD_OPS),
+INSTANTIATE_TEST_SUITE_P(IOMethodTests, IOMethodTest, testing::ValuesIn(kAllIOMethods),
                          [](const auto info) { return info.param.IOMethodToString(); });
 
 class IOReadingMethodTest : public testing::TestWithParam<IOMethod> {};
@@ -337,7 +337,7 @@ TEST_P(IOReadingMethodTest, DatagramSocketErrorWhileBlocked) {
 }
 
 INSTANTIATE_TEST_SUITE_P(IOReadingMethodTests, IOReadingMethodTest,
-                         testing::Values(RECV_IO_METHOD_OPS),
+                         testing::ValuesIn(kRecvIOMethods),
                          [](const testing::TestParamInfo<IOMethod>& info) {
                            return info.param.IOMethodToString();
                          });
@@ -462,7 +462,7 @@ std::string NonBlockingOptionIOParamsToString(
 }
 
 INSTANTIATE_TEST_SUITE_P(NetDatagramTest, NonBlockingOptionIOTest,
-                         testing::Combine(testing::Values(ALL_IO_METHOD_OPS),
+                         testing::Combine(testing::ValuesIn(kAllIOMethods),
                                           testing::Values(false, true)),
                          NonBlockingOptionIOParamsToString);
 

@@ -50,14 +50,6 @@ bool IsRoot();
 // Assumes that `fd` was previously connected to `peer_fd`.
 void fill_stream_send_buf(int fd, int peer_fd, ssize_t* out_bytes_written);
 
-#define RECV_IO_METHOD_OPS                                                             \
-  IOMethod::Op::READ, IOMethod::Op::READV, IOMethod::Op::RECV, IOMethod::Op::RECVFROM, \
-      IOMethod::Op::RECVMSG
-
-#define ALL_IO_METHOD_OPS                                                            \
-  RECV_IO_METHOD_OPS, IOMethod::Op::WRITE, IOMethod::Op::WRITEV, IOMethod::Op::SEND, \
-      IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG
-
 class IOMethod {
  public:
   enum class Op {
@@ -73,7 +65,7 @@ class IOMethod {
     SENDMSG,
   };
 
-  explicit IOMethod(Op op) : op_(op) {}
+  constexpr IOMethod(Op op) : op_(op) {}
   Op Op() const { return op_; }
 
   ssize_t ExecuteIO(int fd, char* buf, size_t len) const;
@@ -107,6 +99,17 @@ class IOMethod {
 
  private:
   const enum Op op_;
+};
+
+constexpr std::initializer_list<IOMethod> kRecvIOMethods = {
+    IOMethod::Op::READ,     IOMethod::Op::READV,   IOMethod::Op::RECV,
+    IOMethod::Op::RECVFROM, IOMethod::Op::RECVMSG,
+};
+
+constexpr std::initializer_list<IOMethod> kAllIOMethods = {
+    IOMethod::Op::READ,    IOMethod::Op::READV,   IOMethod::Op::RECV,   IOMethod::Op::RECVFROM,
+    IOMethod::Op::RECVMSG, IOMethod::Op::WRITE,   IOMethod::Op::WRITEV, IOMethod::Op::SEND,
+    IOMethod::Op::SENDTO,  IOMethod::Op::SENDMSG,
 };
 
 // Performs I/O between `fd` and `other` using `io_method` with a null buffer.
