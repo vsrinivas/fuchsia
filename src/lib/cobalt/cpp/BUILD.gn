@@ -22,6 +22,18 @@ source_set("cobalt_logger") {
     "//src/lib/backoff",
     "//src/lib/fsl",
   ]
+
+  # This library is deprecated, please do not add new elements to this list
+  visibility = [
+    "//src/lib/cobalt/*",
+    "//src/lib/metrics_buffer",
+    "//src/media/audio/audio_core:audio_core_lib",
+    "//src/media/lib/codec_impl",
+    "//src/modular/bin/basemgr/cobalt",
+    "//src/storage/minfs",
+    "//src/ui/scenic/bin",
+    "//src/ui/scenic/lib/scheduling:frame_scheduler",
+  ]
 }
 
 source_set("unittests") {

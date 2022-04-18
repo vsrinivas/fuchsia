@@ -18,6 +18,15 @@ source_set("metrics_buffer") {
     # Only for <ddk/debug.h>'s severity levels.
     "//src/lib/ddk",
   ]
+
+  # //src/lib/cobalt/cpp:cobalt_logger is deprecated, so no new users should be added to this list.
+  visibility = [
+    ":metrics_buffer_unittests",
+    "//src/devices/sysmem/drivers/sysmem:sysmem_common_srcs",
+    "//src/lib",
+    "//src/media/drivers/amlogic_decoder:sources",
+    "//src/media/lib/codec_impl",
+  ]
 }
 
 executable("metrics_buffer_unittests") {

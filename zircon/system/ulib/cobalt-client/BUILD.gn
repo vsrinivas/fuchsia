@@ -71,6 +71,21 @@ source_set("cobalt-metrics") {
 }
 
 group("cobalt-client") {
+  # This library is deprecated, please do not add new elements to this list.
+  visibility = [
+    "//src/lib/storage/vfs/cpp/journal",
+    "//src/lib/storage/vfs/cpp/journal:fuzz-utils",
+    "//src/lib/storage/vfs/cpp/journal:journal-unit",
+    "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
+    "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
+    "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt-test",
+    "//src/lib/storage/vfs/cpp/metrics:metrics-composite-latency-event",
+    "//src/lib/storage/vfs/cpp/metrics:metrics-composite-latency-event",
+    "//src/lib/storage/vfs/cpp/metrics:metrics-composite-latency-event-test",
+    "//src/storage/fshost:fshost_test",
+    "//src/storage/fshost:metrics_cobalt",
+  ]
+
   public_deps = [
     ":cobalt-collector",
     ":cobalt-metrics",

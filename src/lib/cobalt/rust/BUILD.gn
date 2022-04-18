@@ -33,4 +33,26 @@ rustc_library("fuchsia-cobalt") {
     "src/metric_event_builder.rs",
     "src/sender.rs",
   ]
+
+  # This library is deprecated, do not add new elements to this list.
+  visibility = [
+    "//src/cobalt/bin/testing/mock_cobalt/*",
+    "//src/connectivity/bluetooth/lib/bt-a2dp/*",
+    "//src/connectivity/bluetooth/profiles/bt-a2dp/*",
+    "//src/connectivity/location/emergency/*",
+    "//src/connectivity/wlan/wlancfg/*",
+    "//src/connectivity/wlan/wlanstack/*",
+    "//src/lib/cobalt/*",
+    "//src/power/power-manager/*",
+    "//src/sys/pkg/bin/omaha-client/*",
+    "//src/sys/pkg/bin/pkg-cache/*",
+    "//src/sys/pkg/bin/pkg-resolver/*",
+    "//src/sys/pkg/bin/system-updater/*",
+    "//src/sys/time/httpsdate_time_source/*",
+    "//src/sys/time/timekeeper/*",
+    "//src/sys/time/timekeeper_integration/*",
+    "//vendor/google/bin/device_property/*",
+    "//vendor/google/bin/flash_ts/*",
+    "//vendor/google/bin/flash_ts/tests/*",
+  ]
 }
