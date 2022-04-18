@@ -100,7 +100,7 @@ typedef struct radix_sort_vk_sort_devaddr_info
   radix_sort_vk_buffer_info_t   keyvals_even;
   VkDeviceAddress               keyvals_odd;
   radix_sort_vk_buffer_info_t   internal;
-  radix_sort_vk_fill_buffer_pfn fill_buffer;
+  radix_sort_vk_fill_buffer_pfn fill_buffer_pfn;
 } radix_sort_vk_sort_devaddr_info_t;
 
 void
@@ -125,7 +125,7 @@ typedef struct radix_sort_vk_sort_indirect_devaddr_info
   VkDeviceAddress                     keyvals_odd;
   VkDeviceAddress                     internal;
   radix_sort_vk_buffer_info_t         indirect;
-  radix_sort_vk_dispatch_indirect_pfn dispatch_indirect;
+  radix_sort_vk_dispatch_indirect_pfn dispatch_indirect_pfn;
 } radix_sort_vk_sort_indirect_devaddr_info_t;
 
 void

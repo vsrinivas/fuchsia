@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -156,6 +157,7 @@ radix_sort_vk_get_memory_requirements(radix_sort_vk_t const *               rs,
       // Keyvals
       //
 
+      //
       // Round up to the scatter block size.
       //
       // Then round up to the histogram block size.
@@ -604,6 +606,49 @@ rs_ext_cmd_write_timestamp(struct radix_sort_vk_ext_timestamps * ext_timestamps,
 #endif
 
 //
+// Validate alignment of buffer device addresses.
+//
+// Note that the size of the extents can also be validated when using the
+// VkDescriptorBufferInfo sorter.
+//
+#ifndef NDEBUG
+
+static void
+radix_sort_vk_sort_validate_info(radix_sort_vk_t const *                   rs,
+                                 radix_sort_vk_sort_devaddr_info_t const * info)
+{
+  assert(info->count > 0);
+
+  radix_sort_vk_memory_requirements_t mr;
+
+  radix_sort_vk_get_memory_requirements(rs, info->count, &mr);
+
+  // clang-format off
+  assert((info->keyvals_even.devaddr & (mr.keyvals_alignment  - 1)) == 0);
+  assert((info->keyvals_odd          & (mr.keyvals_alignment  - 1)) == 0);
+  assert((info->internal.devaddr     & (mr.internal_alignment - 1)) == 0);
+  // clang-format on
+}
+
+static void
+radix_sort_vk_sort_indirect_validate_info(radix_sort_vk_t const *                            rs,
+                                          radix_sort_vk_sort_indirect_devaddr_info_t const * info)
+{
+  radix_sort_vk_memory_requirements_t mr;
+
+  radix_sort_vk_get_memory_requirements(rs, 1 << 20, &mr);
+
+  // clang-format off
+  assert((info->count        & (sizeof(uint32_t)      - 1)) == 0);
+  assert((info->keyvals_even & (mr.keyvals_alignment  - 1)) == 0);
+  assert((info->keyvals_odd  & (mr.keyvals_alignment  - 1)) == 0);
+  assert((info->internal     & (mr.internal_alignment - 1)) == 0);
+  // clang-format on
+}
+
+#endif
+
+//
 //
 //
 
@@ -636,6 +681,10 @@ radix_sort_vk_sort_devaddr(radix_sort_vk_t const *                   rs,
 
       return;
     }
+
+#ifndef NDEBUG
+  radix_sort_vk_sort_validate_info(rs, info);
+#endif
 
 #ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
   //
@@ -748,11 +797,11 @@ radix_sort_vk_sort_devaddr(radix_sort_vk_t const *                   rs,
   //
   if (count_ru_histo > info->count)
     {
-      info->fill_buffer(cb,
-                        &info->keyvals_even,
-                        info->count * keyval_bytes,
-                        (count_ru_histo - info->count) * keyval_bytes,
-                        0xFFFFFFFF);
+      info->fill_buffer_pfn(cb,
+                            &info->keyvals_even,
+                            info->count * keyval_bytes,
+                            (count_ru_histo - info->count) * keyval_bytes,
+                            0xFFFFFFFF);
     }
 
   //
@@ -770,11 +819,11 @@ radix_sort_vk_sort_devaddr(radix_sort_vk_t const *                   rs,
 
   VkDeviceSize const fill_base = pass_idx * (RS_RADIX_SIZE * sizeof(uint32_t));
 
-  info->fill_buffer(cb,
-                    &info->internal,
-                    rs->internal.histograms.offset + fill_base,
-                    histo_partition_count * (RS_RADIX_SIZE * sizeof(uint32_t)),
-                    0);
+  info->fill_buffer_pfn(cb,
+                        &info->internal,
+                        rs->internal.histograms.offset + fill_base,
+                        histo_partition_count * (RS_RADIX_SIZE * sizeof(uint32_t)),
+                        0);
 
   ////////////////////////////////////////////////////////////////////////
   //
@@ -964,6 +1013,10 @@ radix_sort_vk_sort_indirect_devaddr(radix_sort_vk_t const *                     
       return;
     }
 
+#ifndef NDEBUG
+  radix_sort_vk_sort_indirect_validate_info(rs, info);
+#endif
+
 #ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
   //
   // Any extensions?
@@ -1102,7 +1155,9 @@ radix_sort_vk_sort_indirect_devaddr(radix_sort_vk_t const *                     
 
     vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, rs->pipelines.named.fill);
 
-    info->dispatch_indirect(cb, &info->indirect, offsetof(struct rs_indirect_info, dispatch.pad));
+    info->dispatch_indirect_pfn(cb,
+                                &info->indirect,
+                                offsetof(struct rs_indirect_info, dispatch.pad));
   }
 
   //
@@ -1127,7 +1182,9 @@ radix_sort_vk_sort_indirect_devaddr(radix_sort_vk_t const *                     
 
     vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, rs->pipelines.named.fill);
 
-    info->dispatch_indirect(cb, &info->indirect, offsetof(struct rs_indirect_info, dispatch.zero));
+    info->dispatch_indirect_pfn(cb,
+                                &info->indirect,
+                                offsetof(struct rs_indirect_info, dispatch.zero));
   }
 
 #ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
@@ -1156,9 +1213,9 @@ radix_sort_vk_sort_indirect_devaddr(radix_sort_vk_t const *                     
 
     vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, rs->pipelines.named.histogram);
 
-    info->dispatch_indirect(cb,
-                            &info->indirect,
-                            offsetof(struct rs_indirect_info, dispatch.histogram));
+    info->dispatch_indirect_pfn(cb,
+                                &info->indirect,
+                                offsetof(struct rs_indirect_info, dispatch.histogram));
   }
 
 #ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
@@ -1230,9 +1287,9 @@ radix_sort_vk_sort_indirect_devaddr(radix_sort_vk_t const *                     
 
     while (true)
       {
-        info->dispatch_indirect(cb,
-                                &info->indirect,
-                                offsetof(struct rs_indirect_info, dispatch.scatter));
+        info->dispatch_indirect_pfn(cb,
+                                    &info->indirect,
+                                    offsetof(struct rs_indirect_info, dispatch.scatter));
 
         //
         // Continue?
@@ -1327,7 +1384,8 @@ radix_sort_vk_sort(radix_sort_vk_t const *           rs,
     .internal     = { .buffer  = info->internal.buffer,
                       .offset  = info->internal.offset,
                       .devaddr = rs_get_devaddr(device, &info->internal), },
-    .fill_buffer  = radix_sort_vk_fill_buffer,
+
+    .fill_buffer_pfn = radix_sort_vk_fill_buffer,
   };
 
   VkDeviceAddress di_keyvals_sorted;
@@ -1361,16 +1419,17 @@ radix_sort_vk_sort_indirect(radix_sort_vk_t const *                    rs,
                             VkDescriptorBufferInfo *                   keyvals_sorted)
 {
   struct radix_sort_vk_sort_indirect_devaddr_info const idi = {
-    .ext               = info->ext,
-    .key_bits          = info->key_bits,
-    .count             = rs_get_devaddr(device, &info->count),
-    .keyvals_even      = rs_get_devaddr(device, &info->keyvals_even),
-    .keyvals_odd       = rs_get_devaddr(device, &info->keyvals_odd),
-    .internal          = rs_get_devaddr(device, &info->internal),
-    .indirect          = { .buffer  = info->indirect.buffer,
-                           .offset  = info->indirect.offset,
-                           .devaddr = rs_get_devaddr(device, &info->indirect) },
-    .dispatch_indirect = radix_sort_vk_dispatch_indirect,
+    .ext          = info->ext,
+    .key_bits     = info->key_bits,
+    .count        = rs_get_devaddr(device, &info->count),
+    .keyvals_even = rs_get_devaddr(device, &info->keyvals_even),
+    .keyvals_odd  = rs_get_devaddr(device, &info->keyvals_odd),
+    .internal     = rs_get_devaddr(device, &info->internal),
+    .indirect     = { .buffer  = info->indirect.buffer,
+                      .offset  = info->indirect.offset,
+                      .devaddr = rs_get_devaddr(device, &info->indirect) },
+
+    .dispatch_indirect_pfn = radix_sort_vk_dispatch_indirect,
   };
 
   VkDeviceAddress idi_keyvals_sorted;
