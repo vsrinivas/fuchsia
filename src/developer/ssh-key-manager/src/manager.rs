@@ -425,7 +425,7 @@ mod tests {
         let sneaky_ref: &'static mut Cursor<Vec<u8>> =
             unsafe { std::mem::transmute(file.get_mut()) };
         let mut txn = Transaction::new(file.lock().await).await.expect("start txn okay");
-        sneaky_ref.write("ssh-rsa this-is-a-new-key".as_bytes()).expect("write ok");
+        sneaky_ref.write_all("ssh-rsa this-is-a-new-key".as_bytes()).expect("write ok");
         // Don't use sender here as we expect this to fail.
         txn.add_key(TEST_KEY.to_owned()).expect("add key ok");
         txn.commit(&sender).await.expect_err("commit fails");
