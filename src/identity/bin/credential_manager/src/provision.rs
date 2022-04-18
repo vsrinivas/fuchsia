@@ -51,3 +51,37 @@ async fn reset_state<HS: HashTreeStorage, PW: PinWeaverProtocol, LT: LookupTable
     hash_tree_storage.store(&hash_tree).map_err(|_| CredentialError::InternalError)?;
     Ok(hash_tree)
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::{
+        hash_tree::MockHashTreeStorage, lookup_table::MockLookupTable,
+        pinweaver::MockPinWeaverProtocol,
+    };
+
+    #[fuchsia::test]
+    async fn test_provision_with_existing_tree() {
+        let pinweaver = MockPinWeaverProtocol::new();
+        let mut lookup_table = MockLookupTable::new();
+        let mut storage = MockHashTreeStorage::new();
+        storage.expect_load().times(1).returning(|| {
+            Ok(HashTree::new(TREE_HEIGHT, CHILDREN_PER_NODE).expect("unable to create hash tree"))
+        });
+        provision(&storage, &mut lookup_table, &pinweaver).await.expect("Unable to load storage");
+    }
+
+    #[fuchsia::test]
+    async fn test_provision_with_no_tree_found() {
+        let mut pinweaver = MockPinWeaverProtocol::new();
+        let mut lookup_table = MockLookupTable::new();
+        let mut storage = MockHashTreeStorage::new();
+        storage.expect_load().times(1).returning(|| Err(HashTreeError::DataStoreNotFound));
+        storage.expect_store().times(1).returning(|_| Ok(()));
+        pinweaver.expect_reset_tree().times(1).returning(|_, _| Ok([0; 32]));
+        lookup_table.expect_reset().times(1).returning(|| Ok(()));
+        provision(&storage, &mut lookup_table, &pinweaver)
+            .await
+            .expect("Unable to create new tree");
+    }
+}

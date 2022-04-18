@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::label_generator::{BitstringLabelGenerator, Label},
-    anyhow::{anyhow, Error},
-    log::error,
-    serde::{Deserialize, Serialize},
-    serde_cbor,
-    sha2::{Digest, Sha256},
-    std::collections::VecDeque,
-    std::fs::File,
-    thiserror::Error,
-};
+use crate::label_generator::{BitstringLabelGenerator, Label};
+use anyhow::{anyhow, Error};
+use log::error;
+use serde::{Deserialize, Serialize};
+use serde_cbor;
+use sha2::{Digest, Sha256};
+use std::collections::VecDeque;
+use std::fs::File;
+use thiserror::Error;
+
+#[cfg(test)]
+use mockall::{automock, predicate::*};
 
 /// An alias for hashes stored in the nodes. For leaf nodes, this will be the
 /// hash of the credential metadata. For inner nodes, this will be the hash of
@@ -213,6 +214,7 @@ impl HashTree {
     }
 }
 
+#[cfg_attr(test, automock)]
 pub trait HashTreeStorage {
     /// Load the hash tree from some internal storage.
     fn load(&self) -> Result<HashTree, HashTreeError>;
