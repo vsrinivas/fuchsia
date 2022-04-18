@@ -633,7 +633,7 @@ DriverRunner::DriverRunner(fidl::ClientEnd<fcomponent::Realm> realm,
                            fidl::ClientEnd<fdf::DriverIndex> driver_index,
                            inspect::Inspector& inspector, async_dispatcher_t* dispatcher)
     : realm_(std::move(realm), dispatcher),
-      driver_index_(std::move(driver_index), dispatcher),
+      driver_index_(std::move(driver_index), dispatcher, this),
       dispatcher_(dispatcher),
       root_node_(std::make_shared<Node>("root", std::vector<Node*>{}, this, dispatcher)) {
   inspector.GetRoot().CreateLazyNode(
@@ -687,20 +687,7 @@ void DriverRunner::ScheduleBaseDriversBinding() {
           return;
         }
 
-        // Clear our stored vector of orphaned nodes, we will repopulate it with the
-        // new orphans.
-        std::vector<std::weak_ptr<Node>> orphaned_nodes = std::move(orphaned_nodes_);
-        orphaned_nodes_ = {};
-
-        for (auto& weak_node : orphaned_nodes) {
-          auto node = weak_node.lock();
-          if (!node) {
-            continue;
-          }
-          fidl::Arena arena;
-          auto args = node->CreateAddArgs(arena);
-          Bind(*node, args);
-        }
+        TryBindAllOrphans();
       });
 }
 
@@ -724,6 +711,12 @@ zx::status<> DriverRunner::StartDriver(Node& node, std::string_view url) {
   }
   driver_args_.emplace(info.koid, node);
   return zx::ok();
+}
+
+void DriverRunner::OnNewDriverAvailable(
+    fidl::WireEvent<fuchsia_driver_framework::DriverIndex::OnNewDriverAvailable>* event) {
+  LOGF(INFO, "Received an OnNewDriverAvailable. Re-binding orphan nodes.");
+  TryBindAllOrphans();
 }
 
 void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& completer) {
@@ -986,6 +979,23 @@ zx::status<std::unique_ptr<DriverHostComponent>> DriverRunner::StartDriverHost()
   auto driver_host =
       std::make_unique<DriverHostComponent>(std::move(*client_end), dispatcher_, &driver_hosts_);
   return zx::ok(std::move(driver_host));
+}
+
+void DriverRunner::TryBindAllOrphans() {
+  // Clear our stored vector of orphaned nodes, we will repopulate it with the
+  // new orphans.
+  std::vector<std::weak_ptr<Node>> orphaned_nodes = std::move(orphaned_nodes_);
+  orphaned_nodes_ = {};
+
+  for (auto& weak_node : orphaned_nodes) {
+    auto node = weak_node.lock();
+    if (!node) {
+      continue;
+    }
+    fidl::Arena arena;
+    auto args = node->CreateAddArgs(arena);
+    Bind(*node, args);
+  }
 }
 
 zx::status<> DriverRunner::CreateComponent(std::string name, Collection collection, std::string url,

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl::endpoints::RequestStream;
+
 use {
     crate::device_group::DeviceGroup,
     crate::match_common::node_to_device_property,
@@ -9,7 +11,9 @@ use {
     anyhow::{self, Context},
     fidl_fuchsia_boot as fboot, fidl_fuchsia_driver_development as fdd,
     fidl_fuchsia_driver_framework as fdf,
-    fidl_fuchsia_driver_framework::{DriverIndexRequest, DriverIndexRequestStream},
+    fidl_fuchsia_driver_framework::{
+        DriverIndexControlHandle, DriverIndexRequest, DriverIndexRequestStream,
+    },
     fidl_fuchsia_driver_registrar as fdr, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_component::server::ServiceFs,
@@ -423,6 +427,7 @@ async fn run_driver_registrar_server(
     indexer: Rc<Indexer>,
     stream: fdr::DriverRegistrarRequestStream,
     universe_resolver: &Option<fidl_fuchsia_pkg::PackageResolverProxy>,
+    control_handles: &RefCell<Vec<DriverIndexControlHandle>>,
 ) -> Result<(), anyhow::Error> {
     stream
         .map(|result| result.context("failed request"))
@@ -439,6 +444,11 @@ async fn run_driver_registrar_server(
                         }
                         Some(resolver) => {
                             let mut result = indexer.register_driver(package_url, resolver).await;
+                            let handles = control_handles.borrow();
+                            for handle in handles.iter() {
+                                // Best effort send. Ignore failures since user can just retry.
+                                let _ = handle.send_on_new_driver_available();
+                            }
                             responder
                                 .send(&mut result)
                                 .or_else(ignore_peer_closed)
@@ -626,6 +636,8 @@ async fn main() -> Result<(), anyhow::Error> {
         }
     }
 
+    let control_handles: RefCell<Vec<DriverIndexControlHandle>> = RefCell::new(std::vec![]);
+
     let index = Rc::new(Indexer::new(drivers, BaseRepo::NotResolved(std::vec![]), require_system));
     let (res1, res2, _) = futures::future::join3(
         async {
@@ -650,14 +662,20 @@ async fn main() -> Result<(), anyhow::Error> {
                     // match on `request` and handle each protocol.
                     match request {
                         IncomingRequest::DriverIndexProtocol(stream) => {
+                            control_handles.borrow_mut().push(stream.control_handle());
                             run_index_server(index.clone(), stream).await
                         }
                         IncomingRequest::DriverDevelopmentProtocol(stream) => {
                             run_driver_development_server(index.clone(), stream).await
                         }
                         IncomingRequest::DriverRegistrarProtocol(stream) => {
-                            run_driver_registrar_server(index.clone(), stream, &universe_resolver)
-                                .await
+                            run_driver_registrar_server(
+                                index.clone(),
+                                stream,
+                                &universe_resolver,
+                                &control_handles,
+                            )
+                            .await
                         }
                     }
                     .unwrap_or_else(|e| log::error!("Error running index_server: {:?}", e))
@@ -2457,6 +2475,8 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_pkg::PackageResolverMarker>()
                 .unwrap();
 
+        let control_handles = RefCell::new(std::vec![stream.control_handle()]);
+
         let universe_resolver = Some(resolver);
 
         let base_repo = BaseRepo::Resolved(std::vec![]);
@@ -2464,8 +2484,13 @@ mod tests {
 
         let resolver_task = run_resolver_server(resolver_stream).fuse();
         let index_task = run_index_server(index.clone(), stream).fuse();
-        let registrar_task =
-            run_driver_registrar_server(index.clone(), registrar_stream, &universe_resolver).fuse();
+        let registrar_task = run_driver_registrar_server(
+            index.clone(),
+            registrar_stream,
+            &universe_resolver,
+            &control_handles,
+        )
+        .fuse();
         let test_task = async move {
             // Short delay since the resolver server is starting up at the same time.
             fasync::Timer::new(std::time::Duration::from_millis(100)).await;
@@ -2485,10 +2510,16 @@ mod tests {
             let result = proxy.match_drivers_v1(args.clone()).await.unwrap().unwrap();
             assert_eq!(result.len(), 0);
 
+            let mut event_stream = proxy.take_event_stream();
+
             // Now register the ephemeral driver.
             let mut pkg_url =
                 fidl_fuchsia_pkg::PackageUrl { url: component_manifest_url.to_string() };
             registrar_proxy.register(&mut pkg_url).await.unwrap().unwrap();
+
+            // Check to see if we received the on register event.
+            let fdf::DriverIndexEvent::OnNewDriverAvailable {} =
+                event_stream.next().await.unwrap().unwrap();
 
             // Match succeeds now.
             let result = proxy.match_driver(args.clone()).await.unwrap().unwrap();
@@ -2542,6 +2573,8 @@ mod tests {
         let (development_proxy, development_stream) =
             fidl::endpoints::create_proxy_and_stream::<fdd::DriverIndexMarker>().unwrap();
 
+        let control_handles: RefCell<Vec<DriverIndexControlHandle>> = RefCell::new(std::vec![]);
+
         let universe_resolver = Some(resolver);
 
         let base_repo = BaseRepo::Resolved(std::vec![]);
@@ -2550,8 +2583,13 @@ mod tests {
         let resolver_task = run_resolver_server(resolver_stream).fuse();
         let development_task =
             run_driver_development_server(index.clone(), development_stream).fuse();
-        let registrar_task =
-            run_driver_registrar_server(index.clone(), registrar_stream, &universe_resolver).fuse();
+        let registrar_task = run_driver_registrar_server(
+            index.clone(),
+            registrar_stream,
+            &universe_resolver,
+            &control_handles,
+        )
+        .fuse();
         let test_task = async move {
             // We should not find this before registering it.
             let driver_infos =
@@ -2611,6 +2649,8 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_pkg::PackageResolverMarker>()
                 .unwrap();
 
+        let control_handles: RefCell<Vec<DriverIndexControlHandle>> = RefCell::new(std::vec![]);
+
         let universe_resolver = Some(resolver);
 
         let boot_repo = std::vec![];
@@ -2626,8 +2666,13 @@ mod tests {
         let index = Rc::new(Indexer::new(boot_repo, base_repo, false));
 
         let resolver_task = run_resolver_server(resolver_stream).fuse();
-        let registrar_task =
-            run_driver_registrar_server(index.clone(), registrar_stream, &universe_resolver).fuse();
+        let registrar_task = run_driver_registrar_server(
+            index.clone(),
+            registrar_stream,
+            &universe_resolver,
+            &control_handles,
+        )
+        .fuse();
         let test_task = async move {
             // Try to register the driver.
             let mut pkg_url =
@@ -2673,6 +2718,8 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_pkg::PackageResolverMarker>()
                 .unwrap();
 
+        let control_handles: RefCell<Vec<DriverIndexControlHandle>> = RefCell::new(std::vec![]);
+
         let universe_resolver = Some(resolver);
 
         let boot_repo = vec![ResolvedDriver {
@@ -2688,8 +2735,13 @@ mod tests {
         let index = Rc::new(Indexer::new(boot_repo, base_repo, false));
 
         let resolver_task = run_resolver_server(resolver_stream).fuse();
-        let registrar_task =
-            run_driver_registrar_server(index.clone(), registrar_stream, &universe_resolver).fuse();
+        let registrar_task = run_driver_registrar_server(
+            index.clone(),
+            registrar_stream,
+            &universe_resolver,
+            &control_handles,
+        )
+        .fuse();
         let test_task = async move {
             // Try to register the driver.
             let mut pkg_url =

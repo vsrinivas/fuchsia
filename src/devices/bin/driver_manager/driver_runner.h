@@ -233,7 +233,8 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::NodeController>> controller_ref_;
 };
 
-class DriverRunner : public fidl::WireServer<fuchsia_component_runner::ComponentRunner>,
+class DriverRunner : public fidl::WireAsyncEventHandler<fuchsia_driver_framework::DriverIndex>,
+                     public fidl::WireServer<fuchsia_component_runner::ComponentRunner>,
                      public DriverBinder {
  public:
   DriverRunner(fidl::ClientEnd<fuchsia_component::Realm> realm,
@@ -254,6 +255,9 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   using DriverUrl = std::string;
   using CompositeArgsIterator = std::unordered_multimap<DriverUrl, CompositeArgs>::iterator;
 
+  // fidl::WireAsyncEventHandler<fuchsia_driver_framework::DriverIndex>
+  void OnNewDriverAvailable(
+      fidl::WireEvent<fuchsia_driver_framework::DriverIndex::OnNewDriverAvailable>* event) override;
   // fidl::WireServer<fuchsia_component_runner::ComponentRunner>
   void Start(StartRequestView request, StartCompleter::Sync& completer) override;
   // DriverBinder
@@ -271,6 +275,10 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   zx::status<> StartDriver(Node& node, std::string_view url);
 
   zx::status<std::unique_ptr<DriverHostComponent>> StartDriverHost();
+
+  // Goes through the orphan list attempts the bind them again. Sends nodes that are still
+  // orphaned back to the orphan list.
+  void TryBindAllOrphans();
 
   struct CreateComponentOpts {
     const Node* node = nullptr;
