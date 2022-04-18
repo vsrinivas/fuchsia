@@ -42,6 +42,6 @@ toc:
   - title: "View"
     path: /docs/development/diagnostics/logs/viewing.md
   - title: "Logging and tests"
-    path: /docs/development/diagnostics/logs.md
+    path: /docs/development/diagnostics/test_and_logs.md
 - title: "Analyze with Triage"
   path: /docs/development/diagnostics/triage/codelab.md

@@ -1488,7 +1488,7 @@ async fn test_max_severity(max_severity: Severity) {
 [TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(12)] my error message
 
 ----------------xxxxx----------------
-Failing this test. See: https://fuchsia.dev/fuchsia-src/concepts/testing/logs#restricting_log_severity
+Failing this test. See: https://fuchsia.dev/fuchsia-src/development/diagnostics/test_and_logs#restricting_log_severity
 
 fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm completed with result: FAILED
 "
@@ -1500,7 +1500,7 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_te
 [TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(12)] my error message
 
 ----------------xxxxx----------------
-Failing this test. See: https://fuchsia.dev/fuchsia-src/concepts/testing/logs#restricting_log_severity
+Failing this test. See: https://fuchsia.dev/fuchsia-src/development/diagnostics/test_and_logs#restricting_log_severity
 
 fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm completed with result: FAILED
 "

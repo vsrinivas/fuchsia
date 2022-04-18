@@ -85,7 +85,7 @@ Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] [--min-s
 
        If --max-log-severity is passed, then the test will fail if it produces logs with higher severity.
        Allowed values: TRACE, DEBUG, INFO, WARN, ERROR, FATAL.
-       For more information see: https://fuchsia.dev/fuchsia-src/concepts/testing/logs.md#restricting_log_severity
+       For more information see: https://fuchsia.dev/fuchsia-src/development/diagnostics/test_and_logs#restricting_log_severity
 
        By default when installing log listener, all logs are collected. To filter
        by higher severity please pass severity: TRACE, DEBUG, INFO, WARN, ERROR, FATAL.
@@ -524,7 +524,8 @@ int main(int argc, const char** argv) {
     printf("----------------xxxxx----------------\n");
     printf(
         "Failing this test. See: "
-        "https://fuchsia.dev/fuchsia-src/concepts/testing/logs#restricting_log_severity"
+        "https://fuchsia.dev/fuchsia-src/development/diagnostics/"
+        "test_and_logs#restricting_log_severity"
         "\n");
     fflush(stdout);
     ret_code = 1;

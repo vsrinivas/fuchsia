@@ -666,6 +666,12 @@ dev-gpu
 dev-gpu-performance-counters
 dev-mediacodec
 ```
+
+## Restricted logs
+
+By default, a test will fail if it logs a message with a severity of
+`ERROR` or higher. See this [guide][restricted-logs] for more information.
+
 ## Performance
 
 When writing a test runner that launches processes, the runner needs to
@@ -712,6 +718,7 @@ Components in the test realm may play various roles in the test, as follows:
 [manifests-offer]: https://fuchsia.dev/reference/cml#offer
 [manifests-use]: https://fuchsia.dev/reference/cml#use
 [resolvers]:  /docs/concepts/components/v2/capabilities/resolvers.md
+[restricted-logs]: /docs/development/diagnostics/test_and_logs.md#restricting_log_severity
 [runners]: /docs/concepts/components/v2/capabilities/runners.md
 [test-suite-protocol]: /docs/concepts/components/v2/realms.md
 [unit-tests]: /docs/development/components/build.md#unit_tests_with_generated_manifests

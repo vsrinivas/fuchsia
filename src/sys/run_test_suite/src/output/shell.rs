@@ -397,7 +397,7 @@ impl<W: 'static + Write + Send + Sync> Reporter for ShellReporter<W> {
                     writeln!(writer, "----------------xxxxx----------------")?;
                     writer.write_all(restricted_logs.lock().as_slice())?;
                     writeln!(writer, "\n----------------xxxxx----------------")?;
-                    writeln!(writer, "Failing this test. See: https://fuchsia.dev/fuchsia-src/concepts/testing/logs#restricting_log_severity\n")?;
+                    writeln!(writer, "Failing this test. See: https://fuchsia.dev/fuchsia-src/development/diagnostics/test_and_logs#restricting_log_severity\n")?;
                 }
                 match outcome {
                     ReportedOutcome::Cancelled => {
@@ -820,7 +820,7 @@ mod test {
         expected.push_str("----------------xxxxx----------------\n");
         expected.push_str("suite restricted log\n\n");
         expected.push_str("----------------xxxxx----------------\n");
-        expected.push_str("Failing this test. See: https://fuchsia.dev/fuchsia-src/concepts/testing/logs#restricting_log_severity\n");
+        expected.push_str("Failing this test. See: https://fuchsia.dev/fuchsia-src/development/diagnostics/test_and_logs#restricting_log_severity\n");
         expected.push_str("\ntest-suite completed with result: FAILED\n");
         assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
     }
