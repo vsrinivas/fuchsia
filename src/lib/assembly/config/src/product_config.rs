@@ -5,6 +5,7 @@
 use crate as image_assembly_config;
 use crate::FileEntry;
 use anyhow::bail;
+use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -21,6 +22,8 @@ pub struct ProductAssemblyConfig {
     pub product: ProductConfig,
 }
 
+/// Platform configuration options.  These are the options that pertain to the
+/// platform itself, not anything provided by the product.
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct PlatformConfig {
     example: Option<ExampleConfig>,
@@ -36,6 +39,11 @@ struct ExampleConfig {
     not_from_package: u8,
 }
 
+/// The platform BuildTypes.
+///
+/// These control security and behavioral settings within the platform.
+///
+/// Not presently used.
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub enum BuildType {
     #[serde(rename = "eng")]
@@ -48,8 +56,24 @@ impl Default for BuildType {
     }
 }
 
+/// The Product-provided configuration details.
 #[derive(Debug, Deserialize, Serialize)]
-pub struct ProductConfig {}
+pub struct ProductConfig {
+    #[serde(default)]
+    pub packages: ProductPackagesConfig,
+}
+
+/// Packages provided by the product, to add to the assembled images.
+#[derive(Debug, Default, Deserialize, Serialize)]
+pub struct ProductPackagesConfig {
+    /// Paths to package manifests for packages to add to the 'base' package set.
+    #[serde(default)]
+    pub base: Vec<Utf8PathBuf>,
+
+    /// Paths to package manifests for packages to add to the 'cache' package set.
+    #[serde(default)]
+    pub cache: Vec<Utf8PathBuf>,
+}
 
 impl ProductAssemblyConfig {
     /// Convert the high-level description of product configuration into a series of configuration
@@ -166,6 +190,32 @@ mod tests {
         let mut cursor = std::io::Cursor::new(json5);
         let config: ProductAssemblyConfig = util::from_reader(&mut cursor).unwrap();
         assert_eq!(config.platform.build_type, BuildType::Eng);
+    }
+
+    #[test]
+    fn test_product_assembly_config_with_product_provided_parts() {
+        let json5 = r#"
+            {
+              platform: {
+              },
+              product: {
+                  packages: {
+                      base: [
+                          "path/to/base/package_manifest.json"
+                      ],
+                      cache: [
+                          "path/to/cache/package_manifest.json"
+                      ]
+                  }
+              },
+            }
+        "#;
+
+        let mut cursor = std::io::Cursor::new(json5);
+        let config: ProductAssemblyConfig = util::from_reader(&mut cursor).unwrap();
+        assert_eq!(config.platform.build_type, BuildType::Eng);
+        assert_eq!(config.product.packages.base, vec!["path/to/base/package_manifest.json"]);
+        assert_eq!(config.product.packages.cache, vec!["path/to/cache/package_manifest.json"]);
     }
 
     #[test]

@@ -11,20 +11,17 @@ use assembly_config::{
 };
 use assembly_config_data::ConfigDataBuilder;
 use assembly_structured_config::Repackager;
-use assembly_util::{DuplicateKeyError, InsertAllUniqueExt, InsertUniqueExt, MapEntry};
+use assembly_util::{InsertAllUniqueExt, InsertUniqueExt, MapEntry};
 use fuchsia_pkg::PackageManifest;
+use image_assembly_config::product_config::ProductPackagesConfig;
 use std::path::Path;
 use std::{
     collections::{BTreeMap, BTreeSet},
     path::PathBuf,
 };
 
-type FileEntryMap = BTreeMap<String, PathBuf>;
 type ConfigDataMap = BTreeMap<String, FileEntryMap>;
-/// A set of packages with their manifests parsed into memory, keyed by package name.
-type PackageSet = BTreeMap<String, PackageEntry>;
 
-#[derive(Default)]
 pub struct ImageAssemblyConfigBuilder {
     /// The base packages from the AssemblyInputBundles
     base: PackageSet,
@@ -55,7 +52,29 @@ pub struct ImageAssemblyConfigBuilder {
     kernel_clock_backstop: Option<u64>,
 }
 
+impl Default for ImageAssemblyConfigBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ImageAssemblyConfigBuilder {
+    pub fn new() -> Self {
+        Self {
+            base: PackageSet::new("base packages"),
+            cache: PackageSet::new("cache packages"),
+            system: PackageSet::new("system packages"),
+            bootfs_packages: PackageSet::new("bootfs packages"),
+            boot_args: BTreeSet::default(),
+            bootfs_files: FileEntryMap::new("bootfs files"),
+            config_data: ConfigDataMap::default(),
+            structured_config: StructuredConfigPatches::default(),
+            kernel_path: None,
+            kernel_args: BTreeSet::default(),
+            kernel_clock_backstop: None,
+        }
+    }
+
     /// Add an Assembly Input Bundle to the builder, via the path to its
     /// manifest.
     ///
@@ -84,32 +103,17 @@ impl ImageAssemblyConfigBuilder {
         let bundle_path = bundle_path.as_ref();
         let AssemblyInputBundle { image_assembly: bundle, config_data } = bundle;
 
-        let add_all_packages =
-            |to_add_to: &mut PackageSet, subpaths, set_name| -> anyhow::Result<()> {
-                for p in Self::paths_from(bundle_path, subpaths) {
-                    let entry = PackageEntry::parse_from(p)
-                        .context("parsing package entry from parsed bundle")?;
-                    to_add_to.try_insert_unique(MapEntry(entry.name().to_owned(), entry)).map_err(
-                        |e| anyhow!("duplicate {} package entry found: {:?}", set_name, e),
-                    )?;
-                }
-                Ok(())
-            };
-        add_all_packages(&mut self.base, bundle.base, "base")?;
-        add_all_packages(&mut self.cache, bundle.cache, "cache")?;
-        add_all_packages(&mut self.system, bundle.system, "system")?;
-        add_all_packages(&mut self.bootfs_packages, bundle.bootfs_packages, "bootfs packages")?;
+        Self::add_bundle_packages(bundle_path, &bundle.base, &mut self.base)?;
+        Self::add_bundle_packages(bundle_path, &bundle.cache, &mut self.cache)?;
+        Self::add_bundle_packages(bundle_path, &bundle.system, &mut self.system)?;
+        Self::add_bundle_packages(bundle_path, &bundle.bootfs_packages, &mut self.bootfs_packages)?;
 
         self.boot_args
             .try_insert_all_unique(bundle.boot_args)
             .map_err(|arg| anyhow!("duplicate boot_arg found: {}", arg))?;
 
-        for FileEntry { destination, source } in
-            Self::file_entry_paths_from(bundle_path, bundle.bootfs_files)
-        {
-            self.bootfs_files
-                .try_insert_unique(MapEntry(destination, source))
-                .map_err(|e| anyhow!("Duplicate bootfs destination path found: {}", e.key()))?;
+        for entry in Self::file_entry_paths_from(bundle_path, bundle.bootfs_files) {
+            self.bootfs_files.add_entry(entry)?;
         }
 
         if let Some(kernel) = bundle.kernel {
@@ -138,11 +142,33 @@ impl ImageAssemblyConfigBuilder {
         Ok(())
     }
 
-    fn paths_from<'a, I>(base: &'a Path, paths: I) -> impl IntoIterator<Item = PathBuf> + 'a
-    where
-        I: IntoIterator<Item = PathBuf> + 'a,
-    {
-        paths.into_iter().map(move |p| base.join(p))
+    /// Add all the product-provided packages to the assembly configuration.
+    ///
+    /// This should be performed after the platform's bundles have been added,
+    /// so that any packages that are in conflict with the platform bundles are
+    /// flagged as being the issue (and not the platform being the issue).
+    pub fn add_product_packages(&mut self, packages: &ProductPackagesConfig) -> Result<()> {
+        for p in &packages.base {
+            self.base.add_package_from_path(p)?
+        }
+        for p in &packages.cache {
+            self.cache.add_package_from_path(p)?
+        }
+        Ok(())
+    }
+
+    /// Add a set of packages from a bundle, resolving each path to a package
+    /// manifest from the bundle's path to locate it.
+    fn add_bundle_packages(
+        bundle_path: impl AsRef<Path>,
+        bundle_package_paths: &[impl AsRef<Path>],
+        package_set: &mut PackageSet,
+    ) -> Result<()> {
+        for path in bundle_package_paths {
+            let path = bundle_path.as_ref().join(path);
+            package_set.add_package_from_path(path)?;
+        }
+        Ok(())
     }
 
     fn file_entry_paths_from(
@@ -161,15 +187,7 @@ impl ImageAssemblyConfigBuilder {
     /// Add an entry to `config_data` for the given package.  If the entry
     /// duplicates an existing entry, return an error.
     fn add_config_data_entry(&mut self, package: impl AsRef<str>, entry: FileEntry) -> Result<()> {
-        let package_entries = self.config_data.entry(package.as_ref().into()).or_default();
-        let FileEntry { destination, source } = entry;
-        package_entries.try_insert_unique(MapEntry(destination, source)).map_err(|e|
-            anyhow!(
-                "Duplicate config_data destination path found: {}, previous path was: {}, new path is: {}",
-                e.key(),
-                e.previous_value().display(),
-                e.new_value().display()
-            ))
+        self.config_data.entry(package.as_ref().into()).or_default().add_entry(entry)
     }
 
     /// Set the structured configuration updates for a package. Can only be called once per
@@ -246,8 +264,12 @@ impl ImageAssemblyConfigBuilder {
             // Build the config_data package
             let mut config_data_builder = ConfigDataBuilder::default();
             for (package_name, entries) in config_data {
-                for (destination, source) in entries {
-                    config_data_builder.add_entry(&package_name, destination.into(), source)?;
+                for entry in entries.into_file_entries() {
+                    config_data_builder.add_entry(
+                        &package_name,
+                        entry.destination.into(),
+                        entry.source,
+                    )?;
                 }
             }
             let manifest_path = config_data_builder
@@ -255,11 +277,8 @@ impl ImageAssemblyConfigBuilder {
                 .context("Writing the 'config_data' package metafar.")?;
             let entry = PackageEntry::parse_from(manifest_path)
                 .context("parsing generated config-data package")?;
-            base.try_insert_unique(MapEntry(entry.name().to_owned(), entry)).map_err(|p| {
-                anyhow!(
-                    "found a duplicate config_data package when adding generated package at: {}",
-                    p.new_value().path.display()
-                )
+            base.try_insert_unique(entry.name().to_owned(), entry).map_err(|_| {
+                anyhow!("found a duplicate config_data package when adding generated one.")
             })?;
         }
 
@@ -267,20 +286,17 @@ impl ImageAssemblyConfigBuilder {
         // then pass this to the ImageAssemblyConfig::try_from_partials() to get the
         // final validation that it's complete.
         let partial = image_assembly_config::PartialImageAssemblyConfig {
-            system: system.into_iter().map(|(_, e)| e.path).collect(),
-            base: base.into_iter().map(|(_, e)| e.path).collect(),
-            cache: cache.into_iter().map(|(_, e)| e.path).collect(),
+            system: system.into_paths().collect(),
+            base: base.into_paths().collect(),
+            cache: cache.into_paths().collect(),
             kernel: Some(image_assembly_config::PartialKernelConfig {
                 path: kernel_path,
                 args: kernel_args.into_iter().collect(),
                 clock_backstop: kernel_clock_backstop,
             }),
             boot_args: boot_args.into_iter().collect(),
-            bootfs_files: bootfs_files
-                .into_iter()
-                .map(|(destination, source)| FileEntry { destination, source })
-                .collect(),
-            bootfs_packages: bootfs_packages.into_iter().map(|(_, e)| e.path).collect(),
+            bootfs_files: bootfs_files.into_file_entries(),
+            bootfs_packages: bootfs_packages.into_paths().collect(),
         };
 
         let image_assembly_config = image_assembly_config::ImageAssemblyConfig::try_from_partials(
@@ -331,26 +347,113 @@ impl PackageEntry {
     }
 }
 
+#[derive(Default, Debug)]
+/// A named set of things, which are mapped by a String key.
+
+struct NamedMap<T> {
+    /// The name of the Map.
+    name: String,
+
+    /// The entries in the map.
+    entries: BTreeMap<String, T>,
+}
+
+impl<T> NamedMap<T>
+where
+    T: std::fmt::Debug,
+{
+    /// Create a new, named, map.
+    fn new(name: &str) -> Self {
+        Self { name: name.to_owned(), entries: BTreeMap::new() }
+    }
+
+    fn try_insert_unique(&mut self, name: String, value: T) -> Result<()> {
+        let result =
+            self.entries.try_insert_unique(MapEntry(name, value)).map_err(|e| format!("{:?}", e));
+        // The error is mapped a second time to separate the borrow of entries
+        // from the borrow of name.
+        result.map_err(|e| anyhow!("duplicate entry for {}: {}", self.name, e))
+    }
+}
+
+impl<T> std::ops::Deref for NamedMap<T> {
+    type Target = BTreeMap<String, T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.entries
+    }
+}
+
+impl<T> std::ops::DerefMut for NamedMap<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.entries
+    }
+}
+
+impl<T> IntoIterator for NamedMap<T> {
+    type Item = T;
+
+    type IntoIter = std::collections::btree_map::IntoValues<String, Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.entries.into_values()
+    }
+}
+
+/// A named set of packages with their manifests parsed into memory, keyed by package name.
+type PackageSet = NamedMap<PackageEntry>;
+impl PackageSet {
+    /// Parse the given path as a PackageManifest, and add it to the PackageSet.
+    fn add_package_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
+        let entry = PackageEntry::parse_from(path)?;
+        self.try_insert_unique(entry.name().to_owned(), entry)
+    }
+
+    /// Convert the PackageSet into an iterable collection of Paths.
+    fn into_paths(self) -> impl Iterator<Item = PathBuf> {
+        self.entries.into_values().map(|e| e.path)
+    }
+}
+
+type FileEntryMap = NamedMap<PathBuf>;
+impl FileEntryMap {
+    fn add_entry(&mut self, entry: FileEntry) -> Result<()> {
+        self.try_insert_unique(entry.destination, entry.source)
+    }
+
+    fn into_file_entries(self) -> Vec<FileEntry> {
+        self.entries
+            .into_iter()
+            .map(|(destination, source)| FileEntry { destination, source })
+            .collect()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use camino::Utf8PathBuf;
     use fuchsia_pkg::{PackageBuilder, PackageManifest};
     use std::fs::File;
     use tempfile::TempDir;
 
+    fn write_empty_pkg(path: impl AsRef<Path>, name: &str) -> Utf8PathBuf {
+        let path = path.as_ref();
+        let mut builder = PackageBuilder::new(name);
+        let manifest_path = path.join(name);
+        builder.manifest_path(&manifest_path);
+        builder.build(path, path.join(format!("{}_meta.far", name))).unwrap();
+        Utf8PathBuf::from_path_buf(manifest_path).unwrap()
+    }
+
     fn make_test_assembly_bundle(bundle_path: &Path) -> AssemblyInputBundle {
-        let write_empty_pkg = |path: &str| {
-            let mut builder = PackageBuilder::new("test_pkg");
-            builder.manifest_path(bundle_path.join(path));
-            builder.build(&bundle_path, bundle_path.join(format!("{}_meta.far", path))).unwrap();
-            PathBuf::from(path)
-        };
+        let write_empty_bundle_pkg = |name: &str| write_empty_pkg(bundle_path, name).into();
         AssemblyInputBundle {
             image_assembly: image_assembly_config::PartialImageAssemblyConfig {
-                base: vec![write_empty_pkg("base_package0")],
-                system: vec![write_empty_pkg("sys_package0")],
-                cache: vec![write_empty_pkg("cache_package0")],
-                bootfs_packages: vec![write_empty_pkg("bootfs_package0")],
+                base: vec![write_empty_bundle_pkg("base_package0")],
+                system: vec![write_empty_bundle_pkg("sys_package0")],
+                cache: vec![write_empty_bundle_pkg("cache_package0")],
+                bootfs_packages: vec![write_empty_bundle_pkg("bootfs_package0")],
                 kernel: Some(image_assembly_config::PartialKernelConfig {
                     path: Some("kernel/path".into()),
                     args: vec!["kernel_arg0".into()],
@@ -454,6 +557,73 @@ mod tests {
 
         // 4.  Validate its contents.
         assert_eq!(config_file_data, "configuration data".as_bytes());
+    }
+
+    #[test]
+    fn test_builder_with_product_packages() {
+        let outdir = TempDir::new().unwrap();
+
+        let packages = ProductPackagesConfig {
+            base: vec![write_empty_pkg(&outdir, "base_a"), write_empty_pkg(&outdir, "base_b")],
+            cache: vec![write_empty_pkg(&outdir, "cache_a"), write_empty_pkg(&outdir, "cache_b")],
+        };
+        let minimum_bundle = AssemblyInputBundle {
+            image_assembly: image_assembly_config::PartialImageAssemblyConfig {
+                base: vec![
+                    write_empty_pkg(&outdir, "platform_a").into_std_path_buf(),
+                    write_empty_pkg(&outdir, "platform_b").into_std_path_buf(),
+                ],
+                kernel: Some(image_assembly_config::PartialKernelConfig {
+                    path: Some("kernel/path".into()),
+                    args: Vec::default(),
+                    clock_backstop: Some(0),
+                }),
+                ..image_assembly_config::PartialImageAssemblyConfig::default()
+            },
+            config_data: BTreeMap::default(),
+        };
+        let mut builder = ImageAssemblyConfigBuilder::default();
+        builder.add_parsed_bundle(outdir.path().join("minimum_bundle"), minimum_bundle).unwrap();
+        builder.add_product_packages(&packages).unwrap();
+        let result: image_assembly_config::ImageAssemblyConfig = builder.build(&outdir).unwrap();
+
+        assert_eq!(
+            result.base,
+            ["base_a", "base_b", "platform_a", "platform_b"]
+                .iter()
+                .map(|p| outdir.path().join(p))
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(
+            result.cache,
+            vec![outdir.path().join("cache_a"), outdir.path().join("cache_b")]
+        );
+    }
+
+    #[test]
+    fn test_builder_with_product_packages_catches_duplicates() {
+        let outdir = TempDir::new().unwrap();
+
+        let packages = ProductPackagesConfig {
+            base: vec![write_empty_pkg(&outdir, "base_a")],
+            ..ProductPackagesConfig::default()
+        };
+        let minimum_bundle = AssemblyInputBundle {
+            image_assembly: image_assembly_config::PartialImageAssemblyConfig {
+                base: vec![write_empty_pkg(&outdir, "base_a").into_std_path_buf()],
+                kernel: Some(image_assembly_config::PartialKernelConfig {
+                    path: Some("kernel/path".into()),
+                    args: Vec::default(),
+                    clock_backstop: Some(0),
+                }),
+                ..image_assembly_config::PartialImageAssemblyConfig::default()
+            },
+            config_data: BTreeMap::default(),
+        };
+        let mut builder = ImageAssemblyConfigBuilder::default();
+        builder.add_parsed_bundle(outdir.path().join("minimum_bundle"), minimum_bundle).unwrap();
+        let result = builder.add_product_packages(&packages);
+        assert!(result.is_err());
     }
 
     /// Helper to duplicate the first item in an Vec<T: Clone> and make it also

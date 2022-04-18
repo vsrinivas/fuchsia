@@ -33,6 +33,10 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
             .context(format!("Adding input bundle: {}", bundle_path.display()))?;
     }
 
+    builder
+        .add_product_packages(&config.product.packages)
+        .context("Adding product-provided packages")?;
+
     let image_assembly = builder.build(&outdir).context("Building Image Assembly config")?;
     assembly_validate_product::validate_product(&image_assembly)?;
 
