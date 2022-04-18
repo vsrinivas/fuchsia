@@ -90,15 +90,15 @@ void InitializeVmPage(vm_page_t* p) {
 // Allocates a new page and populates it with the data at |parent_paddr|.
 zx_status_t AllocateCopyPage(uint32_t pmm_alloc_flags, paddr_t parent_paddr,
                              list_node_t* alloc_list, vm_page_t** clone) {
-  paddr_t pa_clone;
   vm_page_t* p_clone = nullptr;
   if (alloc_list) {
     p_clone = list_remove_head_type(alloc_list, vm_page, queue_node);
-    if (p_clone) {
-      pa_clone = p_clone->paddr();
-    }
   }
-  if (!p_clone) {
+
+  paddr_t pa_clone;
+  if (p_clone) {
+    pa_clone = p_clone->paddr();
+  } else {
     zx_status_t status = pmm_alloc_page(pmm_alloc_flags, &p_clone, &pa_clone);
     if (status != ZX_OK) {
       DEBUG_ASSERT(!p_clone);
