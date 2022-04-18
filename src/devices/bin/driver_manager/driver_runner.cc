@@ -794,6 +794,7 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
       [](fidl::WireServer<fdf::Node>* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
   node.set_node_ref(bind_node);
 
+  LOGF(INFO, "Binding %.*s to  %s", static_cast<int>(url.size()), url.data(), node.name().c_str());
   // Start the driver within the driver host.
   auto start =
       node.driver_host()->Start(std::move(endpoints->client), node, std::move(request->start_info));
