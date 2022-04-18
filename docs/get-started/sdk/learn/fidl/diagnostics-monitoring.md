@@ -14,25 +14,22 @@
 In this section, you'll use the diagnostics tools to monitor the health and
 behavior of the echo server component.
 
+<<../_common/_start_femu_with_packages.md>>
+
+<!-- TODO(fxbug.dev/61746): Re-enable once symbols are accessible without auth
+
 ### Monitor FIDL traffic
 
-You can use `fidlcat` to monitor and debug the FIDL connections in your
-components. Launch `ffx debug fidl` and configure it to monitor the echo server
-component:
-
-First, create a new instance of the realm from the previous step:
+Create a new instance of the `echo-realm` containing the server and client
+components:
 
 ```posix-terminal
 ffx component run fuchsia-pkg://fuchsiasamples.com/echo-realm#meta/echo_realm.cm --name echo-realm
 ```
 
-Note: `ffx debug fidl` looks for symbols on a remote server, so you'll need to authenticate (with any account). Feel free to revoke this authentication when you're done with this.
-
-```
-To authenticate gs://fuchsia-artifacts/debug, please supply an authentication token. You can retrieve a token from:
-https://accounts.google.com/o/oauth2/v2/auth?client_
-...
-```
+You can use `fidlcat` to monitor and debug the FIDL connections in your
+components. Launch `ffx debug fidl` and configure it to monitor the echo server
+component:
 
 ```posix-terminal
 ffx debug fidl --remote-name echo_server.cm --fidl-ir-path bazel-bin/
@@ -103,6 +100,8 @@ data payloads.
 <code>fidlcat</code>. Do you see anything different from the messages recorded
 from echo server?</p>
 </aside>
+
+END HIDDEN SECTION -->
 
 ### Add request tracking
 

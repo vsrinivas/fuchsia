@@ -14,6 +14,8 @@
 In this section, you'll use the diagnostics tools to monitor the health and
 behavior of the echo server component.
 
+<<../_common/_start_femu.md>>
+
 ### Monitor FIDL traffic
 
 You can use `fidlcat` to monitor and debug the FIDL connections in your
