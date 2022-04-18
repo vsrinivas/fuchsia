@@ -317,7 +317,7 @@ typedef struct spinel_vk_swapchain_submit_ext_graphics_store
   VkCommandBuffer                       cb;
   VkQueue                               queue;
   uint32_t                              queue_family_index;
-  VkImageLayout                         old_layout;
+  VkImageLayout                         layout_prev;
   VkImage                               image;
   VkDescriptorImageInfo                 image_info;
 } spinel_vk_swapchain_submit_ext_graphics_store_t;

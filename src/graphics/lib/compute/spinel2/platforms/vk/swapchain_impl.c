@@ -502,7 +502,7 @@ spinel_sc_graphics(struct spinel_swapchain_impl * impl, struct spinel_sc_exts co
     .pNext               = NULL,
     .srcAccessMask       = VK_ACCESS_NONE_KHR,
     .dstAccessMask       = VK_ACCESS_NONE_KHR,
-    .oldLayout           = exts->named.graphics.store->old_layout,
+    .oldLayout           = exts->named.graphics.store->layout_prev,
     .newLayout           = exts->named.graphics.store->image_info.imageLayout,
     .srcQueueFamilyIndex = exts->named.graphics.store->queue_family_index,
     .dstQueueFamilyIndex = exts->named.graphics.store->queue_family_index,

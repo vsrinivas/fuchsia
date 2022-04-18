@@ -1644,13 +1644,13 @@ main(int argc, char * const argv[])
               //
               // Update graphics store extension for this presentable
               //
-              VkImageLayout const old_layout = is_layout_undefined  //
-                                                 ? VK_IMAGE_LAYOUT_UNDEFINED
-                                                 : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+              VkImageLayout const layout_prev = is_layout_undefined  //
+                                                  ? VK_IMAGE_LAYOUT_UNDEFINED
+                                                  : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
               ext_graphics_store.extent_index         = presentable->image_index;
               ext_graphics_store.queue                = spinel_vk_q_next(&vk);
-              ext_graphics_store.old_layout           = old_layout;
+              ext_graphics_store.layout_prev          = layout_prev;
               ext_graphics_store.image                = presentable->image;
               ext_graphics_store.image_info.imageView = presentable->image_view;
 

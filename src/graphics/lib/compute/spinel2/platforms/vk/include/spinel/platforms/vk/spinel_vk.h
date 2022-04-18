@@ -9,8 +9,6 @@
 //
 //
 
-#include <vulkan/vulkan_core.h>
-
 #include "spinel/spinel.h"
 #include "spinel_vk_types.h"
 
