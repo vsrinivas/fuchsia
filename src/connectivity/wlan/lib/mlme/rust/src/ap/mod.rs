@@ -10,7 +10,7 @@ mod remote_client;
 use {
     crate::{
         buffer::{BufferProvider, InBuf},
-        device::{Device, TxFlags},
+        device::Device,
         error::Error,
         logger,
     },
@@ -36,7 +36,7 @@ use remote_client::*;
 struct BufferedFrame {
     in_buf: InBuf,
     bytes_written: usize,
-    tx_flags: TxFlags,
+    tx_flags: banjo_wlan_softmac::WlanTxInfoFlags,
 }
 
 /// Rejection reasons for why a frame was not proceessed.

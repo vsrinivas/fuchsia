@@ -121,7 +121,7 @@ type WlanTxInfoValid = strict enum : uint8 {
 type WlanTxInfo = struct {
     /// Transmit flags. These represent boolean options as opposed to enums or other value-based
     /// info which are represented below. Values should be taken from the WLAN_TX_INFO_FLAGS_* enum.
-    tx_flags uint32;
+    tx_flags WlanTxInfoFlags;
 
     /// Bitmask indicating which of the following fields are valid in this struct. Reserved flags
     /// must be zero. Values for fields not indicated by a flag may be chosen at the discretion of

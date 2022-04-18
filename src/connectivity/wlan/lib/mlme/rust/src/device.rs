@@ -36,17 +36,6 @@ impl From<fidl_mlme::ControlledPortState> for LinkStatus {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub struct TxFlags(pub u32);
-impl TxFlags {
-    pub const NONE: Self = Self(0);
-
-    pub const PROTECTED: Self = Self(1);
-    pub const FAVOR_RELIABILITY: Self = Self(1 << 1);
-    // TODO(fxbug.dev/29622): remove once MLME supports QoS tag.
-    pub const QOS: Self = Self(1 << 2);
-}
-
 pub struct Device {
     raw_device: DeviceInterface,
     minstrel: Option<crate::MinstrelWrapper>,
@@ -72,7 +61,11 @@ impl Device {
         self.raw_device.deliver_eth_frame(slice)
     }
 
-    pub fn send_wlan_frame(&self, buf: OutBuf, mut flags: TxFlags) -> Result<(), zx::Status> {
+    pub fn send_wlan_frame(
+        &self,
+        buf: OutBuf,
+        mut tx_flags: banjo_wlan_softmac::WlanTxInfoFlags,
+    ) -> Result<(), zx::Status> {
         if buf.as_slice().len() < REQUIRED_WLAN_HEADER_LEN {
             return Err(zx::Status::BUFFER_TOO_SMALL);
         }
@@ -82,7 +75,7 @@ impl Device {
                 .unwrap()
                 .into_ref();
         if frame_control.protected() {
-            flags.0 |= banjo_wlan_softmac::WlanTxInfoFlags::PROTECTED.0 as u32;
+            tx_flags.0 |= banjo_wlan_softmac::WlanTxInfoFlags::PROTECTED.0;
         }
         let mut peer_addr = [0u8; 6];
         peer_addr.copy_from_slice(&buf.as_slice()[PEER_ADDR_OFFSET..PEER_ADDR_OFFSET + 6]);
@@ -90,17 +83,7 @@ impl Device {
             .minstrel
             .as_ref()
             .and_then(|minstrel| {
-                let mut banjo_flags = banjo_wlan_softmac::WlanTxInfoFlags(0);
-                if flags.0 & TxFlags::FAVOR_RELIABILITY.0 != 0 {
-                    banjo_flags |= banjo_wlan_softmac::WlanTxInfoFlags::FAVOR_RELIABILITY;
-                }
-                if flags.0 & TxFlags::PROTECTED.0 != 0 {
-                    banjo_flags |= banjo_wlan_softmac::WlanTxInfoFlags::PROTECTED;
-                }
-                if flags.0 & TxFlags::QOS.0 != 0 {
-                    banjo_flags |= banjo_wlan_softmac::WlanTxInfoFlags::QOS;
-                }
-                minstrel.lock().get_tx_vector_idx(frame_control, &peer_addr, banjo_flags)
+                minstrel.lock().get_tx_vector_idx(frame_control, &peer_addr, tx_flags)
             })
             .unwrap_or_else(|| {
                 // We either don't have minstrel, or minstrel failed to generate a tx vector.
@@ -123,7 +106,7 @@ impl Device {
             });
 
         let tx_info = wlan_common::tx_vector::TxVector::from_idx(tx_vector_idx)
-            .to_banjo_tx_info(flags.0, self.minstrel.is_some());
+            .to_banjo_tx_info(tx_flags, self.minstrel.is_some());
         self.raw_device.queue_tx(0, buf, tx_info)
     }
 

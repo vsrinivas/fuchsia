@@ -207,7 +207,7 @@ impl TxVector {
 
     pub fn to_banjo_tx_info(
         &self,
-        tx_flags: u32,
+        tx_flags: hw_wlan_softmac::WlanTxInfoFlags,
         minstrel_enabled: bool,
     ) -> hw_wlan_softmac::WlanTxInfo {
         let valid_fields = hw_wlan_softmac::WlanTxInfoValid::CHANNEL_BANDWIDTH.0

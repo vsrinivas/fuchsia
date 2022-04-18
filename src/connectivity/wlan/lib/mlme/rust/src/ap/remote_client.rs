@@ -7,11 +7,11 @@ use {
         ap::{frame_writer, BufferedFrame, Context, TimedEvent},
         buffer::{InBuf, OutBuf},
         ddk_converter,
-        device::TxFlags,
         disconnect::LocallyInitiated,
         error::Error,
     },
     banjo_fuchsia_hardware_wlan_associnfo::*,
+    banjo_fuchsia_hardware_wlan_softmac::WlanTxInfoFlags,
     banjo_fuchsia_wlan_common as banjo_common,
     banjo_fuchsia_wlan_ieee80211::*,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
@@ -260,7 +260,7 @@ impl RemoteClient {
                 fidl_ieee80211::ReasonCode::ReasonInactivity.into(),
             )
             .map_err(ClientRejection::WlanSendError)?;
-        self.send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::NONE).map_err(|s| {
+        self.send_wlan_frame(ctx, in_buf, bytes_written, WlanTxInfoFlags(0)).map_err(|s| {
             ClientRejection::WlanSendError(Error::Status(
                 format!("error sending disassoc frame on BSS idle timeout"),
                 s,
@@ -370,7 +370,7 @@ impl RemoteClient {
         )?;
         // TODO(fxbug.dev/91118) - Added to help investigate hw-sim test. Remove later
         log::info!("Sending auth frame to driver: {} bytes", bytes_written);
-        self.send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::NONE)
+        self.send_wlan_frame(ctx, in_buf, bytes_written, WlanTxInfoFlags(0))
             .map_err(|s| Error::Status(format!("error sending auth frame"), s))
     }
 
@@ -393,7 +393,7 @@ impl RemoteClient {
 
         let (in_buf, bytes_written) =
             ctx.make_deauth_frame(self.addr.clone(), reason_code.into())?;
-        self.send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::NONE)
+        self.send_wlan_frame(ctx, in_buf, bytes_written, WlanTxInfoFlags(0))
             .map_err(|s| Error::Status(format!("error sending deauth frame"), s))
     }
 
@@ -517,7 +517,7 @@ impl RemoteClient {
                 },
             ),
         }?;
-        self.send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::NONE)
+        self.send_wlan_frame(ctx, in_buf, bytes_written, WlanTxInfoFlags(0))
             .map_err(|s| Error::Status(format!("error sending assoc frame"), s))
     }
 
@@ -540,7 +540,7 @@ impl RemoteClient {
 
         let (in_buf, bytes_written) =
             ctx.make_disassoc_frame(self.addr.clone(), ReasonCode(reason_code))?;
-        self.send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::NONE)
+        self.send_wlan_frame(ctx, in_buf, bytes_written, WlanTxInfoFlags(0))
             .map_err(|s| Error::Status(format!("error sending disassoc frame"), s))
     }
 
@@ -577,7 +577,7 @@ impl RemoteClient {
         // SME on success. Our SME employs a timeout for EAPoL negotiation, so MLME-EAPOL.confirm is
         // redundant.
         let (in_buf, bytes_written) = ctx.make_eapol_frame(self.addr, src_addr, false, data)?;
-        self.send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::FAVOR_RELIABILITY)
+        self.send_wlan_frame(ctx, in_buf, bytes_written, WlanTxInfoFlags::FAVOR_RELIABILITY)
             .map_err(|s| Error::Status(format!("error sending eapol frame"), s))
     }
 
@@ -648,7 +648,7 @@ impl RemoteClient {
                         )
                         .map_err(ClientRejection::WlanSendError)?;
                     return self
-                        .send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::NONE)
+                        .send_wlan_frame(ctx, in_buf, bytes_written, WlanTxInfoFlags(0))
                         .map_err(|s| {
                             ClientRejection::WlanSendError(Error::Status(
                                 format!("failed to send auth frame"),
@@ -869,12 +869,14 @@ impl RemoteClient {
                 let (in_buf, bytes_written) = ctx
                     .make_deauth_frame(self.addr, reason_code.into())
                     .map_err(ClientRejection::WlanSendError)?;
-                self.send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::NONE).map_err(|s| {
-                    ClientRejection::WlanSendError(Error::Status(
-                        format!("failed to send deauth frame"),
-                        s,
-                    ))
-                })?;
+                self.send_wlan_frame(ctx, in_buf, bytes_written, WlanTxInfoFlags(0)).map_err(
+                    |s| {
+                        ClientRejection::WlanSendError(Error::Status(
+                            format!("failed to send deauth frame"),
+                            s,
+                        ))
+                    },
+                )?;
 
                 ctx.send_mlme_deauth_ind(self.addr, reason_code, LocallyInitiated(true))
                     .map_err(ClientRejection::SmeSendError)?;
@@ -883,12 +885,14 @@ impl RemoteClient {
                 let (in_buf, bytes_written) = ctx
                     .make_disassoc_frame(self.addr, reason_code.into())
                     .map_err(ClientRejection::WlanSendError)?;
-                self.send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::NONE).map_err(|s| {
-                    ClientRejection::WlanSendError(Error::Status(
-                        format!("failed to send disassoc frame"),
-                        s,
-                    ))
-                })?;
+                self.send_wlan_frame(ctx, in_buf, bytes_written, WlanTxInfoFlags(0)).map_err(
+                    |s| {
+                        ClientRejection::WlanSendError(Error::Status(
+                            format!("failed to send disassoc frame"),
+                            s,
+                        ))
+                    },
+                )?;
 
                 ctx.send_mlme_disassoc_ind(self.addr, reason_code, LocallyInitiated(true))
                     .map_err(ClientRejection::SmeSendError)?;
@@ -1068,7 +1072,7 @@ impl RemoteClient {
                 ether_type, body,
             )
             .map_err(ClientRejection::WlanSendError)?;
-        self.send_wlan_frame(ctx, in_buf, bytes_written, TxFlags::NONE).map_err(|s| {
+        self.send_wlan_frame(ctx, in_buf, bytes_written, WlanTxInfoFlags(0)).map_err(|s| {
             ClientRejection::WlanSendError(Error::Status(format!("error sending eapol frame"), s))
         })
     }
@@ -1078,7 +1082,7 @@ impl RemoteClient {
         ctx: &mut Context,
         in_buf: InBuf,
         bytes_written: usize,
-        tx_flags: TxFlags,
+        tx_flags: WlanTxInfoFlags,
     ) -> Result<(), zx::Status> {
         match self.state.as_mut() {
             State::Associated { ps_state, .. } => match ps_state {

@@ -10,11 +10,11 @@ use {
             BeaconOffloadParams, BufferedFrame, Context, Rejection, TimedEvent,
         },
         buffer::{InBuf, OutBuf},
-        device::TxFlags,
         error::Error,
         key::KeyConfig,
     },
     anyhow::format_err,
+    banjo_fuchsia_hardware_wlan_softmac::WlanTxInfoFlags,
     banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon as zx,
     ieee80211::{MacAddr, Ssid},
@@ -284,7 +284,7 @@ impl InfraBss {
                 self.rsne.as_ref().map_or(&[], |rsne| &rsne),
             )
             .map_err(|e| Rejection::Client(client_addr, ClientRejection::WlanSendError(e)))?;
-        ctx.device.send_wlan_frame(OutBuf::from(in_buf, bytes_written), TxFlags::NONE).map_err(
+        ctx.device.send_wlan_frame(OutBuf::from(in_buf, bytes_written), WlanTxInfoFlags(0)).map_err(
             |s| {
                 Rejection::Client(
                     client_addr,
@@ -492,7 +492,7 @@ impl InfraBss {
                 body,
             )
             .map_err(|e| Rejection::Client(hdr.da, ClientRejection::WlanSendError(e)))?;
-        let tx_flags = TxFlags::NONE;
+        let tx_flags = WlanTxInfoFlags(0);
 
         if !self.clients.values().any(|client| client.dozing()) {
             ctx.device.send_wlan_frame(OutBuf::from(in_buf, bytes_written), tx_flags).map_err(

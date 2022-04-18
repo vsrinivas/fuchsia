@@ -16,7 +16,7 @@ use {
         akm_algorithm,
         block_ack::BlockAckTx,
         buffer::{BufferProvider, OutBuf},
-        device::{Device, TxFlags},
+        device::Device,
         disconnect::LocallyInitiated,
         error::Error,
         logger,
@@ -588,7 +588,7 @@ impl Client {
         })?;
         let out_buf = OutBuf::from(buf, bytes_written);
         ctx.device
-            .send_wlan_frame(out_buf, TxFlags::NONE)
+            .send_wlan_frame(out_buf, banjo_wlan_softmac::WlanTxInfoFlags(0))
             .map_err(|error| Error::Status(format!("error sending power management frame"), error))
     }
 
@@ -794,7 +794,7 @@ impl<'a> BoundClient<'a> {
         let out_buf = OutBuf::from(buf, bytes_written);
         self.ctx
             .device
-            .send_wlan_frame(out_buf, TxFlags::NONE)
+            .send_wlan_frame(out_buf, banjo_wlan_softmac::WlanTxInfoFlags(0))
             .map_err(|s| Error::Status(format!("error sending keep alive frame"), s))
     }
 
@@ -891,8 +891,8 @@ impl<'a> BoundClient<'a> {
         })?;
         let out_buf = OutBuf::from(buf, bytes_written);
         let tx_flags = match ether_type {
-            mac::ETHER_TYPE_EAPOL => TxFlags::FAVOR_RELIABILITY,
-            _ => TxFlags::NONE,
+            mac::ETHER_TYPE_EAPOL => banjo_wlan_softmac::WlanTxInfoFlags::FAVOR_RELIABILITY,
+            _ => banjo_wlan_softmac::WlanTxInfoFlags(0),
         };
         self.ctx
             .device
@@ -1156,7 +1156,7 @@ impl<'a> BoundClient<'a> {
 
     fn send_mgmt_or_ctrl_frame(&mut self, out_buf: OutBuf) -> Result<(), zx::Status> {
         self.ensure_on_channel();
-        self.ctx.device.send_wlan_frame(out_buf, TxFlags::NONE)
+        self.ctx.device.send_wlan_frame(out_buf, banjo_wlan_softmac::WlanTxInfoFlags(0))
     }
 
     fn ensure_on_channel(&mut self) {

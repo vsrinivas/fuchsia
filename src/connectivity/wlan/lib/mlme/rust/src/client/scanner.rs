@@ -12,7 +12,7 @@ use {
             Context, TimedEvent,
         },
         ddk_converter::cssid_from_ssid_unchecked,
-        device::{ActiveScanArgs, Device, TxFlags},
+        device::{ActiveScanArgs, Device},
         error::Error,
     },
     anyhow::format_err,
@@ -500,7 +500,7 @@ impl<'a> BoundScanner<'a> {
         let out_buf = OutBuf::from(buf, bytes_written);
         self.ctx
             .device
-            .send_wlan_frame(out_buf, TxFlags::NONE)
+            .send_wlan_frame(out_buf, banjo_wlan_softmac::WlanTxInfoFlags(0))
             .map_err(|s| Error::Status(format!("error sending probe req frame"), s))
     }
 
