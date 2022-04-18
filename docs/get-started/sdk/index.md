@@ -403,6 +403,8 @@ Do the following:
    tools/ffx daemon stop
    ```
 
+   A new instance of the `ffx` daemon starts the next time you run a `ffx` command.
+
 1. Create a new Fuchsia package repository (and map it to the
    `~/.package_repos/sdk-samples` directory):
 
