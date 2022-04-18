@@ -135,6 +135,8 @@ pub async fn log_file(name: &str, rotate: bool) -> Result<std::fs::File> {
             // rotation length.
             match OpenOptions::new().read(true).create(false).open(&log_path) {
                 Ok(mut f) => {
+                    let size = f.seek(SeekFrom::End(0)).context("checking size of old log file")?;
+                    let log_rotate_size = std::cmp::min(size, log_rotate_size);
                     f.seek(SeekFrom::End(-(log_rotate_size as i64)))
                         .context("seeking through old log file")?;
                     let mut new = OpenOptions::new()
