@@ -125,7 +125,9 @@
         "-vga",
         "none",
         "-device",
-        "virtio-keyboard-pci"
+        "virtio-keyboard-pci",
+        "-device",
+        "edu"
     ],
     "features": [
         {{! We don't bother checking for "auto" here because the Rust code
