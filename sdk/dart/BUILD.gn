@@ -109,7 +109,6 @@ group("tests") {
   _flutter_tester_tests = []
   if (host_os != "mac") {
     _flutter_tester_tests += [
-      "//sdk/dart/fuchsia_webview_flutter:fuchsia_webview_flutter_unittests($host_toolchain)",
       "//sdk/dart/fuchsia_internationalization_flutter:tests($host_toolchain)",
       "//sdk/dart/fuchsia_modular:fuchsia_modular_package_unittests($host_toolchain)",
       "//sdk/dart/fuchsia_scenic_flutter:fuchsia_scenic_flutter_unittests($host_toolchain)",
@@ -194,7 +193,6 @@ action("dart_sdk_docs") {
     rebase_path("//sdk/dart/fuchsia_scenic_flutter"),
     rebase_path("//sdk/dart/fuchsia_services"),
     rebase_path("//sdk/dart/fuchsia_vfs"),
-    rebase_path("//sdk/dart/fuchsia_webview_flutter"),
     rebase_path("//sdk/dart/zircon"),
   ]
 

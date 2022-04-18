@@ -10,7 +10,7 @@ dart_library("fuchsia_webview_flutter") {
   package_name = "fuchsia_webview_flutter"
   null_safe = true
 
-  sdk_category = "partner"
+  sdk_category = "internal"
 
   sources = [
     "src/fuchsia_web_services.dart",

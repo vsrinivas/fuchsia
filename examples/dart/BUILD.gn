@@ -7,7 +7,6 @@ group("dart") {
   public_deps = [
     "//examples/dart:tests",
     "//examples/dart/fuchsia_services/mind_reader/bin:mind-reader-dart",
-    "//examples/dart/fuchsia_webview_flutter/webview_mod",
   ]
 }
 

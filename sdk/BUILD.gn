@@ -499,7 +499,6 @@ sdk("fuchsia_dart") {
     "//sdk/dart/fuchsia_scenic_flutter:fuchsia_scenic_flutter_sdk($dart_toolchain)",
     "//sdk/dart/fuchsia_services:fuchsia_services_sdk($dart_toolchain)",
     "//sdk/dart/fuchsia_vfs:fuchsia_vfs_sdk($dart_toolchain)",
-    "//sdk/dart/fuchsia_webview_flutter:fuchsia_webview_flutter_sdk($dart_toolchain)",
     "//sdk/fidl/fuchsia.element:fuchsia.element_sdk",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_sdk",
     "//tools/fidl/fidlgen_dart:fidlgen_dart_sdk_legacy($host_toolchain)",
