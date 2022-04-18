@@ -7,8 +7,9 @@
 
 group("network") {
   public_deps = [
-    "//garnet/bin/sysmgr:network_config",
-    "//garnet/packages/config:services",
+    ":services",
+    "//src/sys/sysmgr:cobalt_system_metrics_config",
+    "//src/sys/sysmgr:sshd_host_config",
   ]
 }
 
@@ -21,14 +22,13 @@ group("openssh_keys") {
 group("router") {
   testonly = true
   public_deps = [
+    ":services",
     "//garnet/bin/sysmgr:router_config",
-    "//garnet/packages/config:services",
   ]
 }
 
 group("amber") {
   testonly = true
-  public_deps = [ "//garnet/packages/config:network" ]
 }
 
 # WARNING: Known to infrastructure.

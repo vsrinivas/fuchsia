@@ -121,9 +121,8 @@ recovery_eng_packages =
       "//src/connectivity/network/mdns/service:mdns_fuchsia_udp_config",
 
       # Enable SSH (for engineering builds):
-      "//garnet/bin/sshd-host",
-      "//garnet/bin/sshd-host:config",
-      "//src/sys/sysmgr:sshd_host_config",
+      "//src/developer/sshd-host",
+      "//src/developer/sshd-host:config",
 
       # Basic command-line tools:
       "//garnet/packages/prod:sbase",

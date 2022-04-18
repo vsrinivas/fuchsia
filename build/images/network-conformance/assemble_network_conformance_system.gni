@@ -36,8 +36,8 @@ template("assemble_network_conformance_system") {
 
     base_packages = [
       ":core",
-      "//garnet/bin/sshd-host",
-      "//garnet/bin/sshd-host:config",
+      "//src/developer/sshd-host",
+      "//src/developer/sshd-host:config",
       "//src/connectivity/network",
       "//src/connectivity/network/dhcp",
       "//src/connectivity/network/mdns/bundles:config",

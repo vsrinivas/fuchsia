@@ -73,13 +73,18 @@ fuchsia_package("sysmgr") {
 
 template("cfg") {
   config_data(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
     for_pkg = "sysmgr"
     sources = [ rebase_path("config/${invoker.name}") ]
   }
 }
 
-cfg("network_config") {
-  name = "network.config"
+cfg("cobalt_system_metrics_config") {
+  name = "cobalt_system_metrics.config"
 }
 
 cfg("services_config") {

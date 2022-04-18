@@ -31,9 +31,7 @@ source_set("lib") {
 
 executable("bin") {
   output_name = "sshd-host"
-
   sources = [ "sshd-host.cc" ]
-
   deps = [
     ":lib",
     "//sdk/lib/fdio",
@@ -60,20 +58,21 @@ fuchsia_component("cml") {
 
 fuchsia_package("sshd-host") {
   deps = [
-    # TODO(fxbug.dev/90440): create separate sshd-host package for cmx and
-    # cml to ensure we only ever ship one flavor of the component.
     ":cml",
     ":cmx",
-    "//third_party/openssh-portable:hostkeygen",
-    "//third_party/openssh-portable:scp",
-    "//third_party/openssh-portable:sftp-server",
-    "//third_party/openssh-portable:sshd",
+
+    # Ensure this isn't included in production
+    "//build/validate:non_production_tag",
 
     # Used by programs that need to load ICU locale data, such as tz-util.
     "//src/intl:icudtl",
 
-    # Ensure this isn't included in production
-    "//build/validate:non_production_tag",
+    # Configure sysmgr to start sshd-host.cmx
+    "//src/sys/sysmgr:sshd_host_config",
+    "//third_party/openssh-portable:hostkeygen",
+    "//third_party/openssh-portable:scp",
+    "//third_party/openssh-portable:sftp-server",
+    "//third_party/openssh-portable:sshd",
   ]
 }
 
@@ -85,11 +84,8 @@ config_data("config") {
 
 executable("test") {
   testonly = true
-
   output_name = "sshd-host-test"
-
   sources = [ "test.cc" ]
-
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.boot",
