@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/fpromise/promise.h>
 
-#include "src/devices/lib/driver2/namespace.h"
+#include "namespace.h"
 
 namespace driver {
 

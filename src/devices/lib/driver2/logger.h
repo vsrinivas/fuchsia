@@ -8,7 +8,7 @@
 #include <lib/syslog/structured_backend/cpp/fuchsia_syslog.h>
 #include <lib/zx/socket.h>
 
-#include "src/devices/lib/driver2/namespace.h"
+#include "namespace.h"
 
 #define FDF_LOGL(severity, logger, msg...) \
   logger.logf((FUCHSIA_LOG_##severity), nullptr, __FILE__, __LINE__, msg)

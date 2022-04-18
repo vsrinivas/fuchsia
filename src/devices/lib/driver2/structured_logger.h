@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_LIB_DRIVER2_STRUCTURED_LOGGER_H_
 #define SRC_DEVICES_LIB_DRIVER2_STRUCTURED_LOGGER_H_
 
-#include "src/devices/lib/driver2/logger_internal.h"
+#include "logger_internal.h"
 
 // Used to denote a key-value pair for use in structured logging API calls.
 // This macro exists solely to improve readability of calls to FX_SLOG

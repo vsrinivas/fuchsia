@@ -7,8 +7,8 @@
 
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 
-#include "src/devices/lib/driver2/logger.h"
-#include "src/devices/lib/driver2/record.h"
+#include "logger.h"
+#include "record.h"
 
 namespace driver::internal {
 

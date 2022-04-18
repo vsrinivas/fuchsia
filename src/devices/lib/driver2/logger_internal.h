@@ -4,7 +4,8 @@
 
 #ifndef SRC_DEVICES_LIB_DRIVER2_LOGGER_INTERNAL_H_
 #define SRC_DEVICES_LIB_DRIVER2_LOGGER_INTERNAL_H_
-#include "src/devices/lib/driver2/logger.h"
+
+#include "logger.h"
 
 namespace driver_internal {
 
