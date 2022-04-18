@@ -84,9 +84,11 @@ template("zbi_host_test") {
     os = os
     cpu = cpu
     isolated = true
-    if (defined(invoker.timeout) && invoker.timeout != false) {
-      timeout_secs = invoker.timeout
-    }
+
+    # Default timeout for zbi tests is 10 minutes.
+    # TODO(ihuh): Once we have more data, we can override this with a more
+    # sensible timeout for each test.
+    timeout_secs = 600
     forward_variables_from(invoker, [ "visibility" ])
 
     deps = [ ":${_test_script_target}" ]
@@ -312,7 +314,6 @@ template("zbi_test") {
         if (defined(invoker.qemu_kernel)) {
           qemu_kernel = invoker.qemu_kernel
         }
-        forward_variables_from(invoker, [ "timeout" ])
         device_types = emu_types
       }
       group_deps += [ ":$host_test_name" ]
@@ -325,7 +326,6 @@ template("zbi_test") {
         if (use_vbmeta) {
           vbmeta_image = vbmeta_target
         }
-        forward_variables_from(invoker, [ "timeout" ])
         device_types = hardware_types
       }
       group_deps += [ ":$host_test_hw_name" ]
