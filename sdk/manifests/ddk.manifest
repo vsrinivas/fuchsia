@@ -9,9 +9,10 @@ sdk://fidl/fuchsia.component.decl
 sdk://fidl/fuchsia.component.runner
 sdk://fidl/fuchsia.data
 sdk://fidl/fuchsia.device.fs
+sdk://fidl/fuchsia.diagnostics
 sdk://fidl/fuchsia.diagnostics.types
-sdk://fidl/fuchsia.driver.framework
 sdk://fidl/fuchsia.driver.compat
+sdk://fidl/fuchsia.driver.framework
 sdk://fidl/fuchsia.hardware.ftdi
 sdk://fidl/fuchsia.hardware.i2c
 sdk://fidl/fuchsia.hardware.i2cimpl
@@ -28,6 +29,7 @@ sdk://fidl/fuchsia.hardware.wlan.softmac
 sdk://fidl/fuchsia.hardware.wlanphyimpl
 sdk://fidl/fuchsia.io
 sdk://fidl/fuchsia.ldsvc
+sdk://fidl/fuchsia.logger
 sdk://fidl/fuchsia.mem
 sdk://fidl/fuchsia.process
 sdk://fidl/fuchsia.url
@@ -41,8 +43,11 @@ sdk://pkg/ddk
 sdk://pkg/ddk-platform-defs
 sdk://pkg/ddktl-experimental-driver-only
 sdk://pkg/dev-operation-experimental-driver-only
+sdk://pkg/driver2-llcpp
+sdk://pkg/driver2-record
 sdk://pkg/driver_runtime
 sdk://pkg/driver_runtime_cpp
+sdk://pkg/fdio
 sdk://pkg/fidl
 sdk://pkg/fidl-llcpp-experimental-driver-only
 sdk://pkg/fidl_base
@@ -54,6 +59,7 @@ sdk://pkg/mmio-ptr
 sdk://pkg/stdcompat
 sdk://pkg/sync
 sdk://pkg/syslog-headers
+sdk://pkg/syslog_structured_backend
 sdk://pkg/trace
 sdk://pkg/trace-engine
 sdk://pkg/usb-experimental-driver-only
