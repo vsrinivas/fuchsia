@@ -99,11 +99,26 @@ where
                                 Either::Right((result, _)) => {
                                     return Some((
                                         Ok(match result {
-                                            Ok(Ok(())) => Ok(ProvisioningProgress::Identity(
-                                                self.driver_state.lock().get_current_identity(),
-                                            )),
-                                            Ok(Err(x)) => Err(x.into_ext()),
-                                            Err(_) => Err(ProvisionError::Canceled),
+                                            Ok(Ok(())) => {
+                                                let driver_state = self.driver_state.lock();
+
+                                                // Turn on the thread mesh network.
+                                                driver_state
+                                                    .ot_instance
+                                                    .thread_set_enabled(true)
+                                                    .map_err(|e| {
+                                                        error!("Call to thread_set_enabled failed after successful join: {:?}", e);
+                                                        ProvisionError::Canceled
+                                                    })
+                                                    .map(|()|ProvisioningProgress::Identity(
+                                                        driver_state.get_current_identity(),
+                                                    ))
+                                            }
+                                            Ok(Err(e)) => Err(e.into_ext()),
+                                            Err(e) => {
+                                                error!("Call to joiner_start failed: {:?}", e);
+                                                Err(ProvisionError::Canceled)
+                                            }
                                         }),
                                         (receiver, true, None),
                                     ));
