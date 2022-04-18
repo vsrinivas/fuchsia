@@ -164,7 +164,7 @@ typedef struct _TLC_MNG_CONFIG_PARAMS_CMD_API_S_VER_2 {
      */
   uint16_t mcs[TLC_MNG_NSS_MAX][2];  // supported HT/VHT/HE rates per nss. [0] for 80mhz width
   // and lower, [1] for 160mhz.
-  // This is done in order to conform with HE capabilites.
+  // This is done in order to conform with HE capabilities.
   uint16_t maxMpduLen;  // Max length of MPDU, in bytes.
   // Used to calculate allowed A-MSDU sizes.
   uint8_t sgiChWidthSupport;  // bitmap of SGI support per channel width.

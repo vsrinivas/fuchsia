@@ -158,7 +158,7 @@ void BasicTest::RequestPlugDetect() {
 
 // Test cases that target each of the various Stream channel commands
 
-// Verify a valid unique_id, manufacturer, product and gain capabilites is successfully received.
+// Verify a valid unique_id, manufacturer, product and gain capabilities is successfully received.
 DEFINE_BASIC_TEST_CLASS(StreamProperties, { RequestStreamProperties(); });
 
 // Verify valid get gain responses are successfully received.

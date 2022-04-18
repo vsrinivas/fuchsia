@@ -43,7 +43,7 @@
 
 // ID_AA64DFR0
 // Debug Feature Register 0. This register is used to query the system for the debug
-// capabilites present within the chip.
+// capabilities present within the chip.
 
 #define ARM64_ID_AADFR0_EL1_DEBUG_VER 0x0000000000000Flu
 #define ARM64_ID_AADFR0_EL1_TRACE_VER 0x000000000000F0lu

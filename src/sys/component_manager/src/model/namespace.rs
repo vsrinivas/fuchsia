@@ -255,7 +255,7 @@ impl IncomingNamespace {
         match use_ {
             UseDecl::Storage(use_storage_decl) => {
                 // To check that the storage capability is restricted to the storage decl, we have
-                // to resolve the storage source capability. Because storage capabilites are only
+                // to resolve the storage source capability. Because storage capabilities are only
                 // ever `offer`d down the component tree, and we always resolve parents before
                 // children, this resolution will walk the cache-happy path.
                 // TODO(dgonyeo): Eventually combine this logic with the general-purpose startup

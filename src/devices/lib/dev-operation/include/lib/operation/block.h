@@ -16,7 +16,7 @@ namespace block {
 // Usage notes:
 //
 // block::Operation is a c++ wrapper around the block_op_t object. It provides
-// capabilites to interact with a block_op buffer which is used to traverse the
+// capabilities to interact with a block_op buffer which is used to traverse the
 // block stack. On deletion, it will automatically free itself.
 //
 // block::BorrowedOperation provides an unowned variant of block::Operation. It adds

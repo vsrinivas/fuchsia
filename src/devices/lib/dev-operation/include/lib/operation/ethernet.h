@@ -16,7 +16,7 @@ namespace eth {
 // Usage notes:
 //
 // eth::Operation is a c++ wrapper around the ethernet_netbuf_t object. It provides
-// capabilites to interact with a ethernet_netbuf buffer which is used to traverse the
+// capabilities to interact with a ethernet_netbuf buffer which is used to traverse the
 // ethernet stack. On deletion, it will automatically free itself.
 //
 // eth::BorrowedOperation provides an unowned variant of eth::Operation. It adds

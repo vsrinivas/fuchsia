@@ -23,7 +23,7 @@ namespace usb {
 // Usage notes:
 //
 // usb::Request is a c++ wrapper around the usb_request_t object. It provides
-// capabilites to interact with a usb_req buffer which is used to traverse the
+// capabilities to interact with a usb_req buffer which is used to traverse the
 // usb stack. On deletion, it will automatically free itself.
 //
 // usb::BorrowedRequest provides an unowned variant of usb::Request. It adds

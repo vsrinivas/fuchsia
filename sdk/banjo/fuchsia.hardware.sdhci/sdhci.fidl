@@ -25,7 +25,7 @@ type SdhciQuirk = strict enum : uint64 {
     STRIP_RESPONSE_CRC_PRESERVE_ORDER = 0x4;
     /// The controller uses a tuning process that does not follow the SDHCI specification.
     NON_STANDARD_TUNING = 0x8;
-    /// Don't use DDR modes even if the SDHCI capabilites register indicates it is supported.
+    /// Don't use DDR modes even if the SDHCI capabilities register indicates it is supported.
     NO_DDR = 0x10;
     /// Prevent DMA buffers from crossing boundaries specified by dma_boundary_alignment. For
     /// example, a boundary alignment of 0x10000 will cause buffers crossing 64K boundaries to be

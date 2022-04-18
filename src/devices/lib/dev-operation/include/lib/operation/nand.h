@@ -20,7 +20,7 @@ namespace nand {
 // Usage notes:
 //
 // nand::Operation is a c++ wrapper around the nand_operation_t object. It provides
-// capabilites to interact with a nand_op buffer which is used to traverse the
+// capabilities to interact with a nand_op buffer which is used to traverse the
 // nand stack. On deletion, it will automatically free itself.
 //
 // nand::BorrowedOperation provides an unowned variant of nand::Operation. It adds

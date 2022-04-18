@@ -438,7 +438,7 @@ TEST_F(FakePciProtocolTests, PciGetFirstAndNextCapability) {
   config->read(&val, 0x51, sizeof(val));
   ASSERT_EQ(val, 0x60);
 
-  // Can we find sequential capabilites, or different IDs?
+  // Can we find sequential capabilities, or different IDs?
   uint8_t offset2 = 0;
   ASSERT_OK(pci().GetNextCapability(PCI_CAP_ID_VENDOR, offset1, &offset2));
   ASSERT_EQ(0x60, offset2);

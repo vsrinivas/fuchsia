@@ -240,7 +240,7 @@ impl SbcCodecInfo {
         return true;
     }
 
-    /// Return the best intersection of a and b's capabilites, if one exists.
+    /// Return the best intersection of a and b's capabilities, if one exists.
     pub fn negotiate(a: &Self, b: &Self) -> Option<Self> {
         let min_bitpool = std::cmp::max(a.0.minbitpoolval(), b.0.minbitpoolval());
         let max_bitpool = std::cmp::min(a.0.maxbitpoolval(), b.0.maxbitpoolval());

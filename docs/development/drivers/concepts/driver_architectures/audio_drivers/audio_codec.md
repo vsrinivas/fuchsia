@@ -107,7 +107,7 @@ glitches or errors in the codec operation.
 ### Bridged Mode {#bridged-mode}
 
 Before specifying the DAI format the controller must query the codec for its
-bridging capabilites. If the codec is bridgeable, then the controller must
+bridging capabilities. If the codec is bridgeable, then the controller must
 enable or disable bridging based on its knowledge of the system configuration.
 Note that this is a singular property of a codec, i.e. a codec either supports
 bridging or not, and it can be set in bridged mode or not. This protocol allows

@@ -287,7 +287,7 @@ struct chipcregs {
 #define PCAP5_VC_SHIFT  22
 #define PCAP5_CC_MASK   0xf8000000
 #define PCAP5_CC_SHIFT  27
-/* pmucapabilites_ext PMU rev >= 15 */
+/* pmucapabilities_ext PMU rev >= 15 */
 #define PCAPEXT_SR_SUPPORTED_MASK    (1 << 1)
 /* retention_ctl PMU rev >= 15 */
 #define PMU_RCTL_MACPHY_DISABLE_MASK (1 << 26)

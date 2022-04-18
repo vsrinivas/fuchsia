@@ -142,7 +142,7 @@ zx_status_t AudioDriver::GetDriverInfo() {
   // - supported format list.
   // - clock domain.
 
-  // Get unique IDs, strings and gain capabilites.
+  // Get unique IDs, strings and gain capabilities.
   stream_config_fidl_->GetProperties([this](fuchsia::hardware::audio::StreamProperties props) {
     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
     if (state_ != State::MissingDriverInfo) {
