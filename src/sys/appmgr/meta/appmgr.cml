@@ -127,11 +127,10 @@
     ],
     expose: [
         {
-            directory: "svc_from_sys",
-            from: "self",
-        },
-        {
-            directory: "hub-legacy",
+            directory: [
+                "hub-legacy",
+                "svc_from_sys",
+            ],
             from: "self",
         },
         {
