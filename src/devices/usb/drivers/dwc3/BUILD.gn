@@ -1,0 +1,48 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+
+config("internal") {
+  cflags = [ "-Wno-unused-function" ]
+}
+
+driver_module("dwc3") {
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
+  sources = [
+    "dwc3-commands.cc",
+    "dwc3-endpoints.cc",
+    "dwc3-ep0.cc",
+    "dwc3-events.cc",
+    "dwc3.cc",
+  ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.usb",
+    "//sdk/banjo/ddk.protocol.usb.dci",
+    "//sdk/banjo/ddk.protocol.usb.modeswitch",
+    "//sdk/banjo/ddk.protocol.usb.request",
+    "//src/devices/bus/lib/device-protocol-platform-device",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/mmio",
+    "//src/devices/usb/lib/usb",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/hwreg",
+    "//zircon/public/lib/pretty",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+  ]
+  public_configs = [ ":internal" ]
+}
