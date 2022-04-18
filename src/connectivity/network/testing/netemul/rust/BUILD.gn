@@ -25,7 +25,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
     "//src/connectivity/lib/fidl_fuchsia_net_stack_ext",
     "//src/connectivity/lib/ping",
-    "//src/connectivity/network/testing/netemul-v2/fidl:fuchsia.netemul-rustc",
+    "//src/connectivity/network/testing/netemul/fidl:fuchsia.netemul-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
@@ -47,5 +47,7 @@ rustc_library("lib") {
 }
 
 expect_includes("lib_includes") {
-  includes = [ "//src/connectivity/network/testing/netemul-v2/service/meta/client.shard.cml" ]
+  includes = [
+    "//src/connectivity/network/testing/netemul/service/meta/client.shard.cml",
+  ]
 }

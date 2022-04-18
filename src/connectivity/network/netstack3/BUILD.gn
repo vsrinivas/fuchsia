@@ -101,7 +101,7 @@ fuchsia_unittest_package("netstack3-tests") {
   component_name = "netstack3-bin-test"
   deps = [
     ":bin_test",
-    "//src/connectivity/network/testing/netemul-v2/service:netemul-sandbox",
+    "//src/connectivity/network/testing/netemul/service:netemul-sandbox",
   ]
 }
 

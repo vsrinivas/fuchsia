@@ -17,7 +17,7 @@ rustc_test("bin") {
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo-rustc",
     "//src/connectivity/lib/net-types",
     "//src/connectivity/lib/packet-formats",
-    "//src/connectivity/network/testing/netemul-v2/fidl:fuchsia.netemul-rustc",
+    "//src/connectivity/network/testing/netemul/fidl:fuchsia.netemul-rustc",
     "//src/connectivity/network/testing/netemul/rust:lib",
     "//src/connectivity/network/tests/integration/common:netstack_testing_common",
     "//src/connectivity/network/tests/integration/macros:netstack_testing_macros",
@@ -50,7 +50,7 @@ fuchsia_test_component("netsvc-integration-test") {
     "//src/bringup/bin/netsvc:test-component",
 
     # netemul-sandbox-v2 is used to create hermetic test realms.
-    "//src/connectivity/network/testing/netemul-v2/service:netemul-sandbox",
+    "//src/connectivity/network/testing/netemul/service:netemul-sandbox",
 
     # We inject a network stack to be able to communicate with netsvc.
     "//src/connectivity/network/netstack:component-debug",

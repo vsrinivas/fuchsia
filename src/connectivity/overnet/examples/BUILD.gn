@@ -67,7 +67,7 @@ fuchsia_test_package("overnet-examples-tests") {
     ":device-name-provider-client",
     ":device-name-provider-server",
     "//src/connectivity/network/mdns/service:component",
-    "//src/connectivity/network/testing/netemul-v2/configurable-netstack",
+    "//src/connectivity/network/testing/netemul/configurable-netstack",
     "//src/connectivity/overnet/overnetstack:component-with-udp",
   ]
 }

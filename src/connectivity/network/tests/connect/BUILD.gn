@@ -27,7 +27,7 @@ fuchsia_unittest_package("netstack-connect-tests") {
   deps = [
     ":connect",
     "//src/connectivity/network/netstack:component-debug",
-    "//src/connectivity/network/testing/netemul-v2/service:netemul-sandbox",
+    "//src/connectivity/network/testing/netemul/service:netemul-sandbox",
   ]
 }
 

@@ -37,7 +37,7 @@ fuchsia_test_package("netstack-fidl-tests") {
 
   deps = [
     # netemul-sandbox-v2 is used to create hermetic test realms.
-    "//src/connectivity/network/testing/netemul-v2/service:netemul-sandbox",
+    "//src/connectivity/network/testing/netemul/service:netemul-sandbox",
 
     # netstack is under test.
     "//src/connectivity/network/netstack:component-debug",
@@ -63,7 +63,7 @@ fuchsia_test_package("netstack-error-fidl-tests") {
   }
   deps = [
     # netemul-sandbox-v2 is used to create hermetic test realms.
-    "//src/connectivity/network/testing/netemul-v2/service:netemul-sandbox",
+    "//src/connectivity/network/testing/netemul/service:netemul-sandbox",
 
     # netstack is under test.
     "//src/connectivity/network/netstack:component-debug",

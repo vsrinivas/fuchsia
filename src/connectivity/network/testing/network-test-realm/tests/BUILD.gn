@@ -63,7 +63,7 @@ fuchsia_test_package("network-test-realm-integration-tests") {
     "unreliable-echo:unreliable-echo-v6",
 
     # netemul-sandbox-v2 is used to create hermetic test realms.
-    "//src/connectivity/network/testing/netemul-v2/service:netemul-sandbox",
+    "//src/connectivity/network/testing/netemul/service:netemul-sandbox",
 
     # controller is used to interact with the Network Test Realm.
     "//src/connectivity/network/testing/network-test-realm/service:controller",

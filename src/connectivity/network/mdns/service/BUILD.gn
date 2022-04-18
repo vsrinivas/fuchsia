@@ -262,7 +262,7 @@ fuchsia_test_component("mdns-netemul-test") {
     ":device-name-provider-remote",
     ":publisher",
     ":test-driver",
-    "//src/connectivity/network/testing/netemul-v2/configurable-netstack",
+    "//src/connectivity/network/testing/netemul/configurable-netstack",
   ]
 }
 
@@ -274,7 +274,7 @@ fuchsia_test_component("mdns-netemul-v6-test") {
     ":device-name-provider-remote",
     ":publisher",
     ":test-driver",
-    "//src/connectivity/network/testing/netemul-v2/configurable-netstack",
+    "//src/connectivity/network/testing/netemul/configurable-netstack",
   ]
 }
 
@@ -309,8 +309,8 @@ fuchsia_test_component("mdns-netemul-multi-network-test") {
   deps = [
     ":remote-multi-network",
     ":test-driver-multi-network",
-    "//src/connectivity/network/testing/netemul-v2/configurable-netstack",
-    "//src/connectivity/network/testing/netemul-v2/sync-manager",
+    "//src/connectivity/network/testing/netemul/configurable-netstack",
+    "//src/connectivity/network/testing/netemul/sync-manager",
   ]
 }
 

@@ -56,8 +56,8 @@ fuchsia_test_component("weave-ip-fwd-test-wpan-non-subnet-6") {
     ":weave-node",
     ":wlan-node-non-subnet-6",
     ":wpan-node-non-subnet-6",
-    "//src/connectivity/network/testing/netemul-v2/configurable-netstack",
-    "//src/connectivity/network/testing/netemul-v2/sync-manager",
+    "//src/connectivity/network/testing/netemul/configurable-netstack",
+    "//src/connectivity/network/testing/netemul/sync-manager",
   ]
 }
 
@@ -78,8 +78,8 @@ fuchsia_test_component("weave-ip-fwd-test-wpan-subnet-6") {
     ":weave-node",
     ":wlan-node-subnet-6",
     ":wpan-node-subnet-6",
-    "//src/connectivity/network/testing/netemul-v2/configurable-netstack",
-    "//src/connectivity/network/testing/netemul-v2/sync-manager",
+    "//src/connectivity/network/testing/netemul/configurable-netstack",
+    "//src/connectivity/network/testing/netemul/sync-manager",
   ]
 }
 

@@ -69,7 +69,7 @@ rustc_library("test_lib") {
   # Only for use by test runners.
   visibility = [
     "./*",
-    "//src/connectivity/network/testing/netemul-v2/runner/*",
+    "//src/connectivity/network/testing/netemul/runner/*",
   ]
 
   deps = [
@@ -157,7 +157,7 @@ group("test_runners") {
     "rust",
     "starnix",
     "stress_test",
-    "//src/connectivity/network/testing/netemul-v2/runner:package",
+    "//src/connectivity/network/testing/netemul/runner:package",
   ]
 }
 

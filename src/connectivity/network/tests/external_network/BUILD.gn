@@ -30,7 +30,7 @@ fuchsia_test_component("test") {
   deps = [
     ":client",
     ":device-name-provider",
-    "//src/connectivity/network/testing/netemul-v2/configurable-netstack",
+    "//src/connectivity/network/testing/netemul/configurable-netstack",
   ]
 }
 

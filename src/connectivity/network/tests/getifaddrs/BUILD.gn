@@ -25,7 +25,7 @@ fuchsia_test_component("getifaddrs-test") {
   manifest = "meta/getifaddrs-test.cml"
   deps = [
     ":test-driver",
-    "//src/connectivity/network/testing/netemul-v2/configurable-netstack",
+    "//src/connectivity/network/testing/netemul/configurable-netstack",
   ]
 }
 

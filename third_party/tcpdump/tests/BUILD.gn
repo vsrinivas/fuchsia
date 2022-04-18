@@ -12,7 +12,7 @@ fuchsia_unittest_package("tests") {
     ":bin",
 
     # netemul-sandbox-v2 is used to create hermetic test realms.
-    "//src/connectivity/network/testing/netemul-v2/service:netemul-sandbox",
+    "//src/connectivity/network/testing/netemul/service:netemul-sandbox",
 
     # The tests depend `fuchsia.posix.socket/Provider` and
     # `fuchsia.posix.socket.packet/Provider` which the netstack exposes.
@@ -36,7 +36,7 @@ rustc_test("bin") {
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/lib/net-types",
     "//src/connectivity/lib/packet-formats",
-    "//src/connectivity/network/testing/netemul-v2/fidl:fuchsia.netemul-rustc",
+    "//src/connectivity/network/testing/netemul/fidl:fuchsia.netemul-rustc",
     "//src/connectivity/network/testing/netemul/rust:lib",
     "//src/connectivity/network/tests/integration/common:netstack_testing_common",
     "//src/connectivity/network/tests/integration/macros:netstack_testing_macros",
