@@ -51,13 +51,7 @@ void MsiFreeAssert(msi_block_t* /* unused */) { assert(false); }
 const uint32_t kVectorMax = 256u;
 
 zx_status_t create_allocation(fbl::RefPtr<MsiAllocation>* alloc, uint32_t cnt) {
-  zx_status_t status;
-  if ((status =
-           MsiAllocation::Create(cnt, alloc, MsiAllocate, MsiFree, MsiIsSupportedTrue) != ZX_OK)) {
-    return status;
-  }
-
-  return ZX_OK;
+  return MsiAllocation::Create(cnt, alloc, MsiAllocate, MsiFree, MsiIsSupportedTrue);
 }
 
 // Helper function to create a valid vmo / mapping / capability tuple to cut down
