@@ -316,6 +316,10 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 
 				// Create a new file to capture the serial log for this nodename.
 				serialLogName := fmt.Sprintf("%s_serial_log.txt", t.Nodename())
+				// TODO(fxbug.dev/71529): Remove once there are no dependencies on this filename.
+				if len(targetSlice) == 1 {
+					serialLogName = "serial_log.txt"
+				}
 				serialLogPath := filepath.Join(r.serialLogDir, serialLogName)
 				if _, err := os.Create(serialLogPath); err != nil {
 					return err
@@ -392,6 +396,10 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 					}
 					go func() {
 						syslogName := fmt.Sprintf("%s_syslog.txt", t.Nodename())
+						// TODO(fxbug.dev/71529): Remove when there are no dependencies on this filename.
+						if len(targetSlice) == 1 {
+							syslogName = "syslog.txt"
+						}
 						syslogPath := filepath.Join(r.syslogDir, syslogName)
 						if _, err := os.Create(syslogPath); err != nil {
 							logger.Errorf(ctx, "failed to create syslog file %s: %s", syslogPath, err)
