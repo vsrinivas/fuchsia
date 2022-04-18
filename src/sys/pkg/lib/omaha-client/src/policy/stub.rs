@@ -40,7 +40,7 @@ impl<P: Plan> Policy for StubPolicy<P> {
         check_options: &CheckOptions,
     ) -> CheckDecision {
         CheckDecision::Ok(RequestParams {
-            source: check_options.source.clone(),
+            source: check_options.source,
             use_configured_proxies: true,
             disable_updates: false,
         })

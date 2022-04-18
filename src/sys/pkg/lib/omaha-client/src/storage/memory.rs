@@ -182,17 +182,17 @@ mod tests {
     fn test_committed() {
         block_on(async {
             let mut storage = MemStorage::new();
-            assert_eq!(true, storage.committed());
+            assert!(storage.committed());
             storage.set_bool("some bool key", false).await.unwrap();
-            assert_eq!(false, storage.committed());
+            assert!(!storage.committed());
             storage.commit().await.unwrap();
-            assert_eq!(true, storage.committed());
+            assert!(storage.committed());
             storage.set_string("some string key", "some string").await.unwrap();
-            assert_eq!(false, storage.committed());
+            assert!(!storage.committed());
             storage.set_int("some int key", 42).await.unwrap();
-            assert_eq!(false, storage.committed());
+            assert!(!storage.committed());
             storage.commit().await.unwrap();
-            assert_eq!(true, storage.committed());
+            assert!(storage.committed());
         });
     }
 }

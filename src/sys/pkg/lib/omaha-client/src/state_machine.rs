@@ -715,7 +715,7 @@ where
     {
         Self::yield_state(State::CheckingForUpdates(request_params.source), co).await;
 
-        self.report_check_interval(request_params.source.clone()).await;
+        self.report_check_interval(request_params.source).await;
 
         // Construct a request for the app(s).
         let config = self.config.clone();
@@ -2461,7 +2461,7 @@ mod tests {
 
             let storage = storage.lock().await;
             storage.get_int(LAST_UPDATE_TIME).await.unwrap();
-            assert_eq!(true, storage.committed());
+            assert!(storage.committed());
         });
     }
 
@@ -3406,7 +3406,7 @@ mod tests {
 
         let (mut ctl, state_machine) = pool.run_until(
             StateMachineBuilder::new_stub()
-                .app_set(apps.clone())
+                .app_set(apps)
                 .http(http)
                 .installer(installer)
                 .policy_engine(policy_engine)
@@ -3552,7 +3552,7 @@ mod tests {
             .session_id(GUID::from_u128(5))
             .request_id(GUID::from_u128(6));
         for app in &apps {
-            expected_request_builder = expected_request_builder.add_ping(&app);
+            expected_request_builder = expected_request_builder.add_ping(app);
         }
         pool.run_until(assert_request(&ping_request_viewer, expected_request_builder));
 
@@ -3598,7 +3598,7 @@ mod tests {
             .session_id(GUID::from_u128(7))
             .request_id(GUID::from_u128(8));
         for app in &apps {
-            expected_request_builder = expected_request_builder.add_ping(&app);
+            expected_request_builder = expected_request_builder.add_ping(app);
         }
         pool.run_until(assert_request(&ping_request_viewer, expected_request_builder));
 
@@ -3706,7 +3706,7 @@ mod tests {
         }
 
         fn take_states(&self) -> Vec<State> {
-            std::mem::replace(&mut *self.states.borrow_mut(), vec![])
+            std::mem::take(&mut *self.states.borrow_mut())
         }
     }
 
@@ -3980,10 +3980,7 @@ mod tests {
                 .borrow()
                 .metrics
                 .iter()
-                .filter(|m| match m {
-                    Metrics::WaitedForRebootDuration(_) => true,
-                    _ => false,
-                })
+                .filter(|m| matches!(m, Metrics::WaitedForRebootDuration(_)))
                 .collect::<Vec<_>>(),
             vec![&Metrics::WaitedForRebootDuration(Duration::from_secs(999))]
         );

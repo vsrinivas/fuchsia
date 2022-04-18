@@ -223,7 +223,7 @@ mod tests {
             assert_eq!(Some(123456789), storage.get_int(LAST_UPDATE_TIME).await);
             assert_eq!(Some(56789), storage.get_int(SERVER_DICTATED_POLL_INTERVAL).await);
             assert_eq!(Some(1234), storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await);
-            assert_eq!(false, storage.committed());
+            assert!(!storage.committed());
         });
     }
 
@@ -247,7 +247,7 @@ mod tests {
             assert_eq!(Some(123456789), storage.get_int(LAST_UPDATE_TIME).await);
             assert_eq!(None, storage.get_int(SERVER_DICTATED_POLL_INTERVAL).await);
             assert_eq!(None, storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await);
-            assert_eq!(false, storage.committed());
+            assert!(!storage.committed());
         });
     }
 }

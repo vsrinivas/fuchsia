@@ -671,7 +671,7 @@ mod tests {
             }});
             let json = storage.get_string(&app.id).await.unwrap();
             assert_eq!(expected, serde_json::Value::from_str(&json).unwrap());
-            assert_eq!(false, storage.committed());
+            assert!(!storage.committed());
         });
     }
 
@@ -690,7 +690,7 @@ mod tests {
             }});
             let json = storage.get_string(&app.id).await.unwrap();
             assert_eq!(expected, serde_json::Value::from_str(&json).unwrap());
-            assert_eq!(false, storage.committed());
+            assert!(!storage.committed());
         });
     }
 

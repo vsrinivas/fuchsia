@@ -286,7 +286,7 @@ impl<'a> RequestBuilder<'a> {
                     protocol_version: PROTOCOL_V3.to_string(),
                     updater: self.config.updater.name.clone(),
                     updater_version: self.config.updater.version.to_string(),
-                    install_source: self.params.source.clone(),
+                    install_source: self.params.source,
                     is_machine: true,
                     request_id: self.request_id.clone(),
                     session_id: self.session_id.clone(),
