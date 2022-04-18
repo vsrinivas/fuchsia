@@ -9,7 +9,6 @@ use crate::{
     },
     constants::{ACCOUNT_LABEL, FUCHSIA_DATA_GUID},
     disk_management::{DiskError, DiskManager, EncryptedBlockDevice, Partition},
-    insecure::{NullKeySource, INSECURE_EMPTY_PASSWORD},
     keys::{Key, KeyEnrollment, KeyEnrollmentError, KeyRetrieval, KeyRetrievalError},
     pinweaver::{CredManager, PinweaverKeyEnroller, PinweaverKeyRetriever, PinweaverParams},
     scrypt::{ScryptKeySource, ScryptParams},
@@ -98,7 +97,6 @@ impl From<ProvisionError> for faccount::Error {
 
 #[derive(Debug)]
 enum EnrollmentScheme {
-    NullKey,
     Scrypt,
     Pinweaver,
 }
@@ -277,7 +275,6 @@ where
         password: &str,
     ) -> Result<Key, KeyRetrievalError> {
         match meta.authenticator_metadata() {
-            AuthenticatorMetadata::NullKey(_) => NullKeySource.retrieve_key(&password).await,
             AuthenticatorMetadata::ScryptOnly(s_meta) => {
                 let key_source = ScryptKeySource::from(ScryptParams::from(s_meta.clone()));
                 key_source.retrieve_key(&password).await
@@ -296,7 +293,7 @@ where
     }
 
     /// Remove the key from the key source specified in `meta`s authenticator metadata.
-    /// This is expected to succeed trivially for the Null and Scrypt key sources, since they have
+    /// This is expected to succeed trivially for the Scrypt key source, since it has
     /// no resources to dispose, and to make a call to Credential Manager for the Pinweaver key
     /// source.
     async fn remove_key_for_account(
@@ -304,9 +301,6 @@ where
         meta: &AccountMetadata,
     ) -> Result<(), KeyEnrollmentError> {
         match meta.authenticator_metadata() {
-            AuthenticatorMetadata::NullKey(n_meta) => {
-                NullKeySource.remove_key(n_meta.clone().into()).await
-            }
             AuthenticatorMetadata::ScryptOnly(s_meta) => {
                 let mut key_source = ScryptKeySource::from(s_meta.scrypt_params);
                 key_source.remove_key(s_meta.clone().into()).await
@@ -494,38 +488,27 @@ where
             faccount::Error::InvalidRequest
         })?;
 
-        let enrollment_scheme = if password == INSECURE_EMPTY_PASSWORD {
-            if !self.options.allow_null {
-                // Empty passwords are only supported when the allow_null option is true.
-                warn!(
-                    "provision_new_account: refusing to provision account with empty password when \
-                    allow_null=false");
-                return Err(faccount::Error::InvalidRequest);
-            }
-            EnrollmentScheme::NullKey
-        } else {
-            if !(self.options.allow_scrypt || self.options.allow_pinweaver) {
-                // Non-empty passwords are only supported when scrypt or pinweaver is allowed.
-                warn!(
-                    "provision_new_account: refusing to provision account with non-empty password \
-                    when allow_scrypt=false and allow_pinweaver=false"
-                );
-                return Err(faccount::Error::InvalidRequest);
-            } else if password.len() < MIN_PASSWORD_SIZE {
-                // Non-empty passwords must always be at least the minimum length.
-                warn!(
-                    "provision_new_account: refusing to provision account with password of \
-                      length {}",
-                    password.len()
-                );
-                return Err(faccount::Error::InvalidRequest);
-            }
+        if !(self.options.allow_scrypt || self.options.allow_pinweaver) {
+            // Non-empty passwords are only supported when scrypt or pinweaver is allowed.
+            warn!(
+                "provision_new_account: refusing to provision account with non-empty password \
+                when allow_scrypt=false and allow_pinweaver=false"
+            );
+            return Err(faccount::Error::InvalidRequest);
+        } else if password.len() < MIN_PASSWORD_SIZE {
+            // Non-empty passwords must always be at least the minimum length.
+            warn!(
+                "provision_new_account: refusing to provision account with password of \
+                  length {}",
+                password.len()
+            );
+            return Err(faccount::Error::InvalidRequest);
+        }
 
-            if self.options.allow_pinweaver {
-                EnrollmentScheme::Pinweaver
-            } else {
-                EnrollmentScheme::Scrypt
-            }
+        let enrollment_scheme = if self.options.allow_pinweaver {
+            EnrollmentScheme::Pinweaver
+        } else {
+            EnrollmentScheme::Scrypt
         };
 
         // For now, we only contemplate one account ID
@@ -579,10 +562,6 @@ where
 
         // Provision the new account.
         let (key, authenticator_metadata): (Key, AuthenticatorMetadata) = match enrollment_scheme {
-            EnrollmentScheme::NullKey => NullKeySource
-                .enroll_key(&password)
-                .await
-                .map(|enrolled_key| (enrolled_key.key, enrolled_key.enrollment_data.into())),
             EnrollmentScheme::Scrypt => {
                 let mut key_source = ScryptKeySource::new();
                 key_source
@@ -807,13 +786,10 @@ mod test {
         super::*,
         crate::{
             account_metadata::{
-                test::{
-                    TEST_NAME, TEST_NULL_METADATA, TEST_PINWEAVER_METADATA, TEST_SCRYPT_METADATA,
-                },
+                test::{TEST_NAME, TEST_PINWEAVER_METADATA, TEST_SCRYPT_METADATA},
                 AccountMetadata, AccountMetadataStoreError,
             },
             disk_management::{DiskError, MockMinfs},
-            insecure::INSECURE_EMPTY_KEY,
             keys::Key,
             pinweaver::test::{
                 MockCredManager, TEST_PINWEAVER_ACCOUNT_KEY, TEST_PINWEAVER_CREDENTIAL_LABEL,
@@ -830,15 +806,10 @@ mod test {
     };
 
     // By default, allow any implemented form of password and encryption.
-    const DEFAULT_OPTIONS: Options =
-        Options { allow_null: true, allow_scrypt: true, allow_pinweaver: false };
+    const DEFAULT_OPTIONS: Options = Options { allow_scrypt: true, allow_pinweaver: true };
     // Define more restrictive options to verify exclusions are implemented correctly.
-    const NULL_ONLY_OPTIONS: Options =
-        Options { allow_null: true, allow_scrypt: false, allow_pinweaver: false };
-    const SCRYPT_ONLY_OPTIONS: Options =
-        Options { allow_null: false, allow_scrypt: true, allow_pinweaver: false };
-    const PINWEAVER_ONLY_OPTIONS: Options =
-        Options { allow_null: false, allow_scrypt: false, allow_pinweaver: true };
+    const SCRYPT_ONLY_OPTIONS: Options = Options { allow_scrypt: true, allow_pinweaver: false };
+    const PINWEAVER_ONLY_OPTIONS: Options = Options { allow_scrypt: false, allow_pinweaver: true };
 
     // An account ID that should not exist.
     const UNSUPPORTED_ACCOUNT_ID: u64 = 42;
@@ -1049,12 +1020,6 @@ mod test {
     impl MemoryAccountMetadataStore {
         fn new() -> MemoryAccountMetadataStore {
             MemoryAccountMetadataStore { accounts: std::collections::HashMap::new() }
-        }
-
-        fn with_null_keyed_account(mut self, account_id: &AccountId) -> Self {
-            let metadata = AccountMetadata::test_new_null(TEST_NAME.into());
-            self.accounts.insert(*account_id, metadata);
-            self
         }
 
         fn with_password_account(mut self, account_id: &AccountId) -> Self {
@@ -1366,51 +1331,6 @@ mod test {
     }
 
     #[fuchsia::test]
-    async fn test_get_account_found_no_password_allowed() {
-        let disk_manager = MockDiskManager::new()
-            .with_partition(make_formatted_account_partition(INSECURE_EMPTY_KEY));
-        let account_metadata_store =
-            MemoryAccountMetadataStore::new().with_null_keyed_account(&GLOBAL_ACCOUNT_ID);
-        let cred_manager_provider = MockCredManagerProvider::new();
-        let account_manager = AccountManager::new(
-            NULL_ONLY_OPTIONS,
-            disk_manager,
-            account_metadata_store,
-            cred_manager_provider,
-        );
-        let (client, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
-        account_manager
-            .get_account(GLOBAL_ACCOUNT_ID, INSECURE_EMPTY_PASSWORD, server)
-            .await
-            .expect("get account");
-        let (_, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
-        assert_eq!(
-            client.get_data_directory(server).await.expect("get_data_directory FIDL"),
-            Ok(())
-        );
-    }
-
-    #[fuchsia::test]
-    async fn test_get_account_found_no_password_not_allowed() {
-        let disk_manager = MockDiskManager::new()
-            .with_partition(make_formatted_account_partition(INSECURE_EMPTY_KEY));
-        let account_metadata_store =
-            MemoryAccountMetadataStore::new().with_null_keyed_account(&GLOBAL_ACCOUNT_ID);
-        let cred_manager_provider = MockCredManagerProvider::new();
-        let account_manager = AccountManager::new(
-            SCRYPT_ONLY_OPTIONS,
-            disk_manager,
-            account_metadata_store,
-            cred_manager_provider,
-        );
-        let (_, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
-        assert_eq!(
-            account_manager.get_account(GLOBAL_ACCOUNT_ID, INSECURE_EMPTY_PASSWORD, server).await,
-            Err(faccount::Error::UnsupportedOperation)
-        );
-    }
-
-    #[fuchsia::test]
     async fn test_get_account_found_correct_password_allowed() {
         let disk_manager = MockDiskManager::new()
             .with_partition(make_formatted_account_partition(TEST_SCRYPT_KEY));
@@ -1443,7 +1363,7 @@ mod test {
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            NULL_ONLY_OPTIONS,
+            PINWEAVER_ONLY_OPTIONS,
             disk_manager,
             account_metadata_store,
             cred_manager_provider,
@@ -1672,44 +1592,6 @@ mod test {
     }
 
     #[fuchsia::test]
-    async fn test_deprecated_provision_new_account_password_empty_allowed() {
-        let disk_manager =
-            MockDiskManager::new().with_partition(make_unformatted_account_partition());
-        let cred_manager_provider = MockCredManagerProvider::new();
-        let account_manager = AccountManager::new(
-            NULL_ONLY_OPTIONS,
-            disk_manager,
-            MemoryAccountMetadataStore::new(),
-            cred_manager_provider,
-        );
-        assert_eq!(
-            account_manager
-                .provision_new_account(&TEST_FACCOUNT_METADATA, INSECURE_EMPTY_PASSWORD)
-                .await,
-            Ok(GLOBAL_ACCOUNT_ID)
-        );
-    }
-
-    #[fuchsia::test]
-    async fn test_deprecated_provision_new_account_password_empty_not_allowed() {
-        let disk_manager =
-            MockDiskManager::new().with_partition(make_unformatted_account_partition());
-        let cred_manager_provider = MockCredManagerProvider::new();
-        let account_manager = AccountManager::new(
-            SCRYPT_ONLY_OPTIONS,
-            disk_manager,
-            MemoryAccountMetadataStore::new(),
-            cred_manager_provider,
-        );
-        assert_eq!(
-            account_manager
-                .provision_new_account(&TEST_FACCOUNT_METADATA, INSECURE_EMPTY_PASSWORD)
-                .await,
-            Err(faccount::Error::InvalidRequest)
-        );
-    }
-
-    #[fuchsia::test]
     async fn test_deprecated_provision_new_account_password_too_short() {
         // Passwords must be 8 characters or longer
         let disk_manager =
@@ -1720,6 +1602,10 @@ mod test {
             disk_manager,
             MemoryAccountMetadataStore::new(),
             cred_manager_provider,
+        );
+        assert_eq!(
+            account_manager.provision_new_account(&TEST_FACCOUNT_METADATA, "").await,
+            Err(faccount::Error::InvalidRequest)
         );
         assert_eq!(
             account_manager.provision_new_account(&TEST_FACCOUNT_METADATA, "7 chars").await,
@@ -1747,25 +1633,6 @@ mod test {
                 .provision_new_account(&TEST_FACCOUNT_METADATA, TEST_SCRYPT_PASSWORD)
                 .await,
             Ok(GLOBAL_ACCOUNT_ID)
-        );
-    }
-
-    #[fuchsia::test]
-    async fn test_deprecated_provision_new_account_password_not_empty_not_allowed() {
-        let disk_manager =
-            MockDiskManager::new().with_partition(make_unformatted_account_partition());
-        let cred_manager_provider = MockCredManagerProvider::new();
-        let account_manager = AccountManager::new(
-            NULL_ONLY_OPTIONS,
-            disk_manager,
-            MemoryAccountMetadataStore::new(),
-            cred_manager_provider,
-        );
-        assert_eq!(
-            account_manager
-                .provision_new_account(&TEST_FACCOUNT_METADATA, TEST_SCRYPT_PASSWORD)
-                .await,
-            Err(faccount::Error::InvalidRequest)
         );
     }
 
@@ -2077,13 +1944,6 @@ mod test {
             account_metadata_store,
             cred_manager_provider,
         );
-
-        // null
-        let key = account_manager
-            .retrieve_user_key(&TEST_NULL_METADATA, INSECURE_EMPTY_PASSWORD)
-            .await
-            .expect("retrieve key (null)");
-        assert_eq!(key, INSECURE_EMPTY_KEY);
 
         // scrypt
         let key = account_manager

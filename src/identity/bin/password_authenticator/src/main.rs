@@ -7,7 +7,6 @@ mod account_manager;
 mod account_metadata;
 mod constants;
 mod disk_management;
-mod insecure;
 mod keys;
 mod options;
 mod pinweaver;

@@ -59,7 +59,6 @@ rustc_binary("bin") {
     "src/account_metadata.rs",
     "src/constants.rs",
     "src/disk_management.rs",
-    "src/insecure.rs",
     "src/keys.rs",
     "src/main.rs",
     "src/options.rs",
@@ -77,12 +76,6 @@ fuchsia_component("component_scrypt") {
   deps = [ ":bin" ]
 }
 
-fuchsia_component("component_scrypt_or_null") {
-  component_name = "password-authenticator"
-  manifest = "meta/password-authenticator-scrypt-or-null.cml"
-  deps = [ ":bin" ]
-}
-
 fuchsia_component("component_pinweaver_or_scrypt") {
   component_name = "password-authenticator"
   manifest = "meta/password-authenticator-pinweaver-or-scrypt.cml"
@@ -96,13 +89,6 @@ fuchsia_component("component_scrypt_for_test") {
   testonly = true
   component_name = "password-authenticator-scrypt"
   manifest = "meta/password-authenticator-scrypt.cml"
-  deps = [ ":bin" ]
-}
-
-fuchsia_component("component_scrypt_or_null_for_test") {
-  testonly = true
-  component_name = "password-authenticator-scrypt-or-null"
-  manifest = "meta/password-authenticator-scrypt-or-null.cml"
   deps = [ ":bin" ]
 }
 

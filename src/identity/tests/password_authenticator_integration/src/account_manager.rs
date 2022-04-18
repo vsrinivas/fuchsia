@@ -71,7 +71,6 @@ extern "C" {
 
 enum Config {
     PinweaverOrScrypt,
-    ScryptOrNull,
     ScryptOnly,
 }
 
@@ -92,7 +91,6 @@ impl TestEnv {
         builder.driver_test_realm_setup().await.unwrap();
         let manifest = match config {
             Config::PinweaverOrScrypt => "#meta/password-authenticator-pinweaver-or-scrypt.cm",
-            Config::ScryptOrNull => "#meta/password-authenticator-scrypt-or-null.cm",
             Config::ScryptOnly => "#meta/password-authenticator-scrypt.cm",
         };
         let password_authenticator = builder
@@ -389,30 +387,6 @@ async fn deprecated_provision_new_null_password_account_while_null_disallowed() 
 }
 
 #[fuchsia::test]
-async fn deprecated_provision_new_null_password_account_while_null_allowed() {
-    let env = TestEnv::build(Config::ScryptOrNull).await;
-    let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
-    let account_manager = env.account_manager();
-
-    let account_ids = account_manager.get_account_ids().await.expect("get account ids");
-    assert_eq!(account_ids, Vec::<u64>::new());
-
-    let (_account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
-    account_manager
-        .deprecated_provision_new_account(
-            EMPTY_PASSWORD,
-            AccountMetadata { name: Some("test".to_string()), ..AccountMetadata::EMPTY },
-            server_end,
-        )
-        .await
-        .expect("deprecated_new_provision FIDL")
-        .expect("deprecated provision new account");
-
-    let account_ids = account_manager.get_account_ids().await.expect("get account ids");
-    assert_eq!(account_ids, vec![1]);
-}
-
-#[fuchsia::test]
 async fn deprecated_provision_new_real_password_account_on_unformatted_partition() {
     let env = TestEnv::build(Config::ScryptOnly).await;
     let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
@@ -697,43 +671,6 @@ async fn locking_account_terminates_all_clients() {
         wait_for_account_close(&account_proxy2),
     )
     .expect("waiting for account channels to close");
-}
-
-#[fuchsia::test]
-async fn null_provision_and_unlock_with_real_password_fails_with_failed_authentication() {
-    let env = TestEnv::build(Config::ScryptOrNull).await;
-    let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
-    let account_manager = env.account_manager();
-
-    let account_ids = account_manager.get_account_ids().await.expect("get account ids");
-    assert_eq!(account_ids, Vec::<u64>::new());
-
-    let (account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
-    account_manager
-        .deprecated_provision_new_account(
-            EMPTY_PASSWORD,
-            AccountMetadata { name: Some("test".to_string()), ..AccountMetadata::EMPTY },
-            server_end,
-        )
-        .await
-        .expect("deprecated_new_provision FIDL")
-        .expect("deprecated provision new account");
-
-    let account_ids = account_manager.get_account_ids().await.expect("get account ids");
-    assert_eq!(account_ids, vec![1]);
-
-    account_proxy.lock().await.expect("lock FIDL").expect("locked");
-    drop(account_proxy);
-
-    // A second attempt to provision the same user over the existing account should fail, since
-    // the account for the global account ID has already been provisioned.
-    let (_account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
-    let error = account_manager
-        .deprecated_get_account(account_ids[0], REAL_PASSWORD, server_end)
-        .await
-        .expect("deprecated_new_provision FIDL")
-        .expect_err("deprecated provision new account should fail");
-    assert_eq!(error, fidl_fuchsia_identity_account::Error::FailedAuthentication);
 }
 
 #[fuchsia::test]

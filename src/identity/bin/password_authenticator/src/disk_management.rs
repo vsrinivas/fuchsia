@@ -542,7 +542,7 @@ pub mod test {
         super::*,
         crate::{
             constants::{ACCOUNT_LABEL, FUCHSIA_DATA_GUID},
-            insecure::INSECURE_EMPTY_KEY,
+            scrypt::test::TEST_SCRYPT_KEY,
         },
         assert_matches::assert_matches,
         fidl_fuchsia_hardware_block::{BlockInfo, MAX_TRANSFER_UNBOUNDED},
@@ -1100,7 +1100,7 @@ pub mod test {
 
         // Build a zxcrypt block device that points to our mock zxcrypt driver node, emulating
         // bind_to_encrypted_block.
-        let key = Box::new(INSECURE_EMPTY_KEY.clone());
+        let key = Box::new(TEST_SCRYPT_KEY.clone());
         let encrypted_block_device =
             EncryptedDevBlockDevice(serve_mock_devfs(&scope, mock_encrypted_block_dir));
         encrypted_block_device.format(&key).await.expect("format");
@@ -1140,7 +1140,7 @@ pub mod test {
 
         // Build a zxcrypt block device that points to our mock zxcrypt driver node, emulating
         // bind_to_encrypted_block.
-        let key = Box::new(INSECURE_EMPTY_KEY.clone());
+        let key = Box::new(TEST_SCRYPT_KEY.clone());
         let encrypted_block_device =
             EncryptedDevBlockDevice(serve_mock_devfs(&scope, mock_encrypted_block_dir));
 

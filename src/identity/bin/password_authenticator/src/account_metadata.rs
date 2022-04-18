@@ -4,8 +4,8 @@
 
 use {
     crate::{
-        account_manager::AccountId, insecure::NullKeyParams, options::Options,
-        pinweaver::PinweaverParams, scrypt::ScryptParams,
+        account_manager::AccountId, options::Options, pinweaver::PinweaverParams,
+        scrypt::ScryptParams,
     },
     async_trait::async_trait,
     fidl_fuchsia_identity_account as faccount, fidl_fuchsia_io as fio, fuchsia_zircon as zx,
@@ -72,10 +72,6 @@ impl From<AccountMetadataStoreError> for faccount::Error {
     }
 }
 
-/// The null key authenticator stores no additional metadata.
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-pub struct NullAuthMetadata {}
-
 /// Additional data needed to perform password-only authentication using scrypt
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ScryptOnlyMetadata {
@@ -93,19 +89,12 @@ pub struct PinweaverMetadata {
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum AuthenticatorMetadata {
-    NullKey(NullAuthMetadata),
     ScryptOnly(ScryptOnlyMetadata),
     Pinweaver(PinweaverMetadata),
 }
 
 // Implement converting each backend's enrollment data into an AuthenticatorMetadata, to be saved
 // after enrolling a key.
-
-impl From<NullKeyParams> for AuthenticatorMetadata {
-    fn from(_item: NullKeyParams) -> AuthenticatorMetadata {
-        AuthenticatorMetadata::NullKey(NullAuthMetadata {})
-    }
-}
 
 impl From<ScryptParams> for AuthenticatorMetadata {
     fn from(item: ScryptParams) -> AuthenticatorMetadata {
@@ -121,12 +110,6 @@ impl From<PinweaverParams> for AuthenticatorMetadata {
 
 // Symmetrically, implement converting each AuthenticatorMetadata variant back into the backend's
 // enrollment data, to be used when removing a key.
-
-impl From<NullAuthMetadata> for NullKeyParams {
-    fn from(_item: NullAuthMetadata) -> NullKeyParams {
-        NullKeyParams {}
-    }
-}
 
 impl From<ScryptOnlyMetadata> for ScryptParams {
     fn from(item: ScryptOnlyMetadata) -> ScryptParams {
@@ -159,7 +142,6 @@ impl AccountMetadata {
     /// Returns true iff this type of metadata is allowed by the supplied command line options.
     pub fn allowed_by_options(&self, options: &Options) -> bool {
         match self.authenticator_metadata {
-            AuthenticatorMetadata::NullKey(_) => options.allow_null,
             AuthenticatorMetadata::ScryptOnly(_) => options.allow_scrypt,
             AuthenticatorMetadata::Pinweaver(_) => options.allow_pinweaver,
         }
@@ -325,12 +307,6 @@ pub mod test {
     };
 
     impl AccountMetadata {
-        /// Create a new AccountMetadata for the null key scheme
-        pub fn test_new_null(name: String) -> AccountMetadata {
-            let meta = AuthenticatorMetadata::NullKey(NullAuthMetadata {});
-            AccountMetadata { name, authenticator_metadata: meta }
-        }
-
         /// Generate a new AccountMetadata for the scrypt key scheme
         pub fn test_new_scrypt(name: String) -> AccountMetadata {
             let meta = AuthenticatorMetadata::ScryptOnly(ScryptOnlyMetadata {
@@ -381,8 +357,6 @@ pub mod test {
     pub const TEST_NAME: &str = "Test Display Name";
 
     // These are all valid golden metadata we expect to be able to load.
-    const NULL_KEY_AND_NAME_DATA: &[u8] =
-        br#"{"name":"Display Name","authenticator_metadata":{"type":"NullKey"}}"#;
     const SCRYPT_KEY_AND_NAME_DATA: &[u8] = br#"{"name":"Display Name","authenticator_metadata":{"type":"ScryptOnly","scrypt_params":{"salt":[198,228,57,32,90,251,238,12,194,62,68,106,218,187,24,246],"log_n":15,"r":8,"p":1}}}"#;
     const PINWEAVER_KEY_AND_NAME_DATA: &[u8] = br#"{"name":"Display Name","authenticator_metadata":{"type":"Pinweaver","pinweaver_params":{"scrypt_params":{"salt":[198,228,57,32,90,251,238,12,194,62,68,106,218,187,24,246],"log_n":15,"r":8,"p":1},"credential_label":1}}}"#;
 
@@ -393,8 +367,6 @@ pub mod test {
     lazy_static! {
         pub static ref TEST_SCRYPT_METADATA: AccountMetadata =
             AccountMetadata::test_new_weak_scrypt(TEST_NAME.into());
-        pub static ref TEST_NULL_METADATA: AccountMetadata =
-            AccountMetadata::test_new_null(TEST_NAME.into(),);
         pub static ref TEST_PINWEAVER_METADATA: AccountMetadata =
             AccountMetadata::test_new_weak_pinweaver(TEST_NAME.into());
     }
@@ -467,27 +439,18 @@ pub mod test {
 
     #[fuchsia::test]
     fn test_allowed_by_options() {
-        const NULL_ONLY_OPTIONS: Options =
-            Options { allow_null: true, allow_scrypt: false, allow_pinweaver: false };
-        const SCRYPT_ONLY_OPTIONS: Options =
-            Options { allow_null: false, allow_scrypt: true, allow_pinweaver: false };
+        const SCRYPT_ONLY_OPTIONS: Options = Options { allow_scrypt: true, allow_pinweaver: false };
+        const PINWEAVER_ONLY_OPTIONS: Options =
+            Options { allow_scrypt: false, allow_pinweaver: true };
 
         assert_eq!(TEST_SCRYPT_METADATA.allowed_by_options(&SCRYPT_ONLY_OPTIONS), true);
-        assert_eq!(TEST_SCRYPT_METADATA.allowed_by_options(&NULL_ONLY_OPTIONS), false);
-        assert_eq!(TEST_NULL_METADATA.allowed_by_options(&NULL_ONLY_OPTIONS), true);
-        assert_eq!(TEST_NULL_METADATA.allowed_by_options(&SCRYPT_ONLY_OPTIONS), false);
+        assert_eq!(TEST_SCRYPT_METADATA.allowed_by_options(&PINWEAVER_ONLY_OPTIONS), false);
+        assert_eq!(TEST_PINWEAVER_METADATA.allowed_by_options(&SCRYPT_ONLY_OPTIONS), false);
+        assert_eq!(TEST_PINWEAVER_METADATA.allowed_by_options(&PINWEAVER_ONLY_OPTIONS), true);
     }
 
     #[fuchsia::test]
     fn test_metadata_goldens() {
-        let deserialized = serde_json::from_slice::<AccountMetadata>(NULL_KEY_AND_NAME_DATA)
-            .expect("Deserialize golden null auth metadata");
-        assert_eq!(&deserialized.name, "Display Name");
-        assert_matches!(deserialized.authenticator_metadata, AuthenticatorMetadata::NullKey(_));
-        let reserialized = serde_json::to_vec::<AccountMetadata>(&deserialized)
-            .expect("Reserialize null auth metadata");
-        assert_eq!(reserialized, NULL_KEY_AND_NAME_DATA);
-
         let deserialized = serde_json::from_slice::<AccountMetadata>(SCRYPT_KEY_AND_NAME_DATA)
             .expect("Deserialize password-only auth metadata");
         assert_eq!(&deserialized.name, "Display Name");
@@ -520,12 +483,6 @@ pub mod test {
 
     #[fuchsia::test]
     fn test_metadata_round_trip() {
-        let content = AccountMetadata::test_new_null("Display Name".into());
-        let serialized = serde_json::to_vec(&content).unwrap();
-        let deserialized = serde_json::from_slice::<AccountMetadata>(&serialized).unwrap();
-        assert_eq!(content, deserialized);
-        assert_eq!(deserialized.name(), "Display Name");
-
         let content = AccountMetadata::test_new_scrypt("Display Name".into());
         let serialized = serde_json::to_vec(&content).unwrap();
         let deserialized = serde_json::from_slice::<AccountMetadata>(&serialized).unwrap();
@@ -557,9 +514,9 @@ pub mod test {
 
         let mut metadata_store = DataDirAccountMetadataStore::new(dir);
 
-        let null_content = AccountMetadata::test_new_null("Display Name".into());
+        let scrypt_content = AccountMetadata::test_new_scrypt("Display Name".into());
         // Try saving an account to ID 1, and expect it to write new data
-        metadata_store.save(&1, &null_content).await.expect("save account 1");
+        metadata_store.save(&1, &scrypt_content).await.expect("save account 1");
 
         let dirents = files_async::readdir(&dir2).await.expect("readdir");
         assert_eq!(dirents.len(), 1);
@@ -568,21 +525,21 @@ pub mod test {
         // Verify that loading account ID 1 roundtrips the account metadata we just saved.
         let roundtripped = metadata_store.load(&1).await.expect("load account 1");
         assert!(roundtripped.is_some());
-        assert_eq!(roundtripped.unwrap(), null_content);
+        assert_eq!(roundtripped.unwrap(), scrypt_content);
 
-        let scrypt_content = AccountMetadata::test_new_scrypt("Display Name".into());
+        let pinweaver_content = AccountMetadata::test_new_pinweaver("Display Name".into());
 
         // Try saving an account to ID 1, and expect it to overwrite the existing data
-        metadata_store.save(&1, &scrypt_content).await.expect("save (overwrite) account 1");
+        metadata_store.save(&1, &pinweaver_content).await.expect("save (overwrite) account 1");
 
         let dirents = files_async::readdir(&dir2).await.expect("readdir");
         assert_eq!(dirents.len(), 1);
         assert_eq!(dirents[0].name, "1");
         let roundtripped = metadata_store.load(&1).await.expect("load account 1, second time");
         assert!(roundtripped.is_some());
-        assert_eq!(roundtripped.unwrap(), scrypt_content);
+        assert_eq!(roundtripped.unwrap(), pinweaver_content);
 
-        metadata_store.save(&2, &scrypt_content).await.expect("save account 2");
+        metadata_store.save(&2, &pinweaver_content).await.expect("save account 2");
         let dirents = files_async::readdir(&dir2).await.expect("readdir");
         assert_eq!(dirents.len(), 2);
         assert_eq!(dirents[0].name, "1");
@@ -644,7 +601,7 @@ pub mod test {
         .expect("open second connection to temp dir");
 
         // Prepare tmp_dir with an account for ID 1
-        write_test_file_in_dir(&dir, std::path::Path::new("1"), NULL_KEY_AND_NAME_DATA).await;
+        write_test_file_in_dir(&dir, std::path::Path::new("1"), SCRYPT_KEY_AND_NAME_DATA).await;
 
         let mut metadata_store = DataDirAccountMetadataStore::new(dir);
 
@@ -718,8 +675,8 @@ pub mod test {
         // matches the "temp-" prefix used when creating and cleaning up
         // |StagedFile|s.
         let temp_filename = "temp-12345-9876";
-        write_test_file_in_dir(&dir, std::path::Path::new("1"), NULL_KEY_AND_NAME_DATA).await;
-        write_test_file_in_dir(&dir, std::path::Path::new(temp_filename), NULL_KEY_AND_NAME_DATA)
+        write_test_file_in_dir(&dir, std::path::Path::new("1"), SCRYPT_KEY_AND_NAME_DATA).await;
+        write_test_file_in_dir(&dir, std::path::Path::new(temp_filename), SCRYPT_KEY_AND_NAME_DATA)
             .await;
 
         // Expect cleanup to remove the uncommitted file but retain the "1"
