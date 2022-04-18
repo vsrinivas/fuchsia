@@ -5,7 +5,7 @@
 import("//products/core.gni")
 
 core_realm_package_name = "core-terminal"
-core_realm_shards += []
+core_realm_shards += [ "//src/intl/intl_services:intl_services_shard" ]
 
 base_package_labels += [
   "//src/devices/sysmem/bin/sysmem_connector",
@@ -23,7 +23,13 @@ base_package_labels += [
   "//src/ui/bin/text:ime_service",
   "//src/ui/bin/text:text_manager",
 ]
-base_package_labels -= [ "//src/intl/intl_services/config:sysmgr_small" ]
+base_package_labels -= [
+  # TODO(fxbug.dev/90430): Complete CFv2 migration and remove.
+  "//src/intl/intl_services/config:sysmgr_small",
+]
+
+# Remove intl_services default shards that were added in core.gni.
+core_realm_shards -= [ "//src/intl/intl_services:intl_services_small_shard" ]
 
 # Add build type config data
 base_package_labels += [ "//src/fonts:build_type_eng" ]

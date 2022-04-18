@@ -9,6 +9,7 @@ core_realm_shards += [
   "//src/developer/build_info:build_info_core_shard",
   "//src/developer/memory/monitor:memory_monitor_core_shard",
   "//src/identity/bin/account:account-core-shard",
+  "//src/intl/intl_services:intl_services_shard",
   "//src/media/audio/drivers/configurator:configurator_provider_shard",
   "//src/power/battery-manager:battery-manager-core-shard",
   "//src/session/bin/session_manager:workstation_core_shard",
@@ -27,6 +28,8 @@ base_package_labels += [
   "//src/fonts:open-fonts-collection",
   "//src/graphics/bin/vulkan_loader",
   "//src/identity/bin:minimal_auth",
+
+  # TODO(fxbug.dev/90430): Complete CFv2 migration and remove.
   "//src/intl/intl_services/config:sysmgr",
   "//src/intl/intl_services:pkg",
   "//src/media/audio/bundles:services",
@@ -43,7 +46,11 @@ base_package_labels += [
   # Setting service configuration
   "//src/setui/config:workstation_interface_config",
 ]
-base_package_labels -= [ "//src/intl/intl_services/config:sysmgr_small" ]
+base_package_labels -= [
+  # TODO(fxbug.dev/90430): Complete CFv2 migration and remove.
+  "//src/intl/intl_services/config:sysmgr_small",
+]
+core_realm_shards -= [ "//src/intl/intl_services:intl_services_small_shard" ]
 
 # Add build type config data
 base_package_labels += [ "//src/fonts:build_type_eng" ]
