@@ -19,6 +19,7 @@ bool string_file_tests();
 bool string_view_tests();
 bool unittest_tests();
 bool zbitl_tests();
+bool boot_option_tests();
 
 // These are in kernel/lib/arch/test.
 bool ArchRandomTests();

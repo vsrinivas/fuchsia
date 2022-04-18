@@ -19,17 +19,18 @@
 // function-local variable the compiler will try to turn the table
 // into a const global with relocations.
 
-TEST_SUITES(                   //
-    "phys-unittests",          //
-    stack_tests,               //
-    relocation_tests,          //
-    popcount_tests,            //
-    printf_tests,              //
-    string_view_tests,         //
-    string_file_tests,         //
-    multi_file_tests,          //
-    unittest_tests,            //
-    zbitl_tests,               //
-    ArchRandomTests,           //
-    crypto_entropy_pool_tests  //
+TEST_SUITES(                    //
+    "phys-unittests",           //
+    stack_tests,                //
+    relocation_tests,           //
+    popcount_tests,             //
+    printf_tests,               //
+    string_view_tests,          //
+    string_file_tests,          //
+    multi_file_tests,           //
+    unittest_tests,             //
+    zbitl_tests,                //
+    ArchRandomTests,            //
+    crypto_entropy_pool_tests,  //
+    boot_option_tests           //
 )
