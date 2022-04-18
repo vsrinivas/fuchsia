@@ -48,11 +48,6 @@ function check-if-we-can-start-package-server {
   local expected_ip=$2
   local expected_port=$3
 
-  # We can run if nothing is listening on our port.
-  if ! is-listening-on-port "${expected_port}"; then
-    return 0
-  fi
-
   # Checks if a pm package server process appears to be running.
   if [[ -z "$(pgrep -f 'pm serve')" ]]; then
     local is_pm_running=1 # 1 means that pm is not running
@@ -62,10 +57,15 @@ function check-if-we-can-start-package-server {
 
   # Check that the server mode is known, and that we have the ability to use this server mode.
   if [[ "${mode}" = "pm" ]]; then
+    # We can run if nothing is listening on our port.
+    if ! is-listening-on-port "${expected_port}"; then
+      return 0
+    fi
+
     # Something is using the port. Try to determine if it's another pm server, or ffx.
     if [[ "${is_pm_running}" -eq 0 ]]; then
-      fx-warn "It looks like serve-updates may be running."
-      fx-warn "You probably need to stop that one and start a new one here with \"fx serve\""
+      fx-error "It looks like another \"fx serve-updates\" process may be running."
+      fx-error "You probably need to stop that one and start a new one here with \"fx serve\""
       return 1
     fi
 
@@ -92,18 +92,16 @@ function check-if-we-can-start-package-server {
       return 1
     fi
 
-    # Even though everything looks good to run the ffx repository server,
-    # warn if we see a pm server, which could block the ffx package server
-    # from listening on the specified port.
-    if [[ "${is_pm_running}" -eq 0 ]]; then
+    # We can run if nothing is listening on our port.
+    if is-listening-on-port "${expected_port}"; then
       local ffx_addr=$(ffx-repository-server-address)
-      fx-warn "Even though we are configured to use the ffx package server, it appears"
-      fx-warn "that there may be a pm server running that could block the ffx package"
-      fx-warn "server from listening on ${ffx_addr}."
-      fx-warn ""
-      fx-warn "You probably need to stop that one and do:"
-      fx-warn ""
-      fx-warn "$ ffx doctor --restart-daemon"
+
+      fx-error "Another process is using port '${expected_port}', which"
+      fx-error "will block the ffx repository server from listening on ${ffx_addr}."
+      fx-error ""
+      fx-error "Try shutting down that process, and re-running \"fx serve\"."
+
+      return 1
     fi
 
     return 0
