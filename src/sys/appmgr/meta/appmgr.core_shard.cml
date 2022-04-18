@@ -118,7 +118,6 @@
                 "fuchsia.hardware.pty.Device",
                 "fuchsia.hardware.usb.DeviceWatcher",
                 "fuchsia.kernel.Counter",
-                "fuchsia.kernel.CpuResource",
                 "fuchsia.kernel.DebugBroker",
                 "fuchsia.kernel.DebugResource",
                 "fuchsia.kernel.HypervisorResource",
