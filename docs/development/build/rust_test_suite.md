@@ -58,11 +58,11 @@ required for running the test suite.
       --config $DEV_ROOT/rust/fuchsia-config.toml --stage=2 \
       test {{ '<var>' }}TEST_SUITE{{ '</var>' }} \
       --target {{ '<var>' }}x86_64|aarch64{{ '</var>' }}-fuchsia \
-      --run=always --jobs 1 --test-args '--target-panic=abort
-      --remote-test-client ${TEST_TOOLCHAIN}' \
-      --rustc-args '-C panic=abort -Zpanic_abort_tests
+      --run=always --jobs 1 --test-args "--target-panic=abort
+      --remote-test-client $TEST_TOOLCHAIN" \
+      --rustc-args "-C panic=abort -Zpanic_abort_tests
       -L $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/sysroot/lib
-      -L $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/lib' \
+      -L $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/lib" \
    )
    ```
 
