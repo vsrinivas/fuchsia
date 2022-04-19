@@ -22,9 +22,6 @@ template("trace_provider_library") {
       "lib/trace-provider/fdio_connect.h",
       "lib/trace-provider/handler.h",
       "lib/trace-provider/provider.h",
-      "lib/trace-provider/fdio_connect.h",
-      "lib/trace-provider/handler.h",
-      "lib/trace-provider/provider.h",
     ]
     forward_variables_from(invoker, "*")
 
