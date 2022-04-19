@@ -133,17 +133,6 @@ trace_provider_library("trace-provider-so") {
   ]
 }
 
-# Same as trace-provider.
-# TODO(fxbug.dev/23060): Since this is now an alias of trace-provider, delete.
-trace_provider_library("trace-provider-with-fdio") {
-  sdk = "source"
-  sdk_headers = trace_provider_fdio_connect_headers
-  public_deps = [ "//zircon/system/ulib/trace-engine" ]
-  sources = trace_provider_fdio_sources
-  deps = trace_provider_fdio_connect_source_deps
-  deps += [ "//zircon/system/ulib/trace-engine" ]
-}
-
 # A special version for programs and shared libraries that can't use
 # libtrace-engine.so, e.g., because it is unavailable.
 # N.B. Please verify that you really need this before using it.

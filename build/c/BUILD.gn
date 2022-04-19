@@ -365,7 +365,6 @@ config("fidl-deprecated-c-bindings") {
     "//zircon/system/ulib/trace-provider:trace-provider",
     "//zircon/system/ulib/trace-provider:trace-provider-driver",
     "//zircon/system/ulib/trace-provider:trace-provider-so",
-    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
     "//zircon/system/ulib/trace-provider:trace-provider-with-static-engine",
     "//zircon/system/ulib/trace-provider/test:provider-test",
     "//zircon/system/ulib/zx/test:zx",
