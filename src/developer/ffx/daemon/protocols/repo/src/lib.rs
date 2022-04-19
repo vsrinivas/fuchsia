@@ -1077,33 +1077,29 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
     async fn start(&mut self, cx: &Context) -> Result<(), anyhow::Error> {
         log::info!("Starting repository protocol");
 
+        // Log the server mode to get an understanding of the distribution of users between pm and
+        // the ffx repository server.
         match pkg_config::repository_server_mode().await {
             Ok(mode) => {
                 metrics::server_mode_event(&mode).await;
-
-                if mode == "ffx" {
-                    match pkg_config::repository_listen_addr().await {
-                        Ok(Some(addr)) => {
-                            let mut inner = self.inner.write().await;
-                            inner.server = ServerState::Stopped(addr);
-                        }
-                        Ok(None) => {
-                            log::error!(
-                                "repository.server.listen address not configured, not starting server"
-                            );
-
-                            metrics::server_disabled_event().await;
-                        }
-                        Err(err) => {
-                            log::error!("Failed to read server address from config: {:#}", err);
-                        }
-                    }
-                } else {
-                    log::warn!("Repository server mode is {:?}, not starting server", mode);
-                }
             }
             Err(err) => {
-                log::error!("Failed to determine if server is enabled from config: {:#}", err);
+                log::warn!("Failed to determine if server is enabled from config: {:#}", err);
+            }
+        }
+
+        match pkg_config::repository_listen_addr().await {
+            Ok(Some(addr)) => {
+                let mut inner = self.inner.write().await;
+                inner.server = ServerState::Stopped(addr);
+            }
+            Ok(None) => {
+                log::error!("repository.server.listen address not configured, not starting server");
+
+                metrics::server_disabled_event().await;
+            }
+            Err(err) => {
+                log::error!("Failed to read server address from config: {:#}", err);
             }
         }
 
@@ -1981,30 +1977,6 @@ mod tests {
     }
 
     #[test]
-    fn test_start_server_cannot_start_a_server_in_the_wrong_mode() {
-        run_test(async {
-            ffx_config::set(("repository.server.mode", ConfigLevel::User), "pm".into())
-                .await
-                .unwrap();
-
-            let repo = Rc::new(RefCell::new(Repo::<TestEventHandlerProvider>::default()));
-            let (_fake_rcs, fake_rcs_closure) = FakeRcs::new();
-
-            let daemon = FakeDaemonBuilder::new()
-                .rcs_handler(fake_rcs_closure)
-                .inject_fidl_protocol(Rc::clone(&repo))
-                .build();
-
-            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
-
-            assert_matches!(
-                proxy.server_start().await.unwrap(),
-                Err(bridge::RepositoryError::ServerNotRunning)
-            );
-        })
-    }
-
-    #[test]
     fn test_add_remove() {
         run_test(async {
             let repo = Rc::new(RefCell::new(Repo::<TestEventHandlerProvider>::default()));
@@ -2368,54 +2340,6 @@ mod tests {
             fake_repo_manager.take_events(),
             vec![RepositoryManagerEvent::Add { repo: repo_config }]
         );
-    }
-
-    #[test]
-    fn test_does_not_start_server_if_server_mode_is_not_ffx() {
-        run_test(async {
-            ffx_config::set(("repository.server.mode", ConfigLevel::User), "pm".into())
-                .await
-                .unwrap();
-
-            let repo = Rc::new(RefCell::new(Repo::<TestEventHandlerProvider>::default()));
-            let (_fake_repo_manager, fake_repo_manager_closure) = FakeRepositoryManager::new();
-            let (_fake_engine, fake_engine_closure) = FakeEngine::new();
-            let (_fake_rcs, fake_rcs_closure) = FakeRcs::new();
-
-            let daemon = FakeDaemonBuilder::new()
-                .rcs_handler(fake_rcs_closure)
-                .register_instanced_protocol_closure::<RepositoryManagerMarker, _>(
-                    fake_repo_manager_closure,
-                )
-                .register_instanced_protocol_closure::<EngineMarker, _>(fake_engine_closure)
-                .inject_fidl_protocol(Rc::clone(&repo))
-                .target(bridge::TargetInfo {
-                    nodename: Some(TARGET_NODENAME.to_string()),
-                    ssh_host_address: Some(bridge::SshHostAddrInfo {
-                        address: HOST_ADDR.to_string(),
-                    }),
-                    ..bridge::TargetInfo::EMPTY
-                })
-                .build();
-
-            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
-
-            add_repo(&proxy, REPO_NAME).await;
-
-            let err = proxy
-                .register_target(bridge::RepositoryTarget {
-                    repo_name: Some(REPO_NAME.to_string()),
-                    target_identifier: Some(TARGET_NODENAME.to_string()),
-                    storage_type: Some(bridge::RepositoryStorageType::Ephemeral),
-                    aliases: None,
-                    ..bridge::RepositoryTarget::EMPTY
-                })
-                .await
-                .expect("communicated with proxy")
-                .unwrap_err();
-
-            assert_eq!(err, bridge::RepositoryError::ServerNotRunning);
-        })
     }
 
     #[test]

@@ -32,17 +32,6 @@ pub async fn determine_why_repository_server_is_not_running() -> anyhow::Error {
         };
     }
 
-    let mode = check!(repository_server_mode().await);
-    if mode != "ffx" {
-        return anyhow!(
-            "Server cannot run because the server mode \"{}\", not \"ffx\". \
-            You can correct this with:\n\
-            $ ffx config set repository.server.mode ffx\n\
-            $ ffx doctor --restart-daemon",
-            mode
-        );
-    }
-
     if !check!(get_repository_server_enabled().await) {
         return anyhow!(
             "Server is disabled. It can be started with:\n\
