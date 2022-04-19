@@ -674,7 +674,7 @@ async fn daemon_restart<W: Write>(
 
     match timeout(retry_delay, daemon_proxy.get_version_info()).await {
         Ok(Ok(v)) => {
-            let daemon_version = v.build_version.clone().unwrap_or("Unknown".to_string());
+            let daemon_version = v.build_version.clone().unwrap_or("UNKNOWN".to_string());
             let node = ledger
                 .add_node(&format!("Daemon version: {}", daemon_version), LedgerMode::Automatic)?;
             ledger.set_outcome(node, LedgerOutcome::Success)?;
@@ -793,7 +793,7 @@ async fn doctor_summary<W: Write>(
 
     match timeout(retry_delay, daemon_proxy.get_version_info()).await {
         Ok(Ok(v)) => {
-            let daemon_version = v.build_version.clone().unwrap_or("Unknown".to_string());
+            let daemon_version = v.build_version.clone().unwrap_or("UNKNOWN".to_string());
             let node = ledger
                 .add_node(&format!("Daemon version: {}", daemon_version), LedgerMode::Verbose)?;
             ledger.set_outcome(node, LedgerOutcome::Success)?;
@@ -899,15 +899,7 @@ async fn doctor_summary<W: Write>(
     main_node = ledger.add(verify_inode)?;
 
     for target in targets.iter() {
-        let target_name = match target.nodename.clone() {
-            Some(v) => v,
-            None => {
-                let node =
-                    ledger.add_node("Skipping target without node name", LedgerMode::Automatic)?;
-                ledger.set_outcome(node, LedgerOutcome::SoftWarning)?;
-                continue;
-            }
-        };
+        let target_name = target.nodename.clone().unwrap_or("UNKNOWN".to_string());
 
         // Note: this match statement intentionally does not have a fallback case in order to
         // ensure that behavior is considered when we add a new state.
@@ -918,10 +910,13 @@ async fn doctor_summary<W: Write>(
             Some(TargetState::Product) => {}
             Some(TargetState::Fastboot) => {
                 let node = ledger.add_node(
-                    &format!("Skipping target in fastboot: {}", target_name),
+                    &format!(
+                        "Target found in fastboot mode: {}",
+                        target.serial_number.as_deref().unwrap_or("UNKNOWN serial number")
+                    ),
                     LedgerMode::Automatic,
                 )?;
-                ledger.set_outcome(node, LedgerOutcome::SoftWarning)?;
+                ledger.set_outcome(node, LedgerOutcome::Success)?;
                 continue;
             }
             Some(TargetState::Zedboot) => {
@@ -1083,6 +1078,7 @@ mod test {
     const UNRESPONSIVE_NODENAME: &str = "fake-nodename-unresponsive";
     const FASTBOOT_NODENAME: &str = "fastboot-nodename-unresponsive";
     const NON_EXISTENT_NODENAME: &str = "extra-fake-nodename";
+    const SERIAL_NUMBER: &str = "123123123";
     const DEFAULT_RETRY_DELAY: Duration = Duration::from_millis(2000);
     const DAEMON_VERSION: &str = "daemon-build-string";
     const FRONTEND_VERSION: &str = "fake version";
@@ -1545,6 +1541,7 @@ mod test {
                         |_| {
                             vec![TargetInfo {
                                 nodename: Some(FASTBOOT_NODENAME.to_string()),
+                                serial_number: Some(SERIAL_NUMBER.to_string()),
                                 addresses: Some(vec![]),
                                 age_ms: Some(0),
                                 rcs_state: Some(RemoteControlState::Unknown),
@@ -1640,10 +1637,10 @@ mod test {
                                     } => {
                                         let target =
                                             query.string_matcher.as_deref().unwrap_or(NODENAME);
-                                        if target == NODENAME {
-                                            serve_responsive_rcs(remote_control);
-                                        } else if target == UNRESPONSIVE_NODENAME {
+                                        if target == UNRESPONSIVE_NODENAME || !has_nodename {
                                             serve_unresponsive_rcs(remote_control, waiter.clone());
+                                        } else if target == NODENAME {
+                                            serve_responsive_rcs(remote_control);
                                         } else {
                                             panic!("got unexpected target string: '{}'", target);
                                         }
@@ -2565,7 +2562,10 @@ mod test {
             \n[✓] Searching for targets\
             \n    [✓] 2 targets found\
             \n[✗] Verifying Targets\
-            \n    [!] Skipping target without node name\
+            \n    [✗] Target: UNKNOWN\
+            \n        [✓] Opened target handle\
+            \n        [✓] Connecting to RCS\
+            \n        [✗] Timeout while communicating with RCS\
             \n    [✗] Target: {}\
             \n        [✓] Opened target handle\
             \n        [✓] Connecting to RCS\
@@ -2592,7 +2592,7 @@ mod test {
             \n[✓] Searching for targets\
             \n    [✓] 2 targets found\
             \n[✗] Verifying Targets\
-            \n    [!] Skipping target without node name\
+            \n    [✗] Target: UNKNOWN\
             \n    [✗] Target: {}\
             \n[✗] Doctor found issues in one or more categories; \
             run 'ffx doctor-new -v' for more details.\n",
@@ -2602,7 +2602,7 @@ mod test {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_skips_fastboot_target() {
+    async fn test_fastboot_target() {
         let fake = FakeDaemonManager::new(
             vec![true],
             vec![],
@@ -2647,13 +2647,13 @@ mod test {
             \n    [✓] Default target: (none)\
             \n[✓] Searching for targets\
             \n    [✓] 1 targets found\
-            \n[✗] Verifying Targets\
-            \n    [!] Skipping target in fastboot: {}\
-            \n[✗] Doctor found issues in one or more categories.\n",
+            \n[✓] Verifying Targets\
+            \n    [✓] Target found in fastboot mode: {}\
+            \n[✓] No issues found\n",
                 FRONTEND_VERSION,
                 ffx_path(),
                 DAEMON_VERSION,
-                FASTBOOT_NODENAME
+                SERIAL_NUMBER,
             )
         );
     }

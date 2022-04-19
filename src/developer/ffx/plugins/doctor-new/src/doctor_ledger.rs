@@ -227,14 +227,14 @@ impl LedgerNodeOp for LedgerNode {
 #[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq)]
 pub enum LedgerOutcome {
     ValidRangeStart,
-    Info,
     Success,
     Warning,
     Failure,
     ValidRangeEnd,
     Automatic,
-    // Soft values are ignored when computing the outcome of parent.
+    // Values below are ignored when computing the outcome of parent.
     SoftWarning,
+    Info,
 }
 
 impl LedgerOutcome {
