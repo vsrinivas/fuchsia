@@ -11,18 +11,12 @@ group("all") {
   public_deps = [
     "//garnet/packages/testing:environment_delegating_runner",
     "//garnet/packages/testing:run_test_component",
-    "//garnet/packages/testing:views",
   ]
 }
 
 group("environment_delegating_runner") {
   testonly = true
   public_deps = [ "//sdk/lib/sys/cpp/testing/environment_delegating_runner" ]
-}
-
-group("views") {
-  testonly = true
-  public_deps = [ "//src/ui/testing/views:test_views" ]
 }
 
 group("run_test_component") {

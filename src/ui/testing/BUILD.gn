@@ -8,12 +8,6 @@ group("testing") {
   public_deps = [ ":mock_input_device" ]
 }
 
-group("tests") {
-  testonly = true
-
-  public_deps = [ "views:test_views" ]
-}
-
 source_set("mock_input_device") {
   testonly = true
 
