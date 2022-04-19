@@ -46,7 +46,6 @@ struct RoundedLine {
 }
 
 impl RoundedLine {
-    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95054)
     fn new(mut path_builder: PathBuilder, pos: Point, length: f32, thickness: f32) -> Self {
         let radius = thickness / 2.0;
         let tl = pos.to_vector();
@@ -65,11 +64,11 @@ impl RoundedLine {
 
             path_builder.move_to(c!(tl + radiush));
             path_builder.line_to(c!(tr - radiush));
-            path_builder.rat_quad_to(c!(tr), c!(tr + radiusv), 0.7071);
-            path_builder.rat_quad_to(c!(br), c!(br - radiush), 0.7071);
+            path_builder.rat_quad_to(c!(tr), c!(tr + radiusv), f32::consts::FRAC_1_SQRT_2);
+            path_builder.rat_quad_to(c!(br), c!(br - radiush), f32::consts::FRAC_1_SQRT_2);
             path_builder.line_to(c!(bl + radiush));
-            path_builder.rat_quad_to(c!(bl), c!(bl - radiusv), 0.7071);
-            path_builder.rat_quad_to(c!(tl), c!(tl + radiush), 0.7071);
+            path_builder.rat_quad_to(c!(bl), c!(bl - radiusv), f32::consts::FRAC_1_SQRT_2);
+            path_builder.rat_quad_to(c!(tl), c!(tl + radiush), f32::consts::FRAC_1_SQRT_2);
 
             path_builder.build()
         };
