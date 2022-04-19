@@ -192,10 +192,7 @@ test("fvm-integration") {
     "//src/storage/fvm/driver",
   ]
 
-  data_deps = [
-    "//src/storage/bin/blobfs",
-    "//src/storage/bin/minfs",
-  ]
+  data_deps = [ "//src/storage/bin/minfs" ]
 
   # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
   # Consider switching to the C++ bindings. See linked bug for details.

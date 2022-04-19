@@ -3,6 +3,7 @@
         "//sdk/lib/driver_test_realm/meta/realm_builder.shard.cml",
         "//sdk/lib/inspect/client.shard.cml",
         "//sdk/lib/syslog/client.shard.cml",
+        "//src/lib/storage/fs_management/client.shard.cml",
         "sys/component/realm_builder.shard.cml",
         "sys/testing/elf_test_runner.shard.cml",
     ],

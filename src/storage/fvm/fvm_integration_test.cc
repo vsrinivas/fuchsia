@@ -76,6 +76,8 @@ using VolumeManagerInfo = fuchsia_hardware_block_volume_VolumeManagerInfo;
 
 constexpr char kMountPath[] = "/test/minfs_test_mountpath";
 constexpr char kTestDevPath[] = "/fake/dev";
+constexpr char kTestBlobfsChildName[] = "test-blobfs";
+constexpr char kTestCollectionName[] = "fs-collection";
 
 // Returns the number of usable slices for a standard layout on a given-sized device.
 size_t UsableSlicesCount(size_t disk_size, size_t slice_size) {
@@ -1852,8 +1854,12 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
                         fs_management::DiskFormat disk_format,
                         const query_request_t& query_request) {
   // Format the VPart as |disk_format|.
+  fs_management::MkfsOptions mkfs_options{
+      .component_child_name = mounting_options.component_child_name,
+      .component_collection_name = mounting_options.component_collection_name,
+  };
   ASSERT_EQ(fs_management::Mkfs(partition_path, disk_format, fs_management::LaunchStdioSync,
-                                fs_management::MkfsOptions()),
+                                mkfs_options),
             ZX_OK);
 
   auto matcher = part_matcher(kTestPartGUIDData, kTestUniqueGUID);
@@ -2039,8 +2045,11 @@ TEST_F(FvmTest, TestCorruptMount) {
   query_request.vslice_start[2] = blobfs::kFVMDataStart / kBlobfsBlocksPerSlice;
 
   // Run the test for Blobfs.
-  CorruptMountHelper(devfs_root(), partition_path, mounting_options_,
-                     fs_management::kDiskFormatBlobfs, query_request);
+  fs_management::MountOptions options = mounting_options_;
+  options.component_child_name = kTestBlobfsChildName;
+  options.component_collection_name = kTestCollectionName;
+  CorruptMountHelper(devfs_root(), partition_path, options, fs_management::kDiskFormatBlobfs,
+                     query_request);
 
   // Clean up
   ASSERT_EQ(close(fd.release()), 0);
@@ -2292,8 +2301,12 @@ TEST_F(FvmTest, TestMkfs) {
             ZX_OK);
 
   // Now try reformatting as blobfs.
+  fs_management::MkfsOptions mkfs_options = fs_management::MkfsOptions{
+      .component_child_name = kTestBlobfsChildName,
+      .component_collection_name = kTestCollectionName,
+  };
   ASSERT_EQ(fs_management::Mkfs(partition_path, fs_management::kDiskFormatBlobfs,
-                                fs_management::LaunchStdioSync, fs_management::MkfsOptions()),
+                                fs_management::LaunchStdioSync, mkfs_options),
             ZX_OK);
 
   // Demonstrate that mounting as minfs will fail, but mounting as blobfs
@@ -2305,8 +2318,11 @@ TEST_F(FvmTest, TestMkfs) {
   vp_fd.reset(open(partition_path, O_RDWR));
   ASSERT_TRUE(vp_fd);
 
+  fs_management::MountOptions mounting_options = mounting_options_;
+  mounting_options.component_child_name = kTestBlobfsChildName;
+  mounting_options.component_collection_name = kTestCollectionName;
   ASSERT_EQ(fs_management::Mount(std::move(vp_fd), kMountPath, fs_management::kDiskFormatBlobfs,
-                                 mounting_options_, fs_management::LaunchStdioAsync)
+                                 mounting_options, fs_management::LaunchStdioAsync)
                 .status_value(),
             ZX_OK);
 
