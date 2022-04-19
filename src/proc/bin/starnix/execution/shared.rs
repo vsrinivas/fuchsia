@@ -183,7 +183,7 @@ pub fn create_filesystem_from_spec<'a>(
     let mount_point =
         iter.next().ok_or_else(|| anyhow!("mount point is missing from {:?}", spec))?;
     let fs_type = iter.next().ok_or_else(|| anyhow!("fs type is missing from {:?}", spec))?;
-    let fs_src = iter.next().unwrap_or("");
+    let fs_src = iter.next().unwrap_or(".");
 
     // The filesystem types handled in this match are the ones that can only be specified in a
     // manifest file, for whatever reason. Anything else is passed to create_filesystem, which is
