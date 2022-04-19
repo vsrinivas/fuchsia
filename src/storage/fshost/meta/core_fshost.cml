@@ -26,17 +26,17 @@
         {
             directory: "system",
             rights: [ "rx*" ],
-            path: "/delayed/fs/system",
+            path: "/delayed/fs/pkgfs/system",
         },
         {
             directory: "bin-not-delayed",
             rights: [ "rx*" ],
-            path: "/fs/bin",
+            path: "/fs/pkgfs/packages/shell-commands/0/bin",
         },
         {
             directory: "bin",
             rights: [ "rx*" ],
-            path: "/delayed/fs/bin",
+            path: "/delayed/fs/pkgfs/packages/shell-commands/0/bin",
         },
         {
             directory: "minfs-not-delayed",
@@ -71,7 +71,7 @@
         {
             directory: "system-not-delayed",
             rights: [ "rx*" ],
-            path: "/fs/system",
+            path: "/fs/pkgfs/system",
         },
     ],
     use: [

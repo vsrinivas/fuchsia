@@ -356,14 +356,10 @@ const char* FsManager::MountPointPath(FsManager::MountPoint point) {
   switch (point) {
     case MountPoint::kUnknown:
       return "";
-    case MountPoint::kBin:
-      return "/bin";
     case MountPoint::kData:
       return "/data";
     case MountPoint::kVolume:
       return "/volume";
-    case MountPoint::kSystem:
-      return "/system";
     case MountPoint::kInstall:
       return "/install";
     case MountPoint::kPkgfs:

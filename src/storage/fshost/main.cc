@@ -160,7 +160,7 @@ zx_status_t BindNamespace(fidl::ClientEnd<fio::Directory> fs_root_client) {
     if ((status = zx::channel::create(0, &client, &server)) != ZX_OK) {
       return status;
     }
-    if ((status = fdio_open("/fs/system",
+    if ((status = fdio_open("/fs/pkgfs/system",
                             static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable |
                                                   fio::wire::OpenFlags::kRightExecutable),
                             server.release())) != ZX_OK) {
