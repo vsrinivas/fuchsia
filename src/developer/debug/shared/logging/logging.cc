@@ -6,29 +6,35 @@
 
 #include <stdio.h>
 
+#include <iostream>
+
 namespace debug {
 
-LogStatement::LogStatement(FileLineFunction origin, LogCategory category)
-    : origin_(std::move(origin)), category_(category) {
-  should_log_ = false;
-  if (!IsLogCategoryActive(category_))
-    return;
+namespace {
 
-  start_time_ = SecondsSinceStart();
-  should_log_ = true;
-  PushLogEntry(this);
+LogSink* log_sink = nullptr;
+
+const char* SeverityToName(LogSeverity severity) {
+  static_assert(static_cast<int>(LogSeverity::kInfo) == 0);
+  static_assert(static_cast<int>(LogSeverity::kWarn) == 1);
+  static_assert(static_cast<int>(LogSeverity::kError) == 2);
+
+  static const char* kSeverityNames[] = {"INFO", "WARN", "ERROR"};
+  return kSeverityNames[static_cast<int>(severity)];
 }
 
-std::string LogStatement::GetMsg() { return stream_.str(); }
+}  // namespace
 
 LogStatement::~LogStatement() {
-  if (!IsLogCategoryActive(category_))
-    return;
-
-  if (!should_log_)
-    return;
-
-  PopLogEntry(category_, origin_, stream_.str(), start_time_, SecondsSinceStart());
+  if (log_sink) {
+    log_sink->WriteLog(severity_, stream_.str());
+  } else {
+    std::cerr << SeverityToName(severity_) << ": " << stream_.str();
+  }
 }
+
+void LogSink::Set(LogSink* sink) { log_sink = sink; }
+
+void LogSink::Unset() { log_sink = nullptr; }
 
 }  // namespace debug

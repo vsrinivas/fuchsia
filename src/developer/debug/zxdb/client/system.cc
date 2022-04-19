@@ -9,7 +9,7 @@
 #include <filesystem>
 #include <set>
 
-#include "src/developer/debug/shared/logging/debug.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/breakpoint_impl.h"
 #include "src/developer/debug/zxdb/client/download_observer.h"
@@ -329,13 +329,6 @@ System::System(Session* session)
   // Create the default job and target.
   AddNewJob(std::make_unique<Job>(session, true));
   AddNewTarget(std::make_unique<TargetImpl>(this));
-
-  // Forward all messages from the symbol index to our observers. It's OK to bind |this| because the
-  // symbol index is owned by |this|.
-  symbols_.build_id_index().set_information_callback([this](const std::string& msg) {
-    for (auto& observer : observers_)
-      observer.OnSymbolIndexingInformation(msg);
-  });
 
   // The system is the one holding the system symbols and is the one who will be updating the
   // symbols once we get a symbol change, so the System will be listening to its own options. We
@@ -917,7 +910,7 @@ void System::OnSettingChanged(const SettingStore& store, const std::string& sett
         });
 
   } else {
-    FX_LOGS(WARNING) << "Unhandled setting change: " << setting_name;
+    LOGS(Warn) << "Unhandled setting change: " << setting_name;
   }
 }
 
@@ -944,7 +937,7 @@ void System::OnFilterMatches(Job* job, const std::vector<uint64_t>& matched_pids
     AttachToProcess(matched_pid, [matched_pid](fxl::WeakPtr<Target> target, const Err& err,
                                                uint64_t timestamp) {
       if (err.has_error()) {
-        FX_LOGS(ERROR) << "Could not attach to process " << matched_pid << ": " << err.msg();
+        LOGS(Error) << "Could not attach to process " << matched_pid << ": " << err.msg();
         return;
       }
     });

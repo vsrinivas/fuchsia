@@ -19,6 +19,7 @@
 #include <rapidjson/istreamwrapper.h>
 
 #include "lib/syslog/cpp/macros.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/lib/elflib/elflib.h"
 #include "src/lib/files/glob.h"
@@ -176,11 +177,6 @@ int BuildIDIndex::ParseIDs(const std::string& input, const std::filesystem::path
   return added;
 }
 
-void BuildIDIndex::LogMessage(const std::string& msg) const {
-  if (information_callback_)
-    information_callback_(msg);
-}
-
 void BuildIDIndex::LoadIdsTxt(const IdsTxt& ids_txt) {
   std::error_code err;
 
@@ -188,7 +184,7 @@ void BuildIDIndex::LoadIdsTxt(const IdsTxt& ids_txt) {
 
   if (err) {
     status_.emplace_back(ids_txt.path, 0);
-    LogMessage("Can't open build ID file: " + ids_txt.path);
+    LOGS(Warn) << "Can't open build ID file: " << ids_txt.path;
     return;
   }
 
@@ -197,7 +193,7 @@ void BuildIDIndex::LoadIdsTxt(const IdsTxt& ids_txt) {
   FILE* id_file = fopen(ids_txt.path.c_str(), "r");
   if (!id_file) {
     status_.emplace_back(ids_txt.path, 0);
-    LogMessage("Can't open build ID file: " + ids_txt.path);
+    LOGS(Warn) << "Can't open build ID file: " << ids_txt.path;
     return;
   }
 
@@ -205,7 +201,7 @@ void BuildIDIndex::LoadIdsTxt(const IdsTxt& ids_txt) {
   long length = ftell(id_file);
   if (length <= 0) {
     status_.emplace_back(ids_txt.path, 0);
-    LogMessage("Can't load build ID file: " + ids_txt.path);
+    LOGS(Warn) << "Can't load build ID file: " << ids_txt.path;
     return;
   }
 
@@ -215,7 +211,7 @@ void BuildIDIndex::LoadIdsTxt(const IdsTxt& ids_txt) {
   fseek(id_file, 0, SEEK_SET);
   if (fread(contents.data(), 1, contents.size(), id_file) != static_cast<size_t>(length)) {
     status_.emplace_back(ids_txt.path, 0);
-    LogMessage("Can't read build ID file: " + ids_txt.path);
+    LOGS(Warn) << "Can't read build ID file: " << ids_txt.path;
     return;
   }
 
@@ -224,13 +220,14 @@ void BuildIDIndex::LoadIdsTxt(const IdsTxt& ids_txt) {
   int added = ParseIDs(contents, containing_dir, ids_txt.build_dir, &build_id_to_files_);
   status_.emplace_back(ids_txt.path, added);
   if (!added)
-    LogMessage("No mappings found in build ID file: " + ids_txt.path);
+    LOGS(Warn) << "No mappings found in build ID file: " << ids_txt.path;
 }
 
 void BuildIDIndex::LoadSymbolIndexFilePlain(const std::string& file_name) {
   std::ifstream file(file_name);
   if (file.fail()) {
-    return LogMessage("Cannot read symbol-index file: " + file_name);
+    LOGS(Warn) << "Cannot read symbol-index file: " << file_name;
+    return;
   }
 
   while (!file.eof()) {
@@ -243,7 +240,8 @@ void BuildIDIndex::LoadSymbolIndexFilePlain(const std::string& file_name) {
       // If the file ends with \n, we will get failbit, eofbit and line == "".
       if (file.eof())
         break;
-      return LogMessage("Error reading " + file_name);
+      LOGS(Warn) << "Error reading " << file_name;
+      return;
     }
 
     if (auto tab_index = line.find('\t'); tab_index != std::string::npos) {
@@ -257,7 +255,7 @@ void BuildIDIndex::LoadSymbolIndexFilePlain(const std::string& file_name) {
     // Both paths must be absolute.
     if (symbol_path.empty() || symbol_path[0] != '/' ||
         (!build_dir.empty() && build_dir[0] != '/')) {
-      LogMessage(fxl::StringPrintf("Invalid line in %s: %s", file_name.c_str(), line.c_str()));
+      LOGS(Warn) << "Invalid line in " << file_name << ": " << line.c_str();
       continue;
     }
 
@@ -286,14 +284,16 @@ void BuildIDIndex::LoadSymbolIndexFileJSON(const std::string& file_name) {
 
     std::ifstream file(file_name);
     if (!file) {
-      return LogMessage("Can't open " + file_name);
+      LOGS(Warn) << "Can't open " << file_name;
+      return;
     }
 
     rapidjson::IStreamWrapper input_stream(file);
     rapidjson::Document document;
     document.ParseStream(input_stream);
     if (document.HasParseError() || !document.IsObject()) {
-      return LogMessage(file_name + " is not a valid symbol-index.json");
+      LOGS(Warn) << file_name << " is not a valid symbol-index.json";
+      return;
     }
 
     auto resolve_path = [base = std::filesystem::path(file_name).parent_path()](const char* path) {
@@ -376,7 +376,7 @@ void BuildIDIndex::IndexSourcePath(const std::string& path) {
     status_.emplace_back(path, 1);
   } else {
     status_.emplace_back(path, 0);
-    LogMessage(fxl::StringPrintf("Symbol file could not be loaded: %s", path.c_str()));
+    LOGS(Warn) << "Symbol file could not be loaded: " << path;
   }
 }
 

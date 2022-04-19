@@ -65,11 +65,7 @@ zx_status_t SignalHandler::Init(int id, zx_handle_t object, zx_signals_t signals
 // static
 void SignalHandler::Handler(async_dispatcher_t*, async_wait_t* wait, zx_status_t status,
                             const zx_packet_signal_t* signal) {
-  if (status != ZX_OK) {
-    FX_LOGS(WARNING) << "Got error on receiving exception: " << ZxStatusToString(status);
-    FX_NOTREACHED();
-    return;
-  }
+  FX_CHECK(status == ZX_OK) << "Got error on receiving exception: " << ZxStatusToString(status);
 
   auto* loop = MessageLoopFuchsia::Current();
   FX_DCHECK(loop);
@@ -138,11 +134,7 @@ zx_status_t ChannelExceptionHandler::Init(int id, zx_handle_t object, uint32_t o
 // static
 void ChannelExceptionHandler::Handler(async_dispatcher_t* dispatcher, async_wait_t* wait,
                                       zx_status_t status, const zx_packet_signal_t* signal) {
-  if (status != ZX_OK) {
-    FX_LOGS(WARNING) << "Got error on receiving exception: " << ZxStatusToString(status);
-    FX_NOTREACHED();
-    return;
-  }
+  FX_CHECK(status == ZX_OK) << "Got error on receiving exception: " << ZxStatusToString(status);
 
   auto* loop = MessageLoopFuchsia::Current();
   FX_DCHECK(loop);
@@ -182,12 +174,9 @@ void ChannelExceptionHandler::Handler(async_dispatcher_t* dispatcher, async_wait
   zx_exception_info_t exception_info;
   status = handler.exception_channel_.read(0, &exception_info, exception.reset_and_get_address(),
                                            sizeof(exception_info), 1, nullptr, nullptr);
-  if (status != ZX_OK) {
-    FX_LOGS(WARNING) << "Got error when reading from exception channel: "
-                     << ZxStatusToString(status);
-    FX_NOTREACHED();
-    return;
-  }
+
+  FX_CHECK(status == ZX_OK) << "Got error when reading from exception channel: "
+                            << ZxStatusToString(status);
 
   loop->HandleChannelException(handler, std::move(exception), exception_info);
 }

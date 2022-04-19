@@ -166,7 +166,6 @@ class ConsoleContext : public ProcessObserver,
   void DidCreateFilter(Filter* filter) override;
   void WillDestroyFilter(Filter* filter) override;
   void DidCreateSymbolServer(SymbolServer* symbol_server) override;
-  void OnSymbolIndexingInformation(const std::string& msg) override;
 
   // TargetObserver implementation:
   void DidCreateTarget(Target* target) override;

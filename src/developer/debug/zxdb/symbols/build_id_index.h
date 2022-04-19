@@ -68,11 +68,6 @@ class BuildIDIndex {
   BuildIDIndex() = default;
   ~BuildIDIndex() = default;
 
-  // Sets the callback for informational messages. Null callbacks are legal.
-  void set_information_callback(fit::function<void(const std::string&)> fn) {
-    information_callback_ = std::move(fn);
-  }
-
   // Return the entry associated with the given build_id. This is the designated way to obtain
   // information from a BuildIDIndex.
   //
@@ -153,9 +148,6 @@ class BuildIDIndex {
   // Updates the build_id_to_files_ cache if necessary.
   void EnsureCacheClean();
 
-  // Logs an informational message.
-  void LogMessage(const std::string& msg) const;
-
   // Adds all the mappings from the given ids.txt to the index.
   void LoadIdsTxt(const IdsTxt& ids_txt);
 
@@ -178,9 +170,6 @@ class BuildIDIndex {
 
   // Search the .build-id directories for the given build ID.
   void SearchBuildIdDirs(const std::string& build_id);
-
-  // Function to output informational messages. May be null. Use LogMessage().
-  fit::function<void(const std::string&)> information_callback_;
 
   std::vector<BuildIdDir> build_id_dirs_;
   std::vector<IdsTxt> ids_txts_;

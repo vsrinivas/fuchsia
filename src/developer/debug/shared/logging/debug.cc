@@ -28,26 +28,6 @@ std::set<LogCategory>& GetLogCategories() {
   return categories;
 }
 
-}  // namespace
-
-bool IsDebugModeActive() { return kDebugMode; }
-
-void SetDebugMode(bool activate) { kDebugMode = activate; }
-
-double SecondsSinceStart() {
-  return std::chrono::duration<double>(std::chrono::steady_clock::now() - kStartTime).count();
-}
-
-const std::set<LogCategory>& GetActiveLogCategories() { return GetLogCategories(); }
-
-void SetLogCategories(std::initializer_list<LogCategory> categories) {
-  auto& active_categories = GetLogCategories();
-  active_categories.clear();
-  for (LogCategory category : categories) {
-    active_categories.insert(category);
-  }
-}
-
 bool IsLogCategoryActive(LogCategory category) {
   if (!IsDebugModeActive())
     return false;
@@ -62,15 +42,84 @@ bool IsLogCategoryActive(LogCategory category) {
   return active_categories.count(category) > 0;
 }
 
-// Log Tree ----------------------------------------------------------------------------------------
+const char* LogCategoryToString(LogCategory category) {
+  switch (category) {
+    case LogCategory::kAgent:
+      return "Agent";
+    case LogCategory::kArchArm64:
+      return "arm64";
+    case LogCategory::kArchx64:
+      return "x64";
+    case LogCategory::kBreakpoint:
+      return "Breakpoint";
+    case LogCategory::kJob:
+      return "Job";
+    case LogCategory::kMessageLoop:
+      return "Loop";
+    case LogCategory::kProcess:
+      return "Process";
+    case LogCategory::kRemoteAPI:
+      return "DebugAPI";
+    case LogCategory::kSession:
+      return "Session";
+    case LogCategory::kSetting:
+      return "Setting";
+    case LogCategory::kTest:
+      return "Test";
+    case LogCategory::kTiming:
+      return "Timing";
+    case LogCategory::kThread:
+      return "Thread";
+    case LogCategory::kWatchpoint:
+      return "Watchpoint";
+    case LogCategory::kWorkerPool:
+      return "WorkerPool";
+    case LogCategory::kDebugAdapter:
+      return "DebugAdapter";
+    case LogCategory::kAll:
+      return "All";
+    case LogCategory::kNone:
+      return "<none>";
+  }
 
-// Log tree works by pusing a log statement when the logging is done but waiting until that block
-// is done to pop it out of the stack. By waiting until the whole stack is popped, we can flush the
-// logs with a correct log context.
+  FX_NOTREACHED();
+  return "<unknown>";
+}
+
+// Returns how many seconds have passed since the program started.
+double SecondsSinceStart() {
+  return std::chrono::duration<double>(std::chrono::steady_clock::now() - kStartTime).count();
+}
+
+}  // namespace
+
+bool IsDebugModeActive() { return kDebugMode; }
+
+void SetDebugMode(bool activate) { kDebugMode = activate; }
+
+void SetLogCategories(std::initializer_list<LogCategory> categories) {
+  auto& active_categories = GetLogCategories();
+  active_categories.clear();
+  for (LogCategory category : categories) {
+    active_categories.insert(category);
+  }
+}
+
+// Log Tree ----------------------------------------------------------------------------------------
 //
-// This has several drawbacks though, such as additional context is needed to reconstruct logs in
-// case of a crash (backpointer to the log statement object) and that depending on the stack, log
-// statements might not appear for a while.
+// To facilitate logging, messages are appended to a tree and actually filled on the logging
+// instance destructor. This permits to correctly track under which block each message was logged
+// and give better context on output.
+//
+// The pop gets the message information because the logging logic using ostreams. This means that
+// the actual message is constructored *after* the logging object has been constructed, which is
+// the obvious message to push an entry. Plus, this logic permits to do messages that have
+// information that it's only present after the block is done (like timing information).
+//
+// IMPORTANT: Because this delays when the log output, any abnormal termination (eg. crash) might
+//            eat the latest batch of logs that is currently on the stack. Possible workaround is
+//            having an exception handler in fuchsia and/or a signal handler in linux to flush the
+//            rest of the output in the case of a crash.
 
 namespace {
 
@@ -87,9 +136,8 @@ struct LogEntry {
 
   // If a statement is valid, it means that it has not been flushed out of the stack, thus the
   // statement is still valid in memory. We can use this backpointer to flush the statement.
-  LogStatement* statement = nullptr;
+  DebugLogStatement* statement = nullptr;
 };
-inline bool Valid(const LogEntry& entry) { return entry.location.is_valid(); }
 
 LogEntry gRootSlot;
 LogEntry* gCurrentSlot = nullptr;
@@ -160,37 +208,7 @@ void UnwindLogTree(const LogEntry& entry, std::vector<std::string>* logs, int in
   }
 }
 
-// If the log entry is not filled, it means that it's still in the stack. We use the backpointer it
-// was to the log statement that generated it to fill it. This normally happens then |PopLogEntry|
-// is called, but an exception handler that calls |FlushLogEntries| can also make this happen.
-void FillInLogEntryFromStatement(LogEntry* entry) {
-  if (Valid(*entry))
-    return;
-
-  if (!entry->statement)
-    return;
-
-  // Refill the slot with the log statement.
-  entry->category = entry->statement->category();
-  entry->location = entry->statement->origin();
-  entry->msg = entry->statement->GetMsg();
-  entry->start_time = entry->statement->start_time();
-  entry->end_time = SecondsSinceStart();
-  entry->statement = nullptr;
-}
-
-void TraverseLogTree(LogEntry* entry, std::vector<std::string>* logs, int indent = 0) {
-  FillInLogEntryFromStatement(entry);
-  logs->emplace_back(LogEntryToStr(*entry, indent));
-
-  for (auto& child_entry : entry->children) {
-    TraverseLogTree(child_entry.get(), logs, indent + 2);
-  }
-}
-
-}  // namespace
-
-void PushLogEntry(LogStatement* statement) {
+void PushLogEntry(DebugLogStatement* statement) {
   std::lock_guard<std::mutex> lock(gLogMutex);
   // No slot means that it's a new message tree. Use the root.
   if (!gCurrentSlot) {
@@ -245,70 +263,23 @@ void PopLogEntry(LogCategory category, const FileLineFunction& location, const s
 #endif
 }
 
-void FlushLogEntries() {
-  std::vector<std::string> logs;
+}  // namespace
 
-  {
-    if (!gLogMutex.try_lock())
-      return;
-    TraverseLogTree(&gRootSlot, &logs);
-    gLogMutex.unlock();
-  }
+DebugLogStatement::DebugLogStatement(FileLineFunction origin, LogCategory category)
+    : origin_(std::move(origin)), category_(category) {
+  if (!IsLogCategoryActive(category_))
+    return;
 
-#if defined(__Fuchsia__)
-  for (auto& log : logs) {
-    FX_LOGS(DEBUG) << "LOG: " << log;
-  }
-#else
-  for (auto& log : logs) {
-    fprintf(stderr, "\rLOG: %s\r\n", log.c_str());
-  }
-  fflush(stderr);
-#endif
+  start_time_ = SecondsSinceStart();
+  should_log_ = true;
+  PushLogEntry(this);
 }
 
-const char* LogCategoryToString(LogCategory category) {
-  switch (category) {
-    case LogCategory::kAgent:
-      return "Agent";
-    case LogCategory::kArchArm64:
-      return "arm64";
-    case LogCategory::kArchx64:
-      return "x64";
-    case LogCategory::kBreakpoint:
-      return "Breakpoint";
-    case LogCategory::kJob:
-      return "Job";
-    case LogCategory::kMessageLoop:
-      return "Loop";
-    case LogCategory::kProcess:
-      return "Process";
-    case LogCategory::kRemoteAPI:
-      return "DebugAPI";
-    case LogCategory::kSession:
-      return "Session";
-    case LogCategory::kSetting:
-      return "Setting";
-    case LogCategory::kTest:
-      return "Test";
-    case LogCategory::kTiming:
-      return "Timing";
-    case LogCategory::kThread:
-      return "Thread";
-    case LogCategory::kWatchpoint:
-      return "Watchpoint";
-    case LogCategory::kWorkerPool:
-      return "WorkerPool";
-    case LogCategory::kDebugAdapter:
-      return "DebugAdapter";
-    case LogCategory::kAll:
-      return "All";
-    case LogCategory::kNone:
-      return "<none>";
-  }
+DebugLogStatement::~DebugLogStatement() {
+  if (!should_log_)
+    return;
 
-  FX_NOTREACHED();
-  return "<unknown>";
+  PopLogEntry(category_, origin_, stream_.str(), start_time_, SecondsSinceStart());
 }
 
 }  // namespace debug

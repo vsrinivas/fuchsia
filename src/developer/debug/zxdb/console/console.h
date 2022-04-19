@@ -7,6 +7,7 @@
 
 #include <map>
 
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/lib/fxl/macros.h"
@@ -18,7 +19,7 @@ class AsyncOutputBuffer;
 class OutputBuffer;
 class Session;
 
-class Console {
+class Console : debug::LogSink {
  public:
   explicit Console(Session* session);
   virtual ~Console();
@@ -63,6 +64,9 @@ class Console {
   // appear as the "last command" (when they hit enter again) and in the "up" history.
   virtual void ProcessInputLine(const std::string& line, CommandCallback callback = nullptr,
                                 bool add_to_history = true) = 0;
+
+  // Implements |LogSink|.
+  void WriteLog(debug::LogSeverity severity, std::string log) override;
 
  protected:
   static Console* singleton_;

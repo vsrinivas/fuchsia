@@ -62,15 +62,14 @@ void DebugAdapterServer::ListenConnection() {
 
 void DebugAdapterServer::ListenBackgroundThread() {
   // Wait for one connection.
-  // TODO(puneetha) : Replace FX_LOGS with call to console output.
-  FX_LOGS(INFO) << "Waiting on port " << port_ << " for debug adapter connection.\r\n";
+  LOGS(Info) << "Waiting on port " << port_ << " for debug adapter connection.\r\n";
   fbl::unique_fd client;
   while (!Accept(client)) {
     if (background_thread_exit_) {
       return;
     }
   }
-  FX_LOGS(INFO) << "Debug Adapter connection established.\r\n";
+  LOGS(Info) << "Debug Adapter connection established.\r\n";
 
   main_loop_->PostTask(FROM_HERE, [this, client = std::move(client)]() mutable {
     ConnectionResolvedMainThread(std::move(client));
@@ -105,12 +104,12 @@ bool DebugAdapterServer::Accept(fbl::unique_fd& client) {
   client =
       fbl::unique_fd(accept(server_socket_.get(), reinterpret_cast<sockaddr*>(&addr), &addrlen));
   if (!client.is_valid()) {
-    FX_LOGS(ERROR) << "Accept failed.";
+    LOGS(Error) << "Accept failed.";
     return false;
   }
 
   if (fcntl(client.get(), F_SETFL, O_NONBLOCK) < 0) {
-    FX_LOGS(ERROR) << "Couldn't make port nonblocking.";
+    LOGS(Error) << "Couldn't make port nonblocking.";
     return false;
   }
   return true;
@@ -126,7 +125,7 @@ void DebugAdapterServer::ConnectionResolvedMainThread(fbl::unique_fd client) {
 
   buffer_ = std::make_unique<debug::BufferedFD>(std::move(client));
   if (!buffer_->Start()) {
-    FX_LOGS(ERROR) << "Failed to initialize debug adapter buffer";
+    LOGS(Error) << "Failed to initialize debug adapter buffer";
     return;
   }
 
@@ -137,7 +136,7 @@ void DebugAdapterServer::ConnectionResolvedMainThread(fbl::unique_fd client) {
 
   // Reset the client connection on error.
   buffer_->set_error_callback([this]() {
-    FX_LOGS(INFO) << "Connection lost.";
+    LOGS(Info) << "Connection lost.";
     OnDisconnect();
   });
 }

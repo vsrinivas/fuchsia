@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/zxdb/symbols/array_type.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/call_site.h"
@@ -109,7 +110,7 @@ std::optional<size_t> ReadArraySubrange(llvm::DWARFContext* context,
 }
 
 void DisplayDebugTypesSectionWarning() {
-  FX_LOGS_FIRST_N(WARNING, 1)
+  FX_FIRST_N(1, LOGS(Warn))
       << "Separated .debug_types section is not supported yet. Please consider to remove "
          "`-fdebug-types-section` from the compiler flags or add `-fno-debug-types-section` if "
          "it's enabled by default. (fxbug.dev/97388)";

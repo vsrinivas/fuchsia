@@ -606,11 +606,6 @@ void ConsoleContext::DidCreateSymbolServer(SymbolServer* symbol_server) {
   }
 }
 
-void ConsoleContext::OnSymbolIndexingInformation(const std::string& msg) {
-  Console* console = Console::get();
-  console->Output(OutputBuffer(Syntax::kComment, msg));
-}
-
 void ConsoleContext::DidCreateTarget(Target* target) {
   int new_id = next_target_id_;
   next_target_id_++;

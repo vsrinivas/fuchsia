@@ -56,7 +56,7 @@ DebugAdapterContext::DebugAdapterContext(Session* session, debug::StreamBuffer* 
     dap_->send(dap::InitializedEvent());
   });
 
-  dap_->onError([](const char* msg) { FX_LOGS(ERROR) << "dap::Session error:" << msg << "\r\n"; });
+  dap_->onError([](const char* msg) { LOGS(Error) << "dap::Session error:" << msg; });
 
   dap_->connect(reader_, writer_);
 }

@@ -7,13 +7,14 @@
 
 #include <initializer_list>
 #include <set>
+#include <sstream>
 #include <vector>
 
 #include "src/developer/debug/shared/logging/file_line_function.h"
 
 namespace debug {
 
-class LogStatement;
+class DebugLogStatement;
 
 // This API controls and queries the debug functionality of the debug tools within the debug ipc.
 
@@ -83,39 +84,30 @@ enum class LogCategory {
   // Used for any log statements for which the category could not be found.
   kNone,
 };
-const char* LogCategoryToString(LogCategory);
 
-const std::set<LogCategory>& GetActiveLogCategories();
 void SetLogCategories(std::initializer_list<LogCategory>);
 
-bool IsLogCategoryActive(LogCategory);
+// Creates a conditional logger depending whether the debug mode is active or not.
+// See DEBUG_LOG for usage.
+class DebugLogStatement {
+ public:
+  explicit DebugLogStatement(FileLineFunction origin, LogCategory);
+  ~DebugLogStatement();
 
-// Log Tree ----------------------------------------------------------------------------------------
-//
-// To facilitate logging, messages are appended to a tree and actually filled on the logging
-// instance destructor. This permits to correctly track under which block each message was logged
-// and give better context on output.
-//
-// The pop gets the message information because the logging logic using ostreams. This means that
-// the actual message is constructored *after* the loggging object has been constructed, which is
-// the obvious message to push an entry. Plus, this logic permits to do messages that have
-// information that it's only present after the block is done (like timing information).
-//
-// IMPORTANT: Because this delays when the log output, any abnormal termination (eg. crash) might
-//            eat the latest batch of logs that is currently on the stack. Possible workaround is
-//            having an exception handler in fuchsia and/or a signal handler in linux to flush the
-//            rest of the output in the case of a crash.
-void PushLogEntry(LogStatement* statement);
-void PopLogEntry(LogCategory, const FileLineFunction& origin, const std::string& msg,
-                 double start_time, double end_time);
+  std::ostream& stream() { return stream_; }
 
-// Force the printing of the current entries.
-void FlushLogEntries();
+  const FileLineFunction& origin() const { return origin_; }
+  LogCategory category() const { return category_; }
+  double start_time() const { return start_time_; }
 
-// Timing ------------------------------------------------------------------------------------------
+ private:
+  FileLineFunction origin_;
+  LogCategory category_;
+  bool should_log_ = false;
+  double start_time_;
 
-// Returns how many seconds have passed since the program started.
-double SecondsSinceStart();
+  std::ostringstream stream_;
+};
 
 }  // namespace debug
 

@@ -176,7 +176,7 @@ void Job::SendAndUpdateFilters(std::vector<std::string> filters, bool force_send
   session()->remote_api()->JobFilter(request, [filters, weak_job = weak_factory_.GetWeakPtr()](
                                                   const Err& err, debug_ipc::JobFilterReply reply) {
     if (reply.status.has_error()) {
-      FX_LOGS(ERROR) << "Error adding filter: " << reply.status.message();
+      LOGS(Error) << "Error adding filter: " << reply.status.message();
 
       // Agent failed, mark that we had trouble setting filters and return.
       if (weak_job)
