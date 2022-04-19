@@ -8,83 +8,12 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//src/sys/core/build/core_shard.gni")
 
-# Set default visibility for targets to this file only in preparation for
-# migration away from //garnet. See fxbug.dev/98194 for more details.
-visibility = [ ":*" ]
-
-# TODO(fxbug.dev/98207): remove proxy targets once migration is complete
 group("setui") {
-  visibility = []
-  visibility = [
-    ":*",
-    "//:additional_universe_packages",
-    "//garnet/bin/*",
-  ]
-  testonly = true
-  public_deps = [ ":setui_internal" ]
-}
-
-# TODO(fxbug.dev/98207): remove proxy targets once migration is complete
-group("setui_service") {
-  visibility = []
-  visibility = [
-    ":*",
-    "//:additional_base_packages",
-    "//src/developer/forensics/feedback/tests/*",
-    "//src/intl/intl_services/tests/*",
-  ]
-  public_deps = [ ":setui_service_internal" ]
-}
-
-# TODO(fxbug.dev/98207): remove proxy targets once migration is complete
-group("setui-config-test") {
-  testonly = true
-  visibility = []
-  visibility = [
-    ":*",
-    "//src/setui/*",
-    "//vendor/google/*",
-  ]
-  public_deps = [ ":setui-config-test-internal" ]
-}
-
-# TODO(fxbug.dev/98207): remove proxy targets once migration is complete
-group("tests") {
-  visibility = []
-  visibility = [
-    ":*",
-    "//garnet/packages/tests:all",
-  ]
-  testonly = true
-  public_deps = [ ":tests_internal" ]
-}
-
-group("setui_service_core_shard") {
-  visibility = []
-  visibility = [
-    ":*",
-    "//build/images/*",
-    "//vendor/google/*",
-  ]
-  public_deps = [ ":setui_service_core_shard_internal" ]
-}
-
-group("setui_service_with_camera_core_shard") {
-  visibility = []
-  visibility = [
-    ":*",
-    "//build/images/fuchsia:*",
-    "//vendor/google/*",
-  ]
-  public_deps = [ ":setui_service_with_camera_core_shard_internal" ]
-}
-
-group("setui_internal") {
   testonly = true
   deps = [
     ":bin",
     ":lib",
-    ":setui_service_internal",
+    ":setui_service",
     ":setui_service_tests",
   ]
 }
@@ -440,8 +369,7 @@ fuchsia_component("setui_service_with_camera") {
   deps = [ ":bin" ]
 }
 
-fuchsia_package("setui_service_internal") {
-  package_name = "setui_service"
+fuchsia_package("setui_service") {
   deps = [
     ":setui_service_v1",
     ":setui_service_v2",
@@ -451,16 +379,16 @@ fuchsia_package("setui_service_internal") {
 }
 
 # Core shard for products that don't have a camera.
-core_shard("setui_service_core_shard_internal") {
+core_shard("setui_service_core_shard") {
   shard_file = "meta/setui_service.core_shard.cml"
 }
 
 # Core shard for products that have a camera.
-core_shard("setui_service_with_camera_core_shard_internal") {
+core_shard("setui_service_with_camera_core_shard") {
   shard_file = "meta/setui_service_with_camera.core_shard.cml"
 }
 
-rustc_binary("setui-config-test-internal") {
+rustc_binary("setui-config-test") {
   testonly = true
   edition = "2018"
   output_name = "setui_config_test"
@@ -523,7 +451,7 @@ fuchsia_test_package("sample-setui-config-test") {
   deps = [ ":sample-setui-config-test-resources" ]
 }
 
-group("tests_internal") {
+group("tests") {
   testonly = true
   deps = [
     ":sample-setui-config-test",

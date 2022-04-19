@@ -34,7 +34,7 @@ fuchsia_unittest_package("pkg") {
   deps = [
     ":intl_services_test",
     "..:pkg",
-    "//garnet/bin/setui:setui_service",
+    "//garnet/bin/setui",
     "//src/sys/device_settings:device_settings_manager",
     "//src/sys/stash",
   ]
