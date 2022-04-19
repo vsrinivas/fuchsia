@@ -75,7 +75,7 @@ use {
 // Exposed for serialized_types.
 pub use allocator::{AllocatorInfo, AllocatorKey, AllocatorValue};
 pub use extent_record::{ExtentKey, ExtentValue};
-pub use journal::{JournalRecord, SuperBlock, SuperBlockRecord};
+pub use journal::{JournalRecord, JournalRecordV1, SuperBlock, SuperBlockRecord};
 pub use object_record::{ObjectKey, ObjectValue};
 
 /// StoreObjectHandle stores an owner that must implement this trait, which allows the handle to get

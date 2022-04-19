@@ -717,6 +717,14 @@ mod tests {
             unreachable!();
         }
 
+        async fn mark_for_deletion(
+            &self,
+            _transaction: &mut Transaction<'_>,
+            _owner_object_id: u64,
+        ) {
+            unimplemented!();
+        }
+
         fn as_mutations(self: Arc<Self>) -> Arc<dyn Mutations> {
             unreachable!();
         }

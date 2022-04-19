@@ -43,7 +43,7 @@ use {
             object_manager::ObjectManager,
             object_record::{AttributeKey, ObjectKey, ObjectKeyData, ObjectValue},
             transaction::{
-                AllocatorMutation, Mutation, ObjectStoreMutation, Options, Transaction,
+                AllocatorMutation, Mutation, MutationV1, ObjectStoreMutation, Options, Transaction,
                 TxnMutation, TRANSACTION_MAX_JOURNAL_USAGE,
             },
             HandleOptions, Item, LockState, NewChildStoreOptions, ObjectStore, StoreObjectHandle,
@@ -129,6 +129,29 @@ pub fn fletcher64(buf: &[u8], previous: u64) -> u64 {
         hi = hi.wrapping_add(lo);
     }
     (hi as u64) << 32 | lo as u64
+}
+
+#[derive(Serialize, Deserialize, Versioned)]
+pub enum JournalRecordV1 {
+    EndBlock,
+    Mutation { object_id: u64, mutation: MutationV1 },
+    Commit,
+    Discard(u64),
+    DidFlushDevice(u64),
+}
+
+impl From<JournalRecordV1> for JournalRecord {
+    fn from(other: JournalRecordV1) -> Self {
+        match other {
+            JournalRecordV1::EndBlock => JournalRecord::EndBlock,
+            JournalRecordV1::Mutation { object_id, mutation } => {
+                JournalRecord::Mutation { object_id, mutation: mutation.into() }
+            }
+            JournalRecordV1::Commit => JournalRecord::Commit,
+            JournalRecordV1::Discard(x) => JournalRecord::Discard(x),
+            JournalRecordV1::DidFlushDevice(x) => JournalRecord::DidFlushDevice(x),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Versioned)]
@@ -344,7 +367,7 @@ impl Journal {
             }
             Mutation::ObjectStore(_) => {}
             Mutation::EncryptedObjectStore(_) => {}
-            Mutation::Allocator(AllocatorMutation(AllocatorItem {
+            Mutation::Allocator(AllocatorMutation::Item(AllocatorItem {
                 key: AllocatorKey { device_range },
                 ..
             })) => {
@@ -352,6 +375,7 @@ impl Journal {
                     return Ok(false);
                 }
             }
+            Mutation::Allocator(AllocatorMutation::MarkForDeletion(_)) => {}
             Mutation::BeginFlush => {}
             Mutation::EndFlush => {}
             Mutation::UpdateBorrowed(_) => {}
@@ -395,7 +419,7 @@ impl Journal {
                 );
             }
             Mutation::ObjectStore(_) => {}
-            Mutation::Allocator(AllocatorMutation(AllocatorItem {
+            Mutation::Allocator(AllocatorMutation::Item(AllocatorItem {
                 key: AllocatorKey { device_range },
                 value,
                 ..

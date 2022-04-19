@@ -5,8 +5,9 @@
 use crate::{
     lsm_tree::LayerInfo,
     object_store::{
-        transaction::Mutation, AllocatorInfo, AllocatorKey, AllocatorValue, EncryptedMutations,
-        JournalRecord, ObjectKey, ObjectValue, StoreInfo, SuperBlock, SuperBlockRecord,
+        transaction::{Mutation, MutationV1},
+        AllocatorInfo, AllocatorKey, AllocatorValue, EncryptedMutations, JournalRecord,
+        JournalRecordV1, ObjectKey, ObjectValue, StoreInfo, SuperBlock, SuperBlockRecord,
     },
     serialized_types::{versioned_type, Version, Versioned, VersionedLatest},
 };
@@ -18,7 +19,7 @@ use crate::{
 ///
 /// Last breaking change:
 ///  v13:  Enable wrapping object keys with AES-GCM-SIV.
-pub const LATEST_VERSION: Version = Version { major: 13, minor: 0 };
+pub const LATEST_VERSION: Version = Version { major: 14, minor: 0 };
 
 versioned_type! {
     2.. => AllocatorInfo,
@@ -33,13 +34,15 @@ versioned_type! {
     5.. => EncryptedMutations,
 }
 versioned_type! {
-    5.. => JournalRecord,
+    14.. => JournalRecord,
+    13.. => JournalRecordV1,
 }
 versioned_type! {
     1.. => LayerInfo,
 }
 versioned_type! {
-    5.. => Mutation,
+    14.. => Mutation,
+    13.. => MutationV1,
 }
 versioned_type! {
     5.. => ObjectKey,

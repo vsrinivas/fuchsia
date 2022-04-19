@@ -41,7 +41,7 @@ use {
         any::Any,
         borrow::Borrow,
         cmp::min,
-        collections::VecDeque,
+        collections::{HashSet, VecDeque},
         convert::TryInto,
         marker::PhantomData,
         ops::{Bound, Range},
@@ -91,6 +91,11 @@ pub trait Allocator: ReservationOwner {
         object_id: u64,
         device_range: Range<u64>,
     ) -> Result<(), Error>;
+
+    /// Marks allocations associated with a given |owner_object_id| for deletion at next compaction.
+    ///
+    /// Extents will not be reused and will remain 'allocated_bytes' until compaction.
+    async fn mark_for_deletion(&self, transaction: &mut Transaction<'_>, owner_object_id: u64);
 
     /// Cast to super-trait.
     fn as_mutations(self: Arc<Self>) -> Arc<dyn Mutations>;
@@ -416,6 +421,8 @@ struct Inner {
     committed_deallocated: VecDeque<(u64, Range<u64>)>,
     // The total number of committed deallocated bytes.
     committed_deallocated_bytes: u64,
+    // A collection of |owner_object_id| that should be filtered out at next compaction time.
+    marked_for_deletion: HashSet<u64>,
 }
 
 impl Inner {
@@ -456,6 +463,7 @@ impl SimpleAllocator {
                 reserved_bytes: 0,
                 committed_deallocated: VecDeque::new(),
                 committed_deallocated_bytes: 0,
+                marked_for_deletion: HashSet::new(),
             }),
             allocation_mutex: futures::lock::Mutex::new(()),
             stats: SimpleAllocatorStats::new(max_extent_size_bytes),
@@ -773,7 +781,10 @@ impl Allocator for SimpleAllocator {
                             AllocatorValue::None,
                         )));
                     }
-                    Some(Mutation::Allocator(AllocatorMutation(AllocatorItem { key, .. }))) => {
+                    Some(Mutation::Allocator(AllocatorMutation::Item(AllocatorItem {
+                        key,
+                        ..
+                    }))) => {
                         key.device_range.end = end;
                     }
                     _ => unreachable!(),
@@ -792,6 +803,15 @@ impl Allocator for SimpleAllocator {
             transaction.add(self.object_id(), mutation);
         }
         Ok(deallocated)
+    }
+
+    async fn mark_for_deletion(&self, transaction: &mut Transaction<'_>, owner_object_id: u64) {
+        // Note that because the actual time of deletion (the next major compaction) is undefined,
+        // |owner_object_id| should not be reused after this call.
+        transaction.add(
+            self.object_id(),
+            Mutation::Allocator(AllocatorMutation::MarkForDeletion(owner_object_id)),
+        );
     }
 
     fn as_mutations(self: Arc<Self>) -> Arc<dyn Mutations> {
@@ -878,7 +898,10 @@ impl Mutations for SimpleAllocator {
         _assoc_obj: AssocObj<'_>,
     ) {
         match mutation {
-            Mutation::Allocator(AllocatorMutation(mut item)) => {
+            Mutation::Allocator(AllocatorMutation::MarkForDeletion(owner_object_id)) => {
+                self.inner.lock().unwrap().marked_for_deletion.insert(owner_object_id);
+            }
+            Mutation::Allocator(AllocatorMutation::Item(mut item)) => {
                 item.sequence = context.checkpoint.file_offset;
                 // We currently rely on barriers here between inserting/removing from reserved
                 // allocations and merging into the tree.  These barriers are present whilst we use
@@ -963,7 +986,7 @@ impl Mutations for SimpleAllocator {
 
     fn drop_mutation(&self, mutation: Mutation, transaction: &Transaction<'_>) {
         match mutation {
-            Mutation::Allocator(AllocatorMutation(item)) => {
+            Mutation::Allocator(AllocatorMutation::Item(item)) => {
                 if let AllocatorValue::Abs { count: 1, .. } = item.value {
                     let mut inner = self.inner.lock().unwrap();
                     let len = item.key.device_range.length().unwrap();
@@ -1017,10 +1040,37 @@ impl Mutations for SimpleAllocator {
         transaction.add(self.object_id(), Mutation::BeginFlush);
         transaction.commit().await?;
 
+        let marked_for_deletion =
+            std::mem::replace(&mut self.inner.lock().unwrap().marked_for_deletion, HashSet::new());
+
+        // Track the bytes we deallocate due to mark_for_deletion.
+        let deallocated_bytes = std::sync::atomic::AtomicI64::new(0);
+
         let layer_set = self.tree.immutable_layer_set();
         {
             let mut merger = layer_set.merger();
             let iter = filter_tombstones(Box::new(merger.seek(Bound::Unbounded).await?)).await?;
+            let iter = Box::new(
+                iter.filter(|x| match x {
+                    ItemRef {
+                        key: AllocatorKey { device_range },
+                        value: AllocatorValue::Abs { owner_object_id, .. },
+                        ..
+                    } => {
+                        if marked_for_deletion.contains(owner_object_id) {
+                            deallocated_bytes.fetch_add(
+                                device_range.length().unwrap() as i64,
+                                std::sync::atomic::Ordering::SeqCst,
+                            );
+                            false
+                        } else {
+                            true
+                        }
+                    }
+                    _ => true,
+                })
+                .await?,
+            );
             let iter = CoalescingIterator::new(iter).await?;
             self.tree
                 .compact_with_iterator(
@@ -1041,6 +1091,10 @@ impl Mutations for SimpleAllocator {
         let mut serialized_info = Vec::new();
         {
             let mut inner = self.inner.lock().unwrap();
+
+            // Reduce allocated bytes associated with any filtered mark_for_deletion extents.
+            let deallocated_bytes = deallocated_bytes.load(std::sync::atomic::Ordering::SeqCst);
+            inner.allocated_bytes -= deallocated_bytes;
 
             // Move all the existing layers to the graveyard.
             for object_id in &inner.info.layers {
@@ -1449,6 +1503,57 @@ mod tests {
         assert_eq!(overlap(&device_ranges[0], &device_ranges[1]), 0);
         transaction.commit().await.expect("commit failed");
 
+        check_allocations(&allocator, &device_ranges).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_mark_for_deletion() {
+        const STORE_OBJECT_ID: u64 = 99;
+        let (fs, allocator, _) = test_fs().await;
+
+        // Allocate some stuff.
+        let initial_allocated_bytes = allocator.get_allocated_bytes();
+        let mut device_ranges = Vec::new();
+        let mut transaction =
+            fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
+        device_ranges.push(
+            allocator
+                .allocate(&mut transaction, STORE_OBJECT_ID, 100 * fs.block_size())
+                .await
+                .expect("allocate failed"),
+        );
+        device_ranges.push(
+            allocator
+                .allocate(&mut transaction, STORE_OBJECT_ID, 100 * fs.block_size())
+                .await
+                .expect("allocate2 failed"),
+        );
+        transaction.commit().await.expect("commit failed");
+        check_allocations(&allocator, &device_ranges).await;
+
+        // Mark for deletion.
+        let mut transaction =
+            fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
+        assert_eq!(
+            initial_allocated_bytes + fs.block_size() * 200,
+            allocator.get_allocated_bytes()
+        );
+        allocator.mark_for_deletion(&mut transaction, STORE_OBJECT_ID).await;
+        transaction.commit().await.expect("commit failed");
+
+        // Expect that deallocation hasn't happened yet -- it happens at flush time.
+        assert_eq!(
+            initial_allocated_bytes + fs.block_size() * 200,
+            allocator.get_allocated_bytes()
+        );
+        check_allocations(&allocator, &device_ranges).await;
+
+        allocator.flush().await.expect("flush failed");
+
+        // The flush above seems to trigger a two block allocation for the allocator itself.
+        device_ranges.clear();
+        device_ranges.push(fs.block_size() * 200..fs.block_size() * (200 + 2));
+        assert_eq!(fs.block_size() * 2, allocator.get_allocated_bytes());
         check_allocations(&allocator, &device_ranges).await;
     }
 

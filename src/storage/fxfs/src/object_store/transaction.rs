@@ -119,6 +119,32 @@ pub trait TransactionHandler: Send + Sync {
     async fn write_lock<'a>(&'a self, lock_keys: &[LockKey]) -> WriteGuard<'a>;
 }
 
+#[derive(Serialize, Deserialize, Versioned)]
+pub enum MutationV1 {
+    ObjectStore(ObjectStoreMutation),
+    EncryptedObjectStore(Box<[u8]>),
+    Allocator(AllocatorMutationV1),
+    // Indicates the beginning of a flush.  This would typically involve sealing a tree.
+    BeginFlush,
+    // Indicates the end of a flush.  This would typically involve replacing the immutable layers
+    // with compacted ones.
+    EndFlush,
+    UpdateBorrowed(u64),
+}
+
+impl From<MutationV1> for Mutation {
+    fn from(other: MutationV1) -> Self {
+        match other {
+            MutationV1::ObjectStore(x) => Mutation::ObjectStore(x.into()),
+            MutationV1::EncryptedObjectStore(x) => Mutation::EncryptedObjectStore(x.into()),
+            MutationV1::Allocator(x) => Mutation::Allocator(x.into()),
+            MutationV1::BeginFlush => Mutation::BeginFlush,
+            MutationV1::EndFlush => Mutation::EndFlush,
+            MutationV1::UpdateBorrowed(x) => Mutation::UpdateBorrowed(x),
+        }
+    }
+}
+
 /// The journal consists of these records which will be replayed at mount time.  Within a
 /// transaction, these are stored as a set which allows some mutations to be deduplicated and found
 /// (and we require custom comparison functions below).  For example, we need to be able to find
@@ -159,7 +185,7 @@ impl Mutation {
     }
 
     pub fn allocation(item: AllocatorItem) -> Self {
-        Mutation::Allocator(AllocatorMutation(item))
+        Mutation::Allocator(AllocatorMutation::Item(item))
     }
 }
 
@@ -202,27 +228,45 @@ impl PartialEq for ObjectStoreMutation {
 impl Eq for ObjectStoreMutation {}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct AllocatorMutation(pub AllocatorItem);
+pub struct AllocatorMutationV1(pub AllocatorItem);
 
-impl Ord for AllocatorMutation {
+impl Ord for AllocatorItem {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.0.key.cmp(&other.0.key)
+        self.key.cmp(&other.key)
     }
 }
 
-impl PartialOrd for AllocatorMutation {
+impl PartialOrd for AllocatorItem {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl PartialEq for AllocatorMutation {
+impl PartialEq for AllocatorMutationV1 {
     fn eq(&self, other: &Self) -> bool {
         self.0.key.eq(&other.0.key)
     }
 }
 
-impl Eq for AllocatorMutation {}
+impl Eq for AllocatorMutationV1 {}
+
+impl From<AllocatorMutationV1> for AllocatorMutation {
+    fn from(other: AllocatorMutationV1) -> Self {
+        Self::Item(other.0)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+pub enum AllocatorMutation {
+    /// A mutation to some piece of allocator-managed extent space.
+    Item(AllocatorItem),
+    /// Marks all extents with a given owner_object_id for deletion.
+    /// Used to free space allocated to encrypted ObjectStore where we may not have the key.
+    /// Note that the actual deletion time is undefined so this should never be used where an
+    /// ObjectStore is still in use due to a high risk of corruption. Similarly, owner_object_id
+    /// should never be reused for the same reasons.
+    MarkForDeletion(u64),
+}
 
 /// When creating a transaction, locks typically need to be held to prevent two or more writers
 /// trying to make conflicting mutations at the same time.  LockKeys are used for this.
