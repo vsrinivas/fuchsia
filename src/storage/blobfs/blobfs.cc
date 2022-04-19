@@ -277,7 +277,7 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
     return zx::error(status);
   }
   std::unique_ptr<IdAllocator> nodes_bitmap = {};
-  if ((status = IdAllocator::Create(fs->info_.inode_count, &nodes_bitmap) != ZX_OK)) {
+  if ((status = IdAllocator::Create(fs->info_.inode_count, &nodes_bitmap)) != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to allocate bitmap for inodes";
     return zx::error(status);
   }
