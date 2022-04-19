@@ -739,6 +739,15 @@ async fn doctor_summary<W: Write>(
         LedgerMode::Verbose,
     )?;
     ledger.set_outcome(version_node, LedgerOutcome::Success)?;
+
+    let ffx_path = match std::env::current_exe() {
+        Ok(path) => format!("{}", path.display()),
+        _ => "not found".to_string(),
+    };
+    let ffx_path_node =
+        ledger.add_node(&format!("Path to ffx: {}", ffx_path), LedgerMode::Verbose)?;
+    ledger.set_outcome(ffx_path_node, LedgerOutcome::Info)?;
+
     ledger.close(main_node)?;
 
     main_node = ledger.add_node("Checking daemon", LedgerMode::Automatic)?;
@@ -1695,6 +1704,10 @@ mod test {
         Some(FRONTEND_VERSION.to_string())
     }
 
+    fn ffx_path() -> String {
+        format!("{}", std::env::current_exe().unwrap().display())
+    }
+
     fn daemon_version_info() -> VersionInfo {
         VersionInfo {
             commit_hash: None,
@@ -1774,9 +1787,11 @@ mod test {
                 "\
                    \n[✓] FFX doctor\
                    \n    [✓] Frontend version: {}\
+                   \n    [i] Path to ffx: {}\
                    \n[✗] Checking daemon\
                    \n    [✗] No running daemons found. Run `ffx doctor-new --restart-daemon`\n",
-                FRONTEND_VERSION
+                FRONTEND_VERSION,
+                ffx_path()
             )
         );
     }
@@ -1819,6 +1834,7 @@ mod test {
                 "\
                    \n[✓] FFX doctor\
                    \n    [✓] Frontend version: {}\
+                   \n    [i] Path to ffx: {}\
                    \n[✓] Checking daemon\
                    \n    [✓] Daemon found: [1]\
                    \n    [✓] Connecting to daemon\
@@ -1826,7 +1842,9 @@ mod test {
                    \n    [✓] Default target: (none)\
                    \n[✗] Searching for targets\
                    \n    [✗] No targets found!\n",
-                FRONTEND_VERSION, DAEMON_VERSION
+                FRONTEND_VERSION,
+                ffx_path(),
+                DAEMON_VERSION
             )
         );
     }
@@ -1869,6 +1887,7 @@ mod test {
                 "\
                    \n[✓] FFX doctor\
                    \n    [✓] Frontend version: {}\
+                   \n    [i] Path to ffx: {}\
                    \n[✓] Checking daemon\
                    \n    [✓] Daemon found: [1]\
                    \n    [✓] Connecting to daemon\
@@ -1876,7 +1895,9 @@ mod test {
                    \n    [✓] Default target: (none)\
                    \n[✗] Searching for targets\
                    \n    [✗] No targets found!\n",
-                FRONTEND_VERSION, DAEMON_VERSION
+                FRONTEND_VERSION,
+                ffx_path(),
+                DAEMON_VERSION
             )
         );
     }
@@ -1919,6 +1940,7 @@ mod test {
                 "\
             \n[✓] FFX doctor\
             \n    [✓] Frontend version: {}\
+            \n    [i] Path to ffx: {}\
             \n[✓] Checking daemon\
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
@@ -1926,7 +1948,9 @@ mod test {
             \n    [✓] Default target: (none)\
             \n[✗] Searching for targets\
             \n    [✗] Error getting targets: <reason omitted>\n",
-                FRONTEND_VERSION, DAEMON_VERSION
+                FRONTEND_VERSION,
+                ffx_path(),
+                DAEMON_VERSION
             )
         );
     }
@@ -2075,6 +2099,7 @@ mod test {
                 "\
             \n[✓] FFX doctor\
             \n    [✓] Frontend version: {}\
+            \n    [i] Path to ffx: {}\
             \n[✓] Checking daemon\
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
@@ -2092,7 +2117,11 @@ mod test {
             \n        [✓] Connecting to RCS\
             \n        [✗] Timeout while communicating with RCS\
             \n[✓] No issues found\n",
-                FRONTEND_VERSION, DAEMON_VERSION, NODENAME, UNRESPONSIVE_NODENAME,
+                FRONTEND_VERSION,
+                ffx_path(),
+                DAEMON_VERSION,
+                NODENAME,
+                UNRESPONSIVE_NODENAME,
             )
         );
     }
@@ -2159,6 +2188,7 @@ mod test {
                 "\
             \n[✓] FFX doctor\
             \n    [✓] Frontend version: {}\
+            \n    [i] Path to ffx: {}\
             \n[✓] Checking daemon\
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
@@ -2172,7 +2202,10 @@ mod test {
             \n        [✓] Connecting to RCS\
             \n        [✓] Communicating with RCS\
             \n[✓] No issues found\n",
-                FRONTEND_VERSION, DAEMON_VERSION, NODENAME,
+                FRONTEND_VERSION,
+                ffx_path(),
+                DAEMON_VERSION,
+                NODENAME,
             )
         );
     }
@@ -2219,6 +2252,7 @@ mod test {
                 "\
             \n[✓] FFX doctor\
             \n    [✓] Frontend version: {}\
+            \n    [i] Path to ffx: {}\
             \n[✓] Checking daemon\
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
@@ -2226,7 +2260,9 @@ mod test {
             \n    [✓] Default target: (none)\
             \n[✗] Searching for targets\
             \n    [✗] No targets found!\n",
-                FRONTEND_VERSION, DAEMON_VERSION
+                FRONTEND_VERSION,
+                ffx_path(),
+                DAEMON_VERSION
             )
         );
     }
@@ -2377,7 +2413,8 @@ mod test {
                 TestStepEntry::output_step(StepType::Output(format!(
                     "\
                 [✓] FFX doctor\
-                \n    [✓] Frontend version: {}\n\n\
+                \n    [✓] Frontend version: {}\
+                \n    [i] Path to ffx: {}\n\n\
                 [✓] Checking daemon\
                 \n    [✓] Daemon found: [1]\
                 \n    [✓] Connecting to daemon\
@@ -2385,7 +2422,8 @@ mod test {
                 \n    [✓] Default target: (none)\n\n\
                 [✗] Searching for targets\
                 \n    [✗] No targets found!\n\n",
-                    FRONTEND_VERSION
+                    FRONTEND_VERSION,
+                    ffx_path()
                 ))),
                 TestStepEntry::step(StepType::GeneratingRecord),
                 TestStepEntry::result(StepResult::Success),
@@ -2437,7 +2475,8 @@ mod test {
                 TestStepEntry::output_step(StepType::Output(format!(
                     "\
                 [✓] FFX doctor\
-                \n    [✓] Frontend version: {}\n\n\
+                \n    [✓] Frontend version: {}\
+                \n    [i] Path to ffx: {}\n\n\
                 [✓] Checking daemon\
                 \n    [✓] Daemon found: [1]\
                 \n    [✓] Connecting to daemon\
@@ -2445,7 +2484,8 @@ mod test {
                 \n    [✓] Default target: (none)\n\n\
                 [✗] Searching for targets\
                 \n    [✗] No targets found!\n\n",
-                    FRONTEND_VERSION
+                    FRONTEND_VERSION,
+                    ffx_path()
                 ))),
                 // Error will occur here.
             ])
@@ -2516,6 +2556,7 @@ mod test {
                 "\
             \n[✓] FFX doctor\
             \n    [✓] Frontend version: {}\
+            \n    [i] Path to ffx: {}\
             \n[✓] Checking daemon\
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
@@ -2530,7 +2571,10 @@ mod test {
             \n        [✓] Connecting to RCS\
             \n        [✗] Timeout while communicating with RCS\
             \n[✗] Doctor found issues in one or more categories.\n",
-                FRONTEND_VERSION, DAEMON_VERSION, UNRESPONSIVE_NODENAME,
+                FRONTEND_VERSION,
+                ffx_path(),
+                DAEMON_VERSION,
+                UNRESPONSIVE_NODENAME,
             )
         );
     }
@@ -2595,6 +2639,7 @@ mod test {
                 "\
             \n[✓] FFX doctor\
             \n    [✓] Frontend version: {}\
+            \n    [i] Path to ffx: {}\
             \n[✓] Checking daemon\
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
@@ -2605,7 +2650,10 @@ mod test {
             \n[✗] Verifying Targets\
             \n    [!] Skipping target in fastboot: {}\
             \n[✗] Doctor found issues in one or more categories.\n",
-                FRONTEND_VERSION, DAEMON_VERSION, FASTBOOT_NODENAME
+                FRONTEND_VERSION,
+                ffx_path(),
+                DAEMON_VERSION,
+                FASTBOOT_NODENAME
             )
         );
     }
