@@ -62,23 +62,13 @@
     ],
     expose: [
         {
-            directory: "factory",
-            from: "self",
-        },
-        {
-            directory: "durable",
-            from: "self",
-        },
-        {
-            directory: "install",
-            from: "self",
-        },
-        {
-            directory: "mnt",
-            from: "self",
-        },
-        {
-            directory: "tmp",
+            directory: [
+                "durable",
+                "factory",
+                "install",
+                "mnt",
+                "tmp",
+            ],
             from: "self",
         },
         {
