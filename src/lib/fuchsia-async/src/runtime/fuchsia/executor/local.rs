@@ -521,7 +521,6 @@ mod tests {
         assert_eq!(fut_step.get(), 2);
     }
 
-    #[allow(clippy::unit_cmp)] // TODO(fxbug.dev/95049)
     #[test]
     // Runs a future that waits on a timer.
     fn stepwise_timer() {
@@ -538,7 +537,7 @@ mod tests {
         executor.set_fake_time(Time::from_nanos(1000));
         assert_eq!(Time::now(), Time::from_nanos(1000));
         assert_eq!(executor.is_waiting(), WaitState::Ready);
-        assert_eq!(run_until_done(&mut executor, &mut fut), ());
+        run_until_done(&mut executor, &mut fut);
     }
 
     // Runs a future that waits on an event.
