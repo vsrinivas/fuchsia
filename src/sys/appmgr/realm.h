@@ -107,7 +107,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   // Constructor to create a Realm object. Clients should call |Create|.
   Realm(RealmArgs args, zx::job job);
 
-  ~Realm();
+  ~Realm() override;
 
   fxl::WeakPtr<Realm> parent() const { return parent_; }
   CpuWatcher* cpu_watcher() const { return cpu_watcher_; }
@@ -147,7 +147,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   void CreateNestedEnvironment(
       fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
       fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> controller_request,
-      std::string label, fuchsia::sys::ServiceListPtr additional_services,
+      const std::string& label, fuchsia::sys::ServiceListPtr additional_services,
       fuchsia::sys::EnvironmentOptions options);
 
   using ComponentObjectCreatedCallback =
@@ -226,8 +226,8 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   static void InstallRuntime(Realm* realm, zx::job child_job, zx::process process,
                              fxl::RefPtr<Namespace> ns, fdio_flat_namespace_t* flat,
-                             const std::string args, ComponentRequestWrapper component_request,
-                             const std::string url, ExportedDirChannels channels,
+                             std::string args, ComponentRequestWrapper component_request,
+                             std::string url, ExportedDirChannels channels,
                              ComponentObjectCreatedCallback callback, zx::channel pkg_handle);
 
  private:
@@ -239,7 +239,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   RunnerHolder* GetOrCreateRunner(const std::string& runner);
   Realm* GetRunnerRealm();
 
-  void CreateComponentWithRunnerForScheme(std::string runner_url,
+  void CreateComponentWithRunnerForScheme(const std::string& runner_url,
                                           fuchsia::sys::LaunchInfo launch_info,
                                           ComponentRequestWrapper component_request,
                                           ComponentObjectCreatedCallback callback);
@@ -288,8 +288,8 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   std::string temp_path_;
   std::string koid_;
   std::vector<std::string> realm_path_;
-  std::unique_ptr<component::PackageLoader> package_loader_;
-  std::unique_ptr<component::CacheControl> cache_control_;
+  std::optional<component::PackageLoader> package_loader_;
+  std::optional<component::CacheControl> cache_control_;
   fbl::RefPtr<LogConnectorImpl> log_connector_;
 
   zx::job job_;

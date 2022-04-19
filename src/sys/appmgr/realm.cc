@@ -74,20 +74,27 @@ constexpr char kGwpAsanConfig[] = "gwp_asan_config.txt";
 using fuchsia::sys::TerminationReason;
 
 void PushHandle(uint32_t id, zx_handle_t handle, std::vector<fdio_spawn_action_t>* actions) {
-  actions->push_back({.action = FDIO_SPAWN_ACTION_ADD_HANDLE, .h = {.id = id, .handle = handle}});
-// Currently clang static analyzer could not analyze union correctly thus it does not know handle
-// is associated with actions.
-// #TODO(fxbug.dev/64385): Remove this hack once we improve static analyzer.
-#ifdef __clang_analyzer__
-  (*actions)[actions->size() - 1].h.handle = handle;
-#endif  //  #ifdef __clang_analyzer__
+  actions->push_back({
+      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+      .h =
+          {
+              .id = id,
+              .handle = handle,
+          },
+  });
 }
 
 void PushFileDescriptor(fuchsia::sys::FileDescriptorPtr fd, int target_fd,
                         std::vector<fdio_spawn_action_t>* actions) {
   if (!fd) {
-    actions->push_back({.action = FDIO_SPAWN_ACTION_CLONE_FD,
-                        .fd = {.local_fd = target_fd, .target_fd = target_fd}});
+    actions->push_back({
+        .action = FDIO_SPAWN_ACTION_CLONE_FD,
+        .fd =
+            {
+                .local_fd = target_fd,
+                .target_fd = target_fd,
+            },
+    });
     return;
   }
   if (fd->type0) {
@@ -167,16 +174,34 @@ zx::process CreateProcess(const zx::job& job, zx::vmo executable, const std::str
   // StdoutToDebuglog::Init, which installs a write-only debuglog as stdout and
   // stderr, so cloning this handle for new processes gives the same handle
   // (albeit without read rights) as appmgr used to hand out.
-  actions.push_back({.action = FDIO_SPAWN_ACTION_CLONE_FD,
-                     .fd = {.local_fd = STDIN_FILENO, .target_fd = STDIN_FILENO}});
+  actions.push_back({
+      .action = FDIO_SPAWN_ACTION_CLONE_FD,
+      .fd =
+          {
+              .local_fd = STDIN_FILENO,
+              .target_fd = STDIN_FILENO,
+          },
+  });
   PushFileDescriptor(std::move(launch_info.out), STDOUT_FILENO, &actions);
   PushFileDescriptor(std::move(launch_info.err), STDERR_FILENO, &actions);
 
-  actions.push_back({.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = label.c_str()}});
+  actions.push_back({
+      .action = FDIO_SPAWN_ACTION_SET_NAME,
+      .name =
+          {
+              .data = label.c_str(),
+          },
+  });
 
   for (size_t i = 0; i < flat->count; ++i) {
-    actions.push_back({.action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-                       .ns = {.prefix = flat->path[i], .handle = flat->handle[i]}});
+    actions.push_back({
+        .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+        .ns =
+            {
+                .prefix = flat->path[i],
+                .handle = flat->handle[i],
+            },
+    });
   }
 
   executable.set_property(ZX_PROP_NAME, label.data(), label.size());
@@ -238,17 +263,19 @@ RealmArgs RealmArgs::Make(fxl::WeakPtr<Realm> parent, std::string label, std::st
                           fuchsia::sys::EnvironmentOptions options,
                           fbl::unique_fd appmgr_config_dir,
                           fbl::RefPtr<ComponentIdIndex> component_id_index) {
-  return {.parent = parent,
-          .label = label,
-          .data_path = data_path,
-          .cache_path = cache_path,
-          .temp_path = temp_path,
-          .environment_services = env_services,
-          .additional_services = nullptr,
-          .options = std::move(options),
-          .appmgr_config_dir = std::move(appmgr_config_dir),
-          .component_id_index = std::move(component_id_index),
-          .loader = std::nullopt};
+  return {
+      .parent = std::move(parent),
+      .label = std::move(label),
+      .data_path = std::move(data_path),
+      .cache_path = std::move(cache_path),
+      .temp_path = std::move(temp_path),
+      .environment_services = env_services,
+      .additional_services = nullptr,
+      .options = options,
+      .appmgr_config_dir = std::move(appmgr_config_dir),
+      .component_id_index = std::move(component_id_index),
+      .loader = std::nullopt,
+  };
 }
 
 RealmArgs RealmArgs::MakeWithAdditionalServices(
@@ -256,17 +283,19 @@ RealmArgs RealmArgs::MakeWithAdditionalServices(
     std::string temp_path, const std::shared_ptr<sys::ServiceDirectory>& env_services,
     fuchsia::sys::ServiceListPtr additional_services, fuchsia::sys::EnvironmentOptions options,
     fbl::unique_fd appmgr_config_dir, fbl::RefPtr<ComponentIdIndex> component_id_index) {
-  return {.parent = parent,
-          .label = label,
-          .data_path = data_path,
-          .cache_path = cache_path,
-          .temp_path = temp_path,
-          .environment_services = env_services,
-          .additional_services = std::move(additional_services),
-          .options = std::move(options),
-          .appmgr_config_dir = std::move(appmgr_config_dir),
-          .component_id_index = std::move(component_id_index),
-          .loader = std::nullopt};
+  return {
+      .parent = std::move(parent),
+      .label = std::move(label),
+      .data_path = std::move(data_path),
+      .cache_path = std::move(cache_path),
+      .temp_path = std::move(temp_path),
+      .environment_services = env_services,
+      .additional_services = std::move(additional_services),
+      .options = options,
+      .appmgr_config_dir = std::move(appmgr_config_dir),
+      .component_id_index = std::move(component_id_index),
+      .loader = std::nullopt,
+  };
 }
 
 RealmArgs RealmArgs::MakeWithCustomLoader(
@@ -275,17 +304,22 @@ RealmArgs RealmArgs::MakeWithCustomLoader(
     fuchsia::sys::ServiceListPtr additional_services, fuchsia::sys::EnvironmentOptions options,
     fbl::unique_fd appmgr_config_dir, fbl::RefPtr<ComponentIdIndex> component_id_index,
     fuchsia::sys::LoaderPtr loader) {
-  return {.parent = parent,
-          .label = label,
-          .data_path = data_path,
-          .cache_path = cache_path,
-          .temp_path = temp_path,
-          .environment_services = env_services,
-          .additional_services = std::move(additional_services),
-          .options = std::move(options),
-          .appmgr_config_dir = std::move(appmgr_config_dir),
-          .component_id_index = std::move(component_id_index),
-          .loader = std::optional<fuchsia::sys::LoaderPtr>{std::move(loader)}};
+  return {
+      .parent = std::move(parent),
+      .label = std::move(label),
+      .data_path = std::move(data_path),
+      .cache_path = std::move(cache_path),
+      .temp_path = std::move(temp_path),
+      .environment_services = env_services,
+      .additional_services = std::move(additional_services),
+      .options = options,
+      .appmgr_config_dir = std::move(appmgr_config_dir),
+      .component_id_index = std::move(component_id_index),
+      .loader =
+          std::optional<fuchsia::sys::LoaderPtr>{
+              std::move(loader),
+          },
+  };
 }
 
 std::unique_ptr<Realm> Realm::Create(RealmArgs args) {
@@ -298,9 +332,9 @@ std::unique_ptr<Realm> Realm::Create(RealmArgs args) {
   // derive from the application manager's job.
   zx::unowned<zx::job> parent_job;
   if (args.parent) {
-    parent_job = zx::unowned<zx::job>(args.parent->job_);
+    parent_job = args.parent->job_.borrow();
   } else {
-    parent_job = zx::unowned<zx::job>(zx::job::default_job());
+    parent_job = zx::job::default_job();
   }
 
   zx::job job;
@@ -378,7 +412,7 @@ Realm::Realm(RealmArgs args, zx::job job)
   // Add default services hosted by appmgr for the root realm only.
   if (!parent_) {
     // Set up Loader service for root realm.
-    package_loader_.reset(new component::PackageLoader);
+    package_loader_.emplace();
     default_namespace_->services()->AddService(
         fuchsia::sys::Loader::Name_, fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
           package_loader_->AddBinding(
@@ -387,7 +421,7 @@ Realm::Realm(RealmArgs args, zx::job job)
         }));
 
     // Set up CacheControl service for root realm.
-    cache_control_.reset(new component::CacheControl);
+    cache_control_.emplace();
     default_namespace_->services()->AddService(
         fuchsia::sys::test::CacheControl::Name_,
         fbl::MakeRefCounted<fs::Service>([this](zx::channel channel) {
@@ -478,7 +512,7 @@ zx::job Realm::DuplicateJobForHub() const {
 void Realm::CreateNestedEnvironment(
     fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
     fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> controller_request,
-    std::string label, fuchsia::sys::ServiceListPtr additional_services,
+    const std::string& label, fuchsia::sys::ServiceListPtr additional_services,
     fuchsia::sys::EnvironmentOptions options) {
   TRACE_DURATION("appmgr", "Realm::CreateNestedEnvironment", "label", label);
 
@@ -514,12 +548,12 @@ void Realm::CreateNestedEnvironment(
   if (additional_services) {
     args = RealmArgs::MakeWithAdditionalServices(
         weak_ptr(), label, nested_data_path, nested_cache_path, nested_temp_path,
-        environment_services_, std::move(additional_services), std::move(options),
+        environment_services_, std::move(additional_services), options,
         appmgr_config_dir_.duplicate(), component_id_index_);
   } else {
     args = RealmArgs::Make(weak_ptr(), label, nested_data_path, nested_cache_path, nested_temp_path,
-                           environment_services_, std::move(options),
-                           appmgr_config_dir_.duplicate(), component_id_index_);
+                           environment_services_, options, appmgr_config_dir_.duplicate(),
+                           component_id_index_);
   }
   args.cpu_watcher = cpu_watcher_;
 
@@ -669,7 +703,7 @@ void Realm::CreateComponent(fuchsia::sys::LaunchInfo launch_info,
   std::string scheme = GetSchemeFromURL(canon_url);
 
   const std::string launcher_type = scheme_map_.LookUp(scheme);
-  if (launcher_type == "") {
+  if (launcher_type.empty()) {
     component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::URL_INVALID);
   } else if (launcher_type == "package") {
     // "package" type doesn't use a runner.
@@ -743,7 +777,7 @@ void Realm::AddBinding(fidl::InterfaceRequest<fuchsia::sys::Environment> environ
   default_namespace_->AddBinding(std::move(environment));
 }
 
-void Realm::CreateComponentWithRunnerForScheme(std::string runner_url,
+void Realm::CreateComponentWithRunnerForScheme(const std::string& runner_url,
                                                fuchsia::sys::LaunchInfo launch_info,
                                                ComponentRequestWrapper component_request,
                                                ComponentObjectCreatedCallback callback) {
@@ -968,9 +1002,11 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
     }
 
     if (!security_policy->enable_ambient_executable) {
-      policies.push_back(zx_policy_basic_v2_t{.condition = ZX_POL_AMBIENT_MARK_VMO_EXEC,
-                                              .action = ZX_POL_ACTION_DENY,
-                                              .flags = ZX_POL_OVERRIDE_DENY});
+      policies.push_back(zx_policy_basic_v2_t{
+          .condition = ZX_POL_AMBIENT_MARK_VMO_EXEC,
+          .action = ZX_POL_ACTION_DENY,
+          .flags = ZX_POL_OVERRIDE_DENY,
+      });
     }
 
     fxl::RefPtr<Namespace> ns = Namespace::CreateChildNamespace(
@@ -1020,8 +1056,8 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
 
 void Realm::InstallRuntime(
     Realm* realm, zx::job child_job, zx::process process, fxl::RefPtr<Namespace> ns,
-    fdio_flat_namespace_t* flat, const std::string args, ComponentRequestWrapper component_request,
-    const std::string url, ExportedDirChannels channels,
+    fdio_flat_namespace_t* flat, std::string args, ComponentRequestWrapper component_request,
+    std::string url, ExportedDirChannels channels,
     fit::function<void(std::weak_ptr<ComponentControllerImpl> component)> callback,
     zx::channel pkg_handle) {
   if (process) {
@@ -1085,7 +1121,7 @@ void Realm::CreateElfBinaryComponentFromPackage(
   auto channels = Util::BindDirectory(&launch_info);
   zx::process process = CreateProcess(child_job, std::move(executable), app_argv0, env_vars,
                                       std::move(launch_info), std::move(loader_service), flat);
-  InstallRuntime(this, std::move(child_job), std::move(process), ns, flat, std::move(args),
+  InstallRuntime(this, std::move(child_job), std::move(process), std::move(ns), flat, args,
                  std::move(component_request), url, std::move(channels), std::move(callback),
                  std::move(package_handle));
 }
@@ -1228,11 +1264,10 @@ fpromise::result<std::string, zx_status_t> Realm::InitIsolatedPathForComponentIn
                      << " cannot be created because it is using isolated-persistent-storage, but "
                         "is not listed in the component instance ID index.";
       return fpromise::error(ZX_ERR_ACCESS_DENIED);
-    } else {
-      FX_LOGS(WARNING) << "Component " << fp.ToString()
-                       << " is using isolated-persistent-storage, but is not listed in the "
-                          "component instance ID index.";
     }
+    FX_LOGS(WARNING) << "Component " << fp.ToString()
+                     << " is using isolated-persistent-storage, but is not listed in the "
+                        "component instance ID index.";
   }
 
   // Ensure directory path exists.
@@ -1303,8 +1338,8 @@ internal::EventNotificationInfo Realm::GetEventNotificationInfo(const std::strin
     // depending on the moniker not containing `sys` we strip it. To continue allowing tests using
     // an observer to continue creating environments named "sys" we only strip this prefix if it's
     // the actual sys realm, this is, we stopped at the root realm.
-    if (relative_realm_path.size() > 0 && (relative_realm_path[0].compare("sys") == 0) && realm &&
-        (realm->label_.compare(internal::kRootLabel) == 0)) {
+    if (!relative_realm_path.empty() && (relative_realm_path[0] == "sys") && realm &&
+        (realm->label_ == internal::kRootLabel)) {
       relative_realm_path.erase(relative_realm_path.begin());
     }
   }
