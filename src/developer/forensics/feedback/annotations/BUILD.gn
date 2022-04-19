@@ -57,6 +57,19 @@ source_set("board_info_provider") {
   ]
 }
 
+source_set("current_channel_provider") {
+  sources = [
+    "current_channel_provider.cc",
+    "current_channel_provider.h",
+  ]
+
+  public_deps = [
+    ":fidl_provider",
+    "//sdk/fidl/fuchsia.update.channelcontrol",
+    "//src/developer/forensics/feedback/annotations",
+  ]
+}
+
 source_set("data_register") {
   sources = [
     "data_register.cc",

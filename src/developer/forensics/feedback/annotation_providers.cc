@@ -32,8 +32,10 @@ AnnotationProviders::AnnotationProviders(async_dispatcher_t* dispatcher,
       time_provider_(std::make_unique<timekeeper::SystemClock>()),
       board_info_provider_(dispatcher_, services, AnnotationProviderBackoff()),
       product_info_provider_(dispatcher_, services, AnnotationProviderBackoff()),
-      annotation_manager_(dispatcher_, allowlist, static_annotations, &data_register_,
-                          {&time_provider_}, {&board_info_provider_, &product_info_provider_}) {}
+      current_channel_provider_(dispatcher_, services, AnnotationProviderBackoff()),
+      annotation_manager_(
+          dispatcher_, allowlist, static_annotations, &data_register_, {&time_provider_},
+          {&board_info_provider_, &product_info_provider_, &current_channel_provider_}) {}
 
 void AnnotationProviders::Handle(
     ::fidl::InterfaceRequest<fuchsia::feedback::ComponentDataRegister> request,

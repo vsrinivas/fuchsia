@@ -43,8 +43,7 @@ class ChannelProviderTest : public UnitTestFixture {
     }
   }
 
-  Annotations GetChannels(const AnnotationKeys& allowlist = {kAnnotationSystemUpdateChannelCurrent,
-                                                             kAnnotationSystemUpdateChannelTarget},
+  Annotations GetChannels(const AnnotationKeys& allowlist = {kAnnotationSystemUpdateChannelTarget},
                           const zx::duration timeout = zx::sec(1)) {
     ChannelProvider provider(dispatcher(), services());
     auto promise = provider.GetAnnotations(timeout, allowlist);
@@ -75,38 +74,7 @@ class ChannelProviderTest : public UnitTestFixture {
   std::unique_ptr<stubs::ChannelControlBase> channel_provider_server_;
 };
 
-TEST_F(ChannelProviderTest, Succeed_BothChannels) {
-  auto channel_provider_server =
-      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
-          .current = "current-channel",
-          .target = "target-channel",
-      });
-  SetUpChannelProviderServer(std::move(channel_provider_server));
-
-  const auto result = GetChannels();
-
-  EXPECT_THAT(result, UnorderedElementsAreArray({
-                          Pair(kAnnotationSystemUpdateChannelCurrent, "current-channel"),
-                          Pair(kAnnotationSystemUpdateChannelTarget, "target-channel"),
-                      }));
-}
-
-TEST_F(ChannelProviderTest, Succeed_OnlyCurrentChannel) {
-  auto channel_provider_server =
-      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
-          .current = "current-channel",
-          .target = "target-channel",
-      });
-  SetUpChannelProviderServer(std::move(channel_provider_server));
-
-  const auto result = GetChannels({kAnnotationSystemUpdateChannelCurrent});
-
-  EXPECT_THAT(result, UnorderedElementsAreArray({
-                          Pair(kAnnotationSystemUpdateChannelCurrent, "current-channel"),
-                      }));
-}
-
-TEST_F(ChannelProviderTest, Succeed_OnlyTargetChannel) {
+TEST_F(ChannelProviderTest, Succeed_TargetChannel) {
   auto channel_provider_server =
       std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
           .current = "current-channel",
@@ -127,7 +95,6 @@ TEST_F(ChannelProviderTest, Succeed_EmptyChannel) {
   const auto result = GetChannels();
 
   EXPECT_THAT(result, UnorderedElementsAreArray({
-                          Pair(kAnnotationSystemUpdateChannelCurrent, ""),
                           Pair(kAnnotationSystemUpdateChannelTarget, ""),
                       }));
 }
@@ -146,7 +113,6 @@ TEST_F(ChannelProviderTest, Fail_ChannelProviderServerNotAvailable) {
   const auto result = GetChannels();
 
   EXPECT_THAT(result, UnorderedElementsAreArray({
-                          Pair(kAnnotationSystemUpdateChannelCurrent, Error::kConnectionError),
                           Pair(kAnnotationSystemUpdateChannelTarget, Error::kConnectionError),
                       }));
 }
@@ -157,7 +123,6 @@ TEST_F(ChannelProviderTest, Fail_ChannelProviderServerClosesConnection) {
   const auto result = GetChannels();
 
   EXPECT_THAT(result, UnorderedElementsAreArray({
-                          Pair(kAnnotationSystemUpdateChannelCurrent, Error::kConnectionError),
                           Pair(kAnnotationSystemUpdateChannelTarget, Error::kConnectionError),
                       }));
 }
@@ -168,7 +133,6 @@ TEST_F(ChannelProviderTest, Fail_ChannelProviderServerNeverReturns) {
   const auto result = GetChannels();
 
   EXPECT_THAT(result, UnorderedElementsAreArray({
-                          Pair(kAnnotationSystemUpdateChannelCurrent, Error::kTimeout),
                           Pair(kAnnotationSystemUpdateChannelTarget, Error::kTimeout),
                       }));
 }

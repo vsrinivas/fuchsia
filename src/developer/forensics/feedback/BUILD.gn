@@ -124,6 +124,7 @@ source_set("main_service") {
     "//src/developer/forensics/crash_reports:snapshot_manager",
     "//src/developer/forensics/crash_reports/info",
     "//src/developer/forensics/feedback/annotations:board_info_provider",
+    "//src/developer/forensics/feedback/annotations:current_channel_provider",
     "//src/developer/forensics/feedback/annotations:data_register",
     "//src/developer/forensics/feedback/annotations:product_info_provider",
     "//src/developer/forensics/feedback/annotations:time_provider",

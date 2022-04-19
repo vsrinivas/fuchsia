@@ -54,6 +54,20 @@ executable("config_unittest_exe") {
   ]
 }
 
+executable("current_channel_provider_unittest_exe") {
+  testonly = true
+
+  sources = [ "current_channel_provider_unittest.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.hwinfo",
+    "//src/developer/forensics/feedback/annotations:current_channel_provider",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("data_register_unittest_exe") {
   testonly = true
 
@@ -398,6 +412,10 @@ fuchsia_unittest_component("config_unittest") {
   ]
 }
 
+fuchsia_unittest_component("current_channel_provider_unittest") {
+  deps = [ ":current_channel_provider_unittest_exe" ]
+}
+
 fuchsia_unittest_component("data_register_unittest") {
   deps = [
     ":data_register_unittest_exe",
@@ -514,6 +532,7 @@ fuchsia_test_package("feedback-tests") {
     ":annotation_manager_unittest",
     ":board_info_provider_unittest",
     ":config_unittest",
+    ":current_channel_provider_unittest",
     ":data_register_unittest",
     ":device_id_provider_unittest",
     ":feedback_integration_test",

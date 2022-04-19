@@ -242,7 +242,7 @@ TEST_F(DatastoreTest, GetAnnotationsAndAttachments_SmokeTest) {
   GetAttachments();
 }
 
-TEST_F(DatastoreTest, GetAnnotations_Channels) {
+TEST_F(DatastoreTest, GetAnnotations_TargetChannel) {
   SetUpChannelProviderServer(
       std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params({
           .current = "current-channel",
@@ -250,7 +250,6 @@ TEST_F(DatastoreTest, GetAnnotations_Channels) {
       })));
   SetUpDatastore(
       {
-          kAnnotationSystemUpdateChannelCurrent,
           kAnnotationSystemUpdateChannelTarget,
       },
       kDefaultAttachmentsToAvoidSpuriousLogs);
@@ -259,7 +258,6 @@ TEST_F(DatastoreTest, GetAnnotations_Channels) {
   ASSERT_TRUE(annotations.is_ok());
   EXPECT_THAT(annotations.take_value(),
               ElementsAreArray({
-                  Pair(kAnnotationSystemUpdateChannelCurrent, "current-channel"),
                   Pair(kAnnotationSystemUpdateChannelTarget, "target-channel"),
               }));
 

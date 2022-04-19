@@ -18,7 +18,6 @@ namespace feedback_data {
 namespace {
 
 const AnnotationKeys kSupportedAnnotations = {
-    kAnnotationSystemUpdateChannelCurrent,
     kAnnotationSystemUpdateChannelTarget,
 };
 
@@ -36,20 +35,11 @@ ChannelProvider::ChannelProvider(async_dispatcher_t* dispatcher,
   }
 
   using Result = ::fpromise::result<std::string, Error>;
-  return ::fpromise::join_promises(
-             fidl::GetCurrentChannel(dispatcher_, services_, fit::Timeout(timeout)),
-             fidl::GetTargetChannel(dispatcher_, services_, fit::Timeout(timeout)))
-      .and_then([to_get](std::tuple<Result, Result>& results) {
+  return fidl::GetTargetChannel(dispatcher_, services_, fit::Timeout(timeout))
+      .then([to_get](Result& result) {
         Annotations annotations({
-            {kAnnotationSystemUpdateChannelCurrent, std::get<0>(results)},
-            {kAnnotationSystemUpdateChannelTarget, std::get<1>(results)},
+            {kAnnotationSystemUpdateChannelTarget, result},
         });
-
-        if (std::find_if(annotations.begin(), annotations.end(), [](const auto& annotation) {
-              const auto& value = annotation.second;
-              return !value.HasValue() && value.Error() == Error::kTimeout;
-            }) != annotations.end()) {
-        }
 
         return ::fpromise::ok(ExtractAllowlisted(to_get, annotations));
       });
