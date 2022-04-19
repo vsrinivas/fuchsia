@@ -29,6 +29,8 @@ fn config() -> Config {
         .set_target_level(LevelFilter::Error)
         .set_time_to_local(true)
         .set_time_format_str(TIME_FORMAT)
+        .add_filter_ignore_str("hyper")
+        .add_filter_ignore_str("rustls")
         .build()
 }
 
