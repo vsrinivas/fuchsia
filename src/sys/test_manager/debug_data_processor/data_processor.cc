@@ -73,6 +73,7 @@ zx::unowned_event DataProcessor::GetIdleEvent() { return inner_->GetEvent(); }
 DataProcessor::DataProcessorInner::DataProcessorInner(fbl::unique_fd dir_fd)
     : dir_fd_(std::move(dir_fd)) {
   FX_CHECK(zx::event::create(0, &idle_signal_event_) == ZX_OK);
+  idle_signal_event_.signal(PENDING_DATA_SIGNAL, IDLE_SIGNAL);
 }
 
 TestSinkMap DataProcessor::DataProcessorInner::TakeMapContents() {

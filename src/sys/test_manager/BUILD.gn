@@ -197,6 +197,7 @@ group("tests") {
     ":test-manager-unittests",
     "cmx_runner:tests",
     "debug_data:tests",
+    "debug_data_processor:tests",
     "tests",
   ]
 }

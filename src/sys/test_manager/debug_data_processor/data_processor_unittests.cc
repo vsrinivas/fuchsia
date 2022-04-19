@@ -15,6 +15,7 @@
 
 #include "abstract_data_processor.h"
 #include "data_processor.h"
+#include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/json_parser/json_parser.h"
@@ -284,4 +285,19 @@ TEST_F(ProcessDataTest, ProcessData) {
 
   AssertStorage(expected_map, GetTempDirFd());
   ASSERT_FALSE(testing::Test::HasFailure());
+}
+
+TEST_F(ProcessDataTest, AssertIdleSignalIfNoData) {
+  TestDebugDataMap map;
+  RunLoopUntilIdle();
+
+  // Idle signal should be asserted since the processor isn't doing anything.
+  zx_signals_t asserted_signals;
+  processor()->GetIdleEvent()->wait_one(IDLE_SIGNAL, zx::time(0), &asserted_signals);
+  ASSERT_EQ(asserted_signals & IDLE_SIGNAL, IDLE_SIGNAL);
+
+  std::vector<std::string> directory_contents;
+  ASSERT_TRUE(files::ReadDirContentsAt(GetTempDirFd().get(), ".", &directory_contents));
+  ASSERT_EQ(directory_contents.size(), 1u);
+  ASSERT_EQ(directory_contents[0], ".");
 }

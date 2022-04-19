@@ -111,3 +111,36 @@ TEST_F(DataProcessorFidlTest, AwaitIdleOnFinish) {
   RunLoopUntilIdle();
   ASSERT_TRUE(finish_called);
 }
+
+TEST_F(DataProcessorFidlTest, AwaitIdleOnFinishNoVmos) {
+  zx::event event;
+  zx::event::create(0, &event);
+  zx::unowned_event unowned_event = event.borrow();
+
+  ftest_debug::DebugDataProcessorPtr data_processor_fidl_proxy;
+  DataProcessorFidl processor_fidl(
+      data_processor_fidl_proxy.NewRequest(), [&]() {},
+      [&](fbl::unique_fd) {
+        zx_handle_t event_handle = event.release();
+        return std::make_unique<TestDataProcessor>(event_handle);
+      },
+      dispatcher());
+
+  int fd = open("/tmp", O_DIRECTORY | O_RDWR);
+  zx::channel directory_handle;
+  ASSERT_EQ(fdio_fd_transfer(fd, directory_handle.reset_and_get_address()), ZX_OK);
+  fidl::InterfaceHandle<fuchsia::io::Directory> directory(std::move(directory_handle));
+
+  data_processor_fidl_proxy->SetDirectory(std::move(directory));
+
+  bool finish_called = false;
+  data_processor_fidl_proxy->Finish([&]() { finish_called = true; });
+
+  // finish shouldn't be called until we signal on the event we gave to the data processor.
+  RunLoopUntilIdle();
+  ASSERT_FALSE(finish_called);
+
+  unowned_event->signal(0, IDLE_SIGNAL);
+  RunLoopUntilIdle();
+  ASSERT_TRUE(finish_called);
+}
