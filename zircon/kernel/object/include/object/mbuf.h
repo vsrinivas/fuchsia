@@ -56,8 +56,8 @@ class MBufChain {
   // Same as Read() but leaves the bytes in the chain instead of consuming them.
   zx_status_t Peek(user_out_ptr<char> dst, size_t len, bool datagram, size_t* actual) const;
 
-  bool is_full() const;
-  bool is_empty() const;
+  bool is_full() const { return size_ >= kSizeMax; }
+  bool is_empty() const { return size_ == 0; }
 
   // Returns number of bytes stored in the chain.
   // When |datagram| is true, return only the number of bytes in the first
@@ -70,7 +70,7 @@ class MBufChain {
   }
 
   // Returns the maximum number of bytes that can be stored in the chain.
-  size_t max_size() const { return kSizeMax; }
+  static size_t max_size() { return kSizeMax; }
 
  private:
   // An MBuf is a small fixed-size chainable memory buffer.
@@ -99,7 +99,7 @@ class MBufChain {
     char data_[kPayloadSize] = {0};
     // TODO: maybe union data_ with char* blocks for large messages
   };
-  static_assert(sizeof(MBuf) == MBuf::kMallocSize, "");
+  static_assert(sizeof(MBuf) == MBuf::kMallocSize);
 
   static constexpr size_t kSizeMax = 128 * MBuf::kPayloadSize;
 

@@ -18,11 +18,6 @@
 
 #define LOCAL_TRACE 0
 
-constexpr size_t MBufChain::MBuf::kHeaderSize;
-constexpr size_t MBufChain::MBuf::kMallocSize;
-constexpr size_t MBufChain::MBuf::kPayloadSize;
-constexpr size_t MBufChain::kSizeMax;
-
 // Total amount of memory occupied by MBuf objects.
 KCOUNTER(mbuf_total_bytes_count, "mbuf.total_bytes")
 
@@ -36,14 +31,10 @@ MBufChain::~MBufChain() {
     delete tail_.pop_front();
   }
   while (!freelist_.is_empty()) {
-    kcounter_add(mbuf_free_list_bytes_count, -sizeof(MBufChain::MBuf));
+    kcounter_add(mbuf_free_list_bytes_count, -static_cast<int64_t>(sizeof(MBufChain::MBuf)));
     delete freelist_.pop_front();
   }
 }
-
-bool MBufChain::is_full() const { return size_ >= kSizeMax; }
-
-bool MBufChain::is_empty() const { return size_ == 0; }
 
 zx_status_t MBufChain::Read(user_out_ptr<char> dst, size_t len, bool datagram, size_t* actual) {
   return ReadHelper(this, dst, len, datagram, actual);
@@ -236,7 +227,7 @@ MBufChain::MBuf* MBufChain::AllocMBuf() {
     MBuf* buf = new (&ac) MBuf();
     return (!ac.check()) ? nullptr : buf;
   }
-  kcounter_add(mbuf_free_list_bytes_count, -sizeof(MBufChain::MBuf));
+  kcounter_add(mbuf_free_list_bytes_count, -static_cast<int64_t>(sizeof(MBufChain::MBuf)));
   return freelist_.pop_front();
 }
 
@@ -249,4 +240,6 @@ void MBufChain::FreeMBuf(MBuf* buf) {
 
 MBufChain::MBuf::MBuf() { kcounter_add(mbuf_total_bytes_count, sizeof(MBufChain::MBuf)); }
 
-MBufChain::MBuf::~MBuf() { kcounter_add(mbuf_total_bytes_count, -sizeof(MBufChain::MBuf)); }
+MBufChain::MBuf::~MBuf() {
+  kcounter_add(mbuf_total_bytes_count, -static_cast<int64_t>(sizeof(MBufChain::MBuf)));
+}
