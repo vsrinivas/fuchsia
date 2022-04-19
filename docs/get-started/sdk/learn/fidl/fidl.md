@@ -70,7 +70,7 @@ fuchsia_fidl_hlcpp_library(
 )
 ```
 
-Components the consume this library can use the bindings target as a dependency.
+Components that consume this library can use the bindings target as a dependency.
 
 ## Exercise: Echo FIDL Library
 
