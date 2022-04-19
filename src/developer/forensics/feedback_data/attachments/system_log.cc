@@ -78,8 +78,14 @@ namespace feedback_data {
 
 namespace {
 
-constexpr char kFormatFailedFormatPrefix[] = "!!! Failed to format chunk: ";
-constexpr char kFormatFailedFormatSuffix[] = " !!!\n";
+size_t AppendRepeated(const size_t last_msg_repeated, std::string& append_to) {
+  auto repeated_str = last_msg_repeated == 1
+                          ? kRepeatedOnceFormatStr
+                          : fxl::StringPrintf(kRepeatedFormatStr, last_msg_repeated);
+
+  append_to.append(repeated_str);
+  return repeated_str.size();
+}
 
 }  // namespace
 
@@ -90,51 +96,94 @@ bool LogBuffer::Add(LogSink::MessageOr message) {
   auto enforce_capacity = ::fit::defer([this] { EnforceCapacity(); });
 
   if (message.is_ok()) {
-    message.value().msg = redactor_->Redact(message.value().msg);
+    redactor_->Redact(message.value().msg);
   } else {
-    message.error() = redactor_->Redact(message.error());
+    redactor_->Redact(message.error());
   }
 
-  // Create the first message sequence. Errors are assumed to start at 0 if no valid message exists
-  // before them.
-  if (messages_at_time_.empty()) {
-    auto& seq = message.is_ok() ? messages_at_time_[message.value().time] : messages_at_time_[0];
-    size_ += seq.Add(std::move(message));
+  // Assume timestamp 0 if no messages have been added yet.
+  const int64_t last_timestamp = (messages_.empty()) ? 0 : messages_.back().timestamp;
+  const auto& msg = (message.is_ok()) ? message.value().msg : message.error();
+
+  // Adds a new message to |messages_| and updates internal accounting.
+  auto AddNew = [this, &message, &msg, last_timestamp] {
+    messages_.emplace_back(message, last_timestamp);
+    size_ += messages_.back().msg.size();
+
+    last_msg_ = msg;
+    last_msg_repeated_ = 0;
+    is_sorted_ &= messages_.back().timestamp >= last_timestamp;
+
+    return true;
+  };
+
+  if (messages_.empty()) {
+    return AddNew();
+  }
+
+  // The most recent message is repeated, don't need to create new data.
+  if (last_msg_ == msg) {
+    ++last_msg_repeated_;
     return true;
   }
 
-  // Check if |message| is a duplicate of the most recent message in the sequence with a timestamp
-  // less than the timestamp of |message|. If so, add it to record the fact it's a duplicate
-  // otherwise creata a new sequence.
-  auto nearest_seq = (message.is_ok()) ? messages_at_time_.lower_bound(message.value().time)
-                                       : messages_at_time_.begin();
-
-  // Create a new sequence if there isn't a sequence before |message|.
-  if (nearest_seq == messages_at_time_.end()) {
-    auto& seq = message.is_ok() ? messages_at_time_[message.value().time]
-                                : std::prev(messages_at_time_.end())->second;
-    size_ += seq.Add(std::move(message));
-    return true;
+  // Inject a signal the most previously added message was repeated.
+  if (last_msg_repeated_ > 0) {
+    size_ += AppendRepeated(last_msg_repeated_, messages_.back().msg);
   }
 
-  auto& seq = nearest_seq->second;
-  if (message.is_error() || seq.MatchesLast(message)) {
-    size_ += seq.Add(std::move(message));
-  } else {
-    size_ += messages_at_time_[message.value().time].Add(std::move(message));
-  }
-
-  return true;
+  return AddNew();
 }
 
-std::string LogBuffer::ToString() const {
-  std::string out;
+std::string LogBuffer::ToString() {
+  // Ensure messages appear in time order.
+  Sort();
 
-  for (auto it = messages_at_time_.crbegin(); it != messages_at_time_.crend(); ++it) {
-    it->second.Append(out);
+  std::string out;
+  out.reserve(size_);
+  for (const auto& message : messages_) {
+    out.append(message.msg);
+  }
+
+  // Inject a signal the last message was repeated because the signal doesn't exist in the
+  // log yet.
+  if (last_msg_repeated_ > 0) {
+    AppendRepeated(last_msg_repeated_, out);
   }
 
   return out;
+}
+
+void LogBuffer::Sort() {
+  // No sort is needed.
+  if (is_sorted_) {
+    return;
+  }
+
+  // Inject a signal the last message was repeated because the sort may change which message is
+  // last.
+  if (last_msg_repeated_ > 0) {
+    size_ += AppendRepeated(last_msg_repeated_, messages_.back().msg);
+  }
+
+  std::stable_sort(messages_.begin(), messages_.end(),
+                   [](const auto& lhs, const auto& rhs) { return lhs.timestamp < rhs.timestamp; });
+  is_sorted_ = true;
+
+  // Reset the message last added.
+  //
+  // Note: info used to deduplicate messages is lost; it has not yet been proven important enough
+  // in the system log to justify the cost of identifying what the original msg was and
+  // aggregating all adjacent messages that match it. For example, it may be possible to see the
+  // sequence:
+  //
+  // LOG MESSAGE A
+  // !!! MESSAGE REPEATED 3 MORE TIMES!!!
+  // LOG MESSAGE A
+  //
+  // in a final system log.
+  last_msg_ = "";
+  last_msg_repeated_ = 0;
 }
 
 void LogBuffer::EnforceCapacity() {
@@ -142,73 +191,19 @@ void LogBuffer::EnforceCapacity() {
     return;
   }
 
-  auto it = std::prev(messages_at_time_.end());
-  while (size_ > capacity_ && !messages_at_time_.empty()) {
-    auto& seq = it->second;
-    if (seq.IsEmpty()) {
-      messages_at_time_.erase(it--);
-      continue;
-    }
-
-    size_ -= seq.PopBytes(size_ - capacity_);
-  }
-}
-
-bool LogBuffer::MessageSequence::MatchesLast(const LogSink::MessageOr& message) const {
-  if (messages_.empty()) {
-    return false;
-  }
-
-  if (message.is_error()) {
-    return last_msg_ == message.error();
-  }
-
-  return last_msg_ == message.value().msg;
-}
-
-size_t LogBuffer::MessageSequence::Add(LogSink::MessageOr message) {
-  if (MatchesLast(message)) {
-    ++(messages_.back().second);
-    return 0;
-  }
-
-  last_msg_ = (message.is_ok()) ? message.value().msg : message.error();
-
-  std::string text = (message.is_ok())
-                         ? Format(message.value())
-                         : fxl::StringPrintf("%s%s%s", kFormatFailedFormatPrefix,
-                                             message.error().c_str(), kFormatFailedFormatSuffix);
-  const size_t size = text.size();
-
-  messages_.emplace_back(std::move(text), 0);
-  return size;
-}
-
-void LogBuffer::MessageSequence::Append(std::string& out) const {
-  for (const auto& [message, repeated] : messages_) {
-    out.append(message);
-    if (repeated == 1) {
-      out.append(kRepeatedOnceFormatStr);
-    } else if (repeated > 1) {
-      out.append(fxl::StringPrintf(kRepeatedFormatStr, repeated));
-    }
-  }
-}
-
-size_t LogBuffer::MessageSequence::PopBytes(const size_t bytes) {
-  size_t removed{0u};
-  while (removed < bytes && !IsEmpty()) {
-    auto& [message, repeated] = messages_.front();
-
-    removed += message.size();
-
+  // Ensure messages are dropped in time order.
+  Sort();
+  while (size_ > capacity_ && !messages_.empty()) {
+    size_ -= messages_.front().msg.size();
     messages_.pop_front();
   }
-
-  return removed;
 }
 
-bool LogBuffer::MessageSequence::IsEmpty() const { return messages_.empty(); }
+LogBuffer::Message::Message(const LogSink::MessageOr& message, int64_t default_timestamp)
+    : timestamp(message.is_ok() ? message.value().time : default_timestamp),
+      msg(message.is_ok() ? Format(message.value())
+                          : fxl::StringPrintf("!!! Failed to format chunk: %s !!!\n",
+                                              message.error().c_str())) {}
 
 }  // namespace feedback_data
 }  // namespace forensics

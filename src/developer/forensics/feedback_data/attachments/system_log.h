@@ -41,36 +41,30 @@ class LogBuffer : public LogSink {
 
   // Adds |message| to the buffer and drops messages as required to keep the total size under
   // |capacity|. Always returns true.
+  //
+  // Messages are assumed to be received mostly in order.
   bool Add(LogSink::MessageOr message) override;
 
-  std::string ToString() const;
+  std::string ToString();
 
  private:
-  // A sequence of messages at a specific point in time.
-  struct MessageSequence {
-   public:
-    // Add |message| and returns the number of bytes added.
-    size_t Add(LogSink::MessageOr message);
+  struct Message {
+    Message(const LogSink::MessageOr& message, int64_t default_timestamp);
 
-    // Pop |bytes| bytes of messages from the sequence and returns the number of bytes popped.
-    size_t PopBytes(size_t bytes);
-
-    bool IsEmpty() const;
-    void Append(std::string& out) const;
-
-    // Returns true if |message| is duplicate of the last message in the sequence.
-    bool MatchesLast(const LogSink::MessageOr& message) const;
-
-   private:
-    std::string last_msg_{};
-    std::deque<std::pair<std::string, size_t>> messages_;
+    int64_t timestamp;
+    std::string msg;
   };
 
+  void Sort();
   void EnforceCapacity();
-  void AddMessage(LogSink::MessageOr message);
 
   RedactorBase* redactor_;
-  std::map<int64_t, MessageSequence, std::greater<>> messages_at_time_;
+  std::deque<Message> messages_;
+
+  std::string last_msg_;
+  size_t last_msg_repeated_;
+
+  bool is_sorted_{true};
 
   size_t size_{0u};
   const size_t capacity_;
