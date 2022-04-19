@@ -13,7 +13,7 @@ use std::fmt;
 
 use rayon::prelude::*;
 
-use crate::{TILE_SHIFT, TILE_SIZE};
+use crate::{TILE_HEIGHT, TILE_HEIGHT_SHIFT, TILE_WIDTH, TILE_WIDTH_SHIFT};
 
 mod slice_cache;
 pub use slice_cache::{Ref, Slice, SliceCache, Span};
@@ -70,10 +70,10 @@ pub trait Layout {
     /// # Examples
     ///
     /// ```
-    /// # use surpass::{layout::{Layout, LinearLayout}, TILE_SIZE};
+    /// # use surpass::{layout::{Layout, LinearLayout}, TILE_HEIGHT};
     /// let layout = LinearLayout::new(2, 3 * 4, 4);
     ///
-    /// assert_eq!(layout.slices_per_tile(), TILE_SIZE);
+    /// assert_eq!(layout.slices_per_tile(), TILE_HEIGHT);
     /// ```
     fn slices_per_tile(&self) -> usize;
 
@@ -120,14 +120,14 @@ pub trait Layout {
     /// # Examples
     ///
     /// ```
-    /// # use surpass::{layout::{Layout, LinearLayout}, TILE_SIZE};
-    /// let layout = LinearLayout::new(2 * TILE_SIZE, 3 * TILE_SIZE * 4, 4 * TILE_SIZE);
+    /// # use surpass::{layout::{Layout, LinearLayout}, TILE_HEIGHT, TILE_WIDTH};
+    /// let layout = LinearLayout::new(2 * TILE_WIDTH, 3 * TILE_WIDTH * 4, 4 * TILE_HEIGHT);
     ///
     /// assert_eq!(layout.width_in_tiles(), 2);
     /// ```
     #[inline]
     fn width_in_tiles(&self) -> usize {
-        (self.width() + TILE_SIZE - 1) >> TILE_SHIFT
+        (self.width() + TILE_WIDTH - 1) >> TILE_WIDTH_SHIFT
     }
 
     /// Height in tiles.
@@ -135,14 +135,14 @@ pub trait Layout {
     /// # Examples
     ///
     /// ```
-    /// # use surpass::{layout::{Layout, LinearLayout}, TILE_SIZE};
-    /// let layout = LinearLayout::new(2 * TILE_SIZE, 3 * TILE_SIZE * 4, 4 * TILE_SIZE);
+    /// # use surpass::{layout::{Layout, LinearLayout}, TILE_HEIGHT, TILE_WIDTH};
+    /// let layout = LinearLayout::new(2 * TILE_WIDTH, 3 * TILE_WIDTH * 4, 4 * TILE_HEIGHT);
     ///
     /// assert_eq!(layout.height_in_tiles(), 4);
     /// ```
     #[inline]
     fn height_in_tiles(&self) -> usize {
-        (self.height() + TILE_SIZE - 1) >> TILE_SHIFT
+        (self.height() + TILE_HEIGHT - 1) >> TILE_HEIGHT_SHIFT
     }
 }
 
@@ -180,16 +180,16 @@ impl LinearLayout {
             let mut layout: Vec<_> = buffer
                 .chunks(width_stride)
                 .enumerate()
-                .flat_map(|(j, row)| {
-                    row.slice(..width * 4).unwrap().chunks(TILE_SIZE * 4).enumerate().map(
-                        move |(i, slice)| {
-                            let j = j >> TILE_SHIFT;
-                            (i, j, slice)
+                .flat_map(|(tile_y, row)| {
+                    row.slice(..width * 4).unwrap().chunks(TILE_WIDTH * 4).enumerate().map(
+                        move |(tile_x, slice)| {
+                            let tile_y = tile_y >> TILE_HEIGHT_SHIFT;
+                            (tile_x, tile_y, slice)
                         },
                     )
                 })
                 .collect();
-            layout.par_sort_by_key(|&(i, j, _)| (j, i));
+            layout.par_sort_by_key(|&(tile_x, tile_y, _)| (tile_y, tile_x));
 
             layout.into_iter().map(|(_, _, slice)| slice).collect()
         });
@@ -211,7 +211,7 @@ impl Layout for LinearLayout {
 
     #[inline]
     fn slices_per_tile(&self) -> usize {
-        TILE_SIZE
+        TILE_HEIGHT
     }
 
     #[inline]
@@ -252,7 +252,7 @@ impl Layout for LinearLayout {
             TileFill::Full(colors) => {
                 for (y, row) in slices.iter_mut().enumerate().take(tiles_len) {
                     for (x, color) in row.chunks_exact_mut(4).enumerate() {
-                        color.copy_from_slice(&colors[x * TILE_SIZE + y]);
+                        color.copy_from_slice(&colors[x * TILE_HEIGHT + y]);
                     }
                 }
             }
@@ -260,7 +260,7 @@ impl Layout for LinearLayout {
 
         if let Some(flusher) = flusher {
             for row in slices.iter_mut().take(tiles_len) {
-                flusher.flush(if let Some(subslice) = row.get_mut(..TILE_SIZE * 4) {
+                flusher.flush(if let Some(subslice) = row.get_mut(..TILE_WIDTH * 4) {
                     subslice
                 } else {
                     &mut **row

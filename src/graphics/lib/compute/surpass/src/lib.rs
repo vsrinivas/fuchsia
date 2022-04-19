@@ -35,10 +35,16 @@ const MAX_WIDTH_SHIFT: usize = MAX_WIDTH.trailing_zeros() as usize;
 const MAX_HEIGHT_SHIFT: usize = MAX_HEIGHT.trailing_zeros() as usize;
 
 /// The width and height of the renderer's tiles.
-pub const TILE_SIZE: usize = 16;
-const _ASSERT_TILE_SIZE_MULTIPLE_OF_16: usize = 0 - (TILE_SIZE % 16);
-const _ASSERT_MAX_TILE_SIZE: usize = 128 - TILE_SIZE;
-const TILE_SHIFT: usize = TILE_SIZE.trailing_zeros() as usize;
-const TILE_MASK: usize = TILE_SIZE - 1;
+pub const TILE_WIDTH: usize = 16;
+const _ASSERT_TILE_WIFTH_MULTIPLE_OF_16: usize = 0 - (TILE_WIDTH % 16);
+const _ASSERT_MAX_TILE_WIDTH: usize = 128 - TILE_WIDTH;
+const TILE_WIDTH_SHIFT: usize = TILE_WIDTH.trailing_zeros() as usize;
+const TILE_WIDTH_MASK: usize = TILE_WIDTH - 1;
+
+pub const TILE_HEIGHT: usize = 16;
+const _ASSERT_TILE_WIDTH_MULTIPLE_OF_16: usize = 0 - (TILE_HEIGHT % 16);
+const _ASSERT_MAX_TILE_HEIGHT: usize = 128 - TILE_HEIGHT;
+const TILE_HEIGHT_SHIFT: usize = TILE_HEIGHT.trailing_zeros() as usize;
+const TILE_HEIGHT_MASK: usize = TILE_HEIGHT - 1;
 
 pub const LAYER_LIMIT: usize = (1 << rasterizer::BIT_FIELD_LENS[2]) - 1;

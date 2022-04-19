@@ -349,7 +349,7 @@ mod tests {
 
     use surpass::{
         painter::{Color, RGBA},
-        Path, TILE_SIZE,
+        Path, TILE_HEIGHT, TILE_WIDTH,
     };
 
     use crate::{
@@ -671,8 +671,8 @@ mod tests {
 
     #[test]
     fn render_change_layers_only() {
-        let mut buffer = [BLACK_SRGB; 3 * TILE_SIZE * TILE_SIZE].concat();
-        let mut layout = LinearLayout::new(3 * TILE_SIZE, 3 * TILE_SIZE * 4, TILE_SIZE);
+        let mut buffer = [BLACK_SRGB; 3 * TILE_WIDTH * TILE_HEIGHT].concat();
+        let mut layout = LinearLayout::new(3 * TILE_WIDTH, 3 * TILE_WIDTH * 4, TILE_HEIGHT);
         let mut composition = Composition::new();
         let layer_cache = composition.create_buffer_layer_cache();
 
@@ -680,14 +680,14 @@ mod tests {
             .create_layer()
             .unwrap()
             .insert(&pixel_path(0, 0))
-            .insert(&pixel_path(TILE_SIZE as i32, 0))
+            .insert(&pixel_path(TILE_WIDTH as i32, 0))
             .set_props(solid(RED));
 
         let layer_id = composition
             .create_layer()
             .unwrap()
-            .insert(&pixel_path(TILE_SIZE as i32 + 1, 0))
-            .insert(&pixel_path(2 * TILE_SIZE as i32, 0))
+            .insert(&pixel_path(TILE_WIDTH as i32 + 1, 0))
+            .insert(&pixel_path(2 * TILE_WIDTH as i32, 0))
             .set_props(solid(GREEN))
             .id();
 
@@ -701,11 +701,11 @@ mod tests {
         );
 
         assert_eq!(buffer[0..4], RED_SRGB);
-        assert_eq!(buffer[TILE_SIZE * 4..TILE_SIZE * 4 + 4], RED_SRGB);
-        assert_eq!(buffer[(TILE_SIZE + 1) * 4..(TILE_SIZE + 1) * 4 + 4], GREEN_SRGB);
-        assert_eq!(buffer[2 * TILE_SIZE * 4..2 * TILE_SIZE * 4 + 4], GREEN_SRGB);
+        assert_eq!(buffer[TILE_WIDTH * 4..TILE_WIDTH * 4 + 4], RED_SRGB);
+        assert_eq!(buffer[(TILE_WIDTH + 1) * 4..(TILE_WIDTH + 1) * 4 + 4], GREEN_SRGB);
+        assert_eq!(buffer[2 * TILE_WIDTH * 4..2 * TILE_WIDTH * 4 + 4], GREEN_SRGB);
 
-        let mut buffer = [BLACK_SRGB; 3 * TILE_SIZE * TILE_SIZE].concat();
+        let mut buffer = [BLACK_SRGB; 3 * TILE_WIDTH * TILE_HEIGHT].concat();
 
         composition.layer(layer_id).unwrap().set_props(solid(RED));
 
@@ -719,15 +719,15 @@ mod tests {
         );
 
         assert_eq!(buffer[0..4], BLACK_SRGB);
-        assert_eq!(buffer[TILE_SIZE * 4..TILE_SIZE * 4 + 4], RED_SRGB);
-        assert_eq!(buffer[(TILE_SIZE + 1) * 4..(TILE_SIZE + 1) * 4 + 4], RED_SRGB);
-        assert_eq!(buffer[2 * TILE_SIZE * 4..2 * TILE_SIZE * 4 + 4], RED_SRGB);
+        assert_eq!(buffer[TILE_WIDTH * 4..TILE_WIDTH * 4 + 4], RED_SRGB);
+        assert_eq!(buffer[(TILE_WIDTH + 1) * 4..(TILE_WIDTH + 1) * 4 + 4], RED_SRGB);
+        assert_eq!(buffer[2 * TILE_WIDTH * 4..2 * TILE_WIDTH * 4 + 4], RED_SRGB);
     }
 
     #[test]
     fn clear_emptied_tiles() {
-        let mut buffer = [BLACK_SRGB; 2 * TILE_SIZE * TILE_SIZE].concat();
-        let mut layout = LinearLayout::new(2 * TILE_SIZE, 2 * TILE_SIZE * 4, TILE_SIZE);
+        let mut buffer = [BLACK_SRGB; 2 * TILE_WIDTH * TILE_HEIGHT].concat();
+        let mut layout = LinearLayout::new(2 * TILE_WIDTH, 2 * TILE_WIDTH * 4, TILE_HEIGHT);
         let mut composition = Composition::new();
         let layer_cache = composition.create_buffer_layer_cache();
 
@@ -736,7 +736,7 @@ mod tests {
             .unwrap()
             .insert(&pixel_path(0, 0))
             .set_props(solid(RED))
-            .insert(&pixel_path(TILE_SIZE as i32, 0))
+            .insert(&pixel_path(TILE_WIDTH as i32, 0))
             .id();
 
         composition.render(
@@ -751,7 +751,7 @@ mod tests {
         assert_eq!(buffer[0..4], RED_SRGB);
 
         composition.layer(layer_id).unwrap().set_transform(
-            GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, TILE_SIZE as f32, 0.0]).unwrap(),
+            GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, TILE_WIDTH as f32, 0.0]).unwrap(),
         );
 
         composition.render(
@@ -766,7 +766,7 @@ mod tests {
         assert_eq!(buffer[0..4], BLACK_SRGB);
 
         composition.layer(layer_id).unwrap().set_transform(
-            GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, -(TILE_SIZE as f32), 0.0]).unwrap(),
+            GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, -(TILE_WIDTH as f32), 0.0]).unwrap(),
         );
 
         composition.render(
@@ -781,7 +781,7 @@ mod tests {
         assert_eq!(buffer[0..4], RED_SRGB);
 
         composition.layer(layer_id).unwrap().set_transform(
-            GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, 0.0, TILE_SIZE as f32]).unwrap(),
+            GeomPresTransform::try_from([1.0, 0.0, 0.0, 1.0, 0.0, TILE_HEIGHT as f32]).unwrap(),
         );
 
         composition.render(
@@ -798,8 +798,8 @@ mod tests {
 
     #[test]
     fn separate_layer_caches() {
-        let mut buffer = [BLACK_SRGB; TILE_SIZE * TILE_SIZE].concat();
-        let mut layout = LinearLayout::new(TILE_SIZE, TILE_SIZE * 4, TILE_SIZE);
+        let mut buffer = [BLACK_SRGB; TILE_WIDTH * TILE_HEIGHT].concat();
+        let mut layout = LinearLayout::new(TILE_WIDTH, TILE_WIDTH * 4, TILE_HEIGHT);
         let mut composition = Composition::new();
         let layer_cache0 = composition.create_buffer_layer_cache();
         let layer_cache1 = composition.create_buffer_layer_cache();
@@ -821,7 +821,7 @@ mod tests {
 
         assert_eq!(buffer[0..4], RED_SRGB);
 
-        let mut buffer = [BLACK_SRGB; TILE_SIZE * TILE_SIZE].concat();
+        let mut buffer = [BLACK_SRGB; TILE_WIDTH * TILE_HEIGHT].concat();
 
         composition.render(
             &mut BufferBuilder::new(&mut buffer, &mut layout)
@@ -862,7 +862,7 @@ mod tests {
         assert_eq!(buffer[0..4], BLACK_SRGB);
         assert_eq!(buffer[4..8], RED_SRGB);
 
-        let mut buffer = [BLACK_SRGB; TILE_SIZE * TILE_SIZE].concat();
+        let mut buffer = [BLACK_SRGB; TILE_WIDTH * TILE_HEIGHT].concat();
 
         composition.render(
             &mut BufferBuilder::new(&mut buffer, &mut layout)
@@ -882,19 +882,19 @@ mod tests {
         let mut builder = PathBuilder::new();
 
         builder.move_to(Point::new(0.0, 0.0));
-        builder.line_to(Point::new(0.0, TILE_SIZE as f32));
-        builder.line_to(Point::new(3.0 * TILE_SIZE as f32, TILE_SIZE as f32));
-        builder.line_to(Point::new(3.0 * TILE_SIZE as f32, 0.0));
-        builder.line_to(Point::new(TILE_SIZE as f32, 0.0));
-        builder.line_to(Point::new(TILE_SIZE as f32, TILE_SIZE as f32));
-        builder.line_to(Point::new(2.0 * TILE_SIZE as f32, TILE_SIZE as f32));
-        builder.line_to(Point::new(2.0 * TILE_SIZE as f32, 0.0));
+        builder.line_to(Point::new(0.0, TILE_HEIGHT as f32));
+        builder.line_to(Point::new(3.0 * TILE_WIDTH as f32, TILE_HEIGHT as f32));
+        builder.line_to(Point::new(3.0 * TILE_WIDTH as f32, 0.0));
+        builder.line_to(Point::new(TILE_WIDTH as f32, 0.0));
+        builder.line_to(Point::new(TILE_WIDTH as f32, TILE_HEIGHT as f32));
+        builder.line_to(Point::new(2.0 * TILE_WIDTH as f32, TILE_HEIGHT as f32));
+        builder.line_to(Point::new(2.0 * TILE_WIDTH as f32, 0.0));
         builder.line_to(Point::new(0.0, 0.0));
 
         let path = builder.build();
 
-        let mut buffer = [BLACK_SRGB; 3 * TILE_SIZE * TILE_SIZE].concat();
-        let mut layout = LinearLayout::new(3 * TILE_SIZE, 3 * TILE_SIZE * 4, TILE_SIZE);
+        let mut buffer = [BLACK_SRGB; 3 * TILE_WIDTH * TILE_HEIGHT].concat();
+        let mut layout = LinearLayout::new(3 * TILE_WIDTH, 3 * TILE_WIDTH * 4, TILE_HEIGHT);
 
         let mut composition = Composition::new();
 
@@ -911,7 +911,7 @@ mod tests {
         );
 
         assert_eq!(buffer[0..4], RED_SRGB);
-        assert_eq!(buffer[TILE_SIZE * 4..(TILE_SIZE * 4 + 4)], BLACK_SRGB);
-        assert_eq!(buffer[2 * TILE_SIZE * 4..2 * TILE_SIZE * 4 + 4], RED_SRGB);
+        assert_eq!(buffer[TILE_WIDTH * 4..(TILE_WIDTH * 4 + 4)], BLACK_SRGB);
+        assert_eq!(buffer[2 * TILE_WIDTH * 4..2 * TILE_WIDTH * 4 + 4], RED_SRGB);
     }
 }
