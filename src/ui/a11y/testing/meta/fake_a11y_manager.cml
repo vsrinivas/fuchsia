@@ -1,0 +1,29 @@
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/fake_a11y_manager",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.accessibility.semantics.SemanticTree",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.accessibility.semantics.SemanticTree",
+            ],
+            from: "self",
+        },
+    ],
+}
