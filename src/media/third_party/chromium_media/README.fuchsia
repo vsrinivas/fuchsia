@@ -6,5 +6,5 @@ Description:
 This path contains the portions of the chromium code used to drive h.264 decoders. It was forked
 from a1c1168f30f97c43a408e26f2fdf39d867be5d08 and has been modified to drive the amlogic video
 decoder. The path also contains portions of the chromium code used to drive the vp9 decoder. It
-was forked from 0c3b15677a2fd9bfa7eca7b1fc33c8ad9633f254 and has been modified to drive the VAAPI
+was forked from c53c9bb7825c3179a7e89607e8520438fb2bf627 and has been modified to drive the VAAPI
 vp9 decoder.
