@@ -437,7 +437,7 @@ async fn create_realm_instance(
     let () = builder
         .add_route(
             Route::new()
-                .capability(Capability::directory(HUB).rights(fio::R_STAR_DIR))
+                .capability(Capability::directory(HUB).rights(fio::RW_STAR_DIR))
                 .from(Ref::framework())
                 .to(Ref::parent()),
         )

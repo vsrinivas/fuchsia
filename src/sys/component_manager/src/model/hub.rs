@@ -398,18 +398,26 @@ impl Hub {
             lifecycle_controller_path,
             Box::new(
                 move |scope: ExecutionScope,
-                      _flags: fio::OpenFlags,
-                      _mode: u32,
-                      _relative_path: pfsPath,
+                      flags: fio::OpenFlags,
+                      mode: u32,
+                      relative_path: pfsPath,
                       server_end: ServerEnd<fio::NodeMarker>| {
                     log::info!("Connecting fuchsia.sys2.LifecycleController");
                     let lifecycle_controller = lifecycle_controller.clone();
-                    let server_end =
-                        ServerEnd::<LifecycleControllerMarker>::new(server_end.into_channel());
-                    let lifecycle_controller_stream = server_end.into_stream().unwrap();
-                    scope.spawn(async move {
-                        lifecycle_controller.serve(lifecycle_controller_stream).await;
-                    });
+                    // Forward to the vfs::service::Service implementation of DirectoryEntry::open
+                    // instead of just converting the server_end into a
+                    // LifecycleControllerRequestStream and using scope to spawn a task to handle
+                    // the stream so that `flags` and `mode` are handled correctly, including:
+                    //   1. enforcing that OpenFlags::DESCRIBE is not set if
+                    //      OpenFlags::NODE_REFERENCE is not set.
+                    //   2. handling OpenFlags::NODE_REFERENCE correctly (which includes sending
+                    //      OnOpen if requested), which prevents the shell from hanging when e.g.
+                    //      `ls -l` is run in the containing directory.
+                    vfs::service::host(move |stream| {
+                        let lifecycle_controller = lifecycle_controller.clone();
+                        async move { lifecycle_controller.serve(stream).await }
+                    })
+                    .open(scope, flags, mode, relative_path, server_end)
                 },
             ),
         )];
@@ -1512,6 +1520,18 @@ mod tests {
         assert_eq!(
             vec!["fuchsia.sys2.LifecycleController"],
             list_directory_recursive(&debug_svc_dir).await
+        );
+
+        let _: fio::NodeProxy = io_util::directory::open_node(
+            &debug_svc_dir,
+            "fuchsia.sys2.LifecycleController",
+            fio::OpenFlags::NODE_REFERENCE,
+            0,
+        )
+        .await
+        .expect(
+            "fuchsia.sys2.LifecycleController should handle NODE_REFERENCE correctly, including \
+             sending the OnOpen event when requested",
         );
     }
 }

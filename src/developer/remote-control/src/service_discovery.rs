@@ -250,7 +250,7 @@ pub async fn get_matching_paths(root: &str, selector: &Selector) -> Result<Vec<P
                             .join(fsys::LifecycleControllerMarker::NAME);
                         let node_proxy = io_util::open_node_in_namespace(
                             lifecycle_controller_path.to_str().expect("invalid chars"),
-                            io::OpenFlags::RIGHT_READABLE,
+                            io::OpenFlags::RIGHT_READABLE | io::OpenFlags::RIGHT_WRITABLE,
                         )?;
                         let lifecycle_controller_proxy = fsys::LifecycleControllerProxy::new(
                             node_proxy.into_channel().expect("could not get channel from proxy"),
