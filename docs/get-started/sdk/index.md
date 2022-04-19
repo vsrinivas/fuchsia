@@ -387,7 +387,8 @@ The tasks include:
 *   Configure your environment to enable the Fuchsia package server features.
 *   Create a new Fuchsia package repository.
 *   Start the Fuchsia package server.
-*   Register the new repository to the target device (that is, the emulator instance).
+*   Register the new local package repository to the target device (that is, the emulator instance).
+*   Register the system package repository to the target device.
 
 Do the following:
 
