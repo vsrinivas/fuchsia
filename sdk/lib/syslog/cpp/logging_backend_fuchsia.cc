@@ -138,6 +138,8 @@ struct RecordState {
   // Header of the record itself
   uint64_t* header;
   syslog::LogSeverity log_severity;
+  // True if we're logging from a driver.
+  bool is_legacy_backend = false;
   syslog::LogSeverity raw_severity;
   ::fuchsia::diagnostics::Severity severity;
   // arg_size in words
@@ -561,6 +563,7 @@ void BeginRecordInternal(LogBuffer* buffer, syslog::LogSeverity severity, const 
   if (severity == syslog::LOG_FATAL) {
     state->maybe_fatal_string = msg;
   }
+  record.is_legacy_backend = socket != ZX_HANDLE_INVALID;
   state->raw_severity = raw_severity.value_or(severity);
   state->log_severity = severity;
   ExternalDataBuffer external_buffer(buffer);
@@ -678,7 +681,7 @@ bool FlushRecord(LogBuffer* buffer) {
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);
   auto slice = external_buffer.GetSlice();
-  if (state->log_severity < log_state->min_severity()) {
+  if ((state->log_severity < log_state->min_severity()) && !state->is_legacy_backend) {
     if (state->log_severity != state->raw_severity) {
       // Assume we're supposed to generate a log here.
       // For custom severities, macros.h is supposed to filter for us.

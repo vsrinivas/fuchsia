@@ -24,6 +24,7 @@ rustc_library("ddk-log-lib") {
   ]
 
   test_deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",

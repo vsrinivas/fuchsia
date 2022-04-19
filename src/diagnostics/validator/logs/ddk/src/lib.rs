@@ -5,6 +5,7 @@
 use anyhow::Error;
 use diagnostics_log_encoding::{Argument, Record, Severity, Value};
 use diagnostics_reader::{ArchiveReader, Logs, SubscriptionResultsStream};
+use fidl_fuchsia_device::ControllerProxy;
 use fidl_fuchsia_validate_logs::{LogSinkPuppetProxy, PuppetInfo, RecordSpec};
 use fuchsia_async::{futures::StreamExt, Task};
 use tracing::*;
@@ -12,6 +13,7 @@ use tracing::*;
 struct Puppet {
     _info: PuppetInfo,
     proxy: LogSinkPuppetProxy,
+    device_proxy: ControllerProxy,
     _reader_errors_task: Task<()>,
     logs: SubscriptionResultsStream<Logs>,
 }
@@ -19,7 +21,10 @@ struct Puppet {
 impl Puppet {
     // Creates a Puppet instance.
     // Since this is v2, there is no URL to spawn as we are using RealmBuilder.
-    async fn launch(proxy: fidl_fuchsia_validate_logs::LogSinkPuppetProxy) -> Result<Self, Error> {
+    async fn launch(
+        proxy: fidl_fuchsia_validate_logs::LogSinkPuppetProxy,
+        device_proxy: ControllerProxy,
+    ) -> Result<Self, Error> {
         info!("Requesting info from the puppet.");
         let info = proxy.get_info().await?;
         let reader = ArchiveReader::new();
@@ -29,7 +34,7 @@ impl Puppet {
                 panic!("error in subscription: {}", e);
             }
         });
-        Ok(Self { proxy, _info: info, _reader_errors_task: task, logs })
+        Ok(Self { proxy, _info: info, _reader_errors_task: task, logs, device_proxy })
     }
 
     async fn test_puppet_started(&mut self) -> Result<(), Error> {
@@ -107,10 +112,54 @@ impl Puppet {
         Ok(())
     }
 
+    async fn test_severity(&mut self) -> Result<(), Error> {
+        let test_file = "test_file.cc".to_string();
+        let test_line_32 = 9001;
+        let long_test_log = "test_log_trace";
+        let long_test_log_valid = "test_log_valid";
+        let record = Record {
+            arguments: vec![Argument {
+                name: "message".to_string(),
+                value: Value::Text(long_test_log.to_string()),
+            }],
+            severity: Severity::Trace,
+            timestamp: 0,
+        };
+        let mut spec = RecordSpec { file: test_file.clone(), line: test_line_32, record };
+        self.proxy.emit_log(&mut spec).await?;
+
+        // 0 == Log everything
+        let _ = self.device_proxy.set_min_driver_log_severity(0).await.unwrap();
+
+        let record = Record {
+            arguments: vec![Argument {
+                name: "message".to_string(),
+                value: Value::Text(long_test_log_valid.to_string()),
+            }],
+            severity: Severity::Trace,
+            timestamp: 0,
+        };
+        let mut spec = RecordSpec { file: test_file, line: test_line_32, record };
+        self.proxy.emit_log(&mut spec).await?;
+        info!("Sent message");
+        loop {
+            let log_entry = self.logs.next().await.unwrap();
+            if log_entry.msg().unwrap().contains(&long_test_log) {
+                panic!("Unexpected trace log when trace logs were disabled.");
+            }
+            if log_entry.msg().unwrap().contains(&long_test_log_valid) {
+                break;
+            }
+        }
+        info!("Tested file/line number successfully.");
+        Ok(())
+    }
+
     async fn test(&mut self) -> Result<(), Error> {
         self.test_puppet_started().await?;
         self.test_basic_log().await?;
         self.test_file_line().await?;
+        self.test_severity().await?;
         Ok(())
     }
 }
@@ -141,7 +190,12 @@ mod tests {
         let driver_proxy = fidl_fuchsia_validate_logs::LogSinkPuppetProxy::from_channel(
             driver_service.into_channel().unwrap(),
         );
-        let mut puppet = Puppet::launch(driver_proxy).await.unwrap();
+        let driver_service =
+            device_watcher::recursive_wait_and_open_node(&out_dir, "sys/test/virtual-logsink")
+                .await
+                .unwrap();
+        let device_proxy = ControllerProxy::from_channel(driver_service.into_channel().unwrap());
+        let mut puppet = Puppet::launch(driver_proxy, device_proxy).await.unwrap();
         puppet.test().await.unwrap();
     }
 }
