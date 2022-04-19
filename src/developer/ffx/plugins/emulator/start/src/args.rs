@@ -20,10 +20,10 @@ ffx emu start workstation.qemu-x64 --name my-emulator --engine femu",
 The name provided here will be used for all later interactions to indicate
 which emulator to target. Emulator names must be unique.
 
-The start command will compile all of the necessary configuration for an 
-emulator, launch the emulator, and then store the configuration on disk for 
-future reference. The configuration comes from the Product Bundle, which 
-includes a virtual device specification and a start-up flag template. See 
+The start command will compile all of the necessary configuration for an
+emulator, launch the emulator, and then store the configuration on disk for
+future reference. The configuration comes from the Product Bundle, which
+includes a virtual device specification and a start-up flag template. See
 https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0100_product_metadata
 for more information."
 )]
@@ -80,7 +80,8 @@ pub struct StartCommand {
     pub hidpi_scaling: bool,
 
     /// store the emulator log at the provided filesystem path. By default, all output goes to
-    /// stdout/stderr.
+    /// a log file in the emulator working directory. The path to this file is printed onscreen
+    /// during start-up.
     #[argh(option, short = 'l')]
     pub log: Option<PathBuf>,
 
