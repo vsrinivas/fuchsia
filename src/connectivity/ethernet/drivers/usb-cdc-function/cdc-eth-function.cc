@@ -10,6 +10,7 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/metadata.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/sync/completion.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -591,6 +592,7 @@ static void cdc_get_descriptors(void* ctx, uint8_t* buffer, size_t buffer_size,
 static zx_status_t cdc_control(void* ctx, const usb_setup_t* setup, const uint8_t* write_buffer,
                                size_t write_size, uint8_t* out_read_buffer, size_t read_size,
                                size_t* out_read_actual) {
+  TRACE_DURATION("cdc_eth", __func__, "write_size", write_size, "read_size", read_size);
   if (out_read_actual != NULL) {
     *out_read_actual = 0;
   }
@@ -609,6 +611,7 @@ static zx_status_t cdc_control(void* ctx, const usb_setup_t* setup, const uint8_
 }
 
 static zx_status_t cdc_set_configured(void* ctx, bool configured, usb_speed_t speed) {
+  TRACE_DURATION("cdc_eth", __func__, "configured", configured, "speed", speed);
   zxlogf(INFO, "%s: %d %d", __func__, configured, speed);
   auto* cdc = static_cast<usb_cdc_t*>(ctx);
   zx_status_t status;
@@ -642,6 +645,7 @@ static zx_status_t cdc_set_configured(void* ctx, bool configured, usb_speed_t sp
 }
 
 static zx_status_t cdc_set_interface(void* ctx, uint8_t interface, uint8_t alt_setting) {
+  TRACE_DURATION("cdc_eth", __func__, "interface", interface, "alt_setting", alt_setting);
   zxlogf(INFO, "%s: %d %d", __func__, interface, alt_setting);
   auto* cdc = static_cast<usb_cdc_t*>(ctx);
   zx_status_t status;
