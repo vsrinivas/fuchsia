@@ -153,25 +153,6 @@ zx_status_t BindNamespace(fidl::ClientEnd<fio::Directory> fs_root_client) {
     FX_LOGS(ERROR) << "cannot bind /fs to namespace: " << status;
     return status;
   }
-
-  // Bind "/system".
-  {
-    zx::channel client, server;
-    if ((status = zx::channel::create(0, &client, &server)) != ZX_OK) {
-      return status;
-    }
-    if ((status = fdio_open("/fs/pkgfs/system",
-                            static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable |
-                                                  fio::wire::OpenFlags::kRightExecutable),
-                            server.release())) != ZX_OK) {
-      FX_LOGS(ERROR) << "cannot open connection to /system: " << status;
-      return status;
-    }
-    if ((status = fdio_ns_bind(ns, "/system", client.release())) != ZX_OK) {
-      FX_LOGS(ERROR) << "cannot bind /system to namespace: " << status;
-      return status;
-    }
-  }
   return ZX_OK;
 }
 
