@@ -21,6 +21,7 @@
 #include <zircon/boot/multiboot.h>
 
 #include <fbl/alloc_checker.h>
+#include <ktl/algorithm.h>
 #include <ktl/array.h>
 #include <ktl/iterator.h>
 #include <ktl/limits.h>
@@ -312,6 +313,54 @@ uint64_t GetRandomSeed(Zbi& zbi) {
   ZX_PANIC("No source of entropy available.");
 }
 
+// Allows for loading a zbi that skips certain items, this allows for faster iteration by
+// intentionally discarding big items that have no purpose for this test.
+template <typename ViewIt, typename FilterFn>
+void LoadWithFilter(TurduckenTest& turducken, ViewIt kernel_it, ViewIt first, ViewIt last,
+                    size_t extra_capacity, FilterFn filter) {
+  auto& view = first.view();
+  const size_t last_offset = last == view.end() ? view.size_bytes() : last.item_offset();
+  const size_t extra = last_offset - first.item_offset() + extra_capacity;
+
+  // Loads just the decompressed kernel for next boot and allocate enough space for the data zbi.
+  turducken.Load(kernel_it, first, first, static_cast<uint32_t>(extra));
+  auto zbi = turducken.loaded_zbi();
+
+  auto range_end = first;
+  auto range_start = first;
+
+  // Append ranges, by skipping any |filter(it)| that returns true.
+  while (range_start != last && range_start != view.end()) {
+    // Find starting point.
+    while (range_start != last && range_start != view.end() && filter(range_start)) {
+      range_start++;
+    }
+
+    // Find end of the range.
+    range_end = range_start;
+    while (range_end != last && range_end != view.end() && !filter(range_end)) {
+      range_end++;
+    }
+
+    auto extend_result = zbi.Extend(range_start, range_end);
+    if (extend_result.is_error()) {
+      printf("%s: failed to extend embedded ZBI: ", ProgramName());
+      zbitl::PrintViewCopyError(extend_result.error_value());
+      printf("\n");
+      abort();
+    }
+    range_start = range_end;
+  }
+}
+
+// Filters device tree items from an input ZBI.
+// The device tree item size is 1 MiB, while the rest of the payload is on the ~80 KiB mark.
+// This item dramatically reduces the number of iterations we can perform(~4x app).
+auto device_tree_filter = [](auto it) {
+  ZX_ASSERT(it != it.view().end());
+  return it->header->type == ZBI_TYPE_DEVICETREE;
+};
+
 }  // namespace
 
 int TurduckenTest::Main(Zbi::iterator kernel_item) {
@@ -355,7 +404,13 @@ int TurduckenTest::Main(Zbi::iterator kernel_item) {
     return 0;
   }
 
-  Load(kernel_item, kernel_item, boot_zbi().end(), extra_capacity);
+  // Remove any unwanted items from the loaded zbi on bootstrap.
+  if (!is_ready) {
+    LoadWithFilter(*this, kernel_item, kernel_item, boot_zbi().end(), extra_capacity,
+                   device_tree_filter);
+  } else {
+    Load(kernel_item, kernel_item, boot_zbi().end(), extra_capacity);
+  }
 
   ktl::span<ktl::byte> cmdline_item_payload;
 

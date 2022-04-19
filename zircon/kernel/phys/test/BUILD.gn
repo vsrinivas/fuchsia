@@ -334,19 +334,13 @@ if (current_toolchain != default_toolchain) {
     sources = [ "turducken.cc" ]
     deps = [
       ":zbi-test-main",
-      "..:boot-zbi",
+      "..:trampoline-boot",
       "..:zbi-memory",
       "..:zbitl-allocation",
       "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
     ]
-
-    # TODO(fxbug.dev/88583): Add support for arm. Currently the include is guarded
-    # for x86 only, but still is validated by GN.
-    if (current_cpu == "x64") {
-      deps += [ "..:trampoline-boot" ]
-    }
   }
 
   zbi_executable("chain-load-test") {
@@ -448,6 +442,7 @@ if (current_toolchain != default_toolchain) {
       ":handoff-entropy-test",
       ":hello-world-test",
       ":phys-unittests",
+      ":trampoline-boot-zbi-test",
       ":turducken-zbi-test",
       ":zbi-chain-load-core-tests",
       ":zbi-chain-load-hello-world-test",
@@ -457,12 +452,7 @@ if (current_toolchain != default_toolchain) {
       "elf-loading",
     ]
     if (current_cpu == "x64") {
-      deps += [
-        ":qemu-memory-test",
-
-        # TODO(fxb/88583): Add support for arm.
-        ":trampoline-boot-zbi-test",
-      ]
+      deps += [ ":qemu-memory-test" ]
     }
     if (current_cpu == "arm64") {  # TODO(mcgrathr): support on x86
       deps += [ ":zbi-phys-exception-test" ]

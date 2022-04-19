@@ -6,7 +6,6 @@
 
 #include "phys/trampoline-boot.h"
 
-#include <lib/arch/x86/standard-segments.h>
 #include <lib/arch/zbi-boot.h>
 #include <lib/memalloc/pool.h>
 #include <lib/zbitl/items/mem-config.h>
@@ -16,6 +15,7 @@
 #include <cstdint>
 #include <cstring>
 
+#include <fbl/algorithm.h>
 #include <ktl/byte.h>
 #include <phys/page-table.h>
 #include <phys/stdio.h>
@@ -25,16 +25,40 @@
 
 namespace {
 
+#if defined(__x86_64__) || defined(__i386__)
 // In the legacy fixed-address format, the entry address is always above 1M.
 // In the new format, it's an offset and in practice it's never > 1M.  So
 // this is a safe-enough heuristic to distinguish the new from the ol
-bool IsLegacyEntryAddress(uint64_t address) {
-#if defined(__x86_64__) || defined(__i386__)
-  return address > TrampolineBoot::kLegacyLoadAddress;
+bool IsLegacyEntryAddress(uint64_t address) { return address > TrampolineBoot::kLegacyLoadAddress; }
+
+// Relocated blob size must be aligned to |kRelocateAlign|.
+constexpr size_t kRelocateAlign = 1;
+
+// When a RelocatedTarget is copied forward, source and destination offsets must be adjusted by
+// |kForwardBiad|.
+constexpr int64_t kForwardBias = 0;
+
+// When a RelocatedTarget is copied backwards, source and destination offsets must be adjusted by
+// |kForwardBiad|.
+constexpr int64_t kBackwardBias = -1;
+
 #else
-  return false;
+
+// ARM does not use legacy fixed address format.
+bool IsLegacyEntryAddress(uint64_t address) { return false; }
+
+// Relocated blob size must be aligned to |kRelocateAlign|.
+constexpr size_t kRelocateAlign = 32;
+
+// When a RelocatedTarget is copied forward, source and destination offsets must be adjusted by
+// |kForwardBiad|.
+constexpr int64_t kForwardBias = -16;
+
+// When a RelocatedTarget is copied backwards, source and destination offsets must be adjusted by
+// |kForwardBiad|.
+constexpr int64_t kBackwardBias = 0;
+
 #endif
-}
 
 struct RelocateTarget {
   RelocateTarget() = default;
@@ -42,17 +66,20 @@ struct RelocateTarget {
   RelocateTarget(uintptr_t destination, ktl::span<const ktl::byte> blob)
       : src(reinterpret_cast<uintptr_t>(blob.data())),
         dst(destination),
-        count(blob.size()),
+        count(fbl::round_up(blob.size(), kRelocateAlign)),
         backwards(dst > src && dst - src < count) {
     if (backwards) {
-      dst += count - 1;
-      src += count - 1;
+      dst += count + kBackwardBias;
+      src += count + kBackwardBias;
+    } else {
+      dst += kForwardBias;
+      src += kForwardBias;
     }
   }
 
-  constexpr bool IsRedundantRelocation() const { return src == dst || count == 0; }
-
-  constexpr uint64_t destination() const { return backwards ? dst - count + 1 : dst; }
+  constexpr uint64_t destination() const {
+    return backwards ? dst - count - kBackwardBias : dst - kForwardBias;
+  }
 
   uint64_t src = 0;
   uint64_t dst = 0;
@@ -60,9 +87,19 @@ struct RelocateTarget {
 
   // When the addresses overlap, the copying can be done backwards and so the
   // direction flag is set for REP MOVSB and the starting pointers are at the
-  // laste byte rather than the first.
-  bool backwards = false;
+  // last byte rather than the first. While this is a boolean flag, we can
+  // use fewer ASM instruction in the inline assembly by increasinng its width.
+  uint64_t backwards = 0;
 };
+
+#if __aarch64__
+
+static_assert(offsetof(RelocateTarget, src) == offsetof(RelocateTarget, dst) - sizeof(uint64_t),
+              "Must be contiguous for arm64 ldp instruction.");
+static_assert(offsetof(RelocateTarget, count) ==
+                  offsetof(RelocateTarget, backwards) - sizeof(uint64_t),
+              "Must be contiguous for arm64 ldp instruction.");
+#endif
 
 }  // namespace
 
@@ -87,9 +124,8 @@ class TrampolineBoot::Trampoline {
     args = {
         .kernel = kernel,
         .zbi = zbi,
-        .entry = entry_address,
         .data_zbi = zbi.destination(),
-        .zbi_relocate = !zbi.IsRedundantRelocation(),
+        .entry = entry_address,
     };
     ZX_ASSERT(args.entry == entry_address);
     arch::ZbiBootRaw(reinterpret_cast<uintptr_t>(code_), &args);
@@ -101,9 +137,8 @@ class TrampolineBoot::Trampoline {
   struct TrampolineArgs {
     RelocateTarget kernel;
     RelocateTarget zbi;
-    uint64_t entry;
     uint64_t data_zbi;
-    bool zbi_relocate;
+    uint64_t entry;
   };
 
   // We must require the compiler not to inline |TrampolineCode| to prevent
@@ -128,6 +163,7 @@ class TrampolineBoot::Trampoline {
     // jumping to the entry point (%rbx).
     const ktl::byte* code;
     size_t size;
+#if defined(__x86_64__) || defined(__i386__)
     __asm__(
         R"""(
 .code64
@@ -135,13 +171,14 @@ class TrampolineBoot::Trampoline {
 0:
   # Save |rsi| in |rbx|, where |rbx| will always point to '&args'.
   mov %%rsi, %%rbx
-  mov %c[zbi_relocate](%%rbx), %%al
-  testb %%al, %%al
-  jz 2f
-  mov %c[zbi_backwards](%%rbx), %%al
   mov %c[zbi_count](%%rbx), %%rcx
+  test %%rcx, %%rcx
+  jz 2f
   mov %c[zbi_dst](%%rbx), %%rdi
   mov %c[zbi_src](%%rbx), %%rsi
+  cmp %%rdi, %%rsi
+  je 2f
+  mov %c[zbi_backwards](%%rbx), %%al
   testb %%al,%%al
   jz 1f
   std
@@ -149,15 +186,18 @@ class TrampolineBoot::Trampoline {
   rep movsb
   cld
 2:
-  mov %c[kernel_backwards](%%rbx), %%al
   mov %c[kernel_count](%%rbx), %%rcx
   mov %c[kernel_dst](%%rbx), %%rdi
   mov %c[kernel_src](%%rbx), %%rsi
+  cmp %%rdi, %%rsi
+  je 4f
+  mov %c[kernel_backwards](%%rbx), %%al
   testb %%al, %%al
   jz 3f
   std
 3:
   rep movsb
+4:
   # Clean stack pointers before jumping into the kernel.
   xor %%esp, %%esp
   xor %%ebp, %%ebp
@@ -170,6 +210,7 @@ class TrampolineBoot::Trampoline {
 4:
 .popsection
 )"""
+
 #ifdef __i386__
         R"""(
 .code32
@@ -182,6 +223,7 @@ class TrampolineBoot::Trampoline {
   mov $(4b - 0b), %[size]
             )"""
 #endif
+
         : [code] "=r"(code), [size] "=r"(size)
         : [kernel_backwards] "i"(offsetof(TrampolineArgs, kernel.backwards)),  //
           [kernel_dst] "i"(offsetof(TrampolineArgs, kernel.dst)),              //
@@ -191,13 +233,86 @@ class TrampolineBoot::Trampoline {
           [zbi_src] "i"(offsetof(TrampolineArgs, zbi.src)),                    //
           [zbi_count] "i"(offsetof(TrampolineArgs, zbi.count)),                //
           [zbi_backwards] "i"(offsetof(TrampolineArgs, zbi.backwards)),        //
-          [zbi_relocate] "i"(offsetof(TrampolineArgs, zbi_relocate)),          //
           [data_zbi] "i"(offsetof(TrampolineArgs, data_zbi)),                  //
           [entry] "i"(offsetof(TrampolineArgs, entry)));
+#elif __aarch64__  // arm64
+    __asm__(
+        R""(
+.pushsection .rodata.trampoline, "a?", %%progbits
+// x0 contains |&args|.
+.Ltrampoline_start.%=:
+  mov x10, x0
+  ldp x0, x1, [x10, %[zbi_dst_offset]]
+.Ltrampoline_zbi.%=:
+  add x9, x10, %[data_offset]
+  bl .Lcopy_start.%=
+.Ltrampoline_kernel.%=:
+  add x9, x10, %[kernel_offset]
+  bl .Lcopy_start.%=
+.Ltrampoline_exit.%=:
+  mov x29, xzr
+  mov x30, xzr
+  mov sp, x29
+  br x1
+
+// Expectation:
+//   x9: RelocatableTarget*
+//   x2-x8 are used during this procedure.
+.Lcopy_start.%=:
+  // x2 -> src address
+  // x3 -> dst address
+  // x4 -> count (in bytes)
+  // x5 -> backwards (direction)
+  ldp x2, x3, [x9]
+  ldp x4, x5, [x9, %[count_offset]]
+  cbz x4, .Lcopy_ret.%=
+  cmp x2, x3
+  beq .Lcopy_ret.%=
+  // test direction flag.
+  cbnz x5, .Lcopy_backwards.%=
+
+// x2 and x3 hold the first byte in the range to copy, and x4 holds the number of bytes,
+// which is a multiple of 32.
+.Lcopy_forward.%=:
+  ldp x5, x6, [x2, #16]
+  ldp x7, x8, [x2, #32]!
+  stp x5, x6, [x3, #16]
+  stp x7, x8, [x3, #32]!
+  sub x4, x4, #32
+  cbnz x4, .Lcopy_forward.%=
+  ret
+
+// In backwards mode, the src and dst registers point the last, non inclusive, byte and
+// is guaranteed to be a multiple of 32b, hence we can just loop.
+.Lcopy_backwards.%=:
+  ldp x5, x6, [x2, #-16]
+  ldp x7, x8, [x2, #-32]!
+  stp x5, x6, [x3, #-16]
+  stp x7, x8, [x3, #-32]!
+  sub x4, x4, #32
+  cbnz x4, .Lcopy_backwards.%=
+.Lcopy_ret.%=:
+  ret
+
+// Used to calculate code size.
+.Ltrampoline_end.%=:
+.popsection
+
+adrp %[code], .Ltrampoline_start.%=
+add %[code], %[code], #:lo12:.Ltrampoline_start.%=
+mov %[size], (.Ltrampoline_end.%= - .Ltrampoline_start.%=)
+        )""
+        : [code] "=r"(code), [size] "=r"(size)
+        : [kernel_offset] "i"(offsetof(TrampolineArgs, kernel)),
+          [data_offset] "i"(offsetof(TrampolineArgs, zbi)),
+          [src_offset] "i"(offsetof(RelocateTarget, src)),
+          [count_offset] "i"(offsetof(RelocateTarget, count)),
+          [zbi_dst_offset] "i"(offsetof(TrampolineArgs, data_zbi)),
+          [entry] "i"(offsetof(TrampolineArgs, entry)));
+#endif
     return {code, size};
   }
 
-  arch::X86StandardSegments segments_;
   TrampolineArgs args;
   ktl::byte code_[];
 };
