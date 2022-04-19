@@ -231,6 +231,7 @@ mod tests {
         Ipv6DiscoveredRouteTimerId<DummyDeviceId>,
         (),
         Ipv6RouteDiscoveryEvent<DummyDeviceId>,
+        DummyDeviceId,
     >;
 
     impl Ipv6RouteDiscoveryStateContext for MockCtx {

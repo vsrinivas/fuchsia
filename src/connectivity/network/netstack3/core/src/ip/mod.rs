@@ -765,12 +765,12 @@ impl IpDeviceId for DummyDeviceId {
 }
 
 #[cfg(test)]
-impl<I: Ip, S, Id, Meta, Event: Debug> IpDeviceIdContext<I>
-    for crate::context::testutil::DummyCtx<S, Id, Meta, Event>
+impl<I: Ip, S, Id, Meta, Event: Debug, DeviceId: IpDeviceId + 'static> IpDeviceIdContext<I>
+    for crate::context::testutil::DummyCtx<S, Id, Meta, Event, DeviceId>
 {
-    type DeviceId = DummyDeviceId;
+    type DeviceId = DeviceId;
 
-    fn loopback_id(&self) -> Option<DummyDeviceId> {
+    fn loopback_id(&self) -> Option<Self::DeviceId> {
         None
     }
 }
@@ -3715,7 +3715,7 @@ mod tests {
             let mut ctx = builder.build_with(
                 StackStateBuilder::default(),
                 DummyEventDispatcher::default(),
-                crate::context::testutil::DummyCtx::<(), TimerId, DeviceId, ()>::default(),
+                crate::context::testutil::DummyCtx::<(), TimerId, DeviceId, (), DummyDeviceId>::default(),
             );
             let tentative: UnicastAddr<Ipv6Addr> =
                 v6_config.local_mac.to_ipv6_link_local().addr().get();

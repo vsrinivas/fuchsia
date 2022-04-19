@@ -938,7 +938,7 @@ pub(super) mod ipv6_source_address_selection {
 /// Test mock implementations of the traits defined in the `socket` module.
 #[cfg(test)]
 pub(crate) mod testutil {
-    use alloc::vec::Vec;
+    use alloc::{collections::HashMap, vec::Vec};
     use core::fmt::Debug;
 
     use net_types::{
@@ -954,7 +954,7 @@ pub(crate) mod testutil {
         },
         ip::{
             device::state::{AddrConfig, AddressState, AssignedAddress as _, IpDeviceState},
-            DummyDeviceId, SendIpPacketMeta,
+            DummyDeviceId, IpDeviceId, SendIpPacketMeta,
         },
     };
 
@@ -962,25 +962,26 @@ pub(crate) mod testutil {
     ///
     /// `IpSocketContext` is implemented for any `DummyCtx<S>` where `S`
     /// implements `AsRef` and `AsMut` for `DummyIpSocketCtx`.
-    pub(crate) struct DummyIpSocketCtx<I: IpDeviceStateIpExt<DummyInstant>> {
-        pub(crate) table: ForwardingTable<I, DummyDeviceId>,
-        device_state: IpDeviceState<DummyInstant, I>,
+    pub(crate) struct DummyIpSocketCtx<I: IpDeviceStateIpExt<DummyInstant>, D> {
+        pub(crate) table: ForwardingTable<I, D>,
+        device_state: HashMap<D, IpDeviceState<DummyInstant, I>>,
     }
 
     impl<
             I: IpDeviceStateIpExt<DummyInstant>,
-            S: AsRef<DummyIpSocketCtx<I>> + AsMut<DummyIpSocketCtx<I>>,
+            S: AsRef<DummyIpSocketCtx<I, DeviceId>> + AsMut<DummyIpSocketCtx<I, DeviceId>>,
             Id,
             Meta,
             Event: Debug,
-        > IpSocketContext<I> for DummyCtx<S, Id, Meta, Event>
+            DeviceId: IpDeviceId + 'static,
+        > IpSocketContext<I> for DummyCtx<S, Id, Meta, Event, DeviceId>
     {
         fn lookup_route(
             &self,
-            device: Option<DummyDeviceId>,
+            device: Option<Self::DeviceId>,
             local_ip: Option<SpecifiedAddr<I::Addr>>,
             addr: SpecifiedAddr<I::Addr>,
-        ) -> Result<IpSockRoute<I, DummyDeviceId>, IpSockRouteError> {
+        ) -> Result<IpSockRoute<I, Self::DeviceId>, IpSockRouteError> {
             let destination = self
                 .get_ref()
                 .as_ref()
@@ -988,12 +989,15 @@ pub(crate) mod testutil {
                 .lookup(device, addr)
                 .ok_or(IpSockUnroutableError::NoRouteToRemoteAddr)?;
 
+            let Destination { device, next_hop: _ } = &destination;
             local_ip
                 .map_or_else(
                     || {
                         self.get_ref()
                             .as_ref()
                             .device_state
+                            .get(&device)
+                            .unwrap()
                             .iter_addrs()
                             .map(|e| e.addr())
                             .next()
@@ -1003,6 +1007,8 @@ pub(crate) mod testutil {
                         self.get_ref()
                             .as_ref()
                             .device_state
+                            .get(&device)
+                            .unwrap()
                             .iter_addrs()
                             .any(|e| e.addr() == local_ip)
                             .then(|| local_ip)
@@ -1016,14 +1022,16 @@ pub(crate) mod testutil {
     impl<
             I: IpDeviceStateIpExt<DummyInstant> + packet_formats::ip::IpExt,
             B: BufferMut,
-            S: AsRef<DummyIpSocketCtx<I>> + AsMut<DummyIpSocketCtx<I>>,
+            S: AsRef<DummyIpSocketCtx<I, DeviceId>> + AsMut<DummyIpSocketCtx<I, DeviceId>>,
             Id,
             Meta,
             Event: Debug,
-        > BufferIpSocketContext<I, B> for DummyCtx<S, Id, Meta, Event>
+            DeviceId,
+        > BufferIpSocketContext<I, B> for DummyCtx<S, Id, Meta, Event, DeviceId>
     where
-        DummyCtx<S, Id, Meta, Event>:
-            FrameContext<B, SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<I::Addr>>>,
+        DummyCtx<S, Id, Meta, Event, DeviceId>: FrameContext<B, SendIpPacketMeta<I, Self::DeviceId, SpecifiedAddr<I::Addr>>>
+            + IpSocketContext<I>
+            + InstantContext<Instant = DummyInstant>,
     {
         fn send_ip_packet<SS: Serializer<Buffer = B>>(
             &mut self,
@@ -1034,11 +1042,11 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<I: IpDeviceStateIpExt<DummyInstant>> DummyIpSocketCtx<I> {
+    impl<I: IpDeviceStateIpExt<DummyInstant>> DummyIpSocketCtx<I, DummyDeviceId> {
         fn with_device_state(
             device_state: IpDeviceState<DummyInstant, I>,
             remote_ips: Vec<SpecifiedAddr<I::Addr>>,
-        ) -> DummyIpSocketCtx<I> {
+        ) -> Self {
             let mut table = ForwardingTable::default();
             for ip in remote_ips {
                 assert_eq!(
@@ -1050,16 +1058,16 @@ pub(crate) mod testutil {
                 );
             }
 
-            DummyIpSocketCtx { table, device_state }
+            DummyIpSocketCtx { table, device_state: HashMap::from([(DummyDeviceId, device_state)]) }
         }
     }
 
-    impl DummyIpSocketCtx<Ipv4> {
+    impl DummyIpSocketCtx<Ipv4, DummyDeviceId> {
         /// Creates a new `DummyIpSocketCtx<Ipv4>`.
         pub(crate) fn new_ipv4(
             local_ips: Vec<SpecifiedAddr<Ipv4Addr>>,
             remote_ips: Vec<SpecifiedAddr<Ipv4Addr>>,
-        ) -> DummyIpSocketCtx<Ipv4> {
+        ) -> Self {
             let mut device_state = IpDeviceState::default();
             for ip in local_ips {
                 // Users of this utility don't care about subnet prefix length,
@@ -1070,12 +1078,12 @@ pub(crate) mod testutil {
         }
     }
 
-    impl DummyIpSocketCtx<Ipv6> {
+    impl DummyIpSocketCtx<Ipv6, DummyDeviceId> {
         /// Creates a new `DummyIpSocketCtx<Ipv6>`.
         pub(crate) fn new_ipv6(
             local_ips: Vec<SpecifiedAddr<Ipv6Addr>>,
             remote_ips: Vec<SpecifiedAddr<Ipv6Addr>>,
-        ) -> DummyIpSocketCtx<Ipv6> {
+        ) -> Self {
             let mut device_state = IpDeviceState::default();
             for ip in local_ips {
                 device_state

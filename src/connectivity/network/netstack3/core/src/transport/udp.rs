@@ -1435,7 +1435,7 @@ mod tests {
 
     struct DummyUdpCtx<I: TestIpExt> {
         state: UdpState<I, DummyDeviceId>,
-        ip_socket_ctx: DummyIpSocketCtx<I>,
+        ip_socket_ctx: DummyIpSocketCtx<I, DummyDeviceId>,
         listen_data: Vec<ListenData<I>>,
         conn_data: Vec<ConnData<I>>,
         icmp_errors: Vec<IcmpError<I>>,
@@ -1452,7 +1452,7 @@ mod tests {
     }
 
     impl<I: TestIpExt> DummyUdpCtx<I> {
-        fn with_ip_socket_ctx(ip_socket_ctx: DummyIpSocketCtx<I>) -> Self {
+        fn with_ip_socket_ctx(ip_socket_ctx: DummyIpSocketCtx<I, DummyDeviceId>) -> Self {
             DummyUdpCtx {
                 state: Default::default(),
                 ip_socket_ctx,
@@ -1489,14 +1489,14 @@ mod tests {
         }
     }
 
-    impl<I: TestIpExt> AsRef<DummyIpSocketCtx<I>> for DummyUdpCtx<I> {
-        fn as_ref(&self) -> &DummyIpSocketCtx<I> {
+    impl<I: TestIpExt> AsRef<DummyIpSocketCtx<I, DummyDeviceId>> for DummyUdpCtx<I> {
+        fn as_ref(&self) -> &DummyIpSocketCtx<I, DummyDeviceId> {
             &self.ip_socket_ctx
         }
     }
 
-    impl<I: TestIpExt> AsMut<DummyIpSocketCtx<I>> for DummyUdpCtx<I> {
-        fn as_mut(&mut self) -> &mut DummyIpSocketCtx<I> {
+    impl<I: TestIpExt> AsMut<DummyIpSocketCtx<I, DummyDeviceId>> for DummyUdpCtx<I> {
+        fn as_mut(&mut self) -> &mut DummyIpSocketCtx<I, DummyDeviceId> {
             &mut self.ip_socket_ctx
         }
     }
@@ -1506,6 +1506,7 @@ mod tests {
         (),
         SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<<I as Ip>::Addr>>,
         (),
+        DummyDeviceId,
     >;
 
     /// The trait bounds required of `DummyCtx<I>` in tests.

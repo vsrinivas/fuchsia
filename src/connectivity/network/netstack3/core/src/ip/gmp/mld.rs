@@ -476,6 +476,7 @@ mod tests {
         MldReportDelay<DummyDeviceId>,
         MldFrameMetadata<DummyDeviceId>,
         (),
+        DummyDeviceId,
     >;
 
     impl MldContext for DummyCtx {

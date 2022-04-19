@@ -35,7 +35,7 @@ use crate::{
         device::{dad::DadEvent, route_discovery::Ipv6RouteDiscoveryEvent, IpDeviceEvent},
         icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
         socket::IpSockCreationError,
-        AddableEntryEither, IpLayerEvent, SendIpPacketMeta,
+        AddableEntryEither, DummyDeviceId, IpLayerEvent, SendIpPacketMeta,
     },
     transport::udp::{BufferUdpContext, UdpContext},
     BlanketCoreContext, Ctx, EventDispatcher, StackStateBuilder, TimerId,
@@ -105,8 +105,10 @@ pub(crate) mod benchmarks {
 // prevent code from attempting to read from this context (code which only
 // accesses the frame contents rather than the frame metadata will still
 // compile).
-pub(crate) type DummyCtx =
-    Ctx<DummyEventDispatcher, crate::context::testutil::DummyCtx<(), TimerId, Never, ()>>;
+pub(crate) type DummyCtx = Ctx<
+    DummyEventDispatcher,
+    crate::context::testutil::DummyCtx<(), TimerId, Never, (), DummyDeviceId>,
+>;
 
 /// A wrapper which implements `RngCore` and `CryptoRng` for any `RngCore`.
 ///

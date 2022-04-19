@@ -736,6 +736,7 @@ mod tests {
             InstantContext,
         },
         device::ethernet::EthernetLinkDevice,
+        ip::DummyDeviceId,
         testutil::assert_empty,
     };
 
@@ -786,6 +787,7 @@ mod tests {
         ArpTimerId<EthernetLinkDevice, Ipv4Addr, ()>,
         ArpFrameMetadata<EthernetLinkDevice, ()>,
         (),
+        DummyDeviceId,
     >;
 
     impl ArpDeviceIdContext<EthernetLinkDevice> for DummyCtx {
@@ -989,6 +991,7 @@ mod tests {
             ArpTimerId<EthernetLinkDevice, Ipv4Addr, usize>,
             ArpFrameMetadata<EthernetLinkDevice, usize>,
             (),
+            DummyDeviceId,
         >;
 
         impl ArpDeviceIdContext<EthernetLinkDevice> for DummyCtx2 {

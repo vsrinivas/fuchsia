@@ -3404,7 +3404,7 @@ mod tests {
         err: I::ErrorCode,
     }
 
-    struct DummyIcmpCtx<I: IcmpIpExt + IpDeviceStateIpExt<DummyInstant>> {
+    struct DummyIcmpCtx<I: IcmpIpExt + IpDeviceStateIpExt<DummyInstant>, D> {
         // We store calls to `InnerIcmpContext::receive_icmp_error` AND calls to
         // `IcmpContext::receive_icmp_error`. Any call to
         // `InnerIcmpContext::receive_icmp_error` with an IP proto of ICMP(v4|v6)
@@ -3415,11 +3415,11 @@ mod tests {
         receive_icmp_socket_error: Vec<ReceiveIcmpSocketErrorArgs<I>>,
         close_icmp_connection: Vec<CloseIcmpConnectionArgs<I>>,
         pmtu_state: DummyPmtuState<I::Addr>,
-        socket_ctx: DummyIpSocketCtx<I>,
+        socket_ctx: DummyIpSocketCtx<I, D>,
     }
 
-    impl Default for DummyIcmpCtx<Ipv4> {
-        fn default() -> DummyIcmpCtx<Ipv4> {
+    impl Default for DummyIcmpCtx<Ipv4, DummyDeviceId> {
+        fn default() -> Self {
             DummyIcmpCtx::new(DummyIpSocketCtx::new_ipv4(
                 vec![DUMMY_CONFIG_V4.local_ip],
                 vec![DUMMY_CONFIG_V4.remote_ip],
@@ -3427,8 +3427,8 @@ mod tests {
         }
     }
 
-    impl Default for DummyIcmpCtx<Ipv6> {
-        fn default() -> DummyIcmpCtx<Ipv6> {
+    impl Default for DummyIcmpCtx<Ipv6, DummyDeviceId> {
+        fn default() -> Self {
             DummyIcmpCtx::new(DummyIpSocketCtx::new_ipv6(
                 vec![DUMMY_CONFIG_V6.local_ip],
                 vec![DUMMY_CONFIG_V6.remote_ip],
@@ -3436,8 +3436,8 @@ mod tests {
         }
     }
 
-    impl<I: IcmpIpExt + IpDeviceStateIpExt<DummyInstant>> DummyIcmpCtx<I> {
-        fn new(socket_ctx: DummyIpSocketCtx<I>) -> DummyIcmpCtx<I> {
+    impl<I: IcmpIpExt + IpDeviceStateIpExt<DummyInstant>, D> DummyIcmpCtx<I, D> {
+        fn new(socket_ctx: DummyIpSocketCtx<I, D>) -> Self {
             DummyIcmpCtx {
                 receive_icmp_echo_reply: Vec::new(),
                 receive_icmp_error: Vec::new(),
@@ -3450,12 +3450,12 @@ mod tests {
     }
 
     struct DummyIcmpv4Ctx {
-        inner: DummyIcmpCtx<Ipv4>,
+        inner: DummyIcmpCtx<Ipv4, DummyDeviceId>,
         icmp_state: Icmpv4State<DummyInstant, IpSock<Ipv4, DummyDeviceId>>,
     }
 
     struct DummyIcmpv6Ctx {
-        inner: DummyIcmpCtx<Ipv6>,
+        inner: DummyIcmpCtx<Ipv6, DummyDeviceId>,
         icmp_state: Icmpv6State<DummyInstant, IpSock<Ipv6, DummyDeviceId>>,
     }
 
@@ -3486,6 +3486,7 @@ mod tests {
                 (),
                 SendIpPacketMeta<$ip, DummyDeviceId, SpecifiedAddr<<$ip as Ip>::Addr>>,
                 (),
+                DummyDeviceId,
             >;
 
             impl $inner {
@@ -3504,14 +3505,14 @@ mod tests {
                 }
             }
 
-            impl AsRef<DummyIpSocketCtx<$ip>> for $inner {
-                fn as_ref(&self) -> &DummyIpSocketCtx<$ip> {
+            impl AsRef<DummyIpSocketCtx<$ip, DummyDeviceId>> for $inner {
+                fn as_ref(&self) -> &DummyIpSocketCtx<$ip, DummyDeviceId> {
                     &self.inner.socket_ctx
                 }
             }
 
-            impl AsMut<DummyIpSocketCtx<$ip>> for $inner {
-                fn as_mut(&mut self) -> &mut DummyIpSocketCtx<$ip> {
+            impl AsMut<DummyIpSocketCtx<$ip, DummyDeviceId>> for $inner {
+                fn as_mut(&mut self) -> &mut DummyIpSocketCtx<$ip, DummyDeviceId> {
                     &mut self.inner.socket_ctx
                 }
             }
@@ -4393,10 +4394,21 @@ mod tests {
             C,
             W: Fn(
                 u64,
-            )
-                -> DummyCtx<C, (), SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<I::Addr>>, ()>,
+            ) -> DummyCtx<
+                C,
+                (),
+                SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<I::Addr>>,
+                (),
+                DummyDeviceId,
+            >,
             S: Fn(
-                &mut DummyCtx<C, (), SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<I::Addr>>, ()>,
+                &mut DummyCtx<
+                    C,
+                    (),
+                    SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<I::Addr>>,
+                    (),
+                    DummyDeviceId,
+                >,
             ),
         >(
             with_errors_per_second: W,

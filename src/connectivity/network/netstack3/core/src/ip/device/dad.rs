@@ -231,6 +231,7 @@ mod tests {
         DadTimerId<DummyDeviceId>,
         DadMessageMeta,
         DadEvent<DummyDeviceId>,
+        DummyDeviceId,
     >;
 
     impl<'a> Ipv6DeviceDadContext for MockCtx<'a> {

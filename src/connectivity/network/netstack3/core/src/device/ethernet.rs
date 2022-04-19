@@ -1008,6 +1008,7 @@ mod tests {
         EthernetTimerId<DummyDeviceId>,
         DummyDeviceId,
         (),
+        DummyDeviceId,
     >;
 
     impl
