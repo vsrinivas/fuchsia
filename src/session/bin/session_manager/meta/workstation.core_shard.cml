@@ -5,9 +5,16 @@
             protocol: [
                 "fuchsia.media.AudioCore",
                 "fuchsia.ui.input.PointerCaptureListenerRegistry",
-                "fuchsia.ui.shortcut.Registry",
             ],
             from: "self",
+            to: [ "#session-manager" ],
+        },
+        {
+            protocol: [
+                "fuchsia.ui.shortcut.Manager",
+                "fuchsia.ui.shortcut.Registry",
+            ],
+            from: "#ui",
             to: [ "#session-manager" ],
         },
         {

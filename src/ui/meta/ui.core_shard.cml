@@ -7,9 +7,25 @@
             environment: "#full-resolver-env",
         },
     ],
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.ui.shortcut.Manager",
+                "fuchsia.ui.shortcut.Registry",
+            ],
+        },
+    ],
     use: [
         {
             protocol: "fuchsia.input.injection.InputDeviceRegistry",
+            from: "#ui",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "fuchsia.ui.shortcut.Manager",
+                "fuchsia.ui.shortcut.Registry",
+            ],
             from: "#ui",
             dependency: "weak_for_migration",
         },
@@ -37,7 +53,6 @@
                 "fuchsia.ui.keyboard.focus.Controller",
                 "fuchsia.ui.pointerinjector.Registry",
                 "fuchsia.ui.scenic.Scenic",
-                "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.views.ViewRefInstalled",
             ],
             from: "self",

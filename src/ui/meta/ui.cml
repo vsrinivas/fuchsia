@@ -11,6 +11,12 @@
             url: "fuchsia-pkg://fuchsia.com/scene_manager#meta/scene_manager.cm",
             startup: "eager",
         },
+        {
+            // Centralized management of keyboard shortcuts.
+            name: "shortcut_manager",
+            url: "fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cm",
+            startup: "eager",
+        },
     ],
     offer: [
         {
@@ -25,6 +31,7 @@
             to: [
                 "#a11y_manager",
                 "#scene_manager",
+                "#shortcut_manager",
             ],
         },
         {
@@ -43,11 +50,15 @@
                 "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.input3.KeyEventInjector",
                 "fuchsia.ui.keyboard.focus.Controller",
-                "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.views.ViewRefInstalled",
                 "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
+            to: [ "#scene_manager" ],
+        },
+        {
+            protocol: [ "fuchsia.ui.shortcut.Manager" ],
+            from: "#shortcut_manager",
             to: [ "#scene_manager" ],
         },
         {
@@ -83,6 +94,13 @@
                 "fuchsia.accessibility.tts.TtsManager",
             ],
             from: "#a11y_manager",
+        },
+        {
+            protocol: [
+                "fuchsia.ui.shortcut.Manager",
+                "fuchsia.ui.shortcut.Registry",
+            ],
+            from: "#shortcut_manager",
         },
     ],
 }

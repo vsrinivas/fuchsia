@@ -66,12 +66,13 @@ fuchsia_test_package("shortcut_test_pkg") {
   test_components = [ ":shortcut_bin_test" ]
 }
 
-# The shortcut manager component and package.
+# The shortcut manager component.
 fuchsia_component("shortcut_manager") {
   deps = [ ":bin" ]
-  manifest = "meta/shortcut_manager.cmx"
+  manifest = "meta/shortcut_manager.cml"
 }
 
+# The shortcut manager package.
 fuchsia_package("shortcut") {
   deps = [ ":shortcut_manager" ]
 }
@@ -113,9 +114,16 @@ fuchsia_component("shortcut_integration_test") {
     ":shortcut_integration_test_bin",
     ":shortcut_manager",
   ]
-  manifest = "meta/shortcut_integration_test.cmx"
+  manifest = "meta/shortcut_integration_test.cml"
 }
 
 fuchsia_test_package("shortcut_integration_test_pkg") {
   test_components = [ ":shortcut_integration_test" ]
+  deps = [ ":shortcut_manager" ]
+
+  test_specs = {
+    # Test cases manipulate the global focus chain, which will confuse the
+    # shortcut manager if ran in parallel.
+    parallel = 1
+  }
 }

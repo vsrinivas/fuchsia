@@ -818,7 +818,6 @@
                 "fuchsia.ui.pointerinjector.Registry",
                 "fuchsia.ui.policy.Presenter",
                 "fuchsia.ui.scenic.Scenic",
-                "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.views.ViewRefInstalled",
             ],
             from: "self",
