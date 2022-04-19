@@ -18,7 +18,7 @@ void main() {
     home: Material(
       color: Colors.white,
       child: Container(
-        child: FlatButton(
+        child: TextButton(
           child: Text('I am a button'),
           onPressed: () {
             log.info('FlatButton.onPressed');
