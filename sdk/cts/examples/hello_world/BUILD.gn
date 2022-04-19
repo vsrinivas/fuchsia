@@ -26,7 +26,7 @@ cts_executable("my-cts-test") {
 
 cts_fuchsia_component("my-cts-component") {
   deps = [ ":my-cts-test" ]
-  manifest = "meta/my-cts-test.cmx"
+  manifest = "meta/my-cts-test.cml"
   testonly = true
 }
 
