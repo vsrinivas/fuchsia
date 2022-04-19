@@ -851,6 +851,17 @@ foreach(_target_type,
              "Setting hermetic_inputs_args requires hermetic_inputs_file")
     }
 
+    # Implement a hermetic replacement of GN's "response file" feature using
+    # a generate_file() target.
+    if (defined(invoker.response_file_contents)) {
+      _gen_response_file_target = "${invoker.target_name}__response_file"
+      _response_file_path = "$target_gen_dir/response_file"
+      generated_file(_gen_response_file_target) {
+        contents = invoker.response_file_contents
+        outputs = [ _response_file_path ]
+      }
+    }
+
     target(_target_type, target_name) {
       forward_variables_from(invoker,
                              "*",
@@ -864,6 +875,7 @@ foreach(_target_type,
                                "hermetic_inputs_target",
                                "no_output_dir_leaks",
                                "repeatable",
+                               "response_file_contents",
                                "script",
                                "testonly",
                                "visibility",
@@ -877,10 +889,6 @@ foreach(_target_type,
                                "visibility",
                              ])
 
-      assert(
-          !defined(response_file_contents),
-          "Prefer write_file over response_file_contents, see https://fuchsia.dev/fuchsia-src/development/build/hermetic_actions?hl=en#expanding_arguments_from_a_file")
-
       # Accumulate action parameters (inputs, script, args, etc.)
       # over a series of transformations.
       # Innermost tranformations should be applied first.
@@ -889,9 +897,12 @@ foreach(_target_type,
       }
       inputs += [ invoker.script ]
 
-      _args = []
       if (defined(invoker.args)) {
         _args = invoker.args
+      }
+
+      if (!defined(deps)) {
+        deps = []
       }
 
       # This wraps the built-in action template to enforce best practices.
@@ -964,8 +975,21 @@ foreach(_target_type,
         _invoker_script = python_exe_src
       }
 
-      if (!defined(deps)) {
-        deps = []
+      if (defined(_gen_response_file_target)) {
+        # Include the build step for writing the response file.
+        deps += [ ":${_gen_response_file_target}" ]
+
+        # Incorporate the path of the response file into the target's
+        # commandline args.
+        _args_substituted = []
+        foreach(arg, _args) {
+          _args_substituted +=
+              [ string_replace(arg,
+                               "{{response_file_name}}",
+                               rebase_path(_response_file_path)) ]
+        }
+        _args = []
+        _args = _args_substituted
       }
 
       # If the action is either setting that it doesn't have hermetic_deps, or
