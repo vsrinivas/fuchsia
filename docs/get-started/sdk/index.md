@@ -185,14 +185,18 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx version -v
    ffx:
-     build-version: 2022-04-12T01:17:14+00:00
-     integration-commit-hash: 19cd0be96c90e3083efc4a17db9ae4171527cab4
-     integration-commit-time: Tue, 12 Apr 2022 01:17:14 +0000
+     abi-revision: 0xECCEA2F70ACD6FC0
+     api-level: 7
+     build-version: 2022-04-15T14:02:14+00:00
+     integration-commit-hash: 45d8063a1ce6021647378074ae7cceb6a870c11f
+     integration-commit-time: Fri, 15 Apr 2022 14:02:14 +0000
 
    daemon:
-     build-version: 2022-04-12T01:17:14+00:00
-     integration-commit-hash: 19cd0be96c90e3083efc4a17db9ae4171527cab4
-     integration-commit-time: Tue, 12 Apr 2022 01:17:14 +0000
+     abi-revision: 0xECCEA2F70ACD6FC0
+     api-level: 7
+     build-version: 2022-04-15T14:02:14+00:00
+     integration-commit-hash: 45d8063a1ce6021647378074ae7cceb6a870c11f
+     integration-commit-time: Fri, 15 Apr 2022 14:02:14 +0000
    ```
 
    At this point, you only need to confirm that you can run this `ffx` command

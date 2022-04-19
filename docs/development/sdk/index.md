@@ -22,6 +22,11 @@ out-of-the-box solution for building and testing software. However, Bazel is not
 a strict requirement. The Fuchsia SDK is designed to be integrated with
 most build systems to meet the needs of a diverse development ecosystem.
 
+## Get started with the Fuchsia SDK
+
+If you're new to the Fuchsia SDK, complete the
+[Get started with the Fuchsia SDK][get-started-sdk] guide to set up the
+Fuchsia SDK development environment on your host machine.
 
 <!-- Reference links -->
 
@@ -29,3 +34,4 @@ most build systems to meet the needs of a diverse development ecosystem.
 [fuchsia-components]: /docs/concepts/components/v2
 [fuchsia-platform]: /docs/development
 [bazel]: https://bazel.build/docs
+[get-started-sdk]: /docs/get-started/sdk/index.md
