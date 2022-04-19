@@ -284,7 +284,7 @@ config("fidl-wire-deprecated-mutable-tables") {
     "//src/connectivity/network/drivers/network-device/device:device_ddk",
     "//src/connectivity/network/drivers/network-device/device:microbenchmarks_bin",
     "//src/connectivity/network/drivers/network-device/device:test_bin",
-    "//src/connectivity/network/testing/netemul/lib/network:network_service",
+    "//src/connectivity/network/testing/netemul/network-context/lib:network_service",
     "//src/connectivity/network/tun/network-tun:network_tun_unittest",
     "//src/connectivity/network/tun/network-tun:src",
     "//src/developer/forensics/crasher/cpp:crasher_exe",

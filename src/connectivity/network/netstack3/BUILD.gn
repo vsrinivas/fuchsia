@@ -49,7 +49,7 @@ rustc_binary("bin") {
 
   test_deps = [
     "//src/connectivity/lib/net-declare",
-    "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
+    "//src/connectivity/network/testing/netemul/network-context/fidl:network-rustc",
     "//src/connectivity/network/testing/netemul/rust:lib",
     "//src/lib/testing/fixture",
     "//third_party/rust_crates:itertools",

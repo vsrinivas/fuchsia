@@ -4,18 +4,6 @@
 
 import("//build/components.gni")
 
-fuchsia_component("network-test") {
-  testonly = true
-  manifest = "meta/network-test.cml"
-
-  deps = [
-    "network:network_test_bin",
-    "//sdk/lib/driver_test_realm:driver_test_realm_component",
-    "//src/connectivity/network/testing/netemul/service:netemul-driver-test-realm",
-    "//src/connectivity/network/tun/network-tun:component-v2",
-  ]
-}
-
 fuchsia_component("sync-test") {
   testonly = true
   manifest = "meta/sync-test.cml"
@@ -24,8 +12,5 @@ fuchsia_component("sync-test") {
 }
 
 fuchsia_test_package("netemul-lib-tests") {
-  test_components = [
-    ":network-test",
-    ":sync-test",
-  ]
+  test_components = [ ":sync-test" ]
 }

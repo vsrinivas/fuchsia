@@ -67,8 +67,8 @@ source_set("network_service") {
     "//sdk/fidl/fuchsia.net.tun",
     "//sdk/lib/stdcompat",
     "//src/connectivity/lib/network-device/cpp",
-    "//src/connectivity/network/testing/netemul/lib/fidl:internal",
-    "//src/connectivity/network/testing/netemul/lib/fidl:network",
+    "//src/connectivity/network/testing/netemul/network-context/fidl:internal",
+    "//src/connectivity/network/testing/netemul/network-context/fidl:network",
   ]
 
   # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
@@ -83,8 +83,9 @@ source_set("netdump") {
     "netdump_types.h",
   ]
   deps = [ "//src/lib/fxl" ]
-  public_deps =
-      [ "//src/connectivity/network/testing/netemul/lib/fidl:network" ]
+  public_deps = [
+    "//src/connectivity/network/testing/netemul/network-context/fidl:network",
+  ]
 }
 
 executable("network_test_bin") {
@@ -107,7 +108,7 @@ executable("network_test_bin") {
     ":network_service",
     "//sdk/lib/sys/cpp",
     "//src/connectivity/lib/network-device/cpp",
-    "//src/connectivity/network/testing/netemul/lib/fidl:devmgr",
+    "//src/connectivity/network/testing/netemul/network-context/fidl:devmgr",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_NETWORK_ENDPOINT_MANAGER_H_
-#define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_NETWORK_ENDPOINT_MANAGER_H_
+#ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_NETWORK_CONTEXT_LIB_ENDPOINT_MANAGER_H_
+#define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_NETWORK_CONTEXT_LIB_ENDPOINT_MANAGER_H_
 
 #include <fuchsia/netemul/network/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 
 #include <unordered_map>
 
-#include "src/connectivity/network/testing/netemul/lib/network/consumer.h"
-#include "src/connectivity/network/testing/netemul/lib/network/endpoint.h"
+#include "src/connectivity/network/testing/netemul/network-context/lib/consumer.h"
+#include "src/connectivity/network/testing/netemul/network-context/lib/endpoint.h"
 
 namespace netemul {
 
@@ -54,4 +54,4 @@ class EndpointManager : public fuchsia::netemul::network::EndpointManager {
 
 }  // namespace netemul
 
-#endif  // SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_NETWORK_ENDPOINT_MANAGER_H_
+#endif  // SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_NETWORK_CONTEXT_LIB_ENDPOINT_MANAGER_H_

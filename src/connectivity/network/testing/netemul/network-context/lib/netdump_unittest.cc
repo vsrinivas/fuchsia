@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/connectivity/network/testing/netemul/lib/network/netdump.h"
+#include "src/connectivity/network/testing/netemul/network-context/lib/netdump.h"
 
 #include <gtest/gtest.h>
 
-#include "src/connectivity/network/testing/netemul/lib/network/netdump_parser.h"
+#include "src/connectivity/network/testing/netemul/network-context/lib/netdump_parser.h"
 
 namespace netemul {
 namespace testing {

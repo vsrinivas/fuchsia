@@ -10,8 +10,8 @@
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/connectivity/network/testing/netemul/lib/network/network_context.h"
-#include "src/connectivity/network/testing/netemul/lib/network/realm_setup.h"
+#include "src/connectivity/network/testing/netemul/network-context/lib/network_context.h"
+#include "src/connectivity/network/testing/netemul/network-context/lib/realm_setup.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);

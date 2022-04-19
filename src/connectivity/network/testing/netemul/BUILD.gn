@@ -7,6 +7,7 @@ group("tests") {
   deps = [
     "configurable-netstack:tests",
     "lib:netemul-lib-tests",
+    "network-context:tests",
     "runner:tests",
     "service:tests",
   ]

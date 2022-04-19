@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_NETWORK_NETWORK_CONTEXT_H_
-#define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_NETWORK_NETWORK_CONTEXT_H_
+#ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_NETWORK_CONTEXT_LIB_NETWORK_CONTEXT_H_
+#define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_NETWORK_CONTEXT_LIB_NETWORK_CONTEXT_H_
 
 #include <fuchsia/net/tun/cpp/fidl.h>
 #include <fuchsia/netemul/network/cpp/fidl.h>
 
-#include "src/connectivity/network/testing/netemul/lib/network/endpoint_manager.h"
-#include "src/connectivity/network/testing/netemul/lib/network/network_manager.h"
+#include "src/connectivity/network/testing/netemul/network-context/lib/endpoint_manager.h"
+#include "src/connectivity/network/testing/netemul/network-context/lib/network_manager.h"
 
 namespace netemul {
 
@@ -67,4 +67,4 @@ class NetworkContext : public fuchsia::netemul::network::NetworkContext {
 
 }  // namespace netemul
 
-#endif  // SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_NETWORK_NETWORK_CONTEXT_H_
+#endif  // SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_NETWORK_CONTEXT_LIB_NETWORK_CONTEXT_H_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/connectivity/network/testing/netemul/lib/network/realm_setup.h"
+#include "src/connectivity/network/testing/netemul/network-context/lib/realm_setup.h"
 
 #include <fcntl.h>
 #include <fidl/fuchsia.driver.test/cpp/wire.h>

@@ -18,7 +18,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//src/connectivity/network/testing/netemul/fidl:fuchsia.netemul-rustc",
-    "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
+    "//src/connectivity/network/testing/netemul/network-context/fidl:network-rustc",
     "//src/lib/async-utils",
     "//src/lib/diagnostics/log/rust",
     "//src/lib/fidl/rust/fidl",

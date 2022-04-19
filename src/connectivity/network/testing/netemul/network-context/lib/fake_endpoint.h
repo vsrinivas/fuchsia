@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_NETWORK_FAKE_ENDPOINT_H_
-#define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_NETWORK_FAKE_ENDPOINT_H_
+#ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_NETWORK_CONTEXT_LIB_FAKE_ENDPOINT_H_
+#define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_NETWORK_CONTEXT_LIB_FAKE_ENDPOINT_H_
 
 #include <fuchsia/netemul/network/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -12,7 +12,7 @@
 #include <memory>
 #include <queue>
 
-#include "src/connectivity/network/testing/netemul/lib/network/consumer.h"
+#include "src/connectivity/network/testing/netemul/network-context/lib/consumer.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace netemul {
@@ -52,4 +52,4 @@ class FakeEndpoint : public fuchsia::netemul::network::FakeEndpoint, public data
 
 }  // namespace netemul
 
-#endif  // SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_NETWORK_FAKE_ENDPOINT_H_
+#endif  // SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_NETWORK_CONTEXT_LIB_FAKE_ENDPOINT_H_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/connectivity/network/testing/netemul/lib/network/ethertap_client.h"
+#include "src/connectivity/network/testing/netemul/network-context/lib/ethertap_client.h"
 
 #include <fuchsia/hardware/ethertap/cpp/fidl.h>
 #include <fuchsia/netemul/devmgr/cpp/fidl.h>
@@ -10,8 +10,8 @@
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/service_directory.h>
 
-#include "src/connectivity/network/testing/netemul/lib/network/ethernet_client.h"
-#include "src/connectivity/network/testing/netemul/lib/network/realm_setup.h"
+#include "src/connectivity/network/testing/netemul/network-context/lib/ethernet_client.h"
+#include "src/connectivity/network/testing/netemul/network-context/lib/realm_setup.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/testing/predicates/status.h"
 

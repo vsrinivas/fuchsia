@@ -9,12 +9,12 @@ executable("bin") {
   output_name = "network_context"
   sources = [ "main.cc" ]
   deps = [
+    "lib:network_service",
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//src/connectivity/network/testing/netemul/lib/network:network_service",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
@@ -26,4 +26,24 @@ fuchsia_component("network-context") {
   testonly = true
   manifest = "meta/network-context.cml"
   deps = [ ":bin" ]
+}
+
+fuchsia_component("network-test") {
+  testonly = true
+  manifest = "meta/network-test.cml"
+  deps = [
+    "lib:network_test_bin",
+    "//sdk/lib/driver_test_realm:driver_test_realm_component",
+    "//src/connectivity/network/testing/netemul/service:netemul-driver-test-realm",
+    "//src/connectivity/network/tun/network-tun:component-v2",
+  ]
+}
+
+fuchsia_test_package("network-tests") {
+  test_components = [ ":network-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":network-tests" ]
 }

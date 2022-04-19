@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_NETWORK_ENDPOINT_H_
-#define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_NETWORK_ENDPOINT_H_
+#ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_NETWORK_CONTEXT_LIB_ENDPOINT_H_
+#define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_NETWORK_CONTEXT_LIB_ENDPOINT_H_
 
 #include <fuchsia/netemul/network/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -11,7 +11,7 @@
 
 #include <memory>
 
-#include "src/connectivity/network/testing/netemul/lib/network/consumer.h"
+#include "src/connectivity/network/testing/netemul/network-context/lib/consumer.h"
 
 namespace netemul {
 namespace impl {
@@ -81,4 +81,4 @@ class Endpoint : public fuchsia::netemul::network::Endpoint,
 
 }  // namespace netemul
 
-#endif  // SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_NETWORK_ENDPOINT_H_
+#endif  // SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_NETWORK_CONTEXT_LIB_ENDPOINT_H_

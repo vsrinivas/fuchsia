@@ -4,37 +4,8 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("internal") {
-  name = "fuchsia.netemul.internal"
-  sources = [ "internal.fidl" ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.device",
-    "//sdk/fidl/fuchsia.hardware.network",
-  ]
-}
-
-fidl("network") {
-  name = "fuchsia.netemul.network"
-  sources = [ "network.fidl" ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.hardware.ethernet",
-    "//sdk/fidl/fuchsia.hardware.ethertap",
-    "//sdk/fidl/fuchsia.hardware.network",
-    "//sdk/fidl/fuchsia.net",
-    "//sdk/fidl/fuchsia.net.virtualization",
-  ]
-}
-
 fidl("sync") {
   name = "fuchsia.netemul.sync"
   sources = [ "sync.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
-}
-
-fidl("devmgr") {
-  name = "fuchsia.netemul.devmgr"
-  sources = [ "devmgr.fidl" ]
-  public_deps = [ "//sdk/fidl/fuchsia.io" ]
 }

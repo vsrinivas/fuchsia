@@ -12,12 +12,12 @@
 #include <unordered_set>
 
 #include "src/connectivity/lib/network-device/cpp/network_device_client.h"
-#include "src/connectivity/network/testing/netemul/lib/network/ethernet_client.h"
-#include "src/connectivity/network/testing/netemul/lib/network/fake_endpoint.h"
-#include "src/connectivity/network/testing/netemul/lib/network/netdump.h"
-#include "src/connectivity/network/testing/netemul/lib/network/netdump_parser.h"
-#include "src/connectivity/network/testing/netemul/lib/network/network_context.h"
-#include "src/connectivity/network/testing/netemul/lib/network/realm_setup.h"
+#include "src/connectivity/network/testing/netemul/network-context/lib/ethernet_client.h"
+#include "src/connectivity/network/testing/netemul/network-context/lib/fake_endpoint.h"
+#include "src/connectivity/network/testing/netemul/network-context/lib/netdump.h"
+#include "src/connectivity/network/testing/netemul/network-context/lib/netdump_parser.h"
+#include "src/connectivity/network/testing/netemul/network-context/lib/network_context.h"
+#include "src/connectivity/network/testing/netemul/network-context/lib/realm_setup.h"
 #include "src/lib/testing/predicates/status.h"
 
 namespace {
