@@ -14,10 +14,9 @@ use {
     fuchsia_pkg::MetaContents,
     fuchsia_url::pkg_url::RepoUrl,
     futures::{
-        future::{join_all, try_join_all},
         io::Cursor,
-        stream::BoxStream,
-        AsyncReadExt as _,
+        stream::{self, BoxStream},
+        AsyncReadExt as _, StreamExt as _, TryStreamExt as _,
     },
     io_util::file::Adapter,
     parking_lot::Mutex as SyncMutex,
@@ -43,6 +42,8 @@ use {
     },
     url::ParseError,
 };
+
+const LIST_PACKAGE_CONCURRENCY: usize = 5;
 
 mod file_system;
 mod http_repository;
@@ -389,56 +390,61 @@ impl Repository {
             client.database().trusted_targets().context("missing target information")?.clone()
         };
 
-        let packages: Result<Vec<RepositoryPackage>, Error> =
-            join_all(trusted_targets.targets().into_iter().filter_map(|(k, v)| {
-                let size = v.length();
-                let custom = v.custom();
-                let hash = custom.get("merkle")?.as_str().unwrap_or("").to_string();
-                Some(async move {
-                    let mut bytes = vec![];
-                    self.fetch_blob(&hash)
-                        .await
-                        .with_context(|| format!("fetching blob {}", hash))?
-                        .read_to_end(&mut bytes)
-                        .await
-                        .with_context(|| format!("reading blob {}", hash))?;
-                    let mut archive = AsyncReader::new(Adapter::new(Cursor::new(bytes))).await?;
-                    let contents = archive.read_file("meta/contents").await?;
-                    let contents = MetaContents::deserialize(contents.as_slice())?;
+        let mut packages = vec![];
+        for (package_name, package_description) in trusted_targets.targets() {
+            let meta_far_size = package_description.length();
+            let meta_far_hash =
+                if let Some(meta_far_hash) = package_description.custom().get("merkle") {
+                    meta_far_hash.as_str().unwrap_or("").to_string()
+                } else {
+                    continue;
+                };
 
-                    let size = size
-                        + try_join_all(contents.contents().into_iter().map(
-                            |(_, hash)| async move {
-                                self.fetch_blob(&hash.to_string()).await.map(|x| x.total_len())
-                            },
-                        ))
-                        .await?
-                        .into_iter()
-                        .sum::<u64>();
+            let mut bytes = vec![];
+            self.fetch_blob(&meta_far_hash)
+                .await
+                .with_context(|| format!("fetching blob {}", meta_far_hash))?
+                .read_to_end(&mut bytes)
+                .await
+                .with_context(|| format!("reading blob {}", meta_far_hash))?;
 
-                    let modified = self
-                        .backend
-                        .blob_modification_time(&hash)
-                        .await
-                        .with_context(|| format!("fetching blob modification time {}", hash))?
-                        .map(|x| -> anyhow::Result<u64> {
-                            Ok(x.duration_since(SystemTime::UNIX_EPOCH)?.as_secs())
-                        })
-                        .transpose()?;
-                    Ok(RepositoryPackage {
-                        name: Some(k.to_string()),
-                        size: Some(size),
-                        hash: Some(hash),
-                        modified,
-                        ..RepositoryPackage::EMPTY
-                    })
+            let mut archive = AsyncReader::new(Adapter::new(Cursor::new(bytes))).await?;
+            let contents = archive.read_file("meta/contents").await?;
+            let contents = MetaContents::deserialize(contents.as_slice())?;
+
+            // Concurrently fetch the package blob sizes.
+            // FIXME(http://fxbug.dev/97192): Use work queue so we can globally control the
+            // concurrency here, rather than limiting fetches per call.
+            let mut tasks =
+                stream::iter(contents.contents().into_iter().map(|(_, hash)| async move {
+                    self.backend.blob_len(&hash.to_string()).await
+                }))
+                .buffer_unordered(LIST_PACKAGE_CONCURRENCY);
+
+            let mut size = meta_far_size;
+            while let Some(blob_len) = tasks.try_next().await? {
+                size += blob_len;
+            }
+
+            // Determine when the meta.far was created.
+            let meta_far_modified = self
+                .backend
+                .blob_modification_time(&meta_far_hash)
+                .await
+                .with_context(|| format!("fetching blob modification time {}", meta_far_hash))?
+                .map(|x| -> anyhow::Result<u64> {
+                    Ok(x.duration_since(SystemTime::UNIX_EPOCH)?.as_secs())
                 })
-            }))
-            .await
-            .into_iter()
-            .collect();
+                .transpose()?;
 
-        let mut packages = packages?;
+            packages.push(RepositoryPackage {
+                name: Some(package_name.to_string()),
+                size: Some(size),
+                hash: Some(meta_far_hash),
+                modified: meta_far_modified,
+                ..RepositoryPackage::EMPTY
+            });
+        }
 
         if include_fields.intersects(ListFields::COMPONENTS) {
             for package in packages.iter_mut() {
@@ -538,7 +544,7 @@ impl Repository {
                 let contents = MetaContents::deserialize(c.as_slice())?;
                 for (name, hash) in contents.contents() {
                     let hash_string = hash.to_string();
-                    let size = self.fetch_blob(&hash_string).await?.total_len();
+                    let size = self.backend.blob_len(&hash_string).await?;
                     let modified = self
                         .backend
                         .blob_modification_time(&hash_string)
@@ -633,6 +639,9 @@ pub trait RepositoryBackend: std::fmt::Debug {
     fn watch(&self) -> anyhow::Result<BoxStream<'static, ()>> {
         Err(anyhow::anyhow!("Watching not supported for this repo type"))
     }
+
+    /// Get the length of a blob in this repository.
+    async fn blob_len(&self, path: &str) -> anyhow::Result<u64>;
 
     /// Get the modification time of a blob in this repository if available.
     async fn blob_modification_time(&self, path: &str) -> anyhow::Result<Option<SystemTime>>;

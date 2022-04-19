@@ -179,6 +179,11 @@ impl RepositoryBackend for FileSystemRepository {
         Ok(WatchStream { _watcher: watcher, receiver }.boxed())
     }
 
+    async fn blob_len(&self, path: &str) -> Result<u64> {
+        let file_path = sanitize_path(&self.blob_repo_path, path)?;
+        Ok(async_fs::metadata(&file_path).await?.len())
+    }
+
     async fn blob_modification_time(&self, path: &str) -> Result<Option<SystemTime>> {
         let file_path = sanitize_path(&self.blob_repo_path, path)?;
         Ok(Some(async_fs::metadata(&file_path).await?.modified()?))

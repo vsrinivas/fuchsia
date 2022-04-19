@@ -176,6 +176,13 @@ where
         ))
     }
 
+    async fn blob_len(&self, path: &str) -> Result<u64> {
+        // FIXME(http://fxbug.dev/98376): It may be more efficient to try to make a HEAD request and
+        // see if that includes the content length before falling back to us requesting the blob and
+        // dropping the stream.
+        Ok(self.fetch_blob(path, Range::Full).await?.total_len())
+    }
+
     async fn blob_modification_time(&self, _path: &str) -> Result<Option<SystemTime>> {
         Ok(None)
     }

@@ -60,6 +60,10 @@ impl RepositoryBackend for PmRepository {
         self.repo.get_tuf_repo()
     }
 
+    async fn blob_len(&self, path: &str) -> Result<u64> {
+        self.repo.blob_len(path).await
+    }
+
     async fn blob_modification_time(&self, path: &str) -> Result<Option<SystemTime>> {
         self.repo.blob_modification_time(path).await
     }
