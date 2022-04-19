@@ -150,10 +150,15 @@ pub(crate) async fn monitor_media_buttons(
     let (client_end, mut stream) = create_request_stream::<MediaButtonsListenerMarker>()
         .expect("failed to create request stream for media buttons listener");
 
-    if let Err(error) = call_async!(presenter_service => register_listener(client_end)).await {
-        fx_log_err!("Registering media button listener with presenter service failed {:?}", error);
-        return Err(format_err!("presenter service not ready"));
-    }
+    fasync::Task::spawn(async move {
+        if let Err(error) = call_async!(presenter_service => register_listener(client_end)).await {
+            fx_log_err!(
+                "Registering media button listener with presenter service failed {:?}",
+                error
+            );
+        }
+    })
+    .detach();
 
     fasync::Task::spawn(async move {
         while let Some(Ok(media_request)) = stream.next().await {
