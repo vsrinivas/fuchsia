@@ -9,6 +9,7 @@
 #include <zircon/assert.h>
 
 #include <limits>
+#include <ostream>
 
 namespace media {
 
@@ -89,6 +90,11 @@ inline bool operator==(TimelineRate a, TimelineRate b) {
 
 // Tests two rates for inequality.
 inline bool operator!=(TimelineRate a, TimelineRate b) { return !(a == b); }
+
+inline std::ostream& operator<<(std::ostream& out, const TimelineRate& rate) {
+  out << rate.subject_delta() << "/" << rate.reference_delta();
+  return out;
+}
 
 }  // namespace media
 

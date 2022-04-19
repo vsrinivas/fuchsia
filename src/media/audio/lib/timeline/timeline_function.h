@@ -7,6 +7,8 @@
 
 #include <zircon/assert.h>
 
+#include <ostream>
+
 #include "src/media/audio/lib/timeline/timeline_rate.h"
 
 namespace media {
@@ -99,6 +101,12 @@ inline bool operator!=(const TimelineFunction& a, const TimelineFunction& b) { r
 // Composes two timeline functions B->C and A->B producing A->C. ASSERTs on precision loss.
 inline TimelineFunction operator*(const TimelineFunction& bc, const TimelineFunction& ab) {
   return TimelineFunction::Compose(bc, ab);
+}
+
+inline std::ostream& operator<<(std::ostream& out, const TimelineFunction& func) {
+  out << "rate " << func.rate() << ", subj_offset " << func.subject_time() << ", ref_offset "
+      << func.reference_time();
+  return out;
 }
 
 }  // namespace media

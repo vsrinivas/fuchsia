@@ -176,32 +176,6 @@ int32_t AudioClock::SynchronizeClocks(AudioClock& source_clock, AudioClock& dest
   }
 }
 
-std::string AudioClock::SyncModeToString(SyncMode mode) {
-  switch (mode) {
-    case SyncMode::None:
-      // Same clock, or device clocks in same domain. No need to adjust anything (or micro-SRC).
-      return "'None'";
-
-      // Return the clock to monotonic rate if it isn't already, and stop checking for divergence.
-    case SyncMode::RevertSourceToMonotonic:
-      return "'Match Source to MONOTONIC Dest'";
-    case SyncMode::RevertDestToMonotonic:
-      return "'Match Dest to MONOTONIC Source'";
-
-      // Adjust the clock's underlying zx::clock. No micro-SRC needed.
-    case SyncMode::AdjustSourceClock:
-      return "'Adjust Source to match non-MONOTONIC Dest'";
-    case SyncMode::AdjustDestClock:
-      return "'Adjust Dest to match non-MONOTONIC Source'";
-
-      // No clock is adjustable; use micro-SRC (tracked by the client-side clock object).
-    case SyncMode::MicroSrc:
-      return "'Micro-SRC'";
-
-      // No default clause, so newly-added enums get caught and added here.
-  }
-}
-
 std::string AudioClock::SyncInfo(AudioClock& source_clock, AudioClock& dest_clock) {
   auto sync_mode = SyncModeForClocks(source_clock, dest_clock);
 
@@ -223,10 +197,10 @@ std::string AudioClock::SyncInfo(AudioClock& source_clock, AudioClock& dest_cloc
   }
 
   std::stringstream sync_stream;
-  sync_stream << "Mode " << SyncModeToString(sync_mode) << " (" << static_cast<size_t>(sync_mode)
-              << "). Source (" << (source_clock.is_client_clock() ? "cli" : "dev") << ") "
-              << source_ppm << " ppm. Dest (" << (dest_clock.is_client_clock() ? "cli" : "dev")
-              << ") " << dest_ppm << " ppm." << micro_src_str;
+  sync_stream << "Mode " << sync_mode << " (" << static_cast<size_t>(sync_mode) << "). Source ("
+              << (source_clock.is_client_clock() ? "cli" : "dev") << ") " << source_ppm
+              << " ppm. Dest (" << (dest_clock.is_client_clock() ? "cli" : "dev") << ") "
+              << dest_ppm << " ppm." << micro_src_str;
   return sync_stream.str();
 }
 

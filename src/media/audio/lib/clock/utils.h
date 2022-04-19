@@ -19,8 +19,6 @@ namespace media::audio::clock {
 zx_status_t GetAndDisplayClockDetails(const zx::clock& ref_clock);
 fpromise::result<zx_clock_details_v1_t, zx_status_t> GetClockDetails(const zx::clock& ref_clock);
 void DisplayClockDetails(const zx_clock_details_v1_t& clock_details);
-std::string TimelineRateToString(const TimelineRate& rate, std::string tag = "");
-std::string TimelineFunctionToString(const TimelineFunction& func, std::string tag = "");
 
 constexpr uint32_t kInvalidClockGeneration = 0xFFFFFFFF;
 struct ClockSnapshot {

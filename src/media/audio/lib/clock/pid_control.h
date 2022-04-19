@@ -8,6 +8,7 @@
 #include <lib/zx/time.h>
 
 #include <optional>
+#include <ostream>
 #include <string>
 
 #include <gtest/gtest_prod.h>
@@ -40,9 +41,9 @@ class PidControl {
   // Calling Read on an unstarted or untuned PidControl always returns 0 (no feedback).
   double Read() const;
 
+ private:
   friend std::ostream& operator<<(std::ostream& out, const PidControl& pid);
 
- private:
   void Reset();
 
   double proportional_factor_ = 0.0;

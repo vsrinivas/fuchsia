@@ -17,7 +17,6 @@
 
 namespace media::audio {
 
-class AudioClock;
 class AudioClockTest;
 
 class AudioClock {
@@ -131,8 +130,6 @@ class AudioClock {
   virtual void UpdateClockRate(int32_t rate_adjust_ppm);
 
  private:
-  friend class AudioClockSyncModeTest;
-
   // When tuning a ClientAdjustable to a monotonic target, we use proportional clock adjustments
   // instead of the normal PID feedback control, because once a ClientAdjustable is aligned with its
   // monotonic target, it stays aligned (the whole clock domain drifts together, if at all).
@@ -166,8 +163,12 @@ class AudioClock {
     // conversion ratio (referred to as "micro-SRC").
     MicroSrc,
   };
+
+  friend std::ostream& operator<<(std::ostream& out, const SyncMode& mode);
+  friend std::ostream& operator<<(std::ostream& out, const AudioClock& clock);
+  friend class AudioClockSyncModeTest;
+
   static SyncMode SyncModeForClocks(AudioClock& source_clock, AudioClock& dest_clock);
-  static std::string SyncModeToString(SyncMode mode);
 
   int32_t ClampPpm(int32_t parts_per_million);
   int32_t AdjustClock(int32_t rate_adjust_ppm);
@@ -185,6 +186,69 @@ class AudioClock {
   // State used to avoid repeated redundant zx::clock syscalls.
   int32_t current_adjustment_ppm_ = 0;
 };
+
+inline std::ostream& operator<<(std::ostream& out, const zx_clock_transformation_t& transform) {
+  out << "rate " << transform.rate.synthetic_ticks << "/" << transform.rate.reference_ticks  //
+      << ", synth_offset " << transform.synthetic_offset                                     //
+      << ", ref_offset " << transform.reference_offset << "";
+  return out;
+}
+
+inline std::ostream& operator<<(std::ostream& out, const zx::clock& clock) {
+  out << "zx::clock " << &clock  //
+      << ", handle " << clock.get_handle();
+
+  zx_clock_details_v1_t details;
+  auto status = clock.get_details(&details);
+  if (status == ZX_OK) {
+    out << ", options 0x" << std::hex << details.options            //
+        << ", backstop_time " << std::dec << details.backstop_time  //
+        << ", mono_to_synth [" << details.mono_to_synthetic         //
+        << "], generation_counter " << details.generation_counter;
+  } else {
+    out << ", [get_details FAILED: " << status << "]";
+  }
+
+  return out;
+}
+
+inline std::ostream& operator<<(std::ostream& out, const AudioClock::SyncMode& mode) {
+  switch (mode) {
+    case AudioClock::SyncMode::None:
+      // Same clock, or device clocks in same domain. No need to adjust anything (or micro-SRC).
+      return out << "'None'";
+
+      // Return the clock to monotonic rate if it isn't already, and stop checking for divergence.
+    case AudioClock::SyncMode::RevertSourceToMonotonic:
+      return out << "'Match Source to MONOTONIC Dest'";
+    case AudioClock::SyncMode::RevertDestToMonotonic:
+      return out << "'Match Dest to MONOTONIC Source'";
+
+      // Adjust the clock's underlying zx::clock. No micro-SRC needed.
+    case AudioClock::SyncMode::AdjustSourceClock:
+      return out << "'Adjust Source to match non-MONOTONIC Dest'";
+    case AudioClock::SyncMode::AdjustDestClock:
+      return out << "'Adjust Dest to match non-MONOTONIC Source'";
+
+      // No clock is adjustable; use micro-SRC (tracked by the client-side clock object).
+    case AudioClock::SyncMode::MicroSrc:
+      return out << "'Micro-SRC'";
+
+      // No default clause, so newly-added enums get caught and added here.
+  }
+}
+
+inline std::ostream& operator<<(std::ostream& out, const AudioClock& clock) {
+  out << &clock << " [" << clock.clock_                                        //
+      << "], domain " << clock.domain()                                        //
+      << ", " << (clock.is_client_clock() ? "Client" : "Device")               //
+      << (clock.is_adjustable() ? "Adjustable" : "Fixed")                      //
+      << (clock.is_clock_monotonic_ ? " is_" : " NOT ") << "monotonic, pid ["  //
+      << clock.feedback_control_                                               //
+      << "], currently " << clock.current_adjustment_ppm_ << " ppm";
+
+  return out;
+}
 
 }  // namespace media::audio
 

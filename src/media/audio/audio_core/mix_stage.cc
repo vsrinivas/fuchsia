@@ -584,8 +584,7 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   info.clock_mono_to_frac_source_frames = frac_source_frame_to_clock_mono.Inverse();
 
   if constexpr (kLogReconciledTimelineFunctions) {
-    FX_LOGS(INFO) << clock::TimelineFunctionToString(info.clock_mono_to_frac_source_frames,
-                                                     "mono-to-frac-source");
+    FX_LOGS(INFO) << "mono-to-frac-source: " << info.clock_mono_to_frac_source_frames;
   }
 
   // Assert we can map between local monotonic-time and fractional source frames
@@ -628,11 +627,10 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
       dest_frames_to_dest_ref.rate(), info.source_ref_clock_to_frac_source_frames.rate());
 
   if constexpr (kLogReconciledTimelineFunctions) {
-    FX_LOGS(INFO) << clock::TimelineFunctionToString(dest_frames_to_clock_mono, "dest-to-mono");
-    FX_LOGS(INFO) << clock::TimelineFunctionToString(info.dest_frames_to_frac_source_frames,
-                                                     "dest-to-frac-src (with clocks)");
-    FX_LOGS(INFO) << clock::TimelineRateToString(frac_source_frames_per_dest_frame,
-                                                 "dest-to-frac-source rate (no clock effects)");
+    FX_LOGS(INFO) << "dest-to-mono: " << dest_frames_to_clock_mono;
+    FX_LOGS(INFO) << "dest-to-frac-src (with clocks): " << info.dest_frames_to_frac_source_frames;
+    FX_LOGS(INFO) << "dest-to-frac-source rate (no clock effects): "
+                  << frac_source_frames_per_dest_frame;
   }
 
   // Project dest pos "cur_mix_job_.dest_start_frame" into monotonic time as "mono_now_from_dest".

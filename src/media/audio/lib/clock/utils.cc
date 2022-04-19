@@ -62,20 +62,6 @@ void DisplayClockDetails(const zx_clock_details_v1_t& clock_details) {
   FX_LOGS(INFO) << "******************************************";
 }
 
-// Only called by custom code when debugging, so can remain at INFO severity.
-std::string TimelineRateToString(const TimelineRate& rate, std::string tag) {
-  return tag + ": sub_delta " + std::to_string(rate.subject_delta()) + ", ref_delta " +
-         std::to_string(rate.reference_delta());
-}
-
-// Only called by custom code when debugging, so can remain at INFO severity.
-std::string TimelineFunctionToString(const TimelineFunction& func, std::string tag) {
-  return tag + ": sub_off " + std::to_string(func.subject_time()) + ", ref_off " +
-         std::to_string(func.reference_time()) + ", sub_delta " +
-         std::to_string(func.subject_delta()) + ", ref_delta " +
-         std::to_string(func.reference_delta());
-}
-
 zx_koid_t GetKoid(const zx::clock& clock) {
   zx_info_handle_basic_t basic_info;
   // size_t actual, avail;

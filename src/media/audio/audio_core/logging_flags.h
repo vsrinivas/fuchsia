@@ -63,7 +63,7 @@ inline constexpr uint16_t kDriverPositionNotificationDisplayInterval = 0;
 
 // Mix-related logging
 //
-inline constexpr bool kLogReconciledTimelineFunctions = false;
+inline constexpr bool kLogReconciledTimelineFunctions = false;  // very verbose for ongoing streams
 inline constexpr bool kLogInitialPositionSync = false;
 inline constexpr bool kLogDestDiscontinuities = true;
 inline constexpr int kLogDestDiscontinuitiesStride = 997;  // Prime, to avoid misleading cadences.
