@@ -8,6 +8,8 @@
 
 #include <memory>
 
+#include "src/devices/lib/goldfish/pipe_io/pipe_io.h"
+
 namespace goldfish {
 
 namespace {
@@ -110,6 +112,25 @@ struct SetDisplayPoseCmd {
   int32_t y;
   uint32_t w;
   uint32_t h;
+};
+
+// Encoded rcCompose commands have the following layout:
+// - uint32_t  opcode
+// - uint32_t  command header size
+// - uint32_t  bufferSize
+// - uint32_t  bufferSize
+// - void[]    buffer               [input argument]
+// Since the size of buffer array is variable, the size of generated command
+// is also variable.
+
+constexpr uint32_t kOP_rcCompose = 10037;
+constexpr uint32_t kOP_rcComposeAsync = 10058;
+struct ComposeCmd {
+  uint32_t op = kOP_rcCompose;
+  uint32_t size = sizeof(ComposeCmd);
+  uint32_t bufferSize;
+  uint32_t bufferSizeAgain;
+  uint8_t buffer[0];
 };
 
 template <class T>
@@ -319,6 +340,45 @@ zx::status<RenderControl::RcResult> RenderControl::SetDisplayPose(DisplayId disp
   };
 
   PipeIo::WriteSrc src[] = {{.data = ToByteSpan(cmd)}};
+  auto result = pipe_io_->Call<RcResult>(src, 1, true);
+  return result.is_ok() ? zx::ok(result.value()[0]) : zx::status<RcResult>(result.take_error());
+}
+
+zx_status_t RenderControl::ComposeAsync(const hwc::ComposeDeviceV2& device) {
+  TRACE_DURATION("gfx", "RenderControl::ComposeAsync");
+
+  ComposeCmd cmd = {
+      .op = kOP_rcComposeAsync,
+      .size = static_cast<uint32_t>(sizeof(ComposeCmd) + device.size()),
+      .bufferSize = static_cast<uint32_t>(device.size()),
+      .bufferSizeAgain = static_cast<uint32_t>(device.size()),
+  };
+
+  PipeIo::WriteSrc src[] = {
+      {.data = ToByteSpan(cmd)},
+      {.data = cpp20::span(reinterpret_cast<const uint8_t*>(device.get()),
+                           reinterpret_cast<const uint8_t*>(device.get()) + device.size())},
+  };
+
+  auto result = pipe_io_->Call<RcResult>(src, 0, true);
+  return result.is_ok() ? ZX_OK : result.error_value();
+}
+
+zx::status<RenderControl::RcResult> RenderControl::Compose(const hwc::ComposeDeviceV2& device) {
+  TRACE_DURATION("gfx", "RenderControl::Compose");
+
+  ComposeCmd cmd = {
+      .size = static_cast<uint32_t>(sizeof(ComposeCmd) + device.size()),
+      .bufferSize = static_cast<uint32_t>(device.size()),
+      .bufferSizeAgain = static_cast<uint32_t>(device.size()),
+  };
+
+  PipeIo::WriteSrc src[] = {
+      {.data = ToByteSpan(cmd)},
+      {.data = cpp20::span(reinterpret_cast<const uint8_t*>(device.get()),
+                           reinterpret_cast<const uint8_t*>(device.get()) + device.size())},
+  };
+
   auto result = pipe_io_->Call<RcResult>(src, 1, true);
   return result.is_ok() ? zx::ok(result.value()[0]) : zx::status<RcResult>(result.take_error());
 }

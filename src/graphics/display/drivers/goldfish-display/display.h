@@ -19,6 +19,7 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <unordered_map>
 
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
@@ -27,11 +28,14 @@
 
 #include "src/devices/lib/goldfish/pipe_io/pipe_io.h"
 #include "src/graphics/display/drivers/goldfish-display/render_control.h"
+#include "src/graphics/display/drivers/goldfish-display/third_party/aosp/hwcomposer.h"
 
 namespace goldfish {
 
 class Display;
 using DisplayType = ddk::Device<Display, ddk::ChildPreReleaseable>;
+
+class GoldfishDisplayTest;
 
 class Display : public DisplayType,
                 public ddk::DisplayControllerImplProtocol<Display, ddk::base_protocol> {
@@ -94,6 +98,8 @@ class Display : public DisplayType,
     ZX_DEBUG_ASSERT(devices_.empty());
   }
 
+  friend class GoldfishDisplayTest;
+
  private:
   struct ColorBuffer {
     ~ColorBuffer() = default;
@@ -108,19 +114,41 @@ class Display : public DisplayType,
   };
 
   struct DisplayConfig {
-    // For displays with image framebuffer attached to the display, the
-    // framebuffer is represented as a |ColorBuffer| in goldfish graphics
+    // For displays with image framebuffers attached to the display, the
+    // framebuffers are represented as |ColorBuffer| in goldfish graphics
     // device implementation.
-    // A configuration with a non-null |color_buffer| field means that it will
-    // present this |ColorBuffer| image at Vsync; the |ColorBuffer| instance
-    // will be created when importing the image and destroyed when releasing
-    // the image or removing the display device. Otherwise, it means the display
-    // has no framebuffers to display.
-    ColorBuffer* color_buffer = nullptr;
+    //
+    // If |layers| list is not empty, all the |layers| will be composed and
+    // presented at next Vsync. Otherwise, it means the display has nothing
+    // to display.
+    std::list<layer_t> layers = {};
 
     // The |config_stamp| value of the ApplyConfiguration() call to which this
     // DisplayConfig corresponds.
     config_stamp_t config_stamp = {.value = INVALID_CONFIG_STAMP_VALUE};
+  };
+
+  // A Swapchain is a collection of ColorBuffers used as framebuffers.
+  // Each time the driver composes a new frame and present it on display, it
+  // requests a buffer from the Swapchain as the display buffer, and returns it
+  // once the frame has completely shown on the display.
+  class Swapchain {
+   public:
+    Swapchain() = default;
+    void Add(RenderControl* rc, uint32_t width, uint32_t height, uint32_t format);
+    void Add(std::unique_ptr<ColorBuffer> color_buffer);
+
+    // Requests (borrow) an image for presentation.
+    // Returns |nullptr| if there is no ColorBuffer available.
+    ColorBuffer* Request();
+
+    // This "returns" the given |cb| back to the Swapchain so that caller could
+    // request it from Swapchain again.
+    void Return(ColorBuffer* cb);
+
+   private:
+    std::list<std::unique_ptr<ColorBuffer>> available_buffers_;
+    std::unordered_map<ColorBuffer*, std::unique_ptr<ColorBuffer>> used_buffers_;
   };
 
   struct Device {
@@ -133,6 +161,9 @@ class Display : public DisplayType,
     float scale = 1.0;
     zx::time expected_next_flush = zx::time::infinite_past();
     config_stamp_t latest_config_stamp = {.value = INVALID_CONFIG_STAMP_VALUE};
+
+    // Display swapchain storing framebuffers as composition targets.
+    Swapchain swapchain;
 
     // The next display config to be posted through renderControl protocol.
     std::optional<DisplayConfig> incoming_config = std::nullopt;
@@ -150,6 +181,22 @@ class Display : public DisplayType,
   };
 
   zx_status_t ImportVmoImage(image_t* image, zx::vmo vmo, size_t offset);
+
+  // A helper method returning the ColorBuffer layer |l| uses for primary and
+  // cursor layers. It returns |nullptr| for all color layers.
+  static ColorBuffer* GetLayerColorBuffer(const layer_t& l);
+
+  // Input |layers| are created without presentation support. The driver must
+  // set up all color buffers tied to the display and move all Vulkan layer
+  // images out of "Vulkan-only mode" so that they can be used for presentation.
+  zx_status_t ResolveInputLayers(const std::list<layer_t>& layers);
+
+  // Create a ComposeDevice command to compose all the |layers| to ColorBuffer
+  // |target| and present |target| on display |device|.
+  static hwc::ComposeDeviceV2 CreateComposeDevice(const Device& device,
+                                                  const std::list<layer_t>& layers,
+                                                  const ColorBuffer& target);
+
   zx_status_t PresentDisplayConfig(RenderControl::DisplayId display_id,
                                    const DisplayConfig& display_config);
   zx_status_t SetupDisplay(uint64_t id);
