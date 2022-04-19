@@ -27,33 +27,10 @@ fidl("network") {
   ]
 }
 
-fidl("environment") {
-  name = "fuchsia.netemul.environment"
-  sources = [ "environment.fidl" ]
-
-  public_deps = [
-    ":network",
-    "//sdk/fidl/fuchsia.logger",
-    "//sdk/fidl/fuchsia.sys",
-  ]
-}
-
 fidl("sync") {
   name = "fuchsia.netemul.sync"
   sources = [ "sync.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
-}
-
-fidl("sandbox") {
-  name = "fuchsia.netemul.sandbox"
-  sources = [ "sandbox.fidl" ]
-
-  public_deps = [
-    ":environment",
-    ":network",
-    ":sync",
-    "//sdk/fidl/fuchsia.sys",
-  ]
 }
 
 fidl("devmgr") {
