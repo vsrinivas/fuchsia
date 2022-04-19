@@ -59,7 +59,7 @@ class StorageTest : public ::gtest::RealLoopFixture {
     RealmArgs realm_args = RealmArgs::MakeWithCustomLoader(
         nullptr, internal::kRootLabel, files::JoinPath(root_storage_dir_, "data"),
         files::JoinPath(root_storage_dir_, "data/cache"), files::JoinPath(root_storage_dir_, "tmp"),
-        std::move(environment_services), false, std::move(root_realm_services), std::move(opts),
+        std::move(environment_services), std::move(root_realm_services), std::move(opts),
         std::move(appmgr_config_dir), std::move(component_id_index),
         component_context->svc()->Connect<fuchsia::sys::Loader>());
     return Realm::Create(std::move(realm_args));

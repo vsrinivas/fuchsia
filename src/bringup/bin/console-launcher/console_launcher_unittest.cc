@@ -32,11 +32,11 @@ TEST(SystemInstanceTest, CheckBootArgParsing) {
   ASSERT_OK(args.status_value());
 
   ASSERT_TRUE(args->run_shell);
-  ASSERT_TRUE(args->is_virtio);
-  ASSERT_EQ(args->term.compare("TERM=FAKE_TERM"), 0);
-  ASSERT_EQ(args->device.compare("/test/path"), 0);
-  ASSERT_EQ(args->autorun_boot.compare("ls+/dev/class/"), 0);
-  ASSERT_EQ(args->autorun_system.compare("ls+/system"), 0);
+  ASSERT_TRUE(args->device.is_virtio);
+  ASSERT_EQ(args->term, "TERM=FAKE_TERM");
+  ASSERT_EQ(args->device.path, "/test/path");
+  ASSERT_EQ(args->autorun_boot, "ls+/dev/class/");
+  ASSERT_EQ(args->autorun_system, "ls+/system");
 }
 
 TEST(SystemInstanceTest, CheckBootArgDefaultStrings) {
@@ -56,9 +56,64 @@ TEST(SystemInstanceTest, CheckBootArgDefaultStrings) {
   ASSERT_OK(args.status_value());
 
   ASSERT_FALSE(args->run_shell);
-  ASSERT_FALSE(args->is_virtio);
-  ASSERT_EQ(args->term.compare("TERM=uart"), 0);
-  ASSERT_EQ(args->device.compare("/svc/console"), 0);
-  ASSERT_EQ(args->autorun_boot.compare(""), 0);
-  ASSERT_EQ(args->autorun_system.compare(""), 0);
+  ASSERT_FALSE(args->device.is_virtio);
+  ASSERT_EQ(args->term, "TERM=uart");
+  ASSERT_EQ(args->device.path, "/svc/console");
+  ASSERT_EQ(args->autorun_boot, "");
+  ASSERT_EQ(args->autorun_system, "");
+}
+
+// The defaults are that a system is not required, so zedboot will try to launch.
+TEST(VirtconSetup, VirtconDefaults) {
+  std::map<std::string, std::string> arguments;
+
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  mock_boot_arguments::Server boot_server(std::move(arguments));
+  loop.StartThread();
+
+  fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
+  boot_server.CreateClient(loop.dispatcher(), &boot_args);
+
+  zx::status args = console_launcher::GetArguments(boot_args.client_end());
+  ASSERT_OK(args.status_value());
+
+  ASSERT_FALSE(args->virtual_console_need_debuglog);
+}
+
+// Need debuglog should be true when netboot is true and netboot is not disabled.
+TEST(VirtconSetup, VirtconNeedDebuglog) {
+  std::map<std::string, std::string> arguments;
+  arguments["netsvc.disable"] = "false";
+  arguments["netsvc.netboot"] = "true";
+
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  mock_boot_arguments::Server boot_server(std::move(arguments));
+  loop.StartThread();
+
+  fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
+  boot_server.CreateClient(loop.dispatcher(), &boot_args);
+
+  zx::status args = console_launcher::GetArguments(boot_args.client_end());
+  ASSERT_OK(args.status_value());
+
+  ASSERT_TRUE(args->virtual_console_need_debuglog);
+}
+
+// If netboot is true but netsvc is disabled, don't start debuglog.
+TEST(VirtconSetup, VirtconNetbootWithNetsvcDisabled) {
+  std::map<std::string, std::string> arguments;
+  arguments["netsvc.disable"] = "true";
+  arguments["netsvc.netboot"] = "true";
+
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  mock_boot_arguments::Server boot_server(std::move(arguments));
+  loop.StartThread();
+
+  fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
+  boot_server.CreateClient(loop.dispatcher(), &boot_args);
+
+  zx::status args = console_launcher::GetArguments(boot_args.client_end());
+  ASSERT_OK(args.status_value());
+
+  ASSERT_FALSE(args->virtual_console_need_debuglog);
 }

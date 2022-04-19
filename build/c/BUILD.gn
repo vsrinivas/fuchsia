@@ -28,7 +28,6 @@ config("fidl-deprecated-c-bindings") {
     "//src/bringup/bin/bootsvc:bin",
     "//src/bringup/bin/bootsvc/integration_test:bootsvc-integration-test",
     "//src/bringup/bin/dlog:dlog",
-    "//src/bringup/bin/run-vc:run-vc",
     "//src/bringup/bin/svchost:svchost",
     "//src/bringup/bin/waitfor:waitfor",
     "//src/camera/drivers/controller:source",

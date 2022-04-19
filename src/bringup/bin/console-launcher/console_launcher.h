@@ -18,13 +18,21 @@
 
 namespace console_launcher {
 
+zx::status<fbl::unique_fd> WaitForFile(const char* path, zx::time deadline);
+
+struct Device {
+  std::string path = "/svc/console";
+  bool is_virtio = false;
+};
+
 struct Arguments {
   bool run_shell = true;
-  bool is_virtio = false;
-  std::string term = "TERM=";
-  std::string device = "/svc/console";
   std::string autorun_boot;
   std::string autorun_system;
+
+  Device device;
+  std::string term = "TERM=";
+  bool virtual_console_need_debuglog = false;
 };
 
 zx::status<Arguments> GetArguments(const fidl::ClientEnd<fuchsia_boot::Arguments>& client);
@@ -32,18 +40,20 @@ zx::status<Arguments> GetArguments(const fidl::ClientEnd<fuchsia_boot::Arguments
 class ConsoleLauncher {
  public:
   static zx::status<ConsoleLauncher> Create();
-  zx_status_t LaunchShell(const Arguments& args, fidl::ClientEnd<fuchsia_io::Directory> root);
-  zx_status_t WaitForShellExit();
+  zx::status<zx::process> LaunchShell(fidl::ClientEnd<fuchsia_io::Directory> root,
+                                      zx::channel stdio, const std::string& term,
+                                      const std::optional<std::string>& cmd = std::nullopt) const;
 
-  zx::job& shell_job() { return shell_job_; }
+  const zx::job& shell_job() const { return shell_job_; }
 
  private:
-  zx::process shell_process_;
   // WARNING: This job is created directly from the root job with no additional job policy
   // restrictions. We only create it when 'console.shell' is enabled to help protect against
   // accidental usage.
   zx::job shell_job_;
 };
+
+zx_status_t WaitForExit(zx::process process);
 
 }  // namespace console_launcher
 

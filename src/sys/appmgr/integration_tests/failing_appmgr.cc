@@ -48,7 +48,6 @@ class AppmgrHarness : public fuchsia::sys::internal::LogConnectionListener {
         .sysmgr_url =
             "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/nonexistent_sysmgr.cmx",
         .sysmgr_args = {},
-        .run_virtual_console = false,
         .trace_server_channel = std::move(trace_server)};
     component::Appmgr appmgr(loop.dispatcher(), std::move(args));
 

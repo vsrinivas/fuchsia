@@ -64,7 +64,6 @@ assemble_system("guest") {
     "//src/bringup/bin/ptysvc",
     "//src/bringup/bin/pwrbtn-monitor:bootfs",
     "//src/bringup/bin/pwrbtn-monitor",
-    "//src/bringup/bin/run-vc",
     "//src/bringup/bin/svchost:bootfs",
     "//src/bringup/bin/sysinfo:bootfs",
     "//src/bringup/bin/sysinfo",

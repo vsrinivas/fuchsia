@@ -61,7 +61,6 @@ class AppmgrLifecycleTest : public gtest::TestWithEnvironmentFixture,
         .sysmgr_url = kSysmgrUrl,
         .sysmgr_args = {},
         .loader = std::optional<fuchsia::sys::LoaderPtr>(std::move(loader)),
-        .run_virtual_console = false,
         .trace_server_channel = std::move(trace_server),
         .stop_callback = [this](zx_status_t status) { stop_callback_status_ = status; }};
     appmgr_ = std::make_unique<component::Appmgr>(dispatcher(), std::move(args));

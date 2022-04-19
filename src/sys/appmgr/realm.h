@@ -69,23 +69,21 @@ struct RealmArgs {
   static RealmArgs Make(fxl::WeakPtr<Realm> parent, std::string label, std::string data_path,
                         std::string cache_path, std::string temp_path,
                         const std::shared_ptr<sys::ServiceDirectory>& env_services,
-                        bool run_virtual_console, fuchsia::sys::EnvironmentOptions options,
-                        fbl::unique_fd appmgr_config_dir,
+                        fuchsia::sys::EnvironmentOptions options, fbl::unique_fd appmgr_config_dir,
                         fbl::RefPtr<ComponentIdIndex> component_id_index);
 
   static RealmArgs MakeWithAdditionalServices(
       fxl::WeakPtr<Realm> parent, std::string label, std::string data_path, std::string cache_path,
       std::string temp_path, const std::shared_ptr<sys::ServiceDirectory>& env_services,
-      bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
-      fuchsia::sys::EnvironmentOptions options, fbl::unique_fd appmgr_config_dir,
-      fbl::RefPtr<ComponentIdIndex> component_id_index);
+      fuchsia::sys::ServiceListPtr additional_services, fuchsia::sys::EnvironmentOptions options,
+      fbl::unique_fd appmgr_config_dir, fbl::RefPtr<ComponentIdIndex> component_id_index);
 
   static RealmArgs MakeWithCustomLoader(
       fxl::WeakPtr<Realm> parent, std::string label, std::string data_path, std::string cache_path,
       std::string temp_path, const std::shared_ptr<sys::ServiceDirectory>& env_services,
-      bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
-      fuchsia::sys::EnvironmentOptions options, fbl::unique_fd appmgr_config_dir,
-      fbl::RefPtr<ComponentIdIndex> component_id_index, fuchsia::sys::LoaderPtr loader);
+      fuchsia::sys::ServiceListPtr additional_services, fuchsia::sys::EnvironmentOptions options,
+      fbl::unique_fd appmgr_config_dir, fbl::RefPtr<ComponentIdIndex> component_id_index,
+      fuchsia::sys::LoaderPtr loader);
 
   fxl::WeakPtr<Realm> parent;
   std::string label;
@@ -93,7 +91,6 @@ struct RealmArgs {
   std::string cache_path;
   std::string temp_path;
   std::shared_ptr<sys::ServiceDirectory> environment_services;
-  bool run_virtual_console;
   fuchsia::sys::ServiceListPtr additional_services;
   fuchsia::sys::EnvironmentOptions options;
   fbl::unique_fd appmgr_config_dir;
@@ -291,7 +288,6 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   std::string temp_path_;
   std::string koid_;
   std::vector<std::string> realm_path_;
-  const bool run_virtual_console_;
   std::unique_ptr<component::PackageLoader> package_loader_;
   std::unique_ptr<component::CacheControl> cache_control_;
   fbl::RefPtr<LogConnectorImpl> log_connector_;

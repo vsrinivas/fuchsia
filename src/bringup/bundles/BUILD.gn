@@ -9,7 +9,6 @@ import("//build/images/args.gni")
 group("bootstrap") {
   deps = [
     ":zedboot",
-    "//src/bringup/bin/run-vc",
     "//src/bringup/bin/watch",
   ]
 

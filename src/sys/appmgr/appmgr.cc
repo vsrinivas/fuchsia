@@ -105,16 +105,15 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
     FX_LOGS(INFO) << "Creating root realm with a custom loader";
     realm_args = RealmArgs::MakeWithCustomLoader(
         nullptr, internal::kRootLabel, kRootDataDir, kRootCacheDir, kRootTempDir,
-        std::move(args.environment_services), args.run_virtual_console,
-        std::move(args.root_realm_services), fuchsia::sys::EnvironmentOptions{},
-        std::move(appmgr_config_dir), component_id_index.take_value(),
-        std::move(args.loader.value()));
+        std::move(args.environment_services), std::move(args.root_realm_services),
+        fuchsia::sys::EnvironmentOptions{}, std::move(appmgr_config_dir),
+        component_id_index.take_value(), std::move(args.loader.value()));
   } else {
     realm_args = RealmArgs::MakeWithAdditionalServices(
         nullptr, internal::kRootLabel, kRootDataDir, kRootCacheDir, kRootTempDir,
-        std::move(args.environment_services), args.run_virtual_console,
-        std::move(args.root_realm_services), fuchsia::sys::EnvironmentOptions{},
-        std::move(appmgr_config_dir), component_id_index.take_value());
+        std::move(args.environment_services), std::move(args.root_realm_services),
+        fuchsia::sys::EnvironmentOptions{}, std::move(appmgr_config_dir),
+        component_id_index.take_value());
   }
   realm_args.cpu_watcher = cpu_watcher_.get();
   root_realm_ = Realm::Create(std::move(realm_args));

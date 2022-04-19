@@ -235,7 +235,7 @@ std::string ComponentUrlToPathComponent(const FuchsiaPkgUrl& fp) {
 RealmArgs RealmArgs::Make(fxl::WeakPtr<Realm> parent, std::string label, std::string data_path,
                           std::string cache_path, std::string temp_path,
                           const std::shared_ptr<sys::ServiceDirectory>& env_services,
-                          bool run_virtual_console, fuchsia::sys::EnvironmentOptions options,
+                          fuchsia::sys::EnvironmentOptions options,
                           fbl::unique_fd appmgr_config_dir,
                           fbl::RefPtr<ComponentIdIndex> component_id_index) {
   return {.parent = parent,
@@ -244,7 +244,6 @@ RealmArgs RealmArgs::Make(fxl::WeakPtr<Realm> parent, std::string label, std::st
           .cache_path = cache_path,
           .temp_path = temp_path,
           .environment_services = env_services,
-          .run_virtual_console = run_virtual_console,
           .additional_services = nullptr,
           .options = std::move(options),
           .appmgr_config_dir = std::move(appmgr_config_dir),
@@ -255,16 +254,14 @@ RealmArgs RealmArgs::Make(fxl::WeakPtr<Realm> parent, std::string label, std::st
 RealmArgs RealmArgs::MakeWithAdditionalServices(
     fxl::WeakPtr<Realm> parent, std::string label, std::string data_path, std::string cache_path,
     std::string temp_path, const std::shared_ptr<sys::ServiceDirectory>& env_services,
-    bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
-    fuchsia::sys::EnvironmentOptions options, fbl::unique_fd appmgr_config_dir,
-    fbl::RefPtr<ComponentIdIndex> component_id_index) {
+    fuchsia::sys::ServiceListPtr additional_services, fuchsia::sys::EnvironmentOptions options,
+    fbl::unique_fd appmgr_config_dir, fbl::RefPtr<ComponentIdIndex> component_id_index) {
   return {.parent = parent,
           .label = label,
           .data_path = data_path,
           .cache_path = cache_path,
           .temp_path = temp_path,
           .environment_services = env_services,
-          .run_virtual_console = run_virtual_console,
           .additional_services = std::move(additional_services),
           .options = std::move(options),
           .appmgr_config_dir = std::move(appmgr_config_dir),
@@ -275,16 +272,15 @@ RealmArgs RealmArgs::MakeWithAdditionalServices(
 RealmArgs RealmArgs::MakeWithCustomLoader(
     fxl::WeakPtr<Realm> parent, std::string label, std::string data_path, std::string cache_path,
     std::string temp_path, const std::shared_ptr<sys::ServiceDirectory>& env_services,
-    bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
-    fuchsia::sys::EnvironmentOptions options, fbl::unique_fd appmgr_config_dir,
-    fbl::RefPtr<ComponentIdIndex> component_id_index, fuchsia::sys::LoaderPtr loader) {
+    fuchsia::sys::ServiceListPtr additional_services, fuchsia::sys::EnvironmentOptions options,
+    fbl::unique_fd appmgr_config_dir, fbl::RefPtr<ComponentIdIndex> component_id_index,
+    fuchsia::sys::LoaderPtr loader) {
   return {.parent = parent,
           .label = label,
           .data_path = data_path,
           .cache_path = cache_path,
           .temp_path = temp_path,
           .environment_services = env_services,
-          .run_virtual_console = run_virtual_console,
           .additional_services = std::move(additional_services),
           .options = std::move(options),
           .appmgr_config_dir = std::move(appmgr_config_dir),
@@ -329,7 +325,6 @@ Realm::Realm(RealmArgs args, zx::job job)
       data_path_(args.data_path),
       cache_path_(args.cache_path),
       temp_path_(args.temp_path),
-      run_virtual_console_(args.run_virtual_console),
       job_(std::move(job)),
       hub_(fbl::MakeRefCounted<fs::PseudoDir>()),
       info_vfs_(async_get_default_dispatcher()),
@@ -519,13 +514,11 @@ void Realm::CreateNestedEnvironment(
   if (additional_services) {
     args = RealmArgs::MakeWithAdditionalServices(
         weak_ptr(), label, nested_data_path, nested_cache_path, nested_temp_path,
-        environment_services_,
-        /*run_virtual_console=*/false, std::move(additional_services), std::move(options),
+        environment_services_, std::move(additional_services), std::move(options),
         appmgr_config_dir_.duplicate(), component_id_index_);
   } else {
     args = RealmArgs::Make(weak_ptr(), label, nested_data_path, nested_cache_path, nested_temp_path,
-                           environment_services_,
-                           /*run_virtual_console=*/false, std::move(options),
+                           environment_services_, std::move(options),
                            appmgr_config_dir_.duplicate(), component_id_index_);
   }
   args.cpu_watcher = cpu_watcher_;
@@ -552,14 +545,6 @@ void Realm::CreateNestedEnvironment(
 
   controller->OnCreated();
   children_.emplace(child, std::move(controller));
-
-  if (run_virtual_console_) {
-    // TODO(anmittal): remove svc hardcoding once we no longer need to launch
-    // shell with sysmgr services, i.e once we have chrealm.
-    CreateShell("/boot/bin/run-vc", child->default_namespace_->OpenServicesAsDirectory());
-    CreateShell("/boot/bin/run-vc", child->default_namespace_->OpenServicesAsDirectory());
-    CreateShell("/boot/bin/run-vc", child->default_namespace_->OpenServicesAsDirectory());
-  }
 }
 
 void Realm::Resolve(fidl::StringPtr name, fuchsia::process::Resolver::ResolveCallback callback) {
@@ -721,47 +706,6 @@ Moniker Realm::ComputeMoniker(Realm* realm, const FuchsiaPkgUrl& fp) {
   }
   std::reverse(realm_path.begin(), realm_path.end());
   return Moniker{.url = fp.ToString(), .realm_path = std::move(realm_path)};
-}
-
-void Realm::CreateShell(const std::string& path, zx::channel svc) {
-  TRACE_DURATION("appmgr", "Realm::CreateShell", "path", path);
-  if (!svc)
-    return;
-
-  SandboxMetadata sandbox;
-  sandbox.AddFeature("deprecated-shell");
-
-  NamespaceBuilder builder = NamespaceBuilder(appmgr_config_dir_.duplicate(), path);
-  builder.AddServices(std::move(svc));
-  zx_status_t status;
-  status = builder.AddSandbox(sandbox, [this] { return OpenInfoDir(); });
-  if (status != ZX_OK)
-    return;
-
-  zx::vmo executable;
-  fbl::unique_fd fd;
-  status = fdio_open_fd(path.c_str(),
-                        static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE |
-                                              fuchsia::io::OpenFlags::RIGHT_EXECUTABLE),
-                        fd.reset_and_get_address());
-  if (status != ZX_OK) {
-    return;
-  }
-  status = fdio_get_vmo_exec(fd.get(), executable.reset_and_get_address());
-  if (status != ZX_OK) {
-    return;
-  }
-
-  zx::job child_job;
-  status = zx::job::create(job_, 0u, &child_job);
-  if (status != ZX_OK)
-    return;
-
-  std::vector<std::string> env_vars;
-  fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = path;
-  zx::process process = CreateProcess(child_job, std::move(executable), path, env_vars,
-                                      std::move(launch_info), zx::channel(), builder.Build());
 }
 
 std::unique_ptr<EnvironmentControllerImpl> Realm::ExtractChild(Realm* child) {

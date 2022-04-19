@@ -16,27 +16,21 @@ group("bootfs") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":console-launcher-unittests",
-    ":virtcon-setup-test",
-  ]
+  deps = [ ":console-launcher-unittests" ]
 }
 
 source_set("lib") {
   sources = [
     "console_launcher.cc",
     "console_launcher.h",
-    "virtcon-setup.cc",
-    "virtcon-setup.h",
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.hardware.virtioconsole:fuchsia.hardware.virtioconsole_llcpp",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl",
     "//src/lib/storage/vfs/cpp",
-    "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zircon-internal",
   ]
@@ -45,11 +39,10 @@ source_set("lib") {
     # console_launcher.h has #include <fidl/fuchsia.boot/cpp/wire.h>
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
 
-    # virtcon-setup.h has #include <fidl/fuchsia.virtualconsole/cpp/wire.h>
-    "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole_llcpp",
+    # console_launcher.h has #include <fidl/fuchsia.io/cpp/wire.h>
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
 
     # console_launcher.h has #include <fbl/unique_fd.h>
-    # console_launcher.h has #include <lib/zx/status.h>
     "//zircon/system/ulib/fbl",
   ]
 }
@@ -61,12 +54,15 @@ executable("bin") {
 
   deps = [
     ":lib",
+    "//sdk/fidl/fuchsia.hardware.virtioconsole:fuchsia.hardware.virtioconsole_llcpp",
+    "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
   ]
@@ -110,19 +106,4 @@ test("shell-permissions-test") {
 bootfs_test("shell-permissions-bootfs-test") {
   name = "shell-permissions-test"
   deps = [ ":shell-permissions-test" ]
-}
-
-test("virtcon-setup-unittests") {
-  sources = [ "virtcon-setup-unittests.cc" ]
-  deps = [
-    ":lib",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/mock-boot-arguments",
-    "//zircon/system/ulib/zxtest",
-  ]
-}
-
-fuchsia_unittest_package("virtcon-setup-test") {
-  deps = [ ":virtcon-setup-unittests" ]
 }

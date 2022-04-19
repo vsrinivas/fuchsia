@@ -54,7 +54,7 @@ class ComponentEventProviderTest : public ::gtest::TestLoopFixture {
     auto environment_services = sys::ServiceDirectory::CreateFromNamespace();
     fuchsia::sys::ServiceListPtr root_realm_services(new fuchsia::sys::ServiceList);
     RealmArgs realm_args = RealmArgs::MakeWithAdditionalServices(
-        nullptr, "test", "/data", "/data/cache", "/tmp", std::move(environment_services), false,
+        nullptr, "test", "/data", "/data/cache", "/tmp", std::move(environment_services),
         std::move(root_realm_services), fuchsia::sys::EnvironmentOptions{}, std::move(dirfd),
         ComponentIdIndex::CreateFromIndexContents(kEmptyComponentIdIndex).take_value());
     return Realm::Create(std::move(realm_args));
