@@ -473,6 +473,26 @@ Do the following:
 
    This command exits silently without output.
 
+1. Verify that the repositories are registered to the target device:
+
+   ```posix-terminal
+   tools/ffx target repository list
+   ```
+
+   This command prints output similar to the following:
+
+   ```none {:.devsite-disable-click-to-copy}
+   $ tools/ffx target repository list
+   +----------------------+----------------------+
+   | REPO                 | TARGET               |
+   +======================+======================+
+   | fuchsiasamples.com   | walkthrough-emu      |
+   +----------------------+----------------------+
+   | workstation.qemu-x64 | walkthrough-emu      |
+   |                      |   alias: fuchsia.com |
+   +----------------------+----------------------+
+   ```
+
 ## 5. Build and run the sample component {:#build-and-run-the-sample-component}
 
 Build and run the C++ Hello World component included in the SDK samples
