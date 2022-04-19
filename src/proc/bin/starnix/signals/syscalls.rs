@@ -436,10 +436,6 @@ impl WaitingOptions {
 
 /// Waits on the task with `pid` to exit.
 ///
-/// WNOHANG and WNOWAIT are implemented flags for `options`. WUNTRACED, WEXITED and WCONTINUED are
-/// not supported, but don't result in an error, only a log. Any other unsupported flags will
-/// result in EINVAL.
-///
 /// - `current_task`: The current task.
 /// - `pid`: The id of the task to wait on.
 /// - `options`: The options passed to the wait syscall.
@@ -1335,18 +1331,20 @@ mod tests {
             )
             .expect("clone process");
 
+        // No child is currently terminated.
+        assert_eq!(
+            wait_on_pid(
+                &task,
+                ProcessSelector::Any,
+                &WaitingOptions::new_for_wait4(WNOHANG).expect("WaitingOptions")
+            ),
+            Ok(None)
+        );
+
         let task_clone = task.task_arc_clone();
         let child_id = child.id;
         let thread = std::thread::spawn(move || {
             // Block until child is terminated.
-            assert_eq!(
-                wait_on_pid(
-                    &task_clone,
-                    ProcessSelector::Any,
-                    &WaitingOptions::new_for_wait4(WNOHANG).expect("WaitingOptions")
-                ),
-                Ok(None)
-            );
             let waited_child = wait_on_pid(
                 &task_clone,
                 ProcessSelector::Any,
