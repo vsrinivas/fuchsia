@@ -42,6 +42,16 @@ class NonPlatformAnnotationProvider : public DynamicSyncAnnotationProvider {
   virtual bool IsMissingAnnotations() const = 0;
 };
 
+// Collects unsafe-to-cache annotations asynchronously.
+class DynamicAsyncAnnotationProvider {
+ public:
+  // Returns the annotation keys a provider will collect.
+  virtual std::set<std::string> GetKeys() const = 0;
+
+  // Returns the annotations this provider collects via |callback|.
+  virtual void Get(::fit::callback<void(Annotations)> callback) = 0;
+};
+
 }  // namespace forensics::feedback
 
 #endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_ANNOTATIONS_PROVIDER_H_

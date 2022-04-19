@@ -29,7 +29,8 @@ class AnnotationManager {
                     Annotations static_annotations = {},
                     NonPlatformAnnotationProvider* non_platform_provider = nullptr,
                     std::vector<DynamicSyncAnnotationProvider*> dynamic_sync_providers = {},
-                    std::vector<StaticAsyncAnnotationProvider*> static_async_providers = {});
+                    std::vector<StaticAsyncAnnotationProvider*> static_async_providers = {},
+                    std::vector<DynamicAsyncAnnotationProvider*> dynamic_async_providers = {});
 
   // Returns all annotations collected by the manager in a promise that is guaranteed to complete
   // before |timeout| expires.
@@ -52,6 +53,14 @@ class AnnotationManager {
   void InsertStatic(const Annotations& annotations);
 
  private:
+  // Returns a promise that completes once all static async annotations have been added to
+  // |static_annotations_| or |timeout| expires.
+  ::fpromise::promise<> WaitForStaticAsync(zx::duration timeout);
+
+  // Returns a promise that completes with annotations once all dynamic async annotations have been
+  // collected or |timeout| expires.
+  ::fpromise::promise<Annotations> WaitForDynamicAsync(zx::duration timeout);
+
   async_dispatcher_t* dispatcher_;
 
   std::set<std::string> allowlist_;
@@ -59,8 +68,9 @@ class AnnotationManager {
   NonPlatformAnnotationProvider* non_platform_provider_;
   std::vector<DynamicSyncAnnotationProvider*> dynamic_sync_providers_;
   std::vector<StaticAsyncAnnotationProvider*> static_async_providers_;
+  std::vector<DynamicAsyncAnnotationProvider*> dynamic_async_providers_;
 
-  // Calls to GetAll that have not yet completed.
+  // Calls to WaitForStatic that have not yet completed.
   std::vector<std::function<void()>> waiting_for_static_;
 
   fxl::WeakPtrFactory<AnnotationManager> ptr_factory_{this};

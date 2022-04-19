@@ -287,5 +287,226 @@ TEST_F(AnnotationManagerTest, GetAllStaticAsyncProviders) {
   }
 }
 
+class SimpleDynamicAsync : public DynamicAsyncAnnotationProvider {
+ public:
+  SimpleDynamicAsync(async_dispatcher_t* dispatcher, std::set<std::string> keys,
+                     const zx::duration delay = zx::sec(0))
+      : dispatcher_(dispatcher), keys_(std::move(keys)), delay_(delay) {}
+
+  std::set<std::string> GetKeys() const override { return keys_; }
+
+  void Get(::fit::callback<void(Annotations)> callback) override {
+    async::PostDelayedTask(
+        dispatcher_,
+        [this, cb = std::move(callback)]() mutable {
+          const std::string value = "call" + std::to_string(++count_);
+
+          Annotations annotations;
+          for (const auto& key : keys_) {
+            annotations.insert_or_assign(key, value);
+          }
+          cb(annotations);
+        },
+        delay_);
+  }
+
+ private:
+  async_dispatcher_t* dispatcher_;
+  std::set<std::string> keys_;
+  zx::duration delay_;
+
+  size_t count_{0};
+};
+
+TEST_F(AnnotationManagerTest, GetAllNoDyanmicAsyncProviders) {
+  async::Executor executor(dispatcher());
+
+  const Annotations static_annotations({
+      {"annotation1", "value1"},
+      {"annotation2", Error::kMissingValue},
+  });
+
+  DynamicNonPlatform non_platform;
+
+  {
+    AnnotationManager manager(dispatcher(), {"annotation1", "annotation2", "num_calls"},
+                              static_annotations, &non_platform);
+
+    Annotations annotations;
+
+    // Use a timeout of 0 because only immediately available annotations are returned.
+    executor.schedule_task(
+        manager.GetAll(zx::sec(0))
+            .and_then([&annotations](Annotations& result) { annotations = std::move(result); })
+            .or_else([]() { FX_LOGS(FATAL) << "Unreachable error reached"; }));
+
+    RunLoopUntilIdle();
+    EXPECT_THAT(annotations, UnorderedElementsAreArray({
+                                 MakePair("annotation1", "value1"),
+                                 MakePair("annotation2", Error::kMissingValue),
+                                 MakePair("num_calls", "1"),
+                             }));
+  }
+}
+
+TEST_F(AnnotationManagerTest, GetAllDynamicAsyncProviders) {
+  async::Executor executor(dispatcher());
+
+  const Annotations static_annotations({
+      {"annotation1", "value1"},
+      {"annotation2", Error::kMissingValue},
+  });
+
+  SimpleDynamicAsync immediate_dynamic(dispatcher(), {"annotation3"});
+  SimpleDynamicAsync five_second_dynamic(dispatcher(), {"annotation4"}, zx::sec(5));
+  SimpleDynamicAsync ten_second_dynamic(dispatcher(), {"annotation5"}, zx::sec(10));
+  DynamicNonPlatform non_platform;
+
+  AnnotationManager manager(dispatcher(),
+                            {
+                                "annotation1",
+                                "annotation2",
+                                "num_calls",
+                                "annotation3",
+                                "annotation4",
+                                "annotation5",
+                            },
+                            static_annotations, &non_platform, {}, {},
+                            {&immediate_dynamic, &five_second_dynamic, &ten_second_dynamic});
+  {
+    Annotations annotations;
+
+    executor.schedule_task(
+        manager.GetAll(zx::sec(0))
+            .and_then([&annotations](Annotations& result) { annotations = std::move(result); })
+            .or_else([]() { FX_LOGS(FATAL) << "Unreachable error reached"; }));
+
+    RunLoopUntilIdle();
+    EXPECT_THAT(annotations, UnorderedElementsAreArray({
+                                 MakePair("annotation1", "value1"),
+                                 MakePair("annotation2", Error::kMissingValue),
+                                 MakePair("num_calls", "1"),
+                                 MakePair("annotation3", "call1"),
+                                 MakePair("annotation4", Error::kTimeout),
+                                 MakePair("annotation5", Error::kTimeout),
+                             }));
+  }
+
+  {
+    Annotations annotations;
+
+    executor.schedule_task(
+        manager.GetAll(zx::sec(5))
+            .and_then([&annotations](Annotations& result) { annotations = std::move(result); })
+            .or_else([]() { FX_LOGS(FATAL) << "Unreachable error reached"; }));
+
+    RunLoopFor(zx::sec(5));
+    EXPECT_THAT(annotations, UnorderedElementsAreArray({
+                                 MakePair("annotation1", "value1"),
+                                 MakePair("annotation2", Error::kMissingValue),
+                                 MakePair("num_calls", "2"),
+                                 MakePair("annotation3", "call2"),
+                                 MakePair("annotation4", "call2"),
+                                 MakePair("annotation5", Error::kTimeout),
+                             }));
+  }
+
+  {
+    Annotations annotations;
+
+    executor.schedule_task(
+        manager.GetAll(zx::sec(10))
+            .and_then([&annotations](Annotations& result) { annotations = std::move(result); })
+            .or_else([]() { FX_LOGS(FATAL) << "Unreachable error reached"; }));
+
+    RunLoopFor(zx::sec(10));
+    EXPECT_THAT(annotations, UnorderedElementsAreArray({
+                                 MakePair("annotation1", "value1"),
+                                 MakePair("annotation2", Error::kMissingValue),
+                                 MakePair("num_calls", "3"),
+                                 MakePair("annotation3", "call3"),
+                                 MakePair("annotation4", "call3"),
+                                 MakePair("annotation5", "call3"),
+                             }));
+  }
+}
+
+TEST_F(AnnotationManagerTest, GetAll) {
+  async::Executor executor(dispatcher());
+
+  const Annotations static_annotations({
+      {"annotation1", "value1"},
+      {"annotation2", Error::kMissingValue},
+  });
+
+  SimpleStaticAsync three_second_static(dispatcher(), {{"annotation3", "value3"}}, zx::sec(3));
+  SimpleDynamicAsync five_second_dynamic(dispatcher(), {"annotation4"}, zx::sec(5));
+  DynamicNonPlatform non_platform;
+
+  AnnotationManager manager(dispatcher(),
+                            {
+                                "annotation1",
+                                "annotation2",
+                                "num_calls",
+                                "annotation3",
+                                "annotation4",
+                            },
+                            static_annotations, &non_platform, {}, {&three_second_static},
+                            {&five_second_dynamic});
+  {
+    Annotations annotations;
+
+    executor.schedule_task(
+        manager.GetAll(zx::sec(0))
+            .and_then([&annotations](Annotations& result) { annotations = std::move(result); })
+            .or_else([]() { FX_LOGS(FATAL) << "Unreachable error reached"; }));
+
+    RunLoopUntilIdle();
+    EXPECT_THAT(annotations, UnorderedElementsAreArray({
+                                 MakePair("annotation1", "value1"),
+                                 MakePair("annotation2", Error::kMissingValue),
+                                 MakePair("num_calls", "1"),
+                                 MakePair("annotation3", Error::kTimeout),
+                                 MakePair("annotation4", Error::kTimeout),
+                             }));
+  }
+
+  {
+    Annotations annotations;
+
+    executor.schedule_task(
+        manager.GetAll(zx::sec(3))
+            .and_then([&annotations](Annotations& result) { annotations = std::move(result); })
+            .or_else([]() { FX_LOGS(FATAL) << "Unreachable error reached"; }));
+
+    RunLoopFor(zx::sec(3));
+    EXPECT_THAT(annotations, UnorderedElementsAreArray({
+                                 MakePair("annotation1", "value1"),
+                                 MakePair("annotation2", Error::kMissingValue),
+                                 MakePair("num_calls", "2"),
+                                 MakePair("annotation3", "value3"),
+                                 MakePair("annotation4", Error::kTimeout),
+                             }));
+  }
+
+  {
+    Annotations annotations;
+
+    executor.schedule_task(
+        manager.GetAll(zx::sec(5))
+            .and_then([&annotations](Annotations& result) { annotations = std::move(result); })
+            .or_else([]() { FX_LOGS(FATAL) << "Unreachable error reached"; }));
+
+    RunLoopFor(zx::sec(5));
+    EXPECT_THAT(annotations, UnorderedElementsAreArray({
+                                 MakePair("annotation1", "value1"),
+                                 MakePair("annotation2", Error::kMissingValue),
+                                 MakePair("num_calls", "3"),
+                                 MakePair("annotation3", "value3"),
+                                 MakePair("annotation4", "call3"),
+                             }));
+  }
+}
+
 }  // namespace
 }  // namespace forensics::feedback
