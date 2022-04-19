@@ -4,18 +4,17 @@ architecture, highlighting core components and subsystems.]
 
 The following architectural principles guide Fuchsia's design and development:
 
-* [Secure](/docs/concepts/principles/secure.md):
-  All software that runs on Fuchsia receives the least privilege it needs to
-  perform its job, and gains access only to information it needs to know.
-* [Updatable](/docs/concepts/principles/updatable.md):
-  Much like the web, software on Fuchsia is designed to come and go as needed,
-  and security patches can be pushed to all products on demand.
-* [Inclusive](/docs/concepts/principles/inclusive.md):
-  Fuchsia is an open source project designed to be extensible and enable
-  software written against various languages and runtimes to integrate together.
-* [Pragmatic](/docs/concepts/principles/pragmatic.md):
-  Fuchsia is not a science experiment, it's a production-grade operating system
-  that must adhere to fundamentals, like performance.
+* **Simple:**
+  Fuchsia makes it easy to create, maintain, and integrate software and hardware across a wide range of devices.
+
+* **Secure:**
+  Fuchsia has a kernel and software model designed for modern computing.
+
+* **Updatable:**
+  As a modular operating system, Fuchsia allows the kernel, drivers, and software components to be independently updatable.
+
+* **Performant:**
+  Fuchsia is designed for real world product requirements and optimized for performance.
 
 The core of the system is [Zircon][glossary.zircon], a kernel and collection of
 libraries for handling system startup and bootstrapping.
