@@ -4,7 +4,7 @@ If you do not already have an instance running, start FEMU with networking
 support:
 
 ```posix-terminal
-fx vdl start -N --start-package-server
+fx vdl start -N -H --start-package-server
 ```
 
 When startup is complete, the emulator prints the following message and opens

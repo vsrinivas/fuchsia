@@ -9,5 +9,5 @@ ffx emu stop --all
 Start a new FEMU instance with networking support:
 
 ```posix-terminal
-ffx emu start --net tap --name walkthrough-emu workstation.qemu-x64
+ffx emu start --net tap --headless --name walkthrough-emu workstation.qemu-x64
 ```
