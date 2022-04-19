@@ -15,6 +15,7 @@ import (
 )
 
 func TestShutdown(t *testing.T) {
+	t.Skip("Skipping test. Test is disabled.  See fxbug.dev/98149")
 	exDir := execDir(t)
 	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Qemu,
