@@ -4,6 +4,7 @@
 
 use {
     anyhow::{anyhow, Context},
+    async_utils::event,
     diagnostics_data::Severity,
     fidl::Peered,
     fidl_fuchsia_io as fio,
@@ -20,6 +21,7 @@ use {
     std::io::Write,
     std::path::PathBuf,
     std::sync::Arc,
+    std::time::Duration,
 };
 
 mod cancel;
@@ -27,6 +29,9 @@ pub mod diagnostics;
 mod error;
 pub mod output;
 mod stream_util;
+
+/// Timeout for draining logs.
+const LOG_TIMEOUT_DURATION: Duration = Duration::from_secs(10);
 
 pub use error::{RunTestSuiteError, UnexpectedEventError};
 use {
@@ -154,6 +159,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
     let mut successful_completion = false;
     let mut cancelled = false;
     let mut tasks = vec![];
+    let suite_events_done_event = event::Event::new();
 
     let colect_results_fut = async {
         while let Some(event_result) = running_suite.next_event().named("next_event").await {
@@ -331,6 +337,11 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
                                                 .new_artifact(&ArtifactType::Syslog)
                                                 .await?,
                                             log_opts.clone(),
+                                            diagnostics::LogTimeoutOptions {
+                                                timeout_fut: suite_events_done_event
+                                                    .wait_or_dropped(),
+                                                time_between_logs: LOG_TIMEOUT_DURATION,
+                                            },
                                         )
                                         .named("syslog"),
                                     ));
@@ -416,6 +427,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
                 }
             }
         }
+        suite_events_done_event.signal();
 
         // collect all logs
         for t in suite_log_tasks {
