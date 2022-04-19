@@ -514,9 +514,13 @@ zx_status_t BlockDeviceManager::AddDevice(BlockDeviceInterface& device) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  FX_LOGS(INFO) << "Device " << device.topological_path() << " has content format "
+                << fs_management::DiskFormatString(device.content_format());
   for (auto& matcher : matchers_) {
     fs_management::DiskFormat format = matcher->Match(device);
     if (format != fs_management::kDiskFormatUnknown) {
+      FX_LOGS(INFO) << "Device " << device.topological_path() << " matched format "
+                    << fs_management::DiskFormatString(format);
       device.SetFormat(format);
       return matcher->Add(device);
     }
