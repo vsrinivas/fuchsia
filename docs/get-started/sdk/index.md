@@ -894,7 +894,7 @@ Do the following:
    ...
    ```
 
-   Each of these selects represents a different type of data you can inspect.
+   Each of these selectors represents a different type of data you can inspect.
 
 1. Inspect the `bootstrap/archivist` component for the recent events data:
 
