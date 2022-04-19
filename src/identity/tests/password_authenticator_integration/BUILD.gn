@@ -40,6 +40,8 @@ rustc_test("driver") {
   sources = [
     "src/account_manager.rs",
     "src/mock_cr50_agent.rs",
+    "src/pinweaver.rs",
+    "src/scrypt.rs",
   ]
 
   # For fvm_init()
