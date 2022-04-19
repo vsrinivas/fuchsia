@@ -874,26 +874,29 @@ where
                 .iter()
                 .map(|app| (app.id.clone(), app.get_manifest_version()))
                 .collect();
-            let install_plan =
-                match self.installer.try_create_install_plan(&request_params, &response).await {
-                    Ok(plan) => plan,
-                    Err(e) => {
-                        error!("Unable to construct install plan! {}", e);
-                        Self::yield_state(State::InstallingUpdate, co).await;
-                        Self::yield_state(State::InstallationError, co).await;
-                        self.report_omaha_event_and_update_context(
-                            &request_params,
-                            Event::error(EventErrorCode::ConstructInstallPlan),
-                            &apps,
-                            &session_id,
-                            &next_versions,
-                            None,
-                            co,
-                        )
-                        .await;
-                        return Err(UpdateCheckError::InstallPlan(e.into()));
-                    }
-                };
+            let install_plan = match self
+                .installer
+                .try_create_install_plan(&request_params, &response, data)
+                .await
+            {
+                Ok(plan) => plan,
+                Err(e) => {
+                    error!("Unable to construct install plan! {}", e);
+                    Self::yield_state(State::InstallingUpdate, co).await;
+                    Self::yield_state(State::InstallationError, co).await;
+                    self.report_omaha_event_and_update_context(
+                        &request_params,
+                        Event::error(EventErrorCode::ConstructInstallPlan),
+                        &apps,
+                        &session_id,
+                        &next_versions,
+                        None,
+                        co,
+                    )
+                    .await;
+                    return Err(UpdateCheckError::InstallPlan(e.into()));
+                }
+            };
 
             info!("Validating Install Plan with Policy");
             let install_plan_decision = self.policy_engine.update_can_start(&install_plan).await;
@@ -2835,6 +2838,7 @@ mod tests {
             &'a self,
             _request_params: &'a RequestParams,
             _response: &'a Response,
+            _response_bytes: Vec<u8>,
         ) -> LocalBoxFuture<'a, Result<Self::InstallPlan, Self::Error>> {
             future::ready(Ok(StubPlan)).boxed_local()
         }
@@ -3661,6 +3665,7 @@ mod tests {
             &'a self,
             _request_params: &'a RequestParams,
             _response: &'a Response,
+            _response_bytes: Vec<u8>,
         ) -> LocalBoxFuture<'a, Result<Self::InstallPlan, Self::Error>> {
             future::ready(Ok(StubPlan)).boxed_local()
         }

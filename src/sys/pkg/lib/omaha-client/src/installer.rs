@@ -54,6 +54,7 @@ pub trait Installer {
         &'a self,
         request_params: &'a RequestParams,
         response: &'a Response,
+        response_bytes: Vec<u8>,
     ) -> LocalBoxFuture<'a, Result<Self::InstallPlan, Self::Error>>;
 }
 

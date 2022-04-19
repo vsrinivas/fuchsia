@@ -177,8 +177,8 @@ impl ClientConfiguration {
             platform_config.omaha_public_keys = Some(server.public_keys);
         }
         for package in eager_package_configs.packages {
-            let (channel_config, version) =
-                Self::get_eager_package_channel_and_version(&package, &cup).await;
+            let (version, channel_config) =
+                Self::get_eager_package_version_and_channel(&package, &cup).await;
 
             let appid = match channel_config.as_ref().and_then(|c| c.appid.as_ref()) {
                 Some(appid) => &appid,
@@ -204,14 +204,14 @@ impl ClientConfiguration {
         }
     }
 
-    async fn get_eager_package_channel_and_version(
+    async fn get_eager_package_version_and_channel(
         package: &EagerPackageConfig,
         cup: &Option<CupProxy>,
-    ) -> (Option<ChannelConfig>, Version) {
+    ) -> (Version, Option<ChannelConfig>) {
         let default_version = Version::from(MINIMUM_VALID_VERSION);
         if let Some(ref cup) = cup {
             match cup.get_info(&mut PackageUrl { url: package.url.to_string() }).await {
-                Ok(Ok((cup_channel, cup_version))) => {
+                Ok(Ok((cup_version, cup_channel))) => {
                     let channel_config =
                         package.channel_config.get_channel(&cup_channel).or_else(|| {
                             error!(
@@ -227,7 +227,7 @@ impl ClientConfiguration {
                         );
                         default_version
                     });
-                    return (channel_config, version);
+                    return (version, channel_config);
                 }
                 Ok(Err(GetInfoError::NotAvailable)) => {
                     info!("Eager package '{}' not currently available on the device", package.url);
@@ -244,7 +244,7 @@ impl ClientConfiguration {
             }
         }
 
-        (package.channel_config.get_default_channel(), default_version)
+        (default_version, package.channel_config.get_default_channel())
     }
 
     /// Helper to wrap the parsing of a version string, logging any parse errors and making sure
@@ -723,9 +723,9 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
                 match request {
                     Ok(CupRequest::GetInfo { url, responder }) => {
                         let response = match url.url.as_str() {
-                            "fuchsia-pkg://example.com/package" => ("beta".into(), "1.2.3".into()),
+                            "fuchsia-pkg://example.com/package" => ("1.2.3".into(), "beta".into()),
                             "fuchsia-pkg://example.com/package2" => {
-                                ("stable".into(), "4.5.6".into())
+                                ("4.5.6".into(), "stable".into())
                             }
                             url => panic!("unexpected url {}", url),
                         };
@@ -762,13 +762,13 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_get_eager_package_channel_and_version_fallback() {
+    async fn test_get_eager_package_version_and_channel_fallback() {
         let (proxy, mut stream) = create_proxy_and_stream::<CupMarker>().unwrap();
         let stream_fut = async move {
             match stream.next().await.unwrap() {
                 Ok(CupRequest::GetInfo { url, responder }) => {
                     assert_eq!(url.url, "fuchsia-pkg://example.com/package");
-                    responder.send(&mut Ok(("beta".into(), "abc".into()))).unwrap();
+                    responder.send(&mut Ok(("abc".into(), "beta".into()))).unwrap();
                 }
                 request => panic!("Unexpected request: {:?}", request),
             }
@@ -788,8 +788,8 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
             },
         };
         // unknown channel or invalid version fallback to default
-        let ((channel_config, version), ()) = future::join(
-            ClientConfiguration::get_eager_package_channel_and_version(&config, &Some(proxy)),
+        let ((version, channel_config), ()) = future::join(
+            ClientConfiguration::get_eager_package_version_and_channel(&config, &Some(proxy)),
             stream_fut,
         )
         .await;
@@ -807,8 +807,8 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
                 request => panic!("Unexpected request: {:?}", request),
             }
         };
-        let ((channel_config, version), ()) = future::join(
-            ClientConfiguration::get_eager_package_channel_and_version(&config, &Some(proxy)),
+        let ((version, channel_config), ()) = future::join(
+            ClientConfiguration::get_eager_package_version_and_channel(&config, &Some(proxy)),
             stream_fut,
         )
         .await;
@@ -816,8 +816,8 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
         assert_eq!(version, MINIMUM_VALID_VERSION.into());
 
         // no proxy fallback to default
-        let (channel_config, version) =
-            ClientConfiguration::get_eager_package_channel_and_version(&config, &None).await;
+        let (version, channel_config) =
+            ClientConfiguration::get_eager_package_version_and_channel(&config, &None).await;
         assert_eq!(channel_config.unwrap(), stable_channel_config);
         assert_eq!(version, MINIMUM_VALID_VERSION.into());
     }

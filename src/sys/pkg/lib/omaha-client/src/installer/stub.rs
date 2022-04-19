@@ -65,6 +65,7 @@ impl Installer for StubInstaller {
         &'a self,
         _request_params: &'a RequestParams,
         response: &'a Response,
+        _response_bytes: Vec<u8>,
     ) -> LocalBoxFuture<'a, Result<Self::InstallPlan, Self::Error>> {
         if response.protocol_version != "3.0" {
             future::ready(Err(StubInstallErrors::Failed)).boxed_local()

@@ -23,11 +23,12 @@ impl fmt::Display for UpdatePackageUrl {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub struct FuchsiaInstallPlan {
     pub update_package_urls: Vec<UpdatePackageUrl>,
     pub install_source: InstallSource,
     pub urgent_update: bool,
+    pub omaha_response: Vec<u8>,
 }
 
 impl Plan for FuchsiaInstallPlan {
@@ -45,6 +46,7 @@ impl FuchsiaInstallPlan {
             )],
             install_source: InstallSource::OnDemand,
             urgent_update: false,
+            omaha_response: vec![],
         }
     }
 
@@ -65,8 +67,7 @@ mod tests {
         let url = TEST_URL_BASE.to_string() + TEST_PACKAGE_NAME;
         let install_plan = FuchsiaInstallPlan {
             update_package_urls: vec![UpdatePackageUrl::System(url.parse().unwrap())],
-            install_source: InstallSource::ScheduledTask,
-            urgent_update: false,
+            ..FuchsiaInstallPlan::default()
         };
 
         assert_eq!(install_plan.id(), format!("System({url})"));
@@ -81,8 +82,7 @@ mod tests {
                 UpdatePackageUrl::System(PkgUrl::parse(&url1).unwrap()),
                 UpdatePackageUrl::Package(PkgUrl::parse(&url2).unwrap()),
             ],
-            install_source: InstallSource::ScheduledTask,
-            urgent_update: false,
+            ..FuchsiaInstallPlan::default()
         };
 
         assert_eq!(install_plan.id(), format!("System({url1}), Package({url2})"));

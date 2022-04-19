@@ -11,6 +11,7 @@ use crate::{
 use anyhow::{anyhow, Context as _};
 use fidl_connector::{Connect, ServiceReconnector};
 use fidl_fuchsia_hardware_power_statecontrol::RebootReason;
+use fidl_fuchsia_pkg::{CupData, CupMarker, CupProxy, PackageUrl, WriteError};
 use fidl_fuchsia_update_installer::{
     InstallerMarker, InstallerProxy, RebootControllerMarker, RebootControllerProxy,
 };
@@ -118,23 +119,35 @@ pub enum FuchsiaInstallError {
 
     #[error("connect to installer service failed")]
     Connect(#[source] anyhow::Error),
+
+    #[error("eager package cup write failed: {0:?}")]
+    CupWrite(WriteError),
 }
 
 #[derive(Debug)]
-pub struct FuchsiaInstaller<C = ServiceReconnector<InstallerMarker>> {
-    connector: C,
+pub struct FuchsiaInstaller<
+    I = ServiceReconnector<InstallerMarker>,
+    C = ServiceReconnector<CupMarker>,
+> {
+    installer_connector: I,
+    cup_connector: C,
     reboot_controller: Option<RebootControllerProxy>,
     app_set: Rc<AsyncMutex<FuchsiaAppSet>>,
 }
 
-impl FuchsiaInstaller<ServiceReconnector<InstallerMarker>> {
+impl FuchsiaInstaller<ServiceReconnector<InstallerMarker>, ServiceReconnector<CupMarker>> {
     pub fn new(app_set: Rc<AsyncMutex<FuchsiaAppSet>>) -> Self {
-        let connector = ServiceReconnector::<InstallerMarker>::new();
-        Self { connector, reboot_controller: None, app_set }
+        let installer_connector = ServiceReconnector::<InstallerMarker>::new();
+        let cup_connector = ServiceReconnector::<CupMarker>::new();
+        Self { installer_connector, cup_connector, reboot_controller: None, app_set }
     }
 }
 
-impl<C: Connect<Proxy = InstallerProxy> + Send> FuchsiaInstaller<C> {
+impl<I, C> FuchsiaInstaller<I, C>
+where
+    I: Connect<Proxy = InstallerProxy> + Send,
+    C: Connect<Proxy = CupProxy> + Send,
+{
     async fn perform_install_system_update<'a>(
         &'a mut self,
         url: &'a PkgUrl,
@@ -150,7 +163,7 @@ impl<C: Connect<Proxy = InstallerProxy> + Send> FuchsiaInstaller<C> {
             allow_attach_to_existing_attempt: true,
         };
 
-        let proxy = self.connector.connect().map_err(FuchsiaInstallError::Connect)?;
+        let proxy = self.installer_connector.connect().map_err(FuchsiaInstallError::Connect)?;
         let (reboot_controller, reboot_controller_server_end) =
             fidl::endpoints::create_proxy::<RebootControllerMarker>()
                 .map_err(FuchsiaInstallError::FIDL)?;
@@ -204,9 +217,24 @@ impl<C: Connect<Proxy = InstallerProxy> + Send> FuchsiaInstaller<C> {
 
         Err(FuchsiaInstallError::InstallationEndedUnexpectedly)
     }
+
+    async fn perform_install_eager_package<'a>(
+        &'a mut self,
+        url: &'a PkgUrl,
+        response_bytes: &'a [u8],
+    ) -> Result<(), FuchsiaInstallError> {
+        let proxy = self.cup_connector.connect().map_err(FuchsiaInstallError::Connect)?;
+        let mut url = PackageUrl { url: url.to_string() };
+        let cup = CupData { response: Some(response_bytes.to_vec()), ..CupData::EMPTY };
+        proxy.write(&mut url, cup).await?.map_err(FuchsiaInstallError::CupWrite)
+    }
 }
 
-impl<C: Connect<Proxy = InstallerProxy> + Send + Sync> Installer for FuchsiaInstaller<C> {
+impl<I, C> Installer for FuchsiaInstaller<I, C>
+where
+    I: Connect<Proxy = InstallerProxy> + Send,
+    C: Connect<Proxy = CupProxy> + Send,
+{
     type InstallPlan = FuchsiaInstallPlan;
     type Error = FuchsiaInstallError;
     type InstallResult = InstallResult;
@@ -220,17 +248,32 @@ impl<C: Connect<Proxy = InstallerProxy> + Send + Sync> Installer for FuchsiaInst
 
         async move {
             let mut app_results = vec![];
-            for url in &install_plan.update_package_urls {
+            for (i, url) in install_plan.update_package_urls.iter().enumerate() {
                 app_results.push(match url {
                     UpdatePackageUrl::System(url) => self
                         .perform_install_system_update(&url, &install_plan.install_source, observer)
                         .await
                         .into(),
-                    UpdatePackageUrl::Package(_) => {
+                    UpdatePackageUrl::Package(url) => {
                         if is_system_update {
                             AppInstallResult::Deferred
                         } else {
-                            todo!("implement installing packages")
+                            let result = self
+                                .perform_install_eager_package(&url, &install_plan.omaha_response)
+                                .await
+                                .into();
+                            if let Some(observer) = observer {
+                                observer
+                                    .receive_progress(
+                                        Some(&url.to_string()),
+                                        (i + 1) as f32
+                                            / install_plan.update_package_urls.len() as f32,
+                                        None,
+                                        None,
+                                    )
+                                    .await;
+                            }
+                            result
                         }
                     }
                 });
@@ -272,10 +315,11 @@ impl<C: Connect<Proxy = InstallerProxy> + Send + Sync> Installer for FuchsiaInst
         &'a self,
         request_params: &'a RequestParams,
         response: &'a Response,
+        response_bytes: Vec<u8>,
     ) -> LocalBoxFuture<'a, Result<Self::InstallPlan, Self::Error>> {
         async move {
             let system_app_id = self.app_set.lock().await.get_system_app_id().to_owned();
-            try_create_install_plan_impl(request_params, response, system_app_id)
+            try_create_install_plan_impl(request_params, response, response_bytes, system_app_id)
         }
         .boxed_local()
     }
@@ -284,6 +328,7 @@ impl<C: Connect<Proxy = InstallerProxy> + Send + Sync> Installer for FuchsiaInst
 fn try_create_install_plan_impl(
     request_params: &RequestParams,
     response: &Response,
+    response_bytes: Vec<u8>,
     system_app_id: String,
 ) -> Result<FuchsiaInstallPlan, FuchsiaInstallError> {
     let mut update_package_urls = vec![];
@@ -369,6 +414,7 @@ fn try_create_install_plan_impl(
         update_package_urls,
         install_source: request_params.source.clone(),
         urgent_update,
+        omaha_response: response_bytes,
     })
 }
 
@@ -377,6 +423,7 @@ mod tests {
     use {
         super::*,
         assert_matches::assert_matches,
+        fidl_fuchsia_pkg::{CupRequest, CupRequestStream},
         fidl_fuchsia_update_installer::{
             FailPrepareData, InstallationProgress, InstallerRequest, InstallerRequestStream,
             RebootControllerRequest, State, UpdateInfo,
@@ -427,12 +474,12 @@ mod tests {
         }
     }
 
-    struct MockConnector {
-        proxy: Option<InstallerProxy>,
+    struct MockConnector<T> {
+        proxy: Option<T>,
     }
 
-    impl MockConnector {
-        fn new(proxy: InstallerProxy) -> Self {
+    impl<T> MockConnector<T> {
+        fn new(proxy: T) -> Self {
             Self { proxy: Some(proxy) }
         }
         fn failing() -> Self {
@@ -440,25 +487,32 @@ mod tests {
         }
     }
 
-    impl Connect for MockConnector {
-        type Proxy = InstallerProxy;
+    impl<T: fidl::endpoints::Proxy + Clone> Connect for MockConnector<T> {
+        type Proxy = T;
 
         fn connect(&self) -> Result<Self::Proxy, anyhow::Error> {
             self.proxy.clone().ok_or(anyhow::anyhow!("no proxy available"))
         }
     }
 
-    fn new_mock_installer() -> (FuchsiaInstaller<MockConnector>, InstallerRequestStream) {
-        let (proxy, stream) =
+    fn new_mock_installer() -> (
+        FuchsiaInstaller<MockConnector<InstallerProxy>, MockConnector<CupProxy>>,
+        InstallerRequestStream,
+        CupRequestStream,
+    ) {
+        let (installer_proxy, installer_stream) =
             fidl::endpoints::create_proxy_and_stream::<InstallerMarker>().unwrap();
+        let (cup_proxy, cup_stream) =
+            fidl::endpoints::create_proxy_and_stream::<CupMarker>().unwrap();
         let app = omaha_client::common::App::builder("system_id", [1]).build();
         let app_set = Rc::new(AsyncMutex::new(FuchsiaAppSet::new(app)));
         let installer = FuchsiaInstaller {
-            connector: MockConnector::new(proxy),
+            installer_connector: MockConnector::new(installer_proxy),
+            cup_connector: MockConnector::new(cup_proxy),
             reboot_controller: None,
             app_set,
         };
-        (installer, stream)
+        (installer, installer_stream, cup_stream)
     }
 
     fn new_installer() -> FuchsiaInstaller<ServiceReconnector<InstallerMarker>> {
@@ -469,14 +523,14 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_start_update() {
-        let (mut installer, mut stream) = new_mock_installer();
+        let (mut installer, mut stream, _) = new_mock_installer();
         let plan = FuchsiaInstallPlan {
             update_package_urls: vec![
                 UpdatePackageUrl::System(TEST_URL.parse().unwrap()),
                 UpdatePackageUrl::Package(TEST_URL.parse().unwrap()),
             ],
             install_source: InstallSource::OnDemand,
-            urgent_update: false,
+            ..FuchsiaInstallPlan::default()
         };
         let observer = MockProgressObserver::new();
         let progresses = observer.progresses();
@@ -570,12 +624,52 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_eager_package_update() {
+        let (mut installer, _, mut stream) = new_mock_installer();
+        let plan = FuchsiaInstallPlan {
+            update_package_urls: vec![UpdatePackageUrl::Package(TEST_URL.parse().unwrap())],
+            install_source: InstallSource::OnDemand,
+            omaha_response: vec![1, 2, 3],
+            ..FuchsiaInstallPlan::default()
+        };
+        let observer = MockProgressObserver::new();
+        let progresses = observer.progresses();
+        let installer_fut = async move {
+            let (install_result, app_install_results) =
+                installer.perform_install(&plan, Some(&observer)).await;
+            assert_eq!(install_result.urgent_update, false);
+            assert_matches!(app_install_results.as_slice(), &[AppInstallResult::Installed]);
+            assert_matches!(installer.reboot_controller, None);
+        };
+        let stream_fut = async move {
+            match stream.next().await.unwrap() {
+                Ok(CupRequest::Write { url, cup, responder }) => {
+                    assert_eq!(url.url, TEST_URL);
+                    let CupData { response, .. } = cup;
+                    assert_eq!(response, Some(vec![1, 2, 3]));
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                request => panic!("Unexpected request: {:?}", request),
+            }
+        };
+        future::join(installer_fut, stream_fut).await;
+        assert_eq!(
+            *progresses.lock(),
+            vec![Progress {
+                operation: Some(TEST_URL.to_string()),
+                progress: 1.0,
+                total_size: None,
+                size_so_far: None
+            }]
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_install_error() {
-        let (mut installer, mut stream) = new_mock_installer();
+        let (mut installer, mut stream, _) = new_mock_installer();
         let plan = FuchsiaInstallPlan {
             update_package_urls: vec![UpdatePackageUrl::System(TEST_URL.parse().unwrap())],
-            install_source: InstallSource::OnDemand,
-            urgent_update: false,
+            ..FuchsiaInstallPlan::default()
         };
         let installer_fut = async move {
             assert_matches!(
@@ -614,11 +708,10 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_server_close_unexpectedly() {
-        let (mut installer, mut stream) = new_mock_installer();
+        let (mut installer, mut stream, _) = new_mock_installer();
         let plan = FuchsiaInstallPlan {
             update_package_urls: vec![UpdatePackageUrl::System(TEST_URL.parse().unwrap())],
-            install_source: InstallSource::OnDemand,
-            urgent_update: false,
+            ..FuchsiaInstallPlan::default()
         };
         let installer_fut = async move {
             assert_matches!(
@@ -661,12 +754,11 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_connect_to_installer_failed() {
-        let (mut installer, _) = new_mock_installer();
-        installer.connector = MockConnector::failing();
+        let (mut installer, _, _) = new_mock_installer();
+        installer.installer_connector = MockConnector::failing();
         let plan = FuchsiaInstallPlan {
             update_package_urls: vec![UpdatePackageUrl::System(TEST_URL.parse().unwrap())],
-            install_source: InstallSource::OnDemand,
-            urgent_update: false,
+            ..FuchsiaInstallPlan::default()
         };
         assert_matches!(
             installer.perform_install(&plan, None).await.1.as_slice(),
@@ -715,14 +807,17 @@ mod tests {
             ..Response::default()
         };
 
-        let install_plan =
-            new_installer().try_create_install_plan(&request_params, &response).await.unwrap();
+        let install_plan = new_installer()
+            .try_create_install_plan(&request_params, &response, vec![1, 2, 3])
+            .await
+            .unwrap();
         assert_eq!(
             install_plan.update_package_urls,
             vec![UpdatePackageUrl::System(TEST_URL.parse().unwrap())],
         );
         assert_eq!(install_plan.install_source, request_params.source);
         assert_eq!(install_plan.urgent_update, false);
+        assert_eq!(install_plan.omaha_response, vec![1, 2, 3]);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -731,7 +826,7 @@ mod tests {
         let response = Response::default();
 
         assert_matches!(
-            new_installer().try_create_install_plan(&request_params, &response).await,
+            new_installer().try_create_install_plan(&request_params, &response, vec![]).await,
             Err(FuchsiaInstallError::Failure(_))
         );
     }
@@ -759,8 +854,10 @@ mod tests {
             ..Response::default()
         };
 
-        let install_plan =
-            new_installer().try_create_install_plan(&request_params, &response).await.unwrap();
+        let install_plan = new_installer()
+            .try_create_install_plan(&request_params, &response, vec![])
+            .await
+            .unwrap();
         assert_eq!(
             install_plan.update_package_urls,
             vec![UpdatePackageUrl::System(TEST_URL.parse().unwrap())],
@@ -809,8 +906,10 @@ mod tests {
             ..Response::default()
         };
 
-        let install_plan =
-            new_installer().try_create_install_plan(&request_params, &response).await.unwrap();
+        let install_plan = new_installer()
+            .try_create_install_plan(&request_params, &response, vec![])
+            .await
+            .unwrap();
         assert_eq!(
             install_plan.update_package_urls,
             vec![
@@ -848,8 +947,10 @@ mod tests {
         };
         let response = Response { apps: vec![package_app, system_app], ..Response::default() };
 
-        let install_plan =
-            new_installer().try_create_install_plan(&request_params, &response).await.unwrap();
+        let install_plan = new_installer()
+            .try_create_install_plan(&request_params, &response, vec![])
+            .await
+            .unwrap();
         assert_eq!(
             install_plan.update_package_urls,
             vec![
@@ -869,7 +970,7 @@ mod tests {
         };
 
         assert_matches!(
-            new_installer().try_create_install_plan(&request_params, &response).await,
+            new_installer().try_create_install_plan(&request_params, &response, vec![]).await,
             Err(FuchsiaInstallError::Failure(_))
         );
     }
@@ -887,7 +988,7 @@ mod tests {
         };
 
         assert_matches!(
-            new_installer().try_create_install_plan(&request_params, &response).await,
+            new_installer().try_create_install_plan(&request_params, &response, vec![]).await,
             Err(FuchsiaInstallError::Failure(_))
         );
     }
@@ -904,7 +1005,7 @@ mod tests {
         };
 
         assert_matches!(
-            new_installer().try_create_install_plan(&request_params, &response).await,
+            new_installer().try_create_install_plan(&request_params, &response, vec![]).await,
             Err(FuchsiaInstallError::Failure(_))
         );
     }
@@ -918,7 +1019,7 @@ mod tests {
         };
 
         assert_matches!(
-            new_installer().try_create_install_plan(&request_params, &response).await,
+            new_installer().try_create_install_plan(&request_params, &response, vec![]).await,
             Err(FuchsiaInstallError::Failure(_))
         );
     }
@@ -936,7 +1037,7 @@ mod tests {
         };
 
         assert_matches!(
-            new_installer().try_create_install_plan(&request_params, &response).await,
+            new_installer().try_create_install_plan(&request_params, &response, vec![]).await,
             Err(FuchsiaInstallError::Failure(_))
         );
     }
@@ -954,7 +1055,7 @@ mod tests {
         };
 
         assert_matches!(
-            new_installer().try_create_install_plan(&request_params, &response).await,
+            new_installer().try_create_install_plan(&request_params, &response, vec![]).await,
             Err(FuchsiaInstallError::Failure(_))
         );
     }
@@ -977,8 +1078,10 @@ mod tests {
             ..Response::default()
         };
 
-        let install_plan =
-            new_installer().try_create_install_plan(&request_params, &response).await.unwrap();
+        let install_plan = new_installer()
+            .try_create_install_plan(&request_params, &response, vec![])
+            .await
+            .unwrap();
 
         assert_eq!(install_plan.urgent_update, true);
     }
@@ -1001,8 +1104,10 @@ mod tests {
             ..Response::default()
         };
 
-        let install_plan =
-            new_installer().try_create_install_plan(&request_params, &response).await.unwrap();
+        let install_plan = new_installer()
+            .try_create_install_plan(&request_params, &response, vec![])
+            .await
+            .unwrap();
 
         assert_eq!(install_plan.urgent_update, false);
     }

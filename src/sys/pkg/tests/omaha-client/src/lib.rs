@@ -30,6 +30,7 @@ use {
         tree_assertion,
     },
     fuchsia_pkg_testing::{make_epoch_json, make_packages_json},
+    fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon as zx,
     futures::{
         channel::{mpsc, oneshot},
@@ -48,6 +49,7 @@ use {
     parking_lot::Mutex,
     serde_json::json,
     std::{
+        collections::HashMap,
         convert::TryInto,
         fs::{self, create_dir},
         path::PathBuf,
@@ -123,6 +125,7 @@ struct TestEnvBuilder {
     eager_package_config_builder: Option<EagerPackageConfigBuilder>,
     omaha_client_config_bool_overrides: Vec<(String, bool)>,
     omaha_client_config_uint16_overrides: Vec<(String, u16)>,
+    cup_info_map: HashMap<PkgUrl, (String, String)>,
 }
 
 impl TestEnvBuilder {
@@ -139,6 +142,7 @@ impl TestEnvBuilder {
             eager_package_config_builder: None,
             omaha_client_config_bool_overrides: vec![],
             omaha_client_config_uint16_overrides: vec![],
+            cup_info_map: HashMap::new(),
         }
     }
 
@@ -189,6 +193,16 @@ impl TestEnvBuilder {
 
     fn omaha_client_override_config_uint16(mut self, key: String, value: u16) -> Self {
         self.omaha_client_config_uint16_overrides.push((key.into(), value));
+        self
+    }
+
+    fn add_cup_info(
+        mut self,
+        url: impl Into<String>,
+        version: impl Into<String>,
+        channel: impl Into<String>,
+    ) -> Self {
+        self.cup_info_map.insert(url.into().parse().unwrap(), (version.into(), channel.into()));
         self
     }
 
@@ -277,6 +291,12 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
         fs.dir("svc").add_fidl_service({
             let config_optout = Arc::clone(&config_optout);
             move |stream| fasync::Task::spawn(Arc::clone(&config_optout).serve(stream)).detach()
+        });
+
+        let cup = Arc::new(fuchsia_pkg_cup::Mock::new(self.cup_info_map));
+        fs.dir("svc").add_fidl_service({
+            let cup = Arc::clone(&cup);
+            move |stream| fasync::Task::spawn(Arc::clone(&cup).serve(stream)).detach()
         });
 
         let (send, reboot_called) = oneshot::channel();
@@ -406,6 +426,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
                     .capability(Capability::protocol_by_name(
                         "fuchsia.feedback.ComponentDataRegister",
                     ))
+                    .capability(Capability::protocol_by_name("fuchsia.pkg.Cup"))
                     .capability(Capability::protocol_by_name("fuchsia.pkg.PackageResolver"))
                     .capability(Capability::protocol_by_name("fuchsia.pkg.rewrite.Engine"))
                     .capability(Capability::protocol_by_name("fuchsia.pkg.RepositoryManager"))
@@ -712,6 +733,42 @@ pub mod fuchsia_update_config_optout {
     }
 }
 
+pub mod fuchsia_pkg_cup {
+    use super::*;
+    use fidl_fuchsia_pkg::{CupRequest, CupRequestStream};
+
+    #[derive(Debug)]
+    pub struct Mock {
+        info_map: HashMap<PkgUrl, (String, String)>,
+    }
+
+    impl Mock {
+        pub fn new(info_map: HashMap<PkgUrl, (String, String)>) -> Self {
+            Self { info_map }
+        }
+
+        pub async fn serve(self: Arc<Self>, mut stream: CupRequestStream) {
+            while let Some(request) = stream.try_next().await.unwrap() {
+                match request {
+                    CupRequest::Write { url, cup: _, responder } => {
+                        let url: PkgUrl = url.url.parse().unwrap();
+                        assert_eq!(url.host(), "integration.test.fuchsia.com");
+                        assert_eq!(
+                            url.package_hash().unwrap().to_string(),
+                            "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+                        );
+                        responder.send(&mut Ok(())).unwrap();
+                    }
+                    CupRequest::GetInfo { url, responder } => {
+                        let response = self.info_map[&url.url.parse().unwrap()].clone();
+                        responder.send(&mut Ok(response)).unwrap();
+                    }
+                }
+            }
+        }
+    }
+}
+
 async fn expect_states(stream: &mut MonitorRequestStream, expected_states: &[State]) {
     for expected_state in expected_states {
         let MonitorRequest::OnState { state, responder } =
@@ -731,7 +788,11 @@ fn progress(fraction_completed: Option<f32>) -> Option<InstallationProgress> {
     Some(InstallationProgress { fraction_completed, ..InstallationProgress::EMPTY })
 }
 
-async fn omaha_client_update(mut env: TestEnv, platform_metrics: TreeAssertion) {
+async fn omaha_client_update(
+    mut env: TestEnv,
+    platform_metrics: TreeAssertion,
+    should_wait_for_reboot: bool,
+) {
     env.proxies
         .resolver
         .url("fuchsia-pkg://integration.test.fuchsia.com/update?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
@@ -802,12 +863,16 @@ async fn omaha_client_update(mut env: TestEnv, platform_metrics: TreeAssertion) 
         responder.send().unwrap();
     }
     assert_matches!(last_progress, Some(_));
-    assert!(waiting_for_reboot);
+    assert_eq!(waiting_for_reboot, should_wait_for_reboot);
 
     env.assert_platform_metrics(platform_metrics).await;
 
-    // This will hang if reboot was not triggered.
-    env.reboot_called.await.unwrap();
+    if should_wait_for_reboot {
+        // This will hang if reboot was not triggered.
+        env.reboot_called.await.unwrap();
+    } else {
+        assert_matches!(env.reboot_called.try_recv(), Ok(None));
+    }
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -830,6 +895,7 @@ async fn test_omaha_client_update() {
                 }
             }
         ),
+        true,
     )
     .await;
 }
@@ -846,7 +912,7 @@ async fn test_omaha_client_update_multi_app() {
                 "foo".to_string(),
                 ResponseAndMetadata {
                     response: OmahaResponse::NoUpdate,
-                    version: "0.0.0.1".to_string(),
+                    version: "0.0.4.1".to_string(),
                     ..Default::default()
                 },
             ),
@@ -854,7 +920,7 @@ async fn test_omaha_client_update_multi_app() {
                 "bar".to_string(),
                 ResponseAndMetadata {
                     response: OmahaResponse::NoUpdate,
-                    version: "0.0.0.1".to_string(),
+                    version: "0.0.4.2".to_string(),
                     ..Default::default()
                 },
             ),
@@ -912,6 +978,8 @@ async fn test_omaha_client_update_multi_app() {
                 ]
             })
         })
+        .add_cup_info("fuchsia-pkg://example.com/package", "0.0.4.1", "stable")
+        .add_cup_info("fuchsia-pkg://example.com/package2", "0.0.4.2", "stable")
         .build()
         .await;
     omaha_client_update(
@@ -931,6 +999,96 @@ async fn test_omaha_client_update_multi_app() {
                 }
             }
         ),
+        true,
+    )
+    .await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_omaha_client_update_eager_package() {
+    let env = TestEnvBuilder::new()
+        .responses_and_metadata(vec![
+            (
+                "integration-test-appid".to_string(),
+                ResponseAndMetadata { response: OmahaResponse::NoUpdate, ..Default::default() },
+            ),
+            (
+                "foo".to_string(),
+                ResponseAndMetadata {
+                    response: OmahaResponse::Update,
+                    version: "0.0.4.1".to_string(),
+                    ..Default::default()
+                },
+            ),
+            (
+                "bar".to_string(),
+                ResponseAndMetadata {
+                    response: OmahaResponse::NoUpdate,
+                    version: "0.0.4.2".to_string(),
+                    ..Default::default()
+                },
+            ),
+        ])
+        .eager_package_config_builder(|_url: &str| {
+            json!(
+            {
+                "eager_package_configs": [
+                    {
+                        "packages":
+                        [
+                            {
+                                "url": "fuchsia-pkg://example.com/package",
+                                "flavor": "debug",
+                                "channel_config":
+                                    {
+                                        "channels":
+                                            [
+                                                {
+                                                    "name": "stable",
+                                                    "repo": "stable",
+                                                    "appid": "foo"
+                                                },
+                                            ],
+                                        "default_channel": "stable"
+                                    }
+                            },
+                            {
+                                "url": "fuchsia-pkg://example.com/package2",
+                                "channel_config":
+                                    {
+                                        "channels":
+                                            [
+                                                {
+                                                    "name": "stable",
+                                                    "repo": "stable",
+                                                    "appid": "bar"
+                                                }
+                                            ]
+                                    }
+                            }
+                        ]
+                    }
+                ]
+            })
+        })
+        .add_cup_info("fuchsia-pkg://example.com/package", "0.0.4.1", "stable")
+        .add_cup_info("fuchsia-pkg://example.com/package2", "0.0.4.2", "stable")
+        .build()
+        .await;
+    omaha_client_update(
+        env,
+        tree_assertion!(
+            "children": {
+                "0": contains {
+                    "event": "CheckingForUpdates",
+                },
+                "1": contains {
+                    "event": "InstallingUpdate",
+                    "target-version": "",
+                },
+            }
+        ),
+        false,
     )
     .await;
 }
@@ -1248,6 +1406,7 @@ async fn test_omaha_client_installation_deferred() {
                 }
             }
         ),
+        true,
     )
     .await;
 }

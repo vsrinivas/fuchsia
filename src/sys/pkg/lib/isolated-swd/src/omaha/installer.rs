@@ -123,6 +123,7 @@ impl Installer for IsolatedInstaller {
         &'a self,
         request_params: &'a RequestParams,
         response: &'a Response,
+        _response_bytes: Vec<u8>,
     ) -> LocalBoxFuture<'a, Result<Self::InstallPlan, Self::Error>> {
         async move { try_create_install_plan(request_params, response) }.boxed_local()
     }
