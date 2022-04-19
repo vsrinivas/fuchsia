@@ -9,8 +9,21 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 2>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 5>
     test_driverhandle_decoder_encoders = {
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_driverhandle::wire::T",
+            .has_flexible_envelope = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::test_driverhandle::wire::T>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_driverhandle::wire::"
+                              "HandlesInProtocolSendHandlesRequest",
+            .has_flexible_envelope = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest>,
+        },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_driverhandle::wire::ServerEndWrapper",
             .has_flexible_envelope = false,

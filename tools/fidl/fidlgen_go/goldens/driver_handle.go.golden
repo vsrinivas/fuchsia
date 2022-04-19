@@ -3,6 +3,7 @@
 package driverhandle
 
 import (
+	_zx "syscall/zx"
 	_bindings "syscall/zx/fidl"
 )
 
@@ -26,4 +27,86 @@ var _mServerEndWrapper = _bindings.CreateLazyMarshaler(ServerEndWrapper{})
 
 func (msg *ServerEndWrapper) Marshaler() _bindings.Marshaler {
 	return _mServerEndWrapper
+}
+
+type handlesInProtocolWithCtxSendHandlesRequest struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	T T        `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+}
+
+var _mhandlesInProtocolWithCtxSendHandlesRequest = _bindings.CreateLazyMarshaler(handlesInProtocolWithCtxSendHandlesRequest{})
+
+func (msg *handlesInProtocolWithCtxSendHandlesRequest) Marshaler() _bindings.Marshaler {
+	return _mhandlesInProtocolWithCtxSendHandlesRequest
+}
+
+type T struct {
+	_                   struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"true"`
+	I_unknownData       interface{}
+	ZirconHandle        _zx.Event `fidl_handle_subtype:"5" fidl_handle_rights:"2147483648" fidl_bounds:"0" fidl_ordinal:"1"`
+	ZirconHandlePresent bool
+	FdfHandle           DriverProtocolWithCtxInterface `fidl_handle_subtype:"4" fidl_ordinal:"2"`
+	FdfHandlePresent    bool
+}
+
+var _mT = _bindings.CreateLazyMarshaler(T{})
+
+func (msg *T) Marshaler() _bindings.Marshaler {
+	return _mT
+}
+
+func (u *T) SetZirconHandle(zirconHandle _zx.Event) {
+	u.ZirconHandle = zirconHandle
+	u.ZirconHandlePresent = true
+}
+
+func (u *T) GetZirconHandle() _zx.Event {
+	return u.ZirconHandle
+}
+
+func (u *T) GetZirconHandleWithDefault(_default _zx.Event) _zx.Event {
+	if !u.HasZirconHandle() {
+		return _default
+	}
+	return u.ZirconHandle
+}
+
+func (u *T) HasZirconHandle() bool {
+	return u.ZirconHandlePresent
+}
+
+func (u *T) ClearZirconHandle() {
+	u.ZirconHandlePresent = false
+}
+
+func (u *T) SetFdfHandle(fdfHandle DriverProtocolWithCtxInterface) {
+	u.FdfHandle = fdfHandle
+	u.FdfHandlePresent = true
+}
+
+func (u *T) GetFdfHandle() DriverProtocolWithCtxInterface {
+	return u.FdfHandle
+}
+
+func (u *T) GetFdfHandleWithDefault(_default DriverProtocolWithCtxInterface) DriverProtocolWithCtxInterface {
+	if !u.HasFdfHandle() {
+		return _default
+	}
+	return u.FdfHandle
+}
+
+func (u *T) HasFdfHandle() bool {
+	return u.FdfHandlePresent
+}
+
+func (u *T) ClearFdfHandle() {
+	u.FdfHandlePresent = false
+}
+
+func (u *T) HasUnknownData() bool {
+	return u.I_unknownData != nil
+}
+
+func (u *T) GetUnknownData() map[uint64]_bindings.UnknownData {
+	return u.I_unknownData.(map[uint64]_bindings.UnknownData)
 }

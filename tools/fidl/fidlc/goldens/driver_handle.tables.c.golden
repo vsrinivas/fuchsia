@@ -3,14 +3,37 @@
 #include <lib/fidl/internal.h>
 
 
+__LOCAL extern const struct FidlCodedBits zx_rightsTable;
+__LOCAL extern const struct FidlCodedEnum zx_obj_typeTable;
+__LOCAL extern const struct FidlCodedTable test_driverhandle_TTable;
+__LOCAL extern const struct FidlCodedStruct test_driverhandle_HandlesInProtocolSendHandlesRequestTable;
+__LOCAL extern const struct FidlCodedStruct test_driverhandle_HandlesInProtocolSendHandlesRequestMessageTable;
 __LOCAL extern const struct FidlCodedStruct test_driverhandle_ServerEndWrapperTable;
 __LOCAL extern const struct FidlCodedStruct test_driverhandle_ClientEndWrapperTable;
 
 
-static const struct FidlCodedHandle Request32test_driverhandle_DriverProtocolnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=ZX_DEFAULT_CHANNEL_RIGHTS, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedHandle Handleevent2147483648nonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_EVENT, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
 static const struct FidlCodedHandle Protocol32test_driverhandle_DriverProtocolnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=ZX_DEFAULT_CHANNEL_RIGHTS, .nullable=kFidlNullability_Nonnullable};
 
+static const struct FidlCodedHandle Request32test_driverhandle_DriverProtocolnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=ZX_DEFAULT_CHANNEL_RIGHTS, .nullable=kFidlNullability_Nonnullable};
+
+
+static const struct FidlTableField Fields19test_driverhandle_T[] = {
+    /*FidlTableField*/{.type=(fidl_type_t*)(&Handleevent2147483648nonnullableTable), .ordinal=1u},
+    /*FidlTableField*/{.type=(fidl_type_t*)(&Protocol32test_driverhandle_DriverProtocolnonnullableTable), .ordinal=2u}
+};
+const struct FidlCodedTable test_driverhandle_TTable = {.tag=kFidlTypeTable, .fields=Fields19test_driverhandle_T, .field_count=2u, .is_resource=kFidlIsResource_Resource, .name="test.driverhandle/T"};
+
+static const struct FidlStructElement Fields53test_driverhandle_HandlesInProtocolSendHandlesRequest[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_driverhandle_TTable)}}
+};
+const struct FidlCodedStruct test_driverhandle_HandlesInProtocolSendHandlesRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields53test_driverhandle_HandlesInProtocolSendHandlesRequest, .element_count=1u, .size_v1=16u, .size_v2=16u, .name="test.driverhandle/HandlesInProtocolSendHandlesRequest"};
+
+static const struct FidlStructElement Fields60test_driverhandle_HandlesInProtocolSendHandlesRequestMessage[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_driverhandle_TTable)}}
+};
+const struct FidlCodedStruct test_driverhandle_HandlesInProtocolSendHandlesRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields60test_driverhandle_HandlesInProtocolSendHandlesRequestMessage, .element_count=1u, .size_v1=16u, .size_v2=16u, .name="test.driverhandle/HandlesInProtocolSendHandlesRequestMessage"};
 
 static const struct FidlStructElement Fields34test_driverhandle_ServerEndWrapper[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Request32test_driverhandle_DriverProtocolnonnullableTable)}}

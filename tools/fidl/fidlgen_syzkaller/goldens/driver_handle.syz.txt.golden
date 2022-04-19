@@ -31,3 +31,19 @@ resource zx_chan_test_driverhandle_DriverProtocol_server[zx_chan]
 zx_channel_create$test_driverhandle_DriverProtocol(options const[0], out0 ptr[out, zx_chan_test_driverhandle_DriverProtocol_client], out1 ptr[out, zx_chan_test_driverhandle_DriverProtocol_server])
 fdio_service_connect$test_driverhandle_DriverProtocol(path ptr[in, string["/svc/"]], handle zx_chan_test_driverhandle_DriverProtocol_server)
 
+
+test_driverhandle_HandlesInProtocolSendHandlesRequest {
+       hdr fidl_message_header[8904504160365833729]
+        
+} [packed]
+test_driverhandle_HandlesInProtocolSendHandlesRequestHandles {
+       void void
+} [packed]
+
+resource zx_chan_test_driverhandle_HandlesInProtocol_client[zx_chan]
+resource zx_chan_test_driverhandle_HandlesInProtocol_server[zx_chan]
+
+zx_channel_create$test_driverhandle_HandlesInProtocol(options const[0], out0 ptr[out, zx_chan_test_driverhandle_HandlesInProtocol_client], out1 ptr[out, zx_chan_test_driverhandle_HandlesInProtocol_server])
+fdio_service_connect$test_driverhandle_HandlesInProtocol(path ptr[in, string["/svc/"]], handle zx_chan_test_driverhandle_HandlesInProtocol_server)
+zx_channel_write$test_driverhandle_HandlesInProtocolSendHandles(handle zx_chan_test_driverhandle_HandlesInProtocol_client, options const[0], bytes ptr[in, test_driverhandle_HandlesInProtocolSendHandlesRequest], num_bytes bytesize[bytes], handles ptr[in, test_driverhandle_HandlesInProtocolSendHandlesRequestHandles], num_handles bytesize[handles])
+

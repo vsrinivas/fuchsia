@@ -3,6 +3,13 @@
 #include <fidl/test.driverhandle/cpp/wire_types.h>
 
 #ifdef __Fuchsia__
+void ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest::
+    _CloseHandles() {
+  t._CloseHandles();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 void ::test_driverhandle::wire::ServerEndWrapper::_CloseHandles() {
   value.reset();
 }
@@ -12,4 +19,32 @@ void ::test_driverhandle::wire::ServerEndWrapper::_CloseHandles() {
 void ::test_driverhandle::wire::ClientEndWrapper::_CloseHandles() {
   value.reset();
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+bool ::fidl::WireTableFrame<::test_driverhandle::wire::T>::HasUnknownData()
+    const {
+  return false;
+}
+
+bool ::test_driverhandle::wire::T::HasUnknownData() const {
+  if (max_ordinal_ > 2) {
+    return true;
+  }
+  if (frame_ptr_ == nullptr) {
+    return false;
+  }
+  return frame_ptr_->HasUnknownData();
+}
+
+void ::test_driverhandle::wire::T::_CloseHandles() {
+  if (has_zircon_handle()) {
+    zircon_handle().reset();
+  }
+  if (has_fdf_handle()) {
+    fdf_handle().reset();
+  }
+}
+
 #endif  // __Fuchsia__

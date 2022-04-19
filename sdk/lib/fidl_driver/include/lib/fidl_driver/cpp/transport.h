@@ -27,6 +27,14 @@ class Result;
 }  // namespace fdf
 
 namespace fidl {
+
+template <>
+struct ContainsHandle<::fdf::Channel> : std::true_type {};
+template <typename T>
+struct ContainsHandle<::fdf::ClientEnd<T>> : std::true_type {};
+template <typename T>
+struct ContainsHandle<::fdf::ServerEnd<T>> : std::true_type {};
+
 namespace internal {
 
 struct DriverHandleMetadata {};

@@ -17,6 +17,7 @@
 #ifdef __Fuchsia__
 #include <lib/fidl_driver/cpp/wire_types.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/event.h>
 
 #endif  // __Fuchsia__
 
@@ -25,9 +26,13 @@
 
 namespace test_driverhandle {
 namespace wire {
+struct HandlesInProtocolSendHandlesRequest;
+
 struct ServerEndWrapper;
 
 struct ClientEndWrapper;
+
+class T;
 
 #ifdef __Fuchsia__
 
@@ -51,9 +56,317 @@ struct ClientEndWrapper {
 };
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+}  // namespace wire
+}  // namespace test_driverhandle
+template <>
+class ::fidl::WireTableBuilder<::test_driverhandle::wire::T>;
+template <>
+class ::fidl::WireTableExternalBuilder<::test_driverhandle::wire::T>;
+
+template <>
+struct ::fidl::WireTableFrame<::test_driverhandle::wire::T> final {
+ public:
+  WireTableFrame() = default;
+  // In its intended usage, WireTableFrame will be referenced by an ObjectView.
+  // If the ObjectView is assigned before a move or copy, then it will reference
+  // the old invalid object. Because this is unsafe, copies are disallowed and
+  // moves are only allowed by friend classes that operate safely.
+  WireTableFrame(const WireTableFrame&) = delete;
+  WireTableFrame& operator=(const WireTableFrame&) = delete;
+
+ private:
+  WireTableFrame(WireTableFrame&&) noexcept = default;
+  WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
+
+  bool HasUnknownData() const;
+  ::fidl::Envelope<::zx::event> zircon_handle_;
+  ::fidl::Envelope<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>
+      fdf_handle_;
+
+  friend class ::test_driverhandle::wire::T;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_driverhandle::wire::T,
+      ::fidl::WireTableBuilder<::test_driverhandle::wire::T>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_driverhandle::wire::T,
+      ::fidl::WireTableExternalBuilder<::test_driverhandle::wire::T>>;
+};
+
+namespace test_driverhandle {
+namespace wire {
+extern "C" const fidl_type_t test_driverhandle_TTable;
+
+class T {
+ public:
+  T() = default;
+  T(const T& other) noexcept = default;
+  T& operator=(const T& other) noexcept = default;
+  T(T&& other) noexcept = default;
+  T& operator=(T&& other) noexcept = default;
+
+  ~T() = default;
+
+  // Returns whether no field is set.
+  bool IsEmpty() const { return max_ordinal_ == 0; }
+
+  // Returns whether the table references unknown fields.
+  bool HasUnknownData() const;
+  void _CloseHandles();
+
+  // Return a builder that by defaults allocates of an arena.
+  static ::fidl::WireTableBuilder<::test_driverhandle::wire::T> Builder(
+      ::fidl::AnyArena& arena);
+
+  // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
+  static ::fidl::WireTableExternalBuilder<::test_driverhandle::wire::T>
+  ExternalBuilder(
+      ::fidl::ObjectView<::fidl::WireTableFrame<::test_driverhandle::wire::T>>
+          frame);
+
+  const ::zx::event& zircon_handle() const {
+    ZX_ASSERT(has_zircon_handle());
+    return frame_ptr_->zircon_handle_.get_data();
+  }
+  ::zx::event& zircon_handle() {
+    ZX_ASSERT(has_zircon_handle());
+    return frame_ptr_->zircon_handle_.get_data();
+  }
+  bool has_zircon_handle() const {
+    return max_ordinal_ >= 1 && frame_ptr_->zircon_handle_.has_data();
+  }
+
+  const ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>& fdf_handle()
+      const {
+    ZX_ASSERT(has_fdf_handle());
+    return frame_ptr_->fdf_handle_.get_data();
+  }
+  ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>& fdf_handle() {
+    ZX_ASSERT(has_fdf_handle());
+    return frame_ptr_->fdf_handle_.get_data();
+  }
+  bool has_fdf_handle() const {
+    return max_ordinal_ >= 2 && frame_ptr_->fdf_handle_.has_data();
+  }
+#if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
+ public:
+#else   // !defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES)
+ private:
+#endif  // FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES
+
+  T& set_zircon_handle(::zx::event elem) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->zircon_handle_.set_data(std::move(elem));
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
+    return *this;
+  }
+
+  T& clear_zircon_handle() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->zircon_handle_.clear_data();
+    return *this;
+  }
+  T& set_fdf_handle(
+      ::fdf::ClientEnd<::test_driverhandle::DriverProtocol> elem) {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->fdf_handle_.set_data(std::move(elem));
+    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
+    return *this;
+  }
+
+  T& clear_fdf_handle() {
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
+    frame_ptr_->fdf_handle_.clear_data();
+    return *this;
+  }
+
+  explicit T(::fidl::AnyArena& allocator)
+      : frame_ptr_(::fidl::ObjectView<
+                   ::fidl::WireTableFrame<::test_driverhandle::wire::T>>(
+            allocator)) {}
+  // This constructor allows a user controlled allocation (not using a Arena).
+  // It should only be used when performance is key.
+  // As soon as the frame is given to the table, it must not be used directly or
+  // for another table.
+  explicit T(
+      ::fidl::ObjectView<::fidl::WireTableFrame<::test_driverhandle::wire::T>>&&
+          frame)
+      : frame_ptr_(std::move(frame)) {}
+
+  void Allocate(::fidl::AnyArena& allocator) {
+    max_ordinal_ = 0;
+    frame_ptr_ = ::fidl::ObjectView<
+        ::fidl::WireTableFrame<::test_driverhandle::wire::T>>(allocator);
+  }
+  void Init(
+      ::fidl::ObjectView<::fidl::WireTableFrame<::test_driverhandle::wire::T>>&&
+          frame_ptr) {
+    max_ordinal_ = 0;
+    frame_ptr_ = std::move(frame_ptr);
+  }
+
+ private:
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_driverhandle::wire::T,
+      ::fidl::WireTableBuilder<::test_driverhandle::wire::T>>;
+  friend ::fidl::internal::WireTableBaseBuilder<
+      ::test_driverhandle::wire::T,
+      ::fidl::WireTableExternalBuilder<::test_driverhandle::wire::T>>;
+
+  uint64_t max_ordinal_ = 0;
+  ::fidl::ObjectView<::fidl::WireTableFrame<::test_driverhandle::wire::T>>
+      frame_ptr_;
+};
+}  // namespace wire
+}  // namespace test_driverhandle
+template <typename BuilderImpl>
+class ::fidl::internal::WireTableBaseBuilder<::test_driverhandle::wire::T,
+                                             BuilderImpl> {
+ public:
+  // Build and return the table. The builder should not be used after this.
+  ::test_driverhandle::wire::T Build() {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    ::test_driverhandle::wire::T t = std::move(table_);
+    // Poison this builder to prevent accidental reuse.
+    table_.frame_ptr_ = nullptr;
+    return t;
+  }
+
+  BuilderImpl& zircon_handle(::zx::event elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->zircon_handle_.set_data(std::move(elem));
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+  BuilderImpl& fdf_handle(
+      ::fdf::ClientEnd<::test_driverhandle::DriverProtocol> elem) {
+    ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
+    table_.frame_ptr_->fdf_handle_.set_data(std::move(elem));
+    table_.max_ordinal_ =
+        std::max(table_.max_ordinal_, static_cast<uint64_t>(2));
+    return *static_cast<BuilderImpl*>(this);
+  }
+
+ protected:
+  WireTableBaseBuilder(
+      ::fidl::ObjectView<::fidl::WireTableFrame<::test_driverhandle::wire::T>>&&
+          frame)
+      : table_(std::move(frame)) {}
+
+ private:
+  ::test_driverhandle::wire::T table_;
+};
+
+template <>
+class ::fidl::WireTableBuilder<::test_driverhandle::wire::T> final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_driverhandle::wire::T,
+          ::fidl::WireTableBuilder<::test_driverhandle::wire::T>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_driverhandle::wire::T,
+      ::fidl::WireTableBuilder<::test_driverhandle::wire::T>>;
+
+ public:
+ private:
+  friend class ::test_driverhandle::wire::T;
+  WireTableBuilder(::fidl::AnyArena& arena)
+      : Base(::fidl::ObjectView<
+             ::fidl::WireTableFrame<::test_driverhandle::wire::T>>(arena)),
+        arena_(arena) {}
+
+  [[maybe_unused]] std::reference_wrapper<::fidl::AnyArena> arena_;
+};
+
+template <>
+class ::fidl::WireTableExternalBuilder<::test_driverhandle::wire::T> final
+    : public ::fidl::internal::WireTableBaseBuilder<
+          ::test_driverhandle::wire::T,
+          ::fidl::WireTableExternalBuilder<::test_driverhandle::wire::T>> {
+  using Base = ::fidl::internal::WireTableBaseBuilder<
+      ::test_driverhandle::wire::T,
+      ::fidl::WireTableExternalBuilder<::test_driverhandle::wire::T>>;
+
+ private:
+  friend class ::test_driverhandle::wire::T;
+  using Base::Base;
+  WireTableExternalBuilder(
+      ::fidl::WireTableFrame<::test_driverhandle::wire::T>* frame)
+      : Base(::fidl::ObjectView<::fidl::WireTableFrame<
+                 ::test_driverhandle::wire::T>>::FromExternal(frame)) {}
+};
+namespace test_driverhandle {
+namespace wire {
+inline ::fidl::WireTableBuilder<::test_driverhandle::wire::T> T::Builder(
+    ::fidl::AnyArena& arena) {
+  return ::fidl::WireTableBuilder<::test_driverhandle::wire::T>(arena);
+}
+inline ::fidl::WireTableExternalBuilder<::test_driverhandle::wire::T>
+T::ExternalBuilder(
+    ::fidl::ObjectView<::fidl::WireTableFrame<::test_driverhandle::wire::T>>
+        frame) {
+  return ::fidl::WireTableExternalBuilder<::test_driverhandle::wire::T>(
+      std::move(frame));
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_driverhandle_HandlesInProtocolSendHandlesRequestTable;
+
+struct HandlesInProtocolSendHandlesRequest {
+  using T = test_driverhandle::wire::T;
+
+  ::test_driverhandle::wire::T t = {};
+
+  void _CloseHandles();
+};
+#endif  // __Fuchsia__
+
 }  // namespace wire
 }  // namespace test_driverhandle
 namespace fidl {
+
+#ifdef __Fuchsia__
+template <>
+struct IsResource<
+    ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest>
+    : public std::true_type {};
+
+template <>
+struct TypeTraits<
+    ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest> {
+  static constexpr const fidl_type_t* kType =
+      &::test_driverhandle::wire::
+          test_driverhandle_HandlesInProtocolSendHandlesRequestTable;
+  static constexpr uint32_t kMaxNumHandles = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 16;
+  static constexpr uint32_t kMaxOutOfLineV1 = 48;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<
+    ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest>);
+static_assert(
+    offsetof(::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest,
+             t) == 0);
+static_assert(
+    sizeof(::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest) ==
+    TypeTraits<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest>::
+        kPrimarySize);
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 template <>
@@ -117,6 +430,29 @@ static_assert(offsetof(::test_driverhandle::wire::ClientEndWrapper, value) ==
 static_assert(
     sizeof(::test_driverhandle::wire::ClientEndWrapper) ==
     TypeTraits<::test_driverhandle::wire::ClientEndWrapper>::kPrimarySize);
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+struct IsResource<::test_driverhandle::wire::T> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_driverhandle::wire::T> {
+  static constexpr const fidl_type_t* kType =
+      &::test_driverhandle::wire::test_driverhandle_TTable;
+  static constexpr uint32_t kMaxNumHandles = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kPrimarySizeV1 = 16;
+  [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 16;
+  static constexpr uint32_t kMaxOutOfLineV1 = 48;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsFidlType<::test_driverhandle::wire::T> : public std::true_type {};
+template <>
+struct IsTable<::test_driverhandle::wire::T> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_driverhandle::wire::T>);
 #endif  // __Fuchsia__
 
 }  // namespace fidl

@@ -4,6 +4,8 @@
 
 library test.driverhandle;
 
+using zx;
+
 @transport("Driver")
 protocol DriverProtocol {};
 
@@ -15,4 +17,15 @@ type ClientEndWrapper = resource struct {
 @bindings_denylist("rust, cpp, hlcpp, dart")
 type ServerEndWrapper = resource struct {
     value server_end:DriverProtocol;
+};
+
+@transport("Driver")
+@bindings_denylist("rust, cpp, hlcpp, dart")
+protocol HandlesInProtocol {
+    SendHandles(resource struct {
+        t resource table {
+            1: zircon_handle zx.handle:EVENT;
+            2: fdf_handle client_end:DriverProtocol;
+        };
+    });
 };

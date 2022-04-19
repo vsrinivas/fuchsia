@@ -14,13 +14,141 @@
 
 #include <lib/fidl_driver/cpp/natural_types.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/event.h>
 
 #endif  // __Fuchsia__
 
 namespace test_driverhandle {
+class HandlesInProtocolSendHandlesRequest;
+
 class ServerEndWrapper;
 
 class ClientEndWrapper;
+
+class T;
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t test_driverhandle_TTable;
+
+class T {
+ private:
+  struct Storage_;
+
+ public:
+  T(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  T() noexcept = default;
+  T(T&&) noexcept = default;
+  T& operator=(T&&) noexcept = default;
+
+  bool IsEmpty() const {
+    return !(storage_.zircon_handle.has_value() ||
+             storage_.fdf_handle.has_value());
+  }
+
+  const cpp17::optional<::zx::event>& zircon_handle() const {
+    return storage_.zircon_handle;
+  }
+  ::cpp17::optional<::zx::event>& zircon_handle() {
+    return storage_.zircon_handle;
+  }
+
+  const cpp17::optional<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>&
+  fdf_handle() const {
+    return storage_.fdf_handle;
+  }
+  ::cpp17::optional<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>&
+  fdf_handle() {
+    return storage_.fdf_handle;
+  }
+
+  T(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : T(Storage_{}) {}
+
+ private:
+  struct Storage_ final {
+    ::cpp17::optional<::zx::event> zircon_handle{};
+    ::cpp17::optional<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>
+        fdf_handle{};
+  };
+
+  // TODO(https://fxbug.dev/91252): Box the storage.
+  Storage_ storage_;
+  friend struct ::fidl::internal::NaturalTableCodingTraits<
+      ::test_driverhandle::T>;
+  friend struct ::fidl::internal::MemberVisitor<::test_driverhandle::T>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalTableMember<
+          Storage_, ::zx::event,
+          fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_EVENT,
+                                                        0x80000000, false>>{
+          1, &Storage_::zircon_handle},
+      ::fidl::internal::NaturalTableMember<
+          Storage_, ::fdf::ClientEnd<::test_driverhandle::DriverProtocol>,
+          fidl::internal::NaturalCodingConstraintHandle<
+              ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
+          2, &Storage_::fdf_handle});
+};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t
+    test_driverhandle_HandlesInProtocolSendHandlesRequestTable;
+
+class HandlesInProtocolSendHandlesRequest {
+ private:
+  struct Storage_;
+
+ public:
+  HandlesInProtocolSendHandlesRequest(Storage_ storage) noexcept
+      : storage_(std::move(storage)) {}
+  HandlesInProtocolSendHandlesRequest(::test_driverhandle::T t) noexcept
+      : storage_({.t = std::move(t)}) {}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
+  // Default constructs a |HandlesInProtocolSendHandlesRequest| only if all of
+  // its members are default constructible.
+  HandlesInProtocolSendHandlesRequest() = default;
+#pragma clang diagnostic pop
+
+  HandlesInProtocolSendHandlesRequest(
+      HandlesInProtocolSendHandlesRequest&&) noexcept = default;
+  HandlesInProtocolSendHandlesRequest& operator=(
+      HandlesInProtocolSendHandlesRequest&&) noexcept = default;
+
+  const ::test_driverhandle::T& t() const { return storage_.t; }
+
+  ::test_driverhandle::T& t() { return storage_.t; }
+
+  HandlesInProtocolSendHandlesRequest(
+      ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : HandlesInProtocolSendHandlesRequest(Storage_{
+            .t = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+        }) {}
+
+ private:
+  struct Storage_ final {
+    ::test_driverhandle::T t;
+  };
+
+  Storage_ storage_;
+
+  friend struct ::fidl::internal::NaturalStructCodingTraits<
+      ::test_driverhandle::HandlesInProtocolSendHandlesRequest, 16, 16>;
+  friend struct ::fidl::internal::MemberVisitor<
+      ::test_driverhandle::HandlesInProtocolSendHandlesRequest>;
+  static constexpr auto kMembers = std::make_tuple(
+      ::fidl::internal::NaturalStructMember<
+          Storage_, ::test_driverhandle::T,
+          fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::t, 0, 0});
+  static constexpr auto kPaddingV1 = std::make_tuple();
+  static constexpr auto kPaddingV2 = std::make_tuple();
+};
+
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
@@ -147,6 +275,37 @@ namespace fidl {
 
 #ifdef __Fuchsia__
 
+extern "C" const fidl_type_t
+    test_driverhandle_HandlesInProtocolSendHandlesRequestTable;
+
+template <>
+struct IsResource<::test_driverhandle::HandlesInProtocolSendHandlesRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::test_driverhandle::HandlesInProtocolSendHandlesRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::test_driverhandle::HandlesInProtocolSendHandlesRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_driverhandle_HandlesInProtocolSendHandlesRequestTable;
+};
+
+template <>
+struct internal::NaturalCodingTraits<
+    ::test_driverhandle::HandlesInProtocolSendHandlesRequest,
+    ::fidl::internal::NaturalCodingConstraintEmpty>
+    final
+    : public ::fidl::internal::NaturalStructCodingTraits<
+          ::test_driverhandle::HandlesInProtocolSendHandlesRequest, 16, 16> {};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 extern "C" const fidl_type_t test_driverhandle_ServerEndWrapperTable;
 
 template <>
@@ -198,6 +357,29 @@ struct internal::NaturalCodingTraits<
     ::fidl::internal::NaturalCodingConstraintEmpty>
     final : public ::fidl::internal::NaturalStructCodingTraits<
                 ::test_driverhandle::ClientEndWrapper, 4, 4> {};
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t test_driverhandle_TTable;
+
+template <>
+struct IsResource<::test_driverhandle::T> : public std::true_type {};
+template <>
+struct IsFidlType<::test_driverhandle::T> : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::test_driverhandle::T> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable = &test_driverhandle_TTable;
+};
+
+template <>
+struct internal::NaturalCodingTraits<
+    ::test_driverhandle::T, ::fidl::internal::NaturalCodingConstraintEmpty>
+    : public ::fidl::internal::NaturalTableCodingTraits<
+          ::test_driverhandle::T> {};
 
 #endif  // __Fuchsia__
 

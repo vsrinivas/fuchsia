@@ -6,6 +6,21 @@
 
 namespace test_driverhandle {
 
+class HandlesInProtocol final {
+  HandlesInProtocol() = delete;
+
+ public:
+  using Transport = ::fidl::internal::DriverTransport;
+  class SendHandles final {
+    SendHandles() = delete;
+
+   public:
+    using Protocol = ::test_driverhandle::HandlesInProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
+  };
+};
+
 class DriverProtocol final {
   DriverProtocol() = delete;
 
