@@ -1,0 +1,29 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.tracing.perfetto;
+
+using zx;
+
+/// Interface for creating connections between Perfetto "Producers" and
+/// a shared Perfetto service.
+/// To learn more about Perfetto, see: https://www.perfetto.dev/docs/
+/// and https://perfetto.dev/docs/concepts/service-model .
+@discoverable
+protocol ProducerConnector {
+    /// Connects a Perfetto Producer to the Perfetto backend. Both sides
+    /// will communicate over `producer_socket` using Perfetto's internal
+    /// wire format.
+    /// Passing a valid `trace_buffer` handle will result in trace data being
+    /// sent over shared memory, which is more efficient than sending data over
+    /// the socket.
+    /// The lifetime of `producer_socket` may outlive the connection lifetime
+    /// of ProducerConnector.
+    /// Multiple Producers may be connected simultaneously.
+    // TODO(fxb/85561): Define error conditions and status codes.
+    ConnnectProducer(resource struct {
+        producer_socket zx.handle:SOCKET;
+        trace_buffer zx.handle:VMO;
+    }) -> (struct {}) error zx.status;
+};

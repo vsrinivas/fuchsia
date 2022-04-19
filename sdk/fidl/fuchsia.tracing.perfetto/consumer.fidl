@@ -1,0 +1,25 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.tracing.perfetto;
+
+using zx;
+
+/// Interface for creating connections between Perfetto "Consumers" and
+/// a shared Perfetto service.
+/// To learn more about Perfetto, see: https://www.perfetto.dev/docs/
+/// and https://perfetto.dev/docs/concepts/service-model .
+@discoverable
+protocol ConsumerConnector {
+    /// Connects a Perfetto Consumer to the Perfetto backend. Both sides
+    /// will communicate over `producer_socket` using Perfetto's internal wire
+    /// format.
+    /// The lifetime of `consumer_socket` may outlive the connection lifetime
+    /// of ConsumerConnector.
+    /// Multiple producers may be connected simultaneously.
+    // TODO(fxb/85561): Define error conditions and status codes.
+    ConnectConsumer(resource struct {
+        consumer_socket zx.handle:SOCKET;
+    }) -> (struct {}) error zx.status;
+};
