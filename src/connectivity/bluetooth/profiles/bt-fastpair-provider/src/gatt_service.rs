@@ -11,9 +11,10 @@ use fidl::endpoints::{create_request_stream, ControlHandle, RequestStream};
 use fidl_fuchsia_bluetooth_gatt2::{
     self as gatt, AttributePermissions, Characteristic, CharacteristicPropertyBits, Handle,
     LocalServiceMarker, LocalServiceReadValueResponder, LocalServiceRequest,
-    LocalServiceRequestStream, SecurityRequirements, Server_Marker, Server_Proxy, ServiceInfo,
+    LocalServiceRequestStream, LocalServiceWriteValueResponder, SecurityRequirements,
+    Server_Marker, Server_Proxy, ServiceInfo, WriteValueParameters,
 };
-use fuchsia_bluetooth::types::Uuid;
+use fuchsia_bluetooth::types::{PeerId, Uuid};
 use fuchsia_component::client::connect_to_protocol;
 use futures::ready;
 use futures::stream::{FusedStream, Stream, StreamExt};
@@ -51,9 +52,54 @@ const FIRMWARE_REVISION_CHARACTERISTIC_UUID: u16 = 0x2A26;
 /// Fixed Handle assigned to the Model ID characteristic.
 const FIRMWARE_REVISION_CHARACTERISTIC_HANDLE: Handle = Handle { value: 5 };
 
-// TODO(fxbug.dev/95542): Define variants for each type of GATT request.
-#[derive(Debug)]
-pub struct GattRequest {}
+pub enum GattRequest {
+    /// A request to initiate the key-based pairing procedure.
+    KeyBasedPairing {
+        /// The ID of the remote peer that initiated the key-based pairing request.
+        peer_id: PeerId,
+        /// The encrypted payload containing the details of the request.
+        encrypted_request: Vec<u8>,
+        /// A responder used to acknowledge the handling of the pairing request.
+        response: Box<dyn FnOnce(Result<(), gatt::Error>)>,
+    },
+
+    /// A request to write an Account Key to the local device.
+    WriteAccountKey {
+        /// The ID of the remote peer that initiated the key-based pairing request.
+        peer_id: PeerId,
+        /// The encrypted payload containing the Account Key to be written.
+        encrypted_account_key: Vec<u8>,
+        /// A responder used to acknowledge the handling of the write request.
+        response: Box<dyn FnOnce(Result<(), gatt::Error>)>,
+    },
+
+    /// A request to compare the remote peer's passkey with that of the local device.
+    VerifyPasskey {
+        /// The ID of the remote peer that wants to verify the pairing Passkey.
+        peer_id: PeerId,
+        /// The encrypted payload containing the peer's (Seeker) Passkey.
+        encrypted_passkey: Vec<u8>,
+        /// A responder used to acknowledge the handling of the verification request.
+        response: Box<dyn FnOnce(Result<(), gatt::Error>)>,
+    },
+}
+
+impl std::fmt::Debug for GattRequest {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let output = match &self {
+            Self::KeyBasedPairing { peer_id, .. } => {
+                format!("KeyBasedPairing({:?})", peer_id)
+            }
+            Self::WriteAccountKey { peer_id, .. } => {
+                format!("WriteAccountKey({:?})", peer_id)
+            }
+            Self::VerifyPasskey { peer_id, .. } => {
+                format!("VerifyPasskey({:?})", peer_id)
+            }
+        };
+        write!(f, "{}", output)
+    }
+}
 
 /// Represents a published Fast Pair Provider GATT service.
 pub struct GattService {
@@ -210,6 +256,49 @@ impl GattService {
         }
     }
 
+    fn handle_write_request(
+        &self,
+        params: WriteValueParameters,
+        responder: LocalServiceWriteValueResponder,
+    ) -> Option<GattRequest> {
+        // All the fields of the `WriteValueParameters` must be provided.
+        let (peer_id, handle, value) = if let WriteValueParameters {
+            peer_id: Some(peer_id),
+            handle: Some(handle),
+            offset: Some(0),
+            value: Some(value),
+            ..
+        } = params
+        {
+            (peer_id.into(), handle, value)
+        } else {
+            let _ = responder.send(&mut Err(gatt::Error::InvalidParameters));
+            return None;
+        };
+
+        let response: Box<dyn FnOnce(Result<(), gatt::Error>)> = Box::new(|mut result| {
+            let _ = responder.send(&mut result);
+        });
+        match handle {
+            KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE => {
+                Some(GattRequest::KeyBasedPairing { peer_id, encrypted_request: value, response })
+            }
+            PASSKEY_CHARACTERISTIC_HANDLE => {
+                Some(GattRequest::VerifyPasskey { peer_id, encrypted_passkey: value, response })
+            }
+            ACCOUNT_KEY_CHARACTERISTIC_HANDLE => Some(GattRequest::WriteAccountKey {
+                peer_id,
+                encrypted_account_key: value,
+                response,
+            }),
+            h => {
+                warn!("Received unsupported write request for handle: {:?}", h);
+                response(Err(gatt::Error::InvalidHandle));
+                None
+            }
+        }
+    }
+
     /// Handle an incoming FIDL request for the local GATT service.
     fn handle_service_request(&mut self, request: LocalServiceRequest) -> Option<GattRequest> {
         // TODO(fxbug.dev/95542): Handle each GATT request type.
@@ -217,8 +306,8 @@ impl GattService {
             LocalServiceRequest::ReadValue { handle, responder, .. } => {
                 self.handle_read_request(handle, responder);
             }
-            LocalServiceRequest::WriteValue { responder, .. } => {
-                let _ = responder.send(&mut Err(gatt::Error::UnlikelyError));
+            LocalServiceRequest::WriteValue { params, responder, .. } => {
+                return self.handle_write_request(params, responder);
             }
             LocalServiceRequest::CharacteristicConfiguration { responder, .. } => {
                 let _ = responder.send();
@@ -271,6 +360,7 @@ mod tests {
     use super::*;
 
     use assert_matches::assert_matches;
+    use async_test_helpers::run_while;
     use async_utils::PollExt;
     use fidl_fuchsia_bluetooth_gatt2::LocalServiceProxy;
     use fuchsia_async as fasync;
@@ -358,12 +448,8 @@ mod tests {
     #[fuchsia::test]
     fn read_model_id_characteristic_success() {
         let mut exec = fasync::TestExecutor::new().unwrap();
-        let (gatt_service, upstream_service_client) = exec.run_singlethreaded(setup_gatt_service());
-        pin_mut!(gatt_service);
-
-        let _ = exec
-            .run_until_stalled(&mut gatt_service.next())
-            .expect_pending("stream active with no items");
+        let (mut gatt_service, upstream_service_client) =
+            exec.run_singlethreaded(setup_gatt_service());
 
         // Simulate a peer's read request for the Model ID.
         let mut handle = MODEL_ID_CHARACTERISTIC_HANDLE.clone();
@@ -395,12 +481,8 @@ mod tests {
     #[fuchsia::test]
     fn read_firmware_revision_characteristic_success() {
         let mut exec = fasync::TestExecutor::new().unwrap();
-        let (gatt_service, upstream_service_client) = exec.run_singlethreaded(setup_gatt_service());
-        pin_mut!(gatt_service);
-
-        let _ = exec
-            .run_until_stalled(&mut gatt_service.next())
-            .expect_pending("stream active with no items");
+        let (mut gatt_service, upstream_service_client) =
+            exec.run_singlethreaded(setup_gatt_service());
 
         // Simulate a peer's read request for the Model ID.
         let mut handle = FIRMWARE_REVISION_CHARACTERISTIC_HANDLE.clone();
@@ -432,12 +514,8 @@ mod tests {
     #[fuchsia::test]
     fn read_invalid_characteristic_returns_error() {
         let mut exec = fasync::TestExecutor::new().unwrap();
-        let (gatt_service, upstream_service_client) = exec.run_singlethreaded(setup_gatt_service());
-        pin_mut!(gatt_service);
-
-        let _ = exec
-            .run_until_stalled(&mut gatt_service.next())
-            .expect_pending("stream active with no items");
+        let (mut gatt_service, upstream_service_client) =
+            exec.run_singlethreaded(setup_gatt_service());
 
         // Simulate a peer's read request for a random, unsupported, characteristic.
         let read_request_fut = upstream_service_client.read_value(
@@ -462,5 +540,187 @@ mod tests {
             .expect("response is ready")
             .expect("fidl result is Ok");
         assert_matches!(read_result, Err(gatt::Error::InvalidHandle));
+    }
+
+    #[fuchsia::test]
+    fn write_requests_with_invalid_handle_is_handled_gracefully() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let (mut gatt_service, upstream_service_client) =
+            exec.run_singlethreaded(setup_gatt_service());
+        let gatt_service_fut = gatt_service.next();
+        pin_mut!(gatt_service_fut);
+
+        // Model ID is a valid characteristic, but writes are not supported.
+        let params = WriteValueParameters {
+            peer_id: Some(PeerId(123).into()),
+            handle: Some(MODEL_ID_CHARACTERISTIC_HANDLE),
+            offset: Some(0),
+            value: Some(vec![0x00, 0x01, 0x02]),
+            ..WriteValueParameters::EMPTY
+        };
+        let write_request_fut = upstream_service_client.write_value(params);
+        pin_mut!(write_request_fut);
+        // We expect an Error to be returned to the FIDL client. Additionally, no `GattService`
+        // stream items should be produced. This is verified indirectly via `run_while` which will
+        // panic if the `BackgroundFut` (`gatt_service_fut`) finishes.
+        let (write_result, gatt_service_fut) =
+            run_while(&mut exec, gatt_service_fut, write_request_fut);
+        assert_matches!(write_result, Ok(Err(gatt::Error::InvalidHandle)));
+
+        // Random characteristic handle that is not supported by this GATT server.
+        let params = WriteValueParameters {
+            peer_id: Some(PeerId(123).into()),
+            handle: Some(Handle { value: 999 }),
+            offset: Some(0),
+            value: Some(vec![0x00, 0x01, 0x02]),
+            ..WriteValueParameters::EMPTY
+        };
+        let write_request_fut = upstream_service_client.write_value(params);
+        pin_mut!(write_request_fut);
+        let (write_result, _gatt_service_fut) =
+            run_while(&mut exec, gatt_service_fut, write_request_fut);
+        assert_matches!(write_result, Ok(Err(gatt::Error::InvalidHandle)));
+    }
+
+    #[fuchsia::test]
+    fn key_based_pairing_write_results_in_stream_item() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let (mut gatt_service, upstream_service_client) =
+            exec.run_singlethreaded(setup_gatt_service());
+
+        let params = WriteValueParameters {
+            peer_id: Some(PeerId(123).into()),
+            handle: Some(KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE),
+            offset: Some(0),
+            value: Some(vec![0x00, 0x01, 0x02]),
+            ..WriteValueParameters::EMPTY
+        };
+        let write_request_fut = upstream_service_client.write_value(params);
+        pin_mut!(write_request_fut);
+        let _ = exec
+            .run_until_stalled(&mut write_request_fut)
+            .expect_pending("waiting for FIDL response");
+
+        // Write request should be received by the GATT Server - request to initiate key-based
+        // pairing.
+        let responder = match exec
+            .run_until_stalled(&mut gatt_service.next())
+            .expect("stream should yield item")
+        {
+            Some(GattRequest::KeyBasedPairing { response, .. }) => response,
+            req => panic!("Expected Key based pairing request, got: {:?}", req),
+        };
+
+        // FIDL request only resolves when the stream item is handled (e.g responded to).
+        responder(Ok(()));
+        let write_result = exec
+            .run_until_stalled(&mut write_request_fut)
+            .expect("response is ready")
+            .expect("FIDL result is Ok");
+        assert_eq!(write_result, Ok(()));
+    }
+
+    #[fuchsia::test]
+    fn account_key_write_results_in_stream_item() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let (mut gatt_service, upstream_service_client) =
+            exec.run_singlethreaded(setup_gatt_service());
+
+        let params = WriteValueParameters {
+            peer_id: Some(PeerId(123).into()),
+            handle: Some(ACCOUNT_KEY_CHARACTERISTIC_HANDLE),
+            offset: Some(0),
+            value: Some(vec![0x00, 0x01, 0x02]),
+            ..WriteValueParameters::EMPTY
+        };
+        let write_request_fut = upstream_service_client.write_value(params);
+        pin_mut!(write_request_fut);
+        let _ = exec
+            .run_until_stalled(&mut write_request_fut)
+            .expect_pending("waiting for FIDL response");
+
+        // Write request should be received by the GATT Server - request to save an Account Key.
+        let responder = match exec
+            .run_until_stalled(&mut gatt_service.next())
+            .expect("stream should yield item")
+        {
+            Some(GattRequest::WriteAccountKey { response, .. }) => response,
+            req => panic!("Expected account key request, got: {:?}", req),
+        };
+
+        // FIDL request only resolves when the stream item is responded to.
+        responder(Ok(()));
+        let write_result = exec
+            .run_until_stalled(&mut write_request_fut)
+            .expect("response is ready")
+            .expect("FIDL result is Ok");
+        assert_eq!(write_result, Ok(()));
+    }
+
+    #[fuchsia::test]
+    fn verify_passkey_write_results_in_stream_item() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let (mut gatt_service, upstream_service_client) =
+            exec.run_singlethreaded(setup_gatt_service());
+
+        let params = WriteValueParameters {
+            peer_id: Some(PeerId(123).into()),
+            handle: Some(PASSKEY_CHARACTERISTIC_HANDLE),
+            offset: Some(0),
+            value: Some(vec![0x00, 0x01, 0x02]),
+            ..WriteValueParameters::EMPTY
+        };
+        let write_request_fut = upstream_service_client.write_value(params);
+        pin_mut!(write_request_fut);
+        let _ = exec
+            .run_until_stalled(&mut write_request_fut)
+            .expect_pending("waiting for FIDL response");
+
+        // Write request should be received by the GATT Server - request to verify passkey.
+        let responder = match exec
+            .run_until_stalled(&mut gatt_service.next())
+            .expect("stream should yield item")
+        {
+            Some(GattRequest::VerifyPasskey { response, .. }) => response,
+            req => panic!("Expected passkey request, got: {:?}", req),
+        };
+
+        // FIDL request only resolves when the stream item is responded to.
+        responder(Ok(()));
+        let write_result = exec
+            .run_until_stalled(&mut write_request_fut)
+            .expect("response is ready")
+            .expect("FIDL result is Ok");
+        assert_eq!(write_result, Ok(()));
+    }
+
+    #[fuchsia::test]
+    fn gatt_write_with_nonzero_offset_returns_error() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let (mut gatt_service, upstream_service_client) =
+            exec.run_singlethreaded(setup_gatt_service());
+
+        let params = WriteValueParameters {
+            peer_id: Some(PeerId(123).into()),
+            handle: Some(PASSKEY_CHARACTERISTIC_HANDLE),
+            offset: Some(10), // Nonzero is not supported.
+            value: Some(vec![0x00, 0x01, 0x02]),
+            ..WriteValueParameters::EMPTY
+        };
+        let write_request_fut = upstream_service_client.write_value(params);
+        pin_mut!(write_request_fut);
+        let _ = exec
+            .run_until_stalled(&mut write_request_fut)
+            .expect_pending("waiting for FIDL response");
+
+        // Write request should be received by the GATT Server - request to verify passkey but with
+        // an invalid parameter. Should be rejected and no GATT stream item.
+        let _ = exec.run_until_stalled(&mut gatt_service.next()).expect_pending("No stream item");
+
+        let write_result = exec
+            .run_until_stalled(&mut write_request_fut)
+            .expect("response is ready")
+            .expect("FIDL result is Ok");
+        assert_eq!(write_result, Err(gatt::Error::InvalidParameters));
     }
 }
