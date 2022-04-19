@@ -749,6 +749,22 @@ def _tool_is_python(tool: str) -> bool:
     base = os.path.basename(tool)
     return base == "python" or base.startswith("python3")
 
+def get_python_script(command: ToolCommand) -> Optional[str]:
+    """If the script being invoked is python, return the relevant .py file"""
+    # Cover both cases when the tool:
+    #
+    # 1. is executed directly, for example: ./build.py
+    if command.tool.endswith(('.py', '.pyz')):
+        return command.tool
+    # 2. is explicitly executed by an interpreter
+    #    for example: path/to/prebuilt/python3.8 build.py
+    elif _tool_is_python(command.tool):
+        script_index = _find_first_index(
+            command.args, lambda x: x.endswith(('.py', '.pyz')))
+        assert script_index != -1, f"Expected to find Python script after interpreter: {command.args}"
+        return command.args[script_index]
+    return None
+
 
 def is_known_wrapper(command: ToolCommand) -> bool:
     """Is this a command-wrapping script?
@@ -757,25 +773,8 @@ def is_known_wrapper(command: ToolCommand) -> bool:
       True if the command is one of the known wrapper scripts that encapsulates
         another command in tail position after '--'.
     """
-    # Cover both cases when the tool:
-    #
-    # 1. is executed directly, for example: ./build.py
-    if command.tool.endswith(('.py', '.pyz')):
-        python_script = command.tool
-    # 2. is explicitly executed by an interpreter
-    #    for example: path/to/prebuilt/python3.8 build.py
-    elif _tool_is_python(command.tool):
-        script_index = _find_first_index(
-            command.args, lambda x: x.endswith(('.py', '.pyz')))
-        assert script_index != -1, f"Expected to find Python script after interpreter: {command.args}"
-        python_script = command.args[script_index]
-    else:
-        return False
-
-    if os.path.basename(python_script) in {"action_tracer.py",
-                                           "output_cacher.py"}:
-        return True
-
+    if python_script := get_python_script(command):
+        return os.path.basename(python_script) in {"action_tracer.py", "output_cacher.py"}
     return False
 
 
@@ -789,9 +788,6 @@ def main():
     while is_known_wrapper(command):
         command = command.unwrap()
 
-    # Identify the intended tool from the original command.
-    script = command.tool
-
     # Ensure trace_output directory exists
     trace_output_dir = os.path.dirname(args.trace_output)
     os.makedirs(trace_output_dir, exist_ok=True)
@@ -804,6 +800,11 @@ def main():
             "--",
         ] + command.tokens)
 
+    # Identify the intended tool from the original command.
+    script = command.tool
+    if python_script := get_python_script(command):
+        script = python_script
+
     # Scripts with known issues
     ignored_scripts = {
         # Because the clippy linter is effectively the same as the rust compiler,
@@ -813,7 +814,7 @@ def main():
         # When recursively copying a directory, shutil.copy_tree first recursively
         # deletes the old files. It has to read directories to delete all the files
         # in them, and those files arent listed in the generated depfile.
-        "copy_tree_wrapper.sh",
+        "copy_tree.py",
     }
     if os.path.basename(script) in ignored_scripts:
         return retval
