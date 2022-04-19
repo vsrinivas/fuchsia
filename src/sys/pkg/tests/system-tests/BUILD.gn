@@ -130,8 +130,12 @@ if (is_linux || is_mac) {
   }
 
   system_test_upgrade_suite("nuc-release-upgrade") {
-    downgrade_release_builder =
-        "fuchsia/global.ci/workstation.x64-release-e2e-isolated"
+    # FIXME(http://fxbug.dev/95993): Temporarily pin the upgrade test to a
+    # specific build to avoid fxr/661742 and get us back to a recent green
+    # build.
+    #downgrade_release_builder =
+    #    "fuchsia/global.ci/workstation.x64-release-e2e-isolated"
+    downgrade_release_build_id = "8816507346167864353"
 
     environments = [
       {
