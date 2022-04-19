@@ -289,6 +289,7 @@ group("tests") {
     ":legacy-boot-shim-tests($host_toolchain)",
     ":legacy-mem-config-tests($host_toolchain)",
     ":x86-boot-shim-tests",
+    "depthcharge-tests:tests",
   ]
   foreach(shim, legacy_shims) {
     deps += [ ":${shim.name}" ]
