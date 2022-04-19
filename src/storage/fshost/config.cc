@@ -10,6 +10,7 @@ fshost_config::Config DefaultConfig() {
   auto config = EmptyConfig();
   config.blobfs = true;
   config.bootpart = true;
+  config.check_filesystems = true;
   config.fvm = true;
   config.gpt = true;
   config.data = true;

@@ -86,7 +86,7 @@ declare_args() {
 #     minfs_maximum_runtime_bytes to filesystems in ramdisks. By default, these limits only apply
 #     to on-disk filesystems.
 #
-#   check_filesystems (optional; default: false)
+#   check_filesystems (optional; default: true)
 #     [boolean] If set, run a filesystem check on minfs before mounting it. fshost never performs
 #     checks on any other filesystem. If not provided, this check can also be enabled by a kernel
 #     command line argument (it can't be disabled via one).
@@ -135,7 +135,7 @@ template("generated_fshost_config") {
       apply_limits_to_ramdisk = defined(invoker.apply_limits_to_ramdisk) &&
                                 invoker.apply_limits_to_ramdisk
       check_filesystems =
-          defined(invoker.check_filesystems) && invoker.check_filesystems
+          !defined(invoker.check_filesystems) || invoker.check_filesystems
       gpt_all = defined(invoker.gpt_all) && invoker.gpt_all
       no_zxcrypt = defined(invoker.no_minfs_zxcrypt) && invoker.no_minfs_zxcrypt
       fvm_ramdisk = defined(invoker.fvm_ramdisk) && invoker.fvm_ramdisk
