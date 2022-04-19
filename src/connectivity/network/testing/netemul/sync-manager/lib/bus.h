@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_SYNC_BUS_H_
-#define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_SYNC_BUS_H_
+#ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_SYNC_MANAGER_LIB_BUS_H_
+#define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_SYNC_MANAGER_LIB_BUS_H_
 
 #include <fuchsia/netemul/sync/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -46,4 +46,4 @@ class Bus {
 
 }  // namespace netemul
 
-#endif  // SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_SYNC_BUS_H_
+#endif  // SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_SYNC_MANAGER_LIB_BUS_H_

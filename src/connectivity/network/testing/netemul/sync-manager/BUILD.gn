@@ -9,9 +9,9 @@ executable("bin") {
   output_name = "sync_manager"
   sources = [ "main.cc" ]
   deps = [
+    "lib:sync_service",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//src/connectivity/network/testing/netemul/lib/sync:sync_service",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
@@ -21,4 +21,19 @@ fuchsia_component("sync-manager") {
   testonly = true
   manifest = "meta/sync-manager.cml"
   deps = [ ":bin" ]
+}
+
+fuchsia_component("sync-test") {
+  testonly = true
+  manifest = "meta/sync-test.cml"
+  deps = [ "lib:sync_test_bin" ]
+}
+
+fuchsia_test_package("sync-tests") {
+  test_components = [ ":sync-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":sync-tests" ]
 }

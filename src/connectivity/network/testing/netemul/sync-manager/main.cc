@@ -8,7 +8,7 @@
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/connectivity/network/testing/netemul/lib/sync/sync_manager.h"
+#include "src/connectivity/network/testing/netemul/sync-manager/lib/sync_manager.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);

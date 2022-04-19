@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_SYNC_SYNC_MANAGER_H_
-#define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_SYNC_SYNC_MANAGER_H_
+#ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_SYNC_MANAGER_LIB_SYNC_MANAGER_H_
+#define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_SYNC_MANAGER_LIB_SYNC_MANAGER_H_
 
 #include <fuchsia/netemul/sync/cpp/fidl.h>
 #include <lib/async/default.h>
@@ -48,4 +48,4 @@ class SyncManager : public fuchsia::netemul::sync::SyncManager {
 
 }  // namespace netemul
 
-#endif  // SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_LIB_SYNC_SYNC_MANAGER_H_
+#endif  // SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_SYNC_MANAGER_LIB_SYNC_MANAGER_H_

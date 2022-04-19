@@ -287,7 +287,7 @@ executable("mdns_netemul_multi_network_test_agent") {
     ":source_set",
     "//sdk/fidl/fuchsia.net",
     "//sdk/lib/sys/cpp",
-    "//src/connectivity/network/testing/netemul/lib/fidl:sync",
+    "//src/connectivity/network/testing/netemul/sync-manager/fidl:sync",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
