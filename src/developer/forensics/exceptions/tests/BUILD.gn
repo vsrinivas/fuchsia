@@ -189,7 +189,7 @@ fuchsia_component("exception_broker_config_test") {
 fuchsia_component("exception_broker_integration_test") {
   testonly = true
 
-  manifest = "meta/exception_broker_integration_test.cmx"
+  manifest = "meta/exception_broker_integration_test.cml"
 
   deps = [
     ":crasher",
@@ -235,7 +235,6 @@ fuchsia_unittest_component("limbo_client_unittest") {
 fuchsia_test_package("exception-broker-tests") {
   test_components = [
     ":exception_broker_config_test",
-    ":exception_broker_integration_test",
     ":exception_broker_unittest",
     ":limbo_client_unittest",
     ":process_launch_failure_unittest",
@@ -248,6 +247,18 @@ fuchsia_test_package("exception-broker-tests") {
   }
 }
 
+# Separate package as the executable conflicts between exception_broker_unittest
+# and the injected exceptions component.
+fuchsia_test_package("exception-broker-integration-test") {
+  test_components = [ ":exception_broker_integration_test" ]
+
+  deps = [
+    # Other components that we are injecting in the integration tests.
+    "//src/developer/forensics:exceptions",
+    "//src/developer/forensics/testing/fakes:fake_crash_reporter_v2",
+  ]
+}
+
 ###############################################################################
 # GROUPS
 ###############################################################################
@@ -255,11 +266,8 @@ group("tests") {
   testonly = true
 
   public_deps = [
+    ":exception-broker-integration-test",
     ":exception-broker-tests",
-
-    # Packages for the components that we are injecting in the integration tests.
-    "//src/developer/forensics:copy-pkg",
-    "//src/developer/forensics/testing/fakes:fake-crash-reporter",
   ]
 
   visibility += [ "//src/developer/forensics:tests" ]

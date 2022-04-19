@@ -74,7 +74,7 @@ fuchsia_test_package("snapshot-tests") {
   ]
 
   deps = [
-    # Packages for the components that we are injecting in the integration tests.
+    # Other components that we are injecting in the integration tests.
     "//src/developer/forensics/testing/fakes:fake_data_provider",
   ]
 }

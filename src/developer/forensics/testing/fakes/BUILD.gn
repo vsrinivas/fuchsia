@@ -5,33 +5,11 @@
 import("//build/components.gni")
 import("//build/fidl/fidl.gni")
 
-visibility = [
-  "//bundles/buildbot:core_base_packages",
-  "//src/developer/forensics/*",
-]
-
-###############################################################################
-# PACKAGES
-###############################################################################
-fuchsia_package("fake-crash-reporter") {
-  testonly = true
-
-  deps = [ ":fake_crash_reporter" ]
-
-  visibility += [ "//src/developer/exception_broker/tests" ]
-}
+visibility = [ "//src/developer/forensics/*" ]
 
 ###############################################################################
 # COMPONENTS
 ###############################################################################
-fuchsia_component("fake_crash_reporter") {
-  testonly = true
-
-  manifest = "meta/fake_crash_reporter.cmx"
-
-  deps = [ ":fake_crash_reporter_exe" ]
-}
-
 fuchsia_component("fake_crash_reporter_v2") {
   testonly = true
 
