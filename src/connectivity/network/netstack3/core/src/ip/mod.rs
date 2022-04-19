@@ -3715,7 +3715,7 @@ mod tests {
             let mut ctx = builder.build_with(
                 StackStateBuilder::default(),
                 DummyEventDispatcher::default(),
-                crate::context::testutil::DummyCtx::<(), TimerId, DeviceId>::default(),
+                crate::context::testutil::DummyCtx::<(), TimerId, DeviceId, ()>::default(),
             );
             let tentative: UnicastAddr<Ipv6Addr> =
                 v6_config.local_mac.to_ipv6_link_local().addr().get();

@@ -1183,7 +1183,7 @@ pub(crate) mod testutil {
     /// instead implement that trait for `DummyCtx<S, Id, Meta, Event>`. This
     /// allows for full test mocks to be written with a minimum of boilerplate
     /// code.
-    pub(crate) struct DummyCtx<S, Id = (), Meta = (), Event: Debug = ()> {
+    pub(crate) struct DummyCtx<S, Id, Meta, Event: Debug> {
         state: S,
         timers: DummyTimerCtx<Id>,
         frames: DummyFrameCtx<Meta>,
@@ -1778,14 +1778,14 @@ pub(crate) mod testutil {
         fn test_dummy_timer_context() {
             // An implementation of `TimerContext` that uses `usize` timer IDs
             // and stores every timer in a `Vec`.
-            impl TimerHandler<usize> for DummyCtx<Vec<(usize, DummyInstant)>, usize> {
+            impl<M, E: Debug> TimerHandler<usize> for DummyCtx<Vec<(usize, DummyInstant)>, usize, M, E> {
                 fn handle_timer(&mut self, id: usize) {
                     let now = self.now();
                     self.get_mut().push((id, now));
                 }
             }
 
-            let mut ctx = DummyCtx::<Vec<(usize, DummyInstant)>, usize>::default();
+            let mut ctx = DummyCtx::<Vec<(usize, DummyInstant)>, usize, (), ()>::default();
 
             // When no timers are installed, `trigger_next_timer` should return
             // `false`.
@@ -1865,7 +1865,7 @@ pub(crate) mod testutil {
         fn test_trigger_timers_until_and_expect_unordered() {
             // If the requested instant does not coincide with a timer trigger
             // point, the time should still be advanced.
-            let mut ctx = DummyCtx::<Vec<(usize, DummyInstant)>, usize>::default();
+            let mut ctx = DummyCtx::<Vec<(usize, DummyInstant)>, usize, (), ()>::default();
             assert_eq!(ctx.schedule_timer(Duration::from_secs(0), 0), None);
             assert_eq!(ctx.schedule_timer(Duration::from_secs(2), 1), None);
             ctx.trigger_timers_until_and_expect_unordered(

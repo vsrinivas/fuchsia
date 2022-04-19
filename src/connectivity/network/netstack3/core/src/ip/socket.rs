@@ -939,6 +939,7 @@ pub(super) mod ipv6_source_address_selection {
 #[cfg(test)]
 pub(crate) mod testutil {
     use alloc::vec::Vec;
+    use core::fmt::Debug;
 
     use net_types::{
         ip::{AddrSubnet, IpAddress, Subnet},
@@ -971,7 +972,8 @@ pub(crate) mod testutil {
             S: AsRef<DummyIpSocketCtx<I>> + AsMut<DummyIpSocketCtx<I>>,
             Id,
             Meta,
-        > IpSocketContext<I> for DummyCtx<S, Id, Meta>
+            Event: Debug,
+        > IpSocketContext<I> for DummyCtx<S, Id, Meta, Event>
     {
         fn lookup_route(
             &self,
@@ -1017,9 +1019,10 @@ pub(crate) mod testutil {
             S: AsRef<DummyIpSocketCtx<I>> + AsMut<DummyIpSocketCtx<I>>,
             Id,
             Meta,
-        > BufferIpSocketContext<I, B> for DummyCtx<S, Id, Meta>
+            Event: Debug,
+        > BufferIpSocketContext<I, B> for DummyCtx<S, Id, Meta, Event>
     where
-        DummyCtx<S, Id, Meta>:
+        DummyCtx<S, Id, Meta, Event>:
             FrameContext<B, SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<I::Addr>>>,
     {
         fn send_ip_packet<SS: Serializer<Buffer = B>>(

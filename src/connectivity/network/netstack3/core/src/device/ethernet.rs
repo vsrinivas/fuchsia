@@ -1007,6 +1007,7 @@ mod tests {
         DummyEthernetCtx,
         EthernetTimerId<DummyDeviceId>,
         DummyDeviceId,
+        (),
     >;
 
     impl

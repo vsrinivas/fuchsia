@@ -199,7 +199,7 @@ mod tests {
         message: RouterSolicitation,
     }
 
-    type MockCtx<'a> = DummyCtx<MockRsContext<'a>, RsTimerId<DummyDeviceId>, RsMessageMeta>;
+    type MockCtx<'a> = DummyCtx<MockRsContext<'a>, RsTimerId<DummyDeviceId>, RsMessageMeta, ()>;
 
     impl<'a> Ipv6DeviceRsContext for MockCtx<'a> {
         fn get_max_router_solicitations(&self, DummyDeviceId: DummyDeviceId) -> Option<NonZeroU8> {

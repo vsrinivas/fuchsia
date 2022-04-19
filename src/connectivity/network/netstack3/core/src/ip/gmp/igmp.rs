@@ -531,6 +531,7 @@ mod tests {
         DummyIgmpCtx,
         IgmpTimerId<DummyDeviceId>,
         IgmpPacketMetadata<DummyDeviceId>,
+        (),
     >;
 
     impl IgmpContext for DummyCtx {

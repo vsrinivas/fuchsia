@@ -785,6 +785,7 @@ mod tests {
         DummyArpCtx,
         ArpTimerId<EthernetLinkDevice, Ipv4Addr, ()>,
         ArpFrameMetadata<EthernetLinkDevice, ()>,
+        (),
     >;
 
     impl ArpDeviceIdContext<EthernetLinkDevice> for DummyCtx {
@@ -987,6 +988,7 @@ mod tests {
             DummyArpCtx,
             ArpTimerId<EthernetLinkDevice, Ipv4Addr, usize>,
             ArpFrameMetadata<EthernetLinkDevice, usize>,
+            (),
         >;
 
         impl ArpDeviceIdContext<EthernetLinkDevice> for DummyCtx2 {

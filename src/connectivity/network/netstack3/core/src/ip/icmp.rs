@@ -3485,6 +3485,7 @@ mod tests {
                 $inner,
                 (),
                 SendIpPacketMeta<$ip, DummyDeviceId, SpecifiedAddr<<$ip as Ip>::Addr>>,
+                (),
             >;
 
             impl $inner {
@@ -4390,8 +4391,13 @@ mod tests {
         fn run_test<
             I: IpExt,
             C,
-            W: Fn(u64) -> DummyCtx<C, (), SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<I::Addr>>>,
-            S: Fn(&mut DummyCtx<C, (), SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<I::Addr>>>),
+            W: Fn(
+                u64,
+            )
+                -> DummyCtx<C, (), SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<I::Addr>>, ()>,
+            S: Fn(
+                &mut DummyCtx<C, (), SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<I::Addr>>, ()>,
+            ),
         >(
             with_errors_per_second: W,
             send: S,

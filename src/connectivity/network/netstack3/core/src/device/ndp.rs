@@ -3119,7 +3119,7 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::default().build_with(
             StackStateBuilder::default(),
             DummyEventDispatcher::default(),
-            DummyCtx::<(), TimerId, DeviceId>::default(),
+            DummyCtx::<(), TimerId, DeviceId, ()>::default(),
         );
         let dev_id = ctx.state.add_ethernet_device(local_mac(), Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::testutil::enable_device(&mut ctx, dev_id);

@@ -106,7 +106,7 @@ pub(crate) mod benchmarks {
 // accesses the frame contents rather than the frame metadata will still
 // compile).
 pub(crate) type DummyCtx =
-    Ctx<DummyEventDispatcher, crate::context::testutil::DummyCtx<(), TimerId, Never>>;
+    Ctx<DummyEventDispatcher, crate::context::testutil::DummyCtx<(), TimerId, Never, ()>>;
 
 /// A wrapper which implements `RngCore` and `CryptoRng` for any `RngCore`.
 ///
