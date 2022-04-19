@@ -49,18 +49,7 @@ void AssertExpectedReventsAfterPeerShutdown(int fd) {
   EXPECT_GE(n, 0) << strerror(errno);
   EXPECT_EQ(n, 1);
 
-#if defined(__Fuchsia__)
   EXPECT_EQ(pfd.revents, POLLERR | POLLHUP | POLLRDHUP | POLLIN);
-#else
-  // Prior to this commit[1], Linux sometimes returns a subset of the expected `revents`
-  // when the client `poll`s after the receipt of a TCP RST message.
-  //
-  // TODO(https://fxbug.dev/87541): Match Fuchsia after Linux version is >= 4.12.
-  //
-  // [1]: https://github.com/torvalds/linux/commit/3d4762639dd36a5f0f433f0c9d82e9743dc21a33
-  EXPECT_THAT(pfd.revents, testing::AnyOf(testing::Eq(POLLERR), testing::Eq(POLLERR | POLLHUP),
-                                          testing::Eq(POLLERR | POLLHUP | POLLRDHUP | POLLIN)));
-#endif
 }
 
 #if defined(__Fuchsia__)
