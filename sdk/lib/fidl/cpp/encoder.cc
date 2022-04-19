@@ -98,8 +98,13 @@ void MessageEncoder::EncodeMessageHeader(uint64_t ordinal) {
   size_t offset = Alloc(sizeof(fidl_message_header_t));
   fidl_message_header_t* header = GetPtr<fidl_message_header_t>(offset);
   fidl_init_txn_header(header, 0, ordinal);
-  if (wire_format() == internal::WireFormatVersion::kV2) {
-    header->flags[0] |= FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2;
+  switch (wire_format()) {
+    case internal::WireFormatVersion::kV1:
+      header->flags[0] = 0;
+      break;
+    case internal::WireFormatVersion::kV2:
+      header->flags[0] = FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2;
+      break;
   }
 }
 
