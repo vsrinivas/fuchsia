@@ -18,6 +18,7 @@ use {
 pub use crate::reader::tree_reader::SnapshotTree;
 
 /// Enables to scan all the blocks in a given buffer.
+#[derive(Debug)]
 pub struct Snapshot {
     /// The buffer read from an Inspect VMO.
     buffer: BackingBuffer,
@@ -210,6 +211,7 @@ impl<'a> Iterator for BlockIterator<'a> {
     }
 }
 
+#[derive(Debug)]
 pub enum BackingBuffer {
     Map(Arc<Mapping>),
     Vector(Vec<u8>),

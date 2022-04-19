@@ -10,6 +10,8 @@ use {
         ReadableTree, Snapshot,
     },
     fidl_fuchsia_inspect::TreeProxy,
+    fuchsia_async::{DurationExt, TimeoutExt},
+    fuchsia_zircon as zx,
     futures::{
         future::{self, BoxFuture},
         prelude::*,
@@ -22,6 +24,7 @@ use {
 };
 
 /// Contains the snapshot of the hierarchy and snapshots of all the lazy nodes in the hierarchy.
+#[derive(Debug)]
 pub struct SnapshotTree {
     snapshot: Snapshot,
     children: SnapshotTreeMap,
@@ -30,7 +33,14 @@ pub struct SnapshotTree {
 impl SnapshotTree {
     /// Loads a snapshot tree from the given inspect tree.
     pub async fn try_from(tree: &TreeProxy) -> Result<SnapshotTree, ReaderError> {
-        load_snapshot_tree(tree).await
+        load_snapshot_tree(tree, None).await
+    }
+
+    pub async fn try_from_with_timeout(
+        tree: &TreeProxy,
+        lazy_child_timeout: zx::Duration,
+    ) -> Result<SnapshotTree, ReaderError> {
+        load_snapshot_tree(tree, Some(lazy_child_timeout)).await
     }
 }
 
@@ -63,6 +73,9 @@ fn expand(
         let result: Result<DiagnosticsHierarchy, ReaderError> =
             result.unwrap().and_then(|snapshot_tree| snapshot_tree.try_into());
         match result {
+            Err(ReaderError::TreeTimedOut) => {
+                hierarchy.add_missing(MissingValueReason::Timeout, link_value.name);
+            }
             Err(_) => {
                 hierarchy.add_missing(MissingValueReason::LinkParseFailure, link_value.name);
             }
@@ -88,21 +101,52 @@ pub async fn read<T>(tree: &T) -> Result<DiagnosticsHierarchy, ReaderError>
 where
     T: ReadableTree + Send + Sync,
 {
-    load_snapshot_tree(tree).await?.try_into()
+    load_snapshot_tree(tree, None).await?.try_into()
 }
 
-fn load_snapshot_tree<T>(tree: &T) -> BoxFuture<'_, Result<SnapshotTree, ReaderError>>
+/// Reads the given `ReadableTree` into a DiagnosticsHierarchy with Lazy Node timeout.
+/// This reads versions 1 and 2 of the Inspect Format.
+pub async fn read_with_timeout<T>(
+    tree: &T,
+    lazy_node_timeout: zx::Duration,
+) -> Result<DiagnosticsHierarchy, ReaderError>
+where
+    T: ReadableTree + Send + Sync,
+{
+    load_snapshot_tree(tree, Some(lazy_node_timeout)).await?.try_into()
+}
+
+fn load_snapshot_tree<T>(
+    tree: &T,
+    lazy_child_timeout: Option<zx::Duration>,
+) -> BoxFuture<'_, Result<SnapshotTree, ReaderError>>
 where
     T: ReadableTree + Send + Sync,
 {
     async move {
-        let results = future::join(tree.vmo(), tree.tree_names()).await;
+        let results = if let Some(t) = lazy_child_timeout {
+            future::join(tree.vmo(), tree.tree_names())
+                .on_timeout(t.after_now(), || {
+                    (Err(ReaderError::TreeTimedOut), Err(ReaderError::TreeTimedOut))
+                })
+                .await
+        } else {
+            future::join(tree.vmo(), tree.tree_names()).await
+        };
+
         let vmo = results.0?;
         let children_names = results.1?;
         let mut children = BTreeMap::new();
         // TODO(miguelfrde): remove recursion or limit depth.
         for child_name in children_names {
-            let result = tree.read_tree(&child_name).and_then(|child_tree| load(child_tree)).await;
+            let result = if let Some(t) = lazy_child_timeout {
+                tree.read_tree(&child_name)
+                    .on_timeout(t.after_now(), || Err(ReaderError::TreeTimedOut))
+                    .and_then(|child_tree| load(child_tree, lazy_child_timeout))
+                    .await
+            } else {
+                tree.read_tree(&child_name).and_then(|child_tree| load(child_tree, None)).await
+            };
             children.insert(child_name, result);
         }
         Ok(SnapshotTree { snapshot: Snapshot::try_from(&vmo)?, children })
@@ -110,18 +154,21 @@ where
     .boxed()
 }
 
-async fn load<T>(tree: T) -> Result<SnapshotTree, ReaderError>
+async fn load<T>(
+    tree: T,
+    lazy_node_timeout: Option<zx::Duration>,
+) -> Result<SnapshotTree, ReaderError>
 where
     T: ReadableTree + Send + Sync,
 {
-    load_snapshot_tree(&tree).await
+    load_snapshot_tree(&tree, lazy_node_timeout).await
 }
 
 #[cfg(test)]
 mod tests {
     use {
         super::*,
-        crate::{assert_data_tree, reader, Inspector},
+        crate::{assert_data_tree, assert_json_diff, reader, Inspector},
     };
 
     #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
@@ -145,7 +192,7 @@ mod tests {
     #[fuchsia::test]
     async fn test_load_snapshot_tree() -> Result<(), anyhow::Error> {
         let inspector = test_inspector();
-        let mut snapshot_tree = load_snapshot_tree(&inspector).await?;
+        let mut snapshot_tree = load_snapshot_tree(&inspector, None).await?;
 
         let root_hierarchy: DiagnosticsHierarchy =
             PartialNodeHierarchy::try_from(snapshot_tree.snapshot)?.into();
@@ -168,6 +215,31 @@ mod tests {
         assert_eq!(lazy_values.children.keys().len(), 0);
         assert_data_tree!(lazy_values_hierarchy, root: {
             double: 3.14,
+        });
+
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn read_with_hanging_lazy_node() -> Result<(), anyhow::Error> {
+        let inspector = Inspector::new();
+        let root = inspector.root();
+        root.record_string("child", "value");
+
+        root.record_lazy_values("lazy-node-always-hangs", || {
+            async move {
+                fuchsia_async::Timer::new(zx::Duration::from_minutes(30).after_now()).await;
+                Ok(Inspector::new())
+            }
+            .boxed()
+        });
+
+        root.record_int("int", 3);
+
+        let hierarchy = read_with_timeout(&inspector, zx::Duration::from_seconds(2)).await?;
+        assert_json_diff!(hierarchy, root: {
+            child: "value",
+            int: 3i64,
         });
 
         Ok(())

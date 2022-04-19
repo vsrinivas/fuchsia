@@ -176,11 +176,13 @@ mod tests {
     use fidl_fuchsia_inspect::{
         TreeMarker, TreeNameIteratorMarker, TreeNameIteratorProxy, TreeProxy,
     };
+    use fuchsia_async::DurationExt;
     use fuchsia_inspect::{
-        assert_data_tree,
-        reader::{DiagnosticsHierarchy, PartialNodeHierarchy},
+        assert_data_tree, assert_json_diff,
+        reader::{read_with_timeout, DiagnosticsHierarchy, PartialNodeHierarchy},
         Inspector,
     };
+    use fuchsia_zircon as zx;
     use futures::FutureExt;
     use std::convert::TryFrom;
 
@@ -276,6 +278,32 @@ mod tests {
             a: 1i64,
             new: 6i64,
         });
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn read_hanging_lazy_node() -> Result<(), Error> {
+        let inspector = Inspector::new();
+        let root = inspector.root();
+        root.record_string("child", "value");
+
+        root.record_lazy_values("lazy-node-always-hangs", || {
+            async move {
+                fuchsia_async::Timer::new(zx::Duration::from_minutes(30).after_now()).await;
+                Ok(Inspector::new())
+            }
+            .boxed()
+        });
+
+        root.record_int("int", 3);
+
+        let proxy = spawn_server(inspector, TreeServerSettings::default())?;
+        let result = read_with_timeout(&proxy, zx::Duration::from_seconds(5)).await?;
+        assert_json_diff!(result, root: {
+            child: "value",
+            int: 3i64,
+        });
+
         Ok(())
     }
 

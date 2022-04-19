@@ -4,7 +4,9 @@
 
 use crate::{constants::*, test_topology};
 use anyhow::Error;
-use diagnostics_reader::{assert_data_tree, AnyProperty, ArchiveReader, Inspect};
+use diagnostics_reader::{
+    assert_data_tree, assert_json_diff, AnyProperty, ArchiveReader, DiagnosticsHierarchy, Inspect,
+};
 use difference::assert_diff;
 use fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, ArchiveAccessorProxy};
 use fuchsia_component_test::RealmInstance;
@@ -65,6 +67,32 @@ async fn read_components_inspect() {
             status: "OK",
             start_timestamp_nanos: AnyProperty,
         }
+    });
+}
+
+#[fuchsia::test]
+async fn read_component_with_hanging_lazy_node() {
+    let (builder, test_realm) = test_topology::create(test_topology::Options::default())
+        .await
+        .expect("create base topology");
+    test_topology::add_eager_child(&test_realm, "hanging_data", HANGING_INSPECT_COMPONENT_URL)
+        .await
+        .expect("add child");
+
+    let instance = builder.build_with_name("hanging_lazy").await.expect("create instance");
+
+    let accessor =
+        instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
+    let data = ArchiveReader::new()
+        .with_archive(accessor)
+        .add_selector("hanging_data:*")
+        .snapshot::<Inspect>()
+        .await
+        .expect("got inspect data");
+
+    assert_json_diff!(data[0].payload.as_ref().unwrap(), root: {
+        child: "value",
+        int: 3i64,
     });
 }
 

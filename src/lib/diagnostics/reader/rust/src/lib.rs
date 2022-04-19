@@ -26,7 +26,8 @@ use parking_lot::Mutex;
 
 pub use diagnostics_data::{Data, Inspect, Lifecycle, Logs, Severity};
 pub use diagnostics_hierarchy::{
-    assert_data_tree, hierarchy, testing::*, tree_assertion, DiagnosticsHierarchy, Property,
+    assert_data_tree, assert_json_diff, hierarchy, testing::*, tree_assertion,
+    DiagnosticsHierarchy, Property,
 };
 
 const RETRY_DELAY_MS: i64 = 300;

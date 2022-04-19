@@ -41,7 +41,10 @@ use {
 };
 
 pub use {
-    crate::reader::{error::ReaderError, readable_tree::ReadableTree, tree_reader::read},
+    crate::reader::{
+        error::ReaderError, readable_tree::ReadableTree, tree_reader::read,
+        tree_reader::read_with_timeout,
+    },
     diagnostics_hierarchy::{
         ArrayContent, ArrayFormat, Bucket, DiagnosticsHierarchy, LinkNodeDisposition, LinkValue,
         Property,

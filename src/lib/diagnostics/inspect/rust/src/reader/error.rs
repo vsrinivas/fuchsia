@@ -67,6 +67,9 @@ pub enum ReaderError {
     #[error("Failed to load tree name {0}")]
     FailedToLoadTree(String),
 
+    #[error("Timed out reading tree")]
+    TreeTimedOut,
+
     #[error("Failed to lock inspector state")]
     FailedToLockState(#[source] WriterError),
 }

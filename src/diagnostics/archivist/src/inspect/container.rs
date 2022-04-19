@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
+    constants,
     diagnostics::GlobalConnectionStats,
     identity::ComponentIdentity,
     inspect::collector::{self as collector, InspectData},
@@ -35,6 +36,7 @@ lazy_static! {
         "Exceeded per-component time limit for fetching diagnostics data";
 }
 
+#[derive(Debug)]
 pub enum ReadSnapshot {
     Single(Snapshot),
     Tree(SnapshotTree),
@@ -43,6 +45,7 @@ pub enum ReadSnapshot {
 
 /// Packet containing a snapshot and all the metadata needed to
 /// populate a diagnostics schema for that snapshot.
+#[derive(Debug)]
 pub struct SnapshotData {
     /// Name of the file that created this snapshot.
     pub filename: ImmutableString,
@@ -56,17 +59,23 @@ pub struct SnapshotData {
 }
 
 impl SnapshotData {
-    async fn new(filename: ImmutableString, data: InspectData) -> SnapshotData {
+    async fn new(
+        filename: ImmutableString,
+        data: InspectData,
+        lazy_child_timeout: zx::Duration,
+    ) -> SnapshotData {
         match data {
-            InspectData::Tree(tree) => match SnapshotTree::try_from(&tree).await {
-                Ok(snapshot_tree) => {
-                    SnapshotData::successful(ReadSnapshot::Tree(snapshot_tree), filename)
+            InspectData::Tree(tree) => {
+                match SnapshotTree::try_from_with_timeout(&tree, lazy_child_timeout).await {
+                    Ok(snapshot_tree) => {
+                        SnapshotData::successful(ReadSnapshot::Tree(snapshot_tree), filename)
+                    }
+                    Err(e) => SnapshotData::failed(
+                        schema::InspectError { message: format!("{:?}", e) },
+                        filename,
+                    ),
                 }
-                Err(e) => SnapshotData::failed(
-                    schema::InspectError { message: format!("{:?}", e) },
-                    filename,
-                ),
-            },
+            }
             InspectData::DeprecatedFidl(inspect_proxy) => {
                 match deprecated_inspect::load_hierarchy(inspect_proxy).await {
                     Ok(hierarchy) => {
@@ -140,7 +149,7 @@ enum Status {
 struct State {
     status: Status,
     unpopulated: Arc<UnpopulatedInspectDataContainer>,
-    timeout: Option<zx::Duration>,
+    batch_timeout: Option<zx::Duration>,
     elapsed_time: zx::Duration,
     global_stats: Arc<GlobalConnectionStats>,
 }
@@ -154,7 +163,7 @@ impl State {
         Self {
             unpopulated: self.unpopulated,
             status: Status::Pending(pending),
-            timeout: self.timeout,
+            batch_timeout: self.batch_timeout,
             global_stats: self.global_stats,
             elapsed_time: self.elapsed_time + (zx::Time::get_monotonic() - start_time),
         }
@@ -186,7 +195,14 @@ impl State {
                         return None;
                     }
                     Some((filename, data)) => {
-                        let snapshot = SnapshotData::new(filename, data).await;
+                        let snapshot = SnapshotData::new(
+                            filename,
+                            data,
+                            self.batch_timeout.unwrap_or(zx::Duration::from_seconds(
+                                constants::PER_COMPONENT_ASYNC_TIMEOUT_SECONDS,
+                            )) / constants::LAZY_NODE_TIMEOUT_PROPORTION,
+                        )
+                        .await;
                         let result = PopulatedInspectDataContainer {
                             identity: self.unpopulated.identity.clone(),
                             snapshot,
@@ -226,14 +242,14 @@ impl<'a> UnpopulatedInspectDataContainer {
         let state = State {
             status: Status::Begin,
             unpopulated: this,
-            timeout: Some(zx::Duration::from_seconds(timeout)),
+            batch_timeout: Some(zx::Duration::from_seconds(timeout)),
             global_stats,
             elapsed_time: zx::Duration::from_nanos(0),
         };
 
         futures::stream::unfold(state, |state| {
             let unpopulated_for_timeout = state.unpopulated.clone();
-            let timeout = state.timeout;
+            let timeout = state.batch_timeout;
             let elapsed_time = state.elapsed_time;
             let global_stats = state.global_stats.clone();
             let start_time = zx::Time::get_monotonic();
@@ -258,7 +274,7 @@ impl<'a> UnpopulatedInspectDataContainer {
                             State {
                                 status: Status::Pending(VecDeque::new()),
                                 unpopulated: unpopulated_for_timeout,
-                                timeout: None,
+                                batch_timeout: None,
                                 global_stats,
                                 elapsed_time: elapsed_time
                                     + (zx::Time::get_monotonic() - start_time),

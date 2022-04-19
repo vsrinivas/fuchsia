@@ -117,6 +117,9 @@ pub enum MissingValueReason {
 
     /// There was no attempt to read the link.
     LinkNeverExpanded,
+
+    /// There was a timeout while reading.
+    Timeout,
 }
 
 /// Compares the names of two properties or nodes. If both are unsigned integers, then it compares

@@ -13,6 +13,10 @@ pub const IN_MEMORY_SNAPSHOT_LIMIT: usize = 64;
 // This involves diagnostics directory traversal, contents extraction, and snapshotting.
 pub const PER_COMPONENT_ASYNC_TIMEOUT_SECONDS: i64 = 10;
 
+// Divide total batch timeout duration by this value to get the duration that should be allowed
+// on individual lazy nodes/values.
+pub const LAZY_NODE_TIMEOUT_PROPORTION: i64 = 2;
+
 /// Name used by clients to connect to the feedback diagnostics protocol.
 /// This protocol applies static selectors configured under config/data/feedback to
 /// inspect exfiltration.

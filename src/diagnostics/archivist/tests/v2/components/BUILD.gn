@@ -23,6 +23,26 @@ rustc_binary("stub_inspect_component_bin") {
   sources = [ "src/stub_inspect_component.rs" ]
 }
 
+rustc_binary("hanging_inspect_component_bin") {
+  testonly = true
+  output_name = "hanging_inspect_component"
+  edition = "2018"
+  source_root = "src/hanging_inspect_component.rs"
+  deps = [
+    "//src/lib/diagnostics/inspect/runtime/rust",
+    "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  sources = [ "src/hanging_inspect_component.rs" ]
+}
+
 rustc_binary("log_and_exit_component_bin") {
   testonly = true
   output_name = "log_and_exit"
@@ -74,6 +94,12 @@ fuchsia_component("stub_inspect_component") {
   testonly = true
   deps = [ ":stub_inspect_component_bin" ]
   manifest = "meta/stub_inspect_component.cml"
+}
+
+fuchsia_component("hanging_inspect_component") {
+  testonly = true
+  deps = [ ":hanging_inspect_component_bin" ]
+  manifest = "meta/hanging_inspect_component.cml"
 }
 
 fuchsia_component("component_with_children") {
@@ -155,6 +181,7 @@ group("components") {
   testonly = true
   deps = [
     ":component_with_children",
+    ":hanging_inspect_component",
     ":log_and_crash_component",
     ":log_and_exit_component",
     ":log_on_interest_component",
