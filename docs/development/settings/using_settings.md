@@ -177,37 +177,48 @@ proxy.set(new_settings).await.expect("request completed").expect("request succee
 
 ## Debugging
 
-Settings offers a command-line utility for interacting with its protocols, called
-SetUI Client. This tool gives developers real-time access to Settings, enabling
-them to see how their application affects and is affected by Settings. SetUI
-Client can be included in a build by specifying its package in the build
-environment:
+Settings offers a Fuchsia CLI tool ([`ffx setui`][ffx-setui]) for interacting
+with its protocols. This tool gives developers real-time access to Settings,
+enabling them to see how their application affects and is affected by Settings.
+The `ffx setui` tool comes with the Fuchsia source code and SDK. To use it, run
+the following command first to opt in:
 
 ```posix-terminal
-fx set core.x64 --with //garnet/packages/prod:setui_client
+ffx config set setui true
 ```
 
-Since the utility is not part of the base packages, it is important to have the
-package server [serving][pkg] at execution time. A Setting protocol's current
-information can be retrieved by calling SetUI client with the protocol's name as
-an argument. For example, the following command retrieves information about
-Accessibility:
+To retrieve a Setting protocol's current information (except Accessibility and
+VolumePolicy), you can call `ffx setui` with the protocol's name as an argument.
+For example, the following command retrieves information about Privacy:
 
 ```posix-terminal
-fx shell run fuchsia-pkg://fuchsia.com/setui_client#meta/setui_client.cmx accessibility
+ffx setui privacy
 ```
 
-SetUI Client can also modify Settings. The utility's help command details the
+For Accessibility, add the keyword `watch` after the protocol's name:
+
+```
+ffx setui accessibility watch
+```
+
+For VolumePolicy, add the keyword `get` after the protocol's name:
+
+```
+ffx setui volume_policy get
+```
+
+`ffx setui` can also modify Settings. The utility's `help` command details the
 specific modification syntax per protocol:
 
 ```posix-terminal
-fx shell run fuchsia-pkg://fuchsia.com/setui_client#meta/setui_client.cmx accessibility help
+ffx setui privacy help
 ```
 
-Finishing the example, the SetUI Client can be done as follows:
+Here is an example of setting the user data sharing consent
+(`user-data-sharing-consent`) to true:
 
 ```posix-terminal
-fx shell run fuchsia-pkg://fuchsia.com/setui_client#meta/setui_client.cmx accessibility -s true
+ffx setui privacy -u true
 ```
 
 <!-- link labels -->
@@ -220,4 +231,4 @@ fx shell run fuchsia-pkg://fuchsia.com/setui_client#meta/setui_client.cmx access
 [hanging-get]: /docs/development/api/fidl.md#hanging-get
 [fidl_table]: /docs/reference/fidl/language/language.md#tables
 [epitaph]: /docs/contribute/governance/rfcs/0053_epitaphs.md
-[pkg]: /docs/development/build/fx.md#serve-a-build
+[ffx-setui]: https://fuchsia.dev/reference/tools/sdk/ffx#setui
