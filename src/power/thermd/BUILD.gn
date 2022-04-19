@@ -28,7 +28,7 @@ if (target_cpu == "x64") {
       "//zircon/system/ulib/fdio-caller",
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/trace",
-      "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+      "//zircon/system/ulib/trace-provider",
       "//zircon/system/ulib/zx",
     ]
 

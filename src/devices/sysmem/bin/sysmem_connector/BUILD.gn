@@ -18,7 +18,7 @@ executable("sysmem_connector_executable") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/sysmem-connector",
-    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+    "//zircon/system/ulib/trace-provider",
   ]
 }
 

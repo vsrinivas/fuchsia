@@ -93,7 +93,7 @@ executable("camera_gym_bin") {
   sources = [ "main.cc" ]
   deps = [
     ":lib",
-    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+    "//zircon/system/ulib/trace-provider",
   ]
   defines = [ camera_debug_define ]
 }

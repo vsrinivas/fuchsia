@@ -29,7 +29,7 @@ source_set("codec_runner_sw") {
   public_deps = [
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+    "//zircon/system/ulib/trace-provider",
   ]
 }
 

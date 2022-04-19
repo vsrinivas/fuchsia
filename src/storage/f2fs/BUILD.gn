@@ -128,7 +128,7 @@ static_library("f2fs") {
       "//zircon/system/ulib/sync",
       "//zircon/system/ulib/trace",
       "//zircon/system/ulib/trace-engine",
-      "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+      "//zircon/system/ulib/trace-provider",
     ]
   }
 

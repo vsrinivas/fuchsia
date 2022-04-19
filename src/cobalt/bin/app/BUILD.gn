@@ -104,7 +104,7 @@ executable("app") {
     "//sdk/fidl/fuchsia.scheduler",
     "//sdk/fidl/fuchsia.sysinfo",
     "//zircon/system/ulib/trace",
-    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+    "//zircon/system/ulib/trace-provider",
   ]
 }
 

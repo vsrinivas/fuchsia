@@ -107,7 +107,7 @@ source_set("hermetic_audio_test") {
     "//sdk/fidl/fuchsia.scheduler",
     "//src/lib/fxl",
     "//src/media/audio/lib/audio_test_devmgr",
-    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+    "//zircon/system/ulib/trace-provider",
   ]
 }
 

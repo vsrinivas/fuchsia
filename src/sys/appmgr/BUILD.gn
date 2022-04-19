@@ -98,7 +98,7 @@ source_set("lib") {
     "//zircon/system/ulib/syslog",
     "//zircon/system/ulib/task-utils",
     "//zircon/system/ulib/trace",
-    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+    "//zircon/system/ulib/trace-provider",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]

@@ -237,7 +237,7 @@ source_set("audio_core_main") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//zircon/system/ulib/syslog:syslog-headers",
-    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+    "//zircon/system/ulib/trace-provider",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

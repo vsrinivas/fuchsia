@@ -39,7 +39,7 @@ source_set("factoryfs") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
-    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+    "//zircon/system/ulib/trace-provider",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]

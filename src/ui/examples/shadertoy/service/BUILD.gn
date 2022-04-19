@@ -45,7 +45,7 @@ executable("bin") {
     "//third_party/shaderc:libshaderc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+    "//zircon/system/ulib/trace-provider",
   ]
 
   include_dirs = [

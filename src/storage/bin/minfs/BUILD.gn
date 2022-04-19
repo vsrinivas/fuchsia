@@ -22,7 +22,7 @@ executable("minfs") {
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
-    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+    "//zircon/system/ulib/trace-provider",
     "//zircon/system/ulib/zx",
   ]
 

@@ -28,7 +28,7 @@ executable("mutex_pi_exerciser") {
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
-    "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+    "//zircon/system/ulib/trace-provider",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
