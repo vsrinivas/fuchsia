@@ -79,6 +79,7 @@ class FidlMessenger : public fidl::internal::IncomingMessageDispatcher {
     if (binding_)
       binding_->Unbind();
   }
+  void Shutdown() { loop_.Shutdown(); }
 
   // Local channel to send FIDL client messages
   zx::channel& local() { return local_; }

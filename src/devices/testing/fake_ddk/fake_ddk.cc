@@ -55,6 +55,11 @@ void Bind::JoinUnbindThread() {
 
 bool Bind::Ok() {
   JoinUnbindThread();
+
+  // We make sure the FIDL helper is shutdown after unbind before release since it uses the FIDL
+  // handler code from the object being released.
+  fidl_.Shutdown();
+
   return add_called_ &&
          // We do not check the actual value of |init_reply_|, as the test may wish to test
          // scenarios where the init failure is handled.
