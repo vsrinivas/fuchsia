@@ -449,6 +449,8 @@ size_t iconv(iconv_t cd0, char** restrict in, size_t* restrict inb, char** restr
           goto toobig;
         if (c < 128 + totype) {
         revout:
+          if (*outb < 1)
+            goto toobig;
           *(*out)++ = c;
           *outb -= 1;
           break;
