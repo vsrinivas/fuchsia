@@ -10,12 +10,12 @@
     capabilities: [
         {
             resolver: "full-resolver",
-            path: "/svc/fuchsia.sys2.ComponentResolver",
+            path: "/svc/fuchsia.component.resolution.Resolver",
         },
     ],
     use: [
         {
-            protocol: [ "fuchsia.sys2.ComponentResolver" ],
+            protocol: [ "fuchsia.component.resolution.Resolver" ],
         },
     ],
     expose: [

@@ -25,9 +25,9 @@
     offer: [
         {
             protocol: [
+                "fuchsia.component.resolution.Resolver",
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
-                "fuchsia.sys2.ComponentResolver",
                 "fuchsia.sys2.EventSource",
             ],
             from: "parent",

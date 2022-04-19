@@ -194,7 +194,7 @@
     // Protocols offered from `self` are routed from the v1 sys realm.
     offer: [
         {
-            protocol: "fuchsia.sys2.ComponentResolver",
+            protocol: "fuchsia.component.resolution.Resolver",
             from: "parent",
             to: [ "#universe-resolver" ],
         },

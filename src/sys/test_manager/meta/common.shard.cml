@@ -142,7 +142,7 @@
         { protocol: "fuchsia.sys.Loader" },
 
         // TODO(fxbug.dev/86464): Clean this up
-        { protocol: "fuchsia.sys2.ComponentResolver" },
+        { protocol: "fuchsia.component.resolution.Resolver" },
         {
             protocol: "fuchsia.sys2.StorageAdmin",
             from: "#custom_artifacts",
@@ -190,6 +190,10 @@
             protocol: [
                 "fuchsia.boot.ReadOnlyLog",
                 "fuchsia.boot.RootResource",
+
+                // Needed for test_manager_tests and test runner tests.
+                // TODO(fxbug.dev/86464): Remove this once we have facet API.
+                "fuchsia.component.resolution.Resolver",
                 "fuchsia.exception.Handler",
 
                 // fuchsia.hardware.pty.Device is needed for terminal_tests.
@@ -218,10 +222,6 @@
                 // for debugging.
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.scheduler.ProfileProvider",
-
-                // Needed for test_manager_tests and test runner tests.
-                // TODO(fxbug.dev/86464): Remove this once we have facet API.
-                "fuchsia.sys2.ComponentResolver",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.vulkan.loader.Loader",
             ],

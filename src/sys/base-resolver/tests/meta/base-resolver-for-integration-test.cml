@@ -11,11 +11,11 @@
     capabilities: [
         {
             resolver: "pkg_cache_resolver",
-            path: "/pkg-cache-resolver/fuchsia.sys2.ComponentResolver",
+            path: "/pkg-cache-resolver/fuchsia.component.resolution.Resolver",
         },
         {
-            protocol: "fuchsia.sys2.ComponentResolver-ForPkgCache",
-            path: "/pkg-cache-resolver/fuchsia.sys2.ComponentResolver",
+            protocol: "fuchsia.component.resolution.Resolver-ForPkgCache",
+            path: "/pkg-cache-resolver/fuchsia.component.resolution.Resolver",
         },
     ],
     use: [
@@ -35,7 +35,7 @@
             from: "self",
         },
         {
-            protocol: "fuchsia.sys2.ComponentResolver-ForPkgCache",
+            protocol: "fuchsia.component.resolution.Resolver-ForPkgCache",
             from: "self",
         },
     ],

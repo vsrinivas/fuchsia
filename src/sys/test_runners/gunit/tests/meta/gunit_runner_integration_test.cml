@@ -27,7 +27,7 @@
             protocol: [
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
-                "fuchsia.sys2.ComponentResolver",
+                "fuchsia.component.resolution.Resolver",
                 "fuchsia.sys2.EventSource",
             ],
             from: "parent",

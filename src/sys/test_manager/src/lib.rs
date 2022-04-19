@@ -14,12 +14,12 @@ use {
     fidl::endpoints::{create_endpoints, create_proxy, ClientEnd},
     fidl::prelude::*,
     fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_component_resolution::ResolverProxy,
     fidl_fuchsia_component_test::Capability2 as RBCapability,
     fidl_fuchsia_debugdata as fdebugdata, fidl_fuchsia_diagnostics as fdiagnostics,
     fidl_fuchsia_io as fio, fidl_fuchsia_sys as fv1sys, fidl_fuchsia_sys2 as fsys,
     fidl_fuchsia_test as ftest, fidl_fuchsia_test_internal as ftest_internal,
     fidl_fuchsia_test_manager as ftest_manager,
-    fsys::ComponentResolverProxy,
     ftest::Invocation,
     ftest_manager::{
         CaseStatus, DebugDataIteratorMarker, LaunchError, RunControllerRequest,
@@ -110,7 +110,7 @@ struct Suite {
     test_url: String,
     options: ftest_manager::RunOptions,
     controller: SuiteControllerRequestStream,
-    resolver: Arc<ComponentResolverProxy>,
+    resolver: Arc<ResolverProxy>,
     above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
 }
 
@@ -1077,7 +1077,7 @@ async fn run_single_suite(
 /// Start test manager and serve it over `stream`.
 pub async fn run_test_manager(
     mut stream: ftest_manager::RunBuilderRequestStream,
-    resolver: Arc<ComponentResolverProxy>,
+    resolver: Arc<ResolverProxy>,
     debug_data_controller: Arc<ftest_internal::DebugDataControllerProxy>,
     above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
     inspect_root: &self_diagnostics::RootInspectNode,
@@ -1139,7 +1139,7 @@ pub async fn run_test_manager(
 /// Start test manager and serve it over `stream`.
 pub async fn run_test_manager_query_server(
     mut stream: ftest_manager::QueryRequestStream,
-    resolver: Arc<ComponentResolverProxy>,
+    resolver: Arc<ResolverProxy>,
     above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
 ) -> Result<(), TestManagerError> {
     while let Some(event) = stream.try_next().await.map_err(TestManagerError::Stream)? {
@@ -1255,7 +1255,7 @@ impl RunningSuite {
         test_url: &str,
         facets: facet::SuiteFacets,
         instance_name: Option<&str>,
-        resolver: Arc<ComponentResolverProxy>,
+        resolver: Arc<ResolverProxy>,
         above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
     ) -> Result<Self, LaunchTestError> {
         info!("Starting '{}' in '{}' collection.", test_url, facets.collection);
@@ -1611,7 +1611,7 @@ async fn get_realm(
     test_package: &str,
     collection: &str,
     above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
-    resolver: Arc<ComponentResolverProxy>,
+    resolver: Arc<ResolverProxy>,
 ) -> Result<RealmBuilder, RealmBuilderError> {
     let builder = RealmBuilder::new_with_collection(collection.to_string()).await?;
 
@@ -1671,7 +1671,7 @@ async fn get_realm(
                 name: cm_rust::CapabilityName(String::from(HERMETIC_RESOLVER_CAPABILITY_NAME)),
                 source_path: Some(cm_rust::CapabilityPath {
                     dirname: String::from("/svc"),
-                    basename: String::from("fuchsia.sys2.ComponentResolver"),
+                    basename: String::from("fuchsia.component.resolution.Resolver"),
                 }),
             },
         ));

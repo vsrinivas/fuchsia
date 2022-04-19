@@ -4,7 +4,7 @@
 
 use {
     anyhow::Error,
-    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test_internal as ftest_internal,
+    fidl_fuchsia_component_resolution as fresolution, fidl_fuchsia_test_internal as ftest_internal,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_component::server::ServiceFs,
@@ -55,7 +55,7 @@ async fn main() -> Result<(), Error> {
     let routing_info = Arc::new(AboveRootCapabilitiesForTest::new(args.manifest_name()).await?);
     let routing_info_clone = routing_info.clone();
     let resolver = Arc::new(
-        connect_to_protocol::<fsys::ComponentResolverMarker>()
+        connect_to_protocol::<fresolution::ResolverMarker>()
             .expect("Cannot connect to component resolver"),
     );
     let debug_data_controller = Arc::new(

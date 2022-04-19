@@ -1,7 +1,7 @@
 # base-resolver
 
 `base-resolver` is a V2 component that implements the Component Resolver FIDL protocol
-[`fuchsia.sys2.ComponentResolver`] and exposes this protocol as a resolver capability.
+[`fuchsia.component.resolution.Resolver`] and exposes this protocol as a resolver capability.
 
 The responsibility of `base-resolver` is to resolve URLs to packages that are located
 in pkgfs and are part of the "base" set of packages.
@@ -40,4 +40,4 @@ package.
 $ fx test base-resolver-tests
 ```
 
-[`fuchsia.sys2.ComponentResolver`]: ../../../sdk/fidl/fuchsia.sys2/runtime/component_resolver.fidl
+[`fuchsia.component.resolution.Resolver`]: ../../../sdk/fidl/fuchsia.sys2/runtime/component_resolver.fidl

@@ -10,21 +10,30 @@
     capabilities: [
         {
             resolver: "full-resolver",
-            path: "/svc/fuchsia.sys2.ComponentResolver",
+            path: "/svc/fuchsia.component.resolution.Resolver",
         },
+        { protocol: "fuchsia.component.resolution.Resolver" },
+
+        // This component will temporarily serve the legacy protocol until
+        // all clients are migrated to the SDK version.
+        // TODO(http://fxbug.dev/94581): Remove this.
         { protocol: "fuchsia.sys2.ComponentResolver" },
     ],
     use: [
         {
             protocol: [
+                "fuchsia.component.resolution.Resolver",
                 "fuchsia.pkg.PackageResolver",
-                "fuchsia.sys2.ComponentResolver",
             ],
         },
     ],
     expose: [
         {
             resolver: "full-resolver",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.component.resolution.Resolver",
             from: "self",
         },
         {

@@ -5,8 +5,8 @@
 use {
     assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
+    fidl_fuchsia_component_resolution::{self as fresolution, ResolverMarker, ResolverProxy},
     fidl_fuchsia_io as fio,
-    fidl_fuchsia_sys2::*,
     fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
     futures::{
         future::{BoxFuture, FutureExt as _},
@@ -117,7 +117,7 @@ impl TestEnvBuilder {
             .add_route(
                 Route::new()
                     .capability(Capability::protocol_by_name(
-                        "fuchsia.sys2.ComponentResolver-ForPkgCache",
+                        "fuchsia.component.resolution.Resolver-ForPkgCache",
                     ))
                     .from(&base_resolver)
                     .to(Ref::parent()),
@@ -134,11 +134,11 @@ struct TestEnv {
 }
 
 impl TestEnv {
-    fn pkg_cache_resolver(&self) -> ComponentResolverProxy {
+    fn pkg_cache_resolver(&self) -> ResolverProxy {
         self.realm_instance
             .root
-            .connect_to_named_protocol_at_exposed_dir::<ComponentResolverMarker>(
-                "fuchsia.sys2.ComponentResolver-ForPkgCache",
+            .connect_to_named_protocol_at_exposed_dir::<ResolverMarker>(
+                "fuchsia.component.resolution.Resolver-ForPkgCache",
             )
             .unwrap()
     }
@@ -220,6 +220,6 @@ async fn pkg_cache_resolver_succeeds() {
 
     assert_matches!(
         env.pkg_cache_resolver().resolve(PKG_CACHE_COMPONENT_URL).await.unwrap(),
-        Ok(Component { .. })
+        Ok(fresolution::Component { .. })
     );
 }

@@ -6,8 +6,10 @@ use {
     crate::ResolverError,
     anyhow::{self, Context},
     fidl::endpoints::{ClientEnd, Proxy},
+    fidl_fuchsia_component_resolution::{
+        self as fresolution, ResolverRequest, ResolverRequestStream,
+    },
     fidl_fuchsia_io as fio,
-    fidl_fuchsia_sys2::{self as fsys, ComponentResolverRequest, ComponentResolverRequestStream},
     futures::stream::TryStreamExt as _,
     log::error,
 };
@@ -16,7 +18,7 @@ static PKG_CACHE_COMPONENT_URL: &'static str = "fuchsia-pkg-cache:///#meta/pkg-c
 static PKG_CACHE_MANIFEST_PATH: &'static str = "meta/pkg-cache.cm";
 static PKG_CACHE_PACKAGE_URL: &'static str = "fuchsia-pkg-cache:///";
 
-pub async fn serve(stream: ComponentResolverRequestStream) -> anyhow::Result<()> {
+pub async fn serve(stream: ResolverRequestStream) -> anyhow::Result<()> {
     let blobfs =
         blobfs::Client::open_from_namespace_executable().context("failed to open /blob")?;
     let pkg_cache_hash = get_pkg_cache_hash(
@@ -48,17 +50,17 @@ fn pkg_cache_path() -> fuchsia_pkg::PackagePath {
 }
 
 async fn serve_impl(
-    mut stream: ComponentResolverRequestStream,
+    mut stream: ResolverRequestStream,
     blobfs: &blobfs::Client,
     pkg_cache: fuchsia_hash::Hash,
 ) -> anyhow::Result<()> {
-    while let Some(ComponentResolverRequest::Resolve { component_url, responder }) =
+    while let Some(ResolverRequest::Resolve { component_url, responder }) =
         stream.try_next().await.context("failed to read request from FIDL stream")?
     {
         if component_url != PKG_CACHE_COMPONENT_URL {
             error!("failed to resolve invalid pkg-cache URL {:?}", component_url);
             responder
-                .send(&mut Err(fsys::ResolverError::InvalidArgs))
+                .send(&mut Err(fresolution::ResolverError::InvalidArgs))
                 .context("failed sending invalid URL error")?;
             continue;
         }
@@ -79,7 +81,7 @@ async fn serve_impl(
 async fn resolve_pkg_cache(
     blobfs: &blobfs::Client,
     pkg_cache: fuchsia_hash::Hash,
-) -> Result<fsys::Component, ResolverError> {
+) -> Result<fresolution::Component, ResolverError> {
     let (proxy, server) =
         fidl::endpoints::create_proxy().map_err(ResolverError::CreateEndpoints)?;
     let () = package_directory::serve(
@@ -97,15 +99,15 @@ async fn resolve_pkg_cache(
     let client = ClientEnd::new(
         proxy.into_channel().expect("could not convert proxy to channel").into_zx_channel(),
     );
-    Ok(fsys::Component {
-        resolved_url: Some(PKG_CACHE_COMPONENT_URL.into()),
+    Ok(fresolution::Component {
+        url: Some(PKG_CACHE_COMPONENT_URL.into()),
         decl: Some(data),
-        package: Some(fsys::Package {
-            package_url: Some(PKG_CACHE_PACKAGE_URL.to_string()),
-            package_dir: Some(client),
-            ..fsys::Package::EMPTY
+        package: Some(fresolution::Package {
+            url: Some(PKG_CACHE_PACKAGE_URL.to_string()),
+            directory: Some(client),
+            ..fresolution::Package::EMPTY
         }),
-        ..fsys::Component::EMPTY
+        ..fresolution::Component::EMPTY
     })
 }
 
@@ -121,31 +123,31 @@ mod tests {
     #[fuchsia::test]
     async fn serve_rejects_invalid_url() {
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fsys::ComponentResolverMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fresolution::ResolverMarker>().unwrap();
         let (blobfs, _) = blobfs::Client::new_mock();
         let server = serve_impl(stream, &blobfs, [0; 32].into());
         let client = async move { proxy.resolve("invalid-url").await };
         let (server, client) = futures::join!(server, client);
         let () = server.unwrap();
-        assert_matches!(client, Ok(Err(fsys::ResolverError::InvalidArgs)));
+        assert_matches!(client, Ok(Err(fresolution::ResolverError::InvalidArgs)));
     }
 
     #[fuchsia::test]
     async fn serve_sends_error_if_resolve_fails() {
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fsys::ComponentResolverMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fresolution::ResolverMarker>().unwrap();
         let (blobfs, _) = blobfs::Client::new_mock();
         let server = serve_impl(stream, &blobfs, [0; 32].into());
         let client = async move { proxy.resolve("fuchsia-pkg-cache:///#meta/pkg-cache.cm").await };
         let (server, client) = futures::join!(server, client);
         let () = server.unwrap();
-        assert_matches!(client, Ok(Err(fsys::ResolverError::Io)));
+        assert_matches!(client, Ok(Err(fresolution::ResolverError::Io)));
     }
 
     #[fuchsia::test]
     async fn serve_success() {
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fsys::ComponentResolverMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<fresolution::ResolverMarker>().unwrap();
         let (blobfs, fake) = blobfs::Client::new_temp_dir_fake();
         let package = fuchsia_pkg_testing::PackageBuilder::new("fake-pkg-cache")
             .add_resource_at("meta/pkg-cache.cm", [0u8, 1, 2].as_slice())
@@ -160,14 +162,13 @@ mod tests {
 
         let () = server.unwrap();
         let component = client.unwrap().unwrap();
-        assert_eq!(component.resolved_url.unwrap(), "fuchsia-pkg-cache:///#meta/pkg-cache.cm");
+        assert_eq!(component.url.unwrap(), "fuchsia-pkg-cache:///#meta/pkg-cache.cm");
         assert_matches!(component.decl.unwrap(), fmem::Data::Buffer(_));
         assert_eq!(
-            component.package.as_ref().unwrap().package_url.as_ref().unwrap(),
+            component.package.as_ref().unwrap().url.as_ref().unwrap(),
             "fuchsia-pkg-cache:///"
         );
-        let resolved_package =
-            component.package.unwrap().package_dir.unwrap().into_proxy().unwrap();
+        let resolved_package = component.package.unwrap().directory.unwrap().into_proxy().unwrap();
         package.verify_contents(&resolved_package).await.unwrap();
     }
 
