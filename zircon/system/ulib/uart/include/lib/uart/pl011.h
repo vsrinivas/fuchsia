@@ -129,9 +129,7 @@ struct Driver : public DriverBase<Driver, KDRV_PL011_UART, dcfg_simple_t> {
   template <typename... Args>
   explicit Driver(Args&&... args) : Base(std::forward<Args>(args)...) {}
 
-  static std::optional<Driver> MaybeCreate(const zbi_header_t& header, const void* payload) {
-    return Base::MaybeCreate(header, payload);
-  }
+  using Base::MaybeCreate;
 
   static std::optional<Driver> MaybeCreate(std::string_view string) {
     if (string == "qemu") {

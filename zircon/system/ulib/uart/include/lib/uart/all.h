@@ -109,6 +109,10 @@ class KernelDriver {
   // the boot loader will supersede one embedded in the original ZBI).
   bool Match(const zbi_header_t& header, const void* payload) { return DoMatch(header, payload); }
 
+  // If |debug_port| (DBG2 Acpi Table) contains a configuration matching any existing driver,
+  // instantiate that driver and return true.
+  bool Match(const acpi_lite::AcpiDebugPortDescriptor& debug_port) { return DoMatch(debug_port); }
+
   // This is like Match, but instead of matching a ZBI item, it matches a
   // string value for the "kernel.serial" boot option.
   bool Parse(std::string_view option) { return DoMatch(option); }

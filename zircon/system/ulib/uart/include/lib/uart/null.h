@@ -45,6 +45,10 @@ struct Driver {
     return {};
   }
 
+  static std::optional<Driver> MaybeCreate(const acpi_lite::AcpiDebugPortDescriptor& debug_port) {
+    return {};
+  }
+
   void Unparse(FILE* out) const { fprintf(out, "none"); }
 
   // uart::KernelDriver UartDriver API

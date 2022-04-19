@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/acpi_lite/debug_port.h>
 #include <lib/uart/all.h>
+#include <lib/uart/amlogic.h>
+#include <lib/uart/ns8250.h>
+#include <zircon/boot/driver-config.h>
 
 #include <string>
 
@@ -245,6 +249,37 @@ TEST(ParsingTests, TwoUint64s) {
   ASSERT_NO_FATAL_FAILURE(test());
 }
 
+// Currently only these two are supported.
+acpi_lite::AcpiDebugPortDescriptor kMmioDebugPort = {
+    .type = acpi_lite::AcpiDebugPortDescriptor::Type::kMmio,
+    .address = 1234,
+    .length = 4,
+};
+
+acpi_lite::AcpiDebugPortDescriptor kPioDebugPort = {
+    .type = acpi_lite::AcpiDebugPortDescriptor::Type::kPio,
+    .address = 4321,
+    .length = 2,
+};
+
+template <typename T, bool Matches, typename U>
+void CheckMaybeCreateFromAcpi(const U& debug_port) {
+  auto driver = T::MaybeCreate(debug_port);
+
+  if constexpr (Matches) {
+    ASSERT_TRUE(driver);
+    if constexpr (std::is_same_v<decltype(driver->config()), dcfg_simple_t>) {
+      EXPECT_EQ(driver->config().mmio_phys, debug_port.address);
+    }
+
+    if constexpr (std::is_same_v<decltype(driver->config()), dcfg_simple_pio_t>) {
+      EXPECT_EQ(driver->config().base, debug_port.address);
+    }
+  } else {
+    ASSERT_FALSE(driver);
+  }
+}
+
 TEST(ParsingTests, Ns8250MmioDriver) {
   auto driver = uart::ns8250::MmioDriver::MaybeCreate(kX86 ? "mmio,0xa,0xb" : "ns8250,0xa,0xb");
   ASSERT_TRUE(driver.has_value());
@@ -252,6 +287,9 @@ TEST(ParsingTests, Ns8250MmioDriver) {
   const dcfg_simple_t& config = driver->config();
   EXPECT_EQ(0xa, config.mmio_phys);
   EXPECT_EQ(0xb, config.irq);
+
+  CheckMaybeCreateFromAcpi<uart::ns8250::MmioDriver, true>(kMmioDebugPort);
+  CheckMaybeCreateFromAcpi<uart::ns8250::MmioDriver, false>(kPioDebugPort);
 }
 
 TEST(ParsingTests, Ns8250PioDriver) {
@@ -261,6 +299,9 @@ TEST(ParsingTests, Ns8250PioDriver) {
   const dcfg_simple_pio_t& config = driver->config();
   EXPECT_EQ(0xa, config.base);
   EXPECT_EQ(0xb, config.irq);
+
+  CheckMaybeCreateFromAcpi<uart::ns8250::PioDriver, false>(kMmioDebugPort);
+  CheckMaybeCreateFromAcpi<uart::ns8250::PioDriver, true>(kPioDebugPort);
 }
 
 TEST(ParsingTests, Ns8250LegacyDriver) {
@@ -279,6 +320,9 @@ TEST(ParsingTests, Pl011Driver) {
   const dcfg_simple_t& config = driver->config();
   EXPECT_EQ(0xa, config.mmio_phys);
   EXPECT_EQ(0xb, config.irq);
+
+  CheckMaybeCreateFromAcpi<uart::pl011::Driver, false>(kMmioDebugPort);
+  CheckMaybeCreateFromAcpi<uart::pl011::Driver, false>(kPioDebugPort);
 }
 
 TEST(ParsingTests, Pl011QemuDriver) {
@@ -297,6 +341,9 @@ TEST(ParsingTests, AmlogicDriver) {
   const dcfg_simple_t& config = driver->config();
   EXPECT_EQ(0xa, config.mmio_phys);
   EXPECT_EQ(0xb, config.irq);
+
+  CheckMaybeCreateFromAcpi<uart::amlogic::Driver, false>(kMmioDebugPort);
+  CheckMaybeCreateFromAcpi<uart::amlogic::Driver, false>(kPioDebugPort);
 }
 
 }  // namespace

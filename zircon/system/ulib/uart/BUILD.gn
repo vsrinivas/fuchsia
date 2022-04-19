@@ -21,6 +21,9 @@ zx_library("uart") {
     # <lib/uart/uart.h> has #include <lib/arch/intrin.h>.
     "//zircon/kernel/lib/arch:headers",
 
+    # <lib/uart/ns8250.h> has #include <lib/acpi_lite.h>
+    "//zircon/kernel/lib/acpi_lite:headers",
+
     # <lib/uart/uart.h> has #include <lib/zircon-internal/thread_annotations.h>.
     "//zircon/system/ulib/zircon-internal:headers",
 

@@ -22,6 +22,10 @@
 
 #include "chars-from.h"
 
+namespace acpi_lite {
+struct AcpiDebugPortDescriptor;
+}
+
 namespace uart {
 
 // This template is specialized by payload configuration type (see below).
@@ -115,6 +119,11 @@ class DriverBase {
         return Driver{*config};
       }
     }
+    return {};
+  }
+
+  // API to match DBG2 Table (ACPI). Currently only 16550 compatible uarts are supported.
+  static std::optional<Driver> MaybeCreate(const acpi_lite::AcpiDebugPortDescriptor& debug_port) {
     return {};
   }
 

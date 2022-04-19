@@ -5,6 +5,7 @@
 #ifndef LIB_UART_NS8250_H_
 #define LIB_UART_NS8250_H_
 
+#include <lib/acpi_lite/debug_port.h>
 #include <zircon/boot/driver-config.h>
 
 #include <hwreg/bitfields.h>
@@ -182,8 +183,22 @@ class DriverImpl
   template <typename... Args>
   explicit DriverImpl(Args&&... args) : Base(std::forward<Args>(args)...) {}
 
-  static std::optional<DriverImpl> MaybeCreate(const zbi_header_t& header, const void* payload) {
-    return Base::MaybeCreate(header, payload);
+  using Base::MaybeCreate;
+
+  static std::optional<DriverImpl> MaybeCreate(
+      const acpi_lite::AcpiDebugPortDescriptor& debug_port) {
+    if constexpr (KdrvExtra == KDRV_I8250_MMIO_UART) {
+      if (debug_port.type == acpi_lite::AcpiDebugPortDescriptor::Type::kMmio) {
+        return DriverImpl(KdrvConfig{.mmio_phys = debug_port.address});
+      }
+    }
+
+    if constexpr (KdrvExtra == KDRV_I8250_PIO_UART) {
+      if (debug_port.type == acpi_lite::AcpiDebugPortDescriptor::Type::kPio) {
+        return DriverImpl(KdrvConfig{.base = static_cast<uint16_t>(debug_port.address)});
+      }
+    }
+    return {};
   }
 
   static std::optional<DriverImpl> MaybeCreate(std::string_view string) {
