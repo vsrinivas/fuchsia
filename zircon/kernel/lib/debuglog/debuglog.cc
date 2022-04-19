@@ -156,11 +156,12 @@ zx_status_t DLog::Shutdown(zx_time_t deadline) {
   return dumper_status;
 }
 
-void DLog::BluescreenInit() {
-  // if we're panicking, stop processing log writes
-  // they'll fail over to kernel console and serial
+void DLog::PanicStart() {
+  // Stop processing log writes they'll fail over to kernel console and serial.
   panic_ = true;
+}
 
+void DLog::BluescreenInit() {
   udisplay_bind_gfxconsole();
 
   // replay debuglog?
@@ -597,6 +598,7 @@ void dlog_serial_write(ktl::string_view str) {
 }
 
 void dlog_bluescreen_init() { DLOG->BluescreenInit(); }
+void dlog_panic_start() { DLOG->PanicStart(); }
 void dlog_force_panic() { dlog_bypass_ = true; }
 zx_status_t dlog_shutdown(zx_time_t deadline) { return DLOG->Shutdown(deadline); }
 size_t dlog_render_to_crashlog(ktl::span<char> target) { return DLOG->RenderToCrashlog(target); }

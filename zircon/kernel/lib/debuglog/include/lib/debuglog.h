@@ -118,9 +118,15 @@ extern FILE gDlogSerialFile;
 
 extern bool dlog_bypass_;
 
-// bluescreen_init should be called at the "start" of a fatal fault or
-// panic to ensure that the fault output (via kernel printf/dprintf)
-// is captured or displayed to the user
+// Tell the debuglog that the system has started to panic so that subsequent
+// writes won't wake any debuglog threads.  This function should be called
+// *very* early in the process of panicking.  In particular, it should be called
+// before |dlog_bluescreen_init|.
+void dlog_panic_start();
+
+// Print the equivalent of a "blue screen" message.  When called during a panic,
+// this function should be called after |dlog_panic_start| to ensure that its
+// printfs bypass the normal debuglog queue and drainer thread.
 void dlog_bluescreen_init();
 
 // Force the dlog into panic mode.  Can be used in special circumstances to

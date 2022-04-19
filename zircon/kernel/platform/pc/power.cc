@@ -96,9 +96,11 @@ void platform_halt_cpu(void) {
   halted_cpus.fetch_or(cpu_num_to_mask(arch_curr_cpu_num()));
 }
 
+// TODO(fxbug.dev/98351): Refactor platform_panic_start.
 void platform_panic_start(PanicStartHaltOtherCpus option) {
   platform_debug_panic_start();
   arch_disable_ints();
+  dlog_panic_start();
 
   static ktl::atomic<int> panic_started(0);
   if (panic_started.exchange(1) == 0) {
