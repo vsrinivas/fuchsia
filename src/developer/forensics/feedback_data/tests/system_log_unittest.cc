@@ -256,104 +256,10 @@ LogSink::MessageOr ToMessage(const std::string& msg, const zx::duration time) {
 
 LogSink::MessageOr ToError(const std::string& error) { return ::fpromise::error(error); }
 
-TEST(LogBufferTest, AddDoesNotReachCapcity) {
+TEST(LogBufferTest, OrderingOnAdd) {
   IdentityRedactor redactor(inspect::BoolProperty{});
 
-  LogBuffer buffer(StorageSize::Megabytes(100), &redactor);
-
-  EXPECT_TRUE(buffer.Add(ToMessage("log 1")));
-
-  EXPECT_TRUE(buffer.Add(ToMessage("log 2")));
-  EXPECT_TRUE(buffer.Add(ToMessage("log 2")));
-  EXPECT_TRUE(buffer.Add(ToMessage("log 2")));
-
-  EXPECT_TRUE(buffer.Add(ToMessage("log 3")));
-  EXPECT_TRUE(buffer.Add(ToMessage("log 3")));
-
-  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 1")));
-
-  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 2")));
-  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 2")));
-
-  EXPECT_TRUE(buffer.Add(ToMessage("log 4")));
-  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 3")));
-  EXPECT_TRUE(buffer.Add(ToMessage("log 4")));
-
-  EXPECT_EQ(buffer.ToString(), R"([00001.010][00100][00101][tag1, tag2] INFO: log 1
-[00001.010][00100][00101][tag1, tag2] INFO: log 2
-!!! MESSAGE REPEATED 2 MORE TIMES !!!
-[00001.010][00100][00101][tag1, tag2] INFO: log 3
-!!! MESSAGE REPEATED 1 MORE TIME !!!
-!!! Failed to format chunk: ERRORS ERR 1 !!!
-!!! Failed to format chunk: ERRORS ERR 2 !!!
-!!! MESSAGE REPEATED 1 MORE TIME !!!
-[00001.010][00100][00101][tag1, tag2] INFO: log 4
-!!! Failed to format chunk: ERRORS ERR 3 !!!
-[00001.010][00100][00101][tag1, tag2] INFO: log 4
-)");
-}
-
-TEST(LogBufferTest, AddReachesCapcity) {
-  IdentityRedactor redactor(inspect::BoolProperty{});
-
-  // 100 bytes is approximately enough to store 2 log messages.
-  LogBuffer buffer(StorageSize::Bytes(100), &redactor);
-
-  EXPECT_TRUE(buffer.Add(ToMessage("log 1")));
-
-  EXPECT_TRUE(buffer.Add(ToMessage("log 2")));
-  EXPECT_TRUE(buffer.Add(ToMessage("log 2")));
-  EXPECT_TRUE(buffer.Add(ToMessage("log 2")));
-
-  EXPECT_EQ(buffer.ToString(), R"([00001.010][00100][00101][tag1, tag2] INFO: log 1
-[00001.010][00100][00101][tag1, tag2] INFO: log 2
-!!! MESSAGE REPEATED 2 MORE TIMES !!!
-)");
-
-  EXPECT_TRUE(buffer.Add(ToMessage("log 3")));
-  EXPECT_TRUE(buffer.Add(ToMessage("log 3")));
-
-  EXPECT_EQ(buffer.ToString(), R"([00001.010][00100][00101][tag1, tag2] INFO: log 2
-!!! MESSAGE REPEATED 2 MORE TIMES !!!
-[00001.010][00100][00101][tag1, tag2] INFO: log 3
-!!! MESSAGE REPEATED 1 MORE TIME !!!
-)");
-
-  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 1")));
-
-  EXPECT_EQ(buffer.ToString(), R"([00001.010][00100][00101][tag1, tag2] INFO: log 3
-!!! MESSAGE REPEATED 1 MORE TIME !!!
-!!! Failed to format chunk: ERRORS ERR 1 !!!
-)");
-
-  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 2")));
-  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 2")));
-
-  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 1 !!!
-!!! Failed to format chunk: ERRORS ERR 2 !!!
-!!! MESSAGE REPEATED 1 MORE TIME !!!
-)");
-
-  EXPECT_TRUE(buffer.Add(ToMessage("log 4")));
-
-  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 2 !!!
-!!! MESSAGE REPEATED 1 MORE TIME !!!
-[00001.010][00100][00101][tag1, tag2] INFO: log 4
-)");
-
-  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 3")));
-  EXPECT_TRUE(buffer.Add(ToMessage("log 4")));
-
-  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 3 !!!
-[00001.010][00100][00101][tag1, tag2] INFO: log 4
-)");
-}
-
-TEST(LogBufferTest, AddMaintainsOrder) {
-  IdentityRedactor redactor(inspect::BoolProperty{});
-
-  // 100 bytes is approximately enough to store 2 log messages.
-  LogBuffer buffer(StorageSize::Bytes(100), &redactor);
+  LogBuffer buffer(StorageSize::Gigabytes(100), &redactor);
 
   EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 0")));
   EXPECT_TRUE(buffer.Add(ToMessage("log 1", zx::sec(20))));
@@ -362,23 +268,141 @@ TEST(LogBufferTest, AddMaintainsOrder) {
 [00020.000][00100][00101][tag1, tag2] INFO: log 1
 )");
 
+  // Should be deduplicated and before "log 1".
   EXPECT_TRUE(buffer.Add(ToMessage("log 2", zx::sec(18))));
   EXPECT_TRUE(buffer.Add(ToMessage("log 2", zx::sec(18))));
   EXPECT_TRUE(buffer.Add(ToMessage("log 2", zx::sec(19))));
 
-  EXPECT_EQ(buffer.ToString(), R"([00018.000][00100][00101][tag1, tag2] INFO: log 2
+  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 0 !!!
+[00018.000][00100][00101][tag1, tag2] INFO: log 2
 !!! MESSAGE REPEATED 2 MORE TIMES !!!
 [00020.000][00100][00101][tag1, tag2] INFO: log 1
 )");
 
+  // Should be deduplicated and after "log 1".
   EXPECT_TRUE(buffer.Add(ToMessage("log 3", zx::sec(21))));
   EXPECT_TRUE(buffer.Add(ToMessage("log 3", zx::sec(21))));
 
-  EXPECT_EQ(buffer.ToString(), R"([00020.000][00100][00101][tag1, tag2] INFO: log 1
+  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 0 !!!
+[00018.000][00100][00101][tag1, tag2] INFO: log 2
+!!! MESSAGE REPEATED 2 MORE TIMES !!!
+[00020.000][00100][00101][tag1, tag2] INFO: log 1
 [00021.000][00100][00101][tag1, tag2] INFO: log 3
 !!! MESSAGE REPEATED 1 MORE TIME !!!
 )");
 
+  // Should be after "log 3".
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 1")));
+
+  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 0 !!!
+[00018.000][00100][00101][tag1, tag2] INFO: log 2
+!!! MESSAGE REPEATED 2 MORE TIMES !!!
+[00020.000][00100][00101][tag1, tag2] INFO: log 1
+[00021.000][00100][00101][tag1, tag2] INFO: log 3
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+!!! Failed to format chunk: ERRORS ERR 1 !!!
+)");
+
+  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 0 !!!
+[00018.000][00100][00101][tag1, tag2] INFO: log 2
+!!! MESSAGE REPEATED 2 MORE TIMES !!!
+[00020.000][00100][00101][tag1, tag2] INFO: log 1
+[00021.000][00100][00101][tag1, tag2] INFO: log 3
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+!!! Failed to format chunk: ERRORS ERR 1 !!!
+)");
+
+  // Should be before "log 3".
+  EXPECT_TRUE(buffer.Add(ToMessage("log 4", zx::sec(20))));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 4", zx::sec(20))));
+
+  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 0 !!!
+[00018.000][00100][00101][tag1, tag2] INFO: log 2
+!!! MESSAGE REPEATED 2 MORE TIMES !!!
+[00020.000][00100][00101][tag1, tag2] INFO: log 1
+[00020.000][00100][00101][tag1, tag2] INFO: log 4
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+[00021.000][00100][00101][tag1, tag2] INFO: log 3
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+!!! Failed to format chunk: ERRORS ERR 1 !!!
+)");
+
+  // Should be before "log 3", but not aggregated with other "log 4".
+  EXPECT_TRUE(buffer.Add(ToMessage("log 4", zx::sec(20))));
+
+  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 0 !!!
+[00018.000][00100][00101][tag1, tag2] INFO: log 2
+!!! MESSAGE REPEATED 2 MORE TIMES !!!
+[00020.000][00100][00101][tag1, tag2] INFO: log 1
+[00020.000][00100][00101][tag1, tag2] INFO: log 4
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+[00020.000][00100][00101][tag1, tag2] INFO: log 4
+[00021.000][00100][00101][tag1, tag2] INFO: log 3
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+!!! Failed to format chunk: ERRORS ERR 1 !!!
+)");
+
+  // Should be before "log 3".
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 2")));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 4", zx::sec(22))));
+
+  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 0 !!!
+[00018.000][00100][00101][tag1, tag2] INFO: log 2
+!!! MESSAGE REPEATED 2 MORE TIMES !!!
+[00020.000][00100][00101][tag1, tag2] INFO: log 1
+[00020.000][00100][00101][tag1, tag2] INFO: log 4
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+[00020.000][00100][00101][tag1, tag2] INFO: log 4
+[00021.000][00100][00101][tag1, tag2] INFO: log 3
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+!!! Failed to format chunk: ERRORS ERR 1 !!!
+!!! Failed to format chunk: ERRORS ERR 2 !!!
+[00022.000][00100][00101][tag1, tag2] INFO: log 4
+)");
+}
+
+TEST(LogBufferTest, OrderingOnEnforce) {
+  IdentityRedactor redactor(inspect::BoolProperty{});
+
+  // 190 bytes is approximately enough to store 3 log messages.
+  LogBuffer buffer(StorageSize::Bytes(190), &redactor);
+
+  EXPECT_TRUE(buffer.Add(ToMessage("log 1", zx::sec(20))));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 1", zx::sec(20))));
+
+  EXPECT_EQ(buffer.ToString(), R"([00020.000][00100][00101][tag1, tag2] INFO: log 1
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+)");
+
+  // Should be before "log 1".
+  EXPECT_TRUE(buffer.Add(ToMessage("log 2", zx::sec(18))));
+  EXPECT_EQ(buffer.ToString(), R"([00018.000][00100][00101][tag1, tag2] INFO: log 2
+[00020.000][00100][00101][tag1, tag2] INFO: log 1
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+)");
+
+  // Should be before "log 1" and not deduplicated against the earlier "log 2"
+  EXPECT_TRUE(buffer.Add(ToMessage("log 2", zx::sec(18))));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 2", zx::sec(19))));
+
+  EXPECT_EQ(buffer.ToString(), R"([00018.000][00100][00101][tag1, tag2] INFO: log 2
+[00018.000][00100][00101][tag1, tag2] INFO: log 2
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+[00020.000][00100][00101][tag1, tag2] INFO: log 1
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+)");
+
+  // Should be deduplicated and after "log 1".
+  EXPECT_TRUE(buffer.Add(ToMessage("log 3", zx::sec(21))));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 3", zx::sec(21))));
+
+  EXPECT_EQ(buffer.ToString(), R"([00020.000][00100][00101][tag1, tag2] INFO: log 1
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+[00021.000][00100][00101][tag1, tag2] INFO: log 3
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+)");
+
+  // Should be after "log 3".
   EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 1")));
 
   EXPECT_EQ(buffer.ToString(), R"([00021.000][00100][00101][tag1, tag2] INFO: log 3
@@ -386,26 +410,52 @@ TEST(LogBufferTest, AddMaintainsOrder) {
 !!! Failed to format chunk: ERRORS ERR 1 !!!
 )");
 
-  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 2")));
-  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 2")));
-
-  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 1 !!!
-!!! Failed to format chunk: ERRORS ERR 2 !!!
-!!! MESSAGE REPEATED 1 MORE TIME !!!
-)");
-
+  // Should be before "log 3".
+  EXPECT_TRUE(buffer.Add(ToMessage("log 4", zx::sec(20))));
   EXPECT_TRUE(buffer.Add(ToMessage("log 4", zx::sec(20))));
 
-  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 1 !!!
-!!! Failed to format chunk: ERRORS ERR 2 !!!
+  EXPECT_EQ(buffer.ToString(), R"([00020.000][00100][00101][tag1, tag2] INFO: log 4
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+[00021.000][00100][00101][tag1, tag2] INFO: log 3
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+!!! Failed to format chunk: ERRORS ERR 1 !!!
+)");
+}
+
+TEST(LogBufferTest, RepeatedMessage) {
+  IdentityRedactor redactor(inspect::BoolProperty{});
+
+  LogBuffer buffer(StorageSize::Megabytes(100), &redactor);
+
+  EXPECT_TRUE(buffer.Add(ToMessage("log 1")));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 1")));
+
+  EXPECT_EQ(buffer.ToString(), R"([00001.010][00100][00101][tag1, tag2] INFO: log 1
 !!! MESSAGE REPEATED 1 MORE TIME !!!
 )");
+}
 
-  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 3")));
-  EXPECT_TRUE(buffer.Add(ToMessage("log 4", zx::sec(22))));
+TEST(LogBufferTest, Timestamp0OnFirstError) {
+  IdentityRedactor redactor(inspect::BoolProperty{});
 
-  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 3 !!!
-[00022.000][00100][00101][tag1, tag2] INFO: log 4
+  LogBuffer buffer(StorageSize::Megabytes(100), &redactor);
+
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 1")));
+
+  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 1 !!!
+)");
+}
+
+TEST(LogBufferTest, RepeatedError) {
+  IdentityRedactor redactor(inspect::BoolProperty{});
+
+  LogBuffer buffer(StorageSize::Megabytes(100), &redactor);
+
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 1")));
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 1")));
+
+  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 1 !!!
+!!! MESSAGE REPEATED 1 MORE TIME !!!
 )");
 }
 
