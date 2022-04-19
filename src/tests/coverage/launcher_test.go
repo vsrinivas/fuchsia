@@ -61,6 +61,7 @@ func TestCoverage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to initialize fuchsia tester: %s", err)
 	}
+	defer tester.Close()
 
 	test := testsharder.Test{
 		Test: build.Test{
