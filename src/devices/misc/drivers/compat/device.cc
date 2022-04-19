@@ -445,6 +445,20 @@ void Device::InitReply(zx_status_t status) {
   init_waiters_.clear();
 }
 
+zx_status_t Device::ReadOp(void* data, size_t len, size_t off, size_t* out_actual) {
+  if (!HasOp(ops_, &zx_protocol_device_t::read)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  return ops_->read(compat_symbol_.context, data, len, off, out_actual);
+}
+
+zx_status_t Device::WriteOp(const void* data, size_t len, size_t off, size_t* out_actual) {
+  if (!HasOp(ops_, &zx_protocol_device_t::write)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  return ops_->write(compat_symbol_.context, data, len, off, out_actual);
+}
+
 fpromise::promise<void, zx_status_t> Device::WaitForInitToComplete() {
   std::scoped_lock lock(init_lock_);
   if (init_is_finished_) {

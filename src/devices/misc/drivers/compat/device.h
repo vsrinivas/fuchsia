@@ -62,6 +62,10 @@ class Device : public std::enable_shared_from_this<Device> {
   zx_status_t MessageOp(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void InitReply(zx_status_t status);
 
+  // TODO(fxbug.dev/33822): Remove these when R/W are removed.
+  zx_status_t ReadOp(void* data, size_t len, size_t off, size_t* out_actual);
+  zx_status_t WriteOp(const void* data, size_t len, size_t off, size_t* out_actual);
+
   fpromise::promise<void, zx_status_t> RebindToLibname(std::string_view libname);
 
   fpromise::promise<void, zx_status_t> WaitForInitToComplete();

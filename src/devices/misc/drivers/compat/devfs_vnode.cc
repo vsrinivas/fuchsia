@@ -101,10 +101,10 @@ void DevfsVnode::HandleFsSpecificMessage(fidl::IncomingMessage& msg, fidl::Trans
 }
 
 zx_status_t DevfsVnode::Read(void* data, size_t len, size_t off, size_t* out_actual) {
-  return ZX_ERR_NOT_SUPPORTED;
+  return dev_->ReadOp(data, len, off, out_actual);
 }
 zx_status_t DevfsVnode::Write(const void* data, size_t len, size_t off, size_t* out_actual) {
-  return ZX_ERR_NOT_SUPPORTED;
+  return dev_->WriteOp(data, len, off, out_actual);
 }
 
 void DevfsVnode::Bind(BindRequestView request, BindCompleter::Sync& completer) {

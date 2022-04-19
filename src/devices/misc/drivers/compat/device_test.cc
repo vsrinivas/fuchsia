@@ -632,6 +632,48 @@ TEST_F(DeviceTest, DevfsVnodeGetTopologicalPath) {
   ASSERT_TRUE(callback_called);
 }
 
+TEST_F(DeviceTest, DeviceReadWrite) {
+  auto endpoints = fidl::CreateEndpoints<fdf::Node>();
+
+  // Create a device.
+  // Our device expects to have a value of 0xA written to it, and when read it will give 0xB.
+  zx_protocol_device_t ops{
+      .read =
+          [](void* ctx, void* data, size_t len, size_t off, size_t* out_actual) {
+            uint8_t* byte_data = reinterpret_cast<uint8_t*>(data);
+            *byte_data = 0xB;
+            *out_actual = 1;
+
+            return ZX_OK;
+          },
+      .write =
+          [](void* ctx, const void* data, size_t len, size_t off, size_t* out_actual) {
+            const uint8_t* byte_data = reinterpret_cast<const uint8_t*>(data);
+            if (*byte_data != 0xAu) {
+              return ZX_ERR_INTERNAL;
+            }
+            *out_actual = 1;
+
+            return ZX_OK;
+          },
+  };
+  compat::Device device(compat::kDefaultDevice, &ops, nullptr, std::nullopt, logger(),
+                        dispatcher());
+  device.Bind({std::move(endpoints->client), dispatcher()});
+
+  uint8_t first_value = 0xA;
+  size_t actual = 0;
+
+  ASSERT_EQ(ZX_OK, device.WriteOp(&first_value, sizeof(first_value), 0, &actual));
+  ASSERT_EQ(1ul, actual);
+
+  ASSERT_EQ(ZX_OK, device.ReadOp(&first_value, sizeof(first_value), 0, &actual));
+  ASSERT_EQ(0xB, first_value);
+  ASSERT_EQ(1ul, actual);
+
+  ASSERT_TRUE(test_loop().RunUntilIdle());
+}
+
 TEST_F(DeviceTest, DevfsVnodeTestBind) {
   auto [node, node_client] = CreateTestNode();
 
