@@ -37,16 +37,21 @@ use {
     },
     mock_crash_reporter::{CrashReport, MockCrashReporterService, ThrottleHook},
     mock_installer::MockUpdateInstallerService,
-    mock_omaha_server::{OmahaResponse, OmahaServer, ResponseAndMetadata},
+    mock_omaha_server::{
+        OmahaResponse, OmahaServer, PrivateKey, PrivateKeyAndId, PrivateKeys, ResponseAndMetadata,
+    },
     mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
     mock_reboot::{MockRebootService, RebootReason},
     mock_resolver::MockResolverService,
     mock_verifier::MockVerifierService,
+    omaha_client::cup_ecdsa::PublicKey,
     parking_lot::Mutex,
     serde_json::json,
     std::{
+        convert::TryInto,
         fs::{self, create_dir},
         path::PathBuf,
+        str::FromStr,
         sync::Arc,
     },
     tempfile::TempDir,
@@ -104,6 +109,10 @@ struct Proxies {
     _verifier: Arc<MockVerifierService>,
 }
 
+// A builder lambda which accepts as input the full service URL of the mock
+// Omaha server and returns eager package config as JSON.
+type EagerPackageConfigBuilder = fn(&str) -> serde_json::Value;
+
 struct TestEnvBuilder {
     // Set one of responses, responses_and_metadata.
     responses_by_appid: Vec<(String, ResponseAndMetadata)>,
@@ -111,7 +120,7 @@ struct TestEnvBuilder {
     installer: Option<MockUpdateInstallerService>,
     paver: Option<MockPaverService>,
     crash_reporter: Option<MockCrashReporterService>,
-    eager_package_config: Option<serde_json::Value>,
+    eager_package_config_builder: Option<EagerPackageConfigBuilder>,
     omaha_client_config_bool_overrides: Vec<(String, bool)>,
     omaha_client_config_uint16_overrides: Vec<(String, u16)>,
 }
@@ -127,7 +136,7 @@ impl TestEnvBuilder {
             installer: None,
             paver: None,
             crash_reporter: None,
-            eager_package_config: None,
+            eager_package_config_builder: None,
             omaha_client_config_bool_overrides: vec![],
             omaha_client_config_uint16_overrides: vec![],
         }
@@ -166,8 +175,11 @@ impl TestEnvBuilder {
         Self { crash_reporter: Some(crash_reporter), ..self }
     }
 
-    fn eager_package_config(self, eager_package_config: serde_json::Value) -> Self {
-        Self { eager_package_config: Some(eager_package_config), ..self }
+    fn eager_package_config_builder(
+        self,
+        eager_package_config_builder: EagerPackageConfigBuilder,
+    ) -> Self {
+        Self { eager_package_config_builder: Some(eager_package_config_builder), ..self }
     }
 
     fn omaha_client_override_config_bool(mut self, key: String, value: bool) -> Self {
@@ -199,12 +211,37 @@ impl TestEnvBuilder {
         fs.dir("config").add_remote("data", config_data);
         fs.dir("config").add_remote("build-info", build_info);
 
-        let server = OmahaServer::new_with_metadata(self.responses_by_appid);
+        let private_key = PrivateKey::from_str(
+            r#"-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgaWJBcVYaYzQN4OfY
+afKgVJJVjhoEhotqn4VKhmeIGI2hRANCAAQcrP+1Xy8s79idies3SyaBFSRSgC3u
+oJkWBoE32DnPf8SBpESSME1+9mrBF77+g6jQjxVfK1L59hjdRHApBI4P
+-----END PRIVATE KEY-----"#,
+        )
+        .unwrap();
+
+        let public_key = PublicKey::from_str(
+            r#"-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
+7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==
+-----END PUBLIC KEY-----"#,
+        )
+        .unwrap();
+        assert_eq!(private_key.verifying_key(), public_key);
+
+        let private_keys = PrivateKeys {
+            latest: PrivateKeyAndId { id: 42_i32.try_into().unwrap(), key: private_key },
+            historical: vec![],
+        };
+
+        let server =
+            OmahaServer::builder().set(self.responses_by_appid).private_keys(private_keys).build();
         let url = server.clone().start().expect("start server");
-        mounts.write_url(url);
+        mounts.write_url(&url);
         mounts.write_appid("integration-test-appid");
         mounts.write_version(self.version);
-        if let Some(json) = self.eager_package_config {
+        if let Some(eager_package_config_builder) = self.eager_package_config_builder {
+            let json = eager_package_config_builder(&url);
             mounts.write_eager_package_config(json.to_string());
         }
 
@@ -822,47 +859,59 @@ async fn test_omaha_client_update_multi_app() {
                 },
             ),
         ])
-        .eager_package_config(json!(
-        {
-            "eager_package_configs": [
-                {
-                    "packages":
-                    [
-                        {
-                            "url": "fuchsia-pkg://example.com/package",
-                            "flavor": "debug",
-                            "channel_config":
-                                {
-                                    "channels":
-                                        [
-                                            {
-                                                "name": "stable",
-                                                "repo": "stable",
-                                                "appid": "foo"
-                                            },
-                                        ],
-                                    "default_channel": "stable"
-                                }
+        .eager_package_config_builder(|url: &str| {
+            json!(
+            {
+                "eager_package_configs": [
+                    {
+                        "server": {
+                            "service_url": url,
+                            "public_keys": {
+                                "latest": {
+                                    "id": 42,
+                                    "key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----"
+                                },
+                                "historical": [],
+                            }
                         },
-                        {
-                            "url": "fuchsia-pkg://example.com/package2",
-                            "channel_config":
-                                {
-                                    "channels":
-                                        [
-                                            {
-                                                "name": "stable",
-                                                "repo": "stable",
-                                                "appid": "bar"
-                                            }
-                                        ],
-                                    "default_channel": "stable"
-                                }
-                        }
-                    ]
-                }
-            ]
-        }))
+                        "packages":
+                        [
+                            {
+                                "url": "fuchsia-pkg://example.com/package",
+                                "flavor": "debug",
+                                "channel_config":
+                                    {
+                                        "channels":
+                                            [
+                                                {
+                                                    "name": "stable",
+                                                    "repo": "stable",
+                                                    "appid": "foo"
+                                                },
+                                            ],
+                                        "default_channel": "stable"
+                                    }
+                            },
+                            {
+                                "url": "fuchsia-pkg://example.com/package2",
+                                "channel_config":
+                                    {
+                                        "channels":
+                                            [
+                                                {
+                                                    "name": "stable",
+                                                    "repo": "stable",
+                                                    "appid": "bar"
+                                                }
+                                            ],
+                                        "default_channel": "stable"
+                                    }
+                            }
+                        ]
+                    }
+                ]
+            })
+        })
         .build()
         .await;
     omaha_client_update(

@@ -77,11 +77,9 @@ pub type Nonce = [u8; 32];
 /// library can call .hash() and store/retrieve the hash, or they can inspect the
 /// request, public key ID, nonce used if necessary.
 pub struct RequestMetadata {
-    #[allow(dead_code)]
-    request_body: Vec<u8>,
+    pub request_body: Vec<u8>,
     pub public_key_id: PublicKeyId,
-    #[allow(dead_code)]
-    nonce: Nonce,
+    pub nonce: Nonce,
 }
 impl RequestMetadata {
     pub fn hash(&self) -> Vec<u8> {
