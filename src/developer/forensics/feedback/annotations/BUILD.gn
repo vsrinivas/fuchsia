@@ -87,6 +87,19 @@ source_set("fidl_provider") {
   ]
 }
 
+source_set("product_info_provider") {
+  sources = [
+    "product_info_provider.cc",
+    "product_info_provider.h",
+  ]
+
+  public_deps = [
+    ":fidl_provider",
+    "//sdk/fidl/fuchsia.hwinfo",
+    "//src/developer/forensics/feedback/annotations",
+  ]
+}
+
 source_set("time_provider") {
   sources = [
     "time_provider.cc",

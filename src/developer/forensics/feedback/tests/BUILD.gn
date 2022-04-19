@@ -263,6 +263,20 @@ executable("namespace_init_unittest_exe") {
   ]
 }
 
+executable("product_info_provider_unittest_exe") {
+  testonly = true
+
+  sources = [ "product_info_provider_unittest.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.hwinfo",
+    "//src/developer/forensics/feedback/annotations:product_info_provider",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("redactor_factory_unittest_exe") {
   testonly = true
 
@@ -477,6 +491,10 @@ fuchsia_unittest_component("namespace_init_unittest") {
   ]
 }
 
+fuchsia_unittest_component("product_info_provider_unittest") {
+  deps = [ ":product_info_provider_unittest_exe" ]
+}
+
 fuchsia_unittest_component("redactor_factory_unittest") {
   deps = [
     ":redactor_factory_unittest_exe",
@@ -507,6 +525,7 @@ fuchsia_test_package("feedback-tests") {
     ":main_service_unittest",
     ":metrics_unittest",
     ":namespace_init_unittest",
+    ":product_info_provider_unittest",
     ":redactor_factory_unittest",
     ":startup_annotations_unittest",
   ]

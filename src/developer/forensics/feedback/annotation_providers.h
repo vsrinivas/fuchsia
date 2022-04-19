@@ -16,6 +16,7 @@
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/board_info_provider.h"
 #include "src/developer/forensics/feedback/annotations/data_register.h"
+#include "src/developer/forensics/feedback/annotations/product_info_provider.h"
 #include "src/developer/forensics/feedback/annotations/time_provider.h"
 
 namespace forensics::feedback {
@@ -38,6 +39,7 @@ class AnnotationProviders {
   DataRegister data_register_;
   TimeProvider time_provider_;
   BoardInfoProvider board_info_provider_;
+  ProductInfoProvider product_info_provider_;
 
   AnnotationManager annotation_manager_;
 

@@ -284,27 +284,6 @@ executable("kernel_log_ptr_integration_test_exe") {
   configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
-executable("product_info_provider_unittest_exe") {
-  testonly = true
-
-  sources = [ "product_info_provider_unittest.cc" ]
-
-  deps = [
-    "//src/developer/forensics/feedback_data:constants",
-    "//src/developer/forensics/feedback_data/annotations:product_info_provider",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:product_info_provider",
-    "//src/developer/forensics/utils:errors",
-    "//src/lib/fxl",
-    "//src/lib/timekeeper:testing",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/zx",
-  ]
-}
-
 executable("screenshot_ptr_unittest_exe") {
   testonly = true
 
@@ -491,10 +470,6 @@ fuchsia_component("kernel_log_ptr_integration_test") {
   deps = [ ":kernel_log_ptr_integration_test_exe" ]
 }
 
-fuchsia_unittest_component("product_info_provider_unittest") {
-  deps = [ ":product_info_provider_unittest_exe" ]
-}
-
 fuchsia_component("screenshot_ptr_unittest") {
   testonly = true
 
@@ -528,7 +503,6 @@ fuchsia_test_package("feedback-data-tests") {
     ":log_source_unittest",
     ":metadata_unittest",
     ":kernel_log_ptr_integration_test",
-    ":product_info_provider_unittest",
     ":screenshot_ptr_unittest",
     ":system_log_unittest",
     ":timezone_provider_unittest",

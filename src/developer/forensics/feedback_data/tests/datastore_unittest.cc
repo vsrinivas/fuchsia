@@ -34,7 +34,6 @@
 #include "src/developer/forensics/testing/stubs/device_id_provider.h"
 #include "src/developer/forensics/testing/stubs/diagnostics_archive.h"
 #include "src/developer/forensics/testing/stubs/diagnostics_batch_iterator.h"
-#include "src/developer/forensics/testing/stubs/product_info_provider.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
@@ -135,13 +134,6 @@ class DatastoreTest : public UnitTestFixture {
     }
   }
 
-  void SetUpProductProviderServer(std::unique_ptr<stubs::ProductInfoProviderBase> server) {
-    product_provider_server_ = std::move(server);
-    if (product_provider_server_) {
-      InjectServiceProvider(product_provider_server_.get());
-    }
-  }
-
   void WriteFile(const std::string& filepath, const std::string& content) {
     FX_CHECK(files::WriteFile(filepath, content.c_str(), content.size()));
   }
@@ -190,7 +182,6 @@ class DatastoreTest : public UnitTestFixture {
   std::unique_ptr<stubs::ChannelControlBase> channel_provider_server_;
   std::unique_ptr<stubs::DeviceIdProviderBase> device_id_provider_server_;
   std::unique_ptr<stubs::DiagnosticsArchiveBase> diagnostics_server_;
-  std::unique_ptr<stubs::ProductInfoProviderBase> product_provider_server_;
 };
 
 TEST_F(DatastoreTest, GetAnnotationsAndAttachments_SmokeTest) {
@@ -286,53 +277,6 @@ TEST_F(DatastoreTest, GetAnnotations_DeviceId) {
                                         }));
 
   ASSERT_TRUE(files::DeletePath(kDeviceIdPath, /*recursive=*/false));
-}
-
-TEST_F(DatastoreTest, GetAnnotations_ProductInfo) {
-  fuchsia::hwinfo::ProductInfo info;
-  info.set_language("my-language");
-  info.set_manufacturer("my-manufacturer");
-  info.set_model("my-model");
-  info.set_name("my-name");
-  info.set_sku("my-sku");
-
-  fuchsia::intl::RegulatoryDomain domain;
-  domain.set_country_code("my-regulatory-domain");
-  info.set_regulatory_domain(std::move(domain));
-
-  std::vector<fuchsia::intl::LocaleId> locales;
-  for (const auto& locale : {"my-locale1", "my-locale2", "my-locale3"}) {
-    locales.emplace_back();
-    locales.back().id = locale;
-  }
-  info.set_locale_list(locales);
-  SetUpProductProviderServer(std::make_unique<stubs::ProductInfoProvider>(std::move(info)));
-  SetUpDatastore(
-      {
-          kAnnotationHardwareProductLanguage,
-          kAnnotationHardwareProductLocaleList,
-          kAnnotationHardwareProductManufacturer,
-          kAnnotationHardwareProductModel,
-          kAnnotationHardwareProductName,
-          kAnnotationHardwareProductRegulatoryDomain,
-          kAnnotationHardwareProductSKU,
-      },
-      kDefaultAttachmentsToAvoidSpuriousLogs);
-
-  ::fpromise::result<Annotations> annotations = GetAnnotations();
-  ASSERT_TRUE(annotations.is_ok());
-  EXPECT_THAT(annotations.take_value(),
-              ElementsAreArray({
-                  Pair(kAnnotationHardwareProductLanguage, "my-language"),
-                  Pair(kAnnotationHardwareProductLocaleList, "my-locale1, my-locale2, my-locale3"),
-                  Pair(kAnnotationHardwareProductManufacturer, "my-manufacturer"),
-                  Pair(kAnnotationHardwareProductModel, "my-model"),
-                  Pair(kAnnotationHardwareProductName, "my-name"),
-                  Pair(kAnnotationHardwareProductRegulatoryDomain, "my-regulatory-domain"),
-                  Pair(kAnnotationHardwareProductSKU, "my-sku"),
-              }));
-
-  EXPECT_THAT(GetImmediatelyAvailableAnnotations(), IsEmpty());
 }
 
 TEST_F(DatastoreTest, GetAnnotations_FailOn_EmptyAnnotationAllowlist) {
