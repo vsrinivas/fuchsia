@@ -20,9 +20,8 @@ static constexpr zx::duration kSerialStableDelay = zx::msec(800);
 // debian_guest.
 static constexpr size_t kMaximumLineLength = 4096;
 
-static std::string command_hash(const std::string& command) {
-  std::hash<std::string> hash;
-  return fxl::StringPrintf("%zu", hash(command));
+static std::string command_hash(const std::string& command, uint64_t nonce) {
+  return fxl::StringPrintf("%zu", std::hash<std::string>()(command) ^ std::hash<uint64_t>()(nonce));
 }
 
 static std::string normalize_new_lines(const std::string& s) {
@@ -77,8 +76,8 @@ zx_status_t GuestConsole::Start(zx::time deadline) {
 // to be written back to the serial, then the header, then finally we capture
 // everything until the footer.
 zx_status_t GuestConsole::ExecuteBlocking(const std::string& command, const std::string& prompt,
-                                          zx::time deadline, std::string* result) {
-  std::string header = command_hash(command);
+                                          uint64_t nonce, zx::time deadline, std::string* result) {
+  std::string header = command_hash(command, nonce);
   std::string footer = header;
   std::reverse(footer.begin(), footer.end());
 
@@ -132,10 +131,11 @@ zx_status_t GuestConsole::RepeatCommandTillSuccess(const std::string& command,
                                                    const std::string& prompt,
                                                    const std::string& success, zx::time deadline,
                                                    zx::duration repeat_rate) {
+  uint64_t nonce = 0;
   do {
     std::string response;
     zx::time command_timeout = std::min(zx::deadline_after(repeat_rate), deadline);
-    zx_status_t status = ExecuteBlocking(command, prompt, command_timeout, &response);
+    zx_status_t status = ExecuteBlocking(command, prompt, nonce, command_timeout, &response);
     if (status == ZX_OK && response.find(success) != std::string::npos) {
       return ZX_OK;
     }
@@ -143,6 +143,7 @@ zx_status_t GuestConsole::RepeatCommandTillSuccess(const std::string& command,
     // In case the command failed early, wait till at least the repeat_rate deadline has passed
     // before trying agian.
     zx::nanosleep(std::min(command_timeout, deadline));
+    ++nonce;
   } while (zx::clock::get_monotonic() < deadline);
 
   return ZX_ERR_TIMED_OUT;

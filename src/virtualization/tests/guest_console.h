@@ -31,9 +31,14 @@ class GuestConsole {
   // Executes a command and waits for a response. Uses a header and a footer to
   // ensure the command finished executing and to capture output. Blocks on the
   // serial socket being writable and readable at various points and on the
-  // command completing.
-  zx_status_t ExecuteBlocking(const std::string& command, const std::string& prompt,
+  // command completing. If provided, the nonce helps disambiguate multiple
+  // attempts of the same command.
+  zx_status_t ExecuteBlocking(const std::string& command, const std::string& prompt, uint64_t nonce,
                               zx::time deadline, std::string* result = nullptr);
+  zx_status_t ExecuteBlocking(const std::string& command, const std::string& prompt,
+                              zx::time deadline, std::string* result) {
+    return ExecuteBlocking(command, prompt, 0, deadline, result);
+  }
 
   // Sends a message to the guest's serial. Blocks until the entire message is
   // written to the socket but doesn't wait for a response.
