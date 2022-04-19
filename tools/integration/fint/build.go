@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"math"
 	"net/url"
 	"os"
@@ -24,6 +25,8 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/build"
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 	"go.fuchsia.dev/fuchsia/tools/lib/hostplatform"
+	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 )
@@ -250,6 +253,19 @@ func buildImpl(
 					UploadDest: ninjaDepsPath,
 				},
 			}...)
+
+			if contextSpec.ArtifactDir != "" {
+				buildDirManifest := filepath.Join(contextSpec.ArtifactDir, "build_dir_manifest.json")
+				if err := writeBuildDirManifest(contextSpec.BuildDir, buildDirManifest); err != nil {
+					logger.Warningf(ctx, "Failed to create manifest of build dir contents: %s", err)
+				} else {
+					artifacts.DebugFiles = append(artifacts.DebugFiles, &fintpb.DebugFile{
+						Path:       buildDirManifest,
+						UploadDest: "build_dir_manifest.json",
+					})
+				}
+			}
+
 			artifacts.FailureSummary = ninjaNoopFailureMessage(platform)
 			return artifacts, fmt.Errorf("ninja build did not converge to no-op")
 		}
@@ -569,4 +585,65 @@ func gnCheckGenerated(ctx context.Context, r subprocessRunner, gn, checkoutDir, 
 		return stdoutBuf.String(), fmt.Errorf("error running `gn check`: %w", err)
 	}
 	return stdoutBuf.String(), nil
+}
+
+type buildDirManifestElement struct {
+	// Path is the path to the file, relative to the build directory root.
+	Path string `json:"path"`
+	// SyminkTarget is only set if this file is a symlink, and specifies the
+	// path that the symlink points to.
+	SymlinkTarget string `json:"symlink_target,omitempty"`
+	// ModTimeMilliseconds is the modification time of the file, in the form of
+	// a Unix millisecond timestamp for consistency with the timestamp format
+	// that ninja uses.
+	ModTimeMilliseconds float64 `json:"mtime"`
+}
+
+// writeBuildDirManifest constructs a manifest of all the files in the build
+// directory and writes it as JSON to `outputPath`. This manifest is useful for
+// debugging incremental build failures.
+func writeBuildDirManifest(buildDir string, outputPath string) error {
+	// Empty slice instead of nil so it gets rendered as an empty JSON array
+	// instead of null.
+	ret := []buildDirManifestElement{}
+
+	if err := filepath.WalkDir(buildDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+
+		relpath, err := filepath.Rel(buildDir, path)
+		if err != nil {
+			return err
+		}
+
+		var symlinkTarget string
+		if d.Type()&fs.ModeSymlink != 0 {
+			symlinkTarget, err = os.Readlink(path)
+			if err != nil {
+				return err
+			}
+		}
+
+		ret = append(ret, buildDirManifestElement{
+			Path:          filepath.ToSlash(relpath),
+			SymlinkTarget: filepath.ToSlash(symlinkTarget),
+			// Note that for symlinks this is the mtime of the symlink itself,
+			// rather than the mtime of the target of the symlink.
+			ModTimeMilliseconds: float64(info.ModTime().UnixMicro()) / float64(time.Millisecond/time.Microsecond),
+		})
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	return jsonutil.WriteToFile(outputPath, ret)
 }

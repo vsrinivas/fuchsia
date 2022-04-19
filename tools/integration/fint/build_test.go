@@ -17,12 +17,14 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/kr/pretty"
+	"golang.org/x/sys/unix"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/testing/protocmp"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
+	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 )
 
@@ -179,7 +181,12 @@ func TestBuild(t *testing.T) {
 			name:           "failed ninja no-op check",
 			staticSpec:     &fintpb.Static{},
 			ninjaNoopCheck: true,
-			expectErr:      true,
+			// We don't provide a runnerFunc, which causes the fake ninja no-op
+			// check command to not print any output, so the no-op check will
+			// fail because the "no work to do" string will not be present in
+			// the output.
+			runnerFunc: nil,
+			expectErr:  true,
 			expectedArtifacts: &fintpb.BuildArtifacts{
 				FailureSummary: ninjaNoopFailureMessage(platform),
 				DebugFiles: []*fintpb.DebugFile{
@@ -639,5 +646,61 @@ func Test_gnCheckGenerated(t *testing.T) {
 	}
 	if diff := cmp.Diff(string(runner.mockStdout), output); diff != "" {
 		t.Errorf("Got wrong gn check output (-want +got):\n%s", diff)
+	}
+}
+
+func Test_writeBuildDirManifest(t *testing.T) {
+	buildDir := t.TempDir()
+
+	regularFile := filepath.Join(buildDir, "dir", "foo")
+	createEmptyFile(t, regularFile)
+
+	symlink := filepath.Join(buildDir, "bar-link")
+	// The symlink target doesn't actually exist, which is fine - we should be
+	// able to construct the manifest anyway, including the invalid symlink.
+	if err := os.Symlink(filepath.Join("..", "..", "bar"), symlink); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, path := range []string{regularFile, symlink} {
+		tv := unix.Timeval{Sec: 123, Usec: 456789}
+		// Use unix-specific Lutimes instead of os.Chtimes to ensure we update
+		// the mtime of the symlink itself rather than its target.
+		if err := unix.Lutimes(path, []unix.Timeval{tv, tv}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	want := []buildDirManifestElement{
+		{
+			Path:                "dir/foo",
+			ModTimeMilliseconds: 123456.789,
+		},
+		{
+			Path:                "bar-link",
+			SymlinkTarget:       "../../bar",
+			ModTimeMilliseconds: 123456.789,
+		},
+	}
+
+	outputPath := filepath.Join(t.TempDir(), "output.json")
+	if err := writeBuildDirManifest(buildDir, outputPath); err != nil {
+		t.Fatal(err)
+	}
+
+	var got []buildDirManifestElement
+	if err := jsonutil.ReadFromFile(outputPath, &got); err != nil {
+		t.Fatalf("Failed to read output file: %s", err)
+	}
+
+	opts := []cmp.Option{
+		cmpopts.SortSlices(func(x, y buildDirManifestElement) bool {
+			return x.Path < y.Path
+		}),
+		cmpopts.EquateEmpty(),
+	}
+
+	if diff := cmp.Diff(want, got, opts...); diff != "" {
+		t.Errorf("Build dir manifest is wrong (-want +got):\n%s", diff)
 	}
 }
