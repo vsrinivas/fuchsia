@@ -31,6 +31,5 @@ executable("focus_test_bin") {
 }
 
 fuchsia_unittest_package("focus_unittests") {
-  manifest = "meta/focus_unittests.cmx"
   deps = [ ":focus_test_bin" ]
 }

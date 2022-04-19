@@ -63,11 +63,9 @@ executable("geometry_provider_test_bin") {
 }
 
 fuchsia_unittest_package("view_tree_unittests") {
-  manifest = "meta/view_tree_unittests.cmx"
   deps = [ ":view_tree_test_bin" ]
 }
 
 fuchsia_unittest_package("geometry_provider_unittests") {
-  manifest = "meta/geometry_provider_unittests.cmx"
   deps = [ ":geometry_provider_test_bin" ]
 }

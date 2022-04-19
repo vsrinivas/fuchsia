@@ -77,7 +77,6 @@ group("tests") {
     ":screen_capture_unittests",
     "lib/focus/tests",
     "lib/gfx/tests",
-    "lib/gfx/tests:mock_pose_buffer_provider",
     "lib/scenic/util/tests",
     "lib/view_tree:geometry_provider",
     "lib/view_tree:observer_registry",

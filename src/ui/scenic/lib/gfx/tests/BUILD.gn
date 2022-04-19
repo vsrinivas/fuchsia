@@ -155,27 +155,3 @@ executable("apptests") {
     ":testing_deps",
   ]
 }
-
-executable("mock_pose_buffer_provider_cc") {
-  output_name = "mock_pose_buffer_provider"
-
-  sources = [
-    "mock_pose_buffer_provider.cc",
-    "mock_pose_buffer_provider.h",
-  ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.ui.gfx",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/cpp",
-    "//third_party/glm",
-    "//zircon/system/ulib/async-default",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
-fuchsia_package_with_single_component("mock_pose_buffer_provider") {
-  manifest = "meta/mock_pose_buffer_provider.cmx"
-  deps = [ ":mock_pose_buffer_provider_cc" ]
-}
