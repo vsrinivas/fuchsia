@@ -49,14 +49,12 @@ To install these dependencies, do the following:
 
 Note: You only need to do this once on your host machine.
 
-1. Install Git, for example:
+1. To install Git, visit the [Installing Git][git-install]{:.external} page
+   and follow the installation instructions specific to your host machine.
 
-   ```posix-terminal
-   sudo apt-get install git
-   ```
-
-1. To install Bazel, visit the [Installing Bazel][bazel-install]{:.external}
-   page and follow the installation instructions specific to your host machine.
+1. To install Bazel (which needs to be 5.1 or a later version), visit
+   the [Installing Bazel][bazel-install]{:.external} page and follow the
+   installation instructions specific to your host machine.
 
 ### Generate Fuchsia-specific SSH keys {:#generate-fuchsia-specific-ssh-keys}
 
@@ -1178,6 +1176,7 @@ is available for the Fuchsia package server.
 [qemu]: https://www.qemu.org/
 [bazel]: https://bazel.build/docs
 [git]: https://git-scm.com/
+[git-install]: https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
 [bazel-install]: https://bazel.build/install
 [fuchsia-ssh-keys]: /docs/development/sdk/ffx/create-ssh-keys-for-devices.md
 [ticket-01]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=97909
