@@ -7,7 +7,7 @@
         "//src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
-        binary: "bin/netemul_sandbox_v2_bin_test",
+        binary: "bin/netemul_sandbox_bin_test",
     },
     use: [
         {

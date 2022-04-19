@@ -5,7 +5,7 @@
     include: [ "//src/connectivity/network/testing/netemul/service/meta/common.shard.cml" ],
     program: {
         runner: "elf",
-        binary: "bin/netemul_sandbox_v2",
+        binary: "bin/netemul_sandbox",
     },
     capabilities: [
         { protocol: "fuchsia.netemul.Sandbox" },

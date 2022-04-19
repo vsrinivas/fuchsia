@@ -5,7 +5,7 @@
     children: [
         {
             name: "sandbox",
-            url: "#meta/netemul-sandbox-v2.cm",
+            url: "#meta/netemul-sandbox.cm",
         },
     ],
     use: [
