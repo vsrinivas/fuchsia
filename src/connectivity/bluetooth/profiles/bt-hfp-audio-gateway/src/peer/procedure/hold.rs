@@ -4,13 +4,15 @@
 
 use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 
-use crate::peer::{
-    calls::CallIdx, service_level_connection::SlcState, slc_request::SlcRequest, update::AgUpdate,
-};
+use crate::peer::{calls::CallIdx, service_level_connection::SlcState, slc_request::SlcRequest, update::AgUpdate};
 use {
     at_commands as at,
     core::convert::{TryFrom, TryInto},
+    std::fmt,
+    std::slice::Iter,
 };
+
+// TODO (fxbug.dev/94440): Add support for multi-party calls and enhanced call control
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 enum State {
@@ -33,17 +35,26 @@ impl State {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct CallHoldActionError;
+
+impl fmt::Display for CallHoldActionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "invalid or unsupported call hold action")
+    }
+}
+
 /// Action to perform a call related supplementary services. During a call, the following procedures
 /// shall be available for the subscriber to control the operation of Call Waiting or Call Hold;
 ///
 /// See 3GPP TS 22.030 v16.0.0 / ETSI TS 122.030 v16.0.0
-#[derive(PartialEq, Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum CallHoldAction {
     /// Releases all held calls or sets User Determined User Busy (UDUB) for a waiting call.
     ReleaseAllHeld,
     /// Releases all active calls (if any exist) and accepts the other (held or waiting) call.
     ReleaseAllActive,
-    /// Releases call with specified CallIdx.
+    /// Releases call with specified CallIdx
     ReleaseSpecified(CallIdx),
     /// Places all active calls (if any exist) on hold and accepts the other (held or waiting) call.
     HoldActiveAndAccept,
@@ -52,24 +63,47 @@ pub enum CallHoldAction {
     HoldAllExceptSpecified(CallIdx),
 }
 
+impl CallHoldAction {
+    pub fn supported_actions() -> Iter<'static, CallHoldAction> {
+        static SUPPORTED_ACTIONS: [CallHoldAction; 3] = [
+            CallHoldAction::ReleaseAllHeld,
+            CallHoldAction::ReleaseAllActive,
+            CallHoldAction::HoldActiveAndAccept,
+        ];
+        SUPPORTED_ACTIONS.iter()
+    }
+
+    pub fn chld_code(&self) -> String {
+        match self {
+            CallHoldAction::ReleaseAllHeld => String::from("0"),
+            CallHoldAction::ReleaseAllActive => String::from("1"),
+            CallHoldAction::HoldActiveAndAccept => String::from("2"),
+            CallHoldAction::ReleaseSpecified(idx) => format!("1{}", idx),
+            CallHoldAction::HoldAllExceptSpecified(idx) => format!("2{}", idx),
+        }
+    }
+}
+
 impl TryFrom<&str> for CallHoldAction {
-    type Error = ();
+    type Error = CallHoldActionError;
     fn try_from(x: &str) -> Result<Self, Self::Error> {
-        let x = x.trim();
-        match x {
-            "0" => Ok(Self::ReleaseAllHeld),
-            "1" => Ok(Self::ReleaseAllActive),
-            "2" => Ok(Self::HoldActiveAndAccept),
+        let action = match x {
+            "0" => Self::ReleaseAllHeld,
+            "1" => Self::ReleaseAllActive,
+            "2" => Self::HoldActiveAndAccept,
             cmd if cmd.starts_with("1") => {
-                let idx = cmd.strip_prefix("1").unwrap_or("").parse().map_err(|_| ())?;
-                Ok(Self::ReleaseSpecified(idx))
+                let idx = cmd.strip_prefix("1").unwrap_or("").parse().map_err(|_| CallHoldActionError)?;
+                Self::ReleaseSpecified(idx)
             }
             cmd if cmd.starts_with("2") => {
-                let idx = cmd.strip_prefix("2").unwrap_or("").parse().map_err(|_| ())?;
-                Ok(Self::HoldAllExceptSpecified(idx))
+                let idx = cmd.strip_prefix("2").unwrap_or("").parse().map_err(|_| CallHoldActionError)?;
+                Self::HoldAllExceptSpecified(idx)
             }
-            _ => Err(()),
-        }
+            _ => return Err(CallHoldActionError),
+        };
+
+        CallHoldAction::supported_actions().find(|&&x| x == action)
+            .map_or(Err(CallHoldActionError), |&x| Ok(x))
     }
 }
 
@@ -105,7 +139,7 @@ impl Procedure for HoldProcedure {
                         let response = Box::new(Into::into);
                         SlcRequest::Hold { command, response }.into()
                     }
-                    Err(()) => ProcedureRequest::Error(ProcedureError::UnexpectedHf(update)),
+                    Err(_) => ProcedureRequest::Error(ProcedureError::UnexpectedHf(update)),
                 }
             }
             _ => ProcedureRequest::Error(ProcedureError::UnexpectedHf(update)),
@@ -187,10 +221,6 @@ mod tests {
         assert_eq!(CallHoldAction::try_from("0"), Ok(CallHoldAction::ReleaseAllHeld));
         assert_eq!(CallHoldAction::try_from("1"), Ok(CallHoldAction::ReleaseAllActive));
         assert_eq!(CallHoldAction::try_from("2"), Ok(CallHoldAction::HoldActiveAndAccept));
-        assert_eq!(CallHoldAction::try_from("11"), Ok(CallHoldAction::ReleaseSpecified(1)));
-        assert_eq!(CallHoldAction::try_from("21"), Ok(CallHoldAction::HoldAllExceptSpecified(1)));
-        // Two digit call index
-        assert_eq!(CallHoldAction::try_from("231"), Ok(CallHoldAction::HoldAllExceptSpecified(31)));
     }
 
     #[test]
@@ -207,6 +237,10 @@ mod tests {
         assert!(CallHoldAction::try_from("1a").is_err());
         // Invalid second character on "2"
         assert!(CallHoldAction::try_from("2-").is_err());
+        // Valid but unsupported action results in error
+        assert!(CallHoldAction::try_from("19").is_err());
+        // Valid but unsupported action results in error
+        assert!(CallHoldAction::try_from("22").is_err());
     }
 
     #[test]
@@ -286,10 +320,10 @@ mod tests {
         let mut proc = HoldProcedure::new();
         let mut state = SlcState::default();
 
-        let req = proc.hf_update(at::Command::Chld { command: String::from("22") }, &mut state);
+        let req = proc.hf_update(at::Command::Chld { command: String::from("1") }, &mut state);
         let update = match req {
             ProcedureRequest::Request(SlcRequest::Hold { command, response }) => {
-                assert_eq!(command, CallHoldAction::HoldAllExceptSpecified(2));
+                assert_eq!(command, CallHoldAction::ReleaseAllActive);
                 response(Err(()))
             }
             x => panic!("Unexpected message: {:?}", x),

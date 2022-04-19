@@ -9,7 +9,7 @@ use super::{
     gain_control::Gain,
     indicators::{AgIndicator, AgIndicators, HfIndicators},
     procedure::{
-        query_current_calls::build_clcc_response,
+        hold::CallHoldAction, query_current_calls::build_clcc_response,
         subscriber_number_information::build_cnum_response, ProcedureRequest,
     },
 };
@@ -18,7 +18,6 @@ use crate::features::{AgFeatures, CodecId};
 
 // TODO (fxbug.dev/74091): Add multiparty support.
 // TODO (fxbug.dev/74093): Add Explicit Call Transfer support.
-const THREE_WAY_SUPPORT: &[&str] = &["0", "1", "1X", "2", "2X"];
 
 // TODO(fxb/71668) Stop using raw bytes.
 const CIND_TEST_RESPONSE_BYTES: &[u8] = b"+CIND: \
@@ -111,7 +110,9 @@ impl From<AgUpdate> for ProcedureRequest {
                 at::Response::Ok,
             ],
             AgUpdate::ThreeWaySupport => {
-                let commands = THREE_WAY_SUPPORT.into_iter().map(|&s| s.into()).collect();
+                let commands = CallHoldAction::supported_actions()
+                    .map(|&a| a.chld_code())
+                    .collect();
                 vec![at::success(at::Success::Chld { commands }), at::Response::Ok]
             }
             AgUpdate::IndicatorStatus(status) => vec![

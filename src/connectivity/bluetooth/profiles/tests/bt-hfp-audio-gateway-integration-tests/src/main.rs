@@ -496,13 +496,7 @@ async fn test_hfp_full_slc_init_procedure(tf: HfpAgIntegrationTest) {
 
     let call_hold_info_cmd = at::Command::ChldTest {};
     let expected6 = at::success(at::Success::Chld {
-        commands: vec![
-            "0".to_string(),
-            "1".to_string(),
-            "1X".to_string(),
-            "2".to_string(),
-            "2X".to_string(),
-        ],
+        commands: vec!["0".to_string(), "1".to_string(), "2".to_string()],
     });
     send_command_and_expect_response(
         &mut remote,
