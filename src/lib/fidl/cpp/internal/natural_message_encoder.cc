@@ -43,7 +43,7 @@ void NaturalMessageEncoder::EncodeMessageHeader(uint64_t ordinal) {
   fidl_message_header_t* header = body_encoder_.GetPtr<fidl_message_header_t>(offset);
   fidl_init_txn_header(header, 0, ordinal);
   if (body_encoder_.wire_format() == internal::WireFormatVersion::kV2) {
-    header->flags[0] |= FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2;
+    header->at_rest_flags[0] |= FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
   }
 }
 

@@ -32,7 +32,8 @@ void SingleResponseServer(zx::channel ch) {
 
   fidl_message_header_t header_out = {
       .txid = header_in.txid,
-      .flags = {FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2, 0, 0},
+      .at_rest_flags = {FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2, 0},
+      .dynamic_flags = 0,
       .magic_number = header_in.magic_number,
       .ordinal = header_in.ordinal,
   };
@@ -123,7 +124,8 @@ TEST(V2Integration, ServerRequestDecode) {
 
   fidl_message_header_t header = {
       .txid = 100,
-      .flags = {FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2, 0, 0},
+      .at_rest_flags = {FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2, 0},
+      .dynamic_flags = 0,
       .magic_number = kFidlWireFormatMagicNumberInitial,
       .ordinal = 8068486508660569159ull,
   };

@@ -193,8 +193,8 @@ void OutgoingMessage::EncodeImpl(fidl::internal::WireFormatVersion wire_format_v
   if (wire_format_version == fidl::internal::WireFormatVersion::kV2) {
     if (is_transactional()) {
       ZX_ASSERT(iovec_actual() >= 1 && iovecs()[0].capacity >= sizeof(fidl_message_header_t));
-      static_cast<fidl_message_header_t*>(const_cast<void*>(iovecs()[0].buffer))->flags[0] |=
-          FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2;
+      static_cast<fidl_message_header_t*>(const_cast<void*>(iovecs()[0].buffer))
+          ->at_rest_flags[0] |= FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
     }
     return;
   }
@@ -252,7 +252,7 @@ void OutgoingMessage::DecodeImplForCall(const internal::CodingConfig& coding_con
     return;
   }
 
-  if ((header.flags[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) == 0 &&
+  if ((header.at_rest_flags[0] & FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2) == 0 &&
       response_type != nullptr &&
       !internal__fidl_tranform_is_noop__may_break(FIDL_TRANSFORMATION_V1_TO_V2, response_type)) {
     auto transformed_bytes = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
@@ -452,7 +452,7 @@ void IncomingMessage::Decode(const fidl_type_t* message_type,
   ZX_ASSERT(is_transactional_);
   internal::WireFormatVersion wire_format_version = internal::WireFormatVersion::kV1;
   if (bytes() != nullptr &&
-      (header()->flags[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) != 0) {
+      (header()->at_rest_flags[0] & FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2) != 0) {
     wire_format_version = internal::WireFormatVersion::kV2;
   }
   Decode(wire_format_version, message_type, true, out_transformed_buffer);

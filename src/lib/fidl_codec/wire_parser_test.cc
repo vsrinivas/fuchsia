@@ -231,7 +231,8 @@ TEST_F(WireParserTest, ParseSingleString) {
     }                                                                                             \
                                                                                                   \
     if ((num_bytes == -1) && (patched_offset == -1)) {                                            \
-      auto encode_result = Encoder::EncodeMessage(header.txid, header.ordinal, header.flags,      \
+      auto encode_result = Encoder::EncodeMessage(header.txid, header.ordinal,                    \
+                                                  header.at_rest_flags, header.dynamic_flags,     \
                                                   header.magic_number, *object->AsStructValue()); \
       ASSERT_THAT(encode_result.bytes, ::testing::ElementsAreArray(message.bytes()));             \
       ASSERT_EQ(message.handles().size(), encode_result.handles.size());                          \

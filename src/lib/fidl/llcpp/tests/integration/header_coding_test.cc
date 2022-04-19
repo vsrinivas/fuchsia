@@ -51,7 +51,8 @@ TEST(HeaderCodingTest, OneWay) {
 
   const auto* header = reinterpret_cast<fidl_message_header_t*>(buffer);
   ASSERT_EQ(kFidlWireFormatMagicNumberInitial, header->magic_number);
-  ASSERT_EQ(FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2, header->flags[0]);
+  ASSERT_EQ(FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2, header->at_rest_flags[0]);
+  ASSERT_EQ(FIDL_MESSAGE_HEADER_DYNAMIC_FLAGS_STRICT_METHOD, header->dynamic_flags);
   ASSERT_EQ(fidl::internal::WireOrdinal<Example::OneWay>::value, header->ordinal);
 
   ASSERT_BYTES_EQ(
@@ -91,7 +92,8 @@ TEST(HeaderCodingTest, TwoWayAsync) {
 
   const auto* header = reinterpret_cast<fidl_message_header_t*>(buffer);
   ASSERT_EQ(kFidlWireFormatMagicNumberInitial, header->magic_number);
-  ASSERT_EQ(FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2, header->flags[0]);
+  ASSERT_EQ(FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2, header->at_rest_flags[0]);
+  ASSERT_EQ(FIDL_MESSAGE_HEADER_DYNAMIC_FLAGS_STRICT_METHOD, header->dynamic_flags);
   ASSERT_EQ(fidl::internal::WireOrdinal<Example::TwoWay>::value, header->ordinal);
 
   ASSERT_BYTES_EQ(
@@ -126,7 +128,8 @@ TEST(HeaderCodingTest, TwoWaySync) {
 
     const auto* header = reinterpret_cast<fidl_message_header_t*>(buffer);
     ASSERT_EQ(kFidlWireFormatMagicNumberInitial, header->magic_number);
-    ASSERT_EQ(FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2, header->flags[0]);
+    ASSERT_EQ(FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2, header->at_rest_flags[0]);
+    ASSERT_EQ(FIDL_MESSAGE_HEADER_DYNAMIC_FLAGS_STRICT_METHOD, header->dynamic_flags);
     ASSERT_EQ(fidl::internal::WireOrdinal<Example::TwoWay>::value, header->ordinal);
 
     ASSERT_BYTES_EQ(

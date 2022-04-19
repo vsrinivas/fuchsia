@@ -42,15 +42,15 @@ DataForSyscallTest::DataForSyscallTest(debug::Arch arch) : arch_(arch) {
   param_regs_ = (arch_ == debug::Arch::kArm64) ? &aarch64_regs : &amd64_regs;
   header_.txid = kTxId;
   header_.magic_number = kFidlWireFormatMagicNumberInitial;
-  header_.flags[0] = 0;
-  header_.flags[1] = 0;
-  header_.flags[2] = 0;
+  header_.at_rest_flags[0] = 0;
+  header_.at_rest_flags[1] = 0;
+  header_.dynamic_flags = 0;
   header_.ordinal = kOrdinal;
   header2_.txid = kTxId2;
   header2_.magic_number = kFidlWireFormatMagicNumberInitial;
-  header2_.flags[0] = 0;
-  header2_.flags[1] = 0;
-  header2_.flags[2] = 0;
+  header2_.at_rest_flags[0] = 0;
+  header2_.at_rest_flags[1] = 0;
+  header2_.dynamic_flags = 0;
   header2_.ordinal = kOrdinal2;
 
   for (int i = 0; i < 100; ++i) {

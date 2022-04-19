@@ -61,7 +61,7 @@ TEST(NaturalResponsePayload, Decode) {
   // Create a fake V2 |WireFormatMetadata|.
   fidl_message_header_t header;
   fidl_init_txn_header(&header, 0, 0);
-  header.flags[0] = FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2;
+  header.at_rest_flags[0] = FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
   auto metadata = fidl::internal::WireFormatMetadata::FromTransactionalHeader(header);
 
   // Perform decoding.

@@ -23,8 +23,8 @@ class Encoder : public Visitor {
 
   WireVersion version() const { return version_; }
 
-  static Result EncodeMessage(uint32_t tx_id, uint64_t ordinal, const uint8_t flags[3],
-                              uint8_t magic, const StructValue& object);
+  static Result EncodeMessage(uint32_t tx_id, uint64_t ordinal, const uint8_t at_rest_flags[2],
+                              uint8_t dynamic_flags, uint8_t magic, const StructValue& object);
 
   // Write a literal value into our buffer.
   template <typename T>

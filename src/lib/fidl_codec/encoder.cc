@@ -51,18 +51,19 @@ class NullVisitor : public TypeVisitor {
   Encoder* encoder_;
 };
 
-Encoder::Result Encoder::EncodeMessage(uint32_t tx_id, uint64_t ordinal, const uint8_t flags[3],
+Encoder::Result Encoder::EncodeMessage(uint32_t tx_id, uint64_t ordinal,
+                                       const uint8_t at_rest_flags[2], uint8_t dynamic_flags,
                                        uint8_t magic, const StructValue& object) {
-  Encoder encoder(((flags[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) != 0)
+  Encoder encoder(((at_rest_flags[0] & FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2) != 0)
                       ? WireVersion::kWireV2
                       : WireVersion::kWireV1);
 
   size_t object_size = object.struct_definition().Size(encoder.version()) + kTransactionHeaderSize;
   encoder.AllocateObject(object_size);
   encoder.WriteValue(tx_id);
-  encoder.WriteValue(flags[0]);
-  encoder.WriteValue(flags[1]);
-  encoder.WriteValue(flags[2]);
+  encoder.WriteValue(at_rest_flags[0]);
+  encoder.WriteValue(at_rest_flags[1]);
+  encoder.WriteValue(dynamic_flags);
   encoder.WriteValue(magic);
   encoder.WriteValue(ordinal);
   FX_DCHECK(sizeof(fidl_message_header_t) == encoder.current_offset_);

@@ -37,8 +37,8 @@ WireFormatMetadata WireFormatMetadata::FromTransactionalHeader(fidl_message_head
   // store the at_rest flags in the same location. When a future FIDL revision
   // change the location of the at_rest flags, this would need to be updated to
   // be conditional on the magic number.
-  metadata.at_rest_flags_[0] = header.flags[0];
-  metadata.at_rest_flags_[1] = header.flags[1];
+  metadata.at_rest_flags_[0] = header.at_rest_flags[0];
+  metadata.at_rest_flags_[1] = header.at_rest_flags[1];
   memset(metadata.reserved_, 0, sizeof(metadata.reserved_));
   return metadata;
 }
@@ -66,7 +66,7 @@ bool WireFormatMetadata::is_valid() const {
 WireFormatVersion WireFormatMetadata::wire_format_version() const {
   ZX_ASSERT_MSG(is_valid(), "Invalid metadata %d %d %d", at_rest_flags_[0], at_rest_flags_[1],
                 magic_number_);
-  if ((at_rest_flags_[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) == 0) {
+  if ((at_rest_flags_[0] & FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2) == 0) {
     return WireFormatVersion::kV1;
   }
   return WireFormatVersion::kV2;

@@ -250,7 +250,7 @@ zx_status_t HLCPPOutgoingMessage::Encode(const fidl_type_t* type, const char** e
 zx_status_t HLCPPOutgoingMessage::Validate(const fidl_type_t* type,
                                            const char** error_msg_out) const {
   internal::WireFormatVersion wire_format_version = internal::WireFormatVersion::kV1;
-  if ((header().flags[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) != 0) {
+  if ((header().at_rest_flags[0] & FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2) != 0) {
     wire_format_version = internal::WireFormatVersion::kV2;
   }
 

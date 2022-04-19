@@ -452,11 +452,14 @@ enum {
   kFidlWireFormatMagicNumberInitial = 1,
 };
 
-#define FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2 0x02
+#define FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2 0x02
+#define FIDL_MESSAGE_HEADER_DYNAMIC_FLAGS_STRICT_METHOD ((uint8_t)0x00)
+#define FIDL_MESSAGE_HEADER_DYNAMIC_FLAGS_FLEXIBLE_METHOD ((uint8_t)0x80)
 
 typedef struct fidl_message_header {
   zx_txid_t txid;
-  uint8_t flags[3];
+  uint8_t at_rest_flags[2];
+  uint8_t dynamic_flags;
   // This value indicates the message's wire format. Two sides with different
   // wire formats are incompatible with each other
   uint8_t magic_number;

@@ -43,7 +43,8 @@ TEST(WireFormatMetadata, FromTransactionalHeader) {
     ::fidl::internal::WireFormatMetadata metadata =
         ::fidl::internal::WireFormatMetadata::FromTransactionalHeader(fidl_message_header_t{
             .txid = 0,
-            .flags = {},
+            .at_rest_flags = {},
+            .dynamic_flags = 0,
             .magic_number = kFidlWireFormatMagicNumberInitial,
             .ordinal = 0,
         });
@@ -55,7 +56,8 @@ TEST(WireFormatMetadata, FromTransactionalHeader) {
     ::fidl::internal::WireFormatMetadata metadata =
         ::fidl::internal::WireFormatMetadata::FromTransactionalHeader(fidl_message_header_t{
             .txid = 0,
-            .flags = {FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2, 0, 0},
+            .at_rest_flags = {FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2, 0},
+            .dynamic_flags = 0,
             .magic_number = kFidlWireFormatMagicNumberInitial,
             .ordinal = 0,
         });
@@ -67,7 +69,8 @@ TEST(WireFormatMetadata, FromTransactionalHeader) {
     ::fidl::internal::WireFormatMetadata metadata =
         ::fidl::internal::WireFormatMetadata::FromTransactionalHeader(fidl_message_header_t{
             .txid = 0,
-            .flags = {},
+            .at_rest_flags = {},
+            .dynamic_flags = 0,
             // Invalid magic number
             .magic_number = 2,
             .ordinal = 0,
@@ -89,7 +92,8 @@ TEST(WireFormatMetadata, ToOpaque) {
     ::fidl::internal::WireFormatMetadata metadata =
         ::fidl::internal::WireFormatMetadata::FromTransactionalHeader(fidl_message_header_t{
             .txid = 0,
-            .flags = {FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2, 0, 0},
+            .at_rest_flags = {FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2, 0},
+            .dynamic_flags = 0,
             .magic_number = kFidlWireFormatMagicNumberInitial,
             .ordinal = 0,
         });

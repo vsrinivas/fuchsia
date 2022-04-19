@@ -34,7 +34,8 @@ TEST(WireFormatV2DecodeTest, Success) {
 
   fidl_message_header_t header = {
       .txid = 0,
-      .flags = {FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2, 0, 0},
+      .at_rest_flags = {FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2, 0},
+      .dynamic_flags = 0,
       .magic_number = kFidlWireFormatMagicNumberInitial,
       .ordinal = 6185413960342748878,  // Frobinator.SendBasicUnion
   };

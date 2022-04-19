@@ -106,7 +106,8 @@ JSValue LoadLibraryFromString(JSContext* ctx, JSValueConst this_val, int argc, J
 // argv[2] = Object.
 JSValue EncodeRequest(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
   const uint8_t kFidlMagic = 1;
-  const uint8_t kFlags[3] = {0, 0, 0};
+  const uint8_t kAtRestFlags[2] = {0, 0};
+  const uint8_t kDynamicFlags = 0;
 
   if (argc != 3) {
     return JS_ThrowSyntaxError(ctx,
@@ -149,8 +150,8 @@ JSValue EncodeRequest(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
     return JS_EXCEPTION;
   }
 
-  auto result = fidl_codec::Encoder::EncodeMessage(txn_id, ordinal, kFlags, kFidlMagic,
-                                                   *ast->AsStructValue());
+  auto result = fidl_codec::Encoder::EncodeMessage(txn_id, ordinal, kAtRestFlags, kDynamicFlags,
+                                                   kFidlMagic, *ast->AsStructValue());
 
   auto bytes = JS_NewArrayBufferCopy(ctx, result.bytes.data(), result.bytes.size());
   auto handles = JS_NewArray(ctx);

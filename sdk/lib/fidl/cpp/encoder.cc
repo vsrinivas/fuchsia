@@ -100,10 +100,10 @@ void MessageEncoder::EncodeMessageHeader(uint64_t ordinal) {
   fidl_init_txn_header(header, 0, ordinal);
   switch (wire_format()) {
     case internal::WireFormatVersion::kV1:
-      header->flags[0] = 0;
+      header->at_rest_flags[0] = 0;
       break;
     case internal::WireFormatVersion::kV2:
-      header->flags[0] = FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2;
+      header->at_rest_flags[0] = FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
       break;
   }
 }

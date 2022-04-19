@@ -173,7 +173,7 @@ MessageDecoder::MessageDecoder(const uint8_t* bytes, uint64_t num_bytes,
       handle_pos_(handles),
       error_stream_(error_stream) {
   auto header = reinterpret_cast<const fidl_message_header_t*>(bytes);
-  version_ = ((header->flags[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) != 0)
+  version_ = ((header->at_rest_flags[0] & FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2) != 0)
                  ? WireVersion::kWireV2
                  : WireVersion::kWireV1;
 }

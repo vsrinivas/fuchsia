@@ -14,7 +14,8 @@ namespace hlcpp_benchmarks {
 namespace {
 constexpr uint64_t kOrdinal = 1234;
 constexpr fidl_message_header_t kV2Header = {
-    .flags = {FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2},
+    .at_rest_flags = {FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2},
+    .dynamic_flags = 0,
     .magic_number = kFidlWireFormatMagicNumberInitial,
     .ordinal = kOrdinal,
 };
