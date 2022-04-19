@@ -108,6 +108,13 @@ std::optional<size_t> ReadArraySubrange(llvm::DWARFContext* context,
   return static_cast<size_t>(*upper_bound);
 }
 
+void DisplayDebugTypesSectionWarning() {
+  FX_LOGS_FIRST_N(WARNING, 1)
+      << "Separated .debug_types section is not supported yet. Please consider to remove "
+         "`-fdebug-types-section` from the compiler flags or add `-fno-debug-types-section` if "
+         "it's enabled by default. (fxbug.dev/97388)";
+}
+
 }  // namespace
 
 DwarfSymbolFactory::DwarfSymbolFactory(fxl::WeakPtr<ModuleSymbolsImpl> symbols)
@@ -518,6 +525,11 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCollection(const llvm::DWARFDie& d
   llvm::DWARFDie parent;
   decoder.AddAbstractParent(&parent);
 
+  // TODO(fxbug.dev/97388): Support DW_AT_signature.
+  bool has_signature = false;
+  decoder.AddCustom(llvm::dwarf::DW_AT_signature,
+                    [&has_signature](auto, auto) { has_signature = true; });
+
   llvm::Optional<const char*> name;
   decoder.AddCString(llvm::dwarf::DW_AT_name, &name);
 
@@ -530,7 +542,10 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCollection(const llvm::DWARFDie& d
   llvm::Optional<uint64_t> calling_convention;
   decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_calling_convention, &calling_convention);
 
-  if (!decoder.Decode(die))
+  if (has_signature)
+    DisplayDebugTypesSectionWarning();
+
+  if (!decoder.Decode(die) || has_signature)
     return fxl::MakeRefCounted<Symbol>();
 
   auto result = fxl::MakeRefCounted<Collection>(static_cast<DwarfTag>(die.getTag()));
@@ -686,6 +701,11 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeEnum(const llvm::DWARFDie& die) {
   llvm::DWARFDie parent;
   main_decoder.AddAbstractParent(&parent);
 
+  // TODO(fxbug.dev/97388): Support DW_AT_signature.
+  bool has_signature = false;
+  main_decoder.AddCustom(llvm::dwarf::DW_AT_signature,
+                         [&has_signature](auto, auto) { has_signature = true; });
+
   // Name is optional (enums can be anonymous).
   llvm::Optional<const char*> type_name;
   main_decoder.AddCString(llvm::dwarf::DW_AT_name, &type_name);
@@ -730,8 +750,13 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeEnum(const llvm::DWARFDie& die) {
         }
       });
 
-  if (!main_decoder.Decode(die))
+  if (has_signature)
+    DisplayDebugTypesSectionWarning();
+
+  if (!main_decoder.Decode(die) || has_signature)
     return fxl::MakeRefCounted<Symbol>();
+
+  FX_CHECK(byte_size.hasValue());
 
   Enumeration::Map map;
   for (const llvm::DWARFDie& child : die) {
