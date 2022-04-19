@@ -44,6 +44,10 @@ class DLog {
   // subsequent |write| operations will fail.
   zx_status_t Shutdown(zx_time_t deadline);
 
+  // See |dlog_panic_start|.
+  void PanicStart();
+
+  // See |dlog_bluescreen_init|.
   void BluescreenInit();
 
   // See "dlog_render_to_crashlog" in include/lib/debuglog.h
@@ -210,6 +214,10 @@ class DLog {
 
   // Indicates that the system has begun to panic.  When true, |write| will
   // immediately return an error.
+  //
+  // TODO(maniscalco): This field should probably be an atomic since it can be
+  // accessed from multiple threads.  When/if it becomes an atomic, think
+  // carefully about whether it needs acquire/release semantics.
   bool panic_ = false;
 
   // The list of our current readers.
