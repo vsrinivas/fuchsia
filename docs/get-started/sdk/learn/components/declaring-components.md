@@ -8,11 +8,22 @@
 
 ## Building components
 
-The Fuchsia SDK system provides Bazel templates to build and package software
-into Fuchsia components. Below is an example of a `BUILD.bazel` file for a
-simple C++ component:
+The Fuchsia SDK system provides Bazel rules to build and package software
+into Fuchsia components. The
+[Fuchsia SDK environment](/docs/get-started/sdk/index.md#clone-the-sdk-samples-repository)
+makes these rules available within a
+[Bazel workspace](https://bazel.build/concepts/build-ref#workspace){:.external}
+directory.
+
+Within the Bazel workspace, you declare Fuchsia packages and components as
+[Bazel targets](https://bazel.build/concepts/build-ref#targets){:.external} within
+a [Bazel package](https://bazel.build/concepts/build-ref#packages){:.external},
+described by a `BUILD.bazel` file.
+
+Below is an example of a `BUILD.bazel` file for a simple C++ component:
 
 ```bazel
+# Build rules provided by the Fuchsia SDK
 load(
     "fuchsia_cc_binary",
     "fuchsia_component",
@@ -66,19 +77,25 @@ This file contains the following main elements:
 In this exercise, you'll build and run a basic component that reads the program
 arguments and echoes a greeting out the system log.
 
-To begin, create the following project directory structure in your Bazel workspace
-for a new component called `echo`:
+To begin, create a new project directory in your Bazel workspace for a new
+component called `echo`:
+
+```posix-terminal
+mkdir -p fuchsia-codelab/echo
+```
+
+This component project should have the following directory structure:
 
 ```none {:.devsite-disable-click-to-copy}
-fuchsia-codelab/echo
-  |- BUILD.bazel
-  |- meta
-  |   |- echo.cml
-  |
-  |- echo_component.cc
-  |- echo_component.h
-  |- echo_unittest.cc
-  |- main.cc
+//fuchsia-codelab/echo
+                  |- BUILD.bazel
+                  |- meta
+                  |   |- echo.cml
+                  |
+                  |- echo_component.cc
+                  |- echo_component.h
+                  |- echo_unittest.cc
+                  |- main.cc
 ```
 
 * `BUILD.bazel`: Bazel build targets for the executable binaries, component, and

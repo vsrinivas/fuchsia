@@ -90,16 +90,22 @@ In this section, you'll use the generated FIDL bindings for
 Begin by creating a new component project to implement the echo server. This
 component will serve the `Echo` protocol and handle incoming requests.
 
-Create the following project directory structure in your Bazel workspace for a
-new component called `echo_server`:
+Create a new project directory in your Bazel workspace for a new component
+called `echo_server`:
+
+```posix-terminal
+mkdir -p fuchsia-codelab/echo-server
+```
+
+This component project should have the following directory structure:
 
 ```none {:.devsite-disable-click-to-copy}
-fuchsia-codelab/echo-server
-  |- BUILD.bazel
-  |- meta
-  |   |- echo_server.cml
-  |
-  |- main.cc
+//fuchsia-codelab/echo-server
+                  |- BUILD.bazel
+                  |- meta
+                  |   |- echo_server.cml
+                  |
+                  |- main.cc
 ```
 
 Declare the `Echo` protocol as a capability provided by the server component,
@@ -186,16 +192,22 @@ This code performs the following steps to serve the `Echo` protocol:
 Create another new component project to implement the echo client. This
 component will connect to the protocol implementation and send requests.
 
-Create the following project directory structure in your Bazel workspace for a
-new component called `echo_client`:
+Create a new project directory in your Bazel workspace for a new component
+called `echo_client`:
+
+```posix-terminal
+mkdir -p fuchsia-codelab/echo-client
+```
+
+This component project should have the following directory structure:
 
 ```none {:.devsite-disable-click-to-copy}
-fuchsia-codelab/echo-client
-  |- BUILD.bazel
-  |- meta
-  |   |- echo_client.cml
-  |
-  |- main.cc
+//fuchsia-codelab/echo-client
+                  |- BUILD.bazel
+                  |- meta
+                  |   |- echo_client.cml
+                  |
+                  |- main.cc
 ```
 
 Configure the client's component manifest to request the

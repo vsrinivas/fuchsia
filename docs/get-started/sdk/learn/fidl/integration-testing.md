@@ -100,16 +100,21 @@ Framework and run those tests in a FEMU environment.
 
 ### Add an integration test component
 
-To begin, create a new project directory structure in your Bazel workspace under
-`fuchsia-codelab/echo-integration`:
+To begin, create a new project directory in your Bazel workspace:
+
+```posix-terminal
+mkdir -p fuchsia-codelab/echo-integration
+```
+
+This component project should have the following directory structure:
 
 ```none {:.devsite-disable-click-to-copy}
-fuchsia-codelab/echo-integration
-  |- BUILD.bazel
-  |- meta
-  |   |- echo_integration_test.cml
-  |
-  |- echo_integration_test.cc
+//fuchsia-codelab/echo-integration
+                  |- BUILD.bazel
+                  |- meta
+                  |   |- echo_integration_test.cml
+                  |
+                  |- echo_integration_test.cc
 ```
 
 ### Update the test component manifest
