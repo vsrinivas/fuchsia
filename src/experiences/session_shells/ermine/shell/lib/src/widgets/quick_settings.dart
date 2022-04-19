@@ -288,8 +288,8 @@ class _ListSettings extends StatelessWidget {
                   trailing: Icon(Icons.arrow_right),
                   onTap: appState.settingsState.showChannelSettings,
                 ),
+                // Usage & Diagnostics
                 if (appState.isUserFeedbackEnabled)
-                  // Usage & Diagnostics
                   ListTile(
                     enabled: true,
                     contentPadding: EdgeInsets.symmetric(horizontal: 24),
@@ -322,10 +322,14 @@ class _ListSettings extends StatelessWidget {
                   enabled: true,
                   contentPadding: EdgeInsets.symmetric(horizontal: 24),
                   leading: Icon(Icons.feedback_outlined),
-                  title: Text(Strings.feedback),
+                  title: appState.isUserFeedbackEnabled
+                      ? Text(Strings.userFeedback)
+                      : Text(Strings.feedback),
                   trailing: OutlinedButton(
                     style: ErmineButtonStyle.outlinedButton(Theme.of(context)),
-                    onPressed: appState.launchFeedback,
+                    onPressed: appState.isUserFeedbackEnabled
+                        ? appState.showUserFeedback
+                        : appState.launchFeedback,
                     child: Text(Strings.open.toUpperCase()),
                   ),
                 ),

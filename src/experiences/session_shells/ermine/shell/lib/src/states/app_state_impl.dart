@@ -13,6 +13,7 @@ import 'package:ermine/src/services/preferences_service.dart';
 import 'package:ermine/src/services/presenter_service.dart';
 import 'package:ermine/src/services/shortcuts_service.dart';
 import 'package:ermine/src/services/startup_service.dart';
+import 'package:ermine/src/services/user_feedback_service.dart';
 import 'package:ermine/src/states/app_state.dart';
 import 'package:ermine/src/states/settings_state.dart';
 import 'package:ermine/src/states/view_state.dart';
@@ -34,6 +35,7 @@ class AppStateImpl with Disposable implements AppState {
   final ShortcutsService shortcutsService;
   final PreferencesService preferencesService;
   final PointerEventsService pointerEventsService;
+  final UserFeedbackService userFeedbackService;
 
   static const kFeedbackUrl =
       'https://fuchsia.dev/fuchsia-src/contribute/report-issue';
@@ -52,6 +54,7 @@ class AppStateImpl with Disposable implements AppState {
     required this.shortcutsService,
     required this.preferencesService,
     required this.pointerEventsService,
+    required this.userFeedbackService,
   }) : _localeStream = startupService.stream.asObservable() {
     launchService.onControllerClosed = _onElementClosed;
     focusService.onFocusMoved = _onFocusMoved;
@@ -79,6 +82,9 @@ class AppStateImpl with Disposable implements AppState {
       ..onIdle = _onIdle
       ..onAltReleased = _triggerSwitch
       ..serve();
+    userFeedbackService
+      ..onSubmit = _onFeedbackSubmit
+      ..onError = _onFeedbackError;
 
     // Add reactions to state changes.
     reactions
@@ -145,6 +151,9 @@ class AppStateImpl with Disposable implements AppState {
   /// A flag that is set to true when an app is launched from the app launcher.
   final appIsLaunching = false.asObservable();
 
+  /// A flag that is set to true when the [UserFeedback] is triggered.
+  final userFeedbackVisibility = false.asObservable();
+
   @override
   bool get dialogsVisible => _dialogsVisible.value;
   late final _dialogsVisible = (() {
@@ -178,6 +187,12 @@ class AppStateImpl with Disposable implements AppState {
   }).asComputed();
 
   @override
+  bool get userFeedbackVisible => _userFeedbackVisible.value;
+  late final _userFeedbackVisible = (() {
+    return shellHasFocus.value && userFeedbackVisibility.value;
+  }).asComputed();
+
+  @override
   final dialogs = <DialogInfo>[].asObservable();
 
   @override
@@ -190,6 +205,16 @@ class AppStateImpl with Disposable implements AppState {
   bool get switcherVisible => _switcherVisible.value;
   set switcherVisible(bool visible) => _switcherVisible.value = visible;
   final Observable<bool> _switcherVisible = false.asObservable();
+
+  @override
+  FeedbackPage get feedbackPage => _feedbackPage.value;
+  set feedbackPage(FeedbackPage value) => _feedbackPage.value = value;
+  final _feedbackPage = Observable<FeedbackPage>(FeedbackPage.preparing);
+
+  @override
+  String get feedbackUuid => _feedbackUuid.value;
+  set feedbackUuid(String value) => _feedbackUuid.value = value;
+  final _feedbackUuid = ''.asObservable();
 
   @override
   bool get viewsVisible => _viewsVisible.value;
@@ -377,6 +402,33 @@ class AppStateImpl with Disposable implements AppState {
 
   @override
   void launchFeedback() => launch(Strings.feedback, kFeedbackUrl);
+
+  @override
+  void showUserFeedback() async {
+    // TODO(fxb/97464): Take a screenshot here when DataProvider.GetScreenshot() is fixed.
+
+    runInAction(() {
+      userFeedbackVisibility.value = true;
+      _feedbackPage.value = FeedbackPage.ready;
+    });
+  }
+
+  @override
+  void closeUserFeedback() {
+    runInAction(() {
+      userFeedbackVisibility.value = false;
+      _feedbackPage.value = FeedbackPage.preparing;
+      _feedbackUuid.value = '';
+    });
+  }
+
+  @override
+  void userFeedbackSubmit(
+      {required String desc,
+      required String username,
+      String summary = 'New user feedback for Workstation'}) {
+    userFeedbackService.submit(summary, desc, username);
+  }
 
   @override
   void launchLicense() => launch(Strings.license, kLicenseUrl);
@@ -778,5 +830,18 @@ class AppStateImpl with Disposable implements AppState {
         }
       }
     }
+  }
+
+  void _onFeedbackSubmit(String uuid) {
+    runInAction(() {
+      _feedbackUuid.value = uuid;
+      _feedbackPage.value = FeedbackPage.submitted;
+    });
+  }
+
+  void _onFeedbackError() {
+    runInAction(() {
+      _feedbackPage.value = FeedbackPage.failed;
+    });
   }
 }

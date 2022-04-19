@@ -11,26 +11,26 @@ class AppTheme {
   static ThemeData get lightTheme => ThemeData(
         colorScheme: ColorScheme.light(
           // Used by controls.
-          primary: Color(0xff0a7965),
+          primary: FuchsiaColors.green02,
           // Used by [ListTile]'s trailing text.
-          secondary: Colors.grey[800]!,
+          secondary: FuchsiaColors.grey01,
           // Used by control backgrounds.
-          background: Color(0xff0a7965).withOpacity(0.3),
+          background: FuchsiaColors.green02.withOpacity(0.3),
         ),
         fontFamily: 'Roboto Mono',
         // Used for the shell background.
-        canvasColor: Colors.grey[200],
+        canvasColor: FuchsiaColors.white,
         // Used for side bar borders.
         dividerColor: Colors.black,
         // Used for side bar background.
         bottomAppBarColor: Colors.white,
         focusColor: Colors.black.withOpacity(0.15),
         hoverColor: Colors.black.withOpacity(0.15),
-        disabledColor: Colors.grey[500],
+        disabledColor: FuchsiaColors.grey03,
         // Used for error signals and messages.
-        errorColor: Color(0xffc7241f),
+        errorColor: FuchsiaColors.red02,
         // Used by Switch
-        toggleableActiveColor: Color(0xff0a7965),
+        toggleableActiveColor: FuchsiaColors.green02,
         // Used by ElevatedButton in QuickSettings.
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
@@ -48,26 +48,26 @@ class AppTheme {
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
             primary: Colors.black,
-            onSurface: Colors.grey,
+            onSurface: FuchsiaColors.grey03,
             side: BorderSide(color: Colors.black),
             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
           ),
         ),
         // Used by TextButton in [AlertDialog].
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
             primary: Colors.black,
-            onSurface: Colors.grey[700],
+            onSurface: FuchsiaColors.grey01,
             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           ),
         ),
         tooltipTheme: TooltipThemeData(
           padding: EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.grey[900],
-            borderRadius: BorderRadius.circular(4),
+            color: FuchsiaColors.black,
+            borderRadius: BorderRadius.circular(0),
           ),
         ),
         // Used by AppBar under QuickSettings details screen.
@@ -87,36 +87,35 @@ class AppTheme {
           ),
         ),
         // Used for AppBar bottom.
-        indicatorColor: Colors.grey[400],
-        textTheme: TextTheme(
-          // Used by [ListTile]'s subtitle.
-          caption: TextStyle(color: Colors.grey[800]),
-        ),
+        indicatorColor: FuchsiaColors.grey04,
+        textTheme: _ErmineTypography.theme.copyWith(
+            caption: _ErmineTypography.theme.caption!
+                .copyWith(color: FuchsiaColors.grey01)),
       );
 
   static ThemeData get darkTheme => ThemeData(
         colorScheme: ColorScheme.dark(
           // Used by control backgrounds.
-          primary: Color(0xff13b294),
+          primary: FuchsiaColors.green04,
           // Used by [ListTile]'s trailing text.
-          secondary: Colors.grey[400]!,
+          secondary: FuchsiaColors.grey04,
           // Used by control backgrounds.
-          background: Color(0xff13b294).withOpacity(0.3),
+          background: FuchsiaColors.green04.withOpacity(0.3),
         ),
         fontFamily: 'Roboto Mono',
         // Used for the shell background.
-        canvasColor: Colors.grey[900]!,
+        canvasColor: FuchsiaColors.black,
         // Used for side bar borders.
         dividerColor: Colors.white,
         // Used for side bar background.
         bottomAppBarColor: Colors.black,
         focusColor: Colors.white.withOpacity(0.15),
         hoverColor: Colors.white.withOpacity(0.15),
-        disabledColor: Colors.grey[700],
+        disabledColor: FuchsiaColors.grey01,
         // Used for error signals and messages.
-        errorColor: Color(0xffe25344),
+        errorColor: FuchsiaColors.red04,
         // Used by Switch.
-        toggleableActiveColor: Color(0xff13b294),
+        toggleableActiveColor: FuchsiaColors.green04,
         // Used by ElevatedButton in QuickSettings.
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
@@ -127,32 +126,32 @@ class AppTheme {
             elevation: 0,
             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
           ),
         ),
         // Used by OutlinedButton in QuickSettings.
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
             primary: Colors.white,
-            onSurface: Colors.grey,
+            onSurface: FuchsiaColors.grey03,
             side: BorderSide(color: Colors.white),
             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
           ),
         ),
         // Used by TextButton in [AlertDialog].
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
             primary: Colors.white,
-            onSurface: Colors.grey[600],
+            onSurface: FuchsiaColors.grey02,
             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           ),
         ),
         tooltipTheme: TooltipThemeData(
           padding: EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.grey[100],
+            color: FuchsiaColors.white,
             borderRadius: BorderRadius.circular(4),
           ),
         ),
@@ -173,12 +172,132 @@ class AppTheme {
           ),
         ),
         // Used for AppBar bottom.
-        indicatorColor: Colors.grey[700],
-        textTheme: TextTheme(
-          // Used by [ListTile]'s subtitle.
-          caption: TextStyle(color: Colors.grey[400]),
-        ),
+        indicatorColor: FuchsiaColors.grey01,
+        textTheme: _ErmineTypography.theme.copyWith(
+            caption: _ErmineTypography.theme.caption!
+                .copyWith(color: FuchsiaColors.grey05)),
       );
+}
+
+class _ErmineTypography {
+  const _ErmineTypography._();
+
+  static TextTheme theme = TextTheme(
+      headline1: TextStyle(
+          fontSize: 64,
+          fontWeight: FontWeight.normal,
+          letterSpacing: -1.5,
+          height: 1.125),
+      headline2: TextStyle(
+          fontSize: 48,
+          fontWeight: FontWeight.normal,
+          letterSpacing: 0,
+          height: 1.17),
+      headline3: TextStyle(
+          fontSize: 36,
+          fontWeight: FontWeight.normal,
+          letterSpacing: 0,
+          height: 1.3),
+      headline4: TextStyle(
+          fontSize: 28,
+          fontWeight: FontWeight.normal,
+          letterSpacing: 0,
+          height: 1.14),
+      headline5: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.normal,
+          letterSpacing: 0,
+          height: 1.17),
+      headline6: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0,
+          height: 1.3),
+      subtitle1: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0,
+          height: 1.5),
+      subtitle2: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0,
+          height: 1.25),
+      bodyText1: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w300,
+          letterSpacing: 0,
+          height: 1.4),
+      bodyText2: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w300,
+          letterSpacing: 0,
+          height: 1.4),
+      button: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0,
+          height: 1.14),
+      caption: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.normal,
+          letterSpacing: 0,
+          color: FuchsiaColors.grey05),
+      overline: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.normal,
+          letterSpacing: 0,
+          height: 1.4));
+}
+
+class FuchsiaColors {
+  const FuchsiaColors._();
+
+  static Color black = Color(0xFF283238);
+  static Color grey01 = Color(0xFF566168);
+  static Color grey02 = Color(0xFF768087);
+  static Color grey03 = Color(0xFF909BA3);
+  static Color grey04 = Color(0xFFB1B9BE);
+  static Color grey05 = Color(0XFFC3CACE);
+  static Color grey06 = Color(0XFFDCE0E3);
+  static Color white = Color(0XFFF1F3F4);
+
+  static Color green01 = Color(0XFF155450);
+  static Color green02 = Color(0XFF0A7965);
+  static Color green03 = Color(0XFF269580);
+  static Color green04 = Color(0XFF13B294);
+  static Color green05 = Color(0XFF07DDC0);
+  static Color green06 = Color(0XFF64FFDA);
+  static Color green07 = Color(0XFFB9FFEE);
+  static Color green08 = Color(0XFFE0FFF8);
+
+  static Color slate01 = Color(0XFF20335C);
+  static Color slate02 = Color(0XFF3D4D71);
+  static Color slate03 = Color(0XFF5E77A5);
+  static Color slate04 = Color(0XFF7F98C7);
+  static Color slate05 = Color(0XFFA7BBDE);
+  static Color slate06 = Color(0XFFCDDAF2);
+
+  static Color blue01 = Color(0XFF192B95);
+  static Color blue02 = Color(0XFF3F51BF);
+  static Color blue03 = Color(0XFF546CE2);
+  static Color blue04 = Color(0XFF7BCFFF);
+  static Color blue05 = Color(0XFFA3DEFF);
+  static Color blue06 = Color(0XFFC3E9FF);
+
+  static Color red01 = Color(0XFFAE1F1B);
+  static Color red02 = Color(0xffc7241f);
+  static Color red03 = Color(0xffe25344);
+  static Color red04 = Color(0XFFF0857A);
+  static Color red05 = Color(0XFFF1B4AE);
+  static Color red06 = Color(0XFFF6DBD8);
+
+  static Color orange01 = Color(0XFFD04E17);
+  static Color orange02 = Color(0XFFE2622B);
+  static Color orange03 = Color(0XFFEF743F);
+  static Color orange04 = Color(0XFFF7A070);
+  static Color orange05 = Color(0XFFFFBE99);
+  static Color orange06 = Color(0XFFFFE3CA);
 }
 
 class ErmineButtonStyle {

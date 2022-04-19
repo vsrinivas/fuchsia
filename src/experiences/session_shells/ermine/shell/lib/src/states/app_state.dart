@@ -9,12 +9,22 @@ import 'package:ermine/src/services/preferences_service.dart';
 import 'package:ermine/src/services/presenter_service.dart';
 import 'package:ermine/src/services/shortcuts_service.dart';
 import 'package:ermine/src/services/startup_service.dart';
+import 'package:ermine/src/services/user_feedback_service.dart';
 import 'package:ermine/src/states/app_state_impl.dart';
 import 'package:ermine/src/states/settings_state.dart';
 import 'package:ermine/src/states/view_state.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart' hide Action, AppBar;
 import 'package:fuchsia_scenic/views.dart';
+
+enum FeedbackPage {
+  preparing,
+  ready,
+  deviceLogs,
+  submitting,
+  submitted,
+  failed,
+}
 
 /// Defines the state of the entire application.
 ///
@@ -29,6 +39,7 @@ abstract class AppState {
   bool get dialogsVisible;
   bool get appBarVisible;
   bool get sideBarVisible;
+  bool get userFeedbackVisible;
   bool get overlaysVisible;
   bool get isIdle;
   bool get switcherVisible;
@@ -42,6 +53,8 @@ abstract class AppState {
   Locale? get locale;
   String get buildVersion;
   List<Map<String, String>> get appLaunchEntries;
+  FeedbackPage get feedbackPage;
+  String get feedbackUuid;
 
   SettingsState get settingsState;
 
@@ -60,8 +73,12 @@ abstract class AppState {
   void shutdown();
   void logout();
   void launchFeedback();
+  void showUserFeedback();
+  void closeUserFeedback();
   void launchLicense();
   void checkingForUpdatesAlert();
+  void userFeedbackSubmit(
+      {required String desc, required String username, String summary});
 
   factory AppState.fromEnv() {
     // ignore: unnecessary_cast
@@ -76,6 +93,7 @@ abstract class AppState {
         ScenicContext.hostViewRef(),
         insets: EdgeInsets.zero,
       ),
+      userFeedbackService: UserFeedbackService(),
     ) as AppState;
   }
 }

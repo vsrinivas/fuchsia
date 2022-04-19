@@ -50,6 +50,7 @@ dart_library("lib") {
     "src/services/settings/timezone_service.dart",
     "src/services/settings/volume_service.dart",
     "src/services/settings/wifi_service.dart",
+    "src/services/user_feedback_service.dart",
   ]
 
   states = [
@@ -78,6 +79,7 @@ dart_library("lib") {
     "src/widgets/settings/setting_details.dart",
     "src/widgets/settings/shortcut_settings.dart",
     "src/widgets/settings/timezone_settings.dart",
+    "src/widgets/user_feedback.dart",
     "src/widgets/settings/wifi_settings.dart",
     "src/widgets/side_bar.dart",
     "src/widgets/status.dart",
@@ -98,6 +100,7 @@ dart_library("lib") {
     "//sdk/dart/zircon",
     "//sdk/fidl/fuchsia.buildinfo",
     "//sdk/fidl/fuchsia.element",
+    "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.media",

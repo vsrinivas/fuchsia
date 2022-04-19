@@ -22,6 +22,7 @@ void main() async {
   final appBarVisible = false.asObservable();
   final sideBarVisible = false.asObservable();
   final switcherVisible = false.asObservable();
+  final userFeedbackVisible = false.asObservable();
 
   setUp(() {
     app = MockAppState();
@@ -33,6 +34,7 @@ void main() async {
     when(app.appBarVisible).thenAnswer((_) => appBarVisible.value);
     when(app.sideBarVisible).thenAnswer((_) => sideBarVisible.value);
     when(app.switcherVisible).thenAnswer((_) => switcherVisible.value);
+    when(app.userFeedbackVisible).thenAnswer((_) => userFeedbackVisible.value);
 
     WidgetFactory.mockFactory = (type) => Container(key: ValueKey(type));
   });

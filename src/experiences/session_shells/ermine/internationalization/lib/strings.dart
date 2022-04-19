@@ -774,6 +774,11 @@ class Strings {
         name: 'feedback',
         desc: 'The label for the "feedback" text field.',
       );
+  static String get userFeedback => Intl.message(
+        'User Feedback',
+        name: 'user feedback',
+        desc: 'The label for the "user feedback" text field.',
+      );
   static String get please => Intl.message(
         'Please',
         name: 'please',
@@ -1200,6 +1205,82 @@ class Strings {
         'Google’s privacy & terms',
         name: 'google privacy and terms',
         desc: 'The text link to the Google\'s privacy and terms webpage.',
+      );
+
+  static String get sendFeedback => Intl.message(
+        'Send feedback to Google',
+        name: 'send feedback',
+        desc: 'The title for the user feedback form',
+      );
+
+  static String get noPII => Intl.message(
+        'Please do not include personal information in the summary or '
+        'the description unless it is necessary to describe the issue.',
+        name: 'noPII',
+        desc:
+            'A warning message not to include personal data in the user feedback form',
+      );
+
+  static String get summary => Intl.message(
+        'Summary',
+        name: 'issue summary',
+        desc: 'The label for the issue summary input field',
+      );
+
+  static String get description => Intl.message(
+        'Description',
+        name: 'issue description',
+        desc: 'The label for the issue description input field',
+      );
+
+  static String get needDescription => Intl.message(
+        'Please write what you are reporting about.',
+        name: 'issue description is needed',
+        desc:
+            'The error message displayed when the user tries to submit the feedback form without issue description',
+      );
+
+  static String get needUsername => Intl.message(
+        'Please enter your corp username',
+        name: 'reporter\'s username is required.',
+        desc:
+            'The error message displayed when the user tries to submit the feedback form without their username',
+      );
+
+  static String get submit => Intl.message(
+        'Submit',
+        name: 'submit',
+        desc: 'The lable of the Submit button',
+      );
+
+  static String get submittedTitle =>
+      Intl.message('Your feedback report is on its way.',
+          name: 'user feedback submitted title',
+          desc: 'The title for the user feedback submission complete page');
+
+  static String get submittedDesc1 => Intl.message(
+        'Thanks for taking the time to submit your report. '
+        'It is successfully filed and you will be able to see the submitted data '
+        'on Crash once the upload is done. Here is the UUID of the report:',
+        name: 'user feedback submission description 1',
+        desc:
+            'The first sentence of the description on the user feedback submission complete page',
+      );
+
+  static String get submittedDesc2 => Intl.message(
+        'You will also be notified when its auto-created Monorail bug is ready.',
+        name: 'user feedback submission description 2',
+        desc:
+            'The second sentence of the description on the user feedback submission complete page',
+      );
+
+  static String get dataSharingLegalStatement => Intl.message(
+        'Device logs are sent to Google along with this report. '
+        'Go to the Legal Help page to request content changes for legal reasons.'
+        'We will use the information you give us to help address technical issues '
+        'and to improve our services, subject to our Privacy Policy and Terms of Service.',
+        name: 'data sharing legal statement',
+        desc: 'Legal statement for data sharing consent',
       );
 
   /// Lookup message given it's name.

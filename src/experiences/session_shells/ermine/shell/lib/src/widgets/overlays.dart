@@ -7,6 +7,7 @@ import 'package:ermine/src/widgets/app_bar.dart';
 import 'package:ermine/src/widgets/app_switcher.dart';
 import 'package:ermine/src/widgets/scrim.dart';
 import 'package:ermine/src/widgets/side_bar.dart';
+import 'package:ermine/src/widgets/user_feedback.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
@@ -42,6 +43,16 @@ class Overlays extends StatelessWidget {
                 bottom: 0,
                 right: 0,
                 child: WidgetFactory.create(() => SideBar(app)),
+              ),
+
+            // User Feedback.
+            if (app.userFeedbackVisible)
+              Positioned(
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0,
+                child: WidgetFactory.create(() => UserFeedback(app)),
               ),
 
             // App Switcher.
