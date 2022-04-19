@@ -5,6 +5,7 @@
 use crate::pbm::make_configs;
 use anyhow::Result;
 use errors::ffx_bail;
+use ffx_config::sdk::SdkVersion;
 use ffx_core::ffx_plugin;
 use ffx_emulator_common::config::FfxConfigWrapper;
 use ffx_emulator_engines::EngineBuilder;
@@ -27,12 +28,15 @@ then rebuild to enable emulation.";
 #[ffx_plugin(TargetCollectionProxy = "daemon::protocol")]
 pub async fn start(cmd: StartCommand, proxy: TargetCollectionProxy) -> Result<()> {
     let config = FfxConfigWrapper::new();
-    let in_tree = config
-        .get("sdk.type")
-        .await
-        // This is a legitimate "expect": if we can't access the ffx config values, we should panic
-        .expect("Couldn't get sdk.type from ffx config.")
-        .contains("in-tree");
+    let in_tree = match ffx_config::get_sdk().await {
+        Ok(sdk) => match sdk.get_version() {
+            SdkVersion::InTree => true,
+            _ => false,
+        },
+        Err(e) => {
+            ffx_bail!("{:?}", e.context("Couldn't find version information from ffx config."))
+        }
+    };
 
     let emulator_configuration = match make_configs(&cmd, &config).await {
         Ok(config) => config,
