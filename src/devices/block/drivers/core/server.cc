@@ -428,7 +428,7 @@ zx_status_t Server::Serve() {
   block_fifo_request_t requests[BLOCK_FIFO_MAX_DEPTH];
   size_t count;
   while (true) {
-    if ((status = Read(requests, &count) != ZX_OK)) {
+    if ((status = Read(requests, &count)) != ZX_OK) {
       return status;
     }
 
