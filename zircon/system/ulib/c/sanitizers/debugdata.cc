@@ -56,12 +56,12 @@ zx_status_t
 _fuchsia_debugdata_PublisherPublish(zx_handle_t debug_data_channel, const char* data_sink_data,
                                     size_t data_sink_size, zx_handle_t data,
                                     zx_handle_t vmo_token) {
-  if (data_sink_size > fuchsia_debugdata_MAX_NAME) {
+  if (data_sink_size > fuchsia_io_MAX_NAME_LENGTH) {
     _zx_handle_close(data);
     return ZX_ERR_INVALID_ARGS;
   }
   FIDL_ALIGNDECL char wr_bytes[sizeof(fuchsia_debugdata_PublisherPublishRequestMessage) +
-                               fuchsia_debugdata_MAX_NAME] = {};
+                               fuchsia_io_MAX_NAME_LENGTH] = {};
   fuchsia_debugdata_PublisherPublishRequestMessage* request =
       (fuchsia_debugdata_PublisherPublishRequestMessage*)wr_bytes;
   // TODO(fxbug.dev/38643) use fidl_init_txn_header once it is inline
