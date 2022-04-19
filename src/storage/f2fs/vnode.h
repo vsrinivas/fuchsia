@@ -85,29 +85,37 @@ class VnodeF2fs : public fs::Vnode,
   zx_status_t GetAttributes(fs::VnodeAttributes *a) final __TA_EXCLUDES(mutex_);
   zx_status_t SetAttributes(fs::VnodeAttributesUpdate attr) final __TA_EXCLUDES(mutex_);
 
+  fs::VnodeProtocolSet GetProtocols() const final;
+
 #ifdef __Fuchsia__
   zx_status_t GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
                                      [[maybe_unused]] fs::Rights rights,
                                      fs::VnodeRepresentation *info) final;
-#endif  // __Fuchsia__
 
-  fs::VnodeProtocolSet GetProtocols() const final;
+  // For fs::PagedVnode
+  zx_status_t GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo *out_vmo, size_t *out_size) final
+      __TA_EXCLUDES(mutex_);
 
-#ifdef __Fuchsia__
-  zx_status_t GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo *out_vmo,
-                     size_t *out_size) override {
-    FX_LOGS(ERROR) << "Unsupported GetVMO in VnodeF2fs. This method should be overridden.";
+  void VmoRead(uint64_t offset, uint64_t length) final __TA_EXCLUDES(mutex_);
+
+  void VmoDirty(uint64_t offset, uint64_t length) final {
+    FX_LOGS(ERROR) << "Unsupported VmoDirty in VnodeF2fs.";
+  }
+
+  zx::status<zx::vmo> PageFaultReadPages(uint64_t offset, uint64_t length)
+      __TA_REQUIRES_SHARED(mutex_);
+
+  zx_status_t SetMmamppedPages(size_t offset, size_t length) __TA_REQUIRES_SHARED(mutex_);
+
+  virtual zx_status_t ReadOnPageFault(void *data, size_t len, size_t off, size_t *out_actual)
+      __TA_REQUIRES_SHARED(mutex_) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-
-  void VmoRead(uint64_t offset, uint64_t length) override {
-    FX_LOGS(ERROR) << "Unsupported VmoRead in VnodeF2fs. This method should be overridden.";
-  }
-
-  void VmoDirty(uint64_t offset, uint64_t length) override {
-    FX_LOGS(ERROR) << "Unsupported VmoDirty in VnodeF2fs. This method should be overridden.";
-  }
 #endif  // __Fuchsia__
+
+  zx_status_t InvalidatePagedVmo(uint64_t offset, size_t len) __TA_EXCLUDES(mutex_);
+  zx_status_t WritePagedVmo(const void *buffer_address, uint64_t offset, size_t len)
+      __TA_EXCLUDES(mutex_);
 
 #if 0  // porting needed
   // void F2fsSetInodeFlags();
@@ -413,6 +421,18 @@ class VnodeF2fs : public fs::Vnode,
   zx_status_t OpenNode(ValidatedOptions options, fbl::RefPtr<Vnode> *out_redirect) final
       __TA_EXCLUDES(mutex_);
   zx_status_t CloseNode() final;
+
+#ifdef __Fuchsia__
+  zx_status_t CreatePagedVmo(size_t size) __TA_REQUIRES(mutex_);
+
+  zx_status_t ClonePagedVmo(fuchsia_io::wire::VmoFlags flags, size_t size, zx::vmo *out_vmo,
+                            size_t *out_size) __TA_REQUIRES(mutex_);
+
+  void SetPagedVmoName() __TA_REQUIRES(mutex_);
+
+  void ReportPagerError(uint64_t offset, uint64_t length, zx_status_t err)
+      __TA_REQUIRES_SHARED(mutex_);
+#endif  // __Fuchsia__
 
   FileCache file_cache_{this};
   InodeInfo fi_;

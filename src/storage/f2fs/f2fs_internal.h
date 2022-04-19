@@ -84,6 +84,7 @@ enum class CountType {
   kDirtyNodes,
   kDirtyMeta,
   kDirtyData,
+  kMmapedData,
   kNrCountType,
 };
 

@@ -22,6 +22,8 @@ enum class PageFlag {
   kPageAlloc,         // It has a valid Page::vmo_.
   kPageMapped,        // It has a valid mapping to the address space.
   kPageActive,        // It is being referenced.
+  // TODO: Clear |kPageMmapped| when all mmaped areas are unmapped.
+  kPageMmapped,  // It is mmapped. Once set, it remains regardless of munmap.
   kPageFlagSize = 8,
 };
 
@@ -82,7 +84,7 @@ class Page : public PageRefCounted<Page>,
   // if IsAllocated() is false. Then, it creates a mapping for |vmo_| to allow the access to
   // |vmo_| using a virtual address if IsMapped() is false. Finally, it requests ZX_VMO_OP_TRY_LOCK
   // to prevent the page of |vmo_| from being decommitted until there are one or more references. If
-  // it fails, it means the the kernel has decommitted the page of |vmo_| due to memory pressure,
+  // it fails, it means the kernel has decommitted the page of |vmo_| due to memory pressure,
   // and thus it commits a page to |vmo_| and requests ZX_VMO_OP_TRY_LOCK again.
   zx_status_t GetPage(bool need_vmo_lock);
   // f2fs should unlock a Page when it got the Page from FileCache::GetPage().
@@ -105,6 +107,7 @@ class Page : public PageRefCounted<Page>,
   bool IsAllocated() const { return TestFlag(PageFlag::kPageAlloc); }
   bool IsMapped() const { return TestFlag(PageFlag::kPageMapped); }
   bool IsActive() const { return TestFlag(PageFlag::kPageActive); }
+  bool IsMmapped() const { return TestFlag(PageFlag::kPageMmapped); }
 
   void ClearMapped() { ClearFlag(PageFlag::kPageMapped); }
   zx_status_t Unmap();
@@ -146,6 +149,11 @@ class Page : public PageRefCounted<Page>,
 
   bool SetDirty();
   bool ClearDirtyForIo(bool for_writeback);
+
+  void SetMmapped();
+  // It clears PageFlag::kPageMmapped. If the Page is mmapped, it returns true.
+  // If the Page is modified like Invalidate(), it should be synchronized to mmaped area.
+  bool ClearMmapped();
 
   // Truncate and punch-a-hole operations call it to invalidate a Page.
   // It clears PageFlag::kPageUptodate. If the Page is dirty, it clears PageFlag::kPageDirty and

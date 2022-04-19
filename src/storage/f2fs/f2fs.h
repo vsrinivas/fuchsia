@@ -37,6 +37,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/string_buffer.h>
 
 #include <condition_variable>
 

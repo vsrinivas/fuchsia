@@ -1,0 +1,395 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include <cstdint>
+#include <unordered_set>
+
+#include <gtest/gtest.h>
+#include <safemath/checked_math.h>
+
+#include "src/lib/storage/block_client/cpp/fake_block_device.h"
+#include "src/storage/f2fs/f2fs.h"
+#include "src/storage/f2fs/f2fs_layout.h"
+#include "src/storage/f2fs/f2fs_types.h"
+#include "unit_lib.h"
+
+namespace f2fs {
+namespace {
+
+using MmapTest = F2fsFakeDevTestFixture;
+
+TEST_F(MmapTest, GetVmo) {
+  srand(testing::UnitTest::GetInstance()->random_seed());
+
+  fbl::RefPtr<fs::Vnode> test_fs_vnode;
+  std::string file_name("mmap_getvmo_test");
+  ASSERT_EQ(root_dir_->Create(file_name, S_IFREG, &test_fs_vnode), ZX_OK);
+  fbl::RefPtr<VnodeF2fs> test_vnode = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_fs_vnode));
+  File *test_file_ptr = static_cast<File *>(test_vnode.get());
+
+  uint8_t write_buf[PAGE_SIZE];
+  for (uint8_t &character : write_buf) {
+    character = static_cast<uint8_t>(rand());
+  }
+
+  FileTester::AppendToFile(test_file_ptr, write_buf, PAGE_SIZE);
+
+  zx::vmo vmo;
+  uint8_t read_buf[PAGE_SIZE];
+  size_t read_size = 0;
+  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo, &read_size), ZX_OK);
+  ASSERT_EQ(read_size, static_cast<size_t>(PAGE_SIZE));
+  vmo.read(read_buf, 0, PAGE_SIZE);
+  vmo.reset();
+  loop_.RunUntilIdle();
+
+  ASSERT_EQ(memcmp(read_buf, write_buf, PAGE_SIZE), 0);
+
+  test_vnode->Close();
+  test_vnode.reset();
+}
+
+TEST_F(MmapTest, GetVmoSize) {
+  srand(testing::UnitTest::GetInstance()->random_seed());
+
+  fbl::RefPtr<fs::Vnode> test_fs_vnode;
+  std::string file_name("mmap_getvmo_size_test");
+  ASSERT_EQ(root_dir_->Create(file_name, S_IFREG, &test_fs_vnode), ZX_OK);
+  fbl::RefPtr<VnodeF2fs> test_vnode = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_fs_vnode));
+  File *test_file_ptr = static_cast<File *>(test_vnode.get());
+
+  uint8_t write_buf[PAGE_SIZE];
+  for (uint8_t &character : write_buf) {
+    character = static_cast<uint8_t>(rand());
+  }
+
+  FileTester::AppendToFile(test_file_ptr, write_buf, PAGE_SIZE);
+
+  // Create paged_vmo
+  zx::vmo vmo;
+  size_t read_size = 0;
+  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo, &read_size), ZX_OK);
+  ASSERT_EQ(read_size, static_cast<size_t>(PAGE_SIZE));
+  vmo.reset();
+
+  // Increase file size
+  FileTester::AppendToFile(test_file_ptr, write_buf, PAGE_SIZE);
+
+  // Get new Private VMO, but paged_vmo size is not increased.
+  zx::vmo private_vmo;
+  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &private_vmo, &read_size), ZX_OK);
+  ASSERT_EQ(read_size, static_cast<size_t>(PAGE_SIZE));
+  private_vmo.reset();
+
+  // Get new Shared VMO, but paged_vmo size is not increased.
+  zx::vmo shared_vmo;
+  ASSERT_EQ(test_vnode->GetVmo(
+                fuchsia_io::wire::VmoFlags::kSharedBuffer | fuchsia_io::wire::VmoFlags::kRead,
+                &shared_vmo, &read_size),
+            ZX_OK);
+  ASSERT_EQ(read_size, static_cast<size_t>(PAGE_SIZE));
+  shared_vmo.reset();
+  loop_.RunUntilIdle();
+
+  test_vnode->Close();
+  test_vnode.reset();
+}
+
+TEST_F(MmapTest, GetVmoZeroSize) {
+  fbl::RefPtr<fs::Vnode> test_fs_vnode;
+  std::string file_name("mmap_getvmo_zero_size_test");
+  ASSERT_EQ(root_dir_->Create(file_name, S_IFREG, &test_fs_vnode), ZX_OK);
+  fbl::RefPtr<VnodeF2fs> test_vnode = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_fs_vnode));
+
+  zx::vmo vmo;
+  uint8_t read_buf[PAGE_SIZE];
+  size_t read_size = 0;
+  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo, &read_size), ZX_OK);
+  ASSERT_EQ(read_size, static_cast<size_t>(PAGE_SIZE));
+  vmo.read(read_buf, 0, PAGE_SIZE);
+  vmo.reset();
+  loop_.RunUntilIdle();
+
+  test_vnode->Close();
+  test_vnode.reset();
+}
+
+TEST_F(MmapTest, GetVmoOnDirectory) {
+  fbl::RefPtr<fs::Vnode> test_fs_vnode;
+  std::string file_name("mmap_getvmo_dir_test");
+  ASSERT_EQ(root_dir_->Create(file_name, S_IFDIR, &test_fs_vnode), ZX_OK);
+  fbl::RefPtr<VnodeF2fs> test_vnode = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_fs_vnode));
+
+  zx::vmo vmo;
+  size_t read_size = 0;
+  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo, &read_size),
+            ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(read_size, 0LU);
+  vmo.reset();
+  loop_.RunUntilIdle();
+
+  test_vnode->Close();
+  test_vnode.reset();
+}
+
+TEST_F(MmapTest, GetVmoTruncatePartial) {
+  fbl::RefPtr<fs::Vnode> test_fs_vnode;
+  std::string file_name("mmap_getvmo_truncate_partial_test");
+  ASSERT_EQ(root_dir_->Create(file_name, S_IFREG, &test_fs_vnode), ZX_OK);
+  fbl::RefPtr<VnodeF2fs> test_vnode = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_fs_vnode));
+  File *test_file_ptr = static_cast<File *>(test_vnode.get());
+
+  constexpr size_t kPageCount = 5;
+  constexpr size_t kBufferSize = kPageCount * PAGE_SIZE;
+  uint8_t write_buf[kBufferSize];
+  for (size_t i = 0; i < kPageCount; ++i) {
+    memset(write_buf + (i * PAGE_SIZE), static_cast<int>(i), PAGE_SIZE);
+  }
+  FileTester::AppendToFile(test_file_ptr, write_buf, kBufferSize);
+  ASSERT_EQ(test_vnode->GetSize(), kBufferSize);
+
+  zx::vmo vmo;
+  size_t read_size = 0;
+  ASSERT_EQ(test_vnode->GetVmo(
+                fuchsia_io::wire::VmoFlags::kSharedBuffer | fuchsia_io::wire::VmoFlags::kRead, &vmo,
+                &read_size),
+            ZX_OK);
+  ASSERT_EQ(read_size, kBufferSize);
+
+  uint8_t read_buf[kBufferSize];
+  uint8_t zero_buf[kBufferSize];
+  memset(zero_buf, 0, kBufferSize);
+
+  // Truncate partial page
+  size_t zero_size = PAGE_SIZE / 4;
+  size_t truncate_size = kBufferSize - zero_size;
+  test_vnode->Truncate(truncate_size);
+  ASSERT_EQ(test_vnode->GetSize(), truncate_size);
+  vmo.read(read_buf, 0, kBufferSize);
+  ASSERT_EQ(memcmp(read_buf, write_buf, truncate_size), 0);
+  ASSERT_EQ(memcmp(read_buf + truncate_size, zero_buf, zero_size), 0);
+
+  zero_size = PAGE_SIZE / 2;
+  truncate_size = kBufferSize - zero_size;
+  test_vnode->Truncate(truncate_size);
+  ASSERT_EQ(test_vnode->GetSize(), truncate_size);
+  vmo.read(read_buf, 0, kBufferSize);
+  ASSERT_EQ(memcmp(read_buf, write_buf, truncate_size), 0);
+  ASSERT_EQ(memcmp(read_buf + truncate_size, zero_buf, zero_size), 0);
+
+  vmo.reset();
+  loop_.RunUntilIdle();
+
+  test_vnode->Close();
+  test_vnode.reset();
+}
+
+TEST_F(MmapTest, GetVmoTruncatePage) {
+  fbl::RefPtr<fs::Vnode> test_fs_vnode;
+  std::string file_name("mmap_getvmo_truncate_page_test");
+  ASSERT_EQ(root_dir_->Create(file_name, S_IFREG, &test_fs_vnode), ZX_OK);
+  fbl::RefPtr<VnodeF2fs> test_vnode = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_fs_vnode));
+  File *test_file_ptr = static_cast<File *>(test_vnode.get());
+
+  constexpr size_t kPageCount = 5;
+  constexpr size_t kBufferSize = kPageCount * PAGE_SIZE;
+  uint8_t write_buf[kBufferSize];
+  for (size_t i = 0; i < kPageCount; ++i) {
+    memset(write_buf + (i * PAGE_SIZE), static_cast<int>(i), PAGE_SIZE);
+  }
+  FileTester::AppendToFile(test_file_ptr, write_buf, kBufferSize);
+  ASSERT_EQ(test_vnode->GetSize(), kBufferSize);
+
+  zx::vmo vmo;
+  size_t read_size = 0;
+  ASSERT_EQ(test_vnode->GetVmo(
+                fuchsia_io::wire::VmoFlags::kSharedBuffer | fuchsia_io::wire::VmoFlags::kRead, &vmo,
+                &read_size),
+            ZX_OK);
+  ASSERT_EQ(read_size, kBufferSize);
+
+  uint8_t read_buf[kBufferSize];
+  uint8_t zero_buf[kBufferSize];
+  memset(zero_buf, 0, kBufferSize);
+
+  // Truncate one page
+  size_t zero_size = PAGE_SIZE;
+  size_t truncate_size = kBufferSize - zero_size;
+  ASSERT_EQ(test_vnode->Truncate(truncate_size), ZX_OK);
+  ASSERT_EQ(test_vnode->GetSize(), truncate_size);
+  vmo.read(read_buf, 0, kBufferSize);
+  ASSERT_EQ(memcmp(read_buf, write_buf, truncate_size), 0);
+  ASSERT_EQ(memcmp(read_buf + truncate_size, zero_buf, PAGE_SIZE), 0);
+
+  // Truncate two pages
+  zero_size = static_cast<size_t>(PAGE_SIZE) * 2;
+  truncate_size = kBufferSize - zero_size;
+  ASSERT_EQ(test_vnode->Truncate(truncate_size), ZX_OK);
+  ASSERT_EQ(test_vnode->GetSize(), truncate_size);
+  vmo.read(read_buf, 0, kBufferSize);
+  ASSERT_EQ(memcmp(read_buf, write_buf, truncate_size), 0);
+  ASSERT_EQ(memcmp(read_buf + truncate_size, zero_buf, zero_size), 0);
+
+  vmo.reset();
+  loop_.RunUntilIdle();
+
+  test_vnode->Close();
+  test_vnode.reset();
+}
+
+TEST_F(MmapTest, GetVmoException) {
+  fbl::RefPtr<fs::Vnode> test_fs_vnode;
+  std::string file_name("mmap_getvmo_exception_test");
+  ASSERT_EQ(root_dir_->Create(file_name, S_IFREG, &test_fs_vnode), ZX_OK);
+  fbl::RefPtr<VnodeF2fs> test_vnode = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_fs_vnode));
+
+  zx::vmo vmo;
+  size_t read_size = 0;
+
+  // Execute flag
+  fuchsia_io::wire::VmoFlags flags;
+  flags = fuchsia_io::wire::VmoFlags::kExecute;
+  ASSERT_EQ(test_vnode->GetVmo(flags, &vmo, &read_size), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(read_size, 0LU);
+
+  // Shared write flag
+  flags = fuchsia_io::wire::VmoFlags::kSharedBuffer | fuchsia_io::wire::VmoFlags::kWrite;
+  ASSERT_EQ(test_vnode->GetVmo(flags, &vmo, &read_size), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_EQ(read_size, 0LU);
+  vmo.reset();
+  loop_.RunUntilIdle();
+
+  test_vnode->Close();
+  test_vnode.reset();
+}
+
+class MampVnodeF2fs : public VnodeF2fs {
+ public:
+  zx_status_t LockedReadOnPageFault(void *data, size_t len, size_t off, size_t *out_actual) {
+    fs::SharedLock rlock(mutex_);
+    return ReadOnPageFault(data, len, off, out_actual);
+  }
+};
+
+TEST_F(MmapTest, ReadOnPageFaultException) {
+  fbl::RefPtr<fs::Vnode> test_fs_vnode;
+  std::string file_name("mmap_getvmo_page_fault_exception_test");
+  ASSERT_EQ(root_dir_->Create(file_name, S_IFDIR, &test_fs_vnode), ZX_OK);
+  fbl::RefPtr<MampVnodeF2fs> test_vnode =
+      fbl::RefPtr<MampVnodeF2fs>::Downcast(std::move(test_fs_vnode));
+
+  uint8_t read_buf[PAGE_SIZE];
+  size_t read_size = 0;
+
+  ASSERT_EQ(test_vnode->LockedReadOnPageFault(read_buf, 0, PAGE_SIZE, &read_size),
+            ZX_ERR_NOT_SUPPORTED);
+
+  test_vnode->Close();
+  test_vnode.reset();
+}
+
+TEST_F(MmapTest, VmoRead) {
+  srand(testing::UnitTest::GetInstance()->random_seed());
+
+  fbl::RefPtr<fs::Vnode> test_fs_vnode;
+  std::string file_name("mmap_vmoread_test");
+  ASSERT_EQ(root_dir_->Create(file_name, S_IFREG, &test_fs_vnode), ZX_OK);
+  fbl::RefPtr<VnodeF2fs> test_vnode = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_fs_vnode));
+  File *test_file_ptr = static_cast<File *>(test_vnode.get());
+
+  uint8_t write_buf[PAGE_SIZE];
+  for (uint8_t &character : write_buf) {
+    character = static_cast<uint8_t>(rand());
+  }
+
+  FileTester::AppendToFile(test_file_ptr, write_buf, PAGE_SIZE);
+
+  zx::vmo vmo;
+  uint8_t read_buf[PAGE_SIZE];
+  size_t read_size = 0;
+  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo, &read_size), ZX_OK);
+  ASSERT_EQ(read_size, static_cast<size_t>(PAGE_SIZE));
+  test_vnode->VmoRead(0, PAGE_SIZE);
+  vmo.read(read_buf, 0, PAGE_SIZE);
+  vmo.reset();
+  loop_.RunUntilIdle();
+
+  ASSERT_EQ(memcmp(read_buf, write_buf, PAGE_SIZE), 0);
+
+  test_vnode->Close();
+  test_vnode.reset();
+}
+
+TEST_F(MmapTest, VmoReadException) {
+  srand(testing::UnitTest::GetInstance()->random_seed());
+
+  fbl::RefPtr<fs::Vnode> test_fs_vnode;
+  std::string file_name("mmap_vmoread_exception_test");
+  ASSERT_EQ(root_dir_->Create(file_name, S_IFREG, &test_fs_vnode), ZX_OK);
+  fbl::RefPtr<VnodeF2fs> test_vnode = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_fs_vnode));
+  File *test_file_ptr = static_cast<File *>(test_vnode.get());
+
+  uint8_t write_buf[PAGE_SIZE];
+  for (uint8_t &character : write_buf) {
+    character = static_cast<uint8_t>(rand());
+  }
+
+  FileTester::AppendToFile(test_file_ptr, write_buf, PAGE_SIZE);
+
+  zx::vmo vmo;
+  uint8_t read_buf[PAGE_SIZE];
+  size_t read_size = 0;
+  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo, &read_size), ZX_OK);
+  ASSERT_EQ(read_size, static_cast<size_t>(PAGE_SIZE));
+  vmo.reset();
+  loop_.RunUntilIdle();
+  test_vnode->VmoRead(0, PAGE_SIZE);
+
+  ASSERT_NE(memcmp(read_buf, write_buf, PAGE_SIZE), 0);
+
+  test_vnode->Close();
+  test_vnode.reset();
+}
+
+TEST_F(MmapTest, VmoReadSizeException) {
+  srand(testing::UnitTest::GetInstance()->random_seed());
+
+  fbl::RefPtr<fs::Vnode> test_fs_vnode;
+  std::string file_name("mmap_getvmo_size_exception_test");
+  ASSERT_EQ(root_dir_->Create(file_name, S_IFREG, &test_fs_vnode), ZX_OK);
+  fbl::RefPtr<VnodeF2fs> test_vnode = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_fs_vnode));
+  File *test_file_ptr = static_cast<File *>(test_vnode.get());
+
+  uint8_t write_buf[PAGE_SIZE];
+  for (uint8_t &character : write_buf) {
+    character = static_cast<uint8_t>(rand());
+  }
+
+  FileTester::AppendToFile(test_file_ptr, write_buf, PAGE_SIZE);
+
+  zx::vmo vmo;
+  uint8_t read_buf[PAGE_SIZE];
+  size_t read_size = 0;
+  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo, &read_size), ZX_OK);
+  ASSERT_EQ(read_size, static_cast<size_t>(PAGE_SIZE));
+  test_vnode->VmoRead(0, PAGE_SIZE);
+  vmo.read(read_buf, 0, PAGE_SIZE);
+  ASSERT_EQ(memcmp(read_buf, write_buf, PAGE_SIZE), 0);
+
+  // Append to file after mmap
+  FileTester::AppendToFile(test_file_ptr, write_buf, PAGE_SIZE);
+  memset(read_buf, 0, PAGE_SIZE);
+  test_vnode->VmoRead(PAGE_SIZE, PAGE_SIZE);
+  vmo.read(read_buf, PAGE_SIZE, PAGE_SIZE);
+  ASSERT_NE(memcmp(read_buf, write_buf, PAGE_SIZE), 0);
+
+  vmo.reset();
+  loop_.RunUntilIdle();
+
+  test_vnode->Close();
+  test_vnode.reset();
+}
+
+}  // namespace
+}  // namespace f2fs

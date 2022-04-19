@@ -69,6 +69,7 @@ void mmap_crash(const std::string& path, int prot, int flags, DeathTestOp rw) {
             [[maybe_unused]] int v = *static_cast<volatile int*>(addr);
           },
           _);
+      ASSERT_EQ(munmap(addr, PAGE_SIZE), 0);
       break;
     case DeathTestOp::WriteAfterUnmap:
       ASSERT_DEATH(
@@ -81,6 +82,7 @@ void mmap_crash(const std::string& path, int prot, int flags, DeathTestOp rw) {
             *static_cast<int*>(addr) = 5;
           },
           _);
+      ASSERT_EQ(munmap(addr, PAGE_SIZE), 0);
       break;
   }
 }

@@ -20,6 +20,7 @@ Page::~Page() {
   ZX_DEBUG_ASSERT(IsDirty() == false);
   ZX_DEBUG_ASSERT(IsMapped() == false);
   ZX_DEBUG_ASSERT(IsLocked() == false);
+  ZX_DEBUG_ASSERT(IsMmapped() == false);
 }
 
 void Page::RecyclePage() {
@@ -154,6 +155,9 @@ zx_status_t Page::Map() {
 void Page::Invalidate() {
   ZX_DEBUG_ASSERT(IsLocked());
   ClearDirtyForIo(false);
+  if (ClearMmapped()) {
+    ZX_ASSERT(GetVnode().InvalidatePagedVmo(GetIndex() * kBlockSize, kBlockSize) == ZX_OK);
+  }
   ClearUptodate();
 }
 
@@ -185,6 +189,25 @@ void Page::ClearWriteback() {
     ClearFlag(PageFlag::kPageWriteback);
     WakeupFlag(PageFlag::kPageWriteback);
   }
+}
+
+void Page::SetMmapped() {
+  ZX_DEBUG_ASSERT(IsLocked());
+  if (IsUptodate()) {
+    if (!SetFlag(PageFlag::kPageMmapped)) {
+      fs_->GetSuperblockInfo().IncreasePageCount(CountType::kMmapedData);
+    }
+  }
+}
+
+bool Page::ClearMmapped() {
+  ZX_DEBUG_ASSERT(IsLocked());
+  if (IsMmapped()) {
+    fs_->GetSuperblockInfo().DecreasePageCount(CountType::kMmapedData);
+    ClearFlag(PageFlag::kPageMmapped);
+    return true;
+  }
+  return false;
 }
 
 #ifdef __Fuchsia__
@@ -339,7 +362,7 @@ std::vector<fbl::RefPtr<Page>> FileCache::CleanupPagesUnsafe(pgoff_t start, pgof
       // No other reference it |current|. It is safe to release it.
       prev_key = current->GetKey();
       EvictUnsafe(&(*current));
-      if (invalidate) {
+      if (invalidate || current->IsMmapped()) {
         ZX_ASSERT(!current->TryLock());
         current->Invalidate();
         current->Unlock();
@@ -387,6 +410,10 @@ void FileCache::Reset() {
   for (auto &page : pages) {
     // Wait for active Pages to be written.
     page->WaitOnWriteback();
+    // Decrease mmap page count
+    page->Lock();
+    page->ClearMmapped();
+    page->Unlock();
   }
 }
 
@@ -432,8 +459,8 @@ std::vector<fbl::RefPtr<Page>> FileCache::GetLockedDirtyPagesUnsafe(
         // It is the last reference. Just leak it and keep it alive in FileCache.
         __UNUSED auto leak = fbl::ExportToRawPtr(&page);
       }
-    } else if (operation.bReleasePages || !vnode_->IsActive()) {
-      // There is no other reference. It is safe to release it..
+    } else if (!raw_page->IsMmapped() && (operation.bReleasePages || !vnode_->IsActive())) {
+      // There is no other reference. It is safe to release it.
       raw_page->Unlock();
       EvictUnsafe(raw_page);
       delete raw_page;

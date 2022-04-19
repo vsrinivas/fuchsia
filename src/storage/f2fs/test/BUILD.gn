@@ -28,6 +28,7 @@ test("f2fs_unit") {
     "unit/fsck.cc",
     "unit/inline.cc",
     "unit/mkfs.cc",
+    "unit/mmap.cc",
     "unit/mount.cc",
     "unit/node.cc",
     "unit/orphan.cc",
@@ -83,6 +84,8 @@ fs_test_config("f2fs") {
   supports_fsck_after_every_transaction = false
   supports_inspect = true
   supports_shutdown_on_no_connections = true
+  supports_mmap = true
+  supports_mmap_shared_write = false
 
   options = [
     {

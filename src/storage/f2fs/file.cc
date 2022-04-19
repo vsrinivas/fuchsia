@@ -86,12 +86,6 @@ File::File(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 #endif
 
 #if 0  // porting needed
-// int File::F2fsFileMmap(/*file *file,*/ vm_area_struct *vma) {
-//   // file_accessed(file);
-//   // vma->vm_ops = &f2fs_file_vm_ops;
-//   return 0;
-// }
-
 // void File::FillZero(pgoff_t index, loff_t start, loff_t len) {
 //   Page *page = nullptr;
 //   zx_status_t err;
@@ -433,6 +427,14 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
 
     SetSize(std::max(static_cast<size_t>(GetSize()), offset + off_in_buf));
     data_page->SetDirty();
+
+    if (data_page->IsMmapped()) {
+      SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
+      size_t blocksize = superblock_info.GetBlocksize();
+      ZX_ASSERT(WritePagedVmo(data_page->GetAddress(), n * blocksize,
+                              std::min(blocksize, left + cur_len)) == ZX_OK);
+    }
+
     Page::PutPage(std::move(data_pages[index]), true);
 
     if (left == 0)
