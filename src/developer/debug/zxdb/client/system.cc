@@ -890,8 +890,8 @@ void System::OnSettingChanged(const SettingStore& store, const std::string& sett
     // be owned by BuildIDIndex.
     for (const auto& server : build_id_index.symbol_servers()) {
       if (existing.find(server.url) == existing.end()) {
-        // TODO(dangyi): Support server.require_authentication flag.
-        if (auto symbol_server = SymbolServer::FromURL(session(), server.url)) {
+        if (auto symbol_server =
+                SymbolServer::FromURL(session(), server.url, server.require_authentication)) {
           AddSymbolServer(std::move(symbol_server));
         }
       }

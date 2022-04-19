@@ -68,9 +68,14 @@ FILE* GetGoogleApiAuthCache(const char* mode) {
 
 class CloudStorageSymbolServerImpl : public CloudStorageSymbolServer {
  public:
-  CloudStorageSymbolServerImpl(Session* session, const std::string& url)
+  CloudStorageSymbolServerImpl(Session* session, const std::string& url,
+                               bool require_authentication)
       : CloudStorageSymbolServer(session, url), weak_factory_(this) {
-    DoInit();
+    if (require_authentication) {
+      DoInit();
+    } else {
+      ChangeState(SymbolServer::State::kReady);
+    }
   }
 
   void Fetch(const std::string& build_id, DebugSymbolFileType file_type,
@@ -104,9 +109,9 @@ CloudStorageSymbolServer::CloudStorageSymbolServer(Session* session, const std::
   }
 }
 
-std::unique_ptr<CloudStorageSymbolServer> CloudStorageSymbolServer::Impl(Session* session,
-                                                                         const std::string& url) {
-  return std::make_unique<CloudStorageSymbolServerImpl>(session, url);
+std::unique_ptr<CloudStorageSymbolServer> CloudStorageSymbolServer::Impl(
+    Session* session, const std::string& url, bool require_authentication) {
+  return std::make_unique<CloudStorageSymbolServerImpl>(session, url, require_authentication);
 }
 
 Err CloudStorageSymbolServer::HandleRequestResult(Curl::Error result, long response_code,
@@ -361,7 +366,11 @@ fxl::RefPtr<Curl> CloudStorageSymbolServerImpl::PrepareCurl(const std::string& b
   FX_DCHECK(curl);
 
   curl->SetURL(url);
-  curl->headers().push_back("Authorization: Bearer " + access_token_);
+
+  // When require_authentication is true.
+  if (!access_token_.empty()) {
+    curl->headers().push_back("Authorization: Bearer " + access_token_);
+  }
 
   return curl;
 }

@@ -15,7 +15,8 @@ namespace zxdb {
 
 class CloudStorageSymbolServer : public SymbolServer {
  public:
-  static std::unique_ptr<CloudStorageSymbolServer> Impl(Session* session, const std::string& url);
+  static std::unique_ptr<CloudStorageSymbolServer> Impl(Session* session, const std::string& url,
+                                                        bool require_authentication);
 
   // Construct a new cloud storage symbol server. Expects a url of the format
   // gs://bucket/[namespace]

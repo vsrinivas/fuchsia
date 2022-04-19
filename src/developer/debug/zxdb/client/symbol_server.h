@@ -38,7 +38,8 @@ class SymbolServer : public ClientObject {
     kOAuth,
   };
 
-  static std::unique_ptr<SymbolServer> FromURL(Session* session, const std::string& url);
+  static std::unique_ptr<SymbolServer> FromURL(Session* session, const std::string& url,
+                                               bool require_authentication);
 
   const std::string& name() const { return name_; }
 

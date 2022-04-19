@@ -37,9 +37,10 @@ void SymbolServer::ChangeState(SymbolServer::State state) {
     state_change_callback_(this, state_);
 }
 
-std::unique_ptr<SymbolServer> SymbolServer::FromURL(Session* session, const std::string& url) {
+std::unique_ptr<SymbolServer> SymbolServer::FromURL(Session* session, const std::string& url,
+                                                    bool require_authentication) {
   if (StringStartsWith(url, "gs://")) {
-    return CloudStorageSymbolServer::Impl(session, url);
+    return CloudStorageSymbolServer::Impl(session, url, require_authentication);
   }
 
   return nullptr;

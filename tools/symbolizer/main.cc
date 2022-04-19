@@ -28,7 +28,7 @@ int AuthMode() {
   debug::MessageLoopPoll loop;
   loop.Init(nullptr);
 
-  auto server = zxdb::CloudStorageSymbolServer::Impl(nullptr, "");
+  auto server = zxdb::CloudStorageSymbolServer::Impl(nullptr, "", true);
   if (server->state() == zxdb::SymbolServer::State::kBusy) {
     server->set_state_change_callback(
         [&](zxdb::SymbolServer*, zxdb::SymbolServer::State state) { loop.QuitNow(); });
