@@ -1099,17 +1099,14 @@ Learn more about the Fuchsia platform and tools in [Fuchsia SDK Fundamentals][fu
 
 ## Appendices
 
-### Clean up the environment before and after walkthrough {:#clean-up-the-environment-before-and-after-walkthrough}
+### Clean up the environment {:#clean-up-the-environment}
 
-This section provides instructions on how to clean up your development environment
-(that is, newly created directories, build artifacts, symlinks, configuration
-settings, and more) after finishing this guide, if necessary.
+If you run into a problem while following this guide and decide to start over
+from the beginning, consider running the commands below to clean up
+your development environment (that is, to clean up directories, build artifacts,
+downloaded files, symlinks, configuration settings, and more).
 
-Remove the local package repository created in this guide:
-
-```posix-terminal
-tools/ffx repository server stop
-```
+Remove the package repositories created in this guide:
 
 ```posix-terminal
 tools/ffx repository remove fuchsiasamples.com
@@ -1120,13 +1117,33 @@ tools/ffx repository remove workstation.qemu-x64
 ```
 
 ```posix-terminal
+tools/ffx repository server stop
+```
+
+```posix-terminal
 rm -rf ~/.package_repos/sdk-samples
 ```
 
 Remove the `getting-started` directory and its artifacts:
 
+Caution: If the SDK samples repository is cloned to a different location
+than `~/getting-started`, adjust the directory path in the command below.
+Be extremely careful with the directory path when you run the `rm -rf
+<DIR>` command.
+
 ```posix-terminal
 rm -rf ~/getting-started
+```
+
+When Bazel fails to build, try the commands below:
+
+Caution: Running `bazel clean` or deleting the `~/.cache/bazel` directory
+deletes all the artifacts downloaded by Bazel, which can be around 4 GB.
+This means Bazel will need to download those dependencies again
+the next time you run `bazel build`.
+
+```posix-terminal
+bazel clean --expunge
 ```
 
 ```posix-terminal
@@ -1134,10 +1151,6 @@ bazel shutdown && rm -rf ~/.cache/bazel
 ```
 
 Other clean up commands:
-
-```posix-terminal
-bazel clean --expunge
-```
 
 ```posix-terminal
 killall ffx
