@@ -463,11 +463,9 @@
               "type": "ConstructorDeclarationImpl"
             }
           },
-          "ImplementsClause": {
-            "PlatformViewController": {
-              "name": "PlatformViewController",
-              "type": "interface"
-            }
+          "ExtendsClause": {
+            "name": "PlatformViewController",
+            "type": "extends"
           },
           "MethodDeclarationImpl": {
             "clearFocus": {

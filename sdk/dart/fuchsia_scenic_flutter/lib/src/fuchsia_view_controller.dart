@@ -26,7 +26,7 @@ typedef FuchsiaPointerEventsCallback = Future<void> Function(
 
 /// A connection to a fuchsia view.  It can be used to construct a [FuchsiaView]
 /// widget that will display the view's contents on their own layer.
-class FuchsiaViewController implements PlatformViewController {
+class FuchsiaViewController extends PlatformViewController {
   /// The raw value of the [ViewHolderToken] or [ViewportCreationToken] where
   /// this view is attached.
   @override
