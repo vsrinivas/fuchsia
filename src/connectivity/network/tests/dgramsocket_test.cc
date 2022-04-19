@@ -1181,7 +1181,7 @@ std::ostream& operator<<(std::ostream& oss, const CmsgSocketOption& cmsg_opt) {
   return oss << cmsg_opt.cmsg.level_str << '_' << cmsg_opt.cmsg.type_str;
 }
 
-class NetDatagramSocketsCmsgTestBase : public NetDatagramSocketsTestBase, public testing::Test {
+class NetDatagramSocketsCmsgTestBase : public NetDatagramSocketsTestBase {
  protected:
   template <typename F>
   void ReceiveAndCheckMessage(const char* sent_buf, ssize_t sent_buf_len, void* control,
@@ -1286,7 +1286,7 @@ class NetDatagramSocketsCmsgRecvTestBase : public NetDatagramSocketsCmsgTestBase
 
 class NetDatagramSocketsCmsgRecvTest
     : public NetDatagramSocketsCmsgRecvTestBase,
-      public testing::WithParamInterface<SocketDomainAndOptionAndEnableCmsgReceiveTime> {
+      public testing::TestWithParam<SocketDomainAndOptionAndEnableCmsgReceiveTime> {
  protected:
   void SetUp() override {
     auto const& [domain, cmsg_sockopt, enable_cmsg_receive_time] = GetParam();
@@ -1556,7 +1556,7 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRequestOnSetupOnlyRecvIPv6Tests,
                          SocketDomainAndOptionAndEnableCmsgReceiveTimeToString);
 
 class NetDatagramSocketsCmsgSendTest : public NetDatagramSocketsCmsgTestBase,
-                                       public testing::WithParamInterface<sa_family_t> {
+                                       public testing::TestWithParam<sa_family_t> {
  protected:
   void SetUp() override { ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(GetParam())); }
 
@@ -1719,7 +1719,7 @@ std::string SocketDomainAndEnableCmsgReceiveTimeToString(
 
 class NetDatagramSocketsCmsgTimestampTest
     : public NetDatagramSocketsCmsgRecvTestBase,
-      public testing::WithParamInterface<SocketDomainAndEnableCmsgReceiveTime> {
+      public testing::TestWithParam<SocketDomainAndEnableCmsgReceiveTime> {
  protected:
   void SetUp() override {
     auto [domain, enable_cmsg_receive_time] = GetParam();
@@ -1813,7 +1813,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 class NetDatagramSocketsCmsgTimestampNsTest
     : public NetDatagramSocketsCmsgRecvTestBase,
-      public testing::WithParamInterface<SocketDomainAndEnableCmsgReceiveTime> {
+      public testing::TestWithParam<SocketDomainAndEnableCmsgReceiveTime> {
  protected:
   void SetUp() override {
     auto [domain, enable_cmsg_receive_time] = GetParam();
@@ -1922,7 +1922,7 @@ INSTANTIATE_TEST_SUITE_P(
     SocketDomainAndEnableCmsgReceiveTimeToString);
 
 class NetDatagramSocketsCmsgIpTosTest : public NetDatagramSocketsCmsgRecvTestBase,
-                                        public testing::WithParamInterface<EnableCmsgReceiveTime> {
+                                        public testing::TestWithParam<EnableCmsgReceiveTime> {
  protected:
   void SetUp() override { ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET, GetParam())); }
 
@@ -2019,7 +2019,7 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgIpTosTests, NetDatagramSocketsCms
                          });
 
 class NetDatagramSocketsCmsgIpTtlTest : public NetDatagramSocketsCmsgRecvTestBase,
-                                        public testing::WithParamInterface<EnableCmsgReceiveTime> {
+                                        public testing::TestWithParam<EnableCmsgReceiveTime> {
  protected:
   void SetUp() override { ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET, GetParam())); }
 
@@ -2144,9 +2144,8 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgIpTtlTests, NetDatagramSocketsCms
                            return std::string(enableCmsgReceiveTimeToString(info.param));
                          });
 
-class NetDatagramSocketsCmsgIpv6TClassTest
-    : public NetDatagramSocketsCmsgRecvTestBase,
-      public testing::WithParamInterface<EnableCmsgReceiveTime> {
+class NetDatagramSocketsCmsgIpv6TClassTest : public NetDatagramSocketsCmsgRecvTestBase,
+                                             public testing::TestWithParam<EnableCmsgReceiveTime> {
  protected:
   void SetUp() override { ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET6, GetParam())); }
 
@@ -2223,7 +2222,7 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgIpv6TClassTests,
 
 class NetDatagramSocketsCmsgIpv6HopLimitTest
     : public NetDatagramSocketsCmsgRecvTestBase,
-      public testing::WithParamInterface<EnableCmsgReceiveTime> {
+      public testing::TestWithParam<EnableCmsgReceiveTime> {
  protected:
   void SetUp() override { ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET6, GetParam())); }
 
@@ -2378,21 +2377,31 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgIpv6HopLimitTests,
                            return std::string(enableCmsgReceiveTimeToString(info.param));
                          });
 
-class LinearizedSendSemanticsTest {
- protected:
-  template <typename ToggleOn, typename Send, typename ToggleOff, typename ObserveOn>
-  void ValidateLinearizedSendSemantics(ToggleOn toggle_on, Send send, ToggleOff toggle_off,
-                                       ObserveOn observe_on) {
-    constexpr size_t kIterations = 1000;
+template <typename Instance, typename Arg>
+void ValidateLinearizedSendSemantics(const Arg& arg) {
+  // NOTE: this parallelization was picked based on (rough) empirical testing.
+  constexpr size_t kIterationsPerThread = 100;
+  constexpr size_t kNumThreads = 10;
+  std::vector<std::thread> threads;
 
-    for (size_t i = 0; i < kIterations; i++) {
-      ASSERT_NO_FATAL_FAILURE(toggle_on());
-      ASSERT_NO_FATAL_FAILURE(send());
-      ASSERT_NO_FATAL_FAILURE(toggle_off());
-      ASSERT_NO_FATAL_FAILURE(observe_on());
-    }
+  for (size_t i = 0; i < kNumThreads; i++) {
+    Instance instance(arg);
+    ASSERT_NO_FATAL_FAILURE(instance.SetUpInstance());
+    threads.emplace_back([instance = std::move(instance)]() mutable {
+      for (size_t i = 0; i < kIterationsPerThread; i++) {
+        ASSERT_NO_FATAL_FAILURE(instance.ToggleOn());
+        ASSERT_NO_FATAL_FAILURE(instance.SendDatagram());
+        ASSERT_NO_FATAL_FAILURE(instance.ToggleOff());
+        ASSERT_NO_FATAL_FAILURE(instance.ObserveOn());
+      }
+      ASSERT_NO_FATAL_FAILURE(instance.TearDownInstance());
+    });
   }
-};
+
+  for (std::thread& t : threads) {
+    t.join();
+  }
+}
 
 template <typename T>
 struct CmsgValues {
@@ -2426,17 +2435,43 @@ std::string CmsgLinearizedSendTestCaseToString(
   return oss.str();
 }
 
-class DatagramLinearizedSendSemanticsCmsgTest
-    : public LinearizedSendSemanticsTest,
-      public NetDatagramSocketsCmsgTestBase,
-      public testing::WithParamInterface<CmsgLinearizedSendTestCase> {
- protected:
-  void SetUp() override { ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(GetParam().domain)); }
+class DatagramLinearizedSendSemanticsCmsgTestInstance : public NetDatagramSocketsCmsgTestBase {
+ public:
+  DatagramLinearizedSendSemanticsCmsgTestInstance(const CmsgLinearizedSendTestCase& test_case)
+      : test_case_(test_case) {}
 
-  void TearDown() override {
-    if (!IsSkipped()) {
-      EXPECT_NO_FATAL_FAILURE(TearDownDatagramSockets());
-    }
+  void SetUpInstance() {
+    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(test_case_.domain));
+
+    constexpr int kOne = 1;
+    ASSERT_EQ(setsockopt(bound().get(), test_case_.recv_option.cmsg.level,
+                         test_case_.recv_option.optname_to_enable_receive, &kOne, sizeof(kOne)),
+              0)
+        << strerror(errno);
+  }
+
+  void TearDownInstance() { EXPECT_NO_FATAL_FAILURE(TearDownDatagramSockets()); }
+
+  void ToggleOn() {
+    std::visit(
+        [&](auto arg) {
+          ASSERT_EQ(setsockopt(connected().get(), test_case_.recv_option.cmsg.level,
+                               test_case_.send_type, &arg.on, sizeof(arg.on)),
+                    0)
+              << strerror(errno);
+        },
+        test_case_.send_values);
+  }
+
+  void ToggleOff() {
+    std::visit(
+        [&](auto arg) {
+          ASSERT_EQ(setsockopt(connected().get(), test_case_.recv_option.cmsg.level,
+                               test_case_.send_type, &arg.off, sizeof(arg.off)),
+                    0)
+              << strerror(errno);
+        },
+        test_case_.send_values);
   }
 
   void SendDatagram() {
@@ -2444,11 +2479,16 @@ class DatagramLinearizedSendSemanticsCmsgTest
         << strerror(errno);
   }
 
+  void ObserveOn() {
+    std::visit([&](auto arg) { ASSERT_NO_FATAL_FAILURE(RecvDatagramAndValidateCmsg(arg.on)); },
+               test_case_.send_values);
+  }
+
+ private:
   template <typename CmsgType>
   void RecvDatagramAndValidateCmsg(CmsgType expected_value) {
-    CmsgLinearizedSendTestCase test_case = GetParam();
-    const int cmsg_level = test_case.recv_option.cmsg.level;
-    const int cmsg_type = test_case.recv_option.cmsg.type;
+    const int cmsg_level = test_case_.recv_option.cmsg.level;
+    const int cmsg_type = test_case_.recv_option.cmsg.type;
     char control[CMSG_SPACE(sizeof(expected_value)) + 1];
     ReceiveAndCheckMessage(kBuf.data(), kBuf.size(), control, sizeof(control), [&](msghdr& msghdr) {
       EXPECT_EQ(msghdr.msg_controllen, CMSG_SPACE(sizeof(expected_value)));
@@ -2464,47 +2504,16 @@ class DatagramLinearizedSendSemanticsCmsgTest
     });
   }
 
-  template <typename CmsgType>
-  void RunLinearizedSemanticsValidationLoop(CmsgType cmsg_value_on, CmsgType cmsg_value_off) {
-    CmsgLinearizedSendTestCase test_case = GetParam();
-    const int send_type = test_case.send_type;
-    const int request_type = test_case.recv_option.optname_to_enable_receive;
-    const int cmsg_level = test_case.recv_option.cmsg.level;
-    constexpr int kOne = 1;
-    ASSERT_EQ(setsockopt(bound().get(), cmsg_level, request_type, &kOne, sizeof(kOne)), 0)
-        << strerror(errno);
-
-    auto toggle_on = [this, &cmsg_level, &send_type, &cmsg_value_on]() {
-      ASSERT_EQ(setsockopt(connected().get(), cmsg_level, send_type, &cmsg_value_on,
-                           sizeof(cmsg_value_on)),
-                0)
-          << strerror(errno);
-    };
-    auto toggle_off = [this, &cmsg_level, &send_type, &cmsg_value_off]() {
-      ASSERT_EQ(setsockopt(connected().get(), cmsg_level, send_type, &cmsg_value_off,
-                           sizeof(cmsg_value_off)),
-                0)
-          << strerror(errno);
-    };
-    auto observe_on = [this, &cmsg_value_on]() {
-      ASSERT_NO_FATAL_FAILURE(RecvDatagramAndValidateCmsg(cmsg_value_on));
-    };
-    auto send_msg = [this]() { ASSERT_NO_FATAL_FAILURE(SendDatagram()); };
-    ASSERT_NO_FATAL_FAILURE(
-        ValidateLinearizedSendSemantics(toggle_on, send_msg, toggle_off, observe_on));
-  }
-
- private:
   static constexpr std::string_view kBuf = "hello";
+  CmsgLinearizedSendTestCase test_case_;
 };
 
+class DatagramLinearizedSendSemanticsCmsgTest
+    : public testing::TestWithParam<CmsgLinearizedSendTestCase> {};
+
 TEST_P(DatagramLinearizedSendSemanticsCmsgTest, Evaluate) {
-  CmsgLinearizedSendTestCase test_case = GetParam();
-  std::visit(
-      [&](auto arg) {
-        ASSERT_NO_FATAL_FAILURE(RunLinearizedSemanticsValidationLoop(arg.on, arg.off));
-      },
-      test_case.send_values);
+  ASSERT_NO_FATAL_FAILURE(
+      ValidateLinearizedSendSemantics<DatagramLinearizedSendSemanticsCmsgTestInstance>(GetParam()));
 }
 
 INSTANTIATE_TEST_SUITE_P(DatagramLinearizedSendSemanticsCmsgTests,
@@ -2568,27 +2577,22 @@ INSTANTIATE_TEST_SUITE_P(DatagramLinearizedSendSemanticsCmsgTests,
                              }),
                          CmsgLinearizedSendTestCaseToString);
 
-class DatagramLinearizedSendSemanticsTest : public LinearizedSendSemanticsTest,
-                                            public NetDatagramSocketsTestBase,
-                                            public testing::Test,
-                                            public testing::WithParamInterface<sa_family_t> {
- protected:
-  void SetUp() override {
-    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(GetParam()));
+class DatagramLinearizedSendSemanticsTestInstance : public NetDatagramSocketsTestBase {
+ public:
+  DatagramLinearizedSendSemanticsTestInstance(sa_family_t domain) : domain_(domain) {}
+
+  virtual void SetUpInstance() {
+    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(domain_));
     recvbuf_.resize(kBuf.size() + 1);
   }
 
-  void TearDown() override {
-    if (!IsSkipped()) {
-      EXPECT_NO_FATAL_FAILURE(TearDownDatagramSockets());
-    }
-  }
+  virtual void TearDownInstance() { EXPECT_NO_FATAL_FAILURE(TearDownDatagramSockets()); }
 
-  void SendDatagram(int fd) {
+ protected:
+  void SendDatagramFrom(int fd) {
     ASSERT_EQ(send(fd, kBuf.data(), kBuf.size(), 0), ssize_t(kBuf.size())) << strerror(errno);
   }
-
-  void ValidateDatagramReceived(int fd) {
+  void RecvDatagramOn(int fd) {
     pollfd pfd = {
         .fd = fd,
         .events = POLLIN,
@@ -2600,6 +2604,7 @@ class DatagramLinearizedSendSemanticsTest : public LinearizedSendSemanticsTest,
     ASSERT_EQ(read(fd, recvbuf_.data(), recvbuf_.size()), ssize_t(kBuf.size())) << strerror(errno);
     EXPECT_STREQ(kBuf.data(), recvbuf_.data());
   }
+  sa_family_t domain_;
 
   static constexpr std::string_view kBuf = "hello";
 
@@ -2607,78 +2612,187 @@ class DatagramLinearizedSendSemanticsTest : public LinearizedSendSemanticsTest,
   std::string recvbuf_;
 };
 
-TEST_P(DatagramLinearizedSendSemanticsTest, Connect) {
-  std::optional addrinfo = GetSockaddrAndSocklenForDomain(GetParam());
-  if (!addrinfo.has_value()) {
-    FAIL() << "unexpected test variant";
+class DatagramLinearizedSendSemanticsTest : public testing::TestWithParam<sa_family_t> {};
+
+class DatagramLinearizedSendSemanticsConnectInstance
+    : public DatagramLinearizedSendSemanticsTestInstance {
+ public:
+  DatagramLinearizedSendSemanticsConnectInstance(sa_family_t domain)
+      : DatagramLinearizedSendSemanticsTestInstance(domain) {}
+
+  void SetUpInstance() override {
+    DatagramLinearizedSendSemanticsTestInstance::SetUpInstance();
+    std::optional addrinfo = GetSockaddrAndSocklenForDomain(domain_);
+    if (!addrinfo.has_value()) {
+      FAIL() << "unexpected_domain: " << domain_;
+    }
+    sockaddr_storage addr = addrinfo.value().first;
+    addrlen_ = addrinfo.value().second;
+
+    // Create a third socket on the system with a distinct bound address. We alternate
+    // between connecting the `connected()` socket to this new socket vs the original `bound()`
+    // socket. We validate that packets reach the address to which `connected()` was bound
+    // when `send()` was called -- even when the socket is re-`connect()`ed elsewhere immediately
+    // afterwards.
+    ASSERT_TRUE(receiver_fd_ = fbl::unique_fd(socket(domain_, SOCK_DGRAM, 0))) << strerror(errno);
+    ASSERT_EQ(bind(receiver_fd_.get(), reinterpret_cast<const sockaddr*>(&addr), addrlen_), 0)
+        << strerror(errno);
   }
-  sockaddr_storage addr = addrinfo.value().first;
-  const uint32_t addrlen = addrinfo.value().second;
 
-  // Create a third socket on the system with a distinct bound address. Below, we alternate
-  // between connecting the `connected()` socket to this new socket vs the original `bound()`
-  // socket. We validate that packets reach the address to which `connected()` was bound
-  // when `send()` was called -- even when the socket is re-`connect()`ed elsewhere immediately
-  // afterwards.
-  fbl::unique_fd receiver_fd;
-  ASSERT_TRUE(receiver_fd = fbl::unique_fd(socket(GetParam(), SOCK_DGRAM, 0))) << strerror(errno);
-  ASSERT_EQ(bind(receiver_fd.get(), reinterpret_cast<const sockaddr*>(&addr), addrlen), 0)
-      << strerror(errno);
+  void ToggleOn() {
+    sockaddr_storage addr;
+    ASSERT_NO_FATAL_FAILURE(LoadSockname(receiver_fd_.get(), addr));
+    ASSERT_EQ(connect(connected().get(), reinterpret_cast<sockaddr*>(&addr), addrlen_), 0)
+        << strerror(errno);
+  }
 
-  auto load_sockname = [](int fd, sockaddr_storage& addr, uint32_t addrlen) {
-    socklen_t found_addrlen = addrlen;
+  void SendDatagram() {
+    ASSERT_NO_FATAL_FAILURE(
+        DatagramLinearizedSendSemanticsTestInstance::SendDatagramFrom(connected().get()));
+  }
+
+  void ToggleOff() {
+    sockaddr_storage addr;
+    ASSERT_NO_FATAL_FAILURE(LoadSockname(bound().get(), addr));
+    ASSERT_EQ(connect(connected().get(), reinterpret_cast<sockaddr*>(&addr), addrlen_), 0)
+        << strerror(errno);
+  }
+
+  void ObserveOn() { ASSERT_NO_FATAL_FAILURE(RecvDatagramOn(receiver_fd_.get())); }
+
+ private:
+  void LoadSockname(int fd, sockaddr_storage& addr) {
+    socklen_t found_addrlen = addrlen_;
     ASSERT_EQ(getsockname(fd, reinterpret_cast<sockaddr*>(&addr), &found_addrlen), 0)
         << strerror(errno);
-    ASSERT_EQ(addrlen, found_addrlen);
-  };
+    ASSERT_EQ(found_addrlen, addrlen_);
+  }
 
-  auto toggle_on = [this, &load_sockname, &receiver_fd, &addr, &addrlen]() {
-    ASSERT_NO_FATAL_FAILURE(load_sockname(receiver_fd.get(), addr, addrlen));
-    ASSERT_EQ(connect(connected().get(), reinterpret_cast<sockaddr*>(&addr), addrlen), 0)
-        << strerror(errno);
-  };
+  fbl::unique_fd receiver_fd_;
+  uint32_t addrlen_;
+};
 
-  auto toggle_off = [this, &load_sockname, &addr, &addrlen]() {
-    ASSERT_NO_FATAL_FAILURE(load_sockname(bound().get(), addr, addrlen));
-    ASSERT_EQ(connect(connected().get(), reinterpret_cast<sockaddr*>(&addr), addrlen), 0)
-        << strerror(errno);
-  };
-
-  auto send_msg = [this]() { ASSERT_NO_FATAL_FAILURE(SendDatagram(connected().get())); };
-
-  auto observe_on = [this, &receiver_fd]() {
-    ASSERT_NO_FATAL_FAILURE(ValidateDatagramReceived(receiver_fd.get()));
-  };
-
+TEST_P(DatagramLinearizedSendSemanticsTest, Connect) {
   ASSERT_NO_FATAL_FAILURE(
-      ValidateLinearizedSendSemantics(toggle_on, send_msg, toggle_off, observe_on));
+      ValidateLinearizedSendSemantics<DatagramLinearizedSendSemanticsConnectInstance>(GetParam()));
 }
+
+class DatagramLinearizedSendSemanticsCloseInstance
+    : public DatagramLinearizedSendSemanticsTestInstance {
+ public:
+  DatagramLinearizedSendSemanticsCloseInstance(sa_family_t domain)
+      : DatagramLinearizedSendSemanticsTestInstance(domain) {}
+
+  void SetUpInstance() override {
+    DatagramLinearizedSendSemanticsTestInstance::SetUpInstance();
+    std::optional addrinfo = GetSockaddrAndSocklenForDomain(domain_);
+    if (!addrinfo.has_value()) {
+      FAIL() << "unexpected test variant";
+    }
+    addrlen_ = addrinfo.value().second;
+  }
+
+  void ToggleOn() {
+    ASSERT_TRUE(other_sender_fd_ = fbl::unique_fd(socket(domain_, SOCK_DGRAM, 0)))
+        << strerror(errno);
+    sockaddr_storage addr;
+    socklen_t found_addrlen = addrlen_;
+    ASSERT_EQ(getsockname(bound().get(), reinterpret_cast<sockaddr*>(&addr), &found_addrlen), 0)
+        << strerror(errno);
+    ASSERT_EQ(found_addrlen, addrlen_);
+    ASSERT_EQ(connect(other_sender_fd_.get(), reinterpret_cast<sockaddr*>(&addr), addrlen_), 0)
+        << strerror(errno);
+  }
+
+  void SendDatagram() {
+    ASSERT_NO_FATAL_FAILURE(
+        DatagramLinearizedSendSemanticsTestInstance::SendDatagramFrom(other_sender_fd_.get()));
+  }
+
+  void ToggleOff() { ASSERT_EQ(close(other_sender_fd_.release()), 0) << strerror(errno); }
+
+  void ObserveOn() { ASSERT_NO_FATAL_FAILURE(RecvDatagramOn(bound().get())); }
+
+ private:
+  fbl::unique_fd other_sender_fd_;
+  uint32_t addrlen_;
+};
 
 TEST_P(DatagramLinearizedSendSemanticsTest, Close) {
-  std::optional addrinfo = GetSockaddrAndSocklenForDomain(GetParam());
-  if (!addrinfo.has_value()) {
-    FAIL() << "unexpected test variant";
-  }
-  const socklen_t addrlen = addrinfo.value().second;
-  sockaddr_storage addr;
-  socklen_t connect_addrlen = addrlen;
-  ASSERT_EQ(getsockname(bound().get(), reinterpret_cast<sockaddr*>(&addr), &connect_addrlen), 0)
-      << strerror(errno);
-  ASSERT_EQ(addrlen, connect_addrlen);
-
-  fbl::unique_fd fd;
-  auto toggle_on = [&fd, &addr, &addrlen]() {
-    ASSERT_TRUE(fd = fbl::unique_fd(socket(GetParam(), SOCK_DGRAM, 0))) << strerror(errno);
-    ASSERT_EQ(connect(fd.get(), reinterpret_cast<sockaddr*>(&addr), addrlen), 0) << strerror(errno);
-  };
-
-  auto toggle_off = [&fd]() { ASSERT_EQ(close(fd.release()), 0) << strerror(errno); };
-  auto send_msg = [this, &fd]() { ASSERT_NO_FATAL_FAILURE(SendDatagram(fd.get())); };
-  auto observe_on = [this]() { ASSERT_NO_FATAL_FAILURE(ValidateDatagramReceived(bound().get())); };
-
   ASSERT_NO_FATAL_FAILURE(
-      ValidateLinearizedSendSemantics(toggle_on, send_msg, toggle_off, observe_on));
+      ValidateLinearizedSendSemantics<DatagramLinearizedSendSemanticsCloseInstance>(GetParam()));
 }
+
+class DatagramLinearizedSendSemanticsIpv6OnlyInstance
+    : public DatagramLinearizedSendSemanticsTestInstance {
+ public:
+  DatagramLinearizedSendSemanticsIpv6OnlyInstance(sa_family_t domain)
+      : DatagramLinearizedSendSemanticsTestInstance(domain) {}
+
+  void SetUpInstance() override {
+    DatagramLinearizedSendSemanticsTestInstance::SetUpInstance();
+    ASSERT_TRUE(recv_fd_ = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
+
+    sockaddr_in recv_addr = {
+        .sin_family = AF_INET,
+        .sin_addr =
+            {
+                .s_addr = htonl(INADDR_LOOPBACK),
+            },
+    };
+    socklen_t addrlen = sizeof(recv_addr);
+    ASSERT_EQ(bind(recv_fd_.get(), reinterpret_cast<const sockaddr*>(&recv_addr), addrlen), 0)
+        << strerror(errno);
+
+    ASSERT_EQ(getsockname(recv_fd_.get(), reinterpret_cast<sockaddr*>(&recv_addr), &addrlen), 0)
+        << strerror(errno);
+    ASSERT_EQ(addrlen, sizeof(recv_addr));
+
+    ASSERT_TRUE(send_fd_ = fbl::unique_fd(socket(AF_INET6, SOCK_DGRAM, 0))) << strerror(errno);
+
+    // Construct a IPV4 mapped IPV6 address.
+    send_addr_ = {
+        .sin6_family = AF_INET6,
+        .sin6_port = recv_addr.sin_port,
+    };
+    send_addr_.sin6_addr.s6_addr[10] = 0xff;
+    send_addr_.sin6_addr.s6_addr[11] = 0xff;
+    memcpy(&send_addr_.sin6_addr.s6_addr[12], &recv_addr.sin_addr.s_addr,
+           sizeof(recv_addr.sin_addr.s_addr));
+  }
+
+  void ToggleOn() {
+    constexpr int v6_only = 0;
+    EXPECT_EQ(setsockopt(send_fd_.get(), IPPROTO_IPV6, IPV6_V6ONLY, &v6_only, sizeof(v6_only)), 0)
+        << strerror(errno);
+  }
+
+  void SendDatagram() {
+    ASSERT_EQ(sendto(send_fd_.get(), kBuf.data(), kBuf.size(), 0,
+                     reinterpret_cast<sockaddr*>(&send_addr_), sizeof(sockaddr_in6)),
+              ssize_t(kBuf.size()))
+        << strerror(errno);
+  }
+
+  void ToggleOff() {
+    constexpr int v6_only = 1;
+    EXPECT_EQ(setsockopt(send_fd_.get(), IPPROTO_IPV6, IPV6_V6ONLY, &v6_only, sizeof(v6_only)), 0)
+        << strerror(errno);
+  }
+
+  void ObserveOn() { ASSERT_NO_FATAL_FAILURE(RecvDatagramOn(recv_fd_.get())); }
+
+  void TearDownInstance() override {
+    EXPECT_EQ(close(recv_fd_.release()), 0) << strerror(errno);
+    EXPECT_EQ(close(send_fd_.release()), 0) << strerror(errno);
+    ASSERT_NO_FATAL_FAILURE(DatagramLinearizedSendSemanticsTestInstance::TearDownInstance());
+  }
+
+ private:
+  fbl::unique_fd recv_fd_;
+  fbl::unique_fd send_fd_;
+  sockaddr_in6 send_addr_;
+};
 
 TEST_P(DatagramLinearizedSendSemanticsTest, Ipv6Only) {
   if (GetParam() != AF_INET6) {
@@ -2690,62 +2804,8 @@ TEST_P(DatagramLinearizedSendSemanticsTest, Ipv6Only) {
   GTEST_SKIP() << "Linux does not support setting IPV6_V6ONLY after a socket has been bound.";
 #endif
 
-  fbl::unique_fd recv_fd;
-  ASSERT_TRUE(recv_fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
-
-  sockaddr_in recv_addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_LOOPBACK),
-          },
-  };
-  socklen_t addrlen = sizeof(recv_addr);
-  ASSERT_EQ(bind(recv_fd.get(), reinterpret_cast<const sockaddr*>(&recv_addr), addrlen), 0)
-      << strerror(errno);
-
-  ASSERT_EQ(getsockname(recv_fd.get(), reinterpret_cast<sockaddr*>(&recv_addr), &addrlen), 0)
-      << strerror(errno);
-  ASSERT_EQ(addrlen, sizeof(recv_addr));
-
-  fbl::unique_fd send_fd;
-  ASSERT_TRUE(send_fd = fbl::unique_fd(socket(AF_INET6, SOCK_DGRAM, 0))) << strerror(errno);
-
-  auto toggle_on = [&send_fd]() {
-    constexpr int v6_only = 0;
-    EXPECT_EQ(setsockopt(send_fd.get(), IPPROTO_IPV6, IPV6_V6ONLY, &v6_only, sizeof(v6_only)), 0)
-        << strerror(errno);
-  };
-
-  auto toggle_off = [&send_fd]() {
-    constexpr int v6_only = 1;
-    EXPECT_EQ(setsockopt(send_fd.get(), IPPROTO_IPV6, IPV6_V6ONLY, &v6_only, sizeof(v6_only)), 0)
-        << strerror(errno);
-  };
-
-  // Construct a IPV4 mapped IPV6 address.
-  sockaddr_in6 send_addr = {
-      .sin6_family = AF_INET6,
-      .sin6_port = recv_addr.sin_port,
-  };
-  send_addr.sin6_addr.s6_addr[10] = 0xff;
-  send_addr.sin6_addr.s6_addr[11] = 0xff;
-  memcpy(&send_addr.sin6_addr.s6_addr[12], &recv_addr.sin_addr.s_addr,
-         sizeof(recv_addr.sin_addr.s_addr));
-
-  auto send_msg = [&send_fd, &send_addr]() {
-    ASSERT_EQ(sendto(send_fd.get(), kBuf.data(), kBuf.size(), 0,
-                     reinterpret_cast<sockaddr*>(&send_addr), sizeof(sockaddr_in6)),
-              ssize_t(kBuf.size()))
-        << strerror(errno);
-  };
-
-  auto observe_on = [this, &recv_fd]() {
-    ASSERT_NO_FATAL_FAILURE(ValidateDatagramReceived(recv_fd.get()));
-  };
-
   ASSERT_NO_FATAL_FAILURE(
-      ValidateLinearizedSendSemantics(toggle_on, send_msg, toggle_off, observe_on));
+      ValidateLinearizedSendSemantics<DatagramLinearizedSendSemanticsIpv6OnlyInstance>(GetParam()));
 }
 
 INSTANTIATE_TEST_SUITE_P(DatagramLinearizedSendSemanticsTests, DatagramLinearizedSendSemanticsTest,
