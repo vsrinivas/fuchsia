@@ -68,8 +68,13 @@ class FlutterSemanticsTests : public SemanticsIntegrationTestV2 {
   }
 };
 
+INSTANTIATE_TEST_SUITE_P(
+    FlutterSemanticsTestWithParams, FlutterSemanticsTests,
+    ::testing::Values(ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER,
+                      ui_testing::UITestManager::SceneOwnerType::SCENE_MANAGER));
+
 // Loads ally-demo flutter app and verifies its semantic tree.
-TEST_F(FlutterSemanticsTests, StaticSemantics) {
+TEST_P(FlutterSemanticsTests, StaticSemantics) {
   auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
   auto node = FindNodeWithLabel(root, view_ref_koid(), "Blue tapped 0 times");
   ASSERT_TRUE(node);
@@ -85,7 +90,7 @@ TEST_F(FlutterSemanticsTests, StaticSemantics) {
 }
 
 // Loads ally-demo flutter app and validates hit testing
-TEST_F(FlutterSemanticsTests, DISABLED_HitTesting) {
+TEST_P(FlutterSemanticsTests, DISABLED_HitTesting) {
   auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
 
   // Hit test something with an action
@@ -106,7 +111,7 @@ TEST_F(FlutterSemanticsTests, DISABLED_HitTesting) {
 }
 
 // Loads ally-demo flutter app and validates triggering actions
-TEST_F(FlutterSemanticsTests, PerformAction) {
+TEST_P(FlutterSemanticsTests, PerformAction) {
   auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
 
   // Verify the counter is currently at 0
@@ -130,7 +135,7 @@ TEST_F(FlutterSemanticsTests, PerformAction) {
 }
 
 // Loads ally-demo flutter app and validates scroll-to-make-visible
-TEST_F(FlutterSemanticsTests, DISABLED_ScrollToMakeVisible) {
+TEST_P(FlutterSemanticsTests, DISABLED_ScrollToMakeVisible) {
   auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
 
   // The "Yellow" node should be off-screen in a scrollable list

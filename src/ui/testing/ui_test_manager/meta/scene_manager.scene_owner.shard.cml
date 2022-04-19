@@ -1,0 +1,52 @@
+{
+    children: [
+        {
+            name: "scene_manager",
+            url: "#meta/scene_manager.cm",
+
+            // Known missing capabilities:
+            //
+            // fuchsia.settings.Keyboard: should be non-essential so long as
+            // the tests don't require changing keyboard settings.
+            //
+            // dev-input-report: this should be turned off, but no such
+            // test component exists yet.
+            //
+            // fuchsia.ui.shortcut.Manager: a warning is printed in the logs,
+            // but so long as we don't attempt to test shortcuts, the scene
+            // manager will otherwise work.
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#scene_manager" ],
+        },
+        {
+            protocol: [
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.FlatlandDisplay",
+                "fuchsia.ui.pointerinjector.Registry",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.ui.views.ViewRefInstalled",
+            ],
+            from: "#scenic",
+            to: [ "#scene_manager" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.session.scene.Manager",
+                "fuchsia.ui.accessibility.view.Registry",
+            ],
+            from: "#scene_manager",
+        },
+    ],
+}

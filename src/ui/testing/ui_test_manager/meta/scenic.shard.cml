@@ -1,6 +1,8 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+// TDOO(fxb.dev/98336): Replace with //src/ui/scenic/tests/meta/scenic_realm.cml.
 {
     include: [
         "syslog/client.shard.cml",

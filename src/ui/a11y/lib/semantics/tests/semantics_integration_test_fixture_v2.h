@@ -64,7 +64,9 @@ class SemanticsManagerProxy : public fuchsia::accessibility::semantics::Semantic
   fuchsia::accessibility::semantics::SemanticsManager* semantics_manager_ = nullptr;
 };
 
-class SemanticsIntegrationTestV2 : public gtest::RealLoopFixture {
+class SemanticsIntegrationTestV2
+    : public gtest::RealLoopFixture,
+      public testing::WithParamInterface<ui_testing::UITestManager::SceneOwnerType> {
  public:
   static constexpr auto kSemanticsManager = "semantics_manager";
   static constexpr auto kSemanticsManagerRef = ChildRef{kSemanticsManager};
@@ -111,6 +113,10 @@ class SemanticsIntegrationTestV2 : public gtest::RealLoopFixture {
   // was handled
   bool PerformAccessibilityAction(zx_koid_t view_ref_koid, uint32_t node_id,
                                   fuchsia::accessibility::semantics::Action action);
+
+  // Waits for the client view's scale factor to be reflected in the root
+  // semantic node's transform.
+  void WaitForScaleFactor();
 
  private:
   void BuildRealm();

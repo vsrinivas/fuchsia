@@ -17,8 +17,8 @@ class UITestScene {
  public:
   virtual ~UITestScene() = default;
 
-  // Initializes the scene root.
-  virtual void Initialize(component_testing::RealmRoot* realm) = 0;
+  // Initializes the scene root, and attaches a client view.
+  virtual void Initialize() = 0;
 
   // Returns true when the client view is attached to the scene.
   // In order to be consider "attached to the scene", there must be a connected
@@ -32,6 +32,9 @@ class UITestScene {
   // Returns the view ref koid for the client view if it's been attached to the
   // scene, and std::nullopt otherwise.
   virtual std::optional<zx_koid_t> ClientViewRefKoid() = 0;
+
+  // Returns the scale factor for the client view (if any).
+  virtual float ClientViewScaleFactor() = 0;
 };
 
 }  // namespace ui_testing

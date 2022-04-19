@@ -202,6 +202,9 @@ class UITestManager {
   // scene, and std::nullopt otherwise.
   std::optional<zx_koid_t> ClientViewRefKoid();
 
+  // Returns the scale factor applied to the client view.
+  float ClientViewScaleFactor();
+
  private:
   void SetUseFlatlandConfig(bool use_flatland);
 
@@ -214,7 +217,7 @@ class UITestManager {
 
   Config config_;
   component_testing::RealmBuilder realm_builder_ = component_testing::RealmBuilder::Create();
-  std::unique_ptr<component_testing::RealmRoot> realm_root_;
+  std::shared_ptr<component_testing::RealmRoot> realm_root_;
   std::unique_ptr<UITestScene> scene_;
 
   // Add state as necessary.

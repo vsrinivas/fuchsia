@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(fxb.dev/98392): Remove non-cts deps, and use <> for sdk libraries.
 #include "src/ui/a11y/lib/semantics/tests/semantics_integration_test_fixture_v2.h"
 
 #include <fuchsia/cobalt/cpp/fidl.h>
@@ -28,11 +29,15 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <cmath>
+
 #include "fuchsia/sysmem/cpp/fidl.h"
 #include "lib/sys/component/cpp/testing/realm_builder_types.h"
 #include "src/lib/fsl/handles/object_info.h"
 
 namespace accessibility_test {
+
+namespace {
 
 using ScenicEvent = fuchsia::ui::scenic::Event;
 using GfxEvent = fuchsia::ui::gfx::Event;
@@ -42,6 +47,11 @@ using component_testing::Protocol;
 using component_testing::Route;
 using fuchsia::accessibility::semantics::Node;
 
+bool CompareFloat(float f0, float f1, float epsilon = 0.01f) {
+  return std::abs(f0 - f1) <= epsilon;
+}
+
+}  // namespace
 void SemanticsManagerProxy::Start(std::unique_ptr<LocalComponentHandles> mock_handles) {
   FX_CHECK(mock_handles->outgoing()->AddPublicService(
                fidl::InterfaceRequestHandler<fuchsia::accessibility::semantics::SemanticsManager>(
@@ -64,7 +74,7 @@ void SemanticsIntegrationTestV2::SetUp() {
 
   // Initialize ui test manager.
   ui_testing::UITestManager::Config config;
-  config.scene_owner = ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER;
+  config.scene_owner = GetParam();
   config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
   ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(config);
 
@@ -216,4 +226,20 @@ bool SemanticsIntegrationTestV2::PerformAccessibilityAction(
   RunLoopUntil([&callback_handled] { return callback_handled.has_value(); });
   return *callback_handled;
 }
+
+void SemanticsIntegrationTestV2::WaitForScaleFactor() {
+  RunLoopUntil([this] {
+    auto scale_factor = ui_test_manager_->ClientViewScaleFactor();
+    auto node = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
+    if (!node) {
+      return false;
+    }
+
+    // TODO(fxb.dev/93943): Remove accommodation for transform field.
+    return (node->has_transform() && CompareFloat(node->transform().matrix[0], 1 / scale_factor)) ||
+           (node->has_node_to_container_transform() &&
+            CompareFloat(node->node_to_container_transform().matrix[0], 1 / scale_factor));
+  });
+}
+
 }  // namespace accessibility_test

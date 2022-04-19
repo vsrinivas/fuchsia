@@ -1,0 +1,7 @@
+{
+    include: [
+        "//src/ui/testing/ui_test_manager/meta/base_ui_realm.shard.cml",
+        "//src/ui/testing/ui_test_manager/meta/scene_manager.scene_owner.shard.cml",
+        "//src/ui/testing/ui_test_manager/meta/scenic.shard.cml",
+    ],
+}

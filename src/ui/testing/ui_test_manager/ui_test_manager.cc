@@ -6,6 +6,7 @@
 
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
+#include <fuchsia/session/scene/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
@@ -20,6 +21,7 @@
 
 #include "sdk/lib/syslog/cpp/macros.h"
 #include "src/ui/testing/ui_test_manager/gfx_root_presenter_scene.h"
+#include "src/ui/testing/ui_test_manager/gfx_scene_manager_scene.h"
 
 namespace ui_testing {
 
@@ -36,6 +38,7 @@ using sys::testing::Route;
 
 // Base realm urls.
 constexpr auto kRootPresenterSceneUrl = "#meta/root_presenter_scene.cm";
+constexpr auto kSceneManagerSceneUrl = "#meta/scene_manager_scene.cm";
 
 constexpr auto kTestRealmName = "test-realm";
 constexpr auto kClientSubrealmName = "client-subrealm";
@@ -45,8 +48,6 @@ constexpr auto kClientSubrealmName = "client-subrealm";
 UITestManager::UITestManager(UITestManager::Config config) : config_(config) {
   FX_CHECK(!config_.use_flatland) << "Flatland not currently supported";
   FX_CHECK(config_.scene_owner.has_value()) << "Null scene owner not currently supported";
-  FX_CHECK(config_.scene_owner == UITestManager::SceneOwnerType::ROOT_PRESENTER)
-      << "Root presenter must currently own scene";
 }
 
 void UITestManager::SetUseFlatlandConfig(bool use_flatland) {
@@ -60,6 +61,8 @@ component_testing::Realm UITestManager::AddSubrealm() {
 void UITestManager::AddBaseRealmComponent() {
   if (*config_.scene_owner == UITestManager::SceneOwnerType::ROOT_PRESENTER) {
     realm_builder_.AddChild(kTestRealmName, kRootPresenterSceneUrl);
+  } else if (config_.scene_owner == UITestManager::SceneOwnerType::SCENE_MANAGER) {
+    realm_builder_.AddChild(kTestRealmName, kSceneManagerSceneUrl);
   }
 }
 
@@ -82,10 +85,17 @@ void UITestManager::ConfigureDefaultSystemServices() {
 }
 
 void UITestManager::ConfigureSceneOwner() {
+  FX_CHECK(config_.scene_owner.has_value());
+
   if (*config_.scene_owner == UITestManager::SceneOwnerType::ROOT_PRESENTER) {
     realm_builder_.AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::policy::Presenter::Name_}},
                                   .source = ChildRef{kTestRealmName},
                                   .targets = {ParentRef()}});
+  } else if (*config_.scene_owner == UITestManager::SceneOwnerType::SCENE_MANAGER) {
+    realm_builder_.AddRoute(
+        Route{.capabilities = {Protocol{fuchsia::session::scene::Manager::Name_}},
+              .source = ChildRef{kTestRealmName},
+              .targets = {ParentRef()}});
   }
 
   // If the user specifies a view provider, they must also supply a view
@@ -155,12 +165,14 @@ std::unique_ptr<sys::ServiceDirectory> UITestManager::TakeExposedServicesDirecto
 
 void UITestManager::InitializeScene() {
   if (*config_.scene_owner == UITestManager::SceneOwnerType::ROOT_PRESENTER) {
-    scene_ = std::make_unique<ui_testing::GfxRootPresenterScene>();
+    scene_ = std::make_unique<ui_testing::GfxRootPresenterScene>(realm_root_);
+  } else if (config_.scene_owner == UITestManager::SceneOwnerType::SCENE_MANAGER) {
+    scene_ = std::make_unique<ui_testing::GfxSceneManagerScene>(realm_root_);
+  } else {
+    FX_LOGS(FATAL) << "Unsupported scene owner";
   }
 
-  // Constructor FX_CHECKs that root presenter is the scene owner, so it's safe
-  // to assume that scene_ will have a value here.
-  scene_->Initialize(realm_root_.get());
+  scene_->Initialize();
 }
 
 bool UITestManager::ClientViewIsAttached() { return scene_->ClientViewIsAttached(); }
@@ -168,5 +180,7 @@ bool UITestManager::ClientViewIsAttached() { return scene_->ClientViewIsAttached
 bool UITestManager::ClientViewIsRendering() { return scene_->ClientViewIsRendering(); }
 
 std::optional<zx_koid_t> UITestManager::ClientViewRefKoid() { return scene_->ClientViewRefKoid(); }
+
+float UITestManager::ClientViewScaleFactor() { return scene_->ClientViewScaleFactor(); }
 
 }  // namespace ui_testing

@@ -12,8 +12,11 @@ source_set("ui_test_manager") {
     "flatland_test_manager_scene.h",
     "gfx_root_presenter_scene.cc",
     "gfx_root_presenter_scene.h",
+    "gfx_scene_manager_scene.cc",
     "gfx_scene_manager_scene.h",
     "gfx_test_manager_scene.h",
+    "gfx_test_view.cc",
+    "gfx_test_view.h",
     "ui_test_manager.cc",
     "ui_test_manager.h",
     "ui_test_scene.h",
@@ -23,6 +26,7 @@ source_set("ui_test_manager") {
     ":test_realms",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/fidl/fuchsia.session.scene",
     "//sdk/fidl/fuchsia.tracing.provider",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.composition",
@@ -36,13 +40,18 @@ source_set("ui_test_manager") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 
 group("test_realms") {
   testonly = true
 
-  deps = [ ":root_presenter_scene" ]
+  deps = [
+    ":root_presenter_scene",
+    ":scene_manager_scene",
+  ]
 }
 
 fuchsia_component("root_presenter_scene") {
@@ -55,6 +64,20 @@ fuchsia_component("root_presenter_scene") {
     "//src/ui/a11y/bin/a11y_manager:component_v2",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
     "//src/ui/bin/root_presenter:component_v2",
+    "//src/ui/scenic:component_v2",
+  ]
+}
+
+fuchsia_component("scene_manager_scene") {
+  testonly = true
+
+  component_name = "scene_manager_scene"
+  manifest = "meta/scene_manager_scene.cml"
+  deps = [
+    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+    "//src/ui/a11y/bin/a11y_manager:component_v2",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
+    "//src/ui/bin/scene_manager:scene_manager_component",
     "//src/ui/scenic:component_v2",
   ]
 }

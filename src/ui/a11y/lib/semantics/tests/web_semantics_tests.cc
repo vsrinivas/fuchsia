@@ -405,7 +405,12 @@ class WebSemanticsTest : public SemanticsIntegrationTestV2 {
   std::unique_ptr<WebViewProxy> web_view_proxy_;
 };
 
-TEST_F(WebSemanticsTest, StaticSemantics) {
+INSTANTIATE_TEST_SUITE_P(
+    WebSemanticsTestWithParams, WebSemanticsTest,
+    ::testing::Values(ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER,
+                      ui_testing::UITestManager::SceneOwnerType::SCENE_MANAGER));
+
+TEST_P(WebSemanticsTest, StaticSemantics) {
   /* The semantic tree for static.html:
    *
    * ID: 0 Label:Title Role: UNKNOWN
@@ -423,7 +428,7 @@ TEST_F(WebSemanticsTest, StaticSemantics) {
   RunLoopUntilNodeExistsWithLabel("Paragraph");
 }
 
-TEST_F(WebSemanticsTest, PerformAction) {
+TEST_P(WebSemanticsTest, PerformAction) {
   LoadHtml(kDynamicHtml);
 
   // Find the node with the counter to make sure it still reads 0
@@ -443,20 +448,12 @@ TEST_F(WebSemanticsTest, PerformAction) {
   RunLoopUntilNodeExistsWithLabel("1");
 }
 
-TEST_F(WebSemanticsTest, HitTesting) {
+TEST_P(WebSemanticsTest, HitTesting) {
   LoadHtml(kStaticHtml);
 
-  // Ensure that chrome has received the device scale from scenic, and updated
-  // the fuchsia root node's transform to reflect the value. This is necessary
-  // to avoid a race condition in which chrome has received the device scale,
-  // but fuchsia has not, which could result in a false hit test miss.
-  RunLoopUntil([this] {
-    auto node = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
-    // TODO(fxb.dev/93943): Remove accommodation for transform field.
-    return (node->has_transform() && node->transform().matrix[0] != 1.f) ||
-           (node->has_node_to_container_transform() &&
-            node->node_to_container_transform().matrix[0] != 1.f);
-  });
+  FX_LOGS(INFO) << "Wait for scale factor";
+  WaitForScaleFactor();
+  FX_LOGS(INFO) << "Received scale factor";
 
   auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
 
@@ -479,16 +476,12 @@ TEST_F(WebSemanticsTest, HitTesting) {
   ASSERT_EQ(*hit_node, node->node_id());
 }
 
-TEST_F(WebSemanticsTest, ScrollToMakeVisible) {
+TEST_P(WebSemanticsTest, ScrollToMakeVisible) {
   LoadHtml(kOffscreenNodeHtml);
 
-  RunLoopUntil([this] {
-    auto node = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
-    // TODO(fxb.dev/93943): Remove accommodation for transform field.
-    return (node->has_transform() && node->transform().matrix[0] != 1.f) ||
-           (node->has_node_to_container_transform() &&
-            node->node_to_container_transform().matrix[0] != 1.f);
-  });
+  FX_LOGS(INFO) << "Wait for scale factor";
+  WaitForScaleFactor();
+  FX_LOGS(INFO) << "Received scale factor";
 
   auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
 

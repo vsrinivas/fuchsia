@@ -29,21 +29,19 @@ class FlatlandSceneManagerScene : public UITestScene {
   // Expects |realm| to expose the following services:
   // * fuchsia.ui.app.ViewProvider
   // * fuchsia.session.scene.Manager
-  FlatlandSceneManagerScene() = default;
+  explicit FlatlandSceneManagerScene(std::shared_ptr<component_testing::RealmRoot> realm);
   ~FlatlandSceneManagerScene() override = default;
 
-  // Connects to fuchsia.session.scene.Manager.
-  void Initialize(component_testing::RealmRoot* realm) override;
+  // |UITestScene|
+  void Initialize() override;
 
-  // Returns true if the client view is connected to the scene.
+  // |UITestScene|
   bool ClientViewIsAttached() override;
 
-  // Returns true if the client view is connected to the scene, and has rendered
-  // at least one frame of content.
+  // |UITestScene|
   bool ClientViewIsRendering() override;
 
-  // Returns view ref koid for client view if it's been attached to the scene,
-  // or std::nullopt otherwise.
+  // |UITestScene|
   std::optional<zx_koid_t> ClientViewRefKoid() override;
 
  private:
