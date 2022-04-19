@@ -218,7 +218,7 @@ LineDetails ModuleSymbolsImpl::LineDetailsForAddress(const SymbolContext& symbol
 
   // TODO(brettw) this should use our LineTable wrapper instead of LLVM's so it can be mocked.
   const llvm::DWARFDebugLine::LineTable* line_table = unit->GetLLVMLineTable();
-  if (!line_table && line_table->Rows.empty())
+  if (!line_table || line_table->Rows.empty())
     return LineDetails();
 
   const auto& rows = line_table->Rows;
