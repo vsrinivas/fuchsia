@@ -225,6 +225,10 @@ impl FlatlandViewStrategy {
         app_sender: UnboundedSender<MessageInternal>,
     ) -> Result<ViewStrategyPtr, Error> {
         let flatland = connect_to_protocol::<flatland::FlatlandMarker>()?;
+        if let Some(debug_name) = flatland_params.debug_name {
+            flatland.set_debug_name(&debug_name)?;
+        }
+
         flatland.create_transform(&mut TRANSFORM_ID.clone())?;
         flatland.set_root_transform(&mut TRANSFORM_ID.clone())?;
         setup_handle_flatland_events(flatland.take_event_stream(), key, app_sender.clone());
@@ -703,9 +707,10 @@ impl ViewStrategy for FlatlandViewStrategy {
         view_details: &ViewDetails,
         view_assistant: &mut ViewAssistantPtr,
     ) -> bool {
-        duration!("gfx", "FlatlandViewStrategy::render");
-        self.render_timer_scheduled = false;
         let size = view_details.physical_size.floor().to_u32();
+        duration!("gfx", "FlatlandViewStrategy::render", "width" => size.width, "height" => size.height);
+
+        self.render_timer_scheduled = false;
         if size.width > 0 && size.height > 0 {
             if !self.present_allowed() {
                 instant!(

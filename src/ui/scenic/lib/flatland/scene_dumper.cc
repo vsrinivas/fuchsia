@@ -34,10 +34,12 @@ size_t DumpTopology(const flatland::UberStruct::InstanceMap& snapshot,
     return current_index;
   }
 
-  // If the current transform has a debug name, print it on its own line.
+  // Every time we cross a viewport/view boundary, print out the `debug_name` of the view's Flatland
+  // instance.
   const auto& transform = topology_data.topology_vector[current_index];
   const auto uber_struct_it = snapshot.find(transform.GetInstanceId());
-  if (uber_struct_it != snapshot.end() && !uber_struct_it->second->debug_name.empty()) {
+  if (uber_struct_it != snapshot.end() && transform.GetTransformId() == 0 &&
+      !uber_struct_it->second->debug_name.empty()) {
     IndentLine(current_indentation_level, output);
     output << '(' << uber_struct_it->second->debug_name << ")\n";
   }

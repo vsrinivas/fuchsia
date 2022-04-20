@@ -106,6 +106,7 @@ pub(crate) struct ScenicParams {
 #[derive(Debug)]
 pub(crate) struct FlatlandParams {
     pub args: fidl_fuchsia_ui_app::CreateView2Args,
+    pub debug_name: Option<String>,
 }
 
 #[derive(Debug)]

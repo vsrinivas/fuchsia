@@ -130,6 +130,7 @@ void FlatlandDisplay::SetContent(ViewportCreationToken token,
   FX_DCHECK(data.sorted_transforms[0].handle == root_transform_);
 
   auto uber_struct = std::make_unique<UberStruct>();
+  uber_struct->debug_name = "FlatlandDisplay";
   uber_struct->local_topology = std::move(data.sorted_transforms);
   uber_struct->link_properties[child_link_.parent_viewport_watcher_handle] = std::move(properties);
   uber_struct->local_clip_regions[child_link_.parent_viewport_watcher_handle] = {

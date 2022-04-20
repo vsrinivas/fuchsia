@@ -201,7 +201,10 @@ impl AppStrategy for ScenicAppStrategy {
                             ViewProviderRequest::CreateView2 { args, .. } => {
                                 sender
                                     .unbounded_send(MessageInternal::CreateView(
-                                        ViewStrategyParams::Flatland(FlatlandParams { args }),
+                                        ViewStrategyParams::Flatland(FlatlandParams {
+                                            args,
+                                            debug_name: Some("Carnelian View".to_string()),
+                                        }),
                                     ))
                                     .expect("unbounded_send");
                             }

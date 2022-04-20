@@ -42,6 +42,7 @@ class TransformHandle {
            (instance_id_ == rhs.instance_id_ && transform_id_ < rhs.transform_id_);
   }
   InstanceId GetInstanceId() const { return instance_id_; }
+  uint64_t GetTransformId() const { return transform_id_; }
 
  private:
   friend class std::hash<flatland::TransformHandle>;
