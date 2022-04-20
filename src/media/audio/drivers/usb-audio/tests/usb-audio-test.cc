@@ -9,7 +9,6 @@
 #include <vector>
 
 #include <ddktl/device.h>
-#include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <usb/request-cpp.h>
 #include <zxtest/zxtest.h>
 
@@ -294,37 +293,6 @@ class Binder : public fake_ddk::Bind {
 
   std::vector<Context> devs_;
 };
-
-class UsbAudioTest : public inspect::InspectTestHelper, public zxtest::Test {};
-
-TEST_F(UsbAudioTest, Inspect) {
-  Binder tester;
-  FakeDevice fake_device(fake_ddk::kFakeParent);
-  ASSERT_OK(fake_device.Bind());
-
-  zx::status<UsbAudioDevice*> ret = UsbAudioDevice::DriverBind(fake_device.dev());
-  ASSERT_TRUE(ret.is_ok());
-  ASSERT_NO_FATAL_FAILURE(ReadInspect(ret.value()->streams().front().inspect().DuplicateVmo()));
-
-  auto* inspect = hierarchy().GetByPath({"usb_audio_stream"});
-  ASSERT_TRUE(inspect);
-  ASSERT_NO_FATAL_FAILURE(
-      CheckProperty(inspect->node(), "state", inspect::StringPropertyValue("created")));
-  ASSERT_NO_FATAL_FAILURE(
-      CheckProperty(inspect->node(), "start_time", inspect::IntPropertyValue(0)));
-  ASSERT_NO_FATAL_FAILURE(CheckProperty(inspect->node(), "supported_frame_rates[0].min",
-                                        inspect::UintPropertyValue(48'000)));
-  ASSERT_NO_FATAL_FAILURE(CheckProperty(inspect->node(), "supported_frame_rates[0].max",
-                                        inspect::UintPropertyValue(48'000)));
-  ASSERT_NO_FATAL_FAILURE(CheckProperty(inspect->node(), "supported_frame_rates[1].min",
-                                        inspect::UintPropertyValue(44'100)));
-  ASSERT_NO_FATAL_FAILURE(CheckProperty(inspect->node(), "supported_frame_rates[1].max",
-                                        inspect::UintPropertyValue(44'100)));
-
-  fake_device.DdkAsyncRemove();
-  EXPECT_TRUE(tester.Ok());
-  fake_device.DdkRelease();
-}
 
 TEST(UsbAudioTest, GetStreamProperties) {
   Binder tester;

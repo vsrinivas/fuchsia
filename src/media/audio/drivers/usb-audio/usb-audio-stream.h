@@ -8,7 +8,6 @@
 #include <fidl/fuchsia.hardware.audio/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/vmo.h>
 #include <zircon/listnode.h>
@@ -188,9 +187,6 @@ class UsbAudioStream : public UsbAudioStreamBase,
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
-  // For unit test.
-  const inspect::Inspector& inspect() const { return inspect_; }
-
  private:
   friend class fbl::RefPtr<UsbAudioStream>;
 
@@ -333,26 +329,6 @@ class UsbAudioStream : public UsbAudioStreamBase,
   // |shutting_down_| is a boolean indicating whether |loop_| is about to be shut down.
   bool shutting_down_ __TA_GUARDED(lock_) = false;
   async::Loop loop_;
-
-  inspect::Inspector inspect_;
-  inspect::Node root_;
-  inspect::StringProperty state_;
-  inspect::UintProperty number_of_stream_channels_;
-  inspect::IntProperty start_time_;
-  inspect::IntProperty position_request_time_;
-  inspect::IntProperty position_reply_time_;
-  inspect::UintProperty ring_buffer_size2_;
-  inspect::UintProperty number_of_usb_requests_;
-  inspect::StringProperty usb_request_outstanding_;
-  inspect::UintProperty frames_requested_;
-  inspect::UintProperty number_of_channels_;
-  inspect::UintProperty frame_rate_;
-  inspect::UintProperty bits_per_slot_;
-  inspect::UintProperty bits_per_sample_;
-  inspect::StringProperty sample_format_;
-  struct SupportedFormats {
-    std::vector<inspect::UintProperty> frame_rates;
-  } supported_formats_;
 };
 
 }  // namespace usb

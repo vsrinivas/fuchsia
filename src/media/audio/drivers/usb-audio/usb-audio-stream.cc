@@ -46,32 +46,6 @@ UsbAudioStream::UsbAudioStream(UsbAudioDevice* parent, std::unique_ptr<UsbAudioS
   snprintf(log_prefix_, sizeof(log_prefix_), "UsbAud %04hx:%04hx %s-%03d", parent_.vid(),
            parent_.pid(), is_input() ? "input" : "output", ifc_->term_link());
   loop_.StartThread("usb-audio-stream-loop");
-
-  root_ = inspect_.GetRoot().CreateChild("usb_audio_stream");
-  state_ = root_.CreateString("state", "created");
-  number_of_stream_channels_ = root_.CreateUint("number_of_stream_channels", 0);
-  start_time_ = root_.CreateInt("start_time", 0);
-  position_request_time_ = root_.CreateInt("position_request_time", 0);
-  position_reply_time_ = root_.CreateInt("position_reply_time", 0);
-  frames_requested_ = root_.CreateUint("frames_requested", 0);
-  ring_buffer_size2_ = root_.CreateUint("ring_buffer_size", 0);
-  number_of_usb_requests_ = root_.CreateUint("number_of_usb_requests", 0);
-  usb_request_outstanding_ = root_.CreateString("usb_request_outstanding", "not_set");
-
-  frame_rate_ = root_.CreateUint("frame_rate", 0);
-  bits_per_slot_ = root_.CreateUint("bits_per_slot", 0);
-  bits_per_sample_ = root_.CreateUint("bits_per_sample", 0);
-  sample_format_ = root_.CreateString("sample_format", "not_set");
-
-  size_t count = 0;
-  for (auto i : ifc_->formats()) {
-    auto base = std::string("supported_frame_rates[") + std::to_string(count);
-    auto min = base + std::string("].min");
-    auto max = base + std::string("].max");
-    count++;
-    supported_formats_.frame_rates.push_back(root_.CreateUint(min, i.range_.min_frames_per_second));
-    supported_formats_.frame_rates.push_back(root_.CreateUint(max, i.range_.max_frames_per_second));
-  }
 }
 
 UsbAudioStream::~UsbAudioStream() {
@@ -132,8 +106,7 @@ zx_status_t UsbAudioStream::Bind() {
   snprintf(name, sizeof(name), "usb-audio-%s-%03d", is_input() ? "input" : "output",
            ifc_->term_link());
 
-  zx_status_t status =
-      UsbAudioStreamBase::DdkAdd(ddk::DeviceAddArgs(name).set_inspect_vmo(inspect_.DuplicateVmo()));
+  zx_status_t status = UsbAudioStreamBase::DdkAdd(name);
   if (status == ZX_OK) {
     // If bind/setup has succeeded, then the devmgr now holds a reference to us.
     // Manually increase our reference count to account for this.
@@ -263,7 +236,6 @@ void UsbAudioStream::Connect(ConnectRequestView request, ConnectCompleter::Sync&
     return;
   }
   stream_channels_.push_back(stream_channel);
-  number_of_stream_channels_.Add(1);
   fidl::OnUnboundFn<fidl::WireServer<audio_fidl::StreamConfig>> on_unbound =
       [this, stream_channel](fidl::WireServer<audio_fidl::StreamConfig>*, fidl::UnbindInfo,
                              fidl::ServerEnd<fuchsia_hardware_audio::StreamConfig>) {
@@ -545,18 +517,6 @@ void UsbAudioStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
   // bind it to us.
   rb_channel_ = Channel::Create<RingBufferChannel>();
 
-  number_of_channels_.Set(req.number_of_channels);
-  frame_rate_.Set(req.frame_rate);
-  bits_per_slot_.Set(req.bytes_per_sample * 8);
-  bits_per_sample_.Set(req.valid_bits_per_sample);
-  // clang-format off
-  switch (req.sample_format) {
-    case audio_fidl::wire::SampleFormat::kPcmSigned:   sample_format_.Set("PCM_signed");   break;
-    case audio_fidl::wire::SampleFormat::kPcmUnsigned: sample_format_.Set("PCM_unsigned"); break;
-    case audio_fidl::wire::SampleFormat::kPcmFloat:    sample_format_.Set("PCM_float");    break;
-  }
-  // clang-format on
-
   fidl::OnUnboundFn<fidl::WireServer<audio_fidl::RingBuffer>> on_unbound =
       [this](fidl::WireServer<audio_fidl::RingBuffer>*, fidl::UnbindInfo,
              fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer>) {
@@ -607,7 +567,6 @@ void UsbAudioStream::WatchClockRecoveryPositionInfo(
     WatchClockRecoveryPositionInfoCompleter::Sync& completer) {
   fbl::AutoLock req_lock(&req_lock_);
   position_completer_ = completer.ToAsync();
-  position_request_time_.Set(zx::clock::get_monotonic().get());
 }
 
 void UsbAudioStream::SetGain(audio_fidl::wire::GainState state,
@@ -705,7 +664,6 @@ void UsbAudioStream::GetProperties(GetPropertiesRequestView request,
 void UsbAudioStream::GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync& completer) {
   zx::vmo client_rb_handle;
   uint32_t map_flags, client_rights;
-  frames_requested_.Set(request->min_frames);
 
   {
     // We cannot create a new ring buffer if we are not currently stopped.
@@ -786,7 +744,6 @@ void UsbAudioStream::GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync& co
     fbl::AutoLock lock(&lock_);
     rb_vmo_fetched_ = true;
   }
-  ring_buffer_size2_.Set(ring_buffer_size_);
   completer.ReplySuccess(num_ring_buffer_frames, std::move(client_rb_handle));
 }
 
@@ -847,7 +804,6 @@ void UsbAudioStream::Start(StartRequestView request, StartCompleter::Sync& compl
   // Flag ourselves as being in the starting state, then queue up all of our
   // transactions.
   ring_buffer_state_ = RingBufferState::STARTING;
-  state_.Set("starting");
   while (!list_is_empty(&free_req_))
     QueueRequestLocked();
 
@@ -878,7 +834,6 @@ void UsbAudioStream::Stop(StopRequestView request, StopCompleter::Sync& complete
   }
 
   ring_buffer_state_ = RingBufferState::STOPPING;
-  state_.Set("stopping_requested");
   stop_completer_.emplace(completer.ToAsync());
 }
 
@@ -892,8 +847,6 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
   };
 
   audio_fidl::wire::RingBufferPositionInfo position_info = {};
-
-  usb_request_outstanding_.Set("false");
 
   uint64_t complete_time = zx::clock::get_monotonic().get();
   Action when_finished = Action::NONE;
@@ -930,7 +883,6 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
     // enter the stopping state and close the connections to our clients.
     if (req_status == ZX_ERR_IO_NOT_PRESENT) {
       ring_buffer_state_ = RingBufferState::STOPPING_AFTER_UNPLUG;
-      state_.Set("stopping_after_unplug");
     } else {
       // If we are supposed to be delivering notifications, check to see
       // if it is time to do so.
@@ -994,8 +946,6 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
         {
           fbl::AutoLock req_lock(&req_lock_);
           ring_buffer_state_ = RingBufferState::STARTED;
-          state_.Set("started");
-          start_time_.Set(zx::clock::get_monotonic().get());
         }
         break;
 
@@ -1011,7 +961,6 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
         {
           fbl::AutoLock req_lock(&req_lock_);
           ring_buffer_state_ = RingBufferState::STOPPED;
-          state_.Set("stopped_handle_unplug");
         }
         break;
 
@@ -1023,7 +972,6 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
         {
           fbl::AutoLock req_lock(&req_lock_);
           ring_buffer_state_ = RingBufferState::STOPPED;
-          state_.Set("stopped_after_signal");
           ifc_->ActivateIdleFormat();
         }
         break;
@@ -1033,7 +981,6 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
         if (position_completer_) {
           position_completer_->Reply(position_info);
           position_completer_.reset();
-          position_reply_time_.Set(zx::clock::get_monotonic().get());
         }
       } break;
 
@@ -1093,8 +1040,6 @@ void UsbAudioStream::QueueRequestLocked() {
       .callback = UsbAudioStream::RequestCompleteCallback,
       .ctx = this,
   };
-  number_of_usb_requests_.Add(1);
-  usb_request_outstanding_.Set("true");
   usb_request_queue(&parent_.usb_proto(), req, &complete);
 }
 
@@ -1155,7 +1100,6 @@ void UsbAudioStream::DeactivateStreamChannelLocked(StreamChannel* channel) {
     stream_channel_ = nullptr;
   }
   stream_channels_.erase(*channel);
-  number_of_stream_channels_.Subtract(1);
 }
 
 void UsbAudioStream::DeactivateRingBufferChannelLocked(const Channel* channel) {
@@ -1166,7 +1110,6 @@ void UsbAudioStream::DeactivateRingBufferChannelLocked(const Channel* channel) {
     fbl::AutoLock req_lock(&req_lock_);
     if (ring_buffer_state_ != RingBufferState::STOPPED) {
       ring_buffer_state_ = RingBufferState::STOPPING;
-      state_.Set("stopping_deactivate");
     }
     rb_vmo_fetched_ = false;
   }
