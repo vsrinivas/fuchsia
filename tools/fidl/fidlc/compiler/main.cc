@@ -477,24 +477,6 @@ int compile(fidl::Reporter* reporter, std::string library_name, std::string dep_
     Fail("Unused libraries provided via --files: %s", library_names.c_str());
   }
 
-  auto unused_platforms = version_selection->Platforms();
-  for (auto& platform : all_libraries.Platforms()) {
-    unused_platforms.erase(platform);
-  }
-  if (!unused_platforms.empty()) {
-    std::string platform_names;
-    bool first = true;
-    for (auto& platform : unused_platforms) {
-      if (first) {
-        first = false;
-      } else {
-        platform_names.append(", ");
-      }
-      platform_names.append(platform.name());
-    }
-    Fail("Unused platforms provided via --available: %s\n", platform_names.c_str());
-  }
-
   auto compilation = all_libraries.Filter(version_selection);
 
   // Verify that the produced library's name matches the expected name.
