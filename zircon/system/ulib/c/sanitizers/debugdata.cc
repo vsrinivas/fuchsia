@@ -107,6 +107,8 @@ zx_handle_t sanitizer_debugdata_connect() {
 
 }  // namespace
 
+// Publish VMO and return back event pair handle which controls the lifetime of
+// the VMO.
 __EXPORT
 zx_handle_t __sanitizer_publish_data(const char* sink_name, zx_handle_t vmo) {
   if (__zircon_namespace_svc == ZX_HANDLE_INVALID) {
@@ -125,7 +127,6 @@ zx_handle_t __sanitizer_publish_data(const char* sink_name, zx_handle_t vmo) {
   zx_status_t status = _fuchsia_debugdata_PublisherPublish(
       debugdata_channel, sink_name, strlen(sink_name), vmo, vmo_token_server);
   _zx_handle_close(debugdata_channel);
-  _zx_handle_close(vmo_token_client);
 
   if (status != ZX_OK) {
     constexpr const char kErrorPublish[] = "Failed to publish data";
