@@ -19,8 +19,6 @@ pub mod metrics;
 pub mod object_handle;
 pub mod object_store;
 mod range;
-#[cfg(target_os = "fuchsia")]
-pub mod remote_crypt;
 mod round;
 pub mod serialized_types;
 #[cfg(target_os = "fuchsia")]
@@ -31,5 +29,3 @@ mod testing;
 mod trace;
 #[macro_use]
 mod debug_assert_not_too_long;
-#[cfg(target_os = "fuchsia")]
-mod pager;

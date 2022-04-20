@@ -10,12 +10,12 @@ use {
             transaction::{LockKey, Options},
             HandleOptions, HandleOwner, ObjectStore,
         },
-        pager::Pager,
         server::{
             directory::FxDirectory,
             errors::map_to_status,
             file::FxFile,
             node::{FxNode, GetResult, NodeCache},
+            pager::Pager,
             vmo_data_buffer::VmoDataBuffer,
         },
     },

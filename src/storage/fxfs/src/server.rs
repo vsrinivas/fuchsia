@@ -39,6 +39,8 @@ mod directory;
 mod errors;
 pub mod file;
 pub mod node;
+pub mod pager;
+mod remote_crypt;
 pub mod vmo_data_buffer;
 mod volume;
 
@@ -65,6 +67,8 @@ enum Services {
     Admin(AdminRequestStream),
     Query(QueryRequestStream),
 }
+
+pub use remote_crypt::RemoteCrypt;
 
 pub struct FxfsServer {
     /// Ensure the filesystem is closed when this object is dropped.
