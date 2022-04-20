@@ -12,9 +12,14 @@ If you discover possible bugs or have questions or suggestions,
 
 To follow the examples in this doc, you'll need a Fuchsia device running. If you
 don't have a physical device connected, you can use an emulator with networking
-enabled (`-N`).
+enabled by starting the emulator with the `--net tap` option.
 
-Tip: To start a headless emulator, run `fx emu --headless --software-gpu -N`.
+To start an emulator with networking enabled but without graphical user
+interface support,
+run `ffx emu start --net tap --headless`.
+
+For more information on configuring the emulator
+see, [Start the Fuchsia emulator](/docs/get-started/set_up_femu.md).
 
 Your device must be running a `core`
 [product configuration](/docs/development/build/concepts/build_system/boards_and_products.md)
@@ -77,7 +82,7 @@ single emulator running, output looks like:
 
 ```none
 NAME                    SERIAL       TYPE       STATE      ADDRS/IP                       RCS
-fuchsia-5254-0063-5e7a  <unknown>    Unknown    Product    [fe80::5054:ff:fe63:5e7a%4]    N
+fuchsia-emulator  <unknown>    Unknown    Product    [fe80::5054:ff:fe63:5e7a%4]    N
 ```
 
 `RCS`: Indicates whether there is a reachable instance of the Remote Control
@@ -103,7 +108,7 @@ with the target should be sufficient to kick off a connection, like the followin
 fx ffx component list
 ```
 
-NOTE: if the default target has been set, and you are unable to run that command
+Note: If the default target has been set, and you are unable to run that command
 against the target, [reach out](#contacting_the_ffx_team) to the `ffx` team.
 
 Then the next time you list targets you should see that an `RCS` connection
@@ -112,7 +117,7 @@ is active.
 ```none
 $ fx ffx target list
 NAME                    SERIAL       TYPE       STATE      ADDRS/IP                       RCS
-fuchsia-5254-0063-5e7a  <unknown>    Unknown    Product    [fe80::5054:ff:fe63:5e7a%4]    Y
+fuchsia-emulator  <unknown>    Unknown    Product    [fe80::5054:ff:fe63:5e7a%4]    Y
 ```
 
 If a target has been set as default there will be a `*` next to it.
