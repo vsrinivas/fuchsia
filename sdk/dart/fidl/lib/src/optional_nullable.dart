@@ -12,6 +12,7 @@
 ///
 /// A common usage is:
 ///
+/// ```dart
 /// class MyClass {
 ///   String? maybeStr;
 ///   List<int>? maybeList;
@@ -46,6 +47,7 @@
 ///   assert(mod.maybeList!.length == 3);
 ///   assert(mod.maybeMap == null);
 /// }
+/// ```
 class OptionalNullable<T> {
   final T? _value;
 
