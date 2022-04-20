@@ -98,6 +98,7 @@ T (type) | name
 `4`      | unsigned 64-bit integers
 `5`      | double-precision floats
 `6`      | UTF-8 strings
+`9`      | booleans
 
 ### Signed 64-bit integer arguments
 
@@ -199,6 +200,30 @@ Reserved  = {48,63}                must be 0
 NameEnd   = 64+(64*NameRef)
 Name      = {64,NameEnd}           name of the argument, padded to 8-byte alignment
 Value     = {NameEnd+1,SizeWords*64}
+```
+---
+
+### Boolean arguments
+
+Booleans are appended after the `NameRef` field in the argument header.
+
+```
+.---------------------------------------------------------------.
+|         |1|1|1|1|1|2|2|2|2|2|3|3|3|3|3|4|4|4|4|4|5|5|5|5|5|6|6|
+|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|
+|---+-----------+-----------------------------------------------|
+| 9 | SizeWords | NameRef     |B| Reserved                      |
+|---------------------------------------------------------------|
+| Name (1+ words)                                               |
+'---------------------------------------------------------------'
+
+T (type)      = {0,3}                  must be 9
+SizeWords     = {4,15}                 includes header word
+NameRef       = {16,31}                string ref for the argument name
+B (BoolValue) = {32}                   boolean value
+Reserved      = {33,63}                must be 0
+NameEnd       = 64+(64*NameRef)
+Name          = {64,NameEnd}           name of the argument, padded to 8-byte alignment
 ```
 ---
 
