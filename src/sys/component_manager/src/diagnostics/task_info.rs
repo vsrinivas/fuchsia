@@ -17,6 +17,7 @@ use {
     lazy_static::lazy_static,
     moniker::ExtendedMoniker,
     std::{
+        boxed::Box,
         fmt::Debug,
         sync::{Arc, Weak},
     },
@@ -64,7 +65,7 @@ where
 pub struct TaskInfo<T: RuntimeStatsSource + Debug> {
     koid: zx_sys::zx_koid_t,
     pub(crate) task: Arc<Mutex<TaskState<T>>>,
-    time_source: Arc<dyn TimeSource + Sync + Send>,
+    time_source: Box<dyn TimeSource + Sync + Send>,
     pub(crate) has_parent_task: bool,
     measurements: MeasurementsQueue,
     histogram: Option<UintLinearHistogramProperty>,
@@ -73,6 +74,8 @@ pub struct TaskInfo<T: RuntimeStatsSource + Debug> {
     cpu_cores: i64,
     sample_period: std::time::Duration,
     children: Vec<Weak<Mutex<TaskInfo<T>>>>,
+    should_drop_old_measurements: bool,
+    post_invalidation_measurements: usize,
     _terminated_task: fasync::Task<()>,
 }
 
@@ -83,7 +86,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T> {
     pub fn try_from(
         task: T,
         histogram: Option<UintLinearHistogramProperty>,
-        time_source: Arc<dyn TimeSource + Sync + Send>,
+        time_source: Box<dyn TimeSource + Sync + Send>,
     ) -> Result<Self, zx::Status> {
         Self::try_from_internal(task, histogram, time_source, CPU_SAMPLE_PERIOD, num_cpus())
     }
@@ -94,7 +97,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T> {
     fn try_from_internal(
         task: T,
         histogram: Option<UintLinearHistogramProperty>,
-        time_source: Arc<dyn TimeSource + Sync + Send>,
+        time_source: Box<dyn TimeSource + Sync + Send>,
         sample_period: std::time::Duration,
         cpu_cores: i64,
     ) -> Result<Self, zx::Status> {
@@ -125,10 +128,12 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T> {
             koid,
             task: task_state,
             has_parent_task: false,
-            measurements: MeasurementsQueue::new(COMPONENT_CPU_MAX_SAMPLES, time_source.clone()),
+            measurements: MeasurementsQueue::new(),
             children: vec![],
+            should_drop_old_measurements: false,
             cpu_cores,
             sample_period,
+            post_invalidation_measurements: 0,
             histogram,
             previous_cpu: zx::Duration::from_nanos(0),
             previous_histogram_timestamp: time_source.now(),
@@ -160,7 +165,14 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T> {
                 let mut guard = self.task.lock().await;
                 match &*guard {
                     TaskState::TerminatedAndMeasured => {
-                        self.measurements.insert_post_invalidation();
+                        if self.should_drop_old_measurements {
+                            self.measurements.pop_front();
+                        } else {
+                            self.post_invalidation_measurements += 1;
+                            self.should_drop_old_measurements = self.post_invalidation_measurements
+                                + self.measurements.len()
+                                >= COMPONENT_CPU_MAX_SAMPLES;
+                        }
                         return None;
                     }
                     TaskState::Terminated(task) => {
@@ -195,7 +207,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T> {
                 self.add_to_histogram(current_cpu - self.previous_cpu, *measurement.timestamp());
                 self.previous_cpu = current_cpu;
                 self.measurements.insert(measurement);
-                return self.measurements.most_recent_measurement();
+                return self.measurements.back();
             }
             None
         }
@@ -226,7 +238,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T> {
     /// - There's at least one measurement saved.
     pub async fn is_alive(&self) -> bool {
         return !matches!(*self.task.lock().await, TaskState::TerminatedAndMeasured)
-            || !self.measurements.no_true_measurements();
+            || !self.measurements.is_empty();
     }
 
     /// Writes the task measurements under the given inspect node `parent`.
@@ -248,7 +260,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> TaskInfo<T> {
 
     #[cfg(test)]
     pub fn total_measurements(&self) -> usize {
-        self.measurements.true_measurement_count()
+        self.measurements.len()
     }
 }
 
@@ -266,60 +278,55 @@ mod tests {
         std::sync::Arc,
     };
 
-    async fn take_measurement<'a, T: 'static + RuntimeStatsSource + Debug + Send + Sync>(
-        ti: &'a mut TaskInfo<T>,
-        clock: &Arc<FakeTime>,
-    ) -> Option<&'a Measurement> {
-        let m = ti.measure_if_no_parent().await;
-        clock.add_ticks(CPU_SAMPLE_PERIOD.as_nanos() as i64);
-        m
-    }
-
     #[fuchsia::test]
     async fn rotates_measurements_per_task() {
         // Set up test
-        let clock = Arc::new(FakeTime::new());
-        let mut task: TaskInfo<FakeTask> =
-            TaskInfo::try_from(FakeTask::default(), None /* histogram */, clock.clone()).unwrap();
+        let mut task: TaskInfo<FakeTask> = TaskInfo::try_from(
+            FakeTask::default(),
+            None, /* histogram */
+            Box::new(MonotonicTime::new()),
+        )
+        .unwrap();
         assert!(task.is_alive().await);
 
         // Take three measurements.
-        take_measurement(&mut task, &clock).await;
-        assert_eq!(task.measurements.true_measurement_count(), 1);
-        take_measurement(&mut task, &clock).await;
-        assert_eq!(task.measurements.true_measurement_count(), 2);
-        take_measurement(&mut task, &clock).await;
+        task.measure_if_no_parent().await;
+        assert_eq!(task.measurements.len(), 1);
+        task.measure_if_no_parent().await;
+        assert_eq!(task.measurements.len(), 2);
+        task.measure_if_no_parent().await;
         assert!(task.is_alive().await);
-        assert_eq!(task.measurements.true_measurement_count(), 3);
+        assert_eq!(task.measurements.len(), 3);
 
         // Terminate the task
         task.force_terminate().await;
 
         // This will perform the post-termination measurement and bring the state to terminated and
         // measured.
-        take_measurement(&mut task, &clock).await;
-        assert_eq!(task.measurements.true_measurement_count(), 4);
+        task.measure_if_no_parent().await;
+        assert_eq!(task.measurements.len(), 4);
         assert_matches!(*task.task.lock().await, TaskState::TerminatedAndMeasured);
 
-        for _ in 4..COMPONENT_CPU_MAX_SAMPLES {
-            take_measurement(&mut task, &clock).await;
-            assert_eq!(task.measurements.true_measurement_count(), 4);
+        for i in 4..COMPONENT_CPU_MAX_SAMPLES {
+            task.measure_if_no_parent().await;
+            assert_eq!(task.measurements.len(), 4);
+            assert_eq!(task.post_invalidation_measurements, i - 3);
         }
 
-        take_measurement(&mut task, &clock).await; // 1 dropped, 3 left
+        task.measure_if_no_parent().await; // 1 dropped, 3 left
         assert!(task.is_alive().await);
-        assert_eq!(task.measurements.true_measurement_count(), 3);
-        take_measurement(&mut task, &clock).await; // 2 dropped, 2 left
+        assert_eq!(task.measurements.len(), 3);
+        task.measure_if_no_parent().await; // 2 dropped, 2 left
         assert!(task.is_alive().await);
-        assert_eq!(task.measurements.true_measurement_count(), 2);
-        take_measurement(&mut task, &clock).await; // 3 dropped, 1 left
+        assert_eq!(task.measurements.len(), 2);
+        task.measure_if_no_parent().await; // 3 dropped, 1 left
         assert!(task.is_alive().await);
-        assert_eq!(task.measurements.true_measurement_count(), 1);
+        assert_eq!(task.measurements.len(), 1);
 
         // Take one last measure.
-        take_measurement(&mut task, &clock).await; // 4 dropped, 0 left
+        task.measure_if_no_parent().await; // 4 dropped, 0 left
         assert!(!task.is_alive().await);
-        assert_eq!(task.measurements.true_measurement_count(), 0);
+        assert_eq!(task.measurements.len(), 0);
     }
 
     #[fuchsia::test]
@@ -341,7 +348,7 @@ mod tests {
                 ],
             ),
             None, /* histogram */
-            Arc::new(MonotonicTime::new()),
+            Box::new(MonotonicTime::new()),
         )
         .unwrap();
 
@@ -371,7 +378,6 @@ mod tests {
     #[fuchsia::test]
     async fn write_more_than_max_samples() {
         let inspector = inspect::Inspector::new();
-        let clock = Arc::new(FakeTime::new());
         let mut task = TaskInfo::try_from(
             FakeTask::new(
                 1,
@@ -389,15 +395,15 @@ mod tests {
                 ],
             ),
             None, /* histogram */
-            clock.clone(),
+            Box::new(MonotonicTime::new()),
         )
         .unwrap();
 
         for _ in 0..(COMPONENT_CPU_MAX_SAMPLES + 10) {
-            assert!(take_measurement(&mut task, &clock).await.is_some());
+            assert!(task.measure_if_no_parent().await.is_some());
         }
 
-        assert_eq!(task.measurements.true_measurement_count(), COMPONENT_CPU_MAX_SAMPLES);
+        assert_eq!(task.measurements.len(), COMPONENT_CPU_MAX_SAMPLES);
         task.record_to_node(inspector.root());
 
         let hierarchy = inspector.get_diagnostics_hierarchy();
@@ -413,7 +419,6 @@ mod tests {
 
     #[fuchsia::test]
     async fn measure_with_children() {
-        let clock = Arc::new(FakeTime::new());
         let mut task = TaskInfo::try_from(
             FakeTask::new(
                 1,
@@ -431,7 +436,7 @@ mod tests {
                 ],
             ),
             None, /* histogram */
-            clock.clone(),
+            Box::new(MonotonicTime::new()),
         )
         .unwrap();
 
@@ -453,7 +458,7 @@ mod tests {
                     ],
                 ),
                 None, /* histogram */
-                clock.clone(),
+                Box::new(MonotonicTime::new()),
             )
             .unwrap(),
         ));
@@ -476,7 +481,7 @@ mod tests {
                     ],
                 ),
                 None, /* histogram */
-                clock.clone(),
+                Box::new(MonotonicTime::new()),
             )
             .unwrap(),
         ));
@@ -485,7 +490,7 @@ mod tests {
         task.add_child(Arc::downgrade(&child_2));
 
         {
-            let measurement = take_measurement(&mut task, &clock).await.unwrap();
+            let measurement = task.measure_if_no_parent().await.unwrap();
             assert_eq!(measurement.cpu_time().into_nanos(), 100 - 10 - 5);
             assert_eq!(measurement.queue_time().into_nanos(), 200 - 20 - 2);
         }
@@ -496,13 +501,12 @@ mod tests {
         {
             let mut child_2_guard = child_2.lock().await;
             child_2_guard.task = Arc::new(Mutex::new(TaskState::TerminatedAndMeasured));
-            child_2_guard.measurements =
-                MeasurementsQueue::new(COMPONENT_CPU_MAX_SAMPLES, clock.clone());
+            child_2_guard.measurements = MeasurementsQueue::new();
         }
 
         assert_eq!(task.children.len(), 2);
         {
-            let measurement = take_measurement(&mut task, &clock).await.unwrap();
+            let measurement = task.measure_if_no_parent().await.unwrap();
             assert_eq!(measurement.cpu_time().into_nanos(), 300 - 30);
             assert_eq!(measurement.queue_time().into_nanos(), 400 - 40);
         }
@@ -554,7 +558,7 @@ mod tests {
         let mut task = TaskInfo::try_from_internal(
             readings,
             Some(histogram),
-            Arc::new(clock.clone()),
+            Box::new(clock.clone()),
             std::time::Duration::from_nanos(1000),
             1, /* cores */
         )
@@ -614,7 +618,7 @@ mod tests {
         let mut task = TaskInfo::try_from_internal(
             readings,
             Some(histogram),
-            Arc::new(clock.clone()),
+            Box::new(clock.clone()),
             std::time::Duration::from_nanos(1000),
             1, /* cores */
         )
@@ -651,7 +655,7 @@ mod tests {
         let mut task = TaskInfo::try_from_internal(
             readings,
             Some(histogram),
-            Arc::new(clock.clone()),
+            Box::new(clock.clone()),
             std::time::Duration::from_nanos(1000),
             4, /* cores */
         )
