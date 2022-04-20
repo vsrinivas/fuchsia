@@ -17,7 +17,6 @@ core_realm_shards += [
 ]
 
 base_package_labels += [
-  "//garnet/packages/config:shortcut",
   "//src/dart:dart_jit",
   "//src/dart:dart_jit_product",
   "//src/developer/memory/buckets:workstation_memory_monitor_config",

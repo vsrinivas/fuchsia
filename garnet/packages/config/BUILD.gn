@@ -34,10 +34,6 @@ group("terminal") {
   public_deps = [ "//src/ui/bin/terminal:tiles_config" ]
 }
 
-group("shortcut") {
-  public_deps = [ "//src/ui/bin/shortcut:configs" ]
-}
-
 group("ui_policy") {
   testonly = true
   public_deps = [ "//src/sys/sysmgr:services_config" ]
