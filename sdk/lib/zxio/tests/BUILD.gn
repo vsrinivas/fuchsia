@@ -47,7 +47,8 @@ test("zxio") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp_testing",
+    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp_testing",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//sdk/lib/zxio",

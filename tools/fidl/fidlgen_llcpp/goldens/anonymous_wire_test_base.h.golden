@@ -10,13 +10,23 @@ template <>
 class WireTestBase<::test_anonymous::SomeProtocol>
     : public ::fidl::WireServer<::test_anonymous::SomeProtocol> {
  public:
-  virtual ~WireTestBase<::test_anonymous::SomeProtocol>() {}
+  virtual ~WireTestBase<::test_anonymous::SomeProtocol>() = default;
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void SomeMethod(SomeMethodRequestView request,
                           SomeMethodCompleter::Sync& _completer) override {
     NotImplemented_("SomeMethod", _completer);
   }
+};
+
+template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<
+    ::test_anonymous::SomeProtocol>
+    : public ::fidl::WireSyncEventHandler<::test_anonymous::SomeProtocol> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<::test_anonymous::SomeProtocol>() =
+      default;
+  virtual void NotImplemented_(const std::string& name) = 0;
 };
 }  // namespace testing
 }  // namespace fidl

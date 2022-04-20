@@ -78,6 +78,7 @@ test("virtio-gpu-test") {
   sources = [ "gpu_test.cc" ]
   deps = [
     ":gpu_lib",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp_testing",
     "//src/devices/bus/lib/virtio",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/no_ddk",

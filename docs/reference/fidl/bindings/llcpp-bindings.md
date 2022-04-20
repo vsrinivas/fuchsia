@@ -1088,20 +1088,26 @@ FIDL domain objects, are not yet supported (fxbug.dev/82681).
 
 ## Test scaffolding {#test-scaffolding}
 
-The FIDL toolchain also generates a file suffixed with  `_test_base.h` that
-contains convenience code for testing FIDL server implementations. This file
-contains a class for each protocol that provides stub implementations for each
-of the class’s methods, making it possible to implement only the methods that
-are used during testing. These classes template specializations of
-`fidl::testing::WireTestBase<Protocol>` where `Protocol` is the FIDL protocol
-that is stubbed (e.g. for protocol `games.tictactoe/TicTacToe`, the test base is
+The FIDL toolchain also generates a file suffixed with `_test_base.h` that
+contains convenience code for testing FIDL client and server implementations. To
+use these headers, depend on the generated test scaffolding library with a
+`_testing` suffix (`my_library_llcpp_testing` instead of `my_library_llcpp`).
+
+### Server test base
+
+The test base header contains a class for each protocol that provides stub
+implementations for each of the class’ methods, making it possible to implement
+only the methods that are used during testing. These classes are template
+specializations of `fidl::testing::WireTestBase<Protocol>` where `Protocol` is
+the FIDL protocol that is stubbed (e.g. for protocol
+`games.tictactoe/TicTacToe`, the test base is
 `fidl::testing::WireTestBase<games_tictactoe::TicTacToe>`).
 
 For the same `TicTacToe` protocol listed above, generated test base subclasses
 `fidl::WireServer<TicTacToe>` (see [Protocols](#protocols)), offering the
 following methods:
 
-* `virtual ~WireTestBase() {}`: Destructor.
+* `virtual ~WireTestBase() = default`: Destructor.
 * `virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase&
   completer) = 0`: Pure virtual method that is overridden to define behavior for
   unimplemented methods.
@@ -1110,6 +1116,28 @@ The test base provides an implementation for the virtual protocol methods
 `StartGame` and `MakeMove`, which are implemented to just call
 `NotImplemented_("StartGame", completer)` and `NotImplemented_("MakeMove",
 completer)`, respectively.
+
+### Synchronous event handler test base
+
+The test base header contains a class for each protocol that provides stub
+implementations for each of the class’ events, making it possible to implement
+only the events that are used during testing. Similar to the server test base,
+these classes are template specializations of
+`fidl::testing::WireSyncEventHandlerTestBase<Protocol>` where `Protocol` is the
+FIDL protocol that is stubbed.
+
+For the same `TicTacToe` protocol listed above, generated test base subclasses
+`fidl::WireSyncEventHandler<TicTacToe>` (see [Protocols](#protocols)), offering
+the following events:
+
+* `virtual ~WireSyncEventHandlerTestBase() = default`: Destructor.
+* `virtual void NotImplemented_(const std::string& name) = 0`: Pure virtual
+  method that is overridden to define behavior for unimplemented events.
+
+The test base provides an implementation for the virtual protocol events
+`OnOpponentMove`, which is implemented to just call
+`NotImplemented_("OnOpponentMove")`.
+
 
 <!-- xrefs -->
 [anon-names]: /docs/reference/fidl/language/language.md#inline-layouts

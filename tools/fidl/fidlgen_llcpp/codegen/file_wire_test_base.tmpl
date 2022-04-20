@@ -23,8 +23,8 @@ fidl/{{ .LibraryDots }}/cpp/wire_test_base.h
 
   template<>
   class {{ .TestBase.Name }} : public {{ .WireServer }} {
-    public:
-    virtual ~{{ .TestBase.Name }}() { }
+   public:
+    virtual ~{{ .TestBase.Name }}() = default;
     virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
 
     {{- range .Methods }}
@@ -33,6 +33,19 @@ fidl/{{ .LibraryDots }}/cpp/wire_test_base.h
           {{ .WireRequestViewArg }} request, {{ .WireCompleterArg }}& _completer) override {
             NotImplemented_("{{ .Name }}", _completer); }
       {{- end }}
+    {{- end }}
+  };
+
+  template<>
+  class {{ .WireSyncEventHandlerTestBase }} : public {{ .WireSyncEventHandler }} {
+   public:
+    virtual ~{{ .WireSyncEventHandlerTestBase.Name }}() = default;
+    virtual void NotImplemented_(const std::string& name) = 0;
+
+    {{- range .Events }}
+      virtual void {{ .Name }}({{ .WireEvent }}* event) override {
+        NotImplemented_("{{ .Name }}");
+      }
     {{- end }}
   };
 {{ end -}}

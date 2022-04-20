@@ -10,7 +10,8 @@ template <>
 class WireTestBase<::test_inheritancewithrecursivedecl::Parent>
     : public ::fidl::WireServer<::test_inheritancewithrecursivedecl::Parent> {
  public:
-  virtual ~WireTestBase<::test_inheritancewithrecursivedecl::Parent>() {}
+  virtual ~WireTestBase<::test_inheritancewithrecursivedecl::Parent>() =
+      default;
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void First(FirstRequestView request,
@@ -20,10 +21,21 @@ class WireTestBase<::test_inheritancewithrecursivedecl::Parent>
 };
 
 template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<
+    ::test_inheritancewithrecursivedecl::Parent>
+    : public ::fidl::WireSyncEventHandler<
+          ::test_inheritancewithrecursivedecl::Parent> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<
+      ::test_inheritancewithrecursivedecl::Parent>() = default;
+  virtual void NotImplemented_(const std::string& name) = 0;
+};
+
+template <>
 class WireTestBase<::test_inheritancewithrecursivedecl::Child>
     : public ::fidl::WireServer<::test_inheritancewithrecursivedecl::Child> {
  public:
-  virtual ~WireTestBase<::test_inheritancewithrecursivedecl::Child>() {}
+  virtual ~WireTestBase<::test_inheritancewithrecursivedecl::Child>() = default;
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void First(FirstRequestView request,
@@ -34,6 +46,17 @@ class WireTestBase<::test_inheritancewithrecursivedecl::Child>
                       SecondCompleter::Sync& _completer) override {
     NotImplemented_("Second", _completer);
   }
+};
+
+template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<
+    ::test_inheritancewithrecursivedecl::Child>
+    : public ::fidl::WireSyncEventHandler<
+          ::test_inheritancewithrecursivedecl::Child> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<
+      ::test_inheritancewithrecursivedecl::Child>() = default;
+  virtual void NotImplemented_(const std::string& name) = 0;
 };
 }  // namespace testing
 }  // namespace fidl

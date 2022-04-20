@@ -10,7 +10,7 @@ template <>
 class WireTestBase<::test_requestflexibleenvelope::Protocol>
     : public ::fidl::WireServer<::test_requestflexibleenvelope::Protocol> {
  public:
-  virtual ~WireTestBase<::test_requestflexibleenvelope::Protocol>() {}
+  virtual ~WireTestBase<::test_requestflexibleenvelope::Protocol>() = default;
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void RequestStrictResponseFlexible(
@@ -23,6 +23,17 @@ class WireTestBase<::test_requestflexibleenvelope::Protocol>
       RequestFlexibleResponseStrictCompleter::Sync& _completer) override {
     NotImplemented_("RequestFlexibleResponseStrict", _completer);
   }
+};
+
+template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<
+    ::test_requestflexibleenvelope::Protocol>
+    : public ::fidl::WireSyncEventHandler<
+          ::test_requestflexibleenvelope::Protocol> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<
+      ::test_requestflexibleenvelope::Protocol>() = default;
+  virtual void NotImplemented_(const std::string& name) = 0;
 };
 }  // namespace testing
 }  // namespace fidl

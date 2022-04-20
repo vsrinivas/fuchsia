@@ -11,7 +11,8 @@ class WireTestBase<::test_protocols::WithAndWithoutRequestResponse>
     : public ::fidl::WireServer<
           ::test_protocols::WithAndWithoutRequestResponse> {
  public:
-  virtual ~WireTestBase<::test_protocols::WithAndWithoutRequestResponse>() {}
+  virtual ~WireTestBase<::test_protocols::WithAndWithoutRequestResponse>() =
+      default;
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void NoRequestNoResponse(
@@ -47,10 +48,33 @@ class WireTestBase<::test_protocols::WithAndWithoutRequestResponse>
 };
 
 template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<
+    ::test_protocols::WithAndWithoutRequestResponse>
+    : public ::fidl::WireSyncEventHandler<
+          ::test_protocols::WithAndWithoutRequestResponse> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<
+      ::test_protocols::WithAndWithoutRequestResponse>() = default;
+  virtual void NotImplemented_(const std::string& name) = 0;
+  virtual void OnEmptyResponse(
+      ::fidl::WireEvent<
+          ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>*
+          event) override {
+    NotImplemented_("OnEmptyResponse");
+  }
+  virtual void OnWithResponse(
+      ::fidl::WireEvent<
+          ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>*
+          event) override {
+    NotImplemented_("OnWithResponse");
+  }
+};
+
+template <>
 class WireTestBase<::test_protocols::Transitional>
     : public ::fidl::WireServer<::test_protocols::Transitional> {
  public:
-  virtual ~WireTestBase<::test_protocols::Transitional>() {}
+  virtual ~WireTestBase<::test_protocols::Transitional>() = default;
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void Request(RequestRequestView request,
@@ -64,10 +88,24 @@ class WireTestBase<::test_protocols::Transitional>
 };
 
 template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<
+    ::test_protocols::Transitional>
+    : public ::fidl::WireSyncEventHandler<::test_protocols::Transitional> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<::test_protocols::Transitional>() =
+      default;
+  virtual void NotImplemented_(const std::string& name) = 0;
+  virtual void Event(::fidl::WireEvent<::test_protocols::Transitional::Event>*
+                         event) override {
+    NotImplemented_("Event");
+  }
+};
+
+template <>
 class WireTestBase<::test_protocols::MethodWithUnion>
     : public ::fidl::WireServer<::test_protocols::MethodWithUnion> {
  public:
-  virtual ~WireTestBase<::test_protocols::MethodWithUnion>() {}
+  virtual ~WireTestBase<::test_protocols::MethodWithUnion>() = default;
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void UnionMethod(UnionMethodRequestView request,
@@ -77,10 +115,20 @@ class WireTestBase<::test_protocols::MethodWithUnion>
 };
 
 template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<
+    ::test_protocols::MethodWithUnion>
+    : public ::fidl::WireSyncEventHandler<::test_protocols::MethodWithUnion> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<::test_protocols::MethodWithUnion>() =
+      default;
+  virtual void NotImplemented_(const std::string& name) = 0;
+};
+
+template <>
 class WireTestBase<::test_protocols::WithProtocolEnds>
     : public ::fidl::WireServer<::test_protocols::WithProtocolEnds> {
  public:
-  virtual ~WireTestBase<::test_protocols::WithProtocolEnds>() {}
+  virtual ~WireTestBase<::test_protocols::WithProtocolEnds>() = default;
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void ClientEnds(ClientEndsRequestView request,
@@ -99,10 +147,20 @@ class WireTestBase<::test_protocols::WithProtocolEnds>
 };
 
 template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<
+    ::test_protocols::WithProtocolEnds>
+    : public ::fidl::WireSyncEventHandler<::test_protocols::WithProtocolEnds> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<::test_protocols::WithProtocolEnds>() =
+      default;
+  virtual void NotImplemented_(const std::string& name) = 0;
+};
+
+template <>
 class WireTestBase<::test_protocols::ManyParameters>
     : public ::fidl::WireServer<::test_protocols::ManyParameters> {
  public:
-  virtual ~WireTestBase<::test_protocols::ManyParameters>() {}
+  virtual ~WireTestBase<::test_protocols::ManyParameters>() = default;
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void Fifteen(FifteenRequestView request,
@@ -112,10 +170,20 @@ class WireTestBase<::test_protocols::ManyParameters>
 };
 
 template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<
+    ::test_protocols::ManyParameters>
+    : public ::fidl::WireSyncEventHandler<::test_protocols::ManyParameters> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<::test_protocols::ManyParameters>() =
+      default;
+  virtual void NotImplemented_(const std::string& name) = 0;
+};
+
+template <>
 class WireTestBase<::test_protocols::HandleRightsProtocol>
     : public ::fidl::WireServer<::test_protocols::HandleRightsProtocol> {
  public:
-  virtual ~WireTestBase<::test_protocols::HandleRightsProtocol>() {}
+  virtual ~WireTestBase<::test_protocols::HandleRightsProtocol>() = default;
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void NoResponseMethod(
@@ -131,10 +199,26 @@ class WireTestBase<::test_protocols::HandleRightsProtocol>
 };
 
 template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<
+    ::test_protocols::HandleRightsProtocol>
+    : public ::fidl::WireSyncEventHandler<
+          ::test_protocols::HandleRightsProtocol> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<
+      ::test_protocols::HandleRightsProtocol>() = default;
+  virtual void NotImplemented_(const std::string& name) = 0;
+  virtual void AnEvent(
+      ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>* event)
+      override {
+    NotImplemented_("AnEvent");
+  }
+};
+
+template <>
 class WireTestBase<::test_protocols::WithErrorSyntax>
     : public ::fidl::WireServer<::test_protocols::WithErrorSyntax> {
  public:
-  virtual ~WireTestBase<::test_protocols::WithErrorSyntax>() {}
+  virtual ~WireTestBase<::test_protocols::WithErrorSyntax>() = default;
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void ResponseAsStruct(
@@ -159,10 +243,20 @@ class WireTestBase<::test_protocols::WithErrorSyntax>
 };
 
 template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<
+    ::test_protocols::WithErrorSyntax>
+    : public ::fidl::WireSyncEventHandler<::test_protocols::WithErrorSyntax> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<::test_protocols::WithErrorSyntax>() =
+      default;
+  virtual void NotImplemented_(const std::string& name) = 0;
+};
+
+template <>
 class WireTestBase<::test_protocols::DiscoverableProtocol>
     : public ::fidl::WireServer<::test_protocols::DiscoverableProtocol> {
  public:
-  virtual ~WireTestBase<::test_protocols::DiscoverableProtocol>() {}
+  virtual ~WireTestBase<::test_protocols::DiscoverableProtocol>() = default;
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void Method(MethodRequestView request,
@@ -172,10 +266,21 @@ class WireTestBase<::test_protocols::DiscoverableProtocol>
 };
 
 template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<
+    ::test_protocols::DiscoverableProtocol>
+    : public ::fidl::WireSyncEventHandler<
+          ::test_protocols::DiscoverableProtocol> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<
+      ::test_protocols::DiscoverableProtocol>() = default;
+  virtual void NotImplemented_(const std::string& name) = 0;
+};
+
+template <>
 class WireTestBase<::test_protocols::ChannelProtocol>
     : public ::fidl::WireServer<::test_protocols::ChannelProtocol> {
  public:
-  virtual ~WireTestBase<::test_protocols::ChannelProtocol>() {}
+  virtual ~WireTestBase<::test_protocols::ChannelProtocol>() = default;
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void MethodA(MethodARequestView request,
@@ -193,6 +298,21 @@ class WireTestBase<::test_protocols::ChannelProtocol>
   virtual void MutateSocket(MutateSocketRequestView request,
                             MutateSocketCompleter::Sync& _completer) override {
     NotImplemented_("MutateSocket", _completer);
+  }
+};
+
+template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<
+    ::test_protocols::ChannelProtocol>
+    : public ::fidl::WireSyncEventHandler<::test_protocols::ChannelProtocol> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<::test_protocols::ChannelProtocol>() =
+      default;
+  virtual void NotImplemented_(const std::string& name) = 0;
+  virtual void EventA(
+      ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>* event)
+      override {
+    NotImplemented_("EventA");
   }
 };
 }  // namespace testing

@@ -189,6 +189,9 @@ namespace testing {
 template <typename FidlProtocol>
 class WireTestBase;
 
+template <typename FidlProtocol>
+class WireSyncEventHandlerTestBase;
+
 }  // namespace testing
 
 }  // namespace fidl

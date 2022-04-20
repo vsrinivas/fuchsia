@@ -48,3 +48,8 @@ protocol Simple {
         v int32;
     });
 };
+
+protocol TwoEvents {
+    -> EventA();
+    -> EventB();
+};

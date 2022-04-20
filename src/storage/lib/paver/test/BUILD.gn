@@ -28,7 +28,7 @@ test("test") {
     "validation-test.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.acpi.chromeos:fuchsia.acpi.chromeos_llcpp",
+    "//sdk/fidl/fuchsia.acpi.chromeos:fuchsia.acpi.chromeos_llcpp_testing",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",

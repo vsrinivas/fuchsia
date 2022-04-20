@@ -168,6 +168,8 @@ var (
 	WireSyncBufferClientImpl       = internalNs.member("WireSyncBufferClientImpl")
 	WireEventDispatcher            = internalNs.member("WireEventDispatcher")
 	WireServerDispatcher           = internalNs.member("WireServerDispatcher")
+	WireTestBase                   = testingNs.member("WireTestBase")
+	WireSyncEventHandlerTestBase   = testingNs.member("WireSyncEventHandlerTestBase")
 
 	// Method related
 	TransactionalRequest    = internalNs.member("TransactionalRequest")
@@ -215,6 +217,7 @@ type wireTypeNames struct {
 	WireSyncBufferClientImpl       name
 	WireEventDispatcher            name
 	WireServerDispatcher           name
+	WireSyncEventHandlerTestBase   name
 }
 
 func newWireTypeNames(protocolVariants nameVariants) wireTypeNames {
@@ -240,6 +243,7 @@ func newWireTypeNames(protocolVariants nameVariants) wireTypeNames {
 		WireSyncBufferClientImpl:       WireSyncBufferClientImpl.template(p),
 		WireEventDispatcher:            WireEventDispatcher.template(p),
 		WireServerDispatcher:           WireServerDispatcher.template(p),
+		WireSyncEventHandlerTestBase:   WireSyncEventHandlerTestBase.template(p),
 	}
 }
 
@@ -926,7 +930,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 
 	fuzzingName := strings.ReplaceAll(strings.ReplaceAll(string(p.Name), ".", "_"), "/", "_")
 	testBaseNames := protocolName.appendName("_TestBase").appendNamespace("testing")
-	testBaseNames.Wire = testingNs.member("WireTestBase").template(protocolName.Wire)
+	testBaseNames.Wire = WireTestBase.template(protocolName.Wire)
 	r := newProtocol(protocolInner{
 		Attributes:              Attributes{p.Attributes},
 		nameVariants:            protocolName,

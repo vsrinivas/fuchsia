@@ -157,6 +157,7 @@ executable("unittests") {
   deps = [
     ":lib",
     ":test-firmware-file",
+    "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp_testing",
     "//src/devices/lib/compat",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

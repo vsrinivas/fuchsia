@@ -101,8 +101,8 @@ test("fdio-test") {
     ]
     deps += [
       "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
-      "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-      "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp",
+      "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp_testing",
+      "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp_testing",
       "//sdk/fidl/fuchsia.process:fuchsia.process_llcpp",
       "//sdk/lib/fdio",
       "//sdk/lib/stdcompat",

@@ -10,7 +10,7 @@ template <>
 class WireTestBase<::test_protocollayouts::MainProtocol>
     : public ::fidl::WireServer<::test_protocollayouts::MainProtocol> {
  public:
-  virtual ~WireTestBase<::test_protocollayouts::MainProtocol>() {}
+  virtual ~WireTestBase<::test_protocollayouts::MainProtocol>() = default;
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void OneWayAnonComposed(
@@ -81,6 +81,70 @@ class WireTestBase<::test_protocollayouts::MainProtocol>
       TwoWayAnonWithErrorRequestView request,
       TwoWayAnonWithErrorCompleter::Sync& _completer) override {
     NotImplemented_("TwoWayAnonWithError", _completer);
+  }
+};
+
+template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<
+    ::test_protocollayouts::MainProtocol>
+    : public ::fidl::WireSyncEventHandler<
+          ::test_protocollayouts::MainProtocol> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<
+      ::test_protocollayouts::MainProtocol>() = default;
+  virtual void NotImplemented_(const std::string& name) = 0;
+  virtual void OnAnonComposed(
+      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposed>*
+          event) override {
+    NotImplemented_("OnAnonComposed");
+  }
+  virtual void OnAnonComposedWithError(
+      ::fidl::WireEvent<
+          ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>* event)
+      override {
+    NotImplemented_("OnAnonComposedWithError");
+  }
+  virtual void OnNamedComposed(
+      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposed>*
+          event) override {
+    NotImplemented_("OnNamedComposed");
+  }
+  virtual void OnNamedComposedWithError(
+      ::fidl::WireEvent<
+          ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>*
+          event) override {
+    NotImplemented_("OnNamedComposedWithError");
+  }
+  virtual void OnImport(
+      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImport>* event)
+      override {
+    NotImplemented_("OnImport");
+  }
+  virtual void OnImportWithError(
+      ::fidl::WireEvent<
+          ::test_protocollayouts::MainProtocol::OnImportWithError>* event)
+      override {
+    NotImplemented_("OnImportWithError");
+  }
+  virtual void OnLocal(
+      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocal>* event)
+      override {
+    NotImplemented_("OnLocal");
+  }
+  virtual void OnLocalWithError(
+      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocalWithError>*
+          event) override {
+    NotImplemented_("OnLocalWithError");
+  }
+  virtual void OnAnon(
+      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon>* event)
+      override {
+    NotImplemented_("OnAnon");
+  }
+  virtual void OnAnonWithError(
+      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonWithError>*
+          event) override {
+    NotImplemented_("OnAnonWithError");
   }
 };
 }  // namespace testing

@@ -55,6 +55,7 @@ source_set("test-common") {
 
   public_deps = [
     ":core",
+    "//sdk/fidl/fuchsia.hardware.google.ec:fuchsia.hardware.google.ec_llcpp_testing",
     "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/lib/acpi/mock:mock-acpi",
     "//src/devices/testing/mock-ddk",

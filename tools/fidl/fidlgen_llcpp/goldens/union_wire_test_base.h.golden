@@ -10,7 +10,7 @@ template <>
 class WireTestBase<::test_union::TestProtocol>
     : public ::fidl::WireServer<::test_union::TestProtocol> {
  public:
-  virtual ~WireTestBase<::test_union::TestProtocol>() {}
+  virtual ~WireTestBase<::test_union::TestProtocol>() = default;
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void StrictXUnionHenceResponseMayBeStackAllocated(
@@ -26,6 +26,14 @@ class WireTestBase<::test_union::TestProtocol>
     NotImplemented_("FlexibleXUnionHenceResponseMustBeHeapAllocated",
                     _completer);
   }
+};
+
+template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<::test_union::TestProtocol>
+    : public ::fidl::WireSyncEventHandler<::test_union::TestProtocol> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<::test_union::TestProtocol>() = default;
+  virtual void NotImplemented_(const std::string& name) = 0;
 };
 }  // namespace testing
 }  // namespace fidl

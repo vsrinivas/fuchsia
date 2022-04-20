@@ -10,13 +10,24 @@ template <>
 class WireTestBase<::test_transitivedependenciescompose::Top>
     : public ::fidl::WireServer<::test_transitivedependenciescompose::Top> {
  public:
-  virtual ~WireTestBase<::test_transitivedependenciescompose::Top>() {}
+  virtual ~WireTestBase<::test_transitivedependenciescompose::Top>() = default;
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void GetFoo(GetFooRequestView request,
                       GetFooCompleter::Sync& _completer) override {
     NotImplemented_("GetFoo", _completer);
   }
+};
+
+template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<
+    ::test_transitivedependenciescompose::Top>
+    : public ::fidl::WireSyncEventHandler<
+          ::test_transitivedependenciescompose::Top> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<
+      ::test_transitivedependenciescompose::Top>() = default;
+  virtual void NotImplemented_(const std::string& name) = 0;
 };
 }  // namespace testing
 }  // namespace fidl

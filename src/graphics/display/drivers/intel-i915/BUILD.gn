@@ -91,6 +91,7 @@ test("intel-i915-test") {
   ]
   deps = [
     ":common_srcs",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp_testing",
     "//src/devices/pci/testing:pci-protocol-fake",
     "//src/devices/testing/fake-mmio-reg",
     "//src/devices/testing/mock-ddk",

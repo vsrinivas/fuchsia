@@ -460,10 +460,16 @@ template("fidl_cpp_family") {
       headers = [
         "fidl/$library_name/cpp/wire.h",
         "fidl/$library_name/cpp/wire_messaging.h",
-        "fidl/$library_name/cpp/wire_test_base.h",
       ]
       sources = [ "fidl/$library_name/cpp/wire_messaging.cc" ]
       layer_deps = [ "wire_types" ]
+    },
+
+    {
+      layer = "llcpp_testing"
+      headers = [ "fidl/$library_name/cpp/wire_test_base.h" ]
+      layer_deps = [ "llcpp" ]
+      testonly = true
     },
 
     {
@@ -535,6 +541,9 @@ template("fidl_cpp_family") {
         }
         if (defined(layer.sources)) {
           generated_sources = layer.sources
+        }
+        if (defined(layer.testonly)) {
+          testonly = layer.testonly
         }
         additional_public_deps = []
         if (defined(layer.public_deps)) {

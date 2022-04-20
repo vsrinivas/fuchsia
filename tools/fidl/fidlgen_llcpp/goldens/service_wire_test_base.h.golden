@@ -10,7 +10,7 @@ template <>
 class WireTestBase<::test_service::SecondProtocol>
     : public ::fidl::WireServer<::test_service::SecondProtocol> {
  public:
-  virtual ~WireTestBase<::test_service::SecondProtocol>() {}
+  virtual ~WireTestBase<::test_service::SecondProtocol>() = default;
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void MethodOnSecond(
@@ -21,10 +21,20 @@ class WireTestBase<::test_service::SecondProtocol>
 };
 
 template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<
+    ::test_service::SecondProtocol>
+    : public ::fidl::WireSyncEventHandler<::test_service::SecondProtocol> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<::test_service::SecondProtocol>() =
+      default;
+  virtual void NotImplemented_(const std::string& name) = 0;
+};
+
+template <>
 class WireTestBase<::test_service::FirstProtocol>
     : public ::fidl::WireServer<::test_service::FirstProtocol> {
  public:
-  virtual ~WireTestBase<::test_service::FirstProtocol>() {}
+  virtual ~WireTestBase<::test_service::FirstProtocol>() = default;
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void MethodOnFirst(
@@ -32,6 +42,16 @@ class WireTestBase<::test_service::FirstProtocol>
       MethodOnFirstCompleter::Sync& _completer) override {
     NotImplemented_("MethodOnFirst", _completer);
   }
+};
+
+template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<
+    ::test_service::FirstProtocol>
+    : public ::fidl::WireSyncEventHandler<::test_service::FirstProtocol> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<::test_service::FirstProtocol>() =
+      default;
+  virtual void NotImplemented_(const std::string& name) = 0;
 };
 }  // namespace testing
 }  // namespace fidl

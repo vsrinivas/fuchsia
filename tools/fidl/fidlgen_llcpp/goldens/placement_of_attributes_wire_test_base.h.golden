@@ -10,13 +10,25 @@ template <>
 class WireTestBase<::test_placementofattributes::ExampleProtocol>
     : public ::fidl::WireServer<::test_placementofattributes::ExampleProtocol> {
  public:
-  virtual ~WireTestBase<::test_placementofattributes::ExampleProtocol>() {}
+  virtual ~WireTestBase<::test_placementofattributes::ExampleProtocol>() =
+      default;
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void Method(MethodRequestView request,
                       MethodCompleter::Sync& _completer) override {
     NotImplemented_("Method", _completer);
   }
+};
+
+template <>
+class ::fidl::testing::WireSyncEventHandlerTestBase<
+    ::test_placementofattributes::ExampleProtocol>
+    : public ::fidl::WireSyncEventHandler<
+          ::test_placementofattributes::ExampleProtocol> {
+ public:
+  virtual ~WireSyncEventHandlerTestBase<
+      ::test_placementofattributes::ExampleProtocol>() = default;
+  virtual void NotImplemented_(const std::string& name) = 0;
 };
 }  // namespace testing
 }  // namespace fidl
