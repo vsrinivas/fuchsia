@@ -226,19 +226,9 @@ HermeticAudioRealm::CtorArgs HermeticAudioRealm::BuildRealm(Options options,
   // For simplicity, always add this test thermal control server.
   builder.AddChild(kThermalTestControl, "#meta/thermal_test_control.cm");
   builder.AddRoute({
-      .capabilities = {Protocol{"fuchsia.thermal.Controller"}},
-      .source = ChildRef{kThermalTestControl},
-      .targets = {ChildRef{kAudioCore}},
-  });
-  builder.AddRoute({
       .capabilities = {Protocol{"fuchsia.thermal.ClientStateConnector"}},
       .source = ChildRef{kThermalTestControl},
       .targets = {ChildRef{kAudioCore}},
-  });
-  builder.AddRoute({
-      .capabilities = {Protocol{"test.thermal.Control"}},
-      .source = ChildRef{kThermalTestControl},
-      .targets = {ParentRef()},
   });
   builder.AddRoute({
       .capabilities = {Protocol{"test.thermal.ClientStateControl"}},
