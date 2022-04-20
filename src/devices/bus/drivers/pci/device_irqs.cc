@@ -141,9 +141,9 @@ zx_status_t Device::DisableInterrupts() {
 zx::status<zx::interrupt> Device::MapInterrupt(uint32_t which_irq) {
   fbl::AutoLock dev_lock(&dev_lock_);
   // MSI support is controlled through the capability held within the device's configuration space,
-  // so the dispatcher needs acess to the given device's config vmo. MSI-X needs access to the table
-  // structure which is held in one of the device BARs, but a view is built ahead of time for it
-  // when the MSI-X capability is initialized.
+  // so the dispatcher needs access to the given device's config vmo. MSI-X needs access to the
+  // table structure which is held in one of the device BARs, but a view is built ahead of time for
+  // it when the MSI-X capability is initialized.
   if (irqs_.mode == PCI_IRQ_MODE_DISABLED) {
     return zx::error(ZX_ERR_BAD_STATE);
   }
