@@ -574,6 +574,14 @@ TEST_F(DeviceTest, FidlGetConfigurationDescriptorSize) {
   ASSERT_EQ(result->size, sizeof(usb_configuration_descriptor_t));
 }
 
+TEST_F(DeviceTest, FidlGetConfigurationDescriptorSize_Nullptr) {
+  auto& fidl = get_fidl();
+  auto result = fidl->GetConfigurationDescriptorSize(99);  // <-- intentionally bad index.
+  ASSERT_TRUE(result.ok());
+  ASSERT_EQ(result->s, ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(result->size, 0);
+}
+
 TEST_F(DeviceTest, FidlGetConfigurationDescriptor) {
   auto& fidl = get_fidl();
   const usb_configuration_descriptor_t* descriptor;

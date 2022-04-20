@@ -732,6 +732,7 @@ void UsbDevice::GetConfigurationDescriptorSize(
   auto* descriptor = GetConfigDesc(request->config);
   if (!descriptor) {
     completer.Reply(ZX_ERR_INVALID_ARGS, 0);
+    return;
   }
 
   auto length = le16toh(descriptor->w_total_length);
