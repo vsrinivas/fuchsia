@@ -20,6 +20,7 @@ func main() {
 		"WireMessagingHeader", "WireMessagingSource",
 		"NaturalTypesHeader", "NaturalTypesSource",
 		"NaturalMessagingHeader", "NaturalMessagingSource",
+		"TypeConversionsHeader", "TypeConversionsSource",
 		"driver/WireHeader",
 		"driver/WireMessagingHeader", "driver/WireMessagingSource",
 		"driver/NaturalMessagingHeader", "driver/NaturalMessagingSource",

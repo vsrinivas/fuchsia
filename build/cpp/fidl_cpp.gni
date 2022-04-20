@@ -484,6 +484,16 @@ template("fidl_cpp_family") {
     },
 
     {
+      layer = "type_conversions"
+      headers = [ "fidl/$library_name/cpp/type_conversions.h" ]
+      sources = [ "fidl/$library_name/cpp/type_conversions.cc" ]
+      layer_deps = [
+        "natural_types",
+        "wire_types",
+      ]
+    },
+
+    {
       layer = "cpp"  # AKA: unified_channel_messaging
       headers = [
         "fidl/$library_name/cpp/fidl.h",
@@ -493,6 +503,7 @@ template("fidl_cpp_family") {
       layer_deps = [
         "llcpp",
         "natural_types",
+        "type_conversions",
       ]
       public_deps = [ "//src/lib/fidl/cpp" ]
     },
@@ -516,6 +527,7 @@ template("fidl_cpp_family") {
       layer_deps = [
         "driver_wire",
         "natural_types",
+        "type_conversions",
       ]
     },
   ]

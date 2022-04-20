@@ -5,4 +5,5 @@
 #include <fidl/test.errorsyntax.parent/cpp/fidl.h>
 #include <fidl/test.errorsyntax/cpp/natural_messaging.h>
 #include <fidl/test.errorsyntax/cpp/natural_types.h>
+#include <fidl/test.errorsyntax/cpp/type_conversions.h>
 #include <fidl/test.errorsyntax/cpp/wire.h>

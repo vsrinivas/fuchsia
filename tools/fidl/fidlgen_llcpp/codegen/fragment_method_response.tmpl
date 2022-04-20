@@ -148,3 +148,26 @@ class {{ .NaturalResponseConverter }} {
 {{- define "Method:Response:NaturalMessagingSource" }}
 
 {{- end }}
+
+{{- define "Method:Response:Traits:TypeConversionsHeader" }}
+template <>
+struct WireNaturalConversionTraits<{{ .WireResponse }}, {{ .NaturalResponse }}> {
+  static {{ .NaturalResponse }} ToNatural({{ .WireResponse }} src);
+};
+
+template <>
+struct NaturalTypeForWireType<{{ .WireResponse }}> {
+    using type = {{ .NaturalResponse }};
+};
+{{- end }}
+
+{{- define "Method:Response:Traits:TypeConversionsSource" }}
+{{ .NaturalResponse }}  WireNaturalConversionTraits<{{ .WireResponse }}, {{ .NaturalResponse }}>::ToNatural({{ .WireResponse }} src) {
+  {{- if .HasResponsePayload }}
+  return {{ .NaturalResponse }}(
+    WireNaturalConversionTraits<{{ .ResponsePayload.Wire }}, {{ .ResponseMessageBase }}>::ToNatural(std::move(src)));
+  {{- else }}
+  return {{ .NaturalResponse }}();
+  {{- end }}
+}
+{{- end }}

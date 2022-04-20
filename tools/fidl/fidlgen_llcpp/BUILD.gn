@@ -38,6 +38,8 @@ if (is_host) {
       "codegen/file_natural_messaging_source.tmpl",
       "codegen/file_natural_types_header.tmpl",
       "codegen/file_natural_types_source.tmpl",
+      "codegen/file_type_conversions_header.tmpl",
+      "codegen/file_type_conversions_source.tmpl",
       "codegen/file_unified_header.tmpl",
       "codegen/file_wire_header.tmpl",
       "codegen/file_wire_messaging_header.tmpl",
@@ -150,6 +152,14 @@ if (is_host) {
           {
             golden = "${info.name}_natural_messaging.cc.golden"
             generated = "$gen_dir/$include_path/natural_messaging.cc"
+          },
+          {
+            golden = "${info.name}_type_conversions.h.golden"
+            generated = "$gen_dir/$include_path/type_conversions.h"
+          },
+          {
+            golden = "${info.name}_type_conversions.cc.golden"
+            generated = "$gen_dir/$include_path/type_conversions.cc"
           },
           {
             golden = "${info.name}_fidl.h.golden"

@@ -204,3 +204,45 @@ class {{ .Name }} {
 {{- EndifFuchsia -}}
 {{ end }}
 {{- end }}
+
+{{- define "Struct:Traits:TypeConversionsHeader" }}
+{{ if .IsResourceType }}
+{{- IfdefFuchsia -}}
+{{- end }}
+
+template <>
+struct WireNaturalConversionTraits<{{ .Wire }}, {{ .Unified }}> {
+  static {{ .Unified }} ToNatural({{ .Wire }} src);
+};
+
+template <>
+struct NaturalTypeForWireType<{{ .Wire }}> {
+    using type = {{ .Unified }};
+};
+
+{{ if .IsResourceType }}
+{{- EndifFuchsia -}}
+{{ end }}
+{{- end }}
+
+{{- define "Struct:Traits:TypeConversionsSource" }}
+{{ if .IsResourceType }}
+{{- IfdefFuchsia -}}
+{{- end }}
+
+{{ .Unified }}  WireNaturalConversionTraits<{{ .Wire }}, {{ .Unified }}>::ToNatural({{ .Wire }} src) {
+  {{- if eq (len .Members) 1 }}
+  return {{ .Unified }}({{ range .Members }}WireNaturalConversionTraits<{{ .Type.Wire }}, {{ .Type.Unified }}>::ToNatural(std::move(src.{{ .Name }})){{ end }});
+  {{- else }}
+  return {{ .Unified }}({
+  {{- range .Members }}
+    .{{ .Name }} = WireNaturalConversionTraits<{{ .Type.Wire }}, {{ .Type.Unified }}>::ToNatural(std::move(src.{{ .Name }})),
+  {{- end }}
+  });
+  {{- end }}
+}
+
+{{ if .IsResourceType }}
+{{- EndifFuchsia -}}
+{{ end }}
+{{- end }}

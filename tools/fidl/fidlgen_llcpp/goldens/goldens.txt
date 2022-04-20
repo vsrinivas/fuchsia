@@ -12,6 +12,8 @@ anonymous_natural_messaging.cc.golden
 anonymous_natural_messaging.h.golden
 anonymous_natural_types.cc.golden
 anonymous_natural_types.h.golden
+anonymous_type_conversions.cc.golden
+anonymous_type_conversions.h.golden
 anonymous_wire.h.golden
 anonymous_wire_messaging.cc.golden
 anonymous_wire_messaging.h.golden
@@ -32,6 +34,8 @@ arrays_natural_messaging.cc.golden
 arrays_natural_messaging.h.golden
 arrays_natural_types.cc.golden
 arrays_natural_types.h.golden
+arrays_type_conversions.cc.golden
+arrays_type_conversions.h.golden
 arrays_wire.h.golden
 arrays_wire_messaging.cc.golden
 arrays_wire_messaging.h.golden
@@ -52,6 +56,8 @@ bindings_denylist_natural_messaging.cc.golden
 bindings_denylist_natural_messaging.h.golden
 bindings_denylist_natural_types.cc.golden
 bindings_denylist_natural_types.h.golden
+bindings_denylist_type_conversions.cc.golden
+bindings_denylist_type_conversions.h.golden
 bindings_denylist_wire.h.golden
 bindings_denylist_wire_messaging.cc.golden
 bindings_denylist_wire_messaging.h.golden
@@ -74,6 +80,8 @@ bits_constants_natural_messaging.cc.golden
 bits_constants_natural_messaging.h.golden
 bits_constants_natural_types.cc.golden
 bits_constants_natural_types.h.golden
+bits_constants_type_conversions.cc.golden
+bits_constants_type_conversions.h.golden
 bits_constants_wire.h.golden
 bits_constants_wire_messaging.cc.golden
 bits_constants_wire_messaging.h.golden
@@ -92,6 +100,8 @@ bits_natural_messaging.cc.golden
 bits_natural_messaging.h.golden
 bits_natural_types.cc.golden
 bits_natural_types.h.golden
+bits_type_conversions.cc.golden
+bits_type_conversions.h.golden
 bits_wire.h.golden
 bits_wire_messaging.cc.golden
 bits_wire_messaging.h.golden
@@ -112,6 +122,8 @@ byte_and_bytes_natural_messaging.cc.golden
 byte_and_bytes_natural_messaging.h.golden
 byte_and_bytes_natural_types.cc.golden
 byte_and_bytes_natural_types.h.golden
+byte_and_bytes_type_conversions.cc.golden
+byte_and_bytes_type_conversions.h.golden
 byte_and_bytes_wire.h.golden
 byte_and_bytes_wire_messaging.cc.golden
 byte_and_bytes_wire_messaging.h.golden
@@ -132,6 +144,8 @@ consts_natural_messaging.cc.golden
 consts_natural_messaging.h.golden
 consts_natural_types.cc.golden
 consts_natural_types.h.golden
+consts_type_conversions.cc.golden
+consts_type_conversions.h.golden
 consts_wire.h.golden
 consts_wire_messaging.cc.golden
 consts_wire_messaging.h.golden
@@ -152,6 +166,8 @@ doc_comments_natural_messaging.cc.golden
 doc_comments_natural_messaging.h.golden
 doc_comments_natural_types.cc.golden
 doc_comments_natural_types.h.golden
+doc_comments_type_conversions.cc.golden
+doc_comments_type_conversions.h.golden
 doc_comments_wire.h.golden
 doc_comments_wire_messaging.cc.golden
 doc_comments_wire_messaging.h.golden
@@ -172,6 +188,8 @@ driver_handle_natural_messaging.cc.golden
 driver_handle_natural_messaging.h.golden
 driver_handle_natural_types.cc.golden
 driver_handle_natural_types.h.golden
+driver_handle_type_conversions.cc.golden
+driver_handle_type_conversions.h.golden
 driver_handle_wire.h.golden
 driver_handle_wire_messaging.cc.golden
 driver_handle_wire_messaging.h.golden
@@ -192,6 +210,8 @@ driver_one_way_natural_messaging.cc.golden
 driver_one_way_natural_messaging.h.golden
 driver_one_way_natural_types.cc.golden
 driver_one_way_natural_types.h.golden
+driver_one_way_type_conversions.cc.golden
+driver_one_way_type_conversions.h.golden
 driver_one_way_wire.h.golden
 driver_one_way_wire_messaging.cc.golden
 driver_one_way_wire_messaging.h.golden
@@ -212,6 +232,8 @@ driver_two_way_natural_messaging.cc.golden
 driver_two_way_natural_messaging.h.golden
 driver_two_way_natural_types.cc.golden
 driver_two_way_natural_types.h.golden
+driver_two_way_type_conversions.cc.golden
+driver_two_way_type_conversions.h.golden
 driver_two_way_wire.h.golden
 driver_two_way_wire_messaging.cc.golden
 driver_two_way_wire_messaging.h.golden
@@ -232,6 +254,8 @@ empty_struct_natural_messaging.cc.golden
 empty_struct_natural_messaging.h.golden
 empty_struct_natural_types.cc.golden
 empty_struct_natural_types.h.golden
+empty_struct_type_conversions.cc.golden
+empty_struct_type_conversions.h.golden
 empty_struct_wire.h.golden
 empty_struct_wire_messaging.cc.golden
 empty_struct_wire_messaging.h.golden
@@ -252,6 +276,8 @@ encapsulated_structs_natural_messaging.cc.golden
 encapsulated_structs_natural_messaging.h.golden
 encapsulated_structs_natural_types.cc.golden
 encapsulated_structs_natural_types.h.golden
+encapsulated_structs_type_conversions.cc.golden
+encapsulated_structs_type_conversions.h.golden
 encapsulated_structs_wire.h.golden
 encapsulated_structs_wire_messaging.cc.golden
 encapsulated_structs_wire_messaging.h.golden
@@ -272,6 +298,8 @@ enum_natural_messaging.cc.golden
 enum_natural_messaging.h.golden
 enum_natural_types.cc.golden
 enum_natural_types.h.golden
+enum_type_conversions.cc.golden
+enum_type_conversions.h.golden
 enum_wire.h.golden
 enum_wire_messaging.cc.golden
 enum_wire_messaging.h.golden
@@ -306,12 +334,16 @@ error_syntax_natural_messaging.cc.golden
 error_syntax_natural_messaging.h.golden
 error_syntax_natural_types.cc.golden
 error_syntax_natural_types.h.golden
+error_syntax_type_conversions.cc.golden
+error_syntax_type_conversions.h.golden
 error_syntax_wire.h.golden
 error_syntax_wire_messaging.cc.golden
 error_syntax_wire_messaging.h.golden
 error_syntax_wire_test_base.h.golden
 error_syntax_wire_types.cc.golden
 error_syntax_wire_types.h.golden
+error_type_conversions.cc.golden
+error_type_conversions.h.golden
 error_wire.h.golden
 error_wire_messaging.cc.golden
 error_wire_messaging.h.golden
@@ -332,6 +364,8 @@ escaping_natural_messaging.cc.golden
 escaping_natural_messaging.h.golden
 escaping_natural_types.cc.golden
 escaping_natural_types.h.golden
+escaping_type_conversions.cc.golden
+escaping_type_conversions.h.golden
 escaping_wire.h.golden
 escaping_wire_messaging.cc.golden
 escaping_wire_messaging.h.golden
@@ -352,6 +386,8 @@ foreign_type_in_response_used_through_compose_natural_messaging.cc.golden
 foreign_type_in_response_used_through_compose_natural_messaging.h.golden
 foreign_type_in_response_used_through_compose_natural_types.cc.golden
 foreign_type_in_response_used_through_compose_natural_types.h.golden
+foreign_type_in_response_used_through_compose_type_conversions.cc.golden
+foreign_type_in_response_used_through_compose_type_conversions.h.golden
 foreign_type_in_response_used_through_compose_wire.h.golden
 foreign_type_in_response_used_through_compose_wire_messaging.cc.golden
 foreign_type_in_response_used_through_compose_wire_messaging.h.golden
@@ -381,6 +417,8 @@ handles_in_types_natural_messaging.cc.golden
 handles_in_types_natural_messaging.h.golden
 handles_in_types_natural_types.cc.golden
 handles_in_types_natural_types.h.golden
+handles_in_types_type_conversions.cc.golden
+handles_in_types_type_conversions.h.golden
 handles_in_types_wire.h.golden
 handles_in_types_wire_messaging.cc.golden
 handles_in_types_wire_messaging.h.golden
@@ -392,6 +430,8 @@ handles_natural_messaging.cc.golden
 handles_natural_messaging.h.golden
 handles_natural_types.cc.golden
 handles_natural_types.h.golden
+handles_type_conversions.cc.golden
+handles_type_conversions.h.golden
 handles_wire.h.golden
 handles_wire_messaging.cc.golden
 handles_wire_messaging.h.golden
@@ -412,6 +452,8 @@ imported_const_values_natural_messaging.cc.golden
 imported_const_values_natural_messaging.h.golden
 imported_const_values_natural_types.cc.golden
 imported_const_values_natural_types.h.golden
+imported_const_values_type_conversions.cc.golden
+imported_const_values_type_conversions.h.golden
 imported_const_values_wire.h.golden
 imported_const_values_wire_messaging.cc.golden
 imported_const_values_wire_messaging.h.golden
@@ -432,6 +474,8 @@ inheritance_natural_messaging.cc.golden
 inheritance_natural_messaging.h.golden
 inheritance_natural_types.cc.golden
 inheritance_natural_types.h.golden
+inheritance_type_conversions.cc.golden
+inheritance_type_conversions.h.golden
 inheritance_wire.h.golden
 inheritance_wire_messaging.cc.golden
 inheritance_wire_messaging.h.golden
@@ -452,6 +496,8 @@ inheritance_with_recursive_decl_natural_messaging.cc.golden
 inheritance_with_recursive_decl_natural_messaging.h.golden
 inheritance_with_recursive_decl_natural_types.cc.golden
 inheritance_with_recursive_decl_natural_types.h.golden
+inheritance_with_recursive_decl_type_conversions.cc.golden
+inheritance_with_recursive_decl_type_conversions.h.golden
 inheritance_with_recursive_decl_wire.h.golden
 inheritance_with_recursive_decl_wire_messaging.cc.golden
 inheritance_with_recursive_decl_wire_messaging.h.golden
@@ -472,6 +518,8 @@ nullable_natural_messaging.cc.golden
 nullable_natural_messaging.h.golden
 nullable_natural_types.cc.golden
 nullable_natural_types.h.golden
+nullable_type_conversions.cc.golden
+nullable_type_conversions.h.golden
 nullable_wire.h.golden
 nullable_wire_messaging.cc.golden
 nullable_wire_messaging.h.golden
@@ -492,6 +540,8 @@ padding_natural_messaging.cc.golden
 padding_natural_messaging.h.golden
 padding_natural_types.cc.golden
 padding_natural_types.h.golden
+padding_type_conversions.cc.golden
+padding_type_conversions.h.golden
 padding_wire.h.golden
 padding_wire_messaging.cc.golden
 padding_wire_messaging.h.golden
@@ -512,6 +562,8 @@ placement_of_attributes_natural_messaging.cc.golden
 placement_of_attributes_natural_messaging.h.golden
 placement_of_attributes_natural_types.cc.golden
 placement_of_attributes_natural_types.h.golden
+placement_of_attributes_type_conversions.cc.golden
+placement_of_attributes_type_conversions.h.golden
 placement_of_attributes_wire.h.golden
 placement_of_attributes_wire_messaging.cc.golden
 placement_of_attributes_wire_messaging.h.golden
@@ -532,6 +584,8 @@ protocol_layouts_natural_messaging.cc.golden
 protocol_layouts_natural_messaging.h.golden
 protocol_layouts_natural_types.cc.golden
 protocol_layouts_natural_types.h.golden
+protocol_layouts_type_conversions.cc.golden
+protocol_layouts_type_conversions.h.golden
 protocol_layouts_wire.h.golden
 protocol_layouts_wire_messaging.cc.golden
 protocol_layouts_wire_messaging.h.golden
@@ -552,6 +606,8 @@ protocol_payloads_natural_messaging.cc.golden
 protocol_payloads_natural_messaging.h.golden
 protocol_payloads_natural_types.cc.golden
 protocol_payloads_natural_types.h.golden
+protocol_payloads_type_conversions.cc.golden
+protocol_payloads_type_conversions.h.golden
 protocol_payloads_wire.h.golden
 protocol_payloads_wire_messaging.cc.golden
 protocol_payloads_wire_messaging.h.golden
@@ -572,6 +628,8 @@ protocol_request_natural_messaging.cc.golden
 protocol_request_natural_messaging.h.golden
 protocol_request_natural_types.cc.golden
 protocol_request_natural_types.h.golden
+protocol_request_type_conversions.cc.golden
+protocol_request_type_conversions.h.golden
 protocol_request_wire.h.golden
 protocol_request_wire_messaging.cc.golden
 protocol_request_wire_messaging.h.golden
@@ -592,6 +650,8 @@ protocols_natural_messaging.cc.golden
 protocols_natural_messaging.h.golden
 protocols_natural_types.cc.golden
 protocols_natural_types.h.golden
+protocols_type_conversions.cc.golden
+protocols_type_conversions.h.golden
 protocols_wire.h.golden
 protocols_wire_messaging.cc.golden
 protocols_wire_messaging.h.golden
@@ -612,6 +672,8 @@ request_flexible_envelope_natural_messaging.cc.golden
 request_flexible_envelope_natural_messaging.h.golden
 request_flexible_envelope_natural_types.cc.golden
 request_flexible_envelope_natural_types.h.golden
+request_flexible_envelope_type_conversions.cc.golden
+request_flexible_envelope_type_conversions.h.golden
 request_flexible_envelope_wire.h.golden
 request_flexible_envelope_wire_messaging.cc.golden
 request_flexible_envelope_wire_messaging.h.golden
@@ -632,6 +694,8 @@ service_natural_messaging.cc.golden
 service_natural_messaging.h.golden
 service_natural_types.cc.golden
 service_natural_types.h.golden
+service_type_conversions.cc.golden
+service_type_conversions.h.golden
 service_wire.h.golden
 service_wire_messaging.cc.golden
 service_wire_messaging.h.golden
@@ -654,6 +718,8 @@ struct_default_value_enum_library_reference_natural_messaging.cc.golden
 struct_default_value_enum_library_reference_natural_messaging.h.golden
 struct_default_value_enum_library_reference_natural_types.cc.golden
 struct_default_value_enum_library_reference_natural_types.h.golden
+struct_default_value_enum_library_reference_type_conversions.cc.golden
+struct_default_value_enum_library_reference_type_conversions.h.golden
 struct_default_value_enum_library_reference_wire.h.golden
 struct_default_value_enum_library_reference_wire_messaging.cc.golden
 struct_default_value_enum_library_reference_wire_messaging.h.golden
@@ -672,6 +738,8 @@ struct_natural_messaging.cc.golden
 struct_natural_messaging.h.golden
 struct_natural_types.cc.golden
 struct_natural_types.h.golden
+struct_type_conversions.cc.golden
+struct_type_conversions.h.golden
 struct_wire.h.golden
 struct_wire_messaging.cc.golden
 struct_wire_messaging.h.golden
@@ -692,6 +760,8 @@ table_natural_messaging.cc.golden
 table_natural_messaging.h.golden
 table_natural_types.cc.golden
 table_natural_types.h.golden
+table_type_conversions.cc.golden
+table_type_conversions.h.golden
 table_wire.h.golden
 table_wire_messaging.cc.golden
 table_wire_messaging.h.golden
@@ -714,6 +784,8 @@ transitive_dependencies_compose_natural_messaging.cc.golden
 transitive_dependencies_compose_natural_messaging.h.golden
 transitive_dependencies_compose_natural_types.cc.golden
 transitive_dependencies_compose_natural_types.h.golden
+transitive_dependencies_compose_type_conversions.cc.golden
+transitive_dependencies_compose_type_conversions.h.golden
 transitive_dependencies_compose_wire.h.golden
 transitive_dependencies_compose_wire_messaging.cc.golden
 transitive_dependencies_compose_wire_messaging.h.golden
@@ -732,6 +804,8 @@ transitive_dependencies_natural_messaging.cc.golden
 transitive_dependencies_natural_messaging.h.golden
 transitive_dependencies_natural_types.cc.golden
 transitive_dependencies_natural_types.h.golden
+transitive_dependencies_type_conversions.cc.golden
+transitive_dependencies_type_conversions.h.golden
 transitive_dependencies_wire.h.golden
 transitive_dependencies_wire_messaging.cc.golden
 transitive_dependencies_wire_messaging.h.golden
@@ -752,6 +826,8 @@ type_aliases_natural_messaging.cc.golden
 type_aliases_natural_messaging.h.golden
 type_aliases_natural_types.cc.golden
 type_aliases_natural_types.h.golden
+type_aliases_type_conversions.cc.golden
+type_aliases_type_conversions.h.golden
 type_aliases_wire.h.golden
 type_aliases_wire_messaging.cc.golden
 type_aliases_wire_messaging.h.golden
@@ -786,12 +862,16 @@ union_sandwich_natural_messaging.cc.golden
 union_sandwich_natural_messaging.h.golden
 union_sandwich_natural_types.cc.golden
 union_sandwich_natural_types.h.golden
+union_sandwich_type_conversions.cc.golden
+union_sandwich_type_conversions.h.golden
 union_sandwich_wire.h.golden
 union_sandwich_wire_messaging.cc.golden
 union_sandwich_wire_messaging.h.golden
 union_sandwich_wire_test_base.h.golden
 union_sandwich_wire_types.cc.golden
 union_sandwich_wire_types.h.golden
+union_type_conversions.cc.golden
+union_type_conversions.h.golden
 union_wire.h.golden
 union_wire_messaging.cc.golden
 union_wire_messaging.h.golden
@@ -812,6 +892,8 @@ unknown_interactions_natural_messaging.cc.golden
 unknown_interactions_natural_messaging.h.golden
 unknown_interactions_natural_types.cc.golden
 unknown_interactions_natural_types.h.golden
+unknown_interactions_type_conversions.cc.golden
+unknown_interactions_type_conversions.h.golden
 unknown_interactions_wire.h.golden
 unknown_interactions_wire_messaging.cc.golden
 unknown_interactions_wire_messaging.h.golden
@@ -832,6 +914,8 @@ vectors_natural_messaging.cc.golden
 vectors_natural_messaging.h.golden
 vectors_natural_types.cc.golden
 vectors_natural_types.h.golden
+vectors_type_conversions.cc.golden
+vectors_type_conversions.h.golden
 vectors_wire.h.golden
 vectors_wire_messaging.cc.golden
 vectors_wire_messaging.h.golden
@@ -852,6 +936,8 @@ versions_natural_messaging.cc.golden
 versions_natural_messaging.h.golden
 versions_natural_types.cc.golden
 versions_natural_types.h.golden
+versions_type_conversions.cc.golden
+versions_type_conversions.h.golden
 versions_wire.h.golden
 versions_wire_messaging.cc.golden
 versions_wire_messaging.h.golden

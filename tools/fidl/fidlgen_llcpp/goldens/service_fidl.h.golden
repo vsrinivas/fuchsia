@@ -4,4 +4,5 @@
 
 #include <fidl/test.service/cpp/natural_messaging.h>
 #include <fidl/test.service/cpp/natural_types.h>
+#include <fidl/test.service/cpp/type_conversions.h>
 #include <fidl/test.service/cpp/wire.h>

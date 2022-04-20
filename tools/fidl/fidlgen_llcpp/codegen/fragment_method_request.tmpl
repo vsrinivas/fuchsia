@@ -119,3 +119,26 @@ struct {{ .RequestMessageTraits }} final {
 
 {{- end }}
 
+
+{{- define "Method:Request:Traits:TypeConversionsHeader" }}
+template <>
+struct WireNaturalConversionTraits<{{ .WireRequest }}, {{ .NaturalRequest }}> {
+  static {{ .NaturalRequest }} ToNatural({{ .WireRequest }} src);
+};
+
+template <>
+struct NaturalTypeForWireType<{{ .WireRequest }}> {
+    using type = {{ .NaturalRequest }};
+};
+{{- end }}
+
+{{- define "Method:Request:Traits:TypeConversionsSource" }}
+{{ .NaturalRequest }}  WireNaturalConversionTraits<{{ .WireRequest }}, {{ .NaturalRequest }}>::ToNatural({{ .WireRequest }} src) {
+  {{- if .HasRequestPayload }}
+  return {{ .NaturalRequest }}(
+    WireNaturalConversionTraits<{{ .RequestPayload.Wire }}, {{ .RequestMessageBase }}>::ToNatural(std::move(src)));
+  {{- else }}
+  return {{ .NaturalRequest }}();
+  {{- end }}
+}
+{{- end }}

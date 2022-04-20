@@ -4,4 +4,5 @@
 
 #include <fidl/test.driveroneway/cpp/natural_messaging.h>
 #include <fidl/test.driveroneway/cpp/natural_types.h>
+#include <fidl/test.driveroneway/cpp/type_conversions.h>
 #include <fidl/test.driveroneway/cpp/wire.h>

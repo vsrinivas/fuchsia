@@ -5,4 +5,5 @@
 #include <fidl/fdf/cpp/fidl.h>
 #include <fidl/test.handles/cpp/natural_messaging.h>
 #include <fidl/test.handles/cpp/natural_types.h>
+#include <fidl/test.handles/cpp/type_conversions.h>
 #include <fidl/test.handles/cpp/wire.h>

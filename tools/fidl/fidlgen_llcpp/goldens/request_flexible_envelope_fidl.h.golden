@@ -4,4 +4,5 @@
 
 #include <fidl/test.requestflexibleenvelope/cpp/natural_messaging.h>
 #include <fidl/test.requestflexibleenvelope/cpp/natural_types.h>
+#include <fidl/test.requestflexibleenvelope/cpp/type_conversions.h>
 #include <fidl/test.requestflexibleenvelope/cpp/wire.h>

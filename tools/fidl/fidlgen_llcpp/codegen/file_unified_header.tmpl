@@ -18,6 +18,7 @@ fidl/{{ .LibraryDots }}/cpp/fidl.h
 #include <{{ .Library | Filename "WireHeader" }}>
 #include <{{ .Library | Filename "NaturalTypesHeader" }}>
 #include <{{ .Library | Filename "NaturalMessagingHeader" }}>
+#include <{{ .Library | Filename "TypeConversionsHeader" }}>
 {{ range .Dependencies -}}
   #include <{{ . | Filename "UnifiedHeader" }}>
 {{ end -}}

@@ -4,4 +4,5 @@
 
 #include <fidl/test.byteandbytes/cpp/natural_messaging.h>
 #include <fidl/test.byteandbytes/cpp/natural_types.h>
+#include <fidl/test.byteandbytes/cpp/type_conversions.h>
 #include <fidl/test.byteandbytes/cpp/wire.h>

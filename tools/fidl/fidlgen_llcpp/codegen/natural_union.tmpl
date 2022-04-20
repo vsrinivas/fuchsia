@@ -201,3 +201,64 @@ class {{ .Name }} {
 {{- EndifFuchsia -}}
 {{ end }}
 {{- end }}
+
+{{- define "Union:Traits:TypeConversionsHeader" }}
+{{ if .IsResourceType }}
+{{- IfdefFuchsia -}}
+{{- end }}
+
+{{ $naturalType := .Unified }}
+template <>
+struct WireNaturalConversionTraits<{{ .Wire }}, {{ $naturalType }}> {
+  static {{ $naturalType }} ToNatural({{ .Wire }} src);
+};
+
+template <>
+struct WireNaturalConversionTraits<{{ .Wire }}, std::unique_ptr<{{ $naturalType }}>> {
+  static std::unique_ptr<{{ $naturalType }}> ToNatural({{ .Wire }} src);
+};
+
+template <>
+struct NaturalTypeForWireType<{{ .Wire }}> {
+  using type = std::unique_ptr<{{ $naturalType }}>;
+};
+
+{{ if .IsResourceType }}
+{{- EndifFuchsia -}}
+{{ end }}
+{{- end }}
+
+{{- define "Union:Traits:TypeConversionsSource" }}
+{{ if .IsResourceType }}
+{{- IfdefFuchsia -}}
+{{- end }}
+
+{{ $naturalType := .Unified }}
+{{ $naturalType }} WireNaturalConversionTraits<{{ .Wire }}, {{ $naturalType }}>::ToNatural({{ .Wire }} src) {
+  switch (src.Which()) {
+    {{- range .Members }}
+    case {{ .TagName.Wire }}:
+      return {{ $naturalType }}::With{{ .UpperCamelCaseName }}(
+        WireNaturalConversionTraits<{{ .Type.Wire }}, {{ .Type.Unified }}>::ToNatural(std::move(src.{{ .Name }}())));
+    {{- end }}
+    {{- if .IsFlexible }}
+    default:
+      return {{ $naturalType }}();
+    {{- else }}
+    default:
+      ZX_PANIC("unknown union tag in strict union");
+    {{- end }}
+  }
+}
+
+std::unique_ptr<{{ $naturalType }}> WireNaturalConversionTraits<{{ .Wire }}, std::unique_ptr<{{ $naturalType }}>>::ToNatural({{ .Wire }} src) {
+  if (src.has_invalid_tag()) {
+    return nullptr;
+  }
+  return std::make_unique<{{ $naturalType }}>(WireNaturalConversionTraits<{{ .Wire }}, {{ $naturalType }}>::ToNatural(std::move(src)));
+}
+
+{{ if .IsResourceType }}
+{{- EndifFuchsia -}}
+{{ end }}
+{{- end }}

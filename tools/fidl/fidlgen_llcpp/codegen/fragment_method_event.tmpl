@@ -147,3 +147,26 @@ class {{ .NaturalEventConverter }} {
 {{- define "Method:Event:NaturalMessagingSource" }}
 
 {{- end }}
+
+{{- define "Method:Event:Traits:TypeConversionsHeader" }}
+template <>
+struct WireNaturalConversionTraits<{{ .WireEvent }}, {{ .NaturalEvent }}> {
+  static {{ .NaturalEvent }} ToNatural({{ .WireEvent }} src);
+};
+
+template <>
+struct NaturalTypeForWireType<{{ .WireEvent }}> {
+    using type = {{ .NaturalEvent }};
+};
+{{- end }}
+
+{{- define "Method:Event:Traits:TypeConversionsSource" }}
+{{ .NaturalEvent }}  WireNaturalConversionTraits<{{ .WireEvent }}, {{ .NaturalEvent }}>::ToNatural({{ .WireEvent }} src) {
+  {{- if .HasResponsePayload }}
+  return {{ .NaturalEvent }}(
+    WireNaturalConversionTraits<{{ .ResponsePayload.Wire }}, {{ .EventMessageBase }}>::ToNatural(std::move(src)));
+  {{- else }}
+  return {{ .NaturalEvent }}();
+  {{- end }}
+}
+{{- end }}
