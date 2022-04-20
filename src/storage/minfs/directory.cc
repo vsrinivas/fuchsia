@@ -505,12 +505,14 @@ zx_status_t Directory::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out
   TRACE_DURATION("minfs", "Directory::Lookup", "name", name);
   ZX_DEBUG_ASSERT(fs::IsValidName(name));
 
-  auto vn_or = LookupInternal(name);
-  if (vn_or.is_ok()) {
-    *out = std::move(vn_or.value());
-  }
+  return Vfs()->GetNodeOperations()->lookup.Track([&] {
+    auto vn_or = LookupInternal(name);
+    if (vn_or.is_ok()) {
+      *out = std::move(vn_or.value());
+    }
 
-  return vn_or.status_value();
+    return vn_or.status_value();
+  });
 }
 
 zx::status<fbl::RefPtr<fs::Vnode>> Directory::LookupInternal(std::string_view name) {
@@ -553,75 +555,78 @@ zx_status_t Directory::Readdir(fs::VdirCookie* cookie, void* dirents, size_t len
   FX_LOGS(DEBUG) << "minfs_readdir() vn=" << this << "(#" << GetIno() << ") cookie=" << cookie
                  << " len=" << len;
 
-  if (IsUnlinked()) {
-    *out_actual = 0;
+  return Vfs()->GetNodeOperations()->read_dir.Track([&] {
+    if (IsUnlinked()) {
+      *out_actual = 0;
+      return ZX_OK;
+    }
+
+    DirCookie* dc = reinterpret_cast<DirCookie*>(cookie);
+    fs::DirentFiller df(dirents, len);
+
+    size_t off = dc->off;
+    size_t r;
+
+    DirentBuffer dirent_buffer;
+    Dirent* de = &dirent_buffer.dirent;
+
+    if (off != 0 && dc->seqno != GetInode()->seq_num) {
+      // The offset *might* be invalid, if we called Readdir after a directory
+      // has been modified. In this case, we need to re-read the directory
+      // until we get to the direntry at or after the previously identified offset.
+
+      size_t off_recovered = 0;
+      while (off_recovered < off) {
+        if (off_recovered + kMinfsDirentSize >= kMinfsMaxDirectorySize) {
+          FX_LOGS(ERROR) << "Readdir: Corrupt dirent; dirent reclen too large";
+          goto fail;
+        }
+        auto read_status = ReadInternal(nullptr, de, kMinfsMaxDirentSize, off_recovered, &r);
+        if (read_status.is_error() || ValidateDirent(de, r, off_recovered).is_error()) {
+          FX_LOGS(ERROR) << "Readdir: Corrupt dirent unreadable/failed validation";
+          goto fail;
+        }
+        off_recovered += DirentReservedSize(de, off_recovered);
+      }
+      off = off_recovered;
+    }
+
+    while (off + kMinfsDirentSize < kMinfsMaxDirectorySize) {
+      if (auto status = ReadInternal(nullptr, de, kMinfsMaxDirentSize, off, &r);
+          status.is_error()) {
+        FX_LOGS(ERROR) << "Readdir: Unreadable dirent " << status.status_value();
+        goto fail;
+      }
+      if (auto status = ValidateDirent(de, r, off); status.is_error()) {
+        FX_LOGS(ERROR) << "Readdir: Corrupt dirent failed validation " << status.status_value();
+        goto fail;
+      }
+
+      std::string_view name(de->name, de->namelen);
+
+      if (de->ino && name != "..") {
+        zx_status_t status;
+        if ((status = df.Next(name, de->type, de->ino)) != ZX_OK) {
+          // no more space
+          goto done;
+        }
+      }
+
+      off += DirentReservedSize(de, off);
+    }
+
+  done:
+    // save our place in the DirCookie
+    dc->off = off;
+    dc->seqno = GetInode()->seq_num;
+    *out_actual = df.BytesFilled();
+    ZX_DEBUG_ASSERT(*out_actual <= len);  // Otherwise, we're overflowing the input buffer.
     return ZX_OK;
-  }
 
-  DirCookie* dc = reinterpret_cast<DirCookie*>(cookie);
-  fs::DirentFiller df(dirents, len);
-
-  size_t off = dc->off;
-  size_t r;
-
-  DirentBuffer dirent_buffer;
-  Dirent* de = &dirent_buffer.dirent;
-
-  if (off != 0 && dc->seqno != GetInode()->seq_num) {
-    // The offset *might* be invalid, if we called Readdir after a directory
-    // has been modified. In this case, we need to re-read the directory
-    // until we get to the direntry at or after the previously identified offset.
-
-    size_t off_recovered = 0;
-    while (off_recovered < off) {
-      if (off_recovered + kMinfsDirentSize >= kMinfsMaxDirectorySize) {
-        FX_LOGS(ERROR) << "Readdir: Corrupt dirent; dirent reclen too large";
-        goto fail;
-      }
-      auto read_status = ReadInternal(nullptr, de, kMinfsMaxDirentSize, off_recovered, &r);
-      if (read_status.is_error() || ValidateDirent(de, r, off_recovered).is_error()) {
-        FX_LOGS(ERROR) << "Readdir: Corrupt dirent unreadable/failed validation";
-        goto fail;
-      }
-      off_recovered += DirentReservedSize(de, off_recovered);
-    }
-    off = off_recovered;
-  }
-
-  while (off + kMinfsDirentSize < kMinfsMaxDirectorySize) {
-    if (auto status = ReadInternal(nullptr, de, kMinfsMaxDirentSize, off, &r); status.is_error()) {
-      FX_LOGS(ERROR) << "Readdir: Unreadable dirent " << status.status_value();
-      goto fail;
-    }
-    if (auto status = ValidateDirent(de, r, off); status.is_error()) {
-      FX_LOGS(ERROR) << "Readdir: Corrupt dirent failed validation " << status.status_value();
-      goto fail;
-    }
-
-    std::string_view name(de->name, de->namelen);
-
-    if (de->ino && name != "..") {
-      zx_status_t status;
-      if ((status = df.Next(name, de->type, de->ino)) != ZX_OK) {
-        // no more space
-        goto done;
-      }
-    }
-
-    off += DirentReservedSize(de, off);
-  }
-
-done:
-  // save our place in the DirCookie
-  dc->off = off;
-  dc->seqno = GetInode()->seq_num;
-  *out_actual = df.BytesFilled();
-  ZX_DEBUG_ASSERT(*out_actual <= len);  // Otherwise, we're overflowing the input buffer.
-  return ZX_OK;
-
-fail:
-  dc->off = 0;
-  return ZX_ERR_IO;
+  fail:
+    dc->off = 0;
+    return ZX_ERR_IO;
+  });
 }
 
 zx_status_t Directory::Create(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vnode>* out) {
@@ -735,32 +740,34 @@ zx_status_t Directory::Create(std::string_view name, uint32_t mode, fbl::RefPtr<
 zx_status_t Directory::Unlink(std::string_view name, bool must_be_dir) {
   TRACE_DURATION("minfs", "Directory::Unlink", "name", name);
   ZX_DEBUG_ASSERT(fs::IsValidName(name));
-  bool success = false;
-  fs::Ticker ticker(Vfs()->StartTicker());
-  auto get_metrics = fit::defer(
-      [&ticker, &success, this]() { Vfs()->UpdateUnlinkMetrics(success, ticker.End()); });
+  return Vfs()->GetNodeOperations()->unlink.Track([&] {
+    bool success = false;
+    fs::Ticker ticker(Vfs()->StartTicker());
+    auto get_metrics = fit::defer(
+        [&ticker, &success, this]() { Vfs()->UpdateUnlinkMetrics(success, ticker.End()); });
 
-  auto transaction_or = Vfs()->BeginTransaction(0, 0);
-  if (transaction_or.is_error()) {
-    return transaction_or.error_value();
-  }
+    auto transaction_or = Vfs()->BeginTransaction(0, 0);
+    if (transaction_or.is_error()) {
+      return transaction_or.error_value();
+    }
 
-  DirArgs args;
-  args.name = name;
-  args.type = must_be_dir ? kMinfsTypeDir : 0;
-  args.transaction = transaction_or.value().get();
+    DirArgs args;
+    args.name = name;
+    args.type = must_be_dir ? kMinfsTypeDir : 0;
+    args.transaction = transaction_or.value().get();
 
-  zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackUnlink);
-  if (found_or.is_error()) {
-    return found_or.error_value();
-  }
-  if (!found_or.value()) {
-    return ZX_ERR_NOT_FOUND;
-  }
-  transaction_or->PinVnode(fbl::RefPtr(this));
-  Vfs()->CommitTransaction(std::move(transaction_or.value()));
-  success = true;
-  return ZX_OK;
+    zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackUnlink);
+    if (found_or.is_error()) {
+      return found_or.error_value();
+    }
+    if (!found_or.value()) {
+      return ZX_ERR_NOT_FOUND;
+    }
+    transaction_or->PinVnode(fbl::RefPtr(this));
+    Vfs()->CommitTransaction(std::move(transaction_or.value()));
+    success = true;
+    return ZX_OK;
+  });
 }
 
 zx_status_t Directory::Truncate(size_t len) { return ZX_ERR_NOT_FILE; }
@@ -927,64 +934,66 @@ zx_status_t Directory::Link(std::string_view name, fbl::RefPtr<fs::Vnode> _targe
   TRACE_DURATION("minfs", "Directory::Link", "name", name);
   ZX_DEBUG_ASSERT(fs::IsValidName(name));
 
-  if (IsUnlinked()) {
-    return ZX_ERR_BAD_STATE;
-  }
+  return Vfs()->GetNodeOperations()->link.Track([&] {
+    if (IsUnlinked()) {
+      return ZX_ERR_BAD_STATE;
+    }
 
-  auto target = fbl::RefPtr<VnodeMinfs>::Downcast(_target);
-  if (target->IsDirectory()) {
-    // The target must not be a directory
-    return ZX_ERR_NOT_FILE;
-  }
+    auto target = fbl::RefPtr<VnodeMinfs>::Downcast(_target);
+    if (target->IsDirectory()) {
+      // The target must not be a directory
+      return ZX_ERR_NOT_FILE;
+    }
 
-  // The destination should not exist
-  DirArgs args;
-  args.name = name;
-  zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackFind);
-  if (found_or.is_error()) {
-    return found_or.error_value();
-  }
-  if (found_or.value()) {
-    return ZX_ERR_ALREADY_EXISTS;
-  }
+    // The destination should not exist
+    DirArgs args;
+    args.name = name;
+    zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackFind);
+    if (found_or.is_error()) {
+      return found_or.error_value();
+    }
+    if (found_or.value()) {
+      return ZX_ERR_ALREADY_EXISTS;
+    }
 
-  // Ensure that we have enough space to write the new vnode's direntry
-  // before updating any other metadata.
-  args.type = kMinfsTypeFile;  // We can't hard link directories
-  args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(name.length())));
-  if (zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackFindSpace);
-      found_or.is_error()) {
-    return found_or.error_value();
-  } else if (!found_or.value()) {
-    FX_LOGS(WARNING) << "Directory::Link: Can't find a dirent to put this file.";
-    return ZX_ERR_NO_SPACE;
-  }
+    // Ensure that we have enough space to write the new vnode's direntry
+    // before updating any other metadata.
+    args.type = kMinfsTypeFile;  // We can't hard link directories
+    args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(name.length())));
+    if (zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackFindSpace);
+        found_or.is_error()) {
+      return found_or.error_value();
+    } else if (!found_or.value()) {
+      FX_LOGS(WARNING) << "Directory::Link: Can't find a dirent to put this file.";
+      return ZX_ERR_NO_SPACE;
+    }
 
-  // Reserve potential blocks to write a new direntry.
-  auto reserved_blocks_or =
-      GetRequiredBlockCount(GetInode()->size, args.reclen, Vfs()->BlockSize());
-  if (reserved_blocks_or.is_error()) {
-    return reserved_blocks_or.error_value();
-  }
+    // Reserve potential blocks to write a new direntry.
+    auto reserved_blocks_or =
+        GetRequiredBlockCount(GetInode()->size, args.reclen, Vfs()->BlockSize());
+    if (reserved_blocks_or.is_error()) {
+      return reserved_blocks_or.error_value();
+    }
 
-  auto transaction_or = Vfs()->BeginTransaction(0, reserved_blocks_or.value());
-  if (transaction_or.is_error()) {
-    return transaction_or.error_value();
-  }
+    auto transaction_or = Vfs()->BeginTransaction(0, reserved_blocks_or.value());
+    if (transaction_or.is_error()) {
+      return transaction_or.error_value();
+    }
 
-  args.ino = target->GetIno();
-  args.transaction = transaction_or.value().get();
-  if (auto status = AppendDirent(&args); status.is_error()) {
-    return status.error_value();
-  }
+    args.ino = target->GetIno();
+    args.transaction = transaction_or.value().get();
+    if (auto status = AppendDirent(&args); status.is_error()) {
+      return status.error_value();
+    }
 
-  // We have successfully added the vn to a new location. Increment the link count.
-  target->AddLink();
-  target->InodeSync(transaction_or.value().get(), kMxFsSyncDefault);
-  transaction_or->PinVnode(fbl::RefPtr(this));
-  transaction_or->PinVnode(target);
-  Vfs()->CommitTransaction(std::move(transaction_or.value()));
-  return ZX_OK;
+    // We have successfully added the vn to a new location. Increment the link count.
+    target->AddLink();
+    target->InodeSync(transaction_or.value().get(), kMxFsSyncDefault);
+    transaction_or->PinVnode(fbl::RefPtr(this));
+    transaction_or->PinVnode(target);
+    Vfs()->CommitTransaction(std::move(transaction_or.value()));
+    return ZX_OK;
+  });
 }
 
 }  // namespace minfs

@@ -577,52 +577,56 @@ zx::status<> VnodeMinfs::WriteInternal(Transaction* transaction, const uint8_t* 
 
 zx_status_t VnodeMinfs::GetAttributes(fs::VnodeAttributes* a) {
   FX_LOGS(DEBUG) << "minfs_getattr() vn=" << this << "(#" << ino_ << ")";
-  // This transaction exists because acquiring the block size and block
-  // count may be unsafe without locking.
-  //
-  // TODO(unknown): Improve locking semantics of pending data allocation to make this less
-  // confusing.
-  Transaction transaction(fs_);
-  *a = fs::VnodeAttributes();
-  a->mode = DTYPE_TO_VTYPE(MinfsMagicType(inode_.magic)) | V_IRUSR | V_IWUSR | V_IRGRP | V_IROTH;
-  a->inode = ino_;
-  a->content_size = GetSize();
-  a->storage_size = GetBlockCount() * fs_->BlockSize();
-  a->link_count = inode_.link_count;
-  a->creation_time = inode_.create_time;
-  a->modification_time = inode_.modify_time;
-  return ZX_OK;
+  return Vfs()->GetNodeOperations()->get_attr.Track([&] {
+    // This transaction exists because acquiring the block size and block
+    // count may be unsafe without locking.
+    //
+    // TODO(unknown): Improve locking semantics of pending data allocation to make this less
+    // confusing.
+    Transaction transaction(fs_);
+    *a = fs::VnodeAttributes();
+    a->mode = DTYPE_TO_VTYPE(MinfsMagicType(inode_.magic)) | V_IRUSR | V_IWUSR | V_IRGRP | V_IROTH;
+    a->inode = ino_;
+    a->content_size = GetSize();
+    a->storage_size = GetBlockCount() * fs_->BlockSize();
+    a->link_count = inode_.link_count;
+    a->creation_time = inode_.create_time;
+    a->modification_time = inode_.modify_time;
+    return ZX_OK;
+  });
 }
 
 zx_status_t VnodeMinfs::SetAttributes(fs::VnodeAttributesUpdate attr) {
   int dirty = 0;
   FX_LOGS(DEBUG) << "minfs_setattr() vn=" << this << "(#" << ino_ << ")";
-  if (attr.has_creation_time()) {
-    inode_.create_time = attr.take_creation_time();
-    dirty = 1;
-  }
-  if (attr.has_modification_time()) {
-    inode_.modify_time = attr.take_modification_time();
-    dirty = 1;
-  }
-  if (attr.any()) {
-    // any unhandled field update is unsupported
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  // Commit transaction if dirty cache is disabled. Otherwise this will
-  // happen later.
-  if (dirty && !DirtyCacheEnabled()) {
-    // write to disk, but don't overwrite the time
-    auto transaction_or = fs_->BeginTransaction(0, 0);
-    if (transaction_or.is_error()) {
-      return transaction_or.status_value();
+  return Vfs()->GetNodeOperations()->set_attr.Track([&] {
+    if (attr.has_creation_time()) {
+      inode_.create_time = attr.take_creation_time();
+      dirty = 1;
     }
-    InodeSync(transaction_or.value().get(), kMxFsSyncDefault);
-    transaction_or->PinVnode(fbl::RefPtr(this));
-    fs_->CommitTransaction(std::move(transaction_or.value()));
-  }
-  return ZX_OK;
+    if (attr.has_modification_time()) {
+      inode_.modify_time = attr.take_modification_time();
+      dirty = 1;
+    }
+    if (attr.any()) {
+      // any unhandled field update is unsupported
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    // Commit transaction if dirty cache is disabled. Otherwise this will
+    // happen later.
+    if (dirty && !DirtyCacheEnabled()) {
+      // write to disk, but don't overwrite the time
+      auto transaction_or = fs_->BeginTransaction(0, 0);
+      if (transaction_or.is_error()) {
+        return transaction_or.status_value();
+      }
+      InodeSync(transaction_or.value().get(), kMxFsSyncDefault);
+      transaction_or->PinVnode(fbl::RefPtr(this));
+      fs_->CommitTransaction(std::move(transaction_or.value()));
+    }
+    return ZX_OK;
+  });
 }
 
 VnodeMinfs::VnodeMinfs(Minfs* fs) : Vnode(fs), fs_(fs) {}
@@ -860,17 +864,17 @@ zx_status_t VnodeMinfs::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtoco
 
 void VnodeMinfs::Sync(SyncCallback closure) {
   TRACE_DURATION("minfs", "VnodeMinfs::Sync");
+  auto event = Vfs()->GetNodeOperations()->sync.NewEvent();
   // The transaction may go async in journal layer. Hold the reference over this
   // vnode so that we keep the vnode around until the transaction is complete.
   auto vn = fbl::RefPtr(this);
-  fs_->Sync([vn, cb = std::move(closure)](zx_status_t status) mutable {
+  fs_->Sync([vn, cb = std::move(closure), event = std::move(event)](zx_status_t status) mutable {
     // This is called on the journal thread. Operations here must be threadsafe.
-    if (status != ZX_OK) {
-      cb(status);
-      return;
+    if (status == ZX_OK) {
+      status = vn->fs_->bc_->Sync().status_value();
     }
-    status = vn->fs_->bc_->Sync().status_value();
     cb(status);
+    event.SetStatus(status);
   });
   return;
 }

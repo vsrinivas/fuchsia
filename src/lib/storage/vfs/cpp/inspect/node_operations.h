@@ -5,44 +5,45 @@
 #ifndef SRC_LIB_STORAGE_VFS_CPP_INSPECT_NODE_OPERATIONS_H_
 #define SRC_LIB_STORAGE_VFS_CPP_INSPECT_NODE_OPERATIONS_H_
 
-#ifndef __Fuchsia__
-#error "Fuchsia-only header"
-#endif
-
 #include "src/lib/storage/vfs/cpp/inspect/operation_tracker.h"
 
 namespace fs_inspect {
 
 // Common node operations most filesystems implement.
 struct NodeOperations {
-  OperationTracker append;
-  OperationTracker close;
-  OperationTracker create;
-  OperationTracker get_attr;
-  OperationTracker link;
-  OperationTracker lookup;
-  OperationTracker read;
-  OperationTracker read_dir;
-  OperationTracker set_attr;
-  OperationTracker sync;
-  OperationTracker truncate;
-  OperationTracker unlink;
-  OperationTracker write;
+  internal::OperationTrackerType close;
+  internal::OperationTrackerType read;
+  internal::OperationTrackerType write;
+  internal::OperationTrackerType append;
+  internal::OperationTrackerType truncate;
+  internal::OperationTrackerType set_attr;
+  internal::OperationTrackerType get_attr;
+  internal::OperationTrackerType sync;
+  internal::OperationTrackerType read_dir;
+  internal::OperationTrackerType lookup;
+  internal::OperationTrackerType create;
+  internal::OperationTrackerType link;
+  internal::OperationTrackerType unlink;
 
+#ifdef __Fuchsia__
   explicit NodeOperations(inspect::Node& root_node)
-      : append(OperationTracker(root_node, "append")),
-        close(OperationTracker(root_node, "close")),
-        create(OperationTracker(root_node, "create")),
-        get_attr(OperationTracker(root_node, "get_attr")),
-        link(OperationTracker(root_node, "link")),
-        lookup(OperationTracker(root_node, "lookup")),
-        read(OperationTracker(root_node, "read")),
-        read_dir(OperationTracker(root_node, "read_dir")),
-        set_attr(OperationTracker(root_node, "set_attr")),
-        sync(OperationTracker(root_node, "sync")),
-        truncate(OperationTracker(root_node, "truncate")),
-        unlink(OperationTracker(root_node, "unlink")),
-        write(OperationTracker(root_node, "write")) {}
+      : close(OperationTrackerFuchsia(root_node, "close")),
+        read(OperationTrackerFuchsia(root_node, "read")),
+        write(OperationTrackerFuchsia(root_node, "write")),
+        append(OperationTrackerFuchsia(root_node, "append")),
+        truncate(OperationTrackerFuchsia(root_node, "truncate")),
+        set_attr(OperationTrackerFuchsia(root_node, "set_attr")),
+        get_attr(OperationTrackerFuchsia(root_node, "get_attr")),
+        sync(OperationTrackerFuchsia(root_node, "sync")),
+        read_dir(OperationTrackerFuchsia(root_node, "read_dir")),
+        lookup(OperationTrackerFuchsia(root_node, "lookup")),
+        create(OperationTrackerFuchsia(root_node, "create")),
+        link(OperationTrackerFuchsia(root_node, "link")),
+        unlink(OperationTrackerFuchsia(root_node, "unlink")) {}
+#else
+  // Stub implementation for host builds.
+  NodeOperations() = default;
+#endif
 };
 
 }  // namespace fs_inspect

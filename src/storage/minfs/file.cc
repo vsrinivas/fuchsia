@@ -293,8 +293,10 @@ zx_status_t File::Read(void* data, size_t len, size_t off, size_t* out_actual) {
   auto get_metrics = fit::defer(
       [&ticker, &out_actual, this]() { Vfs()->UpdateReadMetrics(*out_actual, ticker.End()); });
 
-  Transaction transaction(Vfs());
-  return ReadInternal(&transaction, data, len, off, out_actual).status_value();
+  return Vfs()->GetNodeOperations()->read.Track([&] {
+    Transaction transaction(Vfs());
+    return ReadInternal(&transaction, data, len, off, out_actual).status_value();
+  });
 }
 
 zx::status<uint32_t> File::GetRequiredBlockCount(size_t offset, size_t length) {
@@ -362,104 +364,110 @@ zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out
   FX_LOGS(DEBUG) << "minfs_write() vn=" << this << "(#" << GetIno() << ") len=" << len
                  << " off=" << offset;
 
-  *out_actual = 0;
+  return Vfs()->GetNodeOperations()->write.Track([&] {
+    *out_actual = 0;
 
-  if (len == 0) {
-    return ZX_OK;
-  }
+    if (len == 0) {
+      return ZX_OK;
+    }
 
-  fs::Ticker ticker(Vfs()->StartTicker());
-  auto get_metrics = fit::defer(
-      [&ticker, &out_actual, this]() { Vfs()->UpdateWriteMetrics(*out_actual, ticker.End()); });
+    fs::Ticker ticker(Vfs()->StartTicker());
+    auto get_metrics = fit::defer(
+        [&ticker, &out_actual, this]() { Vfs()->UpdateWriteMetrics(*out_actual, ticker.End()); });
 
-  auto new_size_or = safemath::CheckAdd(offset, len);
-  if (!new_size_or.IsValid() || new_size_or.ValueOrDie() > kMinfsMaxFileSize) {
-    return ZX_ERR_FILE_BIG;
-  }
+    auto new_size_or = safemath::CheckAdd(offset, len);
+    if (!new_size_or.IsValid() || new_size_or.ValueOrDie() > kMinfsMaxFileSize) {
+      return ZX_ERR_FILE_BIG;
+    }
 
-  // If this file's pending blocks have crossed a limit or if there are no free blocks in the
-  // filesystem, try to flush before we proceed.
-  if (auto status = CheckAndFlush(false, len, offset); status.is_error()) {
-    return status.error_value();
-  }
-
-  // Calculate maximum number of blocks to reserve for this write operation.
-  auto reserve_blocks_or = GetRequiredBlockCount(offset, len);
-  if (reserve_blocks_or.is_error()) {
-    return reserve_blocks_or.error_value();
-  }
-
-  size_t reserve_blocks = reserve_blocks_or.value();
-  auto transaction_or = GetTransaction(static_cast<uint32_t>(reserve_blocks));
-  if (transaction_or.is_error()) {
-    return transaction_or.error_value();
-  }
-  std::unique_ptr<Transaction> transaction = std::move(transaction_or.value());
-  // We mark block that has writes pending only after we have enough blocks reserved through
-  // BeginTransaction or through ContinueTransaction.
-  if (DirtyCacheEnabled()) {
-    if (auto status = MarkRequiredBlocksPending(offset, len); status.is_error()) {
+    // If this file's pending blocks have crossed a limit or if there are no free blocks in the
+    // filesystem, try to flush before we proceed.
+    if (auto status = CheckAndFlush(false, len, offset); status.is_error()) {
       return status.error_value();
     }
-  }
 
-  if (auto status = WriteInternal(transaction.get(), static_cast<const uint8_t*>(data), len, offset,
-                                  out_actual);
-      status.is_error()) {
-    return status.error_value();
-  }
+    // Calculate maximum number of blocks to reserve for this write operation.
+    auto reserve_blocks_or = GetRequiredBlockCount(offset, len);
+    if (reserve_blocks_or.is_error()) {
+      return reserve_blocks_or.error_value();
+    }
 
-  if (*out_actual == 0) {
-    return ZX_OK;
-  }
+    size_t reserve_blocks = reserve_blocks_or.value();
+    auto transaction_or = GetTransaction(static_cast<uint32_t>(reserve_blocks));
+    if (transaction_or.is_error()) {
+      return transaction_or.error_value();
+    }
+    std::unique_ptr<Transaction> transaction = std::move(transaction_or.value());
+    // We mark block that has writes pending only after we have enough blocks reserved through
+    // BeginTransaction or through ContinueTransaction.
+    if (DirtyCacheEnabled()) {
+      if (auto status = MarkRequiredBlocksPending(offset, len); status.is_error()) {
+        return status.error_value();
+      }
+    }
 
-  // If anything was written, enqueue operations allocated within WriteInternal.
-  UpdateModificationTime();
-  return FlushTransaction(std::move(transaction)).status_value();
+    if (auto status = WriteInternal(transaction.get(), static_cast<const uint8_t*>(data), len,
+                                    offset, out_actual);
+        status.is_error()) {
+      return status.error_value();
+    }
+
+    if (*out_actual == 0) {
+      return ZX_OK;
+    }
+
+    // If anything was written, enqueue operations allocated within WriteInternal.
+    UpdateModificationTime();
+    return FlushTransaction(std::move(transaction)).status_value();
+  });
 }
 
 zx_status_t File::Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) {
-  zx_status_t status = Write(data, len, GetSize(), out_actual);
-  *out_end = GetSize();
-  return status;
+  return Vfs()->GetNodeOperations()->append.Track([&] {
+    zx_status_t status = Write(data, len, GetSize(), out_actual);
+    *out_end = GetSize();
+    return status;
+  });
 }
 
 zx_status_t File::Truncate(size_t len) {
   TRACE_DURATION("minfs", "File::Truncate");
-  if (len > kMinfsMaxFileSize) {
-    return ZX_ERR_INVALID_ARGS;
-  }
+  return Vfs()->GetNodeOperations()->truncate.Track([&] {
+    if (len > kMinfsMaxFileSize) {
+      return ZX_ERR_INVALID_ARGS;
+    }
 
-  // TODO(unknown): Following can be optimized.
-  // - do not flush part of the file that will be truncated.
-  // - conditionally flush unaffected part if necessary.
-  if (auto status = FlushCachedWrites(); status.is_error()) {
-    return status.error_value();
-  }
+    // TODO(unknown): Following can be optimized.
+    // - do not flush part of the file that will be truncated.
+    // - conditionally flush unaffected part if necessary.
+    if (auto status = FlushCachedWrites(); status.is_error()) {
+      return status.error_value();
+    }
 
-  fs::Ticker ticker(Vfs()->StartTicker());
-  auto get_metrics = fit::defer([&ticker, this] { Vfs()->UpdateTruncateMetrics(ticker.End()); });
+    fs::Ticker ticker(Vfs()->StartTicker());
+    auto get_metrics = fit::defer([&ticker, this] { Vfs()->UpdateTruncateMetrics(ticker.End()); });
 
-  // Due to file copy-on-write, up to 1 new (data) block may be required.
-  size_t reserve_blocks = 1;
+    // Due to file copy-on-write, up to 1 new (data) block may be required.
+    size_t reserve_blocks = 1;
 
-  auto transaction_or = Vfs()->BeginTransaction(0, reserve_blocks);
-  if (transaction_or.is_error()) {
-    return transaction_or.error_value();
-  }
+    auto transaction_or = Vfs()->BeginTransaction(0, reserve_blocks);
+    if (transaction_or.is_error()) {
+      return transaction_or.error_value();
+    }
 
-  if (auto status = TruncateInternal(transaction_or.value().get(), len); status.is_error()) {
-    return status.status_value();
-  }
+    if (auto status = TruncateInternal(transaction_or.value().get(), len); status.is_error()) {
+      return status.status_value();
+    }
 
-  // Force sync the inode to persistent storage: although our data blocks will be allocated
-  // later, the act of truncating may have allocated indirect blocks.
-  //
-  // Ensure our inode is consistent with that metadata.
-  UpdateModificationTime();
-  auto result = FlushTransaction(std::move(transaction_or.value()), true);
-  ZX_ASSERT_MSG(result.is_ok(), "Failed to force sync inode: %u", result.status_value());
-  return ZX_OK;
+    // Force sync the inode to persistent storage: although our data blocks will be allocated
+    // later, the act of truncating may have allocated indirect blocks.
+    //
+    // Ensure our inode is consistent with that metadata.
+    UpdateModificationTime();
+    auto result = FlushTransaction(std::move(transaction_or.value()), true);
+    ZX_ASSERT_MSG(result.is_ok(), "Failed to force sync inode: %u", result.status_value());
+    return ZX_OK;
+  });
 }
 
 }  // namespace minfs

@@ -7,26 +7,33 @@ import("//build/test.gni")
 
 static_library("inspect") {
   public = [
-    "inspect_data.h",
-    "inspect_tree.h",
     "node_operations.h",
     "operation_tracker.h",
   ]
-  sources = [
-    "inspect_data.cc",
-    "inspect_tree.cc",
-    "operation_tracker.cc",
-  ]
+  sources = [ "operation_tracker/operation_tracker_shared.cc" ]
   public_deps = [
-    "//src/lib/storage/block_client/cpp",
-    "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxc",
   ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
 
-  deps = [
-    "//sdk/lib/fit",
-    "//sdk/lib/syslog/cpp",
-  ]
+  if (is_fuchsia) {
+    public += [
+      "inspect_data.h",
+      "inspect_tree.h",
+    ]
+    sources += [
+      "inspect_data.cc",
+      "inspect_tree.cc",
+      "operation_tracker/operation_tracker_fuchsia.cc",
+    ]
+    public_deps += [
+      "//src/lib/storage/block_client/cpp",
+      "//zircon/system/ulib/inspect",
+    ]
+
+    deps += [ "//sdk/lib/fit" ]
+  }
 
   # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
   # Consider switching to the C++ bindings. See linked bug for details.
@@ -38,7 +45,7 @@ test("inspect_unittests") {
   sources = [
     "inspect_data_tests.cc",
     "inspect_tree_tests.cc",
-    "operation_tracker_tests.cc",
+    "operation_tracker/operation_tracker_fuchsia_tests.cc",
   ]
 
   deps = [

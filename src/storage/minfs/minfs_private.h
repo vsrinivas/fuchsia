@@ -41,6 +41,7 @@
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
 
+#include "src/lib/storage/vfs/cpp/inspect/node_operations.h"
 #include "src/lib/storage/vfs/cpp/journal/inspector_journal.h"
 #include "src/lib/storage/vfs/cpp/ticker.h"
 #include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
@@ -352,9 +353,6 @@ class Minfs :
     return ZX_ERR_UNAVAILABLE;
   }
 
-  // Get reference to the Inspector that Minfs is using.
-  const inspect::Inspector& Inspector() { return inspect_tree_.Inspector(); }
-
   // Record the location, size, and number of all non-free block regions.
   fbl::Vector<BlockRegion> GetAllocatedRegions() const;
 
@@ -362,6 +360,16 @@ class Minfs :
   // "state" is intentionally losely defined to allow
   // adding more information in the near future.
   MountState GetMountState() const { return mount_state_; }
+
+  // Get reference to the Inspector that Minfs is using.
+  const inspect::Inspector& Inspector() { return inspect_tree_.Inspector(); }
+
+  fs_inspect::NodeOperations* GetNodeOperations() { return inspect_tree_.GetNodeOperations(); }
+#else
+  static fs_inspect::NodeOperations* GetNodeOperations() {
+    static fs_inspect::NodeOperations stub;
+    return &stub;
+  }
 #endif
 
   // Returns an immutable reference to the superblock.
@@ -500,7 +508,6 @@ class Minfs :
 
   MinfsInspectTree inspect_tree_;
   void InitializeInspectTree();
-
 #else
   // Store start block + length for all extents. These may differ from info block for
   // sparse files.
