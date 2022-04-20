@@ -79,7 +79,7 @@ func NewFileTree(root string, parent *FileTree) (*FileTree, error) {
 		}
 
 		// Directories
-		if item.IsDir() {
+		if item.IsDir() && !Config.shouldSkip(path) {
 			plus1(NumFolders)
 			child, err := NewFileTree(path, &ft)
 			if err != nil {

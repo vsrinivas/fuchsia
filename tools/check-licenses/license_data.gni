@@ -6,11 +6,15 @@
 #
 # Parameters
 #
-#   fuchsia_dir (optional)
-#     [string] Path to the fuchsia root directory. Defaults to "//".
+#   target (optional)
+#     [string] Strategy for generating the notice file:
+#       Provide a filepath to collect all licenses therein.
+#       Provide a GN label to collect all licenses for dependencies of that target.
+#       Provide nothing to collect all licenses for the current fuchsia repo args (e.g. deps of core.x64).
+#     Defaults to the current fuchsia repo args (e.g. deps of core.x64).
 #
 #   out_dir (optional)
-#     [string] Directory where generated NOTICE files will be placed. Defaults
+#     [string] Directory where generated NOTICE files will be placed.
 #     to target_out_dir.
 #
 #   testonly, visibility
@@ -19,6 +23,9 @@ template("license_data") {
   # that use this template.
   not_needed(invoker, [ "configs" ])
 
+  # If the target specified an out directory, generate a NOTICE file.
+  generate_notice = defined(invoker.out_dir)
+
   out_dir = "$target_out_dir/check-licenses"
   if (defined(invoker.out_dir)) {
     out_dir = invoker.out_dir
@@ -26,17 +33,22 @@ template("license_data") {
   temp_out_dir = "$out_dir/temp"
 
   check_licenses_target = "${target_name}_check-licenses"
-  copy_txt_notices_target = "${target_name}_txt_copy"
-  copy_html_notices_target = "${target_name}_html_copy"
 
-  txt_notices_output = "license_texts_grouped_by_license_pattern_deduped.txt.gz"
-  html_notices_output =
-      "license_texts_grouped_by_license_pattern_deduped.html.gz"
+  if (generate_notice) {
+    copy_txt_notices_target = "${target_name}_txt_copy"
+    copy_txt_compressed_notices_target = "${target_name}_txt_compressed_copy"
+    copy_html_compressed_notices_target = "${target_name}_html_compressed_copy"
+
+    txt_notices_output = "license_texts_grouped_by_license_pattern_deduped.txt"
+    txt_compressed_notices_output =
+        "license_texts_grouped_by_license_pattern_deduped.txt.gz"
+    html_compressed_notices_output =
+        "license_texts_grouped_by_license_pattern_deduped.html.gz"
+  }
 
   action(check_licenses_target) {
     forward_variables_from(invoker,
                            [
-                             "fuchsia_dir",
                              "testonly",
                              "visibility",
                            ])
@@ -55,12 +67,19 @@ template("license_data") {
 
     sources = [ "//tools/check-licenses/_config.json" ]
 
+    depfile = "$target_gen_dir/check-licenses.d"
+
     out_dir = temp_out_dir
 
-    outputs = [
-      "$temp_out_dir/out/$txt_notices_output",
-      "$temp_out_dir/out/$html_notices_output",
-    ]
+    outputs = [ "$temp_out_dir/summary" ]
+
+    if (generate_notice) {
+      outputs += [
+        "$temp_out_dir/out/$txt_notices_output",
+        "$temp_out_dir/out/$txt_compressed_notices_output",
+        "$temp_out_dir/out/$html_compressed_notices_output",
+      ]
+    }
 
     args = [
       ### Args for license_data.sh
@@ -82,46 +101,70 @@ template("license_data") {
       rebase_path("//prebuilt/third_party/gn/${host_os}-${host_cpu}/gn", "//"),
       "--build_dir",
       rebase_path(root_out_dir, root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
     ]
+
+    if (generate_notice) {
+      args += [ "--output_license_file=true" ]
+    }
+
+    if (defined(invoker.target)) {
+      args += [ invoker.target ]
+    }
   }
 
-  copy(copy_txt_notices_target) {
-    forward_variables_from(invoker,
-                           [
-                             "fuchsia_dir",
-                             "testonly",
-                             "visibility",
-                           ])
+  if (generate_notice) {
+    copy(copy_txt_notices_target) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
 
-    sources = [ "$temp_out_dir/out/$txt_notices_output" ]
-    outputs = [ "$out_dir/NOTICE.txt.gz" ]
-    deps = [ ":$check_licenses_target" ]
-  }
-  copy(copy_html_notices_target) {
-    forward_variables_from(invoker,
-                           [
-                             "fuchsia_dir",
-                             "testonly",
-                             "visibility",
-                           ])
+      sources = [ "$temp_out_dir/out/$txt_notices_output" ]
+      outputs = [ "$out_dir/NOTICE.txt" ]
+      deps = [ ":$check_licenses_target" ]
+    }
+    copy(copy_txt_compressed_notices_target) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
 
-    sources = [ "$temp_out_dir/out/$html_notices_output" ]
-    outputs = [ "$out_dir/NOTICE.html.gz" ]
-    deps = [ ":$check_licenses_target" ]
+      sources = [ "$temp_out_dir/out/$txt_compressed_notices_output" ]
+      outputs = [ "$out_dir/NOTICE.txt.gz" ]
+      deps = [ ":$check_licenses_target" ]
+    }
+    copy(copy_html_compressed_notices_target) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+
+      sources = [ "$temp_out_dir/out/$html_compressed_notices_output" ]
+      outputs = [ "$out_dir/NOTICE.html.gz" ]
+      deps = [ ":$check_licenses_target" ]
+    }
   }
 
   group(target_name) {
     forward_variables_from(invoker,
                            [
-                             "fuchsia_dir",
                              "testonly",
                              "visibility",
                            ])
 
-    deps = [
-      ":$check_licenses_target",
-      ":$copy_html_notices_target",
-      ":$copy_txt_notices_target",
-    ]
+    deps = [ ":$check_licenses_target" ]
+
+    if (generate_notice) {
+      deps += [
+        ":$copy_html_compressed_notices_target",
+        ":$copy_txt_compressed_notices_target",
+        ":$copy_txt_notices_target",
+      ]
+    }
   }
 }

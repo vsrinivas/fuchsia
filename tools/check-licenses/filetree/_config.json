@@ -92,7 +92,8 @@
             },
             {
                 "paths": [
-                    "out"
+                    "out",
+                    "{BUILD_DIR}"
                 ],
                 "notes": [
                     "Don't check the fuchsia build out directory for licenses."

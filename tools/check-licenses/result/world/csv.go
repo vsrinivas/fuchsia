@@ -25,6 +25,7 @@ type CSVData struct {
 type CSVEntry struct {
 	Project string
 	Path    string
+	URL     string
 	Package string
 	Left    string
 	Right   string

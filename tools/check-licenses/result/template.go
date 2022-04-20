@@ -54,6 +54,12 @@ func expandTemplates() (string, error) {
 					return "", err
 				}
 			}
+
+			// Don't expose build paths in the output.
+			absBuildDir := filepath.Join(Config.FuchsiaDir, Config.BuildDir)
+			if strings.Contains(name, absBuildDir) {
+				name, _ = filepath.Rel(absBuildDir, name)
+			}
 			b.WriteString(fmt.Sprintf(" ⦿ Executed template -> %v", name))
 			if Config.Zip {
 				b.WriteString(" (+ *.gz)")

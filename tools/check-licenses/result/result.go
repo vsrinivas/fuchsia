@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -30,7 +31,13 @@ const (
 func SaveResults() (string, error) {
 	var b strings.Builder
 
-	s, err := savePackageInfo("license", license.Config, license.Metrics)
+	s, err := saveDepFile()
+	if err != nil {
+		return "", err
+	}
+	b.WriteString(s)
+
+	s, err = savePackageInfo("license", license.Config, license.Metrics)
 	if err != nil {
 		return "", err
 	}
@@ -86,6 +93,7 @@ func SaveResults() (string, error) {
 			return "", err
 		} else {
 			// TODO: Log err to a file
+			log.Println(err)
 		}
 	}
 
@@ -110,6 +118,55 @@ func SaveResults() (string, error) {
 		b.WriteString("Set the 'outputdir' arg in the config file to save detailed information to disk.\n")
 	}
 	return b.String(), nil
+}
+
+func saveDepFile() (string, error) {
+	var err error
+	if Config.DepFile == "" {
+		return "", nil
+	}
+
+	allFiles := make([]string, 0)
+	absBuildDir, err := filepath.Abs(Config.BuildDir)
+	if err != nil {
+		return "", err
+	}
+	for _, f := range file.AllSearchableFiles {
+		path := f.Path
+		if !strings.Contains(path, Config.FuchsiaDir) {
+			path = filepath.Join(Config.FuchsiaDir, path)
+		}
+		path, err = filepath.Rel(absBuildDir, path)
+		if err != nil {
+			return "", err
+		}
+		allFiles = append(allFiles, path)
+	}
+	sort.Strings(allFiles)
+
+	summaryFile := filepath.Join(Config.OutDir, "out", "license_texts_grouped_by_license_pattern_deduped.txt")
+	if strings.Contains(summaryFile, Config.FuchsiaDir) {
+		summaryFile, err = filepath.Rel(absBuildDir, summaryFile)
+		if err != nil {
+			return "", err
+		}
+	}
+	var b strings.Builder
+	b.WriteString(summaryFile)
+	b.WriteString(": ")
+	if len(allFiles) > 0 {
+		b.WriteString(allFiles[0])
+		for _, f := range allFiles[1:] {
+			b.WriteString(" ")
+			b.WriteString(f)
+		}
+	}
+
+	depFile := filepath.Join(Config.CWD, Config.DepFile)
+	if err := os.MkdirAll(filepath.Dir(depFile), 0755); err != nil {
+		return "", err
+	}
+	return "", os.WriteFile(depFile, []byte(b.String()), 0666)
 }
 
 // This retrieves all the relevant metrics information for a given package.

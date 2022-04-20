@@ -36,10 +36,13 @@ func NewConfig() *FileTreeConfig {
 }
 
 func (c *FileTreeConfig) shouldSkip(item string) bool {
+	rel, _ := filepath.Rel(Config.FuchsiaDir, item)
 	base := filepath.Base(item)
 	for _, skip := range c.Skips {
 		for _, path := range skip.Paths {
 			if item == path {
+				return true
+			} else if rel == path {
 				return true
 			} else if skip.SkipAnywhere && base == path {
 				return true

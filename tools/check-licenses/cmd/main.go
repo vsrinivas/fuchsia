@@ -26,15 +26,15 @@ var (
 	// However, there are targets in other repos that rely on this argument, so leave it here
 	// until v2 has been enabled.
 	// TODO: replace "defaultConfigFile" with configFile after v2 has been enabled.
-	configFile = flag.String("config_file", "{FUCHSIA_DIR}/tools/check-licenses/_config.json", "Deprecated, but kept around for backwards compatibility.")
+	configFile = flag.String("config_file", "", "Deprecated, but kept around for backwards compatibility.")
 
 	defaultConfigFile = flag.String("default_config_file", "{FUCHSIA_DIR}/tools/check-licenses/_config.json", "Default config file.")
 
 	diffTarget = flag.String("diff_target", "", "Notice file to diff the current licenses against")
 
-	fuchsiaDir = flag.String("fuchsia_dir", os.Getenv("FUCHSIA_DIR"), "Location of the fuchsia root directory (//).")
-	buildDir   = flag.String("build_dir", os.Getenv("FUCHSIA_BUILD_DIR"), "Location of GN build directory.")
-	outDir     = flag.String("out_dir", "/tmp/check-licenses", "Directory to write outputs to.")
+	fuchsiaDir = flag.String("fuchsia_dir", "", "Location of the fuchsia root directory (//).")
+	buildDir   = flag.String("build_dir", "", "Location of GN build directory.")
+	outDir     = flag.String("out_dir", "", "Directory to write outputs to.")
 
 	gnPath = flag.String("gn_path", "{FUCHSIA_DIR}/prebuilt/third_party/gn/linux-x64/gn", "Path to GN executable. Required when target is specified.")
 
@@ -43,6 +43,12 @@ var (
 	tracefile = flag.String("trace", "", "generate file that can be parsed by go tool trace")
 
 	outputLicenseFile = flag.Bool("output_license_file", true, "Flag for enabling template expansions.")
+
+	depFile = flag.String("depfile", "", "Path to save the depfile.")
+)
+
+const (
+	defaultOutDir = "/tmp/check-licenses"
 )
 
 func mainImpl() error {
@@ -50,17 +56,27 @@ func mainImpl() error {
 
 	flag.Parse()
 
-	// fuchsiaDir
-	fuchsiaDirUpdate := ""
-	if *fuchsiaDir == "" {
-		// TODO: Update CQ to provide the fuchsia home directory.
-		//return fmt.Errorf("--fuchsia_dir cannot be empty.")
-		*fuchsiaDir = "."
-	}
-	if fuchsiaDirUpdate, err = filepath.Abs(*fuchsiaDir); err != nil {
+	// Current working directory
+	cwd, err := os.Getwd()
+	if err != nil {
 		return err
 	}
-	checklicenses.ConfigVars["{FUCHSIA_DIR}"] = fuchsiaDirUpdate
+	checklicenses.ConfigVars["{CWD}"] = cwd
+
+	// fuchsiaDir
+	if *fuchsiaDir == "" {
+		*fuchsiaDir = os.Getenv("FUCHSIA_DIR")
+		if *fuchsiaDir == "" {
+			*fuchsiaDir = "."
+		}
+	}
+	if *fuchsiaDir == "." {
+		*fuchsiaDir = cwd
+	}
+	if *fuchsiaDir, err = filepath.Abs(*fuchsiaDir); err != nil {
+		return err
+	}
+	checklicenses.ConfigVars["{FUCHSIA_DIR}"] = *fuchsiaDir
 
 	// target
 	target := ""
@@ -88,40 +104,52 @@ func mainImpl() error {
 	checklicenses.ConfigVars["{DIFF_TARGET}"] = diffTargetUpdate
 
 	// buildDir
-	buildDirUpdate := ""
 	if *buildDir == "" && *outputLicenseFile {
-		return fmt.Errorf("--build_dir cannot be empty.")
-	}
-	if buildDirUpdate, err = filepath.Abs(*buildDir); err != nil {
-		return err
-	}
-	checklicenses.ConfigVars["{BUILD_DIR}"] = buildDirUpdate
-
-	// outDir
-	outDirUpdate := ""
-	if *outDir != "" {
-		if outDirUpdate, err = filepath.Abs(*outDir); err != nil {
-			return err
+		*buildDir = os.Getenv("FUCHSIA_BUILD_DIR")
+		if *buildDir == "" {
+			return fmt.Errorf("--build_dir cannot be empty.")
 		}
 	}
-	checklicenses.ConfigVars["{OUT_DIR}"] = outDirUpdate
+	if *buildDir == "." {
+		*buildDir = cwd
+	}
+	if *buildDir, err = filepath.Abs(*buildDir); err != nil {
+		return err
+	}
+	if *buildDir, err = filepath.Rel(*fuchsiaDir, *buildDir); err != nil {
+		return err
+	}
+	checklicenses.ConfigVars["{BUILD_DIR}"] = *buildDir
+
+	if *outDir != "" {
+		if *outDir, err = filepath.Abs(*outDir); err != nil {
+			return err
+		}
+	} else {
+		*outDir = defaultOutDir
+		*outputLicenseFile = false
+	}
+	checklicenses.ConfigVars["{OUT_DIR}"] = *outDir
 
 	// gnPath
 	gnPathUpdate := *gnPath
 	if *gnPath == "" {
 		return fmt.Errorf("--gn_path cannot be empty.")
 	}
-	gnPathUpdate = strings.ReplaceAll(gnPathUpdate, "{FUCHSIA_DIR}", fuchsiaDirUpdate)
+	gnPathUpdate = strings.ReplaceAll(gnPathUpdate, "{FUCHSIA_DIR}", *fuchsiaDir)
 	checklicenses.ConfigVars["{GN_PATH}"] = gnPathUpdate
 
+	// depfile
+	checklicenses.ConfigVars["{DEPFILE}"] = *depFile
+
 	// logLevel
-	w, err := getLogWriters(*logLevel, outDirUpdate)
+	w, err := getLogWriters(*logLevel, *outDir)
 	if err != nil {
 		return err
 	}
 	log.SetOutput(w)
 
-	configFileUpdate := strings.ReplaceAll(*defaultConfigFile, "{FUCHSIA_DIR}", fuchsiaDirUpdate)
+	configFileUpdate := strings.ReplaceAll(*defaultConfigFile, "{FUCHSIA_DIR}", *fuchsiaDir)
 	config, err := checklicenses.NewCheckLicensesConfig(configFileUpdate)
 	if err != nil {
 		return err
