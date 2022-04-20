@@ -10,6 +10,7 @@ use run_test_suite_lib::{output, Outcome, RunTestSuiteError, TestParams};
 use std::convert::TryInto;
 use std::str::from_utf8;
 use std::sync::Arc;
+use test_list::TestTag;
 use test_output_directory::{
     self as directory,
     testing::{ExpectedDirectory, ExpectedSuite, ExpectedTestCase, ExpectedTestRun},
@@ -57,12 +58,13 @@ fn sanitize_log_for_comparison(log: impl AsRef<str>) -> String {
 fn new_test_params(test_url: &str) -> TestParams {
     TestParams {
         test_url: test_url.to_string(),
-        timeout: None,
+        timeout_seconds: None,
         test_filters: None,
         also_run_disabled_tests: false,
-        test_args: vec![],
         parallel: None,
+        test_args: vec![],
         max_severity_logs: None,
+        tags: vec![TestTag { key: "internal".to_string(), value: "true".to_string() }],
     }
 }
 
@@ -1027,7 +1029,7 @@ async fn test_timeout(reporter: TestMuxMuxReporter, output: TestOutputView, _: t
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
     );
-    test_params.timeout = std::num::NonZeroU32::new(1);
+    test_params.timeout_seconds = std::num::NonZeroU32::new(1);
     let outcome =
         run_test_once(reporter, test_params, None).await.expect("Running test should not fail");
     let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm'
@@ -1054,7 +1056,7 @@ async fn test_timeout_multiple_times(
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
     );
-    test_params.timeout = std::num::NonZeroU32::new(1);
+    test_params.timeout_seconds = std::num::NonZeroU32::new(1);
     let outcome = run_test_suite_lib::run_tests_and_get_outcome(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
             .expect("connecting to RunBuilderProxy"),
@@ -1129,7 +1131,7 @@ async fn test_continue_on_timeout(
     let mut long_test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
     );
-    long_test_params.timeout = std::num::NonZeroU32::new(1);
+    long_test_params.timeout_seconds = std::num::NonZeroU32::new(1);
 
     let short_test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
@@ -1274,7 +1276,7 @@ async fn test_passes_with_large_timeout(
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/echo_test_realm.cm",
     );
-    test_params.timeout = std::num::NonZeroU32::new(600);
+    test_params.timeout_seconds = std::num::NonZeroU32::new(600);
     let outcome =
         run_test_once(reporter, test_params, None).await.expect("Running test should not fail");
 
@@ -1300,7 +1302,7 @@ async fn test_logging_component(
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm",
     );
-    test_params.timeout = std::num::NonZeroU32::new(600);
+    test_params.timeout_seconds = std::num::NonZeroU32::new(600);
     let outcome =
         run_test_once(reporter, test_params, None).await.expect("Running test should not fail");
 
@@ -1356,7 +1358,7 @@ async fn test_logging_component_min_severity(
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm",
     );
-    test_params.timeout = std::num::NonZeroU32::new(600);
+    test_params.timeout_seconds = std::num::NonZeroU32::new(600);
     let outcome = run_test_once(reporter, test_params, Some(Severity::Info))
         .await
         .expect("Running test should not fail");
@@ -1384,7 +1386,7 @@ async fn test_stdout_and_log_ansi(
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
     );
-    test_params.timeout = std::num::NonZeroU32::new(600);
+    test_params.timeout_seconds = std::num::NonZeroU32::new(600);
     let outcome = run_test_once(reporter, test_params, Some(Severity::Info))
         .await
         .expect("Running test should not fail");
@@ -1415,7 +1417,7 @@ async fn test_stdout_and_log_filter_ansi(
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
     );
-    test_params.timeout = std::num::NonZeroU32::new(600);
+    test_params.timeout_seconds = std::num::NonZeroU32::new(600);
 
     let outcome = run_test_suite_lib::run_tests_and_get_outcome(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
@@ -1462,7 +1464,7 @@ async fn test_max_severity(max_severity: Severity) {
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm",
     );
-    test_params.timeout = std::num::NonZeroU32::new(600);
+    test_params.timeout_seconds = std::num::NonZeroU32::new(600);
     test_params.max_severity_logs = Some(max_severity);
     let (reporter, output) = create_shell_reporter();
     let outcome =
@@ -1545,7 +1547,7 @@ async fn test_stdout_to_directory(
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
     );
-    test_params.timeout = std::num::NonZeroU32::new(600);
+    test_params.timeout_seconds = std::num::NonZeroU32::new(600);
 
     let outcome = run_test_suite_lib::run_tests_and_get_outcome(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
@@ -1613,7 +1615,7 @@ async fn test_syslog_to_directory(
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm",
     );
-    test_params.timeout = std::num::NonZeroU32::new(600);
+    test_params.timeout_seconds = std::num::NonZeroU32::new(600);
     test_params.max_severity_logs = Some(Severity::Warn);
 
     let outcome = run_test_suite_lib::run_tests_and_get_outcome(

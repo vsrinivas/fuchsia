@@ -4,7 +4,7 @@
 
 use crate::{
     ArtifactMetadataV0, Outcome, SuiteEntryV0, SuiteResult, TestCaseResultV0, TestRunResult,
-    RUN_SUMMARY_NAME,
+    TestTag, RUN_SUMMARY_NAME,
 };
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
@@ -193,6 +193,7 @@ pub fn assert_suite_result(
         cases,
         duration_milliseconds,
         start_time,
+        tags,
     } = &actual_suite;
     assert_eq!(outcome, &expected_suite.outcome, "Outcome for {}", context);
     assert_eq!(name, &expected_suite.name, "Name for {}", context);
@@ -206,6 +207,14 @@ pub fn assert_suite_result(
         *start_time,
         format!("Start time for {}", context)
     );
+
+    let mut tags: Vec<TestTag> = tags.clone();
+    tags.sort();
+
+    let mut expected_tags = expected_suite.tags.clone();
+    expected_tags.sort();
+
+    assert_eq!(tags, expected_tags);
 
     assert_artifacts(root, &artifact_dir, &artifacts, &expected_suite.artifacts, context);
 
@@ -428,6 +437,7 @@ pub struct ExpectedSuite {
     cases: HashMap<String, ExpectedTestCase>,
     start_time: MatchOption<u64>,
     duration_milliseconds: MatchOption<u64>,
+    tags: Vec<TestTag>,
 }
 
 /// A version of a test case result that contains all output in memory. This should only be used
@@ -574,12 +584,19 @@ impl ExpectedSuite {
             cases: HashMap::new(),
             start_time: MatchOption::AnyOrNone,
             duration_milliseconds: MatchOption::AnyOrNone,
+            tags: vec![],
         }
     }
 
     /// Add a test case to the suite.
     pub fn with_case(mut self, case: ExpectedTestCase) -> Self {
         self.cases.insert(case.name.clone(), case);
+        self
+    }
+
+    /// Add a tag to the suite.
+    pub fn with_tag(mut self, tag: TestTag) -> Self {
+        self.tags.push(tag);
         self
     }
 
@@ -792,6 +809,7 @@ mod test {
                     cases: vec![],
                     start_time: Some(64),
                     duration_milliseconds: Some(128),
+                    tags: vec![],
                 },
                 ExpectedSuite::new("suite", Outcome::Passed)
                     .with_any_start_time()
@@ -807,6 +825,7 @@ mod test {
                     cases: vec![],
                     start_time: Some(64),
                     duration_milliseconds: Some(128),
+                    tags: vec![],
                 },
                 ExpectedSuite::new("suite", Outcome::Passed)
                     .with_start_time(64)
@@ -822,6 +841,7 @@ mod test {
                     cases: vec![],
                     start_time: None,
                     duration_milliseconds: None,
+                    tags: vec![],
                 },
                 ExpectedSuite::new("suite", Outcome::Passed)
                     .with_no_start_time()
@@ -842,6 +862,7 @@ mod test {
                     cases: vec![],
                     start_time: None,
                     duration_milliseconds: None,
+                    tags: vec![],
                 },
                 ExpectedSuite::new("suite", Outcome::Passed).with_artifact(
                     ArtifactType::Syslog,
@@ -866,12 +887,35 @@ mod test {
                     }],
                     start_time: None,
                     duration_milliseconds: None,
+                    tags: vec![],
                 },
                 ExpectedSuite::new("suite", Outcome::Failed).with_case(
                     ExpectedTestCase::new("case", Outcome::Passed)
                         .with_no_run_duration()
                         .with_no_start_time(),
                 ),
+            ),
+            // Test tags.
+            (
+                make_tempdir(|_| ()),
+                SuiteResult::V0 {
+                    artifacts: hashmap! {},
+                    artifact_dir: Path::new("a").to_path_buf(),
+                    outcome: Outcome::Passed,
+                    name: "suite".into(),
+                    cases: vec![],
+                    start_time: Some(64),
+                    duration_milliseconds: Some(128),
+                    tags: vec![
+                        TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
+                        TestTag { key: "cpu".to_string(), value: "arm64".to_string() },
+                    ],
+                },
+                ExpectedSuite::new("suite", Outcome::Passed)
+                    .with_any_start_time()
+                    .with_any_run_duration()
+                    .with_tag(TestTag { key: "cpu".to_string(), value: "arm64".to_string() })
+                    .with_tag(TestTag { key: "os".to_string(), value: "fuchsia".to_string() }),
             ),
         ];
 
@@ -894,6 +938,7 @@ mod test {
                 cases: vec![],
                 start_time: Some(64),
                 duration_milliseconds: Some(128),
+                tags: vec![],
             },
             &ExpectedSuite::new("suite", Outcome::Failed),
         );
@@ -913,6 +958,7 @@ mod test {
                 cases: vec![],
                 start_time: None,
                 duration_milliseconds: Some(128),
+                tags: vec![],
             },
             &ExpectedSuite::new("suite", Outcome::Passed).with_any_start_time(),
         );
@@ -932,6 +978,7 @@ mod test {
                 cases: vec![],
                 start_time: None,
                 duration_milliseconds: Some(128),
+                tags: vec![],
             },
             &ExpectedSuite::new("suite", Outcome::Passed).with_run_duration(32),
         );
@@ -951,6 +998,7 @@ mod test {
                 cases: vec![],
                 start_time: None,
                 duration_milliseconds: None,
+                tags: vec![],
             },
             &ExpectedSuite::new("suite", Outcome::Passed).with_artifact(
                 ArtifactType::Stderr,
@@ -981,6 +1029,7 @@ mod test {
                 }],
                 start_time: None,
                 duration_milliseconds: None,
+                tags: vec![],
             },
             &ExpectedSuite::new("suite", Outcome::Failed)
                 .with_case(ExpectedTestCase::new("wrong name", Outcome::Passed)),

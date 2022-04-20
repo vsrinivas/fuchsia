@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil/constants"
 	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
@@ -203,7 +204,7 @@ func (f *FFXInstance) TargetWait(ctx context.Context) error {
 // Test runs a test suite.
 func (f *FFXInstance) Test(
 	ctx context.Context,
-	tests []TestDef,
+	testList build.TestList,
 	outDir string,
 	args ...string,
 ) (*TestRunResult, error) {
@@ -211,8 +212,8 @@ func (f *FFXInstance) Test(
 	if err := os.MkdirAll(outDir, os.ModePerm); err != nil {
 		return nil, err
 	}
-	testFile := filepath.Join(outDir, "test-file.json")
-	if err := jsonutil.WriteToFile(testFile, tests); err != nil {
+	testFile := filepath.Join(outDir, "test-list.json")
+	if err := jsonutil.WriteToFile(testFile, testList); err != nil {
 		return nil, err
 	}
 	// Create a new subdirectory within outDir to pass to --output-directory which is expected to be

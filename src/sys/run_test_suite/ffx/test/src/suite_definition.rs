@@ -2,49 +2,142 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {run_test_suite_lib::TestParams, serde::Deserialize, serde_json::Error, std::io::Read};
+use {
+    anyhow::{format_err, Result},
+    run_test_suite_lib::TestParams,
+    std::io::Read,
+    test_list::{ExecutionEntry, FuchsiaComponentExecutionEntry, TestList, TestListEntry},
+};
 
-/// Read Test Parameters specified as json from a reader.
-pub fn test_params_from_reader<R: Read>(reader: R) -> Result<Vec<TestParams>, Error> {
-    let test_params: Vec<SuiteDefinition> = serde_json::from_reader(reader)?;
-    Ok(test_params.into_iter().map(Into::into).collect())
+#[derive(Default)]
+pub struct TestParamsOptions {
+    // If set, filter out all tests that cannot be executed by this binary.
+    // If not set, such tests result in an error.
+    pub ignore_test_without_known_execution: bool,
 }
 
-/// Definition of serializable options specified per test suite.
-/// Note that this struct defines the json interface for the ffx test command and is
-/// therefore part of its API.
-#[derive(Deserialize)]
-struct SuiteDefinition {
-    test_url: String,
-    #[serde(default = "Vec::new")]
-    test_args: Vec<String>,
-    timeout: Option<std::num::NonZeroU32>,
-    test_filters: Option<Vec<String>>,
-    #[serde(default)]
-    also_run_disabled_tests: bool,
-    parallel: Option<u16>,
-    max_severity_logs: Option<diagnostics_data::Severity>,
+pub fn test_params_from_reader<R: Read>(
+    reader: R,
+    options: TestParamsOptions,
+) -> Result<Vec<TestParams>> {
+    let test_list: TestList = serde_json::from_reader(reader).map_err(anyhow::Error::from)?;
+    if options.ignore_test_without_known_execution {
+        Ok(test_list
+            .tests
+            .into_iter()
+            .filter_map(|entry| maybe_convert_test_list_entry_to_test_params(entry).ok())
+            .collect())
+    } else {
+        test_list
+            .tests
+            .into_iter()
+            .map(maybe_convert_test_list_entry_to_test_params)
+            .collect::<Result<Vec<TestParams>, anyhow::Error>>()
+    }
 }
 
-impl From<SuiteDefinition> for TestParams {
-    fn from(other: SuiteDefinition) -> Self {
-        let SuiteDefinition {
-            test_url,
-            timeout,
-            test_args,
-            test_filters,
-            also_run_disabled_tests,
-            parallel,
-            max_severity_logs,
-        } = other;
-        TestParams {
-            test_url,
-            test_args,
-            timeout,
-            test_filters,
-            also_run_disabled_tests,
-            parallel,
-            max_severity_logs,
+fn maybe_convert_test_list_entry_to_test_params(entry: TestListEntry) -> Result<TestParams> {
+    let TestListEntry { tags, execution, .. } = entry;
+
+    match execution {
+        Some(ExecutionEntry::FuchsiaComponent(component_execution)) => {
+            let FuchsiaComponentExecutionEntry {
+                component_url,
+                test_args,
+                timeout_seconds,
+                test_filters,
+                also_run_disabled_tests,
+                parallel,
+                max_severity_logs,
+            } = component_execution;
+
+            Ok(TestParams {
+                test_url: component_url,
+                test_args,
+                timeout_seconds,
+                test_filters,
+                also_run_disabled_tests,
+                parallel,
+                max_severity_logs,
+                tags,
+            })
         }
+        _ => Err(format_err!(
+            "Cannot execute {name}, only \"fuchsia_component\" test execution is supported."
+        )),
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    const VALID_JSON: &'static str = r#"
+    {
+        "tests": [
+            {
+                "name": "test",
+                "labels": [],
+                "tags": [],
+                "execution": {
+                    "type": "fuchsia_component",
+                    "component_url": "fuchsia.com"
+                }
+            }
+        ]
+    }
+    "#;
+
+    const CONTAINS_VALID_AND_INVALID: &'static str = r#"
+    {
+        "tests": [
+            {
+                "name": "test",
+                "labels": [],
+                "tags": [],
+                "execution": {
+                    "type": "fuchsia_component",
+                    "component_url": "fuchsia.com"
+                }
+            },
+            {
+                "name": "test3",
+                "labels": [],
+                "tags": []
+            }
+        ]
+    }
+    "#;
+
+    #[test]
+    fn test_params_from_reader_valid() {
+        let reader = VALID_JSON.as_bytes();
+        let test_params = test_params_from_reader(
+            reader,
+            TestParamsOptions { ignore_test_without_known_execution: false },
+        )
+        .expect("read file");
+        assert_eq!(1, test_params.len());
+    }
+
+    #[test]
+    fn test_params_from_reader_invalid() {
+        let reader = CONTAINS_VALID_AND_INVALID.as_bytes();
+        let test_params = test_params_from_reader(
+            reader,
+            TestParamsOptions { ignore_test_without_known_execution: false },
+        );
+        assert!(test_params.is_err());
+    }
+
+    #[test]
+    fn test_params_from_reader_invalid_skipped() {
+        let reader = CONTAINS_VALID_AND_INVALID.as_bytes();
+        let test_params = test_params_from_reader(
+            reader,
+            TestParamsOptions { ignore_test_without_known_execution: true },
+        )
+        .expect("should have ignored errors");
+        assert_eq!(1, test_params.len());
     }
 }

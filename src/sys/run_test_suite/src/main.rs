@@ -144,12 +144,13 @@ async fn main() {
         vec![
             run_test_suite_lib::TestParams {
                 test_url,
-                timeout: timeout.and_then(std::num::NonZeroU32::new),
+                timeout_seconds: timeout.and_then(std::num::NonZeroU32::new),
                 test_filters,
                 also_run_disabled_tests,
                 parallel,
                 test_args,
-                max_severity_logs
+                max_severity_logs,
+                tags: vec![],
             };
             count as usize
         ],

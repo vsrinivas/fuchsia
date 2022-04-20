@@ -75,6 +75,18 @@
                 "SKIPPED"
             ],
             "type": "string"
+        },
+        "testTag": {
+            "description": "A key/value pair for tagging",
+            "additionalProperties": false,
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
         }
     },
     "$id": "https://fuchsia.dev/schema/src/sys/run_test_suite/directory/schema/suite_summary.schema.json",
@@ -110,6 +122,13 @@
         "start_time": {
             "description": "Start time as milliseconds since the UNIX epoch",
             "type": "integer"
+        },
+        "tags": {
+            "description": "Tags associated with this suite",
+            "items": {
+                "$ref": "#/$defs/testTag"
+            },
+            "type": "array"
         },
         "version": {
             "description": "Schema version",

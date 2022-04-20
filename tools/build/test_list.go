@@ -24,10 +24,21 @@ type TestListEntry struct {
 	Name string `json:"name,omitempty"`
 
 	// Arbitrary labels for this test case.
-	Labels []string `json:"labels,omitempty"`
+	Labels []string `json:"labels"`
 
 	// Arbitrary tags for this test case.
 	Tags []TestTag `json:"tags,omitempty"`
+
+	// Description of how to execute this test.
+	Execution ExecutionDef `json:"execution,omitempty"`
+}
+
+type ExecutionDef struct {
+	Type            string `json:"type"`
+	ComponentURL    string `json:"component_url"`
+	TimeoutSeconds  int    `json:"timeout_seconds,omitempty"`
+	Parallel        uint16 `json:"parallel,omitempty"`
+	MaxSeverityLogs string `json:"max_severity_logs,omitempty"`
 }
 
 // TestTag represents arbitrary test metadata.

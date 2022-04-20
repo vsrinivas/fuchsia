@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use suite_definition::TestParamsOptions;
+
 mod output_directory;
 mod suite_definition;
 
@@ -224,13 +226,19 @@ where
                 return Err(ffx_error!("Tests may not be specified in both args and by file"));
             }
             if filename == "-" {
-                suite_definition::test_params_from_reader(stdin_handle_fn())
-                    .map_err(|e| ffx_error!("Failed to read test definitions: {:?}", e))
+                suite_definition::test_params_from_reader(
+                    stdin_handle_fn(),
+                    TestParamsOptions { ignore_test_without_known_execution: false },
+                )
+                .map_err(|e| ffx_error!("Failed to read test definitions: {:?}", e))
             } else {
                 let file = std::fs::File::open(filename)
                     .map_err(|e| ffx_error!("Failed to open file {}: {:?}", filename, e))?;
-                suite_definition::test_params_from_reader(file)
-                    .map_err(|e| ffx_error!("Failed to read test definitions: {:?}", e))
+                suite_definition::test_params_from_reader(
+                    file,
+                    TestParamsOptions { ignore_test_without_known_execution: false },
+                )
+                .map_err(|e| ffx_error!("Failed to read test definitions: {:?}", e))
             }
         }
         None => {
@@ -248,7 +256,7 @@ where
             Ok(vec![
                 run_test_suite_lib::TestParams {
                     test_url,
-                    timeout: cmd.timeout.and_then(std::num::NonZeroU32::new),
+                    timeout_seconds: cmd.timeout.and_then(std::num::NonZeroU32::new),
                     test_filters: if cmd.test_filter.len() == 0 {
                         None
                     } else {
@@ -258,6 +266,7 @@ where
                     also_run_disabled_tests: cmd.run_disabled,
                     parallel: cmd.parallel,
                     test_args,
+                    tags: vec![],
                 };
                 count.get() as usize
             ])
@@ -489,31 +498,56 @@ mod test {
     use super::*;
     use lazy_static::lazy_static;
     use std::num::NonZeroU32;
+    use test_list::TestTag;
 
     const VALID_INPUT_FILENAME: &str = "valid_defs.json";
     const INVALID_INPUT_FILENAME: &str = "invalid_defs.json";
 
     lazy_static! {
-        static ref VALID_STDIN_INPUT: Vec<u8> = serde_json::to_vec(&serde_json::json!([
+        static ref VALID_INPUT_FORMAT: String = serde_json::to_string(&serde_json::json!({
+          "tests": [
             {
-                "test_url": "stdin-test-url-1",
+                "name": "{}-test-1",
+                "labels": ["{}-label"],
+                "execution": {
+                    "type": "fuchsia_component",
+                    "component_url": "{}-test-url-1",
+                },
+                "tags": [],
             },
             {
-                "test_url": "stdin-test-url-2",
-                "timeout": 60,
-            }
-        ]))
-        .expect("serialize json");
-        static ref VALID_FILE_INPUT: Vec<u8> = serde_json::to_vec(&serde_json::json!([
-            {
-                "test_url": "file-test-url-1",
+                "name": "{}-test-2",
+                "labels": ["{}-label"],
+                "execution": {
+                    "type": "fuchsia_component",
+                    "component_url": "{}-test-url-2",
+                    "timeout_seconds": 60,
+                },
+                "tags": [],
             },
             {
-                "test_url": "file-test-url-2",
-                "timeout": 60,
+                "name": "{}-test-3",
+                "labels": ["{}-label"],
+                "execution": {
+                    "type": "fuchsia_component",
+                    "component_url": "{}-test-url-3",
+                    "test_args": ["--flag"],
+                    "test_filters": ["Unit"],
+                    "also_run_disabled_tests": true,
+                    "parallel": 4,
+                    "max_severity_logs": "INFO",
+                },
+                "tags": [{
+                    "key": "hermetic",
+                    "value": "true",
+                }],
             }
-        ]))
+        ]}))
         .expect("serialize json");
+        static ref VALID_STDIN_INPUT: Vec<u8> =
+            VALID_INPUT_FORMAT.replace("{}", "stdin").into_bytes();
+        static ref VALID_FILE_INPUT: Vec<u8> =
+            VALID_INPUT_FORMAT.replace("{}", "file").into_bytes();
         static ref INVALID_INPUT: Vec<u8> = vec![1u8; 64];
     }
 
@@ -542,12 +576,13 @@ mod test {
                 },
                 vec![run_test_suite_lib::TestParams {
                     test_url: "my-test-url".to_string(),
-                    timeout: None,
+                    timeout_seconds: None,
                     test_filters: None,
                     also_run_disabled_tests: false,
                     parallel: None,
                     test_args: vec![],
                     max_severity_logs: None,
+                    tags: vec![],
                 }],
             ),
             (
@@ -570,12 +605,13 @@ mod test {
                 vec![
                     run_test_suite_lib::TestParams {
                         test_url: "my-test-url".to_string(),
-                        timeout: None,
+                        timeout_seconds: None,
                         test_filters: None,
                         also_run_disabled_tests: false,
                         max_severity_logs: Some(diagnostics_data::Severity::Warn),
                         parallel: None,
                         test_args: vec![],
+                        tags: vec![],
                     };
                     10
                 ],
@@ -599,12 +635,13 @@ mod test {
                 },
                 vec![run_test_suite_lib::TestParams {
                     test_url: "my-test-url".to_string(),
-                    timeout: Some(NonZeroU32::new(10).unwrap()),
+                    timeout_seconds: Some(NonZeroU32::new(10).unwrap()),
                     test_filters: Some(vec!["filter".to_string()]),
                     also_run_disabled_tests: true,
                     max_severity_logs: None,
                     parallel: Some(20),
                     test_args: vec!["--".to_string(), "arg".to_string()],
+                    tags: vec![],
                 }],
             ),
             (
@@ -627,21 +664,36 @@ mod test {
                 vec![
                     run_test_suite_lib::TestParams {
                         test_url: "stdin-test-url-1".to_string(),
-                        timeout: None,
+                        timeout_seconds: None,
                         test_filters: None,
                         also_run_disabled_tests: false,
                         max_severity_logs: None,
                         parallel: None,
                         test_args: vec![],
+                        tags: vec![],
                     },
                     run_test_suite_lib::TestParams {
                         test_url: "stdin-test-url-2".to_string(),
-                        timeout: Some(NonZeroU32::new(60).unwrap()),
+                        timeout_seconds: Some(NonZeroU32::new(60).unwrap()),
                         test_filters: None,
                         also_run_disabled_tests: false,
                         max_severity_logs: None,
                         parallel: None,
                         test_args: vec![],
+                        tags: vec![],
+                    },
+                    run_test_suite_lib::TestParams {
+                        test_url: "stdin-test-url-3".to_string(),
+                        timeout_seconds: None,
+                        test_filters: Some(vec!["Unit".to_string()]),
+                        also_run_disabled_tests: true,
+                        max_severity_logs: Some(diagnostics_data::Severity::Info),
+                        parallel: Some(4),
+                        test_args: vec!["--flag".to_string()],
+                        tags: vec![TestTag {
+                            key: "hermetic".to_string(),
+                            value: "true".to_string(),
+                        }],
                     },
                 ],
             ),
@@ -667,21 +719,36 @@ mod test {
                 vec![
                     run_test_suite_lib::TestParams {
                         test_url: "file-test-url-1".to_string(),
-                        timeout: None,
+                        timeout_seconds: None,
                         test_filters: None,
                         also_run_disabled_tests: false,
                         max_severity_logs: None,
                         parallel: None,
                         test_args: vec![],
+                        tags: vec![],
                     },
                     run_test_suite_lib::TestParams {
                         test_url: "file-test-url-2".to_string(),
-                        timeout: Some(NonZeroU32::new(60).unwrap()),
+                        timeout_seconds: Some(NonZeroU32::new(60).unwrap()),
                         test_filters: None,
                         also_run_disabled_tests: false,
                         max_severity_logs: None,
                         parallel: None,
                         test_args: vec![],
+                        tags: vec![],
+                    },
+                    run_test_suite_lib::TestParams {
+                        test_url: "file-test-url-3".to_string(),
+                        timeout_seconds: None,
+                        test_filters: Some(vec!["Unit".to_string()]),
+                        also_run_disabled_tests: true,
+                        max_severity_logs: Some(diagnostics_data::Severity::Info),
+                        parallel: Some(4),
+                        test_args: vec!["--flag".to_string()],
+                        tags: vec![TestTag {
+                            key: "hermetic".to_string(),
+                            value: "true".to_string(),
+                        }],
                     },
                 ],
             ),

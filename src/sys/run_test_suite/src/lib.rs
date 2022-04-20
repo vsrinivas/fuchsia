@@ -22,6 +22,7 @@ use {
     std::path::PathBuf,
     std::sync::Arc,
     std::time::Duration,
+    test_list::TestTag,
 };
 
 mod cancel;
@@ -102,8 +103,8 @@ pub struct TestParams {
     /// Test URL.
     pub test_url: String,
 
-    /// |timeout|: Test timeout.should be more than zero.
-    pub timeout: Option<std::num::NonZeroU32>,
+    /// |timeout_seconds|: Test timeout. Should be more than zero.
+    pub timeout_seconds: Option<std::num::NonZeroU32>,
 
     /// Filter tests based on glob pattern(s).
     pub test_filters: Option<Vec<String>>,
@@ -119,6 +120,9 @@ pub struct TestParams {
 
     /// Maximum allowable log severity for the test.
     pub max_severity_logs: Option<Severity>,
+
+    /// List of tags to associate with this test's output.
+    pub tags: Vec<TestTag>,
 }
 
 /// Parameters that specify how the overall test run should be executed.
@@ -604,7 +608,7 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
     let mut suite_start_futs = FuturesUnordered::new();
     let mut suite_reporters = HashMap::new();
     for (suite_id_raw, params) in test_params.into_iter().enumerate() {
-        let timeout: Option<i64> = match params.timeout {
+        let timeout: Option<i64> = match params.timeout_seconds {
             Some(t) => {
                 const NANOS_IN_SEC: u64 = 1_000_000_000;
                 let secs: u32 = t.get();

@@ -473,6 +473,8 @@ fn construct_serializable_suite(
         duration_milliseconds,
         start_time,
         name,
+        // TODO(fxbug.dev/94154): Pipe tags through so it is output here from test-list.json input.
+        tags: vec![],
     }
 }
 

@@ -25,6 +25,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	botanistconstants "go.fuchsia.dev/fuchsia/tools/botanist/constants"
+	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
 	"go.fuchsia.dev/fuchsia/tools/lib/clock"
 	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
@@ -384,7 +385,7 @@ func (s *serialSocket) runDiagnostics(ctx context.Context) error {
 // for testability
 type FFXInstance interface {
 	SetStdoutStderr(stdout, stderr io.Writer)
-	Test(ctx context.Context, tests []ffxutil.TestDef, outDir string, args ...string) (*ffxutil.TestRunResult, error)
+	Test(ctx context.Context, tests build.TestList, outDir string, args ...string) (*ffxutil.TestRunResult, error)
 	Snapshot(ctx context.Context, outDir string, snapshotFilename string) error
 	Stop() error
 }
@@ -435,7 +436,7 @@ func (t *FFXTester) Test(ctx context.Context, test testsharder.Test, stdout, std
 
 // TestMultiple runs `ffx test` with multiple tests in one invocation and stores the results in lastTestResults.
 func (t *FFXTester) TestMultiple(ctx context.Context, tests []testsharder.Test, stdout, stderr io.Writer, outDir string) ([]*TestResult, error) {
-	var testDefs []ffxutil.TestDef
+	var testDefs []build.TestListEntry
 	testsByURL := make(map[string]testsharder.Test)
 	for _, test := range tests {
 		var numRuns int
@@ -453,18 +454,24 @@ func (t *FFXTester) TestMultiple(ctx context.Context, tests []testsharder.Test, 
 		testsByURL[test.PackageURL] = test
 
 		for i := 0; i < numRuns; i++ {
-			testDefs = append(testDefs, ffxutil.TestDef{
-				TestUrl:         test.PackageURL,
-				Timeout:         int(test.Timeout.Seconds()),
-				Parallel:        test.Parallel,
-				MaxSeverityLogs: test.LogSettings.MaxSeverity,
+			testDefs = append(testDefs, build.TestListEntry{
+				Name:   test.PackageURL,
+				Labels: []string{test.Label},
+				Execution: build.ExecutionDef{
+					Type:            "fuchsia_component",
+					ComponentURL:    test.PackageURL,
+					TimeoutSeconds:  int(test.Timeout.Seconds()),
+					Parallel:        test.Parallel,
+					MaxSeverityLogs: test.LogSettings.MaxSeverity,
+				},
+				Tags: test.Tags,
 			})
 		}
 	}
 	t.ffx.SetStdoutStderr(stdout, stderr)
 	defer t.ffx.SetStdoutStderr(os.Stdout, os.Stderr)
 
-	runResult, err := t.ffx.Test(ctx, testDefs, outDir, "--filter-ansi")
+	runResult, err := t.ffx.Test(ctx, build.TestList{Tests: testDefs}, outDir, "--filter-ansi")
 	if err != nil {
 		return []*TestResult{}, err
 	}

@@ -61,6 +61,9 @@ pub struct RunCommand {
     /// May not be used in conjunction with `test_args`, `--test-file`, `--test-filter`,
     /// `--run-disabled`, `--parallel`, `--max-severity-logs`
     /// This option is currently unstable and the format of the file is subject to change.
+    ///
+    /// For current details, see test-list.json format at
+    /// https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/src/lib/testing/test_list/
     #[argh(option)]
     pub test_file: Option<String>,
 

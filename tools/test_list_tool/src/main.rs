@@ -118,7 +118,7 @@ fn to_test_list_entry(test_entry: &TestEntry) -> TestListEntry {
         Some(url) => Some(ExecutionEntry::FuchsiaComponent(FuchsiaComponentExecutionEntry {
             component_url: url.to_string(),
             test_args: vec![],
-            timeout: None,
+            timeout_seconds: None,
             test_filters: None,
             also_run_disabled_tests: false,
             parallel: None,
@@ -371,7 +371,7 @@ mod tests {
                     "fuchsia-pkg://fuchsia.com/echo-integration-test#meta/echo-client-test.cm"
                         .to_string(),
                 test_args: vec![],
-                timeout: None,
+                timeout_seconds: None,
                 test_filters: None,
                 also_run_disabled_tests: false,
                 parallel: None,

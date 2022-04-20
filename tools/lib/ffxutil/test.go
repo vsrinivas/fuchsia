@@ -34,15 +34,6 @@ const (
 	ReportType        = "REPORT"
 )
 
-// TestDef is the JSON schema for input to `ffx test run`.
-// Note this only contains the subset of options that are currently used.
-type TestDef struct {
-	TestUrl         string `json:"test_url"`
-	Timeout         int    `json:"timeout,omitempty"`
-	Parallel        uint16 `json:"parallel,omitempty"`
-	MaxSeverityLogs string `json:"max_severity_logs,omitempty"`
-}
-
 // TestRunResult is the JSON schema for a test run in structured results output
 // by `ffx test run`.
 type TestRunResult struct {

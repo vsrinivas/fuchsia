@@ -7,6 +7,7 @@ pub mod testing;
 
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf};
+use test_list::TestTag;
 
 /// Filename of the top level summary json.
 pub const RUN_SUMMARY_NAME: &str = "run_summary.json";
@@ -87,9 +88,10 @@ pub enum SuiteResult {
         start_time: Option<u64>,
         #[serde(skip_serializing_if = "Option::is_none")]
         duration_milliseconds: Option<u64>,
+        #[serde(default = "Vec::new", skip_serializing_if = "Vec::is_empty")]
+        tags: Vec<TestTag>,
     },
 }
-
 /// A serializable test case result.
 #[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
 pub struct TestCaseResultV0 {
@@ -205,6 +207,7 @@ mod test {
             name: "suite".to_string(),
             duration_milliseconds: None,
             start_time: None,
+            tags: vec![],
         };
 
         let serialized = to_string(&suite_result).expect("serialize result");
@@ -332,6 +335,7 @@ mod test {
                 cases: vec![],
                 duration_milliseconds: None,
                 start_time: None,
+                tags: vec![],
             },
             SuiteResult::V0 {
                 artifacts: hashmap! {},
@@ -348,6 +352,7 @@ mod test {
                 }],
                 duration_milliseconds: Some(80),
                 start_time: Some(200),
+                tags: vec![],
             },
             SuiteResult::V0 {
                 artifacts: hashmap! {
@@ -385,6 +390,20 @@ mod test {
                 ],
                 duration_milliseconds: Some(37),
                 start_time: None,
+                tags: vec![],
+            },
+            SuiteResult::V0 {
+                artifacts: hashmap! {},
+                artifact_dir: Path::new("d").to_path_buf(),
+                outcome: Outcome::Passed,
+                name: "suite with tags".to_string(),
+                cases: vec![],
+                duration_milliseconds: None,
+                start_time: None,
+                tags: vec![
+                    TestTag { key: "hermetic".to_string(), value: "false".to_string() },
+                    TestTag { key: "realm".to_string(), value: "system".to_string() },
+                ],
             },
         ];
         for outcome in Outcome::all_variants() {
@@ -403,6 +422,7 @@ mod test {
                 }],
                 duration_milliseconds: None,
                 start_time: None,
+                tags: vec![],
             });
         }
         for artifact_type in ArtifactType::all_variants() {
@@ -425,6 +445,7 @@ mod test {
                 }],
                 duration_milliseconds: None,
                 start_time: None,
+                tags: vec![],
             });
         }
 

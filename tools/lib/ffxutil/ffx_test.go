@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"go.fuchsia.dev/fuchsia/tools/build"
 )
 
 func TestFFXInstance(t *testing.T) {
@@ -58,14 +60,14 @@ func TestFFXInstance(t *testing.T) {
 	if err := ioutil.WriteFile(filepath.Join(testOutputDir, runSummaryFilename), []byte("{}"), os.ModePerm); err != nil {
 		t.Errorf("failed to write run_summary.json: %s", err)
 	}
-	_, err := ffx.Test(ctx, []TestDef{{TestUrl: "test1", Timeout: 30}}, outDir)
+	_, err := ffx.Test(ctx, build.TestList{}, outDir)
 	assertRunsExpectedCmd(
 		err,
 		stdout,
 		ffx.ConfigPath,
 		fmt.Sprintf(
 			"--target target test run --continue-on-timeout --test-file %s --output-directory %s",
-			filepath.Join(outDir, "test-file.json"), testOutputDir,
+			filepath.Join(outDir, "test-list.json"), testOutputDir,
 		),
 	)
 

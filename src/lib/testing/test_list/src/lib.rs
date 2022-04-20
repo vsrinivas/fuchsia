@@ -32,7 +32,7 @@ pub struct TestListEntry {
     pub execution: Option<ExecutionEntry>,
 }
 
-#[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Eq, PartialEq, Serialize, Deserialize, PartialOrd, Ord, Clone)]
 pub struct TestTag {
     pub key: String,
     pub value: String,
@@ -53,7 +53,7 @@ pub struct FuchsiaComponentExecutionEntry {
     #[serde(default = "Vec::new")]
     pub test_args: Vec<String>,
 
-    pub timeout: Option<std::num::NonZeroU32>,
+    pub timeout_seconds: Option<std::num::NonZeroU32>,
 
     pub test_filters: Option<Vec<String>>,
 

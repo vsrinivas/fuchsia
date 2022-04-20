@@ -13,6 +13,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"go.fuchsia.dev/fuchsia/tools/build"
 )
 
 type MockFFXInstance struct {
@@ -28,7 +30,7 @@ func (f *MockFFXInstance) run(cmd string) error {
 	return nil
 }
 
-func (f *MockFFXInstance) Test(_ context.Context, tests []TestDef, outDir string, _ ...string) (*TestRunResult, error) {
+func (f *MockFFXInstance) Test(_ context.Context, testList build.TestList, outDir string, _ ...string) (*TestRunResult, error) {
 	f.run("test")
 	outcome := TestPassed
 	if f.TestOutcome != "" {
@@ -38,7 +40,7 @@ func (f *MockFFXInstance) Test(_ context.Context, tests []TestDef, outDir string
 		return nil, err
 	}
 	var suites []suiteEntry
-	for i, test := range tests {
+	for i, test := range testList.Tests {
 		relTestDir := fmt.Sprintf("test%d", i)
 		if err := os.Mkdir(filepath.Join(outDir, relTestDir), os.ModePerm); err != nil {
 			return nil, err
@@ -51,7 +53,7 @@ func (f *MockFFXInstance) Test(_ context.Context, tests []TestDef, outDir string
 		fmt.Println("writing to ", summaryFile)
 		summaryBytes, err := json.Marshal(SuiteResult{
 			Outcome: outcome,
-			Name:    test.TestUrl,
+			Name:    test.Execution.ComponentURL,
 			Cases: []CaseResult{
 				{
 					Outcome:              outcome,
