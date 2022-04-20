@@ -9,7 +9,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"io/fs"
 	"io/ioutil"
@@ -91,8 +90,8 @@ func TestEmulatorWorksWithFfx(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ctx, terminateEmulator := context.WithCancel(context.Background())
-	defer terminateEmulator()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	i, err := NewQemuInstance(ctx, QemuInstanceArgs{
 		Nodename:               nodename,
@@ -157,23 +156,16 @@ func TestEmulatorWorksWithFfx(t *testing.T) {
 		)))
 	}
 
-	ctx, closeDaemon := context.WithCancel(ctx)
-	defer closeDaemon()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := ffx.Run(ctx, "--env", ffxEnvPath, "daemon", "start"); err != nil &&
-			!errors.Is(err, context.Canceled) {
-			t.Error(err)
-		}
-	}()
-
-	if err := ffx.TargetWait(ctx); err != nil {
+	if err := ffx.RunWithTarget(
+		ctx,
+		"--env", ffxEnvPath,
+		"target",
+		"wait",
+	); err != nil {
 		t.Fatal(err)
 	}
 
-	terminateEmulator()
+	cancel()
 	if _, err := i.Wait(); err != nil {
 		t.Fatal(err)
 	}
