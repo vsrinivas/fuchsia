@@ -41,11 +41,13 @@ type WatchLeadTimeResult = flexible union {
 type StartError = flexible enum {
     CANCELED = 1;
     ALREADY_STARTED = 2;
+    PRECEDES_PENDING_STOP = 3;
 };
 
 type StopError = flexible enum {
     CANCELED = 1;
     ALREADY_STOPPED = 2;
+    PRECEDES_PENDING_START = 3;
 };
 
 type SetRateError = flexible enum {

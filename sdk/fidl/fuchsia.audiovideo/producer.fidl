@@ -86,20 +86,23 @@ protocol Producer {
 };
 
 /// Status of a `Producer`.
-type ProducerStatus = struct {
-    /// Duration of the current content.
-    duration zx.duration;
+type ProducerStatus = table {
+    /// Current error, if any. If this value is absent, no error is currently present.
+    1: error ProducerError;
 
-    /// Metadata regarding the current content.
-    metadata Metadata:optional;
+    /// Duration of the current content. If this value is absent, the duration of the content
+    /// is currently unkonwn.
+    2: duration zx.duration;
 
-    /// Current error, if any.
-    error ProducerError;
+    /// Metadata regarding the current content. If this value is absent, current metadata is
+    /// either unknown or non-existent.
+    3: metadata Metadata;
+
+    /// Whether the producer can seek. If this value is absent, seek is not supported.
+    4: seek_supported bool;
 };
 
 type ProducerError = flexible enum {
-    NONE = 0;
-
     CONTENT_NOT_FOUND = 1;
 
     FAILED_TO_OPEN_CONTENT = 2;

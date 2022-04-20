@@ -45,6 +45,7 @@ protocol ActiveConsumer {
         when RealTime:optional;
         presentation_time zx.duration;
     }) -> (struct {
+        // TODO(dalesat): Add system time here.
         reference_time zx.time;
         presentation_time zx.duration;
     }) error StartError;
@@ -80,6 +81,7 @@ protocol ActiveConsumer {
     Stop(struct {
         when RealOrPresentationTime:optional;
     }) -> (struct {
+        // TODO(dalesat): Add system time here.
         reference_time zx.time;
         presentation_time zx.duration;
     }) error StopError;
@@ -128,6 +130,7 @@ protocol ActiveConsumer {
         when RealOrPresentationTime:optional;
         desired_rate float32;
     }) -> (struct {
+        // TODO(dalesat): Add reference, system time here.
         presentation_time zx.duration;
         actual_rate float32;
     }) error SetRateError;
