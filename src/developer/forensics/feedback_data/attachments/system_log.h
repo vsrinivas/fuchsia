@@ -45,6 +45,12 @@ class LogBuffer : public LogSink {
   // Messages are assumed to be received mostly in order.
   bool Add(LogSink::MessageOr message) override;
 
+  // Records the log stream was interrupted and clears the contents on the next new message.
+  void NotifyInterruption() override;
+
+  // It's safe continue to writing to a LogBuffer if the log source has been interrupted.
+  bool SafeAfterInterruption() const override { return true; }
+
   std::string ToString();
 
  private:
@@ -65,6 +71,7 @@ class LogBuffer : public LogSink {
   size_t last_msg_repeated_;
 
   bool is_sorted_{true};
+  bool was_interrupted_{false};
 
   size_t size_{0u};
   const size_t capacity_;

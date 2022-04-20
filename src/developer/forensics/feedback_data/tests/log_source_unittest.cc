@@ -7,7 +7,9 @@
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/log_level.h>
+#include <lib/zx/time.h>
 
+#include <memory>
 #include <vector>
 
 #include <gmock/gmock.h>
@@ -18,6 +20,7 @@
 #include "src/developer/forensics/testing/stubs/diagnostics_batch_iterator.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/log_format.h"
+#include "src/lib/backoff/backoff.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics::feedback_data {
@@ -81,8 +84,21 @@ bool operator==(const std::vector<LogSink::MessageOr>& lhs,
   return true;
 }
 
+class MonotonicBackoff : public backoff::Backoff {
+ public:
+  zx::duration GetNext() override { return zx::sec(seconds_++); }
+
+  void Reset() override { seconds_ = 1; }
+
+ private:
+  size_t seconds_{1u};
+};
+
 class SimpleLogSink : public LogSink {
  public:
+  SimpleLogSink(bool safe_after_interruption = false)
+      : safe_after_interruption_(safe_after_interruption) {}
+
   bool Add(LogSink::MessageOr message) override {
     messages_.push_back(std::move(message));
     return true;
@@ -90,8 +106,21 @@ class SimpleLogSink : public LogSink {
 
   const std::vector<LogSink::MessageOr>& Messages() const { return messages_; }
 
+  void NotifyInterruption() override {
+    was_interrupted_ = true;
+    if (safe_after_interruption_) {
+      messages_.clear();
+    }
+  }
+
+  bool SafeAfterInterruption() const override { return safe_after_interruption_; }
+
+  bool WasInterrupted() const { return was_interrupted_; }
+
  private:
   std::vector<LogSink::MessageOr> messages_;
+  bool safe_after_interruption_;
+  bool was_interrupted_{false};
 };
 
 using LogSourceTest = UnitTestFixture;
@@ -101,7 +130,7 @@ TEST_F(LogSourceTest, WritesToSink) {
   const zx::duration kArchivePeriod = zx::msec(750);
 
   SimpleLogSink sink;
-  LogSource source(dispatcher(), services(), &sink);
+  LogSource source(dispatcher(), services(), &sink, std::make_unique<MonotonicBackoff>());
 
   const std::vector<std::vector<std::string>> batches({
       {
@@ -152,6 +181,72 @@ TEST_F(LogSourceTest, WritesToSink) {
   source.Stop();
 
   RunLoopUntilIdle();
+  EXPECT_FALSE(archive.IsBound());
+}
+
+TEST_F(LogSourceTest, NotifyInterruptionArchive) {
+  SimpleLogSink sink;
+  LogSource source(dispatcher(), services(), &sink, std::make_unique<MonotonicBackoff>());
+
+  stubs::DiagnosticsArchiveClosesArchiveConnection archive;
+
+  InjectServiceProvider(&archive, "fuchsia.diagnostics.FeedbackArchiveAccessor");
+
+  source.Start();
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(sink.WasInterrupted());
+}
+
+TEST_F(LogSourceTest, NotifyInterruptionIterator) {
+  SimpleLogSink sink;
+  LogSource source(dispatcher(), services(), &sink, std::make_unique<MonotonicBackoff>());
+
+  stubs::DiagnosticsArchiveClosesIteratorConnection archive;
+
+  InjectServiceProvider(&archive, "fuchsia.diagnostics.FeedbackArchiveAccessor");
+
+  source.Start();
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(sink.WasInterrupted());
+}
+
+TEST_F(LogSourceTest, ReconnectsOnSafeAfterInterruption) {
+  SimpleLogSink sink(/*safe_after_interruption=*/true);
+  LogSource source(dispatcher(), services(), &sink, std::make_unique<MonotonicBackoff>());
+
+  stubs::DiagnosticsArchiveClosesFirstIteratorConnection archive(
+      std::make_unique<stubs::DiagnosticsBatchIteratorNeverResponds>());
+
+  InjectServiceProvider(&archive, "fuchsia.diagnostics.FeedbackArchiveAccessor");
+
+  source.Start();
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(sink.WasInterrupted());
+  EXPECT_FALSE(archive.IsBound());
+
+  RunLoopFor(zx::sec(1));
+  EXPECT_TRUE(archive.IsBound());
+}
+
+TEST_F(LogSourceTest, DoesNotReconnectsOnNotSafeAfterInterruption) {
+  SimpleLogSink sink(/*safe_after_interruption=*/false);
+  LogSource source(dispatcher(), services(), &sink, std::make_unique<MonotonicBackoff>());
+
+  stubs::DiagnosticsArchiveClosesFirstIteratorConnection archive(
+      std::make_unique<stubs::DiagnosticsBatchIteratorNeverResponds>());
+
+  InjectServiceProvider(&archive, "fuchsia.diagnostics.FeedbackArchiveAccessor");
+
+  source.Start();
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(sink.WasInterrupted());
+  EXPECT_FALSE(archive.IsBound());
+
+  RunLoopFor(zx::sec(1));
   EXPECT_FALSE(archive.IsBound());
 }
 

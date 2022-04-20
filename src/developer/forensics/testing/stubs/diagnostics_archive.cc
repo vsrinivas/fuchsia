@@ -10,8 +10,19 @@ namespace stubs {
 void DiagnosticsArchive::StreamDiagnostics(
     fuchsia::diagnostics::StreamParameters stream_parameters,
     ::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request) {
-  batch_iterator_binding_ = std::make_unique<::fidl::Binding<fuchsia::diagnostics::BatchIterator>>(
-      batch_iterator_.get(), std::move(request));
+  batch_iterator_->GetHandler()(std::move(request));
+}
+
+void DiagnosticsArchiveClosesFirstIteratorConnection::StreamDiagnostics(
+    fuchsia::diagnostics::StreamParameters stream_parameters,
+    ::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request) {
+  if (is_first_) {
+    request.Close(ZX_ERR_PEER_CLOSED);
+    is_first_ = false;
+    return;
+  }
+
+  BatchIterator()->GetHandler()(std::move(request));
 }
 
 void DiagnosticsArchiveClosesIteratorConnection::StreamDiagnostics(

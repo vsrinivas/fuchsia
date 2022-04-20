@@ -8,6 +8,8 @@
 #include <fuchsia/diagnostics/cpp/fidl.h>
 #include <fuchsia/diagnostics/cpp/fidl_test_base.h>
 
+#include <algorithm>
+
 #include "src/developer/forensics/testing/stubs/diagnostics_batch_iterator.h"
 #include "src/developer/forensics/testing/stubs/fidl_server.h"
 
@@ -28,9 +30,11 @@ class DiagnosticsArchive : public DiagnosticsArchiveBase {
       fuchsia::diagnostics::StreamParameters stream_parameters,
       ::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request) override;
 
+ protected:
+  std::unique_ptr<DiagnosticsBatchIteratorBase>& BatchIterator() { return batch_iterator_; }
+
  private:
   std::unique_ptr<DiagnosticsBatchIteratorBase> batch_iterator_;
-  std::unique_ptr<::fidl::Binding<fuchsia::diagnostics::BatchIterator>> batch_iterator_binding_;
 };
 
 class DiagnosticsArchiveCaptureParameters : public DiagnosticsArchiveBase {
@@ -64,6 +68,19 @@ class DiagnosticsArchiveClosesIteratorConnection : public DiagnosticsArchiveBase
   void StreamDiagnostics(
       fuchsia::diagnostics::StreamParameters stream_parameters,
       ::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request) override;
+};
+
+class DiagnosticsArchiveClosesFirstIteratorConnection : public DiagnosticsArchive {
+ public:
+  using DiagnosticsArchive::DiagnosticsArchive;
+
+  // |fuchsia::diagnostics::Archive|
+  void StreamDiagnostics(
+      fuchsia::diagnostics::StreamParameters stream_parameters,
+      ::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request) override;
+
+ private:
+  bool is_first_{true};
 };
 
 }  // namespace stubs

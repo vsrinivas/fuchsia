@@ -93,6 +93,15 @@ LogBuffer::LogBuffer(const StorageSize capacity, RedactorBase* redactor)
     : redactor_(redactor), capacity_(capacity.ToBytes()) {}
 
 bool LogBuffer::Add(LogSink::MessageOr message) {
+  if (was_interrupted_) {
+    messages_.clear();
+    last_msg_ = "";
+    last_msg_repeated_ = 0u;
+    is_sorted_ = true;
+    was_interrupted_ = false;
+    size_ = 0u;
+  }
+
   auto enforce_capacity = ::fit::defer([this] { EnforceCapacity(); });
 
   if (message.is_ok()) {
@@ -134,6 +143,8 @@ bool LogBuffer::Add(LogSink::MessageOr message) {
 
   return AddNew();
 }
+
+void LogBuffer::NotifyInterruption() { was_interrupted_ = true; }
 
 std::string LogBuffer::ToString() {
   // Ensure messages appear in time order.

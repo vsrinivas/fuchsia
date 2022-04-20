@@ -45,6 +45,13 @@ class LogMessageStore : public LogSink {
   // * The message is omitted if it is the same one as the previous one in the store.
   bool Add(LogSink::MessageOr message) override;
 
+  // The system log recorder takes no action on the log stream being interrupted and ceases to
+  // continue out of safety for the already persisted messages.
+  //
+  // TODO(fxbug.dev/59289): Handle reconnection in the system log recorder.
+  void NotifyInterruption() override {}
+  bool SafeAfterInterruption() const override { return false; }
+
   // |str| will be the final message in the consumed buffer, after the dropped and repeated
   // messages.
   void AppendToEnd(const std::string& str);

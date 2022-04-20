@@ -256,6 +256,12 @@ LogSink::MessageOr ToMessage(const std::string& msg, const zx::duration time) {
 
 LogSink::MessageOr ToError(const std::string& error) { return ::fpromise::error(error); }
 
+TEST(LogBufferTest, SafeAfterInterruption) {
+  IdentityRedactor redactor(inspect::BoolProperty{});
+  LogBuffer buffer(StorageSize::Gigabytes(100), &redactor);
+  ASSERT_TRUE(buffer.SafeAfterInterruption());
+}
+
 TEST(LogBufferTest, OrderingOnAdd) {
   IdentityRedactor redactor(inspect::BoolProperty{});
 
@@ -435,7 +441,7 @@ TEST(LogBufferTest, RepeatedMessage) {
 )");
 }
 
-TEST(LogBufferTest, Timestamp0OnFirstError) {
+TEST(LogBufferTest, TimestampZeroOnFirstError) {
   IdentityRedactor redactor(inspect::BoolProperty{});
 
   LogBuffer buffer(StorageSize::Megabytes(100), &redactor);
@@ -492,6 +498,34 @@ TEST(LogBufferTest, RedactsLogs) {
 [00001.010][00100][00101][tag1, tag2] INFO: REDACTED
 !!! Failed to format chunk: ERRORS ERR 3 !!!
 [00001.010][00100][00101][tag1, tag2] INFO: REDACTED
+)");
+}
+
+TEST(LogBufferTest, NotifyInterruption) {
+  IdentityRedactor redactor(inspect::BoolProperty{});
+
+  LogBuffer buffer(StorageSize::Gigabytes(100), &redactor);
+
+  EXPECT_TRUE(buffer.Add(ToError("ERRORS ERR 0")));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 1", zx::sec(20))));
+
+  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 0 !!!
+[00020.000][00100][00101][tag1, tag2] INFO: log 1
+)");
+
+  buffer.NotifyInterruption();
+
+  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 0 !!!
+[00020.000][00100][00101][tag1, tag2] INFO: log 1
+)");
+
+  // Should clear the buffer.
+  EXPECT_TRUE(buffer.Add(ToMessage("log 2", zx::sec(18))));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 2", zx::sec(18))));
+  EXPECT_TRUE(buffer.Add(ToMessage("log 2", zx::sec(19))));
+
+  EXPECT_EQ(buffer.ToString(), R"([00018.000][00100][00101][tag1, tag2] INFO: log 2
+!!! MESSAGE REPEATED 2 MORE TIMES !!!
 )");
 }
 

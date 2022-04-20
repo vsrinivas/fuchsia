@@ -69,6 +69,12 @@ std::unique_ptr<RedactorBase> MakeSimpleRedactor(const bool count_calls) {
   return std::unique_ptr<RedactorBase>(new SimpleRedactor(count_calls));
 }
 
+TEST(LogMessageStoreTest, NotSafeAfterInterruption) {
+  LogMessageStore store(kMaxLogLineSize * 10, kMaxLogLineSize, MakeIdentityRedactor(),
+                        MakeIdentityEncoder());
+  EXPECT_FALSE(store.SafeAfterInterruption());
+}
+
 TEST(LogMessageStoreTest, UnlimitedMessages) {
   // Set the block to hold 10 log messages while the buffer holds 1 log message (but the buffer
   // limits should be ignored because the component has just started up).

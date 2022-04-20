@@ -6,6 +6,7 @@
 
 #include <fuchsia/diagnostics/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fit/defer.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
@@ -14,16 +15,26 @@
 
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/log_source.h"
+#include "src/lib/backoff/backoff.h"
 #include "src/lib/diagnostics/accessor2logger/log_message.h"
 
 namespace forensics::feedback_data {
 
 LogSource::LogSource(async_dispatcher_t* dispatcher,
-                     std::shared_ptr<sys::ServiceDirectory> services, LogSink* sink)
-    : dispatcher_(dispatcher), services_(std::move(services)), sink_(sink) {
+                     std::shared_ptr<sys::ServiceDirectory> services, LogSink* sink,
+                     std::unique_ptr<backoff::Backoff> backoff)
+    : dispatcher_(dispatcher),
+      services_(std::move(services)),
+      sink_(sink),
+      backoff_(std::move(backoff)) {
   FX_CHECK(dispatcher_ != nullptr);
   FX_CHECK(services_ != nullptr);
   FX_CHECK(sink_ != nullptr);
+
+  // |backoff_| can only be null if we know a reconnection won't occur.
+  if (sink_->SafeAfterInterruption()) {
+    FX_CHECK(backoff_ != nullptr);
+  }
 
   archive_accessor_.set_error_handler([this](const zx_status_t status) {
     FX_LOGS(WARNING) << "Lost connection to " << kArchiveAccessorName;
@@ -31,6 +42,8 @@ LogSource::LogSource(async_dispatcher_t* dispatcher,
     // The batch iterator and archive accessor connections are not expected to close. Ensure both
     // are unbound at the same time to simplify reconnections.
     batch_iterator_.Unbind();
+
+    OnDisconnect();
   });
 
   batch_iterator_.set_error_handler([this](const zx_status_t status) {
@@ -39,6 +52,8 @@ LogSource::LogSource(async_dispatcher_t* dispatcher,
     // The batch iterator and archive accessor connections are not expected to close. Ensure both
     // are unbound at the same time to simplify reconnections.
     archive_accessor_.Unbind();
+
+    OnDisconnect();
   });
 }
 
@@ -54,6 +69,22 @@ void LogSource::Start() {
 
   archive_accessor_->StreamDiagnostics(std::move(params), batch_iterator_.NewRequest(dispatcher_));
   GetNext();
+}
+
+void LogSource::OnDisconnect() {
+  sink_->NotifyInterruption();
+  if (!sink_->SafeAfterInterruption()) {
+    return;
+  }
+
+  async::PostDelayedTask(
+      dispatcher_,
+      [self = ptr_factory_.GetWeakPtr()] {
+        if (self) {
+          self->Start();
+        }
+      },
+      backoff_->GetNext());
 }
 
 void LogSource::GetNext() {
