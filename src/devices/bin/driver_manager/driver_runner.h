@@ -153,8 +153,8 @@ class DriverBinder {
  public:
   virtual ~DriverBinder() = default;
 
-  // Attempt to bind `node` with given `args`.
-  virtual void Bind(Node& node, fuchsia_driver_framework::wire::NodeAddArgs args) = 0;
+  // Attempt to bind `node`.
+  virtual void Bind(Node& node) = 0;
 };
 
 class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
@@ -261,7 +261,7 @@ class DriverRunner : public fidl::WireAsyncEventHandler<fuchsia_driver_framework
   // fidl::WireServer<fuchsia_component_runner::ComponentRunner>
   void Start(StartRequestView request, StartCompleter::Sync& completer) override;
   // DriverBinder
-  void Bind(Node& node, fuchsia_driver_framework::wire::NodeAddArgs args) override;
+  void Bind(Node& node) override;
 
   // Create a composite node. Returns a `Node` that is owned by its parents.
   zx::status<Node*> CreateCompositeNode(

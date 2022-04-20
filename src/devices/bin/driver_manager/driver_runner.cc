@@ -522,22 +522,19 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
   }
 
   if (request->args.has_properties()) {
-    child->properties_.reserve(request->args.properties().count());
+    child->properties_.reserve(request->args.properties().count() + 1);  // + 1 for DFv2 prop.
     for (auto& property : request->args.properties()) {
-      fdf::wire::NodeProperty node_property(child->arena_);
+      auto node_property = fdf::wire::NodeProperty::Builder(child->arena_);
       if (property.has_key()) {
         using fdf::wire::NodePropertyKey;
         switch (property.key().Which()) {
           case NodePropertyKey::Tag::kIntValue:
-            node_property.set_key(child->arena_,
-                                  NodePropertyKey::WithIntValue(property.key().int_value()));
+            node_property.key(NodePropertyKey::WithIntValue(property.key().int_value()));
             break;
           case NodePropertyKey::Tag::kStringValue: {
-            node_property.set_key(
+            node_property.key(NodePropertyKey::WithStringValue(
                 child->arena_,
-                NodePropertyKey::WithStringValue(
-                    child->arena_,
-                    fidl::StringView(child->arena_, property.key().string_value().get())));
+                fidl::StringView(child->arena_, property.key().string_value().get())));
             break;
           }
           default:
@@ -551,22 +548,18 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
         switch (property.value().Which()) {
           case NodePropertyValue::Tag::kIntValue:
           case NodePropertyValue::Tag::kBoolValue:
-            node_property.set_value(child->arena_, property.value());
+            node_property.value(property.value());
             break;
           case NodePropertyValue::Tag::kStringValue: {
-            node_property.set_value(
+            node_property.value(NodePropertyValue::WithStringValue(
                 child->arena_,
-                NodePropertyValue::WithStringValue(
-                    child->arena_,
-                    fidl::StringView(child->arena_, property.value().string_value().get())));
+                fidl::StringView(child->arena_, property.value().string_value().get())));
             break;
           }
           case NodePropertyValue::Tag::kEnumValue: {
-            node_property.set_value(
+            node_property.value(NodePropertyValue::WithEnumValue(
                 child->arena_,
-                NodePropertyValue::WithEnumValue(
-                    child->arena_,
-                    fidl::StringView(child->arena_, property.value().enum_value().get())));
+                fidl::StringView(child->arena_, property.value().enum_value().get())));
 
             break;
           }
@@ -576,9 +569,16 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
             return;
         }
       }
-      child->properties_.push_back(std::move(node_property));
+      child->properties_.emplace_back(node_property.Build());
     }
   }
+
+  // We set a property for DFv2 devices.
+  child->properties_.emplace_back(fdf::wire::NodeProperty::Builder(child->arena_)
+                                      .key(fdf::wire::NodePropertyKey::WithStringValue(
+                                          child->arena_, "fuchsia.driver.framework.dfv2"))
+                                      .value(fdf::wire::NodePropertyValue::WithBoolValue(true))
+                                      .Build());
 
   if (request->args.has_symbols()) {
     child->symbols_.reserve(request->args.symbols().count());
@@ -621,7 +621,7 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
         [](fidl::WireServer<fdf::Node>* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
     child->set_node_ref(std::move(bind_node));
   } else {
-    (*driver_binder_)->Bind(*child, std::move(request->args));
+    (*driver_binder_)->Bind(*child);
   }
   child->AddToParents();
   // We do not block a driver from operation after it has added a child. If the
@@ -807,7 +807,7 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
   drivers_.push_back(std::move(driver));
 }
 
-void DriverRunner::Bind(Node& node, fdf::wire::NodeAddArgs args) {
+void DriverRunner::Bind(Node& node) {
   auto match_callback = [this, weak_node = node.weak_from_this()](
                             fidl::WireUnownedResult<fdf::DriverIndex::MatchDriver>& result) {
     auto shared_node = weak_node.lock();
@@ -885,7 +885,8 @@ void DriverRunner::Bind(Node& node, fdf::wire::NodeAddArgs args) {
     }
     node.OnBind();
   };
-  driver_index_->MatchDriver(args).Then(std::move(match_callback));
+  fidl::Arena<> arena;
+  driver_index_->MatchDriver(node.CreateAddArgs(arena)).Then(std::move(match_callback));
 }
 
 zx::status<Node*> DriverRunner::CreateCompositeNode(
@@ -992,9 +993,7 @@ void DriverRunner::TryBindAllOrphans() {
     if (!node) {
       continue;
     }
-    fidl::Arena arena;
-    auto args = node->CreateAddArgs(arena);
-    Bind(*node, args);
+    Bind(*node);
   }
 }
 

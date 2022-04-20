@@ -14,21 +14,45 @@ use {
     fuchsia_zircon_status as zx_status,
 };
 
-const NO_PROTOCOL_DFV2_NODE_PROPERTY_LIST: Option<[fdf::NodeProperty; 1]> =
-    Some([fdf::NodeProperty {
-        key: Some(fdf::NodePropertyKey::IntValue(bind::ddk_bind_constants::BIND_PROTOCOL)),
-        value: Some(fdf::NodePropertyValue::IntValue(0)),
-        unknown_data: None,
-        ..fdf::NodeProperty::EMPTY
-    }]);
+fn get_no_protocol_dfv2_property_list() -> Option<[fdf::NodeProperty; 2]> {
+    Some([
+        fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(bind::ddk_bind_constants::BIND_PROTOCOL)),
+            value: Some(fdf::NodePropertyValue::IntValue(0)),
+            unknown_data: None,
+            ..fdf::NodeProperty::EMPTY
+        },
+        fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::StringValue(String::from(
+                "fuchsia.driver.framework.dfv2",
+            ))),
+            value: Some(fdf::NodePropertyValue::BoolValue(true)),
+            unknown_data: None,
+            ..fdf::NodeProperty::EMPTY
+        },
+    ])
+}
 
-const TEST_PARENT_DFV2_NODE_PROPERTY_LIST: Option<[fdf::NodeProperty; 1]> =
-    Some([fdf::NodeProperty {
-        key: Some(fdf::NodePropertyKey::IntValue(bind::ddk_bind_constants::BIND_PROTOCOL)),
-        value: Some(fdf::NodePropertyValue::IntValue(fidl_bind_fuchsia_test::BIND_PROTOCOL_PARENT)),
-        unknown_data: None,
-        ..fdf::NodeProperty::EMPTY
-    }]);
+fn get_test_parent_dfv2_property_list() -> Option<[fdf::NodeProperty; 2]> {
+    Some([
+        fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(bind::ddk_bind_constants::BIND_PROTOCOL)),
+            value: Some(fdf::NodePropertyValue::IntValue(
+                fidl_bind_fuchsia_test::BIND_PROTOCOL_PARENT,
+            )),
+            unknown_data: None,
+            ..fdf::NodeProperty::EMPTY
+        },
+        fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::StringValue(String::from(
+                "fuchsia.driver.framework.dfv2",
+            ))),
+            value: Some(fdf::NodePropertyValue::BoolValue(true)),
+            unknown_data: None,
+            ..fdf::NodeProperty::EMPTY
+        },
+    ])
+}
 
 fn assert_not_found_error(error: fidl::Error) {
     if let fidl::Error::ClientChannelClosed { status, protocol_name: _ } = error {
@@ -468,7 +492,7 @@ async fn test_get_device_info_no_filter_dfv2() -> Result<()> {
     assert!(sys.info.bound_driver_url.is_none());
     assert_eq!(
         sys.info.node_property_list.as_ref().map(|x| x.as_slice()),
-        NO_PROTOCOL_DFV2_NODE_PROPERTY_LIST.as_ref().map(|x| x.as_slice())
+        get_no_protocol_dfv2_property_list().as_ref().map(|x| x.as_slice())
     );
     assert_eq!(sys.num_children, 1);
     assert_eq!(sys.child_nodes.len(), 1);
@@ -482,7 +506,7 @@ async fn test_get_device_info_no_filter_dfv2() -> Result<()> {
     );
     assert_eq!(
         test.info.node_property_list.as_ref().map(|x| x.as_slice()),
-        TEST_PARENT_DFV2_NODE_PROPERTY_LIST.as_ref().map(|x| x.as_slice())
+        get_test_parent_dfv2_property_list().as_ref().map(|x| x.as_slice())
     );
     Ok(())
 }
@@ -512,7 +536,7 @@ async fn test_get_device_info_with_filter_dfv2() -> Result<()> {
     );
     assert_eq!(
         root_sys_test.info.node_property_list.as_ref().map(|x| x.as_slice()),
-        TEST_PARENT_DFV2_NODE_PROPERTY_LIST.as_ref().map(|x| x.as_slice())
+        get_test_parent_dfv2_property_list().as_ref().map(|x| x.as_slice())
     );
     assert!(root_sys_test.child_nodes.is_empty());
     Ok(())
@@ -543,7 +567,7 @@ async fn test_get_device_info_with_duplicate_filter_dfv2() -> Result<()> {
     );
     assert_eq!(
         root_sys_test.info.node_property_list.as_ref().map(|x| x.as_slice()),
-        TEST_PARENT_DFV2_NODE_PROPERTY_LIST.as_ref().map(|x| x.as_slice())
+        get_test_parent_dfv2_property_list().as_ref().map(|x| x.as_slice())
     );
     assert!(root_sys_test.child_nodes.is_empty());
     Ok(())
