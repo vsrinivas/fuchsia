@@ -68,6 +68,7 @@ impl Default for ResponseAndMetadata {
 struct Inner {
     pub responses_by_appid: HashMap<String, ResponseAndMetadata>,
     pub private_keys: Option<PrivateKeys>,
+    pub etag_override: Option<String>,
 }
 
 impl Inner {
@@ -132,6 +133,11 @@ impl OmahaServerBuilder {
         self
     }
 
+    pub fn etag_override(mut self, etag_override: Option<String>) -> Self {
+        self.inner.etag_override = etag_override;
+        self
+    }
+
     /// Constructs the OmahaServer
     pub fn build(self) -> OmahaServer {
         OmahaServer { inner: Arc::new(Mutex::new(self.inner)) }
@@ -151,6 +157,7 @@ impl OmahaServer {
                     ResponseAndMetadata::default(),
                 )]),
                 private_keys: None,
+                etag_override: None,
             },
         }
     }
@@ -414,7 +421,11 @@ async fn handle_omaha_request(
     let mut builder = Response::builder()
         .status(StatusCode::OK)
         .header(header::CONTENT_LENGTH, response_data.len());
-    if let Some(etag) = make_etag(&req_body, &uri_string, &inner, &response_data) {
+
+    if let Some(etag) =
+        (inner.etag_override.as_ref())
+            .or(make_etag(&req_body, &uri_string, &inner, &response_data).as_ref())
+    {
         builder = builder.header(header::ETAG, etag);
     }
     Ok(builder.body(Body::from(response_data)).unwrap())

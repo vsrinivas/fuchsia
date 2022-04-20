@@ -148,6 +148,7 @@ struct TestEnvBuilder {
     omaha_client_config_uint16_overrides: Vec<(String, u16)>,
     cup_info_map: HashMap<PkgUrl, (String, String)>,
     private_keys: PrivateKeys,
+    etag_override: Option<String>,
 }
 
 impl TestEnvBuilder {
@@ -166,6 +167,7 @@ impl TestEnvBuilder {
             omaha_client_config_uint16_overrides: vec![],
             cup_info_map: HashMap::new(),
             private_keys: make_default_private_keys(),
+            etag_override: None,
         }
     }
 
@@ -234,6 +236,11 @@ impl TestEnvBuilder {
         self
     }
 
+    fn etag_override(mut self, etag_override: impl Into<String>) -> Self {
+        self.etag_override = Some(etag_override.into());
+        self
+    }
+
     async fn build(self) -> TestEnv {
         // Add the mount directories to fs service.
         let mounts = Mounts::new();
@@ -256,6 +263,7 @@ impl TestEnvBuilder {
         let server = OmahaServer::builder()
             .set(self.responses_by_appid)
             .private_keys(self.private_keys)
+            .etag_override(self.etag_override)
             .build();
         let url = server.clone().start().expect("start server");
         mounts.write_url(&url);
@@ -942,7 +950,7 @@ async fn test_omaha_client_update_multi_app() {
                             "public_keys": {
                                 "latest": {
                                     "id": 42,
-                                    "key":make_default_public_key_string(),
+                                    "key": make_default_public_key_string(),
                                 },
                                 "historical": [],
                             }
@@ -1131,7 +1139,7 @@ async fn test_omaha_client_update_cup_force_historical_key() {
                             "public_keys": {
                                 "latest": {
                                     "id": 42,
-                                    "key":make_default_public_key_string(),
+                                    "key": make_default_public_key_string(),
                                 },
                                 "historical": [],
                             }
@@ -1191,7 +1199,75 @@ async fn test_omaha_client_update_cup_key_mismatch() {
                             "public_keys": {
                                 "latest": {
                                     "id": 42,
-                                    "key":make_default_public_key_string(),
+                                    "key": make_default_public_key_string(),
+                                },
+                                "historical": [],
+                            }
+                        },
+                        "packages": [ ]
+                    }
+                ]
+            })
+        })
+        .build()
+        .await;
+    do_failed_update_check(&env).await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_omaha_client_update_cup_bad_etag() {
+    // What if the server returns an empty etag?
+    let env = TestEnvBuilder::new()
+        .responses_and_metadata(vec![(
+            "integration-test-appid".to_string(),
+            ResponseAndMetadata { response: OmahaResponse::Update, ..Default::default() },
+        )])
+        .etag_override("a1b2c3d4e5")
+        .eager_package_config_builder(|url: &str| {
+            json!(
+            {
+                "eager_package_configs": [
+                    {
+                        "server": {
+                            "service_url": url,
+                            "public_keys": {
+                                "latest": {
+                                    "id": 42,
+                                    "key": make_default_public_key_string(),
+                                },
+                                "historical": [],
+                            }
+                        },
+                        "packages": [ ]
+                    }
+                ]
+            })
+        })
+        .build()
+        .await;
+    do_failed_update_check(&env).await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_omaha_client_update_cup_empty_etag() {
+    // What if the server returns an empty etag?
+    let env = TestEnvBuilder::new()
+        .responses_and_metadata(vec![(
+            "integration-test-appid".to_string(),
+            ResponseAndMetadata { response: OmahaResponse::Update, ..Default::default() },
+        )])
+        .etag_override("")
+        .eager_package_config_builder(|url: &str| {
+            json!(
+            {
+                "eager_package_configs": [
+                    {
+                        "server": {
+                            "service_url": url,
+                            "public_keys": {
+                                "latest": {
+                                    "id": 42,
+                                    "key": make_default_public_key_string(),
                                 },
                                 "historical": [],
                             }
