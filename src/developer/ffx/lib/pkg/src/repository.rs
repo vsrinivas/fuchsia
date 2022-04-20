@@ -14,12 +14,12 @@ use {
     fuchsia_pkg::MetaContents,
     fuchsia_url::pkg_url::RepoUrl,
     futures::{
+        future::Shared,
         io::Cursor,
         stream::{self, BoxStream},
-        AsyncReadExt as _, StreamExt as _, TryStreamExt as _,
+        AsyncReadExt as _, FutureExt as _, StreamExt as _, TryStreamExt as _,
     },
     io_util::file::Adapter,
-    parking_lot::Mutex as SyncMutex,
     serde::{Deserialize, Serialize},
     std::{
         fmt, io,
@@ -182,8 +182,13 @@ pub struct Repository {
     /// Backend for this repository
     backend: Box<dyn RepositoryBackend + Send + Sync>,
 
-    /// Call these functions upon drop. This is synchronous since it's used in the Drop impl.
-    drop_handlers: SyncMutex<Vec<Box<dyn FnOnce() + Send + Sync>>>,
+    /// _tx_on_drop is a channel that will emit a `Cancelled` message to `rx_on_drop` when this
+    /// repository is dropped. This is a convenient way to notify any downstream users to clean up
+    /// any side tables that associate a repository to some other data.
+    _tx_on_drop: futures::channel::oneshot::Sender<()>,
+
+    /// Channel Receiver that receives a `Cancelled` signal when this repository is dropped.
+    rx_on_drop: futures::future::Shared<futures::channel::oneshot::Receiver<()>>,
 
     /// The TUF client for this repository
     client: Arc<
@@ -219,13 +224,22 @@ impl Repository {
         let tuf_repo = backend.get_tuf_repo()?;
         let tuf_client = get_tuf_client(tuf_repo).await?;
 
+        let (tx_on_drop, rx_on_drop) = futures::channel::oneshot::channel();
+        let rx_on_drop = rx_on_drop.shared();
+
         Ok(Self {
             name,
             id: RepositoryId::new(),
             backend,
             client: Arc::new(AsyncMutex::new(tuf_client)),
-            drop_handlers: SyncMutex::new(Vec::new()),
+            _tx_on_drop: tx_on_drop,
+            rx_on_drop,
         })
+    }
+
+    /// Returns a receiver that will receive a `Canceled` signal when the repository is dropped.
+    pub fn on_dropped_signal(&self) -> Shared<futures::channel::oneshot::Receiver<()>> {
+        self.rx_on_drop.clone()
     }
 
     pub fn id(&self) -> RepositoryId {
@@ -234,11 +248,6 @@ impl Repository {
 
     pub fn repo_url(&self) -> String {
         format!("fuchsia-pkg://{}", self.name)
-    }
-
-    /// Stores the given function to be run when the repository is dropped.
-    pub fn on_drop<F: FnOnce() + Send + Sync + 'static>(&self, f: F) {
-        self.drop_handlers.lock().push(Box::new(f));
     }
 
     pub fn name(&self) -> &str {
@@ -569,14 +578,6 @@ impl Repository {
         }
 
         Ok(Some(entries))
-    }
-}
-
-impl Drop for Repository {
-    fn drop(&mut self) {
-        for handler in std::mem::take(&mut *self.drop_handlers.lock()) {
-            (handler)()
-        }
     }
 }
 
