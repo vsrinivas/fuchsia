@@ -616,6 +616,10 @@ group("proptest-derive") {
   public_deps = [ ":proptest-derive-v0_1_1($host_toolchain)" ]
 }
 
+group("prost") {
+  public_deps = [ ":prost-v0_10_1" ]
+}
+
 if (!(current_os == "fuchsia")) {
   group("pulldown-cmark") {
     public_deps = [ ":pulldown-cmark-v0_6_0" ]
@@ -8326,6 +8330,62 @@ rust_proc_macro("proptest-derive-v0_1_1") {
     "--edition=2018",
     "-Cmetadata=c677256b817d9125",
     "-Cextra-filename=-c677256b817d9125",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("prost-v0_10_1") {
+  crate_name = "prost"
+  crate_root = "//third_party/rust_crates/vendor/prost/src/lib.rs"
+  output_name = "prost-a0a61cbe41540e82"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":bytes-v1_0_1" ]
+  deps += [ ":prost-derive-v0_10_1($host_toolchain)" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=a0a61cbe41540e82",
+    "-Cextra-filename=-a0a61cbe41540e82",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"prost-derive\"",
+    "--cfg=feature=\"std\"",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_proc_macro("prost-derive-v0_10_1") {
+  crate_name = "prost_derive"
+  crate_root = "//third_party/rust_crates/vendor/prost-derive/src/lib.rs"
+  output_name = "prost_derive-3b032ba5d4b0c831"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":anyhow-v1_0_38" ]
+  deps += [ ":itertools-v0_10_1" ]
+  deps += [ ":proc-macro2-v1_0_28" ]
+  deps += [ ":quote-v1_0_7" ]
+  deps += [ ":syn-v1_0_74" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=3b032ba5d4b0c831",
+    "-Cextra-filename=-3b032ba5d4b0c831",
   ]
 
   visibility = [ ":*" ]
