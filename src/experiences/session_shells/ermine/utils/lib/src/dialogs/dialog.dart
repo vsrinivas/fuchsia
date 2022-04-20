@@ -15,6 +15,11 @@ class DialogInfo {
   /// drawn using [ElevatedButton] to emphasize it's default nature.
   final List<String> actions;
 
+  /// Optional. The width of the dialog. When null, the dialog extends as long
+  /// as the width of its widest content until it reaches to the screen edges
+  /// with the gap of [insetPaddings].
+  final double? width;
+
   /// Optional. Callback when the dialog is closed.
   final void Function()? onClose;
 
@@ -24,6 +29,7 @@ class DialogInfo {
   const DialogInfo({
     required this.actions,
     this.defaultAction,
+    this.width,
     this.onAction,
     this.onClose,
     this.title,
@@ -40,6 +46,7 @@ class AlertDialogInfo extends DialogInfo {
     required String title,
     required List<String> actions,
     String? defaultAction,
+    double? width,
     void Function(String action)? onAction,
     void Function()? onClose,
     this.body,
@@ -47,6 +54,7 @@ class AlertDialogInfo extends DialogInfo {
           title: title,
           actions: actions,
           defaultAction: defaultAction,
+          width: width,
           onAction: onAction,
           onClose: onClose,
         );

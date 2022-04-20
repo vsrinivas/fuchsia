@@ -1207,6 +1207,22 @@ class Strings {
         desc: 'The text link to the Google\'s privacy and terms webpage.',
       );
 
+  static String get enableDataSharingTitle => Intl.message(
+        'Enable Usage & Diagnostics to send feedback',
+        name: 'the title for enable usage & diagnostics',
+        desc: 'The title for the alert that pops up when the user tries to '
+            'open User Feedback when the data sharing is disabled',
+      );
+
+  static String get enableDataSharingBody => Intl.message(
+        'User Feedback is available only when you have consented to sharing '
+        'usage and diagnostics data. You can update the preference in Quick '
+        'Settings > Usage & Diagnostics.',
+        name: 'the body text for enable usage & diagnostics',
+        desc: 'The body text for the alert that pops up when the user tries to '
+            'open User Feedback when the data sharing is disabled',
+      );
+
   static String get sendFeedback => Intl.message(
         'Send feedback to Google',
         name: 'send feedback',

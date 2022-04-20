@@ -86,7 +86,10 @@ class Dialogs extends StatelessWidget {
   Widget? _titleFromDialogInfo(DialogInfo info) {
     switch (info.runtimeType) {
       case AlertDialogInfo:
-        return Text(info.title!);
+        final text = Text(info.title!);
+        return info.width == null
+            ? text
+            : SizedBox(width: info.width, child: text);
       default:
         return null;
     }
@@ -96,7 +99,11 @@ class Dialogs extends StatelessWidget {
     switch (info.runtimeType) {
       case AlertDialogInfo:
         final dialog = info as AlertDialogInfo;
-        return (dialog.body != null) ? Text(dialog.body!) : null;
+        return dialog.body != null
+            ? info.width == null
+                ? Text(dialog.body!)
+                : SizedBox(width: info.width, child: Text(dialog.body!))
+            : null;
       case PasswordDialogInfo:
         final dialog = info as PasswordDialogInfo;
         return PasswordPrompt(dialog);

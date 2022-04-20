@@ -405,11 +405,20 @@ class AppStateImpl with Disposable implements AppState {
 
   @override
   void showUserFeedback() async {
-    // TODO(fxb/97464): Take a screenshot here when DataProvider.GetScreenshot() is fixed.
-
     runInAction(() {
-      userFeedbackVisibility.value = true;
-      _feedbackPage.value = FeedbackPage.ready;
+      if (settingsState.dataSharingConsentEnabled) {
+        // TODO(fxb/97464): Take a screenshot here when the bug is fixed.
+        userFeedbackVisibility.value = true;
+        _feedbackPage.value = FeedbackPage.ready;
+        return;
+      }
+
+      _displayDialog(AlertDialogInfo(
+        title: Strings.enableDataSharingTitle,
+        body: Strings.enableDataSharingBody,
+        actions: [Strings.close],
+        width: 714,
+      ));
     });
   }
 
