@@ -78,17 +78,17 @@ pub struct ComponentTreeStats<T: RuntimeStatsSource + Debug> {
 
     diagnostics_waiter_task_sender: mpsc::UnboundedSender<fasync::Task<()>>,
 
-    time_source_generator: TimeSourceGenerator,
+    time_source: Arc<dyn TimeSource + Send + Sync>,
 }
 
 impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T> {
     pub async fn new(node: inspect::Node) -> Arc<Self> {
-        Self::new_with_time_generator(node, TimeSourceGenerator::default()).await
+        Self::new_with_timesource(node, Arc::new(MonotonicTime::new())).await
     }
 
-    async fn new_with_time_generator(
+    async fn new_with_timesource(
         node: inspect::Node,
-        time_source_generator: TimeSourceGenerator,
+        time_source: Arc<dyn TimeSource + Send + Sync>,
     ) -> Arc<Self> {
         let processing_times = node.create_int_exponential_histogram(
             "processing_times_ns",
@@ -115,7 +115,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
             _wait_diagnostics_drain: fasync::Task::spawn(async move {
                 rcv.for_each_concurrent(None, |rx| async move { rx.await }).await;
             }),
-            time_source_generator,
+            time_source,
         });
 
         let weak_self = Arc::downgrade(&this);
@@ -169,9 +169,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
     /// Initializes a new component stats with the given task.
     async fn track_ready(&self, moniker: ExtendedMoniker, task: T) {
         let histogram = create_cpu_histogram(&self.histograms_node, &moniker);
-        if let Ok(task_info) =
-            TaskInfo::try_from(task, Some(histogram), self.time_source_generator.next())
-        {
+        if let Ok(task_info) = TaskInfo::try_from(task, Some(histogram), self.time_source.clone()) {
             let koid = task_info.koid();
             let arc_task_info = Arc::new(Mutex::new(task_info));
             let mut stats = ComponentStats::new();
@@ -305,13 +303,13 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
             maybe_return!(source.take_component_task().and_then(|task| TaskInfo::try_from(
                 task,
                 Some(histogram),
-                this.time_source_generator.next()
+                this.time_source.clone()
             )
             .ok()));
 
         let parent_koid = source
             .take_parent_task()
-            .and_then(|task| TaskInfo::try_from(task, None, this.time_source_generator.next()).ok())
+            .and_then(|task| TaskInfo::try_from(task, None, this.time_source.clone()).ok())
             .map(|task| task.koid());
         let koid = task_info.koid();
 
@@ -428,15 +426,6 @@ impl AggregatedStats {
     }
 }
 
-#[derive(Default)]
-struct TimeSourceGenerator {}
-
-impl TimeSourceGenerator {
-    fn next(&self) -> Box<dyn TimeSource + Send + Sync> {
-        Box::new(MonotonicTime::new())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use {
@@ -449,18 +438,25 @@ mod tests {
         diagnostics_hierarchy::DiagnosticsHierarchy,
         fuchsia_inspect::testing::{assert_data_tree, AnyProperty},
         fuchsia_zircon::{AsHandleRef, DurationNum},
+        injectable_time::FakeTime,
         moniker::AbsoluteMoniker,
     };
 
     #[fuchsia::test]
     async fn components_are_deleted_when_all_tasks_are_gone() {
         let inspector = inspect::Inspector::new();
-        let stats = ComponentTreeStats::new(inspector.root().create_child("cpu_stats")).await;
+        let clock = Arc::new(FakeTime::new());
+        let stats = ComponentTreeStats::new_with_timesource(
+            inspector.root().create_child("cpu_stats"),
+            clock.clone(),
+        )
+        .await;
         let moniker: AbsoluteMoniker = vec!["a"].into();
         let moniker: ExtendedMoniker = moniker.into();
         stats.track_ready(moniker.clone(), FakeTask::default()).await;
         for _ in 0..=COMPONENT_CPU_MAX_SAMPLES {
             stats.measure().await;
+            clock.add_ticks(CPU_SAMPLE_PERIOD.as_nanos() as i64);
         }
         assert_eq!(stats.tree.lock().await.len(), 1);
         assert_eq!(stats.tasks.lock().await.len(), 1);
@@ -476,12 +472,10 @@ mod tests {
             task.lock().await.force_terminate().await;
         }
 
-        // This will perform a measurement that is done after a task has finished for the sake of
-        // having one post-termination measurement.
-        stats.measure().await;
-
+        // All post-invalidation measurements; this will push out true measurements
         for i in 0..COMPONENT_CPU_MAX_SAMPLES {
             stats.measure().await;
+            clock.add_ticks(CPU_SAMPLE_PERIOD.as_nanos() as i64);
             assert_eq!(
                 stats
                     .tree
@@ -497,6 +491,7 @@ mod tests {
             );
         }
         stats.measure().await;
+        clock.add_ticks(CPU_SAMPLE_PERIOD.as_nanos() as i64);
         assert!(stats.tree.lock().await.get(&moniker).is_none());
         assert_eq!(stats.tree.lock().await.len(), 0);
         assert_eq!(stats.tasks.lock().await.len(), 0);
@@ -855,8 +850,14 @@ mod tests {
     #[fuchsia::test]
     async fn child_tasks_garbage_collection() {
         let inspector = inspect::Inspector::new();
-        let stats =
-            Arc::new(ComponentTreeStats::new(inspector.root().create_child("cpu_stats")).await);
+        let clock = Arc::new(FakeTime::new());
+        let stats = Arc::new(
+            ComponentTreeStats::new_with_timesource(
+                inspector.root().create_child("cpu_stats"),
+                clock.clone(),
+            )
+            .await,
+        );
         let parent_task = FakeTask::new(
             1,
             vec![
@@ -912,10 +913,12 @@ mod tests {
 
         // This will perform the (last) post-termination sample.
         stats.measure().await;
+        clock.add_ticks(CPU_SAMPLE_PERIOD.as_nanos() as i64);
 
         // These will start incrementing the counter of post-termination samples, but won't sample.
         for _ in 0..COMPONENT_CPU_MAX_SAMPLES {
             stats.measure().await;
+            clock.add_ticks(CPU_SAMPLE_PERIOD.as_nanos() as i64);
         }
 
         // Causes the task to be gone since it has been terminated for long enough.
