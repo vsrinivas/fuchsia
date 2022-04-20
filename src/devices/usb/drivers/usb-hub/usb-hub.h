@@ -207,7 +207,7 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
   async::Loop loop_;
   std::unique_ptr<fpromise::executor> executor_;
   sync_completion_t thread_start_;  // Completion signaled when thread starts running.
-  thrd_t callback_thread_;
+  std::optional<thrd_t> callback_thread_;
   sync_completion_t xfer_done_;
 
   std::optional<ddk::InitTxn> txn_;

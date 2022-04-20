@@ -297,12 +297,14 @@ zx_status_t UsbHubDevice::StartInterruptLoop() {
     static_cast<UsbHubDevice*>(ctx)->InterruptCallback();
     return 0;
   };
+  thrd_t callback_thread;
   int thread_status =
-      thrd_create_with_name(&callback_thread_, callback_func, this, "usb-hub-interrupt");
+      thrd_create_with_name(&callback_thread, callback_func, this, "usb-hub-interrupt");
   if (thread_status != thrd_success) {
     zxlogf(ERROR, "Could not create thread to handle port changes");
     return ZX_ERR_BAD_STATE;
   }
+  callback_thread_ = callback_thread;
   return ZX_OK;
 }
 
@@ -452,10 +454,12 @@ void UsbHubDevice::DdkUnbind(ddk::UnbindTxn txn) {
   if (status != ZX_OK) {
     return;
   }
-  thrd_join(callback_thread_, &status);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not join interrupt thread");
-    return;
+  if (callback_thread_) {
+    thrd_join(*callback_thread_, &status);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Could not join interrupt thread");
+      return;
+    }
   }
   txn.Reply();
 }
