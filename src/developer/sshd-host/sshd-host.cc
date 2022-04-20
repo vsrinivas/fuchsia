@@ -19,7 +19,7 @@
 const uint16_t kPort = 22;
 const char* kKeyGenArgs[] = {"/pkg/bin/hostkeygen", nullptr};
 
-int main(int /*argc*/, const char** /*argv*/) {
+int main(int argc, const char** argv) {
   syslog::SetTags({"sshd-host"});
   // We need to close PA_DIRECTORY_REQUEST otherwise clients that expect us to
   // offer services won't know that we've started and are not going to offer
@@ -43,7 +43,16 @@ int main(int /*argc*/, const char** /*argv*/) {
   fdio_spawn(0, FDIO_SPAWN_CLONE_ALL, kKeyGenArgs[0], kKeyGenArgs, process.reset_and_get_address());
   process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
 
-  sshd_host::Service service(kPort);
+  uint16_t port = kPort;
+  if (argc > 1) {
+    int arg = atoi(argv[1]);
+    if (arg <= 0) {
+      FX_SLOG(ERROR, "Invalid port", KV("argv[1]", argv[1]));
+      return -1;
+    }
+    port = (uint16_t)arg;
+  }
+  sshd_host::Service service(port);
 
   loop.Run();
   async_set_default_dispatcher(nullptr);
