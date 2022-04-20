@@ -565,10 +565,16 @@ static void cdc_tx_complete(void* ctx, usb_request_t* req) {
   bool additional_tx_queued = false;
   txn_info_t* txn;
   zx_status_t send_status = ZX_OK;
-  if ((txn = list_peek_head_type(&cdc->tx_pending_infos, txn_info_t, node))) {
-    if ((send_status = cdc_send_locked(cdc, &txn->netbuf)) != ZX_ERR_SHOULD_WAIT) {
-      list_remove_head(&cdc->tx_pending_infos);
-      additional_tx_queued = true;
+
+  // Do not queue requests if status is ZX_ERR_IO_NOT_PRESENT, as the underlying connection could be
+  // disconnected or USB_RESET is being processed. Calling cdc_send_locked in such scenario will
+  // deadlock and crash the driver (see fxbug.dev/92793).
+  if (req->response.status != ZX_ERR_IO_NOT_PRESENT) {
+    if ((txn = list_peek_head_type(&cdc->tx_pending_infos, txn_info_t, node))) {
+      if ((send_status = cdc_send_locked(cdc, &txn->netbuf)) != ZX_ERR_SHOULD_WAIT) {
+        list_remove_head(&cdc->tx_pending_infos);
+        additional_tx_queued = true;
+      }
     }
   }
   mtx_unlock(&cdc->tx_mutex);
