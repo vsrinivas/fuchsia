@@ -5,6 +5,7 @@
 #include <lib/fdio/directory.h>
 #include <stdio.h>
 
+#include <memory>
 #include <thread>
 
 #include <gtest/gtest.h>
@@ -14,6 +15,7 @@
 #include "src/media/codec/codecs/vaapi/codec_adapter_vaapi_decoder.h"
 #include "src/media/codec/codecs/vaapi/codec_runner_app.h"
 #include "src/media/codec/codecs/vaapi/vaapi_utils.h"
+#include "vaapi_stubs.h"
 
 static int global_display_ptr;
 
@@ -35,6 +37,7 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
     va_end(args);
 
     fail_codec_count_++;
+    cond_.notify_all();
   }
 
   void onCoreCodecFailStream(fuchsia::media::StreamError error) override {
@@ -57,6 +60,12 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
     std::unique_lock<std::mutex> lock(lock_);
     // Wait for buffer initialization to complete to ensure all buffers are staged to be loaded.
     cond_.wait(lock, [&]() { return buffer_initialization_completed_; });
+
+    // Fake out the client setting buffer constraints on sysmem
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
+    buffer_collection.settings.image_format_constraints =
+        output_constraints.image_format_constraints.at(0);
+    codec_adapter_->CoreCodecSetBufferCollectionInfo(CodecPort::kOutputPort, buffer_collection);
     codec_adapter_->CoreCodecMidStreamOutputBufferReConfigFinish();
   }
 
@@ -112,6 +121,11 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
     cond_.notify_all();
   }
 
+  void WaitForCodecFailure(uint64_t failure_count) {
+    std::unique_lock<std::mutex> lock(lock_);
+    cond_.wait(lock, [&]() { return fail_codec_count_ == failure_count; });
+  }
+
   void ReturnLastOutputPacket() {
     std::lock_guard lock(lock_);
     auto packet = output_packets_done_.back();
@@ -132,75 +146,134 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
   bool buffer_initialization_completed_ = false;
 };
 
-TEST(H264Vaapi, DecodeBasic) {
-  std::mutex lock;
+class H264VaapiTestFixture : public ::testing::Test {
+ protected:
+  H264VaapiTestFixture() = default;
+  ~H264VaapiTestFixture() override { decoder_.reset(); }
 
-  EXPECT_TRUE(VADisplayWrapper::InitializeSingletonForTesting());
+  void SetUp() override {
+    EXPECT_TRUE(VADisplayWrapper::InitializeSingletonForTesting());
 
-  constexpr uint32_t kExpectedOutputPackets = 29;
+    vaDefaultStubSetReturn();
 
-  FakeCodecAdapterEvents events;
-  {
-    CodecAdapterVaApiDecoder decoder(lock, &events);
-    events.set_codec_adapter(&decoder);
+    // Have to defer the construction of decoder_ until
+    // VADisplayWrapper::InitializeSingletonForTesting is called
+    decoder_ = std::make_unique<CodecAdapterVaApiDecoder>(lock_, &events_);
+    events_.set_codec_adapter(decoder_.get());
+  }
+
+  void TearDown() override { vaDefaultStubSetReturn(); }
+
+  void CodecAndStreamInit() {
     fuchsia::media::FormatDetails format_details;
     format_details.set_format_details_version_ordinal(1);
     format_details.set_mime_type("video/h264");
-    decoder.CoreCodecInit(format_details);
+    decoder_->CoreCodecInit(format_details);
 
-    auto input_constraints = decoder.CoreCodecGetBufferCollectionConstraints(
+    auto input_constraints = decoder_->CoreCodecGetBufferCollectionConstraints(
         CodecPort::kInputPort, fuchsia::media::StreamBufferConstraints(),
         fuchsia::media::StreamBufferPartialSettings());
     EXPECT_TRUE(input_constraints.buffer_memory_constraints.cpu_domain_supported);
 
-    decoder.CoreCodecStartStream();
-    decoder.CoreCodecQueueInputFormatDetails(format_details);
-
-    std::vector<uint8_t> result;
-    ASSERT_TRUE(files::ReadFileToVector("/pkg/data/bear.h264", &result));
-
-    CodecBufferForTest buffer_for_test(result.size(), 0, false);
-    memcpy(buffer_for_test.base(), result.data(), result.size());
-
-    CodecPacketForTest packet(0);
-    packet.SetStartOffset(0);
-    packet.SetValidLengthBytes(static_cast<uint32_t>(result.size()));
-    packet.SetBuffer(&buffer_for_test);
-    decoder.CoreCodecQueueInputPacket(&packet);
-
-    // Should be enough to handle a large fraction of bear.h264 output without recycling.
-    constexpr uint32_t kOutputPacketCount = 35;
-    // Nothing writes to the output packet so its size doesn't matter.
-    constexpr size_t kOutputPacketSize = 4096;
-    auto test_packets = Packets(kOutputPacketCount);
-    auto test_buffers = Buffers(std::vector<size_t>(kOutputPacketCount, kOutputPacketSize));
-
-    std::vector<std::unique_ptr<CodecPacket>> packets(kOutputPacketCount);
-    for (size_t i = 0; i < kOutputPacketCount; i++) {
-      auto &packet = test_packets.packets[i];
-      packets[i] = std::move(packet);
-      decoder.CoreCodecAddBuffer(CodecPort::kOutputPort, test_buffers.buffers[i].get());
-    }
-
-    decoder.CoreCodecConfigureBuffers(CodecPort::kOutputPort, packets);
-    for (size_t i = 0; i < kOutputPacketCount; i++) {
-      decoder.CoreCodecRecycleOutputPacket(packets[i].get());
-    }
-
-    decoder.CoreCodecConfigureBuffers(CodecPort::kOutputPort, packets);
-    events.SetBufferInitializationCompleted();
-    events.WaitForInputPacketsDone();
-    events.WaitForOutputPacketCount(kExpectedOutputPackets);
-    events.ReturnLastOutputPacket();
-    decoder.CoreCodecStopStream();
-    decoder.CoreCodecEnsureBuffersNotConfigured(CodecPort::kOutputPort);
+    decoder_->CoreCodecStartStream();
+    decoder_->CoreCodecQueueInputFormatDetails(format_details);
   }
 
-  // One packet was returned, so it was already removed from the list.
-  EXPECT_EQ(kExpectedOutputPackets - 1u, events.output_packet_count());
+  void CodecStreamStop() {
+    decoder_->CoreCodecStopStream();
+    decoder_->CoreCodecEnsureBuffersNotConfigured(CodecPort::kOutputPort);
+  }
 
-  EXPECT_EQ(0u, events.fail_codec_count());
-  EXPECT_EQ(0u, events.fail_stream_count());
+  void ParseFileIntoInputPackets(const std::string &file_name) {
+    std::vector<uint8_t> result;
+    ASSERT_TRUE(files::ReadFileToVector(file_name, &result));
+
+    input_buffer_ = std::make_unique<CodecBufferForTest>(result.size(), 0, false);
+    std::memcpy(input_buffer_->base(), result.data(), result.size());
+
+    input_packet_ = std::make_unique<CodecPacketForTest>(0);
+    input_packet_->SetStartOffset(0);
+    input_packet_->SetValidLengthBytes(static_cast<uint32_t>(result.size()));
+    input_packet_->SetBuffer(input_buffer_.get());
+    decoder_->CoreCodecQueueInputPacket(input_packet_.get());
+  }
+
+  void ConfigureOutputBuffers(uint32_t output_packet_count, size_t output_packet_size) {
+    auto test_packets = Packets(output_packet_count);
+    test_buffers_ = Buffers(std::vector<size_t>(output_packet_count, output_packet_size));
+
+    test_packets_ = std::vector<std::unique_ptr<CodecPacket>>(output_packet_count);
+    for (size_t i = 0; i < output_packet_count; i++) {
+      auto &packet = test_packets.packets[i];
+      test_packets_[i] = std::move(packet);
+      decoder_->CoreCodecAddBuffer(CodecPort::kOutputPort, test_buffers_.buffers[i].get());
+    }
+
+    decoder_->CoreCodecConfigureBuffers(CodecPort::kOutputPort, test_packets_);
+    for (size_t i = 0; i < output_packet_count; i++) {
+      decoder_->CoreCodecRecycleOutputPacket(test_packets_[i].get());
+    }
+
+    decoder_->CoreCodecConfigureBuffers(CodecPort::kOutputPort, test_packets_);
+  }
+
+  std::mutex lock_;
+  FakeCodecAdapterEvents events_;
+  std::unique_ptr<CodecAdapterVaApiDecoder> decoder_;
+  std::unique_ptr<CodecPacketForTest> input_packet_;
+  std::unique_ptr<CodecBufferForTest> input_buffer_;
+  TestBuffers test_buffers_;
+  std::vector<std::unique_ptr<CodecPacket>> test_packets_;
+};
+
+TEST_F(H264VaapiTestFixture, MimeTypeMismatchFailure) {
+  constexpr uint64_t kExpectedNumOfCodecFailures = 1u;
+
+  fuchsia::media::FormatDetails format_details;
+  format_details.set_format_details_version_ordinal(1);
+  format_details.set_mime_type("video/h264");
+  decoder_->CoreCodecInit(format_details);
+  decoder_->CoreCodecStartStream();
+
+  fuchsia::media::FormatDetails format_details_mismatch;
+  format_details_mismatch.set_format_details_version_ordinal(1);
+  format_details_mismatch.set_mime_type("video/vp9");
+  decoder_->CoreCodecQueueInputFormatDetails(format_details_mismatch);
+
+  events_.SetBufferInitializationCompleted();
+  events_.WaitForCodecFailure(kExpectedNumOfCodecFailures);
+
+  CodecStreamStop();
+
+  EXPECT_EQ(kExpectedNumOfCodecFailures, events_.fail_codec_count());
+  EXPECT_EQ(0u, events_.fail_stream_count());
+}
+
+TEST_F(H264VaapiTestFixture, DecodeBasic) {
+  constexpr uint32_t kExpectedOutputPackets = 29;
+
+  CodecAndStreamInit();
+
+  // Should be enough to handle a large fraction of bear.h264 output without recycling.
+  constexpr uint32_t kOutputPacketCount = 35;
+  // Nothing writes to the output packet so its size doesn't matter.
+  constexpr size_t kOutputPacketSize = 4096;
+
+  ParseFileIntoInputPackets("/pkg/data/bear.h264");
+  ConfigureOutputBuffers(kOutputPacketCount, kOutputPacketSize);
+
+  events_.SetBufferInitializationCompleted();
+  events_.WaitForInputPacketsDone();
+  events_.WaitForOutputPacketCount(kExpectedOutputPackets);
+  events_.ReturnLastOutputPacket();
+
+  CodecStreamStop();
+
+  // One packet was returned, so it was already removed from the list.
+  EXPECT_EQ(kExpectedOutputPackets - 1u, events_.output_packet_count());
+
+  EXPECT_EQ(0u, events_.fail_codec_count());
+  EXPECT_EQ(0u, events_.fail_stream_count());
 }
 
 TEST(H264Vaapi, CodecList) {

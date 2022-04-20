@@ -69,7 +69,7 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(std::vector<uint8_t> data) {
                                         pic_size.width(), pic_size.height(), VA_PROGRESSIVE,
                                         nullptr, 0, &context_id);
       if (va_res != VA_STATUS_SUCCESS) {
-        events_->onCoreCodecFailCodec("vaCreateContext failed: %d", va_res);
+        events_->onCoreCodecFailCodec("vaCreateContext failed: %s", vaErrorStr(va_res));
         return;
       }
       context_id_.emplace(context_id);
@@ -87,7 +87,7 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(std::vector<uint8_t> data) {
                                 pic_size.width(), pic_size.height(), va_surfaces.data(),
                                 static_cast<uint32_t>(va_surfaces.size()), nullptr, 0);
       if (va_res != VA_STATUS_SUCCESS) {
-        events_->onCoreCodecFailCodec("vaCreateSurfaces failed: %d", va_res);
+        events_->onCoreCodecFailCodec("vaCreateSurfaces failed: %s", vaErrorStr(va_res));
         return;
       }
 
@@ -288,7 +288,7 @@ bool CodecAdapterVaApiDecoder::ProcessOutput(scoped_refptr<VASurface> va_surface
       vaCreateSurfaces(VADisplayWrapper::GetSingleton()->display(), VA_RT_FORMAT_YUV420,
                        pic_size.width(), pic_size.height(), &processed_surface_id, 1, attrib, 2);
   if (status != VA_STATUS_SUCCESS) {
-    FX_LOGS(WARNING) << "CreateSurface failed: " << status;
+    FX_LOGS(WARNING) << "CreateSurface failed: " << vaErrorStr(status);
     return false;
   }
   ScopedSurfaceID processed_surface(processed_surface_id);
@@ -297,7 +297,7 @@ bool CodecAdapterVaApiDecoder::ProcessOutput(scoped_refptr<VASurface> va_surface
   status =
       vaDeriveImage(VADisplayWrapper::GetSingleton()->display(), processed_surface.id(), &image);
   if (status != VA_STATUS_SUCCESS) {
-    FX_LOGS(WARNING) << "DeriveImage failed: " << status;
+    FX_LOGS(WARNING) << "DeriveImage failed: " << vaErrorStr(status);
     return false;
   }
   ScopedImageID scoped_image(image.image_id);
@@ -309,7 +309,7 @@ bool CodecAdapterVaApiDecoder::ProcessOutput(scoped_refptr<VASurface> va_surface
   status = vaGetImage(VADisplayWrapper::GetSingleton()->display(), va_surface->id(), 0, 0,
                       pic_size.width(), pic_size.height(), scoped_image.id());
   if (status != VA_STATUS_SUCCESS) {
-    FX_LOGS(WARNING) << "GetImage failed: " << status;
+    FX_LOGS(WARNING) << "GetImage failed: " << vaErrorStr(status);
     return false;
   }
 

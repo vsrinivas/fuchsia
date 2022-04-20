@@ -14,7 +14,9 @@ VaapiVP9Picture::VaapiVP9Picture(scoped_refptr<VASurface> va_surface) : va_surfa
 
 VaapiVP9Picture::~VaapiVP9Picture() = default;
 
-VP9Accelerator::VP9Accelerator(CodecAdapterVaApiDecoder* adapter) : adapter_(adapter) {}
+VP9Accelerator::VP9Accelerator(CodecAdapterVaApiDecoder* adapter) : adapter_(adapter) {
+  FX_DCHECK(adapter_);
+}
 
 VP9Accelerator::~VP9Accelerator() = default;
 
@@ -186,7 +188,7 @@ VP9Accelerator::Status VP9Accelerator::SubmitDecode(
 
   status = vaEndPicture(VADisplayWrapper::GetSingleton()->display(), adapter_->context_id());
   if (status != VA_STATUS_SUCCESS) {
-    FX_LOGS(WARNING) << "EndPicture failed: " << status;
+    FX_LOGS(WARNING) << "EndPicture failed: " << vaErrorStr(status);
     return Status::kFail;
   }
 
@@ -198,7 +200,7 @@ bool VP9Accelerator::OutputPicture(scoped_refptr<media::VP9Picture> pic) {
   VASurfaceID va_surface_id = static_cast<VaapiVP9Picture*>(pic.get())->GetVASurfaceID();
   VAStatus status = vaSyncSurface(VADisplayWrapper::GetSingleton()->display(), va_surface_id);
   if (status != VA_STATUS_SUCCESS) {
-    FX_LOGS(WARNING) << "SyncSurface failed: " << status;
+    FX_LOGS(WARNING) << "SyncSurface failed: " << vaErrorStr(status);
     return false;
   }
 

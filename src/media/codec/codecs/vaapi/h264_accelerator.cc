@@ -193,14 +193,14 @@ H264Accelerator::Status H264Accelerator::SubmitFrameMetadata(
                                    adapter_->context_id(), VAPictureParameterBufferType,
                                    sizeof(pic_param), 1, &pic_param, &pic_param_buf);
   if (status != VA_STATUS_SUCCESS) {
-    FX_LOGS(WARNING) << "CreateBuffer failed: " << status;
+    FX_LOGS(WARNING) << "CreateBuffer failed: " << vaErrorStr(status);
     return Status::kFail;
   }
   status = vaCreateBuffer(VADisplayWrapper::GetSingleton()->display(), adapter_->context_id(),
                           VAIQMatrixBufferType, sizeof(iq_matrix_buf), 1, &iq_matrix_buf,
                           &iq_matrix_buf_id);
   if (status != VA_STATUS_SUCCESS) {
-    FX_LOGS(WARNING) << "CreateBuffer failed: " << status;
+    FX_LOGS(WARNING) << "CreateBuffer failed: " << vaErrorStr(status);
     return Status::kFail;
   }
   slice_buffers_.emplace_back(pic_param_buf);
@@ -296,7 +296,7 @@ H264Accelerator::Status H264Accelerator::SubmitSlice(
                                    adapter_->context_id(), VASliceParameterBufferType,
                                    sizeof(slice_param), 1, &slice_param, &slice_param_buffer);
   if (status != VA_STATUS_SUCCESS) {
-    FX_LOGS(WARNING) << "CreateBuffer failed: " << status;
+    FX_LOGS(WARNING) << "CreateBuffer failed: " << vaErrorStr(status);
     return Status::kFail;
   }
   slice_buffers_.emplace_back(slice_param_buffer);
@@ -304,7 +304,7 @@ H264Accelerator::Status H264Accelerator::SubmitSlice(
                           VASliceDataBufferType, static_cast<uint32_t>(size), 1,
                           const_cast<uint8_t*>(data), &slice_data_buffer);
   if (status != VA_STATUS_SUCCESS) {
-    FX_LOGS(WARNING) << "CreateBuffer failed: " << status;
+    FX_LOGS(WARNING) << "CreateBuffer failed: " << vaErrorStr(status);
     return Status::kFail;
   }
   slice_buffers_.emplace_back(slice_data_buffer);
@@ -317,7 +317,7 @@ H264Accelerator::Status H264Accelerator::SubmitDecode(scoped_refptr<media::H264P
   VAStatus status = vaBeginPicture(VADisplayWrapper::GetSingleton()->display(),
                                    adapter_->context_id(), va_surface_id);
   if (status != VA_STATUS_SUCCESS) {
-    FX_LOGS(WARNING) << "BeginPicture failed: " << status;
+    FX_LOGS(WARNING) << "BeginPicture failed: " << vaErrorStr(status);
     return Status::kFail;
   }
   std::vector<VABufferID> buffers;
@@ -327,12 +327,12 @@ H264Accelerator::Status H264Accelerator::SubmitDecode(scoped_refptr<media::H264P
   status = vaRenderPicture(VADisplayWrapper::GetSingleton()->display(), adapter_->context_id(),
                            buffers.data(), static_cast<int>(buffers.size()));
   if (status != VA_STATUS_SUCCESS) {
-    FX_LOGS(WARNING) << "RenderPicture failed: " << status;
+    FX_LOGS(WARNING) << "RenderPicture failed: " << vaErrorStr(status);
     return Status::kFail;
   }
   status = vaEndPicture(VADisplayWrapper::GetSingleton()->display(), adapter_->context_id());
   if (status != VA_STATUS_SUCCESS) {
-    FX_LOGS(WARNING) << "EndPicture failed: " << status;
+    FX_LOGS(WARNING) << "EndPicture failed: " << vaErrorStr(status);
     return Status::kFail;
   }
   slice_buffers_.clear();
@@ -344,7 +344,7 @@ bool H264Accelerator::OutputPicture(scoped_refptr<media::H264Picture> pic) {
   VASurfaceID va_surface_id = static_cast<VaapiH264Picture*>(pic.get())->GetVASurfaceID();
   VAStatus status = vaSyncSurface(VADisplayWrapper::GetSingleton()->display(), va_surface_id);
   if (status != VA_STATUS_SUCCESS) {
-    FX_LOGS(WARNING) << "SyncSurface failed: " << status;
+    FX_LOGS(WARNING) << "SyncSurface failed: " << vaErrorStr(status);
     return false;
   }
 

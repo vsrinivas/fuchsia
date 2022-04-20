@@ -8,9 +8,9 @@
 #include <lib/syslog/global.h>
 #include <stdio.h>
 
-#include <chrono>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <memory>
 #include <thread>
 
@@ -21,6 +21,7 @@
 #include "src/media/codec/codecs/vaapi/codec_adapter_vaapi_decoder.h"
 #include "src/media/codec/codecs/vaapi/codec_runner_app.h"
 #include "src/media/codec/codecs/vaapi/vaapi_utils.h"
+#include "vaapi_stubs.h"
 
 namespace {
 
@@ -137,7 +138,6 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
     printf("Got onCoreCodecFailStream %d\n", static_cast<int>(error));
     fflush(stdout);
     fail_stream_count_++;
-    cond_.notify_all();
   }
 
   void onCoreCodecResetStreamAfterCurrentFrame() override {}
@@ -205,8 +205,7 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
 
   void WaitForOutputPacketCount(size_t output_packet_count) {
     std::unique_lock<std::mutex> lock(lock_);
-    cond_.wait_for(lock, std::chrono::seconds(4),
-                   [&]() { return output_packets_done_.size() == output_packet_count; });
+    cond_.wait(lock, [&]() { return output_packets_done_.size() == output_packet_count; });
   }
 
   size_t output_packet_count() const { return output_packets_done_.size(); }
@@ -219,8 +218,7 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
 
   void WaitForCodecFailure(uint64_t failure_count) {
     std::unique_lock<std::mutex> lock(lock_);
-    cond_.wait_for(lock, std::chrono::seconds(4),
-                   [&]() { return fail_codec_count_ == failure_count; });
+    cond_.wait(lock, [&]() { return fail_codec_count_ == failure_count; });
   }
 
  private:
@@ -244,11 +242,15 @@ class Vp9VaapiTestFixture : public ::testing::Test {
   void SetUp() override {
     EXPECT_TRUE(VADisplayWrapper::InitializeSingletonForTesting());
 
+    vaDefaultStubSetReturn();
+
     // Have to defer the construction of decoder_ until
     // VADisplayWrapper::InitializeSingletonForTesting is called
     decoder_ = std::make_unique<CodecAdapterVaApiDecoder>(lock_, &events_);
     events_.set_codec_adapter(decoder_.get());
   }
+
+  void TearDown() override { vaDefaultStubSetReturn(); }
 
   void CodecAndStreamInit() {
     fuchsia::media::FormatDetails format_details;
@@ -278,14 +280,15 @@ class Vp9VaapiTestFixture : public ::testing::Test {
     return ivf_parser_.ReadFileHeader(ivf_file_data_.data(), ivf_file_data_.size());
   }
 
-  void ParseIvfFileIntoPackets(uint32_t output_packet_count, size_t output_packet_size) {
+  void ParseIvfFileIntoPackets(
+      uint32_t num_of_packets_to_parse = std::numeric_limits<uint32_t>::max()) {
     // While we have IVF frames create a new input packet to feed to the decoder. VP9 parser expects
     // the packets to be on VP9Frame boundaries and if not will parse multiple VP9 frames as one
     // frame. The packets will share the same underlying VMO buffer but will be offset in the
     // buffer.
     std::vector<uint8_t> payload;
     uint32_t packet_index = 0;
-    while (true) {
+    while (packet_index < num_of_packets_to_parse) {
       auto parse_frame = ivf_parser_.ParseFrame();
 
       if (parse_frame.is_error()) {
@@ -316,7 +319,9 @@ class Vp9VaapiTestFixture : public ::testing::Test {
       packet->SetBuffer(test_buffer_.get());
       decoder_->CoreCodecQueueInputPacket(packet.get());
     }
+  }
 
+  void ConfigureOutputBuffers(uint32_t output_packet_count, size_t output_packet_size) {
     auto test_packets = Packets(output_packet_count);
     test_buffers_ = Buffers(std::vector<size_t>(output_packet_count, output_packet_size));
 
@@ -346,6 +351,142 @@ class Vp9VaapiTestFixture : public ::testing::Test {
   std::vector<std::unique_ptr<CodecPacket>> test_packets_;
 };
 
+TEST_F(Vp9VaapiTestFixture, NoFormatDetailsFailure) {
+  constexpr uint64_t kExpectedNumOfCodecFailures = 1u;
+
+  fuchsia::media::FormatDetails format_details;
+  decoder_->CoreCodecInit(format_details);
+
+  EXPECT_EQ(kExpectedNumOfCodecFailures, events_.fail_codec_count());
+  EXPECT_EQ(0u, events_.fail_stream_count());
+}
+
+TEST_F(Vp9VaapiTestFixture, MimeTypeMismatchFailure) {
+  constexpr uint64_t kExpectedNumOfCodecFailures = 1u;
+
+  fuchsia::media::FormatDetails format_details;
+  format_details.set_format_details_version_ordinal(1);
+  format_details.set_mime_type("video/vp9");
+  decoder_->CoreCodecInit(format_details);
+  decoder_->CoreCodecStartStream();
+
+  fuchsia::media::FormatDetails format_details_mismatch;
+  format_details_mismatch.set_format_details_version_ordinal(1);
+  format_details_mismatch.set_mime_type("video/h264");
+  decoder_->CoreCodecQueueInputFormatDetails(format_details_mismatch);
+
+  events_.SetBufferInitializationCompleted();
+  events_.WaitForCodecFailure(kExpectedNumOfCodecFailures);
+
+  CodecStreamStop();
+
+  EXPECT_EQ(kExpectedNumOfCodecFailures, events_.fail_codec_count());
+  EXPECT_EQ(0u, events_.fail_stream_count());
+}
+
+TEST_F(Vp9VaapiTestFixture, CreateConfigFailure) {
+  constexpr uint64_t kExpectedNumOfCodecFailures = 1u;
+
+  // Cause vaCreateConfig to return a failure
+  vaCreateConfigStubSetReturn(VA_STATUS_ERROR_OPERATION_FAILED);
+
+  CodecAndStreamInit();
+
+  events_.SetBufferInitializationCompleted();
+  events_.WaitForCodecFailure(kExpectedNumOfCodecFailures);
+
+  CodecStreamStop();
+
+  EXPECT_EQ(kExpectedNumOfCodecFailures, events_.fail_codec_count());
+  EXPECT_EQ(0u, events_.fail_stream_count());
+}
+
+TEST_F(Vp9VaapiTestFixture, CreateContextFailure) {
+  constexpr uint64_t kExpectedNumOfCodecFailures = 1u;
+
+  // Cause vaCreateContext to return a failure
+  vaCreateContextStubSetReturn(VA_STATUS_ERROR_OPERATION_FAILED);
+
+  CodecAndStreamInit();
+
+  auto ivf_file_header_result = InitializeIvfFile("/pkg/data/test-25fps.vp9");
+
+  if (ivf_file_header_result.is_error()) {
+    FAIL() << ivf_file_header_result.error_value();
+  }
+
+  // Ensure the IVF header is what we are expecting
+  auto ivf_file_header = ivf_file_header_result.value();
+  EXPECT_EQ(0u, ivf_file_header.version);
+  EXPECT_EQ(32u, ivf_file_header.header_size);
+  EXPECT_EQ(0x30395056u, ivf_file_header.fourcc);  // VP90
+  EXPECT_EQ(kVideoWidth, ivf_file_header.width);
+  EXPECT_EQ(kVideoHeight, ivf_file_header.height);
+  EXPECT_EQ(250u, ivf_file_header.num_frames);
+
+  // Since each decoded frame will be its own output packet, create enough so we don't have to
+  // recycle them.
+  constexpr uint32_t kOutputPacketCount = 4096u;
+
+  // Nothing writes to the output packet so its size doesn't matter.
+  constexpr size_t kOutputPacketSize = 4096u;
+
+  ParseIvfFileIntoPackets(1u);
+  ConfigureOutputBuffers(kOutputPacketCount, kOutputPacketSize);
+
+  events_.SetBufferInitializationCompleted();
+  events_.WaitForInputPacketsDone();
+  events_.WaitForCodecFailure(kExpectedNumOfCodecFailures);
+
+  CodecStreamStop();
+
+  EXPECT_EQ(kExpectedNumOfCodecFailures, events_.fail_codec_count());
+  EXPECT_EQ(0u, events_.fail_stream_count());
+}
+
+TEST_F(Vp9VaapiTestFixture, CreateSurfacesFailure) {
+  constexpr uint64_t kExpectedNumOfCodecFailures = 1u;
+
+  // Cause vaCreateContext to return a failure
+  vaCreateContextStubSetReturn(VA_STATUS_ERROR_OPERATION_FAILED);
+
+  CodecAndStreamInit();
+
+  auto ivf_file_header_result = InitializeIvfFile("/pkg/data/test-25fps.vp9");
+
+  if (ivf_file_header_result.is_error()) {
+    FAIL() << ivf_file_header_result.error_value();
+  }
+
+  // Ensure the IVF header is what we are expecting
+  auto ivf_file_header = ivf_file_header_result.value();
+  EXPECT_EQ(0u, ivf_file_header.version);
+  EXPECT_EQ(32u, ivf_file_header.header_size);
+  EXPECT_EQ(0x30395056u, ivf_file_header.fourcc);  // VP90
+  EXPECT_EQ(kVideoWidth, ivf_file_header.width);
+  EXPECT_EQ(kVideoHeight, ivf_file_header.height);
+  EXPECT_EQ(250u, ivf_file_header.num_frames);
+
+  // Since each decoded frame will be its own output packet, create enough so we don't have to
+  // recycle them.
+  constexpr uint32_t kOutputPacketCount = 4096u;
+
+  // Nothing writes to the output packet so its size doesn't matter.
+  constexpr size_t kOutputPacketSize = 4096u;
+
+  ParseIvfFileIntoPackets(1u);
+  ConfigureOutputBuffers(kOutputPacketCount, kOutputPacketSize);
+
+  events_.SetBufferInitializationCompleted();
+  events_.WaitForInputPacketsDone();
+  events_.WaitForCodecFailure(kExpectedNumOfCodecFailures);
+
+  CodecStreamStop();
+
+  EXPECT_EQ(kExpectedNumOfCodecFailures, events_.fail_codec_count());
+  EXPECT_EQ(0u, events_.fail_stream_count());
+}
+
 TEST_F(Vp9VaapiTestFixture, DecodeBasic) {
   constexpr uint32_t kExpectedOutputPackets = 250u;
 
@@ -368,12 +509,13 @@ TEST_F(Vp9VaapiTestFixture, DecodeBasic) {
 
   // Since each decoded frame will be its own output packet, create enough so we don't have to
   // recycle them.
-  constexpr uint32_t kOutputPacketCount = 4096;
+  constexpr uint32_t kOutputPacketCount = 4096u;
 
   // Nothing writes to the output packet so its size doesn't matter.
-  constexpr size_t kOutputPacketSize = 4096;
+  constexpr size_t kOutputPacketSize = 4096u;
 
-  ParseIvfFileIntoPackets(kOutputPacketCount, kOutputPacketSize);
+  ParseIvfFileIntoPackets();
+  ConfigureOutputBuffers(kOutputPacketCount, kOutputPacketSize);
 
   events_.SetBufferInitializationCompleted();
   events_.WaitForInputPacketsDone();

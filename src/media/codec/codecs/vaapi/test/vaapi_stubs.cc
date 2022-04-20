@@ -5,6 +5,22 @@
 #include <gtest/gtest.h>
 #include <va/va.h>
 
+static VAStatus vaCreateConfigReturn = VA_STATUS_SUCCESS;
+static VAStatus vaCreateContextReturn = VA_STATUS_SUCCESS;
+static VAStatus vaCreateSurfacesReturn = VA_STATUS_SUCCESS;
+
+void vaDefaultStubSetReturn() {
+  vaCreateConfigReturn = VA_STATUS_SUCCESS;
+  vaCreateContextReturn = VA_STATUS_SUCCESS;
+  vaCreateSurfacesReturn = VA_STATUS_SUCCESS;
+}
+
+void vaCreateConfigStubSetReturn(VAStatus status) { vaCreateConfigReturn = status; }
+
+void vaCreateContextStubSetReturn(VAStatus status) { vaCreateContextReturn = status; }
+
+void vaCreateSurfacesStubSetReturn(VAStatus status) { vaCreateSurfacesReturn = status; }
+
 int vaMaxNumEntrypoints(VADisplay dpy) { return 2; }
 VAStatus vaQueryConfigEntrypoints(VADisplay dpy, VAProfile profile, VAEntrypoint *entrypoint_list,
                                   int *num_entrypoints) {
@@ -25,7 +41,7 @@ VAStatus vaDestroyConfig(VADisplay dpy, VAConfigID config_id) {
 VAStatus vaCreateConfig(VADisplay dpy, VAProfile profile, VAEntrypoint entrypoint,
                         VAConfigAttrib *attrib_list, int num_attribs, VAConfigID *config_id) {
   *config_id = 1;
-  return VA_STATUS_SUCCESS;
+  return vaCreateConfigReturn;
 }
 VAStatus vaQueryConfigAttributes(VADisplay dpy, VAConfigID config_id, VAProfile *profile,
                                  VAEntrypoint *entrypoint, VAConfigAttrib *attrib_list,
@@ -38,7 +54,7 @@ VAStatus vaCreateSurfaces(VADisplay dpy, unsigned int format, unsigned int width
   for (size_t i = 0; i < num_surfaces; i++) {
     surfaces[i] = static_cast<unsigned int>(i + 1);
   }
-  return VA_STATUS_SUCCESS;
+  return vaCreateSurfacesReturn;
 }
 VAStatus vaDestroySurfaces(VADisplay dpy, VASurfaceID *surfaces, int num_surfaces) {
   return VA_STATUS_SUCCESS;
@@ -47,7 +63,7 @@ VAStatus vaCreateContext(VADisplay dpy, VAConfigID config_id, int picture_width,
                          int flag, VASurfaceID *render_targets, int num_render_targets,
                          VAContextID *context) {
   *context = 1;
-  return VA_STATUS_SUCCESS;
+  return vaCreateContextReturn;
 }
 VAStatus vaDestroyContext(VADisplay dpy, VAContextID context) { return VA_STATUS_SUCCESS; }
 VAStatus vaBeginPicture(VADisplay dpy, VAContextID context, VASurfaceID render_target) {

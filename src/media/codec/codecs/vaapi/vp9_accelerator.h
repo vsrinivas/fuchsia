@@ -17,14 +17,13 @@ class CodecAdapterVaApiDecoder;
 class VaapiVP9Picture : public media::VP9Picture {
  public:
   explicit VaapiVP9Picture(scoped_refptr<VASurface> va_surface);
+  ~VaapiVP9Picture() override;
 
   VaapiVP9Picture(const VaapiVP9Picture&) = delete;
   VaapiVP9Picture& operator=(const VaapiVP9Picture&) = delete;
 
   scoped_refptr<VASurface> va_surface() const { return va_surface_; }
   VASurfaceID GetVASurfaceID() const { return va_surface_->id(); }
-
-  ~VaapiVP9Picture() override;
 
  private:
   scoped_refptr<VASurface> va_surface_;
@@ -33,11 +32,10 @@ class VaapiVP9Picture : public media::VP9Picture {
 class VP9Accelerator : public media::VP9Decoder::VP9Accelerator {
  public:
   explicit VP9Accelerator(CodecAdapterVaApiDecoder* adapter);
+  ~VP9Accelerator() override;
 
   VP9Accelerator(const VP9Accelerator&) = delete;
   VP9Accelerator& operator=(const VP9Accelerator&) = delete;
-
-  ~VP9Accelerator() override;
 
   scoped_refptr<media::VP9Picture> CreateVP9Picture() override;
   Status SubmitDecode(scoped_refptr<media::VP9Picture> pic, const media::Vp9SegmentationParams& seg,
