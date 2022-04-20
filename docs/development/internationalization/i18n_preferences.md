@@ -209,8 +209,7 @@ through `fuchsia.intl.PropertyProvider`.
 
 ### Implementation: `setui_service` {#setui-service}
 
-The protocol `fuchsia.settings.Intl` is
-[implemented](/garnet/bin/setui/src/intl/) by the
+The protocol `fuchsia.settings.Intl` is implemented by the
 [`setui_service`](/garnet/bin/setui/) (along with the other protocols under
 `fuchsia.settings`). This service serves as the backend for settings UIs in
 Fuchsia products.
