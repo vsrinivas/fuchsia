@@ -5,6 +5,9 @@
 // TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
 // @dart=2.9
 
+// TODO(fxbug.dev/98455) remove deprecated members after roll
+// ignore_for_file: deprecated_member_use
+
 import 'dart:collection';
 
 import 'package:analyzer/dart/ast/ast.dart';
