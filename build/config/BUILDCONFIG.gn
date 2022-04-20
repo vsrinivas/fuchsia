@@ -983,10 +983,10 @@ foreach(_target_type,
         # commandline args.
         _args_substituted = []
         foreach(arg, _args) {
-          _args_substituted +=
-              [ string_replace(arg,
-                               "{{response_file_name}}",
-                               rebase_path(_response_file_path)) ]
+          _args_substituted += [ string_replace(
+                  arg,
+                  "{{response_file_name}}",
+                  rebase_path(_response_file_path, root_build_dir)) ]
         }
         _args = []
         _args = _args_substituted
