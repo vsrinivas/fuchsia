@@ -40,6 +40,9 @@ bitfield! {
     /// String ref for the associated name, if any.
     u16, name_ref, set_name_ref: 31, 16;
 
+    /// Boolean value, if any.
+    bool, bool_val, set_bool_val: 32;
+
     /// Reserved for record-type-specific data.
     u16, value_ref, set_value_ref: 47, 32;
 
@@ -69,6 +72,7 @@ enum ArgType {
     String = 6,
     Pointer = 7,
     Koid = 8,
+    Bool = 9,
 }
 
 impl TryFrom<u8> for ArgType {
@@ -84,6 +88,7 @@ impl TryFrom<u8> for ArgType {
             6 => ArgType::String,
             7 => ArgType::Pointer,
             8 => ArgType::Koid,
+            9 => ArgType::Bool,
             _ => return Err(parse::ParseError::ValueOutOfValidRange),
         })
     }
@@ -258,6 +263,16 @@ mod tests {
         );
     }
 
+    #[fuchsia::test]
+    fn bool_arg_roundtrip() {
+        assert_roundtrips(
+            Argument { name: String::from("bool"), value: Value::Boolean(false) },
+            Encoder::write_argument,
+            parse_argument,
+            None,
+        );
+    }
+
     #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
     #[fuchsia::test]
     fn arg_of_each_type_roundtrips() {
@@ -269,6 +284,7 @@ mod tests {
                     Argument { name: String::from("signed"), value: Value::SignedInt(-10) },
                     Argument { name: String::from("unsigned"), value: Value::SignedInt(7) },
                     Argument { name: String::from("float"), value: Value::Floating(3.14159) },
+                    Argument { name: String::from("bool"), value: Value::Boolean(true) },
                     Argument {
                         name: String::from("msg"),
                         value: Value::Text(String::from("test message one")),

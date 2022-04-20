@@ -27,6 +27,9 @@ const int tracingFormatF64Type = 5;
 /// Type for a string argument.
 const int tracingFormatStringType = 6;
 
+/// Type for a boolean argument.
+const int tracingFormatBooleanType = 9;
+
 /// Bit that indicates a referenced string is written inline.
 const int _inlineStrRef = 0x8000;
 
@@ -89,6 +92,10 @@ int writeArgument(ByteData buffer, int offset, Argument argument) {
       final textWriteRes = writeString(buffer, curOffset, argument.value.text);
       header.setValue(textWriteRes.strRef);
       curOffset = textWriteRes.nextOffset;
+      break;
+    case ValueTag.boolean:
+      header.setType(tracingFormatBooleanType);
+      header.setBool(argument.value.boolean ? 1 : 0);
       break;
     default:
       throw ArgumentError('Unsupported value type');

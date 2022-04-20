@@ -40,6 +40,7 @@ async fn main() -> Result<(), Error> {
         &test_unsigned_int_max,
         &test_no_args,
         &test_multiple_args,
+        &test_boolean,
     ];
     let mut expected = vec![];
     let mut actual = vec![];
@@ -133,6 +134,25 @@ fn test_empty_string() -> TestCase {
         // (empty string, no bytes)
     ];
     ("test_empty_string", record, expected_result)
+}
+
+fn test_boolean() -> TestCase {
+    let timestamp = 0x24;
+    let arg = Argument { name: String::from("name"), value: Value::Boolean(true) };
+    let record = Record { timestamp, severity: Severity::Warn, arguments: vec![arg] };
+    #[rustfmt::skip]
+    let expected_result = vec![
+        // Record header - 4 for the size of the record, 9 for the type of Record (Log record), 0x40 for WARN severity
+        0x49, 0, 0, 0, 0, 0, 0, 0x40,
+        // Timestamp
+        0x24, 0, 0, 0, 0, 0, 0, 0,
+        // Argument Header - 2 for the size of argument, 9 for the value type, 0x4/0x80 for string ref for NameRef
+        // Boolean value is 0x1
+        0x29, 0, 0x4, 0x80, 0x1, 0, 0, 0,
+        // Representation of "name" with padding
+        0x6E, 0x61, 0x6D, 0x65, 0, 0, 0, 0,
+    ];
+    ("test_boolean", record, expected_result)
 }
 
 #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)

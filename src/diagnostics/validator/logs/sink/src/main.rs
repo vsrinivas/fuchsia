@@ -545,6 +545,7 @@ fn args_strategy() -> impl Strategy<Value = Vec<(String, Value)>> {
         any::<i64>().prop_map(|n| Value::SignedInt(n)),
         any::<u64>().prop_map(|n| Value::UnsignedInt(n)),
         any::<f64>().prop_map(|f| Value::Floating(f)),
+        any::<bool>().prop_map(|f| Value::Boolean(f)),
     ];
 
     vec((key_strategy, value_strategy), 0..=MAX_ARGS as usize)
@@ -565,6 +566,7 @@ impl TestCycle {
                 Value::SignedInt(n) => assertion.add_signed(&name, n),
                 Value::UnsignedInt(n) => assertion.add_unsigned(&name, n),
                 Value::Floating(f) => assertion.add_floating(&name, f),
+                Value::Boolean(f) => assertion.add_boolean(&name, f),
                 _ => unreachable!("we don't generate these"),
             };
         }
@@ -744,6 +746,11 @@ impl RecordAssertionBuilder {
 
     fn add_floating(&mut self, name: &str, value: f64) -> &mut Self {
         self.arguments.insert(name.to_owned(), Value::Floating(value));
+        self
+    }
+
+    fn add_boolean(&mut self, name: &str, value: bool) -> &mut Self {
+        self.arguments.insert(name.to_owned(), Value::Boolean(value));
         self
     }
 }

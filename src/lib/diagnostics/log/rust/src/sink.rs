@@ -191,7 +191,7 @@ mod tests {
             });
             expected_debug
                 .arguments
-                .push(Argument { name: "maybe".into(), value: Value::Text("true".into()) });
+                .push(Argument { name: "maybe".into(), value: Value::Boolean(true) });
             assert_eq!(observed_debug, expected_debug);
         }
 

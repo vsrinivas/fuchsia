@@ -81,6 +81,9 @@ _ArgParseResult parseArgument(ByteData buffer, int offset) {
       value = Value.withText(str);
       curOffset += valLen + padLen;
       break;
+    case tracingFormatBooleanType: // boolean
+      value = Value.withBoolean(header.boolVal == 1);
+      break;
     default:
       fail('Unrecognized header type ${header.type}');
   }
@@ -129,7 +132,8 @@ void main() {
         Argument(name: 'arg-1', value: Value.withSignedInt(23)),
         Argument(name: 'arg-2', value: Value.withUnsignedInt(10)),
         Argument(name: 'arg-3', value: Value.withFloating(0.1)),
-        Argument(name: 'arg-4', value: Value.withText('text'))
+        Argument(name: 'arg-4', value: Value.withText('text')),
+        Argument(name: 'arg-5', value: Value.withBoolean(true))
       ];
       testWriteRecord(Record(
           timestamp: _testTimestamp,
@@ -160,6 +164,11 @@ void main() {
       testWriteArgument(
           Argument(name: 'text-arg', value: Value.withText('arg-value')));
       testWriteArgument(Argument(name: 'text-arg', value: Value.withText('')));
+    });
+
+    test('boolean', () {
+      testWriteArgument(
+          Argument(name: 'boolean', value: Value.withBoolean(false)));
     });
   });
 }

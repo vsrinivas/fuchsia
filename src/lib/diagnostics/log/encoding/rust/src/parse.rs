@@ -112,6 +112,7 @@ fn parse_argument_internal<'a, 'b>(
                 string_ref(header.value_ref(), after_name, matches!(state, ParseState::InMessage))?;
             (Value::Text(s.to_string()), rem)
         }
+        ArgType::Bool => (Value::Boolean(header.bool_val()), after_name),
         ArgType::Pointer | ArgType::Koid | ArgType::I32 | ArgType::U32 => {
             return Err(Err::Failure(ParseError::Unsupported))
         }

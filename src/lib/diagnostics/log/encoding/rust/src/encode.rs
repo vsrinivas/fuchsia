@@ -145,6 +145,11 @@ where
                 header.set_value_ref(StringRef::for_str(t).mask());
                 self.write_string(t)
             }
+            Value::Boolean(b) => {
+                header.set_type(ArgType::Bool as u8);
+                header.set_bool_val(*b);
+                Ok(())
+            }
             _ => Err(EncodingError::Unsupported),
         }?;
 
@@ -266,7 +271,10 @@ impl Visit for RecordBuilder {
     fn record_u64(&mut self, field: &Field, value: u64) {
         self.push_arg(field, || arg!(field.name(), UnsignedInt(value)));
     }
-    // TODO(fxbug.dev/56049) support bools natively and impl record_bool
+
+    fn record_bool(&mut self, field: &Field, value: bool) {
+        self.push_arg(field, || arg!(field.name(), Boolean(value)));
+    }
 }
 
 /// Analogous to `bytes::BufMut`, but immutably-sized and appropriate for use in shared memory.
@@ -598,6 +606,7 @@ mod tests {
             is_debug = ?PrintMe(5),
             is_signed = -500,
             is_unsigned = 1000u64,
+            is_bool = false,
             "blarg this is a message"
         );
 
@@ -618,6 +627,7 @@ mod tests {
                     Argument { name: "is_debug".into(), value: Value::Text("PrintMe(5)".into()) },
                     Argument { name: "is_signed".into(), value: Value::SignedInt(-500) },
                     Argument { name: "is_unsigned".into(), value: Value::UnsignedInt(1000) },
+                    Argument { name: "is_bool".into(), value: Value::Boolean(false) },
                 ]
             }
         );

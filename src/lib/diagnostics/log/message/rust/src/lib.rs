@@ -140,6 +140,7 @@ pub fn from_structured(source: MonikerWithUrl, bytes: &[u8]) -> Result<LogsData,
                             Value::UnsignedInt(v) => LogsProperty::Uint(label, v),
                             Value::Floating(v) => LogsProperty::Double(label, v),
                             Value::Text(v) => LogsProperty::String(label, v),
+                            Value::Boolean(v) => LogsProperty::Bool(label, v),
                             ValueUnknown!() => return Err(MessageError::UnrecognizedValue),
                         })
                     }
@@ -164,6 +165,7 @@ pub fn from_structured(source: MonikerWithUrl, bytes: &[u8]) -> Result<LogsData,
                     Value::UnsignedInt(v) => v.to_string(),
                     Value::Floating(v) => v.to_string(),
                     Value::Text(v) => v,
+                    Value::Boolean(v) => v.to_string(),
                     ValueUnknown!() => return Err(MessageError::UnrecognizedValue),
                 });
             }
@@ -176,6 +178,7 @@ pub fn from_structured(source: MonikerWithUrl, bytes: &[u8]) -> Result<LogsData,
                     Value::UnsignedInt(v) => v.to_string(),
                     Value::Floating(v) => v.to_string(),
                     Value::Text(v) => v,
+                    Value::Boolean(v) => v.to_string(),
                     ValueUnknown!() => return Err(MessageError::UnrecognizedValue),
                 });
             }

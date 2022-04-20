@@ -489,6 +489,7 @@ fn test_from_structured() {
             },
             Argument { name: LINE_NUMBER_LABEL.to_string(), value: Value::UnsignedInt(420) },
             Argument { name: "arg1".to_string(), value: Value::SignedInt(-23) },
+            Argument { name: "arg2".to_string(), value: Value::Boolean(true) },
             Argument { name: PID_LABEL.to_string(), value: Value::UnsignedInt(43) },
             Argument { name: TID_LABEL.to_string(), value: Value::UnsignedInt(912) },
             Argument { name: DROPPED_LABEL.to_string(), value: Value::UnsignedInt(2) },
@@ -518,6 +519,7 @@ fn test_from_structured() {
         .add_tag("tag")
         .set_message("msg".to_string())
         .add_key(LogsProperty::Int(LogsField::Other("arg1".to_string()), -23i64))
+        .add_key(LogsProperty::Bool(LogsField::Other("arg2".to_string()), true))
         .build()
     );
     let severity: i32 = LegacySeverity::Error.into();
@@ -530,7 +532,7 @@ fn test_from_structured() {
             dropped_logs: 2,
             pid: 43,
             tid: 912,
-            msg: "[some_file.cc(420)] msg arg1=-23".into(),
+            msg: "[some_file.cc(420)] msg arg1=-23 arg2=true".into(),
             tags: vec!["tag".into()]
         }
     );

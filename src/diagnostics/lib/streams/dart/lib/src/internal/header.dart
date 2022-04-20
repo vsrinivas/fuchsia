@@ -21,6 +21,7 @@ class Header {
   static final _typeRange = BitRange(0, 3);
   static final _sizeRange = BitRange(4, 15);
   static final _nameRange = BitRange(16, 31);
+  static final _boolRange = BitRange(32, 32);
   static final _valueRange = BitRange(32, 47);
   static final _severityRange = BitRange(56, 63);
 
@@ -50,6 +51,12 @@ class Header {
 
   /// String ref for associated name.
   int get nameRef => _bits.read(_nameRange);
+
+  /// Set boolean value.
+  void setBool(int value) => _bits.write(_boolRange, value);
+
+  /// Boolean value data.
+  int get boolVal => _bits.read(_boolRange);
 
   /// Set any record specific value data.
   void setValue(int value) => _bits.write(_valueRange, value);
