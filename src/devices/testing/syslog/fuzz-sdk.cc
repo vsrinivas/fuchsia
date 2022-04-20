@@ -31,6 +31,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     kUnsignedIntField,
     kDoubleField,
     kMaxValue = kDoubleField,
+    kBooleanField,
   };
   fuchsia_syslog::LogBuffer buffer;
   auto severity = provider.ConsumeIntegral<FuchsiaLogSeverity>();
@@ -73,6 +74,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         auto value = provider.ConsumeRandomLengthString();
         buffer.WriteKeyValue(key.data(), value.data());
       } break;
+      case OP::kBooleanField:
+        buffer.WriteKeyValue(key.data(), provider.ConsumeBool());
+        break;
     }
   }
   buffer.FlushRecord();

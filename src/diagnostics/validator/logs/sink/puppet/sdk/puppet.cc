@@ -168,6 +168,9 @@ class Puppet : public fuchsia::validate::logs::LogSinkPuppet {
           case fuchsia::validate::logs::PrintfValue::kStringValue:
             buffer.WriteKeyValue("", arg.string_value().data());
             break;
+          case fuchsia::validate::logs::PrintfValue::kBooleanValue:
+            buffer.WriteKeyValue("", arg.boolean_value());
+            break;
           case fuchsia::validate::logs::PrintfValue::Invalid:
             break;
         }
@@ -191,6 +194,9 @@ class Puppet : public fuchsia::validate::logs::LogSinkPuppet {
           break;
         case fuchsia::diagnostics::stream::Value::kText:
           buffer.WriteKeyValue(arg.name.data(), arg.value.text().data());
+          break;
+        case fuchsia::diagnostics::stream::Value::kBoolean:
+          buffer.WriteKeyValue(arg.name.data(), arg.value.boolean());
           break;
       }
     }

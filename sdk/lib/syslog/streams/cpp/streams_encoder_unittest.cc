@@ -157,6 +157,26 @@ TEST(StreamsRecordEncoder, WriteRecordFloat) {
   EXPECT_EQ(vec, expected);
 }
 
+TEST(StreamsRecordEncoder, WriteRecordBoolean) {
+  // Create Buffer
+  std::vector<uint8_t> vec;
+  // Create Record
+  fuchsia::diagnostics::stream::Value value;
+  value.set_boolean(true);
+  fuchsia::diagnostics::stream::Argument arg{.name = "name", .value = std::move(value)};
+  std::vector<fuchsia::diagnostics::stream::Argument> args;
+  args.push_back(std::move(arg));
+
+  fuchsia::diagnostics::stream::Record record{.timestamp = 6,
+                                              .severity = fuchsia::diagnostics::Severity::INFO,
+                                              .arguments = std::move(args)};
+  streams::log_record(record, &vec);
+  std::vector<uint8_t> expected({0x49, 0, 0,   0,   0,   0,    0, 0x30, 0x6,  0,   0,
+                                 0,    0, 0,   0,   0,   0x29, 0, 0x4,  0x80, 0x1, 0,
+                                 0,    0, 'n', 'a', 'm', 'e',  0, 0,    0,    0});
+  EXPECT_EQ(vec, expected);
+}
+
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

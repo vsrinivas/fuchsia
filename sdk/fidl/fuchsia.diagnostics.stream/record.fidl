@@ -48,4 +48,6 @@ type Value = flexible union {
     3: floating float64;
     /// A UTF8 text argument.
     4: text string:MAX_TEXT_ARG_LENGTH;
+    /// A boolean argument.
+    5: boolean bool;
 };

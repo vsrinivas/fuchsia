@@ -107,6 +107,9 @@ class Puppet : public fuchsia::validate::logs::LogSinkPuppet {
           case fuchsia::validate::logs::PrintfValue::kStringValue:
             syslog_backend::WriteKeyValue(&buffer, "", arg.string_value().data());
             break;
+          case fuchsia::validate::logs::PrintfValue::kBooleanValue:
+            syslog_backend::WriteKeyValue(&buffer, "", arg.boolean_value());
+            break;
           case fuchsia::validate::logs::PrintfValue::Invalid:
             break;
         }
@@ -130,6 +133,9 @@ class Puppet : public fuchsia::validate::logs::LogSinkPuppet {
           break;
         case fuchsia::diagnostics::stream::Value::kText:
           syslog_backend::WriteKeyValue(&buffer, arg.name.data(), arg.value.text().data());
+          break;
+        case fuchsia::diagnostics::stream::Value::kBoolean:
+          syslog_backend::WriteKeyValue(&buffer, arg.name.data(), arg.value.boolean());
           break;
       }
     }

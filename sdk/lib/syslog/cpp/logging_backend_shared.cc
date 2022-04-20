@@ -99,6 +99,11 @@ void WriteKeyValueLegacy(LogBuffer* buffer, const char* key, double value) {
   header->WriteString(a_buffer);
 }
 
+void WriteKeyValueLegacy(LogBuffer* buffer, const char* key, bool value) {
+  auto header = StartKv(buffer, key);
+  header->WriteString(value ? "true" : "false");
+}
+
 void EndRecordLegacy(LogBuffer* buffer) {}
 
 }  // namespace syslog_backend

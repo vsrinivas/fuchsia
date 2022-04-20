@@ -95,6 +95,12 @@ class LogBuffer final {
     syslog_write_key_value_double(&data_, StringViewToCStr(key), StringViewLength(key), value);
   }
 
+  // Writes a key/value pair to the buffer.
+  template <typename V, typename = std::enable_if_t<std::is_same<V, bool>{}>>
+  void WriteKeyValue(cpp17::string_view key, V value) {
+    syslog_write_key_value_bool(&data_, StringViewToCStr(key), StringViewLength(key), value);
+  }
+
   // Writes the LogBuffer to the socket.
   bool FlushRecord() { return syslog_flush_record(&data_); }
 

@@ -104,6 +104,10 @@ void WriteKeyValue(LogBuffer* buffer, const char* key, double value) {
   WriteKeyValueLegacy(buffer, key, value);
 }
 
+void WriteKeyValue(LogBuffer* buffer, const char* key, bool value) {
+  WriteKeyValueLegacy(buffer, key, value);
+}
+
 void EndRecord(LogBuffer* buffer) { EndRecordLegacy(buffer); }
 
 bool FlushRecord(LogBuffer* buffer) {

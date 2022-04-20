@@ -252,12 +252,12 @@ class Encoder {
     state.current_header_position = header_position;
   }
 
-  uint64_t ComputeArgHeader(RecordState& state, int type, uint64_t value_ref = 0) {
+  uint64_t ComputeArgHeader(RecordState& state, int type) {
     return ArgumentFields::Type::Make(type) |
            ArgumentFields::SizeWords::Make(state.arg_size.unsafe_get()) |
            ArgumentFields::NameRefVal::Make(state.current_key_size.unsafe_get()) |
            ArgumentFields::NameRefMSB::Make(state.current_key_size.unsafe_get() > 0 ? 1 : 0) |
-           ArgumentFields::ValueRef::Make(value_ref) | ArgumentFields::Reserved::Make(0);
+           ReservedFields::Value::Make(0);
   }
 
   void AppendArgumentValue(RecordState& state, int64_t value) {
@@ -288,8 +288,16 @@ class Encoder {
     state.encode_success &=
         buffer_->WritePadded(string.data(), string.slice().ToByteOffset(), &written);
     state.arg_size = state.arg_size + written;
-    *state.current_header_position = ComputeArgHeader(
-        state, type, string.slice().unsafe_get() > 0 ? (1 << 15) | string.slice().unsafe_get() : 0);
+    uint64_t value_ref =
+        string.slice().unsafe_get() > 0 ? (1 << 15) | string.slice().unsafe_get() : 0;
+    *state.current_header_position =
+        ComputeArgHeader(state, type) | StringArgumentFields::ValueRef::Make(value_ref);
+  }
+
+  void AppendArgumentValue(RecordState& state, bool value) {
+    int type = 9;
+    *state.current_header_position = ComputeArgHeader(state, type) |
+                                     BoolArgumentFields::Value::Make(static_cast<uint64_t>(value));
   }
 
   void End(RecordState& state) {
@@ -656,6 +664,16 @@ void WriteKeyValue(LogBuffer* buffer, const char* key, uint64_t value) {
 }
 
 void WriteKeyValue(LogBuffer* buffer, const char* key, double value) {
+  auto* state = RecordState::CreatePtr(buffer);
+  ExternalDataBuffer external_buffer(buffer);
+  Encoder<ExternalDataBuffer> encoder(external_buffer);
+  encoder.AppendArgumentKey(
+      *state, DataSlice<const char>(
+                  key, WordOffset<const char>::FromByteOffset(ByteOffset::Unbounded(strlen(key)))));
+  encoder.AppendArgumentValue(*state, value);
+}
+
+void WriteKeyValue(LogBuffer* buffer, const char* key, bool value) {
   auto* state = RecordState::CreatePtr(buffer);
   ExternalDataBuffer external_buffer(buffer);
   Encoder<ExternalDataBuffer> encoder(external_buffer);

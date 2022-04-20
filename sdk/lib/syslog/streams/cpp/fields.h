@@ -46,7 +46,17 @@ struct ArgumentFields {
   using SizeWords = Field<4, 15>;
   using NameRefVal = Field<16, 30>;
   using NameRefMSB = Field<31, 31>;
+};
+
+struct BoolArgumentFields final : ArgumentFields {
+  using Value = Field<32, 32>;
+};
+
+struct StringArgumentFields final : ArgumentFields {
   using ValueRef = Field<32, 47>;
-  using Reserved = Field<32, 63>;
+};
+
+struct ReservedFields final : ArgumentFields {
+  using Value = Field<32, 63>;
 };
 #endif  // LIB_SYSLOG_STREAMS_CPP_FIELDS_H_

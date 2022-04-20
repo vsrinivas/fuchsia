@@ -68,6 +68,7 @@ TEST(StructuredLogging, BackendDirect) {
   syslog_backend::FlushRecord(&buffer);
   syslog_backend::BeginRecord(&buffer, syslog::LOG_WARNING, "foo.cc", 42, "fake tag", "condition");
   syslog_backend::WriteKeyValue(&buffer, "foo", static_cast<int64_t>(42));
+  syslog_backend::WriteKeyValue(&buffer, "bar", true);
   syslog_backend::EndRecord(&buffer);
   ASSERT_TRUE(syslog_backend::FlushRecord(&buffer));
   // TODO(fxbug.dev/57482): Figure out how to verify this appropriately.

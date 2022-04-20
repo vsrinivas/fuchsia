@@ -68,6 +68,7 @@ size_t log_argument(const std::string& name, const fuchsia::diagnostics::stream:
 
   int type = 0;
   uint64_t value_ref = 0;
+  uint64_t bool_val = 0;
   switch (value.Which()) {
     case fuchsia::diagnostics::stream::Value::Tag::kSignedInt:
       type = 3;
@@ -90,6 +91,11 @@ size_t log_argument(const std::string& name, const fuchsia::diagnostics::stream:
       value_ref = value.text().length() > 0 ? (1 << 15) | value.text().length() : 0;
       break;
 
+    case fuchsia::diagnostics::stream::Value::Tag::kBoolean:
+      type = 9;
+      bool_val = static_cast<uint64_t>(value.boolean());
+      break;
+
     case fuchsia::diagnostics::stream::Value::Tag::kUnknown:
       break;
     default:
@@ -98,7 +104,8 @@ size_t log_argument(const std::string& name, const fuchsia::diagnostics::stream:
   uint64_t header = ArgumentFields::Type::Make(type) | ArgumentFields::SizeWords::Make(arg_size) |
                     ArgumentFields::NameRefVal::Make(name.length()) |
                     ArgumentFields::NameRefMSB::Make(name.length() > 0 ? 1 : 0) |
-                    ArgumentFields::ValueRef::Make(value_ref) | ArgumentFields::Reserved::Make(0);
+                    StringArgumentFields::ValueRef::Make(value_ref) |
+                    BoolArgumentFields::Value::Make(bool_val) | ReservedFields::Value::Make(0);
 
   std::memcpy(out->data() + header_idx, &header, WORD_SIZE);
   return arg_size;

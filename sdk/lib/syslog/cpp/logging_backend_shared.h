@@ -121,6 +121,8 @@ void WriteKeyValueLegacy(LogBuffer* buffer, const char* key, uint64_t value);
 
 void WriteKeyValueLegacy(LogBuffer* buffer, const char* key, double value);
 
+void WriteKeyValueLegacy(LogBuffer* buffer, const char* key, bool value);
+
 void EndRecordLegacy(LogBuffer* buffer);
 
 }  // namespace syslog_backend

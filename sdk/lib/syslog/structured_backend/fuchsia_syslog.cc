@@ -201,13 +201,23 @@ struct HeaderFields final {
 
 // ArgumentField structure for an Argument
 // see https://fuchsia.dev/fuchsia-src/reference/diagnostics/logs/encoding?hl=en#arguments
-struct ArgumentFields final {
+struct ArgumentFields {
   using Type = Field<0, 3>;
   using SizeWords = Field<4, 15>;
   using NameRefVal = Field<16, 30>;
   using NameRefMSB = Field<31, 31>;
+};
+
+struct BoolArgumentFields final : ArgumentFields {
+  using Value = Field<32, 32>;
+};
+
+struct StringArgumentFields final : ArgumentFields {
   using ValueRef = Field<32, 47>;
-  using Reserved = Field<32, 63>;
+};
+
+struct ReservedFields final : ArgumentFields {
+  using Value = Field<32, 63>;
 };
 
 using log_word_t = uint64_t;
@@ -382,12 +392,13 @@ class Encoder final {
   }
 
   // Generates an argument header
-  uint64_t ComputeArgHeader(RecordState& state, int type, uint64_t value_ref = 0) {
+  uint64_t ComputeArgHeader(RecordState& state, int type) {
     return ArgumentFields::Type::Make(type) |
            ArgumentFields::SizeWords::Make(state.arg_size.unsafe_get()) |
            ArgumentFields::NameRefVal::Make(state.current_key_size.unsafe_get()) |
            ArgumentFields::NameRefMSB::Make(state.current_key_size.unsafe_get() > 0 ? 1 : 0) |
-           ArgumentFields::ValueRef::Make(value_ref) | ArgumentFields::Reserved::Make(0);
+           ReservedFields::Value::Make(0);
+    ;
   }
 
   // Append a value to the current argument
@@ -426,8 +437,18 @@ class Encoder final {
     state.encode_success &=
         buffer_->WritePadded(string.data(), string.slice().ToByteOffset(), &written);
     state.arg_size = state.arg_size + written;
-    *state.current_header_position = ComputeArgHeader(
-        state, type, string.slice().unsafe_get() > 0 ? (1 << 15) | string.slice().unsafe_get() : 0);
+    uint64_t value_ref =
+        string.slice().unsafe_get() > 0 ? (1 << 15) | string.slice().unsafe_get() : 0;
+    *state.current_header_position =
+        ComputeArgHeader(state, type) | StringArgumentFields::ValueRef::Make(value_ref);
+  }
+
+  // Append a value to the current argument
+  void AppendArgumentValue(RecordState& state, bool value) {
+    // bool
+    int type = 9;
+    *state.current_header_position = ComputeArgHeader(state, type) |
+                                     BoolArgumentFields::Value::Make(static_cast<uint64_t>(value));
   }
 
   // Append a value to the current argument
@@ -567,6 +588,17 @@ void WriteKeyValue(fuchsia_syslog_log_buffer_t* buffer, cpp17::string_view key, 
   encoder.AppendArgumentValue(*state, value);
 }
 
+template <typename V, typename = std::enable_if_t<std::is_same<V, bool>{}>>
+void WriteKeyValue(fuchsia_syslog_log_buffer_t* buffer, cpp17::string_view key, V value) {
+  auto* state = RecordState::CreatePtr(buffer);
+  ExternalDataBuffer external_buffer(buffer);
+  Encoder<ExternalDataBuffer> encoder(external_buffer);
+  encoder.AppendArgumentKey(
+      *state, DataSlice<const char>(key.data(), WordOffset<const char>::FromByteOffset(
+                                                    ByteOffset::Unbounded(key.size()))));
+  encoder.AppendArgumentValue(*state, value);
+}
+
 void EndRecord(fuchsia_syslog_log_buffer_t* buffer) {
   auto* state = RecordState::CreatePtr(buffer);
   if (state->ended) {
@@ -646,6 +678,12 @@ void syslog_write_key_value_uint64(fuchsia_syslog_log_buffer_t* buffer, const ch
 // Writes a key/value pair to the buffer.
 void syslog_write_key_value_double(fuchsia_syslog_log_buffer_t* buffer, const char* key,
                                    size_t key_length, double value) {
+  fuchsia_syslog::WriteKeyValue(buffer, CStringToStringView(key, key_length).value(), value);
+}
+
+// Writes a key/value pair to the buffer.
+void syslog_write_key_value_bool(fuchsia_syslog_log_buffer_t* buffer, const char* key,
+                                 size_t key_length, bool value) {
   fuchsia_syslog::WriteKeyValue(buffer, CStringToStringView(key, key_length).value(), value);
 }
 

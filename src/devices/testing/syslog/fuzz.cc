@@ -29,6 +29,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     kUnsignedIntField,
     kDoubleField,
     kMaxValue = kDoubleField,
+    kBooleanField,
   };
   syslog_backend::LogBuffer buffer;
   auto severity = provider.ConsumeIntegral<syslog::LogSeverity>();
@@ -46,8 +47,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     auto key = provider.ConsumeRandomLengthString();
     switch (op) {
       case OP::kDoubleField:
-        syslog_backend::WriteKeyValue(&buffer, key.data(),
-                                      provider.ConsumeFloatingPoint<double>());
+        syslog_backend::WriteKeyValue(&buffer, key.data(), provider.ConsumeFloatingPoint<double>());
         break;
       case OP::kSignedIntField: {
         int64_t value;
@@ -68,6 +68,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
       case OP::kStringField: {
         auto value = provider.ConsumeRandomLengthString();
         syslog_backend::WriteKeyValue(&buffer, key.data(), value.data());
+      } break;
+      case OP::kBooleanField: {
+        syslog_backend::WriteKeyValue(&buffer, key.data(), provider.ConsumeBool());
       } break;
     }
   }

@@ -21,6 +21,7 @@ type PrintfValue = strict union {
     2: string_value string;
     3: float_value float64;
     4: integer_value int64;
+    5: boolean_value bool;
 };
 
 type RecordSpec = struct {

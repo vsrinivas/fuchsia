@@ -124,6 +124,10 @@ void syslog_write_key_value_uint64(fuchsia_syslog_log_buffer_t* buffer, const ch
 void syslog_write_key_value_double(fuchsia_syslog_log_buffer_t* buffer, const char* key,
                                    size_t key_length, double value);
 
+// Writes a key/value pair to the buffer.
+void syslog_write_key_value_bool(fuchsia_syslog_log_buffer_t* buffer, const char* key,
+                                 size_t key_length, bool value);
+
 // Writes the LogBuffer to the socket.
 bool syslog_flush_record(fuchsia_syslog_log_buffer_t* buffer);
 

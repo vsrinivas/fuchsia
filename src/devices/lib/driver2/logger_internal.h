@@ -83,6 +83,9 @@ struct EncoderState {
   // Encodes a floating point value
   void Encode(KeyValue<const char*, float> value) { buffer.WriteKeyValue(value.key, value.value); }
 
+  // Encodes a boolean value
+  void Encode(KeyValue<const char*, bool> value) { buffer.WriteKeyValue(value.key, value.value); }
+
   // Encodes an arbitrary list of values recursively.
   template <size_t i, size_t size, typename... T,
             typename std::enable_if<ILessThanSize<i, size>(), int>::type = 0>

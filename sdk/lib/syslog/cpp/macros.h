@@ -41,6 +41,8 @@ WEAK void WriteKeyValue(LogBuffer* buffer, const char* key, uint64_t value);
 
 WEAK void WriteKeyValue(LogBuffer* buffer, const char* key, double value);
 
+WEAK void WriteKeyValue(LogBuffer* buffer, const char* key, bool value);
+
 WEAK void EndRecord(LogBuffer* buffer);
 
 WEAK bool FlushRecord(LogBuffer* buffer);
@@ -119,6 +121,11 @@ struct LogBuffer {
 
   // Encodes a floating point value
   void Encode(KeyValue<const char*, float> value) {
+    syslog_backend::WriteKeyValue(this, value.key, value.value);
+  }
+
+  // Encodes a boolean value
+  void Encode(KeyValue<const char*, bool> value) {
     syslog_backend::WriteKeyValue(this, value.key, value.value);
   }
 
