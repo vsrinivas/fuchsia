@@ -708,9 +708,10 @@ void Device::UsbWriteCompleteHandler(usb_request_t* request) {
   zx_status_t send_status = ZX_OK;
   if (!list_is_empty(&tx_pending_infos_)) {
     txn = list_peek_head_type(&tx_pending_infos_, txn_info_t, node);
-    if ((send_status =
-             SendLocked(&static_cast<const uint8_t*>(txn->netbuf.data_buffer)[kEthFrameHdrSize],
-                        (txn->netbuf.data_size - kEthFrameHdrSize))) != ZX_ERR_SHOULD_WAIT) {
+    send_status =
+        SendLocked(&static_cast<const uint8_t*>(txn->netbuf.data_buffer)[kEthFrameHdrSize],
+                   (txn->netbuf.data_size - kEthFrameHdrSize));
+    if (send_status != ZX_ERR_SHOULD_WAIT) {
       list_remove_head(&tx_pending_infos_);
       additional_tx_queued = true;
     }
