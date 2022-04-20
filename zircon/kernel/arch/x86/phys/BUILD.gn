@@ -172,14 +172,18 @@ if (current_toolchain == default_toolchain) {
       public_deps = [
         "//zircon/kernel/lib/ktl",
         "//zircon/kernel/lib/libc",
+        "//zircon/system/ulib/uart",
       ]
 
       sources = [ "legacy-boot.cc" ]
       deps = [
         ":address-space",
+        "//zircon/kernel/phys:acpi",
         "//zircon/kernel/phys:allocation",
         "//zircon/kernel/phys:page-table",
         "//zircon/kernel/phys:symbolize",
+        "//zircon/kernel/phys:uart",
+        "//zircon/kernel/phys/lib/boot-shim",
         "//zircon/kernel/phys/lib/memalloc",
         "//zircon/system/ulib/hwreg",
         "//zircon/system/ulib/pretty",

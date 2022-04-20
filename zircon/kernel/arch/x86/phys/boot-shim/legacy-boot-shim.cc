@@ -17,6 +17,7 @@
 #include <phys/stdio.h>
 #include <phys/symbolize.h>
 #include <phys/trampoline-boot.h>
+#include <phys/uart.h>
 
 #include "acpi.h"
 #include "stdout.h"
@@ -31,7 +32,9 @@ void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
   // This also fills in gLegacyBoot.
   InitMemory(ptr);
 
-  StdoutFromCmdline(gLegacyBoot.cmdline);
+  // Enable uart.
+  UartFromCmdLine(gLegacyBoot.cmdline, gLegacyBoot.uart);
+  SetUartConsole(gLegacyBoot.uart);
 
   LegacyBootShim shim(symbolize.name(), gLegacyBoot);
   shim.set_build_id(symbolize.BuildIdString());

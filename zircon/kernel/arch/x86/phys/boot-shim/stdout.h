@@ -7,9 +7,12 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_PHYS_BOOT_SHIM_STDOUT_H_
 #define ZIRCON_KERNEL_ARCH_X86_PHYS_BOOT_SHIM_STDOUT_H_
 
+#include <lib/uart/all.h>
+
 #include <ktl/string_view.h>
 
-// Parse kernel.serial=... from the command line to update stdout.
-void StdoutFromCmdline(ktl::string_view cmdline);
+// If |cmdline| provides 'kernel.serial=' override |uart| is replaced by the provided configuration.
+// Otherwise, |uart| is left unchanged.
+void UartFromCmdLine(ktl::string_view cmdline, uart::all::Driver& uart);
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_PHYS_BOOT_SHIM_STDOUT_H_

@@ -175,6 +175,7 @@ if (toolchain_environment == "kernel.phys32") {
       "//zircon/kernel/phys:page-table",
       "//zircon/kernel/phys:symbolize",
       "//zircon/kernel/phys:trampoline-boot",
+      "//zircon/kernel/phys:uart",
       "//zircon/kernel/phys/lib/boot-shim",
       "//zircon/system/ulib/hwreg",
     ]

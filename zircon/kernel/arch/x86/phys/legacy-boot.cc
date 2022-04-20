@@ -7,6 +7,7 @@
 #include "legacy-boot.h"
 
 #include <inttypes.h>
+#include <lib/boot-shim/acpi.h>
 #include <lib/memalloc/pool.h>
 #include <lib/memalloc/range.h>
 #include <lib/zbitl/items/mem-config.h>
@@ -18,10 +19,12 @@
 #include <ktl/iterator.h>
 #include <ktl/limits.h>
 #include <ktl/span.h>
+#include <phys/acpi.h>
 #include <phys/allocation.h>
 #include <phys/main.h>
 #include <phys/page-table.h>
 #include <phys/symbolize.h>
+#include <phys/uart.h>
 #include <pretty/sizes.h>
 
 #include <ktl/enforce.h>
@@ -43,9 +46,26 @@ ktl::span<const ktl::byte> AsBytes(const T& obj) {
   return ktl::as_bytes(span);
 }
 
+void InitAcpi(LegacyBoot& boot_info) {
+  auto acpi_parser = MakeAcpiParser(boot_info.acpi_rsdp);
+  if (acpi_parser.is_error()) {
+    return;
+  }
+  boot_info.acpi_rsdp = acpi_parser->rsdp_pa();
+
+  if (auto debug_port = acpi_lite::GetDebugPort(*acpi_parser); debug_port.is_ok()) {
+    if (UartDriver driver; driver.Match(*debug_port)) {
+      boot_info.uart = driver.uart();
+      SetUartConsole(boot_info.uart);
+    }
+  }
+}
+
 }  // namespace
 
 void LegacyBootInitMemory() {
+  InitAcpi(gLegacyBoot);
+
   constexpr auto as_memrange =
       [](auto obj, memalloc::Type type = memalloc::Type::kLegacyBootData) -> memalloc::Range {
     auto bytes = AsBytes(obj);
