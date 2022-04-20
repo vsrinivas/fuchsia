@@ -21,7 +21,7 @@ To create a new end-to-end test, the steps are:
 
 ## 1. Prerequisites {#prerequisites}
 
-This guide requires that you’re familiar with the following tasks:
+This guide requires that you're familiar with the following tasks:
 
 *   [Configure and build a Fuchsia image](/docs/get-started/build_fuchsia.md).
 *   [Start the emulator (FEMU)](/docs/get-started/set_up_femu.md).
@@ -114,9 +114,9 @@ Do the following:
     }
     ```
 
-    The `test()` function in this code prints `Hello world!` in the device’s
+    The `test()` function in this code prints `Hello world!` in the device's
     log, then the test outputs the `Printed "Hello world!" in the device's log.`
-    message on the host machine’s screen.
+    message on the host machine's screen.
 
 1.  Save the file and exit the text editor.
 
@@ -203,16 +203,29 @@ Start the emulator to run your Fuchsia image:
 Note: The steps in this section assume that you don't have any terminals
 currently running FEMU or the `fx serve` command.
 
-1.  Configure an IPv6 network for the emulator (you only need to do this once):
+1.  Configure an IPv6 network for the emulator:
+
+    Note: This has to be completed once per machine.
 
     ```posix-terminal
     sudo ip tuntap add dev qemu mode tap user $USER && sudo ip link set qemu up
     ```
 
-1.  In a new terminal, start the emulator:
+1. Configure the upscript:
+
+    Note: If your machine is behind a firewall, you may need to apply some additional
+    configuration to allow the emulator to access the network. This is typically
+    accomplished by running an "upscript", which sets up the interfaces and firewall
+    access rules for the current process. If you're on a corporate network, check
+    with your internal networking team to see if they have an existing upscript
+    for you to use.
+    If you're not behind a firewall, there's still some configuration needed to
+    enable tun/tap networking. The example upscript
+    at <code>{{ '<var>' }}FUCHSIA_ROOT{{ '</var>' }}/scripts/start-unsecure-internet.sh</code>
+    should work for the majority of non-corporate users.
 
     ```posix-terminal
-    fx vdl start -N -u <PATH_TO_UPSCRIPT>
+    ffx config set emu.upscript {{ '<var>' }}PATH_TO_UPSCRIPT{{ '</var>' }}
     ```
 
     Replace the following:
@@ -220,16 +233,54 @@ currently running FEMU or the `fx serve` command.
     * `PATH_TO_UPSCRIPT`: The path to a FEMU network setup script; for example,
     `~/fuchsia/scripts/start-unsecure-internet.sh`.
 
-1.  Run the `fx set-device` command and select `fuchsia-5254-0063-5e7a` (the
-    emulator’s default device name) to be your device, for example:
+1. Start the package server
+
+   ```posix-terminal
+   fx serve
+   ```
+
+1.  Start the emulator:
+
+    ```posix-terminal
+    ffx emu start --net tap
+    ```
+
+    When startup is complete, the emulator prints the following message and opens
+    a shell prompt:
+
+    ```none {:.devsite-disable-click-to-copy}
+    Logging to "{{ '<var>' }}$USER{{ '</var>' }}/.local/share/Fuchsia/ffx/emu/instances/fuchsia-emulator/emulator.log"
+    Waiting for Fuchsia to start (up to 60 seconds)........Emulator is ready.
+    ```
+
+    1. The `--net` flag requires a value to indicate which kind of
+    networking to implement. `--net` has the following possible values:
+
+        - `tap`: Attaches a Tun/Tap interface.
+        - `user`: Sets up mapped ports through SLiRP.
+        - `none`: Disables networking.
+        - `auto`: Checks the host system's capabilities and selects `tap` if it is
+            available or `user` if a tap interface is unavailable.
+            `auto` is the default.
+
+    `auto` is the default if the flag is not specified on the command line.
+    The upscript is automatically executed only if the user selects `tap`
+    mode.
+
+    If `auto` is used, the launcher checks for a tap interface on the
+    device. If it finds a tap interface, it uses `tap` mode; otherwise it
+    uses `user` mode.
+
+1.  Run the `fx set-device` command and select `fuchsia-emulator` (the
+    emulator's default device name) to be your device, for example:
 
     <pre>
     $ fx set-device
     ERROR: Multiple devices found, please pick one from the list:
     1) fuchsia-4407-0bb4-d0eb
-    2) fuchsia-5254-0063-5e7a
+    2) fuchsia-emulator
     #? <b>2</b>
-    New default device: fuchsia-5254-0063-5e7a
+    New default device: fuchsia-emulator
     </pre>
 
 ## 5. Run the test {#run-the-test}
@@ -294,19 +345,19 @@ Use the following resources for writing new tests:
         Enable collecting performance traces from the device, for instance, CPU
         usage, Flutter frame rate, and kernel counters.
     *   [SetUI facade test](/src/tests/end_to_end/sl4f/test/setui_test.dart) -
-        Configure the device’s settings, for instance, a network interface
+        Configure the device's settings, for instance, a network interface
         setting.
     *   [File facade test](/src/tests/end_to_end/sl4f/test/storage_test.dart) -
-        Read and write files on the device’s storage.
+        Read and write files on the device's storage.
 
 ## 7. Update and run the test {#update-and-run-the-test}
 
-After editing the test’s source code, use the `fx test --e2e` command to run
+After editing the test's source code, use the `fx test --e2e` command to run
 the updated version of the test, for example:
 
 ```posix-terminal
 fx test --e2e my_new_e2e_test
 ```
 
-When this command detects any changes in the test’s source code, the command
+When this command detects any changes in the test's source code, the command
 automatically rebuilds the test prior to running the test.
