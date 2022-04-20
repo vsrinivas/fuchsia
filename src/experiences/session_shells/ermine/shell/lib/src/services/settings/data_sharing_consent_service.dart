@@ -16,12 +16,19 @@ class DataSharingConsentService implements TaskService {
 
   DataSharingConsentService();
 
-  // TODO(fxb/88445): Get the current consent status from _proxy.watch()
-  bool getCurrentConsent() => false;
+  Future<bool> getCurrentConsent() async {
+    try {
+      final settings = await _proxy.watch();
+      return settings.userDataSharingConsent ?? false;
+    } on Exception catch (e) {
+      log.warning('Failed to retrieve the current privacy status: $e');
+    }
+    return false;
+  }
 
   void setConsent({required bool consent}) {
     final settings = PrivacySettings(userDataSharingConsent: consent);
-    log.info('Setting up the Privacy to ${consent.toString()}');
+    log.info('Setting up the privacy status to ${consent.toString()}');
     _proxy.set(settings);
 
     onChanged(consent);
@@ -32,8 +39,9 @@ class DataSharingConsentService implements TaskService {
     _proxy = PrivacyProxy();
     Incoming.fromSvcPath().connectToService(_proxy);
 
-    final settings = await _proxy.watch();
-    onChanged(settings.userDataSharingConsent ?? false);
+    final status = await getCurrentConsent();
+    log.info('Starting the service with the current privacy status: $status');
+    onChanged(status);
   }
 
   @override
