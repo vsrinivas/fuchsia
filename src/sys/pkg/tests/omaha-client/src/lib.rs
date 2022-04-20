@@ -45,7 +45,6 @@ use {
     mock_reboot::{MockRebootService, RebootReason},
     mock_resolver::MockResolverService,
     mock_verifier::MockVerifierService,
-    omaha_client::cup_ecdsa::PublicKey,
     parking_lot::Mutex,
     serde_json::json,
     std::{
@@ -115,6 +114,28 @@ struct Proxies {
 // Omaha server and returns eager package config as JSON.
 type EagerPackageConfigBuilder = fn(&str) -> serde_json::Value;
 
+fn make_default_public_key_string() -> String {
+    "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----".to_string()
+}
+
+fn make_default_private_key() -> PrivateKey {
+    PrivateKey::from_str(
+        r#"-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgaWJBcVYaYzQN4OfY
+afKgVJJVjhoEhotqn4VKhmeIGI2hRANCAAQcrP+1Xy8s79idies3SyaBFSRSgC3u
+oJkWBoE32DnPf8SBpESSME1+9mrBF77+g6jQjxVfK1L59hjdRHApBI4P
+-----END PRIVATE KEY-----"#,
+    )
+    .unwrap()
+}
+
+fn make_default_private_keys() -> PrivateKeys {
+    PrivateKeys {
+        latest: PrivateKeyAndId { id: 42_i32.try_into().unwrap(), key: make_default_private_key() },
+        historical: vec![],
+    }
+}
+
 struct TestEnvBuilder {
     // Set one of responses, responses_and_metadata.
     responses_by_appid: Vec<(String, ResponseAndMetadata)>,
@@ -126,6 +147,7 @@ struct TestEnvBuilder {
     omaha_client_config_bool_overrides: Vec<(String, bool)>,
     omaha_client_config_uint16_overrides: Vec<(String, u16)>,
     cup_info_map: HashMap<PkgUrl, (String, String)>,
+    private_keys: PrivateKeys,
 }
 
 impl TestEnvBuilder {
@@ -143,6 +165,7 @@ impl TestEnvBuilder {
             omaha_client_config_bool_overrides: vec![],
             omaha_client_config_uint16_overrides: vec![],
             cup_info_map: HashMap::new(),
+            private_keys: make_default_private_keys(),
         }
     }
 
@@ -206,6 +229,11 @@ impl TestEnvBuilder {
         self
     }
 
+    fn private_keys(mut self, private_keys: PrivateKeys) -> Self {
+        self.private_keys = private_keys;
+        self
+    }
+
     async fn build(self) -> TestEnv {
         // Add the mount directories to fs service.
         let mounts = Mounts::new();
@@ -225,31 +253,10 @@ impl TestEnvBuilder {
         fs.dir("config").add_remote("data", config_data);
         fs.dir("config").add_remote("build-info", build_info);
 
-        let private_key = PrivateKey::from_str(
-            r#"-----BEGIN PRIVATE KEY-----
-MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgaWJBcVYaYzQN4OfY
-afKgVJJVjhoEhotqn4VKhmeIGI2hRANCAAQcrP+1Xy8s79idies3SyaBFSRSgC3u
-oJkWBoE32DnPf8SBpESSME1+9mrBF77+g6jQjxVfK1L59hjdRHApBI4P
------END PRIVATE KEY-----"#,
-        )
-        .unwrap();
-
-        let public_key = PublicKey::from_str(
-            r#"-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt
-7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==
------END PUBLIC KEY-----"#,
-        )
-        .unwrap();
-        assert_eq!(private_key.verifying_key(), public_key);
-
-        let private_keys = PrivateKeys {
-            latest: PrivateKeyAndId { id: 42_i32.try_into().unwrap(), key: private_key },
-            historical: vec![],
-        };
-
-        let server =
-            OmahaServer::builder().set(self.responses_by_appid).private_keys(private_keys).build();
+        let server = OmahaServer::builder()
+            .set(self.responses_by_appid)
+            .private_keys(self.private_keys)
+            .build();
         let url = server.clone().start().expect("start server");
         mounts.write_url(&url);
         mounts.write_appid("integration-test-appid");
@@ -935,7 +942,7 @@ async fn test_omaha_client_update_multi_app() {
                             "public_keys": {
                                 "latest": {
                                     "id": 42,
-                                    "key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----"
+                                    "key":make_default_public_key_string(),
                                 },
                                 "historical": [],
                             }
@@ -1091,6 +1098,112 @@ async fn test_omaha_client_update_eager_package() {
         false,
     )
     .await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_omaha_client_update_cup_force_historical_key() {
+    // This test forces usage of a historical key -- the server is passed a
+    // private key struct has key #100 as the latest and #42 in the historical
+    // vector, but the client is passed a public key struct which has key #42 as
+    // the latest.
+    let env = TestEnvBuilder::new()
+        .responses_and_metadata(vec![(
+            "integration-test-appid".to_string(),
+            ResponseAndMetadata { response: OmahaResponse::Update, ..Default::default() },
+        )])
+        .private_keys(PrivateKeys {
+            latest: PrivateKeyAndId {
+                id: 100_i32.try_into().unwrap(),
+                key: make_default_private_key(),
+            },
+            historical: vec![PrivateKeyAndId {
+                id: 42_i32.try_into().unwrap(),
+                key: make_default_private_key(),
+            }],
+        })
+        .eager_package_config_builder(|url: &str| {
+            json!(
+            {
+                "eager_package_configs": [
+                    {
+                        "server": {
+                            "service_url": url,
+                            "public_keys": {
+                                "latest": {
+                                    "id": 42,
+                                    "key":make_default_public_key_string(),
+                                },
+                                "historical": [],
+                            }
+                        },
+                        "packages": [ ]
+                    }
+                ]
+            })
+        })
+        .build()
+        .await;
+    omaha_client_update(
+        env,
+        tree_assertion!(
+            "children": {
+                "0": contains {
+                    "event": "CheckingForUpdates",
+                },
+                "1": contains {
+                    "event": "InstallingUpdate",
+                    "target-version": "0.1.2.3",
+                },
+                "2": contains {
+                    "event": "WaitingForReboot",
+                    "target-version": "0.1.2.3",
+                }
+            }
+        ),
+        true,
+    )
+    .await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_omaha_client_update_cup_key_mismatch() {
+    // If the server and client don't share a public/private keypair, no
+    // handshake and no response.
+    let env = TestEnvBuilder::new()
+        .responses_and_metadata(vec![(
+            "integration-test-appid".to_string(),
+            ResponseAndMetadata { response: OmahaResponse::Update, ..Default::default() },
+        )])
+        .private_keys(PrivateKeys {
+            latest: PrivateKeyAndId {
+                id: 100_i32.try_into().unwrap(),
+                key: make_default_private_key(),
+            },
+            historical: vec![],
+        })
+        .eager_package_config_builder(|url: &str| {
+            json!(
+            {
+                "eager_package_configs": [
+                    {
+                        "server": {
+                            "service_url": url,
+                            "public_keys": {
+                                "latest": {
+                                    "id": 42,
+                                    "key":make_default_public_key_string(),
+                                },
+                                "historical": [],
+                            }
+                        },
+                        "packages": [ ]
+                    }
+                ]
+            })
+        })
+        .build()
+        .await;
+    do_failed_update_check(&env).await;
 }
 
 #[fasync::run_singlethreaded(test)]

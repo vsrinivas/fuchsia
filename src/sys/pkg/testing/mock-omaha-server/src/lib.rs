@@ -240,8 +240,7 @@ fn make_etag(
     })
     .hash();
 
-    let private_key: &PrivateKey =
-        inner.private_keys.as_ref().unwrap().find(public_key_id).unwrap();
+    let private_key: &PrivateKey = inner.private_keys.as_ref().unwrap().find(public_key_id)?;
 
     let mut buffer: Vec<u8> = vec![];
     buffer.extend(response_data.iter());
