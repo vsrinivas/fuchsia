@@ -21,8 +21,8 @@ group("all") {
 group("garnet") {
   testonly = true
   public_deps = [
-    "//garnet/packages/config:network",
     "//garnet/packages/config:openssh_keys",
     "//garnet/packages/prod:all",
+    "//src/sys/sysmgr:services_config",
   ]
 }

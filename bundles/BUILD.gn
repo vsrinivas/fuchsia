@@ -116,7 +116,6 @@ group("kitchen_sink") {
     "//examples",
     "//garnet/packages:all",
     "//garnet/packages/config:amber",
-    "//garnet/packages/config:network",
     "//garnet/packages/config:openssh_keys",
     "//src/connectivity/telephony",
     "//src/graphics/examples",
@@ -125,6 +124,7 @@ group("kitchen_sink") {
     "//src/media/bundles:examples",
     "//src/media/bundles:services",
     "//src/media/bundles:tools",
+    "//src/sys/sysmgr:services_config",
   ]
 }
 

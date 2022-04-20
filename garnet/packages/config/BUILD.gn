@@ -5,14 +5,6 @@
 # WARNING: This file was machine-generated from previous json files and
 # will eventually be deleted.
 
-group("network") {
-  public_deps = [
-    ":services",
-    "//src/sys/sysmgr:cobalt_system_metrics_config",
-    "//src/sys/sysmgr:sshd_host_config",
-  ]
-}
-
 group("openssh_keys") {
   testonly = true
   public_deps =
@@ -22,8 +14,8 @@ group("openssh_keys") {
 group("router") {
   testonly = true
   public_deps = [
-    ":services",
     "//garnet/bin/sysmgr:router_config",
+    "//src/sys/sysmgr:services_config",
   ]
 }
 
@@ -42,15 +34,11 @@ group("terminal") {
   public_deps = [ "//src/ui/bin/terminal:tiles_config" ]
 }
 
-group("services") {
-  public_deps = [ "//garnet/bin/sysmgr:services_config" ]
-}
-
 group("shortcut") {
   public_deps = [ "//src/ui/bin/shortcut:configs" ]
 }
 
 group("ui_policy") {
   testonly = true
-  public_deps = [ "//garnet/packages/config:services" ]
+  public_deps = [ "//src/sys/sysmgr:services_config" ]
 }
