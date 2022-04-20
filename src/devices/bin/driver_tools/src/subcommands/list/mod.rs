@@ -69,12 +69,14 @@ pub async fn list(
 
     if cmd.verbose {
         for driver in driver_info {
-            println!("{0: <10}: {1}", "Name", driver.name.unwrap_or("".to_string()));
-            if let Some(libname) = driver.libname {
-                println!("{0: <10}: {1}", "Driver", libname);
+            if let Some(name) = driver.name {
+                println!("{0: <10}: {1}", "Name", name);
             }
             if let Some(url) = driver.url {
                 println!("{0: <10}: {1}", "URL", url);
+            }
+            if let Some(libname) = driver.libname {
+                println!("{0: <10}: {1}", "Driver", libname);
             }
             match driver.bind_rules {
                 Some(BindRulesBytecode::BytecodeV1(bytecode)) => {
@@ -91,10 +93,13 @@ pub async fn list(
         }
     } else {
         for driver in driver_info {
-            let name = driver.name.unwrap_or("<unknown>".to_string());
-            let libname_or_url = driver.libname.or(driver.url).unwrap_or("".to_string());
-
-            println!("{:<20}: {}", name, libname_or_url);
+            if let Some(name) = driver.name {
+                let libname_or_url = driver.libname.or(driver.url).unwrap_or("".to_string());
+                println!("{:<20}: {}", name, libname_or_url);
+            } else {
+                let url_or_libname = driver.url.or(driver.libname).unwrap_or("".to_string());
+                println!("{}", url_or_libname);
+            }
         }
     }
     Ok(())
