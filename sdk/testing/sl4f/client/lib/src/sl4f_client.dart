@@ -71,9 +71,12 @@ class Sl4f {
     'top': 'top -n 1',
     'wlan': 'wlan-dev status',
   };
-  static const _sl4fComponentUrl =
-      'fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cmx';
-  static const _sl4fComponentName = 'sl4f.cmx';
+
+  /// SL4F V1 url ends with .cmx, its V2 url is "fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cm"
+  static const _sl4fV1Url = 'fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cmx';
+
+  /// SL4F V1 name ends with .cmx, its V2 moniker is "/core/sl4f"
+  static const _sl4fV1Name = 'sl4f.cmx';
   static const _sl4fHttpDefaultPort = 80;
   static final _portSuffixRe = RegExp(r':\d+$');
 
@@ -319,28 +322,30 @@ class Sl4f {
         _log.info('SL4F has started.');
         return;
       }
-
       _log.info('Try $attempt at starting sl4f.');
-      // We run sl4f with `-d` to make sure that it keeps running even
-      // if sshd dies or the connection somehow breaks.
-      //
-      // We apparently cannot rely on the ssh connection to stay open
-      // indefinitely for as long as sl4f is running.
-      //
-      // This has the consequence that we won't get an error in the logs
-      // if sl4f.cmx isn't available. This shouldn't be an issue if the
-      // users start the test with the given instructions, especially
-      // using the `end_to_end_deps` bundle, but it could still happen
-      // if something gets misconfigured in the product build config.
-      //
-      // The run program launches the specified component with stdout and stderr
-      // cloned from its own environment, even when -d is specified. Ssh hooks
-      // into those standard file descriptors and waits for those hooks to close
-      // before exiting, so with a simple run command it effectively waits on
-      // the daemonized component, which would cause a hang here if we awaited
-      // it. By redirecting stdout and stderr to /dev/null, we make it so that
-      // ssh does not wait for them to close, and thus we can await here safely.
-      await ssh.run('run -d $_sl4fComponentUrl > /dev/null 2> /dev/null');
+      ProcessResult isV2 = await ssh.run('start_sl4f');
+      if (isV2.exitCode != 0) {
+        // We run sl4f with `-d` to make sure that it keeps running even
+        // if sshd dies or the connection somehow breaks.
+        //
+        // We apparently cannot rely on the ssh connection to stay open
+        // indefinitely for as long as sl4f is running.
+        //
+        // This has the consequence that we won't get an error in the logs
+        // if sl4f.cmx isn't available. This shouldn't be an issue if the
+        // users start the test with the given instructions, especially
+        // using the `end_to_end_deps` bundle, but it could still happen
+        // if something gets misconfigured in the product build config.
+        //
+        // The run program launches the specified component with stdout and stderr
+        // cloned from its own environment, even when -d is specified. Ssh hooks
+        // into those standard file descriptors and waits for those hooks to close
+        // before exiting, so with a simple run command it effectively waits on
+        // the daemonized component, which would cause a hang here if we awaited
+        // it. By redirecting stdout and stderr to /dev/null, we make it so that
+        // ssh does not wait for them to close, and thus we can await here safely.
+        await ssh.run('run -d $_sl4fV1Url > /dev/null 2> /dev/null');
+      }
 
       if (await isRunning(tries: 3, delay: Duration(seconds: 2))) {
         _log.info('SL4F has started.');
@@ -356,10 +361,24 @@ class Sl4f {
   /// This should be called in the [tearDown] or [tearDownAll] of your test to
   /// ensure that an SL4F server is not lingering after the test is done.
   Future<void> stopServer() async {
-    if ((await ssh.run('killall $_sl4fComponentName')).exitCode != 0) {
-      _log.warning('Could not stop sl4f. Continuing.');
+    if (await isRunning()) {
+      if (await _isV1()) {
+        _log.info('sl4f is running as v1.');
+
+        if ((await ssh.run('killall $_sl4fV1Name')).exitCode != 0) {
+          _log.warning('Could not stop sl4f. Continuing.');
+        }
+      } else {
+        _log.info('sl4f is running as v2, not stopping the component.');
+      }
     }
     close();
+  }
+
+  Future<bool> _isV1() async {
+    final testIsV1 =
+        await request('component_facade.Search', {'name': _sl4fV1Name});
+    return (testIsV1 == 'Success');
   }
 
   /// Restarts the device under test.
