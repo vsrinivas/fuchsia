@@ -5,8 +5,12 @@
 pub mod args;
 
 use {
-    super::common, anyhow::Result, args::ListCommand,
-    fidl_fuchsia_driver_development::BindRulesBytecode, futures::join, std::collections::HashSet,
+    super::common::{self, Device},
+    anyhow::Result,
+    args::ListCommand,
+    fidl_fuchsia_driver_development::BindRulesBytecode,
+    futures::join,
+    std::{collections::HashSet, iter::FromIterator},
 };
 
 pub async fn list(
@@ -24,22 +28,39 @@ pub async fn list(
         // Await the futures concurrently.
         let (driver_info, device_info) = join!(driver_info, device_info);
 
-        let mut loaded_driver_set = HashSet::new();
-        for device in device_info? {
-            if let Some(libname) = &device.bound_driver_libname {
-                loaded_driver_set.insert(String::from(libname));
-            }
-        }
+        let loaded_driver_set: HashSet<String> =
+            HashSet::from_iter(device_info?.into_iter().filter_map(|device_info| {
+                let device: Device = device_info.into();
+                let key = match device {
+                    Device::V1(ref info) => &info.0.bound_driver_libname,
+                    Device::V2(ref info) => {
+                        // DFv2 nodes do not have a bound driver libname so the
+                        // bound driver URL is selected instead.
+                        &info.0.bound_driver_url
+                    }
+                };
+                match key {
+                    Some(key) => Some(key.to_owned()),
+                    None => None,
+                }
+            }));
 
         // Filter the driver list by the hash set.
         driver_info?
             .into_iter()
             .filter(|driver| {
-                if let Some(libname_or_url) = driver.libname.as_ref().or(driver.url.as_ref()) {
-                    loaded_driver_set.contains(libname_or_url)
-                } else {
-                    false
+                let mut loaded = false;
+                if let Some(ref libname) = driver.libname {
+                    if loaded_driver_set.contains(libname) {
+                        loaded = true;
+                    }
                 }
+                if let Some(ref url) = driver.url {
+                    if loaded_driver_set.contains(url) {
+                        loaded = true
+                    }
+                }
+                loaded
             })
             .collect()
     } else {

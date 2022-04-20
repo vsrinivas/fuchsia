@@ -12,6 +12,55 @@ use {
     selectors::{self, VerboseError},
 };
 
+#[derive(Debug)]
+pub struct DFv1Device(pub fdd::DeviceInfo);
+
+impl DFv1Device {
+    pub fn extract_name<'b>(topological_path: &'b str) -> &'b str {
+        let (_, name) = topological_path.rsplit_once('/').unwrap_or(("", &topological_path));
+        name
+    }
+}
+
+#[derive(Debug)]
+pub struct DFv2Node(pub fdd::DeviceInfo);
+
+impl DFv2Node {
+    pub fn extract_name<'b>(moniker: &'b str) -> &'b str {
+        let (_, name) = moniker.rsplit_once('.').unwrap_or(("", &moniker));
+        name
+    }
+}
+
+#[derive(Debug)]
+pub enum Device {
+    V1(DFv1Device),
+    V2(DFv2Node),
+}
+
+impl Device {
+    pub fn get_device_info(&self) -> &fdd::DeviceInfo {
+        match self {
+            Device::V1(device) => &device.0,
+            Device::V2(node) => &node.0,
+        }
+    }
+}
+
+impl std::convert::From<fdd::DeviceInfo> for Device {
+    fn from(device_info: fdd::DeviceInfo) -> Device {
+        fn is_dfv2_node(device_info: &fdd::DeviceInfo) -> bool {
+            device_info.bound_driver_libname.is_none()
+        }
+
+        if is_dfv2_node(&device_info) {
+            Device::V2(DFv2Node(device_info))
+        } else {
+            Device::V1(DFv1Device(device_info))
+        }
+    }
+}
+
 /// Combines pagination results into a single vector.
 pub async fn get_device_info(
     service: &fdd::DriverDevelopmentProxy,

@@ -5,7 +5,7 @@
 pub mod args;
 
 use {
-    super::common,
+    super::common::{self, DFv1Device, DFv2Node, Device},
     anyhow::{format_err, Result},
     args::DumpCommand,
     fidl_fuchsia_developer_remotecontrol as fremotecontrol, fidl_fuchsia_driver_development as fdd,
@@ -17,15 +17,6 @@ trait DeviceInfoPrinter {
 
     fn print_graph_node(&self) -> Result<()>;
     fn print_graph_edge(&self, child: &fdd::DeviceInfo) -> Result<()>;
-}
-
-struct DFv1Device(fdd::DeviceInfo);
-
-impl DFv1Device {
-    fn extract_name<'b>(topological_path: &'b str) -> &'b str {
-        let (_, name) = topological_path.rsplit_once('/').unwrap_or(("", &topological_path));
-        name
-    }
 }
 
 impl DeviceInfoPrinter for DFv1Device {
@@ -68,15 +59,6 @@ impl DeviceInfoPrinter for DFv1Device {
     }
 }
 
-struct DFv2Node(fdd::DeviceInfo);
-
-impl DFv2Node {
-    fn extract_name<'b>(moniker: &'b str) -> &'b str {
-        let (_, name) = moniker.rsplit_once('.').unwrap_or(("", &moniker));
-        name
-    }
-}
-
 impl DeviceInfoPrinter for DFv2Node {
     fn print(&self, tabs: usize) -> Result<()> {
         println!(
@@ -111,20 +93,6 @@ impl DeviceInfoPrinter for DFv2Node {
     }
 }
 
-enum Device {
-    V1(DFv1Device),
-    V2(DFv2Node),
-}
-
-impl Device {
-    pub fn get_device_info(&self) -> &fdd::DeviceInfo {
-        match self {
-            Device::V1(device) => &device.0,
-            Device::V2(node) => &node.0,
-        }
-    }
-}
-
 impl DeviceInfoPrinter for Device {
     fn print(&self, tabs: usize) -> Result<()> {
         match self {
@@ -144,20 +112,6 @@ impl DeviceInfoPrinter for Device {
         match self {
             Device::V1(device) => device.print_graph_edge(child),
             Device::V2(node) => node.print_graph_edge(child),
-        }
-    }
-}
-
-impl std::convert::From<fdd::DeviceInfo> for Device {
-    fn from(device_info: fdd::DeviceInfo) -> Device {
-        fn is_dfv2_node(device_info: &fdd::DeviceInfo) -> bool {
-            device_info.bound_driver_libname.is_none()
-        }
-
-        if is_dfv2_node(&device_info) {
-            Device::V2(DFv2Node(device_info))
-        } else {
-            Device::V1(DFv1Device(device_info))
         }
     }
 }
