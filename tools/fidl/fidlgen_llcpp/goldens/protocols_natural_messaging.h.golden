@@ -308,11 +308,11 @@ class ::fidl::internal::NaturalEventHandlerInterface<
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
   virtual void OnEmptyResponse(
-      ::fidl::Event<
-          ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>&) {}
+      ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::
+                        OnEmptyResponse>&) = 0;
   virtual void OnWithResponse(
-      ::fidl::Event<
-          ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>&) {}
+      ::fidl::Event<::test_protocols::WithAndWithoutRequestResponse::
+                        OnWithResponse>&) = 0;
 };
 
 template <>
@@ -322,6 +322,14 @@ class ::fidl::AsyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>
       public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
+  void OnEmptyResponse(
+      ::fidl::Event<
+          ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>&)
+      override {}
+  void OnWithResponse(
+      ::fidl::Event<
+          ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>&)
+      override {}
 };
 
 template <>
@@ -751,7 +759,7 @@ class ::fidl::internal::NaturalEventHandlerInterface<
  public:
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
-  virtual void Event(::fidl::Event<::test_protocols::Transitional::Event>&) {}
+  virtual void Event(::fidl::Event<::test_protocols::Transitional::Event>&) = 0;
 };
 
 template <>
@@ -761,6 +769,7 @@ class ::fidl::AsyncEventHandler<::test_protocols::Transitional>
       public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
+  void Event(::fidl::Event<::test_protocols::Transitional::Event>&) override {}
 };
 
 template <>
@@ -1690,7 +1699,7 @@ class ::fidl::internal::NaturalEventHandlerInterface<
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
   virtual void AnEvent(
-      ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent>&) {}
+      ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent>&) = 0;
 };
 
 template <>
@@ -1700,6 +1709,8 @@ class ::fidl::AsyncEventHandler<::test_protocols::HandleRightsProtocol>
       public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
+  void AnEvent(::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent>&)
+      override {}
 };
 
 template <>
@@ -2776,7 +2787,7 @@ class ::fidl::internal::NaturalEventHandlerInterface<
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
   virtual void EventA(
-      ::fidl::Event<::test_protocols::ChannelProtocol::EventA>&) {}
+      ::fidl::Event<::test_protocols::ChannelProtocol::EventA>&) = 0;
 };
 
 template <>
@@ -2786,6 +2797,8 @@ class ::fidl::AsyncEventHandler<::test_protocols::ChannelProtocol>
       public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
+  void EventA(
+      ::fidl::Event<::test_protocols::ChannelProtocol::EventA>&) override {}
 };
 
 template <>

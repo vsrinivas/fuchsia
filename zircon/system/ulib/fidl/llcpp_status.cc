@@ -23,6 +23,7 @@ const char* const kErrorChannelUnbound = "failed outgoing operation on unbound c
 const char* const kErrorWaitOneFailed = "zx_channel_wait_one failed";
 const char* const kErrorSyncEventBufferTooSmall =
     "received a larger message than allowed by the events";
+const char* const kErrorSyncEventUnhandledTransitionalEvent = "unhandled transitional event";
 const char* const kCallerAllocatedBufferTooSmall =
     "buffer provided to caller-allocating flavor is too small";
 

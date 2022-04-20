@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire_test_base.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/zx/channel.h>
@@ -48,12 +49,14 @@ zx_status_t OpenFileWithCreate(const fidl::ClientEnd<fio::Directory>& dir,
   EXPECT_EQ(open_res.status(), ZX_OK);
   auto child = fidl::BindSyncClient(std::move(child_endpoints->client));
 
-  class EventHandler : public fidl::WireSyncEventHandler<fio::Node> {
+  class EventHandler : public fidl::testing::WireSyncEventHandlerTestBase<fio::Node> {
    public:
     EventHandler() = default;
     zx_status_t status() const { return status_; }
 
     void OnOpen(fidl::WireEvent<fio::Node::OnOpen>* event) override { status_ = event->s; }
+
+    void NotImplemented_(const std::string& name) override { FAIL() << "Unexpected " << name; }
 
    private:
     zx_status_t status_ = ZX_OK;

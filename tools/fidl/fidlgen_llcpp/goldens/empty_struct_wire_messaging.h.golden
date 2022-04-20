@@ -682,7 +682,7 @@ class ::fidl::internal::WireEventHandlerInterface<
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
   virtual void Receive(
-      ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>* event) {}
+      ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>* event) = 0;
 };
 
 template <>
@@ -692,6 +692,8 @@ class ::fidl::WireAsyncEventHandler<::test_emptystruct::EmptyProtocol>
       public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
+  void Receive(::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>*
+                   event) override {}
 };
 
 template <>
@@ -706,6 +708,9 @@ class ::fidl::WireSyncEventHandler<::test_emptystruct::EmptyProtocol>
   // corresponding virtual method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

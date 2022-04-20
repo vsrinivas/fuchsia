@@ -94,11 +94,12 @@ fuchsia_component("hlcpp-server") {
 executable("llcpp_server") {
   output_name = "llcpp-server"
   output_dir = target_out_dir
+  testonly = true
 
   sources = [ "llcpp_server.cc" ]
 
   deps = [
-    ":fidl_service_llcpp",
+    ":fidl_service_llcpp_testing",
     "//sdk/lib/fdio",
     "//sdk/lib/stdcompat",
     "//sdk/lib/sys/cpp",
@@ -112,6 +113,7 @@ executable("llcpp_server") {
 fuchsia_component("llcpp-server") {
   manifest = "meta/llcpp-server.cmx"
   deps = [ ":llcpp_server" ]
+  testonly = true
 }
 
 ## Rust Test Server

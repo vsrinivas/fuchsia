@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire_test_base.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
 #include <lib/zx/channel.h>
@@ -27,7 +28,7 @@ void FidlOpenValidator(const fidl::ClientEnd<fio::Directory>& directory, const c
       fidl::StringView::FromExternal(path), std::move(endpoints->server));
   ASSERT_OK(result.status());
 
-  class EventHandler : public fidl::WireSyncEventHandler<fio::Node> {
+  class EventHandler : public fidl::testing::WireSyncEventHandlerTestBase<fio::Node> {
    public:
     std::optional<zx_status_t> status() const { return status_; }
     std::optional<fio::wire::NodeInfo::Tag> tag() const { return tag_; }
@@ -37,6 +38,10 @@ void FidlOpenValidator(const fidl::ClientEnd<fio::Directory>& directory, const c
       if (!event->info.has_invalid_tag()) {
         tag_ = event->info.Which();
       }
+    }
+
+    void NotImplemented_(const std::string& name) override {
+      ADD_FAILURE("Unexpected %s", name.c_str());
     }
 
    private:

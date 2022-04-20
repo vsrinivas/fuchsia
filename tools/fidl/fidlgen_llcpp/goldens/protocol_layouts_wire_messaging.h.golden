@@ -6112,35 +6112,36 @@ class ::fidl::internal::WireEventHandlerInterface<
   virtual ~WireEventHandlerInterface() = default;
   virtual void OnAnonComposed(
       ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposed>*
-          event) {}
+          event) = 0;
   virtual void OnAnonComposedWithError(
       ::fidl::WireEvent<
           ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>*
-          event) {}
+          event) = 0;
   virtual void OnNamedComposed(
       ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposed>*
-          event) {}
+          event) = 0;
   virtual void OnNamedComposedWithError(
       ::fidl::WireEvent<
           ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>*
-          event) {}
+          event) = 0;
   virtual void OnImport(
       ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImport>*
-          event) {}
+          event) = 0;
   virtual void OnImportWithError(
       ::fidl::WireEvent<
-          ::test_protocollayouts::MainProtocol::OnImportWithError>* event) {}
+          ::test_protocollayouts::MainProtocol::OnImportWithError>* event) = 0;
   virtual void OnLocal(
-      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocal>* event) {
-  }
+      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocal>*
+          event) = 0;
   virtual void OnLocalWithError(
       ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocalWithError>*
-          event) {}
+          event) = 0;
   virtual void OnAnon(
-      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon>* event) {}
+      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon>*
+          event) = 0;
   virtual void OnAnonWithError(
       ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonWithError>*
-          event) {}
+          event) = 0;
 };
 
 template <>
@@ -6150,6 +6151,37 @@ class ::fidl::WireAsyncEventHandler<::test_protocollayouts::MainProtocol>
       public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
+  void OnAnonComposed(
+      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonComposed>*
+          event) override {}
+  void OnAnonComposedWithError(
+      ::fidl::WireEvent<
+          ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>* event)
+      override {}
+  void OnNamedComposed(
+      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnNamedComposed>*
+          event) override {}
+  void OnNamedComposedWithError(
+      ::fidl::WireEvent<
+          ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>*
+          event) override {}
+  void OnImport(
+      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnImport>* event)
+      override {}
+  void OnImportWithError(
+      ::fidl::WireEvent<
+          ::test_protocollayouts::MainProtocol::OnImportWithError>* event)
+      override {}
+  void OnLocal(::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocal>*
+                   event) override {}
+  void OnLocalWithError(
+      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocalWithError>*
+          event) override {}
+  void OnAnon(::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnon>*
+                  event) override {}
+  void OnAnonWithError(
+      ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonWithError>*
+          event) override {}
 };
 
 template <>
@@ -6165,6 +6197,9 @@ class ::fidl::WireSyncEventHandler<::test_protocollayouts::MainProtocol>
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol>
           client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

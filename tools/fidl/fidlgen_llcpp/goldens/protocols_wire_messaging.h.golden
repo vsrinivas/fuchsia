@@ -1990,11 +1990,11 @@ class ::fidl::internal::WireEventHandlerInterface<
   virtual void OnEmptyResponse(
       ::fidl::WireEvent<
           ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>*
-          event) {}
+          event) = 0;
   virtual void OnWithResponse(
       ::fidl::WireEvent<
           ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>*
-          event) {}
+          event) = 0;
 };
 
 template <>
@@ -2005,6 +2005,14 @@ class ::fidl::WireAsyncEventHandler<
       public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
+  void OnEmptyResponse(
+      ::fidl::WireEvent<
+          ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>*
+          event) override {}
+  void OnWithResponse(
+      ::fidl::WireEvent<
+          ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>*
+          event) override {}
 };
 
 template <>
@@ -2021,6 +2029,9 @@ class ::fidl::WireSyncEventHandler<
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_protocols::WithAndWithoutRequestResponse>
           client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
@@ -3113,7 +3124,7 @@ class ::fidl::internal::WireEventHandlerInterface<
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
   virtual void Event(
-      ::fidl::WireEvent<::test_protocols::Transitional::Event>* event) {}
+      ::fidl::WireEvent<::test_protocols::Transitional::Event>* event) = 0;
 };
 
 template <>
@@ -3123,6 +3134,8 @@ class ::fidl::WireAsyncEventHandler<::test_protocols::Transitional>
       public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
+  void Event(::fidl::WireEvent<::test_protocols::Transitional::Event>* event)
+      override {}
 };
 
 template <>
@@ -3131,12 +3144,19 @@ class ::fidl::WireSyncEventHandler<::test_protocols::Transitional>
           ::test_protocols::Transitional> {
  public:
   WireSyncEventHandler() = default;
+  void Event(::fidl::WireEvent<::test_protocols::Transitional::Event>* event)
+      override {
+    got_transitional_ = true;
+  }
 
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_protocols::Transitional> client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
@@ -3517,6 +3537,9 @@ class ::fidl::WireSyncEventHandler<::test_protocols::MethodWithUnion>
   // corresponding virtual method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion> client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
@@ -4978,6 +5001,9 @@ class ::fidl::WireSyncEventHandler<::test_protocols::WithProtocolEnds>
   // corresponding virtual method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds> client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
@@ -5533,6 +5559,9 @@ class ::fidl::WireSyncEventHandler<::test_protocols::ManyParameters>
   // corresponding virtual method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_protocols::ManyParameters> client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
@@ -6422,7 +6451,7 @@ class ::fidl::internal::WireEventHandlerInterface<
   virtual ~WireEventHandlerInterface() = default;
   virtual void AnEvent(
       ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>*
-          event) {}
+          event) = 0;
 };
 
 template <>
@@ -6432,6 +6461,9 @@ class ::fidl::WireAsyncEventHandler<::test_protocols::HandleRightsProtocol>
       public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
+  void AnEvent(
+      ::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>* event)
+      override {}
 };
 
 template <>
@@ -6447,6 +6479,9 @@ class ::fidl::WireSyncEventHandler<::test_protocols::HandleRightsProtocol>
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_protocols::HandleRightsProtocol>
           client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
@@ -8185,6 +8220,9 @@ class ::fidl::WireSyncEventHandler<::test_protocols::WithErrorSyntax>
   // corresponding virtual method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax> client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
@@ -8761,6 +8799,9 @@ class ::fidl::WireSyncEventHandler<::test_protocols::DiscoverableProtocol>
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_protocols::DiscoverableProtocol>
           client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
@@ -10211,7 +10252,7 @@ class ::fidl::internal::WireEventHandlerInterface<
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
   virtual void EventA(
-      ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>* event) {}
+      ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>* event) = 0;
 };
 
 template <>
@@ -10221,6 +10262,8 @@ class ::fidl::WireAsyncEventHandler<::test_protocols::ChannelProtocol>
       public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
+  void EventA(::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA>*
+                  event) override {}
 };
 
 template <>
@@ -10235,6 +10278,9 @@ class ::fidl::WireSyncEventHandler<::test_protocols::ChannelProtocol>
   // corresponding virtual method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol> client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

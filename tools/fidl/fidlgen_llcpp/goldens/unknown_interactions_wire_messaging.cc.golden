@@ -416,7 +416,13 @@ fidl::WireSyncEventHandler<::test_unknowninteractions::Example>::HandleOneEvent(
       ::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>
           empty_event;
       auto* primary = &empty_event;
+      got_transitional_ = false;
       StrictEvent(primary);
+      if (got_transitional_) {
+        return ::fidl::Status::UnexpectedMessage(
+            ZX_ERR_NOT_SUPPORTED,
+            ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
+      }
       return ::fidl::Status::Ok();
     }
     case ::test_unknowninteractions::kExample_FlexibleEvent_Ordinal: {
@@ -429,7 +435,13 @@ fidl::WireSyncEventHandler<::test_unknowninteractions::Example>::HandleOneEvent(
       ::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>
           empty_event;
       auto* primary = &empty_event;
+      got_transitional_ = false;
       FlexibleEvent(primary);
+      if (got_transitional_) {
+        return ::fidl::Status::UnexpectedMessage(
+            ZX_ERR_NOT_SUPPORTED,
+            ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
+      }
       return ::fidl::Status::Ok();
     }
     default: {

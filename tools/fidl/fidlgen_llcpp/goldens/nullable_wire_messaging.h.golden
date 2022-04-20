@@ -440,6 +440,9 @@ class ::fidl::WireSyncEventHandler<::test_nullable::SimpleProtocol>
   // corresponding virtual method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_nullable::SimpleProtocol> client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

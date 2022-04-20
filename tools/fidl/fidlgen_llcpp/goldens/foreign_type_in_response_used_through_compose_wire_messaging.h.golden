@@ -493,6 +493,9 @@ class ::fidl::WireSyncEventHandler<
       ::fidl::UnownedClientEnd<
           ::test_foreigntypeinresponseusedthroughcompose::Top>
           client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fidl.test.compatibility/cpp/wire.h>
+#include <fidl/fidl.test.compatibility/cpp/wire_test_base.h>
 #include <fidl/fidl.test.compatibility/cpp/wire_types.h>
 #include <fidl/fidl.test.imported/cpp/wire.h>
 #include <fidl/fidl.test.imported/cpp/wire_types.h>
@@ -223,6 +224,11 @@ class EchoClientApp {
   fidl::WireSyncClient<Echo> client_;
 };
 
+class EchoSyncEventHandlerTestStub : public fidl::testing::WireSyncEventHandlerTestBase<Echo> {
+ public:
+  void NotImplemented_(const std::string& name) final { ZX_PANIC("Unexpected %s", name.c_str()); }
+};
+
 class EchoConnection final : public fidl::WireServer<Echo> {
  public:
   EchoConnection() = default;
@@ -263,7 +269,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       ZX_ASSERT_MSG(result.ok(), "Replying with event failed: %s",
                     result.FormatDescription().c_str());
     } else {
-      class EventHandler : public fidl::WireSyncEventHandler<Echo> {
+      class EventHandler : public EchoSyncEventHandlerTestStub {
        public:
         explicit EventHandler(EchoConnection* connection) : connection_(connection) {}
 
@@ -326,7 +332,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       ZX_ASSERT_MSG(result.ok(), "Replying with event failed: %s",
                     result.FormatDescription().c_str());
     } else {
-      class EventHandler : public fidl::WireSyncEventHandler<Echo> {
+      class EventHandler : public EchoSyncEventHandlerTestStub {
        public:
         explicit EventHandler(EchoConnection* connection) : connection_(connection) {}
 
@@ -514,7 +520,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       ZX_ASSERT_MSG(result.ok(), "Replying with event failed: %s",
                     result.FormatDescription().c_str());
     } else {
-      class EventHandler : public fidl::WireSyncEventHandler<Echo> {
+      class EventHandler : public EchoSyncEventHandlerTestStub {
        public:
         explicit EventHandler(EchoConnection* connection) : connection_(connection) {}
 
@@ -603,7 +609,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       ZX_ASSERT_MSG(result.ok(), "Replying with event failed: %s",
                     result.FormatDescription().c_str());
     } else {
-      class EventHandler : public fidl::WireSyncEventHandler<Echo> {
+      class EventHandler : public EchoSyncEventHandlerTestStub {
        public:
         explicit EventHandler(EchoConnection* connection) : connection_(connection) {}
 
@@ -752,7 +758,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       ZX_ASSERT_MSG(result.ok(), "Replying with event failed: %s",
                     result.FormatDescription().c_str());
     } else {
-      class EventHandler : public fidl::WireSyncEventHandler<Echo> {
+      class EventHandler : public EchoSyncEventHandlerTestStub {
        public:
         explicit EventHandler(EchoConnection* connection) : connection_(connection) {}
 

@@ -203,6 +203,7 @@ test("fs-vnode-test") {
   deps = [
     ":test_support",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp_testing",
     "//sdk/lib/fdio",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async",
@@ -236,7 +237,7 @@ test("fs-connection-test") {
     "paging_test.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp_testing",
     "//sdk/fidl/fuchsia.posix.socket.packet:fuchsia.posix.socket.packet_llcpp",
     "//sdk/fidl/fuchsia.posix.socket.raw:fuchsia.posix.socket.raw_llcpp",
     "//sdk/lib/fdio",

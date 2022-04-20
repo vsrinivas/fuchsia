@@ -53,3 +53,8 @@ protocol TwoEvents {
     -> EventA();
     -> EventB();
 };
+
+protocol TransitionalEvent {
+    @transitional
+    -> Event();
+};

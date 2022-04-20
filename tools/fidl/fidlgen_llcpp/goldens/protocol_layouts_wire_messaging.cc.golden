@@ -2125,7 +2125,13 @@ fidl::internal::WireWeakSyncClientImpl<::test_protocollayouts::MainProtocol>::
         return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
+      got_transitional_ = false;
       OnAnonComposed(primary);
+      if (got_transitional_) {
+        return ::fidl::Status::UnexpectedMessage(
+            ZX_ERR_NOT_SUPPORTED,
+            ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
+      }
       return ::fidl::Status::Ok();
     }
     case ::test_protocollayouts::
@@ -2137,7 +2143,13 @@ fidl::internal::WireWeakSyncClientImpl<::test_protocollayouts::MainProtocol>::
         return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
+      got_transitional_ = false;
       OnAnonComposedWithError(primary);
+      if (got_transitional_) {
+        return ::fidl::Status::UnexpectedMessage(
+            ZX_ERR_NOT_SUPPORTED,
+            ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
+      }
       return ::fidl::Status::Ok();
     }
     case ::test_protocollayouts::kMainProtocol_OnNamedComposed_Ordinal: {
@@ -2148,7 +2160,13 @@ fidl::internal::WireWeakSyncClientImpl<::test_protocollayouts::MainProtocol>::
         return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
+      got_transitional_ = false;
       OnNamedComposed(primary);
+      if (got_transitional_) {
+        return ::fidl::Status::UnexpectedMessage(
+            ZX_ERR_NOT_SUPPORTED,
+            ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
+      }
       return ::fidl::Status::Ok();
     }
     case ::test_protocollayouts::
@@ -2160,7 +2178,13 @@ fidl::internal::WireWeakSyncClientImpl<::test_protocollayouts::MainProtocol>::
         return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
+      got_transitional_ = false;
       OnNamedComposedWithError(primary);
+      if (got_transitional_) {
+        return ::fidl::Status::UnexpectedMessage(
+            ZX_ERR_NOT_SUPPORTED,
+            ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
+      }
       return ::fidl::Status::Ok();
     }
     case ::test_protocollayouts::kMainProtocol_OnImport_Ordinal: {
@@ -2171,7 +2195,13 @@ fidl::internal::WireWeakSyncClientImpl<::test_protocollayouts::MainProtocol>::
         return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
+      got_transitional_ = false;
       OnImport(primary);
+      if (got_transitional_) {
+        return ::fidl::Status::UnexpectedMessage(
+            ZX_ERR_NOT_SUPPORTED,
+            ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
+      }
       return ::fidl::Status::Ok();
     }
     case ::test_protocollayouts::kMainProtocol_OnImportWithError_Ordinal: {
@@ -2182,7 +2212,13 @@ fidl::internal::WireWeakSyncClientImpl<::test_protocollayouts::MainProtocol>::
         return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
+      got_transitional_ = false;
       OnImportWithError(primary);
+      if (got_transitional_) {
+        return ::fidl::Status::UnexpectedMessage(
+            ZX_ERR_NOT_SUPPORTED,
+            ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
+      }
       return ::fidl::Status::Ok();
     }
     case ::test_protocollayouts::kMainProtocol_OnLocal_Ordinal: {
@@ -2193,7 +2229,13 @@ fidl::internal::WireWeakSyncClientImpl<::test_protocollayouts::MainProtocol>::
         return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
+      got_transitional_ = false;
       OnLocal(primary);
+      if (got_transitional_) {
+        return ::fidl::Status::UnexpectedMessage(
+            ZX_ERR_NOT_SUPPORTED,
+            ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
+      }
       return ::fidl::Status::Ok();
     }
     case ::test_protocollayouts::kMainProtocol_OnLocalWithError_Ordinal: {
@@ -2204,7 +2246,13 @@ fidl::internal::WireWeakSyncClientImpl<::test_protocollayouts::MainProtocol>::
         return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
+      got_transitional_ = false;
       OnLocalWithError(primary);
+      if (got_transitional_) {
+        return ::fidl::Status::UnexpectedMessage(
+            ZX_ERR_NOT_SUPPORTED,
+            ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
+      }
       return ::fidl::Status::Ok();
     }
     case ::test_protocollayouts::kMainProtocol_OnAnon_Ordinal: {
@@ -2215,7 +2263,13 @@ fidl::internal::WireWeakSyncClientImpl<::test_protocollayouts::MainProtocol>::
         return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
+      got_transitional_ = false;
       OnAnon(primary);
+      if (got_transitional_) {
+        return ::fidl::Status::UnexpectedMessage(
+            ZX_ERR_NOT_SUPPORTED,
+            ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
+      }
       return ::fidl::Status::Ok();
     }
     case ::test_protocollayouts::kMainProtocol_OnAnonWithError_Ordinal: {
@@ -2226,7 +2280,13 @@ fidl::internal::WireWeakSyncClientImpl<::test_protocollayouts::MainProtocol>::
         return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
+      got_transitional_ = false;
       OnAnonWithError(primary);
+      if (got_transitional_) {
+        return ::fidl::Status::UnexpectedMessage(
+            ZX_ERR_NOT_SUPPORTED,
+            ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
+      }
       return ::fidl::Status::Ok();
     }
     default: {

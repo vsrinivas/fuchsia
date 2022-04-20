@@ -84,6 +84,9 @@ class ::fidl::WireSyncEventHandler<::test_handles::DriverProtocol>
   // corresponding virtual method.
   ::fidl::Status HandleOneEvent(
       ::fdf::UnownedClientEnd<::test_handles::DriverProtocol> client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

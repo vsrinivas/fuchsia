@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
@@ -252,7 +253,7 @@ TEST_F(CloneTest, Reopen) {
 
   fidl::ClientEnd<fio::Node> clone_client(std::move(clone));
 
-  class EventHandler : public fidl::WireSyncEventHandler<fio::Node> {
+  class EventHandler : public fidl::testing::WireSyncEventHandlerTestBase<fio::Node> {
    public:
     EventHandler(fidl::ClientEnd<fio::Node> client_end, bool& on_open_received)
         : client_end_(std::move(client_end)), on_open_received_(on_open_received) {}
@@ -263,6 +264,10 @@ TEST_F(CloneTest, Reopen) {
       EXPECT_EQ(event->s, ZX_OK);
       EXPECT_TRUE(event->info.is_file());
       on_open_received_ = true;
+    }
+
+    void NotImplemented_(const std::string& name) final {
+      ADD_FAILURE("Unexpected %s", name.c_str());
     }
 
    private:

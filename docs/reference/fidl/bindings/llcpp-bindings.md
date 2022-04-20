@@ -915,10 +915,9 @@ event. In this example, it consists of the following member:
 * `virtual void OnOpponentMove(fidl::WireEvent<TicTacToe::OnOpponentMove>*
   event) = 0`: The handle for the OnOpponentMove event.
 
-To be able to handle events, a class that inherits from `SyncEventHandler` must
-be defined. This class must define the virtual methods for the events it wants
-to handle. All the other events are ignored. Then an instance of this class must
-be allocated.
+To be able to handle events, a class that inherits from `WireSyncEventHandler`
+must be defined. This class must define the virtual methods for all the events
+in the protocol. Then an instance of this class must be created.
 
 There are two ways to handle one event. Each one use an instance of the user
 defined event handler class:
@@ -936,11 +935,12 @@ one incoming message. Then the message is decoded. If the result is
 no virtual method has been called and the status indicates the error.
 
 If the handlers are always the same (from one call to `HandleOneEvent` to the
-other), the `SyncEventHandler` object should be constructed once and used each
-time you need to call `HandleOneEvent`.
+other), the `WireSyncEventHandler` object should be constructed once and used
+each time you need to call `HandleOneEvent`.
 
 If an event is marked as transitional, then a default implementation is
-provided (instead of the pure virtual).
+provided, which causes `HandleOneEvent` to return an error upon receiving a
+transitional event that is not handled by the user.
 
 #### Server
 

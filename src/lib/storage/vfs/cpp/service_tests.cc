@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
@@ -137,13 +138,17 @@ TEST(Service, ServiceNodeIsNotDirectory) {
                      fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable,
                  0755, fidl::StringView("abc"), std::move(abc->server));
   EXPECT_EQ(open_result.status(), ZX_OK);
-  class EventHandler : public fidl::WireSyncEventHandler<fio::Node> {
+  class EventHandler : public fidl::testing::WireSyncEventHandlerTestBase<fio::Node> {
    public:
     EventHandler() = default;
 
     void OnOpen(fidl::WireEvent<fio::Node::OnOpen>* event) override {
       EXPECT_EQ(ZX_ERR_NOT_DIR, event->s);
       EXPECT_TRUE(event->info.has_invalid_tag());
+    }
+
+    void NotImplemented_(const std::string& name) override {
+      ADD_FAILURE("Unexpected %s", name.c_str());
     }
   };
 

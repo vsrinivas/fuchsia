@@ -94,8 +94,9 @@ enum class Reason {
   // if they desire.
   kDecodeError,
 
-  // A malformed message, message with unknown ordinal, unexpected reply, or an
-  // unsupported event was received.
+  // A malformed message header, message with unknown ordinal, or unexpected
+  // reply was received. Alternatively, an unhandled transitional event was
+  // received during synchronous event handling.
   //
   // |status| contains the associated error code.
   // For a server, the user is still responsible for sending an epitaph,
@@ -131,6 +132,7 @@ extern const char* const kErrorTransport;
 extern const char* const kErrorChannelUnbound;
 extern const char* const kErrorWaitOneFailed;
 extern const char* const kErrorSyncEventBufferTooSmall;
+extern const char* const kErrorSyncEventUnhandledTransitionalEvent;
 extern const char* const kCallerAllocatedBufferTooSmall;
 
 }  // namespace internal

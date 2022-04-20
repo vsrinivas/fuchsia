@@ -246,6 +246,9 @@ class ::fidl::WireSyncEventHandler<
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_placementofattributes::ExampleProtocol>
           client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

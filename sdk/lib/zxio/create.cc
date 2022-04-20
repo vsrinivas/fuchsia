@@ -71,6 +71,10 @@ class ZxioCreateOnOpenEventHandler final : public fidl::WireSyncEventHandler<fio
     status_ = zxio_create_with_nodeinfo(std::move(node_), event->info, storage_);
   }
 
+  void OnConnectionInfo(fidl::WireEvent<fio::Node::OnConnectionInfo>* event) final {
+    status_ = ZX_ERR_NOT_SUPPORTED;
+  }
+
  private:
   fidl::ClientEnd<fio::Node> node_;
   zxio_storage_t* storage_;

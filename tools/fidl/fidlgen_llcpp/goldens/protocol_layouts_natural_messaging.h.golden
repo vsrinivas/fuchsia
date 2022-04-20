@@ -1240,28 +1240,31 @@ class ::fidl::internal::NaturalEventHandlerInterface<
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
   virtual void OnAnonComposed(
-      ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposed>&) {}
+      ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposed>&) = 0;
   virtual void OnAnonComposedWithError(
       ::fidl::Event<
-          ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>&) {}
+          ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>&) = 0;
   virtual void OnNamedComposed(
-      ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposed>&) {}
+      ::fidl::Event<
+          ::test_protocollayouts::MainProtocol::OnNamedComposed>&) = 0;
   virtual void OnNamedComposedWithError(
       ::fidl::Event<
-          ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>&) {}
+          ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>&) = 0;
   virtual void OnImport(
-      ::fidl::Event<::test_protocollayouts::MainProtocol::OnImport>&) {}
+      ::fidl::Event<::test_protocollayouts::MainProtocol::OnImport>&) = 0;
   virtual void OnImportWithError(
-      ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError>&) {
-  }
+      ::fidl::Event<
+          ::test_protocollayouts::MainProtocol::OnImportWithError>&) = 0;
   virtual void OnLocal(
-      ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocal>&) {}
+      ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocal>&) = 0;
   virtual void OnLocalWithError(
-      ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError>&) {}
+      ::fidl::Event<
+          ::test_protocollayouts::MainProtocol::OnLocalWithError>&) = 0;
   virtual void OnAnon(
-      ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnon>&) {}
+      ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnon>&) = 0;
   virtual void OnAnonWithError(
-      ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError>&) {}
+      ::fidl::Event<
+          ::test_protocollayouts::MainProtocol::OnAnonWithError>&) = 0;
 };
 
 template <>
@@ -1271,6 +1274,36 @@ class ::fidl::AsyncEventHandler<::test_protocollayouts::MainProtocol>
       public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
+  void OnAnonComposed(
+      ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposed>&)
+      override {}
+  void OnAnonComposedWithError(
+      ::fidl::Event<
+          ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>&)
+      override {}
+  void OnNamedComposed(
+      ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposed>&)
+      override {}
+  void OnNamedComposedWithError(
+      ::fidl::Event<
+          ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>&)
+      override {}
+  void OnImport(
+      ::fidl::Event<::test_protocollayouts::MainProtocol::OnImport>&) override {
+  }
+  void OnImportWithError(
+      ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError>&)
+      override {}
+  void OnLocal(
+      ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocal>&) override {}
+  void OnLocalWithError(
+      ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError>&)
+      override {}
+  void OnAnon(
+      ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnon>&) override {}
+  void OnAnonWithError(
+      ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError>&)
+      override {}
 };
 
 template <>

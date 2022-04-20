@@ -123,7 +123,13 @@ fidl::WireSyncEventHandler<::test_doccomments::Interface>::HandleOneEvent(
       }
       ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> empty_event;
       auto* primary = &empty_event;
+      got_transitional_ = false;
       OnEvent(primary);
+      if (got_transitional_) {
+        return ::fidl::Status::UnexpectedMessage(
+            ZX_ERR_NOT_SUPPORTED,
+            ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
+      }
       return ::fidl::Status::Ok();
     }
     default: {

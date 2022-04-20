@@ -4,6 +4,7 @@
 
 #include <fidl/fuchsia.hardware.display/cpp/markers.h>
 #include <fidl/fuchsia.hardware.display/cpp/wire.h>
+#include <fidl/fuchsia.hardware.display/cpp/wire_test_base.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <lib/fidl/llcpp/client_base.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
@@ -43,7 +44,8 @@ TEST(DisplayTest, ClientVSyncOk) {
 
   fidl::WireSyncClient<fuchsia_hardware_display::Controller> client(std::move(client_chl));
 
-  class EventHandler : public fidl::WireSyncEventHandler<fuchsia_hardware_display::Controller> {
+  class EventHandler
+      : public fidl::testing::WireSyncEventHandlerTestBase<fuchsia_hardware_display::Controller> {
    public:
     EventHandler(fuchsia_hardware_display::wire::ConfigStamp expected_config_stamp)
         : expected_config_stamp_(expected_config_stamp) {}
@@ -52,6 +54,10 @@ TEST(DisplayTest, ClientVSyncOk) {
       if (event->applied_config_stamp == expected_config_stamp_) {
         vsync_handled_ = true;
       }
+    }
+
+    void NotImplemented_(const std::string& name) override {
+      ADD_FAILURE("Unexpected %s", name.c_str());
     }
 
     bool vsync_handled_ = false;

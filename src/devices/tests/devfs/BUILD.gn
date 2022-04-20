@@ -11,7 +11,7 @@ test("devfs") {
     "fidl-tests.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp_testing",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",

@@ -63,6 +63,9 @@ class ComponentControllerEventHandler
     status_ = zx::make_status(status);
   }
 
+  void OnDirectoryReady(
+      ::fidl::WireEvent<::fuchsia_sys::ComponentController::OnDirectoryReady>* event) override {}
+
   // Returns true if the component has stopped.
   bool terminated() const { return status_.has_value(); }
 

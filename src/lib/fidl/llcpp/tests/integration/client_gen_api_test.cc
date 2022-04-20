@@ -197,6 +197,27 @@ TEST(GenAPITestCase, OneWaySyncManaged) {
   EXPECT_EQ(0, server->two_way_count());
 }
 
+TEST(GenAPITestCase, AsyncEventHandlerExhaustivenessNotRequired) {
+  namespace test = ::fidl_test_coding_fuchsia;
+  class EventHandlerNone : public fidl::WireAsyncEventHandler<test::TwoEvents> {};
+  class EventHandlerA : public fidl::WireAsyncEventHandler<test::TwoEvents> {
+    void EventA(fidl::WireEvent<test::TwoEvents::EventA>*) override {}
+  };
+  class EventHandlerB : public fidl::WireAsyncEventHandler<test::TwoEvents> {
+    void EventB(fidl::WireEvent<test::TwoEvents::EventB>*) override {}
+  };
+  class EventHandlerAll : public fidl::WireAsyncEventHandler<test::TwoEvents> {
+    void EventA(fidl::WireEvent<test::TwoEvents::EventA>*) override {}
+    void EventB(fidl::WireEvent<test::TwoEvents::EventB>*) override {}
+  };
+  class EventHandlerAllTransitional : public fidl::WireSyncEventHandler<test::TransitionalEvent> {};
+  static_assert(!std::is_abstract_v<EventHandlerNone>);
+  static_assert(!std::is_abstract_v<EventHandlerA>);
+  static_assert(!std::is_abstract_v<EventHandlerB>);
+  static_assert(!std::is_abstract_v<EventHandlerAll>);
+  static_assert(!std::is_abstract_v<EventHandlerAllTransitional>);
+}
+
 TEST(GenAPITestCase, EventManaged) {
   auto endpoints = fidl::CreateEndpoints<Example>();
   ASSERT_OK(endpoints.status_value());

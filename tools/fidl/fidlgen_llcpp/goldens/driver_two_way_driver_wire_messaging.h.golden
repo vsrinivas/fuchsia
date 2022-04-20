@@ -384,6 +384,9 @@ class ::fidl::WireSyncEventHandler<::test_drivertwoway::TwoWay>
   // corresponding virtual method.
   ::fidl::Status HandleOneEvent(
       ::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

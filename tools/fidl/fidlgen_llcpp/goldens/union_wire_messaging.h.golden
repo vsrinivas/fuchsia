@@ -907,6 +907,9 @@ class ::fidl::WireSyncEventHandler<::test_union::TestProtocol>
   // corresponding virtual method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_union::TestProtocol> client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

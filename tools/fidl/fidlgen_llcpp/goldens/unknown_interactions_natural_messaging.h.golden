@@ -156,9 +156,9 @@ class ::fidl::internal::NaturalEventHandlerInterface<
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
   virtual void StrictEvent(
-      ::fidl::Event<::test_unknowninteractions::Example::StrictEvent>&) {}
+      ::fidl::Event<::test_unknowninteractions::Example::StrictEvent>&) = 0;
   virtual void FlexibleEvent(
-      ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent>&) {}
+      ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent>&) = 0;
 };
 
 template <>
@@ -168,6 +168,12 @@ class ::fidl::AsyncEventHandler<::test_unknowninteractions::Example>
       public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
+  void StrictEvent(
+      ::fidl::Event<::test_unknowninteractions::Example::StrictEvent>&)
+      override {}
+  void FlexibleEvent(
+      ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent>&)
+      override {}
 };
 
 template <>

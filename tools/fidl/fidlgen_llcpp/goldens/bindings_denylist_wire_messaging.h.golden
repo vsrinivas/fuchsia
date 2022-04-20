@@ -92,6 +92,9 @@ class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::Allowed>
   // corresponding virtual method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::Allowed> client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
@@ -512,6 +515,9 @@ class ::fidl::WireSyncEventHandler<
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
           client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
@@ -743,6 +749,9 @@ class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::OnlyCppAndDeps>
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyCppAndDeps>
           client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
@@ -1149,6 +1158,9 @@ class ::fidl::WireSyncEventHandler<
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext>
           client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
@@ -3475,6 +3487,9 @@ class ::fidl::WireSyncEventHandler<::test_bindingsdenylist::DenyEachBinding>
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>
           client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

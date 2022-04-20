@@ -201,6 +201,9 @@ class ::fidl::WireSyncEventHandler<::test_driveroneway::OneWay>
   // corresponding virtual method.
   ::fidl::Status HandleOneEvent(
       ::fdf::UnownedClientEnd<::test_driveroneway::OneWay> client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

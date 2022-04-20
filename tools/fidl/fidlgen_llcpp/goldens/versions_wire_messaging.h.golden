@@ -85,6 +85,9 @@ class ::fidl::WireSyncEventHandler<::test_versions::OtherProtocol>
   // corresponding virtual method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_versions::OtherProtocol> client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
@@ -328,6 +331,9 @@ class ::fidl::WireSyncEventHandler<::test_versions::Protocol>
   // corresponding virtual method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_versions::Protocol> client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

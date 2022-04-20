@@ -978,24 +978,25 @@ class ::fidl::internal::NaturalEventHandlerInterface<
   NaturalEventHandlerInterface() = default;
   virtual ~NaturalEventHandlerInterface() = default;
   virtual void OnComposed(
-      ::fidl::Event<::test_protocolpayloads::MainProtocol::OnComposed>&) {}
+      ::fidl::Event<::test_protocolpayloads::MainProtocol::OnComposed>&) = 0;
   virtual void OnComposedWithError(
       ::fidl::Event<
-          ::test_protocolpayloads::MainProtocol::OnComposedWithError>&) {}
+          ::test_protocolpayloads::MainProtocol::OnComposedWithError>&) = 0;
   virtual void OnLocal(
-      ::fidl::Event<::test_protocolpayloads::MainProtocol::OnLocal>&) {}
+      ::fidl::Event<::test_protocolpayloads::MainProtocol::OnLocal>&) = 0;
   virtual void OnLocalWithError(
-      ::fidl::Event<::test_protocolpayloads::MainProtocol::OnLocalWithError>&) {
-  }
+      ::fidl::Event<
+          ::test_protocolpayloads::MainProtocol::OnLocalWithError>&) = 0;
   virtual void OnImport(
-      ::fidl::Event<::test_protocolpayloads::MainProtocol::OnImport>&) {}
+      ::fidl::Event<::test_protocolpayloads::MainProtocol::OnImport>&) = 0;
   virtual void OnImportWithError(
       ::fidl::Event<
-          ::test_protocolpayloads::MainProtocol::OnImportWithError>&) {}
+          ::test_protocolpayloads::MainProtocol::OnImportWithError>&) = 0;
   virtual void OnAnon(
-      ::fidl::Event<::test_protocolpayloads::MainProtocol::OnAnon>&) {}
+      ::fidl::Event<::test_protocolpayloads::MainProtocol::OnAnon>&) = 0;
   virtual void OnAnonWithError(
-      ::fidl::Event<::test_protocolpayloads::MainProtocol::OnAnonWithError>&) {}
+      ::fidl::Event<
+          ::test_protocolpayloads::MainProtocol::OnAnonWithError>&) = 0;
 };
 
 template <>
@@ -1005,6 +1006,29 @@ class ::fidl::AsyncEventHandler<::test_protocolpayloads::MainProtocol>
       public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
+  void OnComposed(
+      ::fidl::Event<::test_protocolpayloads::MainProtocol::OnComposed>&)
+      override {}
+  void OnComposedWithError(
+      ::fidl::Event<
+          ::test_protocolpayloads::MainProtocol::OnComposedWithError>&)
+      override {}
+  void OnLocal(
+      ::fidl::Event<::test_protocolpayloads::MainProtocol::OnLocal>&) override {
+  }
+  void OnLocalWithError(
+      ::fidl::Event<::test_protocolpayloads::MainProtocol::OnLocalWithError>&)
+      override {}
+  void OnImport(::fidl::Event<::test_protocolpayloads::MainProtocol::OnImport>&)
+      override {}
+  void OnImportWithError(
+      ::fidl::Event<::test_protocolpayloads::MainProtocol::OnImportWithError>&)
+      override {}
+  void OnAnon(
+      ::fidl::Event<::test_protocolpayloads::MainProtocol::OnAnon>&) override {}
+  void OnAnonWithError(
+      ::fidl::Event<::test_protocolpayloads::MainProtocol::OnAnonWithError>&)
+      override {}
 };
 
 template <>

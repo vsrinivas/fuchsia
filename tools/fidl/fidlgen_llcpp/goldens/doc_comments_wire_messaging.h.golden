@@ -253,7 +253,7 @@ class ::fidl::internal::WireEventHandlerInterface<
   ///
   /// event comment #3
   virtual void OnEvent(
-      ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>* event) {}
+      ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>* event) = 0;
 };
 
 template <>
@@ -263,6 +263,11 @@ class ::fidl::WireAsyncEventHandler<::test_doccomments::Interface>
       public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
+  /// event comment #1
+  ///
+  /// event comment #3
+  void OnEvent(::fidl::WireEvent<::test_doccomments::Interface::OnEvent>* event)
+      override {}
 };
 
 template <>
@@ -277,6 +282,9 @@ class ::fidl::WireSyncEventHandler<::test_doccomments::Interface>
   // corresponding virtual method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_doccomments::Interface> client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

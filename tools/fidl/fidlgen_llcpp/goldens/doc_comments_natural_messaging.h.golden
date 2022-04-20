@@ -54,8 +54,8 @@ class ::fidl::internal::NaturalEventHandlerInterface<
   /// event comment #1
   ///
   /// event comment #3
-  virtual void OnEvent(::fidl::Event<::test_doccomments::Interface::OnEvent>&) {
-  }
+  virtual void OnEvent(
+      ::fidl::Event<::test_doccomments::Interface::OnEvent>&) = 0;
 };
 
 template <>
@@ -65,6 +65,11 @@ class ::fidl::AsyncEventHandler<::test_doccomments::Interface>
       public ::fidl::internal::AsyncEventHandler {
  public:
   AsyncEventHandler() = default;
+  /// event comment #1
+  ///
+  /// event comment #3
+  void OnEvent(
+      ::fidl::Event<::test_doccomments::Interface::OnEvent>&) override {}
 };
 
 template <>

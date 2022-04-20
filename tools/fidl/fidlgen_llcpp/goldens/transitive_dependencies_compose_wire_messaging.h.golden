@@ -450,6 +450,9 @@ class ::fidl::WireSyncEventHandler<::test_transitivedependenciescompose::Top>
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_transitivedependenciescompose::Top>
           client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

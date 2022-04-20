@@ -956,6 +956,9 @@ class ::fidl::WireSyncEventHandler<::test_requestflexibleenvelope::Protocol>
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol>
           client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

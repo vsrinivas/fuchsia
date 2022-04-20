@@ -172,6 +172,10 @@ zx::status<fdio_ptr> fdio::create_with_on_open(fidl::ClientEnd<fio::Node> node) 
       }
     }
 
+    void OnConnectionInfo(fidl::WireEvent<fio::Node::OnConnectionInfo>* event) override {
+      result_ = zx::error(ZX_ERR_NOT_SUPPORTED);
+    }
+
    private:
     fidl::ClientEnd<fio::Node> client_end_;
     zx::status<fdio_ptr> result_ = zx::error(ZX_ERR_INTERNAL);

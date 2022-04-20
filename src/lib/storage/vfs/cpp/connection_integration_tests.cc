@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
@@ -61,13 +62,17 @@ zx::status<fio::wire::NodeInfo> GetOnOpenResponse(fidl::UnownedClientEnd<fio::No
   zx::status<fio::wire::NodeInfo> node_info{};
   auto get_on_open_response = [](fidl::UnownedClientEnd<fio::Node> channel,
                                  zx::status<fio::wire::NodeInfo>& node_info) {
-    class EventHandler final : public fidl::WireSyncEventHandler<fio::Node> {
+    class EventHandler final : public fidl::testing::WireSyncEventHandlerTestBase<fio::Node> {
      public:
       explicit EventHandler() = default;
 
       void OnOpen(fidl::WireEvent<fio::Node::OnOpen>* event) override {
         ASSERT_NE(event, nullptr);
         response_ = std::move(*event);
+      }
+
+      void NotImplemented_(const std::string& name) override {
+        ADD_FAILURE("Unexpected %s", name.c_str());
       }
 
       fidl::WireEvent<fio::Node::OnOpen> GetResponse() { return std::move(response_); }

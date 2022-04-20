@@ -431,6 +431,9 @@ class ::fidl::WireSyncEventHandler<::test_inheritance::Super>
   // corresponding virtual method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_inheritance::Super> client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
@@ -964,6 +967,9 @@ class ::fidl::WireSyncEventHandler<::test_inheritance::Sub>
   // corresponding virtual method.
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_inheritance::Sub> client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

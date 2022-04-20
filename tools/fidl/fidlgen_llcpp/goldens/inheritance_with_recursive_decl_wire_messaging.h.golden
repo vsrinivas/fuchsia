@@ -258,6 +258,9 @@ class ::fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Parent>
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Parent>
           client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>
@@ -769,6 +772,9 @@ class ::fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Child>
   ::fidl::Status HandleOneEvent(
       ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Child>
           client_end);
+
+ private:
+  [[maybe_unused]] bool got_transitional_ = false;
 };
 
 template <>

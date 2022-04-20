@@ -41,15 +41,21 @@
 
 namespace {
 
-template <typename F>
+template <typename FOnOpen, typename FOnConnectionInfo>
 class EventHandler : public fidl::WireSyncEventHandler<fuchsia_io::Directory> {
  public:
-  explicit EventHandler(F fn) : fn_(std::move(fn)) {}
+  explicit EventHandler(FOnOpen on_open, FOnConnectionInfo on_connection_info)
+      : on_open_(std::move(on_open)), on_connection_info_(std::move(on_connection_info)) {}
 
-  void OnOpen(fidl::WireEvent<fuchsia_io::Directory::OnOpen>* event) override { fn_(event); }
+  void OnOpen(fidl::WireEvent<fuchsia_io::Directory::OnOpen>* event) override { on_open_(event); }
+
+  void OnConnectionInfo(fidl::WireEvent<fuchsia_io::Directory::OnConnectionInfo>* event) override {
+    on_connection_info_(event);
+  }
 
  private:
-  F fn_;
+  FOnOpen on_open_;
+  FOnConnectionInfo on_connection_info_;
 };
 
 std::ostream& operator<<(std::ostream& os, const std::vector<std::string>& args) {
@@ -194,15 +200,16 @@ int main(int argv, char** argc) {
     // possible to extract the channel from the client.
     auto [thread, inserted] = threads.emplace(
         path, [&root, client_end = std::move(endpoints->client), dispatcher, path]() mutable {
-          EventHandler handler([&](fidl::WireEvent<fuchsia_io::Directory::OnOpen>* event) {
-            if (event->s != ZX_OK) {
-              FX_PLOGS(ERROR, event->s) << "failed to open '" << path << "'";
-              return;
-            }
-            // Must run on the dispatcher thread to avoid racing with VFS dispatch.
-            std::latch mounted(1);
-            async::PostTask(
-                dispatcher, [&mounted, &root, path, client_end = std::move(client_end)]() mutable {
+          EventHandler handler(
+              [&](fidl::WireEvent<fuchsia_io::Directory::OnOpen>* event) {
+                if (event->s != ZX_OK) {
+                  FX_PLOGS(ERROR, event->s) << "failed to open '" << path << "'";
+                  return;
+                }
+                // Must run on the dispatcher thread to avoid racing with VFS dispatch.
+                std::latch mounted(1);
+                async::PostTask(dispatcher, [&mounted, &root, path,
+                                             client_end = std::move(client_end)]() mutable {
                   // Drop the leading slash.
                   std::string_view relative_path = path;
                   if (relative_path.front() == '/') {
@@ -217,8 +224,11 @@ int main(int argv, char** argc) {
                   }
                   mounted.count_down();
                 });
-            mounted.wait();
-          });
+                mounted.wait();
+              },
+              [&](fidl::WireEvent<fuchsia_io::Directory::OnConnectionInfo>* event) {
+                FX_PLOGS(FATAL, ZX_ERR_NOT_SUPPORTED) << "unexpected OnConnectionInfo";
+              });
           if (fidl::Status status = handler.HandleOneEvent(client_end); !status.ok()) {
             FX_PLOGS(ERROR, status.status())
                 << "failed to receive OnOpen event for '" << path << "'";

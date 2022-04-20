@@ -830,7 +830,13 @@ fidl::WireSyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>::
           ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>
           empty_event;
       auto* primary = &empty_event;
+      got_transitional_ = false;
       OnEmptyResponse(primary);
+      if (got_transitional_) {
+        return ::fidl::Status::UnexpectedMessage(
+            ZX_ERR_NOT_SUPPORTED,
+            ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
+      }
       return ::fidl::Status::Ok();
     }
     case ::test_protocols::
@@ -842,7 +848,13 @@ fidl::WireSyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>::
         return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
+      got_transitional_ = false;
       OnWithResponse(primary);
+      if (got_transitional_) {
+        return ::fidl::Status::UnexpectedMessage(
+            ZX_ERR_NOT_SUPPORTED,
+            ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
+      }
       return ::fidl::Status::Ok();
     }
     default: {
@@ -1789,7 +1801,13 @@ fidl::WireSyncEventHandler<::test_protocols::Transitional>::HandleOneEvent(
         return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
+      got_transitional_ = false;
       Event(primary);
+      if (got_transitional_) {
+        return ::fidl::Status::UnexpectedMessage(
+            ZX_ERR_NOT_SUPPORTED,
+            ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
+      }
       return ::fidl::Status::Ok();
     }
     default: {
@@ -3565,7 +3583,13 @@ fidl::WireSyncEventHandler<::test_protocols::HandleRightsProtocol>::
         return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
+      got_transitional_ = false;
       AnEvent(primary);
+      if (got_transitional_) {
+        return ::fidl::Status::UnexpectedMessage(
+            ZX_ERR_NOT_SUPPORTED,
+            ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
+      }
       return ::fidl::Status::Ok();
     }
     default: {
@@ -5660,7 +5684,13 @@ fidl::WireSyncEventHandler<::test_protocols::ChannelProtocol>::HandleOneEvent(
         return ::fidl::Status(decoded);
       }
       auto* primary = &decoded.PrimaryObject()->body;
+      got_transitional_ = false;
       EventA(primary);
+      if (got_transitional_) {
+        return ::fidl::Status::UnexpectedMessage(
+            ZX_ERR_NOT_SUPPORTED,
+            ::fidl::internal::kErrorSyncEventUnhandledTransitionalEvent);
+      }
       return ::fidl::Status::Ok();
     }
     default: {
