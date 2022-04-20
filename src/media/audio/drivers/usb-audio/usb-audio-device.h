@@ -29,7 +29,7 @@ using UsbAudioDeviceBase = ddk::Device<UsbAudioDevice, ddk::Unbindable>;
 
 class UsbAudioDevice : public UsbAudioDeviceBase, public fbl::RefCounted<UsbAudioDevice> {
  public:
-  static zx_status_t DriverBind(zx_device_t* parent);
+  static zx::status<UsbAudioDevice*> DriverBind(zx_device_t* parent);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
@@ -45,10 +45,12 @@ class UsbAudioDevice : public UsbAudioDeviceBase, public fbl::RefCounted<UsbAudi
   const fbl::Array<uint8_t>& prod_name() const { return prod_name_; }
   const fbl::Array<uint8_t>& serial_num() const { return serial_num_; }
   size_t parent_req_size() const { return parent_req_size_; }
+  // For unit testing.
+  const fbl::DoublyLinkedList<fbl::RefPtr<UsbAudioStream>>& streams() const { return streams_; }
 
  private:
   explicit UsbAudioDevice(zx_device_t* parent);
-
+  zx_status_t Bind();
   // A small struct used when searching descriptors for midi streaming
   // interfaces.
   //
@@ -63,7 +65,6 @@ class UsbAudioDevice : public UsbAudioDeviceBase, public fbl::RefCounted<UsbAudi
     const usb_endpoint_descriptor_t* out_ep = nullptr;
   };
 
-  zx_status_t Bind();
   void Probe();
   void ParseMidiStreamingIfc(DescriptorListMemory::Iterator* iter, MidiStreamingInfo* inout_info);
 

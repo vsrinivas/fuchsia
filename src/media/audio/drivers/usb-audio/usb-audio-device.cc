@@ -6,6 +6,7 @@
 
 #include <lib/fit/defer.h>
 #include <string.h>
+#include <zircon/status.h>
 
 #include <memory>
 #include <utility>
@@ -24,25 +25,24 @@
 namespace audio {
 namespace usb {
 
-zx_status_t UsbAudioDevice::DriverBind(zx_device_t* parent) {
+zx::status<UsbAudioDevice*> UsbAudioDevice::DriverBind(zx_device_t* parent) {
   fbl::AllocChecker ac;
   auto usb_device = fbl::AdoptRef(new (&ac) audio::usb::UsbAudioDevice(parent));
   if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
 
   zx_status_t status = usb_device->Bind();
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
   // We have transferred our fbl::RefPtr reference to the C ddk.  We will
   // recover it (someday) when the release hook is called.  Until then, we
   // need to deliberately leak our reference so that we do not destruct as we
   // exit this function.
-  UsbAudioDevice* leaked_ref;
-  leaked_ref = fbl::ExportToRawPtr(&usb_device);
-  return status;
+  UsbAudioDevice* raw_ptr = fbl::ExportToRawPtr(&usb_device);
+  return zx::ok(raw_ptr);
 }
 
 UsbAudioDevice::UsbAudioDevice(zx_device_t* parent) : UsbAudioDeviceBase(parent) {
@@ -488,7 +488,7 @@ void UsbAudioDevice::DdkRelease() {
 }
 
 static zx_status_t usb_audio_device_bind(void* ctx, zx_device_t* device) {
-  return UsbAudioDevice::DriverBind(device);
+  return UsbAudioDevice::DriverBind(device).error_value();
 }
 
 static constexpr zx_driver_ops_t driver_ops = []() {
