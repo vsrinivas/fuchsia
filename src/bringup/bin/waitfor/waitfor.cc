@@ -287,7 +287,7 @@ int main(int argc, char** argv) {
   sprintf(path, "/dev/class/%s", devclass);
 
   if ((dirfd = open(path, O_DIRECTORY | O_RDONLY)) < 0) {
-    fprintf(stderr, "waitfor: error: cannot watch class '%s'\n", devclass);
+    fprintf(stderr, "waitfor: error: cannot watch class '%s': %s\n", devclass, strerror(errno));
     exit(1);
   }
 
