@@ -14,17 +14,19 @@ void main() {
 
   test('socket_benchmarks', () async {
     final helper = await PerfTestHelper.make();
-    await helper.runTestComponent(
+    await helper.runTestComponentV2(
         packageName: 'socket-benchmarks',
-        componentName: 'socket-benchmarks.cmx',
-        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}');
+        componentName: 'socket-benchmarks.cm',
+        commandArgs:
+            '-p --quiet --out ${PerfTestHelper.componentV2OutputPath}');
   }, timeout: Timeout.none);
 
   test('socket_benchmarks_with_fast_udp', () async {
     final helper = await PerfTestHelper.make();
-    await helper.runTestComponent(
+    await helper.runTestComponentV2(
         packageName: 'socket-benchmarks-with-fast-udp',
-        componentName: 'socket-benchmarks-with-fast-udp.cmx',
-        commandArgs: '-p --quiet --out ${PerfTestHelper.componentOutputPath}');
+        componentName: 'socket-benchmarks-with-fast-udp.cm',
+        commandArgs:
+            '-p --quiet --out ${PerfTestHelper.componentV2OutputPath}');
   }, timeout: Timeout.none);
 }

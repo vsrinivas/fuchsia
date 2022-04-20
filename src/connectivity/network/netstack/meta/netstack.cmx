@@ -1,8 +1,16 @@
 {
     "include": [
-        "//src/connectivity/network/netstack/meta/netstack.shard.cmx"
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/netstack"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-cache-storage"
+        ],
+        "services": [
+            "fuchsia.stash.SecureStore"
+        ]
     }
 }

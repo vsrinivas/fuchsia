@@ -21,16 +21,16 @@ fuchsia_component("component") {
   deps = [ ":bin" ]
 }
 
-fuchsia_component("component-legacy") {
-  component_name = "netstack"
-  manifest = "meta/netstack.cmx"
+fuchsia_component("component-with-fast-udp") {
+  testonly = true
+  component_name = "netstack-with-fast-udp"
+  manifest = "meta/netstack_with_fast_udp.cml"
   deps = [ ":bin" ]
 }
 
-fuchsia_component("component-with-fast-udp-legacy") {
-  testonly = true
-  component_name = "netstack-with-fast-udp"
-  manifest = "meta/netstack_with_fast_udp.cmx"
+fuchsia_component("component-legacy") {
+  component_name = "netstack"
+  manifest = "meta/netstack.cmx"
   deps = [ ":bin" ]
 }
 
