@@ -12,8 +12,6 @@
 
 namespace {
 
-namespace fuchsia_io = fuchsia_io;
-
 const fuchsia_io::wire::OpenFlags kReadFlags = fuchsia_io::wire::OpenFlags::kRightReadable;
 
 TEST(DirectoryTest, ServiceConnect) {

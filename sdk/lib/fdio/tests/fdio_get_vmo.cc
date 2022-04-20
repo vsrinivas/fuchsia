@@ -25,8 +25,6 @@
 
 namespace {
 
-namespace fuchsia_io = fuchsia_io;
-
 struct Context {
   zx::vmo vmo;
   bool is_vmofile;

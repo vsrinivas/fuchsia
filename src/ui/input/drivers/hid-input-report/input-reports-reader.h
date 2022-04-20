@@ -16,8 +16,6 @@
 
 namespace hid_input_report_dev {
 
-namespace fuchsia_input_report = fuchsia_input_report;
-
 class InputReportsReader;
 
 class InputReportBase {

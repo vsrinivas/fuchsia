@@ -27,8 +27,6 @@ namespace touch {
 
 constexpr uint32_t kMaxContacts = 10;
 
-namespace fuchsia_input_report = fuchsia_input_report;
-
 struct Gt6853Contact {
   uint32_t contact_id;
   int64_t position_x;

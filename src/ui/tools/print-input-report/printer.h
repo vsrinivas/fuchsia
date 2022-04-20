@@ -13,8 +13,6 @@
 
 namespace print_input_report {
 
-namespace fuchsia_input_report = fuchsia_input_report;
-
 static_assert(static_cast<int>(fuchsia_input_report::wire::UnitType::kNone) == 0);
 static_assert(static_cast<int>(fuchsia_input_report::wire::UnitType::kOther) == 1);
 static_assert(static_cast<int>(fuchsia_input_report::wire::UnitType::kMeters) == 2);

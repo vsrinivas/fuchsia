@@ -24,8 +24,6 @@
 
 namespace ui_input {
 
-namespace fuchsia_input_report = fuchsia_input_report;
-
 namespace {
 
 using MockInputDevice = ui_input::test::MockInputDevice;

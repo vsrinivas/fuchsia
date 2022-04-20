@@ -24,8 +24,6 @@
 
 namespace test {
 
-namespace fuchsia_input_report = fuchsia_input_report;
-
 class FakePrinter : public print_input_report::Printer {
  public:
   void RealPrint(const char* format, va_list argptr) override {
