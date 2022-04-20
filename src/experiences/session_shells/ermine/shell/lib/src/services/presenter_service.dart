@@ -142,7 +142,6 @@ class _GraphicalPresenterImpl extends GraphicalPresenter {
       ..bind(this, request)
       ..whenClosed.then((_) {
         _disposed = true;
-        onPresenterDisposed();
       });
   }
 
@@ -169,7 +168,8 @@ class _GraphicalPresenterImpl extends GraphicalPresenter {
     if ((viewSpec.viewHolderToken == null &&
             viewSpec.viewportCreationToken == null) ||
         viewSpec.viewRef == null) {
-      log.warning('ViewSpec has null ViewportCreationToken, ViewHolderToken or ViewRef');
+      log.warning(
+          'ViewSpec has null ViewportCreationToken, ViewHolderToken or ViewRef');
       if (url != null) {
         onError(url,
             'ViewSpec has null ViewportCreationToken, ViewHolderToken or ViewRef');
@@ -178,8 +178,9 @@ class _GraphicalPresenterImpl extends GraphicalPresenter {
     }
 
     if (viewSpec.viewportCreationToken != null &&
-      viewSpec.viewHolderToken != null) {
-      log.warning('ViewSpec has both ViewportCreationToken and ViewHolderToken set');
+        viewSpec.viewHolderToken != null) {
+      log.warning(
+          'ViewSpec has both ViewportCreationToken and ViewHolderToken set');
       if (url != null) {
         onError(url,
             'ViewSpec has both ViewportCreationToken and ViewHolderToken set');

@@ -737,17 +737,17 @@ class AppStateImpl with Disposable implements AppState {
     final stuckViews = views.where((view) => view.id == id);
     if (stuckViews.isNotEmpty) {
       final view = stuckViews.first;
-      // TODO(https://fxbug.dev/83165): Ignore rendered/loaded views.
       if (view.loaded) {
-        return;
+        view.close();
+      } else {
+        final description = Strings.applicationFailedToStart(view.title);
+        _displayDialog(AlertDialogInfo(
+          title: description,
+          body: 'Url: ${view.url}',
+          actions: [Strings.close],
+          onClose: view.close,
+        ));
       }
-      final description = Strings.applicationFailedToStart(view.title);
-      _displayDialog(AlertDialogInfo(
-        title: description,
-        body: 'Url: ${view.url}',
-        actions: [Strings.close],
-        onClose: view.close,
-      ));
     }
   }
 
