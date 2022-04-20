@@ -58,11 +58,20 @@ fuchsia_unittest_package("virtio_block_rs_unittests") {
 }
 
 fuchsia_package("virtio_block_rs") {
-  deps = [ ":virtio_block_rs_v2" ]
+  deps = [
+    ":virtio_block_rs_v1",
+    ":virtio_block_rs_v2",
+  ]
 }
 
 fuchsia_component("virtio_block_rs_v2") {
   manifest = "meta/virtio_block.cml"
+  deps = [ ":virtio_block_bin" ]
+  component_name = "virtio_block_rs"
+}
+
+fuchsia_component("virtio_block_rs_v1") {
+  manifest = "meta/virtio_block.cmx"
   deps = [ ":virtio_block_bin" ]
   component_name = "virtio_block_rs"
 }
