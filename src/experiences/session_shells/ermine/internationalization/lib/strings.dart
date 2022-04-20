@@ -1131,16 +1131,25 @@ class Strings {
         desc: 'The label of button to factory data reset a device.',
       );
 
+  static String get factoryDataResetTitle => Intl.message(
+        'Are you sure you want to erase all user data and settings and reset '
+        'the password?',
+        name: 'eraseAndReset',
+        desc: 'The title of the factory data reset alert dialog.',
+      );
+
   static String get factoryDataResetPrompt => Intl.message(
-        'Are you sure to erase all user data and settings and reset the password?',
+        'This will also remove the SSH keys. If you want to connect to the '
+        'device again for debugging, you\'ll have to repave the device or '
+        'set up the SSH keys.',
         name: 'factoryDataReset',
-        desc: 'The label of button to factory data reset a device.',
+        desc: 'The body text of the factory data reset alert dialog.',
       );
 
   static String get eraseAndReset => Intl.message(
         'Erase & Reset',
         name: 'eraseAndReset',
-        desc: 'The label of button confirm factory data reset.',
+        desc: 'The label of button to factory data reset a device.',
       );
 
   static String get forget => Intl.message(

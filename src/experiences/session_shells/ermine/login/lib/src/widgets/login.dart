@@ -161,9 +161,10 @@ class Login extends StatelessWidget {
 
   void _confirmFactoryReset() {
     oobe.showDialog(AlertDialogInfo(
-      title: Strings.eraseAndReset,
+      title: Strings.factoryDataResetTitle,
       body: Strings.factoryDataResetPrompt,
       actions: [Strings.cancel, Strings.eraseAndReset],
+      width: 728,
       onAction: (action) {
         if (action == Strings.eraseAndReset) {
           oobe.factoryReset();
