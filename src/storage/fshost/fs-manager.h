@@ -53,7 +53,6 @@ class FsManager {
   enum class MountPoint {
     kUnknown = 0,
     kData,
-    kVolume,
     kInstall,
     kPkgfs,
     kFactory,
@@ -64,8 +63,8 @@ class FsManager {
   // Returns the fully qualified for the given mount point.
   static const char* MountPointPath(MountPoint);
 
-  constexpr static std::array<MountPoint, 7> kAllMountPoints{
-      MountPoint::kData,    MountPoint::kVolume,  MountPoint::kInstall, MountPoint::kPkgfs,
+  constexpr static std::array<MountPoint, 6> kAllMountPoints{
+      MountPoint::kData,    MountPoint::kInstall, MountPoint::kPkgfs,
       MountPoint::kFactory, MountPoint::kDurable, MountPoint::kMnt,
   };
 
