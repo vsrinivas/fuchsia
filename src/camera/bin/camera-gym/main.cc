@@ -28,11 +28,25 @@
 
 using Command = fuchsia::camera::gym::Command;
 
+constexpr zx::duration kDefaultAutoCycleInterval = zx::msec(CONFIGURATION_CYCLE_INTERVAL_MS);
+
 int main(int argc, char* argv[]) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   // Default must match existing behavior as started from UI.
   bool manual_mode = command_line.HasOption("manual");
+  std::optional<zx::duration> auto_cycle_interval = kDefaultAutoCycleInterval;
+  std::string value_string;
+  if (command_line.GetOptionValue("auto-cycle-interval-ms", &value_string)) {
+    auto auto_cycle_interval_ms_value = std::stoul(value_string, nullptr, 0);
+
+    // Value of 0 means "infinite". (Meaning no config cycling at all.)
+    if (auto_cycle_interval_ms_value == 0) {
+      auto_cycle_interval.reset();
+    } else {
+      auto_cycle_interval = zx::msec(auto_cycle_interval_ms_value);
+    }
+  }
 
   syslog::SetLogSettings({.min_log_level = CAMERA_MIN_LOG_LEVEL}, {"camera-gym"});
 
@@ -101,6 +115,7 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
   auto cycler = cycler_result.take_value();
+  cycler->set_auto_cycle_interval(auto_cycle_interval);
 
   status = cycler_loop.StartThread("StreamCycler Thread");
   if (status != ZX_OK) {

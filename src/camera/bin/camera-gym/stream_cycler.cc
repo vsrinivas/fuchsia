@@ -25,8 +25,6 @@ using AddStreamCommand = fuchsia::camera::gym::AddStreamCommand;
 using SetCropCommand = fuchsia::camera::gym::SetCropCommand;
 using SetResolutionCommand = fuchsia::camera::gym::SetResolutionCommand;
 
-constexpr zx::duration kDemoTime = zx::msec(CONFIGURATION_CYCLE_TIME_MS);
-
 // Watch dog for general purpose catastrophic frame timeout. This is meant for detecting really bad
 // things happening, such as sensor no longer producing frames.
 constexpr zx::duration kCheckInterval = zx::msec(2000);  // 2 seconds
@@ -153,8 +151,10 @@ void StreamCycler::WatchCurrentConfigurationCallback(uint32_t config_index) {
 
     // After a specified demo period, set the next stream configuration, which will end up cutting
     // off all existing streams.
-    async::PostDelayedTask(
-        dispatcher_, [this]() { ForceNextStreamConfiguration(); }, kDemoTime);
+    if (auto_cycle_interval_) {
+      async::PostDelayedTask(
+          dispatcher_, [this]() { ForceNextStreamConfiguration(); }, *auto_cycle_interval_);
+    }
   }
 
   // Be ready for configuration changes.
