@@ -24,6 +24,7 @@ def update_platform_version(fuchsia_api_level):
     try:
         with open(PLATFORM_VERSION_PATH, "w") as f:
             json.dump(fuchsia_api_level, f)
+        return True
     except FileNotFoundError:
         print(
             """error: Unable to open '{path}'.
