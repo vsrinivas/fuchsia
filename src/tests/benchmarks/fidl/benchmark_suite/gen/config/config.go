@@ -12,6 +12,7 @@ const (
 	CPP         Binding = "cpp"
 	HLCPP       Binding = "hlcpp"
 	LLCPP       Binding = "llcpp"
+	DriverCPP   Binding = "driver_cpp"
 	DriverLLCPP Binding = "driver_llcpp"
 	Dart        Binding = "dart"
 	Rust        Binding = "rust"

@@ -65,6 +65,7 @@ sdk_source_set("driver_runtime_internal") {
 
     # This should be migrated to mock_ddk to avoid this.
     "//src/devices/securemem/drivers/aml-securemem:aml-securemem-test-bin",
+    "//src/tests/benchmarks/fidl/driver_cpp/*",
     "//src/tests/benchmarks/fidl/driver_llcpp/*",
   ]
   public_deps = [

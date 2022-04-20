@@ -137,7 +137,7 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlgen.Root, config gidlconfig.Ge
 		if gidlir.ContainsUnknownField(gidlBenchmark.Value) {
 			continue
 		}
-		valBuild, valVar := buildValue(gidlBenchmark.Value, decl, handleReprRaw)
+		valBuild, valVar := BuildValue(gidlBenchmark.Value, decl, HandleReprRaw)
 		tmplInput.Benchmarks = append(tmplInput.Benchmarks, benchmark{
 			Path:                     gidlBenchmark.Name,
 			Name:                     benchmarkName(gidlBenchmark.Name),

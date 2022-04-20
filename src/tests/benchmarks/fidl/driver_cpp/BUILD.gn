@@ -13,7 +13,7 @@ foreach(suite, benchmark_suites) {
   suite_target = "benchmark_suite__${suite.name}"
   gidl_deps += [ ":" + suite_target ]
 
-  gidl_driver_llcpp_benchmarks(suite_target) {
+  gidl_driver_cpp_benchmarks(suite_target) {
     testonly = true
     inputs = suite.gidl
     fidl = suite.fidl_target
@@ -21,7 +21,9 @@ foreach(suite, benchmark_suites) {
       "//sdk/cts/tests/pkg/fidl/cpp:handle_util",
       "//sdk/lib/driver_runtime:driver_runtime_internal",
       "//sdk/lib/fidl_driver",
+      "//sdk/lib/fidl_driver:fidl_driver_natural",
       "//src/devices/bin/driver_runtime:driver_runtime_impl",
+      "//src/lib/fidl/cpp",
       "//zircon/system/ulib/async:async-cpp",
       "//zircon/system/ulib/fidl",
       "//zircon/system/ulib/perftest",
@@ -35,7 +37,7 @@ foreach(suite, benchmark_suites) {
 }
 
 executable("bin") {
-  output_name = "driver_llcpp_fidl_microbenchmarks"
+  output_name = "driver_cpp_fidl_microbenchmarks"
   testonly = true
   sources = [ "main.cc" ]
   deps = [
@@ -49,7 +51,7 @@ executable("bin") {
          ] + gidl_deps
 }
 
-fuchsia_shell_package("driver_llcpp") {
+fuchsia_shell_package("driver_cpp") {
   testonly = true
   deps = [ ":bin" ]
 }

@@ -20,10 +20,10 @@ const (
 	_ = iota
 	handleReprDisposition
 	handleReprInfo
-	handleReprRaw
+	HandleReprRaw
 )
 
-func buildValue(value gidlir.Value, decl gidlmixer.Declaration, handleRepr handleRepr) (string, string) {
+func BuildValue(value gidlir.Value, decl gidlmixer.Declaration, handleRepr handleRepr) (string, string) {
 	builder := builder{
 		handleRepr: handleRepr,
 	}

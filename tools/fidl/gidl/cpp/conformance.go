@@ -185,7 +185,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 		if gidlir.ContainsUnknownField(encodeSuccess.Value) {
 			continue
 		}
-		valueBuild, valueVar := buildValue(encodeSuccess.Value, decl, handleReprRaw)
+		valueBuild, valueVar := BuildValue(encodeSuccess.Value, decl, HandleReprRaw)
 		fuchsiaOnly := decl.IsResourceType() || len(encodeSuccess.HandleDefs) > 0
 		for _, encoding := range encodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
@@ -251,7 +251,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 		if gidlir.ContainsUnknownField(encodeFailure.Value) {
 			continue
 		}
-		valueBuild, valueVar := buildValue(encodeFailure.Value, decl, handleReprRaw)
+		valueBuild, valueVar := BuildValue(encodeFailure.Value, decl, HandleReprRaw)
 		fuchsiaOnly := decl.IsResourceType() || len(encodeFailure.HandleDefs) > 0
 		for _, wireFormat := range supportedWireFormats {
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{

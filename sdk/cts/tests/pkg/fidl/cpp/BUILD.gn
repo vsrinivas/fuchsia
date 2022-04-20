@@ -200,6 +200,8 @@ cts_source_set("test_util") {
 
   sources = [ "test/test_util.h" ]
 
+  public_configs = [ "//sdk/config" ]
+
   public_deps = [ "//sdk/lib/fidl/cpp:cpp_base" ]
 }
 
@@ -210,6 +212,8 @@ cts_source_set("handle_util") {
     "test/handle_util.cc",
     "test/handle_util.h",
   ]
+
+  public_configs = [ "//sdk/config" ]
 
   public_deps = [ "//zircon/system/ulib/zx" ]
 }
