@@ -23,10 +23,10 @@ universe_package_labels += [ "//bundles:tools" ]
 ```
 
 To run `fidlcat`, you must boot with networking enabled. If you're running an
-emulator:
+emulator run the following command:
 
 ```sh
-fx emu -N
+ffx emu --net tap
 ```
 
 In a separate console, you need to ensure your target is able to fetch updates:

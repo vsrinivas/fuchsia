@@ -30,7 +30,7 @@ Set up your development environment.
 This codelab assumes you have completed [Getting Started](/docs/get-started/README.md) and have:
 
 1. A checked out and built Fuchsia tree.
-2. A device or emulator (`fx emu`) that runs Fuchsia.
+2. A device or emulator (`ffx emu`) that runs Fuchsia.
 3. A workstation to serve components (`fx serve`) to your Fuchsia device or emulator.
 
 To build and run the examples in this codelab, add the following arguments

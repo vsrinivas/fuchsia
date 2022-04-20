@@ -114,7 +114,7 @@ Note: For more information on getting started with Fuchsia, see
 [Fuchsia](/docs/get-started/README.md).
 
 ```posix-terminal
-fx emu -N
+ffx emu --net tap
 ```
 
 This command configures and starts the Fuchsia emulator.

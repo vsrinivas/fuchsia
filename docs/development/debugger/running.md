@@ -5,11 +5,10 @@
 Boot the target system with networking support:
 
   * Hardware devices: use the device instructions.
-  * AEMU: `fx emu -N`
+  * AEMU: `ffx emu --net tap`
   * QEMU: `fx qemu -N`
 
-(If using x64 with an emulator on a Linux host, we also recommend the "-k" flag, which will make it
-run faster).
+(If using x64 with an emulator on a Linux host, we  recommend using the `-k` flag with `fx qemu`, which will accelerate the emulator).
 
 To manually validate network connectivity run `fx shell` or `fx get-device-addr`.
 
