@@ -101,6 +101,8 @@ pub async fn make_repository(metadata_dir: &Path, blobs_dir: &Path) {
         let package_path = build_path.join(name);
 
         let mut builder = PackageBuilder::new(name);
+        builder.api_level(7).unwrap();
+
         builder
             .add_contents_as_blob(
                 format!("bin/{}", name),

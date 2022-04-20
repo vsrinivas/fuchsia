@@ -87,11 +87,18 @@ impl<'a> RepositoryBuilder<'a> {
             }
         }
 
+        // Packages need to be built with a specific version. We pick a specific version since then
+        // we won't change merkles when the latest version changes.
+        let version = version_history::VERSION_HISTORY
+            .iter()
+            .find(|v| v.api_level == 7)
+            .expect("API Level 7 to exist");
+
         let mut pm = SpawnBuilder::new()
             .options(fdio::SpawnOptions::CLONE_ALL - fdio::SpawnOptions::CLONE_NAMESPACE)
             .arg("pm")?
             .arg("-abi-revision")?
-            .arg(version_history::LATEST_VERSION.abi_revision.to_string())?
+            .arg(version.abi_revision.to_string())?
             .arg("publish")?
             .arg("-lp")?
             .arg("-f=/in/manifests.list")?
