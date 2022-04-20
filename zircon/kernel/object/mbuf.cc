@@ -27,8 +27,8 @@ KCOUNTER(mbuf_free_list_bytes_count, "mbuf.free_list_bytes")
 size_t MBufChain::MBuf::rem() const { return kPayloadSize - (off_ + len_); }
 
 MBufChain::~MBufChain() {
-  while (!tail_.is_empty()) {
-    delete tail_.pop_front();
+  while (!buffers_.is_empty()) {
+    delete buffers_.pop_front();
   }
   while (!freelist_.is_empty()) {
     kcounter_add(mbuf_free_list_bytes_count, -static_cast<int64_t>(sizeof(MBufChain::MBuf)));
@@ -53,12 +53,12 @@ zx_status_t MBufChain::ReadHelper(T* chain, user_out_ptr<char> dst, size_t len, 
     return ZX_OK;
   }
 
-  if (datagram && len > chain->tail_.front().pkt_len_)
-    len = chain->tail_.front().pkt_len_;
+  if (datagram && len > chain->buffers_.front().pkt_len_)
+    len = chain->buffers_.front().pkt_len_;
 
   size_t pos = 0;
-  auto iter = chain->tail_.begin();
-  while (pos < len && iter != chain->tail_.end()) {
+  auto iter = chain->buffers_.begin();
+  while (pos < len && iter != chain->buffers_.end()) {
     const char* src = iter->data_ + iter->off_;
     size_t copy_len = ktl::min(static_cast<size_t>(iter->len_), len - pos);
     zx_status_t status = dst.byte_offset(pos).copy_array_to_user(src, copy_len);
@@ -85,10 +85,10 @@ zx_status_t MBufChain::ReadHelper(T* chain, user_out_ptr<char> dst, size_t len, 
 
       if (iter->len_ == 0 || datagram) {
         chain->size_ -= iter->len_;
-        if (chain->head_ == &(*iter))
-          chain->head_ = nullptr;
-        chain->FreeMBuf(chain->tail_.pop_front());
-        iter = chain->tail_.begin();
+        if (chain->write_cursor_ == &(*iter))
+          chain->write_cursor_ = nullptr;
+        chain->FreeMBuf(chain->buffers_.pop_front());
+        iter = chain->buffers_.begin();
       }
     }
   }
@@ -96,11 +96,13 @@ zx_status_t MBufChain::ReadHelper(T* chain, user_out_ptr<char> dst, size_t len, 
   // Drain any leftover mbufs in the datagram packet if we're consuming data.
   if constexpr (!ktl::is_const<T>::value) {
     if (datagram) {
-      while (!chain->tail_.is_empty() && chain->tail_.front().pkt_len_ == 0) {
-        MBuf* cur = chain->tail_.pop_front();
+      while (!chain->buffers_.is_empty() && chain->buffers_.front().pkt_len_ == 0) {
+        MBuf* cur = chain->buffers_.pop_front();
         chain->size_ -= cur->len_;
-        if (chain->head_ == cur)
-          chain->head_ = nullptr;
+        if (chain->write_cursor_ == cur) {
+          DEBUG_ASSERT(chain->buffers_.is_empty());
+          chain->write_cursor_ = nullptr;
+        }
         chain->FreeMBuf(cur);
       }
     }
@@ -156,12 +158,13 @@ zx_status_t MBufChain::WriteDatagram(user_in_ptr<const char> src, size_t len, si
   // Successfully built the packet mbufs. Put it on the socket.
   while (!bufs.is_empty()) {
     auto next = bufs.pop_front();
-    if (head_ == nullptr) {
-      tail_.push_front(next);
+    if (write_cursor_ == nullptr) {
+      DEBUG_ASSERT(buffers_.is_empty());
+      buffers_.push_front(next);
     } else {
-      tail_.insert_after(tail_.make_iterator(*head_), next);
+      buffers_.insert_after(buffers_.make_iterator(*write_cursor_), next);
     }
-    head_ = next;
+    write_cursor_ = next;
   }
 
   *written = len;
@@ -170,26 +173,27 @@ zx_status_t MBufChain::WriteDatagram(user_in_ptr<const char> src, size_t len, si
 }
 
 zx_status_t MBufChain::WriteStream(user_in_ptr<const char> src, size_t len, size_t* written) {
-  if (head_ == nullptr) {
-    head_ = AllocMBuf();
-    if (head_ == nullptr) {
+  if (write_cursor_ == nullptr) {
+    DEBUG_ASSERT(buffers_.is_empty());
+    write_cursor_ = AllocMBuf();
+    if (write_cursor_ == nullptr) {
+      *written = 0;
       return ZX_ERR_SHOULD_WAIT;
     }
-    *written = 0;
-    tail_.push_front(head_);
+    buffers_.push_front(write_cursor_);
   }
 
   size_t pos = 0;
   while (pos < len) {
-    if (head_->rem() == 0) {
+    if (write_cursor_->rem() == 0) {
       auto next = AllocMBuf();
       if (next == nullptr)
         break;
-      tail_.insert_after(tail_.make_iterator(*head_), next);
-      head_ = next;
+      buffers_.insert_after(buffers_.make_iterator(*write_cursor_), next);
+      write_cursor_ = next;
     }
-    char* dst = head_->data_ + head_->off_ + head_->len_;
-    size_t copy_len = ktl::min(head_->rem(), len - pos);
+    char* dst = write_cursor_->data_ + write_cursor_->off_ + write_cursor_->len_;
+    size_t copy_len = ktl::min(write_cursor_->rem(), len - pos);
     if (size_ + copy_len > kSizeMax) {
       copy_len = kSizeMax - size_;
       if (copy_len == 0)
@@ -209,7 +213,7 @@ zx_status_t MBufChain::WriteStream(user_in_ptr<const char> src, size_t len, size
     }
 
     pos += copy_len;
-    head_->len_ += static_cast<uint32_t>(copy_len);
+    write_cursor_->len_ += static_cast<uint32_t>(copy_len);
     size_ += copy_len;
   }
 

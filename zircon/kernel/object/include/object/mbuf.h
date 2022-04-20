@@ -64,7 +64,7 @@ class MBufChain {
   // datagram, or 0 if in ZX_SOCKET_STREAM mode.
   size_t size(bool datagram = false) const {
     if (datagram && size_) {
-      return tail_.front().pkt_len_;
+      return buffers_.front().pkt_len_;
     }
     return size_;
   }
@@ -115,9 +115,15 @@ class MBufChain {
   static zx_status_t ReadHelper(T* chain, user_out_ptr<char> dst, size_t len, bool datagram,
                                 size_t* actual);
 
+  // Inactive buffers that will be re-used for future writes. This serves as a cache to avoid
+  // bouncing buffers in and out of the heap all the time.
   fbl::SinglyLinkedList<MBuf*> freelist_;
-  fbl::SinglyLinkedList<MBuf*> tail_;
-  MBuf* head_ = nullptr;
+  // The active buffers that make up this chain. buffers_.front() is the read cursor.
+  fbl::SinglyLinkedList<MBuf*> buffers_;
+  // The write write_cursor_ is the last buffer in the buffers_ list, and is where writes happen.
+  // This needs to be manually tracked since buffers_ is a SinglyLinkedList, but is always
+  // effectively buffers_.back()
+  MBuf* write_cursor_ = nullptr;
   size_t size_ = 0u;
 };
 
