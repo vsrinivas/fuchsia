@@ -85,7 +85,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
 
   // 0. Start storage watchdog for cache storage
   storage_watchdog_.Run(dispatcher);
-  if (zx_status_t status = storage_metrics_.Run().status_value() != ZX_OK) {
+  if (zx_status_t status = storage_metrics_.Run().status_value(); status != ZX_OK) {
     FX_LOGS(WARNING) << "Failed to start polling storage usage: " << zx_status_get_string(status);
   }
 
@@ -120,10 +120,10 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
   FX_CHECK(root_realm_) << "Cannot create root realm ";
 
   // 2. Listen for lifecycle requests
-  zx_status_t status;
   if (args.lifecycle_request != ZX_HANDLE_INVALID) {
-    status = lifecycle_server_.Create(dispatcher, zx::channel(std::move(args.lifecycle_request)));
-    if (status != ZX_OK) {
+    if (zx_status_t status =
+            lifecycle_server_.Create(dispatcher, zx::channel(std::move(args.lifecycle_request)));
+        status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to bind lifecycle service.";
       return;
     }
@@ -164,19 +164,20 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
   // directory as 'hub/' and the first nested realm's (to be created by sysmgr)
   // service directory as 'svc/'.
   zx::channel svc_client_chan, svc_server_chan;
-  status = zx::channel::create(0, &svc_client_chan, &svc_server_chan);
-  if (status != ZX_OK) {
+  if (zx_status_t status = zx::channel::create(0, &svc_client_chan, &svc_server_chan);
+      status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to create channel: " << status;
     return;
   }
-  status = root_realm_->BindFirstNestedRealmSvc(std::move(svc_server_chan));
-  if (status != ZX_OK) {
+  if (zx_status_t status = root_realm_->BindFirstNestedRealmSvc(std::move(svc_server_chan));
+      status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to bind to root realm services: " << status;
     return;
   }
-  status = fdio_service_connect_at(svc_client_chan.get(), "fuchsia.tracing.provider.Registry",
-                                   args.trace_server_channel.release());
-  if (status != ZX_OK) {
+  if (zx_status_t status =
+          fdio_service_connect_at(svc_client_chan.get(), "fuchsia.tracing.provider.Registry",
+                                  args.trace_server_channel.release());
+      status != ZX_OK) {
     FX_LOGS(WARNING) << "failed to connect to tracing: " << status;
     // In test environments the tracing registry may not be available. If this
     // fails, let's still proceed.
