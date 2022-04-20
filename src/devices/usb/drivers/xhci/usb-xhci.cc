@@ -1532,11 +1532,7 @@ size_t UsbXhci::UsbHciGetMaxTransferSize(uint32_t device_id, uint8_t ep_address)
   if (state->IsDisconnecting()) {
     return 0;
   }
-  auto control = reinterpret_cast<uint32_t*>(state->GetInputContext()->virt());
-  uint8_t index = XhciEndpointIndex(ep_address);
-  auto endpoint_context = reinterpret_cast<EndpointContext*>(
-      reinterpret_cast<unsigned char*>(control) + (slot_size_bytes_ * (2 + index)));
-  return endpoint_context->MAX_PACKET_SIZE();
+  return SIZE_MAX;
 }
 
 zx_status_t UsbXhci::UsbHciCancelAll(uint32_t device_id, uint8_t ep_address) {
