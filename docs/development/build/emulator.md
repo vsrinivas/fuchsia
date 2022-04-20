@@ -7,8 +7,7 @@ FEMU is included in the Fuchsia source tree. FEMU is downloaded (or updated) by
 `jiri`, as part of `jiri update` or `jiri run-hooks`, and is fetched into the
 `/prebuilt/third_party/aemu` directory of your Fuchsia source tree.
 
-You can launch FEMU using the `fx vdl` command, or using the `fvdl` command in
-the Fuchsia SDK.
+You can launch FEMU using `ffx emu`.
 
 ## FEMU, AEMU, and QEMU {#femu-aemu-and-qemu}
 
@@ -37,7 +36,7 @@ The features of FEMU include:
 
 *   **GUI Support:** You can run Fuchsia with the GUI (by default) or without
     the GUI (using the `--headless` argument).
-*   **GPU Support:** You can run with the host’s GPU (by default) with full
+*   **GPU Support:** You can run with the host's GPU (by default) with full
     [Vulkan](/docs/development/graphics/magma/concepts/vulkan.md){:.exyernal} support, or
     you can choose software rendering using
     [SwiftShader](https://swiftshader.googlesource.com/SwiftShader/){:.external}.
@@ -49,10 +48,8 @@ The features of FEMU include:
 To see full list of supported flags:
 
 ```posix-terminal
-fx vdl start --help
+ffx emu start --help
 ```
-
-The Fuchsia SDK's `fvdl` command supports the same flags as `fx vdl`.
 
 ## Image and board support {#image-and-board-support}
 
@@ -61,7 +58,7 @@ When setting up FEMU using `fx set`, FEMU supports the following boards:
 *   `qemu-x64`
 *   `qemu-arm64`
 
-With the Fuchsia SDK, FEMU supports the following pre-built images:
+With the Fuchsia SDK, FEMU supports pre-built images, including:
 
 *   `qemu-x64`
 *   `workstation.qemu-x64-release`
@@ -69,34 +66,61 @@ With the Fuchsia SDK, FEMU supports the following pre-built images:
 
 ARM64 support (`qemu-arm64`) is very limited and not recommended.
 
+Use `ffx product-bundle list ` to see the full set of available products
+available from the SDK, and
+<code>ffx product-bundle get {{ '<var>' }}product-bundle</var></code>
+to download those products.
+
 ## Networking
 
-On Linux, FEMU should generally be run with the `-N` flag that
+The `--net` flag specifies the networking mode for the emulator. `--net`
+requires a value to indicate which kind of networking to implement.
+
+`--net` has the following possible values:
+
+  - `tap`: Attaches a Tun/Tap interface.
+  - `user`: Sets up mapped ports through SLiRP.
+  - `none`: Disables networking.
+  - `auto`: Checks the host system's capabilities and selects `tap` if it is
+            available or `user` if a Tap interface is unavailable.
+            `auto` is the default.
+
+On Linux, FEMU should generally be run with the `--net tap` flag that
 provides networking through an emulated NIC.
 
 Note: Instructions for setting up
 networking for FEMU is in the
 [Start the Fuchsia Emulator](/docs/get-started/set_up_femu.md) guide.
 
-Without `-N`, your emulator is not discoverable using `ffx target list`
-(or`fx list-devices`). However, you can manually set the SSH address and
-use `fx` tools to interact with your emulator.
+`--net tap` and `--net user` allow the emulator to be discoverable
+when running `ffx target list`. `--net none` disables networking, which causes
+the emulator to not be discoverable after running `ffx target list`.
 
-If starting the emulator without `-N` (that is, `fx vdl start`), an available TCP
-port from the host is picked and forwarded to the emulator's SSH port. When
-the emulator launches successfully, an additional instruction, which uses
-`fx set-device` with the correct SSH port, is printed in the terminal output:
+If starting the emulator with `ffx emu start --net user`, an available TCP
+port from the host is picked and forwarded to the emulator's SSH port.
+
+You can manually set the SSH address and use `fx` tools to interact
+with your emulator by running the following command:
 
 ```posix-terminal
-fx set-device 127.0.0.1:{{ '<var>' }}SSH_PORT{{ '</var>' }}
+ffx emu start --net user --port-map {{ '<var>' }}PORT-NAME{{ '</var>' }}:{{ '<var>' }}PORT-NUMBER{{ '</var>' }}
 ```
-Using ths command above,  you can manually set the SSH device.
+
+Replace the following:
+
+  * <var>PORT-NAME</var>: The chosen name for the port. An example port name could be
+    `ssh`.
+  * <var>PORT-NUMBER</var>: The number of the port. An example port number is
+  `8022`.
+
+Any named ports can be set the same way. The ports that can be mapped
+are named in the virtual device specification.
 
 To verify that your `fx` tool is using the correct port, run the
 following command:
 
 ```posix-terminal
-fx status
+ffx target get-ssh-address
 ```
 
 You should see the SSH address printed next to `Device name`.
@@ -104,7 +128,7 @@ You should see the SSH address printed next to `Device name`.
 To SSH into the emulator, run the following command:
 
 ```posix-terminal
-fx ssh
+fx shell
 ```
 
 ## Unsupported CPUs {#unsupported-cpu}
