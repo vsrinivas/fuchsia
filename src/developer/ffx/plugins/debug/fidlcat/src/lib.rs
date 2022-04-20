@@ -48,7 +48,7 @@ impl ProcessArguments {
 pub async fn fidlcat(
     debugger_proxy: fidl_fuchsia_debugger::DebugAgentProxy,
     cmd: ffx_debug_fidlcat_args::FidlcatCommand,
-) -> Result<i32> {
+) -> Result<()> {
     if let Err(e) = symbol_index::ensure_symbol_index_registered().await {
         log::warn!("ensure_symbol_index_registered failed, error was: {:#?}", e);
     }
@@ -121,8 +121,9 @@ pub async fn fidlcat(
         };
     });
 
-    if let Some(exit_code) = unblock(move || fidlcat.wait()).await?.code() {
-        Ok(exit_code)
+    // Return code is not used. See fxbug.dev/98220
+    if let Some(_exit_code) = unblock(move || fidlcat.wait()).await?.code() {
+        Ok(())
     } else {
         Err(ffx_error!("fidlcat terminated by signal").into())
     }

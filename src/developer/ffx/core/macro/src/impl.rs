@@ -1611,7 +1611,7 @@ mod test {
     fn test_known_proxy_works_with_custom_return_type() -> Result<(), Error> {
         let proxies = Default::default();
         let input: ItemFn = parse_quote! {
-            fn test_fn(cmd: OptionCommand) -> Result<i32> {}
+            fn test_fn(cmd: OptionCommand) -> Result<()> {}
         };
         ffx_plugin(input, proxies).map(|_| ())
     }

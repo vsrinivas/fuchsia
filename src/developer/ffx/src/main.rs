@@ -365,7 +365,7 @@ fn write_exit_code<T, W: Write>(res: &Result<T>, out: &mut W) -> Result<()> {
     Ok(())
 }
 
-async fn run() -> Result<i32> {
+async fn run() -> Result<()> {
     hoist::disable_autoconnect();
     let app: Ffx = from_env();
 
@@ -383,7 +383,7 @@ async fn run() -> Result<i32> {
                     e
                 );
                 eprintln!("Ensure that $HOME is set, or pass the --env option to specify an environment configuration path");
-                return Ok(1);
+                return Ok(());
             }
         },
     };
@@ -425,7 +425,7 @@ async fn run() -> Result<i32> {
     let stamp = stamp_file(&app.stamp)?;
     let res = if is_schema(&app.subcommand) {
         ffx_lib_suite::ffx_plugin_writer_all_output(0);
-        Ok(0)
+        Ok(())
     } else if app.machine.is_some() && !ffx_lib_suite::ffx_plugin_is_machine_supported(&app) {
         Err(anyhow::Error::new(ffx_error!("The machine flag is not supported for this subcommand")))
     } else {

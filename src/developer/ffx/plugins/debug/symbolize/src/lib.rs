@@ -9,7 +9,7 @@ use {
 };
 
 #[ffx_core::ffx_plugin()]
-pub async fn symbolize(cmd: ffx_debug_symbolize_args::SymbolizeCommand) -> Result<i32> {
+pub async fn symbolize(cmd: ffx_debug_symbolize_args::SymbolizeCommand) -> Result<()> {
     if let Err(e) = symbol_index::ensure_symbol_index_registered().await {
         eprintln!("ensure_symbol_index_registered failed, error was: {:#?}", e);
     }
@@ -22,8 +22,9 @@ pub async fn symbolize(cmd: ffx_debug_symbolize_args::SymbolizeCommand) -> Resul
 
     let mut cmd = Command::new(symbolizer_path).args(args).spawn()?;
 
-    if let Some(exit_code) = unblock(move || cmd.wait()).await?.code() {
-        Ok(exit_code)
+    // Return code is not used. See fxbug.dev/98220
+    if let Some(_exit_code) = unblock(move || cmd.wait()).await?.code() {
+        Ok(())
     } else {
         Err(anyhow!("symbolizer terminated by signal"))
     }

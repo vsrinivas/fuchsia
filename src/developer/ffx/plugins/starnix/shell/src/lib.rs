@@ -20,10 +20,7 @@ use {
     "starnix_enabled",
     ManagerProxy = "core/starnix_manager:expose:fuchsia.starnix.developer.Manager"
 )]
-pub async fn shell_starnix(
-    manager_proxy: ManagerProxy,
-    _shell: ShellStarnixCommand,
-) -> Result<i32> {
+pub async fn shell_starnix(manager_proxy: ManagerProxy, _shell: ShellStarnixCommand) -> Result<()> {
     let (controller_proxy, controller_server_end) = create_proxy::<ShellControllerMarker>()?;
     let (sin, cin) =
         fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create stdin socket")?;
@@ -51,8 +48,9 @@ pub async fn shell_starnix(
         #[allow(clippy::never_loop)]
         while let Some(result) = event_stream.next().await {
             match result? {
-                ShellControllerEvent::OnTerminated { return_code } => {
-                    return Ok(return_code);
+                // Return code is not used. See fxbug.dev/98220
+                ShellControllerEvent::OnTerminated { return_code: _ } => {
+                    return Ok(());
                 }
             }
         }

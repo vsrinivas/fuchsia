@@ -6,32 +6,32 @@ pub async fn ffx_plugin_impl<I: ffx_core::Injector>(
   injector: I,
   cmd: {{suite_args_lib}}::FfxPluginCommand,
 {% endif %}
-) -> anyhow::Result<i32>
+) -> anyhow::Result<()>
 {
 {% if includes_execution %}
 {% if includes_subcommands %}
   match cmd.subcommand {
       Some(sub) => match sub {
 {% for plugin in plugins %}
-        {{suite_subcommand_lib}}::Subcommand::{{plugin.enum}}(c) => ffx_core::PluginResult::from({{plugin.lib}}_suite::ffx_plugin_impl(injector, c).await).into(),
+        {{suite_subcommand_lib}}::Subcommand::{{plugin.enum}}(c) => {{plugin.lib}}_suite::ffx_plugin_impl(injector, c).await,
 {% endfor %}
       },
-      None => ffx_core::PluginResult::from({{execution_lib}}::ffx_plugin_impl(injector, cmd).await).into(),
+      None => {{execution_lib}}::ffx_plugin_impl(injector, cmd).await,
     }
 {% else %}
-  ffx_core::PluginResult::from({{execution_lib}}::ffx_plugin_impl(injector, cmd).await).into()
+  {{execution_lib}}::ffx_plugin_impl(injector, cmd).await
 {% endif %}
 
 {% else %}
 {% if includes_subcommands %}
     match cmd.subcommand {
 {% for plugin in plugins %}
-      {{suite_subcommand_lib}}::Subcommand::{{plugin.enum}}(c) => ffx_core::PluginResult::from({{plugin.lib}}_suite::ffx_plugin_impl(injector, c).await).into(),
+      {{suite_subcommand_lib}}::Subcommand::{{plugin.enum}}(c) => {{plugin.lib}}_suite::ffx_plugin_impl(injector, c).await,
 {% endfor %}
     }
 {% else %}
     println!("Subcommand not implemented yet.");
-    Ok(0)
+    Ok(())
 {% endif %}
 {% endif %}
 }

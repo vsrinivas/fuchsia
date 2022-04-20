@@ -22,29 +22,3 @@ pub trait Injector {
     async fn build_info(&self) -> Result<VersionInfo>;
     async fn writer(&self) -> Result<Writer>;
 }
-
-pub struct PluginResult(Result<i32>);
-
-impl From<Result<()>> for PluginResult {
-    fn from(res: Result<()>) -> Self {
-        PluginResult(res.map(|_| 0))
-    }
-}
-
-impl From<Result<i32>> for PluginResult {
-    fn from(res: Result<i32>) -> Self {
-        PluginResult(res)
-    }
-}
-
-impl From<PluginResult> for Result<i32> {
-    fn from(res: PluginResult) -> Self {
-        res.0
-    }
-}
-
-impl From<PluginResult> for Result<()> {
-    fn from(_res: PluginResult) -> Self {
-        Ok(())
-    }
-}
