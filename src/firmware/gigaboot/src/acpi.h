@@ -21,6 +21,7 @@ extern const uint8_t kXsdtSignature[ACPI_TABLE_SIGNATURE_SIZE];
 extern const uint8_t kSpcrSignature[ACPI_TABLE_SIGNATURE_SIZE];
 extern const uint8_t kFadtSignature[ACPI_TABLE_SIGNATURE_SIZE];
 extern const uint8_t kMadtSignature[ACPI_TABLE_SIGNATURE_SIZE];
+extern const uint8_t kGtdtSignature[ACPI_TABLE_SIGNATURE_SIZE];
 extern const uint8_t kInterruptControllerTypeGicc;
 extern const uint8_t kInterruptControllerTypeGicd;
 extern const uint8_t kInterruptControllerTypeGicMsiFrame;
@@ -218,6 +219,26 @@ typedef struct __attribute__((packed)) {
 } acpi_fadt_t;
 _Static_assert(sizeof(acpi_fadt_t) == 276, "FADT is the wrong size");
 
+typedef struct __attribute__((packed)) {
+  acpi_sdt_hdr_t hdr;
+  uint64_t cnt_control_base;
+  uint32_t reserved;
+  uint32_t secure_el1_timer_gsiv;
+  uint32_t secure_el1_timer_flags;
+  uint32_t nonsecure_el1_timer_gsiv;
+  uint32_t nonsecure_el1_timer_flags;
+  uint32_t virtual_el1_timer_gsiv;
+  uint32_t virtual_el1_timer_flags;
+  uint32_t el2_timer_gsiv;
+  uint32_t el2_timer_flags;
+  uint64_t cnt_read_base;
+  uint32_t platform_timer_count;
+  uint32_t platform_timer_offset;
+  uint32_t virtual_el2_timer_gsiv;
+  uint32_t virtual_el2_timer_flags;
+} acpi_gtdt_t;
+_Static_assert(sizeof(acpi_gtdt_t) == 104, "GTDT is the wrong size");
+
 // Loads the Root System Description Pointer from UEFI.
 // Returns NULL if UEFI contains no such entry in its configuration table.
 acpi_rsdp_t* load_acpi_rsdp(efi_configuration_table* entries, size_t num_entries);
@@ -245,6 +266,10 @@ uint8_t gic_driver_from_madt(const acpi_madt_t* madt, dcfg_arm_gicv2_driver_t* v
 // Returns -1 if the architecture does not support PSCI.
 // Note that this currently only sets the use_hvc field of the PSCI driver.
 int psci_driver_from_fadt(const acpi_fadt_t* fadt, dcfg_arm_psci_driver_t* cfg);
+
+// Uses the data in the GTDT table to construct an ARM generic timer
+// configuration.
+void timer_from_gtdt(const acpi_gtdt_t* gtdt, dcfg_arm_generic_timer_driver_t* timer);
 
 __END_CDECLS
 

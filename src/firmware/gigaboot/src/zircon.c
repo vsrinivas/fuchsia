@@ -344,6 +344,18 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
     }
   }
 
+  // Assemble a timer config for ARM architectures.
+  acpi_gtdt_t* gtdt = (acpi_gtdt_t*)load_table_with_signature(rsdp, (uint8_t*)kGtdtSignature);
+  if (gtdt != 0) {
+    dcfg_arm_generic_timer_driver_t timer;
+    timer_from_gtdt(gtdt, &timer);
+    result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER,
+                                           KDRV_ARM_GENERIC_TIMER, 0, &timer, sizeof(timer));
+    if (result != ZBI_RESULT_OK) {
+      return -1;
+    }
+  }
+
   // pass SMBIOS entry point pointer
   uint64_t smbios = find_smbios(img, sys);
   if (smbios != 0) {

@@ -19,6 +19,7 @@ const uint8_t kXsdtSignature[ACPI_TABLE_SIGNATURE_SIZE] = "XSDT";
 const uint8_t kSpcrSignature[ACPI_TABLE_SIGNATURE_SIZE] = "SPCR";
 const uint8_t kMadtSignature[ACPI_TABLE_SIGNATURE_SIZE] = "APIC";
 const uint8_t kFadtSignature[ACPI_TABLE_SIGNATURE_SIZE] = "FACP";
+const uint8_t kGtdtSignature[ACPI_TABLE_SIGNATURE_SIZE] = "GTDT";
 const uint8_t kInterruptControllerTypeGicc = 0xb;
 const uint8_t kInterruptControllerTypeGicd = 0xc;
 const uint8_t kInterruptControllerTypeGicMsiFrame = 0xd;
@@ -316,4 +317,10 @@ int psci_driver_from_fadt(const acpi_fadt_t* fadt, dcfg_arm_psci_driver_t* cfg) 
   }
   cfg->use_hvc = fadt->arm_boot_arch & kPsciUseHvc;
   return 0;
+}
+
+void timer_from_gtdt(const acpi_gtdt_t* gtdt, dcfg_arm_generic_timer_driver_t* timer) {
+  memset(timer, 0x0, sizeof(dcfg_arm_generic_timer_driver_t));
+  timer->irq_phys = gtdt->nonsecure_el1_timer_gsiv;
+  timer->irq_virt = gtdt->virtual_el1_timer_gsiv;
 }

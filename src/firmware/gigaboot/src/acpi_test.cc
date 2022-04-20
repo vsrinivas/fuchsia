@@ -779,4 +779,15 @@ TEST(Acpi, PsciDriverFromFadtUseHvc) {
   EXPECT_NE(cfg.use_hvc, 0);
 }
 
+TEST(Acpi, TimerDriverFromGtdt) {
+  auto gtdt = acpi_gtdt_t{
+      .nonsecure_el1_timer_gsiv = 30,
+      .virtual_el1_timer_gsiv = 27,
+  };
+  dcfg_arm_generic_timer_driver_t timer;
+  timer_from_gtdt(&gtdt, &timer);
+  EXPECT_EQ(timer.irq_phys, (uint32_t)30);
+  EXPECT_EQ(timer.irq_virt, (uint32_t)27);
+}
+
 }  // namespace
