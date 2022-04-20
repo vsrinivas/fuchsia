@@ -269,6 +269,7 @@ impl ClientMlme {
                 &mut self.chan_sched,
             )
             .map_err(|e| {
+                error!("Scan failed in MLME: {:?}", e);
                 let code = match e {
                     Error::ScanError(scan_error) => scan_error.into(),
                     _ => fidl_mlme::ScanResultCode::InternalError,

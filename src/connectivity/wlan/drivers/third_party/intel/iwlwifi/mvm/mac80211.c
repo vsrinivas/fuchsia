@@ -2527,6 +2527,7 @@ zx_status_t iwl_mvm_mac_hw_scan(struct iwl_mvm_vif* mvmvif, const struct iwl_mvm
   mtx_unlock(&mvm->mutex);
 
   if (ret != ZX_OK) {
+    IWL_ERR(mvm, "Scan start failed: %s", zx_status_get_string(ret));
     return ret;
   }
 
