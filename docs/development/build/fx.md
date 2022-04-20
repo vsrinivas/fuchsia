@@ -497,22 +497,6 @@ $ fx cp book.txt /tmp/book.txt
 $ fx cp --to-host /tmp/poem.txt poem.txt
 ```
 
-### Start Fuchsia in an Emulator {#start-fuchsia-in-emu}
-
-`fx emu` starts a Fuchsia build under the Fuchsia emulator, a general purpose
-virtual machine.
-
-In order to run ephemerally delivered programs, users will need to setup TAP
-based networking, the full details of which are beyond the scope of this
-document. A quick overview is as follows:
-
-On macOS: Install "http://tuntaposx.sourceforge.net/download.xhtml"
-On Linux: Run `sudo ip tuntap add dev qemu mode tap user $USER && sudo ip link set qemu up`
-
-Then to run the emulator using TAP networking, execute `fx emu -N`. You can
-attach a package server by running: `fx serve` as you would with a physical
-target device.
-
 ### Using multiple Fuchsia devices {#using-multiple-fuchsia-devices}
 
 Some users will have more than one Fuchsia device on a network, and will want
