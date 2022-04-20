@@ -4,16 +4,10 @@
 
 use {
     crate::{
-        errors::FxfsError,
-        lsm_tree::types::ItemRef,
         object_handle::{ObjectHandle, ReadObjectHandle},
-        object_store::{
-            extent_record::{ExtentKey, ExtentValue, DEFAULT_DATA_ATTRIBUTE_ID},
-            object_record::{ObjectKey, ObjectValue},
-        },
         range::RangeExt,
     },
-    anyhow::{anyhow, bail, Error},
+    anyhow::Error,
     async_trait::async_trait,
     std::{
         cmp::min,
@@ -29,9 +23,9 @@ use {
     },
 };
 
-// To read the super-block and journal, we use a special reader since we cannot use the object-store
-// reader until we've replayed the whole journal.  Clients must supply the extents to be used.
-pub struct Handle {
+/// To read the super-block and journal, we use this handle since we cannot use StoreObjectHandle
+/// until we've replayed the whole journal.  Clients must supply the extents to be used.
+pub struct BootstrapObjectHandle {
     object_id: u64,
     device: Arc<dyn Device>,
     start_offset: u64,
@@ -42,7 +36,7 @@ pub struct Handle {
     trace: AtomicBool,
 }
 
-impl Handle {
+impl BootstrapObjectHandle {
     pub fn new(object_id: u64, device: Arc<dyn Device>) -> Self {
         Self {
             object_id,
@@ -54,35 +48,24 @@ impl Handle {
         }
     }
 
+    pub fn new_with_start_offset(
+        object_id: u64,
+        device: Arc<dyn Device>,
+        start_offset: u64,
+    ) -> Self {
+        Self {
+            object_id,
+            device,
+            start_offset,
+            extents: Vec::new(),
+            size: 0,
+            trace: AtomicBool::new(false),
+        }
+    }
+
     pub fn push_extent(&mut self, r: Range<u64>) {
         self.size += r.length().unwrap();
         self.extents.push(r);
-    }
-
-    pub fn try_push_extent_from_object_item(
-        &mut self,
-        item: ItemRef<'_, ObjectKey, ObjectValue>,
-    ) -> Result<bool, Error> {
-        match item.into() {
-            Some((
-                object_id,
-                DEFAULT_DATA_ATTRIBUTE_ID,
-                ExtentKey { range },
-                ExtentValue::Some { device_offset, .. },
-            )) if object_id == self.object_id => {
-                if self.extents.is_empty() {
-                    self.start_offset = range.start;
-                } else if range.start != self.start_offset + self.size {
-                    bail!(anyhow!(FxfsError::Inconsistent).context(format!(
-                        "Unexpected journal extent {:?}, expected start: {}",
-                        item, self.size
-                    )));
-                }
-                self.push_extent(*device_offset..*device_offset + range.length()?);
-                Ok(true)
-            }
-            _ => Ok(false),
-        }
     }
 
     // Discard any extents whose logical offset succeeds |offset|.
@@ -103,9 +86,13 @@ impl Handle {
             log::info!("JH: Discarded {} extents from offset {}", num, discard_offset);
         }
     }
+
+    pub fn start_offset(&self) -> u64 {
+        self.start_offset
+    }
 }
 
-impl ObjectHandle for Handle {
+impl ObjectHandle for BootstrapObjectHandle {
     fn object_id(&self) -> u64 {
         self.object_id
     }
@@ -135,7 +122,7 @@ impl ObjectHandle for Handle {
 }
 
 #[async_trait]
-impl ReadObjectHandle for Handle {
+impl ReadObjectHandle for BootstrapObjectHandle {
     async fn read(&self, mut offset: u64, mut buf: MutableBufferRef<'_>) -> Result<usize, Error> {
         assert!(offset >= self.start_offset);
         let trace = self.trace.load(Ordering::Relaxed);

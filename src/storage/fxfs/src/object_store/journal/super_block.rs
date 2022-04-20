@@ -7,11 +7,11 @@ use {
         errors::FxfsError,
         filesystem::{ApplyContext, ApplyMode, Filesystem, Mutations},
         lsm_tree::types::LayerIterator,
+        object_handle::BootstrapObjectHandle,
         object_store::{
             allocator::Reservation,
             constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
             journal::{
-                handle::Handle,
                 reader::{JournalReader, ReadResult},
                 writer::JournalWriter,
                 JournalCheckpoint,
@@ -240,7 +240,7 @@ impl SuperBlock {
         device: Arc<dyn Device>,
         target_super_block: SuperBlockCopy,
     ) -> Result<(SuperBlock, ItemReader), Error> {
-        let mut handle = Handle::new(target_super_block.object_id(), device);
+        let mut handle = BootstrapObjectHandle::new(target_super_block.object_id(), device);
         handle.push_extent(target_super_block.first_extent());
         let mut reader = JournalReader::new(
             handle,
@@ -367,7 +367,7 @@ pub enum SuperBlockItem {
 }
 
 pub struct ItemReader {
-    reader: JournalReader<Handle>,
+    reader: JournalReader<BootstrapObjectHandle>,
 }
 
 impl ItemReader {

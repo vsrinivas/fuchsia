@@ -16,7 +16,6 @@
 // same per-block checksum that is used for the journal file.
 
 mod checksum_list;
-mod handle;
 mod reader;
 pub mod super_block;
 mod writer;
@@ -27,7 +26,7 @@ use {
         errors::FxfsError,
         filesystem::{ApplyContext, ApplyMode, Filesystem, SyncOptions},
         metrics::{traits::Metric as _, UintMetric},
-        object_handle::ObjectHandle,
+        object_handle::{BootstrapObjectHandle, ObjectHandle},
         object_store::{
             allocator::{Allocator, AllocatorItem, AllocatorKey, AllocatorValue, SimpleAllocator},
             constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
@@ -35,7 +34,6 @@ use {
             graveyard::Graveyard,
             journal::{
                 checksum_list::ChecksumList,
-                handle::Handle,
                 reader::{JournalReader, ReadResult},
                 super_block::SuperBlockCopy,
                 writer::JournalWriter,
@@ -46,7 +44,8 @@ use {
                 AllocatorMutation, Mutation, MutationV1, ObjectStoreMutation, Options, Transaction,
                 TxnMutation, TRANSACTION_MAX_JOURNAL_USAGE,
             },
-            HandleOptions, Item, LockState, NewChildStoreOptions, ObjectStore, StoreObjectHandle,
+            HandleOptions, Item, ItemRef, LockState, NewChildStoreOptions, ObjectStore,
+            StoreObjectHandle,
         },
         range::RangeExt,
         round::{round_down, round_up},
@@ -505,9 +504,48 @@ impl Journal {
                     ))),
                 )))
                 .await?;
-            handle = Handle::new(super_block.journal_object_id, device.clone());
+            let start_offset = if let Some(ItemRef {
+                key:
+                    ObjectKey {
+                        data:
+                            ObjectKeyData::Attribute(
+                                DEFAULT_DATA_ATTRIBUTE_ID,
+                                AttributeKey::Extent(ExtentKey { range }),
+                            ),
+                        ..
+                    },
+                ..
+            }) = iter.get()
+            {
+                range.start
+            } else {
+                0
+            };
+            handle = BootstrapObjectHandle::new_with_start_offset(
+                super_block.journal_object_id,
+                device.clone(),
+                start_offset,
+            );
             while let Some(item) = iter.get() {
-                if !handle.try_push_extent_from_object_item(item)? {
+                if !match item.into() {
+                    Some((
+                        object_id,
+                        DEFAULT_DATA_ATTRIBUTE_ID,
+                        ExtentKey { range },
+                        ExtentValue::Some { device_offset, .. },
+                    )) if object_id == super_block.journal_object_id => {
+                        if range.start != start_offset + handle.get_size() {
+                            bail!(anyhow!(FxfsError::Inconsistent).context(format!(
+                                "Unexpected journal extent {:?}, expected start: {}",
+                                item,
+                                handle.get_size()
+                            )));
+                        }
+                        handle.push_extent(*device_offset..*device_offset + range.length()?);
+                        true
+                    }
+                    _ => false,
+                } {
                     break;
                 }
                 iter.advance().await?;
@@ -571,24 +609,49 @@ impl Journal {
                                     if *object_id == super_block.root_parent_store_object_id {
                                         if let Mutation::ObjectStore(ObjectStoreMutation {
                                             item:
-                                                item @ Item {
+                                                Item {
                                                     key:
                                                         ObjectKey {
+                                                            object_id,
                                                             data:
                                                                 ObjectKeyData::Attribute(
-                                                                    0,
-                                                                    AttributeKey::Extent(_),
+                                                                    DEFAULT_DATA_ATTRIBUTE_ID,
+                                                                    AttributeKey::Extent(
+                                                                        ExtentKey { range },
+                                                                    ),
                                                                 ),
                                                             ..
                                                         },
+                                                    value:
+                                                        ObjectValue::Extent(ExtentValue::Some {
+                                                            device_offset,
+                                                            ..
+                                                        }),
                                                     ..
                                                 },
                                             ..
                                         }) = mutation
                                         {
-                                            reader.handle().try_push_extent_from_object_item(
-                                                item.as_item_ref(),
-                                            )?;
+                                            let handle = &mut reader.handle();
+                                            if *object_id != handle.object_id() {
+                                                continue;
+                                            }
+                                            if range.start
+                                                != handle.start_offset() + handle.get_size()
+                                            {
+                                                bail!(anyhow!(FxfsError::Inconsistent).context(
+                                                    format!(
+                                                        "Unexpected journal extent {:?} -> {}, \
+                                                        expected start: {}",
+                                                        range,
+                                                        device_offset,
+                                                        handle.get_size()
+                                                    )
+                                                ));
+                                            }
+                                            handle.push_extent(
+                                                *device_offset..*device_offset + range.length()?,
+                                            );
                                         }
                                     }
                                 }

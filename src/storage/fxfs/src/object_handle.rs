@@ -6,8 +6,14 @@ use {
     crate::object_store::Timestamp,
     anyhow::{bail, Error},
     async_trait::async_trait,
-    storage_device::buffer::{Buffer, BufferRef, MutableBufferRef},
+    storage_device::{
+        buffer::{Buffer, BufferRef, MutableBufferRef},
+    },
 };
+
+mod bootstrap;
+
+pub use bootstrap::BootstrapObjectHandle;
 
 // Some places use Default and assume that zero is an invalid object ID, so this cannot be changed
 // easily.
