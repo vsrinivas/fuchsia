@@ -209,12 +209,12 @@ struct DoctorRecorderParameters {
 }
 
 #[ffx_plugin()]
-pub async fn doctor_cmd(build_info: VersionInfo, cmd: DoctorCommand) -> Result<()> {
-    doctor_cmd_impl(build_info, cmd, stdout()).await
+pub async fn doctor_cmd(version_info: VersionInfo, cmd: DoctorCommand) -> Result<()> {
+    doctor_cmd_impl(version_info, cmd, stdout()).await
 }
 
 pub async fn doctor_cmd_impl<W: Write + Send + Sync + 'static>(
-    build_info: VersionInfo,
+    version_info: VersionInfo,
     cmd: DoctorCommand,
     mut writer: W,
 ) -> Result<()> {
@@ -316,7 +316,7 @@ pub async fn doctor_cmd_impl<W: Write + Send + Sync + 'static>(
         cmd.retry_count,
         delay,
         cmd.restart_daemon,
-        build_info.build_version,
+        version_info,
         default_target,
         DoctorRecorderParameters {
             record,
@@ -370,6 +370,20 @@ fn get_platform_info() -> Result<String> {
     Ok(serde_json::to_string_pretty(&platform_info)?)
 }
 
+fn get_api_level(v: VersionInfo) -> String {
+    match v.api_level {
+        Some(api) => format!("{}", api),
+        None => "UNKNOWN".to_string(),
+    }
+}
+
+fn get_abi_revision(v: VersionInfo) -> String {
+    match v.abi_revision {
+        Some(abi) => format!("{:#X}", abi),
+        None => "UNKNOWN".to_string(),
+    }
+}
+
 async fn get_user_config() -> Result<String> {
     let mut writer = BufWriter::new(Vec::new());
     print_config(&mut writer, &None).await?;
@@ -385,7 +399,7 @@ async fn doctor<W: Write>(
     _retry_count: usize,
     retry_delay: Duration,
     restart_daemon: bool,
-    build_version_string: Option<String>,
+    version_info: VersionInfo,
     default_target: Result<Option<String>, String>,
     record_params: DoctorRecorderParameters,
 ) -> Result<()> {
@@ -397,7 +411,7 @@ async fn doctor<W: Write>(
             daemon_manager,
             target_str,
             retry_delay,
-            build_version_string,
+            version_info,
             default_target,
             ledger,
         )
@@ -678,6 +692,18 @@ async fn daemon_restart<W: Write>(
             let node = ledger
                 .add_node(&format!("Daemon version: {}", daemon_version), LedgerMode::Automatic)?;
             ledger.set_outcome(node, LedgerOutcome::Success)?;
+
+            let node = ledger.add_node(
+                &format!("abi-revision: {}", get_abi_revision(v.clone())),
+                LedgerMode::Automatic,
+            )?;
+            ledger.set_outcome(node, LedgerOutcome::Success)?;
+
+            let node = ledger.add_node(
+                &format!("api-level: {}", get_api_level(v.clone())),
+                LedgerMode::Automatic,
+            )?;
+            ledger.set_outcome(node, LedgerOutcome::Success)?;
         }
         Ok(Err(e)) => {
             let node = ledger
@@ -719,7 +745,7 @@ async fn doctor_summary<W: Write>(
     daemon_manager: &impl DaemonManager,
     target_str: &str,
     retry_delay: Duration,
-    build_version_string: Option<String>,
+    version_info: VersionInfo,
     default_target: Result<Option<String>, String>,
     ledger: &mut DoctorLedger<W>,
 ) -> Result<()> {
@@ -733,12 +759,22 @@ async fn doctor_summary<W: Write>(
     }
 
     let mut main_node = ledger.add_node("FFX doctor", LedgerMode::Automatic)?;
+    let frontend_version = version_info.build_version.clone().unwrap_or("UNKNOWN".to_string());
+    let version_node =
+        ledger.add_node(&format!("Frontend version: {}", frontend_version), LedgerMode::Verbose)?;
+    ledger.set_outcome(version_node, LedgerOutcome::Success)?;
 
-    let version_node = ledger.add_node(
-        &format!("Frontend version: {}", build_version_string.unwrap_or("UNKNOWN".to_string())),
+    let abi_revision_node = ledger.add_node(
+        &format!("abi-revision: {}", get_abi_revision(version_info.clone())),
         LedgerMode::Verbose,
     )?;
-    ledger.set_outcome(version_node, LedgerOutcome::Success)?;
+    ledger.set_outcome(abi_revision_node, LedgerOutcome::Success)?;
+
+    let api_level_node = ledger.add_node(
+        &format!("api-level: {}", get_api_level(version_info.clone())),
+        LedgerMode::Verbose,
+    )?;
+    ledger.set_outcome(api_level_node, LedgerOutcome::Success)?;
 
     let ffx_path = match std::env::current_exe() {
         Ok(path) => format!("{}", path.display()),
@@ -796,6 +832,18 @@ async fn doctor_summary<W: Write>(
             let daemon_version = v.build_version.clone().unwrap_or("UNKNOWN".to_string());
             let node = ledger
                 .add_node(&format!("Daemon version: {}", daemon_version), LedgerMode::Verbose)?;
+            ledger.set_outcome(node, LedgerOutcome::Success)?;
+
+            let node = ledger.add_node(
+                &format!("abi-revision: {}", get_abi_revision(v.clone())),
+                LedgerMode::Verbose,
+            )?;
+            ledger.set_outcome(node, LedgerOutcome::Success)?;
+
+            let node = ledger.add_node(
+                &format!("api-level: {}", get_api_level(v.clone())),
+                LedgerMode::Verbose,
+            )?;
             ledger.set_outcome(node, LedgerOutcome::Success)?;
         }
         Ok(Err(e)) => {
@@ -1083,6 +1131,9 @@ mod test {
     const DAEMON_VERSION: &str = "daemon-build-string";
     const FRONTEND_VERSION: &str = "fake version";
     const INDENT_STR: &str = "    ";
+    const FAKE_ABI_REVISION: u64 = 17063755220075245312;
+    const ABI_REVISION_STR: &str = "0xECCEA2F70ACD6F00";
+    const FAKE_API_LEVEL: u64 = 7;
 
     #[derive(PartialEq)]
     struct TestStep {
@@ -1697,12 +1748,19 @@ mod test {
         .unwrap()
     }
 
-    fn version_str() -> Option<String> {
-        Some(FRONTEND_VERSION.to_string())
-    }
-
     fn ffx_path() -> String {
         format!("{}", std::env::current_exe().unwrap().display())
+    }
+
+    fn frontend_version_info() -> VersionInfo {
+        VersionInfo {
+            commit_hash: None,
+            commit_timestamp: None,
+            build_version: Some(FRONTEND_VERSION.to_string()),
+            abi_revision: Some(FAKE_ABI_REVISION),
+            api_level: Some(FAKE_API_LEVEL),
+            ..VersionInfo::EMPTY
+        }
     }
 
     fn daemon_version_info() -> VersionInfo {
@@ -1710,6 +1768,8 @@ mod test {
             commit_hash: None,
             commit_timestamp: None,
             build_version: Some(DAEMON_VERSION.to_string()),
+            abi_revision: Some(FAKE_ABI_REVISION),
+            api_level: Some(FAKE_API_LEVEL),
             ..VersionInfo::EMPTY
         }
     }
@@ -1771,7 +1831,7 @@ mod test {
             1,
             DEFAULT_RETRY_DELAY,
             false,
-            version_str(),
+            frontend_version_info(),
             Ok(Some(NODENAME.to_string())),
             record_params_no_record(),
         )
@@ -1784,10 +1844,14 @@ mod test {
                 "\
                    \n[✓] FFX doctor\
                    \n    [✓] Frontend version: {}\
+                   \n    [✓] abi-revision: {}\
+                   \n    [✓] api-level: {}\
                    \n    [i] Path to ffx: {}\
                    \n[✗] Checking daemon\
                    \n    [✗] No running daemons found. Run `ffx doctor-new --restart-daemon`\n",
                 FRONTEND_VERSION,
+                ABI_REVISION_STR,
+                FAKE_API_LEVEL,
                 ffx_path()
             )
         );
@@ -1818,7 +1882,7 @@ mod test {
             1,
             DEFAULT_RETRY_DELAY,
             false,
-            version_str(),
+            frontend_version_info(),
             Ok(None),
             record_params_no_record(),
         )
@@ -1831,17 +1895,25 @@ mod test {
                 "\
                    \n[✓] FFX doctor\
                    \n    [✓] Frontend version: {}\
+                   \n    [✓] abi-revision: {}\
+                   \n    [✓] api-level: {}\
                    \n    [i] Path to ffx: {}\
                    \n[✓] Checking daemon\
                    \n    [✓] Daemon found: [1]\
                    \n    [✓] Connecting to daemon\
                    \n    [✓] Daemon version: {}\
+                   \n    [✓] abi-revision: {}\
+                   \n    [✓] api-level: {}\
                    \n    [✓] Default target: (none)\
                    \n[✗] Searching for targets\
                    \n    [✗] No targets found!\n",
                 FRONTEND_VERSION,
+                ABI_REVISION_STR,
+                FAKE_API_LEVEL,
                 ffx_path(),
-                DAEMON_VERSION
+                DAEMON_VERSION,
+                ABI_REVISION_STR,
+                FAKE_API_LEVEL
             )
         );
     }
@@ -1871,7 +1943,7 @@ mod test {
             1,
             DEFAULT_RETRY_DELAY,
             false,
-            version_str(),
+            frontend_version_info(),
             Ok(Some("".to_string())),
             record_params_no_record(),
         )
@@ -1884,17 +1956,25 @@ mod test {
                 "\
                    \n[✓] FFX doctor\
                    \n    [✓] Frontend version: {}\
+                   \n    [✓] abi-revision: {}\
+                   \n    [✓] api-level: {}\
                    \n    [i] Path to ffx: {}\
                    \n[✓] Checking daemon\
                    \n    [✓] Daemon found: [1]\
                    \n    [✓] Connecting to daemon\
                    \n    [✓] Daemon version: {}\
+                   \n    [✓] abi-revision: {}\
+                   \n    [✓] api-level: {}\
                    \n    [✓] Default target: (none)\
                    \n[✗] Searching for targets\
                    \n    [✗] No targets found!\n",
                 FRONTEND_VERSION,
+                ABI_REVISION_STR,
+                FAKE_API_LEVEL,
                 ffx_path(),
-                DAEMON_VERSION
+                DAEMON_VERSION,
+                ABI_REVISION_STR,
+                FAKE_API_LEVEL
             )
         );
     }
@@ -1924,7 +2004,7 @@ mod test {
             2,
             DEFAULT_RETRY_DELAY,
             false,
-            version_str(),
+            frontend_version_info(),
             Ok(None),
             record_params_no_record(),
         )
@@ -1937,17 +2017,25 @@ mod test {
                 "\
             \n[✓] FFX doctor\
             \n    [✓] Frontend version: {}\
+            \n    [✓] abi-revision: {}\
+            \n    [✓] api-level: {}\
             \n    [i] Path to ffx: {}\
             \n[✓] Checking daemon\
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
             \n    [✓] Daemon version: {}\
+            \n    [✓] abi-revision: {}\
+            \n    [✓] api-level: {}\
             \n    [✓] Default target: (none)\
             \n[✗] Searching for targets\
             \n    [✗] Error getting targets: <reason omitted>\n",
                 FRONTEND_VERSION,
+                ABI_REVISION_STR,
+                FAKE_API_LEVEL,
                 ffx_path(),
-                DAEMON_VERSION
+                DAEMON_VERSION,
+                ABI_REVISION_STR,
+                FAKE_API_LEVEL
             )
         );
     }
@@ -1986,7 +2074,7 @@ mod test {
                 2,
                 DEFAULT_RETRY_DELAY,
                 true,
-                version_str(),
+                frontend_version_info(),
                 Ok(None),
                 record_params_no_record(),
             )
@@ -2024,7 +2112,7 @@ mod test {
                 2,
                 DEFAULT_RETRY_DELAY,
                 true,
-                version_str(),
+                frontend_version_info(),
                 Ok(None),
                 record_params_no_record(),
             )
@@ -2043,8 +2131,10 @@ mod test {
                     \n    [✓] Daemon PID: [3]\
                     \n    [✓] Connected to daemon\
                     \n    [✓] Daemon version: {}\
+                    \n    [✓] abi-revision: {}\
+                    \n    [✓] api-level: {}\
                     \n",
-                    DAEMON_VERSION
+                    DAEMON_VERSION, ABI_REVISION_STR, FAKE_API_LEVEL
                 )
             );
         }
@@ -2076,7 +2166,7 @@ mod test {
             1,
             DEFAULT_RETRY_DELAY,
             false,
-            version_str(),
+            frontend_version_info(),
             Ok(None),
             record_params_no_record(),
         )
@@ -2096,11 +2186,15 @@ mod test {
                 "\
             \n[✓] FFX doctor\
             \n    [✓] Frontend version: {}\
+            \n    [✓] abi-revision: {}\
+            \n    [✓] api-level: {}\
             \n    [i] Path to ffx: {}\
             \n[✓] Checking daemon\
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
             \n    [✓] Daemon version: {}\
+            \n    [✓] abi-revision: {}\
+            \n    [✓] api-level: {}\
             \n    [✓] Default target: (none)\
             \n[✓] Searching for targets\
             \n    [✓] 2 targets found\
@@ -2115,8 +2209,12 @@ mod test {
             \n        [✗] Timeout while communicating with RCS\
             \n[✓] No issues found\n",
                 FRONTEND_VERSION,
+                ABI_REVISION_STR,
+                FAKE_API_LEVEL,
                 ffx_path(),
                 DAEMON_VERSION,
+                ABI_REVISION_STR,
+                FAKE_API_LEVEL,
                 NODENAME,
                 UNRESPONSIVE_NODENAME,
             )
@@ -2171,7 +2269,7 @@ mod test {
             2,
             DEFAULT_RETRY_DELAY,
             false,
-            version_str(),
+            frontend_version_info(),
             Ok(None),
             record_params_no_record(),
         )
@@ -2185,11 +2283,15 @@ mod test {
                 "\
             \n[✓] FFX doctor\
             \n    [✓] Frontend version: {}\
+            \n    [✓] abi-revision: {}\
+            \n    [✓] api-level: {}\
             \n    [i] Path to ffx: {}\
             \n[✓] Checking daemon\
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
             \n    [✓] Daemon version: {}\
+            \n    [✓] abi-revision: {}\
+            \n    [✓] api-level: {}\
             \n    [✓] Default target: (none)\
             \n[✓] Searching for targets\
             \n    [✓] 1 targets found\
@@ -2200,8 +2302,12 @@ mod test {
             \n        [✓] Communicating with RCS\
             \n[✓] No issues found\n",
                 FRONTEND_VERSION,
+                ABI_REVISION_STR,
+                FAKE_API_LEVEL,
                 ffx_path(),
                 DAEMON_VERSION,
+                ABI_REVISION_STR,
+                FAKE_API_LEVEL,
                 NODENAME,
             )
         );
@@ -2235,7 +2341,7 @@ mod test {
             1,
             DEFAULT_RETRY_DELAY,
             false,
-            version_str(),
+            frontend_version_info(),
             Ok(None),
             record_params_no_record(),
         )
@@ -2249,17 +2355,25 @@ mod test {
                 "\
             \n[✓] FFX doctor\
             \n    [✓] Frontend version: {}\
+            \n    [✓] abi-revision: {}\
+            \n    [✓] api-level: {}\
             \n    [i] Path to ffx: {}\
             \n[✓] Checking daemon\
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
             \n    [✓] Daemon version: {}\
+            \n    [✓] abi-revision: {}\
+            \n    [✓] api-level: {}\
             \n    [✓] Default target: (none)\
             \n[✗] Searching for targets\
             \n    [✗] No targets found!\n",
                 FRONTEND_VERSION,
+                ABI_REVISION_STR,
+                FAKE_API_LEVEL,
                 ffx_path(),
-                DAEMON_VERSION
+                DAEMON_VERSION,
+                ABI_REVISION_STR,
+                FAKE_API_LEVEL
             )
         );
     }
@@ -2289,7 +2403,7 @@ mod test {
             1,
             DEFAULT_RETRY_DELAY,
             true,
-            version_str(),
+            frontend_version_info(),
             Ok(None),
             record_params_no_record(),
         )
@@ -2308,8 +2422,10 @@ mod test {
             \n    [✓] Daemon PID: [4]\
             \n    [✓] Connected to daemon\
             \n    [✓] Daemon version: {}\
+            \n    [✓] abi-revision: {}\
+            \n    [✓] api-level: {}\
             \n",
-                DAEMON_VERSION
+                DAEMON_VERSION, ABI_REVISION_STR, FAKE_API_LEVEL
             )
         );
     }
@@ -2343,7 +2459,7 @@ mod test {
             1,
             DEFAULT_RETRY_DELAY,
             true,
-            version_str(),
+            frontend_version_info(),
             Ok(None),
             record_params_no_record(),
         )
@@ -2361,8 +2477,10 @@ mod test {
             \n    [✓] Daemon spawned\
             \n    [✓] Connected to daemon\
             \n    [✓] Daemon version: {}\
+            \n    [✓] abi-revision: {}\
+            \n    [✓] api-level: {}\
             \n",
-                DAEMON_VERSION
+                DAEMON_VERSION, ABI_REVISION_STR, FAKE_API_LEVEL
             )
         );
     }
@@ -2396,7 +2514,7 @@ mod test {
             1,
             DEFAULT_RETRY_DELAY,
             false,
-            version_str(),
+            frontend_version_info(),
             Ok(None),
             params,
         )
@@ -2411,16 +2529,25 @@ mod test {
                     "\
                 [✓] FFX doctor\
                 \n    [✓] Frontend version: {}\
+                \n    [✓] abi-revision: {}\
+                \n    [✓] api-level: {}\
                 \n    [i] Path to ffx: {}\n\n\
                 [✓] Checking daemon\
                 \n    [✓] Daemon found: [1]\
                 \n    [✓] Connecting to daemon\
-                \n    [✓] Daemon version: daemon-build-string\
+                \n    [✓] Daemon version: {}\
+                \n    [✓] abi-revision: {}\
+                \n    [✓] api-level: {}\
                 \n    [✓] Default target: (none)\n\n\
                 [✗] Searching for targets\
                 \n    [✗] No targets found!\n\n",
                     FRONTEND_VERSION,
-                    ffx_path()
+                    ABI_REVISION_STR,
+                    FAKE_API_LEVEL,
+                    ffx_path(),
+                    DAEMON_VERSION,
+                    ABI_REVISION_STR,
+                    FAKE_API_LEVEL,
                 ))),
                 TestStepEntry::step(StepType::GeneratingRecord),
                 TestStepEntry::result(StepResult::Success),
@@ -2458,7 +2585,7 @@ mod test {
             1,
             DEFAULT_RETRY_DELAY,
             false,
-            version_str(),
+            frontend_version_info(),
             Ok(None),
             params,
         )
@@ -2473,16 +2600,25 @@ mod test {
                     "\
                 [✓] FFX doctor\
                 \n    [✓] Frontend version: {}\
+                \n    [✓] abi-revision: {}\
+                \n    [✓] api-level: {}\
                 \n    [i] Path to ffx: {}\n\n\
                 [✓] Checking daemon\
                 \n    [✓] Daemon found: [1]\
                 \n    [✓] Connecting to daemon\
-                \n    [✓] Daemon version: daemon-build-string\
+                \n    [✓] Daemon version: {}\
+                \n    [✓] abi-revision: {}\
+                \n    [✓] api-level: {}\
                 \n    [✓] Default target: (none)\n\n\
                 [✗] Searching for targets\
                 \n    [✗] No targets found!\n\n",
                     FRONTEND_VERSION,
-                    ffx_path()
+                    ABI_REVISION_STR,
+                    FAKE_API_LEVEL,
+                    ffx_path(),
+                    DAEMON_VERSION,
+                    ABI_REVISION_STR,
+                    FAKE_API_LEVEL
                 ))),
                 // Error will occur here.
             ])
@@ -2533,7 +2669,7 @@ mod test {
             1,
             DEFAULT_RETRY_DELAY,
             false,
-            version_str(),
+            frontend_version_info(),
             Ok(None),
             record_params_no_record(),
         )
@@ -2553,11 +2689,15 @@ mod test {
                 "\
             \n[✓] FFX doctor\
             \n    [✓] Frontend version: {}\
+            \n    [✓] abi-revision: {}\
+            \n    [✓] api-level: {}\
             \n    [i] Path to ffx: {}\
             \n[✓] Checking daemon\
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
             \n    [✓] Daemon version: {}\
+            \n    [✓] abi-revision: {}\
+            \n    [✓] api-level: {}\
             \n    [✓] Default target: (none)\
             \n[✓] Searching for targets\
             \n    [✓] 2 targets found\
@@ -2572,8 +2712,12 @@ mod test {
             \n        [✗] Timeout while communicating with RCS\
             \n[✗] Doctor found issues in one or more categories.\n",
                 FRONTEND_VERSION,
+                ABI_REVISION_STR,
+                FAKE_API_LEVEL,
                 ffx_path(),
                 DAEMON_VERSION,
+                ABI_REVISION_STR,
+                FAKE_API_LEVEL,
                 UNRESPONSIVE_NODENAME,
             )
         );
@@ -2626,7 +2770,7 @@ mod test {
             1,
             DEFAULT_RETRY_DELAY,
             false,
-            version_str(),
+            frontend_version_info(),
             Ok(None),
             record_params_no_record(),
         )
@@ -2639,11 +2783,15 @@ mod test {
                 "\
             \n[✓] FFX doctor\
             \n    [✓] Frontend version: {}\
+            \n    [✓] abi-revision: {}\
+            \n    [✓] api-level: {}\
             \n    [i] Path to ffx: {}\
             \n[✓] Checking daemon\
             \n    [✓] Daemon found: [1]\
             \n    [✓] Connecting to daemon\
             \n    [✓] Daemon version: {}\
+            \n    [✓] abi-revision: {}\
+            \n    [✓] api-level: {}\
             \n    [✓] Default target: (none)\
             \n[✓] Searching for targets\
             \n    [✓] 1 targets found\
@@ -2651,8 +2799,12 @@ mod test {
             \n    [✓] Target found in fastboot mode: {}\
             \n[✓] No issues found\n",
                 FRONTEND_VERSION,
+                ABI_REVISION_STR,
+                FAKE_API_LEVEL,
                 ffx_path(),
                 DAEMON_VERSION,
+                ABI_REVISION_STR,
+                FAKE_API_LEVEL,
                 SERIAL_NUMBER,
             )
         );
