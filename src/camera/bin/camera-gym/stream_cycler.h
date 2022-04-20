@@ -49,6 +49,10 @@ class StreamCycler {
   // Manual mode entry points:
   void ExecuteCommand(fuchsia::camera::gym::Command command, CommandStatusHandler handler);
 
+  void set_auto_cycle_interval(std::optional<zx::duration> interval) {
+    auto_cycle_interval_ = interval;
+  }
+
  private:
   explicit StreamCycler(async_dispatcher_t* dispatcher, bool manual_mode = false);
 
@@ -116,6 +120,7 @@ class StreamCycler {
   std::vector<fuchsia::camera3::Configuration> configurations_;
 
   bool manual_mode_;
+  std::optional<zx::duration> auto_cycle_interval_;
 
   // Are the camera streams currently muted?
   bool muted_ = false;

@@ -8,7 +8,7 @@ import("//src/camera/bin/camera-gym/assets/convert_image.gni")
 import("//src/camera/debug.gni")
 
 declare_args() {
-  camera_gym_configuration_cycle_time_ms = 10000
+  camera_gym_configuration_cycle_interval_ms = 10000
   camera_gym_enable_root_presenter = false
 }
 
@@ -74,10 +74,7 @@ source_set("lib") {
     "//zircon/system/ulib/trace",
   ]
 
-  defines = [
-    camera_debug_define,
-    "CONFIGURATION_CYCLE_TIME_MS=($camera_gym_configuration_cycle_time_ms)",
-  ]
+  defines = [ camera_debug_define ]
 
   if (camera_gym_enable_root_presenter) {
     defines += [ "CAMERA_GYM_ENABLE_ROOT_PRESENTER=(true)" ]
@@ -95,7 +92,10 @@ executable("camera_gym_bin") {
     ":lib",
     "//zircon/system/ulib/trace-provider",
   ]
-  defines = [ camera_debug_define ]
+  defines = [
+    camera_debug_define,
+    "CONFIGURATION_CYCLE_INTERVAL_MS=($camera_gym_configuration_cycle_interval_ms)",
+  ]
 }
 
 convert_image("mute_icon") {
