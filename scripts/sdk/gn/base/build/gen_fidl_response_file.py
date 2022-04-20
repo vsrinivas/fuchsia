@@ -80,9 +80,7 @@ def main(args_list=None):
     if args.name:
         response_file.append("--name %s" % args.name)
 
-    if args.target_api_level:
-        response_file.append("--available fuchsia:%d" %
-                             args.target_api_level)
+    # TODO(fxb/88338): Append the target API level if specified.
 
     response_file.extend(
         ["--files %s" % library for library in target_libraries])
