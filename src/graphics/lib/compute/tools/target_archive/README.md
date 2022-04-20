@@ -112,7 +112,8 @@ binary.
 * Offsets are relative to the end of the entries[] table.
 * Offsets and sizes are in bytes.
 * Offsets and sizes are 64-bit.
-* Binaries and their offsets are 4-byte aligned.
+* Binaries and their offsets are 8-byte aligned to support recursive embedding
+  of target archives.
 
 This format enables type-safe loading of SPIR-V modules and creation of Vulkan
 pipelines.
@@ -128,9 +129,9 @@ The target archive memory map is:
    | ...                                     |
    | struct target_archive_entry[count-1]    |
    +-----------------------------------------+ 8 + 16 * count
-   | alignas(4) data_(0)                     |
-   | alignas(4) data_(1)                     |
+   | alignas(8) data_(0)                     |
+   | alignas(8) data_(1)                     |
    | ...                                     |
-   | alignas(4) data_(count-1)               |
+   | alignas(8) data_(count-1)               |
    +-----------------------------------------+
 ```

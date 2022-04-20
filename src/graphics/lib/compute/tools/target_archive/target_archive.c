@@ -14,7 +14,10 @@
 //
 //
 
-#define TARGET_ARCHIVE_BUFLEN 8192
+// clang-format off
+#define TARGET_ARCHIVE_BUFLEN       8192
+#define TARGET_ARCHIVE_BINARY_ALIGN 8
+// clang-format on
 
 //
 // Target Archive
@@ -33,7 +36,7 @@ target_archive_usage(char const * argv[])
     "  - Offsets are relative to the end of the entries[] table.\n"
     "  - Offsets and sizes are in bytes.\n"
     "  - Offsets and sizes are 64-bit.\n"
-    "  - Binaries and their offsets are 4-byte aligned.\n"
+    "  - Binaries and their offsets are 8-byte aligned.\n"
     "\n"
     "Three files are output:\n"
     "  - <output_name>.ar  : Target archive\n"
@@ -56,7 +59,9 @@ target_archive_copy(FILE *                        file_out,
                     int * const                   exit_code)
 {
   if (count == 0)
-    return;
+    {
+      return;
+    }
 
   char * buf = malloc(TARGET_ARCHIVE_BUFLEN);
 
@@ -85,23 +90,26 @@ target_archive_copy(FILE *                        file_out,
             }
         }
 
-      // align to 4 byte offset -- pad with zeroes
-      uint32_t const rem          = (entries->size & 3);
+      // pad with zeroes to next 8-byte offset
+      uint32_t const rem          = (entries->size & (TARGET_ARCHIVE_BINARY_ALIGN - 1));
       bool const     is_unaligned = (rem != 0);
-      uint32_t const skip         = is_unaligned ? 4 - rem : 0;
+      uint32_t const skip         = is_unaligned ? TARGET_ARCHIVE_BINARY_ALIGN - rem : 0;
 
       if (is_unaligned)
         {
-          uint32_t const zero = 0;
+          // store up to 7 zero bytes
+          uint8_t const zeroes[TARGET_ARCHIVE_BINARY_ALIGN - 1] = { 0 };
 
-          if (fwrite(&zero, 1, skip, file_out) != skip)
+          if (fwrite(zeroes, 1, skip, file_out) != skip)
             {
               *exit_code = EXIT_FAILURE;
             }
         }
 
       if (--count == 0)
-        break;
+        {
+          break;
+        }
 
       uint64_t const offset_ru = entries->offset + entries->size + skip;
 
