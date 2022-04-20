@@ -5,6 +5,7 @@
 #include "target_requirements.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "common/macros.h"
 #include "radix_sort/platforms/vk/radix_sort_vk.h"
@@ -36,10 +37,15 @@ radix_sort_vk_target_get_requirements(radix_sort_vk_target_t const *        targ
       return false;
     }
 
-#ifndef RS_VK_DISABLE_VERIFY
+  //
+  // Unmarshalling assumes dword alignment.
+  //
+  assert(alignof(struct radix_sort_vk_target_header) == 4);
+
   //
   // Verify target archive is valid archive
   //
+#ifndef RS_VK_DISABLE_VERIFY
   if (target->ar_header.magic != TARGET_ARCHIVE_MAGIC)
     {
 #ifndef NDEBUG
@@ -50,23 +56,26 @@ radix_sort_vk_target_get_requirements(radix_sort_vk_target_t const *        targ
 #endif
 
   //
-  // Get the target header.
+  // Get the target archive header
   //
   struct target_archive_header const * const ar_header  = &target->ar_header;
   struct target_archive_entry const * const  ar_entries = ar_header->entries;
   uint32_t const * const                     ar_data    = ar_entries[ar_header->count - 1].data;
 
-  union
-  {
-    struct radix_sort_vk_target_header const * header;
-    uint32_t const *                           data;
-  } const rs_header_data = { .data = ar_data };
+  //
+  // Get the radix sort target header
+  //
+  struct radix_sort_vk_target_header const * rs_target_header;
 
-#ifndef RS_VK_DISABLE_VERIFY
+  // We assert `alignof(radix_sort_vk_target_header) == 4` (see above) so we can
+  // memcpy() pointers.
+  memcpy(&rs_target_header, &ar_data, sizeof(ar_data));
+
   //
   // Verify target is compatible with the library.
   //
-  if (rs_header_data.header->magic != RS_HEADER_MAGIC)
+#ifndef RS_VK_DISABLE_VERIFY
+  if (rs_target_header->magic != RS_HEADER_MAGIC)
     {
 #ifndef NDEBUG
       fprintf(stderr, "Error: Target is not compatible with library.");
@@ -89,9 +98,9 @@ radix_sort_vk_target_get_requirements(radix_sort_vk_target_t const *        targ
     //
     uint32_t ext_count = 0;
 
-    for (uint32_t ii = 0; ii < ARRAY_LENGTH_MACRO(rs_header_data.header->extensions.bitmap); ii++)
+    for (uint32_t ii = 0; ii < ARRAY_LENGTH_MACRO(rs_target_header->extensions.bitmap); ii++)
       {
-        ext_count += __builtin_popcount(rs_header_data.header->extensions.bitmap[ii]);
+        ext_count += __builtin_popcount(rs_target_header->extensions.bitmap[ii]);
       }
 
     if (requirements->ext_names == NULL)
@@ -121,7 +130,7 @@ radix_sort_vk_target_get_requirements(radix_sort_vk_target_t const *        targ
 
 #undef RS_VK_TARGET_EXTENSION
 #define RS_VK_TARGET_EXTENSION(ext_)                                                               \
-  if (rs_header_data.header->extensions.named.ext_)                                                \
+  if (rs_target_header->extensions.named.ext_)                                                     \
     {                                                                                              \
       requirements->ext_names[ii++] = RS_VK_TARGET_EXTENSION_STRING(ext_);                         \
     }
@@ -174,7 +183,7 @@ radix_sort_vk_target_get_requirements(radix_sort_vk_target_t const *        targ
       //
 #undef RS_VK_TARGET_FEATURE_VK10
 #define RS_VK_TARGET_FEATURE_VK10(feature_)                                                        \
-  if (rs_header_data.header->features.named.feature_)                                              \
+  if (rs_target_header->features.named.feature_)                                                   \
     pdf->feature_ = true;
 
       RS_VK_TARGET_FEATURES_VK10()
@@ -184,7 +193,7 @@ radix_sort_vk_target_get_requirements(radix_sort_vk_target_t const *        targ
       //
 #undef RS_VK_TARGET_FEATURE_VK11
 #define RS_VK_TARGET_FEATURE_VK11(feature_)                                                        \
-  if (rs_header_data.header->features.named.feature_)                                              \
+  if (rs_target_header->features.named.feature_)                                                   \
     pdf11->feature_ = true;
 
       RS_VK_TARGET_FEATURES_VK11()
@@ -194,7 +203,7 @@ radix_sort_vk_target_get_requirements(radix_sort_vk_target_t const *        targ
       //
 #undef RS_VK_TARGET_FEATURE_VK12
 #define RS_VK_TARGET_FEATURE_VK12(feature_)                                                        \
-  if (rs_header_data.header->features.named.feature_)                                              \
+  if (rs_target_header->features.named.feature_)                                                   \
     pdf12->feature_ = true;
 
       RS_VK_TARGET_FEATURES_VK12()

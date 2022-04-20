@@ -5,6 +5,7 @@
 #include "target_requirements.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "common/macros.h"
 #include "radix_sort/platforms/vk/radix_sort_vk.h"
@@ -35,10 +36,15 @@ spinel_vk_target_get_requirements(struct spinel_vk_target const *        target,
       return false;
     }
 
-#ifndef SPN_VK_TARGET_DISABLE_VERIFY
+  //
+  // Unmarshalling assumes dword alignment.
+  //
+  assert(alignof(struct spinel_target_header) == 4);
+
   //
   // Verify target archive is valid archive
   //
+#ifndef SPN_VK_TARGET_DISABLE_VERIFY
   if (target->ar_header.magic != TARGET_ARCHIVE_MAGIC)
     {
 #ifndef NDEBUG
@@ -49,35 +55,38 @@ spinel_vk_target_get_requirements(struct spinel_vk_target const *        target,
 #endif
 
   //
-  // Get the target header
+  // Get the target archive header
   //
   struct target_archive_header const * const ar_header  = &target->ar_header;
   struct target_archive_entry const * const  ar_entries = ar_header->entries;
   uint32_t const * const                     ar_data    = ar_entries[ar_header->count - 1].data;
 
   //
-  // Get the spinel target header
+  // Get the spinel_vk_target header
   //
-  union
-  {
-    struct spinel_target_header const * header;
-    uint32_t const *                    data;
-  } const spinel_header_data = { .data = ar_data };
+  struct spinel_target_header const * spinel_header;
+
+  // We assert `alignof(spinel_target_header) == 4` (see above) so we can
+  // memcpy() pointers.
+  memcpy(&spinel_header, &ar_data, sizeof(spinel_header));
 
   //
   // Get the embedded radix_vk_target
   //
-  union
-  {
-    struct radix_sort_vk_target const * target;
-    uint32_t const *                    data;
-  } const rs_target_data = { .data = ar_data + (ar_entries[ar_header->count - 1].offset >> 2) };
+  // clang-format off
+  uint32_t                    const * rs_target_data = ar_data + (ar_entries[ar_header->count - 1].offset >> 2);
+  struct radix_sort_vk_target const * rs_target;
+  // clang-format on
+
+  // We assert `alignof(radix_sort_vk_target_header) == 4` in the radix sort
+  // sources so we can memcpy() pointers.
+  memcpy(&rs_target, &rs_target_data, sizeof(rs_target_data));
 
   //
   // Verify target is compatible with the library.
   //
 #ifndef SPN_VK_TARGET_DISABLE_VERIFY
-  if (spinel_header_data.header->magic != SPN_HEADER_MAGIC)
+  if (spinel_header->magic != SPN_HEADER_MAGIC)
     {
 #ifndef NDEBUG
       fprintf(stderr, "Error: Target is not compatible with library.");
@@ -97,9 +106,9 @@ spinel_vk_target_get_requirements(struct spinel_vk_target const *        target,
   //
   // Compute number of required extensions
   //
-  for (uint32_t ii = 0; ii < ARRAY_LENGTH_MACRO(spinel_header_data.header->extensions.bitmap); ii++)
+  for (uint32_t ii = 0; ii < ARRAY_LENGTH_MACRO(spinel_header->extensions.bitmap); ii++)
     {
-      ext_name_count += __builtin_popcount(spinel_header_data.header->extensions.bitmap[ii]);
+      ext_name_count += __builtin_popcount(spinel_header->extensions.bitmap[ii]);
     }
 
   if (requirements->ext_names == NULL)
@@ -129,7 +138,7 @@ spinel_vk_target_get_requirements(struct spinel_vk_target const *        target,
 
 #undef SPN_TARGET_EXTENSION
 #define SPN_TARGET_EXTENSION(ext_)                                                                 \
-  if (spinel_header_data.header->extensions.named.ext_)                                            \
+  if (spinel_header->extensions.named.ext_)                                                        \
     {                                                                                              \
       requirements->ext_names[ii++] = SPN_TARGET_EXTENSION_STRING(ext_);                           \
     }
@@ -181,7 +190,7 @@ spinel_vk_target_get_requirements(struct spinel_vk_target const *        target,
       //
 #undef SPN_TARGET_FEATURE_VK10
 #define SPN_TARGET_FEATURE_VK10(feature_)                                                          \
-  if (spinel_header_data.header->features.named.feature_)                                          \
+  if (spinel_header->features.named.feature_)                                                      \
     {                                                                                              \
       pdf->feature_ = true;                                                                        \
     }
@@ -193,7 +202,7 @@ spinel_vk_target_get_requirements(struct spinel_vk_target const *        target,
       //
 #undef SPN_TARGET_FEATURE_VK11
 #define SPN_TARGET_FEATURE_VK11(feature_)                                                          \
-  if (spinel_header_data.header->features.named.feature_)                                          \
+  if (spinel_header->features.named.feature_)                                                      \
     {                                                                                              \
       pdf11->feature_ = true;                                                                      \
     }
@@ -205,7 +214,7 @@ spinel_vk_target_get_requirements(struct spinel_vk_target const *        target,
       //
 #undef SPN_TARGET_FEATURE_VK12
 #define SPN_TARGET_FEATURE_VK12(feature_)                                                          \
-  if (spinel_header_data.header->features.named.feature_)                                          \
+  if (spinel_header->features.named.feature_)                                                      \
     {                                                                                              \
       pdf12->feature_ = true;                                                                      \
     }
@@ -226,7 +235,7 @@ spinel_vk_target_get_requirements(struct spinel_vk_target const *        target,
         .pdf12 = requirements->pdf12,
       };
 
-      bool const rs_is_ok = radix_sort_vk_target_get_requirements(rs_target_data.target, &rs_tr);
+      bool const rs_is_ok = radix_sort_vk_target_get_requirements(rs_target, &rs_tr);
       is_ok               = is_ok && rs_is_ok;
 
       requirements->ext_name_count += rs_tr.ext_name_count;
@@ -245,7 +254,7 @@ spinel_vk_target_get_requirements(struct spinel_vk_target const *        target,
         .pdf12          = requirements->pdf12,
       };
 
-      bool const rs_is_ok = radix_sort_vk_target_get_requirements(rs_target_data.target, &rs_tr);
+      bool const rs_is_ok = radix_sort_vk_target_get_requirements(rs_target, &rs_tr);
       is_ok               = is_ok && rs_is_ok;
     }
 

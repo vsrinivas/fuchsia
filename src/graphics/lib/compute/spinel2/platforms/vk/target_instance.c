@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <vulkan/vulkan_core.h>
 
 #include "common/macros.h"
@@ -122,7 +123,12 @@ spinel_target_instance_create(struct spinel_target_instance * ti,
                               struct spinel_vk_target const * target)
 {
   //
-  // Must not be NULL
+  // Unmarshalling assumes dword alignment.
+  //
+  assert(alignof(struct spinel_target_header) == 4);
+
+  //
+  // Must not be NULL.
   //
   if (target == NULL)
     {
@@ -131,7 +137,7 @@ spinel_target_instance_create(struct spinel_target_instance * ti,
 
 #ifndef SPN_VK_DISABLE_VERIFY
   //
-  // Verify target archive is valid archive
+  // Verify target archive is valid archive,
   //
   if (target->ar_header.magic != TARGET_ARCHIVE_MAGIC)
     {
@@ -143,23 +149,26 @@ spinel_target_instance_create(struct spinel_target_instance * ti,
 #endif
 
   //
-  // Get the spinel_vk_target header
+  // Get the target archive header
   //
   struct target_archive_header const * const ar_header  = &target->ar_header;
   struct target_archive_entry const * const  ar_entries = ar_header->entries;
   uint32_t const * const                     ar_data    = ar_entries[ar_header->count - 1].data;
 
-  union
-  {
-    struct spinel_target_header const * header;
-    uint32_t const *                    data;
-  } const spinel_header_data = { .data = ar_data };
+  //
+  // Get the spinel_vk_target header
+  //
+  struct spinel_target_header const * spinel_header;
+
+  // We assert `alignof(spinel_target_header) == 4` (see above) so we can
+  // memcpy() pointers.
+  memcpy(&spinel_header, &ar_data, sizeof(spinel_header));
 
 #ifndef SPN_VK_DISABLE_VERIFY
   //
   // Verify target is compatible with the library
   //
-  if (spinel_header_data.header->magic != SPN_HEADER_MAGIC)
+  if (spinel_header->magic != SPN_HEADER_MAGIC)
     {
 #ifndef NDEBUG
       fprintf(stderr, "Error: Target is not compatible with library.");
@@ -171,7 +180,7 @@ spinel_target_instance_create(struct spinel_target_instance * ti,
   //
   // Save the config for layer
   //
-  ti->config = spinel_header_data.header->config;
+  ti->config = spinel_header->config;
 
   //
   // Prepare to create pipelines
@@ -248,7 +257,7 @@ spinel_target_instance_create(struct spinel_target_instance * ti,
 
 #define SPN_SUBGROUP_SIZE_CREATE_INFO_NAME(name_)                                                  \
   SPN_SUBGROUP_SIZE_CREATE_INFO_SET(                                                               \
-    1 << spinel_header_data.header->config.group_sizes.named.name_.subgroup_log2)
+    1 << spinel_header->config.group_sizes.named.name_.subgroup_log2)
 
   VkPipelineShaderStageRequiredSubgroupSizeCreateInfoEXT const rsscis[] = {
 #undef SPN_P_EXPAND_X
@@ -286,7 +295,7 @@ spinel_target_instance_create(struct spinel_target_instance * ti,
   //
   // Which of these compute pipelines require subgroup size control?
   //
-  if (spinel_header_data.header->extensions.named.EXT_subgroup_size_control)
+  if (spinel_header->extensions.named.EXT_subgroup_size_control)
     {
       for (uint32_t ii = 0; ii < SPN_P_COUNT; ii++)
         {
@@ -320,16 +329,19 @@ spinel_target_instance_create(struct spinel_target_instance * ti,
   //
   // Get the embedded radix_vk_target
   //
-  union
-  {
-    struct radix_sort_vk_target const * target;
-    uint32_t const *                    data;
-  } const radix_target_data = { .data = ar_data + (ar_entries[ar_header->count - 1].offset >> 2) };
+  // clang-format off
+  uint32_t                    const * rs_target_data = ar_data + (ar_entries[ar_header->count - 1].offset >> 2);
+  struct radix_sort_vk_target const * rs_target;
+  // clang-format on
+
+  // We assert `alignof(radix_sort_vk_target_header) == 4` in the radix sources
+  // so we can memcpy() pointers.
+  memcpy(&rs_target, &rs_target_data, sizeof(rs_target_data));
 
   //
   // Create radix sort instance
   //
-  ti->rs = radix_sort_vk_create(d, ac, pc, radix_target_data.target);
+  ti->rs = radix_sort_vk_create(d, ac, pc, rs_target);
 
   if (ti->rs == NULL)
     {

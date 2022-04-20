@@ -6,6 +6,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "common/macros.h"
 #include "common/util.h"
@@ -118,7 +119,7 @@ struct radix_sort_vk
 };
 
 //
-// FIXME(allanmac): memoize some of these calculations
+// FIXME(allanmac): Memoize some of these calculations.
 //
 void
 radix_sort_vk_get_memory_requirements(radix_sort_vk_t const *               rs,
@@ -292,7 +293,12 @@ radix_sort_vk_create(VkDevice                       device,
                      radix_sort_vk_target_t const * target)
 {
   //
-  // Must not be NULL
+  // Unmarshalling assumes dword alignment.
+  //
+  assert(alignof(struct radix_sort_vk_target_header) == 4);
+
+  //
+  // Must not be NULL.
   //
   if (target == NULL)
     {
@@ -301,7 +307,7 @@ radix_sort_vk_create(VkDevice                       device,
 
 #ifndef RADIX_SORT_VK_DISABLE_VERIFY
   //
-  // Verify target archive is valid archive
+  // Verify target archive is valid archive.
   //
   if (target->ar_header.magic != TARGET_ARCHIVE_MAGIC)
     {
@@ -313,17 +319,20 @@ radix_sort_vk_create(VkDevice                       device,
 #endif
 
   //
-  // Get the Radix Sort target header.
+  // Get the target archive header.
   //
   struct target_archive_header const * const ar_header  = &target->ar_header;
   struct target_archive_entry const * const  ar_entries = ar_header->entries;
   uint32_t const * const                     ar_data    = ar_entries[ar_header->count - 1].data;
 
-  union
-  {
-    struct radix_sort_vk_target_header const * header;
-    uint32_t const *                           data;
-  } const rs_target = { .data = ar_data };
+  //
+  // Get the radix sort target header.
+  //
+  struct radix_sort_vk_target_header const * rs_target_header;
+
+  // We assert `alignof(radix_sort_vk_target_header) == 4` (see above) so we can
+  // memcpy() pointers.
+  memcpy(&rs_target_header, &ar_data, sizeof(ar_data));
 
   //
   // Verify target is compatible with the library.
@@ -332,7 +341,7 @@ radix_sort_vk_create(VkDevice                       device,
   // archives will have a static count.
   //
 #ifndef RADIX_SORT_VK_DISABLE_VERIFY
-  if (rs_target.header->magic != RS_HEADER_MAGIC)
+  if (rs_target_header->magic != RS_HEADER_MAGIC)
     {
 #ifndef NDEBUG
       fprintf(stderr, "Error: Target is not compatible with library.");
@@ -349,7 +358,7 @@ radix_sort_vk_create(VkDevice                       device,
   //
   // Save the config for layer
   //
-  rs->config = rs_target.header->config;
+  rs->config = rs_target_header->config;
 
   //
   // How many pipelines?
@@ -434,7 +443,7 @@ radix_sort_vk_create(VkDevice                       device,
     }
 
     //
-    // If necessary, set the expected subgroup size
+    // If necessary, set the expected subgroup size.
     //
 #define RS_SUBGROUP_SIZE_CREATE_INFO_SET(size_)                                                    \
   {                                                                                                \
@@ -444,7 +453,7 @@ radix_sort_vk_create(VkDevice                       device,
   }
 
 #define RS_SUBGROUP_SIZE_CREATE_INFO_NAME(name_)                                                   \
-  RS_SUBGROUP_SIZE_CREATE_INFO_SET(1 << rs_target.header->config.name_.subgroup_size_log2)
+  RS_SUBGROUP_SIZE_CREATE_INFO_SET(1 << rs_target_header->config.name_.subgroup_size_log2)
 
 #define RS_SUBGROUP_SIZE_CREATE_INFO_ZERO(name_) RS_SUBGROUP_SIZE_CREATE_INFO_SET(0)
 
@@ -460,7 +469,7 @@ radix_sort_vk_create(VkDevice                       device,
   };
 
   //
-  // Define compute pipeline create infos
+  // Define compute pipeline create infos.
   //
 #define RS_COMPUTE_PIPELINE_CREATE_INFO_DECL(idx_)                                                 \
   { .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,                                       \
@@ -492,7 +501,7 @@ radix_sort_vk_create(VkDevice                       device,
   //
   // Which of these compute pipelines require subgroup size control?
   //
-  if (rs_target.header->extensions.named.EXT_subgroup_size_control)
+  if (rs_target_header->extensions.named.EXT_subgroup_size_control)
     {
       for (uint32_t ii = 0; ii < pipeline_count; ii++)
         {
@@ -504,12 +513,12 @@ radix_sort_vk_create(VkDevice                       device,
     }
 
   //
-  // Create the compute pipelines
+  // Create the compute pipelines.
   //
   vk(CreateComputePipelines(device, pc, pipeline_count, cpcis, ac, rs->pipelines.handles));
 
   //
-  // Shader modules can be destroyed now
+  // Shader modules can be destroyed now.
   //
   for (uint32_t ii = 0; ii < pipeline_count; ii++)
     {
@@ -518,17 +527,17 @@ radix_sort_vk_create(VkDevice                       device,
 
 #ifdef RADIX_SORT_VK_ENABLE_DEBUG_UTILS
   //
-  // Tag pipelines with names
+  // Tag pipelines with names.
   //
   rs_debug_utils_set(device, rs);
 #endif
 
   //
-  // Calculate "internal" buffer offsets
+  // Calculate "internal" buffer offsets.
   //
   size_t const keyval_bytes = rs->config.keyval_dwords * sizeof(uint32_t);
 
-  // the .range calculation assumes an 8-bit radix
+  // The .range calculation assumes an 8-bit radix.
   rs->internal.histograms.offset = 0;
   rs->internal.histograms.range  = keyval_bytes * (RS_RADIX_SIZE * sizeof(uint32_t));
 
@@ -550,13 +559,13 @@ radix_sort_vk_destroy(radix_sort_vk_t * rs, VkDevice d, VkAllocationCallbacks co
 {
   uint32_t const pipeline_count = rs_pipeline_count(rs);
 
-  // destroy pipelines
+  // Destroy pipelines
   for (uint32_t ii = 0; ii < pipeline_count; ii++)
     {
       vkDestroyPipeline(d, rs->pipelines.handles[ii], ac);
     }
 
-  // destroy pipeline layouts
+  // Destroy pipeline layouts
   for (uint32_t ii = 0; ii < pipeline_count; ii++)
     {
       vkDestroyPipelineLayout(d, rs->pipeline_layouts.handles[ii], ac);
@@ -1351,7 +1360,7 @@ radix_sort_vk_sort_indirect_devaddr(radix_sort_vk_t const *                     
 }
 
 //
-// Implementation of radix_sort_vk_fill_buffer_pfn
+// Implementation of radix_sort_vk_fill_buffer_pfn.
 //
 static void
 radix_sort_vk_fill_buffer(VkCommandBuffer                     cb,
@@ -1398,7 +1407,7 @@ radix_sort_vk_sort(radix_sort_vk_t const *           rs,
 }
 
 //
-// Implementation of radix_sort_vk_dispatch_indirect_pfn
+// Implementation of radix_sort_vk_dispatch_indirect_pfn.
 //
 static void
 radix_sort_vk_dispatch_indirect(VkCommandBuffer                     cb,
