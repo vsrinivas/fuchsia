@@ -9,9 +9,9 @@ import("//build/flutter/flutter_component.gni")
 import("//build/testing/flutter_driver.gni")
 
 declare_args() {
-  # TODO(http://fxb/85576): Whether or not to launch OOBE workflow on startup.
-  # This feature is still WIP but you can turn it on at your own risk.
-  start_oobe = false
+  # TODO(http://fxb/96400): This argument currently has no effect, remove
+  # it once it has been removed from the products that currently set it.
+  start_oobe = true
 }
 
 dart_library("lib") {
@@ -104,16 +104,11 @@ flutter_component("component") {
   manifest = "meta/login.cml"
 
   deps = [
+    ":default_config",
     ":images",
     ":lib",
     ":resources",
   ]
-
-  if (start_oobe) {
-    deps += [ ":oobe_config" ]
-  } else {
-    deps += [ ":default_config" ]
-  }
 }
 
 resource("resources") {
