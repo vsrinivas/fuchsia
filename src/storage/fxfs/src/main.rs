@@ -12,8 +12,7 @@ use {
     fuchsia_syslog, fuchsia_zircon as zx,
     fxfs::{
         crypt::{Crypt, InsecureCrypt},
-        filesystem::{FxFilesystem, OpenOptions},
-        mkfs,
+        filesystem::{mkfs, FxFilesystem, OpenOptions},
         object_store::fsck::{self},
         remote_crypt::RemoteCrypt,
         serialized_types::LATEST_VERSION,
@@ -102,7 +101,7 @@ async fn main() -> Result<(), Error> {
 
     match args {
         TopLevel { nested: SubCommand::Format(_), .. } => {
-            mkfs::mkfs(DeviceHolder::new(BlockDevice::new(Box::new(client), false).await?), crypt)
+            mkfs(DeviceHolder::new(BlockDevice::new(Box::new(client), false).await?), crypt)
                 .await?;
             Ok(())
         }

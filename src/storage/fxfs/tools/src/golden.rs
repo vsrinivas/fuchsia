@@ -8,8 +8,7 @@ use {
     chrono::Local,
     fxfs::{
         crypt::{Crypt, InsecureCrypt},
-        filesystem::FxFilesystem,
-        mkfs,
+        filesystem::{mkfs, FxFilesystem},
         serialized_types::LATEST_VERSION,
     },
     std::{
@@ -84,7 +83,7 @@ pub async fn create_image() -> Result<(), Error> {
     {
         let device_holder = DeviceHolder::new(FakeDevice::new(IMAGE_BLOCKS, IMAGE_BLOCK_SIZE));
         let device = device_holder.clone();
-        mkfs::mkfs(device_holder, crypt.clone()).await?;
+        mkfs(device_holder, crypt.clone()).await?;
         device.reopen();
         save_device(device, path.as_path()).await?;
     }

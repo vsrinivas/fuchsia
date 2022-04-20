@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        crypt::Crypt,
         debug_assert_not_too_long,
         errors::FxfsError,
         metrics::{traits::Metric as _, traits::NumericMetric as _, UintMetric},
@@ -18,7 +19,7 @@ use {
                 Transaction, TransactionHandler, TransactionLocks, WriteGuard,
                 TRANSACTION_METADATA_MAX_AMOUNT,
             },
-            volume::VOLUMES_DIRECTORY,
+            volume::{root_volume, VOLUMES_DIRECTORY},
             ObjectStore,
         },
         trace_duration,
@@ -519,6 +520,19 @@ impl AsRef<LockManager> for FxFilesystem {
     fn as_ref(&self) -> &LockManager {
         &self.lock_manager
     }
+}
+
+/// Helper method for making a new filesystem.
+pub async fn mkfs(device: DeviceHolder, crypt: Arc<dyn Crypt>) -> Result<(), Error> {
+    let fs = FxFilesystem::new_empty(device).await?;
+    {
+        // expect instead of propagating errors here, since otherwise we could drop |fs| before
+        // close is called, which leads to confusing and unrelated error messages.
+        let root_volume = root_volume(&fs).await.expect("Open root_volume failed");
+        root_volume.new_volume("default", Some(crypt)).await.expect("Create volume failed");
+    }
+    fs.close().await?;
+    Ok(())
 }
 
 #[cfg(test)]

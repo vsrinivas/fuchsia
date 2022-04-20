@@ -61,7 +61,6 @@ fxfs_sources = [
   "src/metrics.rs",
   "src/metrics/stubs.rs",
   "src/metrics/traits.rs",
-  "src/mkfs.rs",
   "src/object_handle.rs",
   "src/object_store.rs",
   "src/object_store/allocator.rs",

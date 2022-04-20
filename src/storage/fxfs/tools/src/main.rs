@@ -8,8 +8,7 @@ use {
     fuchsia_async as fasync,
     fxfs::{
         crypt::{Crypt, InsecureCrypt},
-        filesystem::FxFilesystem,
-        mkfs,
+        filesystem::{mkfs, FxFilesystem},
         object_store::fsck::{self},
     },
     std::{io::Read, path::Path, sync::Arc},
@@ -205,7 +204,7 @@ async fn main() -> Result<(), Error> {
                 }
                 ImageSubCommand::Format(_) => {
                     log::set_max_level(log::LevelFilter::Info);
-                    mkfs::mkfs(device, crypt).await?;
+                    mkfs(device, crypt).await?;
                     Ok(())
                 }
                 ImageSubCommand::Fsck(_) => {
