@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// An base class for information for aler dialogs.
+/// A base class for information of alert dialogs.
 class DialogInfo {
   /// The title of the alert dialog box.
   final String? title;
@@ -21,12 +21,12 @@ class DialogInfo {
   final double? width;
 
   /// Optional. Callback when the dialog is closed.
-  final void Function()? onClose;
+  void Function()? onClose;
 
   /// Optional. Callback when a specific action is invoked.
   final void Function(String action)? onAction;
 
-  const DialogInfo({
+  DialogInfo({
     required this.actions,
     this.defaultAction,
     this.width,
@@ -42,7 +42,7 @@ class AlertDialogInfo extends DialogInfo {
   /// Optional. The content body of the dialog box.
   final String? body;
 
-  const AlertDialogInfo({
+  AlertDialogInfo({
     required String title,
     required List<String> actions,
     String? defaultAction,

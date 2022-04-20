@@ -749,10 +749,12 @@ class AppStateImpl with Disposable implements AppState {
       if (view.loaded) {
         view.close();
       } else {
+        runInAction(() => appIsLaunching.value = false);
         final description = Strings.applicationFailedToStart(view.title);
         _displayDialog(AlertDialogInfo(
           title: description,
           body: 'Url: ${view.url}',
+          defaultAction: Strings.close,
           actions: [Strings.close],
           onClose: view.close,
         ));
@@ -805,6 +807,13 @@ class AppStateImpl with Disposable implements AppState {
 
   void _displayDialog(DialogInfo dialog) {
     runInAction(() {
+      // Override the onClose method to allow removal of dialog from dialogs.
+      final closeFn = dialog.onClose;
+      dialog.onClose = () {
+        closeFn?.call();
+        runInAction(() => dialogs.remove(dialog));
+      };
+
       dialogs.add(dialog);
       if (viewsVisible) {
         // Set focus to shell view so that we can receive the esc key press.
