@@ -32,8 +32,6 @@ rustc_library("fuchsia") {
       "//third_party/rust_crates:log",
     ]
   }
-
-  enforce_source_listing = true
 }
 
 import("//build/rust/rustc_macro.gni")
@@ -48,8 +46,6 @@ rustc_macro("fuchsia-macro") {
     "//third_party/rust_crates:syn",
   ]
 
-  enforce_source_listing = true
-
   source_root = "src/macro.rs"
   sources = [ "src/macro.rs" ]
 }
@@ -62,7 +58,6 @@ rustc_test("fuchsia_test") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
   ]
-  enforce_source_listing = true
   source_root = "src/test.rs"
   sources = [ "src/test.rs" ]
 }

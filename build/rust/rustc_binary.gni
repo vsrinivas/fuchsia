@@ -210,26 +210,6 @@ template("rustc_binary") {
     source_root = invoker.source_root
   }
 
-  _sources = []
-  _deps = []
-
-  if (!defined(invoker.enforce_source_listing) ||
-      invoker.enforce_source_listing == true) {
-    # fail early when the user forgets to list sources
-    assert(defined(invoker.sources), "sources must be listed")
-    _sources = invoker.sources
-  } else {
-    not_needed(invoker, [ "sources" ])
-
-    # This is a hack to workaround the fact that a GN `tool` invocation can't receive arbitrary input.
-    # Add a sentinel value so that enforcement is skipped.
-    _sources = [ "//build/rust/__SKIP_ENFORCEMENT__.rs" ]
-
-    # Opting out of strict sources check requires that the package is present
-    # in a global allow-list.
-    _deps += [ "//build/rust:disable_strict_sources_check_allowlist" ]
-  }
-
   rustc_artifact(target_name) {
     target_type = "executable"
     crate_root = source_root
@@ -254,25 +234,25 @@ template("rustc_binary") {
                              "disable_rbe",
                              "disable_clippy",
                              "edition",
+                             "enforce_source_listing",
                              "features",
                              "inputs",
+                             "sources",
                            ])
 
     configs = []
     configs = invoker.configs
-    if (current_os == "fuchsia") {
-      _deps += [ "//sdk/lib/syslog/cpp:backend_fuchsia_lib_rust" ]
-    }
-    deps = _deps
+    deps = []
     if (defined(invoker.deps)) {
       deps += invoker.deps
+    }
+    if (current_os == "fuchsia") {
+      deps += [ "//sdk/lib/syslog/cpp:backend_fuchsia_lib_rust" ]
     }
 
     # TODO(https://fxbug.dev/43781) remove "non_rust_deps" as a concept
     if (defined(invoker.non_rust_deps)) {
       deps += invoker.non_rust_deps
     }
-
-    sources = _sources
   }
 }

@@ -144,26 +144,6 @@ template("rustc_library") {
   }
   _crate_name = string_replace(package_name, "-", "_")
 
-  _sources = []
-  _deps = []
-
-  if (!defined(invoker.enforce_source_listing) ||
-      invoker.enforce_source_listing == true) {
-    # fail early when the user forgets to list sources
-    assert(defined(invoker.sources), "sources must be listed")
-    _sources = invoker.sources
-  } else {
-    not_needed(invoker, [ "sources" ])
-
-    # This is a hack to workaround the fact that a GN `tool` invocation can't receive arbitrary input.
-    # Add a sentinel value so that enforcement is skipped.
-    _sources = [ "//build/rust/__SKIP_ENFORCEMENT__.rs" ]
-
-    # Opting out of strict sources check requires that the package is present
-    # in a global allow-list.
-    _deps += [ "//build/rust:disable_strict_sources_check_allowlist" ]
-  }
-
   rustc_artifact(target_name) {
     target_type = "rust_library"
     crate_root = source_root
@@ -185,7 +165,7 @@ template("rustc_library") {
     configs = []
     configs = invoker.configs
 
-    deps = _deps
+    deps = []
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
@@ -195,15 +175,15 @@ template("rustc_library") {
       deps += invoker.non_rust_deps
     }
 
-    sources = _sources
-
     forward_variables_from(invoker,
                            [
                              "disable_rbe",
                              "disable_clippy",
                              "edition",
+                             "enforce_source_listing",
                              "features",
                              "inputs",
+                             "sources",
                            ])
 
     # Avoid walking into data_deps when checking component manifest expected includes.
