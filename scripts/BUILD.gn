@@ -13,5 +13,6 @@ group("tests") {
   deps = [
     "fxtest:tests",
     "fxutils:tests",
+    "versioning:tests",
   ]
 }

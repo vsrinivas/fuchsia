@@ -1,0 +1,18 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/python/python_host_test.gni")
+
+if (is_host) {
+  python_host_test("update_platform_version_tests") {
+    main_source = "update_platform_version_tests.py"
+    sources = [ "update_platform_version.py" ]
+  }
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":update_platform_version_tests($host_toolchain)" ]
+}
