@@ -22,6 +22,7 @@ rustc_library("legacy_component_lib") {
   ]
 
   visibility = [
+    ":*",
     "tests:*",
     "//src/lib/fuchsia-component-test/*",
     "//src/sys/test_manager/cmx_runner:*",

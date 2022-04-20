@@ -59,6 +59,10 @@ declare_args() {
 
   # Makes clippy targets fail to build when any "deny" lints are found
   clippy_cause_failure = false
+
+  # Turns rust targets into a group with both the normal target and clippy target. This
+  # causes clippy targets to get included in the build by default.
+  include_clippy = false
 }
 
 # Separate declare_args blocks to use the value of rustc_prefix from previous one.

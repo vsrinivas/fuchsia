@@ -68,6 +68,7 @@ if (is_host) {
       "$package_out_dir/validate_structured_config_packaging/meta.far"
 
   rustc_test("structured_config_test") {
+    disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
     sources = [ "src/test.rs" ]
     source_root = "src/test.rs"
     deps = [

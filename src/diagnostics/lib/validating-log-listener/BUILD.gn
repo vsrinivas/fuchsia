@@ -10,6 +10,7 @@ rustc_library("validating-log-listener") {
   with_unit_tests = true
 
   visibility = [
+    ":*",
     "//src/diagnostics/archivist/*",
     "//src/lib/syslog/rust/tests/*",
     "//src/sys/appmgr/integration_tests/*",

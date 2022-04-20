@@ -89,14 +89,18 @@ template("rustc_artifact") {
     _rustflags += invoker.rustflags
   }
 
+  _target_name = "$target_name.actual"
+  _clippy_name = "$target_name.clippy"
+
   _disable_clippy = defined(invoker.disable_clippy) && invoker.disable_clippy
   if (!_disable_clippy) {
-    clippy("$target_name.clippy") {
+    clippy(_clippy_name) {
       forward_variables_from(invoker,
                              [
                                "edition",
                                "configs",
                              ])
+      forward_variables_from(invoker.pass_through, [ "testonly" ])
       rustflags = _rustflags
       sources = invoker.sources
       deps = invoker.deps
@@ -107,6 +111,7 @@ template("rustc_artifact") {
     if (defined(invoker.clippy_crate_type)) {
       not_needed(invoker, [ "clippy_crate_type" ])
     }
+    not_needed([ "_clippy_name" ])
   }
 
   _use_rbe = enable_rbe
@@ -123,7 +128,37 @@ template("rustc_artifact") {
     _local_inputs += rust_rbe_deps
   }
 
-  target(invoker.target_type, target_name) {
+  # Every rust target is actually a group of both target_name.actual and
+  # optionally target_name.clippy (if include_clippy is set)
+  group(target_name) {
+    forward_variables_from(invoker.pass_through, [ "testonly" ])
+    public_deps = [ ":$_target_name" ]
+    metadata = {
+    }
+    if (!_disable_clippy) {
+      _outputs = get_target_outputs(":$_clippy_name")
+      metadata = {
+        test_component_manifest_program_barrier = [ ":$_target_name" ]
+        link_output_barrier = [ ":$_target_name" ]
+        rust_source_map = [
+          {
+            clippy = get_label_info(":$_clippy_name", "label_with_toolchain")
+            output = rebase_path(_outputs[0], root_build_dir)
+            src = []
+            foreach(s, invoker.sources) {
+              src += [ rebase_path(s, root_build_dir) ]
+            }
+          },
+        ]
+      }
+
+      if (include_clippy) {
+        data_deps = [ ":$_clippy_name" ]
+      }
+    }
+  }
+
+  target(invoker.target_type, _target_name) {
     crate_root = _crate_root
     crate_name = _crate_name
 
@@ -131,7 +166,7 @@ template("rustc_artifact") {
     if (enable_rbe) {
       rustflags +=
           [ "--remote-flag=--label='" +
-            get_label_info(":$target_name", "label_with_toolchain") + "'" ]
+            get_label_info(":$_target_name", "label_with_toolchain") + "'" ]
     }
     if (_use_rbe && _remote_inputs != []) {
       # Signal to rustc-remote-wrapper.sh that there are additional
@@ -150,6 +185,11 @@ template("rustc_artifact") {
     inputs = _local_inputs
     sources = invoker.sources
 
+    # Clippy target is a gen dep if it's not included in the group
+    if (!_disable_clippy && !include_clippy) {
+      gen_deps = [ ":$_clippy_name" ]
+    }
+
     # in-tree default is 2018 edition
     if (defined(invoker.edition)) {
       assert(invoker.edition == "2015" || invoker.edition == "2018",
@@ -161,10 +201,6 @@ template("rustc_artifact") {
       }
     }
 
-    if (!_disable_clippy) {
-      gen_deps = [ ":$target_name.clippy" ]
-    }
-
     # _pass_through and not_needed are to workaround https://crbug.com/gn/10
     _pass_through = invoker.pass_through
     assert(!defined(_pass_through.metadata))
@@ -173,20 +209,6 @@ template("rustc_artifact") {
     metadata = {
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")
-      }
-      if (!_disable_clippy) {
-        _outputs = get_target_outputs(":$target_name.clippy")
-        rust_source_map = [
-          {
-            clippy =
-                get_label_info(":$target_name.clippy", "label_with_toolchain")
-            output = rebase_path(_outputs[0], root_build_dir)
-            src = []
-            foreach(s, sources) {
-              src += [ rebase_path(s, root_build_dir) ]
-            }
-          },
-        ]
       }
     }
 

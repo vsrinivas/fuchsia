@@ -10,21 +10,21 @@ template("clippy") {
 
   # These generated files collect the rlibs of this targets direct and transitive dependencies
   generated_file("$target_name.depsfile") {
-    testonly = true
+    forward_variables_from(invoker, [ "testonly" ])
     deps = invoker.deps
     outputs = [ "$_output.deps" ]
     data_keys = [ "rlib" ]
     walk_keys = [ "rust_barrier" ]
   }
   generated_file("$target_name.transdepsfile") {
-    testonly = true
+    forward_variables_from(invoker, [ "testonly" ])
     deps = invoker.deps
     outputs = [ "$_output.transdeps" ]
     data_keys = [ "searchdir" ]
   }
 
   action(target_name) {
-    testonly = true
+    forward_variables_from(invoker, [ "testonly" ])
     sources = invoker.sources
     deps = invoker.deps
     deps += [
