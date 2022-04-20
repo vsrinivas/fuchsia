@@ -17,13 +17,6 @@ protocol TextInputContextLegacy {
     /// the onscreen keyboard.
     HideKeyboard();
 
-    /// This event fires any time a new text field is focused. It also is sent to
-    /// newly connected keyboards when they connect, if there is a focused text
-    /// field. If focus is lost, the TextField handle will be closed.
-    -> OnFocus(resource struct {
-        text_field client_end:TextFieldLegacy;
-    });
-
     /// This event fires any time a physical keyboard event is sent to the
     /// TextManager. The keyboard may translate it into an edit on the focused
     /// text field if it so desires. It's expected that this interface will change

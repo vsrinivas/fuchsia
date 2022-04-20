@@ -5,7 +5,6 @@
 pub mod fidl_helpers;
 pub mod index_convert;
 pub mod legacy_ime;
-pub mod multiplex;
 pub mod text_manager;
 
 mod keyboard;
@@ -30,8 +29,7 @@ async fn main() -> Result<(), Error> {
         // Requires clients to have `fuchsia.ui.input3.KeyEventInjector` in the sandbox.
         .add_fidl_service(|stream| keyboard_service.spawn_key_event_injector(stream))
         .add_fidl_service(|stream| keyboard_service.spawn_focus_controller(stream))
-        .add_fidl_service(|stream| text_manager.bind_ime_visibility_service(stream))
-        .add_fidl_service(|stream| text_manager.bind_text_input_context(stream));
+        .add_fidl_service(|stream| text_manager.bind_ime_visibility_service(stream));
 
     fs.take_and_serve_directory_handle()?;
     let () = fs.collect().await;

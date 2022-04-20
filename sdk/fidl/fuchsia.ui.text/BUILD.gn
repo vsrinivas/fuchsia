@@ -5,15 +5,11 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.ui.text") {
-  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [ "string-bounds-not-specified" ]
-
   sdk_category = "internal"
 
   sources = [
     "primitives.fidl",
     "text_field.fidl",
-    "text_field_legacy.fidl",
     "text_input_context.fidl",
     "text_manager_legacy.fidl",
   ]

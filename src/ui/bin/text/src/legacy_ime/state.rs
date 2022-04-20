@@ -8,13 +8,12 @@ use {
     anyhow::{Context as _, Error},
     core::convert::TryInto,
     fidl_fuchsia_input as input, fidl_fuchsia_ui_input as uii, fidl_fuchsia_ui_text as txt,
-    fuchsia_syslog::{fx_log_err, fx_log_warn},
+    fuchsia_syslog::fx_log_warn,
     std::{
         char,
         collections::{HashMap, HashSet},
         ops::Range,
     },
-    text::text_field_state::TextFieldStateLegacy,
 };
 
 use super::position;
@@ -38,14 +37,6 @@ pub struct ImeState {
     /// Currently pressed keys.
     pub keys_pressed: HashSet<input::Key>,
 
-    /// We expose a TextField interface to an input method. There are also legacy
-    /// input methods that just send key events through inject_input — in this case,
-    /// input_method would be None, and these events would be handled by the
-    /// inject_input method. ImeState can only handle talking to one input_method
-    /// at a time; it's the responsibility of some other code (likely inside
-    /// ImeService) to multiplex multiple TextField interfaces into this one.
-    pub input_method: Option<txt::TextFieldLegacyControlHandle>,
-
     /// A number used to serve the TextField interface. It increments any time any
     /// party makes a change to the state.
     pub revision: u64,
@@ -62,41 +53,12 @@ pub struct ImeState {
     /// `text_state.text`. When a new revision is created, all preexisting TextPoints
     /// are deleted, which means we clear this out.
     pub text_points: HashMap<u64, usize>,
-
-    /// We don't actually apply any edits in a transaction until CommitEdit() is called.
-    /// This is a queue of edit requests that will get applied on commit.
-    pub transaction_changes: Vec<txt::TextFieldLegacyRequest>,
-
-    /// If there is an inflight transaction started with `TextField.BeginEdit()`, this
-    /// contains the revision number specified in the `BeginEdit` call. If there is no
-    /// inflight transaction, this is `None`.
-    pub transaction_revision: Option<u64>,
 }
 
 /// Looks up a TextPoint's byte index from a list of points. Usually this list will be
 /// `ImeState.text_points`, but in the middle of a transaction, we clone it to a temporary list
 /// so that we can mutate them without mutating the original list. That way, if the transaction
 /// gets rejected, the original list is left intact.
-pub fn get_point(point_list: &HashMap<u64, usize>, point: &txt::Position) -> Option<usize> {
-    point_list.get(&point.id).cloned()
-}
-
-/// Looks up a TextRange's byte indices from a list of points. If `fix_inversion` is true, we
-/// also will sort the result so that start <= end. You almost always want to sort the result,
-/// although sometimes you want to know if the range was inverted. The Distance function, for
-/// instance, returns a negative result if the range given was inverted.
-pub fn get_range(
-    point_list: &HashMap<u64, usize>,
-    range: &txt::Range,
-    fix_inversion: bool,
-) -> Option<(usize, usize)> {
-    match (get_point(point_list, &range.start), get_point(point_list, &range.end)) {
-        (Some(a), Some(b)) if a >= b && fix_inversion => Some((b, a)),
-        (Some(a), Some(b)) => Some((a, b)),
-        _ => None,
-    }
-}
-
 impl ImeState {
     /// Forwards a keyboard event to any listening clients without changing the actual state of the
     /// IME at all.
@@ -123,12 +85,6 @@ impl ImeState {
     pub fn increment_revision(&mut self, call_did_update_state: bool) {
         self.revision += 1;
         self.text_points = HashMap::new();
-        let state = self.as_text_field_state();
-        if let Some(input_method) = &self.input_method {
-            if let Err(e) = input_method.send_on_update(state.into()) {
-                fx_log_err!("error when sending update to TextField listener: {}", e);
-            }
-        }
 
         if call_did_update_state {
             let mut state = idx::text_state_byte_to_codeunit(self.text_state.clone());
@@ -138,58 +94,6 @@ impl ImeState {
                     e
                 )
             });
-        }
-    }
-
-    /// Converts the current self.text_state (the IME API v1 representation of the text field's state)
-    /// into the v2 representation TextFieldStateLegacy.
-    pub fn as_text_field_state(&mut self) -> TextFieldStateLegacy {
-        let anchor_first = self.text_state.selection.base < self.text_state.selection.extent;
-        let composition = if self.text_state.composing.start < 0
-            || self.text_state.composing.end < 0
-        {
-            None
-        } else {
-            let start = self.new_point(self.text_state.composing.start as usize);
-            let end = self.new_point(self.text_state.composing.end as usize);
-            let text_range = if self.text_state.composing.start < self.text_state.composing.end {
-                txt::Range { start, end }
-            } else {
-                txt::Range { start: end, end: start }
-            };
-            Some(text_range)
-        };
-        let selection = txt::Selection {
-            range: txt::Range {
-                start: self.new_point(if anchor_first {
-                    self.text_state.selection.base as usize
-                } else {
-                    self.text_state.selection.extent as usize
-                }),
-                end: self.new_point(if anchor_first {
-                    self.text_state.selection.extent as usize
-                } else {
-                    self.text_state.selection.base as usize
-                }),
-            },
-            anchor: if anchor_first {
-                txt::SelectionAnchor::AnchoredAtStart
-            } else {
-                txt::SelectionAnchor::AnchoredAtEnd
-            },
-            affinity: txt::Affinity::Upstream,
-        };
-        TextFieldStateLegacy {
-            document: txt::Range {
-                start: self.new_point(0),
-                end: self.new_point(self.text_state.text.len()),
-            },
-            selection,
-            composition,
-            // unfortunately, since the old API doesn't support these, we have to set highlights to None.
-            composition_highlight: None,
-            dead_key_highlight: None,
-            revision: self.revision,
         }
     }
 
@@ -209,105 +113,6 @@ impl ImeState {
         let start = s.base.min(s.extent) as usize;
         let end = s.base.max(s.extent) as usize;
         start..end
-    }
-
-    /// Return bool indicates if transaction was successful and valid
-    pub fn apply_transaction(&mut self) -> bool {
-        let mut moved_points = self.text_points.clone();
-        let mut new_state = self.text_state.clone();
-        for edit in &self.transaction_changes {
-            match edit {
-                txt::TextFieldLegacyRequest::Replace { range, new_text, .. } => {
-                    let (start, end) = match get_range(&moved_points, &range, true) {
-                        Some(v) => v,
-                        None => return false,
-                    };
-                    let first_half = if let Some(v) = new_state.text.get(..start) {
-                        v
-                    } else {
-                        fx_log_err!(
-                            "IME: out of bounds string request for range (..{}) on string {:?}",
-                            start,
-                            new_state.text
-                        );
-                        return false;
-                    };
-                    let second_half = if let Some(v) = new_state.text.get(end..) {
-                        v
-                    } else {
-                        fx_log_err!(
-                            "IME: out of bounds string request for range ({}..) on string {:?}",
-                            end,
-                            new_state.text
-                        );
-                        return false;
-                    };
-                    new_state.text = format!("{}{}{}", first_half, new_text, second_half);
-
-                    // adjust char index of points after the insert
-                    let delete_len = end as i64 - start as i64;
-                    let insert_len = new_text.len() as i64;
-                    for (_, byte_index) in moved_points.iter_mut() {
-                        if start < *byte_index && *byte_index <= end {
-                            *byte_index = start + insert_len as usize;
-                        } else if end < *byte_index {
-                            *byte_index = (*byte_index as i64 - delete_len as i64
-                                + insert_len as i64)
-                                as usize;
-                        }
-                    }
-
-                    adjust_range(
-                        start as i64,
-                        end as i64,
-                        new_text.len() as i64,
-                        &mut new_state.selection.extent,
-                        &mut new_state.selection.base,
-                    );
-                    if new_state.composing.start >= 0 && new_state.composing.end >= 0 {
-                        adjust_range(
-                            start as i64,
-                            end as i64,
-                            new_text.len() as i64,
-                            &mut new_state.composing.start,
-                            &mut new_state.composing.end,
-                        );
-                    }
-                }
-                txt::TextFieldLegacyRequest::SetSelection { selection, .. } => {
-                    let (start, end) = match get_range(&moved_points, &selection.range, false) {
-                        Some(v) => v,
-                        None => return false,
-                    };
-
-                    if selection.anchor == txt::SelectionAnchor::AnchoredAtStart {
-                        new_state.selection.base = start as i64;
-                        new_state.selection.extent = end as i64;
-                    } else {
-                        new_state.selection.extent = start as i64;
-                        new_state.selection.base = end as i64;
-                    }
-                }
-                txt::TextFieldLegacyRequest::SetComposition { composition_range, .. } => {
-                    let (start, end) = match get_range(&moved_points, &composition_range, true) {
-                        Some(v) => v,
-                        None => return false,
-                    };
-                    new_state.composing.start = start as i64;
-                    new_state.composing.end = end as i64;
-                }
-                txt::TextFieldLegacyRequest::ClearComposition { .. } => {
-                    new_state.composing.start = -1;
-                    new_state.composing.end = -1;
-                }
-                _ => {
-                    fx_log_warn!("the input method tried to an unsupported TextFieldRequest on this proxy to InputMethodEditorClient");
-                }
-            }
-        }
-
-        self.text_state = new_state;
-        true
     }
 
     pub fn type_keycode(&mut self, code_point: u32) {
@@ -423,26 +228,5 @@ impl ImeState {
             self.text_state.selection.base = new_position;
         }
         self.text_state.selection.affinity = uii::TextAffinity::Downstream;
-    }
-}
-
-/// This function modifies a range in response to an edit.
-fn adjust_range(
-    edit_start: i64,
-    edit_end: i64,
-    insert_len: i64,
-    range_a: &mut i64,
-    range_b: &mut i64,
-) {
-    let (range_start, range_end) =
-        if *range_a < *range_b { (*range_a, *range_b) } else { (*range_b, *range_a) };
-    if edit_end <= range_start {
-        // if replace happened strictly before selection, push selection forwards
-        *range_b += insert_len + edit_start - edit_end;
-        *range_a += insert_len + edit_start - edit_end;
-    } else if edit_start < range_end {
-        // if our replace intersected with the selection at all, set the selection to the end of the insert
-        *range_b = edit_start + insert_len;
-        *range_a = edit_start + insert_len;
     }
 }

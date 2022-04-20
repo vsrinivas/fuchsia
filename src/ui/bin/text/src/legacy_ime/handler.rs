@@ -5,10 +5,9 @@
 //! This module contains an implementation of `LegacyIme` itself.
 
 use {
-    anyhow::{format_err, Context as _, Error, Result},
-    fidl::endpoints::RequestStream,
+    anyhow::{format_err, Context, Error, Result},
     fidl_fuchsia_ui_input::{self as uii, InputMethodEditorRequest as ImeReq},
-    fidl_fuchsia_ui_input3 as ui_input3, fidl_fuchsia_ui_text as txt,
+    fidl_fuchsia_ui_input3 as ui_input3,
     fuchsia_syslog::{fx_log_err, fx_log_warn},
     futures::{lock::Mutex, prelude::*},
     std::{
@@ -19,9 +18,8 @@ use {
 };
 
 use super::{
-    state::{get_point, get_range, ImeState},
-    HID_USAGE_KEY_BACKSPACE, HID_USAGE_KEY_DELETE, HID_USAGE_KEY_ENTER, HID_USAGE_KEY_LEFT,
-    HID_USAGE_KEY_RIGHT,
+    state::ImeState, HID_USAGE_KEY_BACKSPACE, HID_USAGE_KEY_DELETE, HID_USAGE_KEY_ENTER,
+    HID_USAGE_KEY_LEFT, HID_USAGE_KEY_RIGHT,
 };
 use crate::{index_convert as idx, keyboard::events, text_manager::TextManager};
 
@@ -56,9 +54,6 @@ impl LegacyIme {
             next_text_point_id: 0,
             text_points: HashMap::new(),
             keys_pressed: HashSet::new(),
-            input_method: None,
-            transaction_changes: Vec::new(),
-            transaction_revision: None,
         };
         LegacyIme(Arc::new(Mutex::new(state)))
     }
@@ -74,36 +69,6 @@ impl LegacyIme {
     /// Binds a `TextField` to this `LegacyIme`, replacing and unbinding any previous `TextField`.
     /// All requests from the request stream will be translated into requests for
     /// `InputMethodEditorClient`, and for events, vice-versa.
-    pub fn bind_text_field(&self, mut stream: txt::TextFieldLegacyRequestStream) {
-        let mut self_clone = self.clone();
-        fuchsia_async::Task::spawn(
-            async move {
-                let control_handle = stream.control_handle();
-                {
-                    let mut state = self_clone.0.lock().await;
-                    let res = control_handle.send_on_update(state.as_text_field_state().into());
-                    if let Err(e) = res {
-                        fx_log_err!("{}", e);
-                    } else {
-                        state.input_method = Some(control_handle);
-                    }
-                }
-                while let Some(msg) = stream
-                    .try_next()
-                    .await
-                    .context("error reading value from text field request stream")?
-                {
-                    if let Err(e) = self_clone.handle_text_field_msg(msg).await {
-                        fx_log_err!("error when replying to TextFieldRequest: {}", e);
-                    }
-                }
-                Ok(())
-            }
-            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
-        )
-        .detach();
-    }
-
     /// Handles all state updates passed down the `InputMethodEditorRequestStream`.
     pub fn bind_ime(&self, mut stream: uii::InputMethodEditorRequestStream) {
         let self_clone = self.clone();
@@ -133,139 +98,6 @@ impl LegacyIme {
             }),
         )
         .detach();
-    }
-
-    /// Handles a TextFieldRequest, returning a FIDL error if one occurred when sending a reply.
-    async fn handle_text_field_msg(
-        &mut self,
-        msg: txt::TextFieldLegacyRequest,
-    ) -> Result<(), fidl::Error> {
-        let mut ime_state = self.0.lock().await;
-        match msg {
-            txt::TextFieldLegacyRequest::PositionOffset {
-                old_position,
-                offset,
-                revision,
-                responder,
-            } => {
-                if revision != ime_state.revision {
-                    return responder
-                        .send(&mut txt::Position { id: 0 }, txt::ErrorLegacy::BadRevision);
-                }
-                let old_char_index = if let Some(v) =
-                    get_point(&ime_state.text_points, &old_position).and_then(|old_byte_index| {
-                        idx::byte_to_char(&ime_state.text_state.text, old_byte_index)
-                    }) {
-                    v
-                } else {
-                    return responder
-                        .send(&mut txt::Position { id: 0 }, txt::ErrorLegacy::BadRequest);
-                };
-                let new_char_index = (old_char_index as i64 + offset)
-                    .max(0)
-                    .min(ime_state.text_state.text.chars().count() as i64);
-                // ok to .expect() here, since char_to_byte can only fail if new_char_index is out of the char indices
-                let new_byte_index = idx::char_to_byte(&ime_state.text_state.text, new_char_index)
-                    .expect("did not expect character to fail");
-                let mut new_point = ime_state.new_point(new_byte_index);
-                return responder.send(&mut new_point, txt::ErrorLegacy::Ok);
-            }
-            txt::TextFieldLegacyRequest::Distance { range, revision, responder } => {
-                if revision != ime_state.revision {
-                    return responder.send(0, txt::ErrorLegacy::BadRevision);
-                }
-                let (byte_start, byte_end) = match get_range(&ime_state.text_points, &range, false)
-                {
-                    Some(v) => v,
-                    None => {
-                        return responder.send(0, txt::ErrorLegacy::BadRequest);
-                    }
-                };
-                let (char_start, char_end) = match (
-                    idx::byte_to_char(&ime_state.text_state.text, byte_start),
-                    idx::byte_to_char(&ime_state.text_state.text, byte_end),
-                ) {
-                    (Some(a), Some(b)) => (a, b),
-                    _ => {
-                        return responder.send(0, txt::ErrorLegacy::BadRequest);
-                    }
-                };
-                return responder.send(char_end as i64 - char_start as i64, txt::ErrorLegacy::Ok);
-            }
-            txt::TextFieldLegacyRequest::Contents { range, revision, responder } => {
-                if revision != ime_state.revision {
-                    return responder.send(
-                        "",
-                        &mut txt::Position { id: 0 },
-                        txt::ErrorLegacy::BadRevision,
-                    );
-                }
-                match get_range(&ime_state.text_points, &range, true) {
-                    Some((start, end)) => {
-                        let mut start_point = ime_state.new_point(start);
-                        match ime_state.text_state.text.get(start..end) {
-                            Some(contents) => {
-                                return responder.send(
-                                    contents,
-                                    &mut start_point,
-                                    txt::ErrorLegacy::Ok,
-                                );
-                            }
-                            None => {
-                                return responder.send(
-                                    "",
-                                    &mut txt::Position { id: 0 },
-                                    txt::ErrorLegacy::BadRequest,
-                                );
-                            }
-                        }
-                    }
-                    None => {
-                        return responder.send(
-                            "",
-                            &mut txt::Position { id: 0 },
-                            txt::ErrorLegacy::BadRequest,
-                        );
-                    }
-                }
-            }
-            txt::TextFieldLegacyRequest::BeginEdit { revision, .. } => {
-                ime_state.transaction_changes = Vec::new();
-                ime_state.transaction_revision = Some(revision);
-                return Ok(());
-            }
-            txt::TextFieldLegacyRequest::CommitEdit { responder, .. } => {
-                if ime_state.transaction_revision != Some(ime_state.revision) {
-                    return responder.send(txt::ErrorLegacy::BadRevision);
-                }
-                let res = if ime_state.apply_transaction() {
-                    let res = responder.send(txt::ErrorLegacy::Ok);
-                    ime_state.increment_revision(true);
-                    res
-                } else {
-                    responder.send(txt::ErrorLegacy::BadRequest)
-                };
-                ime_state.transaction_changes = Vec::new();
-                ime_state.transaction_revision = None;
-                return res;
-            }
-            txt::TextFieldLegacyRequest::AbortEdit { .. } => {
-                ime_state.transaction_changes = Vec::new();
-                ime_state.transaction_revision = None;
-                return Ok(());
-            }
-            req @ txt::TextFieldLegacyRequest::Replace { .. }
-            | req @ txt::TextFieldLegacyRequest::SetSelection { .. }
-            | req @ txt::TextFieldLegacyRequest::SetComposition { .. }
-            | req @ txt::TextFieldLegacyRequest::ClearComposition { .. }
-            | req @ txt::TextFieldLegacyRequest::SetDeadKeyHighlight { .. }
-            | req @ txt::TextFieldLegacyRequest::ClearDeadKeyHighlight { .. } => {
-                if ime_state.transaction_revision.is_some() {
-                    ime_state.transaction_changes.push(req)
-                }
-                return Ok(());
-            }
-        }
     }
 
     /// Handles a request from the legancy IME API, an InputMethodEditorRequest.
