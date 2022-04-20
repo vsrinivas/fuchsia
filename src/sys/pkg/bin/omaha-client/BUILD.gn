@@ -8,8 +8,6 @@ import("//build/rust/rustc_library.gni")
 import("//src/sys/core/build/core_shard.gni")
 import("//src/sys/pkg/bin/grand-swd-binary/gsb.gni")
 
-# TODO(fxbug.dev/92844): Remove this config.gni.
-import("//src/sys/pkg/bin/omaha-client/omcl_policy_config.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 declare_args() {
   # Default app id will always return no update.
