@@ -31,7 +31,17 @@ class Thread {
   // Returns a shared pointer to a |Thread| representing the thread represented by |loop|.
   static Thread CreateForLoop(async::Loop& loop);
 
+  Thread() = default;
   ~Thread() = default;
+
+  // Makes this |Thread| invalid, dereferencing underlying state.
+  Thread& operator=(std::nullptr_t) {
+    shared_ = nullptr;
+    return *this;
+  }
+
+  bool is_valid() const { return !!shared_; }
+  explicit operator bool() const { return is_valid(); }
 
   // Determines whether the current thread is the one represented by this |Thread|.
   bool is_current() const { return dispatcher() == async_get_default_dispatcher(); }
