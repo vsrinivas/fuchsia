@@ -35,7 +35,7 @@ template <typename T, typename U>
 static inline constexpr T saturate(U val) {
   return (val > ktl::numeric_limits<T>::max())   ? ktl::numeric_limits<T>::max()
          : (val < ktl::numeric_limits<T>::min()) ? ktl::numeric_limits<T>::min()
-                                                 : val;
+                                                 : static_cast<T>(val);
 }
 
 // The definition of an interface used to abstract printing operations used when

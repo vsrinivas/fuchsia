@@ -113,7 +113,7 @@ zx_status_t sys_clock_update(zx_handle_t clock_handle, uint64_t options,
   } args;
 
   zx_status_t status;
-  const uint32_t version = GetArgsVersion(options);
+  const uint64_t version = GetArgsVersion(options);
   int32_t rate_adjust;
   switch (version) {
     case 1:

@@ -168,10 +168,10 @@ void print_limits() {
 
   // Based on Intel Software Manual vol 3, chapter 14.9,
   // Time limit = 2^Y * (1.0 + Z/4.0) * Time_Unit
-  uint32_t y = BITS_SHIFT(rapl, 21, 17);
-  uint32_t z = BITS_SHIFT(rapl, 23, 22);
+  auto y = static_cast<uint32_t>(BITS_SHIFT(rapl, 21, 17));
+  auto z = static_cast<uint32_t>(BITS_SHIFT(rapl, 23, 22));
   uint32_t time_window = (1 << y) * (4 + z) * units.time_us / 4;
-  uint32_t power_limit = BITS_SHIFT(rapl, 14, 0);
+  auto power_limit = static_cast<uint32_t>(BITS_SHIFT(rapl, 14, 0));
 
   printf("PL1 limit: %umW\n", power_limit * units.power_mw);
   printf("PL1 window: %uus\n", time_window);

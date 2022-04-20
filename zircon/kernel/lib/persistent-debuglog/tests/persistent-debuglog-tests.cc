@@ -29,7 +29,7 @@ namespace {
 using LogHeader = ::tests::PersistentDebuglogTestingFriend::LogHeader;
 
 struct Buffer {
-  bool Setup(size_t new_capacity) {
+  bool Setup(uint32_t new_capacity) {
     BEGIN_TEST;
 
     ASSERT_NULL(storage.get());
@@ -45,11 +45,11 @@ struct Buffer {
   }
 
   ktl::unique_ptr<char[]> storage = nullptr;
-  size_t capacity = 0;
+  uint32_t capacity = 0;
 } recovered_log;
 
 struct TestEnvironment {
-  bool Setup(size_t log_size, size_t recovered_size) {
+  bool Setup(uint32_t log_size, uint32_t recovered_size) {
     BEGIN_TEST;
 
     ASSERT_TRUE(log_buffer.Setup(log_size));
@@ -129,7 +129,7 @@ bool pdlog_basic_test() {
       "Foo Bar Baz\n"sv,
   };
 
-  uint32_t expected_rd_ptr = 0;
+  size_t expected_rd_ptr = 0;
   for (const auto& sv : kTestStrings) {
     env.log->Write(sv);
     expected_rd_ptr += sv.length();

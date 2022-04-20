@@ -1771,7 +1771,7 @@ void VmCowPages::UpdateDirtyStateLocked(vm_page_t* page, uint64_t offset, DirtyS
     default:
       ASSERT(false);
   }
-  page->object.dirty_state = static_cast<uint8_t>(dirty_state);
+  page->object.dirty_state = static_cast<uint8_t>(dirty_state) & VM_PAGE_OBJECT_DIRTY_STATES_MASK;
 }
 
 zx_status_t VmCowPages::PrepareForWriteLocked(LazyPageRequest* page_request, uint64_t offset,

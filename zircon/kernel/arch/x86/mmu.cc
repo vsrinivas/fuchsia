@@ -525,8 +525,10 @@ void x86_mmu_early_init() {
   x86_tlb_global_invalidate();
 
   /* get the address width from the CPU */
-  uint8_t vaddr_width = arch::BootCpuid<arch::CpuidAddressSizeInfo>().linear_addr_bits();
-  uint8_t paddr_width = arch::BootCpuid<arch::CpuidAddressSizeInfo>().phys_addr_bits();
+  auto vaddr_width =
+      static_cast<uint8_t>(arch::BootCpuid<arch::CpuidAddressSizeInfo>().linear_addr_bits());
+  auto paddr_width =
+      static_cast<uint8_t>(arch::BootCpuid<arch::CpuidAddressSizeInfo>().phys_addr_bits());
 
   supports_huge_pages = x86_feature_test(X86_FEATURE_HUGE_PAGE);
 

@@ -95,9 +95,9 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
 void parse_next_process_arguments(const zx::debuglog& log, const Options& opts, uint32_t& argc,
                                   char* argv) {
   // Extra byte for null terminator.
-  uint32_t required_size = opts.next.size() + 1;
+  size_t required_size = opts.next.size() + 1;
   if (required_size > kProcessArgsMaxBytes) {
-    fail(log, "required %u bytes for process arguments, but only %u are available", required_size,
+    fail(log, "required %zu bytes for process arguments, but only %u are available", required_size,
          kProcessArgsMaxBytes);
   }
 

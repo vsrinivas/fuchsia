@@ -201,7 +201,8 @@ static void* read_device_tree(void* device_tree, device_tree_context_t* ctx) {
 static void append_from_device_tree(zbi_header_t* zbi, device_tree_context_t* ctx) {
   // append kernel command line
   if (ctx->cmdline && ctx->cmdline_length) {
-    append_boot_item(zbi, ZBI_TYPE_CMDLINE, 0, ctx->cmdline, ctx->cmdline_length);
+    const uint32_t length = (uint32_t)ctx->cmdline_length;
+    append_boot_item(zbi, ZBI_TYPE_CMDLINE, 0, ctx->cmdline, length);
   }
   append_boot_item(zbi, ZBI_TYPE_DEVICETREE, 0, ctx->devicetree.data, ctx->devicetree.size);
 }
@@ -285,7 +286,8 @@ static zbi_result_t list_zbi_cb(zbi_header_t* item, void* payload, void* ctx) {
   uart_putc(item->type & 0xff);
   uart_putc((item->type >> 8) & 0xff);
   uart_putc((item->type >> 16) & 0xff);
-  uart_putc((item->type >> 24) & 0xff);
+  // The cast below is needed to make GCC with -Wconversion happy.
+  uart_putc((char)(item->type >> 24) & 0xff);
   uart_puts(") extra=0x");
   uart_print_hex(item->extra);
   uart_puts("\n");

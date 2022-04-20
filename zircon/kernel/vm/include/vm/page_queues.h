@@ -329,7 +329,7 @@ class PageQueues {
 
  private:
   // Specifies the indices for both the page_queues_ and the page_queue_counts_
-  enum PageQueue : uint32_t {
+  enum PageQueue : uint8_t {
     PageQueueNone = 0,
     PageQueueUnswappable,
     PageQueueWired,

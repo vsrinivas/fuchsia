@@ -123,8 +123,8 @@ zx_status_t x86_allocate_ap_structures(uint32_t* apic_ids, uint8_t cpu_count) {
                   arch::BootCpuidSupports<arch::CpuidMonitorMwaitB>() &&
                   !x86_get_microarch_config()->idle_prefer_hlt;
     if (use_monitor) {
-      uint16_t monitor_size =
-          arch::BootCpuid<arch::CpuidMonitorMwaitB>().largest_monitor_line_size();
+      auto monitor_size = static_cast<uint16_t>(
+          arch::BootCpuid<arch::CpuidMonitorMwaitB>().largest_monitor_line_size());
       if (monitor_size < MAX_CACHE_LINE) {
         monitor_size = MAX_CACHE_LINE;
       }

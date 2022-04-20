@@ -688,7 +688,7 @@ bool migrate_stress_test() {
   // Mutate threads as they run.
   for (int i = 0; i < 10'000; i++) {
     for (size_t j = 0; j < threads.size(); j++) {
-      const cpu_mask_t affinity = (i + j) & mp_get_active_mask();
+      const cpu_mask_t affinity = static_cast<cpu_mask_t>(i + j) & mp_get_active_mask();
       if (affinity) {
         threads[j].thread->SetSoftCpuAffinity(affinity);
       }

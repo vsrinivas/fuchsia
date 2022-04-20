@@ -83,16 +83,16 @@ static void add_cpu_topology(zbi_header_t* zbi) {
         .parent_index = ZBI_TOPOLOGY_NO_PARENT,
         .entity = {
           .processor = {
-            .logical_ids = {index},
+            .logical_ids = {(uint16_t)index},
             .logical_id_count = 1,
             .flags = (index == 0) ? ZBI_TOPOLOGY_PROCESSOR_PRIMARY : 0,
             .architecture = ZBI_TOPOLOGY_ARCH_ARM,
             .architecture_info = {
               .arm = {
                 // qemu seems to put 16 cores per aff0 level, max 32 cores.
-                .cluster_1_id = (index / 16),
+                .cluster_1_id = (uint8_t)(index / 16),
                 .cpu_id = (index % 16),
-                .gic_id = index,
+                .gic_id = (uint8_t)(index),
               }
             }
           }
@@ -101,9 +101,10 @@ static void add_cpu_topology(zbi_header_t* zbi) {
   }
   // clang-format on
 
+  const uint32_t length = (uint32_t)(sizeof(zbi_topology_node_t) * cpu_count);
   append_boot_item(zbi, ZBI_TYPE_CPU_TOPOLOGY,
                    sizeof(zbi_topology_node_t),  // Extra
-                   &nodes, sizeof(zbi_topology_node_t) * cpu_count);
+                   &nodes, length);
 }
 
 static uint64_t top_of_ram;

@@ -761,7 +761,7 @@ zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
   }
 
   // Find the shift needed for this timeout, since count is 32-bit.
-  const uint highest_set_bit = log2_ulong_floor(apic_ticks_needed);
+  const auto highest_set_bit = static_cast<uint32_t>(log2_ulong_floor(apic_ticks_needed));
   uint8_t extra_shift = (highest_set_bit <= 31) ? 0 : static_cast<uint8_t>(highest_set_bit - 31);
   if (extra_shift > 8) {
     extra_shift = 8;

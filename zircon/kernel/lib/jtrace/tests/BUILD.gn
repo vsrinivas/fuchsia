@@ -12,7 +12,4 @@ source_set("tests") {
     "//zircon/system/ulib/affine",
     "//zircon/system/ulib/pretty",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

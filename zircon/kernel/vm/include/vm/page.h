@@ -305,6 +305,7 @@ struct vm_page {
 
 #define VM_PAGE_OBJECT_DIRTY_STATE_BITS 2
 #define VM_PAGE_OBJECT_MAX_DIRTY_STATES ((1u << VM_PAGE_OBJECT_DIRTY_STATE_BITS))
+#define VM_PAGE_OBJECT_DIRTY_STATES_MASK (VM_PAGE_OBJECT_MAX_DIRTY_STATES - 1)
       // Tracks state used to determine whether the page is dirty and its contents need to written
       // back to the page source at some point, and when it has been cleaned. Used for pages backed
       // by a user pager. The three states supported are Clean, Dirty, and AwaitingClean (more

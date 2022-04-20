@@ -19,10 +19,10 @@ uint32_t dt_rd32(uint8_t *data) {
 }
 
 void dt_wr32(uint32_t n, uint8_t *data) {
-  *data++ = n >> 24;
-  *data++ = n >> 16;
-  *data++ = n >> 8;
-  *data = n;
+  *data++ = (uint8_t)(n >> 24);
+  *data++ = (uint8_t)(n >> 16);
+  *data++ = (uint8_t)(n >> 8);
+  *data = (uint8_t)n;
 }
 
 /* init subslice from slice, returning 0 if successful */

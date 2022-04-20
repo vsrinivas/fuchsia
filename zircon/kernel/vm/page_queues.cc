@@ -892,10 +892,10 @@ void PageQueues::RecalculateActiveInactiveLocked() {
   uint64_t active = 0;
   uint64_t inactive = 0;
 
-  uint32_t lru = lru_gen_.load(ktl::memory_order_relaxed);
-  uint32_t mru = mru_gen_.load(ktl::memory_order_relaxed);
+  uint64_t lru = lru_gen_.load(ktl::memory_order_relaxed);
+  uint64_t mru = mru_gen_.load(ktl::memory_order_relaxed);
 
-  for (uint32_t index = lru; index <= mru; index++) {
+  for (uint64_t index = lru; index <= mru; index++) {
     uint64_t count = page_queue_counts_[gen_to_queue(index)].load(ktl::memory_order_relaxed);
     if (queue_is_active(gen_to_queue(index), gen_to_queue(mru))) {
       active += count;
@@ -968,10 +968,10 @@ PageQueues::Counts PageQueues::QueueCounts() const {
   // Grab the lock to prevent LRU processing, this lets us get a slightly less racy snapshot of
   // the queue counts. We may still double count pages that move after we count them.
   Guard<CriticalMutex> guard{&lock_};
-  uint32_t lru = lru_gen_.load(ktl::memory_order_relaxed);
-  uint32_t mru = mru_gen_.load(ktl::memory_order_relaxed);
+  uint64_t lru = lru_gen_.load(ktl::memory_order_relaxed);
+  uint64_t mru = mru_gen_.load(ktl::memory_order_relaxed);
 
-  for (uint32_t index = lru; index <= mru; index++) {
+  for (uint64_t index = lru; index <= mru; index++) {
     counts.pager_backed[mru - index] =
         page_queue_counts_[gen_to_queue(index)].load(ktl::memory_order_relaxed);
   }

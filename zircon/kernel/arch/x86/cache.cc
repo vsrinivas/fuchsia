@@ -14,11 +14,11 @@
 #include <arch/x86/feature.h>
 
 uint32_t arch_dcache_line_size(void) {
-  return arch::BootCpuid<arch::CpuidProcessorInfo>().cache_line_size_bytes();
+  return static_cast<uint32_t>(arch::BootCpuid<arch::CpuidProcessorInfo>().cache_line_size_bytes());
 }
 
 uint32_t arch_icache_line_size(void) {
-  return arch::BootCpuid<arch::CpuidProcessorInfo>().cache_line_size_bytes();
+  return static_cast<uint32_t>(arch::BootCpuid<arch::CpuidProcessorInfo>().cache_line_size_bytes());
 }
 
 void arch_sync_cache_range(vaddr_t start, size_t len) {

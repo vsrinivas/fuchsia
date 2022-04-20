@@ -321,7 +321,7 @@ static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestS
       // so are required to iterate through every set/way. If the guest
       // doesn't do this, they shouldn't be surprised if not everything has
       // been cleaned.
-      uint32_t set_way = BITS_SHIFT(reg, 31, 4);
+      uint64_t set_way = BITS_SHIFT(reg, 31, 4);
       if (set_way == 0) {
         clean_invalidate_cache(gpas->arch_table_phys(), MMU_GUEST_TOP_SHIFT);
       }

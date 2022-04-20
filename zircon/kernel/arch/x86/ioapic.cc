@@ -102,15 +102,15 @@ static void apic_io_debug_nolock() TA_REQ(io_apic_lock::Get());
 
 // Track all IO APICs in the system
 static fbl::Array<io_apic> io_apics;
-static uint32_t num_io_apics;
+static size_t num_io_apics;
 
 // The first 16 global IRQs are identity mapped to the legacy ISA IRQs unless
 // we are told otherwise.  This tracks the actual mapping.
 // Read-only after initialization in apic_io_init()
 static struct io_apic_isa_override isa_overrides[NUM_ISA_IRQS];
 
-void apic_io_init(struct io_apic_descriptor* io_apic_descs, unsigned int num_io_apic_descs,
-                  struct io_apic_isa_override* overrides, unsigned int num_overrides) {
+void apic_io_init(struct io_apic_descriptor* io_apic_descs, size_t num_io_apic_descs,
+                  struct io_apic_isa_override* overrides, size_t num_overrides) {
   ASSERT(!io_apics);
 
   num_io_apics = num_io_apic_descs;
@@ -119,12 +119,12 @@ void apic_io_init(struct io_apic_descriptor* io_apic_descs, unsigned int num_io_
     io_apics.reset(new (&ac) io_apic[num_io_apics], num_io_apics);
     ASSERT(ac.check());
   }
-  for (unsigned int i = 0; i < num_io_apics; ++i) {
+  for (size_t i = 0; i < num_io_apics; ++i) {
     io_apics[i].desc = io_apic_descs[i];
   }
 
   // Allocate windows to their control pages
-  for (uint32_t i = 0; i < num_io_apics; ++i) {
+  for (size_t i = 0; i < num_io_apics; ++i) {
     struct io_apic* apic = &io_apics[i];
     paddr_t paddr = apic->desc.paddr;
     void* vaddr = paddr_to_physmap(paddr);
@@ -181,7 +181,7 @@ void apic_io_init(struct io_apic_descriptor* io_apic_descs, unsigned int num_io_
 }
 
 static struct io_apic* apic_io_resolve_global_irq_no_panic(uint32_t irq) {
-  for (uint32_t i = 0; i < num_io_apics; ++i) {
+  for (size_t i = 0; i < num_io_apics; ++i) {
     uint32_t start = io_apics[i].desc.global_irq_base;
     uint32_t end = start + io_apics[i].max_redirection_entry;
     if (start <= irq && irq <= end) {
@@ -398,7 +398,7 @@ uint32_t apic_io_isa_to_global(uint8_t isa_irq) {
 void apic_io_save(void) {
   DEBUG_ASSERT(arch_ints_disabled());
   Guard<SpinLock, NoIrqSave> guard{io_apic_lock::Get()};
-  for (uint32_t i = 0; i < num_io_apics; ++i) {
+  for (size_t i = 0; i < num_io_apics; ++i) {
     struct io_apic* apic = &io_apics[i];
     for (uint8_t j = 0; j <= apic->max_redirection_entry; ++j) {
       uint32_t global_irq = apic->desc.global_irq_base + j;
@@ -411,7 +411,7 @@ void apic_io_save(void) {
 void apic_io_restore(void) {
   DEBUG_ASSERT(arch_ints_disabled());
   Guard<SpinLock, NoIrqSave> guard{io_apic_lock::Get()};
-  for (uint32_t i = 0; i < num_io_apics; ++i) {
+  for (size_t i = 0; i < num_io_apics; ++i) {
     struct io_apic* apic = &io_apics[i];
     for (uint8_t j = 0; j <= apic->max_redirection_entry; ++j) {
       uint32_t global_irq = apic->desc.global_irq_base + j;
@@ -439,9 +439,9 @@ GsiRange apic_io_get_gsi_range() {
 }
 
 static void apic_io_debug_nolock(void) {
-  for (uint32_t i = 0; i < num_io_apics; ++i) {
+  for (size_t i = 0; i < num_io_apics; ++i) {
     struct io_apic* apic = &io_apics[i];
-    printf("IO APIC idx %u:\n", i);
+    printf("IO APIC idx %lu:\n", i);
     printf("  id: %08x\n", apic->desc.apic_id);
     printf("  version: %08hhx\n", apic->version);
     printf("  entries: %08x\n", apic->max_redirection_entry + 1U);

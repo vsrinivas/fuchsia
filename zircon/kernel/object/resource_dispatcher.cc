@@ -48,7 +48,7 @@ const char* kKindLabels[ZX_RSRC_KIND_COUNT] = {
     "mmio", "irq", "ioport", "root", "smc", "system",
 };
 
-static const char* kind_to_string(uint8_t kind) {
+static const char* kind_to_string(zx_rsrc_kind_t kind) {
   ZX_ASSERT(kind < ZX_RSRC_KIND_COUNT);
   return kKindLabels[kind];
 }

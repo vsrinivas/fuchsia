@@ -30,7 +30,7 @@ TEST(X86UserCopyTests, FUNCTION_NAME) {
     auto dst = std::make_unique<uint8_t[]>(i);
     std::unique_ptr<uint8_t[]> src(new uint8_t[i]);
     for (size_t j = 0; j < i; ++j) {
-      src[j] = i;
+      src[j] = static_cast<uint8_t>(i);
     }
 
     uint64_t fault_return = 0;

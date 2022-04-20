@@ -39,9 +39,9 @@ static_assert(kContiguousBytes <= BufferChain::kContig, "");
 static constexpr uint32_t kHandlesOffset = static_cast<uint32_t>(sizeof(MessagePacket));
 
 // PayloadOffset returns the offset of the data payload from the start of the first buffer.
-static inline uint32_t PayloadOffset(uint32_t num_handles) {
+static inline size_t PayloadOffset(size_t num_handles) {
   // The payload comes after the handles.
-  return kHandlesOffset + num_handles * static_cast<uint32_t>(sizeof(Handle*));
+  return kHandlesOffset + num_handles * sizeof(Handle*);
 }
 
 // Creates a MessagePacket in |msg| sufficient to hold |data_size| bytes and |num_handles|.
@@ -57,7 +57,7 @@ inline zx_status_t MessagePacket::CreateCommon(size_t data_size, size_t num_hand
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  const uint32_t payload_offset = PayloadOffset(num_handles);
+  const size_t payload_offset = PayloadOffset(num_handles);
 
   // MessagePackets lives *inside* a list of buffers.  The first buffer holds the MessagePacket
   // object, followed by its handles (if any), and finally the payload data.
@@ -74,7 +74,8 @@ inline zx_status_t MessagePacket::CreateCommon(size_t data_size, size_t num_hand
   // Construct the MessagePacket into the first buffer.
   MessagePacket* const packet = reinterpret_cast<MessagePacket*>(data);
   static_assert(kMaxMessageHandles <= UINT16_MAX, "");
-  msg->reset(new (packet) MessagePacket(chain, data_size, payload_offset,
+  msg->reset(new (packet) MessagePacket(chain, static_cast<uint32_t>(data_size),
+                                        static_cast<uint32_t>(payload_offset),
                                         static_cast<uint16_t>(num_handles), handles));
   // The MessagePacket now owns the BufferChain and msg owns the MessagePacket.
 
@@ -190,7 +191,7 @@ zx_status_t MessagePacket::CreateIovecUnbounded(user_in_ptr<const zx_channel_iov
   }
 
   new_msg->buffer_chain_->FreeUnusedBuffers();
-  new_msg->set_data_size(message_size);
+  new_msg->set_data_size(static_cast<uint32_t>(message_size));
 
   *msg = ktl::move(new_msg);
   return ZX_OK;

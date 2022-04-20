@@ -447,15 +447,15 @@ static void x86_perfmon_init_once(uint level) {
   auto perfmon_b = arch::BootCpuid<arch::CpuidPerformanceMonitoringB>();
   auto perfmon_d = arch::BootCpuid<arch::CpuidPerformanceMonitoringD>();
 
-  perfmon_version = perfmon_a.version();
+  perfmon_version = static_cast<uint16_t>(perfmon_a.version());
 
-  perfmon_num_programmable_counters = perfmon_a.num_general_counters();
+  perfmon_num_programmable_counters = static_cast<uint16_t>(perfmon_a.num_general_counters());
   if (perfmon_num_programmable_counters > IPM_MAX_PROGRAMMABLE_COUNTERS) {
     TRACEF("perfmon: unexpected num programmable counters %u in cpuid.0AH\n",
            perfmon_num_programmable_counters);
     return;
   }
-  perfmon_programmable_counter_width = perfmon_a.general_counter_width();
+  perfmon_programmable_counter_width = static_cast<uint16_t>(perfmon_a.general_counter_width());
   // The <16 test is just something simple to ensure it's usable.
   if (perfmon_programmable_counter_width < 16 || perfmon_programmable_counter_width > 64) {
     TRACEF("perfmon: unexpected programmable counter width %u in cpuid.0AH\n",
@@ -474,12 +474,12 @@ static void x86_perfmon_init_once(uint level) {
   }
   perfmon_unsupported_events = perfmon_b.reg_value() & ((1u << ebx_length) - 1);
 
-  perfmon_num_fixed_counters = perfmon_d.num_fixed_counters();
+  perfmon_num_fixed_counters = static_cast<uint16_t>(perfmon_d.num_fixed_counters());
   if (perfmon_num_fixed_counters > IPM_MAX_FIXED_COUNTERS) {
     TRACEF("perfmon: unexpected num fixed counters %u in cpuid.0AH\n", perfmon_num_fixed_counters);
     return;
   }
-  perfmon_fixed_counter_width = perfmon_d.fixed_counter_width();
+  perfmon_fixed_counter_width = static_cast<uint16_t>(perfmon_d.fixed_counter_width());
   // The <16 test is just something simple to ensure it's usable.
   if (perfmon_fixed_counter_width < 16 || perfmon_fixed_counter_width > 64) {
     TRACEF("perfmon: unexpected fixed counter width %u in cpuid.0AH\n",

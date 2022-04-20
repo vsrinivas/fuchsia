@@ -19,9 +19,6 @@ source_set("boringssl") {
     "zircon-mem.c",
   ]
 
-  # Some boringssl code is not -Wconversion clean.
-  configs += [ "//build/config:Wno-conversion" ]
-
   deps = [ "//zircon/kernel/lib/libc" ]
 }
 
