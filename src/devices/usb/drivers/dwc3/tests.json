@@ -1,0 +1,38 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.designware.platform.BIND_PLATFORM_DEV_DID.DWC3",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.platform.BIND_PLATFORM_DEV_PID.GENERIC",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GENERIC"
+        },
+        "expected": "match",
+        "name": "AllMatch"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_COMPOSITE": "1",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.designware.platform.BIND_PLATFORM_DEV_DID.DWC3",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.platform.BIND_PLATFORM_DEV_PID.GENERIC"
+        },
+        "expected": "abort",
+        "name": "AbortNoVID"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_COMPOSITE": "1",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.designware.platform.BIND_PLATFORM_DEV_DID.DWC3",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GENERIC"
+        },
+        "expected": "abort",
+        "name": "AbortNoPID"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_COMPOSITE": "1",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.platform.BIND_PLATFORM_DEV_PID.GENERIC",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GENERIC"
+        },
+        "expected": "abort",
+        "name": "AbortNoDID"
+    }
+]

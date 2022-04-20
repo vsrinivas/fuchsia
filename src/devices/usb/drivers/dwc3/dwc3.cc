@@ -4,606 +4,642 @@
 
 #include "dwc3.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
+#include <lib/fit/defer.h>
+#include <lib/zx/clock.h>
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <fbl/auto_lock.h>
-#include <hw/reg.h>
-#include <pretty/hexdump.h>
-#include <usb/usb-request.h>
+#include <usb/usb.h>
 
 #include "dwc3-regs.h"
-#include "dwc3-types.h"
+#include "src/devices/usb/drivers/dwc3/dwc3_bind.h"
 
-// MMIO indices
-enum {
-  MMIO_USB3OTG,
-};
+namespace dwc3 {
 
-// IRQ indices
-enum {
-  IRQ_USB3,
-};
-
-// Fragment indices
-enum {
-  FRAGMENT_PDEV,
-  FRAGMENT_UMS,
-  FRAGMENT_COUNT,
-};
-
-void dwc3_print_status(dwc3_t* dwc) {
-  auto* mmio = dwc3_mmio(dwc);
-  auto dsts = DSTS::Get().ReadFrom(mmio);
-  zxlogf(DEBUG, "DSTS: ");
-  zxlogf(DEBUG, "USBLNKST: %d ", dsts.USBLNKST());
-  zxlogf(DEBUG, "SOFFN: %d ", dsts.SOFFN());
-  zxlogf(DEBUG, "CONNECTSPD: %d ", dsts.CONNECTSPD());
-  if (dsts.DCNRD())
-    zxlogf(DEBUG, "DCNRD ");
-  if (dsts.SRE())
-    zxlogf(DEBUG, "SRE ");
-  if (dsts.RSS())
-    zxlogf(DEBUG, "RSS ");
-  if (dsts.SSS())
-    zxlogf(DEBUG, "SSS ");
-  if (dsts.COREIDLE())
-    zxlogf(DEBUG, "COREIDLE ");
-  if (dsts.DEVCTRLHLT())
-    zxlogf(DEBUG, "DEVCTRLHLT ");
-  if (dsts.RXFIFOEMPTY())
-    zxlogf(DEBUG, "RXFIFOEMPTY ");
-  zxlogf(DEBUG, "");
-
-  auto gsts = GSTS::Get().ReadFrom(mmio);
-  zxlogf(DEBUG, "GSTS: ");
-  zxlogf(DEBUG, "CBELT: %d ", gsts.CBELT());
-  zxlogf(DEBUG, "CURMOD: %d ", gsts.CURMOD());
-  if (gsts.SSIC_IP())
-    zxlogf(DEBUG, "SSIC_IP ");
-  if (gsts.OTG_IP())
-    zxlogf(DEBUG, "OTG_IP ");
-  if (gsts.BC_IP())
-    zxlogf(DEBUG, "BC_IP ");
-  if (gsts.ADP_IP())
-    zxlogf(DEBUG, "ADP_IP ");
-  if (gsts.Host_IP())
-    zxlogf(DEBUG, "HOST_IP ");
-  if (gsts.Device_IP())
-    zxlogf(DEBUG, "DEVICE_IP ");
-  if (gsts.CSRTimeout())
-    zxlogf(DEBUG, "CSR_TIMEOUT ");
-  if (gsts.BUSERRADDRVLD())
-    zxlogf(DEBUG, "BUSERRADDRVLD ");
-  zxlogf(DEBUG, "");
-}
-
-static void dwc3_stop(dwc3_t* dwc) {
-  auto* mmio = dwc3_mmio(dwc);
-
-  fbl::AutoLock lock(&dwc->lock);
-
-  DCTL::Get().ReadFrom(mmio).set_RUN_STOP(0).set_CSFTRST(1).WriteTo(mmio);
-  while (DCTL::Get().ReadFrom(mmio).CSFTRST()) {
-    usleep(1000);
-  }
-}
-
-static void dwc3_start_peripheral_mode(dwc3_t* dwc) {
-  auto* mmio = dwc3_mmio(dwc);
-
-  dwc->lock.Acquire();
-
-  // configure and enable PHYs
-  GUSB2PHYCFG::Get(0).ReadFrom(mmio).set_USBTRDTIM(9).WriteTo(mmio);
-  GUSB3PIPECTL::Get(0)
-      .ReadFrom(mmio)
-      .set_DELAYP1TRANS(0)
-      .set_SUSPENDENABLE(0)
-      .set_LFPSFILTER(1)
-      .set_SS_TX_DE_EMPHASIS(1)
-      .WriteTo(mmio);
-
-  // configure for device mode
-  GCTL::Get()
-      .FromValue(0)
-      .set_PWRDNSCALE(2)
-      .set_U2RSTECN(1)
-      .set_PRTCAPDIR(GCTL::PRTCAPDIR_DEVICE)
-      .set_U2EXIT_LFPS(1)
-      .WriteTo(mmio);
-
-  uint32_t nump = 16;
-  uint32_t max_speed = DCFG::DEVSPD_SUPER;
-  DCFG::Get().ReadFrom(mmio).set_NUMP(nump).set_DEVSPD(max_speed).set_DEVADDR(0).WriteTo(mmio);
-
-  dwc3_events_start(dwc);
-
-  dwc->lock.Release();
-
-  dwc3_ep0_start(dwc);
-
-  dwc->lock.Acquire();
-
-  // start the controller
-  DCTL::Get().FromValue(0).set_RUN_STOP(1).WriteTo(mmio);
-
-  dwc->lock.Release();
-}
-
-static zx_status_t xhci_get_protocol(void* ctx, uint32_t proto_id, void* protocol) {
-  auto* dwc = static_cast<dwc3_t*>(ctx);
-  // XHCI uses same MMIO and IRQ as dwc3, so we can just share our pdev protoocl
-  // with the XHCI driver
-  return device_get_protocol(dwc->pdev_dev, proto_id, protocol);
-}
-
-static void xhci_release(void* ctx) {
-  auto* dwc = static_cast<dwc3_t*>(ctx);
-  fbl::AutoLock lock(&dwc->usb_mode_lock);
-
-  if (dwc->start_device_on_xhci_release) {
-    dwc3_start_peripheral_mode(dwc);
-    dwc->start_device_on_xhci_release = false;
-    dwc->usb_mode = USB_MODE_PERIPHERAL;
-  }
-}
-
-static zx_protocol_device_t xhci_device_ops = []() {
-  zx_protocol_device_t device = {};
-  device.version = DEVICE_OPS_VERSION;
-  device.get_protocol = xhci_get_protocol;
-  device.release = xhci_release;
-  return device;
-}();
-
-static void dwc3_start_host_mode(dwc3_t* dwc) {
-  auto* mmio = dwc3_mmio(dwc);
-
-  dwc->lock.Acquire();
-
-  // configure for host mode
-  GCTL::Get()
-      .FromValue(0)
-      .set_PWRDNSCALE(2)
-      .set_U2RSTECN(1)
-      .set_PRTCAPDIR(GCTL::PRTCAPDIR_HOST)
-      .set_U2EXIT_LFPS(1)
-      .WriteTo(mmio);
-
-  dwc->lock.Release();
-
-  // add a device to bind the XHCI driver
-  ZX_DEBUG_ASSERT(dwc->xhci_dev == nullptr);
-
-  zx_device_prop_t props[] = {
-      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
-      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_GENERIC},
-      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_USB_XHCI},
-  };
-
-  device_add_args_t args = {};
-  args.version = DEVICE_ADD_ARGS_VERSION;
-  args.name = "dwc3";
-  args.proto_id = ZX_PROTOCOL_PDEV;
-  args.ctx = dwc;
-  args.ops = &xhci_device_ops;
-  args.props = props;
-  args.prop_count = countof(props);
-
-  zx_status_t status = device_add(dwc->parent, &args, &dwc->xhci_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "dwc3_start_host_mode failed to add device for XHCI: %d", status);
-  }
-}
-
-void dwc3_usb_reset(dwc3_t* dwc) {
-  zxlogf(INFO, "dwc3_usb_reset");
-
-  dwc3_ep0_reset(dwc);
-
-  for (unsigned i = 2; i < countof(dwc->eps); i++) {
-    dwc3_ep_end_transfers(dwc, i, ZX_ERR_IO_NOT_PRESENT);
-    dwc3_ep_set_stall(dwc, i, false);
+zx_status_t Dwc3::Create(void* ctx, zx_device_t* parent) {
+  auto dev = std::make_unique<Dwc3>(parent);
+  if (zx_status_t status = dev->AcquirePDevResources(); status != ZX_OK) {
+    zxlogf(ERROR, "Dwc3 Create failed (%s)", zx_status_get_string(status));
+    return status;
   }
 
-  dwc3_set_address(dwc, 0);
-  dwc3_ep0_start(dwc);
-  usb_dci_interface_set_connected(&dwc->dci_intf, true);
-}
-
-void dwc3_disconnected(dwc3_t* dwc) {
-  zxlogf(INFO, "dwc3_disconnected");
-
-  dwc3_cmd_ep_end_transfer(dwc, EP0_OUT);
-  dwc->ep0_state = EP0_STATE_NONE;
-
-  if (dwc->dci_intf.ops) {
-    usb_dci_interface_set_connected(&dwc->dci_intf, false);
+  if (zx_status_t status = dev->DdkAdd("dwc3"); status != ZX_OK) {
+    zxlogf(ERROR, "DdkAdd failed: %s", zx_status_get_string(status));
+    return status;
   }
 
-  for (unsigned i = 2; i < countof(dwc->eps); i++) {
-    dwc3_ep_end_transfers(dwc, i, ZX_ERR_IO_NOT_PRESENT);
-    dwc3_ep_set_stall(dwc, i, false);
-  }
-}
-
-void dwc3_connection_done(dwc3_t* dwc) {
-  auto* mmio = dwc3_mmio(dwc);
-
-  dwc->lock.Acquire();
-
-  uint32_t speed = DSTS::Get().ReadFrom(mmio).CONNECTSPD();
-  uint16_t ep0_max_packet = 0;
-
-  switch (speed) {
-    case DSTS::CONNECTSPD_HIGH:
-      dwc->speed = USB_SPEED_HIGH;
-      ep0_max_packet = 64;
-      break;
-    case DSTS::CONNECTSPD_FULL:
-      dwc->speed = USB_SPEED_FULL;
-      ep0_max_packet = 64;
-      break;
-    case DSTS::CONNECTSPD_SUPER:
-    case DSTS::CONNECTSPD_ENHANCED_SUPER:
-      dwc->speed = USB_SPEED_SUPER;
-      ep0_max_packet = 512;
-      break;
-    default:
-      zxlogf(ERROR, "dwc3_connection_done: unsupported speed %u", speed);
-      dwc->speed = USB_SPEED_UNDEFINED;
-      break;
-  }
-
-  dwc->lock.Release();
-
-  if (ep0_max_packet) {
-    dwc->eps[EP0_OUT].max_packet_size = ep0_max_packet;
-    dwc->eps[EP0_IN].max_packet_size = ep0_max_packet;
-    dwc3_cmd_ep_set_config(dwc, EP0_OUT, USB_ENDPOINT_CONTROL, ep0_max_packet, 0, true);
-    dwc3_cmd_ep_set_config(dwc, EP0_IN, USB_ENDPOINT_CONTROL, ep0_max_packet, 0, true);
-  }
-
-  usb_dci_interface_set_speed(&dwc->dci_intf, dwc->speed);
-}
-
-void dwc3_set_address(dwc3_t* dwc, unsigned address) {
-  auto* mmio = dwc3_mmio(dwc);
-  fbl::AutoLock lock(&dwc->lock);
-
-  DCFG::Get().ReadFrom(mmio).set_DEVADDR(address).WriteTo(mmio);
-}
-
-void dwc3_reset_configuration(dwc3_t* dwc) {
-  auto* mmio = dwc3_mmio(dwc);
-
-  dwc->lock.Acquire();
-
-  // disable all endpoints except EP0_OUT and EP0_IN
-  DALEPENA::Get().FromValue(0).EnableEp(EP0_OUT).EnableEp(EP0_IN).WriteTo(mmio);
-
-  dwc->lock.Release();
-
-  for (unsigned i = 2; i < countof(dwc->eps); i++) {
-    dwc3_ep_end_transfers(dwc, i, ZX_ERR_IO_NOT_PRESENT);
-    dwc3_ep_set_stall(dwc, i, false);
-  }
-}
-
-static zx_status_t dwc3_cancel_all(void* ctx, uint8_t ep) {
-  auto* dwc = static_cast<dwc3_t*>(ctx);
-  unsigned ep_num = dwc3_ep_num(ep);
-  if (ep_num >= 32) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  fbl::AutoLock l(&dwc->eps[ep_num].lock);
-  if (dwc->eps[ep_num].current_req) {
-    dwc3_cmd_ep_end_transfer(dwc, ep);
-  }
-  if (list_is_empty(&dwc->eps[ep_num].queued_reqs)) {
-    return ZX_OK;
-  }
-  list_node_t list;
-  list_move(&dwc->eps[ep_num].queued_reqs, &list);
-  dwc_usb_req_internal_t* entry;
-  l.release();
-  list_for_every_entry (&list, entry, dwc_usb_req_internal_t, node) {
-    usb_request_complete(INTERNAL_TO_USB_REQ(entry), ZX_ERR_IO_NOT_PRESENT, 0, &entry->complete_cb);
-  };
+  // devmgr is now in charge of the device.
+  __UNUSED auto* _ = dev.release();
   return ZX_OK;
 }
 
-static void dwc3_request_queue(void* ctx, usb_request_t* req, const usb_request_complete_t* cb) {
-  auto* dwc = static_cast<dwc3_t*>(ctx);
-  auto* req_int = USB_REQ_TO_INTERNAL(req);
-  req_int->complete_cb = *cb;
-
-  zxlogf(SERIAL, "dwc3_request_queue ep: %u", req->header.ep_address);
-  unsigned ep_num = dwc3_ep_num(req->header.ep_address);
-  if (ep_num < 2 || ep_num >= countof(dwc->eps)) {
-    zxlogf(ERROR, "dwc3_request_queue: bad ep address 0x%02X", req->header.ep_address);
-    usb_request_complete(req, ZX_ERR_INVALID_ARGS, 0, cb);
-    return;
+zx_status_t Dwc3::AcquirePDevResources() {
+  if (zx_status_t status = device_get_protocol(parent_, ZX_PROTOCOL_PDEV, &pdev_);
+      status != ZX_OK) {
+    zxlogf(ERROR, "could not get pdev %s", zx_status_get_string(status));
+    return status;
   }
 
-  dwc3_ep_queue(dwc, ep_num, req);
-}
+  if (zx_status_t status = pdev_.MapMmio(0, &mmio_); status != ZX_OK) {
+    zxlogf(ERROR, "MapMmio failed: %s", zx_status_get_string(status));
+    return status;
+  }
 
-static zx_status_t dwc3_set_interface(void* ctx, const usb_dci_interface_protocol_t* dci_intf) {
-  auto* dwc = static_cast<dwc3_t*>(ctx);
-  memcpy(&dwc->dci_intf, dci_intf, sizeof(dwc->dci_intf));
+  if (zx_status_t status = pdev_.GetBti(0, &bti_); status != ZX_OK) {
+    zxlogf(ERROR, "GetBti failed: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  if (zx_status_t status = pdev_.GetInterrupt(0, &irq_); status != ZX_OK) {
+    zxlogf(ERROR, "GetInterrupt failed: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  if (zx_status_t status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &irq_port_);
+      status != ZX_OK) {
+    zxlogf(ERROR, "zx::port::create failed: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  if (zx_status_t status = irq_.bind(irq_port_, 0, ZX_INTERRUPT_BIND); status != ZX_OK) {
+    zxlogf(ERROR, "irq bind to port failed: %s", zx_status_get_string(status));
+    return status;
+  }
+  irq_bound_to_port_ = true;
+
   return ZX_OK;
 }
 
-static zx_status_t dwc3_config_ep(void* ctx, const usb_endpoint_descriptor_t* ep_desc,
-                                  const usb_ss_ep_comp_descriptor_t* ss_comp_desc) {
-  auto* dwc = static_cast<dwc3_t*>(ctx);
-  return dwc3_ep_config(dwc, ep_desc, ss_comp_desc);
-}
+zx_status_t Dwc3::Init() {
+  // Start by identifying our hardware and making sure that we recognize it, and
+  // it is a version that we know we can support.  Then, reset the hardware so
+  // that we know it is in a good state.
+  uint32_t ep_count{0};
+  {
+    fbl::AutoLock lock(&lock_);
 
-static zx_status_t dwc3_disable_ep(void* ctx, uint8_t ep_addr) {
-  auto* dwc = static_cast<dwc3_t*>(ctx);
-  return dwc3_ep_disable(dwc, ep_addr);
-}
+    // Now that we have our registers, check to make sure that we are running on
+    // a version of the hardware that we support.
+    if (zx_status_t status = CheckHwVersion(); status != ZX_OK) {
+      zxlogf(ERROR, "CheckHwVersion failed: %s", zx_status_get_string(status));
+      return status;
+    }
 
-static zx_status_t dwc3_set_stall(void* ctx, uint8_t ep_address) {
-  auto* dwc = static_cast<dwc3_t*>(ctx);
-  return dwc3_ep_set_stall(dwc, dwc3_ep_num(ep_address), true);
-}
+    // Now that we have our registers, reset the hardware.  This will ensure that
+    // we are starting from a known state moving forward.
+    if (zx_status_t status = ResetHw(); status != ZX_OK) {
+      zxlogf(ERROR, "HW Reset Failed: %s", zx_status_get_string(status));
+      return status;
+    }
 
-static zx_status_t dwc3_clear_stall(void* ctx, uint8_t ep_address) {
-  auto* dwc = static_cast<dwc3_t*>(ctx);
-  return dwc3_ep_set_stall(dwc, dwc3_ep_num(ep_address), false);
-}
+    // Finally, figure out the number of endpoints that this version of the
+    // controller supports.
+    ep_count = GHWPARAMS3::Get().ReadFrom(get_mmio()).DWC_USB31_NUM_EPS();
+  }
 
-static size_t dwc3_get_request_size(void* ctx) {
-  // Allocate dwc_usb_req_internal_t after usb_request_t, to accommodate queueing in
-  // the dwc3 layer.
-  return sizeof(usb_request_t) + sizeof(dwc_usb_req_internal_t);
-}
-
-usb_dci_protocol_ops_t dwc_dci_ops = {.request_queue = dwc3_request_queue,
-                                      .set_interface = dwc3_set_interface,
-                                      .config_ep = dwc3_config_ep,
-                                      .disable_ep = dwc3_disable_ep,
-                                      .ep_set_stall = dwc3_set_stall,
-                                      .ep_clear_stall = dwc3_clear_stall,
-                                      .get_request_size = dwc3_get_request_size,
-                                      .cancel_all = dwc3_cancel_all};
-
-static zx_status_t dwc3_set_mode(void* ctx, usb_mode_t mode) {
-  auto* dwc = static_cast<dwc3_t*>(ctx);
-  zx_status_t status = ZX_OK;
-
-  if (mode == USB_MODE_OTG) {
+  if (ep_count < (kUserEndpointStartNum + 1)) {
+    zxlogf(ERROR, "HW supports only %u physical endpoints, but at least %u are needed to operate.",
+           ep_count, (kUserEndpointStartNum + 1));
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  fbl::AutoLock lock(&dwc->usb_mode_lock);
+  // Now go ahead and allocate the user endpoint storage.
+  user_endpoints_.Init(ep_count - kUserEndpointStartNum);
 
-  if (dwc->usb_mode == mode) {
-    return ZX_OK;
+  // Now that we have our BTI, and have reset our hardware, we can go ahead and
+  // release the quarantine on any pages which may have been previously pinned
+  // by this BTI.
+  if (zx_status_t status = bti_.release_quarantine(); status != ZX_OK) {
+    zxlogf(ERROR, "Release quarantine failed: %s", zx_status_get_string(status));
+    return status;
   }
 
-  // Shutdown if we are in peripheral mode
-  if (dwc->usb_mode == USB_MODE_PERIPHERAL) {
-    dwc3_events_stop(dwc);
-    dwc->irq_handle.reset();
-    dwc3_disconnected(dwc);
-    dwc3_stop(dwc);
-  } else if (dwc->usb_mode == USB_MODE_HOST) {
-    if (dwc->xhci_dev) {
-      device_async_remove(dwc->xhci_dev);
-      dwc->xhci_dev = nullptr;
+  // If something goes wrong after this point, make sure to release any of our
+  // allocated IoBuffers.
+  auto cleanup = fit::defer([this]() { ReleaseResources(); });
 
-      if (mode == USB_MODE_PERIPHERAL) {
-        dwc->start_device_on_xhci_release = true;
-        return ZX_OK;
+  // Strictly speaking, we should not need RW access to this buffer.
+  // Unfortunately, attempting to writeback and invalidate the cache before
+  // reading anything from the buffer produces a page fault right if this buffer
+  // is mapped read only, so for now, we keep the buffer mapped RW.
+  if (zx_status_t status =
+          event_buffer_.Init(bti_.get(), kEventBufferSize, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+      status != ZX_OK) {
+    zxlogf(ERROR, "event_buffer init failed: %s", zx_status_get_string(status));
+    return status;
+  }
+  event_buffer_.CacheFlushInvalidate(0, kEventBufferSize);
+
+  // Now that we have allocated our event buffer, we have at least one region
+  // pinned.  We need to be sure to place the hardware into reset before
+  // unpinning the memory during shutdown.
+  has_pinned_memory_ = true;
+
+  {
+    fbl::AutoLock lock(&ep0_.lock);
+    if (zx_status_t status =
+            ep0_.buffer.Init(bti_.get(), UINT16_MAX, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+        status != ZX_OK) {
+      zxlogf(ERROR, "ep0_buffer init failed: %s", zx_status_get_string(status));
+      return status;
+    }
+  }
+
+  if (zx_status_t status = Ep0Init(); status != ZX_OK) {
+    zxlogf(ERROR, "Ep0Init init failed: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  StartPeripheralMode();
+
+  // Start the interrupt thread.
+  auto irq_thunk = +[](void* arg) -> int { return static_cast<Dwc3*>(arg)->IrqThread(); };
+  if (int rc = thrd_create_with_name(&irq_thread_, irq_thunk, static_cast<void*>(this),
+                                     "dwc3-interrupt-thread");
+      rc != thrd_success) {
+    return ZX_ERR_INTERNAL;
+  }
+  irq_thread_started_.store(true);
+
+  // Things went well.  Cancel our cleanup routine.
+  cleanup.cancel();
+  return ZX_OK;
+}
+
+void Dwc3::ReleaseResources() {
+  // The IRQ thread had better not be running at this point.
+  ZX_ASSERT(!irq_thread_started_.load());
+
+  // Unbind the interrupt from the interrupt port.
+  if (irq_bound_to_port_) {
+    irq_.bind(irq_port_, 0, ZX_INTERRUPT_UNBIND);
+    irq_bound_to_port_ = false;
+  }
+
+  {
+    fbl::AutoLock lock(&lock_);
+    // If we managed to get our registers mapped, place the device into reset so
+    // we are certain that there is no DMA going on in the background.
+    if (mmio_.has_value()) {
+      if (zx_status_t status = ResetHw(); status != ZX_OK) {
+        // Deliberately panic and terminate this driver if we fail to place the
+        // hardware into reset at this point and we have any pinned memory..  We do this
+        // deliberately because, if we cannot put the hardware into reset, it may still be accessing
+        // pages we previously pinned using DMA.  If we are on a system with no
+        // IOMMU, deliberately terminating the process will ensure that our
+        // pinned pages are quarantined instead of being returned to the page
+        // pool.
+        if (has_pinned_memory_) {
+          zxlogf(ERROR,
+                 "Failed to place HW into reset during shutdown (%s), self-terminating in order to "
+                 "ensure quarantine",
+                 zx_status_get_string(status));
+          ZX_ASSERT(false);
+        }
       }
     }
   }
 
-  dwc->start_device_on_xhci_release = false;
-  if (dwc->ums.ops != nullptr) {
-    status = usb_mode_switch_set_mode(&dwc->ums, mode);
-    if (status != ZX_OK) {
-      goto fail;
-    }
+  // Now go ahead and release any buffers we may have pinned.
+  {
+    fbl::AutoLock lock(&ep0_.lock);
+    ep0_.out.enabled = false;
+    ep0_.in.enabled = false;
+    ep0_.buffer.release();
+    ep0_.shared_fifo.Release();
   }
 
-  if (mode == USB_MODE_PERIPHERAL) {
-    status = pdev_get_interrupt(&dwc->pdev, IRQ_USB3, 0, dwc->irq_handle.reset_and_get_address());
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "dwc3_set_mode: pdev_get_interrupt failed");
-      goto fail;
-    }
-
-    dwc3_start_peripheral_mode(dwc);
-  } else if (mode == USB_MODE_HOST) {
-    dwc3_start_host_mode(dwc);
+  for (UserEndpoint& uep : user_endpoints_) {
+    fbl::AutoLock lock(&uep.lock);
+    uep.fifo.Release();
+    uep.ep.enabled = false;
   }
 
-  dwc->usb_mode = mode;
+  event_buffer_.release();
+  has_pinned_memory_ = false;
+}
+
+zx_status_t Dwc3::CheckHwVersion() {
+  auto* mmio = get_mmio();
+  const uint32_t ip_version = USB31_VER_NUMBER::Get().ReadFrom(mmio).IPVERSION();
+
+  auto is_ascii_digit = [](char val) -> bool { return (val >= '0') && (val <= '9'); };
+  auto is_ascii_letter = [](char val) -> bool {
+    return ((val >= 'A') && (val <= 'Z')) || ((val >= 'a') && (val <= 'z'));
+  };
+
+  const char c1 = static_cast<char>((ip_version >> 24) & 0xFF);
+  const char c2 = static_cast<char>((ip_version >> 16) & 0xFF);
+  const char c3 = static_cast<char>((ip_version >> 8) & 0xFF);
+  const char c4 = static_cast<char>(ip_version & 0xFF);
+
+  // Format defined by section 1.3.44 of the DWC3 Programming Guide
+  if (!is_ascii_digit(c1) || !is_ascii_digit(c2) || !is_ascii_digit(c3) ||
+      (!is_ascii_letter(c4) && (c4 != '*'))) {
+    zxlogf(ERROR, "Unrecognized USB IP Version 0x%08x", ip_version);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  const int major = c1 - '0';
+  const int minor = ((c2 - '0') * 10) + (c3 - '0');
+
+  if (major != 1) {
+    zxlogf(ERROR, "Unsupported USB IP Version %d.%02d%c", major, minor, c4);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zxlogf(INFO, "Detected DWC3 IP version %d.%02d%c", major, minor, c4);
   return ZX_OK;
-
-fail:
-  if (dwc->ums.ops != nullptr) {
-    usb_mode_switch_set_mode(&dwc->ums, USB_MODE_NONE);
-  }
-  dwc->usb_mode = USB_MODE_NONE;
-
-  return status;
 }
 
-usb_mode_switch_protocol_ops_t dwc_ums_ops = {
-    .set_mode = dwc3_set_mode,
-};
+zx_status_t Dwc3::ResetHw() {
+  auto* mmio = get_mmio();
 
-static void dwc3_unbind(void* ctx) {
-  auto* dwc = static_cast<dwc3_t*>(ctx);
-  dwc->irq_handle.destroy();
-  thrd_join(dwc->irq_thread, nullptr);
-  device_unbind_reply(dwc->zxdev);
-}
+  // Clear the run/stop bit and request a software reset.
+  DCTL::Get().ReadFrom(mmio).set_RUN_STOP(0).set_CSFTRST(1).WriteTo(mmio);
 
-static zx_status_t dwc3_get_protocol(void* ctx, uint32_t proto_id, void* out) {
-  switch (proto_id) {
-    case ZX_PROTOCOL_USB_DCI: {
-      auto proto = static_cast<usb_dci_protocol_t*>(out);
-      proto->ops = &dwc_dci_ops;
-      proto->ctx = ctx;
-      return ZX_OK;
+  // HW will clear the software reset bit when it is finished with the reset
+  // process.
+  zx::time start = zx::clock::get_monotonic();
+  while (DCTL::Get().ReadFrom(mmio).CSFTRST()) {
+    if ((zx::clock::get_monotonic() - start) >= kHwResetTimeout) {
+      return ZX_ERR_TIMED_OUT;
     }
-    case ZX_PROTOCOL_USB_MODE_SWITCH: {
-      auto proto = static_cast<usb_mode_switch_protocol_t*>(out);
-      proto->ops = &dwc_ums_ops;
-      proto->ctx = ctx;
-      return ZX_OK;
-    }
-    default:
-      return ZX_ERR_NOT_SUPPORTED;
+    usleep(1000);
+  }
+
+  return ZX_OK;
+}
+
+void Dwc3::SetDeviceAddress(uint32_t address) {
+  auto* mmio = get_mmio();
+  DCFG::Get().ReadFrom(mmio).set_DEVADDR(address).WriteTo(mmio);
+}
+
+void Dwc3::StartPeripheralMode() {
+  {
+    fbl::AutoLock lock(&lock_);
+    auto* mmio = get_mmio();
+
+    // configure and enable PHYs
+    GUSB2PHYCFG::Get(0)
+        .ReadFrom(mmio)
+        .set_USBTRDTIM(9)    // USB2.0 Turn-around time == 9 phy clocks
+        .set_ULPIAUTORES(0)  // No auto resume
+        .WriteTo(mmio);
+
+    GUSB3PIPECTL::Get(0)
+        .ReadFrom(mmio)
+        .set_DELAYP1TRANS(0)
+        .set_SUSPENDENABLE(0)
+        .set_LFPSFILTER(1)
+        .set_SS_TX_DE_EMPHASIS(1)
+        .WriteTo(mmio);
+
+    // TODO(johngro): This is the number of receive buffers.  Why do we set it to 16?
+    constexpr uint32_t nump = 16;
+    DCFG::Get()
+        .ReadFrom(mmio)
+        .set_NUMP(nump)                  // number of receive buffers
+        .set_DEVSPD(DCFG::DEVSPD_SUPER)  // max speed is 5Gbps USB3.1
+        .set_DEVADDR(0)                  // device address is 0
+        .WriteTo(mmio);
+
+    // Program the location of the event buffer, then enable event delivery.
+    StartEvents();
+  }
+
+  Ep0Start();
+
+  {
+    // Set the run/stop bit to start the controller
+    fbl::AutoLock lock(&lock_);
+    auto* mmio = get_mmio();
+    DCTL::Get().FromValue(0).set_RUN_STOP(1).WriteTo(mmio);
   }
 }
 
-static void dwc3_release(void* ctx) {
-  auto* dwc = static_cast<dwc3_t*>(ctx);
-
-  for (unsigned i = 0; i < countof(dwc->eps); i++) {
-    dwc3_ep_fifo_release(dwc, i);
+void Dwc3::ResetConfiguration() {
+  {
+    fbl::AutoLock lock(&lock_);
+    auto* mmio = get_mmio();
+    // disable all endpoints except EP0_OUT and EP0_IN
+    DALEPENA::Get().FromValue(0).EnableEp(kEp0Out).EnableEp(kEp0In).WriteTo(mmio);
   }
-  io_buffer_release(&dwc->event_buffer);
-  io_buffer_release(&dwc->ep0_buffer);
-  delete dwc;
+
+  for (UserEndpoint& uep : user_endpoints_) {
+    fbl::AutoLock lock(&uep.lock);
+    EpEndTransfers(uep.ep, ZX_ERR_IO_NOT_PRESENT);
+    EpSetStall(uep.ep, false);
+  }
 }
 
-static zx_protocol_device_t dwc3_device_ops = []() {
-  zx_protocol_device_t device = {};
-  device.version = DEVICE_OPS_VERSION;
-  device.get_protocol = dwc3_get_protocol;
-  device.release = dwc3_release;
-  return device;
-}();
+void Dwc3::HandleResetEvent() {
+  zxlogf(INFO, "Dwc3::HandleResetEvent");
 
-zx_status_t dwc3_bind(void* ctx, zx_device_t* parent) {
-  zxlogf(INFO, "dwc3_bind");
+  Ep0Reset();
 
-  auto* dwc = new dwc3_t;
-  if (!dwc) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  list_initialize(&dwc->pending_completions);
-
-  composite_protocol_t composite;
-  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Could not get ZX_PROTOCOL_COMPOSITE", __func__);
-    goto fail;
-  }
-  zx_device_t* fragments[FRAGMENT_COUNT];
-  size_t actual;
-  composite_get_fragments(&composite, fragments, FRAGMENT_COUNT, &actual);
-  if (actual != FRAGMENT_COUNT) {
-    zxlogf(ERROR, "%s: Could not get fragments", __func__);
-    goto fail;
-  }
-
-  status = device_get_protocol(fragments[FRAGMENT_PDEV], ZX_PROTOCOL_PDEV, &dwc->pdev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Could not get ZX_PROTOCOL_PDEV", __func__);
-    goto fail;
-  }
-
-  status = device_get_protocol(fragments[FRAGMENT_UMS], ZX_PROTOCOL_USB_MODE_SWITCH, &dwc->ums);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Could not get ZX_PROTOCOL_USB_MODE_SWITCH", __func__);
-    goto fail;
-  }
-
-  status = pdev_get_bti(&dwc->pdev, 0, dwc->bti_handle.reset_and_get_address());
-  if (status != ZX_OK) {
-    goto fail;
-  }
-
-  for (uint8_t i = 0; i < countof(dwc->eps); i++) {
-    dwc3_endpoint_t* ep = &dwc->eps[i];
-    ep->ep_num = i;
-    list_initialize(&ep->queued_reqs);
-  }
-  dwc->parent = parent;
-  dwc->pdev_dev = fragments[FRAGMENT_PDEV];
-  dwc->usb_mode = USB_MODE_NONE;
-
-  mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer(&dwc->pdev, MMIO_USB3OTG, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "dwc3_bind: pdev_map_mmio_buffer failed");
-    goto fail;
-  }
-  dwc->mmio = ddk::MmioBuffer(mmio);
-
-  status = io_buffer_init(&dwc->event_buffer, dwc->bti_handle.get(), EVENT_BUFFER_SIZE,
-                          IO_BUFFER_RO | IO_BUFFER_CONTIG);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "dwc3_bind: io_buffer_init failed");
-    goto fail;
-  }
-  io_buffer_cache_flush(&dwc->event_buffer, 0, EVENT_BUFFER_SIZE);
-
-  status = io_buffer_init(&dwc->ep0_buffer, dwc->bti_handle.get(), UINT16_MAX,
-                          IO_BUFFER_RW | IO_BUFFER_CONTIG);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "dwc3_bind: io_buffer_init failed");
-    goto fail;
-  }
-
-  status = dwc3_ep0_init(dwc);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "dwc3_bind: dwc3_ep_init failed");
-    goto fail;
+  for (UserEndpoint& uep : user_endpoints_) {
+    fbl::AutoLock lock(&uep.lock);
+    EpEndTransfers(uep.ep, ZX_ERR_IO_NOT_PRESENT);
+    EpSetStall(uep.ep, false);
   }
 
   {
-    device_add_args_t args = {};
-    args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = "dwc3";
-    args.ctx = dwc;
-    args.ops = &dwc3_device_ops;
-    args.proto_id = ZX_PROTOCOL_USB_DCI;
-    args.proto_ops = &dwc_dci_ops,
+    fbl::AutoLock lock(&lock_);
+    SetDeviceAddress(0);
+  }
 
-    status = device_add(parent, &args, &dwc->zxdev);
-    if (status != ZX_OK) {
-      goto fail;
+  Ep0Start();
+
+  {
+    fbl::AutoLock lock(&dci_lock_);
+    if (dci_intf_) {
+      dci_intf_->SetConnected(true);
+    }
+  }
+}
+
+void Dwc3::HandleConnectionDoneEvent() {
+  uint16_t ep0_max_packet = 0;
+  usb_speed_t new_speed = USB_SPEED_UNDEFINED;
+  {
+    fbl::AutoLock lock(&lock_);
+    auto* mmio = get_mmio();
+
+    uint32_t speed = DSTS::Get().ReadFrom(mmio).CONNECTSPD();
+
+    switch (speed) {
+      case DSTS::CONNECTSPD_HIGH:
+        new_speed = USB_SPEED_HIGH;
+        ep0_max_packet = 64;
+        break;
+      case DSTS::CONNECTSPD_FULL:
+        new_speed = USB_SPEED_FULL;
+        ep0_max_packet = 64;
+        break;
+      case DSTS::CONNECTSPD_SUPER:
+        new_speed = USB_SPEED_SUPER;
+        ep0_max_packet = 512;
+        break;
+      case DSTS::CONNECTSPD_ENHANCED_SUPER:
+        new_speed = USB_SPEED_ENHANCED_SUPER;
+        ep0_max_packet = 512;
+        break;
+      default:
+        zxlogf(ERROR, "unsupported speed %u", speed);
+        break;
+    }
+
+    new_speed = USB_SPEED_UNDEFINED;
+  }
+
+  if (ep0_max_packet) {
+    fbl::AutoLock lock(&ep0_.lock);
+
+    std::array eps{&ep0_.out, &ep0_.in};
+    for (Endpoint* ep : eps) {
+      ep->type = USB_ENDPOINT_CONTROL;
+      ep->interval = 0;
+      ep->max_packet_size = ep0_max_packet;
+      CmdEpSetConfig(*ep, true);
+    }
+    ep0_.cur_speed = new_speed;
+  }
+
+  {
+    fbl::AutoLock lock(&dci_lock_);
+    if (dci_intf_) {
+      dci_intf_->SetSpeed(new_speed);
+    }
+  }
+}
+
+void Dwc3::HandleDisconnectedEvent() {
+  zxlogf(INFO, "Dwc3::HandleDisconnectedEvent");
+
+  {
+    fbl::AutoLock ep0_lock(&ep0_.lock);
+    CmdEpEndTransfer(ep0_.out);
+    ep0_.state = Ep0::State::None;
+  }
+
+  {
+    fbl::AutoLock lock(&dci_lock_);
+    if (dci_intf_) {
+      dci_intf_->SetConnected(false);
     }
   }
 
-  return ZX_OK;
-
-fail:
-  zxlogf(ERROR, "dwc3_bind failed %d", status);
-  dwc3_release(dwc);
-  return status;
+  for (UserEndpoint& uep : user_endpoints_) {
+    fbl::AutoLock lock(&uep.lock);
+    EpEndTransfers(uep.ep, ZX_ERR_IO_NOT_PRESENT);
+    EpSetStall(uep.ep, false);
+  }
 }
 
-static constexpr zx_driver_ops_t dwc3_driver_ops = []() {
+void Dwc3::DdkInit(ddk::InitTxn txn) {
+  if (zx_status_t status = Init(); status != ZX_OK) {
+    txn.Reply(status);
+  } else {
+    zxlogf(INFO, "Dwc3 Init Succeeded");
+    txn.Reply(ZX_OK);
+  }
+}
+
+void Dwc3::DdkUnbind(ddk::UnbindTxn txn) {
+  {
+    fbl::AutoLock lock(&dci_lock_);
+    dci_intf_.reset();
+  }
+
+  if (irq_thread_started_.load()) {
+    zx_status_t status = SignalIrqThread(IrqSignal::Exit);
+    // if we can't signal the thread, we are not going to be able to shut down
+    // and we should just terminate the process instead.
+    ZX_ASSERT(status == ZX_OK);
+    thrd_join(irq_thread_, nullptr);
+    irq_thread_started_.store(false);
+  }
+
+  txn.Reply();
+}
+
+void Dwc3::DdkRelease() {
+  ReleaseResources();
+  delete this;
+}
+
+void Dwc3::UsbDciRequestQueue(usb_request_t* usb_req, const usb_request_complete_callback_t* cb) {
+  Request req{usb_req, *cb, sizeof(*usb_req)};
+
+  zx_status_t queue_result = [&]() {
+    const uint8_t ep_num = UsbAddressToEpNum(req.request()->header.ep_address);
+    UserEndpoint* const uep = get_user_endpoint(ep_num);
+
+    if (uep == nullptr) {
+      zxlogf(ERROR, "Dwc3::UsbDciRequestQueue: bad ep address 0x%02X", ep_num);
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    const zx_off_t length = req.request()->header.length;
+    zxlogf(SERIAL, "UsbDciRequestQueue ep %u length %zu", ep_num, length);
+
+    {
+      fbl::AutoLock lock(&uep->lock);
+
+      if (!uep->ep.enabled) {
+        zxlogf(ERROR, "Dwc3: ep(%u) not enabled!", ep_num);
+        return ZX_ERR_BAD_STATE;
+      }
+
+      // OUT transactions must have length > 0 and multiple of max packet size
+      if (uep->ep.IsOutput()) {
+        if (length == 0 || ((length % uep->ep.max_packet_size) != 0)) {
+          zxlogf(ERROR, "Dwc3: OUT transfers must be multiple of max packet size (len %ld mps %hu)",
+                 length, uep->ep.max_packet_size);
+          return ZX_ERR_INVALID_ARGS;
+        }
+      }
+
+      // Add the request to our queue of pending requests.  Then, if we are
+      // configured, kick the queue to make sure it is running.  Do not fail the
+      // request!  In particular, during the set interface callback to the CDC
+      // driver, the driver will attempt to queue a request.  We are (at this
+      // point in time) not _technically_ configured yet.  We declare ourselves
+      // to be configured only after our call into the CDC client succeeds.  So,
+      // if we fail requests because we are not yet configured yet (as the dwc2
+      // driver does), we are just going to end up in the infinite recursion or
+      // deadlock traps described below.
+      uep->ep.queued_reqs.push(std::move(req));
+      if (configured_) {
+        UserEpQueueNext(*uep);
+      }
+      return ZX_OK;
+    }
+  }();
+
+  if (queue_result != ZX_OK) {
+    ZX_DEBUG_ASSERT(false);
+    req.request()->response.status = queue_result;
+    req.request()->response.actual = 0;
+    pending_completions_.push(std::move(req));
+    if (zx_status_t status = SignalIrqThread(IrqSignal::Wakeup); status != ZX_OK) {
+      zxlogf(DEBUG, "Failed to signal IRQ thread %s", zx_status_get_string(status));
+    }
+  }
+}
+
+zx_status_t Dwc3::UsbDciSetInterface(const usb_dci_interface_protocol_t* interface) {
+  fbl::AutoLock lock(&dci_lock_);
+
+  if (dci_intf_) {
+    zxlogf(ERROR, "Dwc3: DCI Interface already set");
+    return ZX_ERR_BAD_STATE;
+  }
+
+  dci_intf_ = ddk::UsbDciInterfaceProtocolClient(interface);
+  return ZX_OK;
+}
+
+zx_status_t Dwc3::UsbDciConfigEp(const usb_endpoint_descriptor_t* ep_desc,
+                                 const usb_ss_ep_comp_descriptor_t* ss_comp_desc) {
+  const uint8_t ep_num = UsbAddressToEpNum(ep_desc->b_endpoint_address);
+  UserEndpoint* const uep = get_user_endpoint(ep_num);
+
+  if (uep == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  uint8_t ep_type = usb_ep_type(ep_desc);
+  if (ep_type == USB_ENDPOINT_ISOCHRONOUS) {
+    zxlogf(ERROR, "isochronous endpoints are not supported");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  fbl::AutoLock lock(&uep->lock);
+
+  if (zx_status_t status = uep->fifo.Init(bti_); status != ZX_OK) {
+    zxlogf(ERROR, "fifo init failed %s", zx_status_get_string(status));
+    return status;
+  }
+  uep->ep.max_packet_size = usb_ep_max_packet(ep_desc);
+  uep->ep.type = ep_type;
+  uep->ep.interval = ep_desc->b_interval;
+  // TODO(voydanoff) USB3 support
+  uep->ep.enabled = true;
+
+  // TODO(johngro): What protects this configured_ state from a locking/threading perspective?
+  if (configured_) {
+    UserEpQueueNext(*uep);
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t Dwc3::UsbDciDisableEp(uint8_t ep_address) {
+  const uint8_t ep_num = UsbAddressToEpNum(ep_address);
+  UserEndpoint* const uep = get_user_endpoint(ep_num);
+
+  if (uep == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  RequestQueue to_complete;
+  {
+    fbl::AutoLock lock(&uep->lock);
+    to_complete = UserEpCancelAllLocked(*uep);
+    uep->fifo.Release();
+    uep->ep.enabled = false;
+  }
+
+  to_complete.CompleteAll(ZX_ERR_IO_NOT_PRESENT, 0);
+  return ZX_OK;
+}
+
+zx_status_t Dwc3::UsbDciEpSetStall(uint8_t ep_address) {
+  const uint8_t ep_num = UsbAddressToEpNum(ep_address);
+  UserEndpoint* const uep = get_user_endpoint(ep_num);
+
+  if (uep == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  fbl::AutoLock lock(&uep->lock);
+  return EpSetStall(uep->ep, true);
+}
+
+zx_status_t Dwc3::UsbDciEpClearStall(uint8_t ep_address) {
+  const uint8_t ep_num = UsbAddressToEpNum(ep_address);
+  UserEndpoint* const uep = get_user_endpoint(ep_num);
+
+  if (uep == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  fbl::AutoLock lock(&uep->lock);
+  return EpSetStall(uep->ep, false);
+}
+
+size_t Dwc3::UsbDciGetRequestSize() { return Request::RequestSize(sizeof(usb_request_t)); }
+
+zx_status_t Dwc3::UsbDciCancelAll(uint8_t ep_address) {
+  const uint8_t ep_num = UsbAddressToEpNum(ep_address);
+  UserEndpoint* const uep = get_user_endpoint(ep_num);
+
+  if (uep == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  return UserEpCancelAll(*uep);
+}
+
+static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.bind = dwc3_bind;
+  ops.bind = Dwc3::Create;
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(dwc3, dwc3_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_DWC3),
-ZIRCON_DRIVER_END(dwc3)
-    // clang-format on
+}  // namespace dwc3
+
+ZIRCON_DRIVER(dwc3, dwc3::driver_ops, "zircon", "0.1");

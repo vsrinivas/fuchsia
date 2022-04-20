@@ -2,36 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdio.h>
-#include <string.h>
-
-#include <ddk/debug.h>
 #include <fbl/auto_lock.h>
 
-#include "dwc3-regs.h"
-#include "dwc3-types.h"
 #include "dwc3.h"
 
-#define EP0_LOCK(dwc) (&(dwc)->eps[EP0_OUT].lock)
+namespace dwc3 {
 
-static void dwc3_queue_setup_locked(dwc3_t* dwc) {
-  io_buffer_cache_flush_invalidate(&dwc->ep0_buffer, 0, sizeof(usb_setup_t));
-  dwc3_ep_start_transfer(dwc, EP0_OUT, TRB_TRBCTL_SETUP, io_buffer_phys(&dwc->ep0_buffer),
-                         sizeof(usb_setup_t), false);
-  dwc->ep0_state = EP0_STATE_SETUP;
-}
+zx_status_t Dwc3::Ep0Init() {
+  fbl::AutoLock lock(&ep0_.lock);
 
-zx_status_t dwc3_ep0_init(dwc3_t* dwc) {
-  // fifo only needed for physical endpoint 0
-  zx_status_t status = dwc3_ep_fifo_init(dwc, EP0_OUT);
-  if (status != ZX_OK) {
+  if (zx_status_t status = ep0_.shared_fifo.Init(bti_); status != ZX_OK) {
     return status;
   }
 
-  for (unsigned i = EP0_OUT; i <= EP0_IN; i++) {
-    dwc3_endpoint_t* ep = &dwc->eps[i];
+  const std::array eps{&ep0_.out, &ep0_.in};
+  for (Endpoint* ep : eps) {
     ep->enabled = false;
-    ep->max_packet_size = EP0_MAX_PACKET_SIZE;
+    ep->max_packet_size = kEp0MaxPacketSize;
     ep->type = USB_ENDPOINT_CONTROL;
     ep->interval = 0;
   }
@@ -39,192 +26,241 @@ zx_status_t dwc3_ep0_init(dwc3_t* dwc) {
   return ZX_OK;
 }
 
-void dwc3_ep0_reset(dwc3_t* dwc) {
-  fbl::AutoLock lock(EP0_LOCK(dwc));
-
-  dwc3_cmd_ep_end_transfer(dwc, EP0_OUT);
-  dwc->ep0_state = EP0_STATE_NONE;
+void Dwc3::Ep0Reset() {
+  fbl::AutoLock lock(&ep0_.lock);
+  CmdEpEndTransfer(ep0_.out);
+  ep0_.state = Ep0::State::None;
 }
 
-void dwc3_ep0_start(dwc3_t* dwc) {
-  fbl::AutoLock lock(EP0_LOCK(dwc));
+void Dwc3::Ep0Start() {
+  fbl::AutoLock lock(&ep0_.lock);
 
-  dwc3_cmd_start_new_config(dwc, EP0_OUT, 0);
-  dwc3_ep_set_config(dwc, EP0_OUT, true);
-  dwc3_ep_set_config(dwc, EP0_IN, true);
+  CmdStartNewConfig(ep0_.out, 0);
+  EpSetConfig(ep0_.out, true);
+  EpSetConfig(ep0_.in, true);
 
-  dwc3_queue_setup_locked(dwc);
+  Ep0QueueSetupLocked();
 }
 
-static zx_status_t dwc3_handle_setup(dwc3_t* dwc, usb_setup_t* setup, void* buffer, size_t length,
-                                     size_t* out_actual) {
-  if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE)) {
+void Dwc3::Ep0QueueSetupLocked() {
+  ep0_.buffer.CacheFlushInvalidate(0, sizeof(usb_setup_t));
+  EpStartTransfer(ep0_.out, ep0_.shared_fifo, TRB_TRBCTL_SETUP, ep0_.buffer.phys(),
+                  sizeof(usb_setup_t), false);
+  ep0_.state = Ep0::State::Setup;
+}
+
+void Dwc3::Ep0StartEndpoints() {
+  zxlogf(DEBUG, "Dwc3::Ep0StartEndpoints");
+
+  ep0_.in.type = USB_ENDPOINT_CONTROL;
+  ep0_.in.interval = 0;
+  CmdEpSetConfig(ep0_.in, true);
+
+  // TODO(johngro): Why do we pass a hardcoded value of 2 for the resource ID
+  // here?  Eventually, it is going to end up in the Params field of the DEPCMD
+  // (Device EndPoint Command) register, where according to DWC docs (Table
+  // 1-102), it will be ignored by the Start New Configuration command we are
+  // sending.
+  CmdStartNewConfig(ep0_.out, 2);
+
+  for (UserEndpoint& uep : user_endpoints_) {
+    fbl::AutoLock lock(&uep.lock);
+
+    if (uep.ep.enabled) {
+      EpSetConfig(uep.ep, true);
+      UserEpQueueNext(uep);
+    }
+  }
+}
+
+void Dwc3::HandleEp0TransferCompleteEvent(uint8_t ep_num) {
+  fbl::AutoLock lock(&ep0_.lock);
+  ZX_DEBUG_ASSERT(is_ep0_num(ep_num));
+
+  switch (ep0_.state) {
+    case Ep0::State::Setup: {
+      void* const vaddr = ep0_.buffer.virt();
+      const zx_paddr_t paddr = ep0_.buffer.phys();
+      usb_setup_t setup = ep0_.cur_setup;
+      //
+      memcpy(&setup, vaddr, sizeof(setup));
+
+      zxlogf(DEBUG, "got setup: type: 0x%02X req: %d value: %d index: %d length: %d",
+             setup.bm_request_type, setup.b_request, setup.w_value, setup.w_index, setup.w_length);
+
+      const bool is_out = ((setup.bm_request_type & USB_DIR_MASK) == USB_DIR_OUT);
+      if (setup.w_length > 0 && is_out) {
+        ep0_.buffer.CacheFlushInvalidate(0, ep0_.buffer.size());
+        EpStartTransfer(ep0_.out, ep0_.shared_fifo, TRB_TRBCTL_CONTROL_DATA, paddr,
+                        ep0_.buffer.size(), false);
+        ep0_.state = Ep0::State::DataOut;
+      } else {
+        zx::status<size_t> status = HandleEp0Setup(setup, vaddr, ep0_.buffer.size());
+        if (status.is_error()) {
+          zxlogf(DEBUG, "HandleSetup returned %s", zx_status_get_string(status.error_value()));
+          CmdEpSetStall(ep0_.out);
+          Ep0QueueSetupLocked();
+          break;
+        }
+
+        const size_t actual = status.value();
+        zxlogf(DEBUG, "HandleSetup success: actual %zu", actual);
+        if (setup.w_length > 0) {
+          // queue a write for the data phase
+          ep0_.buffer.CacheFlush(0, actual);
+          EpStartTransfer(ep0_.in, ep0_.shared_fifo, TRB_TRBCTL_CONTROL_DATA, paddr, actual, false);
+          ep0_.state = Ep0::State::DataIn;
+        } else {
+          ep0_.state = Ep0::State::WaitNrdyIn;
+        }
+      }
+      break;
+    }
+    case Ep0::State::DataOut: {
+      ZX_DEBUG_ASSERT(ep_num == kEp0Out);
+
+      dwc3_trb_t trb;
+      EpReadTrb(ep0_.out, ep0_.shared_fifo, ep0_.shared_fifo.current, &trb);
+      ep0_.shared_fifo.current = nullptr;
+      zx_off_t received = ep0_.buffer.size() - TRB_BUFSIZ(trb.status);
+
+      zx::status<size_t> status = HandleEp0Setup(ep0_.cur_setup, ep0_.buffer.virt(), received);
+      if (status.is_error()) {
+        CmdEpSetStall(ep0_.out);
+        Ep0QueueSetupLocked();
+        break;
+      }
+      ep0_.state = Ep0::State::WaitNrdyIn;
+      break;
+    }
+    case Ep0::State::DataIn:
+      ZX_DEBUG_ASSERT(ep_num == kEp0In);
+      ep0_.state = Ep0::State::WaitNrdyOut;
+      break;
+    case Ep0::State::Status:
+      Ep0QueueSetupLocked();
+      break;
+    default:
+      break;
+  }
+}
+
+void Dwc3::HandleEp0TransferNotReadyEvent(uint8_t ep_num, uint32_t stage) {
+  fbl::AutoLock lock(&ep0_.lock);
+  ZX_DEBUG_ASSERT(is_ep0_num(ep_num));
+
+  switch (ep0_.state) {
+    case Ep0::State::Setup:
+      if ((stage == DEPEVT_XFER_NOT_READY_STAGE_DATA) ||
+          (stage == DEPEVT_XFER_NOT_READY_STAGE_STATUS)) {
+        // Stall if we receive xfer not ready data/status while waiting for setup to complete
+        CmdEpSetStall(ep0_.out);
+        Ep0QueueSetupLocked();
+      }
+      break;
+    case Ep0::State::DataOut:
+      if ((ep_num == kEp0In) && (stage == DEPEVT_XFER_NOT_READY_STAGE_DATA)) {
+        // end transfer and stall if we receive xfer not ready in the opposite direction
+        CmdEpEndTransfer(ep0_.out);
+        CmdEpSetStall(ep0_.in);
+        Ep0QueueSetupLocked();
+      }
+      break;
+    case Ep0::State::DataIn:
+      if ((ep_num == kEp0Out) && (stage == DEPEVT_XFER_NOT_READY_STAGE_DATA)) {
+        // end transfer and stall if we receive xfer not ready in the opposite direction
+        CmdEpEndTransfer(ep0_.in);
+        CmdEpSetStall(ep0_.out);
+        Ep0QueueSetupLocked();
+      }
+      break;
+    case Ep0::State::WaitNrdyOut:
+      if (ep_num == kEp0Out) {
+        if (ep0_.cur_setup.w_length > 0) {
+          EpStartTransfer(ep0_.out, ep0_.shared_fifo, TRB_TRBCTL_STATUS_3, 0, 0, false);
+        } else {
+          EpStartTransfer(ep0_.out, ep0_.shared_fifo, TRB_TRBCTL_STATUS_2, 0, 0, false);
+        }
+        ep0_.state = Ep0::State::Status;
+      }
+      break;
+    case Ep0::State::WaitNrdyIn:
+      if (ep_num == kEp0In) {
+        if (ep0_.cur_setup.w_length > 0) {
+          EpStartTransfer(ep0_.in, ep0_.shared_fifo, TRB_TRBCTL_STATUS_3, 0, 0, false);
+        } else {
+          EpStartTransfer(ep0_.in, ep0_.shared_fifo, TRB_TRBCTL_STATUS_2, 0, 0, false);
+        }
+        ep0_.state = Ep0::State::Status;
+      }
+      break;
+    case Ep0::State::Status:
+    default:
+      zxlogf(ERROR, "ready unhandled state %u", static_cast<uint32_t>(ep0_.state));
+      break;
+  }
+}
+
+zx::status<size_t> Dwc3::HandleEp0Setup(const usb_setup_t& setup, void* buffer, size_t length) {
+  auto DoControlCall = [this](const usb_setup_t& setup, const uint8_t* in_buf, size_t in_len,
+                              uint8_t* out_buf, size_t out_len) -> zx::status<size_t> {
+    fbl::AutoLock lock(&dci_lock_);
+
+    if (!dci_intf_.has_value()) {
+      return zx::error(ZX_ERR_BAD_STATE);
+    }
+
+    size_t actual = 0;
+    zx_status_t status = dci_intf_->Control(&setup, in_buf, in_len, out_buf, out_len, &actual);
+    if (status == ZX_OK) {
+      return zx::ok(actual);
+    } else {
+      return zx::error(status);
+    }
+  };
+
+  if (setup.bm_request_type == (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE)) {
     // handle some special setup requests in this driver
-    switch (setup->bRequest) {
-      case USB_REQ_SET_ADDRESS:
-        zxlogf(DEBUG, "SET_ADDRESS %d", setup->wValue);
-        dwc3_set_address(dwc, setup->wValue);
-        *out_actual = 0;
-        return ZX_OK;
+    switch (setup.b_request) {
+      case USB_REQ_SET_ADDRESS: {
+        fbl::AutoLock lock{&lock_};
+        SetDeviceAddress(setup.w_value);
+      }
+        return zx::ok(0);
       case USB_REQ_SET_CONFIGURATION: {
-        zxlogf(DEBUG, "SET_CONFIGURATION %d", setup->wValue);
-        dwc3_reset_configuration(dwc);
-        dwc->configured = false;
-        zx_status_t status =
-            usb_dci_interface_control(&dwc->dci_intf, setup, nullptr, 0, nullptr, 0, out_actual);
-        if (status == ZX_OK && setup->wValue) {
-          dwc->configured = true;
-          dwc3_start_eps(dwc);
+        ResetConfiguration();
+        configured_ = false;
+
+        zx::status<size_t> status = DoControlCall(setup, nullptr, 0, nullptr, 0);
+        if (status.is_ok() && setup.w_value) {
+          ZX_DEBUG_ASSERT(status.value() == 0);
+          configured_ = true;
+          Ep0StartEndpoints();
         }
         return status;
       }
       default:
-        // fall through to usb_dci_interface_control()
+        // fall through to the common DoControlCall
         break;
     }
-  } else if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE) &&
-             setup->bRequest == USB_REQ_SET_INTERFACE) {
-    zxlogf(DEBUG, "SET_INTERFACE %d", setup->wValue);
-    dwc3_reset_configuration(dwc);
-    dwc->configured = false;
-    zx_status_t status =
-        usb_dci_interface_control(&dwc->dci_intf, setup, nullptr, 0, nullptr, 0, out_actual);
-    if (status == ZX_OK) {
-      dwc->configured = true;
-      dwc3_start_eps(dwc);
+  } else if ((setup.bm_request_type == (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE)) &&
+             (setup.b_request == USB_REQ_SET_INTERFACE)) {
+    ResetConfiguration();
+    configured_ = false;
+
+    zx::status<size_t> status = DoControlCall(setup, nullptr, 0, nullptr, 0);
+    if (status.is_ok()) {
+      configured_ = true;
+      Ep0StartEndpoints();
     }
     return status;
   }
 
-  if ((setup->bmRequestType & USB_DIR_MASK) == USB_DIR_IN) {
-    return usb_dci_interface_control(&dwc->dci_intf, setup, nullptr, 0, buffer, length, out_actual);
+  if ((setup.bm_request_type & USB_DIR_MASK) == USB_DIR_IN) {
+    return DoControlCall(setup, nullptr, 0, reinterpret_cast<uint8_t*>(buffer), length);
   } else {
-    return usb_dci_interface_control(&dwc->dci_intf, setup, buffer, length, nullptr, 0, out_actual);
+    return DoControlCall(setup, nullptr, 0, nullptr, 0);
   }
 }
 
-void dwc3_ep0_xfer_not_ready(dwc3_t* dwc, unsigned ep_num, unsigned stage) {
-  fbl::AutoLock lock(EP0_LOCK(dwc));
-
-  switch (dwc->ep0_state) {
-    case EP0_STATE_SETUP:
-      if (stage == DEPEVT_XFER_NOT_READY_STAGE_DATA ||
-          stage == DEPEVT_XFER_NOT_READY_STAGE_STATUS) {
-        // Stall if we receive xfer not ready data/status while waiting for setup to complete
-        dwc3_cmd_ep_set_stall(dwc, EP0_OUT);
-        dwc3_queue_setup_locked(dwc);
-      }
-      break;
-    case EP0_STATE_DATA_OUT:
-      if (ep_num == EP0_IN && stage == DEPEVT_XFER_NOT_READY_STAGE_DATA) {
-        // end transfer and stall if we receive xfer not ready in the opposite direction
-        dwc3_cmd_ep_end_transfer(dwc, EP0_OUT);
-        dwc3_cmd_ep_set_stall(dwc, EP0_OUT);
-        dwc3_queue_setup_locked(dwc);
-      }
-      break;
-    case EP0_STATE_DATA_IN:
-      if (ep_num == EP0_OUT && stage == DEPEVT_XFER_NOT_READY_STAGE_DATA) {
-        // end transfer and stall if we receive xfer not ready in the opposite direction
-        dwc3_cmd_ep_end_transfer(dwc, EP0_IN);
-        dwc3_cmd_ep_set_stall(dwc, EP0_OUT);
-        dwc3_queue_setup_locked(dwc);
-      }
-      break;
-    case EP0_STATE_WAIT_NRDY_OUT:
-      if (ep_num == EP0_OUT) {
-        if (dwc->cur_setup.wLength > 0) {
-          dwc3_ep_start_transfer(dwc, EP0_OUT, TRB_TRBCTL_STATUS_3, 0, 0, false);
-        } else {
-          dwc3_ep_start_transfer(dwc, EP0_OUT, TRB_TRBCTL_STATUS_2, 0, 0, false);
-        }
-        dwc->ep0_state = EP0_STATE_STATUS;
-      }
-      break;
-    case EP0_STATE_WAIT_NRDY_IN:
-      if (ep_num == EP0_IN) {
-        if (dwc->cur_setup.wLength > 0) {
-          dwc3_ep_start_transfer(dwc, EP0_IN, TRB_TRBCTL_STATUS_3, 0, 0, false);
-        } else {
-          dwc3_ep_start_transfer(dwc, EP0_IN, TRB_TRBCTL_STATUS_2, 0, 0, false);
-        }
-        dwc->ep0_state = EP0_STATE_STATUS;
-      }
-      break;
-    default:
-      zxlogf(ERROR, "dwc3_ep0_xfer_not_ready unhandled state %u", dwc->ep0_state);
-      break;
-  }
-}
-
-void dwc3_ep0_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
-  fbl::AutoLock lock(EP0_LOCK(dwc));
-
-  switch (dwc->ep0_state) {
-    case EP0_STATE_SETUP: {
-      usb_setup_t* setup = &dwc->cur_setup;
-
-      void* vaddr = io_buffer_virt(&dwc->ep0_buffer);
-      zx_paddr_t paddr = io_buffer_phys(&dwc->ep0_buffer);
-      memcpy(setup, vaddr, sizeof(*setup));
-
-      zxlogf(DEBUG, "got setup: type: 0x%02X req: %d value: %d index: %d length: %d",
-             setup->bmRequestType, setup->bRequest, setup->wValue, setup->wIndex, setup->wLength);
-
-      bool is_out = ((setup->bmRequestType & USB_DIR_MASK) == USB_DIR_OUT);
-      if (setup->wLength > 0 && is_out) {
-        // queue a read for the data phase
-        io_buffer_cache_flush_invalidate(&dwc->ep0_buffer, 0, dwc->ep0_buffer.size);
-        dwc3_ep_start_transfer(dwc, EP0_OUT, TRB_TRBCTL_CONTROL_DATA, paddr, dwc->ep0_buffer.size,
-                               false);
-        dwc->ep0_state = EP0_STATE_DATA_OUT;
-      } else {
-        size_t actual;
-        zx_status_t status = dwc3_handle_setup(dwc, setup, vaddr, dwc->ep0_buffer.size, &actual);
-        zxlogf(DEBUG, "dwc3_handle_setup returned %d actual %zu", status, actual);
-        if (status != ZX_OK) {
-          dwc3_cmd_ep_set_stall(dwc, EP0_OUT);
-          dwc3_queue_setup_locked(dwc);
-          break;
-        }
-
-        if (setup->wLength > 0) {
-          // queue a write for the data phase
-          io_buffer_cache_flush(&dwc->ep0_buffer, 0, actual);
-          dwc3_ep_start_transfer(dwc, EP0_IN, TRB_TRBCTL_CONTROL_DATA, paddr, actual, false);
-          dwc->ep0_state = EP0_STATE_DATA_IN;
-        } else {
-          dwc->ep0_state = EP0_STATE_WAIT_NRDY_IN;
-        }
-      }
-      break;
-    }
-    case EP0_STATE_DATA_OUT: {
-      dwc3_endpoint_t* ep = &dwc->eps[ep_num];
-      dwc3_trb_t trb;
-      dwc_ep_read_trb(ep, ep->fifo.current, &trb);
-      ep->fifo.current = nullptr;
-      zx_off_t received = dwc->ep0_buffer.size - TRB_BUFSIZ(trb.status);
-
-      // "actual" is unused for OUT transfers.
-      size_t actual;
-      zx_status_t status = dwc3_handle_setup(dwc, &dwc->cur_setup, io_buffer_virt(&dwc->ep0_buffer),
-                                             received, &actual);
-      if (status != ZX_OK) {
-        dwc3_cmd_ep_set_stall(dwc, EP0_OUT);
-        dwc3_queue_setup_locked(dwc);
-        break;
-      }
-      dwc->ep0_state = EP0_STATE_WAIT_NRDY_IN;
-      break;
-    }
-    case EP0_STATE_DATA_IN:
-      dwc->ep0_state = EP0_STATE_WAIT_NRDY_OUT;
-      break;
-    case EP0_STATE_STATUS:
-      dwc3_queue_setup_locked(dwc);
-      break;
-    default:
-      break;
-  }
-}
+}  // namespace dwc3

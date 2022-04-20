@@ -2,39 +2,40 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdio.h>
-#include <unistd.h>
-
-#include <ddk/debug.h>
-#include <fbl/auto_lock.h>
-#include <hw/arch_ops.h>
+#include <lib/fit/defer.h>
 
 #include "dwc3-regs.h"
+#include "dwc3-types.h"
 #include "dwc3.h"
 
-static void dwc3_handle_ep_event(dwc3_t* dwc, uint32_t event) {
-  uint32_t type = DEPEVT_TYPE(event);
-  uint32_t ep_num = DEPEVT_PHYS_EP(event);
-  uint32_t status = DEPEVT_STATUS(event);
+namespace dwc3 {
+
+void Dwc3::HandleEpEvent(uint32_t event) {
+  const uint32_t type = DEPEVT_TYPE(event);
+  const uint8_t ep_num = DEPEVT_PHYS_EP(event);
+  const uint32_t status = DEPEVT_STATUS(event);
 
   switch (type) {
     case DEPEVT_XFER_COMPLETE:
-      dwc3_ep_xfer_complete(dwc, ep_num);
+      zxlogf(SERIAL, "ep[%u] DEPEVT_XFER_COMPLETE", ep_num);
+      HandleEpTransferCompleteEvent(ep_num);
       break;
     case DEPEVT_XFER_IN_PROGRESS:
-      zxlogf(DEBUG, "DEPEVT_XFER_IN_PROGRESS ep_num: %u status %u", ep_num, status);
+      zxlogf(SERIAL, "ep[%u] DEPEVT_XFER_IN_PROGRESS: status %u", ep_num, status);
       break;
     case DEPEVT_XFER_NOT_READY:
-      dwc3_ep_xfer_not_ready(dwc, ep_num, DEPEVT_XFER_NOT_READY_STAGE(event));
+      zxlogf(SERIAL, "ep[%u] DEPEVT_XFER_NOT_READY", ep_num);
+      HandleEpTransferNotReadyEvent(ep_num, DEPEVT_XFER_NOT_READY_STAGE(event));
       break;
     case DEPEVT_STREAM_EVT:
-      zxlogf(DEBUG, "DEPEVT_STREAM_EVT ep_num: %u status %u", ep_num, status);
+      zxlogf(SERIAL, "ep[%u] DEPEVT_STREAM_EVT ep_num: status %u", ep_num, status);
       break;
     case DEPEVT_CMD_CMPLT: {
-      unsigned cmd_type = DEPEVT_CMD_CMPLT_CMD_TYPE(event);
-      unsigned rsrc_id = DEPEVT_CMD_CMPLT_RSRC_ID(event);
+      uint32_t cmd_type = DEPEVT_CMD_CMPLT_CMD_TYPE(event);
+      uint32_t rsrc_id = DEPEVT_CMD_CMPLT_RSRC_ID(event);
+      zxlogf(SERIAL, "ep[%u] DEPEVT_CMD_COMPLETE: type %u rsrc_id %u", ep_num, cmd_type, rsrc_id);
       if (cmd_type == DEPCMD::DEPSTRTXFER) {
-        dwc3_ep_xfer_started(dwc, ep_num, rsrc_id);
+        HandleEpTransferStartedEvent(ep_num, rsrc_id);
       }
       break;
     }
@@ -44,10 +45,9 @@ static void dwc3_handle_ep_event(dwc3_t* dwc, uint32_t event) {
   }
 }
 
-static void dwc3_handle_event(dwc3_t* dwc, uint32_t event) {
-  zxlogf(SERIAL, "dwc3_handle_event %08X", event);
+void Dwc3::HandleEvent(uint32_t event) {
   if (!(event & DEPEVT_NON_EP)) {
-    dwc3_handle_ep_event(dwc, event);
+    HandleEpEvent(event);
     return;
   }
 
@@ -56,78 +56,78 @@ static void dwc3_handle_event(dwc3_t* dwc, uint32_t event) {
 
   switch (type) {
     case DEVT_DISCONNECT:
-      zxlogf(DEBUG, "DEVT_DISCONNECT");
+      zxlogf(SERIAL, "DEVT_DISCONNECT");
       break;
     case DEVT_USB_RESET:
-      zxlogf(DEBUG, "DEVT_USB_RESET");
-      dwc3_usb_reset(dwc);
+      zxlogf(SERIAL, "DEVT_USB_RESET");
+      HandleResetEvent();
       break;
     case DEVT_CONNECTION_DONE:
-      zxlogf(DEBUG, "DEVT_CONNECTION_DONE");
-      dwc3_connection_done(dwc);
+      zxlogf(SERIAL, "DEVT_CONNECTION_DONE");
+      HandleConnectionDoneEvent();
       break;
     case DEVT_LINK_STATE_CHANGE:
-      zxlogf(DEBUG, "DEVT_LINK_STATE_CHANGE: ");
+      zxlogf(SERIAL, "DEVT_LINK_STATE_CHANGE: ");
       switch (info) {
         case DSTS::USBLNKST_U0 | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(DEBUG, "DSTS::USBLNKST_U0");
+          zxlogf(SERIAL, "DSTS::USBLNKST_U0");
           break;
         case DSTS::USBLNKST_U1 | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(DEBUG, "DSTS_USBLNKST_U1");
+          zxlogf(SERIAL, "DSTS_USBLNKST_U1");
           break;
         case DSTS::USBLNKST_U2 | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(DEBUG, "DSTS_USBLNKST_U2");
+          zxlogf(SERIAL, "DSTS_USBLNKST_U2");
           break;
         case DSTS::USBLNKST_U3 | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(DEBUG, "DSTS_USBLNKST_U3");
+          zxlogf(SERIAL, "DSTS_USBLNKST_U3");
           break;
         case DSTS::USBLNKST_ESS_DIS | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(DEBUG, "DSTS_USBLNKST_ESS_DIS");
+          zxlogf(SERIAL, "DSTS_USBLNKST_ESS_DIS");
           break;
         case DSTS::USBLNKST_RX_DET | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(DEBUG, "DSTS_USBLNKST_RX_DET");
+          zxlogf(SERIAL, "DSTS_USBLNKST_RX_DET");
           break;
         case DSTS::USBLNKST_ESS_INACT | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(DEBUG, "DSTS_USBLNKST_ESS_INACT");
+          zxlogf(SERIAL, "DSTS_USBLNKST_ESS_INACT");
           break;
         case DSTS::USBLNKST_POLL | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(DEBUG, "DSTS_USBLNKST_POLL");
+          zxlogf(SERIAL, "DSTS_USBLNKST_POLL");
           break;
         case DSTS::USBLNKST_RECOV | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(DEBUG, "DSTS_USBLNKST_RECOV");
+          zxlogf(SERIAL, "DSTS_USBLNKST_RECOV");
           break;
         case DSTS::USBLNKST_HRESET | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(DEBUG, "DSTS_USBLNKST_HRESET");
+          zxlogf(SERIAL, "DSTS_USBLNKST_HRESET");
           break;
         case DSTS::USBLNKST_CMPLY | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(DEBUG, "DSTS_USBLNKST_CMPLY");
+          zxlogf(SERIAL, "DSTS_USBLNKST_CMPLY");
           break;
         case DSTS::USBLNKST_LPBK | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(DEBUG, "DSTS_USBLNKST_LPBK");
+          zxlogf(SERIAL, "DSTS_USBLNKST_LPBK");
           break;
         case DSTS::USBLNKST_RESUME_RESET | DEVT_LINK_STATE_CHANGE_SS:
-          zxlogf(DEBUG, "DSTS_USBLNKST_RESUME_RESET");
+          zxlogf(SERIAL, "DSTS_USBLNKST_RESUME_RESET");
           break;
         case DSTS::USBLNKST_ON:
-          zxlogf(DEBUG, "DSTS_USBLNKST_ON");
+          zxlogf(SERIAL, "DSTS_USBLNKST_ON");
           break;
         case DSTS::USBLNKST_SLEEP:
-          zxlogf(DEBUG, "DSTS_USBLNKST_SLEEP");
+          zxlogf(SERIAL, "DSTS_USBLNKST_SLEEP");
           break;
         case DSTS::USBLNKST_SUSPEND:
-          zxlogf(DEBUG, "DSTS_USBLNKST_SUSPEND");
+          zxlogf(SERIAL, "DSTS_USBLNKST_SUSPEND");
           break;
         case DSTS::USBLNKST_DISCONNECTED:
-          zxlogf(DEBUG, "DSTS_USBLNKST_DISCONNECTED");
+          zxlogf(SERIAL, "DSTS_USBLNKST_DISCONNECTED");
           break;
         case DSTS::USBLNKST_EARLY_SUSPEND:
-          zxlogf(DEBUG, "DSTS_USBLNKST_EARLY_SUSPEND");
+          zxlogf(SERIAL, "DSTS_USBLNKST_EARLY_SUSPEND");
           break;
         case DSTS::USBLNKST_RESET:
-          zxlogf(DEBUG, "DSTS_USBLNKST_RESET");
+          zxlogf(SERIAL, "DSTS_USBLNKST_RESET");
           break;
         case DSTS::USBLNKST_RESUME:
-          zxlogf(DEBUG, "DSTS_USBLNKST_RESUME");
+          zxlogf(SERIAL, "DSTS_USBLNKST_RESUME");
           break;
         default:
           zxlogf(ERROR, "unknown state %d", info);
@@ -135,39 +135,39 @@ static void dwc3_handle_event(dwc3_t* dwc, uint32_t event) {
       }
       break;
     case DEVT_REMOTE_WAKEUP:
-      zxlogf(DEBUG, "DEVT_REMOTE_WAKEUP");
+      zxlogf(SERIAL, "DEVT_REMOTE_WAKEUP");
       break;
     case DEVT_HIBERNATE_REQUEST:
-      zxlogf(DEBUG, "DEVT_HIBERNATE_REQUEST");
+      zxlogf(SERIAL, "DEVT_HIBERNATE_REQUEST");
       break;
     case DEVT_SUSPEND_ENTRY:
-      zxlogf(DEBUG, "DEVT_SUSPEND_ENTRY");
+      zxlogf(SERIAL, "DEVT_SUSPEND_ENTRY");
       // TODO(voydanoff) is this the best way to detect disconnect?
-      dwc3_disconnected(dwc);
+      HandleDisconnectedEvent();
       break;
     case DEVT_SOF:
-      zxlogf(DEBUG, "DEVT_SOF");
+      zxlogf(SERIAL, "DEVT_SOF");
       break;
     case DEVT_ERRATIC_ERROR:
-      zxlogf(DEBUG, "DEVT_ERRATIC_ERROR");
+      zxlogf(SERIAL, "DEVT_ERRATIC_ERROR");
       break;
     case DEVT_COMMAND_COMPLETE:
-      zxlogf(DEBUG, "DEVT_COMMAND_COMPLETE");
+      zxlogf(SERIAL, "DEVT_COMMAND_COMPLETE");
       break;
     case DEVT_EVENT_BUF_OVERFLOW:
-      zxlogf(DEBUG, "DEVT_EVENT_BUF_OVERFLOW");
+      zxlogf(SERIAL, "DEVT_EVENT_BUF_OVERFLOW");
       break;
     case DEVT_VENDOR_TEST_LMP:
-      zxlogf(DEBUG, "DEVT_VENDOR_TEST_LMP");
+      zxlogf(SERIAL, "DEVT_VENDOR_TEST_LMP");
       break;
     case DEVT_STOPPED_DISCONNECT:
-      zxlogf(DEBUG, "DEVT_STOPPED_DISCONNECT");
+      zxlogf(SERIAL, "DEVT_STOPPED_DISCONNECT");
       break;
     case DEVT_L1_RESUME_DETECT:
-      zxlogf(DEBUG, "DEVT_L1_RESUME_DETECT");
+      zxlogf(SERIAL, "DEVT_L1_RESUME_DETECT");
       break;
     case DEVT_LDM_RESPONSE:
-      zxlogf(DEBUG, "DEVT_LDM_RESPONSE");
+      zxlogf(SERIAL, "DEVT_LDM_RESPONSE");
       break;
     default:
       zxlogf(ERROR, "dwc3_handle_event: unknown event type %u", type);
@@ -175,65 +175,97 @@ static void dwc3_handle_event(dwc3_t* dwc, uint32_t event) {
   }
 }
 
-static int dwc3_irq_thread(void* arg) {
-  auto* dwc = static_cast<dwc3_t*>(arg);
-  auto* mmio = dwc3_mmio(dwc);
+int Dwc3::IrqThread() {
+  auto* mmio = get_mmio();
+  const uint32_t* const ring_start = static_cast<const uint32_t*>(event_buffer_.virt());
+  const uint32_t* const ring_end = ring_start + (kEventBufferSize / sizeof(*ring_start));
+  const uint32_t* ring_cur = ring_start;
+  bool shutdown_now = false;
 
-  zxlogf(DEBUG, "dwc3_irq_thread start");
-
-  auto* ring_start = static_cast<uint32_t*>(io_buffer_virt(&dwc->event_buffer));
-  auto* ring_end = ring_start + EVENT_BUFFER_SIZE / sizeof(*ring_start);
-  auto* ring_cur = ring_start;
-  while (1) {
-    {
-      fbl::AutoLock l(&dwc->pending_completions_lock);
-      if (!list_is_empty(&dwc->pending_completions)) {
-        dwc_usb_req_internal_t* req_int;
-        list_node_t list;
-        list_move(&dwc->pending_completions, &list);
-        l.release();
-        while ((req_int = list_remove_head_type(&list, dwc_usb_req_internal_t, pending_node)) !=
-               nullptr) {
-          req_int->complete_cb.callback(req_int->complete_cb.ctx, INTERNAL_TO_USB_REQ(req_int));
-        }
-      }
+  while (!shutdown_now) {
+    // Perform the callbacks for any requests which are pending completion.
+    for (auto req = pending_completions_.pop(); req; req = pending_completions_.pop()) {
+      const zx_status_t status = req->request()->response.status;
+      const zx_off_t actual = req->request()->response.actual;
+      req->Complete(status, actual);
     }
-    zx_status_t status = dwc->irq_handle.wait(nullptr);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "dwc3_irq_thread: zx_interrupt_wait returned %d", status);
-      break;
+
+    // Wait for a new interrupt.
+    zx_port_packet_t wakeup_pkt;
+    if (zx_status_t status = irq_port_.wait(zx::time::infinite(), &wakeup_pkt); status != ZX_OK) {
+      zxlogf(ERROR, "Dwc3::IrqThread: zx_port_wait returned %s", zx_status_get_string(status));
+      shutdown_now = true;
+      continue;
     }
-    // read number of new bytes in the event buffer
-    uint32_t event_count;
-    while ((event_count = GEVNTCOUNT::Get(0).ReadFrom(mmio).EVNTCOUNT()) > 0) {
-      // invalidate cache so we can read fresh events
-      io_buffer_cache_flush_invalidate(&dwc->event_buffer, 0, EVENT_BUFFER_SIZE);
 
-      for (uint32_t i = 0; i < event_count; i += static_cast<uint32_t>(sizeof(uint32_t))) {
-        uint32_t event = *ring_cur++;
-        if (ring_cur == ring_end) {
-          ring_cur = ring_start;
+    // Was this an actual HW interrupt?  If so, process any new events in the
+    // event buffer.
+    if (wakeup_pkt.type == ZX_PKT_TYPE_INTERRUPT) {
+      // Our interrupt should be edge triggered, so go ahead and ack and re-enable
+      // it now so that we don't accidentally miss any new interrupts while
+      // process these.
+      irq_.ack();
+
+      uint32_t event_count;
+      while ((event_count = GEVNTCOUNT::Get(0).ReadFrom(mmio).EVNTCOUNT()) > 0) {
+        // invalidate cache so we can read fresh events
+        const zx_off_t offset = (ring_cur - ring_start) * sizeof(*ring_cur);
+        const size_t todo = std::min<size_t>(ring_end - ring_cur, event_count);
+        event_buffer_.CacheFlushInvalidate(offset, todo * sizeof(*ring_cur));
+        if (event_count > todo) {
+          event_buffer_.CacheFlushInvalidate(0, (event_count - todo) * sizeof(*ring_cur));
         }
-        dwc3_handle_event(dwc, event);
-      }
 
-      // acknowledge the events we have processed
-      GEVNTCOUNT::Get(0).FromValue(0).set_EVNTCOUNT(event_count).WriteTo(mmio);
+        for (uint32_t i = 0; i < event_count; i += sizeof(uint32_t)) {
+          uint32_t event = *ring_cur++;
+          if (ring_cur == ring_end) {
+            ring_cur = ring_start;
+          }
+
+          HandleEvent(event);
+        }
+
+        // acknowledge the events we have processed
+        GEVNTCOUNT::Get(0).FromValue(0).set_EVNTCOUNT(event_count).WriteTo(mmio);
+      }
+    } else if (wakeup_pkt.type == ZX_PKT_TYPE_USER) {
+      const IrqSignal signal = GetIrqSignal(wakeup_pkt);
+      switch (signal) {
+        case IrqSignal::Wakeup:
+          // Nothing to do here, just loop around and process the pending
+          // completion queue.
+          break;
+        case IrqSignal::Exit:
+          zxlogf(INFO, "Dwc3::IrqThread: shutting down");
+          shutdown_now = true;
+          break;
+        default:
+          zxlogf(ERROR, "Dwc3::IrqThread: got invalid signal value %u",
+                 static_cast<std::underlying_type_t<decltype(signal)>>(signal));
+          shutdown_now = true;
+          break;
+      }
+      shutdown_now = true;
+      continue;
+    } else {
+      zxlogf(ERROR, "Dwc3::IrqThread: unrecognized packet type %u", wakeup_pkt.type);
+      shutdown_now = true;
+      continue;
     }
   }
-
-  zxlogf(DEBUG, "dwc3_irq_thread done");
   return 0;
 }
 
-void dwc3_events_start(dwc3_t* dwc) {
-  auto* mmio = dwc3_mmio(dwc);
+void Dwc3::StartEvents() {
+  auto* mmio = get_mmio();
 
   // set event buffer pointer and size
   // keep interrupts masked until we are ready
-  zx_paddr_t paddr = io_buffer_phys(&dwc->event_buffer);
+  zx_paddr_t paddr = event_buffer_.phys();
+  ZX_DEBUG_ASSERT(paddr != 0);
+
   GEVNTADR::Get(0).FromValue(0).set_EVNTADR(paddr).WriteTo(mmio);
-  GEVNTSIZ::Get(0).FromValue(0).set_EVENTSIZ(EVENT_BUFFER_SIZE).set_EVNTINTRPTMASK(1).WriteTo(mmio);
+  GEVNTSIZ::Get(0).FromValue(0).set_EVENTSIZ(kEventBufferSize).set_EVNTINTRPTMASK(0).WriteTo(mmio);
   GEVNTCOUNT::Get(0).FromValue(0).set_EVNTCOUNT(0).WriteTo(mmio);
 
   // enable events
@@ -245,11 +277,6 @@ void dwc3_events_start(dwc3_t* dwc) {
       .set_USBRSTEVTEN(1)
       .set_DISSCONNEVTEN(1)
       .WriteTo(mmio);
-
-  thrd_create_with_name(&dwc->irq_thread, dwc3_irq_thread, dwc, "dwc3_irq_thread");
 }
 
-void dwc3_events_stop(dwc3_t* dwc) {
-  dwc->irq_handle.destroy();
-  thrd_join(dwc->irq_thread, nullptr);
-}
+}  // namespace dwc3

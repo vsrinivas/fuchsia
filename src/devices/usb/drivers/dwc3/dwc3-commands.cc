@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdio.h>
-#include <unistd.h>
-
 #include <fbl/auto_lock.h>
 
 #include "dwc3-regs.h"
 #include "dwc3.h"
 
-void dwc3_cmd_start_new_config(dwc3_t* dwc, unsigned ep_num, unsigned rsrc_id) {
-  auto* mmio = dwc3_mmio(dwc);
+namespace dwc3 {
 
-  fbl::AutoLock lock(&dwc->lock);
+void Dwc3::CmdStartNewConfig(const Endpoint& ep, uint32_t rsrc_id) {
+  fbl::AutoLock lock(&lock_);
+
+  auto* mmio = get_mmio();
+  const uint8_t ep_num = ep.ep_num;
 
   DEPCMDPAR0::Get(ep_num).FromValue(0).WriteTo(mmio);
   DEPCMDPAR1::Get(ep_num).FromValue(0).WriteTo(mmio);
@@ -26,28 +26,28 @@ void dwc3_cmd_start_new_config(dwc3_t* dwc, unsigned ep_num, unsigned rsrc_id) {
       .WriteTo(mmio);
 }
 
-void dwc3_cmd_ep_set_config(dwc3_t* dwc, unsigned ep_num, unsigned ep_type,
-                            unsigned max_packet_size, unsigned interval, bool modify) {
-  auto* mmio = dwc3_mmio(dwc);
+void Dwc3::CmdEpSetConfig(const Endpoint& ep, bool modify) {
+  fbl::AutoLock lock(&lock_);
 
-  fbl::AutoLock lock(&dwc->lock);
+  auto* mmio = get_mmio();
+  const uint8_t ep_num = ep.ep_num;
 
   // fifo number is zero for OUT endpoints and EP0_IN
-  uint32_t fifo_num = (EP_OUT(ep_num) || ep_num == EP0_IN ? 0 : ep_num >> 1);
-  uint32_t action =
-      (modify ? DEPCFG_DEPCMDPAR0::ACTION_MODIFY : DEPCFG_DEPCMDPAR0::ACTION_INITIALIZE);
+  const uint32_t fifo_num = (ep.IsOutput() || (ep_num == kEp0In)) ? 0 : ep_num >> 1;
+  const uint32_t action =
+      modify ? DEPCFG_DEPCMDPAR0::ACTION_MODIFY : DEPCFG_DEPCMDPAR0::ACTION_INITIALIZE;
 
   DEPCFG_DEPCMDPAR0::Get(ep_num)
       .FromValue(0)
       .set_FIFO_NUM(fifo_num)
-      .set_MAX_PACKET_SIZE(max_packet_size)
-      .set_EP_TYPE(ep_type)
+      .set_MAX_PACKET_SIZE(ep.max_packet_size)
+      .set_EP_TYPE(ep.type)
       .set_ACTION(action)
       .WriteTo(mmio);
   DEPCFG_DEPCMDPAR1::Get(ep_num)
       .FromValue(0)
       .set_EP_NUMBER(ep_num)
-      .set_INTERVAL(interval)
+      .set_INTERVAL(ep.interval)
       .set_XFER_NOT_READY_EN(1)
       .set_XFER_COMPLETE_EN(1)
       .set_INTR_NUM(0)
@@ -56,10 +56,10 @@ void dwc3_cmd_ep_set_config(dwc3_t* dwc, unsigned ep_num, unsigned ep_type,
   DEPCMD::Get(ep_num).FromValue(0).set_CMDTYP(DEPCMD::DEPCFG).set_CMDACT(1).WriteTo(mmio);
 }
 
-void dwc3_cmd_ep_transfer_config(dwc3_t* dwc, unsigned ep_num) {
-  auto* mmio = dwc3_mmio(dwc);
-
-  fbl::AutoLock lock(&dwc->lock);
+void Dwc3::CmdEpTransferConfig(const Endpoint& ep) {
+  fbl::AutoLock lock(&lock_);
+  auto* mmio = get_mmio();
+  const uint8_t ep_num = ep.ep_num;
 
   DEPCMDPAR0::Get(ep_num).FromValue(0).set_PARAMETER(1).WriteTo(mmio);
   DEPCMDPAR1::Get(ep_num).FromValue(0).WriteTo(mmio);
@@ -67,10 +67,10 @@ void dwc3_cmd_ep_transfer_config(dwc3_t* dwc, unsigned ep_num) {
   DEPCMD::Get(ep_num).FromValue(0).set_CMDTYP(DEPCMD::DEPXFERCFG).set_CMDACT(1).WriteTo(mmio);
 }
 
-void dwc3_cmd_ep_start_transfer(dwc3_t* dwc, unsigned ep_num, zx_paddr_t trb_phys) {
-  auto* mmio = dwc3_mmio(dwc);
-
-  fbl::AutoLock lock(&dwc->lock);
+void Dwc3::CmdEpStartTransfer(const Endpoint& ep, zx_paddr_t trb_phys) {
+  fbl::AutoLock lock(&lock_);
+  auto* mmio = get_mmio();
+  const uint8_t ep_num = ep.ep_num;
 
   DEPCMDPAR0::Get(ep_num)
       .FromValue(0)
@@ -90,12 +90,12 @@ void dwc3_cmd_ep_start_transfer(dwc3_t* dwc, unsigned ep_num, zx_paddr_t trb_phy
   }
 }
 
-void dwc3_cmd_ep_end_transfer(dwc3_t* dwc, unsigned ep_num) {
-  auto* mmio = dwc3_mmio(dwc);
+void Dwc3::CmdEpEndTransfer(const Endpoint& ep) {
+  fbl::AutoLock lock(&lock_);
+  auto* mmio = get_mmio();
 
-  fbl::AutoLock lock(&dwc->lock);
-
-  unsigned rsrc_id = dwc->eps[ep_num].rsrc_id;
+  const uint32_t ep_num = ep.ep_num;
+  const uint32_t rsrc_id = ep.rsrc_id;
 
   DEPCMDPAR0::Get(ep_num).FromValue(0).WriteTo(mmio);
   DEPCMDPAR1::Get(ep_num).FromValue(0).WriteTo(mmio);
@@ -114,10 +114,11 @@ void dwc3_cmd_ep_end_transfer(dwc3_t* dwc, unsigned ep_num) {
   }
 }
 
-void dwc3_cmd_ep_set_stall(dwc3_t* dwc, unsigned ep_num) {
-  auto* mmio = dwc3_mmio(dwc);
+void Dwc3::CmdEpSetStall(const Endpoint& ep) {
+  fbl::AutoLock lock(&lock_);
+  auto* mmio = get_mmio();
 
-  fbl::AutoLock lock(&dwc->lock);
+  const uint32_t ep_num = ep.ep_num;
 
   DEPCMDPAR0::Get(ep_num).FromValue(0).WriteTo(mmio);
   DEPCMDPAR1::Get(ep_num).FromValue(0).WriteTo(mmio);
@@ -134,10 +135,11 @@ void dwc3_cmd_ep_set_stall(dwc3_t* dwc, unsigned ep_num) {
   }
 }
 
-void dwc3_cmd_ep_clear_stall(dwc3_t* dwc, unsigned ep_num) {
-  auto* mmio = dwc3_mmio(dwc);
+void Dwc3::CmdEpClearStall(const Endpoint& ep) {
+  fbl::AutoLock lock(&lock_);
+  auto* mmio = get_mmio();
 
-  fbl::AutoLock lock(&dwc->lock);
+  const uint32_t ep_num = ep.ep_num;
 
   DEPCMDPAR0::Get(ep_num).FromValue(0).WriteTo(mmio);
   DEPCMDPAR1::Get(ep_num).FromValue(0).WriteTo(mmio);
@@ -153,3 +155,5 @@ void dwc3_cmd_ep_clear_stall(dwc3_t* dwc, unsigned ep_num) {
     usleep(1000);
   }
 }
+
+}  // namespace dwc3

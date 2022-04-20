@@ -107,6 +107,21 @@ class GUSB3PIPECTL : public hwreg::RegisterBase<GUSB3PIPECTL, uint32_t> {
   }
 };
 
+// HW Parameters used during IP synthesis.  This register contains
+// DWC_USB31_NUM_EPS, which we use to know how many sets of physical endpoint
+// registers are present in this instantiation of the IP.
+class GHWPARAMS3 : public hwreg::RegisterBase<GHWPARAMS3, uint32_t> {
+ public:
+  DEF_FIELD(30, 23, DWC_USB31_CACHE_TOTAL_XFER_RESOURCES);
+  DEF_FIELD(22, 18, DWC_USB31_NUM_IN_EPS);
+  DEF_FIELD(17, 12, DWC_USB31_NUM_EPS);
+  DEF_BIT(10, DWC_USB31_VENDOR_CTL_INTERFACE);
+  DEF_FIELD(7, 6, DWC_USB31_HSPHY_DWIDTH);
+  DEF_FIELD(3, 2, DWC_USB31_HSPHY_INTERFACE);
+  DEF_FIELD(1, 0, DWC_USB31_SSPHY_INTERFACE);
+  static auto Get() { return hwreg::RegisterAddr<GHWPARAMS3>(0xc14c); }
+};
+
 // Global Event Buffer Address Register
 class GEVNTADR : public hwreg::RegisterBase<GEVNTADR, uint64_t> {
  public:
@@ -146,6 +161,7 @@ class DCFG : public hwreg::RegisterBase<DCFG, uint32_t> {
   static constexpr uint32_t DEVSPD_FULL = 1;
   static constexpr uint32_t DEVSPD_LOW = 2;
   static constexpr uint32_t DEVSPD_SUPER = 4;
+  static constexpr uint32_t DEVSPD_ENHANCED_SUPER = 5;
 };
 
 // Device Control Register
@@ -330,6 +346,18 @@ class DEPCMD : public hwreg::RegisterBase<DEPCMD, uint32_t> {
   static constexpr uint32_t DEPUPDXFER = 7;   // Update Transfer
   static constexpr uint32_t DEPENDXFER = 8;   // End Transfer
   static constexpr uint32_t DEPSTARTCFG = 9;  // Start New Configuration
+};
+
+class USB31_VER_NUMBER : public hwreg::RegisterBase<USB31_VER_NUMBER, uint32_t> {
+ public:
+  DEF_FIELD(31, 0, IPVERSION);
+  static auto Get() { return hwreg::RegisterAddr<USB31_VER_NUMBER>(0xc1a0); }
+};
+
+class USB31_VER_TYPE : public hwreg::RegisterBase<USB31_VER_TYPE, uint32_t> {
+ public:
+  DEF_FIELD(31, 0, VERSIONTYPE);
+  static auto Get() { return hwreg::RegisterAddr<USB31_VER_TYPE>(0xc1a4); }
 };
 
 #endif  // SRC_DEVICES_USB_DRIVERS_DWC3_DWC3_REGS_H_
