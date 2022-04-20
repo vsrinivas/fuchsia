@@ -44,7 +44,7 @@ class ChannelSettings extends StatelessWidget {
                               color: Theme.of(context).disabledColor,
                             ),
                     ),
-                    subtitle: index == 0
+                    subtitle: channel == state.currentChannel
                         ? Text(
                             Strings.currentChannel,
                             style: idleState

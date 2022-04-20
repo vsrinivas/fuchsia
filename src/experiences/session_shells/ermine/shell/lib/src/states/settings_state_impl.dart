@@ -258,7 +258,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     required this.channelService,
     required this.volumeService,
     required this.wifiService,
-  })   : _timezones = _loadTimezones(),
+  })  : _timezones = _loadTimezones(),
         _selectedTimezone = timezoneService.timezone.asObservable() {
     dataSharingConsentService.onChanged =
         (consent) => runInAction(() => dataSharingConsentEnabled = consent);
@@ -271,8 +271,8 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
           final addresses = interfaces
               .expand((interface) => interface.addresses)
               .toList(growable: false)
-                ..sort((addr1, addr2) =>
-                    addr1.type == InternetAddressType.IPv4 ? -1 : 0);
+            ..sort((addr1, addr2) =>
+                addr1.type == InternetAddressType.IPv4 ? -1 : 0);
 
           runInAction(() => networkAddresses
             ..clear()
@@ -306,16 +306,20 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
         systemUpdateProgress = channelService.updateProgress;
         // Ensure current channel is listed first in available channels
         List<String> channels;
-        if (channelService.channels.contains(currentChannel)) {
-          channels = channelService.channels;
-          int index = channels.indexOf(currentChannel);
-          if (index != 0) {
-            channels
-              ..removeAt(index)
-              ..insert(0, currentChannel);
+        if (currentChannel.isNotEmpty) {
+          if (channelService.channels.contains(currentChannel)) {
+            channels = channelService.channels;
+            int index = channels.indexOf(currentChannel);
+            if (index != 0) {
+              channels
+                ..removeAt(index)
+                ..insert(0, currentChannel);
+            }
+          } else {
+            channels = [currentChannel]..addAll(availableChannels);
           }
         } else {
-          channels = [currentChannel]..addAll(availableChannels);
+          channels = channelService.channels;
         }
         availableChannels
           ..clear()
