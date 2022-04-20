@@ -431,6 +431,199 @@ To migrate this test to the Test Runner Framework, do the following:
 For more details on providing external capabilities to tests, see
 [Integration testing topologies][integration-test].
 
+## `TestWithEnvironment`
+
+The legacy Component Framework provided a C++ library named
+`TestWithEnvironment` that allowed the construction of an isolated environment
+within a test. It was often used to serve injected services that are either
+implemented in-process or by other components in the test.
+
+Legacy tests relying on this functionality should move to using [realm
+builder][realm-builder] when being migrated. Realm Builder can create isolated
+environments similar to the ones constructed by `TestWithEnvironment`. General
+usage of the library is covered in the [Realm Builder
+documentation][realm-builder]. The remainder of this section covers how to
+translate `TestWithEnvironment` specific use cases to Realm Builder.
+
+### Test setup
+
+There is no Realm Builder specific fixture, so any tests that depend on the
+`TextWithEnvironmentFixture` portion of the library should instead use a more
+generic test fixture, such as `gtest::RealLoopFixture`.
+
+```
+class RealmBuilderTest : public gtest::RealLoopFixture {};
+```
+
+In the test implementation (or a custom test fixture) the test will call
+`RealmBuilder::Create` to begin building a realm, add components and routes to
+the realm, and finally call `Build` to construct and begin running the realm
+that's been described.
+
+```
+TEST_F(RealmBuilderTest, RoutesProtocolFromChild) {
+      auto realm_builder = RealmBuilder::Create();
+      // Set up the realm.
+      ...
+      auto realm = realm_builder.Build(dispatcher());
+      // Use the constructed realm to assert some property about the components
+      // under test.
+      ...
+}
+```
+
+### Adding components to a realm
+
+The legacy components that were added to the nested environment with
+`TestWithEnvironment` can be added to the realm created by Realm Builder. A
+realm created by Realm Builder can contain both legacy and modern components
+simultaneously.
+
+When using `TestWithEnvironment`, the services which are present in a realm are
+specified when the legacy realm is created, and after realm creation has
+occurred components may be added to the realm (with
+`EnclosingEnvironment::CreateComponentFromUrl`). In the modern component
+framework, and thus when using Realm Builder, the components are added to a
+realm (along with capability routing) as the realm is created, and once the
+realm exists its contents are immutable.
+
+Additionally, unlike in `TestWithEnvironment`, when using Realm Builder the
+components should be added to the realm _before_ the routing (i.e. protocol
+wiring) is performed.
+
+Modern components can be added to a realm with the `AddChild` call:
+
+```
+realm_builder->AddChild("example_component", "#meta/example_component.cm");
+```
+
+And legacy components can be added to a realm with the `AddLegacyChild` call:
+
+```
+realm_builder->AddLegacyChild(
+    "example_legacy_component",
+    "fuchsia-pkg://fuchsia.com/example#meta/example.cmx");
+```
+
+Whenever a component is added to a realm, a name for the component must be
+provided. This name is used later in `AddRoute` calls.
+
+When a component is added to a realm, it may also be added along with options
+for the new child component. One such option is to mark the component as
+`eager`, which causes the component to start running the moment the realm is
+created. When this option is not supplied, the component will not begin running
+until something accesses a capabilities provided by the component.
+
+```
+realm_builder->AddChild(
+    "example_eager_component",
+    "#meta/example_eager.cm",
+    ChildOptions{.startup_mode = StartupMode::EAGER});
+```
+
+### Connecting components together
+
+When using `TestWithEnvironment` the parent is responsible for setting up a
+`sys::testing::EnvironmentServices` that would hold the set of additional
+services available to legacy components in the nested environment. Along with
+the services added to the realm with this approach, by default the nested realm
+would inherit all services in the parent realm.
+
+When using Realm Builder, the protocols each component expects to be able to
+access (along with where it comes from) are added during realm construction by
+using the `AddRoute` call. This capability routing must be performed even for
+capabilities in the parent realm, unlike in `TestWithEnvironment` where the
+components in the nested realm could implicitly access these services.
+
+For example, to make the `fuchsia.logger.LogSink` protocol available to the
+`example_component` and `example_legacy_component` components, it must be
+explicitly routed to them like so:
+
+```
+realm_builder->AddRoute(
+    Route{.capabilities = {Protocol{"fuchsia.logger.LogSink"}},
+          .source = ParentRef(),
+          .targets = {
+              ChildRef{"example_component"},
+              ChildRef{"example_legacy_component"}}});
+```
+
+Connections between children in the realm under construction must also be added
+to the realm using the same `AddRoute` call, but with `ChildRef`s as both the
+source and target:
+
+```
+realm_builder->AddRoute(
+    Route{.capabilities = {Protocol{"fuchsia.examples.Example"}},
+          .source = ChildRef{"example_component"},
+          .targets = {ChildRef{"example_legacy_component"}}});
+```
+
+Finally, if the test constructing the realm wishes to be able to access any
+capabilities from any of the components in the realm, then those capabilities
+must be routed to the parent.
+
+```
+realm_builder->AddRoute(
+    Route{.capabilities = {Protocol{"fuchsia.examples.Example2"}},
+          .source = ChildRef{"example_legacy_component"},
+          .targets = {ParentRef{}}});
+```
+
+### Implementing protocols
+
+The services held in a `sys::testing::EnvironmentServices` may be implemented
+anywhere, including in the test component exercising `TestWithEnvironment`. It's
+not possible to offer capabilities implemented in the test component itself
+directly to components in the created realm; instead the test component can
+create _local components_. These components, instead of being implemented by a
+dedicated process, are implemented in-process by local objects. These functions
+are added to a realm being constructed, capabilities can be routed to and from
+them, and when the realm is created the functions are invoked as dedicated
+components.
+
+As an example, if we wanted to implement a mock for the `fuchsia.example.Echo`
+protocol:
+
+```
+class LocalEchoServer : public test::placeholders::Echo, public LocalComponent {
+ public:
+  explicit LocalEchoServer(fit::closure quit_loop, async_dispatcher_t* dispatcher)
+      : quit_loop_(std::move(quit_loop)), dispatcher_(dispatcher), called_(false) {}
+
+  void EchoString(::fidl::StringPtr value, EchoStringCallback callback) override {
+    callback(std::move(value));
+    called_ = true;
+    quit_loop_();
+  }
+
+  void Start(std::unique_ptr<LocalComponentHandles> handles) override {
+    handles_ = std::move(handles);
+    ASSERT_EQ(handles_->outgoing()->AddPublicService(bindings_.GetHandler(this, dispatcher_)),
+              ZX_OK);
+  }
+
+  bool WasCalled() const { return called_; }
+
+ private:
+  fit::closure quit_loop_;
+  async_dispatcher_t* dispatcher_;
+  fidl::BindingSet<test::placeholders::Echo> bindings_;
+  bool called_;
+  std::unique_ptr<LocalComponentHandles> handles_;
+};
+```
+
+The above class can be instantiated to provide a `fuchsia.example.Echo`
+implementation to a realm, and the created object can even be inspected by the
+test to determine things like if the FIDL protocol provided by this local
+component was accessed.
+
+```
+LocalEchoServer local_echo_server(QuitLoopClosure(), dispatcher());
+realm_builder.AddLocalChild(kEchoServer, &local_echo_server);
+```
+
 ## Migrate component features {#features}
 
 Explore the following sections for additional migration guidance on
@@ -474,3 +667,4 @@ advice in [Troubleshooting components][troubleshooting-components].
 [trf-test-runners]: /docs/development/testing/components/test_runner_framework.md#test-runners
 [troubleshooting-components]: /docs/development/components/troubleshooting.md
 [unit-test-manifests]: /docs/development/components/build.md#unit-tests
+[realm-builder]: /docs/development/testing/components/realm_builder.md
