@@ -87,42 +87,66 @@ enable KVM.
 
 ## 4. Start FEMU {#start-femu}
 
-Before you start the Fuchsia emulator, make sure you start the package server in another terminal:
 
+### Start the package server
+
+Prior to starting the emulator, start the package server.
+
+To start the the package server, run the following command:
+
+  ```posix-terminal
+  fx serve
+  ```
 Note: Alternatively you can background the `fx serve` process.
 
-```posix-terminal
-fx serve
-```
+### Start the emulator
 
-Start the Fuchsia emulator on your machine.
+To start the emulator on your Linux machine, do the following:
 
 * {Linux}
 
-  The command below allows FEMU to access external networks:
+  1. Configure the upscript by running the following command:
 
-  ```posix-terminal
-  fx vdl start -N -u {{ '<var>' }}FUCHSIA_ROOT{{ '</var>' }}/scripts/start-unsecure-internet.sh
-  ```
+      Note: If your machine is behind a firewall, you may need to apply some additional
+      configuration to allow the emulator to access the network. This is typically
+      accomplished by running an "upscript", which sets up the interfaces and firewall
+      access rules for the current process. If you're on a corporate network, check
+      with your internal networking team to see if they have an existing upscript
+      for you to use.
+      If you're not behind a firewall, there's still some configuration needed to
+      enable tun/tap networking. The example upscript
+      at <code>{{ '<var>' }}FUCHSIA_ROOT{{ '</var>' }}/scripts/start-unsecure-internet.sh</code>
+      should work for the majority of non-corporate users.
 
-  Replace the following:
 
-  * `FUCHSIA_ROOT`: The path to the Fuchsia checkout on your machine (for example, `~/fuchsia`).
+      ```posix-terminal
+      ffx config set emu.upscript {{ '<var>' }}FUCHSIA_ROOT{{ '</var>' }}/scripts/start-unsecure-internet.sh
+      ```
+      * `start-unsecure-internet.sh` is an example upscript.
+      * `FUCHSIA_ROOT` is the path to your Fuchsia directory.
 
-  This command opens a new window with the title "Fuchsia Emulator".
-  After the Fuchsia emulator is launched successfully, the terminal starts a
-  SSH console. You can run shell commands on this console, as you would on a
-  Fuchsia device.
+  1. Start FEMU
 
-  However, if you want to run FEMU without access to external network,
-  run the following command instead:
+      1. To start the emulator with access to external networks, run the
+         following command:
 
-  ```posix-terminal
-  fx vdl start -N
-  ```
+          ```posix-terminal
+          ffx emu start --net tap
+          ```
 
-  The `-N` option enables the `fx` tool to discover this FEMU instance as a device
-  on your machine.
+          * `--net` specifies the networking mode for the emulator. `--net tap`
+          attaches to a Tun/Tap interface.
+
+      1. To start the emulator without access to external networks, run
+         the following command:
+
+          ```posix-terminal
+          ffx emu start --net none
+          ```
+
+    Starting the emulator opens a new window with the
+    title **Fuchsia Emulator**. When the emulator is finished booting, you are
+    returned to the command prompt, and the emulator runs in the background.
 
 * {macOS}
 
@@ -131,32 +155,28 @@ Start the Fuchsia emulator on your machine.
   1. Start FEMU:
 
      ```posix-terminal
-     fx vdl start
+     ffx emu start
      ```
 
      If you launch FEMU for the first time on your macOS (including after a reboot),
      a window pops up asking if you want to allow the process `aemu` to run on your
      machine. Click **Allow**.
 
-     This command opens a new window with the title "Fuchsia Emulator".
-     After the Fuchsia emulator is launched successfully, the terminal starts a
-     SSH console. You can run shell commands on this console, as you would on a
-     Fuchsia device.
+     This command opens a new window with the title **Fuchsia Emulator**.
+     When the emulator is finished booting, you are returned to the command
+     prompt, and the emulator runs in the background.
 
-     Additionally, the command's output includes an instruction that
-     asks you to run `fx set-device`. Make a note of this instruction for the next step.
-
-  2. Open a new terminal and run the `fx set-device` command to specify
-     the launched Fuchsia emulator SSH port:
+  2. (Optional) If you need to specify the launched Fuchsia emulator, you can
+     run the `fx set-device` command in the same terminal:
 
      ```posix-terminal
-     fx set-device 127.0.0.1:{{ '<var>' }}SSH_PORT{{ '</var>' }}
+     fx set-device {{ '<var>' }}NAME{{ '</var>' }}
      ```
 
      Replace the following:
 
-     * `SSH_PORT`: Use the value from the `fx vdl start` command's output in
-     Step 1.
+     * `NAME`: Use the desired value from the `ffx emu list` or `ffx target list`
+       command's output. `fuchsia-emulator` is the default value.
 
 ## 5. Discover FEMU {#discover-femu}
 
@@ -172,10 +192,19 @@ This command prints output similar to the following:
 ```none {:.devsite-disable-click-to-copy}
 $ ffx target list
 NAME                      SERIAL       TYPE                    STATE      ADDRS/IP                            RCS
-fuchsia-5254-0063-5e7a    <unknown>    workstation.qemu-x64    Product    [fe80::866a:a5ea:cd9e:69f6%qemu]    N
+fuchsia-emulator    <unknown>    workstation.qemu-x64    Product    [fe80::866a:a5ea:cd9e:69f6%qemu]    N
 ```
 
-`fuchsia-5254-0063-5e7a` is the default node name of the Fuchsia emulator.
+`fuchsia-emulator` is the default node name of the Fuchsia emulator.
+
+The output of `ffx target list` is influenced by the `--net` option in the
+following ways:
+
+   * `--net none` disables networking, which causes the device to not be
+   discoverable when running `ffx target list`.
+   * `--net tap` and `--net user` allow the device to be discoverable
+   when running `ffx target list`.
+
 
 ## Next steps
 
@@ -188,19 +217,10 @@ This section provides additional FEMU options.
 
 ### See all available flags
 
-To see a full list of supported flags:
+To see a full list of the emulator's supported flags:
 
 ```posix-terminal
-fx vdl start --help
-```
-
-### Input options
-
-By default FEMU uses multi-touch input. You can add the argument
-`--pointing-device mouse` for mouse cursor input instead.
-
-```posix-terminal
-fx vdl start --pointing-device mouse
+ffx emu start --help
 ```
 
 ### Run FEMU without GUI support
@@ -209,15 +229,15 @@ If you don't need graphics or working under the remote workflow,
 you can run FEMU in headless mode:
 
 ```posix-terminal
-fx vdl start --headless
+ffx emu start --headless
 ```
 
 ### Specify GPU used by FEMU
 
-By default, FEMU launcher uses software rendering using
+By default, the FEMU launcher uses software rendering using
 [SwiftShader][swiftshader]{: .external}. To force FEMU to use a specific
-graphics emulation method, use the parameters `--host-gpu` or
-`--software-gpu` to the `fx vdl start` command.
+graphics emulation method, use the parameters `--gpu host` or
+`--gpu guest` with the `ffx emu start` command.
 
 These are the valid commands and options:
 
@@ -229,13 +249,25 @@ These are the valid commands and options:
   </tr>
   <tr>
    <td>Hardware (host GPU)</td>
-   <td>Uses the host machine’s GPU directly to perform GPU processing.</td>
-   <td><code>fx vdl start --host-gpu</code></td>
+   <td>Uses the host machine's GPU directly to perform GPU processing.</td>
+   <td><code>ffx emu start --gpu host</code></td>
   </tr>
   <tr>
    <td>Software (host CPU)</td>
-   <td>Uses the host machine’s CPU to simulate GPU processing.</td>
-   <td><code>fx vdl start --software-gpu</code></td>
+   <td>Uses the host machine's CPU to simulate GPU processing.</td>
+   <td><code>ffx emu start --gpu guest</code></td>
+  </tr>
+  <tr>
+   <td>SwiftShader</td>
+   <td>Uses SwiftShader libraries to simulate GPU processing.</td>
+   <td><code>ffx emu start --gpu swiftshader_indirect</code></td>
+  </tr>
+  <tr>
+   <td>Auto</td>
+   <td>Resolves to <code>host</code> if there is a hardware GPU available or
+       <code>swiftshader_indirect</code> if there isn't a hardware GPU available.
+       <code>auto</code> is the current default.</td>
+   <td><code>ffx emu start --gpu auto</code></td>
   </tr>
 </tbody></table>
 
@@ -247,12 +279,12 @@ To reboot FEMU, run the following `ffx` command:
 ffx target reboot
 ```
 
-### Exit FEMU {#exit-femu}
+### Stop FEMU {#stop-femu}
 
-To exit FEMU, run the following `ffx` command:
+To stop FEMU, run the following `ffx` command:
 
 ```posix-terminal
-ffx target off
+ffx emu stop
 ```
 
 ### Configure IPv6 network {#configure-ipv6-network}
@@ -262,7 +294,7 @@ for FEMU on Linux machine using [TUN/TAP][tuntap]{: .external}.
 
 * {Linux}
 
-  Note: The `fx vdl` command automatically performs the instructions below.
+  Note: This has to be completed once per machine.
 
   To enable networking in FEMU using
   [tap networking][tap-networking]{: .external}, do the following:
