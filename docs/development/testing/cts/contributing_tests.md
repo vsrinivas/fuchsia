@@ -111,21 +111,21 @@ cts_fuchsia_test_package("my_test") {
 
 These instructions require you to open several terminal tabs.
 
-#### Tab 1: Start the Fuchsia emulator
-
-```
-fx vdl start --headless
-```
-
-* `--headless` disables graphical output.
-* See [Start the Fuchsia Emulator] for more info.
-
-
-#### Tab 2: Start the Fuchsia package server
+#### Tab 1: Start the Fuchsia package server
 
 ```
 fx serve
 ```
+
+#### Tab 2: Start the Fuchsia emulator
+
+```
+ffx emu start --headless
+```
+
+* `--headless` disables graphical output.
+
+For more information on configuring the emulator, see [Start the Fuchsia Emulator].
 
 #### Tab 3: Stream the device logs
 
