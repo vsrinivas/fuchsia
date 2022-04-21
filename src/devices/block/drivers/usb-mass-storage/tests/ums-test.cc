@@ -311,7 +311,8 @@ TEST_F(UmsTest, DISABLED_UncachedWriteShouldBePersistedToBlockDevice) {
   }
 }
 
-TEST_F(UmsTest, BlkdevTest) {
+// TODO(fxbug.dev/98566) re-enable when the race is resolved.
+TEST_F(UmsTest, DISABLED_BlkdevTest) {
   char errmsg[1024];
   fdio_spawn_action_t actions[1];
   actions[0] = {};
