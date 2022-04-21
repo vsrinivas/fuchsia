@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.driverhost.test/cpp/wire.h>
+#include <lib/driver2/record.h>
+#include <lib/driver2/start_args.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/epitaph.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/sys/component/llcpp/outgoing_directory.h>
-
-#include "src/devices/lib/driver2/record.h"
-#include "src/devices/lib/driver2/start_args.h"
 
 namespace fdf = fuchsia_driver_framework;
 namespace ftest = fuchsia_driverhost_test;

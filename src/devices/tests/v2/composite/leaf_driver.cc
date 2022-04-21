@@ -5,12 +5,11 @@
 #include <fidl/fuchsia.composite.test/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/async/cpp/executor.h>
+#include <lib/driver2/logger.h>
+#include <lib/driver2/namespace.h>
+#include <lib/driver2/promise.h>
+#include <lib/driver2/record_cpp.h>
 #include <lib/fpromise/scope.h>
-
-#include "src/devices/lib/driver2/logger.h"
-#include "src/devices/lib/driver2/namespace.h"
-#include "src/devices/lib/driver2/promise.h"
-#include "src/devices/lib/driver2/record_cpp.h"
 
 namespace fdf = fuchsia_driver_framework;
 namespace ft = fuchsia_composite_test;

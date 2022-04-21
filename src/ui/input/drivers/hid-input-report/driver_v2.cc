@@ -5,6 +5,9 @@
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/ddk/debug.h>
+#include <lib/driver2/devfs_exporter.h>
+#include <lib/driver2/driver2.h>
+#include <lib/driver2/inspect.h>
 #include <lib/fpromise/scope.h>
 #include <lib/service/llcpp/outgoing_directory.h>
 #include <lib/sys/component/llcpp/outgoing_directory.h>
@@ -12,9 +15,6 @@
 
 #include "src/devices/lib/compat/compat.h"
 #include "src/devices/lib/compat/symbols.h"
-#include "src/devices/lib/driver2/devfs_exporter.h"
-#include "src/devices/lib/driver2/driver2.h"
-#include "src/devices/lib/driver2/inspect.h"
 #include "src/ui/input/drivers/hid-input-report/input-report.h"
 
 namespace fdf2 = fuchsia_driver_framework;

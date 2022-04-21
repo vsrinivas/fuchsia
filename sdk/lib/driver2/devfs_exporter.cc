@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/devices/lib/driver2/devfs_exporter.h"
-
+#include <lib/driver2/devfs_exporter.h>
 #include <lib/fpromise/bridge.h>
 
 namespace fdfs = fuchsia_device_fs;

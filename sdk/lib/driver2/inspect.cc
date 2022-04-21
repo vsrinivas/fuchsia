@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/devices/lib/driver2/inspect.h"
-
 #include <fidl/fuchsia.io/cpp/wire_types.h>
+#include <lib/driver2/inspect.h>
 #include <lib/fidl/llcpp/channel.h>
 #include <lib/sys/component/llcpp/outgoing_directory.h>
 

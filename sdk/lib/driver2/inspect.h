@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_LIB_DRIVER2_INSPECT_H_
-#define SRC_DEVICES_LIB_DRIVER2_INSPECT_H_
+#ifndef LIB_DRIVER2_INSPECT_H_
+#define LIB_DRIVER2_INSPECT_H_
 
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/inspector.h>
@@ -38,4 +38,4 @@ class ExposedInspector {
 
 }  // namespace driver
 
-#endif  // SRC_DEVICES_LIB_DRIVER2_INSPECT_H_
+#endif  // LIB_DRIVER2_INSPECT_H_

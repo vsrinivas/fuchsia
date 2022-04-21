@@ -4,8 +4,9 @@
 
 #include "compat.h"
 
+#include <lib/driver2/devfs_exporter.h>
+
 #include "lib/fpromise/promise.h"
-#include "src/devices/lib/driver2/devfs_exporter.h"
 
 namespace compat {
 

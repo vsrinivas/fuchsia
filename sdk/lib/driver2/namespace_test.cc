@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/devices/lib/driver2/namespace.h"
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/driver2/namespace.h>
+#include <lib/driver2/test_base.h>
 #include <lib/fidl/cpp/binding.h>
 
 #include <gtest/gtest.h>
-
-#include "src/devices/lib/driver2/test_base.h"
 
 namespace fio = fuchsia::io;
 namespace frunner = fuchsia_component_runner;

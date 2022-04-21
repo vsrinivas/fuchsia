@@ -262,7 +262,7 @@ source_set("driver_runner") {
   ]
 
   deps = [
-    "//src/devices/lib/driver2:llcpp",
+    "//sdk/lib/driver2:llcpp",
     "//src/devices/lib/log",
     "//src/lib/fxl",
     "//zircon/system/ulib/service:service-llcpp",

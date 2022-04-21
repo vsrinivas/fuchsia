@@ -6,13 +6,12 @@
 #include <fidl/fuchsia.driver.compat/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <fidl/fuchsia.hardware.demo/cpp/wire.h>
+#include <lib/driver2/namespace.h>
+#include <lib/driver2/record_cpp.h>
+#include <lib/driver2/start_args.h>
+#include <lib/driver2/structured_logger.h>
 #include <lib/sys/component/llcpp/outgoing_directory.h>
 #include <zircon/errors.h>
-
-#include "src/devices/lib/driver2/namespace.h"
-#include "src/devices/lib/driver2/record_cpp.h"
-#include "src/devices/lib/driver2/start_args.h"
-#include "src/devices/lib/driver2/structured_logger.h"
 
 namespace fdf2 = fuchsia_driver_framework;
 namespace fio = fuchsia_io;

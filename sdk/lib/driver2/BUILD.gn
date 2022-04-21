@@ -14,7 +14,7 @@ sdk_source_set("record") {
   category = "experimental"
   sdk_name = "driver2-record"
 
-  include_base = "//src/devices"
+  include_base = "//sdk"
 
   sources = [ "record.h" ]
 
@@ -49,7 +49,7 @@ sdk_source_set("llcpp") {
   category = "experimental"
   sdk_name = "driver2-llcpp"
 
-  include_base = "//src/devices"
+  include_base = "//sdk"
 
   sources = [
     "driver2.h",

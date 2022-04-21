@@ -2,20 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/devices/lib/driver2/logger.h"
-
 #include <fidl/fuchsia.logger/cpp/wire.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/driver2/logger.h>
+#include <lib/driver2/test_base.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/syslog/wire_format.h>
 
 #include <gtest/gtest.h>
 #include <rapidjson/document.h>
 
-#include "src/devices/lib/driver2/test_base.h"
 #include "src/diagnostics/lib/cpp-log-decoder/log_decoder.h"
 #include "src/lib/diagnostics/accessor2logger/log_message.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"

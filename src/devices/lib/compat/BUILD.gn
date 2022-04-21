@@ -10,8 +10,8 @@ source_set("compat") {
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.driver.compat:fuchsia.driver.compat_llcpp",
-    "//src/devices/lib/driver2:devfs_exporter",
-    "//src/devices/lib/driver2:llcpp",
+    "//sdk/lib/driver2:devfs_exporter",
+    "//sdk/lib/driver2:llcpp",
     "//zircon/system/ulib/service:service-llcpp",
   ]
 }

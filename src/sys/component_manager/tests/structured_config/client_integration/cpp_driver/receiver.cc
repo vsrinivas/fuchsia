@@ -8,6 +8,10 @@
 #include <fidl/test.structuredconfig.receiver/cpp/wire.h>
 #include <fidl/test.structuredconfig.receiver/cpp/wire_types.h>
 #include <lib/async/cpp/executor.h>
+#include <lib/driver2/inspect.h>
+#include <lib/driver2/logger.h>
+#include <lib/driver2/namespace.h>
+#include <lib/driver2/record_cpp.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/scope.h>
 #include <lib/sys/component/llcpp/handlers.h>
@@ -27,10 +31,6 @@
 #include "lib/fidl/llcpp/arena.h"
 #include "lib/fidl/llcpp/string_view.h"
 #include "lib/fidl/llcpp/vector_view.h"
-#include "src/devices/lib/driver2/inspect.h"
-#include "src/devices/lib/driver2/logger.h"
-#include "src/devices/lib/driver2/namespace.h"
-#include "src/devices/lib/driver2/record_cpp.h"
 
 namespace fdf = fuchsia_driver_framework;
 namespace scr = test_structuredconfig_receiver;

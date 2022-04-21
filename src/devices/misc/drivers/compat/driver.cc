@@ -7,6 +7,9 @@
 #include <fidl/fuchsia.scheduler/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/binding_priv.h>
+#include <lib/driver2/promise.h>
+#include <lib/driver2/record_cpp.h>
+#include <lib/driver2/start_args.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/promise.h>
@@ -14,9 +17,6 @@
 #include <lib/service/llcpp/service.h>
 #include <zircon/dlfcn.h>
 
-#include "src/devices/lib/driver2/promise.h"
-#include "src/devices/lib/driver2/record_cpp.h"
-#include "src/devices/lib/driver2/start_args.h"
 #include "src/devices/misc/drivers/compat/devfs_vnode.h"
 #include "src/devices/misc/drivers/compat/loader.h"
 

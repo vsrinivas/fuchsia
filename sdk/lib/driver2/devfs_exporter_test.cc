@@ -2,18 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/devices/lib/driver2/devfs_exporter.h"
-
 #include <fidl/fuchsia.logger/cpp/wire.h>
 #include <fuchsia/device/fs/cpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
+#include <lib/driver2/devfs_exporter.h>
+#include <lib/driver2/test_base.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/service/llcpp/outgoing_directory.h>
-
-#include "src/devices/lib/driver2/test_base.h"
 
 namespace fdfs = fuchsia::device::fs;
 namespace fio = fuchsia::io;

@@ -7,6 +7,7 @@
 
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/driver2/record.h>
 #include <lib/fdf/dispatcher.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/sys/component/llcpp/outgoing_directory.h>
@@ -15,7 +16,6 @@
 
 #include <fbl/intrusive_double_list.h>
 
-#include "src/devices/lib/driver2/record.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 class Driver : public fidl::WireServer<fuchsia_driver_framework::Driver>,

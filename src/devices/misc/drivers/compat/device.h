@@ -11,6 +11,7 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/driver2/logger.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/scope.h>
 #include <lib/service/llcpp/outgoing_directory.h>
@@ -23,7 +24,6 @@
 
 #include "src/devices/lib/compat/compat.h"
 #include "src/devices/lib/compat/symbols.h"
-#include "src/devices/lib/driver2/logger.h"
 #include "src/devices/misc/drivers/compat/devfs_vnode.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 

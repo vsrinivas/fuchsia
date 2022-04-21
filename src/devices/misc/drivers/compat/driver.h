@@ -8,15 +8,15 @@
 #include <fidl/fuchsia.boot/cpp/wire.h>
 #include <fidl/fuchsia.scheduler/cpp/markers.h>
 #include <lib/async/cpp/executor.h>
+#include <lib/driver2/devfs_exporter.h>
+#include <lib/driver2/logger.h>
+#include <lib/driver2/namespace.h>
 #include <lib/fpromise/scope.h>
 #include <lib/service/llcpp/outgoing_directory.h>
 
 #include <unordered_set>
 
 #include "src/devices/lib/compat/compat.h"
-#include "src/devices/lib/driver2/devfs_exporter.h"
-#include "src/devices/lib/driver2/logger.h"
-#include "src/devices/lib/driver2/namespace.h"
 #include "src/devices/misc/drivers/compat/device.h"
 #include "src/devices/misc/drivers/compat/sysmem.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"

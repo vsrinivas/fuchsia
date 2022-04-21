@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_LIB_DRIVER2_LOGGER_H_
-#define SRC_DEVICES_LIB_DRIVER2_LOGGER_H_
+#ifndef LIB_DRIVER2_LOGGER_H_
+#define LIB_DRIVER2_LOGGER_H_
 
+#include <lib/driver2/namespace.h>
 #include <lib/syslog/structured_backend/cpp/fuchsia_syslog.h>
 #include <lib/zx/socket.h>
-
-#include "namespace.h"
 
 #define FDF_LOGL(severity, logger, msg...) \
   logger.logf((FUCHSIA_LOG_##severity), nullptr, __FILE__, __LINE__, msg)
@@ -69,4 +68,4 @@ class Logger {
 
 }  // namespace driver
 
-#endif  // SRC_DEVICES_LIB_DRIVER2_LOGGER_H_
+#endif  // LIB_DRIVER2_LOGGER_H_

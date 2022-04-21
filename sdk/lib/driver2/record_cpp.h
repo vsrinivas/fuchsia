@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_LIB_DRIVER2_RECORD_CPP_H_
-#define SRC_DEVICES_LIB_DRIVER2_RECORD_CPP_H_
+#ifndef LIB_DRIVER2_RECORD_CPP_H_
+#define LIB_DRIVER2_RECORD_CPP_H_
 
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
-
-#include "logger.h"
-#include "record.h"
+#include <lib/driver2/logger.h>
+#include <lib/driver2/record.h>
 
 namespace driver::internal {
 
@@ -75,4 +74,4 @@ zx_status_t Stop(void* driver) {
 #define FUCHSIA_DRIVER_RECORD_CPP_V1(T) \
   FUCHSIA_DRIVER_RECORD_V1(.start = driver::internal::Start<T>, .stop = driver::internal::Stop<T>)
 
-#endif  // SRC_DEVICES_LIB_DRIVER2_RECORD_CPP_H_
+#endif  // LIB_DRIVER2_RECORD_CPP_H_

@@ -5,15 +5,14 @@
 #include <fidl/fuchsia.devfs.test/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/async/cpp/executor.h>
+#include <lib/driver2/devfs_exporter.h>
+#include <lib/driver2/logger.h>
+#include <lib/driver2/namespace.h>
+#include <lib/driver2/promise.h>
+#include <lib/driver2/record_cpp.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/scope.h>
 #include <lib/service/llcpp/outgoing_directory.h>
-
-#include "src/devices/lib/driver2/devfs_exporter.h"
-#include "src/devices/lib/driver2/logger.h"
-#include "src/devices/lib/driver2/namespace.h"
-#include "src/devices/lib/driver2/promise.h"
-#include "src/devices/lib/driver2/record_cpp.h"
 
 namespace fcd = fuchsia_component_decl;
 namespace fdf = fuchsia_driver_framework;

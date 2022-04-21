@@ -7,6 +7,7 @@
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <fidl/fuchsia.process/cpp/wire.h>
 #include <lib/async/cpp/task.h>
+#include <lib/driver2/start_args.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
@@ -23,7 +24,6 @@
 
 #include "fidl/fuchsia.driver.development/cpp/wire_types.h"
 #include "fidl/fuchsia.driver.framework/cpp/wire_types.h"
-#include "src/devices/lib/driver2/start_args.h"
 #include "src/devices/lib/log/log.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/storage/vfs/cpp/service.h"

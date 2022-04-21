@@ -7,6 +7,9 @@
 
 #include <fidl/fuchsia.driver.compat/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
+#include <lib/driver2/devfs_exporter.h>
+#include <lib/driver2/namespace.h>
+#include <lib/driver2/start_args.h>
 #include <lib/fit/defer.h>
 #include <lib/fpromise/promise.h>
 #include <lib/service/llcpp/outgoing_directory.h>
@@ -15,9 +18,6 @@
 #include <unordered_set>
 
 #include "src/devices/lib/compat/symbols.h"
-#include "src/devices/lib/driver2/devfs_exporter.h"
-#include "src/devices/lib/driver2/namespace.h"
-#include "src/devices/lib/driver2/start_args.h"
 
 namespace compat {
 

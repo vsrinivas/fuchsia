@@ -6,6 +6,7 @@
 
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async/cpp/task.h>
+#include <lib/driver2/start_args.h>
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fdf/cpp/internal.h>
 #include <lib/fdio/directory.h>
@@ -14,7 +15,6 @@
 #include <lib/sys/component/llcpp/outgoing_directory.h>
 #include <zircon/dlfcn.h>
 
-#include "src/devices/lib/driver2/start_args.h"
 #include "src/devices/lib/log/log.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 

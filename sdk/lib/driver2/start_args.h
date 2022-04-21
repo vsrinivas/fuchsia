@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_LIB_DRIVER2_START_ARGS_H_
-#define SRC_DEVICES_LIB_DRIVER2_START_ARGS_H_
+#ifndef LIB_DRIVER2_START_ARGS_H_
+#define LIB_DRIVER2_START_ARGS_H_
 
 #include <fidl/fuchsia.component.runner/cpp/wire.h>
 #include <fidl/fuchsia.data/cpp/wire.h>
@@ -67,4 +67,4 @@ inline zx::status<fidl::UnownedClientEnd<fuchsia_io::Directory>> NsValue(
 
 }  // namespace driver
 
-#endif  // SRC_DEVICES_LIB_DRIVER2_START_ARGS_H_
+#endif  // LIB_DRIVER2_START_ARGS_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_LIB_DRIVER2_RECORD_H_
-#define SRC_DEVICES_LIB_DRIVER2_RECORD_H_
+#ifndef LIB_DRIVER2_RECORD_H_
+#define LIB_DRIVER2_RECORD_H_
 
 #include <lib/async/dispatcher.h>
 #include <zircon/fidl.h>
@@ -32,4 +32,4 @@ struct DriverRecordV1 {
 #define FUCHSIA_DRIVER_RECORD_V1(start, stop) \
   extern "C" const DriverRecordV1 __fuchsia_driver_record__ __EXPORT { .version = 1, start, stop, }
 
-#endif  // SRC_DEVICES_LIB_DRIVER2_RECORD_H_
+#endif  // LIB_DRIVER2_RECORD_H_

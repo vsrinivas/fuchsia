@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_LIB_DRIVER2_TEST_BASE_H_
-#define SRC_DEVICES_LIB_DRIVER2_TEST_BASE_H_
+#ifndef LIB_DRIVER2_TEST_BASE_H_
+#define LIB_DRIVER2_TEST_BASE_H_
 
 #include <fuchsia/io/cpp/fidl_test_base.h>
+#include <lib/driver2/namespace.h>
 #include <lib/fpromise/promise.h>
-
-#include "src/devices/lib/driver2/namespace.h"
 
 namespace driver::testing {
 
@@ -41,4 +40,4 @@ zx::status<Namespace> CreateNamespace(fidl::ClientEnd<fuchsia_io::Directory> cli
 
 }  // namespace driver::testing
 
-#endif  // SRC_DEVICES_LIB_DRIVER2_TEST_BASE_H_
+#endif  // LIB_DRIVER2_TEST_BASE_H_

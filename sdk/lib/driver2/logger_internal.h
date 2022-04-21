@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_LIB_DRIVER2_LOGGER_INTERNAL_H_
-#define SRC_DEVICES_LIB_DRIVER2_LOGGER_INTERNAL_H_
+#ifndef LIB_DRIVER2_LOGGER_INTERNAL_H_
+#define LIB_DRIVER2_LOGGER_INTERNAL_H_
 
-#include "logger.h"
+#include <lib/driver2/logger.h>
 
 namespace driver_internal {
 
@@ -159,4 +159,4 @@ static void fx_slog(driver::Logger& logger, FuchsiaLogSeverity severity, const c
 
 }  // namespace driver_internal
 
-#endif  // SRC_DEVICES_LIB_DRIVER2_LOGGER_INTERNAL_H_
+#endif  // LIB_DRIVER2_LOGGER_INTERNAL_H_
