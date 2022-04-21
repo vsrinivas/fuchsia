@@ -22,7 +22,7 @@ using fuchsia::cobalt::Status;
 using fuchsia::metrics::MetricEventLoggerFactory;
 using fxl::StringPrintf;
 
-constexpr uint32_t kMaxPendingEvents = 256u;
+constexpr uint32_t kMaxPendingEvents = 100000u;
 
 uint64_t CurrentTimeUSecs(const std::unique_ptr<timekeeper::Clock>& clock) {
   return zx::nsec(clock->Now().get()).to_usecs();
