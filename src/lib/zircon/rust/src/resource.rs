@@ -13,7 +13,7 @@ use fuchsia_zircon_sys::{self as sys, zx_duration_t, ZX_MAX_NAME_LEN};
 /// An object representing a Zircon resource.
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct Resource(Handle);
 impl_handle_based!(Resource);
