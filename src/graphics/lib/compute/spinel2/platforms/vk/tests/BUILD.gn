@@ -6,6 +6,6 @@ group("tests") {
   testonly = true
   public_deps = [
     "spinel_vk_bench",
-    "spinel_vk_test",
+    "spinel_vk_tests",
   ]
 }

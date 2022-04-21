@@ -4,7 +4,7 @@
 
 import("//src/graphics/lib/compute/gn/build_rules.gni")
 
-source_set("spinel_vk_test_sources") {
+source_set("spinel_vk_tests_sources") {
   testonly = true
   sources = [
     "env.cc",
@@ -34,22 +34,22 @@ source_set("spinel_vk_test_sources") {
 graphics_compute_unittests("spinel-vk-api-unittests") {
   testonly = true
   sources = [ "spinel_vk_api_unittests.cc" ]
-  deps = [ ":spinel_vk_test_sources" ]
+  deps = [ ":spinel_vk_tests_sources" ]
 }
 
 graphics_compute_unittests("spinel-vk-simple-unittests") {
   testonly = true
   sources = [ "spinel_vk_simple_unittests.cc" ]
-  deps = [ ":spinel_vk_test_sources" ]
+  deps = [ ":spinel_vk_tests_sources" ]
 }
 
 graphics_compute_unittests("spinel-vk-svg-unittests") {
   testonly = true
   sources = [ "spinel_vk_svg_unittests.cc" ]
-  deps = [ ":spinel_vk_test_sources" ]
+  deps = [ ":spinel_vk_tests_sources" ]
 }
 
-graphics_compute_unittests_package("spinel2-vk-test") {
+graphics_compute_unittests_package("spinel2-vk-tests") {
   needs_vulkan = true
   testonly = true
   deps = [
@@ -62,11 +62,11 @@ graphics_compute_unittests_package("spinel2-vk-test") {
   # Ensure that a host executable is built on Linux hosts
   #
   if (is_fuchsia && host_os == "linux") {
-    data_deps = [ ":spinel2-vk-test($host_toolchain)" ]
+    data_deps = [ ":spinel2-vk-tests($host_toolchain)" ]
   }
 }
 
-group("spinel_vk_test") {
+group("spinel_vk_tests") {
   testonly = true
-  deps = [ ":spinel2-vk-test" ]
+  deps = [ ":spinel2-vk-tests" ]
 }
