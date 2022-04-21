@@ -36,6 +36,19 @@ enum page_request_type : uint32_t {
   COUNT       // Number of page request types.
 };
 
+inline const char* PageRequestTypeToString(page_request_type type) {
+  switch (type) {
+    case page_request_type::READ:
+      return "READ";
+    case page_request_type::DIRTY:
+      return "DIRTY";
+    case page_request_type::WRITEBACK:
+      return "WRITEBACK";
+    default:
+      return "UNKNOWN";
+  }
+}
+
 // These properties are constant per PageProvider type, so a given VmCowPages can query and cache
 // these properties once (if it has a PageSource) and know they won't change after that.  This also
 // avoids per-property plumbing via PageSource.

@@ -361,14 +361,22 @@ void PagerProxy::Dump() {
       packet_busy_, complete_pending_);
 
   if (active_request_) {
-    printf("  active request on pager port [0x%lx, 0x%lx)\n", GetRequestOffset(active_request_),
-           GetRequestLen(active_request_));
+    printf("  active %s request on pager port [0x%lx, 0x%lx)\n",
+           PageRequestTypeToString(GetRequestType(active_request_)),
+           GetRequestOffset(active_request_),
+           GetRequestOffset(active_request_) + GetRequestLen(active_request_));
   } else {
     printf("  no active request on pager port\n");
   }
 
+  if (pending_requests_.is_empty()) {
+    printf("  no pending requests to queue on pager port\n");
+    return;
+  }
+
   for (auto& req : pending_requests_) {
-    printf("  pending req to queue on pager port [0x%lx, 0x%lx)\n", GetRequestOffset(&req),
-           GetRequestLen(&req));
+    printf("  pending %s req to queue on pager port [0x%lx, 0x%lx)\n",
+           PageRequestTypeToString(GetRequestType(&req)), GetRequestOffset(&req),
+           GetRequestOffset(&req) + GetRequestLen(&req));
   }
 }

@@ -464,10 +464,13 @@ zx_status_t PageSource::RequestDirtyTransition(PageRequest* request, uint64_t of
 void PageSource::Dump() const {
   Guard<Mutex> guard{&page_source_mtx_};
   printf("page_source %p detached %d closed %d\n", this, detached_, closed_);
-  for (auto& req : outstanding_requests_[page_request_type::READ]) {
-    printf("  vmo 0x%lx/k%lu req [0x%lx, 0x%lx) pending 0x%lx overlap %lu\n",
-           req.vmo_debug_info_.vmo_ptr, req.vmo_debug_info_.vmo_id, req.offset_, req.GetEnd(),
-           req.pending_size_, req.overlap_.size_slow());
+  for (uint8_t type = 0; type < page_request_type::COUNT; type++) {
+    for (auto& req : outstanding_requests_[type]) {
+      printf("  vmo 0x%lx/k%lu %s req [0x%lx, 0x%lx) pending 0x%lx overlap %lu\n",
+             req.vmo_debug_info_.vmo_ptr, req.vmo_debug_info_.vmo_id,
+             PageRequestTypeToString(page_request_type(type)), req.offset_, req.GetEnd(),
+             req.pending_size_, req.overlap_.size_slow());
+    }
   }
   page_provider_->Dump();
 }

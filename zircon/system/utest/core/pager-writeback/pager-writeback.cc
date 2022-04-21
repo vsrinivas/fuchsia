@@ -566,7 +566,7 @@ TEST(PagerWriteback, DirtyRequestsOverlap) {
   // Dirty the range [11,16).
   ASSERT_TRUE(pager.DirtyPages(vmo, 11, 5));
 
-  // This should terminate t3, and wake up t3 until it blocks again for the remaining range.
+  // This should terminate t3, and wake up t4 until it blocks again for the remaining range.
   ASSERT_TRUE(t3.Wait());
   ASSERT_TRUE(t4.WaitForBlocked());
 
