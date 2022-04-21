@@ -14,6 +14,7 @@ ffx_plugin("ffx_doctor") {
     "//src/developer/ffx:ffx_lib_args",
     "//src/developer/ffx/lib/doctor_utils:lib",
     "//src/developer/ffx/lib/timeout:lib",
+    "//src/developer/ffx/plugins/doctor/test_utils:lib",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
@@ -32,6 +33,8 @@ ffx_plugin("ffx_doctor") {
 
   sources = [
     "src/constants.rs",
+    "src/doctor_ledger.rs",
+    "src/ledger_view.rs",
     "src/lib.rs",
   ]
 }
