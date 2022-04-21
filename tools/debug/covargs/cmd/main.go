@@ -251,12 +251,15 @@ func readEmbeddedBuildId(ctx context.Context, tool string, profile string) (stri
 	// Split the lines in llvm-profdata output, which should have the following lines for build ids.
 	// Binary IDs:
 	// 1696251c (This is an example for build id)
-	splittedOutput := strings.Split((string(output)), "\n")
+	splittedOutput := strings.Split((string(output)), "Binary IDs:")
 	if len(splittedOutput) < 2 {
-		return "", fmt.Errorf("invalid llvm-profdata output in profile %q: %w", profile, err)
+		return "", fmt.Errorf("invalid llvm-profdata output in profile %q: %w\n%s", profile, err, string(output))
 	}
 
-	embeddedBuildId := splittedOutput[len(splittedOutput)-2]
+	embeddedBuildId := strings.TrimSpace(splittedOutput[len(splittedOutput)-1])
+	if embeddedBuildId == "" {
+		return "", fmt.Errorf("no build id found in profile %q:\n%s", profile, string(output))
+	}
 	// Check if embedded build id consists of hex characters.
 	_, err = hex.DecodeString(embeddedBuildId)
 	if err != nil {
