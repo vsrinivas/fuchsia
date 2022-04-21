@@ -845,6 +845,11 @@ async fn doctor_summary<W: Write>(
                 LedgerMode::Verbose,
             )?;
             ledger.set_outcome(node, LedgerOutcome::Success)?;
+
+            if v.api_level != version_info.api_level {
+                let node = ledger.add_node("Daemon and frontend are at different API levels. Run `ffx doctor --restart-daemon`", LedgerMode::Automatic)?;
+                ledger.set_outcome(node, LedgerOutcome::SoftWarning)?;
+            }
         }
         Ok(Err(e)) => {
             let node = ledger
@@ -1148,6 +1153,7 @@ mod test {
     const FAKE_ABI_REVISION: u64 = 17063755220075245312;
     const ABI_REVISION_STR: &str = "0xECCEA2F70ACD6F00";
     const FAKE_API_LEVEL: u64 = 7;
+    const ANOTHER_FAKE_API_LEVEL: u64 = 8;
 
     #[derive(PartialEq)]
     struct TestStep {
@@ -1787,13 +1793,17 @@ mod test {
         format!("{}", std::env::current_exe().unwrap().display())
     }
 
-    fn frontend_version_info() -> VersionInfo {
+    fn frontend_version_info(use_default_api_level: bool) -> VersionInfo {
         VersionInfo {
             commit_hash: None,
             commit_timestamp: None,
             build_version: Some(FRONTEND_VERSION.to_string()),
             abi_revision: Some(FAKE_ABI_REVISION),
-            api_level: Some(FAKE_API_LEVEL),
+            api_level: if use_default_api_level {
+                Some(FAKE_API_LEVEL)
+            } else {
+                Some(ANOTHER_FAKE_API_LEVEL)
+            },
             ..VersionInfo::EMPTY
         }
     }
@@ -1866,7 +1876,7 @@ mod test {
             1,
             DEFAULT_RETRY_DELAY,
             false,
-            frontend_version_info(),
+            frontend_version_info(true),
             Ok(Some(NODENAME.to_string())),
             record_params_no_record(),
         )
@@ -1917,7 +1927,7 @@ mod test {
             1,
             DEFAULT_RETRY_DELAY,
             false,
-            frontend_version_info(),
+            frontend_version_info(true),
             Ok(None),
             record_params_no_record(),
         )
@@ -1978,7 +1988,7 @@ mod test {
             1,
             DEFAULT_RETRY_DELAY,
             false,
-            frontend_version_info(),
+            frontend_version_info(true),
             Ok(Some("".to_string())),
             record_params_no_record(),
         )
@@ -2039,7 +2049,7 @@ mod test {
             2,
             DEFAULT_RETRY_DELAY,
             false,
-            frontend_version_info(),
+            frontend_version_info(true),
             Ok(None),
             record_params_no_record(),
         )
@@ -2109,7 +2119,7 @@ mod test {
                 2,
                 DEFAULT_RETRY_DELAY,
                 true,
-                frontend_version_info(),
+                frontend_version_info(true),
                 Ok(None),
                 record_params_no_record(),
             )
@@ -2147,7 +2157,7 @@ mod test {
                 2,
                 DEFAULT_RETRY_DELAY,
                 true,
-                frontend_version_info(),
+                frontend_version_info(true),
                 Ok(None),
                 record_params_no_record(),
             )
@@ -2202,7 +2212,7 @@ mod test {
             1,
             DEFAULT_RETRY_DELAY,
             false,
-            frontend_version_info(),
+            frontend_version_info(true),
             Ok(None),
             record_params_no_record(),
         )
@@ -2344,7 +2354,7 @@ mod test {
             2,
             DEFAULT_RETRY_DELAY,
             false,
-            frontend_version_info(),
+            frontend_version_info(true),
             Ok(None),
             record_params_no_record(),
         )
@@ -2416,7 +2426,7 @@ mod test {
             1,
             DEFAULT_RETRY_DELAY,
             false,
-            frontend_version_info(),
+            frontend_version_info(true),
             Ok(None),
             record_params_no_record(),
         )
@@ -2478,7 +2488,7 @@ mod test {
             1,
             DEFAULT_RETRY_DELAY,
             true,
-            frontend_version_info(),
+            frontend_version_info(true),
             Ok(None),
             record_params_no_record(),
         )
@@ -2534,7 +2544,7 @@ mod test {
             1,
             DEFAULT_RETRY_DELAY,
             true,
-            frontend_version_info(),
+            frontend_version_info(true),
             Ok(None),
             record_params_no_record(),
         )
@@ -2589,7 +2599,7 @@ mod test {
             1,
             DEFAULT_RETRY_DELAY,
             false,
-            frontend_version_info(),
+            frontend_version_info(true),
             Ok(None),
             params,
         )
@@ -2660,7 +2670,7 @@ mod test {
             1,
             DEFAULT_RETRY_DELAY,
             false,
-            frontend_version_info(),
+            frontend_version_info(true),
             Ok(None),
             params,
         )
@@ -2744,7 +2754,7 @@ mod test {
             1,
             DEFAULT_RETRY_DELAY,
             false,
-            frontend_version_info(),
+            frontend_version_info(true),
             Ok(None),
             record_params_no_record(),
         )
@@ -2845,7 +2855,7 @@ mod test {
             1,
             DEFAULT_RETRY_DELAY,
             false,
-            frontend_version_info(),
+            frontend_version_info(true),
             Ok(None),
             record_params_no_record(),
         )
@@ -2881,6 +2891,68 @@ mod test {
                 ABI_REVISION_STR,
                 FAKE_API_LEVEL,
                 SERIAL_NUMBER,
+            )
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_single_try_daemon_running_different_api_level() {
+        let fake = FakeDaemonManager::new(
+            vec![true],
+            vec![],
+            vec![],
+            vec![Ok(setup_responsive_daemon_server())],
+            vec![Ok(vec![1])],
+        );
+        let mut handler = FakeStepHandler::new();
+        let ledger_view = Box::new(FakeLedgerView::new());
+        let mut ledger = DoctorLedger::<MockWriter>::new(
+            MockWriter::new(),
+            ledger_view,
+            LedgerViewMode::Verbose,
+        );
+
+        doctor(
+            &mut handler,
+            &mut ledger,
+            &fake,
+            "",
+            1,
+            DEFAULT_RETRY_DELAY,
+            false,
+            frontend_version_info(false),
+            Ok(Some("".to_string())),
+            record_params_no_record(),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            ledger.writer.get_data(),
+            format!(
+                "\
+                   \n[✓] FFX doctor\
+                   \n    [✓] Frontend version: {}\
+                   \n    [✓] abi-revision: {}\
+                   \n    [✓] api-level: {}\
+                   \n    [i] Path to ffx: {}\
+                   \n[✓] Checking daemon\
+                   \n    [✓] Daemon found: [1]\
+                   \n    [✓] Connecting to daemon\
+                   \n    [✓] Daemon version: {}\
+                   \n    [✓] abi-revision: {}\
+                   \n    [✓] api-level: {}\
+                   \n    [!] Daemon and frontend are at different API levels. Run `ffx doctor --restart-daemon`\
+                   \n    [✓] Default target: (none)\
+                   \n[✗] Searching for targets\
+                   \n    [✗] No targets found!\n",
+                FRONTEND_VERSION,
+                ABI_REVISION_STR,
+                ANOTHER_FAKE_API_LEVEL,
+                ffx_path(),
+                DAEMON_VERSION,
+                ABI_REVISION_STR,
+                FAKE_API_LEVEL
             )
         );
     }
