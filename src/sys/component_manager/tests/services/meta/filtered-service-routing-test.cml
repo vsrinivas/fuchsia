@@ -1,0 +1,61 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//sdk/lib/syslog/client.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "sys/component/realm_builder.shard.cml",
+    ],
+    program: {
+        binary: "bin/filtered_service_routing_test_bin",
+    },
+    children: [
+        {
+            name: "echo_provider_a",
+            url: "#meta/multi-instance-echo-provider.cm",
+        },
+    ],
+    collections: [
+        {
+            name: "test_collection",
+            durability: "transient",
+            allowed_offers: "static_and_dynamic",
+        },
+    ],
+    capabilities: [
+        { service: "fuchsia.examples.EchoService" },
+    ],
+    use: [
+        { protocol: "fuchsia.sys2.EventSource" },
+        {
+            event: [
+                "discovered",
+                "started",
+            ],
+            from: "framework",
+        },
+        {
+            directory: "hub",
+            from: "framework",
+            rights: [ "r*" ],
+            path: "/hub",
+        },
+
+        // Needed to create children
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#echo_provider_a",
+                "#test_collection",
+            ],
+        },
+    ],
+}

@@ -89,6 +89,10 @@ impl FilteredServiceDirectory {
         if path.is_empty() {
             return false;
         }
+        // If an instance was renamed the original name shouldn't be usable.
+        if self.instance_name_source_to_target.contains_key(path) {
+            return false;
+        }
         self.source_instance_filter.is_empty() || self.source_instance_filter.contains(path)
     }
 }
@@ -104,16 +108,18 @@ impl DirectoryEntry for FilteredServiceDirectory {
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
         let input_path_string = path.clone().into_string();
-        let path_string = self
-            .instance_name_target_to_source
-            .get(&input_path_string)
-            .map_or(input_path_string, |source_str| source_str.clone());
 
-        if self.path_matches_allowed_instance(&path_string) {
-            if let Err(e) = self.source_dir_proxy.open(flags, mode, &path_string, server_end) {
+        if self.path_matches_allowed_instance(&input_path_string) {
+            let source_path_string = self
+                .instance_name_target_to_source
+                .get(&input_path_string)
+                .map_or(input_path_string, |source_str| source_str.clone());
+
+            if let Err(e) = self.source_dir_proxy.open(flags, mode, &source_path_string, server_end)
+            {
                 error!(
                     error = %e,
-                    path = %path_string,
+                    path = source_path_string.as_str(),
                     "Error opening instance in FilteredServiceDirectory"
                 );
             }
@@ -181,7 +187,10 @@ impl Directory for FilteredServiceDirectory {
                     }
                 }
             }
-            Err(_) => return Err(zx::Status::INTERNAL),
+            Err(e) => {
+                warn!("Error reading the source components service directory: {}", e);
+                return Err(zx::Status::INTERNAL);
+            }
         }
         return Ok((TraversalPosition::End, sink.seal()));
     }
@@ -249,7 +258,7 @@ impl CapabilityProvider for FilteredServiceProvider {
                 task_scope,
                 flags,
                 open_mode,
-                relative_path,
+                PathBuf::new(), //relative_path,
                 &mut (source_service_server_end.into_channel()),
             )
             .await?;

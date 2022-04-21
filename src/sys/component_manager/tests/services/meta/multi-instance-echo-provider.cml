@@ -1,0 +1,23 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//sdk/lib/syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/multi_instance_echo_service_bin",
+    },
+    capabilities: [
+        { service: "fuchsia.examples.EchoService" },
+    ],
+    expose: [
+        {
+            service: "fuchsia.examples.EchoService",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
+}

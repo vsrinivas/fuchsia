@@ -23,6 +23,7 @@ group("dynamic_offers") {
     "//sdk/lib/driver_test_realm:*",
     "//src/devices/tests/*",
     "//src/sys/bootstrap:*",
+    "//src/sys/component_manager/tests/services:*",
     "//src/sys/component_manager/tests/structured_config/client_integration/cpp_driver:*",
     "//tools/cmc:*",
   ]
