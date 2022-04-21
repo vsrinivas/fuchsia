@@ -539,18 +539,22 @@ impl ViewController {
     }
 
     pub(crate) fn handle_metrics_changed(&mut self, metrics: Size) {
-        self.metrics = metrics;
-        self.render_requested = true;
-        self.send_update_message();
+        if self.metrics != metrics {
+            self.metrics = metrics;
+            self.render_requested = true;
+            self.send_update_message();
+        }
     }
 
     pub(crate) fn handle_size_changed(&mut self, new_size: Size) {
-        self.physical_size = new_size;
-        self.assistant
-            .resize(&new_size)
-            .unwrap_or_else(|e| println!("handle_size_changed error: {}", e));
-        self.render_requested = true;
-        self.send_update_message();
+        if self.physical_size != new_size {
+            self.physical_size = new_size;
+            self.assistant
+                .resize(&new_size)
+                .unwrap_or_else(|e| println!("handle_size_changed error: {}", e));
+            self.render_requested = true;
+            self.send_update_message();
+        }
     }
 
     pub(crate) fn focus(&mut self, focus: bool) {
