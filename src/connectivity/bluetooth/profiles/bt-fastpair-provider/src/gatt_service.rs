@@ -359,6 +359,7 @@ impl FusedStream for GattService {
 mod tests {
     use super::*;
 
+    use anyhow::format_err;
     use assert_matches::assert_matches;
     use async_test_helpers::run_while;
     use async_utils::PollExt;
@@ -582,15 +583,19 @@ mod tests {
         assert_matches!(write_result, Ok(Err(gatt::Error::InvalidHandle)));
     }
 
-    #[fuchsia::test]
-    fn key_based_pairing_write_results_in_stream_item() {
+    type Responder = Box<dyn FnOnce(Result<(), gatt::Error>)>;
+    type GattRequestMatcher = fn(GattRequest) -> Result<Responder, anyhow::Error>;
+    fn characteristic_write_results_in_expected_stream_item(
+        characteristic_handle: Handle,
+        matcher: GattRequestMatcher,
+    ) {
         let mut exec = fasync::TestExecutor::new().unwrap();
         let (mut gatt_service, upstream_service_client) =
             exec.run_singlethreaded(setup_gatt_service());
 
         let params = WriteValueParameters {
             peer_id: Some(PeerId(123).into()),
-            handle: Some(KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE),
+            handle: Some(characteristic_handle),
             offset: Some(0),
             value: Some(vec![0x00, 0x01, 0x02]),
             ..WriteValueParameters::EMPTY
@@ -601,15 +606,13 @@ mod tests {
             .run_until_stalled(&mut write_request_fut)
             .expect_pending("waiting for FIDL response");
 
-        // Write request should be received by the GATT Server - request to initiate key-based
-        // pairing.
-        let responder = match exec
+        // The write request should be received by the GATT Server and converted into the expected
+        // GattRequest variant.
+        let request = exec
             .run_until_stalled(&mut gatt_service.next())
             .expect("stream should yield item")
-        {
-            Some(GattRequest::KeyBasedPairing { response, .. }) => response,
-            req => panic!("Expected Key based pairing request, got: {:?}", req),
-        };
+            .expect("stream item should not be none");
+        let responder = matcher(request).expect("wrong GATT request");
 
         // FIDL request only resolves when the stream item is handled (e.g responded to).
         responder(Ok(()));
@@ -621,77 +624,36 @@ mod tests {
     }
 
     #[fuchsia::test]
+    fn key_based_pairing_write_results_in_stream_item() {
+        characteristic_write_results_in_expected_stream_item(
+            KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE,
+            |gatt_req| match gatt_req {
+                GattRequest::KeyBasedPairing { response, .. } => Ok(response),
+                req => Err(format_err!("Expected key-based pairing write, got: {:?}", req)),
+            },
+        );
+    }
+
+    #[fuchsia::test]
     fn account_key_write_results_in_stream_item() {
-        let mut exec = fasync::TestExecutor::new().unwrap();
-        let (mut gatt_service, upstream_service_client) =
-            exec.run_singlethreaded(setup_gatt_service());
-
-        let params = WriteValueParameters {
-            peer_id: Some(PeerId(123).into()),
-            handle: Some(ACCOUNT_KEY_CHARACTERISTIC_HANDLE),
-            offset: Some(0),
-            value: Some(vec![0x00, 0x01, 0x02]),
-            ..WriteValueParameters::EMPTY
-        };
-        let write_request_fut = upstream_service_client.write_value(params);
-        pin_mut!(write_request_fut);
-        let _ = exec
-            .run_until_stalled(&mut write_request_fut)
-            .expect_pending("waiting for FIDL response");
-
-        // Write request should be received by the GATT Server - request to save an Account Key.
-        let responder = match exec
-            .run_until_stalled(&mut gatt_service.next())
-            .expect("stream should yield item")
-        {
-            Some(GattRequest::WriteAccountKey { response, .. }) => response,
-            req => panic!("Expected account key request, got: {:?}", req),
-        };
-
-        // FIDL request only resolves when the stream item is responded to.
-        responder(Ok(()));
-        let write_result = exec
-            .run_until_stalled(&mut write_request_fut)
-            .expect("response is ready")
-            .expect("FIDL result is Ok");
-        assert_eq!(write_result, Ok(()));
+        characteristic_write_results_in_expected_stream_item(
+            ACCOUNT_KEY_CHARACTERISTIC_HANDLE,
+            |gatt_req| match gatt_req {
+                GattRequest::WriteAccountKey { response, .. } => Ok(response),
+                req => Err(format_err!("Expected account key write, got: {:?}", req)),
+            },
+        );
     }
 
     #[fuchsia::test]
     fn verify_passkey_write_results_in_stream_item() {
-        let mut exec = fasync::TestExecutor::new().unwrap();
-        let (mut gatt_service, upstream_service_client) =
-            exec.run_singlethreaded(setup_gatt_service());
-
-        let params = WriteValueParameters {
-            peer_id: Some(PeerId(123).into()),
-            handle: Some(PASSKEY_CHARACTERISTIC_HANDLE),
-            offset: Some(0),
-            value: Some(vec![0x00, 0x01, 0x02]),
-            ..WriteValueParameters::EMPTY
-        };
-        let write_request_fut = upstream_service_client.write_value(params);
-        pin_mut!(write_request_fut);
-        let _ = exec
-            .run_until_stalled(&mut write_request_fut)
-            .expect_pending("waiting for FIDL response");
-
-        // Write request should be received by the GATT Server - request to verify passkey.
-        let responder = match exec
-            .run_until_stalled(&mut gatt_service.next())
-            .expect("stream should yield item")
-        {
-            Some(GattRequest::VerifyPasskey { response, .. }) => response,
-            req => panic!("Expected passkey request, got: {:?}", req),
-        };
-
-        // FIDL request only resolves when the stream item is responded to.
-        responder(Ok(()));
-        let write_result = exec
-            .run_until_stalled(&mut write_request_fut)
-            .expect("response is ready")
-            .expect("FIDL result is Ok");
-        assert_eq!(write_result, Ok(()));
+        characteristic_write_results_in_expected_stream_item(
+            PASSKEY_CHARACTERISTIC_HANDLE,
+            |gatt_req| match gatt_req {
+                GattRequest::VerifyPasskey { response, .. } => Ok(response),
+                req => Err(format_err!("Expected passkey write, got: {:?}", req)),
+            },
+        );
     }
 
     #[fuchsia::test]
