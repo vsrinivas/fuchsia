@@ -65,7 +65,11 @@ function check-if-we-can-start-package-server {
     # Something is using the port. Try to determine if it's another pm server, or ffx.
     if [[ "${is_pm_running}" -eq 0 ]]; then
       fx-error "It looks like another \"fx serve-updates\" process may be running."
-      fx-error "You probably need to stop that one and start a new one here with \"fx serve\""
+      fx-error "It may be the ffx repository server. Try shutting it down with:"
+      fx-error ""
+      fx-error "$ ffx repository server stop"
+      fx-error ""
+      fx-error "Otherwise, try stopping that process, and re-run \"fx serve\"."
       return 1
     fi
 
