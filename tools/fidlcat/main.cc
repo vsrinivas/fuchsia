@@ -219,18 +219,15 @@ int ConsoleMain(int argc, const char* argv[]) {
         if (server->state() == zxdb::SymbolServer::State::kAuth) {
           workflow.AuthenticateServer(server);
         }
-        // We want to know when all the symbol servers are ready. We can only start
-        //  monitoring when all the servers are ready.
-        server->set_state_change_callback(
+        fit::callback<void(zxdb::SymbolServer*, zxdb::SymbolServer::State)> state_change_callback =
             [&workflow, &options, &params](zxdb::SymbolServer* server,
                                            zxdb::SymbolServer::State state) {
               if (state == zxdb::SymbolServer::State::kAuth) {
                 workflow.AuthenticateServer(server);
               } else if (state == zxdb::SymbolServer::State::kUnreachable) {
-                server->set_state_change_callback(nullptr);
                 FX_LOGS(ERROR) << "Can't connect to symbol server";
               } else if (state == zxdb::SymbolServer::State::kReady) {
-                server->set_state_change_callback(nullptr);
+                FX_LOGS(INFO) << "Connected to symbol server " << server->name();
                 bool ready = true;
                 for (const auto& server : workflow.GetSymbolServers()) {
                   if (server->state() != zxdb::SymbolServer::State::kReady) {
@@ -239,11 +236,18 @@ int ConsoleMain(int argc, const char* argv[]) {
                 }
                 if (ready) {
                   // Now all the symbol servers are ready. We can start fidlcat work.
-                  FX_LOGS(INFO) << "Connected to symbol server " << server->name();
                   EnqueueStartup(&workflow, options, params);
                 }
               }
-            });
+            };
+        // The state_change_callback will not be called if the state is already kReady.
+        if (server->state() == zxdb::SymbolServer::State::kReady) {
+          state_change_callback(server, server->state());
+        } else {
+          // We want to know when all the symbol servers are ready. We can only start
+          //  monitoring when all the servers are ready.
+          server->set_state_change_callback(std::move(state_change_callback));
+        }
       }
     } else {
       // No symbol server => directly start monitoring.
