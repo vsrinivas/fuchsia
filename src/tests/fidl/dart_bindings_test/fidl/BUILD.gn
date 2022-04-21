@@ -18,9 +18,7 @@ fidl("bindings_test") {
   sources = [
     "bindings_test.test.fidl",
     "conformance.test.fidl",
-    "unknown_interactions.test.fidl",
   ]
 
   public_deps = [ "//zircon/vdso/zx" ]
-  experimental_flags = [ "unknown_interactions" ]
 }
