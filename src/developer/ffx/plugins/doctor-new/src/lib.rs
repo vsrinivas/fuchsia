@@ -1015,9 +1015,22 @@ async fn doctor_summary<W: Write>(
         let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
 
         match timeout(retry_delay, target_proxy.open_remote_control(remote_server_end)).await {
-            Ok(Ok(_)) => {
+            Ok(Ok(res)) => {
                 let node = ledger.add_node("Connecting to RCS", LedgerMode::Verbose)?;
                 ledger.set_outcome(node, LedgerOutcome::Success)?;
+                match res {
+                    Ok(_) => {}
+                    Err(_) => {
+                        let logs = target_proxy.get_ssh_logs().await?;
+                        let node = ledger.add_node(
+                            &format!("Error while connecting to RCS: could not establish SSH connection to the target: {}", logs),
+                            LedgerMode::Verbose,
+                        )?;
+                        ledger.set_outcome(node, LedgerOutcome::Failure)?;
+                        ledger.close(target_node)?;
+                        continue;
+                    }
+                };
             }
             Ok(Err(e)) => {
                 let node = ledger.add_node(
@@ -1105,8 +1118,8 @@ mod test {
         fidl::Channel,
         fidl_fuchsia_developer_ffx::{
             DaemonProxy, DaemonRequest, OpenTargetError, RemoteControlState,
-            TargetCollectionRequest, TargetCollectionRequestStream, TargetInfo, TargetRequest,
-            TargetState, TargetType,
+            TargetCollectionRequest, TargetCollectionRequestStream, TargetError, TargetInfo,
+            TargetRequest, TargetState, TargetType,
         },
         fidl_fuchsia_developer_remotecontrol::{
             IdentifyHostResponse, RemoteControlMarker, RemoteControlRequest,
@@ -1124,6 +1137,7 @@ mod test {
 
     const NODENAME: &str = "fake-nodename";
     const UNRESPONSIVE_NODENAME: &str = "fake-nodename-unresponsive";
+    const SSH_ERR_NODENAME: &str = "fake-nodename-ssh-error";
     const FASTBOOT_NODENAME: &str = "fastboot-nodename-unresponsive";
     const NON_EXISTENT_NODENAME: &str = "extra-fake-nodename";
     const SERIAL_NUMBER: &str = "123123123";
@@ -1624,6 +1638,7 @@ mod test {
 
     fn setup_responsive_daemon_server_with_targets(
         has_nodename: bool,
+        is_ssh_error: bool,
         waiter: Shared<Receiver<()>>,
     ) -> DaemonProxy {
         spawn_local_stream_handler(move |req| {
@@ -1644,11 +1659,22 @@ mod test {
                                 if !query.is_empty()
                                     && query != NODENAME
                                     && query != UNRESPONSIVE_NODENAME
+                                    && query != SSH_ERR_NODENAME
                                 {
                                     vec![]
                                 } else if query == NODENAME {
                                     vec![TargetInfo {
                                         nodename: nodename.clone(),
+                                        addresses: Some(vec![]),
+                                        age_ms: Some(0),
+                                        rcs_state: Some(RemoteControlState::Unknown),
+                                        target_type: Some(TargetType::Unknown),
+                                        target_state: Some(TargetState::Unknown),
+                                        ..TargetInfo::EMPTY
+                                    }]
+                                } else if is_ssh_error {
+                                    vec![TargetInfo {
+                                        nodename: Some(SSH_ERR_NODENAME.to_string()),
                                         addresses: Some(vec![]),
                                         age_ms: Some(0),
                                         rcs_state: Some(RemoteControlState::Unknown),
@@ -1690,12 +1716,21 @@ mod test {
                                             query.string_matcher.as_deref().unwrap_or(NODENAME);
                                         if target == UNRESPONSIVE_NODENAME || !has_nodename {
                                             serve_unresponsive_rcs(remote_control, waiter.clone());
-                                        } else if target == NODENAME {
+                                        } else if target == NODENAME || target == SSH_ERR_NODENAME {
                                             serve_responsive_rcs(remote_control);
                                         } else {
                                             panic!("got unexpected target string: '{}'", target);
                                         }
-                                        responder.send(&mut Ok(())).unwrap();
+                                        if target == SSH_ERR_NODENAME {
+                                            responder
+                                                .send(&mut Err(TargetError::SshHostPipe))
+                                                .unwrap();
+                                        } else {
+                                            responder.send(&mut Ok(())).unwrap();
+                                        }
+                                    }
+                                    TargetRequest::GetSshLogs { responder } => {
+                                        responder.send("some ssh issue").unwrap();
                                     }
                                     r => panic!("unexpected request: {:?}", r),
                                 });
@@ -2144,6 +2179,7 @@ mod test {
 
     async fn test_finds_target_connects_to_rcs_setup(
         mode: LedgerViewMode,
+        is_ssh_error: bool,
     ) -> DoctorLedger<MockWriter> {
         let (tx, rx) = oneshot::channel::<()>();
 
@@ -2151,7 +2187,7 @@ mod test {
             vec![true],
             vec![],
             vec![],
-            vec![Ok(setup_responsive_daemon_server_with_targets(true, rx.shared()))],
+            vec![Ok(setup_responsive_daemon_server_with_targets(true, is_ssh_error, rx.shared()))],
             vec![Ok(vec![1])],
         );
         let mut handler = FakeStepHandler::new();
@@ -2178,8 +2214,47 @@ mod test {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_finds_target_connects_to_rcs_with_ssh_error_verbose() {
+        let ledger = test_finds_target_connects_to_rcs_setup(LedgerViewMode::Verbose, true).await;
+        assert_eq!(
+            ledger.writer.get_data(),
+            format!(
+                "\
+            \n[✓] FFX doctor\
+            \n    [✓] Frontend version: {}\
+            \n    [✓] abi-revision: {}\
+            \n    [✓] api-level: {}\
+            \n    [i] Path to ffx: {}\
+            \n[✓] Checking daemon\
+            \n    [✓] Daemon found: [1]\
+            \n    [✓] Connecting to daemon\
+            \n    [✓] Daemon version: {}\
+            \n    [✓] abi-revision: {}\
+            \n    [✓] api-level: {}\
+            \n    [✓] Default target: (none)\
+            \n[✓] Searching for targets\
+            \n    [✓] 1 targets found\
+            \n[✗] Verifying Targets\
+            \n    [✗] Target: {}\
+            \n        [✓] Opened target handle\
+            \n        [✓] Connecting to RCS\
+            \n        [✗] Error while connecting to RCS: <reason omitted>\
+            \n[✗] Doctor found issues in one or more categories.\n",
+                FRONTEND_VERSION,
+                ABI_REVISION_STR,
+                FAKE_API_LEVEL,
+                ffx_path(),
+                DAEMON_VERSION,
+                ABI_REVISION_STR,
+                FAKE_API_LEVEL,
+                SSH_ERR_NODENAME,
+            )
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_finds_target_connects_to_rcs_verbose() {
-        let ledger = test_finds_target_connects_to_rcs_setup(LedgerViewMode::Verbose).await;
+        let ledger = test_finds_target_connects_to_rcs_setup(LedgerViewMode::Verbose, false).await;
         assert_eq!(
             ledger.writer.get_data(),
             format!(
@@ -2223,7 +2298,7 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_finds_target_connects_to_rcs_normal() {
-        let ledger = test_finds_target_connects_to_rcs_setup(LedgerViewMode::Normal).await;
+        let ledger = test_finds_target_connects_to_rcs_setup(LedgerViewMode::Normal, false).await;
         assert_eq!(
             ledger.writer.get_data(),
             format!(
@@ -2250,7 +2325,7 @@ mod test {
             vec![true],
             vec![],
             vec![],
-            vec![Ok(setup_responsive_daemon_server_with_targets(true, rx.shared()))],
+            vec![Ok(setup_responsive_daemon_server_with_targets(true, false, rx.shared()))],
             vec![Ok(vec![1])],
         );
         let mut handler = FakeStepHandler::new();
@@ -2321,7 +2396,7 @@ mod test {
             vec![true],
             vec![],
             vec![],
-            vec![Ok(setup_responsive_daemon_server_with_targets(true, rx.shared()))],
+            vec![Ok(setup_responsive_daemon_server_with_targets(true, false, rx.shared()))],
             vec![Ok(vec![1])],
         );
 
@@ -2653,7 +2728,7 @@ mod test {
             vec![true],
             vec![],
             vec![],
-            vec![Ok(setup_responsive_daemon_server_with_targets(false, rx.shared()))],
+            vec![Ok(setup_responsive_daemon_server_with_targets(false, false, rx.shared()))],
             vec![Ok(vec![1])],
         );
 
