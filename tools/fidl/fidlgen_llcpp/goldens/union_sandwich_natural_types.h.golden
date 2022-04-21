@@ -37,7 +37,7 @@ extern "C" const fidl_type_t test_unionsandwich_UnionSize8Alignment4Table;
 
 class UnionSize8Alignment4 {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, uint32_t>;
+  using Storage_ = std::variant<std::monostate, uint32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -118,14 +118,14 @@ class UnionSize8Alignment4 {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_unionsandwich::UnionSize8Alignment4::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_unionsandwich::UnionSize8Alignment4::Tag::kVariant;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -252,7 +252,7 @@ extern "C" const fidl_type_t test_unionsandwich_UnionSize36Alignment4Table;
 
 class UnionSize36Alignment4 {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, ::std::array<uint8_t, 32>>;
+  using Storage_ = std::variant<std::monostate, ::std::array<uint8_t, 32>>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -334,14 +334,14 @@ class UnionSize36Alignment4 {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_unionsandwich::UnionSize36Alignment4::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_unionsandwich::UnionSize36Alignment4::Tag::kVariant;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -468,7 +468,7 @@ extern "C" const fidl_type_t test_unionsandwich_UnionSize12Alignment4Table;
 
 class UnionSize12Alignment4 {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, ::std::array<uint8_t, 6>>;
+  using Storage_ = std::variant<std::monostate, ::std::array<uint8_t, 6>>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -550,14 +550,14 @@ class UnionSize12Alignment4 {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_unionsandwich::UnionSize12Alignment4::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_unionsandwich::UnionSize12Alignment4::Tag::kVariant;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -764,8 +764,8 @@ extern "C" const fidl_type_t test_unionsandwich_UnionSize24Alignment8Table;
 
 class UnionSize24Alignment8 {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate,
-                                  ::test_unionsandwich::StructSize16Alignment8>;
+  using Storage_ = std::variant<std::monostate,
+                                ::test_unionsandwich::StructSize16Alignment8>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -848,14 +848,14 @@ class UnionSize24Alignment8 {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_unionsandwich::UnionSize24Alignment8::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_unionsandwich::UnionSize24Alignment8::Tag::kVariant;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };

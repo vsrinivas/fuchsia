@@ -49,8 +49,7 @@ class StructWithNullableVector {
  public:
   StructWithNullableVector(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
-  StructWithNullableVector(
-      ::cpp17::optional<::std::vector<int32_t>> val) noexcept
+  StructWithNullableVector(::std::optional<::std::vector<int32_t>> val) noexcept
       : storage_({.val = std::move(val)}) {}
 
 #pragma clang diagnostic push
@@ -80,11 +79,11 @@ class StructWithNullableVector {
         ::test_nullable::StructWithNullableVector, 16, 16>::Equal(this, &other);
   }
 
-  const ::cpp17::optional<::std::vector<int32_t>>& val() const {
+  const ::std::optional<::std::vector<int32_t>>& val() const {
     return storage_.val;
   }
 
-  ::cpp17::optional<::std::vector<int32_t>>& val() { return storage_.val; }
+  ::std::optional<::std::vector<int32_t>>& val() { return storage_.val; }
 
   StructWithNullableVector(
       ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -94,7 +93,7 @@ class StructWithNullableVector {
 
  private:
   struct Storage_ final {
-    ::cpp17::optional<::std::vector<int32_t>> val;
+    ::std::optional<::std::vector<int32_t>> val;
   };
 
   Storage_ storage_;
@@ -106,7 +105,7 @@ class StructWithNullableVector {
       ::test_nullable::StructWithNullableVector>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<
-                      Storage_, ::cpp17::optional<::std::vector<int32_t>>,
+                      Storage_, ::std::optional<::std::vector<int32_t>>,
                       fidl::internal::NaturalCodingConstraintVector<
                           fidl::internal::NaturalCodingConstraintEmpty>>{
           &Storage_::val, 0, 0});
@@ -271,7 +270,7 @@ class StructWithNullableString {
  public:
   StructWithNullableString(Storage_ storage) noexcept
       : storage_(std::move(storage)) {}
-  StructWithNullableString(::cpp17::optional<::std::string> val) noexcept
+  StructWithNullableString(::std::optional<::std::string> val) noexcept
       : storage_({.val = std::move(val)}) {}
 
 #pragma clang diagnostic push
@@ -301,9 +300,9 @@ class StructWithNullableString {
         ::test_nullable::StructWithNullableString, 16, 16>::Equal(this, &other);
   }
 
-  const ::cpp17::optional<::std::string>& val() const { return storage_.val; }
+  const ::std::optional<::std::string>& val() const { return storage_.val; }
 
-  ::cpp17::optional<::std::string>& val() { return storage_.val; }
+  ::std::optional<::std::string>& val() { return storage_.val; }
 
   StructWithNullableString(
       ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -313,7 +312,7 @@ class StructWithNullableString {
 
  private:
   struct Storage_ final {
-    ::cpp17::optional<::std::string> val;
+    ::std::optional<::std::string> val;
   };
 
   Storage_ storage_;
@@ -325,7 +324,7 @@ class StructWithNullableString {
       ::test_nullable::StructWithNullableString>;
   static constexpr auto kMembers =
       std::make_tuple(::fidl::internal::NaturalStructMember<
-                      Storage_, ::cpp17::optional<::std::string>,
+                      Storage_, ::std::optional<::std::string>,
                       fidl::internal::NaturalCodingConstraintString<>>{
           &Storage_::val, 0, 0});
   static constexpr auto kPaddingV1 = std::make_tuple();
@@ -520,7 +519,7 @@ extern "C" const fidl_type_t test_nullable_SimpleUnionTable;
 
 class SimpleUnion {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, int32_t, float>;
+  using Storage_ = std::variant<std::monostate, int32_t, float>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -615,15 +614,15 @@ class SimpleUnion {
     }
   }
 
-  static constexpr cpp17::optional<::test_nullable::SimpleUnion::Tag>
-  IndexToTag(size_t index) {
+  static constexpr std::optional<::test_nullable::SimpleUnion::Tag> IndexToTag(
+      size_t index) {
     switch (index) {
       case 1:
         return ::test_nullable::SimpleUnion::Tag::kA;
       case 2:
         return ::test_nullable::SimpleUnion::Tag::kB;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };

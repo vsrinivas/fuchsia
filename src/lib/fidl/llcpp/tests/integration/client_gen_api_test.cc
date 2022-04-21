@@ -9,7 +9,6 @@
 #include <lib/fidl/epitaph.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fit/defer.h>
-#include <lib/stdcompat/type_traits.h>
 #include <lib/sync/completion.h>
 #include <lib/sync/cpp/completion.h>
 #include <lib/zx/channel.h>
@@ -17,6 +16,8 @@
 #include <lib/zx/time.h>
 #include <string.h>
 #include <zircon/types.h>
+
+#include <type_traits>
 
 #include <zxtest/zxtest.h>
 

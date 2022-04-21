@@ -29,13 +29,13 @@ class __TA_CAPABILITY("mutex") DebugOnlyThreadChecker {
   using CheckerType = AnyThreadChecker;
 
   template <typename T, typename... Args>
-  explicit DebugOnlyThreadChecker(cpp17::in_place_type_t<T>, Args&&... args)
-      : checker_(cpp17::in_place_type_t<T>{}, std::forward<Args>(args)...) {}
+  explicit DebugOnlyThreadChecker(std::in_place_type_t<T>, Args&&... args)
+      : checker_(std::in_place_type_t<T>{}, std::forward<Args>(args)...) {}
 #else
   using CheckerType = Arrow<NoopThreadChecker>;
 
   template <typename T, typename... Args>
-  explicit DebugOnlyThreadChecker(cpp17::in_place_type_t<T>, Args&&... args) {}
+  explicit DebugOnlyThreadChecker(std::in_place_type_t<T>, Args&&... args) {}
 #endif
 
   DebugOnlyThreadChecker(const TransportVTable* vtable, async_dispatcher_t* dispatcher,

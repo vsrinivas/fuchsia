@@ -12,14 +12,14 @@
 #include <lib/fidl/txn_header.h>
 #include <lib/fit/nullable.h>
 #include <lib/fitx/result.h>
-#include <lib/stdcompat/span.h>
-#include <lib/stdcompat/variant.h>
 #include <zircon/assert.h>
 #include <zircon/fidl.h>
 
+#include <array>
 #include <memory>
 #include <string>
 #include <type_traits>
+#include <variant>
 #include <vector>
 
 #ifdef __Fuchsia__

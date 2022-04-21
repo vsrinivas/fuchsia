@@ -46,18 +46,18 @@ class T {
              storage_.fdf_handle.has_value());
   }
 
-  const cpp17::optional<::zx::event>& zircon_handle() const {
+  const std::optional<::zx::event>& zircon_handle() const {
     return storage_.zircon_handle;
   }
-  ::cpp17::optional<::zx::event>& zircon_handle() {
+  ::std::optional<::zx::event>& zircon_handle() {
     return storage_.zircon_handle;
   }
 
-  const cpp17::optional<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>&
+  const std::optional<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>&
   fdf_handle() const {
     return storage_.fdf_handle;
   }
-  ::cpp17::optional<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>&
+  ::std::optional<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>&
   fdf_handle() {
     return storage_.fdf_handle;
   }
@@ -67,8 +67,8 @@ class T {
 
  private:
   struct Storage_ final {
-    ::cpp17::optional<::zx::event> zircon_handle{};
-    ::cpp17::optional<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>
+    ::std::optional<::zx::event> zircon_handle{};
+    ::std::optional<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>
         fdf_handle{};
   };
 

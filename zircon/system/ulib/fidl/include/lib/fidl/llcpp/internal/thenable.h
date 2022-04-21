@@ -10,7 +10,8 @@
 #include <lib/fidl/llcpp/internal/client_continuation.h>
 #include <lib/fidl/llcpp/internal/make_response_context.h>
 #include <lib/fidl/llcpp/message.h>
-#include <lib/stdcompat/type_traits.h>
+
+#include <type_traits>
 
 namespace fidl::internal {
 

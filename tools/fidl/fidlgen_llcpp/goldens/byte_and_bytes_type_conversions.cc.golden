@@ -18,10 +18,10 @@ WireNaturalConversionTraits<::test_byteandbytes::wire::ByteAndBytes,
       .only_one_k_bytes = WireNaturalConversionTraits<
           ::fidl::VectorView<uint8_t>,
           ::std::vector<uint8_t>>::ToNatural(std::move(src.only_one_k_bytes)),
-      .opt_only_one_k_bytes = WireNaturalConversionTraits<
-          ::fidl::VectorView<uint8_t>,
-          ::cpp17::optional<::std::vector<uint8_t>>>::
-          ToNatural(std::move(src.opt_only_one_k_bytes)),
+      .opt_only_one_k_bytes =
+          WireNaturalConversionTraits<::fidl::VectorView<uint8_t>,
+                                      ::std::optional<::std::vector<uint8_t>>>::
+              ToNatural(std::move(src.opt_only_one_k_bytes)),
   });
 }
 

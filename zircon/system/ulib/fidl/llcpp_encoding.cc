@@ -7,7 +7,6 @@
 #include <lib/fidl/llcpp/internal/transport.h>
 #include <lib/fidl/visitor.h>
 #include <lib/fidl/walker.h>
-#include <lib/stdcompat/variant.h>
 #include <stdalign.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -19,6 +18,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <limits>
+#include <variant>
 
 #ifdef __Fuchsia__
 #include <zircon/syscalls.h>

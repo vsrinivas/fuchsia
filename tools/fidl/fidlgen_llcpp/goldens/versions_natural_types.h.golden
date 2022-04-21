@@ -27,7 +27,7 @@ extern "C" const fidl_type_t test_versions_UnionTable;
 
 class Union {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, uint32_t>;
+  using Storage_ = std::variant<std::monostate, uint32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -109,7 +109,7 @@ class Union {
     }
   }
 
-  static constexpr cpp17::optional<::test_versions::Union::Tag> IndexToTag(
+  static constexpr std::optional<::test_versions::Union::Tag> IndexToTag(
       size_t index) {
     switch (index) {
       case 1:
@@ -147,15 +147,15 @@ class Table {
 
   bool IsEmpty() const { return !(storage_.x.has_value()); }
 
-  const cpp17::optional<uint32_t>& x() const { return storage_.x; }
-  ::cpp17::optional<uint32_t>& x() { return storage_.x; }
+  const std::optional<uint32_t>& x() const { return storage_.x; }
+  ::std::optional<uint32_t>& x() { return storage_.x; }
 
   Table(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
       : Table(Storage_{}) {}
 
  private:
   struct Storage_ final {
-    ::cpp17::optional<uint32_t> x{};
+    ::std::optional<uint32_t> x{};
   };
 
   // TODO(https://fxbug.dev/91252): Box the storage.

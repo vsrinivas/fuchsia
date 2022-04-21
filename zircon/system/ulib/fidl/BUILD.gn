@@ -156,9 +156,6 @@ if (is_fuchsia) {
     public_deps = [
       ":headers",
 
-      # <lib/fidl/llcpp/service_handler_interface.h> has #include <lib/stdcompat/string_view.h>
-      "//sdk/lib/stdcompat",
-
       # <lib/fidl/llcpp/async_binding.h> has #include <lib/async/dispatcher.h>
       "//zircon/system/ulib/async:headers",
 
@@ -226,7 +223,6 @@ if (is_fuchsia) {
     ]
     public_deps = [
       "//sdk/lib/fit:headers",
-      "//sdk/lib/stdcompat",
       "//src/zircon/lib/zircon:headers",
       "//zircon/system/ulib/zxc:headers",
     ]

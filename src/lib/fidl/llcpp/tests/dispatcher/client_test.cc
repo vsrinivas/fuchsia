@@ -294,7 +294,7 @@ class OnCanceledTestResponseContext : public internal::ResponseContext {
  public:
   explicit OnCanceledTestResponseContext(sync_completion_t* done)
       : internal::ResponseContext(0), done_(done) {}
-  cpp17::optional<fidl::UnbindInfo> OnRawResult(
+  std::optional<fidl::UnbindInfo> OnRawResult(
       fidl::IncomingMessage&& msg,
       fidl::internal::IncomingTransportContext transport_context) override {
     if (!msg.ok() && msg.reason() == fidl::Reason::kUnbind) {
@@ -334,7 +334,7 @@ class OnErrorTestResponseContext : public internal::ResponseContext {
  public:
   explicit OnErrorTestResponseContext(sync_completion_t* done, fidl::Reason expected_reason)
       : internal::ResponseContext(0), done_(done), expected_reason_(expected_reason) {}
-  cpp17::optional<fidl::UnbindInfo> OnRawResult(
+  std::optional<fidl::UnbindInfo> OnRawResult(
       fidl::IncomingMessage&& msg,
       fidl::internal::IncomingTransportContext transport_context) override {
     EXPECT_TRUE(!msg.ok());

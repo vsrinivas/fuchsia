@@ -104,7 +104,7 @@ class MockResponseContext : public fidl::internal::ResponseContext {
  public:
   MockResponseContext() : fidl::internal::ResponseContext(kTestOrdinal) {}
 
-  cpp17::optional<fidl::UnbindInfo> OnRawResult(
+  std::optional<fidl::UnbindInfo> OnRawResult(
       ::fidl::IncomingMessage&& msg,
       fidl::internal::IncomingTransportContext transport_context) override {
     if (msg.ok()) {
@@ -113,23 +113,23 @@ class MockResponseContext : public fidl::internal::ResponseContext {
     }
     if (msg.reason() == fidl::Reason::kUnbind) {
       canceled_ = true;
-      return cpp17::nullopt;
+      return std::nullopt;
     }
     num_errors_ += 1;
     last_error_ = msg.error();
-    return cpp17::nullopt;
+    return std::nullopt;
   }
 
   bool canceled() const { return canceled_; }
 
   int num_errors() const { return num_errors_; }
 
-  cpp17::optional<fidl::Status> last_error() const { return last_error_; }
+  std::optional<fidl::Status> last_error() const { return last_error_; }
 
  private:
   bool canceled_ = false;
   int num_errors_ = 0;
-  cpp17::optional<fidl::Status> last_error_ = cpp17::nullopt;
+  std::optional<fidl::Status> last_error_ = std::nullopt;
 };
 
 class ClientBaseTest : public zxtest::Test {

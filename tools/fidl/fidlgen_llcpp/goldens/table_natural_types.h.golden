@@ -61,8 +61,8 @@ class TableWithAttributes {
 
   bool IsEmpty() const { return !(storage_.x.has_value()); }
 
-  const cpp17::optional<int64_t>& x() const { return storage_.x; }
-  ::cpp17::optional<int64_t>& x() { return storage_.x; }
+  const std::optional<int64_t>& x() const { return storage_.x; }
+  ::std::optional<int64_t>& x() { return storage_.x; }
 
   TableWithAttributes(
       ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -70,7 +70,7 @@ class TableWithAttributes {
 
  private:
   struct Storage_ final {
-    ::cpp17::optional<int64_t> x{};
+    ::std::optional<int64_t> x{};
   };
 
   // TODO(https://fxbug.dev/91252): Box the storage.
@@ -116,19 +116,19 @@ class SimpleTable {
     return !(storage_.x.has_value() || storage_.y.has_value());
   }
 
-  const cpp17::optional<int64_t>& x() const { return storage_.x; }
-  ::cpp17::optional<int64_t>& x() { return storage_.x; }
+  const std::optional<int64_t>& x() const { return storage_.x; }
+  ::std::optional<int64_t>& x() { return storage_.x; }
 
-  const cpp17::optional<int64_t>& y() const { return storage_.y; }
-  ::cpp17::optional<int64_t>& y() { return storage_.y; }
+  const std::optional<int64_t>& y() const { return storage_.y; }
+  ::std::optional<int64_t>& y() { return storage_.y; }
 
   SimpleTable(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
       : SimpleTable(Storage_{}) {}
 
  private:
   struct Storage_ final {
-    ::cpp17::optional<int64_t> x{};
-    ::cpp17::optional<int64_t> y{};
+    ::std::optional<int64_t> x{};
+    ::std::optional<int64_t> y{};
   };
 
   // TODO(https://fxbug.dev/91252): Box the storage.
@@ -178,14 +178,14 @@ class ReverseOrdinalTable {
              storage_.x.has_value());
   }
 
-  const cpp17::optional<int64_t>& z() const { return storage_.z; }
-  ::cpp17::optional<int64_t>& z() { return storage_.z; }
+  const std::optional<int64_t>& z() const { return storage_.z; }
+  ::std::optional<int64_t>& z() { return storage_.z; }
 
-  const cpp17::optional<int64_t>& y() const { return storage_.y; }
-  ::cpp17::optional<int64_t>& y() { return storage_.y; }
+  const std::optional<int64_t>& y() const { return storage_.y; }
+  ::std::optional<int64_t>& y() { return storage_.y; }
 
-  const cpp17::optional<int64_t>& x() const { return storage_.x; }
-  ::cpp17::optional<int64_t>& x() { return storage_.x; }
+  const std::optional<int64_t>& x() const { return storage_.x; }
+  ::std::optional<int64_t>& x() { return storage_.x; }
 
   ReverseOrdinalTable(
       ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -193,9 +193,9 @@ class ReverseOrdinalTable {
 
  private:
   struct Storage_ final {
-    ::cpp17::optional<int64_t> z{};
-    ::cpp17::optional<int64_t> y{};
-    ::cpp17::optional<int64_t> x{};
+    ::std::optional<int64_t> z{};
+    ::std::optional<int64_t> y{};
+    ::std::optional<int64_t> x{};
   };
 
   // TODO(https://fxbug.dev/91252): Box the storage.
@@ -245,15 +245,15 @@ class OlderSimpleTable {
 
   bool IsEmpty() const { return !(storage_.x.has_value()); }
 
-  const cpp17::optional<int64_t>& x() const { return storage_.x; }
-  ::cpp17::optional<int64_t>& x() { return storage_.x; }
+  const std::optional<int64_t>& x() const { return storage_.x; }
+  ::std::optional<int64_t>& x() { return storage_.x; }
 
   OlderSimpleTable(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
       : OlderSimpleTable(Storage_{}) {}
 
  private:
   struct Storage_ final {
-    ::cpp17::optional<int64_t> x{};
+    ::std::optional<int64_t> x{};
   };
 
   // TODO(https://fxbug.dev/91252): Box the storage.
@@ -299,23 +299,23 @@ class NewerSimpleTable {
              storage_.z.has_value());
   }
 
-  const cpp17::optional<int64_t>& x() const { return storage_.x; }
-  ::cpp17::optional<int64_t>& x() { return storage_.x; }
+  const std::optional<int64_t>& x() const { return storage_.x; }
+  ::std::optional<int64_t>& x() { return storage_.x; }
 
-  const cpp17::optional<int64_t>& y() const { return storage_.y; }
-  ::cpp17::optional<int64_t>& y() { return storage_.y; }
+  const std::optional<int64_t>& y() const { return storage_.y; }
+  ::std::optional<int64_t>& y() { return storage_.y; }
 
-  const cpp17::optional<int64_t>& z() const { return storage_.z; }
-  ::cpp17::optional<int64_t>& z() { return storage_.z; }
+  const std::optional<int64_t>& z() const { return storage_.z; }
+  ::std::optional<int64_t>& z() { return storage_.z; }
 
   NewerSimpleTable(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
       : NewerSimpleTable(Storage_{}) {}
 
  private:
   struct Storage_ final {
-    ::cpp17::optional<int64_t> x{};
-    ::cpp17::optional<int64_t> y{};
-    ::cpp17::optional<int64_t> z{};
+    ::std::optional<int64_t> x{};
+    ::std::optional<int64_t> y{};
+    ::std::optional<int64_t> z{};
   };
 
   // TODO(https://fxbug.dev/91252): Box the storage.
@@ -442,201 +442,199 @@ class SixtyFourOrdinalTable {
              storage_.v63.has_value() || storage_.v64.has_value());
   }
 
-  const cpp17::optional<int64_t>& v1() const { return storage_.v1; }
-  ::cpp17::optional<int64_t>& v1() { return storage_.v1; }
+  const std::optional<int64_t>& v1() const { return storage_.v1; }
+  ::std::optional<int64_t>& v1() { return storage_.v1; }
 
-  const cpp17::optional<int64_t>& v2() const { return storage_.v2; }
-  ::cpp17::optional<int64_t>& v2() { return storage_.v2; }
+  const std::optional<int64_t>& v2() const { return storage_.v2; }
+  ::std::optional<int64_t>& v2() { return storage_.v2; }
 
-  const cpp17::optional<int64_t>& v3() const { return storage_.v3; }
-  ::cpp17::optional<int64_t>& v3() { return storage_.v3; }
+  const std::optional<int64_t>& v3() const { return storage_.v3; }
+  ::std::optional<int64_t>& v3() { return storage_.v3; }
 
-  const cpp17::optional<int64_t>& v4() const { return storage_.v4; }
-  ::cpp17::optional<int64_t>& v4() { return storage_.v4; }
+  const std::optional<int64_t>& v4() const { return storage_.v4; }
+  ::std::optional<int64_t>& v4() { return storage_.v4; }
 
-  const cpp17::optional<int64_t>& v5() const { return storage_.v5; }
-  ::cpp17::optional<int64_t>& v5() { return storage_.v5; }
+  const std::optional<int64_t>& v5() const { return storage_.v5; }
+  ::std::optional<int64_t>& v5() { return storage_.v5; }
 
-  const cpp17::optional<int64_t>& v6() const { return storage_.v6; }
-  ::cpp17::optional<int64_t>& v6() { return storage_.v6; }
+  const std::optional<int64_t>& v6() const { return storage_.v6; }
+  ::std::optional<int64_t>& v6() { return storage_.v6; }
 
-  const cpp17::optional<int64_t>& v7() const { return storage_.v7; }
-  ::cpp17::optional<int64_t>& v7() { return storage_.v7; }
+  const std::optional<int64_t>& v7() const { return storage_.v7; }
+  ::std::optional<int64_t>& v7() { return storage_.v7; }
 
-  const cpp17::optional<int64_t>& v8() const { return storage_.v8; }
-  ::cpp17::optional<int64_t>& v8() { return storage_.v8; }
+  const std::optional<int64_t>& v8() const { return storage_.v8; }
+  ::std::optional<int64_t>& v8() { return storage_.v8; }
 
-  const cpp17::optional<int64_t>& v9() const { return storage_.v9; }
-  ::cpp17::optional<int64_t>& v9() { return storage_.v9; }
+  const std::optional<int64_t>& v9() const { return storage_.v9; }
+  ::std::optional<int64_t>& v9() { return storage_.v9; }
 
-  const cpp17::optional<int64_t>& v10() const { return storage_.v10; }
-  ::cpp17::optional<int64_t>& v10() { return storage_.v10; }
+  const std::optional<int64_t>& v10() const { return storage_.v10; }
+  ::std::optional<int64_t>& v10() { return storage_.v10; }
 
-  const cpp17::optional<int64_t>& v11() const { return storage_.v11; }
-  ::cpp17::optional<int64_t>& v11() { return storage_.v11; }
+  const std::optional<int64_t>& v11() const { return storage_.v11; }
+  ::std::optional<int64_t>& v11() { return storage_.v11; }
 
-  const cpp17::optional<int64_t>& v12() const { return storage_.v12; }
-  ::cpp17::optional<int64_t>& v12() { return storage_.v12; }
+  const std::optional<int64_t>& v12() const { return storage_.v12; }
+  ::std::optional<int64_t>& v12() { return storage_.v12; }
 
-  const cpp17::optional<int64_t>& v13() const { return storage_.v13; }
-  ::cpp17::optional<int64_t>& v13() { return storage_.v13; }
+  const std::optional<int64_t>& v13() const { return storage_.v13; }
+  ::std::optional<int64_t>& v13() { return storage_.v13; }
 
-  const cpp17::optional<int64_t>& v14() const { return storage_.v14; }
-  ::cpp17::optional<int64_t>& v14() { return storage_.v14; }
+  const std::optional<int64_t>& v14() const { return storage_.v14; }
+  ::std::optional<int64_t>& v14() { return storage_.v14; }
 
-  const cpp17::optional<int64_t>& v15() const { return storage_.v15; }
-  ::cpp17::optional<int64_t>& v15() { return storage_.v15; }
+  const std::optional<int64_t>& v15() const { return storage_.v15; }
+  ::std::optional<int64_t>& v15() { return storage_.v15; }
 
-  const cpp17::optional<int64_t>& v16() const { return storage_.v16; }
-  ::cpp17::optional<int64_t>& v16() { return storage_.v16; }
+  const std::optional<int64_t>& v16() const { return storage_.v16; }
+  ::std::optional<int64_t>& v16() { return storage_.v16; }
 
-  const cpp17::optional<int64_t>& v17() const { return storage_.v17; }
-  ::cpp17::optional<int64_t>& v17() { return storage_.v17; }
+  const std::optional<int64_t>& v17() const { return storage_.v17; }
+  ::std::optional<int64_t>& v17() { return storage_.v17; }
 
-  const cpp17::optional<int64_t>& v18() const { return storage_.v18; }
-  ::cpp17::optional<int64_t>& v18() { return storage_.v18; }
+  const std::optional<int64_t>& v18() const { return storage_.v18; }
+  ::std::optional<int64_t>& v18() { return storage_.v18; }
 
-  const cpp17::optional<int64_t>& v19() const { return storage_.v19; }
-  ::cpp17::optional<int64_t>& v19() { return storage_.v19; }
+  const std::optional<int64_t>& v19() const { return storage_.v19; }
+  ::std::optional<int64_t>& v19() { return storage_.v19; }
 
-  const cpp17::optional<int64_t>& v20() const { return storage_.v20; }
-  ::cpp17::optional<int64_t>& v20() { return storage_.v20; }
+  const std::optional<int64_t>& v20() const { return storage_.v20; }
+  ::std::optional<int64_t>& v20() { return storage_.v20; }
 
-  const cpp17::optional<int64_t>& v21() const { return storage_.v21; }
-  ::cpp17::optional<int64_t>& v21() { return storage_.v21; }
+  const std::optional<int64_t>& v21() const { return storage_.v21; }
+  ::std::optional<int64_t>& v21() { return storage_.v21; }
 
-  const cpp17::optional<int64_t>& v22() const { return storage_.v22; }
-  ::cpp17::optional<int64_t>& v22() { return storage_.v22; }
+  const std::optional<int64_t>& v22() const { return storage_.v22; }
+  ::std::optional<int64_t>& v22() { return storage_.v22; }
 
-  const cpp17::optional<int64_t>& v23() const { return storage_.v23; }
-  ::cpp17::optional<int64_t>& v23() { return storage_.v23; }
+  const std::optional<int64_t>& v23() const { return storage_.v23; }
+  ::std::optional<int64_t>& v23() { return storage_.v23; }
 
-  const cpp17::optional<int64_t>& v24() const { return storage_.v24; }
-  ::cpp17::optional<int64_t>& v24() { return storage_.v24; }
+  const std::optional<int64_t>& v24() const { return storage_.v24; }
+  ::std::optional<int64_t>& v24() { return storage_.v24; }
 
-  const cpp17::optional<int64_t>& v25() const { return storage_.v25; }
-  ::cpp17::optional<int64_t>& v25() { return storage_.v25; }
+  const std::optional<int64_t>& v25() const { return storage_.v25; }
+  ::std::optional<int64_t>& v25() { return storage_.v25; }
 
-  const cpp17::optional<int64_t>& v26() const { return storage_.v26; }
-  ::cpp17::optional<int64_t>& v26() { return storage_.v26; }
+  const std::optional<int64_t>& v26() const { return storage_.v26; }
+  ::std::optional<int64_t>& v26() { return storage_.v26; }
 
-  const cpp17::optional<int64_t>& v27() const { return storage_.v27; }
-  ::cpp17::optional<int64_t>& v27() { return storage_.v27; }
+  const std::optional<int64_t>& v27() const { return storage_.v27; }
+  ::std::optional<int64_t>& v27() { return storage_.v27; }
 
-  const cpp17::optional<int64_t>& v28() const { return storage_.v28; }
-  ::cpp17::optional<int64_t>& v28() { return storage_.v28; }
+  const std::optional<int64_t>& v28() const { return storage_.v28; }
+  ::std::optional<int64_t>& v28() { return storage_.v28; }
 
-  const cpp17::optional<int64_t>& v29() const { return storage_.v29; }
-  ::cpp17::optional<int64_t>& v29() { return storage_.v29; }
+  const std::optional<int64_t>& v29() const { return storage_.v29; }
+  ::std::optional<int64_t>& v29() { return storage_.v29; }
 
-  const cpp17::optional<int64_t>& v30() const { return storage_.v30; }
-  ::cpp17::optional<int64_t>& v30() { return storage_.v30; }
+  const std::optional<int64_t>& v30() const { return storage_.v30; }
+  ::std::optional<int64_t>& v30() { return storage_.v30; }
 
-  const cpp17::optional<int64_t>& v31() const { return storage_.v31; }
-  ::cpp17::optional<int64_t>& v31() { return storage_.v31; }
+  const std::optional<int64_t>& v31() const { return storage_.v31; }
+  ::std::optional<int64_t>& v31() { return storage_.v31; }
 
-  const cpp17::optional<int64_t>& v32() const { return storage_.v32; }
-  ::cpp17::optional<int64_t>& v32() { return storage_.v32; }
+  const std::optional<int64_t>& v32() const { return storage_.v32; }
+  ::std::optional<int64_t>& v32() { return storage_.v32; }
 
-  const cpp17::optional<int64_t>& v33() const { return storage_.v33; }
-  ::cpp17::optional<int64_t>& v33() { return storage_.v33; }
+  const std::optional<int64_t>& v33() const { return storage_.v33; }
+  ::std::optional<int64_t>& v33() { return storage_.v33; }
 
-  const cpp17::optional<int64_t>& v34() const { return storage_.v34; }
-  ::cpp17::optional<int64_t>& v34() { return storage_.v34; }
+  const std::optional<int64_t>& v34() const { return storage_.v34; }
+  ::std::optional<int64_t>& v34() { return storage_.v34; }
 
-  const cpp17::optional<int64_t>& v35() const { return storage_.v35; }
-  ::cpp17::optional<int64_t>& v35() { return storage_.v35; }
+  const std::optional<int64_t>& v35() const { return storage_.v35; }
+  ::std::optional<int64_t>& v35() { return storage_.v35; }
 
-  const cpp17::optional<int64_t>& v36() const { return storage_.v36; }
-  ::cpp17::optional<int64_t>& v36() { return storage_.v36; }
+  const std::optional<int64_t>& v36() const { return storage_.v36; }
+  ::std::optional<int64_t>& v36() { return storage_.v36; }
 
-  const cpp17::optional<int64_t>& v37() const { return storage_.v37; }
-  ::cpp17::optional<int64_t>& v37() { return storage_.v37; }
+  const std::optional<int64_t>& v37() const { return storage_.v37; }
+  ::std::optional<int64_t>& v37() { return storage_.v37; }
 
-  const cpp17::optional<int64_t>& v38() const { return storage_.v38; }
-  ::cpp17::optional<int64_t>& v38() { return storage_.v38; }
+  const std::optional<int64_t>& v38() const { return storage_.v38; }
+  ::std::optional<int64_t>& v38() { return storage_.v38; }
 
-  const cpp17::optional<int64_t>& v39() const { return storage_.v39; }
-  ::cpp17::optional<int64_t>& v39() { return storage_.v39; }
+  const std::optional<int64_t>& v39() const { return storage_.v39; }
+  ::std::optional<int64_t>& v39() { return storage_.v39; }
 
-  const cpp17::optional<int64_t>& v40() const { return storage_.v40; }
-  ::cpp17::optional<int64_t>& v40() { return storage_.v40; }
+  const std::optional<int64_t>& v40() const { return storage_.v40; }
+  ::std::optional<int64_t>& v40() { return storage_.v40; }
 
-  const cpp17::optional<int64_t>& v41() const { return storage_.v41; }
-  ::cpp17::optional<int64_t>& v41() { return storage_.v41; }
+  const std::optional<int64_t>& v41() const { return storage_.v41; }
+  ::std::optional<int64_t>& v41() { return storage_.v41; }
 
-  const cpp17::optional<int64_t>& v42() const { return storage_.v42; }
-  ::cpp17::optional<int64_t>& v42() { return storage_.v42; }
+  const std::optional<int64_t>& v42() const { return storage_.v42; }
+  ::std::optional<int64_t>& v42() { return storage_.v42; }
 
-  const cpp17::optional<int64_t>& v43() const { return storage_.v43; }
-  ::cpp17::optional<int64_t>& v43() { return storage_.v43; }
+  const std::optional<int64_t>& v43() const { return storage_.v43; }
+  ::std::optional<int64_t>& v43() { return storage_.v43; }
 
-  const cpp17::optional<int64_t>& v44() const { return storage_.v44; }
-  ::cpp17::optional<int64_t>& v44() { return storage_.v44; }
+  const std::optional<int64_t>& v44() const { return storage_.v44; }
+  ::std::optional<int64_t>& v44() { return storage_.v44; }
 
-  const cpp17::optional<int64_t>& v45() const { return storage_.v45; }
-  ::cpp17::optional<int64_t>& v45() { return storage_.v45; }
+  const std::optional<int64_t>& v45() const { return storage_.v45; }
+  ::std::optional<int64_t>& v45() { return storage_.v45; }
 
-  const cpp17::optional<int64_t>& v46() const { return storage_.v46; }
-  ::cpp17::optional<int64_t>& v46() { return storage_.v46; }
+  const std::optional<int64_t>& v46() const { return storage_.v46; }
+  ::std::optional<int64_t>& v46() { return storage_.v46; }
 
-  const cpp17::optional<int64_t>& v47() const { return storage_.v47; }
-  ::cpp17::optional<int64_t>& v47() { return storage_.v47; }
+  const std::optional<int64_t>& v47() const { return storage_.v47; }
+  ::std::optional<int64_t>& v47() { return storage_.v47; }
 
-  const cpp17::optional<int64_t>& v48() const { return storage_.v48; }
-  ::cpp17::optional<int64_t>& v48() { return storage_.v48; }
+  const std::optional<int64_t>& v48() const { return storage_.v48; }
+  ::std::optional<int64_t>& v48() { return storage_.v48; }
 
-  const cpp17::optional<int64_t>& v49() const { return storage_.v49; }
-  ::cpp17::optional<int64_t>& v49() { return storage_.v49; }
+  const std::optional<int64_t>& v49() const { return storage_.v49; }
+  ::std::optional<int64_t>& v49() { return storage_.v49; }
 
-  const cpp17::optional<int64_t>& v50() const { return storage_.v50; }
-  ::cpp17::optional<int64_t>& v50() { return storage_.v50; }
+  const std::optional<int64_t>& v50() const { return storage_.v50; }
+  ::std::optional<int64_t>& v50() { return storage_.v50; }
 
-  const cpp17::optional<int64_t>& v51() const { return storage_.v51; }
-  ::cpp17::optional<int64_t>& v51() { return storage_.v51; }
+  const std::optional<int64_t>& v51() const { return storage_.v51; }
+  ::std::optional<int64_t>& v51() { return storage_.v51; }
 
-  const cpp17::optional<int64_t>& v52() const { return storage_.v52; }
-  ::cpp17::optional<int64_t>& v52() { return storage_.v52; }
+  const std::optional<int64_t>& v52() const { return storage_.v52; }
+  ::std::optional<int64_t>& v52() { return storage_.v52; }
 
-  const cpp17::optional<int64_t>& v53() const { return storage_.v53; }
-  ::cpp17::optional<int64_t>& v53() { return storage_.v53; }
+  const std::optional<int64_t>& v53() const { return storage_.v53; }
+  ::std::optional<int64_t>& v53() { return storage_.v53; }
 
-  const cpp17::optional<int64_t>& v54() const { return storage_.v54; }
-  ::cpp17::optional<int64_t>& v54() { return storage_.v54; }
+  const std::optional<int64_t>& v54() const { return storage_.v54; }
+  ::std::optional<int64_t>& v54() { return storage_.v54; }
 
-  const cpp17::optional<int64_t>& v55() const { return storage_.v55; }
-  ::cpp17::optional<int64_t>& v55() { return storage_.v55; }
+  const std::optional<int64_t>& v55() const { return storage_.v55; }
+  ::std::optional<int64_t>& v55() { return storage_.v55; }
 
-  const cpp17::optional<int64_t>& v56() const { return storage_.v56; }
-  ::cpp17::optional<int64_t>& v56() { return storage_.v56; }
+  const std::optional<int64_t>& v56() const { return storage_.v56; }
+  ::std::optional<int64_t>& v56() { return storage_.v56; }
 
-  const cpp17::optional<int64_t>& v57() const { return storage_.v57; }
-  ::cpp17::optional<int64_t>& v57() { return storage_.v57; }
+  const std::optional<int64_t>& v57() const { return storage_.v57; }
+  ::std::optional<int64_t>& v57() { return storage_.v57; }
 
-  const cpp17::optional<int64_t>& v58() const { return storage_.v58; }
-  ::cpp17::optional<int64_t>& v58() { return storage_.v58; }
+  const std::optional<int64_t>& v58() const { return storage_.v58; }
+  ::std::optional<int64_t>& v58() { return storage_.v58; }
 
-  const cpp17::optional<int64_t>& v59() const { return storage_.v59; }
-  ::cpp17::optional<int64_t>& v59() { return storage_.v59; }
+  const std::optional<int64_t>& v59() const { return storage_.v59; }
+  ::std::optional<int64_t>& v59() { return storage_.v59; }
 
-  const cpp17::optional<int64_t>& v60() const { return storage_.v60; }
-  ::cpp17::optional<int64_t>& v60() { return storage_.v60; }
+  const std::optional<int64_t>& v60() const { return storage_.v60; }
+  ::std::optional<int64_t>& v60() { return storage_.v60; }
 
-  const cpp17::optional<int64_t>& v61() const { return storage_.v61; }
-  ::cpp17::optional<int64_t>& v61() { return storage_.v61; }
+  const std::optional<int64_t>& v61() const { return storage_.v61; }
+  ::std::optional<int64_t>& v61() { return storage_.v61; }
 
-  const cpp17::optional<int64_t>& v62() const { return storage_.v62; }
-  ::cpp17::optional<int64_t>& v62() { return storage_.v62; }
+  const std::optional<int64_t>& v62() const { return storage_.v62; }
+  ::std::optional<int64_t>& v62() { return storage_.v62; }
 
-  const cpp17::optional<int64_t>& v63() const { return storage_.v63; }
-  ::cpp17::optional<int64_t>& v63() { return storage_.v63; }
+  const std::optional<int64_t>& v63() const { return storage_.v63; }
+  ::std::optional<int64_t>& v63() { return storage_.v63; }
 
-  const cpp17::optional<::test_table::ExtensionTable>& v64() const {
+  const std::optional<::test_table::ExtensionTable>& v64() const {
     return storage_.v64;
   }
-  ::cpp17::optional<::test_table::ExtensionTable>& v64() {
-    return storage_.v64;
-  }
+  ::std::optional<::test_table::ExtensionTable>& v64() { return storage_.v64; }
 
   SixtyFourOrdinalTable(
       ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -644,70 +642,70 @@ class SixtyFourOrdinalTable {
 
  private:
   struct Storage_ final {
-    ::cpp17::optional<int64_t> v1{};
-    ::cpp17::optional<int64_t> v2{};
-    ::cpp17::optional<int64_t> v3{};
-    ::cpp17::optional<int64_t> v4{};
-    ::cpp17::optional<int64_t> v5{};
-    ::cpp17::optional<int64_t> v6{};
-    ::cpp17::optional<int64_t> v7{};
-    ::cpp17::optional<int64_t> v8{};
-    ::cpp17::optional<int64_t> v9{};
-    ::cpp17::optional<int64_t> v10{};
-    ::cpp17::optional<int64_t> v11{};
-    ::cpp17::optional<int64_t> v12{};
-    ::cpp17::optional<int64_t> v13{};
-    ::cpp17::optional<int64_t> v14{};
-    ::cpp17::optional<int64_t> v15{};
-    ::cpp17::optional<int64_t> v16{};
-    ::cpp17::optional<int64_t> v17{};
-    ::cpp17::optional<int64_t> v18{};
-    ::cpp17::optional<int64_t> v19{};
-    ::cpp17::optional<int64_t> v20{};
-    ::cpp17::optional<int64_t> v21{};
-    ::cpp17::optional<int64_t> v22{};
-    ::cpp17::optional<int64_t> v23{};
-    ::cpp17::optional<int64_t> v24{};
-    ::cpp17::optional<int64_t> v25{};
-    ::cpp17::optional<int64_t> v26{};
-    ::cpp17::optional<int64_t> v27{};
-    ::cpp17::optional<int64_t> v28{};
-    ::cpp17::optional<int64_t> v29{};
-    ::cpp17::optional<int64_t> v30{};
-    ::cpp17::optional<int64_t> v31{};
-    ::cpp17::optional<int64_t> v32{};
-    ::cpp17::optional<int64_t> v33{};
-    ::cpp17::optional<int64_t> v34{};
-    ::cpp17::optional<int64_t> v35{};
-    ::cpp17::optional<int64_t> v36{};
-    ::cpp17::optional<int64_t> v37{};
-    ::cpp17::optional<int64_t> v38{};
-    ::cpp17::optional<int64_t> v39{};
-    ::cpp17::optional<int64_t> v40{};
-    ::cpp17::optional<int64_t> v41{};
-    ::cpp17::optional<int64_t> v42{};
-    ::cpp17::optional<int64_t> v43{};
-    ::cpp17::optional<int64_t> v44{};
-    ::cpp17::optional<int64_t> v45{};
-    ::cpp17::optional<int64_t> v46{};
-    ::cpp17::optional<int64_t> v47{};
-    ::cpp17::optional<int64_t> v48{};
-    ::cpp17::optional<int64_t> v49{};
-    ::cpp17::optional<int64_t> v50{};
-    ::cpp17::optional<int64_t> v51{};
-    ::cpp17::optional<int64_t> v52{};
-    ::cpp17::optional<int64_t> v53{};
-    ::cpp17::optional<int64_t> v54{};
-    ::cpp17::optional<int64_t> v55{};
-    ::cpp17::optional<int64_t> v56{};
-    ::cpp17::optional<int64_t> v57{};
-    ::cpp17::optional<int64_t> v58{};
-    ::cpp17::optional<int64_t> v59{};
-    ::cpp17::optional<int64_t> v60{};
-    ::cpp17::optional<int64_t> v61{};
-    ::cpp17::optional<int64_t> v62{};
-    ::cpp17::optional<int64_t> v63{};
-    ::cpp17::optional<::test_table::ExtensionTable> v64{};
+    ::std::optional<int64_t> v1{};
+    ::std::optional<int64_t> v2{};
+    ::std::optional<int64_t> v3{};
+    ::std::optional<int64_t> v4{};
+    ::std::optional<int64_t> v5{};
+    ::std::optional<int64_t> v6{};
+    ::std::optional<int64_t> v7{};
+    ::std::optional<int64_t> v8{};
+    ::std::optional<int64_t> v9{};
+    ::std::optional<int64_t> v10{};
+    ::std::optional<int64_t> v11{};
+    ::std::optional<int64_t> v12{};
+    ::std::optional<int64_t> v13{};
+    ::std::optional<int64_t> v14{};
+    ::std::optional<int64_t> v15{};
+    ::std::optional<int64_t> v16{};
+    ::std::optional<int64_t> v17{};
+    ::std::optional<int64_t> v18{};
+    ::std::optional<int64_t> v19{};
+    ::std::optional<int64_t> v20{};
+    ::std::optional<int64_t> v21{};
+    ::std::optional<int64_t> v22{};
+    ::std::optional<int64_t> v23{};
+    ::std::optional<int64_t> v24{};
+    ::std::optional<int64_t> v25{};
+    ::std::optional<int64_t> v26{};
+    ::std::optional<int64_t> v27{};
+    ::std::optional<int64_t> v28{};
+    ::std::optional<int64_t> v29{};
+    ::std::optional<int64_t> v30{};
+    ::std::optional<int64_t> v31{};
+    ::std::optional<int64_t> v32{};
+    ::std::optional<int64_t> v33{};
+    ::std::optional<int64_t> v34{};
+    ::std::optional<int64_t> v35{};
+    ::std::optional<int64_t> v36{};
+    ::std::optional<int64_t> v37{};
+    ::std::optional<int64_t> v38{};
+    ::std::optional<int64_t> v39{};
+    ::std::optional<int64_t> v40{};
+    ::std::optional<int64_t> v41{};
+    ::std::optional<int64_t> v42{};
+    ::std::optional<int64_t> v43{};
+    ::std::optional<int64_t> v44{};
+    ::std::optional<int64_t> v45{};
+    ::std::optional<int64_t> v46{};
+    ::std::optional<int64_t> v47{};
+    ::std::optional<int64_t> v48{};
+    ::std::optional<int64_t> v49{};
+    ::std::optional<int64_t> v50{};
+    ::std::optional<int64_t> v51{};
+    ::std::optional<int64_t> v52{};
+    ::std::optional<int64_t> v53{};
+    ::std::optional<int64_t> v54{};
+    ::std::optional<int64_t> v55{};
+    ::std::optional<int64_t> v56{};
+    ::std::optional<int64_t> v57{};
+    ::std::optional<int64_t> v58{};
+    ::std::optional<int64_t> v59{};
+    ::std::optional<int64_t> v60{};
+    ::std::optional<int64_t> v61{};
+    ::std::optional<int64_t> v62{};
+    ::std::optional<int64_t> v63{};
+    ::std::optional<::test_table::ExtensionTable> v64{};
   };
 
   // TODO(https://fxbug.dev/91252): Box the storage.

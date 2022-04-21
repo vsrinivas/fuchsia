@@ -99,7 +99,7 @@ struct HeapAllocator {
       HeapAllocator* a_;
     };
 
-    return fidl::AnyMemoryResource(cpp17::in_place_type_t<HeapAllocatorMemoryResource>{}, a);
+    return fidl::AnyMemoryResource(std::in_place_type_t<HeapAllocatorMemoryResource>{}, a);
   }
 
   std::vector<uint8_t*> allocations_;

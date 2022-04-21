@@ -47,7 +47,6 @@ test("fidl_llcpp_dispatcher_tests_bin") {
   ]
   deps = [
     ":client_test_helpers",
-    "//sdk/lib/stdcompat",
     "//src/lib/fidl/llcpp/tests/integration:fidl.test.coding.fuchsia_llcpp",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop",

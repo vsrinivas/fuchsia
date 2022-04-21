@@ -33,7 +33,7 @@ extern "C" const fidl_type_t test_requestflexibleenvelope_StrictFooTable;
 
 class StrictFoo {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
+  using Storage_ = std::variant<std::monostate, ::std::string, int32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -129,8 +129,7 @@ class StrictFoo {
     }
   }
 
-  static constexpr cpp17::optional<
-      ::test_requestflexibleenvelope::StrictFoo::Tag>
+  static constexpr std::optional<::test_requestflexibleenvelope::StrictFoo::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
@@ -138,7 +137,7 @@ class StrictFoo {
       case 2:
         return ::test_requestflexibleenvelope::StrictFoo::Tag::kI;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -316,7 +315,7 @@ extern "C" const fidl_type_t test_requestflexibleenvelope_FlexibleFooTable;
 
 class FlexibleFoo {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
+  using Storage_ = std::variant<std::monostate, ::std::string, int32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -417,7 +416,7 @@ class FlexibleFoo {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_requestflexibleenvelope::FlexibleFoo::Tag>
   IndexToTag(size_t index) {
     switch (index) {

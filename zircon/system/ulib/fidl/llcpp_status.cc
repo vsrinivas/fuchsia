@@ -4,12 +4,12 @@
 
 #include <lib/fidl/llcpp/status.h>
 #include <lib/fit/nullable.h>
-#include <lib/stdcompat/string_view.h>
 #include <zircon/compiler.h>
 
 #include <array>
 #include <iostream>
 #include <string>
+#include <string_view>
 
 namespace fidl {
 
@@ -127,7 +127,7 @@ size_t Status::FormatImpl(char* destination, size_t length, bool from_unbind_inf
 std::ostream& operator<<(std::ostream& ostream, const Status& result) {
   StatusFormattingBuffer buf;
   size_t length = result.FormatImpl(buf.begin(), sizeof(buf), /* from_unbind_info */ false);
-  ostream << cpp17::string_view(buf.begin(), length);
+  ostream << std::string_view(buf.begin(), length);
   return ostream;
 }
 
@@ -140,7 +140,7 @@ std::ostream& operator<<(std::ostream& ostream, const Status& result) {
 std::ostream& operator<<(std::ostream& ostream, const UnbindInfo& info) {
   StatusFormattingBuffer buf;
   size_t length = info.Status::FormatImpl(buf.begin(), sizeof(buf), /* from_unbind_info */ true);
-  ostream << cpp17::string_view(buf.begin(), length);
+  ostream << std::string_view(buf.begin(), length);
   return ostream;
 }
 

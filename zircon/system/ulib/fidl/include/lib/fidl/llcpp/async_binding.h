@@ -18,13 +18,13 @@
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/llcpp/wire_messaging_declarations.h>
 #include <lib/fit/function.h>
-#include <lib/stdcompat/variant.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
 #include <mutex>
 #include <optional>
+#include <variant>
 
 namespace fidl {
 
@@ -188,7 +188,7 @@ class AsyncBinding : public std::enable_shared_from_this<AsyncBinding> {
   //
   // Always releases |thread_checker_| because the binding (the current object)
   // is destroyed during this function.
-  void PerformTeardown(cpp17::optional<UnbindInfo> info) __TA_REQUIRES(thread_checker_)
+  void PerformTeardown(std::optional<UnbindInfo> info) __TA_REQUIRES(thread_checker_)
       __TA_RELEASE(thread_checker_) __TA_EXCLUDES(lock_);
 
   // Override |FinishTeardown| to perform cleanup work at the final stage of

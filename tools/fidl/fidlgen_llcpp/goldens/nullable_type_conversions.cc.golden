@@ -11,7 +11,7 @@ WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableVector,
     ToNatural(::test_nullable::wire::StructWithNullableVector src) {
   return ::test_nullable::StructWithNullableVector(
       WireNaturalConversionTraits<::fidl::VectorView<int32_t>,
-                                  ::cpp17::optional<::std::vector<int32_t>>>::
+                                  ::std::optional<::std::vector<int32_t>>>::
           ToNatural(std::move(src.val)));
 }
 
@@ -44,7 +44,7 @@ WireNaturalConversionTraits<::test_nullable::wire::StructWithNullableString,
   return ::test_nullable::StructWithNullableString(
       WireNaturalConversionTraits<
           ::fidl::StringView,
-          ::cpp17::optional<::std::string>>::ToNatural(std::move(src.val)));
+          ::std::optional<::std::string>>::ToNatural(std::move(src.val)));
 }
 
 #ifdef __Fuchsia__

@@ -41,7 +41,7 @@ extern "C" const fidl_type_t test_anonymous_UnionMemberTable;
 
 class UnionMember {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, uint8_t>;
+  using Storage_ = std::variant<std::monostate, uint8_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -125,8 +125,8 @@ class UnionMember {
     }
   }
 
-  static constexpr cpp17::optional<::test_anonymous::UnionMember::Tag>
-  IndexToTag(size_t index) {
+  static constexpr std::optional<::test_anonymous::UnionMember::Tag> IndexToTag(
+      size_t index) {
     switch (index) {
       case 1:
         return ::test_anonymous::UnionMember::Tag::kUnionData;
@@ -227,11 +227,11 @@ class TableMember {
 
   bool IsEmpty() const { return !(storage_.table_data.has_value()); }
 
-  const cpp17::optional<::std::vector<::test_anonymous::TableData>>&
-  table_data() const {
+  const std::optional<::std::vector<::test_anonymous::TableData>>& table_data()
+      const {
     return storage_.table_data;
   }
-  ::cpp17::optional<::std::vector<::test_anonymous::TableData>>& table_data() {
+  ::std::optional<::std::vector<::test_anonymous::TableData>>& table_data() {
     return storage_.table_data;
   }
 
@@ -240,7 +240,7 @@ class TableMember {
 
  private:
   struct Storage_ final {
-    ::cpp17::optional<::std::vector<::test_anonymous::TableData>> table_data{};
+    ::std::optional<::std::vector<::test_anonymous::TableData>> table_data{};
   };
 
   // TODO(https://fxbug.dev/91252): Box the storage.
@@ -489,24 +489,24 @@ class FunctionApplication {
              storage_.flags.has_value());
   }
 
-  const cpp17::optional<::std::string>& func() const { return storage_.func; }
-  ::cpp17::optional<::std::string>& func() { return storage_.func; }
+  const std::optional<::std::string>& func() const { return storage_.func; }
+  ::std::optional<::std::string>& func() { return storage_.func; }
 
-  const cpp17::optional<
+  const std::optional<
       ::std::vector<::std::unique_ptr<::test_anonymous::Expression>>>&
   args() const {
     return storage_.args;
   }
-  ::cpp17::optional<
+  ::std::optional<
       ::std::vector<::std::unique_ptr<::test_anonymous::Expression>>>&
   args() {
     return storage_.args;
   }
 
-  const cpp17::optional<::test_anonymous::Flags>& flags() const {
+  const std::optional<::test_anonymous::Flags>& flags() const {
     return storage_.flags;
   }
-  ::cpp17::optional<::test_anonymous::Flags>& flags() { return storage_.flags; }
+  ::std::optional<::test_anonymous::Flags>& flags() { return storage_.flags; }
 
   FunctionApplication(
       ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -514,11 +514,11 @@ class FunctionApplication {
 
  private:
   struct Storage_ final {
-    ::cpp17::optional<::std::string> func{};
-    ::cpp17::optional<
+    ::std::optional<::std::string> func{};
+    ::std::optional<
         ::std::vector<::std::unique_ptr<::test_anonymous::Expression>>>
         args{};
-    ::cpp17::optional<::test_anonymous::Flags> flags{};
+    ::std::optional<::test_anonymous::Flags> flags{};
   };
 
   // TODO(https://fxbug.dev/91252): Box the storage.
@@ -549,8 +549,8 @@ extern "C" const fidl_type_t test_anonymous_ExpressionTable;
 class Expression {
  private:
   using Storage_ =
-      cpp17::variant<cpp17::monostate, uint64_t, ::test_anonymous::OverrideTest,
-                     ::test_anonymous::FunctionApplication>;
+      std::variant<std::monostate, uint64_t, ::test_anonymous::OverrideTest,
+                   ::test_anonymous::FunctionApplication>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -668,8 +668,8 @@ class Expression {
     }
   }
 
-  static constexpr cpp17::optional<::test_anonymous::Expression::Tag>
-  IndexToTag(size_t index) {
+  static constexpr std::optional<::test_anonymous::Expression::Tag> IndexToTag(
+      size_t index) {
     switch (index) {
       case 1:
         return ::test_anonymous::Expression::Tag::kValue;
@@ -766,9 +766,9 @@ extern "C" const fidl_type_t test_anonymous_SomeProtocol_SomeMethod_ResultTable;
 class SomeProtocolSomeMethodResult {
  private:
   using Storage_ =
-      cpp17::variant<cpp17::monostate,
-                     ::test_anonymous::SomeProtocolSomeMethodResponse,
-                     ::test_anonymous::SomeProtocolSomeMethodError>;
+      std::variant<std::monostate,
+                   ::test_anonymous::SomeProtocolSomeMethodResponse,
+                   ::test_anonymous::SomeProtocolSomeMethodError>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -870,7 +870,7 @@ class SomeProtocolSomeMethodResult {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_anonymous::SomeProtocolSomeMethodResult::Tag>
   IndexToTag(size_t index) {
     switch (index) {
@@ -879,7 +879,7 @@ class SomeProtocolSomeMethodResult {
       case 2:
         return ::test_anonymous::SomeProtocolSomeMethodResult::Tag::kErr;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };

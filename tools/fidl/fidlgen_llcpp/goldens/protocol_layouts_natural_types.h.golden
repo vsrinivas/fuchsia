@@ -67,9 +67,9 @@ extern "C" const fidl_type_t
 class MainProtocolTwoWayImportWithErrorResult {
  private:
   using Storage_ =
-      cpp17::variant<cpp17::monostate,
-                     ::test_protocollayouts_imported::ImportUnionPayload,
-                     uint32_t>;
+      std::variant<std::monostate,
+                   ::test_protocollayouts_imported::ImportUnionPayload,
+                   uint32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -180,7 +180,7 @@ class MainProtocolTwoWayImportWithErrorResult {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult::Tag>
   IndexToTag(size_t index) {
     switch (index) {
@@ -191,7 +191,7 @@ class MainProtocolTwoWayImportWithErrorResult {
         return ::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult::
             Tag::kErr;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -288,7 +288,7 @@ extern "C" const fidl_type_t
 
 class MainProtocolTwoWayAnonWithErrorResponse {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, bool>;
+  using Storage_ = std::variant<std::monostate, bool>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -388,7 +388,7 @@ class MainProtocolTwoWayAnonWithErrorResponse {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse::Tag>
   IndexToTag(size_t index) {
     switch (index) {
@@ -407,8 +407,8 @@ extern "C" const fidl_type_t
 
 class MainProtocolTwoWayAnonWithErrorResult {
  private:
-  using Storage_ = cpp17::variant<
-      cpp17::monostate,
+  using Storage_ = std::variant<
+      std::monostate,
       ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse,
       uint32_t>;
 
@@ -519,7 +519,7 @@ class MainProtocolTwoWayAnonWithErrorResult {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult::Tag>
   IndexToTag(size_t index) {
     switch (index) {
@@ -530,7 +530,7 @@ class MainProtocolTwoWayAnonWithErrorResult {
         return ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult::
             Tag::kErr;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -628,9 +628,9 @@ extern "C" const fidl_type_t
 class MainProtocolOnImportWithErrorResult {
  private:
   using Storage_ =
-      cpp17::variant<cpp17::monostate,
-                     ::test_protocollayouts_imported::ImportTablePayload,
-                     uint32_t>;
+      std::variant<std::monostate,
+                   ::test_protocollayouts_imported::ImportTablePayload,
+                   uint32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -739,7 +739,7 @@ class MainProtocolOnImportWithErrorResult {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_protocollayouts::MainProtocolOnImportWithErrorResult::Tag>
   IndexToTag(size_t index) {
     switch (index) {
@@ -750,7 +750,7 @@ class MainProtocolOnImportWithErrorResult {
         return ::test_protocollayouts::MainProtocolOnImportWithErrorResult::
             Tag::kErr;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -878,8 +878,8 @@ class MainProtocolOnAnonWithErrorResponse {
 
   bool IsEmpty() const { return !(storage_.a.has_value()); }
 
-  const cpp17::optional<uint16_t>& a() const { return storage_.a; }
-  ::cpp17::optional<uint16_t>& a() { return storage_.a; }
+  const std::optional<uint16_t>& a() const { return storage_.a; }
+  ::std::optional<uint16_t>& a() { return storage_.a; }
 
   MainProtocolOnAnonWithErrorResponse(
       ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -887,7 +887,7 @@ class MainProtocolOnAnonWithErrorResponse {
 
  private:
   struct Storage_ final {
-    ::cpp17::optional<uint16_t> a{};
+    ::std::optional<uint16_t> a{};
   };
 
   // TODO(https://fxbug.dev/91252): Box the storage.
@@ -908,9 +908,10 @@ extern "C" const fidl_type_t
 
 class MainProtocolOnAnonWithErrorResult {
  private:
-  using Storage_ = cpp17::variant<
-      cpp17::monostate,
-      ::test_protocollayouts::MainProtocolOnAnonWithErrorResponse, uint32_t>;
+  using Storage_ =
+      std::variant<std::monostate,
+                   ::test_protocollayouts::MainProtocolOnAnonWithErrorResponse,
+                   uint32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -1017,7 +1018,7 @@ class MainProtocolOnAnonWithErrorResult {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_protocollayouts::MainProtocolOnAnonWithErrorResult::Tag>
   IndexToTag(size_t index) {
     switch (index) {
@@ -1028,7 +1029,7 @@ class MainProtocolOnAnonWithErrorResult {
         return ::test_protocollayouts::MainProtocolOnAnonWithErrorResult::Tag::
             kErr;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -1155,8 +1156,8 @@ class MainProtocolTwoWayAnonWithErrorRequest {
 
   bool IsEmpty() const { return !(storage_.a.has_value()); }
 
-  const cpp17::optional<uint16_t>& a() const { return storage_.a; }
-  ::cpp17::optional<uint16_t>& a() { return storage_.a; }
+  const std::optional<uint16_t>& a() const { return storage_.a; }
+  ::std::optional<uint16_t>& a() { return storage_.a; }
 
   MainProtocolTwoWayAnonWithErrorRequest(
       ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -1164,7 +1165,7 @@ class MainProtocolTwoWayAnonWithErrorRequest {
 
  private:
   struct Storage_ final {
-    ::cpp17::optional<uint16_t> a{};
+    ::std::optional<uint16_t> a{};
   };
 
   // TODO(https://fxbug.dev/91252): Box the storage.
@@ -1216,8 +1217,8 @@ class MainProtocolTwoWayAnonResponse {
 
   bool IsEmpty() const { return !(storage_.a.has_value()); }
 
-  const cpp17::optional<uint16_t>& a() const { return storage_.a; }
-  ::cpp17::optional<uint16_t>& a() { return storage_.a; }
+  const std::optional<uint16_t>& a() const { return storage_.a; }
+  ::std::optional<uint16_t>& a() { return storage_.a; }
 
   MainProtocolTwoWayAnonResponse(
       ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -1225,7 +1226,7 @@ class MainProtocolTwoWayAnonResponse {
 
  private:
   struct Storage_ final {
-    ::cpp17::optional<uint16_t> a{};
+    ::std::optional<uint16_t> a{};
   };
 
   // TODO(https://fxbug.dev/91252): Box the storage.
@@ -1246,7 +1247,7 @@ extern "C" const fidl_type_t
 
 class MainProtocolTwoWayAnonRequest {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, bool>;
+  using Storage_ = std::variant<std::monostate, bool>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -1336,7 +1337,7 @@ class MainProtocolTwoWayAnonRequest {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_protocollayouts::MainProtocolTwoWayAnonRequest::Tag>
   IndexToTag(size_t index) {
     switch (index) {
@@ -1385,8 +1386,8 @@ class MainProtocolOneWayAnonRequest {
 
   bool IsEmpty() const { return !(storage_.a.has_value()); }
 
-  const cpp17::optional<uint16_t>& a() const { return storage_.a; }
-  ::cpp17::optional<uint16_t>& a() { return storage_.a; }
+  const std::optional<uint16_t>& a() const { return storage_.a; }
+  ::std::optional<uint16_t>& a() { return storage_.a; }
 
   MainProtocolOneWayAnonRequest(
       ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -1394,7 +1395,7 @@ class MainProtocolOneWayAnonRequest {
 
  private:
   struct Storage_ final {
-    ::cpp17::optional<uint16_t> a{};
+    ::std::optional<uint16_t> a{};
   };
 
   // TODO(https://fxbug.dev/91252): Box the storage.
@@ -1415,7 +1416,7 @@ extern "C" const fidl_type_t
 
 class MainProtocolOnAnonRequest {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, bool>;
+  using Storage_ = std::variant<std::monostate, bool>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -1504,7 +1505,7 @@ class MainProtocolOnAnonRequest {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_protocollayouts::MainProtocolOnAnonRequest::Tag>
   IndexToTag(size_t index) {
     switch (index) {
@@ -1520,7 +1521,7 @@ extern "C" const fidl_type_t test_protocollayouts_LocalUnionPayloadTable;
 
 class LocalUnionPayload {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, bool>;
+  using Storage_ = std::variant<std::monostate, bool>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -1605,8 +1606,7 @@ class LocalUnionPayload {
     }
   }
 
-  static constexpr cpp17::optional<
-      ::test_protocollayouts::LocalUnionPayload::Tag>
+  static constexpr std::optional<::test_protocollayouts::LocalUnionPayload::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
@@ -1623,8 +1623,8 @@ extern "C" const fidl_type_t
 class MainProtocolTwoWayLocalWithErrorResult {
  private:
   using Storage_ =
-      cpp17::variant<cpp17::monostate,
-                     ::test_protocollayouts::LocalUnionPayload, uint32_t>;
+      std::variant<std::monostate, ::test_protocollayouts::LocalUnionPayload,
+                   uint32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -1733,7 +1733,7 @@ class MainProtocolTwoWayLocalWithErrorResult {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult::Tag>
   IndexToTag(size_t index) {
     switch (index) {
@@ -1744,7 +1744,7 @@ class MainProtocolTwoWayLocalWithErrorResult {
         return ::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult::
             Tag::kErr;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -1864,15 +1864,15 @@ class LocalTablePayload {
 
   bool IsEmpty() const { return !(storage_.a.has_value()); }
 
-  const cpp17::optional<uint16_t>& a() const { return storage_.a; }
-  ::cpp17::optional<uint16_t>& a() { return storage_.a; }
+  const std::optional<uint16_t>& a() const { return storage_.a; }
+  ::std::optional<uint16_t>& a() { return storage_.a; }
 
   LocalTablePayload(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
       : LocalTablePayload(Storage_{}) {}
 
  private:
   struct Storage_ final {
-    ::cpp17::optional<uint16_t> a{};
+    ::std::optional<uint16_t> a{};
   };
 
   // TODO(https://fxbug.dev/91252): Box the storage.
@@ -1894,8 +1894,8 @@ extern "C" const fidl_type_t
 class MainProtocolOnLocalWithErrorResult {
  private:
   using Storage_ =
-      cpp17::variant<cpp17::monostate,
-                     ::test_protocollayouts::LocalTablePayload, uint32_t>;
+      std::variant<std::monostate, ::test_protocollayouts::LocalTablePayload,
+                   uint32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -2003,7 +2003,7 @@ class MainProtocolOnLocalWithErrorResult {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_protocollayouts::MainProtocolOnLocalWithErrorResult::Tag>
   IndexToTag(size_t index) {
     switch (index) {
@@ -2014,7 +2014,7 @@ class MainProtocolOnLocalWithErrorResult {
         return ::test_protocollayouts::MainProtocolOnLocalWithErrorResult::Tag::
             kErr;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };

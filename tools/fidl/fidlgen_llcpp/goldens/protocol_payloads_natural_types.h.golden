@@ -65,9 +65,9 @@ extern "C" const fidl_type_t
 class MainProtocolTwoWayImportWithErrorResult {
  private:
   using Storage_ =
-      cpp17::variant<cpp17::monostate,
-                     ::test_protocolpayloads_imported::ImportStructPayload,
-                     uint32_t>;
+      std::variant<std::monostate,
+                   ::test_protocolpayloads_imported::ImportStructPayload,
+                   uint32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -179,7 +179,7 @@ class MainProtocolTwoWayImportWithErrorResult {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_protocolpayloads::MainProtocolTwoWayImportWithErrorResult::Tag>
   IndexToTag(size_t index) {
     switch (index) {
@@ -190,7 +190,7 @@ class MainProtocolTwoWayImportWithErrorResult {
         return ::test_protocolpayloads::
             MainProtocolTwoWayImportWithErrorResult::Tag::kErr;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -372,8 +372,8 @@ extern "C" const fidl_type_t
 
 class MainProtocolTwoWayAnonWithErrorResult {
  private:
-  using Storage_ = cpp17::variant<
-      cpp17::monostate,
+  using Storage_ = std::variant<
+      std::monostate,
       ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorResponse,
       uint32_t>;
 
@@ -484,7 +484,7 @@ class MainProtocolTwoWayAnonWithErrorResult {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorResult::Tag>
   IndexToTag(size_t index) {
     switch (index) {
@@ -495,7 +495,7 @@ class MainProtocolTwoWayAnonWithErrorResult {
         return ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorResult::
             Tag::kErr;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -593,9 +593,9 @@ extern "C" const fidl_type_t
 class MainProtocolOnImportWithErrorResult {
  private:
   using Storage_ =
-      cpp17::variant<cpp17::monostate,
-                     ::test_protocolpayloads_imported::ImportStructPayload,
-                     uint32_t>;
+      std::variant<std::monostate,
+                   ::test_protocolpayloads_imported::ImportStructPayload,
+                   uint32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -704,7 +704,7 @@ class MainProtocolOnImportWithErrorResult {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_protocolpayloads::MainProtocolOnImportWithErrorResult::Tag>
   IndexToTag(size_t index) {
     switch (index) {
@@ -715,7 +715,7 @@ class MainProtocolOnImportWithErrorResult {
         return ::test_protocolpayloads::MainProtocolOnImportWithErrorResult::
             Tag::kErr;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -896,9 +896,10 @@ extern "C" const fidl_type_t
 
 class MainProtocolOnAnonWithErrorResult {
  private:
-  using Storage_ = cpp17::variant<
-      cpp17::monostate,
-      ::test_protocolpayloads::MainProtocolOnAnonWithErrorResponse, uint32_t>;
+  using Storage_ =
+      std::variant<std::monostate,
+                   ::test_protocolpayloads::MainProtocolOnAnonWithErrorResponse,
+                   uint32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -1006,7 +1007,7 @@ class MainProtocolOnAnonWithErrorResult {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_protocolpayloads::MainProtocolOnAnonWithErrorResult::Tag>
   IndexToTag(size_t index) {
     switch (index) {
@@ -1017,7 +1018,7 @@ class MainProtocolOnAnonWithErrorResult {
         return ::test_protocolpayloads::MainProtocolOnAnonWithErrorResult::Tag::
             kErr;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -1605,8 +1606,8 @@ extern "C" const fidl_type_t
 class MainProtocolTwoWayLocalWithErrorResult {
  private:
   using Storage_ =
-      cpp17::variant<cpp17::monostate,
-                     ::test_protocolpayloads::LocalStructPayload, uint32_t>;
+      std::variant<std::monostate, ::test_protocolpayloads::LocalStructPayload,
+                   uint32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -1716,7 +1717,7 @@ class MainProtocolTwoWayLocalWithErrorResult {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_protocolpayloads::MainProtocolTwoWayLocalWithErrorResult::Tag>
   IndexToTag(size_t index) {
     switch (index) {
@@ -1727,7 +1728,7 @@ class MainProtocolTwoWayLocalWithErrorResult {
         return ::test_protocolpayloads::MainProtocolTwoWayLocalWithErrorResult::
             Tag::kErr;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -1825,8 +1826,8 @@ extern "C" const fidl_type_t
 class MainProtocolOnLocalWithErrorResult {
  private:
   using Storage_ =
-      cpp17::variant<cpp17::monostate,
-                     ::test_protocolpayloads::LocalStructPayload, uint32_t>;
+      std::variant<std::monostate, ::test_protocolpayloads::LocalStructPayload,
+                   uint32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -1934,7 +1935,7 @@ class MainProtocolOnLocalWithErrorResult {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_protocolpayloads::MainProtocolOnLocalWithErrorResult::Tag>
   IndexToTag(size_t index) {
     switch (index) {
@@ -1945,7 +1946,7 @@ class MainProtocolOnLocalWithErrorResult {
         return ::test_protocolpayloads::MainProtocolOnLocalWithErrorResult::
             Tag::kErr;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };

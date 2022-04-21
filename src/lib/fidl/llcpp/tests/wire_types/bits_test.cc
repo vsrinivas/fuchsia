@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 #include <fidl/test.types/cpp/wire.h>
-#include <lib/stdcompat/optional.h>
+
+#include <optional>
 
 #include <gtest/gtest.h>
 
@@ -85,10 +86,10 @@ TYPED_TEST_P(Bits, TruncatingUnknown) {
 TYPED_TEST_P(Bits, TryFrom) {
   // The bits type only has 2, 4, and 8 defined.
   auto result = TypeParam::TryFrom(1);
-  EXPECT_EQ(result, cpp17::nullopt);
+  EXPECT_EQ(result, std::nullopt);
 
   auto result_ok = TypeParam::TryFrom(2);
-  EXPECT_EQ(result_ok, cpp17::optional<TypeParam>(TypeParam::kB));
+  EXPECT_EQ(result_ok, std::optional<TypeParam>(TypeParam::kB));
 }
 
 TYPED_TEST_P(Bits, AllowingUnknownThroughStaticCast) {

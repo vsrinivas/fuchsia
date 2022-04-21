@@ -66,7 +66,7 @@ void AsyncBinding::MessageHandler(fidl::IncomingMessage& msg,
   // Flag indicating whether this thread still has access to the binding.
   bool next_wait_begun_early = false;
   // Dispatch the message.
-  cpp17::optional<DispatchError> maybe_error =
+  std::optional<DispatchError> maybe_error =
       Dispatch(msg, &next_wait_begun_early, std::move(transport_context));
   // If |next_wait_begun_early| is true, then the interest for the next
   // message had been eagerly registered in the method handler, and another
@@ -84,7 +84,7 @@ void AsyncBinding::MessageHandler(fidl::IncomingMessage& msg,
   }
 
   if (CheckForTeardownAndBeginNextWait() != ZX_OK)
-    return PerformTeardown(cpp17::nullopt);
+    return PerformTeardown(std::nullopt);
 }
 
 void AsyncBinding::WaitFailureHandler(UnbindInfo info) {
@@ -261,7 +261,7 @@ auto AsyncBinding::StartTeardownWithInfo(std::shared_ptr<AsyncBinding>&& calling
       // Therefore, we can relax any thread checking here, since there are no
       // parallel up-calls to user objects regardless of the current thread.
       binding_raw->thread_checker_.assume_exclusive();
-      binding_raw->PerformTeardown(cpp17::nullopt);
+      binding_raw->PerformTeardown(std::nullopt);
     }
 
    private:
@@ -306,7 +306,7 @@ auto AsyncBinding::StartTeardownWithInfo(std::shared_ptr<AsyncBinding>&& calling
   return TeardownTaskPostingResult::kOk;
 }
 
-void AsyncBinding::PerformTeardown(cpp17::optional<UnbindInfo> info) {
+void AsyncBinding::PerformTeardown(std::optional<UnbindInfo> info) {
   auto binding = std::move(keep_alive_);
 
   fidl::UnbindInfo stored_info;

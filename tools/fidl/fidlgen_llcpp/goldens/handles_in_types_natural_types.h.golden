@@ -29,7 +29,7 @@ extern "C" const fidl_type_t test_handlesintypes_UnionWithHandleTable;
 
 class UnionWithHandle {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, ::zx::vmo>;
+  using Storage_ = std::variant<std::monostate, ::zx::vmo>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -99,7 +99,7 @@ class UnionWithHandle {
     }
   }
 
-  static constexpr cpp17::optional<::test_handlesintypes::UnionWithHandle::Tag>
+  static constexpr std::optional<::test_handlesintypes::UnionWithHandle::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
@@ -128,15 +128,15 @@ class TableWithHandle {
 
   bool IsEmpty() const { return !(storage_.h.has_value()); }
 
-  const cpp17::optional<::zx::vmo>& h() const { return storage_.h; }
-  ::cpp17::optional<::zx::vmo>& h() { return storage_.h; }
+  const std::optional<::zx::vmo>& h() const { return storage_.h; }
+  ::std::optional<::zx::vmo>& h() { return storage_.h; }
 
   TableWithHandle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
       : TableWithHandle(Storage_{}) {}
 
  private:
   struct Storage_ final {
-    ::cpp17::optional<::zx::vmo> h{};
+    ::std::optional<::zx::vmo> h{};
   };
 
   // TODO(https://fxbug.dev/91252): Box the storage.

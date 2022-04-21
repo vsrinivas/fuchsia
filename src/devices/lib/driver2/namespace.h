@@ -47,7 +47,7 @@ class Namespace {
 
   // Connect to a service within a driver's namespace.
   template <typename FidlService>
-  zx::status<typename FidlService::ServiceClient> OpenService(cpp17::string_view instance) const {
+  zx::status<typename FidlService::ServiceClient> OpenService(std::string_view instance) const {
     std::string path = std::string("/") + FidlService::Name + "/" + std::string(instance);
     auto result =
         Connect<fuchsia_io::Directory>(path, fuchsia_io::wire::OpenFlags::kRightReadable |

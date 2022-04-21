@@ -101,7 +101,6 @@ executable("llcpp_server") {
   deps = [
     ":fidl_service_llcpp_testing",
     "//sdk/lib/fdio",
-    "//sdk/lib/stdcompat",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",

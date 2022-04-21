@@ -15,12 +15,12 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/llcpp/string_view.h>
-#include <lib/stdcompat/optional.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/status.h>
 
 #include <cstdlib>
 #include <iostream>
+#include <optional>
 #include <string>
 
 constexpr const char kEchoInterfaceName[] = "fidl.test.compatibility.Echo";
@@ -833,7 +833,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
   }
 
  private:
-  cpp17::optional<::fidl::ServerBindingRef<Echo>> server_binding_;
+  std::optional<::fidl::ServerBindingRef<Echo>> server_binding_;
 };
 
 int main(int argc, const char** argv) {

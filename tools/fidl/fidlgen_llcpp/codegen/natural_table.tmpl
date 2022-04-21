@@ -55,9 +55,9 @@ class {{ .Name }} {
 
   {{- range .Members }}
     {{ .Docs }}
-    const cpp17::optional<{{ .Type }}>& {{ .Name }}() const { return storage_.{{ .Name }}; }
+    const std::optional<{{ .Type }}>& {{ .Name }}() const { return storage_.{{ .Name }}; }
     {{- .Docs }}
-    ::cpp17::optional<{{ .Type }}>& {{ .Name }}() { return storage_.{{ .Name }}; }
+    ::std::optional<{{ .Type }}>& {{ .Name }}() { return storage_.{{ .Name }}; }
   {{- end }}
 
   {{ .Name }}(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : {{ .Name }}(Storage_{}) {}
@@ -66,7 +66,7 @@ class {{ .Name }} {
   struct Storage_ final {
     {{- range .Members -}}
       {{ .Docs }}
-      ::cpp17::optional<{{ .Type }}> {{ .Name }} {};
+      ::std::optional<{{ .Type }}> {{ .Name }} {};
     {{- end }}
   };
 

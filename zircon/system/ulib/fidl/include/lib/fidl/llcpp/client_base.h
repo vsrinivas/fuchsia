@@ -15,7 +15,6 @@
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fit/traits.h>
-#include <lib/stdcompat/optional.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 #include <zircon/listnode.h>
@@ -23,6 +22,7 @@
 
 #include <memory>
 #include <mutex>
+#include <optional>
 
 namespace fidl_testing {
 // Forward declaration of test helpers to support friend declaration.
@@ -110,7 +110,7 @@ class ResponseContext : public fidl::internal_wavl::WAVLTreeContainable<Response
   //
   // If there was an error decoding |result|, the implementation should return
   // that error as a present |fidl::UnbindInfo|. Otherwise, the implementation
-  // should return |cpp17::nullopt|.
+  // should return |std::nullopt|.
   //
   // ## If |result| represents an error
   //
@@ -126,7 +126,7 @@ class ResponseContext : public fidl::internal_wavl::WAVLTreeContainable<Response
   //   teardown.
   //
   // See |WireResponseContext<FidlMethod>::OnResult| for more details.
-  virtual cpp17::optional<fidl::UnbindInfo> OnRawResult(
+  virtual std::optional<fidl::UnbindInfo> OnRawResult(
       ::fidl::IncomingMessage&& result, internal::IncomingTransportContext transport_context) = 0;
 
   // A helper around |OnRawResult| to directly notify an error to the context.
@@ -228,12 +228,12 @@ class WireResponseContext : public internal::ResponseContext {
   virtual void OnResult(::fidl::internal::WireUnownedResultType<FidlMethod>& result) = 0;
 
  private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
+  ::std::optional<::fidl::UnbindInfo> OnRawResult(
       ::fidl::IncomingMessage&& msg, internal::IncomingTransportContext transport_context) final {
     if (unlikely(!msg.ok())) {
       ::fidl::internal::WireUnownedResultType<FidlMethod> result{msg.error()};
       OnResult(result);
-      return cpp17::nullopt;
+      return std::nullopt;
     }
     ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<FidlMethod>> decoded{
         std::move(msg)};
@@ -244,7 +244,7 @@ class WireResponseContext : public internal::ResponseContext {
     if (unlikely(!maybe_error.ok())) {
       return ::fidl::UnbindInfo(maybe_error);
     }
-    return cpp17::nullopt;
+    return std::nullopt;
   }
 };
 

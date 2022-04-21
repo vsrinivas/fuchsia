@@ -49,7 +49,7 @@ class ServiceHandler final : public fidl::ServiceHandlerInterface {
   // # Errors
   //
   // ZX_ERR_ALREADY_EXISTS: The member already exists.
-  zx::status<> AddAnyMember(cpp17::string_view member, AnyMemberHandler handler) override {
+  zx::status<> AddAnyMember(std::string_view member, AnyMemberHandler handler) override {
     std::string owned_member = std::string(member);
     if (handlers_.count(owned_member) != 0) {
       return zx::make_status(ZX_ERR_ALREADY_EXISTS);

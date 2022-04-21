@@ -110,8 +110,8 @@ extern "C" const fidl_type_t
 
 class ExampleUseOfErrorSyntaxCallWhichMayFailResult {
  private:
-  using Storage_ = cpp17::variant<
-      cpp17::monostate,
+  using Storage_ = std::variant<
+      std::monostate,
       ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse,
       uint32_t>;
 
@@ -225,7 +225,7 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResult {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag>
   IndexToTag(size_t index) {
     switch (index) {
@@ -236,7 +236,7 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResult {
         return ::test_errorsyntax::
             ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag::kErr;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };

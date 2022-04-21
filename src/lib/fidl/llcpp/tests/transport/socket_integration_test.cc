@@ -105,7 +105,7 @@ class TestClient {
           : fidl::internal::ResponseContext(kTwoWayOrdinal), callback(std::move(callback)) {}
 
      private:
-      cpp17::optional<fidl::UnbindInfo> OnRawResult(
+      std::optional<fidl::UnbindInfo> OnRawResult(
           ::fidl::IncomingMessage&& result,
           fidl::internal::IncomingTransportContext incoming_transport_context) override {
         ZX_ASSERT(result.ok());
@@ -113,7 +113,7 @@ class TestClient {
             std::move(result));
         callback(*decoded.PrimaryObject());
         delete this;
-        return cpp17::nullopt;
+        return std::nullopt;
       }
       fit::callback<void(TwoWayResponse)> callback;
     };

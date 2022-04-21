@@ -14,7 +14,7 @@
 // debug builds.
 TEST(ThreadChecker, CheckInDebug) {
   fidl::internal::DebugOnlyThreadChecker checker{
-      cpp17::in_place_type_t<fidl::internal::ZirconThreadChecker>{},
+      std::in_place_type_t<fidl::internal::ZirconThreadChecker>{},
       fidl::internal::ThreadingPolicy::kCreateAndTeardownFromDispatcherThread};
   std::thread thread(
       [&] { ASSERT_DEATH([&] { fidl::internal::ScopedThreadGuard guard(checker); }); });
@@ -24,7 +24,7 @@ TEST(ThreadChecker, CheckInDebug) {
 // It is possible to configure whether to skip the check.
 TEST(ThreadChecker, SkipCheckUsingPolicy) {
   fidl::internal::DebugOnlyThreadChecker checker{
-      cpp17::in_place_type_t<fidl::internal::ZirconThreadChecker>{},
+      std::in_place_type_t<fidl::internal::ZirconThreadChecker>{},
       fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread};
   std::thread thread(
       [&] { ASSERT_NO_DEATH([&] { fidl::internal::ScopedThreadGuard guard(checker); }); });
@@ -36,7 +36,7 @@ TEST(ThreadChecker, SkipCheckUsingPolicy) {
 // |ThreadChecker| should not perform any assertions in release builds.
 TEST(ThreadChecker, NoCheckInRelease) {
   fidl::internal::DebugOnlyThreadChecker checker{
-      cpp17::in_place_type_t<fidl::internal::ZirconThreadChecker>{},
+      std::in_place_type_t<fidl::internal::ZirconThreadChecker>{},
       fidl::internal::ThreadingPolicy::kCreateAndTeardownFromDispatcherThread};
   std::thread thread(
       [&] { ASSERT_NO_DEATH([&] { fidl::internal::ScopedThreadGuard guard(checker); }); });

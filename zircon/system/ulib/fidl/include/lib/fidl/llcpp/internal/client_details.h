@@ -10,10 +10,10 @@
 #include <lib/fidl/llcpp/status.h>
 #include <lib/fidl/llcpp/wire_messaging_declarations.h>
 #include <lib/fit/function.h>
-#include <lib/stdcompat/variant.h>
 
 #include <memory>
 #include <type_traits>
+#include <variant>
 
 namespace fidl {
 namespace internal {

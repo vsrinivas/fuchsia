@@ -72,7 +72,7 @@ AnyMemoryResource MakeFidlAnyMemoryResource(AnyArena& arena) {
    private:
     AnyArena* arena_;
   };
-  return AnyMemoryResource(cpp17::in_place_type_t<ArenaMemoryResource>{}, arena);
+  return AnyMemoryResource(std::in_place_type_t<ArenaMemoryResource>{}, arena);
 }
 
 }  // namespace fidl

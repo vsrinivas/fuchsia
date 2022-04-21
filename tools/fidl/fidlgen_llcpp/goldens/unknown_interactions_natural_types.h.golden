@@ -103,9 +103,9 @@ extern "C" const fidl_type_t
 class ExampleFlexibleTwoWayResult {
  private:
   using Storage_ =
-      cpp17::variant<cpp17::monostate,
-                     ::test_unknowninteractions::ExampleFlexibleTwoWayResponse,
-                     int32_t>;
+      std::variant<std::monostate,
+                   ::test_unknowninteractions::ExampleFlexibleTwoWayResponse,
+                   int32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -208,7 +208,7 @@ class ExampleFlexibleTwoWayResult {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_unknowninteractions::ExampleFlexibleTwoWayResult::Tag>
   IndexToTag(size_t index) {
     switch (index) {
@@ -219,7 +219,7 @@ class ExampleFlexibleTwoWayResult {
         return ::test_unknowninteractions::ExampleFlexibleTwoWayResult::Tag::
             kTransportErr;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };

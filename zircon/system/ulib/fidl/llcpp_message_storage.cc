@@ -35,7 +35,7 @@ AnyMemoryResource MakeFidlAnyMemoryResource(fidl::BufferSpan buffer_span) {
     uint32_t used_ = 0;
   };
 
-  return AnyMemoryResource(cpp17::in_place_type_t<BufferSpanMemoryResource>{}, buffer_span);
+  return AnyMemoryResource(std::in_place_type_t<BufferSpanMemoryResource>{}, buffer_span);
 }
 
 namespace internal {

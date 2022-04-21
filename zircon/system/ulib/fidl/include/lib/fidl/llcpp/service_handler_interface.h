@@ -7,8 +7,9 @@
 
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fit/function.h>
-#include <lib/stdcompat/string_view.h>
 #include <zircon/fidl.h>
+
+#include <string_view>
 
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/internal/endpoints.h>
@@ -39,7 +40,7 @@ class ServiceHandlerInterface {
   //
   // ZX_ERR_ALREADY_EXISTS: The member already exists.
   template <typename Protocol>
-  zx::status<> AddMember(cpp17::string_view member, MemberHandler<Protocol> handler) {
+  zx::status<> AddMember(std::string_view member, MemberHandler<Protocol> handler) {
     return AddAnyMember(member, [handler = std::move(handler)](zx::channel channel) {
       return handler(::fidl::ServerEnd<Protocol>(std::move(channel)));
     });
@@ -59,7 +60,7 @@ class ServiceHandlerInterface {
   // # Errors
   //
   // ZX_ERR_ALREADY_EXISTS: The member already exists.
-  virtual zx::status<> AddAnyMember(cpp17::string_view member, AnyMemberHandler handler) = 0;
+  virtual zx::status<> AddAnyMember(std::string_view member, AnyMemberHandler handler) = 0;
 };
 
 #endif  // __Fuchsia__

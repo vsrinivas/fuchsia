@@ -41,10 +41,10 @@ class Bits final {
 
   // Constructs an instance of |Bits| from an underlying primitive value
   // if the primitive does not contain any unknown members not defined in the
-  // FIDL schema. Otherwise, returns |cpp17::nullopt|.
-  constexpr inline static cpp17::optional<Bits> TryFrom(uint32_t value) {
+  // FIDL schema. Otherwise, returns |std::nullopt|.
+  constexpr inline static std::optional<Bits> TryFrom(uint32_t value) {
     if (value & ~kMask.value_) {
-      return cpp17::nullopt;
+      return std::nullopt;
     }
     return Bits(value & Bits::kMask.value_);
   }

@@ -5,12 +5,12 @@
 #ifndef LIB_FIDL_LLCPP_EXTRACT_RESOURCE_ON_DESTRUCTION_H_
 #define LIB_FIDL_LLCPP_EXTRACT_RESOURCE_ON_DESTRUCTION_H_
 
-#include <lib/stdcompat/optional.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <zircon/assert.h>
 
 #include <memory>
+#include <optional>
 
 namespace fidl {
 namespace internal {
@@ -26,7 +26,7 @@ class ExtractedOnDestruction {
 
   ~ExtractedOnDestruction() {
     if (receiver_on_destruction_) {
-      *receiver_on_destruction_ = cpp17::optional(std::move(resource_));
+      *receiver_on_destruction_ = std::optional(std::move(resource_));
     }
     if (on_destruction_completion_) {
       sync_completion_signal(on_destruction_completion_);
@@ -43,7 +43,7 @@ class ExtractedOnDestruction {
                                 Callback callback);
 
   Resource resource_;
-  cpp17::optional<Resource>* receiver_on_destruction_ = nullptr;
+  std::optional<Resource>* receiver_on_destruction_ = nullptr;
   sync_completion_t* on_destruction_completion_ = nullptr;
 };
 
@@ -81,7 +81,7 @@ void DestroyAndExtract(std::shared_ptr<Container>&& object,
 
   // Using an optional accommodates |Resource| types which do not
   // have a default constructor.
-  cpp17::optional<Resource> result;
+  std::optional<Resource> result;
   member->receiver_on_destruction_ = &result;
 
   // Trigger the destruction of |object|.

@@ -28,7 +28,7 @@ class ByteAndBytes {
   ByteAndBytes(
       uint8_t single_byte, ::std::vector<uint8_t> many_bytes,
       ::std::vector<uint8_t> only_one_k_bytes,
-      ::cpp17::optional<::std::vector<uint8_t>> opt_only_one_k_bytes) noexcept
+      ::std::optional<::std::vector<uint8_t>> opt_only_one_k_bytes) noexcept
       : storage_({.single_byte = std::move(single_byte),
                   .many_bytes = std::move(many_bytes),
                   .only_one_k_bytes = std::move(only_one_k_bytes),
@@ -77,12 +77,11 @@ class ByteAndBytes {
     return storage_.only_one_k_bytes;
   }
 
-  const ::cpp17::optional<::std::vector<uint8_t>>& opt_only_one_k_bytes()
-      const {
+  const ::std::optional<::std::vector<uint8_t>>& opt_only_one_k_bytes() const {
     return storage_.opt_only_one_k_bytes;
   }
 
-  ::cpp17::optional<::std::vector<uint8_t>>& opt_only_one_k_bytes() {
+  ::std::optional<::std::vector<uint8_t>>& opt_only_one_k_bytes() {
     return storage_.opt_only_one_k_bytes;
   }
 
@@ -99,7 +98,7 @@ class ByteAndBytes {
     uint8_t single_byte = {};
     ::std::vector<uint8_t> many_bytes;
     ::std::vector<uint8_t> only_one_k_bytes;
-    ::cpp17::optional<::std::vector<uint8_t>> opt_only_one_k_bytes;
+    ::std::optional<::std::vector<uint8_t>> opt_only_one_k_bytes;
   };
 
   Storage_ storage_;
@@ -124,7 +123,7 @@ class ByteAndBytes {
               fidl::internal::NaturalCodingConstraintEmpty, 1024>>{
           &Storage_::only_one_k_bytes, 24, 24},
       ::fidl::internal::NaturalStructMember<
-          Storage_, ::cpp17::optional<::std::vector<uint8_t>>,
+          Storage_, ::std::optional<::std::vector<uint8_t>>,
           fidl::internal::NaturalCodingConstraintVector<
               fidl::internal::NaturalCodingConstraintEmpty, 1024>>{
           &Storage_::opt_only_one_k_bytes, 40, 40});

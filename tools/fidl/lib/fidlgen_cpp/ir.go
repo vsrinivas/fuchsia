@@ -494,7 +494,7 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		r.nameVariants.Wire = makeName("fidl::VectorView").template(t.Wire)
 		if val.Nullable {
 			r.nameVariants.HLCPP = makeName("fidl::VectorPtr").template(t.HLCPP)
-			r.nameVariants.Unified = makeName("cpp17::optional").template(r.nameVariants.Unified)
+			r.nameVariants.Unified = makeName("std::optional").template(r.nameVariants.Unified)
 		} else {
 			r.nameVariants.HLCPP = makeName("std::vector").template(t.HLCPP)
 		}
@@ -514,7 +514,7 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		r.Wire = makeName("fidl::StringView")
 		if val.Nullable {
 			r.HLCPP = makeName("fidl::StringPtr")
-			r.nameVariants.Unified = makeName("cpp17::optional").template(r.nameVariants.Unified)
+			r.nameVariants.Unified = makeName("std::optional").template(r.nameVariants.Unified)
 		} else {
 			r.HLCPP = makeName("std::string")
 		}

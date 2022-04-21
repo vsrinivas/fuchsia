@@ -8,11 +8,11 @@
 #include <lib/fidl/llcpp/arena.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fidl/walker.h>
-#include <lib/stdcompat/string_view.h>
 #include <zircon/fidl.h>
 
 #include <cstring>
 #include <string>
+#include <string_view>
 #include <type_traits>
 
 namespace fidl {
@@ -25,7 +25,7 @@ class StringView final : private VectorView<const char> {
   explicit StringView(VectorView<const char>&& vv) : VectorView(std::move(vv)) {}
 
   // Allocates a string using an arena.
-  StringView(AnyArena& allocator, cpp17::string_view from) : VectorView(allocator, from.size()) {
+  StringView(AnyArena& allocator, std::string_view from) : VectorView(allocator, from.size()) {
     memcpy(const_cast<char*>(VectorView::mutable_data()), from.data(), from.size());
   }
 
@@ -47,15 +47,15 @@ class StringView final : private VectorView<const char> {
   // For example:
   // std::string foo = path + "/foo";
   // fidl::StringView foo_view(foo);
-  static StringView FromExternal(cpp17::string_view from) { return StringView(from); }
+  static StringView FromExternal(std::string_view from) { return StringView(from); }
   static StringView FromExternal(const char* data, size_t size) { return StringView(data, size); }
 
-  void Set(AnyArena& allocator, cpp17::string_view from) {
+  void Set(AnyArena& allocator, std::string_view from) {
     Allocate(allocator, from.size());
     memcpy(const_cast<char*>(VectorView::mutable_data()), from.data(), from.size());
   }
 
-  cpp17::string_view get() const { return {data(), size()}; }
+  std::string_view get() const { return {data(), size()}; }
 
   uint64_t size() const { return count(); }
   void set_size(uint64_t size) { set_count(size); }
@@ -76,7 +76,7 @@ class StringView final : private VectorView<const char> {
   const char* cend() const { return data() + size(); }
 
  private:
-  explicit StringView(cpp17::string_view from) : VectorView(from.data(), from.size()) {}
+  explicit StringView(std::string_view from) : VectorView(from.data(), from.size()) {}
   StringView(const char* data, uint64_t size) : VectorView(data, size) {}
 };
 

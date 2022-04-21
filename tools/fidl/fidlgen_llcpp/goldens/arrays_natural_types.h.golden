@@ -31,7 +31,7 @@ extern "C" const fidl_type_t test_arrays_UnionSmallArrayTable;
 
 class UnionSmallArray {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, ::std::array<uint32_t, 2>>;
+  using Storage_ = std::variant<std::monostate, ::std::array<uint32_t, 2>>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -110,13 +110,13 @@ class UnionSmallArray {
     }
   }
 
-  static constexpr cpp17::optional<::test_arrays::UnionSmallArray::Tag>
+  static constexpr std::optional<::test_arrays::UnionSmallArray::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_arrays::UnionSmallArray::Tag::kA;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -125,8 +125,7 @@ extern "C" const fidl_type_t test_arrays_UnionLargeArrayTable;
 
 class UnionLargeArray {
  private:
-  using Storage_ =
-      cpp17::variant<cpp17::monostate, ::std::array<uint32_t, 100>>;
+  using Storage_ = std::variant<std::monostate, ::std::array<uint32_t, 100>>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -205,13 +204,13 @@ class UnionLargeArray {
     }
   }
 
-  static constexpr cpp17::optional<::test_arrays::UnionLargeArray::Tag>
+  static constexpr std::optional<::test_arrays::UnionLargeArray::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_arrays::UnionLargeArray::Tag::kA;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -244,17 +243,17 @@ class TableSmallArray {
 
   bool IsEmpty() const { return !(storage_.a.has_value()); }
 
-  const cpp17::optional<::std::array<uint32_t, 2>>& a() const {
+  const std::optional<::std::array<uint32_t, 2>>& a() const {
     return storage_.a;
   }
-  ::cpp17::optional<::std::array<uint32_t, 2>>& a() { return storage_.a; }
+  ::std::optional<::std::array<uint32_t, 2>>& a() { return storage_.a; }
 
   TableSmallArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
       : TableSmallArray(Storage_{}) {}
 
  private:
   struct Storage_ final {
-    ::cpp17::optional<::std::array<uint32_t, 2>> a{};
+    ::std::optional<::std::array<uint32_t, 2>> a{};
   };
 
   // TODO(https://fxbug.dev/91252): Box the storage.
@@ -297,17 +296,17 @@ class TableLargeArray {
 
   bool IsEmpty() const { return !(storage_.a.has_value()); }
 
-  const cpp17::optional<::std::array<uint32_t, 100>>& a() const {
+  const std::optional<::std::array<uint32_t, 100>>& a() const {
     return storage_.a;
   }
-  ::cpp17::optional<::std::array<uint32_t, 100>>& a() { return storage_.a; }
+  ::std::optional<::std::array<uint32_t, 100>>& a() { return storage_.a; }
 
   TableLargeArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
       : TableLargeArray(Storage_{}) {}
 
  private:
   struct Storage_ final {
-    ::cpp17::optional<::std::array<uint32_t, 100>> a{};
+    ::std::optional<::std::array<uint32_t, 100>> a{};
   };
 
   // TODO(https://fxbug.dev/91252): Box the storage.

@@ -166,11 +166,11 @@ class TestResponseContext : public fidl::internal::ResponseContext {
  public:
   explicit TestResponseContext(ClientBaseSpy* spy)
       : fidl::internal::ResponseContext(0), spy_(spy) {}
-  cpp17::optional<fidl::UnbindInfo> OnRawResult(
+  std::optional<fidl::UnbindInfo> OnRawResult(
       fidl::IncomingMessage&& msg,
       fidl::internal::IncomingTransportContext transport_context) override {
     spy_->EraseTxid(this);
-    return cpp17::nullopt;
+    return std::nullopt;
   }
 
  private:

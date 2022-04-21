@@ -79,7 +79,7 @@ extern "C" const fidl_type_t test_union_UnionWithAttributesTable;
 
 class UnionWithAttributes {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, int64_t>;
+  using Storage_ = std::variant<std::monostate, int64_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -165,7 +165,7 @@ class UnionWithAttributes {
     }
   }
 
-  static constexpr cpp17::optional<::test_union::UnionWithAttributes::Tag>
+  static constexpr std::optional<::test_union::UnionWithAttributes::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
@@ -180,8 +180,8 @@ extern "C" const fidl_type_t test_union_UnionTable;
 
 class Union {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, int32_t, ::std::string,
-                                  ::std::vector<::std::string>>;
+  using Storage_ = std::variant<std::monostate, int32_t, ::std::string,
+                                ::std::vector<::std::string>>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -294,7 +294,7 @@ class Union {
     }
   }
 
-  static constexpr cpp17::optional<::test_union::Union::Tag> IndexToTag(
+  static constexpr std::optional<::test_union::Union::Tag> IndexToTag(
       size_t index) {
     switch (index) {
       case 1:
@@ -304,7 +304,7 @@ class Union {
       case 3:
         return ::test_union::Union::Tag::kVectorStringAlsoNeedsConstructor;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -387,8 +387,8 @@ extern "C" const fidl_type_t test_union_StrictUnionTable;
 
 class StrictUnion {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, int32_t, ::std::string,
-                                  ::std::vector<::std::string>>;
+  using Storage_ = std::variant<std::monostate, int32_t, ::std::string,
+                                ::std::vector<::std::string>>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -504,7 +504,7 @@ class StrictUnion {
     }
   }
 
-  static constexpr cpp17::optional<::test_union::StrictUnion::Tag> IndexToTag(
+  static constexpr std::optional<::test_union::StrictUnion::Tag> IndexToTag(
       size_t index) {
     switch (index) {
       case 1:
@@ -515,7 +515,7 @@ class StrictUnion {
         return ::test_union::StrictUnion::Tag::
             kVectorStringAlsoNeedsConstructor;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -524,8 +524,7 @@ extern "C" const fidl_type_t test_union_StrictSimpleXUnionTable;
 
 class StrictSimpleXUnion {
  private:
-  using Storage_ =
-      cpp17::variant<cpp17::monostate, int32_t, float, ::std::string>;
+  using Storage_ = std::variant<std::monostate, int32_t, float, ::std::string>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -637,7 +636,7 @@ class StrictSimpleXUnion {
     }
   }
 
-  static constexpr cpp17::optional<::test_union::StrictSimpleXUnion::Tag>
+  static constexpr std::optional<::test_union::StrictSimpleXUnion::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
@@ -647,7 +646,7 @@ class StrictSimpleXUnion {
       case 3:
         return ::test_union::StrictSimpleXUnion::Tag::kS;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -656,7 +655,7 @@ extern "C" const fidl_type_t test_union_StrictFooTable;
 
 class StrictFoo {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
+  using Storage_ = std::variant<std::monostate, ::std::string, int32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -751,7 +750,7 @@ class StrictFoo {
     }
   }
 
-  static constexpr cpp17::optional<::test_union::StrictFoo::Tag> IndexToTag(
+  static constexpr std::optional<::test_union::StrictFoo::Tag> IndexToTag(
       size_t index) {
     switch (index) {
       case 1:
@@ -759,7 +758,7 @@ class StrictFoo {
       case 2:
         return ::test_union::StrictFoo::Tag::kI;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -768,7 +767,7 @@ extern "C" const fidl_type_t test_union_StrictBoundedXUnionTable;
 
 class StrictBoundedXUnion {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, ::std::vector<uint8_t>>;
+  using Storage_ = std::variant<std::monostate, ::std::vector<uint8_t>>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -850,13 +849,13 @@ class StrictBoundedXUnion {
     }
   }
 
-  static constexpr cpp17::optional<::test_union::StrictBoundedXUnion::Tag>
+  static constexpr std::optional<::test_union::StrictBoundedXUnion::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
         return ::test_union::StrictBoundedXUnion::Tag::kV;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -961,7 +960,7 @@ extern "C" const fidl_type_t test_union_ReverseOrdinalUnionTable;
 
 class ReverseOrdinalUnion {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, uint32_t, uint32_t>;
+  using Storage_ = std::variant<std::monostate, uint32_t, uint32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -1058,7 +1057,7 @@ class ReverseOrdinalUnion {
     }
   }
 
-  static constexpr cpp17::optional<::test_union::ReverseOrdinalUnion::Tag>
+  static constexpr std::optional<::test_union::ReverseOrdinalUnion::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
@@ -1066,7 +1065,7 @@ class ReverseOrdinalUnion {
       case 2:
         return ::test_union::ReverseOrdinalUnion::Tag::kFirst;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -1207,8 +1206,8 @@ extern "C" const fidl_type_t test_union_StrictPizzaOrPastaTable;
 
 class StrictPizzaOrPasta {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, ::test_union::Pizza,
-                                  ::test_union::Pasta>;
+  using Storage_ =
+      std::variant<std::monostate, ::test_union::Pizza, ::test_union::Pasta>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -1304,7 +1303,7 @@ class StrictPizzaOrPasta {
     }
   }
 
-  static constexpr cpp17::optional<::test_union::StrictPizzaOrPasta::Tag>
+  static constexpr std::optional<::test_union::StrictPizzaOrPasta::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
@@ -1312,7 +1311,7 @@ class StrictPizzaOrPasta {
       case 2:
         return ::test_union::StrictPizzaOrPasta::Tag::kPasta;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -1321,8 +1320,8 @@ extern "C" const fidl_type_t test_union_PizzaOrPastaTable;
 
 class PizzaOrPasta {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, ::test_union::Pizza,
-                                  ::test_union::Pasta>;
+  using Storage_ =
+      std::variant<std::monostate, ::test_union::Pizza, ::test_union::Pasta>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -1417,7 +1416,7 @@ class PizzaOrPasta {
     }
   }
 
-  static constexpr cpp17::optional<::test_union::PizzaOrPasta::Tag> IndexToTag(
+  static constexpr std::optional<::test_union::PizzaOrPasta::Tag> IndexToTag(
       size_t index) {
     switch (index) {
       case 1:
@@ -1425,7 +1424,7 @@ class PizzaOrPasta {
       case 2:
         return ::test_union::PizzaOrPasta::Tag::kPasta;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -1434,8 +1433,8 @@ extern "C" const fidl_type_t test_union_FlexiblePizzaOrPastaTable;
 
 class FlexiblePizzaOrPasta {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, ::test_union::Pizza,
-                                  ::test_union::Pasta>;
+  using Storage_ =
+      std::variant<std::monostate, ::test_union::Pizza, ::test_union::Pasta>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -1537,7 +1536,7 @@ class FlexiblePizzaOrPasta {
     }
   }
 
-  static constexpr cpp17::optional<::test_union::FlexiblePizzaOrPasta::Tag>
+  static constexpr std::optional<::test_union::FlexiblePizzaOrPasta::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
@@ -1554,8 +1553,8 @@ extern "C" const fidl_type_t test_union_ExplicitPizzaOrPastaTable;
 
 class ExplicitPizzaOrPasta {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, ::test_union::Pizza,
-                                  ::test_union::Pasta>;
+  using Storage_ =
+      std::variant<std::monostate, ::test_union::Pizza, ::test_union::Pasta>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -1652,7 +1651,7 @@ class ExplicitPizzaOrPasta {
     }
   }
 
-  static constexpr cpp17::optional<::test_union::ExplicitPizzaOrPasta::Tag>
+  static constexpr std::optional<::test_union::ExplicitPizzaOrPasta::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
@@ -1660,7 +1659,7 @@ class ExplicitPizzaOrPasta {
       case 2:
         return ::test_union::ExplicitPizzaOrPasta::Tag::kPasta;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -1669,7 +1668,7 @@ extern "C" const fidl_type_t test_union_OlderSimpleUnionTable;
 
 class OlderSimpleUnion {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, int64_t, float>;
+  using Storage_ = std::variant<std::monostate, int64_t, float>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -1769,7 +1768,7 @@ class OlderSimpleUnion {
     }
   }
 
-  static constexpr cpp17::optional<::test_union::OlderSimpleUnion::Tag>
+  static constexpr std::optional<::test_union::OlderSimpleUnion::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
@@ -1954,8 +1953,8 @@ extern "C" const fidl_type_t test_union_NewerSimpleUnionTable;
 
 class NewerSimpleUnion {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, int64_t, ::std::string,
-                                  ::std::vector<::std::string>>;
+  using Storage_ = std::variant<std::monostate, int64_t, ::std::string,
+                                ::std::vector<::std::string>>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -2072,7 +2071,7 @@ class NewerSimpleUnion {
     }
   }
 
-  static constexpr cpp17::optional<::test_union::NewerSimpleUnion::Tag>
+  static constexpr std::optional<::test_union::NewerSimpleUnion::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
@@ -2091,8 +2090,8 @@ extern "C" const fidl_type_t test_union_FlexibleUnionTable;
 
 class FlexibleUnion {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, int32_t, ::std::string,
-                                  ::std::vector<::std::string>>;
+  using Storage_ = std::variant<std::monostate, int32_t, ::std::string,
+                                ::std::vector<::std::string>>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -2213,7 +2212,7 @@ class FlexibleUnion {
     }
   }
 
-  static constexpr cpp17::optional<::test_union::FlexibleUnion::Tag> IndexToTag(
+  static constexpr std::optional<::test_union::FlexibleUnion::Tag> IndexToTag(
       size_t index) {
     switch (index) {
       case 1:
@@ -2233,7 +2232,7 @@ extern "C" const fidl_type_t test_union_FlexibleFooTable;
 
 class FlexibleFoo {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
+  using Storage_ = std::variant<std::monostate, ::std::string, int32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -2333,7 +2332,7 @@ class FlexibleFoo {
     }
   }
 
-  static constexpr cpp17::optional<::test_union::FlexibleFoo::Tag> IndexToTag(
+  static constexpr std::optional<::test_union::FlexibleFoo::Tag> IndexToTag(
       size_t index) {
     switch (index) {
       case 1:
@@ -2350,7 +2349,7 @@ extern "C" const fidl_type_t test_union_FieldCollisionTable;
 
 class FieldCollision {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, int32_t>;
+  using Storage_ = std::variant<std::monostate, int32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -2430,13 +2429,13 @@ class FieldCollision {
     }
   }
 
-  static constexpr cpp17::optional<::test_union::FieldCollision::Tag>
-  IndexToTag(size_t index) {
+  static constexpr std::optional<::test_union::FieldCollision::Tag> IndexToTag(
+      size_t index) {
     switch (index) {
       case 1:
         return ::test_union::FieldCollision::Tag::kFieldCollisionTag;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -2445,7 +2444,7 @@ extern "C" const fidl_type_t test_union_ExplicitXUnionTable;
 
 class ExplicitXUnion {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, int64_t, float>;
+  using Storage_ = std::variant<std::monostate, int64_t, float>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -2545,8 +2544,8 @@ class ExplicitXUnion {
     }
   }
 
-  static constexpr cpp17::optional<::test_union::ExplicitXUnion::Tag>
-  IndexToTag(size_t index) {
+  static constexpr std::optional<::test_union::ExplicitXUnion::Tag> IndexToTag(
+      size_t index) {
     switch (index) {
       case 1:
         return ::test_union::ExplicitXUnion::Tag::kI;
@@ -2660,7 +2659,7 @@ extern "C" const fidl_type_t test_union_ExplicitUnionTable;
 
 class ExplicitUnion {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, int32_t, ::std::string>;
+  using Storage_ = std::variant<std::monostate, int32_t, ::std::string>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -2756,7 +2755,7 @@ class ExplicitUnion {
     }
   }
 
-  static constexpr cpp17::optional<::test_union::ExplicitUnion::Tag> IndexToTag(
+  static constexpr std::optional<::test_union::ExplicitUnion::Tag> IndexToTag(
       size_t index) {
     switch (index) {
       case 1:
@@ -2764,7 +2763,7 @@ class ExplicitUnion {
       case 2:
         return ::test_union::ExplicitUnion::Tag::kStringNeedsConstructor;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -2773,7 +2772,7 @@ extern "C" const fidl_type_t test_union_ExplicitStrictFooTable;
 
 class ExplicitStrictFoo {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
+  using Storage_ = std::variant<std::monostate, ::std::string, int32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -2868,7 +2867,7 @@ class ExplicitStrictFoo {
     }
   }
 
-  static constexpr cpp17::optional<::test_union::ExplicitStrictFoo::Tag>
+  static constexpr std::optional<::test_union::ExplicitStrictFoo::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
@@ -2876,7 +2875,7 @@ class ExplicitStrictFoo {
       case 2:
         return ::test_union::ExplicitStrictFoo::Tag::kI;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -2885,7 +2884,7 @@ extern "C" const fidl_type_t test_union_ExplicitFooTable;
 
 class ExplicitFoo {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, ::std::string, int32_t>;
+  using Storage_ = std::variant<std::monostate, ::std::string, int32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -2985,7 +2984,7 @@ class ExplicitFoo {
     }
   }
 
-  static constexpr cpp17::optional<::test_union::ExplicitFoo::Tag> IndexToTag(
+  static constexpr std::optional<::test_union::ExplicitFoo::Tag> IndexToTag(
       size_t index) {
     switch (index) {
       case 1:
@@ -3065,7 +3064,7 @@ extern "C" const fidl_type_t test_union_XUnionContainingEmptyStructTable;
 
 class XUnionContainingEmptyStruct {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, ::test_union::Empty>;
+  using Storage_ = std::variant<std::monostate, ::test_union::Empty>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -3153,8 +3152,7 @@ class XUnionContainingEmptyStruct {
     }
   }
 
-  static constexpr cpp17::optional<
-      ::test_union::XUnionContainingEmptyStruct::Tag>
+  static constexpr std::optional<::test_union::XUnionContainingEmptyStruct::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:

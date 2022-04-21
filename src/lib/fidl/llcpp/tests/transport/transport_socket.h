@@ -121,7 +121,7 @@ class UnownedClientEnd final
 
 template <typename Protocol>
 class ServerEnd final : public internal::ServerEndBase<Protocol, internal::SocketTransport> {
-  static_assert(cpp17::is_same_v<typename Protocol::Transport, fidl::internal::SocketTransport>);
+  static_assert(std::is_same_v<typename Protocol::Transport, fidl::internal::SocketTransport>);
   using ServerEndBase = internal::ServerEndBase<Protocol, internal::SocketTransport>;
 
  public:

@@ -176,7 +176,7 @@ class UnownedClientEnd final
 // in a different thread.
 template <typename Protocol>
 class ServerEnd : public internal::ServerEndBase<Protocol, internal::ChannelTransport> {
-  static_assert(cpp17::is_same_v<typename Protocol::Transport, internal::ChannelTransport>);
+  static_assert(std::is_same_v<typename Protocol::Transport, internal::ChannelTransport>);
   using ServerEndBase = internal::ServerEndBase<Protocol, internal::ChannelTransport>;
 
  public:

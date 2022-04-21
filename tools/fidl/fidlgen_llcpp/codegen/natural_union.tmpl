@@ -21,8 +21,8 @@ extern "C" const fidl_type_t {{ .CodingTableType.Name }};
 class {{ .Name }} {
  private:
   using Storage_ =
-    cpp17::variant<
-      cpp17::monostate
+    std::variant<
+      std::monostate
       {{- range .Members }}
         , {{ .Type }}
       {{- end -}}
@@ -122,7 +122,7 @@ class {{ .Name }} {
     }
   }
 
-  static constexpr cpp17::optional<{{ .TagEnum }}> IndexToTag(size_t index) {
+  static constexpr std::optional<{{ .TagEnum }}> IndexToTag(size_t index) {
     switch (index) {
       {{- range  .Members }}
         case {{ .NaturalIndex }}: return {{ .TagName }};
@@ -130,7 +130,7 @@ class {{ .Name }} {
       {{- if .IsFlexible }}
         default: return {{ .TagUnknown }};
       {{- else }}
-        default: return cpp17::nullopt;
+        default: return std::nullopt;
       {{- end }}
     }
   }

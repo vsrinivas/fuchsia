@@ -46,11 +46,10 @@ class MyStrictBits final {
 
   // Constructs an instance of |MyStrictBits| from an underlying primitive value
   // if the primitive does not contain any unknown members not defined in the
-  // FIDL schema. Otherwise, returns |cpp17::nullopt|.
-  constexpr inline static cpp17::optional<MyStrictBits> TryFrom(
-      uint32_t value) {
+  // FIDL schema. Otherwise, returns |std::nullopt|.
+  constexpr inline static std::optional<MyStrictBits> TryFrom(uint32_t value) {
     if (value & ~kMask.value_) {
-      return cpp17::nullopt;
+      return std::nullopt;
     }
     return MyStrictBits(value & MyStrictBits::kMask.value_);
   }
@@ -146,11 +145,11 @@ class MyFlexibleBits final {
 
   // Constructs an instance of |MyFlexibleBits| from an underlying primitive
   // value if the primitive does not contain any unknown members not defined in
-  // the FIDL schema. Otherwise, returns |cpp17::nullopt|.
-  constexpr inline static cpp17::optional<MyFlexibleBits> TryFrom(
+  // the FIDL schema. Otherwise, returns |std::nullopt|.
+  constexpr inline static std::optional<MyFlexibleBits> TryFrom(
       uint32_t value) {
     if (value & ~kMask.value_) {
-      return cpp17::nullopt;
+      return std::nullopt;
     }
     return MyFlexibleBits(value & MyFlexibleBits::kMask.value_);
   }

@@ -94,8 +94,8 @@ extern "C" const fidl_type_t test_error_Example_foo_ResultTable;
 
 class ExampleFooResult {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate,
-                                  ::test_error::ExampleFooResponse, uint32_t>;
+  using Storage_ =
+      std::variant<std::monostate, ::test_error::ExampleFooResponse, uint32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -190,7 +190,7 @@ class ExampleFooResult {
     }
   }
 
-  static constexpr cpp17::optional<::test_error::ExampleFooResult::Tag>
+  static constexpr std::optional<::test_error::ExampleFooResult::Tag>
   IndexToTag(size_t index) {
     switch (index) {
       case 1:
@@ -198,7 +198,7 @@ class ExampleFooResult {
       case 2:
         return ::test_error::ExampleFooResult::Tag::kErr;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };

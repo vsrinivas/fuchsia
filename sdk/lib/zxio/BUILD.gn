@@ -94,6 +94,7 @@ source_set("zxio") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/stdcompat",
     "//sdk/lib/zxio:inception",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",

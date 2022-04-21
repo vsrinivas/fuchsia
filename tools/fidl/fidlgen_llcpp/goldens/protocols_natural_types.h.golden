@@ -468,9 +468,9 @@ extern "C" const fidl_type_t
 class WithErrorSyntaxResponseAsStructResult {
  private:
   using Storage_ =
-      cpp17::variant<cpp17::monostate,
-                     ::test_protocols::WithErrorSyntaxResponseAsStructResponse,
-                     uint32_t>;
+      std::variant<std::monostate,
+                   ::test_protocols::WithErrorSyntaxResponseAsStructResponse,
+                   uint32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -578,7 +578,7 @@ class WithErrorSyntaxResponseAsStructResult {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_protocols::WithErrorSyntaxResponseAsStructResult::Tag>
   IndexToTag(size_t index) {
     switch (index) {
@@ -589,7 +589,7 @@ class WithErrorSyntaxResponseAsStructResult {
         return ::test_protocols::WithErrorSyntaxResponseAsStructResult::Tag::
             kErr;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -746,9 +746,9 @@ extern "C" const fidl_type_t
 class WithErrorSyntaxHandleInResultResult {
  private:
   using Storage_ =
-      cpp17::variant<cpp17::monostate,
-                     ::test_protocols::WithErrorSyntaxHandleInResultResponse,
-                     uint32_t>;
+      std::variant<std::monostate,
+                   ::test_protocols::WithErrorSyntaxHandleInResultResponse,
+                   uint32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -836,7 +836,7 @@ class WithErrorSyntaxHandleInResultResult {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_protocols::WithErrorSyntaxHandleInResultResult::Tag>
   IndexToTag(size_t index) {
     switch (index) {
@@ -846,7 +846,7 @@ class WithErrorSyntaxHandleInResultResult {
       case 2:
         return ::test_protocols::WithErrorSyntaxHandleInResultResult::Tag::kErr;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -1000,9 +1000,9 @@ extern "C" const fidl_type_t
 class WithErrorSyntaxErrorAsPrimitiveResult {
  private:
   using Storage_ =
-      cpp17::variant<cpp17::monostate,
-                     ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse,
-                     uint32_t>;
+      std::variant<std::monostate,
+                   ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse,
+                   uint32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -1110,7 +1110,7 @@ class WithErrorSyntaxErrorAsPrimitiveResult {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult::Tag>
   IndexToTag(size_t index) {
     switch (index) {
@@ -1121,7 +1121,7 @@ class WithErrorSyntaxErrorAsPrimitiveResult {
         return ::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult::Tag::
             kErr;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
@@ -2113,7 +2113,7 @@ extern "C" const fidl_type_t test_protocols_TheUnionTable;
 
 class TheUnion {
  private:
-  using Storage_ = cpp17::variant<cpp17::monostate, uint32_t>;
+  using Storage_ = std::variant<std::monostate, uint32_t>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -2195,7 +2195,7 @@ class TheUnion {
     }
   }
 
-  static constexpr cpp17::optional<::test_protocols::TheUnion::Tag> IndexToTag(
+  static constexpr std::optional<::test_protocols::TheUnion::Tag> IndexToTag(
       size_t index) {
     switch (index) {
       case 1:
@@ -3056,9 +3056,9 @@ extern "C" const fidl_type_t
 class WithErrorSyntaxErrorAsEnumResult {
  private:
   using Storage_ =
-      cpp17::variant<cpp17::monostate,
-                     ::test_protocols::WithErrorSyntaxErrorAsEnumResponse,
-                     ::test_protocols::ErrorEnum>;
+      std::variant<std::monostate,
+                   ::test_protocols::WithErrorSyntaxErrorAsEnumResponse,
+                   ::test_protocols::ErrorEnum>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -3165,7 +3165,7 @@ class WithErrorSyntaxErrorAsEnumResult {
     }
   }
 
-  static constexpr cpp17::optional<
+  static constexpr std::optional<
       ::test_protocols::WithErrorSyntaxErrorAsEnumResult::Tag>
   IndexToTag(size_t index) {
     switch (index) {
@@ -3175,7 +3175,7 @@ class WithErrorSyntaxErrorAsEnumResult {
       case 2:
         return ::test_protocols::WithErrorSyntaxErrorAsEnumResult::Tag::kErr;
       default:
-        return cpp17::nullopt;
+        return std::nullopt;
     }
   }
 };
