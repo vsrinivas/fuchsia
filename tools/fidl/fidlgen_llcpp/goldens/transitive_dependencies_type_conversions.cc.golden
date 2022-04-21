@@ -14,6 +14,18 @@ WireNaturalConversionTraits<::test_transitivedependencies::wire::Baz,
           ::test_middle::wire::Bar,
           ::test_middle::Bar>::ToNatural(std::move(src.g)));
 }
+::test_transitivedependencies::wire::Baz
+WireNaturalConversionTraits<::test_transitivedependencies::wire::Baz,
+                            ::test_transitivedependencies::Baz>::
+    ToWire(fidl::AnyArena& arena, ::test_transitivedependencies::Baz src) {
+  return ::test_transitivedependencies::wire::Baz{
+      .g =
+          WireNaturalConversionTraits<::test_middle::wire::Bar,
+                                      ::test_middle::Bar>::ToWire(arena,
+                                                                  std::move(
+                                                                      src.g())),
+  };
+}
 
 #ifdef __Fuchsia__
 

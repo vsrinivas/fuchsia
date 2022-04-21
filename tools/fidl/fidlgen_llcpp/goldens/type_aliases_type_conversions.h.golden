@@ -22,11 +22,17 @@ struct WireNaturalConversionTraits<
     ::test_typealiases::ExampleOfUseOfAliases> {
   static ::test_typealiases::ExampleOfUseOfAliases ToNatural(
       ::test_typealiases::wire::ExampleOfUseOfAliases src);
+  static ::test_typealiases::wire::ExampleOfUseOfAliases ToWire(
+      fidl::AnyArena& arena, ::test_typealiases::ExampleOfUseOfAliases src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_typealiases::wire::ExampleOfUseOfAliases> {
   using type = ::test_typealiases::ExampleOfUseOfAliases;
+};
+template <>
+struct WireTypeForNaturalType<::test_typealiases::ExampleOfUseOfAliases> {
+  using type = ::test_typealiases::wire::ExampleOfUseOfAliases;
 };
 
 #endif  // __Fuchsia__

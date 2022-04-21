@@ -28,12 +28,24 @@ struct WireNaturalConversionTraits<
   ToNatural(::fidl::WireRequest<
             ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
                 src);
+  static ::fidl::WireRequest<
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+  ToWire(fidl::AnyArena& arena,
+         ::fidl::Request<
+             ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+             src);
 };
 
 template <>
 struct NaturalTypeForWireType<::fidl::WireRequest<
     ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>> {
   using type = ::fidl::Request<
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
+};
+template <>
+struct WireTypeForNaturalType<::fidl::Request<
+    ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>> {
+  using type = ::fidl::WireRequest<
       ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
 };
 
@@ -48,12 +60,24 @@ struct WireNaturalConversionTraits<
   ToNatural(::fidl::WireResponse<
             ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
                 src);
+  static ::fidl::WireResponse<
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+  ToWire(fidl::AnyArena& arena,
+         ::fidl::Response<
+             ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+             src);
 };
 
 template <>
 struct NaturalTypeForWireType<::fidl::WireResponse<
     ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>> {
   using type = ::fidl::Response<
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
+};
+template <>
+struct WireTypeForNaturalType<::fidl::Response<
+    ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>> {
+  using type = ::fidl::WireResponse<
       ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
 };
 #endif  // __Fuchsia__

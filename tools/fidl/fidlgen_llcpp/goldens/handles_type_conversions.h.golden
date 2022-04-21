@@ -20,11 +20,17 @@ template <>
 struct WireNaturalConversionTraits<::test_handles::wire::Handles,
                                    ::test_handles::Handles> {
   static ::test_handles::Handles ToNatural(::test_handles::wire::Handles src);
+  static ::test_handles::wire::Handles ToWire(fidl::AnyArena& arena,
+                                              ::test_handles::Handles src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_handles::wire::Handles> {
   using type = ::test_handles::Handles;
+};
+template <>
+struct WireTypeForNaturalType<::test_handles::Handles> {
+  using type = ::test_handles::wire::Handles;
 };
 
 #endif  // __Fuchsia__
@@ -36,11 +42,17 @@ struct WireNaturalConversionTraits<::test_handles::wire::FdfHandles,
                                    ::test_handles::FdfHandles> {
   static ::test_handles::FdfHandles ToNatural(
       ::test_handles::wire::FdfHandles src);
+  static ::test_handles::wire::FdfHandles ToWire(
+      fidl::AnyArena& arena, ::test_handles::FdfHandles src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_handles::wire::FdfHandles> {
   using type = ::test_handles::FdfHandles;
+};
+template <>
+struct WireTypeForNaturalType<::test_handles::FdfHandles> {
+  using type = ::test_handles::wire::FdfHandles;
 };
 
 #endif  // __Fuchsia__

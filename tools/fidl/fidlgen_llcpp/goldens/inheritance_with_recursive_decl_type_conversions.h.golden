@@ -22,12 +22,20 @@ struct WireNaturalConversionTraits<
     ::test_inheritancewithrecursivedecl::ParentFirstRequest> {
   static ::test_inheritancewithrecursivedecl::ParentFirstRequest ToNatural(
       ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest src);
+  static ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest ToWire(
+      fidl::AnyArena& arena,
+      ::test_inheritancewithrecursivedecl::ParentFirstRequest src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest> {
   using type = ::test_inheritancewithrecursivedecl::ParentFirstRequest;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_inheritancewithrecursivedecl::ParentFirstRequest> {
+  using type = ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest;
 };
 
 #endif  // __Fuchsia__
@@ -40,12 +48,20 @@ struct WireNaturalConversionTraits<
     ::test_inheritancewithrecursivedecl::ChildSecondRequest> {
   static ::test_inheritancewithrecursivedecl::ChildSecondRequest ToNatural(
       ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest src);
+  static ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest ToWire(
+      fidl::AnyArena& arena,
+      ::test_inheritancewithrecursivedecl::ChildSecondRequest src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest> {
   using type = ::test_inheritancewithrecursivedecl::ChildSecondRequest;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_inheritancewithrecursivedecl::ChildSecondRequest> {
+  using type = ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest;
 };
 
 #endif  // __Fuchsia__
@@ -60,6 +76,10 @@ struct WireNaturalConversionTraits<
   ToNatural(
       ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>
           src);
+  static ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>
+  ToWire(
+      fidl::AnyArena& arena,
+      ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First> src);
 };
 
 template <>
@@ -67,6 +87,12 @@ struct NaturalTypeForWireType<
     ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>> {
   using type =
       ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First>> {
+  using type =
+      ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>;
 };
 
 template <>
@@ -77,6 +103,10 @@ struct WireNaturalConversionTraits<
   ToNatural(
       ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>
           src);
+  static ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>
+  ToWire(
+      fidl::AnyArena& arena,
+      ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First> src);
 };
 
 template <>
@@ -84,6 +114,12 @@ struct NaturalTypeForWireType<
     ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>> {
   using type =
       ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::fidl::Request<::test_inheritancewithrecursivedecl::Child::First>> {
+  using type =
+      ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>;
 };
 
 template <>
@@ -94,6 +130,10 @@ struct WireNaturalConversionTraits<
   ToNatural(
       ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>
           src);
+  static ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>
+  ToWire(
+      fidl::AnyArena& arena,
+      ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second> src);
 };
 
 template <>
@@ -101,6 +141,12 @@ struct NaturalTypeForWireType<
     ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>> {
   using type =
       ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second>> {
+  using type =
+      ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>;
 };
 #endif  // __Fuchsia__
 }  // namespace internal

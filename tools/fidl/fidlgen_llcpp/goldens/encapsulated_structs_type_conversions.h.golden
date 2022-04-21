@@ -22,12 +22,20 @@ struct WireNaturalConversionTraits<
     ::test_encapsulatedstructs::NonInlineStructTestStruct> {
   static ::test_encapsulatedstructs::NonInlineStructTestStruct ToNatural(
       ::test_encapsulatedstructs::wire::NonInlineStructTestStruct src);
+  static ::test_encapsulatedstructs::wire::NonInlineStructTestStruct ToWire(
+      fidl::AnyArena& arena,
+      ::test_encapsulatedstructs::NonInlineStructTestStruct src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_encapsulatedstructs::wire::NonInlineStructTestStruct> {
   using type = ::test_encapsulatedstructs::NonInlineStructTestStruct;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_encapsulatedstructs::NonInlineStructTestStruct> {
+  using type = ::test_encapsulatedstructs::wire::NonInlineStructTestStruct;
 };
 
 #endif  // __Fuchsia__
@@ -37,11 +45,17 @@ struct WireNaturalConversionTraits<::test_encapsulatedstructs::wire::Int8Int32,
                                    ::test_encapsulatedstructs::Int8Int32> {
   static ::test_encapsulatedstructs::Int8Int32 ToNatural(
       ::test_encapsulatedstructs::wire::Int8Int32 src);
+  static ::test_encapsulatedstructs::wire::Int8Int32 ToWire(
+      fidl::AnyArena& arena, ::test_encapsulatedstructs::Int8Int32 src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_encapsulatedstructs::wire::Int8Int32> {
   using type = ::test_encapsulatedstructs::Int8Int32;
+};
+template <>
+struct WireTypeForNaturalType<::test_encapsulatedstructs::Int8Int32> {
+  using type = ::test_encapsulatedstructs::wire::Int8Int32;
 };
 
 template <>
@@ -49,11 +63,17 @@ struct WireNaturalConversionTraits<::test_encapsulatedstructs::wire::Int16Int8,
                                    ::test_encapsulatedstructs::Int16Int8> {
   static ::test_encapsulatedstructs::Int16Int8 ToNatural(
       ::test_encapsulatedstructs::wire::Int16Int8 src);
+  static ::test_encapsulatedstructs::wire::Int16Int8 ToWire(
+      fidl::AnyArena& arena, ::test_encapsulatedstructs::Int16Int8 src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_encapsulatedstructs::wire::Int16Int8> {
   using type = ::test_encapsulatedstructs::Int16Int8;
+};
+template <>
+struct WireTypeForNaturalType<::test_encapsulatedstructs::Int16Int8> {
+  using type = ::test_encapsulatedstructs::wire::Int16Int8;
 };
 
 template <>
@@ -62,12 +82,18 @@ struct WireNaturalConversionTraits<
     ::test_encapsulatedstructs::ArrayInt16Int8> {
   static ::test_encapsulatedstructs::ArrayInt16Int8 ToNatural(
       ::test_encapsulatedstructs::wire::ArrayInt16Int8 src);
+  static ::test_encapsulatedstructs::wire::ArrayInt16Int8 ToWire(
+      fidl::AnyArena& arena, ::test_encapsulatedstructs::ArrayInt16Int8 src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_encapsulatedstructs::wire::ArrayInt16Int8> {
   using type = ::test_encapsulatedstructs::ArrayInt16Int8;
+};
+template <>
+struct WireTypeForNaturalType<::test_encapsulatedstructs::ArrayInt16Int8> {
+  using type = ::test_encapsulatedstructs::wire::ArrayInt16Int8;
 };
 
 template <>
@@ -76,12 +102,20 @@ struct WireNaturalConversionTraits<
     ::test_encapsulatedstructs::StructPaddingTestStruct> {
   static ::test_encapsulatedstructs::StructPaddingTestStruct ToNatural(
       ::test_encapsulatedstructs::wire::StructPaddingTestStruct src);
+  static ::test_encapsulatedstructs::wire::StructPaddingTestStruct ToWire(
+      fidl::AnyArena& arena,
+      ::test_encapsulatedstructs::StructPaddingTestStruct src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_encapsulatedstructs::wire::StructPaddingTestStruct> {
   using type = ::test_encapsulatedstructs::StructPaddingTestStruct;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_encapsulatedstructs::StructPaddingTestStruct> {
+  using type = ::test_encapsulatedstructs::wire::StructPaddingTestStruct;
 };
 
 #ifdef __Fuchsia__
@@ -92,12 +126,18 @@ struct WireNaturalConversionTraits<
     ::test_encapsulatedstructs::TopLevelStruct> {
   static ::test_encapsulatedstructs::TopLevelStruct ToNatural(
       ::test_encapsulatedstructs::wire::TopLevelStruct src);
+  static ::test_encapsulatedstructs::wire::TopLevelStruct ToWire(
+      fidl::AnyArena& arena, ::test_encapsulatedstructs::TopLevelStruct src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_encapsulatedstructs::wire::TopLevelStruct> {
   using type = ::test_encapsulatedstructs::TopLevelStruct;
+};
+template <>
+struct WireTypeForNaturalType<::test_encapsulatedstructs::TopLevelStruct> {
+  using type = ::test_encapsulatedstructs::wire::TopLevelStruct;
 };
 
 #endif  // __Fuchsia__

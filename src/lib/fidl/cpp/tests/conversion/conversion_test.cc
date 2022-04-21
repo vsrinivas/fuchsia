@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <gtest/gtest.h>
+#include <src/lib/fidl/llcpp/tests/arena_checker.h>
 
 #if __Fuchsia__
 #include <fidl/test.types/cpp/fidl.h>
@@ -18,15 +19,38 @@ TEST(WireToNaturalConversion, Primitives) {
   EXPECT_EQ(0.12, fidl::ToNatural(0.12));
 }
 
+TEST(NaturalToWireConversion, Primitives) {
+  fidl::Arena arena;
+  EXPECT_EQ(true, fidl::ToWire(arena, true));
+  EXPECT_EQ(1u, fidl::ToWire(arena, 1u));
+  EXPECT_EQ(1ull, fidl::ToWire(arena, 1ull));
+  EXPECT_EQ(0.12, fidl::ToWire(arena, 0.12));
+}
+
 TEST(WireNaturalConversionTraits, Enum) {
   EXPECT_EQ(test_types::StrictEnum::kB, fidl::ToNatural(test_types::wire::StrictEnum::kB));
   EXPECT_EQ(test_types::FlexibleEnum(100), fidl::ToNatural(test_types::wire::FlexibleEnum(100)));
+}
+
+TEST(NaturalToWireConversion, Enum) {
+  fidl::Arena arena;
+  EXPECT_EQ(test_types::wire::StrictEnum::kB, fidl::ToWire(arena, test_types::StrictEnum::kB));
+  EXPECT_EQ(test_types::wire::FlexibleEnum(100),
+            fidl::ToWire(arena, test_types::FlexibleEnum(100)));
 }
 
 TEST(WireToNaturalConversion, Bits) {
   EXPECT_EQ(test_types::StrictBits::kB | test_types::StrictBits::kD,
             fidl::ToNatural(test_types::wire::StrictBits::kB | test_types::wire::StrictBits::kD));
   EXPECT_EQ(test_types::FlexibleBits(100), fidl::ToNatural(test_types::wire::FlexibleBits(100)));
+}
+
+TEST(NaturalToWireConversion, Bits) {
+  fidl::Arena arena;
+  EXPECT_EQ(test_types::wire::StrictBits::kB | test_types::wire::StrictBits::kD,
+            fidl::ToWire(arena, test_types::StrictBits::kB | test_types::StrictBits::kD));
+  EXPECT_EQ(test_types::wire::FlexibleBits(100),
+            fidl::ToWire(arena, test_types::FlexibleBits(100)));
 }
 
 #if __Fuchsia__
@@ -44,21 +68,74 @@ TEST(WireToNaturalConversion, Handle) {
             zx_object_get_info(handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
 }
 
+TEST(NaturalToWireConversion, Handle) {
+  fidl::Arena arena;
+  zx::event ev;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &ev));
+  zx_handle_t handle = ev.get();
+
+  {
+    zx::event ev2 = fidl::ToWire(arena, std::move(ev));
+    EXPECT_EQ(ZX_OK, ev2.get_info(ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
+    EXPECT_EQ(handle, ev2.get());
+  }
+  EXPECT_EQ(ZX_ERR_BAD_HANDLE,
+            zx_object_get_info(handle, ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
+}
+
 TEST(WireToNaturalConversion, InvalidHandle) {
   EXPECT_EQ(zx::handle(), fidl::ToNatural(zx::handle()));
+}
+
+TEST(NaturalToWireConversion, InvalidHandle) {
+  fidl::Arena arena;
+  EXPECT_EQ(zx::handle(), fidl::ToWire(arena, zx::handle()));
 }
 #endif
 
 TEST(WireToNaturalConversion, String) {
   EXPECT_EQ(std::string("abcd"), fidl::internal::ToNatural<std::string>(fidl::StringView("abcd")));
+  EXPECT_EQ(std::string(), fidl::internal::ToNatural<std::string>(fidl::StringView("")));
   EXPECT_EQ(std::string(), fidl::internal::ToNatural<std::string>(fidl::StringView()));
+}
+
+TEST(NaturalToWireConversion, String) {
+  fidl::Arena arena;
+  fidl::StringView str = fidl::ToWire(arena, std::string("abcd"));
+  EXPECT_EQ("abcd", str.get());
+  EXPECT_TRUE(fidl_testing::ArenaChecker::IsPointerInArena(str.data(), arena));
+
+  fidl::StringView empty_str = fidl::ToWire(arena, std::string(""));
+  EXPECT_EQ(0u, empty_str.size());
+  EXPECT_NE(nullptr, empty_str.data());
+
+  fidl::StringView null_str = fidl::ToWire(arena, std::string());
+  EXPECT_EQ(0u, null_str.size());
+  EXPECT_NE(nullptr, null_str.data());
 }
 
 TEST(WireToNaturalConversion, OptionalString) {
   EXPECT_EQ(std::optional(std::string("abcd")), fidl::ToNatural(fidl::StringView("abcd")));
-  EXPECT_EQ(std::optional(std::string("abcd")), fidl::ToNatural(fidl::StringView("abcd")));
-  EXPECT_EQ(std::optional(std::string("abcd")), fidl::ToNatural(fidl::StringView("abcd")));
   EXPECT_EQ(std::nullopt, fidl::ToNatural(fidl::StringView()));
+}
+
+TEST(NaturalToWireConversion, OptionalString) {
+  fidl::Arena arena;
+  fidl::StringView str = fidl::ToWire(arena, std::optional(std::string("abcd")));
+  EXPECT_EQ("abcd", str.get());
+  EXPECT_TRUE(fidl_testing::ArenaChecker::IsPointerInArena(str.data(), arena));
+
+  fidl::StringView empty_str = fidl::ToWire(arena, std::optional(std::string("")));
+  EXPECT_EQ(0u, empty_str.size());
+  EXPECT_NE(nullptr, empty_str.data());
+
+  fidl::StringView null_str = fidl::ToWire(arena, std::optional(std::string()));
+  EXPECT_EQ(0u, null_str.size());
+  EXPECT_NE(nullptr, null_str.data());
+
+  fidl::StringView nullopt_str = fidl::ToWire(arena, std::optional<std::string>());
+  EXPECT_EQ(0u, nullopt_str.size());
+  EXPECT_EQ(nullptr, nullopt_str.data());
 }
 
 TEST(WireToNaturalConversion, Vector) {
@@ -68,11 +145,54 @@ TEST(WireToNaturalConversion, Vector) {
                 fidl::VectorView<uint32_t>::FromExternal(data, std::size(data))));
 }
 
+TEST(NaturalToWireConversion, Vector) {
+  fidl::Arena arena;
+  fidl::VectorView<uint32_t> vec = fidl::ToWire(arena, std::vector<uint32_t>{1, 2, 3});
+  EXPECT_EQ(3u, vec.count());
+  EXPECT_EQ(1u, vec[0]);
+  EXPECT_EQ(2u, vec[1]);
+  EXPECT_EQ(3u, vec[2]);
+  EXPECT_TRUE(fidl_testing::ArenaChecker::IsPointerInArena(vec.data(), arena));
+
+  fidl::VectorView<uint32_t> empty_vec = fidl::ToWire(arena, std::vector<uint32_t>({}));
+  EXPECT_EQ(0u, empty_vec.count());
+  EXPECT_NE(nullptr, empty_vec.data());
+
+  fidl::VectorView<uint32_t> null_vec = fidl::ToWire(arena, std::vector<uint32_t>());
+  EXPECT_EQ(0u, null_vec.count());
+  EXPECT_NE(nullptr, null_vec.data());
+}
+
 TEST(WireToNaturalConversion, OptionalVector) {
   uint32_t data[] = {1, 2, 3};
   EXPECT_EQ(std::optional(std::vector<uint32_t>(data, data + std::size(data))),
             fidl::ToNatural(fidl::VectorView<uint32_t>::FromExternal(data, std::size(data))));
   EXPECT_EQ(std::nullopt, fidl::ToNatural(fidl::VectorView<uint32_t>()));
+}
+
+TEST(NaturalToWireConversion, OptionalVector) {
+  fidl::Arena arena;
+  fidl::VectorView<uint32_t> vec =
+      fidl::ToWire(arena, std::optional(std::vector<uint32_t>{1, 2, 3}));
+  EXPECT_EQ(3u, vec.count());
+  EXPECT_EQ(1u, vec[0]);
+  EXPECT_EQ(2u, vec[1]);
+  EXPECT_EQ(3u, vec[2]);
+  EXPECT_TRUE(fidl_testing::ArenaChecker::IsPointerInArena(vec.data(), arena));
+
+  fidl::VectorView<uint32_t> empty_vec =
+      fidl::ToWire(arena, std::optional(std::vector<uint32_t>({})));
+  EXPECT_EQ(0u, empty_vec.count());
+  EXPECT_NE(nullptr, empty_vec.data());
+
+  fidl::VectorView<uint32_t> null_vec = fidl::ToWire(arena, std::optional(std::vector<uint32_t>()));
+  EXPECT_EQ(0u, null_vec.count());
+  EXPECT_NE(nullptr, null_vec.data());
+
+  fidl::VectorView<uint32_t> nullopt_vec =
+      fidl::ToWire(arena, std::optional<std::vector<uint32_t>>());
+  EXPECT_EQ(0u, nullopt_vec.count());
+  EXPECT_EQ(nullptr, nullopt_vec.data());
 }
 
 TEST(WireToNaturalConversion, ObjectView) {
@@ -85,20 +205,89 @@ TEST(WireToNaturalConversion, ObjectView) {
   EXPECT_EQ(123, val->x());
 }
 
+TEST(NaturalToWireConversion, ObjectView) {
+  fidl::Arena arena;
+  EXPECT_EQ(fidl::ObjectView<test_types::wire::CopyableStruct>(),
+            fidl::ToWire(arena, std::unique_ptr<test_types::CopyableStruct>(nullptr)));
+
+  fidl::ObjectView<test_types::wire::CopyableStruct> val =
+      fidl::ToWire(arena, std::make_unique<test_types::CopyableStruct>(123));
+  EXPECT_EQ(123, val->x);
+  EXPECT_TRUE(fidl_testing::ArenaChecker::IsPointerInArena(val.get(), arena));
+}
+
 TEST(WireToNaturalConversion, Union) {
-  test_types::TestStrictXUnion xunion = fidl::internal::ToNatural<test_types::TestStrictXUnion>(
-      test_types::wire::TestStrictXUnion::WithPrimitive(123));
-  ASSERT_EQ(test_types::TestStrictXUnion::Tag::kPrimitive, xunion.Which());
-  EXPECT_EQ(123, xunion.primitive().value());
+  fidl::Arena arena;
+
+  test_types::TestStrictXUnion union_with_uint32 =
+      fidl::internal::ToNatural<test_types::TestStrictXUnion>(
+          test_types::wire::TestStrictXUnion::WithPrimitive(123));
+  ASSERT_EQ(test_types::TestStrictXUnion::Tag::kPrimitive, union_with_uint32.Which());
+  EXPECT_EQ(123, union_with_uint32.primitive().value());
+
+  test_types::UnionWithUint64 union_with_uint64 =
+      fidl::internal::ToNatural<test_types::UnionWithUint64>(
+          test_types::wire::UnionWithUint64::WithValue(arena, 123));
+  ASSERT_EQ(test_types::UnionWithUint64::Tag::kValue, union_with_uint64.Which());
+  EXPECT_EQ(123ll, union_with_uint64.value().value());
+}
+
+TEST(NaturalToWireConversion, Union) {
+  fidl::Arena arena;
+
+  test_types::wire::TestStrictXUnion union_with_uint32 =
+      fidl::ToWire(arena, test_types::TestStrictXUnion::WithPrimitive(123));
+  ASSERT_EQ(test_types::wire::TestStrictXUnion::Tag::kPrimitive, union_with_uint32.Which());
+  EXPECT_EQ(123, union_with_uint32.primitive());
+  // Inline union value.
+  EXPECT_FALSE(fidl_testing::ArenaChecker::IsPointerInArena(&union_with_uint32.primitive(), arena));
+
+  test_types::wire::UnionWithUint64 union_with_uint64 =
+      fidl::ToWire(arena, test_types::UnionWithUint64::WithValue(123));
+  ASSERT_EQ(test_types::wire::UnionWithUint64::Tag::kValue, union_with_uint64.Which());
+  EXPECT_EQ(123ll, union_with_uint64.value());
+  // Inline union value.
+  EXPECT_TRUE(fidl_testing::ArenaChecker::IsPointerInArena(&union_with_uint64.value(), arena));
 }
 
 TEST(WireToNaturalConversion, OptionalUnion) {
+  fidl::Arena arena;
+
   ASSERT_EQ(nullptr, fidl::ToNatural(test_types::wire::TestStrictXUnion()));
 
-  std::unique_ptr<test_types::TestStrictXUnion> xunion =
+  std::unique_ptr<test_types::TestStrictXUnion> union_with_uint32 =
       fidl::ToNatural(test_types::wire::TestStrictXUnion::WithPrimitive(123));
-  ASSERT_EQ(test_types::TestStrictXUnion::Tag::kPrimitive, xunion->Which());
-  EXPECT_EQ(123, xunion->primitive().value());
+  ASSERT_EQ(test_types::TestStrictXUnion::Tag::kPrimitive, union_with_uint32->Which());
+  EXPECT_EQ(123, union_with_uint32->primitive().value());
+
+  std::unique_ptr<test_types::UnionWithUint64> union_with_uint64 =
+      fidl::ToNatural(test_types::wire::UnionWithUint64::WithValue(arena, 123ll));
+  ASSERT_EQ(test_types::UnionWithUint64::Tag::kValue, union_with_uint64->Which());
+  EXPECT_EQ(123ll, union_with_uint64->value().value());
+}
+
+TEST(NaturalToWireConversion, OptionalUnion) {
+  fidl::Arena arena;
+
+  test_types::wire::TestStrictXUnion empty =
+      fidl::ToWire(arena, std::unique_ptr<test_types::TestStrictXUnion>());
+  ASSERT_TRUE(empty.has_invalid_tag());
+
+  test_types::wire::TestStrictXUnion xunion =
+      fidl::ToWire(arena, std::make_unique<test_types::TestStrictXUnion>(
+                              test_types::TestStrictXUnion::WithPrimitive(123)));
+  ASSERT_EQ(test_types::wire::TestStrictXUnion::Tag::kPrimitive, xunion.Which());
+  EXPECT_EQ(123, xunion.primitive());
+  // Inline union value.
+  EXPECT_FALSE(fidl_testing::ArenaChecker::IsPointerInArena(&xunion.primitive(), arena));
+
+  test_types::wire::UnionWithUint64 union_with_uint64 = fidl::ToWire(
+      arena,
+      std::make_unique<test_types::UnionWithUint64>(test_types::UnionWithUint64::WithValue(123ll)));
+  ASSERT_EQ(test_types::wire::UnionWithUint64::Tag::kValue, union_with_uint64.Which());
+  EXPECT_EQ(123ll, union_with_uint64.value());
+  // Inline union value.
+  EXPECT_TRUE(fidl_testing::ArenaChecker::IsPointerInArena(&union_with_uint64.value(), arena));
 }
 
 TEST(WireToNaturalConversion, Table) {
@@ -109,6 +298,21 @@ TEST(WireToNaturalConversion, Table) {
   EXPECT_EQ(34, table.y());
 }
 
+TEST(NaturalToWireConversion, Table) {
+  fidl::Arena arena;
+  test_types::wire::SampleTable table = fidl::ToWire(arena, test_types::SampleTable({
+                                                                .x = 12,
+                                                                .y = 34,
+                                                            }));
+  EXPECT_EQ(12, table.x());
+  EXPECT_EQ(34, table.y());
+  EXPECT_TRUE(fidl_testing::ArenaChecker::IsPointerInArena(&table.x(), arena));
+  EXPECT_TRUE(fidl_testing::ArenaChecker::IsPointerInArena(&table.y(), arena));
+
+  void* frame = reinterpret_cast<fidl_vector_t*>(&table)->data;
+  EXPECT_TRUE(fidl_testing::ArenaChecker::IsPointerInArena(frame, arena));
+}
+
 #if __Fuchsia__
 TEST(WireToNaturalConversion, MoveOnlyUnion) {
   test_types::wire::TestXUnion wire = test_types::wire::TestXUnion::WithH(zx::handle());
@@ -117,11 +321,25 @@ TEST(WireToNaturalConversion, MoveOnlyUnion) {
   EXPECT_FALSE(natural.h()->is_valid());
 }
 
+TEST(NaturalToWireConversion, MoveOnlyUnion) {
+  fidl::Arena arena;
+  test_types::TestXUnion natural = test_types::TestXUnion::WithH(zx::handle());
+  test_types::wire::TestXUnion wire = fidl::ToWire(arena, std::move(natural));
+  EXPECT_FALSE(wire.h().is_valid());
+}
+
 TEST(WireToNaturalConversion, MoveOnlyTable) {
-  fidl::Arena<512> arena;
+  fidl::Arena arena;
   test_types::TestHandleTable table =
       fidl::ToNatural(test_types::wire::TestHandleTable::Builder(arena).hs({}).Build());
   EXPECT_FALSE(table.hs()->h().is_valid());
+}
+
+TEST(NaturalToWireConversion, MoveOnlyTable) {
+  fidl::Arena arena;
+  test_types::wire::TestHandleTable table =
+      fidl::ToWire(arena, test_types::TestHandleTable({.hs = {}}));
+  EXPECT_FALSE(table.has_hs());
 }
 
 TEST(WireToNaturalConversion, Request) {
@@ -130,16 +348,37 @@ TEST(WireToNaturalConversion, Request) {
   EXPECT_EQ(123, request.req().bar());
 }
 
+TEST(NaturalToWireConversion, Request) {
+  fidl::Arena arena;
+  fidl::WireRequest<test_types::Baz::Foo> request =
+      fidl::ToWire(arena, fidl::Request<test_types::Baz::Foo>(test_types::FooRequest(123)));
+  EXPECT_EQ(123, request.req.bar);
+}
+
 TEST(WireToNaturalConversion, Response) {
   fidl::Response<test_types::Baz::Foo> response =
       fidl::ToNatural(fidl::WireResponse<test_types::Baz::Foo>({.bar = 123}));
   EXPECT_EQ(123, response.res().bar());
 }
 
+TEST(NaturalToWireConversion, Response) {
+  fidl::Arena arena;
+  fidl::WireResponse<test_types::Baz::Foo> response =
+      fidl::ToWire(arena, fidl::Response<test_types::Baz::Foo>(test_types::FooResponse(123)));
+  EXPECT_EQ(123, response.res.bar);
+}
+
 TEST(WireToNaturalConversion, ResponseEmptyResultSuccess) {
   fidl::Response<test_types::ErrorSyntax::EmptyPayload> natural =
       fidl::ToNatural(fidl::WireResponse<test_types::ErrorSyntax::EmptyPayload>());
   ASSERT_TRUE(natural.is_ok());
+}
+
+TEST(NaturalToWireConversion, ResponseEmptyResultSuccess) {
+  fidl::Arena arena;
+  fidl::WireResponse<test_types::ErrorSyntax::EmptyPayload> wire =
+      fidl::ToWire(arena, fidl::Response<test_types::ErrorSyntax::EmptyPayload>(::fitx::ok()));
+  ASSERT_TRUE(wire.result.is_response());
 }
 
 TEST(WireToNaturalConversion, ResponseEmptyResultError) {
@@ -150,12 +389,29 @@ TEST(WireToNaturalConversion, ResponseEmptyResultError) {
   EXPECT_EQ(123, natural.error_value());
 }
 
+TEST(NaturalToWireConversion, ResponseEmptyResultError) {
+  fidl::Arena arena;
+  fidl::Response<test_types::ErrorSyntax::EmptyPayload> natural(::fitx::error(123));
+  fidl::WireResponse<test_types::ErrorSyntax::EmptyPayload> wire = fidl::ToWire(arena, natural);
+  ASSERT_TRUE(wire.result.is_err());
+  EXPECT_EQ(123, wire.result.err());
+}
+
 TEST(WireToNaturalConversion, ResponseResultSuccess) {
   fidl::WireResponse<test_types::ErrorSyntax::FooPayload> wire(
       test_types::wire::ErrorSyntaxFooPayloadResult::WithResponse({.bar = 123}));
   fidl::Response<test_types::ErrorSyntax::FooPayload> natural = fidl::ToNatural(wire);
   ASSERT_TRUE(natural.is_ok());
   EXPECT_EQ(123, natural.value().bar());
+}
+
+TEST(NaturalToWireConversion, ResponseResultSuccess) {
+  fidl::Arena arena;
+  fidl::Response<test_types::ErrorSyntax::FooPayload> natural(::fitx::ok(123));
+  fidl::WireResponse<test_types::ErrorSyntax::FooPayload> wire =
+      fidl::ToWire(arena, std::move(natural));
+  ASSERT_TRUE(wire.result.is_response());
+  EXPECT_EQ(123, wire.result.response().bar);
 }
 
 TEST(WireToNaturalConversion, ResponseResultError) {
@@ -166,9 +422,25 @@ TEST(WireToNaturalConversion, ResponseResultError) {
   EXPECT_EQ(123, natural.error_value());
 }
 
+TEST(NaturalToWireConversion, ResponseResultError) {
+  fidl::Arena arena;
+  fidl::Response<test_types::ErrorSyntax::FooPayload> natural(fitx::error(123));
+  fidl::WireResponse<test_types::ErrorSyntax::FooPayload> wire =
+      fidl::ToWire(arena, std::move(natural));
+  ASSERT_TRUE(wire.result.is_err());
+  EXPECT_EQ(123, wire.result.err());
+}
+
 TEST(WireToNaturalConversion, Event) {
   fidl::Event<test_types::Baz::FooEvent> event =
       fidl::ToNatural(fidl::WireEvent<test_types::Baz::FooEvent>(123));
   EXPECT_EQ(123, event.bar());
+}
+
+TEST(NaturalToWireConversion, Event) {
+  fidl::Arena arena;
+  fidl::WireEvent<test_types::Baz::FooEvent> event =
+      fidl::ToWire(arena, fidl::Event<test_types::Baz::FooEvent>(123));
+  EXPECT_EQ(123, event.bar);
 }
 #endif

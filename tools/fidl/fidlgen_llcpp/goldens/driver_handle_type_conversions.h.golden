@@ -22,12 +22,20 @@ struct WireNaturalConversionTraits<
     ::test_driverhandle::HandlesInProtocolSendHandlesRequest> {
   static ::test_driverhandle::HandlesInProtocolSendHandlesRequest ToNatural(
       ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest src);
+  static ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest ToWire(
+      fidl::AnyArena& arena,
+      ::test_driverhandle::HandlesInProtocolSendHandlesRequest src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest> {
   using type = ::test_driverhandle::HandlesInProtocolSendHandlesRequest;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_driverhandle::HandlesInProtocolSendHandlesRequest> {
+  using type = ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest;
 };
 
 #endif  // __Fuchsia__
@@ -39,11 +47,17 @@ struct WireNaturalConversionTraits<::test_driverhandle::wire::ServerEndWrapper,
                                    ::test_driverhandle::ServerEndWrapper> {
   static ::test_driverhandle::ServerEndWrapper ToNatural(
       ::test_driverhandle::wire::ServerEndWrapper src);
+  static ::test_driverhandle::wire::ServerEndWrapper ToWire(
+      fidl::AnyArena& arena, ::test_driverhandle::ServerEndWrapper src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_driverhandle::wire::ServerEndWrapper> {
   using type = ::test_driverhandle::ServerEndWrapper;
+};
+template <>
+struct WireTypeForNaturalType<::test_driverhandle::ServerEndWrapper> {
+  using type = ::test_driverhandle::wire::ServerEndWrapper;
 };
 
 #endif  // __Fuchsia__
@@ -55,11 +69,17 @@ struct WireNaturalConversionTraits<::test_driverhandle::wire::ClientEndWrapper,
                                    ::test_driverhandle::ClientEndWrapper> {
   static ::test_driverhandle::ClientEndWrapper ToNatural(
       ::test_driverhandle::wire::ClientEndWrapper src);
+  static ::test_driverhandle::wire::ClientEndWrapper ToWire(
+      fidl::AnyArena& arena, ::test_driverhandle::ClientEndWrapper src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_driverhandle::wire::ClientEndWrapper> {
   using type = ::test_driverhandle::ClientEndWrapper;
+};
+template <>
+struct WireTypeForNaturalType<::test_driverhandle::ClientEndWrapper> {
+  using type = ::test_driverhandle::wire::ClientEndWrapper;
 };
 
 #endif  // __Fuchsia__
@@ -70,11 +90,17 @@ template <>
 struct WireNaturalConversionTraits<::test_driverhandle::wire::T,
                                    ::test_driverhandle::T> {
   static ::test_driverhandle::T ToNatural(::test_driverhandle::wire::T src);
+  static ::test_driverhandle::wire::T ToWire(fidl::AnyArena& arena,
+                                             ::test_driverhandle::T src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_driverhandle::wire::T> {
   using type = ::test_driverhandle::T;
+};
+template <>
+struct WireTypeForNaturalType<::test_driverhandle::T> {
+  using type = ::test_driverhandle::wire::T;
 };
 
 #endif  // __Fuchsia__

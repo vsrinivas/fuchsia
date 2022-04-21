@@ -24,6 +24,11 @@ struct WireNaturalConversionTraits<
       ProtocolRequestStrictResponseFlexibleRequest
       ToNatural(::test_requestflexibleenvelope::wire::
                     ProtocolRequestStrictResponseFlexibleRequest src);
+  static ::test_requestflexibleenvelope::wire::
+      ProtocolRequestStrictResponseFlexibleRequest
+      ToWire(fidl::AnyArena& arena,
+             ::test_requestflexibleenvelope::
+                 ProtocolRequestStrictResponseFlexibleRequest src);
 };
 
 template <>
@@ -31,6 +36,13 @@ struct NaturalTypeForWireType<
     ::test_requestflexibleenvelope::wire::
         ProtocolRequestStrictResponseFlexibleRequest> {
   using type = ::test_requestflexibleenvelope::
+      ProtocolRequestStrictResponseFlexibleRequest;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_requestflexibleenvelope::
+        ProtocolRequestStrictResponseFlexibleRequest> {
+  using type = ::test_requestflexibleenvelope::wire::
       ProtocolRequestStrictResponseFlexibleRequest;
 };
 
@@ -44,6 +56,11 @@ struct WireNaturalConversionTraits<
       ProtocolRequestFlexibleResponseStrictTopResponse
       ToNatural(::test_requestflexibleenvelope::wire::
                     ProtocolRequestFlexibleResponseStrictTopResponse src);
+  static ::test_requestflexibleenvelope::wire::
+      ProtocolRequestFlexibleResponseStrictTopResponse
+      ToWire(fidl::AnyArena& arena,
+             ::test_requestflexibleenvelope::
+                 ProtocolRequestFlexibleResponseStrictTopResponse src);
 };
 
 template <>
@@ -51,6 +68,13 @@ struct NaturalTypeForWireType<
     ::test_requestflexibleenvelope::wire::
         ProtocolRequestFlexibleResponseStrictTopResponse> {
   using type = ::test_requestflexibleenvelope::
+      ProtocolRequestFlexibleResponseStrictTopResponse;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_requestflexibleenvelope::
+        ProtocolRequestFlexibleResponseStrictTopResponse> {
+  using type = ::test_requestflexibleenvelope::wire::
       ProtocolRequestFlexibleResponseStrictTopResponse;
 };
 
@@ -64,6 +88,11 @@ struct WireNaturalConversionTraits<
       ProtocolRequestStrictResponseFlexibleTopResponse
       ToNatural(::test_requestflexibleenvelope::wire::
                     ProtocolRequestStrictResponseFlexibleTopResponse src);
+  static ::test_requestflexibleenvelope::wire::
+      ProtocolRequestStrictResponseFlexibleTopResponse
+      ToWire(fidl::AnyArena& arena,
+             ::test_requestflexibleenvelope::
+                 ProtocolRequestStrictResponseFlexibleTopResponse src);
 };
 
 template <>
@@ -71,6 +100,13 @@ struct NaturalTypeForWireType<
     ::test_requestflexibleenvelope::wire::
         ProtocolRequestStrictResponseFlexibleTopResponse> {
   using type = ::test_requestflexibleenvelope::
+      ProtocolRequestStrictResponseFlexibleTopResponse;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_requestflexibleenvelope::
+        ProtocolRequestStrictResponseFlexibleTopResponse> {
+  using type = ::test_requestflexibleenvelope::wire::
       ProtocolRequestStrictResponseFlexibleTopResponse;
 };
 
@@ -84,6 +120,11 @@ struct WireNaturalConversionTraits<
       ProtocolRequestFlexibleResponseStrictRequest
       ToNatural(::test_requestflexibleenvelope::wire::
                     ProtocolRequestFlexibleResponseStrictRequest src);
+  static ::test_requestflexibleenvelope::wire::
+      ProtocolRequestFlexibleResponseStrictRequest
+      ToWire(fidl::AnyArena& arena,
+             ::test_requestflexibleenvelope::
+                 ProtocolRequestFlexibleResponseStrictRequest src);
 };
 
 template <>
@@ -93,6 +134,13 @@ struct NaturalTypeForWireType<
   using type = ::test_requestflexibleenvelope::
       ProtocolRequestFlexibleResponseStrictRequest;
 };
+template <>
+struct WireTypeForNaturalType<
+    ::test_requestflexibleenvelope::
+        ProtocolRequestFlexibleResponseStrictRequest> {
+  using type = ::test_requestflexibleenvelope::wire::
+      ProtocolRequestFlexibleResponseStrictRequest;
+};
 
 template <>
 struct WireNaturalConversionTraits<
@@ -100,6 +148,8 @@ struct WireNaturalConversionTraits<
     ::test_requestflexibleenvelope::StrictFoo> {
   static ::test_requestflexibleenvelope::StrictFoo ToNatural(
       ::test_requestflexibleenvelope::wire::StrictFoo src);
+  static ::test_requestflexibleenvelope::wire::StrictFoo ToWire(
+      fidl::AnyArena& arena, ::test_requestflexibleenvelope::StrictFoo src);
 };
 
 template <>
@@ -108,11 +158,23 @@ struct WireNaturalConversionTraits<
     std::unique_ptr<::test_requestflexibleenvelope::StrictFoo>> {
   static std::unique_ptr<::test_requestflexibleenvelope::StrictFoo> ToNatural(
       ::test_requestflexibleenvelope::wire::StrictFoo src);
+  static ::test_requestflexibleenvelope::wire::StrictFoo ToWire(
+      fidl::AnyArena& arena,
+      std::unique_ptr<::test_requestflexibleenvelope::StrictFoo> src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_requestflexibleenvelope::wire::StrictFoo> {
   using type = std::unique_ptr<::test_requestflexibleenvelope::StrictFoo>;
+};
+template <>
+struct WireTypeForNaturalType<::test_requestflexibleenvelope::StrictFoo> {
+  using type = ::test_requestflexibleenvelope::wire::StrictFoo;
+};
+template <>
+struct WireTypeForNaturalType<
+    std::unique_ptr<::test_requestflexibleenvelope::StrictFoo>> {
+  using type = ::test_requestflexibleenvelope::wire::StrictFoo;
 };
 
 template <>
@@ -121,6 +183,8 @@ struct WireNaturalConversionTraits<
     ::test_requestflexibleenvelope::FlexibleFoo> {
   static ::test_requestflexibleenvelope::FlexibleFoo ToNatural(
       ::test_requestflexibleenvelope::wire::FlexibleFoo src);
+  static ::test_requestflexibleenvelope::wire::FlexibleFoo ToWire(
+      fidl::AnyArena& arena, ::test_requestflexibleenvelope::FlexibleFoo src);
 };
 
 template <>
@@ -129,12 +193,24 @@ struct WireNaturalConversionTraits<
     std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo>> {
   static std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo> ToNatural(
       ::test_requestflexibleenvelope::wire::FlexibleFoo src);
+  static ::test_requestflexibleenvelope::wire::FlexibleFoo ToWire(
+      fidl::AnyArena& arena,
+      std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo> src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_requestflexibleenvelope::wire::FlexibleFoo> {
   using type = std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo>;
+};
+template <>
+struct WireTypeForNaturalType<::test_requestflexibleenvelope::FlexibleFoo> {
+  using type = ::test_requestflexibleenvelope::wire::FlexibleFoo;
+};
+template <>
+struct WireTypeForNaturalType<
+    std::unique_ptr<::test_requestflexibleenvelope::FlexibleFoo>> {
+  using type = ::test_requestflexibleenvelope::wire::FlexibleFoo;
 };
 
 #ifdef __Fuchsia__
@@ -150,12 +226,24 @@ struct WireNaturalConversionTraits<
   ToNatural(::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                                     RequestStrictResponseFlexible>
                 src);
+  static ::fidl::WireRequest<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
+  ToWire(fidl::AnyArena& arena,
+         ::fidl::Request<::test_requestflexibleenvelope::Protocol::
+                             RequestStrictResponseFlexible>
+             src);
 };
 
 template <>
 struct NaturalTypeForWireType<::fidl::WireRequest<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> {
   using type = ::fidl::Request<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>;
+};
+template <>
+struct WireTypeForNaturalType<::fidl::Request<
+    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> {
+  using type = ::fidl::WireRequest<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>;
 };
 
@@ -170,12 +258,24 @@ struct WireNaturalConversionTraits<
   ToNatural(::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                                     RequestFlexibleResponseStrict>
                 src);
+  static ::fidl::WireRequest<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
+  ToWire(fidl::AnyArena& arena,
+         ::fidl::Request<::test_requestflexibleenvelope::Protocol::
+                             RequestFlexibleResponseStrict>
+             src);
 };
 
 template <>
 struct NaturalTypeForWireType<::fidl::WireRequest<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> {
   using type = ::fidl::Request<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>;
+};
+template <>
+struct WireTypeForNaturalType<::fidl::Request<
+    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> {
+  using type = ::fidl::WireRequest<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>;
 };
 
@@ -190,12 +290,24 @@ struct WireNaturalConversionTraits<
   ToNatural(::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                                      RequestStrictResponseFlexible>
                 src);
+  static ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
+  ToWire(fidl::AnyArena& arena,
+         ::fidl::Response<::test_requestflexibleenvelope::Protocol::
+                              RequestStrictResponseFlexible>
+             src);
 };
 
 template <>
 struct NaturalTypeForWireType<::fidl::WireResponse<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> {
   using type = ::fidl::Response<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>;
+};
+template <>
+struct WireTypeForNaturalType<::fidl::Response<
+    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> {
+  using type = ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>;
 };
 
@@ -210,12 +322,24 @@ struct WireNaturalConversionTraits<
   ToNatural(::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                                      RequestFlexibleResponseStrict>
                 src);
+  static ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
+  ToWire(fidl::AnyArena& arena,
+         ::fidl::Response<::test_requestflexibleenvelope::Protocol::
+                              RequestFlexibleResponseStrict>
+             src);
 };
 
 template <>
 struct NaturalTypeForWireType<::fidl::WireResponse<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> {
   using type = ::fidl::Response<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>;
+};
+template <>
+struct WireTypeForNaturalType<::fidl::Response<
+    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> {
+  using type = ::fidl::WireResponse<
       ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>;
 };
 #endif  // __Fuchsia__

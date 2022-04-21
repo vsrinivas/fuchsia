@@ -47,6 +47,10 @@ type TestStrictXUnion = strict union {
     2: copyable CopyableStruct;
 };
 
+type UnionWithUint64 = strict union {
+    1: value int64;
+};
+
 type TestStrictXUnionInStruct = struct {
     xu TestStrictXUnion;
 };

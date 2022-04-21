@@ -19,11 +19,17 @@ struct WireNaturalConversionTraits<::test_vectors::wire::ExampleUseOfVectors,
                                    ::test_vectors::ExampleUseOfVectors> {
   static ::test_vectors::ExampleUseOfVectors ToNatural(
       ::test_vectors::wire::ExampleUseOfVectors src);
+  static ::test_vectors::wire::ExampleUseOfVectors ToWire(
+      fidl::AnyArena& arena, ::test_vectors::ExampleUseOfVectors src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_vectors::wire::ExampleUseOfVectors> {
   using type = ::test_vectors::ExampleUseOfVectors;
+};
+template <>
+struct WireTypeForNaturalType<::test_vectors::ExampleUseOfVectors> {
+  using type = ::test_vectors::wire::ExampleUseOfVectors;
 };
 
 #ifdef __Fuchsia__

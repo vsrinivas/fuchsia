@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_FIDL_LLCPP_TESTS_INTEGRATION_ARENA_CHECKER_H_
-#define SRC_LIB_FIDL_LLCPP_TESTS_INTEGRATION_ARENA_CHECKER_H_
+#ifndef SRC_LIB_FIDL_LLCPP_TESTS_ARENA_CHECKER_H_
+#define SRC_LIB_FIDL_LLCPP_TESTS_ARENA_CHECKER_H_
 
 #include <lib/fidl/llcpp/arena.h>
 
@@ -12,7 +12,7 @@ namespace fidl_testing {
 class ArenaChecker {
  public:
   template <size_t kInitialCapacity>
-  static bool IsPointerInArena(void* pointer, ::fidl::Arena<kInitialCapacity>& arena) {
+  static bool IsPointerInArena(const void* pointer, ::fidl::Arena<kInitialCapacity>& arena) {
     return IsPointerInArena(pointer, arena, arena.initial_buffer_, kInitialCapacity);
   }
 
@@ -23,7 +23,7 @@ class ArenaChecker {
   }
 
  private:
-  static bool IsPointerInArena(void* pointer, ::fidl::ArenaBase& arena,
+  static bool IsPointerInArena(const void* pointer, ::fidl::ArenaBase& arena,
                                const uint8_t* initial_buffer, size_t initial_capacity);
 
   static bool DidUse(::fidl::ArenaBase& arena, const uint8_t* initial_buffer);
@@ -31,4 +31,4 @@ class ArenaChecker {
 
 }  // namespace fidl_testing
 
-#endif  // SRC_LIB_FIDL_LLCPP_TESTS_INTEGRATION_ARENA_CHECKER_H_
+#endif  // SRC_LIB_FIDL_LLCPP_TESTS_ARENA_CHECKER_H_

@@ -20,12 +20,20 @@ struct WireNaturalConversionTraits<
     ::test_unionsandwich::SandwichUnionSize8Alignment4> {
   static ::test_unionsandwich::SandwichUnionSize8Alignment4 ToNatural(
       ::test_unionsandwich::wire::SandwichUnionSize8Alignment4 src);
+  static ::test_unionsandwich::wire::SandwichUnionSize8Alignment4 ToWire(
+      fidl::AnyArena& arena,
+      ::test_unionsandwich::SandwichUnionSize8Alignment4 src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_unionsandwich::wire::SandwichUnionSize8Alignment4> {
   using type = ::test_unionsandwich::SandwichUnionSize8Alignment4;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_unionsandwich::SandwichUnionSize8Alignment4> {
+  using type = ::test_unionsandwich::wire::SandwichUnionSize8Alignment4;
 };
 
 template <>
@@ -34,12 +42,20 @@ struct WireNaturalConversionTraits<
     ::test_unionsandwich::SandwichUnionSize36Alignment4> {
   static ::test_unionsandwich::SandwichUnionSize36Alignment4 ToNatural(
       ::test_unionsandwich::wire::SandwichUnionSize36Alignment4 src);
+  static ::test_unionsandwich::wire::SandwichUnionSize36Alignment4 ToWire(
+      fidl::AnyArena& arena,
+      ::test_unionsandwich::SandwichUnionSize36Alignment4 src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_unionsandwich::wire::SandwichUnionSize36Alignment4> {
   using type = ::test_unionsandwich::SandwichUnionSize36Alignment4;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_unionsandwich::SandwichUnionSize36Alignment4> {
+  using type = ::test_unionsandwich::wire::SandwichUnionSize36Alignment4;
 };
 
 template <>
@@ -48,12 +64,20 @@ struct WireNaturalConversionTraits<
     ::test_unionsandwich::SandwichUnionSize12Alignment4> {
   static ::test_unionsandwich::SandwichUnionSize12Alignment4 ToNatural(
       ::test_unionsandwich::wire::SandwichUnionSize12Alignment4 src);
+  static ::test_unionsandwich::wire::SandwichUnionSize12Alignment4 ToWire(
+      fidl::AnyArena& arena,
+      ::test_unionsandwich::SandwichUnionSize12Alignment4 src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_unionsandwich::wire::SandwichUnionSize12Alignment4> {
   using type = ::test_unionsandwich::SandwichUnionSize12Alignment4;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_unionsandwich::SandwichUnionSize12Alignment4> {
+  using type = ::test_unionsandwich::wire::SandwichUnionSize12Alignment4;
 };
 
 template <>
@@ -62,12 +86,18 @@ struct WireNaturalConversionTraits<
     ::test_unionsandwich::StructSize16Alignment8> {
   static ::test_unionsandwich::StructSize16Alignment8 ToNatural(
       ::test_unionsandwich::wire::StructSize16Alignment8 src);
+  static ::test_unionsandwich::wire::StructSize16Alignment8 ToWire(
+      fidl::AnyArena& arena, ::test_unionsandwich::StructSize16Alignment8 src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_unionsandwich::wire::StructSize16Alignment8> {
   using type = ::test_unionsandwich::StructSize16Alignment8;
+};
+template <>
+struct WireTypeForNaturalType<::test_unionsandwich::StructSize16Alignment8> {
+  using type = ::test_unionsandwich::wire::StructSize16Alignment8;
 };
 
 template <>
@@ -76,12 +106,20 @@ struct WireNaturalConversionTraits<
     ::test_unionsandwich::SandwichUnionSize24Alignment8> {
   static ::test_unionsandwich::SandwichUnionSize24Alignment8 ToNatural(
       ::test_unionsandwich::wire::SandwichUnionSize24Alignment8 src);
+  static ::test_unionsandwich::wire::SandwichUnionSize24Alignment8 ToWire(
+      fidl::AnyArena& arena,
+      ::test_unionsandwich::SandwichUnionSize24Alignment8 src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_unionsandwich::wire::SandwichUnionSize24Alignment8> {
   using type = ::test_unionsandwich::SandwichUnionSize24Alignment8;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_unionsandwich::SandwichUnionSize24Alignment8> {
+  using type = ::test_unionsandwich::wire::SandwichUnionSize24Alignment8;
 };
 
 template <>
@@ -90,6 +128,8 @@ struct WireNaturalConversionTraits<
     ::test_unionsandwich::UnionSize8Alignment4> {
   static ::test_unionsandwich::UnionSize8Alignment4 ToNatural(
       ::test_unionsandwich::wire::UnionSize8Alignment4 src);
+  static ::test_unionsandwich::wire::UnionSize8Alignment4 ToWire(
+      fidl::AnyArena& arena, ::test_unionsandwich::UnionSize8Alignment4 src);
 };
 
 template <>
@@ -98,12 +138,24 @@ struct WireNaturalConversionTraits<
     std::unique_ptr<::test_unionsandwich::UnionSize8Alignment4>> {
   static std::unique_ptr<::test_unionsandwich::UnionSize8Alignment4> ToNatural(
       ::test_unionsandwich::wire::UnionSize8Alignment4 src);
+  static ::test_unionsandwich::wire::UnionSize8Alignment4 ToWire(
+      fidl::AnyArena& arena,
+      std::unique_ptr<::test_unionsandwich::UnionSize8Alignment4> src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_unionsandwich::wire::UnionSize8Alignment4> {
   using type = std::unique_ptr<::test_unionsandwich::UnionSize8Alignment4>;
+};
+template <>
+struct WireTypeForNaturalType<::test_unionsandwich::UnionSize8Alignment4> {
+  using type = ::test_unionsandwich::wire::UnionSize8Alignment4;
+};
+template <>
+struct WireTypeForNaturalType<
+    std::unique_ptr<::test_unionsandwich::UnionSize8Alignment4>> {
+  using type = ::test_unionsandwich::wire::UnionSize8Alignment4;
 };
 
 template <>
@@ -112,6 +164,8 @@ struct WireNaturalConversionTraits<
     ::test_unionsandwich::UnionSize36Alignment4> {
   static ::test_unionsandwich::UnionSize36Alignment4 ToNatural(
       ::test_unionsandwich::wire::UnionSize36Alignment4 src);
+  static ::test_unionsandwich::wire::UnionSize36Alignment4 ToWire(
+      fidl::AnyArena& arena, ::test_unionsandwich::UnionSize36Alignment4 src);
 };
 
 template <>
@@ -120,12 +174,24 @@ struct WireNaturalConversionTraits<
     std::unique_ptr<::test_unionsandwich::UnionSize36Alignment4>> {
   static std::unique_ptr<::test_unionsandwich::UnionSize36Alignment4> ToNatural(
       ::test_unionsandwich::wire::UnionSize36Alignment4 src);
+  static ::test_unionsandwich::wire::UnionSize36Alignment4 ToWire(
+      fidl::AnyArena& arena,
+      std::unique_ptr<::test_unionsandwich::UnionSize36Alignment4> src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_unionsandwich::wire::UnionSize36Alignment4> {
   using type = std::unique_ptr<::test_unionsandwich::UnionSize36Alignment4>;
+};
+template <>
+struct WireTypeForNaturalType<::test_unionsandwich::UnionSize36Alignment4> {
+  using type = ::test_unionsandwich::wire::UnionSize36Alignment4;
+};
+template <>
+struct WireTypeForNaturalType<
+    std::unique_ptr<::test_unionsandwich::UnionSize36Alignment4>> {
+  using type = ::test_unionsandwich::wire::UnionSize36Alignment4;
 };
 
 template <>
@@ -134,6 +200,8 @@ struct WireNaturalConversionTraits<
     ::test_unionsandwich::UnionSize12Alignment4> {
   static ::test_unionsandwich::UnionSize12Alignment4 ToNatural(
       ::test_unionsandwich::wire::UnionSize12Alignment4 src);
+  static ::test_unionsandwich::wire::UnionSize12Alignment4 ToWire(
+      fidl::AnyArena& arena, ::test_unionsandwich::UnionSize12Alignment4 src);
 };
 
 template <>
@@ -142,12 +210,24 @@ struct WireNaturalConversionTraits<
     std::unique_ptr<::test_unionsandwich::UnionSize12Alignment4>> {
   static std::unique_ptr<::test_unionsandwich::UnionSize12Alignment4> ToNatural(
       ::test_unionsandwich::wire::UnionSize12Alignment4 src);
+  static ::test_unionsandwich::wire::UnionSize12Alignment4 ToWire(
+      fidl::AnyArena& arena,
+      std::unique_ptr<::test_unionsandwich::UnionSize12Alignment4> src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_unionsandwich::wire::UnionSize12Alignment4> {
   using type = std::unique_ptr<::test_unionsandwich::UnionSize12Alignment4>;
+};
+template <>
+struct WireTypeForNaturalType<::test_unionsandwich::UnionSize12Alignment4> {
+  using type = ::test_unionsandwich::wire::UnionSize12Alignment4;
+};
+template <>
+struct WireTypeForNaturalType<
+    std::unique_ptr<::test_unionsandwich::UnionSize12Alignment4>> {
+  using type = ::test_unionsandwich::wire::UnionSize12Alignment4;
 };
 
 template <>
@@ -156,6 +236,8 @@ struct WireNaturalConversionTraits<
     ::test_unionsandwich::UnionSize24Alignment8> {
   static ::test_unionsandwich::UnionSize24Alignment8 ToNatural(
       ::test_unionsandwich::wire::UnionSize24Alignment8 src);
+  static ::test_unionsandwich::wire::UnionSize24Alignment8 ToWire(
+      fidl::AnyArena& arena, ::test_unionsandwich::UnionSize24Alignment8 src);
 };
 
 template <>
@@ -164,12 +246,24 @@ struct WireNaturalConversionTraits<
     std::unique_ptr<::test_unionsandwich::UnionSize24Alignment8>> {
   static std::unique_ptr<::test_unionsandwich::UnionSize24Alignment8> ToNatural(
       ::test_unionsandwich::wire::UnionSize24Alignment8 src);
+  static ::test_unionsandwich::wire::UnionSize24Alignment8 ToWire(
+      fidl::AnyArena& arena,
+      std::unique_ptr<::test_unionsandwich::UnionSize24Alignment8> src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_unionsandwich::wire::UnionSize24Alignment8> {
   using type = std::unique_ptr<::test_unionsandwich::UnionSize24Alignment8>;
+};
+template <>
+struct WireTypeForNaturalType<::test_unionsandwich::UnionSize24Alignment8> {
+  using type = ::test_unionsandwich::wire::UnionSize24Alignment8;
+};
+template <>
+struct WireTypeForNaturalType<
+    std::unique_ptr<::test_unionsandwich::UnionSize24Alignment8>> {
+  using type = ::test_unionsandwich::wire::UnionSize24Alignment8;
 };
 
 #ifdef __Fuchsia__

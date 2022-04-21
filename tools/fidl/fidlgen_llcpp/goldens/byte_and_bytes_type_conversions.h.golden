@@ -19,11 +19,17 @@ struct WireNaturalConversionTraits<::test_byteandbytes::wire::ByteAndBytes,
                                    ::test_byteandbytes::ByteAndBytes> {
   static ::test_byteandbytes::ByteAndBytes ToNatural(
       ::test_byteandbytes::wire::ByteAndBytes src);
+  static ::test_byteandbytes::wire::ByteAndBytes ToWire(
+      fidl::AnyArena& arena, ::test_byteandbytes::ByteAndBytes src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_byteandbytes::wire::ByteAndBytes> {
   using type = ::test_byteandbytes::ByteAndBytes;
+};
+template <>
+struct WireTypeForNaturalType<::test_byteandbytes::ByteAndBytes> {
+  using type = ::test_byteandbytes::wire::ByteAndBytes;
 };
 
 #ifdef __Fuchsia__

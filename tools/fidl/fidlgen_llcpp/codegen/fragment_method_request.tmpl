@@ -128,11 +128,16 @@ struct {{ .RequestMessageTraits }} final {
 template <>
 struct WireNaturalConversionTraits<{{ .WireRequest }}, {{ .NaturalRequest }}> {
   static {{ .NaturalRequest }} ToNatural({{ .WireRequest }} src);
+  static {{ .WireRequest }} ToWire(fidl::AnyArena& arena, {{ .NaturalRequest }} src);
 };
 
 template <>
 struct NaturalTypeForWireType<{{ .WireRequest }}> {
     using type = {{ .NaturalRequest }};
+};
+template <>
+struct WireTypeForNaturalType<{{ .NaturalRequest }}> {
+    using type = {{ .WireRequest }};
 };
 {{- end }}
 
@@ -143,6 +148,14 @@ struct NaturalTypeForWireType<{{ .WireRequest }}> {
     WireNaturalConversionTraits<{{ .RequestPayload.Wire }}, {{ .RequestMessageBase }}>::ToNatural(std::move(src)));
   {{- else }}
   return {{ .NaturalRequest }}();
+  {{- end }}
+}
+{{ .WireRequest }}  WireNaturalConversionTraits<{{ .WireRequest }}, {{ .NaturalRequest }}>::ToWire(fidl::AnyArena& arena, {{ .NaturalRequest }} src) {
+  {{- if .HasRequestPayload }}
+  return {{ .WireRequest }}(
+    WireNaturalConversionTraits<{{ .RequestPayload.Wire }}, {{ .RequestMessageBase }}>::ToWire(arena, std::move(src)));
+  {{- else }}
+  return {{ .WireRequest }}();
   {{- end }}
 }
 {{- end }}

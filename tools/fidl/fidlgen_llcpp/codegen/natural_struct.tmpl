@@ -213,11 +213,16 @@ class {{ .Name }} {
 template <>
 struct WireNaturalConversionTraits<{{ .Wire }}, {{ .Unified }}> {
   static {{ .Unified }} ToNatural({{ .Wire }} src);
+  static {{ .Wire }} ToWire(fidl::AnyArena& arena, {{ .Unified }} src);
 };
 
 template <>
 struct NaturalTypeForWireType<{{ .Wire }}> {
     using type = {{ .Unified }};
+};
+template <>
+struct WireTypeForNaturalType<{{ .Unified }}> {
+    using type = {{ .Wire }};
 };
 
 {{ if .IsResourceType }}
@@ -240,6 +245,13 @@ struct NaturalTypeForWireType<{{ .Wire }}> {
   {{- end }}
   });
   {{- end }}
+}
+{{ .Wire }} WireNaturalConversionTraits<{{ .Wire }}, {{ .Unified }}>::ToWire(fidl::AnyArena& arena, {{ .Unified }} src) {
+  return {{ .Wire }}{
+    {{- range .Members }}
+      .{{ .Name }} = WireNaturalConversionTraits<{{ .Type.Wire }}, {{ .Type.Unified }}>::ToWire(arena, std::move(src.{{ .Name }}())),
+    {{- end }}
+  };
 }
 
 {{ if .IsResourceType }}

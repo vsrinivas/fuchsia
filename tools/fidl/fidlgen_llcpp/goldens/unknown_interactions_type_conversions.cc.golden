@@ -15,6 +15,17 @@ WireNaturalConversionTraits<
       WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(
           std::move(src.__reserved)));
 }
+::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse
+WireNaturalConversionTraits<
+    ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse,
+    ::test_unknowninteractions::ExampleFlexibleTwoWayResponse>::
+    ToWire(fidl::AnyArena& arena,
+           ::test_unknowninteractions::ExampleFlexibleTwoWayResponse src) {
+  return ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResponse{
+      .__reserved = WireNaturalConversionTraits<uint8_t, uint8_t>::ToWire(
+          arena, std::move(src.__reserved())),
+  };
+}
 
 ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse
 WireNaturalConversionTraits<
@@ -27,6 +38,19 @@ WireNaturalConversionTraits<
           ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult,
           ::test_unknowninteractions::ExampleFlexibleTwoWayResult>::
           ToNatural(std::move(src.result)));
+}
+::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse
+WireNaturalConversionTraits<
+    ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse,
+    ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>::
+    ToWire(fidl::AnyArena& arena,
+           ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse src) {
+  return ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse{
+      .result = WireNaturalConversionTraits<
+          ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult,
+          ::test_unknowninteractions::ExampleFlexibleTwoWayResult>::
+          ToWire(arena, std::move(src.result())),
+  };
 }
 
 ::test_unknowninteractions::ExampleFlexibleTwoWayResult
@@ -55,6 +79,30 @@ WireNaturalConversionTraits<
       ZX_PANIC("unknown union tag in strict union");
   }
 }
+::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult
+WireNaturalConversionTraits<
+    ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult,
+    ::test_unknowninteractions::ExampleFlexibleTwoWayResult>::
+    ToWire(fidl::AnyArena& arena,
+           ::test_unknowninteractions::ExampleFlexibleTwoWayResult src) {
+  switch (src.Which()) {
+    case ::test_unknowninteractions::ExampleFlexibleTwoWayResult::Tag::
+        kResponse:
+      return ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult::
+          WithResponse(
+              WireNaturalConversionTraits<
+                  ::test_unknowninteractions::wire::
+                      ExampleFlexibleTwoWayResponse,
+                  ::test_unknowninteractions::ExampleFlexibleTwoWayResponse>::
+                  ToWire(arena, std::move(src.response().value())));
+    case ::test_unknowninteractions::ExampleFlexibleTwoWayResult::Tag::
+        kTransportErr:
+      return ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult::
+          WithTransportErr(
+              WireNaturalConversionTraits<int32_t, int32_t>::ToWire(
+                  arena, std::move(src.transport_err().value())));
+  }
+}
 
 std::unique_ptr<::test_unknowninteractions::ExampleFlexibleTwoWayResult>
 WireNaturalConversionTraits<
@@ -72,6 +120,22 @@ WireNaturalConversionTraits<
           ::test_unknowninteractions::ExampleFlexibleTwoWayResult>::
           ToNatural(std::move(src)));
 }
+::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult
+WireNaturalConversionTraits<
+    ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult,
+    std::unique_ptr<::test_unknowninteractions::ExampleFlexibleTwoWayResult>>::
+    ToWire(
+        fidl::AnyArena& arena,
+        std::unique_ptr<::test_unknowninteractions::ExampleFlexibleTwoWayResult>
+            src) {
+  if (!src) {
+    return ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult();
+  }
+  return WireNaturalConversionTraits<
+      ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult,
+      ::test_unknowninteractions::ExampleFlexibleTwoWayResult>::
+      ToWire(arena, std::move(*src));
+}
 
 #ifdef __Fuchsia__
 
@@ -84,6 +148,16 @@ WireNaturalConversionTraits<
             src) {
   return ::fidl::Request<::test_unknowninteractions::Example::StrictOneWay>();
 }
+::fidl::WireRequest<::test_unknowninteractions::Example::StrictOneWay>
+WireNaturalConversionTraits<
+    ::fidl::WireRequest<::test_unknowninteractions::Example::StrictOneWay>,
+    ::fidl::Request<::test_unknowninteractions::Example::StrictOneWay>>::
+    ToWire(fidl::AnyArena& arena,
+           ::fidl::Request<::test_unknowninteractions::Example::StrictOneWay>
+               src) {
+  return ::fidl::WireRequest<
+      ::test_unknowninteractions::Example::StrictOneWay>();
+}
 
 ::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay>
 WireNaturalConversionTraits<
@@ -93,6 +167,16 @@ WireNaturalConversionTraits<
         ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleOneWay>
             src) {
   return ::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay>();
+}
+::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleOneWay>
+WireNaturalConversionTraits<
+    ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleOneWay>,
+    ::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay>>::
+    ToWire(fidl::AnyArena& arena,
+           ::fidl::Request<::test_unknowninteractions::Example::FlexibleOneWay>
+               src) {
+  return ::fidl::WireRequest<
+      ::test_unknowninteractions::Example::FlexibleOneWay>();
 }
 
 ::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay>
@@ -104,6 +188,16 @@ WireNaturalConversionTraits<
             src) {
   return ::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay>();
 }
+::fidl::WireRequest<::test_unknowninteractions::Example::StrictTwoWay>
+WireNaturalConversionTraits<
+    ::fidl::WireRequest<::test_unknowninteractions::Example::StrictTwoWay>,
+    ::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay>>::
+    ToWire(fidl::AnyArena& arena,
+           ::fidl::Request<::test_unknowninteractions::Example::StrictTwoWay>
+               src) {
+  return ::fidl::WireRequest<
+      ::test_unknowninteractions::Example::StrictTwoWay>();
+}
 
 ::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay>
 WireNaturalConversionTraits<
@@ -114,6 +208,16 @@ WireNaturalConversionTraits<
             src) {
   return ::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay>();
 }
+::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleTwoWay>
+WireNaturalConversionTraits<
+    ::fidl::WireRequest<::test_unknowninteractions::Example::FlexibleTwoWay>,
+    ::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay>>::
+    ToWire(fidl::AnyArena& arena,
+           ::fidl::Request<::test_unknowninteractions::Example::FlexibleTwoWay>
+               src) {
+  return ::fidl::WireRequest<
+      ::test_unknowninteractions::Example::FlexibleTwoWay>();
+}
 
 ::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay>
 WireNaturalConversionTraits<
@@ -123,6 +227,16 @@ WireNaturalConversionTraits<
         ::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay>
             src) {
   return ::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay>();
+}
+::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay>
+WireNaturalConversionTraits<
+    ::fidl::WireResponse<::test_unknowninteractions::Example::StrictTwoWay>,
+    ::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay>>::
+    ToWire(fidl::AnyArena& arena,
+           ::fidl::Response<::test_unknowninteractions::Example::StrictTwoWay>
+               src) {
+  return ::fidl::WireResponse<
+      ::test_unknowninteractions::Example::StrictTwoWay>();
 }
 
 ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>
@@ -138,6 +252,20 @@ WireNaturalConversionTraits<
           ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>::
           ToNatural(std::move(src)));
 }
+::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>
+WireNaturalConversionTraits<
+    ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>,
+    ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>>::
+    ToWire(fidl::AnyArena& arena,
+           ::fidl::Response<::test_unknowninteractions::Example::FlexibleTwoWay>
+               src) {
+  return ::fidl::WireResponse<
+      ::test_unknowninteractions::Example::FlexibleTwoWay>(
+      WireNaturalConversionTraits<
+          ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse,
+          ::test_unknowninteractions::ExampleFlexibleTwoWayTopResponse>::
+          ToWire(arena, std::move(src)));
+}
 
 ::fidl::Event<::test_unknowninteractions::Example::StrictEvent>
 WireNaturalConversionTraits<
@@ -148,6 +276,15 @@ WireNaturalConversionTraits<
             src) {
   return ::fidl::Event<::test_unknowninteractions::Example::StrictEvent>();
 }
+::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>
+WireNaturalConversionTraits<
+    ::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>,
+    ::fidl::Event<::test_unknowninteractions::Example::StrictEvent>>::
+    ToWire(
+        fidl::AnyArena& arena,
+        ::fidl::Event<::test_unknowninteractions::Example::StrictEvent> src) {
+  return ::fidl::WireEvent<::test_unknowninteractions::Example::StrictEvent>();
+}
 
 ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent>
 WireNaturalConversionTraits<
@@ -157,6 +294,16 @@ WireNaturalConversionTraits<
         ::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>
             src) {
   return ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent>();
+}
+::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>
+WireNaturalConversionTraits<
+    ::fidl::WireEvent<::test_unknowninteractions::Example::FlexibleEvent>,
+    ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent>>::
+    ToWire(
+        fidl::AnyArena& arena,
+        ::fidl::Event<::test_unknowninteractions::Example::FlexibleEvent> src) {
+  return ::fidl::WireEvent<
+      ::test_unknowninteractions::Example::FlexibleEvent>();
 }
 #endif  // __Fuchsia__
 }  // namespace internal

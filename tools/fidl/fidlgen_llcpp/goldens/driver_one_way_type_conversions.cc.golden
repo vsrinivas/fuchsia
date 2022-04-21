@@ -13,6 +13,15 @@ namespace internal {
       WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(
           std::move(src.value)));
 }
+::test_driveroneway::wire::Payload WireNaturalConversionTraits<
+    ::test_driveroneway::wire::Payload,
+    ::test_driveroneway::Payload>::ToWire(fidl::AnyArena& arena,
+                                          ::test_driveroneway::Payload src) {
+  return ::test_driveroneway::wire::Payload{
+      .value = WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(
+          arena, std::move(src.value())),
+  };
+}
 
 ::test_driveroneway::OneWaySendRequest
 WireNaturalConversionTraits<::test_driveroneway::wire::OneWaySendRequest,
@@ -22,6 +31,17 @@ WireNaturalConversionTraits<::test_driveroneway::wire::OneWaySendRequest,
       WireNaturalConversionTraits<
           ::test_driveroneway::wire::Payload,
           ::test_driveroneway::Payload>::ToNatural(std::move(src.payload)));
+}
+::test_driveroneway::wire::OneWaySendRequest
+WireNaturalConversionTraits<::test_driveroneway::wire::OneWaySendRequest,
+                            ::test_driveroneway::OneWaySendRequest>::
+    ToWire(fidl::AnyArena& arena, ::test_driveroneway::OneWaySendRequest src) {
+  return ::test_driveroneway::wire::OneWaySendRequest{
+      .payload = WireNaturalConversionTraits<
+          ::test_driveroneway::wire::Payload,
+          ::test_driveroneway::Payload>::ToWire(arena,
+                                                std::move(src.payload())),
+  };
 }
 
 #ifdef __Fuchsia__

@@ -16,6 +16,16 @@ WireNaturalConversionTraits<
             src) {
   return ::fidl::Request<::test_transitivedependenciescompose::Top::GetFoo>();
 }
+::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>
+WireNaturalConversionTraits<
+    ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>,
+    ::fidl::Request<::test_transitivedependenciescompose::Top::GetFoo>>::
+    ToWire(fidl::AnyArena& arena,
+           ::fidl::Request<::test_transitivedependenciescompose::Top::GetFoo>
+               src) {
+  return ::fidl::WireRequest<
+      ::test_transitivedependenciescompose::Top::GetFoo>();
+}
 
 ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo>
 WireNaturalConversionTraits<
@@ -28,6 +38,20 @@ WireNaturalConversionTraits<
       WireNaturalConversionTraits<
           ::test_bottom::wire::BottomGetFooTopResponse,
           ::test_bottom::BottomGetFooTopResponse>::ToNatural(std::move(src)));
+}
+::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>
+WireNaturalConversionTraits<
+    ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>,
+    ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo>>::
+    ToWire(fidl::AnyArena& arena,
+           ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo>
+               src) {
+  return ::fidl::WireResponse<
+      ::test_transitivedependenciescompose::Top::GetFoo>(
+      WireNaturalConversionTraits<
+          ::test_bottom::wire::BottomGetFooTopResponse,
+          ::test_bottom::BottomGetFooTopResponse>::ToWire(arena,
+                                                          std::move(src)));
 }
 #endif  // __Fuchsia__
 }  // namespace internal

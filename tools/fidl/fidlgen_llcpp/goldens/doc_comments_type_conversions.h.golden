@@ -19,11 +19,17 @@ struct WireNaturalConversionTraits<::test_doccomments::wire::Struct,
                                    ::test_doccomments::Struct> {
   static ::test_doccomments::Struct ToNatural(
       ::test_doccomments::wire::Struct src);
+  static ::test_doccomments::wire::Struct ToWire(
+      fidl::AnyArena& arena, ::test_doccomments::Struct src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_doccomments::wire::Struct> {
   using type = ::test_doccomments::Struct;
+};
+template <>
+struct WireTypeForNaturalType<::test_doccomments::Struct> {
+  using type = ::test_doccomments::wire::Struct;
 };
 
 template <>
@@ -31,11 +37,17 @@ struct WireNaturalConversionTraits<::test_doccomments::wire::Table,
                                    ::test_doccomments::Table> {
   static ::test_doccomments::Table ToNatural(
       ::test_doccomments::wire::Table src);
+  static ::test_doccomments::wire::Table ToWire(fidl::AnyArena& arena,
+                                                ::test_doccomments::Table src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_doccomments::wire::Table> {
   using type = ::test_doccomments::Table;
+};
+template <>
+struct WireTypeForNaturalType<::test_doccomments::Table> {
+  using type = ::test_doccomments::wire::Table;
 };
 
 template <>
@@ -43,6 +55,8 @@ struct WireNaturalConversionTraits<::test_doccomments::wire::StrictUnion,
                                    ::test_doccomments::StrictUnion> {
   static ::test_doccomments::StrictUnion ToNatural(
       ::test_doccomments::wire::StrictUnion src);
+  static ::test_doccomments::wire::StrictUnion ToWire(
+      fidl::AnyArena& arena, ::test_doccomments::StrictUnion src);
 };
 
 template <>
@@ -51,11 +65,23 @@ struct WireNaturalConversionTraits<
     std::unique_ptr<::test_doccomments::StrictUnion>> {
   static std::unique_ptr<::test_doccomments::StrictUnion> ToNatural(
       ::test_doccomments::wire::StrictUnion src);
+  static ::test_doccomments::wire::StrictUnion ToWire(
+      fidl::AnyArena& arena,
+      std::unique_ptr<::test_doccomments::StrictUnion> src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_doccomments::wire::StrictUnion> {
   using type = std::unique_ptr<::test_doccomments::StrictUnion>;
+};
+template <>
+struct WireTypeForNaturalType<::test_doccomments::StrictUnion> {
+  using type = ::test_doccomments::wire::StrictUnion;
+};
+template <>
+struct WireTypeForNaturalType<
+    std::unique_ptr<::test_doccomments::StrictUnion>> {
+  using type = ::test_doccomments::wire::StrictUnion;
 };
 
 template <>
@@ -63,6 +89,8 @@ struct WireNaturalConversionTraits<::test_doccomments::wire::FlexibleUnion,
                                    ::test_doccomments::FlexibleUnion> {
   static ::test_doccomments::FlexibleUnion ToNatural(
       ::test_doccomments::wire::FlexibleUnion src);
+  static ::test_doccomments::wire::FlexibleUnion ToWire(
+      fidl::AnyArena& arena, ::test_doccomments::FlexibleUnion src);
 };
 
 template <>
@@ -71,11 +99,23 @@ struct WireNaturalConversionTraits<
     std::unique_ptr<::test_doccomments::FlexibleUnion>> {
   static std::unique_ptr<::test_doccomments::FlexibleUnion> ToNatural(
       ::test_doccomments::wire::FlexibleUnion src);
+  static ::test_doccomments::wire::FlexibleUnion ToWire(
+      fidl::AnyArena& arena,
+      std::unique_ptr<::test_doccomments::FlexibleUnion> src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_doccomments::wire::FlexibleUnion> {
   using type = std::unique_ptr<::test_doccomments::FlexibleUnion>;
+};
+template <>
+struct WireTypeForNaturalType<::test_doccomments::FlexibleUnion> {
+  using type = ::test_doccomments::wire::FlexibleUnion;
+};
+template <>
+struct WireTypeForNaturalType<
+    std::unique_ptr<::test_doccomments::FlexibleUnion>> {
+  using type = ::test_doccomments::wire::FlexibleUnion;
 };
 
 #ifdef __Fuchsia__
@@ -86,12 +126,20 @@ struct WireNaturalConversionTraits<
     ::fidl::Request<::test_doccomments::Interface::Method>> {
   static ::fidl::Request<::test_doccomments::Interface::Method> ToNatural(
       ::fidl::WireRequest<::test_doccomments::Interface::Method> src);
+  static ::fidl::WireRequest<::test_doccomments::Interface::Method> ToWire(
+      fidl::AnyArena& arena,
+      ::fidl::Request<::test_doccomments::Interface::Method> src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::fidl::WireRequest<::test_doccomments::Interface::Method>> {
   using type = ::fidl::Request<::test_doccomments::Interface::Method>;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::fidl::Request<::test_doccomments::Interface::Method>> {
+  using type = ::fidl::WireRequest<::test_doccomments::Interface::Method>;
 };
 
 template <>
@@ -100,12 +148,20 @@ struct WireNaturalConversionTraits<
     ::fidl::Event<::test_doccomments::Interface::OnEvent>> {
   static ::fidl::Event<::test_doccomments::Interface::OnEvent> ToNatural(
       ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> src);
+  static ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> ToWire(
+      fidl::AnyArena& arena,
+      ::fidl::Event<::test_doccomments::Interface::OnEvent> src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>> {
   using type = ::fidl::Event<::test_doccomments::Interface::OnEvent>;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::fidl::Event<::test_doccomments::Interface::OnEvent>> {
+  using type = ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>;
 };
 #endif  // __Fuchsia__
 }  // namespace internal

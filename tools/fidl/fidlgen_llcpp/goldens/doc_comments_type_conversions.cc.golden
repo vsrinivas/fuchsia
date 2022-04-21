@@ -13,6 +13,15 @@ namespace internal {
       WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(
           std::move(src.field)));
 }
+::test_doccomments::wire::Struct WireNaturalConversionTraits<
+    ::test_doccomments::wire::Struct,
+    ::test_doccomments::Struct>::ToWire(fidl::AnyArena& arena,
+                                        ::test_doccomments::Struct src) {
+  return ::test_doccomments::wire::Struct{
+      .field = WireNaturalConversionTraits<int32_t, int32_t>::ToWire(
+          arena, std::move(src.field())),
+  };
+}
 
 ::test_doccomments::Table WireNaturalConversionTraits<
     ::test_doccomments::wire::Table,
@@ -25,6 +34,17 @@ namespace internal {
 
   return dst;
 }
+::test_doccomments::wire::Table WireNaturalConversionTraits<
+    ::test_doccomments::wire::Table,
+    ::test_doccomments::Table>::ToWire(fidl::AnyArena& arena,
+                                       ::test_doccomments::Table src) {
+  auto builder = ::test_doccomments::wire::Table::Builder(arena);
+  if (src.field().has_value()) {
+    builder.field(WireNaturalConversionTraits<int32_t, int32_t>::ToWire(
+        arena, std::move(src.field().value())));
+  }
+  return builder.Build();
+}
 
 ::test_doccomments::StrictUnion WireNaturalConversionTraits<
     ::test_doccomments::wire::StrictUnion, ::test_doccomments::StrictUnion>::
@@ -36,6 +56,16 @@ namespace internal {
               std::move(src.field())));
     default:
       ZX_PANIC("unknown union tag in strict union");
+  }
+}
+::test_doccomments::wire::StrictUnion WireNaturalConversionTraits<
+    ::test_doccomments::wire::StrictUnion, ::test_doccomments::StrictUnion>::
+    ToWire(fidl::AnyArena& arena, ::test_doccomments::StrictUnion src) {
+  switch (src.Which()) {
+    case ::test_doccomments::StrictUnion::Tag::kField:
+      return ::test_doccomments::wire::StrictUnion::WithField(
+          WireNaturalConversionTraits<int32_t, int32_t>::ToWire(
+              arena, std::move(src.field().value())));
   }
 }
 
@@ -51,6 +81,18 @@ WireNaturalConversionTraits<::test_doccomments::wire::StrictUnion,
           ::test_doccomments::wire::StrictUnion,
           ::test_doccomments::StrictUnion>::ToNatural(std::move(src)));
 }
+::test_doccomments::wire::StrictUnion
+WireNaturalConversionTraits<::test_doccomments::wire::StrictUnion,
+                            std::unique_ptr<::test_doccomments::StrictUnion>>::
+    ToWire(fidl::AnyArena& arena,
+           std::unique_ptr<::test_doccomments::StrictUnion> src) {
+  if (!src) {
+    return ::test_doccomments::wire::StrictUnion();
+  }
+  return WireNaturalConversionTraits<
+      ::test_doccomments::wire::StrictUnion,
+      ::test_doccomments::StrictUnion>::ToWire(arena, std::move(*src));
+}
 
 ::test_doccomments::FlexibleUnion
 WireNaturalConversionTraits<::test_doccomments::wire::FlexibleUnion,
@@ -63,6 +105,20 @@ WireNaturalConversionTraits<::test_doccomments::wire::FlexibleUnion,
               std::move(src.field())));
     default:
       return ::test_doccomments::FlexibleUnion();
+  }
+}
+::test_doccomments::wire::FlexibleUnion WireNaturalConversionTraits<
+    ::test_doccomments::wire::FlexibleUnion,
+    ::test_doccomments::FlexibleUnion>::ToWire(fidl::AnyArena& arena,
+                                               ::test_doccomments::FlexibleUnion
+                                                   src) {
+  switch (src.Which()) {
+    case ::test_doccomments::FlexibleUnion::Tag::kField:
+      return ::test_doccomments::wire::FlexibleUnion::WithField(
+          WireNaturalConversionTraits<int32_t, int32_t>::ToWire(
+              arena, std::move(src.field().value())));
+    default:
+      return ::test_doccomments::wire::FlexibleUnion();
   }
 }
 
@@ -78,6 +134,18 @@ std::unique_ptr<::test_doccomments::FlexibleUnion> WireNaturalConversionTraits<
           ::test_doccomments::wire::FlexibleUnion,
           ::test_doccomments::FlexibleUnion>::ToNatural(std::move(src)));
 }
+::test_doccomments::wire::FlexibleUnion WireNaturalConversionTraits<
+    ::test_doccomments::wire::FlexibleUnion,
+    std::unique_ptr<::test_doccomments::FlexibleUnion>>::
+    ToWire(fidl::AnyArena& arena,
+           std::unique_ptr<::test_doccomments::FlexibleUnion> src) {
+  if (!src) {
+    return ::test_doccomments::wire::FlexibleUnion();
+  }
+  return WireNaturalConversionTraits<
+      ::test_doccomments::wire::FlexibleUnion,
+      ::test_doccomments::FlexibleUnion>::ToWire(arena, std::move(*src));
+}
 
 #ifdef __Fuchsia__
 
@@ -88,6 +156,14 @@ WireNaturalConversionTraits<
     ToNatural(::fidl::WireRequest<::test_doccomments::Interface::Method> src) {
   return ::fidl::Request<::test_doccomments::Interface::Method>();
 }
+::fidl::WireRequest<::test_doccomments::Interface::Method>
+WireNaturalConversionTraits<
+    ::fidl::WireRequest<::test_doccomments::Interface::Method>,
+    ::fidl::Request<::test_doccomments::Interface::Method>>::
+    ToWire(fidl::AnyArena& arena,
+           ::fidl::Request<::test_doccomments::Interface::Method> src) {
+  return ::fidl::WireRequest<::test_doccomments::Interface::Method>();
+}
 
 ::fidl::Event<::test_doccomments::Interface::OnEvent>
 WireNaturalConversionTraits<
@@ -95,6 +171,14 @@ WireNaturalConversionTraits<
     ::fidl::Event<::test_doccomments::Interface::OnEvent>>::
     ToNatural(::fidl::WireEvent<::test_doccomments::Interface::OnEvent> src) {
   return ::fidl::Event<::test_doccomments::Interface::OnEvent>();
+}
+::fidl::WireEvent<::test_doccomments::Interface::OnEvent>
+WireNaturalConversionTraits<
+    ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>,
+    ::fidl::Event<::test_doccomments::Interface::OnEvent>>::
+    ToWire(fidl::AnyArena& arena,
+           ::fidl::Event<::test_doccomments::Interface::OnEvent> src) {
+  return ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>();
 }
 #endif  // __Fuchsia__
 }  // namespace internal

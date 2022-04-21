@@ -9,9 +9,8 @@
 
 #include <cstdint>
 
+#include <src/lib/fidl/llcpp/tests/arena_checker.h>
 #include <zxtest/zxtest.h>
-
-#include "arena_checker.h"
 
 namespace test = ::llcpptest_protocol_test;
 

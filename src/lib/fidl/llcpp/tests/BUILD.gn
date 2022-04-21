@@ -16,6 +16,19 @@ group("tests") {
   ]
 }
 
+source_set("arena_checker") {
+  testonly = true
+  public = [ "arena_checker.h" ]
+  sources = [
+    "arena_checker.cc",
+    "arena_checker.h",
+  ]
+  public_deps = [
+    "//zircon/system/ulib/fidl",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
+  ]
+}
+
 source_set("types_test_utils") {
   testonly = true
   public = [ "types_test_utils.h" ]

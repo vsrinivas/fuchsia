@@ -157,11 +157,16 @@ class {{ .NaturalResponseConverter }} {
 template <>
 struct WireNaturalConversionTraits<{{ .WireResponse }}, {{ .NaturalResponse }}> {
   static {{ .NaturalResponse }} ToNatural({{ .WireResponse }} src);
+  static {{ .WireResponse }} ToWire(fidl::AnyArena& arena, {{ .NaturalResponse }} src);
 };
 
 template <>
 struct NaturalTypeForWireType<{{ .WireResponse }}> {
     using type = {{ .NaturalResponse }};
+};
+template <>
+struct WireTypeForNaturalType<{{ .NaturalResponse }}> {
+    using type = {{ .WireResponse }};
 };
 {{- end }}
 
@@ -172,6 +177,14 @@ struct NaturalTypeForWireType<{{ .WireResponse }}> {
     WireNaturalConversionTraits<{{ .ResponsePayload.Wire }}, {{ .ResponseMessageBase }}>::ToNatural(std::move(src)));
   {{- else }}
   return {{ .NaturalResponse }}();
+  {{- end }}
+}
+{{ .WireResponse }}  WireNaturalConversionTraits<{{ .WireResponse }}, {{ .NaturalResponse }}>::ToWire(fidl::AnyArena& arena, {{ .NaturalResponse }} src) {
+  {{- if .HasResponsePayload }}
+  return {{ .WireResponse }}(
+    WireNaturalConversionTraits<{{ .ResponsePayload.Wire }}, {{ .ResponseMessageBase }}>::ToWire(arena, std::move(src)));
+  {{- else }}
+  return {{ .WireResponse }}();
   {{- end }}
 }
 {{- end }}

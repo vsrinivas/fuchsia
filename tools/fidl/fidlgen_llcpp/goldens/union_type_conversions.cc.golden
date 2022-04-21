@@ -15,6 +15,17 @@ WireNaturalConversionTraits<::test_union::wire::StructWithNullableXUnion,
           ::std::unique_ptr<::test_union::OlderSimpleUnion>>::
           ToNatural(std::move(src.x1)));
 }
+::test_union::wire::StructWithNullableXUnion
+WireNaturalConversionTraits<::test_union::wire::StructWithNullableXUnion,
+                            ::test_union::StructWithNullableXUnion>::
+    ToWire(fidl::AnyArena& arena, ::test_union::StructWithNullableXUnion src) {
+  return ::test_union::wire::StructWithNullableXUnion{
+      .x1 = WireNaturalConversionTraits<
+          ::test_union::wire::OlderSimpleUnion,
+          ::std::unique_ptr<::test_union::OlderSimpleUnion>>::
+          ToWire(arena, std::move(src.x1())),
+  };
+}
 
 ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse
 WireNaturalConversionTraits<
@@ -32,6 +43,26 @@ WireNaturalConversionTraits<
               ::test_union::wire::StrictBoundedXUnion,
               ::test_union::StrictBoundedXUnion>::ToNatural(std::move(src.xu)));
 }
+::test_union::wire::
+    TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse
+    WireNaturalConversionTraits<
+        ::test_union::wire::
+            TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse,
+        ::test_union::
+            TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>::
+        ToWire(
+            fidl::AnyArena& arena,
+            ::test_union::
+                TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse
+                    src) {
+  return ::test_union::wire::
+      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse{
+          .xu = WireNaturalConversionTraits<
+              ::test_union::wire::StrictBoundedXUnion,
+              ::test_union::StrictBoundedXUnion>::ToWire(arena,
+                                                         std::move(src.xu())),
+      };
+}
 
 ::test_union::Pizza WireNaturalConversionTraits<
     ::test_union::wire::Pizza,
@@ -41,6 +72,17 @@ WireNaturalConversionTraits<
           ::fidl::VectorView<::fidl::StringView>,
           ::std::vector<::std::string>>::ToNatural(std::move(src.toppings)));
 }
+::test_union::wire::Pizza WireNaturalConversionTraits<
+    ::test_union::wire::Pizza,
+    ::test_union::Pizza>::ToWire(fidl::AnyArena& arena,
+                                 ::test_union::Pizza src) {
+  return ::test_union::wire::Pizza{
+      .toppings = WireNaturalConversionTraits<
+          ::fidl::VectorView<::fidl::StringView>,
+          ::std::vector<::std::string>>::ToWire(arena,
+                                                std::move(src.toppings())),
+  };
+}
 
 ::test_union::Pasta WireNaturalConversionTraits<
     ::test_union::wire::Pasta,
@@ -48,6 +90,16 @@ WireNaturalConversionTraits<
   return ::test_union::Pasta(
       WireNaturalConversionTraits<::fidl::StringView, ::std::string>::ToNatural(
           std::move(src.sauce)));
+}
+::test_union::wire::Pasta WireNaturalConversionTraits<
+    ::test_union::wire::Pasta,
+    ::test_union::Pasta>::ToWire(fidl::AnyArena& arena,
+                                 ::test_union::Pasta src) {
+  return ::test_union::wire::Pasta{
+      .sauce = WireNaturalConversionTraits<
+          ::fidl::StringView, ::std::string>::ToWire(arena,
+                                                     std::move(src.sauce())),
+  };
 }
 
 ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse
@@ -66,6 +118,25 @@ WireNaturalConversionTraits<
               ::test_union::wire::OlderSimpleUnion,
               ::test_union::OlderSimpleUnion>::ToNatural(std::move(src.xu)));
 }
+::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse
+WireNaturalConversionTraits<
+    ::test_union::wire::
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse,
+    ::test_union::
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>::
+    ToWire(
+        fidl::AnyArena& arena,
+        ::test_union::
+            TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse
+                src) {
+  return ::test_union::wire::
+      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse{
+          .xu = WireNaturalConversionTraits<
+              ::test_union::wire::OlderSimpleUnion,
+              ::test_union::OlderSimpleUnion>::ToWire(arena,
+                                                      std::move(src.xu())),
+      };
+}
 
 ::test_union::NullableUnionStruct
 WireNaturalConversionTraits<::test_union::wire::NullableUnionStruct,
@@ -75,6 +146,19 @@ WireNaturalConversionTraits<::test_union::wire::NullableUnionStruct,
       WireNaturalConversionTraits<::test_union::wire::Union,
                                   ::std::unique_ptr<::test_union::Union>>::
           ToNatural(std::move(src.the_union)));
+}
+::test_union::wire::NullableUnionStruct WireNaturalConversionTraits<
+    ::test_union::wire::NullableUnionStruct,
+    ::test_union::NullableUnionStruct>::ToWire(fidl::AnyArena& arena,
+                                               ::test_union::NullableUnionStruct
+                                                   src) {
+  return ::test_union::wire::NullableUnionStruct{
+      .the_union = WireNaturalConversionTraits<
+          ::test_union::wire::Union,
+          ::std::unique_ptr<::test_union::Union>>::ToWire(arena,
+                                                          std::move(
+                                                              src.the_union())),
+  };
 }
 
 ::test_union::UnionSandwich WireNaturalConversionTraits<
@@ -91,6 +175,20 @@ WireNaturalConversionTraits<::test_union::wire::NullableUnionStruct,
           std::move(src.b)),
   });
 }
+::test_union::wire::UnionSandwich WireNaturalConversionTraits<
+    ::test_union::wire::UnionSandwich,
+    ::test_union::UnionSandwich>::ToWire(fidl::AnyArena& arena,
+                                         ::test_union::UnionSandwich src) {
+  return ::test_union::wire::UnionSandwich{
+      .a = WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(
+          arena, std::move(src.a())),
+      .u = WireNaturalConversionTraits<
+          ::test_union::wire::ExplicitXUnion,
+          ::test_union::ExplicitXUnion>::ToWire(arena, std::move(src.u())),
+      .b = WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(
+          arena, std::move(src.b())),
+  };
+}
 
 ::test_union::Empty WireNaturalConversionTraits<
     ::test_union::wire::Empty,
@@ -98,6 +196,15 @@ WireNaturalConversionTraits<::test_union::wire::NullableUnionStruct,
   return ::test_union::Empty(
       WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(
           std::move(src.__reserved)));
+}
+::test_union::wire::Empty WireNaturalConversionTraits<
+    ::test_union::wire::Empty,
+    ::test_union::Empty>::ToWire(fidl::AnyArena& arena,
+                                 ::test_union::Empty src) {
+  return ::test_union::wire::Empty{
+      .__reserved = WireNaturalConversionTraits<uint8_t, uint8_t>::ToWire(
+          arena, std::move(src.__reserved())),
+  };
 }
 
 ::test_union::UnionWithAttributes
@@ -113,6 +220,20 @@ WireNaturalConversionTraits<::test_union::wire::UnionWithAttributes,
       return ::test_union::UnionWithAttributes();
   }
 }
+::test_union::wire::UnionWithAttributes WireNaturalConversionTraits<
+    ::test_union::wire::UnionWithAttributes,
+    ::test_union::UnionWithAttributes>::ToWire(fidl::AnyArena& arena,
+                                               ::test_union::UnionWithAttributes
+                                                   src) {
+  switch (src.Which()) {
+    case ::test_union::UnionWithAttributes::Tag::kX:
+      return ::test_union::wire::UnionWithAttributes::WithX(
+          arena, WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
+                     arena, std::move(src.x().value())));
+    default:
+      return ::test_union::wire::UnionWithAttributes();
+  }
+}
 
 std::unique_ptr<::test_union::UnionWithAttributes> WireNaturalConversionTraits<
     ::test_union::wire::UnionWithAttributes,
@@ -125,6 +246,18 @@ std::unique_ptr<::test_union::UnionWithAttributes> WireNaturalConversionTraits<
       WireNaturalConversionTraits<
           ::test_union::wire::UnionWithAttributes,
           ::test_union::UnionWithAttributes>::ToNatural(std::move(src)));
+}
+::test_union::wire::UnionWithAttributes WireNaturalConversionTraits<
+    ::test_union::wire::UnionWithAttributes,
+    std::unique_ptr<::test_union::UnionWithAttributes>>::
+    ToWire(fidl::AnyArena& arena,
+           std::unique_ptr<::test_union::UnionWithAttributes> src) {
+  if (!src) {
+    return ::test_union::wire::UnionWithAttributes();
+  }
+  return WireNaturalConversionTraits<
+      ::test_union::wire::UnionWithAttributes,
+      ::test_union::UnionWithAttributes>::ToWire(arena, std::move(*src));
 }
 
 ::test_union::Union WireNaturalConversionTraits<
@@ -148,6 +281,30 @@ std::unique_ptr<::test_union::UnionWithAttributes> WireNaturalConversionTraits<
       ZX_PANIC("unknown union tag in strict union");
   }
 }
+::test_union::wire::Union WireNaturalConversionTraits<
+    ::test_union::wire::Union,
+    ::test_union::Union>::ToWire(fidl::AnyArena& arena,
+                                 ::test_union::Union src) {
+  switch (src.Which()) {
+    case ::test_union::Union::Tag::kPrimitive:
+      return ::test_union::wire::Union::WithPrimitive(
+          WireNaturalConversionTraits<int32_t, int32_t>::ToWire(
+              arena, std::move(src.primitive().value())));
+    case ::test_union::Union::Tag::kStringNeedsConstructor:
+      return ::test_union::wire::Union::WithStringNeedsConstructor(
+          arena,
+          WireNaturalConversionTraits<::fidl::StringView, ::std::string>::
+              ToWire(arena, std::move(src.string_needs_constructor().value())));
+    case ::test_union::Union::Tag::kVectorStringAlsoNeedsConstructor:
+      return ::test_union::wire::Union::WithVectorStringAlsoNeedsConstructor(
+          arena,
+          WireNaturalConversionTraits<::fidl::VectorView<::fidl::StringView>,
+                                      ::std::vector<::std::string>>::
+              ToWire(arena,
+                     std::move(
+                         src.vector_string_also_needs_constructor().value())));
+  }
+}
 
 std::unique_ptr<::test_union::Union> WireNaturalConversionTraits<
     ::test_union::wire::Union,
@@ -160,6 +317,17 @@ std::unique_ptr<::test_union::Union> WireNaturalConversionTraits<
       WireNaturalConversionTraits<
           ::test_union::wire::Union,
           ::test_union::Union>::ToNatural(std::move(src)));
+}
+::test_union::wire::Union WireNaturalConversionTraits<
+    ::test_union::wire::Union, std::unique_ptr<::test_union::Union>>::
+    ToWire(fidl::AnyArena& arena, std::unique_ptr<::test_union::Union> src) {
+  if (!src) {
+    return ::test_union::wire::Union();
+  }
+  return WireNaturalConversionTraits<::test_union::wire::Union,
+                                     ::test_union::Union>::ToWire(arena,
+                                                                  std::move(
+                                                                      *src));
 }
 
 ::test_union::StrictUnion WireNaturalConversionTraits<
@@ -184,6 +352,33 @@ std::unique_ptr<::test_union::Union> WireNaturalConversionTraits<
       ZX_PANIC("unknown union tag in strict union");
   }
 }
+::test_union::wire::StrictUnion WireNaturalConversionTraits<
+    ::test_union::wire::StrictUnion,
+    ::test_union::StrictUnion>::ToWire(fidl::AnyArena& arena,
+                                       ::test_union::StrictUnion src) {
+  switch (src.Which()) {
+    case ::test_union::StrictUnion::Tag::kPrimitive:
+      return ::test_union::wire::StrictUnion::WithPrimitive(
+          WireNaturalConversionTraits<int32_t, int32_t>::ToWire(
+              arena, std::move(src.primitive().value())));
+    case ::test_union::StrictUnion::Tag::kStringNeedsConstructor:
+      return ::test_union::wire::StrictUnion::WithStringNeedsConstructor(
+          arena,
+          WireNaturalConversionTraits<::fidl::StringView, ::std::string>::
+              ToWire(arena, std::move(src.string_needs_constructor().value())));
+    case ::test_union::StrictUnion::Tag::kVectorStringAlsoNeedsConstructor:
+      return ::test_union::wire::StrictUnion::
+          WithVectorStringAlsoNeedsConstructor(
+              arena,
+              WireNaturalConversionTraits<
+                  ::fidl::VectorView<::fidl::StringView>,
+                  ::std::vector<::std::string>>::
+                  ToWire(
+                      arena,
+                      std::move(
+                          src.vector_string_also_needs_constructor().value())));
+  }
+}
 
 std::unique_ptr<::test_union::StrictUnion>
 WireNaturalConversionTraits<::test_union::wire::StrictUnion,
@@ -196,6 +391,18 @@ WireNaturalConversionTraits<::test_union::wire::StrictUnion,
       WireNaturalConversionTraits<
           ::test_union::wire::StrictUnion,
           ::test_union::StrictUnion>::ToNatural(std::move(src)));
+}
+::test_union::wire::StrictUnion
+WireNaturalConversionTraits<::test_union::wire::StrictUnion,
+                            std::unique_ptr<::test_union::StrictUnion>>::
+    ToWire(fidl::AnyArena& arena,
+           std::unique_ptr<::test_union::StrictUnion> src) {
+  if (!src) {
+    return ::test_union::wire::StrictUnion();
+  }
+  return WireNaturalConversionTraits<
+      ::test_union::wire::StrictUnion,
+      ::test_union::StrictUnion>::ToWire(arena, std::move(*src));
 }
 
 ::test_union::StrictSimpleXUnion WireNaturalConversionTraits<
@@ -218,6 +425,25 @@ WireNaturalConversionTraits<::test_union::wire::StrictUnion,
       ZX_PANIC("unknown union tag in strict union");
   }
 }
+::test_union::wire::StrictSimpleXUnion WireNaturalConversionTraits<
+    ::test_union::wire::StrictSimpleXUnion, ::test_union::StrictSimpleXUnion>::
+    ToWire(fidl::AnyArena& arena, ::test_union::StrictSimpleXUnion src) {
+  switch (src.Which()) {
+    case ::test_union::StrictSimpleXUnion::Tag::kI:
+      return ::test_union::wire::StrictSimpleXUnion::WithI(
+          WireNaturalConversionTraits<int32_t, int32_t>::ToWire(
+              arena, std::move(src.i().value())));
+    case ::test_union::StrictSimpleXUnion::Tag::kF:
+      return ::test_union::wire::StrictSimpleXUnion::WithF(
+          WireNaturalConversionTraits<float, float>::ToWire(
+              arena, std::move(src.f().value())));
+    case ::test_union::StrictSimpleXUnion::Tag::kS:
+      return ::test_union::wire::StrictSimpleXUnion::WithS(
+          arena,
+          WireNaturalConversionTraits<::fidl::StringView, ::std::string>::
+              ToWire(arena, std::move(src.s().value())));
+  }
+}
 
 std::unique_ptr<::test_union::StrictSimpleXUnion>
 WireNaturalConversionTraits<::test_union::wire::StrictSimpleXUnion,
@@ -230,6 +456,18 @@ WireNaturalConversionTraits<::test_union::wire::StrictSimpleXUnion,
       WireNaturalConversionTraits<
           ::test_union::wire::StrictSimpleXUnion,
           ::test_union::StrictSimpleXUnion>::ToNatural(std::move(src)));
+}
+::test_union::wire::StrictSimpleXUnion
+WireNaturalConversionTraits<::test_union::wire::StrictSimpleXUnion,
+                            std::unique_ptr<::test_union::StrictSimpleXUnion>>::
+    ToWire(fidl::AnyArena& arena,
+           std::unique_ptr<::test_union::StrictSimpleXUnion> src) {
+  if (!src) {
+    return ::test_union::wire::StrictSimpleXUnion();
+  }
+  return WireNaturalConversionTraits<
+      ::test_union::wire::StrictSimpleXUnion,
+      ::test_union::StrictSimpleXUnion>::ToWire(arena, std::move(*src));
 }
 
 ::test_union::StrictFoo WireNaturalConversionTraits<
@@ -248,6 +486,22 @@ WireNaturalConversionTraits<::test_union::wire::StrictSimpleXUnion,
       ZX_PANIC("unknown union tag in strict union");
   }
 }
+::test_union::wire::StrictFoo WireNaturalConversionTraits<
+    ::test_union::wire::StrictFoo,
+    ::test_union::StrictFoo>::ToWire(fidl::AnyArena& arena,
+                                     ::test_union::StrictFoo src) {
+  switch (src.Which()) {
+    case ::test_union::StrictFoo::Tag::kS:
+      return ::test_union::wire::StrictFoo::WithS(
+          arena,
+          WireNaturalConversionTraits<::fidl::StringView, ::std::string>::
+              ToWire(arena, std::move(src.s().value())));
+    case ::test_union::StrictFoo::Tag::kI:
+      return ::test_union::wire::StrictFoo::WithI(
+          WireNaturalConversionTraits<int32_t, int32_t>::ToWire(
+              arena, std::move(src.i().value())));
+  }
+}
 
 std::unique_ptr<::test_union::StrictFoo> WireNaturalConversionTraits<
     ::test_union::wire::StrictFoo, std::unique_ptr<::test_union::StrictFoo>>::
@@ -259,6 +513,17 @@ std::unique_ptr<::test_union::StrictFoo> WireNaturalConversionTraits<
       WireNaturalConversionTraits<
           ::test_union::wire::StrictFoo,
           ::test_union::StrictFoo>::ToNatural(std::move(src)));
+}
+::test_union::wire::StrictFoo WireNaturalConversionTraits<
+    ::test_union::wire::StrictFoo, std::unique_ptr<::test_union::StrictFoo>>::
+    ToWire(fidl::AnyArena& arena,
+           std::unique_ptr<::test_union::StrictFoo> src) {
+  if (!src) {
+    return ::test_union::wire::StrictFoo();
+  }
+  return WireNaturalConversionTraits<
+      ::test_union::wire::StrictFoo,
+      ::test_union::StrictFoo>::ToWire(arena, std::move(*src));
 }
 
 ::test_union::StrictBoundedXUnion
@@ -275,6 +540,21 @@ WireNaturalConversionTraits<::test_union::wire::StrictBoundedXUnion,
       ZX_PANIC("unknown union tag in strict union");
   }
 }
+::test_union::wire::StrictBoundedXUnion WireNaturalConversionTraits<
+    ::test_union::wire::StrictBoundedXUnion,
+    ::test_union::StrictBoundedXUnion>::ToWire(fidl::AnyArena& arena,
+                                               ::test_union::StrictBoundedXUnion
+                                                   src) {
+  switch (src.Which()) {
+    case ::test_union::StrictBoundedXUnion::Tag::kV:
+      return ::test_union::wire::StrictBoundedXUnion::WithV(
+          arena,
+          WireNaturalConversionTraits<
+              ::fidl::VectorView<uint8_t>,
+              ::std::vector<uint8_t>>::ToWire(arena,
+                                              std::move(src.v().value())));
+  }
+}
 
 std::unique_ptr<::test_union::StrictBoundedXUnion> WireNaturalConversionTraits<
     ::test_union::wire::StrictBoundedXUnion,
@@ -287,6 +567,18 @@ std::unique_ptr<::test_union::StrictBoundedXUnion> WireNaturalConversionTraits<
       WireNaturalConversionTraits<
           ::test_union::wire::StrictBoundedXUnion,
           ::test_union::StrictBoundedXUnion>::ToNatural(std::move(src)));
+}
+::test_union::wire::StrictBoundedXUnion WireNaturalConversionTraits<
+    ::test_union::wire::StrictBoundedXUnion,
+    std::unique_ptr<::test_union::StrictBoundedXUnion>>::
+    ToWire(fidl::AnyArena& arena,
+           std::unique_ptr<::test_union::StrictBoundedXUnion> src) {
+  if (!src) {
+    return ::test_union::wire::StrictBoundedXUnion();
+  }
+  return WireNaturalConversionTraits<
+      ::test_union::wire::StrictBoundedXUnion,
+      ::test_union::StrictBoundedXUnion>::ToWire(arena, std::move(*src));
 }
 
 ::test_union::ReverseOrdinalUnion
@@ -306,6 +598,22 @@ WireNaturalConversionTraits<::test_union::wire::ReverseOrdinalUnion,
       ZX_PANIC("unknown union tag in strict union");
   }
 }
+::test_union::wire::ReverseOrdinalUnion WireNaturalConversionTraits<
+    ::test_union::wire::ReverseOrdinalUnion,
+    ::test_union::ReverseOrdinalUnion>::ToWire(fidl::AnyArena& arena,
+                                               ::test_union::ReverseOrdinalUnion
+                                                   src) {
+  switch (src.Which()) {
+    case ::test_union::ReverseOrdinalUnion::Tag::kSecond:
+      return ::test_union::wire::ReverseOrdinalUnion::WithSecond(
+          WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(
+              arena, std::move(src.second().value())));
+    case ::test_union::ReverseOrdinalUnion::Tag::kFirst:
+      return ::test_union::wire::ReverseOrdinalUnion::WithFirst(
+          WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(
+              arena, std::move(src.first().value())));
+  }
+}
 
 std::unique_ptr<::test_union::ReverseOrdinalUnion> WireNaturalConversionTraits<
     ::test_union::wire::ReverseOrdinalUnion,
@@ -318,6 +626,18 @@ std::unique_ptr<::test_union::ReverseOrdinalUnion> WireNaturalConversionTraits<
       WireNaturalConversionTraits<
           ::test_union::wire::ReverseOrdinalUnion,
           ::test_union::ReverseOrdinalUnion>::ToNatural(std::move(src)));
+}
+::test_union::wire::ReverseOrdinalUnion WireNaturalConversionTraits<
+    ::test_union::wire::ReverseOrdinalUnion,
+    std::unique_ptr<::test_union::ReverseOrdinalUnion>>::
+    ToWire(fidl::AnyArena& arena,
+           std::unique_ptr<::test_union::ReverseOrdinalUnion> src) {
+  if (!src) {
+    return ::test_union::wire::ReverseOrdinalUnion();
+  }
+  return WireNaturalConversionTraits<
+      ::test_union::wire::ReverseOrdinalUnion,
+      ::test_union::ReverseOrdinalUnion>::ToWire(arena, std::move(*src));
 }
 
 ::test_union::StrictPizzaOrPasta WireNaturalConversionTraits<
@@ -338,6 +658,26 @@ std::unique_ptr<::test_union::ReverseOrdinalUnion> WireNaturalConversionTraits<
       ZX_PANIC("unknown union tag in strict union");
   }
 }
+::test_union::wire::StrictPizzaOrPasta WireNaturalConversionTraits<
+    ::test_union::wire::StrictPizzaOrPasta, ::test_union::StrictPizzaOrPasta>::
+    ToWire(fidl::AnyArena& arena, ::test_union::StrictPizzaOrPasta src) {
+  switch (src.Which()) {
+    case ::test_union::StrictPizzaOrPasta::Tag::kPizza:
+      return ::test_union::wire::StrictPizzaOrPasta::WithPizza(
+          arena,
+          WireNaturalConversionTraits<
+              ::test_union::wire::Pizza,
+              ::test_union::Pizza>::ToWire(arena,
+                                           std::move(src.pizza().value())));
+    case ::test_union::StrictPizzaOrPasta::Tag::kPasta:
+      return ::test_union::wire::StrictPizzaOrPasta::WithPasta(
+          arena,
+          WireNaturalConversionTraits<
+              ::test_union::wire::Pasta,
+              ::test_union::Pasta>::ToWire(arena,
+                                           std::move(src.pasta().value())));
+  }
+}
 
 std::unique_ptr<::test_union::StrictPizzaOrPasta>
 WireNaturalConversionTraits<::test_union::wire::StrictPizzaOrPasta,
@@ -350,6 +690,18 @@ WireNaturalConversionTraits<::test_union::wire::StrictPizzaOrPasta,
       WireNaturalConversionTraits<
           ::test_union::wire::StrictPizzaOrPasta,
           ::test_union::StrictPizzaOrPasta>::ToNatural(std::move(src)));
+}
+::test_union::wire::StrictPizzaOrPasta
+WireNaturalConversionTraits<::test_union::wire::StrictPizzaOrPasta,
+                            std::unique_ptr<::test_union::StrictPizzaOrPasta>>::
+    ToWire(fidl::AnyArena& arena,
+           std::unique_ptr<::test_union::StrictPizzaOrPasta> src) {
+  if (!src) {
+    return ::test_union::wire::StrictPizzaOrPasta();
+  }
+  return WireNaturalConversionTraits<
+      ::test_union::wire::StrictPizzaOrPasta,
+      ::test_union::StrictPizzaOrPasta>::ToWire(arena, std::move(*src));
 }
 
 ::test_union::PizzaOrPasta WireNaturalConversionTraits<
@@ -371,6 +723,27 @@ WireNaturalConversionTraits<::test_union::wire::StrictPizzaOrPasta,
       ZX_PANIC("unknown union tag in strict union");
   }
 }
+::test_union::wire::PizzaOrPasta WireNaturalConversionTraits<
+    ::test_union::wire::PizzaOrPasta,
+    ::test_union::PizzaOrPasta>::ToWire(fidl::AnyArena& arena,
+                                        ::test_union::PizzaOrPasta src) {
+  switch (src.Which()) {
+    case ::test_union::PizzaOrPasta::Tag::kPizza:
+      return ::test_union::wire::PizzaOrPasta::WithPizza(
+          arena,
+          WireNaturalConversionTraits<
+              ::test_union::wire::Pizza,
+              ::test_union::Pizza>::ToWire(arena,
+                                           std::move(src.pizza().value())));
+    case ::test_union::PizzaOrPasta::Tag::kPasta:
+      return ::test_union::wire::PizzaOrPasta::WithPasta(
+          arena,
+          WireNaturalConversionTraits<
+              ::test_union::wire::Pasta,
+              ::test_union::Pasta>::ToWire(arena,
+                                           std::move(src.pasta().value())));
+  }
+}
 
 std::unique_ptr<::test_union::PizzaOrPasta>
 WireNaturalConversionTraits<::test_union::wire::PizzaOrPasta,
@@ -383,6 +756,18 @@ WireNaturalConversionTraits<::test_union::wire::PizzaOrPasta,
       WireNaturalConversionTraits<
           ::test_union::wire::PizzaOrPasta,
           ::test_union::PizzaOrPasta>::ToNatural(std::move(src)));
+}
+::test_union::wire::PizzaOrPasta
+WireNaturalConversionTraits<::test_union::wire::PizzaOrPasta,
+                            std::unique_ptr<::test_union::PizzaOrPasta>>::
+    ToWire(fidl::AnyArena& arena,
+           std::unique_ptr<::test_union::PizzaOrPasta> src) {
+  if (!src) {
+    return ::test_union::wire::PizzaOrPasta();
+  }
+  return WireNaturalConversionTraits<
+      ::test_union::wire::PizzaOrPasta,
+      ::test_union::PizzaOrPasta>::ToWire(arena, std::move(*src));
 }
 
 ::test_union::FlexiblePizzaOrPasta
@@ -404,6 +789,29 @@ WireNaturalConversionTraits<::test_union::wire::FlexiblePizzaOrPasta,
       return ::test_union::FlexiblePizzaOrPasta();
   }
 }
+::test_union::wire::FlexiblePizzaOrPasta
+WireNaturalConversionTraits<::test_union::wire::FlexiblePizzaOrPasta,
+                            ::test_union::FlexiblePizzaOrPasta>::
+    ToWire(fidl::AnyArena& arena, ::test_union::FlexiblePizzaOrPasta src) {
+  switch (src.Which()) {
+    case ::test_union::FlexiblePizzaOrPasta::Tag::kPizza:
+      return ::test_union::wire::FlexiblePizzaOrPasta::WithPizza(
+          arena,
+          WireNaturalConversionTraits<
+              ::test_union::wire::Pizza,
+              ::test_union::Pizza>::ToWire(arena,
+                                           std::move(src.pizza().value())));
+    case ::test_union::FlexiblePizzaOrPasta::Tag::kPasta:
+      return ::test_union::wire::FlexiblePizzaOrPasta::WithPasta(
+          arena,
+          WireNaturalConversionTraits<
+              ::test_union::wire::Pasta,
+              ::test_union::Pasta>::ToWire(arena,
+                                           std::move(src.pasta().value())));
+    default:
+      return ::test_union::wire::FlexiblePizzaOrPasta();
+  }
+}
 
 std::unique_ptr<::test_union::FlexiblePizzaOrPasta> WireNaturalConversionTraits<
     ::test_union::wire::FlexiblePizzaOrPasta,
@@ -416,6 +824,18 @@ std::unique_ptr<::test_union::FlexiblePizzaOrPasta> WireNaturalConversionTraits<
       WireNaturalConversionTraits<
           ::test_union::wire::FlexiblePizzaOrPasta,
           ::test_union::FlexiblePizzaOrPasta>::ToNatural(std::move(src)));
+}
+::test_union::wire::FlexiblePizzaOrPasta WireNaturalConversionTraits<
+    ::test_union::wire::FlexiblePizzaOrPasta,
+    std::unique_ptr<::test_union::FlexiblePizzaOrPasta>>::
+    ToWire(fidl::AnyArena& arena,
+           std::unique_ptr<::test_union::FlexiblePizzaOrPasta> src) {
+  if (!src) {
+    return ::test_union::wire::FlexiblePizzaOrPasta();
+  }
+  return WireNaturalConversionTraits<
+      ::test_union::wire::FlexiblePizzaOrPasta,
+      ::test_union::FlexiblePizzaOrPasta>::ToWire(arena, std::move(*src));
 }
 
 ::test_union::ExplicitPizzaOrPasta
@@ -437,6 +857,27 @@ WireNaturalConversionTraits<::test_union::wire::ExplicitPizzaOrPasta,
       ZX_PANIC("unknown union tag in strict union");
   }
 }
+::test_union::wire::ExplicitPizzaOrPasta
+WireNaturalConversionTraits<::test_union::wire::ExplicitPizzaOrPasta,
+                            ::test_union::ExplicitPizzaOrPasta>::
+    ToWire(fidl::AnyArena& arena, ::test_union::ExplicitPizzaOrPasta src) {
+  switch (src.Which()) {
+    case ::test_union::ExplicitPizzaOrPasta::Tag::kPizza:
+      return ::test_union::wire::ExplicitPizzaOrPasta::WithPizza(
+          arena,
+          WireNaturalConversionTraits<
+              ::test_union::wire::Pizza,
+              ::test_union::Pizza>::ToWire(arena,
+                                           std::move(src.pizza().value())));
+    case ::test_union::ExplicitPizzaOrPasta::Tag::kPasta:
+      return ::test_union::wire::ExplicitPizzaOrPasta::WithPasta(
+          arena,
+          WireNaturalConversionTraits<
+              ::test_union::wire::Pasta,
+              ::test_union::Pasta>::ToWire(arena,
+                                           std::move(src.pasta().value())));
+  }
+}
 
 std::unique_ptr<::test_union::ExplicitPizzaOrPasta> WireNaturalConversionTraits<
     ::test_union::wire::ExplicitPizzaOrPasta,
@@ -449,6 +890,18 @@ std::unique_ptr<::test_union::ExplicitPizzaOrPasta> WireNaturalConversionTraits<
       WireNaturalConversionTraits<
           ::test_union::wire::ExplicitPizzaOrPasta,
           ::test_union::ExplicitPizzaOrPasta>::ToNatural(std::move(src)));
+}
+::test_union::wire::ExplicitPizzaOrPasta WireNaturalConversionTraits<
+    ::test_union::wire::ExplicitPizzaOrPasta,
+    std::unique_ptr<::test_union::ExplicitPizzaOrPasta>>::
+    ToWire(fidl::AnyArena& arena,
+           std::unique_ptr<::test_union::ExplicitPizzaOrPasta> src) {
+  if (!src) {
+    return ::test_union::wire::ExplicitPizzaOrPasta();
+  }
+  return WireNaturalConversionTraits<
+      ::test_union::wire::ExplicitPizzaOrPasta,
+      ::test_union::ExplicitPizzaOrPasta>::ToWire(arena, std::move(*src));
 }
 
 ::test_union::OlderSimpleUnion WireNaturalConversionTraits<
@@ -467,6 +920,22 @@ std::unique_ptr<::test_union::ExplicitPizzaOrPasta> WireNaturalConversionTraits<
       return ::test_union::OlderSimpleUnion();
   }
 }
+::test_union::wire::OlderSimpleUnion WireNaturalConversionTraits<
+    ::test_union::wire::OlderSimpleUnion, ::test_union::OlderSimpleUnion>::
+    ToWire(fidl::AnyArena& arena, ::test_union::OlderSimpleUnion src) {
+  switch (src.Which()) {
+    case ::test_union::OlderSimpleUnion::Tag::kI:
+      return ::test_union::wire::OlderSimpleUnion::WithI(
+          arena, WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
+                     arena, std::move(src.i().value())));
+    case ::test_union::OlderSimpleUnion::Tag::kF:
+      return ::test_union::wire::OlderSimpleUnion::WithF(
+          WireNaturalConversionTraits<float, float>::ToWire(
+              arena, std::move(src.f().value())));
+    default:
+      return ::test_union::wire::OlderSimpleUnion();
+  }
+}
 
 std::unique_ptr<::test_union::OlderSimpleUnion>
 WireNaturalConversionTraits<::test_union::wire::OlderSimpleUnion,
@@ -479,6 +948,18 @@ WireNaturalConversionTraits<::test_union::wire::OlderSimpleUnion,
       WireNaturalConversionTraits<
           ::test_union::wire::OlderSimpleUnion,
           ::test_union::OlderSimpleUnion>::ToNatural(std::move(src)));
+}
+::test_union::wire::OlderSimpleUnion
+WireNaturalConversionTraits<::test_union::wire::OlderSimpleUnion,
+                            std::unique_ptr<::test_union::OlderSimpleUnion>>::
+    ToWire(fidl::AnyArena& arena,
+           std::unique_ptr<::test_union::OlderSimpleUnion> src) {
+  if (!src) {
+    return ::test_union::wire::OlderSimpleUnion();
+  }
+  return WireNaturalConversionTraits<
+      ::test_union::wire::OlderSimpleUnion,
+      ::test_union::OlderSimpleUnion>::ToWire(arena, std::move(*src));
 }
 
 ::test_union::NewerSimpleUnion WireNaturalConversionTraits<
@@ -502,6 +983,29 @@ WireNaturalConversionTraits<::test_union::wire::OlderSimpleUnion,
       return ::test_union::NewerSimpleUnion();
   }
 }
+::test_union::wire::NewerSimpleUnion WireNaturalConversionTraits<
+    ::test_union::wire::NewerSimpleUnion, ::test_union::NewerSimpleUnion>::
+    ToWire(fidl::AnyArena& arena, ::test_union::NewerSimpleUnion src) {
+  switch (src.Which()) {
+    case ::test_union::NewerSimpleUnion::Tag::kI:
+      return ::test_union::wire::NewerSimpleUnion::WithI(
+          arena, WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
+                     arena, std::move(src.i().value())));
+    case ::test_union::NewerSimpleUnion::Tag::kS:
+      return ::test_union::wire::NewerSimpleUnion::WithS(
+          arena,
+          WireNaturalConversionTraits<::fidl::StringView, ::std::string>::
+              ToWire(arena, std::move(src.s().value())));
+    case ::test_union::NewerSimpleUnion::Tag::kV:
+      return ::test_union::wire::NewerSimpleUnion::WithV(
+          arena,
+          WireNaturalConversionTraits<::fidl::VectorView<::fidl::StringView>,
+                                      ::std::vector<::std::string>>::
+              ToWire(arena, std::move(src.v().value())));
+    default:
+      return ::test_union::wire::NewerSimpleUnion();
+  }
+}
 
 std::unique_ptr<::test_union::NewerSimpleUnion>
 WireNaturalConversionTraits<::test_union::wire::NewerSimpleUnion,
@@ -514,6 +1018,18 @@ WireNaturalConversionTraits<::test_union::wire::NewerSimpleUnion,
       WireNaturalConversionTraits<
           ::test_union::wire::NewerSimpleUnion,
           ::test_union::NewerSimpleUnion>::ToNatural(std::move(src)));
+}
+::test_union::wire::NewerSimpleUnion
+WireNaturalConversionTraits<::test_union::wire::NewerSimpleUnion,
+                            std::unique_ptr<::test_union::NewerSimpleUnion>>::
+    ToWire(fidl::AnyArena& arena,
+           std::unique_ptr<::test_union::NewerSimpleUnion> src) {
+  if (!src) {
+    return ::test_union::wire::NewerSimpleUnion();
+  }
+  return WireNaturalConversionTraits<
+      ::test_union::wire::NewerSimpleUnion,
+      ::test_union::NewerSimpleUnion>::ToWire(arena, std::move(*src));
 }
 
 ::test_union::FlexibleUnion WireNaturalConversionTraits<
@@ -539,6 +1055,35 @@ WireNaturalConversionTraits<::test_union::wire::NewerSimpleUnion,
       return ::test_union::FlexibleUnion();
   }
 }
+::test_union::wire::FlexibleUnion WireNaturalConversionTraits<
+    ::test_union::wire::FlexibleUnion,
+    ::test_union::FlexibleUnion>::ToWire(fidl::AnyArena& arena,
+                                         ::test_union::FlexibleUnion src) {
+  switch (src.Which()) {
+    case ::test_union::FlexibleUnion::Tag::kPrimitive:
+      return ::test_union::wire::FlexibleUnion::WithPrimitive(
+          WireNaturalConversionTraits<int32_t, int32_t>::ToWire(
+              arena, std::move(src.primitive().value())));
+    case ::test_union::FlexibleUnion::Tag::kStringNeedsConstructor:
+      return ::test_union::wire::FlexibleUnion::WithStringNeedsConstructor(
+          arena,
+          WireNaturalConversionTraits<::fidl::StringView, ::std::string>::
+              ToWire(arena, std::move(src.string_needs_constructor().value())));
+    case ::test_union::FlexibleUnion::Tag::kVectorStringAlsoNeedsConstructor:
+      return ::test_union::wire::FlexibleUnion::
+          WithVectorStringAlsoNeedsConstructor(
+              arena,
+              WireNaturalConversionTraits<
+                  ::fidl::VectorView<::fidl::StringView>,
+                  ::std::vector<::std::string>>::
+                  ToWire(
+                      arena,
+                      std::move(
+                          src.vector_string_also_needs_constructor().value())));
+    default:
+      return ::test_union::wire::FlexibleUnion();
+  }
+}
 
 std::unique_ptr<::test_union::FlexibleUnion>
 WireNaturalConversionTraits<::test_union::wire::FlexibleUnion,
@@ -551,6 +1096,18 @@ WireNaturalConversionTraits<::test_union::wire::FlexibleUnion,
       WireNaturalConversionTraits<
           ::test_union::wire::FlexibleUnion,
           ::test_union::FlexibleUnion>::ToNatural(std::move(src)));
+}
+::test_union::wire::FlexibleUnion
+WireNaturalConversionTraits<::test_union::wire::FlexibleUnion,
+                            std::unique_ptr<::test_union::FlexibleUnion>>::
+    ToWire(fidl::AnyArena& arena,
+           std::unique_ptr<::test_union::FlexibleUnion> src) {
+  if (!src) {
+    return ::test_union::wire::FlexibleUnion();
+  }
+  return WireNaturalConversionTraits<
+      ::test_union::wire::FlexibleUnion,
+      ::test_union::FlexibleUnion>::ToWire(arena, std::move(*src));
 }
 
 ::test_union::FlexibleFoo WireNaturalConversionTraits<
@@ -569,6 +1126,24 @@ WireNaturalConversionTraits<::test_union::wire::FlexibleUnion,
       return ::test_union::FlexibleFoo();
   }
 }
+::test_union::wire::FlexibleFoo WireNaturalConversionTraits<
+    ::test_union::wire::FlexibleFoo,
+    ::test_union::FlexibleFoo>::ToWire(fidl::AnyArena& arena,
+                                       ::test_union::FlexibleFoo src) {
+  switch (src.Which()) {
+    case ::test_union::FlexibleFoo::Tag::kS:
+      return ::test_union::wire::FlexibleFoo::WithS(
+          arena,
+          WireNaturalConversionTraits<::fidl::StringView, ::std::string>::
+              ToWire(arena, std::move(src.s().value())));
+    case ::test_union::FlexibleFoo::Tag::kI:
+      return ::test_union::wire::FlexibleFoo::WithI(
+          WireNaturalConversionTraits<int32_t, int32_t>::ToWire(
+              arena, std::move(src.i().value())));
+    default:
+      return ::test_union::wire::FlexibleFoo();
+  }
+}
 
 std::unique_ptr<::test_union::FlexibleFoo>
 WireNaturalConversionTraits<::test_union::wire::FlexibleFoo,
@@ -581,6 +1156,18 @@ WireNaturalConversionTraits<::test_union::wire::FlexibleFoo,
       WireNaturalConversionTraits<
           ::test_union::wire::FlexibleFoo,
           ::test_union::FlexibleFoo>::ToNatural(std::move(src)));
+}
+::test_union::wire::FlexibleFoo
+WireNaturalConversionTraits<::test_union::wire::FlexibleFoo,
+                            std::unique_ptr<::test_union::FlexibleFoo>>::
+    ToWire(fidl::AnyArena& arena,
+           std::unique_ptr<::test_union::FlexibleFoo> src) {
+  if (!src) {
+    return ::test_union::wire::FlexibleFoo();
+  }
+  return WireNaturalConversionTraits<
+      ::test_union::wire::FlexibleFoo,
+      ::test_union::FlexibleFoo>::ToWire(arena, std::move(*src));
 }
 
 ::test_union::FieldCollision WireNaturalConversionTraits<
@@ -596,6 +1183,17 @@ WireNaturalConversionTraits<::test_union::wire::FlexibleFoo,
       ZX_PANIC("unknown union tag in strict union");
   }
 }
+::test_union::wire::FieldCollision WireNaturalConversionTraits<
+    ::test_union::wire::FieldCollision,
+    ::test_union::FieldCollision>::ToWire(fidl::AnyArena& arena,
+                                          ::test_union::FieldCollision src) {
+  switch (src.Which()) {
+    case ::test_union::FieldCollision::Tag::kFieldCollisionTag:
+      return ::test_union::wire::FieldCollision::WithFieldCollisionTag(
+          WireNaturalConversionTraits<int32_t, int32_t>::ToWire(
+              arena, std::move(src.field_collision_tag().value())));
+  }
+}
 
 std::unique_ptr<::test_union::FieldCollision>
 WireNaturalConversionTraits<::test_union::wire::FieldCollision,
@@ -608,6 +1206,18 @@ WireNaturalConversionTraits<::test_union::wire::FieldCollision,
       WireNaturalConversionTraits<
           ::test_union::wire::FieldCollision,
           ::test_union::FieldCollision>::ToNatural(std::move(src)));
+}
+::test_union::wire::FieldCollision
+WireNaturalConversionTraits<::test_union::wire::FieldCollision,
+                            std::unique_ptr<::test_union::FieldCollision>>::
+    ToWire(fidl::AnyArena& arena,
+           std::unique_ptr<::test_union::FieldCollision> src) {
+  if (!src) {
+    return ::test_union::wire::FieldCollision();
+  }
+  return WireNaturalConversionTraits<
+      ::test_union::wire::FieldCollision,
+      ::test_union::FieldCollision>::ToWire(arena, std::move(*src));
 }
 
 ::test_union::ExplicitXUnion WireNaturalConversionTraits<
@@ -627,6 +1237,23 @@ WireNaturalConversionTraits<::test_union::wire::FieldCollision,
       return ::test_union::ExplicitXUnion();
   }
 }
+::test_union::wire::ExplicitXUnion WireNaturalConversionTraits<
+    ::test_union::wire::ExplicitXUnion,
+    ::test_union::ExplicitXUnion>::ToWire(fidl::AnyArena& arena,
+                                          ::test_union::ExplicitXUnion src) {
+  switch (src.Which()) {
+    case ::test_union::ExplicitXUnion::Tag::kI:
+      return ::test_union::wire::ExplicitXUnion::WithI(
+          arena, WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
+                     arena, std::move(src.i().value())));
+    case ::test_union::ExplicitXUnion::Tag::kF:
+      return ::test_union::wire::ExplicitXUnion::WithF(
+          WireNaturalConversionTraits<float, float>::ToWire(
+              arena, std::move(src.f().value())));
+    default:
+      return ::test_union::wire::ExplicitXUnion();
+  }
+}
 
 std::unique_ptr<::test_union::ExplicitXUnion>
 WireNaturalConversionTraits<::test_union::wire::ExplicitXUnion,
@@ -639,6 +1266,18 @@ WireNaturalConversionTraits<::test_union::wire::ExplicitXUnion,
       WireNaturalConversionTraits<
           ::test_union::wire::ExplicitXUnion,
           ::test_union::ExplicitXUnion>::ToNatural(std::move(src)));
+}
+::test_union::wire::ExplicitXUnion
+WireNaturalConversionTraits<::test_union::wire::ExplicitXUnion,
+                            std::unique_ptr<::test_union::ExplicitXUnion>>::
+    ToWire(fidl::AnyArena& arena,
+           std::unique_ptr<::test_union::ExplicitXUnion> src) {
+  if (!src) {
+    return ::test_union::wire::ExplicitXUnion();
+  }
+  return WireNaturalConversionTraits<
+      ::test_union::wire::ExplicitXUnion,
+      ::test_union::ExplicitXUnion>::ToWire(arena, std::move(*src));
 }
 
 ::test_union::ExplicitUnion WireNaturalConversionTraits<
@@ -658,6 +1297,22 @@ WireNaturalConversionTraits<::test_union::wire::ExplicitXUnion,
       ZX_PANIC("unknown union tag in strict union");
   }
 }
+::test_union::wire::ExplicitUnion WireNaturalConversionTraits<
+    ::test_union::wire::ExplicitUnion,
+    ::test_union::ExplicitUnion>::ToWire(fidl::AnyArena& arena,
+                                         ::test_union::ExplicitUnion src) {
+  switch (src.Which()) {
+    case ::test_union::ExplicitUnion::Tag::kPrimitive:
+      return ::test_union::wire::ExplicitUnion::WithPrimitive(
+          WireNaturalConversionTraits<int32_t, int32_t>::ToWire(
+              arena, std::move(src.primitive().value())));
+    case ::test_union::ExplicitUnion::Tag::kStringNeedsConstructor:
+      return ::test_union::wire::ExplicitUnion::WithStringNeedsConstructor(
+          arena,
+          WireNaturalConversionTraits<::fidl::StringView, ::std::string>::
+              ToWire(arena, std::move(src.string_needs_constructor().value())));
+  }
+}
 
 std::unique_ptr<::test_union::ExplicitUnion>
 WireNaturalConversionTraits<::test_union::wire::ExplicitUnion,
@@ -670,6 +1325,18 @@ WireNaturalConversionTraits<::test_union::wire::ExplicitUnion,
       WireNaturalConversionTraits<
           ::test_union::wire::ExplicitUnion,
           ::test_union::ExplicitUnion>::ToNatural(std::move(src)));
+}
+::test_union::wire::ExplicitUnion
+WireNaturalConversionTraits<::test_union::wire::ExplicitUnion,
+                            std::unique_ptr<::test_union::ExplicitUnion>>::
+    ToWire(fidl::AnyArena& arena,
+           std::unique_ptr<::test_union::ExplicitUnion> src) {
+  if (!src) {
+    return ::test_union::wire::ExplicitUnion();
+  }
+  return WireNaturalConversionTraits<
+      ::test_union::wire::ExplicitUnion,
+      ::test_union::ExplicitUnion>::ToWire(arena, std::move(*src));
 }
 
 ::test_union::ExplicitStrictFoo WireNaturalConversionTraits<
@@ -688,6 +1355,21 @@ WireNaturalConversionTraits<::test_union::wire::ExplicitUnion,
       ZX_PANIC("unknown union tag in strict union");
   }
 }
+::test_union::wire::ExplicitStrictFoo WireNaturalConversionTraits<
+    ::test_union::wire::ExplicitStrictFoo, ::test_union::ExplicitStrictFoo>::
+    ToWire(fidl::AnyArena& arena, ::test_union::ExplicitStrictFoo src) {
+  switch (src.Which()) {
+    case ::test_union::ExplicitStrictFoo::Tag::kS:
+      return ::test_union::wire::ExplicitStrictFoo::WithS(
+          arena,
+          WireNaturalConversionTraits<::fidl::StringView, ::std::string>::
+              ToWire(arena, std::move(src.s().value())));
+    case ::test_union::ExplicitStrictFoo::Tag::kI:
+      return ::test_union::wire::ExplicitStrictFoo::WithI(
+          WireNaturalConversionTraits<int32_t, int32_t>::ToWire(
+              arena, std::move(src.i().value())));
+  }
+}
 
 std::unique_ptr<::test_union::ExplicitStrictFoo>
 WireNaturalConversionTraits<::test_union::wire::ExplicitStrictFoo,
@@ -700,6 +1382,18 @@ WireNaturalConversionTraits<::test_union::wire::ExplicitStrictFoo,
       WireNaturalConversionTraits<
           ::test_union::wire::ExplicitStrictFoo,
           ::test_union::ExplicitStrictFoo>::ToNatural(std::move(src)));
+}
+::test_union::wire::ExplicitStrictFoo
+WireNaturalConversionTraits<::test_union::wire::ExplicitStrictFoo,
+                            std::unique_ptr<::test_union::ExplicitStrictFoo>>::
+    ToWire(fidl::AnyArena& arena,
+           std::unique_ptr<::test_union::ExplicitStrictFoo> src) {
+  if (!src) {
+    return ::test_union::wire::ExplicitStrictFoo();
+  }
+  return WireNaturalConversionTraits<
+      ::test_union::wire::ExplicitStrictFoo,
+      ::test_union::ExplicitStrictFoo>::ToWire(arena, std::move(*src));
 }
 
 ::test_union::ExplicitFoo WireNaturalConversionTraits<
@@ -718,6 +1412,24 @@ WireNaturalConversionTraits<::test_union::wire::ExplicitStrictFoo,
       return ::test_union::ExplicitFoo();
   }
 }
+::test_union::wire::ExplicitFoo WireNaturalConversionTraits<
+    ::test_union::wire::ExplicitFoo,
+    ::test_union::ExplicitFoo>::ToWire(fidl::AnyArena& arena,
+                                       ::test_union::ExplicitFoo src) {
+  switch (src.Which()) {
+    case ::test_union::ExplicitFoo::Tag::kS:
+      return ::test_union::wire::ExplicitFoo::WithS(
+          arena,
+          WireNaturalConversionTraits<::fidl::StringView, ::std::string>::
+              ToWire(arena, std::move(src.s().value())));
+    case ::test_union::ExplicitFoo::Tag::kI:
+      return ::test_union::wire::ExplicitFoo::WithI(
+          WireNaturalConversionTraits<int32_t, int32_t>::ToWire(
+              arena, std::move(src.i().value())));
+    default:
+      return ::test_union::wire::ExplicitFoo();
+  }
+}
 
 std::unique_ptr<::test_union::ExplicitFoo>
 WireNaturalConversionTraits<::test_union::wire::ExplicitFoo,
@@ -730,6 +1442,18 @@ WireNaturalConversionTraits<::test_union::wire::ExplicitFoo,
       WireNaturalConversionTraits<
           ::test_union::wire::ExplicitFoo,
           ::test_union::ExplicitFoo>::ToNatural(std::move(src)));
+}
+::test_union::wire::ExplicitFoo
+WireNaturalConversionTraits<::test_union::wire::ExplicitFoo,
+                            std::unique_ptr<::test_union::ExplicitFoo>>::
+    ToWire(fidl::AnyArena& arena,
+           std::unique_ptr<::test_union::ExplicitFoo> src) {
+  if (!src) {
+    return ::test_union::wire::ExplicitFoo();
+  }
+  return WireNaturalConversionTraits<
+      ::test_union::wire::ExplicitFoo,
+      ::test_union::ExplicitFoo>::ToWire(arena, std::move(*src));
 }
 
 ::test_union::XUnionContainingEmptyStruct
@@ -746,6 +1470,22 @@ WireNaturalConversionTraits<::test_union::wire::XUnionContainingEmptyStruct,
       return ::test_union::XUnionContainingEmptyStruct();
   }
 }
+::test_union::wire::XUnionContainingEmptyStruct
+WireNaturalConversionTraits<::test_union::wire::XUnionContainingEmptyStruct,
+                            ::test_union::XUnionContainingEmptyStruct>::
+    ToWire(fidl::AnyArena& arena,
+           ::test_union::XUnionContainingEmptyStruct src) {
+  switch (src.Which()) {
+    case ::test_union::XUnionContainingEmptyStruct::Tag::kEmpty:
+      return ::test_union::wire::XUnionContainingEmptyStruct::WithEmpty(
+          WireNaturalConversionTraits<
+              ::test_union::wire::Empty,
+              ::test_union::Empty>::ToWire(arena,
+                                           std::move(src.empty().value())));
+    default:
+      return ::test_union::wire::XUnionContainingEmptyStruct();
+  }
+}
 
 std::unique_ptr<::test_union::XUnionContainingEmptyStruct>
 WireNaturalConversionTraits<
@@ -760,6 +1500,19 @@ WireNaturalConversionTraits<
           ::test_union::wire::XUnionContainingEmptyStruct,
           ::test_union::XUnionContainingEmptyStruct>::
           ToNatural(std::move(src)));
+}
+::test_union::wire::XUnionContainingEmptyStruct WireNaturalConversionTraits<
+    ::test_union::wire::XUnionContainingEmptyStruct,
+    std::unique_ptr<::test_union::XUnionContainingEmptyStruct>>::
+    ToWire(fidl::AnyArena& arena,
+           std::unique_ptr<::test_union::XUnionContainingEmptyStruct> src) {
+  if (!src) {
+    return ::test_union::wire::XUnionContainingEmptyStruct();
+  }
+  return WireNaturalConversionTraits<
+      ::test_union::wire::XUnionContainingEmptyStruct,
+      ::test_union::XUnionContainingEmptyStruct>::ToWire(arena,
+                                                         std::move(*src));
 }
 
 #ifdef __Fuchsia__
@@ -778,6 +1531,21 @@ WireNaturalConversionTraits<
   return ::fidl::Request<::test_union::TestProtocol::
                              StrictXUnionHenceResponseMayBeStackAllocated>();
 }
+::fidl::WireRequest<
+    ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
+WireNaturalConversionTraits<
+    ::fidl::WireRequest<::test_union::TestProtocol::
+                            StrictXUnionHenceResponseMayBeStackAllocated>,
+    ::fidl::Request<::test_union::TestProtocol::
+                        StrictXUnionHenceResponseMayBeStackAllocated>>::
+    ToWire(fidl::AnyArena& arena,
+           ::fidl::Request<::test_union::TestProtocol::
+                               StrictXUnionHenceResponseMayBeStackAllocated>
+               src) {
+  return ::fidl::WireRequest<
+      ::test_union::TestProtocol::
+          StrictXUnionHenceResponseMayBeStackAllocated>();
+}
 
 ::fidl::Request<
     ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>
@@ -792,6 +1560,21 @@ WireNaturalConversionTraits<
             src) {
   return ::fidl::Request<::test_union::TestProtocol::
                              FlexibleXUnionHenceResponseMustBeHeapAllocated>();
+}
+::fidl::WireRequest<
+    ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>
+WireNaturalConversionTraits<
+    ::fidl::WireRequest<::test_union::TestProtocol::
+                            FlexibleXUnionHenceResponseMustBeHeapAllocated>,
+    ::fidl::Request<::test_union::TestProtocol::
+                        FlexibleXUnionHenceResponseMustBeHeapAllocated>>::
+    ToWire(fidl::AnyArena& arena,
+           ::fidl::Request<::test_union::TestProtocol::
+                               FlexibleXUnionHenceResponseMustBeHeapAllocated>
+               src) {
+  return ::fidl::WireRequest<
+      ::test_union::TestProtocol::
+          FlexibleXUnionHenceResponseMustBeHeapAllocated>();
 }
 
 ::fidl::Response<
@@ -814,6 +1597,26 @@ WireNaturalConversionTraits<
               TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>::
           ToNatural(std::move(src)));
 }
+::fidl::WireResponse<
+    ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
+WireNaturalConversionTraits<
+    ::fidl::WireResponse<::test_union::TestProtocol::
+                             StrictXUnionHenceResponseMayBeStackAllocated>,
+    ::fidl::Response<::test_union::TestProtocol::
+                         StrictXUnionHenceResponseMayBeStackAllocated>>::
+    ToWire(fidl::AnyArena& arena,
+           ::fidl::Response<::test_union::TestProtocol::
+                                StrictXUnionHenceResponseMayBeStackAllocated>
+               src) {
+  return ::fidl::WireResponse<
+      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>(
+      WireNaturalConversionTraits<
+          ::test_union::wire::
+              TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse,
+          ::test_union::
+              TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>::
+          ToWire(arena, std::move(src)));
+}
 
 ::fidl::Response<
     ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>
@@ -834,6 +1637,27 @@ WireNaturalConversionTraits<
           ::test_union::
               TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>::
           ToNatural(std::move(src)));
+}
+::fidl::WireResponse<
+    ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>
+WireNaturalConversionTraits<
+    ::fidl::WireResponse<::test_union::TestProtocol::
+                             FlexibleXUnionHenceResponseMustBeHeapAllocated>,
+    ::fidl::Response<::test_union::TestProtocol::
+                         FlexibleXUnionHenceResponseMustBeHeapAllocated>>::
+    ToWire(fidl::AnyArena& arena,
+           ::fidl::Response<::test_union::TestProtocol::
+                                FlexibleXUnionHenceResponseMustBeHeapAllocated>
+               src) {
+  return ::fidl::WireResponse<
+      ::test_union::TestProtocol::
+          FlexibleXUnionHenceResponseMustBeHeapAllocated>(
+      WireNaturalConversionTraits<
+          ::test_union::wire::
+              TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse,
+          ::test_union::
+              TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>::
+          ToWire(arena, std::move(src)));
 }
 #endif  // __Fuchsia__
 }  // namespace internal

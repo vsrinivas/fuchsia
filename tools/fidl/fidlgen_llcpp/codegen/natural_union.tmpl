@@ -207,20 +207,31 @@ class {{ .Name }} {
 {{- IfdefFuchsia -}}
 {{- end }}
 
+{{ $wireType := .Wire }}
 {{ $naturalType := .Unified }}
 template <>
-struct WireNaturalConversionTraits<{{ .Wire }}, {{ $naturalType }}> {
-  static {{ $naturalType }} ToNatural({{ .Wire }} src);
+struct WireNaturalConversionTraits<{{ $wireType }}, {{ $naturalType }}> {
+  static {{ $naturalType }} ToNatural({{ $wireType }} src);
+  static {{ $wireType }} ToWire(fidl::AnyArena& arena, {{ $naturalType }} src);
 };
 
 template <>
-struct WireNaturalConversionTraits<{{ .Wire }}, std::unique_ptr<{{ $naturalType }}>> {
-  static std::unique_ptr<{{ $naturalType }}> ToNatural({{ .Wire }} src);
+struct WireNaturalConversionTraits<{{ $wireType }}, std::unique_ptr<{{ $naturalType }}>> {
+  static std::unique_ptr<{{ $naturalType }}> ToNatural({{ $wireType }} src);
+  static {{ $wireType }} ToWire(fidl::AnyArena& arena, std::unique_ptr<{{ $naturalType }}> src);
 };
 
 template <>
-struct NaturalTypeForWireType<{{ .Wire }}> {
+struct NaturalTypeForWireType<{{ $wireType }}> {
   using type = std::unique_ptr<{{ $naturalType }}>;
+};
+template <>
+struct WireTypeForNaturalType<{{ $naturalType }}> {
+    using type = {{ $wireType }};
+};
+template <>
+struct WireTypeForNaturalType<std::unique_ptr<{{ $naturalType }}>> {
+    using type = {{ $wireType }};
 };
 
 {{ if .IsResourceType }}
@@ -233,8 +244,9 @@ struct NaturalTypeForWireType<{{ .Wire }}> {
 {{- IfdefFuchsia -}}
 {{- end }}
 
+{{ $wireType := .Wire }}
 {{ $naturalType := .Unified }}
-{{ $naturalType }} WireNaturalConversionTraits<{{ .Wire }}, {{ $naturalType }}>::ToNatural({{ .Wire }} src) {
+{{ $naturalType }} WireNaturalConversionTraits<{{ $wireType }}, {{ $naturalType }}>::ToNatural({{ $wireType }} src) {
   switch (src.Which()) {
     {{- range .Members }}
     case {{ .TagName.Wire }}:
@@ -250,12 +262,32 @@ struct NaturalTypeForWireType<{{ .Wire }}> {
     {{- end }}
   }
 }
+{{ $wireType }} WireNaturalConversionTraits<{{ $wireType }}, {{ $naturalType }}>::ToWire(fidl::AnyArena& arena, {{ $naturalType }} src) {
+  switch (src.Which()) {
+    {{- range .Members }}
+    case {{ .TagName.Unified }}:
+      return {{ $wireType }}::With{{ .UpperCamelCaseName }}(
+        {{- if not .Type.InlineInEnvelope }}arena, {{- end }}
+        WireNaturalConversionTraits<{{ .Type.Wire }}, {{ .Type.Unified }}>::ToWire(arena, std::move(src.{{ .Name }}().value())));
+    {{- end }}
+    {{- if .IsFlexible }}
+    default:
+      return {{ $wireType }}();
+    {{- end }}
+  }
+}
 
 std::unique_ptr<{{ $naturalType }}> WireNaturalConversionTraits<{{ .Wire }}, std::unique_ptr<{{ $naturalType }}>>::ToNatural({{ .Wire }} src) {
   if (src.has_invalid_tag()) {
     return nullptr;
   }
   return std::make_unique<{{ $naturalType }}>(WireNaturalConversionTraits<{{ .Wire }}, {{ $naturalType }}>::ToNatural(std::move(src)));
+}
+{{ $wireType }} WireNaturalConversionTraits<{{ $wireType }}, std::unique_ptr<{{ $naturalType }}>>::ToWire(fidl::AnyArena& arena, std::unique_ptr<{{ $naturalType }}> src) {
+  if (!src) {
+    return {{ $wireType }}();
+  }
+  return WireNaturalConversionTraits<{{ $wireType }}, {{ $naturalType }}>::ToWire(arena, std::move(*src));
 }
 
 {{ if .IsResourceType }}

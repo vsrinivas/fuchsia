@@ -20,12 +20,21 @@ struct WireNaturalConversionTraits<
     ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary> {
   static ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary ToNatural(
       ::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary src);
+  static ::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary
+  ToWire(fidl::AnyArena& arena,
+         ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary> {
   using type = ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary> {
+  using type =
+      ::test_bindingsdenylist::wire::MemberOnlyAppearsInImportingLibrary;
 };
 
 template <>
@@ -34,12 +43,20 @@ struct WireNaturalConversionTraits<
     ::test_bindingsdenylist::OnlyAppearsInImportingLibrary> {
   static ::test_bindingsdenylist::OnlyAppearsInImportingLibrary ToNatural(
       ::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary src);
+  static ::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary ToWire(
+      fidl::AnyArena& arena,
+      ::test_bindingsdenylist::OnlyAppearsInImportingLibrary src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary> {
   using type = ::test_bindingsdenylist::OnlyAppearsInImportingLibrary;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_bindingsdenylist::OnlyAppearsInImportingLibrary> {
+  using type = ::test_bindingsdenylist::wire::OnlyAppearsInImportingLibrary;
 };
 
 template <>
@@ -50,6 +67,9 @@ struct WireNaturalConversionTraits<
   ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse
           src);
+  static ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse
+  ToWire(fidl::AnyArena& arena,
+         ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse src);
 };
 
 template <>
@@ -57,6 +77,12 @@ struct NaturalTypeForWireType<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse> {
   using type =
       ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse> {
+  using type =
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResponse;
 };
 
 template <>
@@ -67,6 +93,12 @@ struct WireNaturalConversionTraits<
   ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerTopResponse
           src);
+  static ::test_bindingsdenylist::wire::
+      DenyEachBindingOnlyDenySyzkallerTopResponse
+      ToWire(
+          fidl::AnyArena& arena,
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse
+              src);
 };
 
 template <>
@@ -75,6 +107,12 @@ struct NaturalTypeForWireType<::test_bindingsdenylist::wire::
   using type =
       ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse;
 };
+template <>
+struct WireTypeForNaturalType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse> {
+  using type = ::test_bindingsdenylist::wire::
+      DenyEachBindingOnlyDenySyzkallerTopResponse;
+};
 
 template <>
 struct WireNaturalConversionTraits<
@@ -82,12 +120,21 @@ struct WireNaturalConversionTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse> {
   static ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse src);
+  static ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse
+  ToWire(fidl::AnyArena& arena,
+         ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse> {
   using type = ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse> {
+  using type =
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResponse;
 };
 
 template <>
@@ -98,12 +145,21 @@ struct WireNaturalConversionTraits<
   ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse
           src);
+  static ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse
+  ToWire(fidl::AnyArena& arena,
+         ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse> {
   using type = ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse> {
+  using type =
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustTopResponse;
 };
 
 template <>
@@ -114,6 +170,9 @@ struct WireNaturalConversionTraits<
   ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse
           src);
+  static ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse
+  ToWire(fidl::AnyArena& arena,
+         ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse src);
 };
 
 template <>
@@ -121,6 +180,12 @@ struct NaturalTypeForWireType<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse> {
   using type =
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse> {
+  using type =
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResponse;
 };
 
 template <>
@@ -131,6 +196,12 @@ struct WireNaturalConversionTraits<
   ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerTopResponse
           src);
+  static ::test_bindingsdenylist::wire::
+      DenyEachBindingOnlyDenyLibfuzzerTopResponse
+      ToWire(
+          fidl::AnyArena& arena,
+          ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse
+              src);
 };
 
 template <>
@@ -139,6 +210,12 @@ struct NaturalTypeForWireType<::test_bindingsdenylist::wire::
   using type =
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse;
 };
+template <>
+struct WireTypeForNaturalType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse> {
+  using type = ::test_bindingsdenylist::wire::
+      DenyEachBindingOnlyDenyLibfuzzerTopResponse;
+};
 
 template <>
 struct WireNaturalConversionTraits<
@@ -146,12 +223,20 @@ struct WireNaturalConversionTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse> {
   static ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse src);
+  static ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse
+  ToWire(fidl::AnyArena& arena,
+         ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse> {
   using type = ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse> {
+  using type = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResponse;
 };
 
 template <>
@@ -161,12 +246,21 @@ struct WireNaturalConversionTraits<
   static ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse
   ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse src);
+  static ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse
+  ToWire(fidl::AnyArena& arena,
+         ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse> {
   using type = ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse> {
+  using type =
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoTopResponse;
 };
 
 template <>
@@ -175,12 +269,21 @@ struct WireNaturalConversionTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse> {
   static ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse src);
+  static ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse
+  ToWire(fidl::AnyArena& arena,
+         ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse> {
   using type = ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse> {
+  using type =
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResponse;
 };
 
 template <>
@@ -191,12 +294,21 @@ struct WireNaturalConversionTraits<
   ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartTopResponse
           src);
+  static ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartTopResponse
+  ToWire(fidl::AnyArena& arena,
+         ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartTopResponse> {
   using type = ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse> {
+  using type =
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartTopResponse;
 };
 
 template <>
@@ -207,12 +319,21 @@ struct WireNaturalConversionTraits<
   ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest
           src);
+  static ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest
+  ToWire(fidl::AnyArena& arena,
+         ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest> {
   using type = ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest> {
+  using type =
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest;
 };
 
 template <>
@@ -221,12 +342,21 @@ struct WireNaturalConversionTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest> {
   static ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest src);
+  static ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest
+  ToWire(fidl::AnyArena& arena,
+         ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest> {
   using type = ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest> {
+  using type =
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest;
 };
 
 template <>
@@ -237,12 +367,21 @@ struct WireNaturalConversionTraits<
   ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest
           src);
+  static ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest
+  ToWire(fidl::AnyArena& arena,
+         ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest> {
   using type = ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest> {
+  using type =
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest;
 };
 
 template <>
@@ -251,12 +390,20 @@ struct WireNaturalConversionTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest> {
   static ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest src);
+  static ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest ToWire(
+      fidl::AnyArena& arena,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest> {
   using type = ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest> {
+  using type = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest;
 };
 
 template <>
@@ -265,6 +412,9 @@ struct WireNaturalConversionTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest> {
   static ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest src);
+  static ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest
+  ToWire(fidl::AnyArena& arena,
+         ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest src);
 };
 
 template <>
@@ -272,12 +422,20 @@ struct NaturalTypeForWireType<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest> {
   using type = ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest;
 };
+template <>
+struct WireTypeForNaturalType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest> {
+  using type =
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest;
+};
 
 template <>
 struct WireNaturalConversionTraits<::test_bindingsdenylist::wire::OnlyLlcpp,
                                    ::test_bindingsdenylist::OnlyLlcpp> {
   static ::test_bindingsdenylist::OnlyLlcpp ToNatural(
       ::test_bindingsdenylist::wire::OnlyLlcpp src);
+  static ::test_bindingsdenylist::wire::OnlyLlcpp ToWire(
+      fidl::AnyArena& arena, ::test_bindingsdenylist::OnlyLlcpp src);
 };
 
 template <>
@@ -286,11 +444,23 @@ struct WireNaturalConversionTraits<
     std::unique_ptr<::test_bindingsdenylist::OnlyLlcpp>> {
   static std::unique_ptr<::test_bindingsdenylist::OnlyLlcpp> ToNatural(
       ::test_bindingsdenylist::wire::OnlyLlcpp src);
+  static ::test_bindingsdenylist::wire::OnlyLlcpp ToWire(
+      fidl::AnyArena& arena,
+      std::unique_ptr<::test_bindingsdenylist::OnlyLlcpp> src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_bindingsdenylist::wire::OnlyLlcpp> {
   using type = std::unique_ptr<::test_bindingsdenylist::OnlyLlcpp>;
+};
+template <>
+struct WireTypeForNaturalType<::test_bindingsdenylist::OnlyLlcpp> {
+  using type = ::test_bindingsdenylist::wire::OnlyLlcpp;
+};
+template <>
+struct WireTypeForNaturalType<
+    std::unique_ptr<::test_bindingsdenylist::OnlyLlcpp>> {
+  using type = ::test_bindingsdenylist::wire::OnlyLlcpp;
 };
 
 template <>
@@ -301,6 +471,9 @@ struct WireNaturalConversionTraits<
   ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult
           src);
+  static ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult
+  ToWire(fidl::AnyArena& arena,
+         ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult src);
 };
 
 template <>
@@ -313,6 +486,11 @@ struct WireNaturalConversionTraits<
   ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult
           src);
+  static ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult
+  ToWire(fidl::AnyArena& arena,
+         std::unique_ptr<
+             ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>
+             src);
 };
 
 template <>
@@ -321,6 +499,18 @@ struct NaturalTypeForWireType<
   using type = std::unique_ptr<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>;
 };
+template <>
+struct WireTypeForNaturalType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult> {
+  using type =
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult;
+};
+template <>
+struct WireTypeForNaturalType<std::unique_ptr<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>> {
+  using type =
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult;
+};
 
 template <>
 struct WireNaturalConversionTraits<
@@ -328,6 +518,9 @@ struct WireNaturalConversionTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult> {
   static ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult src);
+  static ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult
+  ToWire(fidl::AnyArena& arena,
+         ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult src);
 };
 
 template <>
@@ -339,6 +532,11 @@ struct WireNaturalConversionTraits<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>
   ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult src);
+  static ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult
+  ToWire(fidl::AnyArena& arena,
+         std::unique_ptr<
+             ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>
+             src);
 };
 
 template <>
@@ -346,6 +544,16 @@ struct NaturalTypeForWireType<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult> {
   using type = std::unique_ptr<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult> {
+  using type = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult;
+};
+template <>
+struct WireTypeForNaturalType<std::unique_ptr<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult>> {
+  using type = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult;
 };
 
 template <>
@@ -356,6 +564,9 @@ struct WireNaturalConversionTraits<
   ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult
           src);
+  static ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult
+  ToWire(fidl::AnyArena& arena,
+         ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult src);
 };
 
 template <>
@@ -368,6 +579,11 @@ struct WireNaturalConversionTraits<
   ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult
           src);
+  static ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult
+  ToWire(fidl::AnyArena& arena,
+         std::unique_ptr<
+             ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>
+             src);
 };
 
 template <>
@@ -376,6 +592,18 @@ struct NaturalTypeForWireType<
   using type = std::unique_ptr<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>;
 };
+template <>
+struct WireTypeForNaturalType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult> {
+  using type =
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult;
+};
+template <>
+struct WireTypeForNaturalType<std::unique_ptr<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult>> {
+  using type =
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult;
+};
 
 template <>
 struct WireNaturalConversionTraits<
@@ -383,6 +611,9 @@ struct WireNaturalConversionTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult> {
   static ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult src);
+  static ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult ToWire(
+      fidl::AnyArena& arena,
+      ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult src);
 };
 
 template <>
@@ -392,6 +623,10 @@ struct WireNaturalConversionTraits<
   static std::unique_ptr<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>
   ToNatural(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult src);
+  static ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult ToWire(
+      fidl::AnyArena& arena,
+      std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>
+          src);
 };
 
 template <>
@@ -400,6 +635,16 @@ struct NaturalTypeForWireType<
   using type =
       std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>;
 };
+template <>
+struct WireTypeForNaturalType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult> {
+  using type = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult;
+};
+template <>
+struct WireTypeForNaturalType<
+    std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult>> {
+  using type = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult;
+};
 
 template <>
 struct WireNaturalConversionTraits<
@@ -407,6 +652,9 @@ struct WireNaturalConversionTraits<
     ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult> {
   static ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult src);
+  static ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult
+  ToWire(fidl::AnyArena& arena,
+         ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult src);
 };
 
 template <>
@@ -418,6 +666,11 @@ struct WireNaturalConversionTraits<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult>
   ToNatural(
       ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult src);
+  static ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult
+  ToWire(fidl::AnyArena& arena,
+         std::unique_ptr<
+             ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult>
+             src);
 };
 
 template <>
@@ -425,6 +678,16 @@ struct NaturalTypeForWireType<
     ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult> {
   using type = std::unique_ptr<
       ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult>;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult> {
+  using type = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult;
+};
+template <>
+struct WireTypeForNaturalType<std::unique_ptr<
+    ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult>> {
+  using type = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult;
 };
 
 #ifdef __Fuchsia__
@@ -440,6 +703,12 @@ struct WireNaturalConversionTraits<
   ToNatural(::fidl::WireRequest<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                                     LibfuzzerNeedsNonemptyProtocol>
                 src);
+  static ::fidl::WireRequest<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                                 LibfuzzerNeedsNonemptyProtocol>
+  ToWire(fidl::AnyArena& arena,
+         ::fidl::Request<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                             LibfuzzerNeedsNonemptyProtocol>
+             src);
 };
 
 template <>
@@ -448,6 +717,14 @@ struct NaturalTypeForWireType<
                             LibfuzzerNeedsNonemptyProtocol>> {
   using type = ::fidl::Request<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                                    LibfuzzerNeedsNonemptyProtocol>;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::fidl::Request<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                        LibfuzzerNeedsNonemptyProtocol>> {
+  using type =
+      ::fidl::WireRequest<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                              LibfuzzerNeedsNonemptyProtocol>;
 };
 
 template <>
@@ -461,6 +738,12 @@ struct WireNaturalConversionTraits<
   ToNatural(::fidl::WireResponse<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                                      LibfuzzerNeedsNonemptyProtocol>
                 src);
+  static ::fidl::WireResponse<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                                  LibfuzzerNeedsNonemptyProtocol>
+  ToWire(fidl::AnyArena& arena,
+         ::fidl::Response<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                              LibfuzzerNeedsNonemptyProtocol>
+             src);
 };
 
 template <>
@@ -469,6 +752,14 @@ struct NaturalTypeForWireType<
                              LibfuzzerNeedsNonemptyProtocol>> {
   using type = ::fidl::Response<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                                     LibfuzzerNeedsNonemptyProtocol>;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::fidl::Response<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                         LibfuzzerNeedsNonemptyProtocol>> {
+  using type =
+      ::fidl::WireResponse<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                               LibfuzzerNeedsNonemptyProtocol>;
 };
 
 template <>
@@ -482,12 +773,24 @@ struct WireNaturalConversionTraits<
   ToNatural(::fidl::WireRequest<
             ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
                 src);
+  static ::fidl::WireRequest<
+      ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
+  ToWire(fidl::AnyArena& arena,
+         ::fidl::Request<
+             ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>
+             src);
 };
 
 template <>
 struct NaturalTypeForWireType<::fidl::WireRequest<
     ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>> {
   using type = ::fidl::Request<
+      ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>;
+};
+template <>
+struct WireTypeForNaturalType<::fidl::Request<
+    ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>> {
+  using type = ::fidl::WireRequest<
       ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>;
 };
 
@@ -503,6 +806,12 @@ struct WireNaturalConversionTraits<
       ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
                               AlwaysAppearsInImportingLibrary>
           src);
+  static ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
+                                 AlwaysAppearsInImportingLibrary>
+  ToWire(fidl::AnyArena& arena,
+         ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::
+                             AlwaysAppearsInImportingLibrary>
+             src);
 };
 
 template <>
@@ -511,6 +820,14 @@ struct NaturalTypeForWireType<
                             AlwaysAppearsInImportingLibrary>> {
   using type = ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::
                                    AlwaysAppearsInImportingLibrary>;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::
+                        AlwaysAppearsInImportingLibrary>> {
+  using type =
+      ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::
+                              AlwaysAppearsInImportingLibrary>;
 };
 
 template <>
@@ -521,6 +838,11 @@ struct WireNaturalConversionTraits<
   ToNatural(::fidl::WireRequest<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
                 src);
+  static ::fidl::WireRequest<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+  ToWire(fidl::AnyArena& arena,
+         ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+             src);
 };
 
 template <>
@@ -528,6 +850,12 @@ struct NaturalTypeForWireType<::fidl::WireRequest<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>> {
   using type =
       ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>> {
+  using type = ::fidl::WireRequest<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>;
 };
 
 template <>
@@ -538,6 +866,11 @@ struct WireNaturalConversionTraits<
   ToNatural(
       ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
           src);
+  static ::fidl::WireRequest<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+  ToWire(fidl::AnyArena& arena,
+         ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+             src);
 };
 
 template <>
@@ -545,6 +878,12 @@ struct NaturalTypeForWireType<
     ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>> {
   using type =
       ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>> {
+  using type =
+      ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>;
 };
 
 template <>
@@ -558,12 +897,24 @@ struct WireNaturalConversionTraits<
   ToNatural(::fidl::WireRequest<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
                 src);
+  static ::fidl::WireRequest<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+  ToWire(fidl::AnyArena& arena,
+         ::fidl::Request<
+             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+             src);
 };
 
 template <>
 struct NaturalTypeForWireType<::fidl::WireRequest<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>> {
   using type = ::fidl::Request<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>;
+};
+template <>
+struct WireTypeForNaturalType<::fidl::Request<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>> {
+  using type = ::fidl::WireRequest<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>;
 };
 
@@ -575,6 +926,11 @@ struct WireNaturalConversionTraits<
   ToNatural(::fidl::WireRequest<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
                 src);
+  static ::fidl::WireRequest<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+  ToWire(fidl::AnyArena& arena,
+         ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+             src);
 };
 
 template <>
@@ -582,6 +938,12 @@ struct NaturalTypeForWireType<::fidl::WireRequest<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>> {
   using type =
       ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>> {
+  using type = ::fidl::WireRequest<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>;
 };
 
 template <>
@@ -595,12 +957,24 @@ struct WireNaturalConversionTraits<
   ToNatural(::fidl::WireRequest<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
                 src);
+  static ::fidl::WireRequest<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+  ToWire(fidl::AnyArena& arena,
+         ::fidl::Request<
+             ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+             src);
 };
 
 template <>
 struct NaturalTypeForWireType<::fidl::WireRequest<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>> {
   using type = ::fidl::Request<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>;
+};
+template <>
+struct WireTypeForNaturalType<::fidl::Request<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>> {
+  using type = ::fidl::WireRequest<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>;
 };
 
@@ -614,6 +988,12 @@ struct WireNaturalConversionTraits<
   ToNatural(::fidl::WireResponse<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
                 src);
+  static ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+  ToWire(
+      fidl::AnyArena& arena,
+      ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>
+          src);
 };
 
 template <>
@@ -621,6 +1001,12 @@ struct NaturalTypeForWireType<::fidl::WireResponse<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>> {
   using type =
       ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>> {
+  using type = ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>;
 };
 
 template <>
@@ -631,6 +1017,11 @@ struct WireNaturalConversionTraits<
   ToNatural(
       ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
           src);
+  static ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+  ToWire(fidl::AnyArena& arena,
+         ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>
+             src);
 };
 
 template <>
@@ -638,6 +1029,12 @@ struct NaturalTypeForWireType<::fidl::WireResponse<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>> {
   using type =
       ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>> {
+  using type = ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>;
 };
 
 template <>
@@ -651,12 +1048,24 @@ struct WireNaturalConversionTraits<
   ToNatural(::fidl::WireResponse<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
                 src);
+  static ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+  ToWire(fidl::AnyArena& arena,
+         ::fidl::Response<
+             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>
+             src);
 };
 
 template <>
 struct NaturalTypeForWireType<::fidl::WireResponse<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>> {
   using type = ::fidl::Response<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>;
+};
+template <>
+struct WireTypeForNaturalType<::fidl::Response<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>> {
+  using type = ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>;
 };
 
@@ -670,6 +1079,12 @@ struct WireNaturalConversionTraits<
   ToNatural(::fidl::WireResponse<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
                 src);
+  static ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+  ToWire(
+      fidl::AnyArena& arena,
+      ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>
+          src);
 };
 
 template <>
@@ -677,6 +1092,12 @@ struct NaturalTypeForWireType<::fidl::WireResponse<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>> {
   using type =
       ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::fidl::Response<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>> {
+  using type = ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>;
 };
 
 template <>
@@ -690,12 +1111,24 @@ struct WireNaturalConversionTraits<
   ToNatural(::fidl::WireResponse<
             ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
                 src);
+  static ::fidl::WireResponse<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+  ToWire(fidl::AnyArena& arena,
+         ::fidl::Response<
+             ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>
+             src);
 };
 
 template <>
 struct NaturalTypeForWireType<::fidl::WireResponse<
     ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>> {
   using type = ::fidl::Response<
+      ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>;
+};
+template <>
+struct WireTypeForNaturalType<::fidl::Response<
+    ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>> {
+  using type = ::fidl::WireResponse<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>;
 };
 #endif  // __Fuchsia__

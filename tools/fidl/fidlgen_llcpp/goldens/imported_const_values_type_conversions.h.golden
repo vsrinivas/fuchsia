@@ -19,11 +19,17 @@ struct WireNaturalConversionTraits<::test_importedconstvalues::wire::MyStruct,
                                    ::test_importedconstvalues::MyStruct> {
   static ::test_importedconstvalues::MyStruct ToNatural(
       ::test_importedconstvalues::wire::MyStruct src);
+  static ::test_importedconstvalues::wire::MyStruct ToWire(
+      fidl::AnyArena& arena, ::test_importedconstvalues::MyStruct src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_importedconstvalues::wire::MyStruct> {
   using type = ::test_importedconstvalues::MyStruct;
+};
+template <>
+struct WireTypeForNaturalType<::test_importedconstvalues::MyStruct> {
+  using type = ::test_importedconstvalues::wire::MyStruct;
 };
 
 #ifdef __Fuchsia__

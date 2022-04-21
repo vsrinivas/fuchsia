@@ -17,6 +17,7 @@ test("fidl_cpp_conversion_tests_bin") {
   output_name = "fidl_cpp_conversion_tests"
   sources = [ "conversion_test.cc" ]
   deps = [
+    "//src/lib/fidl/llcpp/tests:arena_checker",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]

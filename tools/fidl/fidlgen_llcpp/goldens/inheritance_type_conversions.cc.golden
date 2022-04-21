@@ -13,6 +13,15 @@ WireNaturalConversionTraits<::test_inheritance::wire::SuperFooTopResponse,
       WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(
           std::move(src.y)));
 }
+::test_inheritance::wire::SuperFooTopResponse
+WireNaturalConversionTraits<::test_inheritance::wire::SuperFooTopResponse,
+                            ::test_inheritance::SuperFooTopResponse>::
+    ToWire(fidl::AnyArena& arena, ::test_inheritance::SuperFooTopResponse src) {
+  return ::test_inheritance::wire::SuperFooTopResponse{
+      .y = WireNaturalConversionTraits<int64_t, int64_t>::ToWire(
+          arena, std::move(src.y())),
+  };
+}
 
 ::test_inheritance::SuperFooRequest
 WireNaturalConversionTraits<::test_inheritance::wire::SuperFooRequest,
@@ -21,6 +30,15 @@ WireNaturalConversionTraits<::test_inheritance::wire::SuperFooRequest,
   return ::test_inheritance::SuperFooRequest(
       WireNaturalConversionTraits<::fidl::StringView, ::std::string>::ToNatural(
           std::move(src.s)));
+}
+::test_inheritance::wire::SuperFooRequest
+WireNaturalConversionTraits<::test_inheritance::wire::SuperFooRequest,
+                            ::test_inheritance::SuperFooRequest>::
+    ToWire(fidl::AnyArena& arena, ::test_inheritance::SuperFooRequest src) {
+  return ::test_inheritance::wire::SuperFooRequest{
+      .s = WireNaturalConversionTraits<
+          ::fidl::StringView, ::std::string>::ToWire(arena, std::move(src.s())),
+  };
 }
 
 #ifdef __Fuchsia__
@@ -34,6 +52,16 @@ WireNaturalConversionTraits<::fidl::WireRequest<::test_inheritance::Super::Foo>,
           ::test_inheritance::wire::SuperFooRequest,
           ::test_inheritance::SuperFooRequest>::ToNatural(std::move(src)));
 }
+::fidl::WireRequest<::test_inheritance::Super::Foo>
+WireNaturalConversionTraits<::fidl::WireRequest<::test_inheritance::Super::Foo>,
+                            ::fidl::Request<::test_inheritance::Super::Foo>>::
+    ToWire(fidl::AnyArena& arena,
+           ::fidl::Request<::test_inheritance::Super::Foo> src) {
+  return ::fidl::WireRequest<::test_inheritance::Super::Foo>(
+      WireNaturalConversionTraits<
+          ::test_inheritance::wire::SuperFooRequest,
+          ::test_inheritance::SuperFooRequest>::ToWire(arena, std::move(src)));
+}
 
 ::fidl::Response<::test_inheritance::Super::Foo> WireNaturalConversionTraits<
     ::fidl::WireResponse<::test_inheritance::Super::Foo>,
@@ -43,6 +71,18 @@ WireNaturalConversionTraits<::fidl::WireRequest<::test_inheritance::Super::Foo>,
       WireNaturalConversionTraits<
           ::test_inheritance::wire::SuperFooTopResponse,
           ::test_inheritance::SuperFooTopResponse>::ToNatural(std::move(src)));
+}
+::fidl::WireResponse<::test_inheritance::Super::Foo>
+WireNaturalConversionTraits<
+    ::fidl::WireResponse<::test_inheritance::Super::Foo>,
+    ::fidl::Response<::test_inheritance::Super::Foo>>::
+    ToWire(fidl::AnyArena& arena,
+           ::fidl::Response<::test_inheritance::Super::Foo> src) {
+  return ::fidl::WireResponse<::test_inheritance::Super::Foo>(
+      WireNaturalConversionTraits<
+          ::test_inheritance::wire::SuperFooTopResponse,
+          ::test_inheritance::SuperFooTopResponse>::ToWire(arena,
+                                                           std::move(src)));
 }
 
 ::fidl::Request<::test_inheritance::Sub::Foo>
@@ -54,6 +94,16 @@ WireNaturalConversionTraits<::fidl::WireRequest<::test_inheritance::Sub::Foo>,
           ::test_inheritance::wire::SuperFooRequest,
           ::test_inheritance::SuperFooRequest>::ToNatural(std::move(src)));
 }
+::fidl::WireRequest<::test_inheritance::Sub::Foo>
+WireNaturalConversionTraits<::fidl::WireRequest<::test_inheritance::Sub::Foo>,
+                            ::fidl::Request<::test_inheritance::Sub::Foo>>::
+    ToWire(fidl::AnyArena& arena,
+           ::fidl::Request<::test_inheritance::Sub::Foo> src) {
+  return ::fidl::WireRequest<::test_inheritance::Sub::Foo>(
+      WireNaturalConversionTraits<
+          ::test_inheritance::wire::SuperFooRequest,
+          ::test_inheritance::SuperFooRequest>::ToWire(arena, std::move(src)));
+}
 
 ::fidl::Response<::test_inheritance::Sub::Foo>
 WireNaturalConversionTraits<::fidl::WireResponse<::test_inheritance::Sub::Foo>,
@@ -63,6 +113,17 @@ WireNaturalConversionTraits<::fidl::WireResponse<::test_inheritance::Sub::Foo>,
       WireNaturalConversionTraits<
           ::test_inheritance::wire::SuperFooTopResponse,
           ::test_inheritance::SuperFooTopResponse>::ToNatural(std::move(src)));
+}
+::fidl::WireResponse<::test_inheritance::Sub::Foo>
+WireNaturalConversionTraits<::fidl::WireResponse<::test_inheritance::Sub::Foo>,
+                            ::fidl::Response<::test_inheritance::Sub::Foo>>::
+    ToWire(fidl::AnyArena& arena,
+           ::fidl::Response<::test_inheritance::Sub::Foo> src) {
+  return ::fidl::WireResponse<::test_inheritance::Sub::Foo>(
+      WireNaturalConversionTraits<
+          ::test_inheritance::wire::SuperFooTopResponse,
+          ::test_inheritance::SuperFooTopResponse>::ToWire(arena,
+                                                           std::move(src)));
 }
 #endif  // __Fuchsia__
 }  // namespace internal

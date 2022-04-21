@@ -20,11 +20,17 @@ struct WireNaturalConversionTraits<
     ::test_inheritance::SuperFooTopResponse> {
   static ::test_inheritance::SuperFooTopResponse ToNatural(
       ::test_inheritance::wire::SuperFooTopResponse src);
+  static ::test_inheritance::wire::SuperFooTopResponse ToWire(
+      fidl::AnyArena& arena, ::test_inheritance::SuperFooTopResponse src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_inheritance::wire::SuperFooTopResponse> {
   using type = ::test_inheritance::SuperFooTopResponse;
+};
+template <>
+struct WireTypeForNaturalType<::test_inheritance::SuperFooTopResponse> {
+  using type = ::test_inheritance::wire::SuperFooTopResponse;
 };
 
 template <>
@@ -32,11 +38,17 @@ struct WireNaturalConversionTraits<::test_inheritance::wire::SuperFooRequest,
                                    ::test_inheritance::SuperFooRequest> {
   static ::test_inheritance::SuperFooRequest ToNatural(
       ::test_inheritance::wire::SuperFooRequest src);
+  static ::test_inheritance::wire::SuperFooRequest ToWire(
+      fidl::AnyArena& arena, ::test_inheritance::SuperFooRequest src);
 };
 
 template <>
 struct NaturalTypeForWireType<::test_inheritance::wire::SuperFooRequest> {
   using type = ::test_inheritance::SuperFooRequest;
+};
+template <>
+struct WireTypeForNaturalType<::test_inheritance::SuperFooRequest> {
+  using type = ::test_inheritance::wire::SuperFooRequest;
 };
 
 #ifdef __Fuchsia__
@@ -47,12 +59,19 @@ struct WireNaturalConversionTraits<
     ::fidl::Request<::test_inheritance::Super::Foo>> {
   static ::fidl::Request<::test_inheritance::Super::Foo> ToNatural(
       ::fidl::WireRequest<::test_inheritance::Super::Foo> src);
+  static ::fidl::WireRequest<::test_inheritance::Super::Foo> ToWire(
+      fidl::AnyArena& arena,
+      ::fidl::Request<::test_inheritance::Super::Foo> src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::fidl::WireRequest<::test_inheritance::Super::Foo>> {
   using type = ::fidl::Request<::test_inheritance::Super::Foo>;
+};
+template <>
+struct WireTypeForNaturalType<::fidl::Request<::test_inheritance::Super::Foo>> {
+  using type = ::fidl::WireRequest<::test_inheritance::Super::Foo>;
 };
 
 template <>
@@ -61,12 +80,20 @@ struct WireNaturalConversionTraits<
     ::fidl::Response<::test_inheritance::Super::Foo>> {
   static ::fidl::Response<::test_inheritance::Super::Foo> ToNatural(
       ::fidl::WireResponse<::test_inheritance::Super::Foo> src);
+  static ::fidl::WireResponse<::test_inheritance::Super::Foo> ToWire(
+      fidl::AnyArena& arena,
+      ::fidl::Response<::test_inheritance::Super::Foo> src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::fidl::WireResponse<::test_inheritance::Super::Foo>> {
   using type = ::fidl::Response<::test_inheritance::Super::Foo>;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::fidl::Response<::test_inheritance::Super::Foo>> {
+  using type = ::fidl::WireResponse<::test_inheritance::Super::Foo>;
 };
 
 template <>
@@ -75,12 +102,18 @@ struct WireNaturalConversionTraits<
     ::fidl::Request<::test_inheritance::Sub::Foo>> {
   static ::fidl::Request<::test_inheritance::Sub::Foo> ToNatural(
       ::fidl::WireRequest<::test_inheritance::Sub::Foo> src);
+  static ::fidl::WireRequest<::test_inheritance::Sub::Foo> ToWire(
+      fidl::AnyArena& arena, ::fidl::Request<::test_inheritance::Sub::Foo> src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::fidl::WireRequest<::test_inheritance::Sub::Foo>> {
   using type = ::fidl::Request<::test_inheritance::Sub::Foo>;
+};
+template <>
+struct WireTypeForNaturalType<::fidl::Request<::test_inheritance::Sub::Foo>> {
+  using type = ::fidl::WireRequest<::test_inheritance::Sub::Foo>;
 };
 
 template <>
@@ -89,12 +122,19 @@ struct WireNaturalConversionTraits<
     ::fidl::Response<::test_inheritance::Sub::Foo>> {
   static ::fidl::Response<::test_inheritance::Sub::Foo> ToNatural(
       ::fidl::WireResponse<::test_inheritance::Sub::Foo> src);
+  static ::fidl::WireResponse<::test_inheritance::Sub::Foo> ToWire(
+      fidl::AnyArena& arena,
+      ::fidl::Response<::test_inheritance::Sub::Foo> src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::fidl::WireResponse<::test_inheritance::Sub::Foo>> {
   using type = ::fidl::Response<::test_inheritance::Sub::Foo>;
+};
+template <>
+struct WireTypeForNaturalType<::fidl::Response<::test_inheritance::Sub::Foo>> {
+  using type = ::fidl::WireResponse<::test_inheritance::Sub::Foo>;
 };
 #endif  // __Fuchsia__
 }  // namespace internal

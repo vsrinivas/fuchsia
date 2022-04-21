@@ -20,12 +20,20 @@ struct WireNaturalConversionTraits<
     ::test_structdefaultvalueenumlibraryreference::Foo> {
   static ::test_structdefaultvalueenumlibraryreference::Foo ToNatural(
       ::test_structdefaultvalueenumlibraryreference::wire::Foo src);
+  static ::test_structdefaultvalueenumlibraryreference::wire::Foo ToWire(
+      fidl::AnyArena& arena,
+      ::test_structdefaultvalueenumlibraryreference::Foo src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_structdefaultvalueenumlibraryreference::wire::Foo> {
   using type = ::test_structdefaultvalueenumlibraryreference::Foo;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_structdefaultvalueenumlibraryreference::Foo> {
+  using type = ::test_structdefaultvalueenumlibraryreference::wire::Foo;
 };
 
 #ifdef __Fuchsia__

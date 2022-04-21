@@ -137,13 +137,13 @@ fidl("llcpptest.protocol.test") {
 test("fidl_llcpp_protocol_tests_bin") {
   output_name = "fidl_llcpp_protocol_tests"
   sources = [
-    "arena_checker.cc",
     "caller_allocating_test.cc",
     "protocol_test.cc",
     "sync_client_error_tests.cc",
   ]
   deps = [
     ":llcpptest.protocol.test_llcpp",
+    "//src/lib/fidl/llcpp/tests:arena_checker",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

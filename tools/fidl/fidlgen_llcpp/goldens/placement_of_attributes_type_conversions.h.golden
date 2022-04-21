@@ -20,12 +20,18 @@ struct WireNaturalConversionTraits<
     ::test_placementofattributes::ExampleStruct> {
   static ::test_placementofattributes::ExampleStruct ToNatural(
       ::test_placementofattributes::wire::ExampleStruct src);
+  static ::test_placementofattributes::wire::ExampleStruct ToWire(
+      fidl::AnyArena& arena, ::test_placementofattributes::ExampleStruct src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_placementofattributes::wire::ExampleStruct> {
   using type = ::test_placementofattributes::ExampleStruct;
+};
+template <>
+struct WireTypeForNaturalType<::test_placementofattributes::ExampleStruct> {
+  using type = ::test_placementofattributes::wire::ExampleStruct;
 };
 
 template <>
@@ -34,12 +40,20 @@ struct WireNaturalConversionTraits<
     ::test_placementofattributes::ExampleProtocolMethodRequest> {
   static ::test_placementofattributes::ExampleProtocolMethodRequest ToNatural(
       ::test_placementofattributes::wire::ExampleProtocolMethodRequest src);
+  static ::test_placementofattributes::wire::ExampleProtocolMethodRequest
+  ToWire(fidl::AnyArena& arena,
+         ::test_placementofattributes::ExampleProtocolMethodRequest src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_placementofattributes::wire::ExampleProtocolMethodRequest> {
   using type = ::test_placementofattributes::ExampleProtocolMethodRequest;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::test_placementofattributes::ExampleProtocolMethodRequest> {
+  using type = ::test_placementofattributes::wire::ExampleProtocolMethodRequest;
 };
 
 template <>
@@ -48,12 +62,18 @@ struct WireNaturalConversionTraits<
     ::test_placementofattributes::ExampleTable> {
   static ::test_placementofattributes::ExampleTable ToNatural(
       ::test_placementofattributes::wire::ExampleTable src);
+  static ::test_placementofattributes::wire::ExampleTable ToWire(
+      fidl::AnyArena& arena, ::test_placementofattributes::ExampleTable src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_placementofattributes::wire::ExampleTable> {
   using type = ::test_placementofattributes::ExampleTable;
+};
+template <>
+struct WireTypeForNaturalType<::test_placementofattributes::ExampleTable> {
+  using type = ::test_placementofattributes::wire::ExampleTable;
 };
 
 template <>
@@ -62,6 +82,8 @@ struct WireNaturalConversionTraits<
     ::test_placementofattributes::ExampleXUnion> {
   static ::test_placementofattributes::ExampleXUnion ToNatural(
       ::test_placementofattributes::wire::ExampleXUnion src);
+  static ::test_placementofattributes::wire::ExampleXUnion ToWire(
+      fidl::AnyArena& arena, ::test_placementofattributes::ExampleXUnion src);
 };
 
 template <>
@@ -70,12 +92,24 @@ struct WireNaturalConversionTraits<
     std::unique_ptr<::test_placementofattributes::ExampleXUnion>> {
   static std::unique_ptr<::test_placementofattributes::ExampleXUnion> ToNatural(
       ::test_placementofattributes::wire::ExampleXUnion src);
+  static ::test_placementofattributes::wire::ExampleXUnion ToWire(
+      fidl::AnyArena& arena,
+      std::unique_ptr<::test_placementofattributes::ExampleXUnion> src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_placementofattributes::wire::ExampleXUnion> {
   using type = std::unique_ptr<::test_placementofattributes::ExampleXUnion>;
+};
+template <>
+struct WireTypeForNaturalType<::test_placementofattributes::ExampleXUnion> {
+  using type = ::test_placementofattributes::wire::ExampleXUnion;
+};
+template <>
+struct WireTypeForNaturalType<
+    std::unique_ptr<::test_placementofattributes::ExampleXUnion>> {
+  using type = ::test_placementofattributes::wire::ExampleXUnion;
 };
 
 template <>
@@ -84,6 +118,8 @@ struct WireNaturalConversionTraits<
     ::test_placementofattributes::ExampleUnion> {
   static ::test_placementofattributes::ExampleUnion ToNatural(
       ::test_placementofattributes::wire::ExampleUnion src);
+  static ::test_placementofattributes::wire::ExampleUnion ToWire(
+      fidl::AnyArena& arena, ::test_placementofattributes::ExampleUnion src);
 };
 
 template <>
@@ -92,12 +128,24 @@ struct WireNaturalConversionTraits<
     std::unique_ptr<::test_placementofattributes::ExampleUnion>> {
   static std::unique_ptr<::test_placementofattributes::ExampleUnion> ToNatural(
       ::test_placementofattributes::wire::ExampleUnion src);
+  static ::test_placementofattributes::wire::ExampleUnion ToWire(
+      fidl::AnyArena& arena,
+      std::unique_ptr<::test_placementofattributes::ExampleUnion> src);
 };
 
 template <>
 struct NaturalTypeForWireType<
     ::test_placementofattributes::wire::ExampleUnion> {
   using type = std::unique_ptr<::test_placementofattributes::ExampleUnion>;
+};
+template <>
+struct WireTypeForNaturalType<::test_placementofattributes::ExampleUnion> {
+  using type = ::test_placementofattributes::wire::ExampleUnion;
+};
+template <>
+struct WireTypeForNaturalType<
+    std::unique_ptr<::test_placementofattributes::ExampleUnion>> {
+  using type = ::test_placementofattributes::wire::ExampleUnion;
 };
 
 #ifdef __Fuchsia__
@@ -110,6 +158,11 @@ struct WireNaturalConversionTraits<
   ToNatural(
       ::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>
           src);
+  static ::fidl::WireRequest<
+      ::test_placementofattributes::ExampleProtocol::Method>
+  ToWire(fidl::AnyArena& arena,
+         ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>
+             src);
 };
 
 template <>
@@ -117,6 +170,12 @@ struct NaturalTypeForWireType<::fidl::WireRequest<
     ::test_placementofattributes::ExampleProtocol::Method>> {
   using type =
       ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>;
+};
+template <>
+struct WireTypeForNaturalType<
+    ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>> {
+  using type = ::fidl::WireRequest<
+      ::test_placementofattributes::ExampleProtocol::Method>;
 };
 #endif  // __Fuchsia__
 }  // namespace internal
