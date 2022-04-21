@@ -104,7 +104,7 @@ messages to the provider.
 In this section, you'll use the generated FIDL bindings for
 `fidl.examples.routing.echo` to implement client and server components in Rust.
 
-<<../_common/_start_femu.md>>
+<<../_common/_start_femu_with_packages.md>>
 
 ### Create the server component
 

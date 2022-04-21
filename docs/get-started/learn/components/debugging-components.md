@@ -9,7 +9,7 @@
 In this exercise, you'll use the Fuchsia debugger (`zxdb`) to inspect a running
 instance of the `echo-args` component and understand the cause of a crash.
 
-<<../_common/_start_femu.md>>
+<<../_common/_start_femu_with_packages.md>>
 
 ### Start a debug session
 

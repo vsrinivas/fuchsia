@@ -1,16 +1,16 @@
 ### Start the emulator
 
-If you do not already have an instance running, start FEMU with networking
-support:
+If you do not already have an instance running, start the emulator:
 
 ```posix-terminal
-fx vdl start -N -H --start-package-server
+ffx emu start --headless
 ```
 
-When startup is complete, the emulator prints the following message and opens
-a shell prompt:
+When startup is complete, the emulator prints the following message and
+returns:
 
 ```none {:.devsite-disable-click-to-copy}
-To support fx tools on emulator, please run "fx set-device fuchsia-5254-0063-5e7a"
-$
+Logging to "{{ '<var>' }}$HOME{{ '</var>' }}/.local/share/Fuchsia/ffx/emu/instances/fuchsia-emulator/emulator.log"
+Waiting for Fuchsia to start (up to 60 seconds)........
+Emulator is ready.
 ```

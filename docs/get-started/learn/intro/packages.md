@@ -15,24 +15,36 @@ on a Fuchsia device.
 
 <<../_common/_restart_femu.md>>
 
-### Examine the package server
+### Start a local package server
 
-When the emulator device launches, the device launcher also starts a
-**local package server** that will be used to deliver packages.
+Run the following command to start a package server and enable the emulator to
+load software packages:
 
-Inspect the logs from your terminal window where the emulator was launched.
-You should find output indicating that a package server is running. Note the
-**port number** of the server:
-
-```none {:.devsite-disable-click-to-copy}
-[info] pm: Package server serving ..., at port 54189, pid: ...
-[pm serve] serving ... at http://[::]:54189
-[pm serve] 200 /
+```posix-terminal
+fx serve-updates
 ```
 
-Open a browser to `http://localhost:[server-port]`. This loads an HTML page
-listing all the packages currently available in the package repository. Each
-one of these are packages that can be delivered to the device.
+The command prints output similar to the following, indicating the server is
+running and has successfully registered the emulator as a target device:
+
+```none {:.devsite-disable-click-to-copy}
+[serve-updates] Discovery...
+[serve-updates] Device up
+[serve-updates] Registering devhost as update source
+[serve-updates] Ready to push packages!
+[serve-updates] Target uptime: 139
+[pm auto] adding client: [fe80::5888:cea3:7557:7384%qemu]:46126
+[pm auto] client count: 1
+```
+
+### Examine the package server
+
+The `fx serve-updates` command runs a **local package server** used to deliver
+packages to the target devices. By default, this server runs at on port 8083.
+
+Open a browser to `http://localhost:8083`. This loads an HTML page listing all
+the packages currently available in the package repository. Each one of these
+are packages that can be delivered to the device.
 
 ### Monitor package loading
 
@@ -43,7 +55,7 @@ From the device shell prompt, you can confirm whether a known package is
 currently on the device:
 
 ```posix-terminal
-pkgctl pkg-status fuchsia-pkg://fuchsia.com/bouncing_ball
+fx shell pkgctl pkg-status fuchsia-pkg://fuchsia.com/bouncing_ball
 ```
 
 ```none {:.devsite-disable-click-to-copy}
@@ -63,7 +75,7 @@ server.
 From the device shell prompt, attempt to resolve the package:
 
 ```posix-terminal
-pkgctl resolve fuchsia-pkg://fuchsia.com/bouncing_ball
+fx shell pkgctl resolve fuchsia-pkg://fuchsia.com/bouncing_ball
 ```
 
 Notice the new lines added to the log output for `pkg-resolver`:
@@ -78,7 +90,7 @@ Notice the new lines added to the log output for `pkg-resolver`:
 From the device shell prompt, check the package status again on the device:
 
 ```posix-terminal
-pkgctl pkg-status fuchsia-pkg://fuchsia.com/bouncing_ball
+fx shell pkgctl pkg-status fuchsia-pkg://fuchsia.com/bouncing_ball
 ```
 
 ```none {:.devsite-disable-click-to-copy}
@@ -99,8 +111,10 @@ From the device shell prompt, use the `pkgctl get-hash` command to determine the
 package hash for `bouncing_ball`:
 
 ```posix-terminal
-pkgctl get-hash fuchsia-pkg://fuchsia.com/bouncing_ball
+fx shell pkgctl get-hash fuchsia-pkg://fuchsia.com/bouncing_ball
 ```
+
+The command returns the unique package hash:
 
 ```none {:.devsite-disable-click-to-copy}
 ef65e2ed...
@@ -110,7 +124,7 @@ Provide the full package hash to the `pkgctl open` command to view the package
 contents:
 
 ```posix-terminal
-pkgctl open ef65e2ed...
+fx shell pkgctl open {{ '<var>' }}ef65e2ed...{{ '</var>' }}
 ```
 
 ```none {:.devsite-disable-click-to-copy}

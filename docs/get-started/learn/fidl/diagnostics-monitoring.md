@@ -14,7 +14,7 @@
 In this section, you'll use the diagnostics tools to monitor the health and
 behavior of the echo server component.
 
-<<../_common/_start_femu.md>>
+<<../_common/_start_femu_with_packages.md>>
 
 ### Monitor FIDL traffic
 

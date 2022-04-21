@@ -16,7 +16,7 @@ component topology. For this exercise, you will add your component to the
 product's **core realm**. Collections enable components to be dynamically
 created and destroyed at runtime.
 
-<<../_common/_start_femu.md>>
+<<../_common/_start_femu_with_packages.md>>
 
 ### Add to the component topology
 

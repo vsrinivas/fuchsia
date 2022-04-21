@@ -17,11 +17,11 @@ this exercise, you'll see how jobs and processes interact to form a tree.
 
 ### Dump the process list
 
-From the device shell prompt, you can use the `ps` command to dump the list of
+Connect to a device shell prompt and use the `ps` command to dump the list of
 running jobs and processes.
 
 ```posix-terminal
-ps
+fx shell ps
 ```
 
 Below is a trimmed example of what the output looks like:

@@ -29,11 +29,11 @@ You'll explore more about what this structure means shortly.
 </aside>
 
 
-From the device shell prompt, enter the `ls` command to list the components of
-the `core` realm under `/hub-v2/children/core/children`:
+Connect to a device shell prompt and enter the following `ls` command to list
+the components of the `core` realm under `/hub-v2/children/core/children`:
 
 ```posix-terminal
-ls /hub-v2/children/core/children
+fx shell ls /hub-v2/children/core/children
 ```
 
 ```none {:.devsite-disable-click-to-copy}
@@ -51,7 +51,7 @@ more details about a specific component, list its directory contents.
 Try this for the `http-client` component:
 
 ```posix-terminal
-ls /hub-v2/children/core/children/network/children/http-client
+fx shell ls /hub-v2/children/core/children/network/children/http-client
 ```
 
 ```none {:.devsite-disable-click-to-copy}
@@ -71,7 +71,7 @@ You'll find a running component's **namespace** under the `exec/in` path inside
 the hub.
 
 ```posix-terminal
-ls /hub-v2/children/core/children/network/children/http-client/exec/in
+fx shell ls /hub-v2/children/core/children/network/children/http-client/exec/in
 ```
 
 ```none {:.devsite-disable-click-to-copy}
@@ -92,7 +92,7 @@ directory contains
 representing the system services provided to this component.
 
 ```posix-terminal
-ls /hub-v2/children/core/children/network/children/http-client/exec/in/svc
+fx shell ls /hub-v2/children/core/children/network/children/http-client/exec/in/svc
 ```
 
 ```none {:.devsite-disable-click-to-copy}
@@ -110,7 +110,7 @@ List the contents of the outgoing `svc/` directory to see the system services
 this component provides.
 
 ```posix-terminal
-ls /hub-v2/children/core/children/network/children/http-client/exec/out/svc
+fx shell ls /hub-v2/children/core/children/network/children/http-client/exec/out/svc
 ```
 
 ```none {:.devsite-disable-click-to-copy}

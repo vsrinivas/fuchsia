@@ -1,12 +1,6 @@
+### Start the emulator
 
-### Restart the emulator
-
-1.  Run the following command to close any emulator instances you currently have
-    open:
-
-    ```posix-terminal
-    ffx emu stop --all
-    ```
+If you do not already have an instance running, start the emulator:
 
 1.  Start a new emulator instance:
 
@@ -21,4 +15,10 @@
     Logging to "{{ '<var>' }}$HOME{{ '</var>' }}/.local/share/Fuchsia/ffx/emu/instances/fuchsia-emulator/emulator.log"
     Waiting for Fuchsia to start (up to 60 seconds)........
     Emulator is ready.
+    ```
+
+1.  Start a package server to enable the emulator to load software packages:
+
+    ```posix-terminal
+    fx serve-updates
     ```
