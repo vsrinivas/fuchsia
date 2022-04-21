@@ -11,6 +11,7 @@ from typing import Set
 
 from depfile import DepFile
 from assembly import AssemblyInputBundle
+from serialization.serialization import json_load
 
 
 def generate_package_creation_manifest(args: argparse.Namespace) -> None:
@@ -94,22 +95,22 @@ def generate_archive(args: argparse.Namespace) -> None:
 
 
 def diff_bundles(args: argparse.Namespace) -> None:
-    first = AssemblyInputBundle.load(args.first)
-    second = AssemblyInputBundle.load(args.second)
+    first = AssemblyInputBundle.json_load(args.first)
+    second = AssemblyInputBundle.json_load(args.second)
     result = first.difference(second)
     if args.output:
-        result.dump(args.output)
+        result.json_dump(args.output)
     else:
         print(result)
 
 
 def intersect_bundles(args: argparse.Namespace) -> None:
-    bundles = [AssemblyInputBundle.load(file) for file in args.bundles]
+    bundles = [AssemblyInputBundle.json_load(file) for file in args.bundles]
     result = bundles[0]
     for next_bundle in bundles[1:]:
         result = result.intersection(next_bundle)
     if args.output:
-        result.dump(args.output)
+        result.json_dump(args.output)
     else:
         print(result)
 

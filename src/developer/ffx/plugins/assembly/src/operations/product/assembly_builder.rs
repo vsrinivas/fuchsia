@@ -101,7 +101,7 @@ impl ImageAssemblyConfigBuilder {
         bundle: AssemblyInputBundle,
     ) -> Result<()> {
         let bundle_path = bundle_path.as_ref();
-        let AssemblyInputBundle { image_assembly: bundle, config_data } = bundle;
+        let AssemblyInputBundle { image_assembly: bundle, config_data, blobs: _ } = bundle;
 
         Self::add_bundle_packages(bundle_path, &bundle.base, &mut self.base)?;
         Self::add_bundle_packages(bundle_path, &bundle.cache, &mut self.cache)?;
@@ -466,6 +466,7 @@ mod tests {
                 }],
             },
             config_data: BTreeMap::default(),
+            blobs: Vec::default(),
         }
     }
 
@@ -581,6 +582,7 @@ mod tests {
                 ..image_assembly_config::PartialImageAssemblyConfig::default()
             },
             config_data: BTreeMap::default(),
+            blobs: Vec::default(),
         };
         let mut builder = ImageAssemblyConfigBuilder::default();
         builder.add_parsed_bundle(outdir.path().join("minimum_bundle"), minimum_bundle).unwrap();
@@ -619,6 +621,7 @@ mod tests {
                 ..image_assembly_config::PartialImageAssemblyConfig::default()
             },
             config_data: BTreeMap::default(),
+            blobs: Vec::default(),
         };
         let mut builder = ImageAssemblyConfigBuilder::default();
         builder.add_parsed_bundle(outdir.path().join("minimum_bundle"), minimum_bundle).unwrap();

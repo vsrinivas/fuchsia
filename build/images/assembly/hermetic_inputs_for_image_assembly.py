@@ -68,7 +68,7 @@ def main():
 
     args = parser.parse_args()
 
-    config = ImageAssemblyConfig.load(args.image_assembly_config)
+    config = ImageAssemblyConfig.json_load(args.image_assembly_config)
 
     # Collect the list of files that are read in this script.
     deps = []

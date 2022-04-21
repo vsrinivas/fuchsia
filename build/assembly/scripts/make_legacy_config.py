@@ -261,7 +261,7 @@ def copy_file_entries(entries: FileEntrySet, outdir: FilePath,
         # out-of-tree layout, and the same destination.
         results.append(
             FileEntry(
-                source_path=rebased_destination, dest_path=entry.destination))
+                source=rebased_destination, destination=entry.destination))
 
         # Add the copied file's source/destination to the set of touched files.
         deps.add(entry.source)
@@ -312,7 +312,7 @@ def copy_config_data_entries(
 
         # Append the entry to the set of entries for the package
         results.setdefault(package_name, set()).add(
-            FileEntry(source_path=rebased_source_path, dest_path=file_path))
+            FileEntry(source=rebased_source_path, destination=file_path))
 
         # Add the copy operation to the depfile
         deps.add(entry.source)
@@ -341,9 +341,9 @@ def main():
     os.makedirs(args.outdir)
 
     # Read in the legacy config and the others to subtract from it
-    legacy: ImageAssemblyConfig = ImageAssemblyConfig.load(
+    legacy: ImageAssemblyConfig = ImageAssemblyConfig.json_load(
         args.image_assembly_config)
-    subtract = [ImageAssemblyConfig.load(other) for other in args.subtract]
+    subtract = [ImageAssemblyConfig.json_load(other) for other in args.subtract]
 
     # Subtract each from the legacy config, in the order given in args.
     for other in subtract:
@@ -373,7 +373,7 @@ def main():
     # file as the dest_path, which will be rebased when generating the fini
     # manifest later.
     with open(assembly_config_manifest_path, 'w') as outfile:
-        assembly_input_bundle.write_to(outfile)
+        assembly_input_bundle.json_dump(outfile, indent=2)
 
     # Write out a fini manifest of the files that have been copied, to create a
     # package or archive that contains all of the files in the bundle.

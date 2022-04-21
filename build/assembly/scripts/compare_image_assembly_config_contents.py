@@ -188,8 +188,8 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    first = ImageAssemblyConfig.load(args.first)
-    second = ImageAssemblyConfig.load(args.second)
+    first = ImageAssemblyConfig.json_load(args.first)
+    second = ImageAssemblyConfig.json_load(args.second)
 
     errors = []
     errors.extend(compare_pkg_sets(first.base, second.base, "base"))

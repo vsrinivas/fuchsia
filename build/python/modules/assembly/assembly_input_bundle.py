@@ -8,15 +8,17 @@ of-tree (OOT) assembly as a unit, but whose contents should be opaque to the
 delivery system itself.
 
 """
-import json
+from dataclasses import dataclass, field
 import os
-from typing import Dict, List, Set, TextIO, Union
+import pathlib
+from typing import Any, Dict, List, Optional, Set, TextIO, Tuple
 
-from depfile.depfile import FilePath
+import serialization
+from serialization import json_dump, json_load, serialize_json
 
-from .image_assembly_config import ImageAssemblyConfig
-from .common import FileEntry
-from .utils import set_named_member_if_present
+from .image_assembly_config import ImageAssemblyConfig, KernelInfo
+from .common import FileEntry, FilePath, fast_copy
+from .package_manifest import BlobEntry, PackageManifest
 
 __all__ = ["AssemblyInputBundle", "ConfigDataEntries"]
 
@@ -24,6 +26,8 @@ PackageName = str
 ConfigDataEntries = Dict[PackageName, Set[FileEntry]]
 
 
+@dataclass
+@serialize_json
 class AssemblyInputBundle(ImageAssemblyConfig):
     """AssemblyInputBundle wraps a set of artifacts together for use by out-of-tree assembly, both
     the manifest of the artifacts, and the artifacts themselves.
@@ -71,7 +75,7 @@ class AssemblyInputBundle(ImageAssemblyConfig):
             "kernel": {
                 "path": "kernel/kernel.zbi",
                 "args": [ "arg1", "arg2", ... ],
-                "clock_backstop": "01234"
+                "clock_backstop": 01234
             }
             "boot_args": [ "arg1", "arg2", ... ],
         }
@@ -82,51 +86,12 @@ class AssemblyInputBundle(ImageAssemblyConfig):
     The AssemblyInputBundle is an extension of the ImageAssemblyConfig class, adding new categories
     that it supports which aren't in the ImageAssemblyConfig.
     """
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.config_data: ConfigDataEntries = {}
-        self.blobs: Union[None, Set[FilePath]] = None
-
-    @classmethod
-    def from_dict(cls, dict: Dict) -> 'AssemblyInputBundle':
-        result = super().from_dict(dict)
-        set_named_member_if_present(
-            result,
-            "bootfs_files",
-            dict,
-            transform=lambda items: set(
-                [FileEntry.from_dict(item) for item in items]))
-        if "config_data" in dict:
-            for (package, entries) in dict["config_data"].items():
-                result.config_data[package] = set(
-                    [FileEntry.from_dict(entry) for entry in entries])
-        return result
-
-    def to_dict(self) -> Dict:
-        """Dump the object out as a dict."""
-        result = super().to_dict()
-        config_data = {}
-        for (package, entries) in sorted(self.config_data.items()):
-            config_data[package] = [
-                entry.to_dict() for entry in sorted(entries)
-            ]
-        if config_data:
-            result['config_data'] = config_data
-        return result
-
-    def write_to(self, file) -> None:
-        """Write to a file (JSON format)"""
-        json.dump(self.to_dict(), file, indent=2)
+    config_data: ConfigDataEntries = field(default_factory=dict)
+    blobs: Set[FilePath] = field(default_factory=set)
 
     def __repr__(self) -> str:
         """Serialize to a JSON string"""
-        return json.dumps(self.to_dict(), indent=2)
-
-    def __eq__(self, other):
-        """ This is temporary, and will be shortly removed in another CL
-        """
-        return str(self) == str(other)
+        return serialization.json_dumps(self, indent=2)
 
     def intersection(
             self, other: 'AssemblyInputBundle') -> 'AssemblyInputBundle':

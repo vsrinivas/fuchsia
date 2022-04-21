@@ -4,11 +4,14 @@
 """Python Types that are shared across different parts of the assembly types
 
 """
+from dataclasses import dataclass
 from functools import total_ordering
 import os
 import shutil
 from typing import Dict, Iterable, TextIO, Union
 from os import PathLike
+
+import serialization
 
 __all__ = ["FileEntry", "FilePath", "fast_copy"]
 
@@ -17,32 +20,17 @@ FilePath = Union[str, os.PathLike]
 
 # TODO(fxb/89571) Move to python module at //build/python/modules/file_entry
 @total_ordering
+@dataclass
+@serialization.serialize_dict
 class FileEntry:
     """FileEntry Class
 
     This is a source_path=destination_path mapping type
     """
-
-    def __init__(self, source_path: FilePath, dest_path: FilePath) -> None:
-        """Constructor from source and destination paths.
-        """
-        self.source = source_path
-        self.destination = dest_path
-
-    @classmethod
-    def from_dict(cls, entry: Dict[str, str]) -> 'FileEntry':
-        """Create from a dictionary (parsed JSON)
-        """
-        return cls(source_path=entry["source"], dest_path=entry["destination"])
-
-    def to_dict(self) -> Dict[str, str]:
-        """Serialize to a dictionary
-        """
-        # Note: This order matches the format in other places, for easier diffing
-        return {
-            "source": str(self.source),
-            "destination": str(self.destination),
-        }
+    # TODO(fxbug.dev/98573) Mark these fields to `kw_only=True` after switching
+    #   to python 3.10 or later.
+    source: FilePath
+    destination: FilePath
 
     def get_destination(self) -> str:
         """Destination accessor method

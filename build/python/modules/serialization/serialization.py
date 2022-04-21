@@ -187,7 +187,7 @@ def get_named_values_from(
             has_default = has_default_value(for_cls, name)
             if not has_default:
                 raise KeyError(
-                    "param '{}' not found in dict:\n{}".format(
+                    "unable to find required value for '{}' in: {}".format(
                         name, entries.keys()))
 
     return values

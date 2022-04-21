@@ -20,7 +20,7 @@ def fast_copy_mock(
     """A bindable-mock of assembly.fast_copy() that tracks all of the copies
     that it's asked to perform in the passed-in list.
     """
-    tracked_copies.append(FileEntry(source_path=src, dest_path=dst))
+    tracked_copies.append(FileEntry(source=src, destination=dst))
 
 
 def create_fast_copy_mock_instance() -> Tuple[Callable, List[FileEntry]]:
@@ -122,11 +122,10 @@ class MakeLegacyConfig(unittest.TestCase):
                 set(
                     [
                         FileEntry(
-                            source_path="bootfs/some/file",
-                            dest_path="some/file"),
+                            source="bootfs/some/file", destination="some/file"),
                         FileEntry(
-                            source_path="bootfs/another/file",
-                            dest_path="another/file"),
+                            source="bootfs/another/file",
+                            destination="another/file"),
                     ]))
 
             # Make sure all the manifests were created in the correct location.
@@ -222,107 +221,107 @@ class MakeLegacyConfig(unittest.TestCase):
                 set(
                     [
                         FileEntry(
-                            source_path='source/base_a/internal/path/file_a_1',
-                            dest_path=
+                            source='source/base_a/internal/path/file_a_1',
+                            destination=
                             'outdir/blobs/efac096092f7cf879c72ac51d23d9f142e97405dec7dd9c69aeee81de083f794'
                         ),
                         FileEntry(
-                            source_path='source/base_a/internal/path/file_a_1',
-                            dest_path=
+                            source='source/base_a/internal/path/file_a_1',
+                            destination=
                             'outdir/blobs/efac096092f7cf879c72ac51d23d9f142e97405dec7dd9c69aeee81de083f794'
                         ),
                         FileEntry(
-                            source_path='source/base_a/internal/path/file_a_2',
-                            dest_path=
+                            source='source/base_a/internal/path/file_a_2',
+                            destination=
                             'outdir/blobs/bf0c3ae1356b5863258f73a37d555cf878007b8bfe4fd780d74466ec62fe062d'
                         ),
                         FileEntry(
-                            source_path='source/base_a/internal/path/file_a_3',
-                            dest_path=
+                            source='source/base_a/internal/path/file_a_3',
+                            destination=
                             'outdir/blobs/a2e574ccd55c815f0a87c4f27e7a3115fe8e46d41a2e0caf2a91096a41421f78'
                         ),
                         FileEntry(
-                            source_path='source/base_b/internal/path/file_b_1',
-                            dest_path=
+                            source='source/base_b/internal/path/file_b_1',
+                            destination=
                             'outdir/blobs/ae9fd81e1c2fd1b084ec2c362737e812c5ef9b3aa8cb0538ec8e2269ea7fbe1a'
                         ),
                         FileEntry(
-                            source_path='source/base_b/internal/path/file_b_2',
-                            dest_path=
+                            source='source/base_b/internal/path/file_b_2',
+                            destination=
                             'outdir/blobs/d3cd38c4881c3bc31f1e2e397a548d431a6430299785446f28be10cc5b76d92b'
                         ),
                         FileEntry(
-                            source_path='source/base_b/internal/path/file_b_3',
-                            dest_path=
+                            source='source/base_b/internal/path/file_b_3',
+                            destination=
                             'outdir/blobs/6468d9d6761c8afcc97744dfd9e066f29bb697a9a0c8248b5e6eec989134a048'
                         ),
                         FileEntry(
-                            source_path='source/cache_a/internal/path/file_a_1',
-                            dest_path=
+                            source='source/cache_a/internal/path/file_a_1',
+                            destination=
                             'outdir/blobs/f0601d51be1ec8c11d825b756841937706eb2805ce9b924b67b4b0dc14caba29'
                         ),
                         FileEntry(
-                            source_path='source/cache_a/internal/path/file_a_2',
-                            dest_path=
+                            source='source/cache_a/internal/path/file_a_2',
+                            destination=
                             'outdir/blobs/1834109a42a5ff6501fbe05216475b2b0acc44e0d9c94924469a485d6f45dc86'
                         ),
                         FileEntry(
-                            source_path='source/cache_a/internal/path/file_a_3',
-                            dest_path=
+                            source='source/cache_a/internal/path/file_a_3',
+                            destination=
                             'outdir/blobs/0f32059964674afd810001c76c2a5d783a2ce012c41303685ec1adfdb83290fd'
                         ),
                         FileEntry(
-                            source_path='source/cache_b/internal/path/file_b_1',
-                            dest_path=
+                            source='source/cache_b/internal/path/file_b_1',
+                            destination=
                             'outdir/blobs/301e8584305e63f0b764daf52dcf312eecb6378b201663fcc77d7ad68aab1f23'
                         ),
                         FileEntry(
-                            source_path='source/cache_b/internal/path/file_b_2',
-                            dest_path=
+                            source='source/cache_b/internal/path/file_b_2',
+                            destination=
                             'outdir/blobs/8135016519df51d386efaea9b02f50cb454b6c7afe69c77895c1d4d844c3584d'
                         ),
                         FileEntry(
-                            source_path='source/cache_b/internal/path/file_b_3',
-                            dest_path=
+                            source='source/cache_b/internal/path/file_b_3',
+                            destination=
                             'outdir/blobs/b548948fd2dc40574775308a92a8330e5c5d84ddf31513d1fe69964b458479e7'
                         ),
                         FileEntry(
-                            source_path='source/system_a/internal/path/file_a_1',
-                            dest_path=
+                            source='source/system_a/internal/path/file_a_1',
+                            destination=
                             'outdir/blobs/8ca898b1389c58b6cd9a6a777e320f2756ab3437b402c61d774dd2758ad9cf06'
                         ),
                         FileEntry(
-                            source_path='source/system_a/internal/path/file_a_2',
-                            dest_path=
+                            source='source/system_a/internal/path/file_a_2',
+                            destination=
                             'outdir/blobs/ef84c6711eaba482164fe4eb08a6c45f18fe62d493e5a31a631c32937bf7229d'
                         ),
                         FileEntry(
-                            source_path='source/system_a/internal/path/file_a_3',
-                            dest_path=
+                            source='source/system_a/internal/path/file_a_3',
+                            destination=
                             'outdir/blobs/d66cb673257e25393a319fb2c3e9745ef6e0f1cfa4fb89c5576df73cd3eba586'
                         ),
                         FileEntry(
-                            source_path='source/system_b/internal/path/file_b_1',
-                            dest_path=
+                            source='source/system_b/internal/path/file_b_1',
+                            destination=
                             'outdir/blobs/fd0891d15ce65d7682f7437e441e917b8ed4bde4db07a11dc100104f25056051'
                         ),
                         FileEntry(
-                            source_path='source/system_b/internal/path/file_b_2',
-                            dest_path=
+                            source='source/system_b/internal/path/file_b_2',
+                            destination=
                             'outdir/blobs/c244c7c6ebf40a9a4c9d59e7b08a1cf54ae3d60404d1cecb417a7b55cc308d91'
                         ),
                         FileEntry(
-                            source_path='source/system_b/internal/path/file_b_3',
-                            dest_path=
+                            source='source/system_b/internal/path/file_b_3',
+                            destination=
                             'outdir/blobs/0cdbf3e4f1246ce7522e78c21bcf1c3aef2d41ac2b4de3f0ee98fc6273f62eb9'
                         ),
                         FileEntry(
-                            source_path='source/kernel.bin',
-                            dest_path='outdir/kernel/kernel.bin'),
+                            source='source/kernel.bin',
+                            destination='outdir/kernel/kernel.bin'),
                         FileEntry(
-                            source_path='source/some/file',
-                            dest_path='outdir/bootfs/some/file'),
+                            source='source/some/file',
+                            destination='outdir/bootfs/some/file'),
                         FileEntry(
-                            source_path='source/another/file',
-                            dest_path='outdir/bootfs/another/file'),
+                            source='source/another/file',
+                            destination='outdir/bootfs/another/file'),
                     ]))

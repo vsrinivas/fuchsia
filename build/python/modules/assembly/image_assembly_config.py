@@ -7,46 +7,26 @@ This module contains Python classes for working with files that have the same
 schema as `//src/developer/ffx/plugins/assembly`.
 """
 
-import json
-from multiprocessing.sharedctypes import Value
-from typing import Dict, Set, Type, TypeVar, Union
+from dataclasses import dataclass, field
+from typing import Optional, Set, TypeVar
+
+import serialization
 
 __all__ = ["ImageAssemblyConfig", "KernelInfo"]
 
 from .common import FileEntry, FilePath
-from .utils import *
 from .utils import difference_field, intersect_field
 
 ExtendsImageAssemblyConfig = TypeVar(
     'ExtendsImageAssemblyConfig', bound='ImageAssemblyConfig')
 
 
+@dataclass
 class KernelInfo:
     """Information about the kernel"""
-
-    def __init__(self) -> None:
-        self.path: Union[FilePath, None] = None
-        self.args: Set[str] = set()
-        self.clock_backstop: Union[int, None] = None
-
-    @classmethod
-    def from_dict(cls, entry: Dict[str, str]) -> 'KernelInfo':
-        """Create from a dictionary (parsed JSON)
-        """
-        result = cls()
-        set_named_member_if_present(result, 'path', entry)
-        set_named_member_if_present(result, 'args', entry, transform=set)
-        set_named_member_if_present(result, 'clock_backstop', entry)
-        return result
-
-    def to_dict(self) -> Dict:
-        """Dump the object out as a dict."""
-        result = {}
-        set_if_named_member_not_empty(result, 'path', self)
-        set_if_named_member_not_empty(result, 'args', self, sort=True)
-        if self.clock_backstop:
-            result['clock_backstop'] = self.clock_backstop
-        return result
+    path: Optional[FilePath] = None
+    args: Set[str] = field(default_factory=set)
+    clock_backstop: Optional[int] = None
 
     def intersection(self, other: 'KernelInfo') -> 'KernelInfo':
         """Return the intersection of the two KernelInfo's
@@ -66,90 +46,26 @@ class KernelInfo:
         result.args = self.args.difference(other.args)
         return result
 
-    def __repr__(self):
-        return f"KernelInfo{{ path: '{self.path}', args: {self.args}, backstop: {self.clock_backstop} }}"
 
-    def __eq__(self, other):
-        if not isinstance(other, KernelInfo):
-            raise ValueError("other is not a KernelInfo")
-        return (self.path, self.args, self.clock_backstop) == (
-            other.path, other.args, other.clock_backstop)
-
-
+@dataclass
+@serialization.serialize_json
 class ImageAssemblyConfig:
     """The input configuration for the Image Assembly Operation
 
     This describes all the packages, bootfs files, kernel args, kernel, etc.
     that are to be combined into a complete set of assembled product images.
     """
-
-    def __init__(self) -> None:
-        """Default constructor
-        """
-        self.base: Set[FilePath] = set()
-        self.cache: Set[FilePath] = set()
-        self.system: Set[FilePath] = set()
-        self.kernel = KernelInfo()
-        self.boot_args: Set[str] = set()
-        self.bootfs_files: Set[FileEntry] = set()
-        self.bootfs_packages: Set[FilePath] = set()
-
-    @classmethod
-    def from_dict(
-            cls: Type[ExtendsImageAssemblyConfig],
-            dict: Dict) -> ExtendsImageAssemblyConfig:
-        """Create an instance of ImageAssemblyConfig from a dict that was parsed
-        """
-        result = cls()
-        set_named_member_if_present(result, "base", dict, transform=set)
-        set_named_member_if_present(result, "cache", dict, transform=set)
-        set_named_member_if_present(result, "system", dict, transform=set)
-        set_named_member_if_present(
-            result, "kernel", dict, transform=KernelInfo.from_dict)
-        set_named_member_if_present(result, "boot_args", dict, transform=set)
-        set_named_member_if_present(
-            result,
-            "bootfs_files",
-            dict,
-            transform=lambda items: set(
-                [FileEntry.from_dict(item) for item in items]))
-        set_named_member_if_present(
-            result, "bootfs_packages", dict, transform=set)
-        return result
-
-    @classmethod
-    def load(cls, fp) -> 'ImageAssemblyConfig':
-        """Create an instance of ImageAssemblyConfig by parsing a JSON file
-        """
-        parsed = json.load(fp)
-        return cls.from_dict(parsed)
-
-    def to_dict(self) -> Dict:
-        """Convert to a dictionary that can be serialized to JSON
-        """
-        result = {}
-        set_if_not_empty(result, "base", self.base, sort=True)
-        set_if_not_empty(result, "cache", self.cache, sort=True)
-        set_if_not_empty(result, "system", self.system, sort=True)
-        set_if_not_empty(result, "kernel", self.kernel.to_dict())
-        set_if_not_empty(result, "boot_args", self.boot_args, sort=True)
-        set_if_not_empty(
-            result,
-            "bootfs_files",
-            sorted(self.bootfs_files),
-            transform=FileEntry.to_dict)
-        set_if_not_empty(
-            result, "bootfs_packages", self.bootfs_packages, sort=True)
-        return result
-
-    def dump(self, fp) -> None:
-        """Serialize to a file (JSON)
-        """
-        json.dump(self.to_dict(), fp, indent=2)
+    base: Set[FilePath] = field(default_factory=set)
+    cache: Set[FilePath] = field(default_factory=set)
+    system: Set[FilePath] = field(default_factory=set)
+    kernel: KernelInfo = field(default_factory=KernelInfo)
+    boot_args: Set[str] = field(default_factory=set)
+    bootfs_files: Set[FileEntry] = field(default_factory=set)
+    bootfs_packages: Set[FilePath] = field(default_factory=set)
 
     def __repr__(self) -> str:
         """Serialize to a JSON string"""
-        return json.dumps(self.to_dict(), indent=2)
+        return serialization.json_dumps(self, indent=2)
 
     def intersection(
             self: ExtendsImageAssemblyConfig,

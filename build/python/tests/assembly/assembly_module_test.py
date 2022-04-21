@@ -145,6 +145,7 @@ raw_assembly_input_bundle_json = """{
       "destination": "path/to/destination"
     }
   ],
+  "bootfs_packages": [],
   "config_data": {
     "package1": [
       {
@@ -152,7 +153,8 @@ raw_assembly_input_bundle_json = """{
         "destination": "config.json"
       }
     ]
-  }
+  },
+  "blobs": []
 }"""
 
 
@@ -174,7 +176,8 @@ class AssemblyInputBundleTest(unittest.TestCase):
         aib.config_data["package1"] = set(
             [FileEntry("path/to/source.json", "config.json")])
 
-        self.assertEqual(str(aib), raw_assembly_input_bundle_json)
+        self.assertEqual(
+            aib.json_dumps(indent=2), raw_assembly_input_bundle_json)
 
     def test_deserialization(self):
 
@@ -192,8 +195,8 @@ class AssemblyInputBundleTest(unittest.TestCase):
         aib.config_data["package1"] = set(
             [FileEntry("path/to/source.json", "config.json")])
 
-        parsed_aib = AssemblyInputBundle.from_dict(
-            json.loads(raw_assembly_input_bundle_json))
+        parsed_aib = AssemblyInputBundle.json_loads(
+            raw_assembly_input_bundle_json)
 
         def assert_field_equal(parsed, expected, field_name):
             self.assertEqual(

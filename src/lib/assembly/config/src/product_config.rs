@@ -167,6 +167,11 @@ pub struct AssemblyInputBundle {
     /// Entries for the `config_data` package.
     #[serde(default)]
     pub config_data: BTreeMap<String, Vec<FileEntry>>,
+
+    /// The blobs index of the AIB.  This currently isn't used by product
+    /// assembly, as the package manifests contain the same information.
+    #[serde(default)]
+    pub blobs: Vec<Utf8PathBuf>,
 }
 
 #[cfg(test)]
