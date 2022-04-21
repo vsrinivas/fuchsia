@@ -25,6 +25,7 @@ class MetricsReporter {
   class ConfigurationRecord;
   class ImageFormatRecord;
   class StreamRecord;
+  class FailureTestRecord;
 
   // Gets a reference to the MetricsReporter object.
   //
@@ -56,6 +57,24 @@ class MetricsReporter {
   // |num_streams| This is the number of streams that the configuration with a given index has.
   std::unique_ptr<ConfigurationRecord> CreateConfigurationRecord(uint32_t index,
                                                                  size_t num_streams);
+
+  using FailureTestRecordType = camera__metrics::CameraMetricDimensionFailureTestType;
+  // Creates a FailureTestRecord representing a potential failure occurrence. When the class is
+  // destroyed, the occurrence is logged as either failure or non-failure depending on its state at
+  // the time of destruction. Callers can use the |initial_failure| parameter and ignore the
+  // returned record to provide immediate-mode recording.
+  //
+  // |type| The failure class for the record.
+  //
+  // |initial_failure| The initial failure state of the record.
+  //
+  // |config_index| If specified, the configuration this failure applies to.
+  //
+  // |stream_index| If specified, the stream this failure applies to.
+  std::unique_ptr<FailureTestRecord> CreateFailureTestRecord(
+      FailureTestRecordType type, bool initial_failure = true,
+      std::optional<uint32_t> config_index = std::nullopt,
+      std::optional<uint32_t> stream_index = std::nullopt);
 
  private:
   explicit MetricsReporter() = default;
@@ -163,6 +182,26 @@ class MetricsReporter {
     inspect::BoolProperty active_node_;
     inspect::Node stream_node_;
     std::vector<StreamRecord> stream_records_;
+  };
+
+  // FailureTestRecord records a potential occurrence of a specific class of failure in the camera
+  // system, and subsequently whether or not the failure actually occurred.
+  class FailureTestRecord {
+   public:
+    explicit FailureTestRecord(MetricsReporter::Impl& impl, FailureTestRecordType type,
+                               bool initial_failure, std::optional<uint32_t> config_index,
+                               std::optional<uint32_t> stream_index);
+    ~FailureTestRecord();
+
+    // Sets the record failure state to the provided value.
+    void SetFailureState(bool failed);
+
+   private:
+    MetricsReporter::Impl& impl_;
+    FailureTestRecordType type_;
+    bool failed_;
+    camera__metrics::CameraMetricDimensionConfigIndex config_index_;
+    camera__metrics::CameraMetricDimensionStreamIndex stream_index_;
   };
 };
 

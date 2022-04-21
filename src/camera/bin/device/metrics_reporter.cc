@@ -197,6 +197,14 @@ std::unique_ptr<MetricsReporter::ConfigurationRecord> MetricsReporter::CreateCon
   return std::make_unique<ConfigurationRecord>(*impl_, index, num_streams);
 }
 
+std::unique_ptr<MetricsReporter::FailureTestRecord> MetricsReporter::CreateFailureTestRecord(
+    FailureTestRecordType type, bool initial_failure, std::optional<uint32_t> config_index,
+    std::optional<uint32_t> stream_index) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  return std::make_unique<FailureTestRecord>(*impl_, type, initial_failure, config_index,
+                                             stream_index);
+}
+
 MetricsReporter::StreamRecord::StreamRecord(MetricsReporter::Impl& impl, inspect::Node& parent,
                                             uint32_t config_index, uint32_t stream_index)
     : impl_(impl),
@@ -262,5 +270,70 @@ void MetricsReporter::ImageFormatRecord::Set(const fuchsia::sysmem::ImageFormat_
                                                       format.pixel_aspect_ratio_height));
   }
 }
+
+static camera__metrics::CameraMetricDimensionConfigIndex ConfigIndexDimension(
+    std::optional<uint32_t> index) {
+  if (index) {
+    switch (*index) {
+      case 0:
+        return camera__metrics::CameraMetricDimensionConfigIndex::Config0;
+      case 1:
+        return camera__metrics::CameraMetricDimensionConfigIndex::Config1;
+      case 2:
+        return camera__metrics::CameraMetricDimensionConfigIndex::Config2;
+      default:
+        FX_LOGS(ERROR) << "Invalid config index " << *index;
+        break;
+    }
+  }
+  return camera__metrics::CameraMetricDimensionConfigIndex::NotApplicable;
+}
+
+static camera__metrics::CameraMetricDimensionStreamIndex StreamIndexDimension(
+    std::optional<uint32_t> index) {
+  if (index) {
+    switch (*index) {
+      case 0:
+        return camera__metrics::CameraMetricDimensionStreamIndex::Stream0;
+      case 1:
+        return camera__metrics::CameraMetricDimensionStreamIndex::Stream1;
+      case 2:
+        return camera__metrics::CameraMetricDimensionStreamIndex::Stream2;
+      default:
+        FX_LOGS(ERROR) << "Invalid stream index " << *index;
+        break;
+    }
+  }
+  return camera__metrics::CameraMetricDimensionStreamIndex::NotApplicable;
+}
+
+MetricsReporter::FailureTestRecord::FailureTestRecord(MetricsReporter::Impl& impl,
+                                                      FailureTestRecordType type,
+                                                      bool initial_failure,
+                                                      std::optional<uint32_t> config_index,
+                                                      std::optional<uint32_t> stream_index)
+    : impl_{impl},
+      type_{type},
+      failed_{initial_failure},
+      config_index_{ConfigIndexDimension(config_index)},
+      stream_index_{StreamIndexDimension(stream_index)} {}
+
+MetricsReporter::FailureTestRecord::~FailureTestRecord() {
+  TRACE_INSTANT("camera", "FailureTestRecordLogged", TRACE_SCOPE_GLOBAL, "type", type_, "failed",
+                failed_);
+
+  if (!impl_.logger_) {
+    return;
+  }
+
+  const auto failure_state = failed_
+                                 ? camera__metrics::CameraMetricDimensionFailureTestResult::Failure
+                                 : camera__metrics::CameraMetricDimensionFailureTestResult::Success;
+  impl_.logger_->LogOccurrence(
+      camera__metrics::kCameraFailureFrequencyMetricId,
+      cobalt::Logger::BuildDimension(type_, failure_state, config_index_, stream_index_));
+}
+
+void MetricsReporter::FailureTestRecord::SetFailureState(bool failed) { failed_ = failed; }
 
 }  // namespace camera

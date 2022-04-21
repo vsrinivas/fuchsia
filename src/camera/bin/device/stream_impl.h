@@ -36,13 +36,14 @@ class StreamImpl {
   using BuffersRequestedCallback = fit::function<void(fuchsia::sysmem::BufferCollectionTokenHandle,
                                                       fit::function<void(uint32_t)>)>;
 
-  StreamImpl(async_dispatcher_t* dispatcher, MetricsReporter::StreamRecord& record,
-             const fuchsia::camera3::StreamProperties2& properties,
-             const fuchsia::camera2::hal::StreamConfig& legacy_config,
-             fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
-             StreamRequestedCallback on_stream_requested,
-             BuffersRequestedCallback on_buffers_requested, fit::closure on_no_clients,
-             std::optional<std::string> description = std::nullopt);
+  StreamImpl(
+      async_dispatcher_t* dispatcher, MetricsReporter::StreamRecord& record,
+      const fuchsia::camera3::StreamProperties2& properties,
+      const fuchsia::camera2::hal::StreamConfig& legacy_config,
+      fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
+      StreamRequestedCallback on_stream_requested, BuffersRequestedCallback on_buffers_requested,
+      fit::closure on_no_clients, std::optional<std::string> description = std::nullopt,
+      std::unique_ptr<MetricsReporter::FailureTestRecord> streaming_failure_record_ = nullptr);
   ~StreamImpl();
 
   // Close all client connections with given status as epitaph.
@@ -76,6 +77,9 @@ class StreamImpl {
 
   // Restores previously-sent state to the legacy stream.
   void RestoreLegacyStreamState();
+
+  // Analyzes the streaming failure tracker to determine whether a failure has occurred.
+  void CheckStreamingFailure();
 
   // Represents a single client connection to the StreamImpl class.
   class Client : public fuchsia::camera3::Stream {
@@ -176,6 +180,15 @@ class StreamImpl {
   std::unique_ptr<fuchsia::math::RectF> current_crop_region_;
   fpromise::scope scope_;
   std::string description_;
+  struct {
+    zx::time window_start = zx::time::infinite();
+    uint64_t frames_received_in_window = 0;
+    void Reset() {
+      window_start = zx::clock::get_monotonic();
+      frames_received_in_window = 0;
+    }
+    std::unique_ptr<MetricsReporter::FailureTestRecord> record;
+  } streaming_failure_tracker_;
   friend class Client;
 };
 

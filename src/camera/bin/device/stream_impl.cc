@@ -26,7 +26,8 @@ StreamImpl::StreamImpl(async_dispatcher_t* dispatcher, MetricsReporter::StreamRe
                        fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
                        StreamRequestedCallback on_stream_requested,
                        BuffersRequestedCallback on_buffers_requested, fit::closure on_no_clients,
-                       std::optional<std::string> description)
+                       std::optional<std::string> description,
+                       std::unique_ptr<MetricsReporter::FailureTestRecord> streaming_failure_record)
     : dispatcher_(dispatcher),
       record_(record),
       properties_(properties),
@@ -34,14 +35,15 @@ StreamImpl::StreamImpl(async_dispatcher_t* dispatcher, MetricsReporter::StreamRe
       on_stream_requested_(std::move(on_stream_requested)),
       on_buffers_requested_(std::move(on_buffers_requested)),
       on_no_clients_(std::move(on_no_clients)),
-      description_(description.value_or("<unknown>")) {
+      description_(description.value_or("<unknown>")),
+      streaming_failure_tracker_{.record = std::move(streaming_failure_record)} {
   legacy_stream_.set_error_handler(fit::bind_member(this, &StreamImpl::OnLegacyStreamDisconnected));
   legacy_stream_.events().OnFrameAvailable = fit::bind_member(this, &StreamImpl::OnFrameAvailable);
   current_resolution_ = ConvertToSize(properties.image_format());
   OnNewRequest(std::move(request));
 }
 
-StreamImpl::~StreamImpl() = default;
+StreamImpl::~StreamImpl() { CheckStreamingFailure(); }
 
 void StreamImpl::CloseAllClients(zx_status_t status) {
   while (clients_.size() > 1) {
@@ -58,11 +60,14 @@ void StreamImpl::CloseAllClients(zx_status_t status) {
 
 void StreamImpl::SetMuteState(MuteState mute_state) {
   TRACE_DURATION("camera", "StreamImpl::SetMuteState");
+  // Before updating the mute state, check to see if the current window has accumulated a failure.
+  CheckStreamingFailure();
   mute_state_ = mute_state;
-  // On either transition, invalidate existing frames.
+  // On either transition, invalidate existing frames and reset the failure tracker.
   for (auto& [id, client] : clients_) {
     client->ClearFrames();
   }
+  streaming_failure_tracker_.Reset();
 }
 
 fpromise::scope& StreamImpl::Scope() { return scope_; }
@@ -95,6 +100,8 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
     TRACE_FLOW_END("camera", "camera_stream_on_frame_available", info.metadata.timestamp());
   }
   record_.FrameReceived();
+  ++streaming_failure_tracker_.frames_received_in_window;
+  CheckStreamingFailure();
 
   if (info.frame_status != fuchsia::camera2::FrameStatus::OK) {
     FX_LOGS(WARNING) << description_
@@ -242,6 +249,7 @@ void StreamImpl::SetBufferCollection(
           RestoreLegacyStreamState();
           if (legacy_stream_needs_start) {
             legacy_stream_->Start();
+            streaming_failure_tracker_.Reset();
           }
         });
       });
@@ -342,6 +350,44 @@ void StreamImpl::RestoreLegacyStreamState() {
                                         current_crop_region_->y + current_crop_region_->height,
                                         [](zx_status_t) {});
   }
+}
+
+void StreamImpl::CheckStreamingFailure() {
+  TRACE_DURATION("camera", "StreamImpl::CheckStreamingFailure");
+
+  // Minimum streaming duration for which the frame counter will be used to indicate failures.
+  constexpr auto kMinimumWindow = zx::min(1);
+
+  auto window_duration = zx::clock::get_monotonic() - streaming_failure_tracker_.window_start;
+  if (mute_state_.muted() || window_duration < kMinimumWindow) {
+    // If the camera is muted, or only recently began streaming, the corresponding frame count is
+    // not a good indicator for streaming failures.
+    return;
+  }
+
+  // Fraction of expected frames actually received, below which a window is considered a failure.
+  // The precise value is not particularly important, as most successful windows will see near 100%
+  // of frames received, while most failed windows will be near 0%.
+  constexpr float kFailureThreshold = 0.5f;
+
+  float expected_frames = static_cast<float>(window_duration.to_secs()) *
+                          static_cast<float>(properties_.frame_rate().numerator) /
+                          static_cast<float>(properties_.frame_rate().denominator);
+  if (static_cast<float>(streaming_failure_tracker_.frames_received_in_window) / expected_frames <
+      kFailureThreshold) {
+    FX_LOGS(WARNING) << description_ << ": possible streaming failure - expected "
+                     << expected_frames << " frames during the last " << window_duration.to_secs()
+                     << " seconds but only received "
+                     << streaming_failure_tracker_.frames_received_in_window << " from driver";
+    if (streaming_failure_tracker_.record) {
+      // Mark the record as a failure and immediately report it.
+      streaming_failure_tracker_.record->SetFailureState(true);
+      streaming_failure_tracker_.record = nullptr;
+    }
+  }
+
+  // Begin a new window to avoid failures being lost in the noise of long-lived streams.
+  streaming_failure_tracker_.Reset();
 }
 
 }  // namespace camera
