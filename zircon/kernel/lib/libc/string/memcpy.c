@@ -17,7 +17,7 @@ __attribute__((no_sanitize_address)) void *__unsanitized_memcpy(void *dest, cons
                                                                 size_t count) {
   char *d = (char *)dest;
   const char *s = (const char *)src;
-  int len;
+  size_t len;
 
   if (count == 0 || dest == src)
     return dest;

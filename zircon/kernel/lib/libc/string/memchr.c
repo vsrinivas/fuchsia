@@ -11,7 +11,7 @@
 void *memchr(void const *buf, int c, size_t len) {
   size_t i;
   unsigned char const *b = buf;
-  unsigned char x = (c & 0xff);
+  unsigned char x = (unsigned char)c;
 
   for (i = 0; i < len; i++) {
     if (b[i] == x) {

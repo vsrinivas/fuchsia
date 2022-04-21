@@ -73,9 +73,6 @@ if (toolchain_environment == "kernel") {
       "//zircon/kernel/lib/libc/string/memset.c",
     ]
     deps = [ "//zircon/kernel/lib/libc:headers" ]
-
-    # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 } else {
   fuchsia_unittest_package("tests") {
@@ -99,8 +96,5 @@ if (toolchain_environment == "kernel") {
       "//third_party/googletest:gtest",
       "//zircon/kernel/lib/arch/testing",
     ]
-
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 }

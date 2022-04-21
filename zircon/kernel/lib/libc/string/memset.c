@@ -20,15 +20,15 @@ __attribute__((no_sanitize_address)) void *__unsanitized_memset(void *s, int c, 
     cc |= cc << 8;
     cc |= cc << 16;
     if (sizeof(size_t) == 8)
-      cc |= (uint64_t)cc << 32;  // should be optimized out on 32 bit machines
+      cc |= (size_t)((uint64_t)cc << 32);  // should be optimized out on 32 bit machines
 
     // write to non-aligned memory byte-wise
     for (; len > 0; len--)
-      *xs++ = c;
+      *xs++ = (char)c;
 
     // write to aligned memory dword-wise
     for (len = count / sizeof(size_t); len > 0; len--) {
-      *((size_t *)xs) = (size_t)cc;
+      *((size_t *)xs) = cc;
       xs += sizeof(size_t);
     }
 
@@ -37,7 +37,7 @@ __attribute__((no_sanitize_address)) void *__unsanitized_memset(void *s, int c, 
 
   // write remaining bytes
   for (; count > 0; count--)
-    *xs++ = c;
+    *xs++ = (char)c;
 
   return s;
 }

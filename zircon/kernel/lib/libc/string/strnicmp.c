@@ -24,8 +24,8 @@ int strnicmp(char const *s1, char const *s2, size_t len) {
         break;
       if (c1 == c2)
         continue;
-      c1 = tolower(c1);
-      c2 = tolower(c2);
+      c1 = (unsigned char)tolower(c1);
+      c2 = (unsigned char)tolower(c2);
       if (c1 != c2)
         break;
     } while (--len);

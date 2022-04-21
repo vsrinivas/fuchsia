@@ -23,7 +23,7 @@ void TestMemcpy(MemcpyFunc memcpy_func) {
     auto dst = std::make_unique<uint8_t[]>(i);       // Zero-filled.
     std::unique_ptr<uint8_t[]> src(new uint8_t[i]);  // Uninitialized array, immediately filled.
     for (size_t j = 0; j < i; ++j) {
-      src[j] = i;
+      src[j] = static_cast<uint8_t>(i);
     }
 
     auto result = memcpy_func(dst.get(), src.get(), i);
@@ -37,7 +37,7 @@ void TestMemcpy(MemcpyFunc memcpy_func) {
 void TestMemset(MemsetFunc memset_func) {
   for (size_t i = 0; i < 40; ++i) {
     auto buff = std::make_unique<uint8_t[]>(i);  // Zero-filled.
-    auto result = memset_func(buff.get(), i, i);
+    auto result = memset_func(buff.get(), static_cast<int>(i), i);
     EXPECT_EQ(buff.get(), static_cast<uint8_t*>(result));
     for (size_t j = 0; j < i; ++j) {
       EXPECT_EQ(i, buff[j]) << "case (" << i << ", " << j << ")";
