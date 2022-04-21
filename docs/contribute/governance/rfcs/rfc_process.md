@@ -10,6 +10,9 @@ The Fuchsia RFC process has evolved from the following RFCs:
 
 This page collates the above RFCs and captures the current process.
 
+After reviewing this process, you can follow
+[this guide to create an RFC][create].
+
 [TOC]
 
 ## Summary
@@ -458,3 +461,4 @@ existing processes:
    proposal exists because of the success of that decision-making process.
 
 [swd]: /docs/contribute/governance/rfcs/0103_software_delivery_rfc_criteria.md
+[create]: /docs/contribute/governance/rfcs/create_rfc.md
