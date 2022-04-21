@@ -28,7 +28,7 @@ use fuchsia_zircon::{self as zx, prelude::HandleBased as _, Peered as _};
 use futures::{StreamExt as _, TryFutureExt as _};
 use log::{error, trace};
 use net_types::{
-    ip::{Ip, Ipv4, Ipv6},
+    ip::{Ip, IpVersion, Ipv4, Ipv6},
     SpecifiedAddr,
 };
 use netstack3_core::{
@@ -62,8 +62,15 @@ use super::{
 // TODO(brunodalbo) move this to a buffer pool instead.
 const MAX_OUTSTANDING_APPLICATION_MESSAGES: usize = 50;
 
+/// The types of supported datagram protocols.
+pub(crate) enum DatagramProtocol {
+    Udp,
+    IcmpEcho,
+}
+
 /// A minimal abstraction over transport protocols that allows bindings-side state to be stored.
 pub(crate) trait Transport<I>: Debug {
+    const PROTOCOL: DatagramProtocol;
     type UnboundId: Debug + Copy + IdMapCollectionKey;
     type ConnId: Debug + Copy + IdMapCollectionKey;
     type ListenerId: Debug + Copy + IdMapCollectionKey;
@@ -252,6 +259,7 @@ pub(crate) trait BufferTransportState<I: Ip, B: BufferMut, C>: TransportState<I,
 pub(crate) enum Udp {}
 
 impl<I: Ip> Transport<I> for Udp {
+    const PROTOCOL: DatagramProtocol = DatagramProtocol::Udp;
     type UnboundId = UdpUnboundId<I>;
     type ConnId = UdpConnId<I>;
     type ListenerId = UdpListenerId<I>;
@@ -450,6 +458,7 @@ impl IdMapCollectionKey for IcmpListenerId {
 }
 
 impl<I: Ip> Transport<I> for IcmpEcho {
+    const PROTOCOL: DatagramProtocol = DatagramProtocol::IcmpEcho;
     type UnboundId = icmp::IcmpUnboundId<I>;
     type ConnId = icmp::IcmpConnId<I>;
     type ListenerId = IcmpListenerId;
@@ -1286,7 +1295,7 @@ where
                             responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::GetInfo { responder } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                            responder_send!(responder, &mut self.make_handler().await.get_sock_info())
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::GetInfoDeprecated { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
@@ -1833,6 +1842,24 @@ where
                 Ok(I::SocketAddress::new(local_ip, local_port.into()).into_sock_addr())
             }
         }
+    }
+
+    /// Handles a [POSIX socket get_info request].
+    ///
+    /// [POSIX socket get_info request]: fposix_socket::SynchronousDatagramSocketRequest::GetInfo
+    fn get_sock_info(
+        self,
+    ) -> Result<(fposix_socket::Domain, fposix_socket::DatagramSocketProtocol), fposix::Errno> {
+        let domain = match I::VERSION {
+            IpVersion::V4 => fposix_socket::Domain::Ipv4,
+            IpVersion::V6 => fposix_socket::Domain::Ipv6,
+        };
+        let protocol = match <T as Transport<I>>::PROTOCOL {
+            DatagramProtocol::Udp => fposix_socket::DatagramSocketProtocol::Udp,
+            DatagramProtocol::IcmpEcho => fposix_socket::DatagramSocketProtocol::IcmpEcho,
+        };
+
+        Ok((domain, protocol))
     }
 
     /// Handles a [POSIX socket get_peer_name request].
@@ -2530,6 +2557,54 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn icmp_echo_v6_socket_describe() {
         socket_describe(
+            fposix_socket::Domain::Ipv6,
+            fposix_socket::DatagramSocketProtocol::IcmpEcho,
+        )
+        .await
+    }
+
+    async fn socket_get_info(
+        domain: fposix_socket::Domain,
+        proto: fposix_socket::DatagramSocketProtocol,
+    ) {
+        let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
+        let test_stack = t.get(0);
+        let socket_provider = test_stack.connect_socket_provider().unwrap();
+        let socket = socket_provider
+            .datagram_socket(domain, proto)
+            .await
+            .unwrap()
+            .expect("Socket call succeeds")
+            .into_proxy()
+            .unwrap();
+        let info = socket.get_info().await.expect("get_info call succeeds");
+        assert_eq!(info, Ok((domain, proto)));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn udp_v4_socket_get_info() {
+        socket_get_info(fposix_socket::Domain::Ipv4, fposix_socket::DatagramSocketProtocol::Udp)
+            .await
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn udp_v6_socket_get_info() {
+        socket_get_info(fposix_socket::Domain::Ipv6, fposix_socket::DatagramSocketProtocol::Udp)
+            .await
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn icmp_echo_v4_socket_get_info() {
+        socket_get_info(
+            fposix_socket::Domain::Ipv4,
+            fposix_socket::DatagramSocketProtocol::IcmpEcho,
+        )
+        .await
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn icmp_echo_v6_socket_get_info() {
+        socket_get_info(
             fposix_socket::Domain::Ipv6,
             fposix_socket::DatagramSocketProtocol::IcmpEcho,
         )
