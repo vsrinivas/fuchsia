@@ -233,12 +233,6 @@ impl Connection {
             fio::FileRequest::Resize { length: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_ACCESS_DENIED))?;
             }
-            fio::FileRequest::GetFlagsDeprecatedUseNode { responder } => {
-                responder.send(ZX_OK, fio::OpenFlags::NODE_REFERENCE)?;
-            }
-            fio::FileRequest::SetFlagsDeprecatedUseNode { flags: _, responder } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED)?;
-            }
             fio::FileRequest::GetBufferDeprecatedUseGetBackingMemory { flags: _, responder } => {
                 // There is no backing VMO.
                 responder.send(ZX_ERR_NOT_SUPPORTED, None)?;

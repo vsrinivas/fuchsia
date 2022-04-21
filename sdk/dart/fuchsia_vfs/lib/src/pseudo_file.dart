@@ -388,12 +388,6 @@ class _FileConnection extends File {
   }
 
   @override
-  Future<File$GetFlagsDeprecatedUseNode$Response>
-      getFlagsDeprecatedUseNode() async {
-    return File$GetFlagsDeprecatedUseNode$Response(ZX.OK, flags);
-  }
-
-  @override
   Future<File$GetBufferDeprecatedUseGetBackingMemory$Response>
       getBufferDeprecatedUseGetBackingMemory(VmoFlags flags) async {
     return File$GetBufferDeprecatedUseGetBackingMemory$Response(
@@ -486,11 +480,6 @@ class _FileConnection extends File {
   @override
   Future<int> setFlags(OpenFlags flags) async {
     return ZX.ERR_NOT_SUPPORTED;
-  }
-
-  @override
-  Future<int> setFlagsDeprecatedUseNode(OpenFlags flags) async {
-    return await setFlags(flags);
   }
 
   @override

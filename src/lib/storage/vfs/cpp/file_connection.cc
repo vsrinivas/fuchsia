@@ -116,28 +116,6 @@ void FileConnection::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync&
   }
 }
 
-void FileConnection::GetFlagsDeprecatedUseNode(
-    GetFlagsDeprecatedUseNodeRequestView request,
-    GetFlagsDeprecatedUseNodeCompleter::Sync& completer) {
-  zx::status result = Connection::NodeGetFlags();
-  if (result.is_error()) {
-    completer.Reply(result.status_value(), {});
-  } else {
-    completer.Reply(ZX_OK, result.value());
-  }
-}
-
-void FileConnection::SetFlagsDeprecatedUseNode(
-    SetFlagsDeprecatedUseNodeRequestView request,
-    SetFlagsDeprecatedUseNodeCompleter::Sync& completer) {
-  zx::status result = Connection::NodeSetFlags(request->flags);
-  if (result.is_error()) {
-    completer.Reply(result.status_value());
-  } else {
-    completer.Reply(ZX_OK);
-  }
-}
-
 zx_status_t FileConnection::ResizeInternal(uint64_t length) {
   FS_PRETTY_TRACE_DEBUG("[FileTruncate] options: ", options());
 

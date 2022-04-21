@@ -557,12 +557,6 @@ impl VmoFileConnection {
                 })
                 .await?;
             }
-            fio::FileRequest::GetFlagsDeprecatedUseNode { responder } => {
-                responder.send(ZX_OK, self.flags & GET_FLAGS_VISIBLE)?;
-            }
-            fio::FileRequest::SetFlagsDeprecatedUseNode { flags: _, responder } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED)?;
-            }
             fio::FileRequest::AdvisoryLock { request: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }

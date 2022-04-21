@@ -116,12 +116,6 @@ void NullPtyDeviceImpl::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sy
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::GetFlagsDeprecatedUseNode(
-    GetFlagsDeprecatedUseNodeRequestView request,
-    GetFlagsDeprecatedUseNodeCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
 void NullPtyDeviceImpl::ReadAtDeprecated(ReadAtDeprecatedRequestView request,
                                          ReadAtDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
@@ -156,12 +150,6 @@ void NullPtyDeviceImpl::TruncateDeprecatedUseResize(
 }
 
 void NullPtyDeviceImpl::Resize(ResizeRequestView request, ResizeCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void NullPtyDeviceImpl::SetFlagsDeprecatedUseNode(
-    SetFlagsDeprecatedUseNodeRequestView request,
-    SetFlagsDeprecatedUseNodeCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

@@ -702,10 +702,6 @@ func (f *fileWrapper) GetFlags(ctx fidl.Context) (int32, io.OpenFlags, error) {
 	return status, io.OpenFlags(flags), err
 }
 
-func (f *fileWrapper) GetFlagsDeprecatedUseNode(ctx fidl.Context) (int32, io.OpenFlags, error) {
-	return f.GetFlags(ctx)
-}
-
 func (f *fileWrapper) AdvisoryLock(ctx fidl.Context, req io.AdvisoryLockRequest) (io.AdvisoryLockingAdvisoryLockResult, error) {
 	return io.AdvisoryLockingAdvisoryLockResultWithErr(int32(zx.ErrNotSupported)), nil
 }
@@ -716,10 +712,6 @@ func (f *fileWrapper) SetFlags(ctx fidl.Context, flags io.OpenFlags) (int32, err
 		uflags := (uint32(f.file.GetOpenFlags()) & ^statusFlags) | (flags & statusFlags)
 		return int32(errorToZx(f.file.SetOpenFlags(fs.OpenFlags(uflags)))), nil
 	}
-}
-
-func (f *fileWrapper) SetFlagsDeprecatedUseNode(ctx fidl.Context, flags io.OpenFlags) (int32, error) {
-	return f.SetFlags(ctx, flags)
 }
 
 func (d *fileWrapper) QueryFilesystem(fidl.Context) (int32, *io.FilesystemInfo, error) {

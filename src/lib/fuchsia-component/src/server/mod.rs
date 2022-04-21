@@ -1551,12 +1551,6 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 unsupported!(responder, None)?
             }
             fio::FileRequest::GetBackingMemory { flags: _, responder } => unsupported2!(responder)?,
-            fio::FileRequest::GetFlagsDeprecatedUseNode { responder } => {
-                unsupported!(responder, fio::OpenFlags::empty())?
-            }
-            fio::FileRequest::SetFlagsDeprecatedUseNode { flags: _, responder } => {
-                unsupported!(responder)?
-            }
             fio::FileRequest::AdvisoryLock { request: _, responder } => unsupported2!(responder)?,
             fio::FileRequest::QueryFilesystem { responder } => unsupported!(responder, None)?,
         }

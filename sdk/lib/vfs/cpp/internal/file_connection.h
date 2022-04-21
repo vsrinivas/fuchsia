@@ -55,9 +55,6 @@ class FileConnection final : public Connection, public fuchsia::io::File {
   void TruncateDeprecatedUseResize(uint64_t length,
                                    TruncateDeprecatedUseResizeCallback callback) override;
   void Resize(uint64_t length, ResizeCallback callback) override;
-  void GetFlagsDeprecatedUseNode(GetFlagsDeprecatedUseNodeCallback callback) override;
-  void SetFlagsDeprecatedUseNode(fuchsia::io::OpenFlags flags,
-                                 SetFlagsDeprecatedUseNodeCallback callback) override;
   void GetBufferDeprecatedUseGetBackingMemory(
       fuchsia::io::VmoFlags flags,
       GetBufferDeprecatedUseGetBackingMemoryCallback callback) override;

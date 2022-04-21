@@ -97,12 +97,6 @@ void PtyServerDevice::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::GetFlagsDeprecatedUseNode(
-    GetFlagsDeprecatedUseNodeRequestView request,
-    GetFlagsDeprecatedUseNodeCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
 void PtyServerDevice::ReadAtDeprecated(ReadAtDeprecatedRequestView request,
                                        ReadAtDeprecatedCompleter::Sync& completer) {
   ZX_ASSERT(false);
@@ -137,12 +131,6 @@ void PtyServerDevice::TruncateDeprecatedUseResize(
 }
 
 void PtyServerDevice::Resize(ResizeRequestView request, ResizeCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void PtyServerDevice::SetFlagsDeprecatedUseNode(
-    SetFlagsDeprecatedUseNodeRequestView request,
-    SetFlagsDeprecatedUseNodeCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

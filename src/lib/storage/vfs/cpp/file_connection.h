@@ -56,10 +56,6 @@ class FileConnection : public Connection, public fidl::WireServer<fuchsia_io::Fi
   void TruncateDeprecatedUseResize(TruncateDeprecatedUseResizeRequestView request,
                                    TruncateDeprecatedUseResizeCompleter::Sync& completer) final;
   void Resize(ResizeRequestView request, ResizeCompleter::Sync& completer) final;
-  void GetFlagsDeprecatedUseNode(GetFlagsDeprecatedUseNodeRequestView request,
-                                 GetFlagsDeprecatedUseNodeCompleter::Sync& completer) final;
-  void SetFlagsDeprecatedUseNode(SetFlagsDeprecatedUseNodeRequestView request,
-                                 SetFlagsDeprecatedUseNodeCompleter::Sync& completer) final;
   void GetBufferDeprecatedUseGetBackingMemory(
       GetBufferDeprecatedUseGetBackingMemoryRequestView request,
       GetBufferDeprecatedUseGetBackingMemoryCompleter::Sync& completer) final;

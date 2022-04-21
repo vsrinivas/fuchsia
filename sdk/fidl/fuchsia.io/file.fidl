@@ -108,29 +108,6 @@ protocol File1 {
         s zx.status;
     });
 
-    /// Acquires the `Directory.Open` rights and flags used to access this file.
-    ///
-    /// This method does not require any rights.
-    @selector("fuchsia.io1/File.GetFlags")
-    @deprecated("replaced by Node.GetFlags")
-    GetFlagsDeprecatedUseNode() -> (struct {
-        s zx.status;
-        flags OpenFlags;
-    });
-
-    /// Changes the `Directory.Open` flags used to access the file.
-    /// Supported flags which can be turned on / off:
-    /// - `OpenFlags.APPEND`
-    ///
-    /// This method does not require any rights.
-    @selector("fuchsia.io1/File.SetFlags")
-    @deprecated("replaced by Node.SetFlags")
-    SetFlagsDeprecatedUseNode(struct {
-        flags OpenFlags;
-    }) -> (struct {
-        s zx.status;
-    });
-
     /// Acquires a buffer representing this file, if there is one, with the
     /// requested access rights.
     ///

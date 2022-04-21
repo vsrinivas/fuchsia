@@ -215,8 +215,6 @@ protocol Node1 {
     /// Acquires the `Directory.Open` rights and flags used to access this file.
     ///
     /// This method does not require any rights.
-    /// This method has the same functionality as GetFlags for File and is
-    /// meant as an in-progress replacement.
     @selector("fuchsia.io1/Node.NodeGetFlags")
     GetFlags() -> (struct {
         s zx.status;
@@ -228,8 +226,6 @@ protocol Node1 {
     /// - `OpenFlags.APPEND`
     ///
     /// This method does not require any rights.
-    /// This method has the same functionality as SetFlags for File and is
-    /// meant as an in-progress replacement.
     @selector("fuchsia.io1/Node.NodeSetFlags")
     SetFlags(struct {
         flags OpenFlags;

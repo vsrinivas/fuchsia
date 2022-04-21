@@ -2871,8 +2871,6 @@ mod serve_write_blob_tests {
         Sync,
         GetAttr,
         SetAttr,
-        GetFlagsDeprecatedUseNode,
-        SetFlagsDeprecatedUseNode,
         Write,
         WriteAt,
         Read,
@@ -2898,8 +2896,6 @@ mod serve_write_blob_tests {
                 StubRequestor::Sync => "sync",
                 StubRequestor::GetAttr => "get_attr",
                 StubRequestor::SetAttr => "set_attr",
-                StubRequestor::GetFlagsDeprecatedUseNode => "get_flags_deprecated_use_node",
-                StubRequestor::SetFlagsDeprecatedUseNode => "set_flags_deprecated_use_node",
                 StubRequestor::Write => "write",
                 StubRequestor::WriteAt => "write_at",
                 StubRequestor::Read => "read",
@@ -2931,12 +2927,6 @@ mod serve_write_blob_tests {
                     )
                     .map(|_| ())
                     .boxed(),
-                StubRequestor::GetFlagsDeprecatedUseNode => {
-                    proxy.get_flags_deprecated_use_node().map(|_| ()).boxed()
-                }
-                StubRequestor::SetFlagsDeprecatedUseNode => {
-                    proxy.set_flags_deprecated_use_node(fio::OpenFlags::empty()).map(|_| ()).boxed()
-                }
                 StubRequestor::Write => proxy.write(&[0; 0]).map(|_| ()).boxed(),
                 StubRequestor::WriteAt => proxy.write_at(&[0; 0], 0).map(|_| ()).boxed(),
                 StubRequestor::Read => proxy.read(0).map(|_| ()).boxed(),

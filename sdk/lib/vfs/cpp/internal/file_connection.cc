@@ -222,15 +222,6 @@ void FileConnection::Resize(uint64_t length, ResizeCallback callback) {
   });
 }
 
-void FileConnection::GetFlagsDeprecatedUseNode(GetFlagsDeprecatedUseNodeCallback callback) {
-  callback(ZX_OK, flags() & (Flags::kStatusFlags | Flags::kFsRights));
-}
-
-void FileConnection::SetFlagsDeprecatedUseNode(fuchsia::io::OpenFlags flags,
-                                               SetFlagsDeprecatedUseNodeCallback callback) {
-  callback(ZX_ERR_NOT_SUPPORTED);
-}
-
 void FileConnection::GetBufferDeprecatedUseGetBackingMemory(
     fuchsia::io::VmoFlags flags, GetBufferDeprecatedUseGetBackingMemoryCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED, nullptr);

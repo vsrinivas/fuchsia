@@ -744,14 +744,6 @@ func (*fileState) SetFlags(_ fidl.Context, flags io.OpenFlags) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (*fileState) GetFlagsDeprecatedUseNode(fidl.Context) (int32, io.OpenFlags, error) {
-	return int32(zx.ErrNotSupported), 0, nil
-}
-
-func (*fileState) SetFlagsDeprecatedUseNode(_ fidl.Context, flags io.OpenFlags) (int32, error) {
-	return int32(zx.ErrNotSupported), nil
-}
-
 func (*fileState) QueryFilesystem(_ fidl.Context) (int32, *io.FilesystemInfo, error) {
 	return int32(zx.ErrNotSupported), nil, nil
 }
