@@ -180,12 +180,10 @@ where
     while len > 1 {
         let half = len / 2;
         let mid = start + half;
-
-        start = match f(&segments[mid]).cmp(&key) {
-            Ordering::Greater => start,
-            _ => mid,
+        (start, len) = match f(&segments[mid]).cmp(&key) {
+            Ordering::Greater => (start, half),
+            _ => (mid, len - half),
         };
-        len -= half;
     }
 
     match f(&segments[start]).cmp(&key) {
@@ -311,5 +309,18 @@ mod tests {
         assert_eq!(pixel_segment.local_y(), local_y);
         assert_eq!(pixel_segment.double_area(), double_area_multiplier as i16 * cover as i16);
         assert_eq!(pixel_segment.cover(), cover);
+    }
+
+    #[test]
+    fn search_last_by_key_test() {
+        let size = 50;
+        let segments: Vec<PixelSegment> =
+            (0..(size * 2)).map(|i| PixelSegment::new(i / 2, 0, 0, 0, 0, 0, 0)).collect();
+        for i in 0..size {
+            assert_eq!(
+                Ok((i * 2 + 1) as usize),
+                search_last_by_key(segments.as_slice(), i, |ps| ps.layer_id())
+            );
+        }
     }
 }
