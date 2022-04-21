@@ -174,9 +174,8 @@ class CrashReporterTest : public UnitTestFixture {
             {feedback::kBuildLatestCommitDateKey, kBuildLatestCommitDate},
         });
     snapshot_manager_ = std::make_unique<SnapshotManager>(
-        dispatcher(), &clock_, data_provider_server_.get(), annotation_manager_.get(),
-        kSnapshotSharedRequestWindow, kGarbageCollectedSnapshotsPath, StorageSize::Gigabytes(1u),
-        StorageSize::Gigabytes(1u)),
+        dispatcher(), &clock_, data_provider_server_.get(), kSnapshotSharedRequestWindow,
+        kGarbageCollectedSnapshotsPath, StorageSize::Gigabytes(1u), StorageSize::Gigabytes(1u)),
     crash_server_ =
         std::make_unique<StubCrashServer>(dispatcher(), services(), upload_attempt_results);
     device_id_provider_ =

@@ -14,7 +14,6 @@
 #include <vector>
 
 #include "src/developer/forensics/crash_reports/errors.h"
-#include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/lib/uuid/uuid.h"
 
 namespace forensics {
@@ -58,14 +57,12 @@ std::shared_ptr<T> MakeShared(T&& t) {
 
 SnapshotManager::SnapshotManager(async_dispatcher_t* dispatcher, timekeeper::Clock* clock,
                                  fuchsia::feedback::DataProvider* data_provider,
-                                 feedback::AnnotationManager* annotation_manager,
                                  zx::duration shared_request_window,
                                  const std::string& garbage_collected_snapshots_path,
                                  StorageSize max_annotations_size, StorageSize max_archives_size)
     : dispatcher_(dispatcher),
       clock_(clock),
       data_provider_(data_provider),
-      annotation_manager_(annotation_manager),
       shared_request_window_(shared_request_window),
       garbage_collected_snapshots_path_(garbage_collected_snapshots_path),
       max_annotations_size_(max_annotations_size),
@@ -100,50 +97,36 @@ SnapshotManager::SnapshotManager(async_dispatcher_t* dispatcher, timekeeper::Clo
 }
 
 Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
-  // Update |annotations| with the annotations that are immediately available from the
-  // annotation manager.
-  //
-  // The Set operation (effectively an upsert) is safe for all special case snapshots because their
-  // base content is static and an upserted annotation will never need to be removed, just updated.
-  auto UpdateAndSnapshot = [this](std::shared_ptr<AnnotationMap>& annotations) {
-    for (const auto& [key, value] : annotation_manager_->ImmediatelyAvailable()) {
-      annotations->Set(key, value);
-    }
-    return Snapshot(annotations);
-  };
-
   if (uuid == garbage_collected_snapshot_.uuid) {
-    return UpdateAndSnapshot(garbage_collected_snapshot_.annotations);
+    return Snapshot(garbage_collected_snapshot_.annotations);
   }
 
   if (uuid == not_persisted_snapshot_.uuid) {
-    return UpdateAndSnapshot(not_persisted_snapshot_.annotations);
+    return Snapshot(not_persisted_snapshot_.annotations);
   }
 
   if (uuid == timed_out_snapshot_.uuid) {
-    return UpdateAndSnapshot(timed_out_snapshot_.annotations);
+    return Snapshot(timed_out_snapshot_.annotations);
   }
 
   if (uuid == shutdown_snapshot_.uuid) {
-    return UpdateAndSnapshot(shutdown_snapshot_.annotations);
+    return Snapshot(shutdown_snapshot_.annotations);
   }
 
   if (uuid == no_uuid_snapshot_.uuid) {
-    return UpdateAndSnapshot(no_uuid_snapshot_.annotations);
+    return Snapshot(no_uuid_snapshot_.annotations);
   }
 
   auto* data = FindSnapshotData(uuid);
 
   if (!data) {
     if (garbage_collected_snapshots_.find(uuid) != garbage_collected_snapshots_.end()) {
-      return UpdateAndSnapshot(garbage_collected_snapshot_.annotations);
+      return Snapshot(garbage_collected_snapshot_.annotations);
     } else {
-      return UpdateAndSnapshot(not_persisted_snapshot_.annotations);
+      return Snapshot(not_persisted_snapshot_.annotations);
     }
   }
 
-  // The immediately available annotations don't need to be added because the snapshot was collected
-  // successfully and has all its annotations.
   return Snapshot(data->annotations, data->archive);
 }
 
