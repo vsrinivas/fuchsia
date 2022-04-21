@@ -14,8 +14,11 @@ BT_FILE_DEPS=(
   "tools/devshell/lib/fx-optional-features.sh"
   "tools/devshell/lib/image_build_vars.sh"
   "tools/devshell/lib/vars.sh"
+  "tools/devshell/tests/subcommands/${TESTDATA}/cml.cml"
   "tools/devshell/tests/subcommands/${TESTDATA}/cplusplus.cc"
   "tools/devshell/tests/subcommands/${TESTDATA}/rust.rs"
+  "tools/devshell/tests/subcommands/${TESTDATA}/fidl.test.fidl"
+  "tools/devshell/tests/subcommands/${TESTDATA}/gidl.gidl"
   "tools/devshell/tests/subcommands/${TESTDATA}/gn.gn"
   "tools/devshell/tests/subcommands/${TESTDATA}/gn.gni"
   "tools/devshell/tests/subcommands/${TESTDATA}/python3.py"
@@ -35,6 +38,9 @@ BT_MOCKED_TOOLS=(
   "${MOCK_GN}"
   "${MOCK_PYTHON3_DIR}/bin/python3.8"
   "${MOCK_RUST_DIR}/bin/rustfmt"
+  "${FUCHSIA_BUILD_DIR}/host_x64/cmc"
+  "${FUCHSIA_BUILD_DIR}/host_x64/fidl-format"
+  "${FUCHSIA_BUILD_DIR}/host_x64/gidl-format"
 )
 
 BT_MKDIR_DEPS=(
@@ -102,6 +108,34 @@ TEST_fx-format-code-unknown-extension() {
   printf -v csfiles ",%s" "${files[@]}"
   BT_EXPECT "${fx}" format-code --verbose --files="${csfiles:1}" > "${out}"
   BT_EXPECT grep -q -E '"clang-format.*cplusplus.cc"' "${out}"
+}
+
+# Ensure that buildable format commands are built when needed
+TEST_fx-format-code-builds-required-commands() {
+  btf::make_mock "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts"
+  btf::make_mock "${BT_TEMP_DIR}/tools/devshell/build"
+  local out="${BT_TEMP_DIR}/_fx_format_code_output"
+  local err="${BT_TEMP_DIR}/_fx_format_code_stderr"
+  local files=(
+    "${TESTDATA}/cplusplus.cc"
+    "${TESTDATA}/rust.rs"
+    "${TESTDATA}/gidl.gidl"
+    "${TESTDATA}/fidl.test.fidl"
+    "${TESTDATA}/cml.cml"
+  )
+  local csfiles
+  printf -v csfiles ",%s" "${files[@]}"
+  echo "host_x64/gidl-format" > "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_stdout"
+  echo "host_x64/fidl-format" > "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_stdout.1"
+  echo "host_x64/cmc" > "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_stdout.2"
+  # NOT EXPECTing success, since the missing commands are not actually built,
+  # but this test verifies that they would be built.
+  "${fx}" format-code --verbose --files="${csfiles:1}" > "${out}" 2> "${err}"
+  BT_EXPECT grep -q -E '"clang-format.*cplusplus.cc"' "${out}"
+  BT_EXPECT grep -q -E '"rustfmt.*rust.rs"' "${out}"
+  BT_EXPECT grep -q -E '"fidl-format not built; building now..."' "${err}"
+  BT_EXPECT grep -q -E '"gidl-format not built; building now..."' "${err}"
+  BT_EXPECT grep -q -E '"cmc not built; building now..."' "${err}"
 }
 
 BT_RUN_TESTS "$@"
