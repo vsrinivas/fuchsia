@@ -22,7 +22,7 @@
         // TODO(fxbug.dev/97903): try to remove each one of the below.
         // TODO(fxbug.dev/98086): specifically reduce /bin.
         {
-            directory: "bin-not-delayed",
+            directory: "bin",
             rights: [ "rx*" ],
             path: "/bin",
         },
@@ -47,7 +47,7 @@
             path: "/config/ssl",
         },
         {
-            directory: "minfs-not-delayed",
+            directory: "minfs",
             rights: [ "rw*" ],
             path: "/data",
         },
@@ -72,12 +72,12 @@
             path: "/mnt",
         },
         {
-            directory: "pkgfs-not-delayed",
+            directory: "pkgfs",
             rights: [ "rx*" ],
             path: "/pkgfs",
         },
         {
-            directory: "system-not-delayed",
+            directory: "system",
             rights: [ "rx*" ],
             path: "/system",
         },
