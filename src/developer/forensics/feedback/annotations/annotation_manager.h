@@ -38,8 +38,7 @@ class AnnotationManager {
   // Note: currently only immediately available annotations are returned.
   ::fpromise::promise<Annotations> GetAll(zx::duration timeout);
 
-  // Returns the annotations that are immediately available regardless of whether they're static or
-  // dynamic.
+  // Returns the annotations that are immediately available.
   //
   // This is useful when annotations can't be waited, e.g. component startup /
   // shutdown, and the annotation aggregate data that are ready to be used because it never changes,
