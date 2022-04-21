@@ -3,6 +3,12 @@
 // found in the LICENSE file.
 
 use super::*;
+use std::sync::atomic::Ordering;
+
+/// Error type indicating that a platform reset has been requested.
+#[derive(thiserror::Error, Debug, Hash)]
+#[error("PlatformResetRequested")]
+pub struct PlatformResetRequested {}
 
 impl PlatformBacking {
     fn on_plat_reset(&self, instance: Option<&ot::Instance>) {
@@ -21,7 +27,8 @@ impl PlatformBacking {
             instance.thread_set_enabled(false).unwrap();
             instance.ip6_set_enabled(false).unwrap();
         }
-
+        // end the stream
+        self.is_platform_reset_requested.store(true, Ordering::SeqCst);
         info!("on_plat_reset for {:?}", instance);
     }
 }

@@ -70,14 +70,14 @@ impl Instance {
         }
     }
 
-    pub(crate) fn platform_poll(self: &Self, cx: &mut Context<'_>) {
+    pub(crate) fn platform_poll(self: &Self, cx: &mut Context<'_>) -> Result<(), anyhow::Error> {
         unsafe {
             // SAFETY: The underlying unsafe call, process_poll(), must
             //         only be called from the same thread that the OpenThread
             //         instance is being used on. Since the OpenThread instance
             //         does not implement `Sync`, the self reference is neither
             //         `Send` nor `Sync`, so it is is safe to call here.
-            self.borrow_backing().platform.borrow_mut().process_poll(self, cx);
+            self.borrow_backing().platform.borrow_mut().process_poll(self, cx)
         }
     }
 }

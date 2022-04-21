@@ -18,12 +18,14 @@ use openthread::prelude::*;
 use backing::*;
 use binding::*;
 
+use anyhow::Error;
 use fuchsia_async as fasync;
 use futures::channel::mpsc as fmpsc;
 use futures::Stream;
 use log::*;
 use lowpan_driver_common::spinel::*;
 use std::cell::{Cell, RefCell};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::task::{Context, Poll};
 
@@ -178,6 +180,7 @@ impl Platform {
                 netif_index_backbone: builder.backbone_netif_index,
                 trel: RefCell::new(None),
                 infra_if: InfraIfInstance::new(builder.backbone_netif_index.unwrap_or(0)),
+                is_platform_reset_requested: AtomicBool::new(false),
             });
 
             // Initialize the lower-level platform implementation
@@ -201,13 +204,21 @@ impl Drop for Platform {
 }
 
 impl ot::Platform for Platform {
-    unsafe fn process_poll(&mut self, instance: &ot::Instance, cx: &mut Context<'_>) {
+    unsafe fn process_poll(
+        &mut self,
+        instance: &ot::Instance,
+        cx: &mut Context<'_>,
+    ) -> Result<(), Error> {
         self.process_poll_alarm(instance, cx);
         self.process_poll_radio(instance, cx);
         self.process_poll_udp(instance, cx);
         self.process_poll_trel(instance, cx);
         self.process_poll_infra_if(instance, cx);
         self.process_poll_tasks(cx);
+        if PlatformBacking::as_ref().is_platform_reset_requested.load(Ordering::SeqCst) {
+            return Err(PlatformResetRequested {}.into());
+        }
+        Ok(())
     }
 }
 

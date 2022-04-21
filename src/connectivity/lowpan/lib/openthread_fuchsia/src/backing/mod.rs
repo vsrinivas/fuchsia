@@ -11,6 +11,7 @@ use futures::channel::mpsc as fmpsc;
 use log::*;
 use lowpan_driver_common::spinel::*;
 use std::cell::{Cell, RefCell};
+use std::sync::atomic::AtomicBool;
 use std::sync::mpsc;
 use std::time::Duration;
 
@@ -23,6 +24,7 @@ mod udp;
 
 pub(crate) use infra_if::InfraIfInstance;
 use openthread::ot::NetifIdentifier;
+pub(crate) use reset::PlatformResetRequested;
 pub(crate) use udp::*;
 
 pub(super) struct PlatformBacking {
@@ -34,6 +36,7 @@ pub(super) struct PlatformBacking {
     pub(super) netif_index_backbone: Option<ot::NetifIndex>,
     pub(super) trel: RefCell<Option<trel::TrelInstance>>,
     pub(super) infra_if: Option<InfraIfInstance>,
+    pub(super) is_platform_reset_requested: AtomicBool,
 }
 
 impl PlatformBacking {

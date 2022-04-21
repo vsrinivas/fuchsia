@@ -53,7 +53,10 @@ pub trait ProcessPollAsync {
 
 impl ProcessPollAsync for ot::Instance {
     fn process_poll(self: &Self, cx: &mut Context<'_>) -> std::task::Poll<Option<()>> {
-        self.platform_poll(cx);
+        if let Err(err) = self.platform_poll(cx) {
+            warn!("process_poll terminating: {:?}", err);
+            return std::task::Poll::Ready(None);
+        };
         self.set_waker(cx.waker().clone());
         if self.has_pending() {
             std::task::Poll::Ready(Some(self.process()))
