@@ -79,8 +79,13 @@ Reviews are performed by the Rust Working Group.
 
 ## Currently Used Features
 
-There are no longer any unstable features used in Fuchsia! The last one was
-`async_await`, which was stabilized in 2019 Q3.
+- `min_specialization` and `specialization`
+  - [Tracking issue](https://fxbug.dev/98399).
+  - Used by some netstack3 targets via the
+  `netstack3_only_specialization_feature` config.
+- `stdsimd` and `aarch64_target_feature`
+  - [Tracking issue](https://fxbug.dev/98400).
+  - Used by the `aes-v0_7_5` crate via the `allow_simd` config.
 
 [the edition guide]: https://rust-lang-nursery.github.io/edition-guide/editions/index.html
 [Rust 2018: an early preview]: https://internals.rust-lang.org/t/rust-2018-an-early-preview/7776
