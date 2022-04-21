@@ -351,6 +351,7 @@
                     // eng builds only.
                     "/bootstrap/driver_index",
                     "/bootstrap/driver_manager",
+                    "/bootstrap/full_resolver",
                     "/bootstrap/netsvc",
 
                     // system-updater still runs as a v1 component and is a

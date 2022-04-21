@@ -110,6 +110,14 @@
             name: "virtual_console",
             url: "fuchsia-boot:///#meta/virtual-console.cm",
         },
+
+        // TODO(fxb/98535): Remove need for separate universe-resolver component here.
+        // Full resolver clone to be used by the universe-pkg-drivers collection
+        {
+            name: "full_resolver",
+            url: "fuchsia-pkg://fuchsia.com/universe-resolver#meta/universe-resolver.cm",
+            environment: "#base-resolver-env",
+        },
     ],
     collections: [
         {
@@ -127,6 +135,13 @@
         {
             name: "pkg-drivers",
             environment: "#pkg-driver-env",
+            durability: "single_run",
+            allowed_offers: "static_and_dynamic",
+            allow_long_names: true,
+        },
+        {
+            name: "universe-pkg-drivers",
+            environment: "#universe-pkg-driver-env",
             durability: "single_run",
             allowed_offers: "static_and_dynamic",
             allow_long_names: true,
@@ -274,7 +289,10 @@
         {
             protocol: [ "fuchsia.tracing.provider.Registry" ],
             from: "parent",
-            to: "#pkg-drivers",
+            to: [
+                "#pkg-drivers",
+                "#universe-pkg-drivers",
+            ],
         },
         {
             protocol: [
@@ -373,6 +391,7 @@
                 "#decompressor",
                 "#fshost",
                 "#pkg-drivers",
+                "#universe-pkg-drivers",
             ],
         },
         {
@@ -423,6 +442,7 @@
             to: [
                 "#boot-drivers",
                 "#pkg-drivers",
+                "#universe-pkg-drivers",
             ],
         },
         {
@@ -452,6 +472,7 @@
             to: [
                 "#boot-drivers",
                 "#pkg-drivers",
+                "#universe-pkg-drivers",
             ],
         },
         {
@@ -738,6 +759,7 @@
                 "#power_manager",
                 "#pwrbtn-monitor",
                 "#svchost",
+                "#universe-pkg-drivers",
                 "#vboot-fwparam",
             ],
         },
@@ -885,6 +907,23 @@
             to: "#driver_index",
             dependency: "weak_for_migration",
         },
+
+        // Full resolver dependencies
+        {
+            protocol: "fuchsia.pkg.PackageResolver",
+            from: "parent",
+            to: "#full_resolver",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "#archivist",
+            to: "#full_resolver",
+        },
+        {
+            protocol: "fuchsia.component.resolution.Resolver",
+            from: "#base_resolver",
+            to: "#full_resolver",
+        },
     ],
     expose: [
         {
@@ -1011,6 +1050,17 @@
     ],
     environments: [
         {
+            name: "base-resolver-env",
+            extends: "realm",
+            resolvers: [
+                {
+                    resolver: "base_resolver",
+                    from: "#base_resolver",
+                    scheme: "fuchsia-pkg",
+                },
+            ],
+        },
+        {
             name: "fshost-env",
             extends: "realm",
 
@@ -1064,6 +1114,26 @@
                 {
                     resolver: "base_resolver",
                     from: "#base_resolver",
+                    scheme: "fuchsia-pkg",
+                },
+            ],
+
+            // 1 second
+            __stop_timeout_ms: 1000,
+        },
+        {
+            name: "universe-pkg-driver-env",
+            extends: "none",
+            runners: [
+                {
+                    runner: "driver",
+                    from: "#driver_manager",
+                },
+            ],
+            resolvers: [
+                {
+                    resolver: "full-resolver",
+                    from: "#full_resolver",
                     scheme: "fuchsia-pkg",
                 },
             ],

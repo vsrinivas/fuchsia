@@ -117,6 +117,8 @@ enum class Collection {
   kBoot,
   // Collection for package drivers.
   kPackage,
+  // Collection for universe package drivers.
+  kUniversePackage,
 };
 
 // TODO(fxbug.dev/66150): Once FIDL wire types support a Clone() method,
@@ -272,7 +274,8 @@ class DriverRunner : public fidl::WireAsyncEventHandler<fuchsia_driver_framework
   zx::status<CompositeArgsIterator> AddToCompositeArgs(
       const std::string& name,
       const fuchsia_driver_framework::wire::MatchedCompositeInfo& matched_driver);
-  zx::status<> StartDriver(Node& node, std::string_view url);
+  zx::status<> StartDriver(Node& node, std::string_view url,
+                           fuchsia_driver_framework::DriverPackageType package_type);
 
   zx::status<std::unique_ptr<DriverHostComponent>> StartDriverHost();
 

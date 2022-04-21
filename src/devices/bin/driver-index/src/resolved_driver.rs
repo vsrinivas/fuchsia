@@ -76,7 +76,7 @@ impl ResolvedDriver {
             })
             .await?;
 
-        return driver.ok_or({
+        return driver.ok_or_else(|| {
             log::warn!("{}: Component was not a driver-component", component_url.as_str());
             fuchsia_zircon::Status::INTERNAL
         });

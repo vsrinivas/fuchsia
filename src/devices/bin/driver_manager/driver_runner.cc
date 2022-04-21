@@ -4,6 +4,7 @@
 
 #include "src/devices/bin/driver_manager/driver_runner.h"
 
+#include <fidl/fuchsia.driver.development/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <fidl/fuchsia.process/cpp/wire.h>
 #include <lib/async/cpp/task.h>
@@ -22,8 +23,6 @@
 #include <stack>
 #include <unordered_set>
 
-#include "fidl/fuchsia.driver.development/cpp/wire_types.h"
-#include "fidl/fuchsia.driver.framework/cpp/wire_types.h"
 #include "src/devices/lib/log/log.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/storage/vfs/cpp/service.h"
@@ -136,6 +135,8 @@ fidl::StringView CollectionName(Collection collection) {
       return "boot-drivers";
     case Collection::kPackage:
       return "pkg-drivers";
+    case Collection::kUniversePackage:
+      return "universe-pkg-drivers";
   }
 }
 
@@ -667,7 +668,7 @@ zx::status<> DriverRunner::PublishComponentRunner(const fbl::RefPtr<fs::PseudoDi
 }
 
 zx::status<> DriverRunner::StartRootDriver(std::string_view url) {
-  return StartDriver(*root_node_, url);
+  return StartDriver(*root_node_, url, fdf::DriverPackageType::kBase);
 }
 
 std::shared_ptr<const Node> DriverRunner::root_node() const { return root_node_; }
@@ -691,7 +692,8 @@ void DriverRunner::ScheduleBaseDriversBinding() {
       });
 }
 
-zx::status<> DriverRunner::StartDriver(Node& node, std::string_view url) {
+zx::status<> DriverRunner::StartDriver(Node& node, std::string_view url,
+                                       fdf::DriverPackageType package_type) {
   zx::event token;
   zx_status_t status = zx::event::create(0, &token);
   if (status != ZX_OK) {
@@ -702,7 +704,12 @@ zx::status<> DriverRunner::StartDriver(Node& node, std::string_view url) {
   if (status != ZX_OK) {
     return zx::error(status);
   }
+
+  // TODO(fxb/98474) Stop doing the url prefix check and just rely on the package_type.
   auto collection = cpp20::starts_with(url, kBootScheme) ? Collection::kBoot : Collection::kPackage;
+  if (package_type == fdf::DriverPackageType::kUniverse) {
+    collection = Collection::kUniversePackage;
+  }
   node.set_collection(collection);
   auto create = CreateComponent(node.TopoName(), collection, std::string(url),
                                 {.node = &node, .token = std::move(token)});
@@ -877,7 +884,9 @@ void DriverRunner::Bind(Node& node) {
       driver_node = *composite;
     }
 
-    auto start_result = StartDriver(*driver_node, driver_info.url().get());
+    auto pkg_type =
+        driver_info.has_package_type() ? driver_info.package_type() : fdf::DriverPackageType::kBase;
+    auto start_result = StartDriver(*driver_node, driver_info.url().get(), pkg_type);
     if (start_result.is_error()) {
       orphaned();
       LOGF(ERROR, "Failed to start driver '%s': %s", driver_node->name().data(),

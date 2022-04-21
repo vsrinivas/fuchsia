@@ -403,6 +403,54 @@
                     },
                 },
                 {
+                    using_node: "/bootstrap/full_resolver",
+                    capability: "fuchsia.pkg.PackageResolver",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    policy_error: {
+                                        capability_use_disallowed: {
+                                            cap: "fuchsia.pkg.PackageResolver",
+                                            source_moniker: {
+                                                component_instance: {
+                                                    path: [
+                                                        {
+                                                            name: "core",
+                                                            collection: null,
+                                                            rep: "core",
+                                                        },
+                                                        {
+                                                            name: "pkg-resolver",
+                                                            collection: null,
+                                                            rep: "pkg-resolver",
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                            target_moniker: {
+                                                path: [
+                                                    {
+                                                        name: "bootstrap",
+                                                        collection: null,
+                                                        rep: "bootstrap",
+                                                    },
+                                                    {
+                                                        name: "full_resolver",
+                                                        collection: null,
+                                                        rep: "full_resolver",
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        message: "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core/pkg-resolver\" being used at \"/bootstrap/full_resolver\"",
+                    },
+                },
+                {
                     using_node: "/bootstrap/netsvc",
                     capability: "fuchsia.pkg.PackageResolver",
                     error: {
