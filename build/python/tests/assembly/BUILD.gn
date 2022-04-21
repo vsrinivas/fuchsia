@@ -5,7 +5,7 @@
 import("//build/python/python_host_test.gni")
 
 python_host_test("python_module_assembly_test") {
-  main_source = "py_assembly_test.py"
+  main_source = "assembly_module_test.py"
   libraries = [
     "//build/python/modules/assembly",
     "//build/python/modules/serialization",
