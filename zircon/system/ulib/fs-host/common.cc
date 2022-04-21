@@ -11,6 +11,7 @@
 #include <libgen.h>
 #include <limits.h>
 #include <sys/stat.h>
+#include <zircon/errors.h>
 
 #include <filesystem>
 #include <iterator>
@@ -211,7 +212,9 @@ zx_status_t FsCreator::ParseManifestLine(FILE* manifest, const char* dir_path, c
 
   if (depfile_) {
     // Add source to depfile
-    AppendDepfile(src);
+    if (zx_status_t status = AppendDepfile(src); status != ZX_OK) {
+      return status;
+    }
   }
 
   return ZX_OK;
@@ -386,9 +389,12 @@ zx_status_t FsCreator::ProcessArgs(int argc, char** argv) {
   zx_status_t status;
   if (depfile_needed) {
     size_t len = strlen(device);
-    assert(len + 2 < PATH_MAX);
+    if (len >= PATH_MAX - 2) {
+      fprintf(stderr, "error: device path is too long: %zu\n", len);
+      return ZX_ERR_BAD_PATH;
+    }
     char buf[PATH_MAX] = {0};
-    memcpy(buf, device, strlen(device));
+    memcpy(buf, device, len);
     buf[len++] = '.';
     buf[len++] = 'd';
 
@@ -444,7 +450,10 @@ zx_status_t FsCreator::AppendDepfile(const char* str) {
   }
 
   size_t len = strlen(str);
-  assert(len < PATH_MAX);
+  if (len >= PATH_MAX) {
+    fprintf(stderr, "error: path is too long: %zu\n", len);
+    return ZX_ERR_BAD_PATH;
+  }
   char buf[PATH_MAX] = {0};
   memcpy(buf, str, len);
   buf[len++] = ' ';
@@ -452,8 +461,8 @@ zx_status_t FsCreator::AppendDepfile(const char* str) {
   std::lock_guard<std::mutex> lock(depfile_lock_);
   // this code makes assumptions about the size of atomic writes on target
   // platforms which currently hold true, but are not part of e.g. POSIX.
-  ssize_t result = fwrite(buf, 1, len, depfile_.get());
-  if (result < 0 || static_cast<size_t>(result) != len) {
+  size_t result = fwrite(buf, 1, len, depfile_.get());
+  if (result != len) {
     fprintf(stderr, "error: depfile append error\n");
     return ZX_ERR_IO;
   }
