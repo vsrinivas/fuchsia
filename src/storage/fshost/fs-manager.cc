@@ -448,8 +448,7 @@ void FsManager::FileReport(ReportReason reason) {
     auto res = client->File(report);
     if (!res.ok()) {
       FX_LOGS(WARNING) << "Unable to send crash report (fidl error): " << res.status_string();
-    }
-    if (res->result.is_err()) {
+    } else if (res->result.is_err()) {
       FX_LOGS(WARNING) << "Failed to file crash report: "
                        << zx_status_get_string(res->result.err());
     } else {
