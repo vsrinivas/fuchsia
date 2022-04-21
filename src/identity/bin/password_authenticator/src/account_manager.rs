@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
-    account::{Account, CheckNewClientResult},
+    account::{Account, AccountError, CheckNewClientResult},
     account_metadata::{
         AccountMetadata, AccountMetadataStore, AccountMetadataStoreError, AuthenticatorMetadata,
     },
@@ -15,11 +15,12 @@ use crate::{
     Options,
 };
 use anyhow::{anyhow, Context, Error};
-use fidl::endpoints::ServerEnd;
+use fidl::endpoints::{ControlHandle, ServerEnd};
 use fidl_fuchsia_identity_account::{
     self as faccount, AccountManagerRequest, AccountManagerRequestStream, AccountMarker,
 };
 use fidl_fuchsia_identity_credential::{CredentialManagerMarker, CredentialManagerProxy};
+use fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream};
 use fuchsia_component::client::connect_to_protocol;
 use futures::{lock::Mutex, prelude::*};
 use log::{error, info, warn};
@@ -122,13 +123,81 @@ where
         }
     }
 
+    /// Serially process a stream of incoming LifecycleRequest FIDL requests.
+    pub async fn handle_requests_for_lifecycle(&self, mut request_stream: LifecycleRequestStream) {
+        info!("Watching for lifecycle events from startup handle");
+        while let Some(request) = request_stream.try_next().await.expect("read lifecycle request") {
+            match request {
+                LifecycleRequest::Stop { control_handle } => {
+                    // `password_authenticator` supervises a filesystem process, which expects to
+                    // receive advance notice when shutdown is imminent so that it can flush any
+                    // cached writes to disk.  To uphold our end of that contract, we implement a
+                    // lifecycle listener which responds to a stop request by locking all unlocked
+                    // accounts, which in turn has the effect of gracefully stopping the filesystem
+                    // and locking storage.
+                    info!("Received lifecycle stop request; attempting graceful teardown");
+
+                    match self.lock_all_accounts().await {
+                        Ok(()) => {
+                            info!("Shutdown complete");
+                        }
+                        Err(e) => {
+                            error!(
+                                "error shutting down for lifecycle request; data may not be fully \
+                                flushed {:#}",
+                                anyhow!(e)
+                            );
+                        }
+                    }
+
+                    control_handle.shutdown();
+                }
+            }
+        }
+    }
+
+    /// Locks all currently-unlocked accounts.
+    async fn lock_all_accounts(&self) -> Result<(), AccountError> {
+        // Acquire the lock for all accounts.
+        let mut accounts_locked = self.accounts.lock().await;
+
+        // For each account, ensure the account is locked.
+        let known_account_ids: Vec<u64> = accounts_locked.keys().map(|x| x.clone()).collect();
+        for account_id in known_account_ids.iter() {
+            // This structure is a little funky -- we need to take ownership of any Account in
+            // AccountState::Provisioned so we can call lock() on them, which requires ownership
+            // of the contained Account.
+            // We don't need to remove anything that was in AccountState::Provisioning, but due to
+            // the ownership requirement above, we have to move it out and then put it back.
+            let account_state = accounts_locked.remove(account_id);
+            match account_state {
+                Some(AccountState::Provisioned(account)) => {
+                    info!("Locking account {}...", account_id);
+                    account.lock().await?;
+                    info!("account {} locked.", account_id);
+                }
+                Some(AccountState::Provisioning(provisioning_lock)) => {
+                    // Put the account back in the map, as though we never took it out
+                    accounts_locked
+                        .insert(*account_id, AccountState::Provisioning(provisioning_lock));
+                }
+                None => {
+                    // This should never be reached, because we're holding the accounts lock.
+                    unreachable!();
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     /// Serially process a stream of incoming AccountManager FIDL requests.
-    pub async fn handle_requests_for_stream(
+    pub async fn handle_requests_for_account_manager(
         &self,
         mut request_stream: AccountManagerRequestStream,
     ) {
         while let Some(request) = request_stream.try_next().await.expect("read request") {
-            self.handle_request(request)
+            self.handle_account_manager_request(request)
                 .unwrap_or_else(|e| {
                     error!("error handling fidl request: {:#}", anyhow!(e));
                 })
@@ -137,7 +206,10 @@ where
     }
 
     /// Process a single AccountManager FIDL request and send a reply.
-    async fn handle_request(&self, request: AccountManagerRequest) -> Result<(), Error> {
+    async fn handle_account_manager_request(
+        &self,
+        request: AccountManagerRequest,
+    ) -> Result<(), Error> {
         match request {
             AccountManagerRequest::GetAccountIds { responder } => {
                 let account_ids = self.get_account_ids().await?;
@@ -769,14 +841,6 @@ where
         // and returning success.
         drop(accounts_locked);
         Ok(())
-    }
-
-    #[cfg(test)]
-    async fn lock_account(&self, id: AccountId) {
-        let mut accounts_locked = self.accounts.lock().await;
-        if let Some(AccountState::Provisioned(account)) = accounts_locked.remove(&id) {
-            account.lock().await.expect("lock");
-        }
     }
 }
 
@@ -1526,7 +1590,7 @@ mod test {
             client.get_data_directory(server).await.expect("get_data_directory FIDL"),
             Ok(())
         );
-        account_manager.lock_account(GLOBAL_ACCOUNT_ID).await;
+        account_manager.lock_all_accounts().await.expect("lock_all_accounts");
         let (_, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         let err =
             client.get_data_directory(server).await.expect_err("get_data_directory should fail");
@@ -1911,7 +1975,7 @@ mod test {
             .expect("get_data_directory FIDL")
             .expect("get_data_directory");
 
-        account_manager.lock_account(GLOBAL_ACCOUNT_ID).await;
+        account_manager.lock_all_accounts().await.expect("lock_all_accounts");
 
         let (account, server_end) = fidl::endpoints::create_proxy().unwrap();
         account_manager

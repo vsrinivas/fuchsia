@@ -15,13 +15,17 @@ mod scrypt;
 mod testing;
 
 use anyhow::{Context, Error};
+use fidl::endpoints::RequestStream;
 use fidl_fuchsia_identity_account::AccountManagerRequestStream;
 use fidl_fuchsia_io as fio;
+use fidl_fuchsia_process_lifecycle::LifecycleRequestStream;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
+use fuchsia_runtime::{self as fruntime, HandleInfo, HandleType};
 use futures::StreamExt;
 use io_util::directory::open_in_namespace;
 use log::{error, info};
+use std::sync::Arc;
 
 use crate::{
     account_manager::{AccountManager, EnvCredManagerProvider},
@@ -66,15 +70,33 @@ async fn main() -> Result<(), Error> {
     drop(cleanup_res);
 
     let cred_manager_provider = EnvCredManagerProvider {};
-    let account_manager =
-        AccountManager::new(options, disk_manager, account_metadata_store, cred_manager_provider);
+    let account_manager = Arc::new(AccountManager::new(
+        options,
+        disk_manager,
+        account_metadata_store,
+        cred_manager_provider,
+    ));
 
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(Services::AccountManager);
     fs.take_and_serve_directory_handle().context("serving directory handle")?;
 
+    let lifecycle_handle_info = HandleInfo::new(HandleType::Lifecycle, 0);
+    let lifecycle_handle = fruntime::take_startup_handle(lifecycle_handle_info)
+        .expect("must have been provided a lifecycle channel in procargs");
+    let async_chan = fasync::Channel::from_channel(lifecycle_handle.into())
+        .expect("Async channel conversion failed.");
+    let lifecycle_req_stream = LifecycleRequestStream::from_channel(async_chan);
+
+    let account_manager_for_lifecycle = account_manager.clone();
+    let _lifecycle_task = fasync::Task::spawn(async move {
+        account_manager_for_lifecycle.handle_requests_for_lifecycle(lifecycle_req_stream).await
+    });
+
     fs.for_each_concurrent(None, |service| match service {
-        Services::AccountManager(stream) => account_manager.handle_requests_for_stream(stream),
+        Services::AccountManager(stream) => {
+            account_manager.handle_requests_for_account_manager(stream)
+        }
     })
     .await;
 
