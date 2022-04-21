@@ -73,9 +73,19 @@
             path: "/tmp",
         },
         {
+            // Used by console-launcher itself.
             protocol: [
-                "console",
+                "console", // Default device path, overriden by boot arguments.
                 "fuchsia.boot.Arguments",
+                "fuchsia.kernel.RootJob",
+                "fuchsia.process.Launcher",
+                "fuchsia.process.Resolver",
+                "fuchsia.virtualconsole.SessionManager",
+            ],
+        },
+        {
+            // Used by programs started in the console.
+            protocol: [
                 "fuchsia.boot.FactoryItems",
                 "fuchsia.boot.Items",
                 "fuchsia.boot.ReadOnlyLog",
@@ -93,7 +103,6 @@
                 "fuchsia.hardware.usb.DeviceWatcher",
                 "fuchsia.kernel.Counter",
                 "fuchsia.kernel.DebugBroker",
-                "fuchsia.kernel.RootJob",
                 "fuchsia.kernel.RootJobForInspect",
                 "fuchsia.kernel.Stats",
                 "fuchsia.logger.Log",
@@ -101,8 +110,6 @@
                 "fuchsia.pkg.PackageResolver",
                 "fuchsia.pkg.RepositoryManager",
                 "fuchsia.pkg.rewrite.Engine",
-                "fuchsia.process.Launcher",
-                "fuchsia.process.Resolver",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Launcher",
@@ -114,7 +121,6 @@
                 "fuchsia.tracing.kernel.Controller",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.vboot.FirmwareParam",
-                "fuchsia.virtualconsole.SessionManager",
                 "fuchsia.virtualization.Manager",
             ],
         },
