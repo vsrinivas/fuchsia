@@ -47,38 +47,38 @@ const MIN_SUPER_BLOCK_SIZE: u64 = 524_288;
 /// All superblocks start with the magic bytes "FxfsSupr".
 const SUPER_BLOCK_MAGIC: &[u8; 8] = b"FxfsSupr";
 
-/// An enum representing one of our [SuperBlock] copies.
+/// An enum representing one of our [SuperBlock] instances.
 ///
 /// This provides hard-coded constants related to the location and properties of the super blocks
 /// that are required to bootstrap the filesystem.
 #[derive(Copy, Clone, Debug)]
-pub enum SuperBlockCopy {
+pub enum SuperBlockInstance {
     A,
     B,
 }
 
-impl SuperBlockCopy {
-    /// Returns the next [SuperBlockCopy] for use in round-robining writes across super-blocks.
-    pub fn next(&self) -> SuperBlockCopy {
+impl SuperBlockInstance {
+    /// Returns the next [SuperBlockInstance] for use in round-robining writes across super-blocks.
+    pub fn next(&self) -> SuperBlockInstance {
         match self {
-            SuperBlockCopy::A => SuperBlockCopy::B,
-            SuperBlockCopy::B => SuperBlockCopy::A,
+            SuperBlockInstance::A => SuperBlockInstance::B,
+            SuperBlockInstance::B => SuperBlockInstance::A,
         }
     }
 
     pub fn object_id(&self) -> u64 {
         match self {
-            SuperBlockCopy::A => SUPER_BLOCK_A_OBJECT_ID,
-            SuperBlockCopy::B => SUPER_BLOCK_B_OBJECT_ID,
+            SuperBlockInstance::A => SUPER_BLOCK_A_OBJECT_ID,
+            SuperBlockInstance::B => SUPER_BLOCK_B_OBJECT_ID,
         }
     }
 
-    /// Returns the byte range where the first extent of the [SuperBlockCopy] is stored.
-    /// (Note that a [SuperBlockCopy] may still have multiple extents.)
+    /// Returns the byte range where the first extent of the [SuperBlockInstance] is stored.
+    /// (Note that a [SuperBlockInstance] may still have multiple extents.)
     pub fn first_extent(&self) -> Range<u64> {
         match self {
-            SuperBlockCopy::A => 0..MIN_SUPER_BLOCK_SIZE,
-            SuperBlockCopy::B => MIN_SUPER_BLOCK_SIZE..2 * MIN_SUPER_BLOCK_SIZE,
+            SuperBlockInstance::A => 0..MIN_SUPER_BLOCK_SIZE,
+            SuperBlockInstance::B => MIN_SUPER_BLOCK_SIZE..2 * MIN_SUPER_BLOCK_SIZE,
         }
     }
 }
@@ -155,7 +155,7 @@ pub enum SuperBlockRecord {
 }
 
 impl SuperBlock {
-    pub(super) fn new(
+    pub fn new(
         root_parent_store_object_id: u64,
         root_parent_graveyard_directory_object_id: u64,
         root_store_object_id: u64,
@@ -180,8 +180,8 @@ impl SuperBlock {
     /// Read one of the SuperBlock instances from the filesystem's underlying device.
     pub async fn read(
         filesystem: Arc<dyn Filesystem>,
-        target_super_block: SuperBlockCopy,
-    ) -> Result<(SuperBlock, SuperBlockCopy, Arc<ObjectStore>), Error> {
+        target_super_block: SuperBlockInstance,
+    ) -> Result<(SuperBlock, SuperBlockInstance, Arc<ObjectStore>), Error> {
         let device = filesystem.device();
         let (super_block, mut reader) = SuperBlock::read_header(device, target_super_block)
             .await
@@ -225,7 +225,7 @@ impl SuperBlock {
     /// wipe out any stale super-blocks when rewriting Fxfs.
     /// This isn't a secure shred in any way, it just ensures the super-block is not recognized as a
     /// super-block.
-    pub(super) async fn shred<S: AsRef<ObjectStore> + Send + Sync + 'static>(
+    pub async fn shred<S: AsRef<ObjectStore> + Send + Sync + 'static>(
         handle: StoreObjectHandle<S>,
     ) -> Result<(), Error> {
         let mut buf =
@@ -238,7 +238,7 @@ impl SuperBlock {
     /// to be replayed in to the root parent object store.
     async fn read_header(
         device: Arc<dyn Device>,
-        target_super_block: SuperBlockCopy,
+        target_super_block: SuperBlockInstance,
     ) -> Result<(SuperBlock, ItemReader), Error> {
         let mut handle = BootstrapObjectHandle::new(target_super_block.object_id(), device);
         handle.push_extent(target_super_block.first_extent());
@@ -272,7 +272,7 @@ impl SuperBlock {
     }
 
     /// Writes the super-block and the records from the root parent store to |handle|.
-    pub(super) async fn write<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
+    pub async fn write<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
         &self,
         root_parent_store: &'a ObjectStore,
         handle: StoreObjectHandle<S>,
@@ -392,7 +392,7 @@ impl ItemReader {
 #[cfg(test)]
 mod tests {
     use {
-        super::{SuperBlock, SuperBlockCopy, SuperBlockItem, MIN_SUPER_BLOCK_SIZE},
+        super::{SuperBlock, SuperBlockInstance, SuperBlockItem, MIN_SUPER_BLOCK_SIZE},
         crate::{
             filesystem::{Filesystem, FxFilesystem},
             lsm_tree::types::LayerIterator,
@@ -454,7 +454,7 @@ mod tests {
         .await
         .expect("create_object_with_id failed");
         handle_a
-            .extend(&mut transaction, super::SuperBlockCopy::A.first_extent())
+            .extend(&mut transaction, super::SuperBlockInstance::A.first_extent())
             .await
             .expect("extend failed");
         handle_b = ObjectStore::create_object_with_id(
@@ -467,7 +467,7 @@ mod tests {
         .await
         .expect("create_object_with_id failed");
         handle_b
-            .extend(&mut transaction, super::SuperBlockCopy::B.first_extent())
+            .extend(&mut transaction, super::SuperBlockInstance::B.first_extent())
             .await
             .expect("extend failed");
 
@@ -541,11 +541,11 @@ mod tests {
         assert!(handle.get_size() > MIN_SUPER_BLOCK_SIZE);
 
         let mut written_super_block_a =
-            SuperBlock::read_header(fs.device(), SuperBlockCopy::A).await.expect("read failed");
+            SuperBlock::read_header(fs.device(), SuperBlockInstance::A).await.expect("read failed");
 
         assert_eq!(written_super_block_a.0, super_block_a);
         let written_super_block_b =
-            SuperBlock::read_header(fs.device(), SuperBlockCopy::B).await.expect("read failed");
+            SuperBlock::read_header(fs.device(), SuperBlockInstance::B).await.expect("read failed");
         assert_eq!(written_super_block_b.0, super_block_b);
 
         // Check that the records match what we expect in the root parent store.
@@ -588,7 +588,7 @@ mod tests {
             .await
             .expect("write failed");
         let super_block =
-            SuperBlock::read_header(fs.device(), SuperBlockCopy::A).await.expect("read failed");
+            SuperBlock::read_header(fs.device(), SuperBlockInstance::A).await.expect("read failed");
         // Ensure a GUID has been assigned.
         assert_ne!(super_block.0.guid, [0; 16]);
     }
@@ -620,8 +620,8 @@ mod tests {
         let device = fs.take_device().await;
         device.reopen();
 
-        SuperBlock::read_header(device.clone(), SuperBlockCopy::A).await.expect("read failed");
-        SuperBlock::read_header(device.clone(), SuperBlockCopy::B).await.expect("read failed");
+        SuperBlock::read_header(device.clone(), SuperBlockInstance::A).await.expect("read failed");
+        SuperBlock::read_header(device.clone(), SuperBlockInstance::B).await.expect("read failed");
 
         // Re-initialize the filesystem.  The A block should be reset and the B block should be
         // wiped.
@@ -630,8 +630,8 @@ mod tests {
         let device = fs.take_device().await;
         device.reopen();
 
-        SuperBlock::read_header(device.clone(), SuperBlockCopy::A).await.expect("read failed");
-        SuperBlock::read_header(device.clone(), SuperBlockCopy::B)
+        SuperBlock::read_header(device.clone(), SuperBlockInstance::A).await.expect("read failed");
+        SuperBlock::read_header(device.clone(), SuperBlockInstance::B)
             .await
             .map(|_| ())
             .expect_err("Super-block B was readable after a re-format");
@@ -645,8 +645,9 @@ mod tests {
         let device = fs.take_device().await;
         device.reopen();
 
-        let (super_block_a, _) =
-            SuperBlock::read_header(device.clone(), SuperBlockCopy::A).await.expect("read failed");
+        let (super_block_a, _) = SuperBlock::read_header(device.clone(), SuperBlockInstance::A)
+            .await
+            .expect("read failed");
 
         // The second super-block won't be valid at this time so there's no point reading it.
 
@@ -674,9 +675,13 @@ mod tests {
         device.reopen();
 
         let (super_block_a_after, _) =
-            SuperBlock::read_header(device.clone(), SuperBlockCopy::A).await.expect("read failed");
+            SuperBlock::read_header(device.clone(), SuperBlockInstance::A)
+                .await
+                .expect("read failed");
         let (super_block_b_after, _) =
-            SuperBlock::read_header(device.clone(), SuperBlockCopy::B).await.expect("read failed");
+            SuperBlock::read_header(device.clone(), SuperBlockInstance::B)
+                .await
+                .expect("read failed");
 
         // It's possible that multiple super-blocks were written, so cater for that.
 

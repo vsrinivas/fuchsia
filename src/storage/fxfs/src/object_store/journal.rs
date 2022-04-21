@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// The journal is implemented as an ever extending file which contains variable length records that
-// describe mutations to be applied to various objects.  The journal file consists of blocks, with a
-// checksum at the end of each block, but otherwise it can be considered a continuous stream.  The
-// checksum is seeded with the checksum from the previous block.  To free space in the journal,
-// records are replaced with sparse extents when it is known they are no longer needed to mount.  At
-// mount time, the journal is replayed: the mutations are applied into memory.  Eventually, a
-// checksum failure will indicate no more records exist to be replayed, at which point the mount can
-// continue and the journal will be extended from that point with further mutations as required.
-//
-// The super-block contains the starting offset and checksum for the journal file and sufficient
-// information to locate the initial extents for the journal.  The super-block is written using the
-// same per-block checksum that is used for the journal file.
+//! The journal is implemented as an ever extending file which contains variable length records
+//! that describe mutations to be applied to various objects.  The journal file consists of
+//! blocks, with a checksum at the end of each block, but otherwise it can be considered a
+//! continuous stream.
+//!
+//! The checksum is seeded with the checksum from the previous block.  To free space in the
+//! journal, records are replaced with sparse extents when it is known they are no longer
+//! needed to mount.
+//!
+//! At mount time, the journal is replayed: the mutations are applied into memory.
+//! Eventually, a checksum failure will indicate no more records exist to be replayed,
+//! at which point the mount can continue and the journal will be extended from that point with
+//! further mutations as required.
 
 mod checksum_list;
 mod reader;
@@ -35,7 +36,7 @@ use {
             journal::{
                 checksum_list::ChecksumList,
                 reader::{JournalReader, ReadResult},
-                super_block::SuperBlockCopy,
+                super_block::SuperBlockInstance,
                 writer::JournalWriter,
             },
             object_manager::ObjectManager,
@@ -198,7 +199,7 @@ pub struct Journal {
 
 struct Inner {
     super_block: SuperBlock,
-    super_block_to_write: SuperBlockCopy,
+    super_block_to_write: SuperBlockInstance,
 
     // This event is used when we are waiting for a compaction to free up journal space.
     reclaim_event: Option<Event>,
@@ -288,7 +289,7 @@ impl Journal {
             handle: OnceCell::new(),
             inner: Mutex::new(Inner {
                 super_block: SuperBlock::default(),
-                super_block_to_write: SuperBlockCopy::A,
+                super_block_to_write: SuperBlockInstance::A,
                 reclaim_event: None,
                 zero_offset: None,
                 device_flushed_offset: 0,
@@ -441,8 +442,8 @@ impl Journal {
     ) -> Result<(), Error> {
         trace_duration!("Journal::replay");
         let (super_block, current_super_block, root_parent) = match futures::join!(
-            SuperBlock::read(filesystem.clone(), SuperBlockCopy::A),
-            SuperBlock::read(filesystem.clone(), SuperBlockCopy::B)
+            SuperBlock::read(filesystem.clone(), SuperBlockInstance::A),
+            SuperBlock::read(filesystem.clone(), SuperBlockInstance::B)
         ) {
             (Err(e1), Err(e2)) => {
                 bail!("Failed to load both superblocks due to {:?}\nand\n{:?}", e1, e2)
@@ -847,7 +848,7 @@ impl Journal {
         .await
         .context("create super block")?;
         super_block_a_handle
-            .extend(&mut transaction, SuperBlockCopy::A.first_extent())
+            .extend(&mut transaction, SuperBlockInstance::A.first_extent())
             .await
             .context("extend super block")?;
         super_block_b_handle = ObjectStore::create_object_with_id(
@@ -860,7 +861,7 @@ impl Journal {
         .await
         .context("create super block")?;
         super_block_b_handle
-            .extend(&mut transaction, SuperBlockCopy::B.first_extent())
+            .extend(&mut transaction, SuperBlockInstance::B.first_extent())
             .await
             .context("extend super block")?;
 
@@ -898,12 +899,11 @@ impl Journal {
                 journal_handle.object_id(),
                 checkpoint,
             );
-            inner.super_block_to_write = SuperBlockCopy::A;
+            inner.super_block_to_write = SuperBlockInstance::A;
         }
 
         // Initialize the journal writer.
         let _ = self.handle.set(journal_handle);
-
         self.write_super_block().await?;
         SuperBlock::shred(super_block_b_handle).await
     }
