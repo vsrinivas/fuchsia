@@ -6,7 +6,7 @@
 
 use {
     crate::process::wait_for_process_termination,
-    anyhow::{format_err, Context as _, Error},
+    anyhow::{anyhow, format_err, Context as _, Error},
     fdio::SpawnBuilder,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio,
@@ -94,7 +94,11 @@ impl Package {
         let root = root.as_ref();
         let file = File::open(root.join("meta/package"))?;
         let meta_package = MetaPackage::deserialize(io::BufReader::new(file))?;
-        let mut pkg = PackageBuilder::new(meta_package.name().as_ref());
+
+        let abi_revision_bytes = std::fs::read(root.join("meta/fuchsia.abi/abi-revision"))?;
+        let abi_revision = u64::from_le_bytes(abi_revision_bytes.as_slice().try_into()?);
+
+        let mut pkg = PackageBuilder::new(meta_package.name().as_ref()).abi_revision(abi_revision);
 
         fn is_generated_file(path: &Path) -> bool {
             match path.to_str() {
@@ -433,6 +437,7 @@ impl<T: Into<Error>> From<T> for VerificationError {
 pub struct PackageBuilder {
     name: PackageName,
     contents: BTreeMap<PathBuf, PackageEntry>,
+    abi_revision: Option<u64>,
 }
 
 impl PackageBuilder {
@@ -442,7 +447,29 @@ impl PackageBuilder {
     ///
     /// Panics if `name` is an invalid package name.
     pub fn new(name: impl Into<String>) -> Self {
-        Self { name: name.into().try_into().unwrap(), contents: BTreeMap::new() }
+        Self {
+            name: name.into().try_into().unwrap(),
+            contents: BTreeMap::new(),
+            abi_revision: None,
+        }
+    }
+
+    /// Set the API Level that should be included in the package. This will return an error if there
+    /// is no ABI revision that corresponds with this API Level.
+    pub fn api_level(self, api_level: u64) -> Result<Self, Error> {
+        for v in version_history::VERSION_HISTORY {
+            if v.api_level == api_level {
+                return Ok(self.abi_revision(v.abi_revision));
+            }
+        }
+
+        Err(anyhow!("unknown API level {}", api_level))
+    }
+
+    /// Set the ABI Revision that should be included in the package.
+    pub fn abi_revision(mut self, abi_revision: u64) -> Self {
+        self.abi_revision = Some(abi_revision);
+        self
     }
 
     /// Create a subdirectory within the package.
@@ -527,6 +554,18 @@ impl PackageBuilder {
     pub async fn build(self) -> Result<Package, Error> {
         // TODO Consider switching indir/packagedir to be a VFS instead
 
+        let abi_revision = if let Some(abi_revision) = self.abi_revision {
+            abi_revision
+        } else {
+            // If an ABI revision wasn't specified, default to a pinned one so that merkles won't
+            // change when we create a new ABI revision.
+            version_history::VERSION_HISTORY
+                .iter()
+                .find(|v| v.api_level == 7)
+                .expect("API Level 7 to exist")
+                .abi_revision
+        };
+
         // indir contains temporary inputs to package creation
         let indir = tempfile::tempdir().context("create /in")?;
 
@@ -569,18 +608,11 @@ impl PackageBuilder {
             }
         }
 
-        // Packages need to be built with a specific version. We pick a specific version since then
-        // we won't change merkles when the latest version changes.
-        let version = version_history::VERSION_HISTORY
-            .iter()
-            .find(|v| v.api_level == 7)
-            .expect("API Level 7 to exist");
-
         let pm = SpawnBuilder::new()
             .options(fdio::SpawnOptions::CLONE_ALL - fdio::SpawnOptions::CLONE_NAMESPACE)
             .arg("pm")?
             .arg("-abi-revision")?
-            .arg(version.abi_revision.to_string())?
+            .arg(abi_revision.to_string())?
             .arg(format!("-n={}", self.name))?
             .arg("-m=/in/package.manifest")?
             .arg("-r=fuchsia.com")?
@@ -785,26 +817,41 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_from_dir() -> Result<(), Error> {
+    async fn test_from_dir() {
+        let abi_revision = version_history::LATEST_VERSION.abi_revision;
+
         let root = {
-            let dir = tempfile::tempdir()?;
-            fs::create_dir(dir.path().join("meta"))?;
-            fs::create_dir(dir.path().join("data"))?;
+            let dir = tempfile::tempdir().unwrap();
+
+            fs::create_dir(dir.path().join("meta")).unwrap();
+            fs::create_dir(dir.path().join("data")).unwrap();
+
             MetaPackage::from_name("asdf".parse().unwrap())
-                .serialize(File::create(dir.path().join("meta/package"))?)?;
-            fs::write(dir.path().join("data/hello"), "world")?;
+                .serialize(File::create(dir.path().join("meta/package")).unwrap())
+                .unwrap();
+
+            fs::create_dir(dir.path().join("meta/fuchsia.abi")).unwrap();
+            fs::write(
+                dir.path().join("meta/fuchsia.abi/abi-revision"),
+                &abi_revision.to_le_bytes(),
+            )
+            .unwrap();
+
+            fs::write(dir.path().join("data/hello"), "world").unwrap();
+
             dir
         };
 
-        let from_dir = Package::from_dir(root.path()).await?;
+        let from_dir = Package::from_dir(root.path()).await.unwrap();
+
         let pkg = PackageBuilder::new("asdf")
+            .abi_revision(abi_revision)
             .add_resource_at("data/hello", "world".as_bytes())
             .build()
-            .await?;
+            .await
+            .unwrap();
 
         assert_eq!(from_dir.meta_far_merkle, pkg.meta_far_merkle);
-
-        Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
