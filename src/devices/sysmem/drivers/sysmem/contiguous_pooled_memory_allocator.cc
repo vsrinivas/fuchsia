@@ -1183,9 +1183,7 @@ void ContiguousPooledMemoryAllocator::DumpPoolStats() {
 }
 
 void ContiguousPooledMemoryAllocator::DumpPoolHighWaterMark() {
-  LOG(INFO,
-      "%s high_water_mark_used_size_: %ld bytes, max_free_size_at_high_water_mark_ %ld bytes "
-      "(not including any failed allocations)",
+  LOG(INFO, "%s high_water_mark_used_size_: %ld bytes, max_free_size_at_high_water_mark_ %ld bytes",
       allocation_name_, high_water_mark_used_size_, max_free_size_at_high_water_mark_);
 }
 

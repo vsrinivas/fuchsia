@@ -3140,7 +3140,7 @@ TEST(Sysmem, HeapAmlogicSecureMiniStress) {
   std::uniform_int_distribution<uint32_t> key_distribution(0, std::numeric_limits<uint32_t>::max());
   // Buffers aren't required to be block aligned.
   const uint32_t max_buffer_size = 4 * kBlockSize;
-  std::uniform_int_distribution<uint32_t> size_distribution(0, max_buffer_size);
+  std::uniform_int_distribution<uint32_t> size_distribution(1, max_buffer_size);
 
   struct Vmo {
     uint32_t size;
