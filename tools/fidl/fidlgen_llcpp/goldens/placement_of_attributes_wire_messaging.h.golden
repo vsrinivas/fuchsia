@@ -69,6 +69,10 @@ struct ::fidl::WireRequest<
     ::test_placementofattributes::ExampleProtocol::Method>
     final
     : public ::test_placementofattributes::wire::ExampleProtocolMethodRequest {
+  explicit WireRequest(
+      ::test_placementofattributes::wire::ExampleProtocolMethodRequest base)
+      : ::test_placementofattributes::wire::ExampleProtocolMethodRequest(
+            std::move(base)) {}
   explicit WireRequest(const ::test_exampleusing::wire::Empty& arg)
       : ::test_placementofattributes::wire::ExampleProtocolMethodRequest{
             .arg = std::move(arg)} {}

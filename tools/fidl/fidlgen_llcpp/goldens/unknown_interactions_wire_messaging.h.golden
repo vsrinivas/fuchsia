@@ -198,6 +198,10 @@ struct ::fidl::WireResponse<::test_unknowninteractions::Example::FlexibleTwoWay>
   using Result = test_unknowninteractions::wire::ExampleFlexibleTwoWayResult;
 
   explicit WireResponse(
+      ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse base)
+      : ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse(
+            std::move(base)) {}
+  explicit WireResponse(
       ::test_unknowninteractions::wire::ExampleFlexibleTwoWayResult result)
       : ::test_unknowninteractions::wire::ExampleFlexibleTwoWayTopResponse{
             .result = std::move(result)} {}

@@ -58,6 +58,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_error::Example> final {
 template <>
 struct ::fidl::WireRequest<::test_error::Example::Foo> final
     : public ::test_error::wire::ExampleFooRequest {
+  explicit WireRequest(::test_error::wire::ExampleFooRequest base)
+      : ::test_error::wire::ExampleFooRequest(std::move(base)) {}
   explicit WireRequest(::fidl::StringView s)
       : ::test_error::wire::ExampleFooRequest{.s = std::move(s)} {}
   WireRequest() = default;
@@ -88,6 +90,8 @@ struct ::fidl::WireResponse<::test_error::Example::Foo> final
     : public ::test_error::wire::ExampleFooTopResponse {
   using Result = test_error::wire::ExampleFooResult;
 
+  explicit WireResponse(::test_error::wire::ExampleFooTopResponse base)
+      : ::test_error::wire::ExampleFooTopResponse(std::move(base)) {}
   explicit WireResponse(::test_error::wire::ExampleFooResult result)
       : ::test_error::wire::ExampleFooTopResponse{.result = std::move(result)} {
   }

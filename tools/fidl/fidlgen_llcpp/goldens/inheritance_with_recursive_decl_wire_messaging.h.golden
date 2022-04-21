@@ -72,6 +72,10 @@ struct ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>
     final
     : public ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest {
   explicit WireRequest(
+      ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest base)
+      : ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest(
+            std::move(base)) {}
+  explicit WireRequest(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request)
       : ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest{
             .request = std::move(request)} {}
@@ -429,6 +433,10 @@ struct ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>
     final
     : public ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest {
   explicit WireRequest(
+      ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest base)
+      : ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest(
+            std::move(base)) {}
+  explicit WireRequest(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request)
       : ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest{
             .request = std::move(request)} {}
@@ -464,6 +472,10 @@ template <>
 struct ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>
     final
     : public ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest {
+  explicit WireRequest(
+      ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest base)
+      : ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest(
+            std::move(base)) {}
   explicit WireRequest(
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request)
       : ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest{

@@ -73,6 +73,10 @@ struct ::fidl::WireRequest<::test_driverhandle::HandlesInProtocol::SendHandles>
     : public ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest {
   using T = test_driverhandle::wire::T;
 
+  explicit WireRequest(
+      ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest base)
+      : ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest(
+            std::move(base)) {}
   explicit WireRequest(::test_driverhandle::wire::T t)
       : ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest{
             .t = std::move(t)} {}

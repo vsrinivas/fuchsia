@@ -97,6 +97,13 @@ struct ::fidl::WireResponse<
     final
     : public ::test_union::wire::
           TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse {
+  explicit WireResponse(
+      ::test_union::wire::
+          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse
+              base)
+      : ::test_union::wire::
+            TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(
+                std::move(base)) {}
   explicit WireResponse(::test_union::wire::StrictBoundedXUnion xu)
       : ::test_union::wire::
             TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse{
@@ -158,6 +165,13 @@ struct ::fidl::WireResponse<
     final
     : public ::test_union::wire::
           TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse {
+  explicit WireResponse(
+      ::test_union::wire::
+          TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse
+              base)
+      : ::test_union::wire::
+            TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(
+                std::move(base)) {}
   explicit WireResponse(::test_union::wire::OlderSimpleUnion xu)
       : ::test_union::wire::
             TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse{

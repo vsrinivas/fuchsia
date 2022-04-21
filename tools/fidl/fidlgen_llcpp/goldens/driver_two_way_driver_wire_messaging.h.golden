@@ -61,6 +61,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>
 template <>
 struct ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add> final
     : public ::test_drivertwoway::wire::TwoWayAddRequest {
+  explicit WireRequest(::test_drivertwoway::wire::TwoWayAddRequest base)
+      : ::test_drivertwoway::wire::TwoWayAddRequest(std::move(base)) {}
   explicit WireRequest(uint16_t addend1, uint16_t addend2)
       : ::test_drivertwoway::wire::TwoWayAddRequest{
             .addend1 = std::move(addend1), .addend2 = std::move(addend2)} {}
@@ -91,6 +93,8 @@ struct ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>
 template <>
 struct ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add> final
     : public ::test_drivertwoway::wire::TwoWayAddTopResponse {
+  explicit WireResponse(::test_drivertwoway::wire::TwoWayAddTopResponse base)
+      : ::test_drivertwoway::wire::TwoWayAddTopResponse(std::move(base)) {}
   explicit WireResponse(uint16_t sum)
       : ::test_drivertwoway::wire::TwoWayAddTopResponse{.sum = std::move(sum)} {
   }

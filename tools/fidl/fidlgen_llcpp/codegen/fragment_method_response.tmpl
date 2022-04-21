@@ -16,7 +16,11 @@ struct {{ .WireResponse }} final {{- if .HasResponsePayload }} : public {{ .Resp
   using {{ .ScopedName }} = {{ .FlattenedName }};
 {{- end }}
 
-  {{ if .ResponseArgs }}
+  {{ if (and .ResponseFlattened .HasResponsePayload) }}
+  explicit {{ .WireResponse.Self }}({{ .ResponsePayload }} base) : {{ .ResponsePayload }}(std::move(base)) {}
+  {{- end }}
+
+  {{- if .ResponseArgs }}
   explicit {{ .WireResponse.Self }}({{ RenderParams .ResponseArgs }}) : {{ .ResponsePayload }}
   {{- if .ResponseFlattened -}}
   {{- "{ " }}{{ RenderForwardStructParams .ResponseArgs }}}

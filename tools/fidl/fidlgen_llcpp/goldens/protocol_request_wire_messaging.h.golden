@@ -111,6 +111,10 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild> final
     : public ::test_protocolrequest::wire::ParentGetChildTopResponse {
+  explicit WireResponse(
+      ::test_protocolrequest::wire::ParentGetChildTopResponse base)
+      : ::test_protocolrequest::wire::ParentGetChildTopResponse(
+            std::move(base)) {}
   explicit WireResponse(::fidl::ClientEnd<::test_protocolrequest::Child>&& c)
       : ::test_protocolrequest::wire::ParentGetChildTopResponse{
             .c = std::move(c)} {}
@@ -167,6 +171,10 @@ template <>
 struct ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>
     final
     : public ::test_protocolrequest::wire::ParentGetChildRequestTopResponse {
+  explicit WireResponse(
+      ::test_protocolrequest::wire::ParentGetChildRequestTopResponse base)
+      : ::test_protocolrequest::wire::ParentGetChildRequestTopResponse(
+            std::move(base)) {}
   explicit WireResponse(::fidl::ServerEnd<::test_protocolrequest::Child>&& r)
       : ::test_protocolrequest::wire::ParentGetChildRequestTopResponse{
             .r = std::move(r)} {}
@@ -200,6 +208,9 @@ struct ::fidl::internal::TransactionalResponse<
 template <>
 struct ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild> final
     : public ::test_protocolrequest::wire::ParentTakeChildRequest {
+  explicit WireRequest(
+      ::test_protocolrequest::wire::ParentTakeChildRequest base)
+      : ::test_protocolrequest::wire::ParentTakeChildRequest(std::move(base)) {}
   explicit WireRequest(::fidl::ClientEnd<::test_protocolrequest::Child>&& c)
       : ::test_protocolrequest::wire::ParentTakeChildRequest{.c =
                                                                  std::move(c)} {
@@ -234,6 +245,10 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>
     final : public ::test_protocolrequest::wire::ParentTakeChildRequestRequest {
+  explicit WireRequest(
+      ::test_protocolrequest::wire::ParentTakeChildRequestRequest base)
+      : ::test_protocolrequest::wire::ParentTakeChildRequestRequest(
+            std::move(base)) {}
   explicit WireRequest(::fidl::ServerEnd<::test_protocolrequest::Child>&& r)
       : ::test_protocolrequest::wire::ParentTakeChildRequestRequest{
             .r = std::move(r)} {}

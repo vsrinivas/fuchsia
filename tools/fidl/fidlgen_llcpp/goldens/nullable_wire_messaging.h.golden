@@ -63,6 +63,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_nullable::SimpleProtocol>
 template <>
 struct ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add> final
     : public ::test_nullable::wire::SimpleProtocolAddRequest {
+  explicit WireRequest(::test_nullable::wire::SimpleProtocolAddRequest base)
+      : ::test_nullable::wire::SimpleProtocolAddRequest(std::move(base)) {}
   explicit WireRequest(int32_t a, int32_t b)
       : ::test_nullable::wire::SimpleProtocolAddRequest{.a = std::move(a),
                                                         .b = std::move(b)} {}
@@ -94,6 +96,9 @@ struct ::fidl::internal::TransactionalRequest<
 template <>
 struct ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add> final
     : public ::test_nullable::wire::SimpleProtocolAddTopResponse {
+  explicit WireResponse(
+      ::test_nullable::wire::SimpleProtocolAddTopResponse base)
+      : ::test_nullable::wire::SimpleProtocolAddTopResponse(std::move(base)) {}
   explicit WireResponse(int32_t sum)
       : ::test_nullable::wire::SimpleProtocolAddTopResponse{
             .sum = std::move(sum)} {}

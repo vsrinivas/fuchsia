@@ -16,7 +16,11 @@
     using {{ .ScopedName }} = {{ .FlattenedName }};
   {{- end }}
 
-    {{ if .ResponseArgs }}
+    {{ if (and .ResponseFlattened .HasResponsePayload) }}
+    explicit {{ .WireEvent.Self }}({{ .ResponsePayload }} base) : {{ .ResponsePayload }}(std::move(base)) {}
+    {{- end }}
+
+    {{- if .ResponseArgs }}
     explicit {{ .WireEvent.Self }}({{ RenderParams .ResponseArgs }}) : {{ .ResponsePayload }}
     {{- if .ResponseFlattened -}}
     {{- "{ " }}{{ RenderForwardStructParams .ResponseArgs }}}

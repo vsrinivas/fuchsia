@@ -80,6 +80,12 @@ struct ::fidl::WireRequest<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
     final : public ::test_errorsyntax_parent::wire::
                 ParentUsesErrorSyntaxComposedCallWhichMayFailRequest {
+  explicit WireRequest(
+      ::test_errorsyntax_parent::wire::
+          ParentUsesErrorSyntaxComposedCallWhichMayFailRequest base)
+      : ::test_errorsyntax_parent::wire::
+            ParentUsesErrorSyntaxComposedCallWhichMayFailRequest(
+                std::move(base)) {}
   explicit WireRequest(::fidl::StringView s)
       : ::test_errorsyntax_parent::wire::
             ParentUsesErrorSyntaxComposedCallWhichMayFailRequest{
@@ -119,6 +125,12 @@ struct ::fidl::WireResponse<
                 ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse {
   explicit WireResponse(
       ::test_errorsyntax_parent::wire::
+          ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse base)
+      : ::test_errorsyntax_parent::wire::
+            ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse(
+                std::move(base)) {}
+  explicit WireResponse(
+      ::test_errorsyntax_parent::wire::
           ParentUsesErrorSyntaxComposedCallWhichMayFailResult result)
       : ::test_errorsyntax_parent::wire::
             ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse{
@@ -154,6 +166,11 @@ struct ::fidl::WireRequest<
     ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
     final : public ::test_errorsyntax::wire::
                 ExampleUseOfErrorSyntaxCallWhichMayFailRequest {
+  explicit WireRequest(
+      ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest
+          base)
+      : ::test_errorsyntax::wire::
+            ExampleUseOfErrorSyntaxCallWhichMayFailRequest(std::move(base)) {}
   explicit WireRequest(::fidl::StringView s)
       : ::test_errorsyntax::wire::
             ExampleUseOfErrorSyntaxCallWhichMayFailRequest{.s = std::move(s)} {}
@@ -194,6 +211,12 @@ struct ::fidl::WireResponse<
   using Result =
       test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult;
 
+  explicit WireResponse(
+      ::test_errorsyntax::wire::
+          ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse base)
+      : ::test_errorsyntax::wire::
+            ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(
+                std::move(base)) {}
   explicit WireResponse(
       ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult
           result)

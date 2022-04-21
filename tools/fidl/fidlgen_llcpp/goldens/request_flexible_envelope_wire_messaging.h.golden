@@ -79,6 +79,10 @@ struct ::fidl::WireRequest<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
     final : public ::test_requestflexibleenvelope::wire::
                 ProtocolRequestStrictResponseFlexibleRequest {
+  explicit WireRequest(::test_requestflexibleenvelope::wire::
+                           ProtocolRequestStrictResponseFlexibleRequest base)
+      : ::test_requestflexibleenvelope::wire::
+            ProtocolRequestStrictResponseFlexibleRequest(std::move(base)) {}
   explicit WireRequest(::test_requestflexibleenvelope::wire::StrictFoo s)
       : ::test_requestflexibleenvelope::wire::
             ProtocolRequestStrictResponseFlexibleRequest{.s = std::move(s)} {}
@@ -116,6 +120,11 @@ struct ::fidl::WireResponse<
     ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
     final : public ::test_requestflexibleenvelope::wire::
                 ProtocolRequestStrictResponseFlexibleTopResponse {
+  explicit WireResponse(
+      ::test_requestflexibleenvelope::wire::
+          ProtocolRequestStrictResponseFlexibleTopResponse base)
+      : ::test_requestflexibleenvelope::wire::
+            ProtocolRequestStrictResponseFlexibleTopResponse(std::move(base)) {}
   explicit WireResponse(::test_requestflexibleenvelope::wire::FlexibleFoo f)
       : ::test_requestflexibleenvelope::wire::
             ProtocolRequestStrictResponseFlexibleTopResponse{.f =
@@ -151,6 +160,10 @@ struct ::fidl::WireRequest<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
     final : public ::test_requestflexibleenvelope::wire::
                 ProtocolRequestFlexibleResponseStrictRequest {
+  explicit WireRequest(::test_requestflexibleenvelope::wire::
+                           ProtocolRequestFlexibleResponseStrictRequest base)
+      : ::test_requestflexibleenvelope::wire::
+            ProtocolRequestFlexibleResponseStrictRequest(std::move(base)) {}
   explicit WireRequest(::test_requestflexibleenvelope::wire::FlexibleFoo s)
       : ::test_requestflexibleenvelope::wire::
             ProtocolRequestFlexibleResponseStrictRequest{.s = std::move(s)} {}
@@ -188,6 +201,11 @@ struct ::fidl::WireResponse<
     ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
     final : public ::test_requestflexibleenvelope::wire::
                 ProtocolRequestFlexibleResponseStrictTopResponse {
+  explicit WireResponse(
+      ::test_requestflexibleenvelope::wire::
+          ProtocolRequestFlexibleResponseStrictTopResponse base)
+      : ::test_requestflexibleenvelope::wire::
+            ProtocolRequestFlexibleResponseStrictTopResponse(std::move(base)) {}
   explicit WireResponse(::test_requestflexibleenvelope::wire::StrictFoo f)
       : ::test_requestflexibleenvelope::wire::
             ProtocolRequestFlexibleResponseStrictTopResponse{.f =

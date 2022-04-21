@@ -16,7 +16,11 @@ struct {{ .WireRequest }} final {{- if .HasRequestPayload }} : public {{ .Reques
   using {{ .ScopedName }} = {{ .FlattenedName }};
 {{- end }}
 
-  {{ if .RequestArgs }}
+  {{ if (and .RequestFlattened .HasRequestPayload) }}
+  explicit {{ .WireRequest.Self }}({{ .RequestPayload }} base) : {{ .RequestPayload }}(std::move(base)) {}
+  {{- end }}
+
+  {{- if .RequestArgs }}
   explicit {{ .WireRequest.Self }}({{ RenderParams .RequestArgs }}) : {{ .RequestPayload }}
   {{- if .RequestFlattened -}}
   {{- "{ " }}{{ RenderForwardStructParams .RequestArgs }}}

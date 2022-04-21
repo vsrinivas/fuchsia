@@ -65,6 +65,10 @@ struct ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod> final
   using UnionMember = test_anonymous::wire::UnionMember;
   using TableMember = test_anonymous::wire::TableMember;
 
+  explicit WireRequest(
+      ::test_anonymous::wire::SomeProtocolSomeMethodRequest base)
+      : ::test_anonymous::wire::SomeProtocolSomeMethodRequest(std::move(base)) {
+  }
   explicit WireRequest(::test_anonymous::wire::UnionMember union_member,
                        ::test_anonymous::wire::TableMember table_member)
       : ::test_anonymous::wire::SomeProtocolSomeMethodRequest{
@@ -103,6 +107,10 @@ struct ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod> final
     : public ::test_anonymous::wire::SomeProtocolSomeMethodTopResponse {
   using Result = test_anonymous::wire::SomeProtocolSomeMethodResult;
 
+  explicit WireResponse(
+      ::test_anonymous::wire::SomeProtocolSomeMethodTopResponse base)
+      : ::test_anonymous::wire::SomeProtocolSomeMethodTopResponse(
+            std::move(base)) {}
   explicit WireResponse(
       ::test_anonymous::wire::SomeProtocolSomeMethodResult result)
       : ::test_anonymous::wire::SomeProtocolSomeMethodTopResponse{

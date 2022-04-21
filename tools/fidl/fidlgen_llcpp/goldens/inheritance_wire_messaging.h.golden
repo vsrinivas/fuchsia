@@ -60,6 +60,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_inheritance::Super> final {
 template <>
 struct ::fidl::WireRequest<::test_inheritance::Super::Foo> final
     : public ::test_inheritance::wire::SuperFooRequest {
+  explicit WireRequest(::test_inheritance::wire::SuperFooRequest base)
+      : ::test_inheritance::wire::SuperFooRequest(std::move(base)) {}
   explicit WireRequest(::fidl::StringView s)
       : ::test_inheritance::wire::SuperFooRequest{.s = std::move(s)} {}
   WireRequest() = default;
@@ -88,6 +90,8 @@ struct ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>
 template <>
 struct ::fidl::WireResponse<::test_inheritance::Super::Foo> final
     : public ::test_inheritance::wire::SuperFooTopResponse {
+  explicit WireResponse(::test_inheritance::wire::SuperFooTopResponse base)
+      : ::test_inheritance::wire::SuperFooTopResponse(std::move(base)) {}
   explicit WireResponse(int64_t y)
       : ::test_inheritance::wire::SuperFooTopResponse{.y = std::move(y)} {}
   WireResponse() = default;
@@ -601,6 +605,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_inheritance::Sub> final {
 template <>
 struct ::fidl::WireRequest<::test_inheritance::Sub::Foo> final
     : public ::test_inheritance::wire::SuperFooRequest {
+  explicit WireRequest(::test_inheritance::wire::SuperFooRequest base)
+      : ::test_inheritance::wire::SuperFooRequest(std::move(base)) {}
   explicit WireRequest(::fidl::StringView s)
       : ::test_inheritance::wire::SuperFooRequest{.s = std::move(s)} {}
   WireRequest() = default;
@@ -629,6 +635,8 @@ struct ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>
 template <>
 struct ::fidl::WireResponse<::test_inheritance::Sub::Foo> final
     : public ::test_inheritance::wire::SuperFooTopResponse {
+  explicit WireResponse(::test_inheritance::wire::SuperFooTopResponse base)
+      : ::test_inheritance::wire::SuperFooTopResponse(std::move(base)) {}
   explicit WireResponse(int64_t y)
       : ::test_inheritance::wire::SuperFooTopResponse{.y = std::move(y)} {}
   WireResponse() = default;

@@ -436,6 +436,12 @@ struct ::fidl::WireResponse<
                 ComposedProtocolTwoWayAnonComposedWithErrorTopResponse {
   explicit WireResponse(
       ::test_protocollayouts_imported::wire::
+          ComposedProtocolTwoWayAnonComposedWithErrorTopResponse base)
+      : ::test_protocollayouts_imported::wire::
+            ComposedProtocolTwoWayAnonComposedWithErrorTopResponse(
+                std::move(base)) {}
+  explicit WireResponse(
+      ::test_protocollayouts_imported::wire::
           ComposedProtocolTwoWayAnonComposedWithErrorResult result)
       : ::test_protocollayouts_imported::wire::
             ComposedProtocolTwoWayAnonComposedWithErrorTopResponse{
@@ -507,6 +513,10 @@ struct ::fidl::WireEvent<
     ::test_protocollayouts::MainProtocol::OnAnonComposedWithError>
     final : public ::test_protocollayouts_imported::wire::
                 ComposedProtocolOnAnonComposedWithErrorRequest {
+  explicit WireEvent(::test_protocollayouts_imported::wire::
+                         ComposedProtocolOnAnonComposedWithErrorRequest base)
+      : ::test_protocollayouts_imported::wire::
+            ComposedProtocolOnAnonComposedWithErrorRequest(std::move(base)) {}
   explicit WireEvent(::test_protocollayouts_imported::wire::
                          ComposedProtocolOnAnonComposedWithErrorResult result)
       : ::test_protocollayouts_imported::wire::
@@ -693,6 +703,12 @@ struct ::fidl::WireResponse<
                 ComposedProtocolTwoWayNamedComposedWithErrorTopResponse {
   explicit WireResponse(
       ::test_protocollayouts_imported::wire::
+          ComposedProtocolTwoWayNamedComposedWithErrorTopResponse base)
+      : ::test_protocollayouts_imported::wire::
+            ComposedProtocolTwoWayNamedComposedWithErrorTopResponse(
+                std::move(base)) {}
+  explicit WireResponse(
+      ::test_protocollayouts_imported::wire::
           ComposedProtocolTwoWayNamedComposedWithErrorResult result)
       : ::test_protocollayouts_imported::wire::
             ComposedProtocolTwoWayNamedComposedWithErrorTopResponse{
@@ -760,6 +776,10 @@ struct ::fidl::WireEvent<
     ::test_protocollayouts::MainProtocol::OnNamedComposedWithError>
     final : public ::test_protocollayouts_imported::wire::
                 ComposedProtocolOnNamedComposedWithErrorRequest {
+  explicit WireEvent(::test_protocollayouts_imported::wire::
+                         ComposedProtocolOnNamedComposedWithErrorRequest base)
+      : ::test_protocollayouts_imported::wire::
+            ComposedProtocolOnNamedComposedWithErrorRequest(std::move(base)) {}
   explicit WireEvent(::test_protocollayouts_imported::wire::
                          ComposedProtocolOnNamedComposedWithErrorResult result)
       : ::test_protocollayouts_imported::wire::
@@ -941,6 +961,11 @@ struct ::fidl::WireResponse<
       test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult;
 
   explicit WireResponse(
+      ::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorTopResponse
+          base)
+      : ::test_protocollayouts::wire::
+            MainProtocolTwoWayImportWithErrorTopResponse(std::move(base)) {}
+  explicit WireResponse(
       ::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorResult
           result)
       : ::test_protocollayouts::wire::
@@ -1012,6 +1037,10 @@ struct ::fidl::WireEvent<
   using Result =
       test_protocollayouts::wire::MainProtocolOnImportWithErrorResult;
 
+  explicit WireEvent(
+      ::test_protocollayouts::wire::MainProtocolOnImportWithErrorRequest base)
+      : ::test_protocollayouts::wire::MainProtocolOnImportWithErrorRequest(
+            std::move(base)) {}
   explicit WireEvent(
       ::test_protocollayouts::wire::MainProtocolOnImportWithErrorResult result)
       : ::test_protocollayouts::wire::MainProtocolOnImportWithErrorRequest{
@@ -1180,6 +1209,11 @@ struct ::fidl::WireResponse<
       test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult;
 
   explicit WireResponse(
+      ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorTopResponse
+          base)
+      : ::test_protocollayouts::wire::
+            MainProtocolTwoWayLocalWithErrorTopResponse(std::move(base)) {}
+  explicit WireResponse(
       ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorResult
           result)
       : ::test_protocollayouts::wire::
@@ -1248,6 +1282,10 @@ struct ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnLocalWithError>
     : public ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest {
   using Result = test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult;
 
+  explicit WireEvent(
+      ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest base)
+      : ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest(
+            std::move(base)) {}
   explicit WireEvent(
       ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorResult result)
       : ::test_protocollayouts::wire::MainProtocolOnLocalWithErrorRequest{
@@ -1429,6 +1467,11 @@ struct ::fidl::WireResponse<
       test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult;
 
   explicit WireResponse(
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorTopResponse
+          base)
+      : ::test_protocollayouts::wire::
+            MainProtocolTwoWayAnonWithErrorTopResponse(std::move(base)) {}
+  explicit WireResponse(
       ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResult
           result)
       : ::test_protocollayouts::wire::
@@ -1498,6 +1541,10 @@ struct ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonWithError>
     : public ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorRequest {
   using Result = test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult;
 
+  explicit WireEvent(
+      ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorRequest base)
+      : ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorRequest(
+            std::move(base)) {}
   explicit WireEvent(
       ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResult result)
       : ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorRequest{
