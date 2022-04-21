@@ -171,6 +171,14 @@ void FileTester::CheckNonInlineFile(VnodeF2fs *vn) {
   ASSERT_EQ(vn->TestFlag(InodeInfoFlag::kInlineData), 0);
 }
 
+void FileTester::CheckDataExistFlagSet(VnodeF2fs *vn) {
+  ASSERT_NE(vn->TestFlag(InodeInfoFlag::kDataExist), 0);
+}
+
+void FileTester::CheckDataExistFlagUnset(VnodeF2fs *vn) {
+  ASSERT_EQ(vn->TestFlag(InodeInfoFlag::kDataExist), 0);
+}
+
 void FileTester::CheckChildrenFromReaddir(Dir *dir, std::unordered_set<std::string> childs) {
   childs.insert(".");
 

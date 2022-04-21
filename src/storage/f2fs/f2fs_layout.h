@@ -193,6 +193,7 @@ constexpr uint8_t kInlineXattrAddrs = 50;  // 200 bytes for inline xattrs
 constexpr uint8_t kInlineXattr = 0x01;     // file inline xattr flag
 constexpr uint8_t kInlineData = 0x02;      // file inline data flag
 constexpr uint8_t kInlineDentry = 0x04;    // file inline dentry flag
+constexpr uint8_t kDataExist = 0x08;       // file inline data exist flag
 constexpr uint8_t kExtraAttr = 0x20;       // file having extra attribute
 
 struct Inode {

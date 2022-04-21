@@ -663,5 +663,84 @@ TEST(FsckTest, InvalidNextOffsetInCurseg) {
   ASSERT_EQ(checkpoint_ptr->cur_data_blkoff[0], CpuToLe(uint16_t{1}));
 }
 
+TEST(FsckTest, WrongDataExistFlag) {
+  std::unique_ptr<Bcache> bc;
+  nid_t ino;
+  FileTester::MkfsOnFakeDev(&bc);
+
+  {
+    std::unique_ptr<F2fs> fs;
+    async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+    MountOptions options{};
+    // Enable inline data option
+    ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineData), 1), ZX_OK);
+    FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+
+    fbl::RefPtr<VnodeF2fs> root;
+    FileTester::CreateRoot(fs.get(), &root);
+    fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+
+    std::string file_name("file");
+    fbl::RefPtr<fs::Vnode> child;
+    ASSERT_EQ(root_dir->Create(file_name, S_IFREG, &child), ZX_OK);
+
+    // Write string and verify
+    fbl::RefPtr<VnodeF2fs> child_file = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(child));
+    File *child_file_ptr = static_cast<File *>(child_file.get());
+    const std::string_view data_string = "hello";
+    FileTester::AppendToFile(child_file_ptr, data_string.data(), data_string.size());
+    ASSERT_EQ(child_file_ptr->GetSize(), data_string.size());
+
+    char r_buf[data_string.size()];
+    size_t out;
+    ASSERT_EQ(child_file_ptr->Read(r_buf, data_string.size(), 0, &out), ZX_OK);
+    ASSERT_EQ(out, data_string.size());
+    ASSERT_EQ(memcmp(r_buf, data_string.data(), data_string.size()), 0);
+
+    // Save the inode number for fsck to retrieve it
+    ino = child_file->GetKey();
+
+    ASSERT_EQ(child_file->Close(), ZX_OK);
+    child_file = nullptr;
+    ASSERT_EQ(root_dir->Close(), ZX_OK);
+    root_dir = nullptr;
+
+    FileTester::Unmount(std::move(fs), &bc);
+  }
+
+  FsckWorker fsck(std::move(bc), FsckOptions{.repair = false});
+  ASSERT_EQ(fsck.DoMount(), ZX_OK);
+
+  // Retrieve node block with saved ino
+  auto ret = fsck.ReadNodeBlock(ino);
+  ASSERT_TRUE(ret.is_ok());
+
+  auto [fs_block, node_info] = std::move(*ret);
+  auto node_block = reinterpret_cast<Node *>(fs_block->GetData().data());
+
+  // Data exist flag should be set
+  ASSERT_NE(node_block->i.i_inline & kDataExist, 0);
+
+  // Inject fault and see fsck detects it
+  node_block->i.i_inline &= ~kDataExist;
+  ASSERT_EQ(fsck.WriteBlock(*fs_block.get(), node_info.blk_addr), ZX_OK);
+  ASSERT_EQ(fsck.DoFsck(), ZX_ERR_INTERNAL);
+
+  // Run fsck again with repair option
+  bc = fsck.Destroy();
+  FsckWorker fsck_repair(std::move(bc), FsckOptions{.repair = true});
+  ASSERT_EQ(fsck_repair.Run(), ZX_OK);
+
+  // Then check if the flag is fixed
+  ASSERT_EQ(fsck_repair.DoMount(), ZX_OK);
+  ret = fsck_repair.ReadNodeBlock(ino);
+  ASSERT_TRUE(ret.is_ok());
+
+  auto [fs_block_repair, node_info_repair] = std::move(*ret);
+  node_block = reinterpret_cast<Node *>(fs_block_repair->GetData().data());
+
+  ASSERT_NE(node_block->i.i_inline & kDataExist, 0);
+}
+
 }  // namespace
 }  // namespace f2fs

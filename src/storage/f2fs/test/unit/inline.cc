@@ -719,5 +719,87 @@ TEST(InlineDataTest, InlineRegFileTruncate) {
   EXPECT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}, &bc), ZX_OK);
 }
 
+TEST(InlineDataTest, DataExistFlag) {
+  std::unique_ptr<Bcache> bc;
+  FileTester::MkfsOnFakeDev(&bc);
+
+  std::unique_ptr<F2fs> fs;
+  MountOptions options{};
+  // Enable inline data option
+  ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineData), 1), ZX_OK);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+
+  fbl::RefPtr<VnodeF2fs> root;
+  FileTester::CreateRoot(fs.get(), &root);
+
+  fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+
+  // Inline file creation, then check if kDataExist flag is unset
+  std::string inline_file_name("inline");
+  fbl::RefPtr<fs::Vnode> inline_child;
+  ASSERT_EQ(root_dir->Create(inline_file_name, S_IFREG, &inline_child), ZX_OK);
+
+  fbl::RefPtr<VnodeF2fs> inline_child_file =
+      fbl::RefPtr<VnodeF2fs>::Downcast(std::move(inline_child));
+
+  FileTester::CheckInlineFile(inline_child_file.get());
+  FileTester::CheckDataExistFlagUnset(inline_child_file.get());
+
+  // Write some data, then check if kDataExist flag is set
+  File *inline_child_file_ptr = static_cast<File *>(inline_child_file.get());
+  constexpr std::string_view data_string = "hello";
+
+  FileTester::AppendToFile(inline_child_file_ptr, data_string.data(), data_string.size());
+  FileTester::CheckInlineFile(inline_child_file.get());
+  ASSERT_EQ(inline_child_file_ptr->GetSize(), data_string.size());
+  FileTester::CheckDataExistFlagSet(inline_child_file.get());
+
+  // Truncate to non-zero size, then check if kDataExist flag is set
+  ASSERT_EQ(inline_child_file_ptr->Truncate(data_string.size() / 2), ZX_OK);
+  FileTester::CheckInlineFile(inline_child_file.get());
+  ASSERT_EQ(inline_child_file_ptr->GetSize(), data_string.size() / 2);
+  FileTester::CheckDataExistFlagSet(inline_child_file.get());
+
+  // Truncate to zero size, then check if kDataExist flag is unset
+  ASSERT_EQ(inline_child_file_ptr->Truncate(0), ZX_OK);
+  FileTester::CheckInlineFile(inline_child_file.get());
+  ASSERT_EQ(inline_child_file_ptr->GetSize(), 0UL);
+  FileTester::CheckDataExistFlagUnset(inline_child_file.get());
+
+  // Write data again, then check if kDataExist flag is set
+  FileTester::AppendToFile(inline_child_file_ptr, data_string.data(), data_string.size());
+  FileTester::CheckInlineFile(inline_child_file.get());
+  ASSERT_EQ(inline_child_file_ptr->GetSize(), data_string.size());
+  FileTester::CheckDataExistFlagSet(inline_child_file.get());
+
+  inline_child_file_ptr = nullptr;
+  ASSERT_EQ(inline_child_file->Close(), ZX_OK);
+  inline_child_file = nullptr;
+  ASSERT_EQ(root_dir->Close(), ZX_OK);
+  root_dir = nullptr;
+
+  FileTester::Unmount(std::move(fs), &bc);
+
+  // Remount and check if KDataExist flag is still set
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+
+  FileTester::CreateRoot(fs.get(), &root);
+  root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+
+  FileTester::Lookup(root_dir.get(), inline_file_name, &inline_child);
+  inline_child_file = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(inline_child));
+  FileTester::CheckInlineFile(inline_child_file.get());
+  FileTester::CheckDataExistFlagSet(inline_child_file.get());
+
+  ASSERT_EQ(inline_child_file->Close(), ZX_OK);
+  inline_child_file = nullptr;
+  ASSERT_EQ(root_dir->Close(), ZX_OK);
+  root_dir = nullptr;
+
+  FileTester::Unmount(std::move(fs), &bc);
+  EXPECT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}, &bc), ZX_OK);
+}
+
 }  // namespace
 }  // namespace f2fs

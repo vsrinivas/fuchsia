@@ -47,7 +47,7 @@ void HostOperator::Unmount() {
 }
 
 void HostOperator::Fsck() {
-  ASSERT_EQ(system(std::string("fsck.f2fs ").append(test_image_path_).c_str()), 0);
+  ASSERT_EQ(system(std::string("fsck.f2fs --dry-run ").append(test_image_path_).c_str()), 0);
 }
 
 void HostOperator::Mkdir(std::string_view path, mode_t mode) {

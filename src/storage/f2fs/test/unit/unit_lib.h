@@ -65,6 +65,9 @@ class FileTester {
   static void CheckInlineFile(VnodeF2fs *vn);
   static void CheckNonInlineFile(VnodeF2fs *vn);
 
+  static void CheckDataExistFlagSet(VnodeF2fs *vn);
+  static void CheckDataExistFlagUnset(VnodeF2fs *vn);
+
   static void CheckChildrenFromReaddir(Dir *dir, std::unordered_set<std::string> childs);
   static void CheckChildrenInBlock(Dir *vn, uint64_t bidx, std::unordered_set<std::string> childs);
 

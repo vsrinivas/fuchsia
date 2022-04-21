@@ -364,5 +364,144 @@ TEST_F(InlineCompatibilityTest, InlineDataFuchsiaToHost) {
   }
 }
 
+TEST_F(InlineCompatibilityTest, DataExistFlagHostToFuchsia) {
+  constexpr std::string_view filenames[4] = {"alpha", "bravo", "charlie", "delta"};
+  constexpr std::string_view test_string = "hello";
+
+  // Create and write inline files on Linux
+  {
+    host_operator_->Mkfs();
+    host_operator_->Mount();
+
+    auto umount = fit::defer([&] { host_operator_->Unmount(); });
+
+    // create file
+    auto test_file = host_operator_->Open(filenames[0], O_RDWR | O_CREAT, 0644);
+    ASSERT_TRUE(test_file->is_valid());
+
+    // write some data
+    test_file = host_operator_->Open(filenames[1], O_RDWR | O_CREAT, 0644);
+    ASSERT_TRUE(test_file->is_valid());
+
+    ASSERT_EQ(test_file->Write(test_string.data(), test_string.size()),
+              static_cast<ssize_t>(test_string.size()));
+
+    // truncate to non-zero size
+    test_file = host_operator_->Open(filenames[2], O_RDWR | O_CREAT, 0644);
+    ASSERT_TRUE(test_file->is_valid());
+
+    ASSERT_EQ(test_file->Write(test_string.data(), test_string.size()),
+              static_cast<ssize_t>(test_string.size()));
+    ASSERT_EQ(test_file->Ftruncate(test_string.size() / 2), 0);
+
+    // truncate to zero size
+    test_file = host_operator_->Open(filenames[3], O_RDWR | O_CREAT, 0644);
+    ASSERT_TRUE(test_file->is_valid());
+
+    ASSERT_EQ(test_file->Write(test_string.data(), test_string.size()),
+              static_cast<ssize_t>(test_string.size()));
+    ASSERT_EQ(test_file->Ftruncate(0), 0);
+  }
+
+  // check if all files have correct flags on Fuchsia
+  {
+    target_operator_->Fsck();
+    target_operator_->Mount();
+
+    auto umount = fit::defer([&] { target_operator_->Unmount(); });
+
+    // only created, kDataExist should be unset
+    auto test_file = target_operator_->Open(filenames[0], O_RDWR | O_CREAT, 0644);
+    ASSERT_TRUE(test_file->is_valid());
+
+    VnodeF2fs *raw_vn_ptr = static_cast<TargetTestFile *>(test_file.get())->GetRawVnodePtr();
+    ASSERT_TRUE(raw_vn_ptr->TestFlag(InodeInfoFlag::kInlineData));
+    ASSERT_FALSE(raw_vn_ptr->TestFlag(InodeInfoFlag::kDataExist));
+
+    // data written, kDataExist should be set
+    test_file = target_operator_->Open(filenames[1], O_RDWR | O_CREAT, 0644);
+    ASSERT_TRUE(test_file->is_valid());
+
+    raw_vn_ptr = static_cast<TargetTestFile *>(test_file.get())->GetRawVnodePtr();
+    ASSERT_TRUE(raw_vn_ptr->TestFlag(InodeInfoFlag::kInlineData));
+    ASSERT_TRUE(raw_vn_ptr->TestFlag(InodeInfoFlag::kDataExist));
+
+    // truncated to non-zero size, kDataExist should be set
+    test_file = target_operator_->Open(filenames[2], O_RDWR | O_CREAT, 0644);
+    ASSERT_TRUE(test_file->is_valid());
+
+    raw_vn_ptr = static_cast<TargetTestFile *>(test_file.get())->GetRawVnodePtr();
+    ASSERT_TRUE(raw_vn_ptr->TestFlag(InodeInfoFlag::kInlineData));
+    ASSERT_TRUE(raw_vn_ptr->TestFlag(InodeInfoFlag::kDataExist));
+
+    // truncated to zero size, kDataExist should be unset
+    test_file = target_operator_->Open(filenames[3], O_RDWR | O_CREAT, 0644);
+    ASSERT_TRUE(test_file->is_valid());
+
+    raw_vn_ptr = static_cast<TargetTestFile *>(test_file.get())->GetRawVnodePtr();
+    ASSERT_TRUE(raw_vn_ptr->TestFlag(InodeInfoFlag::kInlineData));
+    ASSERT_FALSE(raw_vn_ptr->TestFlag(InodeInfoFlag::kDataExist));
+  }
+}
+
+TEST_F(InlineCompatibilityTest, DataExistFlagFuchsiaToHost) {
+  constexpr std::string_view filenames[4] = {"alpha", "bravo", "charlie", "delta"};
+  constexpr std::string_view test_string = "hello";
+
+  // Create and write inline files on Fuchsia
+  {
+    target_operator_->Mkfs();
+    target_operator_->Mount();
+
+    auto umount = fit::defer([&] { target_operator_->Unmount(); });
+
+    // create file, then check if kDataExist is unset
+    auto test_file = target_operator_->Open(filenames[0], O_RDWR | O_CREAT, 0644);
+    ASSERT_TRUE(test_file->is_valid());
+
+    VnodeF2fs *raw_vn_ptr = static_cast<TargetTestFile *>(test_file.get())->GetRawVnodePtr();
+    ASSERT_TRUE(raw_vn_ptr->TestFlag(InodeInfoFlag::kInlineData));
+    ASSERT_FALSE(raw_vn_ptr->TestFlag(InodeInfoFlag::kDataExist));
+
+    // write some data, then check if kDataExist is set
+    test_file = target_operator_->Open(filenames[1], O_RDWR | O_CREAT, 0644);
+    ASSERT_TRUE(test_file->is_valid());
+
+    ASSERT_EQ(test_file->Write(test_string.data(), test_string.size()),
+              static_cast<ssize_t>(test_string.size()));
+
+    raw_vn_ptr = static_cast<TargetTestFile *>(test_file.get())->GetRawVnodePtr();
+    ASSERT_TRUE(raw_vn_ptr->TestFlag(InodeInfoFlag::kInlineData));
+    ASSERT_TRUE(raw_vn_ptr->TestFlag(InodeInfoFlag::kDataExist));
+
+    // truncate to non-zero size, then check if kDataExist is set
+    test_file = target_operator_->Open(filenames[2], O_RDWR | O_CREAT, 0644);
+    ASSERT_TRUE(test_file->is_valid());
+
+    ASSERT_EQ(test_file->Write(test_string.data(), test_string.size()),
+              static_cast<ssize_t>(test_string.size()));
+    ASSERT_EQ(test_file->Ftruncate(test_string.size() / 2), 0);
+
+    raw_vn_ptr = static_cast<TargetTestFile *>(test_file.get())->GetRawVnodePtr();
+    ASSERT_TRUE(raw_vn_ptr->TestFlag(InodeInfoFlag::kInlineData));
+    ASSERT_TRUE(raw_vn_ptr->TestFlag(InodeInfoFlag::kDataExist));
+
+    // truncate to zero size, then check if kDataExist is unset
+    test_file = target_operator_->Open(filenames[3], O_RDWR | O_CREAT, 0644);
+    ASSERT_TRUE(test_file->is_valid());
+
+    ASSERT_EQ(test_file->Write(test_string.data(), test_string.size()),
+              static_cast<ssize_t>(test_string.size()));
+    ASSERT_EQ(test_file->Ftruncate(0), 0);
+
+    raw_vn_ptr = static_cast<TargetTestFile *>(test_file.get())->GetRawVnodePtr();
+    ASSERT_TRUE(raw_vn_ptr->TestFlag(InodeInfoFlag::kInlineData));
+    ASSERT_FALSE(raw_vn_ptr->TestFlag(InodeInfoFlag::kDataExist));
+  }
+
+  // check if all files pass fsck on Linux
+  { host_operator_->Fsck(); }
+}
+
 }  // namespace
 }  // namespace f2fs

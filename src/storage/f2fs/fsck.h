@@ -36,6 +36,7 @@ struct FsckInfo {
   std::map<nid_t, InodeLinkInfo> inode_link_map;
   std::unique_ptr<uint8_t[]> main_area_bitmap;
   std::unique_ptr<uint8_t[]> nat_area_bitmap;
+  std::set<nid_t> data_exist_flag_set;
 
   uint64_t main_area_bitmap_size = 0;
   uint32_t nat_area_bitmap_size = 0;
@@ -173,6 +174,8 @@ class FsckWorker {
   zx_status_t RepairCheckpoint();
   // RepairInodeLinks() iterates over inode link map and corrects link count for each inode.
   zx_status_t RepairInodeLinks();
+  // RepairDataExistFlag() sets kDataExist for each inode that has inline data with the flag unset.
+  zx_status_t RepairDataExistFlag();
   void DoUmount();
   zx_status_t Run();
 

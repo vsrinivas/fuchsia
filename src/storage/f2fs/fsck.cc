@@ -22,11 +22,13 @@ uint32_t MaxInlineDentry(const Inode &inode) {
          ((kSizeOfDirEntry + kDentrySlotLen) * kBitsPerByte + 1);
 }
 
-const uint8_t *InlineDentryBitmap(const Inode &inode) {
+const uint8_t *InlineDataPtr(const Inode &inode) {
   uint16_t extra_isize = (inode.i_inline & kExtraAttr) ? inode.i_extra_isize : 0;
   return reinterpret_cast<const uint8_t *>(
       &inode.i_addr[extra_isize / sizeof(uint32_t) + kInlineStartOffset]);
 }
+
+const uint8_t *InlineDentryBitmap(const Inode &inode) { return InlineDataPtr(inode); }
 
 const DirEntry *InlineDentryArray(const Inode &inode) {
   uint32_t reserved =
@@ -412,6 +414,16 @@ zx::status<TraverseResult> FsckWorker::TraverseInodeBlock(const Node &node_block
     }
 
     if (node_block.i.i_inline & kInlineData) {
+      if (!(node_block.i.i_inline & kDataExist)) {
+        char zeroes[MaxInlineData(node_block.i)];
+        memset(zeroes, 0, MaxInlineData(node_block.i));
+
+        if (memcmp(zeroes, InlineDataPtr(node_block.i), MaxInlineData(node_block.i))) {
+          FX_LOGS(WARNING) << "ino[0x" << std::hex << nid << "] has junk inline data";
+          fsck_.data_exist_flag_set.insert(nid);
+        }
+      }
+
       FX_LOGS(INFO) << "ino[0x" << std::hex << nid << "] has inline data";
       break;
     }
@@ -889,6 +901,14 @@ zx_status_t FsckWorker::Verify() {
     }
   }
 
+  std::cout << "[FSCK] Junk inline data checking for regular file    ";
+  if (fsck_.data_exist_flag_set.empty()) {
+    std::cout << " [Ok..]" << std::endl;
+  } else {
+    std::cout << " [Fail]" << std::endl;
+    status = ZX_ERR_INTERNAL;
+  }
+
   return status;
 }
 
@@ -1147,6 +1167,28 @@ zx_status_t FsckWorker::RepairInodeLinks() {
   return ZX_OK;
 }
 
+zx_status_t FsckWorker::RepairDataExistFlag() {
+  for (auto const nid : fsck_.data_exist_flag_set) {
+    auto status = ReadNodeBlock(nid);
+    if (status.is_error()) {
+      return ZX_ERR_INTERNAL;
+    }
+
+    auto [fs_block, node_info] = std::move(*status);
+#ifdef __Fuchsia__
+    auto node_block = reinterpret_cast<Node *>(fs_block->GetData().data());
+#else   // __Fuchsia__
+    auto node_block = reinterpret_cast<Node *>(fs_block->GetData());
+#endif  // __Fuchsia__
+
+    node_block->i.i_inline |= kDataExist;
+    if (WriteBlock(*fs_block.get(), node_info.blk_addr) != ZX_OK) {
+      return ZX_ERR_INTERNAL;
+    }
+  }
+  return ZX_OK;
+}
+
 zx_status_t FsckWorker::Repair() {
   if (auto ret = RepairNat(); ret != ZX_OK) {
     return ret;
@@ -1158,6 +1200,9 @@ zx_status_t FsckWorker::Repair() {
     return ret;
   }
   if (auto ret = RepairInodeLinks(); ret != ZX_OK) {
+    return ret;
+  }
+  if (auto ret = RepairDataExistFlag(); ret != ZX_OK) {
     return ret;
   }
   return ZX_OK;

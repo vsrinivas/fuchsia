@@ -477,6 +477,7 @@ zx_status_t File::WriteInline(const void *data, size_t len, size_t offset, size_
   memcpy(inline_data + offset, static_cast<const uint8_t *>(data), len);
 
   SetSize(std::max(static_cast<size_t>(GetSize()), offset + len));
+  SetFlag(InodeInfoFlag::kDataExist);
   inline_page->SetDirty();
   Page::PutPage(std::move(inline_page), true);
 
@@ -504,6 +505,10 @@ zx_status_t File::TruncateInline(size_t len) {
   memset(inline_data + ((len > GetSize()) ? GetSize() : len), 0, size_diff);
 
   SetSize(len);
+  if (GetSize() == 0) {
+    ClearFlag(InodeInfoFlag::kDataExist);
+  }
+
   inline_page->SetDirty();
   Page::PutPage(std::move(inline_page), true);
 

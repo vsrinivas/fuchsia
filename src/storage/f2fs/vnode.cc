@@ -346,6 +346,9 @@ zx_status_t VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) 
   if (ri.i_inline & kExtraAttr) {
     vnode->SetExtraISize(ri.i_extra_isize);
   }
+  if (ri.i_inline & kDataExist) {
+    vnode->SetFlag(InodeInfoFlag::kDataExist);
+  }
 
   Page::PutPage(std::move(node_page), true);
   return ZX_OK;
@@ -563,6 +566,11 @@ void VnodeF2fs::UpdateInode(Page *node_page) {
     ri->i_inline |= kExtraAttr;
     ri->i_extra_isize = GetExtraISize();
   }
+  if (TestFlag(InodeInfoFlag::kDataExist)) {
+    ri->i_inline |= kDataExist;
+  } else {
+    ri->i_inline &= ~kDataExist;
+  }
 
   node_page->SetDirty();
 }
@@ -593,6 +601,10 @@ zx_status_t VnodeF2fs::DoTruncate(size_t len) {
 
   if (ret = TruncateBlocks(len); ret == ZX_OK) {
     SetSize(len);
+    if (GetSize() == 0) {
+      ClearFlag(InodeInfoFlag::kDataExist);
+    }
+
     timespec cur_time;
     clock_gettime(CLOCK_REALTIME, &cur_time);
     SetCTime(cur_time);

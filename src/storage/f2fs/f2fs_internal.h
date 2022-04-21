@@ -489,6 +489,7 @@ enum class InodeInfoFlag {
   kInlineXattr,   // used for inline xattr
   kInlineData,    // used for inline data
   kInlineDentry,  // used for inline dentry
+  kDataExist,     // indicate data exists
   kBad,           // should drop this inode without purging
 };
 
