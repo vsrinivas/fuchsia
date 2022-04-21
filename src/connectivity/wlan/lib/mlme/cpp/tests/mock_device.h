@@ -90,8 +90,7 @@ struct MockDevice : public DeviceInterface {
   using PacketList = std::vector<WlanPacket>;
   using KeyList = std::vector<wlan_key_config_t>;
 
-  MockDevice(common::MacAddr addr = common::MacAddr(kClientAddress)) : sta_assoc_ctx_ {}
-  {
+  MockDevice(common::MacAddr addr = common::MacAddr(kClientAddress)) : sta_assoc_ctx_{} {
     auto [sme, mlme] = make_channel();
     sme_ = fidl::InterfaceHandle<fuchsia::wlan::mlme::MLME>(std::move(sme)).BindSync();
     mlme_ = std::make_optional(std::move(mlme));

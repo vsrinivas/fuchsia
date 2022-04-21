@@ -114,6 +114,40 @@ mod tests {
         assert_eq!(0xffff_ffff_ffff_ffff_ffff_ffff_ffff_ffff, big.raw());
     }
 
+    #[bitfield(
+        0..=3    head,
+        4..=20   middle,
+        21       bit,
+        22..=23  tail,
+    )]
+    pub struct Array([u8; 3]);
+
+    #[test]
+    pub fn array() {
+        let array = Array([0b01_1_00010, 0b10101111, 0b0000_0000]);
+        assert_eq!(array.head(), 0b0000);
+        assert_eq!(array.middle(), 0b00010_10101111_0000);
+        assert!(array.bit());
+        assert_eq!(array.tail(), 0b01);
+
+        let mut array2 = Array([0u8; 3]);
+        array2.set_head(array.head());
+        array2.set_middle(array.middle());
+        array2.set_bit(array.bit());
+        array2.set_tail(array.tail());
+        assert_eq!(&array.0[..], &array2.0[..]);
+    }
+
+    #[test]
+    pub fn overwrite_array() {
+        let mut array = Array([0b11_1_11100, 0b11100000, 0b0011_1111]);
+        array.set_head(0b1010);
+        array.set_middle(0b00011_11111111_0101);
+        array.set_bit(false);
+        array.set_tail(0b00);
+        assert_eq!(&array.0[..], &[0b00_0_00011, 0b11111111, 0b0101_1010][..])
+    }
+
     #[derive(Debug)]
     struct CustomType(pub u8);
 
