@@ -90,7 +90,7 @@ group("tests") {
 
   deps = [
     ":package_manager_test($host_toolchain)",
-    "//garnet/packages/tools:sl4f",  # Required to run tests locally.
+    "//src/testing/sl4f:sl4f",  # SL4F is not included in core image.
   ]
 }
 

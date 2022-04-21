@@ -20,9 +20,3 @@ group("all") {
   testonly = true
   public_deps = [ ":scenic" ]
 }
-
-# WARNING: Known to infrastructure.
-group("sl4f") {
-  testonly = true
-  public_deps = [ "//src/testing/sl4f" ]
-}

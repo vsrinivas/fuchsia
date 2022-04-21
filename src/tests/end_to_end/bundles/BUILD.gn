@@ -24,7 +24,7 @@ group("end_to_end_deps") {
     "//src/media/audio/bundles:virtual_audio_service_with_config",
 
     # SL4F to translate JSON-RPC to calls.
-    "//garnet/packages/tools:sl4f",
+    "//src/testing/sl4f:sl4f",
 
     # Needed for performance testing.
     "//garnet/packages/prod:tracing",

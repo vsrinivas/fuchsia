@@ -107,8 +107,6 @@ if (is_host) {
     deps = [
       ":echo",
       ":echo_client_sym",
-      "//garnet/packages/prod:run",
-      "//garnet/packages/tools:sl4f",
       "//sdk/fidl/fuchsia.io($fidl_toolchain)",
       "//sdk/fidl/fuchsia.mem($fidl_toolchain)",
       "//sdk/fidl/fuchsia.sys($fidl_toolchain)",
