@@ -1070,14 +1070,6 @@ mod test {
         fn make_readable(&mut self, count: usize) {
             assert_eq!(count, 0);
         }
-
-        fn read_with<'a, F>(&'a mut self, f: F) -> usize
-        where
-            F: for<'b> FnOnce(&'b [&'a [u8]]) -> usize,
-        {
-            assert_eq!(f(&[]), 0);
-            0
-        }
     }
 
     impl SendBuffer for NullBuffer {

@@ -30,7 +30,7 @@ pub trait Buffer: Default + Debug {
 pub trait ReceiveBuffer: Buffer {
     /// Stores the remaining data that have not been read by the user when the
     /// connection is shutdown by the peer.
-    type Residual: From<Self> + Debug;
+    type Residual: From<Self> + Buffer;
 
     /// Writes `data` into the buffer at `offset`.
     ///
@@ -45,17 +45,6 @@ pub trait ReceiveBuffer: Buffer {
     /// buffer has capacity for. That is, this method panics if
     /// `self.len() + count > self.cap()`
     fn make_readable(&mut self, count: usize);
-
-    /// Calls `f` with contiguous sequences of readable bytes in the buffer and
-    /// discards the amount of bytes returned by `f`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the closure wants to discard more bytes than possible, i.e.,
-    /// the value returned by `f` is greater than `self.len()`.
-    fn read_with<'a, F>(&'a mut self, f: F) -> usize
-    where
-        F: for<'b> FnOnce(&'b [&'a [u8]]) -> usize;
 }
 
 /// A buffer supporting TCP sending operations.
@@ -199,6 +188,28 @@ impl RingBuffer {
             f(&[all_bytes][..])
         }
     }
+
+    /// Calls `f` with contiguous sequences of readable bytes in the buffer and
+    /// discards the amount of bytes returned by `f`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the closure wants to discard more bytes than possible, i.e.,
+    /// the value returned by `f` is greater than `self.len()`.
+    pub(super) fn read_with<'a, F>(&'a mut self, f: F) -> usize
+    where
+        F: for<'b> FnOnce(&'b [&'a [u8]]) -> usize,
+    {
+        let Self { storage, head, len } = self;
+        if storage.len() == 0 {
+            return f(&[&[]]);
+        }
+        let nread = RingBuffer::with_readable(storage, *head, *len, f);
+        assert!(nread <= *len);
+        *len -= nread;
+        *head = (*head + nread) % storage.len();
+        nread
+    }
 }
 
 impl Buffer for RingBuffer {
@@ -243,21 +254,6 @@ impl ReceiveBuffer for RingBuffer {
     fn make_readable(&mut self, count: usize) {
         assert!(count <= self.cap() - self.len());
         self.len += count;
-    }
-
-    fn read_with<'a, F>(&'a mut self, f: F) -> usize
-    where
-        F: for<'b> FnOnce(&'b [&'a [u8]]) -> usize,
-    {
-        let Self { storage, head, len } = self;
-        if storage.len() == 0 {
-            return f(&[&[]]);
-        }
-        let nread = RingBuffer::with_readable(storage, *head, *len, f);
-        assert!(nread <= *len);
-        *len -= nread;
-        *head = (*head + nread) % storage.len();
-        nread
     }
 }
 
