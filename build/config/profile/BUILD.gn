@@ -79,21 +79,6 @@ variant("coverage-cts") {
   }
 }
 
-variant("profile") {
-  common_flags = _coverage_common_flags
-  inputs = _coverage_inputs
-
-  if (!is_kernel && is_fuchsia) {
-    # The statically-linked profiling runtime depends on libzircon.
-    # TODO(fxbug.dev/61522): Ensure this works with shared_library() instances too!
-    deps = [ "//src/zircon/lib/zircon" ]
-
-    dynamic_linker_flags = "-dynamic-linker=profile/ld.so.1"
-    ldflags = [ "-Wl,$dynamic_linker_flags" ]
-    rustflags = [ "-Clink-arg=$dynamic_linker_flags" ]
-  }
-}
-
 # Only enable either "coverage-rust" or clang coverage (variant("profile") or variant("coverage")),
 # not both.
 #
@@ -110,5 +95,19 @@ variant("coverage-rust") {
     dynamic_linker_flags = "-dynamic-linker=coverage-rust/ld.so.1"
     ldflags = [ "-Wl,$dynamic_linker_flags" ]
     rustflags += [ "-Clink-arg=$dynamic_linker_flags" ]
+  }
+}
+
+variant("profile") {
+  common_flags = [ "-fprofile-generate" ]
+
+  if (!is_kernel && is_fuchsia) {
+    # The statically-linked profiling runtime depends on libzircon.
+    # TODO(fxbug.dev/61522): Ensure this works with shared_library() instances too!
+    deps = [ "//src/zircon/lib/zircon" ]
+
+    dynamic_linker_flags = "-dynamic-linker=profile/ld.so.1"
+    ldflags = [ "-Wl,$dynamic_linker_flags" ]
+    rustflags = [ "-Clink-arg=$dynamic_linker_flags" ]
   }
 }
