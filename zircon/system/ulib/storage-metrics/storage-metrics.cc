@@ -7,7 +7,6 @@
 #include <algorithm>
 
 #include <storage-metrics/block-metrics.h>
-#include <storage-metrics/fs-metrics.h>
 #include <storage-metrics/storage-metrics.h>
 
 namespace storage_metrics {
@@ -210,65 +209,6 @@ void CallStat::UpdateCallStat(bool success, zx_ticks_t delta_time, uint64_t byte
 void Metrics::SetEnable(bool enable) { enabled_ = enable; }
 
 bool Metrics::Enabled() const { return enabled_; }
-
-FsMetrics::FsMetrics(const fuchsia_storage_metrics::wire::FsMetrics* metrics) {
-  create_.CopyFromFidl(&metrics->create);
-  read_.CopyFromFidl(&metrics->read);
-  write_.CopyFromFidl(&metrics->write);
-  truncate_.CopyFromFidl(&metrics->truncate);
-  unlink_.CopyFromFidl(&metrics->unlink);
-  rename_.CopyFromFidl(&metrics->rename);
-  lookup_.CopyFromFidl(&metrics->lookup);
-  open_.CopyFromFidl(&metrics->open);
-
-  SetEnable(true);
-}
-
-FsMetrics::FsMetrics(const fuchsia_storage_metrics_FsMetrics* metrics) {
-  create_.CopyFromFidl(&metrics->create);
-  read_.CopyFromFidl(&metrics->read);
-  write_.CopyFromFidl(&metrics->write);
-  truncate_.CopyFromFidl(&metrics->truncate);
-  unlink_.CopyFromFidl(&metrics->unlink);
-  rename_.CopyFromFidl(&metrics->rename);
-  lookup_.CopyFromFidl(&metrics->lookup);
-  open_.CopyFromFidl(&metrics->open);
-
-  SetEnable(true);
-}
-
-void FsMetrics::CopyToFidl(fuchsia_storage_metrics::wire::FsMetrics* metrics) const {
-  create_.CopyToFidl(&metrics->create);
-  read_.CopyToFidl(&metrics->read);
-  write_.CopyToFidl(&metrics->write);
-  truncate_.CopyToFidl(&metrics->truncate);
-  unlink_.CopyToFidl(&metrics->unlink);
-  rename_.CopyToFidl(&metrics->rename);
-  lookup_.CopyToFidl(&metrics->lookup);
-  open_.CopyToFidl(&metrics->open);
-}
-
-void FsMetrics::CopyToFidl(fuchsia_storage_metrics_FsMetrics* metrics) const {
-  create_.CopyToFidl(&metrics->create);
-  read_.CopyToFidl(&metrics->read);
-  write_.CopyToFidl(&metrics->write);
-  truncate_.CopyToFidl(&metrics->truncate);
-  unlink_.CopyToFidl(&metrics->unlink);
-  rename_.CopyToFidl(&metrics->rename);
-  lookup_.CopyToFidl(&metrics->lookup);
-  open_.CopyToFidl(&metrics->open);
-}
-
-void FsMetrics::Dump(FILE* stream, std::optional<bool> success) const {
-  create_.Dump(stream, "create", success);
-  read_.Dump(stream, "read", success);
-  write_.Dump(stream, "write", success);
-  truncate_.Dump(stream, "truncate", success);
-  unlink_.Dump(stream, "unlink", success);
-  rename_.Dump(stream, "rename", success);
-  lookup_.Dump(stream, "lookup", success);
-  open_.Dump(stream, "open", success);
-}
 
 BlockDeviceMetrics::BlockDeviceMetrics(const BlockStatFidl* metrics) {
   read_.CopyFromFidl(&metrics->read);

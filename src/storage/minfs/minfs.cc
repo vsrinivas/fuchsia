@@ -985,11 +985,8 @@ zx::status<fbl::RefPtr<VnodeMinfs>> Minfs::VnodeGet(ino_t ino) {
     return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
 
-  fs::Ticker ticker(StartTicker());
-
   fbl::RefPtr<VnodeMinfs> vn = VnodeLookup(ino);
   if (vn != nullptr) {
-    UpdateOpenMetrics(/* cache_hit= */ true, ticker.End());
     return zx::ok(std::move(vn));
   }
 
@@ -1004,7 +1001,6 @@ zx::status<fbl::RefPtr<VnodeMinfs>> Minfs::VnodeGet(ino_t ino) {
   }
 
   VnodeInsert(vn.get());
-  UpdateOpenMetrics(/* cache_hit= */ false, ticker.End());
   return zx::ok(std::move(vn));
 }
 

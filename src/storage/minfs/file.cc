@@ -289,10 +289,6 @@ zx_status_t File::Read(void* data, size_t len, size_t off, size_t* out_actual) {
   FX_LOGS(DEBUG) << "minfs_read() vn=" << this << "(#" << GetIno() << ") len=" << len
                  << " off=" << off;
 
-  fs::Ticker ticker(Vfs()->StartTicker());
-  auto get_metrics = fit::defer(
-      [&ticker, &out_actual, this]() { Vfs()->UpdateReadMetrics(*out_actual, ticker.End()); });
-
   return Vfs()->GetNodeOperations()->read.Track([&] {
     Transaction transaction(Vfs());
     return ReadInternal(&transaction, data, len, off, out_actual).status_value();
@@ -371,10 +367,6 @@ zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out
       return ZX_OK;
     }
 
-    fs::Ticker ticker(Vfs()->StartTicker());
-    auto get_metrics = fit::defer(
-        [&ticker, &out_actual, this]() { Vfs()->UpdateWriteMetrics(*out_actual, ticker.End()); });
-
     auto new_size_or = safemath::CheckAdd(offset, len);
     if (!new_size_or.IsValid() || new_size_or.ValueOrDie() > kMinfsMaxFileSize) {
       return ZX_ERR_FILE_BIG;
@@ -443,9 +435,6 @@ zx_status_t File::Truncate(size_t len) {
     if (auto status = FlushCachedWrites(); status.is_error()) {
       return status.error_value();
     }
-
-    fs::Ticker ticker(Vfs()->StartTicker());
-    auto get_metrics = fit::defer([&ticker, this] { Vfs()->UpdateTruncateMetrics(ticker.End()); });
 
     // Due to file copy-on-write, up to 1 new (data) block may be required.
     size_t reserve_blocks = 1;

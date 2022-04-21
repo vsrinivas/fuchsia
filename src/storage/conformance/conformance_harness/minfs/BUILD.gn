@@ -11,6 +11,7 @@ executable("bin") {
   deps = [
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.io.test",
+    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",

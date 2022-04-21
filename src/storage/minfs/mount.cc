@@ -70,7 +70,6 @@ zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(const MountOptions& mo
   }
   std::unique_ptr<Minfs> fs = std::move(fs_or).value();
 
-  fs->SetMetrics(mount_options.metrics);
   fs->SetUnmountCallback(std::move(on_unmount));
 
   // At time of writing the Cobalt client has certain requirements around which thread you interact

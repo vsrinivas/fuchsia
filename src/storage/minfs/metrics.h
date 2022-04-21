@@ -4,14 +4,14 @@
 #ifndef SRC_STORAGE_MINFS_METRICS_H_
 #define SRC_STORAGE_MINFS_METRICS_H_
 
-#include <fbl/macros.h>
-#include <storage-metrics/fs-metrics.h>
+#include <fidl/fuchsia.minfs/cpp/wire.h>
 
-using storage_metrics::FsMetrics;
+#include <fbl/macros.h>
 
 namespace minfs {
 
-class MinfsMetrics : public FsMetrics {
+// TODO(fxbug.dev/98018): Remove MinfsMetrics and replace with Inspect.
+class MinfsMetrics {
  public:
   MinfsMetrics() = default;
   explicit MinfsMetrics(const fuchsia_minfs::wire::Metrics* metrics);

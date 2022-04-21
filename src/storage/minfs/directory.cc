@@ -519,11 +519,6 @@ zx::status<fbl::RefPtr<fs::Vnode>> Directory::LookupInternal(std::string_view na
   DirArgs args;
   args.name = name;
 
-  bool success = false;
-  fs::Ticker ticker(Vfs()->StartTicker());
-  auto get_metrics = fit::defer(
-      [&ticker, &success, this]() { Vfs()->UpdateLookupMetrics(success, ticker.End()); });
-
   zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackFind);
   if (found_or.is_error()) {
     return found_or.take_error();
@@ -636,11 +631,6 @@ zx_status_t Directory::Create(std::string_view name, uint32_t mode, fbl::RefPtr<
     return ZX_ERR_INVALID_ARGS;
   }
 
-  bool success = false;
-  fs::Ticker ticker(Vfs()->StartTicker());
-  auto get_metrics = fit::defer(
-      [&ticker, &success, this]() { Vfs()->UpdateCreateMetrics(success, ticker.End()); });
-
   if (IsUnlinked()) {
     return ZX_ERR_BAD_STATE;
   }
@@ -733,7 +723,6 @@ zx_status_t Directory::Create(std::string_view name, uint32_t mode, fbl::RefPtr<
     return status;
   }
   *out = std::move(vn_or.value());
-  success = true;
   return ZX_OK;
 }
 
@@ -741,11 +730,6 @@ zx_status_t Directory::Unlink(std::string_view name, bool must_be_dir) {
   TRACE_DURATION("minfs", "Directory::Unlink", "name", name);
   ZX_DEBUG_ASSERT(fs::IsValidName(name));
   return Vfs()->GetNodeOperations()->unlink.Track([&] {
-    bool success = false;
-    fs::Ticker ticker(Vfs()->StartTicker());
-    auto get_metrics = fit::defer(
-        [&ticker, &success, this]() { Vfs()->UpdateUnlinkMetrics(success, ticker.End()); });
-
     auto transaction_or = Vfs()->BeginTransaction(0, 0);
     if (transaction_or.is_error()) {
       return transaction_or.error_value();
@@ -765,7 +749,6 @@ zx_status_t Directory::Unlink(std::string_view name, bool must_be_dir) {
     }
     transaction_or->PinVnode(fbl::RefPtr(this));
     Vfs()->CommitTransaction(std::move(transaction_or.value()));
-    success = true;
     return ZX_OK;
   });
 }
@@ -796,11 +779,6 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view o
                               std::string_view newname, bool src_must_be_dir,
                               bool dst_must_be_dir) {
   TRACE_DURATION("minfs", "Directory::Rename", "src", oldname, "dst", newname);
-  bool success = false;
-  fs::Ticker ticker(Vfs()->StartTicker());
-  auto get_metrics = fit::defer(
-      [&ticker, &success, this]() { Vfs()->UpdateRenameMetrics(success, ticker.End()); });
-
   ZX_DEBUG_ASSERT(fs::IsValidName(oldname));
   ZX_DEBUG_ASSERT(fs::IsValidName(newname));
 
@@ -843,7 +821,6 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view o
   if ((newdir->GetIno() == GetIno()) && (oldname == newname)) {
     // Renaming a file or directory to itself?
     // Shortcut success case.
-    success = true;
     return ZX_OK;
   }
 
@@ -926,7 +903,6 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view o
   transaction_or->PinVnode(std::move(oldvn_or.value()));
   transaction_or->PinVnode(std::move(newdir));
   Vfs()->CommitTransaction(std::move(transaction_or.value()));
-  success = true;
   return ZX_OK;
 }
 

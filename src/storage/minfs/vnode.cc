@@ -137,7 +137,6 @@ zx::status<> VnodeMinfs::InitVmo() {
     return zx::ok();
   }
 
-  fs::Ticker ticker(fs_->StartTicker());
   const size_t vmo_size = fbl::round_up(GetSize(), fs_->BlockSize());
   if (zx_status_t status = zx::vmo::create(vmo_size, ZX_VMO_RESIZABLE, &vmo_); status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to initialize vmo; error: " << status;
@@ -177,9 +176,6 @@ zx::status<> VnodeMinfs::InitVmo() {
 
   zx_status_t status = fs_->GetMutableBcache()->RunRequests(builder.TakeOperations());
   ValidateVmoTail(GetSize());
-  // For now, we only track the time it takes to initialize VMOs.
-  // TODO(fxbug.dev/51589): add more expansive init metrics.
-  fs_->UpdateInitMetrics(0, 0, 0, 0, ticker.End());
   return zx::make_status(status);
 }
 
@@ -691,7 +687,6 @@ void VnodeMinfs::GetMetrics(GetMetricsRequestView request, GetMetricsCompleter::
 
 void VnodeMinfs::ToggleMetrics(ToggleMetricsRequestView request,
                                ToggleMetricsCompleter::Sync& completer) {
-  fs_->SetMetrics(request->enable);
   completer.Reply(ZX_OK);
 }
 

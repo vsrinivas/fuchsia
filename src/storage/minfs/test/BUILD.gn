@@ -37,7 +37,7 @@ test("minfs_unit") {
     "unit/vnode_mapper_test.cc",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
+    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
     "//src/lib/cobalt/cpp/testing:mock_cobalt_logger",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/block_client/cpp",
@@ -152,57 +152,6 @@ test("minfs-power") {
   configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
-test("minfs_micro_benchmark") {
-  sources = [
-    "micro-benchmark/minfs-costs.cc",
-    "micro-benchmark/minfs-tests.cc",
-  ]
-  deps = [
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
-    "//sdk/lib/fdio",
-    "//sdk/lib/fit",
-    "//src/lib/digest",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/storage/fs_management",
-    "//src/lib/storage/ramdevice_client/cpp",
-    "//src/lib/storage/vfs/cpp",
-    "//src/storage/fs_test",
-    "//src/storage/fvm",
-    "//src/storage/gpt",
-    "//src/storage/memfs",
-    "//src/storage/memfs:lib",
-    "//src/storage/minfs",
-    "//src/storage/testing:storage_driver_test_support",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/async",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/async-default",
-    "//zircon/system/ulib/async-loop",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/perftest",
-    "//zircon/system/ulib/storage-metrics",
-    "//zircon/system/ulib/sync",
-    "//zircon/system/ulib/trace",
-    "//zircon/system/ulib/trace-engine",
-    "//zircon/system/ulib/zx",
-  ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
-}
-
 # To run this use the component name below: "minfs-integration-fs-tests"
 test("fs_tests") {
   sources = [ "integration/fs_tests.cc" ]
@@ -236,6 +185,7 @@ storage_driver_test_realm_v2_component("minfs-integration-fs-tests") {
 fuzzer("minfs-fuzzer") {
   sources = [ "unit/fuzz.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
     "//src/lib/storage/block_client/cpp:fake_device",
     "//src/storage/minfs",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -271,10 +221,6 @@ fuchsia_unittest_component("minfs-unit-test") {
   manifest = "meta/minfs_unit_test.cml"
 }
 
-storage_driver_test_realm_v2_component("minfs-micro-benchmark-test") {
-  deps = [ ":minfs_micro_benchmark" ]
-}
-
 fs_test_config("minfs") {
   timestamp_granularity = 1
   supports_hard_links = true
@@ -306,7 +252,6 @@ fs_test_suite("minfs") {
   extra_components = [
     ":minfs-dirty-cache-integration-test",
     ":minfs-integration-fs-tests",
-    ":minfs-micro-benchmark-test",
     ":minfs-unit-test",
   ]
 

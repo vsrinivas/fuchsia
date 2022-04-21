@@ -304,38 +304,6 @@ class Minfs :
   // functions is preferred.
   [[nodiscard]] zx::status<> ReadDat(blk_t bno, void* data);
 
-  void SetMetrics(bool enable) {
-#ifdef __Fuchsia__
-    metrics_.SetEnable(enable);
-#endif
-  }
-  fs::Ticker StartTicker() const {
-#ifdef __Fuchsia__
-    return fs::Ticker(metrics_.Enabled());
-#endif
-    return fs::Ticker(true);
-  }
-
-  // Update aggregate information about VMO initialization.
-  void UpdateInitMetrics(uint32_t dnum_count, uint32_t inum_count, uint32_t dinum_count,
-                         uint64_t user_data_size, const fs::Duration& duration);
-  // Update aggregate information about looking up vnodes by name.
-  void UpdateLookupMetrics(bool success, const fs::Duration& duration);
-  // Update aggregate information about looking up vnodes by inode.
-  void UpdateOpenMetrics(bool cache_hit, const fs::Duration& duration);
-  // Update aggregate information about inode creation.
-  void UpdateCreateMetrics(bool success, const fs::Duration& duration);
-  // Update aggregate information about reading from Vnodes.
-  void UpdateReadMetrics(uint64_t size, const fs::Duration& duration);
-  // Update aggregate information about writing to Vnodes.
-  void UpdateWriteMetrics(uint64_t size, const fs::Duration& duration);
-  // Update aggregate information about truncating Vnodes.
-  void UpdateTruncateMetrics(const fs::Duration& duration);
-  // Update aggregate information about unlinking Vnodes.
-  void UpdateUnlinkMetrics(bool success, const fs::Duration& duration);
-  // Update aggregate information about renaming Vnodes.
-  void UpdateRenameMetrics(bool success, const fs::Duration& duration);
-
   // Adds |dirty_bytes| number of bytes to metrics. Also marks whether those
   // bytes needs allocation or not.
   zx::status<> AddDirtyBytes(uint64_t dirty_bytes, bool allocated) __TA_EXCLUDES(hash_lock_);
@@ -346,11 +314,8 @@ class Minfs :
 #ifdef __Fuchsia__
   // Acquire a copy of the collected metrics.
   [[nodiscard]] zx_status_t GetMetrics(fuchsia_minfs::wire::Metrics* out) const {
-    if (metrics_.Enabled()) {
-      metrics_.CopyToFidl(out);
-      return ZX_OK;
-    }
-    return ZX_ERR_UNAVAILABLE;
+    metrics_.CopyToFidl(out);
+    return ZX_OK;
   }
 
   // Record the location, size, and number of all non-free block regions.
