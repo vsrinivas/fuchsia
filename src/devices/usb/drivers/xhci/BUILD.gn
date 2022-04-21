@@ -21,19 +21,6 @@ driver_bind_rules("usb_xhci_bind") {
   ]
 }
 
-# TODO(fxbug.dev/93333): Remove this when DFv2 has stabilised.
-driver_bind_rules("usb_xhci_dfv2_bind") {
-  rules = "usb_xhci_dfv2.bind"
-  header_output = "usb_xhci_dfv2_bind.h"
-  bind_output = "xhci_dfv2.bindbc"
-  deps = [
-    "//src/devices/bind/fuchsia.driver.framework",
-    "//src/devices/bind/fuchsia.pci",
-    "//src/devices/bind/fuchsia.pci:serial",
-    "//src/devices/bind/fuchsia.pci:serial.usb",
-  ]
-}
-
 fuchsia_driver("xhci-driver") {
   output_name = "xhci"
 
@@ -51,7 +38,6 @@ fuchsia_driver("xhci-driver") {
   ]
   deps = [
     ":usb_xhci_bind_header",
-    ":usb_xhci_dfv2_bind_header",
     "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
@@ -95,22 +81,10 @@ fuchsia_driver_component("xhci") {
   uses_profiles = true
 }
 
-fuchsia_driver_component("xhci-dfv2") {
-  info = "xhci-info.json"
-  component_name = "xhci"
-  deps = [
-    ":usb_xhci_dfv2_bind",
-    ":xhci-driver",
-  ]
-  colocate = true
-  uses_profiles = true
-}
-
 source_set("test-libs") {
   testonly = true
   public_deps = [
     ":usb_xhci_bind",
-    ":usb_xhci_dfv2_bind",
     "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.serialimpl.async:fuchsia.hardware.serialimpl.async_banjo_cpp",

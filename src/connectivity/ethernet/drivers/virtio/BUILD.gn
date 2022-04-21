@@ -17,13 +17,6 @@ driver_bind_rules("virtio_ethernet_bind") {
   ]
 }
 
-driver_bind_rules("virtio_ethernet_bind_v2") {
-  rules = "virtio_ethernet_dfv2.bind"
-  header_output = "virtio_ethernet-dfv2-bind.h"
-  tests = "bind-tests.json"
-  deps = [ "//src/devices/bind/fuchsia.pci" ]
-}
-
 source_set("virtio_ethernet_lib") {
   configs += [ "//build/config:all_source" ]
   sources = [
@@ -58,16 +51,6 @@ fuchsia_driver_component("virtio_ethernet") {
     ":virtio_ethernet_bind",
   ]
 
-  info = "virtio_ethernet-info.json"
-  colocate = true
-}
-
-fuchsia_driver_component("virtio_ethernet_dfv2") {
-  component_name = "virtio_ethernet"
-  deps = [
-    ":virtio_ethernet-driver",
-    ":virtio_ethernet_bind_v2",
-  ]
   info = "virtio_ethernet-info.json"
   colocate = true
 }

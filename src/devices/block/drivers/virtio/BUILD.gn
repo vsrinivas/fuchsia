@@ -17,12 +17,6 @@ driver_bind_rules("virtio_block_bind") {
   ]
 }
 
-driver_bind_rules("virtio_block_bind_v2") {
-  rules = "virtio_block_dfv2.bind"
-  header_output = "virtio_block_dfv2_bind.h"
-  deps = [ "//src/devices/bind/fuchsia.pci" ]
-}
-
 fuchsia_driver("virtio_block-driver") {
   output_name = "virtio_block"
   configs += [
@@ -45,16 +39,6 @@ fuchsia_driver_component("virtio_block") {
   deps = [
     ":virtio_block-driver",
     ":virtio_block_bind",
-  ]
-  info = "virtio_block-info.json"
-  colocate = true
-}
-
-fuchsia_driver_component("virtio_block_dfv2") {
-  component_name = "virtio_block"
-  deps = [
-    ":virtio_block-driver",
-    ":virtio_block_bind_v2",
   ]
   info = "virtio_block-info.json"
   colocate = true
