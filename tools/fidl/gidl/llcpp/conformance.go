@@ -321,11 +321,10 @@ func decodeFailureCases(gidlDecodeFailurees []gidlir.DecodeFailure, schema gidlm
 }
 
 var supportedWireFormats = []gidlir.WireFormat{
-	gidlir.V1WireFormat,
 	gidlir.V2WireFormat,
 }
 var supportedEncodeFailureFormats = []gidlir.WireFormat{
-	gidlir.V1WireFormat,
+	gidlir.V2WireFormat,
 }
 
 func wireFormatSupported(wireFormat gidlir.WireFormat) bool {

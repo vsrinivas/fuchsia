@@ -183,18 +183,18 @@ TEST(LlcppTypesTests, OwnedEncodedMessageOwns) {
     }
 
     encoded = std::make_unique<fidl::unstable::OwnedEncodedMessage<VectorStruct>>(
-        fidl::internal::WireFormatVersion::kV1, &vector_struct);
+        fidl::internal::WireFormatVersion::kV2, &vector_struct);
     ASSERT_TRUE(encoded->ok());
 
     auto encoded_with_iovecs = std::make_unique<fidl::unstable::OwnedEncodedMessage<VectorStruct>>(
-        fidl::internal::AllowUnownedInputRef{}, fidl::internal::WireFormatVersion::kV1,
+        fidl::internal::AllowUnownedInputRef{}, fidl::internal::WireFormatVersion::kV2,
         &vector_struct);
     ASSERT_TRUE(encoded_with_iovecs->ok());
   }
 
   fidl::OutgoingToIncomingMessage converted(encoded->GetOutgoingMessage());
   ASSERT_TRUE(converted.ok());
-  fidl::unstable::DecodedMessage<VectorStruct> decoded(fidl::internal::WireFormatVersion::kV1,
+  fidl::unstable::DecodedMessage<VectorStruct> decoded(fidl::internal::WireFormatVersion::kV2,
                                                        std::move(converted.incoming_message()));
 
   ASSERT_EQ(vector_view_count, decoded.PrimaryObject()->v.count());
