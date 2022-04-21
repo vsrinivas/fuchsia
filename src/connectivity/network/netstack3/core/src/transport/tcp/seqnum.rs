@@ -156,6 +156,10 @@ impl WindowSize {
     pub(super) fn new(wnd: usize) -> Option<Self> {
         u32::try_from(wnd).ok_checked::<TryFromIntError>().and_then(WindowSize::from_u32)
     }
+
+    pub(super) fn checked_sub(self, diff: usize) -> Option<Self> {
+        usize::from(self).checked_sub(diff).and_then(Self::new)
+    }
 }
 
 impl ops::Add<WindowSize> for SeqNum {

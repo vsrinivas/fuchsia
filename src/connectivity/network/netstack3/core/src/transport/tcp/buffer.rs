@@ -7,13 +7,7 @@
 //! used by TCP.
 
 use alloc::{vec, vec::Vec};
-use core::{
-    cmp,
-    convert::TryFrom,
-    fmt::Debug,
-    num::{NonZeroUsize, TryFromIntError},
-    ops::Range,
-};
+use core::{cmp, convert::TryFrom, fmt::Debug, num::TryFromIntError, ops::Range};
 
 use crate::transport::tcp::{
     segment::Payload,
@@ -27,10 +21,17 @@ pub trait Buffer: Default + Debug {
 
     /// Returns the maximum number of bytes that can reside in the buffer.
     fn cap(&self) -> usize;
+
+    /// Returns an empty buffer.
+    fn empty() -> Self;
 }
 
 /// A buffer supporting TCP receiving operations.
 pub trait ReceiveBuffer: Buffer {
+    /// Stores the remaining data that have not been read by the user when the
+    /// connection is shutdown by the peer.
+    type Residual: From<Self> + Debug;
+
     /// Writes `data` into the buffer at `offset`.
     ///
     /// Returns the number of bytes written.
@@ -161,7 +162,6 @@ impl Payload for SendPayload<'_> {
 #[derive(Debug, Clone)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
 pub(super) struct RingBuffer {
-    // It must not be empty because we can not divide a number by 0.
     storage: Vec<u8>,
     // The index where the reader starts to read.
     head: usize,
@@ -171,14 +171,14 @@ pub(super) struct RingBuffer {
 
 impl RingBuffer {
     /// Creates a new `RingBuffer`.
-    pub(super) fn new(capacity: NonZeroUsize) -> Self {
-        Self { storage: vec![0; capacity.get()], head: 0, len: 0 }
+    pub(super) fn new(capacity: usize) -> Self {
+        Self { storage: vec![0; capacity], head: 0, len: 0 }
     }
 }
 
 impl Default for RingBuffer {
     fn default() -> Self {
-        Self::new(NonZeroUsize::new(WindowSize::DEFAULT.into()).unwrap())
+        Self::new(WindowSize::DEFAULT.into())
     }
 }
 
@@ -209,11 +209,20 @@ impl Buffer for RingBuffer {
     fn cap(&self) -> usize {
         self.storage.len()
     }
+
+    fn empty() -> Self {
+        RingBuffer::new(0)
+    }
 }
 
 impl ReceiveBuffer for RingBuffer {
+    type Residual = Self;
+
     fn write_at<P: Payload>(&mut self, offset: usize, data: &P) -> usize {
         let Self { storage, head, len } = self;
+        if storage.len() == 0 {
+            return 0;
+        }
         let available = storage.len() - *len;
         if offset > available {
             return 0;
@@ -241,6 +250,9 @@ impl ReceiveBuffer for RingBuffer {
         F: for<'b> FnOnce(&'b [&'a [u8]]) -> usize,
     {
         let Self { storage, head, len } = self;
+        if storage.len() == 0 {
+            return f(&[&[]]);
+        }
         let nread = RingBuffer::with_readable(storage, *head, *len, f);
         assert!(nread <= *len);
         *len -= nread;
@@ -262,6 +274,9 @@ impl SendBuffer for RingBuffer {
         F: FnOnce(SendPayload<'a>) -> R,
     {
         let Self { storage, head, len } = self;
+        if storage.len() == 0 {
+            return f(SendPayload::Contiguous(&[]));
+        }
         assert!(offset <= *len);
         RingBuffer::with_readable(
             storage,
@@ -569,7 +584,7 @@ mod test {
 
     #[test]
     fn ring_buffer_example() {
-        let mut rb = RingBuffer::new(NonZeroUsize::new(16).unwrap());
+        let mut rb = RingBuffer::new(16);
         assert_eq!(rb.write_at(5, &"World".as_bytes()), 5);
         assert_eq!(rb.write_at(0, &"Hello".as_bytes()), 5);
         rb.make_readable(10);

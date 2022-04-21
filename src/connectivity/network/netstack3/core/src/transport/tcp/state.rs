@@ -7,7 +7,7 @@
 // this file are from https://tools.ietf.org/html/rfc793#section-3.9 if not
 // specified otherwise.
 
-use core::{convert::TryFrom as _, num::TryFromIntError, time::Duration};
+use core::{convert::TryFrom as _, mem, num::TryFromIntError, time::Duration};
 
 use explicit::ResultExt as _;
 
@@ -25,6 +25,15 @@ use crate::{
 /// Per RFC 793 (https://tools.ietf.org/html/rfc793#page-22):
 ///
 ///   CLOSED - represents no connection state at all.
+///
+/// Allowed operations:
+///   - listen
+///   - connect
+/// Disallowed operations:
+///   - send
+///   - recv
+///   - shutdown
+///   - accept
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
 struct Closed<Error> {
@@ -91,8 +100,17 @@ impl<Error> Closed<Error> {
 
 /// Per RFC 793 (https://tools.ietf.org/html/rfc793#page-21):
 ///
-///   SYN-SENT - represents waiting for a matching connection request
-///   after having sent a connection request.
+///   LISTEN - represents waiting for a connection request from any remote
+///   TCP and port.
+///
+/// Allowed operations:
+///   - send (queued until connection is established)
+///   - recv (queued until connection is established)
+///   - connect
+///   - shutdown
+///   - accept
+/// Disallowed operations:
+///   - listen
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
 struct Listen {
@@ -159,6 +177,19 @@ impl Listen {
     }
 }
 
+/// Per RFC 793 (https://tools.ietf.org/html/rfc793#page-21):
+///
+///   SYN-SENT - represents waiting for a matching connection request
+///   after having sent a connection request.
+///
+/// Allowed operations:
+///   - send (queued until connection is established)
+///   - recv (queued until connection is established)
+///   - shutdown
+/// Disallowed operations:
+///   - listen
+///   - accept
+///   - connect
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
 struct SynSent<I: Instant> {
@@ -330,6 +361,15 @@ impl<I: Instant> SynSent<I> {
 ///   SYN-RECEIVED - represents waiting for a confirming connection
 ///   request acknowledgment after having both received and sent a
 ///   connection request.
+///
+/// Allowed operations:
+///   - send (queued until connection is established)
+///   - recv (queued until connection is established)
+///   - shutdown
+/// Disallowed operations:
+///   - listen
+///   - accept
+///   - connect
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
 struct SynRcvd<I: Instant> {
@@ -417,6 +457,15 @@ impl<R: ReceiveBuffer> Recv<R> {
 ///   ESTABLISHED - represents an open connection, data received can be
 ///   delivered to the user.  The normal state for the data transfer phase
 ///   of the connection.
+///
+/// Allowed operations:
+///   - send
+///   - recv
+///   - shutdown
+/// Disallowed operations:
+///   - listen
+///   - accept
+///   - connect
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
 struct Established<I: Instant, R: ReceiveBuffer, S: SendBuffer> {
@@ -614,6 +663,28 @@ impl<I: Instant, S: SendBuffer> Send<I, S> {
     }
 }
 
+/// Per RFC 793 (https://tools.ietf.org/html/rfc793#page-21):
+///
+///   CLOSE-WAIT - represents waiting for a connection termination request
+///   from the local user.
+///
+/// Allowed operations:
+///   - send
+///   - recv (only leftovers and no new data will be accepted from the peer)
+///   - shutdown
+/// Disallowed operations:
+///   - listen
+///   - accept
+///   - connect
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq, Eq))]
+struct CloseWait<I: Instant, R, S: SendBuffer> {
+    snd: Send<I, S>,
+    rcv_residual: R,
+    last_ack: SeqNum,
+    last_wnd: WindowSize,
+}
+
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
 enum State<I: Instant, R: ReceiveBuffer, S: SendBuffer> {
@@ -622,6 +693,7 @@ enum State<I: Instant, R: ReceiveBuffer, S: SendBuffer> {
     SynRcvd(SynRcvd<I>),
     SynSent(SynSent<I>),
     Established(Established<I, R, S>),
+    CloseWait(CloseWait<I, R::Residual, S>),
 }
 
 impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
@@ -664,6 +736,9 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
                 (*irs + 1, WindowSize::DEFAULT, *iss + 1)
             }
             State::Established(Established { rcv, snd }) => (rcv.nxt(), rcv.wnd(), snd.nxt),
+            State::CloseWait(CloseWait { snd, rcv_residual: _, last_ack, last_wnd }) => {
+                (*last_ack, *last_wnd, snd.nxt)
+            }
         };
         // Unreachable note(1): The above match returns early for states CLOSED,
         // SYN_SENT and LISTEN, so it is impossible to have the above states
@@ -759,7 +834,8 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
                     // transition to Established for the ack processing, it is
                     // impossible for SYN_RCVD to appear past this line.
                 }
-                State::Established(Established { snd, rcv: _ }) => {
+                State::Established(Established { snd, rcv: _ })
+                | State::CloseWait(CloseWait { snd, rcv_residual: _, last_ack: _, last_wnd: _ }) => {
                     if let Some(ack) =
                         snd.process_ack(seg_seq, seg_ack, seg_wnd, rcv_nxt, rcv_wnd, now)
                     {
@@ -792,7 +868,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
         //     <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
         //   This acknowledgment should be piggybacked on a segment being
         //   transmitted if possible without incurring undue delay.
-        if contents.data().len() > 0 {
+        let ack_to_text = if contents.data().len() > 0 {
             match self {
                 State::Closed(_) | State::Listen(_) | State::SynRcvd(_) | State::SynSent(_) => {
                     // This unreachable assert is justified by note (1) and (2).
@@ -807,12 +883,55 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
                     let nwritten = rcv.buffer.write_at(offset, contents.data());
                     let readable = rcv.assembler.insert(seg_seq..seg_seq + nwritten);
                     rcv.buffer.make_readable(readable);
-                    return Some(Segment::ack(snd.nxt, rcv.nxt(), rcv.wnd()));
+                    Some(Segment::ack(snd.nxt, rcv.nxt(), rcv.wnd()))
+                }
+                State::CloseWait(_) => {
+                    // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-75):
+                    //   This should not occur, since a FIN has been received from the
+                    //   remote side.  Ignore the segment text.
+                    None
                 }
             }
-        }
-        // TODO(https://fxbug.dev/93522): should handle incoming FIN.
-        None
+        } else {
+            None
+        };
+        // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-75):
+        //   eighth, check the FIN bit
+        let ack_to_fin = if contents.control() == Some(Control::FIN) {
+            // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-75):
+            //   If the FIN bit is set, signal the user "connection closing" and
+            //   return any pending RECEIVEs with same message, advance RCV.NXT
+            //   over the FIN, and send an acknowledgment for the FIN.
+            match self {
+                State::Closed(_) | State::Listen(_) | State::SynRcvd(_) | State::SynSent(_) => {
+                    // This unreachable assert is justified by note (1) and (2).
+                    unreachable!("encountered an alread-handled state: {:?}", self)
+                }
+                State::Established(Established { snd, rcv }) => {
+                    // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-75):
+                    //   Enter the CLOSE-WAIT state.
+                    if rcv.nxt() == seg_seq + contents.data().len() {
+                        let last_ack = rcv.nxt() + 1;
+                        let last_wnd = rcv.wnd().checked_sub(1).unwrap_or(WindowSize::ZERO);
+                        *self = State::CloseWait(CloseWait {
+                            snd: Send { buffer: mem::replace(&mut snd.buffer, S::empty()), ..*snd },
+                            rcv_residual: mem::replace(&mut rcv.buffer, R::empty()).into(),
+                            last_ack,
+                            last_wnd,
+                        });
+                        Some(Segment::ack(snd_nxt, last_ack, last_wnd))
+                    } else {
+                        None
+                    }
+                }
+                State::CloseWait(_) => None,
+            }
+        } else {
+            None
+        };
+        // If we generated an ACK to FIN, then because of the cumulative nature
+        // of ACKs, the ACK generated to text (if any) can be safely overridden.
+        ack_to_fin.or(ack_to_text)
     }
 
     /// Polls if there are any bytes available to send in the buffer.
@@ -836,6 +955,9 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
             }
             State::Established(Established { snd, rcv }) => {
                 snd.poll_send(rcv.nxt(), rcv.wnd(), mss, now)
+            }
+            State::CloseWait(CloseWait { snd, rcv_residual: _, last_ack, last_wnd }) => {
+                snd.poll_send(*last_ack, *last_wnd, mss, now)
             }
             State::Closed(_) | State::Listen(_) => None,
         }
@@ -861,9 +983,12 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
     /// interleave, otherwise timers may be lost.
     fn poll_send_at(&self) -> Option<I> {
         match self {
-            State::Established(Established { snd, rcv: _ }) => match snd.timer? {
-                SendTimer::Retrans(RetransTimer { at, rto: _ }) => Some(at),
-            },
+            State::Established(Established { snd, rcv: _ })
+            | State::CloseWait(CloseWait { snd, rcv_residual: _, last_ack: _, last_wnd: _ }) => {
+                match snd.timer? {
+                    SendTimer::Retrans(RetransTimer { at, rto: _ }) => Some(at),
+                }
+            }
             State::SynRcvd(syn_rcvd) => Some(syn_rcvd.retrans_timer.at),
             State::SynSent(syn_sent) => Some(syn_sent.retrans_timer.at),
             State::Closed(_) | State::Listen(_) => None,
@@ -873,7 +998,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer> State<I, R, S> {
 
 #[cfg(test)]
 mod test {
-    use core::{fmt::Debug, num::NonZeroUsize, time::Duration};
+    use core::{fmt::Debug, time::Duration};
 
     use assert_matches::assert_matches;
     use test_case::test_case;
@@ -898,6 +1023,23 @@ mod test {
             assert_eq!(truncated, 0);
             seg
         }
+
+        fn piggybacked_fin(seq: SeqNum, ack: SeqNum, wnd: WindowSize, data: P) -> Segment<P> {
+            let (seg, truncated) =
+                Segment::with_data(seq, Some(ack), Some(Control::FIN), wnd, data);
+            assert_eq!(truncated, 0);
+            seg
+        }
+    }
+
+    impl RingBuffer {
+        fn with_data<'a>(cap: usize, data: &'a [u8]) -> Self {
+            let mut buffer = RingBuffer::new(cap);
+            let nwritten = buffer.write_at(0, &data);
+            assert_eq!(nwritten, data.len());
+            buffer.make_readable(nwritten);
+            buffer
+        }
     }
 
     /// A buffer that can't read or write for test purpose.
@@ -912,9 +1054,15 @@ mod test {
         fn cap(&self) -> usize {
             0
         }
+
+        fn empty() -> Self {
+            NullBuffer
+        }
     }
 
     impl ReceiveBuffer for NullBuffer {
+        type Residual = Self;
+
         fn write_at<P: Payload>(&mut self, _offset: usize, _data: &P) -> usize {
             0
         }
@@ -950,13 +1098,16 @@ mod test {
         }
     }
 
-    impl<I: Instant, R: ReceiveBuffer + Debug, S: SendBuffer + Debug> State<I, R, S> {
+    impl<S: SendBuffer + Debug> State<DummyInstant, RingBuffer, S> {
         fn read_with(&mut self, f: impl for<'b> FnOnce(&'b [&'_ [u8]]) -> usize) -> usize {
             match self {
                 State::Closed(_) | State::Listen(_) | State::SynRcvd(_) | State::SynSent(_) => {
                     panic!("No receive state in {:?}", self);
                 }
                 State::Established(e) => e.rcv.buffer.read_with(f),
+                State::CloseWait(CloseWait { snd: _, rcv_residual, last_ack: _, last_wnd: _ }) => {
+                    rcv_residual.read_with(f)
+                }
             }
         }
     }
@@ -1110,6 +1261,31 @@ mod test {
         Segment::new(ISS_1 + 1, None, None, WindowSize::DEFAULT),
         None
     => None; "no ack")]
+    #[test_case(
+        Segment::fin(ISS_1 + 1, ISS_2 + 1, WindowSize::DEFAULT),
+        Some(State::CloseWait(CloseWait {
+            snd: Send {
+                nxt: ISS_2 + 1,
+                max: ISS_2 + 1,
+                una: ISS_2 + 1,
+                wnd: WindowSize::DEFAULT,
+                buffer: NullBuffer,
+                wl1: ISS_1 + 1,
+                wl2: ISS_2 + 1,
+                rtt_estimator: Estimator::Measured{
+                    srtt: RTT,
+                    rtt_var: RTT / 2,
+                },
+                last_seq_ts: None,
+                timer: None,
+            },
+            rcv_residual: NullBuffer,
+            last_ack: ISS_1 + 2,
+            last_wnd: WindowSize::ZERO,
+        }))
+    => Some(
+        Segment::ack(ISS_2 + 1, ISS_1 + 2, WindowSize::ZERO)
+    ); "fin")]
     fn segment_arrives_when_syn_rcvd(
         incoming: Segment<()>,
         expected: Option<State<DummyInstant, NullBuffer, NullBuffer>>,
@@ -1146,14 +1322,64 @@ mod test {
         Segment::ack(ISS_2 + 1, ISS_1 + 2, WindowSize::DEFAULT),
         None
     => Some(
-        Segment::ack(ISS_1 + 1, ISS_2 + 1, WindowSize::new(1).unwrap())
+        Segment::ack(ISS_1 + 1, ISS_2 + 1, WindowSize::new(2).unwrap())
     ); "unacceptable ack")]
     #[test_case(
         Segment::ack(ISS_2 + 1, ISS_1 + 1, WindowSize::DEFAULT),
         None
     => None; "pure ack")]
+    #[test_case(
+        Segment::fin(ISS_2 + 1, ISS_1 + 1, WindowSize::DEFAULT),
+        Some(State::CloseWait(CloseWait {
+            snd: Send {
+                nxt: ISS_1 + 1,
+                max: ISS_1 + 1,
+                una: ISS_1 + 1,
+                wnd: WindowSize::DEFAULT,
+                buffer: NullBuffer,
+                wl1: ISS_2 + 1,
+                wl2: ISS_1 + 1,
+                rtt_estimator: Estimator::default(),
+                last_seq_ts: None,
+                timer: None,
+            },
+            rcv_residual: RingBuffer::new(2),
+            last_ack: ISS_2 + 2,
+            last_wnd: WindowSize::new(1).unwrap(),
+        }))
+    => Some(
+        Segment::ack(ISS_1 + 1, ISS_2 + 2, WindowSize::new(1).unwrap())
+    ); "pure fin")]
+    #[test_case(
+        Segment::piggybacked_fin(ISS_2 + 1, ISS_1 + 1, WindowSize::DEFAULT, "A".as_bytes()),
+        Some(State::CloseWait(CloseWait {
+            snd: Send {
+                nxt: ISS_1 + 1,
+                max: ISS_1 + 1,
+                una: ISS_1 + 1,
+                wnd: WindowSize::DEFAULT,
+                buffer: NullBuffer,
+                wl1: ISS_2 + 1,
+                wl2: ISS_1 + 1,
+                rtt_estimator: Estimator::default(),
+                last_seq_ts: None,
+                timer: None,
+            },
+            rcv_residual: RingBuffer::with_data(2, "A".as_bytes()),
+            last_ack: ISS_2 + 3,
+            last_wnd: WindowSize::ZERO,
+        }))
+    => Some(
+        Segment::ack(ISS_1 + 1, ISS_2 + 3, WindowSize::ZERO)
+    ); "fin with 1 byte")]
+    #[test_case(
+        Segment::piggybacked_fin(ISS_2 + 1, ISS_1 + 1, WindowSize::DEFAULT, "AB".as_bytes()),
+        None
+    => Some(
+        Segment::ack(ISS_1 + 1, ISS_2 + 3, WindowSize::ZERO)
+    ); "fin with 2 bytes")]
     fn segment_arrives_when_established(
-        incoming: Segment<()>,
+        incoming: Segment<impl Payload>,
         expected: Option<State<DummyInstant, RingBuffer, NullBuffer>>,
     ) -> Option<Segment<()>> {
         let mut state = State::Established(Established {
@@ -1169,15 +1395,61 @@ mod test {
                 last_seq_ts: None,
                 timer: None,
             },
-            rcv: Recv {
-                buffer: RingBuffer::new(NonZeroUsize::new(1).unwrap()),
-                assembler: Assembler::new(ISS_2 + 1),
-            },
+            rcv: Recv { buffer: RingBuffer::new(2), assembler: Assembler::new(ISS_2 + 1) },
         });
         let seg = state.on_segment(incoming, DummyInstant::default());
         match expected {
             Some(new_state) => assert_eq!(new_state, state),
             None => assert_matches!(state, State::Established(_)),
+        };
+        seg
+    }
+
+    #[test_case(
+        Segment::syn(ISS_2 + 2, WindowSize::DEFAULT),
+        Some(State::Closed (
+            Closed { reason: UserError::ConnectionReset },
+        ))
+    => Some(Segment::rst(ISS_1 + 1)); "syn")]
+    #[test_case(
+        Segment::rst(ISS_2 + 2),
+        Some(State::Closed (
+            Closed { reason: UserError::ConnectionReset },
+        ))
+    => None; "rst")]
+    #[test_case(
+        Segment::fin(ISS_2 + 2, ISS_1 + 1, WindowSize::DEFAULT),
+        None
+    => None; "ignore fin")]
+    #[test_case(
+        Segment::data(ISS_2 + 2, ISS_1 + 1, WindowSize::DEFAULT, "Hello".as_bytes()),
+        None
+    => None; "ignore data")]
+    fn segment_arrives_when_close_wait(
+        incoming: Segment<impl Payload>,
+        expected: Option<State<DummyInstant, RingBuffer, NullBuffer>>,
+    ) -> Option<Segment<()>> {
+        let mut state = State::CloseWait(CloseWait {
+            snd: Send {
+                nxt: ISS_1 + 1,
+                max: ISS_1 + 1,
+                una: ISS_1 + 1,
+                wnd: WindowSize::DEFAULT,
+                buffer: NullBuffer,
+                wl1: ISS_2 + 1,
+                wl2: ISS_1 + 1,
+                rtt_estimator: Estimator::default(),
+                last_seq_ts: None,
+                timer: None,
+            },
+            rcv_residual: RingBuffer::empty(),
+            last_ack: ISS_2 + 2,
+            last_wnd: WindowSize::DEFAULT,
+        });
+        let seg = state.on_segment(incoming, DummyInstant::default());
+        match expected {
+            Some(new_state) => assert_eq!(new_state, state),
+            None => assert_matches!(state, State::CloseWait(_)),
         };
         seg
     }
@@ -1352,7 +1624,7 @@ mod test {
                 timer: None,
             },
             rcv: Recv {
-                buffer: RingBuffer::new(NonZeroUsize::new(BUFFER_SIZE).unwrap()),
+                buffer: RingBuffer::new(BUFFER_SIZE),
                 assembler: Assembler::new(ISS_2 + 1),
             },
         });
@@ -1431,7 +1703,7 @@ mod test {
     #[test]
     fn established_send() {
         let clock = DummyInstantCtx::default();
-        let mut send_buffer = RingBuffer::new(NonZeroUsize::new(BUFFER_SIZE).unwrap());
+        let mut send_buffer = RingBuffer::new(BUFFER_SIZE);
         assert_eq!(send_buffer.enqueue_data(TEST_BYTES), 5);
         let mut established = State::Established(Established {
             snd: Send {
@@ -1447,7 +1719,7 @@ mod test {
                 timer: None,
             },
             rcv: Recv {
-                buffer: RingBuffer::new(NonZeroUsize::new(BUFFER_SIZE).unwrap()),
+                buffer: RingBuffer::new(BUFFER_SIZE),
                 assembler: Assembler::new(ISS_2 + 1),
             },
         });
@@ -1526,7 +1798,13 @@ mod test {
             State::Closed(_) | State::Listen(_) | State::SynRcvd(_) | State::SynSent(_) => {
                 panic!("expected that we have entered established state, but got {:?}", state)
             }
-            State::Established(Established { ref mut snd, rcv: _ }) => {
+            State::Established(Established { ref mut snd, rcv: _ })
+            | State::CloseWait(CloseWait {
+                ref mut snd,
+                rcv_residual: _,
+                last_ack: _,
+                last_wnd: _,
+            }) => {
                 assert_eq!(snd.buffer.enqueue_data(TEST_BYTES), TEST_BYTES.len());
             }
         }
