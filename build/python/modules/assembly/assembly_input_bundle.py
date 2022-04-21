@@ -123,6 +123,11 @@ class AssemblyInputBundle(ImageAssemblyConfig):
         """Serialize to a JSON string"""
         return json.dumps(self.to_dict(), indent=2)
 
+    def __eq__(self, other):
+        """ This is temporary, and will be shortly removed in another CL
+        """
+        return str(self) == str(other)
+
     def intersection(
             self, other: 'AssemblyInputBundle') -> 'AssemblyInputBundle':
         """Return the intersection of the two 'ImageAssemblyConfiguration's

@@ -8,6 +8,7 @@ schema as `//src/developer/ffx/plugins/assembly`.
 """
 
 import json
+from multiprocessing.sharedctypes import Value
 from typing import Dict, Set, Type, TypeVar, Union
 
 __all__ = ["ImageAssemblyConfig", "KernelInfo"]
@@ -26,7 +27,7 @@ class KernelInfo:
     def __init__(self) -> None:
         self.path: Union[FilePath, None] = None
         self.args: Set[str] = set()
-        self.clock_backstop: Union[str, None] = None
+        self.clock_backstop: Union[int, None] = None
 
     @classmethod
     def from_dict(cls, entry: Dict[str, str]) -> 'KernelInfo':
@@ -64,6 +65,15 @@ class KernelInfo:
         difference_field(self, other, 'clock_backstop', result)
         result.args = self.args.difference(other.args)
         return result
+
+    def __repr__(self):
+        return f"KernelInfo{{ path: '{self.path}', args: {self.args}, backstop: {self.clock_backstop} }}"
+
+    def __eq__(self, other):
+        if not isinstance(other, KernelInfo):
+            raise ValueError("other is not a KernelInfo")
+        return (self.path, self.args, self.clock_backstop) == (
+            other.path, other.args, other.clock_backstop)
 
 
 class ImageAssemblyConfig:
