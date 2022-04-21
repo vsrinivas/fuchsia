@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_MINFS_COMMAND_HANDLER_H_
-#define SRC_STORAGE_MINFS_COMMAND_HANDLER_H_
+#ifndef SRC_STORAGE_MINFS_INSPECTOR_COMMAND_HANDLER_H_
+#define SRC_STORAGE_MINFS_INSPECTOR_COMMAND_HANDLER_H_
 
 #include <iostream>
 #include <map>
@@ -20,7 +20,7 @@
 
 #include "src/lib/storage/block_client/cpp/block_device.h"
 #include "src/storage/minfs/format.h"
-#include "src/storage/minfs/minfs_inspector.h"
+#include "src/storage/minfs/inspector/minfs_inspector.h"
 
 namespace minfs {
 using ArgType = disk_inspector::ArgType;
@@ -104,4 +104,4 @@ class CommandHandler : public disk_inspector::CommandHandler {
 
 }  // namespace minfs
 
-#endif  // SRC_STORAGE_MINFS_COMMAND_HANDLER_H_
+#endif  // SRC_STORAGE_MINFS_INSPECTOR_COMMAND_HANDLER_H_

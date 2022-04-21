@@ -7,7 +7,7 @@
 
 #include <lib/zx/status.h>
 
-#include "src/storage/minfs/allocator_reservation.h"
+#include "src/storage/minfs/allocator/allocator_reservation.h"
 
 namespace minfs {
 

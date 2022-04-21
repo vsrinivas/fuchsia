@@ -4,7 +4,7 @@
 
 // Tests minfs inspector behavior.
 
-#include "src/storage/minfs/inspector.h"
+#include "src/storage/minfs/inspector/inspector.h"
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -16,10 +16,10 @@
 
 #include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/lib/storage/vfs/cpp/journal/inspector_journal.h"
-#include "src/storage/minfs/inspector_inode.h"
-#include "src/storage/minfs/inspector_inode_table.h"
-#include "src/storage/minfs/inspector_private.h"
-#include "src/storage/minfs/inspector_superblock.h"
+#include "src/storage/minfs/inspector/inspector_inode.h"
+#include "src/storage/minfs/inspector/inspector_inode_table.h"
+#include "src/storage/minfs/inspector/inspector_private.h"
+#include "src/storage/minfs/inspector/inspector_superblock.h"
 #include "src/storage/minfs/minfs_private.h"
 
 namespace minfs {

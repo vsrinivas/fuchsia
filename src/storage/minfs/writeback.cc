@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "src/storage/minfs/allocator_reservation.h"
+#include "src/storage/minfs/allocator/allocator_reservation.h"
 #include "zircon/types.h"
 
 #ifdef __Fuchsia__

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_MINFS_MINFS_INSPECTOR_H_
-#define SRC_STORAGE_MINFS_MINFS_INSPECTOR_H_
+#ifndef SRC_STORAGE_MINFS_INSPECTOR_MINFS_INSPECTOR_H_
+#define SRC_STORAGE_MINFS_INSPECTOR_MINFS_INSPECTOR_H_
 
 #include <string>
 #include <vector>
@@ -112,4 +112,4 @@ class MinfsInspector {
 
 }  // namespace minfs
 
-#endif  // SRC_STORAGE_MINFS_MINFS_INSPECTOR_H_
+#endif  // SRC_STORAGE_MINFS_INSPECTOR_MINFS_INSPECTOR_H_

@@ -31,7 +31,7 @@
 #include "src/lib/storage/vfs/cpp/queue.h"
 #include "src/lib/storage/vfs/cpp/transaction/buffered_operations_builder.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
-#include "src/storage/minfs/allocator_reservation.h"
+#include "src/storage/minfs/allocator/allocator_reservation.h"
 #include "src/storage/minfs/bcache.h"
 #include "src/storage/minfs/cached_block_transaction.h"
 #include "src/storage/minfs/format.h"

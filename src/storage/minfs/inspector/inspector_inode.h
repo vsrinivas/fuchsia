@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_MINFS_INSPECTOR_INODE_H_
-#define SRC_STORAGE_MINFS_INSPECTOR_INODE_H_
+#ifndef SRC_STORAGE_MINFS_INSPECTOR_INSPECTOR_INODE_H_
+#define SRC_STORAGE_MINFS_INSPECTOR_INSPECTOR_INODE_H_
 
 #include <disk_inspector/common_types.h>
 #include <fbl/string_printf.h>
@@ -55,4 +55,4 @@ class InodeObject : public disk_inspector::DiskObject {
 
 }  // namespace minfs
 
-#endif  // SRC_STORAGE_MINFS_INSPECTOR_INODE_H_
+#endif  // SRC_STORAGE_MINFS_INSPECTOR_INSPECTOR_INODE_H_

@@ -19,8 +19,8 @@
 #include <fbl/macros.h>
 
 #include "src/lib/storage/vfs/cpp/transaction/buffered_operations_builder.h"
+#include "src/storage/minfs/allocator/allocator_reservation.h"
 #include "src/storage/minfs/allocator/storage.h"
-#include "src/storage/minfs/allocator_reservation.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/superblock.h"
 #include "src/storage/minfs/writeback.h"

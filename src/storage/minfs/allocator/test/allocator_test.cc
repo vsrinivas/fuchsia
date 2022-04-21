@@ -13,7 +13,7 @@
 #include <fbl/array.h>
 #include <gtest/gtest.h>
 
-#include "src/storage/minfs/allocator_reservation.h"
+#include "src/storage/minfs/allocator/allocator_reservation.h"
 #include "src/storage/minfs/format.h"
 
 namespace minfs {

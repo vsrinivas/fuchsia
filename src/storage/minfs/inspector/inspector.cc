@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/storage/minfs/inspector.h"
+#include "src/storage/minfs/inspector/inspector.h"
 
 #include <lib/syslog/cpp/macros.h>
 #include <sys/stat.h>
@@ -14,9 +14,9 @@
 #include "src/lib/storage/block_client/cpp/block_device.h"
 #include "src/lib/storage/vfs/cpp/journal/inspector_journal.h"
 #include "src/storage/minfs/bcache.h"
-#include "src/storage/minfs/inspector_inode_table.h"
-#include "src/storage/minfs/inspector_private.h"
-#include "src/storage/minfs/inspector_superblock.h"
+#include "src/storage/minfs/inspector/inspector_inode_table.h"
+#include "src/storage/minfs/inspector/inspector_private.h"
+#include "src/storage/minfs/inspector/inspector_superblock.h"
 
 namespace minfs {
 

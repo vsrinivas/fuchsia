@@ -5,8 +5,8 @@
 // This file includes necessary methods for inspecting various on-disk structures
 // of a MinFS filesystem.
 
-#ifndef SRC_STORAGE_MINFS_INSPECTOR_PRIVATE_H_
-#define SRC_STORAGE_MINFS_INSPECTOR_PRIVATE_H_
+#ifndef SRC_STORAGE_MINFS_INSPECTOR_INSPECTOR_PRIVATE_H_
+#define SRC_STORAGE_MINFS_INSPECTOR_INSPECTOR_PRIVATE_H_
 
 #include <sys/stat.h>
 
@@ -74,4 +74,4 @@ std::unique_ptr<disk_inspector::DiskObjectUint32Array> CreateUint32ArrayDiskObj(
 
 }  // namespace minfs
 
-#endif  // SRC_STORAGE_MINFS_INSPECTOR_PRIVATE_H_
+#endif  // SRC_STORAGE_MINFS_INSPECTOR_INSPECTOR_PRIVATE_H_

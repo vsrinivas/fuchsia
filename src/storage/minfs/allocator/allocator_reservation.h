@@ -5,8 +5,8 @@
 // This file describes the structure used to allocate
 // from an on-disk bitmap.
 
-#ifndef SRC_STORAGE_MINFS_ALLOCATOR_RESERVATION_H_
-#define SRC_STORAGE_MINFS_ALLOCATOR_RESERVATION_H_
+#ifndef SRC_STORAGE_MINFS_ALLOCATOR_ALLOCATOR_RESERVATION_H_
+#define SRC_STORAGE_MINFS_ALLOCATOR_ALLOCATOR_RESERVATION_H_
 
 #include <lib/fit/function.h>
 #include <lib/zx/status.h>
@@ -91,4 +91,4 @@ class AllocatorReservation {
 
 }  // namespace minfs
 
-#endif  // SRC_STORAGE_MINFS_ALLOCATOR_RESERVATION_H_
+#endif  // SRC_STORAGE_MINFS_ALLOCATOR_ALLOCATOR_RESERVATION_H_

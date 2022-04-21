@@ -30,7 +30,7 @@
 #include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/lib/storage/vfs/cpp/journal/initializer.h"
 #include "src/lib/storage/vfs/cpp/trace.h"
-#include "src/storage/minfs/allocator_reservation.h"
+#include "src/storage/minfs/allocator/allocator_reservation.h"
 #include "src/storage/minfs/file.h"
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs_private.h"
