@@ -397,7 +397,7 @@ bench_statistics(struct bench_config const * const      config,
                 {
                   fprintf(
                     stdout,
-                    "%8.3f, %10.6f, %10.6f, %10.6f, %10.6f, %+10.6f, %+10.6f, %+10.6f, %+10.6f\n",
+                    "%8.3f, %10.3f, %10.3f, %10.3f, %10.3f, %+10.3f, %+10.3f, %+10.3f, %+10.3f\n",
                     (double)bytes / (d_h_ns_elapsed),
                     0.0,
                     (d_h_ns_start - h_ns_start) / 1e3,
@@ -457,7 +457,7 @@ bench_statistics(struct bench_config const * const      config,
               if (!config->is_quiet)
                 {
                   fprintf(stdout,
-                          "%8.3f, %+10.6f, %+10.6f, %+10.6f\n",
+                          "%8.3f, %+10.3f, %+10.3f, %+10.3f\n",
                           (double)bytes / d_ns_elapsed,
                           h_ns_elapsed / 1e3,
                           d_ns_elapsed / 1e3,
