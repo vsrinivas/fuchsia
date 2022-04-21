@@ -16,6 +16,7 @@
 #include <fuchsia/posix/socket/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
@@ -51,9 +52,9 @@
 #include <src/lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <test/touch/cpp/fidl.h>
 
-#include "fuchsia/sysmem/cpp/fidl.h"
 #include "src/ui/input/testing/fake_input_report_device/fake.h"
 #include "src/ui/input/testing/fake_input_report_device/reports_reader.h"
+#include "src/ui/testing/ui_test_manager/ui_test_manager.h"
 
 // This test exercises the touch input dispatch path from Input Pipeline to a Scenic client. It is a
 // multi-component test, and carefully avoids sleeping or polling for component coordination.
@@ -73,8 +74,8 @@
 // Setup sequence
 // - The test sets up a view hierarchy with three views:
 //   - Top level scene, owned by Root Presenter.
-//   - Middle view, owned by this test.
-//   - Bottom view, owned by the child view.
+//   - Middle view, owned by this test (via ui test manager).
+//   - Bottom view, owned by the ui client.
 // - The test waits for a Scenic event that verifies the child has UI content in the scene graph.
 // - The test injects input into Input Pipeline, emulating a display's touch report.
 // - Input Pipeline dispatches the touch event to Scenic, which in turn dispatches it to the child.
@@ -120,7 +121,7 @@ using component_testing::LocalComponent;
 using component_testing::LocalComponentHandles;
 using component_testing::ParentRef;
 using component_testing::Protocol;
-using component_testing::RealmRoot;
+using component_testing::Realm;
 using component_testing::Route;
 using RealmBuilder = component_testing::RealmBuilder;
 
@@ -138,7 +139,6 @@ constexpr zx::duration kTimeout = zx::min(5);
 // long as it differs from the ZX_CLOCK_MONOTONIC=0 defined by Zircon.
 using time_utc = zx::basic_time<1>;
 
-constexpr auto kInputTestRealm = "input-pipeline-test-realm";
 constexpr auto kMockResponseListener = "response_listener";
 
 enum class TapLocation { kTopLeft, kTopRight };
@@ -194,11 +194,11 @@ class ResponseListenerServer : public ResponseListener, public LocalComponent {
   fit::function<void(test::touch::PointerData)> respond_callback_;
 };
 
-class TouchInputBase : public gtest::RealLoopFixture {
+class TouchInputBase
+    : public gtest::RealLoopFixture,
+      public testing::WithParamInterface<ui_testing::UITestManager::SceneOwnerType> {
  protected:
-  TouchInputBase()
-      : realm_builder_(std::make_unique<RealmBuilder>(RealmBuilder::Create())), realm_() {}
-
+  TouchInputBase() = default;
   ~TouchInputBase() override {
     FX_CHECK(injection_count_ > 0) << "injection expected but didn't happen.";
   }
@@ -210,11 +210,20 @@ class TouchInputBase : public gtest::RealLoopFixture {
         [] { FX_LOGS(FATAL) << "\n\n>> Test did not complete in time, terminating.  <<\n\n"; },
         kTimeout);
 
+    ui_testing::UITestManager::Config config;
+    config.scene_owner = ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER;
+    config.use_input = true;
+    config.accessibility_owner = ui_testing::UITestManager::AccessibilityOwnerType::FAKE;
+    config.exposed_client_services = {test::touch::TestAppLauncher::Name_};
+    config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
+    ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
+
     // Assemble realm.
     BuildRealm(this->GetTestComponents(), this->GetTestRoutes(), this->GetTestV2Components());
 
     // Get the display dimensions.
-    scenic_ = realm()->Connect<fuchsia::ui::scenic::Scenic>();
+    FX_LOGS(INFO) << "Waiting for scenic display info";
+    scenic_ = realm_exposed_services()->Connect<fuchsia::ui::scenic::Scenic>();
     scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) {
       display_width_ = display_info.width_in_px;
       display_height_ = display_info.height_in_px;
@@ -224,7 +233,12 @@ class TouchInputBase : public gtest::RealLoopFixture {
     RunLoopUntil([this] { return display_width_ != 0 && display_height_ != 0; });
 
     // Register input injection device.
+    FX_LOGS(INFO) << "Registering input injection device";
     RegisterInjectionDevice();
+
+    // Launch client view, and wait until it's rendering to proceed with the test.
+    ui_test_manager_->InitializeScene();
+    RunLoopUntil([this]() { return ui_test_manager_->ClientViewIsRendering(); });
   }
 
   // Subclass should implement this method to add components to the test realm
@@ -239,103 +253,17 @@ class TouchInputBase : public gtest::RealLoopFixture {
   // next to the base ones added.
   virtual std::vector<std::pair<ChildName, std::string>> GetTestV2Components() { return {}; }
 
-  // Launches the test client by connecting to fuchsia.ui.app.ViewProvider protocol.
-  // This method should only be invoked if this protocol has been exposed from
-  // the root of the test realm. After establishing a connection, this method
-  // listens for the client is_rendering signal and calls |on_is_rendering| when it arrives.
-  void LaunchClient(std::string const& debug_name) {
-    auto tokens_rt = scenic::ViewTokenPair::New();  // Root Presenter -> Test
-    auto tokens_tf = scenic::ViewTokenPair::New();  // Test -> Client
-
-    // Instruct Root Presenter to present test's View.
-    auto root_presenter = realm()->Connect<fuchsia::ui::policy::Presenter>();
-    root_presenter->PresentOrReplaceView(std::move(tokens_rt.view_holder_token),
-                                         /* presentation */ nullptr);
-
-    // Set up test's View, to harvest the client view's view_state.is_rendering signal.
-    auto session_pair = scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get());
-    session_ = std::make_unique<scenic::Session>(std::move(session_pair.first),
-                                                 std::move(session_pair.second));
-    session_->SetDebugName(debug_name);
-    bool is_rendering = false;
-    session_->set_event_handler([this, debug_name, &is_rendering](
-                                    const std::vector<fuchsia::ui::scenic::Event>& events) {
-      for (const auto& event : events) {
-        if (!event.is_gfx())
-          continue;  // skip non-gfx events
-
-        if (event.gfx().is_view_properties_changed()) {
-          const auto properties = event.gfx().view_properties_changed().properties;
-          FX_VLOGS(1) << "Test received its view properties; transfer to child view: "
-                      << properties;
-          FX_CHECK(view_holder_) << "Expect that view holder is already set up.";
-          view_holder_->SetViewProperties(properties);
-          session_->Present2(/*when*/ zx::clock::get_monotonic().get(), /*span*/ 0, [](auto) {});
-        } else if (event.gfx().is_view_state_changed()) {
-          is_rendering = event.gfx().view_state_changed().state.is_rendering;
-          FX_VLOGS(1) << "Child's view content is rendering: " << std::boolalpha << is_rendering;
-        } else if (event.gfx().is_view_disconnected()) {
-          // Save time, terminate the test immediately if we know that client's view is borked.
-          FX_CHECK(injection_count_ > 0) << "Expected to have completed input injection, but "
-                                         << debug_name << " view terminated early.";
-        }
-      }
-    });
-
-    view_holder_ = std::make_unique<scenic::ViewHolder>(
-        session_.get(), std::move(tokens_tf.view_holder_token), "test's view holder");
-    view_ = std::make_unique<scenic::View>(session_.get(), std::move(tokens_rt.view_token),
-                                           "test's view");
-    view_->AddChild(*view_holder_);
-
-    // Request to make test's view; this will trigger dispatch of view properties.
-    session_->Present2(/*when*/ zx::clock::get_monotonic().get(), /*span*/ 0, [](auto) {
-      FX_VLOGS(1) << "test's view and view holder created by Scenic.";
-    });
-
-    // Start client app inside the test environment.
-    // Note well. There is a significant difference in how ViewProvider is
-    // vended and used, between CF v1 and CF v2. This test follows the CF v2
-    // style: the realm specifies a component C that can serve ViewProvider, and
-    // when the test runner asks for that protocol, C is launched by Component
-    // Manager. In contrast, production uses CF v1 style, where a parent
-    // component P launches a child component C directly, and P connects to C's
-    // ViewProvider directly. However, this difference does not impact the
-    // testing logic.
-    auto view_provider = realm()->Connect<fuchsia::ui::app::ViewProvider>();
-    view_provider->CreateView(std::move(tokens_tf.view_token.value), /* in */ nullptr,
-                              /* out */ nullptr);
-
-    RunLoopUntil([&is_rendering] { return is_rendering; });
-
-    // Reset the event handler without capturing the is_rendering stack variable.
-    session_->set_event_handler([this, debug_name](
-                                    const std::vector<fuchsia::ui::scenic::Event>& events) {
-      for (const auto& event : events) {
-        if (!event.is_gfx())
-          continue;  // skip non-gfx events
-
-        if (event.gfx().is_view_properties_changed()) {
-          const auto properties = event.gfx().view_properties_changed().properties;
-          FX_VLOGS(1) << "Test received its view properties; transfer to child view: "
-                      << properties;
-          FX_CHECK(view_holder_) << "Expect that view holder is already set up.";
-          view_holder_->SetViewProperties(properties);
-          session_->Present2(/*when*/ zx::clock::get_monotonic().get(), /*span*/ 0, [](auto) {});
-        } else if (event.gfx().is_view_disconnected()) {
-          // Save time, terminate the test immediately if we know that client's view is borked.
-          FX_CHECK(injection_count_ > 0) << "Expected to have completed input injection, but "
-                                         << debug_name << " view terminated early.";
-        }
-      }
-    });
-  }
-
   // Calls test.touch.TestAppLauncher::Launch.
   // Only works if we've already launched a client that serves test.touch.TestAppLauncher.
   void LaunchEmbeddedClient(std::string debug_name) {
+    // Set up an empty session, only used for synchronization in this method.
+    auto session_pair = scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get());
+    session_ = std::make_unique<scenic::Session>(std::move(session_pair.first),
+                                                 std::move(session_pair.second));
+    session_->SetDebugName("empty-session-for-synchronization");
+
     // Launch the embedded app.
-    auto test_app_launcher = realm()->Connect<test::touch::TestAppLauncher>();
+    auto test_app_launcher = realm_exposed_services()->Connect<test::touch::TestAppLauncher>();
     bool child_launched = false;
     test_app_launcher->Launch(std::move(debug_name), [&child_launched] { child_launched = true; });
     RunLoopUntil([&child_launched] { return child_launched; });
@@ -378,8 +306,10 @@ class TouchInputBase : public gtest::RealLoopFixture {
   }
 
   void RegisterInjectionDevice() {
-    registry_ = realm()->Connect<fuchsia::input::injection::InputDeviceRegistry>();
-
+    registry_ = realm_exposed_services()->Connect<fuchsia::input::injection::InputDeviceRegistry>();
+    registry_.set_error_handler([](zx_status_t status) {
+      FX_LOGS(ERROR) << "Input device registry error: " << zx_status_get_string(status);
+    });
     // Create a FakeInputDevice
     fake_input_device_ = std::make_unique<fake_input_report_device::FakeInputDevice>(
         input_device_ptr_.NewRequest(), dispatcher());
@@ -471,10 +401,9 @@ class TouchInputBase : public gtest::RealLoopFixture {
   uint32_t display_height() const { return display_height_; }
 
   fuchsia::sys::ComponentControllerPtr& client_component() { return client_component_; }
-  sys::ServiceDirectory& child_services() { return *child_services_; }
 
-  RealmBuilder* builder() { return realm_builder_.get(); }
-  RealmRoot* realm() { return realm_.get(); }
+  sys::ServiceDirectory* realm_exposed_services() { return realm_exposed_services_.get(); }
+  Realm* realm() { return realm_.get(); }
 
   ResponseListenerServer* response_listener() { return response_listener_.get(); }
 
@@ -482,50 +411,31 @@ class TouchInputBase : public gtest::RealLoopFixture {
   void BuildRealm(const std::vector<std::pair<ChildName, LegacyUrl>>& components,
                   const std::vector<Route>& routes,
                   const std::vector<std::pair<ChildName, std::string>>& v2_components) {
+    FX_LOGS(INFO) << "Building realm";
+    realm_ = std::make_unique<Realm>(ui_test_manager_->AddSubrealm());
+
     // Key part of service setup: have this test component vend the
     // |ResponseListener| service in the constructed realm.
     response_listener_ = std::make_unique<ResponseListenerServer>(dispatcher());
-    builder()->AddLocalChild(kMockResponseListener, response_listener_.get());
-
-    // Add static test realm as a component to the realm.
-    builder()->AddChild(
-        kInputTestRealm,
-        "fuchsia-pkg://fuchsia.com/touch-input-test-ip#meta/input-pipeline-test-realm.cm");
+    realm()->AddLocalChild(kMockResponseListener, response_listener_.get());
 
     // Add components specific for this test case to the realm.
     for (const auto& [name, component] : components) {
-      builder()->AddLegacyChild(name, component);
+      realm()->AddLegacyChild(name, component);
     }
 
     for (const auto& [name, component] : v2_components) {
-      builder()->AddChild(name, component);
+      realm()->AddChild(name, component);
     }
-
-    // Capabilities routed from test_manager to components in static test realm.
-    builder()->AddRoute(
-        Route{.capabilities = {Protocol{fuchsia::logger::LogSink::Name_},
-                               Protocol{fuchsia::vulkan::loader::Loader::Name_},
-                               Protocol{fuchsia::scheduler::ProfileProvider::Name_},
-                               Protocol{fuchsia::sysmem::Allocator::Name_},
-                               Protocol{fuchsia::tracing::provider::Registry::Name_}},
-              .source = ParentRef(),
-              .targets = {ChildRef{kInputTestRealm}}});
-
-    // Capabilities routed from static test realm up to test driver (this component).
-    builder()->AddRoute(
-        Route{.capabilities = {Protocol{fuchsia::input::injection::InputDeviceRegistry::Name_},
-                               Protocol{fuchsia::ui::policy::Presenter::Name_},
-                               Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-              .source = ChildRef{kInputTestRealm},
-              .targets = {ParentRef()}});
 
     // Add the necessary routing for each of the extra components added above.
     for (const auto& route : routes) {
-      builder()->AddRoute(route);
+      realm()->AddRoute(route);
     }
 
-    // Finally, build the realm using the provided components and routes.
-    realm_ = std::make_unique<RealmRoot>(builder()->Build());
+    ui_test_manager_->BuildRealm();
+
+    realm_exposed_services_ = ui_test_manager_->TakeExposedServicesDirectory();
   }
 
   template <typename TimeT>
@@ -544,8 +454,9 @@ class TouchInputBase : public gtest::RealLoopFixture {
     return time_utc(now);
   }
 
-  std::unique_ptr<RealmBuilder> realm_builder_;
-  std::unique_ptr<RealmRoot> realm_;
+  std::unique_ptr<ui_testing::UITestManager> ui_test_manager_;
+  std::unique_ptr<sys::ServiceDirectory> realm_exposed_services_;
+  std::unique_ptr<Realm> realm_;
 
   std::unique_ptr<ResponseListenerServer> response_listener_;
 
@@ -561,12 +472,7 @@ class TouchInputBase : public gtest::RealLoopFixture {
   uint32_t display_width_ = 0;
   uint32_t display_height_ = 0;
 
-  // Test view and child view's ViewHolder.
-  std::unique_ptr<scenic::ViewHolder> view_holder_;
-  std::unique_ptr<scenic::View> view_;
-
   fuchsia::sys::ComponentControllerPtr client_component_;
-  std::shared_ptr<sys::ServiceDirectory> child_services_;
 };
 
 class FlutterInputTestIp : public TouchInputBase {
@@ -592,7 +498,7 @@ class FlutterInputTestIp : public TouchInputBase {
              .source = ChildRef{kMockResponseListener},
              .targets = {target}},
             {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-             .source = ChildRef{kInputTestRealm},
+             .source = ParentRef(),
              .targets = {target}},
             {.capabilities = {Protocol{fuchsia::sys::Environment::Name_}},
              .source = ParentRef(),
@@ -616,8 +522,6 @@ class FlutterInputTestIp : public TouchInputBase {
 TEST_F(FlutterInputTestIp, FlutterTap) {
   // Use `ZX_CLOCK_MONOTONIC` to avoid complications due to wall-clock time changes.
   zx::basic_time<ZX_CLOCK_MONOTONIC> input_injection_time(0);
-
-  LaunchClient("FlutterTap");
 
   bool injection_complete = false;
   SetResponseExpectations(/*expected_x=*/static_cast<float>(display_height()) / 4.f,
@@ -644,7 +548,7 @@ class GfxInputTestIp : public TouchInputBase {
          .source = ChildRef{kMockResponseListener},
          .targets = {ChildRef{kCppGfxClient}}},
         {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-         .source = ChildRef{kInputTestRealm},
+         .source = ParentRef(),
          .targets = {ChildRef{kCppGfxClient}}},
         {.capabilities = {Protocol{fuchsia::sys::Environment::Name_}},
          .source = ParentRef(),
@@ -661,8 +565,6 @@ class GfxInputTestIp : public TouchInputBase {
 TEST_F(GfxInputTestIp, CppGfxClientTap) {
   // Use `ZX_CLOCK_MONOTONIC` to avoid complications due to wall-clock time changes.
   zx::basic_time<ZX_CLOCK_MONOTONIC> input_injection_time(0);
-
-  LaunchClient("CppGfxClientTap");
 
   bool injection_complete = false;
   SetResponseExpectations(/*expected_x=*/static_cast<float>(display_height()) / 4.f,
@@ -685,7 +587,7 @@ class WebEngineTestIp : public TouchInputBase {
         std::make_pair(kMemoryPressureProvider, kMemoryPressureProviderUrl),
         std::make_pair(kNetstack, kNetstackUrl),
         std::make_pair(kWebContextProvider, kWebContextProviderUrl),
-        std::make_pair(kSemanticsManager, kSemanticsManagerUrl),
+        std::make_pair(kMockCobalt, kMockCobaltUrl),
     };
   }
 
@@ -787,9 +689,6 @@ class WebEngineTestIp : public TouchInputBase {
         {.capabilities = {Protocol{fuchsia::ui::input::ImeVisibilityService::Name_}},
          .source = ChildRef{kTextManager},
          .targets = {target}},
-        {.capabilities = {Protocol{fuchsia::intl::PropertyProvider::Name_}},
-         .source = ChildRef{kIntl},
-         .targets = {target, ChildRef{kSemanticsManager}}},
         {.capabilities = {Protocol{fuchsia::memorypressure::Provider::Name_}},
          .source = ChildRef{kMemoryPressureProvider},
          .targets = {target}},
@@ -800,22 +699,20 @@ class WebEngineTestIp : public TouchInputBase {
          .source = ChildRef{kNetstack},
          .targets = {target}},
         {.capabilities = {Protocol{fuchsia::accessibility::semantics::SemanticsManager::Name_}},
-         .source = ChildRef{kSemanticsManager},
+         .source = ParentRef(),
          .targets = {target}},
         {.capabilities = {Protocol{fuchsia::web::ContextProvider::Name_}},
          .source = ChildRef{kWebContextProvider},
          .targets = {target}},
         {.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_}},
          .source = ParentRef(),
-         .targets = {ChildRef{kFontsProvider}, ChildRef{kSemanticsManager}}},
-        {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-         .source = ChildRef{kInputTestRealm},
-         .targets = {ChildRef{kSemanticsManager}}},
-        {.capabilities = {Protocol{fuchsia::sys::Environment::Name_}},
+         .targets = {ChildRef{kFontsProvider}}},
+        {.capabilities = {Protocol{fuchsia::sys::Environment::Name_},
+                          Protocol{fuchsia::logger::LogSink::Name_}},
          .source = ParentRef(),
          .targets = {target}},
         {.capabilities = {Protocol{fuchsia::cobalt::LoggerFactory::Name_}},
-         .source = ChildRef{kInputTestRealm},
+         .source = ChildRef{kMockCobalt},
          .targets = {ChildRef{kMemoryPressureProvider}}},
         {.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},
          .source = ParentRef(),
@@ -833,7 +730,7 @@ class WebEngineTestIp : public TouchInputBase {
          .source = ParentRef(),
          .targets = {ChildRef{kMemoryPressureProvider}}},
         {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-         .source = ChildRef{kInputTestRealm},
+         .source = ParentRef(),
          .targets = {target}},
         {.capabilities = {Protocol{fuchsia::posix::socket::Provider::Name_}},
          .source = ChildRef{kNetstack},
@@ -841,6 +738,9 @@ class WebEngineTestIp : public TouchInputBase {
         {.capabilities = {Protocol{fuchsia::buildinfo::Provider::Name_}},
          .source = ChildRef{kBuildInfoProvider},
          .targets = {target, ChildRef{kWebContextProvider}}},
+        {.capabilities = {Protocol{fuchsia::intl::PropertyProvider::Name_}},
+         .source = ChildRef{kIntl},
+         .targets = {target}},
     };
   }
 
@@ -872,13 +772,13 @@ class WebEngineTestIp : public TouchInputBase {
   static constexpr auto kWebContextProviderUrl =
       "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx";
 
-  static constexpr auto kSemanticsManager = "semantics_manager";
-  static constexpr auto kSemanticsManagerUrl =
-      "fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cmx";
-
   static constexpr auto kBuildInfoProvider = "build_info_provider";
   static constexpr auto kBuildInfoProviderUrl =
       "fuchsia-pkg://fuchsia.com/touch-input-test-ip#meta/fake_build_info.cm";
+
+  static constexpr auto kMockCobalt = "cobalt";
+  static constexpr auto kMockCobaltUrl =
+      "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx";
 
   // The typical latency on devices we've tested is ~60 msec. The retry interval is chosen to be
   // a) Long enough that it's unlikely that we send a new tap while a previous tap is still being
@@ -898,7 +798,6 @@ TEST_F(WebEngineTestIp, ChromiumTap) {
   // Note well: unlike one-flutter and cpp-gfx-client, the web app may be rendering before
   // it is hittable. Nonetheless, waiting for rendering is better than injecting the touch
   // immediately. In the event that the app is not hittable, `TryInject()` will retry.
-  LaunchClient("ChromiumTap");
   client_component().events().OnTerminated = [](int64_t return_code,
                                                 fuchsia::sys::TerminationReason reason) {
     // Unlike the Flutter and C++ apps, the process hosting the web app's logic doesn't retain
@@ -946,7 +845,7 @@ class EmbeddingFlutterTestIp {
          .source = ChildRef{kMockResponseListener},
          .targets = {ChildRef{kEmbeddingFlutter}}},
         {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-         .source = ChildRef{kInputTestRealm},
+         .source = ParentRef(),
          .targets = {ChildRef{kEmbeddingFlutter}}},
 
         // Needed to launch Embedded Client.
@@ -991,9 +890,6 @@ class FlutterInFlutterTestIp : public FlutterInputTestIp, public EmbeddingFlutte
 TEST_F(FlutterInFlutterTestIp, FlutterInFlutterTap) {
   // Use `ZX_CLOCK_MONOTONIC` to avoid complications due to wall-clock time changes.
   zx::basic_time<ZX_CLOCK_MONOTONIC> input_injection_time(0);
-
-  // Launch the embedding app.
-  LaunchClient("FlutterInFlutterTap");
 
   // Launch the embedded app.
   LaunchEmbeddedClient("fuchsia-pkg://fuchsia.com/one-flutter#meta/one-flutter.cmx");
@@ -1041,9 +937,6 @@ class WebInFlutterTestIp : public WebEngineTestIp, public EmbeddingFlutterTestIp
 };
 
 TEST_F(WebInFlutterTestIp, WebInFlutterTap) {
-  // Launch the embedding app.
-  LaunchClient("WebInFlutterTap");
-
   // Launch the embedded app.
   LaunchEmbeddedClient("fuchsia-pkg://fuchsia.com/one-chromium#meta/one-chromium.cmx");
 

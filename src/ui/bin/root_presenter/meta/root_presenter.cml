@@ -13,6 +13,7 @@
                 "fuchsia.ui.accessibility.view.Registry",
                 "fuchsia.ui.brightness.ColorAdjustmentHandler",
                 "fuchsia.ui.input.accessibility.PointerEventRegistry",
+                "fuchsia.ui.pointerinjector.configuration.Setup",
                 "fuchsia.ui.policy.DisplayBacklight",
                 "fuchsia.ui.policy.Presenter",
                 "fuchsia.ui.views.accessibility.FocuserRegistry",
@@ -49,6 +50,7 @@
             protocol: [
                 "fuchsia.ui.accessibility.view.Registry",
                 "fuchsia.ui.brightness.ColorAdjustmentHandler",
+                "fuchsia.ui.pointerinjector.configuration.Setup",
                 "fuchsia.ui.policy.DisplayBacklight",
                 "fuchsia.ui.policy.Presenter",
                 "fuchsia.ui.views.accessibility.FocuserRegistry",

@@ -4,6 +4,8 @@
 
 #include "src/ui/testing/ui_test_manager/ui_test_manager.h"
 
+#include <fuchsia/accessibility/semantics/cpp/fidl.h>
+#include <fuchsia/input/injection/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/session/scene/cpp/fidl.h>
@@ -12,6 +14,8 @@
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/composition/cpp/fidl.h>
 #include <fuchsia/ui/focus/cpp/fidl.h>
+#include <fuchsia/ui/pointerinjector/configuration/cpp/fidl.h>
+#include <fuchsia/ui/pointerinjector/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
@@ -38,10 +42,16 @@ using sys::testing::Route;
 
 // Base realm urls.
 constexpr auto kRootPresenterSceneUrl = "#meta/root_presenter_scene.cm";
+constexpr auto kRootPresenterSceneWithInputUrl = "#meta/root_presenter_scene_with_input.cm";
 constexpr auto kSceneManagerSceneUrl = "#meta/scene_manager_scene.cm";
+
+// System component urls.
+constexpr auto kFakeA11yManagerUrl = "#meta/fake-a11y-manager.cm";
 
 constexpr auto kTestRealmName = "test-realm";
 constexpr auto kClientSubrealmName = "client-subrealm";
+
+constexpr auto kA11yManagerName = "a11y-manager";
 
 }  // namespace
 
@@ -59,11 +69,14 @@ component_testing::Realm UITestManager::AddSubrealm() {
 }
 
 void UITestManager::AddBaseRealmComponent() {
+  std::string url = "";
   if (*config_.scene_owner == UITestManager::SceneOwnerType::ROOT_PRESENTER) {
-    realm_builder_.AddChild(kTestRealmName, kRootPresenterSceneUrl);
+    url = config_.use_input ? kRootPresenterSceneWithInputUrl : kRootPresenterSceneUrl;
   } else if (config_.scene_owner == UITestManager::SceneOwnerType::SCENE_MANAGER) {
-    realm_builder_.AddChild(kTestRealmName, kSceneManagerSceneUrl);
+    url = kSceneManagerSceneUrl;
   }
+
+  realm_builder_.AddChild(kTestRealmName, url);
 }
 
 void UITestManager::ConfigureDefaultSystemServices() {
@@ -105,8 +118,46 @@ void UITestManager::ConfigureSceneOwner() {
                                 .targets = {ParentRef()}});
 }
 
+void UITestManager::ConfigureAccessibility() {
+  if (!config_.accessibility_owner) {
+    return;
+  }
+
+  FX_CHECK(config_.accessibility_owner == UITestManager::AccessibilityOwnerType::FAKE)
+      << "Real a11y manager not currently supported";
+
+  realm_builder_.AddChild(kA11yManagerName, kFakeA11yManagerUrl);
+
+  realm_builder_.AddRoute(
+      Route{.capabilities = {Protocol{fuchsia::accessibility::semantics::SemanticsManager::Name_}},
+            .source = ChildRef{kA11yManagerName},
+            .targets = {ChildRef{kClientSubrealmName}}});
+}
+
 void UITestManager::ConfigureInput() {
-  // Not yet implemented.
+  if (!config_.use_input) {
+    return;
+  }
+
+  // Infer that input pipeline owns input if root presenter or scene mnaager
+  // owns the scene.
+  if (config_.scene_owner) {
+    realm_builder_.AddRoute(
+        Route{.capabilities = {Protocol{fuchsia::input::injection::InputDeviceRegistry::Name_},
+                               Protocol{fuchsia::ui::policy::DeviceListenerRegistry::Name_}},
+              .source = ChildRef{kTestRealmName},
+              .targets = {ParentRef()}});
+  } else {
+    realm_builder_.AddRoute(
+        Route{.capabilities = {Protocol{fuchsia::ui::pointerinjector::Registry::Name_}},
+              .source = ChildRef{kTestRealmName},
+              .targets = {ParentRef()}});
+  }
+
+  // Specify display rotation.
+  realm_builder_.RouteReadOnlyDirectory(
+      "config", {ChildRef{kTestRealmName}},
+      std::move(component_testing::DirectoryContents().AddFile("data/display_rotation", "90")));
 }
 
 void UITestManager::ConfigureScenic() {
@@ -136,6 +187,10 @@ void UITestManager::BuildRealm() {
 
   // Expose input APIs out of the realm.
   ConfigureInput();
+
+  // Set up a11y manager, if requested, and route semantics manager service to
+  // client subrealm.
+  ConfigureAccessibility();
 
   // Route base scenic services to client subrealm.
   // We also expose these services to parent, so that the ui test manager can

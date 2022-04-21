@@ -61,6 +61,12 @@ fuchsia_component("component") {
   deps = [ ":input-pipeline-bin" ]
 }
 
+fuchsia_component("component-v2") {
+  component_name = "input-pipeline"
+  manifest = "meta/input-pipeline.cml"
+  deps = [ ":input-pipeline-bin" ]
+}
+
 fuchsia_package("input-pipeline") {
   deps = [ ":component" ]
 }

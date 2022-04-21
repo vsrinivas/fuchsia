@@ -1,0 +1,48 @@
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/input-pipeline",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.ui.policy.DeviceListenerRegistry",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.ui.pointerinjector.configuration.Setup",
+                "fuchsia.ui.pointerinjector.Registry",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
+            directory: "dev-input-report",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/dev/class/input-report",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.ui.policy.DeviceListenerRegistry",
+            ],
+            from: "self",
+        },
+    ],
+}

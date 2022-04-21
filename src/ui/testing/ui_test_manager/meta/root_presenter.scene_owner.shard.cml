@@ -7,7 +7,17 @@
     ],
     offer: [
         {
-            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            directory: "config",
+            from: "parent",
+            as: "config-data",
+            to: "#root-presenter",
+            subdir: "data",
+        },
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.tracing.provider.Registry",
+            ],
             from: "parent",
             to: "#root-presenter",
         },
@@ -28,8 +38,7 @@
                 "fuchsia.recovery.ui.FactoryResetCountdown",
                 "fuchsia.ui.accessibility.view.Registry",
                 "fuchsia.ui.brightness.ColorAdjustmentHandler",
-                "fuchsia.ui.input.InputDeviceRegistry",
-                "fuchsia.ui.policy.DeviceListenerRegistry",
+                "fuchsia.ui.pointerinjector.configuration.Setup",
                 "fuchsia.ui.policy.DisplayBacklight",
                 "fuchsia.ui.policy.Presenter",
             ],

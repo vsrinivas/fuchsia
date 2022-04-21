@@ -90,6 +90,30 @@ namespace ui_testing {
 // Clients can gate on one of these two signals as appropriate to guarantee that
 // the scene is in a sensible state before proceeding with test logic.
 //
+// INPUT
+//
+// UITestManager enables configurations with or without input.
+//
+// * If clients specify a scene owner via Config::scene_owner and set
+//   Config::use_input = true, then UITestManager assumes input pipeline will
+//   own input for the test scene (either as a standalone component with root
+//   presenter or as part of scene manager).
+// * If a client does not specify a scene owner, but sets Config::use_input = true,
+//  then UITestManager will expose raw scenic input APIs out of the test realm.
+// * If clients set Config::use_input = false, then UITestManager will not
+//   any input APIs out of the test realm.
+//
+// ACCESSIBILITY
+//
+// UITestManager enables configurations without accessibility, and also allows
+// clients to opt into using a real or fake a11y manager. In general, clients
+// should not request accessibility unless it's explicitly required. For cases
+// where accessibility is required, clients should prefer using the fake a11y
+// manager for tests that require a11y services, but do not test a11y
+// functionality (e.g. tests that run a chromium view). Clients should only use
+// a real a11y manager for tests that explicitly exercise accessibility-specific
+// behavior.
+//
 // EXAMPLE USAGE
 //
 // ```
@@ -142,8 +166,19 @@ class UITestManager {
     SCENE_MANAGER = 2,
   };
 
+  enum class AccessibilityOwnerType {
+    // Use the fake a11y manager. Clients should prefer using the fake a11y
+    // manager for tests that require a11y services, but do not test a11y
+    // functionality (e.g. tests that run a chromium client).
+    FAKE = 1,
+
+    // Use the real a11y manager. Clients should only use the real a11y manager
+    // for tests that exercise accessibility-specific functionality.
+    REAL = 2,
+  };
+
   struct Config {
-    // Specifies the entity that owns the root of the scene.
+    // Specifies the entity that owns the root of the scene, if any.
     // If std::nullopt, then no scene owner will be present in the test realm.
     //
     // For now, UITestManager assumes that the entity that input pipeline owns
@@ -153,6 +188,22 @@ class UITestManager {
     // Furthermore, if a scene owner is specified, the client promises to expose
     // fuchsia.ui.app.ViewProvider from its subrealm.
     std::optional<SceneOwnerType> scene_owner;
+
+    // Specifies the entity that owns accessibility in the test realm, if any.
+    // If std::nullopt, then no a11y services will be present in the test realm.
+    std::optional<AccessibilityOwnerType> accessibility_owner;
+
+    // Instructs UITestManager to expose input APIs out of the test realm.
+    //
+    // If |scene_owner| has a value, input pipeline will own input and
+    // the top-level realm will expose the following services:
+    //   * fuchsia.input.injection.InputDeviceRegistry
+    //   * fuchsia.ui.policy.DeviceListenerRegistry
+    //
+    // If |scene_owner| is std::nullopt, the top-level realm exposes the raw scenic
+    // input API:
+    //   * fuchsia.ui.pointerinjector.Registry
+    bool use_input = false;
 
     // List of ui services required by the client.
     // UITestManager will route these services from the ui layer component to the
@@ -213,6 +264,7 @@ class UITestManager {
   void ConfigureDefaultSystemServices();
   void ConfigureSceneOwner();
   void ConfigureInput();
+  void ConfigureAccessibility();
   void ConfigureScenic();
 
   Config config_;

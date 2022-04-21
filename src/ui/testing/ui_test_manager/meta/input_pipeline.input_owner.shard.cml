@@ -1,0 +1,33 @@
+{
+    children: [
+        {
+            name: "input-pipeline",
+            url: "#meta/input-pipeline.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.ui.pointerinjector.Registry",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "#scenic",
+            to: [ "#input-pipeline" ],
+        },
+        {
+            // Input pipeline will only ever be used with root presenter.
+            protocol: [ "fuchsia.ui.pointerinjector.configuration.Setup" ],
+            from: "#root-presenter",
+            to: [ "#input-pipeline" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.ui.policy.DeviceListenerRegistry",
+            ],
+            from: "#input-pipeline",
+        },
+    ],
+}

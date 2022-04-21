@@ -114,15 +114,6 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
     });
     RunLoopUntil([&] { return is_port_registered; });
 
-    // Plumb view to child.
-    //
-    // Note well: our parent will inject a touch event immediately after we plumb the view
-    // to the child. Hence, we must not call `CreateView()` before `is_port_registered`
-    // is true.
-    FX_LOGS(INFO) << "Waiting for view token from parent";
-    RunLoopUntil([&] { return view_token_.value.is_valid(); });
-    web_frame_->CreateView(std::move(view_token_));
-
     FX_LOGS(INFO) << "Waiting for tap response message";
     std::optional<rapidjson::Document> tap_response;
     message_port->ReceiveMessage([&tap_response](auto web_message) {
@@ -217,9 +208,15 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
   void CreateView(zx::eventpair token,
                   fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
                   fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override {
-    // Save the token until we're ready to use it. (We may receive the token before we've
-    // finished setting up the web app.)
-    view_token_ = scenic::ToViewToken(std::move(token));
+    web_frame_->CreateView(scenic::ToViewToken(std::move(token)));
+  }
+
+  // |fuchsia::ui::app::ViewProvider|
+  void CreateViewWithViewRef(zx::eventpair token,
+                             fuchsia::ui::views::ViewRefControl view_ref_control,
+                             fuchsia::ui::views::ViewRef view_ref) override {
+    web_frame_->CreateViewWithViewRef(scenic::ToViewToken(std::move(token)),
+                                      std::move(view_ref_control), std::move(view_ref));
   }
 
   void SendMessageToWebPage(fidl::InterfaceRequest<fuchsia::web::MessagePort> message_port,
@@ -246,7 +243,6 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
   async::Loop loop_;
   std::unique_ptr<sys::ComponentContext> context_;
   fidl::Binding<fuchsia::ui::app::ViewProvider> view_provider_binding_;
-  fuchsia::ui::views::ViewToken view_token_;
   fuchsia::web::ContextPtr web_context_;
   fuchsia::web::FramePtr web_frame_;
 };
