@@ -9,7 +9,10 @@ driver_bind_rules("i8042_bind") {
   rules = "i8042.bind"
   header_output = "i8042_bind.h"
   tests = "bind_tests.json"
-  deps = [ "//src/devices/bind/fuchsia.acpi" ]
+  deps = [
+    "//src/devices/bind/fuchsia.acpi",
+    "//src/devices/bind/fuchsia.driver.framework",
+  ]
 }
 
 # TODO(fxbug.dev/93333): remove this once DFv2 has stabilised.

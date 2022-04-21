@@ -3,9 +3,15 @@
 // found in the LICENSE file.
 
 using fuchsia.pci;
+using fuchsia.driver.framework;
 
-fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE;
 fuchsia.BIND_PCI_CLASS == fuchsia.pci.BIND_PCI_CLASS.GENERIC_SYSTEM_PERIPHERAL;
 fuchsia.BIND_PCI_SUBCLASS == 0x05;
 fuchsia.BIND_PCI_INTERFACE == 0x01;
-fuchsia.BIND_COMPOSITE == 1;
+
+if fuchsia.driver.framework.dfv2 == true {
+  true;
+} else {
+  fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_COMPOSITE == 1;
+}

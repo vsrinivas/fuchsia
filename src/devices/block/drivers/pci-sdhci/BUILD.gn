@@ -9,7 +9,10 @@ driver_bind_rules("pci-sdhci-bind") {
   rules = "pci-sdhci.bind"
   header_output = "pci-sdhci-bind.h"
   tests = "pci-sdhci-bind-test.json"
-  deps = [ "//src/devices/bind/fuchsia.pci" ]
+  deps = [
+    "//src/devices/bind/fuchsia.driver.framework",
+    "//src/devices/bind/fuchsia.pci",
+  ]
 }
 
 # TODO(fxbug.dev/93333): Remove this once DFv2 has stabilised.

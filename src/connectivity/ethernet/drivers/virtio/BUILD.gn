@@ -11,7 +11,10 @@ driver_bind_rules("virtio_ethernet_bind") {
   rules = "virtio_ethernet.bind"
   header_output = "virtio_ethernet-bind.h"
   tests = "bind-tests.json"
-  deps = [ "//src/devices/bind/fuchsia.pci" ]
+  deps = [
+    "//src/devices/bind/fuchsia.driver.framework",
+    "//src/devices/bind/fuchsia.pci",
+  ]
 }
 
 driver_bind_rules("virtio_ethernet_bind_v2") {

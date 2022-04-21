@@ -13,6 +13,7 @@ driver_bind_rules("usb_xhci_bind") {
   bind_output = "xhci.bindbc"
   tests = "tests.json"
   deps = [
+    "//src/devices/bind/fuchsia.driver.framework",
     "//src/devices/bind/fuchsia.pci",
     "//src/devices/bind/fuchsia.pci:serial",
     "//src/devices/bind/fuchsia.pci:serial.usb",
@@ -26,6 +27,7 @@ driver_bind_rules("usb_xhci_dfv2_bind") {
   header_output = "usb_xhci_dfv2_bind.h"
   bind_output = "xhci_dfv2.bindbc"
   deps = [
+    "//src/devices/bind/fuchsia.driver.framework",
     "//src/devices/bind/fuchsia.pci",
     "//src/devices/bind/fuchsia.pci:serial",
     "//src/devices/bind/fuchsia.pci:serial.usb",

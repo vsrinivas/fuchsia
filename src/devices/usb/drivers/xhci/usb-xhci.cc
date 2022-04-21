@@ -30,12 +30,7 @@
 
 #include <fbl/alloc_checker.h>
 
-#ifdef ENABLE_DFV2
-// TODO(fxbug.dev/93333): Remove this when DFv2 has stabilised.
-#include "src/devices/usb/drivers/xhci/usb_xhci_dfv2_bind.h"
-#else
 #include "src/devices/usb/drivers/xhci/usb_xhci_bind.h"
-#endif
 
 namespace usb_xhci {
 

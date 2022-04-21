@@ -280,94 +280,89 @@ zx::status<> DeviceBuilder::BuildComposite(acpi::Manager* manager,
   // While we could use vector.reserve(), there's no way to guarantee that future bugs won't be
   // caused by someone adding an extra fragment without first updating the reserve() call.
   auto bind_insns = std::make_unique<std::vector<zx_bind_inst_t>[]>(fragment_count);
-      auto fragment_names = std::make_unique<fbl::String[]>(fragment_count);
-      auto fragment_parts = std::make_unique<device_fragment_part_t[]>(fragment_count);
-      auto fragments = std::make_unique<device_fragment_t[]>(fragment_count);
-      std::unordered_map<BusType, uint32_t> parent_types;
+  auto fragment_names = std::make_unique<fbl::String[]>(fragment_count);
+  auto fragment_parts = std::make_unique<device_fragment_part_t[]>(fragment_count);
+  auto fragments = std::make_unique<device_fragment_t[]>(fragment_count);
+  std::unordered_map<BusType, uint32_t> parent_types;
 
-      size_t bus_index = 0;
-      // Generate fragments for every device we use.
-      for (auto& pair : buses_) {
-        DeviceBuilder* parent = pair.first;
-        size_t child_index = pair.second;
-        BusType type = parent->GetBusType();
-        // Fragments are named <protocol>NNN, e.g. "i2c000", "i2c001".
-        fragment_names[bus_index] = fbl::StringPrintf(
-            "%s%03u", BusTypeToString(type), parent_types.emplace(type, 0).first->second++);
+  size_t bus_index = 0;
+  // Generate fragments for every device we use.
+  for (auto& pair : buses_) {
+    DeviceBuilder* parent = pair.first;
+    size_t child_index = pair.second;
+    BusType type = parent->GetBusType();
+    // Fragments are named <protocol>NNN, e.g. "i2c000", "i2c001".
+    fragment_names[bus_index] = fbl::StringPrintf("%s%03u", BusTypeToString(type),
+                                                  parent_types.emplace(type, 0).first->second++);
 
-        std::vector<zx_bind_inst_t> insns = parent->GetFragmentBindInsnsForChild(child_index);
-        bind_insns[bus_index] = std::move(insns);
-        fragment_parts[bus_index] = device_fragment_part_t{
-            .instruction_count = static_cast<uint32_t>(bind_insns[bus_index].size()),
-            .match_program = bind_insns[bus_index].data(),
-        };
-        fragments[bus_index] = device_fragment_t{
-            .name = fragment_names[bus_index].data(),
-            .parts_count = 1,
-            .parts = &fragment_parts[bus_index],
-        };
+    std::vector<zx_bind_inst_t> insns = parent->GetFragmentBindInsnsForChild(child_index);
+    bind_insns[bus_index] = std::move(insns);
+    fragment_parts[bus_index] = device_fragment_part_t{
+        .instruction_count = static_cast<uint32_t>(bind_insns[bus_index].size()),
+        .match_program = bind_insns[bus_index].data(),
+    };
+    fragments[bus_index] = device_fragment_t{
+        .name = fragment_names[bus_index].data(),
+        .parts_count = 1,
+        .parts = &fragment_parts[bus_index],
+    };
 
-        bus_index++;
-      }
+    bus_index++;
+  }
 
   // Generate the ACPI fragment.
-  std::vector<zx_bind_inst_t>
-      insns = GetFragmentBindInsnsForSelf();
-      bind_insns[bus_index] = std::move(insns);
-      fragment_parts[bus_index] =
-          device_fragment_part_t{
-              .instruction_count = static_cast<uint32_t>(bind_insns[bus_index].size()),
-              .match_program = bind_insns[bus_index].data(),
-          };
-      fragments[bus_index] =
-          device_fragment_t{
-              .name = "acpi",
-              .parts_count = 1,
-              .parts = &fragment_parts[bus_index],
-          };
-      bus_index++;
+  std::vector<zx_bind_inst_t> insns = GetFragmentBindInsnsForSelf();
+  bind_insns[bus_index] = std::move(insns);
+  fragment_parts[bus_index] = device_fragment_part_t{
+      .instruction_count = static_cast<uint32_t>(bind_insns[bus_index].size()),
+      .match_program = bind_insns[bus_index].data(),
+  };
+  fragments[bus_index] = device_fragment_t{
+      .name = "acpi",
+      .parts_count = 1,
+      .parts = &fragment_parts[bus_index],
+  };
+  bus_index++;
 
-      // Generate the sysmem fragment.
-      fragment_parts[bus_index] =
-          device_fragment_part_t{
-              .instruction_count = sizeof(kSysmemFragment) / sizeof(kSysmemFragment[0]),
-              .match_program = kSysmemFragment,
-          };
-      fragments[bus_index] =
-          device_fragment_t{
-              .name = "sysmem",
-              .parts_count = 1,
-              .parts = &fragment_parts[bus_index],
-          };
+  // Generate the sysmem fragment.
+  fragment_parts[bus_index] = device_fragment_part_t{
+      .instruction_count = sizeof(kSysmemFragment) / sizeof(kSysmemFragment[0]),
+      .match_program = kSysmemFragment,
+  };
+  fragments[bus_index] = device_fragment_t{
+      .name = "sysmem",
+      .parts_count = 1,
+      .parts = &fragment_parts[bus_index],
+  };
 
-      __UNUSED composite_device_desc_t composite_desc =
-          {
-              .props = dev_props_.data(),
-              .props_count = dev_props_.size(),
-              .str_props = str_props.data(),
-              .str_props_count = str_props.size(),
-              .fragments = fragments.get(),
-              .fragments_count = fragment_count,
-              .primary_fragment = "acpi",
-              .spawn_colocated = true,
-          };
+  __UNUSED composite_device_desc_t composite_desc = {
+      .props = dev_props_.data(),
+      .props_count = dev_props_.size(),
+      .str_props = str_props.data(),
+      .str_props_count = str_props.size(),
+      .fragments = fragments.get(),
+      .fragments_count = fragment_count,
+      .primary_fragment = "acpi",
+      .spawn_colocated = true,
+  };
 
-#if !defined(IS_TEST) && !defined(ENABLE_DFV2)
-      // TODO(fxbug.dev/79923): re-enable this in tests once mock_ddk supports composites.
-      // TODO(fxbug.dev/93333): For DFv2, we don't add composite device fragments yet.
-      auto composite_name = fbl::StringPrintf("%s-composite", name());
-      // Don't worry about any metadata, since it's present in the "acpi" parent.
-      DeviceArgs args(parent_->zx_device_, manager, handle_);
-      auto composite_device = std::make_unique<Device>(args);
-      zx_status_t status =
-          composite_device->DdkAddComposite(composite_name.data(), &composite_desc);
+  zx_status_t status = ZX_OK;
+#if !defined(IS_TEST)
+  bool is_dfv2 = device_is_dfv2(parent_->zx_device_);
+  // TODO(fxbug.dev/93333): For DFv2, we don't add composite device fragments yet.
+  if (!is_dfv2) {
+    // TODO(fxbug.dev/79923): re-enable this in tests once mock_ddk supports composites.
+    auto composite_name = fbl::StringPrintf("%s-composite", name());
+    // Don't worry about any metadata, since it's present in the "acpi" parent.
+    DeviceArgs args(parent_->zx_device_, manager, handle_);
+    auto composite_device = std::make_unique<Device>(args);
+    status = composite_device->DdkAddComposite(composite_name.data(), &composite_desc);
 
-      if (status == ZX_OK) {
-        // The DDK takes ownership of the device, but only if DdkAddComposite succeeded.
-        __UNUSED auto unused = composite_device.release();
-      }
-#else
-      zx_status_t status = ZX_OK;
+    if (status == ZX_OK) {
+      // The DDK takes ownership of the device, but only if DdkAddComposite succeeded.
+      __UNUSED auto unused = composite_device.release();
+    }
+  }
 #endif
 
   return zx::make_status(status);

@@ -420,6 +420,16 @@ zx_status_t device_connect_fragment_fidl_protocol(zx_device_t* device, const cha
 zx_status_t device_get_variable(zx_device_t* device, const char* name, char* out, size_t out_size,
                                 size_t* size_actual);
 
+__UNUSED static inline bool device_is_dfv2(zx_device_t* dev) {
+  char name[2];
+  size_t out_size = 0;
+  zx_status_t status = device_get_variable(dev, "IS_DFV2", name, sizeof(name), &out_size);
+  if (status != ZX_OK || out_size != 2) {
+    return false;
+  }
+  return name[0] == '1';
+}
+
 typedef enum {
   DEVICE_GROUP_PROPERTY_KEY_UNDEFINED = 0,
   DEVICE_GROUP_PROPERTY_KEY_INT = 1,
