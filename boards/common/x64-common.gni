@@ -10,6 +10,10 @@ target_cpu = "x64"
 
 # Drivers and tools to include on bootfs.
 _bootfs_deps = [
+  # For DFv2. TODO(fxbug.dev/93333): Move this to //products/bringup.gni
+  # once we have enough space on ARM for this binary.
+  "//src/devices/bin/driver_host2",
+
   # Drivers
   "//src/devices/block/drivers/ahci",
   "//src/devices/block/drivers/mbr",
