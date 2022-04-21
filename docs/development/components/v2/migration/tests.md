@@ -261,21 +261,19 @@ To migrate this test to the Test Runner Framework, do the following:
     }
     ```
 
-1.  You need CML files for each component that provides a capability needed in
-    the test. If there is an existing CML file for the component providing the
-    injected service, you may be able to reuse it. Otherwise **if the mock
-    component is being ported to v2**, create a new CML file.  If the **mock
-    component has not been ported to v2 yet**, wrap the component using
-    `cmx_runner`.
+1.  Ensure each component providing capabilities to this test has a CML manifest
+    file. If this manifest does not already exist, consider creating it at this
+    point. You can also temporarily wrap a legacy (CMX) provider component using
+    the `cmx_runner` in your migrated test.
 
-    * {CML component}
+    * {CML provider}
 
         ```json5
         // mock_font_resolver.cml (capability provider)
         {
             program: {
-            runner: "elf",
-            binary: "bin/mock_font_resolver",
+                runner: "elf",
+                binary: "bin/mock_font_resolver",
             },
             use: [
                 //  mock_font_resolver's dependencies.
@@ -297,7 +295,7 @@ To migrate this test to the Test Runner Framework, do the following:
         }
         ```
 
-    * {Wrapped CMX component}
+    * {CMX provider}
 
         ```json5
         // mock_font_resolver.cml (capability provider)
@@ -316,12 +314,6 @@ To migrate this test to the Test Runner Framework, do the following:
                 {
                     protocol: [ "fuchsia.proto.SomeProtocol" ],
                 },
-                // Note: Wrapped legacy component manifest can only "use"
-                // protocol capabilities. cmx file of the legacy component will
-                // define what other non-protocol capabilities it gets (example
-                // isolated-tmp, /dev, etc). These capabilities will come
-                // directly from the system and can't be mocked or forwarded
-                // from the test to legacy components.
             ],
             // expose capability provided by mock component.
             capabilities: [
@@ -338,6 +330,12 @@ To migrate this test to the Test Runner Framework, do the following:
         }
         ```
 
+        Note: Component manifests wrapping a legacy component can only `use`
+        protocol capabilities. The `.cmx` file of the legacy component defines
+        the remaining non-protocol capabilities (`isolated-tmp`, `/dev`, etc).
+        These capabilities will come directly from the system and can't be mocked
+        or forwarded from the test to legacy components.
+
     Note: The CML files for the capability providers can be distributed in the
     same package that contained the v1 test. Follow the same instructions in
     [Migrate the component manifest][migrate-component-manifest] that you used
@@ -346,85 +344,118 @@ To migrate this test to the Test Runner Framework, do the following:
 1.  Add the capability provider(s) as children of the test component, and route
     the capabilities from each provider.
 
-    ```json5
-    // my_component_test.cml (test component)
-    {
-        include: [
-            // If using Wrapped CMX component.
-            "sys/testing/hermetic-tier-2-test.shard.cml",
-        ],
-        ...
+    * {CML provider}
 
-        // Add capability providers
-        children: [
-            {
-                name: "font_resolver",
-                url: "#meta/mock_font_resolver.cm",
-            },
-        ],
-        // Route capabilities to the test
-        use: [
-            {
-                protocol: [ "fuchsia.pkg.FontResolver" ],
-                from: "#font_resolver",
-            },
-        ],
-        offer: [
-            {
-                // offer dependencies to mock font provider.
-                protocol: [ "fuchsia.proto.SomeProtocol" ],
-                from: "#some_other_child",
-            },
-        ],
-    }
-    ```
+        ```json5
+        // my_component_test.cml (test component)
+        {
+            ...
+
+            // Add capability providers
+            children: [
+                {
+                    name: "font_resolver",
+                    url: "#meta/mock_font_resolver.cm",
+                },
+            ],
+            // Route capabilities to the test
+            use: [
+                {
+                    protocol: [ "fuchsia.pkg.FontResolver" ],
+                    from: "#font_resolver",
+                },
+            ],
+            offer: [
+                {
+                    // offer dependencies to mock font provider.
+                    protocol: [ "fuchsia.proto.SomeProtocol" ],
+                    from: "#some_other_child",
+                },
+            ],
+        }
+        ```
+
+    * {CMX provider}
+
+        ```json5
+        // my_component_test.cml (test component)
+        {
+            include: [
+                // Required for wrapped CMX components
+                "sys/testing/hermetic-tier-2-test.shard.cml",
+            ],
+            ...
+
+            // Add capability providers
+            children: [
+                {
+                    name: "font_resolver",
+                    url: "#meta/mock_font_resolver.cm",
+                },
+            ],
+            // Route capabilities to the test
+            use: [
+                {
+                    protocol: [ "fuchsia.pkg.FontResolver" ],
+                    from: "#font_resolver",
+                },
+            ],
+            offer: [
+                {
+                    // offer dependencies to mock font provider.
+                    protocol: [ "fuchsia.proto.SomeProtocol" ],
+                    from: "#some_other_child",
+                },
+            ],
+        }
+        ```
 
 1.  Package the test component and capability provider(s) together into a
     single hermetic `fuchsia_test_package()`:
 
-    * {CML component}
+    * {CML provider}
 
         ```gn
         # Test component
         fuchsia_component("my_component_test") {
-        testonly = true
-        manifest = "meta/my_component_test.cml"
-        deps = [ ":bin_test" ]
+          testonly = true
+          manifest = "meta/my_component_test.cml"
+          deps = [ ":bin_test" ]
         }
 
         fuchsia_component("mock_font_resolver") {
-        testonly = true
-        manifest = "meta/mock_font_resolver.cml"
-        deps = [ ":mock_font_resolver_bin" ]
+          testonly = true
+          manifest = "meta/mock_font_resolver.cml"
+          deps = [ ":mock_font_resolver_bin" ]
         }
 
         # Hermetic test package
         fuchsia_test_package("my_component_tests") {
-        test_components = [ ":my_component_test" ]
-        deps = [ ":mock_font_resolver" ]
+          test_components = [ ":my_component_test" ]
+          deps = [ ":mock_font_resolver" ]
         }
         ```
 
-    * {Wrapped CMX component}
+    * {CMX provider}
 
         ```gn
         # Test component
         fuchsia_component("my_component_test") {
-        testonly = true
-        manifest = "meta/my_component_test.cml"
-        deps = [ ":bin_test" ]
+          testonly = true
+          manifest = "meta/my_component_test.cml"
+          deps = [ ":bin_test" ]
         }
 
         fuchsia_component("mock_font_resolver") {
-        testonly = true
-        manifest = "meta/mock_font_resolver.cml"
-        deps = [ {{ '<var label="legacy_component">"//path/to/legacy(v1)_component"</var>' }} ]
+          testonly = true
+          manifest = "meta/mock_font_resolver.cml"
+          deps = [ {{ '<var label="legacy_component">"//path/to/legacy(v1)_component"</var>' }} ]
         }
 
         # Hermetic test package
         fuchsia_test_package("my_component_tests") {
-        test_components = [ ":my_component_test" ]
-        deps = [ ":mock_font_resolver" ]
+          test_components = [ ":my_component_test" ]
+          deps = [ ":mock_font_resolver" ]
         }
         ```
 
@@ -438,108 +469,106 @@ The legacy Component Framework provided a C++ library named
 within a test. It was often used to serve injected services that are either
 implemented in-process or by other components in the test.
 
-Legacy tests relying on this functionality should move to using [realm
-builder][realm-builder] when being migrated. Realm Builder can create isolated
-environments similar to the ones constructed by `TestWithEnvironment`. General
-usage of the library is covered in the [Realm Builder
-documentation][realm-builder]. The remainder of this section covers how to
-translate `TestWithEnvironment` specific use cases to Realm Builder.
+Consider migrating legacy tests relying on this functionality to Realm Builder.
+Realm Builder creates isolated environments similar to those constructed by
+`TestWithEnvironment`. For more details on Realm Builder, see the
+[developer guide][realm-builder].
+
+The remainder of this section covers migrating `TestWithEnvironment` use cases
+to Realm Builder.
 
 ### Test setup
 
-There is no Realm Builder specific fixture, so any tests that depend on the
-`TextWithEnvironmentFixture` portion of the library should instead use a more
-generic test fixture, such as `gtest::RealLoopFixture`.
+Realm Builder does not provide its own test fixture, so tests that depend on
+`TextWithEnvironmentFixture` should migrate to a more generic test fixture,
+such as `gtest::RealLoopFixture`.
 
-```
+```cpp
 class RealmBuilderTest : public gtest::RealLoopFixture {};
 ```
 
-In the test implementation (or a custom test fixture) the test will call
-`RealmBuilder::Create` to begin building a realm, add components and routes to
-the realm, and finally call `Build` to construct and begin running the realm
-that's been described.
+During the setup phase of your test, use `RealmBuilder::Create()` to initialize a
+realm instance. After populating the realm with components and routes, call
+`Build()` to construct and start the realm instance.
 
-```
+```cpp
 TEST_F(RealmBuilderTest, RoutesProtocolFromChild) {
       auto realm_builder = RealmBuilder::Create();
-      // Set up the realm.
-      ...
+
+      // Configure the realm.
+      // ...
+
       auto realm = realm_builder.Build(dispatcher());
-      // Use the constructed realm to assert some property about the components
+
+      // Use the constructed realm to assert properties on the components
       // under test.
-      ...
+      // ...
 }
 ```
 
-### Adding components to a realm
+### Add components to a realm
 
-The legacy components that were added to the nested environment with
-`TestWithEnvironment` can be added to the realm created by Realm Builder. A
-realm created by Realm Builder can contain both legacy and modern components
-simultaneously.
+When using `TestWithEnvironment`, services are specified before creation of the
+`EnclosingEnvironment`. After the environment is created, the test may include
+components using `CreateComponent()` or `CreateComponentFromUrl()`.
+Consider the following example:
 
-When using `TestWithEnvironment`, the services which are present in a realm are
-specified when the legacy realm is created, and after realm creation has
-occurred components may be added to the realm (with
-`EnclosingEnvironment::CreateComponentFromUrl`). In the modern component
-framework, and thus when using Realm Builder, the components are added to a
-realm (along with capability routing) as the realm is created, and once the
-realm exists its contents are immutable.
+```cpp
+std::unique_ptr<EnvironmentServices> services = CreateServices();
+// Add services to the environment
+// ...
+auto test_env = CreateNewEnclosingEnvironment("test_env", std::move(services));
 
-Additionally, unlike in `TestWithEnvironment`, when using Realm Builder the
-components should be added to the realm _before_ the routing (i.e. protocol
-wiring) is performed.
-
-Modern components can be added to a realm with the `AddChild` call:
-
+// Create additional components in the environment
+test_env_->CreateComponentFromUrl(
+      "fuchsia-pkg://fuchsia.com/example-package#meta/example.cmx");
 ```
+
+Realm Bulder supports constructing realms that contain both legacy and CML
+components simultaneously. However, all components must be added to the realm
+_before_ it is created. Once a realm is created its contents are immutable.
+
+To add a CML component with Realm Builder, use `AddChild()`:
+
+```cpp
 realm_builder->AddChild("example_component", "#meta/example_component.cm");
 ```
 
-And legacy components can be added to a realm with the `AddLegacyChild` call:
+To include a legacy component in the same realm, use `AddLegacyChild()`:
 
-```
+```cpp
 realm_builder->AddLegacyChild(
     "example_legacy_component",
-    "fuchsia-pkg://fuchsia.com/example#meta/example.cmx");
+    "fuchsia-pkg://fuchsia.com/example-package#meta/example.cmx");
 ```
 
-Whenever a component is added to a realm, a name for the component must be
-provided. This name is used later in `AddRoute` calls.
+Realm Builder allows you to provide additional options for each new child
+component. The following example marks the child as [`eager`][cml-children] when
+adding it to the realm, indicating the component should start automatically with
+its parent:
 
-When a component is added to a realm, it may also be added along with options
-for the new child component. One such option is to mark the component as
-`eager`, which causes the component to start running the moment the realm is
-created. When this option is not supplied, the component will not begin running
-until something accesses a capabilities provided by the component.
-
-```
+```cpp
 realm_builder->AddChild(
     "example_eager_component",
     "#meta/example_eager.cm",
     ChildOptions{.startup_mode = StartupMode::EAGER});
 ```
 
-### Connecting components together
+### Connect components together
 
-When using `TestWithEnvironment` the parent is responsible for setting up a
-`sys::testing::EnvironmentServices` that would hold the set of additional
-services available to legacy components in the nested environment. Along with
-the services added to the realm with this approach, by default the nested realm
-would inherit all services in the parent realm.
+When using `TestWithEnvironment`, the `EnclosedEnvironment` inherits all
+services from the parent environment by default. Tests can configure additional
+services in their nested environment using the `EnvironmentServices` instance.
+It is not necessary to route these services from the components providing them
+to the test environment.
 
-When using Realm Builder, the protocols each component expects to be able to
-access (along with where it comes from) are added during realm construction by
-using the `AddRoute` call. This capability routing must be performed even for
-capabilities in the parent realm, unlike in `TestWithEnvironment` where the
-components in the nested realm could implicitly access these services.
+With Realm Builder, tests must explicitly route all capabilities between
+the components in the realm and the parent using `AddRoute()`.
+The following example makes the `fuchsia.logger.LogSink` protocol available
+from the parent to `example_component` and `example_legacy_component` in the
+realm:
 
-For example, to make the `fuchsia.logger.LogSink` protocol available to the
-`example_component` and `example_legacy_component` components, it must be
-explicitly routed to them like so:
-
-```
+```cpp
 realm_builder->AddRoute(
     Route{.capabilities = {Protocol{"fuchsia.logger.LogSink"}},
           .source = ParentRef(),
@@ -548,44 +577,41 @@ realm_builder->AddRoute(
               ChildRef{"example_legacy_component"}}});
 ```
 
-Connections between children in the realm under construction must also be added
-to the realm using the same `AddRoute` call, but with `ChildRef`s as both the
-source and target:
+Note: All components should be added to the realm _before_ adding routes.
 
-```
+To route additional capabilities between child components within the realm or
+back to the parent, simply adjust the `source` and `target` properties.
+
+```cpp
+// Route fuchsia.examples.Example from one child to another
 realm_builder->AddRoute(
     Route{.capabilities = {Protocol{"fuchsia.examples.Example"}},
           .source = ChildRef{"example_component"},
           .targets = {ChildRef{"example_legacy_component"}}});
-```
 
-Finally, if the test constructing the realm wishes to be able to access any
-capabilities from any of the components in the realm, then those capabilities
-must be routed to the parent.
-
-```
+//Route fuchsia.examples.Example2 up to the parent
 realm_builder->AddRoute(
     Route{.capabilities = {Protocol{"fuchsia.examples.Example2"}},
           .source = ChildRef{"example_legacy_component"},
           .targets = {ParentRef{}}});
 ```
 
-### Implementing protocols
+### Implement protocols
 
-The services held in a `sys::testing::EnvironmentServices` may be implemented
-anywhere, including in the test component exercising `TestWithEnvironment`. It's
-not possible to offer capabilities implemented in the test component itself
-directly to components in the created realm; instead the test component can
-create _local components_. These components, instead of being implemented by a
-dedicated process, are implemented in-process by local objects. These functions
-are added to a realm being constructed, capabilities can be routed to and from
-them, and when the realm is created the functions are invoked as dedicated
-components.
+The `EnvironmentServices` connected to `TestWithEnvironment` can be implemented
+anywhere, including within the test component itself. The test runner framework
+in Components v2 does not allow test components to offer capabilities they
+implement directly to components in the test realm. Instead the test component
+can create _local components_ using Realm Builder.
 
-As an example, if we wanted to implement a mock for the `fuchsia.example.Echo`
-protocol:
+Local components are implemented in-process by local objects. When these functions
+are added to the realm under construction, they become a valid `source` or
+`target` for capability routes. Once the realm is created, Realm Builder invokes
+these functions as dedicated components.
 
-```
+The following example implements a mock for the `fuchsia.example.Echo` protocol:
+
+```cpp
 class LocalEchoServer : public test::placeholders::Echo, public LocalComponent {
  public:
   explicit LocalEchoServer(fit::closure quit_loop, async_dispatcher_t* dispatcher)
@@ -614,15 +640,18 @@ class LocalEchoServer : public test::placeholders::Echo, public LocalComponent {
 };
 ```
 
-The above class can be instantiated to provide a `fuchsia.example.Echo`
-implementation to a realm, and the created object can even be inspected by the
-test to determine things like if the FIDL protocol provided by this local
-component was accessed.
+You can use Realm Builder to instantiate this class as a local component to
+provide `fuchsia.example.Echo` to the realm and handle requests:
 
-```
+```cpp
 LocalEchoServer local_echo_server(QuitLoopClosure(), dispatcher());
 realm_builder.AddLocalChild(kEchoServer, &local_echo_server);
 ```
+
+Since the test has direct access to the local component object, you can inspect
+it to determine state. In the above example, the test could assert the value of
+`LocalEchoServer::WasCalled()` to indicate whether the FIDL protocol method was
+accessed.
 
 ## Migrate component features {#features}
 
@@ -656,6 +685,7 @@ Verify that your migrated tests are passing successfully using Components v2.
 If your test doesn't run correctly or doesn't start at all, try following the
 advice in [Troubleshooting components][troubleshooting-components].
 
+[cml-children]: https://fuchsia.dev/reference/cml#children
 [example-package-rule]: https://fuchsia.googlesource.com/fuchsia/+/cd29e692c5bfdb0979161e52572f847069e10e2f/src/fonts/BUILD.gn
 [fuchsia-test-facets]: /docs/concepts/testing/v1_test_component.md
 [hermetic-resolution]: /docs/development/testing/components/test_runner_framework.md#hermetic_component_resolution
