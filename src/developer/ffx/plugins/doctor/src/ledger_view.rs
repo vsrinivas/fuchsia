@@ -40,7 +40,9 @@ impl LedgerViewOutcome {
         let (symbol, color) = match self {
             LedgerViewOutcome::Info => ("i".to_string(), format!("{}", color::Fg(color::Green))),
             LedgerViewOutcome::Success => ("✓".to_string(), format!("{}", color::Fg(color::Green))),
-            LedgerViewOutcome::Warning => ("!".to_string(), format!("{}", color::Fg(color::Black))),
+            LedgerViewOutcome::Warning => {
+                ("!".to_string(), format!("{}", color::Fg(color::Yellow)))
+            }
             LedgerViewOutcome::Failure => ("✗".to_string(), format!("{}", color::Fg(color::Red))),
             LedgerViewOutcome::Invalid => (" ".to_string(), format!("{}", color::Fg(color::Red))),
         };

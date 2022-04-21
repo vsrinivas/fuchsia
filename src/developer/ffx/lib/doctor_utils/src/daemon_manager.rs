@@ -14,6 +14,7 @@ use {
 
 const KILL_RETRY_COUNT: usize = 5;
 const KILL_RETRY_DELAY: Duration = Duration::from_millis(150);
+const DAEMON_START_REGEX: &str = "(^|/)ffx(-.*)? (-.* )?daemon start$";
 
 #[async_trait]
 pub trait DaemonManager {
@@ -37,8 +38,8 @@ impl DaemonManager for DefaultDaemonManager {
     async fn kill_all(&self) -> Result<bool> {
         // If ffx was started with a --config or a --target, as fx does, there
         // may be flags between ffx and daemon start.
-        let status =
-            Command::new("pkill").arg("-f").arg("(^|/)ffx (-.* )?daemon start$").status()?;
+        // The binary may be ffx, ffx-linux-x64, or ffx-mac-x64.
+        let status = Command::new("pkill").arg("-f").arg(DAEMON_START_REGEX).status()?;
 
         // There can be a delay between when the daemon is killed and when the
         // ascendd socket closes. If we return too quickly, the main loop will see
@@ -70,7 +71,8 @@ impl DaemonManager for DefaultDaemonManager {
     async fn get_pid(&self) -> Result<Vec<usize>> {
         // If ffx was started with a --config or a --target, as fx does, there
         // may be flags between ffx and daemon start.
-        let cmd = Command::new("pgrep").arg("-f").arg("(^|/)ffx (-.* )?daemon start$").output()?;
+        // The binary may be ffx, ffx-linux-x64, or ffx-mac-x64.
+        let cmd = Command::new("pgrep").arg("-f").arg(DAEMON_START_REGEX).output()?;
         let output: Vec<usize> = String::from_utf8(cmd.stdout)
             .expect("Invalid pgrep output")
             .split("\n")

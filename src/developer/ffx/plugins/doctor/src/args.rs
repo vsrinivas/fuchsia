@@ -54,6 +54,9 @@ pub struct DoctorCommand {
     #[argh(switch, description = "force restart the daemon, even if the connection is working")]
     pub restart_daemon: bool,
 
+    #[argh(switch, short = 'v', description = "verbose, display all steps")]
+    pub verbose: bool,
+
     #[argh(option, description = "override the default output directory for doctor records")]
     pub output_dir: Option<String>,
 }
