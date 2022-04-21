@@ -212,12 +212,12 @@ void DeviceImpl::SetConfiguration(uint32_t index) {
 
   streams_.clear();
 
-  #if CAMERA_QUIRK_ADD_CONFIG_CHANGE_DELAY
+#if CAMERA_QUIRK_ADD_CONFIG_CHANGE_DELAY
   // TODO(b/224858687) - Temporary workaround to ensure that camera pipeline has an opportunity to
   // teardown buffers before the next stream (in the new configuration) is requested. The original
   // code to protect this race condition has some flaws. The real fix is in progress.
   zx_nanosleep(zx_deadline_after(ZX_MSEC(1000)));
-  #endif // CAMERA_QUIRK_ADD_CONFIG_CHANGE_DELAY
+#endif  // CAMERA_QUIRK_ADD_CONFIG_CHANGE_DELAY
 
   streams_.resize(configurations_[index].streams().size());
   FX_LOGS(INFO) << "Configuration set to " << index << ".";
@@ -288,6 +288,9 @@ void DeviceImpl::ConnectToStream(uint32_t index,
   // When the last client disconnects destroy the stream.
   auto on_no_clients = [this, index]() { streams_[index] = nullptr; };
 
+  auto streaming_failure_record = MetricsReporter::Get().CreateFailureTestRecord(
+      MetricsReporter::FailureTestRecordType::FramesStuckInPipeline, false,
+      current_configuration_index_, index);
   auto description =
       "c" + std::to_string(current_configuration_index_) + "s" + std::to_string(index);
   streams_[index] = std::make_unique<StreamImpl>(
@@ -295,7 +298,7 @@ void DeviceImpl::ConnectToStream(uint32_t index,
       configurations_[current_configuration_index_].streams()[index],
       configs_[current_configuration_index_].stream_configs[index], std::move(request),
       std::move(on_stream_requested), std::move(on_buffers_requested), std::move(on_no_clients),
-      description);
+      description, std::move(streaming_failure_record));
 }
 
 void DeviceImpl::OnStreamRequested(uint32_t index,
