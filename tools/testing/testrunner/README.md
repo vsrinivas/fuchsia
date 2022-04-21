@@ -8,9 +8,8 @@ testrunner is generally executed by
 [botanist](https://fuchsia.googlesource.com/fuchsia/+/HEAD/tools/botanist) in
 a Swarming task launched by an infra recipe. When the Swarming task is
 complete, the recipe downloads testrunner's output files from the task's
-Isolated outputs and parses the test results to determine which tests passed
-or failed, and to determine the location of tests' log files within the
-testrunner outputs.
+outputs and parses the test results to determine which tests passed or failed,
+and to determine the location of tests' log files within the testrunner outputs.
 
 ## Input
 
@@ -29,8 +28,8 @@ After it has finished running all tests, testrunner writes the results to a
 testrunner places this file in the root of the `-out-dir` directory, which in
 turn is in the directory specified by the `$FUCHSIA_TEST_OUTDIR` environment
 variable. When executed in a Swarming task by recipes, `$FUCHSIA_TEST_OUTDIR`
-corresponds to the Swarming task's Isolated output directory, which will be
-automatically uploaded to Isolate upon completion of the task.
+corresponds to the Swarming task's CAS output directory, which will be
+automatically uploaded to CAS upon completion of the task.
 
 For each test, testrunner also captures stdout and stderr and writes those logs
 to another file in the output directory. Each test's stdout/stderr file is
