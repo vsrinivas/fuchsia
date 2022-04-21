@@ -696,7 +696,7 @@ void Uint64Type::Visit(TypeVisitor* visitor) const { visitor->VisitUint64Type(th
 
 void ActualAndRequestedType::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
   auto actual_and_requested_value = value->AsActualAndRequestedValue();
-  if (value == nullptr) {
+  if (actual_and_requested_value == nullptr) {
     printer << Red << "invalid" << ResetColor;
   } else {
     printer << Blue << actual_and_requested_value->actual() << ResetColor << '/' << Blue

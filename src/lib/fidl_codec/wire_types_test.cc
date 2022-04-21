@@ -7,10 +7,14 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 
+#include <sstream>
+
 #include <gtest/gtest.h>
 
 #include "src/lib/fidl_codec/fidl_codec_test.h"
 #include "src/lib/fidl_codec/library_loader.h"
+#include "src/lib/fidl_codec/printer.h"
+#include "src/lib/fidl_codec/wire_object.h"
 
 namespace fidl_codec {
 
@@ -61,6 +65,21 @@ TEST_F(TypeTest, CppName) {
   std::unique_ptr<Type> bits_type =
       library()->TypeFromIdentifier(false, "test.fidlcodec.examples/DefaultBits");
   EXPECT_EQ(bits_type.get()->CppName(), "test::fidlcodec::examples::DefaultBits");
+}
+
+TEST(ActualAndRequestedType, PrettyPrint) {
+  ActualAndRequestedType type;
+  std::ostringstream os;
+  PrettyPrinter printer(os, WithoutColors, true, "", 100, false);
+
+  NullValue null_value;
+  type.PrettyPrint(&null_value, printer);
+  EXPECT_EQ(os.str(), "invalid");
+  os.str("");
+
+  ActualAndRequestedValue value(0, 0);
+  type.PrettyPrint(&value, printer);
+  EXPECT_EQ(os.str(), "0/0");
 }
 
 }  // namespace fidl_codec
