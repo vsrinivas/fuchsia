@@ -435,7 +435,7 @@
   title: 'Handling of unknown fields and strictness'
   short_description: 'This FTP amends and clarifies the behavior of FIDL decoders when encountering tables, extensible unions, enums, and bits — extensible messages — contain fields where the type is unknown.'
   authors: ['apang@google.com', 'pascallouis@google.com']
-  file: '0033_handling_unkown_fields_strictness.md'
+  file: '0033_handling_unknown_fields_strictness.md'
   area: ['FIDL']
   issue: ['']
   gerrit_change_id: ['']
