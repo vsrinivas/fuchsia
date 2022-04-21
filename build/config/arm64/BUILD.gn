@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 # Platform baseline.
-# This tracks the minimum hardware requirements for Fuchsia on x86-64.
+# This tracks the minimum hardware requirements for Fuchsia on AArch64.
 config("arm64") {
   cflags = [
     "-march=armv8-a+simd+crc+crypto",
