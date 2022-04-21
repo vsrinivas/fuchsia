@@ -19,6 +19,8 @@ group("runtime") {
     "//src/devices/sysmem/bin/sysmem_connector",
     "//src/graphics/bin/vulkan_loader",
     "//src/sys/activity",
+    "//src/ui/bin/input-pipeline",
+    "//src/ui/bin/input-pipeline:configs",
     "//src/ui/bin/root_presenter",
     "//src/ui/bin/root_presenter:configs",
 

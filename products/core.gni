@@ -157,3 +157,6 @@ policy_labels.swd = "unrestricted"
 # Set the update_checker policy for core.gni, details can be found in
 # //build/security/policies_swd.gni.
 policy_labels.update_checker = "system_update_checker"
+
+# Enable input injection for testing through `fuchsia.input.injection.InputDeviceRegistry`.
+use_modern_input_injection = true
