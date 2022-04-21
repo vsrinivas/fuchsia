@@ -43,8 +43,8 @@ class BlobEntry:
     """
     path: FilePath
     merkle: str
-    size: Optional[int]
-    source_path: Optional[FilePath]
+    size: Optional[int] = None
+    source_path: Optional[FilePath] = None
 
     def compare_with(
             self,

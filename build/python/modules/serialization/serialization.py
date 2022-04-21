@@ -88,12 +88,14 @@ to print:
 
 """
 
+import dataclasses
 import functools
 import inspect
 import json
 
 from typing import (
-    Any, Callable, Dict, List, Optional, Type, TypeVar, Union, get_type_hints)
+    Any, Callable, Dict, List, Optional, Set, Type, TypeVar, Union,
+    get_type_hints)
 import typing
 
 __all__ = [
@@ -117,7 +119,7 @@ def instance_from_dict(cls: Type[C], a_dict: Dict[str, Any]) -> C:
     each init param.  All must match names in the entry dictionary.
     """
     init_param_types = get_fn_param_types(cls, "__init__")
-    init_param_values = get_named_values_from(a_dict, init_param_types)
+    init_param_values = get_named_values_from(a_dict, init_param_types, cls)
     instance = cls(**init_param_values)
 
     field_types = typing.get_type_hints(cls)
@@ -132,7 +134,7 @@ def instance_from_dict(cls: Type[C], a_dict: Dict[str, Any]) -> C:
     # If any fields weren't set via the constructor, set those attributes on the
     # class directly.  For classes that use @dataclass, this is likely to be
     # empty.
-    for field_name, value in get_named_values_from(a_dict, fields_to_read):
+    for field_name, value in get_named_values_from(a_dict, fields_to_read, cls):
         setattr(instance, field_name, value)
 
     return instance
@@ -162,29 +164,28 @@ def has_field_types(cls: Type[Any]) -> bool:
 
 
 def get_named_values_from(
-        entries: Dict[str, Any],
-        names_and_types: Dict[str, Type[Any]]) -> Dict[str, Any]:
+        entries: Dict[str, Any], names_and_types: Dict[str, Type[Any]],
+        for_cls: Type[Any]) -> Dict[str, Any]:
     """Take a Dict of name:value, and a dict of name:types, and return a dict of
-    name to instantiated-type-for-value.
+    name to instantiated-type-for-value, for the class given by `for_cls`.
+
+    The given class is used to determine if default values have been provided or
+    not.
 
     Example::
         >>> entry = { "my_int": "42", "some_vals": [ "1", "2", "3" ]}
-        >>> names_and_types = { "my_int":"int", "some_vals": "List[int]" }
-        >>> get_named_values_from(entry, names_and_types)
+        >>> names_and_types = { "my_int":"int", "some_vals": "List[int]", "has_a_default": "int" }
+        >>> get_named_values_from(entry, names_and_types, my_class)
         {"my_int":42, "some_vals":[1, 2, 3]}
 
     """
     values = {}
     for name, cls in names_and_types.items():
         if name in entries:
-            values[name] = parse_dict_value_into(cls, entries[name])
+            values[name] = parse_value_into(entries[name], cls)
         else:
-            # Is the field optional?
-            if typing.get_origin(cls) is Union and type(
-                    None) in typing.get_args(cls):
-                # Yes, so just set it to None.
-                values[name] = None
-            else:
+            has_default = has_default_value(for_cls, name)
+            if not has_default:
                 raise KeyError(
                     "param '{}' not found in dict:\n{}".format(
                         name, entries.keys()))
@@ -192,8 +193,26 @@ def get_named_values_from(
     return values
 
 
-def parse_dict_value_into(cls: Type[Union[Dict, List, C]],
-                          value: Any) -> Union[Dict, List, C]:
+def has_default_value(cls: Type[Any], field: str) -> Any:
+    """Returns if the given field of a class has a default value (requires a
+    @dataclass-based class, others will silently return 'False')
+    """
+    dataclass_fields: Optional[Dict] = getattr(
+        cls, "__dataclass_fields__", None)
+    if dataclass_fields:
+        field_entry: Optional[dataclasses.Field] = dataclass_fields.get(
+            field, None)
+        if field_entry:
+            has_value = field_entry.default is not dataclasses.MISSING
+            has_factory = field_entry.default_factory is not dataclasses.MISSING
+            return has_value or has_factory
+    return False
+
+
+def parse_value_into(
+    value: Any,
+    cls: Type[Union[Dict, List, Set, C]],
+) -> Union[Dict, List, Set, C]:
     """For a class, attempt to parse it from the value.
     """
     if typing.get_origin(cls) is dict:
@@ -205,25 +224,37 @@ def parse_dict_value_into(cls: Type[Union[Dict, List, C]],
             raise TypeError(f"Cannot deserialize untyped Dicts: {cls}")
 
         # value also has to be a dict
-        if type(value) is not dict:
+        if type(value) is dict:
+            result = dict()
+            for key, dict_value in value.items():
+                key = parse_value_into(key, dict_key_type)
+                result[key] = parse_value_into(dict_value, dict_value_type)
+            return result
+        else:
             raise TypeError(
                 f"cannot parse {cls} from a non-dict value of type: {type(value)}"
             )
-
-        result = dict()
-        for key, dict_value in value.items():
-            key = parse_dict_value_into(dict_key_type, key)
-            result[key] = parse_dict_value_into(dict_value_type, dict_value)
-        return result
 
     elif typing.get_origin(cls) is list:
         # List items need to have a type
         list_item_type = typing.get_args(cls)[0]
         # value also has to be a list
-        if type(value) is not list:
-            raise TypeError(f'cannot parse {cls} from a non-list value')
+        if type(value) is list:
+            return [parse_value_into(item, list_item_type) for item in value]
+        else:
+            raise TypeError(
+                f'cannot parse {cls} from a non-list value({type(value)})')
 
-        return [parse_dict_value_into(list_item_type, item) for item in value]
+    elif typing.get_origin(cls) is set:
+        # Set items need to have a type
+        set_item_type = typing.get_args(cls)[0]
+        # the value for a Set type needs to be a List or a Set.
+        if (type(value) is list) or (type(value) is set):
+            return set(
+                [parse_value_into(item, set_item_type) for item in value])
+        else:
+            raise TypeError(
+                f'cannot parse {cls} from a non-list value ({type(value)})')
 
     elif has_field_types(cls):
         # Create an object from this value
@@ -233,9 +264,9 @@ def parse_dict_value_into(cls: Type[Union[Dict, List, C]],
         # Unions are special, because we don't know what value we can make, so
         # just try them all, in order, until we get one that works.
         errors = []
-        for arg in typing.get_args(cls):
+        for type_arg in typing.get_args(cls):
             try:
-                return parse_dict_value_into(arg, value)
+                return parse_value_into(value, type_arg)
             except KeyError as ke:
                 errors.append(ke)
             except TypeError as te:
@@ -261,8 +292,15 @@ def make_dict_value_for(obj: Any) -> Union[Dict, List, str, int]:
         return result
 
     elif isinstance(obj, list):
-        # Lists are also special
+        # Lists are special, they need to retain their existing order
         return [make_dict_value_for(value) for value in obj]
+
+    elif isinstance(obj, set):
+        # Sets are special, as they are serialized to a list, and lists are
+        # order sensitive for compares, unlike sets.  To ensure that different
+        # sets that contain the same elements always have the same serialized
+        # representation the set's contents are sorted when creating the list.
+        return [make_dict_value_for(value) for value in sorted(obj)]
 
     elif has_field_types(type(obj)):
         # It's something else, and it has field type annotations, so let's use

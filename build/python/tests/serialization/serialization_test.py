@@ -5,11 +5,11 @@
 
 from dataclasses import dataclass, field
 import json
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 import unittest
 
 from serialization import (
-    instance_to_dict, json_dumps, serialize_dict, serialize_json,
+    instance_to_dict, instance_from_dict, serialize_dict, serialize_json,
     serialize_fields_as)
 
 
@@ -17,7 +17,7 @@ class SerializeFieldsTest(unittest.TestCase):
     """Validate that fields of different kinds are properly serialized.
     """
 
-    def test_simple_class(self):
+    def test_serialize_simple_class(self):
 
         @dataclass
         class SimpleClass:
@@ -31,7 +31,41 @@ class SerializeFieldsTest(unittest.TestCase):
                 'str_field': "a string"
             })
 
-    def test_int_value_0(self):
+    def test_deserialize_simple_class(self):
+
+        @dataclass
+        class SimpleClass:
+            int_field: int
+            str_field: str
+
+        value = {'int_field': 42, 'str_field': "a string"}
+        self.assertEqual(
+            instance_from_dict(SimpleClass, value), SimpleClass(42, "a string"))
+
+    def test_deserialize_simple_class_with_default_value(self):
+
+        @dataclass
+        class SimpleClass:
+            int_field: int
+            str_field: str = "a default value"
+
+        value = {'int_field': 42}
+        self.assertEqual(
+            instance_from_dict(SimpleClass, value),
+            SimpleClass(42, "a default value"))
+
+    def test_deserialize_simple_class_with_default_factory(self):
+
+        @dataclass
+        class SimpleClass:
+            int_field: int
+            str_field: List[str] = field(default_factory=list)
+
+        value = {'int_field': 42}
+        self.assertEqual(
+            instance_from_dict(SimpleClass, value), SimpleClass(42, []))
+
+    def test_serialize_int_value_0(self):
 
         @dataclass
         class SimpleClass:
@@ -45,7 +79,7 @@ class SerializeFieldsTest(unittest.TestCase):
                 'str_field': "a string"
             })
 
-    def test_optional_field_with_value(self):
+    def test_serialize_optional_field_with_value(self):
 
         @dataclass
         class SimpleClassWithOptionalField:
@@ -59,7 +93,7 @@ class SerializeFieldsTest(unittest.TestCase):
                 'str_field': "some value"
             })
 
-    def test_optional_field_without_value(self):
+    def test_serialize_optional_field_without_value(self):
 
         @dataclass
         class SimpleClassWithOptionalField:
@@ -97,6 +131,118 @@ class SerializeFieldsTest(unittest.TestCase):
                 'int_field': [],
                 'str_field': "foo"
             })
+
+    def test_deserialize_list_fields(self):
+
+        @dataclass
+        class SimpleClassWithList:
+            int_field: List[int] = field(default_factory=list)
+            str_field: str = "foo"
+
+        instance = SimpleClassWithList([1, 2, 3, 4, 5])
+        self.assertEqual(
+            instance_from_dict(
+                SimpleClassWithList, {
+                    'int_field': [1, 2, 3, 4, 5],
+                    'str_field': "foo"
+                }), instance)
+
+    def test_deserialize_empty_list_fields(self):
+
+        @dataclass
+        class SimpleClassWithList:
+            int_field: List[int] = field(default_factory=list)
+            str_field: str = "foo"
+
+        instance = SimpleClassWithList()
+        self.assertEqual(
+            instance_from_dict(
+                SimpleClassWithList, {
+                    'int_field': [],
+                    'str_field': "foo"
+                }), instance)
+
+    def test_deserialize_missing_list_fields_empty(self):
+
+        @dataclass
+        class SimpleClassWithList:
+            int_field: List[int] = field(default_factory=list)
+            str_field: str = "foo"
+
+        instance = SimpleClassWithList()
+        self.assertEqual(
+            instance_from_dict(SimpleClassWithList, {'str_field': "foo"}),
+            instance)
+
+    def test_serialize_set_fields(self):
+        # Note that this also tests that sets are serialized into sorted-order
+        @dataclass
+        class SimpleClassWithSet:
+            int_field: Set[int] = field(default_factory=set)
+            str_field: str = "foo"
+
+        instance = SimpleClassWithSet(set([5, 4, 3, 2, 1]))
+        self.assertEqual(
+            instance_to_dict(instance), {
+                'int_field': [1, 2, 3, 4, 5],
+                'str_field': "foo"
+            })
+
+    def test_serialize_empty_set_fields(self):
+
+        @dataclass
+        class SimpleClassWithSet:
+            int_field: Set[int] = field(default_factory=set)
+            str_field: str = "foo"
+
+        instance = SimpleClassWithSet()
+        self.assertEqual(
+            instance_to_dict(instance), {
+                'int_field': [],
+                'str_field': "foo"
+            })
+
+    def test_deserialize_set_fields(self):
+
+        @dataclass
+        class SimpleClassWithSet:
+            int_field: Set[int] = field(default_factory=set)
+            str_field: str = "foo"
+
+        instance = SimpleClassWithSet(set([5, 4, 3, 2, 1]))
+        self.assertEqual(
+            instance_from_dict(
+                SimpleClassWithSet, {
+                    'int_field': [1, 2, 3, 4, 5],
+                    'str_field': "foo"
+                }), instance)
+
+    def test_deserialize_empty_set_fields(self):
+
+        @dataclass
+        class SimpleClassWithSet:
+            int_field: Set[int] = field(default_factory=set)
+            str_field: str = "foo"
+
+        instance = SimpleClassWithSet()
+        self.assertEqual(
+            instance_from_dict(
+                SimpleClassWithSet, {
+                    'int_field': [],
+                    'str_field': "foo"
+                }), instance)
+
+    def test_deserialize_missing_set_fields_empty(self):
+
+        @dataclass
+        class SimpleClassWithSet:
+            str_field: str = "foo"
+            int_field: Set[int] = field(default_factory=set)
+
+        instance = SimpleClassWithSet()
+        self.assertEqual(
+            instance_from_dict(SimpleClassWithSet, {'str_field': "foo"}),
+            instance)
 
     def test_serialize_dict_fields(self):
 
