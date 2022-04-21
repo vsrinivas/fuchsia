@@ -292,6 +292,135 @@ class SerializeFieldsTest(unittest.TestCase):
                 'str_field': "a string",
             })
 
+    def test_serialize_class_with_superclass(self):
+
+        @dataclass
+        class SimpleBaseClass:
+            int_field_base: int
+            str_field_base: str
+
+        @dataclass
+        class SimpleChildClass(SimpleBaseClass):
+            int_field_child: int
+            str_field_child: str
+
+        instance = SimpleChildClass(
+            int_field_base=42,
+            str_field_base="base",
+            int_field_child=84,
+            str_field_child="child")
+        self.assertEqual(
+            instance_to_dict(instance), {
+                'int_field_base': 42,
+                'str_field_base': 'base',
+                'int_field_child': 84,
+                'str_field_child': "child"
+            })
+
+    def test_deserialize_class_with_superclass(self):
+
+        @dataclass
+        class SimpleBaseClass:
+            int_field_base: int
+            str_field_base: str
+
+        @dataclass
+        class SimpleChildClass(SimpleBaseClass):
+            int_field_child: int
+            str_field_child: str
+
+        instance = SimpleChildClass(
+            int_field_base=42,
+            str_field_base="base",
+            int_field_child=84,
+            str_field_child="child")
+
+        self.assertEqual(
+            instance_from_dict(
+                SimpleChildClass, {
+                    'int_field_base': 42,
+                    'str_field_base': 'base',
+                    'int_field_child': 84,
+                    'str_field_child': "child"
+                }), instance)
+
+    def test_serialize_class_with_multiple_superclasses(self):
+
+        @dataclass
+        class RootClass:
+            int_field_root: int
+
+        @dataclass
+        class SimpleBaseClass(RootClass):
+            int_field_base: int
+            str_field_base: str
+
+        @dataclass
+        class AnotherBaseClass:
+            str_field_another: str
+
+        @dataclass
+        class SimpleChildClass(SimpleBaseClass, AnotherBaseClass):
+            int_field_child: int
+            str_field_child: str
+
+        instance = SimpleChildClass(
+            int_field_root=89,
+            int_field_base=42,
+            str_field_base="base",
+            str_field_another="another",
+            int_field_child=84,
+            str_field_child="child")
+
+        self.assertEqual(
+            instance_to_dict(instance), {
+                'int_field_root': 89,
+                'int_field_base': 42,
+                'str_field_base': 'base',
+                'str_field_another': 'another',
+                'int_field_child': 84,
+                'str_field_child': "child"
+            })
+
+    def test_deserialize_class_with_multiple_superclasses(self):
+
+        @dataclass
+        class RootClass:
+            int_field_root: int
+
+        @dataclass
+        class SimpleBaseClass(RootClass):
+            int_field_base: int
+            str_field_base: str
+
+        @dataclass
+        class AnotherBaseClass:
+            str_field_another: str
+
+        @dataclass
+        class SimpleChildClass(SimpleBaseClass, AnotherBaseClass):
+            int_field_child: int
+            str_field_child: str
+
+        instance = SimpleChildClass(
+            int_field_root=89,
+            int_field_base=42,
+            str_field_base="base",
+            str_field_another="another",
+            int_field_child=84,
+            str_field_child="child")
+
+        self.assertEqual(
+            instance_from_dict(
+                SimpleChildClass, {
+                    'int_field_root': 89,
+                    'int_field_base': 42,
+                    'str_field_base': 'base',
+                    'str_field_another': 'another',
+                    'int_field_child': 84,
+                    'str_field_child': "child"
+                }), instance)
+
 
 class SerializeToDictDecorator(unittest.TestCase):
     """Validate that the `@serialize_to_dict class decorator behaves correctly.

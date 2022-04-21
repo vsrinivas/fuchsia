@@ -328,7 +328,10 @@ def instance_to_dict(instance: Any) -> Dict[str, Any]:
             some_field: int
             some_other_field: Optional[str]
      """
-    field_types = typing.get_type_hints(instance)
+    # Get the type hints for the class, not the instance, because it's only
+    # meant to be used with 'function, method, module, or class object' per the
+    # documentation.
+    field_types = typing.get_type_hints(instance.__class__)
     result = {}
     for name in field_types.keys():
         # First get the value of each field.
