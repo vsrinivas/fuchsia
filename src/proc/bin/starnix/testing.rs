@@ -163,3 +163,13 @@ pub fn check_unmapped(current_task: &CurrentTask, addr: UserAddress) {
         }
     }
 }
+
+/// An FsNodeOps implementation that panics if you try to open it. Useful as a stand-in for testing
+/// APIs that require a FsNodeOps implementation but don't actually use it.
+pub struct PlaceholderFsNodeOps;
+
+impl FsNodeOps for PlaceholderFsNodeOps {
+    fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
+        panic!("should not be called")
+    }
+}

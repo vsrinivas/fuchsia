@@ -20,7 +20,7 @@ use bitflags::bitflags;
 use fuchsia_zircon as zx;
 use parking_lot::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use slab::Slab;
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{btree_map::Entry as BTreeMapEntry, BTreeMap, VecDeque};
 use std::sync::{Arc, Weak};
 use zerocopy::{AsBytes, FromBytes};
 
@@ -28,28 +28,52 @@ use zerocopy::{AsBytes, FromBytes};
 const MAX_MMAP_SIZE: usize = 4 * 1024 * 1024;
 
 /// Android's binder kernel driver implementation.
-#[derive(Clone)]
-pub struct BinderDev(Arc<BinderDriver>);
+pub struct BinderDev {
+    driver: Arc<BinderDriver>,
+}
 
 impl BinderDev {
     pub fn new() -> Self {
-        Self(Arc::new(BinderDriver::new()))
+        Self { driver: Arc::new(BinderDriver::new()) }
     }
 }
 
 impl DeviceOps for BinderDev {
     fn open(
         &self,
-        _current_task: &CurrentTask,
+        current_task: &CurrentTask,
         _id: DeviceType,
         _node: &FsNode,
         _flags: OpenFlags,
     ) -> Result<Box<dyn FileOps>, Errno> {
-        Ok(Box::new(self.clone()))
+        let binder_proc = Arc::new(BinderProcess::new(current_task.get_pid()));
+        match self.driver.procs.write().entry(binder_proc.pid) {
+            BTreeMapEntry::Vacant(entry) => {
+                // The process has not previously opened the binder device.
+                entry.insert(Arc::downgrade(&binder_proc));
+            }
+            BTreeMapEntry::Occupied(mut entry) if entry.get().upgrade().is_none() => {
+                // The process previously closed the binder device, so it can re-open it.
+                entry.insert(Arc::downgrade(&binder_proc));
+            }
+            _ => {
+                // A process cannot open the same binder device more than once.
+                return error!(EINVAL);
+            }
+        }
+        Ok(Box::new(BinderDevInstance { proc: binder_proc, driver: self.driver.clone() }))
     }
 }
 
-impl FileOps for BinderDev {
+/// An instance of the binder driver, associated with the process that opened the binder device.
+struct BinderDevInstance {
+    /// The process that opened the binder device.
+    proc: Arc<BinderProcess>,
+    /// The implementation of the binder driver.
+    driver: Arc<BinderDriver>,
+}
+
+impl FileOps for BinderDevInstance {
     fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {
         FdEvents::POLLIN | FdEvents::POLLOUT
     }
@@ -62,11 +86,16 @@ impl FileOps for BinderDev {
         events: FdEvents,
         handler: EventHandler,
     ) -> WaitKey {
-        self.0.wait_async(current_task, waiter, events, handler)
+        let binder_thread = self
+            .proc
+            .thread_pool
+            .write()
+            .find_or_register_thread(&self.proc, current_task.get_tid());
+        self.driver.wait_async(&self.proc, &binder_thread, waiter, events, handler)
     }
 
-    fn cancel_wait(&self, current_task: &CurrentTask, waiter: &Arc<Waiter>, key: WaitKey) {
-        self.0.cancel_wait(current_task, waiter, key);
+    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Arc<Waiter>, key: WaitKey) {
+        self.driver.cancel_wait(&self.proc, key)
     }
 
     fn ioctl(
@@ -76,7 +105,12 @@ impl FileOps for BinderDev {
         request: u32,
         user_addr: UserAddress,
     ) -> Result<SyscallResult, Errno> {
-        self.0.ioctl(current_task, request, user_addr)
+        let binder_thread = self
+            .proc
+            .thread_pool
+            .write()
+            .find_or_register_thread(&self.proc, current_task.get_tid());
+        self.driver.ioctl(current_task, &self.proc, &binder_thread, request, user_addr)
     }
 
     fn get_vmo(
@@ -86,21 +120,21 @@ impl FileOps for BinderDev {
         length: Option<usize>,
         _prot: zx::VmarFlags,
     ) -> Result<zx::Vmo, Errno> {
-        self.0.get_vmo(length.unwrap_or(MAX_MMAP_SIZE))
+        self.driver.get_vmo(length.unwrap_or(MAX_MMAP_SIZE))
     }
 
     fn mmap(
         &self,
-        file: &FileObject,
+        _file: &FileObject,
         current_task: &CurrentTask,
         addr: DesiredAddress,
-        vmo_offset: u64,
+        _vmo_offset: u64,
         length: usize,
         flags: zx::VmarFlags,
         mapping_options: MappingOptions,
         filename: NamespaceNode,
     ) -> Result<MappedVmo, Errno> {
-        self.0.mmap(file, current_task, addr, vmo_offset, length, flags, mapping_options, filename)
+        self.driver.mmap(current_task, &self.proc, addr, length, flags, mapping_options, filename)
     }
 
     fn read(
@@ -718,7 +752,7 @@ struct BinderDriver {
     context_manager: RwLock<Option<Weak<BinderProcess>>>,
 
     /// Manages the internal state of each process interacting with the binder driver.
-    procs: RwLock<BTreeMap<pid_t, Arc<BinderProcess>>>,
+    procs: RwLock<BTreeMap<pid_t, Weak<BinderProcess>>>,
 }
 
 impl BinderDriver {
@@ -727,25 +761,7 @@ impl BinderDriver {
     }
 
     fn find_process(&self, pid: pid_t) -> Result<Arc<BinderProcess>, Errno> {
-        self.procs.read().get(&pid).cloned().ok_or_else(|| errno!(ENOENT))
-    }
-
-    /// Returns the binder process and thread states that represent the `current_task`.
-    fn get_proc_and_thread(
-        &self,
-        current_task: &CurrentTask,
-    ) -> (Arc<BinderProcess>, Arc<BinderThread>) {
-        let binder_proc = self
-            .procs
-            .write()
-            .entry(current_task.get_pid())
-            .or_insert_with(|| Arc::new(BinderProcess::new(current_task.get_pid())))
-            .clone();
-        let binder_thread = binder_proc
-            .thread_pool
-            .write()
-            .find_or_register_thread(&binder_proc, current_task.get_tid());
-        (binder_proc, binder_thread)
+        self.procs.read().get(&pid).and_then(Weak::upgrade).ok_or_else(|| errno!(ENOENT))
     }
 
     /// Creates the binder process state to represent a process with `pid`.
@@ -753,7 +769,7 @@ impl BinderDriver {
     fn create_process(&self, pid: pid_t) -> Arc<BinderProcess> {
         let binder_process = Arc::new(BinderProcess::new(pid));
         assert!(
-            self.procs.write().insert(pid, binder_process.clone()).is_none(),
+            self.procs.write().insert(pid, Arc::downgrade(&binder_process)).is_none(),
             "process with same pid created"
         );
         binder_process
@@ -785,6 +801,8 @@ impl BinderDriver {
     fn ioctl(
         &self,
         current_task: &CurrentTask,
+        binder_proc: &Arc<BinderProcess>,
+        binder_thread: &Arc<BinderThread>,
         request: u32,
         user_arg: UserAddress,
     ) -> Result<SyscallResult, Errno> {
@@ -809,7 +827,6 @@ impl BinderDriver {
 
                 // TODO: Read the flat_binder_object when ioctl is BINDER_IOCTL_SET_CONTEXT_MGR_EXT.
 
-                let (binder_proc, _) = self.get_proc_and_thread(current_task);
                 *self.context_manager.write() = Some(Arc::downgrade(&binder_proc));
                 Ok(SUCCESS)
             }
@@ -823,8 +840,6 @@ impl BinderDriver {
                 let user_ref = UserRef::new(user_arg);
                 let mut input = binder_write_read::new_zeroed();
                 current_task.mm.read_object(user_ref, &mut input)?;
-
-                let (binder_proc, binder_thread) = self.get_proc_and_thread(current_task);
 
                 // We will be writing this back to userspace, don't trust what the client gave us.
                 input.write_consumed = 0;
@@ -1386,17 +1401,14 @@ impl BinderDriver {
 
     fn mmap(
         &self,
-        _file: &FileObject,
         current_task: &CurrentTask,
+        binder_proc: &Arc<BinderProcess>,
         addr: DesiredAddress,
-        _vmo_offset: u64,
         length: usize,
         flags: zx::VmarFlags,
         mapping_options: MappingOptions,
         filename: NamespaceNode,
     ) -> Result<MappedVmo, Errno> {
-        let (binder_proc, _) = self.get_proc_and_thread(current_task);
-
         // Do not support mapping shared memory more than once.
         let mut shared_memory = binder_proc.shared_memory.lock();
         if shared_memory.is_some() {
@@ -1434,13 +1446,12 @@ impl BinderDriver {
 
     fn wait_async(
         &self,
-        current_task: &CurrentTask,
+        binder_proc: &Arc<BinderProcess>,
+        binder_thread: &Arc<BinderThread>,
         waiter: &Arc<Waiter>,
         events: FdEvents,
         handler: EventHandler,
     ) -> WaitKey {
-        let (binder_proc, binder_thread) = self.get_proc_and_thread(current_task);
-
         // THREADING: Always acquire the [`BinderProcess::command_queue`] lock before the
         // [`BinderThread::state`] lock or else it may lead to deadlock.
         let proc_command_queue = binder_proc.command_queue.lock();
@@ -1453,10 +1464,8 @@ impl BinderDriver {
         }
     }
 
-    fn cancel_wait(&self, current_task: &CurrentTask, _waiter: &Arc<Waiter>, key: WaitKey) -> bool {
-        let (binder_proc, _) = self.get_proc_and_thread(current_task);
-        let result = binder_proc.waiters.lock().cancel_wait(key);
-        result
+    fn cancel_wait(&self, binder_proc: &Arc<BinderProcess>, key: WaitKey) {
+        binder_proc.waiters.lock().cancel_wait(key);
     }
 }
 
@@ -1928,5 +1937,30 @@ mod tests {
             .expect("expected handle not present");
         assert!(std::ptr::eq(proxy.owner.as_ptr(), Arc::as_ptr(&owner)));
         assert_eq!(proxy.object, binder_object);
+    }
+
+    #[fuchsia::test]
+    fn process_state_cleaned_up_after_binder_fd_closed() {
+        let (_kernel, current_task) = create_kernel_and_task();
+        let binder_dev = BinderDev::new();
+        let node = FsNode::new_root(PlaceholderFsNodeOps);
+
+        // Open the binder device, which creates an instance of the binder device associated with
+        // the process.
+        let binder_instance = binder_dev
+            .open(&current_task, DeviceType::NONE, &node, OpenFlags::RDWR)
+            .expect("binder dev open failed");
+
+        // Ensure that the binder driver has created process state.
+        binder_dev.driver.find_process(current_task.get_pid()).expect("failed to find process");
+
+        // Simulate closing the FD by dropping the binder instance.
+        drop(binder_instance);
+
+        // Verify that the process state no longer exists.
+        binder_dev
+            .driver
+            .find_process(current_task.get_pid())
+            .expect_err("process was not cleaned up");
     }
 }

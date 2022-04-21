@@ -180,7 +180,6 @@ impl DeviceRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fs::FsNodeOps;
     use crate::testing::*;
 
     #[::fuchsia::test]
@@ -189,13 +188,6 @@ mod tests {
         registry.register_chrdev_static_id(DevNull).expect("registers once");
         registry.register_chrdev_static_id(DevZero).expect("registers unique");
         registry.register_chrdev_static_id(DevNull).expect_err("fail to register duplicate");
-    }
-
-    struct PlaceholderFsNodeOps;
-    impl FsNodeOps for PlaceholderFsNodeOps {
-        fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-            panic!("should not be called")
-        }
     }
 
     #[::fuchsia::test]
