@@ -79,7 +79,6 @@
             "fuchsia.weave.FactoryDataManager",
             "fuchsia.weave.Stack",
             "fuchsia.web.ContextProvider",
-            "fuchsia.wlan.device.Phy",
             "fuchsia.wlan.device.service.DeviceMonitor",
             "fuchsia.wlan.device.service.DeviceService",
             "fuchsia.wlan.policy.AccessPointListener",
