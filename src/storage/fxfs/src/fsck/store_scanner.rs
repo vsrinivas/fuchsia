@@ -4,20 +4,17 @@
 
 use {
     crate::{
+        fsck::{
+            errors::{FsckError, FsckFatal, FsckIssue, FsckWarning},
+            Fsck,
+        },
         lsm_tree::types::{Item, ItemRef, LayerIterator, MutableLayer},
         object_handle::INVALID_OBJECT_ID,
         object_store::{
             allocator::{self, AllocatorKey, AllocatorValue},
-            extent_record::{ExtentKey, ExtentValue, DEFAULT_DATA_ATTRIBUTE_ID},
-            fsck::{
-                errors::{FsckError, FsckFatal, FsckIssue, FsckWarning},
-                Fsck,
-            },
             graveyard::Graveyard,
-            object_record::{
-                AttributeKey, ObjectDescriptor, ObjectKey, ObjectKeyData, ObjectKind, ObjectValue,
-            },
-            ObjectStore,
+            AttributeKey, ExtentKey, ExtentValue, ObjectDescriptor, ObjectKey, ObjectKeyData,
+            ObjectKind, ObjectStore, ObjectValue, DEFAULT_DATA_ATTRIBUTE_ID,
         },
         range::RangeExt,
         round::round_up,
@@ -502,7 +499,7 @@ async fn scan_extents<'a, F: Fn(&FsckIssue)>(
 ) -> Result<(), Error> {
     let store_id = store.store_object_id();
     let bs = store.block_size();
-    let layer_set = store.tree.layer_set();
+    let layer_set = store.tree().layer_set();
     let mut merger = layer_set.merger();
     let mut iter = merger.seek(Bound::Unbounded).await?;
     let mut allocated_bytes = 0;
@@ -613,7 +610,7 @@ pub(super) async fn scan_store<F: Fn(&FsckIssue)>(
     let mut scanned = ScannedStore::new(fsck, root_objects, store_id, store.is_root());
 
     // Scan the store for objects, attributes, and parent/child relationships.
-    let layer_set = store.tree.layer_set();
+    let layer_set = store.tree().layer_set();
     let mut merger = layer_set.merger();
     let mut iter =
         fsck.assert(merger.seek(Bound::Unbounded).await, FsckFatal::MalformedStore(store_id))?;

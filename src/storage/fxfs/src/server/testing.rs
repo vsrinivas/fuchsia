@@ -6,10 +6,8 @@ use {
     crate::{
         crypt::InsecureCrypt,
         filesystem::{FxFilesystem, OpenFxFilesystem},
-        object_store::{
-            fsck::{errors::FsckIssue, fsck_with_options, FsckOptions},
-            volume::root_volume,
-        },
+        fsck::{errors::FsckIssue, fsck_with_options, FsckOptions},
+        object_store::volume::root_volume,
         server::volume::FxVolumeAndRoot,
     },
     anyhow::Error,

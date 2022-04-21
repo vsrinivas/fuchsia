@@ -1382,10 +1382,10 @@ mod tests {
     use {
         crate::{
             filesystem::{Filesystem, FxFilesystem, SyncOptions},
+            fsck::fsck,
             object_handle::{ObjectHandle, ReadObjectHandle, WriteObjectHandle},
             object_store::{
                 directory::Directory,
-                fsck::fsck,
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectStore,
             },

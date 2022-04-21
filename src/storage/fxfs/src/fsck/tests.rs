@@ -6,6 +6,10 @@ use {
     crate::{
         crypt::{Crypt, InsecureCrypt},
         filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem, OpenOptions},
+        fsck::{
+            errors::{FsckError, FsckFatal, FsckIssue, FsckWarning},
+            fsck_with_options, FsckOptions,
+        },
         lsm_tree::{
             simple_persistent_layer::SimplePersistentLayerWriter,
             types::{Item, ItemRef, Key, LayerIterator, LayerWriter, Value},
@@ -17,18 +21,10 @@ use {
                 CoalescingIterator, SimpleAllocator,
             },
             directory::Directory,
-            extent_record::ExtentValue,
-            fsck::{
-                errors::{FsckError, FsckFatal, FsckIssue, FsckWarning},
-                fsck_with_options, FsckOptions,
-            },
-            object_record::{
-                AttributeKey, EncryptionKeys, ObjectAttributes, ObjectDescriptor, ObjectKey,
-                ObjectKind, ObjectValue, Timestamp,
-            },
             transaction::{self, Options, TransactionHandler},
             volume::root_volume,
-            HandleOptions, Mutation, ObjectStore,
+            AttributeKey, EncryptionKeys, ExtentValue, HandleOptions, Mutation, ObjectAttributes,
+            ObjectDescriptor, ObjectKey, ObjectKind, ObjectStore, ObjectValue, Timestamp,
         },
         round::round_down,
         serialized_types::VersionedLatest,
@@ -1133,14 +1129,14 @@ async fn test_file_length_mismatch() {
         transaction.add(
             store.store_object_id(),
             Mutation::replace_or_insert_object(
-                ObjectKey::attribute(handle.object_id, handle.attribute_id, AttributeKey::Size),
+                ObjectKey::attribute(handle.object_id(), handle.attribute_id(), AttributeKey::Size),
                 ObjectValue::attribute(123),
             ),
         );
         transaction.add(
             store.store_object_id(),
             Mutation::replace_or_insert_object(
-                ObjectKey::object(handle.object_id),
+                ObjectKey::object(handle.object_id()),
                 ObjectValue::Object {
                     kind: ObjectKind::File {
                         refs: 1,

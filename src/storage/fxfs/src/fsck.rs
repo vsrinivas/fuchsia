@@ -6,6 +6,7 @@ use {
     crate::{
         crypt::Crypt,
         filesystem::{Filesystem, FxFilesystem},
+        fsck::errors::{FsckError, FsckFatal, FsckIssue, FsckWarning},
         lsm_tree::{
             simple_persistent_layer::SimplePersistentLayer,
             skip_list_layer::SkipListLayer,
@@ -20,11 +21,10 @@ use {
                 SimpleAllocator,
             },
             constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
-            fsck::errors::{FsckError, FsckFatal, FsckIssue, FsckWarning},
-            object_record::{ObjectKey, ObjectValue},
             transaction::{LockKey, TransactionHandler},
             volume::root_volume,
-            HandleOptions, LockState, ObjectStore, StoreInfo, MAX_STORE_INFO_SERIALIZED_SIZE,
+            HandleOptions, LockState, ObjectKey, ObjectStore, ObjectValue, StoreInfo,
+            MAX_STORE_INFO_SERIALIZED_SIZE,
         },
         serialized_types::VersionedLatest,
     },

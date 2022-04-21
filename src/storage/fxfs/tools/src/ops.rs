@@ -8,10 +8,10 @@ use {
     fxfs::{
         crypt::Crypt,
         filesystem::OpenFxFilesystem,
+        fsck,
         object_handle::{GetProperties, ObjectHandle, ReadObjectHandle, WriteObjectHandle},
         object_store::{
             directory::replace_child,
-            fsck::{self},
             transaction::{Options, TransactionHandler},
             volume::root_volume,
             Directory, HandleOptions, ObjectDescriptor, ObjectStore,

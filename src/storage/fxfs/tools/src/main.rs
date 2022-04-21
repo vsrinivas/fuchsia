@@ -9,7 +9,7 @@ use {
     fxfs::{
         crypt::{Crypt, InsecureCrypt},
         filesystem::{mkfs, FxFilesystem},
-        object_store::fsck::{self},
+        fsck,
     },
     std::{io::Read, path::Path, sync::Arc},
     storage_device::{file_backed_device::FileBackedDevice, DeviceHolder},

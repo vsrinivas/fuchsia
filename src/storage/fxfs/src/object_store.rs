@@ -7,7 +7,6 @@ pub mod caching_object_handle;
 pub mod constants;
 pub mod directory;
 mod extent_record;
-pub mod fsck;
 pub mod graveyard;
 pub mod journal;
 mod merge;
@@ -41,15 +40,13 @@ use {
         metrics::{traits::Metric, StringMetric, UintMetric},
         object_handle::{ObjectHandle, ObjectHandleExt, WriteObjectHandle, INVALID_OBJECT_ID},
         object_store::{
-            extent_record::DEFAULT_DATA_ATTRIBUTE_ID,
             graveyard::Graveyard,
             journal::JournalCheckpoint,
             object_manager::{ObjectManager, ReservationUpdate},
-            object_record::{AttributeKey, EncryptionKeys, ObjectKeyData, ObjectKind},
             store_object_handle::DirectWriter,
             transaction::{
-                AssocObj, AssociatedObject, LockKey, Mutation, ObjectStoreMutation, Operation,
-                Options, Transaction,
+                AssocObj, AssociatedObject, LockKey, ObjectStoreMutation, Operation, Options,
+                Transaction,
             },
         },
         serialized_types::{Versioned, VersionedLatest},
@@ -74,9 +71,13 @@ use {
 
 // Exposed for serialized_types.
 pub use allocator::{AllocatorInfo, AllocatorKey, AllocatorValue};
-pub use extent_record::{ExtentKey, ExtentValue};
+pub use extent_record::{ExtentKey, ExtentValue, DEFAULT_DATA_ATTRIBUTE_ID};
 pub use journal::{JournalRecord, JournalRecordV1, SuperBlock, SuperBlockRecord};
-pub use object_record::{ObjectKey, ObjectValue};
+pub use object_record::{
+    AttributeKey, EncryptionKeys, ObjectAttributes, ObjectKey, ObjectKeyData, ObjectKind,
+    ObjectValue,
+};
+pub use transaction::Mutation;
 
 /// StoreObjectHandle stores an owner that must implement this trait, which allows the handle to get
 /// back to an ObjectStore and provides a callback for creating a data buffer for the handle.
@@ -99,7 +100,7 @@ pub struct StoreInfo {
 
     /// Object ids for layers.  TODO(fxbug.dev/95971): need a layer of indirection here so we can
     /// support snapshots.
-    layers: Vec<u64>,
+    pub layers: Vec<u64>,
 
     /// The object ID for the root directory.
     root_directory_object_id: u64,
@@ -132,9 +133,9 @@ impl StoreInfo {
 
 // TODO(fxbug.dev/95972): We should test or put checks in place to ensure this limit isn't exceeded.
 // It will likely involve placing limits on the maximum number of layers.
-const MAX_STORE_INFO_SERIALIZED_SIZE: usize = 131072;
+pub const MAX_STORE_INFO_SERIALIZED_SIZE: usize = 131072;
 
-const MAX_ENCRYPTED_MUTATIONS_SIZE: usize = 8 * journal::DEFAULT_RECLAIM_SIZE as usize;
+pub const MAX_ENCRYPTED_MUTATIONS_SIZE: usize = 8 * journal::DEFAULT_RECLAIM_SIZE as usize;
 
 #[derive(Default)]
 pub struct HandleOptions {
@@ -297,7 +298,7 @@ impl StoreOrReplayInfo {
 }
 
 #[derive(Clone)]
-enum LockState {
+pub enum LockState {
     Locked,
     Unencrypted,
     Unlocked(Arc<dyn Crypt>),
@@ -491,7 +492,7 @@ impl ObjectStore {
         }
     }
 
-    fn is_root(&self) -> bool {
+    pub fn is_root(&self) -> bool {
         if let Some(parent) = &self.parent_store {
             parent.parent_store.is_none()
         } else {
@@ -500,7 +501,7 @@ impl ObjectStore {
         }
     }
 
-    fn device(&self) -> &Arc<dyn Device> {
+    pub fn device(&self) -> &Arc<dyn Device> {
         &self.device
     }
 
@@ -524,7 +525,7 @@ impl ObjectStore {
         self.store_info.lock().unwrap().info().unwrap().root_directory_object_id
     }
 
-    fn graveyard_directory_object_id(&self) -> u64 {
+    pub fn graveyard_directory_object_id(&self) -> u64 {
         self.store_info.lock().unwrap().info().unwrap().graveyard_directory_object_id
     }
 
@@ -817,7 +818,7 @@ impl ObjectStore {
     }
 
     /// Returns all objects that exist in the parent store that pertain to this object store.
-    fn parent_objects(&self) -> Vec<u64> {
+    pub fn parent_objects(&self) -> Vec<u64> {
         assert!(self.store_info_handle.get().is_some());
         let mut objects = Vec::new();
         // We should not include the ID of the store itself, since that should be referred to in the
@@ -832,7 +833,7 @@ impl ObjectStore {
     }
 
     /// Returns root objects for this store.
-    fn root_objects(&self) -> Vec<u64> {
+    pub fn root_objects(&self) -> Vec<u64> {
         let mut objects = Vec::new();
         let store_info = self.store_info.lock().unwrap();
         let info = store_info.info().unwrap();
@@ -845,7 +846,7 @@ impl ObjectStore {
         objects
     }
 
-    fn store_info(&self) -> StoreInfo {
+    pub fn store_info(&self) -> StoreInfo {
         self.store_info.lock().unwrap().info().unwrap().clone()
     }
 
@@ -979,7 +980,7 @@ impl ObjectStore {
 
     /// Unlocks a store so that it is ready to be used.
     /// This is not thread-safe.
-    async fn unlock(&self, crypt: Arc<dyn Crypt>) -> Result<(), Error> {
+    pub async fn unlock(&self, crypt: Arc<dyn Crypt>) -> Result<(), Error> {
         let store_info = self.store_info();
 
         // The store should be locked.
@@ -1057,11 +1058,11 @@ impl ObjectStore {
         Ok(())
     }
 
-    fn lock_state(&self) -> LockState {
+    pub fn lock_state(&self) -> LockState {
         self.lock_state.lock().unwrap().clone()
     }
 
-    fn is_locked(&self) -> bool {
+    pub fn is_locked(&self) -> bool {
         matches!(*self.lock_state.lock().unwrap(), LockState::Locked)
     }
 
@@ -1508,12 +1509,12 @@ mod tests {
             crypt::{Crypt, InsecureCrypt},
             errors::FxfsError,
             filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem, SyncOptions},
+            fsck::fsck,
             lsm_tree::types::{Item, ItemRef, LayerIterator},
             object_handle::{ObjectHandle, ReadObjectHandle, WriteObjectHandle},
             object_store::{
                 directory::Directory,
                 extent_record::{ExtentKey, ExtentValue},
-                fsck::fsck,
                 object_record::{AttributeKey, ObjectKey, ObjectKeyData, ObjectValue},
                 transaction::{Options, TransactionHandler},
                 volume::root_volume,

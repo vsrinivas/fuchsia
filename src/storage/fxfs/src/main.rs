@@ -13,7 +13,7 @@ use {
     fxfs::{
         crypt::{Crypt, InsecureCrypt},
         filesystem::{mkfs, FxFilesystem, OpenOptions},
-        object_store::fsck::{self},
+        fsck,
         serialized_types::LATEST_VERSION,
         server::{FxfsServer, RemoteCrypt},
     },

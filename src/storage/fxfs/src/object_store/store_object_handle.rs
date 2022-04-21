@@ -79,6 +79,10 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         &self.owner
     }
 
+    pub fn attribute_id(&self) -> u64 {
+        self.attribute_id
+    }
+
     pub fn store(&self) -> &ObjectStore {
         self.owner.as_ref().as_ref()
     }

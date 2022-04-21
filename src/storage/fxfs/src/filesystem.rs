@@ -540,13 +540,13 @@ mod tests {
     use {
         super::{Filesystem, FxFilesystem, OpenOptions, SyncOptions},
         crate::{
+            fsck::fsck,
             lsm_tree::{types::Item, Operation},
             object_handle::{ObjectHandle, WriteObjectHandle},
             object_store::{
                 allocator::SimpleAllocator,
                 directory::replace_child,
                 directory::Directory,
-                fsck::fsck,
                 journal::JournalOptions,
                 transaction::{Options, TransactionHandler},
             },
