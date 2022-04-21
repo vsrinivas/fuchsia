@@ -29,6 +29,8 @@
 
 namespace compat {
 
+constexpr char kDfv2Variable[] = "IS_DFV2";
+
 // The DFv1 ops: zx_protocol_device_t.
 constexpr char kOps[] = "compat-ops";
 

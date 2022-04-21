@@ -4,6 +4,7 @@
 
 #include <lib/ddk/debug.h>
 #include <lib/zx/profile.h>
+#include <zircon/errors.h>
 
 #include <ddktl/fidl.h>
 
@@ -194,6 +195,17 @@ __EXPORT zx_status_t device_get_fragment_metadata(zx_device_t* dev, const char* 
 
 __EXPORT zx_status_t device_get_variable(zx_device_t* device, const char* name, char* out,
                                          size_t out_size, size_t* size_actual) {
+  if (!strncmp(name, compat::kDfv2Variable, sizeof(compat::kDfv2Variable))) {
+    if (size_actual) {
+      *size_actual = 2;
+    }
+    if (out_size < 2) {
+      return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+    out[0] = '1';
+    out[1] = 0;
+    return ZX_OK;
+  }
   return ZX_ERR_NOT_SUPPORTED;
 }
 

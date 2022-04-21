@@ -148,6 +148,7 @@ executable("unittests") {
   testonly = true
   output_name = "compat_test"
   sources = [
+    "api_test.cc",
     "device_test.cc",
     "driver_test.cc",
     "loader_test.cc",
