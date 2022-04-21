@@ -132,7 +132,11 @@ func mainImpl(ctx context.Context) error {
 	}
 
 	// Set the build dir used by subsequent fx commands.
-	if err := fx.run(ctx, "use", contextSpec.BuildDir); err != nil {
+	buildDir := contextSpec.BuildDir
+	if relBuildDir, err := filepath.Rel(contextSpec.CheckoutDir, contextSpec.BuildDir); err == nil {
+		buildDir = relBuildDir
+	}
+	if err := fx.run(ctx, "use", buildDir); err != nil {
 		return fmt.Errorf("failed to set build directory: %w", err)
 	}
 
