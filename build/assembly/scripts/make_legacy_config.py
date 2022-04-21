@@ -11,15 +11,12 @@ removing any other configuration sets from it.
 import argparse
 import json
 import os
-import pathlib
 import shutil
 import sys
-from typing import Any, Dict, List, Set, Tuple
+from typing import List, Set, Tuple
 
-from assembly import fast_copy, AssemblyInputBundle, BlobEntry, ConfigDataEntries
-from assembly import FileEntry, FilePath, ImageAssemblyConfig, PackageManifest
+from assembly import AssemblyInputBundle, AIBCreator, FileEntry, FilePath, ImageAssemblyConfig
 from depfile import DepFile
-from serialization import json_load, json_dump
 
 # Some type annotations for clarity
 PackageManifestList = List[FilePath]
@@ -32,7 +29,7 @@ DepSet = Set[FilePath]
 
 def copy_to_assembly_input_bundle(
         config: ImageAssemblyConfig, config_data_entries: FileEntryList,
-        outdir: FilePath) -> Tuple[AssemblyInputBundle, DepSet]:
+        outdir: FilePath) -> Tuple[AssemblyInputBundle, FilePath, DepSet]:
     """
     Copy all the artifacts from the ImageAssemblyConfig into an AssemblyInputBundle that is in
     outdir, tracking all copy operations in a DepFile that is returned with the resultant bundle.
@@ -43,281 +40,18 @@ def copy_to_assembly_input_bundle(
         - the return value contains a list of all files read/written by the
         copying operation (ie. depfile contents)
     """
-    # Track all files we read
-    deps: DepSet = set()
+    aib_creator = AIBCreator(outdir)
+    aib_creator.base = config.base
+    aib_creator.cache = config.cache
+    aib_creator.system = config.system
+    aib_creator.bootfs_files = config.bootfs_files
+    aib_creator.bootfs_packages = config.bootfs_packages
+    aib_creator.kernel = config.kernel
+    aib_creator.boot_args = config.boot_args
 
-    # Init an empty resultant AssemblyInputBundle
-    result = AssemblyInputBundle()
+    aib_creator.config_data = config_data_entries
 
-    # Copy over the boot args and zbi kernel args, unchanged, into the resultant
-    # assembly bundle
-    result.boot_args = config.boot_args
-    kernel_args = config.kernel.args
-    if kernel_args:
-        result.kernel.args = kernel_args
-    kernel_backstop = config.kernel.clock_backstop
-    if kernel_backstop:
-        result.kernel.clock_backstop = kernel_backstop
-
-    # Copy the manifests for the base package set into the assembly bundle
-    (base_pkgs, base_blobs, base_deps) = copy_packages(config, outdir, "base")
-    deps.update(base_deps)
-    result.base.update(base_pkgs)
-
-    # Strip any base pkgs from the cache set
-    config.cache = config.cache.difference(config.base)
-
-    # Copy the manifests for the cache package set into the assembly bundle
-    (cache_pkgs, cache_blobs,
-     cache_deps) = copy_packages(config, outdir, "cache")
-    deps.update(cache_deps)
-    result.cache.update(cache_pkgs)
-
-    # Copy the manifests for the system package set into the assembly bundle
-    (system_pkgs, system_blobs,
-     system_deps) = copy_packages(config, outdir, "system")
-    deps.update(system_deps)
-    result.system.update(system_pkgs)
-
-    # Copy the manifests for the bootfs package set into the assembly bundle
-    (bootfs_pkgs, bootfs_pkg_blobs,
-     bootfs_pkg_deps) = copy_packages(config, outdir, "bootfs_packages")
-    deps.update(bootfs_pkg_deps)
-    result.bootfs_packages.update(bootfs_pkgs)
-
-    # Deduplicate all blobs by merkle, but don't validate unique sources for
-    # each merkle, last one wins (we trust that in the in-tree build isn't going
-    # to make invalid merkles).
-    all_blobs = {}
-    for (merkle, source) in [*base_blobs, *cache_blobs, *system_blobs,
-                             *bootfs_pkg_blobs]:
-        all_blobs[merkle] = source
-
-    # Copy all the blobs to their dir in the out-of-tree layout
-    (all_blobs, blob_deps) = copy_blobs(all_blobs, outdir)
-    deps.update(blob_deps)
-    result.blobs = set(
-        [os.path.relpath(blob_path, outdir) for blob_path in all_blobs])
-
-    # Copy the bootfs entries
-    (bootfs,
-     bootfs_deps) = copy_file_entries(config.bootfs_files, outdir, "bootfs")
-    deps.update(bootfs_deps)
-    result.bootfs_files.update(bootfs)
-
-    # Rebase the path to the kernel into the out-of-tree layout
-    kernel_src_path: Any = config.kernel.path
-    kernel_filename = os.path.basename(kernel_src_path)
-    kernel_dst_path = os.path.join("kernel", kernel_filename)
-    result.kernel.path = kernel_dst_path
-
-    # Copy the kernel itself into the out-of-tree layout
-    local_kernel_dst_path = os.path.join(outdir, kernel_dst_path)
-    os.makedirs(os.path.dirname(local_kernel_dst_path), exist_ok=True)
-    fast_copy(kernel_src_path, local_kernel_dst_path)
-    deps.add(kernel_src_path)
-
-    # Copy the config_data entries into the out-of-tree layout
-    (config_data,
-     config_data_deps) = copy_config_data_entries(config_data_entries, outdir)
-    deps.update(config_data_deps)
-    result.config_data = config_data
-
-    return (result, deps)
-
-
-def copy_packages(
-        config: ImageAssemblyConfig, outdir: FilePath,
-        set_name: str) -> Tuple[PackageManifestList, BlobList, DepSet]:
-    """Copy package manifests to the assembly bundle outdir, returning the set of blobs
-    that need to be copied as well (so that they blob copying can be done in a
-    single, deduplicated step.)
-    """
-    package_manifests = getattr(config, set_name)
-
-    # Resultant paths to package manifests
-    packages = []
-
-    # All of the blobs to copy, deduplicated by merkle, and validated for
-    # conflicting sources.
-    blobs: BlobList = []
-
-    # The deps touched by this function.
-    deps: DepSet = set()
-
-    # Bail early if empty
-    if len(package_manifests) == 0:
-        return (packages, blobs, deps)
-
-    # Create the directory for the packages, now that we know it will exist
-    packages_dir = os.path.join("packages", set_name)
-    os.makedirs(os.path.join(outdir, packages_dir), exist_ok=True)
-
-    # Open each manifest, record the blobs, and then copy it to its destination,
-    # sorted by path to the package manifest.
-    for package_manifest_path in sorted(package_manifests):
-        with open(package_manifest_path, 'r') as file:
-            manifest = json_load(PackageManifest, file)
-            package_name = manifest.package.name
-            # Track in deps, since it was opened.
-            deps.add(package_manifest_path)
-
-        # But skip config-data, if we find it.
-        if "config-data" == package_name:
-            continue
-
-        # Instead of copying the package manifest itself, the contents of the
-        # manifest needs to be rewritten to reflect the new location of the
-        # blobs within it.
-        new_manifest = PackageManifest(manifest.package, [])
-
-        # For each blob in the manifest:
-        #  1) add it to set of all blobs
-        #  2) add it to the PackageManifest that will be written to the Assembly
-        #     Input Bundle, using the correct source path for within the
-        #     Assembly Input Bundle.
-        for blob in manifest.blobs:
-            source = blob.source_path
-            if source is None:
-                raise ValueError(
-                    f"Found a blob with no source path: {package_name}::{blob.path} in {package_manifest_path}"
-                )
-            merkle = blob.merkle
-            blobs.append((merkle, source))
-
-            blob_destination = os.path.relpath(
-                make_internal_blob_path(blob.merkle), packages_dir)
-            new_manifest.blobs.append(
-                BlobEntry(
-                    blob.path,
-                    blob.merkle,
-                    blob.size,
-                    source_path=blob_destination))
-        new_manifest.set_blob_sources_relative(True)
-
-        # Write the new manifest to its destination within the input bundle.
-        rebased_destination = os.path.join(packages_dir, package_name)
-        package_manifest_destination = os.path.join(outdir, rebased_destination)
-        with open(package_manifest_destination, 'w') as new_manifest_file:
-            json_dump(new_manifest, new_manifest_file)
-
-        # Track the package manifest in our set of packages
-        packages.append(rebased_destination)
-
-    return (packages, blobs, deps)
-
-
-def make_internal_blob_path(merkle: str) -> FilePath:
-    """Common function to compute the destination path to a blob within the
-    AssemblyInputBundle's folder hierarchy.
-    """
-    return os.path.join("blobs", merkle)
-
-
-def copy_blobs(blobs: Dict[Merkle, FilePath],
-               outdir: FilePath) -> Tuple[List[FilePath], DepSet]:
-    blob_paths: List[FilePath] = []
-    deps: DepSet = set()
-
-    # Bail early if empty
-    if len(blobs) == 0:
-        return (blob_paths, deps)
-
-    # Create the directory for the blobs, now that we know it will exist.
-    blobs_dir = os.path.join(outdir, "blobs")
-    os.makedirs(blobs_dir)
-
-    # Copy all blobs
-    for (merkle, source) in blobs.items():
-        blob_destination = os.path.join(outdir, make_internal_blob_path(merkle))
-        blob_paths.append(blob_destination)
-        fast_copy(source, blob_destination)
-        deps.add(source)
-
-    return (blob_paths, deps)
-
-
-def copy_file_entries(entries: FileEntrySet, outdir: FilePath,
-                      set_name: str) -> Tuple[FileEntryList, DepSet]:
-    results: FileEntryList = []
-    deps: DepSet = set()
-
-    # Bail early if nothing to do
-    if len(entries) == 0:
-        return (results, deps)
-
-    for entry in entries:
-        rebased_destination = os.path.join(set_name, entry.destination)
-        copy_destination = os.path.join(outdir, rebased_destination)
-
-        # Create parents if they don't exist
-        os.makedirs(os.path.dirname(copy_destination), exist_ok=True)
-
-        # Hardlink the file from source to the destination, relative to the
-        # directory for all entries.
-        fast_copy(entry.source, copy_destination)
-
-        # Make a new FileEntry, which has a source of the path within the
-        # out-of-tree layout, and the same destination.
-        results.append(
-            FileEntry(
-                source=rebased_destination, destination=entry.destination))
-
-        # Add the copied file's source/destination to the set of touched files.
-        deps.add(entry.source)
-
-    return (results, deps)
-
-
-def copy_config_data_entries(
-        entries: FileEntryList,
-        outdir: FilePath) -> Tuple[ConfigDataEntries, DepSet]:
-    """
-    Take a list of entries for the config_data package, copy them into the
-    appropriate layout for the assembly input bundle, and then return the
-    config data entries and the set of DepEntries from the copying
-
-    This expects the entries to be destined for:
-    `meta/data/<package>/<path/to/file>`
-
-    and creates a ConfigDataEntries dict of PackageName:FileEntryList.
-    """
-    results: ConfigDataEntries = {}
-    deps: DepSet = set()
-
-    if len(entries) == 0:
-        return (results, deps)
-
-    # Make a sorted list of a deduplicated set of the entries.
-    for entry in sorted(set(entries)):
-        # Crack the in-package path apart
-        #
-        # "meta" / "data" / package_name / path/to/file
-        parts = pathlib.Path(entry.destination).parts
-        if parts[:2] != ("meta", "data"):
-            raise ValueError(
-                "Found an unexpected destination path: {}".format(parts))
-        package_name = parts[2]
-        file_path = os.path.join(*parts[3:])
-
-        rebased_source_path = os.path.join(
-            "config_data", package_name, file_path)
-        copy_destination = os.path.join(outdir, rebased_source_path)
-
-        # Make any needed parents directories
-        os.makedirs(os.path.dirname(copy_destination), exist_ok=True)
-
-        # Hardlink the file from source to the destination
-        fast_copy(entry.source, copy_destination)
-
-        # Append the entry to the set of entries for the package
-        results.setdefault(package_name, set()).add(
-            FileEntry(source=rebased_source_path, destination=file_path))
-
-        # Add the copy operation to the depfile
-        deps.add(entry.source)
-
-    return (results, deps)
+    return aib_creator.build()
 
 
 def main():
@@ -358,22 +92,10 @@ def main():
     else:
         config_data_entries = []
 
-    assembly_config_manifest_path = os.path.join(
-        args.outdir, "assembly_config.json")
-
-    dep_file = DepFile(assembly_config_manifest_path)
-
-    # Copy the remaining contents to the out-of-tree Assembly Input Bundle layout
-    (assembly_input_bundle, deps) = copy_to_assembly_input_bundle(
-        legacy, config_data_entries, args.outdir)
-    dep_file.update(deps)
-
-    # Write out the resultant config into the outdir of the out-of-tree layout.
-    # the copy_set paths are all relative to cwd, so use the full cwd to the
-    # file as the dest_path, which will be rebased when generating the fini
-    # manifest later.
-    with open(assembly_config_manifest_path, 'w') as outfile:
-        assembly_input_bundle.json_dump(outfile, indent=2)
+    # Create an Assembly Input Bundle from the remaining contents
+    (assembly_input_bundle, assembly_config_manifest_path,
+     deps) = copy_to_assembly_input_bundle(
+         legacy, config_data_entries, args.outdir)
 
     # Write out a fini manifest of the files that have been copied, to create a
     # package or archive that contains all of the files in the bundle.
@@ -383,6 +105,8 @@ def main():
 
     # Write out a depfile.
     if args.depfile:
+        dep_file = DepFile(assembly_config_manifest_path)
+        dep_file.update(deps)
         dep_file.write_to(args.depfile)
 
 

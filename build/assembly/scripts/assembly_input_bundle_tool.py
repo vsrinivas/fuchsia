@@ -5,12 +5,13 @@
 
 import argparse
 import json
+import os
 import subprocess
 import sys
-from typing import Set
+from typing import List, Set, Tuple
 
 from depfile import DepFile
-from assembly import AssemblyInputBundle
+from assembly import AssemblyInputBundle, FilePath, PackageManifest
 from serialization.serialization import json_load
 
 
@@ -115,6 +116,33 @@ def intersect_bundles(args: argparse.Namespace) -> None:
         print(result)
 
 
+def find_blob(args: argparse.Namespace) -> None:
+    bundle = AssemblyInputBundle.json_load(args.bundle_config)
+    bundle_dir = os.path.dirname(args.bundle_config.name)
+    found_at: List[Tuple[FilePath, FilePath]] = []
+    for pkg_set in [bundle.base, bundle.cache, bundle.system]:
+        for pkg_manifest_path in pkg_set:
+            with open(os.path.join(bundle_dir, pkg_manifest_path),
+                      'r') as pkg_manifest_file:
+                manifest = json_load(PackageManifest, pkg_manifest_file)
+                for blob in manifest.blobs:
+                    if blob.merkle == args.blob:
+                        found_at.append((pkg_manifest_path, blob.path))
+    if found_at:
+        pkg_header = "Package"
+        path_header = "Path"
+        pkg_column_width = max(
+            len(pkg_header), *[len(entry[0]) for entry in found_at])
+        path_column_width = max(
+            len(path_header), *[len(entry[1]) for entry in found_at])
+        formatter = f"{{0: <{pkg_column_width}}}  | {{1: <{path_column_width}}}"
+        header = formatter.format(pkg_header, path_header)
+        print(header)
+        print("=" * len(header))
+        for pkg, path in found_at:
+            print(formatter.format(pkg, path))
+
+
 def main():
     parser = argparse.ArgumentParser(
         description=
@@ -181,6 +209,19 @@ def main():
     archive_creation_parser.add_argument(
         "--depfile", type=argparse.FileType('w'))
     archive_creation_parser.set_defaults(handler=generate_archive)
+
+    find_blob_parser = sub_parsers.add_parser(
+        "find-blob",
+        help=
+        "Find what causes a blob to be included in the Assembly Input Bundle.")
+    find_blob_parser.add_argument(
+        "--bundle-config",
+        required=True,
+        type=argparse.FileType('r'),
+        help="Path to the assembly_config.json for the bundle")
+    find_blob_parser.add_argument(
+        "--blob", required=True, help="Merkle of the blob to search for.")
+    find_blob_parser.set_defaults(handler=find_blob)
 
     args = parser.parse_args()
 

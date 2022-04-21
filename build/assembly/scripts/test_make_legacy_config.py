@@ -3,32 +3,16 @@
 # found in the LICENSE file.
 """!/usr/bin/env python3.8"""
 
-import functools
 import hashlib
 import os
 import tempfile
-from typing import Callable, List, Tuple
 import unittest
 
-from assembly import FilePath, FileEntry, ImageAssemblyConfig, PackageManifest, BlobEntry, PackageMetaData
+from assembly import FileEntry, ImageAssemblyConfig, PackageManifest, BlobEntry, PackageMetaData
+from fast_copy_mock import mock_fast_copy_in
 import make_legacy_config
+import assembly
 import serialization
-
-
-def fast_copy_mock(
-        src: FilePath, dst: FilePath, tracked_copies: List[FileEntry]) -> None:
-    """A bindable-mock of assembly.fast_copy() that tracks all of the copies
-    that it's asked to perform in the passed-in list.
-    """
-    tracked_copies.append(FileEntry(source=src, destination=dst))
-
-
-def create_fast_copy_mock_instance() -> Tuple[Callable, List[FileEntry]]:
-    """Create a mock implementation of fast_copy() that's bound to a list of
-    FileEntries in which it records all the copies it's asked to make.
-    """
-    copies = []
-    return (functools.partial(fast_copy_mock, tracked_copies=copies), copies)
 
 
 def make_merkle(blob_name: str) -> str:
@@ -45,8 +29,8 @@ class MakeLegacyConfig(unittest.TestCase):
         self.maxDiff = None
 
         # Patch in a mock for the fast_copy() fn
-        fast_copy_mock_fn, copies = create_fast_copy_mock_instance()
-        make_legacy_config.fast_copy = fast_copy_mock_fn
+        fast_copy_mock_fn, copies = mock_fast_copy_in(
+            assembly.assembly_input_bundle)
 
         with tempfile.TemporaryDirectory() as temp_dir_path:
             os.chdir(temp_dir_path)
@@ -88,7 +72,7 @@ class MakeLegacyConfig(unittest.TestCase):
             image_assembly.boot_args.update(["boot-arg-1", "boot-arg-2"])
             image_assembly.kernel.path = os.path.join(source_dir, "kernel.bin")
             image_assembly.kernel.args.update(["arg1", "arg2"])
-            image_assembly.kernel.clock_backstop = "123456"
+            image_assembly.kernel.clock_backstop = 123456
             image_assembly.bootfs_files.update(
                 [
                     FileEntry(
@@ -101,23 +85,23 @@ class MakeLegacyConfig(unittest.TestCase):
             # Create the outdir path, and perform the "copying" into the
             # AssemblyInputBundle.
             outdir = "outdir"
-            aib, deps = make_legacy_config.copy_to_assembly_input_bundle(
+            aib, assembly_config, deps = make_legacy_config.copy_to_assembly_input_bundle(
                 image_assembly, [], outdir)
 
             # Validate the contents of the AssemblyInputBundle itself
-            self.assertEquals(
+            self.assertEqual(
                 aib.base, set(["packages/base/base_a", "packages/base/base_b"]))
-            self.assertEquals(
+            self.assertEqual(
                 aib.cache,
                 set(["packages/cache/cache_a", "packages/cache/cache_b"]))
-            self.assertEquals(
+            self.assertEqual(
                 aib.system,
                 set(["packages/system/system_a", "packages/system/system_b"]))
-            self.assertEquals(aib.boot_args, set(["boot-arg-1", "boot-arg-2"]))
-            self.assertEquals(aib.kernel.path, "kernel/kernel.bin")
-            self.assertEquals(aib.kernel.args, set(["arg1", "arg2"]))
-            self.assertEquals(aib.kernel.clock_backstop, "123456")
-            self.assertEquals(
+            self.assertEqual(aib.boot_args, set(["boot-arg-1", "boot-arg-2"]))
+            self.assertEqual(aib.kernel.path, "kernel/kernel.bin")
+            self.assertEqual(aib.kernel.args, set(["arg1", "arg2"]))
+            self.assertEqual(aib.kernel.clock_backstop, 123456)
+            self.assertEqual(
                 aib.bootfs_files,
                 set(
                     [
@@ -136,8 +120,8 @@ class MakeLegacyConfig(unittest.TestCase):
                              ) as manifest_file:
                         manifest = serialization.json_load(
                             PackageManifest, manifest_file)
-                        self.assertEquals(manifest.package.name, package_name)
-                        self.assertEquals(
+                        self.assertEqual(manifest.package.name, package_name)
+                        self.assertEqual(
                             set(manifest.blobs_by_path().keys()),
                             set(
                                 [
@@ -151,30 +135,30 @@ class MakeLegacyConfig(unittest.TestCase):
             with open("outdir/packages/base/base_a") as manifest_file:
                 manifest = serialization.json_load(
                     PackageManifest, manifest_file)
-                self.assertEquals(manifest.package.name, "base_a")
-                self.assertEquals(len(manifest.blobs), 3)
+                self.assertEqual(manifest.package.name, "base_a")
+                self.assertEqual(len(manifest.blobs), 3)
                 blobs = manifest.blobs_by_path()
-                self.assertEquals(
+                self.assertEqual(
                     blobs['internal/path/file_a_1'].source_path,
                     '../../blobs/efac096092f7cf879c72ac51d23d9f142e97405dec7dd9c69aeee81de083f794'
                 )
-                self.assertEquals(
+                self.assertEqual(
                     blobs['internal/path/file_a_1'].merkle,
                     'efac096092f7cf879c72ac51d23d9f142e97405dec7dd9c69aeee81de083f794'
                 )
-                self.assertEquals(
+                self.assertEqual(
                     blobs['internal/path/file_a_2'].source_path,
                     '../../blobs/bf0c3ae1356b5863258f73a37d555cf878007b8bfe4fd780d74466ec62fe062d'
                 )
-                self.assertEquals(
+                self.assertEqual(
                     blobs['internal/path/file_a_2'].merkle,
                     'bf0c3ae1356b5863258f73a37d555cf878007b8bfe4fd780d74466ec62fe062d'
                 )
-                self.assertEquals(
+                self.assertEqual(
                     blobs['internal/path/file_a_3'].source_path,
                     '../../blobs/a2e574ccd55c815f0a87c4f27e7a3115fe8e46d41a2e0caf2a91096a41421f78'
                 )
-                self.assertEquals(
+                self.assertEqual(
                     blobs['internal/path/file_a_3'].merkle,
                     'a2e574ccd55c815f0a87c4f27e7a3115fe8e46d41a2e0caf2a91096a41421f78'
                 )
@@ -182,7 +166,7 @@ class MakeLegacyConfig(unittest.TestCase):
             # Validate that the deps were correctly identified (all package
             # manifest paths, the blob source paths, the bootfs source paths,
             # and the kernel source path)
-            self.assertEquals(
+            self.assertEqual(
                 deps,
                 set(
                     [
@@ -216,7 +200,7 @@ class MakeLegacyConfig(unittest.TestCase):
 
             # Validate that all the files were correctly copied to the
             # correct paths in the AIB.
-            self.assertEquals(
+            self.assertEqual(
                 set(copies),
                 set(
                     [

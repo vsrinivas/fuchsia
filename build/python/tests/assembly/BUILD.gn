@@ -9,6 +9,7 @@ python_host_test("python_module_assembly_test") {
   libraries = [
     "//build/python/modules/assembly",
     "//build/python/modules/serialization",
+    "//build/python/tests/fast_copy_mock",
   ]
 }
 

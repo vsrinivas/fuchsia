@@ -1,6 +1,7 @@
 {
     "extraPaths": [
         "build/python/modules",
+        "build/python/tests",
         "third_party/jinja2",
         "third_party/mako",
         "third_party/parameterized/src"

@@ -23,6 +23,7 @@ python_host_test("test_make_legacy_config") {
   libraries = [
     "//build/python/modules/assembly",
     "//build/python/modules/serialization",
+    "//build/python/tests/fast_copy_mock",
   ]
 }
 
