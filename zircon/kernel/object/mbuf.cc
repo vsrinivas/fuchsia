@@ -7,6 +7,7 @@
 #include "object/mbuf.h"
 
 #include <lib/counters.h>
+#include <lib/fit/defer.h>
 #include <lib/user_copy/user_ptr.h>
 
 #include <fbl/algorithm.h>
@@ -23,8 +24,6 @@ KCOUNTER(mbuf_total_bytes_count, "mbuf.total_bytes")
 
 // Amount of memory occupied by MBuf objects on free lists.
 KCOUNTER(mbuf_free_list_bytes_count, "mbuf.free_list_bytes")
-
-size_t MBufChain::MBuf::rem() const { return kPayloadSize - (off_ + len_); }
 
 MBufChain::~MBufChain() {
   while (!buffers_.is_empty()) {
@@ -58,9 +57,17 @@ zx_status_t MBufChain::ReadHelper(T* chain, user_out_ptr<char> dst, size_t len, 
 
   size_t pos = 0;
   auto iter = chain->buffers_.begin();
+  // To handle peeking and non-peeking, cache our read cursor offset and set it when we're done.
+  uint32_t read_off = chain->read_cursor_off_;
+  auto update_cursor = fit::defer([&] {
+    if constexpr (!ktl::is_const<T>::value) {
+      chain->read_cursor_off_ = read_off;
+    }
+  });
+
   while (pos < len && iter != chain->buffers_.end()) {
-    const char* src = iter->data_ + iter->off_;
-    size_t copy_len = ktl::min(static_cast<size_t>(iter->len_), len - pos);
+    const char* src = iter->data_ + read_off;
+    size_t copy_len = ktl::min(static_cast<size_t>(iter->len_ - read_off), len - pos);
     zx_status_t status = dst.byte_offset(pos).copy_array_to_user(src, copy_len);
     if (status != ZX_OK) {
       // Record the fact that some data might have been read, even if the overall operation is
@@ -72,6 +79,7 @@ zx_status_t MBufChain::ReadHelper(T* chain, user_out_ptr<char> dst, size_t len, 
     pos += copy_len;
 
     if constexpr (ktl::is_const<T>::value) {
+      read_off = 0;
       ++iter;
     } else {
       // TODO(fxbug.dev/34143): Note, we're advancing (consuming data) after each copy.  This means
@@ -79,16 +87,20 @@ zx_status_t MBufChain::ReadHelper(T* chain, user_out_ptr<char> dst, size_t len, 
       // faults) data will be "dropped".  Consider changing this function to only advance (and
       // free) once all data has been successfully copied.
 
-      iter->off_ += static_cast<uint32_t>(copy_len);
-      iter->len_ -= static_cast<uint32_t>(copy_len);
+      read_off += static_cast<uint32_t>(copy_len);
       chain->size_ -= copy_len;
 
-      if (iter->len_ == 0 || datagram) {
-        chain->size_ -= iter->len_;
-        if (chain->write_cursor_ == &(*iter))
+      if (read_off == iter->len_ || datagram) {
+        if (datagram) {
+          chain->size_ -= (iter->len_ - read_off);
+        }
+        if (chain->write_cursor_ == &(*iter)) {
           chain->write_cursor_ = nullptr;
+        }
         chain->FreeMBuf(chain->buffers_.pop_front());
         iter = chain->buffers_.begin();
+        // Start the next buffer at the beginning.
+        read_off = 0;
       }
     }
   }
@@ -98,12 +110,13 @@ zx_status_t MBufChain::ReadHelper(T* chain, user_out_ptr<char> dst, size_t len, 
     if (datagram) {
       while (!chain->buffers_.is_empty() && chain->buffers_.front().pkt_len_ == 0) {
         MBuf* cur = chain->buffers_.pop_front();
-        chain->size_ -= cur->len_;
+        chain->size_ -= (cur->len_ - read_off);
         if (chain->write_cursor_ == cur) {
           DEBUG_ASSERT(chain->buffers_.is_empty());
           chain->write_cursor_ = nullptr;
         }
         chain->FreeMBuf(cur);
+        read_off = 0;
       }
     }
   }
@@ -192,7 +205,7 @@ zx_status_t MBufChain::WriteStream(user_in_ptr<const char> src, size_t len, size
       buffers_.insert_after(buffers_.make_iterator(*write_cursor_), next);
       write_cursor_ = next;
     }
-    char* dst = write_cursor_->data_ + write_cursor_->off_ + write_cursor_->len_;
+    char* dst = write_cursor_->data_ + write_cursor_->len_;
     size_t copy_len = ktl::min(write_cursor_->rem(), len - pos);
     if (size_ + copy_len > kSizeMax) {
       copy_len = kSizeMax - size_;
@@ -236,7 +249,6 @@ MBufChain::MBuf* MBufChain::AllocMBuf() {
 }
 
 void MBufChain::FreeMBuf(MBuf* buf) {
-  buf->off_ = 0u;
   buf->len_ = 0u;
   freelist_.push_front(buf);
   kcounter_add(mbuf_free_list_bytes_count, sizeof(MBufChain::MBuf));
