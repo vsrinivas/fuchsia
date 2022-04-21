@@ -22,7 +22,6 @@ group("tests") {
   deps = [
     ":ime_service",
     ":keyboard_test",
-    ":keyboard_test_parallel",
     ":text_manager",
     ":text_manager_test",
   ]
@@ -86,12 +85,6 @@ fuchsia_component("text_manager_comp") {
   deps = [ ":bin" ]
 }
 
-fuchsia_component("text_manager_comp_v2") {
-  component_name = "text_manager"
-  manifest = "meta/text_manager.cml"
-  deps = [ ":bin" ]
-}
-
 # This is the same component as `text_manager_comp`, with the legacy name.
 # TODO(fxbug.dev/82822): Remove after out-of-tree tests migrate to text_manager.
 fuchsia_component("ime_service_comp") {
@@ -113,7 +106,7 @@ fuchsia_package("ime_service") {
 fuchsia_component("text_manager_bin_test") {
   testonly = true
   component_name = "text_manager_bin_test"
-  manifest = "meta/text_manager_bin_test.cml"
+  manifest = "meta/text_manager_bin_test.cmx"
   deps = [ ":bin_test" ]
 }
 
@@ -129,7 +122,6 @@ rustc_test("keyboard3_integration_test_bin") {
     ":bin",
     ":test_helpers",
     "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
@@ -138,7 +130,6 @@ rustc_test("keyboard3_integration_test_bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-component-test",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
@@ -230,42 +221,27 @@ fuchsia_component("keyboard3_integration_test") {
   testonly = true
   deps = [
     ":keyboard3_integration_test_bin",
-    ":text_manager_comp_v2",
+    ":text_manager_comp",
   ]
-  manifest = "meta/keyboard3_integration_test.cml"
+  manifest = "meta/keyboard3_integration_test.cmx"
 }
 
 fuchsia_component("text_manager_integration_test") {
   testonly = true
-  deps = [
-    ":text_manager_comp_v2",
-    ":text_manager_integration_test_bin",
-  ]
-  manifest = "meta/text_manager_integration_test.cml"
+  deps = [ ":text_manager_integration_test_bin" ]
+  manifest = "meta/text_manager_integration_test.cmx"
 }
 
 fuchsia_component("legacy_ime_integration_test") {
   testonly = true
-  deps = [
-    ":legacy_ime_integration_test_bin",
-    ":text_manager_comp_v2",
-  ]
-  manifest = "meta/legacy_ime_integration_test.cml"
+  deps = [ ":legacy_ime_integration_test_bin" ]
+  manifest = "meta/legacy_ime_integration_test.cmx"
 }
 
 fuchsia_test_package("keyboard_test") {
   test_components = [
+    ":keyboard3_integration_test",
     ":text_manager_integration_test",
     ":legacy_ime_integration_test",
   ]
-
-  # These tests use a single instance of the text manager, and since they set
-  # up conflicting test cases, they can not run in parallel.
-  test_specs = {
-    parallel = 1
-  }
-}
-
-fuchsia_test_package("keyboard_test_parallel") {
-  test_components = [ ":keyboard3_integration_test" ]
 }
