@@ -241,10 +241,10 @@ pub fn force_signal(current_task: &CurrentTask, mut siginfo: SignalInfo) {
 pub fn get_signal_target(
     thread_group: &ThreadGroup,
     _signal: &UncheckedSignal,
+    pids: &PidTable,
 ) -> Option<Arc<Task>> {
     // TODO(fxb/96632): Consider more than the main thread or the first thread in the thread group
     // to dispatch the signal.
-    let pids = thread_group.kernel.pids.read();
     pids.get_task(thread_group.leader)
         .or_else(|| thread_group.tasks.read().iter().next().map(|p| pids.get_task(*p)).flatten())
 }

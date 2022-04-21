@@ -198,8 +198,8 @@ impl ThreadGroup {
         }
         *terminating = true;
 
-        // Interrupt each task.
         let pids = self.kernel.pids.read();
+        // Interrupt each task.
         for tid in &*self.tasks.read() {
             if let Some(task) = pids.get_task(*tid) {
                 *task.exit_status.lock() = Some(exit_status.clone());
@@ -225,12 +225,14 @@ impl ThreadGroup {
         }
         let process_group = ProcessGroup::new(Session::new(self.leader), self.leader);
         pids.add_process_group(&process_group);
-        self.set_process_group(process_group);
+        self.set_process_group(process_group, &mut pids);
 
         Ok(())
     }
 
     pub fn setpgid(&self, target: &Task, pgid: pid_t) -> Result<(), Errno> {
+        let mut pids = self.kernel.pids.write();
+
         // The target process must be either the current process of a child of the current process
         let target_thread_group = &target.thread_group;
         let is_target_current_process_child = *target_thread_group.parent.read() == self.leader;
@@ -250,7 +252,6 @@ impl ThreadGroup {
 
         let new_process_group;
         {
-            let mut pids = self.kernel.pids.write();
             let current_process_group = self.process_group.read();
             let target_process_group = target_thread_group.process_group.read();
 
@@ -285,13 +286,14 @@ impl ThreadGroup {
             }
         }
 
-        target_thread_group.set_process_group(new_process_group);
+        target_thread_group.set_process_group(new_process_group, &mut pids);
 
         Ok(())
     }
 
     /// Set the stop status of the process.
     pub fn set_stopped(&self, stopped: bool, siginfo: SignalInfo) {
+        let pids = self.kernel.pids.read();
         let mut running_status_writer = self.running_status.write();
         if stopped != running_status_writer.stopped {
             // TODO(qsr): When task can be running_status inside user code, task will need to be
@@ -299,10 +301,10 @@ impl ThreadGroup {
             running_status_writer.stopped = stopped;
             running_status_writer.waitable = Some(siginfo);
             if !stopped {
-                self.interrupt(InterruptionType::Continue);
+                self.interrupt(InterruptionType::Continue, &pids);
             }
-            if let Some(parent) = self.get_parent(&self.kernel.pids.read()) {
-                parent.interrupt(InterruptionType::ChildChange);
+            if let Some(parent) = self.get_parent(&pids) {
+                parent.interrupt(InterruptionType::ChildChange, &pids);
             }
         }
     }
@@ -317,19 +319,18 @@ impl ThreadGroup {
         }
     }
 
-    fn set_process_group(&self, process_group: Arc<ProcessGroup>) {
+    fn set_process_group(&self, process_group: Arc<ProcessGroup>, pids: &mut PidTable) {
         let mut process_group_writer = self.process_group.write();
         if *process_group_writer == process_group {
             return;
         }
-        self.leave_process_group(&process_group_writer);
+        self.leave_process_group(&process_group_writer, pids);
         *process_group_writer = process_group;
         process_group_writer.thread_groups.write().insert(self.leader);
     }
 
-    fn leave_process_group(&self, process_group: &Arc<ProcessGroup>) {
+    fn leave_process_group(&self, process_group: &Arc<ProcessGroup>, pids: &mut PidTable) {
         if process_group.remove(self.leader) {
-            let mut pids = self.kernel.pids.write();
             if process_group.session.remove(process_group.leader) {
                 // TODO(qsr): Handle signals ?
             }
@@ -337,9 +338,9 @@ impl ThreadGroup {
         }
     }
 
-    fn remove_internal(&self, task: &Arc<Task>) -> bool {
+    fn remove_internal(&self, task: &Arc<Task>, pids: &mut PidTable) -> bool {
         let mut tasks = self.tasks.write();
-        self.kernel.pids.write().remove_task(task.id);
+        pids.remove_task(task.id);
         tasks.remove(&task.id);
 
         if task.id == self.leader {
@@ -360,7 +361,7 @@ impl ThreadGroup {
         tasks.is_empty()
     }
 
-    fn adopt_children(&self, other: &ThreadGroup) {
+    fn adopt_children(&self, other: &ThreadGroup, pids: &PidTable) {
         assert!(self != other);
 
         // TODO(qsr): Implement PR_SET_CHILD_SUBREAPER
@@ -368,13 +369,13 @@ impl ThreadGroup {
         let parent_pid = *self.parent.read();
         // If parent == self, act like init, otherwise, reparent.
         if parent_pid == self.leader {
-            let mut children = self.children.write();
             let mut zombies = self.zombie_children.lock();
-            let mut other_children = other.children.write();
+            let mut children = self.children.write();
             let mut other_zombies = other.zombie_children.lock();
+            let mut other_children = other.children.write();
 
             for pid in other_children.iter() {
-                if let Some(child) = self.kernel.pids.read().get_thread_group(*pid) {
+                if let Some(child) = pids.get_thread_group(*pid) {
                     *child.parent.write() = self.leader;
                     children.insert(*pid);
                 }
@@ -383,14 +384,16 @@ impl ThreadGroup {
             other_children.clear();
             zombies.append(&mut other_zombies);
         } else {
-            if let Some(parent) = self.kernel.pids.read().get_thread_group(parent_pid) {
-                parent.adopt_children(other);
+            if let Some(parent) = pids.get_thread_group(parent_pid) {
+                parent.adopt_children(other, pids);
             }
         }
     }
 
     pub fn remove(&self, task: &Arc<Task>) {
-        if self.remove_internal(task) {
+        let mut pids = self.kernel.pids.write();
+
+        if self.remove_internal(task, &mut pids) {
             let mut terminating = self.terminating.lock();
             *terminating = true;
 
@@ -399,38 +402,35 @@ impl ThreadGroup {
                 if parent_id == self.leader {
                     None
                 } else {
-                    self.kernel.pids.read().get_thread_group(*self.parent.read())
+                    pids.get_thread_group(*self.parent.read())
                 }
             };
 
             // Before unregistering this object from other places, register the zombie.
             if let Some(parent) = parent_opt.as_ref() {
                 // Reparent the children.
-                parent.adopt_children(self);
+                parent.adopt_children(self, &pids);
 
                 let zombie =
                     self.zombie_leader.lock().take().expect("Failed to capture zombie leader.");
-                let mut pids = self.kernel.pids.write();
-                let mut parent_children = parent.children.write();
                 let mut parent_zombies = parent.zombie_children.lock();
+                let mut parent_children = parent.children.write();
 
                 parent_children.remove(&self.leader);
                 parent_zombies.push(zombie);
-                pids.remove_thread_group(self.leader);
-            } else {
-                self.kernel.pids.write().remove_thread_group(self.leader);
             }
+            pids.remove_thread_group(self.leader);
 
             // Unregister this object.
-            self.leave_process_group(&self.process_group.read());
+            self.leave_process_group(&self.process_group.read(), &mut pids);
 
             // Send signals
             if let Some(parent) = parent_opt.as_ref() {
                 // TODO: Should this be zombie_leader.exit_signal?
-                if let Some(signal_target) = get_signal_target(&parent, &SIGCHLD.into()) {
+                if let Some(signal_target) = get_signal_target(&parent, &SIGCHLD.into(), &pids) {
                     send_signal(&signal_target, SignalInfo::default(SIGCHLD));
                 }
-                parent.interrupt(InterruptionType::ChildChange);
+                parent.interrupt(InterruptionType::ChildChange, &pids);
             }
 
             // TODO: Set the error_code on the Zircon process object. Currently missing a way
@@ -459,8 +459,7 @@ impl ThreadGroup {
     }
 
     /// Returns a task in the current thread group.
-    fn get_task(&self) -> Result<Arc<Task>, Errno> {
-        let pids = self.kernel.pids.read();
+    fn get_task(&self, pids: &PidTable) -> Result<Arc<Task>, Errno> {
         if let Some(task) = pids.get_task(self.leader) {
             return Ok(task);
         }
@@ -551,7 +550,7 @@ impl ThreadGroup {
                     };
                     return Ok(WaitableChild::Available(ZombieProcess::new(
                         child,
-                        &child.get_task()?.creds.read(),
+                        &child.get_task(&pids)?.creds.read(),
                         ExitStatus::Continue(siginfo),
                     )));
                 }
@@ -563,7 +562,7 @@ impl ThreadGroup {
                     };
                     return Ok(WaitableChild::Available(ZombieProcess::new(
                         child,
-                        &child.get_task()?.creds.read(),
+                        &child.get_task(&pids)?.creds.read(),
                         ExitStatus::Stop(siginfo),
                     )));
                 }
@@ -722,8 +721,7 @@ impl ThreadGroup {
     /// Interrupt the thread group.
     ///
     /// This will interrupt every task in the thread group.
-    fn interrupt(&self, interruption_type: InterruptionType) {
-        let pids = self.kernel.pids.read();
+    fn interrupt(&self, interruption_type: InterruptionType, pids: &PidTable) {
         for pid in self.tasks.read().iter() {
             if let Some(task) = pids.get_task(*pid) {
                 task.interrupt(interruption_type);

@@ -201,14 +201,15 @@ pub fn sys_kill(
     pid: pid_t,
     unchecked_signal: UncheckedSignal,
 ) -> Result<(), Errno> {
+    let pids = current_task.thread_group.kernel.pids.read();
     match pid {
         pid if pid > 0 => {
             // "If pid is positive, then signal sig is sent to the process with
             // the ID specified by pid."
             let target_thread_group =
                 &current_task.get_task(pid).ok_or(errno!(ESRCH))?.thread_group;
-            let target =
-                get_signal_target(target_thread_group, &unchecked_signal).ok_or(errno!(ESRCH))?;
+            let target = get_signal_target(target_thread_group, &unchecked_signal, &pids)
+                .ok_or(errno!(ESRCH))?;
             if !current_task.can_signal(&target, &unchecked_signal) {
                 return error!(EPERM);
             }
@@ -223,7 +224,7 @@ pub fn sys_kill(
             // system processes. Linux allows a process to signal itself, but on
             // Linux the call kill(-1,sig) does not signal the calling process."
 
-            let thread_groups = current_task.thread_group.kernel.pids.read().get_thread_groups();
+            let thread_groups = pids.get_thread_groups();
             signal_thread_groups(
                 &current_task,
                 &unchecked_signal,
@@ -250,7 +251,6 @@ pub fn sys_kill(
             };
 
             let thread_groups = {
-                let pids = current_task.thread_group.kernel.pids.read();
                 let process_group = pids.get_process_group(process_group_id);
                 process_group
                     .iter()
@@ -361,13 +361,15 @@ fn signal_thread_groups<F>(
 where
     F: Iterator<Item = Arc<ThreadGroup>>,
 {
+    let pids = task.thread_group.kernel.pids.read();
     let mut last_error = errno!(ESRCH);
     let mut sent_signal = false;
 
     // This loop keeps track of whether a signal was sent, so that "on
     // success (at least one signal was sent), zero is returned."
     for thread_group in thread_groups {
-        let target = get_signal_target(&thread_group, unchecked_signal).ok_or(errno!(ESRCH))?;
+        let target =
+            get_signal_target(&thread_group, unchecked_signal, &pids).ok_or(errno!(ESRCH))?;
         if !task.can_signal(&target, &unchecked_signal) {
             last_error = errno!(EPERM);
             continue;
