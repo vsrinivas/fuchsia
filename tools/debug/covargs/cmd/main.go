@@ -303,7 +303,7 @@ func mergeEntries(ctx context.Context, vf *versionFetcher, summary runtests.Data
 			if err != nil {
 				// TODO(fxbug.dev/83504): Known issue causes occasional failures on host tests.
 				// Once resolved, return an error.
-				logger.Warningf(ctx, "cannot read version from profile %q: %w", profile, err)
+				logger.Warningf(ctx, "cannot read version from profile %q: %s", profile, err)
 				return nil
 			}
 
@@ -406,7 +406,7 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 		if err != nil {
 			// TODO(fxbug.dev/83504): Known issue causes occasional failures on host tests.
 			// Once resolved, return error below.
-			logger.Warningf(ctx, "cannot read version from profile %q: %w", entry.Profile, err)
+			logger.Warningf(ctx, "cannot read version from profile %q: %s", entry.Profile, err)
 			continue
 		}
 		partition, ok := partitions[version]
