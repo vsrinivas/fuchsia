@@ -4,6 +4,7 @@
 
 import 'dart:async';
 
+//ignore: unused_import
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:fidl_fuchsia_component/fidl_async.dart';
 import 'package:fidl_fuchsia_component_decl/fidl_async.dart';

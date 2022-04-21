@@ -4,6 +4,7 @@
 
 import 'dart:io' as io;
 import 'package:fidl/fidl.dart';
+//ignore: unused_import
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:fidl_fuchsia_identity_account/fidl_async.dart';
 import 'package:fidl_fuchsia_io/fidl_async.dart';
