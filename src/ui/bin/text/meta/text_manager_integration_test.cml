@@ -1,0 +1,44 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        // Use the CFv2 Rust test runner.
+        "//src/sys/test_runners/rust/default.shard.cml",
+
+        // Enable system logging.
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/text_manager_integration_test",
+
+        // The tests are not isolated from each other as they share a text
+        // manager instance. This prevents them from stepping onto each other.
+        args: [ "--test-threads=1" ],
+    },
+    children: [
+        {
+            name: "text_manager",
+            url: "#meta/text_manager.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input.ImeVisibilityService",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.input3.KeyEventInjector",
+                "fuchsia.ui.keyboard.focus.Controller",
+            ],
+            from: "#text_manager",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#text_manager",
+        },
+    ],
+}

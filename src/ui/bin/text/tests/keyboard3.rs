@@ -6,13 +6,13 @@
 use {
     anyhow::{Context as _, Result},
     assert_matches::assert_matches,
+    fidl::endpoints::DiscoverableProtocolMarker,
     fidl::endpoints::{create_request_stream, ProtocolMarker as _},
-    fidl_fuchsia_input as input, fidl_fuchsia_ui_input3 as ui_input3,
-    fidl_fuchsia_ui_keyboard_focus as fidl_focus, fidl_fuchsia_ui_views as ui_views,
-    fuchsia_async as fasync,
-    fuchsia_component::{
-        client::{App, AppBuilder},
-        server::{NestedEnvironment, ServiceFs, ServiceObj},
+    fidl_fuchsia_input as input, fidl_fuchsia_ui_input as fidl_input,
+    fidl_fuchsia_ui_input3 as ui_input3, fidl_fuchsia_ui_keyboard_focus as fidl_focus,
+    fidl_fuchsia_ui_views as ui_views, fuchsia_async as fasync,
+    fuchsia_component_test::{
+        Capability, ChildOptions, ChildRef, RealmBuilder, RealmInstance, Ref, Route,
     },
     fuchsia_scenic as scenic,
     fuchsia_syslog::*,
@@ -26,42 +26,52 @@ use {
     test_helpers::create_key_event,
 };
 
-const URL_TEXT_MANAGER: &str = "fuchsia-pkg://fuchsia.com/keyboard_test#meta/text_manager.cmx";
+const URL_TEXT_MANAGER: &str =
+    "fuchsia-pkg://fuchsia.com/keyboard_test_parallel#meta/text_manager.cm";
+
+// A shorthand for type safe routing the given protocol from a child to the parent.
+async fn route_to_parent<P: DiscoverableProtocolMarker>(
+    builder: &RealmBuilder,
+    child: &ChildRef,
+) -> Result<(), fuchsia_component_test::error::Error> {
+    builder
+        .add_route(
+            Route::new().capability(Capability::protocol::<P>()).from(child).to(Ref::parent()),
+        )
+        .await
+}
 
 /// Wrapper for a `NestedEnvironment` that exposes the protocols offered by `text_manager.cmx`.
 /// Running each test method in its own environment allows the tests to be run in parallel.
 struct TestEnvironment {
-    _text_manager_app: App,
-    _fs_task: fasync::Task<()>,
-    env: NestedEnvironment,
+    realm: RealmInstance,
 }
 
 impl TestEnvironment {
     /// Creates a new `NestedEnvironment` exposing services from `text_manager.cmx`, which is
     /// immediately launched.
-    #[must_use]
-    fn new() -> Result<Self> {
-        let mut text_manager_builder = AppBuilder::new(URL_TEXT_MANAGER);
-        let text_manager_dir =
-            text_manager_builder.directory_request().context("directory_request")?.to_owned();
+    async fn new() -> Result<Self> {
+        let builder = RealmBuilder::new().await?;
+        let text_manager =
+            builder.add_child("text_manager", URL_TEXT_MANAGER, ChildOptions::new()).await?;
 
-        let mut fs: ServiceFs<ServiceObj<'static, ()>> = ServiceFs::new();
-        fs.add_proxy_service_to::<fidl_fuchsia_ui_input::ImeServiceMarker, _>(
-            text_manager_dir.clone(),
-        )
-        .add_proxy_service_to::<ui_input3::KeyboardMarker, _>(text_manager_dir.clone())
-        .add_proxy_service_to::<ui_input3::KeyEventInjectorMarker, _>(text_manager_dir.clone())
-        .add_proxy_service_to::<fidl_focus::ControllerMarker, _>(text_manager_dir.clone());
+        route_to_parent::<ui_input3::KeyboardMarker>(&builder, &text_manager).await?;
+        route_to_parent::<fidl_input::ImeServiceMarker>(&builder, &text_manager).await?;
+        route_to_parent::<ui_input3::KeyEventInjectorMarker>(&builder, &text_manager).await?;
+        route_to_parent::<fidl_focus::ControllerMarker>(&builder, &text_manager).await?;
+        route_to_parent::<fidl_input::ImeVisibilityServiceMarker>(&builder, &text_manager).await?;
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol::<fidl_fuchsia_logger::LogSinkMarker>())
+                    .from(Ref::parent())
+                    .to(&text_manager),
+            )
+            .await?;
 
-        let env = fs
-            .create_salted_nested_environment("test")
-            .context("create_salted_nested_environment")?;
+        let realm = builder.build().await?;
 
-        let _text_manager_app =
-            text_manager_builder.spawn(env.launcher()).context("Launching text_manager")?;
-        let _fs_task = fasync::Task::spawn(fs.collect());
-
-        Ok(TestEnvironment { _text_manager_app, _fs_task, env })
+        Ok(TestEnvironment { realm })
     }
 
     /// Connects to the given discoverable service in the `NestedEnvironment`, with a readable
@@ -71,10 +81,12 @@ impl TestEnvironment {
         P: fidl::endpoints::Proxy,
         P::Protocol: fidl::endpoints::DiscoverableProtocolMarker,
     {
-        fx_log_debug!("Connecting to nested environment's {}", P::Protocol::DEBUG_NAME);
-        self.env.connect_to_protocol::<P::Protocol>().with_context(|| {
-            format!("Failed to connect to nested environment's {}", P::Protocol::DEBUG_NAME)
-        })
+        let conn =
+            self.realm.root.connect_to_protocol_at_exposed_dir::<P::Protocol>().with_context(
+                || format!("Failed to connect to test realm's {}", P::Protocol::DEBUG_NAME),
+            );
+        fx_log_debug!("Connected to test realm's {}", P::Protocol::DEBUG_NAME);
+        conn
     }
 
     fn connect_to_focus_controller(&self) -> Result<fidl_focus::ControllerProxy> {
@@ -212,10 +224,10 @@ async fn test_disconnecting_keyboard_client_disconnects_listener_with_connection
 #[fasync::run_singlethreaded(test)]
 async fn test_disconnecting_keyboard_client_disconnects_listener_via_key_event_injector(
 ) -> Result<()> {
+    let test_env = TestEnvironment::new().await?;
+
     fuchsia_syslog::init_with_tags(&["keyboard3_integration_test"])
         .expect("syslog init should not fail");
-
-    let test_env = TestEnvironment::new()?;
 
     let key_event_injector = test_env.connect_to_key_event_injector()?;
 
@@ -336,10 +348,10 @@ async fn test_sync_cancel_with_connections(
 
 #[fasync::run_singlethreaded(test)]
 async fn test_sync_cancel_via_key_event_injector() -> Result<()> {
+    let test_env = TestEnvironment::new().await?;
+
     fuchsia_syslog::init_with_tags(&["keyboard3_integration_test"])
         .expect("syslog init should not fail");
-
-    let test_env = TestEnvironment::new()?;
 
     // This test dispatches keys via KeyEventInjector.
     let key_event_injector = test_env.connect_to_key_event_injector()?;
@@ -371,7 +383,7 @@ struct TestHandles {
 
 impl TestHandles {
     async fn new() -> Result<TestHandles> {
-        let _test_env = TestEnvironment::new()?;
+        let _test_env = TestEnvironment::new().await?;
 
         // Create fake client.
         let (listener_client_end, listener_stream) = create_request_stream::<
