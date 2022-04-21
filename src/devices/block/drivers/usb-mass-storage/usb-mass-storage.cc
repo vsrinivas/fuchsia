@@ -267,10 +267,6 @@ void UsbMassStorageDevice::DdkInit(ddk::InitTxn txn) {
 
   tag_send_ = tag_receive_ = 8;
 
-  if (status != ZX_OK) {
-    txn.Reply(status);
-    return;
-  }
   worker_thread_.emplace(
       [this, init_txn = std::move(txn)]() mutable { WorkerThread(std::move(init_txn)); });
 }
