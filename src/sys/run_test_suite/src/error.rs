@@ -37,9 +37,9 @@ pub enum UnexpectedEventError {
     )]
     CaseArtifactButNotFound { identifier: u32 },
     #[error(
-        "received a 'stopped' event for case with id {identifier:?} but no 'case_found' event"
+        "received a 'finished' event for case with id {identifier:?} but no 'case_found' event"
     )]
-    CaseStoppedButNotFound { identifier: u32 },
+    CaseFinishedButNotFound { identifier: u32 },
     #[error("received a 'stopped' event for case with id {identifier:?} but no 'started' event")]
     CaseStoppedButNotStarted { test_case_name: String, identifier: u32 },
     #[error("received an unhandled case status for case with id {identifier:?}: {status:?}")]

@@ -156,6 +156,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
     let mut test_cases = HashMap::new();
     let mut test_case_reporters = HashMap::new();
     let mut test_cases_in_progress = HashSet::new();
+    let mut test_cases_timed_out = HashSet::new();
     let mut test_cases_output = HashMap::new();
     let mut suite_log_tasks = vec![];
     let mut suite_finish_timestamp = Timestamp::Unknown;
@@ -284,15 +285,29 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
                             identifier,
                             status,
                         }) => {
-                            let test_case_name = test_cases.get(&identifier).ok_or(
-                                UnexpectedEventError::CaseStoppedButNotFound { identifier },
-                            )?;
                             // when a case errors out we handle it as if it never completed
                             if status != ftest_manager::CaseStatus::Error {
                                 test_cases_in_progress.remove(&identifier);
                             }
+                            // record timed out cases so we can cancel artifact collection for them
+                            if status == ftest_manager::CaseStatus::TimedOut {
+                                test_cases_timed_out.insert(identifier);
+                            };
+                            let reporter = test_case_reporters.get(&identifier).unwrap();
+                            // TODO(fxbug.dev/79712): Record per-case runtime once we have an
+                            // accurate way to measure it.
+                            reporter.stopped(&status.into(), Timestamp::Unknown).await?;
+                        }
+                        ftest_manager::SuiteEventPayload::CaseFinished(CaseFinished {
+                            identifier,
+                        }) => {
+                            // complete artifact collection first. If the test timed out assume
+                            // collection may hang and cancel the future.
+                            let test_case_name = test_cases.get(&identifier).ok_or(
+                                UnexpectedEventError::CaseFinishedButNotFound { identifier },
+                            )?;
                             if let Some(tasks) = test_cases_output.remove(&identifier) {
-                                if status == ftest_manager::CaseStatus::TimedOut {
+                                if test_cases_timed_out.remove(&identifier) {
                                     for t in tasks {
                                         if let Some(Err(e)) = t.now_or_never() {
                                             error!(
@@ -312,14 +327,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
                                     }
                                 }
                             }
-                            let reporter = test_case_reporters.get(&identifier).unwrap();
-                            // TODO(fxbug.dev/79712): Record per-case runtime once we have an
-                            // accurate way to measure it.
-                            reporter.stopped(&status.into(), Timestamp::Unknown).await?;
-                        }
-                        ftest_manager::SuiteEventPayload::CaseFinished(CaseFinished {
-                            identifier,
-                        }) => {
+
                             let reporter = test_case_reporters.remove(&identifier).unwrap();
                             reporter.finished().await?;
                         }
@@ -1054,6 +1062,23 @@ mod test {
         responder.send(&mut Ok(events)).expect("send events");
     }
 
+    /// Serves all events to completion.
+    async fn serve_all_events(
+        mut request_stream: ftest_manager::SuiteControllerRequestStream,
+        events: Vec<ftest_manager::SuiteEvent>,
+    ) {
+        const BATCH_SIZE: usize = 5;
+        let mut event_iter = events.into_iter();
+        while event_iter.len() > 0 {
+            respond_to_get_events(
+                &mut request_stream,
+                event_iter.by_ref().take(BATCH_SIZE).collect(),
+            )
+            .await;
+        }
+        respond_to_get_events(&mut request_stream, vec![]).await;
+    }
+
     /// Creates a SuiteEvent which is unpopulated, except for timestamp.
     /// This isn't representative of an actual event from test framework, but is sufficient
     /// to assert events are routed correctly.
@@ -1145,6 +1170,404 @@ mod test {
         );
         suite_server_task.await;
     }
+
+    fn suite_event_from_payload(
+        timestamp: i64,
+        payload: ftest_manager::SuiteEventPayload,
+    ) -> ftest_manager::SuiteEvent {
+        let mut event = create_empty_event(timestamp);
+        event.payload = Some(payload);
+        event
+    }
+
+    fn case_found_event(timestamp: i64, identifier: u32, name: &str) -> ftest_manager::SuiteEvent {
+        suite_event_from_payload(
+            timestamp,
+            ftest_manager::SuiteEventPayload::CaseFound(ftest_manager::CaseFound {
+                test_case_name: name.into(),
+                identifier,
+            }),
+        )
+    }
+
+    fn case_started_event(timestamp: i64, identifier: u32) -> ftest_manager::SuiteEvent {
+        suite_event_from_payload(
+            timestamp,
+            ftest_manager::SuiteEventPayload::CaseStarted(ftest_manager::CaseStarted {
+                identifier,
+            }),
+        )
+    }
+
+    fn case_stopped_event(
+        timestamp: i64,
+        identifier: u32,
+        status: ftest_manager::CaseStatus,
+    ) -> ftest_manager::SuiteEvent {
+        suite_event_from_payload(
+            timestamp,
+            ftest_manager::SuiteEventPayload::CaseStopped(ftest_manager::CaseStopped {
+                identifier,
+                status,
+            }),
+        )
+    }
+
+    fn case_finished_event(timestamp: i64, identifier: u32) -> ftest_manager::SuiteEvent {
+        suite_event_from_payload(
+            timestamp,
+            ftest_manager::SuiteEventPayload::CaseFinished(ftest_manager::CaseFinished {
+                identifier,
+            }),
+        )
+    }
+
+    fn case_stdout_event(
+        timestamp: i64,
+        identifier: u32,
+        stdout: fidl::Socket,
+    ) -> ftest_manager::SuiteEvent {
+        suite_event_from_payload(
+            timestamp,
+            ftest_manager::SuiteEventPayload::CaseArtifact(ftest_manager::CaseArtifact {
+                identifier,
+                artifact: ftest_manager::Artifact::Stdout(stdout),
+            }),
+        )
+    }
+
+    fn case_stderr_event(
+        timestamp: i64,
+        identifier: u32,
+        stderr: fidl::Socket,
+    ) -> ftest_manager::SuiteEvent {
+        suite_event_from_payload(
+            timestamp,
+            ftest_manager::SuiteEventPayload::CaseArtifact(ftest_manager::CaseArtifact {
+                identifier,
+                artifact: ftest_manager::Artifact::Stderr(stderr),
+            }),
+        )
+    }
+
+    fn suite_started_event(timestamp: i64) -> ftest_manager::SuiteEvent {
+        suite_event_from_payload(
+            timestamp,
+            ftest_manager::SuiteEventPayload::SuiteStarted(ftest_manager::SuiteStarted),
+        )
+    }
+
+    fn suite_stopped_event(
+        timestamp: i64,
+        status: ftest_manager::SuiteStatus,
+    ) -> ftest_manager::SuiteEvent {
+        suite_event_from_payload(
+            timestamp,
+            ftest_manager::SuiteEventPayload::SuiteStopped(ftest_manager::SuiteStopped { status }),
+        )
+    }
+
+    #[fuchsia::test]
+    async fn collect_suite_events_simple() {
+        let all_events = vec![
+            suite_started_event(0),
+            case_found_event(100, 0, "my_test_case"),
+            case_started_event(200, 0),
+            case_stopped_event(300, 0, ftest_manager::CaseStatus::Passed),
+            case_finished_event(400, 0),
+            suite_stopped_event(500, ftest_manager::SuiteStatus::Passed),
+        ];
+
+        let (proxy, stream) = create_proxy_and_stream::<ftest_manager::SuiteControllerMarker>()
+            .expect("create stream");
+        let test_fut = async move {
+            let reporter = output::InMemoryReporter::new();
+            let run_reporter = output::RunReporter::new(reporter.clone());
+            let suite_reporter =
+                run_reporter.new_suite("test-url", &SuiteId(0)).await.expect("create new suite");
+
+            let suite = RunningSuite::wait_for_start(proxy, "test-url".to_string(), None).await;
+            assert_eq!(
+                run_suite_and_collect_logs(
+                    suite,
+                    &suite_reporter,
+                    diagnostics::LogCollectionOptions::default(),
+                    futures::future::pending()
+                )
+                .await
+                .expect("collect results"),
+                Outcome::Passed
+            );
+            suite_reporter.finished().await.expect("Reporter finished");
+
+            let reports = reporter.get_reports();
+            let case = reports
+                .iter()
+                .find(|report| report.id == EntityId::Case { suite: SuiteId(0), case: CaseId(0) })
+                .unwrap();
+            assert_eq!(case.report.name, "my_test_case");
+            assert_eq!(case.report.outcome, Some(output::ReportedOutcome::Passed));
+            assert!(case.report.is_finished);
+            assert!(case.report.artifacts.is_empty());
+            assert!(case.report.directories.is_empty());
+            let suite =
+                reports.iter().find(|report| report.id == EntityId::Suite(SuiteId(0))).unwrap();
+            assert_eq!(suite.report.name, "test-url");
+            assert_eq!(suite.report.outcome, Some(output::ReportedOutcome::Passed));
+            assert!(suite.report.is_finished);
+            assert!(suite.report.artifacts.is_empty());
+            assert!(suite.report.directories.is_empty());
+        };
+
+        futures::future::join(serve_all_events(stream, all_events), test_fut).await;
+    }
+
+    #[fuchsia::test]
+    async fn collect_suite_events_with_case_artifacts() {
+        const STDOUT_CONTENT: &str = "stdout from my_test_case";
+        const STDERR_CONTENT: &str = "stderr from my_test_case";
+
+        let (stdout_write, stdout_read) =
+            fidl::Socket::create(fidl::SocketOpts::STREAM).expect("create socket");
+        let (stderr_write, stderr_read) =
+            fidl::Socket::create(fidl::SocketOpts::STREAM).expect("create socket");
+        let all_events = vec![
+            suite_started_event(0),
+            case_found_event(100, 0, "my_test_case"),
+            case_started_event(200, 0),
+            case_stdout_event(300, 0, stdout_read),
+            case_stderr_event(300, 0, stderr_read),
+            case_stopped_event(300, 0, ftest_manager::CaseStatus::Passed),
+            case_finished_event(400, 0),
+            suite_stopped_event(500, ftest_manager::SuiteStatus::Passed),
+        ];
+
+        let (proxy, stream) = create_proxy_and_stream::<ftest_manager::SuiteControllerMarker>()
+            .expect("create stream");
+        let stdio_write_fut = async move {
+            let mut async_stdout =
+                fasync::Socket::from_socket(stdout_write).expect("make async socket");
+            async_stdout.write_all(STDOUT_CONTENT.as_bytes()).await.expect("write to socket");
+            let mut async_stderr =
+                fasync::Socket::from_socket(stderr_write).expect("make async socket");
+            async_stderr.write_all(STDERR_CONTENT.as_bytes()).await.expect("write to socket");
+        };
+        let test_fut = async move {
+            let reporter = output::InMemoryReporter::new();
+            let run_reporter = output::RunReporter::new(reporter.clone());
+            let suite_reporter =
+                run_reporter.new_suite("test-url", &SuiteId(0)).await.expect("create new suite");
+
+            let suite = RunningSuite::wait_for_start(proxy, "test-url".to_string(), None).await;
+            assert_eq!(
+                run_suite_and_collect_logs(
+                    suite,
+                    &suite_reporter,
+                    diagnostics::LogCollectionOptions::default(),
+                    futures::future::pending()
+                )
+                .await
+                .expect("collect results"),
+                Outcome::Passed
+            );
+            suite_reporter.finished().await.expect("Reporter finished");
+
+            let reports = reporter.get_reports();
+            let case = reports
+                .iter()
+                .find(|report| report.id == EntityId::Case { suite: SuiteId(0), case: CaseId(0) })
+                .unwrap();
+            assert_eq!(case.report.name, "my_test_case");
+            assert_eq!(case.report.outcome, Some(output::ReportedOutcome::Passed));
+            assert!(case.report.is_finished);
+            assert_eq!(case.report.artifacts.len(), 2);
+            assert_eq!(
+                case.report
+                    .artifacts
+                    .iter()
+                    .map(|(artifact_type, artifact)| (*artifact_type, artifact.get_contents()))
+                    .collect::<HashMap<_, _>>(),
+                hashmap! {
+                    output::ArtifactType::Stdout => STDOUT_CONTENT.as_bytes().to_vec(),
+                    output::ArtifactType::Stderr => STDERR_CONTENT.as_bytes().to_vec()
+                }
+            );
+            assert!(case.report.directories.is_empty());
+
+            let suite =
+                reports.iter().find(|report| report.id == EntityId::Suite(SuiteId(0))).unwrap();
+            assert_eq!(suite.report.name, "test-url");
+            assert_eq!(suite.report.outcome, Some(output::ReportedOutcome::Passed));
+            assert!(suite.report.is_finished);
+            assert!(suite.report.artifacts.is_empty());
+            assert!(suite.report.directories.is_empty());
+        };
+
+        futures::future::join3(serve_all_events(stream, all_events), stdio_write_fut, test_fut)
+            .await;
+    }
+
+    #[fuchsia::test]
+    async fn collect_suite_events_with_case_artifacts_sent_after_case_stopped() {
+        const STDOUT_CONTENT: &str = "stdout from my_test_case";
+        const STDERR_CONTENT: &str = "stderr from my_test_case";
+
+        let (stdout_write, stdout_read) =
+            fidl::Socket::create(fidl::SocketOpts::STREAM).expect("create socket");
+        let (stderr_write, stderr_read) =
+            fidl::Socket::create(fidl::SocketOpts::STREAM).expect("create socket");
+        let all_events = vec![
+            suite_started_event(0),
+            case_found_event(100, 0, "my_test_case"),
+            case_started_event(200, 0),
+            case_stopped_event(300, 0, ftest_manager::CaseStatus::Passed),
+            case_stdout_event(300, 0, stdout_read),
+            case_stderr_event(300, 0, stderr_read),
+            case_finished_event(400, 0),
+            suite_stopped_event(500, ftest_manager::SuiteStatus::Passed),
+        ];
+
+        let (proxy, stream) = create_proxy_and_stream::<ftest_manager::SuiteControllerMarker>()
+            .expect("create stream");
+        let stdio_write_fut = async move {
+            let mut async_stdout =
+                fasync::Socket::from_socket(stdout_write).expect("make async socket");
+            async_stdout.write_all(STDOUT_CONTENT.as_bytes()).await.expect("write to socket");
+            let mut async_stderr =
+                fasync::Socket::from_socket(stderr_write).expect("make async socket");
+            async_stderr.write_all(STDERR_CONTENT.as_bytes()).await.expect("write to socket");
+        };
+        let test_fut = async move {
+            let reporter = output::InMemoryReporter::new();
+            let run_reporter = output::RunReporter::new(reporter.clone());
+            let suite_reporter =
+                run_reporter.new_suite("test-url", &SuiteId(0)).await.expect("create new suite");
+
+            let suite = RunningSuite::wait_for_start(proxy, "test-url".to_string(), None).await;
+            assert_eq!(
+                run_suite_and_collect_logs(
+                    suite,
+                    &suite_reporter,
+                    diagnostics::LogCollectionOptions::default(),
+                    futures::future::pending()
+                )
+                .await
+                .expect("collect results"),
+                Outcome::Passed
+            );
+            suite_reporter.finished().await.expect("Reporter finished");
+
+            let reports = reporter.get_reports();
+            let case = reports
+                .iter()
+                .find(|report| report.id == EntityId::Case { suite: SuiteId(0), case: CaseId(0) })
+                .unwrap();
+            assert_eq!(case.report.name, "my_test_case");
+            assert_eq!(case.report.outcome, Some(output::ReportedOutcome::Passed));
+            assert!(case.report.is_finished);
+            assert_eq!(case.report.artifacts.len(), 2);
+            assert_eq!(
+                case.report
+                    .artifacts
+                    .iter()
+                    .map(|(artifact_type, artifact)| (*artifact_type, artifact.get_contents()))
+                    .collect::<HashMap<_, _>>(),
+                hashmap! {
+                    output::ArtifactType::Stdout => STDOUT_CONTENT.as_bytes().to_vec(),
+                    output::ArtifactType::Stderr => STDERR_CONTENT.as_bytes().to_vec()
+                }
+            );
+            assert!(case.report.directories.is_empty());
+
+            let suite =
+                reports.iter().find(|report| report.id == EntityId::Suite(SuiteId(0))).unwrap();
+            assert_eq!(suite.report.name, "test-url");
+            assert_eq!(suite.report.outcome, Some(output::ReportedOutcome::Passed));
+            assert!(suite.report.is_finished);
+            assert!(suite.report.artifacts.is_empty());
+            assert!(suite.report.directories.is_empty());
+        };
+
+        futures::future::join3(serve_all_events(stream, all_events), stdio_write_fut, test_fut)
+            .await;
+    }
+
+    #[fuchsia::test]
+    async fn collect_suite_events_timed_out_case_with_hanging_artifacts() {
+        // create sockets and leave the server end open to simulate a hang.
+        let (_stdout_write, stdout_read) =
+            fidl::Socket::create(fidl::SocketOpts::STREAM).expect("create socket");
+        let (_stderr_write, stderr_read) =
+            fidl::Socket::create(fidl::SocketOpts::STREAM).expect("create socket");
+        let all_events = vec![
+            suite_started_event(0),
+            case_found_event(100, 0, "my_test_case"),
+            case_started_event(200, 0),
+            case_stdout_event(300, 0, stdout_read),
+            case_stopped_event(300, 0, ftest_manager::CaseStatus::TimedOut),
+            // artifact sent after stopped should be terminated too.
+            case_stderr_event(300, 0, stderr_read),
+            case_finished_event(400, 0),
+            suite_stopped_event(500, ftest_manager::SuiteStatus::TimedOut),
+        ];
+
+        let (proxy, stream) = create_proxy_and_stream::<ftest_manager::SuiteControllerMarker>()
+            .expect("create stream");
+        let test_fut = async move {
+            let reporter = output::InMemoryReporter::new();
+            let run_reporter = output::RunReporter::new(reporter.clone());
+            let suite_reporter =
+                run_reporter.new_suite("test-url", &SuiteId(0)).await.expect("create new suite");
+
+            let suite = RunningSuite::wait_for_start(proxy, "test-url".to_string(), None).await;
+            assert_eq!(
+                run_suite_and_collect_logs(
+                    suite,
+                    &suite_reporter,
+                    diagnostics::LogCollectionOptions::default(),
+                    futures::future::pending()
+                )
+                .await
+                .expect("collect results"),
+                Outcome::Timedout
+            );
+            suite_reporter.finished().await.expect("Reporter finished");
+
+            let reports = reporter.get_reports();
+            let case = reports
+                .iter()
+                .find(|report| report.id == EntityId::Case { suite: SuiteId(0), case: CaseId(0) })
+                .unwrap();
+            assert_eq!(case.report.name, "my_test_case");
+            assert_eq!(case.report.outcome, Some(output::ReportedOutcome::Timedout));
+            assert!(case.report.is_finished);
+            assert_eq!(case.report.artifacts.len(), 2);
+            assert_eq!(
+                case.report
+                    .artifacts
+                    .iter()
+                    .map(|(artifact_type, artifact)| (*artifact_type, artifact.get_contents()))
+                    .collect::<HashMap<_, _>>(),
+                hashmap! {
+                    output::ArtifactType::Stdout => vec![],
+                    output::ArtifactType::Stderr => vec![]
+                }
+            );
+            assert!(case.report.directories.is_empty());
+
+            let suite =
+                reports.iter().find(|report| report.id == EntityId::Suite(SuiteId(0))).unwrap();
+            assert_eq!(suite.report.name, "test-url");
+            assert_eq!(suite.report.outcome, Some(output::ReportedOutcome::Timedout));
+            assert!(suite.report.is_finished);
+            assert!(suite.report.artifacts.is_empty());
+            assert!(suite.report.directories.is_empty());
+        };
+
+        futures::future::join(serve_all_events(stream, all_events), test_fut).await;
+    }
+
+    // TODO(fxbug.dev/98222): add unit tests for suite artifacts too.
 
     async fn fake_running_all_suites_and_return_run_events(
         mut stream: ftest_manager::RunBuilderRequestStream,

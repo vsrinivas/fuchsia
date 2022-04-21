@@ -255,7 +255,7 @@ impl<'a> CaseReporter<'a> {
 }
 
 /// An enumeration of different known artifact types.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum ArtifactType {
     Stdout,
     Stderr,
