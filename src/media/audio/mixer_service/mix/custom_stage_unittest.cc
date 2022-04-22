@@ -22,7 +22,6 @@
 #include "lib/fidl/llcpp/object_view.h"
 #include "lib/fidl/llcpp/vector_view.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/mixer_service/common/basic_types.h"
 #include "src/media/audio/mixer_service/common/thread_checker.h"
 #include "src/media/audio/mixer_service/mix/detached_thread.h"
@@ -36,7 +35,6 @@ namespace {
 using ::fuchsia_audio_effects::Processor;
 using ::fuchsia_audio_effects::wire::ProcessorConfiguration;
 using ::fuchsia_mediastreams::wire::AudioSampleFormat;
-using ::media::audio::clock::CloneOfMonotonic;
 using ::testing::Each;
 using ::testing::FloatEq;
 
@@ -193,8 +191,7 @@ PipelineStagePtr MakeCustomStage(ProcessorConfiguration config, PipelineStagePtr
 }
 
 std::shared_ptr<PacketQueueProducerStage> MakePacketQueueProducerStage(Format format) {
-  return std::make_shared<PacketQueueProducerStage>(
-      format, std::make_unique<AudioClock>(AudioClock::ClientFixed(CloneOfMonotonic())));
+  return std::make_shared<PacketQueueProducerStage>(format);
 }
 
 std::vector<float> ToVector(void* payload, size_t sample_start_idx, size_t sample_end_idx) {

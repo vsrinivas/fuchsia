@@ -10,7 +10,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/mixer_service/common/basic_types.h"
 #include "src/media/audio/mixer_service/mix/packet_view.h"
 
@@ -18,7 +17,6 @@ namespace media_audio_mixer_service {
 namespace {
 
 using ::fuchsia_mediastreams::wire::AudioSampleFormat;
-using ::media::audio::clock::CloneOfMonotonic;
 
 const Format kFormat = Format::CreateOrDie({AudioSampleFormat::kFloat, 2, 48000});
 const int64_t kFrameCount = 480;
@@ -30,9 +28,8 @@ class RingBufferProducerStageTest : public ::testing::Test {
     const auto status =
         vmo_mapper_.CreateAndMap(zx_system_get_page_size(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
     FX_CHECK(status == ZX_OK);
-    ring_buffer_producer_stage_.emplace(
-        kFormat, std::move(vmo_mapper_), kFrameCount, [this]() { return safe_read_frame_; },
-        std::make_unique<AudioClock>(AudioClock::ClientFixed(CloneOfMonotonic())));
+    ring_buffer_producer_stage_.emplace(kFormat, std::move(vmo_mapper_), kFrameCount,
+                                        [this]() { return safe_read_frame_; });
   }
 
   RingBufferProducerStage& ring_buffer_producer_stage() { return *ring_buffer_producer_stage_; }

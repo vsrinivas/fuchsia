@@ -10,7 +10,6 @@
 #include <lib/zx/time.h>
 
 #include <functional>
-#include <memory>
 #include <optional>
 #include <utility>
 
@@ -26,11 +25,8 @@ class RingBufferProducerStage : public ProducerStage {
   using SafeReadFrameFn = std::function<int64_t()>;
 
   RingBufferProducerStage(Format format, fzl::VmoMapper vmo_mapper, int64_t frame_count,
-                          SafeReadFrameFn safe_read_frame_fn,
-                          std::unique_ptr<AudioClock> audio_clock,
-                          TimelineFunction ref_time_to_frac_presentation_frame = {})
-      : ProducerStage("RingBufferProducerStage", format, std::move(audio_clock),
-                      ref_time_to_frac_presentation_frame),
+                          SafeReadFrameFn safe_read_frame_fn)
+      : ProducerStage("RingBufferProducerStage", format),
         vmo_mapper_(std::move(vmo_mapper)),
         frame_count_(frame_count),
         safe_read_frame_fn_(std::move(safe_read_frame_fn)) {

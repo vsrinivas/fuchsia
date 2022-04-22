@@ -39,21 +39,11 @@ class FakeStage : public PipelineStage {
   };
 
   FakeStage(bool use_cache, std::vector<QueuedPacket>&& packets)
-      : PipelineStage("FakeStage", kFormat),
-        use_cache_(use_cache),
-        packets_(std::move(packets)),
-        audio_clock_(AudioClock::ClientFixed(media::audio::clock::CloneOfMonotonic())),
-        timeline_function_(TimelineFunction(0, 0, Fixed(kFormat.frames_per_second()).raw_value(),
-                                            zx::sec(1).get())) {}
+      : PipelineStage("FakeStage", kFormat), use_cache_(use_cache), packets_(std::move(packets)) {}
 
   // TODO(fxbug.dev/87651): Use this instead of the constructor.
   void AddSource(PipelineStagePtr src) override {}
   void RemoveSource(PipelineStagePtr src) override {}
-
-  TimelineFunction ref_time_to_frac_presentation_frame() const override {
-    return timeline_function_;
-  }
-  AudioClock& reference_clock() override { return audio_clock_; }
 
   std::optional<Packet> ReadImpl(Fixed start_frame, int64_t frame_count) override {
     if (cached_end_ && start_frame < *cached_end_) {
@@ -112,8 +102,6 @@ class FakeStage : public PipelineStage {
   std::vector<QueuedPacket> packets_;
   std::vector<Fixed> advance_calls_;
   std::optional<Fixed> cached_end_;
-  AudioClock audio_clock_;
-  TimelineFunction timeline_function_;
 };
 
 // No-op passthrough stage that wraps a source stage via using `ForwardPacket`.
@@ -125,11 +113,6 @@ class PassthroughStage : public PipelineStage {
   // TODO(fxbug.dev/87651): Use this instead of the constructor.
   void AddSource(PipelineStagePtr src) override {}
   void RemoveSource(PipelineStagePtr src) override {}
-
-  TimelineFunction ref_time_to_frac_presentation_frame() const override {
-    return src_->ref_time_to_frac_presentation_frame();
-  }
-  AudioClock& reference_clock() override { return src_->reference_clock(); }
 
   std::optional<Packet> ReadImpl(Fixed start_frame, int64_t frame_count) override {
     return ForwardPacket(src_->Read(start_frame, frame_count));

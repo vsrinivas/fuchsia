@@ -5,7 +5,6 @@
 #include "src/media/audio/mixer_service/mix/custom_stage.h"
 
 #include <lib/fidl/llcpp/connect_service.h>
-#include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <zircon/syscalls/object.h>
 

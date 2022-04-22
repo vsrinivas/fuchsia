@@ -10,7 +10,6 @@
 #include <lib/zx/time.h>
 
 #include <deque>
-#include <memory>
 #include <optional>
 #include <utility>
 
@@ -23,10 +22,8 @@ namespace media_audio_mixer_service {
 
 class PacketQueueProducerStage : public ProducerStage {
  public:
-  PacketQueueProducerStage(Format format, std::unique_ptr<AudioClock> audio_clock,
-                           TimelineFunction ref_time_to_frac_presentation_frame = {})
-      : ProducerStage("PacketQueueProducerStage", format, std::move(audio_clock),
-                      ref_time_to_frac_presentation_frame) {}
+  explicit PacketQueueProducerStage(Format format)
+      : ProducerStage("PacketQueueProducerStage", format) {}
 
   // Registers a callback to invoke when a packet underflows.
   // The duration estimates how late the packet was relative to the system monotonic clock.

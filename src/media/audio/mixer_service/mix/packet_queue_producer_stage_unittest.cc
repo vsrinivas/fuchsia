@@ -13,7 +13,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/mixer_service/common/basic_types.h"
 #include "src/media/audio/mixer_service/mix/packet_view.h"
 
@@ -21,17 +20,13 @@ namespace media_audio_mixer_service {
 namespace {
 
 using ::fuchsia_mediastreams::wire::AudioSampleFormat;
-using ::media::audio::clock::CloneOfMonotonic;
 using ::testing::ElementsAre;
 
 const Format kFormat = Format::CreateOrDie({AudioSampleFormat::kFloat, 2, 48000});
 
 class PacketQueueProducerStageTest : public ::testing::Test {
  public:
-  PacketQueueProducerStageTest()
-      : packet_queue_producer_stage_(
-            kFormat, std::make_unique<AudioClock>(AudioClock::ClientFixed(CloneOfMonotonic())),
-            TimelineFunction(TimelineRate(Fixed(1).raw_value(), 1'000'000))) {}
+  PacketQueueProducerStageTest() : packet_queue_producer_stage_(kFormat) {}
 
   const void* PushPacket(uint32_t packet_id, int64_t start = 0, int64_t length = 1) {
     void* payload =

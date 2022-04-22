@@ -39,15 +39,6 @@ class CustomStage : public PipelineStage {
     FX_CHECK(source_ == src) << "CustomStage input source does not match with: " << src->name();
     source_ = nullptr;
   }
-  TimelineFunction ref_time_to_frac_presentation_frame() const final {
-    FX_CHECK(source_) << "CustomStage input source was not found";
-    // TODO(fxbug.dev/87651): Take into account of the latency introduced by `source_` and effect.
-    return source_->ref_time_to_frac_presentation_frame();
-  }
-  AudioClock& reference_clock() final {
-    FX_CHECK(source_) << "CustomStage input source was not found";
-    return source_->reference_clock();
-  }
 
  protected:
   void AdvanceImpl(Fixed frame) final;

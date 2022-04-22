@@ -8,7 +8,6 @@
 #include <fidl/fuchsia.audio.mixer/cpp/wire.h>
 #include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zx/time.h>
 
 #include <atomic>
 #include <optional>
@@ -77,14 +76,6 @@ class PipelineStage {
   // Required: caller must verify that src is currently a source for this stage.
   virtual void RemoveSource(PipelineStagePtr src) TA_REQ(thread()->checker()) = 0;
 
-  // Returns a function that translates from a timestamp to the corresponding fixed-point frame
-  // number that will be presented at that time. The given timestamp is relative to
-  // `reference_clock`.
-  virtual TimelineFunction ref_time_to_frac_presentation_frame() const = 0;
-
-  // Returns the stage's reference clock.
-  virtual AudioClock& reference_clock() = 0;
-
   // Advances the destination stream by releasing any frames before the given `frame`. This is a
   // declaration that the caller will not attempt to `Read` any frame before the given `frame`. If
   // the stage has allocated packets for frames before `frame`, it can free those packets now.
@@ -139,16 +130,6 @@ class PipelineStage {
   //
   // TODO(fxbug.dev/87651): Pass in `context` for metrics etc (similar to `ReadableStream`).
   std::optional<Packet> Read(Fixed start_frame, int64_t frame_count);
-
-  // Returns the corresponding frame for a given `ref_time`.
-  Fixed FracPresentationFrameAtRefTime(zx::time ref_time) const {
-    return Fixed::FromRaw(ref_time_to_frac_presentation_frame().Apply(ref_time.get()));
-  }
-
-  // Returns the corresponding reference time for a given `frame`.
-  zx::time RefTimeAtFracPresentationFrame(Fixed frame) const {
-    return zx::time(ref_time_to_frac_presentation_frame().ApplyInverse(frame.raw_value()));
-  }
 
   // Returns the stage's name. This is used for diagnostics only.
   // The name may not be a unique identifier.
