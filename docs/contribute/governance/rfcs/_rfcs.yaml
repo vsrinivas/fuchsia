@@ -2009,3 +2009,16 @@
   reviewers: ['hjfreyer@google.com', 'wittrock@google.com', 'jsankey@google.com', 'abarth@google.com', 'wittrock@google.com', 'geb@google.com', 'shayba@google.com', 'ampearce@google.com', 'etryzelaar@google.com', 'aaronwood@google.com', 'dgonyeo@google.com']
   submitted: '2022-01-25'
   reviewed: '2022-03-23'
+
+- name: 'RFC-0155'
+  title: 'Optional capability routes'
+  short_description: 'A new field is added to the offer and use sections of component manifests to denote when a given capability may not exist.'
+  authors: ['dgonyeo@google.com']
+  file: '0155_optional_capability_routes.md'
+  area: ['Component Framework']
+  issue: ['87164']
+  gerrit_change_id: ['642862']
+  status: 'Accepted'
+  reviewers: ['markdittmer@google.com', 'geb@google.com', 'mnck@google.com', 'aniramakri@google.com', 'yaar@google.com', 'hjfreyer@google.com']
+  submitted: '2022-02-07'
+  reviewed: '2022-04-14'
