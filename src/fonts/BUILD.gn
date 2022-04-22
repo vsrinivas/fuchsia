@@ -161,11 +161,10 @@ fuchsia_test_package("font_provider_unit_tests") {
   test_components = [ ":font_provider_unit_tests_cmp" ]
 }
 
-# Re-export:
-# Group of all open-source font packages. This should be added to
-# `universe_package_labels`.
+# Deprecated.
+# TODO(fxbug.dev/98663): Clean up after all out-of-tree dependents are fixed.
 group("open-fonts") {
-  deps = [ "collections:open-fonts" ]
+  deps = []
 }
 
 # Re-export:
@@ -180,7 +179,6 @@ group("downstream-test-fonts-collection") {
 # Font collection for open-source products. This should be added to
 # `base_package_labels` or `cache_package_labels`.
 group("open-fonts-collection") {
-  testonly = true
   deps = [ "collections:open-fonts-collection" ]
 }
 

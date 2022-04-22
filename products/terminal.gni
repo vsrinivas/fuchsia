@@ -35,7 +35,7 @@ core_realm_shards -= [ "//src/intl/intl_services:intl_services_small_shard" ]
 base_package_labels += [ "//src/fonts:build_type_eng" ]
 
 cache_package_labels += [
-  "//src/fonts:open-fonts-collection",
+  "//src/fonts/collections:small-open-fonts-collection",
   "//src/ui/bin/terminal",
   "//src/ui/scenic",
   "//src/ui/tools/tiles",
@@ -82,6 +82,4 @@ universe_package_labels += [
 
   # Only for products in which Flutter is supported.
   "//src/tests/intl/timezone:tests-for-flutter",
-
-  "//src/fonts:open-fonts",
 ]

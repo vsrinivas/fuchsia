@@ -23,8 +23,7 @@ base_package_labels += [
   "//src/developer/ssh-key-manager",
   "//src/experiences/session_shells/ermine/session:session_manager",
   "//src/fonts",
-  "//src/fonts:open-fonts",
-  "//src/fonts:open-fonts-collection",
+  "//src/fonts/collections:open-fonts-collection",
   "//src/graphics/bin/vulkan_loader",
   "//src/identity/bin:minimal_auth",
 

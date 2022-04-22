@@ -7,15 +7,324 @@
 // The fallback chain must be maintained by hand.
 // See //src/fonts/tools/manifest_generator/README.md.
 {
-  $schema: "http://fuchsia.com/src/fonts/tools/schemas/fontcfg.schema.json",
-  version: "1",
-  // Note that "MaterialIcons-Regular.ttf" isn't a fallback font because it provides non-Unicode
-  // characters.
-  fallback_chain: [
-    "Roboto-Regular.ttf",
-    "Roboto-Light.ttf",
-    "Roboto-Medium.ttf",
-    "RobotoMono-Regular.ttf",
-    "RobotoSlab-Regular.ttf"
-  ]
+    $schema: "http://fuchsia.com/src/fonts/tools/schemas/fontcfg.schema.json",
+    version: "1",
+
+    // Note that "MaterialIcons-Regular.ttf" isn't a fallback font because it provides non-Unicode
+    // characters.
+    fallback_chain: [
+        ///
+        ///
+        /// SANS SERIF LATIN
+        "Roboto-Regular.ttf",
+        "Roboto-Black.ttf",
+        "Roboto-BlackItalic.ttf",
+        "Roboto-Bold.ttf",
+        "Roboto-BoldItalic.ttf",
+        "Roboto-Italic.ttf",
+        "Roboto-Light.ttf",
+        "Roboto-LightItalic.ttf",
+        "Roboto-Medium.ttf",
+        "Roboto-MediumItalic.ttf",
+        "Roboto-Thin.ttf",
+        "Roboto-ThinItalic.ttf",
+        "RobotoCondensed-Regular.ttf",
+        "RobotoCondensed-Bold.ttf",
+        "RobotoCondensed-BoldItalic.ttf",
+        "RobotoCondensed-Italic.ttf",
+        "RobotoCondensed-Light.ttf",
+        "RobotoCondensed-LightItalic.ttf",
+        "DroidSans-Regular.ttf",
+        "DroidSans-Bold.ttf",
+
+        ///
+        ///
+        /// SANS-SERIF NON-LATIN
+        "NotoNaskhArabicUI-Regular.ttf",
+        "NotoSansArmenian-Regular.ttf",
+        "NotoSansEthiopic-Regular.ttf",
+        "NotoSansGeorgian-Regular.ttf",
+        "NotoSansHebrew-Regular.ttf",
+        "NotoSansThaiUI-Regular.ttf",
+
+        // All Indian scripts should come after Devanagari, due to shared danda characters.
+        "NotoSansDevanagariUI-Regular.ttf",
+        "NotoSansBengaliUI-Regular.ttf",
+        "NotoSansGujaratiUI-Regular.ttf",
+        "NotoSansKannada-Regular.ttf",
+        "NotoSansMalayalamUI-Regular.ttf",
+        "NotoSansTamilUI-Regular.ttf",
+        "NotoSansTelugu-Regular.ttf",
+
+        ///
+        ///
+        /// SANS SERIF CJK
+        {
+            full_name: "Noto Sans CJK SC",
+        },
+        {
+            full_name: "Noto Sans CJK TC",
+        },
+        {
+            full_name: "Noto Sans CJK HK",
+        },
+        {
+            full_name: "Noto Sans CJK KR",
+        },
+        {
+            full_name: "Noto Sans CJK JP",
+        },
+        {
+            full_name: "Noto Sans CJK SC Bold",
+        },
+        {
+            full_name: "Noto Sans CJK TC Bold",
+        },
+        {
+            full_name: "Noto Sans CJK HK Bold",
+        },
+        {
+            full_name: "Noto Sans CJK KR Bold",
+        },
+        {
+            full_name: "Noto Sans CJK JP Bold",
+        },
+        {
+            full_name: "Noto Sans CJK SC Black",
+        },
+        {
+            full_name: "Noto Sans CJK TC Black",
+        },
+        {
+            full_name: "Noto Sans CJK HK Black",
+        },
+        {
+            full_name: "Noto Sans CJK KR Black",
+        },
+        {
+            full_name: "Noto Sans CJK JP Black",
+        },
+        {
+            full_name: "Noto Sans CJK SC DemiLight",
+        },
+        {
+            full_name: "Noto Sans CJK TC DemiLight",
+        },
+        {
+            full_name: "Noto Sans CJK HK DemiLight",
+        },
+        {
+            full_name: "Noto Sans CJK KR DemiLight",
+        },
+        {
+            full_name: "Noto Sans CJK JP DemiLight",
+        },
+        {
+            full_name: "Noto Sans CJK SC Light",
+        },
+        {
+            full_name: "Noto Sans CJK TC Light",
+        },
+        {
+            full_name: "Noto Sans CJK HK Light",
+        },
+        {
+            full_name: "Noto Sans CJK KR Light",
+        },
+        {
+            full_name: "Noto Sans CJK JP Light",
+        },
+        {
+            full_name: "Noto Sans CJK SC Medium",
+        },
+        {
+            full_name: "Noto Sans CJK TC Medium",
+        },
+        {
+            full_name: "Noto Sans CJK HK Medium",
+        },
+        {
+            full_name: "Noto Sans CJK KR Medium",
+        },
+        {
+            full_name: "Noto Sans CJK JP Medium",
+        },
+        {
+            full_name: "Noto Sans CJK SC Thin",
+        },
+        {
+            full_name: "Noto Sans CJK TC Thin",
+        },
+        {
+            full_name: "Noto Sans CJK HK Thin",
+        },
+        {
+            full_name: "Noto Sans CJK KR Thin",
+        },
+        {
+            full_name: "Noto Sans CJK JP Thin",
+        },
+
+        ///
+        ///
+        /// SERIF LATIN
+        "RobotoSlab-Regular.ttf",
+        "RobotoSlab-Bold.ttf",
+        "RobotoSlab-Light.ttf",
+        "RobotoSlab-Thin.ttf",
+        "DroidSerif-Regular.ttf",
+        "DroidSerif-Bold.ttf",
+        "DroidSerif-BoldItalic.ttf",
+        "DroidSerif-Italic.ttf",
+
+        ///
+        ///
+        /// SERIF CJK
+        {
+            full_name: "Noto Serif CJK SC",
+        },
+        {
+            full_name: "Noto Serif CJK TC",
+        },
+        {
+            full_name: "Noto Serif CJK KR",
+        },
+        {
+            full_name: "Noto Serif CJK JP",
+        },
+        {
+            full_name: "Noto Serif CJK SC Bold",
+        },
+        {
+            full_name: "Noto Serif CJK TC Bold",
+        },
+        {
+            full_name: "Noto Serif CJK KR Bold",
+        },
+        {
+            full_name: "Noto Serif CJK JP Bold",
+        },
+        {
+            full_name: "Noto Serif CJK SC Black",
+        },
+        {
+            full_name: "Noto Serif CJK TC Black",
+        },
+        {
+            full_name: "Noto Serif CJK KR Black",
+        },
+        {
+            full_name: "Noto Serif CJK JP Black",
+        },
+        {
+            full_name: "Noto Serif CJK SC ExtraLight",
+        },
+        {
+            full_name: "Noto Serif CJK TC ExtraLight",
+        },
+        {
+            full_name: "Noto Serif CJK KR ExtraLight",
+        },
+        {
+            full_name: "Noto Serif CJK JP ExtraLight",
+        },
+        {
+            full_name: "Noto Serif CJK SC Light",
+        },
+        {
+            full_name: "Noto Serif CJK TC Light",
+        },
+        {
+            full_name: "Noto Serif CJK KR Light",
+        },
+        {
+            full_name: "Noto Serif CJK JP Light",
+        },
+        {
+            full_name: "Noto Serif CJK SC Medium",
+        },
+        {
+            full_name: "Noto Serif CJK TC Medium",
+        },
+        {
+            full_name: "Noto Serif CJK KR Medium",
+        },
+        {
+            full_name: "Noto Serif CJK JP Medium",
+        },
+        {
+            full_name: "Noto Serif CJK SC SemiBold",
+        },
+        {
+            full_name: "Noto Serif CJK TC SemiBold",
+        },
+        {
+            full_name: "Noto Serif CJK KR SemiBold",
+        },
+        {
+            full_name: "Noto Serif CJK JP SemiBold",
+        },
+
+        ///
+        ///
+        /// MONOSPACE LATIN
+        "RobotoMono-Bold.ttf",
+        "RobotoMono-BoldItalic.ttf",
+        "RobotoMono-Italic.ttf",
+        "RobotoMono-Light.ttf",
+        "RobotoMono-LightItalic.ttf",
+        "RobotoMono-Regular.ttf",
+        "RobotoMono-Medium.ttf",
+        "RobotoMono-MediumItalic.ttf",
+        "RobotoMono-Thin.ttf",
+        "RobotoMono-ThinItalic.ttf",
+        "DroidSansMono-Regular.ttf",
+
+        ///
+        ///
+        /// MONOSPACE CJK
+        {
+            full_name: "Noto Sans Mono CJK SC",
+        },
+        {
+            full_name: "Noto Sans Mono CJK TC",
+        },
+        {
+            full_name: "Noto Sans Mono CJK HK",
+        },
+        {
+            full_name: "Noto Sans Mono CJK KR",
+        },
+        {
+            full_name: "Noto Sans Mono CJK JP",
+        },
+        {
+            full_name: "Noto Sans Mono CJK SC Bold",
+        },
+        {
+            full_name: "Noto Sans Mono CJK TC Bold",
+        },
+        {
+            full_name: "Noto Sans Mono CJK HK Bold",
+        },
+        {
+            full_name: "Noto Sans Mono CJK KR Bold",
+        },
+        {
+            full_name: "Noto Sans Mono CJK JP Bold",
+        },
+
+        ///
+        ///
+        /// CURSIVE LATIN
+        "Quintessential-Regular.ttf",
+
+        ///
+        ///
+        /// EMOJI
+        "NotoColorEmoji.ttf",
+    ],
+    settings: {
+        cache_size_bytes: 8000000,
+    },
 }

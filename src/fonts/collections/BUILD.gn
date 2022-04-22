@@ -4,20 +4,165 @@
 
 import("//src/fonts/build/fonts.gni")
 
-# Group of all open-source font packages. This should be added to
-# `universe_package_labels`.
-group("open-fonts") {
-  deps = [
-    "//src/fonts/groups:material-icons",
-    "//src/fonts/groups:noto-sans",
-    "//src/fonts/groups:noto-serif",
-    "//src/fonts/groups:roboto",
-    "//src/fonts/groups:roboto-mono",
-    "//src/fonts/groups:roboto-slab",
+local_font_bundle("alegreya-local") {
+  asset_names = [
+    "AlegreyaSansSC-Bold.ttf",
+    "AlegreyaSansSC-BoldItalic.ttf",
+    "AlegreyaSansSC-Italic.ttf",
+    "AlegreyaSansSC-Regular.ttf",
   ]
 }
 
-local_font_bundle("open-fonts-local") {
+local_font_bundle("cutive-mono-local") {
+  asset_names = [ "CutiveMono-Regular.ttf" ]
+}
+
+local_font_bundle("droid-sans-local") {
+  asset_names = [
+    "DroidSans-Bold.ttf",
+    "DroidSans-Regular.ttf",
+    "DroidSansMono-Regular.ttf",
+  ]
+}
+
+local_font_bundle("droid-serif-local") {
+  asset_names = [
+    "DroidSerif-Bold.ttf",
+    "DroidSerif-BoldItalic.ttf",
+    "DroidSerif-Italic.ttf",
+    "DroidSerif-Regular.ttf",
+  ]
+}
+
+local_font_bundle("material-icons-local") {
+  asset_names = [ "MaterialIcons-Regular.ttf" ]
+}
+
+local_font_bundle("noto-color-emoji-local") {
+  asset_names = [ "NotoColorEmoji.ttf" ]
+}
+
+local_font_bundle("noto-sans-local") {
+  asset_names = [
+    "NotoNaskhArabicUI-Regular.ttf",
+    "NotoSansArmenian-Regular.ttf",
+    "NotoSansBengaliUI-Regular.ttf",
+    "NotoSansDevanagariUI-Regular.ttf",
+    "NotoSansEthiopic-Regular.ttf",
+    "NotoSansGeorgian-Regular.ttf",
+    "NotoSansGujaratiUI-Regular.ttf",
+    "NotoSansHebrew-Regular.ttf",
+    "NotoSansKannada-Regular.ttf",
+    "NotoSansMalayalamUI-Regular.ttf",
+    "NotoSansTamilUI-Regular.ttf",
+    "NotoSansTelugu-Regular.ttf",
+    "NotoSansThaiUI-Regular.ttf",
+  ]
+}
+
+local_font_bundle("noto-sans-cjk-local") {
+  asset_names = [
+    "NotoSansCJK-Black.ttc",
+    "NotoSansCJK-Bold.ttc",
+    "NotoSansCJK-DemiLight.ttc",
+    "NotoSansCJK-Light.ttc",
+    "NotoSansCJK-Medium.ttc",
+    "NotoSansCJK-Regular.ttc",
+    "NotoSansCJK-Thin.ttc",
+  ]
+}
+
+local_font_bundle("noto-serif-cjk-local") {
+  asset_names = [
+    "NotoSansCJK-Thin.ttc",
+    "NotoSerifCJK-Black.ttc",
+    "NotoSerifCJK-Bold.ttc",
+    "NotoSerifCJK-ExtraLight.ttc",
+    "NotoSerifCJK-Light.ttc",
+    "NotoSerifCJK-Medium.ttc",
+    "NotoSerifCJK-Regular.ttc",
+    "NotoSerifCJK-SemiBold.ttc",
+  ]
+}
+
+local_font_bundle("quintessential-local") {
+  asset_names = [ "Quintessential-Regular.ttf" ]
+}
+
+local_font_bundle("roboto-local") {
+  asset_names = [
+    "Roboto-Black.ttf",
+    "Roboto-BlackItalic.ttf",
+    "Roboto-Bold.ttf",
+    "Roboto-BoldItalic.ttf",
+    "Roboto-Italic.ttf",
+    "Roboto-Light.ttf",
+    "Roboto-LightItalic.ttf",
+    "Roboto-Medium.ttf",
+    "Roboto-MediumItalic.ttf",
+    "Roboto-Regular.ttf",
+    "Roboto-Thin.ttf",
+    "Roboto-ThinItalic.ttf",
+    "RobotoCondensed-Bold.ttf",
+    "RobotoCondensed-BoldItalic.ttf",
+    "RobotoCondensed-Italic.ttf",
+    "RobotoCondensed-Light.ttf",
+    "RobotoCondensed-LightItalic.ttf",
+    "RobotoCondensed-Regular.ttf",
+  ]
+}
+
+local_font_bundle("roboto-mono-local") {
+  asset_names = [
+    "RobotoMono-Bold.ttf",
+    "RobotoMono-BoldItalic.ttf",
+    "RobotoMono-Italic.ttf",
+    "RobotoMono-Light.ttf",
+    "RobotoMono-LightItalic.ttf",
+    "RobotoMono-Medium.ttf",
+    "RobotoMono-MediumItalic.ttf",
+    "RobotoMono-Regular.ttf",
+    "RobotoMono-Thin.ttf",
+    "RobotoMono-ThinItalic.ttf",
+  ]
+}
+
+local_font_bundle("roboto-slab-local") {
+  asset_names = [
+    "RobotoSlab-Bold.ttf",
+    "RobotoSlab-Light.ttf",
+    "RobotoSlab-Regular.ttf",
+    "RobotoSlab-Thin.ttf",
+  ]
+}
+
+local_font_bundle("short-stack-local") {
+  asset_names = [ "ShortStack-Regular.ttf" ]
+}
+
+# Expansive font collection for open-source products. This should be added to
+# `base_package_labels` or `cache_package_labels`.
+font_collection("open-fonts-collection") {
+  product_config_path = "open-fonts-collection.fontcfg.json5"
+  local_font_bundles = [
+    ":alegreya-local",
+    ":cutive-mono-local",
+    ":droid-sans-local",
+    ":droid-serif-local",
+    ":material-icons-local",
+    ":noto-color-emoji-local",
+    ":noto-sans-local",
+    ":noto-sans-cjk-local",
+    ":noto-serif-cjk-local",
+    ":quintessential-local",
+    ":roboto-local",
+    ":roboto-mono-local",
+    ":roboto-slab-local",
+    ":short-stack-local",
+  ]
+}
+
+local_font_bundle("small-open-fonts-local") {
   asset_names = [
     "MaterialIcons-Regular.ttf",
     "Roboto-Regular.ttf",
@@ -30,13 +175,9 @@ local_font_bundle("open-fonts-local") {
 
 # Font collection for open-source products. This should be added to
 # `base_package_labels` or `cache_package_labels`.
-font_collection("open-fonts-collection") {
-  # Ephemeral font packages are temporarily disabled because they break
-  # Chromium/Cast tests (fxbug.dev/43327).
-
-  # font_packages = [ ":open-fonts" ]
-  product_config_path = "open-fonts-collection.fontcfg.json5"
-  local_font_bundles = [ ":open-fonts-local" ]
+font_collection("small-open-fonts-collection") {
+  product_config_path = "small-open-fonts-collection.fontcfg.json5"
+  local_font_bundles = [ ":small-open-fonts-local" ]
 }
 
 local_font_bundle("test-fonts-small-local") {
@@ -106,8 +247,15 @@ font_collection("test-fonts-large-collection") {
   testonly = true
   product_config_path = "test-fonts-large-collection.fontcfg.json5"
   manifest_prefix = "test_fonts_large"
-  font_packages = [ ":open-fonts" ]
-  local_font_bundles = [ ":open-fonts-local" ]
+  local_font_bundles = [
+    ":material-icons-local",
+    ":noto-sans-local",
+    ":noto-sans-cjk-local",
+    ":noto-serif-cjk-local",
+    ":roboto-local",
+    ":roboto-mono-local",
+    ":roboto-slab-local",
+  ]
 }
 
 # Empty font collection for products that spawn a font server but don't want any
