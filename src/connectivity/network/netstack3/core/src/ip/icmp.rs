@@ -17,7 +17,7 @@ use net_types::{
 use packet::{BufferMut, ParseBuffer, Serializer, TruncateDirection, TruncatingSerializer};
 use packet_formats::{
     icmp::{
-        ndp::{options::NdpOption, NdpPacket},
+        ndp::{options::NdpOption, NdpPacket, NonZeroNdpLifetime},
         peek_message_type, IcmpDestUnreachable, IcmpEchoRequest, IcmpMessage, IcmpMessageType,
         IcmpPacket, IcmpPacketBuilder, IcmpPacketRaw, IcmpParseArgs, IcmpTimeExceeded,
         IcmpUnusedCode, Icmpv4DestUnreachableCode, Icmpv4Packet, Icmpv4ParameterProblem,
@@ -1226,7 +1226,7 @@ fn receive_ndp_packet<
                 sync_ctx,
                 device_id,
                 Ipv6DiscoveredRoute { subnet: IPV6_DEFAULT_SUBNET, gateway: Some(src_ip) },
-                p.message().router_lifetime(),
+                p.message().router_lifetime().map(NonZeroNdpLifetime::Finite),
             );
 
             for option in p.body().iter() {
@@ -2567,7 +2567,6 @@ mod tests {
         ip::{IpPacketBuilder, IpProto},
         testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame,
         udp::UdpPacketBuilder,
-        utils::NonZeroDuration,
     };
     use specialize_ip_macro::ip_test;
 
@@ -3649,7 +3648,7 @@ mod tests {
             &mut self,
             _device_id: Self::DeviceId,
             _route: Ipv6DiscoveredRoute,
-            _lifetime: Option<NonZeroDuration>,
+            _lifetime: Option<NonZeroNdpLifetime>,
         ) {
             unimplemented!()
         }

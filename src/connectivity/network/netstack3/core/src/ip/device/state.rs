@@ -401,13 +401,20 @@ pub(crate) struct TemporarySlaacConfig<Instant> {
     pub(crate) dad_counter: u8,
 }
 
+/// A lifetime that may be forever/infinite.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) enum Lifetime<I> {
+    Finite(I),
+    Infinite,
+}
+
 /// Configuration for an IPv6 address assigned via SLAAC.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum SlaacConfig<Instant> {
     /// The address is static.
     Static {
-        /// The lifetime of the address, or none for a link-local address.
-        valid_until: Option<Instant>,
+        /// The lifetime of the address.
+        valid_until: Lifetime<Instant>,
     },
     /// The address is a temporary address, as specified by [RFC 8981].
     ///
@@ -433,7 +440,7 @@ impl<Instant> AddrConfig<Instant> {
     ///
     /// [RFC 4862 Section 5.3]: https://tools.ietf.org/html/rfc4862#section-5.3
     pub(crate) const SLAAC_LINK_LOCAL: Self =
-        Self::Slaac(SlaacConfig::Static { valid_until: None });
+        Self::Slaac(SlaacConfig::Static { valid_until: Lifetime::Infinite });
 }
 
 /// The type of address configuration.
@@ -513,7 +520,7 @@ mod tests {
             ipv6.add_addr(Ipv6AddressEntry::new(
                 AddrSubnet::new(ADDRESS, PREFIX_LEN).unwrap(),
                 AddressState::Tentative { dad_transmits_remaining: None },
-                AddrConfig::Slaac(SlaacConfig::Static { valid_until: None }),
+                AddrConfig::Slaac(SlaacConfig::Static { valid_until: Lifetime::Infinite }),
             )),
             Ok(())
         );

@@ -42,7 +42,8 @@ use packet_formats::{
         ndp::{
             self,
             options::{NdpOption, NdpOptionBuilder, PrefixInformation},
-            NdpPacket, NeighborAdvertisement, NeighborSolicitation, Options, RouterSolicitation,
+            NdpPacket, NeighborAdvertisement, NeighborSolicitation, NonZeroNdpLifetime, Options,
+            RouterSolicitation,
         },
         IcmpMessage, IcmpPacket, IcmpPacketBuilder, IcmpUnusedCode,
     },
@@ -64,7 +65,8 @@ use crate::{
     },
     error::ExistsError,
     ip::device::state::{
-        AddrConfig, AddrConfigType, AddressState, IpDeviceState, SlaacConfig, TemporarySlaacConfig,
+        AddrConfig, AddrConfigType, AddressState, IpDeviceState, Lifetime, SlaacConfig,
+        TemporarySlaacConfig,
     },
     Instant, Ipv6DeviceConfiguration,
 };
@@ -376,6 +378,9 @@ pub(crate) trait NdpContext<D: LinkDevice>:
 
     /// Update the instant when an address configured via SLAAC is valid until.
     ///
+    /// A `None` value for `valid_until` indicates that the address is valid
+    /// forever; `Some` indicates valid for some finite lifetime.
+    ///
     /// # Panics
     ///
     /// May panic if `addr` is not an address configured via SLAAC on
@@ -384,7 +389,7 @@ pub(crate) trait NdpContext<D: LinkDevice>:
         &mut self,
         device_id: Self::DeviceId,
         addr: &UnicastAddr<Ipv6Addr>,
-        valid_until: Self::Instant,
+        valid_until: Lifetime<Self::Instant>,
     ) {
         trace!(
             "NdpContext::update_slaac_addr_valid_until: updating address {:?}'s valid until instant to {:?} on device {:?}",
@@ -408,13 +413,18 @@ pub(crate) trait NdpContext<D: LinkDevice>:
             })
             .expect("address is not configured via SLAAC on this device");
         match slaac_config {
-            SlaacConfig::Static { valid_until: v } => *v = Some(valid_until),
+            SlaacConfig::Static { valid_until: v } => *v = valid_until,
             SlaacConfig::Temporary(TemporarySlaacConfig {
                 valid_until: v,
                 desync_factor: _,
                 creation_time: _,
                 dad_counter: _,
-            }) => *v = valid_until,
+            }) => {
+                *v = match valid_until {
+                    Lifetime::Finite(v) => v,
+                    Lifetime::Infinite => panic!("temporary addresses may not be valid forever"),
+                }
+            }
         };
     }
 
@@ -1217,8 +1227,8 @@ fn regenerate_temporary_slaac_addr<'a, D: LinkDevice, C: NdpContext<D>>(
         device_id,
         now,
         SlaacInitConfig::Temporary { dad_count: 0 },
-        valid_for,
-        NonZeroDuration::new(preferred_for),
+        NonZeroNdpLifetime::Finite(valid_for),
+        NonZeroDuration::new(preferred_for).map(NonZeroNdpLifetime::Finite),
         &addr_subnet.subnet(),
     );
 }
@@ -1288,34 +1298,30 @@ fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
         /// Encapsulates a lifetime bound and where it came from.
         #[derive(Copy, Clone)]
         enum ValidLifetimeBound {
-            FromPrefix(Duration),
+            FromPrefix(Option<NonZeroNdpLifetime>),
             FromMaxBound(Duration),
         }
 
         impl ValidLifetimeBound {
             /// Unwraps the object and returns the wrapped duration.
-            fn get(self) -> Duration {
+            fn get(self) -> Option<NonZeroNdpLifetime> {
                 match self {
                     Self::FromPrefix(d) => d,
-                    Self::FromMaxBound(d) => d,
+                    Self::FromMaxBound(d) => {
+                        NonZeroDuration::new(d).map(NonZeroNdpLifetime::Finite)
+                    }
                 }
             }
         }
 
-        let prefix_valid_for =
-            prefix_info.valid_lifetime().map(|l| l.get()).unwrap_or(Duration::ZERO);
+        let prefix_valid_for = prefix_info.valid_lifetime();
 
-        let (valid_for, preferred_for, entry_valid_until) = match slaac_config {
-            SlaacConfig::Static { valid_until: entry_valid_until } => {
-                // TODO(https://fxbug.dev/91300): The code below assumes that
-                // valid_until is always finite, which it is not. This means the
-                // `unwrap` can panic.
-                (
-                    ValidLifetimeBound::FromPrefix(prefix_valid_for),
-                    prefix_preferred_for,
-                    entry_valid_until.unwrap(),
-                )
-            }
+        let (valid_for, entry_valid_until, preferred_for_and_regen_at) = match slaac_config {
+            SlaacConfig::Static { valid_until: entry_valid_until } => (
+                ValidLifetimeBound::FromPrefix(prefix_valid_for),
+                *entry_valid_until,
+                prefix_preferred_for.map(|p| (p, None)),
+            ),
             // Select valid_for and preferred_for according to RFC 8981
             // Section 3.4.
             SlaacConfig::Temporary(TemporarySlaacConfig {
@@ -1324,7 +1330,7 @@ fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
                 desync_factor,
                 dad_counter: _,
             }) => {
-                match sync_ctx
+                let (valid_for, preferred_for, entry_valid_until) = match sync_ctx
                     .get_state_with(device_id)
                     .config
                     .get_temporary_address_configuration()
@@ -1346,16 +1352,13 @@ fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
                         //   TEMP_PREFERRED_LIFETIME - DESYNC_FACTOR). A similar
                         //   approach can be used with the valid lifetime.
                         let preferred_for = prefix_preferred_for.and_then(|prefix_preferred_for| {
-                            let max_preferred_for = temporary_address_config
+                            temporary_address_config
                                 .temp_preferred_lifetime
                                 .get()
                                 .checked_sub(now.duration_since(*creation_time))
                                 .and_then(|p| p.checked_sub(*desync_factor))
-                                .and_then(NonZeroDuration::new);
-                            // The result we want is min(max, prefix). If
-                            // max_preferred_for is None then it's because it
-                            // would be <= 0, so the min would be <= 0.
-                            max_preferred_for.map(|max| core::cmp::min(max, prefix_preferred_for))
+                                .and_then(NonZeroDuration::new)
+                                .map(|d| prefix_preferred_for.min_finite_duration(d))
                         });
                         // Per RFC 8981 Section 3.4.1, `desync_factor` is only
                         // used for preferred lifetime:
@@ -1373,30 +1376,31 @@ fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
                             configured_max_lifetime - since_creation
                         };
 
-                        let valid_for = if max_valid_lifetime <= prefix_valid_for {
-                            ValidLifetimeBound::FromMaxBound(max_valid_lifetime)
-                        } else {
-                            ValidLifetimeBound::FromPrefix(prefix_valid_for)
-                        };
+                        let valid_for =
+                            prefix_valid_for.map_or(ValidLifetimeBound::FromPrefix(None), |d| {
+                                match d {
+                                    NonZeroNdpLifetime::Infinite => {
+                                        ValidLifetimeBound::FromMaxBound(max_valid_lifetime)
+                                    }
+                                    NonZeroNdpLifetime::Finite(d) => {
+                                        if max_valid_lifetime <= d.get() {
+                                            ValidLifetimeBound::FromMaxBound(max_valid_lifetime)
+                                        } else {
+                                            ValidLifetimeBound::FromPrefix(prefix_valid_for)
+                                        }
+                                    }
+                                }
+                            });
+
                         (valid_for, preferred_for, *entry_valid_until)
                     }
-                }
-            }
-        };
+                };
 
-        let remaining_lifetime = if entry_valid_until < now {
-            None
-        } else {
-            Some(entry_valid_until.duration_since(now))
-        };
-
-        let regen_at = match slaac_config {
-            SlaacConfig::Static { valid_until: _ } => None,
-            SlaacConfig::Temporary(_) => {
-                preferred_for.and_then(|preferred_for| {
+                let preferred_for_and_regen_at = preferred_for.map(|preferred_for| {
                     let device_config = sync_ctx.get_ip_device_configuration(device_id);
                     let state = sync_ctx.get_state_with(device_id);
-                    state.config.get_temporary_address_configuration().and_then(
+
+                    let regen_at = state.config.get_temporary_address_configuration().and_then(
                         |TemporarySlaacAddressConfiguration {
                              temp_idgen_retries,
                              temp_preferred_lifetime: _,
@@ -1426,61 +1430,81 @@ fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
                                 .checked_sub(regen_advance)
                                 .map_or(Some(now), |d| now.checked_add(d))
                         },
-                    )
-                })
+                    );
+
+                    (NonZeroNdpLifetime::Finite(preferred_for), regen_at)
+                });
+
+                (valid_for, Lifetime::Finite(entry_valid_until), preferred_for_and_regen_at)
             }
+        };
+
+        // `Some` iff the remaining lifetime is a positive non-zero lifetime.
+        let remaining_lifetime = match entry_valid_until {
+            Lifetime::Infinite => Some(Lifetime::Infinite),
+            Lifetime::Finite(entry_valid_until) => (entry_valid_until > now)
+                .then(|| Lifetime::Finite(entry_valid_until.duration_since(now))),
         };
 
         // As per RFC 4862 section 5.5.3.e, if the advertised prefix is equal to
         // the prefix of an address configured by stateless autoconfiguration in
         // the list, the preferred lifetime of the address is reset to the
         // Preferred Lifetime in the received advertisement.
-        trace!("receive_ndp_packet: updating preferred lifetime to {:?} for {:?} SLAAC address {:?} on device {:?}", preferred_for,
-            SlaacType::from(slaac_config), addr, device_id);
 
         // Update the preferred lifetime for this address.
         //
         // Must not have reached this point if the address was not already
         // assigned to a device.
-        if let Some(preferred_for) = preferred_for {
-            if entry.state.is_deprecated() {
-                let entry = sync_ctx
-                    .get_ip_device_state_mut(device_id)
-                    .iter_addrs_mut()
-                    .find(|a| a.addr_sub() == entry.addr_sub())
-                    .unwrap();
-                entry.state = match entry.state {
-                    AddressState::Deprecated => AddressState::Assigned,
-                    state => state,
+        match preferred_for_and_regen_at {
+            None => {
+                if !entry.state.is_deprecated() {
+                    sync_ctx.deprecate_slaac_addr(device_id, &addr);
+                    let _: Option<C::Instant> = sync_ctx
+                        .cancel_timer(NdpTimerId::new_deprecate_slaac_address(device_id, addr));
+                    let _: Option<C::Instant> = sync_ctx.cancel_timer(
+                        NdpTimerId::new_regenerate_temporary_slaac_address(device_id, *addr_sub),
+                    );
+                }
+            }
+            Some((preferred_for, regen_at)) => {
+                if entry.state.is_deprecated() {
+                    let entry = sync_ctx
+                        .get_ip_device_state_mut(device_id)
+                        .iter_addrs_mut()
+                        .find(|a| a.addr_sub() == entry.addr_sub())
+                        .unwrap();
+                    entry.state = match entry.state {
+                        AddressState::Deprecated => AddressState::Assigned,
+                        state => state,
+                    };
+                }
+
+                let timer_id = NdpTimerId::new_deprecate_slaac_address(device_id, addr).into();
+                let _previously_scheduled_instant: Option<C::Instant> = match preferred_for {
+                    NonZeroNdpLifetime::Finite(preferred_for) => {
+                        // Use `schedule_timer_instant` instead of `schedule_timer` to set
+                        // the timeout relative to the previously recorded `now` value. This
+                        // helps prevent skew in cases where this task gets preempted and
+                        // isn't scheduled for some period of time between recording `now`
+                        // and here.
+                        sync_ctx.schedule_timer_instant(
+                            now.checked_add(preferred_for.get()).unwrap(),
+                            timer_id,
+                        )
+                    }
+                    NonZeroNdpLifetime::Infinite => sync_ctx.cancel_timer(timer_id),
+                };
+
+                let _prev_regen_at: Option<C::Instant> = match regen_at {
+                    Some(regen_at) => sync_ctx.schedule_timer_instant(
+                        regen_at,
+                        NdpTimerId::new_regenerate_temporary_slaac_address(device_id, *addr_sub),
+                    ),
+                    None => sync_ctx.cancel_timer(
+                        NdpTimerId::new_regenerate_temporary_slaac_address(device_id, *addr_sub),
+                    ),
                 };
             }
-
-            // Use `schedule_timer_instant` instead of `schedule_timer` to set
-            // the timeout relative to the previously recorded `now` value. This
-            // helps prevent skew in cases where this task gets preempted and
-            // isn't scheduled for some period of time between recording `now`
-            // and here.
-            let _: Option<C::Instant> = sync_ctx.schedule_timer_instant(
-                now.checked_add(preferred_for.get()).unwrap(),
-                NdpTimerId::new_deprecate_slaac_address(device_id, addr).into(),
-            );
-
-            let _prev_regen_at: Option<C::Instant> = match regen_at {
-                Some(regen_at) => sync_ctx.schedule_timer_instant(
-                    regen_at,
-                    NdpTimerId::new_regenerate_temporary_slaac_address(device_id, *addr_sub),
-                ),
-                None => sync_ctx.cancel_timer(NdpTimerId::new_regenerate_temporary_slaac_address(
-                    device_id, *addr_sub,
-                )),
-            };
-        } else if !entry.state.is_deprecated() {
-            sync_ctx.deprecate_slaac_addr(device_id, &addr);
-            let _: Option<C::Instant> =
-                sync_ctx.cancel_timer(NdpTimerId::new_deprecate_slaac_address(device_id, addr));
-            let _: Option<C::Instant> = sync_ctx.cancel_timer(
-                NdpTimerId::new_regenerate_temporary_slaac_address(device_id, *addr_sub),
-            );
         }
 
         // As per RFC 4862 section 5.5.3.e, the specific action to perform for
@@ -1491,63 +1515,80 @@ fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
             ValidLifetimeBound::FromMaxBound(valid_for) => {
                 // If the maximum lifetime for the address is smaller than the
                 // lifetime specified for the prefix, then it must be applied.
-                Some(valid_for)
+                NonZeroDuration::new(valid_for).map(NonZeroNdpLifetime::Finite)
             }
             ValidLifetimeBound::FromPrefix(valid_for) => {
-                if valid_for > MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE
-                    || remaining_lifetime.map_or(true, |r| r < valid_for)
-                {
-                    // If the received Valid Lifetime is greater than 2 hours or
-                    // greater than RemainingLifetime, set the valid lifetime of
-                    // the corresponding address to the advertised Valid
-                    // Lifetime.
-                    Some(valid_for)
-                } else if remaining_lifetime
-                    .map_or(true, |r| r <= MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE)
-                {
-                    // If RemainingLifetime is less than or equal to 2 hours,
-                    // ignore the Prefix Information option with regards to the
-                    // valid lifetime, unless the Router Advertisement from
-                    // which this option was obtained has been authenticated
-                    // (e.g., via Secure Neighbor Discovery [RFC3971]).  If the
-                    // Router Advertisement was authenticated, the valid
-                    // lifetime of the corresponding address should be set to
-                    // the Valid Lifetime in the received option.
-                    //
-                    // TODO(ghanan): If the NDP packet this prefix option is in
-                    //               was authenticated, update the valid
-                    //               lifetime of the address to the valid
-                    //               lifetime in the received option, as per RFC
-                    //               4862 section 5.5.3.e.
-                    None
-                } else {
-                    // Otherwise, reset the valid lifetime of the corresponding
-                    // address to 2 hours.
-                    Some(MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE)
+                // If the received Valid Lifetime is greater than 2 hours or
+                // greater than RemainingLifetime, set the valid lifetime of
+                // the corresponding address to the advertised Valid
+                // Lifetime.
+                match valid_for {
+                    Some(NonZeroNdpLifetime::Infinite) => Some(NonZeroNdpLifetime::Infinite),
+                    Some(NonZeroNdpLifetime::Finite(v))
+                        if v.get() > MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE
+                            || remaining_lifetime
+                                .map_or(true, |r| r < Lifetime::Finite(v.get())) =>
+                    {
+                        Some(NonZeroNdpLifetime::Finite(v))
+                    }
+                    None | Some(NonZeroNdpLifetime::Finite(_)) => {
+                        if remaining_lifetime.map_or(true, |r| {
+                            r <= Lifetime::Finite(MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE)
+                        }) {
+                            // If RemainingLifetime is less than or equal to 2 hours,
+                            // ignore the Prefix Information option with regards to the
+                            // valid lifetime, unless the Router Advertisement from
+                            // which this option was obtained has been authenticated
+                            // (e.g., via Secure Neighbor Discovery [RFC3971]).  If the
+                            // Router Advertisement was authenticated, the valid
+                            // lifetime of the corresponding address should be set to
+                            // the Valid Lifetime in the received option.
+                            //
+                            // TODO(ghanan): If the NDP packet this prefix option is in
+                            //               was authenticated, update the valid
+                            //               lifetime of the address to the valid
+                            //               lifetime in the received option, as per RFC
+                            //               4862 section 5.5.3.e.
+                            None
+                        } else {
+                            // Otherwise, reset the valid lifetime of the corresponding
+                            // address to 2 hours.
+                            Some(NonZeroNdpLifetime::Finite(
+                                NonZeroDuration::new(MIN_PREFIX_VALID_LIFETIME_FOR_UPDATE).unwrap(),
+                            ))
+                        }
+                    }
                 }
             }
         };
+
         match valid_for_to_update {
-            Some(valid_for) => {
-                // TODO(https://fxbug.dev/91300): The code below assumes that
-                // valid_until is always finite, which it is not. This
-                // means the `unwrap` can panic.
-                let valid_until = now.checked_add(valid_for).unwrap();
-                trace!("receive_ndp_packet: updating valid lifetime to {:?} for SLAAC address {:?} on device {:?}", valid_until, addr, device_id);
+            Some(valid_for) => match valid_for {
+                NonZeroNdpLifetime::Finite(valid_for) => {
+                    let valid_until = now.checked_add(valid_for.get()).unwrap();
+                    trace!("receive_ndp_packet: updating valid lifetime to {:?} for SLAAC address {:?} on device {:?}", valid_until, addr, device_id);
 
-                // Set the valid lifetime for this address.
-                sync_ctx.update_slaac_addr_valid_until(device_id, &addr, valid_until);
+                    // Set the valid lifetime for this address.
+                    sync_ctx.update_slaac_addr_valid_until(
+                        device_id,
+                        &addr,
+                        Lifetime::Finite(valid_until),
+                    );
 
-                // Must not have reached this point if the address was already
-                // assigned to a device.
-                assert_matches!(
-                    sync_ctx.schedule_timer_instant(
+                    let _: Option<C::Instant> = sync_ctx.schedule_timer_instant(
                         valid_until,
                         NdpTimerId::new_invalidate_slaac_address(device_id, addr).into(),
-                    ),
-                    Some(_)
-                );
-            }
+                    );
+                }
+                NonZeroNdpLifetime::Infinite => {
+                    // Set the valid lifetime for this address.
+                    sync_ctx.update_slaac_addr_valid_until(device_id, &addr, Lifetime::Infinite);
+
+                    let _: Option<C::Instant> = sync_ctx.cancel_timer(
+                        NdpTimerId::new_invalidate_slaac_address(device_id, addr).into(),
+                    );
+                }
+            },
             None => {
                 trace!("receive_ndp_packet: not updating valid lifetime for SLAAC address {:?} on device {:?} as remaining lifetime is less than 2 hours and new valid lifetime ({:?}) is less than remaining lifetime", addr, device_id, valid_for.get());
             }
@@ -1660,8 +1701,8 @@ fn add_slaac_addr_sub<'a, D: LinkDevice, C: NdpContext<D>>(
     device_id: <C as DeviceIdContext<D>>::DeviceId,
     now: C::Instant,
     slaac_config: SlaacInitConfig,
-    prefix_valid_for: NonZeroDuration,
-    prefix_preferred_for: Option<NonZeroDuration>,
+    prefix_valid_for: NonZeroNdpLifetime,
+    prefix_preferred_for: Option<NonZeroNdpLifetime>,
     subnet: &Subnet<Ipv6Addr>,
 ) {
     if subnet.prefix() != REQUIRED_PREFIX_BITS {
@@ -1672,15 +1713,20 @@ fn add_slaac_addr_sub<'a, D: LinkDevice, C: NdpContext<D>>(
         return;
     }
 
-    struct PreferredForAndRegenAt<Instant>(NonZeroDuration, Option<Instant>);
+    struct PreferredForAndRegenAt<Instant>(NonZeroNdpLifetime, Option<Instant>);
 
     let (valid_until, preferred_and_regen, slaac_config, address) = match slaac_config {
         SlaacInitConfig::Static => {
-            let valid_until = now.checked_add(prefix_valid_for.get()).unwrap();
+            let valid_until = match prefix_valid_for {
+                NonZeroNdpLifetime::Finite(d) => {
+                    Lifetime::Finite(now.checked_add(d.get()).unwrap())
+                }
+                NonZeroNdpLifetime::Infinite => Lifetime::Infinite,
+            };
             (
                 valid_until,
                 prefix_preferred_for.map(|p| PreferredForAndRegenAt(p, None)),
-                SlaacConfig::Static { valid_until: Some(valid_until) },
+                SlaacConfig::Static { valid_until },
                 // Generate the global address as defined by RFC 4862 section 5.5.3.d.
                 generate_global_static_address(
                     &subnet,
@@ -1715,8 +1761,12 @@ fn add_slaac_addr_sub<'a, D: LinkDevice, C: NdpContext<D>>(
             //
             //    *  Its preferred lifetime is the lower of the Preferred Lifetime
             //       of the prefix and TEMP_PREFERRED_LIFETIME - DESYNC_FACTOR.
-            let valid_for =
-                core::cmp::min(prefix_valid_for, temporary_address_config.temp_valid_lifetime);
+            let valid_for = match prefix_valid_for {
+                NonZeroNdpLifetime::Finite(prefix_valid_for) => {
+                    core::cmp::min(prefix_valid_for, temporary_address_config.temp_valid_lifetime)
+                }
+                NonZeroNdpLifetime::Infinite => temporary_address_config.temp_valid_lifetime,
+            };
 
             let regen_advance = regen_advance(
                 temporary_address_config.temp_idgen_retries,
@@ -1777,27 +1827,34 @@ fn add_slaac_addr_sub<'a, D: LinkDevice, C: NdpContext<D>>(
 
             let desync_factor =
                 sync_ctx.rng_mut().sample(Uniform::new(Duration::ZERO, max_desync_factor));
-            let preferred_for = core::cmp::min(
-                prefix_preferred_for.map_or(Duration::ZERO, NonZeroDuration::get),
-                temp_preferred_lifetime - desync_factor,
-            );
-            let regen_at = match preferred_for.checked_sub(regen_advance) {
-                Some(before_regen) => now.checked_add(before_regen).unwrap(),
-                None => {
-                    // RFC 8981 Section 3.4.5:
-                    //
-                    //   A temporary address is created only if this calculated
-                    //   preferred lifetime is greater than REGEN_ADVANCE time
-                    //   units.
-                    trace!("receive_ndp_packet: preferred lifetime of {:?} for subnet {:?} is too short to allow regen", preferred_for, subnet);
-                    return;
-                }
+            let preferred_for = prefix_preferred_for.and_then(|prefix_preferred_for| {
+                temp_preferred_lifetime
+                    .checked_sub(desync_factor)
+                    .and_then(NonZeroDuration::new)
+                    .map(|d| prefix_preferred_for.min_finite_duration(d))
+            });
+
+            // RFC 8981 Section 3.4.5:
+            //
+            //   A temporary address is created only if this calculated
+            //   preferred lifetime is greater than REGEN_ADVANCE time
+            //   units.
+            let preferred_for_and_regen_at = match preferred_for {
+                None => return,
+                Some(preferred_for) => match preferred_for.get().checked_sub(regen_advance) {
+                    Some(before_regen) => PreferredForAndRegenAt(
+                        NonZeroNdpLifetime::Finite(preferred_for),
+                        Some(now.checked_add(before_regen).unwrap()),
+                    ),
+                    None => {
+                        trace!("receive_ndp_packet: preferred lifetime of {:?} for subnet {:?} is too short to allow regen", preferred_for, subnet);
+                        return;
+                    }
+                },
             };
-            let preferred_for = NonZeroDuration::new(preferred_for)
-                .expect("nonzero because checked_sub above succeeded, and regen_advance > 0");
             (
-                valid_until,
-                Some(PreferredForAndRegenAt(preferred_for, Some(regen_at))),
+                Lifetime::Finite(valid_until),
+                Some(preferred_for_and_regen_at),
                 SlaacConfig::Temporary(TemporarySlaacConfig {
                     desync_factor,
                     valid_until,
@@ -1822,13 +1879,18 @@ fn add_slaac_addr_sub<'a, D: LinkDevice, C: NdpContext<D>>(
         //
         // Must not have reached this point if the address was already assigned
         // to a device.
-        assert_eq!(
-            sync_ctx.schedule_timer_instant(
-                valid_until,
-                NdpTimerId::new_invalidate_slaac_address(device_id, address.addr()).into(),
-            ),
-            None
-        );
+        match valid_until {
+            Lifetime::Finite(valid_until) => {
+                assert_eq!(
+                    sync_ctx.schedule_timer_instant(
+                        valid_until,
+                        NdpTimerId::new_invalidate_slaac_address(device_id, address.addr()).into(),
+                    ),
+                    None
+                );
+            }
+            Lifetime::Infinite => {}
+        }
 
         let deprecate_timer_id = NdpTimerId::new_deprecate_slaac_address(device_id, address.addr());
 
@@ -1842,13 +1904,19 @@ fn add_slaac_addr_sub<'a, D: LinkDevice, C: NdpContext<D>>(
             // cases where this task gets preempted and isn't scheduled for some period of time
             // between recording `now` and here.
             Some(PreferredForAndRegenAt(preferred_for, regen_at)) => {
-                assert_eq!(
-                    sync_ctx.schedule_timer_instant(
-                        now.checked_add(preferred_for.get()).unwrap(),
-                        deprecate_timer_id.into()
-                    ),
-                    None
-                );
+                match preferred_for {
+                    NonZeroNdpLifetime::Finite(preferred_for) => {
+                        assert_eq!(
+                            sync_ctx.schedule_timer_instant(
+                                now.checked_add(preferred_for.get()).unwrap(),
+                                deprecate_timer_id.into()
+                            ),
+                            None
+                        );
+                    }
+                    NonZeroNdpLifetime::Infinite => {}
+                }
+
                 match regen_at {
                     Some(regen_at) => assert_eq!(
                         sync_ctx.schedule_timer_instant(
@@ -1951,8 +2019,8 @@ fn duplicate_address_detected<D: LinkDevice, C: NdpContext<D>>(
         device_id,
         now,
         SlaacInitConfig::Temporary { dad_count: dad_counter + 1 },
-        valid_for,
-        NonZeroDuration::new(preferred_for),
+        NonZeroNdpLifetime::Finite(valid_for),
+        NonZeroDuration::new(preferred_for).map(NonZeroNdpLifetime::Finite),
         &addr_sub.subnet(),
     );
 }
@@ -4497,6 +4565,156 @@ mod tests {
     }
 
     #[test]
+    fn test_host_slaac_infinite_lifetime() {
+        let config = Ipv6::DUMMY_CONFIG;
+        let mut ctx = DummyEventDispatcherBuilder::default().build();
+        let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        crate::device::testutil::enable_device(&mut ctx, device);
+
+        let src_mac = config.remote_mac;
+        let src_ip = src_mac.to_ipv6_link_local().addr().get();
+        let prefix = Ipv6Addr::from([1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let prefix_length = 64;
+        let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
+        expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
+        let expected_addr = UnicastAddr::new(Ipv6Addr::from(expected_addr)).unwrap();
+
+        crate::device::set_ipv6_configuration(&mut ctx, device, {
+            let mut config = crate::device::Ipv6DeviceConfiguration::default();
+            config.ip_config.ip_enabled = true;
+            config.dad_transmits = None;
+            config
+        });
+
+        // Receive a new RA with new prefix (autonomous).
+        //
+        // Should get a new IP with an infinite lifetime.
+        let valid_lifetime = u32::MAX;
+        let preferred_lifetime = u32::MAX;
+        let mut icmpv6_packet_buf = slaac_packet_buf(
+            src_ip,
+            config.local_ip.get(),
+            prefix,
+            prefix_length,
+            true,
+            true,
+            valid_lifetime,
+            preferred_lifetime,
+        );
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
+            .unwrap();
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
+        let device_id = device.try_into().unwrap();
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
+                .iter_global_ipv6_addrs()
+                .collect::<Vec<_>>(),
+            [&Ipv6AddressEntry {
+                addr_sub: AddrSubnet::new(expected_addr.get(), prefix_length).unwrap(),
+                state: AddressState::Assigned,
+                config: AddrConfig::Slaac(SlaacConfig::Static { valid_until: Lifetime::Infinite }),
+            }]
+        );
+        ctx.ctx.timer_ctx().assert_no_timers_installed();
+
+        // Receive a new RA to update prefix lifetimes.
+        //
+        // Should reset SLAAC address lifetimes to finite values.
+        let valid_lifetime = u32::MAX - 1;
+        let preferred_lifetime = u32::MAX - 1;
+        let mut icmpv6_packet_buf = slaac_packet_buf(
+            src_ip,
+            config.local_ip.get(),
+            prefix,
+            prefix_length,
+            true,
+            true,
+            valid_lifetime,
+            preferred_lifetime,
+        );
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
+            .unwrap();
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
+        let now = ctx.now();
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
+                .iter_global_ipv6_addrs()
+                .collect::<Vec<_>>(),
+            [&Ipv6AddressEntry {
+                addr_sub: AddrSubnet::new(expected_addr.get(), prefix_length).unwrap(),
+                state: AddressState::Assigned,
+                config: AddrConfig::Slaac(SlaacConfig::Static {
+                    valid_until: Lifetime::Finite(DummyInstant::from(Duration::from_secs(
+                        valid_lifetime.into()
+                    )))
+                }),
+            }]
+        );
+        // Timers should have been reset.
+        ctx.ctx.timer_ctx().assert_some_timers_installed([
+            (
+                NdpTimerId::new_deprecate_slaac_address(device.try_into().unwrap(), expected_addr)
+                    .into(),
+                now + Duration::from_secs(preferred_lifetime.into()),
+            ),
+            (
+                NdpTimerId::new_invalidate_slaac_address(device.try_into().unwrap(), expected_addr)
+                    .into(),
+                now + Duration::from_secs(valid_lifetime.into()),
+            ),
+        ]);
+
+        // Receive a new RA to update prefix lifetimes.
+        //
+        // Should reset SLAAC address lifetimes to infinite values.
+        let valid_lifetime = u32::MAX;
+        let preferred_lifetime = u32::MAX;
+        let mut icmpv6_packet_buf = slaac_packet_buf(
+            src_ip,
+            config.local_ip.get(),
+            prefix,
+            prefix_length,
+            true,
+            true,
+            valid_lifetime,
+            preferred_lifetime,
+        );
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
+            .unwrap();
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            config.local_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
+        let device_id = device.try_into().unwrap();
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
+                .iter_global_ipv6_addrs()
+                .collect::<Vec<_>>(),
+            [&Ipv6AddressEntry {
+                addr_sub: AddrSubnet::new(expected_addr.get(), prefix_length).unwrap(),
+                state: AddressState::Assigned,
+                config: AddrConfig::Slaac(SlaacConfig::Static { valid_until: Lifetime::Infinite }),
+            }]
+        );
+        ctx.ctx.timer_ctx().assert_no_timers_installed();
+    }
+
+    #[test]
     fn test_host_stateless_static_address_autoconfiguration() {
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build();
@@ -5238,7 +5456,7 @@ mod tests {
             let prefix1_valid_until = prefix1.valid_until(now);
             assert_matches!(static_address, (_addr,
             SlaacConfig::Static { valid_until }) => {
-                assert_eq!(valid_until, Some(prefix1_valid_until))
+                assert_eq!(valid_until, Lifetime::Finite(prefix1_valid_until))
             });
             assert_matches!(temporary_address, (_addr,
                 SlaacConfig::Temporary(TemporarySlaacConfig {
@@ -5271,7 +5489,7 @@ mod tests {
             let prefix1_valid_until = prefix1.valid_until(now);
             assert_matches!(static_address, (addr, SlaacConfig::Static { valid_until }) => {
                 assert_eq!(addr, prefix_1_static);
-                assert_eq!(valid_until, Some(prefix1_valid_until));
+                assert_eq!(valid_until, Lifetime::Finite(prefix1_valid_until));
             });
             assert_matches!(temporary_address,
             (addr, SlaacConfig::Temporary(TemporarySlaacConfig { valid_until, creation_time, desync_factor: _, dad_counter: 0 })) => {
@@ -5294,7 +5512,7 @@ mod tests {
             let now = ctx.now();
             let prefix2_valid_until = prefix2.valid_until(now);
             assert_matches!(static_address, (_, SlaacConfig::Static { valid_until }) => {
-                assert_eq!(valid_until, Some(prefix2_valid_until))
+                assert_eq!(valid_until, Lifetime::Finite(prefix2_valid_until))
             });
             assert_matches!(temporary_address,
             (_, SlaacConfig::Temporary(TemporarySlaacConfig {
@@ -5305,8 +5523,10 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_host_generate_temporary_slaac_address() {
+    fn test_host_generate_temporary_slaac_address(
+        valid_lifetime_in_ra: u32,
+        preferred_lifetime_in_ra: u32,
+    ) {
         set_logger_for_test();
         let (mut ctx, device, config) = initialize_with_temporary_addresses_enabled();
 
@@ -5341,17 +5561,14 @@ mod tests {
         //
         // Should get a new temporary IP.
 
-        let valid_lifetime = 10000;
-        let preferred_lifetime = 9000;
-
         receive_prefix_update(
             &mut ctx,
             device,
             src_ip,
             dst_ip,
             subnet,
-            preferred_lifetime,
-            valid_lifetime,
+            preferred_lifetime_in_ra,
+            valid_lifetime_in_ra,
             true,
         );
 
@@ -5375,6 +5592,16 @@ mod tests {
         assert_eq!(addr_sub.subnet(), subnet);
         assert_eq!(state, AddressState::Assigned);
         assert!(valid_until <= ctx.now().checked_add(max_valid_lifetime).unwrap());
+    }
+
+    #[test]
+    fn test_host_generate_temporary_slaac_address_finite_lifetime_in_ra() {
+        test_host_generate_temporary_slaac_address(10000, 9000)
+    }
+
+    #[test]
+    fn test_host_generate_temporary_slaac_address_infinite_lifetime_in_ra() {
+        test_host_generate_temporary_slaac_address(u32::MAX, u32::MAX)
     }
 
     #[test]
@@ -5942,10 +6169,10 @@ mod tests {
                 desync_factor: _,
                 creation_time: _,
                 dad_counter: _,
-            })) => Some(valid_until),
-            AddrConfig::Manual => None,
+            })) => Lifetime::Finite(valid_until),
+            AddrConfig::Manual => unreachable!(),
         };
-        assert_eq!(entry_valid_until, Some(valid_until));
+        assert_eq!(entry_valid_until, Lifetime::Finite(valid_until));
         ctx.ctx.timer_ctx().assert_some_timers_installed([
             (
                 NdpTimerId::new_deprecate_slaac_address(device, entry.addr_sub().addr()).into(),
@@ -6315,8 +6542,10 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_host_temporary_slaac_regenerates_address_before_expiration() {
+    fn test_host_temporary_slaac_regenerates_address_before_expiration(
+        valid_lifetime_in_ra: u32,
+        preferred_lifetime_in_ra: u32,
+    ) {
         // Check that before a temporary address expires, a new one gets
         // generated.
         set_logger_for_test();
@@ -6353,8 +6582,8 @@ mod tests {
             router_ip,
             src_ip,
             subnet,
-            MAX_PREFERRED_LIFETIME.as_secs().try_into().unwrap(),
-            MAX_VALID_LIFETIME.as_secs().try_into().unwrap(),
+            preferred_lifetime_in_ra,
+            valid_lifetime_in_ra,
             false,
         );
 
@@ -6426,6 +6655,16 @@ mod tests {
             .collect::<Vec<_>>(),
             vec![&new_addr_entry]
         )
+    }
+
+    #[test]
+    fn test_host_temporary_slaac_regenerates_address_before_expiration_finite_lifetime_in_ra() {
+        test_host_temporary_slaac_regenerates_address_before_expiration(15000, 5000)
+    }
+
+    #[test]
+    fn test_host_temporary_slaac_regenerates_address_before_expiration_infinite_lifetime_in_ra() {
+        test_host_temporary_slaac_regenerates_address_before_expiration(u32::MAX, u32::MAX)
     }
 
     #[test]

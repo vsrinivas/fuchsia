@@ -26,6 +26,57 @@ pub enum NdpPacket<B: ByteSlice> {
     Redirect(IcmpPacket<Ipv6, B, Redirect>),
 }
 
+/// A non-zero lifetime conveyed through NDP.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+pub enum NonZeroNdpLifetime {
+    /// A finite lifetime greater than zero.
+    ///
+    /// Note that the finite lifetime is not statically guaranteed to be less
+    /// than the infinite value representation of a field. E.g. for Prefix
+    /// Information option lifetime 32-bit fields, infinity is represented as
+    /// all 1s but it is possible for this variant to hold a value representing
+    /// X seconds where X is >= 2^32.
+    Finite(NonZeroDuration),
+
+    /// An infinite lifetime.
+    Infinite,
+}
+
+impl NonZeroNdpLifetime {
+    fn from_u32_with_infinite(lifetime: u32) -> Option<NonZeroNdpLifetime> {
+        // Per RFC 4861 section 4.6.2,
+        //
+        //   Valid Lifetime
+        //                  32-bit unsigned integer.  The length of time in
+        //                  seconds (relative to the time the packet is sent)
+        //                  that the prefix is valid for the purpose of on-link
+        //                  determination.  A value of all one bits
+        //                  (0xffffffff) represents infinity.  The Valid
+        //                  Lifetime is also used by [ADDRCONF].
+        //
+        //   Preferred Lifetime
+        //                  32-bit unsigned integer.  The length of time in
+        //                  seconds (relative to the time the packet is sent)
+        //                  that addresses generated from the prefix via
+        //                  stateless address autoconfiguration remain
+        //                  preferred [ADDRCONF].  A value of all one bits
+        //                  (0xffffffff) represents infinity.  See [ADDRCONF].
+        match lifetime {
+            u32::MAX => Some(NonZeroNdpLifetime::Infinite),
+            finite => NonZeroDuration::new(Duration::from_secs(finite.into()))
+                .map(NonZeroNdpLifetime::Finite),
+        }
+    }
+
+    /// Returns the minimum finite duration.
+    pub fn min_finite_duration(self, other: NonZeroDuration) -> NonZeroDuration {
+        match self {
+            NonZeroNdpLifetime::Finite(lifetime) => core::cmp::min(lifetime, other),
+            NonZeroNdpLifetime::Infinite => other,
+        }
+    }
+}
+
 /// A records parser for NDP options.
 ///
 /// See [`Options`] for more details.
@@ -403,6 +454,7 @@ pub mod options {
     use zerocopy::byteorder::{ByteOrder, NetworkEndian};
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
+    use super::NonZeroNdpLifetime;
     use crate::utils::NonZeroDuration;
     use crate::U32;
 
@@ -732,19 +784,19 @@ pub mod options {
         /// Get the length of time (relative to the time the packet is sent) that
         /// the prefix is valid for the purpose of on-link determination and SLAAC.
         ///
-        /// A value of [`INFINITE_LIFETIME`] represents infinity; a value of `None`
-        /// means that the prefix must no longer be used for on-link determination.
-        pub fn valid_lifetime(&self) -> Option<NonZeroDuration> {
-            NonZeroDuration::new(Duration::from_secs(self.valid_lifetime.get().into()))
+        /// `None` indicates that the prefix has no valid lifetime and should
+        /// not be considered valid.
+        pub fn valid_lifetime(&self) -> Option<NonZeroNdpLifetime> {
+            NonZeroNdpLifetime::from_u32_with_infinite(self.valid_lifetime.get())
         }
 
         /// Get the length of time (relative to the time the packet is sent) that
         /// addresses generated from the prefix via SLAAC remains preferred.
         ///
-        /// A value of [`INFINITE_LIFETIME`] represents infinity; a value of `None`
-        /// means that the prefix should be immediately deprecated.
-        pub fn preferred_lifetime(&self) -> Option<NonZeroDuration> {
-            NonZeroDuration::new(Duration::from_secs(self.preferred_lifetime.get().into()))
+        /// `None` indicates that the prefix has no preferred lifetime and
+        /// should not be considered preferred.
+        pub fn preferred_lifetime(&self) -> Option<NonZeroNdpLifetime> {
+            NonZeroNdpLifetime::from_u32_with_infinite(self.preferred_lifetime.get())
         }
 
         /// An IPv6 address or a prefix of an IPv6 address.
@@ -1334,15 +1386,15 @@ mod tests {
                     );
                     assert_eq!(
                         info.valid_lifetime(),
-                        NonZeroDuration::new(Duration::from_secs(
-                            PREFIX_INFO_VALID_LIFETIME_SECONDS.into()
-                        ))
+                        NonZeroNdpLifetime::from_u32_with_infinite(
+                            PREFIX_INFO_VALID_LIFETIME_SECONDS
+                        )
                     );
                     assert_eq!(
                         info.preferred_lifetime(),
-                        NonZeroDuration::new(Duration::from_secs(
-                            PREFIX_INFO_PREFERRED_LIFETIME_SECONDS.into()
-                        ))
+                        NonZeroNdpLifetime::from_u32_with_infinite(
+                            PREFIX_INFO_PREFERRED_LIFETIME_SECONDS
+                        )
                     );
                     assert_eq!(info.prefix_length(), PREFIX_INFO_PREFIX.prefix());
                     assert_eq!(info.prefix(), &PREFIX_INFO_PREFIX.network());
@@ -1660,5 +1712,59 @@ mod tests {
         expected[8..].copy_from_slice(prefix.bytes());
 
         assert_eq!(serialized.as_ref(), &expected[..expected_option_length.into()]);
+    }
+
+    #[test_case(0, None)]
+    #[test_case(
+        1,
+        Some(NonZeroNdpLifetime::Finite(NonZeroDuration::new(
+            Duration::from_secs(1),
+        ).unwrap()))
+    )]
+    #[test_case(
+        u32::MAX - 1,
+        Some(NonZeroNdpLifetime::Finite(NonZeroDuration::new(
+            Duration::from_secs(u64::from(u32::MAX) - 1),
+        ).unwrap()))
+    )]
+    #[test_case(u32::MAX, Some(NonZeroNdpLifetime::Infinite))]
+    fn non_zero_ndp_lifetime_non_zero_or_max_u32_from_u32_with_infinite(
+        t: u32,
+        expected: Option<NonZeroNdpLifetime>,
+    ) {
+        assert_eq!(NonZeroNdpLifetime::from_u32_with_infinite(t), expected)
+    }
+
+    const MIN_NON_ZERO_DURATION: Duration = Duration::new(0, 1);
+    #[test_case(
+        NonZeroNdpLifetime::Infinite,
+        NonZeroDuration::new(MIN_NON_ZERO_DURATION).unwrap(),
+        NonZeroDuration::new(MIN_NON_ZERO_DURATION).unwrap()
+    )]
+    #[test_case(
+        NonZeroNdpLifetime::Infinite,
+        NonZeroDuration::new(Duration::MAX).unwrap(),
+        NonZeroDuration::new(Duration::MAX).unwrap()
+    )]
+    #[test_case(
+        NonZeroNdpLifetime::Finite(NonZeroDuration::new(
+            Duration::from_secs(2)).unwrap()
+        ),
+        NonZeroDuration::new(Duration::from_secs(1)).unwrap(),
+        NonZeroDuration::new(Duration::from_secs(1)).unwrap()
+    )]
+    #[test_case(
+        NonZeroNdpLifetime::Finite(NonZeroDuration::new(
+            Duration::from_secs(3)).unwrap()
+        ),
+        NonZeroDuration::new(Duration::from_secs(4)).unwrap(),
+        NonZeroDuration::new(Duration::from_secs(3)).unwrap()
+    )]
+    fn non_zero_ndp_lifetime_min_finite_duration(
+        lifetime: NonZeroNdpLifetime,
+        duration: NonZeroDuration,
+        expected: NonZeroDuration,
+    ) {
+        assert_eq!(lifetime.min_finite_duration(duration), expected)
     }
 }
