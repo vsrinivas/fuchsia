@@ -59,25 +59,26 @@ TEST(MemoryTest, AddressOfReturnsAddressNotOverridenOperator) {
   ASSERT_EQ(cpp17::addressof(misleading), ptr);
 }
 
-#if __cpp_lib_addressof_constexpr >= 201603L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+// TODO(fxbug.dev/98561) Disable these tests until we can avoid taking  the address of std::
+// functions #if __cpp_lib_addressof_constexpr >= 201603L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-template <typename T>
-constexpr void check_addressof_alias() {
-  // Need so the compiler picks the right overload.
-  constexpr T* (*cpp17_addressof)(T&) = &cpp17::addressof<T>;
-  constexpr T* (*std_addressof)(T&) = &std::addressof<T>;
-  static_assert(cpp17_addressof == std_addressof);
-}
+// template <typename T>
+// constexpr void check_addressof_alias() {
+//// Need so the compiler picks the right overload.
+// constexpr T* (*cpp17_addressof)(T&) = &cpp17::addressof<T>;
+// constexpr T* (*std_addressof)(T&) = &std::addressof<T>;
+// static_assert(cpp17_addressof == std_addressof);
+//}
 
-struct UserType {
-  int var;
-};
+// struct UserType {
+// int var;
+//};
 
-TEST(MemoryTest, AddressOfIsAliasForStdWhenAvailable) {
-  check_addressof_alias<int>();
-  check_addressof_alias<UserType>();
-}
-#endif
+// TEST(MemoryTest, AddressOfIsAliasForStdWhenAvailable) {
+// check_addressof_alias<int>();
+// check_addressof_alias<UserType>();
+//}
+// #endif
 
 TEST(MemoryTest, ToAddressWithRawReturnsRightPointer) {
   constexpr int* a = nullptr;
@@ -142,21 +143,22 @@ TEST(MemoryTest, BannedUses) {
   // EXPECT_EQ(&*d.value, cpp20::to_address(d));
 }
 
-#if __cpp_lib_to_address >= 201711L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+// TODO(fxbug.dev/98561) Disable these tests until we can avoid taking  the address of std::
+// functions #if __cpp_lib_to_address >= 201711L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-template <typename T>
-constexpr void check_to_address_alias() {
-  // Need so the compiler picks the right overload.
-  constexpr auto (*cpp20_to_address)(const T&) = &cpp20::to_address<T>;
-  constexpr auto (*std_to_address)(const T&) = &std::to_address<T>;
-  static_assert(cpp20_to_address == std_to_address);
-}
+// template <typename T>
+// constexpr void check_to_address_alias() {
+//// Need so the compiler picks the right overload.
+// constexpr auto (*cpp20_to_address)(const T&) = &cpp20::to_address<T>;
+// constexpr auto (*std_to_address)(const T&) = &std::to_address<T>;
+// static_assert(cpp20_to_address == std_to_address);
+//}
 
-TEST(MemoryTest, ToAddressIsAliasForStdWhenAvailable) {
-  check_to_address_alias<int*>();
-  check_to_address_alias<std::unique_ptr<int>>();
-}
+// TEST(MemoryTest, ToAddressIsAliasForStdWhenAvailable) {
+// check_to_address_alias<int*>();
+// check_to_address_alias<std::unique_ptr<int>>();
+//}
 
-#endif
+// #endif
 
 }  // namespace

@@ -115,15 +115,16 @@ TEST(AsConstTest, DeniesRvalueReferences) {
                 "cpp17::as_const should not accept rvalue references.");
 }
 
-#if __cpp_lib_as_const >= 201510L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+// TODO(fxbug.dev/98561)
+// #if __cpp_lib_as_const >= 201510L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-TEST(AsConstTest, IsAliasWhenAvailable) {
-  constexpr const int& (*cpp17_as_const)(int&) = &cpp17::as_const<int>;
-  constexpr const int& (*std_as_const)(int&) = &std::as_const<int>;
-  static_assert(cpp17_as_const == std_as_const,
-                "cpp17::as_const must be an alias for std::as_const in c++17.");
-}
+// TEST(AsConstTest, IsAliasWhenAvailable) {
+// constexpr const int& (*cpp17_as_const)(int&) = &cpp17::as_const<int>;
+// constexpr const int& (*std_as_const)(int&) = &std::as_const<int>;
+// static_assert(cpp17_as_const == std_as_const,
+//"cpp17::as_const must be an alias for std::as_const in c++17.");
+//}
 
-#endif
+// #endif
 
 }  // namespace
