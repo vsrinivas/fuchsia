@@ -50,8 +50,6 @@ To create a composite device, a number of data structures need to be set up.
 
 We need a number of binding instructions (`zx_bind_inst_t`) that tell us which
 devices we match.
-These binding instructions are the ones discussed in the
-["Registration" topic](/docs/development/drivers/developer_guide/simple.md#Registration) in the introduction section.
 
 For the `astro-audio` device, we have:
 
@@ -133,8 +131,7 @@ static const device_fragment_t fragments[] = {
 
 ### Creating the device
 
-For simple (non-composite) devices, we used **device_add()** (which we
-saw in the ["Registration" section](/docs/development/drivers/developer_guide/simple.md#Registration) previously).
+For simple (non-composite) devices, we used **device_add()**.
 
 For composite devices, we use **device_add_composite()**:
 

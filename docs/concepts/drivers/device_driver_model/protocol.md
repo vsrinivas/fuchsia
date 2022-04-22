@@ -102,8 +102,6 @@ A driver host is a process that contains a protocol stack &mdash; that is, one o
 more protocols that work together.
 The driver host loads drivers from ELF shared libraries (called Dynamic Shared Objects,
 or **DSO**s).
-In the [simple drivers](/docs/development/drivers/developer_guide/simple.md) section,
-we'll see the meta information that's contained in the DSO to facilitate the discovery process.
 
 The protocol stack effectively allows the creation of a complete "driver" for
 a device, consisting of platform dependent and platform independent components,

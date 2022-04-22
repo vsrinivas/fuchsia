@@ -36,10 +36,6 @@ Deprecated Mixin class      | Function             | Purpose
 `ddk::GetSizable`           | **DdkGetSize()**     | returns size of device
 `ddk::UnbindableDeprecated` | **DdkUnbindDeprecated()**   | called when this device is being removed
 
-These mixins correspond to the functions defined in the
-[`zx_protocol_device_t`](/src/lib/ddk/include/lib/ddk/device.h#74) struct
-that is used in the [simple, C-based drivers](/docs/development/drivers/developer_guide/simple.md).
-
 When defining the class for your device, you specify which functions it will
 support by including the appropriate mixins.
 For example (line numbers added for documentation purposes only):
@@ -195,8 +191,7 @@ Let's take a look at how a driver uses the DDKTL.
 We're going to use the USB XHCI driver for this set of code samples; you can find it
 [here: `//src/devices/usb/drivers/xhci/usb-xhci.cpp`](/src/devices/usb/drivers/xhci/usb-xhci.cc).
 
-Recall that in [simple, C-based drivers](/docs/development/drivers/developer_guide/simple.md),
-the drivers had a driver declaration (usually at the bottom of the source file), like this:
+Drivers have a driver declaration (usually at the bottom of the source file), like this:
 
 ```c
 ZIRCON_DRIVER(driver_name, driver_ops, "zircon", "0.1");
@@ -224,9 +219,7 @@ This executes the **driver_ops()** lambda, which returns an initialized `zx_driv
 Why the lambda? C++ doesn't like partial initialization of structures, so we start with an
 empty instance of `ops`, set the fields we're interested in, and then return the structure.
 
-The **UsbXhci::Create()** function is just like its C counterpart (e.g., **null_bind()**
-from the [Simple Drivers](/docs/development/drivers/developer_guide/simple.md) section),
-but with a few extras:
+The **UsbXhci::Create()** function is as follows:
 
 ```c++
 [01] zx_status_t UsbXhci::Create(void* ctx, zx_device_t* parent) {
