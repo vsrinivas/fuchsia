@@ -11,6 +11,7 @@ executable("usb-audio-test-bin") {
   sources = [ "usb-audio-test.cc" ]
   deps = [
     "../:shared",
+    "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/testing/fake_ddk",
     "//src/devices/usb/lib/usb",
     "//zircon/system/ulib/zxtest",
