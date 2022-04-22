@@ -4,7 +4,7 @@
 
 use crate::output::{
     ArtifactType, DirectoryArtifactType, DirectoryWrite, DynArtifact, DynDirectoryArtifact,
-    EntityId, ReportedOutcome, Reporter, Timestamp,
+    EntityId, EntityInfo, ReportedOutcome, Reporter, Timestamp,
 };
 use async_trait::async_trait;
 use futures::future::try_join;
@@ -63,6 +63,14 @@ impl<A: Reporter, B: Reporter> Reporter for MultiplexedReporter<A, B> {
         try_join(self.a.new_entity(entity, name), self.b.new_entity(entity, name))
             .await
             .map(map_void)
+    }
+
+    async fn set_entity_info(&self, entity: &EntityId, info: &EntityInfo) {
+        futures::future::join(
+            self.a.set_entity_info(entity, info),
+            self.b.set_entity_info(entity, info),
+        )
+        .await;
     }
 
     async fn entity_started(&self, entity: &EntityId, timestamp: Timestamp) -> Result<(), Error> {

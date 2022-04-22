@@ -38,6 +38,12 @@ pub struct TestTag {
     pub value: String,
 }
 
+impl TestTag {
+    pub fn new(key: impl Into<String>, value: impl Into<String>) -> Self {
+        TestTag { key: key.into(), value: value.into() }
+    }
+}
+
 #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[non_exhaustive]
 #[serde(tag = "type")]

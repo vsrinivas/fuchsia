@@ -201,6 +201,7 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-onfinished-af
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-onfinished-after-test-example.cm",
                 directory::Outcome::Inconclusive,
             )
+            .with_tag(TestTag::new("internal", "true"))
             .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
             .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
             .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed))
@@ -257,6 +258,7 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-exa
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
         directory::Outcome::Passed,
     )
+    .with_tag(TestTag::new("internal", "true"))
     .with_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), "")
     .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed).with_artifact(
         directory::ArtifactType::Stdout,
@@ -338,6 +340,7 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/test-with-stderr
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/test-with-stderr.cm",
         directory::Outcome::Passed,
     )
+    .with_tag(TestTag::new("internal", "true"))
     .with_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), "")
     .with_case(
         ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed)
@@ -407,6 +410,7 @@ async fn launch_and_test_passing_v2_test_multiple_times(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
         directory::Outcome::Passed,
     )
+    .with_tag(TestTag::new("internal", "true"))
     .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
     .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
     .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed));
@@ -457,6 +461,7 @@ async fn launch_and_test_multiple_passing_tests(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
             directory::Outcome::Passed,
         )
+        .with_tag(TestTag::new("internal", "true"))
         .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
         .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
         .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed)),
@@ -464,6 +469,7 @@ async fn launch_and_test_multiple_passing_tests(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/test-with-stderr.cm",
             directory::Outcome::Passed,
         )
+        .with_tag(TestTag::new("internal", "true"))
         .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
         .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
         .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed))
@@ -523,6 +529,7 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-exa
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
                 directory::Outcome::Passed
             )
+            .with_tag(TestTag::new("internal", "true"))
             .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed))
         ],
     );
@@ -577,6 +584,7 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-exa
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
                 directory::Outcome::Passed
             )
+            .with_tag(TestTag::new("internal", "true"))
             .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
             .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed))
         ],
@@ -636,7 +644,8 @@ async fn launch_and_test_empty_test(
         &vec![ExpectedSuite::new(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-test-example.cm",
             directory::Outcome::Passed,
-        )],
+        )
+        .with_tag(TestTag::new("internal", "true"))],
     );
 }
 
@@ -664,7 +673,8 @@ async fn launch_and_test_huge_test(
     let mut expected_test_suite = ExpectedSuite::new(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/huge-test-example.cm",
         directory::Outcome::Passed,
-    );
+    )
+    .with_tag(TestTag::new("internal", "true"));
     for i in 1..1001 {
         expected_test_suite = expected_test_suite.with_case(ExpectedTestCase::new(
             format!("FooTest{:?}", i),
@@ -734,6 +744,7 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-ex
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm",
                 directory::Outcome::Passed
             )
+            .with_tag(TestTag::new("internal", "true"))
             .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
             .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Skipped))
             .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Skipped))
@@ -795,6 +806,7 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-ex
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm",
                 directory::Outcome::Failed
             )
+            .with_tag(TestTag::new("internal", "true"))
             .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
             .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
             .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Failed))
@@ -860,6 +872,7 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-exa
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
                 directory::Outcome::Failed
             )
+            .with_tag(TestTag::new("internal", "true"))
             .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
             .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Failed))
             .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed))
@@ -900,6 +913,7 @@ async fn launch_and_test_failing_v2_test_multiple_times(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
         directory::Outcome::Failed,
     )
+    .with_tag(TestTag::new("internal", "true"))
     .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
     .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Failed))
     .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed));
@@ -943,6 +957,7 @@ async fn launch_and_test_incomplete_test(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/incomplete-test-example.cm",
                 directory::Outcome::Inconclusive
             )
+            .with_tag(TestTag::new("internal", "true"))
             .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Error))
             .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
             .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Error))
@@ -984,6 +999,7 @@ async fn launch_and_test_invalid_test(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/invalid-test-example.cm",
                 directory::Outcome::Inconclusive
             )
+            .with_tag(TestTag::new("internal", "true"))
             .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Error))
             .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
             .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Error))
@@ -1101,6 +1117,7 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_tes
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
             directory::Outcome::Timedout,
         )
+        .with_tag(TestTag::new("internal", "true"))
         .with_case(ExpectedTestCase::new(
             "LongRunningTest.LongRunning",
             directory::Outcome::Timedout,
@@ -1116,6 +1133,7 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_tes
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
                 directory::Outcome::NotStarted
             )
+            .with_tag(TestTag::new("internal", "true"))
         );
     }
 }
@@ -1179,6 +1197,7 @@ async fn test_continue_on_timeout(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
             directory::Outcome::Timedout,
         )
+        .with_tag(TestTag::new("internal", "true"))
         .with_case(ExpectedTestCase::new(
             "LongRunningTest.LongRunning",
             directory::Outcome::Timedout,
@@ -1194,6 +1213,7 @@ async fn test_continue_on_timeout(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
                 directory::Outcome::Passed
             )
+            .with_tag(TestTag::new("internal", "true"))
             .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
             .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
             .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed)),
@@ -1248,6 +1268,7 @@ async fn test_stop_after_n_failures(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
                 directory::Outcome::Failed
             )
+            .with_tag(TestTag::new("internal", "true"))
             .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
             .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Failed))
             .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed))
@@ -1262,6 +1283,7 @@ async fn test_stop_after_n_failures(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
                 directory::Outcome::NotStarted
             )
+            .with_tag(TestTag::new("internal", "true"))
         );
     }
 }
@@ -1337,6 +1359,7 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm 
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm",
             directory::Outcome::Passed,
         )
+        .with_tag(TestTag::new("internal", "true"))
         .with_matching_artifact(
             directory::ArtifactType::Syslog,
             "syslog.txt".into(),
@@ -1569,6 +1592,7 @@ async fn test_stdout_to_directory(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
         directory::Outcome::Passed,
     )
+    .with_tag(TestTag::new("internal", "true"))
     .with_matching_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), |logs| {
         assert_output!(
             logs.as_bytes(),
@@ -1641,6 +1665,7 @@ async fn test_syslog_to_directory(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm",
         directory::Outcome::Failed,
     )
+    .with_tag(TestTag::new("internal", "true"))
     .with_case(
         ExpectedTestCase::new("log_and_exit", directory::Outcome::Passed)
             .with_any_start_time()
@@ -1696,6 +1721,7 @@ async fn test_custom_artifacts_to_directory(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/custom_artifact_user.cm",
         directory::Outcome::Passed,
     )
+    .with_tag(TestTag::new("internal", "true"))
     .with_case(
         ExpectedTestCase::new("use_artifact", directory::Outcome::Passed)
             .with_any_start_time()
@@ -1823,7 +1849,8 @@ async fn test_terminate_signal_multiple_suites(
             &ExpectedSuite::new(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
                 directory::Outcome::NotStarted,
-            ),
+            )
+            .with_tag(TestTag::new("internal", "true")),
         );
     });
 }

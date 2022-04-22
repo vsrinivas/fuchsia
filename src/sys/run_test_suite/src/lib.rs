@@ -636,8 +636,9 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
         };
 
         let suite_id = SuiteId(suite_id_raw as u32);
-        suite_reporters
-            .insert(suite_id, run_reporter.new_suite(&params.test_url, &suite_id).await?);
+        let suite = run_reporter.new_suite(&params.test_url, &suite_id).await?;
+        suite.set_tags(params.tags).await;
+        suite_reporters.insert(suite_id, suite);
         let (suite_controller, suite_server_end) = fidl::endpoints::create_proxy()?;
         let suite_and_id_fut = RunningSuite::wait_for_start(
             suite_controller,

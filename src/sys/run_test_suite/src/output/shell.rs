@@ -4,7 +4,7 @@
 
 use crate::output::{
     noop::NoopDirectoryWriter, ArtifactType, DirectoryArtifactType, DynArtifact,
-    DynDirectoryArtifact, EntityId, ReportedOutcome, Reporter, Timestamp,
+    DynDirectoryArtifact, EntityId, EntityInfo, ReportedOutcome, Reporter, Timestamp,
 };
 use async_trait::async_trait;
 use fuchsia_async as fasync;
@@ -254,6 +254,8 @@ impl<W: 'static + Write + Send + Sync> Reporter for ShellReporter<W> {
         }
         Ok(())
     }
+
+    async fn set_entity_info(&self, _entity: &EntityId, _info: &EntityInfo) {}
 
     async fn entity_started(&self, entity: &EntityId, _: Timestamp) -> Result<(), Error> {
         let mut writer = self.new_writer_handle(None);

@@ -6,7 +6,7 @@ use crate::output::{
     directory::DirectoryReporter,
     mux::{MultiplexedDirectoryWriter, MultiplexedWriter},
     shell::ShellReporter,
-    ArtifactType, DirectoryArtifactType, DynArtifact, DynDirectoryArtifact, EntityId,
+    ArtifactType, DirectoryArtifactType, DynArtifact, DynDirectoryArtifact, EntityId, EntityInfo,
     ReportedOutcome, Reporter, SuiteId, Timestamp,
 };
 use async_trait::async_trait;
@@ -73,6 +73,22 @@ impl Reporter for DirectoryWithStdoutReporter {
         };
 
         futures::future::try_join(dir_fut, shell_fut).await.map(|((), ())| ())
+    }
+
+    async fn set_entity_info(&self, entity: &EntityId, info: &EntityInfo) {
+        let dir_fut = self.directory_reporter.set_entity_info(entity, info);
+        let shell_fut = async move {
+            let suite_id = match entity {
+                EntityId::Suite(suite) => Some(suite),
+                EntityId::Case { suite, .. } => Some(suite),
+                _ => None,
+            };
+            if let Some(suite) = suite_id {
+                self.get_locked_shell_reporter(suite).await.set_entity_info(entity, info).await;
+            }
+        };
+
+        futures::future::join(dir_fut, shell_fut).await;
     }
 
     async fn entity_started(&self, entity: &EntityId, timestamp: Timestamp) -> Result<(), Error> {

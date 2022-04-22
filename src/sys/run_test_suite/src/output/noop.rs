@@ -4,7 +4,7 @@
 
 use crate::output::{
     ArtifactType, DirectoryArtifactType, DirectoryWrite, DynArtifact, DynDirectoryArtifact,
-    EntityId, ReportedOutcome, Reporter, Timestamp,
+    EntityId, EntityInfo, ReportedOutcome, Reporter, Timestamp,
 };
 use async_trait::async_trait;
 use std::{io::Error, path::Path};
@@ -18,6 +18,8 @@ impl Reporter for NoopReporter {
     async fn new_entity(&self, _: &EntityId, _: &str) -> Result<(), Error> {
         Ok(())
     }
+
+    async fn set_entity_info(&self, _: &EntityId, _: &EntityInfo) {}
 
     async fn entity_started(&self, _: &EntityId, _: Timestamp) -> Result<(), Error> {
         Ok(())

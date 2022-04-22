@@ -4,7 +4,7 @@
 
 use crate::output::{
     ArtifactType, DirectoryArtifactType, DirectoryWrite, DynArtifact, DynDirectoryArtifact,
-    EntityId, ReportedOutcome, Reporter, Timestamp,
+    EntityId, EntityInfo, ReportedOutcome, Reporter, Timestamp,
 };
 use async_trait::async_trait;
 use parking_lot::Mutex;
@@ -92,6 +92,8 @@ impl Reporter for InMemoryReporter {
         self.entities.lock().entry(*id).or_default().name = name.to_string();
         Ok(())
     }
+
+    async fn set_entity_info(&self, _entity: &EntityId, _info: &EntityInfo) {}
 
     async fn entity_started(&self, id: &EntityId, timestamp: Timestamp) -> Result<(), Error> {
         self.entities.lock().entry(*id).or_default().started_time = Some(timestamp);

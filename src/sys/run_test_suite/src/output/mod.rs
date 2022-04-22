@@ -5,6 +5,7 @@
 use async_trait::async_trait;
 use std::io::{Error, Write};
 use std::path::Path;
+use test_list::TestTag;
 
 mod directory;
 mod directory_with_stdout;
@@ -209,6 +210,13 @@ impl<'a> SuiteReporter<'a> {
     pub async fn finished(self) -> Result<(), Error> {
         self.reporter.entity_finished(&EntityId::Suite(self.suite_id)).await
     }
+
+    /// Set the tags for this suite.
+    pub async fn set_tags(&self, tags: Vec<TestTag>) {
+        self.reporter
+            .set_entity_info(&EntityId::Suite(self.suite_id), &EntityInfo { tags: Some(tags) })
+            .await;
+    }
 }
 
 impl<'a> CaseReporter<'a> {
@@ -362,6 +370,10 @@ pub enum EntityId {
     Case { suite: SuiteId, case: CaseId },
 }
 
+pub struct EntityInfo {
+    pub tags: Option<Vec<TestTag>>,
+}
+
 /// A trait for structs that report test results.
 /// Implementations of `Reporter` serve as the backend powering `RunReporter`.
 ///
@@ -372,6 +384,9 @@ pub enum EntityId {
 pub trait Reporter: Send + Sync {
     /// Record a new test suite or test case. This should be called once per entity.
     async fn new_entity(&self, entity: &EntityId, name: &str) -> Result<(), Error>;
+
+    /// Add additional info for an entity.
+    async fn set_entity_info(&self, entity: &EntityId, info: &EntityInfo);
 
     /// Record that a test run, suite or case has started.
     async fn entity_started(&self, entity: &EntityId, timestamp: Timestamp) -> Result<(), Error>;

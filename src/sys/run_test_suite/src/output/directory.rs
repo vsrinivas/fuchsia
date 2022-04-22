@@ -4,7 +4,7 @@
 
 use crate::output::{
     ArtifactType, DirectoryArtifactType, DirectoryWrite, DynArtifact, DynDirectoryArtifact,
-    EntityId, ReportedOutcome, Reporter, Timestamp, ZxTime,
+    EntityId, EntityInfo, ReportedOutcome, Reporter, Timestamp, ZxTime,
 };
 use anyhow::format_err;
 use async_trait::async_trait;
@@ -14,6 +14,7 @@ use std::fs::{DirBuilder, File};
 use std::io::{BufWriter, Error, ErrorKind, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
+use test_list::TestTag;
 use test_output_directory as directory;
 
 const STDOUT_FILE: &str = "stdout.txt";
@@ -55,6 +56,7 @@ struct EntityEntry {
     /// Timer used to measure durations as the difference between monotonic timestamps on
     /// start and stop events.
     timer: MonotonicTimer,
+    tags: Option<Vec<TestTag>>,
 }
 
 enum MonotonicTimer {
@@ -108,6 +110,7 @@ impl DirectoryReporter {
                 outcome: directory::Outcome::NotStarted,
                 timer: MonotonicTimer::Unknown,
                 approximate_host_start_time: None,
+                tags: None,
             },
         );
         let new_self = Self { root, entries: Mutex::new(entries), name_counter: AtomicU32::new(0) };
@@ -196,10 +199,17 @@ impl Reporter for DirectoryReporter {
                 outcome: directory::Outcome::NotStarted,
                 timer: MonotonicTimer::Unknown,
                 approximate_host_start_time: None,
+                tags: None,
             },
         );
 
         Ok(())
+    }
+
+    async fn set_entity_info(&self, entity: &EntityId, info: &EntityInfo) {
+        let mut entries = self.entries.lock();
+        let entry = entries.get_mut(entity).expect("Setting info for entity that does not exist");
+        entry.tags = info.tags.clone();
     }
 
     async fn entity_started(&self, entity: &EntityId, timestamp: Timestamp) -> Result<(), Error> {
@@ -461,7 +471,7 @@ fn construct_serializable_suite(
         .collect::<Vec<_>>();
     let duration_milliseconds = suite_entry.run_time_millis();
     let start_time = suite_entry.start_time_millis();
-    let EntityEntry { artifact_dir, artifacts, outcome, name, .. } = suite_entry;
+    let EntityEntry { artifact_dir, artifacts, outcome, name, tags, .. } = suite_entry;
     directory::SuiteResult::V0 {
         artifacts: artifacts
             .into_iter()
@@ -473,8 +483,7 @@ fn construct_serializable_suite(
         duration_milliseconds,
         start_time,
         name,
-        // TODO(fxbug.dev/94154): Pipe tags through so it is output here from test-list.json input.
-        tags: vec![],
+        tags: tags.unwrap_or_default(),
     }
 }
 
