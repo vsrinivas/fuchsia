@@ -108,6 +108,11 @@ __all__ = [
 # deserialized.
 C = TypeVar("C")
 
+####
+#
+#  Deserialization Flow
+#
+
 
 def instance_from_dict(cls: Type[C], a_dict: Dict[str, Any]) -> C:
     """Instantiate an object from a dictionary of its field values.
@@ -118,8 +123,8 @@ def instance_from_dict(cls: Type[C], a_dict: Dict[str, Any]) -> C:
     This relies on type annotations that specify the class of each field and
     each init param.  All must match names in the entry dictionary.
     """
-    init_param_types = get_fn_param_types(cls, "__init__")
-    init_param_values = get_named_values_from(a_dict, init_param_types, cls)
+    init_param_types = _get_fn_param_types(cls, "__init__")
+    init_param_values = _get_named_values_from(a_dict, init_param_types, cls)
     instance = cls(**init_param_values)
 
     field_types = typing.get_type_hints(cls)
@@ -134,13 +139,14 @@ def instance_from_dict(cls: Type[C], a_dict: Dict[str, Any]) -> C:
     # If any fields weren't set via the constructor, set those attributes on the
     # class directly.  For classes that use @dataclass, this is likely to be
     # empty.
-    for field_name, value in get_named_values_from(a_dict, fields_to_read, cls):
+    for field_name, value in _get_named_values_from(a_dict, fields_to_read,
+                                                    cls):
         setattr(instance, field_name, value)
 
     return instance
 
 
-def get_fn_param_types(cls: Type[Any], fn_name: str) -> Dict[str, Type[Any]]:
+def _get_fn_param_types(cls: Type[Any], fn_name: str) -> Dict[str, Type[Any]]:
     """Get the names and types of the parameters of the fn with the given name
     for the given class.
 
@@ -154,16 +160,7 @@ def get_fn_param_types(cls: Type[Any], fn_name: str) -> Dict[str, Type[Any]]:
     }
 
 
-def has_field_types(cls: Type[Any]) -> bool:
-    """Returns True if the class in question has member field type annotations.
-
-    This is akin to [`typing.get_type_hints()`], except that this doesn't raise
-    any errors on types that don't support annotations at all (like ['Union']).
-    """
-    return "__annotations__" in cls.__dict__
-
-
-def get_named_values_from(
+def _get_named_values_from(
         entries: Dict[str, Any], names_and_types: Dict[str, Type[Any]],
         for_cls: Type[Any]) -> Dict[str, Any]:
     """Take a Dict of name:value, and a dict of name:types, and return a dict of
@@ -182,9 +179,9 @@ def get_named_values_from(
     values = {}
     for name, cls in names_and_types.items():
         if name in entries:
-            values[name] = parse_value_into(entries[name], cls)
+            values[name] = _parse_value_into(entries[name], cls)
         else:
-            has_default = has_default_value(for_cls, name)
+            has_default = _has_default_value(for_cls, name)
             if not has_default:
                 raise KeyError(
                     "unable to find required value for '{}' in: {}".format(
@@ -193,7 +190,7 @@ def get_named_values_from(
     return values
 
 
-def has_default_value(cls: Type[Any], field: str) -> Any:
+def _has_default_value(cls: Type[Any], field: str) -> Any:
     """Returns if the given field of a class has a default value (requires a
     @dataclass-based class, others will silently return 'False')
     """
@@ -209,7 +206,7 @@ def has_default_value(cls: Type[Any], field: str) -> Any:
     return False
 
 
-def parse_value_into(
+def _parse_value_into(
     value: Any,
     cls: Type[Union[Dict, List, Set, C]],
 ) -> Union[Dict, List, Set, C]:
@@ -227,8 +224,8 @@ def parse_value_into(
         if type(value) is dict:
             result = dict()
             for key, dict_value in value.items():
-                key = parse_value_into(key, dict_key_type)
-                result[key] = parse_value_into(dict_value, dict_value_type)
+                key = _parse_value_into(key, dict_key_type)
+                result[key] = _parse_value_into(dict_value, dict_value_type)
             return result
         else:
             raise TypeError(
@@ -240,7 +237,7 @@ def parse_value_into(
         list_item_type = typing.get_args(cls)[0]
         # value also has to be a list
         if type(value) is list:
-            return [parse_value_into(item, list_item_type) for item in value]
+            return [_parse_value_into(item, list_item_type) for item in value]
         else:
             raise TypeError(
                 f'cannot parse {cls} from a non-list value({type(value)})')
@@ -251,12 +248,12 @@ def parse_value_into(
         # the value for a Set type needs to be a List or a Set.
         if (type(value) is list) or (type(value) is set):
             return set(
-                [parse_value_into(item, set_item_type) for item in value])
+                [_parse_value_into(item, set_item_type) for item in value])
         else:
             raise TypeError(
                 f'cannot parse {cls} from a non-list value ({type(value)})')
 
-    elif has_field_types(cls):
+    elif _has_field_types(cls):
         # Create an object from this value
         return instance_from_dict(cls, value)
 
@@ -266,7 +263,7 @@ def parse_value_into(
         errors = []
         for type_arg in typing.get_args(cls):
             try:
-                return parse_value_into(value, type_arg)
+                return _parse_value_into(value, type_arg)
             except KeyError as ke:
                 errors.append(ke)
             except TypeError as te:
@@ -281,36 +278,19 @@ def parse_value_into(
         return cls(value)
 
 
-def make_dict_value_for(obj: Any) -> Union[Dict, List, str, int]:
-    """Create the value to put into a dictionary for the given object."""
-    if isinstance(obj, dict):
-        # Dicts are special, and need to be treated individually.
-        result = {}
-        for key, value in obj.items():
-            # Recurse for each value in the dict.
-            result[str(key)] = make_dict_value_for(value)
-        return result
+def _has_field_types(cls: Type[Any]) -> bool:
+    """Returns True if the class in question has member field type annotations.
 
-    elif isinstance(obj, list):
-        # Lists are special, they need to retain their existing order
-        return [make_dict_value_for(value) for value in obj]
+    This is akin to [`typing.get_type_hints()`], except that this doesn't raise
+    any errors on types that don't support annotations at all (like ['Union']).
+    """
+    return "__annotations__" in cls.__dict__
 
-    elif isinstance(obj, set):
-        # Sets are special, as they are serialized to a list, and lists are
-        # order sensitive for compares, unlike sets.  To ensure that different
-        # sets that contain the same elements always have the same serialized
-        # representation the set's contents are sorted when creating the list.
-        return [make_dict_value_for(value) for value in sorted(obj)]
 
-    elif has_field_types(type(obj)):
-        # It's something else, and it has field type annotations, so let's use
-        # those to get a dictionary.
-        return instance_to_dict(obj)
-
-    else:
-        # It doesn't support type hints, so just use it as-is, and hope for the
-        # best.
-        return obj
+####
+#
+#  Serialization Flow
+#
 
 
 def instance_to_dict(instance: Any) -> Dict[str, Any]:
@@ -352,6 +332,44 @@ def instance_to_dict(instance: Any) -> Dict[str, Any]:
     return result
 
 
+def make_dict_value_for(obj: Any) -> Union[Dict, List, str, int]:
+    """Create the value to put into a dictionary for the given object."""
+    if isinstance(obj, dict):
+        # Dicts are special, and need to be treated individually.
+        result = {}
+        for key, value in obj.items():
+            # Recurse for each value in the dict.
+            result[str(key)] = make_dict_value_for(value)
+        return result
+
+    elif isinstance(obj, list):
+        # Lists are special, they need to retain their existing order
+        return [make_dict_value_for(value) for value in obj]
+
+    elif isinstance(obj, set):
+        # Sets are special, as they are serialized to a list, and lists are
+        # order sensitive for compares, unlike sets.  To ensure that different
+        # sets that contain the same elements always have the same serialized
+        # representation the set's contents are sorted when creating the list.
+        return [make_dict_value_for(value) for value in sorted(obj)]
+
+    elif _has_field_types(type(obj)):
+        # It's something else, and it has field type annotations, so let's use
+        # those to get a dictionary.
+        return instance_to_dict(obj)
+
+    else:
+        # It doesn't support type hints, so just use it as-is, and hope for the
+        # best.
+        return obj
+
+
+####
+#
+#  JSON Deserialization
+#
+
+
 def json_loads(cls: Type[C], s: str) -> C:
     """Deserialize an instance of type 'cls' from JSON in the string 's'.
 
@@ -385,6 +403,12 @@ def json_load(cls: Type[C], fp) -> C:
             some_other_field: Optional[str]
     """
     return instance_from_dict(cls, json.load(fp))
+
+
+####
+#
+#  JSON Serialization
+#
 
 
 def json_dump(instance: Any, fp, **kwargs) -> None:
@@ -421,26 +445,10 @@ def json_dumps(instance: Any, **kwargs) -> str:
     return json.dumps(instance_to_dict(instance), **kwargs)
 
 
-C = TypeVar('C')
-
-
-def _bind_class_fn(cls: Type[C], fn: Callable, name: Optional[str] = None):
-    """Creates a class-fn for a class by binding the passed-in class as the first
-    param of the passed-in function, and then adding it as a callable attribute
-    to the class.
-    """
-    if name is None:
-        name = fn.__name__
-    setattr(cls, name, functools.partial(fn, cls))
-
-
-def _bind_instance_fn(cls: Type[C], fn: Callable, name: Optional[str] = None):
-    """Creates an instance-fn for a class by adding it as a callable attribute
-    of the class.
-    """
-    if name is None:
-        name = fn.__name__
-    setattr(cls, name, fn)
+####
+#
+#  Class Decorators for JSON and dict-based serialization
+#
 
 
 def serialize_dict(cls: Type[C]) -> Type[C]:
@@ -469,6 +477,10 @@ def serialize_dict(cls: Type[C]) -> Type[C]:
     def to_dict(self) -> Dict:
       return serialization.instance_to_dict(self)
     ```
+
+    Note: While the functions are added to the class, they aren't properly
+    detected by linters such as PyRight, and so they will be flagged as issues
+    when used.
     """
 
     def wrap(cls: Type[C]) -> Type[C]:
@@ -513,6 +525,10 @@ def serialize_json(cls: Type[C]) -> Type[C]:
     def json_dump(self, fp: SupportsWrite, **kwargs) -> str:
       return serialization.json_dump(self, fp, **kwargs)
     ```
+
+    Note: While the functions are added to the class, they aren't properly
+    detected by linters such as PyRight, and so they will be flagged as issues
+    when used.
     """
 
     def wrap(cls: Type[C]) -> Type[C]:
@@ -523,17 +539,6 @@ def serialize_json(cls: Type[C]) -> Type[C]:
         return cls
 
     return wrap(cls)
-
-
-def _process_metadata(cls: Type[C], **kwargs) -> Type[C]:
-    for name in kwargs.keys():
-        if not hasattr(cls, name):
-            annotations = get_type_hints(cls)
-            if name not in annotations:
-                raise ValueError(f'{cls} does not have a field named: {name}:')
-    if kwargs:
-        setattr(cls, "__SERIALIZE_AS__", kwargs)
-    return cls
 
 
 def serialize_fields_as(**kwargs) -> Callable[[Type[C]], Type[C]]:
@@ -568,3 +573,39 @@ def serialize_fields_as(**kwargs) -> Callable[[Type[C]], Type[C]]:
         return _process_metadata(cls, **kwargs)
 
     return wrap
+
+
+####
+#
+#  Decorator Utility Functions
+#
+
+
+def _bind_class_fn(cls: Type[C], fn: Callable, name: Optional[str] = None):
+    """Creates a class-fn for a class by binding the passed-in class as the first
+    param of the passed-in function, and then adding it as a callable attribute
+    to the class.
+    """
+    if name is None:
+        name = fn.__name__
+    setattr(cls, name, functools.partial(fn, cls))
+
+
+def _bind_instance_fn(cls: Type[C], fn: Callable, name: Optional[str] = None):
+    """Creates an instance-fn for a class by adding it as a callable attribute
+    of the class.
+    """
+    if name is None:
+        name = fn.__name__
+    setattr(cls, name, fn)
+
+
+def _process_metadata(cls: Type[C], **kwargs) -> Type[C]:
+    for name in kwargs.keys():
+        if not hasattr(cls, name):
+            annotations = get_type_hints(cls)
+            if name not in annotations:
+                raise ValueError(f'{cls} does not have a field named: {name}:')
+    if kwargs:
+        setattr(cls, "__SERIALIZE_AS__", kwargs)
+    return cls
