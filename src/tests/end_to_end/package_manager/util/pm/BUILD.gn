@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//sdk/cts/build/cts.gni")
+import("//build/dart/dart_library.gni")
 
-cts_dart_library("pm") {
+dart_library("pm") {
   package_name = "pm"
 
   testonly = true
@@ -12,9 +12,9 @@ cts_dart_library("pm") {
   sources = [ "pm.dart" ]
 
   deps = [
-    "//sdk/cts/util/net:net",
-    "//sdk/cts/util/pkg:pkg",
     "//sdk/testing/sl4f/client",
+    "//src/tests/end_to_end/package_manager/util/net:net",
+    "//src/tests/end_to_end/package_manager/util/pkg:pkg",
     "//third_party/dart-pkg/pub/async",
     "//third_party/dart-pkg/pub/file",
     "//third_party/dart-pkg/pub/logging",

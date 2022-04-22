@@ -1,0 +1,36 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("package-manager-sample-bin") {
+  testonly = true
+  sources = [ "hello_world.cc" ]
+}
+
+executable("package-manager-sample-bin2") {
+  testonly = true
+  sources = [ "hello_world2.cc" ]
+}
+
+fuchsia_component("package-manager-sample") {
+  testonly = true
+  manifest = "meta/package-manager-sample.cmx"
+  deps = [ ":package-manager-sample-bin" ]
+}
+
+fuchsia_component("package-manager-sample2") {
+  testonly = true
+  manifest = "meta/package-manager-sample2.cmx"
+  deps = [ ":package-manager-sample-bin2" ]
+}
+
+fuchsia_package("package-manager-sample-pkg") {
+  package_name = "package-manager-sample"
+  testonly = true
+  deps = [
+    ":package-manager-sample",
+    ":package-manager-sample2",
+  ]
+}

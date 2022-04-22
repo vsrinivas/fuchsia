@@ -9,7 +9,6 @@ ALLOWED_CTS_DEPS = [
 
   "//sdk/lib/device-watcher/cpp:cpp",
   "//sdk/cts/tests/pkg/fidl/cpp:conformance_test_sources",
-  "//sdk/cts/tests/tools/package_manager:pm_test_package_gather_deps",
   "//src/sys/pkg/bin/pm:host",
   "//zircon/system/ulib/zxtest:zxtest",
   "//zircon/system/ulib/fbl:fbl",

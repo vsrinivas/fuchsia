@@ -3,6 +3,6 @@
         "syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/cts-package-manager-sample-bin2"
+        "binary": "bin/package-manager-sample-bin2"
     }
 }

@@ -10,7 +10,7 @@ group("tests_no_e2e") {
 
 group("e2e_tests") {
   testonly = true
-  deps = [ "package_manager:tests" ]
+  deps = []
 }
 
 group("tests") {

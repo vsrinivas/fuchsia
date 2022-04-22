@@ -24,7 +24,7 @@ const _timeout = Timeout(Duration(minutes: 5));
 
 void printErrorHelp() {
   print('If this test fails, see '
-      'https://fuchsia.googlesource.com/a/fuchsia/+/HEAD/sdk/cts/tools/package_manager/README.md'
+      'https://fuchsia.googlesource.com/a/fuchsia/+/HEAD/src/tests/end_to_end/package_manger/README.md'
       ' for details!');
 }
 
@@ -90,7 +90,7 @@ void main() {
     String originalRewriteRuleJson;
     Set<String> originalRepos;
     PackageManagerRepo repoServer;
-    String testPackageName = 'cts-package-manager-sample-component';
+    String testPackageName = 'package-manager-sample';
     String testRepoRewriteRule =
         '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"%%NAME%%","path_prefix_match":"/","path_prefix_replacement":"/"}]}';
 
@@ -372,7 +372,7 @@ void main() {
       expect(
           resolveProcessResult.stdout.toString(),
           equals(
-              'resolving fuchsia-pkg://fuchsia.com/cts-package-manager-sample-component\n'));
+              'resolving fuchsia-pkg://fuchsia.com/package-manager-sample\n'));
 
       await repoServer.setupServe('$testPackageName-0.far', manifestPath, []);
       final optionalPort = repoServer.getServePort();
@@ -406,7 +406,7 @@ void main() {
       expect(
           resolveProcessResult.stdout.toString(),
           equals(
-              'resolving fuchsia-pkg://fuchsia.com/cts-package-manager-sample-component\n'));
+              'resolving fuchsia-pkg://fuchsia.com/package-manager-sample\n'));
 
       await repoServer.pkgctlRuleReplace(
           'Restoring rewriting rule to original state',
@@ -501,11 +501,11 @@ void main() {
           'Setting rewriting rule for new repository', localRewriteRule, 0);
 
       var response = await sl4fDriver.ssh.run(
-          'run fuchsia-pkg://fuchsia.com/$testPackageName#meta/cts-package-manager-sample.cmx');
+          'run fuchsia-pkg://fuchsia.com/$testPackageName#meta/package-manager-sample.cmx');
       expect(response.exitCode, 0);
       expect(response.stdout.toString(), 'Hello, World!\n');
       response = await sl4fDriver.ssh.run(
-          'run fuchsia-pkg://fuchsia.com/$testPackageName#meta/cts-package-manager-sample2.cmx');
+          'run fuchsia-pkg://fuchsia.com/$testPackageName#meta/package-manager-sample2.cmx');
       expect(response.exitCode, 0);
       expect(response.stdout.toString(), 'Hello, World2!\n');
 
@@ -543,12 +543,12 @@ void main() {
       await repoServer.pkgctlRuleReplace(
           'Setting rewriting rule for new repository', localRewriteRule, 0);
 
-      var response = await sl4fDriver.ssh.run(
-          'run $repoUrl/$testPackageName#meta/cts-package-manager-sample.cmx');
+      var response = await sl4fDriver.ssh
+          .run('run $repoUrl/$testPackageName#meta/package-manager-sample.cmx');
       expect(response.exitCode, 0);
       expect(response.stdout.toString(), 'Hello, World!\n');
       response = await sl4fDriver.ssh.run(
-          'run $repoUrl/$testPackageName#meta/cts-package-manager-sample2.cmx');
+          'run $repoUrl/$testPackageName#meta/package-manager-sample2.cmx');
       expect(response.exitCode, 0);
       expect(response.stdout.toString(), 'Hello, World2!\n');
 
