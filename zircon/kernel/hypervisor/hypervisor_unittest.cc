@@ -216,7 +216,7 @@ static bool guest_physical_address_space_unmap_range_sub_region() {
   END_TEST;
 }
 
-static bool guest_phyiscal_address_single_vmo_multiple_mappings() {
+static bool guest_phyiscal_address_space_single_vmo_multiple_mappings() {
   BEGIN_TEST;
 
   if (!hypervisor_supported()) {
@@ -562,7 +562,7 @@ HYPERVISOR_UNITTEST(guest_physical_address_space_unmap_range)
 HYPERVISOR_UNITTEST(guest_physical_address_space_unmap_range_outside_of_mapping)
 HYPERVISOR_UNITTEST(guest_physical_address_space_unmap_range_multiple_mappings)
 HYPERVISOR_UNITTEST(guest_physical_address_space_unmap_range_sub_region)
-HYPERVISOR_UNITTEST(guest_phyiscal_address_single_vmo_multiple_mappings)
+HYPERVISOR_UNITTEST(guest_phyiscal_address_space_single_vmo_multiple_mappings)
 HYPERVISOR_UNITTEST(guest_physical_address_space_page_fault)
 HYPERVISOR_UNITTEST(guest_physical_address_space_map_interrupt_controller)
 HYPERVISOR_UNITTEST(guest_physical_address_space_uncached)
