@@ -412,7 +412,7 @@ Do the following:
    `~/.package_repos/sdk-samples` directory):
 
    Note: The `~/.package_repos/sdk-samples` directory is created on your host
-   machine when you run the `bazil build` command for the first time in the
+   machine when you run the `bazel build` command for the first time in the
    [Clone the SDK samples repository](#clone-the-sdk-samples-repository) section.
 
    ```posix-terminal
