@@ -9,7 +9,10 @@ use {
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
     scrutiny_utils::golden::{CompareResult, GoldenFile},
     serde_json,
-    std::{collections::HashSet, path::Path},
+    std::{
+        collections::HashSet,
+        path::{Path, PathBuf},
+    },
 };
 
 const SOFT_TRANSITION_MSG : &str = "
@@ -57,23 +60,21 @@ fn verify_kernel_cmdline<P: AsRef<Path>>(zbi_path: &str, golden_path: P) -> Resu
     }
 }
 
-pub async fn verify(cmd: Command) -> Result<HashSet<String>> {
+pub async fn verify(cmd: Command) -> Result<HashSet<PathBuf>> {
     if cmd.golden.len() == 0 {
         bail!("Must specify at least one --golden");
     }
     let mut deps = HashSet::new();
-    let zbi_path = cmd.zbi.to_str().ok_or_else(|| {
+    let zbi_path = &cmd.zbi;
+    let zbi = zbi_path.to_str().ok_or_else(|| {
         anyhow!("ZBI path {:?} cannot be converted to string for passing to scrutiny", cmd.zbi)
     })?;
-    deps.insert(zbi_path.to_string());
+    deps.insert(zbi_path.clone());
 
     for golden_file_path in cmd.golden.into_iter() {
-        verify_kernel_cmdline(zbi_path, &golden_file_path)?;
+        verify_kernel_cmdline(zbi, &golden_file_path)?;
 
-        let golden_file_path_str = golden_file_path.to_str().ok_or_else(|| {
-            anyhow!("Failed to convert golden file path to string: {:?}", golden_file_path)
-        })?;
-        deps.insert(golden_file_path_str.to_string());
+        deps.insert(golden_file_path);
     }
 
     Ok(deps)

@@ -15,7 +15,7 @@ use {
     std::{
         collections::{HashMap, HashSet},
         io::Cursor,
-        path::Path,
+        path::{Path, PathBuf},
         str,
     },
 };
@@ -44,7 +44,7 @@ pub trait PackageReader: Send + Sync {
     fn read_service_package_definition(&mut self, data: String)
         -> Result<ServicePackageDefinition>;
     /// Gets the paths to files touched by read operations.
-    fn get_deps(&self) -> HashSet<String>;
+    fn get_deps(&self) -> HashSet<PathBuf>;
 }
 
 pub struct PackageServerReader {
@@ -57,13 +57,13 @@ impl PackageServerReader {
     }
 
     fn read_blob_raw(&mut self, merkle: &str) -> Result<Vec<u8>> {
-        Ok(self.pkg_reader.read_raw(&Path::new(&format!("blobs/{}", merkle)[..]))?)
+        Ok(self.pkg_reader.read_bytes(&Path::new(&format!("blobs/{}", merkle)[..]))?)
     }
 }
 
 impl PackageReader for PackageServerReader {
     fn read_targets(&mut self) -> Result<TargetsJson> {
-        let resp_b = self.pkg_reader.read_raw(&Path::new("targets.json"))?;
+        let resp_b = self.pkg_reader.read_bytes(&Path::new("targets.json"))?;
         let resp = str::from_utf8(&resp_b).context("Failed to decode targets.json as utf8")?;
 
         Ok(serde_json::from_str(&resp).context("Failed to parse targets.json")?)
@@ -164,7 +164,7 @@ impl PackageReader for PackageServerReader {
                     } else if e.is_array() {
                         let inner = e.as_array().unwrap();
                         if inner.len() > 0 {
-                            apps.push(String::from(inner[0].as_str().unwrap()));
+                            apps.push(String::from(inner[0].as_str().unwrap()).into());
                         }
                     }
                 }
@@ -174,7 +174,7 @@ impl PackageReader for PackageServerReader {
         Ok(service_def)
     }
 
-    fn get_deps(&self) -> HashSet<String> {
+    fn get_deps(&self) -> HashSet<PathBuf> {
         self.pkg_reader.get_deps()
     }
 }

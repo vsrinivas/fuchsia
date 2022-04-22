@@ -22,7 +22,7 @@ pub async fn scrutiny_verify(cmd: Command) -> Result<()> {
         bail!("Cannot specify --depfile without --stamp");
     }
 
-    let deps = match cmd.subcommand {
+    let deps_set = match cmd.subcommand {
         Subcommand::Bootfs(cmd) => bootfs::verify(cmd).await,
         Subcommand::ComponentResolvers(cmd) => component_resolvers::verify(cmd).await,
         Subcommand::KernelCmdline(cmd) => kernel_cmdline::verify(cmd).await,
@@ -44,7 +44,14 @@ pub async fn scrutiny_verify(cmd: Command) -> Result<()> {
         })?;
         let mut depfile = fs::File::create(depfile_path).context("failed to create depfile")?;
 
-        let deps: Vec<String> = deps.into_iter().collect();
+        let deps = deps_set
+            .iter()
+            .map(|path_buf| {
+                path_buf.to_str().ok_or_else(|| {
+                    anyhow!("Failed to convert path for depfile to string: {:?}", path_buf)
+                })
+            })
+            .collect::<Result<Vec<&str>>>()?;
         write!(depfile, "{}: {}", stamp_path, deps.join(" "))
             .context("failed to write to depfile")?;
     }

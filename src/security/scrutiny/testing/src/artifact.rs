@@ -5,12 +5,16 @@
 use {
     anyhow::{anyhow, Result},
     scrutiny_utils::artifact::ArtifactReader,
-    std::{collections::HashSet, path::Path, sync::RwLock},
+    std::{
+        collections::HashSet,
+        path::{Path, PathBuf},
+        sync::RwLock,
+    },
 };
 
 pub struct MockArtifactReader {
     bytes: RwLock<Vec<Vec<u8>>>,
-    deps: HashSet<String>,
+    deps: HashSet<PathBuf>,
 }
 
 impl MockArtifactReader {
@@ -24,19 +28,18 @@ impl MockArtifactReader {
 }
 
 impl ArtifactReader for MockArtifactReader {
-    fn read_raw(&mut self, path: &Path) -> Result<Vec<u8>> {
-        let path = path.to_str().ok_or_else(|| anyhow!("Path connot be converted to string"))?;
+    fn read_bytes(&mut self, path: &Path) -> Result<Vec<u8>> {
         let mut borrow = self.bytes.write().unwrap();
         {
             if borrow.len() == 0 {
                 return Err(anyhow!("No more byte vectors left to return. Maybe append more?"));
             }
-            self.deps.insert(path.to_string());
+            self.deps.insert(path.to_path_buf());
             Ok(borrow.remove(0))
         }
     }
 
-    fn get_deps(&self) -> HashSet<String> {
+    fn get_deps(&self) -> HashSet<PathBuf> {
         self.deps.clone()
     }
 }

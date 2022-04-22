@@ -21,7 +21,7 @@ use {
     std::{
         collections::HashSet,
         io::Cursor,
-        path::Path,
+        path::{Path, PathBuf},
         str::{from_utf8, FromStr},
         sync::Arc,
     },
@@ -33,12 +33,12 @@ static META_FAR_CONTENTS_LISTING_PATH: &str = "meta/contents";
 static STATIC_PKGS_LISTING_PATH: &str = "data/static_packages";
 
 struct StaticPkgsData {
-    deps: HashSet<String>,
+    deps: HashSet<PathBuf>,
     static_pkgs: StaticPkgsContents,
 }
 
 struct ErrorWithDeps {
-    pub deps: HashSet<String>,
+    pub deps: HashSet<PathBuf>,
     pub error: StaticPkgsError,
 }
 
@@ -82,7 +82,7 @@ fn collect_static_pkgs(
     // Load blob manifest for subsequent blob-loading operations.
     let blob_manifest_path = model_config.blob_manifest_path();
     let blob_manifest_buffer =
-        artifact_loader.read_raw(&blob_manifest_path).map_err(|err| ErrorWithDeps {
+        artifact_loader.read_bytes(&blob_manifest_path).map_err(|err| ErrorWithDeps {
             deps: artifact_loader.get_deps(),
             error: StaticPkgsError::FailedToReadBlobManifest {
                 blob_manifest_path: blob_manifest_path.clone(),
@@ -125,7 +125,7 @@ fn collect_static_pkgs(
 
     // Read system image package and verify its merkle.
     let system_image_pkg_buffer =
-        artifact_loader.read_raw(&system_image_path).map_err(|err| ErrorWithDeps {
+        artifact_loader.read_bytes(&system_image_path).map_err(|err| ErrorWithDeps {
             deps: artifact_loader.get_deps(),
             error: StaticPkgsError::FailedToReadSystemImage {
                 system_image_path: system_image_path.clone(),
@@ -224,7 +224,7 @@ fn collect_static_pkgs(
 
     // Read static packages index, check its merkle, and parse it.
     let static_pkgs_buffer =
-        artifact_loader.read_raw(&static_pkgs_path).map_err(|err| ErrorWithDeps {
+        artifact_loader.read_bytes(&static_pkgs_path).map_err(|err| ErrorWithDeps {
             deps: artifact_loader.get_deps(),
             error: StaticPkgsError::FailedToReadStaticPkgs {
                 static_pkgs_path: static_pkgs_path.clone(),

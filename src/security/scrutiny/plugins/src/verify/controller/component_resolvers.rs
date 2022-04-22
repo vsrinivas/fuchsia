@@ -19,7 +19,7 @@ use {
     scrutiny::{model::controller::DataController, model::model::*},
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
-    std::{collections::HashSet, sync::Arc},
+    std::{collections::HashSet, path::PathBuf, sync::Arc},
 };
 
 /// ComponentResolversController
@@ -45,7 +45,7 @@ pub struct ComponentResolverRequest {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ComponentResolverResponse {
     /// Files accessed to perform this query, for depfile generation.
-    pub deps: HashSet<String>,
+    pub deps: HashSet<PathBuf>,
     /// Component monikers that matched the query.
     pub monikers: Vec<String>,
 }

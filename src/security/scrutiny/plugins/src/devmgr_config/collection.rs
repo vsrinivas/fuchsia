@@ -64,7 +64,7 @@ pub type DevmgrConfigContents = HashMap<String, Vec<String>>;
 
 #[derive(Deserialize, Serialize)]
 pub struct DevmgrConfigCollection {
-    pub deps: HashSet<String>,
+    pub deps: HashSet<PathBuf>,
     pub devmgr_config: Option<DevmgrConfigContents>,
     pub errors: Vec<DevmgrConfigError>,
 }

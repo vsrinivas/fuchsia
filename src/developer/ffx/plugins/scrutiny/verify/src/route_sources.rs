@@ -43,7 +43,7 @@ impl TryFrom<Command> for Query {
     }
 }
 
-fn verify_route_sources(query: Query) -> Result<HashSet<String>> {
+fn verify_route_sources(query: Query) -> Result<HashSet<PathBuf>> {
     let model = ModelConfig {
         zbi_path: query.zbi,
         blob_manifest_path: query.blobfs_manifest,
@@ -96,7 +96,7 @@ fn verify_route_sources(query: Query) -> Result<HashSet<String>> {
     Ok(route_sources_results.deps)
 }
 
-pub async fn verify(cmd: Command) -> Result<HashSet<String>> {
+pub async fn verify(cmd: Command) -> Result<HashSet<PathBuf>> {
     let query = cmd.try_into()?;
     let deps = verify_route_sources(query)?;
     Ok(deps)

@@ -9,7 +9,7 @@ use {
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
     scrutiny_utils::golden::{CompareResult, GoldenFile},
     serde_json,
-    std::collections::HashSet,
+    std::{collections::HashSet, path::PathBuf},
 };
 
 const SOFT_TRANSITION_MSG : &str = "
@@ -21,16 +21,16 @@ If you are making a change in fuchsia.git that causes this, you need to perform 
 5: For each existing line you modified in 2, remove the line.
 ";
 
-pub async fn verify(cmd: Command) -> Result<HashSet<String>> {
+pub async fn verify(cmd: Command) -> Result<HashSet<PathBuf>> {
     if cmd.golden.len() == 0 {
         bail!("Must specify at least one --golden");
     }
     let mut deps = HashSet::new();
-    let zbi = cmd
-        .zbi
+    let zbi_path = &cmd.zbi;
+    let zbi = zbi_path
         .to_str()
         .ok_or_else(|| anyhow!("Failed to convert ZBI path to string: {:?}", cmd.zbi))?;
-    deps.insert(zbi.to_string());
+    deps.insert(zbi_path.clone());
 
     let config = Config::run_command_with_runtime(
         CommandBuilder::new("tool.zbi.list.bootfs").param("input", zbi).build(),
@@ -65,10 +65,7 @@ pub async fn verify(cmd: Command) -> Result<HashSet<String>> {
             }
         }?;
 
-        let golden_file_path_str = golden_file_path.to_str().ok_or_else(|| {
-            anyhow!("Failed to convert golden file path to string: {:?}", golden_file_path)
-        })?;
-        deps.insert(golden_file_path_str.to_string());
+        deps.insert(golden_file_path);
     }
 
     Ok(deps)

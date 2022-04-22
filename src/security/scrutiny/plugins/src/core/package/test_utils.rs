@@ -15,6 +15,7 @@ use {
     scrutiny_testing::fake::fake_model_config,
     std::{
         collections::{HashMap, HashSet},
+        path::PathBuf,
         sync::{Arc, RwLock},
     },
 };
@@ -23,7 +24,7 @@ pub struct MockPackageReader {
     targets: RwLock<Vec<TargetsJson>>,
     package_defs: RwLock<Vec<PackageDefinition>>,
     service_package_defs: RwLock<Vec<ServicePackageDefinition>>,
-    deps: HashSet<String>,
+    deps: HashSet<PathBuf>,
 }
 
 impl MockPackageReader {
@@ -57,7 +58,7 @@ impl PackageReader for MockPackageReader {
             if borrow.len() == 0 {
                 return Err(anyhow!("No more targets left to return. Maybe append more?"));
             }
-            self.deps.insert("targets.json".to_string());
+            self.deps.insert("targets.json".to_string().into());
             Ok(borrow.remove(0))
         }
     }
@@ -72,7 +73,7 @@ impl PackageReader for MockPackageReader {
             if borrow.len() == 0 {
                 return Err(anyhow!("No more package_defs left to return. Maybe append more?"));
             }
-            self.deps.insert(borrow[0].merkle.clone());
+            self.deps.insert(borrow[0].merkle.clone().into());
             Ok(borrow.remove(0))
         }
     }
@@ -92,7 +93,7 @@ impl PackageReader for MockPackageReader {
         }
     }
 
-    fn get_deps(&self) -> HashSet<String> {
+    fn get_deps(&self) -> HashSet<PathBuf> {
         self.deps.clone()
     }
 }

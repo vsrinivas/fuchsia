@@ -4,9 +4,68 @@
 
 import("//build/host.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/testing/host_test.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/testing/host_test_data.gni")
+import("//build/zircon/tools.gni")
 
 if (is_host) {
+  template("scrutiny_utils_blobfs_testdata") {
+    assert(defined(invoker.blobs),
+           "scrutiny_utils_blobfs_testdata() requires blobs")
+    assert(defined(invoker.blobfs_manifest),
+           "scrutiny_utils_blobfs_testdata() requires blobfs_manifest")
+    action(target_name) {
+      script = blobfs_tool_path
+      output = "$target_out_dir/$target_name/$target_name.blk"
+      args = [
+        "--compress",
+        rebase_path(output, root_build_dir),
+        "create",
+        "--manifest",
+        rebase_path(invoker.blobfs_manifest, root_build_dir),
+      ]
+      deps = [ blobfs_tool_target ]
+      inputs = [ invoker.blobfs_manifest ] + invoker.blobs
+      outputs = [ output ]
+    }
+  }
+
+  scrutiny_utils_blobfs_testdata("alpha_beta_blobfs") {
+    blobs = [
+      "testdata/alpha",
+      "testdata/beta",
+    ]
+    blobfs_manifest = "testdata/blob.alpha_beta.manifest"
+  }
+
+  scrutiny_utils_blobfs_testdata("beta_gamma_blobfs") {
+    blobs = [
+      "testdata/beta",
+      "testdata/gamma",
+    ]
+    blobfs_manifest = "testdata/blob.beta_gamma.manifest"
+  }
+
+  host_test_data("testdata") {
+    alpha_beta_blobfs = get_label_info(":alpha_beta_blobfs", "target_out_dir") +
+                        "/alpha_beta_blobfs/alpha_beta_blobfs.blk"
+    beta_gamma_blobfs = get_label_info(":beta_gamma_blobfs", "target_out_dir") +
+                        "/beta_gamma_blobfs/beta_gamma_blobfs.blk"
+    deps = [
+      ":alpha_beta_blobfs",
+      ":beta_gamma_blobfs",
+    ]
+    sources = [
+      "testdata/alpha",
+      "testdata/beta",
+      "testdata/delta",
+      "testdata/gamma",
+      alpha_beta_blobfs,
+      beta_gamma_blobfs,
+    ]
+    outputs = [ "$target_out_dir/testdata/{{source_file_part}}" ]
+  }
+
   rustc_library("utils") {
     name = "scrutiny_utils"
     with_unit_tests = true
@@ -54,9 +113,48 @@ if (is_host) {
     # TODO(fxbug.dev/92670): Needed by test.  Remove when fixed.
     configs += [ "//build/config/rust:output_dir_sensitive" ]
   }
+
+  config("test_config") {
+    testdata_dir = get_label_info(":testdata($host_toolchain)",
+                                  "target_out_dir") + "/testdata"
+    rustenv = [ "TESTDATA_DIR=" + rebase_path(testdata_dir, root_build_dir) ]
+  }
+
+  rustc_test("integration_tests") {
+    source_root = "test/lib.rs"
+    sources = [ "test/lib.rs" ]
+    inputs = [
+      "testdata/alpha",
+      "testdata/beta",
+      "testdata/gamma",
+      "testdata/delta",
+    ]
+
+    configs += [ ":test_config" ]
+    disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
+
+    # TODO(fxbug.dev/92670): Needed by test.  Remove when fixed.
+    configs += [ "//build/config/rust:output_dir_sensitive" ]
+
+    deps = [
+      ":testdata($host_toolchain)",
+      ":utils($host_toolchain)",
+      "//src/sys/pkg/lib/fuchsia-merkle",
+      "//third_party/rust_crates:once_cell",
+    ]
+
+    non_rust_deps = [
+      "//src/lib/chunked-compression",
+      "//src/security/scrutiny/utils/ffi-bridge",
+      "//third_party/zstd",
+    ]
+  }
 }
 
 group("tests") {
   testonly = true
-  public_deps = [ ":utils_test($host_toolchain)" ]
+  public_deps = [
+    ":integration_tests($host_toolchain)",
+    ":utils_test($host_toolchain)",
+  ]
 }

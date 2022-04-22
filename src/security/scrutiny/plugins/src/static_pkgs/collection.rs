@@ -89,7 +89,7 @@ pub type StaticPkgsContents = HashMap<String, String>;
 
 #[derive(Deserialize, Serialize)]
 pub struct StaticPkgsCollection {
-    pub deps: HashSet<String>,
+    pub deps: HashSet<PathBuf>,
     pub static_pkgs: Option<StaticPkgsContents>,
     pub errors: Vec<StaticPkgsError>,
 }

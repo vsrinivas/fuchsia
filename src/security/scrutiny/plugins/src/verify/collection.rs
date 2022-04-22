@@ -6,14 +6,13 @@ use {
     cm_fidl_analyzer::component_model::ComponentModelForAnalyzer,
     scrutiny::prelude::*,
     serde::{Deserialize, Serialize},
-    std::collections::HashSet,
-    std::sync::Arc,
+    std::{collections::HashSet, path::PathBuf, sync::Arc},
     uuid::Uuid,
 };
 
 #[derive(Deserialize, Serialize)]
 pub struct V2ComponentModel {
-    pub deps: HashSet<String>,
+    pub deps: HashSet<PathBuf>,
     // TODO(pesk): investigate options for partially serializing `component_model`.
     #[serde(skip)]
     pub component_model: Arc<ComponentModelForAnalyzer>,
@@ -24,7 +23,7 @@ pub struct V2ComponentModel {
 
 impl V2ComponentModel {
     pub fn new(
-        deps: HashSet<String>,
+        deps: HashSet<PathBuf>,
         component_model: Arc<ComponentModelForAnalyzer>,
         errors: Vec<anyhow::Error>,
     ) -> Self {

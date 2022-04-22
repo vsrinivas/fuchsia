@@ -39,7 +39,7 @@ impl DataController for BlobController {
         let mut blob_loader = FileArtifactReader::new(&build_path, &repository_path);
 
         let req: BlobRequest = serde_json::from_value(query)?;
-        let data = blob_loader.read_raw(&Path::new(&format!("blobs/{}", req.merkle)))?;
+        let data = blob_loader.read_bytes(&Path::new(&format!("blobs/{}", req.merkle)))?;
         let resp = BlobResponse {
             merkle: req.merkle.clone(),
             encoding: "base64".to_string(),

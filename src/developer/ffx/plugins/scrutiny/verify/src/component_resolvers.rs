@@ -22,7 +22,7 @@ struct ComponentResolversRequest {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 struct ComponentResolversResponse {
-    deps: HashSet<String>,
+    deps: HashSet<PathBuf>,
     monikers: Vec<NodePath>,
 }
 
@@ -103,7 +103,7 @@ impl QueryComponentResolvers for ScrutinyQueryComponentResolvers {
 fn verify_component_resolvers(
     scrutiny: impl QueryComponentResolvers,
     allowlist: AllowList,
-) -> Result<Result<HashSet<String>, AllowList>> {
+) -> Result<Result<HashSet<PathBuf>, AllowList>> {
     let mut violations = vec![];
     let mut deps = HashSet::new();
 
@@ -137,7 +137,7 @@ fn verify_component_resolvers(
     }
 }
 
-pub async fn verify(cmd: Command) -> Result<HashSet<String>> {
+pub async fn verify(cmd: Command) -> Result<HashSet<PathBuf>> {
     let allowlist_path = cmd.allowlist.clone();
     let scrutiny = ScrutinyQueryComponentResolvers {
         build_path: cmd.build_path,
@@ -189,7 +189,7 @@ mod tests {
         ) -> Self {
             let raw_response = serde_json::to_string(&ComponentResolversResponse {
                 monikers: response,
-                deps: response_deps.into_iter().collect(),
+                deps: response_deps.into_iter().map(PathBuf::from).collect(),
             })
             .unwrap();
             self.with_raw_response(query, raw_response)
@@ -330,7 +330,7 @@ mod tests {
             vec!["path/to/dep.zbi".to_owned()],
         );
 
-        let expected_deps = vec!["path/to/dep.zbi".to_owned()].into_iter().collect();
+        let expected_deps = vec!["path/to/dep.zbi".to_string().into()].into_iter().collect();
         assert_eq!(verify_component_resolvers(scrutiny, allowlist).unwrap(), Ok(expected_deps));
     }
 

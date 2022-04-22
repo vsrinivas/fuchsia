@@ -7,7 +7,10 @@ use {
     scrutiny::prelude::*,
     scrutiny_utils::zbi::ZbiSection,
     serde::{Deserialize, Serialize},
-    std::collections::{HashMap, HashSet},
+    std::{
+        collections::{HashMap, HashSet},
+        path::PathBuf,
+    },
     uuid::Uuid,
 };
 
@@ -474,11 +477,11 @@ impl DataCollection for Sysmgr {
 /// of dependencies during tool execution.
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct CoreDataDeps {
-    pub deps: HashSet<String>,
+    pub deps: HashSet<PathBuf>,
 }
 
 impl CoreDataDeps {
-    pub fn new(deps: HashSet<String>) -> Self {
+    pub fn new(deps: HashSet<PathBuf>) -> Self {
         Self { deps }
     }
 }

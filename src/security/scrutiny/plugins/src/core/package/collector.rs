@@ -33,7 +33,7 @@ use {
     serde_json::Value,
     std::{
         collections::{HashMap, HashSet},
-        path::Path,
+        path::{Path, PathBuf},
         str,
         sync::Arc,
     },
@@ -216,7 +216,7 @@ impl PackageDataCollector {
         info!("Extracting the ZBI from {}", package.url);
         for (path, merkle) in package.contents.iter() {
             if path == "zbi" || path == "zbi.signed" {
-                let zbi_data = reader.read_raw(&Path::new(&format!("blobs/{}", merkle)))?;
+                let zbi_data = reader.read_bytes(&Path::new(&format!("blobs/{}", merkle)))?;
                 let mut reader = ZbiReader::new(zbi_data);
                 let sections = reader.parse()?;
                 let mut bootfs = HashMap::new();
@@ -291,7 +291,7 @@ impl PackageDataCollector {
 
     fn get_static_pkg_deps(
         static_pkgs_result: &Result<Arc<StaticPkgsCollection>>,
-    ) -> HashSet<String> {
+    ) -> HashSet<PathBuf> {
         static_pkgs_result.as_ref().ok().map(|result| result.deps.clone()).unwrap_or(HashSet::new())
     }
 
@@ -1522,8 +1522,8 @@ pub mod tests {
             Arc::new(CoreDataDeps {
                 deps: hashset! {
                     // These follow conventions defined in `MockPackageReader` dep management.
-                    "targets.json".to_string(), merkle_one_two_three.to_string(),
-                    merkle_four_five_six.to_string(),
+                    "targets.json".to_string().into(), merkle_one_two_three.to_string().into(),
+                    merkle_four_five_six.to_string().into(),
                 },
             })
         );

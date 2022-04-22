@@ -24,7 +24,7 @@ use {
     cm_rust::{CapabilityName, CapabilityTypeName},
     scrutiny::prelude::*,
     serde::{Deserialize, Serialize},
-    std::{collections::HashSet, sync::Arc},
+    std::{collections::HashSet, path::PathBuf, sync::Arc},
 };
 
 pub use controller::route_sources::{
@@ -51,7 +51,7 @@ plugin!(
 /// Top-level result type for `CapabilityRouteController` query result.
 #[derive(Deserialize, Serialize)]
 pub struct CapabilityRouteResults {
-    pub deps: HashSet<String>,
+    pub deps: HashSet<PathBuf>,
     pub results: Vec<ResultsForCapabilityType>,
 }
 
@@ -279,7 +279,7 @@ mod tests {
             root_component_url.clone().unwrap_or(DEFAULT_ROOT_URL.to_string()),
         );
         let root_manifest = make_v2_manifest(root_id, new_component_decl(vec![]))?;
-        let deps = hashset! { CORE_DEP_STR.to_string() };
+        let deps = hashset! { CORE_DEP_STR.to_string().into() };
         model.set(Components::new(vec![root_component]))?;
         model.set(Manifests::new(vec![root_manifest]))?;
         model
@@ -327,7 +327,7 @@ mod tests {
         let bar_manifest = make_v2_manifest(bar_id, bar_decl)?;
         let baz_manifest = make_v2_manifest(baz_id, baz_decl)?;
 
-        let deps = hashset! { CORE_DEP_STR.to_string() };
+        let deps = hashset! { CORE_DEP_STR.to_string().into() };
 
         model.set(Components::new(vec![
             root_component,
@@ -362,7 +362,7 @@ mod tests {
         model.set(Components::new(components))?;
         model.set(Zbi { ..zbi(None, None, component_id_index::Index::default()) })?;
         model.set(Manifests::new(manifests))?;
-        model.set(CoreDataDeps { deps: hashset! { CORE_DEP_STR.to_string() } })?;
+        model.set(CoreDataDeps { deps: hashset! { CORE_DEP_STR.to_string().into() } })?;
 
         V2ComponentModelDataCollector::new().collect(model.clone())?;
 
@@ -445,7 +445,7 @@ mod tests {
         assert!(build_model_result.model.is_some());
         let component_model = build_model_result.model.unwrap();
         assert_eq!(component_model.len(), 2);
-        let deps = hashset! { "v2_component_tree_dep".to_string() };
+        let deps = hashset! { "v2_component_tree_dep".to_string().into() };
 
         model.set(V2ComponentModel::new(deps, component_model, build_model_result.errors))?;
         Ok(model)

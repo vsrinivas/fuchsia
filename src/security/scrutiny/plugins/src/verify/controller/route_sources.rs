@@ -259,7 +259,7 @@ fn match_path_prefix(prefix: &CapabilityPath, path: &CapabilityPath) -> bool {
 /// Output type: Wrapper for full set of results and dependencies.
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct VerifyRouteSourcesResults {
-    pub deps: HashSet<String>,
+    pub deps: HashSet<PathBuf>,
     pub results: HashMap<String, Vec<VerifyRouteSourcesResult>>,
 }
 

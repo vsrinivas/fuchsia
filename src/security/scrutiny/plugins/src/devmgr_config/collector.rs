@@ -28,7 +28,7 @@ fn load_devmgr_config<'a, P1: AsRef<Path>, P2: AsRef<Path>>(
             devmgr_config_path: devmgr_config_path_ref.to_path_buf(),
         }
     })?;
-    let zbi_buffer = artifact_reader.read_raw(zbi_path_ref).map_err(|err| {
+    let zbi_buffer = artifact_reader.read_bytes(zbi_path_ref).map_err(|err| {
         DevmgrConfigError::FailedToReadZbi {
             zbi_path: zbi_path_ref.to_path_buf(),
             io_error: format!("{:?}", err),

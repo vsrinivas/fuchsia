@@ -68,7 +68,7 @@ fn load_allowlist(allowlist_paths: &Vec<PathBuf>) -> Result<Box<dyn AllowlistFil
     Err(err.unwrap())
 }
 
-pub async fn verify(cmd: Command) -> Result<HashSet<String>> {
+pub async fn verify(cmd: Command) -> Result<HashSet<PathBuf>> {
     let query: Query = cmd.into();
     let mut config = Config::run_command_with_plugins(
         CommandBuilder::new("verify.capability_routes")

@@ -33,7 +33,7 @@ struct Query {
     blobfs_manifest_path: PathBuf,
 }
 
-fn verify_static_pkgs(query: &Query, golden_file_path: PathBuf) -> Result<HashSet<String>> {
+fn verify_static_pkgs(query: &Query, golden_file_path: PathBuf) -> Result<HashSet<PathBuf>> {
     let config = Config::run_command_with_runtime(
         CommandBuilder::new("static.pkgs").build(),
         RuntimeConfig {
@@ -80,14 +80,17 @@ fn verify_static_pkgs(query: &Query, golden_file_path: PathBuf) -> Result<HashSe
         .collect();
 
     let mut golden_reader = FileArtifactReader::new(&query.build_path, &query.build_path);
-    let golden_contents =
-        golden_reader.read_raw(golden_file_path.as_path()).context("Failed to read golden file")?;
+    let golden_contents = golden_reader
+        .read_bytes(golden_file_path.as_path())
+        .context("Failed to read golden file")?;
     let golden_file = GoldenFile::from_contents(golden_file_path.as_path(), golden_contents)
         .context("Failed to parse golden file")?;
     match golden_file.compare(static_package_urls) {
-        CompareResult::Matches => {
-            Ok(static_pkgs_result.deps.union(&golden_reader.get_deps()).map(String::from).collect())
-        }
+        CompareResult::Matches => Ok(static_pkgs_result
+            .deps
+            .union(&golden_reader.get_deps())
+            .map(PathBuf::clone)
+            .collect()),
         CompareResult::Mismatch { errors } => {
             println!("Static package file mismatch");
             println!("");
@@ -102,7 +105,7 @@ fn verify_static_pkgs(query: &Query, golden_file_path: PathBuf) -> Result<HashSe
     }
 }
 
-pub async fn verify(cmd: Command) -> Result<HashSet<String>> {
+pub async fn verify(cmd: Command) -> Result<HashSet<PathBuf>> {
     let query = Query {
         build_path: cmd.build_path,
         zbi_path: cmd.zbi,
