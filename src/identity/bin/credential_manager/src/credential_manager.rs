@@ -257,7 +257,7 @@ mod test {
     use {
         super::*,
         crate::{
-            diagnostics::FakeDiagnostics,
+            diagnostics::{Event, FakeDiagnostics},
             hash_tree::{HashTreeStorageCbor, CHILDREN_PER_NODE, TREE_HEIGHT},
             lookup_table::{LookupTableError, MockLookupTable, ReadResult},
             pinweaver::MockPinWeaverProtocol,
@@ -301,8 +301,8 @@ mod test {
     impl TestHarness {
         async fn create(params: TestParams) -> Self {
             let path = params.dir.path().join("hash_tree");
-            let hash_tree_storage = HashTreeStorageCbor::new(path.to_str().unwrap());
             let diag = Arc::new(FakeDiagnostics::new());
+            let hash_tree_storage = HashTreeStorageCbor::new(path.to_str().unwrap());
             let cm = CredentialManager::new(
                 params.pinweaver,
                 params.hash_tree,
@@ -647,9 +647,12 @@ mod test {
         .detach();
 
         test.cm.handle_requests_for_stream(request_stream).await;
-        test.diag.assert_incoming_outcomes(&[
-            (IncomingMethod::AddCredential, Ok(())),
-            (IncomingMethod::RemoveCredential, Err(CredentialError::InvalidLabel)),
+        test.diag.assert_events(&[
+            Event::IncomingOutcome(IncomingMethod::AddCredential, Ok(())),
+            Event::IncomingOutcome(
+                IncomingMethod::RemoveCredential,
+                Err(CredentialError::InvalidLabel),
+            ),
         ]);
     }
 }

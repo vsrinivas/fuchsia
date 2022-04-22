@@ -7,7 +7,7 @@ mod fake;
 mod inspect;
 
 #[cfg(test)]
-pub use self::fake::FakeDiagnostics;
+pub use self::fake::{Event, FakeDiagnostics};
 pub use self::inspect::{InspectDiagnostics, INSPECTOR};
 
 use {fidl_fuchsia_identity_credential::CredentialError, paste::paste, std::collections::HashMap};

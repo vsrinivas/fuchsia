@@ -8,32 +8,34 @@ use {
     parking_lot::Mutex,
 };
 
+/// The different events that can be recorded through interactions with a `FakeDiagnostics`.
+#[derive(Debug, PartialEq)]
+pub enum Event {
+    IncomingOutcome(IncomingMethod, Result<(), CredentialError>),
+}
+
 /// A fake `Diagnostics` implementation useful for verifying unittest.
 pub struct FakeDiagnostics {
-    /// An ordered list of the incoming RPC events received.
-    incoming_outcomes: Mutex<Vec<(IncomingMethod, Result<(), CredentialError>)>>,
+    /// An ordered list of the events received.
+    events: Mutex<Vec<Event>>,
 }
 
 impl FakeDiagnostics {
     /// Constructs a new `FakeDiagnostics`.
     pub fn new() -> Self {
-        FakeDiagnostics { incoming_outcomes: Mutex::new(Vec::new()) }
+        FakeDiagnostics { events: Mutex::new(Vec::new()) }
     }
 
-    /// Panics if the supplied slice does not match the received incoming_outcomes.
-    pub fn assert_incoming_outcomes(
-        &self,
-        expected: &[(IncomingMethod, Result<(), CredentialError>)],
-    ) {
-        let actual: &[(IncomingMethod, Result<(), CredentialError>)] =
-            &*self.incoming_outcomes.lock();
+    /// Panics if the supplied slice does not match the received events.
+    pub fn assert_events(&self, expected: &[Event]) {
+        let actual: &[Event] = &*self.events.lock();
         assert_eq!(actual, expected);
     }
 }
 
 impl Diagnostics for FakeDiagnostics {
     fn incoming_outcome(&self, method: IncomingMethod, result: Result<(), CredentialError>) {
-        self.incoming_outcomes.lock().push((method, result));
+        self.events.lock().push(Event::IncomingOutcome(method, result));
     }
 }
 
@@ -52,11 +54,17 @@ mod test {
         diagnostics
             .incoming_outcome(IncomingMethod::AddCredential, Err(CredentialError::NoFreeLabel));
 
-        diagnostics.assert_incoming_outcomes(&[
-            (IncomingMethod::AddCredential, Ok(())),
-            (IncomingMethod::RemoveCredential, Err(CredentialError::InvalidLabel)),
-            (IncomingMethod::CheckCredential, Ok(())),
-            (IncomingMethod::AddCredential, Err(CredentialError::NoFreeLabel)),
+        diagnostics.assert_events(&[
+            Event::IncomingOutcome(IncomingMethod::AddCredential, Ok(())),
+            Event::IncomingOutcome(
+                IncomingMethod::RemoveCredential,
+                Err(CredentialError::InvalidLabel),
+            ),
+            Event::IncomingOutcome(IncomingMethod::CheckCredential, Ok(())),
+            Event::IncomingOutcome(
+                IncomingMethod::AddCredential,
+                Err(CredentialError::NoFreeLabel),
+            ),
         ]);
     }
 }
