@@ -354,8 +354,6 @@ void FsManager::ReadyForShutdown() { sync_completion_signal(&ready_for_shutdown_
 
 const char* FsManager::MountPointPath(FsManager::MountPoint point) {
   switch (point) {
-    case MountPoint::kUnknown:
-      return "";
     case MountPoint::kData:
       return "/data";
     case MountPoint::kInstall:
@@ -376,9 +374,6 @@ zx_status_t FsManager::ForwardFsDiagnosticsDirectory(MountPoint point,
   // The diagnostics directory may not be initialized in tests.
   if (diagnostics_dir_ == nullptr) {
     return ZX_ERR_INTERNAL;
-  }
-  if (point == MountPoint::kUnknown) {
-    return ZX_ERR_INVALID_ARGS;
   }
   if (!mount_nodes_[point].export_root) {
     FX_LOGS(ERROR) << "Can't forward diagnostics dir for " << MountPointPath(point)
@@ -403,9 +398,6 @@ zx_status_t FsManager::ForwardFsService(MountPoint point, const char* service_na
   // The outgoing service directory may not be initialized in tests.
   if (svc_dir_ == nullptr) {
     return ZX_ERR_INTERNAL;
-  }
-  if (point == MountPoint::kUnknown) {
-    return ZX_ERR_INVALID_ARGS;
   }
   if (!mount_nodes_[point].export_root) {
     FX_LOGS(ERROR) << "Can't forward service for " << MountPointPath(point)

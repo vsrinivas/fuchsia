@@ -51,7 +51,6 @@ class FsManager {
 
   // MountPoint is a possible location that a filesystem can be installed at.
   enum class MountPoint {
-    kUnknown = 0,
     kData,
     kInstall,
     kPkgfs,
