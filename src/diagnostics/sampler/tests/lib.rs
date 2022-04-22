@@ -196,7 +196,8 @@ async fn sampler_inspect_test() {
         hierarchy,
         root: {
             config: {
-                minimum_sample_rate_sec: 1 as u64
+                minimum_sample_rate_sec: 1 as u64,
+                configs_path: "/pkg/data/config",
             },
             sampler_executor_stats: {
                 healthily_exited_samplers: 0 as u64,

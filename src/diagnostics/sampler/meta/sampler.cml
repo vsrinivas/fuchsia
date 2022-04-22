@@ -42,5 +42,9 @@
     ],
     config: {
         minimum_sample_rate_sec: { type: "int64" },
+        configs_path: {
+            type: "string",
+            max_size: 128,
+        },
     },
 }

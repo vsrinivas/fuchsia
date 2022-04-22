@@ -41,10 +41,13 @@ pub async fn main() -> Result<(), Error> {
 
     let component_config = ComponentConfig::from_args().record_to_inspect(inspector.root());
 
+    let sampler_config = format!("{}/metrics", component_config.configs_path);
+    let fire_config = format!("{}/fire", component_config.configs_path);
+
     match config::SamplerConfig::from_directories(
         component_config.minimum_sample_rate_sec,
-        "/config/data/metrics", /* Sampler config */
-        "/config/data/fire",    /* FIRE config */
+        sampler_config,
+        fire_config,
     ) {
         Ok(sampler_config) => {
             // Create endpoint for the reboot watcher register.

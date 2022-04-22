@@ -124,22 +124,6 @@ pub async fn create() -> Result<RealmInstance, Error> {
                 .to(&single_counter),
         )
         .await?;
-    builder
-        .add_route(
-            Route::new()
-                .capability(Capability::directory("config-data"))
-                .from(Ref::parent())
-                .to(&wrapper_realm),
-        )
-        .await?;
-    wrapper_realm
-        .add_route(
-            Route::new()
-                .capability(Capability::directory("config-data"))
-                .from(Ref::parent())
-                .to(&sampler),
-        )
-        .await?;
     // TODO(fxbug.dev/76599): refactor these tests to use the single test archivist and remove
     // this archivist. We can also remove the `wrapper` realm when this is done. The
     // ArchiveAccessor and Log protocols routed here would be routed from AboveRoot instead. To

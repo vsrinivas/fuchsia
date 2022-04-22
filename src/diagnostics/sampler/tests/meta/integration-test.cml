@@ -1,7 +1,5 @@
 {
     include: [
-        // Depends on config_data which is a system capability.
-        "//src/sys/test_manager/system-test.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "sys/component/realm_builder.shard.cml",
         "syslog/client.shard.cml",
@@ -12,15 +10,6 @@
     use: [
         {
             protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
-        },
-    ],
-    offer: [
-        {
-            directory: "config-data",
-            from: "parent",
-            to: [ "#realm_builder" ],
-            rights: [ "r*" ],
-            subdir: "sampler-integration-tests",
         },
     ],
 }

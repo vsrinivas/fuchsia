@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/config.gni")
 import("//build/rust/rustc_library.gni")
 
 # Test binary responsible for readings
@@ -67,49 +66,17 @@ fuchsia_unittest_component("sampler-integration-test") {
   deps = [ ":integration-bin" ]
 }
 
-# config-data sampler config that requires reboot
-# for the integration test.
-config_data("reboot-required-config") {
-  for_pkg = "sampler-integration-tests"
-  sources = [ "configs/reboot_required_config.json" ]
-  outputs = [ "metrics/any_name/reboot_required_config.json" ]
-}
-
-# Sampler config-data for the integration test.
-config_data("test-sampler-config") {
-  for_pkg = "sampler-integration-tests"
-  sources = [ "configs/test_config.json" ]
-  outputs = [ "metrics/any_name/test_config.json" ]
-}
-
-# FIRE component config-data for the integration test.
-config_data("test-fire-component-config") {
-  for_pkg = "sampler-integration-tests"
-  sources = [ "configs/components.json5" ]
-  outputs = [ "fire/any_name/components.json5" ]
-}
-
-# FIRE template config-data for the integration test.
-config_data("test-fire-project-config") {
-  for_pkg = "sampler-integration-tests"
-  sources = [
-    "configs/fire_1.json5",
-    "configs/fire_2.json5",
-  ]
-  outputs = [ "fire/any_name/projects/{{source_file_part}}" ]
-}
-
 resource("validation-sampler-resources") {
   sources = [
     "configs/reboot_required_config.json",
     "configs/test_config.json",
   ]
-  outputs = [ "config/metrics/any_name/{{source_file_part}}" ]
+  outputs = [ "data/config/metrics/any_name/{{source_file_part}}" ]
 }
 
 resource("validation-fire-components") {
   sources = [ "configs/components.json5" ]
-  outputs = [ "config/fire/any_name/{{source_file_part}}" ]
+  outputs = [ "data/config/fire/any_name/{{source_file_part}}" ]
 }
 
 resource("validation-fire-projects") {
@@ -117,7 +84,7 @@ resource("validation-fire-projects") {
     "configs/fire_1.json5",
     "configs/fire_2.json5",
   ]
-  outputs = [ "config/fire/any_name/projects/{{source_file_part}}" ]
+  outputs = [ "data/config/fire/any_name/projects/{{source_file_part}}" ]
 }
 
 fuchsia_test_package("sampler-integration-tests") {
@@ -126,10 +93,6 @@ fuchsia_test_package("sampler-integration-tests") {
     ":sampler-integration-test",
   ]
   deps = [
-    ":reboot-required-config",
-    ":test-fire-component-config",
-    ":test-fire-project-config",
-    ":test-sampler-config",
     ":validation-fire-components",
     ":validation-fire-projects",
     ":validation-sampler-resources",
