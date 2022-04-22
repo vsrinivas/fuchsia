@@ -32,6 +32,9 @@ class NandDevice : public BlockDevice {
   NandDevice(const NandDevice&) = delete;
   NandDevice& operator=(const NandDevice&) = delete;
 
+  fs_management::DiskFormat content_format() const override {
+    return fs_management::DiskFormat::kDiskFormatUnknown;
+  }
   zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) const override {
     return ZX_ERR_NOT_SUPPORTED;
   }
