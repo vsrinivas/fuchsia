@@ -127,10 +127,34 @@ zx_status_t WlanSoftmacDevice::WlanSoftmacQueueTx(const wlan_tx_packet_t* packet
   return iwl_mvm_mac_tx(mvmvif_, ap_mvm_sta_->iwl_mvm_sta(), &mac_packet);
 }
 
+// Reject the request that firmware doesn't allow. See fxb/89911 for more context.
+bool WlanSoftmacDevice::IsValidChannel(const wlan_channel_t* channel) {
+  if (channel->cbw == CHANNEL_BANDWIDTH_CBW40 || channel->cbw == CHANNEL_BANDWIDTH_CBW40BELOW) {
+    if (channel->primary >= 10 && channel->primary <= 14) {
+      IWL_WARN(mvmvif_, "The 40%sMHz bandwidth is not supported on the channel %d.\n",
+               channel->cbw == CHANNEL_BANDWIDTH_CBW40BELOW ? "-" : "", channel->primary);
+      return false;
+    }
+  }
+
+  if (channel->primary <= 14 && channel->cbw >= CHANNEL_BANDWIDTH_CBW80) {
+    IWL_WARN(mvmvif_, "The 80+MHz bandwidth is not supported on the 2.4GHz band (channel %d).\n",
+             channel->primary);
+    return false;
+  }
+
+  return true;
+}
+
 zx_status_t WlanSoftmacDevice::WlanSoftmacSetChannel(const wlan_channel_t* channel) {
   zx_status_t status = ZX_OK;
 
   CHECK_DELETE_IN_PROGRESS_WITH_ERRCODE(mvmvif_);
+
+  if (!IsValidChannel(channel)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   // If the AP sta already exists, it probably was left from the previous association attempt.
   // Remove it first.
   if (ap_mvm_sta_ != nullptr) {

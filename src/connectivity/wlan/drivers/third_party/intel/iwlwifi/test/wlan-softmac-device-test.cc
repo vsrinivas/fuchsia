@@ -348,6 +348,10 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
   fp_send_cmd original_send_cmd;
 
  protected:
+  bool IsValidChannel(const wlan_channel_t* channel) {
+    return device_->IsValidChannel(channel);
+  }
+
   zx_status_t SetChannel(const wlan_channel_t* channel) {
     return device_->WlanSoftmacSetChannel(channel);
   }
@@ -518,6 +522,34 @@ class MacInterfaceTest : public WlanSoftmacDeviceTest, public MockTrans {
           },
   };
 };
+
+TEST_F(MacInterfaceTest, TestIsValidChannel) {
+  ExpectSendCmd(expected_cmd_id_list({}));
+
+  wlan_channel_t ch10_20m = {
+      .primary = 10,
+      .cbw = CHANNEL_BANDWIDTH_CBW20,
+  };
+  EXPECT_EQ(true, IsValidChannel(&ch10_20m));
+
+  wlan_channel_t ch10_40m = {
+      .primary = 10,
+      .cbw = CHANNEL_BANDWIDTH_CBW40,
+  };
+  EXPECT_EQ(false, IsValidChannel(&ch10_40m));
+
+  wlan_channel_t ch13_40m_below = {
+      .primary = 13,
+      .cbw = CHANNEL_BANDWIDTH_CBW40BELOW,
+  };
+  EXPECT_EQ(false, IsValidChannel(&ch13_40m_below));
+
+  wlan_channel_t ch5_80m = {
+      .primary = 5,
+      .cbw = CHANNEL_BANDWIDTH_CBW80,
+  };
+  EXPECT_EQ(false, IsValidChannel(&ch5_80m));
+}
 
 // Test the set_channel().
 //

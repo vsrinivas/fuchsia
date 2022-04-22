@@ -58,6 +58,9 @@ class WlanSoftmacDevice
                                          uint64_t* out_scan_id);
   zx_status_t WlanSoftmacUpdateWmmParams(wlan_ac_t ac, const wlan_wmm_params_t* params);
 
+  // Helper function
+  bool IsValidChannel(const wlan_channel_t* channel);
+
  protected:
   struct iwl_mvm_vif* mvmvif_;
 
