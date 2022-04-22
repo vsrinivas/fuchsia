@@ -8,12 +8,6 @@ import("//build/fidl/fidl.gni")
 import("//build/flutter/flutter_component.gni")
 import("//build/testing/flutter_driver.gni")
 
-declare_args() {
-  # TODO(http://fxb/96400): This argument currently has no effect, remove
-  # it once it has been removed from the products that currently set it.
-  start_oobe = true
-}
-
 dart_library("lib") {
   package_name = "login"
   null_safe = true
