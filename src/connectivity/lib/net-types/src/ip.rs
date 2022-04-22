@@ -369,7 +369,7 @@ impl Ipv4 {
     ///
     /// [RFC 5771 Section 4]: https://tools.ietf.org/html/rfc5771#section-4
     pub const LINK_LOCAL_MULTICAST_SUBNET: Subnet<Ipv4Addr> =
-        Subnet { network: Ipv4Addr::new([169, 254, 0, 0]), prefix: 16 };
+        Subnet { network: Ipv4Addr::new([224, 0, 0, 0]), prefix: 24 };
 
     /// The multicast address subscribed to by all routers on the local network,
     /// defined in the [IPv4 Multicast Address Space Registry].
