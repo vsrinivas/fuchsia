@@ -12,7 +12,7 @@ use core::{
     time::Duration,
 };
 
-use log::{debug, error, trace};
+use log::{debug, error};
 use net_types::{
     ip::{AddrSubnet, Ipv4, Ipv4Addr},
     MulticastAddr, SpecifiedAddr, Witness,
@@ -190,23 +190,21 @@ impl<B: ByteSlice, M: MessageType<B, FixedHeader = Ipv4Addr>> GmpMessage<Ipv4>
 impl<C: IgmpContext> GmpContext<Ipv4, Igmpv2ProtocolSpecific> for C {
     type Err = IgmpError<C::DeviceId>;
     type GroupState = IgmpGroupState<Self::Instant>;
+
+    fn gmp_disabled(&self, device: Self::DeviceId, _addr: MulticastAddr<Ipv4Addr>) -> bool {
+        !self.igmp_enabled(device)
+    }
+
     fn run_actions(
         &mut self,
         device: Self::DeviceId,
         actions: Actions<Igmpv2ProtocolSpecific>,
         group_addr: MulticastAddr<Ipv4Addr>,
     ) {
-        if self.igmp_enabled(device) {
-            for action in actions {
-                if let Err(err) = run_action(self, device, action, group_addr) {
-                    error!(
-                        "Error performing action on {} on device {}: {}",
-                        group_addr, device, err
-                    );
-                }
+        for action in actions {
+            if let Err(err) = run_action(self, device, action, group_addr) {
+                error!("Error performing action on {} on device {}: {}", group_addr, device, err);
             }
-        } else {
-            trace!("skipping executing IGMP actions on device {}: IGMP disabled on device", device);
         }
     }
 
@@ -567,7 +565,8 @@ mod tests {
     fn test_igmp_state_with_igmpv1_router() {
         run_with_many_seeds(|seed| {
             let mut rng = new_rng(seed);
-            let (mut s, _actions) = GmpStateMachine::join_group(&mut rng, DummyInstant::default());
+            let (mut s, _actions) =
+                GmpStateMachine::join_group(&mut rng, DummyInstant::default(), false);
             let Actions(actions) =
                 s.query_received(&mut rng, Duration::from_secs(0), DummyInstant::default());
             assert_eq!(
@@ -593,6 +592,7 @@ mod tests {
             let (mut s, _actions) = GmpStateMachine::<_, Igmpv2ProtocolSpecific>::join_group(
                 &mut rng,
                 DummyInstant::default(),
+                false,
             );
             let Actions(actions) =
                 s.query_received(&mut rng, Duration::from_secs(0), DummyInstant::default());
@@ -947,8 +947,7 @@ mod tests {
     #[test]
     fn test_skip_igmp() {
         run_with_many_seeds(|seed| {
-            // Test that we properly skip executing any `Actions` when IGMP is
-            // disabled for the device.
+            // Test that we do not perform IGMP when IGMP is disabled.
 
             let mut ctx = DummyCtx::default();
             ctx.seed_rng(seed);
@@ -961,20 +960,19 @@ mod tests {
             };
 
             assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
-            // We should have joined the group but not executed any `Actions`.
-            assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
+            // We should join the group but left in the GMP's non-member
+            // state.
+            assert_gmp_state!(ctx, &GROUP_ADDR, NonMember);
             assert_no_effect(&ctx);
 
             receive_igmp_report(&mut ctx);
-            // We should have executed the transition but not executed any
-            // `Actions`.
-            assert_gmp_state!(ctx, &GROUP_ADDR, Idle);
+            // We should have done no state transitions/work.
+            assert_gmp_state!(ctx, &GROUP_ADDR, NonMember);
             assert_no_effect(&ctx);
 
             receive_igmp_query(&mut ctx, Duration::from_secs(10));
-            // We should have executed the transition but not executed any
-            // `Actions`.
-            assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
+            // We should have done no state transitions/work.
+            assert_gmp_state!(ctx, &GROUP_ADDR, NonMember);
             assert_no_effect(&ctx);
 
             assert_eq!(ctx.gmp_leave_group(DummyDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));

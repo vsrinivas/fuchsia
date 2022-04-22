@@ -10,7 +10,7 @@
 
 use core::time::Duration;
 
-use log::{debug, error, trace};
+use log::{debug, error};
 use net_types::{
     ip::{Ip, Ipv6, Ipv6Addr, Ipv6ReservedScope, Ipv6Scope, Ipv6SourceAddr},
     LinkLocalUnicastAddr, MulticastAddr, ScopeableAddress, SpecifiedAddr, Witness,
@@ -177,12 +177,8 @@ impl<B: ByteSlice> GmpMessage<Ipv6> for Mldv1Body<B> {
 impl<C: MldContext> GmpContext<Ipv6, MldProtocolSpecific> for C {
     type Err = MldError;
     type GroupState = MldGroupState<Self::Instant>;
-    fn run_actions(
-        &mut self,
-        device: C::DeviceId,
-        actions: Actions<MldProtocolSpecific>,
-        group_addr: MulticastAddr<Ipv6Addr>,
-    ) {
+
+    fn gmp_disabled(&self, device: Self::DeviceId, group_addr: MulticastAddr<Ipv6Addr>) -> bool {
         // Per [RFC 3810 Section 6]:
         //
         // > No MLD messages are ever sent regarding neither the link-scope
@@ -195,22 +191,21 @@ impl<C: MldContext> GmpContext<Ipv6, MldProtocolSpecific> for C {
         // machines.
         //
         // [RFC 3810 Section 6]: https://tools.ietf.org/html/rfc3810#section-6
-        let skip_mld = group_addr == Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS
-            || group_addr.scope() == Ipv6Scope::Reserved(Ipv6ReservedScope::Scope0)
-            || group_addr.scope() == Ipv6Scope::InterfaceLocal;
+        !self.mld_enabled(device)
+            || group_addr == Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS
+            || [Ipv6Scope::Reserved(Ipv6ReservedScope::Scope0), Ipv6Scope::InterfaceLocal]
+                .contains(&group_addr.scope())
+    }
 
-        if skip_mld {
-            trace!("skipping executing MLD actions for group {}: MLD prohibited on this group by RFC 3810 Section 6", group_addr);
-        } else if !self.mld_enabled(device) {
-            trace!("skipping executing MLD actions on device {}: MLD disabled on device", device);
-        } else {
-            for action in actions {
-                if let Err(err) = run_action(self, device, action, group_addr) {
-                    error!(
-                        "Error performing action on {} on device {}: {}",
-                        group_addr, device, err
-                    );
-                }
+    fn run_actions(
+        &mut self,
+        device: C::DeviceId,
+        actions: Actions<MldProtocolSpecific>,
+        group_addr: MulticastAddr<Ipv6Addr>,
+    ) {
+        for action in actions {
+            if let Err(err) = run_action(self, device, action, group_addr) {
+                error!("Error performing action on {} on device {}: {}", group_addr, device, err);
             }
         }
     }
@@ -516,6 +511,7 @@ mod tests {
             let (mut s, _actions) = GmpStateMachine::<_, MldProtocolSpecific>::join_group(
                 &mut rng,
                 DummyInstant::default(),
+                false,
             );
             let actions =
                 s.query_received(&mut rng, Duration::from_secs(0), DummyInstant::default());
@@ -868,9 +864,8 @@ mod tests {
     #[test]
     fn test_skip_mld() {
         run_with_many_seeds(|seed| {
-            // Test that we properly skip executing any `Actions` for addresses
-            // that we're supposed to skip (see the comment in `run_actions`)
-            // and when MLD is disabled for the device.
+            // Test that we do not perform MLD for addresses that we're supposed
+            // to skip or when MLD is disabled.
             let test = |mut ctx: DummyCtx, group| {
                 ctx.get_mut().ipv6_link_local = Some(MY_MAC.to_ipv6_link_local().addr());
 
@@ -881,21 +876,19 @@ mod tests {
                 };
 
                 assert_eq!(ctx.gmp_join_group(DummyDeviceId, group), GroupJoinResult::Joined(()));
-                // We should have joined the group but not executed any
-                // `Actions`.
-                assert_gmp_state!(ctx, &group, Delaying);
+                // We should join the group but left in the GMP's non-member
+                // state.
+                assert_gmp_state!(ctx, &group, NonMember);
                 assert_no_effect(&ctx);
 
                 receive_mld_report(&mut ctx, group);
-                // We should have executed the transition but not executed any
-                // `Actions`.
-                assert_gmp_state!(ctx, &group, Idle);
+                // We should have done no state transitions/work.
+                assert_gmp_state!(ctx, &group, NonMember);
                 assert_no_effect(&ctx);
 
                 receive_mld_query(&mut ctx, Duration::from_secs(10), group);
-                // We should have executed the transition but not executed any
-                // `Actions`.
-                assert_gmp_state!(ctx, &group, Delaying);
+                // We should have done no state transitions/work.
+                assert_gmp_state!(ctx, &group, NonMember);
                 assert_no_effect(&ctx);
 
                 assert_eq!(ctx.gmp_leave_group(DummyDeviceId, group), GroupLeaveResult::Left(()));
