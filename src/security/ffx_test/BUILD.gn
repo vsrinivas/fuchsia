@@ -1,0 +1,106 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components/fuchsia_package.gni")
+import("//build/config.gni")
+import("//build/images/assemble_system.gni")
+import("//build/testing/host_test_data.gni")
+
+# `assemble_system` requires a package with the name "pkgfs".
+fuchsia_package("empty_pkgfs") {
+  testonly = true
+  package_name = "pkgfs"
+}
+
+# `assemble_system` needs at least one package in base_packages.
+fuchsia_package("empty-pkg") {
+  testonly = true
+  package_name = "empty-pkg"
+}
+
+config_data("empty_config") {
+  for_pkg = "empty-pkg"
+  sources = [ "empty_config" ]
+  outputs = [ "empty/{{source_file_part}}" ]
+}
+
+# `assemble_system` builds a zbi and blob.blk for consumption by the test.
+_assemble_system_target_name = "assembly"
+assemble_system(_assemble_system_target_name) {
+  testonly = true
+  bootfs_labels = []
+  base_packages = [
+    ":empty-pkg",
+    ":empty_config",
+  ]
+  pkgfs_package_label = ":empty_pkgfs"
+}
+
+if (is_host) {
+  host_test_data("testdata") {
+    deps = [
+      ":${_assemble_system_target_name}_image_assembler($target_toolchain)",
+    ]
+    sources = [
+      get_label_info(
+              ":${_assemble_system_target_name}_image_assembler($target_toolchain)",
+              "target_out_dir") + "/${_assemble_system_target_name}/blob.blk",
+      get_label_info(
+              ":${_assemble_system_target_name}_image_assembler($target_toolchain)",
+              "target_out_dir") + "/${_assemble_system_target_name}/${_assemble_system_target_name}.zbi",
+    ]
+    outputs = [ "$target_out_dir/testdata/{{source_file_part}}" ]
+
+    metadata = {
+      package_barrier = []
+    }
+  }
+
+  # Required for the test to be able to call ffx.
+  host_test_data("copy_host_tools") {
+    sources = [ "${host_tools_dir}/ffx" ]
+    deps = [ "//src/developer/ffx:host($host_toolchain)" ]
+    outputs = [ "$target_out_dir/host_tools/{{source_file_part}}" ]
+  }
+
+  config("config") {
+    testdata_out_dir =
+        get_label_info(":testdata($host_toolchain)", "target_out_dir")
+    host_tools_out_dir =
+        get_label_info(":copy_host_tools($host_toolchain)", "target_out_dir")
+    ffx_path = "$host_tools_out_dir/host_tools/ffx"
+    blobfs_path = "$testdata_out_dir/testdata/blob.blk"
+    zbi_path = "$testdata_out_dir/testdata/${_assemble_system_target_name}.zbi"
+
+    rustenv = [
+      "FFX_TOOL_PATH=" + rebase_path(ffx_path, root_build_dir),
+      "BLOBFS_PATH=" + rebase_path(blobfs_path, root_build_dir),
+      "ZBI_PATH=" + rebase_path(zbi_path, root_build_dir),
+    ]
+  }
+
+  rustc_test("test") {
+    source_root = "src/lib.rs"
+    deps = [
+      ":copy_host_tools($host_toolchain)",
+      ":testdata($host_toolchain)",
+      "//third_party/rust_crates:tempfile",
+    ]
+
+    # TODO(fxbug.dev/86506): Remove when clippy supports envars
+    disable_clippy = true
+    sources = [ "src/lib.rs" ]
+    configs += [ ":config" ]
+
+    # TODO(fxbug.dev/97055): LSAN says that Scrutiny has a leak, disable this test in ASAN
+    if (is_asan) {
+      test_environments = []
+    }
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":test($host_toolchain)" ]
+}

@@ -60,12 +60,12 @@ group("structured_config") {
     # (generating an fshost configuration file requires access to a compiled manifest, which
     # must be defined in the same file as the generated values)
     "//build/images/*",
+    "//src/security/ffx_test:*",
     "//src/security/pkg_test/tests:*",
     "//third_party/network-conformance/images:*",
     "//vendor/google/build/pre_migration:*",
     "//vendor/google/build/recovery:*",
     "//vendor/google/build/reverse_migration:*",
-    "//vendor/google/security/fuss_testing:*",
 
     # locations where session_manager_package() is invoked:
     "//src/experiences/session_shells/ermine/session:*",
