@@ -127,6 +127,10 @@ pub struct LogCommand {
     #[argh(switch)]
     pub hide_tags: bool,
 
+    /// hide the file and line number field from output (does not exclude any log messages)
+    #[argh(switch)]
+    pub hide_file: bool,
+
     /// disable coloring logs according to severity.
     /// Note that you can permanently disable this with
     /// `ffx config set log_cmd.color false`

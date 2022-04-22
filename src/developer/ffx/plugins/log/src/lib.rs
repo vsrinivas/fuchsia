@@ -180,6 +180,7 @@ pub struct TextDisplayOptions {
     time_format: TimeFormat,
     show_metadata: bool,
     show_tags: bool,
+    show_file: bool,
 }
 
 /// display options
@@ -364,9 +365,23 @@ impl<'a> DefaultLogFormatter<'a> {
             String::default()
         };
 
+        let file_info_str = if options.show_file {
+            match (data.metadata.file, data.metadata.line) {
+                (Some(filename), Some(line)) => {
+                    format!(": [{}:{}]", filename, line)
+                }
+                (Some(filename), None) => {
+                    format!(": [{}]", filename)
+                }
+                _ => String::default(),
+            }
+        } else {
+            String::default()
+        };
+
         let severity_str = &format!("{}", data.metadata.severity)[..1];
         format!(
-            "[{}]{}[{}]{}[{}{}{}] {}{}{}{}",
+            "[{}]{}[{}]{}[{}{}{}]{} {}{}{}{}",
             ts,
             process_info_str,
             data.moniker,
@@ -374,6 +389,7 @@ impl<'a> DefaultLogFormatter<'a> {
             color_str,
             severity_str,
             reset_str,
+            file_info_str,
             color_str,
             msg,
             kvps,
@@ -448,6 +464,7 @@ pub async fn log_impl<W: std::io::Write>(
             } else {
                 DisplayOption::Text(TextDisplayOptions {
                     show_tags: !cmd.hide_tags,
+                    show_file: !cmd.hide_file,
                     color: should_color(config_color, cmd.no_color),
                     time_format: cmd.clock.clone(),
                     show_metadata: cmd.show_metadata,
@@ -700,6 +717,7 @@ mod test {
             tags: vec![],
             exclude_tags: vec![],
             hide_tags: false,
+            hide_file: false,
             clock: TimeFormat::Monotonic,
             no_color: false,
             kernel: false,
@@ -755,6 +773,7 @@ mod test {
                 time_format: TimeFormat::Monotonic,
                 show_metadata: Default::default(),
                 show_tags: Default::default(),
+                show_file: Default::default(),
             }
         }
     }
@@ -1822,5 +1841,50 @@ mod test {
             }
             DisplayOption::Json => unreachable!("The default display option must be Text"),
         }
+    }
+
+    #[fuchsia::test]
+    fn display_for_file_and_line() {
+        let mut stdout = Unblock::new(std::io::stdout());
+        let mut display_options =
+            TextDisplayOptions { show_file: true, ..TextDisplayOptions::default() };
+        let options = LogFormatterOptions {
+            display: DisplayOption::Text(display_options.clone()),
+            no_symbols: false,
+        };
+
+        let formatter =
+            DefaultLogFormatter::new(LogFilterCriteria::default(), &mut stdout, options);
+        let message_with_file_and_line = logs_data_builder()
+            .set_line(123u64)
+            .set_file("path/to/file.cc".to_string())
+            .set_message("my message")
+            .build();
+        assert_eq!(
+            formatter.format_target_log_data(
+                &display_options,
+                message_with_file_and_line.clone(),
+                None
+            ),
+            "[1615535969.000][some/moniker][W]: [path/to/file.cc:123] my message"
+        );
+
+        assert_eq!(
+            formatter.format_target_log_data(
+                &display_options,
+                logs_data_builder()
+                    .set_file("path/to/file.cc".to_string())
+                    .set_message("my message")
+                    .build(),
+                None
+            ),
+            "[1615535969.000][some/moniker][W]: [path/to/file.cc] my message"
+        );
+
+        display_options.show_file = false;
+        assert_eq!(
+            formatter.format_target_log_data(&display_options, message_with_file_and_line, None),
+            "[1615535969.000][some/moniker][W] my message"
+        );
     }
 }
