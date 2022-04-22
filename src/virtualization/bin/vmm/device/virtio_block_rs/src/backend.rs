@@ -5,7 +5,7 @@
 use {crate::wire, anyhow::Error, async_trait::async_trait, virtio_device::mem::DeviceRange};
 
 /// Represents a 512 byte sector.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Sector(u64);
 
 impl Sector {

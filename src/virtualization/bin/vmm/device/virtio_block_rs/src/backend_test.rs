@@ -79,23 +79,19 @@ fn color_range<'a>(range: &DeviceRange<'a>, color: u8) {
 
 /// Test that a backend properly reports capacity in different configurations.
 pub async fn test_get_attrs<T: BackendTest>() -> Result<(), Error> {
-    let (backend, _) = T::create_with_size(0).await?;
-    assert_eq!(
-        backend.get_attrs().await?,
-        DeviceAttrs { capacity: Sector::from_raw_sector(0), block_size: None }
-    );
-
     let expected_byte_sector_sizes = [
-        // anything less than 512 bytes rounds down to 0 sectors.
-        (1, Sector::from_raw_sector(0)),
-        (511, Sector::from_raw_sector(0)),
         (4096, Sector::from_raw_sector(8)),
+        (4097, Sector::from_raw_sector(8)),
+        (4607, Sector::from_raw_sector(8)),
         // 400MiB -> 819200 sectors
         (400 * 1024 * 1024, Sector::from_raw_sector(819200)),
     ];
-    for (file_size, sectors) in expected_byte_sector_sizes {
-        let (backend, _) = T::create_with_size(file_size).await?;
-        assert_eq!(backend.get_attrs().await?, DeviceAttrs { capacity: sectors, block_size: None });
+    for (size, sectors) in expected_byte_sector_sizes {
+        let (backend, _controller) = T::create_with_size(size).await?;
+        // Comparison is a little loose here because some backends have minimum granularity and may
+        // round up sizes. We just verify we get at least the capacity we requested otherwise other
+        // tests may fail as they depend on this precondition.
+        assert!(backend.get_attrs().await?.capacity >= sectors);
     }
 
     Ok(())
@@ -393,7 +389,7 @@ pub async fn test_write_concurrent<T: BackendTest>() -> Result<(), Error> {
 pub async fn test_read_write_loop<T: BackendTest>() -> Result<(), Error> {
     const ITERATIONS: u64 = 100;
 
-    let (backend, _) = T::create_with_sectors(Sector::from_raw_sector(1)).await?;
+    let (backend, _controller) = T::create_with_sectors(Sector::from_raw_sector(1)).await?;
 
     // Iteratively write a value to a sector and read it back.
     let mem = IdentityDriverMem::new();

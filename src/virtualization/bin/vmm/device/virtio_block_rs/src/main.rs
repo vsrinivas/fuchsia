@@ -9,12 +9,14 @@ mod block_device;
 mod file_backend;
 #[cfg(test)]
 mod memory_backend;
+mod remote_backend;
 mod wire;
 
 use {
     crate::backend::*,
     crate::block_device::*,
     crate::file_backend::FileBackend,
+    crate::remote_backend::RemoteBackend,
     anyhow::{anyhow, Context},
     fidl::endpoints::RequestStream,
     fidl_fuchsia_virtualization::BlockFormat,
@@ -26,7 +28,7 @@ use {
     virtio_device::chain::ReadableChain,
 };
 
-fn create_backend(
+async fn create_backend(
     format: BlockFormat,
     channel: zx::Channel,
 ) -> Result<Box<dyn BlockBackend>, anyhow::Error> {
@@ -35,7 +37,11 @@ fn create_backend(
             let file_backend = FileBackend::new(channel)?;
             Ok(Box::new(file_backend))
         }
-        _ => Err(anyhow!("Unsupported BlockFormat {:?}", format)),
+        BlockFormat::Block => {
+            let remote_backend = RemoteBackend::new(channel).await?;
+            Ok(Box::new(remote_backend))
+        }
+        _ => Err(anyhow!("Unsupported block format {:?}", format)),
     }
 }
 
@@ -53,7 +59,7 @@ async fn run_virtio_block(
     // Prepare the device builder
     let (device_builder, guest_mem) = machina_virtio_device::from_start_info(start_info)?;
 
-    let backend = create_backend(format, client)?;
+    let backend = create_backend(format, client).await?;
     let block_device = BlockDevice::new(id, mode.into(), backend).await?;
     responder.send(
         block_device.attrs().capacity.to_bytes().unwrap(),

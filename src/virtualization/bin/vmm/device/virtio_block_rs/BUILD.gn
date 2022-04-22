@@ -22,6 +22,7 @@ rustc_binary("virtio_block_bin") {
     "src/file_backend.rs",
     "src/main.rs",
     "src/memory_backend.rs",
+    "src/remote_backend.rs",
     "src/wire.rs",
   ]
 
@@ -34,6 +35,7 @@ rustc_binary("virtio_block_bin") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/storage/block_client/rust:remote-block-device",
     "//src/lib/syslog",
     "//src/lib/zerocopy",
     "//src/lib/zircon/rust:fuchsia-zircon",
@@ -49,12 +51,28 @@ rustc_binary("virtio_block_bin") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  test_deps = [ "//third_party/rust_crates:tempfile" ]
+  test_deps = [
+    "//src/lib/storage/ramdevice_client/rust",
+    "//third_party/rust_crates:tempfile",
+  ]
 }
 
 fuchsia_unittest_package("virtio_block_rs_unittests") {
   manifest = "meta/virtio_block_rs_unittests.cml"
-  deps = [ ":virtio_block_bin_test" ]
+  deps = [
+    ":virtio_block_bin_test",
+
+    # Use the storage_driver_test_realm to provide access to a ramdisk driver for testing.
+    "//src/storage/testing:storage_driver_test_realm",
+    "//src/storage/testing:storage_test_includes",
+  ]
+
+  # The DriverTestRealm will emit an ERROR log when testing the RemoteBackend.
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 fuchsia_package("virtio_block_rs") {
