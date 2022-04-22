@@ -157,7 +157,8 @@ int sethostname(const char*, size_t);
 int getdomainname(char*, size_t);
 int setdomainname(const char*, size_t);
 int setgroups(size_t, const gid_t*);
-char* getpass(const char*);
+char* getpass(const char*)
+    __attribute__((deprecated("getpass is not supported and will always fail")));
 int acct(const char*);
 int execvpe(const char*, char* const[], char* const[]);
 int issetugid(void);
