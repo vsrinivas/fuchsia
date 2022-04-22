@@ -25,9 +25,8 @@
 #include <gtest/gtest.h>
 
 #include "src/ui/a11y/lib/magnifier/tests/mocks/mock_magnifier.h"
+#include "src/ui/testing/ui_test_manager/ui_test_manager.h"
 
-constexpr auto kRootPresenter = "root_presenter";
-constexpr auto kScenicTestRealm = "scenic-test-realm";
 constexpr auto kMockMagnifier = "mock_magnifier";
 
 // Types imported for the realm_builder library.
@@ -36,7 +35,7 @@ using component_testing::LocalComponent;
 using component_testing::LocalComponentHandles;
 using component_testing::ParentRef;
 using component_testing::Protocol;
-using component_testing::RealmRoot;
+using component_testing::Realm;
 using component_testing::Route;
 using RealmBuilder = component_testing::RealmBuilder;
 
@@ -89,7 +88,7 @@ class MockMagnifierImpl : public accessibility_test::MockMagnifier, public Local
 
 class PointerInjectorConfigTest : public gtest::RealLoopFixture {
  protected:
-  explicit PointerInjectorConfigTest() : realm_builder_(RealmBuilder::Create()) {}
+  PointerInjectorConfigTest() = default;
   ~PointerInjectorConfigTest() override {}
 
   void SetUp() override {
@@ -99,81 +98,60 @@ class PointerInjectorConfigTest : public gtest::RealLoopFixture {
         [] { FX_LOGS(FATAL) << "\n\n>> Test did not complete in time, terminating.  <<\n\n"; },
         kTimeout);
 
-    // Add static test realm as a component to the realm.
-    realm_builder_.AddLegacyChild(
-        kRootPresenter,
-        "fuchsia-pkg://fuchsia.com/pointerinjector-config-test#meta/root_presenter.cmx");
-    realm_builder_.AddChild(
-        kScenicTestRealm,
-        "fuchsia-pkg://fuchsia.com/pointerinjector-config-test#meta/scenic-test-realm.cm");
+    // Initialize ui test manager.
+    ui_testing::UITestManager::Config config;
+    config.scene_owner = ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER;
+    config.use_input = true;
+    config.client_to_ui_services = {fuchsia::accessibility::Magnifier::Name_};
+    ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(config);
+
+    realm_ = std::make_unique<Realm>(ui_test_manager_->AddSubrealm());
 
     // Setup MockMagnifier for Root Presenter to connect to.
     mock_magnifier_ = std::make_unique<MockMagnifierImpl>(dispatcher());
-    realm_builder_.AddLocalChild(kMockMagnifier, mock_magnifier());
+    realm_->AddLocalChild(kMockMagnifier, mock_magnifier());
+    realm_->AddRoute(Route{.capabilities = {Protocol{fuchsia::accessibility::Magnifier::Name_}},
+                           .source = ChildRef{kMockMagnifier},
+                           .targets = {ParentRef()}});
 
-    // Capabilities routed from test_manager to components in realm.
-    realm_builder_.AddRoute(
-        Route{.capabilities = {Protocol{fuchsia::logger::LogSink::Name_},
-                               Protocol{fuchsia::vulkan::loader::Loader::Name_},
-                               Protocol{fuchsia::scheduler::ProfileProvider::Name_},
-                               Protocol{fuchsia::sysmem::Allocator::Name_},
-                               Protocol{fuchsia::tracing::provider::Registry::Name_}},
-              .source = ParentRef(),
-              .targets = {ChildRef{kScenicTestRealm}}});
-    realm_builder_.AddRoute(
-        Route{.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_}},
-              .source = ParentRef(),
-              .targets = {ChildRef{kRootPresenter}}});
-
-    // Capabilities routed between siblings in realm.
-    realm_builder_.AddRoute(
-        Route{.capabilities = {Protocol{fuchsia::accessibility::Magnifier::Name_}},
-              .source = ChildRef{kMockMagnifier},
-              .targets = {ChildRef{kRootPresenter}}});
-    realm_builder_.AddRoute(
-        Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_},
-                               Protocol{fuchsia::ui::focus::FocusChainListenerRegistry::Name_}},
-              .source = ChildRef{kScenicTestRealm},
-              .targets = {ChildRef{kRootPresenter}}});
-
-    // Capabilities routed up to test driver (this component).
-    realm_builder_.AddRoute(
-        Route{.capabilities = {Protocol{fuchsia::ui::pointerinjector::configuration::Setup::Name_},
-                               Protocol{fuchsia::ui::accessibility::view::Registry::Name_}},
-              .source = ChildRef{kRootPresenter},
-              .targets = {ParentRef()}});
-
-    // Finally, build the realm using the provided components and routes.
-    realm_ = std::make_unique<RealmRoot>(realm_builder_.Build());
+    ui_test_manager_->BuildRealm();
+    realm_exposed_services_ = ui_test_manager_->TakeExposedServicesDirectory();
   }
 
-  RealmRoot* realm() { return realm_.get(); }
+  Realm* realm() { return realm_.get(); }
+  sys::ServiceDirectory* realm_exposed_services() { return realm_exposed_services_.get(); }
   MockMagnifierImpl* mock_magnifier() { return mock_magnifier_.get(); }
 
  private:
-  RealmBuilder realm_builder_;
-  std::unique_ptr<RealmRoot> realm_;
+  std::unique_ptr<ui_testing::UITestManager> ui_test_manager_;
+  std::unique_ptr<Realm> realm_;
+  std::unique_ptr<sys::ServiceDirectory> realm_exposed_services_;
   std::unique_ptr<MockMagnifierImpl> mock_magnifier_;
 };
 
 // Checks that GetViewRefs() returns the same ViewRefs after a11y registers a view.
 TEST_F(PointerInjectorConfigTest, GetViewRefs) {
   // Connect to pointerinjector::configuration::Setup.
-  auto config_setup = realm()->Connect<fuchsia::ui::pointerinjector::configuration::Setup>();
+  auto config_setup =
+      realm_exposed_services()->Connect<fuchsia::ui::pointerinjector::configuration::Setup>();
 
   // Get ViewRefs before a11y sets up.
-  fuchsia::ui::views::ViewRef first_context;
-  fuchsia::ui::views::ViewRef first_target;
+  std::optional<fuchsia::ui::views::ViewRef> first_context;
+  std::optional<fuchsia::ui::views::ViewRef> first_target;
   config_setup->GetViewRefs(
       [&](fuchsia::ui::views::ViewRef context, fuchsia::ui::views::ViewRef target) {
         first_context = std::move(context);
         first_target = std::move(target);
       });
 
+  RunLoopUntil([&first_context, &first_target]() {
+    return first_context.has_value() && first_target.has_value();
+  });
+
   // Create view token and view ref pairs for a11y view.
   auto [a11y_view_token, a11y_view_holder_token] = scenic::ViewTokenPair::New();
   auto [a11y_control_ref, a11y_view_ref] = scenic::ViewRefPair::New();
-  auto a11y = realm()->Connect<fuchsia::ui::accessibility::view::Registry>();
+  auto a11y = realm_exposed_services()->Connect<fuchsia::ui::accessibility::view::Registry>();
   a11y->CreateAccessibilityViewHolder(std::move(a11y_view_ref), std::move(a11y_view_holder_token),
                                       [](fuchsia::ui::views::ViewHolderToken) {});
 
@@ -182,8 +160,8 @@ TEST_F(PointerInjectorConfigTest, GetViewRefs) {
   config_setup->GetViewRefs(
       [&](fuchsia::ui::views::ViewRef context, fuchsia::ui::views::ViewRef target) {
         // Check that the ViewRefs match
-        EXPECT_EQ(ExtractKoid(context), ExtractKoid(first_context));
-        EXPECT_EQ(ExtractKoid(target), ExtractKoid(first_target));
+        EXPECT_EQ(ExtractKoid(context), ExtractKoid(*first_context));
+        EXPECT_EQ(ExtractKoid(target), ExtractKoid(*first_target));
         checked_view_refs = true;
       });
 
@@ -192,7 +170,8 @@ TEST_F(PointerInjectorConfigTest, GetViewRefs) {
 
 TEST_F(PointerInjectorConfigTest, WatchViewport) {
   // Connect to pointerinjector::configuration::Setup.
-  auto config_setup = realm()->Connect<fuchsia::ui::pointerinjector::configuration::Setup>();
+  auto config_setup =
+      realm_exposed_services()->Connect<fuchsia::ui::pointerinjector::configuration::Setup>();
 
   // Get the starting viewport.
   fuchsia::ui::pointerinjector::Viewport starting_viewport, updated_viewport;

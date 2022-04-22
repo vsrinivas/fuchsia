@@ -32,6 +32,7 @@ source_set("ui_test_manager") {
     "//sdk/fidl/fuchsia.scheduler",
     "//sdk/fidl/fuchsia.session.scene",
     "//sdk/fidl/fuchsia.tracing.provider",
+    "//sdk/fidl/fuchsia.ui.accessibility.view",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.composition",
     "//sdk/fidl/fuchsia.ui.focus",

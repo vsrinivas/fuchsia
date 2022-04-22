@@ -37,17 +37,14 @@ executable("pointerinjector_config_test") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/ui/a11y/lib/magnifier/tests/mocks:mock_magnifier",
+    "//src/ui/testing/ui_test_manager",
     "//zircon/system/ulib/zx",
   ]
 }
 
 fuchsia_unittest_package("pointerinjector-config-test") {
   manifest = "meta/pointerinjector_config_test.cml"
-  deps = [
-    ":pointerinjector_config_test",
-    "//src/ui/bin/root_presenter:component_v1_for_test",
-    "//src/ui/tests/integration_input_tests:scenic-test-realm",
-  ]
+  deps = [ ":pointerinjector_config_test" ]
 
   test_specs = {
     log_settings = {

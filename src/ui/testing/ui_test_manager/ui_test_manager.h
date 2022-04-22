@@ -199,22 +199,27 @@ class UITestManager {
     // the top-level realm will expose the following services:
     //   * fuchsia.input.injection.InputDeviceRegistry
     //   * fuchsia.ui.policy.DeviceListenerRegistry
+    //   * fuchsia.ui.pointerinjector.configuration.Setup
     //
     // If |scene_owner| is std::nullopt, the top-level realm exposes the raw scenic
     // input API:
     //   * fuchsia.ui.pointerinjector.Registry
     bool use_input = false;
 
-    // List of ui services required by the client.
+    // List of ui services required by components in the client subrealm.
     // UITestManager will route these services from the ui layer component to the
     // client subrealm.
     std::vector<std::string> ui_to_client_services;
 
     // List of non-ui services the test manager needs to expose to the test fixture.
     // By specifying services here, the client promises to expose them from its subrealm.
-    //
-    // This field should not be required for most use cases.
     std::vector<std::string> exposed_client_services;
+
+    // List of client realm services to route to the ui layer component.
+    //
+    // *** Use cases for this field are ~very~ rare.
+    // *** This optoin will NOT be available to OOT clients.
+    std::vector<std::string> client_to_ui_services;
 
     bool use_flatland = false;
   };
@@ -266,6 +271,11 @@ class UITestManager {
   void ConfigureInput();
   void ConfigureAccessibility();
   void ConfigureScenic();
+
+  // Helper method to route a set of services from the specified source to the
+  // spceified targets.
+  void RouteServices(std::vector<std::string> services, component_testing::Ref source,
+                     std::vector<component_testing::Ref> targets);
 
   Config config_;
   component_testing::RealmBuilder realm_builder_ = component_testing::RealmBuilder::Create();

@@ -15,6 +15,7 @@
         },
         {
             protocol: [
+                "fuchsia.accessibility.Magnifier",
                 "fuchsia.logger.LogSink",
                 "fuchsia.tracing.provider.Registry",
             ],

@@ -11,6 +11,7 @@
 #include <fuchsia/session/scene/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
+#include <fuchsia/ui/accessibility/view/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/composition/cpp/fidl.h>
 #include <fuchsia/ui/focus/cpp/fidl.h>
@@ -64,6 +65,21 @@ void UITestManager::SetUseFlatlandConfig(bool use_flatland) {
   // Not yet implemented.
 }
 
+void UITestManager::RouteServices(std::vector<std::string> services, Ref source,
+                                  std::vector<Ref> targets) {
+  if (services.empty()) {
+    return;
+  }
+
+  std::vector<Capability> protocols;
+  for (const auto& service : services) {
+    protocols.emplace_back(Protocol{service});
+  }
+
+  realm_builder_.AddRoute(
+      Route{.capabilities = protocols, .source = std::move(source), .targets = std::move(targets)});
+}
+
 component_testing::Realm UITestManager::AddSubrealm() {
   return realm_builder_.AddChildRealm(kClientSubrealmName);
 }
@@ -82,40 +98,28 @@ void UITestManager::AddBaseRealmComponent() {
 void UITestManager::ConfigureDefaultSystemServices() {
   std::vector<Ref> targets = {ChildRef{kTestRealmName}, ChildRef{kClientSubrealmName}};
 
-  // Route system services from parent to both test realm and client subrealm.
-  realm_builder_.AddRoute(Route{.capabilities =
-                                    {
-                                        // Redirect logging output for the test realm to
-                                        // the host console output.
-                                        Protocol{fuchsia::logger::LogSink::Name_},
-                                        Protocol{fuchsia::scheduler::ProfileProvider::Name_},
-                                        Protocol{fuchsia::sysmem::Allocator::Name_},
-                                        Protocol{fuchsia::tracing::provider::Registry::Name_},
-                                        Protocol{fuchsia::vulkan::loader::Loader::Name_},
-                                    },
-                                .source = ParentRef(),
-                                .targets = std::move(targets)});
+  RouteServices({fuchsia::logger::LogSink::Name_, fuchsia::scheduler::ProfileProvider::Name_,
+                 fuchsia::sysmem::Allocator::Name_, fuchsia::tracing::provider::Registry::Name_,
+                 fuchsia::vulkan::loader::Loader::Name_},
+                /* source = */ ParentRef(),
+                /* targets = */ std::move(targets));
 }
 
 void UITestManager::ConfigureSceneOwner() {
-  FX_CHECK(config_.scene_owner.has_value());
-
-  if (*config_.scene_owner == UITestManager::SceneOwnerType::ROOT_PRESENTER) {
-    realm_builder_.AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::policy::Presenter::Name_}},
-                                  .source = ChildRef{kTestRealmName},
-                                  .targets = {ParentRef()}});
-  } else if (*config_.scene_owner == UITestManager::SceneOwnerType::SCENE_MANAGER) {
-    realm_builder_.AddRoute(
-        Route{.capabilities = {Protocol{fuchsia::session::scene::Manager::Name_}},
-              .source = ChildRef{kTestRealmName},
-              .targets = {ParentRef()}});
+  if (config_.scene_owner == UITestManager::SceneOwnerType::ROOT_PRESENTER) {
+    RouteServices(
+        {fuchsia::ui::policy::Presenter::Name_, fuchsia::ui::accessibility::view::Registry::Name_},
+        /* source = */ ChildRef{kTestRealmName}, /* targets = */ {ParentRef()});
+  } else if (config_.scene_owner == UITestManager::SceneOwnerType::SCENE_MANAGER) {
+    RouteServices({fuchsia::session::scene::Manager::Name_,
+                   fuchsia::ui::accessibility::view::Registry::Name_},
+                  /* source = */ ChildRef{kTestRealmName}, /* targets = */ {ParentRef()});
   }
 
   // If the user specifies a view provider, they must also supply a view
   // provider in their subrealm.
-  realm_builder_.AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
-                                .source = ChildRef{kClientSubrealmName},
-                                .targets = {ParentRef()}});
+  RouteServices({fuchsia::ui::app::ViewProvider::Name_},
+                /* source = */ ChildRef{kClientSubrealmName}, /* targets = */ {ParentRef()});
 }
 
 void UITestManager::ConfigureAccessibility() {
@@ -127,11 +131,9 @@ void UITestManager::ConfigureAccessibility() {
       << "Real a11y manager not currently supported";
 
   realm_builder_.AddChild(kA11yManagerName, kFakeA11yManagerUrl);
-
-  realm_builder_.AddRoute(
-      Route{.capabilities = {Protocol{fuchsia::accessibility::semantics::SemanticsManager::Name_}},
-            .source = ChildRef{kA11yManagerName},
-            .targets = {ChildRef{kClientSubrealmName}}});
+  RouteServices({fuchsia::accessibility::semantics::SemanticsManager::Name_},
+                /* source = */ ChildRef{kA11yManagerName},
+                /* target = */ {ChildRef{kClientSubrealmName}, ParentRef()});
 }
 
 void UITestManager::ConfigureInput() {
@@ -142,16 +144,15 @@ void UITestManager::ConfigureInput() {
   // Infer that input pipeline owns input if root presenter or scene mnaager
   // owns the scene.
   if (config_.scene_owner) {
-    realm_builder_.AddRoute(
-        Route{.capabilities = {Protocol{fuchsia::input::injection::InputDeviceRegistry::Name_},
-                               Protocol{fuchsia::ui::policy::DeviceListenerRegistry::Name_}},
-              .source = ChildRef{kTestRealmName},
-              .targets = {ParentRef()}});
+    RouteServices({fuchsia::ui::pointerinjector::configuration::Setup::Name_,
+                   fuchsia::input::injection::InputDeviceRegistry::Name_,
+                   fuchsia::ui::policy::DeviceListenerRegistry::Name_},
+                  /* source = */ ChildRef{kTestRealmName},
+                  /* targets = */ {ParentRef()});
   } else {
-    realm_builder_.AddRoute(
-        Route{.capabilities = {Protocol{fuchsia::ui::pointerinjector::Registry::Name_}},
-              .source = ChildRef{kTestRealmName},
-              .targets = {ParentRef()}});
+    RouteServices({fuchsia::ui::pointerinjector::Registry::Name_},
+                  /* source = */ ChildRef{kTestRealmName},
+                  /* targets = */ {ParentRef()});
   }
 
   // Specify display rotation.
@@ -161,18 +162,12 @@ void UITestManager::ConfigureInput() {
 }
 
 void UITestManager::ConfigureScenic() {
-  realm_builder_.AddRoute(
-      Route{.capabilities =
-                {
-                    Protocol{fuchsia::ui::composition::Allocator::Name_},
-                    Protocol{fuchsia::ui::composition::Flatland::Name_},
-                    Protocol{fuchsia::ui::composition::FlatlandDisplay::Name_},
-                    Protocol{fuchsia::ui::focus::FocusChainListenerRegistry::Name_},
-                    Protocol{fuchsia::ui::scenic::Scenic::Name_},
-                    Protocol{fuchsia::ui::views::ViewRefInstalled::Name_},
-                },
-            .source = ChildRef{kTestRealmName},
-            .targets = {ParentRef()}});
+  RouteServices(
+      {fuchsia::ui::composition::Allocator::Name_, fuchsia::ui::composition::Flatland::Name_,
+       fuchsia::ui::composition::FlatlandDisplay::Name_,
+       fuchsia::ui::focus::FocusChainListenerRegistry::Name_, fuchsia::ui::scenic::Scenic::Name_,
+       fuchsia::ui::views::ViewRefInstalled::Name_},
+      /* source = */ ChildRef{kTestRealmName}, /* targets = */ {ParentRef()});
 }
 
 void UITestManager::BuildRealm() {
@@ -198,18 +193,16 @@ void UITestManager::BuildRealm() {
   ConfigureScenic();
 
   // Route services to parent that client requested to expose.
-  for (const auto& service : config_.exposed_client_services) {
-    realm_builder_.AddRoute(Route{.capabilities = {Protocol{service}},
-                                  .source = ChildRef{kClientSubrealmName},
-                                  .targets = {ParentRef()}});
-  }
+  RouteServices(config_.exposed_client_services, /* source = */ ChildRef{kClientSubrealmName},
+                /* targets = */ {ParentRef()});
 
   // Route requested services from ui realm to client subrealm.
-  for (const auto& service : config_.ui_to_client_services) {
-    realm_builder_.AddRoute(Route{.capabilities = {Protocol{service}},
-                                  .source = ChildRef{kTestRealmName},
-                                  .targets = {ChildRef{kClientSubrealmName}}});
-  }
+  RouteServices(config_.ui_to_client_services, /* source = */ ChildRef{kTestRealmName},
+                /* targets = */ {ChildRef{kClientSubrealmName}});
+
+  // Route requested services from client subrealm to ui realm.
+  RouteServices(config_.client_to_ui_services, /* source = */ ChildRef{kClientSubrealmName},
+                /* targets = */ {ChildRef{kTestRealmName}});
 
   realm_root_ = std::make_unique<component_testing::RealmRoot>(realm_builder_.Build());
 }
