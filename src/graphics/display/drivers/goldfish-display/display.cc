@@ -11,9 +11,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/trace/event.h>
-#include <lib/fit/defer.h>
 #include <lib/zircon-internal/align.h>
-#include <zircon/assert.h>
 #include <zircon/pixelformat.h>
 #include <zircon/threads.h>
 
@@ -27,7 +25,6 @@
 
 #include "src/graphics/display/drivers/goldfish-display/goldfish-display-bind.h"
 #include "src/graphics/display/drivers/goldfish-display/render_control.h"
-#include "src/graphics/display/drivers/goldfish-display/third_party/aosp/hwcomposer.h"
 
 namespace goldfish {
 namespace {
@@ -51,52 +48,6 @@ constexpr uint32_t GL_RGBA = 0x1908;
 constexpr uint32_t GL_BGRA_EXT = 0x80E1;
 
 }  // namespace
-
-void Display::Swapchain::Add(RenderControl* rc, uint32_t width, uint32_t height, uint32_t format) {
-  ZX_DEBUG_ASSERT(rc);
-  auto cb = std::make_unique<ColorBuffer>();
-  cb->width = width;
-  cb->height = height;
-  cb->format = format;
-
-  // Note that we only need to call CreateColorBuffer() to create them, but
-  // we won't need to explicitly destroy (close) them after using them.
-  // Host renderer will destroy them on exit automatically. This matches the
-  // behavior of AEMU hwcomposer.
-  auto result = rc->CreateColorBuffer(width, height, format);
-  ZX_DEBUG_ASSERT(result.is_ok());
-  cb->id = result.value();
-
-  available_buffers_.emplace_back(std::move(cb));
-}
-
-void Display::Swapchain::Add(std::unique_ptr<ColorBuffer> color_buffer) {
-  ZX_DEBUG_ASSERT(color_buffer);
-  available_buffers_.emplace_back(std::move(color_buffer));
-}
-
-Display::ColorBuffer* Display::Swapchain::Request() {
-  if (available_buffers_.empty()) {
-    return nullptr;
-  }
-
-  std::unique_ptr<ColorBuffer> buffer = std::move(available_buffers_.front());
-  available_buffers_.pop_front();
-
-  ColorBuffer* raw = buffer.get();
-  used_buffers_[raw] = std::move(buffer);
-  return raw;
-}
-
-void Display::Swapchain::Return(ColorBuffer* cb) {
-  if (used_buffers_.find(cb) == used_buffers_.end()) {
-    zxlogf(ERROR, "ColorBuffer (%p) not found!", cb);
-    ZX_DEBUG_ASSERT(false);
-    return;
-  }
-  available_buffers_.emplace_back(std::move(used_buffers_[cb]));
-  used_buffers_.erase(cb);
-}
 
 // static
 zx_status_t Display::Create(void* ctx, zx_device_t* device) {
@@ -349,15 +300,9 @@ void Display::DisplayControllerImplReleaseImage(image_t* image) {
 
   async::PostTask(loop_.dispatcher(), [this, color_buffer] {
     for (auto& kv : devices_) {
-      if (kv.second.incoming_config) {
-        auto& layers = kv.second.incoming_config->layers;
-        layers.remove_if([color_buffer](const layer_t& layer) {
-          return GetLayerColorBuffer(layer) == color_buffer;
-        });
-
-        if (layers.empty()) {
-          kv.second.incoming_config = std::nullopt;
-        }
+      if (kv.second.incoming_config.has_value() &&
+          kv.second.incoming_config->color_buffer == color_buffer) {
+        kv.second.incoming_config = std::nullopt;
       }
     }
     delete color_buffer;
@@ -374,6 +319,9 @@ uint32_t Display::DisplayControllerImplCheckConfiguration(const display_config_t
   for (unsigned i = 0; i < display_count; i++) {
     const size_t layer_count = display_configs[i]->layer_count;
     if (layer_count > 0) {
+      ZX_DEBUG_ASSERT(devices_.find(display_configs[i]->display_id) != devices_.end());
+      const Device& device = devices_[display_configs[i]->display_id];
+
       if (display_configs[i]->cc_flags != 0) {
         // Color Correction is not supported, but we will pretend we do.
         // TODO(fxbug.dev/36184): Returning error will cause blank screen if scenic requests
@@ -382,259 +330,69 @@ uint32_t Display::DisplayControllerImplCheckConfiguration(const display_config_t
         zxlogf(WARNING, "%s: Color Correction not support. No error reported", __func__);
       }
 
-      for (size_t layer_idx = 0; layer_idx < display_configs[i]->layer_count; layer_idx++) {
-        const layer_t* layer = display_configs[i]->layer_list[layer_idx];
-        switch (layer->type) {
-          case LAYER_TYPE_PRIMARY: {
-            const primary_layer_t& primary = layer->cfg.primary;
-            if (primary.alpha_mode != ALPHA_DISABLE && primary.alpha_mode != ALPHA_PREMULTIPLIED) {
-              layer_cfg_results[i][layer_idx] |= CLIENT_ALPHA;
-            }
-          } break;
-          case LAYER_TYPE_CURSOR:
-            break;
-          case LAYER_TYPE_COLOR: {
-            const color_layer_t& color = layer->cfg.color;
-            if (color.format != ZX_PIXEL_FORMAT_RGB_x888 &&
-                color.format != ZX_PIXEL_FORMAT_ARGB_8888) {
-              layer_cfg_results[i][layer_idx] |= CLIENT_USE_PRIMARY;
-            }
-          } break;
-          default:
-            // Not reachable
-            ZX_DEBUG_ASSERT(false);
-            layer_cfg_results[i][layer_idx] = CLIENT_USE_PRIMARY;
+      if (display_configs[i]->layer_list[0]->type != LAYER_TYPE_PRIMARY) {
+        // We only support PRIMARY layer. Notify client to convert layer to
+        // primary type.
+        layer_cfg_results[i][0] |= CLIENT_USE_PRIMARY;
+        layer_cfg_result_count[i] = 1;
+      } else {
+        primary_layer_t* layer = &display_configs[i]->layer_list[0]->cfg.primary;
+        // Scaling is allowed if destination frame match display and
+        // source frame match image.
+        frame_t dest_frame = {
+            .x_pos = 0,
+            .y_pos = 0,
+            .width = device.width,
+            .height = device.height,
+        };
+        frame_t src_frame = {
+            .x_pos = 0,
+            .y_pos = 0,
+            .width = layer->image.width,
+            .height = layer->image.height,
+        };
+        if (memcmp(&layer->dest_frame, &dest_frame, sizeof(frame_t)) != 0) {
+          // TODO(fxbug.dev/36222): Need to provide proper flag to indicate driver only
+          // accepts full screen dest frame.
+          layer_cfg_results[i][0] |= CLIENT_FRAME_SCALE;
         }
-        if (layer_cfg_results[i][layer_idx] != 0) {
+        if (memcmp(&layer->src_frame, &src_frame, sizeof(frame_t)) != 0) {
+          layer_cfg_results[i][0] |= CLIENT_SRC_FRAME;
+        }
+
+        if (layer->alpha_mode != ALPHA_DISABLE) {
+          // Alpha is not supported.
+          layer_cfg_results[i][0] |= CLIENT_ALPHA;
+        }
+
+        if (layer->transform_mode != FRAME_TRANSFORM_IDENTITY) {
+          // Transformation is not supported.
+          layer_cfg_results[i][0] |= CLIENT_TRANSFORM;
+        }
+
+        // Check if any changes to the base layer were required.
+        if (layer_cfg_results[i][0] != 0) {
           layer_cfg_result_count[i] = 1;
         }
+      }
+      // If there is more than one layer, the rest need to be merged into the base layer.
+      if (layer_count > 1) {
+        layer_cfg_results[i][0] |= CLIENT_MERGE_BASE;
+        for (unsigned j = 1; j < layer_count; j++) {
+          layer_cfg_results[i][j] |= CLIENT_MERGE_SRC;
+        }
+        layer_cfg_result_count[i] = layer_count;
       }
     }
   }
   return CONFIG_DISPLAY_OK;
 }
 
-// static
-Display::ColorBuffer* Display::GetLayerColorBuffer(const layer_t& l) {
-  switch (l.type) {
-    case LAYER_TYPE_PRIMARY:
-      return reinterpret_cast<Display::ColorBuffer*>(l.cfg.primary.image.handle);
-    case LAYER_TYPE_CURSOR:
-      return reinterpret_cast<Display::ColorBuffer*>(l.cfg.cursor.image.handle);
-    case LAYER_TYPE_COLOR:
-      return nullptr;
-    default:
-      // Not reachable.
-      ZX_DEBUG_ASSERT(false);
-      return nullptr;
-  }
-}
-
-zx_status_t Display::ResolveInputLayers(const std::list<layer_t>& layers) {
-  for (const auto& layer : layers) {
-    if (layer.type == LAYER_TYPE_COLOR) {
-      continue;
-    }
-
-    ColorBuffer* color_buffer = GetLayerColorBuffer(layer);
-    ZX_DEBUG_ASSERT(color_buffer);
-    if (!color_buffer->id) {
-      zx::vmo vmo;
-
-      zx_status_t status = color_buffer->vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
-      if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: failed to duplicate vmo: %d", kTag, status);
-        return status;
-      }
-
-      {
-        fbl::AutoLock lock(&lock_);
-        status = control_.GetColorBuffer(std::move(vmo), &color_buffer->id);
-        if (status != ZX_OK) {
-          zxlogf(ERROR, "%s: failed to get color buffer: %d", kTag, status);
-          return status;
-        }
-      }
-
-      // Color buffers are in vulkan-only mode by default as that avoids
-      // unnecessary copies on the host in some cases. The color buffer
-      // needs to be moved out of vulkan-only mode before being used for
-      // presentation.
-      if (color_buffer->id) {
-        auto status = rc_->SetColorBufferVulkanMode(color_buffer->id, 0);
-        if (status.is_error() || status.value()) {
-          zxlogf(ERROR, "%s: failed to set vulkan mode: %d %d", kTag, status.status_value(),
-                 status.value_or(0));
-          return status.is_error() ? status.error_value() : ZX_ERR_INTERNAL;
-        }
-      }
-    }
-  }
-  return ZX_OK;
-}
-
-// static
-hwc::ComposeDeviceV2 Display::CreateComposeDevice(const Device& device,
-                                                  const std::list<layer_t>& layers,
-                                                  const ColorBuffer& target) {
-  hwc::ComposeDeviceV2 compose_device(layers.size());
-
-  compose_device->version = 2u;
-  compose_device->display_id = device.host_display_id;
-  compose_device->num_layers = layers.size();
-  compose_device->target_handle = target.id;
-
-  size_t next_layer_idx = 0;
-  for (auto it = layers.begin(); it != layers.end(); it++) {
-    switch (it->type) {
-      case LAYER_TYPE_COLOR: {
-        const color_layer_t& color_cfg = it->cfg.color;
-        ZX_DEBUG_ASSERT((color_cfg.format == ZX_PIXEL_FORMAT_RGB_x888 ||
-                         color_cfg.format == ZX_PIXEL_FORMAT_ARGB_8888) &&
-                        color_cfg.color_count >= 4);
-
-        compose_device->layers[next_layer_idx++] = hwc::compose_layer{
-            .cb_handle = 0,
-            .compose_mode = hwc::Composition::kSolidColor,
-            .display_frame =
-                {
-                    .left = 0,
-                    .top = 0,
-                    .right = static_cast<int>(device.width),
-                    .bottom = static_cast<int>(device.height),
-                },
-            .crop =
-                {
-                    .left = 0,
-                    .top = 0,
-                    .right = static_cast<float>(device.width),
-                    .bottom = static_cast<float>(device.height),
-                },
-            .blend_mode = hwc::BlendMode::kNone,
-            .alpha = 1.0,
-            .color =
-                hwc::hwc_color_t{
-                    .r = color_cfg.color_list[2],
-                    .g = color_cfg.color_list[1],
-                    .b = color_cfg.color_list[0],
-                    .a = color_cfg.format == ZX_PIXEL_FORMAT_ARGB_8888 ? color_cfg.color_list[3]
-                                                                       : static_cast<uint8_t>(0xff),
-                },
-            .transform = {},
-        };
-      } break;
-      case LAYER_TYPE_CURSOR: {
-        const cursor_layer_t& cursor_cfg = it->cfg.cursor;
-        ColorBuffer* color_buffer = GetLayerColorBuffer(*it);
-        ZX_DEBUG_ASSERT(color_buffer);
-        compose_device->layers[next_layer_idx++] = hwc::compose_layer{
-            .cb_handle = color_buffer->id,
-            // kCursor is not supported on render control implementation,
-            // so we use kDevice instead.
-            .compose_mode = hwc::Composition::kDevice,
-            .display_frame =
-                {
-                    .left = cursor_cfg.x_pos,
-                    .top = cursor_cfg.y_pos,
-                    .right = static_cast<int>(cursor_cfg.x_pos + color_buffer->width),
-                    .bottom = static_cast<int>(cursor_cfg.y_pos + color_buffer->height),
-                },
-            .crop =
-                {
-                    .left = 0,
-                    .top = 0,
-                    .right = static_cast<float>(color_buffer->width),
-                    .bottom = static_cast<float>(color_buffer->height),
-                },
-            .blend_mode = hwc::BlendMode::kNone,
-            .alpha = 1.0,
-            .color = {},
-            .transform = {},
-        };
-      } break;
-      case LAYER_TYPE_PRIMARY: {
-        const primary_layer_t& primary_cfg = it->cfg.primary;
-        ColorBuffer* color_buffer = GetLayerColorBuffer(*it);
-        ZX_DEBUG_ASSERT(color_buffer);
-        ZX_DEBUG_ASSERT(primary_cfg.alpha_mode == ALPHA_PREMULTIPLIED ||
-                        primary_cfg.alpha_mode == ALPHA_DISABLE);
-
-        hwc::hwc_transform_t transform = {};
-        switch (primary_cfg.transform_mode) {
-          case FRAME_TRANSFORM_IDENTITY:
-            break;
-          case FRAME_TRANSFORM_ROT_180:
-            transform = hwc::HWC_TRANSFORM_ROT_180;
-            break;
-          case FRAME_TRANSFORM_ROT_270:
-            transform = hwc::HWC_TRANSFORM_ROT_270;
-            break;
-          case FRAME_TRANSFORM_ROT_90:
-            transform = hwc::HWC_TRANSFORM_ROT_90;
-            break;
-          case FRAME_TRANSFORM_REFLECT_X:
-            transform = hwc::HWC_TRANSFORM_FLIP_H;
-            break;
-          case FRAME_TRANSFORM_REFLECT_Y:
-            transform = hwc::HWC_TRANSFORM_FLIP_V;
-            break;
-          case FRAME_TRANSFORM_ROT_90_REFLECT_X:
-            transform = hwc::HWC_TRANSFORM_FLIP_H_ROT_90;
-            break;
-          case FRAME_TRANSFORM_ROT_90_REFLECT_Y:
-            transform = hwc::HWC_TRANSFORM_FLIP_V_ROT_90;
-            break;
-          default:
-            // Not reachable
-            ZX_DEBUG_ASSERT(false);
-        }
-
-        compose_device->layers[next_layer_idx++] = hwc::compose_layer{
-            .cb_handle = color_buffer->id,
-            .compose_mode = hwc::Composition::kDevice,
-            .display_frame =
-                {
-                    .left = static_cast<int>(primary_cfg.dest_frame.x_pos),
-                    .top = static_cast<int>(primary_cfg.dest_frame.y_pos),
-                    .right = static_cast<int>(primary_cfg.dest_frame.x_pos +
-                                              primary_cfg.dest_frame.width),
-                    .bottom = static_cast<int>(primary_cfg.dest_frame.y_pos +
-                                               primary_cfg.dest_frame.height),
-                },
-            .crop =
-                {
-                    .left = static_cast<float>(primary_cfg.src_frame.x_pos),
-                    .top = static_cast<float>(primary_cfg.src_frame.y_pos),
-                    .right = static_cast<float>(primary_cfg.src_frame.x_pos +
-                                                primary_cfg.src_frame.width),
-                    .bottom = static_cast<float>(primary_cfg.src_frame.y_pos +
-                                                 primary_cfg.src_frame.height),
-                },
-            .blend_mode = primary_cfg.alpha_mode == ALPHA_PREMULTIPLIED
-                              ? hwc::BlendMode::kPremultiplied
-                              : hwc::BlendMode::kNone,
-            .alpha =
-                primary_cfg.alpha_mode == ALPHA_PREMULTIPLIED ? primary_cfg.alpha_layer_val : 1.0f,
-            .color = {},
-            .transform = transform,
-        };
-      } break;
-    }
-  }
-
-  return compose_device;
-}
-
 zx_status_t Display::PresentDisplayConfig(RenderControl::DisplayId display_id,
                                           const DisplayConfig& display_config) {
-  auto& device = devices_[display_id];
-  if (display_config.layers.empty()) {
+  auto* color_buffer = display_config.color_buffer;
+  if (!color_buffer) {
     return ZX_OK;
-  }
-
-  auto* target_color_buffer = device.swapchain.Request();
-  if (target_color_buffer == nullptr) {
-    return ZX_ERR_SHOULD_WAIT;
   }
 
   zx::eventpair event_display, event_sync_device;
@@ -644,6 +402,8 @@ zx_status_t Display::PresentDisplayConfig(RenderControl::DisplayId display_id,
     return status;
   }
 
+  auto& device = devices_[display_id];
+
   // Set up async wait for the goldfish sync event. The zx::eventpair will be
   // stored in the async wait callback, which will be destroyed only when the
   // event is signaled or the wait is cancelled.
@@ -651,8 +411,7 @@ zx_status_t Display::PresentDisplayConfig(RenderControl::DisplayId display_id,
   auto& wait = device.pending_config_waits.back();
 
   wait.Begin(loop_.dispatcher(), [event = std::move(event_display), &device,
-                                  pending_config_stamp = display_config.config_stamp,
-                                  target_color_buffer](
+                                  pending_config_stamp = display_config.config_stamp](
                                      async_dispatcher_t* dispatcher, async::WaitOnce* current_wait,
                                      zx_status_t status, const zx_packet_signal_t*) {
     TRACE_DURATION("gfx", "Display::SyncEventHandler", "config_stamp", pending_config_stamp.value);
@@ -684,36 +443,36 @@ zx_status_t Display::PresentDisplayConfig(RenderControl::DisplayId display_id,
     }
     device.latest_config_stamp = {
         .value = std::max(device.latest_config_stamp.value, pending_config_stamp.value)};
-    device.swapchain.Return(target_color_buffer);
   });
 
-  // The event and wait should be removed if the driver fails to compose the
-  // layers.
-  fit::deferred_callback cancel_wait_on_failure(
-      [&device] { device.pending_config_waits.pop_back(); });
-
   // Update host-writeable display buffers before presenting.
-  for (auto& layer : display_config.layers) {
-    ColorBuffer* color_buffer = GetLayerColorBuffer(layer);
-    if (color_buffer && color_buffer->pinned_vmo.region_count() > 0) {
-      auto status =
-          rc_->UpdateColorBuffer(color_buffer->id, color_buffer->pinned_vmo, color_buffer->width,
-                                 color_buffer->height, color_buffer->format, color_buffer->size);
-      if (status.is_error() || status.value()) {
-        zxlogf(ERROR, "%s : color buffer update failed: %d:%u", kTag, status.status_value(),
-               status.value_or(0));
-        return status.is_error() ? status.status_value() : ZX_ERR_INTERNAL;
-      }
+  if (color_buffer->pinned_vmo.region_count() > 0) {
+    auto status =
+        rc_->UpdateColorBuffer(color_buffer->id, color_buffer->pinned_vmo, color_buffer->width,
+                               color_buffer->height, color_buffer->format, color_buffer->size);
+    if (status.is_error() || status.value()) {
+      zxlogf(ERROR, "%s : color buffer update failed: %d:%u", kTag, status.status_value(),
+             status.value_or(0));
+      return status.is_error() ? status.status_value() : ZX_ERR_INTERNAL;
     }
   }
 
-  // Present the layers.
+  // Present the buffer.
   {
-    status =
-        rc_->ComposeAsync(CreateComposeDevice(device, display_config.layers, *target_color_buffer));
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: Compose failed: %d", kTag, status);
-      return status;
+    uint32_t host_display_id = devices_[display_id].host_display_id;
+    if (host_display_id) {
+      // Set color buffer for secondary displays.
+      auto status = rc_->SetDisplayColorBuffer(host_display_id, color_buffer->id);
+      if (status.is_error() || status.value()) {
+        zxlogf(ERROR, "%s: failed to set display color buffer", kTag);
+        return status.is_error() ? status.status_value() : ZX_ERR_INTERNAL;
+      }
+    } else {
+      status = rc_->FbPost(color_buffer->id);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: FbPost failed: %d", kTag, status);
+        return status;
+      }
     }
 
     fbl::AutoLock lock(&lock_);
@@ -724,7 +483,6 @@ zx_status_t Display::PresentDisplayConfig(RenderControl::DisplayId display_id,
     }
   }
 
-  cancel_wait_on_failure.cancel();
   return ZX_OK;
 }
 
@@ -732,22 +490,17 @@ void Display::DisplayControllerImplApplyConfiguration(const display_config_t** d
                                                       size_t display_count,
                                                       const config_stamp_t* config_stamp) {
   for (const auto& it : devices_) {
-    std::list<layer_t> layers;
+    uint64_t handle = 0;
     for (unsigned i = 0; i < display_count; i++) {
       if (display_configs[i]->display_id == it.first) {
-        for (size_t j = 0; j < display_configs[i]->layer_count; j++) {
-          layer_t* l = display_configs[i]->layer_list[j];
-          ZX_DEBUG_ASSERT(l);
-          if ((l->type == LAYER_TYPE_COLOR) ||
-              (l->type == LAYER_TYPE_PRIMARY && l->cfg.primary.image.handle != 0) ||
-              (l->type == LAYER_TYPE_CURSOR && l->cfg.cursor.image.handle != 0)) {
-            layers.push_back(*l);
-          }
+        if (display_configs[i]->layer_count) {
+          handle = display_configs[i]->layer_list[0]->cfg.primary.image.handle;
         }
+        break;
       }
     }
 
-    if (layers.empty()) {
+    if (handle == 0u) {
       // The display doesn't have any active layers right now. For layers that
       // previously existed, we should cancel waiting events on the pending
       // color buffer and remove references to both pending and current color
@@ -762,26 +515,46 @@ void Display::DisplayControllerImplApplyConfiguration(const display_config_t** d
                   .value = std::max(device.latest_config_stamp.value, config_stamp.value)};
             }
           });
-      continue;
+      return;
     }
 
-    // Layers must be sorted by z-index for host composition.
-    layers.sort([](const layer_t& a, const layer_t& b) { return a.z_index < b.z_index; });
+    auto color_buffer = reinterpret_cast<ColorBuffer*>(handle);
+    if (color_buffer && !color_buffer->id) {
+      zx::vmo vmo;
 
-    zx_status_t status = ResolveInputLayers(layers);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: cannot resolve input layers for display %lu: %d", kTag, it.first, status);
-      continue;
+      zx_status_t status = color_buffer->vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: failed to duplicate vmo: %d", kTag, status);
+      } else {
+        fbl::AutoLock lock(&lock_);
+        status = control_.GetColorBuffer(std::move(vmo), &color_buffer->id);
+        if (status != ZX_OK) {
+          zxlogf(ERROR, "%s: failed to get color buffer: %d", kTag, status);
+        }
+
+        // Color buffers are in vulkan-only mode by default as that avoids
+        // unnecessary copies on the host in some cases. The color buffer
+        // needs to be moved out of vulkan-only mode before being used for
+        // presentation.
+        if (color_buffer->id) {
+          auto status = rc_->SetColorBufferVulkanMode(color_buffer->id, 0);
+          if (status.is_error() || status.value()) {
+            zxlogf(ERROR, "%s: failed to set vulkan mode: %d %d", kTag, status.status_value(),
+                   status.value_or(0));
+          }
+        }
+      }
     }
 
-    async::PostTask(loop_.dispatcher(),
-                    [this, config_stamp = *config_stamp, layers = std::move(layers),
-                     display_id = it.first]() mutable {
-                      devices_[display_id].incoming_config = {
-                          .layers = std::move(layers),
-                          .config_stamp = config_stamp,
-                      };
-                    });
+    if (color_buffer) {
+      async::PostTask(loop_.dispatcher(),
+                      [this, config_stamp = *config_stamp, color_buffer, display_id = it.first] {
+                        devices_[display_id].incoming_config = {
+                            .color_buffer = color_buffer,
+                            .config_stamp = config_stamp,
+                        };
+                      });
+    }
   }
 }
 
@@ -852,12 +625,6 @@ zx_status_t Display::DisplayControllerImplSetBufferCollectionConstraints(const i
 
 zx_status_t Display::SetupDisplay(uint64_t display_id) {
   Device& device = devices_[display_id];
-
-  // Set up compose swapchain.
-  constexpr size_t kSwapchainSize = 3;
-  for (size_t i = 0; i < kSwapchainSize; i++) {
-    device.swapchain.Add(rc_.get(), device.width, device.height, GL_BGRA_EXT);
-  }
 
   // Create secondary displays.
   if (display_id != kPrimaryDisplayId) {

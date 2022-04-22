@@ -15,7 +15,6 @@
 #include <ddktl/device.h>
 
 #include "src/devices/lib/goldfish/pipe_io/pipe_io.h"
-#include "src/graphics/display/drivers/goldfish-display/third_party/aosp/hwcomposer.h"
 
 namespace goldfish {
 
@@ -40,9 +39,6 @@ class RenderControl {
                                          uint32_t width, uint32_t height, uint32_t format,
                                          size_t size);
   zx_status_t FbPost(uint32_t id);
-  zx_status_t ComposeAsync(const hwc::ComposeDeviceV2& device);
-  zx::status<RcResult> Compose(const hwc::ComposeDeviceV2& device);
-
   using DisplayId = uint32_t;
   zx::status<DisplayId> CreateDisplay();
   zx::status<RcResult> DestroyDisplay(DisplayId display_id);
