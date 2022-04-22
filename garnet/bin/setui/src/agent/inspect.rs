@@ -12,3 +12,6 @@ pub(crate) mod setting_values;
 
 /// Agent for writing the recent request payloads to inspect.
 pub(crate) mod setting_proxy;
+
+/// Agent for writing api usage counts.
+pub(crate) mod usage_counts;

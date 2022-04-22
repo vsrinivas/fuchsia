@@ -64,6 +64,8 @@ pub enum AgentType {
     InspectSettingProxy,
     /// Responsible for logging the setting values in the setting proxy to inspect.
     InspectSettingValues,
+    /// Responsible for logging API usage counts to inspect.
+    InspectSettingTypeUsage,
 }
 
 impl AgentType {
@@ -92,6 +94,9 @@ impl AgentType {
                     .initialize::<crate::agent::inspect::setting_proxy::SettingProxyInspectAgent>()
                     .await
             }
+            AgentType::InspectSettingTypeUsage => storage_factory
+                .initialize::<crate::agent::inspect::usage_counts::SettingTypeUsageInspectAgent>()
+                .await,
             AgentType::InspectPolicyValues => {
                 storage_factory
                     .initialize::<crate::agent::inspect::policy_values::PolicyValuesInspectAgent>()
@@ -120,6 +125,9 @@ impl From<AgentType> for BlueprintHandle {
             AgentType::Restore => crate::agent::restore_agent::blueprint::create(),
             AgentType::InspectSettingProxy => {
                 crate::agent::inspect::setting_proxy::blueprint::create()
+            }
+            AgentType::InspectSettingTypeUsage => {
+                crate::agent::inspect::usage_counts::blueprint::create()
             }
             AgentType::InspectPolicyValues => {
                 crate::agent::inspect::policy_values::blueprint::create()
