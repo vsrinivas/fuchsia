@@ -11,7 +11,7 @@
 #include <sys/types.h>
 #include <zircon/types.h>
 
-// Contains an array of PC values representing a thread's backtrace.
+// Contains an array of return address values representing a thread's backtrace.
 //
 // This class is not thread-safe.
 class Backtrace {
@@ -23,25 +23,33 @@ class Backtrace {
   size_t size() const { return size_; }
 
   // Returns a pointer to the underlying elements.
-  const vaddr_t* data() const { return pc_; }
+  const vaddr_t* data() const { return addr_; }
 
   // Resets the size to 0.
   void reset() { size_ = 0; }
 
-  // Adds one element to the array.
-  void push_back(vaddr_t pc) {
+  // Adds one element to the array.  See also |set_first_frame_type|.
+  void push_back(vaddr_t addr) {
     if (size_ < kMaxSize) {
-      pc_[size_++] = pc;
+      addr_[size_++] = addr;
     }
   }
+
+  // With the possible exception of the first frame, each address in the backtrace is a return
+  // address.  The first frame may be either a return address or a precise location (think PC).  See
+  // the "Presentation elements" section of //docs/reference/kernel/symbolizer_markup.md for
+  // details.  Unless specified, the first frame is assumed to be a return address.
+  enum FrameType { ReturnAddress, PreciseLocation };
+  void set_first_frame_type(FrameType type) { first_frame_type_ = type; }
 
   // Pretty-prints this backtrace to |file|.
   void Print(FILE* = stdout) const;
   void PrintWithoutVersion(FILE* = stdout) const;
 
  private:
-  vaddr_t pc_[kMaxSize]{};
+  vaddr_t addr_[kMaxSize]{};
   size_t size_{};
+  FrameType first_frame_type_{ReturnAddress};
 };
 
 #endif  // ZIRCON_KERNEL_LIB_BACKTRACE_INCLUDE_LIB_BACKTRACE_H_

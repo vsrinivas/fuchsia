@@ -38,12 +38,32 @@ static bool PrintTest() {
 
   Backtrace bt;
   bt.push_back(0xffffffff76543210);
-
+  bt.push_back(0xffffffff76543214);
+  bt.push_back(0xffffffff76543218);
   char buffer[1024];
-  StringFile file(ktl::span(buffer, sizeof(buffer)));
-  bt.Print(&file);
-  EXPECT_NE(ktl::string_view::npos, file.as_string_view().find("zx_system_get_version_string"));
-  EXPECT_NE(ktl::string_view::npos, file.as_string_view().find("{{{bt:0:0xffffffff76543210}"));
+
+  // All frames are return addresses.
+  {
+    StringFile file(ktl::span(buffer, sizeof(buffer)));
+    bt.Print(&file);
+    EXPECT_NE(ktl::string_view::npos, file.as_string_view().find("zx_system_get_version_string"));
+    EXPECT_NE(ktl::string_view::npos, file.as_string_view().find("{{{bt:0:0xffffffff76543210:ra}"));
+    EXPECT_NE(ktl::string_view::npos, file.as_string_view().find("{{{bt:1:0xffffffff76543214:ra}"));
+    EXPECT_NE(ktl::string_view::npos, file.as_string_view().find("{{{bt:2:0xffffffff76543218:ra}"));
+  }
+
+  memset(buffer, 0, sizeof(buffer));
+
+  // And now with the first frame as a precise location.
+  {
+    StringFile file(ktl::span(buffer, sizeof(buffer)));
+    bt.set_first_frame_type(Backtrace::FrameType::PreciseLocation);
+    bt.Print(&file);
+    EXPECT_NE(ktl::string_view::npos, file.as_string_view().find("zx_system_get_version_string"));
+    EXPECT_NE(ktl::string_view::npos, file.as_string_view().find("{{{bt:0:0xffffffff76543210:pc}"));
+    EXPECT_NE(ktl::string_view::npos, file.as_string_view().find("{{{bt:1:0xffffffff76543214:ra}"));
+    EXPECT_NE(ktl::string_view::npos, file.as_string_view().find("{{{bt:2:0xffffffff76543218:ra}"));
+  }
 
   END_TEST;
 }
@@ -58,7 +78,6 @@ static bool PrintWithoutVersionTest() {
   StringFile file(ktl::span(buffer, sizeof(buffer)));
   bt.PrintWithoutVersion(&file);
   EXPECT_EQ(ktl::string_view::npos, file.as_string_view().find("zx_system_get_version_string"));
-  EXPECT_NE(ktl::string_view::npos, file.as_string_view().find("{{{bt:0:0xffffffff76543210}"));
 
   END_TEST;
 }

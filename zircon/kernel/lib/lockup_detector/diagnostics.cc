@@ -40,6 +40,7 @@ zx_status_t GetBacktraceFromDapState(const arm64_dap_processor_state& state, Bac
   // Build a backtrace using the PC as frame 0's address and the LR as frame 1's address.
   out_bt.reset();
   out_bt.push_back(state.pc);
+  out_bt.set_first_frame_type(Backtrace::FrameType::PreciseLocation);
   out_bt.push_back(state.r[30]);
 
   // Is the Shadow Call Stack Pointer (x18) properly aligned?
