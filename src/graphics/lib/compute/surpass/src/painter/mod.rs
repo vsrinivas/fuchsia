@@ -194,6 +194,8 @@ pub trait LayerProps: Send + Sync {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub(crate) struct Cover {
+    // Proportion of the pixel area covered for each pixel row of a tile row.
+    // 0 is none, 16 is full coverage. Value above 16 happens when paths self-overlap.
     covers: [i8x16; TILE_HEIGHT / i8x16::LANES],
 }
 
@@ -476,7 +478,7 @@ impl Painter {
         previous_clear_color: Option<Color>,
         mut previous_layers: Option<&mut [Option<u32>]>,
         row: ChunksExactMut<'_, Slice<'_, u8>>,
-        crop: Option<Rect>,
+        crop: &Option<Rect>,
         flusher: Option<&dyn Flusher>,
     ) {
         fn acc_covers(segments: &[PixelSegment], covers: &mut BTreeMap<u32, Cover>) {
@@ -486,7 +488,7 @@ impl Painter {
                 cover.as_slice_mut()[segment.local_y() as usize] += segment.cover();
             }
         }
-
+        // Maps layer id to cover carry information.
         let mut covers_left_of_row: BTreeMap<u32, Cover> = BTreeMap::new();
         let mut populate_covers = |limit: Option<i16>| {
             let query = search_last_by_key(segments, false, |segment| match limit {
@@ -519,9 +521,7 @@ impl Painter {
         }
 
         workbench.init(
-            covers_left_of_row
-                .into_iter()
-                .map(|(layer, cover)| CoverCarry { cover, layer_id: layer }),
+            covers_left_of_row.into_iter().map(|(layer_id, cover)| CoverCarry { cover, layer_id }),
         );
 
         for (tile_x, slices) in row.enumerate() {
@@ -601,7 +601,8 @@ fn print_row<S: LayerProps, L: Layout>(
 
     let segments = search_last_by_key(segments, j as i16, |segment| segment.tile_y())
         .map(|end| {
-            let result = search_last_by_key(segments, j as i16 - 1, |segment| segment.tile_y());
+            let result =
+                search_last_by_key(&segments[..end], j as i16 - 1, |segment| segment.tile_y());
             let start = match result {
                 Ok(i) => i + 1,
                 Err(i) => i,
@@ -625,7 +626,7 @@ fn print_row<S: LayerProps, L: Layout>(
             previous_clear_color,
             layers_per_tile,
             row,
-            crop.clone(),
+            crop,
             flusher,
         );
     });
@@ -645,6 +646,8 @@ pub fn for_each_row<L: Layout, S: LayerProps>(
     crop: &Option<Rect>,
     styles: &S,
 ) {
+    // Assuming that tile_y two's complement negative values are placed after the positive values by
+    // the sort.
     if let Ok(end) = search_last_by_key(segments, false, |segment| segment.tile_y().is_negative()) {
         segments = &segments[..=end];
     }
