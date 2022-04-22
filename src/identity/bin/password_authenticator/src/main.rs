@@ -8,13 +8,12 @@ mod account_metadata;
 mod constants;
 mod disk_management;
 mod keys;
-mod options;
 mod pinweaver;
 mod scrypt;
 #[cfg(test)]
 mod testing;
 
-use anyhow::{Context, Error};
+use anyhow::{anyhow, Context, Error};
 use fidl::endpoints::RequestStream;
 use fidl_fuchsia_identity_account::AccountManagerRequestStream;
 use fidl_fuchsia_io as fio;
@@ -31,7 +30,6 @@ use crate::{
     account_manager::{AccountManager, EnvCredManagerProvider},
     account_metadata::DataDirAccountMetadataStore,
     disk_management::DevDiskManager,
-    options::Options,
 };
 
 enum Services {
@@ -43,12 +41,13 @@ async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
     info!("Starting password authenticator");
 
-    let options = argh::from_env::<Options>();
-    info!("Command line options = {:?}", options);
-    options.validate().map_err(|err| {
-        error!("Failed to validate command line options: {:?}", err);
-        err
-    })?;
+    let config = password_authenticator_config::Config::from_args();
+    // validate that at least one account metadata type is enabled
+    if !config.allow_scrypt && !config.allow_pinweaver {
+        let err = anyhow!("No account types allowed by config, exiting");
+        error!("{}", err);
+        return Err(err);
+    }
 
     let dev_root =
         open_in_namespace("/dev", fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE)?;
@@ -71,7 +70,7 @@ async fn main() -> Result<(), Error> {
 
     let cred_manager_provider = EnvCredManagerProvider {};
     let account_manager = Arc::new(AccountManager::new(
-        options,
+        config,
         disk_manager,
         account_metadata_store,
         cred_manager_provider,

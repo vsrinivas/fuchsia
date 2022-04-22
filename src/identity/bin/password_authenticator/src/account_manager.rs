@@ -12,7 +12,6 @@ use crate::{
     keys::{Key, KeyEnrollment, KeyEnrollmentError, KeyRetrieval, KeyRetrievalError},
     pinweaver::{CredManager, PinweaverKeyEnroller, PinweaverKeyRetriever, PinweaverParams},
     scrypt::{ScryptKeySource, ScryptParams},
-    Options,
 };
 use anyhow::{anyhow, Context, Error};
 use fidl::endpoints::{ControlHandle, ServerEnd};
@@ -24,6 +23,7 @@ use fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream};
 use fuchsia_component::client::connect_to_protocol;
 use futures::{lock::Mutex, prelude::*};
 use log::{error, info, warn};
+use password_authenticator_config::Config;
 use std::{collections::HashMap, sync::Arc};
 
 /// The singleton account ID on the device.
@@ -65,7 +65,7 @@ where
     AMS: AccountMetadataStore,
     CMP: CredManagerProvider,
 {
-    options: Options,
+    config: Config,
     disk_manager: DM,
     account_metadata_store: Mutex<AMS>,
     cred_manager_provider: CMP,
@@ -109,13 +109,13 @@ where
     CMP: CredManagerProvider,
 {
     pub fn new(
-        options: Options,
+        config: Config,
         disk_manager: DM,
         account_metadata_store: AMS,
         cred_manager_provider: CMP,
     ) -> Self {
         Self {
-            options,
+            config,
             disk_manager,
             account_metadata_store: Mutex::new(account_metadata_store),
             cred_manager_provider,
@@ -425,14 +425,14 @@ where
             return Err(faccount::Error::Internal);
         }
 
-        // Verify that the command line options allow this type of metadata.
+        // Verify that the component configuration allows this type of metadata.
         //
         // TODO(zarvox, jsankey): Once account deletion is available it probably makes sense to
-        // automatically delete an account that is not allowed by the current command line options
+        // automatically delete an account that is not allowed by the current config
         // (for example an account that was created with an empty password once allow_null=false)
         // but for now we simply log a warning and return an error.
-        if !account_metadata.allowed_by_options(&self.options) {
-            warn!("get_account: account metadata is not allowed by current command line options");
+        if !account_metadata.allowed_by_config(&self.config) {
+            warn!("get_account: account metadata is not allowed by current configuration");
             return Err(faccount::Error::UnsupportedOperation);
         }
 
@@ -560,7 +560,7 @@ where
             faccount::Error::InvalidRequest
         })?;
 
-        if !(self.options.allow_scrypt || self.options.allow_pinweaver) {
+        if !(self.config.allow_scrypt || self.config.allow_pinweaver) {
             // Non-empty passwords are only supported when scrypt or pinweaver is allowed.
             warn!(
                 "provision_new_account: refusing to provision account with non-empty password \
@@ -577,7 +577,7 @@ where
             return Err(faccount::Error::InvalidRequest);
         }
 
-        let enrollment_scheme = if self.options.allow_pinweaver {
+        let enrollment_scheme = if self.config.allow_pinweaver {
             EnrollmentScheme::Pinweaver
         } else {
             EnrollmentScheme::Scrypt
@@ -870,10 +870,10 @@ mod test {
     };
 
     // By default, allow any implemented form of password and encryption.
-    const DEFAULT_OPTIONS: Options = Options { allow_scrypt: true, allow_pinweaver: true };
-    // Define more restrictive options to verify exclusions are implemented correctly.
-    const SCRYPT_ONLY_OPTIONS: Options = Options { allow_scrypt: true, allow_pinweaver: false };
-    const PINWEAVER_ONLY_OPTIONS: Options = Options { allow_scrypt: false, allow_pinweaver: true };
+    const DEFAULT_CONFIG: Config = Config { allow_scrypt: true, allow_pinweaver: true };
+    // Define more restrictive configs to verify exclusions are implemented correctly.
+    const SCRYPT_ONLY_CONFIG: Config = Config { allow_scrypt: true, allow_pinweaver: false };
+    const PINWEAVER_ONLY_CONFIG: Config = Config { allow_scrypt: false, allow_pinweaver: true };
 
     // An account ID that should not exist.
     const UNSUPPORTED_ACCOUNT_ID: u64 = 42;
@@ -1269,7 +1269,7 @@ mod test {
         let account_metadata_store = MemoryAccountMetadataStore::new();
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             account_metadata_store,
             cred_manager_provider,
@@ -1286,7 +1286,7 @@ mod test {
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             account_metadata_store,
             cred_manager_provider,
@@ -1303,7 +1303,7 @@ mod test {
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             account_metadata_store,
             cred_manager_provider,
@@ -1327,7 +1327,7 @@ mod test {
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             account_metadata_store,
             cred_manager_provider,
@@ -1339,7 +1339,7 @@ mod test {
     #[fuchsia::test]
     async fn test_get_account_no_accounts() {
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             MockDiskManager::new(),
             MemoryAccountMetadataStore::new(),
             MockCredManagerProvider::new(),
@@ -1361,7 +1361,7 @@ mod test {
             MemoryAccountMetadataStore::new().with_password_account(&UNSUPPORTED_ACCOUNT_ID);
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             account_metadata_store,
             cred_manager_provider,
@@ -1382,7 +1382,7 @@ mod test {
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             account_metadata_store,
             cred_manager_provider,
@@ -1402,7 +1402,7 @@ mod test {
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            SCRYPT_ONLY_OPTIONS,
+            SCRYPT_ONLY_CONFIG,
             disk_manager,
             account_metadata_store,
             cred_manager_provider,
@@ -1427,7 +1427,7 @@ mod test {
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            PINWEAVER_ONLY_OPTIONS,
+            PINWEAVER_ONLY_CONFIG,
             disk_manager,
             account_metadata_store,
             cred_manager_provider,
@@ -1453,7 +1453,7 @@ mod test {
             .expect("enroll key");
         assert_eq!(label, TEST_PINWEAVER_CREDENTIAL_LABEL);
         let account_manager = AccountManager::new(
-            PINWEAVER_ONLY_OPTIONS,
+            PINWEAVER_ONLY_CONFIG,
             disk_manager,
             account_metadata_store,
             cred_manager_provider,
@@ -1485,7 +1485,7 @@ mod test {
             .expect("enroll key");
         assert_eq!(label, TEST_PINWEAVER_CREDENTIAL_LABEL);
         let account_manager = AccountManager::new(
-            PINWEAVER_ONLY_OPTIONS,
+            PINWEAVER_ONLY_CONFIG,
             disk_manager,
             account_metadata_store,
             cred_manager_provider,
@@ -1503,7 +1503,7 @@ mod test {
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             account_metadata_store,
             cred_manager_provider,
@@ -1538,7 +1538,7 @@ mod test {
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             account_metadata_store,
             cred_manager_provider,
@@ -1575,7 +1575,7 @@ mod test {
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             account_metadata_store,
             cred_manager_provider,
@@ -1603,7 +1603,7 @@ mod test {
             .with_partition(make_formatted_account_partition(TEST_SCRYPT_KEY));
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             MemoryAccountMetadataStore::new(),
             cred_manager_provider,
@@ -1621,7 +1621,7 @@ mod test {
             MockDiskManager::new().with_partition(make_formatted_account_partition_any_key());
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             MemoryAccountMetadataStore::new(),
             cred_manager_provider,
@@ -1641,7 +1641,7 @@ mod test {
             MockDiskManager::new().with_partition(make_unformatted_account_partition());
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             MemoryAccountMetadataStore::new(),
             cred_manager_provider,
@@ -1662,7 +1662,7 @@ mod test {
             MockDiskManager::new().with_partition(make_unformatted_account_partition());
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            SCRYPT_ONLY_OPTIONS,
+            SCRYPT_ONLY_CONFIG,
             disk_manager,
             MemoryAccountMetadataStore::new(),
             cred_manager_provider,
@@ -1687,7 +1687,7 @@ mod test {
             MockDiskManager::new().with_partition(make_unformatted_account_partition());
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            SCRYPT_ONLY_OPTIONS,
+            SCRYPT_ONLY_CONFIG,
             disk_manager,
             MemoryAccountMetadataStore::new(),
             cred_manager_provider,
@@ -1706,7 +1706,7 @@ mod test {
             MockDiskManager::new().with_partition(make_unformatted_account_partition());
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            PINWEAVER_ONLY_OPTIONS,
+            PINWEAVER_ONLY_CONFIG,
             disk_manager,
             MemoryAccountMetadataStore::new(),
             cred_manager_provider,
@@ -1731,7 +1731,7 @@ mod test {
         });
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             MemoryAccountMetadataStore::new(),
             cred_manager_provider,
@@ -1762,7 +1762,7 @@ mod test {
         });
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             MemoryAccountMetadataStore::new(),
             cred_manager_provider,
@@ -1793,7 +1793,7 @@ mod test {
         });
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             MemoryAccountMetadataStore::new(),
             cred_manager_provider,
@@ -1812,7 +1812,7 @@ mod test {
             MockDiskManager::new().with_partition(make_unformatted_account_partition());
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             MemoryAccountMetadataStore::new(),
             cred_manager_provider,
@@ -1868,7 +1868,7 @@ mod test {
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             account_metadata_store,
             cred_manager_provider,
@@ -1925,7 +1925,7 @@ mod test {
             });
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             MemoryAccountMetadataStore::new(),
             cred_manager_provider,
@@ -1956,7 +1956,7 @@ mod test {
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             account_metadata_store,
             cred_manager_provider,
@@ -2003,7 +2003,7 @@ mod test {
             .expect("enroll key");
         assert_eq!(label, TEST_PINWEAVER_CREDENTIAL_LABEL);
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             account_metadata_store,
             cred_manager_provider,
@@ -2032,7 +2032,7 @@ mod test {
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             account_metadata_store,
             cred_manager_provider,
@@ -2055,7 +2055,7 @@ mod test {
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             account_metadata_store,
             cred_manager_provider,
@@ -2101,7 +2101,7 @@ mod test {
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             account_metadata_store,
             cred_manager_provider,
@@ -2126,7 +2126,7 @@ mod test {
             MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            DEFAULT_OPTIONS,
+            DEFAULT_CONFIG,
             disk_manager,
             account_metadata_store,
             cred_manager_provider,
@@ -2150,7 +2150,7 @@ mod test {
         // This cred manager will not know about the label `TEST_PINWEAVER_CREDENTIAL_LABEL`.
         let cred_manager_provider = MockCredManagerProvider::new();
         let account_manager = AccountManager::new(
-            PINWEAVER_ONLY_OPTIONS,
+            PINWEAVER_ONLY_CONFIG,
             disk_manager,
             account_metadata_store,
             cred_manager_provider,

@@ -46,6 +46,7 @@ group("structured_config") {
     "//src/diagnostics/archivist/tests/v2:*",
     "//src/diagnostics/detect:*",
     "//src/diagnostics/sampler:*",
+    "//src/identity/bin/password_authenticator:*",
     "//src/proc/bin/galaxies/stardroid:*",
     "//src/proc/bin/galaxies/stardroid_test:*",
     "//src/proc/bin/galaxies/starless:*",

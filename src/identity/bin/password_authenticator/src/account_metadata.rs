@@ -3,13 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        account_manager::AccountId, options::Options, pinweaver::PinweaverParams,
-        scrypt::ScryptParams,
-    },
+    crate::{account_manager::AccountId, pinweaver::PinweaverParams, scrypt::ScryptParams},
     async_trait::async_trait,
     fidl_fuchsia_identity_account as faccount, fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     identity_common::StagedFile,
+    password_authenticator_config::Config,
     serde::{Deserialize, Serialize},
     std::str::FromStr,
 };
@@ -139,11 +137,11 @@ impl AccountMetadata {
         AccountMetadata { name, authenticator_metadata }
     }
 
-    /// Returns true iff this type of metadata is allowed by the supplied command line options.
-    pub fn allowed_by_options(&self, options: &Options) -> bool {
+    /// Returns true iff this type of metadata is allowed by the supplied component configuration.
+    pub fn allowed_by_config(&self, config: &Config) -> bool {
         match self.authenticator_metadata {
-            AuthenticatorMetadata::ScryptOnly(_) => options.allow_scrypt,
-            AuthenticatorMetadata::Pinweaver(_) => options.allow_pinweaver,
+            AuthenticatorMetadata::ScryptOnly(_) => config.allow_scrypt,
+            AuthenticatorMetadata::Pinweaver(_) => config.allow_pinweaver,
         }
     }
 
@@ -438,15 +436,14 @@ pub mod test {
     }
 
     #[fuchsia::test]
-    fn test_allowed_by_options() {
-        const SCRYPT_ONLY_OPTIONS: Options = Options { allow_scrypt: true, allow_pinweaver: false };
-        const PINWEAVER_ONLY_OPTIONS: Options =
-            Options { allow_scrypt: false, allow_pinweaver: true };
+    fn test_allowed_by_config() {
+        const SCRYPT_ONLY_CONFIG: Config = Config { allow_scrypt: true, allow_pinweaver: false };
+        const PINWEAVER_ONLY_CONFIG: Config = Config { allow_scrypt: false, allow_pinweaver: true };
 
-        assert_eq!(TEST_SCRYPT_METADATA.allowed_by_options(&SCRYPT_ONLY_OPTIONS), true);
-        assert_eq!(TEST_SCRYPT_METADATA.allowed_by_options(&PINWEAVER_ONLY_OPTIONS), false);
-        assert_eq!(TEST_PINWEAVER_METADATA.allowed_by_options(&SCRYPT_ONLY_OPTIONS), false);
-        assert_eq!(TEST_PINWEAVER_METADATA.allowed_by_options(&PINWEAVER_ONLY_OPTIONS), true);
+        assert_eq!(TEST_SCRYPT_METADATA.allowed_by_config(&SCRYPT_ONLY_CONFIG), true);
+        assert_eq!(TEST_SCRYPT_METADATA.allowed_by_config(&PINWEAVER_ONLY_CONFIG), false);
+        assert_eq!(TEST_PINWEAVER_METADATA.allowed_by_config(&SCRYPT_ONLY_CONFIG), false);
+        assert_eq!(TEST_PINWEAVER_METADATA.allowed_by_config(&PINWEAVER_ONLY_CONFIG), true);
     }
 
     #[fuchsia::test]

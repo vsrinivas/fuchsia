@@ -90,12 +90,24 @@ impl TestEnv {
     ) -> TestEnv {
         let builder = RealmBuilder::new().await.unwrap();
         builder.driver_test_realm_setup().await.unwrap();
-        let manifest = match config {
-            Config::PinweaverOrScrypt => "#meta/password-authenticator-pinweaver-or-scrypt.cm",
-            Config::ScryptOnly => "#meta/password-authenticator-scrypt.cm",
-        };
         let password_authenticator = builder
-            .add_child("password_authenticator", manifest, ChildOptions::new())
+            .add_child(
+                "password_authenticator",
+                "#meta/password-authenticator.cm",
+                ChildOptions::new(),
+            )
+            .await
+            .unwrap();
+        let (allow_scrypt, allow_pinweaver) = match config {
+            Config::PinweaverOrScrypt => (true, true),
+            Config::ScryptOnly => (true, false),
+        };
+        builder
+            .replace_config_value_bool(&password_authenticator, "allow_scrypt", allow_scrypt)
+            .await
+            .unwrap();
+        builder
+            .replace_config_value_bool(&password_authenticator, "allow_pinweaver", allow_pinweaver)
             .await
             .unwrap();
         builder

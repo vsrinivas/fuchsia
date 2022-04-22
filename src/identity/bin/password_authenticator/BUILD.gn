@@ -12,6 +12,7 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
+    ":password_authenticator_config",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
@@ -34,7 +35,6 @@ rustc_binary("bin") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hmac",
@@ -63,47 +63,39 @@ rustc_binary("bin") {
     "src/disk_management.rs",
     "src/keys.rs",
     "src/main.rs",
-    "src/options.rs",
     "src/pinweaver.rs",
     "src/scrypt.rs",
     "src/testing.rs",
   ]
 }
 
-# Define non-test components for each flag combination, all sharing
-# the same component name.
-fuchsia_component("component_scrypt") {
+fuchsia_component_manifest("manifest") {
   component_name = "password-authenticator"
-  manifest = "meta/password-authenticator-scrypt.cml"
+  manifest = "meta/password-authenticator.cml"
+  restricted_features = [ "structured_config" ]
+}
+
+fuchsia_component("component") {
+  cm_label = ":manifest"
   deps = [ ":bin" ]
 }
 
-fuchsia_component("component_pinweaver_or_scrypt") {
-  component_name = "password-authenticator"
-  manifest = "meta/password-authenticator-pinweaver-or-scrypt.cml"
-  deps = [ ":bin" ]
+fuchsia_structured_config_values("config") {
+  cm_label = ":manifest"
+  values = {
+    allow_scrypt = true
+    allow_pinweaver = false
+  }
 }
 
-# Define test components for each flag combination using different
-# component names so that an integration test can include more than
-# one.
-fuchsia_component("component_scrypt_for_test") {
-  testonly = true
-  component_name = "password-authenticator-scrypt"
-  manifest = "meta/password-authenticator-scrypt.cml"
-  deps = [ ":bin" ]
-}
-
-fuchsia_component("component_pinweaver_or_scrypt_for_test") {
-  testonly = true
-  component_name = "password-authenticator-pinweaver-or-scrypt"
-  manifest = "meta/password-authenticator-pinweaver-or-scrypt.cml"
-  deps = [ ":bin" ]
+fuchsia_structured_config_rust_lib("password_authenticator_config") {
+  cm_label = ":manifest"
 }
 
 fuchsia_package("password_authenticator") {
   deps = [
-    ":component_scrypt",
+    ":component",
+    ":config",
     "//src/storage/bin/minfs",
   ]
 }
