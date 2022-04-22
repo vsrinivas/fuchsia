@@ -80,7 +80,8 @@ class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, dd
   zx_status_t StartConnectDispatchThread();
 
   std::unique_ptr<thermal::AmlTSensor> tsensor_;
-  fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_;
+  // TODO(fxbug.dev/98726) Determine if annotation is necessary or field should be removed.
+  [[maybe_unused]] fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_;
   async::Loop loop_;
 };
 }  // namespace thermal
