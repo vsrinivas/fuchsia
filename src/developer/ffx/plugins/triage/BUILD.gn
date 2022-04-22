@@ -11,6 +11,7 @@ ffx_plugin("ffx_triage") {
   deps = [
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/developer/ffx/config:lib",
     "//src/developer/ffx/lib/writer:lib",
     "//src/developer/ffx/plugins/target/snapshot:ffx_snapshot",
     "//src/developer/ffx/plugins/target/snapshot:ffx_snapshot_args",

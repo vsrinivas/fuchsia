@@ -3,42 +3,56 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, bail, Context, Result},
+    anyhow::{Context, Result},
     std::{env, ffi::OsStr, fs::read_dir, path::PathBuf},
 };
 
 /// The default configs paths used if 0 paths are given.
 /// These will be prefixed by ${FUCHSIA_DIR} to get the full config file path.
-// TODO(fxbug.dev/95665): load default config path from ffx config.
-const DEFAULT_RELATIVE_CONFIG_FILES: [&str; 2] =
-    [("src/diagnostics/config/triage/"), ("src/diagnostics/config/triage/detect/")];
+const DEFAULT_INTREE_RELATIVE_CONFIG_FILES: [&str; 2] =
+    ["src/diagnostics/config/triage/", "src/diagnostics/config/triage/detect/"];
 
-/// Gets $FUCHSIA_DIR variable from the environment.
-/// Returns an error if variable is not set or contains invalid Unicode.
-fn get_fuchsia_dir_from_env() -> Result<PathBuf> {
-    match env::var_os("FUCHSIA_DIR") {
-        Some(os_str) => os_str
-            .into_string()
-            .map(PathBuf::from)
-            .map_err(|_| anyhow!("$FUCHSIA_DIR environment var contained invalid Unicode.")),
-        None => bail!("Could not find $FUCHSIA_DIR variable set in the environment."),
+/// The default config paths variable in OOT invocation.
+const DEFAULT_CONFIG_PATHS_VARIABLE: &str = "triage.config_paths";
+
+/// Gets the closest enclosing fuchsia checkout.
+/// We look for .jiri_root to determine whether a directory
+/// is a fuchsia checkout.
+/// Returns None if not working in tree.
+fn get_closed_enclosing_fuchsia_dir() -> Result<Option<PathBuf>> {
+    let mut current_dir = env::current_dir()?;
+    loop {
+        let jiri_root_path = current_dir.join(".jiri_root/");
+        if jiri_root_path.exists() {
+            return Ok(Some(current_dir));
+        }
+        if !current_dir.pop() {
+            break;
+        }
     }
+    Ok(None)
 }
 
 /// Returns the config files passed via cmdline arguments.
 /// If 0 paths are given returns default paths.
-pub fn get_or_default_config_files(config: Vec<String>) -> Result<Vec<PathBuf>> {
+pub async fn get_or_default_config_files(config: Vec<String>) -> Result<Vec<PathBuf>> {
     let config_paths: Vec<PathBuf> = if config.is_empty() {
-        let fuchsia_dir = get_fuchsia_dir_from_env()?;
-
-        DEFAULT_RELATIVE_CONFIG_FILES
-            .iter()
-            .map(|default_file| {
-                let mut dir = fuchsia_dir.clone();
-                dir.push(default_file);
-                dir
-            })
-            .collect()
+        if let Some(fuchsia_dir) = get_closed_enclosing_fuchsia_dir()? {
+            DEFAULT_INTREE_RELATIVE_CONFIG_FILES
+                .iter()
+                .map(|default_file| {
+                    let mut dir = fuchsia_dir.clone();
+                    dir.push(default_file);
+                    dir
+                })
+                .collect()
+        } else {
+            // OOT default configs are expected to be set in triage.config_path variable.
+            ffx_config::get(DEFAULT_CONFIG_PATHS_VARIABLE).await.context(format!(
+                "Please set the default config using `ffx config set {} \"{}\"`.",
+                DEFAULT_CONFIG_PATHS_VARIABLE, r#"[\"config1.triage\",\"default/config2.triage\"]"#
+            ))?
+        }
     } else {
         config.into_iter().map(PathBuf::from).collect()
     };
@@ -84,22 +98,76 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn default_config() {
-        env::set_var("FUCHSIA_DIR", "/fake/fuchsia/");
+    async fn innermost_fuchsia_dir_default_config() {
+        let tempdir = tempdir().expect("Unable to create tempdir for testing.");
+        let root = tempdir.path();
+
+        let outer_jiri_root = root.join(".jiri_root");
+        let inner_dir = root.join("fake");
+        let innermost_checkout = inner_dir.join("fuchsia");
+        let inner_jiri_root = innermost_checkout.join(".jiri_root");
+        let inner_subdir = innermost_checkout.join("subdir");
+
+        fs::create_dir_all(&outer_jiri_root).expect("Unable to create outer jiri root directory.");
+        fs::create_dir_all(&inner_jiri_root).expect("Unable to create inner jiri root directory.");
+        fs::create_dir_all(&inner_subdir).expect("Unable to create inner subdir root directory.");
+
+        // Directory structure is
+        // $root/.jiri_root
+        // $root/fake/fuchsia/
+        // $root/fake/fuchsia/.jiri_root
+        // We invoke the plugin from $root/fake/fuchsia/subdir/
+
+        env::set_current_dir(&inner_subdir).expect("Unable to change current dir for testing.");
+
         let config_files =
-            get_or_default_config_files(vec![]).expect("Unable to get config files.");
+            get_or_default_config_files(vec![]).await.expect("Unable to get config files.");
+
+        // Get absolute path as $TMPDIR might contain symlinks.
+        // Eg. on macOS /var@ -> /private/var
+        // Hence for tempdir, env::current_dir()? will return /private/var/...
+        // but tempdir() will return /var/... .
+        let canonical_innermost_path = fs::canonicalize(&innermost_checkout)
+            .expect("Unable to get canonical path to fuchsia checkout.");
 
         assert_eq!(
             config_files,
             &[
-                Path::new("/fake/fuchsia/src/diagnostics/config/triage/"),
-                Path::new("/fake/fuchsia/src/diagnostics/config/triage/detect/")
+                canonical_innermost_path.join("src/diagnostics/config/triage/"),
+                canonical_innermost_path.join("src/diagnostics/config/triage/detect/")
             ]
         );
     }
 
     #[fuchsia::test]
-    fn directory_passed_to_config() {
+    async fn oot_default_config() {
+        ffx_config::init(&[], None, None).expect("Unable to initialize ffx_config.");
+
+        let oot_test_default_configs =
+            [Path::new("default/configs/a.triage"), Path::new("configs/b.triage")];
+
+        let tempdir = tempdir().expect("Unable to create tempdir for testing.");
+        let root = tempdir.path();
+
+        env::set_current_dir(&root).expect("Unable to change current dir for testing.");
+
+        ffx_config::set(
+            (DEFAULT_CONFIG_PATHS_VARIABLE, ffx_config::ConfigLevel::User),
+            serde_json::json!(oot_test_default_configs),
+        )
+        .await
+        .expect("Unable to set oot default config variable.");
+
+        let config_files =
+            get_or_default_config_files(vec![]).await.expect("Unable to get config files.");
+
+        // One reason of failure might be the existence of .jiri_root/ in the $TEMPDIR parent
+        // path due to which OOT configs are not picked up.
+        assert_eq!(config_files, oot_test_default_configs);
+    }
+
+    #[fuchsia::test]
+    async fn directory_passed_to_config() {
         let tempdir = tempdir().expect("Unable to create tempdir for testing.");
         let root = tempdir.path();
         let config_file1 = create_empty_file(root, "config1.triage");
@@ -113,6 +181,7 @@ mod tests {
             root.to_string_lossy().into(),
             config_file2.path().to_string_lossy().into(),
         ])
+        .await
         .expect("Unable to get config files.");
 
         assert_eq!(config_files, &[&config_file1, config_file2.path()]);

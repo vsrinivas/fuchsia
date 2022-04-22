@@ -35,7 +35,7 @@ async fn triage_impl(
 ) -> Result<()> {
     let TriageCommand { config, data, tags, exclude_tags } = cmd;
 
-    let config_files = config::get_or_default_config_files(config)?;
+    let config_files = config::get_or_default_config_files(config).await?;
 
     let data_directory = match data {
         Some(d) => PathBuf::from(d),
