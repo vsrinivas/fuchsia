@@ -117,7 +117,7 @@ zx::status<> vmxon_task(void* context, cpu_num_t cpu_num) {
   // instruction or immediately prior to execution of the VMXOFF instruction.
   // Either prevents potentially undesired retention of information cached from
   // EPT paging structures between separate uses of VMX operation.
-  status = invept(InvEpt::ALL_CONTEXT, 0);
+  status = invept(InvEpt::GLOBAL, 0);
   if (status != ZX_OK) {
     dprintf(CRITICAL, "Failed to invalidate all EPTs on CPU %u\n", cpu_num);
     return zx::error(status);

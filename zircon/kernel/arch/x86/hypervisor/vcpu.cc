@@ -334,8 +334,8 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
   vmcs.Write(VmcsField64::EPT_POINTER, eptp);
 
   // From Volume 3, Section 28.3.3.4: Software can use an INVEPT with type all
-  // ALL_CONTEXT to prevent undesired retention of cached EPT information. Here,
-  // we only care about invalidating information associated with this EPTP.
+  // "all-context" to prevent undesired retention of cached EPT information.
+  // We only care about invalidating information associated with this EPTP.
   invept(InvEpt::SINGLE_CONTEXT, eptp);
 
   // Setup MSR handling.

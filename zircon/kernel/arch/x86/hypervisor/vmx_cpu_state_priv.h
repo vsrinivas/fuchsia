@@ -65,7 +65,7 @@ struct VmxRegion {
 //   invalidates mappings associated with all EPTPs.
 enum class InvEpt : uint64_t {
   SINGLE_CONTEXT = 1,
-  ALL_CONTEXT = 2,  // Global invalidation.
+  GLOBAL = 2,
 };
 
 zx_status_t invept(InvEpt invalidation, uint64_t eptp);
