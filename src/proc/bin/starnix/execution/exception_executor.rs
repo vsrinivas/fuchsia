@@ -84,7 +84,7 @@ fn block_while_stopped(task: &Task) {
         if task.exit_status.lock().is_some() {
             return;
         }
-        if !task.thread_group.running_status.read().stopped {
+        if !task.thread_group.read().stopped {
             return;
         }
         // Result is not needed, as this is not in a syscall.

@@ -246,7 +246,7 @@ pub fn sys_kill(
             // "If pid is less than -1, then sig is sent to every process in the
             // process group whose ID is -pid."
             let process_group_id = match pid {
-                0 => current_task.thread_group.process_group.read().leader,
+                0 => current_task.thread_group.read().process_group.leader,
                 _ => -pid,
             };
 
@@ -485,7 +485,7 @@ pub fn sys_waitid(
         P_PID => ProcessSelector::Pid(id),
         P_ALL => ProcessSelector::Any,
         P_PGID => ProcessSelector::Pgid(if id == 0 {
-            current_task.thread_group.process_group.read().leader
+            current_task.thread_group.read().process_group.leader
         } else {
             id
         }),
@@ -516,7 +516,7 @@ pub fn sys_wait4(
     let waiting_options = WaitingOptions::new_for_wait4(options)?;
 
     let selector = if pid == 0 {
-        ProcessSelector::Pgid(current_task.thread_group.process_group.read().leader)
+        ProcessSelector::Pgid(current_task.thread_group.read().process_group.leader)
     } else if pid == -1 {
         ProcessSelector::Any
     } else if pid > 0 {
@@ -1200,17 +1200,11 @@ mod tests {
     #[::fuchsia::test]
     fn test_stop_cont() {
         let (_kernel, task) = create_kernel_and_task();
-        let mut child = task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
+        let mut child = task.clone_task_for_test(0);
 
         assert_eq!(sys_kill(&task, child.id, UncheckedSignal::from(SIGSTOP)), Ok(()));
         // Child should be stopped immediately.
-        assert_eq!(child.thread_group.running_status.read().stopped, true);
+        assert_eq!(child.thread_group.read().stopped, true);
         dequeue_signal(&mut child);
 
         // Child is now waitable using WUNTRACED.
@@ -1226,7 +1220,7 @@ mod tests {
 
         assert_eq!(sys_kill(&task, child.id, UncheckedSignal::from(SIGCONT)), Ok(()));
         // Child should be restarted immediately.
-        assert_eq!(child.thread_group.running_status.read().stopped, false);
+        assert_eq!(child.thread_group.read().stopped, false);
         dequeue_signal(&mut child);
 
         // Child is now waitable using WUNTRACED.
@@ -1306,32 +1300,30 @@ mod tests {
     #[::fuchsia::test]
     fn test_no_error_when_zombie() {
         let (_kernel, current_task) = create_kernel_and_task();
-        // Send the signal to the task.
-        assert!(
-            sys_kill(&current_task, current_task.get_pid(), UncheckedSignal::from(SIGCHLD)).is_ok()
-        );
-        let zombie = ZombieProcess { pid: 0, pgid: 0, uid: 0, exit_status: ExitStatus::Exit(1) };
-        current_task.thread_group.zombie_children.lock().push(zombie.clone());
+        let child = current_task.clone_task_for_test(0);
+        let expected_zombie = ZombieProcess {
+            pid: child.id,
+            pgid: child.thread_group.read().process_group.leader,
+            uid: 0,
+            exit_status: ExitStatus::Exit(1),
+        };
+        child.thread_group.exit(ExitStatus::Exit(1));
+        std::mem::drop(child);
+
         assert_eq!(
             wait_on_pid(
                 &current_task,
                 ProcessSelector::Any,
                 &WaitingOptions::new_for_wait4(0).expect("WaitingOptions")
             ),
-            Ok(Some(zombie))
+            Ok(Some(expected_zombie))
         );
     }
 
     #[::fuchsia::test]
     fn test_waiting_for_child() {
         let (_kernel, task) = create_kernel_and_task();
-        let child = task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
+        let child = task.clone_task_for_test(0);
 
         // No child is currently terminated.
         assert_eq!(
@@ -1371,13 +1363,7 @@ mod tests {
     #[::fuchsia::test]
     fn test_sigkill() {
         let (_kernel, current_task) = create_kernel_and_task();
-        let child = current_task
-            .clone_task(
-                0,
-                UserRef::new(UserAddress::default()),
-                UserRef::new(UserAddress::default()),
-            )
-            .expect("clone process");
+        let child = current_task.clone_task_for_test(0);
 
         // Send SigKill to the child. As kill is handled immediately, no need to dequeue signals.
         send_signal(&child, SignalInfo::default(SIGKILL));
@@ -1459,7 +1445,7 @@ mod tests {
         let address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE as u64);
         assert_eq!(sys_waitid(&current_task, P_PGID, child2_pid, address, WEXITED), Ok(()));
         // The previous wait matched child2, only child1 should be in the available zombies.
-        assert_eq!(current_task.thread_group.zombie_children.lock()[0].pid, child1_pid);
+        assert_eq!(current_task.thread_group.read().zombie_children[0].pid, child1_pid);
 
         assert_eq!(sys_waitid(&current_task, P_PGID, 0, address, WEXITED), Ok(()));
     }

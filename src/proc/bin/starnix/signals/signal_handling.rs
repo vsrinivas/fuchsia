@@ -246,7 +246,7 @@ pub fn get_signal_target(
     // TODO(fxb/96632): Consider more than the main thread or the first thread in the thread group
     // to dispatch the signal.
     pids.get_task(thread_group.leader)
-        .or_else(|| thread_group.tasks.read().iter().next().map(|p| pids.get_task(*p)).flatten())
+        .or_else(|| thread_group.read().tasks.iter().next().map(|p| pids.get_task(*p)).flatten())
 }
 
 /// Represents the action to take when signal is delivered.

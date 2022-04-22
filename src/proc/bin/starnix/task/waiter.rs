@@ -59,7 +59,7 @@ impl InterruptionType {
         match self {
             InterruptionType::Signal => signal_state.is_any_pending(),
             InterruptionType::Exit => task.exit_status.lock().is_some(),
-            InterruptionType::Continue => !task.thread_group.running_status.read().stopped,
+            InterruptionType::Continue => !task.thread_group.read().stopped,
             InterruptionType::ChildChange => false,
         }
     }

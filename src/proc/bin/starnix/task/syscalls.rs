@@ -93,7 +93,7 @@ pub fn sys_gettid(current_task: &CurrentTask) -> Result<pid_t, Errno> {
 }
 
 pub fn sys_getppid(current_task: &CurrentTask) -> Result<pid_t, Errno> {
-    Ok(*current_task.thread_group.parent.read())
+    Ok(current_task.thread_group.read().parent)
 }
 
 fn get_task_or_current(current_task: &CurrentTask, pid: pid_t) -> Result<Arc<Task>, Errno> {
@@ -105,15 +105,15 @@ fn get_task_or_current(current_task: &CurrentTask, pid: pid_t) -> Result<Arc<Tas
 }
 
 pub fn sys_getsid(current_task: &CurrentTask, pid: pid_t) -> Result<pid_t, Errno> {
-    Ok(get_task_or_current(current_task, pid)?.thread_group.process_group.read().session.leader)
+    Ok(get_task_or_current(current_task, pid)?.thread_group.read().process_group.session.leader)
 }
 
 pub fn sys_getpgrp(current_task: &CurrentTask) -> Result<pid_t, Errno> {
-    Ok(current_task.thread_group.process_group.read().leader)
+    Ok(current_task.thread_group.read().process_group.leader)
 }
 
 pub fn sys_getpgid(current_task: &CurrentTask, pid: pid_t) -> Result<pid_t, Errno> {
-    Ok(get_task_or_current(current_task, pid)?.thread_group.process_group.read().leader)
+    Ok(get_task_or_current(current_task, pid)?.thread_group.read().process_group.leader)
 }
 
 pub fn sys_setpgid(current_task: &CurrentTask, pid: pid_t, pgid: pid_t) -> Result<(), Errno> {
@@ -272,7 +272,7 @@ pub fn sys_getitimer(
     which: u32,
     user_curr_value: UserRef<itimerval>,
 ) -> Result<(), Errno> {
-    let itimers = current_task.thread_group.itimers.read();
+    let itimers = current_task.thread_group.read().itimers;
     let timer = itimers.get(which as usize).ok_or(errno!(EINVAL))?;
     current_task.mm.write_object(user_curr_value, timer)?;
     Ok(())
@@ -287,10 +287,7 @@ pub fn sys_setitimer(
     let mut new_value = itimerval::default();
     current_task.mm.read_object(user_new_value, &mut new_value)?;
 
-    let mut itimers = current_task.thread_group.itimers.write();
-    let timer = itimers.get_mut(which as usize).ok_or(errno!(EINVAL))?;
-    let old_value = *timer;
-    *timer = new_value;
+    let old_value = current_task.thread_group.set_itimer(which, new_value)?;
 
     if !user_old_value.is_null() {
         current_task.mm.write_object(user_old_value, &old_value)?;

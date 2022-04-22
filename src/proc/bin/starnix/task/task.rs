@@ -286,11 +286,12 @@ impl Task {
             } else {
                 self.thread_group.signal_actions.fork()
             };
+            let process_group = self.thread_group.read().process_group.clone();
             create_zircon_process(
                 kernel,
                 Some(&self.thread_group),
                 pid,
-                self.thread_group.process_group.read().clone(),
+                process_group,
                 signal_actions,
                 &comm,
             )?
@@ -759,8 +760,7 @@ impl CurrentTask {
 
         // TODO: POSIX timers are not preserved.
 
-        self.thread_group.set_name(&path)?;
-        *self.thread_group.did_exec.write() = true;
+        self.thread_group.mark_executed(&path)?;
 
         // Get the basename of the path, which will be used as the name displayed with
         // `prtcl(PR_GET_NAME)` and `/proc/self/stat`
@@ -839,7 +839,7 @@ mod test {
         let child_task = current_task.clone_task_for_test(0);
         assert_ne!(current_task.get_pid(), child_task.get_pid());
         assert_ne!(current_task.get_tid(), child_task.get_tid());
-        assert_eq!(current_task.get_pid(), *child_task.thread_group.parent.read());
+        assert_eq!(current_task.get_pid(), child_task.thread_group.read().parent);
     }
 
     #[::fuchsia::test]

@@ -587,8 +587,8 @@ mod tests {
         // Opening the main terminal should not set the terminal of the session.
         assert!(task
             .thread_group
-            .process_group
             .read()
+            .process_group
             .session
             .controlling_terminal
             .read()
@@ -599,8 +599,8 @@ mod tests {
                 .expect("open file");
         assert!(task
             .thread_group
-            .process_group
             .read()
+            .process_group
             .session
             .controlling_terminal
             .read()
@@ -611,8 +611,8 @@ mod tests {
             open_file_with_flags(&task, &fs, b"0", OpenFlags::RDWR).expect("open file");
         assert!(task
             .thread_group
-            .process_group
             .read()
+            .process_group
             .session
             .controlling_terminal
             .read()
@@ -635,14 +635,14 @@ mod tests {
         set_controlling_terminal(&task1, &opened_main, false).unwrap();
         assert_eq!(
             ioctl::<i32>(&task1, &opened_main, TIOCGPGRP, &0),
-            Ok(task1.thread_group.process_group.read().leader)
+            Ok(task1.thread_group.read().process_group.leader)
         );
         assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCGPGRP, &0), Err(ENOTTY));
 
         set_controlling_terminal(&task2, &opened_replica, false).unwrap();
         assert_eq!(
             ioctl::<i32>(&task2, &opened_replica, TIOCGPGRP, &0),
-            Ok(task2.thread_group.process_group.read().leader)
+            Ok(task2.thread_group.read().process_group.leader)
         );
     }
 
@@ -691,8 +691,8 @@ mod tests {
 
         assert!(task1
             .thread_group
-            .process_group
             .read()
+            .process_group
             .session
             .controlling_terminal
             .read()
@@ -706,9 +706,9 @@ mod tests {
         task1.thread_group.setsid().expect("setsid");
         let task2 = task1.clone_task_for_test(0);
         task2.thread_group.setpgid(&task2, 0).expect("setpgid");
-        let task2_pgid = task2.thread_group.process_group.read().leader;
+        let task2_pgid = task2.thread_group.read().process_group.leader;
 
-        assert_ne!(task2_pgid, task1.thread_group.process_group.read().leader);
+        assert_ne!(task2_pgid, task1.thread_group.read().process_group.leader);
 
         let fs = dev_pts_fs(&kernel);
         let _opened_main = open_ptmx_and_unlock(&init, &fs).expect("ptmx");
@@ -723,7 +723,7 @@ mod tests {
         // The foreground process group should be the one of task1
         assert_eq!(
             ioctl::<i32>(&task1, &opened_replica, TIOCGPGRP, &0),
-            Ok(task1.thread_group.process_group.read().leader)
+            Ok(task1.thread_group.read().process_group.leader)
         );
 
         // Cannot change the foreground process group to a negative pid.
@@ -738,7 +738,7 @@ mod tests {
                 &task2,
                 &opened_replica,
                 TIOCSPGRP,
-                &init.thread_group.process_group.read().leader
+                &init.thread_group.read().process_group.leader
             ),
             Err(EPERM)
         );
@@ -750,8 +750,8 @@ mod tests {
         assert_eq!(
             task1
                 .thread_group
-                .process_group
                 .read()
+                .process_group
                 .session
                 .controlling_terminal
                 .read()
@@ -788,8 +788,8 @@ mod tests {
         ioctl::<i32>(&task2, &opened_replica, TIOCNOTTY, &0).expect("detach terminal");
         assert!(task2
             .thread_group
-            .process_group
             .read()
+            .process_group
             .session
             .controlling_terminal
             .read()

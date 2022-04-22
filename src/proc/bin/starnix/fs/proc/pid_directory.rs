@@ -114,8 +114,8 @@ impl DirectoryDelegate for TaskListDirectory {
     fn list(&self, _fs: &Arc<FileSystem>) -> Result<Vec<DynamicDirectoryEntry>, Errno> {
         Ok(self
             .thread_group
-            .tasks
             .read()
+            .tasks
             .iter()
             .map(|tid| DynamicDirectoryEntry {
                 entry_type: DirectoryEntryType::DIR,
@@ -131,7 +131,7 @@ impl DirectoryDelegate for TaskListDirectory {
             .parse::<pid_t>()
             .map_err(|_| errno!(ENOENT))?;
         // Make sure the tid belongs to this process.
-        if !self.thread_group.tasks.read().contains(&tid) {
+        if !self.thread_group.read().tasks.contains(&tid) {
             return error!(ENOENT);
         }
         let task =
