@@ -696,16 +696,11 @@ impl Path {
                     .zip(data.weight.par_iter_mut().with_min_len(MIN_LEN)),
             )
             .for_each(|(x, (y, weight))| {
-                let old_x = *x;
-                let old_y = *y;
-                let old_weight = *weight;
-
-                *x = transform[0]
-                    .mul_add(old_x, transform[1].mul_add(old_y, transform[2] * old_weight));
-                *y = transform[3]
-                    .mul_add(old_x, transform[4].mul_add(old_y, transform[5] * old_weight));
-                *weight = transform[6]
-                    .mul_add(old_x, transform[7].mul_add(old_y, transform[8] * old_weight));
+                (*x, *y, *weight) = (
+                    transform[0].mul_add(*x, transform[1].mul_add(*y, transform[2] * *weight)),
+                    transform[3].mul_add(*x, transform[4].mul_add(*y, transform[5] * *weight)),
+                    transform[6].mul_add(*x, transform[7].mul_add(*y, transform[8] * *weight)),
+                );
             });
 
         Self { inner: Rc::new(RefCell::new(data)), transform: None }
