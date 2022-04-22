@@ -3,8 +3,6 @@
 
 <<../../_common/fidl/_diagnostics_intro.md>>
 
-<<../../_common/fidl/_diagnostics_routes.md>>
-
 <<../../_common/fidl/_diagnostics_fidlcat.md>>
 
 <<../../_common/fidl/_diagnostics_inspect.md>>
