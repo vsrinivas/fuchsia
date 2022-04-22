@@ -9,10 +9,12 @@
 
 #include <acpica/acpi.h>
 
-// TODO(fxbug.dev/94772): We should disable interrupts for the ACPI call.
 void poweroff(void) {
   ACPI_STATUS status = AcpiEnterSleepStatePrep(5);
   if (status == AE_OK) {
+    // AcpiEnterSleepState is usually called with interrupts disabled so that the interrupt state
+    // can be saved and restored on wake. However for power off (sleep state 5) AcpiEnterSleepState
+    // can be called without interrupts disabled as caches are dropped regardless.
     AcpiEnterSleepState(5);
   }
 }
