@@ -16,6 +16,7 @@ use anyhow::{ensure, Error};
 use euclid::size2;
 use fuchsia_framebuffer::ImageId;
 use fuchsia_scenic::View;
+use fuchsia_trace::instant;
 use fuchsia_zircon::{Event, Time};
 use futures::channel::mpsc::{unbounded, UnboundedSender};
 
@@ -540,6 +541,15 @@ impl ViewController {
 
     pub(crate) fn handle_metrics_changed(&mut self, metrics: Size) {
         if self.metrics != metrics {
+            instant!(
+                "gfx",
+                "ViewController::metrics_changed",
+                fuchsia_trace::Scope::Process,
+                "old_width" => self.metrics.width as f64,
+                "old_height" => self.metrics.height as f64,
+                "new_width" => metrics.width as f64,
+                "new_height" => metrics.height as f64
+            );
             self.metrics = metrics;
             self.render_requested = true;
             self.send_update_message();
@@ -548,6 +558,15 @@ impl ViewController {
 
     pub(crate) fn handle_size_changed(&mut self, new_size: Size) {
         if self.physical_size != new_size {
+            instant!(
+                "gfx",
+                "ViewController::size_changed",
+                fuchsia_trace::Scope::Process,
+                "old_width" => self.physical_size.width as f64,
+                "old_height" => self.physical_size.height as f64,
+                "new_width" => new_size.width as f64,
+                "new_height" => new_size.height as f64
+            );
             self.physical_size = new_size;
             self.assistant
                 .resize(&new_size)
