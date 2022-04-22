@@ -559,4 +559,9 @@
         label: "Sys Manager",
         moniker: "sysmgr.cmx",
     },
+    {
+        id: 213,
+        label: "SSHD Host",
+        moniker: "core/sshd-host",
+    },
 ]
