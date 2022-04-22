@@ -6,4 +6,4 @@ drivers, and libraries in [/zircon/system](/zircon/system) necessary for the
 system to boot, talk to hardware, load userspace processes and run them,
 etc. Fuchsia builds a much larger OS on top of this foundation.
 
-See the documentation at: https://fuchsia.dev/fuchsia-src/zircon
+See the documentation at: https://fuchsia.dev/fuchsia-src/concepts/kernel
