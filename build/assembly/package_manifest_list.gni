@@ -1,0 +1,50 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Create a list of package manifests from a list of GN targets and their
+# dependencies.
+#
+# The list is in JSON format, using the `package_output_manifests` metadata key.
+#
+# Parameters
+#
+#  filename
+#    [file path] The output file to create
+#
+#  deps
+#    [list of targets] List of GN targets (as usual), which are to be walked to
+#    find fuchsia_package() metadata.
+#
+#  additional_walk_keys [optional]
+#    [list of strings] An additional set of "barriers" to add to the 'walk_keys'
+#    list used with 'generated_file()'.
+#
+#  GN Usual
+#    testonly, visibility
+#
+template("list_package_manifests") {
+  walk_keys_entries = [
+    "package_barrier",
+    "assembly_package_barrier",
+  ]
+
+  if (defined(invoker.additional_walk_keys)) {
+    walk_keys_entries += invoker.additional_walk_keys
+  }
+
+  generated_file(target_name) {
+    data_keys = [ "package_output_manifests" ]
+    walk_keys = walk_keys_entries
+    outputs = [ invoker.filename ]
+    output_conversion = "json"
+    rebase = root_build_dir
+
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+  }
+}
