@@ -167,7 +167,7 @@ template("spinel_vk_target") {
                                "skip_spirv_opt",
                              ])
       if (!defined(skip_spirv_opt)) {
-        skip_spirv_opt = true  # FIXME
+        skip_spirv_opt = false
       }
       gen_debug_shaders = true
     }
@@ -186,7 +186,7 @@ template("spinel_vk_target") {
                                "skip_spirv_opt",
                              ])
       if (!defined(skip_spirv_opt)) {
-        skip_spirv_opt = true  # FIXME
+        skip_spirv_opt = false
       }
       gen_debug_shaders = true
     }
