@@ -9,9 +9,8 @@
 #include <numeric>
 #include <sstream>
 
-#include "base/check_op.h"
-#include "base/numerics/checked_math.h"
-#include "media/base/bitrate.h"
+// #include "base/check_op.h"
+// #include "base/numerics/checked_math.h"
 
 namespace {
 

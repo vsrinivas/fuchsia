@@ -10,14 +10,17 @@
 #include <memory>
 #include <optional>
 
+#include <fbl/algorithm.h>
 #include <lib/fit/function.h>
 #include <lib/stdcompat/span.h>
 #include <lib/syslog/cpp/macros.h>
 #include <safemath/safe_math.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
 #include <zircon/compiler.h>
 #include "safemath/safe_conversions.h"
 #include "time_delta.h"
+
+#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 #define MEDIA_EXPORT
 #define MEDIA_GPU_EXPORT
@@ -31,6 +34,12 @@
 #define DCHECK_NE(a, b) FX_DCHECK((a) != (b))
 
 #define CHECK FX_CHECK
+#define CHECK_LT(a, b) FX_CHECK((a) < (b))
+#define CHECK_LE(a, b) FX_CHECK((a) <= (b))
+#define CHECK_GT(a, b) FX_CHECK((a) > (b))
+#define CHECK_GE(a, b) FX_CHECK((a) >= (b))
+#define CHECK_EQ(a, b) FX_CHECK((a) == (b))
+
 #ifndef DLOG
 #define DLOG FX_DLOGS
 #endif
@@ -53,7 +62,11 @@
   FX_LAZY_STREAM(FX_LOG_STREAM(ERROR, ""), (condition))
 #endif
 
+#define DVLOGF(verbosity) FX_DVLOGS(verbosity)
+#define VLOGF(verbosity) FX_VLOGS(verbosity)
+
 #define NOTREACHED FX_NOTREACHED
+#define NOTIMPLEMENTED FX_NOTIMPLEMENTED
 
 #define WARN_UNUSED_RESULT __WARN_UNUSED_RESULT
 #define FALLTHROUGH __FALLTHROUGH
@@ -83,6 +96,9 @@ constexpr size_t size(const T (&array)[N]) noexcept {
   return N;
 }
 
+template <typename T, typename... Args>
+inline auto MakeRefCounted = std::make_shared<T, Args...>;
+
 // base/span.h
 template <typename T>
 using span = cpp20::span<T>;
@@ -92,14 +108,14 @@ template <typename T>
 using CheckedNumeric = safemath::internal::CheckedNumeric<T>;
 using safemath::checked_cast;
 using safemath::IsValueInRangeForNumericType;
-
-template <typename Dst, typename Src>
-constexpr Dst strict_cast(Src value) {
-  return static_cast<Dst>(value);
-}
+using safemath::saturated_cast;
+using safemath::strict_cast;
 
 // base/callback_forward.h
 using OnceClosure = fit::callback<void()>;
+using RepeatingClosure = fit::function<void()>;
+template <typename T>
+using OnceCallback = fit::callback<T>;
 
 // base/containers/circular_deque.h
 template <typename T>
@@ -138,6 +154,42 @@ inline uint64_t HostToNet64(uint64_t x) {
   return __builtin_bswap64(x);
 }
 
+// base/strings/stringprintf.h
+inline auto StringPrintf = fxl::StringPrintf;
+
+// base/bits.h
+namespace bits {
+template <class T,
+          class U,
+          class L = std::conditional_t<sizeof(T) >= sizeof(U), T, U>,
+          class = std::enable_if_t<std::is_unsigned_v<T>>,
+          class = std::enable_if_t<std::is_unsigned_v<U>>>
+constexpr const L AlignUp(const T& val_, const U& multiple_) {
+  const L val = static_cast<L>(val_);
+  const L multiple = static_cast<L>(multiple_);
+  return val == 0 ? 0
+         : cpp20::has_single_bit<L>(multiple)
+             ? (val + (multiple - 1)) & ~(multiple - 1)
+             : ((val + (multiple - 1)) / multiple) * multiple;
+}
+template <typename T, unsigned bits = sizeof(T) * 8>
+constexpr typename std::enable_if<std::is_unsigned<T>::value && sizeof(T) <= 8,
+                                  unsigned>::type
+CountLeadingZeroBits(T value) {
+  static_assert(bits > 0, "invalid instantiation");
+  return value ? bits == 64
+                     ? __builtin_clzll(static_cast<uint64_t>(value))
+                     : __builtin_clz(static_cast<uint32_t>(value)) - (32 - bits)
+               : bits;
+}
+
+constexpr int Log2Ceiling(uint32_t n) {
+  // When n == 0, we want the function to return -1.
+  // When n == 0, (n - 1) will underflow to 0xFFFFFFFF, which is
+  // why the statement below starts with (n ? 32 : -1).
+  return (n ? 32 : -1) - CountLeadingZeroBits(n - 1);
+}
+}  // namespace bits
 }  // namespace base
 
 namespace media {

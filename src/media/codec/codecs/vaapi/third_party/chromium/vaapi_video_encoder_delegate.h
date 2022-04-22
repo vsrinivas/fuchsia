@@ -5,25 +5,32 @@
 #ifndef MEDIA_GPU_VAAPI_VAAPI_VIDEO_ENCODER_DELEGATE_H_
 #define MEDIA_GPU_VAAPI_VAAPI_VIDEO_ENCODER_DELEGATE_H_
 
-#include <va/va.h>
 #include <vector>
 
-#include "base/callback.h"
-#include "base/containers/queue.h"
-#include "base/memory/scoped_refptr.h"
-#include "base/sequence_checker.h"
-#include "base/time/time.h"
+#include <va/va.h>
+
+// Fuchsia change.
+// #include "base/callback.h"
+// #include "base/containers/queue.h"
+// #include "base/memory/scoped_refptr.h"
+// #include "base/sequence_checker.h"
+// #include "base/time/time.h"
 #include "media/base/video_bitrate_allocation.h"
-#include "media/base/video_codecs.h"
+// #include "media/base/video_codecs.h"
 #include "media/video/video_encode_accelerator.h"
-#include "media/video/video_encoder_info.h"
-#include "ui/gfx/geometry/size.h"
+// #include "media/video/video_encoder_info.h"
+#include "src/media/codec/codecs/vaapi/vaapi_utils.h"
+#include "src/media/third_party/chromium_media/chromium_utils.h"
+#include "src/media/third_party/chromium_media/geometry.h"
 
 namespace media {
 struct BitstreamBufferMetadata;
 class CodecPicture;
-class ScopedVABuffer;
-class VideoFrame;
+// Fuchsia addition:
+class VideoFrame {
+ public:
+  base::TimeDelta timestamp() { return base::TimeDelta(); }
+};
 class VaapiWrapper;
 
 // An VaapiVideoEncoderDelegate  performs high-level, platform-independent

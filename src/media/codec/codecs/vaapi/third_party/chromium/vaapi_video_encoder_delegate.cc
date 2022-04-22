@@ -2,19 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "media/gpu/vaapi/vaapi_video_encoder_delegate.h"
+#include "vaapi_video_encoder_delegate.h"
 
 #include <va/va.h>
 
-#include "base/memory/ref_counted_memory.h"
-#include "media/base/video_frame.h"
-#include "media/gpu/codec_picture.h"
+// Fuchsia change.
+// #include "base/memory/ref_counted_memory.h"
+// #include "media/base/video_frame.h"
+// #include "media/gpu/codec_picture.h"
 #include "media/gpu/gpu_video_encode_accelerator_helpers.h"
-#include "media/gpu/macros.h"
-#include "media/gpu/vaapi/va_surface.h"
-#include "media/gpu/vaapi/vaapi_utils.h"
-#include "media/gpu/vaapi/vaapi_wrapper.h"
+// #include "media/gpu/macros.h"
+// #include "media/gpu/vaapi/va_surface.h"
+// #include "media/gpu/vaapi/vaapi_utils.h"
+// #include "media/gpu/vaapi/vaapi_wrapper.h"
 #include "media/video/video_encode_accelerator.h"
+#include "vaapi_wrapper.h"
 
 namespace media {
 
@@ -93,10 +95,9 @@ VaapiVideoEncoderDelegate::EncodeResult::metadata() const {
   return metadata_;
 }
 
-VaapiVideoEncoderDelegate::VaapiVideoEncoderDelegate(
-    scoped_refptr<VaapiWrapper> vaapi_wrapper,
-    base::RepeatingClosure error_cb)
-    : vaapi_wrapper_(vaapi_wrapper), error_cb_(error_cb) {
+VaapiVideoEncoderDelegate::VaapiVideoEncoderDelegate(scoped_refptr<VaapiWrapper> vaapi_wrapper,
+                                                     base::RepeatingClosure error_cb)
+    : vaapi_wrapper_(vaapi_wrapper), error_cb_(std::move(error_cb)) {
   DETACH_FROM_SEQUENCE(sequence_checker_);
 }
 

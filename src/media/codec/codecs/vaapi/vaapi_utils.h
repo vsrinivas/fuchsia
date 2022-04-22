@@ -66,6 +66,9 @@ class ScopedBufferID {
   FXL_DISALLOW_COPY_AND_ASSIGN(ScopedBufferID);
 };
 
+// For chromium code.
+using ScopedVABuffer = ScopedBufferID;
+
 class ScopedContextID {
  public:
   explicit ScopedContextID(VAContextID buffer_id) : id_(buffer_id) {}

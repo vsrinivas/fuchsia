@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MEDIA_GPU_VAAPI_H264_VAAPI_VIDEO_ENCODER_DELEGATE_H_
-#define MEDIA_GPU_VAAPI_H264_VAAPI_VIDEO_ENCODER_DELEGATE_H_
+#ifndef MEDIA_GPU_H264_VAAPI_VIDEO_ENCODER_DELEGATE_H_
+#define MEDIA_GPU_H264_VAAPI_VIDEO_ENCODER_DELEGATE_H_
 
 #include <stddef.h>
 
-#include "base/containers/circular_deque.h"
+// Fuchsia change.
+// #include "base/containers/circular_deque.h"
 #include "media/filters/h264_bitstream_buffer.h"
 #include "media/gpu/h264_dpb.h"
-#include "media/gpu/vaapi/vaapi_video_encoder_delegate.h"
+#include "vaapi_video_encoder_delegate.h"
 
 namespace media {
 class VaapiWrapper;
@@ -109,14 +110,11 @@ class H264VaapiVideoEncoderDelegate : public VaapiVideoEncoderDelegate {
   bool SubmitPackedHeaders(scoped_refptr<H264BitstreamBuffer> packed_sps,
                            scoped_refptr<H264BitstreamBuffer> packed_pps);
 
-  bool SubmitFrameParameters(
-      EncodeJob& job,
-      const H264VaapiVideoEncoderDelegate::EncodeParams& encode_params,
-      const H264SPS& sps,
-      const H264PPS& pps,
-      scoped_refptr<H264Picture> pic,
-      const base::circular_deque<scoped_refptr<H264Picture>>& ref_pic_list0,
-      const absl::optional<size_t>& ref_frame_index);
+  bool SubmitFrameParameters(EncodeJob& job,
+                             const H264VaapiVideoEncoderDelegate::EncodeParams& encode_params,
+                             const H264SPS& sps, const H264PPS& pps, scoped_refptr<H264Picture> pic,
+                             const base::circular_deque<scoped_refptr<H264Picture>>& ref_pic_list0,
+                             const std::optional<size_t>& ref_frame_index);
 
   // Current SPS, PPS and their packed versions. Packed versions are NALUs
   // in AnnexB format *without* emulation prevention three-byte sequences
@@ -169,4 +167,4 @@ class H264VaapiVideoEncoderDelegate : public VaapiVideoEncoderDelegate {
 
 }  // namespace media
 
-#endif  // MEDIA_GPU_VAAPI_H264_VAAPI_VIDEO_ENCODER_DELEGATE_H_
+#endif  // MEDIA_GPU_H264_VAAPI_VIDEO_ENCODER_DELEGATE_H_

@@ -8,9 +8,6 @@
 
 namespace media {
 
-Vp9Metadata::Vp9Metadata() = default;
-Vp9Metadata::~Vp9Metadata() = default;
-Vp9Metadata::Vp9Metadata(const Vp9Metadata&) = default;
 
 VP9Picture::VP9Picture() : frame_hdr(new Vp9FrameHeader()) {}
 

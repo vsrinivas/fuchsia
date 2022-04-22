@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 #include "media/base/bitrate.h"
-#include "base/check_op.h"
-#include "base/strings/stringprintf.h"
+// Fuchsia change.
+// #include "base/check_op.h"
+// #include "base/strings/stringprintf.h"
+#include "chromium_utils.h"
 
 namespace media {
 

@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <string>
 
-#include "media/base/media_export.h"
+#include "chromium_utils.h"
 
 namespace media {
 

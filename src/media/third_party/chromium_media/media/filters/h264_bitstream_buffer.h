@@ -13,11 +13,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "base/gtest_prod_util.h"
-#include "base/memory/ref_counted.h"
-#include "base/numerics/safe_conversions.h"
-#include "media/base/media_export.h"
-#include "media/base/video_frame.h"
+#include "chromium_utils.h"
+// #include "base/gtest_prod_util.h"
+// #include "base/memory/ref_counted.h"
+// #include "base/numerics/safe_conversions.h"
+// #include "media/base/media_export.h"
+// #include "media/base/video_frame.h"
 #include "media/video/h264_parser.h"
 
 namespace media {
@@ -28,8 +29,7 @@ namespace media {
 // Refcounted as these buffers may be used as arguments to multiple codec jobs
 // (e.g. a buffer containing an H.264 SPS NALU may be used as an argument to all
 // jobs that use parameters contained in that SPS).
-class MEDIA_EXPORT H264BitstreamBuffer
-    : public base::RefCountedThreadSafe<H264BitstreamBuffer> {
+class MEDIA_EXPORT H264BitstreamBuffer {
  public:
   H264BitstreamBuffer();
 
@@ -92,12 +92,14 @@ class MEDIA_EXPORT H264BitstreamBuffer
   // in the buffer.
   const uint8_t* data() const;
 
- private:
-  friend class base::RefCountedThreadSafe<H264BitstreamBuffer>;
   ~H264BitstreamBuffer();
 
-  FRIEND_TEST_ALL_PREFIXES(H264BitstreamBufferAppendBitsTest,
-                           AppendAndVerifyBits);
+ private:
+  // Fuchsia change: different refcounting implementation.
+  // friend class base::RefCountedThreadSafe<H264BitstreamBuffer>;
+
+  //  FRIEND_TEST_ALL_PREFIXES(H264BitstreamBufferAppendBitsTest,
+  //                           AppendAndVerifyBits);
 
   // Allocate additional memory (kGrowBytes bytes) for the buffer.
   void Grow();

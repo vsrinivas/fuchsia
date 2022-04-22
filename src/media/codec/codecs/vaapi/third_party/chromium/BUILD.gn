@@ -1,0 +1,26 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("chromium_headers") {
+  include_dirs = [ "." ]
+}
+
+source_set("chromium") {
+  sources = [
+    "h264_vaapi_video_encoder_delegate.cc",
+    "h264_vaapi_video_encoder_delegate.h",
+    "vaapi_video_encoder_delegate.cc",
+    "vaapi_video_encoder_delegate.h",
+  ]
+  public_deps = [
+    "../..:vaapi_utils",
+    "//sdk/lib/stdcompat",
+    "//src/media/lib/codec_impl",
+    "//src/media/third_party/chromium_media",
+    "//third_party/intel/libva/fuchsia:headers",
+    "//zircon/system/ulib/fbl",
+    "//zircon/third_party/ulib/safemath",
+  ]
+  public_configs = [ ":chromium_headers" ]
+}

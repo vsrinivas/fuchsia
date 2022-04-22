@@ -6,9 +6,9 @@
 
 #include <algorithm>
 
-#include "base/check_op.h"
-#include "base/notreached.h"
-#include "base/numerics/safe_conversions.h"
+// #include "base/check_op.h"
+// #include "base/notreached.h"
+// #include "base/numerics/safe_conversions.h"
 
 namespace media {
 namespace {
@@ -103,9 +103,10 @@ size_t GetEncodeBitstreamBufferSize(const gfx::Size& size,
       // The buffer size is proportional to (bitrate / framerate), but linear
       // interpolation for smaller ratio is not enough. Therefore we only use
       // linear extrapolation for larger ratio.
-      double ratio = std::max(
-          1.0f * (bitrate / framerate) / (data.bitrate_in_bps / data.framerate),
-          1.0f);
+      double ratio =
+          std::max(1.0f * static_cast<float>(bitrate / framerate) /
+                       static_cast<float>(data.bitrate_in_bps / data.framerate),
+                   1.0f);
       return std::min(static_cast<size_t>(data.buffer_size_in_bytes * ratio),
                       GetMaxEncodeBitstreamBufferSize(size));
     }
@@ -194,7 +195,7 @@ VideoBitrateAllocation AllocateDefaultBitrateForTesting(
   for (size_t sid = 0; sid < num_spatial_layers; ++sid) {
     const double bitrate_factor =
         kSpatialLayersBitrateScaleFactors[num_spatial_layers - 1][sid];
-    bitrates[sid] = bitrate * bitrate_factor;
+    bitrates[sid] = static_cast<uint32_t>(bitrate * bitrate_factor);
   }
 
   return AllocateBitrateForDefaultEncodingWithBitrates(bitrates,

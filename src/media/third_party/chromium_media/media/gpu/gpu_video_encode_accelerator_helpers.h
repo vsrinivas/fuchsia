@@ -7,10 +7,10 @@
 
 #include <vector>
 
+#include "chromium_utils.h"
+#include "geometry.h"
 #include "media/base/video_bitrate_allocation.h"
-#include "media/gpu/media_gpu_export.h"
 #include "media/video/video_encode_accelerator.h"
-#include "ui/gfx/geometry/size.h"
 
 namespace media {
 

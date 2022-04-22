@@ -21,6 +21,7 @@ class Size {
 
   constexpr int width() const { return width_; }
   constexpr int height() const { return height_; }
+  constexpr int GetArea() const { return width_ * height_; }
 
   void set_width(int width) { width_ = std::max(0, width); }
   void set_height(int height) { height_ = std::max(0, height); }
@@ -41,7 +42,7 @@ class Size {
   }
 
   bool IsEmpty() const { return width_ == 0 || height_ == 0; }
-  std::string ToString() { return std::string(); }
+  std::string ToString() const { return std::string(); }
 
  private:
   int width_;

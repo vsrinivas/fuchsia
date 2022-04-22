@@ -6,11 +6,6 @@
 
 #include <inttypes.h>
 
-#include "base/callback.h"
-#include "base/strings/stringprintf.h"
-#include "build/build_config.h"
-#include "build/chromeos_buildflags.h"
-
 namespace media {
 
 Vp9Metadata::Vp9Metadata() = default;
@@ -38,7 +33,7 @@ BitstreamBufferMetadata::BitstreamBufferMetadata(size_t payload_size_bytes,
 BitstreamBufferMetadata::~BitstreamBufferMetadata() = default;
 
 VideoEncodeAccelerator::Config::Config()
-    : input_format(PIXEL_FORMAT_UNKNOWN),
+    :  // input_format(PIXEL_FORMAT_UNKNOWN),
       output_profile(VIDEO_CODEC_PROFILE_UNKNOWN),
       bitrate(Bitrate::ConstantBitrate(0u)),
       content_type(ContentType::kCamera) {}
@@ -46,19 +41,19 @@ VideoEncodeAccelerator::Config::Config()
 VideoEncodeAccelerator::Config::Config(const Config& config) = default;
 
 VideoEncodeAccelerator::Config::Config(
-    VideoPixelFormat input_format,
+    // VideoPixelFormat input_format,
     const gfx::Size& input_visible_size,
     VideoCodecProfile output_profile,
     const Bitrate& bitrate,
-    absl::optional<uint32_t> initial_framerate,
-    absl::optional<uint32_t> gop_length,
-    absl::optional<uint8_t> h264_output_level,
+    std::optional<uint32_t> initial_framerate,
+    std::optional<uint32_t> gop_length,
+    std::optional<uint8_t> h264_output_level,
     bool is_constrained_h264,
-    absl::optional<StorageType> storage_type,
+    std::optional<StorageType> storage_type,
     ContentType content_type,
     const std::vector<SpatialLayer>& spatial_layers,
     InterLayerPredMode inter_layer_pred)
-    : input_format(input_format),
+    :  // input_format(input_format),
       input_visible_size(input_visible_size),
       output_profile(output_profile),
       bitrate(bitrate),
@@ -78,7 +73,9 @@ std::string VideoEncodeAccelerator::Config::AsHumanReadableString() const {
   std::string str = base::StringPrintf(
       "input_format: %s, input_visible_size: %s, output_profile: %s, "
       "bitrate: %s",
-      VideoPixelFormatToString(input_format).c_str(),
+    // Fuchsia change: input_format doesn't exist.
+      // VideoPixelFormatToString(input_format).c_str(),
+      "",
       input_visible_size.ToString().c_str(),
       GetProfileName(output_profile).c_str(), bitrate.ToString().c_str());
   if (initial_framerate) {
@@ -88,6 +85,8 @@ std::string VideoEncodeAccelerator::Config::AsHumanReadableString() const {
   if (gop_length)
     str += base::StringPrintf(", gop_length: %u", gop_length.value());
 
+  // Fuchsia change: VideoCodecProfileToVideoCodec isn't implemented.
+#if 0
   if (VideoCodecProfileToVideoCodec(output_profile) == VideoCodec::kH264) {
     if (h264_output_level) {
       str += base::StringPrintf(", h264_output_level: %u",
@@ -96,6 +95,7 @@ std::string VideoEncodeAccelerator::Config::AsHumanReadableString() const {
 
     str += base::StringPrintf(", is_constrained_h264: %u", is_constrained_h264);
   }
+#endif
 
   if (spatial_layers.empty())
     return str;
@@ -137,6 +137,8 @@ bool VideoEncodeAccelerator::Config::HasSpatialLayer() const {
   return spatial_layers.size() > 1u;
 }
 
+// Fuchsia change: VEA is never allocated and the client is never used.
+#if 0
 void VideoEncodeAccelerator::Client::NotifyEncoderInfoChange(
     const VideoEncoderInfo& info) {
   // Do nothing if a client doesn't use the info.
@@ -204,6 +206,7 @@ bool operator==(const VideoEncodeAccelerator::SupportedProfile& l,
          l.max_framerate_denominator == r.max_framerate_denominator &&
          l.scalability_modes == r.scalability_modes;
 }
+#endif
 
 bool operator==(const H264Metadata& l, const H264Metadata& r) {
   return l.temporal_idx == r.temporal_idx && l.layer_sync == r.layer_sync;
@@ -252,7 +255,7 @@ bool operator==(const VideoEncodeAccelerator::Config::SpatialLayer& l,
 
 bool operator==(const VideoEncodeAccelerator::Config& l,
                 const VideoEncodeAccelerator::Config& r) {
-  return l.input_format == r.input_format &&
+  return //l.input_format == r.input_format &&
          l.input_visible_size == r.input_visible_size &&
          l.output_profile == r.output_profile && l.bitrate == r.bitrate &&
          l.initial_framerate == r.initial_framerate &&
@@ -264,6 +267,8 @@ bool operator==(const VideoEncodeAccelerator::Config& l,
 }
 }  // namespace media
 
+// Fuchsia change: VEA is never allocated and the client is never used.
+#if 0
 namespace std {
 
 void default_delete<media::VideoEncodeAccelerator>::operator()(
@@ -272,3 +277,4 @@ void default_delete<media::VideoEncodeAccelerator>::operator()(
 }
 
 }  // namespace std
+#endif

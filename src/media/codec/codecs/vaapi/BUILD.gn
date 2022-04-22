@@ -20,6 +20,21 @@ source_set("avcc_processor") {
     "//src/media/lib/codec_impl",
   ]
 }
+source_set("vaapi_utils") {
+  sources = [ "vaapi_utils.cc" ]
+  public = [ "vaapi_utils.h" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.mediacodec",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/graphics/lib/magma/include:magma",
+    "//src/lib/fxl",
+    "//src/media/lib/codec_impl",
+    "//src/media/lib/mpsc_queue",
+    "//src/media/third_party/chromium_media",
+    "//third_party/intel/libva/fuchsia:headers",
+  ]
+}
 
 source_set("codec_runner_vaapi") {
   sources = [
@@ -27,7 +42,6 @@ source_set("codec_runner_vaapi") {
     "codec_adapter_vaapi_decoder.cc",
     "h264_accelerator.cc",
     "local_single_codec_factory.h",
-    "vaapi_utils.cc",
     "vp9_accelerator.cc",
   ]
 
@@ -36,7 +50,6 @@ source_set("codec_runner_vaapi") {
     "codec_adapter_vaapi_decoder.h",
     "codec_runner_app.h",
     "h264_accelerator.h",
-    "vaapi_utils.h",
     "vp9_accelerator.h",
   ]
 
@@ -44,6 +57,8 @@ source_set("codec_runner_vaapi") {
 
   public_deps = [
     ":avcc_processor",
+    ":vaapi_utils",
+    "third_party/chromium",
     "//sdk/fidl/fuchsia.mediacodec",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",

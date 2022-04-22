@@ -16,6 +16,7 @@
 #include "geometry.h"
 #include "media/gpu/codec_picture.h"
 #include "media/video/h264_parser.h"
+#include "media/video/video_encode_accelerator.h"
 
 namespace media {
 
@@ -66,6 +67,8 @@ class MEDIA_GPU_EXPORT H264Picture : public CodecPicture {
   bool idr;        // IDR picture?
   int idr_pic_id;  // Valid only if idr == true.
   bool ref;        // reference picture?
+  int ref_pic_list_modification_flag_l0;  // Fuchsia: only for encoding
+  int abs_diff_pic_num_minus1;            // Fuchsia: only for encoding.
   bool long_term;  // long term reference picture?
   bool outputted;
   // Does memory management op 5 needs to be executed after this
@@ -86,6 +89,8 @@ class MEDIA_GPU_EXPORT H264Picture : public CodecPicture {
 
   // Position in DPB (i.e. index in DPB).
   int dpb_position;
+
+  std::optional<H264Metadata> metadata_for_encoding;
 
   ~H264Picture() override;
 

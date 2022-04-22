@@ -11,21 +11,22 @@
 #include <memory>
 #include <vector>
 
-#include "base/callback_forward.h"
-#include "base/memory/ref_counted.h"
-#include "base/memory/weak_ptr.h"
-#include "base/task/single_thread_task_runner.h"
-#include "base/time/time.h"
+// #include "base/callback_forward.h"
+// #include "base/memory/ref_counted.h"
+// #include "base/memory/weak_ptr.h"
+// #include "base/task/single_thread_task_runner.h"
+// #include "base/time/time.h"
 #include "media/base/bitrate.h"
-#include "media/base/bitstream_buffer.h"
-#include "media/base/media_export.h"
-#include "media/base/svc_scalability_mode.h"
+// #include "media/base/bitstream_buffer.h"
+// #include "media/base/media_export.h"
+// #include "media/base/svc_scalability_mode.h"
 #include "media/base/video_bitrate_allocation.h"
-#include "media/base/video_codecs.h"
-#include "media/base/video_frame.h"
+// #include "media/base/video_frame.h"
 #include "media/video/h264_parser.h"
-#include "media/video/video_encoder_info.h"
-#include "third_party/abseil-cpp/absl/types/optional.h"
+// #include "media/video/video_encoder_info.h"
+#include "chromium_utils.h"
+#include "geometry.h"
+#include "media/base/video_codecs.h"
 
 namespace media {
 
@@ -136,11 +137,13 @@ struct MEDIA_EXPORT BitstreamBufferMetadata final {
 
   // |h264|, |vp8| or |vp9| may be set, but not multiple of them. Presumably,
   // it's also possible for none of them to be set.
-  absl::optional<H264Metadata> h264;
-  absl::optional<Vp8Metadata> vp8;
-  absl::optional<Vp9Metadata> vp9;
-  absl::optional<Av1Metadata> av1;
+  std::optional<H264Metadata> h264;
+  std::optional<Vp8Metadata> vp8;
+  std::optional<Vp9Metadata> vp9;
+  std::optional<Av1Metadata> av1;
 };
+
+struct SVCScalabilityMode {};
 
 // Video encoder interface.
 class MEDIA_EXPORT VideoEncodeAccelerator {
@@ -183,7 +186,6 @@ class MEDIA_EXPORT VideoEncodeAccelerator {
 
   // A default framerate for all VEA implementations.
   enum { kDefaultFramerate = 30 };
-
   // Parameters required for VEA initialization.
   struct MEDIA_EXPORT Config {
     // Indicates if video content should be treated as a "normal" camera feed
@@ -218,18 +220,18 @@ class MEDIA_EXPORT VideoEncodeAccelerator {
     Config();
     Config(const Config& config);
 
-    Config(VideoPixelFormat input_format,
-           const gfx::Size& input_visible_size,
-           VideoCodecProfile output_profile,
-           const Bitrate& bitrate,
-           absl::optional<uint32_t> initial_framerate = absl::nullopt,
-           absl::optional<uint32_t> gop_length = absl::nullopt,
-           absl::optional<uint8_t> h264_output_level = absl::nullopt,
-           bool is_constrained_h264 = false,
-           absl::optional<StorageType> storage_type = absl::nullopt,
-           ContentType content_type = ContentType::kCamera,
-           const std::vector<SpatialLayer>& spatial_layers = {},
-           InterLayerPredMode inter_layer_pred = InterLayerPredMode::kOnKeyPic);
+    Config(  // VideoPixelFormat input_format,
+        const gfx::Size& input_visible_size,
+        VideoCodecProfile output_profile,
+        const Bitrate& bitrate,
+        std::optional<uint32_t> initial_framerate = std::nullopt,
+        std::optional<uint32_t> gop_length = std::nullopt,
+        std::optional<uint8_t> h264_output_level = std::nullopt,
+        bool is_constrained_h264 = false,
+        std::optional<StorageType> storage_type = std::nullopt,
+        ContentType content_type = ContentType::kCamera,
+        const std::vector<SpatialLayer>& spatial_layers = {},
+        InterLayerPredMode inter_layer_pred = InterLayerPredMode::kOnKeyPic);
 
     ~Config();
 
@@ -240,7 +242,8 @@ class MEDIA_EXPORT VideoEncodeAccelerator {
 
     // Frame format of input stream (as would be reported by
     // VideoFrame::format() for frames passed to Encode()).
-    VideoPixelFormat input_format;
+    // Fuchsia change: input format goes through sysmem.
+    // VideoPixelFormat input_format;
 
     // Resolution of input stream (as would be reported by
     // VideoFrame::visible_rect().size() for frames passed to Encode()).
@@ -255,17 +258,17 @@ class MEDIA_EXPORT VideoEncodeAccelerator {
 
     // Initial encoding framerate in frames per second. This is optional and
     // VideoEncodeAccelerator should use |kDefaultFramerate| if not given.
-    absl::optional<uint32_t> initial_framerate;
+    std::optional<uint32_t> initial_framerate;
 
     // Group of picture length for encoded output stream, indicates the
     // distance between two key frames, i.e. IPPPIPPP would be represent as 4.
-    absl::optional<uint32_t> gop_length;
+    std::optional<uint32_t> gop_length;
 
     // Codec level of encoded output stream for H264 only. This value should
     // be aligned to the H264 standard definition of SPS.level_idc.
     // If this is not given, VideoEncodeAccelerator selects one of proper H.264
     // levels for |input_visible_size| and |initial_framerate|.
-    absl::optional<uint8_t> h264_output_level;
+    std::optional<uint8_t> h264_output_level;
 
     // Indicates baseline profile or constrained baseline profile for H264 only.
     bool is_constrained_h264;
@@ -275,7 +278,7 @@ class MEDIA_EXPORT VideoEncodeAccelerator {
     // Encode().
     // This is kShmem iff a video frame is mapped in user space.
     // This is kDmabuf iff a video frame has dmabuf.
-    absl::optional<StorageType> storage_type;
+    std::optional<StorageType> storage_type;
 
     // Indicates captured video (from a camera) or generated (screen grabber).
     // Screen content has a number of special properties such as lack of noise,
@@ -298,6 +301,8 @@ class MEDIA_EXPORT VideoEncodeAccelerator {
     bool require_low_delay = true;
   };
 
+  // Fuchsia change: VEA is never allocated and the client is never used.
+#if 0
   // Interface for clients that use VideoEncodeAccelerator. These callbacks will
   // not be made unless Initialize() has returned successfully.
   class MEDIA_EXPORT Client {
@@ -436,6 +441,7 @@ class MEDIA_EXPORT VideoEncodeAccelerator {
   // Do not delete directly; use Destroy() or own it with a scoped_ptr, which
   // will Destroy() it properly by default.
   virtual ~VideoEncodeAccelerator();
+#endif
 };
 
 MEDIA_EXPORT bool operator==(const VideoEncodeAccelerator::SupportedProfile& l,
@@ -451,6 +457,8 @@ MEDIA_EXPORT bool operator==(const VideoEncodeAccelerator::Config& l,
                              const VideoEncodeAccelerator::Config& r);
 }  // namespace media
 
+// Fuchsia change: VEA is never allocated.
+#if 0
 namespace std {
 
 // Specialize std::default_delete so that
@@ -463,4 +471,5 @@ struct MEDIA_EXPORT default_delete<media::VideoEncodeAccelerator> {
 
 }  // namespace std
 
+#endif
 #endif  // MEDIA_VIDEO_VIDEO_ENCODE_ACCELERATOR_H_

@@ -9,8 +9,8 @@
 #include <stdint.h>
 #include <string>
 
+#include "chromium_utils.h"
 #include "media/base/bitrate.h"
-#include "media/base/media_export.h"
 
 namespace media {
 
