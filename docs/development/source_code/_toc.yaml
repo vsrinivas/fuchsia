@@ -18,6 +18,8 @@ toc:
   path: /docs/development/source_code/layout.md
 - title: "Owners"
   path: /docs/development/source_code/owners.md
+- title: "Gerrit auto-submit"
+  path: /docs/development/source_code/auto_submit.md
 - title: "README.fuchsia file syntax"
   path: /docs/development/source_code/third-party-metadata.md
 - title: "Fuchsia archive format (FAR)"
