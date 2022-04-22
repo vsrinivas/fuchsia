@@ -1465,6 +1465,7 @@ dependencies = [
  "tracing-core",
  "tracing-futures",
  "tracing-log",
+ "tracing-mutex",
  "tracing-subscriber",
  "trust-dns-proto",
  "trust-dns-resolver",
@@ -4180,6 +4181,15 @@ dependencies = [
  "lazy_static",
  "log",
  "tracing-core",
+]
+
+[[package]]
+name = "tracing-mutex"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "690dac82fd4828b694c9825c0b8faae2b8277c53528a13cc0710510c1b6693ff"
+dependencies = [
+ "lazy_static",
 ]
 
 [[package]]

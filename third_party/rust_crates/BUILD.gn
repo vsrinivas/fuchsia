@@ -926,6 +926,10 @@ group("tracing-log") {
   public_deps = [ ":tracing-log-v0_1_2" ]
 }
 
+group("tracing-mutex") {
+  public_deps = [ ":tracing-mutex-v0_1_2" ]
+}
+
 group("tracing-subscriber") {
   public_deps = [ ":tracing-subscriber-v0_3_1" ]
 }
@@ -11893,6 +11897,30 @@ rust_library("tracing-log-v0_1_2") {
     "--cfg=feature=\"log-tracer\"",
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"trace-logger\"",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("tracing-mutex-v0_1_2") {
+  crate_name = "tracing_mutex"
+  crate_root = "//third_party/rust_crates/vendor/tracing-mutex/src/lib.rs"
+  output_name = "tracing_mutex-dadc5940f86e7644"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":lazy_static-v1_4_0" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=dadc5940f86e7644",
+    "-Cextra-filename=-dadc5940f86e7644",
   ]
 
   visibility = [ ":*" ]
