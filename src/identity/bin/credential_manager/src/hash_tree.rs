@@ -3,14 +3,11 @@
 // found in the LICENSE file.
 
 use crate::label_generator::{BitstringLabelGenerator, Label};
-use anyhow::{anyhow, Error};
-use log::error;
 use serde::{Deserialize, Serialize};
 use serde_cbor;
 use sha2::{Digest, Sha256};
 use std::collections::VecDeque;
 use std::fs::File;
-use thiserror::Error;
 
 #[cfg(test)]
 use mockall::{automock, predicate::*};
@@ -36,23 +33,23 @@ pub const BITS_PER_LEVEL: u8 = 2;
 /// Default height of the hash tree.
 pub const TREE_HEIGHT: u8 = LABEL_LENGTH / BITS_PER_LEVEL;
 
-#[derive(Error, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum HashTreeError {
-    #[error("no available leaf nodes")]
+    /// No available leaf nodes
     NoLeafNodes,
-    #[error("unknown leaf label")]
+    /// Unknown leaf label
     UnknownLeafLabel,
-    #[error("found label but is for a non-leaf node")]
+    /// Found label but is for a non-leaf node
     NonLeafLabel,
-    #[error("invalid tree")]
+    /// Invalid tree parameters
     InvalidTree { leaf_label: Label, tree_height: u8, children_per_node: u8 },
-    #[error(transparent)]
-    InvalidInput(#[from] anyhow::Error),
-    #[error("no available file")]
+    /// Invalid input
+    InvalidInput,
+    /// No available file
     DataStoreNotFound,
-    #[error("unable to deserialize tree")]
+    /// Unable to deserialize tree
     DeserializationFailed,
-    #[error("unable to serialize tree")]
+    /// Unable to serialize tree
     SerializationFailed,
 }
 
@@ -77,11 +74,10 @@ impl HashTree {
     /// store hashes.
     pub fn new(height: u8, children_per_node: u8) -> Result<Self, HashTreeError> {
         if height < 1 || children_per_node < 1 {
-            return Err(HashTreeError::InvalidInput(anyhow!(
-                "invalid height or children_per_node"
-            )));
+            return Err(HashTreeError::InvalidInput);
         }
-        let label_gen = BitstringLabelGenerator::new(height, children_per_node)?;
+        let label_gen = BitstringLabelGenerator::new(height, children_per_node)
+            .map_err(|_| HashTreeError::InvalidInput)?;
         let root = Node::new(label_gen.root(), children_per_node, height, &label_gen)?;
         let hash_tree = Self { height, children_per_node, root, label_gen };
         Ok(hash_tree)
@@ -146,13 +142,9 @@ impl HashTree {
 
     /// Updates the metadata hash associated with this label, or returns an
     /// error if a matching leaf node is not found.
-    pub fn update_leaf_hash(
-        &mut self,
-        label: &Label,
-        metadata: Hash,
-    ) -> Result<bool, HashTreeError> {
+    pub fn update_leaf_hash(&mut self, label: &Label, metadata: Hash) -> Result<(), HashTreeError> {
         match self.root.write_leaf(label, &Some(metadata)) {
-            WriteLeafOutcome::LeafUpdated => Ok(true),
+            WriteLeafOutcome::LeafUpdated => Ok(()),
             WriteLeafOutcome::NonLeafNodeFound => Err(HashTreeError::NonLeafLabel),
             WriteLeafOutcome::NotFound => Err(HashTreeError::UnknownLeafLabel),
         }
@@ -321,7 +313,7 @@ impl Node {
         children_per_node: u8,
         layers: u8,
         label_gen: &BitstringLabelGenerator,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self, HashTreeError> {
         let mut node = Self { label: label, hash: None, children: Vec::new() };
         if layers == 0 {
             return Ok(node);
@@ -330,7 +322,9 @@ impl Node {
         let mut hasher = Sha256::new();
         for child_index in 0..children_per_node {
             let child = Node::new(
-                label_gen.child_label(&node.label, child_index)?,
+                label_gen
+                    .child_label(&node.label, child_index)
+                    .map_err(|_| HashTreeError::InvalidInput)?,
                 children_per_node,
                 layers - 1,
                 label_gen,
@@ -562,12 +556,12 @@ mod test {
 
     #[test]
     fn test_tree_bad_height() {
-        assert!(HashTree::new(0, 2).is_err());
+        assert_eq!(HashTree::new(0, 2).unwrap_err(), HashTreeError::InvalidInput);
     }
 
     #[test]
     fn test_tree_bad_children_per_node() {
-        assert!(HashTree::new(4, 0).is_err());
+        assert_eq!(HashTree::new(4, 0).unwrap_err(), HashTreeError::InvalidInput);
     }
 
     #[test]
@@ -599,7 +593,7 @@ mod test {
         }
 
         // Insert a 9th leaf which should fail.
-        assert!(tree.get_free_leaf_label().is_err());
+        assert_eq!(tree.get_free_leaf_label().unwrap_err(), HashTreeError::NoLeafNodes);
     }
 
     #[test]
@@ -614,7 +608,7 @@ mod test {
         assert!(tree.verify_tree().is_ok());
 
         // Try to read a bad leaf.
-        assert!(tree.get_leaf_hash(&BAD_LABEL).is_err())
+        assert_eq!(tree.get_leaf_hash(&BAD_LABEL).unwrap_err(), HashTreeError::UnknownLeafLabel);
     }
 
     #[test]
@@ -646,7 +640,10 @@ mod test {
         assert!(tree.verify_tree().is_ok());
 
         // Try to update a bad leaf and check that the value has not changed.
-        assert!(tree.update_leaf_hash(&BAD_LABEL, [2; 32]).is_err());
+        assert_eq!(
+            tree.update_leaf_hash(&BAD_LABEL, [2; 32]).unwrap_err(),
+            HashTreeError::UnknownLeafLabel
+        );
         assert_eq!(&[1; 32], tree.get_leaf_hash(&node_label).unwrap());
         assert!(tree.verify_tree().is_ok());
     }
@@ -664,7 +661,7 @@ mod test {
 
         // Delete the leaf.
         tree.delete_leaf(&node_label).unwrap();
-        assert!(tree.get_leaf_hash(&node_label).is_err());
+        assert_eq!(tree.get_leaf_hash(&node_label).unwrap_err(), HashTreeError::NonLeafLabel);
         assert!(tree.verify_tree().is_ok());
     }
 
@@ -680,7 +677,7 @@ mod test {
         assert!(tree.verify_tree().is_ok());
 
         // Try to delete a bad leaf and check that the value has not changed.
-        assert!(tree.delete_leaf(&BAD_LABEL).is_err());
+        assert_eq!(tree.delete_leaf(&BAD_LABEL).unwrap_err(), HashTreeError::UnknownLeafLabel);
         assert_eq!(&[1; 32], tree.get_leaf_hash(&node_label).unwrap());
         assert!(tree.verify_tree().is_ok());
     }
@@ -701,7 +698,7 @@ mod test {
         assert!(node_label.is_some());
 
         // Check that we cannot a 9th leaf.
-        assert!(tree.get_free_leaf_label().is_err());
+        assert_eq!(tree.get_free_leaf_label().unwrap_err(), HashTreeError::NoLeafNodes);
 
         // Delete the last added leaf.
         tree.delete_leaf(&node_label.unwrap()).unwrap();
@@ -727,7 +724,7 @@ mod test {
         }
 
         // Check that we cannot a 9th leaf.
-        assert!(tree.get_free_leaf_label().is_err());
+        assert_eq!(tree.get_free_leaf_label().unwrap_err(), HashTreeError::NoLeafNodes);
 
         // Delete the last added leaf.
         tree.reset().unwrap();
