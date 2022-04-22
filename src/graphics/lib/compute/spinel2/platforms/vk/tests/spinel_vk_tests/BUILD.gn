@@ -68,5 +68,5 @@ graphics_compute_unittests_package("spinel2-vk-tests") {
 
 group("spinel_vk_tests") {
   testonly = true
-  deps = [ ":spinel2-vk-tests" ]
+  public_deps = [ ":spinel2-vk-tests" ]
 }
