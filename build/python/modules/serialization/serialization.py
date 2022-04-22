@@ -341,11 +341,13 @@ def instance_to_dict(instance: Any) -> Dict[str, Any]:
             # the "default" handler
             metadata: Optional[Dict] = getattr(
                 instance.__class__, '__SERIALIZE_AS__', None)
-            if metadata and name in metadata:
-                serializer: Callable = metadata.get(name)
+            serializer: Optional[Callable] = None
+            if metadata:
+                serializer = metadata.get(name)
+            if serializer:
+                result[name] = serializer(value)
             else:
-                serializer = make_dict_value_for
-            result[name] = serializer(value)
+                result[name] = make_dict_value_for(value)
 
     return result
 
@@ -422,7 +424,7 @@ def json_dumps(instance: Any, **kwargs) -> str:
 C = TypeVar('C')
 
 
-def _bind_class_fn(cls: Type[C], fn: Callable, name: str = None):
+def _bind_class_fn(cls: Type[C], fn: Callable, name: Optional[str] = None):
     """Creates a class-fn for a class by binding the passed-in class as the first
     param of the passed-in function, and then adding it as a callable attribute
     to the class.
@@ -432,7 +434,7 @@ def _bind_class_fn(cls: Type[C], fn: Callable, name: str = None):
     setattr(cls, name, functools.partial(fn, cls))
 
 
-def _bind_instance_fn(cls: Type[C], fn: Callable, name: str = None):
+def _bind_instance_fn(cls: Type[C], fn: Callable, name: Optional[str] = None):
     """Creates an instance-fn for a class by adding it as a callable attribute
     of the class.
     """
