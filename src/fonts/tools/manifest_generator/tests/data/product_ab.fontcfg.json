@@ -1,16 +1,18 @@
 {
-  "version": "1",
-  "fallback_chain": [
-    "BetaSans-Regular.ttf",
-    "BetaSans-Italic.ttf",
-    "BetaSans-BoldItalic.ttf",
-    {
-      "file_name": "AlphaAndBeta-Thin.ttc",
-      "index": 1
-    },
-    "GammaCJK-Regular.ttc"
-  ],
-  "settings": {
-    "cache_size_bytes": 5000000
-  }
+    "version": "1",
+    "fallback_chain": [
+        "BetaSans-Regular.ttf",
+        {
+            "full_name": "BetaSans Italic"
+        },
+        "BetaSans-BoldItalic.ttf",
+        {
+            "file_name": "AlphaAndBeta-Thin.ttc",
+            "index": 1
+        },
+        "GammaCJK-Regular.ttc"
+    ],
+    "settings": {
+        "cache_size_bytes": 5000000
+    }
 }

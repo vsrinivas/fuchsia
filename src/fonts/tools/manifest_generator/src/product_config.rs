@@ -7,6 +7,7 @@
 use {
     crate::{font_catalog::TypefaceInAssetIndex, serde_ext},
     anyhow::Error,
+    manifest::v2,
     serde::Deserialize,
     std::path::Path,
 };
@@ -22,55 +23,91 @@ enum ProductConfigWrapper {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Hash)]
 struct ProductConfigInternal {
     /// A sequence of typeface identifiers representing a fallback chain.
-    pub fallback_chain: Vec<TypefaceIdOrFileName>,
+    pub fallback_chain: Vec<SerializedFallbackChainEntry>,
     /// Runtime settings for the font provider service.
     #[serde(default)]
     pub settings: Settings,
 }
 
+/// Used solely as a deserialization aid.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Hash)]
 #[serde(untagged)]
-enum TypefaceIdOrFileName {
-    TypefaceId(TypefaceId),
+enum SerializedFallbackChainEntry {
+    TypefaceId {
+        file_name: String,
+        index: Option<u32>,
+    },
     FileName(String),
+    /// Has a named field to differentiate from FileName.
+    FullName {
+        full_name: String,
+    },
 }
 
-impl Into<TypefaceId> for TypefaceIdOrFileName {
-    fn into(self) -> TypefaceId {
+impl Into<FallbackChainEntry> for SerializedFallbackChainEntry {
+    fn into(self) -> FallbackChainEntry {
+        use SerializedFallbackChainEntry::*;
         match self {
-            TypefaceIdOrFileName::TypefaceId(typeface_id) => typeface_id,
-            TypefaceIdOrFileName::FileName(file_name) => TypefaceId { file_name, index: None },
+            TypefaceId { file_name, index } => FallbackChainEntry::FileNameAndIndex {
+                file_name,
+                index: index.map(TypefaceInAssetIndex),
+            },
+            FileName(file_name) => FallbackChainEntry::without_index(file_name),
+            FullName { full_name } => FallbackChainEntry::with_full_name(full_name),
         }
     }
 }
 
-/// Reference to a typeface, for use in specifying a fallback order.
+/// Reference to a typeface (or all typefaces in one file) for use in specifying a fallback order.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Hash)]
-pub struct TypefaceId {
-    /// File name of the asset.
-    pub file_name: String,
-    /// Index of the typeface in the file. If absent, treat as all of the typefaces in the file.
-    pub index: Option<TypefaceInAssetIndex>,
+#[serde(untagged)]
+pub enum FallbackChainEntry {
+    FileNameAndIndex {
+        /// File name of the asset.
+        file_name: String,
+        /// Index of the typeface in the file. If absent, treat as all of the typefaces in the file.
+        index: Option<TypefaceInAssetIndex>,
+    },
+    FullName(String),
 }
 
-#[cfg(test)]
-impl TypefaceId {
-    /// Creates a new `TypefaceId` representing a single typeface in the given file.
+impl FallbackChainEntry {
+    /// Creates a new `FallbackChainEntry` representing a single typeface in the given file.
     ///
     /// - `file_name`: The file name of the font asset.
     /// - `index`: The index of the typeface in the given file. See [`TypefaceInAssetIndex`].
-    pub(crate) fn new(
+    pub(crate) fn with_index(
         file_name: impl Into<String>,
         index: impl Into<TypefaceInAssetIndex>,
     ) -> Self {
-        Self { file_name: file_name.into(), index: Some(index.into()) }
+        Self::FileNameAndIndex { file_name: file_name.into(), index: Some(index.into()) }
+    }
+
+    /// Creates a new `FallbackChainEntry` representing _all_ of the typefaces in the given file.
+    ///
+    /// - `file_name`: The file name of the font asset.
+    pub(crate) fn without_index(file_name: impl Into<String>) -> Self {
+        Self::FileNameAndIndex { file_name: file_name.into(), index: None }
+    }
+
+    /// Creates a new `FallbackChainEntry` for a unique "full name".
+    ///
+    /// - `full_name`: The "full name" of the typeface from the font metadata.
+    pub(crate) fn with_full_name(full_name: impl Into<String>) -> Self {
+        Self::FullName(full_name.into())
+    }
+}
+
+impl Into<FallbackChainEntry> for v2::TypefaceId {
+    fn into(self) -> FallbackChainEntry {
+        FallbackChainEntry::with_index(self.file_name, self.index)
     }
 }
 
 /// An in-memory representation of a ".fontcfg.json" file.
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Default)]
 pub struct ProductConfig {
-    pub fallback_chain: Vec<TypefaceId>,
+    pub fallback_chain: Vec<FallbackChainEntry>,
     pub settings: Settings,
 }
 
@@ -90,7 +127,7 @@ impl ProductConfig {
     }
 
     /// Iterates over the `TypefaceId`s in the configuration's font fallback chain.
-    pub fn iter_fallback_chain(&self) -> impl Iterator<Item = &TypefaceId> {
+    pub fn iter_fallback_chain(&self) -> impl Iterator<Item = &FallbackChainEntry> {
         self.fallback_chain.iter()
     }
 }
@@ -112,6 +149,8 @@ mod tests {
 
     #[test]
     fn test_load_from_path() -> Result<(), Error> {
+        use FallbackChainEntry::*;
+
         let contents = json!(
         {
             "version": "1",
@@ -120,7 +159,8 @@ mod tests {
                 "b.ttf",
                 { "file_name": "c.ttf", "index": 1 },
                 { "file_name": "d.ttf" },
-                { "file_name": "e.ttf", "index": 0 }
+                { "file_name": "e.ttf", "index": 0 },
+                { "full_name": "Gamma Regular" }
             ],
             "settings": {
                 "cache_size_bytes": 5000123
@@ -133,11 +173,18 @@ mod tests {
         let actual = ProductConfig::load_from_path(file.path())?;
         let expected = ProductConfig {
             fallback_chain: vec![
-                TypefaceId { file_name: "a.ttf".to_string(), index: None },
-                TypefaceId { file_name: "b.ttf".to_string(), index: None },
-                TypefaceId { file_name: "c.ttf".to_string(), index: Some(TypefaceInAssetIndex(1)) },
-                TypefaceId { file_name: "d.ttf".to_string(), index: None },
-                TypefaceId { file_name: "e.ttf".to_string(), index: Some(TypefaceInAssetIndex(0)) },
+                FileNameAndIndex { file_name: "a.ttf".to_string(), index: None },
+                FileNameAndIndex { file_name: "b.ttf".to_string(), index: None },
+                FileNameAndIndex {
+                    file_name: "c.ttf".to_string(),
+                    index: Some(TypefaceInAssetIndex(1)),
+                },
+                FileNameAndIndex { file_name: "d.ttf".to_string(), index: None },
+                FileNameAndIndex {
+                    file_name: "e.ttf".to_string(),
+                    index: Some(TypefaceInAssetIndex(0)),
+                },
+                FullName("Gamma Regular".to_string()),
             ],
             settings: Settings { cache_size_bytes: Some(5_000_123) },
         };

@@ -210,7 +210,7 @@ mod tests {
             font_catalog::{Asset, Family, Typeface, TypefaceInAssetIndex},
             font_pkgs::FontPackageEntry,
             font_sets::{FontSet, FontSets},
-            product_config::{ProductConfig, Settings, TypefaceId},
+            product_config::{FallbackChainEntry, ProductConfig, Settings},
         },
         anyhow::format_err,
         assert_matches::assert_matches,
@@ -322,7 +322,7 @@ mod tests {
         });
 
         let product_config = ProductConfig {
-            fallback_chain: vec![TypefaceId::new("AlphaSans.ttc", 0)],
+            fallback_chain: vec![FallbackChainEntry::with_index("AlphaSans.ttc", 0)],
             settings: Settings { cache_size_bytes: None },
         };
 

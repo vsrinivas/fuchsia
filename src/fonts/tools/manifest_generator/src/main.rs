@@ -16,7 +16,7 @@ mod serde_ext;
 pub(crate) use crate::font_catalog::{FontCatalog, TypefaceInAssetIndex};
 pub(crate) use crate::font_pkgs::FontPackageListing;
 pub(crate) use crate::font_sets::{FontSet, FontSets};
-pub(crate) use crate::product_config::ProductConfig;
+pub(crate) use crate::product_config::{FallbackChainEntry, ProductConfig};
 
 use {
     anyhow::Error,
