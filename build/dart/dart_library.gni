@@ -12,7 +12,8 @@ import("//build/toolchain/concurrent_jobs.gni")
 
 declare_args() {
   # Enable all dart analysis
-  enable_dart_analysis = true
+  # TODO(fxbug.dev/98703) reenable analysis when hangs are fixed.
+  enable_dart_analysis = false
 
   # Enable all strict deps.
   disable_dart_strict_deps = false
@@ -430,6 +431,13 @@ if (current_toolchain == dart_toolchain) {
           "--all-deps-sources-file",
           rebase_path(_all_deps_sources_file, root_build_dir),
         ]
+      }
+    } else {
+      if (defined(invoker.pubspec)) {
+        not_needed([ invoker.pubspec ])
+      }
+      if (defined(invoker.options_file)) {
+        not_needed([ invoker.options_file ])
       }
     }
 
