@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use crate::bytecode_constants::*;
+use crate::compiler::Symbol;
 use crate::interpreter::common::*;
+use crate::parser::bind_library;
 use num_traits::FromPrimitive;
 use std::collections::HashMap;
 
@@ -67,8 +69,9 @@ fn split_off_node(
     let mut node_instructions = bytecode.split_off(NODE_TYPE_HEADER_SZ);
     let remaining_bytecode = node_instructions.split_off(node_inst_sz as usize);
 
-    let mut verification = InstructionVerification::new(symbol_table, &node_instructions);
-    verification.verify_instruction_bytecode()?;
+    // TODO(fxb/93365): Store the decoded instructions in Node.
+    let mut decoder = InstructionDecoder::new(symbol_table, &node_instructions);
+    decoder.decode()?;
 
     Ok((Node { name_id: node_id, instructions: node_instructions }, remaining_bytecode))
 }
@@ -93,12 +96,29 @@ impl DecodedRules {
     }
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub struct DecodedCondition {
+    pub is_equal: bool,
+    pub lhs: Symbol,
+    pub rhs: Symbol,
+}
+
+// TODO(fxb/93365): Add IDs to the Label and Jump statements.
+#[derive(Debug, PartialEq, Clone)]
+pub enum DecodedInstruction {
+    UnconditionalAbort,
+    Condition(DecodedCondition),
+    Jump(Option<DecodedCondition>),
+    Label,
+}
+
 // This struct decodes and unwraps the given bytecode into a symbol table
 // and list of instructions.
 #[derive(Debug, PartialEq, Clone)]
 pub struct DecodedBindRules {
     pub symbol_table: HashMap<u32, String>,
     pub instructions: Vec<u8>,
+    pub decoded_instructions: Vec<DecodedInstruction>,
 }
 
 impl DecodedBindRules {
@@ -113,9 +133,13 @@ impl DecodedBindRules {
             return Err(BytecodeError::IncorrectSectionSize);
         }
 
-        let mut verification = InstructionVerification::new(&symbol_table, &inst_bytecode);
-        verification.verify_instruction_bytecode()?;
-        Ok(DecodedBindRules { symbol_table: symbol_table, instructions: inst_bytecode })
+        let decoded_instructions =
+            InstructionDecoder::new(&symbol_table, &inst_bytecode).decode()?;
+        Ok(DecodedBindRules {
+            symbol_table: symbol_table,
+            instructions: inst_bytecode,
+            decoded_instructions: decoded_instructions,
+        })
     }
 
     pub fn from_bytecode(bytecode: Vec<u8>) -> Result<Self, BytecodeError> {
@@ -290,84 +314,100 @@ fn read_symbol_table(bytecode: Vec<u8>) -> Result<HashMap<u32, String>, Bytecode
     Ok(symbol_table)
 }
 
-// This is used for verification of the instruction bytecode.
+// Verifies and converts instruction bytecode into a set of DecodedInstructions.
 #[derive(Debug, Clone)]
-pub struct InstructionVerification<'a> {
+pub struct InstructionDecoder<'a> {
     symbol_table: &'a HashMap<u32, String>,
     inst_iter: BytecodeIter<'a>,
 }
 
-impl<'a> InstructionVerification<'a> {
+impl<'a> InstructionDecoder<'a> {
     pub fn new(
         symbol_table: &'a HashMap<u32, String>,
         instructions: &'a Vec<u8>,
-    ) -> InstructionVerification<'a> {
-        InstructionVerification { symbol_table: symbol_table, inst_iter: instructions.iter() }
+    ) -> InstructionDecoder<'a> {
+        InstructionDecoder { symbol_table: symbol_table, inst_iter: instructions.iter() }
     }
 
-    pub fn verify_instruction_bytecode(&mut self) -> Result<(), BytecodeError> {
+    pub fn decode(&mut self) -> Result<Vec<DecodedInstruction>, BytecodeError> {
+        let mut decoded_instructions: Vec<DecodedInstruction> = vec![];
         while let Some(byte) = self.inst_iter.next() {
             let op_byte = FromPrimitive::from_u8(*byte).ok_or(BytecodeError::InvalidOp(*byte))?;
-            match op_byte {
-                RawOp::UnconditionalJump => {
-                    self.verify_control_flow_statement(false)?;
+            let instruction = match op_byte {
+                RawOp::UnconditionalJump | RawOp::JumpIfEqual | RawOp::JumpIfNotEqual => {
+                    self.decode_control_flow_statement(op_byte)?
                 }
-                RawOp::JumpIfEqual | RawOp::JumpIfNotEqual => {
-                    self.verify_control_flow_statement(true)?;
-                }
-                RawOp::EqualCondition | RawOp::InequalCondition => {
-                    self.verify_conditional_statement()?;
-                }
-                RawOp::JumpLandPad | RawOp::Abort => {
-                    // no-op
-                }
+                RawOp::EqualCondition | RawOp::InequalCondition => DecodedInstruction::Condition(
+                    self.decode_conditional_statement(op_byte == RawOp::EqualCondition)?,
+                ),
+                RawOp::Abort => DecodedInstruction::UnconditionalAbort,
+                RawOp::JumpLandPad => DecodedInstruction::Label,
             };
+            decoded_instructions.push(instruction);
         }
 
-        Ok(())
+        Ok(decoded_instructions)
     }
 
-    fn verify_control_flow_statement(&mut self, is_conditional: bool) -> Result<(), BytecodeError> {
+    fn decode_control_flow_statement(
+        &mut self,
+        op_byte: RawOp,
+    ) -> Result<DecodedInstruction, BytecodeError> {
         // TODO(fxb/93278): verify offset amount takes you to a jump landing pad.
         let offset_amount = next_u32(&mut self.inst_iter)?;
 
-        if is_conditional {
-            self.verify_conditional_statement()?;
-        }
+        let condition = match op_byte {
+            RawOp::JumpIfEqual => Some(self.decode_conditional_statement(true)?),
+            RawOp::JumpIfNotEqual => Some(self.decode_conditional_statement(false)?),
+            RawOp::UnconditionalJump => None,
+            _ => {
+                return Err(BytecodeError::InvalidOp(op_byte as u8));
+            }
+        };
 
         if self.inst_iter.len() as u32 <= offset_amount {
             return Err(BytecodeError::InvalidJumpLocation);
         }
 
-        Ok(())
+        Ok(DecodedInstruction::Jump(condition))
     }
 
-    fn verify_conditional_statement(&mut self) -> Result<(), BytecodeError> {
-        self.verify_value()?;
-        self.verify_value()?;
-        Ok(())
+    fn decode_conditional_statement(
+        &mut self,
+        is_equal: bool,
+    ) -> Result<DecodedCondition, BytecodeError> {
+        // Read in the LHS value first, followed by the RHS value.
+        let lhs = self.decode_value()?;
+        let rhs = self.decode_value()?;
+        Ok(DecodedCondition { is_equal: is_equal, lhs: lhs, rhs: rhs })
     }
 
-    fn verify_value(&mut self) -> Result<(), BytecodeError> {
+    fn decode_value(&mut self) -> Result<Symbol, BytecodeError> {
         let val_primitive = *next_u8(&mut self.inst_iter)?;
         let val_type = FromPrimitive::from_u8(val_primitive)
             .ok_or(BytecodeError::InvalidValueType(val_primitive))?;
         let val = next_u32(&mut self.inst_iter)?;
 
         match val_type {
-            RawValueType::NumberValue => Ok(()),
+            RawValueType::NumberValue => Ok(Symbol::NumberValue(val as u64)),
             RawValueType::BoolValue => match val {
-                FALSE_VAL | TRUE_VAL => Ok(()),
+                FALSE_VAL => Ok(Symbol::BoolValue(false)),
+                TRUE_VAL => Ok(Symbol::BoolValue(true)),
                 _ => Err(BytecodeError::InvalidBoolValue(val)),
             },
-            RawValueType::Key | RawValueType::StringValue | RawValueType::EnumValue => {
-                if self.symbol_table.contains_key(&val) {
-                    Ok(())
-                } else {
-                    Err(BytecodeError::MissingEntryInSymbolTable(val))
-                }
+            RawValueType::Key => {
+                Ok(Symbol::Key(self.lookup_symbol_table(val)?, bind_library::ValueType::Str))
             }
+            RawValueType::StringValue => Ok(Symbol::StringValue(self.lookup_symbol_table(val)?)),
+            RawValueType::EnumValue => Ok(Symbol::EnumValue(self.lookup_symbol_table(val)?)),
         }
+    }
+
+    fn lookup_symbol_table(&self, key: u32) -> Result<String, BytecodeError> {
+        self.symbol_table
+            .get(&key)
+            .ok_or(BytecodeError::MissingEntryInSymbolTable(key))
+            .map(|val| val.to_string())
     }
 }
 
@@ -530,7 +570,8 @@ mod test {
         assert_eq!(
             DecodedRules::Normal(DecodedBindRules {
                 symbol_table: HashMap::new(),
-                instructions: vec![]
+                instructions: vec![],
+                decoded_instructions: vec![],
             }),
             DecodedRules::new(bytecode).unwrap()
         );
@@ -676,9 +717,36 @@ mod test {
         expected_symbol_table.insert(1, "WREN".to_string());
         expected_symbol_table.insert(2, "DUCK".to_string());
 
+        let expected_decoded_inst = vec![
+            DecodedInstruction::Condition(DecodedCondition {
+                is_equal: true,
+                lhs: Symbol::NumberValue(0x05000000),
+                rhs: Symbol::NumberValue(0x10000010),
+            }),
+            DecodedInstruction::Jump(Some(DecodedCondition {
+                is_equal: true,
+                lhs: Symbol::NumberValue(0x05000000),
+                rhs: Symbol::NumberValue(0x10),
+            })),
+            DecodedInstruction::UnconditionalAbort,
+            DecodedInstruction::Label,
+            DecodedInstruction::Jump(Some(DecodedCondition {
+                is_equal: true,
+                lhs: Symbol::Key("WREN".to_string(), bind_library::ValueType::Str),
+                rhs: Symbol::StringValue("DUCK".to_string()),
+            })),
+            DecodedInstruction::UnconditionalAbort,
+            DecodedInstruction::Label,
+            DecodedInstruction::Jump(None),
+            DecodedInstruction::UnconditionalAbort,
+            DecodedInstruction::UnconditionalAbort,
+            DecodedInstruction::Label,
+        ];
+
         let rules = DecodedBindRules {
             symbol_table: expected_symbol_table,
             instructions: instructions.to_vec(),
+            decoded_instructions: expected_decoded_inst,
         };
         assert_eq!(DecodedRules::Normal(rules), DecodedRules::new(bytecode).unwrap());
     }

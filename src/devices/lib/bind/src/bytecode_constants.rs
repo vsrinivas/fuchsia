@@ -29,7 +29,7 @@ pub const FALSE_VAL: u32 = 0x00;
 // Bytecode boolean value for true.
 pub const TRUE_VAL: u32 = 0x01;
 
-#[derive(FromPrimitive)]
+#[derive(FromPrimitive, PartialEq)]
 pub enum RawOp {
     EqualCondition = 0x01,
     InequalCondition = 0x02,

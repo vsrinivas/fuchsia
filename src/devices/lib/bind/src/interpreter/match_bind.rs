@@ -295,7 +295,11 @@ mod test {
     fn empty_instructions() {
         verify_match_result(
             Ok(true),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: vec![] },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: vec![],
+                decoded_instructions: vec![],
+            },
             &HashMap::new(),
         );
     }
@@ -315,7 +319,11 @@ mod test {
         );
         verify_match_result(
             Ok(true),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
 
@@ -328,7 +336,11 @@ mod test {
         );
         verify_match_result(
             Ok(false),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
 
@@ -341,7 +353,11 @@ mod test {
         );
         verify_match_result(
             Ok(false),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
     }
@@ -378,7 +394,11 @@ mod test {
         );
         verify_match_result(
             Ok(true),
-            DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: symbol_table.clone(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
 
@@ -391,7 +411,11 @@ mod test {
         );
         verify_match_result(
             Ok(false),
-            DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: symbol_table.clone(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
 
@@ -404,7 +428,11 @@ mod test {
         );
         verify_match_result(
             Ok(false),
-            DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: symbol_table.clone(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
     }
@@ -424,7 +452,11 @@ mod test {
         );
         verify_match_result(
             Ok(true),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
 
@@ -437,7 +469,11 @@ mod test {
         );
         verify_match_result(
             Ok(true),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
 
@@ -450,7 +486,11 @@ mod test {
         );
         verify_match_result(
             Ok(false),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
     }
@@ -476,7 +516,11 @@ mod test {
         );
         verify_match_result(
             Ok(true),
-            DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: symbol_table.clone(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
 
@@ -490,7 +534,11 @@ mod test {
         );
         verify_match_result(
             Ok(true),
-            DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: symbol_table.clone(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
 
@@ -503,7 +551,11 @@ mod test {
         );
         verify_match_result(
             Ok(false),
-            DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: symbol_table.clone(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
     }
@@ -514,7 +566,11 @@ mod test {
         append_abort(&mut instructions);
         verify_match_result(
             Ok(false),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &HashMap::new(),
         );
     }
@@ -536,7 +592,11 @@ mod test {
         );
         verify_match_result(
             Ok(true),
-            DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: symbol_table.clone(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
 
@@ -548,7 +608,11 @@ mod test {
         );
         verify_match_result(
             Ok(false),
-            DecodedBindRules { symbol_table: symbol_table, instructions: instructions },
+            DecodedBindRules {
+                symbol_table: symbol_table,
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
     }
@@ -566,7 +630,11 @@ mod test {
         );
         verify_match_result(
             Ok(true),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
 
@@ -578,7 +646,11 @@ mod test {
         );
         verify_match_result(
             Ok(false),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
     }
@@ -597,7 +669,11 @@ mod test {
         );
         verify_match_result(
             Err(BytecodeError::MissingEntryInSymbolTable(10)),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &HashMap::new(),
         );
 
@@ -609,7 +685,11 @@ mod test {
         );
         verify_match_result(
             Err(BytecodeError::MissingEntryInSymbolTable(15)),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &HashMap::new(),
         );
     }
@@ -625,7 +705,11 @@ mod test {
 
         verify_match_result(
             Err(BytecodeError::InvalidOp(0xFF)),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &HashMap::new(),
         );
     }
@@ -635,7 +719,11 @@ mod test {
         let instructions: Vec<u8> = vec![0x01, 0x05, 0, 0, 0, 0, 0x01, 0, 0, 0, 0];
         verify_match_result(
             Err(BytecodeError::InvalidValueType(0x05)),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &HashMap::new(),
         );
     }
@@ -651,7 +739,11 @@ mod test {
 
         verify_match_result(
             Err(BytecodeError::InvalidBoolValue(15)),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &HashMap::new(),
         );
     }
@@ -667,7 +759,11 @@ mod test {
 
         verify_match_result(
             Err(BytecodeError::InvalidKeyType),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &HashMap::new(),
         );
     }
@@ -694,7 +790,11 @@ mod test {
 
         verify_match_result(
             Err(BytecodeError::MismatchValueTypes),
-            DecodedBindRules { symbol_table: symbol_table, instructions: instructions },
+            DecodedBindRules {
+                symbol_table: symbol_table,
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
     }
@@ -704,7 +804,11 @@ mod test {
         let instructions: Vec<u8> = vec![0x01, 0x02, 0, 0, 0];
         verify_match_result(
             Err(BytecodeError::UnexpectedEnd),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &HashMap::new(),
         );
     }
@@ -742,7 +846,11 @@ mod test {
 
         verify_match_result(
             Ok(true),
-            DecodedBindRules { symbol_table: symbol_table, instructions: instructions },
+            DecodedBindRules {
+                symbol_table: symbol_table,
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
     }
@@ -780,7 +888,11 @@ mod test {
 
         verify_match_result(
             Ok(false),
-            DecodedBindRules { symbol_table: symbol_table, instructions: instructions },
+            DecodedBindRules {
+                symbol_table: symbol_table,
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
     }
@@ -799,7 +911,11 @@ mod test {
 
         verify_match_result(
             Ok(true),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &HashMap::new(),
         );
     }
@@ -828,6 +944,7 @@ mod test {
             DecodedBindRules {
                 symbol_table: symbol_table.clone(),
                 instructions: instructions.clone(),
+                decoded_instructions: vec![],
             },
             &device_properties,
         );
@@ -837,7 +954,11 @@ mod test {
             .insert(PropertyKey::NumberKey(10), Symbol::StringValue("godwit".to_string()));
         verify_match_result(
             Ok(false),
-            DecodedBindRules { symbol_table: symbol_table.clone(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: symbol_table.clone(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
     }
@@ -859,7 +980,11 @@ mod test {
         device_properties.insert(PropertyKey::NumberKey(10), Symbol::NumberValue(2000));
         verify_match_result(
             Ok(false),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions.clone() },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions.clone(),
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
 
@@ -867,7 +992,11 @@ mod test {
         device_properties.insert(PropertyKey::NumberKey(10), Symbol::NumberValue(20));
         verify_match_result(
             Ok(true),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
     }
@@ -888,7 +1017,11 @@ mod test {
         append_abort(&mut instructions);
         verify_match_result(
             Err(BytecodeError::InvalidJumpLocation),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
     }
@@ -909,7 +1042,11 @@ mod test {
         append_jump_pad(&mut instructions);
         verify_match_result(
             Err(BytecodeError::UnexpectedEnd),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
     }
@@ -933,7 +1070,11 @@ mod test {
         device_properties.insert(PropertyKey::NumberKey(10), Symbol::NumberValue(2000));
         verify_match_result(
             Ok(true),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions.clone() },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions.clone(),
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
 
@@ -945,7 +1086,11 @@ mod test {
         );
         verify_match_result(
             Ok(false),
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: instructions },
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
     }
@@ -1002,7 +1147,11 @@ mod test {
 
         verify_match_result(
             Ok(true),
-            DecodedBindRules { symbol_table: symbol_table, instructions: instructions },
+            DecodedBindRules {
+                symbol_table: symbol_table,
+                instructions: instructions,
+                decoded_instructions: vec![],
+            },
             &device_properties,
         );
     }
