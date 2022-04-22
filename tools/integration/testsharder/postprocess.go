@@ -34,7 +34,7 @@ const (
 	maxMatchesPerMultiplier = 5
 
 	// The prefix added to the names of shards that run affected tests.
-	affectedShardPrefix = "affected:"
+	AffectedShardPrefix = "affected:"
 
 	// The prefix added to the names of shards that run multiplied tests.
 	multipliedShardPrefix = "multiplied:"
@@ -200,7 +200,7 @@ func MultiplyShards(
 			// If a test is multiplied, it doesn't matter if it was originally
 			// in an affected shard or not and it's confusing for it to have
 			// two prefixes. So don't include the "affected" prefix.
-			shardName := strings.TrimPrefix(shards[m.shardIdx].Name, affectedShardPrefix)
+			shardName := strings.TrimPrefix(shards[m.shardIdx].Name, AffectedShardPrefix)
 			// If the test was already multiplied by another modifier, keep the same
 			// multiplier shard but prefer the lower number of runs.
 			alreadyMultiplied := strings.HasPrefix(shardName, multipliedShardPrefix)
@@ -277,33 +277,34 @@ func ApplyModifiers(shards []*Shard, modTests []TestModifier) ([]*Shard, error) 
 	return shards, nil
 }
 
-// ShardAffected separates the affected tests into separate shards.
-// If `affectedOnly` is true, it will only return the affected test shards.
-func ShardAffected(shards []*Shard, affectedOnly bool) []*Shard {
-	var newShards []*Shard
+// PartitionShards splits a set of shards in two using the given partition
+// function.
+func PartitionShards(shards []*Shard, partitionFunc func(Test) bool, prefix string) ([]*Shard, []*Shard) {
+	var matchingShards []*Shard
+	var nonmatchingShards []*Shard
 	for _, shard := range shards {
-		var affected []Test
-		var unaffected []Test
+		var matching []Test
+		var nonmatching []Test
 		for _, test := range shard.Tests {
-			if test.Affected {
-				affected = append(affected, test)
+			if partitionFunc(test) {
+				matching = append(matching, test)
 			} else {
-				unaffected = append(unaffected, test)
+				nonmatching = append(nonmatching, test)
 			}
 		}
-		if len(affected) > 0 {
-			newShards = append(newShards, &Shard{
-				Name:  affectedShardPrefix + shard.Name,
-				Tests: affected,
+		if len(matching) > 0 {
+			matchingShards = append(matchingShards, &Shard{
+				Name:  prefix + shard.Name,
+				Tests: matching,
 				Env:   shard.Env,
 			})
 		}
-		if len(unaffected) > 0 && !affectedOnly {
-			shard.Tests = unaffected
-			newShards = append(newShards, shard)
+		if len(nonmatching) > 0 {
+			shard.Tests = nonmatching
+			nonmatchingShards = append(nonmatchingShards, shard)
 		}
 	}
-	return newShards
+	return matchingShards, nonmatchingShards
 }
 
 func min(a, b int) int {

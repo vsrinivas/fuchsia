@@ -167,7 +167,14 @@ func execute(ctx context.Context) error {
 		return err
 	}
 
-	shards = testsharder.ShardAffected(shards, affectedOnly)
+	isAffected := func(t testsharder.Test) bool {
+		return t.Affected
+	}
+	affectedShards, unaffectedShards := testsharder.PartitionShards(shards, isAffected, testsharder.AffectedShardPrefix)
+	shards = affectedShards
+	if !affectedOnly {
+		shards = append(shards, unaffectedShards...)
+	}
 
 	shards, err = testsharder.MultiplyShards(ctx, shards, modifiers, testDurations, targetDuration, targetTestCount)
 	if err != nil {

@@ -27,7 +27,7 @@ func affectedShard(env build.Environment, os string, ids ...int) *Shard {
 		tests = append(tests, test)
 	}
 	return &Shard{
-		Name:  affectedShardPrefix + environmentName(env),
+		Name:  AffectedShardPrefix + environmentName(env),
 		Tests: tests,
 		Env:   env,
 	}
@@ -425,7 +425,7 @@ func TestApplyModifiers(t *testing.T) {
 	}
 }
 
-func TestShardAffected(t *testing.T) {
+func TestPartitionShards(t *testing.T) {
 	env1 := build.Environment{
 		Dimensions: build.DimensionSet{DeviceType: "QEMU"},
 		Tags:       []string{},
@@ -434,11 +434,6 @@ func TestShardAffected(t *testing.T) {
 		Dimensions: build.DimensionSet{DeviceType: "NUC"},
 		Tags:       []string{},
 	}
-	env3 := build.Environment{
-		Dimensions: build.DimensionSet{OS: "linux"},
-		Tags:       []string{},
-	}
-
 	shardWithAffected := func(s *Shard, affectedIndices ...int) *Shard {
 		for _, i := range affectedIndices {
 			s.Tests[i].Affected = true
@@ -447,65 +442,75 @@ func TestShardAffected(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name         string
-		shards       []*Shard
-		affectedOnly bool
-		expected     []*Shard
+		name               string
+		shards             []*Shard
+		partitionFunc      func(Test) bool
+		prefix             string
+		expectedPartition1 []*Shard
+		expectedPartition2 []*Shard
 	}{
 		{
-			name: "matches any os",
+			name:   "partitions correctly",
+			prefix: AffectedShardPrefix,
 			shards: []*Shard{
 				shardWithAffected(shard(env1, "fuchsia", 1, 2, 3), 2),
-				shardWithAffected(shard(env3, "linux", 1, 2, 3), 0),
+				shardWithAffected(shard(env2, "linux", 1, 2, 3), 0),
 			},
-			expected: []*Shard{
+			partitionFunc: func(t Test) bool {
+				return t.Affected
+			},
+			expectedPartition1: []*Shard{
 				affectedShard(env1, "fuchsia", 3),
+				affectedShard(env2, "linux", 1),
+			},
+			expectedPartition2: []*Shard{
 				shard(env1, "fuchsia", 1, 2),
-				affectedShard(env3, "linux", 1),
-				shard(env3, "linux", 2, 3),
+				shard(env2, "linux", 2, 3),
 			},
 		},
 		{
-			name: "shards correctly",
+			name:   "shards with no matching tests return only nonmatching shards",
+			prefix: AffectedShardPrefix,
 			shards: []*Shard{
-				shard(env1, "fuchsia", 1),
-				shardWithAffected(shard(env1, "fuchsia", 2, 4), 0, 1),
-				shardWithAffected(shard(env2, "fuchsia", 1, 2, 4), 1, 2),
-				shardWithAffected(shard(env3, "linux", 3, 4), 0),
+				shard(env1, "fuchsia", 1, 2, 3),
+				shard(env2, "linux", 1, 2, 3),
 			},
-			expected: []*Shard{
-				shard(env1, "fuchsia", 1),
-				affectedShard(env1, "fuchsia", 2, 4),
-				affectedShard(env2, "fuchsia", 2, 4),
-				shard(env2, "fuchsia", 1),
-				affectedShard(env3, "linux", 3),
-				shard(env3, "linux", 4),
+			partitionFunc: func(t Test) bool {
+				return t.Affected
+			},
+			expectedPartition1: nil,
+			expectedPartition2: []*Shard{
+				shard(env1, "fuchsia", 1, 2, 3),
+				shard(env2, "linux", 1, 2, 3),
 			},
 		},
 		{
-			name: "shards only affected tests",
+			name:   "shards with only matching tests return only matching shards",
+			prefix: AffectedShardPrefix,
 			shards: []*Shard{
-				shard(env1, "fuchsia", 1),
-				shardWithAffected(shard(env1, "fuchsia", 2, 4), 0, 1),
-				shardWithAffected(shard(env2, "fuchsia", 1, 2, 4), 1, 2),
-				shardWithAffected(shard(env3, "linux", 3, 4), 0),
+				shardWithAffected(shard(env1, "fuchsia", 1, 2, 3), 0, 1, 2),
+				shardWithAffected(shard(env2, "linux", 1, 2, 3), 0, 1, 2),
 			},
-			affectedOnly: true,
-			expected: []*Shard{
-				affectedShard(env1, "fuchsia", 2, 4),
-				affectedShard(env2, "fuchsia", 2, 4),
-				affectedShard(env3, "linux", 3),
+			partitionFunc: func(t Test) bool {
+				return t.Affected
 			},
+			expectedPartition1: []*Shard{
+				affectedShard(env1, "fuchsia", 1, 2, 3),
+				affectedShard(env2, "linux", 1, 2, 3),
+			},
+			expectedPartition2: nil,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := ShardAffected(
+			partition1, partition2 := PartitionShards(
 				tc.shards,
-				tc.affectedOnly,
+				tc.partitionFunc,
+				tc.prefix,
 			)
-			assertEqual(t, tc.expected, actual)
+			assertEqual(t, tc.expectedPartition1, partition1)
+			assertEqual(t, tc.expectedPartition2, partition2)
 		})
 	}
 }
