@@ -13,6 +13,7 @@
 
 #include <usb/usb-request.h>
 
+#include "lib/ddk/binding_priv.h"
 #include "src/connectivity/ethernet/drivers/usb-cdc-ecm/ethernet_usb_cdc_ecm-bind.h"
 #include "usb-cdc-ecm-lib.h"
 
@@ -655,6 +656,15 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
     goto fail;
   }
 
+  zx_device_str_prop_t prop = {
+      .key = "fuchsia.ethernet.NETDEVICE_MIGRATION",
+      .property_value =
+          {
+              .value_type = ZX_DEVICE_PROPERTY_VALUE_BOOL,
+              .value = {.bool_val = true},
+          },
+  };
+
   // Add the device
   device_add_args_t args = {
       .version = DEVICE_ADD_ARGS_VERSION,
@@ -663,6 +673,9 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
       .ops = &ecm_device_proto,
       .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
       .proto_ops = &ethernet_impl_ops,
+      .str_props = &prop,
+      // TODO(fxbug.dev/93333): Remove this conditional once GND is ready everywhere.
+      .str_prop_count = device_is_dfv2(ecm_ctx->usb_device) ? 1 : 0,
   };
   result = device_add(ecm_ctx->usb_device, &args, &ecm_ctx->zxdev);
   if (result < 0) {
