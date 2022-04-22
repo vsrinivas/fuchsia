@@ -179,6 +179,19 @@ impl PkgUrl {
         Ok(PkgUrl { repo, path, hash, resource: None, name, variant })
     }
 
+    pub fn new_package_url(
+        repo: RepoUrl,
+        name: PackageName,
+        variant: Option<PackageVariant>,
+        hash: Option<Hash>,
+    ) -> PkgUrl {
+        let path = match &variant {
+            Some(variant) => format!("/{}/{}", name, variant),
+            None => format!("/{}", name),
+        };
+        PkgUrl { repo, path, hash, resource: None, name, variant }
+    }
+
     pub fn new_resource(
         host: String,
         path: String,
@@ -495,7 +508,10 @@ fn parse_query_pairs(pairs: url::form_urlencoded::Parse<'_>) -> Result<Option<Ha
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::errors::ResourcePathError, assert_matches::assert_matches};
+    use {
+        super::*, crate::errors::ResourcePathError, assert_matches::assert_matches,
+        std::str::FromStr,
+    };
 
     macro_rules! test_parse_ok {
         (
@@ -882,8 +898,37 @@ mod tests {
             parsed = PkgUrl::new_package(
                 "fuchsia.com".to_string(),
                 "/fonts/stable".to_string(),
-                Some("80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a").map(|s| s.parse().unwrap()),
+                Some(
+                    "80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a".parse().unwrap(),
+                ),
             ).unwrap(),
+            formatted = "fuchsia-pkg://fuchsia.com/fonts/stable?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
+        }
+        test_format_package_url_from_parsed => {
+            parsed = PkgUrl::new_package_url(
+                RepoUrl::new("fuchsia.com".to_string()).unwrap(),
+                PackageName::from_str("fonts").unwrap(),
+                None,
+                None,
+            ),
+            formatted = "fuchsia-pkg://fuchsia.com/fonts",
+        }
+        test_format_package_url_from_parsed_with_variant => {
+            parsed = PkgUrl::new_package_url(
+                RepoUrl::new("fuchsia.com".to_string()).unwrap(),
+                PackageName::from_str("fonts").unwrap(), Some(PackageVariant::from_str("stable").unwrap()),
+                None,
+            ),
+            formatted = "fuchsia-pkg://fuchsia.com/fonts/stable",
+        }
+        test_format_package_url_from_parsed_with_hash => {
+            parsed = PkgUrl::new_package_url(
+                RepoUrl::new("fuchsia.com".to_string()).unwrap(),
+                PackageName::from_str("fonts").unwrap(), Some(PackageVariant::from_str("stable").unwrap()),
+                Some(
+                    "80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a".parse().unwrap(),
+                ),
+            ),
             formatted = "fuchsia-pkg://fuchsia.com/fonts/stable?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
         }
         test_format_resource_url => {
@@ -947,6 +992,52 @@ mod tests {
             ),
         )
         .unwrap();
+
+        assert_eq!("fuchsia.com", url.host());
+        assert_eq!("/fonts", url.path());
+        assert_eq!(&"fonts".parse::<PackageName>().unwrap(), url.name());
+        assert_eq!(None, url.variant());
+        assert_eq!(
+            Some(
+                "80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a".parse().unwrap()
+            )
+            .as_ref(),
+            url.package_hash()
+        );
+    }
+
+    #[test]
+    fn test_new_package_url() {
+        let url = PkgUrl::new_package_url(
+            RepoUrl::new("fuchsia.com".to_string()).unwrap(),
+            PackageName::from_str("fonts").unwrap(),
+            Some(PackageVariant::from_str("stable").unwrap()),
+            Some(
+                "80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a".parse().unwrap(),
+            ),
+        );
+        assert_eq!("fuchsia.com", url.host());
+        assert_eq!("/fonts/stable", url.path());
+        assert_eq!(&"fonts".parse::<PackageName>().unwrap(), url.name());
+        assert_eq!(Some(&"stable".parse::<PackageVariant>().unwrap()), url.variant());
+        assert_eq!(
+            Some(
+                "80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a".parse().unwrap()
+            )
+            .as_ref(),
+            url.package_hash()
+        );
+        assert_eq!(None, url.resource());
+        assert_eq!(url, url.root_url());
+
+        let url = PkgUrl::new_package_url(
+            RepoUrl::new("fuchsia.com".to_string()).unwrap(),
+            PackageName::from_str("fonts").unwrap(),
+            None,
+            Some(
+                "80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a".parse().unwrap(),
+            ),
+        );
 
         assert_eq!("fuchsia.com", url.host());
         assert_eq!("/fonts", url.path());
