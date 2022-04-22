@@ -23,15 +23,31 @@
             to: [ "#chromium-tests" ],
         },
 
-        // These system capabilities are offered for use by the cts tests.
+        // These system capabilities are offered for use by the chromium tests.
         {
             protocol: [
                 "fuchsia.hwinfo.Product",
                 "fuchsia.media.ProfileProvider",
+
+                // some chromium tests require access to the network.
+                "fuchsia.net.http.Loader",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.vulkan.loader.Loader",
 
                 // TODO: add any other required capabilities
+            ],
+            from: "parent",
+            to: "#chromium-tests",
+        },
+
+        // some chromium tests require access to the network.
+        {
+            protocol: [
+                "fuchsia.net.http.Loader",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
             ],
             from: "parent",
             to: "#chromium-tests",

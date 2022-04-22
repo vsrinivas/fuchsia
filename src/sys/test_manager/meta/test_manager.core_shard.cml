@@ -282,9 +282,13 @@
         },
 
         // Needed for //src/cobalt/bin/meta/cobalt_testapp_for_prober_do_not_run_manually.cml
+        // and chromium realm.
         // TODO(fxbug.dev/83038): Remove once e2e is better supported.
         {
-            protocol: "fuchsia.net.http.Loader",
+            protocol: [
+                "fuchsia.net.http.Loader",
+                "fuchsia.net.name.Lookup",
+            ],
             from: "#network",
             to: "#test_manager",
         },
