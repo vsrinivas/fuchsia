@@ -6,10 +6,43 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <algorithm>
+#include <string_view>
+#include <utility>
+#include <vector>
+
 #include "src/media/audio/mixer_service/mix/pipeline_stage.h"
 #include "src/media/audio/mixer_service/mix/thread.h"
 
 namespace media_audio_mixer_service {
+
+namespace {
+
+bool HasNode(const std::vector<NodePtr>& nodes, const NodePtr& node) {
+  FX_CHECK(node);
+  return std::find(nodes.cbegin(), nodes.cend(), node) != nodes.cend();
+}
+
+bool HasInputInChildren(const std::vector<NodePtr>& children, const NodePtr& input) {
+  FX_CHECK(input);
+  // Should only be used if `input` is not a meta node (to avoid unnecessary computation).
+  FX_CHECK(!input->is_meta());
+  return std::find_if(children.cbegin(), children.cend(), [&input](const NodePtr& child) {
+           FX_CHECK(!child->is_meta());
+           return HasNode(child->inputs(), input);
+         }) != children.cend();
+}
+
+bool HasOutputInChildren(const std::vector<NodePtr>& children, const NodePtr& output) {
+  FX_CHECK(output);
+  return std::find_if(children.cbegin(), children.cend(), [&output](const NodePtr& child) {
+           FX_CHECK(!child->is_meta());
+           return output->is_meta() ? HasNode(output->child_inputs(), child->output())
+                                    : output == child->output();
+         }) != children.cend();
+}
+
+}  // namespace
 
 Node::Node(std::string_view name, bool is_meta, PipelineStagePtr pipeline_stage, NodePtr parent)
     : name_(name), is_meta_(is_meta), pipeline_stage_(std::move(pipeline_stage)), parent_(parent) {
@@ -54,69 +87,61 @@ ThreadPtr Node::thread() const {
   return thread_;
 }
 
-void Node::AddInput(NodePtr n) {
+void Node::AddInput(NodePtr input) {
   FX_CHECK(!is_meta_);
-  FX_CHECK(n);
-  inputs_.push_back(n);
+  FX_CHECK(input);
+  inputs_.push_back(std::move(input));
 }
 
-void Node::SetOutput(NodePtr n) {
+void Node::SetOutput(NodePtr output) {
   FX_CHECK(!is_meta_);
-  FX_CHECK(n);
-  output_ = n;
+  FX_CHECK(output);
+  output_ = std::move(output);
 }
 
-void Node::AddChildInput(NodePtr child) {
+void Node::AddChildInput(NodePtr child_input) {
   FX_CHECK(is_meta_);
-  FX_CHECK(child);
-  child_inputs_.push_back(child);
+  FX_CHECK(child_input);
+  child_inputs_.push_back(std::move(child_input));
 }
 
-void Node::AddChildOutput(NodePtr child) {
+void Node::AddChildOutput(NodePtr child_output) {
   FX_CHECK(is_meta_);
-  FX_CHECK(child);
-  child_outputs_.push_back(child);
+  FX_CHECK(child_output);
+  child_outputs_.push_back(std::move(child_output));
 }
 
-bool Node::HasInput(NodePtr n) {
+void Node::RemoveInput(NodePtr input) {
   FX_CHECK(!is_meta_);
-  FX_CHECK(n);
+  FX_CHECK(input);
 
-  auto it = std::find(inputs_.begin(), inputs_.end(), n);
-  return it != inputs_.end();
-}
-
-void Node::RemoveInput(NodePtr n) {
-  FX_CHECK(!is_meta_);
-  FX_CHECK(n);
-
-  auto it = std::find(inputs_.begin(), inputs_.end(), n);
+  const auto it = std::find(inputs_.begin(), inputs_.end(), input);
   FX_CHECK(it != inputs_.end());
   inputs_.erase(it);
 }
 
-void Node::RemoveOutput(NodePtr n) {
+void Node::RemoveOutput(NodePtr output) {
   FX_CHECK(!is_meta_);
-  FX_CHECK(n);
-  FX_CHECK(output_ == n);
+  FX_CHECK(output);
+  FX_CHECK(output_ == output);
 
   output_ = nullptr;
 }
 
-void Node::RemoveChildInput(NodePtr child) {
+void Node::RemoveChildInput(NodePtr child_input) {
   FX_CHECK(is_meta_);
-  FX_CHECK(child);
+  FX_CHECK(child_input);
 
-  auto it = std::find(child_inputs_.begin(), child_inputs_.end(), child);
+  const auto it = std::find(child_inputs_.begin(), child_inputs_.end(), child_input);
   FX_CHECK(it != child_inputs_.end());
   child_inputs_.erase(it);
 }
 
-void Node::RemoveChildOutput(NodePtr child) {
+void Node::RemoveChildOutput(NodePtr child_output) {
   FX_CHECK(is_meta_);
-  FX_CHECK(child);
+  FX_CHECK(child_output);
 
-  auto it = std::find(child_outputs_.begin(), child_outputs_.end(), child);
+  const auto it = std::find(child_outputs_.begin(), child_outputs_.end(), child_output);
   FX_CHECK(it != child_outputs_.end());
   child_outputs_.erase(it);
 }
@@ -128,7 +153,9 @@ fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdge(
 
   // Create a src child if needed.
   if (src->is_meta_) {
-    // TODO(fxbug.dev/87651): prevent connections to dest (two children can't point to same node)
+    if (HasOutputInChildren(src->child_outputs(), dest)) {
+      return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
+    }
     NodePtr child = src->CreateNewChildOutput();
     if (!child) {
       return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kSourceHasTooManyOutputs);
@@ -143,7 +170,9 @@ fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdge(
 
   // Create a dest child if needed.
   if (dest->is_meta_) {
-    // TODO(fxbug.dev/87651): prevent connections to dest (two children can't point to same node)
+    if (HasInputInChildren(dest->child_inputs(), src)) {
+      return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
+    }
     NodePtr child = dest->CreateNewChildInput();
     if (!child) {
       return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kDestHasTooManyInputs);
@@ -156,11 +185,10 @@ fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdge(
     return result;
   }
 
-  if (src->output()) {
+  if (src->output() || HasNode(dest->inputs(), src)) {
     return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
   }
-  // TODO(fxbug.dev/87651): prevent connections to dest (dest.inputs can't have src twice)
-  // TODO(fxbug.dev/87651): prevent duplication connection here too?
+
   if (!dest->CanAcceptInput(src)) {
     return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
   }
@@ -204,7 +232,7 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
     }
     // Remove the edge child -> dest.
     // If this succeeds, then also remove child from src.
-    auto result = DeleteEdge(global_queue, dest, child);
+    const auto result = DeleteEdge(global_queue, dest, child);
     if (result.is_ok()) {
       src->RemoveChildOutput(child);
     }
@@ -232,11 +260,9 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
     return result;
   }
 
-  if (!dest->HasInput(src)) {
+  if (!HasNode(dest->inputs_, src)) {
     return fpromise::error(fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
   }
-
-  // If dest->HasInput(src), then this better be true as well.
   FX_CHECK(src->output_ == dest);
 
   src->RemoveOutput(dest);

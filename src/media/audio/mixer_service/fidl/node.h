@@ -9,8 +9,9 @@
 #include <lib/fpromise/result.h>
 
 #include <memory>
-#include <optional>
 #include <string>
+#include <string_view>
+#include <vector>
 
 #include "src/media/audio/mixer_service/common/basic_types.h"
 #include "src/media/audio/mixer_service/common/global_task_queue.h"
@@ -83,7 +84,7 @@ class Node {
  public:
   // Returns the node's name. This is used for diagnostics only.
   // The name may not be a unique identifier.
-  const std::string& name() const { return name_; }
+  std::string_view name() const { return name_; }
 
   // Reports whether this is a meta node.
   bool is_meta() const { return is_meta_; }
@@ -159,17 +160,16 @@ class Node {
 
  private:
   // Implementation of CreateEdge.
-  void AddInput(NodePtr n);
-  void SetOutput(NodePtr n);
-  void AddChildInput(NodePtr child);
-  void AddChildOutput(NodePtr dest);
+  void AddInput(NodePtr input);
+  void SetOutput(NodePtr output);
+  void AddChildInput(NodePtr child_input);
+  void AddChildOutput(NodePtr child_output);
 
   // Implementation of DeleteEdge.
-  bool HasInput(NodePtr n);
-  void RemoveInput(NodePtr n);
-  void RemoveOutput(NodePtr n);
-  void RemoveChildInput(NodePtr child);
-  void RemoveChildOutput(NodePtr dest);
+  void RemoveInput(NodePtr input);
+  void RemoveOutput(NodePtr output);
+  void RemoveChildInput(NodePtr child_input);
+  void RemoveChildOutput(NodePtr child_output);
 
   const std::string name_;
   const bool is_meta_;
