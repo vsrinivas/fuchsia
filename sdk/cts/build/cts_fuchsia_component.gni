@@ -17,7 +17,7 @@ import("//sdk/cts/build/write_cts_file.gni")
 # ```
 # cts_fuchsia_component("my-test-component") {
 #   deps = [ ":my-test" ]
-#   manifest = "meta/my-test.cmx"
+#   manifest = "meta/my-test.cml"
 #   testonly = true
 # }
 # ```
@@ -35,6 +35,13 @@ import("//sdk/cts/build/write_cts_file.gni")
 #     not create an _sdk target.
 #     Type: bool
 template("cts_fuchsia_component") {
+  assert(
+      defined(invoker.manifest),
+      "`manifest` must be specified when calling cts_fuchsia_component($target_name)")
+
+  assert(get_path_info(invoker.manifest, "extension") == "cml",
+         "CTS component manifests must be CFv2.")
+
   if (!defined(invoker.deps)) {
     invoker.deps = []
   }
