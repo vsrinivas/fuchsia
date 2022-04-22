@@ -1247,11 +1247,11 @@ where
 
         if let (Some(handler), Some(metadata)) = (self.cup_handler.as_ref(), request_metadata) {
             let () = handler
-                .verify_response(&metadata.hash(), &response, metadata.public_key_id)
+                .verify_response(&metadata, &response, metadata.public_key_id)
                 .map_err(|e| {
-                error!("Could not verify response: {:?}", e);
-                e
-            })?;
+                    error!("Could not verify response: {:?}", e);
+                    e
+                })?;
         }
 
         let (parts, body) = response.into_parts();

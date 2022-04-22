@@ -14,9 +14,10 @@ use {
         service::{make_service_fn, service_fn},
         Body, Method, Request, Response, StatusCode,
     },
-    omaha_client::cup_ecdsa::{PublicKeyId, RequestMetadata},
+    omaha_client::cup_ecdsa::PublicKeyId,
     parking_lot::Mutex,
     serde_json::json,
+    sha2::{Digest, Sha256},
     std::{
         collections::HashMap,
         convert::Infallible,
@@ -225,7 +226,6 @@ fn make_etag(
     response_data: &[u8],
 ) -> Option<String> {
     use p256::ecdsa::signature::Signer;
-    use std::convert::TryInto;
 
     if uri == "/" {
         return None;
@@ -237,26 +237,24 @@ fn make_etag(
     let (cup2key_key, cup2key_val) = query_pairs.next().unwrap();
     assert_eq!(cup2key_key, "cup2key");
 
-    let (public_key_id_str, nonce_str) = cup2key_val.split_once(':').unwrap();
+    let (public_key_id_str, _nonce_str) = cup2key_val.split_once(':').unwrap();
     let public_key_id: PublicKeyId = public_key_id_str.parse().unwrap();
-
-    let request_metadata_hash = (RequestMetadata {
-        request_body: request_body.to_vec().clone(),
-        public_key_id,
-        nonce: hex::decode(nonce_str).unwrap().try_into().unwrap(),
-    })
-    .hash();
 
     let private_key: &PrivateKey = inner.private_keys.as_ref().unwrap().find(public_key_id)?;
 
-    let mut buffer: Vec<u8> = vec![];
-    buffer.extend(response_data.iter());
-    buffer.extend(request_metadata_hash.iter());
+    let request_hash = Sha256::digest(&request_body);
+    let response_hash = Sha256::digest(&response_data);
+
+    let mut hasher = Sha256::new();
+    hasher.update(&request_hash);
+    hasher.update(&response_hash);
+    hasher.update(&*cup2key_val);
+    let transaction_hash = hasher.finalize();
 
     Some(format!(
         "{}:{}",
-        hex::encode(private_key.sign(&buffer).to_der()),
-        hex::encode(request_metadata_hash)
+        hex::encode(private_key.sign(&transaction_hash).to_der()),
+        hex::encode(request_hash)
     ))
 }
 

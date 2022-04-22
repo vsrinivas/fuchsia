@@ -7,7 +7,7 @@ use hyper::header::ETAG;
 use p256::ecdsa::{signature::Verifier as _, DerSignature};
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Deserializer, Serialize};
-use sha2::{Digest, Sha256};
+use sha2::{digest, Digest, Sha256};
 use signature::Signature;
 use std::{collections::HashMap, convert::TryInto, fmt::Debug};
 use url::Url;
@@ -81,15 +81,6 @@ pub struct RequestMetadata {
     pub public_key_id: PublicKeyId,
     pub nonce: Nonce,
 }
-impl RequestMetadata {
-    pub fn hash(&self) -> Vec<u8> {
-        let mut hasher = Sha256::new();
-        hasher.update(&self.request_body);
-        hasher.update(self.public_key_id.to_string().as_bytes());
-        hasher.update(hex::encode(self.nonce).as_bytes());
-        hasher.finalize().as_slice().to_vec()
-    }
-}
 
 /// An interface to an under-construction server request, providing read/write
 /// access to the URI and read access to the serialized request body.
@@ -117,7 +108,7 @@ pub trait Cupv2RequestHandler {
     /// error if the response is not authentic.
     fn verify_response(
         &self,
-        request_metadata_hash: &[u8],
+        request_metadata: &RequestMetadata,
         resp: &Response<Vec<u8>>,
         public_key_id: PublicKeyId,
     ) -> Result<(), CupVerificationError>;
@@ -130,7 +121,7 @@ pub trait Cupv2Verifier {
     fn verify_response_with_signature(
         &self,
         ecdsa_signature: DerSignature,
-        request_metadata_hash: &[u8],
+        request_metadata: &RequestMetadata,
         response_body: &[u8],
         public_key_id: PublicKeyId,
     ) -> Result<(), CupVerificationError>;
@@ -192,7 +183,7 @@ impl Cupv2RequestHandler for StandardCupv2Handler {
 
     fn verify_response(
         &self,
-        request_metadata_hash: &[u8],
+        request_metadata: &RequestMetadata,
         resp: &Response<Vec<u8>>,
         public_key_id: PublicKeyId,
     ) -> Result<(), CupVerificationError> {
@@ -224,7 +215,8 @@ impl Cupv2RequestHandler for StandardCupv2Handler {
         let actual_hash =
             &hex::decode(hex_hash).map_err(|_| CupVerificationError::RequestHashMalformed)?;
 
-        if request_metadata_hash != actual_hash {
+        let request_body_hash = Sha256::digest(&request_metadata.request_body);
+        if *request_body_hash != *actual_hash {
             return Err(CupVerificationError::RequestHashMismatch);
         }
 
@@ -233,31 +225,41 @@ impl Cupv2RequestHandler for StandardCupv2Handler {
                 .map_err(|_| CupVerificationError::SignatureMalformed)?,
         )?;
 
-        self.verify_response_with_signature(
-            signature,
-            request_metadata_hash,
-            resp.body(),
-            public_key_id,
-        )
+        self.verify_response_with_signature(signature, request_metadata, resp.body(), public_key_id)
     }
+}
+
+pub fn make_transaction_hash(
+    request_metadata: &RequestMetadata,
+    response_body: &[u8],
+) -> digest::Output<Sha256> {
+    let request_hash = Sha256::digest(&request_metadata.request_body);
+    let response_hash = Sha256::digest(response_body);
+    let cup2_urlparam =
+        format!("{}:{}", request_metadata.public_key_id, hex::encode(request_metadata.nonce));
+
+    let mut hasher = Sha256::new();
+    hasher.update(&request_hash);
+    hasher.update(&response_hash);
+    hasher.update(&cup2_urlparam);
+    hasher.finalize()
 }
 
 impl Cupv2Verifier for StandardCupv2Handler {
     fn verify_response_with_signature(
         &self,
         ecdsa_signature: DerSignature,
-        request_metadata_hash: &[u8],
+        request_metadata: &RequestMetadata,
         response_body: &[u8],
         public_key_id: PublicKeyId,
     ) -> Result<(), CupVerificationError> {
-        let mut message: Vec<u8> = response_body.to_vec();
-        message.extend(request_metadata_hash);
+        let transaction_hash = make_transaction_hash(request_metadata, response_body);
 
         let public_key: &PublicKey = self
             .parameters_by_id
             .get(&public_key_id)
             .ok_or(CupVerificationError::SpecifiedPublicKeyIdMissing)?;
-        Ok(public_key.verify(&message, &ecdsa_signature.try_into()?)?)
+        Ok(public_key.verify(&transaction_hash, &ecdsa_signature.try_into()?)?)
     }
 }
 
@@ -334,7 +336,7 @@ pub mod test_support {
 
         fn verify_response(
             &self,
-            _request_metadata_hash: &[u8],
+            _request_metadata: &RequestMetadata,
             _resp: &Response<Vec<u8>>,
             _public_key_id: PublicKeyId,
         ) -> Result<(), CupVerificationError> {
@@ -349,7 +351,7 @@ pub mod test_support {
         fn verify_response_with_signature(
             &self,
             _ecdsa_signature: DerSignature,
-            _request_metadata_hash: &[u8],
+            _request_metadata: &RequestMetadata,
             _response_body: &[u8],
             _public_key_id: PublicKeyId,
         ) -> Result<(), CupVerificationError> {
@@ -390,21 +392,8 @@ mod tests {
         response_body: &[u8],
     ) -> String {
         use signature::Signer;
-        let mut message: Vec<u8> = response_body.to_vec();
-        message.extend(request_metadata.hash());
-        hex::encode(signing_key.sign(&message).to_der().as_bytes())
-    }
-
-    fn make_expected_hash_for_test(
-        intermediate: &Intermediate,
-        nonce: Nonce,
-        public_key_id: impl std::string::ToString,
-    ) -> Vec<u8> {
-        let mut hasher = Sha256::new();
-        hasher.update(&intermediate.serialize_body().unwrap());
-        hasher.update(public_key_id.to_string().as_bytes());
-        hasher.update(hex::encode(nonce).as_bytes());
-        hasher.finalize().as_slice().to_vec()
+        let transaction_hash = make_transaction_hash(request_metadata, response_body);
+        hex::encode(signing_key.sign(&transaction_hash).to_der().as_bytes())
     }
 
     #[test]
@@ -449,7 +438,7 @@ mod tests {
             hyper::Response::builder().status(200).body("foo".as_bytes().to_vec())?;
 
         assert_matches!(
-            cup_handler.verify_response(&request_metadata.hash(), &response, public_key_id),
+            cup_handler.verify_response(&request_metadata, &response, public_key_id),
             Err(CupVerificationError::EtagHeaderMissing)
         );
         Ok(())
@@ -471,7 +460,7 @@ mod tests {
             .body("foo".as_bytes().to_vec())?;
 
         assert_matches!(
-            cup_handler.verify_response(&request_metadata.hash(), &response, public_key_id),
+            cup_handler.verify_response(&request_metadata, &response, public_key_id),
             Err(CupVerificationError::EtagNotString(_))
         );
         Ok(())
@@ -495,11 +484,8 @@ mod tests {
             nonce: request_metadata.nonce,
         };
 
-        let expected_hash = make_expected_hash_for_test(
-            &intermediate,
-            request_metadata.nonce,
-            correct_public_key_id,
-        );
+        let expected_hash = Sha256::digest(&request_metadata.request_body);
+
         let expected_hash_hex: String = hex::encode(expected_hash);
         let expected_signature = make_expected_signature_for_test(
             &priv_key,
@@ -549,9 +535,8 @@ mod tests {
                 .status(200)
                 .header(ETAG, etag)
                 .body(response_body.as_bytes().to_vec())?;
-            let actual_err = cup_handler
-                .verify_response(&request_metadata.hash(), &response, public_key_id)
-                .err();
+            let actual_err =
+                cup_handler.verify_response(&request_metadata, &response, public_key_id).err();
             assert_eq!(
                 actual_err, expected_err,
                 "Received error {:?}, expected error {:?}",
@@ -567,10 +552,9 @@ mod tests {
     // verification below.
     fn make_verify_response_arguments(
         request_handler: &impl Cupv2RequestHandler,
-        public_key_id: PublicKeyId,
         private_key: SigningKey,
         response_body: &str,
-    ) -> Result<(Vec<u8>, Response<Vec<u8>>), anyhow::Error> {
+    ) -> Result<(RequestMetadata, Response<Vec<u8>>), anyhow::Error> {
         let mut intermediate = make_standard_intermediate_for_test(Request::default());
         let request_metadata = request_handler.decorate_request(&mut intermediate)?;
 
@@ -583,18 +567,14 @@ mod tests {
         let etag = &format!(
             "{}:{}",
             signature,
-            hex::encode(make_expected_hash_for_test(
-                &intermediate,
-                request_metadata.nonce,
-                public_key_id
-            ))
+            hex::encode(Sha256::digest(&request_metadata.request_body))
         );
 
         let response: Response<Vec<u8>> = hyper::Response::builder()
             .status(200)
             .header(ETAG, etag)
             .body(response_body.as_bytes().to_vec())?;
-        Ok((request_metadata.hash(), response))
+        Ok((request_metadata, response))
     }
 
     #[test]
@@ -608,14 +588,10 @@ mod tests {
             historical: vec![],
         };
         let mut cup_handler = StandardCupv2Handler::new(&public_keys);
-        let (request_metadata_hash_a, response_a) = make_verify_response_arguments(
-            &cup_handler,
-            public_key_id_a,
-            private_key_a,
-            response_body_a,
-        )?;
+        let (request_metadata_a, response_a) =
+            make_verify_response_arguments(&cup_handler, private_key_a, response_body_a)?;
         assert_matches!(
-            cup_handler.verify_response(&request_metadata_hash_a, &response_a, public_key_id_a),
+            cup_handler.verify_response(&request_metadata_a, &response_a, public_key_id_a),
             Ok(())
         );
 
@@ -631,34 +607,30 @@ mod tests {
         };
         cup_handler = StandardCupv2Handler::new(&public_keys);
 
-        let (request_metadata_hash_b, response_b) = make_verify_response_arguments(
-            &cup_handler,
-            public_key_id_b,
-            private_key_b,
-            response_body_b,
-        )?;
+        let (request_metadata_b, response_b) =
+            make_verify_response_arguments(&cup_handler, private_key_b, response_body_b)?;
         // and verify that the cup handler can verify a newly generated response,
         assert_matches!(
-            cup_handler.verify_response(&request_metadata_hash_b, &response_b, public_key_id_b),
+            cup_handler.verify_response(&request_metadata_b, &response_b, public_key_id_b),
             Ok(())
         );
 
         // as well as a response which has already been generated and stored.
         assert_matches!(
-            cup_handler.verify_response(&request_metadata_hash_a, &response_a, public_key_id_a),
+            cup_handler.verify_response(&request_metadata_a, &response_a, public_key_id_a),
             Ok(())
         );
 
         // finally, assert that verification fails if either (1) the hash, (2)
         // the stored response, or (3) the key ID itself is wrong.
         assert!(cup_handler
-            .verify_response(&request_metadata_hash_a, &response_a, public_key_id_b)
+            .verify_response(&request_metadata_a, &response_a, public_key_id_b)
             .is_err());
         assert!(cup_handler
-            .verify_response(&request_metadata_hash_a, &response_b, public_key_id_a)
+            .verify_response(&request_metadata_a, &response_b, public_key_id_a)
             .is_err());
         assert!(cup_handler
-            .verify_response(&request_metadata_hash_b, &response_a, public_key_id_a)
+            .verify_response(&request_metadata_b, &response_a, public_key_id_a)
             .is_err());
 
         Ok(())
