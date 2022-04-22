@@ -1277,9 +1277,11 @@ func (s *streamSocketImpl) Listen(_ fidl.Context, backlog int16) (socket.StreamS
 	// Accept one more than the configured listen backlog to keep in parity with
 	// Linux. Ref, because of missing equality check here:
 	// https://github.com/torvalds/linux/blob/7acac4b3196/include/net/sock.h#L937
-	backlog++
-
-	if err := s.ep.Listen(int(backlog)); err != nil {
+	//
+	// Upcast from int16 to int before incrementing to avoid overflow when
+	// backlog is math.MaxInt16. Note that int is always at least 32 bits as per
+	// https://golang.google.cn/pkg/builtin/#int.
+	if err := s.ep.Listen(int(backlog) + 1); err != nil {
 		return socket.StreamSocketListenResultWithErr(tcpipErrorToCode(err)), nil
 	}
 

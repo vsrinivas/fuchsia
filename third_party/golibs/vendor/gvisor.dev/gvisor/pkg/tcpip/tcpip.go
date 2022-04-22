@@ -1351,7 +1351,7 @@ type NetworkProtocolNumber uint32
 //
 // +stateify savable
 type StatCounter struct {
-	count atomicbitops.AlignedAtomicUint64
+	count atomicbitops.Uint64
 }
 
 // Increment adds one to the counter.
@@ -2275,12 +2275,10 @@ func (s Stats) FillIn() Stats {
 	return s
 }
 
-// Clone returns a copy of the TransportEndpointStats by atomically reading
-// each field.
-func (src *TransportEndpointStats) Clone() TransportEndpointStats {
-	var dst TransportEndpointStats
-	clone(reflect.ValueOf(&dst).Elem(), reflect.ValueOf(src).Elem())
-	return dst
+// Clone clones a copy of the TransportEndpointStats into dst by atomically
+// reading each field.
+func (src *TransportEndpointStats) Clone(dst *TransportEndpointStats) {
+	clone(reflect.ValueOf(dst).Elem(), reflect.ValueOf(src).Elem())
 }
 
 func clone(dst reflect.Value, src reflect.Value) {
@@ -2488,6 +2486,18 @@ func GetDanglingEndpoints() []Endpoint {
 	}
 	danglingEndpointsMu.Unlock()
 	return es
+}
+
+// ReleaseDanglingEndpoints clears out all all reference counted objects held by
+// dangling endpoints.
+func ReleaseDanglingEndpoints() {
+	// Get the dangling endpoints first to avoid locking around Release(), which
+	// can cause a lock inversion with endpoint.mu and danglingEndpointsMu.
+	// Calling Release on a dangling endpoint that has been deleted is a noop.
+	eps := GetDanglingEndpoints()
+	for _, ep := range eps {
+		ep.Abort()
+	}
 }
 
 // AddDanglingEndpoint adds a dangling endpoint.

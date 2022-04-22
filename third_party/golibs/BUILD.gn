@@ -2146,9 +2146,12 @@ go_library("gvisor.dev/gvisor") {
     ":golang.org/x/time",
   ]
   sources = [
+    "pkg/atomicbitops/32b_32bit.go",
+    "pkg/atomicbitops/32b_64bit.go",
     "pkg/atomicbitops/aligned_32bit_unsafe.go",
     "pkg/atomicbitops/aligned_64bit.go",
     "pkg/atomicbitops/atomicbitops.go",
+    "pkg/atomicbitops/atomicbitops_32bit_state_autogen.go",
     "pkg/atomicbitops/atomicbitops_32bit_unsafe_state_autogen.go",
     "pkg/atomicbitops/atomicbitops_64bit_state_autogen.go",
     "pkg/atomicbitops/atomicbitops_amd64.s",
@@ -2383,6 +2386,7 @@ go_library("gvisor.dev/gvisor") {
     "pkg/tcpip/transport/tcp/snd.go",
     "pkg/tcpip/transport/tcp/tcp_endpoint_list.go",
     "pkg/tcpip/transport/tcp/tcp_segment_list.go",
+    "pkg/tcpip/transport/tcp/tcp_segment_refs.go",
     "pkg/tcpip/transport/tcp/tcp_state_autogen.go",
     "pkg/tcpip/transport/tcp/tcp_unsafe_state_autogen.go",
     "pkg/tcpip/transport/tcp/timer.go",

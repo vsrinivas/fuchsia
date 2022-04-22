@@ -616,7 +616,7 @@ const (
 	ERROR_DEVICE_ENUMERATION_ERROR                                            syscall.Errno = 648
 	ERROR_MOUNT_POINT_NOT_RESOLVED                                            syscall.Errno = 649
 	ERROR_INVALID_DEVICE_OBJECT_PARAMETER                                     syscall.Errno = 650
-	ERROR_MCA_OCCURRED                                                         syscall.Errno = 651
+	ERROR_MCA_OCCURED                                                         syscall.Errno = 651
 	ERROR_DRIVER_DATABASE_ERROR                                               syscall.Errno = 652
 	ERROR_SYSTEM_HIVE_TOO_LARGE                                               syscall.Errno = 653
 	ERROR_DRIVER_FAILED_PRIOR_UNLOAD                                          syscall.Errno = 654
@@ -7780,7 +7780,7 @@ const (
 	STATUS_DEVICE_ENUMERATION_ERROR                                           NTStatus      = 0xC0000366
 	STATUS_MOUNT_POINT_NOT_RESOLVED                                           NTStatus      = 0xC0000368
 	STATUS_INVALID_DEVICE_OBJECT_PARAMETER                                    NTStatus      = 0xC0000369
-	STATUS_MCA_OCCURRED                                                        NTStatus      = 0xC000036A
+	STATUS_MCA_OCCURED                                                        NTStatus      = 0xC000036A
 	STATUS_DRIVER_BLOCKED_CRITICAL                                            NTStatus      = 0xC000036B
 	STATUS_DRIVER_BLOCKED                                                     NTStatus      = 0xC000036C
 	STATUS_DRIVER_DATABASE_ERROR                                              NTStatus      = 0xC000036D

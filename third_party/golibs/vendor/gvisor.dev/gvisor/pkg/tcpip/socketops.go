@@ -55,8 +55,10 @@ type SocketOptionsHandler interface {
 	// buffer size. It also returns the newly set value.
 	OnSetSendBufferSize(v int64) (newSz int64)
 
-	// OnSetReceiveBufferSize is invoked by SO_RCVBUF and SO_RCVBUFFORCE.
-	OnSetReceiveBufferSize(v, oldSz int64) (newSz int64)
+	// OnSetReceiveBufferSize is invoked by SO_RCVBUF and SO_RCVBUFFORCE. The
+	// handler can optionally return a callback which will be called after
+	// the buffer size is updated to newSz.
+	OnSetReceiveBufferSize(v, oldSz int64) (newSz int64, postSet func())
 
 	// WakeupWriters is invoked when the send buffer size for an endpoint is
 	// changed. The handler notifies the writers if the send buffer size is
@@ -107,8 +109,8 @@ func (*DefaultSocketOptionsHandler) OnSetSendBufferSize(v int64) (newSz int64) {
 func (*DefaultSocketOptionsHandler) WakeupWriters() {}
 
 // OnSetReceiveBufferSize implements SocketOptionsHandler.OnSetReceiveBufferSize.
-func (*DefaultSocketOptionsHandler) OnSetReceiveBufferSize(v, oldSz int64) (newSz int64) {
-	return v
+func (*DefaultSocketOptionsHandler) OnSetReceiveBufferSize(v, oldSz int64) (newSz int64, postSet func()) {
+	return v, nil
 }
 
 // StackHandler holds methods to access the stack options. These must be
@@ -229,7 +231,7 @@ type SocketOptions struct {
 	getSendBufferLimits GetSendBufferLimits `state:"manual"`
 
 	// sendBufferSize determines the send buffer size for this socket.
-	sendBufferSize atomicbitops.AlignedAtomicInt64
+	sendBufferSize atomicbitops.Int64
 
 	// getReceiveBufferLimits provides the handler to get the min, default and
 	// max size for receive buffer. It is initialized at the creation time and
@@ -237,7 +239,7 @@ type SocketOptions struct {
 	getReceiveBufferLimits GetReceiveBufferLimits `state:"manual"`
 
 	// receiveBufferSize determines the receive buffer size for this socket.
-	receiveBufferSize atomicbitops.AlignedAtomicInt64
+	receiveBufferSize atomicbitops.Int64
 
 	// mu protects the access to the below fields.
 	mu sync.Mutex `state:"nosave"`
@@ -245,6 +247,10 @@ type SocketOptions struct {
 	// linger determines the amount of time the socket should linger before
 	// close. We currently implement this option for TCP socket only.
 	linger LingerOption
+
+	// rcvlowat specifies the minimum number of bytes which should be
+	// received to indicate the socket as readable.
+	rcvlowat int32
 }
 
 // InitHandler initializes the handler. This must be called before using the
@@ -696,9 +702,27 @@ func (so *SocketOptions) ReceiveBufferLimits() (min, max int64) {
 // SetReceiveBufferSize sets the value of the SO_RCVBUF option, optionally
 // notifying the owning endpoint.
 func (so *SocketOptions) SetReceiveBufferSize(receiveBufferSize int64, notify bool) {
+	var postSet func()
 	if notify {
 		oldSz := so.receiveBufferSize.Load()
-		receiveBufferSize = so.handler.OnSetReceiveBufferSize(receiveBufferSize, oldSz)
+		receiveBufferSize, postSet = so.handler.OnSetReceiveBufferSize(receiveBufferSize, oldSz)
 	}
 	so.receiveBufferSize.Store(receiveBufferSize)
+	if postSet != nil {
+		postSet()
+	}
+}
+
+// GetRcvlowat gets value for SO_RCVLOWAT option.
+func (so *SocketOptions) GetRcvlowat() int32 {
+	// TODO(b/226603727): Return so.rcvlowat after adding complete support
+	// for SO_RCVLOWAT option. For now, return the default value of 1.
+	defaultRcvlowat := int32(1)
+	return defaultRcvlowat
+}
+
+// SetRcvlowat sets value for SO_RCVLOWAT option.
+func (so *SocketOptions) SetRcvlowat(rcvlowat int32) Error {
+	atomic.StoreInt32(&so.rcvlowat, rcvlowat)
+	return nil
 }

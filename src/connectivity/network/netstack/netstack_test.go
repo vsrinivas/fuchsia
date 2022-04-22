@@ -572,7 +572,7 @@ func TestTCPEndpointMapConnect(t *testing.T) {
 	var wq waiter.Queue
 	eps := createEP(t, ns, &wq)
 
-	events := make(chan waiter.EventMask)
+	events := make(chan waiter.EventMask, 1)
 	waitEntry := waiter.NewFunctionEntry(math.MaxUint64, func(m waiter.EventMask) {
 		events <- m
 	})

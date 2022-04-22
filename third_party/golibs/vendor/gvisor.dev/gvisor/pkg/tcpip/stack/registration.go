@@ -225,6 +225,13 @@ type TransportProtocol interface {
 	// Wait waits for any worker goroutines owned by the protocol to stop.
 	Wait()
 
+	// Pause requests that any protocol level background workers pause.
+	Pause()
+
+	// Resume resumes any protocol level background workers that were
+	// previously paused by Pause.
+	Resume()
+
 	// Parse sets pkt.TransportHeader and trims pkt.Data appropriately. It does
 	// neither and returns false if pkt.Data is too small, i.e. pkt.Data.Size() <
 	// MinimumPacketSize()
@@ -689,6 +696,21 @@ type ForwardingNetworkEndpoint interface {
 	//
 	// Returns the previous forwarding configuration.
 	SetForwarding(bool) bool
+}
+
+// MulticastForwardingNetworkEndpoint is a network endpoint that may forward
+// multicast packets.
+type MulticastForwardingNetworkEndpoint interface {
+	ForwardingNetworkEndpoint
+
+	// MulticastForwarding returns true if multicast forwarding is enabled.
+	// Otherwise, returns false.
+	MulticastForwarding() bool
+
+	// SetMulticastForwarding sets the multicast forwarding configuration.
+	//
+	// Returns the previous forwarding configuration.
+	SetMulticastForwarding(bool) bool
 }
 
 // NetworkProtocol is the interface that needs to be implemented by network

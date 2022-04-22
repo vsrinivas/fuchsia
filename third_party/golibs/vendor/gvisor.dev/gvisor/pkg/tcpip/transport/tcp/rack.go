@@ -186,9 +186,11 @@ func (s *sender) schedulePTO() {
 
 // probeTimerExpired is the same as TLP_send_probe() as defined in
 // https://tools.ietf.org/html/draft-ietf-tcpm-rack-08#section-7.5.2.
-func (s *sender) probeTimerExpired() tcpip.Error {
-	if !s.probeTimer.checkExpiration() {
-		return nil
+//
+// +checklocks:s.ep.mu
+func (s *sender) probeTimerExpired() {
+	if s.probeTimer.isZero() || !s.probeTimer.checkExpiration() {
+		return
 	}
 
 	var dataSent bool
@@ -196,7 +198,7 @@ func (s *sender) probeTimerExpired() tcpip.Error {
 		dataSent = s.maybeSendSegment(s.writeNext, int(s.ep.scoreboard.SMSS()), s.SndUna.Add(s.SndWnd))
 		if dataSent {
 			s.Outstanding += s.pCount(s.writeNext, s.MaxPayloadSize)
-			s.writeNext = s.writeNext.Next()
+			s.updateWriteNext(s.writeNext.Next())
 		}
 	}
 
@@ -229,7 +231,7 @@ func (s *sender) probeTimerExpired() tcpip.Error {
 	// not the probe timer. This ensures that the sender does not send repeated,
 	// back-to-back tail loss probes.
 	s.postXmit(dataSent, false /* shouldScheduleProbe */)
-	return nil
+	return
 }
 
 // detectTLPRecovery detects if recovery was accomplished by the loss probes
@@ -384,16 +386,16 @@ func (rc *rackControl) detectLoss(rcvTime tcpip.MonotonicTime) int {
 
 // reorderTimerExpired will retransmit the segments which have not been acked
 // before the reorder timer expired.
-func (rc *rackControl) reorderTimerExpired() tcpip.Error {
-	// Check if the timer actually expired or if it's a spurious wake due
-	// to a previously orphaned runtime timer.
-	if !rc.snd.reorderTimer.checkExpiration() {
-		return nil
+//
+// +checklocks:rc.snd.ep.mu
+func (rc *rackControl) reorderTimerExpired() {
+	if rc.snd.reorderTimer.isZero() || !rc.snd.reorderTimer.checkExpiration() {
+		return
 	}
 
 	numLost := rc.detectLoss(rc.snd.ep.stack.Clock().NowMonotonic())
 	if numLost == 0 {
-		return nil
+		return
 	}
 
 	fastRetransmit := false
@@ -404,10 +406,12 @@ func (rc *rackControl) reorderTimerExpired() tcpip.Error {
 	}
 
 	rc.DoRecovery(nil, fastRetransmit)
-	return nil
+	return
 }
 
 // DoRecovery implements lossRecovery.DoRecovery.
+//
+// +checklocks:rc.snd.ep.mu
 func (rc *rackControl) DoRecovery(_ *segment, fastRetransmit bool) {
 	snd := rc.snd
 	if fastRetransmit {

@@ -1484,6 +1484,47 @@ INSTANTIATE_TEST_SUITE_P(NetStreamTest, BlockedIOTest,
                                           testing::Values(false, true)),
                          BlockedIOParamsToString);
 
+class ListenBacklogTest : public testing::TestWithParam<int> {};
+
+TEST_P(ListenBacklogTest, BacklogValues) {
+  sockaddr_in addr = {
+      .sin_family = AF_INET,
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
+  };
+  socklen_t addrlen = sizeof(addr);
+
+  fbl::unique_fd listenfd;
+  ASSERT_TRUE(listenfd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+  ASSERT_EQ(bind(listenfd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
+      << strerror(errno);
+  ASSERT_EQ(getsockname(listenfd.get(), reinterpret_cast<sockaddr*>(&addr), &addrlen), 0)
+      << strerror(errno);
+  ASSERT_EQ(addrlen, sizeof(addr));
+  ASSERT_EQ(listen(listenfd.get(), GetParam()), 0) << strerror(errno);
+
+  fbl::unique_fd connfd;
+  ASSERT_TRUE(connfd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+  ASSERT_EQ(connect(connfd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
+      << strerror(errno);
+
+  fbl::unique_fd acceptfd;
+  ASSERT_TRUE(acceptfd = fbl::unique_fd(accept(listenfd.get(), nullptr, nullptr)))
+      << strerror(errno);
+
+  EXPECT_EQ(close(acceptfd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(connfd.release()), 0) << strerror(errno);
+  EXPECT_EQ(close(listenfd.release()), 0) << strerror(errno);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    NetStreamTest, ListenBacklogTest,
+    testing::Values(std::numeric_limits<int>::min(), std::numeric_limits<int16_t>::min(), -1, 0, 1,
+                    std::numeric_limits<int16_t>::max() - 1, std::numeric_limits<int16_t>::max(),
+                    std::numeric_limits<int>::max() - 1, std::numeric_limits<int>::max()));
+
 // Note: we choose 100 because the max number of fds per process is limited to
 // 256.
 const int32_t kListeningSockets = 100;

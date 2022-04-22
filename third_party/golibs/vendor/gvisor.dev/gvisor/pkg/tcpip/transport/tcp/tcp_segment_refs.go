@@ -1,4 +1,4 @@
-package stack
+package tcp
 
 import (
 	"fmt"
@@ -11,11 +11,11 @@ import (
 // stack traces). This is false by default and should only be set to true for
 // debugging purposes, as it can generate an extremely large amount of output
 // and drastically degrade performance.
-const packetBufferenableLogging = false
+const segmentenableLogging = false
 
 // obj is used to customize logging. Note that we use a pointer to T so that
 // we do not copy the entire object when passed as a format parameter.
-var packetBufferobj *PacketBuffer
+var segmentobj *segment
 
 // Refs implements refs.RefCounter. It keeps a reference count using atomic
 // operations and calls the destructor when the count reaches zero.
@@ -29,7 +29,7 @@ var packetBufferobj *PacketBuffer
 // interfaces manually.
 //
 // +stateify savable
-type packetBufferRefs struct {
+type segmentRefs struct {
 	// refCount is composed of two fields:
 	//
 	//	[32-bit speculative references]:[32-bit real references]
@@ -42,38 +42,38 @@ type packetBufferRefs struct {
 
 // InitRefs initializes r with one reference and, if enabled, activates leak
 // checking.
-func (r *packetBufferRefs) InitRefs() {
+func (r *segmentRefs) InitRefs() {
 	r.refCount.Store(1)
 	refsvfs2.Register(r)
 }
 
 // RefType implements refsvfs2.CheckedObject.RefType.
-func (r *packetBufferRefs) RefType() string {
-	return fmt.Sprintf("%T", packetBufferobj)[1:]
+func (r *segmentRefs) RefType() string {
+	return fmt.Sprintf("%T", segmentobj)[1:]
 }
 
 // LeakMessage implements refsvfs2.CheckedObject.LeakMessage.
-func (r *packetBufferRefs) LeakMessage() string {
+func (r *segmentRefs) LeakMessage() string {
 	return fmt.Sprintf("[%s %p] reference count of %d instead of 0", r.RefType(), r, r.ReadRefs())
 }
 
 // LogRefs implements refsvfs2.CheckedObject.LogRefs.
-func (r *packetBufferRefs) LogRefs() bool {
-	return packetBufferenableLogging
+func (r *segmentRefs) LogRefs() bool {
+	return segmentenableLogging
 }
 
 // ReadRefs returns the current number of references. The returned count is
 // inherently racy and is unsafe to use without external synchronization.
-func (r *packetBufferRefs) ReadRefs() int64 {
+func (r *segmentRefs) ReadRefs() int64 {
 	return r.refCount.Load()
 }
 
 // IncRef implements refs.RefCounter.IncRef.
 //
 //go:nosplit
-func (r *packetBufferRefs) IncRef() {
+func (r *segmentRefs) IncRef() {
 	v := r.refCount.Add(1)
-	if packetBufferenableLogging {
+	if segmentenableLogging {
 		refsvfs2.LogIncRef(r, v)
 	}
 	if v <= 1 {
@@ -88,7 +88,7 @@ func (r *packetBufferRefs) IncRef() {
 // other TryIncRef calls from genuine references held.
 //
 //go:nosplit
-func (r *packetBufferRefs) TryIncRef() bool {
+func (r *segmentRefs) TryIncRef() bool {
 	const speculativeRef = 1 << 32
 	if v := r.refCount.Add(speculativeRef); int32(v) == 0 {
 
@@ -97,7 +97,7 @@ func (r *packetBufferRefs) TryIncRef() bool {
 	}
 
 	v := r.refCount.Add(-speculativeRef + 1)
-	if packetBufferenableLogging {
+	if segmentenableLogging {
 		refsvfs2.LogTryIncRef(r, v)
 	}
 	return true
@@ -115,9 +115,9 @@ func (r *packetBufferRefs) TryIncRef() bool {
 //	A: TryIncRef [transform speculative to real]
 //
 //go:nosplit
-func (r *packetBufferRefs) DecRef(destroy func()) {
+func (r *segmentRefs) DecRef(destroy func()) {
 	v := r.refCount.Add(-1)
-	if packetBufferenableLogging {
+	if segmentenableLogging {
 		refsvfs2.LogDecRef(r, v)
 	}
 	switch {
@@ -133,7 +133,7 @@ func (r *packetBufferRefs) DecRef(destroy func()) {
 	}
 }
 
-func (r *packetBufferRefs) afterLoad() {
+func (r *segmentRefs) afterLoad() {
 	if r.ReadRefs() > 0 {
 		refsvfs2.Register(r)
 	}

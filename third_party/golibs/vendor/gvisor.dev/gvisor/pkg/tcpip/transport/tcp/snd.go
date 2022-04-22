@@ -20,7 +20,6 @@ import (
 	"sort"
 	"time"
 
-	"gvisor.dev/gvisor/pkg/sleep"
 	"gvisor.dev/gvisor/pkg/sync"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
@@ -106,8 +105,7 @@ type sender struct {
 
 	writeNext   *segment
 	writeList   segmentList
-	resendTimer timer       `state:"nosave"`
-	resendWaker sleep.Waker `state:"nosave"`
+	resendTimer timer `state:"nosave"`
 
 	// rtt.TCPRTTState.SRTT and rtt.TCPRTTState.RTTVar are the "smoothed
 	// round-trip time", and "round-trip time variation", as defined in
@@ -138,12 +136,10 @@ type sender struct {
 
 	// reorderTimer is the timer used to retransmit the segments after RACK
 	// detects them as lost.
-	reorderTimer timer       `state:"nosave"`
-	reorderWaker sleep.Waker `state:"nosave"`
+	reorderTimer timer `state:"nosave"`
 
-	// probeTimer and probeWaker are used to schedule PTO for RACK TLP algorithm.
-	probeTimer timer       `state:"nosave"`
-	probeWaker sleep.Waker `state:"nosave"`
+	// probeTimer is used to schedule PTO for RACK TLP algorithm.
+	probeTimer timer `state:"nosave"`
 
 	// spuriousRecovery indicates whether the sender entered recovery
 	// spuriously as described in RFC3522 Section 3.2.
@@ -165,6 +161,7 @@ type rtt struct {
 	stack.TCPRTTState
 }
 
+// +checklocks:ep.mu
 func newSender(ep *endpoint, iss, irs seqnum.Value, sndWnd seqnum.Size, mss uint16, sndWndScale int) *sender {
 	// The sender MUST reduce the TCP data length to account for any IP or
 	// TCP options that it is including in the packets that it sends.
@@ -206,12 +203,12 @@ func newSender(ep *endpoint, iss, irs seqnum.Value, sndWnd seqnum.Size, mss uint
 		s.SndWndScale = uint8(sndWndScale)
 	}
 
-	s.resendTimer.init(s.ep.stack.Clock(), &s.resendWaker)
-	s.reorderTimer.init(s.ep.stack.Clock(), &s.reorderWaker)
-	s.probeTimer.init(s.ep.stack.Clock(), &s.probeWaker)
+	s.resendTimer.init(s.ep.stack.Clock(), maybeFailTimerHandler(s.ep, s.retransmitTimerExpired))
+	s.reorderTimer.init(s.ep.stack.Clock(), timerHandler(s.ep, s.rc.reorderTimerExpired))
+	s.probeTimer.init(s.ep.stack.Clock(), timerHandler(s.ep, s.probeTimerExpired))
 
+	s.ep.AssertLockHeld(ep)
 	s.updateMaxPayloadSize(int(ep.route.MTU()), 0)
-
 	// Initialize SACK Scoreboard after updating max payload size as we use
 	// the maxPayloadSize as the smss when determining if a segment is lost
 	// etc.
@@ -270,6 +267,7 @@ func (s *sender) initLossRecovery() lossRecovery {
 // MTU. If this is in response to "packet too big" control packets (indicated
 // by the count argument), it also reduces the number of outstanding packets and
 // attempts to retransmit the first packet above the MTU size.
+// +checklocks:s.ep.mu
 func (s *sender) updateMaxPayloadSize(mtu, count int) {
 	m := mtu - header.TCPMinimumSize
 
@@ -331,13 +329,14 @@ func (s *sender) updateMaxPayloadSize(mtu, count int) {
 
 	// Since we likely reduced the number of outstanding packets, we may be
 	// ready to send some more.
-	s.writeNext = nextSeg
+	s.updateWriteNext(nextSeg)
 	s.sendData()
 }
 
 // sendAck sends an ACK segment.
+// +checklocks:s.ep.mu
 func (s *sender) sendAck() {
-	s.sendSegmentFromView(buffer.VectorisedView{}, header.TCPFlagAck, s.SndNxt)
+	s.sendEmptySegment(header.TCPFlagAck, s.SndNxt)
 }
 
 // updateRTO updates the retransmit timeout when a new roud-trip time is
@@ -397,6 +396,7 @@ func (s *sender) updateRTO(rtt time.Duration) {
 }
 
 // resendSegment resends the first unacknowledged segment.
+// +checklocks:s.ep.mu
 func (s *sender) resendSegment() {
 	// Don't use any segments we already sent to measure RTT as they may
 	// have been affected by packets being lost.
@@ -427,11 +427,12 @@ func (s *sender) resendSegment() {
 // unacknowledged segments are assumed lost, and thus need to be resent.
 // Returns true if the connection is still usable, or false if the connection
 // is deemed lost.
-func (s *sender) retransmitTimerExpired() bool {
+// +checklocks:s.ep.mu
+func (s *sender) retransmitTimerExpired() tcpip.Error {
 	// Check if the timer actually expired or if it's a spurious wake due
 	// to a previously orphaned runtime timer.
-	if !s.resendTimer.checkExpiration() {
-		return true
+	if s.resendTimer.isZero() || !s.resendTimer.checkExpiration() {
+		return nil
 	}
 
 	// Initialize the variables used to detect spurious recovery after
@@ -445,7 +446,7 @@ func (s *sender) retransmitTimerExpired() bool {
 	// when writeList is empty. Remove this once we have a proper fix for this
 	// issue.
 	if s.writeList.Front() == nil {
-		return true
+		return nil
 	}
 
 	s.ep.stack.Stats().TCP.Timeouts.Increment()
@@ -480,7 +481,8 @@ func (s *sender) retransmitTimerExpired() bool {
 	// window probes were acknowledged.
 	// net/ipv4/tcp_timer.c::tcp_probe_timer()
 	if remaining <= 0 || s.unackZeroWindowProbes >= s.maxRetries {
-		return false
+		s.ep.stack.Stats().TCP.EstablishedTimedout.Increment()
+		return &tcpip.ErrTimeout{}
 	}
 
 	// Set new timeout. The timer will be restarted by the call to sendData
@@ -540,7 +542,7 @@ func (s *sender) retransmitTimerExpired() bool {
 	// information as we lack more rigorous checks to validate if the SACK
 	// information is usable after an RTO.
 	s.ep.scoreboard.Reset()
-	s.writeNext = s.writeList.Front()
+	s.updateWriteNext(s.writeList.Front())
 
 	// RFC 1122 4.2.2.17: Start sending zero window probes when we still see a
 	// zero receive window after retransmission interval and we have data to
@@ -551,19 +553,20 @@ func (s *sender) retransmitTimerExpired() bool {
 		// indefinitely.  As long as the receiving TCP continues to send
 		// acknowledgments in response to the probe segments, the sending TCP
 		// MUST allow the connection to stay open.
-		return true
+		return nil
 	}
 
 	seg := s.writeNext
 	// RFC 1122 4.2.3.5: Close the connection when the number of
 	// retransmissions for this segment is beyond a limit.
 	if seg != nil && seg.xmitCount > s.maxRetries {
-		return false
+		s.ep.stack.Stats().TCP.EstablishedTimedout.Increment()
+		return &tcpip.ErrTimeout{}
 	}
 
 	s.sendData()
 
-	return true
+	return nil
 }
 
 // pCount returns the number of packets in the segment. Due to GSO, a segment
@@ -717,6 +720,7 @@ func (s *sender) NextSeg(nextSegHint *segment) (nextSeg, hint *segment, rescueRt
 // other segments into this one or splits the specified segment based on the
 // lower of the specified limit value or the receivers window size specified by
 // end.
+// +checklocks:s.ep.mu
 func (s *sender) maybeSendSegment(seg *segment, limit int, end seqnum.Value) (sent bool) {
 	// We abuse the flags field to determine if we have already
 	// assigned a sequence number to this segment.
@@ -746,7 +750,7 @@ func (s *sender) maybeSendSegment(seg *segment, limit int, end seqnum.Value) (se
 				}
 				seg.merge(nSeg)
 				s.writeList.Remove(nSeg)
-				nSeg.decRef()
+				nSeg.DecRef()
 			}
 			if !nextTooBig && seg.data.Size() < available {
 				// Segment is not full.
@@ -874,12 +878,12 @@ func (s *sender) maybeSendSegment(seg *segment, limit int, end seqnum.Value) (se
 	return true
 }
 
+// +checklocks:s.ep.mu
 func (s *sender) sendZeroWindowProbe() {
-	ack, win := s.ep.rcv.getSendParams()
 	s.unackZeroWindowProbes++
 	// Send a zero window probe with sequence number pointing to
 	// the last acknowledged byte.
-	s.ep.sendRaw(buffer.VectorisedView{}, header.TCPFlagAck, s.SndUna-1, ack, win)
+	s.sendEmptySegment(header.TCPFlagAck, s.SndUna-1)
 	// Rearm the timer to continue probing.
 	s.resendTimer.enable(s.RTO)
 }
@@ -937,6 +941,7 @@ func (s *sender) postXmit(dataSent bool, shouldScheduleProbe bool) {
 
 // sendData sends new data segments. It is called when data becomes available or
 // when the send window opens up.
+// +checklocks:s.ep.mu
 func (s *sender) sendData() {
 	limit := s.MaxPayloadSize
 	if s.gso {
@@ -963,7 +968,7 @@ func (s *sender) sendData() {
 		if s.isAssignedSequenceNumber(seg) && s.ep.SACKPermitted && s.ep.scoreboard.IsSACKED(seg.sackBlock()) {
 			// Move writeNext along so that we don't try and scan data that
 			// has already been SACKED.
-			s.writeNext = seg.Next()
+			s.updateWriteNext(seg.Next())
 			continue
 		}
 		if sent := s.maybeSendSegment(seg, limit, end); !sent {
@@ -971,7 +976,7 @@ func (s *sender) sendData() {
 		}
 		dataSent = true
 		s.Outstanding += s.pCount(seg, s.MaxPayloadSize)
-		s.writeNext = seg.Next()
+		s.updateWriteNext(seg.Next())
 	}
 
 	s.postXmit(dataSent, true /* shouldScheduleProbe */)
@@ -1363,6 +1368,8 @@ func (s *sender) inRecovery() bool {
 
 // handleRcvdSegment is called when a segment is received; it is responsible for
 // updating the send-related state.
+// +checklocks:s.ep.mu
+// +checklocksalias:s.rc.snd.ep.mu=s.ep.mu
 func (s *sender) handleRcvdSegment(rcvdSeg *segment) {
 	// Check if we can extract an RTT measurement from this ack.
 	if !rcvdSeg.parsedOptions.TS && s.RTTMeasureSeqNum.LessThan(rcvdSeg.ackNumber) {
@@ -1485,18 +1492,6 @@ func (s *sender) handleRcvdSegment(rcvdSeg *segment) {
 		// Remove all acknowledged data from the write list.
 		acked := s.SndUna.Size(ack)
 		s.SndUna = ack
-
-		// The remote ACK-ing at least 1 byte is an indication that we have a
-		// full-duplex connection to the remote as the only way we will receive an
-		// ACK is if the remote received data that we previously sent.
-		//
-		// As of writing, linux seems to only confirm a route as reachable when
-		// forward progress is made which is indicated by an ACK that removes data
-		// from the retransmit queue.
-		if acked > 0 {
-			s.ep.route.ConfirmReachable()
-		}
-
 		ackLeft := acked
 		originalOutstanding := s.Outstanding
 		for ackLeft > 0 {
@@ -1515,7 +1510,7 @@ func (s *sender) handleRcvdSegment(rcvdSeg *segment) {
 			}
 
 			if s.writeNext == seg {
-				s.writeNext = seg.Next()
+				s.updateWriteNext(seg.Next())
 			}
 
 			// Update the RACK fields if SACK is enabled.
@@ -1534,7 +1529,7 @@ func (s *sender) handleRcvdSegment(rcvdSeg *segment) {
 			} else {
 				s.SackedOut -= s.pCount(seg, s.MaxPayloadSize)
 			}
-			seg.decRef()
+			seg.DecRef()
 			ackLeft -= datalen
 		}
 
@@ -1629,6 +1624,7 @@ func (s *sender) handleRcvdSegment(rcvdSeg *segment) {
 }
 
 // sendSegment sends the specified segment.
+// +checklocks:s.ep.mu
 func (s *sender) sendSegment(seg *segment) tcpip.Error {
 	if seg.xmitCount > 0 {
 		s.ep.stack.Stats().TCP.Retransmits.Increment()
@@ -1661,6 +1657,8 @@ func (s *sender) sendSegment(seg *segment) tcpip.Error {
 
 // sendSegmentFromView sends a new segment containing the given payload, flags
 // and sequence number.
+// +checklocks:s.ep.mu
+// +checklocksalias:s.ep.rcv.ep.mu=s.ep.mu
 func (s *sender) sendSegmentFromView(data buffer.VectorisedView, flags header.TCPFlags, seq seqnum.Value) tcpip.Error {
 	s.LastSendTime = s.ep.stack.Clock().NowMonotonic()
 	if seq == s.RTTMeasureSeqNum {
@@ -1675,12 +1673,30 @@ func (s *sender) sendSegmentFromView(data buffer.VectorisedView, flags header.TC
 	return s.ep.sendRaw(data, flags, seq, rcvNxt, rcvWnd)
 }
 
+// sendEmptySegment sends a new segment containing the given flags and sequence
+// number.
+// +checklocks:s.ep.mu
+func (s *sender) sendEmptySegment(flags header.TCPFlags, seq seqnum.Value) tcpip.Error {
+	return s.sendSegmentFromView(buffer.VectorisedView{}, flags, seq)
+}
+
 // maybeSendOutOfWindowAck sends an ACK if we are not being rate limited
 // currently.
+// +checklocks:s.ep.mu
 func (s *sender) maybeSendOutOfWindowAck(seg *segment) {
 	// Data packets are unlikely to be part of an ACK loop. So always send
 	// an ACK for a packet w/ data.
 	if seg.payloadSize() > 0 || s.ep.allowOutOfWindowAck() {
 		s.sendAck()
 	}
+}
+
+func (s *sender) updateWriteNext(seg *segment) {
+	if s.writeNext != nil {
+		s.writeNext.DecRef()
+	}
+	if seg != nil {
+		seg.IncRef()
+	}
+	s.writeNext = seg
 }
