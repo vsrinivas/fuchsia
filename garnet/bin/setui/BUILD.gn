@@ -42,7 +42,7 @@ group("setui-config-test") {
   visibility = []
   visibility = [
     ":*",
-    "//src/setui/*",
+    "//src/settings/*",
     "//vendor/google/*",
   ]
   public_deps = [ ":setui-config-test-internal" ]

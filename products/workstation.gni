@@ -42,7 +42,7 @@ base_package_labels += [
   "//src/ui/bin/text:text_manager",
 
   # Setting service configuration
-  "//src/setui/config:workstation_interface_config",
+  "//src/settings/config:workstation_interface_config",
 ]
 base_package_labels -= [
   # TODO(fxbug.dev/90430): Complete CFv2 migration and remove.
