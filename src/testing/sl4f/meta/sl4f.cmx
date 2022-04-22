@@ -3,7 +3,10 @@
         "syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/sl4f"
+        "binary": "bin/sl4f",
+        "args": [
+            "--v1"
+        ]
     },
     "sandbox": {
         "dev": [

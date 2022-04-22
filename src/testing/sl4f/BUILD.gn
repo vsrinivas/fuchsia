@@ -106,6 +106,7 @@ rustc_library("lib") {
     "//src/testing/sl4f/fidl:fuchsia.testing.proxy-rustc",
     "//src/testing/system-metrics-logger/fuchsia.systemmetrics.test:fuchsia.systemmetrics.test-rustc",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:async-channel",
     "//third_party/rust_crates:async-trait",
