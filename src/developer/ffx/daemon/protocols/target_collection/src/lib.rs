@@ -96,19 +96,17 @@ impl TargetCollectionProtocol {
             };
             let secs = val.as_u64();
             if secs.is_some() {
-                // If the manual target has a lifetime specified, check to see if it's passed. If
-                // so, we remove it from the collection instead of reloading it.
+                // If the manual target has a lifetime specified, we need to include it in the
+                // reloaded entry.
                 let lifetime_from_epoch = Duration::from_secs(secs.unwrap());
                 let now = SystemTime::now();
                 if let Ok(elapsed) = now.duration_since(UNIX_EPOCH) {
-                    if elapsed < lifetime_from_epoch {
-                        let remaining = lifetime_from_epoch - elapsed;
-                        self.add_manual_target(tc, sa, Some(remaining)).await;
+                    let remaining = if lifetime_from_epoch < elapsed {
+                        Duration::ZERO
                     } else {
-                        let _ = self.manual_targets.remove(format!("{}", sa)).await.map_err(|e| {
-                            log::error!("Unable to remove persisted manual target: {:?}", e);
-                        });
-                    }
+                        lifetime_from_epoch - elapsed
+                    };
+                    self.add_manual_target(tc, sa, Some(remaining)).await;
                 }
             } else {
                 // Manual targets without a lifetime are always reloaded.
@@ -740,7 +738,7 @@ mod tests {
             .build();
         // We attempt to load three targets:
         // - One with no timeout, should load,
-        // - One with an expired timeout, should not load, and
+        // - One with an expired timeout, should load, and
         // - One with a future timeout, should load.
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -769,8 +767,8 @@ mod tests {
 
         let target = target_collection.get("127.0.0.1:8022".to_string()).unwrap();
         assert_eq!(target.ssh_address(), Some("127.0.0.1:8022".parse::<SocketAddr>().unwrap()));
-        let target = target_collection.get("127.0.0.1:8023".to_string());
-        assert!(target.is_none());
+        let target = target_collection.get("127.0.0.1:8023".to_string()).unwrap();
+        assert_eq!(target.ssh_address(), Some("127.0.0.1:8023".parse::<SocketAddr>().unwrap()));
         let target = target_collection.get("127.0.0.1:8024".to_string()).unwrap();
         assert_eq!(target.ssh_address(), Some("127.0.0.1:8024".parse::<SocketAddr>().unwrap()));
     }
