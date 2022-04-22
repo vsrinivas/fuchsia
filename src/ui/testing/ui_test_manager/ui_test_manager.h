@@ -266,7 +266,8 @@ class UITestManager {
 
   // Helper methods to configure the test realm.
   void AddBaseRealmComponent();
-  void ConfigureDefaultSystemServices();
+  void ConfigureTestSubrealm();
+  void ConfigureClientSubrealm();
   void ConfigureSceneOwner();
   void ConfigureInput();
   void ConfigureAccessibility();
@@ -281,6 +282,14 @@ class UITestManager {
   component_testing::RealmBuilder realm_builder_ = component_testing::RealmBuilder::Create();
   std::shared_ptr<component_testing::RealmRoot> realm_root_;
   std::unique_ptr<UITestScene> scene_;
+
+  // Some tests may not need a dedicated subrealm. Those clients will not call
+  // AddSubrealm(), so UITestManager will crash if it tries to add routes
+  // to/from the missing subrealm.
+  //
+  // NOTE: This piece of state is temporary, and can be removed once the client
+  // owns a full RealmBuilder instance, as opposed to a child realm.
+  bool has_client_subrealm_ = false;
 
   // Add state as necessary.
 

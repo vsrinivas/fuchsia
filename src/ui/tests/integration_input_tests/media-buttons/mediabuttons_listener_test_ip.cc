@@ -25,21 +25,20 @@
 
 #include "src/ui/input/testing/fake_input_report_device/fake.h"
 #include "src/ui/input/testing/fake_input_report_device/reports_reader.h"
+#include "src/ui/testing/ui_test_manager/ui_test_manager.h"
 
 namespace {
 // Types imported for the realm_builder library.
 using component_testing::ChildRef;
 using component_testing::ParentRef;
 using component_testing::Protocol;
-using component_testing::RealmRoot;
+using component_testing::Realm;
 using component_testing::Route;
 using RealmBuilder = component_testing::RealmBuilder;
 
 // Max timeout in failure cases.
 // Set this as low as you can that still works across all test platforms.
 constexpr zx::duration kTimeout = zx::min(5);
-
-constexpr auto kInputTestRealm = "input-pipeline-test-realm";
 
 // This implements the MediaButtonsListener class. Its purpose is to test that MediaButton Events
 // are actually sent out to the Listeners.
@@ -68,8 +67,7 @@ class ButtonsListenerImpl : public fuchsia::ui::policy::MediaButtonsListener {
 
 class MediaButtonsListenerTest : public gtest::RealLoopFixture {
  protected:
-  MediaButtonsListenerTest()
-      : realm_builder_(std::make_unique<RealmBuilder>(RealmBuilder::Create())), realm_() {}
+  MediaButtonsListenerTest() = default;
 
   ~MediaButtonsListenerTest() override {
     FX_CHECK(injection_count_ > 0) << "injection expected but didn't happen.";
@@ -82,35 +80,17 @@ class MediaButtonsListenerTest : public gtest::RealLoopFixture {
         [] { FX_LOGS(FATAL) << "\n\n>> Test did not complete in time, terminating.  <<\n\n"; },
         kTimeout);
 
-    // Add static test realm as a component to the realm.
-    builder()->AddChild(kInputTestRealm, "#meta/input-pipeline-test-realm.cm");
+    ui_testing::UITestManager::Config config;
+    config.scene_owner = ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER;
+    config.use_input = true;
+    ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
 
-    // Capabilities routed from test_manager to components in static test realm.
-    builder()->AddRoute(
-        Route{.capabilities = {Protocol{fuchsia::logger::LogSink::Name_},
-                               Protocol{fuchsia::vulkan::loader::Loader::Name_},
-                               Protocol{fuchsia::scheduler::ProfileProvider::Name_},
-                               Protocol{fuchsia::sysmem::Allocator::Name_},
-                               Protocol{fuchsia::tracing::provider::Registry::Name_}},
-              .source = ParentRef(),
-              .targets = {ChildRef{kInputTestRealm}}});
-
-    // Capabilities routed from static test realm up to test driver (this component).
-    builder()->AddRoute(
-        Route{.capabilities =
-                  {
-                      Protocol{fuchsia::input::injection::InputDeviceRegistry::Name_},
-                      Protocol{fuchsia::ui::policy::DeviceListenerRegistry::Name_},
-                  },
-              .source = ChildRef{kInputTestRealm},
-              .targets = {ParentRef()}});
-
-    // Finally, build the realm using the provided components and routes.
-    realm_ = std::make_unique<RealmRoot>(builder()->Build());
+    ui_test_manager_->BuildRealm();
+    realm_exposed_services_ = ui_test_manager_->TakeExposedServicesDirectory();
   }
 
   void RegisterInjectionDevice() {
-    registry_ = realm()->Connect<fuchsia::input::injection::InputDeviceRegistry>();
+    registry_ = realm_exposed_services()->Connect<fuchsia::input::injection::InputDeviceRegistry>();
 
     // Create a FakeInputDevice
     fake_input_device_ = std::make_unique<fake_input_report_device::FakeInputDevice>(
@@ -145,12 +125,13 @@ class MediaButtonsListenerTest : public gtest::RealLoopFixture {
     ++injection_count_;
   }
 
-  RealmBuilder* builder() { return realm_builder_.get(); }
-  RealmRoot* realm() { return realm_.get(); }
+  sys::ServiceDirectory* realm_exposed_services() { return realm_exposed_services_.get(); }
+  Realm* realm() { return realm_.get(); }
 
  private:
-  std::unique_ptr<RealmBuilder> realm_builder_;
-  std::unique_ptr<RealmRoot> realm_;
+  std::unique_ptr<ui_testing::UITestManager> ui_test_manager_;
+  std::unique_ptr<sys::ServiceDirectory> realm_exposed_services_;
+  std::unique_ptr<Realm> realm_;
 
   fuchsia::input::injection::InputDeviceRegistryPtr registry_;
   std::unique_ptr<fake_input_report_device::FakeInputDevice> fake_input_device_;
@@ -174,7 +155,8 @@ TEST_F(MediaButtonsListenerTest, MediaButtonsWithCallback) {
   auto button_listener_impl =
       std::make_unique<ButtonsListenerImpl>(listener_handle.NewRequest(), std::move(on_event));
 
-  auto listener_registry = realm()->Connect<fuchsia::ui::policy::DeviceListenerRegistry>();
+  auto listener_registry =
+      realm_exposed_services()->Connect<fuchsia::ui::policy::DeviceListenerRegistry>();
   listener_registry.set_error_handler([](zx_status_t status) {
     FX_LOGS(FATAL) << "Lost connection to DeviceListenerRegistry: " << zx_status_get_string(status);
   });

@@ -54,6 +54,14 @@ constexpr auto kClientSubrealmName = "client-subrealm";
 
 constexpr auto kA11yManagerName = "a11y-manager";
 
+// Set of low-level system services that components in the realm can consume
+// from parent (test_manager).
+std::vector<std::string> DefaultSystemServices() {
+  return {fuchsia::logger::LogSink::Name_, fuchsia::scheduler::ProfileProvider::Name_,
+          fuchsia::sysmem::Allocator::Name_, fuchsia::tracing::provider::Registry::Name_,
+          fuchsia::vulkan::loader::Loader::Name_};
+}
+
 }  // namespace
 
 UITestManager::UITestManager(UITestManager::Config config) : config_(config) {
@@ -81,6 +89,7 @@ void UITestManager::RouteServices(std::vector<std::string> services, Ref source,
 }
 
 component_testing::Realm UITestManager::AddSubrealm() {
+  has_client_subrealm_ = true;
   return realm_builder_.AddChildRealm(kClientSubrealmName);
 }
 
@@ -95,14 +104,43 @@ void UITestManager::AddBaseRealmComponent() {
   realm_builder_.AddChild(kTestRealmName, url);
 }
 
-void UITestManager::ConfigureDefaultSystemServices() {
-  std::vector<Ref> targets = {ChildRef{kTestRealmName}, ChildRef{kClientSubrealmName}};
+void UITestManager::ConfigureTestSubrealm() {
+  // Route default system services to test subrealm.
+  RouteServices(DefaultSystemServices(), /* source = */ ParentRef(),
+                /* targets = */ {ChildRef{kTestRealmName}});
+}
 
-  RouteServices({fuchsia::logger::LogSink::Name_, fuchsia::scheduler::ProfileProvider::Name_,
-                 fuchsia::sysmem::Allocator::Name_, fuchsia::tracing::provider::Registry::Name_,
-                 fuchsia::vulkan::loader::Loader::Name_},
-                /* source = */ ParentRef(),
-                /* targets = */ std::move(targets));
+void UITestManager::ConfigureClientSubrealm() {
+  if (!has_client_subrealm_) {
+    return;
+  }
+
+  // Route default system services to test subrealm.
+  RouteServices(DefaultSystemServices(), /* source = */ ParentRef(),
+                /* targets = */ {ChildRef{kClientSubrealmName}});
+
+  // Route services to parent that client requested to expose.
+  RouteServices(config_.exposed_client_services, /* source = */ ChildRef{kClientSubrealmName},
+                /* targets = */ {ParentRef()});
+
+  // Route requested services from ui realm to client subrealm.
+  RouteServices(config_.ui_to_client_services, /* source = */ ChildRef{kTestRealmName},
+                /* targets = */ {ChildRef{kClientSubrealmName}});
+
+  // Route requested services from client subrealm to ui realm.
+  RouteServices(config_.client_to_ui_services, /* source = */ ChildRef{kClientSubrealmName},
+                /* targets = */ {ChildRef{kTestRealmName}});
+
+  if (config_.accessibility_owner) {
+    RouteServices({fuchsia::accessibility::semantics::SemanticsManager::Name_},
+                  /* source = */ ChildRef{kA11yManagerName},
+                  /* target = */ {ChildRef{kClientSubrealmName}});
+  }
+
+  // If the user specifies a view provider, they must also supply a view
+  // provider in their subrealm.
+  RouteServices({fuchsia::ui::app::ViewProvider::Name_},
+                /* source = */ ChildRef{kClientSubrealmName}, /* targets = */ {ParentRef()});
 }
 
 void UITestManager::ConfigureSceneOwner() {
@@ -115,11 +153,6 @@ void UITestManager::ConfigureSceneOwner() {
                    fuchsia::ui::accessibility::view::Registry::Name_},
                   /* source = */ ChildRef{kTestRealmName}, /* targets = */ {ParentRef()});
   }
-
-  // If the user specifies a view provider, they must also supply a view
-  // provider in their subrealm.
-  RouteServices({fuchsia::ui::app::ViewProvider::Name_},
-                /* source = */ ChildRef{kClientSubrealmName}, /* targets = */ {ParentRef()});
 }
 
 void UITestManager::ConfigureAccessibility() {
@@ -133,7 +166,7 @@ void UITestManager::ConfigureAccessibility() {
   realm_builder_.AddChild(kA11yManagerName, kFakeA11yManagerUrl);
   RouteServices({fuchsia::accessibility::semantics::SemanticsManager::Name_},
                 /* source = */ ChildRef{kA11yManagerName},
-                /* target = */ {ChildRef{kClientSubrealmName}, ParentRef()});
+                /* target = */ {ParentRef()});
 }
 
 void UITestManager::ConfigureInput() {
@@ -173,7 +206,8 @@ void UITestManager::ConfigureScenic() {
 void UITestManager::BuildRealm() {
   AddBaseRealmComponent();
 
-  ConfigureDefaultSystemServices();
+  // Add routes to/from the test realm and client subrealm (if applicable).
+  ConfigureTestSubrealm();
 
   // Route API to present scene root to ui test manager.
   // Note that ui test manger mediates scene setup, so clients do not use these
@@ -192,17 +226,9 @@ void UITestManager::BuildRealm() {
   // use them for scene setup and monitoring.
   ConfigureScenic();
 
-  // Route services to parent that client requested to expose.
-  RouteServices(config_.exposed_client_services, /* source = */ ChildRef{kClientSubrealmName},
-                /* targets = */ {ParentRef()});
-
-  // Route requested services from ui realm to client subrealm.
-  RouteServices(config_.ui_to_client_services, /* source = */ ChildRef{kTestRealmName},
-                /* targets = */ {ChildRef{kClientSubrealmName}});
-
-  // Route requested services from client subrealm to ui realm.
-  RouteServices(config_.client_to_ui_services, /* source = */ ChildRef{kClientSubrealmName},
-                /* targets = */ {ChildRef{kTestRealmName}});
+  // This step needs to come after ConfigureAccessibility(), because the a11y
+  // manager component needs to be added to the realm first.
+  ConfigureClientSubrealm();
 
   realm_root_ = std::make_unique<component_testing::RealmRoot>(realm_builder_.Build());
 }
