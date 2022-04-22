@@ -63,6 +63,9 @@ func (t *Test) applyModifier(m TestModifier) {
 			t.RunAlgorithm = ""
 		}
 	}
+	if m.Affected {
+		t.Affected = true
+	}
 }
 
 func (t *Test) minRequiredRuns() int {

@@ -48,6 +48,10 @@ var errInvalidMultiplierRegex = fmt.Errorf("invalid multiplier regex")
 // matches too many tests.
 var errTooManyMultiplierMatches = fmt.Errorf("a multiplier cannot match more than %d tests", maxMatchesPerMultiplier)
 
+// ApplyModifiers will return an error that unwraps to this if multiple default
+// test modifiers are provided.
+var errMultipleDefaultModifiers = fmt.Errorf("too many default modifiers, only one is allowed")
+
 func ExtractDeps(shards []*Shard, fuchsiaBuildDir string) error {
 	for _, shard := range shards {
 		if err := extractDepsFromShard(shard, fuchsiaBuildDir); err != nil {
@@ -243,41 +247,47 @@ func MultiplyShards(
 	return shards, nil
 }
 
-// ShardAffected separates the affected tests into separate shards.
-// If `affectedOnly` is true, it will only return the affected test shards.
-func ShardAffected(shards []*Shard, modTests []TestModifier, affectedOnly bool) ([]*Shard, error) {
-	var newShards []*Shard
+// ApplyModifiers applies the given test modifiers to tests in the given shards.
+func ApplyModifiers(shards []*Shard, modTests []TestModifier) ([]*Shard, error) {
 	defaultModTest := TestModifier{}
 	foundDefault := false
 	for _, modTest := range modTests {
 		if modTest.Name == "*" {
 			if foundDefault {
-				return nil, fmt.Errorf("too many default modifiers, only one is allowed")
+				return nil, errMultipleDefaultModifiers
 			}
 			defaultModTest = modTest
 			foundDefault = true
 		}
 	}
+
+	for _, shard := range shards {
+		var modifiedTests []Test
+		for _, test := range shard.Tests {
+			test.applyModifier(defaultModTest)
+			for _, modTest := range modTests {
+				if modTest.Name == test.Name {
+					test.applyModifier(modTest)
+				}
+			}
+			modifiedTests = append(modifiedTests, test)
+		}
+		shard.Tests = modifiedTests
+	}
+	return shards, nil
+}
+
+// ShardAffected separates the affected tests into separate shards.
+// If `affectedOnly` is true, it will only return the affected test shards.
+func ShardAffected(shards []*Shard, affectedOnly bool) []*Shard {
+	var newShards []*Shard
 	for _, shard := range shards {
 		var affected []Test
 		var unaffected []Test
 		for _, test := range shard.Tests {
-			isAffected := false
-			test.applyModifier(defaultModTest)
-			for _, modTest := range modTests {
-				if modTest.Name != test.Name {
-					continue
-				}
-				test.applyModifier(modTest)
-
-				if modTest.Affected {
-					isAffected = true
-					test.Affected = true
-					affected = append(affected, test)
-					break
-				}
-			}
-			if !isAffected {
+			if test.Affected {
+				affected = append(affected, test)
+			} else {
 				unaffected = append(unaffected, test)
 			}
 		}
@@ -293,7 +303,7 @@ func ShardAffected(shards []*Shard, modTests []TestModifier, affectedOnly bool) 
 			newShards = append(newShards, shard)
 		}
 	}
-	return newShards, nil
+	return newShards
 }
 
 func min(a, b int) int {

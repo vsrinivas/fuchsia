@@ -162,10 +162,12 @@ func execute(ctx context.Context) error {
 		modifiers = append(modifiers, affectedModifiers...)
 	}
 
-	shards, err = testsharder.ShardAffected(shards, modifiers, affectedOnly)
+	shards, err = testsharder.ApplyModifiers(shards, modifiers)
 	if err != nil {
 		return err
 	}
+
+	shards = testsharder.ShardAffected(shards, affectedOnly)
 
 	shards, err = testsharder.MultiplyShards(ctx, shards, modifiers, testDurations, targetDuration, targetTestCount)
 	if err != nil {

@@ -300,6 +300,131 @@ func TestMultiplyShards(t *testing.T) {
 	}
 }
 
+func TestApplyModifiers(t *testing.T) {
+	env1 := build.Environment{
+		Dimensions: build.DimensionSet{DeviceType: "QEMU"},
+		Tags:       []string{},
+	}
+	env2 := build.Environment{
+		Dimensions: build.DimensionSet{OS: "linux"},
+		Tags:       []string{},
+	}
+
+	type modifyDetails struct {
+		index       int
+		affected    bool
+		maxAttempts int
+	}
+
+	shardWithModify := func(s *Shard, md []modifyDetails) *Shard {
+		for _, m := range md {
+			i := m.index
+			s.Tests[i].Runs = m.maxAttempts
+			if m.maxAttempts > 1 {
+				s.Tests[i].RunAlgorithm = StopOnSuccess
+			} else {
+				s.Tests[i].RunAlgorithm = ""
+			}
+			if m.affected {
+				s.Tests[i].Affected = true
+			}
+		}
+		return s
+	}
+
+	testCases := []struct {
+		name      string
+		shards    []*Shard
+		modifiers []TestModifier
+		expected  []*Shard
+		err       error
+	}{
+		{
+			name: "no modifiers provided",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1, 2, 3),
+				shard(env2, "linux", 1, 2, 3),
+			},
+			expected: []*Shard{
+				shard(env1, "fuchsia", 1, 2, 3),
+				shard(env2, "linux", 1, 2, 3),
+			},
+		},
+		{
+			name: "multiple default modifiers",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1, 2, 3),
+				shard(env2, "linux", 1, 2, 3),
+			},
+			modifiers: []TestModifier{
+				{Name: "*", Affected: true},
+				{Name: "*", Affected: true},
+			},
+			err: errMultipleDefaultModifiers,
+		},
+		{
+			name: "single modifier for a single test",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1, 2, 3),
+				shard(env2, "linux", 1, 2, 3),
+			},
+			modifiers: []TestModifier{
+				{Name: fullTestName(1, "fuchsia"), Affected: true},
+			},
+			expected: []*Shard{
+				shardWithModify(shard(env1, "fuchsia", 1, 2, 3), []modifyDetails{{0, true, 1}}),
+				shard(env2, "linux", 1, 2, 3),
+			},
+		},
+		{
+			name: "multiple modifiers for a single test",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1, 2, 3),
+				shard(env2, "linux", 1, 2, 3),
+			},
+			modifiers: []TestModifier{
+				{Name: fullTestName(1, "fuchsia"), Affected: true},
+				{Name: fullTestName(1, "fuchsia"), MaxAttempts: 5},
+			},
+			expected: []*Shard{
+				shardWithModify(shard(env1, "fuchsia", 1, 2, 3), []modifyDetails{{0, true, 5}}),
+				shard(env2, "linux", 1, 2, 3),
+			},
+		},
+		{
+			name: "multiple modifiers for multiple tests",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1, 2, 3),
+				shard(env2, "linux", 1, 2, 3),
+			},
+			modifiers: []TestModifier{
+				{Name: fullTestName(1, "fuchsia"), Affected: true},
+				{Name: fullTestName(2, "fuchsia"), Affected: true},
+				{Name: fullTestName(1, "linux"), MaxAttempts: 5},
+			},
+			expected: []*Shard{
+				shardWithModify(shard(env1, "fuchsia", 1, 2, 3), []modifyDetails{{0, true, 1}, {1, true, 1}}),
+				shardWithModify(shard(env2, "linux", 1, 2, 3), []modifyDetails{{0, false, 5}}),
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual, err := ApplyModifiers(
+				tc.shards,
+				tc.modifiers,
+			)
+			if !errors.Is(err, tc.err) {
+				t.Fatalf("got unexpected error %v, expected: %v", err, tc.err)
+			}
+			if err != nil {
+				return
+			}
+			assertEqual(t, tc.expected, actual)
+		})
+	}
+}
+
 func TestShardAffected(t *testing.T) {
 	env1 := build.Environment{
 		Dimensions: build.DimensionSet{DeviceType: "QEMU"},
@@ -314,50 +439,24 @@ func TestShardAffected(t *testing.T) {
 		Tags:       []string{},
 	}
 
-	type modifyDetails struct {
-		index       int
-		maxAttempts int
-	}
-
-	shardWithModify := func(s *Shard, md []modifyDetails) *Shard {
-		for _, m := range md {
-			i := m.index
-			s.Tests[i].Runs = m.maxAttempts
-			if m.maxAttempts > 1 {
-				s.Tests[i].RunAlgorithm = StopOnSuccess
-			} else {
-				s.Tests[i].RunAlgorithm = ""
-			}
+	shardWithAffected := func(s *Shard, affectedIndices ...int) *Shard {
+		for _, i := range affectedIndices {
+			s.Tests[i].Affected = true
 		}
 		return s
-	}
-
-	makeTestModifier := func(id int, os string, affected bool) TestModifier {
-		return TestModifier{
-			Name:        fullTestName(id, os),
-			OS:          os,
-			Affected:    affected,
-			MaxAttempts: 1,
-		}
 	}
 
 	testCases := []struct {
 		name         string
 		shards       []*Shard
-		modifiers    []TestModifier
 		affectedOnly bool
 		expected     []*Shard
-		err          error
 	}{
 		{
 			name: "matches any os",
 			shards: []*Shard{
-				shard(env1, "fuchsia", 1, 2, 3),
-				shard(env3, "linux", 1, 2, 3),
-			},
-			modifiers: []TestModifier{
-				{Name: "fuchsia-pkg://fuchsia.com/test3", Affected: true},
-				{Name: "/path/to/test1", Affected: true},
+				shardWithAffected(shard(env1, "fuchsia", 1, 2, 3), 2),
+				shardWithAffected(shard(env3, "linux", 1, 2, 3), 0),
 			},
 			expected: []*Shard{
 				affectedShard(env1, "fuchsia", 3),
@@ -370,16 +469,9 @@ func TestShardAffected(t *testing.T) {
 			name: "shards correctly",
 			shards: []*Shard{
 				shard(env1, "fuchsia", 1),
-				shard(env1, "fuchsia", 2, 4),
-				shard(env2, "fuchsia", 1, 2, 4),
-				shard(env3, "linux", 3, 4),
-			},
-			modifiers: []TestModifier{
-				makeTestModifier(1, "fuchsia", false),
-				makeTestModifier(2, "fuchsia", false),
-				makeTestModifier(2, "fuchsia", true),
-				makeTestModifier(4, "fuchsia", true),
-				makeTestModifier(3, "linux", true),
+				shardWithAffected(shard(env1, "fuchsia", 2, 4), 0, 1),
+				shardWithAffected(shard(env2, "fuchsia", 1, 2, 4), 1, 2),
+				shardWithAffected(shard(env3, "linux", 3, 4), 0),
 			},
 			expected: []*Shard{
 				shard(env1, "fuchsia", 1),
@@ -394,15 +486,9 @@ func TestShardAffected(t *testing.T) {
 			name: "shards only affected tests",
 			shards: []*Shard{
 				shard(env1, "fuchsia", 1),
-				shard(env1, "fuchsia", 2, 4),
-				shard(env2, "fuchsia", 1, 2, 4),
-				shard(env3, "linux", 3, 4),
-			},
-			modifiers: []TestModifier{
-				makeTestModifier(1, "fuchsia", false),
-				makeTestModifier(2, "fuchsia", true),
-				makeTestModifier(4, "fuchsia", true),
-				makeTestModifier(3, "linux", true),
+				shardWithAffected(shard(env1, "fuchsia", 2, 4), 0, 1),
+				shardWithAffected(shard(env2, "fuchsia", 1, 2, 4), 1, 2),
+				shardWithAffected(shard(env3, "linux", 3, 4), 0),
 			},
 			affectedOnly: true,
 			expected: []*Shard{
@@ -411,43 +497,14 @@ func TestShardAffected(t *testing.T) {
 				affectedShard(env3, "linux", 3),
 			},
 		},
-		{
-			name: "copies other fields correctly",
-			shards: []*Shard{
-				shard(env1, "fuchsia", 1, 4, 5),
-				shard(env2, "fuchsia", 1, 2, 4),
-				shard(env3, "linux", 3, 4),
-			},
-			modifiers: []TestModifier{
-				{Name: "*", MaxAttempts: 5},
-				makeTestModifier(4, "fuchsia", true),
-				makeTestModifier(5, "fuchsia", true),
-				makeTestModifier(3, "linux", true),
-			},
-			expected: []*Shard{
-				affectedShard(env1, "fuchsia", 4, 5),
-				shardWithModify(shard(env1, "fuchsia", 1), []modifyDetails{{0, 5}}),
-				affectedShard(env2, "fuchsia", 4),
-				shardWithModify(shard(env2, "fuchsia", 1, 2), []modifyDetails{{0, 5}, {1, 5}}),
-				affectedShard(env3, "linux", 3),
-				shardWithModify(shard(env3, "linux", 4), []modifyDetails{{0, 5}}),
-			},
-		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual, err := ShardAffected(
+			actual := ShardAffected(
 				tc.shards,
-				tc.modifiers,
 				tc.affectedOnly,
 			)
-			if !errors.Is(err, tc.err) {
-				t.Fatalf("got unexpected error %v, expected: %v", err, tc.err)
-			}
-			if err != nil {
-				return
-			}
 			assertEqual(t, tc.expected, actual)
 		})
 	}
