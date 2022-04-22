@@ -10,7 +10,7 @@ use {
             transaction::{LockKey, Options},
             HandleOptions, HandleOwner, ObjectStore,
         },
-        server::{
+        platform::fuchsia::{
             directory::FxDirectory,
             errors::map_to_status,
             file::FxFile,
@@ -405,7 +405,7 @@ mod tests {
                 volume::root_volume,
                 HandleOptions, ObjectStore,
             },
-            server::{
+            platform::fuchsia::{
                 file::FxFile,
                 testing::{
                     close_dir_checked, close_file_checked, open_dir, open_dir_checked, open_file,

@@ -38,6 +38,4 @@ pub use stubs::*;
 
 // Export the `fuchsia_inspect`-backed implementation on Fuchsia.
 #[cfg(target_os = "fuchsia")]
-mod fuchsia;
-#[cfg(target_os = "fuchsia")]
-pub use self::fuchsia::*;
+pub use crate::platform::metrics::*;

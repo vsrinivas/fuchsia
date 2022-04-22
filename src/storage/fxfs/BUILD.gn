@@ -91,6 +91,7 @@ fxfs_sources = [
   "src/object_store/tree.rs",
   "src/object_store/volume.rs",
   "src/object_store/writeback_cache.rs",
+  "src/platform.rs",
   "src/range.rs",
   "src/round.rs",
   "src/serialized_types.rs",
@@ -133,18 +134,18 @@ if (is_fuchsia) {
     "//src/sys/pkg/lib/fuchsia-merkle",
   ]
   fxfs_sources += [
-    "src/metrics/fuchsia.rs",
-    "src/server.rs",
-    "src/server/device.rs",
-    "src/server/directory.rs",
-    "src/server/errors.rs",
-    "src/server/file.rs",
-    "src/server/node.rs",
-    "src/server/pager.rs",
-    "src/server/remote_crypt.rs",
-    "src/server/testing.rs",
-    "src/server/vmo_data_buffer.rs",
-    "src/server/volume.rs",
+    "src/platform/fuchsia.rs",
+    "src/platform/fuchsia/device.rs",
+    "src/platform/fuchsia/directory.rs",
+    "src/platform/fuchsia/errors.rs",
+    "src/platform/fuchsia/file.rs",
+    "src/platform/fuchsia/metrics.rs",
+    "src/platform/fuchsia/node.rs",
+    "src/platform/fuchsia/pager.rs",
+    "src/platform/fuchsia/remote_crypt.rs",
+    "src/platform/fuchsia/testing.rs",
+    "src/platform/fuchsia/vmo_data_buffer.rs",
+    "src/platform/fuchsia/volume.rs",
   ]
 }
 

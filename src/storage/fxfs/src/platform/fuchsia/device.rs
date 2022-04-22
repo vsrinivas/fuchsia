@@ -4,8 +4,8 @@
 use {
     crate::{
         errors::FxfsError,
+        platform::fuchsia::{errors::map_to_status, file::FxFile, node::OpenedNode},
         round::{round_down, round_up},
-        server::{errors::map_to_status, file::FxFile, node::OpenedNode},
     },
     anyhow::Error,
     fidl::endpoints::ServerEnd,
@@ -588,7 +588,7 @@ impl BlockServer {
 #[cfg(test)]
 mod tests {
     use {
-        crate::server::testing::{open_file_checked, TestFixture},
+        crate::platform::fuchsia::testing::{open_file_checked, TestFixture},
         fidl::endpoints::{ClientEnd, ServerEnd},
         fidl_fuchsia_hardware_block_volume::VolumeAndNodeMarker,
         fidl_fuchsia_io as fio,

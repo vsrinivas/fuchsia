@@ -7,8 +7,8 @@ use {
         crypt::Crypt,
         filesystem::{Filesystem, Info, OpenFxFilesystem},
         object_store::volume::root_volume,
+        platform::fuchsia::volume::FxVolumeAndRoot,
         serialized_types::LATEST_VERSION,
-        server::volume::FxVolumeAndRoot,
     },
     anyhow::{Context, Error},
     fidl_fuchsia_fs::{AdminRequest, AdminRequestStream, QueryRequest, QueryRequestStream},
@@ -38,6 +38,7 @@ mod device;
 mod directory;
 mod errors;
 pub mod file;
+pub mod metrics;
 pub mod node;
 pub mod pager;
 mod remote_crypt;
@@ -275,7 +276,7 @@ impl FsInspect for FxfsServer {
 #[cfg(test)]
 mod tests {
     use {
-        crate::{crypt::InsecureCrypt, filesystem::FxFilesystem, server::FxfsServer},
+        crate::{crypt::InsecureCrypt, filesystem::FxFilesystem, platform::fuchsia::FxfsServer},
         anyhow::Error,
         fidl_fuchsia_fs::AdminMarker,
         fidl_fuchsia_io as fio, fuchsia_async as fasync,

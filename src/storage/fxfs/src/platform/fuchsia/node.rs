@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::server::{directory::FxDirectory, file::FxFile},
+    crate::platform::fuchsia::{directory::FxDirectory, file::FxFile},
     futures::future::poll_fn,
     std::{
         any::TypeId,
@@ -251,7 +251,7 @@ impl<N: FxNode + ?Sized> std::ops::Deref for OpenedNode<N> {
 #[cfg(test)]
 mod tests {
     use {
-        crate::server::{
+        crate::platform::fuchsia::{
             directory::FxDirectory,
             node::{FxNode, GetResult, NodeCache},
         },

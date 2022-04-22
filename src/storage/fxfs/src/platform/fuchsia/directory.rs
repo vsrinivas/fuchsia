@@ -12,7 +12,7 @@ use {
             transaction::{LockKey, Options, Transaction},
             ObjectStore, Timestamp,
         },
-        server::{
+        platform::fuchsia::{
             device::BlockServer,
             errors::map_to_status,
             file::FxFile,
@@ -621,7 +621,7 @@ impl Directory for FxDirectory {
 #[cfg(test)]
 mod tests {
     use {
-        crate::server::testing::{
+        crate::platform::fuchsia::testing::{
             close_dir_checked, close_file_checked, open_dir, open_dir_checked, open_file,
             open_file_checked, TestFixture,
         },

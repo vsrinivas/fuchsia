@@ -8,7 +8,7 @@ use {
         filesystem::{FxFilesystem, OpenFxFilesystem},
         fsck::{errors::FsckIssue, fsck_with_options, FsckOptions},
         object_store::volume::root_volume,
-        server::volume::FxVolumeAndRoot,
+        platform::fuchsia::volume::FxVolumeAndRoot,
     },
     anyhow::Error,
     fidl::endpoints::{create_proxy, ServerEnd},

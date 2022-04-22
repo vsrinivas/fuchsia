@@ -8,13 +8,13 @@ use {
         filesystem::SyncOptions,
         object_handle::{GetProperties, ObjectHandle, ReadObjectHandle, WriteObjectHandle},
         object_store::{CachingObjectHandle, StoreObjectHandle, Timestamp},
-        round::{round_down, round_up},
-        server::{
+        platform::fuchsia::{
             directory::FxDirectory,
             errors::map_to_status,
             node::{FxNode, OpenedNode},
             volume::FxVolume,
         },
+        round::{round_down, round_up},
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -529,7 +529,7 @@ mod tests {
         crate::{
             filesystem::Filesystem,
             object_handle::INVALID_OBJECT_ID,
-            server::testing::{close_file_checked, open_file_checked, TestFixture},
+            platform::fuchsia::testing::{close_file_checked, open_file_checked, TestFixture},
         },
         anyhow::format_err,
         fdio::fdio_sys::{V_IRGRP, V_IROTH, V_IRUSR, V_IWUSR, V_TYPE_FILE},

@@ -5,7 +5,7 @@
 use {
     crate::{
         debug_assert_not_too_long,
-        server::{file::FxFile, node::FxNode},
+        platform::fuchsia::{file::FxFile, node::FxNode},
     },
     anyhow::{anyhow, Error},
     async_utils::event::Event,

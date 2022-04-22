@@ -19,11 +19,10 @@ mod lsm_tree;
 pub mod metrics;
 pub mod object_handle;
 pub mod object_store;
+pub mod platform;
 mod range;
 mod round;
 pub mod serialized_types;
-#[cfg(target_os = "fuchsia")]
-pub mod server;
 #[cfg(test)]
 mod testing;
 #[macro_use]
