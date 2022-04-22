@@ -133,14 +133,10 @@ log() {
 serve_updates_target_addr=""
 target-addr() {
   if [[ -z "${serve_updates_target_addr}" ]]; then
-    if [[ "${server_mode}" = "pm" ]]; then
-      serve_updates_target_addr="$(get-device-addr-resource)"
+    serve_updates_target_addr="$(get-device-addr-resource)"
 
-      if [[ -n "${serve_updates_target_addr}" && -n "$(get-fuchsia-device-port)" ]]; then
-        serve_updates_target_addr="${serve_updates_target_addr}:$(get-fuchsia-device-port)"
-      fi
-    else
-      serve_updates_target_addr="$(get-device-raw)"
+    if [[ -n "${serve_updates_target_addr}" && -n "$(get-fuchsia-device-port)" ]]; then
+      serve_updates_target_addr="${serve_updates_target_addr}:$(get-fuchsia-device-port)"
     fi
   fi
 

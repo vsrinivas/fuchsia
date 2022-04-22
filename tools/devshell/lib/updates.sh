@@ -203,7 +203,7 @@ function ffx-default-repository-name {
 }
 
 function ffx-start-server {
-  fx-command-run ffx --config ffx_repository=true repository server start
+  fx-command-run ffx repository server start
   err=$?
   if [[ "${err}" -ne 0 ]]; then
     fx-error "The repository server was unable to be started"
@@ -214,7 +214,7 @@ function ffx-start-server {
 }
 
 function ffx-stop-server {
-  fx-command-run ffx --config ffx_repository=true repository server stop
+  fx-command-run ffx repository server stop
   err=$?
   if [[ "${err}" -ne 0 ]]; then
     fx-error "The repository server was unable to be stopped"
@@ -233,7 +233,7 @@ function ffx-add-repository {
     return 1
   fi
 
-  fx-command-run ffx --config ffx_repository=true repository add-from-pm \
+  fx-command-run ffx repository add-from-pm \
     --repository "${repo_name}" \
     "${FUCHSIA_BUILD_DIR}/amber-files"
   err=$?
@@ -251,7 +251,17 @@ function ffx-register-repository {
 
   ffx-add-repository "${repo_name}" || return $?
 
-  fx-command-run ffx --config ffx_repository=true target repository register \
+  # Start the server before registering a repository. While `register`
+  # technically also automatically starts the server in the background, running
+  # it in the foreground gives us better error messages.
+  ffx-start-server || return $?
+
+  # FIXME(http://fxbug.dev/98589): ffx cannot yet parse targets that may
+  # include the ssh port. We'll explicitly specify the target here with
+  # `get-device-name`, which strips out the port if present.
+  fx-command-run ffx \
+    --target "$(get-device-name)" \
+    target repository register \
     --repository "${repo_name}" \
     --alias "fuchsia.com" \
     "$@"
