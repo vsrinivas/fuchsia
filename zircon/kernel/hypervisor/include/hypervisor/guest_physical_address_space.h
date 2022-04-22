@@ -27,9 +27,8 @@ class GuestPtr {
   ~GuestPtr() { reset(); }
 
   GuestPtr() = default;
-  GuestPtr(GuestPtr&&) = default;
-  GuestPtr& operator=(GuestPtr&&) = default;
-
+  GuestPtr(GuestPtr&&) noexcept = default;
+  GuestPtr& operator=(GuestPtr&&) noexcept = default;
   GuestPtr(const GuestPtr&) = delete;
   GuestPtr& operator=(const GuestPtr&) = delete;
 
