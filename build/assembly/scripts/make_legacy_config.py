@@ -10,8 +10,6 @@ removing any other configuration sets from it.
 
 import argparse
 import json
-import os
-import shutil
 import sys
 from typing import List, Set, Tuple
 
@@ -28,7 +26,7 @@ DepSet = Set[FilePath]
 
 
 def copy_to_assembly_input_bundle(
-        config: ImageAssemblyConfig, config_data_entries: FileEntryList,
+        legacy: ImageAssemblyConfig, config_data_entries: FileEntryList,
         outdir: FilePath) -> Tuple[AssemblyInputBundle, FilePath, DepSet]:
     """
     Copy all the artifacts from the ImageAssemblyConfig into an AssemblyInputBundle that is in
@@ -41,13 +39,13 @@ def copy_to_assembly_input_bundle(
         copying operation (ie. depfile contents)
     """
     aib_creator = AIBCreator(outdir)
-    aib_creator.base = config.base
-    aib_creator.cache = config.cache
-    aib_creator.system = config.system
-    aib_creator.bootfs_files = config.bootfs_files
-    aib_creator.bootfs_packages = config.bootfs_packages
-    aib_creator.kernel = config.kernel
-    aib_creator.boot_args = config.boot_args
+    aib_creator.base = legacy.base
+    aib_creator.cache = legacy.cache
+    aib_creator.system = legacy.system
+    aib_creator.bootfs_files = legacy.bootfs_files
+    aib_creator.bootfs_packages = legacy.bootfs_packages
+    aib_creator.kernel = legacy.kernel
+    aib_creator.boot_args = legacy.boot_args
 
     aib_creator.config_data = config_data_entries
 
@@ -68,11 +66,6 @@ def main():
     parser.add_argument("--depfile", type=argparse.FileType('w'))
     parser.add_argument("--export-manifest", type=argparse.FileType('w'))
     args = parser.parse_args()
-
-    # Remove the existing <outdir>, and recreate it
-    if os.path.exists(args.outdir):
-        shutil.rmtree(args.outdir)
-    os.makedirs(args.outdir)
 
     # Read in the legacy config and the others to subtract from it
     legacy: ImageAssemblyConfig = ImageAssemblyConfig.json_load(

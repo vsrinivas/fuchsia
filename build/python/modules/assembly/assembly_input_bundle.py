@@ -11,6 +11,7 @@ delivery system itself.
 from dataclasses import dataclass, field
 import os
 import pathlib
+import shutil
 from typing import Any, Dict, List, Optional, Set, TextIO, Tuple
 
 import serialization
@@ -234,6 +235,11 @@ class AIBCreator:
             - the return value contains a list of all files read/written by the
             copying operation (ie. depfile contents)
         """
+        # Remove the existing <outdir>, and recreate it
+        if os.path.exists(self.outdir):
+            shutil.rmtree(self.outdir)
+        os.makedirs(self.outdir)
+
         # Track all files we read
         deps: DepSet = set()
 

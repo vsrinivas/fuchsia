@@ -1150,13 +1150,19 @@ group("additional_base_driver_packages") {
 
 group("additional_base_packages") {
   testonly = base_cache_packages_testonly
-  visibility = [ "//build/images/*" ]
+  visibility = [
+    "//build/assembly/*",
+    "//build/images/*",
+  ]
   public_deps = base_package_labels + board_package_labels
 }
 
 group("additional_cache_packages") {
   testonly = base_cache_packages_testonly
-  visibility = [ "//build/images/*" ]
+  visibility = [
+    "//build/assembly/*",
+    "//build/images/*",
+  ]
   public_deps = cache_package_labels
 }
 

@@ -11,8 +11,50 @@ import sys
 from typing import List, Set, Tuple
 
 from depfile import DepFile
-from assembly import AssemblyInputBundle, FilePath, PackageManifest
+from assembly import AssemblyInputBundle, AIBCreator, FilePath, PackageManifest, assembly_input_bundle
 from serialization.serialization import json_load
+
+
+def create_bundle(args: argparse.Namespace) -> None:
+    """Create an Assembly Input Bundle (AIB).
+    """
+    aib_creator = AIBCreator(args.outdir)
+
+    # Add the base and cache packages, if they exist.
+    if args.base_pkg_list:
+        add_pkg_list_from_file(aib_creator, args.base_pkg_list, "base")
+
+    if args.cache_pkg_list:
+        add_pkg_list_from_file(aib_creator, args.cache_pkg_list, "cache")
+
+    # Create the AIB itself.
+    (assembly_input_bundle, assembly_config, deps) = aib_creator.build()
+
+    # Write out a dep file if one is requested.
+    if args.depfile:
+        DepFile.from_deps(assembly_config, deps).write_to(args.depfile)
+
+    # Write out a fini manifest of the files that have been copied, to create a
+    # package or archive that contains all of the files in the bundle.
+    if args.export_manifest:
+        assembly_input_bundle.write_fini_manifest(
+            args.export_manifest, base_dir=args.outdir)
+
+
+def add_pkg_list_from_file(
+        aib_creator: AIBCreator, pkg_list_file, pkg_set_name: str):
+    pkg_set: Set = getattr(aib_creator, pkg_set_name)
+    try:
+        pkg_list = json.load(pkg_list_file)
+    except Exception as ex:
+        ex.args = (*ex.args, f"While parsing {pkg_list_file.name}")
+        raise
+
+    for pkg_manifest_path in pkg_list:
+        if pkg_manifest_path in pkg_set:
+            raise ValueError(
+                f"duplicate pkg manifest found: {pkg_manifest_path}")
+        pkg_set.add(pkg_manifest_path)
 
 
 def generate_package_creation_manifest(args: argparse.Namespace) -> None:
@@ -74,13 +116,17 @@ def generate_archive(args: argparse.Namespace) -> None:
     contents_manifest = args.contents_manifest.readlines()
     deps.add(args.contents_manifest.name)
     with open(args.creation_manifest, 'w') as creation_manifest:
-        # Add the AIB's package metafar to the creation manifest.
-        creation_manifest.write("meta.far={}\n".format(args.meta_far))
-        # Followed by all files from the AIB's contents manifest.
+
+        if args.meta_far:
+            # Add the AIB's package meta.far to the creation manifest if one was
+            # provided.
+            creation_manifest.write("meta.far={}\n".format(args.meta_far))
+
+        # Add all files from the AIB's contents manifest.
         for line in contents_manifest:
             # Split out the lines so that a depfile for the action can be made
             # from the contents_manifest's source paths.
-            (dst, src) = line.split('=', 1)
+            src = line.split('=', 1)[1]
             deps.add(src.strip())
             creation_manifest.write(line)
 
@@ -152,6 +198,40 @@ def main():
         title="Commands",
         description="Commands for working with Assembly Input Bundles")
 
+    ###
+    #
+    # 'assembly_input_bundle_tool create' subcommand parser
+    #
+    bundle_creation_parser = sub_parsers.add_parser(
+        "create", help="Create an Assembly Input Bundle")
+    bundle_creation_parser.add_argument(
+        "--outdir",
+        required=True,
+        help="Path to the outdir that will contain the AIB.")
+    bundle_creation_parser.add_argument(
+        "--base-pkg-list",
+        type=argparse.FileType('r'),
+        help=
+        "Path to a json list of package manifests for the 'base' package set")
+    bundle_creation_parser.add_argument(
+        "--cache-pkg-list",
+        type=argparse.FileType('r'),
+        help=
+        "Path to a json list of package manifests for the 'cache' package set")
+    bundle_creation_parser.add_argument(
+        "--depfile",
+        type=argparse.FileType('w'),
+        help="Path to write a dependency file to")
+    bundle_creation_parser.add_argument(
+        "--export-manifest",
+        type=argparse.FileType('w'),
+        help="Path to write a FINI manifest of the contents of the AIB.")
+    bundle_creation_parser.set_defaults(handler=create_bundle)
+
+    ###
+    #
+    # 'assembly_input_bundle_tool diff' subcommand parser
+    #
     diff_bundles_parser = sub_parsers.add_parser(
         "diff",
         help=
@@ -166,6 +246,10 @@ def main():
         type=argparse.FileType('w'))
     diff_bundles_parser.set_defaults(handler=diff_bundles)
 
+    ###
+    #
+    # 'assembly_input_bundle_tool intersect' subcommand parser
+    #
     intersect_bundles_parser = sub_parsers.add_parser(
         "intersect", help="Calculate the intersection of the provided bundles.")
     intersect_bundles_parser.add_argument(
@@ -180,6 +264,11 @@ def main():
         type=argparse.FileType('w'))
     intersect_bundles_parser.set_defaults(handler=intersect_bundles)
 
+    ###
+    #
+    # 'assembly_input_bundle_tool generate-package-creation-manifest' subcommand
+    #  parser
+    #
     package_creation_manifest_parser = sub_parsers.add_parser(
         "generate-package-creation-manifest",
         help=
@@ -195,6 +284,10 @@ def main():
     package_creation_manifest_parser.set_defaults(
         handler=generate_package_creation_manifest)
 
+    ###
+    #
+    # 'assembly_input_bundle_tool generate-archive' subcommand parser
+    #
     archive_creation_parser = sub_parsers.add_parser(
         "generate-archive",
         help=
@@ -203,13 +296,17 @@ def main():
     archive_creation_parser.add_argument("--tarmaker", required=True)
     archive_creation_parser.add_argument(
         "--contents-manifest", type=argparse.FileType('r'), required=True)
-    archive_creation_parser.add_argument("--meta-far", required=True)
+    archive_creation_parser.add_argument("--meta-far")
     archive_creation_parser.add_argument("--creation-manifest", required=True)
     archive_creation_parser.add_argument("--output", required=True)
     archive_creation_parser.add_argument(
         "--depfile", type=argparse.FileType('w'))
     archive_creation_parser.set_defaults(handler=generate_archive)
 
+    ###
+    #
+    # 'assembly_input_bundle_tool find-blob' subcommand parser
+    #
     find_blob_parser = sub_parsers.add_parser(
         "find-blob",
         help=

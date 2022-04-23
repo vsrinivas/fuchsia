@@ -35,6 +35,10 @@ import("//build/python/python_action.gni")
 #     configurations that do not have a config_data package.
 #
 template("legacy_assembly_input_bundle") {
+  # TODO:  Switch this over to using the `assembly_input_bundle()` template when
+  #        that template supports all the categories that are needed by the
+  #        legacy AIB.
+
   forward_variables_from(invoker,
                          [
                            "image_assembly_label",

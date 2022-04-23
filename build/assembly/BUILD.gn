@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/assembly/assembly_input_bundle.gni")
 import("//build/assembly/legacy.gni")
+import("//build/security.gni")
 
 if (is_fuchsia) {
   # Create an OOT-usable Image Assembly configuration, with all supporting
@@ -18,9 +20,22 @@ if (is_fuchsia) {
     create_package_archive = true
   }
 
+  # This is an example of creating an assembly input bundle, it's only for use
+  # to show how to use the template, and isn't meant to be used (it will be
+  # removed after there are other, "real" usages of the template.)
+  assembly_input_bundle("additional_packages") {
+    testonly = base_cache_packages_testonly
+    visibility = [ ":*" ]
+    base_packages = [ "//:additional_base_packages" ]
+    cache_packages = [ "//:additional_cache_packages" ]
+    create_aib_package = true
+    create_aib_archive = true
+  }
+
   group("assembly") {
     testonly = true
     public_deps = [
+      ":additional_packages",
       ":legacy",
       ":legacy.tgz",
       "scripts:assembly_input_bundle_tool_install($host_toolchain)",
