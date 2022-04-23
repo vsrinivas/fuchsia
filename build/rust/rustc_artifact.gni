@@ -146,22 +146,22 @@ template("rustc_artifact") {
     public_deps = [ ":$_target_name" ]
     metadata = {
     }
+    metadata = {
+      test_component_manifest_program_barrier = [ ":$_target_name" ]
+      link_output_barrier = [ ":$_target_name" ]
+    }
     if (!_disable_clippy) {
       _outputs = get_target_outputs(":$_clippy_name")
-      metadata = {
-        test_component_manifest_program_barrier = [ ":$_target_name" ]
-        link_output_barrier = [ ":$_target_name" ]
-        rust_source_map = [
-          {
-            clippy = get_label_info(":$_clippy_name", "label_with_toolchain")
-            output = rebase_path(_outputs[0], root_build_dir)
-            src = []
-            foreach(s, invoker.sources) {
-              src += [ rebase_path(s, root_build_dir) ]
-            }
-          },
-        ]
-      }
+      metadata.rust_source_map = [
+        {
+          clippy = get_label_info(":$_clippy_name", "label_with_toolchain")
+          output = rebase_path(_outputs[0], root_build_dir)
+          src = []
+          foreach(s, invoker.sources) {
+            src += [ rebase_path(s, root_build_dir) ]
+          }
+        },
+      ]
 
       if (include_clippy) {
         data_deps = [ ":$_clippy_name" ]
