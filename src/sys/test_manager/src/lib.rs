@@ -287,6 +287,7 @@ impl TestRunBuilder {
         .await;
 
         if let Err(()) = controller_res {
+            warn!("Controller terminated early. Last known state: {:#?}", &inspect_node);
             inspect_node.persist();
         }
     }
@@ -996,7 +997,7 @@ async fn run_single_suite(
     suite: Suite,
     debug_controller: &ftest_internal::DebugDataSetControllerProxy,
     instance_name: &str,
-    inspect_node: self_diagnostics::SuiteInspectNode,
+    inspect_node: Arc<self_diagnostics::SuiteInspectNode>,
 ) {
     let (mut sender, recv) = mpsc::channel(1024);
     let (stop_sender, stop_recv) = oneshot::channel::<()>();

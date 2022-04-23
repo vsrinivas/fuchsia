@@ -4,12 +4,13 @@
 
 use {
     fuchsia_inspect::{
-        types::{Node, StringProperty},
-        InspectType, Property,
+        types::{LazyNode, Node},
+        Inspector,
     },
     fuchsia_inspect_contrib::nodes::BoundedListNode,
+    futures::FutureExt,
     std::{
-        fmt::Debug,
+        fmt::{Debug, Error, Formatter},
         sync::{Arc, Mutex, Weak},
     },
 };
@@ -47,12 +48,17 @@ impl RootInspectNode {
 
 /// Inspect node containing diagnostics for a single test run.
 pub struct RunInspectNode {
-    node: Node,
+    node: LazyNode,
+    inner: Arc<Mutex<RunInspectNodeInner>>,
     finished_runs_node: Weak<Mutex<BoundedListNode>>,
-    suites_node: Arc<Node>,
-    execution_state: DebugStringProperty<RunExecutionState>,
-    debug_data_state: DebugStringProperty<DebugDataState>,
-    controller_state: DebugStringProperty<RunControllerState>,
+}
+
+#[derive(Debug)]
+struct RunInspectNodeInner {
+    execution_state: RunExecutionState,
+    debug_data_state: DebugDataState,
+    controller_state: RunControllerState,
+    suites: Vec<Arc<SuiteInspectNode>>,
 }
 
 impl RunInspectNode {
@@ -62,103 +68,103 @@ impl RunInspectNode {
         finished_runs_node: Weak<Mutex<BoundedListNode>>,
         node_name: &str,
     ) -> Self {
-        let node = executing_root.create_child(node_name);
-        Self {
-            execution_state: DebugStringProperty::new(
-                &node,
-                "execution_state",
-                RunExecutionState::NotStarted,
-            ),
-            debug_data_state: DebugStringProperty::new(
-                &node,
-                "debug_data_state",
-                DebugDataState::PendingDebugDataProduced,
-            ),
-            controller_state: DebugStringProperty::new(
-                &node,
-                "controller_state",
-                RunControllerState::AwaitingRequest,
-            ),
-            suites_node: Arc::new(node.create_child("suites")),
-            node,
-            finished_runs_node,
-        }
+        let inner = Arc::new(Mutex::new(RunInspectNodeInner {
+            execution_state: RunExecutionState::NotStarted,
+            debug_data_state: DebugDataState::PendingDebugDataProduced,
+            controller_state: RunControllerState::AwaitingRequest,
+            suites: vec![],
+        }));
+        let inner_clone = inner.clone();
+        let node = executing_root.create_lazy_child(node_name, move || {
+            let inspector = Inspector::new();
+            let root = inspector.root();
+            let lock = inner_clone.lock().unwrap();
+            root.record_string("execution_state", format!("{:#?}", lock.execution_state));
+            root.record_string("debug_data_state", format!("{:#?}", lock.debug_data_state));
+            root.record_string("controller_state", format!("{:#?}", lock.controller_state));
+            let suites = lock.suites.clone();
+            drop(lock);
+            let suite_node = root.create_child("suites");
+            for suite in suites {
+                suite.record(&suite_node);
+            }
+            root.record(suite_node);
+            futures::future::ready(Ok(inspector)).boxed()
+        });
+        Self { inner, node, finished_runs_node }
     }
 
     pub fn set_execution_state(&self, state: RunExecutionState) {
-        self.execution_state.set(state);
+        self.inner.lock().unwrap().execution_state = state;
     }
 
     pub fn set_debug_data_state(&self, state: DebugDataState) {
-        self.debug_data_state.set(state);
+        self.inner.lock().unwrap().debug_data_state = state;
     }
 
     pub fn set_controller_state(&self, state: RunControllerState) {
-        self.controller_state.set(state);
+        self.inner.lock().unwrap().controller_state = state;
     }
 
-    pub fn new_suite(&self, name: &str, url: &str) -> SuiteInspectNode {
-        SuiteInspectNode::new(name, url, &self.suites_node)
+    pub fn new_suite(&self, name: &str, url: &str) -> Arc<SuiteInspectNode> {
+        let node = Arc::new(SuiteInspectNode::new(name, url));
+        self.inner.lock().unwrap().suites.push(node.clone());
+        node
     }
 
     pub fn persist(self) {
-        let Self {
-            node,
-            finished_runs_node,
-            suites_node,
-            execution_state,
-            debug_data_state,
-            controller_state,
-        } = self;
-
-        if let Some(finished_runs) = finished_runs_node.upgrade() {
+        if let Some(finished_runs) = self.finished_runs_node.upgrade() {
             let mut node_lock = finished_runs.lock().unwrap();
             let parent = node_lock.create_entry();
-            node.record(NodeWrapper(suites_node));
-            node.record(execution_state);
-            node.record(debug_data_state);
-            node.record(controller_state);
-            let _ = parent.adopt(&node);
-            parent.record(node);
+            let _ = parent.adopt(&self.node);
+            parent.record(self.node);
         }
+    }
+}
+
+impl Debug for RunInspectNode {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        self.inner.lock().unwrap().fmt(f)
     }
 }
 
 /// Inspect node containing state for a single test suite.
 pub struct SuiteInspectNode {
-    parent_node: Weak<Node>,
-    node: Option<Node>,
-    execution_state: Option<DebugStringProperty<ExecutionState>>,
+    name: String,
+    url: String,
+    execution_state: Mutex<ExecutionState>,
 }
 
 impl SuiteInspectNode {
-    fn new(name: &str, url: &str, parent_node: &Arc<Node>) -> Self {
-        let node = parent_node.create_child(name);
-        node.record_string("url", url);
+    fn new(name: &str, url: &str) -> Self {
         Self {
-            execution_state: Some(DebugStringProperty::new(
-                &node,
-                "execution_state",
-                ExecutionState::Pending,
-            )),
-            node: Some(node),
-            parent_node: Arc::downgrade(parent_node),
+            name: name.into(),
+            url: url.into(),
+            execution_state: Mutex::new(ExecutionState::Pending),
         }
     }
 
     pub fn set_execution_state(&self, state: ExecutionState) {
-        self.execution_state.as_ref().unwrap().set(state);
+        *self.execution_state.lock().unwrap() = state;
+    }
+
+    fn record(&self, parent_node: &Node) {
+        let node = parent_node.create_child(&self.name);
+        node.record_string("url", &self.url);
+        node.record_string(
+            "execution_state",
+            format!("{:#?}", *self.execution_state.lock().unwrap()),
+        );
+        parent_node.record(node);
     }
 }
 
-impl Drop for SuiteInspectNode {
-    fn drop(&mut self) {
-        if let Some(parent) = self.parent_node.upgrade() {
-            let node = self.node.take().unwrap();
-            let execution_state = self.execution_state.take().unwrap();
-            node.record(execution_state);
-            parent.record(node);
-        }
+impl Debug for SuiteInspectNode {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        f.debug_struct(&self.name)
+            .field("url", &self.url)
+            .field("execution_state", &*self.execution_state.lock().unwrap())
+            .finish()
     }
 }
 
@@ -202,28 +208,6 @@ pub enum RunControllerState {
     AwaitingRequest,
     Done { stopped_or_killed: bool, events_drained: bool, events_sent_successfully: bool },
 }
-
-struct DebugStringProperty<T: Debug> {
-    inner: StringProperty,
-    _type: std::marker::PhantomData<T>,
-}
-
-impl<T: Debug> DebugStringProperty<T> {
-    fn new(parent: &Node, name: &str, initial: T) -> Self {
-        Self {
-            inner: parent.create_string(name, &format!("{:#?}", initial)),
-            _type: std::marker::PhantomData,
-        }
-    }
-
-    fn set(&self, new: T) {
-        self.inner.set(&format!("{:#?}", new));
-    }
-}
-
-impl<T: Debug + Send + Sync> InspectType for DebugStringProperty<T> {}
-struct NodeWrapper(Arc<Node>);
-impl InspectType for NodeWrapper {}
 
 #[cfg(test)]
 mod test {
