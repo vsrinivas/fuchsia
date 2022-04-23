@@ -32,17 +32,20 @@ const (
 	CustomType        = "CUSTOM"
 	RestrictedLogType = "RESTRICTED_LOG"
 	ReportType        = "REPORT"
+	DebugType         = "DEBUG"
 )
 
 // TestRunResult is the JSON schema for a test run in structured results output
 // by `ffx test run`.
 type TestRunResult struct {
-	Outcome   string       `json:"outcome"`
-	Suites    []suiteEntry `json:"suites"`
-	outputDir string
+	Artifacts   map[string]ArtifactMetadata `json:"artifacts"`
+	ArtifactDir string                      `json:"artifact_dir"`
+	Outcome     string                      `json:"outcome"`
+	Suites      []suiteEntry                `json:"suites"`
+	outputDir   string
 }
 
-func getRunResult(outputDir string) (*TestRunResult, error) {
+func GetRunResult(outputDir string) (*TestRunResult, error) {
 	runSummaryBytes, err := os.ReadFile(filepath.Join(outputDir, runSummaryFilename))
 	if err != nil {
 		return nil, err

@@ -953,15 +953,17 @@ func TestExecute(t *testing.T) {
 			}
 			copySinksCount := strings.Count(funcCalls, copySinksFunc)
 			snapshotCount := strings.Count(funcCalls, runSnapshotFunc)
+			expectedCopySinksCount := 1
 			if c.useFFX {
 				snapshotCount = strings.Count(strings.Join(ffx.CmdsCalled, ","), "snapshot")
+				expectedCopySinksCount = 0
 			}
 			closeCount := strings.Count(funcCalls, closeFunc)
 			if testCount != expectedTestCount {
 				t.Errorf("ran %d tests, want: %d", testCount, expectedTestCount)
 			}
-			if copySinksCount != 1 {
-				t.Errorf("ran CopySinks %d times, want: 1", copySinksCount)
+			if copySinksCount != expectedCopySinksCount {
+				t.Errorf("ran CopySinks %d times, want: %d", copySinksCount, expectedCopySinksCount)
 			}
 			if snapshotCount != 1 {
 				t.Errorf("ran RunSnapshot %d times, want: 1", snapshotCount)
@@ -972,12 +974,12 @@ func TestExecute(t *testing.T) {
 			// Ensure CopySinks, RunSnapshot, and Close are run after all calls to Test.
 			numLastCalls := 3
 			if c.useFFX {
-				numLastCalls = 2
+				numLastCalls = 1
 			}
 			lastCalls := fuchsiaTester.funcCalls[len(fuchsiaTester.funcCalls)-numLastCalls:]
 			expectedLastCalls := []string{runSnapshotFunc, copySinksFunc, closeFunc}
 			if c.useFFX {
-				expectedLastCalls = expectedLastCalls[1:]
+				expectedLastCalls = expectedLastCalls[2:]
 			}
 			if diff := cmp.Diff(expectedLastCalls, lastCalls); diff != "" {
 				t.Errorf("Unexpected command run (-want +got):\n%s", diff)

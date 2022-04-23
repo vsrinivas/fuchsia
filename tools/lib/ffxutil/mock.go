@@ -78,11 +78,34 @@ func (f *MockFFXInstance) Test(_ context.Context, testList build.TestList, outDi
 		}
 		suites = append(suites, suite)
 	}
-	return &TestRunResult{
-		Outcome:   outcome,
-		Suites:    suites,
-		outputDir: outDir,
-	}, nil
+	runArtifactDir := "artifact-run"
+	debugDir := "debug"
+	if err := os.MkdirAll(filepath.Join(outDir, runArtifactDir, debugDir), os.ModePerm); err != nil {
+		return nil, err
+	}
+	if err := ioutil.WriteFile(filepath.Join(outDir, runArtifactDir, debugDir, "kernel.profraw"), []byte("data"), os.ModePerm); err != nil {
+		return nil, err
+	}
+
+	runResult := &TestRunResult{
+		Artifacts: map[string]ArtifactMetadata{
+			debugDir: {
+				ArtifactType: DebugType,
+			},
+		},
+		ArtifactDir: runArtifactDir,
+		Outcome:     outcome,
+		Suites:      suites,
+		outputDir:   outDir,
+	}
+	runResultBytes, err := json.Marshal(*runResult)
+	if err != nil {
+		return nil, err
+	}
+	if err := ioutil.WriteFile(filepath.Join(outDir, runSummaryFilename), runResultBytes, os.ModePerm); err != nil {
+		return nil, err
+	}
+	return runResult, nil
 }
 
 func (f *MockFFXInstance) Snapshot(_ context.Context, _, _ string) error {

@@ -355,17 +355,30 @@ func TestFFXTester(t *testing.T) {
 				t.Errorf("Run() called wrong number of times. Got: %d, Want: %d", client.runCalls, wantSSHRunCalls)
 			}
 
-			expectedRemoteDir := dataOutputDir
 			if c.runV2 {
 				// Call EnsureSinks() for v2 tests to set the copier.remoteDir to the data output dir for v2 tests.
 				// v1 tests will already have set the appropriate remoteDir value within Test().
-				if err = tester.EnsureSinks(ctx, sinks, &TestOutputs{}); err != nil {
+				outputs := &TestOutputs{}
+				if err = tester.EnsureSinks(ctx, sinks, outputs); err != nil {
 					t.Errorf("failed to collect sinks: %s", err)
 				}
-				expectedRemoteDir = dataOutputDirV2
-			}
-			if copier.remoteDir != expectedRemoteDir {
-				t.Errorf("expected sinks in dir: %s, but got: %s", expectedRemoteDir, copier.remoteDir)
+				foundKernelSinks := false
+				for _, test := range outputs.Summary.Tests {
+					if test.Name == "kernel_sinks" {
+						foundKernelSinks = true
+						if len(test.DataSinks["llvm-profile"]) != 1 {
+							t.Errorf("got %d kernel sinks, want 1", len(test.DataSinks["llvm-profile"]))
+						}
+						break
+					}
+				}
+				if !foundKernelSinks {
+					t.Errorf("failed to find kernel sinks")
+				}
+			} else {
+				if copier.remoteDir != dataOutputDir {
+					t.Errorf("expected sinks in dir: %s, but got: %s", dataOutputDir, copier.remoteDir)
+				}
 			}
 		})
 	}

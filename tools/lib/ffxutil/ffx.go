@@ -233,7 +233,7 @@ func (f *FFXInstance) Test(
 			},
 			args...)...)
 
-	return getRunResult(testOutputDir)
+	return GetRunResult(testOutputDir)
 }
 
 // Snapshot takes a snapshot of the target's state and saves it to outDir/snapshotFilename.

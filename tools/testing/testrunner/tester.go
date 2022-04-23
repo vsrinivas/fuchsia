@@ -70,6 +70,9 @@ const (
 	llvmProfileSinkType  = "llvm-profile"
 
 	testStartedTimeout = 5 * time.Second
+
+	// The name of the test to associate kernel data sinks with.
+	kernelSinksTestName = "kernel_sinks"
 )
 
 // Tester describes the interface for all different types of testers.
@@ -620,9 +623,130 @@ func (t *FFXTester) Close() error {
 }
 
 func (t *FFXTester) EnsureSinks(ctx context.Context, sinks []runtests.DataSinkReference, outputs *TestOutputs) error {
-	// TODO(fxbug.dev/77634): Implement. Until this is done, fuchsiaSSHTester.EnsureSinks()
-	// needs to be called to get the data sinks from the ffxTester.
-	return t.sshTester.EnsureSinks(ctx, sinks, outputs)
+	sinksPerTest := make(map[string]runtests.DataSinkReference)
+	for _, testOutDir := range t.testOutDirs {
+		runResult, err := ffxutil.GetRunResult(testOutDir)
+		if err != nil {
+			return err
+		}
+		runArtifactDir := filepath.Join(testOutDir, runResult.ArtifactDir)
+		seen := make(map[string]struct{})
+		startTime := clock.Now(ctx)
+		// The runResult's artifacts should contain a directory with the profiles from
+		// component v2 tests along with a summary.json that lists the data sinks per test.
+		// It should also contain a second directory with the kernel profile.
+		for artifact := range runResult.Artifacts {
+			artifactPath := filepath.Join(runArtifactDir, artifact)
+			if err := t.getSinks(artifactPath, sinksPerTest, seen); err != nil {
+				return err
+			}
+		}
+		copyDuration := clock.Now(ctx).Sub(startTime)
+		if len(seen) > 0 {
+			logger.Debugf(ctx, "copied %d data sinks in %s", len(seen), copyDuration)
+		}
+	}
+	// If there were kernel sinks, record the "kernel_sinks" test in the outputs
+	// so that the test result can be updated with the kernel sinks.
+	if _, ok := sinksPerTest[kernelSinksTestName]; ok {
+		kernelSinksTest :=
+			&TestResult{
+				Name:   kernelSinksTestName,
+				Result: runtests.TestSuccess,
+			}
+		outputs.Record(ctx, *kernelSinksTest)
+	}
+	if len(sinksPerTest) > 0 {
+		outputs.updateDataSinks(sinksPerTest, "v2")
+	}
+	// Copy v1 sinks.
+	if sshTester, ok := t.sshTester.(*FuchsiaSSHTester); ok {
+		return sshTester.copySinks(ctx, sinks, t.localOutputDir)
+	}
+	return nil
+}
+
+func (t *FFXTester) getSinks(artifactDir string, sinksPerTest map[string]runtests.DataSinkReference, seen map[string]struct{}) error {
+	return filepath.WalkDir(artifactDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		// If the path is a directory, check for the summary.json and copy all
+		// profiles to the localOutputDir. If the directory does not have a
+		// summary.json, that means it doesn't contain profile artifacts, so ignore
+		// it.
+		if d.IsDir() {
+			summaryPath := filepath.Join(path, runtests.TestSummaryFilename)
+			f, err := os.Open(summaryPath)
+			if os.IsNotExist(err) {
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			var summary runtests.TestSummary
+			if err = json.NewDecoder(f).Decode(&summary); err != nil {
+				return fmt.Errorf("failed to read test summary from %q: %w", summaryPath, err)
+			}
+			if err := t.getSinksPerTest(path, summary, sinksPerTest, seen); err != nil {
+				return err
+			}
+			return filepath.SkipDir
+		}
+		// Else, if the path is a .profraw file, then it must be a kernel profile.
+		if filepath.Ext(path) == ".profraw" {
+			return t.getKernelSink(path, sinksPerTest, seen)
+		}
+		return nil
+	})
+}
+
+// getSinksPerTest moves sinks from sinkDir to the localOutputDir and records
+// the sinks in sinksPerTest.
+func (t *FFXTester) getSinksPerTest(sinkDir string, summary runtests.TestSummary, sinksPerTest map[string]runtests.DataSinkReference, seen map[string]struct{}) error {
+	for _, details := range summary.Tests {
+		for _, sinks := range details.DataSinks {
+			for _, sink := range sinks {
+				if _, ok := seen[sink.File]; !ok {
+					newPath := filepath.Join(t.localOutputDir, "v2", sink.File)
+					if err := os.MkdirAll(filepath.Dir(newPath), os.ModePerm); err != nil {
+						return err
+					}
+					if err := os.Rename(filepath.Join(sinkDir, sink.File), newPath); err != nil {
+						return err
+					}
+					seen[sink.File] = struct{}{}
+				}
+			}
+		}
+		sinksPerTest[details.Name] = runtests.DataSinkReference{Sinks: details.DataSinks}
+	}
+	return nil
+}
+
+// getKernelSink moves the kernel sink to the localOutputDir and records it with
+// a "kernel_sinks" test in sinksPerTest.
+func (t *FFXTester) getKernelSink(path string, sinksPerTest map[string]runtests.DataSinkReference, seen map[string]struct{}) error {
+	sinkFile := filepath.Base(path)
+	if _, ok := seen[path]; !ok {
+		newPath := filepath.Join(t.localOutputDir, "v2", sinkFile)
+		if err := os.MkdirAll(filepath.Dir(newPath), os.ModePerm); err != nil {
+			return err
+		}
+		if err := os.Rename(path, newPath); err != nil {
+			return err
+		}
+		seen[path] = struct{}{}
+	}
+	kernelSinks, ok := sinksPerTest[kernelSinksTestName]
+	if !ok {
+		kernelSinks = runtests.DataSinkReference{Sinks: runtests.DataSinkMap{}}
+	}
+	kernelSinks.Sinks["llvm-profile"] = append(kernelSinks.Sinks["llvm-profile"], runtests.DataSink{Name: sinkFile, File: sinkFile})
+	sinksPerTest[kernelSinksTestName] = kernelSinks
+	return nil
 }
 
 func (t *FFXTester) RunSnapshot(ctx context.Context, snapshotFile string) error {

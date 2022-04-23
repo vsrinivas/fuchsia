@@ -123,7 +123,7 @@ func (o *TestOutputs) Record(ctx context.Context, result TestResult) error {
 
 	// If the stdout/stderr file didn't already exist in the test result's OutputFiles,
 	// create it using the bytes from the test Stdio.
-	if !containsStdio {
+	if !containsStdio && len(result.Stdio) > 0 {
 		stdioPath := filepath.Join(o.OutDir, stdioPath)
 		pathWriter, err := osmisc.CreateFile(stdioPath)
 		if err != nil {
@@ -152,7 +152,9 @@ func (o *TestOutputs) Record(ctx context.Context, result TestResult) error {
 	})
 
 	desc := fmt.Sprintf("%s (%s)", result.Name, duration)
-	o.tap.Ok(result.Passed(), desc)
+	if o.tap != nil {
+		o.tap.Ok(result.Passed(), desc)
+	}
 
 	return nil
 }
