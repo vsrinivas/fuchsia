@@ -120,7 +120,7 @@ class Nelson : public NelsonType {
   zx_status_t ButtonsInit();
   zx_status_t CanvasInit();
   zx_status_t ClkInit();
-  zx_status_t DisplayInit();
+  zx_status_t DisplayInit(uint32_t bootloader_display_id);
   zx_status_t DsiInit();
   zx_status_t EmmcInit();
   zx_status_t GpioInit();

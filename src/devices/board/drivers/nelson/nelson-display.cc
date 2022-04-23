@@ -102,31 +102,51 @@ static pbus_dev_t display_dev = []() {
 
 // Composite binding rules for display driver.
 
-zx_status_t Nelson::DisplayInit() {
+// DisplayInit's bootloader_display_id must match the enum used by u-boot and the GT6853 touch
+// driver.
+
+uint32_t uboot_mapping[] = {
+    PANEL_UNKNOWN,           // 0 - invalid
+    PANEL_KD070D82_FT,       // 1
+    PANEL_TV070WSM_FT,       // 2
+    PANEL_UNKNOWN,           // 3 - should be unused
+    PANEL_KD070D82_FT_9365,  // 4
+    PANEL_TV070WSM_FT_9365,  // 5
+    PANEL_TV070WSM_ST7703I,  // 6
+};
+zx_status_t Nelson::DisplayInit(uint32_t bootloader_display_id) {
   display_panel_t display_panel_info[] = {
       {
           .width = 600,
           .height = 1024,
+          .panel_type = PANEL_UNKNOWN,
       },
   };
 
-  auto display_id = GetDisplayId();
-  switch (display_id) {
-    case 0b10:
-      display_panel_info[0].panel_type = PANEL_TV070WSM_FT;
-      break;
-    case 0b11:
-      display_panel_info[0].panel_type = PANEL_TV070WSM_FT_9365;
-      break;
-    case 0b01:
-      display_panel_info[0].panel_type = PANEL_KD070D82_FT_9365;
-      break;
-    case 0b00:
-      display_panel_info[0].panel_type = PANEL_KD070D82_FT;
-      break;
-    default:
-      zxlogf(ERROR, "%s: invalid display panel detected: %d", __func__, display_id);
-      return ZX_ERR_INVALID_ARGS;
+  if (bootloader_display_id && bootloader_display_id < countof(uboot_mapping)) {
+    display_panel_info[0].panel_type = uboot_mapping[bootloader_display_id];
+    zxlogf(DEBUG, "%s: bootloader provided display panel %d", __func__,
+           display_panel_info[0].panel_type);
+  }
+  if (display_panel_info[0].panel_type == PANEL_UNKNOWN) {
+    auto display_id = GetDisplayId();
+    switch (display_id) {
+      case 0b10:
+        display_panel_info[0].panel_type = PANEL_TV070WSM_FT;
+        break;
+      case 0b11:
+        display_panel_info[0].panel_type = PANEL_TV070WSM_FT_9365;
+        break;
+      case 0b01:
+        display_panel_info[0].panel_type = PANEL_KD070D82_FT_9365;
+        break;
+      case 0b00:
+        display_panel_info[0].panel_type = PANEL_KD070D82_FT;
+        break;
+      default:
+        zxlogf(ERROR, "%s: invalid display panel detected: %d", __func__, display_id);
+        return ZX_ERR_INVALID_ARGS;
+    }
   }
   display_panel_metadata[0].data_size = sizeof(display_panel_info);
   display_panel_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(&display_panel_info);

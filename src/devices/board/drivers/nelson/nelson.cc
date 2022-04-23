@@ -11,6 +11,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -108,6 +109,29 @@ int Nelson::Thread() {
     return -1;
   }
 
+  // This is tightly coupled to the u-boot supplied metadata and the GT6853 touch driver.
+  size_t metadata_size;
+  uint32_t bootloader_display_id = 0;
+  status = DdkGetMetadataSize(DEVICE_METADATA_BOARD_PRIVATE, &metadata_size);
+  if (status == ZX_OK) {
+    if (metadata_size != sizeof(uint32_t)) {
+      zxlogf(ERROR, "%s: bootloader board metadata is the wrong size, got %zu want %zu", __func__,
+             metadata_size, sizeof(uint32_t));
+    } else {
+      size_t actual;
+      status = DdkGetMetadata(DEVICE_METADATA_BOARD_PRIVATE, &bootloader_display_id, metadata_size,
+                              &actual);
+      if (status != ZX_OK || actual != metadata_size) {
+        zxlogf(ERROR, "%s: bootloader board metadata could not be read (%d, size=%zu)", __func__,
+               status, actual);
+        bootloader_display_id = 0;
+      }
+    }
+  } else {
+    zxlogf(ERROR, "%s: no panel type metadata (%d), falling back to GPIO inspection", __func__,
+           status);
+  }
+
   if ((status = RegistersInit()) != ZX_OK) {
     zxlogf(ERROR, "RegistersInit failed: %d", status);
   }
@@ -152,7 +176,7 @@ int Nelson::Thread() {
     zxlogf(ERROR, "DsiInit failed: %d", status);
   }
 
-  if ((status = DisplayInit()) != ZX_OK) {
+  if ((status = DisplayInit(bootloader_display_id)) != ZX_OK) {
     zxlogf(ERROR, "DisplayInit failed: %d", status);
   }
 
