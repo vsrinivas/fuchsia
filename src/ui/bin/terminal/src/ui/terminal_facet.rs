@@ -45,11 +45,9 @@ fn raster_for_rounded_rectangle(
     raster_builder.build()
 }
 
-// Computes the current scroll thumb alpha value for a fade-out effect started at `starting_time` for a duration of `duration`.
-fn scroll_thumb_fade_out_alpha(starting_time: Instant, duration: Duration, alpha: f32) -> f32 {
-    let time = starting_time.elapsed().min(duration).as_secs_f32();
-    let duration = duration.as_secs_f32();
-    alpha - (alpha / duration) * time
+// Computes the current scroll thumb alpha value for a fade-out effect started for `time_elapsed` with a duration of `total_duration`.
+fn scroll_thumb_fade_out_alpha(total_duration: f32, time_elapsed: f32, alpha: f32) -> f32 {
+    alpha - (alpha / total_duration) * time_elapsed
 }
 
 /// Facet that implements a terminal text grid with a scroll bar.
@@ -120,9 +118,11 @@ impl<T: 'static> Facet for TerminalFacet<T> {
 
         // Add new scrollbar thumb.
         if let Some((thumb, alpha)) = self.scroll_thumb {
-            let alpha = self.scroll_thumb_fade_out.map_or(alpha, |(starting_time, delay)| {
-                scroll_thumb_fade_out_alpha(starting_time, delay, alpha)
-            });
+            let alpha =
+                self.scroll_thumb_fade_out.map_or(alpha, |(starting_time, total_duration)| {
+                    let time_elapsed = starting_time.elapsed().min(total_duration).as_secs_f32();
+                    scroll_thumb_fade_out_alpha(total_duration.as_secs_f32(), time_elapsed, alpha)
+                });
             // Linear to sRGB.
             let srgb = (alpha.powf(1.0 / 2.2) * 255.0) as u8;
             let color = Color { r: srgb, g: srgb, b: srgb, a: (alpha * 255.0) as u8 };
@@ -172,35 +172,15 @@ impl<T: 'static> Facet for TerminalFacet<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::{Duration, Instant};
-
-    macro_rules! assert_approx {
-        ( $left:expr, $right:expr ) => {{
-            assert!(($left - $right).abs() < 0.01, "{:?} != {:?}", $left, $right,);
-        }};
-    }
 
     #[test]
     fn scroll_thumb_fade_out() {
         let alpha: f32 = 1.0;
-        let time = Instant::now();
-        let delay = Duration::from_secs_f32(1.0);
+        let fade_out_duration = 1.0;
 
-        assert_approx!(
-            scroll_thumb_fade_out_alpha(time - Duration::from_secs_f32(0.25), delay, alpha),
-            0.75
-        );
-        assert_approx!(
-            scroll_thumb_fade_out_alpha(time - Duration::from_secs_f32(0.5), delay, alpha),
-            0.5
-        );
-        assert_approx!(
-            scroll_thumb_fade_out_alpha(time - Duration::from_secs_f32(0.75), delay, alpha),
-            0.25
-        );
-        assert_approx!(
-            scroll_thumb_fade_out_alpha(time - Duration::from_secs_f32(1.0), delay, alpha),
-            0.0
-        );
+        assert_eq!(scroll_thumb_fade_out_alpha(fade_out_duration, 0.25, alpha), 0.75);
+        assert_eq!(scroll_thumb_fade_out_alpha(fade_out_duration, 0.50, alpha), 0.5);
+        assert_eq!(scroll_thumb_fade_out_alpha(fade_out_duration, 0.75, alpha), 0.25);
+        assert_eq!(scroll_thumb_fade_out_alpha(fade_out_duration, 1.0, alpha), 0.0);
     }
 }
