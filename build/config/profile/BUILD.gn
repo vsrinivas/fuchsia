@@ -12,6 +12,13 @@ _coverage_common_flags = [
   "-fcoverage-mapping",
 ]
 
+if (is_linux) {
+  _coverage_common_flags += [
+    "-mllvm",
+    "-runtime-counter-relocation",
+  ]
+}
+
 if (profile_source_files != []) {
   _profile_source_files_lines = []
   foreach(file, profile_source_files) {
@@ -95,6 +102,8 @@ variant("coverage-rust") {
     dynamic_linker_flags = "-dynamic-linker=coverage-rust/ld.so.1"
     ldflags = [ "-Wl,$dynamic_linker_flags" ]
     rustflags += [ "-Clink-arg=$dynamic_linker_flags" ]
+  } else if (is_linux) {
+    rustflags += [ "-Cllvm-args=-runtime-counter-relocation" ]
   }
 }
 
