@@ -194,6 +194,48 @@ class Image : public View<Storage> {
     return view.Copy(this->storage(), first.item_offset(), tail_size, size);
   }
 
+  // The given iterator must be to the last item in the ZBI.  Adjust its length
+  // to the given new length, which must be no larger than the space already
+  // accounted for the item when it was appended.  On success, the new iterator
+  // at the same item is returned; old iterators to this item are invalidated.
+  fitx::result<Error, iterator> TrimLastItem(iterator item, uint32_t new_length) {
+    ZX_ASSERT(item != this->end());
+    ZX_ASSERT(std::next(item) == this->end());
+
+    const uint32_t old_length = item->header->length;
+    ZX_ASSERT(new_length <= ZBI_ALIGN(old_length));
+
+    if (new_length == old_length) {
+      return fitx::ok(item);
+    }
+
+    const uint32_t offset = item.item_offset();
+    if (auto result = this->WriteHeader(*item->header, offset, new_length); result.is_error()) {
+      return fitx::error{Error{
+          "cannot write item header",
+          offset,
+          std::move(result.error_value()),
+      }};
+    }
+
+    if (auto result = ResetContainer(item.payload_offset() + ZBI_ALIGN(new_length));
+        result.is_error()) {
+      return result.take_error();
+    }
+
+    item.Update(offset);
+    return fitx::ok(item);
+  }
+
+  // Remove the given item and all items past it, invalidating any iterators to
+  // those items.
+  fitx::result<Error> Truncate(iterator new_end) {
+    if (new_end == this->end()) {
+      return fitx::ok();
+    }
+    return ResetContainer(new_end.item_offset());
+  }
+
  private:
   // Resets the container as being of the provided size (which is the total
   // container size and not the length of the ZBI). If possible, the
@@ -214,6 +256,7 @@ class Image : public View<Storage> {
       return fitx::error{
           Error{"cannot write container header", 0, std::move(result.error_value())}};
     }
+    this->set_limit(new_size);
     return fitx::ok();
   }
 };

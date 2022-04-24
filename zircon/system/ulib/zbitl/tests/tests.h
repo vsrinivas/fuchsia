@@ -274,12 +274,12 @@ void TestMutation(TestDataZbiType type) {
 
 template <typename SrcTestTraits, typename DestTestTraits>
 constexpr bool kExpectOneShotDecompression =
-    SrcTestTraits::kExpectOneShotReads&& DestTestTraits::kExpectUnbufferedWrites;
+    SrcTestTraits::kExpectOneShotReads && DestTestTraits::kExpectUnbufferedWrites;
 
 template <typename SrcTestTraits, typename DestTestTraits>
-constexpr bool kExpectZeroCopying = SrcTestTraits::kExpectOneShotReads ||
-                                    (SrcTestTraits::kExpectUnbufferedReads &&
-                                     DestTestTraits::kExpectUnbufferedWrites);
+constexpr bool kExpectZeroCopying =
+    SrcTestTraits::kExpectOneShotReads ||
+    (SrcTestTraits::kExpectUnbufferedReads && DestTestTraits::kExpectUnbufferedWrites);
 
 inline size_t OneShotDecompressionScratchSize() {
   return zbitl::decompress::OneShot::GetScratchSize();
@@ -1017,6 +1017,45 @@ void TestAppending() {
     {
       auto result = image.Append(zbi_header_t{.type = kItemType, .length = 0});
       EXPECT_TRUE(result.is_error());
+    }
+  } else {
+    // Test appending and then truncating or trimming.
+
+    auto count_items = [&image]() -> size_t { return std::distance(image.begin(), image.end()); };
+    const size_t count_before = count_items();
+    const size_t size_before = image.size_bytes();
+
+    {
+      auto result = image.Append(zbi_header_t{.type = kItemType}, zbitl::ByteView{});
+      EXPECT_FALSE(result.is_error()) << ViewErrorString(std::move(result).error_value());
+    }
+    {
+      auto result = image.Append(zbi_header_t{.type = kItemType, .length = 0});
+      EXPECT_FALSE(result.is_error()) << ViewErrorString(std::move(result).error_value());
+    }
+
+    const size_t count_after = count_items();
+    EXPECT_EQ(count_after, count_before + 2);
+
+    {
+      auto item = std::next(image.begin(), count_before);
+      ASSERT_EQ(std::distance(item, image.end()), 2u);
+      auto result = image.Truncate(item);
+      EXPECT_FALSE(result.is_error()) << ViewErrorString(std::move(result).error_value());
+      EXPECT_EQ(count_items(), count_before);
+      EXPECT_EQ(image.size_bytes(), size_before);
+    }
+
+    {
+      auto result = image.Append(zbi_header_t{.type = kItemType, .length = 99});
+      ASSERT_FALSE(result.is_error()) << ViewErrorString(std::move(result).error_value());
+      EXPECT_EQ(result.value()->header->length, 99u);
+      EXPECT_EQ(image.size_bytes(), size_before + sizeof(zbi_header_t) + ZBI_ALIGN(99));
+
+      auto trim_result = image.TrimLastItem(result.value(), 33u);
+      ASSERT_FALSE(trim_result.is_error()) << ViewErrorString(std::move(trim_result).error_value());
+      EXPECT_EQ(trim_result.value()->header->length, 33u);
+      EXPECT_EQ(image.size_bytes(), size_before + sizeof(zbi_header_t) + ZBI_ALIGN(33));
     }
   }
 

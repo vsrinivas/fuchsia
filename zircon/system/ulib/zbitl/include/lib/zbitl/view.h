@@ -953,6 +953,12 @@ class View {
     return fitx::ok(header);
   }
 
+  void set_limit(uint32_t limit) {
+    if (!std::holds_alternative<Unused>(error_)) {
+      limit_ = limit;
+    }
+  }
+
  private:
   struct Unused {};
   struct NoError {};
