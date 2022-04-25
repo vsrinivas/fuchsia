@@ -30,6 +30,11 @@ void PrintTo(const std::chrono::duration<Rep, Period>& duration, std::ostream* o
 
 namespace {
 
+void ExpectCharsEqual(const char* first, const char* second, size_t len) {
+  EXPECT_EQ(memcmp(first, second, len), 0)
+      << std::string_view(first, len) << " != " << std::string_view(second, len);
+}
+
 template <typename T>
 void SendWithCmsg(int sock, char* buf, size_t buf_size, int cmsg_level, int cmsg_type,
                   T cmsg_value) {
@@ -342,71 +347,86 @@ INSTANTIATE_TEST_SUITE_P(IOReadingMethodTests, IOReadingMethodTest,
                            return info.param.IOMethodToString();
                          });
 
-template <typename F>
-void TestDatagramSocketClearPoller(bool nonblocking, F consumeError) {
-  int flags = 0;
-  if (nonblocking) {
-    flags |= SOCK_NONBLOCK;
+class DatagramSocketErrBase {
+ protected:
+  static void SetUpSocket(fbl::unique_fd& fd, bool nonblocking) {
+    int flags = 0;
+    if (nonblocking) {
+      flags |= SOCK_NONBLOCK;
+    }
+
+    ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM | flags, 0))) << strerror(errno);
+    ASSERT_NO_FATAL_FAILURE(BindLoopback(fd));
+    ASSERT_NO_FATAL_FAILURE(CheckNoPendingEvents(fd));
   }
 
-  fbl::unique_fd fd;
-  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM | flags, 0))) << strerror(errno);
+  static void BindLoopback(const fbl::unique_fd& fd) {
+    {
+      sockaddr_in addr = {
+          .sin_family = AF_INET,
+          .sin_addr =
+              {
+                  .s_addr = htonl(INADDR_LOOPBACK),
+              },
+      };
 
-  {
-    // Connect to an existing remote but on a port that is not being used.
-    sockaddr_in addr = {
-        .sin_family = AF_INET,
-        .sin_port = htons(1337),
-        .sin_addr =
-            {
-                .s_addr = htonl(INADDR_LOOPBACK),
-            },
-    };
-
-    ASSERT_EQ(connect(fd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
-        << strerror(errno);
+      ASSERT_EQ(bind(fd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
+          << strerror(errno);
+    }
   }
 
-  {
-    // Precondition sanity check: no pending events on the socket.
-    pollfd pfd = {
-        .fd = fd.get(),
-    };
-    int n = poll(&pfd, 1, 0);
-    ASSERT_GE(n, 0) << strerror(errno);
-    ASSERT_EQ(n, 0);
+  static void ConnectTo(const fbl::unique_fd& send_fd, const fbl::unique_fd& fd) {
+    {
+      sockaddr_in addr;
+      socklen_t addrlen = sizeof(addr);
+      ASSERT_EQ(getsockname(fd.get(), reinterpret_cast<sockaddr*>(&addr), &addrlen), 0)
+          << strerror(errno);
+      ASSERT_EQ(addrlen, sizeof(sockaddr_in));
+
+      ASSERT_EQ(connect(send_fd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
+          << strerror(errno);
+    }
   }
 
-  {
-    // Send a UDP packet to trigger a port unreachable response.
-    char bytes[1];
-    ASSERT_EQ(send(fd.get(), bytes, sizeof(bytes), 0), ssize_t(sizeof(bytes))) << strerror(errno);
+  static void TriggerICMPUnreachable(const fbl::unique_fd& fd) {
+    fbl::unique_fd unused_fd;
+    ASSERT_TRUE(unused_fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
+    ASSERT_NO_FATAL_FAILURE(BindLoopback(unused_fd));
+    ASSERT_NO_FATAL_FAILURE(ConnectTo(fd, unused_fd));
+    // Closing this socket ensures that `fd` ends up connected to an unbound port.
+    ASSERT_EQ(close(unused_fd.release()), 0) << strerror(errno);
+
+    {
+      // Send a UDP packet from `fd` to trigger a port unreachable response.
+      constexpr char bytes[] = "b";
+      ASSERT_EQ(send(fd.get(), bytes, sizeof(bytes), 0), ssize_t(sizeof(bytes))) << strerror(errno);
+    }
+
+    {
+      // Expect a POLLERR to be signaled on the socket.
+      pollfd pfd = {
+          .fd = fd.get(),
+      };
+      const int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
+      ASSERT_GE(n, 0) << strerror(errno);
+      EXPECT_EQ(n, 1);
+      EXPECT_EQ(pfd.revents & POLLERR, POLLERR);
+    }
   }
 
-  {
-    // Expect a POLLERR to be signaled on the socket.
-    pollfd pfd = {
-        .fd = fd.get(),
-    };
-    int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
-    ASSERT_GE(n, 0) << strerror(errno);
-    ASSERT_EQ(n, 1);
-    ASSERT_EQ(pfd.revents & POLLERR, POLLERR);
+  static void CheckNoPendingEvents(fbl::unique_fd& fd) {
+    {
+      pollfd pfd = {
+          .fd = fd.get(),
+          .events = std::numeric_limits<decltype(pfd.events)>::max() &
+                    ~(POLLOUT | POLLWRNORM | POLLWRBAND),
+      };
+      const int n = poll(&pfd, 1, 0);
+      ASSERT_GE(n, 0) << strerror(errno);
+      EXPECT_EQ(n, 0);
+    }
   }
-
-  consumeError(fd);
-
-  {
-    pollfd pfd = {
-        .fd = fd.get(),
-    };
-    int n = poll(&pfd, 1, 0);
-    ASSERT_GE(n, 0) << strerror(errno);
-    ASSERT_EQ(n, 0);
-  }
-
-  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
-}
+};
 
 std::string nonBlockingToString(bool nonblocking) {
   if (nonblocking) {
@@ -415,45 +435,80 @@ std::string nonBlockingToString(bool nonblocking) {
   return "Blocking";
 }
 
-void ExpectLastError(const fbl::unique_fd& fd, int expected) {
+class DatagramSocketErrWithNonBlockingOptionTest : public DatagramSocketErrBase,
+                                                   public testing::TestWithParam<bool> {};
+
+TEST_P(DatagramSocketErrWithNonBlockingOptionTest, ClearsErrWithGetSockOpt) {
+  fbl::unique_fd fd;
+  ASSERT_NO_FATAL_FAILURE(SetUpSocket(fd, GetParam()));
+  ASSERT_NO_FATAL_FAILURE(TriggerICMPUnreachable(fd));
+
+  // Clear error using `getsockopt`.
   int err;
   socklen_t optlen = sizeof(err);
   ASSERT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
   ASSERT_EQ(optlen, sizeof(err));
-  EXPECT_EQ(err, expected) << " err=" << strerror(err) << " expected=" << strerror(expected);
+  EXPECT_EQ(err, ECONNREFUSED) << strerror(err);
+
+  ASSERT_NO_FATAL_FAILURE(CheckNoPendingEvents(fd));
+  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
 }
 
-class NonBlockingOptionTest : public testing::TestWithParam<bool> {};
-
-TEST_P(NonBlockingOptionTest, DatagramSocketClearErrorWithGetSockOpt) {
-  bool nonblocking = GetParam();
-
-  TestDatagramSocketClearPoller(nonblocking, [&](const fbl::unique_fd& fd) {
-    ASSERT_NO_FATAL_FAILURE(ExpectLastError(fd, ECONNREFUSED));
-  });
-}
-
-INSTANTIATE_TEST_SUITE_P(NetDatagramTest, NonBlockingOptionTest, testing::Values(false, true),
+INSTANTIATE_TEST_SUITE_P(NetDatagramTest, DatagramSocketErrWithNonBlockingOptionTest,
+                         testing::Values(false, true),
                          [](const testing::TestParamInfo<bool>& info) {
                            return nonBlockingToString(info.param);
                          });
 
-using NonBlockingOptionIOParams = std::tuple<IOMethod, bool>;
+using IOMethodNonBlockingOptionParams = std::tuple<IOMethod, bool>;
 
-class NonBlockingOptionIOTest : public testing::TestWithParam<NonBlockingOptionIOParams> {};
-
-TEST_P(NonBlockingOptionIOTest, DatagramSocketClearErrorWithIO) {
-  auto const& [io_method, nonblocking] = GetParam();
-
-  TestDatagramSocketClearPoller(nonblocking, [op = io_method](const fbl::unique_fd& fd) {
+class DatagramSocketErrWithIOMethodBase : public DatagramSocketErrBase {
+ protected:
+  static void ExpectConnectionRefusedErr(const fbl::unique_fd& fd, const IOMethod& io_method) {
     char bytes[1];
-    EXPECT_EQ(op.ExecuteIO(fd.get(), bytes, sizeof(bytes)), -1);
+    EXPECT_EQ(io_method.ExecuteIO(fd.get(), bytes, sizeof(bytes)), -1);
     EXPECT_EQ(errno, ECONNREFUSED) << strerror(errno);
-  });
+  }
+};
+
+class DatagramSocketErrWithIOMethodNonBlockingOptionTest
+    : public DatagramSocketErrWithIOMethodBase,
+      public testing::TestWithParam<IOMethodNonBlockingOptionParams> {};
+
+TEST_P(DatagramSocketErrWithIOMethodNonBlockingOptionTest, ClearsErrWithIO) {
+  fbl::unique_fd fd;
+  const auto& [io_method, nonblocking] = GetParam();
+  ASSERT_NO_FATAL_FAILURE(SetUpSocket(fd, nonblocking));
+  ASSERT_NO_FATAL_FAILURE(TriggerICMPUnreachable(fd));
+  ASSERT_NO_FATAL_FAILURE(ExpectConnectionRefusedErr(fd, io_method));
+  ASSERT_NO_FATAL_FAILURE(CheckNoPendingEvents(fd));
+  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
 }
 
-std::string NonBlockingOptionIOParamsToString(
-    const testing::TestParamInfo<NonBlockingOptionIOParams> info) {
+TEST_P(DatagramSocketErrWithIOMethodNonBlockingOptionTest,
+       ClearsErrWithIOAfterSendCacheInvalidated) {
+  // Datagram sockets using the Fast UDP protocol
+  // (https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0109_socket_datagram_socket)
+  // use a single mechanism to 1) check for errors and 2) check the validity of elements
+  // in their cache. Here, we validate that signaled/sticky errors take precedence
+  // over cache errors.
+  fbl::unique_fd fd;
+  const auto& [io_method, nonblocking] = GetParam();
+  ASSERT_NO_FATAL_FAILURE(SetUpSocket(fd, nonblocking));
+  // Send to an unreachable port, which causes an ICMP error to be
+  // returned on the socket. In addition, it causes the socket to cache the
+  // destination address.
+  ASSERT_NO_FATAL_FAILURE(TriggerICMPUnreachable(fd));
+  // Connecting the socket to a new destination invalidates the cached address.
+  ASSERT_NO_FATAL_FAILURE(ConnectTo(fd, fd));
+  // Expect socket I/O returns the received error.
+  ASSERT_NO_FATAL_FAILURE(ExpectConnectionRefusedErr(fd, io_method));
+  ASSERT_NO_FATAL_FAILURE(CheckNoPendingEvents(fd));
+  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
+}
+
+std::string IOMethodNonBlockingOptionParamsToString(
+    const testing::TestParamInfo<IOMethodNonBlockingOptionParams> info) {
   auto const& [io_method, nonblocking] = info.param;
   std::stringstream s;
   s << nonBlockingToString(nonblocking);
@@ -461,10 +516,173 @@ std::string NonBlockingOptionIOParamsToString(
   return s.str();
 }
 
-INSTANTIATE_TEST_SUITE_P(NetDatagramTest, NonBlockingOptionIOTest,
+INSTANTIATE_TEST_SUITE_P(NetDatagramTest, DatagramSocketErrWithIOMethodNonBlockingOptionTest,
                          testing::Combine(testing::ValuesIn(kAllIOMethods),
                                           testing::Values(false, true)),
-                         NonBlockingOptionIOParamsToString);
+                         IOMethodNonBlockingOptionParamsToString);
+
+class DatagramSocketErrWithIOMethodAndReceivedDatagramBase
+    : public DatagramSocketErrWithIOMethodBase {
+ protected:
+  static void ExpectPollin(const fbl::unique_fd& fd) {
+    pollfd pfd = {
+        .fd = fd.get(),
+        .events = POLLIN,
+    };
+    const int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
+    ASSERT_GE(n, 0) << strerror(errno);
+    EXPECT_EQ(n, 1);
+    ASSERT_EQ(pfd.revents & POLLIN, POLLIN)
+        << "expect pfd.revents contains POLLIN, found: " << pfd.revents;
+  }
+};
+
+class DatagramSocketErrWithIOMethodTest
+    : public DatagramSocketErrWithIOMethodAndReceivedDatagramBase,
+      public testing::TestWithParam<IOMethod> {};
+
+TEST_P(DatagramSocketErrWithIOMethodTest, ClearsErrWithIOAfterDatagramReceived) {
+  fbl::unique_fd fd;
+  ASSERT_NO_FATAL_FAILURE(SetUpSocket(fd, false));
+  fbl::unique_fd send_fd;
+  ASSERT_TRUE(send_fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
+  ASSERT_NO_FATAL_FAILURE(ConnectTo(send_fd, fd));
+
+  // Send a datagram to `fd`.
+  constexpr char send_buf[] = "abc";
+  ASSERT_EQ(send(send_fd.get(), send_buf, sizeof(send_buf), 0), ssize_t(sizeof(send_buf)))
+      << strerror(errno);
+
+  ASSERT_NO_FATAL_FAILURE(ExpectPollin(fd));
+  ASSERT_NO_FATAL_FAILURE(TriggerICMPUnreachable(fd));
+  ASSERT_NO_FATAL_FAILURE(ExpectConnectionRefusedErr(fd, GetParam()));
+
+  // Now that the error has been consumed, consume the datagram.
+  char recv_buf[sizeof(send_buf) + 1];
+  ASSERT_EQ(read(fd.get(), recv_buf, sizeof(recv_buf)), ssize_t(sizeof(send_buf)))
+      << strerror(errno);
+  ASSERT_NO_FATAL_FAILURE(ExpectCharsEqual(recv_buf, send_buf, sizeof(send_buf)));
+
+  ASSERT_NO_FATAL_FAILURE(CheckNoPendingEvents(fd));
+  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
+  ASSERT_EQ(close(send_fd.release()), 0) << strerror(errno);
+}
+
+INSTANTIATE_TEST_SUITE_P(NetDatagramTest, DatagramSocketErrWithIOMethodTest,
+                         testing::ValuesIn(kRecvIOMethods),
+                         [](const testing::TestParamInfo<IOMethod>& info) {
+                           return info.param.IOMethodToString();
+                         });
+
+using IOMethodCmsgCacheInvalidationParams = std::tuple<IOMethod, bool>;
+
+class DatagramSocketErrWithIOMethodCmsgCacheInvalidationTest
+    : public DatagramSocketErrWithIOMethodAndReceivedDatagramBase,
+      public testing::TestWithParam<IOMethodCmsgCacheInvalidationParams> {};
+
+TEST_P(DatagramSocketErrWithIOMethodCmsgCacheInvalidationTest, ClearsErrWithIOWithCmsgCache) {
+  // Datagram sockets using the Fast UDP protocol
+  // (https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0109_socket_datagram_socket)
+  // use a single mechanism to 1) check for errors and 2) check the validity of elements
+  // in their cache. Here, we validate that signaled/sticky errors take precedence
+  // over cache errors.
+  fbl::unique_fd fd;
+  const auto& [io_method, request_cmsg] = GetParam();
+  ASSERT_NO_FATAL_FAILURE(SetUpSocket(fd, false));
+  fbl::unique_fd send_fd;
+  ASSERT_TRUE(send_fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
+  ASSERT_NO_FATAL_FAILURE(ConnectTo(send_fd, fd));
+
+  constexpr int kTtl = 42;
+  char send_buf[] = "abc";
+  ASSERT_NO_FATAL_FAILURE(
+      SendWithCmsg(send_fd.get(), send_buf, sizeof(send_buf), SOL_IP, IP_TTL, kTtl));
+  char control[CMSG_SPACE(sizeof(kTtl)) + 1];
+  char recv_buf[sizeof(send_buf) + 1];
+  iovec iovec = {
+      .iov_base = recv_buf,
+      .iov_len = sizeof(recv_buf),
+  };
+  msghdr msghdr = {
+      .msg_name = nullptr,
+      .msg_namelen = 0,
+      .msg_iov = &iovec,
+      .msg_iovlen = 1,
+      .msg_control = control,
+      .msg_controllen = sizeof(control),
+  };
+
+  // Receive a datagram while providing space for control messages. This causes
+  // the socket to look up and cache the set of requested control messages.
+  EXPECT_EQ(recvmsg(fd.get(), &msghdr, 0), ssize_t(sizeof(send_buf))) << strerror(errno);
+  ASSERT_NO_FATAL_FAILURE(ExpectCharsEqual(recv_buf, send_buf, sizeof(send_buf)));
+  EXPECT_EQ(msghdr.msg_controllen, 0u);
+  EXPECT_EQ(CMSG_FIRSTHDR(&msghdr), nullptr);
+
+  ASSERT_NO_FATAL_FAILURE(
+      SendWithCmsg(send_fd.get(), send_buf, sizeof(send_buf), SOL_IP, IP_TTL, kTtl));
+  ASSERT_NO_FATAL_FAILURE(ExpectPollin(fd));
+
+  // Send to an unreachable port, which causes an ICMP error to be
+  // returned on the socket.
+  ASSERT_NO_FATAL_FAILURE(TriggerICMPUnreachable(fd));
+
+  // Requesting a new cmsg invalidates the cache.
+  if (request_cmsg) {
+    constexpr int kOne = 1;
+    ASSERT_EQ(setsockopt(fd.get(), SOL_IP, IP_RECVTTL, &kOne, sizeof(kOne)), 0) << strerror(errno);
+  }
+
+  // Expect socket I/O returns the received error.
+  ASSERT_NO_FATAL_FAILURE(ExpectConnectionRefusedErr(fd, io_method));
+
+  msghdr = {
+      .msg_name = nullptr,
+      .msg_namelen = 0,
+      .msg_iov = &iovec,
+      .msg_iovlen = 1,
+      .msg_control = control,
+      .msg_controllen = sizeof(control),
+  };
+  EXPECT_EQ(recvmsg(fd.get(), &msghdr, 0), ssize_t(sizeof(send_buf))) << strerror(errno);
+  ASSERT_NO_FATAL_FAILURE(ExpectCharsEqual(recv_buf, send_buf, sizeof(send_buf)));
+
+  // Expect that a cmsg is returned with the datagram iff it was previously requested.
+  if (request_cmsg) {
+    EXPECT_EQ(msghdr.msg_controllen, CMSG_SPACE(sizeof(kTtl)));
+    cmsghdr* cmsg = CMSG_FIRSTHDR(&msghdr);
+    ASSERT_NE(cmsg, nullptr);
+    EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(kTtl)));
+    EXPECT_EQ(cmsg->cmsg_level, SOL_IP);
+    EXPECT_EQ(cmsg->cmsg_type, IP_TTL);
+    int recv_ttl;
+    memcpy(&recv_ttl, CMSG_DATA(cmsg), sizeof(recv_ttl));
+    EXPECT_EQ(recv_ttl, kTtl);
+  } else {
+    EXPECT_EQ(msghdr.msg_controllen, 0u);
+    EXPECT_EQ(CMSG_FIRSTHDR(&msghdr), nullptr);
+  }
+  ASSERT_NO_FATAL_FAILURE(CheckNoPendingEvents(fd));
+  ASSERT_EQ(close(send_fd.release()), 0) << strerror(errno);
+}
+
+std::string IOMethodCmsgCacheInvalidationParamsToString(
+    const testing::TestParamInfo<IOMethodCmsgCacheInvalidationParams> info) {
+  auto const& [io_method, invalidate_cmsg_cache] = info.param;
+  std::stringstream s;
+  if (invalidate_cmsg_cache) {
+    s << "InvalidCmsgCache";
+  } else {
+    s << "ValidCmsgCache";
+  }
+  s << io_method.IOMethodToString();
+  return s.str();
+}
+
+INSTANTIATE_TEST_SUITE_P(NetDatagramTest, DatagramSocketErrWithIOMethodCmsgCacheInvalidationTest,
+                         testing::Combine(testing::ValuesIn(kRecvIOMethods),
+                                          testing::Values(false, true)),
+                         IOMethodCmsgCacheInvalidationParamsToString);
 
 class DatagramSendTest : public testing::TestWithParam<IOMethod> {};
 
