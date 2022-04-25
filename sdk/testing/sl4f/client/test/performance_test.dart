@@ -37,6 +37,15 @@ class FakePerformanceTools extends Performance {
   }
 }
 
+// Helper class for checking that an exception that is thrown has the
+// expected error text.
+class ExceptionHasText extends CustomMatcher {
+  ExceptionHasText(matcher)
+      : super('Exception with text that is', 'text', matcher);
+  @override
+  Object featureValueOf(dynamic exception) => exception.toString();
+}
+
 const String sl4fTraceRequestMethod = 'traceutil_facade.GetTraceFile';
 
 void main(List<String> args) {
@@ -149,20 +158,26 @@ void main(List<String> args) {
     expect(resultsObject[1]['values'], equals([2.0]));
   });
 
+  File createFuchsiaPerfFile(String name) {
+    return File(path.join(createTempDir().path, name))..writeAsStringSync('[]');
+  }
+
   test('convert results', () async {
     final mockRunProcessObserver = MockRunProcessObserver();
     final performance =
         FakePerformanceTools(mockSl4f, mockDump, mockRunProcessObserver);
 
+    final File fuchsiaPerfFile1 =
+        createFuchsiaPerfFile('test1-benchmark.fuchsiaperf.json');
     // With no buildbucket id env variable, it should do a local run.
-    await performance.convertResults('/bin/catapult_converter',
-        File('test1-benchmark.fuchsiaperf.json'), {});
+    await performance
+        .convertResults('/bin/catapult_converter', fuchsiaPerfFile1, {});
     var verifyMockRunProcessObserver = verify(mockRunProcessObserver.runProcess(
         argThat(endsWith('catapult_converter')), captureAny))
       ..called(1);
     var capturedArgs = verifyMockRunProcessObserver.captured.single;
     expect(capturedArgs[0], '--input');
-    expect(capturedArgs[1], endsWith('test1-benchmark.fuchsiaperf.json'));
+    expect(capturedArgs[1], fuchsiaPerfFile1.path);
     expect(capturedArgs[2], '--output');
     expect(capturedArgs[3], endsWith('test1-benchmark.catapult_json_disabled'));
     expect(capturedArgs[4], '--execution-timestamp-ms');
@@ -182,14 +197,16 @@ void main(List<String> args) {
       'BUILD_CREATE_TIME': '1561234567890',
     };
 
-    await performance.convertResults('/bin/catapult_converter',
-        File('test2-benchmark.fuchsiaperf.json'), environment);
+    final File fuchsiaPerfFile2 =
+        createFuchsiaPerfFile('test2-benchmark.fuchsiaperf.json');
+    await performance.convertResults(
+        '/bin/catapult_converter', fuchsiaPerfFile2, environment);
     verifyMockRunProcessObserver = verify(mockRunProcessObserver.runProcess(
         argThat(endsWith('catapult_converter')), captureAny))
       ..called(1);
     capturedArgs = verifyMockRunProcessObserver.captured.single;
     expect(capturedArgs[0], '--input');
-    expect(capturedArgs[1], endsWith('test2-benchmark.fuchsiaperf.json'));
+    expect(capturedArgs[1], fuchsiaPerfFile2.path);
     expect(capturedArgs[2], '--output');
     expect(capturedArgs[3], endsWith('test2-benchmark.catapult_json'));
     expect(capturedArgs[4], '--execution-timestamp-ms');
@@ -210,14 +227,16 @@ void main(List<String> args) {
       'RELEASE_VERSION': '0.001.20.3',
     };
 
-    await performance.convertResults('/bin/catapult_converter',
-        File('test3-benchmark.fuchsiaperf.json'), environmentWithVersion);
+    final File fuchsiaPerfFile3 =
+        createFuchsiaPerfFile('test3-benchmark.fuchsiaperf.json');
+    await performance.convertResults(
+        '/bin/catapult_converter', fuchsiaPerfFile3, environmentWithVersion);
     verifyMockRunProcessObserver = verify(mockRunProcessObserver.runProcess(
         argThat(endsWith('catapult_converter')), captureAny))
       ..called(1);
     capturedArgs = verifyMockRunProcessObserver.captured.single;
     expect(capturedArgs[0], '--input');
-    expect(capturedArgs[1], endsWith('test3-benchmark.fuchsiaperf.json'));
+    expect(capturedArgs[1], fuchsiaPerfFile3.path);
     expect(capturedArgs[2], '--output');
     expect(capturedArgs[3], endsWith('test3-benchmark.catapult_json'));
     expect(capturedArgs[4], '--execution-timestamp-ms');
@@ -242,9 +261,11 @@ void main(List<String> args) {
     final environment = {
       'CATAPULT_DASHBOARD_MASTER': 'example.fuchsia.global.ci',
     };
+    final File fuchsiaPerfFile =
+        createFuchsiaPerfFile('test1-benchmark.fuchsiaperf.json');
     expect(
-        performance.convertResults('/bin/catapult_converter',
-            File('test1-benchmark.fuchsiaperf.json'), environment),
+        performance.convertResults(
+            '/bin/catapult_converter', fuchsiaPerfFile, environment),
         throwsA(TypeMatcher<ArgumentError>()));
   });
 
@@ -255,10 +276,47 @@ void main(List<String> args) {
     final performance =
         FakePerformanceTools(mockSl4f, mockDump, mockRunProcessObserver);
 
+    final File fuchsiaPerfFile =
+        createFuchsiaPerfFile('results-fuchsiaperf.json');
     expect(
-        performance.convertResults(
-            '/bin/catapult_converter', File('results-fuchsiaperf.json'), {}),
+        performance
+            .convertResults('/bin/catapult_converter', fuchsiaPerfFile, {}),
         throwsA(TypeMatcher<ArgumentError>()));
+  });
+
+  // convertResults() should raise an error when given a fuchsiaperf
+  // file containing metrics that don't follow the naming conventions.
+  test('convertResults errors from metrics naming check', () async {
+    final mockRunProcessObserver = MockRunProcessObserver();
+    final performance =
+        FakePerformanceTools(mockSl4f, mockDump, mockRunProcessObserver);
+
+    const fuchsiaPerfJson = [
+      // This case is OK and should not produce an error.
+      {'test_suite': 'fuchsia.benchmark', 'label': 'Test'},
+      // These cases should produce errors.
+      {'test_suite': 'not_fuchsia.benchmark', 'label': 'Test'},
+      {'test_suite': 'fuchsiatest', 'label': 'Test(foo)'},
+    ];
+    // Use a regexp here so that we don't duplicate the expected
+    // regexps from the software-under-test.
+    const String expectedErrorRegExp =
+        'Invalid argument\\(s\\): Some performance test metrics'
+        ' don\'t follow the naming conventions:\n'
+        'test_suite field "not_fuchsia.benchmark"'
+        ' does not match the pattern "fuchsia.*"\n'
+        'test_suite field "fuchsiatest"'
+        ' does not match the pattern "fuchsia.*"\n'
+        'label field "Test\\(foo\\)" does not match the pattern ".*"\$';
+
+    final File fuchsiaPerfFile =
+        File(path.join(createTempDir().path, 'results.fuchsiaperf.json'))
+          ..writeAsStringSync(jsonEncode(fuchsiaPerfJson));
+    expect(
+        performance
+            .convertResults('/bin/catapult_converter', fuchsiaPerfFile, {}),
+        throwsA(allOf(TypeMatcher<ArgumentError>(),
+            ExceptionHasText(matches(expectedErrorRegExp)))));
   });
 
   test('convert trace', () async {
