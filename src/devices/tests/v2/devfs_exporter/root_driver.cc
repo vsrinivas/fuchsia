@@ -13,6 +13,7 @@
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/scope.h>
 #include <lib/service/llcpp/outgoing_directory.h>
+#include <lib/sys/component/llcpp/outgoing_directory.h>
 
 namespace fcd = fuchsia_component_decl;
 namespace fdf = fuchsia_driver_framework;
@@ -29,10 +30,10 @@ namespace {
 class RootDriver : public fidl::WireServer<ft::Device> {
  public:
   RootDriver(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf::Node> node,
-             driver::Namespace ns, driver::Logger logger)
+             driver::Namespace ns, driver::Logger logger, component::OutgoingDirectory outgoing)
       : dispatcher_(dispatcher),
         executor_(dispatcher),
-        outgoing_(dispatcher),
+        outgoing_(std::move(outgoing)),
         node_(std::move(node)),
         ns_(std::move(ns)),
         logger_(std::move(logger)) {}
@@ -44,8 +45,9 @@ class RootDriver : public fidl::WireServer<ft::Device> {
                                                        fidl::WireSharedClient<fdf::Node> node,
                                                        driver::Namespace ns,
                                                        driver::Logger logger) {
-    auto driver =
-        std::make_unique<RootDriver>(dispatcher, std::move(node), std::move(ns), std::move(logger));
+    auto outgoing = component::OutgoingDirectory::Create(dispatcher);
+    auto driver = std::make_unique<RootDriver>(dispatcher, std::move(node), std::move(ns),
+                                               std::move(logger), std::move(outgoing));
     auto result = driver->Run(std::move(start_args.outgoing_dir()));
     if (result.is_error()) {
       return result.take_error();
@@ -56,14 +58,9 @@ class RootDriver : public fidl::WireServer<ft::Device> {
  private:
   zx::status<> Run(fidl::ServerEnd<fio::Directory> outgoing_dir) {
     // Setup the outgoing directory.
-    auto service = [this](fidl::ServerEnd<ft::Device> server_end) {
-      fidl::BindServer(dispatcher_, std::move(server_end), this);
-      return ZX_OK;
-    };
-    zx_status_t status = outgoing_.svc_dir()->AddEntry(fidl::DiscoverableProtocolName<ft::Device>,
-                                                       fbl::MakeRefCounted<fs::Service>(service));
-    if (status != ZX_OK) {
-      return zx::error(status);
+    auto status = outgoing_.AddProtocol<ft::Device>(this, Name());
+    if (status.is_error()) {
+      return status.take_error();
     }
     auto serve = outgoing_.Serve(std::move(outgoing_dir));
     if (serve.is_error()) {
@@ -75,10 +72,9 @@ class RootDriver : public fidl::WireServer<ft::Device> {
     if (endpoints.is_error()) {
       return zx::error(endpoints.status_value());
     }
-    status = outgoing_.vfs().Serve(outgoing_.svc_dir(), endpoints->server.TakeChannel(),
-                                   fs::VnodeConnectionOptions::ReadWrite());
-    if (status != ZX_OK) {
-      return zx::error(status);
+    status = outgoing_.Serve(std::move(endpoints->server));
+    if (status.is_error()) {
+      return status.take_error();
     }
     auto exporter = driver::DevfsExporter::Create(
         ns_, dispatcher_, fidl::WireSharedClient(std::move(endpoints->client), dispatcher_));
@@ -88,7 +84,7 @@ class RootDriver : public fidl::WireServer<ft::Device> {
     exporter_ = std::move(*exporter);
 
     // Export "root-device" to devfs.
-    auto task = exporter_.Export<ft::Device>("root-device")
+    auto task = exporter_.Export(std::string("svc/").append(Name()), "root-device")
                     .or_else(fit::bind_member(this, &RootDriver::UnbindNode))
                     .wrap_with(scope_);
     executor_.schedule_task(std::move(task));
@@ -106,7 +102,7 @@ class RootDriver : public fidl::WireServer<ft::Device> {
 
   async_dispatcher_t* const dispatcher_;
   async::Executor executor_;
-  service::OutgoingDirectory outgoing_;
+  component::OutgoingDirectory outgoing_;
 
   fidl::WireSharedClient<fdf::Node> node_;
   driver::Namespace ns_;

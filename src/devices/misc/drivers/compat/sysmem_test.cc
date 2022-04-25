@@ -5,6 +5,7 @@
 #include <fidl/fuchsia.sysmem/cpp/wire_test_base.h>
 #include <lib/driver2/logger.h>
 #include <lib/gtest/test_loop_fixture.h>
+#include <lib/sys/component/llcpp/outgoing_directory.h>
 
 #include <fbl/ref_ptr.h>
 #include <gtest/gtest.h>
@@ -20,15 +21,8 @@ namespace fio = fuchsia_io;
 namespace frunner = fuchsia_component_runner;
 
 class FakeSysmem : public fidl::testing::WireTestBase<fuchsia_sysmem::Allocator>,
-                   public fs::Service {
+                   public fbl::RefCounted<FakeSysmem> {
  public:
-  explicit FakeSysmem(async_dispatcher_t* dispatcher)
-      : fs::Service([dispatcher, this](fidl::ServerEnd<fuchsia_sysmem::Allocator> server) {
-          fidl::BindServer(dispatcher, std::move(server), this);
-          connection_count_++;
-          return ZX_OK;
-        }) {}
-
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
     printf("Not implemented: Allocator::%s\n", name.data());
   }
@@ -38,12 +32,18 @@ class FakeSysmem : public fidl::testing::WireTestBase<fuchsia_sysmem::Allocator>
 
 class SysmemTest : public gtest::TestLoopFixture {
  public:
-  SysmemTest() : outgoing_(dispatcher()) {}
+  SysmemTest() { outgoing_ = component::OutgoingDirectory::Create(dispatcher()); }
   void SetUp() override {
     TestLoopFixture::SetUp();
-    fake_sysmem_ = fbl::MakeRefCounted<FakeSysmem>(dispatcher());
-    outgoing_.root_dir()->AddEntry(fidl::DiscoverableProtocolName<fuchsia_sysmem::Allocator>,
-                                   fake_sysmem_);
+    fake_sysmem_ = fbl::MakeRefCounted<FakeSysmem>();
+    ASSERT_EQ(ZX_OK, outgoing_
+                         ->AddProtocol<fuchsia_sysmem::Allocator>(
+                             [this](fidl::ServerEnd<fuchsia_sysmem::Allocator> server) {
+                               fidl::BindServer(dispatcher(), std::move(server),
+                                                fake_sysmem_.get());
+                               fake_sysmem_->connection_count_++;
+                             })
+                         .status_value());
     auto ns = CreateNamespaceAndLogger();
     ASSERT_EQ(ZX_OK, ns.status_value());
     ns_ = std::move(ns->first);
@@ -55,7 +55,7 @@ class SysmemTest : public gtest::TestLoopFixture {
     if (endpoints.is_error()) {
       return endpoints.take_error();
     }
-    auto status = outgoing_.Serve(std::move(endpoints->server));
+    auto status = outgoing_->Serve(std::move(endpoints->server));
     if (status.is_error()) {
       return status.take_error();
     }
@@ -63,7 +63,7 @@ class SysmemTest : public gtest::TestLoopFixture {
     fidl::Arena arena;
     fidl::VectorView<frunner::wire::ComponentNamespaceEntry> entries(arena, 1);
     entries[0].Allocate(arena);
-    entries[0].set_path(arena, "/svc").set_directory(std::move(endpoints->client));
+    entries[0].set_path(arena, "/").set_directory(std::move(endpoints->client));
 
     auto ns = driver::Namespace::Create(entries);
     if (ns.is_error()) {
@@ -79,7 +79,7 @@ class SysmemTest : public gtest::TestLoopFixture {
 
  protected:
   fbl::RefPtr<FakeSysmem> fake_sysmem_;
-  service::OutgoingDirectory outgoing_;
+  std::optional<component::OutgoingDirectory> outgoing_;
   driver::Namespace ns_;
   driver::Logger logger_;
   std::optional<compat::Device> device_;

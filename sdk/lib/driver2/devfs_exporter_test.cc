@@ -12,6 +12,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/service/llcpp/outgoing_directory.h>
+#include <lib/sys/component/llcpp/outgoing_directory.h>
 
 namespace fdfs = fuchsia::device::fs;
 namespace fio = fuchsia::io;
@@ -46,6 +47,27 @@ class TestExporter : public fdfs::testing::Exporter_TestBase {
 
 class DevfsExporterTest : public gtest::TestLoopFixture {};
 
+zx::status<fidl::ClientEnd<fuchsia_io::Directory>> ServeSvcDir(
+    component::OutgoingDirectory& outgoing) {
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
+  }
+  auto status = outgoing.Serve(std::move(endpoints->server));
+  if (status.is_error()) {
+    return status.take_error();
+  }
+
+  auto svc_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (svc_endpoints.is_error()) {
+    return svc_endpoints.take_error();
+  }
+  fidl::WireCall(endpoints->client)
+      ->Open(fuchsia_io::wire::OpenFlags::kRightReadable, 0, "svc",
+             fidl::ServerEnd<fuchsia_io::Node>(svc_endpoints->server.TakeChannel()));
+  return zx::ok(std::move(svc_endpoints->client));
+}
+
 TEST_F(DevfsExporterTest, Create) {
   // Setup namespace.
   auto svc = fidl::CreateEndpoints<fuchsia_io::Directory>();
@@ -65,18 +87,17 @@ TEST_F(DevfsExporterTest, Create) {
   fidl::Binding<fio::Directory> svc_binding(&svc_directory);
   svc_binding.Bind(svc->server.TakeChannel(), dispatcher());
 
-  service::OutgoingDirectory outgoing(dispatcher());
-  const auto service = [](fidl::ServerEnd<flogger::LogSink> request) { return ZX_OK; };
-  zx_status_t status = outgoing.svc_dir()->AddEntry(
-      fidl::DiscoverableProtocolName<flogger::LogSink>, fbl::MakeRefCounted<fs::Service>(service));
-  ASSERT_EQ(ZX_OK, status);
+  auto outgoing = component::OutgoingDirectory::Create(dispatcher());
+  auto status =
+      outgoing.AddProtocol<flogger::LogSink>([](fidl::ServerEnd<flogger::LogSink> request) {});
 
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  ASSERT_EQ(ZX_OK, endpoints.status_value());
-  ASSERT_EQ(ZX_OK, outgoing.vfs().Serve(outgoing.svc_dir(), endpoints->server.TakeChannel(),
-                                        fs::VnodeConnectionOptions::ReadWrite()));
+  ASSERT_EQ(ZX_OK, status.status_value());
+
+  auto svc_client = ServeSvcDir(outgoing);
+  ASSERT_EQ(ZX_OK, svc_client.status_value());
+
   auto exporter = driver::DevfsExporter::Create(
-      *ns, dispatcher(), fidl::WireSharedClient(std::move(endpoints->client), dispatcher()));
+      *ns, dispatcher(), fidl::WireSharedClient(std::move(*svc_client), dispatcher()));
   ASSERT_TRUE(exporter.is_ok());
 
   // Check export is successful.
@@ -127,11 +148,12 @@ TEST_F(DevfsExporterTest, Create_ServiceNotFound) {
   fidl::Binding<fio::Directory> svc_binding(&svc_directory);
   svc_binding.Bind(svc->server.TakeChannel(), dispatcher());
 
-  service::OutgoingDirectory outgoing(dispatcher());
+  auto outgoing = component::OutgoingDirectory::Create(dispatcher());
+  auto status =
+      outgoing.AddProtocol<flogger::LogSink>([](fidl::ServerEnd<flogger::LogSink> request) {});
+  ASSERT_EQ(ZX_OK, status.status_value());
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  ASSERT_EQ(ZX_OK, endpoints.status_value());
-  ASSERT_EQ(ZX_OK, outgoing.vfs().Serve(outgoing.svc_dir(), endpoints->server.TakeChannel(),
-                                        fs::VnodeConnectionOptions::ReadWrite()));
+  ASSERT_EQ(ZX_OK, outgoing.Serve(std::move(endpoints->server)).status_value());
 
   auto exporter = driver::DevfsExporter::Create(
       *ns, dispatcher(), fidl::WireSharedClient(std::move(endpoints->client), dispatcher()));
@@ -169,18 +191,16 @@ TEST_F(DevfsExporterTest, Create_ServiceFailure) {
   fidl::Binding<fio::Directory> svc_binding(&svc_directory);
   svc_binding.Bind(svc->server.TakeChannel(), dispatcher());
 
-  service::OutgoingDirectory outgoing(dispatcher());
-  const auto service = [](fidl::ServerEnd<flogger::LogSink> request) { return ZX_OK; };
-  zx_status_t status = outgoing.svc_dir()->AddEntry(
-      fidl::DiscoverableProtocolName<flogger::LogSink>, fbl::MakeRefCounted<fs::Service>(service));
-  ASSERT_EQ(ZX_OK, status);
+  auto outgoing = component::OutgoingDirectory::Create(dispatcher());
+  auto status =
+      outgoing.AddProtocol<flogger::LogSink>([](fidl::ServerEnd<flogger::LogSink> request) {});
+  ASSERT_EQ(ZX_OK, status.status_value());
 
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  ASSERT_EQ(ZX_OK, endpoints.status_value());
-  ASSERT_EQ(ZX_OK, outgoing.vfs().Serve(outgoing.svc_dir(), endpoints->server.TakeChannel(),
-                                        fs::VnodeConnectionOptions::ReadWrite()));
+  auto svc_client = ServeSvcDir(outgoing);
+  ASSERT_EQ(ZX_OK, svc_client.status_value());
+
   auto exporter = driver::DevfsExporter::Create(
-      *ns, dispatcher(), fidl::WireSharedClient(std::move(endpoints->client), dispatcher()));
+      *ns, dispatcher(), fidl::WireSharedClient(std::move(*svc_client), dispatcher()));
   ASSERT_TRUE(exporter.is_ok());
 
   // Check export failure due to service failure.
