@@ -467,9 +467,9 @@ TEST_F(DeviceTest, GetProtocolFromDevice) {
 TEST_F(DeviceTest, GetFidlProtocol) {
   // Set up a fake incoming /svc.
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  service::OutgoingDirectory outgoing(dispatcher());
-  outgoing.root_dir()->AddEntry(fidl::DiscoverableProtocolName<test_placeholders::Echo>,
-                                fbl::MakeRefCounted<EchoImpl>(dispatcher()));
+  auto outgoing = component::OutgoingDirectory::Create(dispatcher());
+  auto echo_impl = fbl::MakeRefCounted<EchoImpl>(dispatcher());
+  ASSERT_EQ(ZX_OK, outgoing.AddProtocol(echo_impl.get()).status_value());
   ASSERT_EQ(ZX_OK, outgoing.Serve(std::move(endpoints->server)).status_value());
 
   // Set up the driver namespace.
@@ -477,7 +477,7 @@ TEST_F(DeviceTest, GetFidlProtocol) {
   fidl::VectorView<fuchsia_component_runner::wire::ComponentNamespaceEntry> entries;
   entries.Allocate(arena, 1);
   entries[0].Allocate(arena);
-  entries[0].set_path(arena, "/svc").set_directory(std::move(endpoints->client));
+  entries[0].set_path(arena, "/").set_directory(std::move(endpoints->client));
   auto ret = driver::Namespace::Create(entries);
   ASSERT_EQ(ZX_OK, ret.status_value());
   auto ns = std::move(ret.value());
@@ -486,9 +486,10 @@ TEST_F(DeviceTest, GetFidlProtocol) {
 
   auto drv_logger = driver::Logger::Create(ns, dispatcher(), "test-logger");
   ASSERT_EQ(ZX_OK, drv_logger.status_value());
+  auto drv_outgoing = component::OutgoingDirectory::Create(dispatcher());
   compat::Driver drv(dispatcher(), {std::move(node_client), dispatcher()}, std::move(ns),
                      std::move(*drv_logger), "fuchsia-boot:///#meta/fake-driver.cm",
-                     compat::kDefaultDevice, nullptr);
+                     compat::kDefaultDevice, nullptr, std::move(drv_outgoing));
 
   compat::Device dev(compat::kDefaultDevice, nullptr, &drv, std::nullopt, logger(), dispatcher());
 

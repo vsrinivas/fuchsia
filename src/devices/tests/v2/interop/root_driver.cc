@@ -10,11 +10,12 @@
 #include <lib/driver2/promise.h>
 #include <lib/driver2/record_cpp.h>
 #include <lib/fpromise/bridge.h>
+#include <lib/fpromise/result.h>
 #include <lib/fpromise/scope.h>
+#include <lib/sys/component/llcpp/outgoing_directory.h>
 
 #include <bind/fuchsia/test/cpp/fidl.h>
 
-#include "lib/fpromise/result.h"
 #include "src/devices/lib/compat/compat.h"
 #include "src/devices/lib/compat/symbols.h"
 
@@ -30,13 +31,13 @@ namespace {
 class RootDriver {
  public:
   RootDriver(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf::Node> node,
-             driver::Namespace ns, driver::Logger logger)
+             driver::Namespace ns, driver::Logger logger, component::OutgoingDirectory outgoing)
       : dispatcher_(dispatcher),
         executor_(dispatcher),
         node_(std::move(node)),
         ns_(std::move(ns)),
         logger_(std::move(logger)),
-        outgoing_(dispatcher) {}
+        outgoing_(std::move(outgoing)) {}
 
   static constexpr const char* Name() { return "root"; }
 
@@ -45,8 +46,9 @@ class RootDriver {
                                                        fidl::WireSharedClient<fdf::Node> node,
                                                        driver::Namespace ns,
                                                        driver::Logger logger) {
-    auto driver =
-        std::make_unique<RootDriver>(dispatcher, std::move(node), std::move(ns), std::move(logger));
+    auto outgoing = component::OutgoingDirectory::Create(dispatcher);
+    auto driver = std::make_unique<RootDriver>(dispatcher, std::move(node), std::move(ns),
+                                               std::move(logger), std::move(outgoing));
 
     auto serve = driver->outgoing_.Serve(std::move(start_args.outgoing_dir()));
     if (serve.is_error()) {
@@ -142,7 +144,7 @@ class RootDriver {
   compat::Interop interop_;
   compat::device_t compat_device_ = compat::kDefaultDevice;
   std::optional<compat::Child> child_;
-  service::OutgoingDirectory outgoing_;
+  component::OutgoingDirectory outgoing_;
 
   // NOTE: Must be the last member.
   fpromise::scope scope_;

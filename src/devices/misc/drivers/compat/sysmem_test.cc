@@ -87,8 +87,10 @@ class SysmemTest : public gtest::TestLoopFixture {
 
 TEST_F(SysmemTest, SysmemConnectAllocator) {
   auto [ns, logger] = CreateNamespaceAndLogger().value();
+  auto outgoing = component::OutgoingDirectory::Create(dispatcher());
   compat::Driver drv(dispatcher(), {}, std::move(ns), std::move(logger),
-                     "fuchsia-boot:///#meta/fake-driver.cm", compat::kDefaultDevice, nullptr);
+                     "fuchsia-boot:///#meta/fake-driver.cm", compat::kDefaultDevice, nullptr,
+                     std::move(outgoing));
   compat::Device dev(compat::kDefaultDevice, nullptr, &drv, std::nullopt, logger_, dispatcher());
 
   zx_device_t* zxdev = dev.ZxDevice();

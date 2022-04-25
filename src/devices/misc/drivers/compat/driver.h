@@ -12,7 +12,6 @@
 #include <lib/driver2/logger.h>
 #include <lib/driver2/namespace.h>
 #include <lib/fpromise/scope.h>
-#include <lib/service/llcpp/outgoing_directory.h>
 
 #include <unordered_set>
 
@@ -29,7 +28,7 @@ class Driver {
   Driver(async_dispatcher_t* dispatcher,
          fidl::WireSharedClient<fuchsia_driver_framework::Node> node, driver::Namespace ns,
          driver::Logger logger, std::string_view url, device_t device,
-         const zx_protocol_device_t* ops);
+         const zx_protocol_device_t* ops, component::OutgoingDirectory outgoing);
   ~Driver();
 
   static constexpr const char* Name() { return "compat"; }
@@ -94,7 +93,8 @@ class Driver {
   fbl::RefPtr<fs::PseudoDir> compat_service_;
   async_dispatcher_t* const dispatcher_;
   async::Executor executor_;
-  service::OutgoingDirectory outgoing_;
+  component::OutgoingDirectory outgoing_;
+  Interop interop_;
 
   const driver::Namespace ns_;
   driver::Logger logger_;
@@ -112,7 +112,6 @@ class Driver {
   // API resources.
   zx::resource root_resource_;
 
-  Interop interop_;
   fidl::WireSharedClient<fuchsia_driver_compat::Device> parent_client_;
 
   // NOTE: Must be the last member.

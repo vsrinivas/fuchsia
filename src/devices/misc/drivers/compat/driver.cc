@@ -69,10 +69,10 @@ void DriverList::Log(FuchsiaLogSeverity severity, const char* tag, const char* f
 
 Driver::Driver(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf::Node> node,
                driver::Namespace ns, driver::Logger logger, std::string_view url, device_t device,
-               const zx_protocol_device_t* ops)
+               const zx_protocol_device_t* ops, component::OutgoingDirectory outgoing)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
-      outgoing_(dispatcher),
+      outgoing_(std::move(outgoing)),
       ns_(std::move(ns)),
       logger_(std::move(logger)),
       url_(url),
@@ -107,9 +107,11 @@ zx::status<std::unique_ptr<Driver>> Driver::Start(fdf::wire::DriverStartArgs& st
     return compat.take_error();
   }
 
+  auto outgoing = component::OutgoingDirectory::Create(dispatcher);
+
   auto driver =
       std::make_unique<Driver>(dispatcher, std::move(node), std::move(ns), std::move(logger),
-                               start_args.url().get(), *compat_device, ops);
+                               start_args.url().get(), *compat_device, ops, std::move(outgoing));
 
   auto result = driver->Run(std::move(start_args.outgoing_dir()), "/pkg/" + *compat);
   if (result.is_error()) {

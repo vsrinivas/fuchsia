@@ -87,23 +87,22 @@ void DeviceServer::GetMetadata(GetMetadataRequestView request,
 }
 
 zx::status<Interop> Interop::Create(async_dispatcher_t* dispatcher, const driver::Namespace* ns,
-                                    service::OutgoingDirectory* outgoing) {
+                                    component::OutgoingDirectory* outgoing) {
   Interop interop;
   interop.dispatcher_ = dispatcher;
   interop.ns_ = ns;
   interop.outgoing_ = outgoing;
+  interop.vfs_ = std::make_unique<fs::SynchronousVfs>(dispatcher);
+  interop.devfs_exports_ = fbl::MakeRefCounted<fs::PseudoDir>();
+  interop.compat_service_ = fbl::MakeRefCounted<fs::PseudoDir>();
 
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
-  // Serve a connection to `svc_dir_`.
-  zx_status_t status =
-      interop.outgoing_->vfs().Serve(interop.outgoing_->svc_dir(), endpoints->server.TakeChannel(),
-                                     fs::VnodeConnectionOptions::ReadWrite());
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
+  // Start the devfs exporter.
+  auto serve_status = interop.vfs_->Serve(interop.devfs_exports_, endpoints->server.TakeChannel(),
+                                          fs::VnodeConnectionOptions::ReadWrite());
 
   auto exporter = driver::DevfsExporter::Create(
       *interop.ns_, interop.dispatcher_,
@@ -113,8 +112,21 @@ zx::status<Interop> Interop::Create(async_dispatcher_t* dispatcher, const driver
   }
   interop.exporter_ = std::move(*exporter);
 
-  interop.compat_service_ = fbl::MakeRefCounted<fs::PseudoDir>();
-  interop.outgoing_->root_dir()->AddEntry("fuchsia.driver.compat.Service", interop.compat_service_);
+  endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
+  }
+
+  serve_status = interop.vfs_->Serve(interop.compat_service_, endpoints->server.TakeChannel(),
+                                     fs::VnodeConnectionOptions::ReadWrite());
+  if (serve_status != ZX_OK) {
+    return zx::error(serve_status);
+  }
+  auto status = interop.outgoing_->AddDirectory(std::move(endpoints->client),
+                                                "fuchsia.driver.compat.Service");
+  if (status.is_error()) {
+    return status.take_error();
+  }
 
   return zx::ok(std::move(interop));
 }
@@ -162,15 +174,16 @@ fpromise::promise<void, zx_status_t> Interop::ExportChild(Child* child,
   if (!dev_node) {
     return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
   }
-  zx_status_t add_status = outgoing_->svc_dir()->AddEntry(child->name(), dev_node);
+  zx_status_t add_status = devfs_exports_->AddEntry(child->name(), dev_node);
   if (add_status != ZX_OK) {
     return fpromise::make_error_promise<zx_status_t>(add_status);
   }
   // If the child goes out of scope, we should close the devfs connection.
   child->AddCallback(std::make_shared<fit::deferred_callback>(
       [this, name = std::string(child->name()), dev_node]() {
-        outgoing_->vfs().CloseAllConnectionsForVnode(*dev_node, {});
-        outgoing_->svc_dir()->RemoveEntry(name);
+        (void)outgoing_->RemoveNamedProtocol(name);
+        vfs_->CloseAllConnectionsForVnode(*dev_node, {});
+        devfs_exports_->RemoveEntry(name);
       }));
 
   return exporter_.Export(child->name(), child->topological_path(), child->proto_id());

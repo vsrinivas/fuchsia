@@ -12,12 +12,15 @@
 #include <lib/driver2/start_args.h>
 #include <lib/fit/defer.h>
 #include <lib/fpromise/promise.h>
-#include <lib/service/llcpp/outgoing_directory.h>
+#include <lib/service/llcpp/service_handler.h>
+#include <lib/sys/component/llcpp/outgoing_directory.h>
 
 #include <unordered_map>
 #include <unordered_set>
 
 #include "src/devices/lib/compat/symbols.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
 namespace compat {
 
@@ -99,7 +102,7 @@ class Interop {
   // Create an Interop. Each parameter here is an unowned pointer, so these objects must outlive
   // the Interop class.
   static zx::status<Interop> Create(async_dispatcher_t* dispatcher, const driver::Namespace* ns,
-                                    service::OutgoingDirectory* outgoing);
+                                    component::OutgoingDirectory* outgoing);
 
   // Take a Child, and export its fuchsia.driver.compat service, and it export it to devfs.
   fpromise::promise<void, zx_status_t> ExportChild(Child* child, fbl::RefPtr<fs::Vnode> dev_node);
@@ -109,8 +112,10 @@ class Interop {
 
   async_dispatcher_t* dispatcher_;
   const driver::Namespace* ns_;
-  service::OutgoingDirectory* outgoing_;
+  component::OutgoingDirectory* outgoing_;
 
+  std::unique_ptr<fs::SynchronousVfs> vfs_;
+  fbl::RefPtr<fs::PseudoDir> devfs_exports_;
   fbl::RefPtr<fs::PseudoDir> compat_service_;
   driver::DevfsExporter exporter_;
 };
