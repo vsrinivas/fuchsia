@@ -9,7 +9,6 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fidl/txn_header.h>
-#include <lib/zircon-internal/debug.h>
 #include <lib/zx/handle.h>
 #include <limits.h>
 #include <stdint.h>

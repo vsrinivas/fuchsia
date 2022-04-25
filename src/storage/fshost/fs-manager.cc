@@ -46,8 +46,6 @@
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 
-#define ZXDEBUG 0
-
 namespace fshost {
 
 namespace {

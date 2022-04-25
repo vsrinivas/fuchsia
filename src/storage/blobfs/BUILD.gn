@@ -111,7 +111,6 @@ static_library("blobfs") {
     "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
-    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxc",
     "//zircon/third_party/ulib/cksum",
   ]

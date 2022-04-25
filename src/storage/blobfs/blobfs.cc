@@ -11,7 +11,6 @@
 #include <lib/cksum.h>
 #include <lib/sync/completion.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zircon-internal/debug.h>
 #include <lib/zx/event.h>
 #include <lib/zx/status.h>
 #include <stdarg.h>
