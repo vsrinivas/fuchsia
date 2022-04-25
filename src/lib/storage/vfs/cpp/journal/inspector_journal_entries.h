@@ -25,7 +25,7 @@ class JournalBlock : public disk_inspector::DiskObject {
   JournalBlock& operator=(JournalBlock&&) = delete;
 
   // The api, like rest of the journal, accepts only kJournalBlockSize as block size.
-  JournalBlock(uint32_t index, fs::JournalInfo info, std::array<uint8_t, kJournalBlockSize> block);
+  JournalBlock(uint32_t index, std::array<uint8_t, kJournalBlockSize> block);
 
   // DiskObject interface:
   const char* GetName() const override { return name_.c_str(); }
@@ -37,11 +37,10 @@ class JournalBlock : public disk_inspector::DiskObject {
   std::unique_ptr<DiskObject> GetElementAt(uint32_t index) const override;
 
  private:
-  const uint32_t index_ = 0;
-  const fs::JournalInfo journal_info_;
   const std::array<uint8_t, kJournalBlockSize> block_;
   fbl::String name_;
   fs::JournalObjectType object_type_;
+  const uint32_t index_ = 0;
   uint32_t num_elements_ = 0;
 };
 
@@ -53,12 +52,8 @@ class JournalEntries : public disk_inspector::DiskObject {
   JournalEntries& operator=(const JournalEntries&) = delete;
   JournalEntries& operator=(JournalEntries&&) = delete;
 
-  JournalEntries(fs::JournalInfo info, uint64_t start_block, uint64_t length,
-                 BlockReadCallback read_block)
-      : journal_info_(std::move(info)),
-        start_block_(start_block),
-        length_(length),
-        read_block_(std::move(read_block)) {
+  JournalEntries(uint64_t start_block, uint64_t length, BlockReadCallback read_block)
+      : start_block_(start_block), length_(length), read_block_(std::move(read_block)) {
     ZX_ASSERT(read_block_ != nullptr);
   }
 
@@ -72,7 +67,6 @@ class JournalEntries : public disk_inspector::DiskObject {
   std::unique_ptr<DiskObject> GetElementAt(uint32_t index) const override;
 
  private:
-  fs::JournalInfo journal_info_;
   uint64_t start_block_;
   uint64_t length_;
   BlockReadCallback read_block_;

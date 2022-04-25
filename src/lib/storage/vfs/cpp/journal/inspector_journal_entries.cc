@@ -30,9 +30,8 @@ std::unique_ptr<disk_inspector::DiskObject> ParsePrefix(const fs::JournalPrefix*
 
 }  // namespace
 
-JournalBlock::JournalBlock(uint32_t index, fs::JournalInfo info,
-                           std::array<uint8_t, kJournalBlockSize> block)
-    : index_(index), journal_info_(std::move(info)), block_(std::move(block)) {
+JournalBlock::JournalBlock(uint32_t index, std::array<uint8_t, kJournalBlockSize> block)
+    : block_(std::move(block)), index_(index) {
   auto prefix = reinterpret_cast<const fs::JournalPrefix*>(block_.data());
   if (prefix->magic == fs::kJournalEntryMagic) {
     object_type_ = prefix->ObjectType();
@@ -125,7 +124,7 @@ std::unique_ptr<disk_inspector::DiskObject> JournalEntries::GetElementAt(uint32_
       return nullptr;
     }
 
-    return std::make_unique<JournalBlock>(index, journal_info_, std::move(data));
+    return std::make_unique<JournalBlock>(index, std::move(data));
   }
   return nullptr;
 }

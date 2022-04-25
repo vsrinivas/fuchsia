@@ -41,8 +41,7 @@ std::unique_ptr<disk_inspector::DiskObject> JournalObject::GetElementAt(uint32_t
                                                                 &(journal_info_.checksum));
     }
     case 5: {
-      return std::make_unique<JournalEntries>(journal_info_,
-                                              start_block_ + fs::kJournalMetadataBlocks,
+      return std::make_unique<JournalEntries>(start_block_ + fs::kJournalMetadataBlocks,
                                               length_ - fs::kJournalMetadataBlocks, read_block_);
     }
   }
