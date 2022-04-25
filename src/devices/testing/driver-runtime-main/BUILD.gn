@@ -1,0 +1,40 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+source_set("zxtest") {
+  testonly = true
+  sources = [ "zxtest.cc" ]
+  deps = [
+    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//sdk/lib/driver_runtime:driver_runtime_internal",
+    "//src/devices/lib/driver:driver_runtime",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/sync:sync-cpp",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":driver-runtime-main-test" ]
+}
+
+test("zxtest-test") {
+  output_name = "driver-runtime-main-test"
+  sources = [ "zxtest_test.cc" ]
+  deps = [
+    ":zxtest",
+    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/sync:sync-cpp",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("driver-runtime-main-test") {
+  deps = [ ":zxtest-test" ]
+}

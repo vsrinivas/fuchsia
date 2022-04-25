@@ -5,6 +5,7 @@
 group("tests") {
   testonly = true
   deps = [
+    "driver-runtime-main:tests",
     "fake-bti:tests",
     "fake-dma-buffer:tests",
     "fake-mmio-reg:tests",
