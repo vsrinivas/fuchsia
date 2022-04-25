@@ -1,4 +1,5 @@
 sdk://bind/fuchsia.acpi
+sdk://bind/fuchsia.i2c
 sdk://bind/fuchsia.pci
 sdk://bind/fuchsia.test
 sdk://bind/fuchsia.usb
