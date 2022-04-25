@@ -36,6 +36,8 @@ void Logger::BeginRecord(flog::LogBuffer& buffer, FuchsiaLogSeverity severity,
   static thread_local zx_koid_t tid = GetKoid(zx_thread_self());
   buffer.BeginRecord(severity, file_name, line, message, condition, is_printf, socket_.borrow(),
                      dropped, pid, tid);
+  buffer.WriteKeyValue("tag", tag_);
+  buffer.WriteKeyValue("tag", "driver");
 }
 
 zx::status<Logger> Logger::Create(const Namespace& ns, async_dispatcher_t* dispatcher,

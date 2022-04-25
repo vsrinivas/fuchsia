@@ -72,6 +72,16 @@ struct EncoderState {
     Encode(KeyValue<const char*, int64_t>(value.key, value.value));
   }
 
+  // Encodes a uint64
+  void Encode(KeyValue<const char*, uint64_t> value) {
+    buffer.WriteKeyValue(value.key, value.value);
+  }
+
+  // Encodes an unsigned int
+  void Encode(KeyValue<const char*, unsigned int> value) {
+    Encode(KeyValue<const char*, uint64_t>(value.key, value.value));
+  }
+
   // Encodes a NULL-terminated C-string.
   void Encode(KeyValue<const char*, const char*> value) {
     buffer.WriteKeyValue(value.key, value.value);
