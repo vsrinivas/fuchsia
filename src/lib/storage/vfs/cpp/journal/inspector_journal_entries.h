@@ -6,6 +6,7 @@
 #define SRC_LIB_STORAGE_VFS_CPP_JOURNAL_INSPECTOR_JOURNAL_ENTRIES_H_
 
 #include <array>
+#include <cstddef>
 #include <functional>
 
 #include <disk_inspector/common_types.h>
@@ -37,7 +38,8 @@ class JournalBlock : public disk_inspector::DiskObject {
   std::unique_ptr<DiskObject> GetElementAt(uint32_t index) const override;
 
  private:
-  const std::array<uint8_t, kJournalBlockSize> block_;
+  // This will be cast into more specific types, so ensure that it is aligned to support them.
+  alignas(std::max_align_t) const std::array<uint8_t, kJournalBlockSize> block_;
   fbl::String name_;
   fs::JournalObjectType object_type_;
   const uint32_t index_ = 0;
