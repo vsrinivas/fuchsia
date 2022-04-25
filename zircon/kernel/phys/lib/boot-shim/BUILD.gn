@@ -12,11 +12,12 @@ zx_library("boot-shim") {
   sdk = "source"
   sdk_headers = [
     "lib/boot-shim/acpi.h",
-    "lib/boot-shim/uart.h",
     "lib/boot-shim/boot-shim.h",
+    "lib/boot-shim/efi.h",
     "lib/boot-shim/item-base.h",
     "lib/boot-shim/pool-mem-config.h",
     "lib/boot-shim/test-serial-number.h",
+    "lib/boot-shim/uart.h",
   ]
 
   public_deps = [
@@ -31,12 +32,16 @@ zx_library("boot-shim") {
 
     # <lib/boot-shim/item-base.h> #include <lib/fitx/result.h>
     "//zircon/system/ulib/zxc",
+
+    # <lib/boot-shim/efi.h> #include <efi/system-table.h>
+    "//zircon/kernel/lib/efi",
   ]
 
   sources = [
     "acpi.cc",
     "boot-shim.cc",
     "cmdline.cc",
+    "efi.cc",
     "pool-mem-config.cc",
     "test-serial-number.cc",
     "uart.cc",
@@ -77,6 +82,7 @@ group("tests") {
 test("boot-shim-unittests") {
   sources = [
     "acpi-tests.cc",
+    "efi-tests.cc",
     "pool-mem-config-tests.cc",
     "test-serial-number-tests.cc",
     "uart-tests.cc",
