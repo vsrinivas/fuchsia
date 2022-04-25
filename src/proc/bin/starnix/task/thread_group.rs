@@ -236,7 +236,23 @@ impl ThreadGroup {
 
     pub fn remove(&self, task: &Arc<Task>) {
         let mut pids = self.kernel.pids.write();
-        self.write().remove(task, &mut pids);
+        let mut state = self.write();
+        if state.remove_internal(task, &mut pids) {
+            state.terminating = true;
+
+            // Because of lock ordering, one cannot get a lock to the state of the children of this
+            // thread group while having a lock of the thread group itself. Instead, the set of
+            // children will be computed here, the lock will be dropped and the children will be
+            // passed to the reaper that will capture the state in the correct order.
+            let children = state
+                .children
+                .iter()
+                .flat_map(|pid| pids.get_thread_group(*pid))
+                .collect::<Vec<_>>();
+            std::mem::drop(state);
+            let children_state = children.iter().map(|c| c.write()).collect::<Vec<_>>();
+            self.write().remove(children_state, &mut pids);
+        }
     }
 
     pub fn setsid(&self) -> Result<(), Errno> {
@@ -368,7 +384,17 @@ impl ThreadGroup {
         selector: ProcessSelector,
         options: &WaitingOptions,
     ) -> Result<WaitableChild, Errno> {
-        self.write().get_waitable_child(selector, options, &self.kernel.pids.read())
+        let pids = self.kernel.pids.read();
+        // Built a list of mutable child state before acquire a write lock to the state of this
+        // object because lock ordering imposes the child lock is acquired before the parent.
+        let children = self
+            .read()
+            .children
+            .iter()
+            .flat_map(|pid| pids.get_thread_group(*pid))
+            .collect::<Vec<_>>();
+        let children_state = children.iter().map(|c| c.write()).collect::<Vec<_>>();
+        self.write().get_waitable_child(children_state, selector, options, &pids)
     }
 
     /// Returns whether |session| is the controlling session inside of |controlling_session|.
@@ -576,6 +602,7 @@ impl ThreadGroupMutableState {
     ///Will remove the waitable status from the child depending on `options`.
     pub fn get_waitable_child(
         &mut self,
+        children: Vec<RwLockWriteGuard<'_, ThreadGroupMutableState>>,
         selector: ProcessSelector,
         options: &WaitingOptions,
         pids: &PidTable,
@@ -608,60 +635,42 @@ impl ThreadGroupMutableState {
         }
 
         // The vector of potential matches.
-        let selected_children = {
-            fn to_thread_group(
-                tg_pids: impl Iterator<Item = pid_t>,
-                pids: &PidTable,
-            ) -> Vec<Arc<ThreadGroup>> {
-                tg_pids.flat_map(|pid| pids.get_thread_group(pid)).collect()
-            }
-
-            match selector {
-                ProcessSelector::Any => to_thread_group(self.children.iter().copied(), &pids),
-                ProcessSelector::Pid(pid) => {
-                    to_thread_group(self.children.get(&pid).copied().iter().copied(), &pids)
-                }
-                ProcessSelector::Pgid(pgid) => pids
-                    .get_process_group(pgid)
-                    .map(|process_group| {
-                        to_thread_group(
-                            self.children
-                                .intersection(&process_group.thread_groups.read())
-                                .copied(),
-                            &pids,
-                        )
-                    })
-                    .unwrap_or_default(),
+        let children_filter = |child: &RwLockWriteGuard<'_, ThreadGroupMutableState>| match selector
+        {
+            ProcessSelector::Any => true,
+            ProcessSelector::Pid(pid) => child.leader == pid,
+            ProcessSelector::Pgid(pgid) => {
+                pids.get_process_group(pgid).as_ref() == Some(&child.process_group)
             }
         };
 
-        if selected_children.is_empty() {
+        let mut selected_children = children.into_iter().filter(children_filter).peekable();
+        if selected_children.peek().is_none() {
             return Ok(WaitableChild::NotFound);
         }
-        for child in selected_children.iter() {
-            let mut child_state = child.write();
-            if child_state.waitable.is_some() {
-                if !child_state.stopped && options.wait_for_continued {
+        for mut child in selected_children {
+            if child.waitable.is_some() {
+                if !child.stopped && options.wait_for_continued {
                     let siginfo = if options.keep_waitable_state {
-                        child_state.waitable.clone().unwrap()
+                        child.waitable.clone().unwrap()
                     } else {
-                        child_state.waitable.take().unwrap()
+                        child.waitable.take().unwrap()
                     };
                     return Ok(WaitableChild::Available(ZombieProcess::new(
-                        &child_state,
-                        &child_state.get_task(&pids)?.creds.read(),
+                        &child,
+                        &child.get_task(&pids)?.creds.read(),
                         ExitStatus::Continue(siginfo),
                     )));
                 }
-                if child_state.stopped && options.wait_for_stopped {
+                if child.stopped && options.wait_for_stopped {
                     let siginfo = if options.keep_waitable_state {
-                        child_state.waitable.clone().unwrap()
+                        child.waitable.clone().unwrap()
                     } else {
-                        child_state.waitable.take().unwrap()
+                        child.waitable.take().unwrap()
                     };
                     return Ok(WaitableChild::Available(ZombieProcess::new(
-                        &child_state,
-                        &child_state.get_task(&pids)?.creds.read(),
+                        &child,
+                        &child.get_task(&pids)?.creds.read(),
                         ExitStatus::Stop(siginfo),
                     )));
                 }
@@ -671,19 +680,22 @@ impl ThreadGroupMutableState {
         Ok(WaitableChild::Pending)
     }
 
-    pub fn adopt_children(&mut self, other: &mut ThreadGroupMutableState, pids: &PidTable) {
+    pub fn adopt_children(
+        &mut self,
+        other: &mut ThreadGroupMutableState,
+        children: Vec<RwLockWriteGuard<'_, ThreadGroupMutableState>>,
+        pids: &PidTable,
+    ) {
         // TODO(qsr): Implement PR_SET_CHILD_SUBREAPER
 
         // If parent != self, reparent.
         if let Some(parent) = self.get_parent(pids) {
-            parent.write().adopt_children(other, pids);
+            parent.write().adopt_children(other, children, pids);
         } else {
             // Else, act like init.
-            for pid in other.children.iter() {
-                if let Some(child) = pids.get_thread_group(*pid) {
-                    child.write().parent = self.leader;
-                    self.children.insert(*pid);
-                }
+            for mut child in children.into_iter() {
+                child.parent = self.leader;
+                self.children.insert(child.leader);
             }
 
             other.children.clear();
@@ -691,42 +703,42 @@ impl ThreadGroupMutableState {
         }
     }
 
-    pub fn remove(&mut self, task: &Arc<Task>, pids: &mut PidTable) {
-        if self.remove_internal(task, pids) {
-            self.terminating = true;
+    pub fn remove(
+        &mut self,
+        children: Vec<RwLockWriteGuard<'_, ThreadGroupMutableState>>,
+        pids: &mut PidTable,
+    ) {
+        let parent_opt = self.get_parent(pids);
 
-            let parent_opt = self.get_parent(pids);
+        // Before unregistering this object from other places, register the zombie.
+        if let Some(parent) = parent_opt.as_ref() {
+            let mut parent_writer = parent.write();
+            // Reparent the children.
+            parent_writer.adopt_children(self, children, &pids);
 
-            // Before unregistering this object from other places, register the zombie.
-            if let Some(parent) = parent_opt.as_ref() {
-                let mut parent_writer = parent.write();
-                // Reparent the children.
-                parent_writer.adopt_children(self, &pids);
+            let zombie = self.zombie_leader.take().expect("Failed to capture zombie leader.");
 
-                let zombie = self.zombie_leader.take().expect("Failed to capture zombie leader.");
-
-                parent_writer.children.remove(&self.leader);
-                parent_writer.zombie_children.push(zombie);
-            }
-            pids.remove_thread_group(self.leader);
-
-            // Unregister this object.
-            self.leave_process_group(pids);
-
-            // Send signals
-            if let Some(parent) = parent_opt.as_ref() {
-                // TODO: Should this be zombie_leader.exit_signal?
-                if let Some(signal_target) = get_signal_target(&parent, &SIGCHLD.into(), &pids) {
-                    send_signal(&signal_target, SignalInfo::default(SIGCHLD));
-                }
-                parent.read().interrupt(InterruptionType::ChildChange, &pids);
-            }
-
-            // TODO: Set the error_code on the Zircon process object. Currently missing a way
-            // to do this in Zircon. Might be easier in the new execution model.
-
-            // Once the last zircon thread stops, the zircon process will also stop executing.
+            parent_writer.children.remove(&self.leader);
+            parent_writer.zombie_children.push(zombie);
         }
+        pids.remove_thread_group(self.leader);
+
+        // Unregister this object.
+        self.leave_process_group(pids);
+
+        // Send signals
+        if let Some(parent) = parent_opt.as_ref() {
+            // TODO: Should this be zombie_leader.exit_signal?
+            if let Some(signal_target) = get_signal_target(&parent, &SIGCHLD.into(), &pids) {
+                send_signal(&signal_target, SignalInfo::default(SIGCHLD));
+            }
+            parent.read().interrupt(InterruptionType::ChildChange, &pids);
+        }
+
+        // TODO: Set the error_code on the Zircon process object. Currently missing a way
+        // to do this in Zircon. Might be easier in the new execution model.
+
+        // Once the last zircon thread stops, the zircon process will also stop executing.
     }
 
     /// Returns a task in the current thread group.
