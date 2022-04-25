@@ -67,10 +67,8 @@ class AppStateImpl with Disposable implements AppState {
 
     // Register keyboard shortcuts and then initialize SettingsState with it.
     shortcutsService.register(_actions);
-    settingsState = SettingsState.from(
-      shortcutBindings: shortcutsService.keyboardBindings,
-      launchPrivacyTerms: (String url) => launch(Strings.privacyTerms, url),
-    );
+    settingsState =
+        SettingsState.from(shortcutBindings: shortcutsService.keyboardBindings);
 
     pointerEventsService
       ..onPeekBegin = _onPeekBegin
@@ -101,6 +99,13 @@ class AppStateImpl with Disposable implements AppState {
           // Start screenSaver.
           await launchService.launch('Screen Saver', kScreenSaverUrl);
         }
+      }))
+      ..add(reaction<Locale?>((_) => locale, (locale) {
+        // Removes the U extensions and T extensions
+        // http://www.unicode.org/reports/tr35/#36-unicode-bcp-47-u-extension
+        // https://www.unicode.org/reports/tr35/tr35.html#BCP47_T_Extension
+        _simpleLocale.value =
+            locale?.toString().split('-u-').first.split('-t-').first ?? '';
       }));
   }
 
@@ -225,6 +230,10 @@ class AppStateImpl with Disposable implements AppState {
   @override
   Locale? get locale => _localeStream.value;
   final ObservableStream<Locale> _localeStream;
+
+  @override
+  String get simpleLocale => _simpleLocale.value;
+  final _simpleLocale = ''.asObservable();
 
   late final shellHasFocus = (() {
     return startupService.hostView == _focusedView.value;

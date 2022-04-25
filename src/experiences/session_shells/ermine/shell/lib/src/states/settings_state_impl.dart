@@ -231,9 +231,6 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
       // Ex: Mon, Jun 7 2:25 AM
       DateFormat.MMMEd().add_jm().format(dateTimeNow.value)).asComputed();
 
-  @override
-  LaunchPrivacyTermsCallback launchPrivacyTerms;
-
   final DataSharingConsentService dataSharingConsentService;
   final DateTimeService dateTimeService;
   final TimezoneService timezoneService;
@@ -249,7 +246,6 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     required this.shortcutBindings,
     required this.timezoneService,
     required this.dataSharingConsentService,
-    required this.launchPrivacyTerms,
     required this.dateTimeService,
     required this.networkService,
     required this.memoryWatcherService,

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:ermine/src/states/app_state.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
-import 'package:ermine/src/states/app_state.dart';
 import 'package:internationalization/strings.dart';
 
 const _kPageVerticalPaddings = 100.0;
@@ -44,6 +44,17 @@ class UserFeedbackForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final _theme = Theme.of(context);
+    final _lang = app.simpleLocale;
+    final _legalHelpUrl = _lang.isEmpty
+        ? 'https://policies.google.com/terms'
+        : 'https://policies.google.com/terms?hl=$_lang';
+    final _privacyPolicyUrl = _lang.isEmpty
+        ? 'https://policies.google.com/privacy'
+        : 'https://policies.google.com/privacy?hl=$_lang';
+    final _termsOfServiceUrl = _lang.isEmpty
+        ? 'https://policies.google.com/terms'
+        : 'https://policies.google.com/terms?hl=$_lang';
+
     return FocusScope(
       child: Container(
         padding: EdgeInsets.symmetric(vertical: _kPageVerticalPaddings),
@@ -145,9 +156,13 @@ class UserFeedbackForm extends StatelessWidget {
                               ),
                               // TODO(fxb/97464): Add the screenshot UX when the bug is fixed.
                               SizedBox(height: 40),
-                              // TODO(fxb/88445): Add text links
-                              Text('${Strings.dataSharingLegalStatement}',
-                                  style: _theme.textTheme.bodyText1),
+                              MarkdownRichText(
+                                Strings.dataSharingLegalStatement(_legalHelpUrl,
+                                    _privacyPolicyUrl, _termsOfServiceUrl),
+                                urlLauncher: (url) {
+                                  app.launch(url, url);
+                                },
+                              ),
                             ],
                           ),
                         ),

@@ -19,10 +19,9 @@ class DataSharingConsentSettings extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Observer(builder: (_) {
         final bodyTextStyle = Theme.of(context).textTheme.bodyText1!;
-        // TODO(fxr/97780): Create a URL with a simple locale code
-        final privacyTermsUrl = app.locale != null
-            ? 'https://policies.google.com/privacy?hl=${app.locale.toString()}'
-            : 'https://policies.google.com/privacy';
+        final privacyTermsUrl = app.simpleLocale.isEmpty
+            ? 'https://policies.google.com/privacy'
+            : 'https://policies.google.com/privacy?hl=${app.simpleLocale}';
         return SettingDetails(
           title: Strings.usageDiagnostics,
           onBack: state.showAllSettings,
@@ -46,7 +45,8 @@ class DataSharingConsentSettings extends StatelessWidget {
                   message: privacyTermsUrl,
                   child: TextButton(
                     style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                    onPressed: () => state.launchPrivacyTerms(privacyTermsUrl),
+                    onPressed: () =>
+                        app.launch(Strings.privacyTerms, privacyTermsUrl),
                     child: Container(
                       padding: EdgeInsets.only(bottom: 1),
                       decoration: BoxDecoration(

@@ -1299,13 +1299,36 @@ class Strings {
             'The second sentence of the description on the user feedback submission complete page',
       );
 
-  static String get dataSharingLegalStatement => Intl.message(
+  static String dataSharingLegalStatement(String legalHelpUrl,
+          String privacyPolicyUrl, String termsOfServiceUrl,
+          [String prefix = '[', String midfix = '](', String suffix = ')']) =>
+      Intl.message(
         'Device logs are sent to Google along with this report. '
-        'Go to the Legal Help page to request content changes for legal reasons.'
-        'We will use the information you give us to help address technical issues '
-        'and to improve our services, subject to our Privacy Policy and Terms of Service.',
-        name: 'data sharing legal statement',
-        desc: 'Legal statement for data sharing consent',
+        'Go to the ${prefix}Legal Help$midfix$legalHelpUrl$suffix page to request '
+        'content changes for legal reasons. We will use the information you '
+        'give us to help address technical issues and to improve our services, '
+        'subject to our ${prefix}Privacy Policy$midfix$privacyPolicyUrl$suffix '
+        'and ${prefix}Terms of Service$midfix$termsOfServiceUrl$suffix.',
+        name: 'legal statement for data sharing consent',
+        desc: 'Statement including text links in the markdown format that opens'
+            ' web pages that show legal information regarding data sharing '
+            'with data sharing relevant information.',
+        examples: const {
+          'legalHelpUrl': 'https://support.google.com/legal/answer/3110420',
+          'privacyPolicyUrl': 'https://policies.google.com/privacy',
+          'termsOfServiceUrl': 'https://policies.google.com/terms',
+          'prefix': '[',
+          'midfix': '](',
+          'suffix': ')'
+        },
+        args: [
+          legalHelpUrl,
+          privacyPolicyUrl,
+          termsOfServiceUrl,
+          prefix,
+          midfix,
+          suffix
+        ],
       );
 
   /// Lookup message given it's name.

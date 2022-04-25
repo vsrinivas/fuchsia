@@ -48,8 +48,6 @@ enum SettingsPage {
   about
 }
 
-typedef LaunchPrivacyTermsCallback = void Function(String);
-
 /// Defines the state of the [QuickSettings] overlay.
 abstract class SettingsState implements TaskService {
   bool get allSettingsPageVisible;
@@ -92,17 +90,14 @@ abstract class SettingsState implements TaskService {
   bool get clientConnectionsMonitor;
   int get wifiToggleMillisecondsPassed;
   bool get dataSharingConsentEnabled;
-  LaunchPrivacyTermsCallback get launchPrivacyTerms;
 
   factory SettingsState.from(
-      {required Map<String, Set<String>> shortcutBindings,
-      required LaunchPrivacyTermsCallback launchPrivacyTerms}) {
+      {required Map<String, Set<String>> shortcutBindings}) {
     // ignore: unnecessary_cast
     return SettingsStateImpl(
       shortcutBindings: shortcutBindings,
       timezoneService: TimezoneService(),
       dataSharingConsentService: DataSharingConsentService(),
-      launchPrivacyTerms: launchPrivacyTerms,
       dateTimeService: DateTimeService(),
       networkService: NetworkAddressService(),
       memoryWatcherService: MemoryWatcherService(),

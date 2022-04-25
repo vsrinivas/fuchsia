@@ -14,6 +14,7 @@ dart_library("ermine_utils") {
     "src/dialogs/dialog.dart",
     "src/dialogs/dialogs.dart",
     "src/dialogs/password_prompt.dart",
+    "src/markdown_rich_text.dart",
     "src/mobx_disposable.dart",
     "src/mobx_extensions.dart",
     "src/themes.dart",
