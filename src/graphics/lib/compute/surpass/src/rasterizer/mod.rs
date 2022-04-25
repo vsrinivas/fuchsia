@@ -58,6 +58,7 @@ impl Rasterizer {
 
     #[inline(never)]
     pub fn rasterize(&mut self, lines: &Lines) {
+        // Shard the workload into set of similar output size in PixelSegment.
         let iter = GroupedIter::new(&lines.lengths);
 
         iter.into_par_iter()
@@ -124,6 +125,7 @@ impl Rasterizer {
 
     #[inline]
     pub fn sort(&mut self) {
+        // Sort by (tile_y, tile_x, layer_id).
         self.segments.par_sort_unstable_by_key(|segment| {
             let segment: u64 = segment.into();
             segment
@@ -334,10 +336,10 @@ mod tests {
                 Point::new(-(TILE_WIDTH as f32) - 2.0, TILE_HEIGHT as f32 + 3.0),
             )),
             [
-                (-2, 1, TILE_WIDTH as u8 - 1, 0),
-                (-2, 1, TILE_WIDTH as u8 - 1, 1),
-                (-2, 1, TILE_WIDTH as u8 - 2, 1),
-                (-2, 1, TILE_WIDTH as u8 - 2, 2),
+                (-1, 1, TILE_WIDTH as u8 - 1, 0),
+                (-1, 1, TILE_WIDTH as u8 - 1, 1),
+                (-1, 1, TILE_WIDTH as u8 - 2, 1),
+                (-1, 1, TILE_WIDTH as u8 - 2, 2),
             ],
         );
     }
@@ -350,10 +352,10 @@ mod tests {
                 Point::new(-(TILE_WIDTH as f32) - 3.0, TILE_HEIGHT as f32 + 2.0),
             )),
             [
-                (-2, 1, TILE_WIDTH as u8 - 1, 0),
-                (-2, 1, TILE_WIDTH as u8 - 2, 0),
-                (-2, 1, TILE_WIDTH as u8 - 2, 1),
-                (-2, 1, TILE_WIDTH as u8 - 3, 1),
+                (-1, 1, TILE_WIDTH as u8 - 1, 0),
+                (-1, 1, TILE_WIDTH as u8 - 2, 0),
+                (-1, 1, TILE_WIDTH as u8 - 2, 1),
+                (-1, 1, TILE_WIDTH as u8 - 3, 1),
             ],
         );
     }
@@ -366,10 +368,10 @@ mod tests {
                 Point::new(-(TILE_WIDTH as f32) - 3.0, -(TILE_HEIGHT as f32) - 2.0),
             )),
             [
-                (-2, -2, TILE_WIDTH as u8 - 1, TILE_HEIGHT as u8 - 1),
-                (-2, -2, TILE_WIDTH as u8 - 2, TILE_HEIGHT as u8 - 1),
-                (-2, -2, TILE_WIDTH as u8 - 2, TILE_HEIGHT as u8 - 2),
-                (-2, -2, TILE_WIDTH as u8 - 3, TILE_HEIGHT as u8 - 2),
+                (-1, -1, TILE_WIDTH as u8 - 1, TILE_HEIGHT as u8 - 1),
+                (-1, -1, TILE_WIDTH as u8 - 2, TILE_HEIGHT as u8 - 1),
+                (-1, -1, TILE_WIDTH as u8 - 2, TILE_HEIGHT as u8 - 2),
+                (-1, -1, TILE_WIDTH as u8 - 3, TILE_HEIGHT as u8 - 2),
             ],
         );
     }
@@ -382,10 +384,10 @@ mod tests {
                 Point::new(-(TILE_WIDTH as f32) - 2.0, -(TILE_HEIGHT as f32) - 3.0),
             )),
             [
-                (-2, -2, TILE_WIDTH as u8 - 1, TILE_HEIGHT as u8 - 1),
-                (-2, -2, TILE_WIDTH as u8 - 1, TILE_HEIGHT as u8 - 2),
-                (-2, -2, TILE_WIDTH as u8 - 2, TILE_HEIGHT as u8 - 2),
-                (-2, -2, TILE_WIDTH as u8 - 2, TILE_HEIGHT as u8 - 3),
+                (-1, -1, TILE_WIDTH as u8 - 1, TILE_HEIGHT as u8 - 1),
+                (-1, -1, TILE_WIDTH as u8 - 1, TILE_HEIGHT as u8 - 2),
+                (-1, -1, TILE_WIDTH as u8 - 2, TILE_HEIGHT as u8 - 2),
+                (-1, -1, TILE_WIDTH as u8 - 2, TILE_HEIGHT as u8 - 3),
             ],
         );
     }
@@ -398,10 +400,10 @@ mod tests {
                 Point::new(TILE_WIDTH as f32 + 2.0, -(TILE_HEIGHT as f32) - 3.0),
             )),
             [
-                (1, -2, 0, TILE_HEIGHT as u8 - 1),
-                (1, -2, 0, TILE_HEIGHT as u8 - 2),
-                (1, -2, 1, TILE_HEIGHT as u8 - 2),
-                (1, -2, 1, TILE_HEIGHT as u8 - 3),
+                (1, -1, 0, TILE_HEIGHT as u8 - 1),
+                (1, -1, 0, TILE_HEIGHT as u8 - 2),
+                (1, -1, 1, TILE_HEIGHT as u8 - 2),
+                (1, -1, 1, TILE_HEIGHT as u8 - 3),
             ],
         );
     }
@@ -414,10 +416,10 @@ mod tests {
                 Point::new(TILE_WIDTH as f32 + 3.0, -(TILE_HEIGHT as f32) - 2.0),
             )),
             [
-                (1, -2, 0, TILE_HEIGHT as u8 - 1),
-                (1, -2, 1, TILE_HEIGHT as u8 - 1),
-                (1, -2, 1, TILE_HEIGHT as u8 - 2),
-                (1, -2, 2, TILE_HEIGHT as u8 - 2),
+                (1, -1, 0, TILE_HEIGHT as u8 - 1),
+                (1, -1, 1, TILE_HEIGHT as u8 - 1),
+                (1, -1, 1, TILE_HEIGHT as u8 - 2),
+                (1, -1, 2, TILE_HEIGHT as u8 - 2),
             ],
         );
     }

@@ -154,6 +154,7 @@ impl Composition {
         self.layers.values_mut().map(move |layer| layer::Layer { layer, lines_builder: builder })
     }
 
+    /// Number of active layers.
     fn actual_len(&self) -> usize {
         self.layers.values().filter_map(|layer| layer.inner.is_enabled.then(|| layer.len)).sum()
     }

@@ -6,6 +6,10 @@ use std::{cmp::Ordering, fmt, mem};
 
 use crate::{MAX_HEIGHT_SHIFT, MAX_WIDTH_SHIFT, PIXEL_WIDTH, TILE_HEIGHT_SHIFT, TILE_WIDTH_SHIFT};
 
+// Tile coordinates are signed integers stored with a bias.
+// The value range goes from -1 to 2^bits - 2 inclusive.
+const TILE_BIAS: i16 = 1;
+
 pub const BIT_FIELD_LENS: [usize; 7] = {
     const fn log2_round_up(n: usize) -> usize {
         if n.count_ones() == 1 {
@@ -80,10 +84,10 @@ impl PixelSegment {
     ) -> Self {
         let mut val = 0;
 
-        val |= mask_for(0) & tile_y as u64;
+        val |= mask_for(0) & (tile_y + TILE_BIAS).max(0) as u64;
 
         val <<= BIT_FIELD_LENS[1];
-        val |= mask_for(1) & tile_x as u64;
+        val |= mask_for(1) & (tile_x + TILE_BIAS).max(0) as u64;
 
         val <<= BIT_FIELD_LENS[2];
         val |= mask_for(2) & layer_id as u64;
@@ -110,12 +114,12 @@ impl PixelSegment {
 
     #[inline]
     pub fn tile_x(self) -> i16 {
-        extract!(self.0 as i64, 1) as i16
+        extract!(self.0, 1) as i16 - TILE_BIAS
     }
 
     #[inline]
     pub fn tile_y(self) -> i16 {
-        extract!(self.0 as i64, 0) as i16
+        extract!(self.0, 0) as i16 - TILE_BIAS
     }
 
     #[inline]
@@ -285,8 +289,8 @@ mod tests {
     #[test]
     fn pixel_segment_min() {
         let layer_id = 0;
-        let tile_x = -(1 << (BIT_FIELD_LENS[1] - 1));
-        let tile_y = -(1 << (BIT_FIELD_LENS[0] - 1));
+        let tile_x = -1;
+        let tile_y = -1;
         let local_x = 0;
         let local_y = 0;
         let double_area_multiplier = 0;
@@ -303,12 +307,31 @@ mod tests {
         );
 
         assert_eq!(pixel_segment.layer_id(), layer_id);
-        assert_eq!(pixel_segment.tile_x(), tile_x);
-        assert_eq!(pixel_segment.tile_y(), tile_y);
+        assert_eq!(pixel_segment.tile_x(), -1);
+        assert_eq!(pixel_segment.tile_y(), -1);
         assert_eq!(pixel_segment.local_x(), local_x);
         assert_eq!(pixel_segment.local_y(), local_y);
         assert_eq!(pixel_segment.double_area(), double_area_multiplier as i16 * cover as i16);
         assert_eq!(pixel_segment.cover(), cover);
+    }
+
+    #[test]
+    fn pixel_segment_clipping() {
+        let tile_x = -2;
+        let tile_y = -2;
+
+        let pixel_segment = PixelSegment::new(0, tile_x, tile_y, 0, 0, 0, 0);
+
+        assert_eq!(pixel_segment.tile_x(), -1, "negative tile coord clipped to -1");
+        assert_eq!(pixel_segment.tile_y(), -1, "negative tile coord clipped to -1");
+
+        let tile_x = i16::MIN;
+        let tile_y = i16::MIN;
+
+        let pixel_segment = PixelSegment::new(0, tile_x, tile_y, 0, 0, 0, 0);
+
+        assert_eq!(pixel_segment.tile_x(), -1, "negative tile coord clipped to -1");
+        assert_eq!(pixel_segment.tile_y(), -1, "negative tile coord clipped to -1");
     }
 
     #[test]

@@ -481,43 +481,19 @@ impl Painter {
         crop: &Option<Rect>,
         flusher: Option<&dyn Flusher>,
     ) {
-        fn acc_covers(segments: &[PixelSegment], covers: &mut BTreeMap<u32, Cover>) {
-            for segment in segments {
-                let cover = covers.entry(segment.layer_id()).or_default();
-
+        // Map layer id to cover carry information.
+        let mut covers_left_of_row: BTreeMap<u32, Cover> = BTreeMap::new();
+        let tile_x_start = crop.as_ref().map(|rect| rect.hor.start as i16).unwrap_or_default();
+        if let Ok(last_clipped_index) =
+            search_last_by_key(segments, false, |segment| segment.tile_x() >= tile_x_start)
+        {
+            // Accumulate cover for clipped tiles.
+            for segment in &segments[..=last_clipped_index] {
+                let cover = covers_left_of_row.entry(segment.layer_id()).or_default();
                 cover.as_slice_mut()[segment.local_y() as usize] += segment.cover();
             }
-        }
-        // Maps layer id to cover carry information.
-        let mut covers_left_of_row: BTreeMap<u32, Cover> = BTreeMap::new();
-        let mut populate_covers = |limit: Option<i16>| {
-            let query = search_last_by_key(segments, false, |segment| match limit {
-                Some(limit) => (segment.tile_x() - limit).is_positive(),
-                None => segment.tile_x().is_negative(),
-            });
 
-            if let Ok(i) = query {
-                let i = i + 1;
-
-                match limit {
-                    Some(_) => {
-                        acc_covers(&segments[..i], &mut covers_left_of_row);
-                        segments = &segments[i..];
-                    }
-                    None => {
-                        acc_covers(&segments[i..], &mut covers_left_of_row);
-                        segments = &segments[..i];
-                    }
-                }
-            }
-        };
-
-        populate_covers(None);
-
-        if let Some(rect) = &crop {
-            if rect.hor.start > 0 {
-                populate_covers(Some(rect.hor.start as i16 - 1));
-            }
+            segments = &segments[last_clipped_index + 1..];
         }
 
         workbench.init(
@@ -646,10 +622,9 @@ pub fn for_each_row<L: Layout, S: LayerProps>(
     crop: &Option<Rect>,
     styles: &S,
 ) {
-    // Assuming that tile_y two's complement negative values are placed after the positive values by
-    // the sort.
-    if let Ok(end) = search_last_by_key(segments, false, |segment| segment.tile_y().is_negative()) {
-        segments = &segments[..=end];
+    // Skip content with negative y coordinates.
+    if let Ok(start) = search_last_by_key(segments, false, |segment| segment.tile_y() >= 0) {
+        segments = &segments[start + 1..];
     }
 
     let width_in_tiles = layout.width_in_tiles();
