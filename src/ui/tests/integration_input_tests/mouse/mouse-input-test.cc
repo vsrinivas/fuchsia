@@ -329,9 +329,13 @@ class MouseInputBase : public gtest::RealLoopFixture {
 
     // Connect to the scene graph.
     auto flatland = realm_->Connect<fuchsia::ui::composition::Flatland>();
+    flatland.events().OnError = [](fuchsia::ui::composition::FlatlandError error) {
+      FX_LOGS(ERROR) << "Flatland present OnError received: " << static_cast<uint32_t>(error);
+    };
     flatland.set_error_handler([](zx_status_t status) {
       FX_LOGS(ERROR) << "Flatland error status: " << zx_status_get_string(status);
     });
+    EXPECT_TRUE(flatland.is_bound());
     flatland->SetDebugName(debug_name);
 
     fidl::InterfaceHandle<fuchsia::ui::composition::ParentViewportWatcher> parent_watcher;

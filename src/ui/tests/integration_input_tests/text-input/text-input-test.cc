@@ -258,9 +258,13 @@ TEST_F(TextInputTest, FlutterTextFieldEntry) {
   // Must connect to the scene graph here.
 
   auto flatland = realm_->Connect<fuchsia::ui::composition::Flatland>();
+  flatland.events().OnError = [](fuchsia::ui::composition::FlatlandError error) {
+    FX_LOGS(ERROR) << "Flatland present OnError received: " << static_cast<uint32_t>(error);
+  };
   flatland.set_error_handler([](zx_status_t status) {
     FX_LOGS(ERROR) << "flatland error status: " << zx_status_get_string(status);
   });
+  EXPECT_TRUE(flatland.is_bound());
   flatland->SetDebugName("text-input-test");
 
   fidl::InterfaceHandle<fuchsia::ui::composition::ParentViewportWatcher> parent_watcher;
