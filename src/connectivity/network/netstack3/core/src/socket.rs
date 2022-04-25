@@ -265,6 +265,58 @@ impl<S: SocketMapSpec> BoundSocketMap<S> {
         }
     }
 
+    pub(crate) fn try_update_listener_addr<R>(
+        &mut self,
+        id: &S::ListenerId,
+        new_addr: impl FnOnce(S::ListenerAddr) -> Result<S::ListenerAddr, R>,
+    ) -> Result<(), MoveError<R>> {
+        let Self { listener_id_to_sock, conn_id_to_sock: _, addr_to_id } = self;
+        let (_state, addr) = listener_id_to_sock.get_mut(id.clone().into()).unwrap();
+
+        let new_addr = Self::try_update_addr(addr.clone(), new_addr, addr_to_id)?;
+        *addr = new_addr;
+
+        Ok(())
+    }
+
+    pub(crate) fn try_update_conn_addr<R>(
+        &mut self,
+        id: &S::ConnId,
+        new_addr: impl FnOnce(S::ConnAddr) -> Result<S::ConnAddr, R>,
+    ) -> Result<(), MoveError<R>> {
+        let Self { listener_id_to_sock: _, conn_id_to_sock, addr_to_id } = self;
+        let (_state, addr) = conn_id_to_sock.get_mut(id.clone().into()).unwrap();
+
+        let new_addr = Self::try_update_addr(addr.clone(), new_addr, addr_to_id)?;
+        *addr = new_addr;
+
+        Ok(())
+    }
+
+    fn try_update_addr<A: Into<S::AddrVec> + Clone, B: Into<S::AddrVec> + Clone, E>(
+        addr: A,
+        new_addr: impl FnOnce(A) -> Result<B, E>,
+        addr_to_id: &mut SocketMap<S::AddrVec, Bound<S>>,
+    ) -> Result<B, MoveError<E>> {
+        let new_addr = new_addr(addr.clone()).map_err(MoveError::NewAddrFailed)?;
+        let addr = addr.into();
+        let state = addr_to_id.remove(&addr).expect("existing entry not found");
+        match addr_to_id.entry(new_addr.clone().into()) {
+            Entry::Occupied(_) => {
+                // Restore the old state before returning an error.
+                match addr_to_id.entry(addr) {
+                    Entry::Occupied(_) => unreachable!("just-removed-from entry is occupied"),
+                    Entry::Vacant(v) => v.insert(state),
+                };
+                Err(MoveError::AlreadyExists)
+            }
+            Entry::Vacant(v) => {
+                v.insert(state);
+                Ok(new_addr)
+            }
+        }
+    }
+
     pub(crate) fn remove_listener_by_id(
         &mut self,
         id: S::ListenerId,
@@ -313,6 +365,12 @@ pub(crate) enum InsertConnError {
     ShadowAddrExists,
     ConnExists,
     ShadowerExists,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub(crate) enum MoveError<E> {
+    NewAddrFailed(E),
+    AlreadyExists,
 }
 
 #[cfg(test)]

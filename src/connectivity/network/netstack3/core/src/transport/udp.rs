@@ -42,7 +42,7 @@ use crate::{
         BufferIpTransportContext, BufferTransportIpContext, IpDeviceId, IpDeviceIdContext, IpExt,
         IpTransportContext, TransportIpContext, TransportReceiveError,
     },
-    socket::{BoundSocketMap, InsertConnError, InsertListenerError, SocketMapSpec},
+    socket::{BoundSocketMap, InsertConnError, InsertListenerError, MoveError, SocketMapSpec},
     BlanketCoreContext, BufferDispatcher, Ctx, EventDispatcher,
 };
 
@@ -95,7 +95,7 @@ impl UdpStateBuilder {
 /// `D` is the device ID type.
 pub struct UdpState<I: IpExt, D: IpDeviceId> {
     conn_state: UdpConnectionState<I, D, IpSock<I, D>>,
-    unbound: IdMap<()>,
+    unbound: IdMap<UnboundSocketState<D>>,
     /// lazy_port_alloc is lazy-initialized when it's used.
     lazy_port_alloc: Option<PortAlloc<UdpConnectionState<I, D, IpSock<I, D>>>>,
     send_port_unreachable: bool,
@@ -115,6 +115,13 @@ impl<I: IpExt, D: IpDeviceId> Default for UdpState<I, D> {
 #[derivative(Default(bound = ""))]
 struct UdpConnectionState<I: Ip, D: IpDeviceId, S> {
     bound: BoundSocketMap<Self>,
+}
+
+#[derive(Debug, Derivative)]
+#[derivative(Default(bound = ""))]
+#[cfg_attr(test, derive(PartialEq))]
+struct UnboundSocketState<D> {
+    device: Option<D>,
 }
 
 /// An address vector for all possible UDP socket addresses.
@@ -1014,10 +1021,11 @@ pub fn send_udp<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>(
 ) -> Result<(), (B, UdpSendError)> {
     // TODO(brunodalbo) this can be faster if we just perform the checks but
     // don't actually create a UDP connection.
-    let tmp_conn = match create_udp_conn(sync_ctx, local_ip, local_port, remote_ip, remote_port) {
-        Ok(conn) => conn,
-        Err(err) => return Err((body, UdpSendError::CreateSock(err))),
-    };
+    let tmp_conn =
+        match create_udp_conn(sync_ctx, local_ip, local_port, None, remote_ip, remote_port) {
+            Ok(conn) => conn,
+            Err(err) => return Err((body, UdpSendError::CreateSock(err))),
+        };
 
     // Not using `?` here since we need to `remove_udp_conn` even in the case of failure.
     let ret = send_udp_conn(sync_ctx, tmp_conn, body)
@@ -1114,11 +1122,11 @@ pub fn send_udp_listener<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>
     // probably fail and `send_udp` must be used instead.
     let state = sync_ctx.get_first_state();
     let UdpConnectionState { ref bound } = state.conn_state;
-    let ((), ListenerAddr(ListenerIpAddr { addr: local_ip, port: local_port }, _device)) =
+    let ((), ListenerAddr(ListenerIpAddr { addr: local_ip, port: local_port }, device)) =
         *bound.get_listener_by_id(&listener).expect("specified listener not found");
 
     let sock = match sync_ctx.new_ip_socket(
-        None,
+        device,
         local_ip,
         remote_ip,
         IpProto::Udp.into(),
@@ -1152,7 +1160,7 @@ pub fn send_udp_listener<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>>
 /// address or to listen for incoming packets.
 pub fn create_udp_unbound<I: IpExt, C: UdpStateContext<I>>(sync_ctx: &mut C) -> UdpUnboundId<I> {
     let state = sync_ctx.get_first_state_mut();
-    UdpUnboundId::new(state.unbound.push(()))
+    UdpUnboundId::new(state.unbound.push(UnboundSocketState::default()))
 }
 
 /// Removes a socket that has been created but not bound.
@@ -1163,7 +1171,7 @@ pub fn create_udp_unbound<I: IpExt, C: UdpStateContext<I>>(sync_ctx: &mut C) -> 
 /// # Panics if `id` is not a valid [`UdpUnboundId`].
 pub fn remove_udp_unbound<I: IpExt, C: UdpStateContext<I>>(sync_ctx: &mut C, id: UdpUnboundId<I>) {
     let state = sync_ctx.get_first_state_mut();
-    state.unbound.remove(id.into()).expect("invalid UDP unbound ID")
+    let _: UnboundSocketState<_> = state.unbound.remove(id.into()).expect("invalid UDP unbound ID");
 }
 
 /// Create a UDP connection.
@@ -1197,10 +1205,18 @@ pub fn connect_udp<I: IpExt, C: UdpStateContext<I>>(
     remote_port: NonZeroU16,
 ) -> Result<UdpConnId<I>, UdpSockCreationError> {
     // First remove the unbound socket being promoted.
-    let state = sync_ctx.get_first_state_mut();
-    state.unbound.remove(id.into()).expect("unbound socket not found");
-    create_udp_conn(sync_ctx, local_ip, local_port, remote_ip, remote_port).map_err(|e| {
-        assert_eq!(sync_ctx.get_first_state_mut().unbound.insert(id.into(), ()), None);
+    let UdpState { conn_state: _, unbound, lazy_port_alloc: _, send_port_unreachable: _ } =
+        sync_ctx.get_first_state_mut();
+    let UnboundSocketState { device } =
+        unbound.remove(id.into()).unwrap_or_else(|| panic!("unbound socket {:?} not found", id));
+
+    create_udp_conn(sync_ctx, local_ip, local_port, device, remote_ip, remote_port).map_err(|e| {
+        assert_matches::assert_matches!(
+            sync_ctx.get_first_state_mut().unbound.insert(id.into(), UnboundSocketState { device }),
+            None,
+            "just-cleared-entry for {:?} is occupied",
+            id
+        );
         e
     })
 }
@@ -1209,6 +1225,7 @@ fn create_udp_conn<I: IpExt, C: UdpStateContext<I>>(
     sync_ctx: &mut C,
     local_ip: Option<SpecifiedAddr<I::Addr>>,
     local_port: Option<NonZeroU16>,
+    device: Option<C::DeviceId>,
     remote_ip: SpecifiedAddr<I::Addr>,
     remote_port: NonZeroU16,
 ) -> Result<UdpConnId<I>, UdpSockCreationError> {
@@ -1234,10 +1251,65 @@ fn create_udp_conn<I: IpExt, C: UdpStateContext<I>>(
     };
     let UdpConnectionState { ref mut bound } = sync_ctx.get_first_state_mut().conn_state;
 
-    let c = ConnAddr(ConnIpAddr { local_ip, local_port, remote_ip, remote_port }, None);
+    let c = ConnAddr(ConnIpAddr { local_ip, local_port, remote_ip, remote_port }, device);
     bound
         .try_insert_conn(c, ip_sock)
         .map_err(|_: InsertConnError| UdpSockCreationError::SockAddrConflict)
+}
+
+/// Sets the device to be bound to for an unbound socket.
+///
+/// # Panics
+///
+/// `set_unbound_udp_device` panics if `id` is not a valid [`UdpUnboundId`].
+pub fn set_unbound_udp_device<I: IpExt, C: UdpStateContext<I>>(
+    sync_ctx: &mut C,
+    id: UdpUnboundId<I>,
+    device_id: C::DeviceId,
+) {
+    let UnboundSocketState { ref mut device } = sync_ctx
+        .get_first_state_mut()
+        .unbound
+        .get_mut(id.into())
+        .expect("unbound UDP socket not found");
+    *device = Some(device_id);
+}
+
+/// Binds the socket to the specified device.
+///
+/// # Panics
+///
+/// `set_bound_udp_device` panics if `id` is not a valid [`UdpBoundId`].
+pub fn set_bound_udp_device<I: IpExt, C: UdpStateContext<I>>(
+    sync_ctx: &mut C,
+    id: UdpBoundId<I>,
+    device_id: C::DeviceId,
+) -> Result<(), LocalAddressError> {
+    let UdpConnectionState { ref mut bound } = sync_ctx.get_first_state_mut().conn_state;
+    match id {
+        UdpBoundId::Listening(id) => bound
+            .try_update_listener_addr(&id, |ListenerAddr(addr, device)| match device {
+                // TODO(https://fxbug.dev/96573): Handle rebinding to a
+                // different device.
+                Some(_) => Err(LocalAddressError::CannotBindToAddress),
+                None => Ok(ListenerAddr(addr, Some(device_id))),
+            })
+            .map_err(|e| match e {
+                MoveError::AlreadyExists => LocalAddressError::AddressInUse,
+                MoveError::NewAddrFailed(e) => e,
+            }),
+        UdpBoundId::Connected(id) => bound
+            .try_update_conn_addr(&id, |ConnAddr(addr, device)| match device {
+                // TODO(https://fxbug.dev/96573): Handle rebinding to a
+                // different device.
+                Some(_) => Err(LocalAddressError::CannotBindToAddress),
+                None => Ok(ConnAddr(addr, Some(device_id))),
+            })
+            .map_err(|e| match e {
+                MoveError::AlreadyExists => LocalAddressError::AddressInUse,
+                MoveError::NewAddrFailed(e) => e,
+            }),
+    }
 }
 
 /// Removes a previously registered UDP connection.
@@ -1319,14 +1391,14 @@ pub fn listen_udp<I: IpExt, C: UdpStateContext<I>>(
         IdMapEntry::Occupied(o) => o,
     };
 
+    let UnboundSocketState { device } = unbound_entry.get();
     let UdpConnectionState { ref mut bound } = conn_state;
-    bound
-        .try_insert_listener(ListenerAddr(ListenerIpAddr { addr, port }, None), ())
-        .map(|l| {
-            unbound_entry.remove();
-            l
-        })
-        .map_err(|_: InsertListenerError| LocalAddressError::AddressInUse)
+    let listener = bound
+        .try_insert_listener(ListenerAddr(ListenerIpAddr { addr, port }, *device), ())
+        .map_err(|_: InsertListenerError| LocalAddressError::AddressInUse)?;
+
+    let _: UnboundSocketState<_> = unbound_entry.remove();
+    Ok(listener)
 }
 
 /// Removes a previously registered UDP listener.
@@ -1380,6 +1452,7 @@ pub enum UdpSockCreationError {
 #[cfg(test)]
 mod tests {
     use alloc::{borrow::ToOwned, vec, vec::Vec};
+    use core::convert::TryInto as _;
 
     use assert_matches::assert_matches;
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr};
@@ -1401,12 +1474,12 @@ mod tests {
             device::state::IpDeviceStateIpExt,
             icmp::Icmpv6ErrorCode,
             socket::{
-                testutil::DummyIpSocketCtx, BufferIpSocketHandler, IpSockRouteError,
-                IpSockUnroutableError,
+                testutil::DummyDeviceConfig, testutil::DummyIpSocketCtx, BufferIpSocketHandler,
+                IpSockRouteError, IpSockUnroutableError,
             },
             DummyDeviceId, SendIpPacketMeta,
         },
-        testutil::{assert_empty, set_logger_for_test, FakeCryptoRng},
+        testutil::{assert_empty, set_logger_for_test, FakeCryptoRng, TestIpExt as _},
     };
 
     /// The listener data sent through a [`DummyUdpCtx`].
@@ -1433,26 +1506,26 @@ mod tests {
         err: I::ErrorCode,
     }
 
-    struct DummyUdpCtx<I: TestIpExt> {
-        state: UdpState<I, DummyDeviceId>,
-        ip_socket_ctx: DummyIpSocketCtx<I, DummyDeviceId>,
+    struct DummyUdpCtx<I: TestIpExt, D: IpDeviceId> {
+        state: UdpState<I, D>,
+        ip_socket_ctx: DummyIpSocketCtx<I, D>,
         listen_data: Vec<ListenData<I>>,
         conn_data: Vec<ConnData<I>>,
         icmp_errors: Vec<IcmpError<I>>,
         extra_local_addrs: Vec<I::Addr>,
     }
 
-    impl<I: TestIpExt> Default for DummyUdpCtx<I>
+    impl<I: TestIpExt> Default for DummyUdpCtx<I, DummyDeviceId>
     where
-        DummyUdpCtx<I>: DummyUdpCtxExt<I>,
+        DummyUdpCtx<I, DummyDeviceId>: DummyUdpCtxExt<I>,
     {
         fn default() -> Self {
             DummyUdpCtx::with_local_remote_ip_addrs(vec![local_ip::<I>()], vec![remote_ip::<I>()])
         }
     }
 
-    impl<I: TestIpExt> DummyUdpCtx<I> {
-        fn with_ip_socket_ctx(ip_socket_ctx: DummyIpSocketCtx<I, DummyDeviceId>) -> Self {
+    impl<I: TestIpExt, D: IpDeviceId> DummyUdpCtx<I, D> {
+        fn with_ip_socket_ctx(ip_socket_ctx: DummyIpSocketCtx<I, D>) -> Self {
             DummyUdpCtx {
                 state: Default::default(),
                 ip_socket_ctx,
@@ -1471,72 +1544,80 @@ mod tests {
         ) -> Self;
     }
 
-    impl DummyUdpCtxExt<Ipv4> for DummyUdpCtx<Ipv4> {
+    impl DummyUdpCtxExt<Ipv4> for DummyUdpCtx<Ipv4, DummyDeviceId> {
         fn with_local_remote_ip_addrs(
             local_ips: Vec<SpecifiedAddr<Ipv4Addr>>,
             remote_ips: Vec<SpecifiedAddr<Ipv4Addr>>,
         ) -> Self {
-            DummyUdpCtx::with_ip_socket_ctx(DummyIpSocketCtx::new_ipv4(local_ips, remote_ips))
+            DummyUdpCtx::with_ip_socket_ctx(DummyIpSocketCtx::new_dummy_ipv4(local_ips, remote_ips))
         }
     }
 
-    impl DummyUdpCtxExt<Ipv6> for DummyUdpCtx<Ipv6> {
+    impl DummyUdpCtxExt<Ipv6> for DummyUdpCtx<Ipv6, DummyDeviceId> {
         fn with_local_remote_ip_addrs(
             local_ips: Vec<SpecifiedAddr<Ipv6Addr>>,
             remote_ips: Vec<SpecifiedAddr<Ipv6Addr>>,
         ) -> Self {
-            DummyUdpCtx::with_ip_socket_ctx(DummyIpSocketCtx::new_ipv6(local_ips, remote_ips))
+            DummyUdpCtx::with_ip_socket_ctx(DummyIpSocketCtx::new_dummy_ipv6(local_ips, remote_ips))
         }
     }
 
-    impl<I: TestIpExt> AsRef<DummyIpSocketCtx<I, DummyDeviceId>> for DummyUdpCtx<I> {
-        fn as_ref(&self) -> &DummyIpSocketCtx<I, DummyDeviceId> {
+    impl<I: TestIpExt, D: IpDeviceId> AsRef<DummyIpSocketCtx<I, D>> for DummyUdpCtx<I, D> {
+        fn as_ref(&self) -> &DummyIpSocketCtx<I, D> {
             &self.ip_socket_ctx
         }
     }
 
-    impl<I: TestIpExt> AsMut<DummyIpSocketCtx<I, DummyDeviceId>> for DummyUdpCtx<I> {
-        fn as_mut(&mut self) -> &mut DummyIpSocketCtx<I, DummyDeviceId> {
+    impl<I: TestIpExt, D: IpDeviceId> AsMut<DummyIpSocketCtx<I, D>> for DummyUdpCtx<I, D> {
+        fn as_mut(&mut self) -> &mut DummyIpSocketCtx<I, D> {
             &mut self.ip_socket_ctx
         }
     }
 
-    type DummyCtx<I> = crate::context::testutil::DummyCtx<
-        DummyUdpCtx<I>,
+    type DummyDeviceCtx<I, D> = crate::context::testutil::DummyCtx<
+        DummyUdpCtx<I, D>,
         (),
-        SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<<I as Ip>::Addr>>,
+        SendIpPacketMeta<I, D, SpecifiedAddr<<I as Ip>::Addr>>,
         (),
-        DummyDeviceId,
+        D,
     >;
 
+    type DummyCtx<I> = DummyDeviceCtx<I, DummyDeviceId>;
+
     /// The trait bounds required of `DummyCtx<I>` in tests.
-    trait DummyCtxBound<I: TestIpExt>:
-        Default + BufferIpSocketHandler<I, Buf<Vec<u8>>, DeviceId = DummyDeviceId>
+    trait DummyDeviceCtxBound<I: TestIpExt, D: IpDeviceId>:
+        Default + BufferIpSocketHandler<I, Buf<Vec<u8>>, DeviceId = D>
     {
     }
-    impl<I: TestIpExt> DummyCtxBound<I> for DummyCtx<I> where
-        DummyCtx<I>: Default + BufferIpSocketHandler<I, Buf<Vec<u8>>, DeviceId = DummyDeviceId>
+    impl<I: TestIpExt, D: IpDeviceId> DummyDeviceCtxBound<I, D> for DummyDeviceCtx<I, D> where
+        DummyDeviceCtx<I, D>: Default + BufferIpSocketHandler<I, Buf<Vec<u8>>, DeviceId = D>
     {
     }
 
-    impl<I: TestIpExt> TransportIpContext<I> for DummyCtx<I>
+    trait DummyCtxBound<I: TestIpExt>: DummyDeviceCtxBound<I, DummyDeviceId> {}
+    impl<I: TestIpExt, C: DummyDeviceCtxBound<I, DummyDeviceId>> DummyCtxBound<I> for C {}
+
+    impl<I: TestIpExt, D: IpDeviceId> TransportIpContext<I> for DummyDeviceCtx<I, D>
     where
-        DummyCtx<I>: DummyCtxBound<I>,
+        DummyDeviceCtx<I, D>: DummyDeviceCtxBound<I, D>,
     {
         fn is_assigned_local_addr(&self, addr: <I as Ip>::Addr) -> bool {
             local_ip::<I>().get() == addr || self.get_ref().extra_local_addrs.contains(&addr)
         }
     }
 
-    impl<I: TestIpExt> DualStateContext<UdpState<I, DummyDeviceId>, FakeCryptoRng<XorShiftRng>>
-        for DummyCtx<I>
+    impl<I: TestIpExt, D: IpDeviceId + 'static>
+        DualStateContext<
+            UdpState<I, <Self as IpDeviceIdContext<I>>::DeviceId>,
+            FakeCryptoRng<XorShiftRng>,
+        > for DummyDeviceCtx<I, D>
     {
         fn get_states_with(
             &self,
             _id0: (),
             _id1: (),
-        ) -> (&UdpState<I, DummyDeviceId>, &FakeCryptoRng<XorShiftRng>) {
-            let (state, rng): (&DummyUdpCtx<I>, _) = self.get_states();
+        ) -> (&UdpState<I, D>, &FakeCryptoRng<XorShiftRng>) {
+            let (state, rng): (&DummyUdpCtx<I, D>, _) = self.get_states();
             (&state.state, rng)
         }
 
@@ -1544,18 +1625,19 @@ mod tests {
             &mut self,
             _id0: (),
             _id1: (),
-        ) -> (&mut UdpState<I, DummyDeviceId>, &mut FakeCryptoRng<XorShiftRng>) {
-            let (state, rng): (&mut DummyUdpCtx<I>, _) = self.get_states_mut();
+        ) -> (&mut UdpState<I, D>, &mut FakeCryptoRng<XorShiftRng>) {
+            let (state, rng): (&mut DummyUdpCtx<I, D>, _) = self.get_states_mut();
             (&mut state.state, rng)
         }
     }
 
-    impl<I: TestIpExt> UdpContext<I> for DummyCtx<I> {
+    impl<I: TestIpExt, D: IpDeviceId> UdpContext<I> for DummyDeviceCtx<I, D> {
         fn receive_icmp_error(&mut self, id: UdpBoundId<I>, err: I::ErrorCode) {
             self.get_mut().icmp_errors.push(IcmpError { id, err })
         }
     }
-    impl<I: TestIpExt, B: BufferMut> BufferUdpContext<I, B> for DummyCtx<I> {
+
+    impl<I: TestIpExt, B: BufferMut, D: IpDeviceId> BufferUdpContext<I, B> for DummyDeviceCtx<I, D> {
         fn receive_udp_from_conn(
             &mut self,
             conn: UdpConnId<I>,
@@ -1619,15 +1701,16 @@ mod tests {
     }
 
     /// Helper function to inject an UDP packet with the provided parameters.
-    fn receive_udp_packet<I: TestIpExt>(
-        ctx: &mut DummyCtx<I>,
+    fn receive_udp_packet<I: TestIpExt, D: IpDeviceId + 'static>(
+        ctx: &mut DummyDeviceCtx<I, D>,
+        device: D,
         src_ip: I::Addr,
         dst_ip: I::Addr,
         src_port: NonZeroU16,
         dst_port: NonZeroU16,
         body: &[u8],
     ) where
-        DummyCtx<I>: DummyCtxBound<I>,
+        DummyDeviceCtx<I, D>: DummyDeviceCtxBound<I, D>,
     {
         let builder = UdpPacketBuilder::new(src_ip, dst_ip, Some(src_port), dst_port);
         let buffer = Buf::new(body.to_owned(), ..)
@@ -1637,7 +1720,7 @@ mod tests {
             .into_inner();
         UdpIpTransportContext::receive_ip_packet(
             ctx,
-            DummyDeviceId,
+            device,
             I::try_into_recv_src_addr(src_ip).unwrap(),
             SpecifiedAddr::new(dst_ip).unwrap(),
             buffer,
@@ -1746,6 +1829,7 @@ mod tests {
         let body = [1, 2, 3, 4, 5];
         receive_udp_packet(
             &mut ctx,
+            DummyDeviceId,
             remote_ip.get(),
             local_ip.get(),
             NonZeroU16::new(200).unwrap(),
@@ -1821,6 +1905,7 @@ mod tests {
         let body = [1, 2, 3, 4, 5];
         receive_udp_packet(
             &mut ctx,
+            DummyDeviceId,
             remote_ip.get(),
             local_ip.get(),
             NonZeroU16::new(200).unwrap(),
@@ -1860,6 +1945,7 @@ mod tests {
         let body = [1, 2, 3, 4, 5];
         receive_udp_packet(
             &mut ctx,
+            DummyDeviceId,
             remote_ip.get(),
             local_ip.get(),
             NonZeroU16::new(200).unwrap(),
@@ -2257,7 +2343,7 @@ mod tests {
     fn test_udp_demux<I: Ip + TestIpExt>()
     where
         DummyCtx<I>: DummyCtxBound<I>,
-        DummyUdpCtx<I>: DummyUdpCtxExt<I>,
+        DummyUdpCtx<I, DummyDeviceId>: DummyUdpCtxExt<I>,
     {
         set_logger_for_test();
         let local_ip = local_ip::<I>();
@@ -2311,6 +2397,7 @@ mod tests {
         let body_conn1 = [1, 1, 1, 1];
         receive_udp_packet(
             &mut ctx,
+            DummyDeviceId,
             remote_ip_a.get(),
             local_ip.get(),
             remote_port_a,
@@ -2320,6 +2407,7 @@ mod tests {
         let body_conn2 = [2, 2, 2, 2];
         receive_udp_packet(
             &mut ctx,
+            DummyDeviceId,
             remote_ip_b.get(),
             local_ip.get(),
             remote_port_a,
@@ -2329,6 +2417,7 @@ mod tests {
         let body_list1 = [3, 3, 3, 3];
         receive_udp_packet(
             &mut ctx,
+            DummyDeviceId,
             remote_ip_a.get(),
             local_ip.get(),
             remote_port_a,
@@ -2338,6 +2427,7 @@ mod tests {
         let body_list2 = [4, 4, 4, 4];
         receive_udp_packet(
             &mut ctx,
+            DummyDeviceId,
             remote_ip_a.get(),
             local_ip.get(),
             remote_port_a,
@@ -2347,6 +2437,7 @@ mod tests {
         let body_wildcard_list = [5, 5, 5, 5];
         receive_udp_packet(
             &mut ctx,
+            DummyDeviceId,
             remote_ip_a.get(),
             local_ip.get(),
             remote_port_a,
@@ -2408,6 +2499,7 @@ mod tests {
         let body = [1, 2, 3, 4, 5];
         receive_udp_packet(
             &mut ctx,
+            DummyDeviceId,
             remote_ip_a.get(),
             local_ip_a.get(),
             remote_port,
@@ -2417,6 +2509,7 @@ mod tests {
         // Receive into a different local IP.
         receive_udp_packet(
             &mut ctx,
+            DummyDeviceId,
             remote_ip_b.get(),
             local_ip_b.get(),
             remote_port,
@@ -2439,6 +2532,178 @@ mod tests {
         assert_eq!(pkt.dst_ip, local_ip_b.get());
         assert_eq!(pkt.src_port.unwrap(), remote_port);
         assert_eq!(pkt.body, &body[..]);
+    }
+
+    /// A device ID type that supports identifying more than one distinct
+    /// device.
+    #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Ord, PartialOrd)]
+    enum MultipleDevicesId {
+        A,
+        B,
+    }
+
+    impl core::fmt::Display for MultipleDevicesId {
+        fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+            core::fmt::Debug::fmt(self, f)
+        }
+    }
+
+    impl IpDeviceId for MultipleDevicesId {
+        fn is_loopback(&self) -> bool {
+            false
+        }
+    }
+
+    type MultiDeviceDummyCtx<I> = DummyDeviceCtx<I, MultipleDevicesId>;
+
+    impl Default for DummyUdpCtx<Ipv4, MultipleDevicesId> {
+        fn default() -> Self {
+            let remote_ips = vec![Ipv4::get_other_remote_ip_address(1)];
+            DummyUdpCtx::with_ip_socket_ctx(DummyIpSocketCtx::new_ipv4(
+                IntoIterator::into_iter([MultipleDevicesId::A, MultipleDevicesId::B])
+                    .enumerate()
+                    .map(|(i, device)| DummyDeviceConfig {
+                        device,
+                        local_ips: vec![Ipv4::get_other_ip_address((i + 1).try_into().unwrap())],
+                        remote_ips: remote_ips.clone(),
+                    }),
+            ))
+        }
+    }
+
+    impl Default for DummyUdpCtx<Ipv6, MultipleDevicesId> {
+        fn default() -> Self {
+            let remote_ips = vec![Ipv6::get_other_remote_ip_address(1)];
+            DummyUdpCtx::with_ip_socket_ctx(DummyIpSocketCtx::new_ipv6(
+                IntoIterator::into_iter([MultipleDevicesId::A, MultipleDevicesId::B])
+                    .enumerate()
+                    .map(|(i, device)| DummyDeviceConfig {
+                        device,
+                        local_ips: vec![Ipv6::get_other_ip_address((i + 1).try_into().unwrap())],
+                        remote_ips: remote_ips.clone(),
+                    }),
+            ))
+        }
+    }
+    /// Tests that if sockets are bound to devices, they will only receive
+    /// packets that are received on those devices.
+    #[ip_test]
+    fn test_bound_to_device_receive<I: Ip + TestIpExt>()
+    where
+        MultiDeviceDummyCtx<I>: DummyDeviceCtxBound<I, MultipleDevicesId>,
+    {
+        set_logger_for_test();
+        let mut ctx = MultiDeviceDummyCtx::<I>::default();
+        let ctx = &mut ctx;
+        let bound_first_device = {
+            let unbound = create_udp_unbound(ctx);
+            let conn = connect_udp(
+                ctx,
+                unbound,
+                Some(local_ip::<I>()),
+                Some(LOCAL_PORT),
+                I::get_other_remote_ip_address(1),
+                REMOTE_PORT,
+            )
+            .expect("connect should succeed");
+            set_bound_udp_device(ctx, conn.into(), MultipleDevicesId::A)
+                .expect("bind should succeed");
+            conn
+        };
+
+        let bound_second_device = {
+            let unbound = create_udp_unbound(ctx);
+            set_unbound_udp_device(ctx, unbound, MultipleDevicesId::B);
+            listen_udp(ctx, unbound, None, Some(LOCAL_PORT)).expect("listen should succeed")
+        };
+
+        // Inject a packet received on `MultipleDevicesId::A` from the specified
+        // remote; this should go to the first socket.
+        let body = [1, 2, 3, 4, 5];
+        receive_udp_packet(
+            ctx,
+            MultipleDevicesId::A,
+            I::get_other_remote_ip_address(1).get(),
+            local_ip::<I>().get(),
+            REMOTE_PORT,
+            LOCAL_PORT,
+            &body[..],
+        );
+
+        let conn_data = &ctx.get_ref().conn_data;
+        assert_matches!(&conn_data[..], &[ConnData {conn, body: _ }] if conn == bound_first_device);
+
+        // A second packet received on `MultipleDevicesId::B` will go to the
+        // second socket.
+        receive_udp_packet(
+            ctx,
+            MultipleDevicesId::B,
+            I::get_other_remote_ip_address(1).get(),
+            local_ip::<I>().get(),
+            REMOTE_PORT,
+            LOCAL_PORT,
+            &body[..],
+        );
+
+        let listen_data = &ctx.get_ref().listen_data;
+        assert_matches!(&listen_data[..], &[ListenData {
+            listener, src_ip: _, dst_ip: _, src_port: _, body: _
+        }] if listener== bound_second_device);
+    }
+
+    /// Tests that if sockets are bound to devices, they will send packets out
+    /// of those devices.
+    #[ip_test]
+    fn test_bound_to_device_send<I: Ip + TestIpExt>()
+    where
+        MultiDeviceDummyCtx<I>: DummyDeviceCtxBound<I, MultipleDevicesId>,
+    {
+        set_logger_for_test();
+        let mut ctx = MultiDeviceDummyCtx::<I>::default();
+        let ctx = &mut ctx;
+        let bound_on_devices = [MultipleDevicesId::A, MultipleDevicesId::B].map(|device| {
+            let unbound = create_udp_unbound(ctx);
+            set_unbound_udp_device(ctx, unbound, device);
+            listen_udp(ctx, unbound, None, Some(LOCAL_PORT)).expect("listen should succeed")
+        });
+
+        // Send a packet from each socket.
+        let body = [1, 2, 3, 4, 5];
+        for socket in bound_on_devices {
+            send_udp_listener(
+                ctx,
+                socket,
+                I::get_other_remote_ip_address(1),
+                REMOTE_PORT,
+                Buf::new(body.to_vec(), ..),
+            )
+            .expect("send should succeed");
+        }
+
+        let mut received_devices = ctx
+            .frames()
+            .iter()
+            .map(
+                |(
+                    SendIpPacketMeta {
+                        device,
+                        src_ip: _,
+                        dst_ip,
+                        next_hop: _,
+                        proto,
+                        ttl: _,
+                        mtu: _,
+                    },
+                    _body,
+                )| {
+                    assert_eq!(proto, &IpProto::Udp.into());
+                    assert_eq!(dst_ip, &I::get_other_remote_ip_address(1),);
+                    device
+                },
+            )
+            .collect::<Vec<_>>();
+        received_devices.sort();
+        assert_eq!(received_devices, [&MultipleDevicesId::A, &MultipleDevicesId::B]);
     }
 
     /// Tests establishing a UDP connection without providing a local IP
@@ -2491,7 +2756,7 @@ mod tests {
     fn test_udp_local_port_alloc<I: Ip + TestIpExt>()
     where
         DummyCtx<I>: DummyCtxBound<I>,
-        DummyUdpCtx<I>: DummyUdpCtxExt<I>,
+        DummyUdpCtx<I, DummyDeviceId>: DummyUdpCtxExt<I>,
     {
         let local_ip = local_ip::<I>();
         let ip_a = I::get_other_ip_address(100);
@@ -2568,7 +2833,7 @@ mod tests {
     fn test_udp_collect_local_ports<I: Ip + TestIpExt>()
     where
         DummyCtx<I>: DummyCtxBound<I>,
-        DummyUdpCtx<I>: DummyUdpCtxExt<I>,
+        DummyUdpCtx<I, DummyDeviceId>: DummyUdpCtxExt<I>,
     {
         let local_ip = local_ip::<I>();
         let local_ip_2 = I::get_other_ip_address(10);

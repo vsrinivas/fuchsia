@@ -308,6 +308,7 @@ pub trait IpDeviceId: Copy + Display + Debug + Eq + Hash + PartialEq + Send + Sy
 /// require lots of verbose type bounds when they need to be interoperable (such
 /// as when ICMP delivers an MLD packet to the `mld` module for processing).
 pub trait IpDeviceIdContext<I: Ip> {
+    /// The type of device IDs.
     type DeviceId: IpDeviceId + 'static;
 
     /// Returns the ID of the loopback interface, if one exists on the system
@@ -765,10 +766,10 @@ impl IpDeviceId for DummyDeviceId {
 }
 
 #[cfg(test)]
-impl<I: Ip, S, Id, Meta, Event: Debug, DeviceId: IpDeviceId + 'static> IpDeviceIdContext<I>
-    for crate::context::testutil::DummyCtx<S, Id, Meta, Event, DeviceId>
+impl<I: Ip, S, Id, Meta, Event: Debug, D: IpDeviceId + 'static> IpDeviceIdContext<I>
+    for crate::context::testutil::DummyCtx<S, Id, Meta, Event, D>
 {
-    type DeviceId = DeviceId;
+    type DeviceId = D;
 
     fn loopback_id(&self) -> Option<Self::DeviceId> {
         None

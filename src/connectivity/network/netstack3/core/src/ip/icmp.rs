@@ -3419,7 +3419,7 @@ mod tests {
 
     impl Default for DummyIcmpCtx<Ipv4, DummyDeviceId> {
         fn default() -> Self {
-            DummyIcmpCtx::new(DummyIpSocketCtx::new_ipv4(
+            DummyIcmpCtx::new(DummyIpSocketCtx::new_dummy_ipv4(
                 vec![DUMMY_CONFIG_V4.local_ip],
                 vec![DUMMY_CONFIG_V4.remote_ip],
             ))
@@ -3428,7 +3428,7 @@ mod tests {
 
     impl Default for DummyIcmpCtx<Ipv6, DummyDeviceId> {
         fn default() -> Self {
-            DummyIcmpCtx::new(DummyIpSocketCtx::new_ipv6(
+            DummyIcmpCtx::new(DummyIpSocketCtx::new_dummy_ipv6(
                 vec![DUMMY_CONFIG_V6.local_ip],
                 vec![DUMMY_CONFIG_V6.remote_ip],
             ))

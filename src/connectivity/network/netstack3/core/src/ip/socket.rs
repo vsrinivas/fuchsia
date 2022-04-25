@@ -1042,61 +1042,108 @@ pub(crate) mod testutil {
         }
     }
 
-    impl<I: IpDeviceStateIpExt<DummyInstant>> DummyIpSocketCtx<I, DummyDeviceId> {
-        fn with_device_state(
-            device_state: IpDeviceState<DummyInstant, I>,
-            remote_ips: Vec<SpecifiedAddr<I::Addr>>,
+    impl<I: IpDeviceStateIpExt<DummyInstant>, D: IpDeviceId> DummyIpSocketCtx<I, D> {
+        pub(crate) fn with_devices_state(
+            devices: impl IntoIterator<
+                Item = (D, IpDeviceState<DummyInstant, I>, Vec<SpecifiedAddr<I::Addr>>),
+            >,
         ) -> Self {
             let mut table = ForwardingTable::default();
-            for ip in remote_ips {
-                assert_eq!(
-                    table.add_device_route(
-                        Subnet::new(ip.get(), <I::Addr as IpAddress>::BYTES * 8).unwrap(),
-                        DummyDeviceId,
-                    ),
-                    Ok(())
+            let mut device_state = HashMap::default();
+            for (device, state, addrs) in devices {
+                for ip in addrs {
+                    assert_eq!(
+                        table.add_device_route(
+                            Subnet::new(ip.get(), <I::Addr as IpAddress>::BYTES * 8).unwrap(),
+                            device,
+                        ),
+                        Ok(())
+                    );
+                }
+                assert!(
+                    device_state.insert(device, state).is_none(),
+                    "duplicate entries for {}",
+                    device
                 );
             }
 
-            DummyIpSocketCtx { table, device_state: HashMap::from([(DummyDeviceId, device_state)]) }
+            DummyIpSocketCtx { table, device_state }
+        }
+    }
+
+    pub(crate) struct DummyDeviceConfig<D, A: IpAddress> {
+        pub(crate) device: D,
+        pub(crate) local_ips: Vec<SpecifiedAddr<A>>,
+        pub(crate) remote_ips: Vec<SpecifiedAddr<A>>,
+    }
+
+    impl<D: IpDeviceId> DummyIpSocketCtx<Ipv4, D> {
+        /// Creates a new `DummyIpSocketCtx<Ipv4>` with the given device
+        /// configs.
+        pub(crate) fn new_ipv4(
+            devices: impl IntoIterator<Item = DummyDeviceConfig<D, Ipv4Addr>>,
+        ) -> Self {
+            DummyIpSocketCtx::with_devices_state(devices.into_iter().map(
+                |DummyDeviceConfig { device, local_ips, remote_ips }| {
+                    let mut device_state = IpDeviceState::default();
+                    for ip in local_ips {
+                        // Users of this utility don't care about subnet prefix length,
+                        // so just pick a reasonable one.
+                        device_state
+                            .add_addr(AddrSubnet::new(ip.get(), 32).unwrap())
+                            .expect("add address");
+                    }
+                    (device, device_state, remote_ips)
+                },
+            ))
         }
     }
 
     impl DummyIpSocketCtx<Ipv4, DummyDeviceId> {
         /// Creates a new `DummyIpSocketCtx<Ipv4>`.
-        pub(crate) fn new_ipv4(
+        pub(crate) fn new_dummy_ipv4(
             local_ips: Vec<SpecifiedAddr<Ipv4Addr>>,
             remote_ips: Vec<SpecifiedAddr<Ipv4Addr>>,
         ) -> Self {
-            let mut device_state = IpDeviceState::default();
-            for ip in local_ips {
-                // Users of this utility don't care about subnet prefix length,
-                // so just pick a reasonable one.
-                device_state.add_addr(AddrSubnet::new(ip.get(), 32).unwrap()).expect("add address");
-            }
-            DummyIpSocketCtx::with_device_state(device_state, remote_ips)
+            Self::new_ipv4([DummyDeviceConfig { device: DummyDeviceId, local_ips, remote_ips }])
+        }
+    }
+
+    impl<D: IpDeviceId> DummyIpSocketCtx<Ipv6, D> {
+        /// Creates a new `DummyIpSocketCtx<Ipv6>` with the given device
+        /// configs.
+        pub(crate) fn new_ipv6(
+            devices: impl IntoIterator<Item = DummyDeviceConfig<D, Ipv6Addr>>,
+        ) -> Self {
+            DummyIpSocketCtx::with_devices_state(devices.into_iter().map(
+                |DummyDeviceConfig { device, local_ips, remote_ips }| {
+                    let mut device_state = IpDeviceState::default();
+                    for ip in local_ips {
+                        // Users of this utility don't care about subnet prefix length,
+                        // so just pick a reasonable one.
+                        device_state
+                            .add_addr(Ipv6AddressEntry::new(
+                                // Users of this utility don't care about subnet prefix
+                                // length, so just pick a reasonable one.
+                                AddrSubnet::new(ip.get(), 128).unwrap(),
+                                AddressState::Assigned,
+                                AddrConfig::Manual,
+                            ))
+                            .expect("add address");
+                    }
+                    (device, device_state, remote_ips)
+                },
+            ))
         }
     }
 
     impl DummyIpSocketCtx<Ipv6, DummyDeviceId> {
         /// Creates a new `DummyIpSocketCtx<Ipv6>`.
-        pub(crate) fn new_ipv6(
+        pub(crate) fn new_dummy_ipv6(
             local_ips: Vec<SpecifiedAddr<Ipv6Addr>>,
             remote_ips: Vec<SpecifiedAddr<Ipv6Addr>>,
         ) -> Self {
-            let mut device_state = IpDeviceState::default();
-            for ip in local_ips {
-                device_state
-                    .add_addr(Ipv6AddressEntry::new(
-                        // Users of this utility don't care about subnet prefix
-                        // length, so just pick a reasonable one.
-                        AddrSubnet::new(ip.get(), 128).unwrap(),
-                        AddressState::Assigned,
-                        AddrConfig::Manual,
-                    ))
-                    .expect("add address");
-            }
-            DummyIpSocketCtx::with_device_state(device_state, remote_ips)
+            Self::new_ipv6([DummyDeviceConfig { device: DummyDeviceId, local_ips, remote_ips }])
         }
     }
 }
