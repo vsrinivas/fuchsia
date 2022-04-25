@@ -200,17 +200,17 @@ pub fn restore_from_signal_handler(current_task: &mut CurrentTask) -> Result<(),
         fs_base: current_task.registers.fs_base,
         gs_base: current_task.registers.gs_base,
     };
-    current_task.signals.write().mask = signal_stack_frame.context.uc_sigmask;
+    current_task.write().signals.mask = signal_stack_frame.context.uc_sigmask;
     Ok(())
 }
 
 pub fn send_signal(task: &Task, siginfo: SignalInfo) {
-    let mut signal_state = task.signals.write();
-    signal_state.enqueue(siginfo.clone());
+    let mut task_state = task.write();
+    task_state.signals.enqueue(siginfo.clone());
 
-    let action_is_masked = siginfo.signal.is_in_set(signal_state.mask);
+    let action_is_masked = siginfo.signal.is_in_set(task_state.signals.mask);
     let action = action_for_signal(&siginfo, task.thread_group.signal_actions.get(siginfo.signal));
-    drop(signal_state);
+    drop(task_state);
 
     // SIGKILL is handled without waiting to the signal to be dequeued.
     if siginfo.signal == SIGKILL {
@@ -296,26 +296,26 @@ fn action_for_signal(siginfo: &SignalInfo, sigaction: sigaction_t) -> DeliveryAc
 /// Dequeues and handles a pending signal for `current_task`.
 pub fn dequeue_signal(current_task: &mut CurrentTask) {
     let task = current_task.task_arc_clone();
-    let mut signal_state = task.signals.write();
+    let mut task_state = task.write();
 
-    let mask = signal_state.mask;
+    let mask = task_state.signals.mask;
     if let Some(siginfo) =
-        signal_state.take_next_where(|sig| !sig.signal.is_in_set(mask) || sig.force)
+        task_state.signals.take_next_where(|sig| !sig.signal.is_in_set(mask) || sig.force)
     {
         let sigaction = task.thread_group.signal_actions.get(siginfo.signal);
         match action_for_signal(&siginfo, sigaction) {
             DeliveryAction::CallHandler => {
-                dispatch_signal_handler(current_task, &mut signal_state, siginfo, sigaction);
+                dispatch_signal_handler(current_task, &mut task_state.signals, siginfo, sigaction);
             }
             DeliveryAction::Terminate => {
                 // Release the signals lock. [`ThreadGroup::exit`] sends signals to threads which
                 // will include this one and cause a deadlock re-acquiring the signals lock.
-                drop(signal_state);
+                drop(task_state);
                 current_task.thread_group.exit(ExitStatus::Kill(siginfo));
             }
             DeliveryAction::CoreDump => {
                 // TODO(tbodt): Trigger crashsvc somehow
-                drop(signal_state);
+                drop(task_state);
                 current_task.thread_group.exit(ExitStatus::CoreDump(siginfo));
             }
             DeliveryAction::Ignore => {}

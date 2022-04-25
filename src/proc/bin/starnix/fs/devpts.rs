@@ -36,7 +36,7 @@ pub fn create_pts_node(fs: &FileSystemHandle, task: &CurrentTask, id: u32) -> Re
     )?;
     let mut info = pts.node.info_write();
     info.blksize = BLOCK_SIZE;
-    info.uid = task.creds.read().euid;
+    info.uid = task.read().creds.euid;
     // TODO(qsr): set gid to the tty group
     info.gid = 0;
     Ok(())
@@ -567,7 +567,7 @@ mod tests {
     #[::fuchsia::test]
     fn test_ptmx_stats() {
         let (kernel, task) = create_kernel_and_task();
-        *task.creds.write() = Credentials::from_passwd("nobody:x:22:22").expect("credentials");
+        task.write().creds = Credentials::from_passwd("nobody:x:22:22").expect("credentials");
         let fs = dev_pts_fs(&kernel);
         let ptmx = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
         let ptmx_stat = ptmx.node().stat().expect("stat");
@@ -649,7 +649,7 @@ mod tests {
     #[::fuchsia::test]
     fn test_steal_terminal() {
         let (kernel, task1) = create_kernel_and_task();
-        *task1.creds.write() = Credentials::from_passwd("nobody:x:1:1").expect("credentials");
+        task1.write().creds = Credentials::from_passwd("nobody:x:1:1").expect("credentials");
 
         let task2 = task1.clone_task_for_test(0);
 
@@ -683,7 +683,7 @@ mod tests {
         assert_eq!(set_controlling_terminal(&task2, &opened_replica, true), Err(EPERM));
 
         // One can steal a terminal with the CAP_SYS_ADMIN capacility
-        *task2.creds.write() = Credentials::from_passwd("root:x:0:0").expect("credentials");
+        task2.write().creds = Credentials::from_passwd("root:x:0:0").expect("credentials");
         // But not without specifying that one wants to steal it.
         assert_eq!(set_controlling_terminal(&task2, &opened_replica, false), Err(EPERM));
         set_controlling_terminal(&task2, &opened_replica, true)

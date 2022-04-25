@@ -229,10 +229,10 @@ impl FileOps for CmdlineFile {
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
+        let argv = self.task.read().argv.clone();
         let mut seq = self.seq.lock();
-        let iter = |_cursor, sink: &mut SeqFileBuf| {
-            let argv = self.task.argv.read();
-            for arg in &*argv {
+        let iter = move |_cursor, sink: &mut SeqFileBuf| {
+            for arg in &argv {
                 sink.write(arg.as_bytes_with_nul());
             }
             Ok(None)

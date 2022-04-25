@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use fuchsia_zircon as zx;
-use parking_lot::{Mutex, RwLock};
+use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::cmp;
 use std::convert::TryFrom;
 use std::ffi::CString;
@@ -84,14 +84,29 @@ impl ExitStatus {
     }
 }
 
+pub struct TaskMutableState {
+    /// The command of this task.
+    pub command: CString,
+
+    /// The arguments with which this task was started.
+    pub argv: Vec<CString>,
+
+    /// The security credentials for this task.
+    pub creds: Credentials,
+
+    // See https://man7.org/linux/man-pages/man2/set_tid_address.2.html
+    pub clear_child_tid: UserRef<pid_t>,
+
+    /// Signal handler related state. This is grouped together for when atomicity is needed during
+    /// signal sending and delivery.
+    pub signals: SignalState,
+
+    /// The exit status that this task exited with.
+    pub exit_status: Option<ExitStatus>,
+}
+
 pub struct Task {
     pub id: pid_t,
-
-    // The command of this task.
-    pub command: RwLock<CString>,
-
-    // The arguments with which this task was started.
-    pub argv: RwLock<Vec<CString>>,
 
     /// The thread group to which this task belongs.
     pub thread_group: Arc<ThreadGroup>,
@@ -108,27 +123,17 @@ pub struct Task {
     /// The file system for this task.
     pub fs: Arc<FsContext>,
 
-    /// The security credentials for this task.
-    pub creds: RwLock<Credentials>,
-
     /// The namespace for abstract AF_UNIX sockets for this task.
     pub abstract_socket_namespace: Arc<AbstractUnixSocketNamespace>,
 
     /// The namespace for AF_VSOCK for this task.
     pub abstract_vsock_namespace: Arc<AbstractVsockSocketNamespace>,
 
-    // See https://man7.org/linux/man-pages/man2/set_tid_address.2.html
-    pub clear_child_tid: Mutex<UserRef<pid_t>>,
-
-    /// Signal handler related state. This is grouped together for when atomicity is needed during
-    /// signal sending and delivery.
-    pub signals: RwLock<SignalState>,
-
     /// The signal this task generates on exit.
     pub exit_signal: Option<Signal>,
 
-    /// The exit status that this task exited with.
-    pub exit_status: Mutex<Option<ExitStatus>>,
+    /// The mutable state of the Task.
+    mutable_state: RwLock<TaskMutableState>,
 }
 
 impl Task {
@@ -154,21 +159,33 @@ impl Task {
     ) -> CurrentTask {
         CurrentTask::new(Task {
             id,
-            command: RwLock::new(comm),
-            argv: RwLock::new(argv),
             thread_group,
             thread,
             files,
             mm,
             fs,
-            creds: RwLock::new(creds),
             abstract_socket_namespace,
             abstract_vsock_namespace,
-            clear_child_tid: Mutex::new(UserRef::default()),
-            signals: Default::default(),
             exit_signal,
-            exit_status: Mutex::new(None),
+            mutable_state: RwLock::new(TaskMutableState {
+                command: comm,
+                argv: argv,
+                creds: creds,
+                clear_child_tid: UserRef::default(),
+                signals: Default::default(),
+                exit_status: None,
+            }),
         })
+    }
+
+    /// Access mutable state with a read lock.
+    pub fn read(&self) -> RwLockReadGuard<'_, TaskMutableState> {
+        self.mutable_state.read()
+    }
+
+    /// Access mutable state with a write lock.
+    pub fn write(&self) -> RwLockWriteGuard<'_, TaskMutableState> {
+        self.mutable_state.write()
     }
 
     /// Create a task that is the leader of a new thread group.
@@ -276,8 +293,11 @@ impl Task {
 
         let kernel = &self.thread_group.kernel;
         let mut pids = kernel.pids.write();
+        let mut thread_group_state = self.thread_group.write();
+        let state = self.read();
+
         let pid = pids.allocate_pid();
-        let comm = self.command.read();
+        let comm = state.command.clone();
         let (thread, thread_group, mm) = if clone_thread {
             create_zircon_thread(self)?
         } else {
@@ -286,41 +306,45 @@ impl Task {
             } else {
                 self.thread_group.signal_actions.fork()
             };
-            let process_group = self.thread_group.read().process_group.clone();
+            let process_group = thread_group_state.process_group.clone();
             create_zircon_process(
                 kernel,
-                Some(&self.thread_group),
+                Some(&mut thread_group_state),
                 pid,
                 process_group,
                 signal_actions,
                 &comm,
             )?
         };
+        drop(thread_group_state);
 
         let child = Self::new(
             pid,
-            comm.clone(),
-            self.argv.read().clone(),
+            comm,
+            state.argv.clone(),
             thread_group,
             thread,
             files,
             mm,
             fs,
-            self.creds.read().clone(),
+            state.creds.clone(),
             self.abstract_socket_namespace.clone(),
             self.abstract_vsock_namespace.clone(),
             child_exit_signal,
         );
         pids.add_task(&child.task);
+        // Child lock must be taken before this lock. Drop the lock on the task, take a writable
+        // lock on the child and take the current state back.
+        std::mem::drop(state);
 
         if clone_thread {
             self.thread_group.add(&child)?;
         } else {
+            let mut child_state = child.write();
+            let state = self.read();
             pids.add_thread_group(&child.thread_group);
-            let signals = self.signals.read();
-            let mut child_signals = child.signals.write();
-            child_signals.alt_stack = signals.alt_stack;
-            child_signals.mask = signals.mask;
+            child_state.signals.alt_stack = state.signals.alt_stack;
+            child_state.signals.mask = state.signals.mask;
             self.mm.snapshot_to(&child.mm)?;
         }
 
@@ -329,7 +353,7 @@ impl Task {
         }
 
         if flags & (CLONE_CHILD_CLEARTID as u64) != 0 {
-            *child.clear_child_tid.lock() = user_child_tid;
+            child.write().clear_child_tid = user_child_tid;
         }
 
         if flags & (CLONE_CHILD_SETTID as u64) != 0 {
@@ -341,8 +365,18 @@ impl Task {
 
     #[cfg(test)]
     pub fn clone_task_for_test(&self, flags: u64) -> CurrentTask {
-        self.clone_task(flags, UserRef::default(), UserRef::default())
-            .expect("failed to create task in test")
+        let result = self
+            .clone_task(flags, UserRef::default(), UserRef::default())
+            .expect("failed to create task in test");
+
+        // Take the lock on thread group and task in the correct order to ensure any wrong ordering
+        // will trigger the tracing-mutex at the right call site.
+        {
+            let _l1 = result.thread_group.read();
+            let _l2 = result.read();
+        }
+
+        result
     }
 
     /// If needed, clear the child tid for this task.
@@ -353,13 +387,13 @@ impl Task {
     /// pthread_join sleeps using FUTEX_WAIT on the child tid address. We wake
     /// them up here to let them know the thread is done.
     fn clear_child_tid_if_needed(&self) -> Result<(), Errno> {
-        let mut clear_child_tid = self.clear_child_tid.lock();
-        let user_tid = *clear_child_tid;
+        let mut state = self.write();
+        let user_tid = state.clear_child_tid;
         if !user_tid.is_null() {
             let zero: pid_t = 0;
             self.mm.write_object(user_tid, &zero)?;
             self.mm.futex.wake(user_tid.addr(), usize::MAX, FUTEX_BITSET_MATCH_ANY);
-            *clear_child_tid = UserRef::default();
+            state.clear_child_tid = UserRef::default();
         }
         Ok(())
     }
@@ -383,8 +417,8 @@ impl Task {
     }
 
     pub fn as_ucred(&self) -> ucred {
-        let creds = self.creds.read();
-        ucred { pid: self.get_pid(), uid: creds.uid, gid: creds.gid }
+        let state = self.read();
+        ucred { pid: self.get_pid(), uid: state.creds.uid, gid: state.creds.gid }
     }
 
     pub fn can_signal(&self, target: &Task, unchecked_signal: &UncheckedSignal) -> bool {
@@ -394,11 +428,13 @@ impl Task {
             return true;
         }
 
-        if self.creds.read().has_capability(CAP_KILL) {
+        let self_creds = self.read().creds.clone();
+
+        if self_creds.has_capability(CAP_KILL) {
             return true;
         }
 
-        if self.creds.read().has_same_uid(&target.creds.read()) {
+        if self_creds.has_same_uid(&target.read().creds) {
             return true;
         }
 
@@ -419,7 +455,7 @@ impl Task {
     ///
     /// TODO(qsr): This should also interrupt any running code.
     pub fn interrupt(&self, interruption_type: InterruptionType) -> bool {
-        if let Some(waiter) = &self.signals.read().waiter {
+        if let Some(waiter) = &self.read().signals.waiter {
             waiter.interrupt(interruption_type)
         } else {
             false
@@ -458,10 +494,10 @@ impl CurrentTask {
     where
         F: FnOnce(&CurrentTask) -> Result<T, Errno>,
     {
-        let old_mask = self.signals.write().set_signal_mask(signal_mask);
+        let old_mask = self.write().signals.set_signal_mask(signal_mask);
         let wait_result = wait_function(self);
         dequeue_signal(self);
-        self.signals.write().set_signal_mask(old_mask);
+        self.write().signals.set_signal_mask(old_mask);
         wait_result
     }
 
@@ -732,7 +768,7 @@ impl CurrentTask {
     /// process crashing. This function is for that second half; any error returned from this
     /// function will be considered unrecoverable.
     fn finish_exec(&mut self, path: CString, resolved_elf: ResolvedElf) -> Result<(), Errno> {
-        *self.argv.write() = resolved_elf.argv.clone();
+        self.write().argv = resolved_elf.argv.clone();
         self.mm
             .exec(resolved_elf.file.name.clone())
             .map_err(|status| from_status_like_fdio!(status))?;
@@ -741,7 +777,7 @@ impl CurrentTask {
         self.dt_debug_address = start_info.dt_debug_address;
 
         self.thread_group.signal_actions.reset_for_exec();
-        self.signals.write().alt_stack = None;
+        self.write().signals.alt_stack = None;
 
         // TODO: The termination signal is reset to SIGCHLD.
 
@@ -777,7 +813,7 @@ impl CurrentTask {
     pub fn set_command_name(&mut self, name: CString) {
         // Truncate to 16 bytes, including null byte.
         let bytes = name.to_bytes();
-        *self.command.write() = if bytes.len() > 15 {
+        self.write().command = if bytes.len() > 15 {
             // SAFETY: Substring of a CString will contain no null bytes.
             CString::new(&bytes[..15]).unwrap()
         } else {
@@ -788,7 +824,7 @@ impl CurrentTask {
 
 impl fmt::Debug for Task {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}[{}]", self.id, self.command.read().to_string_lossy())
+        write!(f, "{}[{}]", self.id, self.read().command.to_string_lossy())
     }
 }
 
@@ -845,11 +881,11 @@ mod test {
     #[::fuchsia::test]
     fn test_root_capabilities() {
         let (_kernel, current_task) = create_kernel_and_task();
-        *current_task.creds.write() =
+        current_task.write().creds =
             Credentials::from_passwd("root:x:0:0").expect("Credentials::from_passwd");
-        assert!(current_task.creds.read().has_capability(CAP_SYS_ADMIN));
-        *current_task.creds.write() =
+        assert!(current_task.read().creds.has_capability(CAP_SYS_ADMIN));
+        current_task.write().creds =
             Credentials::from_passwd("foo:x:1:1").expect("Credentials::from_passwd");
-        assert!(!current_task.creds.read().has_capability(CAP_SYS_ADMIN));
+        assert!(!current_task.read().creds.has_capability(CAP_SYS_ADMIN));
     }
 }

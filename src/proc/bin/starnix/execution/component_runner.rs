@@ -82,7 +82,7 @@ pub async fn start_component(
     )?;
     let user_passwd = get_program_string(&start_info, "user").unwrap_or("fuchsia:x:42:42");
     let credentials = Credentials::from_passwd(user_passwd)?;
-    *current_task.creds.write() = credentials;
+    current_task.write().creds = credentials;
 
     let ns = start_info.ns.take().ok_or_else(|| anyhow!("Missing namespace"))?;
     let pkg = fio::DirectorySynchronousProxy::new(

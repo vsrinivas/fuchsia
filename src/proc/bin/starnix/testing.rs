@@ -48,6 +48,13 @@ pub fn create_kernel_and_task_with_fs(fs: Arc<FsContext>) -> (Arc<Kernel>, Curre
     let task = Task::create_process_without_parent(&kernel, CString::new("test-task").unwrap(), fs)
         .expect("failed to create first task");
 
+    // Take the lock on thread group and task in the correct order to ensure any wrong ordering
+    // will trigger the tracing-mutex at the right call site.
+    {
+        let _l1 = task.thread_group.read();
+        let _l2 = task.read();
+    }
+
     (kernel, task)
 }
 
@@ -61,6 +68,14 @@ pub fn create_task(kernel: &Arc<Kernel>, task_name: &str) -> CurrentTask {
         create_pkgfs(),
     )
     .expect("failed to create second task");
+
+    // Take the lock on thread group and task in the correct order to ensure any wrong ordering
+    // will trigger the tracing-mutex at the right call site.
+    {
+        let _l1 = task.thread_group.read();
+        let _l2 = task.read();
+    }
+
     task
 }
 

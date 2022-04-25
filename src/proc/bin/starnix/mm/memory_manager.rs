@@ -1445,9 +1445,9 @@ impl FileOps for ProcStatFile {
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
+        let command = self.task.read().command.clone();
         let mut seq = self.seq.lock();
-        let iter = |_cursor, sink: &mut SeqFileBuf| {
-            let command = self.task.command.read();
+        let iter = move |_cursor, sink: &mut SeqFileBuf| {
             let command = command.as_c_str().to_str().unwrap_or("unknown");
             let mut stats = [0u64; 49];
             let mm_state = self.task.mm.state.read();

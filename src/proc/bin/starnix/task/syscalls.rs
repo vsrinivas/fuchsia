@@ -123,19 +123,19 @@ pub fn sys_setpgid(current_task: &CurrentTask, pid: pid_t, pgid: pid_t) -> Resul
 }
 
 pub fn sys_getuid(current_task: &CurrentTask) -> Result<uid_t, Errno> {
-    Ok(current_task.creds.read().uid)
+    Ok(current_task.read().creds.uid)
 }
 
 pub fn sys_getgid(current_task: &CurrentTask) -> Result<gid_t, Errno> {
-    Ok(current_task.creds.read().gid)
+    Ok(current_task.read().creds.gid)
 }
 
 pub fn sys_geteuid(current_task: &CurrentTask) -> Result<uid_t, Errno> {
-    Ok(current_task.creds.read().euid)
+    Ok(current_task.read().creds.euid)
 }
 
 pub fn sys_getegid(current_task: &CurrentTask) -> Result<gid_t, Errno> {
-    Ok(current_task.creds.read().egid)
+    Ok(current_task.read().creds.egid)
 }
 
 pub fn sys_getresuid(
@@ -144,7 +144,8 @@ pub fn sys_getresuid(
     euid_addr: UserRef<uid_t>,
     suid_addr: UserRef<uid_t>,
 ) -> Result<(), Errno> {
-    let creds = current_task.creds.read();
+    let state = current_task.read();
+    let creds = &state.creds;
     current_task.mm.write_object(ruid_addr, &creds.uid)?;
     current_task.mm.write_object(euid_addr, &creds.euid)?;
     current_task.mm.write_object(suid_addr, &creds.saved_uid)?;
@@ -157,7 +158,8 @@ pub fn sys_getresgid(
     egid_addr: UserRef<gid_t>,
     sgid_addr: UserRef<gid_t>,
 ) -> Result<(), Errno> {
-    let creds = current_task.creds.read();
+    let state = current_task.read();
+    let creds = &state.creds;
     current_task.mm.write_object(rgid_addr, &creds.gid)?;
     current_task.mm.write_object(egid_addr, &creds.egid)?;
     current_task.mm.write_object(sgid_addr, &creds.saved_gid)?;
@@ -170,7 +172,8 @@ pub fn sys_setresuid(
     euid: uid_t,
     suid: uid_t,
 ) -> Result<(), Errno> {
-    let mut creds = current_task.creds.write();
+    let mut state = current_task.write();
+    let mut creds = &mut state.creds;
     if !creds.has_capability(CAP_SETUID) {
         let allowed =
             |uid| uid == u32::MAX || [creds.uid, creds.euid, creds.saved_uid].contains(&uid);
@@ -196,7 +199,8 @@ pub fn sys_setresgid(
     egid: gid_t,
     sgid: gid_t,
 ) -> Result<(), Errno> {
-    let mut creds = current_task.creds.write();
+    let mut state = current_task.write();
+    let mut creds = &mut state.creds;
     if !creds.has_capability(CAP_SETGID) {
         let allowed =
             |gid| gid == u32::MAX || [creds.gid, creds.egid, creds.saved_gid].contains(&gid);
@@ -220,8 +224,7 @@ pub fn sys_exit(current_task: &CurrentTask, code: i32) -> Result<(), Errno> {
     info!(target: "exit", "{:?} exit({})", current_task, code);
     // Only change the current exit status if this has not been already set by exit_group, as
     // otherwise it has priority.
-    let _: ExitStatus =
-        *current_task.exit_status.lock().get_or_insert(ExitStatus::Exit(code as u8));
+    current_task.write().exit_status.get_or_insert(ExitStatus::Exit(code as u8));
     Ok(())
 }
 
@@ -336,9 +339,8 @@ pub fn sys_prctl(
             Ok(0.into())
         }
         PR_GET_NAME => {
-            let name = current_task.command.read();
             let addr = UserAddress::from(arg2);
-            current_task.mm.write_memory(addr, name.to_bytes_with_nul())?;
+            current_task.mm.write_memory(addr, current_task.read().command.to_bytes_with_nul())?;
             Ok(0.into())
         }
         PR_SET_PTRACER => {
@@ -377,7 +379,7 @@ pub fn sys_set_tid_address(
     current_task: &CurrentTask,
     user_tid: UserRef<pid_t>,
 ) -> Result<pid_t, Errno> {
-    *current_task.clear_child_tid.lock() = user_tid;
+    current_task.write().clear_child_tid = user_tid;
     Ok(current_task.get_tid())
 }
 
@@ -506,11 +508,11 @@ pub fn sys_setgroups(
     }
     let mut groups: Vec<gid_t> = vec![0; size];
     current_task.mm.read_memory(groups_addr, groups.as_mut_slice().as_bytes_mut())?;
-    let mut creds = current_task.creds.write();
-    if !creds.is_superuser() {
+    let mut state = current_task.write();
+    if !state.creds.is_superuser() {
         return error!(EPERM);
     }
-    creds.groups = groups;
+    state.creds.groups = groups;
     Ok(())
 }
 
@@ -519,8 +521,8 @@ pub fn sys_getgroups(
     size: usize,
     groups_addr: UserAddress,
 ) -> Result<usize, Errno> {
-    let creds = current_task.creds.read();
-    let groups = &creds.groups;
+    let state = current_task.read();
+    let groups = &state.creds.groups;
     if size != 0 {
         if size < groups.len() {
             return error!(EINVAL);

@@ -81,7 +81,7 @@ fn start_task_thread(current_task: &CurrentTask) -> Result<zx::Channel, zx::Stat
 /// Block the exception handler as long as the task is stopped and not terminated.
 fn block_while_stopped(task: &Task) {
     loop {
-        if task.exit_status.lock().is_some() {
+        if task.read().exit_status.is_some() {
             return;
         }
         if !task.thread_group.read().stopped {
@@ -190,11 +190,11 @@ fn run_exception_loop(
 
         block_while_stopped(current_task);
 
-        if current_task.exit_status.lock().is_none() {
+        if current_task.read().exit_status.is_none() {
             dequeue_signal(current_task);
         }
 
-        if let Some(exit_status) = current_task.exit_status.lock().as_ref() {
+        if let Some(exit_status) = current_task.read().exit_status.as_ref() {
             strace!(current_task, "exiting with status {:?}", exit_status);
             exception.set_exception_state(&ZX_EXCEPTION_STATE_THREAD_EXIT)?;
             return Ok(exit_status.clone());
@@ -222,7 +222,7 @@ pub fn create_zircon_thread(
     let thread = parent
         .thread_group
         .process
-        .create_thread(parent.command.read().as_bytes())
+        .create_thread(parent.read().command.as_bytes())
         .map_err(|status| from_status_like_fdio!(status))?;
 
     let thread_group = parent.thread_group.clone();
@@ -241,7 +241,7 @@ pub fn create_zircon_thread(
 /// memory manager to use for the returned thread.
 pub fn create_zircon_process(
     kernel: &Arc<Kernel>,
-    parent: Option<&ThreadGroup>,
+    parent: Option<&mut ThreadGroupMutableState>,
     pid: pid_t,
     process_group: Arc<ProcessGroup>,
     signal_actions: Arc<SignalActions>,
@@ -317,7 +317,7 @@ mod tests {
         });
 
         // Wait for the task to have a waiter.
-        while task.signals.read().waiter.is_none() {
+        while task.read().signals.waiter.is_none() {
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
 
@@ -348,7 +348,7 @@ mod tests {
         });
 
         // Wait for the task to have a waiter.
-        while task.signals.read().waiter.is_none() {
+        while task.read().signals.waiter.is_none() {
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
 

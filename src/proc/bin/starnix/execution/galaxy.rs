@@ -96,7 +96,7 @@ pub fn create_galaxy(
     // actual init to be run.
     let init_task = if CONFIG.init.is_empty() {
         // A task must have an exit status, so set it here to simulate the init task having run.
-        *init_task.exit_status.lock() = Some(ExitStatus::Exit(0));
+        init_task.write().exit_status = Some(ExitStatus::Exit(0));
         None
     } else {
         let argv: Vec<_> = CONFIG.init.iter().map(to_cstr).collect();
@@ -163,7 +163,7 @@ fn create_init_task(kernel: &Arc<Kernel>, fs: &Arc<FsContext>) -> Result<Current
     let name =
         if CONFIG.init.is_empty() { to_cstr(&String::new()) } else { to_cstr(&CONFIG.init[0]) };
     let init_task = Task::create_process_without_parent(kernel, name, fs.clone())?;
-    *init_task.creds.write() = credentials;
+    init_task.write().creds = credentials;
     Ok(init_task)
 }
 

@@ -1110,7 +1110,7 @@ impl BinderDriver {
         let command = Command::Transaction(Transaction {
             peer_pid: binder_proc.pid,
             peer_tid: binder_thread.tid,
-            peer_euid: current_task.creds.read().euid,
+            peer_euid: current_task.read().creds.euid,
 
             object,
             code: data.code,
@@ -1158,7 +1158,7 @@ impl BinderDriver {
         target_thread.write().enqueue_command(Command::Reply(Transaction {
             peer_pid: binder_proc.pid,
             peer_tid: binder_thread.tid,
-            peer_euid: current_task.creds.read().euid,
+            peer_euid: current_task.read().creds.euid,
 
             object: FlatBinderObject::Remote { handle: Handle::SpecialServiceManager },
             code: data.code,

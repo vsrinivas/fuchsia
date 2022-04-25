@@ -158,7 +158,7 @@ impl ThreadGroup {
     pub fn new(
         kernel: Arc<Kernel>,
         process: zx::Process,
-        parent: Option<&ThreadGroup>,
+        parent: Option<&mut ThreadGroupMutableState>,
         leader: pid_t,
         process_group: Arc<ProcessGroup>,
         signal_actions: Arc<SignalActions>,
@@ -168,7 +168,7 @@ impl ThreadGroup {
         process_group.thread_groups.write().insert(leader);
 
         let parent_id = if let Some(parent_tg) = parent {
-            parent_tg.write().children.insert(leader);
+            parent_tg.children.insert(leader);
             parent_tg.leader
         } else {
             leader
@@ -202,7 +202,7 @@ impl ThreadGroup {
     }
 
     /// Access mutable state with a write lock.
-    fn write(&self) -> RwLockWriteGuard<'_, ThreadGroupMutableState> {
+    pub fn write(&self) -> RwLockWriteGuard<'_, ThreadGroupMutableState> {
         self.mutable_state.write()
     }
 
@@ -219,7 +219,7 @@ impl ThreadGroup {
         // Interrupt each task.
         for tid in &state.tasks {
             if let Some(task) = pids.get_task(*tid) {
-                *task.exit_status.lock() = Some(exit_status.clone());
+                task.write().exit_status = Some(exit_status.clone());
                 task.interrupt(InterruptionType::Exit);
             }
         }
@@ -478,7 +478,7 @@ impl ThreadGroup {
             return error!(EINVAL);
         }
 
-        let has_admin = current_task.creds.read().has_capability(CAP_SYS_ADMIN);
+        let has_admin = current_task.read().creds.has_capability(CAP_SYS_ADMIN);
 
         // "If this terminal is already the controlling terminal of a different
         // session group, then the ioctl fails with EPERM, unless the caller
@@ -580,7 +580,7 @@ impl ThreadGroupMutableState {
         self.tasks.remove(&task.id);
 
         if task.id == self.leader {
-            let exit_status = task.exit_status.lock().clone();
+            let exit_status = task.read().exit_status.clone();
             #[cfg(not(test))]
             let exit_status =
                 exit_status.expect("a process should not be exiting without an exit status");
@@ -589,7 +589,7 @@ impl ThreadGroupMutableState {
             self.zombie_leader = Some(ZombieProcess {
                 pid: self.leader,
                 pgid: self.process_group.leader,
-                uid: task.creds.read().uid,
+                uid: task.read().creds.uid,
                 exit_status,
             });
         }
@@ -658,7 +658,7 @@ impl ThreadGroupMutableState {
                     };
                     return Ok(WaitableChild::Available(ZombieProcess::new(
                         &child,
-                        &child.get_task(&pids)?.creds.read(),
+                        &child.get_task(&pids)?.read().creds,
                         ExitStatus::Continue(siginfo),
                     )));
                 }
@@ -670,7 +670,7 @@ impl ThreadGroupMutableState {
                     };
                     return Ok(WaitableChild::Available(ZombieProcess::new(
                         &child,
-                        &child.get_task(&pids)?.creds.read(),
+                        &child.get_task(&pids)?.read().creds,
                         ExitStatus::Stop(siginfo),
                     )));
                 }

@@ -4,8 +4,7 @@
 
 use crate::fs::FdEvents;
 use crate::logging::*;
-use crate::signals::SignalState;
-use crate::task::Task;
+use crate::task::*;
 use crate::types::Errno;
 use crate::types::*;
 use fuchsia_zircon as zx;
@@ -55,11 +54,15 @@ pub enum InterruptionType {
 
 impl InterruptionType {
     /// Returns whether the interruption is already triggered on the given task.
-    pub fn is_triggered(&self, task: &Task, signal_state: &SignalState) -> bool {
+    pub fn is_triggered(
+        &self,
+        task_state: &TaskMutableState,
+        thread_state: &ThreadGroupMutableState,
+    ) -> bool {
         match self {
-            InterruptionType::Signal => signal_state.is_any_pending(),
-            InterruptionType::Exit => task.exit_status.lock().is_some(),
-            InterruptionType::Continue => !task.thread_group.read().stopped,
+            InterruptionType::Signal => task_state.signals.is_any_pending(),
+            InterruptionType::Exit => task_state.exit_status.is_some(),
+            InterruptionType::Continue => !thread_state.stopped,
             InterruptionType::ChildChange => false,
         }
     }
@@ -122,23 +125,24 @@ impl Waiter {
     ) -> Result<scopeguard::ScopeGuard<&'a Task, impl FnOnce(&'a Task), scopeguard::Always>, Errno>
     {
         {
-            let mut signal_state = task.signals.write();
-            assert!(signal_state.waiter.is_none());
+            let thread_state = task.thread_group.read();
+            let mut state = task.write();
+            assert!(state.signals.waiter.is_none());
 
-            if self.interruption_filter.iter().any(|f| f.is_triggered(task, &signal_state)) {
+            if self.interruption_filter.iter().any(|f| f.is_triggered(&state, &thread_state)) {
                 return error!(EINTR);
             }
-            signal_state.waiter = Some(Arc::clone(self));
+            state.signals.waiter = Some(Arc::clone(self));
         }
 
         let waiter_copy = Arc::clone(self);
         return Ok(scopeguard::guard(&task, move |task| {
-            let mut signal_state = task.signals.write();
+            let mut state = task.write();
             assert!(
-                Arc::ptr_eq(signal_state.waiter.as_ref().unwrap(), &waiter_copy),
+                Arc::ptr_eq(state.signals.waiter.as_ref().unwrap(), &waiter_copy),
                 "SignalState waiter changed while waiting!"
             );
-            signal_state.waiter = None;
+            state.signals.waiter = None;
         }));
     }
 

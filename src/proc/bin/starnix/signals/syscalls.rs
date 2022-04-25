@@ -78,7 +78,8 @@ pub fn sys_rt_sigprocmask(
         current_task.mm.read_object(user_set, &mut new_mask)?;
     }
 
-    let mut signal_state = current_task.signals.write();
+    let mut state = current_task.write();
+    let signal_state = &mut state.signals;
     let signal_mask = signal_state.mask;
     // If old_set is not null, store the previous value in old_set.
     if !user_old_set.is_null() {
@@ -107,7 +108,8 @@ pub fn sys_sigaltstack(
     user_ss: UserRef<sigaltstack_t>,
     user_old_ss: UserRef<sigaltstack_t>,
 ) -> Result<(), Errno> {
-    let mut signal_state = current_task.signals.write();
+    let mut state = current_task.write();
+    let mut signal_state = &mut state.signals;
     let on_signal_stack = signal_state
         .alt_stack
         .map(|signal_stack| signal_stack.contains_pointer(current_task.registers.rsp))
@@ -681,7 +683,7 @@ mod tests {
         let addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
         let original_mask = SIGTRAP.mask();
         {
-            current_task.signals.write().mask = original_mask;
+            current_task.write().signals.mask = original_mask;
         }
 
         let set = UserRef::<sigset_t>::default();
@@ -710,7 +712,7 @@ mod tests {
         let (_kernel, current_task) = create_kernel_and_task();
         let original_mask = SIGTRAP.mask();
         {
-            current_task.signals.write().mask = original_mask;
+            current_task.write().signals.mask = original_mask;
         }
 
         let set = UserRef::<sigset_t>::default();
@@ -721,7 +723,7 @@ mod tests {
             sys_rt_sigprocmask(&current_task, how, set, old_set, std::mem::size_of::<sigset_t>()),
             Ok(())
         );
-        assert_eq!(current_task.signals.read().mask, original_mask);
+        assert_eq!(current_task.read().signals.mask, original_mask);
     }
 
     /// Calling rt_sigprocmask with SIG_SETMASK should set the mask to the provided set.
@@ -736,7 +738,7 @@ mod tests {
 
         let original_mask = SIGTRAP.mask();
         {
-            current_task.signals.write().mask = original_mask;
+            current_task.write().signals.mask = original_mask;
         }
 
         let new_mask: sigset_t = SIGIO.mask();
@@ -754,7 +756,7 @@ mod tests {
         let mut old_mask = sigset_t::default();
         current_task.mm.read_object(old_set, &mut old_mask).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
-        assert_eq!(current_task.signals.read().mask, new_mask);
+        assert_eq!(current_task.read().signals.mask, new_mask);
     }
 
     /// Calling st_sigprocmask with a how of SIG_BLOCK should add to the existing set.
@@ -769,7 +771,7 @@ mod tests {
 
         let original_mask = SIGTRAP.mask();
         {
-            current_task.signals.write().mask = original_mask;
+            current_task.write().signals.mask = original_mask;
         }
 
         let new_mask: sigset_t = SIGIO.mask();
@@ -787,7 +789,7 @@ mod tests {
         let mut old_mask = sigset_t::default();
         current_task.mm.read_object(old_set, &mut old_mask).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
-        assert_eq!(current_task.signals.read().mask, new_mask | original_mask);
+        assert_eq!(current_task.read().signals.mask, new_mask | original_mask);
     }
 
     /// Calling st_sigprocmask with a how of SIG_UNBLOCK should remove from the existing set.
@@ -802,7 +804,7 @@ mod tests {
 
         let original_mask = SIGTRAP.mask() | SIGIO.mask();
         {
-            current_task.signals.write().mask = original_mask;
+            current_task.write().signals.mask = original_mask;
         }
 
         let new_mask: sigset_t = SIGTRAP.mask();
@@ -820,7 +822,7 @@ mod tests {
         let mut old_mask = sigset_t::default();
         current_task.mm.read_object(old_set, &mut old_mask).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
-        assert_eq!(current_task.signals.read().mask, SIGIO.mask());
+        assert_eq!(current_task.read().signals.mask, SIGIO.mask());
     }
 
     /// It's ok to call sigprocmask to unblock a signal that is not set.
@@ -835,7 +837,7 @@ mod tests {
 
         let original_mask = SIGIO.mask();
         {
-            current_task.signals.write().mask = original_mask;
+            current_task.write().signals.mask = original_mask;
         }
 
         let new_mask: sigset_t = SIGTRAP.mask();
@@ -853,7 +855,7 @@ mod tests {
         let mut old_mask = sigset_t::default();
         current_task.mm.read_object(old_set, &mut old_mask).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
-        assert_eq!(current_task.signals.read().mask, original_mask);
+        assert_eq!(current_task.read().signals.mask, original_mask);
     }
 
     /// It's not possible to block SIGKILL or SIGSTOP.
@@ -868,7 +870,7 @@ mod tests {
 
         let original_mask = SIGIO.mask();
         {
-            current_task.signals.write().mask = original_mask;
+            current_task.write().signals.mask = original_mask;
         }
 
         let new_mask: sigset_t = SIGSTOP.mask() | SIGKILL.mask();
@@ -886,7 +888,7 @@ mod tests {
         let mut old_mask = sigset_t::default();
         current_task.mm.read_object(old_set, &mut old_mask).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
-        assert_eq!(current_task.signals.read().mask, original_mask);
+        assert_eq!(current_task.read().signals.mask, original_mask);
     }
 
     #[::fuchsia::test]
@@ -1011,9 +1013,9 @@ mod tests {
         let task2 = task1.clone_task_for_test(0);
 
         assert_eq!(sys_kill(&task1, 0, SIGINT.into()), Ok(()));
-        assert_eq!(task1.signals.read().queued_count(SIGINT), 1);
-        assert_eq!(task2.signals.read().queued_count(SIGINT), 1);
-        assert_eq!(init_task.signals.read().queued_count(SIGINT), 0);
+        assert_eq!(task1.read().signals.queued_count(SIGINT), 1);
+        assert_eq!(task2.read().signals.queued_count(SIGINT), 1);
+        assert_eq!(init_task.read().signals.queued_count(SIGINT), 0);
     }
 
     /// A task should be able to signal a thread group.
@@ -1025,9 +1027,9 @@ mod tests {
         let task2 = task1.clone_task_for_test(0);
 
         assert_eq!(sys_kill(&task1, -task1.id, SIGINT.into()), Ok(()));
-        assert_eq!(task1.signals.read().queued_count(SIGINT), 1);
-        assert_eq!(task2.signals.read().queued_count(SIGINT), 1);
-        assert_eq!(init_task.signals.read().queued_count(SIGINT), 0);
+        assert_eq!(task1.read().signals.queued_count(SIGINT), 1);
+        assert_eq!(task2.read().signals.queued_count(SIGINT), 1);
+        assert_eq!(init_task.read().signals.queued_count(SIGINT), 0);
     }
 
     /// A task should be able to signal everything but init and itself.
@@ -1039,9 +1041,9 @@ mod tests {
         let task2 = task1.clone_task_for_test(0);
 
         assert_eq!(sys_kill(&task1, -1, SIGINT.into()), Ok(()));
-        assert_eq!(task1.signals.read().queued_count(SIGINT), 0);
-        assert_eq!(task2.signals.read().queued_count(SIGINT), 1);
-        assert_eq!(init_task.signals.read().queued_count(SIGINT), 0);
+        assert_eq!(task1.read().signals.queued_count(SIGINT), 0);
+        assert_eq!(task2.read().signals.queued_count(SIGINT), 1);
+        assert_eq!(init_task.read().signals.queued_count(SIGINT), 0);
     }
 
     /// A task should not be able to signal a nonexistent task.
@@ -1057,15 +1059,15 @@ mod tests {
     fn test_kill_invalid_task() {
         let (_kernel, task1) = create_kernel_and_task();
         // Task must not have the kill capability.
-        *task1.creds.write() =
+        task1.write().creds =
             Credentials::from_passwd("foo:x:1:1").expect("Credentials::from_passwd");
         let task2 = task1.clone_task_for_test(0);
-        *task2.creds.write() = Credentials::from_passwd("bin:x:2:2:bin:/bin:/usr/sbin/nologin")
+        task2.write().creds = Credentials::from_passwd("bin:x:2:2:bin:/bin:/usr/sbin/nologin")
             .expect("build credentials");
 
         assert_eq!(task1.can_signal(&task2, &SIGINT.into()), false);
         assert_eq!(sys_kill(&task2, task1.id, SIGINT.into()), error!(EPERM));
-        assert_eq!(task1.signals.read().queued_count(SIGINT), 0);
+        assert_eq!(task1.read().signals.queued_count(SIGINT), 0);
     }
 
     /// A task should not be able to signal a task owned by another uid in a thead group.
@@ -1076,12 +1078,12 @@ mod tests {
         task1.thread_group.setsid().expect("setsid");
         let task2 = task1.clone_task_for_test(0);
         task2.thread_group.setsid().expect("setsid");
-        *task2.creds.write() = Credentials::from_passwd("bin:x:2:2:bin:/bin:/usr/sbin/nologin")
+        task2.write().creds = Credentials::from_passwd("bin:x:2:2:bin:/bin:/usr/sbin/nologin")
             .expect("build credentials");
 
         assert_eq!(task2.can_signal(&task1, &SIGINT.into()), false);
         assert_eq!(sys_kill(&task2, -task1.id, SIGINT.into()), error!(EPERM));
-        assert_eq!(task1.signals.read().queued_count(SIGINT), 0);
+        assert_eq!(task1.read().signals.queued_count(SIGINT), 0);
     }
 
     /// A task should not be able to send an invalid signal.
@@ -1120,11 +1122,11 @@ mod tests {
             Ok(())
         );
         assert_eq!(sys_kill(&current_task, current_task.id, SIGIO.into()), Ok(()));
-        assert_eq!(current_task.signals.read().queued_count(SIGIO), 1);
+        assert_eq!(current_task.read().signals.queued_count(SIGIO), 1);
 
         // A second signal should not increment the number of pending signals.
         assert_eq!(sys_kill(&current_task, current_task.id, SIGIO.into()), Ok(()));
-        assert_eq!(current_task.signals.read().queued_count(SIGIO), 1);
+        assert_eq!(current_task.read().signals.queued_count(SIGIO), 1);
     }
 
     /// More than one instance of a real-time signal can be blocked.
@@ -1152,11 +1154,11 @@ mod tests {
             Ok(())
         );
         assert_eq!(sys_kill(&current_task, current_task.id, SIGRTMIN.into()), Ok(()));
-        assert_eq!(current_task.signals.read().queued_count(SIGRTMIN), 1);
+        assert_eq!(current_task.read().signals.queued_count(SIGRTMIN), 1);
 
         // A second signal should increment the number of pending signals.
         assert_eq!(sys_kill(&current_task, current_task.id, SIGRTMIN.into()), Ok(()));
-        assert_eq!(current_task.signals.read().queued_count(SIGRTMIN), 2);
+        assert_eq!(current_task.read().signals.queued_count(SIGRTMIN), 2);
     }
 
     #[::fuchsia::test]
@@ -1184,7 +1186,7 @@ mod tests {
         // Wait for the first task to be suspended.
         let mut suspended = false;
         while !suspended {
-            suspended = first_task_clone.signals.read().waiter.is_some();
+            suspended = first_task_clone.read().signals.waiter.is_some();
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
 
@@ -1194,7 +1196,7 @@ mod tests {
         // Wait for the sigsuspend to complete.
         let _ = thread.join();
 
-        assert!(first_task_clone.signals.read().waiter.is_none());
+        assert!(first_task_clone.read().signals.waiter.is_none());
     }
 
     #[::fuchsia::test]
@@ -1350,7 +1352,7 @@ mod tests {
         });
 
         // Wait for the thread to be blocked on waiting for a child.
-        while task.signals.read().waiter.is_none() {
+        while task.read().signals.waiter.is_none() {
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
         child.thread_group.exit(ExitStatus::Exit(0));
@@ -1453,7 +1455,7 @@ mod tests {
     #[::fuchsia::test]
     fn test_sigqueue() {
         let (kernel, current_task) = create_kernel_and_task();
-        let current_uid = current_task.creds.read().uid;
+        let current_uid = current_task.read().creds.uid;
         let current_pid = current_task.get_pid();
 
         const TEST_VALUE: u64 = 101;
@@ -1476,7 +1478,7 @@ mod tests {
         let second_current = create_task(&kernel, "second task");
         let second_pid = second_current.get_pid();
         let second_tid = second_current.get_tid();
-        assert_eq!(second_current.signals.read().queued_count(SIGIO), 0);
+        assert_eq!(second_current.read().signals.queued_count(SIGIO), 0);
 
         assert_eq!(
             sys_rt_tgsigqueueinfo(
@@ -1488,11 +1490,11 @@ mod tests {
             ),
             Ok(())
         );
-        assert_eq!(second_current.signals.read().queued_count(SIGIO), 1);
+        assert_eq!(second_current.read().signals.queued_count(SIGIO), 1);
 
         let queued_signal = second_current
-            .signals
             .write()
+            .signals
             .take_next_where(|sig| sig.signal.is_in_set(SIGIO.mask()));
         if let Some(sig) = queued_signal {
             assert_eq!(sig.signal, SIGIO);

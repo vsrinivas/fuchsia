@@ -1315,7 +1315,7 @@ fn poll(
         epoll_file.add(&current_task, &file, event)?;
     }
 
-    let mask = mask.unwrap_or_else(|| current_task.signals.read().mask);
+    let mask = mask.unwrap_or_else(|| current_task.read().signals.mask);
     let ready_fds = current_task.wait_with_temporary_mask(mask, |current_task| {
         epoll_file.wait(current_task, num_fds, timeout)
     })?;

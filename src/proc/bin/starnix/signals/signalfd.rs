@@ -38,8 +38,8 @@ impl FileOps for SignalFd {
         let mut buf = Vec::new();
         while buf.len() + std::mem::size_of::<signalfd_siginfo>() <= data_len {
             let signal = current_task
-                .signals
                 .write()
+                .signals
                 .take_next_where(|sig| sig.signal.is_in_set(self.mask))
                 .ok_or(errno!(EAGAIN))?;
             let mut siginfo = signalfd_siginfo {
@@ -93,23 +93,21 @@ impl FileOps for SignalFd {
     ) -> WaitKey {
         // TODO(tbodt): The fact that so many of the wait_async methods have the same
         // wake_immediately call is a sign that maybe it should be factored out to a higher layer.
-        let mut signals = current_task.signals.write();
-        if signals.is_any_allowed_by_mask(!self.mask) {
+        let mut task_state = current_task.write();
+        if task_state.signals.is_any_allowed_by_mask(!self.mask) {
             waiter.wake_immediately(FdEvents::POLLIN.mask(), handler)
         } else {
-            signals.signalfd_wait.wait_async_mask(waiter, events.mask(), handler)
+            task_state.signals.signalfd_wait.wait_async_mask(waiter, events.mask(), handler)
         }
     }
 
     fn cancel_wait(&self, current_task: &CurrentTask, _waiter: &Arc<Waiter>, key: WaitKey) {
-        let mut signals = current_task.signals.write();
-        signals.signalfd_wait.cancel_wait(key);
+        current_task.write().signals.signalfd_wait.cancel_wait(key);
     }
 
     fn query_events(&self, current_task: &CurrentTask) -> FdEvents {
         let mut events = FdEvents::empty();
-        let signals = current_task.signals.read();
-        if signals.is_any_allowed_by_mask(!self.mask) {
+        if current_task.read().signals.is_any_allowed_by_mask(!self.mask) {
             events |= FdEvents::POLLIN;
         }
         events
