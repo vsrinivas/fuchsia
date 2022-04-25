@@ -7,7 +7,7 @@
 
 #include "ftl.h"
 #include "ftl_private.h"
-#include "ftln/ftlnp.h"
+#include "ftln/diagnose.h"
 
 namespace ftl {
 
@@ -145,14 +145,7 @@ bool VolumeImpl::OnVolumeAdded(const XfsVol* ftl) {
 }
 
 std::string VolumeImpl::DiagnoseKnownIssues() const {
-  char* result = FtlnDiagnoseIssues(static_cast<FTLN>(vol_));
-  if (result == nullptr) {
-    return "";
-  }
-
-  std::string result_copy(result);
-  free(result);
-  return result_copy;
+  return ftl::FtlnDiagnoseIssues(static_cast<FTLN>(vol_));
 }
 
 void* VolumeImpl::GetInternalVolumeForTest() { return vol_; }

@@ -2,17 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdbool.h>
-#include <stdlib.h>
-#include <sys/types.h>
+#include "diagnose.h"
 
-#include "ftlnp.h"
+#include <functional>
+#include <string_view>
 
-typedef struct {
-  bool (*check)(FTLN ftl);
-  const char* message;
-  bool result;
-} KnownIssue;
+namespace {
+
+struct KnownIssue {
+  // Diagnostic function that returns true if a known issue is found, or false otherwise.
+  std::function<bool(FTLN)> diagnostic;
+  // Error message that should be displayed if the diagnostic function returns true.
+  std::string_view error_message;
+};
 
 // A partial page write between two pages will result in the block count
 // being corrupted by overwriting the most significant byte with 0xff. The
@@ -36,7 +38,7 @@ bool PartialPageWritesWithFix(FTLN ftl) {
     if (ftl->mpns[i] == UINT32_MAX) {
       continue;
     }
-    if (ndmReadSpare(ftl->mpns[i], ftl->spare_buf, ftl->ndm) < 0) {
+    if (ndmReadSpare(ftl->mpns[i], ftl->spare_buf, static_cast<NDM>(ftl->ndm)) < 0) {
       fprintf(stderr, "Failed to read map page %u at physical page %u\n", i, ftl->mpns[i]);
       break;
     }
@@ -58,7 +60,7 @@ bool PrematureBlockRecycle(FTLN ftl) {
     if (FtlnMapGetPpn(ftl, vpn, &ppn) < 0 || ppn == UINT32_MAX) {
       continue;
     }
-    if (ndmReadSpare(ppn, ftl->spare_buf, ftl->ndm) < 0) {
+    if (ndmReadSpare(ppn, ftl->spare_buf, static_cast<NDM>(ftl->ndm)) < 0) {
       fprintf(stderr, "Failed to read spare for ppn %u\n", ppn);
       break;
     }
@@ -88,59 +90,40 @@ bool LostMapBlock(FTLN ftl) {
   return false;
 }
 
-//  FtlnDiagnoseIssues: Search for known bad symptoms in an FTL.
-//
-//       Input: ftl = pointer to fully mounted FTL control block.
-//
-//     Returns: NULL when no symptoms found, or a char* to a human readable
-//              message. Caller is responsible for freeing.
-//
-char* FtlnDiagnoseIssues(FTLN ftl) {
+}  // namespace
+
+namespace ftl {
+
+std::string FtlnDiagnoseIssues(FTLN ftl) {
   KnownIssue issues[] = {
       {
           &PartialPageWrites,
           "Block count in the billions. Partial Page Writes occurred. fxbug.dev/87629\n",
-          false,
       },
       {
           &PartialPageWritesWithFix,
           "Found Partial Page Writes despite the fix being present.\n",
-          false,
       },
       {
           &PrematureBlockRecycle,
           "A vpage points to a physical page which contains a different vpage. Premature Block "
           "Recycles occurred. fxbug.dev/87653\n",
-          false,
       },
       {
           &LostMapBlock,
           "Unmapped map pages. An in-use map block may have been deleted. fxbug.dev/88465\n",
-          false,
       },
   };
 
-  size_t issue_count = sizeof(issues) / sizeof(*issues);
-  size_t message_length = 0;
+  std::string analysis_result;
 
-  for (size_t i = 0; i < issue_count; ++i) {
-    issues[i].result = issues[i].check(ftl);
-    if (issues[i].result) {
-      message_length += strlen(issues[i].message);
+  for (const KnownIssue& known_issue : issues) {
+    if (known_issue.diagnostic(ftl)) {
+      analysis_result.append(known_issue.error_message);
     }
   }
 
-  if (message_length == 0) {
-    return NULL;
-  }
-
-  char* analysis = malloc(sizeof(char*) * (message_length + 1));
-  analysis[0] = '\0';
-  for (size_t i = 0; i < issue_count; ++i) {
-    if (issues[i].result) {
-      strcat(analysis, issues[i].message);
-    }
-  }
-
-  return analysis;
+  return analysis_result;
 }
+
+}  // namespace ftl
