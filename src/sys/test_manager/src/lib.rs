@@ -267,7 +267,7 @@ impl TestRunBuilder {
 
             // Collect run artifacts
             let mut kernel_debug_tasks = vec![];
-            kernel_debug_tasks.push(send_kernel_debug_data(event_sender.clone()));
+            kernel_debug_tasks.push(send_kernel_debug_data(event_sender));
             join_all(kernel_debug_tasks).await;
             inspect_node_ref.set_execution_state(self_diagnostics::RunExecutionState::Complete);
         };
@@ -398,6 +398,7 @@ async fn send_kernel_debug_data(mut event_sender: mpsc::Sender<RunEvent>) {
         let (client, fut) = serve_debug_data(files);
         let task = fasync::Task::spawn(fut);
         let _ = event_sender.send(RunEvent::debug_data(client).into()).await;
+        event_sender.disconnect(); // No need to hold this open while we serve the task.
         task.await;
     }
 }
