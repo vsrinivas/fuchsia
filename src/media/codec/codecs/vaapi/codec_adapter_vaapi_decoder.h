@@ -160,6 +160,8 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
     TRACE_INSTANT("codec_runner", "Media:Stop", TRACE_SCOPE_THREAD);
   }
 
+  void CoreCodecResetStreamAfterCurrentFrame() override;
+
   void CoreCodecRecycleOutputPacket(CodecPacket* packet) override {
     if (packet->is_new()) {
       // CoreCodecConfigureBuffers() took care of initially populating
@@ -440,6 +442,9 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
     return video_uncompressed;
   }
 
+  // Allow up to 240 frames (8 seconds @ 30 fps) between keyframes.
+  static constexpr uint32_t kMaxDecoderFailures = 240u;
+
   BlockingMpscQueue<CodecInputItem> input_queue_{};
   BlockingMpscQueue<CodecPacket*> free_output_packets_{};
 
@@ -474,6 +479,7 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   // otherwise.
   std::unique_ptr<media::AcceleratedVideoDecoder> media_decoder_;
   bool is_h264_{false};  // TODO(stefanbossbaly): Remove in favor abstraction in VAAPI layer
+  uint32_t decoder_failures_{0};  // The amount of failures the decoder has encountered
 
   std::deque<std::pair<int32_t, uint64_t>> stream_to_pts_map_;
   int32_t next_stream_id_{};

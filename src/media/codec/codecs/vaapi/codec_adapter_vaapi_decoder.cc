@@ -6,9 +6,13 @@
 
 #include <zircon/status.h>
 
+#include <condition_variable>
+#include <mutex>
+
 #include <va/va_drmcommon.h>
 
 #include "h264_accelerator.h"
+#include "lib/async/cpp/task.h"
 #include "media/gpu/h264_decoder.h"
 #include "media/gpu/vp9_decoder.h"
 #include "vp9_accelerator.h"
@@ -51,6 +55,24 @@ void CodecAdapterVaApiDecoder::CoreCodecInit(
         result);
     return;
   }
+}
+
+void CodecAdapterVaApiDecoder::CoreCodecResetStreamAfterCurrentFrame() {
+  // Before we reset the decoder we must ensure that ProcessInputLoop() has exited and has no
+  // outstanding tasks
+  WaitForInputProcessingLoopToEnd();
+
+  media_decoder_.reset();
+
+  if (is_h264_) {
+    media_decoder_ = std::make_unique<media::H264Decoder>(std::make_unique<H264Accelerator>(this),
+                                                          media::H264PROFILE_HIGH);
+  } else {
+    media_decoder_ = std::make_unique<media::VP9Decoder>(std::make_unique<VP9Accelerator>(this),
+                                                         media::VP9PROFILE_PROFILE0);
+  }
+
+  CoreCodecStartStream();
 }
 
 void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(std::vector<uint8_t> data) {
@@ -96,9 +118,25 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(std::vector<uint8_t> data) {
       }
       continue;
     } else if (result == media::AcceleratedVideoDecoder::kRanOutOfStreamData) {
+      // Reset decoder failures on successful decode
+      decoder_failures_ = 0;
       break;
     } else {
-      events_->onCoreCodecFailCodec("Unexpected media_decoder::Decode result: %d", result);
+      decoder_failures_ += 1;
+      if (decoder_failures_ >= kMaxDecoderFailures) {
+        events_->onCoreCodecFailCodec(
+            "Decoder exceeded the number of allowed failures. media_decoder::Decode result: "
+            "%d",
+            result);
+      } else {
+        // We allow the decoder to fail a set amount of times, reset the decoder after the current
+        // frame. We need to stop the input_queue_ from processing any further items before the
+        // stream reset. The stream control thread is responsible starting the stream once is has
+        // been successfully reset.
+        input_queue_.StopAllWaits();
+        events_->onCoreCodecResetStreamAfterCurrentFrame();
+      }
+
       return;
     }
   }
