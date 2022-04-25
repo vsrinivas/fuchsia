@@ -175,6 +175,11 @@ void OutgoingMessage::EncodeImpl(fidl::internal::WireFormatVersion wire_format_v
   if (!ok()) {
     return;
   }
+  if (wire_format_version != fidl::internal::WireFormatVersion::kV2) {
+    SetStatus(fidl::Status::EncodeError(ZX_ERR_INVALID_ARGS, "only v2 wire format supported"));
+    return;
+  }
+
   uint32_t num_iovecs_actual;
   uint32_t num_handles_actual;
 
@@ -190,38 +195,11 @@ void OutgoingMessage::EncodeImpl(fidl::internal::WireFormatVersion wire_format_v
   iovec_message().num_iovecs = num_iovecs_actual;
   iovec_message().num_handles = num_handles_actual;
 
-  if (wire_format_version == fidl::internal::WireFormatVersion::kV2) {
-    if (is_transactional()) {
-      ZX_ASSERT(iovec_actual() >= 1 && iovecs()[0].capacity >= sizeof(fidl_message_header_t));
-      static_cast<fidl_message_header_t*>(const_cast<void*>(iovecs()[0].buffer))
-          ->at_rest_flags[0] |= FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
-    }
-    return;
+  if (is_transactional()) {
+    ZX_ASSERT(iovec_actual() >= 1 && iovecs()[0].capacity >= sizeof(fidl_message_header_t));
+    static_cast<fidl_message_header_t*>(const_cast<void*>(iovecs()[0].buffer))->at_rest_flags[0] |=
+        FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
   }
-
-  if (message_type == nullptr ||
-      internal__fidl_tranform_is_noop__may_break(FIDL_TRANSFORMATION_V2_TO_V1, message_type)) {
-    return;
-  }
-
-  auto linearized_bytes = CopyBytes();
-  uint32_t actual_num_bytes;
-  status = internal__fidl_transform__may_break(
-      FIDL_TRANSFORMATION_V2_TO_V1, message_type, is_transactional(), linearized_bytes.data(),
-      linearized_bytes.size(), backing_buffer(), backing_buffer_capacity(), &actual_num_bytes,
-      error_address());
-  if (status != ZX_OK) {
-    SetStatus(fidl::Status::EncodeError(status, *error_address()));
-    return;
-  }
-
-  converted_byte_message_iovec_ = {
-      .buffer = backing_buffer_,
-      .capacity = actual_num_bytes,
-  };
-  message_.type = FIDL_OUTGOING_MSG_TYPE_IOVEC;
-  message_.iovec.iovecs = &converted_byte_message_iovec_;
-  message_.iovec.num_iovecs = 1;
 }
 
 void OutgoingMessage::Write(internal::AnyUnownedTransport transport, WriteOptions options) {

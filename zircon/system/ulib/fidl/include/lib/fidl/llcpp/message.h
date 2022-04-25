@@ -194,8 +194,7 @@ class OutgoingMessage : public ::fidl::Status {
   // Encodes the data.
   template <typename FidlType>
   void Encode(FidlType* data) {
-    is_transactional_ = fidl::IsFidlTransactionalMessage<FidlType>::value;
-    EncodeImpl(fidl::internal::WireFormatVersion::kV2, fidl::TypeTraits<FidlType>::kType, data);
+    Encode(fidl::internal::WireFormatVersion::kV2, fidl::TypeTraits<FidlType>::kType, data);
   }
 
   template <typename FidlType>
