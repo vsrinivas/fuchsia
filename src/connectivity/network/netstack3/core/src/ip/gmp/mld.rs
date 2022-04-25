@@ -37,9 +37,10 @@ use crate::{
     context::{FrameContext, InstantContext, RngContext, TimerContext, TimerHandler},
     ip::{
         gmp::{
-            gmp_join_group, gmp_leave_group, handle_gmp_message, Action, Actions, GmpAction,
-            GmpContext, GmpHandler, GmpMessage, GmpStateMachine, GroupJoinResult, GroupLeaveResult,
-            MulticastGroupSet, ProtocolSpecific,
+            gmp_handle_disabled, gmp_handle_enabled, gmp_join_group, gmp_leave_group,
+            handle_gmp_message, Action, Actions, GmpAction, GmpContext, GmpHandler, GmpMessage,
+            GmpStateMachine, GroupJoinResult, GroupLeaveResult, MulticastGroupSet,
+            ProtocolSpecific,
         },
         IpDeviceIdContext,
     },
@@ -103,9 +104,23 @@ pub(crate) trait MldContext:
         let (state, _rng): (_, &mut Self::Rng) = self.get_state_mut_and_rng(device);
         state
     }
+
+    /// Gets immutable access to the device's MLD state.
+    fn get_state(
+        &self,
+        device: Self::DeviceId,
+    ) -> &MulticastGroupSet<Ipv6Addr, MldGroupState<<Self as InstantContext>::Instant>>;
 }
 
 impl<C: MldContext> GmpHandler<Ipv6> for C {
+    fn gmp_handle_enabled(&mut self, device: Self::DeviceId) {
+        gmp_handle_enabled(self, device)
+    }
+
+    fn gmp_handle_disabled(&mut self, device: Self::DeviceId) {
+        gmp_handle_disabled(self, device)
+    }
+
     fn gmp_join_group(
         &mut self,
         device: Self::DeviceId,
@@ -220,6 +235,10 @@ impl<C: MldContext> GmpContext<Ipv6, MldProtocolSpecific> for C {
     ) -> (&mut MulticastGroupSet<Ipv6Addr, Self::GroupState>, &mut Self::Rng) {
         self.get_state_mut_and_rng(device)
     }
+
+    fn get_state(&self, device: C::DeviceId) -> &MulticastGroupSet<Ipv6Addr, Self::GroupState> {
+        self.get_state(device)
+    }
 }
 
 #[derive(Debug, Error)]
@@ -304,6 +323,13 @@ impl<I: Instant> From<GmpStateMachine<I, MldProtocolSpecific>> for MldGroupState
 impl<I: Instant> From<MldGroupState<I>> for GmpStateMachine<I, MldProtocolSpecific> {
     fn from(MldGroupState(state): MldGroupState<I>) -> GmpStateMachine<I, MldProtocolSpecific> {
         state
+    }
+}
+
+impl<I: Instant> AsMut<GmpStateMachine<I, MldProtocolSpecific>> for MldGroupState<I> {
+    fn as_mut(&mut self) -> &mut GmpStateMachine<I, MldProtocolSpecific> {
+        let Self(s) = self;
+        s
     }
 }
 
@@ -401,7 +427,9 @@ fn send_mld_packet<C: MldContext, B: ByteSlice, M: IcmpMldv1MessageType<B>>(
     // link-local address is not available for the device (e.g., one has not
     // been configured), the message is sent with the unspecified address (::)
     // as the IPv6 source address.
-
+    //
+    // TODO(https://fxbug.dev/98534): Handle an IPv6 link-local address being
+    // assigned when reports were sent with the unspecified source address.
     let src_ip =
         sync_ctx.get_ipv6_link_local_addr(device).map_or(Ipv6::UNSPECIFIED_ADDRESS, |x| x.get());
 
@@ -431,7 +459,13 @@ mod tests {
 
     use net_types::ethernet::Mac;
     use packet::ParseBuffer;
-    use packet_formats::icmp::{mld::MulticastListenerQuery, IcmpParseArgs, Icmpv6Packet};
+    use packet_formats::{
+        icmp::{
+            mld::{MulticastListenerDone, MulticastListenerQuery, MulticastListenerReport},
+            IcmpParseArgs, Icmpv6MessageType, Icmpv6Packet,
+        },
+        testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame,
+    };
     use rand_xorshift::XorShiftRng;
 
     use super::*;
@@ -441,10 +475,15 @@ mod tests {
             DualStateContext,
         },
         ip::{
+            device::Ipv6DeviceTimerId,
             gmp::{Action, MemberState},
             DummyDeviceId,
         },
-        testutil::{assert_empty, new_rng, run_with_many_seeds, FakeCryptoRng},
+        testutil::{
+            assert_empty, new_rng, run_with_many_seeds, DummyEventDispatcher,
+            DummyEventDispatcherConfig, FakeCryptoRng, TestIpExt as _,
+        },
+        Ctx, StackStateBuilder, TimerId, TimerIdInner,
     };
 
     /// A dummy [`MldContext`] that stores the [`MldInterface`] and an optional
@@ -495,6 +534,14 @@ mod tests {
         ) {
             let (state, rng) = self.get_states_mut();
             (&mut state.groups, rng)
+        }
+
+        fn get_state(
+            &self,
+            DummyDeviceId: DummyDeviceId,
+        ) -> &MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>> {
+            let (state, _rng) = self.get_states();
+            &state.groups
         }
     }
 
@@ -965,5 +1012,205 @@ mod tests {
             ensure_frame(frame, 132, Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS, GROUP_ADDR);
             ensure_slice_addr(frame, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
         });
+    }
+
+    #[test]
+    fn test_mld_enable_disable() {
+        run_with_many_seeds(|seed| {
+            let mut ctx = DummyCtx::default();
+            ctx.seed_rng(seed);
+            assert_eq!(ctx.take_frames(), []);
+
+            // Should not perform MLD for the all-nodes address.
+            //
+            // As per RFC 3810 Section 6,
+            //
+            //   No MLD messages are ever sent regarding neither the link-scope,
+            //   all-nodes multicast address, nor any multicast address of scope
+            //   0 (reserved) or 1 (node-local).
+            assert_eq!(
+                ctx.gmp_join_group(DummyDeviceId, Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS),
+                GroupJoinResult::Joined(())
+            );
+            assert_gmp_state!(ctx, &Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS, NonMember);
+            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
+            assert_matches::assert_matches!(
+                &ctx.take_frames()[..],
+                [(MldFrameMetadata { device: DummyDeviceId, dst_ip }, frame)] => {
+                    assert_eq!(dst_ip, &GROUP_ADDR);
+                    ensure_frame(frame, Icmpv6MessageType::MulticastListenerReport.into(), GROUP_ADDR, GROUP_ADDR);
+                    ensure_slice_addr(frame, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
+                }
+            );
+
+            // Should do nothing.
+            ctx.gmp_handle_enabled(DummyDeviceId);
+            assert_gmp_state!(ctx, &Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS, NonMember);
+            assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
+            assert_eq!(ctx.take_frames(), []);
+
+            // Should send done message.
+            ctx.gmp_handle_disabled(DummyDeviceId);
+            assert_gmp_state!(ctx, &Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS, NonMember);
+            assert_gmp_state!(ctx, &GROUP_ADDR, NonMember);
+            assert_matches::assert_matches!(
+                &ctx.take_frames()[..],
+                [(MldFrameMetadata { device: DummyDeviceId, dst_ip }, frame)] => {
+                    assert_eq!(dst_ip, &Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS);
+                    ensure_frame(frame, Icmpv6MessageType::MulticastListenerDone.into(), Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS, GROUP_ADDR);
+                    ensure_slice_addr(frame, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
+                }
+            );
+
+            // Should do nothing.
+            ctx.gmp_handle_disabled(DummyDeviceId);
+            assert_gmp_state!(ctx, &Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS, NonMember);
+            assert_gmp_state!(ctx, &GROUP_ADDR, NonMember);
+            assert_eq!(ctx.take_frames(), []);
+
+            // Should send report message.
+            ctx.gmp_handle_enabled(DummyDeviceId);
+            assert_gmp_state!(ctx, &Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS, NonMember);
+            assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
+            assert_matches::assert_matches!(
+                &ctx.take_frames()[..],
+                [(MldFrameMetadata { device: DummyDeviceId, dst_ip }, frame)] => {
+                    assert_eq!(dst_ip, &GROUP_ADDR);
+                    ensure_frame(frame, Icmpv6MessageType::MulticastListenerReport.into(), GROUP_ADDR, GROUP_ADDR);
+                    ensure_slice_addr(frame, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
+                }
+            );
+        });
+    }
+
+    #[test]
+    fn test_mld_enable_disable_integration() {
+        let DummyEventDispatcherConfig {
+            local_mac,
+            remote_mac: _,
+            local_ip: _,
+            remote_ip: _,
+            subnet: _,
+        } = Ipv6::DUMMY_CONFIG;
+
+        let mut ctx: crate::testutil::DummyCtx = Ctx::new(
+            StackStateBuilder::default().build(),
+            DummyEventDispatcher::default(),
+            Default::default(),
+        );
+        let device_id =
+            ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+
+        {
+            let ctx = &mut ctx;
+            crate::ip::device::set_ipv6_configuration(ctx, device_id, {
+                let mut config = crate::ip::device::get_ipv6_configuration(ctx, device_id);
+                // TODO(https://fxbug.dev/98534): Make sure that DAD resolving
+                // for a link-local address results in reports sent with a
+                // specified source address.
+                config.dad_transmits = None;
+                config.max_router_solicitations = None;
+                config.ip_config.ip_enabled = true;
+                config.ip_config.gmp_enabled = true;
+                config
+            });
+        }
+        let now = ctx.now();
+        let ll_addr = local_mac.to_ipv6_link_local().addr();
+        let snmc_addr = ll_addr.to_solicited_node_address();
+        let snmc_timer_id = TimerId(TimerIdInner::Ipv6Device(Ipv6DeviceTimerId::Mld(
+            MldReportDelay { device: device_id, group_addr: snmc_addr }.into(),
+        )));
+
+        // MLD should be performed for the auto-generated link-local address's
+        // solicited-node multicast address.
+        let range = now..=(now + DEFAULT_UNSOLICITED_REPORT_INTERVAL);
+        ctx.ctx.timer_ctx().assert_timers_installed([(snmc_timer_id, range.clone())]);
+        assert_matches::assert_matches!(
+            &ctx.dispatcher.take_frames()[..],
+            [(egress_device, frame)] => {
+                assert_eq!(egress_device, &device_id);
+                let (src_mac, dst_mac, src_ip, dst_ip, ttl, _message, code) =
+                    parse_icmp_packet_in_ip_packet_in_ethernet_frame::<
+                        Ipv6,
+                        _,
+                        MulticastListenerReport,
+                        _,
+                    >(frame, |icmp| {
+                        assert_eq!(icmp.body().group_addr, snmc_addr.get());
+                    }).unwrap();
+                assert_eq!(src_mac, local_mac.get());
+                assert_eq!(dst_mac, Mac::from(&snmc_addr));
+                assert_eq!(src_ip, Ipv6::UNSPECIFIED_ADDRESS);
+                assert_eq!(dst_ip, snmc_addr.get());
+                assert_eq!(ttl, 1);
+                assert_eq!(code, IcmpUnusedCode);
+            }
+        );
+
+        // Disable MLD.
+        {
+            let ctx = &mut ctx;
+            crate::ip::device::set_ipv6_configuration(ctx, device_id, {
+                let mut config = crate::ip::device::get_ipv6_configuration(ctx, device_id);
+                config.ip_config.gmp_enabled = false;
+                config
+            });
+        }
+        ctx.ctx.timer_ctx().assert_no_timers_installed();
+        assert_matches::assert_matches!(
+            &ctx.dispatcher.take_frames()[..],
+            [(egress_device, frame)] => {
+                assert_eq!(egress_device, &device_id);
+                let (src_mac, dst_mac, src_ip, dst_ip, ttl, _message, code) =
+                    parse_icmp_packet_in_ip_packet_in_ethernet_frame::<
+                        Ipv6,
+                        _,
+                        MulticastListenerDone,
+                        _,
+                    >(frame, |icmp| {
+                        assert_eq!(icmp.body().group_addr, snmc_addr.get());
+                    }).unwrap();
+                assert_eq!(src_mac, local_mac.get());
+                assert_eq!(dst_mac, Mac::from(&Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS));
+                assert_eq!(src_ip, ll_addr.get());
+                assert_eq!(dst_ip, Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS.get());
+                assert_eq!(ttl, 1);
+                assert_eq!(code, IcmpUnusedCode);
+            }
+        );
+
+        // Enable MLD.
+        {
+            let ctx = &mut ctx;
+            crate::ip::device::set_ipv6_configuration(ctx, device_id, {
+                let mut config = crate::ip::device::get_ipv6_configuration(ctx, device_id);
+                config.ip_config.gmp_enabled = true;
+                config
+            });
+        }
+        ctx.ctx.timer_ctx().assert_timers_installed([(snmc_timer_id, range.clone())]);
+        assert_matches::assert_matches!(
+            &ctx.dispatcher.take_frames()[..],
+            [(egress_device, frame)] => {
+                assert_eq!(egress_device, &device_id);
+                let (src_mac, dst_mac, src_ip, dst_ip, ttl, _message, code) =
+                    parse_icmp_packet_in_ip_packet_in_ethernet_frame::<
+                        Ipv6,
+                        _,
+                        MulticastListenerReport,
+                        _,
+                    >(frame, |icmp| {
+                        assert_eq!(icmp.body().group_addr, snmc_addr.get());
+                    }).unwrap();
+                assert_eq!(src_mac, local_mac.get());
+                assert_eq!(dst_mac, Mac::from(&snmc_addr));
+                assert_eq!(src_ip, ll_addr.get());
+                assert_eq!(dst_ip, snmc_addr.get());
+                assert_eq!(ttl, 1);
+                assert_eq!(code, IcmpUnusedCode);
+            }
+        );
     }
 }

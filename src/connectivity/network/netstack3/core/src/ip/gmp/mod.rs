@@ -147,6 +147,10 @@ impl<A: IpAddress, T> Default for MulticastGroupSet<A, T> {
 }
 
 impl<A: IpAddress, T> MulticastGroupSet<A, T> {
+    fn groups<'a>(&'a self) -> impl Iterator<Item = &MulticastAddr<A>> + 'a {
+        self.inner.iter().map(|(g, _state)| g)
+    }
+
     fn join_group_with<O, F: FnOnce() -> (T, O)>(
         &mut self,
         group: MulticastAddr<A>,
@@ -200,9 +204,7 @@ impl<A: IpAddress, T> MulticastGroupSet<A, T> {
     {
         self.leave_group(group).map(|state| state.into().leave_group()).into()
     }
-}
 
-impl<A: IpAddress, T> MulticastGroupSet<A, T> {
     /// Does the set contain the given group?
     pub(crate) fn contains(&self, group: &MulticastAddr<A>) -> bool {
         self.inner.contains_key(group)
@@ -226,6 +228,18 @@ impl<A: IpAddress, T> MulticastGroupSet<A, T> {
 /// Group Management Protocol, Version 2 (IGMPv2) for IPv4 or the Multicast
 /// Listener Discovery (MLD) protocol for IPv6.
 pub(crate) trait GmpHandler<I: Ip>: IpDeviceIdContext<I> {
+    /// Handles GMP being enabled.
+    ///
+    /// Attempts to transition memberships in the non-member state to a member
+    /// state.
+    fn gmp_handle_enabled(&mut self, device: Self::DeviceId);
+
+    /// Handles GMP being disabled.
+    ///
+    /// All joined groups will transition to the non-member state but still
+    /// remain locally joined.
+    fn gmp_handle_disabled(&mut self, device: Self::DeviceId);
+
     /// Joins the given multicast group.
     fn gmp_join_group(
         &mut self,
@@ -633,7 +647,7 @@ impl<I: Instant, P: ProtocolSpecific> MemberState<I, P> {
     }
 
     /// Performs the "leave group" transition, consuming the state by value, and
-    /// returning a set of actions to execute.
+    /// returning the next state and a set of actions to execute.
     ///
     /// In the [IGMPv2] and [MLD] RFCs, the "leave group" transition moves from
     /// any state to the Non-Member state. However, we don't allow `MemberState`
@@ -643,16 +657,16 @@ impl<I: Instant, P: ProtocolSpecific> MemberState<I, P> {
     ///
     /// [IGMPv2]: https://tools.ietf.org/html/rfc2236
     /// [MLD]: https://tools.ietf.org/html/rfc2710
-    fn leave_group(self) -> Actions<P> {
+    fn leave_group(self) -> (MemberState<I, P>, Actions<P>) {
         // Rust can infer these types, but since we're just discarding `_state`,
         // we explicitly make sure it's the state we expect in case we introduce
         // a bug.
-        let Transition(_state, actions): Transition<NonMember, _> = match self {
+        match self {
             MemberState::NonMember(state) => state.leave_group(),
             MemberState::Delaying(state) => state.leave_group(),
             MemberState::Idle(state) => state.leave_group(),
-        };
-        actions
+        }
+        .into_state_actions()
     }
 
     fn query_received<R: Rng>(
@@ -722,6 +736,27 @@ where
 }
 
 impl<I: Instant, P: ProtocolSpecific> GmpStateMachine<I, P> {
+    /// Attempts to join the group if the group is currently in the non-member
+    /// state.
+    ///
+    /// If the group is in a member state (delaying/idle), this method does
+    /// nothing.
+    fn join_if_non_member<R: Rng>(&mut self, rng: &mut R, now: I) -> Actions<P> {
+        self.update(|s| match s {
+            MemberState::NonMember(s) => s.join_group(rng, now).into_state_actions(),
+            state @ MemberState::Delaying(_) | state @ MemberState::Idle(_) => {
+                (state, Actions::EMPTY)
+            }
+        })
+    }
+
+    /// Leaves the group if the group is in a member state.
+    ///
+    /// Does nothing if the group is in a non-member state.
+    fn leave_if_member(&mut self) -> Actions<P> {
+        self.update(|s| s.leave_group())
+    }
+
     /// When a "leave group" command is received.
     ///
     /// `leave_group` consumes the state machine by value since we don't allow
@@ -729,7 +764,8 @@ impl<I: Instant, P: ProtocolSpecific> GmpStateMachine<I, P> {
     fn leave_group(self) -> Actions<P> {
         // This `unwrap` is safe because we maintain the invariant that `inner`
         // is always `Some`.
-        self.inner.unwrap().leave_group()
+        let (_state, actions) = self.inner.unwrap().leave_group();
+        actions
     }
 
     /// When a query is received, and we have to respond within max_resp_time.
@@ -796,7 +832,8 @@ trait GmpContext<I: Ip, PS: ProtocolSpecific>:
 {
     type Err;
     type GroupState: From<GmpStateMachine<Self::Instant, PS>>
-        + Into<GmpStateMachine<Self::Instant, PS>>;
+        + Into<GmpStateMachine<Self::Instant, PS>>
+        + AsMut<GmpStateMachine<Self::Instant, PS>>;
 
     /// Returns true iff the group management protocol is currently disabled for
     /// a multicast address on a device.
@@ -823,6 +860,8 @@ trait GmpContext<I: Ip, PS: ProtocolSpecific>:
         let (state, _rng) = self.get_state_mut_and_rng(device);
         state
     }
+
+    fn get_state(&self, device: Self::DeviceId) -> &MulticastGroupSet<I::Addr, Self::GroupState>;
 }
 
 trait GmpMessage<I: Ip> {
@@ -863,6 +902,56 @@ where
         return Ok(());
     }
     Err(C::not_a_member_err(group_addr))
+}
+
+fn gmp_handle_enabled<C, I, PS>(sync_ctx: &mut C, device: C::DeviceId)
+where
+    C: GmpContext<I, PS> + InstantContext,
+    PS: ProtocolSpecific + Default,
+    PS::Config: Default,
+    I: Ip,
+{
+    let groups: Vec<_> = sync_ctx
+        .get_state(device)
+        .groups()
+        .filter_map(|g| {
+            let g = g.clone();
+            (!sync_ctx.gmp_disabled(device, g)).then(|| g)
+        })
+        .collect();
+
+    let now = sync_ctx.now();
+    let (state, rng) = sync_ctx.get_state_mut_and_rng(device);
+    let mut actions = Vec::new();
+    for group in groups {
+        let gs = state.get_mut(&group);
+        actions
+            .push((group, gs.map_or(Actions::EMPTY, |s| s.as_mut().join_if_non_member(rng, now))));
+    }
+
+    for (group, actions) in actions {
+        sync_ctx.run_actions(device, actions, group);
+    }
+}
+
+fn gmp_handle_disabled<C, I, PS>(sync_ctx: &mut C, device: C::DeviceId)
+where
+    C: GmpContext<I, PS> + InstantContext,
+    PS: ProtocolSpecific,
+    I: Ip,
+{
+    let (state, _rng) = sync_ctx.get_state_mut_and_rng(device);
+
+    let mut actions = Vec::new();
+
+    for group in state.groups().cloned().collect::<Vec<_>>() {
+        let gs = state.get_mut(&group);
+        actions.push((group, gs.map_or(Actions::EMPTY, |s| s.as_mut().leave_if_member())));
+    }
+
+    for (group, actions) in actions {
+        sync_ctx.run_actions(device, actions, group);
+    }
 }
 
 fn gmp_join_group<C, I, PS>(

@@ -1097,6 +1097,11 @@ pub(crate) mod testutil {
     }
 
     impl<Meta> DummyFrameCtx<Meta> {
+        /// Take all frames sent so far.
+        pub(crate) fn take_frames(&mut self) -> Vec<(Meta, Vec<u8>)> {
+            core::mem::take(&mut self.frames)
+        }
+
         /// Get the frames sent so far.
         pub(crate) fn frames(&self) -> &[(Meta, Vec<u8>)] {
             self.frames.as_slice()
@@ -1259,6 +1264,11 @@ pub(crate) mod testutil {
         /// Get the list of frames sent so far.
         pub(crate) fn frames(&self) -> &[(Meta, Vec<u8>)] {
             self.frames.frames()
+        }
+
+        /// Take the list of frames sent so far.
+        pub(crate) fn take_frames(&mut self) -> Vec<(Meta, Vec<u8>)> {
+            self.frames.take_frames()
         }
 
         /// Get the value of the named counter.

@@ -85,6 +85,13 @@ impl<C: device::BufferIpDeviceContext<Ipv4, EmptyBuf>> IgmpContext for C {
         let (state, rng) = self.get_ip_device_state_mut_and_rng(device);
         (&mut state.ip_state.multicast_groups, rng)
     }
+
+    fn get_state(
+        &self,
+        device: C::DeviceId,
+    ) -> &MulticastGroupSet<Ipv4Addr, IgmpGroupState<<C as InstantContext>::Instant>> {
+        &self.get_ip_device_state(device).ip_state.multicast_groups
+    }
 }
 
 impl<C: device::BufferIpDeviceContext<Ipv4, EmptyBuf>>
@@ -126,6 +133,13 @@ impl<C: device::BufferIpDeviceContext<Ipv6, EmptyBuf>> MldContext for C {
     ) {
         let (state, rng) = self.get_ip_device_state_mut_and_rng(device);
         (&mut state.ip_state.multicast_groups, rng)
+    }
+
+    fn get_state(
+        &self,
+        device: C::DeviceId,
+    ) -> &MulticastGroupSet<Ipv6Addr, MldGroupState<<C as InstantContext>::Instant>> {
+        &self.get_ip_device_state(device).ip_state.multicast_groups
     }
 }
 

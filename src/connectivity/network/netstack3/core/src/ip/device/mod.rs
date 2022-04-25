@@ -666,12 +666,22 @@ pub(crate) fn add_ipv6_addr_subnet<C: Ipv6DeviceContext + GmpHandler<Ipv6> + Dad
             config,
         ))
         .map(|()| {
+            // As per RFC 4861 section 5.6.2,
+            //
+            //   Before sending a Neighbor Solicitation, an interface MUST join
+            //   the all-nodes multicast address and the solicited-node
+            //   multicast address of the tentative address.
+            //
+            // Note that we join the all-nodes multicast address on interface
+            // enable.
             join_ip_multicast(sync_ctx, device_id, addr_sub.addr().to_solicited_node_address());
+
             // NB: We don't start DAD if the device is disabled. DAD will be
             // performed when the device is enabled for all addressed.
             if ip_enabled {
                 DadHandler::do_duplicate_address_detection(sync_ctx, device_id, addr_sub.addr());
             }
+
             // NB: We don't emit an address assigned event here, addresses are
             // only exposed when they've moved from the Tentative state.
         })
@@ -703,9 +713,9 @@ pub(crate) fn del_ipv6_addr<C: Ipv6DeviceContext + GmpHandler<Ipv6> + DadHandler
             // dynamic check here and statically guarantee only unicast
             // addresses are added for IPv6.
             if let Some(addr) = UnicastAddr::new(addr.get()) {
-                // Leave the the solicited-node multicast group.
-                leave_ip_multicast(sync_ctx, device_id, addr.to_solicited_node_address());
                 DadHandler::stop_duplicate_address_detection(sync_ctx, device_id, addr);
+                leave_ip_multicast(sync_ctx, device_id, addr.to_solicited_node_address());
+
                 match entry.state {
                     AddressState::Assigned | AddressState::Deprecated => sync_ctx
                         .on_event(IpDeviceEvent::AddressUnassigned { device: device_id, addr }),
@@ -748,12 +758,24 @@ pub(crate) fn get_ipv6_configuration<C: IpDeviceContext<Ipv6>>(
 }
 
 /// Updates the IPv4 Configuration for the device.
-pub(crate) fn set_ipv4_configuration<C: IpDeviceContext<Ipv4>>(
+pub(crate) fn set_ipv4_configuration<C: IpDeviceContext<Ipv4> + GmpHandler<Ipv4>>(
     sync_ctx: &mut C,
     device_id: C::DeviceId,
     config: Ipv4DeviceConfiguration,
 ) {
+    let Ipv4DeviceConfiguration {
+        ip_config: IpDeviceConfiguration { ip_enabled: _, gmp_enabled: next_gmp_enabled },
+    } = config;
+    let Ipv4DeviceConfiguration {
+        ip_config: IpDeviceConfiguration { ip_enabled: _, gmp_enabled: prev_gmp_enabled },
+    } = sync_ctx.get_ip_device_state_mut(device_id).config;
     sync_ctx.get_ip_device_state_mut(device_id).config = config;
+
+    if !prev_gmp_enabled && next_gmp_enabled {
+        GmpHandler::gmp_handle_enabled(sync_ctx, device_id);
+    } else if prev_gmp_enabled && !next_gmp_enabled {
+        GmpHandler::gmp_handle_disabled(sync_ctx, device_id);
+    }
 }
 
 pub(super) fn is_ip_device_enabled<
@@ -777,20 +799,27 @@ pub(crate) fn set_ipv6_configuration<
     let Ipv6DeviceConfiguration {
         dad_transmits: _,
         max_router_solicitations: _,
-        ip_config: IpDeviceConfiguration { ip_enabled: prev_ip_enabled, gmp_enabled: _ },
-    } = sync_ctx.get_ip_device_state_mut(device_id).config.clone();
-    sync_ctx.get_ip_device_state_mut(device_id).config = config;
-
+        ip_config:
+            IpDeviceConfiguration { ip_enabled: next_ip_enabled, gmp_enabled: next_gmp_enabled },
+    } = config;
     let Ipv6DeviceConfiguration {
         dad_transmits: _,
         max_router_solicitations: _,
-        ip_config: IpDeviceConfiguration { ip_enabled: next_ip_enabled, gmp_enabled: _ },
+        ip_config:
+            IpDeviceConfiguration { ip_enabled: prev_ip_enabled, gmp_enabled: prev_gmp_enabled },
     } = sync_ctx.get_ip_device_state_mut(device_id).config;
+    sync_ctx.get_ip_device_state_mut(device_id).config = config;
 
     if !prev_ip_enabled && next_ip_enabled {
         enable_ipv6_device(sync_ctx, device_id);
     } else if prev_ip_enabled && !next_ip_enabled {
         disable_ipv6_device(sync_ctx, device_id);
+    }
+
+    if !prev_gmp_enabled && next_gmp_enabled {
+        GmpHandler::gmp_handle_enabled(sync_ctx, device_id);
+    } else if prev_gmp_enabled && !next_gmp_enabled {
+        GmpHandler::gmp_handle_disabled(sync_ctx, device_id);
     }
 }
 

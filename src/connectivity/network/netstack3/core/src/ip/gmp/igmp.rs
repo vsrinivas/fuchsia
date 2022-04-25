@@ -36,9 +36,10 @@ use crate::{
     context::{FrameContext, InstantContext, RngContext, TimerContext, TimerHandler},
     ip::{
         gmp::{
-            gmp_join_group, gmp_leave_group, handle_gmp_message, Action, Actions, GmpAction,
-            GmpContext, GmpHandler, GmpMessage, GmpStateMachine, GroupJoinResult, GroupLeaveResult,
-            MulticastGroupSet, ProtocolSpecific,
+            gmp_handle_disabled, gmp_handle_enabled, gmp_join_group, gmp_leave_group,
+            handle_gmp_message, Action, Actions, GmpAction, GmpContext, GmpHandler, GmpMessage,
+            GmpStateMachine, GroupJoinResult, GroupLeaveResult, MulticastGroupSet,
+            ProtocolSpecific,
         },
         IpDeviceIdContext,
     },
@@ -98,9 +99,23 @@ pub(crate) trait IgmpContext:
         let (state, _rng): (_, &mut Self::Rng) = self.get_state_mut_and_rng(device);
         state
     }
+
+    /// Gets immutable access to the device's IGMP state.
+    fn get_state(
+        &self,
+        device: Self::DeviceId,
+    ) -> &MulticastGroupSet<Ipv4Addr, IgmpGroupState<<Self as InstantContext>::Instant>>;
 }
 
 impl<C: IgmpContext> GmpHandler<Ipv4> for C {
+    fn gmp_handle_enabled(&mut self, device: Self::DeviceId) {
+        gmp_handle_enabled(self, device)
+    }
+
+    fn gmp_handle_disabled(&mut self, device: Self::DeviceId) {
+        gmp_handle_disabled(self, device)
+    }
+
     fn gmp_join_group(
         &mut self,
         device: C::DeviceId,
@@ -217,6 +232,10 @@ impl<C: IgmpContext> GmpContext<Ipv4, Igmpv2ProtocolSpecific> for C {
         device: C::DeviceId,
     ) -> (&mut MulticastGroupSet<Ipv4Addr, Self::GroupState>, &mut Self::Rng) {
         self.get_state_mut_and_rng(device)
+    }
+
+    fn get_state(&self, device: C::DeviceId) -> &MulticastGroupSet<Ipv4Addr, Self::GroupState> {
+        self.get_state(device)
     }
 }
 
@@ -423,6 +442,13 @@ impl<I: Instant> From<IgmpGroupState<I>> for GmpStateMachine<I, Igmpv2ProtocolSp
     }
 }
 
+impl<I: Instant> AsMut<GmpStateMachine<I, Igmpv2ProtocolSpecific>> for IgmpGroupState<I> {
+    fn as_mut(&mut self) -> &mut GmpStateMachine<I, Igmpv2ProtocolSpecific> {
+        let Self(s) = self;
+        s
+    }
+}
+
 impl<I: Instant> GmpStateMachine<I, Igmpv2ProtocolSpecific> {
     fn v1_router_present_timer_expired(&mut self) {
         let Actions(actions) =
@@ -488,9 +514,18 @@ mod tests {
     use alloc::vec::Vec;
     use core::convert::TryInto;
 
-    use net_types::ip::AddrSubnet;
-    use packet::serialize::{Buf, InnerPacketBuilder, Serializer};
-    use packet_formats::igmp::messages::IgmpMembershipQueryV2;
+    use net_types::{
+        ethernet::Mac,
+        ip::{AddrSubnet, Ip as _},
+    };
+    use packet::{
+        serialize::{Buf, InnerPacketBuilder, Serializer},
+        ParsablePacket as _,
+    };
+    use packet_formats::{
+        igmp::messages::IgmpMembershipQueryV2,
+        testutil::{parse_ip_packet, parse_ip_packet_in_ethernet_frame},
+    };
     use rand_xorshift::XorShiftRng;
 
     use super::*;
@@ -503,7 +538,11 @@ mod tests {
             gmp::{Action, GmpAction, MemberState},
             DummyDeviceId,
         },
-        testutil::{assert_empty, new_rng, run_with_many_seeds, FakeCryptoRng},
+        testutil::{
+            assert_empty, new_rng, run_with_many_seeds, DummyEventDispatcher,
+            DummyEventDispatcherConfig, FakeCryptoRng, TestIpExt as _,
+        },
+        Ctx, StackStateBuilder, TimerId, TimerIdInner,
     };
 
     /// A dummy [`IgmpContext`] that stores the [`MulticastGroupSet`] and an
@@ -551,6 +590,14 @@ mod tests {
         ) {
             let (state, rng) = self.get_states_mut();
             (&mut state.groups, rng)
+        }
+
+        fn get_state(
+            &self,
+            DummyDeviceId: DummyDeviceId,
+        ) -> &MulticastGroupSet<Ipv4Addr, IgmpGroupState<DummyInstant>> {
+            let (state, _rng) = self.get_states();
+            &state.groups
         }
     }
 
@@ -1019,5 +1066,221 @@ mod tests {
             ctx.timer_ctx().assert_no_timers_installed();
             ensure_ttl_ihl_rtr(&ctx);
         });
+    }
+
+    #[test]
+    fn test_igmp_enable_disable() {
+        run_with_many_seeds(|seed| {
+            let mut ctx = setup_simple_test_environment(seed);
+            assert_eq!(ctx.take_frames(), []);
+
+            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
+            assert_matches::assert_matches!(
+                &ctx.take_frames()[..],
+                [(IgmpPacketMetadata { device: DummyDeviceId, dst_ip }, frame)] => {
+                    assert_eq!(dst_ip, &GROUP_ADDR);
+                    let (body, src_ip, dst_ip, proto, ttl) =
+                        parse_ip_packet::<Ipv4>(frame).unwrap();
+                    assert_eq!(src_ip, MY_ADDR.get());
+                    assert_eq!(dst_ip, GROUP_ADDR.get());
+                    assert_eq!(proto, Ipv4Proto::Igmp);
+                    assert_eq!(ttl, 1);
+                    let mut bv = &body[..];
+                    assert_matches::assert_matches!(
+                        IgmpPacket::parse(&mut bv, ()).unwrap(),
+                        IgmpPacket::MembershipReportV2(msg) => {
+                            assert_eq!(msg.group_addr(), GROUP_ADDR.get());
+                        }
+                    );
+                }
+            );
+
+            // Should do nothing.
+            ctx.gmp_handle_enabled(DummyDeviceId);
+            assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
+            assert_eq!(ctx.take_frames(), []);
+
+            // Should send done message.
+            ctx.gmp_handle_disabled(DummyDeviceId);
+            assert_gmp_state!(ctx, &GROUP_ADDR, NonMember);
+            assert_matches::assert_matches!(
+                &ctx.take_frames()[..],
+                [(IgmpPacketMetadata { device: DummyDeviceId, dst_ip }, frame)] => {
+                    assert_eq!(dst_ip, &Ipv4::ALL_ROUTERS_MULTICAST_ADDRESS);
+                    let (body, src_ip, dst_ip, proto, ttl) =
+                        parse_ip_packet::<Ipv4>(frame).unwrap();
+                    assert_eq!(src_ip, MY_ADDR.get());
+                    assert_eq!(dst_ip, Ipv4::ALL_ROUTERS_MULTICAST_ADDRESS.get());
+                    assert_eq!(proto, Ipv4Proto::Igmp);
+                    assert_eq!(ttl, 1);
+                    let mut bv = &body[..];
+                    assert_matches::assert_matches!(
+                        IgmpPacket::parse(&mut bv, ()).unwrap(),
+                        IgmpPacket::LeaveGroup(msg) => {
+                            assert_eq!(msg.group_addr(), GROUP_ADDR.get());
+                        }
+                    );
+                }
+            );
+
+            // Should do nothing.
+            ctx.gmp_handle_disabled(DummyDeviceId);
+            assert_gmp_state!(ctx, &GROUP_ADDR, NonMember);
+            assert_eq!(ctx.take_frames(), []);
+
+            // Should send report message.
+            ctx.gmp_handle_enabled(DummyDeviceId);
+            assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
+            assert_matches::assert_matches!(
+                &ctx.take_frames()[..],
+                [(IgmpPacketMetadata { device: DummyDeviceId, dst_ip }, frame)] => {
+                    assert_eq!(dst_ip, &GROUP_ADDR);
+                    let (body, src_ip, dst_ip, proto, ttl) =
+                        parse_ip_packet::<Ipv4>(frame).unwrap();
+                    assert_eq!(src_ip, MY_ADDR.get());
+                    assert_eq!(dst_ip, GROUP_ADDR.get());
+                    assert_eq!(proto, Ipv4Proto::Igmp);
+                    assert_eq!(ttl, 1);
+                    let mut bv = &body[..];
+                    assert_matches::assert_matches!(
+                        IgmpPacket::parse(&mut bv, ()).unwrap(),
+                        IgmpPacket::MembershipReportV2(msg) => {
+                            assert_eq!(msg.group_addr(), GROUP_ADDR.get());
+                        }
+                    );
+                }
+            );
+        });
+    }
+
+    #[test]
+    fn test_igmp_enable_disable_integration() {
+        let DummyEventDispatcherConfig {
+            local_mac,
+            remote_mac: _,
+            local_ip: _,
+            remote_ip: _,
+            subnet: _,
+        } = Ipv4::DUMMY_CONFIG;
+
+        let mut ctx: crate::testutil::DummyCtx = Ctx::new(
+            StackStateBuilder::default().build(),
+            DummyEventDispatcher::default(),
+            Default::default(),
+        );
+        let device_id =
+            ctx.state.device.add_ethernet_device(local_mac, Ipv4::MINIMUM_LINK_MTU.into());
+
+        {
+            let ctx = &mut ctx;
+            crate::ip::device::set_ipv4_configuration(ctx, device_id, {
+                let mut config = crate::ip::device::get_ipv4_configuration(ctx, device_id);
+                config.ip_config.ip_enabled = true;
+                config.ip_config.gmp_enabled = true;
+                config
+            });
+        }
+        crate::ip::device::add_ipv4_addr_subnet(
+            &mut ctx,
+            device_id,
+            AddrSubnet::new(MY_ADDR.get(), 24).unwrap(),
+        )
+        .unwrap();
+        ctx.ctx.timer_ctx().assert_no_timers_installed();
+        let now = ctx.now();
+        let timer_id = TimerId(TimerIdInner::Ipv4Device(
+            IgmpTimerId::ReportDelay { device: device_id, group_addr: GROUP_ADDR }.into(),
+        ));
+        let range = now..=(now + DEFAULT_UNSOLICITED_REPORT_INTERVAL);
+
+        // Join a group.
+        crate::ip::device::join_ip_multicast::<Ipv4, _>(&mut ctx, device_id, GROUP_ADDR);
+        ctx.ctx.timer_ctx().assert_timers_installed([(timer_id, range.clone())]);
+        assert_matches::assert_matches!(
+            &ctx.dispatcher.take_frames()[..],
+            [(egress_device, frame)] => {
+                assert_eq!(egress_device, &device_id);
+                let (body, src_mac, dst_mac, src_ip, dst_ip, proto, ttl) =
+                    parse_ip_packet_in_ethernet_frame::<Ipv4>(frame).unwrap();
+                assert_eq!(src_mac, local_mac.get());
+                assert_eq!(dst_mac, Mac::from(&GROUP_ADDR));
+                assert_eq!(src_ip, MY_ADDR.get());
+                assert_eq!(dst_ip, GROUP_ADDR.get());
+                assert_eq!(proto, Ipv4Proto::Igmp);
+                assert_eq!(ttl, 1);
+                let mut bv = &body[..];
+                assert_matches::assert_matches!(
+                    IgmpPacket::parse(&mut bv, ()).unwrap(),
+                    IgmpPacket::MembershipReportV2(msg) => {
+                        assert_eq!(msg.group_addr(), GROUP_ADDR.get());
+                    }
+                );
+            }
+        );
+
+        // Disable IGMP.
+        {
+            let ctx = &mut ctx;
+            crate::ip::device::set_ipv4_configuration(ctx, device_id, {
+                let mut config = crate::ip::device::get_ipv4_configuration(ctx, device_id);
+                config.ip_config.gmp_enabled = false;
+                config
+            });
+        }
+        ctx.ctx.timer_ctx().assert_no_timers_installed();
+        assert_matches::assert_matches!(
+            &ctx.dispatcher.take_frames()[..],
+            [(egress_device, frame)] => {
+                assert_eq!(egress_device, &device_id);
+                let (body, src_mac, dst_mac, src_ip, dst_ip, proto, ttl) =
+                    parse_ip_packet_in_ethernet_frame::<Ipv4>(frame).unwrap();
+                assert_eq!(src_mac, local_mac.get());
+                assert_eq!(dst_mac, Mac::from(&Ipv4::ALL_ROUTERS_MULTICAST_ADDRESS));
+                assert_eq!(src_ip, MY_ADDR.get());
+                assert_eq!(dst_ip, Ipv4::ALL_ROUTERS_MULTICAST_ADDRESS.get());
+                assert_eq!(proto, Ipv4Proto::Igmp);
+                assert_eq!(ttl, 1);
+                let mut bv = &body[..];
+                assert_matches::assert_matches!(
+                    IgmpPacket::parse(&mut bv, ()).unwrap(),
+                    IgmpPacket::LeaveGroup(msg) => {
+                        assert_eq!(msg.group_addr(), GROUP_ADDR.get());
+                    }
+                );
+            }
+        );
+
+        // Enable IGMP.
+        {
+            let ctx = &mut ctx;
+            crate::ip::device::set_ipv4_configuration(ctx, device_id, {
+                let mut config = crate::ip::device::get_ipv4_configuration(ctx, device_id);
+                config.ip_config.gmp_enabled = true;
+                config
+            });
+        }
+        ctx.ctx.timer_ctx().assert_timers_installed([(timer_id, range.clone())]);
+        assert_matches::assert_matches!(
+            &ctx.dispatcher.take_frames()[..],
+            [(egress_device, frame)] => {
+                assert_eq!(egress_device, &device_id);
+                let (body, src_mac, dst_mac, src_ip, dst_ip, proto, ttl) =
+                    parse_ip_packet_in_ethernet_frame::<Ipv4>(frame).unwrap();
+                assert_eq!(src_mac, local_mac.get());
+                assert_eq!(dst_mac, Mac::from(&GROUP_ADDR));
+                assert_eq!(src_ip, MY_ADDR.get());
+                assert_eq!(dst_ip, GROUP_ADDR.get());
+                assert_eq!(proto, Ipv4Proto::Igmp);
+                assert_eq!(ttl, 1);
+                let mut bv = &body[..];
+                assert_matches::assert_matches!(
+                    IgmpPacket::parse(&mut bv, ()).unwrap(),
+                    IgmpPacket::MembershipReportV2(msg) => {
+                        assert_eq!(msg.group_addr(), GROUP_ADDR.get());
+                    }
+                );
+            }
+        );
     }
 }

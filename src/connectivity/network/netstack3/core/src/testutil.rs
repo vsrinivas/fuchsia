@@ -641,6 +641,10 @@ impl TestutilIpExt for Ipv6 {
 }
 
 impl DummyEventDispatcher {
+    pub(crate) fn take_frames(&mut self) -> Vec<(DeviceId, Vec<u8>)> {
+        self.frames.take_frames()
+    }
+
     pub(crate) fn frames_sent(&self) -> &[(DeviceId, Vec<u8>)] {
         self.frames.frames()
     }

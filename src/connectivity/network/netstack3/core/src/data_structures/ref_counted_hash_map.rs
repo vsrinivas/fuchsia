@@ -99,6 +99,12 @@ impl<K: Eq + Hash, V> RefCountedHashMap<K, V> {
     }
 
     /// An iterator visiting all key-value pairs in arbitrary order, with
+    /// immutable references to the values.
+    pub(crate) fn iter<'a>(&'a self) -> impl 'a + Iterator<Item = (&'a K, &'a V)> {
+        self.inner.iter().map(|(key, (_, value))| (key, value))
+    }
+
+    /// An iterator visiting all key-value pairs in arbitrary order, with
     /// mutable references to the values.
     pub(crate) fn iter_mut<'a>(&'a mut self) -> impl 'a + Iterator<Item = (&'a K, &'a mut V)> {
         self.inner.iter_mut().map(|(key, (_, value))| (key, value))
