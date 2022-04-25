@@ -19,7 +19,7 @@ To run this end-to-end test, the steps are:
 1.  [Prerequisites](#prerequisites).
 1.  [Build a Fuchsia image to include the end-to-end test](#build-a-fuchsia-image-to-include-the-end-to-end-test).
 1.  [Start the emulator with the Fuchsia image](#start-the-emulator-with-the-fuchsia-image).
-1.   [Run the end-to-end test](#run-the-end-to-end-test).
+1.  [Run the end-to-end test](#run-the-end-to-end-test).
 
 Also, to run any end-to-end test, see the [Appendices](#appendices) section.
 
@@ -70,16 +70,29 @@ Start the emulator with your Fuchsia image and run a
 Note: The steps in this section assume that you don't have any terminals
 currently running FEMU or the `fx serve` command.
 
-1.  Configure an IPv6 network for the emulator (you only need to do this once):
+1.  Configure an IPv6 network for the emulator:
+
+    Note: This has to be completed once per machine.
 
     ```posix-terminal
     sudo ip tuntap add dev qemu mode tap user $USER && sudo ip link set qemu up
     ```
 
-1.  In a new terminal, start the emulator:
+1. Configure the upscript:
+
+    Note: If your machine is behind a firewall, you may need to apply some additional
+    configuration to allow the emulator to access the network. This is typically
+    accomplished by running an "upscript", which sets up the interfaces and firewall
+    access rules for the current process. If you're on a corporate network, check
+    with your internal networking team to see if they have an existing upscript
+    for you to use.
+    If you're not behind a firewall, there's still some configuration needed to
+    enable tun/tap networking. The example upscript
+    at <code>{{ '<var>' }}FUCHSIA_ROOT{{ '</var>' }}/scripts/start-unsecure-internet.sh</code>
+    should work for the majority of non-corporate users.
 
     ```posix-terminal
-    fx vdl start -N -u <PATH_TO_UPSCRIPT>
+    ffx config set emu.upscript {{ '<var>' }}PATH_TO_UPSCRIPT{{ '</var>' }}
     ```
 
     Replace the following:
@@ -87,23 +100,54 @@ currently running FEMU or the `fx serve` command.
     * `PATH_TO_UPSCRIPT`: The path to a FEMU network setup script; for example,
     `~/fuchsia/scripts/start-unsecure-internet.sh`.
 
-1.  Set the emulator to be your device:
+1. Start the package server
+
+   ```posix-terminal
+   fx serve
+   ```
+
+1.  Start the emulator:
 
     ```posix-terminal
-    fx set-device
+    ffx emu start --net tap
     ```
 
-    If you have multiple devices, select `fuchsia-5254-0063-5e7a` (the emulator’s
-    default device name), for example:
+    When startup is complete, the emulator prints the following message and opens
+    a shell prompt:
+
+    ```none {:.devsite-disable-click-to-copy}
+    Logging to "{{ '<var>' }}$HOME{{ '</var>' }}/.local/share/Fuchsia/ffx/emu/instances/fuchsia-emulator/emulator.log"
+    Waiting for Fuchsia to start (up to 60 seconds)........Emulator is ready.
+    ```
+
+    1. The `--net` flag requires a value to indicate which kind of
+    networking to implement. `--net` has the following possible values:
+
+        - `tap`: Attaches a Tun/Tap interface.
+        - `user`: Sets up mapped ports through SLiRP.
+        - `none`: Disables networking.
+        - `auto`: Checks the host system's capabilities and selects `tap` if it is
+            available or `user` if a tap interface is unavailable.
+            `auto` is the default.
+
+    `auto` is the default if the flag is not specified on the command line.
+    The upscript is automatically executed only if the user selects `tap`
+    mode.
+
+    If `auto` is used, the launcher checks for a tap interface on the
+    device. If it finds a tap interface, it uses `tap` mode; otherwise it
+    uses `user` mode.
+
+1.  Run the `fx set-device` command and select `fuchsia-emulator` (the
+    emulator's default device name) to be your device, for example:
 
     <pre>
     $ fx set-device
-
-    Multiple devices found, please pick one from the list:
+    ERROR: Multiple devices found, please pick one from the list:
     1) fuchsia-4407-0bb4-d0eb
-    2) fuchsia-5254-0063-5e7a
+    2) fuchsia-emulator
     #? <b>2</b>
-    New default device: fuchsia-5254-0063-5e7a
+    New default device: fuchsia-emulator
     </pre>
 
 ## 4. Run the end-to-end test {#run-the-end-to-end-test}
