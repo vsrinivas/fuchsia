@@ -8,11 +8,10 @@ import("//src/graphics/lib/compute/gn/build_rules.gni")
 # Vulkan Bench unit tests
 #
 graphics_compute_unittests_package("bench-vk-unittests") {
-  sources = [ "bench_vk_unittests.cc" ]
-  deps =
-      [ "//src/graphics/lib/compute/tools/bench/platforms/vk:bench_vk_sources" ]
-
   needs_vulkan = true
+  testonly = true
+  sources = [ "bench_vk_unittests.cc" ]
+  deps = [ "${graphics_compute_dir}/tools/bench/platforms/vk:bench_vk_sources" ]
 }
 
 #
