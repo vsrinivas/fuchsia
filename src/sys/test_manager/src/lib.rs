@@ -395,7 +395,8 @@ async fn send_kernel_debug_data(mut event_sender: mpsc::Sender<RunEvent>) {
         .collect::<Vec<_>>();
 
     if !files.is_empty() {
-        let (client, task) = serve_debug_data(files);
+        let (client, fut) = serve_debug_data(files);
+        let task = fasync::Task::spawn(fut);
         let _ = event_sender.send(RunEvent::debug_data(client).into()).await;
         task.await;
     }
