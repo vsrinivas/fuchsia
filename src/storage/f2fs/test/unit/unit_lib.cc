@@ -349,10 +349,9 @@ void MapTester::CheckBlkaddrsInuse(F2fs *fs, std::unordered_set<block_t> &blkadd
   }
 }
 
-void MapTester::CheckDnodeOfData(DnodeOfData *dn, nid_t exp_nid, pgoff_t exp_index, bool is_inode) {
-  ASSERT_EQ(dn->nid, exp_nid);
-  ASSERT_EQ(dn->ofs_in_node, uint64_t{1});
-  ASSERT_EQ(dn->data_blkaddr, block_t{0});
+void MapTester::CheckDnodePage(NodePage &page, nid_t exp_nid) {
+  ASSERT_EQ(page.NidOfNode(), exp_nid);
+  ASSERT_EQ(DatablockAddr(&page, uint64_t{1}), block_t{0});
 }
 
 bool MapTester::IsCachedNat(NodeManager &node_manager, nid_t n) {

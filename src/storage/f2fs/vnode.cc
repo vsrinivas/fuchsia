@@ -671,7 +671,6 @@ void VnodeF2fs::TruncatePartialDataPage(uint64_t from) {
 zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
   SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
   uint32_t blocksize = superblock_info.GetBlocksize();
-  DnodeOfData dn;
   int count = 0;
   zx_status_t err;
 
@@ -685,29 +684,34 @@ zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
 
     do {
-      NodeManager::SetNewDnode(dn, this, nullptr, nullptr, 0);
-      err = Vfs()->GetNodeManager().GetDnodeOfData(dn, free_from, kRdOnlyNode);
+      LockedPage<NodePage> node_page;
+      err = Vfs()->GetNodeManager().FindLockedDnodePage(*this, free_from, &node_page);
       if (err) {
         if (err == ZX_ERR_NOT_FOUND)
           break;
         return err;
       }
 
-      if (IsInode(*(dn.node_page))) {
+      if (IsInode(*node_page)) {
         count = kAddrsPerInode;
       } else {
         count = kAddrsPerBlock;
       }
 
-      count -= dn.ofs_in_node;
+      uint32_t ofs_in_node;
+      if (auto result = Vfs()->GetNodeManager().GetOfsInDnode(*this, free_from);
+          result.is_error()) {
+        return result.error_value();
+      } else {
+        ofs_in_node = result.value();
+      }
+      count -= ofs_in_node;
       ZX_ASSERT(count >= 0);
 
-      if (dn.ofs_in_node || IsInode(*(dn.node_page))) {
-        TruncateDataBlocksRange(*dn.node_page, dn.ofs_in_node, count);
+      if (ofs_in_node || IsInode(*node_page)) {
+        TruncateDataBlocksRange(*node_page, ofs_in_node, count);
         free_from += count;
       }
-
-      F2fsPutDnode(&dn);
     } while (false);
 
     err = Vfs()->GetNodeManager().TruncateInodeBlocks(*this, free_from);
@@ -720,20 +724,28 @@ zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
 
 zx_status_t VnodeF2fs::TruncateHole(pgoff_t pg_start, pgoff_t pg_end) {
   for (pgoff_t index = pg_start; index < pg_end; ++index) {
-    DnodeOfData dn;
-
-    NodeManager::SetNewDnode(dn, this, nullptr, nullptr, 0);
-    if (zx_status_t err = Vfs()->GetNodeManager().GetDnodeOfData(dn, index, kRdOnlyNode);
+    LockedPage<NodePage> dnode_page;
+    if (zx_status_t err = Vfs()->GetNodeManager().GetLockedDnodePage(*this, index, &dnode_page);
         err != ZX_OK) {
-      if (err == ZX_ERR_NOT_FOUND)
+      if (err == ZX_ERR_NOT_FOUND) {
         continue;
+      }
       return err;
     }
 
-    if (dn.data_blkaddr != kNullAddr) {
-      TruncateDataBlocksRange(*dn.node_page, dn.ofs_in_node, 1);
+    uint32_t ofs_in_dnode;
+    if (auto result = Vfs()->GetNodeManager().GetOfsInDnode(*this, index); result.is_error()) {
+      if (result.error_value() == ZX_ERR_NOT_FOUND) {
+        continue;
+      }
+      return result.error_value();
+    } else {
+      ofs_in_dnode = result.value();
     }
-    F2fsPutDnode(&dn);
+
+    if (DatablockAddr(dnode_page.get(), ofs_in_dnode) != kNullAddr) {
+      TruncateDataBlocksRange(*dnode_page, ofs_in_dnode, 1);
+    }
   }
   return ZX_OK;
 }

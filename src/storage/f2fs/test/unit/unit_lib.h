@@ -84,7 +84,7 @@ class MapTester {
   static void CheckNidsInuse(F2fs *fs, std::unordered_set<nid_t> &nids);
   static void CheckBlkaddrsFree(F2fs *fs, std::unordered_set<block_t> &blkaddrs);
   static void CheckBlkaddrsInuse(F2fs *fs, std::unordered_set<block_t> &blkaddrs);
-  static void CheckDnodeOfData(DnodeOfData *dn, nid_t exp_nid, pgoff_t exp_index, bool is_inode);
+  static void CheckDnodePage(NodePage &page, nid_t exp_nid);
   static void DoWriteNat(F2fs *fs, nid_t nid, block_t blkaddr, uint8_t version);
   static void RemoveTruncatedNode(NodeManager &nm_i, std::vector<nid_t> &nids)
       __TA_EXCLUDES(nm_i.nat_tree_lock_);

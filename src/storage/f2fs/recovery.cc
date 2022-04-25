@@ -228,7 +228,6 @@ void F2fs::CheckIndexInPrevNodes(block_t blkaddr) {
 
 void F2fs::DoRecoverData(VnodeF2fs *vnode, NodePage *page, block_t blkaddr) {
   uint32_t start, end;
-  DnodeOfData dn;
   Summary sum;
   NodeInfo ni;
 
@@ -239,54 +238,64 @@ void F2fs::DoRecoverData(VnodeF2fs *vnode, NodePage *page, block_t blkaddr) {
     end = start + kAddrsPerBlock;
   }
 
-  NodeManager::SetNewDnode(dn, vnode, nullptr, nullptr, 0);
-  if (GetNodeManager().GetDnodeOfData(dn, start, 0))
+  LockedPage<NodePage> dnode_page;
+  if (GetNodeManager().GetLockedDnodePage(*vnode, start, &dnode_page) != ZX_OK) {
     return;
+  }
 
-  dn.node_page->WaitOnWriteback();
+  dnode_page->WaitOnWriteback();
 
-  GetNodeManager().GetNodeInfo(dn.nid, ni);
+  GetNodeManager().GetNodeInfo(dnode_page->NidOfNode(), ni);
   ZX_ASSERT(ni.ino == page->InoOfNode());
-  ZX_ASSERT(dn.node_page->OfsOfNode() == page->OfsOfNode());
+  ZX_ASSERT(dnode_page->OfsOfNode() == page->OfsOfNode());
+
+  uint32_t ofs_in_dnode;
+  if (auto result = GetNodeManager().GetOfsInDnode(*vnode, start); result.is_error()) {
+    return;
+  } else {
+    ofs_in_dnode = result.value();
+  }
 
   for (; start < end; ++start) {
     block_t src, dest;
 
-    src = DatablockAddr(dn.node_page.get(), dn.ofs_in_node);
-    dest = DatablockAddr(page, dn.ofs_in_node);
+    src = DatablockAddr(dnode_page.get(), ofs_in_dnode);
+    dest = DatablockAddr(page, ofs_in_dnode);
 
     if (src != dest && dest != kNewAddr && dest != kNullAddr) {
       if (src == kNullAddr) {
-        zx_status_t err = vnode->ReserveNewBlock(*dn.node_page, dn.ofs_in_node);
+        zx_status_t err = vnode->ReserveNewBlock(*dnode_page, ofs_in_dnode);
         ZX_ASSERT(err == ZX_OK);
-        dn.data_blkaddr = kNewAddr;
       }
 
       // Check the previous node page having this index
       CheckIndexInPrevNodes(dest);
 
-      GetSegmentManager().SetSummary(&sum, dn.nid, dn.ofs_in_node, ni.version);
+      GetSegmentManager().SetSummary(&sum, dnode_page->NidOfNode(), ofs_in_dnode, ni.version);
 
       // write dummy data page
       GetSegmentManager().RecoverDataPage(nullptr, &sum, src, dest);
-      vnode->SetDataBlkaddr(*dn.node_page, dn.ofs_in_node, dest);
+      vnode->SetDataBlkaddr(*dnode_page, ofs_in_dnode, dest);
       vnode->UpdateExtentCache(dest, page->StartBidxOfNode());
     }
-    ++dn.ofs_in_node;
+    ++ofs_in_dnode;
   }
 
   // write node page in place
-  GetSegmentManager().SetSummary(&sum, dn.nid, 0, 0);
-  if (IsInode(*(dn.node_page))) {
-    dn.vnode->MarkInodeDirty();
+  GetSegmentManager().SetSummary(&sum, dnode_page->NidOfNode(), 0, 0);
+  if (IsInode(*dnode_page)) {
+    vnode->MarkInodeDirty();
   }
 
-  dn.node_page->CopyNodeFooterFrom(*page);
-  dn.node_page->FillNodeFooter(dn.nid, ni.ino, page->OfsOfNode(), false);
-  dn.node_page->SetDirty();
+  dnode_page->CopyNodeFooterFrom(*page);
+  dnode_page->FillNodeFooter(ni.nid, ni.ino, page->OfsOfNode(), false);
+  dnode_page->SetDirty();
 
-  GetNodeManager().RecoverNodePage(dn.node_page, sum, ni, blkaddr);
-  F2fsPutDnode(&dn);
+  // TODO: raw_dnode_page will be removed when Page Lock is fully managed by wrapper class.
+  fbl::RefPtr<NodePage> raw_dnode_page = dnode_page.release();
+  raw_dnode_page->Lock();
+  GetNodeManager().RecoverNodePage(raw_dnode_page, sum, ni, blkaddr);
+  Page::PutPage(std::move(raw_dnode_page), true);
 }
 
 void F2fs::RecoverData(list_node_t *head, CursegType type) {

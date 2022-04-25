@@ -441,86 +441,101 @@ zx::status<int32_t> NodeManager::GetNodePath(VnodeF2fs &vnode, pgoff_t block, in
   return zx::ok(level);
 }
 
-// Caller should call F2fsPutDnode(dn).
-zx_status_t NodeManager::GetDnodeOfData(DnodeOfData &dn, pgoff_t index, bool readonly) {
-  fbl::RefPtr<NodePage> npage[4];
-  fbl::RefPtr<NodePage> parent;
+zx_status_t NodeManager::FindLockedDnodePage(VnodeF2fs &vnode, pgoff_t index,
+                                             LockedPage<NodePage> *out) {
   int32_t offset[4];
   uint32_t noffset[4];
-  nid_t nids[4] = {0};
 
-  auto node_path = GetNodePath(*dn.vnode, index, offset, noffset);
+  auto node_path = GetNodePath(vnode, index, offset, noffset);
   if (node_path.is_error()) {
     return node_path.error_value();
   }
 
   auto level = *node_path;
-  nids[0] = dn.vnode->Ino();
-  if (auto err = GetNodePage(nids[0], &npage[0]); err != ZX_OK) {
-    return err;
+
+  nid_t nid = vnode.Ino();
+
+  for (auto i = 0; i <= level; ++i) {
+    // TODO: node_page type should be LockedPage when GetNodePage returns LockedPage instead of
+    // RefPtr.
+    fbl::RefPtr<NodePage> node_page;
+    if (zx_status_t err = GetNodePage(nid, &node_page); err != ZX_OK) {
+      return err;
+    }
+
+    if (i < level) {
+      nid = node_page->GetNid(offset[i], IsInode(*node_page));
+      Page::PutPage(std::move(node_page), true);
+    } else {
+      node_page->Unlock();
+      *out = LockedPage<NodePage>(node_page);
+    }
+  }
+  return ZX_OK;
+}
+
+zx_status_t NodeManager::GetLockedDnodePage(VnodeF2fs &vnode, pgoff_t index,
+                                            LockedPage<NodePage> *out) {
+  int32_t offset[4];
+  uint32_t noffset[4];
+
+  auto node_path = GetNodePath(vnode, index, offset, noffset);
+  if (node_path.is_error()) {
+    return node_path.error_value();
   }
 
-  auto release_pages = fit::defer([&]() {
-    dn.inode_page = nullptr;
-    dn.node_page = nullptr;
-    // Avoid releasing |npage[0]| twice.
-    if (parent && parent != npage[0]) {
-      Page::PutPage(std::move(parent), true);
-    }
-    for (auto i = 0; i < 4; ++i) {
-      if (npage[i]) {
-        Page::PutPage(std::move(npage[i]), true);
-      }
-    }
-  });
+  auto level = *node_path;
 
-  parent = npage[0];
-  dn.inode_page = npage[0];
-
-  if (level != 0) {
-    nids[1] = parent->GetNid(offset[0], true);
-  }
-
-  // get indirect or direct nodes
-  for (auto i = 1; i <= level; ++i) {
-    if (!nids[i] && !readonly) {
+  nid_t nid = vnode.Ino();
+  LockedPage<NodePage> parent;
+  for (auto i = 0; i <= level; ++i) {
+    LockedPage<NodePage> node_page;
+    if (!nid && i > 0) {
       // alloc new node
-      if (!AllocNid(nids[i])) {
+      if (!AllocNid(nid)) {
         return ZX_ERR_NO_SPACE;
       }
-
-      dn.nid = nids[i];
-      if (zx_status_t err = NewNodePage(*dn.vnode, dn.nid, noffset[i], &npage[i]); err != ZX_OK) {
-        AllocNidFailed(nids[i]);
+      // TODO: page_locked will be removed when GetNodePage returns LockedPage instead of RefPtr.
+      fbl::RefPtr<NodePage> page_locked;
+      if (zx_status_t err = NewNodePage(vnode, nid, noffset[i], &page_locked); err != ZX_OK) {
+        AllocNidFailed(nid);
         return err;
       }
+      page_locked->Unlock();
+      node_page = LockedPage<NodePage>(page_locked);
 
-      parent->SetNid(offset[i - 1], nids[i], i == 1);
-      AllocNidDone(nids[i]);
-    } else if (readonly && i == level && level > 1) {
-      // TODO: Read ahead Pages
-    }
-    if (i == 1) {
-      parent->Unlock();
+      parent->SetNid(offset[i - 1], nid, IsInode(*parent));
+      AllocNidDone(nid);
     } else {
-      Page::PutPage(std::move(parent), true);
-    }
-    if (!npage[i]) {
-      if (zx_status_t err = GetNodePage(nids[i], &npage[i]); err != ZX_OK) {
+      // TODO: page_locked will be removed when GetNodePage returns LockedPage instead of RefPtr.
+      fbl::RefPtr<NodePage> page_locked;
+      if (zx_status_t err = GetNodePage(nid, &page_locked); err != ZX_OK) {
         return err;
       }
+      page_locked->Unlock();
+      node_page = LockedPage<NodePage>(page_locked);
     }
+
     if (i < level) {
-      parent = std::move(npage[i]);
-      nids[i + 1] = parent->GetNid(offset[i], false);
+      nid = node_page->GetNid(offset[i], IsInode(*node_page));
+      parent = std::move(node_page);
+    } else {
+      *out = std::move(node_page);
     }
   }
-  dn.nid = nids[level];
-  dn.ofs_in_node = offset[level];
-  dn.node_page = std::move(npage[level]);
-  dn.data_blkaddr = DatablockAddr(dn.node_page.get(), dn.ofs_in_node);
-  release_pages.cancel();
   return ZX_OK;
+}
+
+zx::status<uint32_t> NodeManager::GetOfsInDnode(VnodeF2fs &vnode, pgoff_t index) {
+  int32_t offset[4];
+  uint32_t noffset[4];
+
+  auto node_path = GetNodePath(vnode, index, offset, noffset);
+  if (node_path.is_error()) {
+    return zx::error(node_path.error_value());
+  }
+
+  return zx::ok(offset[*node_path]);
 }
 
 void NodeManager::TruncateNode(VnodeF2fs &vnode, nid_t nid, NodePage &node_page) {
@@ -873,6 +888,8 @@ zx_status_t NodeManager::ReadNodePage(fbl::RefPtr<Page> page, nid_t nid, int typ
                             PageType::kNode);
 }
 
+// TODO: This method should return LockedPage instead of RefPtr when Page Lock is fully managed by
+// wrapper class.
 zx_status_t NodeManager::GetNodePage(nid_t nid, fbl::RefPtr<NodePage> *out) {
   if (zx_status_t ret = fs_->GetNodeVnode().GrabCachePage(nid, out); ret != ZX_OK) {
     return ret;

@@ -151,20 +151,27 @@ zx_status_t Dir::ConvertInlineDir() {
   if (zx_status_t ret = GrabCachePage(0, &page); ret != ZX_OK) {
     return ret;
   }
+  auto free_page = fit::defer([&] { Page::PutPage(std::move(page), true); });
 
-  DnodeOfData dn;
-  NodeManager::SetNewDnode(dn, this, nullptr, nullptr, 0);
-  if (zx_status_t err = Vfs()->GetNodeManager().GetDnodeOfData(dn, 0, 0); err != ZX_OK) {
+  LockedPage<NodePage> dnode_page;
+  if (zx_status_t err = Vfs()->GetNodeManager().GetLockedDnodePage(*this, 0, &dnode_page);
+      err != ZX_OK) {
     return err;
   }
 
-  if (dn.data_blkaddr == kNullAddr) {
-    if (zx_status_t err = ReserveNewBlock(*dn.node_page, dn.ofs_in_node); err != ZX_OK) {
-      F2fsPutDnode(&dn);
-      Page::PutPage(std::move(page), true);
+  uint32_t ofs_in_dnode;
+  if (auto result = Vfs()->GetNodeManager().GetOfsInDnode(*this, 0); result.is_error()) {
+    return result.error_value();
+  } else {
+    ofs_in_dnode = result.value();
+  }
+
+  block_t data_blkaddr = DatablockAddr(dnode_page.get(), ofs_in_dnode);
+  if (data_blkaddr == kNullAddr) {
+    if (zx_status_t err = ReserveNewBlock(*dnode_page, ofs_in_dnode); err != ZX_OK) {
       return err;
     }
-    dn.data_blkaddr = kNewAddr;
+    data_blkaddr = kNewAddr;
   }
 
   page->WaitOnWriteback();
@@ -172,7 +179,7 @@ zx_status_t Dir::ConvertInlineDir() {
 
   DentryBlock *dentry_blk = page->GetAddress<DentryBlock>();
 
-  Page *ipage = dn.inode_page.get();
+  Page *ipage = dnode_page.get();
   // copy data from inline dentry block to new dentry block
   memcpy(dentry_blk->dentry_bitmap, InlineDentryBitmap(ipage), InlineDentryBitmapSize());
   memcpy(dentry_blk->dentry, InlineDentryArray(ipage), sizeof(DirEntry) * MaxInlineDentry());
@@ -187,10 +194,10 @@ zx_status_t Dir::ConvertInlineDir() {
   if (page->ClearDirtyForIo(true)) {
     page->SetWriteback();
     fbl::RefPtr<Page> written_page = page;
-    Vfs()->GetSegmentManager().WriteDataPage(this, std::move(written_page), dn.nid, dn.ofs_in_node,
-                                             dn.data_blkaddr, &dn.data_blkaddr);
-    SetDataBlkaddr(*dn.node_page, dn.ofs_in_node, dn.data_blkaddr);
-    UpdateExtentCache(dn.data_blkaddr, 0);
+    Vfs()->GetSegmentManager().WriteDataPage(this, std::move(written_page), dnode_page->NidOfNode(),
+                                             ofs_in_dnode, data_blkaddr, &data_blkaddr);
+    SetDataBlkaddr(*dnode_page, ofs_in_dnode, data_blkaddr);
+    UpdateExtentCache(data_blkaddr, 0);
     UpdateVersion();
   }
   // clear inline dir and flag after data writeback
@@ -207,8 +214,6 @@ zx_status_t Dir::ConvertInlineDir() {
 #if 0  // porting needed
   // stat_dec_inline_inode(dir);
 #endif
-  F2fsPutDnode(&dn);
-  Page::PutPage(std::move(page), true);
   return ZX_OK;
 }
 
@@ -430,17 +435,24 @@ zx_status_t File::ConvertInlineData() {
   if (zx_status_t ret = GrabCachePage(0, &page); ret != ZX_OK) {
     return ret;
   }
+  auto free_page = fit::defer([&] { Page::PutPage(std::move(page), true); });
 
-  DnodeOfData dn;
-  NodeManager::SetNewDnode(dn, this, nullptr, nullptr, 0);
-  if (zx_status_t err = Vfs()->GetNodeManager().GetDnodeOfData(dn, 0, 0); err != ZX_OK) {
+  LockedPage<NodePage> dnode_page;
+  if (zx_status_t err = Vfs()->GetNodeManager().GetLockedDnodePage(*this, 0, &dnode_page);
+      err != ZX_OK) {
     return err;
   }
 
-  if (dn.data_blkaddr == kNullAddr) {
-    if (zx_status_t err = ReserveNewBlock(*dn.node_page, dn.ofs_in_node); err != ZX_OK) {
-      F2fsPutDnode(&dn);
-      Page::PutPage(std::move(page), true);
+  uint32_t ofs_in_dnode;
+  if (auto result = Vfs()->GetNodeManager().GetOfsInDnode(*this, 0); result.is_error()) {
+    return result.error_value();
+  } else {
+    ofs_in_dnode = result.value();
+  }
+
+  block_t data_blkaddr = DatablockAddr(dnode_page.get(), ofs_in_dnode);
+  if (data_blkaddr == kNullAddr) {
+    if (zx_status_t err = ReserveNewBlock(*dnode_page, ofs_in_dnode); err != ZX_OK) {
       return err;
     }
   }
@@ -448,7 +460,7 @@ zx_status_t File::ConvertInlineData() {
   page->WaitOnWriteback();
   page->ZeroUserSegment(0, kPageSize);
 
-  Page *ipage = dn.inode_page.get();
+  Page *ipage = dnode_page.get();
   uint8_t *inline_data = InlineDataPtr(ipage);
   memcpy(page->GetAddress(), inline_data, GetSize());
 
@@ -460,8 +472,6 @@ zx_status_t File::ConvertInlineData() {
 
   UpdateInode(ipage);
 
-  F2fsPutDnode(&dn);
-  Page::PutPage(std::move(page), true);
   return ZX_OK;
 }
 

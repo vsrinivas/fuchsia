@@ -141,6 +141,7 @@ class VnodeF2fs : public fs::Vnode,
 
   // Caller should ensure node_page is locked.
   void SetDataBlkaddr(NodePage &node_page, uint32_t ofs_in_node, block_t new_addr);
+  zx::status<block_t> FindDataBlkAddr(pgoff_t index);
   // Caller should ensure node_page is locked.
   zx_status_t ReserveNewBlock(NodePage &node_page, uint32_t ofs_in_node);
 

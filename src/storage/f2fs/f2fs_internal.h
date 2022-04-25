@@ -56,23 +56,7 @@ constexpr int kXattrNodeOffset = -1;
 // store xattrs to one node block per
 // file keeping -1 as its node offset to
 // distinguish from index node blocks.
-constexpr bool kRdOnlyNode = true;
-// specify a read-only mode when getting
-// a node block. 0 is read-write mode.
-// used by GetDnodeOfData().
 constexpr int kLinkMax = 32000;  // maximum link count per file
-
-// this structure is used as one of function parameters.
-// all the information are dedicated to a given direct node block determined
-// by the data offset in a file.
-struct DnodeOfData {
-  VnodeF2fs *vnode = nullptr;
-  fbl::RefPtr<NodePage> inode_page = nullptr;  // its inode page, nullptr is possible
-  fbl::RefPtr<NodePage> node_page = nullptr;   // cached direct node page
-  nid_t nid = 0;                               // node id of the direct node block
-  uint32_t ofs_in_node = 0;                    // data offset in the node page
-  block_t data_blkaddr = 0;                    // block address of the node block
-};
 
 // CountType for monitoring
 //
@@ -406,18 +390,6 @@ constexpr uint32_t kDefaultAllocatedBlocks = 1;
 inline bool IsSetCkptFlags(Checkpoint *cp, uint32_t f) {
   uint32_t ckpt_flags = LeToCpu(cp->ckpt_flags);
   return ckpt_flags & f;
-}
-
-inline void F2fsPutDnode(DnodeOfData *dn) {
-  if (dn->inode_page == dn->node_page) {
-    dn->inode_page = nullptr;
-  }
-  if (dn->node_page) {
-    Page::PutPage(std::move(dn->node_page), true);
-  }
-  if (dn->inode_page) {
-    Page::PutPage(std::move(dn->inode_page), false);
-  }
 }
 
 inline bool RawIsInode(Node &node) { return node.footer.nid == node.footer.ino; }

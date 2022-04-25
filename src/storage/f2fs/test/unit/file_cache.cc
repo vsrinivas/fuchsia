@@ -383,19 +383,17 @@ TEST_F(FileCacheTest, Truncate) {
   for (size_t i = 0; i < nblocks; ++i) {
     fbl::RefPtr<Page> page;
     vn->GrabCachePage(i, &page);
-    DnodeOfData dn;
-    NodeManager::SetNewDnode(dn, vn.get(), nullptr, nullptr, 0);
-    fs_->GetNodeManager().GetDnodeOfData(dn, i, kRdOnlyNode);
+    auto data_blkaddr = vn->FindDataBlkAddr(i);
+    ASSERT_TRUE(data_blkaddr.is_ok());
     if (i >= start / kPageSize) {
       ASSERT_EQ(page->IsDirty(), false);
       ASSERT_EQ(page->IsUptodate(), false);
-      ASSERT_EQ(dn.data_blkaddr, kNullAddr);
+      ASSERT_EQ(data_blkaddr.value(), kNullAddr);
     } else {
       ASSERT_EQ(page->IsDirty(), true);
       ASSERT_EQ(page->IsUptodate(), true);
-      ASSERT_EQ(dn.data_blkaddr, kNewAddr);
+      ASSERT_EQ(data_blkaddr.value(), kNewAddr);
     }
-    F2fsPutDnode(&dn);
     Page::PutPage(std::move(page), true);
   }
 
@@ -405,15 +403,58 @@ TEST_F(FileCacheTest, Truncate) {
 
   fbl::RefPtr<Page> page;
   vn->GrabCachePage(start, &page);
-  DnodeOfData dn;
-  NodeManager::SetNewDnode(dn, vn.get(), nullptr, nullptr, 0);
-  fs_->GetNodeManager().GetDnodeOfData(dn, start, kRdOnlyNode);
+  auto data_blkaddr = vn->FindDataBlkAddr(start);
+  ASSERT_TRUE(data_blkaddr.is_ok());
   // |page| for the hole should be invalidated.
   ASSERT_EQ(page->IsDirty(), false);
   ASSERT_EQ(page->IsUptodate(), false);
-  ASSERT_EQ(dn.data_blkaddr, kNullAddr);
-  F2fsPutDnode(&dn);
+  ASSERT_EQ(data_blkaddr.value(), kNullAddr);
   Page::PutPage(std::move(page), true);
+
+  vn->Close();
+  vn = nullptr;
+}
+
+TEST_F(FileCacheTest, LockedPageBasic) {
+  fbl::RefPtr<fs::Vnode> test_file;
+  root_dir_->Create("test", S_IFREG, &test_file);
+  fbl::RefPtr<f2fs::File> vn = fbl::RefPtr<f2fs::File>::Downcast(std::move(test_file));
+
+  fbl::RefPtr<Page> page;
+  ASSERT_EQ(vn->GrabCachePage(0, &page), ZX_OK);
+  page->Unlock();
+
+  ASSERT_EQ(vn->FindPage(0, &page), ZX_OK);
+  {
+    LockedPage<Page> locked_page(page);
+    ASSERT_EQ(page->TryLock(), true);
+  }
+  ASSERT_EQ(page->TryLock(), false);
+  Page::PutPage(std::move(page), true);
+
+  vn->Close();
+  vn = nullptr;
+}
+
+TEST_F(FileCacheTest, LockedPageRelease) {
+  fbl::RefPtr<fs::Vnode> test_file;
+  root_dir_->Create("test", S_IFREG, &test_file);
+  fbl::RefPtr<f2fs::File> vn = fbl::RefPtr<f2fs::File>::Downcast(std::move(test_file));
+
+  fbl::RefPtr<Page> page;
+  ASSERT_EQ(vn->GrabCachePage(0, &page), ZX_OK);
+  page->Unlock();
+
+  ASSERT_EQ(vn->FindPage(0, &page), ZX_OK);
+
+  LockedPage<Page> locked_page(page);
+  ASSERT_EQ(page->TryLock(), true);
+  fbl::RefPtr<Page> released_page = locked_page.release();
+  ASSERT_EQ(released_page->TryLock(), false);
+
+  ASSERT_EQ(page, released_page);
+  Page::PutPage(std::move(page), true);
+  Page::PutPage(std::move(released_page), false);
 
   vn->Close();
   vn = nullptr;

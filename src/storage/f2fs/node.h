@@ -109,20 +109,18 @@ class NodeManager {
   zx_status_t ReadNodePage(fbl::RefPtr<Page> page, nid_t nid, int type);
   zx_status_t GetNodePage(nid_t nid, fbl::RefPtr<NodePage> *out);
 
-  // Caller should acquire LockType:kFileOp when |ro| = 0.
-  zx_status_t GetDnodeOfData(DnodeOfData &dn, pgoff_t index, bool readonly);
+  // If an unassigned node page is encountered while following the node path, a new node page is
+  // assigned. Caller should acquire LockType:kFileOp.
+  zx_status_t GetLockedDnodePage(VnodeF2fs &vnode, pgoff_t index, LockedPage<NodePage> *out);
+
+  // Read-only mode of GetLockedDnodePage().
+  zx_status_t FindLockedDnodePage(VnodeF2fs &vnode, pgoff_t index, LockedPage<NodePage> *out);
+
+  zx::status<uint32_t> GetOfsInDnode(VnodeF2fs &vnode, pgoff_t index);
 
   zx_status_t RestoreNodeSummary(uint32_t segno, SummaryBlock &sum);
 
   static bool IsColdFile(VnodeF2fs &vnode);
-
-  static void SetNewDnode(DnodeOfData &dn, VnodeF2fs *vnode, fbl::RefPtr<NodePage> ipage,
-                          fbl::RefPtr<NodePage> npage, nid_t nid) {
-    dn.vnode = vnode;
-    dn.inode_page = std::move(ipage);
-    dn.node_page = std::move(npage);
-    dn.nid = nid;
-  }
 
   void GetNodeInfo(nid_t nid, NodeInfo &out);
 

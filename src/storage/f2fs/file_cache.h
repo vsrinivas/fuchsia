@@ -222,6 +222,69 @@ class Page : public PageRefCounted<Page>,
   F2fs *fs_ = nullptr;
 };
 
+// LockedPage<T> is a wrapper class for f2fs::Page lock management.
+// It holds a fbl::RefPtr<T> object, and T should be a subclass of f2fs::Page.
+// When LockedPage holds "fbl::RefPtr<T> page" and the page is not nullptr, it guarantees that the
+// page is locked.
+//
+// The syntax looks something like...
+// fbl::RefPtr<Page> unlocked_page;
+// {
+//   LockedPage<Page> locked_page(unlocked_page);
+//   do something requiring page lock...
+// }
+//
+// When Page is used as a function parameter, you should use `Page&` type for unlocked page, and use
+// `LockedPage<Page>&` type for locked page.
+template <typename T>
+class LockedPage final {
+  static_assert(std::is_base_of<Page, T>::value, "LockedPage<T>: T must inherit from f2fs::Page");
+
+ public:
+  LockedPage() : page_(nullptr) {}
+
+  LockedPage(const LockedPage &) = delete;
+  LockedPage &operator=(const LockedPage &) = delete;
+
+  LockedPage(LockedPage &&p) {
+    page_ = std::move(p.page_);
+    p.page_ = nullptr;
+  }
+  LockedPage &operator=(LockedPage &&p) {
+    reset();
+    page_ = std::move(p.page_);
+    p.page_ = nullptr;
+    return *this;
+  }
+
+  explicit LockedPage(fbl::RefPtr<T> page) {
+    page_ = page;
+    page_->Lock();
+  }
+
+  ~LockedPage() { reset(); }
+
+  void reset() {
+    if (page_ != nullptr) {
+      ZX_ASSERT(page_->IsLocked());
+      page_->Unlock();
+      page_.reset();
+    }
+  }
+
+  fbl::RefPtr<T> release() {
+    page_->Unlock();
+    return fbl::RefPtr<T>(std::move(page_));
+  }
+
+  T *get() { return page_.get(); }
+  T &operator*() { return *page_; }
+  T *operator->() { return page_.get(); }
+
+ private:
+  fbl::RefPtr<T> page_ = nullptr;
+};
+
 class FileCache {
  public:
   FileCache(VnodeF2fs *vnode);
