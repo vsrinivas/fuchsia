@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_pkg::PackageManifest;
 use serde::de::{self, Deserializer};
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
@@ -51,7 +52,12 @@ pub enum Image {
     VBMeta(PathBuf),
 
     /// BlobFS image.
-    BlobFS(PathBuf),
+    BlobFS {
+        /// Path to the BlobFS image.
+        path: PathBuf,
+        /// Contents metadata.
+        contents: BlobfsContents,
+    },
 
     /// Fuchsia Volume Manager.
     FVM(PathBuf),
@@ -73,7 +79,7 @@ impl Image {
             Image::BasePackage(s) => s,
             Image::ZBI { path, signed: _ } => path,
             Image::VBMeta(s) => s,
-            Image::BlobFS(s) => s,
+            Image::BlobFS { path, .. } => path,
             Image::FVM(s) => s,
             Image::FVMSparse(s) => s,
             Image::FVMSparseBlob(s) => s,
@@ -90,6 +96,14 @@ struct ImageSerializeHelper<'a> {
     path: &'a Path,
     #[serde(skip_serializing_if = "Option::is_none")]
     signed: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    contents: Option<ImageContentsSerializeHelper<'a>>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+enum ImageContentsSerializeHelper<'a> {
+    Blobfs(&'a BlobfsContents),
 }
 
 impl Serialize for Image {
@@ -103,49 +117,98 @@ impl Serialize for Image {
                 name: "base-package",
                 path,
                 signed: None,
+                contents: None,
             },
             Image::ZBI { path, signed } => ImageSerializeHelper {
                 partition_type: "zbi",
                 name: "zircon-a",
                 path,
                 signed: Some(*signed),
+                contents: None,
             },
             Image::VBMeta(path) => ImageSerializeHelper {
                 partition_type: "vbmeta",
                 name: "zircon-a",
                 path,
                 signed: None,
+                contents: None,
             },
-            Image::BlobFS(path) => {
-                ImageSerializeHelper { partition_type: "blk", name: "blob", path, signed: None }
-            }
+            Image::BlobFS { path, contents } => ImageSerializeHelper {
+                partition_type: "blk",
+                name: "blob",
+                path,
+                signed: None,
+                contents: Some(ImageContentsSerializeHelper::Blobfs(contents)),
+            },
             Image::FVM(path) => ImageSerializeHelper {
                 partition_type: "blk",
                 name: "storage-full",
                 path,
                 signed: None,
+                contents: None,
             },
             Image::FVMSparse(path) => ImageSerializeHelper {
                 partition_type: "blk",
                 name: "storage-sparse",
                 path,
                 signed: None,
+                contents: None,
             },
             Image::FVMSparseBlob(path) => ImageSerializeHelper {
                 partition_type: "blk",
                 name: "storage-sparse-blob",
                 path,
                 signed: None,
+                contents: None,
             },
             Image::FVMFastboot(path) => ImageSerializeHelper {
                 partition_type: "blk",
                 name: "fvm.fastboot",
                 path,
                 signed: None,
+                contents: None,
             },
         };
         helper.serialize(serializer)
     }
+}
+
+/// Detailed metadata on the contents of a particular image output.
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+pub struct BlobfsContents {
+    /// Information about packages included in the image.
+    pub packages: PackagesMetadata,
+}
+
+/// Metadata on packages included in a given image.
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+pub struct PackagesMetadata {
+    /// Paths to package manifests for the base package set.
+    pub base: PackageSetMetadata,
+    /// Paths to package manifests for the cache package set.
+    pub cache: PackageSetMetadata,
+}
+
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+#[serde(transparent)]
+pub struct PackageSetMetadata(Vec<PackageMetadata>);
+
+impl PackageSetMetadata {
+    pub fn add_package(&mut self, path: impl AsRef<Path>) -> anyhow::Result<()> {
+        let manifest = path.as_ref().to_owned();
+        let name = PackageManifest::try_load_from(&manifest)?.name().to_string();
+        self.0.push(PackageMetadata { name, manifest });
+        Ok(())
+    }
+}
+
+/// Metadata on a single package included in a given image.
+#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+pub struct PackageMetadata {
+    /// The package's name.
+    pub name: String,
+    /// Path to the package's manifest.
+    pub manifest: PathBuf,
 }
 
 #[derive(Debug, Deserialize)]
@@ -155,6 +218,13 @@ struct ImageDeserializeHelper {
     name: String,
     path: PathBuf,
     signed: Option<bool>,
+    contents: Option<ImageContentsDeserializeHelper>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum ImageContentsDeserializeHelper {
+    Blobfs(BlobfsContents),
 }
 
 impl<'de> Deserialize<'de> for Image {
@@ -169,7 +239,14 @@ impl<'de> Deserialize<'de> for Image {
                 Ok(Image::ZBI { path: helper.path, signed: *signed })
             }
             ("vbmeta", "zircon-a", None) => Ok(Image::VBMeta(helper.path)),
-            ("blk", "blob", None) => Ok(Image::BlobFS(helper.path)),
+            ("blk", "blob", None) => {
+                if let Some(contents) = helper.contents {
+                    let ImageContentsDeserializeHelper::Blobfs(contents) = contents;
+                    Ok(Image::BlobFS { path: helper.path, contents })
+                } else {
+                    Err(de::Error::missing_field("contents"))
+                }
+            }
             ("blk", "storage-full", None) => Ok(Image::FVM(helper.path)),
             ("blk", "storage-sparse", None) => Ok(Image::FVMSparse(helper.path)),
             ("blk", "storage-sparse-blob", None) => Ok(Image::FVMSparseBlob(helper.path)),
@@ -203,7 +280,7 @@ mod tests {
                 Image::BasePackage("path/to/base.far".into()),
                 Image::ZBI { path: "path/to/fuchsia.zbi".into(), signed: true },
                 Image::VBMeta("path/to/fuchsia.vbmeta".into()),
-                Image::BlobFS("path/to/blob.blk".into()),
+                Image::BlobFS { path: "path/to/blob.blk".into(), contents: Default::default() },
                 Image::FVM("path/to/fvm.blk".into()),
                 Image::FVMSparse("path/to/fvm.sparse.blk".into()),
                 Image::FVMSparseBlob("path/to/fvm.blob.sparse.blk".into()),
@@ -257,7 +334,10 @@ mod tests {
                     ("path/to/fuchsia.zbi", path)
                 }
                 Image::VBMeta(path) => ("path/to/fuchsia.vbmeta", path),
-                Image::BlobFS(path) => ("path/to/blob.blk", path),
+                Image::BlobFS { path, contents } => {
+                    assert_eq!(contents, &BlobfsContents::default());
+                    ("path/to/blob.blk", path)
+                }
                 Image::FVM(path) => ("path/to/fvm.blk", path),
                 Image::FVMSparse(path) => ("path/to/fvm.sparse.blk", path),
                 Image::FVMSparseBlob(path) => ("path/to/fvm.blob.sparse.blk", path),
@@ -302,6 +382,12 @@ mod tests {
                 "type": "blk",
                 "name": "blob",
                 "path": "path/to/blob.blk",
+                "contents": {
+                    "packages": {
+                        "base": [],
+                        "cache": [],
+                    },
+                },
             },
             {
                 "type": "blk",

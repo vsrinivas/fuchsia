@@ -2,7 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/compiled_action.gni")
+import("//build/python/python_action.gni")
+import("//build/python/python_binary.gni")
 
 group("archives") {
   testonly = true
@@ -90,9 +91,14 @@ all_package_manifests_target = "//build/images:all_package_manifests.list"
 timestamp_json_file =
     "$root_build_dir/${tuf_repo_name}/repository/timestamp.json"
 
-action("package_archive") {
+python_binary("create_packages_archive") {
+  main_source = "//build/gn/create_packages_archive.py"
+  deps = [ "//build/python/modules/assembly" ]
+}
+
+python_action("package_archive") {
   testonly = true
-  script = "//build/gn/create_packages_archive.py"
+  binary_label = ":create_packages_archive"
   tarmaker_manifest = "$target_gen_dir/$target_name.tarmaker.manifest"
   outputs = [
     pkg_archive,
