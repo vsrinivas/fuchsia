@@ -7,7 +7,7 @@
 //! used by TCP.
 
 use alloc::{vec, vec::Vec};
-use core::{cmp, convert::TryFrom, fmt::Debug, num::TryFromIntError, ops::Range};
+use core::{cmp, convert::TryFrom, fmt::Debug, mem, num::TryFromIntError, ops::Range};
 
 use crate::transport::tcp::{
     segment::Payload,
@@ -24,6 +24,10 @@ pub trait Buffer: Default + Debug {
 
     /// Returns an empty buffer.
     fn empty() -> Self;
+
+    fn take(&mut self) -> Self {
+        mem::replace(self, Self::empty())
+    }
 }
 
 /// A buffer supporting TCP receiving operations.

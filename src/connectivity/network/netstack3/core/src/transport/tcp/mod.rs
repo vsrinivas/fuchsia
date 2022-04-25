@@ -38,4 +38,6 @@ impl Control {
 enum UserError {
     /// The connection was reset because of a RST segment.
     ConnectionReset,
+    /// The connection was closed because of a user request.
+    ConnectionClosed,
 }
