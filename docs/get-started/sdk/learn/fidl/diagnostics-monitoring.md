@@ -14,8 +14,6 @@ behavior of the echo server component.
 
 <<../_common/_start_femu_with_packages.md>>
 
-<!-- TODO(fxbug.dev/61746): Re-enable once symbols are accessible without auth
-
 ### Monitor FIDL traffic
 
 Create a new instance of the `echo-realm` containing the server and client
@@ -98,8 +96,6 @@ data payloads.
 <code>fidlcat</code>. Do you see anything different from the messages recorded
 from echo server?</p>
 </aside>
-
-END HIDDEN SECTION -->
 
 ### Add request tracking
 
