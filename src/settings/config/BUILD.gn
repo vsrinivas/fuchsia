@@ -6,6 +6,14 @@ import("//build/components.gni")
 import("//build/config.gni")
 import("//build/dist/resource.gni")
 
+group("config") {
+  testonly = true
+  deps = [
+    ":tests",
+    ":workstation_interface_config",
+  ]
+}
+
 config_data("workstation_interface_config") {
   for_pkg = "setui_service"
 
