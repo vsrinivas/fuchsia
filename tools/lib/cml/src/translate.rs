@@ -1508,6 +1508,7 @@ pub fn offer_source_from_ref(
         AnyRef::Debug => Ok(fdecl::Ref::Debug(fdecl::DebugRef {})),
         AnyRef::Parent => Ok(fdecl::Ref::Parent(fdecl::ParentRef {})),
         AnyRef::Self_ => Ok(fdecl::Ref::Self_(fdecl::SelfRef {})),
+        AnyRef::Void => panic!("void is unsupported"),
     }
 }
 

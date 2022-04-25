@@ -402,6 +402,8 @@ this component and the capability's source.
       handle these dependencies becoming unavailable. This type exists to keep
       track of weak dependencies that resulted from migrations into v2
       components.
+- `availability`: (_optional `string`_) Determines whether this capability is required to be available, or if its presence is
+  optional.
 
 Example:
 
@@ -522,6 +524,8 @@ instance or a [child collection][doc-collections].
   -   `#<child-name>`: A [reference](#references) to a child component
       instance. This source can only be used when offering protocol,
       directory, or runner capabilities.
+  -   `void`: The source is intentionally omitted. Only valid when `availability` is not
+      `required`.
 - `to`: (_`string or array of strings`_) A capability target or array of targets, each of which is a [reference](#references) to the
   child or collection to which the capability is being offered, of the form `#<target-name>`.
 - `as`: (_optional `string`_) An explicit [name](#name) for the capability as it will be known by the target. If omitted,
@@ -545,6 +549,11 @@ instance or a [child collection][doc-collections].
 - `filter`: (_optional `object`_) TODO(fxb/96705): Complete.
 - `event_stream`: (_optional `string or array of strings`_) TODO(fxb/96705): Complete.
 - `scope`: (_optional `string or array of strings`_) TODO(fxb/96705): Complete.
+- `availability`: (_optional `string`_) Whether or not this capability must be present. Defaults to `required`.
+- `source_availability`: (_optional `string`_) Whether or not the source of this offer must exist. If set to `unknown`, the source of this
+  offer will be rewritten to `void` if the source does not exist (i.e. is not defined in this
+  manifest). The availability must be set to `optional` when `source_availability` is set to
+  `unknown`. Defaults to `required`.
 
 Example:
 

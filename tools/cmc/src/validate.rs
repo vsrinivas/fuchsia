@@ -732,7 +732,7 @@ impl<'a> ValidationContext<'a> {
 
         // Validate `from` (done last because this validation depends on the capability type, which
         // must be validated first)
-        self.validate_from_clause("expose", expose)?;
+        self.validate_from_clause("expose", expose, &Some(cml::SourceAvailability::Required))?;
 
         Ok(())
     }
@@ -1015,7 +1015,7 @@ impl<'a> ValidationContext<'a> {
 
         // Validate `from` (done last because this validation depends on the capability type, which
         // must be validated first)
-        self.validate_from_clause("offer", offer)?;
+        self.validate_from_clause("offer", offer, &offer.source_availability)?;
 
         Ok(())
     }
@@ -1064,7 +1064,12 @@ impl<'a> ValidationContext<'a> {
     /// - references names that exist.
     ///
     /// `verb` is used in any error messages and is expected to be "offer", "expose", etc.
-    fn validate_from_clause<T>(&self, verb: &str, cap: &T) -> Result<(), Error>
+    fn validate_from_clause<T>(
+        &self,
+        verb: &str,
+        cap: &T,
+        source_availability: &Option<cml::SourceAvailability>,
+    ) -> Result<(), Error>
     where
         T: cml::CapabilityClause + cml::FromClause,
     {
@@ -1082,6 +1087,11 @@ impl<'a> ValidationContext<'a> {
 
         let reference_description = format!("\"{}\" source", verb);
         for from_clause in from {
+            if source_availability == &Some(cml::SourceAvailability::Unknown) {
+                // We don't need to check if the source exists if the source's availability is
+                // unknown.
+                continue;
+            }
             // If this is a protocol, it could reference either a child or a storage capability
             // (for the storage admin protocol).
             if cap.protocol().is_some() {
@@ -1341,7 +1351,11 @@ impl<'a> ValidationContext<'a> {
                         }
                     }
                 }
-                self.validate_from_clause("debug", debug)?;
+                self.validate_from_clause(
+                    "debug",
+                    debug,
+                    &Some(cml::SourceAvailability::Required),
+                )?;
                 // Ensure there are no cycles, such as a debug capability in an environment being
                 // assigned to the child which is providing the capability.
                 if let Some(source) = DependencyNode::offer_from_ref(&debug.from) {
@@ -1438,6 +1452,10 @@ impl<'a> DependencyNode<'a> {
             // We don't care about cycles with the framework, because the framework always outlives
             // a component
             cml::OfferFromRef::Framework => None,
+
+            // If the offer source is intentionally omitted, then definitionally this offer does
+            // not cause an edge in our dependency graph.
+            cml::OfferFromRef::Void => None,
         }
     }
 
@@ -2078,7 +2096,7 @@ mod tests {
                     },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "unknown field `resolver`, expected one of `service`, `protocol`, `directory`, `storage`, `event`, `event_stream_deprecated`, `event_stream`, `from`, `path`, `rights`, `subdir`, `as`, `scope`, `filter`, `subscriptions`, `dependency`"
+            Err(Error::Parse { err, .. }) if &err == "unknown field `resolver`, expected one of `service`, `protocol`, `directory`, `storage`, `event`, `event_stream_deprecated`, `event_stream`, `from`, `path`, `rights`, `subdir`, `as`, `scope`, `filter`, `subscriptions`, `dependency`, `availability`"
         ),
 
         test_cml_use_disallows_nested_dirs_directory(
@@ -5138,6 +5156,63 @@ mod tests {
                 }
             ),
             Err(Error::Parse { err, .. }) if err.starts_with("unknown field `unknown_field`, expected one of ")
+        ),
+        test_offer_source_availability_unknown(
+            json!({
+                "children": [
+                    {
+                        "name": "foo",
+                        "url": "fuchsia-pkg://foo.com/foo#meta/foo.cm"
+                    },
+                ],
+                "offer": [
+                    {
+                        "protocol": "fuchsia.examples.Echo",
+                        "from": "#bar",
+                        "to": "#foo",
+                        "availability": "optional",
+                        "source_availability": "unknown",
+                    },
+                ],
+            }),
+            Ok(())
+        ),
+        test_offer_source_availability_required(
+            json!({
+                "children": [
+                    {
+                        "name": "foo",
+                        "url": "fuchsia-pkg://foo.com/foo#meta/foo.cm"
+                    },
+                ],
+                "offer": [
+                    {
+                        "protocol": "fuchsia.examples.Echo",
+                        "from": "#bar",
+                        "to": "#foo",
+                        "source_availability": "required",
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"offer\" source \"#bar\" does not appear in \"children\" or \"capabilities\""
+        ),
+        test_offer_source_availability_omitted(
+            json!({
+                "children": [
+                    {
+                        "name": "foo",
+                        "url": "fuchsia-pkg://foo.com/foo#meta/foo.cm"
+                    },
+                ],
+                "offer": [
+                    {
+                        "protocol": "fuchsia.examples.Echo",
+                        "from": "#bar",
+                        "to": "#foo",
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"offer\" source \"#bar\" does not appear in \"children\" or \"capabilities\""
         ),
     }
 

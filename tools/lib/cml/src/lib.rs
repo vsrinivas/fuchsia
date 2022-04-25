@@ -35,8 +35,8 @@ use {
 };
 
 pub use cm_types::{
-    AllowedOffers, DependencyType, Durability, Name, OnTerminate, ParseError, Path, RelativePath,
-    StartupMode, StorageId, Url,
+    AllowedOffers, DependencyType, Durability, Name, OfferAvailability, OnTerminate, ParseError,
+    Path, RelativePath, StartupMode, StorageId, Url, UseAvailability,
 };
 
 pub use crate::translate::compile;
@@ -580,6 +580,8 @@ pub enum AnyRef<'a> {
     Debug,
     /// A reference to this component. Parsed as `self`.
     Self_,
+    /// An intentionally omitted reference.
+    Void,
 }
 
 /// Format an `AnyRef` as a string.
@@ -591,6 +593,7 @@ impl fmt::Display for AnyRef<'_> {
             Self::Framework => write!(f, "framework"),
             Self::Debug => write!(f, "debug"),
             Self::Self_ => write!(f, "self"),
+            Self::Void => write!(f, "void"),
         }
     }
 }
@@ -651,7 +654,7 @@ pub enum ExposeToRef {
 
 /// A reference in an `offer from`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
-#[reference(expected = "\"parent\", \"framework\", \"self\", or \"#<child-name>\"")]
+#[reference(expected = "\"parent\", \"framework\", \"self\", \"void\", or \"#<child-name>\"")]
 pub enum OfferFromRef {
     /// A reference to a child or collection.
     Named(Name),
@@ -661,6 +664,8 @@ pub enum OfferFromRef {
     Framework,
     /// A reference to this component.
     Self_,
+    /// An intentionally omitted source.
+    Void,
 }
 
 impl OfferFromRef {
@@ -678,6 +683,20 @@ impl OfferFromRef {
 pub enum OfferToRef {
     /// A reference to a child or collection.
     Named(Name),
+}
+
+/// A reference in an `offer to`.
+#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum SourceAvailability {
+    Required,
+    Unknown,
+}
+
+impl Default for SourceAvailability {
+    fn default() -> Self {
+        Self::Required
+    }
 }
 
 /// A reference in an environment.
@@ -1949,6 +1968,10 @@ pub struct Use {
     ///     track of weak dependencies that resulted from migrations into v2
     ///     components.
     pub dependency: Option<DependencyType>,
+
+    /// Determines whether this capability is required to be available, or if its presence is
+    /// optional.
+    pub availability: Option<UseAvailability>,
 }
 
 /// Example:
@@ -2118,6 +2141,8 @@ pub struct Offer {
     /// -   `#<child-name>`: A [reference](#references) to a child component
     ///     instance. This source can only be used when offering protocol,
     ///     directory, or runner capabilities.
+    /// -   `void`: The source is intentionally omitted. Only valid when `availability` is not
+    ///     `required`.
     pub from: OneOrMany<OfferFromRef>,
 
     /// A capability target or array of targets, each of which is a [reference](#references) to the
@@ -2158,6 +2183,15 @@ pub struct Offer {
 
     /// TODO(fxb/96705): Complete.
     pub scope: Option<OneOrMany<EventScope>>,
+
+    /// Whether or not this capability must be present. Defaults to `required`.
+    pub availability: Option<OfferAvailability>,
+
+    /// Whether or not the source of this offer must exist. If set to `unknown`, the source of this
+    /// offer will be rewritten to `void` if the source does not exist (i.e. is not defined in this
+    /// manifest). The availability must be set to `optional` when `source_availability` is set to
+    /// `unknown`. Defaults to `required`.
+    pub source_availability: Option<SourceAvailability>,
 }
 
 /// Example:
@@ -2982,6 +3016,8 @@ mod tests {
             filter: None,
             event_stream: None,
             scope: None,
+            availability: None,
+            source_availability: None,
         }
     }
 
@@ -3003,6 +3039,7 @@ mod tests {
             filter: None,
             subscriptions: None,
             dependency: None,
+            availability: None,
         }
     }
 

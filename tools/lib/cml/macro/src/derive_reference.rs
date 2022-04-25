@@ -48,6 +48,11 @@ pub fn impl_derive_ref(ast: syn::DeriveInput) -> Result<TokenStream2, syn::Error
                         Self::Self_ => write!(f, "self"),
                     });
                 }
+                if self.variants.contains("Void") {
+                    tokens.append_all(quote! {
+                        Self::Void => write!(f, "void"),
+                    });
+                }
                 tokens
             };
             tokens.append_all(quote! {
@@ -108,6 +113,11 @@ pub fn impl_derive_ref(ast: syn::DeriveInput) -> Result<TokenStream2, syn::Error
                             "self" => Ok(Self::Self_),
                         });
                     }
+                    if self.variants.contains("Void") {
+                        tokens.append_all(quote! {
+                            "void" => Ok(Self::Void),
+                        });
+                    }
                     tokens.append_all(quote! {_ => Err(ParseError::InvalidValue) });
                     tokens
                 };
@@ -157,6 +167,11 @@ pub fn impl_derive_ref(ast: syn::DeriveInput) -> Result<TokenStream2, syn::Error
                 if self.variants.contains("Self_") {
                     tokens.append_all(quote! {
                         #name::Self_ => Self::Self_,
+                    });
+                }
+                if self.variants.contains("Void") {
+                    tokens.append_all(quote! {
+                        #name::Void => Self::Void,
                     });
                 }
                 if self.variants.contains("Named") {
@@ -249,6 +264,7 @@ fn parse_reference_attributes(ast: &syn::DeriveInput) -> Result<ReferenceAttribu
         "Framework",
         "Debug",
         "Self_",
+        "Void",
     };
     for ty in variants.iter() {
         if !allowed_variants.contains(ty as &str) {

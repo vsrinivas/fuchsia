@@ -638,6 +638,39 @@ impl Default for DependencyType {
     }
 }
 
+/// Offered availability. See [`OfferAvailability`].
+///
+/// [`OfferAvailability`]: ../../fidl_fuchsia_sys2/enum.OfferAvailability.html
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum OfferAvailability {
+    Required,
+    Optional,
+    SameAsTarget,
+}
+
+impl Default for OfferAvailability {
+    fn default() -> Self {
+        Self::Required
+    }
+}
+
+/// Used availability. See [`UseAvailability`].
+///
+/// [`UseAvailability`]: ../../fidl_fuchsia_sys2/enum.UseAvailability.html
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum UseAvailability {
+    Required,
+    Optional,
+}
+
+impl Default for UseAvailability {
+    fn default() -> Self {
+        Self::Required
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum StorageId {

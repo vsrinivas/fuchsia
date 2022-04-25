@@ -80,6 +80,7 @@ pub fn derive_one_or_many(input: TokenStream) -> TokenStream {
 /// - Framework,
 /// - Debug,
 /// - Self_,
+/// - Void
 ///
 /// Attributes:
 /// - `expected` (required): The `expected` string attached to the serde deserializer.
