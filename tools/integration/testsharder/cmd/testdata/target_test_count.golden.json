@@ -1,0 +1,72 @@
+[
+  {
+    "name": "AEMU-(1)",
+    "tests": [
+      {
+        "name": "fuchsia-pkg://fuchsia.com/foo1#meta/foo1.cm",
+        "package_url": "fuchsia-pkg://fuchsia.com/foo1#meta/foo1.cm",
+        "path": "",
+        "label": "//src/something:foo1(//build/toolchain/fuchsia:x64)",
+        "os": "fuchsia",
+        "cpu": "x64",
+        "log_settings": {},
+        "runs": 1
+      },
+      {
+        "name": "fuchsia-pkg://fuchsia.com/foo3#meta/foo3.cm",
+        "package_url": "fuchsia-pkg://fuchsia.com/foo3#meta/foo3.cm",
+        "path": "",
+        "label": "//src/something:foo3(//build/toolchain/fuchsia:x64)",
+        "os": "fuchsia",
+        "cpu": "x64",
+        "log_settings": {},
+        "runs": 1
+      }
+    ],
+    "environment": {
+      "dimensions": {
+        "device_type": "AEMU"
+      },
+      "is_emu": true
+    },
+    "timeout_secs": 604,
+    "summary": {
+      "tests": null
+    }
+  },
+  {
+    "name": "AEMU-(2)",
+    "tests": [
+      {
+        "name": "fuchsia-pkg://fuchsia.com/foo2#meta/foo2.cm",
+        "package_url": "fuchsia-pkg://fuchsia.com/foo2#meta/foo2.cm",
+        "path": "",
+        "label": "//src/something:foo2(//build/toolchain/fuchsia:x64)",
+        "os": "fuchsia",
+        "cpu": "x64",
+        "log_settings": {},
+        "runs": 1
+      },
+      {
+        "name": "fuchsia-pkg://fuchsia.com/foo4#meta/foo4.cm",
+        "package_url": "fuchsia-pkg://fuchsia.com/foo4#meta/foo4.cm",
+        "path": "",
+        "label": "//src/something:foo4(//build/toolchain/fuchsia:x64)",
+        "os": "fuchsia",
+        "cpu": "x64",
+        "log_settings": {},
+        "runs": 1
+      }
+    ],
+    "environment": {
+      "dimensions": {
+        "device_type": "AEMU"
+      },
+      "is_emu": true
+    },
+    "timeout_secs": 604,
+    "summary": {
+      "tests": null
+    }
+  }
+]

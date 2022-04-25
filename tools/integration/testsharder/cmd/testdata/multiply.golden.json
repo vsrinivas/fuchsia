@@ -1,0 +1,28 @@
+[
+  {
+    "name": "multiplied:AEMU-fuchsia-pkg:__fuchsia.com_foo#meta_foo.cm",
+    "tests": [
+      {
+        "name": "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm",
+        "package_url": "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm",
+        "path": "",
+        "label": "//src/something:foo(//build/toolchain/fuchsia:x64)",
+        "os": "fuchsia",
+        "cpu": "x64",
+        "log_settings": {},
+        "runs": 50,
+        "run_algorithm": "STOP_ON_FAILURE"
+      }
+    ],
+    "environment": {
+      "dimensions": {
+        "device_type": "AEMU"
+      },
+      "is_emu": true
+    },
+    "timeout_secs": 0,
+    "summary": {
+      "tests": null
+    }
+  }
+]

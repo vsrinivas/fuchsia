@@ -16,6 +16,6 @@ group("tests") {
 
   deps = [
     "fint:tests",
-    "testsharder:testsharder_tests",
+    "testsharder:tests",
   ]
 }

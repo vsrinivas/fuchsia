@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -21,10 +22,19 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
-var (
+func usage() {
+	fmt.Printf(`testsharder [flags]
+
+Shards tests produced by a build.
+For more information on the modes in which the testsharder may be run, see
+https://pkg.go.dev/go.fuchsia.dev/fuchsia/tools/integration/testsharder#Mode.
+`)
+}
+
+type testsharderFlags struct {
 	buildDir                       string
 	outputFile                     string
-	mode                           testsharder.Mode = testsharder.Normal
+	mode                           testsharder.Mode
 	tags                           flagmisc.StringsValue
 	modifiersPath                  string
 	targetTestCount                int
@@ -39,46 +49,42 @@ var (
 	hermeticDeps                   bool
 	imageDeps                      bool
 	pave                           bool
-)
-
-func usage() {
-	fmt.Printf(`testsharder [flags]
-
-Shards tests produced by a build.
-For more information on the modes in which the testsharder may be run, see
-https://pkg.go.dev/go.fuchsia.dev/fuchsia/tools/integration/testsharder#Mode.
-`)
 }
 
-func init() {
-	flag.StringVar(&buildDir, "build-dir", "", "path to the fuchsia build directory root (required)")
-	flag.StringVar(&outputFile, "output-file", "", "path to a file which will contain the shards as JSON, default is stdout")
-	flag.Var(&mode, "mode", "mode in which to run the testsharder (e.g., normal or restricted).")
-	flag.Var(&tags, "tag", "environment tags on which to filter; only the tests that match all tags will be sharded")
-	flag.StringVar(&modifiersPath, "modifiers", "", "path to the json manifest containing tests to modify")
-	flag.IntVar(&targetDurationSecs, "target-duration-secs", 0, "approximate duration that each shard should run in")
-	flag.IntVar(&maxShardsPerEnvironment, "max-shards-per-env", 8, "maximum shards allowed per environment. If <= 0, no max will be set")
+func parseFlags() testsharderFlags {
+	var flags testsharderFlags
+	flag.StringVar(&flags.buildDir, "build-dir", "", "path to the fuchsia build directory root (required)")
+	flag.StringVar(&flags.outputFile, "output-file", "", "path to a file which will contain the shards as JSON, default is stdout")
+	flag.Var(&flags.mode, "mode", "mode in which to run the testsharder (e.g., normal or restricted).")
+	flag.Var(&flags.tags, "tag", "environment tags on which to filter; only the tests that match all tags will be sharded")
+	flag.StringVar(&flags.modifiersPath, "modifiers", "", "path to the json manifest containing tests to modify")
+	flag.IntVar(&flags.targetDurationSecs, "target-duration-secs", 0, "approximate duration that each shard should run in")
+	flag.IntVar(&flags.maxShardsPerEnvironment, "max-shards-per-env", 8, "maximum shards allowed per environment. If <= 0, no max will be set")
 	// TODO(fxbug.dev/10456): Support different timeouts for different tests.
-	flag.IntVar(&perTestTimeoutSecs, "per-test-timeout-secs", 0, "per-test timeout, applied to all tests. If <= 0, no timeout will be set")
+	flag.IntVar(&flags.perTestTimeoutSecs, "per-test-timeout-secs", 0, "per-test timeout, applied to all tests. If <= 0, no timeout will be set")
 	// Despite being a misnomer, this argument is still called -max-shard-size
 	// for legacy reasons. If it becomes confusing, we can create a new
 	// target_test_count fuchsia.proto field and do a soft transition with the
 	// recipes to start setting the renamed argument instead.
-	flag.IntVar(&targetTestCount, "max-shard-size", 0, "target number of tests per shard. If <= 0, will be ignored. Otherwise, tests will be placed into more, smaller shards")
-	flag.StringVar(&affectedTestsPath, "affected-tests", "", "path to a file containing names of tests affected by the change being tested. One test name per line.")
-	flag.IntVar(&affectedTestsMaxAttempts, "affected-tests-max-attempts", 2, "maximum attempts for each affected test. Only applied to tests that are not multiplied")
-	flag.IntVar(&affectedTestsMultiplyThreshold, "affected-tests-multiply-threshold", 0, "if there are <= this many tests in -affected-tests, they may be multplied "+
+	flag.IntVar(&flags.targetTestCount, "max-shard-size", 0, "target number of tests per shard. If <= 0, will be ignored. Otherwise, tests will be placed into more, smaller shards")
+	flag.StringVar(&flags.affectedTestsPath, "affected-tests", "", "path to a file containing names of tests affected by the change being tested. One test name per line.")
+	flag.IntVar(&flags.affectedTestsMaxAttempts, "affected-tests-max-attempts", 2, "maximum attempts for each affected test. Only applied to tests that are not multiplied")
+	flag.IntVar(&flags.affectedTestsMultiplyThreshold, "affected-tests-multiply-threshold", 0, "if there are <= this many tests in -affected-tests, they may be multplied "+
 		"(modified to run many times in a separate shard), but only be multiplied if allowed by certain constraints designed to minimize false rejections and bot demand.")
-	flag.BoolVar(&affectedOnly, "affected-only", false, "whether to create test shards for only the affected tests found in either the modifiers file or the affected-tests file.")
-	flag.StringVar(&realmLabel, "realm-label", "", "applies this realm label to the output sharded json file generated by testsharder. If empty, no realm label is applied.")
-	flag.BoolVar(&hermeticDeps, "hermetic-deps", false, "whether to add all the images and blobs used by the shard as dependencies")
-	flag.BoolVar(&imageDeps, "image-deps", false, "whether to add all the images used by the shard as dependencies")
-	flag.BoolVar(&pave, "pave", false, "whether the shards generated should pave or netboot fuchsia")
+	flag.BoolVar(&flags.affectedOnly, "affected-only", false, "whether to create test shards for only the affected tests found in either the modifiers file or the affected-tests file.")
+	flag.StringVar(&flags.realmLabel, "realm-label", "", "applies this realm label to the output sharded json file generated by testsharder. If empty, no realm label is applied.")
+	flag.BoolVar(&flags.hermeticDeps, "hermetic-deps", false, "whether to add all the images and blobs used by the shard as dependencies")
+	flag.BoolVar(&flags.imageDeps, "image-deps", false, "whether to add all the images used by the shard as dependencies")
+	flag.BoolVar(&flags.pave, "pave", false, "whether the shards generated should pave or netboot fuchsia")
+
 	flag.Usage = usage
+
+	flag.Parse()
+
+	return flags
 }
 
 func main() {
-	flag.Parse()
 	l := logger.NewLogger(logger.ErrorLevel, color.NewColor(color.ColorAuto), os.Stdout, os.Stderr, "")
 	// testsharder is expected to complete quite quickly, so it's generally not
 	// useful to include timestamps in logs. File names can be helpful though.
@@ -86,18 +92,16 @@ func main() {
 	ctx := logger.WithLogger(context.Background(), l)
 	ctx, cancel := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
-	if err := execute(ctx); err != nil {
+
+	if err := mainImpl(ctx); err != nil {
 		logger.Fatalf(ctx, err.Error())
 	}
 }
 
-// TODO(olivernewman): Write tests for this function. The helper functions it
-// calls are individually unit-tested, but the ordering of the calls is
-// important and depending on the ordering the functions might step on each
-// other's toes, so it's important to validate that the end-to-end output is as
-// expected.
-func execute(ctx context.Context) error {
-	if buildDir == "" {
+func mainImpl(ctx context.Context) error {
+	flags := parseFlags()
+
+	if flags.buildDir == "" {
 		return fmt.Errorf("must specify a Fuchsia build output directory")
 	}
 
@@ -108,33 +112,45 @@ func execute(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := os.Chdir(buildDir); err != nil {
+	if err := os.Chdir(flags.buildDir); err != nil {
 		return err
 	}
 	defer os.Chdir(wd)
 
-	targetDuration := time.Duration(targetDurationSecs) * time.Second
-	if targetTestCount > 0 && targetDuration > 0 {
-		return fmt.Errorf("max-shard-size and target-duration-secs cannot both be set")
-	}
-
-	perTestTimeout := time.Duration(perTestTimeoutSecs) * time.Second
-
-	m, err := build.NewModules(buildDir)
+	m, err := build.NewModules(flags.buildDir)
 	if err != nil {
 		return err
 	}
+	return execute(ctx, flags, m)
+}
 
-	if err = testsharder.ValidateTests(m.TestSpecs(), m.Platforms()); err != nil {
+type buildModules interface {
+	Images() []build.Image
+	Platforms() []build.DimensionSet
+	TestSpecs() []build.TestSpec
+	TestListLocation() []string
+	TestDurations() []build.TestDuration
+}
+
+func execute(ctx context.Context, flags testsharderFlags, m buildModules) error {
+	targetDuration := time.Duration(flags.targetDurationSecs) * time.Second
+	if flags.targetTestCount > 0 && targetDuration > 0 {
+		return fmt.Errorf("max-shard-size and target-duration-secs cannot both be set")
+	}
+
+	perTestTimeout := time.Duration(flags.perTestTimeoutSecs) * time.Second
+
+	if err := testsharder.ValidateTests(m.TestSpecs(), m.Platforms()); err != nil {
 		return err
 	}
 
 	opts := &testsharder.ShardOptions{
-		Mode: mode,
-		Tags: tags,
+		Mode: flags.mode,
+		Tags: flags.tags,
 	}
 	// Pass in the test-list to carry over tags to the shards.
-	testListEntries, err := build.LoadTestList(m.TestListLocation()[0])
+	testListPath := filepath.Join(flags.buildDir, m.TestListLocation()[0])
+	testListEntries, err := build.LoadTestList(testListPath)
 	if err != nil {
 		return err
 	}
@@ -147,15 +163,15 @@ func execute(ctx context.Context) error {
 	testDurations := testsharder.NewTestDurationsMap(m.TestDurations())
 
 	var modifiers []testsharder.TestModifier
-	if modifiersPath != "" {
-		modifiers, err = testsharder.LoadTestModifiers(modifiersPath)
+	if flags.modifiersPath != "" {
+		modifiers, err = testsharder.LoadTestModifiers(flags.modifiersPath)
 		if err != nil {
 			return err
 		}
 	}
 
-	if affectedTestsPath != "" {
-		affectedModifiers, err := testsharder.AffectedModifiers(m.TestSpecs(), affectedTestsPath, affectedTestsMaxAttempts, affectedTestsMultiplyThreshold)
+	if flags.affectedTestsPath != "" {
+		affectedModifiers, err := testsharder.AffectedModifiers(m.TestSpecs(), flags.affectedTestsPath, flags.affectedTestsMaxAttempts, flags.affectedTestsMultiplyThreshold)
 		if err != nil {
 			return err
 		}
@@ -172,21 +188,21 @@ func execute(ctx context.Context) error {
 	}
 	affectedShards, unaffectedShards := testsharder.PartitionShards(shards, isAffected, testsharder.AffectedShardPrefix)
 	shards = affectedShards
-	if !affectedOnly {
+	if !flags.affectedOnly {
 		shards = append(shards, unaffectedShards...)
 	}
 
-	shards, err = testsharder.MultiplyShards(ctx, shards, modifiers, testDurations, targetDuration, targetTestCount)
+	shards, err = testsharder.MultiplyShards(ctx, shards, modifiers, testDurations, targetDuration, flags.targetTestCount)
 	if err != nil {
 		return err
 	}
 
-	shards = testsharder.WithTargetDuration(shards, targetDuration, targetTestCount, maxShardsPerEnvironment, testDurations)
+	shards = testsharder.WithTargetDuration(shards, targetDuration, flags.targetTestCount, flags.maxShardsPerEnvironment, testDurations)
 
-	if hermeticDeps || imageDeps {
+	if flags.hermeticDeps || flags.imageDeps {
 		for _, s := range shards {
-			testsharder.AddImageDeps(s, m.Images(), pave)
-			if hermeticDeps {
+			testsharder.AddImageDeps(s, m.Images(), flags.pave)
+			if flags.hermeticDeps {
 				if err := s.CreatePackageRepo(); err != nil {
 					return err
 				}
@@ -194,20 +210,20 @@ func execute(ctx context.Context) error {
 		}
 	}
 
-	if err := testsharder.ExtractDeps(shards, m.BuildDir()); err != nil {
+	if err := testsharder.ExtractDeps(shards, flags.buildDir); err != nil {
 		return err
 	}
 
-	if realmLabel != "" {
-		testsharder.ApplyRealmLabel(shards, realmLabel)
+	if flags.realmLabel != "" {
+		testsharder.ApplyRealmLabel(shards, flags.realmLabel)
 	}
 
 	f := os.Stdout
-	if outputFile != "" {
+	if flags.outputFile != "" {
 		var err error
-		f, err = os.Create(outputFile)
+		f, err = os.Create(flags.outputFile)
 		if err != nil {
-			return fmt.Errorf("unable to create %s: %v", outputFile, err)
+			return fmt.Errorf("unable to create %s: %v", flags.outputFile, err)
 		}
 		defer f.Close()
 	}

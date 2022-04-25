@@ -5,6 +5,7 @@
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
+import("//build/testing/host_test_data.gni")
 
 go_library("testsharder_lib") {
   sources = [
@@ -36,7 +37,10 @@ go_library("testsharder_lib") {
 
 go_library("main") {
   source_dir = "cmd"
-  sources = [ "main.go" ]
+  sources = [
+    "main.go",
+    "main_test.go",
+  ]
   deps = [
     ":testsharder_lib",
     "//tools/lib/flagmisc",
@@ -48,11 +52,48 @@ go_binary("testsharder") {
   deps = [ ":main" ]
 }
 
-go_test("testsharder_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/integration/testsharder" ]
+if (is_host) {
+  go_test("testsharder_lib_tests") {
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/integration/testsharder" ]
+    deps = [
+      ":testsharder_lib",
+      "//third_party/golibs:github.com/google/go-cmp",
+    ]
+  }
+
+  _golden_dir = "${target_gen_dir}/goldens"
+  host_test_data("copy_golden_files") {
+    sources = [
+      "cmd/testdata/affected_tests.golden.json",
+      "cmd/testdata/basic.golden.json",
+      "cmd/testdata/multiply.golden.json",
+      "cmd/testdata/target_test_count.golden.json",
+      "cmd/testdata/test_list_with_tags.golden.json",
+    ]
+    outputs = [ "${_golden_dir}/{{source_file_part}}" ]
+  }
+
+  go_test("testsharder_tests") {
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/integration/testsharder/cmd" ]
+    deps = [
+      ":main",
+      "//third_party/golibs:github.com/google/go-cmp",
+      "//tools/lib/jsonutil",
+    ]
+
+    non_go_deps = [ ":copy_golden_files" ]
+
+    args = [
+      "-goldens-dir",
+      rebase_path(_golden_dir, root_build_dir),
+    ]
+  }
+}
+
+group("tests") {
+  testonly = true
   deps = [
-    ":testsharder_lib",
-    "//third_party/golibs:github.com/google/go-cmp",
-    "//tools/testing/runtests",
+    ":testsharder_lib_tests($host_toolchain)",
+    ":testsharder_tests($host_toolchain)",
   ]
 }
