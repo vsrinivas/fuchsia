@@ -34,6 +34,7 @@ template("create_all_drivers_doc") {
 
     # File containing driver documentation.
     data_keys = [ "fuchsia_driver_doc_file" ]
+    walk_keys = [ "driver_component_barrier" ]
   }
 
   action(target_name) {
