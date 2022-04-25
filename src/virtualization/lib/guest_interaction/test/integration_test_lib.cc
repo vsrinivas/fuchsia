@@ -102,9 +102,11 @@ void GuestInteractionTest::SetUp() {
       // Periodically log the guest state.
       MakeRecurringTask(
           dispatcher(),
-          [serial = std::move(serial)]() mutable {
-            ASSERT_OK(serial.ExecuteBlocking("journalctl -u guest_interaction_daemon --no-pager",
-                                             "$", zx::time::infinite(), nullptr));
+          [serial = std::move(serial), log_count = 0]() mutable {
+            ASSERT_OK(
+                serial.ExecuteBlocking("echo " + std::to_string(++log_count) +
+                                           "; journalctl -u guest_interaction_daemon --no-pager",
+                                       "$", zx::time::infinite(), nullptr));
           },
           zx::sec(10))();
 

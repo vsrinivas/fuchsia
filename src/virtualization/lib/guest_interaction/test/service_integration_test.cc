@@ -53,6 +53,7 @@ TEST_F(GuestInteractionTestWithDiscovery, FidlExecScriptTest) {
   gis.set_error_handler([&gis_status](zx_status_t status) { gis_status = status; });
 
   // Push the bash script to the guest
+  FX_LOGS(INFO) << "Sending script to guest";
   fidl::InterfaceHandle<fuchsia::io::File> put_file;
   ASSERT_OK(fdio_open(kTestScriptSource,
                       static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE),
@@ -79,6 +80,7 @@ TEST_F(GuestInteractionTestWithDiscovery, FidlExecScriptTest) {
   ASSERT_OK(zx::socket::create(0, &stderr_writer, &stderr_reader));
 
   // Run the bash script on the guest.
+  FX_LOGS(INFO) << "Running script in guest";
   std::string command = std::string("/bin/sh ");
   command.append(kGuestScriptDestination);
   std::vector<fuchsia::netemul::guest::EnvironmentVariable> env_vars = {
