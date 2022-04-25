@@ -54,9 +54,8 @@ fn get_timestamp() -> Result<Timestamp> {
     ))
 }
 
-fn timestamp_to_partial_secs(ts: Timestamp) -> f64 {
-    let u_ts: i64 = ts.into();
-    u_ts as f64 / NANOS_IN_SECOND as f64
+fn timestamp_to_partial_secs(ts: i64) -> f64 {
+    ts as f64 / NANOS_IN_SECOND as f64
 }
 
 fn severity_to_color_str(s: Severity) -> String {
@@ -306,11 +305,11 @@ impl<'a> DefaultLogFormatter<'a> {
         })
     }
 
-    fn format_target_timestamp(&self, options: &TextDisplayOptions, ts: Timestamp) -> String {
+    fn format_target_timestamp(&self, options: &TextDisplayOptions, ts: i64) -> String {
         let mut abs_ts = 0;
         let time_format = match self.boot_ts_nanos {
             Some(boot_ts) => {
-                abs_ts = boot_ts + *ts;
+                abs_ts = boot_ts + ts;
                 &options.time_format
             }
             None => &TimeFormat::Monotonic,

@@ -388,7 +388,7 @@ impl CachedSessionStream {
                     .next()
                     .await;
                 if let Some(earliest_ts) = earliest_chunk_ts {
-                    if earliest_ts < start_ts {
+                    if earliest_ts < *start_ts {
                         entries.drain(0..i);
                         break;
                     }
@@ -434,7 +434,7 @@ impl CachedSessionStream {
                     match &entry.data {
                         LogData::TargetLog(data) | LogData::SymbolizedTargetLog(data, _) => {
                             if let Some(min_ts) = self.start_target_timestamp {
-                                if data.metadata.timestamp < min_ts {
+                                if data.metadata.timestamp < *min_ts {
                                     continue;
                                 }
                             }
@@ -791,7 +791,7 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer<'_> {
                 .await;
             if entry.is_some() {
                 log::trace!("read of most recent target timestamps finished with entry found");
-                return Ok(entry);
+                return Ok(entry.map(|t| t.into()));
             }
         }
         log::trace!("read of most recent target timestamps finished with no entry found");

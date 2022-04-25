@@ -199,7 +199,7 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + ?Sized>(
                     if let Some(ts) = skip_timestamp {
                         match &log.data {
                             LogData::TargetLog(log_data) => {
-                                if log_data.metadata.timestamp > ts {
+                                if log_data.metadata.timestamp > *ts {
                                     skip_timestamp = None;
                                     true
                                 } else {

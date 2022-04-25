@@ -124,7 +124,7 @@ impl DiagnosticsData for Lifecycle {
     }
 
     fn timestamp(metadata: &Self::Metadata) -> Timestamp {
-        metadata.timestamp
+        Timestamp(metadata.timestamp)
     }
 
     fn errors(metadata: &Self::Metadata) -> &Option<Vec<Self::Error>> {
@@ -156,7 +156,7 @@ impl DiagnosticsData for Inspect {
     }
 
     fn timestamp(metadata: &Self::Metadata) -> Timestamp {
-        metadata.timestamp
+        Timestamp(metadata.timestamp)
     }
 
     fn errors(metadata: &Self::Metadata) -> &Option<Vec<Self::Error>> {
@@ -188,7 +188,7 @@ impl DiagnosticsData for Logs {
     }
 
     fn timestamp(metadata: &Self::Metadata) -> Timestamp {
-        metadata.timestamp
+        Timestamp(metadata.timestamp)
     }
 
     fn errors(metadata: &Self::Metadata) -> &Option<Vec<Self::Error>> {
@@ -295,7 +295,7 @@ pub struct LifecycleEventMetadata {
     pub component_url: Option<String>,
 
     /// Monotonic time in nanos.
-    pub timestamp: Timestamp,
+    pub timestamp: i64,
 }
 
 /// The metadata contained in a `DiagnosticsData` object where the data source is
@@ -311,7 +311,7 @@ pub struct InspectMetadata {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub component_url: Option<String>,
     /// Monotonic time in nanos.
-    pub timestamp: Timestamp,
+    pub timestamp: i64,
 }
 
 /// The metadata contained in a `DiagnosticsData` object where the data source is
@@ -328,7 +328,7 @@ pub struct LogsMetadata {
     pub component_url: Option<String>,
 
     /// Monotonic time in nanos.
-    pub timestamp: Timestamp,
+    pub timestamp: i64,
 
     /// Severity of the message.
     pub severity: Severity,
@@ -516,7 +516,7 @@ impl Data<Lifecycle> {
             data_source: DataSource::LifecycleEvent,
             payload,
             metadata: LifecycleEventMetadata {
-                timestamp: timestamp.into(),
+                timestamp: *(timestamp.into()),
                 component_url: Some(component_url.into()),
                 lifecycle_event_type,
                 errors: errors_opt,
@@ -530,7 +530,7 @@ impl Data<Inspect> {
     pub fn for_inspect(
         moniker: impl Into<String>,
         inspect_hierarchy: Option<DiagnosticsHierarchy>,
-        timestamp_nanos: impl Into<Timestamp>,
+        timestamp: impl Into<Timestamp>,
         component_url: impl Into<String>,
         filename: impl Into<String>,
         errors: Vec<InspectError>,
@@ -543,7 +543,7 @@ impl Data<Inspect> {
             data_source: DataSource::Inspect,
             payload: inspect_hierarchy,
             metadata: InspectMetadata {
-                timestamp: timestamp_nanos.into(),
+                timestamp: *(timestamp.into()),
                 component_url: Some(component_url.into()),
                 filename: filename.into(),
                 errors: errors_opt,
@@ -752,7 +752,7 @@ impl Data<Logs> {
     pub fn for_logs(
         moniker: impl Into<String>,
         payload: Option<LogsHierarchy>,
-        timestamp_nanos: impl Into<Timestamp>,
+        timestamp: impl Into<Timestamp>,
         component_url: Option<String>,
         severity: impl Into<Severity>,
         errors: Vec<LogError>,
@@ -765,7 +765,7 @@ impl Data<Logs> {
             data_source: DataSource::Logs,
             payload,
             metadata: LogsMetadata {
-                timestamp: timestamp_nanos.into(),
+                timestamp: *(timestamp.into()),
                 component_url: component_url,
                 severity: severity.into(),
                 errors,
@@ -1000,7 +1000,7 @@ impl fmt::Display for Data<Logs> {
         // Multiple tags are supported for the `LogMessage` format and are represented
         // as multiple instances of LogsField::Tag arguments.
         let kvps = self.payload_keys_strings();
-        let time: Duration = self.metadata.timestamp.into();
+        let time: Duration = Duration::from_nanos(self.metadata.timestamp as u64);
         write!(
             f,
             "[{:05}.{:06}][{}][{}][{}]",
