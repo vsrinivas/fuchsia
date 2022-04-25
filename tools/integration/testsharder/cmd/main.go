@@ -49,6 +49,7 @@ type testsharderFlags struct {
 	hermeticDeps                   bool
 	imageDeps                      bool
 	pave                           bool
+	skipUnaffected                 bool
 }
 
 func parseFlags() testsharderFlags {
@@ -76,7 +77,7 @@ func parseFlags() testsharderFlags {
 	flag.BoolVar(&flags.hermeticDeps, "hermetic-deps", false, "whether to add all the images and blobs used by the shard as dependencies")
 	flag.BoolVar(&flags.imageDeps, "image-deps", false, "whether to add all the images used by the shard as dependencies")
 	flag.BoolVar(&flags.pave, "pave", false, "whether the shards generated should pave or netboot fuchsia")
-
+	flag.BoolVar(&flags.skipUnaffected, "skip-unaffected", false, "whether the shards should ignore hermetic, unaffected tests")
 	flag.Usage = usage
 
 	flag.Parse()
@@ -183,13 +184,41 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 		return err
 	}
 
-	isAffected := func(t testsharder.Test) bool {
-		return t.Affected
-	}
-	affectedShards, unaffectedShards := testsharder.PartitionShards(shards, isAffected, testsharder.AffectedShardPrefix)
-	shards = affectedShards
-	if !flags.affectedOnly {
-		shards = append(shards, unaffectedShards...)
+	var skippedShards []*testsharder.Shard
+	if flags.skipUnaffected {
+		// Filter out the affected, hermetic shards.
+		hermeticAndAffected := func(t testsharder.Test) bool {
+			return t.Affected && t.Hermetic()
+		}
+		affectedHermeticShards, unaffectedOrNonhermeticShards := testsharder.PartitionShards(shards, hermeticAndAffected, testsharder.AffectedShardPrefix)
+
+		// Filter out unaffected hermetic shards from the remaining shards.
+		hermetic := func(t testsharder.Test) bool {
+			return t.Hermetic()
+		}
+		unaffectedHermeticShards, nonhermeticShards := testsharder.PartitionShards(unaffectedOrNonhermeticShards, hermetic, testsharder.UnaffectedShardPrefix)
+
+		// Set up the shards to include:
+		// 1. Affected hermetic shards
+		// 2. Nonhermetic shards
+		shards = affectedHermeticShards
+		shards = append(shards, nonhermeticShards...)
+
+		// Mark the unaffected, hermetic shards skipped, as we don't need to
+		// run them.
+		skippedShards, err = testsharder.MarkShardsSkipped(unaffectedHermeticShards)
+		if err != nil {
+			return err
+		}
+	} else {
+		isAffected := func(t testsharder.Test) bool {
+			return t.Affected
+		}
+		affectedShards, unaffectedShards := testsharder.PartitionShards(shards, isAffected, testsharder.AffectedShardPrefix)
+		shards = affectedShards
+		if !flags.affectedOnly {
+			shards = append(shards, unaffectedShards...)
+		}
 	}
 
 	shards, err = testsharder.MultiplyShards(ctx, shards, modifiers, testDurations, targetDuration, flags.targetTestCount)
@@ -217,6 +246,10 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 	if flags.realmLabel != "" {
 		testsharder.ApplyRealmLabel(shards, flags.realmLabel)
 	}
+
+	// Add back the skipped shards so that we can process and upload results
+	// downstream.
+	shards = append(shards, skippedShards...)
 
 	f := os.Stdout
 	if flags.outputFile != "" {

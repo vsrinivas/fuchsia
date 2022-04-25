@@ -78,3 +78,12 @@ func (t *Test) minRequiredRuns() int {
 func (t *Test) applyTestListTags(tl build.TestListEntry) {
 	t.Tags = tl.Tags
 }
+
+func (t *Test) Hermetic() bool {
+	for _, tag := range t.Tags {
+		if tag.Key == "hermetic" && tag.Value == "true" {
+			return true
+		}
+	}
+	return false
+}

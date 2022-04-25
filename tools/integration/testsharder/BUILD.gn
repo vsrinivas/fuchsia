@@ -67,6 +67,7 @@ if (is_host) {
       "cmd/testdata/affected_tests.golden.json",
       "cmd/testdata/basic.golden.json",
       "cmd/testdata/multiply.golden.json",
+      "cmd/testdata/skip_unaffected_tests.golden.json",
       "cmd/testdata/target_test_count.golden.json",
       "cmd/testdata/test_list_with_tags.golden.json",
     ]

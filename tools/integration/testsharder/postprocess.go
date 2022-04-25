@@ -39,6 +39,9 @@ const (
 
 	// The prefix added to the names of shards that run multiplied tests.
 	multipliedShardPrefix = "multiplied:"
+
+	// The prefix added to the names of shards that run unaffected tests.
+	UnaffectedShardPrefix = "unaffected:"
 )
 
 // MultiplyShards will return an error that unwraps to this if a multiplier's
