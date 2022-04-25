@@ -10,7 +10,7 @@ visibility = [ "//src/developer/forensics/*" ]
 ###############################################################################
 # COMPONENTS
 ###############################################################################
-fuchsia_component("fake_crash_reporter_v2") {
+fuchsia_component("fake_crash_reporter") {
   testonly = true
 
   manifest = "meta/fake_crash_reporter.cml"

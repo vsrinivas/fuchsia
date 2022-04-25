@@ -15,7 +15,7 @@
     children: [
         {
             name: "crash_reporter",
-            url: "#meta/fake_crash_reporter_v2.cm",
+            url: "#meta/fake_crash_reporter.cm",
         },
         {
             name: "exception_handler",

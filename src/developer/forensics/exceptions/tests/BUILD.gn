@@ -255,7 +255,7 @@ fuchsia_test_package("exception-broker-integration-test") {
   deps = [
     # Other components that we are injecting in the integration tests.
     "//src/developer/forensics:exceptions",
-    "//src/developer/forensics/testing/fakes:fake_crash_reporter_v2",
+    "//src/developer/forensics/testing/fakes:fake_crash_reporter",
   ]
 }
 

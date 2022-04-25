@@ -18,7 +18,7 @@
         },
         {
             name: "fake-crash-reporter",
-            url: "fuchsia-pkg://fuchsia.com/fshost-tests#meta/fake_crash_reporter_v2.cm",
+            url: "fuchsia-pkg://fuchsia.com/fshost-tests#meta/fake_crash_reporter.cm",
         },
     ],
     collections: [
