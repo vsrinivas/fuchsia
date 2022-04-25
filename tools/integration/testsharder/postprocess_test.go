@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
+	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
 func affectedShard(env build.Environment, os string, ids ...int) *Shard {
@@ -511,6 +512,80 @@ func TestPartitionShards(t *testing.T) {
 			)
 			assertEqual(t, tc.expectedPartition1, partition1)
 			assertEqual(t, tc.expectedPartition2, partition2)
+		})
+	}
+}
+
+func TestMarkShardsSkipped(t *testing.T) {
+	env1 := build.Environment{
+		Dimensions: build.DimensionSet{DeviceType: "QEMU"},
+	}
+	env2 := build.Environment{
+		Dimensions: build.DimensionSet{DeviceType: "NUC"},
+	}
+
+	summary := func(os string, ids ...int) runtests.TestSummary {
+		var s runtests.TestSummary
+		for _, id := range ids {
+			test := makeTest(id, os)
+			s.Tests = append(s.Tests, runtests.TestDetails{
+				Name:    test.Name,
+				GNLabel: test.Label,
+				Result:  runtests.TestSkipped,
+				Tags:    test.Tags,
+			})
+		}
+		return s
+	}
+
+	skippedShard := func(s *Shard, summary runtests.TestSummary) *Shard {
+		s.Summary = summary
+		return s
+	}
+
+	shardWithAffected := func(s *Shard, affectedIndices ...int) *Shard {
+		for _, i := range affectedIndices {
+			s.Tests[i].Affected = true
+		}
+		return s
+	}
+
+	testCases := []struct {
+		name     string
+		shards   []*Shard
+		expected []*Shard
+		err      error
+	}{
+		{
+			name: "shards are skipped correctly",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1, 2, 3),
+				shard(env2, "linux", 1, 2, 3),
+			},
+			expected: []*Shard{
+				skippedShard(shard(env1, "fuchsia", 1, 2, 3), summary("fuchsia", 1, 2, 3)),
+				skippedShard(shard(env2, "linux", 1, 2, 3), summary("linux", 1, 2, 3)),
+			},
+		},
+		{
+			name: "skipping an affected test throws an error",
+			shards: []*Shard{
+				shardWithAffected(shard(env1, "fuchsia", 1, 2, 3), 0),
+				shard(env2, "linux", 1, 2, 3),
+			},
+			err: errSkippedAffectedTest,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := MarkShardsSkipped(tc.shards)
+			if !errors.Is(err, tc.err) {
+				t.Fatalf("got unexpected error %v, expected: %v", err, tc.err)
+			}
+			if err != nil {
+				return
+			}
+			assertEqual(t, tc.expected, got)
 		})
 	}
 }

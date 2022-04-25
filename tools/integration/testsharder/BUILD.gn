@@ -30,6 +30,7 @@ go_library("testsharder_lib") {
     "//tools/build",
     "//tools/lib/color",
     "//tools/lib/logger",
+    "//tools/testing/runtests",
   ]
 }
 
@@ -52,5 +53,6 @@ go_test("testsharder_tests") {
   deps = [
     ":testsharder_lib",
     "//third_party/golibs:github.com/google/go-cmp",
+    "//tools/testing/runtests",
   ]
 }

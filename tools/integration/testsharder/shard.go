@@ -15,6 +15,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/repo"
 	"go.fuchsia.dev/fuchsia/tools/build"
+	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
 // Shard represents a set of tests with a common execution environment.
@@ -41,6 +42,9 @@ type Shard struct {
 	// the task that runs the shard. It's computed dynamically based on the
 	// expected runtime of the tests.
 	TimeoutSecs int `json:"timeout_secs"`
+
+	// Summary is a TestSummary that is populated if the shard is skipped.
+	Summary runtests.TestSummary `json:"summary,omitempty"`
 }
 
 // CreatePackageRepo creates a package repository for the given shard.

@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
 const (
@@ -51,6 +52,10 @@ var errTooManyMultiplierMatches = fmt.Errorf("a multiplier cannot match more tha
 // ApplyModifiers will return an error that unwraps to this if multiple default
 // test modifiers are provided.
 var errMultipleDefaultModifiers = fmt.Errorf("too many default modifiers, only one is allowed")
+
+// MarkShardsSkipped will return an error that unwraps to this if the shards
+// contain an affected test.
+var errSkippedAffectedTest = fmt.Errorf("attempted to skip an affected test")
 
 func ExtractDeps(shards []*Shard, fuchsiaBuildDir string) error {
 	for _, shard := range shards {
@@ -305,6 +310,32 @@ func PartitionShards(shards []*Shard, partitionFunc func(Test) bool, prefix stri
 		}
 	}
 	return matchingShards, nonmatchingShards
+}
+
+// MarkShardsSkipped marks the entire set of shards skipped.
+func MarkShardsSkipped(shards []*Shard) ([]*Shard, error) {
+	var newShards []*Shard
+	for _, shard := range shards {
+		var summary runtests.TestSummary
+		for _, test := range shard.Tests {
+			if test.Affected {
+				return nil, errSkippedAffectedTest
+			}
+			summary.Tests = append(summary.Tests, runtests.TestDetails{
+				Name:    test.Name,
+				GNLabel: test.Label,
+				Result:  runtests.TestSkipped,
+				Tags:    test.Tags,
+			})
+		}
+		newShards = append(newShards, &Shard{
+			Name:    shard.Name,
+			Tests:   shard.Tests,
+			Env:     shard.Env,
+			Summary: summary,
+		})
+	}
+	return newShards, nil
 }
 
 func min(a, b int) int {
