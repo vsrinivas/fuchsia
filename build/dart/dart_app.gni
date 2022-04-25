@@ -147,7 +147,11 @@ template("dart_app") {
 
   dart_library_gn_label = target_name + "_dart_library"
   dart_library(dart_library_gn_label) {
-    forward_variables_from(invoker, [ "null_safe" ])
+    forward_variables_from(invoker,
+                           [
+                             "null_safe",
+                             "non_dart_deps",
+                           ])
     package_name = _package_name
     sources = _sources
     source_dir = _source_dir

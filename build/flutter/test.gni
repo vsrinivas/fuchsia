@@ -218,7 +218,7 @@ if (current_toolchain == dart_toolchain) {
     # with the test and the rest of the test's dependencies, so that the
     # archiving happens with respect to the build directory.
     _data_dir = "$target_gen_dir/${_main_target_name}_data"
-    _icudtl_file = "$_data_dir/icudtl.dat"
+    _icudtl_file = "${root_build_dir}/icu_data/icudtl.dat"
     _dart_binary = "$_data_dir/dart"
     copy(_copy_target_name) {
       sources = [
@@ -226,6 +226,7 @@ if (current_toolchain == dart_toolchain) {
         prebuilt_dart,
       ]
       outputs = [ "$_data_dir/{{source_file_part}}" ]
+      deps = [ "//src/lib/icu_data:icudtl($host_toolchain)" ]
     }
 
     # Creates a snapshot file of the fuchsia tester, which allows the test to

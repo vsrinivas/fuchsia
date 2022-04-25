@@ -92,9 +92,6 @@ template("flutter_app") {
   if (defined(invoker.deps)) {
     _deps += invoker.deps
   }
-  if (defined(invoker.non_dart_deps)) {
-    _deps += invoker.non_dart_deps
-  }
   _null_safe = false
   if (defined(invoker.null_safe) && invoker.null_safe) {
     _null_safe = true
@@ -116,6 +113,7 @@ template("flutter_app") {
 
   dart_library_gn_label = target_name + "_dart_library"
   dart_library(dart_library_gn_label) {
+    forward_variables_from(invoker, [ "non_dart_deps" ])
     package_name = _package_name
     sources = _sources
     source_dir = _source_dir
