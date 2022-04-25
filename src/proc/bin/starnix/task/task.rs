@@ -337,6 +337,16 @@ impl Task {
         // lock on the child and take the current state back.
         std::mem::drop(state);
 
+        #[cfg(test)]
+        {
+            // Take the lock on the thread group and its child in the correct order to ensure any wrong ordering
+            // will trigger the tracing-mutex at the right call site.
+            if !clone_thread {
+                let _l1 = child.thread_group.read();
+                let _l2 = self.thread_group.read();
+            }
+        }
+
         if clone_thread {
             self.thread_group.add(&child)?;
         } else {

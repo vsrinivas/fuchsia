@@ -432,6 +432,7 @@ impl ThreadGroup {
         pgid: pid_t,
     ) -> Result<(), Errno> {
         // Keep locks to ensure atomicity.
+        let pids = self.kernel.pids.read();
         let state = self.read();
         let process_group = &state.process_group;
         let mut controlling_session = terminal.get_controlling_session_mut(is_main);
@@ -448,7 +449,7 @@ impl ThreadGroup {
             return error!(EINVAL);
         }
 
-        let new_process_group = self.kernel.pids.read().get_process_group(pgid).ok_or(ESRCH)?;
+        let new_process_group = pids.get_process_group(pgid).ok_or(ESRCH)?;
         if new_process_group.session != process_group.session {
             return error!(EPERM);
         }
@@ -469,8 +470,8 @@ impl ThreadGroup {
         // Keep locks to ensure atomicity.
         let state = self.read();
         let process_group = &state.process_group;
-        let mut controlling_terminal = process_group.session.controlling_terminal.write();
         let mut controlling_session = terminal.get_controlling_session_mut(is_main);
+        let mut controlling_terminal = process_group.session.controlling_terminal.write();
 
         // "The calling process must be a session leader and not have a
         // controlling terminal already." - tty_ioctl(4)
@@ -519,8 +520,8 @@ impl ThreadGroup {
         // Keep locks to ensure atomicity.
         let state = self.read();
         let process_group = &state.process_group;
-        let mut controlling_terminal = process_group.session.controlling_terminal.write();
         let mut controlling_session = terminal.get_controlling_session_mut(is_main);
+        let mut controlling_terminal = process_group.session.controlling_terminal.write();
 
         // tty must be the controlling terminal.
         if !Self::is_controlling_session(&process_group.session, &controlling_session) {
@@ -807,14 +808,14 @@ mod test {
 
     #[::fuchsia::test]
     fn test_setsid() {
+        fn get_process_group(task: &Task) -> Arc<ProcessGroup> {
+            Arc::clone(&task.thread_group.read().process_group)
+        }
         let (_kernel, current_task) = create_kernel_and_task();
         assert_eq!(current_task.thread_group.setsid(), error!(EPERM));
 
         let child_task = current_task.clone_task_for_test(0);
-        assert_eq!(
-            current_task.thread_group.read().process_group.session.leader,
-            child_task.thread_group.read().process_group.session.leader
-        );
+        assert_eq!(get_process_group(&current_task), get_process_group(&child_task));
 
         let old_process_group = child_task.thread_group.read().process_group.clone();
         assert_eq!(child_task.thread_group.setsid(), Ok(()));

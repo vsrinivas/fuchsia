@@ -733,22 +733,15 @@ mod tests {
         assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCSPGRP, &255), Err(ESRCH));
 
         // Cannot change the foreground process group to a process group in another session.
-        assert_eq!(
-            ioctl::<i32>(
-                &task2,
-                &opened_replica,
-                TIOCSPGRP,
-                &init.thread_group.read().process_group.leader
-            ),
-            Err(EPERM)
-        );
+        let init_pgid = init.thread_group.read().process_group.leader;
+        assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCSPGRP, &init_pgid,), Err(EPERM));
 
         // Set the foregound process to task2 process group
         ioctl::<i32>(&task2, &opened_replica, TIOCSPGRP, &task2_pgid).unwrap();
 
         // Check that the foreground process has been changed.
-        assert_eq!(
-            task1
+        let terminal = Arc::clone(
+            &task1
                 .thread_group
                 .read()
                 .process_group
@@ -757,11 +750,10 @@ mod tests {
                 .read()
                 .as_ref()
                 .unwrap()
-                .terminal
-                .get_controlling_session(false)
-                .as_ref()
-                .unwrap()
-                .foregound_process_group,
+                .terminal,
+        );
+        assert_eq!(
+            terminal.get_controlling_session(false).as_ref().unwrap().foregound_process_group,
             task2_pgid
         );
     }
