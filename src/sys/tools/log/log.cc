@@ -45,7 +45,7 @@ zx_status_t ParseAndWriteLog(fuchsia::logger::LogSinkHandle log_sink, zx::time t
 
   fx_log_packet packet{
       .metadata{.time = time.get(), .severity = fuchsia::logger::LOG_LEVEL_DEFAULT}};
-  packet.data[0] = tag.length();
+  packet.data[0] = static_cast<char>(tag.length());
   tag.copy(&packet.data[1], tag.length());
   message.copy(&packet.data[tag.length() + 2], message.length());
   size_t actual = 0;
