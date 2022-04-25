@@ -17,7 +17,6 @@
 - Firmware
 - General
 - Governance
-- Graphics
 - HCI
 - Identity
 - Kernel
@@ -34,6 +33,7 @@
 - System
 - Testing
 - Toolchain
+- UI
 - View System
 - Virtualization
 - Web

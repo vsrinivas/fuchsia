@@ -1909,7 +1909,7 @@
   short_description: 'Describes the windowing system for the Fuchsia platform and ratifies its role in the platform.'
   authors: ['dworsham@google.com', 'jaeheon@google.com', 'neelsa@google.com']
   file: '0147_view_system.md'
-  area: ['Graphics, HCI']
+  area: ['HCI, UI']
   issue: ['83310']
   gerrit_change_id: ['602783']
   status: 'Accepted'

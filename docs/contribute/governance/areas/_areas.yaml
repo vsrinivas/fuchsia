@@ -40,10 +40,6 @@
   api_primary: 'dpursell@google.com'
   api_secondary: ''
 
-- name: 'Graphics'
-  api_primary: 'jbauman@google.com'
-  api_secondary: 'jaeheon@google.com'
-
 - name: 'HCI'
   api_primary: 'neelsa@google.com'
   api_secondary: 'jaeheon@google.com'
@@ -87,6 +83,10 @@
 - name: 'Toolchain'
   api_primary: 'mcgrathr@google.com'
   api_secondary: ''
+
+- name: 'UI'
+  api_primary: 'jbauman@google.com'
+  api_secondary: 'jaeheon@google.com'
 
 - name: 'View System'
   api_primary: 'jaeheon@google.com'
