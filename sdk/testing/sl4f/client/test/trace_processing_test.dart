@@ -4,101 +4,116 @@
 
 // TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
 // @dart=2.9
-
 import 'dart:io' show Platform;
 
 import 'package:sl4f/trace_processing.dart';
 import 'package:test/test.dart';
 
 Model _getTestModel() {
-  final readEvent = DurationEvent()
-    ..category = 'io'
-    ..name = 'Read'
-    ..pid = 7009
-    ..tid = 7021
-    ..start =
-        TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(697503138.9531089))
-    ..duration = TimeDelta.fromMicroseconds(698607461.7395687) -
-        TimeDelta.fromMicroseconds(697503138.9531089);
+  final readEvent = DurationEvent(
+      TimeDelta.fromMicroseconds(698607461.7395687) -
+          TimeDelta.fromMicroseconds(697503138.9531089),
+      null,
+      [],
+      [],
+      'io',
+      'Read',
+      TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(697503138.9531089)),
+      7009,
+      7021,
+      {});
 
-  final writeEvent = DurationEvent()
-    ..category = 'io'
-    ..name = 'Write'
-    ..pid = 7009
-    ..tid = 7022
-    ..start =
-        TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(697778328.2160872))
-    ..duration = TimeDelta.fromMicroseconds(697868582.5994568) -
-        TimeDelta.fromMicroseconds(697778328.2160872);
+  final writeEvent = DurationEvent(
+      TimeDelta.fromMicroseconds(697868582.5994568) -
+          TimeDelta.fromMicroseconds(697778328.2160872),
+      null,
+      [],
+      [],
+      'io',
+      'Write',
+      TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(697778328.2160872)),
+      7009,
+      7022,
+      {});
 
-  final asyncReadWriteEvent = AsyncEvent()
-    ..category = 'io'
-    ..name = 'AsyncReadWrite'
-    ..pid = 7009
-    ..tid = 7022
-    ..start = TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(697503138))
-    ..id = 43
-    ..duration = TimeDelta.fromMicroseconds(698607461.0) -
-        TimeDelta.fromMicroseconds(697503138.0);
+  final asyncReadWriteEvent = AsyncEvent(
+      43,
+      TimeDelta.fromMicroseconds(698607461.0) -
+          TimeDelta.fromMicroseconds(697503138.0),
+      'io',
+      'AsyncReadWrite',
+      TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(697503138)),
+      7009,
+      7022,
+      {});
 
-  final readEvent2 = DurationEvent()
-    ..category = 'io'
-    ..name = 'Read'
-    ..pid = 7010
-    ..tid = 7023
-    ..start =
-        TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(697868185.3588456))
-    ..duration = TimeDelta.fromMicroseconds(697868571.6018075) -
-        TimeDelta.fromMicroseconds(697868185.3588456);
+  final readEvent2 = DurationEvent(
+    TimeDelta.fromMicroseconds(697868571.6018075) -
+        TimeDelta.fromMicroseconds(697868185.3588456),
+    null,
+    [],
+    [],
+    'io',
+    'Read',
+    TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(697868185.3588456)),
+    7010,
+    7023,
+    {},
+  );
 
-  final flowStart = FlowEvent()
-    ..category = 'io'
-    ..name = 'ReadWriteFlow'
-    ..pid = 7009
-    ..tid = 7021
-    ..start =
-        TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(697503139.9531089))
-    ..id = '0'
-    ..phase = FlowEventPhase.start;
+  final flowStart = FlowEvent(
+      '0',
+      FlowEventPhase.start,
+      null,
+      null,
+      null,
+      'io',
+      'ReadWriteFlow',
+      TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(697503139.9531089)),
+      7009,
+      7021, {});
 
-  final flowStep = FlowEvent()
-    ..category = 'io'
-    ..name = 'ReadWriteFlow'
-    ..pid = 7009
-    ..tid = 7022
-    ..start =
-        TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(697779328.2160872))
-    ..id = '0'
-    ..phase = FlowEventPhase.step;
+  final flowStep = FlowEvent(
+      '0',
+      FlowEventPhase.step,
+      null,
+      null,
+      null,
+      'io',
+      'ReadWriteFlow',
+      TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(697779328.2160872)),
+      7009,
+      7022, {});
 
-  final flowEnd = FlowEvent()
-    ..category = 'io'
-    ..name = 'ReadWriteFlow'
-    ..pid = 7009
-    ..tid = 7022
-    ..start =
-        TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(697868050.2160872))
-    ..id = '0'
-    ..phase = FlowEventPhase.end;
+  final flowEnd = FlowEvent(
+      '0',
+      FlowEventPhase.end,
+      null,
+      null,
+      null,
+      'io',
+      'ReadWriteFlow',
+      TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(697868050.2160872)),
+      7009,
+      7022, {});
 
-  final counterEvent = CounterEvent()
-    ..category = 'system_metrics'
-    ..name = 'cpu_usage'
-    ..pid = 7010
-    ..tid = 7023
-    ..start =
-        TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(698607465.375))
-    ..args = {'average_cpu_percentage': 0.89349317793, 'max_cpu_usage': 0.1234};
+  final counterEvent = CounterEvent(
+      null,
+      'system_metrics',
+      'cpu_usage',
+      TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(698607465.375)),
+      7010,
+      7023,
+      {'average_cpu_percentage': 0.89349317793, 'max_cpu_usage': 0.1234});
 
-  final instantEvent = InstantEvent()
-    ..category = 'log'
-    ..name = 'log'
-    ..pid = 7009
-    ..tid = 7021
-    ..start =
-        TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(698607465.312))
-    ..scope = InstantEventScope.global
-    ..args = {'message': '[INFO:trace_manager.cc(66)] Stopping trace'};
+  final instantEvent = InstantEvent(
+      InstantEventScope.global,
+      'log',
+      'log',
+      TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(698607465.312)),
+      7009,
+      7021,
+      {'message': '[INFO:trace_manager.cc(66)] Stopping trace'});
 
   flowStart
     ..enclosingDuration = readEvent
@@ -118,30 +133,18 @@ Model _getTestModel() {
   readEvent.childFlows = [flowStart];
   writeEvent.childFlows = [flowStep, flowEnd];
 
-  final thread7021 = Thread()
-    ..tid = 7021
-    ..name = ''
-    ..events = [readEvent, flowStart, instantEvent];
+  final thread7021 = Thread(7021, events: [readEvent, flowStart, instantEvent]);
 
-  final thread7022 = Thread()
-    ..tid = 7022
-    ..name = 'initial-thread'
-    ..events = [asyncReadWriteEvent, writeEvent, flowStep, flowEnd];
+  final thread7022 = Thread(7022,
+      name: 'initial-thread',
+      events: [asyncReadWriteEvent, writeEvent, flowStep, flowEnd]);
 
-  final thread7023 = Thread()
-    ..tid = 7023
-    ..name = ''
-    ..events = [readEvent2, counterEvent];
+  final thread7023 = Thread(7023, events: [readEvent2, counterEvent]);
 
-  final process7009 = Process()
-    ..pid = 7009
-    ..name = 'root_presenter'
-    ..threads = [thread7021, thread7022];
+  final process7009 =
+      Process(7009, name: 'root_presenter', threads: [thread7021, thread7022]);
 
-  final process7010 = Process()
-    ..pid = 7010
-    ..name = ''
-    ..threads = [thread7023];
+  final process7010 = Process(7010, threads: [thread7023]);
 
   final model = Model()..processes = [process7009, process7010];
 
@@ -150,7 +153,7 @@ Model _getTestModel() {
 
 Map<String, dynamic> _toDictionary(Event e) {
   final result = {
-    'category': e.category,
+    'cat': e.category,
     'name': e.name,
     'start.toEpochDelta().toNanoseconds()':
         e.start.toEpochDelta().toNanoseconds(),
@@ -161,7 +164,10 @@ Map<String, dynamic> _toDictionary(Event e) {
   if (e is InstantEvent) {
     result['scope'] = e.scope;
   } else if (e is CounterEvent) {
-    result['id'] = e.id;
+    final id = e.id;
+    if (id != null) {
+      result['id'] = id;
+    }
   } else if (e is DurationEvent) {
     result['duration.toNanoseconds()'] = e.duration.toNanoseconds();
     result['!!parent'] = e.parent != null;
@@ -169,7 +175,10 @@ Map<String, dynamic> _toDictionary(Event e) {
     result['childFlows.length'] = e.childFlows.length;
   } else if (e is AsyncEvent) {
     result['id'] = e.id;
-    result['duration'] = e.duration;
+    final duration = e.duration;
+    if (duration != null) {
+      result['duration'] = duration;
+    }
   } else if (e is FlowEvent) {
     result['id'] = e.id;
     result['phase'] = e.phase;
@@ -205,13 +214,13 @@ void _checkEventsEqual(Event a, Event b) {
   } else if (a is CounterEvent && b is CounterEvent) {
     result &= a.id == b.id;
   } else if (a is DurationEvent && b is DurationEvent) {
-    result &= a.duration == b.duration;
+    expect(a.duration.toMicroseconds(), _closeTo(b.duration.toMicroseconds()));
     result &= (a.parent == null) == (b.parent == null);
     result &= a.childDurations.length == b.childDurations.length;
     result &= a.childFlows.length == b.childFlows.length;
   } else if (a is AsyncEvent && b is AsyncEvent) {
     result &= a.id == b.id;
-    result &= a.duration == b.duration;
+    expect(a.duration.toMicroseconds(), _closeTo(b.duration.toMicroseconds()));
   } else if (a is FlowEvent && b is FlowEvent) {
     result &= a.id == b.id;
     result &= a.phase == b.phase;
@@ -311,12 +320,30 @@ void main(List<String> args) {
 
   test('Filter events', () async {
     final events = [
-      DurationEvent()
-        ..category = 'cat_a'
-        ..name = 'name_a',
-      DurationEvent()
-        ..category = 'cat_b'
-        ..name = 'name_b',
+      DurationEvent(
+          null,
+          null,
+          [],
+          [],
+          'cat_a',
+          'name_a',
+          TimePoint.fromEpochDelta(
+              TimeDelta.fromMicroseconds(697778328.2160872)),
+          7009,
+          7022,
+          {}),
+      DurationEvent(
+          null,
+          null,
+          [],
+          [],
+          'cat_b',
+          'name_b',
+          TimePoint.fromEpochDelta(
+              TimeDelta.fromMicroseconds(697778328.2160872)),
+          7009,
+          7022,
+          {})
     ];
 
     final filtered = filterEvents(events, category: 'cat_a', name: 'name_a');
@@ -329,12 +356,30 @@ void main(List<String> args) {
 
   test('Filter events typed', () async {
     final events = [
-      DurationEvent()
-        ..category = 'cat_a'
-        ..name = 'name_a',
-      DurationEvent()
-        ..category = 'cat_b'
-        ..name = 'name_b',
+      DurationEvent(
+          null,
+          null,
+          [],
+          [],
+          'cat_a',
+          'name_a',
+          TimePoint.fromEpochDelta(
+              TimeDelta.fromMicroseconds(697778328.2160872)),
+          7009,
+          7022,
+          {}),
+      DurationEvent(
+          null,
+          null,
+          [],
+          [],
+          'cat_b',
+          'name_b',
+          TimePoint.fromEpochDelta(
+              TimeDelta.fromMicroseconds(697778328.2160872)),
+          7009,
+          7022,
+          {})
     ];
 
     final filtered = filterEventsTyped<DurationEvent>(events,
@@ -912,20 +957,15 @@ void main(List<String> args) {
   test('Memory metric missing fixed', () async {
     // One useless event with memory_monitor category so that the check that
     // memory_monitor data is there passes.
-    final event = CounterEvent()
-      ..category = 'memory_monitor'
-      ..name = 'useless'
-      ..pid = 1234
-      ..tid = 1235
-      ..start = TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(1000))
-      ..id = 1
-      ..args = {};
-    final thread = Thread()
-      ..tid = 1235
-      ..events = [event];
-    final process = Process()
-      ..pid = 1234
-      ..threads = [thread];
+    final event = CounterEvent(
+        1,
+        'memory_monitor',
+        'useless',
+        TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(1000)),
+        1234,
+        1235, {});
+    final thread = Thread(1235, events: [event]);
+    final process = Process(1234, threads: [thread]);
     final model = Model()..processes = [process];
 
     final memoryMetrics = memoryMetricsProcessor(model, {});
