@@ -2,6 +2,7 @@
     allowed_log_tags: [
         "console-launcher",
         "driver_manager.cm",
+        "driver_host2.cm",
         "driver",
         "device",
         "mdns",
