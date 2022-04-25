@@ -252,8 +252,7 @@ class RealmBuilder final {
                fuchsia::component::test::RealmSyncPtr test_realm_proxy);
 
   static RealmBuilder CreateImpl(cpp17::optional<std::string_view> relative_url = cpp17::nullopt,
-                                 std::shared_ptr<sys::ServiceDirectory> svc = nullptr,
-                                 bool call_deprecated_create = false);
+                                 std::shared_ptr<sys::ServiceDirectory> svc = nullptr);
 
   bool realm_commited_ = false;
   std::shared_ptr<sys::ServiceDirectory> svc_;

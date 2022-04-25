@@ -23,24 +23,26 @@ const LOCAL_COMPONENT_NAME_KEY string = "LOCAL_COMPONENT_NAME";
 /// creating a new realm.
 @discoverable
 protocol RealmBuilderFactory {
-    /// Creates a new RealmBuilder. The client end of `realm_server_end` can be
-    /// used to mutate the realm that is being constructed, by doing things such
-    /// as adding new children to the realm or adding capability routes between
-    /// them. The client end of `builder_server_end` is used to finalize the
-    /// realm, after which point it can be launched in a collection.
+    // Once all out of tree builds have the new signature for Create, the SDK
+    // client bindings can be updated to call `Create` and we can then remove
+    // CreateWithResult.
+    @deprecated("Use Create")
     CreateWithResult(resource struct {
         pkg_dir_handle client_end:fuchsia.io.Directory;
         realm_server_end server_end:Realm;
         builder_server_end server_end:Builder;
     }) -> (struct {}) error RealmBuilderError2;
 
-
-    @deprecated("Use CreateWithResult")
+    /// Creates a new RealmBuilder. The client end of `realm_server_end` can be
+    /// used to mutate the realm that is being constructed, by doing things such
+    /// as adding new children to the realm or adding capability routes between
+    /// them. The client end of `builder_server_end` is used to finalize the
+    /// realm, after which point it can be launched in a collection.
     Create(resource struct {
         pkg_dir_handle client_end:fuchsia.io.Directory;
         realm_server_end server_end:Realm;
         builder_server_end server_end:Builder;
-    }) -> ();
+    }) -> (struct {}) error RealmBuilderError2;
 
     /// Identical to `Create`, but instead of the realm being empty by default
     /// it contains the contents of the manifest located at `relative_url`
