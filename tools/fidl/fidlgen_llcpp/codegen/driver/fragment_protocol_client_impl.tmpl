@@ -35,7 +35,7 @@ class {{ .WireWeakOnewayClientImpl }} : public ::fidl::internal::ClientImplBase 
     : ClientImplBase(client_base), arena_(arena) {}
 
   {{- range .OneWayMethods }}
-    {{- template "Method:WireWeakOnewayClientImpl:WireMessagingHeader" . }}
+    {{- template "Method:WireWeakOnewayClientImpl:driver/WireMessagingHeader" . }}
   {{- end }}
 
   protected:
@@ -62,7 +62,7 @@ class {{ .WireWeakSyncClientImpl }} final : public {{ .WireWeakOnewayClientImpl 
   {{ EnsureNamespace ""}}
 
   {{- range .OneWayMethods }}
-    {{- template "Method:WireWeakOnewayClientImpl:WireMessagingSource" . }}
+    {{- template "Method:WireWeakOnewayClientImpl:driver/WireMessagingSource" . }}
   {{- end }}
   {{- range .OneWayMethods }}
     {{- template "Method:ClientImplOnewayBuffer:driver/MessagingSource" . }}

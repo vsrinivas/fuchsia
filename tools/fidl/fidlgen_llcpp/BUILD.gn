@@ -25,6 +25,7 @@ if (is_host) {
       "codegen/driver/file_wire_messaging_header.tmpl",
       "codegen/driver/file_wire_messaging_source.tmpl",
       "codegen/driver/fragment_method_client_impl_async_buffer.tmpl",
+      "codegen/driver/fragment_method_client_impl_oneway.tmpl",
       "codegen/driver/fragment_method_client_impl_oneway_buffer.tmpl",
       "codegen/driver/fragment_method_client_impl_sync.tmpl",
       "codegen/driver/fragment_method_completer_base.tmpl",

@@ -52,13 +52,23 @@ namespace test_driverhandle {
   ::fidl::internal::TransactionalRequest<
       ::test_driverhandle::HandlesInProtocol::SendHandles>
       _request_object{t};
-  ::fidl::unstable::OwnedEncodedMessage<
+
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_driverhandle::HandlesInProtocol::SendHandles>();
+  uint8_t* _buffer = static_cast<uint8_t*>(arena_.Allocate(_buffer_size));
+
+  ::fidl::unstable::UnownedEncodedMessage<
       ::fidl::internal::TransactionalRequest<
           ::test_driverhandle::HandlesInProtocol::SendHandles>,
       ::fidl::internal::DriverTransport>
-      _request_message(::fidl::internal::AllowUnownedInputRef{},
-                       &_request_object);
-  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
+      _request_message(_buffer, _buffer_size, &_request_object);
+  fidl::WriteOptions _options = {};
+  _options.outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<
+          ::fidl::internal::DriverTransport>(arena_.get());
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage(),
+                                    std::move(_options));
 }
 ::fidl::Status fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_driverhandle::HandlesInProtocol>::

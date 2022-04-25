@@ -74,4 +74,38 @@ TEST(DriverTransport, WireOneWayVector) {
   ASSERT_OK(dispatcher_shutdown.Wait());
 }
 
+TEST(DriverTransport, WireOneWayVectorSyncViaAsyncClient) {
+  fidl_driver_testing::ScopedFakeDriver driver;
+
+  libsync::Completion dispatcher_shutdown;
+  auto dispatcher =
+      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS,
+                              [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
+  ASSERT_OK(dispatcher.status_value());
+
+  auto channels = fdf::ChannelPair::Create(0);
+  ASSERT_OK(channels.status_value());
+
+  fdf::ServerEnd<test_transport::OneWayTest> server_end(std::move(channels->end0));
+  fdf::ClientEnd<test_transport::OneWayTest> client_end(std::move(channels->end1));
+
+  auto server = std::make_shared<TestServer>();
+  fdf::BindServer(dispatcher->get(), std::move(server_end), server,
+                  fidl_driver_testing::FailTestOnServerError<test_transport::OneWayTest>());
+
+  fdf::WireSharedClient<test_transport::OneWayTest> client;
+  client.Bind(std::move(client_end), dispatcher->get());
+  auto arena = fdf::Arena::Create(0, "");
+  ASSERT_OK(arena.status_value());
+  server->fdf_request_arena = arena->get();
+  auto result = client.sync().buffer(*arena)->OneWay(
+      fidl::VectorView<uint8_t>::FromExternal(kRequestPayload));
+  ASSERT_OK(result.status());
+
+  ASSERT_OK(sync_completion_wait(&server->done, ZX_TIME_INFINITE));
+
+  dispatcher->ShutdownAsync();
+  ASSERT_OK(dispatcher_shutdown.Wait());
+}
+
 }  // namespace
