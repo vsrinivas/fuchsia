@@ -126,5 +126,24 @@ mod bindings {
                 Err(err) => format_js_err!("Failed to run analysis: {}", err),
             }
         }
+
+        /// Analyze all DiagnosticData against loaded configs and generate corresponding ActionResults.
+        /// Returns JSON-serialized value of triage library's `analyze_structured` function's return value.
+        ///
+        /// # Arguments
+        ///
+        /// * `targets` - Handles for targets.
+        /// * `context` - Handle for context.
+        #[wasm_bindgen]
+        pub fn analyze_structured(
+            &mut self,
+            targets: &[Handle],
+            context: Handle,
+        ) -> Result<JsValue, JsValue> {
+            match self.shim.analyze_structured(&targets, context) {
+                Ok(results) => Ok(JsValue::from_str(&results)),
+                Err(err) => format_js_err!("Failed to run analysis: {}", err),
+            }
+        }
     }
 }
