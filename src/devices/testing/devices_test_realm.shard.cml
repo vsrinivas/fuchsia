@@ -1,0 +1,53 @@
+{
+    collections: [
+        {
+            name: "devices-tests",
+            environment: "#legacy-test-env",
+            durability: "transient",
+        },
+    ],
+    offer: [
+        {
+            // These hermetic capabilities are offered to be used by tests.
+            protocol: [
+                // Tests can write to debug logs
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys2.EventSource",
+
+                // Tests can produce trace.
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#devices-tests" ],
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: [ "#devices-tests" ],
+        },
+        {
+            storage: "tmp",
+            from: "self",
+            to: [ "#devices-tests" ],
+        },
+        {
+            storage: "cache",
+            from: "self",
+            to: [ "#devices-tests" ],
+        },
+        {
+            storage: "custom_artifacts",
+            from: "self",
+            to: "#devices-tests",
+        },
+
+        // These system capabilities are offered for use by the devices tests.
+        {
+            directory: "dev",
+            from: "parent",
+            to: "#devices-tests",
+        },
+    ],
+}

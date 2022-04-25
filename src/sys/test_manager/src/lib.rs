@@ -89,6 +89,7 @@ const VULKAN_TESTS_COLLECTION: &'static str = "vulkan-tests";
 const CHROMIUM_TESTS_COLLECTION: &'static str = "chromium-tests";
 const DRM_TESTS_COLLECTION: &'static str = "drm-tests";
 const GOOGLE_TESTS_COLLECTION: &'static str = "google-tests";
+const DEVICES_TESTS_COLLECTION: &'static str = "devices-tests";
 
 lazy_static! {
     static ref TEST_TYPE_REALM_MAP: HashMap<&'static str, &'static str> = [
@@ -98,6 +99,7 @@ lazy_static! {
         ("cts", CTS_TESTS_COLLECTION),
         ("vulkan", VULKAN_TESTS_COLLECTION),
         ("chromium", CHROMIUM_TESTS_COLLECTION),
+        ("devices", DEVICES_TESTS_COLLECTION),
         ("drm", DRM_TESTS_COLLECTION),
         ("google", GOOGLE_TESTS_COLLECTION)
     ]
