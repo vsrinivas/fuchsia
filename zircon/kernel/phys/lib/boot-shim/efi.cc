@@ -6,6 +6,7 @@
 
 #include "lib/boot-shim/efi.h"
 
+#include <lib/acpi_lite.h>
 #include <lib/stdcompat/span.h>
 #include <string.h>
 
@@ -36,6 +37,12 @@ const void* GetVendorTable(const efi_system_table* systab,
   return nullptr;
 }
 
+struct DirectPhysMemReader : public acpi_lite::PhysMemReader {
+  zx::status<const void*> PhysToPtr(uintptr_t paddr, size_t bytes) override {
+    return zx::success(reinterpret_cast<const void*>(paddr));
+  }
+};
+
 }  // namespace
 
 void EfiSystemTableItem::Init(const efi_system_table* systab) {
@@ -55,6 +62,20 @@ void EfiSmbiosItem::Init(const efi_system_table* systab) {
                                          })) {
     set_payload(reinterpret_cast<uintptr_t>(table));
   }
+}
+
+zx::status<acpi_lite::AcpiParser> EfiGetAcpi(const efi_system_table* systab) {
+  constexpr std::string_view kRsdPtr = "RSD PTR ";
+  if (const void* table = GetVendorTable(systab,  //
+                                         {
+                                             {ACPI_TABLE_GUID, kRsdPtr},
+                                             {ACPI_20_TABLE_GUID, kRsdPtr},
+                                         })) {
+    static DirectPhysMemReader phys_mem_reader;
+    zx_paddr_t paddr = reinterpret_cast<uintptr_t>(table);
+    return acpi_lite::AcpiParser::Init(phys_mem_reader, paddr);
+  }
+  return zx::error(ZX_ERR_NOT_FOUND);
 }
 
 }  // namespace boot_shim

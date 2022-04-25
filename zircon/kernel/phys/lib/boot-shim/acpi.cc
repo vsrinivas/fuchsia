@@ -6,7 +6,6 @@
 
 #include <lib/acpi_lite/debug_port.h>
 #include <lib/boot-shim/acpi.h>
-#include <stdio.h>
 
 namespace boot_shim {
 
