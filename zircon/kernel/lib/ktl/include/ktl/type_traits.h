@@ -105,6 +105,9 @@ using std::is_trivially_move_assignable_v;
 using std::is_trivially_move_constructible;
 using std::is_trivially_move_constructible_v;
 
+using std::is_unsigned;
+using std::is_unsigned_v;
+
 using std::is_void;
 using std::is_void_v;
 
