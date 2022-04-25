@@ -68,6 +68,7 @@ rustc_library("lib") {
     "src/compiler/mod.rs",
     "src/compiler/symbol_table.rs",
     "src/ddk_bind_constants.rs",
+    "src/debugger/debug_dump.rs",
     "src/debugger/debugger.rs",
     "src/debugger/device_specification.rs",
     "src/debugger/mod.rs",

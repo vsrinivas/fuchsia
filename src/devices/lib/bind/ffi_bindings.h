@@ -52,6 +52,8 @@ bool match_bind_rules(const uint8_t *bytecode_c, size_t bytecode_sz,
                       const device_str_property_t *str_properties_c, size_t str_properties_sz,
                       uint32_t protocol_id, bool autobind);
 
+const char *dump_bytecode(const uint8_t *bytecode_c, size_t bytecode_sz);
+
 }  // extern "C"
 
 #endif  // SRC_DEVICES_LIB_BIND_FFI_BINDINGS_H_

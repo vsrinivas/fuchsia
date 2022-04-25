@@ -4,6 +4,8 @@
 
 #include "src/devices/bin/driver_manager/debug_dump.h"
 
+#include "src/devices/lib/bind/ffi_bindings.h"
+
 namespace {
 
 void DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) {
@@ -58,10 +60,8 @@ void DumpDriver(const Driver& drv, VmoWriter& writer) {
       return;
     }
 
-    writer.Printf("Bytecode (%u byte%s): \n", drv.binding_size, (drv.binding_size == 1) ? "" : "s");
-    for (uint32_t i = 0; i < drv.binding_size; ++i) {
-      writer.Printf("0x%02x", (binding->get()[i]));
-    }
+    writer.Printf("Bytecode (%u byte%s): ", drv.binding_size, (drv.binding_size == 1) ? "" : "s");
+    writer.Printf("%s", dump_bytecode(binding->get(), drv.binding_size));
     writer.Printf("\n\n");
   }
 }

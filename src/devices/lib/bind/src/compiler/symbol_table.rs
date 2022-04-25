@@ -9,6 +9,7 @@ use crate::parser::common::{CompoundIdentifier, Include};
 use crate::parser::{self, bind_library};
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::fmt;
 use std::ops::Deref;
 
 pub type SymbolTable = HashMap<CompoundIdentifier, Symbol>;
@@ -21,6 +22,19 @@ pub enum Symbol {
     StringValue(String),
     BoolValue(bool),
     EnumValue(String),
+}
+
+impl fmt::Display for Symbol {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Symbol::DeprecatedKey(key) => write!(f, "DeprecatedKey({})", key),
+            Symbol::Key(key, _) => write!(f, "Key({})", key),
+            Symbol::NumberValue(value) => write!(f, "{}", value),
+            Symbol::StringValue(value) => write!(f, "\"{}\"", value),
+            Symbol::BoolValue(value) => write!(f, "{}", value),
+            Symbol::EnumValue(value) => write!(f, "Enum({})", value),
+        }
+    }
 }
 
 pub fn get_symbol_table_from_libraries<'a>(

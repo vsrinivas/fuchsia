@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 use bind::compiler::Symbol;
+use bind::debugger::debug_dump::dump_bind_rules;
 use bind::interpreter::match_bind::{match_bytecode, PropertyKey};
 use std::collections::HashMap;
-use std::ffi::CStr;
+use std::ffi::{CStr, CString};
 
 const BIND_PROTOCOL: u64 = 0x0001;
 const BIND_AUTOBIND: u64 = 0x0002;
@@ -187,4 +188,15 @@ pub extern "C" fn match_bind_rules(
         println!("Error evaluating the bytecode: {}", e);
         false
     })
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn dump_bytecode(
+    bytecode_c: *const u8,
+    bytecode_sz: libc::size_t,
+) -> *const libc::c_char {
+    let bytecode = std::slice::from_raw_parts(bytecode_c, bytecode_sz).to_vec();
+    let dump_str =
+        CString::new(dump_bind_rules(bytecode).unwrap_or_else(|e| e.to_string())).unwrap();
+    dump_str.into_raw()
 }
