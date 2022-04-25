@@ -15,7 +15,7 @@ static uint8_t SmbiosAnchor[4] = "_SM_";
 static uint8_t Smbios3Anchor[5] = "_SM3_";
 
 uint64_t find_smbios(efi_handle img, efi_system_table* sys) {
-  efi_configuration_table* cfgtab = sys->ConfigurationTable;
+  const efi_configuration_table* cfgtab = sys->ConfigurationTable;
   for (size_t i = 0; i < sys->NumberOfTableEntries; i++) {
     if (!xefi_cmp_guid(&cfgtab[i].VendorGuid, &SmbiosTableGUID)) {
       if (!memcmp(cfgtab[i].VendorTable, SmbiosAnchor, sizeof(SmbiosAnchor))) {

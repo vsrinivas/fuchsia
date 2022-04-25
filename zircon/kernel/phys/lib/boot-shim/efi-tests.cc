@@ -63,4 +63,53 @@ TEST(BootShimTests, EfiSystemTable) {
       &kTable, expected_payload)));
 }
 
+TEST(BootShimTests, EfiGetVendorTable) {
+  constexpr efi_guid kTestGuid = {1, 2, 3, {4, 5, 6, 7, 8}};
+  static constexpr std::string_view kFakeTable = "VendorPrefix<data here>";
+  static constexpr efi_configuration_table kConfigTable[] = {
+      {.VendorGuid = kTestGuid, .VendorTable = kFakeTable.data()}};
+  static constexpr efi_system_table kSystemTable = {
+      .NumberOfTableEntries = std::size(kConfigTable),
+      .ConfigurationTable = kConfigTable,
+  };
+
+  EXPECT_NULL(boot_shim::EfiGetVendorTable(&kSystemTable, {}));
+
+  EXPECT_EQ(boot_shim::EfiGetVendorTable(&kSystemTable, kTestGuid, "VendorPrefix"),
+            kFakeTable.data());
+}
+
+TEST(BootShimTests, EfiSmbiosNone) {
+  ASSERT_NO_FATAL_FAILURE(
+      (EfiTest<boot_shim::EfiSmbiosItem, ZBI_TYPE_SMBIOS>(nullptr, std::monostate{})));
+}
+
+TEST(BootShimTests, EfiSmbios) {
+  static constexpr std::string_view kFakeSmbios = "_SM_<real data here>";
+  static constexpr efi_configuration_table kConfigTable[] = {
+      {.VendorGuid = SMBIOS_TABLE_GUID, .VendorTable = kFakeSmbios.data()},
+  };
+  static constexpr efi_system_table kSystemTable = {
+      .NumberOfTableEntries = std::size(kConfigTable),
+      .ConfigurationTable = kConfigTable,
+  };
+  const uint64_t expected_payload = reinterpret_cast<uintptr_t>(kFakeSmbios.data());
+  ASSERT_NO_FATAL_FAILURE(
+      (EfiTest<boot_shim::EfiSmbiosItem, ZBI_TYPE_SMBIOS>(&kSystemTable, expected_payload)));
+}
+
+TEST(BootShimTests, EfiSmbiosV3) {
+  static constexpr std::string_view kFakeSmbios = "_SM3_<real data here>";
+  static constexpr efi_configuration_table kConfigTable[] = {
+      {.VendorGuid = SMBIOS3_TABLE_GUID, .VendorTable = kFakeSmbios.data()},
+  };
+  static constexpr efi_system_table kSystemTable = {
+      .NumberOfTableEntries = std::size(kConfigTable),
+      .ConfigurationTable = kConfigTable,
+  };
+  const uint64_t expected_payload = reinterpret_cast<uintptr_t>(kFakeSmbios.data());
+  ASSERT_NO_FATAL_FAILURE(
+      (EfiTest<boot_shim::EfiSmbiosItem, ZBI_TYPE_SMBIOS>(&kSystemTable, expected_payload)));
+}
+
 }  // namespace

@@ -241,7 +241,7 @@ _Static_assert(sizeof(acpi_gtdt_t) == 104, "GTDT is the wrong size");
 
 // Loads the Root System Description Pointer from UEFI.
 // Returns NULL if UEFI contains no such entry in its configuration table.
-acpi_rsdp_t* load_acpi_rsdp(efi_configuration_table* entries, size_t num_entries);
+acpi_rsdp_t* load_acpi_rsdp(const efi_configuration_table* entries, size_t num_entries);
 
 // Loads an ACPI table with the given signature if it exists.
 acpi_sdt_hdr_t* load_table_with_signature(acpi_rsdp_t* rsdp, uint8_t* signature);

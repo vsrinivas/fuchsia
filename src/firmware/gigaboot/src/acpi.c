@@ -48,7 +48,7 @@ uint8_t acpi_checksum(void* bytes, uint32_t length) {
   return checksum;
 }
 
-acpi_rsdp_t* load_acpi_rsdp(efi_configuration_table* entries, size_t num_entries) {
+acpi_rsdp_t* load_acpi_rsdp(const efi_configuration_table* entries, size_t num_entries) {
   acpi_rsdp_t* rsdp = NULL;
   for (size_t i = 0; i < num_entries; i++) {
     // Check if this entry is an ACPI RSD PTR.

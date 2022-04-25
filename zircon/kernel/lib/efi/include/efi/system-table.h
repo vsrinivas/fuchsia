@@ -34,7 +34,7 @@ __BEGIN_CDECLS
 
 typedef struct {
   efi_guid VendorGuid;
-  void* VendorTable;
+  const void* VendorTable;
 } efi_configuration_table;
 
 typedef struct efi_system_table {
@@ -50,7 +50,7 @@ typedef struct efi_system_table {
   efi_runtime_services* RuntimeServices;
   efi_boot_services* BootServices;
   size_t NumberOfTableEntries;
-  efi_configuration_table* ConfigurationTable;
+  const efi_configuration_table* ConfigurationTable;
 } efi_system_table;
 
 __END_CDECLS
