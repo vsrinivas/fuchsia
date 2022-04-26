@@ -127,10 +127,7 @@ trace_provider_library("trace-provider-so") {
   sources = trace_provider_fdio_sources
   deps = trace_provider_fdio_connect_source_deps
   deps += [ "//zircon/system/ulib/trace-engine" ]
-  runtime_deps = [
-    "//sdk/lib/fdio:fdio_sdk",
-    "//zircon/system/ulib/async-default:async-default_sdk",
-  ]
+  runtime_deps = [ "//sdk/lib/fdio:fdio_sdk" ]
 }
 
 # A special version for programs and shared libraries that can't use
