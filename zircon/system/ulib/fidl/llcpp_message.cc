@@ -428,55 +428,16 @@ IncomingMessage IncomingMessage::SkipTransactionHeader() {
 void IncomingMessage::Decode(const fidl_type_t* message_type,
                              std::unique_ptr<uint8_t[]>* out_transformed_buffer) {
   ZX_ASSERT(is_transactional_);
-  internal::WireFormatVersion wire_format_version = internal::WireFormatVersion::kV1;
-  if (bytes() != nullptr &&
-      (header()->at_rest_flags[0] & FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2) != 0) {
-    wire_format_version = internal::WireFormatVersion::kV2;
-  }
-  Decode(wire_format_version, message_type, true, out_transformed_buffer);
+  Decode(internal::WireFormatVersion::kV2, message_type, true, out_transformed_buffer);
 }
 
 void IncomingMessage::Decode(internal::WireFormatVersion wire_format_version,
                              const fidl_type_t* message_type, bool is_transactional,
                              std::unique_ptr<uint8_t[]>* out_transformed_buffer) {
   ZX_DEBUG_ASSERT(status() == ZX_OK);
-
-  if (wire_format_version == internal::WireFormatVersion::kV1) {
-    uint8_t* trimmed_bytes = bytes();
-    uint32_t trimmed_num_bytes = byte_actual();
-    if (is_transactional) {
-      zx_status_t status = ::fidl::internal::fidl_exclude_header_bytes(
-          bytes(), byte_actual(), &trimmed_bytes, &trimmed_num_bytes, error_address());
-      if (status != ZX_OK) {
-        SetStatus(fidl::Status::DecodeError(status, *error_address()));
-        return;
-      }
-    }
-
-    zx_status_t status = internal__fidl_validate__v1__may_break(
-        message_type, trimmed_bytes, trimmed_num_bytes, handle_actual(), error_address());
-    if (status != ZX_OK) {
-      SetStatus(fidl::Status::DecodeError(status, *error_address()));
-      return;
-    }
-
-    if (message_type == nullptr ||
-        !internal__fidl_tranform_is_noop__may_break(FIDL_TRANSFORMATION_V1_TO_V2, message_type)) {
-      *out_transformed_buffer = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
-      uint32_t actual_num_bytes = 0;
-      status = internal__fidl_transform__may_break(
-          FIDL_TRANSFORMATION_V1_TO_V2, message_type, is_transactional, bytes(), byte_actual(),
-          out_transformed_buffer->get(), ZX_CHANNEL_MAX_MSG_BYTES, &actual_num_bytes,
-          error_address());
-      if (status != ZX_OK) {
-        SetStatus(fidl::Status::DecodeError(status, *error_address()));
-        return;
-      }
-
-      // Update this object with the transformed value.
-      message_.bytes = out_transformed_buffer->get();
-      message_.num_bytes = actual_num_bytes;
-    }
+  if (wire_format_version != internal::WireFormatVersion::kV2) {
+    SetStatus(fidl::Status::DecodeError(ZX_ERR_INVALID_ARGS, "only wire format v2 supported"));
+    return;
   }
 
   uint8_t* trimmed_bytes = bytes();
