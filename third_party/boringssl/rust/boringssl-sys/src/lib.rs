@@ -445,6 +445,8 @@ pub const ASN1_R_WRONG_TYPE: u32 = 191;
 pub const ASN1_R_NESTED_TOO_DEEP: u32 = 192;
 pub const ASN1_R_BAD_TEMPLATE: u32 = 193;
 pub const ASN1_R_INVALID_BIT_STRING_PADDING: u32 = 194;
+pub const ASN1_R_WRONG_INTEGER_TYPE: u32 = 195;
+pub const ASN1_R_INVALID_INTEGER: u32 = 196;
 pub const ASN1_TFLG_OPTIONAL: u32 = 1;
 pub const ASN1_TFLG_SET_OF: u32 = 2;
 pub const ASN1_TFLG_SEQUENCE_OF: u32 = 4;
@@ -459,7 +461,6 @@ pub const ASN1_TFLG_PRIVATE: u32 = 192;
 pub const ASN1_TFLG_TAG_CLASS: u32 = 192;
 pub const ASN1_TFLG_ADB_MASK: u32 = 768;
 pub const ASN1_TFLG_ADB_OID: u32 = 256;
-pub const ASN1_TFLG_ADB_INT: u32 = 512;
 pub const ASN1_TFLG_COMBINE: u32 = 1024;
 pub const ASN1_ITYPE_PRIMITIVE: u32 = 0;
 pub const ASN1_ITYPE_SEQUENCE: u32 = 1;
@@ -1799,6 +1800,35 @@ pub const OPENSSL_INIT_LOAD_SSL_STRINGS: u32 = 0;
 pub const OPENSSL_INIT_SSL_DEFAULT: u32 = 0;
 pub type size_t = ::std::os::raw::c_ulong;
 pub type time_t = ::std::os::raw::c_long;
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct pthread_rwlock_t {
+    pub _rw_lock: u32,
+    pub _rw_waiters: u32,
+}
+#[test]
+fn bindgen_test_layout_pthread_rwlock_t() {
+    assert_eq!(
+        ::std::mem::size_of::<pthread_rwlock_t>(),
+        8usize,
+        concat!("Size of: ", stringify!(pthread_rwlock_t))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<pthread_rwlock_t>(),
+        4usize,
+        concat!("Alignment of ", stringify!(pthread_rwlock_t))
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<pthread_rwlock_t>()))._rw_lock as *const _ as usize },
+        0usize,
+        concat!("Offset of field: ", stringify!(pthread_rwlock_t), "::", stringify!(_rw_lock))
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<pthread_rwlock_t>()))._rw_waiters as *const _ as usize },
+        4usize,
+        concat!("Offset of field: ", stringify!(pthread_rwlock_t), "::", stringify!(_rw_waiters))
+    );
+}
 pub type CRYPTO_THREADID = ::std::os::raw::c_int;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -2669,36 +2699,7 @@ fn bindgen_test_layout_crypto_ex_data_st() {
         concat!("Offset of field: ", stringify!(crypto_ex_data_st), "::", stringify!(sk))
     );
 }
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub union crypto_mutex_st {
-    pub alignment: f64,
-    pub padding: [u8; 56usize],
-}
-#[test]
-fn bindgen_test_layout_crypto_mutex_st() {
-    assert_eq!(
-        ::std::mem::size_of::<crypto_mutex_st>(),
-        56usize,
-        concat!("Size of: ", stringify!(crypto_mutex_st))
-    );
-    assert_eq!(
-        ::std::mem::align_of::<crypto_mutex_st>(),
-        8usize,
-        concat!("Alignment of ", stringify!(crypto_mutex_st))
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<crypto_mutex_st>())).alignment as *const _ as usize },
-        0usize,
-        concat!("Offset of field: ", stringify!(crypto_mutex_st), "::", stringify!(alignment))
-    );
-    assert_eq!(
-        unsafe { &(*(::std::ptr::null::<crypto_mutex_st>())).padding as *const _ as usize },
-        0usize,
-        concat!("Offset of field: ", stringify!(crypto_mutex_st), "::", stringify!(padding))
-    );
-}
-pub type CRYPTO_MUTEX = crypto_mutex_st;
+pub type CRYPTO_MUTEX = pthread_rwlock_t;
 pub type CRYPTO_refcount_t = u32;
 extern "C" {
     pub fn CRYPTO_num_locks() -> ::std::os::raw::c_int;
@@ -4644,13 +4645,16 @@ extern "C" {
     pub static ASN1_INTEGER_it: ASN1_ITEM;
 }
 extern "C" {
+    pub fn ASN1_INTEGER_set_uint64(out: *mut ASN1_INTEGER, v: u64) -> ::std::os::raw::c_int;
+}
+extern "C" {
     pub fn ASN1_INTEGER_set(
         a: *mut ASN1_INTEGER,
         v: ::std::os::raw::c_long,
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
-    pub fn ASN1_INTEGER_set_uint64(out: *mut ASN1_INTEGER, v: u64) -> ::std::os::raw::c_int;
+    pub fn ASN1_INTEGER_get_uint64(out: *mut u64, a: *const ASN1_INTEGER) -> ::std::os::raw::c_int;
 }
 extern "C" {
     pub fn ASN1_INTEGER_get(a: *const ASN1_INTEGER) -> ::std::os::raw::c_long;
@@ -4677,9 +4681,18 @@ extern "C" {
     pub static ASN1_ENUMERATED_it: ASN1_ITEM;
 }
 extern "C" {
+    pub fn ASN1_ENUMERATED_set_uint64(out: *mut ASN1_ENUMERATED, v: u64) -> ::std::os::raw::c_int;
+}
+extern "C" {
     pub fn ASN1_ENUMERATED_set(
         a: *mut ASN1_ENUMERATED,
         v: ::std::os::raw::c_long,
+    ) -> ::std::os::raw::c_int;
+}
+extern "C" {
+    pub fn ASN1_ENUMERATED_get_uint64(
+        out: *mut u64,
+        a: *const ASN1_ENUMERATED,
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
@@ -5375,7 +5388,7 @@ fn bindgen_test_layout_ASN1_ADB_st() {
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct ASN1_ADB_TABLE_st {
-    pub value: ::std::os::raw::c_long,
+    pub value: ::std::os::raw::c_int,
     pub tt: ASN1_TEMPLATE,
 }
 #[test]
@@ -5980,6 +5993,7 @@ extern "C" {
         out_tag: *mut ::std::os::raw::c_uint,
         out_header_len: *mut size_t,
         out_ber_found: *mut ::std::os::raw::c_int,
+        out_indefinite: *mut ::std::os::raw::c_int,
     ) -> ::std::os::raw::c_int;
 }
 extern "C" {
@@ -7764,7 +7778,7 @@ extern "C" {
     ) -> ::std::os::raw::c_int;
 }
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct dh_st {
     pub p: *mut BIGNUM,
     pub g: *mut BIGNUM,
@@ -7783,7 +7797,7 @@ pub struct dh_st {
 }
 #[test]
 fn bindgen_test_layout_dh_st() {
-    assert_eq!(::std::mem::size_of::<dh_st>(), 152usize, concat!("Size of: ", stringify!(dh_st)));
+    assert_eq!(::std::mem::size_of::<dh_st>(), 104usize, concat!("Size of: ", stringify!(dh_st)));
     assert_eq!(
         ::std::mem::align_of::<dh_st>(),
         8usize,
@@ -7816,47 +7830,47 @@ fn bindgen_test_layout_dh_st() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<dh_st>())).method_mont_p_lock as *const _ as usize },
-        40usize,
+        36usize,
         concat!("Offset of field: ", stringify!(dh_st), "::", stringify!(method_mont_p_lock))
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<dh_st>())).method_mont_p as *const _ as usize },
-        96usize,
+        48usize,
         concat!("Offset of field: ", stringify!(dh_st), "::", stringify!(method_mont_p))
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<dh_st>())).q as *const _ as usize },
-        104usize,
+        56usize,
         concat!("Offset of field: ", stringify!(dh_st), "::", stringify!(q))
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<dh_st>())).j as *const _ as usize },
-        112usize,
+        64usize,
         concat!("Offset of field: ", stringify!(dh_st), "::", stringify!(j))
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<dh_st>())).seed as *const _ as usize },
-        120usize,
+        72usize,
         concat!("Offset of field: ", stringify!(dh_st), "::", stringify!(seed))
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<dh_st>())).seedlen as *const _ as usize },
-        128usize,
+        80usize,
         concat!("Offset of field: ", stringify!(dh_st), "::", stringify!(seedlen))
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<dh_st>())).counter as *const _ as usize },
-        136usize,
+        88usize,
         concat!("Offset of field: ", stringify!(dh_st), "::", stringify!(counter))
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<dh_st>())).flags as *const _ as usize },
-        144usize,
+        96usize,
         concat!("Offset of field: ", stringify!(dh_st), "::", stringify!(flags))
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<dh_st>())).references as *const _ as usize },
-        148usize,
+        100usize,
         concat!("Offset of field: ", stringify!(dh_st), "::", stringify!(references))
     );
 }
@@ -8347,7 +8361,7 @@ extern "C" {
     ) -> *mut DSA;
 }
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct dsa_st {
     pub version: ::std::os::raw::c_long,
     pub p: *mut BIGNUM,
@@ -8364,7 +8378,7 @@ pub struct dsa_st {
 }
 #[test]
 fn bindgen_test_layout_dsa_st() {
-    assert_eq!(::std::mem::size_of::<dsa_st>(), 144usize, concat!("Size of: ", stringify!(dsa_st)));
+    assert_eq!(::std::mem::size_of::<dsa_st>(), 96usize, concat!("Size of: ", stringify!(dsa_st)));
     assert_eq!(
         ::std::mem::align_of::<dsa_st>(),
         8usize,
@@ -8407,27 +8421,27 @@ fn bindgen_test_layout_dsa_st() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<dsa_st>())).method_mont_lock as *const _ as usize },
-        56usize,
+        52usize,
         concat!("Offset of field: ", stringify!(dsa_st), "::", stringify!(method_mont_lock))
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<dsa_st>())).method_mont_p as *const _ as usize },
-        112usize,
+        64usize,
         concat!("Offset of field: ", stringify!(dsa_st), "::", stringify!(method_mont_p))
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<dsa_st>())).method_mont_q as *const _ as usize },
-        120usize,
+        72usize,
         concat!("Offset of field: ", stringify!(dsa_st), "::", stringify!(method_mont_q))
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<dsa_st>())).references as *const _ as usize },
-        128usize,
+        80usize,
         concat!("Offset of field: ", stringify!(dsa_st), "::", stringify!(references))
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<dsa_st>())).ex_data as *const _ as usize },
-        136usize,
+        88usize,
         concat!("Offset of field: ", stringify!(dsa_st), "::", stringify!(ex_data))
     );
 }
@@ -10736,7 +10750,7 @@ pub struct bn_blinding_st {
 }
 pub type BN_BLINDING = bn_blinding_st;
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct rsa_st {
     pub meth: *mut RSA_METHOD,
     pub n: *mut BIGNUM,
@@ -10768,7 +10782,7 @@ pub struct rsa_st {
 }
 #[test]
 fn bindgen_test_layout_rsa_st() {
-    assert_eq!(::std::mem::size_of::<rsa_st>(), 240usize, concat!("Size of: ", stringify!(rsa_st)));
+    assert_eq!(::std::mem::size_of::<rsa_st>(), 192usize, concat!("Size of: ", stringify!(rsa_st)));
     assert_eq!(
         ::std::mem::align_of::<rsa_st>(),
         8usize,
@@ -10841,37 +10855,37 @@ fn bindgen_test_layout_rsa_st() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<rsa_st>())).mont_n as *const _ as usize },
-        144usize,
+        96usize,
         concat!("Offset of field: ", stringify!(rsa_st), "::", stringify!(mont_n))
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<rsa_st>())).mont_p as *const _ as usize },
-        152usize,
+        104usize,
         concat!("Offset of field: ", stringify!(rsa_st), "::", stringify!(mont_p))
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<rsa_st>())).mont_q as *const _ as usize },
-        160usize,
+        112usize,
         concat!("Offset of field: ", stringify!(rsa_st), "::", stringify!(mont_q))
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<rsa_st>())).d_fixed as *const _ as usize },
-        168usize,
+        120usize,
         concat!("Offset of field: ", stringify!(rsa_st), "::", stringify!(d_fixed))
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<rsa_st>())).dmp1_fixed as *const _ as usize },
-        176usize,
+        128usize,
         concat!("Offset of field: ", stringify!(rsa_st), "::", stringify!(dmp1_fixed))
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<rsa_st>())).dmq1_fixed as *const _ as usize },
-        184usize,
+        136usize,
         concat!("Offset of field: ", stringify!(rsa_st), "::", stringify!(dmq1_fixed))
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<rsa_st>())).inv_small_mod_large_mont as *const _ as usize },
-        192usize,
+        144usize,
         concat!(
             "Offset of field: ",
             stringify!(rsa_st),
@@ -10881,22 +10895,22 @@ fn bindgen_test_layout_rsa_st() {
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<rsa_st>())).num_blindings as *const _ as usize },
-        200usize,
+        152usize,
         concat!("Offset of field: ", stringify!(rsa_st), "::", stringify!(num_blindings))
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<rsa_st>())).blindings as *const _ as usize },
-        208usize,
+        160usize,
         concat!("Offset of field: ", stringify!(rsa_st), "::", stringify!(blindings))
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<rsa_st>())).blindings_inuse as *const _ as usize },
-        216usize,
+        168usize,
         concat!("Offset of field: ", stringify!(rsa_st), "::", stringify!(blindings_inuse))
     );
     assert_eq!(
         unsafe { &(*(::std::ptr::null::<rsa_st>())).blinding_fork_generation as *const _ as usize },
-        224usize,
+        176usize,
         concat!(
             "Offset of field: ",
             stringify!(rsa_st),

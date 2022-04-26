@@ -20,10 +20,12 @@ To update:
    ${BINDGEN_EXPECTED_VERSION}` and investigate).
 1. `go run roll_boringssl.go`
 1. Test according to instructions given by the previous step.
-1. Commit, review, and submit the changes to this repository (you may need to
-   bypass the CQ).
+1. Commit, review, and submit the changes to this repository. If CQ fails, this
+   is likely a breaking change and need to be submitted together with the
+   integration pin (see below), per process at go/tq-breaking-change.
 1. Update the BoringSSL manifest in the internal integration repository with
-   this repository's revision and the upstream revision.
+   this repository's revision and the upstream revision. The manifest you're
+   looking for is at //integration/fuchsia/third_party/flower.
 
 Upstream revision:
-https://fuchsia.googlesource.com/third_party/boringssl/+/123eaaef26abc278f53ae338e9c758eb01c70b08/
+https://fuchsia.googlesource.com/third_party/boringssl/+/59e37765f1dbc63a121153f664505cf65499e66c/

@@ -40,7 +40,7 @@ if (current_cpu == "arm64" && (is_fuchsia || is_linux)) {
 } else if (current_cpu == "x64" && (is_fuchsia || is_linux)) {
   crypto_sources += crypto_sources_linux_x86_64
 } else if (current_cpu == "x64" && is_mac) {
-  crypto_sources += crypto_sources_mac_x86_64
+  crypto_sources += crypto_sources_apple_x86_64
 } else {
   assert(false, "unsupported OS or CPU: $current_os/$current_cpu")
 }
