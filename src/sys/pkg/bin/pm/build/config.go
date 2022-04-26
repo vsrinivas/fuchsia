@@ -13,8 +13,8 @@ import (
 	"sort"
 	"strconv"
 
-	versionHistory "go.fuchsia.dev/fuchsia/src/lib/versioning/version-history/go"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
+	versionHistory "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/version-history/go"
 )
 
 // Config contains global build configuration for other build commands
