@@ -58,6 +58,10 @@ class Guest {
 
   zx::status<hypervisor::Id<uint16_t>> AllocVpid() { return vpid_allocator_.TryAlloc(); }
   zx::status<> FreeVpid(hypervisor::Id<uint16_t> id) { return vpid_allocator_.Free(ktl::move(id)); }
+  template <typename F>
+  void MigrateVpid(hypervisor::Id<uint16_t>& id, F invalidate) {
+    vpid_allocator_.Migrate(id, invalidate);
+  }
 
  private:
   hypervisor::GuestPhysicalAddressSpace gpas_;

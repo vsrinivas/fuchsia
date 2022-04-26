@@ -86,6 +86,44 @@ void vmwrite(uint64_t field, uint64_t val) {
   DEBUG_ASSERT(!err);
 }
 
+// INVVPID invalidation types.
+//
+// From Volume 3, Section 30.3: There are four INVVPID types currently defined:
+// • Individual-address invalidation: If the INVVPID type is 0, the logical
+//   processor invalidates mappings for the linear address and VPID specified in
+//   the INVVPID descriptor. In some cases, it may invalidate mappings for other
+//   linear addresses (or other VPIDs) as well.
+// * Single-context invalidation: If the INVVPID type is 1, the logical
+//   processor invalidates all mappings tagged with the VPID specified in the
+//   INVVPID descriptor. In some cases, it may invalidate mappings for other
+//   VPIDs as well.
+// * All-contexts invalidation: If the INVVPID type is 2, the logical processor
+//   invalidates all mappings tagged with all VPIDs except VPID 0000H. In some
+//   cases, it may invalidate translations with VPID 0000H as well.
+// * Single-context invalidation, retaining global translations: If the INVVPID
+//   type is 3, the logical processor invalidates all mappings tagged with the
+//   VPID specified in the INVVPID descriptor except global translations. In
+//   some cases, it may invalidate global translations (and mappings with other
+//   VPIDs) as well.
+enum class InvVpid : uint64_t {
+  INDIVIDUAL_ADDRESS = 0,
+  SINGLE_CONTEXT = 1,
+  ALL_CONTEXTS = 2,
+  SINGLE_CONTEXT_RETAIN_GLOBALS = 3,
+};
+
+zx_status_t invvpid(InvVpid invalidation, uint16_t vpid, zx_gpaddr_t address) {
+  uint8_t err;
+  uint64_t descriptor[] = {vpid, address};
+
+  __asm__ __volatile__("invvpid %[descriptor], %[invalidation]"
+                       : "=@ccna"(err)  // Set `err` on error (C or Z flag set)
+                       : [descriptor] "m"(descriptor), [invalidation] "r"(invalidation)
+                       : "cc");
+
+  return err ? ZX_ERR_INTERNAL : ZX_OK;
+}
+
 bool has_error_code(uint32_t vector) {
   switch (vector) {
     case X86_INT_DOUBLE_FAULT:
@@ -1004,6 +1042,10 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
       return status;
     }
     AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
+    guest_->MigrateVpid(vpid_, [](uint16_t vpid) {
+      zx_status_t status = invvpid(InvVpid::SINGLE_CONTEXT, vpid, 0);
+      ASSERT_MSG(status == ZX_OK, "Failed to invalidate VPID %u\n", vpid);
+    });
 
     // We check whether a kick was requested before entering the guest so that:
     // 1. When we enter the syscall, we can return immediately without entering
