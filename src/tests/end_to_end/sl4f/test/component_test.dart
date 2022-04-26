@@ -39,13 +39,6 @@ void main() {
       expect(result.isNotEmpty, true);
     });
 
-    test('tests launcher allows clean for graceful component shutdown',
-        () async {
-      await sl4fDriver.ssh.run('killall "system_monitor_harvester.cmx"');
-      await sl4f.Component(sl4fDriver)
-          .launch('system_monitor_harvester', ['--version']);
-    });
-
     test('tests launcher with error', () async {
       final result = await sl4f.Component(sl4fDriver).launch('fake');
       expect(result['Fail'], -1);
