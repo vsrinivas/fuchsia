@@ -45,8 +45,8 @@
             {{/if}}
         {{/if}}
         "-machine",
-        {{#if (eq host.architecture "arm64")}}
-            "virt",
+        {{#if (eq device.cpu.architecture "arm64")}}
+            "virt-2.12",  "-machine", "virtualization=true", "-cpu", "max",
         {{else}} {{! architecture == x64 }}
             "q35",
             "-device",
@@ -54,7 +54,7 @@
         {{/if}}
         {{#if (eq host.acceleration "none")}}
             "-cpu",
-            {{#if (eq runtime.architecture "arm64")}}
+            {{#if (eq device.cpu.architecture "arm64")}}
                 "cortex-a53",
             {{else}}
                 "Haswell,+smap,-check,-fsgsbase",
@@ -172,6 +172,9 @@
     ],
     "options": [
         "-metrics-collection",
+        {{#if (eq device.cpu.architecture "arm64")}}
+            "-avd-arch", "arm64",
+        {{/if}}
         {{#unless runtime.hidpi_scaling}}
             "-no-hidpi-scaling",
         {{/unless}}

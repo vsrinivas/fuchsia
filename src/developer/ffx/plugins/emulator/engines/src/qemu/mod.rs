@@ -14,10 +14,15 @@ use ffx_emulator_common::{
     config::{FfxConfigWrapper, QEMU_TOOL},
     process,
 };
-use ffx_emulator_config::{EmulatorConfiguration, EmulatorEngine, EngineType, PointingDevice};
+use ffx_emulator_config::{
+    EmulatorConfiguration, EmulatorEngine, EngineType, PointingDevice, TargetArchitecture,
+};
 use fidl_fuchsia_developer_ffx as bridge;
 use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, process::Command};
+use std::{
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 pub(crate) mod qemu_base;
 pub(crate) use qemu_base::QemuBasedEngine;
@@ -30,6 +35,39 @@ pub struct QemuEngine {
     pub(crate) emulator_configuration: EmulatorConfiguration,
     pub(crate) pid: u32,
     pub(crate) engine_type: EngineType,
+}
+
+impl QemuEngine {
+    /// returns the path to the qemu binary to execute. This is based on the guest OS architecture.
+    ///
+    /// Currently this is done by getting the default CLI which is for x64 images, and then
+    /// replace it if the guest OK is arm64.
+    /// TODO(http://fxdev.bug/98862): Improve the SDK metadata to have multiple binaries per tool.
+    async fn get_qemu_path(&self) -> Result<PathBuf> {
+        let cli_name = match self.emulator_configuration.device.cpu.architecture {
+            TargetArchitecture::Arm64 => Some("qemu-system-aarch64"),
+            TargetArchitecture::X64 => None,
+        };
+
+        // Realistically, the file is always in a directory, so the empty path is a reasonable
+        // fallback since it will "never" happen
+        let qemu_x64_path = match self.ffx_config.get_host_tool(QEMU_TOOL).await {
+            Ok(qemu_path) => qemu_path.canonicalize().context(format!(
+                "Failed to canonicalize the path to the emulator binary: {:?}",
+                qemu_path
+            ))?,
+            Err(e) => bail!("Cannot find {} in the SDK: {:?}", QEMU_TOOL, e),
+        };
+
+        // If we need to, replace the executable name.
+        if let Some(exe_name) = cli_name {
+            let mut p = PathBuf::from(qemu_x64_path.parent().unwrap_or(Path::new("")));
+            p.push(exe_name);
+            Ok(p)
+        } else {
+            Ok(qemu_x64_path)
+        }
+    }
 }
 
 #[async_trait]
@@ -46,18 +84,11 @@ impl EmulatorEngine for QemuEngine {
             .await
             .context("could not stage image files")?;
 
-        let qemu = match self.ffx_config.get_host_tool(QEMU_TOOL).await {
-            Ok(qemu_path) => qemu_path.canonicalize().context(format!(
-                "Failed to canonicalize the path to the emulator binary: {:?}",
-                qemu_path
-            ))?,
-            Err(e) => {
-                bail!("Cannot find {} in the SDK: {:?}", QEMU_TOOL, e);
-            }
-        };
+        let qemu = self.get_qemu_path().await.context("could not determine qemu cli path")?;
 
         return self.run(&qemu, proxy).await;
     }
+
     fn show(&self) {
         println!("{:#?}", self.emulator_configuration);
     }

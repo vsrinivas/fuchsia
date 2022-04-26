@@ -11,7 +11,7 @@ use ffx_emulator_common::{
 };
 use ffx_emulator_config::{
     convert_bundle_to_configs, AccelerationMode, ConsoleType, EmulatorConfiguration, LogLevel,
-    NetworkingMode,
+    NetworkingMode, TargetArchitecture,
 };
 use ffx_emulator_engines::get_instance_dir;
 use ffx_emulator_start_args::StartCommand;
@@ -83,23 +83,38 @@ async fn apply_command_line_options(
         let instance = get_instance_dir(&ffx_config, &cmd.name, false).await?;
         emu_config.host.log = instance.join("emulator.log");
     }
+
     if emu_config.host.acceleration == AccelerationMode::Auto {
-        if emu_config.host.os == "linux" {
-            emu_config.host.acceleration = AccelerationMode::None;
-            // Make sure we have access to KVM.
-            let file = std::fs::File::open("/dev/kvm");
-            if let Ok(kvm) = file {
-                if let Ok(metadata) = kvm.metadata() {
-                    if !metadata.permissions().readonly() {
-                        emu_config.host.acceleration = AccelerationMode::Hyper;
+        let check_kvm = match emu_config.device.cpu.architecture {
+            TargetArchitecture::Arm64 if emu_config.host.architecture == "aarch64" => true,
+            TargetArchitecture::X64 if emu_config.host.architecture == "x64_64" => true,
+            _ => false,
+        };
+
+        match emu_config.host.os.as_str() {
+            "linux" => {
+                emu_config.host.acceleration = AccelerationMode::None;
+                if check_kvm {
+                    if let Ok(kvm) = std::fs::File::open("/dev/kvm") {
+                        if let Ok(metadata) = kvm.metadata() {
+                            if !metadata.permissions().readonly() {
+                                emu_config.host.acceleration = AccelerationMode::Hyper
+                            }
+                        }
                     }
                 }
             }
-        } else {
-            // We generally assume Macs have HVF installed.
-            emu_config.host.acceleration = AccelerationMode::Hyper;
+            _ => {
+                // We assume everything else is a mac, and they have HVF installed.
+                if check_kvm {
+                    emu_config.host.acceleration = AccelerationMode::Hyper;
+                } else {
+                    emu_config.host.acceleration = AccelerationMode::None;
+                }
+            }
         }
     }
+
     if emu_config.host.networking == NetworkingMode::Auto {
         if tap_available() {
             emu_config.host.networking = NetworkingMode::Tap;
