@@ -286,6 +286,10 @@ impl ElfRunner {
             });
         }
 
+        if let Some(handles) = start_info.numbered_handles {
+            handle_infos.extend(handles);
+        }
+
         // Load the component
         let launch_info =
             runner::component::configure_launcher(runner::component::LauncherConfigArgs {

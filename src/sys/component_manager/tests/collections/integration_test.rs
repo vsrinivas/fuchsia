@@ -5,13 +5,15 @@
 use {
     anyhow::{Context as _, Error},
     fidl::endpoints::{self, Proxy},
-    fidl::HandleBased,
+    fidl::{AsHandleRef, HandleBased},
     fidl_fidl_test_components as ftest, fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio, fidl_fuchsia_process as fprocess,
     fuchsia_async as fasync,
     fuchsia_component::client,
+    fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon as zx,
     io_util::{self, OpenFlags},
+    std::ffi::CString,
     std::path::PathBuf,
 };
 
@@ -153,21 +155,23 @@ async fn child_args() {
     }
     // Providing numbered handles to a component that is in a single run collection should succeed.
     {
-        let name = "a";
-        let mut collection_ref = fdecl::CollectionRef { name: "single_run".to_string() };
+        let mut collection_ref = fdecl::CollectionRef { name: "single_run".to_owned() };
         let child_decl = fdecl::Child {
-            name: Some(name.to_string()),
-            url: Some(format!(
-                "fuchsia-pkg://fuchsia.com/collections_integration_test#meta/trigger_{}.cm",
-                name
-            )),
+            name: Some("write_startup_socket".to_owned()),
+            url: Some(
+                "fuchsia-pkg://fuchsia.com/collections_integration_test#meta/write_startup_socket.cm".to_owned(),
+            ),
             startup: Some(fdecl::StartupMode::Lazy),
             environment: None,
             ..fdecl::Child::EMPTY
         };
-        let (_, socket) =
+        let (their_socket, our_socket) =
             zx::Socket::create(zx::SocketOpts::STREAM).expect("Couldn't create socket");
-        let numbered_handles = vec![fprocess::HandleInfo { handle: socket.into_handle(), id: 0 }];
+        let numbered_handles = vec![fprocess::HandleInfo {
+            handle: their_socket.into_handle(),
+            // Must correspond to the same Handle Id in write_startup_socket.rs.
+            id: HandleInfo::new(HandleType::User0, 0).as_raw(),
+        }];
         let child_args = fcomponent::CreateChildArgs {
             numbered_handles: Some(numbered_handles),
             ..fcomponent::CreateChildArgs::EMPTY
@@ -175,8 +179,73 @@ async fn child_args() {
         realm
             .create_child(&mut collection_ref, child_decl, child_args)
             .await
-            .expect(&format!("create_child {} failed", name))
-            .expect(&format!("failed to create child {}", name));
+            .expect("fidl error in create_child")
+            .expect("failed to create_child");
+
+        // NOTE: Although we specified StartupMode::Lazy above, which is the only supported mode for
+        // dynamic components. |create_child| will actually start the component immediately without
+        // the need to manually bind it, because "the instances in a single run collection are
+        // started when they are created" (see //docs/concepts/components/v2/realms.md).
+        // fxbug.dev/90085 discusses the idea to remove the startup parameter.
+
+        fasync::OnSignals::new(&our_socket, zx::Signals::SOCKET_READABLE)
+            .await
+            .expect("SOCKET_READABLE should be signaled after the child starts");
+        let mut bytes = [0u8; 32];
+        let length = our_socket.read(&mut bytes).expect("read should succeed");
+        assert_eq!(bytes[..length], b"Hello, World!"[..]);
+
+        // Checking OBJECT_PEER_CLOSED ensures that |their_socket| is not leaked.
+        fasync::OnSignals::new(&our_socket, zx::Signals::OBJECT_PEER_CLOSED)
+            .await
+            .expect("OBJECT_PEER_CLOSED should be signaled after the child exits");
+    }
+    // Providing numbered handles with invalid id should fail.
+    {
+        let mut collection_ref = fdecl::CollectionRef { name: "single_run".to_owned() };
+        let child_decl = fdecl::Child {
+            name: Some("write_startup_socket_2".to_owned()),
+            url: Some(
+                "fuchsia-pkg://fuchsia.com/collections_integration_test#meta/write_startup_socket.cm".to_owned(),
+            ),
+            startup: Some(fdecl::StartupMode::Lazy),
+            environment: None,
+            ..fdecl::Child::EMPTY
+        };
+        let (their_socket, our_socket) =
+            zx::Socket::create(zx::SocketOpts::STREAM).expect("Couldn't create socket");
+        let job =
+            fuchsia_runtime::job_default().create_child_job().expect("fail to create_child_job");
+        job.set_name(&CString::new("new-job-new-name").unwrap()).expect("fail to set_name");
+        let numbered_handles = vec![
+            fprocess::HandleInfo {
+                handle: job.into_handle(),
+                // Only PA_FD and PA_USER* handles are valid arguments (//sdk/fidl/fuchsia.component/realm.fidl).
+                id: HandleInfo::new(HandleType::DefaultJob, 0).as_raw(),
+            },
+            fprocess::HandleInfo {
+                handle: their_socket.into_handle(),
+                // Must correspond to the same Handle Id in write_startup_socket.rs.
+                id: HandleInfo::new(HandleType::User0, 0).as_raw(),
+            },
+        ];
+        let child_args = fcomponent::CreateChildArgs {
+            numbered_handles: Some(numbered_handles),
+            ..fcomponent::CreateChildArgs::EMPTY
+        };
+        let result = realm
+            .create_child(&mut collection_ref, child_decl, child_args)
+            .await
+            .expect("fidl error in create_child");
+
+        // TODO(fxbug.dev/98739): it should fail to create_child, but it succeeds instead. Also
+        // the default_job received in write_startup_socket.rs is NOT the job we created above.
+        result.unwrap();
+
+        // Wait for the component to exit (to mute the log).
+        fasync::OnSignals::new(&our_socket, zx::Signals::OBJECT_PEER_CLOSED)
+            .await
+            .expect("OBJECT_PEER_CLOSED should be signaled after the child exits");
     }
 }
 
