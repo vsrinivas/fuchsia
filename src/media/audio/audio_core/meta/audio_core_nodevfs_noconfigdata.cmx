@@ -19,7 +19,6 @@
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.thermal.ClientStateConnector",
             "fuchsia.thermal.ClientStateWatcher",
-            "fuchsia.thermal.Controller",
             "fuchsia.tracing.provider.Registry"
         ]
     }

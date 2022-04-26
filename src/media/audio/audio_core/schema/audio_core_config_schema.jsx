@@ -161,52 +161,6 @@
       ],
       "additionalProperties": false
     },
-    "thermal_state_transitions_format": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "target_name": {
-            "type": "string"
-          },
-          "_comment": "string",
-          "config": {}
-        },
-        "required": ["target_name", "config"]
-      }
-    },
-    "thermal_policy_entry_format": {
-      "type": "object",
-      "properties": {
-        "trip_point": {
-          "type": "object",
-          "properties": {
-            "deactivate_below": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            },
-            "activate_at": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            }
-          },
-          "required": ["deactivate_below", "activate_at"]
-        },
-        "state_transitions": { "#ref" : "#/definitions/thermal_state_transitions_format" }
-      },
-      "required": ["trip_point", "state_transitions"]
-    },
-    "thermal_policy_nominal_entry_format": {
-      "type": "object",
-      "properties": {
-        "nominal_config": "bool",
-        "state_transitions": { "#ref" : "#/definitions/thermal_state_transitions_format" },
-        "_comment": "string"
-      },
-      "required": ["nominal_config", "state_transitions"]
-    },
     "thermal_state_format": {
       "type": "object",
       "properties": {
@@ -274,15 +228,6 @@
     "input_devices" : {
       "type": "array",
       "items" : { "$ref" : "#/definitions/input_device_profile" }
-    },
-    "thermal_policy": {
-      "type" : "array",
-      "items": {
-        "oneOf": [
-          {"$ref" : "#/definitions/thermal_policy_entry_format"},
-          {"$ref" : "#/definitions/thermal_policy_nominal_entry_format"}
-        ]
-      }
     },
     "thermal_states": {
       "type" : "array",
