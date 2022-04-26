@@ -268,6 +268,25 @@ func TestRunNinja(t *testing.T) {
             `,
 		},
 		{
+			name: "ninja internal error",
+			fail: true,
+			stdout: `
+                [1/53672] CXX foo
+                [2/53672] CXX a.o b.o
+                ninja: build stopped: something went wrong
+            `,
+			expectedFailureMessage: `
+                ninja: build stopped: something went wrong
+			`,
+			expectedActionData: &fintpb.NinjaActionMetrics{
+				InitialActions: 53672,
+				FinalActions:   53672,
+				ActionsByType: map[string]int32{
+					"CXX": 2,
+				},
+			},
+		},
+		{
 			name: "graph error",
 			fail: true,
 			stdout: `
@@ -310,8 +329,8 @@ func TestRunNinja(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.stdout = normalize(tc.stdout)
-			tc.expectedFailureMessage = normalize(tc.expectedFailureMessage)
+			tc.stdout = trimLines(tc.stdout)
+			tc.expectedFailureMessage = trimLines(tc.expectedFailureMessage)
 
 			sr := &fakeSubprocessRunner{
 				mockStdout: []byte(tc.stdout),
@@ -352,7 +371,11 @@ func TestRunNinja(t *testing.T) {
 				t.Errorf("runNinja didn't set the -j flag. Full command: %v", cmd)
 			}
 
-			if diff := cmp.Diff(tc.expectedFailureMessage, msg); diff != "" {
+			wantMsg := tc.expectedFailureMessage
+			if wantMsg != "" {
+				wantMsg += "\n"
+			}
+			if diff := cmp.Diff(wantMsg, msg); diff != "" {
 				t.Errorf("Unexpected failure message diff (-want +got):\n%s", diff)
 			}
 			if diff := cmp.Diff(tc.expectedActionData, gotActionData, protocmp.Transform()); diff != "" {
@@ -397,13 +420,17 @@ ninja explain: obj/build/foo is dirty`),
 	}
 }
 
-// normalize removes a leading newline and trailing spaces from a multiline
-// string, ensuring that the expected failure message has the same whitespace
-// formatting as failure messages emitted by runNinja.
-func normalize(s string) string {
-	s = strings.TrimLeft(s, "\n")
-	s = strings.TrimRight(s, " ")
-	return s
+// trimLines removes leading/trailing whitespace from each line of a multiline
+// string.
+func trimLines(s string) string {
+	var res []string
+	for _, line := range strings.Split(s, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed != "" {
+			res = append(res, trimmed)
+		}
+	}
+	return strings.Join(res, "\n")
 }
 
 func TestCheckNinjaNoop(t *testing.T) {

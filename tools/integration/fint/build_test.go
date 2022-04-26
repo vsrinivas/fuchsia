@@ -147,7 +147,7 @@ func TestBuild(t *testing.T) {
 				return fmt.Errorf("failed to run command: %s", cmd)
 			},
 			expectedArtifacts: &fintpb.BuildArtifacts{
-				FailureSummary: unrecognizedFailureMsg,
+				FailureSummary: unrecognizedFailureMsg + "\n",
 				DebugFiles: []*fintpb.DebugFile{
 					{
 						Path:       filepath.Join(buildDir, "clang-crashreports", "foo.sh"),

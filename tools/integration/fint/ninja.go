@@ -47,9 +47,9 @@ var (
 	// "FAILED: foo.o"
 	failureStartRegex = regexp.MustCompile(`^\s*FAILED: .*`)
 
-	// failureEndRegex indicates the end of Ninja's execution as a result of a
+	// buildStoppedRegex indicates the end of Ninja's execution as a result of a
 	// build failure. When present, it will be the last line of stdout.
-	failureEndRegex = regexp.MustCompile(`^\s*ninja: build stopped:.*`)
+	buildStoppedRegex = regexp.MustCompile(`^\s*ninja: build stopped:.*`)
 
 	// noWorkString in the Ninja output indicates a null build (i.e. all the
 	// requested targets have already been built).
@@ -232,13 +232,13 @@ func (p *ninjaParser) parseLine(line string) error {
 			}
 			p.ninjaActionData.FinalActions = totalActions
 			actionType := ruleMatches[3]
-			p.ninjaActionData.ActionsByType[actionType] += 1
+			p.ninjaActionData.ActionsByType[actionType]++
 		}
 	}
 	p.currentRuleLines = append(p.currentRuleLines, line)
 
 	if p.processingFailure {
-		if ruleRegex.MatchString(line) || failureEndRegex.MatchString(line) {
+		if ruleRegex.MatchString(line) || buildStoppedRegex.MatchString(line) {
 			// Found the end of the info for this failure (either a new rule
 			// started or we hit the end of the Ninja logs).
 			p.processingFailure = false
@@ -259,13 +259,19 @@ func (p *ninjaParser) parseLine(line string) error {
 		if _, err := p.explainOutputSink.Write([]byte(line + "\n")); err != nil {
 			return err
 		}
+	} else if buildStoppedRegex.MatchString(line) && len(p.failureOutputLines) == 0 {
+		// Use the "build stopped" error message (which is generally the final
+		// line of output) as the failure message if there were no failed
+		// targets, as this is likely an internal ninja failure that the "build
+		// stopped" message will help identify.
+		p.failureOutputLines = append(p.failureOutputLines, line)
 	}
 	return nil
 }
 
 func (p *ninjaParser) failureMessage() string {
 	if len(p.failureOutputLines) == 0 {
-		return unrecognizedFailureMsg
+		p.failureOutputLines = []string{unrecognizedFailureMsg}
 	}
 	lines := p.failureOutputLines
 	if p.failureOutputLines[len(p.failureOutputLines)-1] != "" {
