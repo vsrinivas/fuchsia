@@ -220,6 +220,12 @@ Gain::AScale Gain::GetGainScale() {
   TRACE_DURATION("audio", "Gain::GetGainScale");
 
   if (source_.IsMuted()) {
+    if constexpr (kLogGainScaleValues) {
+      if (latest_scale_ != kMuteScale) {
+        latest_scale_ = kMuteScale;
+        FX_LOGS(INFO) << "Gain(" << this << ") ***** New gain_scale: " << latest_scale_ << " *****";
+      }
+    }
     return kMuteScale;
   }
 
@@ -250,6 +256,13 @@ Gain::AScale Gain::GetGainScale() {
   // Apply gain limits.
   if (combined_scale > kMuteScale) {
     combined_scale = std::clamp(combined_scale, min_gain_scale_, max_gain_scale_);
+  }
+
+  if constexpr (kLogGainScaleValues) {
+    if (latest_scale_ != combined_scale) {
+      latest_scale_ = combined_scale;
+      FX_LOGS(INFO) << "Gain(" << this << ") ***** New gain_scale: " << latest_scale_ << " *****";
+    }
   }
 
   return combined_scale;

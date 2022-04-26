@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "fuchsia/media/audio/cpp/fidl.h"
 #include "src/media/audio/audio_core/driver_output.h"
 #include "src/media/audio/audio_core/mixer/coefficient_table.h"
 #include "src/media/audio/audio_core/test/api/fidelity_results.h"
@@ -34,7 +35,6 @@ namespace media::audio::test {
 
 class AudioCoreFidelityTest : public HermeticFidelityTest {
  protected:
-  static constexpr int32_t kDeviceChannels = 2;
   static constexpr audio_stream_unique_id_t kOutputDeviceId =
       AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS;
 
@@ -60,6 +60,7 @@ class AudioCoreFidelityTest : public HermeticFidelityTest {
 class AudioCore48kFidelityTest : public AudioCoreFidelityTest {
  protected:
   static constexpr int32_t kDeviceFrameRate = 48000;
+  static constexpr int32_t kDeviceChannels = 2;
 
   static void SetUpTestSuite() {
     HermeticAudioTest::SetTestSuiteRealmOptions([] {
@@ -98,6 +99,7 @@ class AudioCore48kFidelityTest : public AudioCoreFidelityTest {
 class AudioCore96kFidelityTest : public AudioCoreFidelityTest {
  protected:
   static constexpr int32_t kDeviceFrameRate = 96000;
+  static constexpr int32_t kDeviceChannels = 2;
 
   static void SetUpTestSuite() {
     HermeticAudioTest::SetTestSuiteRealmOptions([] {
@@ -138,6 +140,7 @@ class AudioCore96kFidelityTest : public AudioCoreFidelityTest {
 class AudioCore48k96kFidelityTest : public AudioCoreFidelityTest {
  protected:
   static constexpr int32_t kDeviceFrameRate = 96000;
+  static constexpr int32_t kDeviceChannels = 2;
 
   static void SetUpTestSuite() {
     HermeticAudioTest::SetTestSuiteRealmOptions([] {
@@ -184,6 +187,82 @@ class AudioCore48k96kFidelityTest : public AudioCoreFidelityTest {
   }
 };
 
+class AudioCoreMaxGainTest : public AudioCoreFidelityTest {
+ protected:
+  static constexpr int32_t kDeviceFrameRate = 48000;
+  static constexpr int32_t kDeviceChannels = 1;
+
+  static void SetUpTestSuite() {
+    HermeticAudioTest::SetTestSuiteRealmOptions([] {
+      return HermeticAudioRealm::Options{
+          .audio_core_config_data = MakeAudioCoreConfig({
+              .output_device_config = R"x(
+                "device_id": "*",
+                "supported_stream_types": [
+                    "render:background",
+                    "render:communications",
+                    "render:interruption",
+                    "render:media",
+                    "render:system_agent"
+                ],
+                "pipeline": {
+                    "name": "Gain-limited MixStage 48k (max 0db)",
+                    "max_gain_db": 0,
+                    "streams": [
+                        "render:background",
+                        "render:communications",
+                        "render:interruption",
+                        "render:media",
+                        "render:system_agent"
+                    ],
+                    "output_rate": 48000,
+                    "output_channels": 1
+                }
+              )x",
+          }),
+      };
+    });
+  }
+};
+
+class AudioCoreMinGainTest : public AudioCoreFidelityTest {
+ protected:
+  static constexpr int32_t kDeviceFrameRate = 48000;
+  static constexpr int32_t kDeviceChannels = 1;
+
+  static void SetUpTestSuite() {
+    HermeticAudioTest::SetTestSuiteRealmOptions([] {
+      return HermeticAudioRealm::Options{
+          .audio_core_config_data = MakeAudioCoreConfig({
+              .output_device_config = R"x(
+                "device_id": "*",
+                "supported_stream_types": [
+                    "render:background",
+                    "render:communications",
+                    "render:interruption",
+                    "render:media",
+                    "render:system_agent"
+                ],
+                "pipeline": {
+                    "name": "Gain-limited MixStage 48k (min 0db)",
+                    "min_gain_db": 0,
+                    "streams": [
+                        "render:background",
+                        "render:communications",
+                        "render:interruption",
+                        "render:media",
+                        "render:system_agent"
+                    ],
+                    "output_rate": 48000,
+                    "output_channels": 1
+                }
+              )x",
+          }),
+      };
+    });
+  }
+};
+
 //
 // Assess frequency response/sinad for source sample_formats. Test with single MixStage at 96k.
 //
@@ -216,6 +295,11 @@ TEST_F(AudioCoreSourceFormatFidelityTest, DISABLED_Uint8PassThru) {
               FidelityResults::kUint8LimitsDb,
               FidelityResults::kUint8SinadLimitsDb,
           },
+          {
+              1,
+              FidelityResults::kSilenceDb,
+              FidelityResults::kFloat32SinadLimitsDb,
+          },
       },
   });
 }
@@ -238,6 +322,11 @@ TEST_F(AudioCoreSourceFormatFidelityTest, Int16PassThru) {
       .device_id = kOutputDeviceId,
       .output_format = Format::Create<ASF::FLOAT>(kDeviceChannels, kDeviceFrameRate).take_value(),
       .channels_to_measure{
+          {
+              0,
+              FidelityResults::kSilenceDb,
+              FidelityResults::kFloat32SinadLimitsDb,
+          },
           {
               1,
               FidelityResults::kFullScaleLimitsDb,
@@ -270,6 +359,11 @@ TEST_F(AudioCoreSourceFormatFidelityTest, DISABLED_Int24PassThru) {
               FidelityResults::kFullScaleLimitsDb,
               FidelityResults::kInt24SinadLimitsDb,
           },
+          {
+              1,
+              FidelityResults::kSilenceDb,
+              FidelityResults::kFloat32SinadLimitsDb,
+          },
       },
   });
 }
@@ -292,6 +386,11 @@ TEST_F(AudioCoreSourceFormatFidelityTest, DISABLED_Float32PassThru) {
       .device_id = kOutputDeviceId,
       .output_format = Format::Create<ASF::FLOAT>(kDeviceChannels, kDeviceFrameRate).take_value(),
       .channels_to_measure{
+          {
+              0,
+              FidelityResults::kSilenceDb,
+              FidelityResults::kFloat32SinadLimitsDb,
+          },
           {
               1,
               FidelityResults::kFullScaleLimitsDb,
@@ -491,6 +590,11 @@ TEST_F(AudioCore96kFidelityTest, DISABLED_48kTo96k) {
               FidelityResults::k48kTo96kLimitsDb,
               FidelityResults::k48kTo96kSinadLimitsDb,
           },
+          {
+              1,
+              FidelityResults::kSilenceDb,
+              FidelityResults::kFloat32SinadLimitsDb,
+          },
       },
   });
 }
@@ -521,6 +625,11 @@ TEST_F(AudioCore48k96kFidelityTest, DISABLED_24kTo48kTo96k) {
               FidelityResults::k24kTo48kTo96kLimitsDb,
               FidelityResults::k24kTo48kTo96kSinadLimitsDb,
           },
+          {
+              1,
+              FidelityResults::kSilenceDb,
+              FidelityResults::kFloat32SinadLimitsDb,
+          },
       },
   });
 }
@@ -549,6 +658,98 @@ TEST_F(AudioCore48k96kFidelityTest, 96kTo48kTo96k) {
               0,
               FidelityResults::k96kTo48kTo96kLimitsDb,
               FidelityResults::k96kTo48kTo96kSinadLimitsDb,
+          },
+          {
+              1,
+              FidelityResults::kSilenceDb,
+              FidelityResults::kFloat32SinadLimitsDb,
+          },
+      },
+  });
+}
+
+// 48k float32 mono stream to 48k mono mix stage that has a maximum gain of 0dB. If the max_gain
+// limiting is not working, then our SiNAD measurement will fail.
+TEST_F(AudioCoreMaxGainTest, MaxGainTest) {
+  constexpr uint32_t kSourceRate = 48000;
+
+  Run(HermeticFidelityTest::TestCase<ASF::FLOAT, ASF::FLOAT>{
+      .test_name = "audio_core_max_gain_float32_1chan_48k",
+
+      .input_format = Format::Create<ASF::FLOAT>(1, kSourceRate).take_value(),
+      .path = RenderPath::Communications,
+      .channels_to_play{0},
+      .renderer_clock_mode = ClockMode::Flexible,
+      .gain_db = +20.0f,  // This clips heavily (low SiNAD) without "max_gain=0" in static config.
+
+      .pipeline = pipeline_constants(kSourceRate, 1),
+      .single_frequency_to_test = 8000,
+
+      .device_id = kOutputDeviceId,
+      .output_format = Format::Create<ASF::FLOAT>(kDeviceChannels, kDeviceFrameRate).take_value(),
+      .channels_to_measure{
+          {
+              0,
+              FidelityResults::kFullScaleLimitsDb,
+              FidelityResults::kFloat32SinadLimitsDb,
+          },
+      },
+  });
+}
+
+// 48k float32 mono stream to 48k mono mix stage that has a minimum gain of 0dB. If the min_gain
+// limiting is not working, then our Frequency Response measurement will fail.
+TEST_F(AudioCoreMinGainTest, MinGainTest) {
+  constexpr uint32_t kSourceRate = 48000;
+
+  Run(HermeticFidelityTest::TestCase<ASF::FLOAT, ASF::FLOAT>{
+      .test_name = "audio_core_min_gain_float32_1chan_48k",
+
+      .input_format = Format::Create<ASF::FLOAT>(1, kSourceRate).take_value(),
+      .path = RenderPath::Communications,
+      .channels_to_play{0},
+      .renderer_clock_mode = ClockMode::Flexible,
+      .gain_db = -20.0f,  // Without "min_gain=0" in static config, FR is -20dB (not unity 0dB).
+
+      .pipeline = pipeline_constants(kSourceRate, 1),
+      .single_frequency_to_test = 8000,
+
+      .device_id = kOutputDeviceId,
+      .output_format = Format::Create<ASF::FLOAT>(kDeviceChannels, kDeviceFrameRate).take_value(),
+      .channels_to_measure{
+          {
+              0,
+              FidelityResults::kFullScaleLimitsDb,
+              FidelityResults::kFloat32SinadLimitsDb,
+          },
+      },
+  });
+}
+
+// 48k float32 mono stream to 48k mono mix stage that has a maximum gain of 0dB. Even with min_gain
+// limiting, a gain of -160 dB should always lead to silence being produced.
+TEST_F(AudioCoreMinGainTest, MinGainTestAtMutedGainDb) {
+  constexpr uint32_t kSourceRate = 48000;
+
+  Run(HermeticFidelityTest::TestCase<ASF::FLOAT, ASF::FLOAT>{
+      .test_name = "audio_core_min_gain_float32_1chan_48k_minus_160db",
+
+      .input_format = Format::Create<ASF::FLOAT>(1, kSourceRate).take_value(),
+      .path = RenderPath::Communications,
+      .channels_to_play{0},
+      .renderer_clock_mode = ClockMode::Flexible,
+      .gain_db = fuchsia::media::audio::MUTED_GAIN_DB,
+
+      .pipeline = pipeline_constants(kSourceRate, 1),
+      .single_frequency_to_test = 8000,
+
+      .device_id = kOutputDeviceId,
+      .output_format = Format::Create<ASF::FLOAT>(kDeviceChannels, kDeviceFrameRate).take_value(),
+      .channels_to_measure{
+          {
+              0,
+              FidelityResults::kSilenceDb,
+              FidelityResults::kFloat32SinadLimitsDb,
           },
       },
   });

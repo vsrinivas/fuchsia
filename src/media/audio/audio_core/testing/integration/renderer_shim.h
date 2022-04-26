@@ -30,9 +30,12 @@ class VirtualDevice;
 // This class is thread hostile: none of its methods can be called concurrently.
 class RendererShimImpl {
  public:
+  virtual ~RendererShimImpl() = default;
+
   fuchsia::media::AudioRendererPtr& fidl() { return fidl_; }
   VmoBackedBuffer& payload() { return payload_buffer_; }
   const Format& format() const { return format_; }
+  const zx::clock& reference_clock() const { return reference_clock_; }
 
   int64_t num_payload_frames() const { return payload_frame_count_; }
   int64_t num_payload_samples() const { return payload_frame_count_ * format_.channels(); }
@@ -105,8 +108,6 @@ class RendererShimImpl {
 
   // For validating properties exported by inspect.
   size_t inspect_id() const { return inspect_id_; }
-
-  const zx::clock& reference_clock() const { return reference_clock_; }
 
  protected:
   RendererShimImpl(Format format, int64_t payload_frame_count, size_t inspect_id);
@@ -193,9 +194,21 @@ class AudioRendererShim : public RendererShimImpl {
     SetPtsUnits(format().frames_per_second(), 1);
     fidl()->AddPayloadBuffer(0, payload_buffer().CreateAndMapVmo(false));
     RetrieveReferenceClock(fixture);
+
+    fidl()->BindGainControl(gain().NewRequest());
+    fixture->AddErrorHandler(gain(), "GainControl");
   }
 
+  ~AudioRendererShim() override { gain().Unbind(); }
+
   bool created() const { return has_min_lead_time(); }
+
+  void SetGain(float gain_db) { gain()->SetGain(gain_db); }
+
+  fuchsia::media::audio::GainControlPtr& gain() { return gain_; }
+
+ private:
+  fuchsia::media::audio::GainControlPtr gain_;
 };
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>

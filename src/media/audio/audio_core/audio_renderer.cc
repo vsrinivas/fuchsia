@@ -422,7 +422,8 @@ void AudioRenderer::RealizeVolume(VolumeCommand volume_command) {
 
         if constexpr (kLogRenderUsageVolumeGainActions) {
           // TODO(fxbug.dev/51049) Swap this logging for inspect or other real-time gain observation
-          FX_LOGS(INFO) << static_cast<const void*>(this) << " (mixer "
+          FX_LOGS(INFO) << static_cast<const void*>(this) << " (gain "
+                        << &(link.mixer->bookkeeping().gain) << ", mixer "
                         << static_cast<const void*>(link.mixer.get()) << ") "
                         << StreamUsage::WithRenderUsage(usage_).ToString() << " dest_gain("
                         << (volume_command.ramp.has_value() ? "ramping to " : "") << gain_db
@@ -454,8 +455,11 @@ void AudioRenderer::PostStreamGainMute(StreamGainCommand gain_command) {
     if constexpr (kLogRendererSetGainMuteRampActions) {
       // TODO(fxbug.dev/51049) Swap this logging for inspect or other real-time gain observation
       std::stringstream stream;
-      stream << static_cast<const void*>(this) << " (mixer "
-             << static_cast<const void*>(link.mixer.get()) << ") stream (source) Gain: ";
+      stream << static_cast<const void*>(this) << " (gain " << &(link.mixer->bookkeeping().gain)
+             << ", mixer " << static_cast<const void*>(link.mixer.get()) << ") stream ("
+             << (gain_command.control == StreamGainCommand::Control::ADJUSTMENT ? "adjustment"
+                                                                                : "source")
+             << ") Gain: ";
       std::string log_string = stream.str();
       if (gain_command.mute.has_value()) {
         FX_CHECK(gain_command.control == StreamGainCommand::Control::SOURCE);
@@ -463,17 +467,11 @@ void AudioRenderer::PostStreamGainMute(StreamGainCommand gain_command) {
                       << (gain_command.mute.value() ? "TRUE" : "FALSE");
       }
       if (gain_command.gain_db.has_value()) {
-        FX_LOGS(INFO) << log_string << "setting gain to " << gain_command.gain_db.value() << " db"
-                      << (gain_command.control == StreamGainCommand::Control::ADJUSTMENT
-                              ? " (on adjustment control)"
-                              : "");
+        FX_LOGS(INFO) << log_string << "setting gain to " << gain_command.gain_db.value() << " db";
       }
       if (gain_command.ramp.has_value()) {
         FX_LOGS(INFO) << log_string << "ramping gain to " << gain_command.ramp->end_gain_db
-                      << " db, over " << gain_command.ramp->duration.to_usecs() << " usec"
-                      << (gain_command.control == StreamGainCommand::Control::ADJUSTMENT
-                              ? " (on adjustment control)"
-                              : "");
+                      << " db, over " << gain_command.ramp->duration.to_usecs() << " usec";
       }
     }
 

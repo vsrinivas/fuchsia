@@ -125,8 +125,12 @@ class HermeticAudioTest : public TestFixture {
   // Unbind and forget about the given object.
   void Unbind(VirtualOutputImpl* device);
   void Unbind(VirtualInputImpl* device);
-  void Unbind(RendererShimImpl* renderer);
   void Unbind(CapturerShimImpl* capturer);
+
+  template <fuchsia::media::AudioSampleFormat SampleFormat>
+  void Unbind(AudioRendererShim<SampleFormat>* renderer);
+  template <fuchsia::media::AudioSampleFormat SampleFormat>
+  void Unbind(UltrasoundRendererShim<SampleFormat>* renderer);
 
   // Takes ownership of the AudioDeviceEnumerator. This is useful when tests need to watch for
   // low-level device enumeration events. This is incompatible with CreateInput and CreateOutput.
@@ -158,6 +162,8 @@ class HermeticAudioTest : public TestFixture {
   void SetUpRealm();
   // Tears down the HermeticAudioRealm for each test instance during `TearDown()`.
   void TearDownRealm();
+
+  void Unbind(RendererShimImpl* renderer);
 
   void WatchForDeviceArrivals();
   void WaitForDeviceDepartures();

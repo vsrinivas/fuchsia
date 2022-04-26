@@ -14,6 +14,7 @@
 #include <cmath>
 #include <iomanip>
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
 
@@ -253,7 +254,8 @@ std::vector<HermeticFidelityTest::Frequency> HermeticFidelityTest::GetTestFreque
 template <ASF InputFormat, ASF OutputFormat>
 AudioBuffer<OutputFormat> HermeticFidelityTest::GetRendererOutput(
     TypedFormat<InputFormat> input_format, int64_t input_buffer_frames, RenderPath path,
-    AudioBuffer<InputFormat> input, VirtualOutput<OutputFormat>* device, ClockMode clock_mode) {
+    AudioBuffer<InputFormat> input, VirtualOutput<OutputFormat>* device, ClockMode clock_mode,
+    std::optional<float> gain_db) {
   fuchsia::media::AudioRenderUsage usage = fuchsia::media::AudioRenderUsage::MEDIA;
 
   if (path == RenderPath::Communications) {
@@ -266,7 +268,6 @@ AudioBuffer<OutputFormat> HermeticFidelityTest::GetRendererOutput(
 
     renderer->PlaySynchronized(this, device, 0);
     renderer->WaitForPackets(this, packets);
-    Unbind(renderer);
   } else {
     std::optional<zx::clock> clock;
     zx::clock::update_args args;
@@ -299,12 +300,14 @@ AudioBuffer<OutputFormat> HermeticFidelityTest::GetRendererOutput(
         break;
     }
     auto renderer = CreateAudioRenderer(input_format, input_buffer_frames, usage, std::move(clock));
+    if (gain_db.has_value()) {
+      renderer->SetGain(*gain_db);
+    }
 
     auto packets = renderer->AppendPackets({&input});
 
     renderer->PlaySynchronized(this, device, 0);
     renderer->WaitForPackets(this, packets);
-    Unbind(renderer);
   }
 
   return device->SnapshotRingBuffer();
@@ -731,7 +734,7 @@ void HermeticFidelityTest::Run(
 
     // Set up the renderer, run it and retrieve the output.
     auto ring_buffer = GetRendererOutput(tc.input_format, total_input_buffer_len, tc.path, input,
-                                         device, tc.renderer_clock_mode);
+                                         device, tc.renderer_clock_mode, tc.gain_db);
 
     // For each channel: 1. analyze output, 2) display in-progress results if configured, 3) display
     // output buffer sections if applicable, 4) exit if underflows, 5) save results for later.

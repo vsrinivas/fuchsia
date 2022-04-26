@@ -9,8 +9,11 @@
 
 namespace media::audio {
 
-inline constexpr bool kLogGainSetGain = false;
+inline constexpr bool kLogGainSetGainCalls = false;
+inline constexpr bool kLogGainScaleValues = false;
+
 inline constexpr bool kLogGainSetMute = false;
+
 inline constexpr bool kLogGainSetRamp = false;
 inline constexpr bool kLogGainRampAdvance = false;
 

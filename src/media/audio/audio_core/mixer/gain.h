@@ -222,7 +222,7 @@ class Gain {
     bool IsRampingDown() const { return IsRamping() && ramp_start_gain_db_ > ramp_end_gain_db_; }
 
     void SetGain(float gain_db) {
-      if constexpr (kLogGainSetGain) {
+      if constexpr (kLogGainSetGainCalls) {
         FX_LOGS(INFO) << "Gain(" << this << "): " << name_ << ".SetGain(" << gain_db
                       << "), was gain_db " << gain_db_ << ", start_db " << ramp_start_gain_db_
                       << ", end_db " << ramp_end_gain_db_;
@@ -280,6 +280,8 @@ class Gain {
   Control source_{"source"};
   Control dest_{"dest"};
   Control adjustment_{"adjustment"};
+
+  float latest_scale_ = 100.0f;  // Guaranteed to not match the first set value.
 };
 
 }  // namespace media::audio

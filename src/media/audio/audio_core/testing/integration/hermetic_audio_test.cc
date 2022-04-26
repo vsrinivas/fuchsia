@@ -301,16 +301,6 @@ void HermeticAudioTest::Unbind(VirtualOutputImpl* device) {
   devices_.erase(it);
 }
 
-void HermeticAudioTest::Unbind(RendererShimImpl* renderer) {
-  auto it = std::find_if(
-      renderers_.begin(), renderers_.end(),
-      [renderer](const std::unique_ptr<RendererShimImpl>& p) { return p.get() == renderer; });
-  FX_CHECK(it != renderers_.end());
-
-  renderer->fidl().Unbind();
-  renderers_.erase(it);
-}
-
 void HermeticAudioTest::Unbind(CapturerShimImpl* capturer) {
   auto it = std::find_if(
       capturers_.begin(), capturers_.end(),
@@ -319,6 +309,27 @@ void HermeticAudioTest::Unbind(CapturerShimImpl* capturer) {
 
   capturer->fidl().Unbind();
   capturers_.erase(it);
+}
+
+template <fuchsia::media::AudioSampleFormat SampleFormat>
+void HermeticAudioTest::Unbind(AudioRendererShim<SampleFormat>* renderer) {
+  renderer->gain().Unbind();
+  Unbind(reinterpret_cast<RendererShimImpl*>(renderer));
+}
+
+template <fuchsia::media::AudioSampleFormat SampleFormat>
+void HermeticAudioTest::Unbind(UltrasoundRendererShim<SampleFormat>* renderer) {
+  Unbind(reinterpret_cast<RendererShimImpl*>(renderer));
+}
+
+void HermeticAudioTest::Unbind(RendererShimImpl* renderer) {
+  auto it = std::find_if(
+      renderers_.begin(), renderers_.end(),
+      [renderer](const std::unique_ptr<RendererShimImpl>& p) { return p.get() == renderer; });
+  FX_CHECK(it != renderers_.end());
+
+  renderer->fidl().Unbind();
+  renderers_.erase(it);
 }
 
 void HermeticAudioTest::WatchForDeviceArrivals() {
@@ -638,6 +649,8 @@ bool HermeticAudioTest::DeviceHasUnderflows(VirtualOutput<OutputFormat>* device)
       TypedFormat<T>, int64_t, bool);                                                       \
   template UltrasoundCapturerShim<T>* HermeticAudioTest::CreateUltrasoundCapturer<T>(       \
       TypedFormat<T>, int64_t, bool);                                                       \
+  template void HermeticAudioTest::Unbind<T>(AudioRendererShim<T> * renderer);              \
+  template void HermeticAudioTest::Unbind<T>(UltrasoundRendererShim<T> * renderer);         \
   template bool HermeticAudioTest::DeviceHasUnderflows(VirtualOutput<T>* device);
 
 INSTANTIATE_FOR_ALL_FORMATS(INSTANTIATE)

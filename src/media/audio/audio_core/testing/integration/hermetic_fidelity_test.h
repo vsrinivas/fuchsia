@@ -80,6 +80,7 @@ class HermeticFidelityTest : public HermeticPipelineTest {
     RenderPath path;
     const std::set<int32_t> channels_to_play;
     ClockMode renderer_clock_mode = ClockMode::Default;
+    std::optional<float> gain_db;
 
     PipelineConstants pipeline;
     // Only test this one frequency, not the full-spectrum set.
@@ -149,7 +150,7 @@ class HermeticFidelityTest : public HermeticPipelineTest {
                                               int64_t input_buffer_frames, RenderPath path,
                                               AudioBuffer<InputFormat> input,
                                               VirtualOutput<OutputFormat>* device,
-                                              ClockMode clock_mode);
+                                              ClockMode clock_mode, std::optional<float> gain_db);
 
   // Display specific locations of interest in the generated input signal, for debugging.
   template <fuchsia::media::AudioSampleFormat InputFormat>

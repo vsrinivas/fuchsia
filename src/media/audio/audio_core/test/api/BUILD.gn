@@ -163,8 +163,7 @@ audio_core_test_package("audio-core-api-tests") {
   }
 }
 
-# These tests must run on real hardware because they have hard real-time restraints.
-# Emulators are too slow.
+# These tests have real-time restraints and must run on real hardware (emulators are too slow).
 audio_core_test_package("audio-core-api-pipeline-tests") {
   package_deps = [ ":audio-core-api-test-effects" ]
   audio_core_manifest_shards = [
@@ -175,12 +174,29 @@ audio_core_test_package("audio-core-api-pipeline-tests") {
   test_components = [
     ":audio-capturer-pipeline-test",
     ":audio-clock-pipeline-test",
-    ":audio-core-fidelity-test",
     ":audio-policy-pipeline-test",
     ":audio-renderer-pipeline-test",
   ]
 
   # Many of the above tests print ERROR logs in cases where the client makes an error.
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+    environments = hardware_envs
+  }
+}
+
+# These tests have real-time restraints and must run on real hardware (emulators are too slow).
+audio_core_test_package("audio_core_fidelity_tests") {
+  audio_core_manifest_shards = [
+    "//src/media/audio/audio_core/meta/audio_core.shard.ultrasound.cml",
+    "//src/media/audio/audio_core/meta/audio_core.shard.for_integration_tests.cml",
+  ]
+
+  test_components = [ ":audio-core-fidelity-test" ]
+
+  # AudioCore emits ERRORs upon output pipeline underflows, which we don't treat as audio failures.
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
