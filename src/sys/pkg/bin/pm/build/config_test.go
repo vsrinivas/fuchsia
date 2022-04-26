@@ -12,7 +12,7 @@ import (
 	"reflect"
 	"testing"
 
-	versionHistory "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/version-history/go"
+	versionHistory "go.fuchsia.dev/fuchsia/src/lib/versioning/version-history/go"
 )
 
 func TestRepository(t *testing.T) {

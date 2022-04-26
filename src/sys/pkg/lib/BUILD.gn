@@ -27,7 +27,6 @@ group("lib") {
     "system-image",
     "update-package",
     "version",
-    "version-history",
     "work-queue",
   ]
 }
@@ -59,7 +58,6 @@ group("tests") {
     "tuf:tests",
     "update-package:tests",
     "version:tests",
-    "version-history:tests",
     "work-queue:tests",
   ]
 }

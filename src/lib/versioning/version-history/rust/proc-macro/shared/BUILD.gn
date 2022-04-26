@@ -18,6 +18,7 @@ rustc_library("version-history-shared") {
   disable_clippy = true  # TODO(fxbug.dev/86506): clippy needs env vars
 
   configs += [ ":env" ]
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 
   deps = [
     "//third_party/rust_crates:serde",
