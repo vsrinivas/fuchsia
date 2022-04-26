@@ -44,11 +44,11 @@ pub struct DeviceAttrs {
     pub block_size: Option<u32>,
 }
 
-/// `ForEachRangeBounded` wrapper around an iterator of `DeviceRange`s that enforces an upper bound
-/// to the length of any single `DeviceRange` by splitting it into multiple sub-ranges.
+/// `RangesBounded` is a wrapper around an iterator of `DeviceRange`s that can enforce an upper bound
+/// on the length of any single `DeviceRange` by splitting it into multiple sub-ranges.
 ///
-/// For example, if you have a single `DeviceRange` that is 4096 bytes, `ForEachRangeBounded` with
-/// a bound of 1024 will produce 4 ranges:
+/// For example, if you have a single `DeviceRange` that is 4096 bytes, `RangesBounded` with a bound of
+/// 1024 will produce 4 ranges:
 ///   > [0, 1024)
 ///   > [1024, 2048)
 ///   > [2048, 3072)
@@ -56,21 +56,21 @@ pub struct DeviceAttrs {
 ///
 /// The iterator produces a tuple of a `u64` that indicates the device offset for the request, and
 /// a `DeviceRange` that specifies the guest memory region for the request.
-pub struct ForEachRangeBounded<'a, I: Iterator<Item = DeviceRange<'a>>> {
+pub struct RangesBounded<'a, I: Iterator<Item = DeviceRange<'a>>> {
     iter: I,
     current: Option<DeviceRange<'a>>,
     offset: u64,
     bound: usize,
 }
 
-impl<'a, I: Iterator<Item = DeviceRange<'a>>> ForEachRangeBounded<'a, I> {
-    fn next_range(&mut self) -> Option<DeviceRange<'a>> {
+impl<'a, I: Iterator<Item = DeviceRange<'a>>> RangesBounded<'a, I> {
+    pub fn next_range(&mut self, bound: usize) -> Option<DeviceRange<'a>> {
         if self.current.is_none() {
             self.current = self.iter.next();
         }
         if let Some(range) = self.current.take() {
-            if range.len() > self.bound {
-                let (new_range, remaining) = range.split_at(self.bound).unwrap();
+            if range.len() > bound {
+                let (new_range, remaining) = range.split_at(bound).unwrap();
                 self.current = Some(remaining);
                 Some(new_range)
             } else {
@@ -80,13 +80,9 @@ impl<'a, I: Iterator<Item = DeviceRange<'a>>> ForEachRangeBounded<'a, I> {
             None
         }
     }
-}
 
-impl<'a, I: Iterator<Item = DeviceRange<'a>>> Iterator for ForEachRangeBounded<'a, I> {
-    type Item = (u64, DeviceRange<'a>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let range = self.next_range();
+    pub fn next_with_bound(&mut self, bound: usize) -> Option<(u64, DeviceRange<'a>)> {
+        let range = self.next_range(bound);
         if let Some(inner) = range {
             let offset = self.offset;
             self.offset = self.offset.checked_add(inner.len() as u64).unwrap();
@@ -94,6 +90,14 @@ impl<'a, I: Iterator<Item = DeviceRange<'a>>> Iterator for ForEachRangeBounded<'
         } else {
             None
         }
+    }
+}
+
+impl<'a, I: Iterator<Item = DeviceRange<'a>>> Iterator for RangesBounded<'a, I> {
+    type Item = (u64, DeviceRange<'a>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next_with_bound(self.bound)
     }
 }
 
@@ -108,13 +112,39 @@ pub struct Request<'a> {
 }
 
 impl<'a> Request<'a> {
+    /// Returns an unbounded iterator of the ranges in a Request that includes an accumulated
+    /// disk offset.
+    ///
+    /// The primary use case of this is to read from the set of ranges with a variable bound. For
+    /// example, the following are equivalent:
+    ///
+    /// ```
+    ///     const BOUND: usize = 10;
+    ///
+    ///     // No ranges returned from `next()` will be greater than `BOUND`.
+    ///     let ranges = request.ranges_bounded(BOUND);
+    ///     while let Some(range) = ranges.next() { }
+    ///
+    ///     // Ranges returned from `next()` will be whatever is in the underlying virtio chain
+    ///     // unmodified, but `next_with_bound` can be used to pull a bounded range out of the
+    ///     // chain.
+    ///     let ranges = request.ranges_unbounded();
+    ///     while let Some(range) = ranges.next_with_bound(BOUND) { }
+    /// ```
+    #[allow(dead_code)]
+    pub fn ranges_unbounded(
+        &self,
+    ) -> RangesBounded<'a, std::iter::Cloned<std::slice::Iter<'a, DeviceRange<'a>>>> {
+        self.ranges_bounded(usize::MAX)
+    }
+
     /// Returns an iterator over the `DeviceRange`s in this request, splitting any ranges that
     /// have a length that exceeds `bound`.
-    pub fn for_each_range_bounded(
+    pub fn ranges_bounded(
         &self,
         bound: usize,
-    ) -> ForEachRangeBounded<'a, std::iter::Cloned<std::slice::Iter<'a, DeviceRange<'a>>>> {
-        ForEachRangeBounded {
+    ) -> RangesBounded<'a, std::iter::Cloned<std::slice::Iter<'a, DeviceRange<'a>>>> {
+        RangesBounded {
             iter: self.ranges.iter().cloned(),
             current: None,
             offset: self.sector.to_bytes().unwrap(),
@@ -147,7 +177,7 @@ mod tests {
     use {super::*, crate::wire, virtio_device::fake_queue::IdentityDriverMem};
 
     #[test]
-    fn test_for_each_range_bounded_no_change() {
+    fn test_ranges_bounded_no_change() {
         // Create a Request with 3 ranges.
         let mem = IdentityDriverMem::new();
         let ranges = vec![
@@ -159,7 +189,7 @@ mod tests {
 
         // Create an iterator with a sector size bound. Since we only created sector-sized ranges
         // this should produce the same ranges as our input.
-        let mut iter = request.for_each_range_bounded(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize);
+        let mut iter = request.ranges_bounded(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize);
         assert_eq!(Some((0, ranges[0].clone())), iter.next());
         assert_eq!(Some((1 * wire::VIRTIO_BLOCK_SECTOR_SIZE, ranges[1].clone())), iter.next());
         assert_eq!(Some((2 * wire::VIRTIO_BLOCK_SECTOR_SIZE, ranges[2].clone())), iter.next());
@@ -169,7 +199,7 @@ mod tests {
     }
 
     #[test]
-    fn test_for_each_range_bounded_split_range() {
+    fn test_ranges_bounded_split_range() {
         // Create a Request with 3 ranges.
         let mem = IdentityDriverMem::new();
         let ranges = vec![mem.new_range(4 * wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap()];
@@ -177,7 +207,7 @@ mod tests {
 
         // Create an iterator with a sector size bound. We have one large range as an input so
         // we expect to have that split up into 4 sector-sized ranges.
-        let mut iter = request.for_each_range_bounded(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize);
+        let mut iter = request.ranges_bounded(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize);
         let (range0, remain) = ranges[0].split_at(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap();
         let (range1, remain) = remain.split_at(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap();
         let (range2, range3) = remain.split_at(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap();
@@ -188,5 +218,62 @@ mod tests {
         assert_eq!(None, iter.next());
         assert_eq!(None, iter.next());
         assert_eq!(None, iter.next());
+    }
+
+    #[test]
+    fn test_ranges_unbounded() {
+        // Create a Request with 3 ranges.
+        let mem = IdentityDriverMem::new();
+        let ranges = vec![
+            mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap(),
+            mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap(),
+            mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap(),
+        ];
+        let request = Request { ranges: ranges.as_slice(), sector: Sector::from_raw_sector(0) };
+
+        // Check that the unbounded iterator is the same as the slice iterator but with the
+        // accumulated offset.
+        ranges.iter().cloned().zip(request.ranges_unbounded()).fold(
+            0,
+            |expected_offset, (r1, (offset, r2))| {
+                assert_eq!(r1, r2);
+                assert_eq!(expected_offset, offset);
+                expected_offset + r2.len() as u64
+            },
+        );
+    }
+
+    #[test]
+    fn test_ranges_unbounded_split() {
+        // Create a Request with 3 ranges.
+        let mem = IdentityDriverMem::new();
+        let ranges = vec![mem.new_range(4 * wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap()];
+        let request = Request { ranges: ranges.as_slice(), sector: Sector::from_raw_sector(0) };
+
+        // Create an iterator with a sector size bound. Since we only created sector-sized ranges
+        // this should produce the same ranges as our input.
+        let mut iter = request.ranges_unbounded();
+        let (range0, remain) = ranges[0].split_at(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap();
+        let (range1, remain) = remain.split_at(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap();
+        let (range2, range3) = remain.split_at(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap();
+        assert_eq!(
+            Some((0, range0)),
+            iter.next_with_bound(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize)
+        );
+        assert_eq!(
+            Some((1 * wire::VIRTIO_BLOCK_SECTOR_SIZE, range1)),
+            iter.next_with_bound(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize)
+        );
+        assert_eq!(
+            Some((2 * wire::VIRTIO_BLOCK_SECTOR_SIZE, range2)),
+            iter.next_with_bound(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize)
+        );
+        assert_eq!(
+            Some((3 * wire::VIRTIO_BLOCK_SECTOR_SIZE, range3)),
+            iter.next_with_bound(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize)
+        );
+        assert_eq!(None, iter.next_with_bound(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize));
+        assert_eq!(None, iter.next_with_bound(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize));
+        assert_eq!(None, iter.next_with_bound(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize));
     }
 }

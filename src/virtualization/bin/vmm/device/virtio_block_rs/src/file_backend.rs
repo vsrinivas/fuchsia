@@ -97,7 +97,7 @@ impl BlockBackend for FileBackend {
     async fn read<'a>(&self, request: Request<'a>) -> Result<(), Error> {
         try_join_all(
             request
-                .for_each_range_bounded(MAX_BUF as usize)
+                .ranges_bounded(MAX_BUF as usize)
                 .map(|(offset, range)| self.read_range(offset, range)),
         )
         .await?;
@@ -107,7 +107,7 @@ impl BlockBackend for FileBackend {
     async fn write<'a>(&self, request: Request<'a>) -> Result<(), Error> {
         try_join_all(
             request
-                .for_each_range_bounded(MAX_BUF as usize)
+                .ranges_bounded(MAX_BUF as usize)
                 .map(|(offset, range)| self.write_range(offset, range)),
         )
         .await?;
