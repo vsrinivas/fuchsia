@@ -38,20 +38,16 @@ template("compatibility_test_suite") {
 
   test_targets = [ ":$abi_test_target_name" ]
 
-  if (!defined(invoker.disable_host_tests) ||
-      (defined(invoker.disable_host_tests) &&
-       invoker.disable_host_tests == false)) {
-    # Host Tool Tests
-    host_tool_test_target_name = "${target_name}_host"
-    if (is_host) {
-      prebuilt_host_test_manifest(host_tool_test_target_name) {
-        forward_variables_from(invoker, [ "disabled_tests" ])
-        archive_dir = rebase_path(invoker.path)
-      }
+  # Host Tool Tests
+  host_tool_test_target_name = "${target_name}_host"
+  if (is_host) {
+    prebuilt_host_test_manifest(host_tool_test_target_name) {
+      forward_variables_from(invoker, [ "disabled_tests" ])
+      archive_dir = rebase_path(invoker.path)
     }
-
-    test_targets += [ ":$host_tool_test_target_name($host_toolchain)" ]
   }
+
+  test_targets += [ ":$host_tool_test_target_name($host_toolchain)" ]
 
   # API Tests
   if (defined(invoker.generate_api_tests) && invoker.generate_api_tests) {
