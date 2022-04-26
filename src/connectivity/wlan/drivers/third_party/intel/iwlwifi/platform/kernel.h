@@ -164,8 +164,11 @@ typedef struct wait_queue_head wait_queue_head_t;
 static inline void* vmalloc(unsigned long size) { return malloc(size); }
 
 static inline void* kmemdup(const void* src, size_t len) {
+  ZX_ASSERT(src);
   void* dst = malloc(len);
-  memcpy(dst, src, len);
+  if (dst) {
+    memcpy(dst, src, len);
+  }
   return dst;
 }
 
