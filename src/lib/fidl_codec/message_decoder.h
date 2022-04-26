@@ -240,7 +240,7 @@ class MessageDecoder {
   std::ostream& error_stream_;
 
   // Wire format version.
-  WireVersion version_ = WireVersion::kWireV1;
+  WireVersion version_ = WireVersion::kWireV2;
 };
 
 // Used by numeric types to retrieve a numeric value. If there is not enough

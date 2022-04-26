@@ -833,9 +833,8 @@ std::string UnionType::Name() const { return union_definition_.name(); }
 std::string UnionType::CppName() const { return FidlMethodNameToCpp(union_definition_.name()); }
 
 size_t UnionType::InlineSize(WireVersion version) const {
-  // The inline size is the size of a 64 bit ordinal plus the size of an envelope which is 16 bytes
-  // for v1 and 8 bytes for v2.
-  return (version == WireVersion::kWireV1) ? 24 : 16;
+  // The inline size is the size of a 64 bit ordinal plus the size of an envelope which is 16 bytes.
+  return 16;
 }
 
 bool UnionType::Nullable() const { return nullable_; }
@@ -1001,9 +1000,7 @@ std::unique_ptr<Value> TableType::Decode(MessageDecoder* decoder, uint64_t offse
 
   bool is_null;
   uint64_t nullable_offset;
-  size_t kEnvelopeSize = (decoder->version() == WireVersion::kWireV1)
-                             ? (2 * sizeof(uint32_t) + sizeof(uint64_t))
-                             : (sizeof(uint32_t) + 2 * sizeof(uint16_t));
+  size_t kEnvelopeSize = sizeof(uint32_t) + 2 * sizeof(uint16_t);
   if (!decoder->DecodeNullableHeader(offset, member_count * kEnvelopeSize, &is_null,
                                      &nullable_offset)) {
     return std::make_unique<InvalidValue>();

@@ -261,13 +261,9 @@ TEST_F(WireParserTest, ParseSingleString) {
 // The remaining parameters are the parameters to |_iface| to generate the
 // message.
 // Checks each test for v1 and v2.
-#define TEST_DECODE_WIRE(_testname, _iface, _json_value, _pretty_print, ...)  \
-  TEST_F(WireParserTest, Parse##_testname) {                                  \
-    TEST_DECODE_WIRE_BODY(_iface, _json_value, _pretty_print, __VA_ARGS__);   \
-    {                                                                         \
-      fidl::internal::HLCPPWireFormatV1Enabler enabler;                       \
-      TEST_DECODE_WIRE_BODY(_iface, _json_value, _pretty_print, __VA_ARGS__); \
-    }                                                                         \
+#define TEST_DECODE_WIRE(_testname, _iface, _json_value, _pretty_print, ...) \
+  TEST_F(WireParserTest, Parse##_testname) {                                 \
+    TEST_DECODE_WIRE_BODY(_iface, _json_value, _pretty_print, __VA_ARGS__);  \
   }
 
 #define TEST_DECODE_WIRE_PATCHED(_testname, _iface, patched_offset, patched_value, _json_value, \

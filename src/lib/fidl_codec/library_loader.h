@@ -44,7 +44,7 @@ constexpr int kDecimalBase = 10;
 using Ordinal32 = uint32_t;
 using Ordinal64 = uint64_t;
 
-enum class WireVersion { kWireV1, kWireV2 };
+enum class WireVersion { kWireV2 };
 
 struct LibraryReadError {
   enum ErrorValue {
@@ -93,16 +93,13 @@ class EnumOrBits {
   ~EnumOrBits();
 
   const std::string& name() const { return name_; }
-  uint64_t size_v1() const { return size_v1_; }
   uint64_t size_v2() const { return size_v2_; }
   const Type* type() const { return type_.get(); }
 
   // Get a list of Enum members.
   const std::vector<EnumOrBitsMember>& members() const { return members_; }
 
-  uint64_t Size(WireVersion version) const {
-    return (version == WireVersion::kWireV1) ? size_v1_ : size_v2_;
-  }
+  uint64_t Size(WireVersion version) const { return size_v2_; }
 
  protected:
   explicit EnumOrBits(const rapidjson::Value* json_definition);
@@ -113,7 +110,6 @@ class EnumOrBits {
  private:
   const rapidjson::Value* json_definition_;
   std::string name_;
-  uint64_t size_v1_;
   uint64_t size_v2_;
   std::unique_ptr<Type> type_;
   std::vector<EnumOrBitsMember> members_;
@@ -309,9 +305,7 @@ class StructMember {
   void reset_type();
   uint8_t id() const { return id_; }
 
-  uint64_t Offset(WireVersion version) const {
-    return (version == WireVersion::kWireV1) ? offset_v1_ : offset_v2_;
-  }
+  uint64_t Offset(WireVersion version) const { return offset_v2_; }
 
  private:
   const std::string name_;

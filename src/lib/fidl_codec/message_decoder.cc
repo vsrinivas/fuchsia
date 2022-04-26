@@ -172,10 +172,7 @@ MessageDecoder::MessageDecoder(const uint8_t* bytes, uint64_t num_bytes,
       end_handle_pos_(handles + num_handles),
       handle_pos_(handles),
       error_stream_(error_stream) {
-  auto header = reinterpret_cast<const fidl_message_header_t*>(bytes);
-  version_ = ((header->at_rest_flags[0] & FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2) != 0)
-                 ? WireVersion::kWireV2
-                 : WireVersion::kWireV1;
+  version_ = WireVersion::kWireV2;
 }
 
 MessageDecoder::MessageDecoder(MessageDecoder* container, uint64_t offset, uint64_t num_bytes,
@@ -268,48 +265,27 @@ std::unique_ptr<Value> MessageDecoder::DecodeEnvelope(uint64_t offset, const Typ
   bool is_null;
   uint64_t nullable_offset;
   bool is_inline = false;
-  if (version_ == WireVersion::kWireV1) {
-    GetValueAt(offset, &envelope_bytes);
-    offset += sizeof(envelope_bytes);
-    GetValueAt(offset, &envelope_handles);
-    offset += sizeof(envelope_handles);
-    if (!DecodeNullableHeader(offset, envelope_bytes, &is_null, &nullable_offset)) {
-      return std::make_unique<InvalidValue>();
-    }
-    if (is_null) {
-      if (envelope_bytes != 0) {
-        AddError() << std::hex << (absolute_offset() + offset) << std::dec
-                   << ": Null envelope shouldn't have bytes\n";
-      }
-      if (envelope_handles != 0) {
-        AddError() << std::hex << (absolute_offset() + offset) << std::dec
-                   << ": Null envelope shouldn't have handles\n";
-      }
-      return std::make_unique<NullValue>();
-    }
-  } else {
-    uint64_t inline_offset = offset;
-    GetValueAt(offset, &envelope_bytes);
-    offset += sizeof(envelope_bytes);
-    uint16_t envelope_handles_16;
-    GetValueAt(offset, &envelope_handles_16);
-    offset += sizeof(envelope_handles_16);
-    uint16_t flags;
-    GetValueAt(offset, &flags);
-    offset += sizeof(flags);
+  uint64_t inline_offset = offset;
+  GetValueAt(offset, &envelope_bytes);
+  offset += sizeof(envelope_bytes);
+  uint16_t envelope_handles_16;
+  GetValueAt(offset, &envelope_handles_16);
+  offset += sizeof(envelope_handles_16);
+  uint16_t flags;
+  GetValueAt(offset, &flags);
+  offset += sizeof(flags);
 
-    is_inline = (flags & 1) != 0;
+  is_inline = (flags & 1) != 0;
 
-    envelope_handles = envelope_handles_16;
-    is_null = !is_inline && (envelope_bytes == 0) && (envelope_handles == 0);
-    if (is_null) {
-      return std::make_unique<NullValue>();
-    }
-    nullable_offset = is_inline ? inline_offset : next_object_offset();
-    envelope_bytes = is_inline ? sizeof(uint32_t) : envelope_bytes;
-    if ((envelope_bytes > 0) && !is_inline) {
-      SkipObject(envelope_bytes);
-    }
+  envelope_handles = envelope_handles_16;
+  is_null = !is_inline && (envelope_bytes == 0) && (envelope_handles == 0);
+  if (is_null) {
+    return std::make_unique<NullValue>();
+  }
+  nullable_offset = is_inline ? inline_offset : next_object_offset();
+  envelope_bytes = is_inline ? sizeof(uint32_t) : envelope_bytes;
+  if ((envelope_bytes > 0) && !is_inline) {
+    SkipObject(envelope_bytes);
   }
   if (!is_inline && (envelope_bytes > num_bytes() - nullable_offset)) {
     AddError() << std::hex << (absolute_offset() + nullable_offset) << std::dec
@@ -329,31 +305,20 @@ bool MessageDecoder::CheckNullEnvelope(uint64_t offset) {
   uint32_t envelope_bytes;
   uint32_t envelope_handles;
   bool is_null;
-  if (version_ == WireVersion::kWireV1) {
-    GetValueAt(offset, &envelope_bytes);
-    offset += sizeof(envelope_bytes);
-    GetValueAt(offset, &envelope_handles);
-    offset += sizeof(envelope_handles);
-    uint64_t nullable_offset;
-    if (!DecodeNullableHeader(offset, envelope_bytes, &is_null, &nullable_offset)) {
-      return false;
-    }
-  } else {
-    GetValueAt(offset, &envelope_bytes);
-    offset += sizeof(envelope_bytes);
-    uint16_t envelope_handles_16;
-    GetValueAt(offset, &envelope_handles_16);
-    offset += sizeof(envelope_handles_16);
-    uint16_t flags;
-    GetValueAt(offset, &flags);
-    offset += sizeof(flags);
+  GetValueAt(offset, &envelope_bytes);
+  offset += sizeof(envelope_bytes);
+  uint16_t envelope_handles_16;
+  GetValueAt(offset, &envelope_handles_16);
+  offset += sizeof(envelope_handles_16);
+  uint16_t flags;
+  GetValueAt(offset, &flags);
+  offset += sizeof(flags);
 
-    bool is_inline = (flags & 1) != 0;
+  bool is_inline = (flags & 1) != 0;
 
-    envelope_handles = envelope_handles_16;
-    is_null = (envelope_bytes == 0) && (envelope_handles == 0);
-    envelope_bytes = is_inline ? sizeof(uint32_t) : envelope_bytes;
-  }
+  envelope_handles = envelope_handles_16;
+  is_null = (envelope_bytes == 0) && (envelope_handles == 0);
+  envelope_bytes = is_inline ? sizeof(uint32_t) : envelope_bytes;
   if (!is_null) {
     AddError() << std::hex << (absolute_offset() + offset) << std::dec
                << ": Expecting null envelope\n";
@@ -378,48 +343,27 @@ void MessageDecoder::SkipEnvelope(uint64_t offset) {
   bool is_null;
   uint64_t nullable_offset;
   bool is_inline = false;
-  if (version_ == WireVersion::kWireV1) {
-    GetValueAt(offset, &envelope_bytes);
-    offset += sizeof(envelope_bytes);
-    GetValueAt(offset, &envelope_handles);
-    offset += sizeof(envelope_handles);
-    if (!DecodeNullableHeader(offset, envelope_bytes, &is_null, &nullable_offset)) {
-      return;
-    }
-    if (is_null) {
-      if (envelope_bytes != 0) {
-        AddError() << std::hex << (absolute_offset() + offset) << std::dec
-                   << ": Null envelope shouldn't have bytes\n";
-      }
-      if (envelope_handles != 0) {
-        AddError() << std::hex << (absolute_offset() + offset) << std::dec
-                   << ": Null envelope shouldn't have handles\n";
-      }
-      return;
-    }
-  } else {
-    uint64_t inline_offset = offset;
-    GetValueAt(offset, &envelope_bytes);
-    offset += sizeof(envelope_bytes);
-    uint16_t envelope_handles_16;
-    GetValueAt(offset, &envelope_handles_16);
-    offset += sizeof(envelope_handles_16);
-    uint16_t flags;
-    GetValueAt(offset, &flags);
-    offset += sizeof(flags);
+  uint64_t inline_offset = offset;
+  GetValueAt(offset, &envelope_bytes);
+  offset += sizeof(envelope_bytes);
+  uint16_t envelope_handles_16;
+  GetValueAt(offset, &envelope_handles_16);
+  offset += sizeof(envelope_handles_16);
+  uint16_t flags;
+  GetValueAt(offset, &flags);
+  offset += sizeof(flags);
 
-    is_inline = (flags & 1) != 0;
+  is_inline = (flags & 1) != 0;
 
-    envelope_handles = envelope_handles_16;
-    is_null = (envelope_bytes == 0) && (envelope_handles == 0);
-    nullable_offset = is_null ? 0 : (is_inline ? inline_offset : next_object_offset());
-    envelope_bytes = is_inline ? sizeof(uint32_t) : envelope_bytes;
-    if (is_null) {
-      return;
-    }
-    if ((envelope_bytes > 0) && !is_inline) {
-      SkipObject(envelope_bytes);
-    }
+  envelope_handles = envelope_handles_16;
+  is_null = (envelope_bytes == 0) && (envelope_handles == 0);
+  nullable_offset = is_null ? 0 : (is_inline ? inline_offset : next_object_offset());
+  envelope_bytes = is_inline ? sizeof(uint32_t) : envelope_bytes;
+  if (is_null) {
+    return;
+  }
+  if ((envelope_bytes > 0) && !is_inline) {
+    SkipObject(envelope_bytes);
   }
   if (!is_inline && (envelope_bytes > num_bytes() - nullable_offset)) {
     AddError() << std::hex << (absolute_offset() + nullable_offset) << std::dec

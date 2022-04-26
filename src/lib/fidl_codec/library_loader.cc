@@ -67,7 +67,6 @@ void EnumOrBits::DecodeTypes(bool is_scalar, const std::string& supertype_name,
     }
   }
 
-  size_v1_ = type_->InlineSize(WireVersion::kWireV1);
   size_v2_ = type_->InlineSize(WireVersion::kWireV2);
 }
 
@@ -315,14 +314,6 @@ void Struct::DecodeTypes() {
   json_definition_ = nullptr;
   name_ = enclosing_library_->ExtractString(json_definition, "struct", "<unknown>", "name");
 
-  if (!json_definition->HasMember("type_shape_v1")) {
-    enclosing_library_->FieldNotFound("struct", name_, "type_shape_v1");
-  } else {
-    const rapidjson::Value& v1 = (*json_definition)["type_shape_v1"];
-    size_v1_ = static_cast<uint32_t>(
-        enclosing_library_->ExtractUint64(&v1, "struct", name_, "inline_size"));
-  }
-
   if (!json_definition->HasMember("type_shape_v2")) {
     enclosing_library_->FieldNotFound("struct", name_, "type_shape_v2");
   } else {
@@ -365,9 +356,7 @@ StructMember* Struct::SearchMember(std::string_view name, uint32_t id) const {
   return nullptr;
 }
 
-uint32_t Struct::Size(WireVersion version) const {
-  return (version == WireVersion::kWireV1) ? size_v1_ : size_v2_;
-}
+uint32_t Struct::Size(WireVersion version) const { return size_v2_; }
 
 std::string Struct::ToString(bool expand) const {
   StructType type(*this, false);
