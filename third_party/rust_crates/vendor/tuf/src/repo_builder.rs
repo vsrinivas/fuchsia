@@ -1324,6 +1324,7 @@ mod tests {
             metadata::SignedMetadata,
             repository::EphemeralRepository,
         },
+        assert_matches::assert_matches,
         chrono::{
             offset::{TimeZone as _, Utc},
             DateTime,
@@ -1332,7 +1333,6 @@ mod tests {
         futures_util::io::{AsyncReadExt, Cursor},
         lazy_static::lazy_static,
         maplit::hashmap,
-        matches::assert_matches,
         pretty_assertions::assert_eq,
         std::collections::BTreeMap,
     };

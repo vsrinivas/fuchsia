@@ -12,7 +12,7 @@
 [package]
 edition = "2018"
 name = "tuf"
-version = "0.3.0-beta5"
+version = "0.3.0-beta6"
 authors = ["heartsucker <heartsucker@autistici.org>", "Erick Tryzelaar <etryzelaar@google.com>"]
 description = "Library for The Update Framework (TUF)"
 homepage = "https://github.com/theupdateframework/rust-tuf"
@@ -92,6 +92,9 @@ version = "0.7"
 
 [dependencies.url]
 version = "2"
+[dev-dependencies.assert_matches]
+version = "1.5.0"
+
 [dev-dependencies.futures-executor]
 version = "0.3.1"
 
@@ -100,9 +103,6 @@ version = "1"
 
 [dev-dependencies.maplit]
 version = "1"
-
-[dev-dependencies.matches]
-version = "0.1.8"
 
 [dev-dependencies.pretty_assertions]
 version = "1"

@@ -984,8 +984,8 @@ mod test {
         RawSignedMetadataSetBuilder, RootMetadataBuilder, SnapshotMetadataBuilder,
         TargetsMetadataBuilder, TimestampMetadataBuilder,
     };
+    use assert_matches::assert_matches;
     use lazy_static::lazy_static;
-    use matches::assert_matches;
     use std::iter::once;
 
     lazy_static! {

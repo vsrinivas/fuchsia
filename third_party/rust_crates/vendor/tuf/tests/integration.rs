@@ -1,6 +1,6 @@
+use assert_matches::assert_matches;
 use futures_executor::block_on;
 use maplit::hashmap;
-use matches::assert_matches;
 use tuf::crypto::{Ed25519PrivateKey, HashAlgorithm, PrivateKey};
 use tuf::interchange::Json;
 use tuf::metadata::{

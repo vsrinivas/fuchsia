@@ -1085,7 +1085,7 @@ fn write_pkcs1(n: &[u8], e: &[u8]) -> ::std::result::Result<Vec<u8>, derp::Error
 #[cfg(test)]
 mod test {
     use super::*;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
     use pretty_assertions::assert_eq;
     use serde_json::{self, json};
 

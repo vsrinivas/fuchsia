@@ -215,8 +215,8 @@ mod test {
     use super::*;
     use crate::interchange::Json;
     use crate::repository::{fetch_metadata_to_string, fetch_target_to_string};
+    use assert_matches::assert_matches;
     use futures_executor::block_on;
-    use matches::assert_matches;
 
     #[test]
     fn ephemeral_repo_targets() {

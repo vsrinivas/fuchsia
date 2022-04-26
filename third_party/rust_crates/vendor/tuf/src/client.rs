@@ -1200,11 +1200,11 @@ mod test {
     use crate::repository::{
         fetch_metadata_to_string, EphemeralRepository, ErrorRepository, Track, TrackRepository,
     };
+    use assert_matches::assert_matches;
     use chrono::prelude::*;
     use futures_executor::block_on;
     use lazy_static::lazy_static;
     use maplit::hashmap;
-    use matches::assert_matches;
     use pretty_assertions::assert_eq;
     use serde_json::json;
     use std::collections::HashMap;

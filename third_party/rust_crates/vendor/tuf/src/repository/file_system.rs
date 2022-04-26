@@ -349,9 +349,9 @@ mod test {
     use crate::interchange::Json;
     use crate::metadata::{Role, RootMetadata};
     use crate::repository::{fetch_metadata_to_string, fetch_target_to_string, Repository};
+    use assert_matches::assert_matches;
     use futures_executor::block_on;
     use futures_util::io::AsyncReadExt;
-    use matches::assert_matches;
     use tempfile;
 
     #[test]

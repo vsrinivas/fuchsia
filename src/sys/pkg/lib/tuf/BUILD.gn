@@ -14,6 +14,7 @@ rustc_test("tuf_lib_test") {
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = [
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:data-encoding",
     "//third_party/rust_crates:derp",

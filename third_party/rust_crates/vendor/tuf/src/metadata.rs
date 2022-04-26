@@ -2146,10 +2146,10 @@ mod test {
     use crate::crypto::Ed25519PrivateKey;
     use crate::interchange::Json;
     use crate::verify::verify_signatures;
+    use assert_matches::assert_matches;
     use chrono::prelude::*;
     use futures_executor::block_on;
     use maplit::{hashmap, hashset};
-    use matches::assert_matches;
     use pretty_assertions::assert_eq;
     use serde_json::json;
     use std::str::FromStr;
