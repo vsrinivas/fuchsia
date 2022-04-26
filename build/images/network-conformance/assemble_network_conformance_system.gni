@@ -53,6 +53,7 @@ template("assemble_network_conformance_system") {
       "//src/sys/pkg/bin/pkg-cache",
       "//src/sys/pkg/bin/pkg-resolver",
       "//src/sys/sysmgr",
+      "//src/sys/universe-resolver",
     ]
     base_packages += invoker.additional_base_packages
 
