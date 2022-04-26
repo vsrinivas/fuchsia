@@ -246,7 +246,7 @@ impl ClientConfigExt for ClientConfig {
 #[cfg(test)]
 mod tests {
     use crate::*;
-    use matches::assert_matches;
+    use assert_matches::assert_matches;
 
     /// Tests that valid `SystemPowerModeConfig` instances pass the validation.
     #[test]

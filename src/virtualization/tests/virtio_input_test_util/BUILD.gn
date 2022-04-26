@@ -9,14 +9,22 @@ rustc_binary("virtio_input_test_util") {
   edition = "2018"
   configs += [ "//src/virtualization/tests:guest_test_util" ]
   disable_rbe = true
+  with_unit_tests = true
 
   deps = [
     "//third_party/rust_crates:clap",
     "//third_party/rust_crates:libc",
   ]
 
+  test_deps = [ "//third_party/rust_crates:assert_matches" ]
+
   sources = [
     "src/events.rs",
     "src/main.rs",
   ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":virtio_input_test_util_test" ]
 }

@@ -56,6 +56,7 @@ group("tests") {
     ":virtualization_net_tests_pkg",
     ":virtualization_vsock_tests_pkg",
     "hypervisor",
+    "virtio_input_test_util:tests($host_toolchain)",
   ]
 
   # TODO(fxbug.dev/12616): These tests currently do not work on arm64.

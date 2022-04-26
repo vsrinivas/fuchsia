@@ -27,7 +27,6 @@ rustc_test("tuf_lib_test") {
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:maplit",
-    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:percent-encoding",
     "//third_party/rust_crates:pretty_assertions",

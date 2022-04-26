@@ -117,7 +117,7 @@ impl EventReader {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use matches::matches;
+    use assert_matches::assert_matches;
 
     #[test]
     fn test_parse_event() {
@@ -141,6 +141,6 @@ mod tests {
     fn test_eof() {
         let empty_stream = vec![];
         let mut reader = EventReader::new_from_reader(Box::new(std::io::Cursor::new(empty_stream)));
-        assert!(matches!(reader.read(), Err(_)));
+        assert_matches!(reader.read(), Err(_));
     }
 }

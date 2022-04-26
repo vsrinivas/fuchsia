@@ -442,10 +442,6 @@ group("maplit") {
   public_deps = [ ":maplit-v1_0_1" ]
 }
 
-group("matches") {
-  public_deps = [ ":matches-v0_1_9" ]
-}
-
 group("maybe-owned") {
   public_deps = [ ":maybe-owned-v0_3_2" ]
 }

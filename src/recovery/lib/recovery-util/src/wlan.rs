@@ -126,11 +126,9 @@ impl WifiConnect for WifiConnectImpl {
 mod tests {
     use super::*;
 
-    #[allow(unused_imports)]
     use {
-        crate::testing::*, anyhow::bail, fuchsia_async as fasync, futures::future::FutureExt,
-        matches::assert_matches, pin_utils::pin_mut, std::cell::Cell, std::future::Future,
-        std::rc::Rc,
+        assert_matches::assert_matches, fuchsia_async as fasync, std::cell::Cell,
+        std::future::Future,
     };
 
     fn mock_wlan_policy<H, F>(handler: H) -> Result<Box<GetClientController>, Error>

@@ -1393,7 +1393,6 @@ dependencies = [
  "log",
  "lru-cache",
  "maplit",
- "matches",
  "maybe-owned",
  "memchr",
  "memoffset 0.5.3",
