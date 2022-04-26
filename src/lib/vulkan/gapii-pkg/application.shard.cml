@@ -1,3 +1,7 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+//
 // To use the Android GPU Inspector application for Vulkan tracing,
 // include this .cml shard in your Vulkan-based component.  This
 // shard provides the Vulkan layer functionality needed for AGI to
@@ -6,7 +10,7 @@
     children: [
         {
             name: "gapii-server",
-            url: "fuchsia-pkg://fuchsia.com/gapii-pkg#meta/gapii-server.cm",
+            url: "fuchsia-pkg://gapii-repo/gapii#meta/gapii-server.cm",
         },
     ],
     use: [

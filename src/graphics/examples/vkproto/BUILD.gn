@@ -7,11 +7,17 @@ import("//src/graphics/lib/magma/gnbuild/magma.gni")
 import("//src/lib/vulkan/build/config.gni")
 import("//src/lib/vulkan/build/vulkan_targets.gni")
 
-fuchsia_component("vkproto_cmp") {
+resource("override") {
+  sources = [ "VkLayer_override.json" ]
+  outputs = [ "data/vulkan/implicit_layer.d/VkLayer_override.json" ]
+}
+
+fuchsia_component("vkproto-cmp") {
   manifest = "meta/vkproto.cml"
 
   deps = [
     ":bin",
+    ":override",
     ":shaders",
     "//src/lib/vulkan/swapchain:image_pipe_swapchain_fb_layer",
     "//src/lib/vulkan/validation_layers",
@@ -26,13 +32,8 @@ resource("shaders") {
   outputs = [ "data/shaders/{{source_file_part}}" ]
 }
 
-fuchsia_test_package("vkproto-pkg") {
-  test_components = [ ":vkproto_cmp" ]
-
-  deps = [ "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component" ]
-  test_specs = {
-    environments = magma_libvulkan_hardware_envs
-  }
+fuchsia_package("vkproto-pkg") {
+  deps = [ ":vkproto-cmp" ]
 }
 
 config("vulkan_sdk_linux_config") {
@@ -109,6 +110,5 @@ group("vkproto_glfw") {
 }
 
 group("vkproto") {
-  testonly = true
   deps = [ ":vkproto-pkg" ]
 }

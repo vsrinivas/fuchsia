@@ -9,12 +9,34 @@
     program: {
         binary: "bin/agis",
     },
+    collections: [
+        {
+            name: "vulkan-trace",
+            durability: "transient",
+        },
+    ],
     capabilities: [
         { protocol: "fuchsia.gpu.agis.Session" },
     ],
     use: [
         {
             protocol: [ "fuchsia.posix.socket.Provider" ],
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: "#vulkan-trace",
+        },
+        {
+            protocol: [ "fuchsia.gpu.agis.Session" ],
+            from: "self",
+            to: "#vulkan-trace",
         },
     ],
     expose: [

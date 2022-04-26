@@ -869,9 +869,16 @@
             protocol: [ "fuchsia.vulkan.loader.Loader" ],
             from: "#vulkan_loader",
             to: [
+                "#agis",
                 "#session-manager",
                 "#starnix_manager",
             ],
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "self",
+            to: "#agis",
+            dependency: "weak_for_migration",
         },
         {
             directory: "dev",
