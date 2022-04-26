@@ -2,20 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_HOST_COMMON_H_
+#define FS_HOST_COMMON_H_
 
 #include <fcntl.h>
-#include <mutex>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
+
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <filesystem>
+#include <mutex>
+#include <optional>
 
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <zircon/types.h>
-#include <fs-host/json_recorder.h>
 
 // The "manifest" command is only being retained here for backwards compatibility.
 // TODO(planders): Once all clients have switched create/add with --manifest, remove this command.
@@ -65,10 +69,9 @@ class FsCreator {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(FsCreator);
 
-  FsCreator(uint64_t data_blocks) :
-    data_blocks_(data_blocks),
-    depfile_(nullptr, [](FILE* fp) { if (fp) { fclose(fp); } }) {}
-  virtual ~FsCreator() {}
+  explicit FsCreator(uint64_t data_blocks)
+      : data_blocks_(data_blocks), depfile_(nullptr, [](FILE* fp) { fclose(fp); }) {}
+  virtual ~FsCreator() = default;
 
   // Process the command line arguments and run the specified command.
   zx_status_t ProcessAndRun(int argc, char** argv);
@@ -138,11 +141,10 @@ class FsCreator {
   off_t GetLength() const { return length_; }
   bool ShouldCompress() const { return compress_; }
 
-  JsonRecorder* json_recorder() { return &json_recorder_; }
-
+  const std::optional<std::filesystem::path>& json_output_path() { return json_output_path_; }
   fbl::unique_fd fd_;
 
-  off_t data_blocks_;
+  uint64_t data_blocks_;
 
  private:
   // Process all options/arguments and open fd to device.
@@ -165,7 +167,8 @@ class FsCreator {
   bool read_only_{false};
   bool compress_{false};
   std::mutex depfile_lock_;
-  std::unique_ptr<FILE, void(*)(FILE*)> depfile_;
-
-  JsonRecorder json_recorder_;
+  std::unique_ptr<FILE, void (*)(FILE*)> depfile_;
+  std::optional<std::filesystem::path> json_output_path_;
 };
+
+#endif  // FS_HOST_COMMON_H_

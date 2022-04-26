@@ -47,8 +47,6 @@
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/node_finder.h"
 
-class JsonRecorder;
-
 namespace blobfs {
 
 // A mapping of a file. Does not own the file.
@@ -83,15 +81,13 @@ class BlobInfo {
 
   // Creates a BlobInfo object for |fd| using the layout specified by |blob_layout_format|. If
   // compressing the blob would save space then the blob will be compressed.
-  static zx::status<BlobInfo> CreateCompressed(
-      int fd, BlobLayoutFormat blob_layout_format,
-      std::optional<std::filesystem::path> file_path = std::nullopt);
+  static zx::status<BlobInfo> CreateCompressed(int fd, BlobLayoutFormat blob_layout_format,
+                                               std::filesystem::path file_path);
 
   // Creates a BlobInfo object for |fd| using the layout specified by |blob_layout_format|. The blob
   // will not be compressed.
-  static zx::status<BlobInfo> CreateUncompressed(
-      int fd, BlobLayoutFormat blob_layout_format,
-      std::optional<std::filesystem::path> file_path = std::nullopt);
+  static zx::status<BlobInfo> CreateUncompressed(int fd, BlobLayoutFormat blob_layout_format,
+                                                 std::filesystem::path file_path);
 
   // If the blob was compressed then this function will return the compressed data. Otherwise the
   // uncompressed data is returned.
@@ -105,7 +101,7 @@ class BlobInfo {
     return cpp20::span<const uint8_t>(merkle_tree_);
   }
   const BlobLayout& GetBlobLayout() const { return *blob_layout_; }
-  const std::optional<std::filesystem::path>& GetSrcFilePath() const { return src_file_path_; }
+  const std::filesystem::path& GetSrcFilePath() const { return src_file_path_; }
 
  private:
   BlobInfo() = default;
@@ -115,7 +111,7 @@ class BlobInfo {
   std::unique_ptr<BlobLayout> blob_layout_;
 
   // The path to the file which this blob came from.
-  std::optional<std::filesystem::path> src_file_path_;
+  std::filesystem::path src_file_path_;
 
   using CompressedBlobData = std::vector<uint8_t>;
   using UncompressedBlobData = FileMapping;

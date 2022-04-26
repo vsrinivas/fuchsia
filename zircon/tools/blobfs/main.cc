@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <string>
 #include <thread>
@@ -27,26 +28,61 @@
 
 namespace {
 
-// Add the blob described by |info| on host to the |blobfs| blobfs store.
-zx_status_t AddBlob(blobfs::Blobfs* blobfs, JsonRecorder* json_recorder,
-                    const blobfs::BlobInfo& info) {
-  const std::optional<std::filesystem::path>& blob_src = info.GetSrcFilePath();
-  if (zx::status<> status = blobfs->AddBlob(info); status.is_error()) {
-    if (blob_src.has_value()) {
-      fprintf(stderr, "blobfs: Failed to add blob '%s': %d\n", blob_src->c_str(),
-              status.status_value());
+void WriteBlobInfoToJson(std::ofstream& file, const blobfs::BlobInfo& blob) {
+  std::filesystem::path path =
+      std::filesystem::relative(std::filesystem::canonical(blob.GetSrcFilePath()));
+  const auto& blob_layout = blob.GetBlobLayout();
+  uint64_t total_size = uint64_t{blob_layout.TotalBlockCount()} * blobfs::kBlobfsBlockSize;
+  file << "  {\n";
+  file << "    \"source_path\": " << path << ",\n";
+  file << "    \"merkle\": \"" << blob.GetDigest().ToString() << "\",\n";
+  file << "    \"bytes\": " << blob_layout.FileSize() << ",\n";
+  file << "    \"size\": " << total_size << ",\n";
+  file << "    \"file_size\": " << blob_layout.FileSize() << ",\n";
+  file << "    \"compressed_file_size\": " << blob_layout.DataSizeUpperBound() << ",\n";
+  file << "    \"merkle_tree_size\": " << blob_layout.MerkleTreeSize() << ",\n";
+  file << "    \"used_space_in_blobfs\": " << total_size << "\n";
+  file << "  }";
+}
+
+zx::status<> RecordBlobs(const std::filesystem::path& path, std::vector<blobfs::BlobInfo>& blobs) {
+  std::ofstream file(path);
+  if (!file.is_open()) {
+    fprintf(stderr, "Failed to open: %s\n", path.c_str());
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+  file << "[\n";
+  bool is_first_blob = true;
+  for (const auto& blob : blobs) {
+    if (is_first_blob) {
+      is_first_blob = false;
+    } else {
+      file << ",\n";
     }
-    return status.status_value();
+    WriteBlobInfoToJson(file, blob);
   }
-
-  if (json_recorder != nullptr && blob_src.has_value()) {
-    const blobfs::BlobLayout& blob_layout = info.GetBlobLayout();
-    json_recorder->Append(blob_src->string(), info.GetDigest().ToString().c_str(),
-                          blob_layout.FileSize(),
-                          size_t{blob_layout.TotalBlockCount()} * blobfs::kBlobfsBlockSize);
+  file << "]\n";
+  file.close();
+  if (file.fail()) {
+    fprintf(stderr, "Writing to %s failed\n", path.c_str());
+    return zx::error(ZX_ERR_IO);
   }
+  return zx::ok();
+}
 
-  return ZX_OK;
+zx::status<> CreateBlobfsWithBlobs(fbl::unique_fd fd, const std::vector<blobfs::BlobInfo>& blobs) {
+  std::unique_ptr<blobfs::Blobfs> blobfs;
+  if (zx_status_t status = blobfs_create(&blobfs, std::move(fd)); status != ZX_OK) {
+    return zx::error(status);
+  }
+  for (const auto& blob : blobs) {
+    if (zx::status status = blobfs->AddBlob(blob); status.is_error()) {
+      fprintf(stderr, "Failed to add blob '%s': %d\n", blob.GetSrcFilePath().c_str(),
+              status.status_value());
+      return status;
+    }
+  }
+  return zx::ok();
 }
 
 }  // namespace
@@ -197,10 +233,9 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
 
         fbl::unique_fd data_fd(open(path.c_str(), O_RDONLY, 0644));
         zx::status<blobfs::BlobInfo> blob_info =
-            should_compress ? blobfs::BlobInfo::CreateCompressed(data_fd.get(), blob_layout_format_,
-                                                                 std::optional(path))
-                            : blobfs::BlobInfo::CreateUncompressed(
-                                  data_fd.get(), blob_layout_format_, std::optional(path));
+            should_compress
+                ? blobfs::BlobInfo::CreateCompressed(data_fd.get(), blob_layout_format_, path)
+                : blobfs::BlobInfo::CreateUncompressed(data_fd.get(), blob_layout_format_, path);
         if (blob_info.is_error()) {
           mtx.lock();
           status = blob_info.status_value();
@@ -323,19 +358,18 @@ zx_status_t BlobfsCreator::Add() {
     return Usage();
   }
 
-  zx_status_t status = ZX_OK;
-  std::unique_ptr<blobfs::Blobfs> blobfs;
-  if ((status = blobfs_create(&blobfs, std::move(fd_))) != ZX_OK) {
-    return status;
+  if (zx::status status = CreateBlobfsWithBlobs(std::move(fd_), blob_info_list_);
+      status.is_error()) {
+    return status.status_value();
   }
 
-  for (const auto& blob_info : blob_info_list_) {
-    if ((status = AddBlob(blobfs.get(), json_recorder(), blob_info)) < 0) {
-      break;
+  if (json_output_path().has_value()) {
+    if (zx::status status = RecordBlobs(*json_output_path(), blob_info_list_); status.is_error()) {
+      return status.status_value();
     }
   }
 
-  return status;
+  return ZX_OK;
 }
 
 int ExportBlobs(std::string& source_path, std::string& output_path) {

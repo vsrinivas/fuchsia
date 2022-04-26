@@ -284,7 +284,7 @@ FileMapping::~FileMapping() {
 }
 
 zx::status<BlobInfo> BlobInfo::CreateCompressed(int fd, BlobLayoutFormat blob_layout_format,
-                                                std::optional<std::filesystem::path> file_path) {
+                                                std::filesystem::path file_path) {
   zx::status<BlobInfo> blob_info = CreateUncompressed(fd, blob_layout_format, std::move(file_path));
   if (blob_info.is_error()) {
     return blob_info;
@@ -320,7 +320,7 @@ zx::status<BlobInfo> BlobInfo::CreateCompressed(int fd, BlobLayoutFormat blob_la
 }
 
 zx::status<BlobInfo> BlobInfo::CreateUncompressed(int fd, BlobLayoutFormat blob_layout_format,
-                                                  std::optional<std::filesystem::path> file_path) {
+                                                  std::filesystem::path file_path) {
   BlobInfo blob_info;
   blob_info.src_file_path_ = std::move(file_path);
 

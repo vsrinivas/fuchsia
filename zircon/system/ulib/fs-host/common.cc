@@ -275,11 +275,11 @@ zx_status_t FsCreator::ProcessArgs(int argc, char** argv) {
         compress_ = true;
         break;
       case 'j': {
-        const char* const json_file = optarg;
-        if (!json_recorder_.OpenFile(json_file)) {
-          fprintf(stderr, "error: cannot open '%s'\n", json_file);
-          return ZX_ERR_IO;
+        if (json_output_path_.has_value()) {
+          fprintf(stderr, "error: --json-output was specified multiple times\n");
+          return ZX_ERR_INVALID_ARGS;
         }
+        json_output_path_ = std::filesystem::path(optarg);
         break;
       }
       case 'h':

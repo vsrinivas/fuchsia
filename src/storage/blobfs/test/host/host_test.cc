@@ -32,6 +32,8 @@
 namespace blobfs {
 namespace {
 
+constexpr std::string_view kSrcFilePath = "/path/to/blob/src";
+
 constexpr FilesystemOptions DefaultFilesystemOptions() {
   return FilesystemOptions{
       .num_inodes = 512,
@@ -131,7 +133,8 @@ std::unique_ptr<File> CreateFileWithRandomContent(uint64_t file_size, unsigned i
 Inode AddUncompressedBlob(uint64_t data_size, Blobfs& blobfs) {
   unsigned int seed = testing::UnitTest::GetInstance()->random_seed();
   auto file = CreateFileWithRandomContent(data_size, &seed);
-  auto blob_info = BlobInfo::CreateUncompressed(file->fd(), GetBlobLayoutFormat(blobfs.Info()));
+  auto blob_info =
+      BlobInfo::CreateUncompressed(file->fd(), GetBlobLayoutFormat(blobfs.Info()), kSrcFilePath);
   ZX_ASSERT(blob_info.is_ok());
   EXPECT_FALSE(blob_info->IsCompressed());
 
@@ -144,7 +147,8 @@ Inode AddUncompressedBlob(uint64_t data_size, Blobfs& blobfs) {
 // created blob's Inode.  The blobs data will be all zeros which will be significantly compressed.
 Inode AddCompressedBlob(uint64_t data_size, Blobfs& blobfs) {
   auto file = CreateEmptyFile(data_size);
-  auto blob_info = BlobInfo::CreateCompressed(file->fd(), GetBlobLayoutFormat(blobfs.Info()));
+  auto blob_info =
+      BlobInfo::CreateCompressed(file->fd(), GetBlobLayoutFormat(blobfs.Info()), kSrcFilePath);
   ZX_ASSERT(blob_info.is_ok());
   // Make sure that the blob was compressed.
   EXPECT_TRUE(blob_info->IsCompressed());
@@ -210,8 +214,8 @@ TEST(BlobfsHostCompressionTest, CompressSmallFiles) {
   constexpr size_t all_zero_size = 12 * 1024;
   auto file = CreateEmptyFile(all_zero_size);
 
-  auto blob_info =
-      BlobInfo::CreateCompressed(file->fd(), BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart);
+  auto blob_info = BlobInfo::CreateCompressed(
+      file->fd(), BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, kSrcFilePath);
   ASSERT_TRUE(blob_info.is_ok());
 
   EXPECT_TRUE(blob_info->IsCompressed());
@@ -344,8 +348,8 @@ TEST(BlobfsHostTest, VisitBlobsVisitsAllBlobsAndProvidesTheCorrectContents) {
     // 1-3 blocks and random tail(empty tail is acceptable too).
     size_t data_size = (i % 3 + 1) * kBlobfsBlockSize + (rand_r(&seed) % kBlobfsBlockSize);
     blobs.push_back(CreateFileWithRandomContent(data_size, &seed));
-    auto blob_info =
-        BlobInfo::CreateUncompressed(blobs.back()->fd(), GetBlobLayoutFormat(blobfs->Info()));
+    auto blob_info = BlobInfo::CreateUncompressed(
+        blobs.back()->fd(), GetBlobLayoutFormat(blobfs->Info()), kSrcFilePath);
     ASSERT_TRUE(blob_info.is_ok());
     blob_infos.push_back(std::move(blob_info).value());
     ASSERT_TRUE(blobfs->AddBlob(blob_infos.back()).is_ok());
@@ -437,8 +441,8 @@ TEST(BlobfsHostTest, ExportBlobsCreatesBlobsWithTheCorrectContentAndName) {
     // 1-3 blocks and random tail(empty tail is acceptable too).
     size_t data_size = (i % 3 + 1) * kBlobfsBlockSize + (rand_r(&seed) % kBlobfsBlockSize);
     blobs.push_back(CreateFileWithRandomContent(data_size, &seed));
-    auto blob_info =
-        BlobInfo::CreateUncompressed(blobs.back()->fd(), GetBlobLayoutFormat(blobfs->Info()));
+    auto blob_info = BlobInfo::CreateUncompressed(
+        blobs.back()->fd(), GetBlobLayoutFormat(blobfs->Info()), kSrcFilePath);
     ASSERT_TRUE(blob_info.is_ok());
     blob_infos.push_back(std::move(blob_info).value());
     ASSERT_TRUE(blobfs->AddBlob(blob_infos.back()).is_ok());
@@ -493,16 +497,16 @@ TEST(BlobfsHostTest, CreateBlobfsWithNullBlobPassesFsck) {
 TEST(BlobfsHostTest, BlobInfoCreateCompressedWithUncompressableFileDoesNotCompressBlob) {
   unsigned int seed = testing::UnitTest::GetInstance()->random_seed();
   auto file = CreateFileWithRandomContent(2 * kBlobfsBlockSize, &seed);
-  auto blob_info =
-      BlobInfo::CreateCompressed(file->fd(), BlobLayoutFormat::kCompactMerkleTreeAtEnd);
+  auto blob_info = BlobInfo::CreateCompressed(file->fd(), BlobLayoutFormat::kCompactMerkleTreeAtEnd,
+                                              kSrcFilePath);
   ASSERT_TRUE(blob_info.is_ok());
   EXPECT_FALSE(blob_info->IsCompressed());
 }
 
 TEST(BlobfsHostTest, BlobInfoCreateCompressedWithTinyFileDoesNotCompressBlob) {
   auto file = CreateEmptyFile(kBlobfsBlockSize);
-  auto blob_info =
-      BlobInfo::CreateCompressed(file->fd(), BlobLayoutFormat::kCompactMerkleTreeAtEnd);
+  auto blob_info = BlobInfo::CreateCompressed(file->fd(), BlobLayoutFormat::kCompactMerkleTreeAtEnd,
+                                              kSrcFilePath);
   ASSERT_TRUE(blob_info.is_ok());
   EXPECT_FALSE(blob_info->IsCompressed());
 }
@@ -515,15 +519,15 @@ TEST(BlobfsHostTest, BlobInfoCreateCompressedWithSlightlyCompressibleFileWillCom
 
   // With the padded format, compressing the half block doesn't save any blocks so the file is not
   // compressed.
-  auto padded_blob_info =
-      BlobInfo::CreateCompressed(file->fd(), BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart);
+  auto padded_blob_info = BlobInfo::CreateCompressed(
+      file->fd(), BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, kSrcFilePath);
   ASSERT_TRUE(padded_blob_info.is_ok());
   EXPECT_FALSE(padded_blob_info->IsCompressed());
 
   // With the compact format, compressing the half block saves enough space to fit the Merkle tree
   // which saves a block so the file is compressed.
-  auto compact_blob_info =
-      BlobInfo::CreateCompressed(file->fd(), BlobLayoutFormat::kCompactMerkleTreeAtEnd);
+  auto compact_blob_info = BlobInfo::CreateCompressed(
+      file->fd(), BlobLayoutFormat::kCompactMerkleTreeAtEnd, kSrcFilePath);
   ASSERT_TRUE(compact_blob_info.is_ok());
   EXPECT_TRUE(compact_blob_info->IsCompressed());
 }
@@ -538,7 +542,7 @@ TEST(BlobfsHostTest, WriteBlobThatRequiresMultipleExtentsIsCorrect) {
 
   // Filling a 500MB file with random data takes a long time so use an empty file instead.
   auto file = CreateEmptyFile(data_block_count * kBlobfsBlockSize);
-  auto blob_info = BlobInfo::CreateUncompressed(file->fd(), blob_layout_format);
+  auto blob_info = BlobInfo::CreateUncompressed(file->fd(), blob_layout_format, kSrcFilePath);
   ASSERT_TRUE(blob_info.is_ok());
   EXPECT_TRUE(blobfs->AddBlob(*blob_info).is_ok());
   Inode inode = FindInodeByMerkleDigest(*blobfs, blob_info->GetDigest()).value();
