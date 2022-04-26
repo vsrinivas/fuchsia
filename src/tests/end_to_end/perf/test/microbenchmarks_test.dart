@@ -19,7 +19,7 @@ void main() {
   // useful for tests that exhibit between-process variation in results
   // (e.g. due to memory layout chosen when a process starts) -- it
   // reduces the variation in the average that we report.
-  const int processRuns = 1;
+  const int processRuns = 6;
 
   // We override the default number of within-process iterations of
   // each test case and use a lower value.  This reduces the overall
