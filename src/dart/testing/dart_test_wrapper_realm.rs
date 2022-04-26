@@ -48,6 +48,7 @@ async fn fuchsia_component_test_dart_tests() -> Result<(), Error> {
                 .capability(Capability::protocol::<fsys::LoaderMarker>())
                 .capability(Capability::protocol::<fsys2::EventSourceMarker>())
                 .capability(Capability::storage("data"))
+                .capability(Capability::storage("custom_artifacts"))
                 .from(Ref::parent())
                 .to(&dart_component_to_test),
         )

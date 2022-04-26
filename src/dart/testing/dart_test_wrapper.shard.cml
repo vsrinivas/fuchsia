@@ -30,7 +30,10 @@
             to: [ "#realm_builder" ],
         },
         {
-            storage: "data",
+            storage: [
+                "custom_artifacts",
+                "data",
+            ],
             from: "parent",
             to: [ "#realm_builder" ],
         },

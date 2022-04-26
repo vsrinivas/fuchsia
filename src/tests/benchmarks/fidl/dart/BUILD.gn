@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/dart/dart_test_component.gni")
 import("//build/fidl/fidl.gni")
+import("//src/dart/testing/dart_test_wrapper_component.gni")
 import("//src/tests/benchmarks/fidl/benchmark_suite/benchmark_suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
@@ -29,7 +30,7 @@ copy("copy_benchmark_component_analysis_options") {
 
 dart_test_component("benchmark-component") {
   component_name = "dart-fidl-benchmarks"
-  manifest = "meta/dart-fidl-benchmarks.cmx"
+  manifest = "meta/dart-fidl-benchmarks.cml"
   package_root = benchmark_dir
   sources = [ benchmark_file ]
   deps = [
@@ -49,8 +50,18 @@ dart_test_component("benchmark-component") {
   options_file = "${benchmark_dir}/test/analysis_options.yaml"
 }
 
+dart_test_wrapper_component("dart-fidl-benchmarks-wrapper") {
+  # Note that build/rust/rustc_binary.gni converts "-" to "_" in binary
+  # names, so use underscores in the wrapper_binary name for searchability,
+  # so that this matches the name in the .cml file.
+  wrapper_binary = "dart_fidl_benchmarks_wrapper"
+  manifest = "meta/dart-fidl-benchmarks-wrapper.cml"
+  dart_test_component_name = "dart-fidl-benchmarks"
+}
+
 fuchsia_test_package("dart-fidl-benchmarks") {
-  test_components = [ ":benchmark-component" ]
+  test_components = [ ":dart-fidl-benchmarks-wrapper" ]
+  deps = [ ":benchmark-component" ]
 }
 
 group("dart") {
