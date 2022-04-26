@@ -166,6 +166,9 @@
         "kernel.lockup-detector.critical-section-fatal-threshold-ms=0",
         "kernel.lockup-detector.critical-section-threshold-ms=5000",
         "kernel.lockup-detector.heartbeat-age-fatal-threshold-ms=0"
+        {{#each runtime.addl_kernel_args}}
+            ,"{{this}}"
+        {{/each}}
     ],
     "options": [
         "-metrics-collection",

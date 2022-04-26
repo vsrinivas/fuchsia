@@ -181,6 +181,10 @@ pub struct RuntimeConfig {
     /// The staging and working directory for the emulator instance.
     pub instance_directory: PathBuf,
 
+    /// Additional arguments to pass directly to the emulator.
+    #[serde(default)]
+    pub addl_kernel_args: Vec<String>,
+
     /// The verbosity level of the logs for this instance.
     pub log_level: LogLevel,
 
