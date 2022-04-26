@@ -1007,7 +1007,7 @@ Do the following:
    Running test 'fuchsia-pkg://fuchsiasamples.com/hello_test#meta/hello_test.cm'
    [RUNNING]       main
    [stdout - main]
-   Hello Test!
+   Example stdout.
    [PASSED]        main
 
    1 out of 1 tests passed...
@@ -1028,6 +1028,7 @@ Do the following:
    [RUNNING]       HelloTest.BasicAssertions
    [stdout - HelloTest.BasicAssertions]
    Running main() from gmock_main.cc
+   Example stdout.
    [PASSED]        HelloTest.BasicAssertions
 
    1 out of 1 tests passed...
@@ -1078,7 +1079,8 @@ Do the following:
    [RUNNING]       HelloTest.BasicAssertions
    [stdout - HelloTest.BasicAssertions]
    Running main() from gmock_main.cc
-   src/hello_world/hello_gtest.cc:11: Failure
+   Example stdout.
+   src/hello_world/hello_gtest.cc:14: Failure
    Expected equality of these values:
      "hello"
      "world"
