@@ -13,16 +13,8 @@ using fuchsia.diagnostics;
 /// greater than the threshold being included in the
 /// printable logs.
 type LogLevelFilter = strict enum : int8 {
-    @deprecated("Use NONE instead")
-    DEPRECATED_NONE = -1;
-    @deprecated("Use INFO instead")
-    DEPRECATED_INFO = 0;
-    @deprecated("Use WARN instead")
-    DEPRECATED_WARN = 1;
-    @deprecated("Use ERROR instead")
-    DEPRECATED_ERROR = 2;
-    @deprecated("Use FATAL instead")
-    DEPRECATED_FATAL = 3;
+    @deprecated("TODO(https://crrev.com/c/3606917): Remove when no longer used in Chromium")
+    DEPRECATED_INFO_LOAD_BEARING_IN_CHROMIUM = 0;
     ALL = -0x7F;
     TRACE = 0x10;
     DEBUG = 0x20;
@@ -100,7 +92,6 @@ protocol Log {
     /// Dumps all cached logs by calling LogMany() in batches followed by Log() for each new log
     /// message.
     /// A null `options` indicates no filtering is requested.
-    @transitional
     ListenSafe(resource struct {
         log_listener client_end:LogListenerSafe;
         options box<LogFilterOptions>;
@@ -108,7 +99,6 @@ protocol Log {
 
     /// Dumps all cached logs by calling LogMany() followed by Done() on `log_listener`.
     /// A null `options` indicates no filtering is requested.
-    @transitional
     DumpLogsSafe(resource struct {
         log_listener client_end:LogListenerSafe;
         options box<LogFilterOptions>;
@@ -116,7 +106,6 @@ protocol Log {
 
     /// Listens to new log entries by calling Log() on `log_listener`.
     /// A null `options` indicates no filtering is requested.
-    @transitional
     ListenSafeWithSelectors(resource struct {
         log_listener client_end:LogListenerSafe;
         options box<LogFilterOptions>;
@@ -157,7 +146,6 @@ protocol LogSink {
     ///
     /// See //docs/reference/diagnostics/logs/encoding.md for what is expected to be received over
     /// the socket.
-    @transitional
     ConnectStructured(resource struct {
         socket zx.handle:SOCKET;
     });
@@ -165,18 +153,6 @@ protocol LogSink {
 
 /// Max log bytes per call to a listener.
 const MAX_LOG_MANY_SIZE_BYTES uint64 = 16384;
-
-/// Included temporarily for backwards compatiblity. Use `LogListenerSafe`.
-@deprecated
-protocol LogListener {
-    Log(struct {
-        log LogMessage;
-    });
-    LogMany(struct {
-        log vector<LogMessage>:MAX;
-    });
-    Done();
-};
 
 /// A listener who will notify the `Log` of the receipt of each message.
 protocol LogListenerSafe {

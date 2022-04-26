@@ -18,11 +18,7 @@ struct/member fuchsia.logger/LogFilterOptions.verbosity uint8
 struct fuchsia.logger/LogFilterOptions
 enum/member fuchsia.logger/LogLevelFilter.ALL -127
 enum/member fuchsia.logger/LogLevelFilter.DEBUG 32
-enum/member fuchsia.logger/LogLevelFilter.DEPRECATED_ERROR 2
-enum/member fuchsia.logger/LogLevelFilter.DEPRECATED_FATAL 3
-enum/member fuchsia.logger/LogLevelFilter.DEPRECATED_INFO 0
-enum/member fuchsia.logger/LogLevelFilter.DEPRECATED_NONE -1
-enum/member fuchsia.logger/LogLevelFilter.DEPRECATED_WARN 1
+enum/member fuchsia.logger/LogLevelFilter.DEPRECATED_INFO_LOAD_BEARING_IN_CHROMIUM 0
 enum/member fuchsia.logger/LogLevelFilter.ERROR 80
 enum/member fuchsia.logger/LogLevelFilter.FATAL 96
 enum/member fuchsia.logger/LogLevelFilter.INFO 48
@@ -30,10 +26,6 @@ enum/member fuchsia.logger/LogLevelFilter.NONE 127
 enum/member fuchsia.logger/LogLevelFilter.TRACE 16
 enum/member fuchsia.logger/LogLevelFilter.WARN 64
 strict enum fuchsia.logger/LogLevelFilter int8
-protocol/member fuchsia.logger/LogListener.Done()
-protocol/member fuchsia.logger/LogListener.Log(fuchsia.logger/LogMessage log)
-protocol/member fuchsia.logger/LogListener.LogMany(vector<fuchsia.logger/LogMessage> log)
-protocol fuchsia.logger/LogListener
 protocol/member fuchsia.logger/LogListenerSafe.Done()
 protocol/member fuchsia.logger/LogListenerSafe.Log(fuchsia.logger/LogMessage log) -> ()
 protocol/member fuchsia.logger/LogListenerSafe.LogMany(vector<fuchsia.logger/LogMessage> log) -> ()

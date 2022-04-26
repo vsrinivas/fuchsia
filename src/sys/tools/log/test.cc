@@ -1,7 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include <fuchsia/logger/cpp/fidl.h>
+#include <fuchsia/logger/cpp/fidl_test_base.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/wire_format.h>
 #include <zircon/errors.h>
@@ -16,10 +16,13 @@
 
 namespace {
 
-class FakeLogSink : public fuchsia::logger::LogSink {
+class FakeLogSink : public fuchsia::logger::testing::LogSink_TestBase {
  public:
-  FakeLogSink(fidl::InterfaceRequest<fuchsia::logger::LogSink> request)
+  explicit FakeLogSink(fidl::InterfaceRequest<fuchsia::logger::LogSink> request)
       : binding_(this, std::move(request)) {}
+  void NotImplemented_(const std::string& name) override {
+    ADD_FAILURE() << "unexpected call to " << name;
+  }
   void Connect(zx::socket socket) override { socket_ = std::move(socket); }
   fpromise::result<std::tuple<zx_time_t, std::string, std::string>, zx_status_t> ReadPacket() {
     static_assert(FX_LOG_MAX_DATAGRAM_LEN == sizeof(fx_log_packet_t));
