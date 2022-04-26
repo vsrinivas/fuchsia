@@ -10,7 +10,6 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
-#include "src/lib/storage/vfs/cpp/query_service.h"
 #include "src/storage/blobfs/service/admin.h"
 #include "src/storage/blobfs/service/health_check.h"
 
@@ -99,9 +98,6 @@ zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root) {
   auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>(this);
   outgoing->AddEntry("diagnostics", diagnostics_dir);
   diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, inspect_tree);
-
-  outgoing->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>,
-                     fbl::MakeRefCounted<fs::QueryService>(this));
 
   outgoing->AddEntry(fidl::DiscoverableProtocolName<fuchsia_update_verify::BlobfsVerifier>,
                      fbl::MakeRefCounted<HealthCheckService>(loop_->dispatcher(), *blobfs_));

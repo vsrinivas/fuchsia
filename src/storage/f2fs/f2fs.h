@@ -44,7 +44,6 @@
 #ifdef __Fuchsia__
 #include "src/lib/storage/vfs/cpp/paged_vfs.h"
 #include "src/lib/storage/vfs/cpp/paged_vnode.h"
-#include "src/lib/storage/vfs/cpp/query_service.h"
 #include "src/lib/storage/vfs/cpp/watcher.h"
 #include "src/lib/storage/vfs/cpp/shared_mutex.h"
 #include "src/lib/storage/vfs/cpp/service.h"
@@ -130,7 +129,6 @@ class F2fs : public fs::Vfs {
   void Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) final;
   void OnNoConnections() final;
 
-  void SetQueryService(fbl::RefPtr<fs::QueryService> svc) { query_svc_ = std::move(svc); }
   void SetAdminService(fbl::RefPtr<AdminService> svc) { admin_svc_ = std::move(svc); }
 
   zx::status<fs::FilesystemInfo> GetFilesystemInfo() final;
@@ -297,7 +295,6 @@ class F2fs : public fs::Vfs {
 
 #ifdef __Fuchsia__
   DirEntryCache dir_entry_cache_;
-  fbl::RefPtr<fs::QueryService> query_svc_;
   fbl::RefPtr<AdminService> admin_svc_;
   zx::event fs_id_;
   InspectTree inspect_tree_;

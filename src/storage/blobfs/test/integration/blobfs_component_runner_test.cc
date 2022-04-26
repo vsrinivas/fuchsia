@@ -94,25 +94,6 @@ TEST_F(BlobfsComponentRunnerTest, ServeAndConfigureStartsBlobfs) {
   auto status = runner_->Configure(std::move(device_), options);
   ASSERT_EQ(status.status_value(), ZX_OK);
 
-  auto query_client_end = service::ConnectAt<fuchsia_fs::Query>(svc_dir.borrow());
-  ASSERT_EQ(query_client_end.status_value(), ZX_OK);
-  fidl::WireSharedClient<fuchsia_fs::Query> query_client(std::move(*query_client_end),
-                                                         loop_.dispatcher());
-
-  zx::event event;
-  ASSERT_EQ(zx::event::create(0, &event), ZX_OK);
-
-  std::atomic<bool> query_complete = false;
-  query_client->IsNodeInFilesystem(std::move(event))
-      .ThenExactlyOnce([query_complete = &query_complete](
-                           fidl::WireUnownedResult<fuchsia_fs::Query::IsNodeInFilesystem>& info) {
-        EXPECT_EQ(info.status(), ZX_OK);
-        EXPECT_FALSE(info->is_in_filesystem);
-        *query_complete = true;
-      });
-  ASSERT_EQ(loop_.RunUntilIdle(), ZX_OK);
-  ASSERT_TRUE(query_complete);
-
   std::atomic<bool> callback_called = false;
   runner_->Shutdown([callback_called = &callback_called](zx_status_t status) {
     EXPECT_EQ(status, ZX_OK);
@@ -136,25 +117,6 @@ TEST_F(BlobfsComponentRunnerTest, ServeAndConfigureStartsBlobfsWithoutDriverMana
   auto status = runner_->Configure(std::move(device_), options);
   ASSERT_EQ(status.status_value(), ZX_OK);
 
-  auto query_client_end = service::ConnectAt<fuchsia_fs::Query>(svc_dir.borrow());
-  ASSERT_EQ(query_client_end.status_value(), ZX_OK);
-  fidl::WireSharedClient<fuchsia_fs::Query> query_client(std::move(*query_client_end),
-                                                         loop_.dispatcher());
-
-  zx::event event;
-  ASSERT_EQ(zx::event::create(0, &event), ZX_OK);
-
-  std::atomic<bool> query_complete = false;
-  query_client->IsNodeInFilesystem(std::move(event))
-      .ThenExactlyOnce([query_complete = &query_complete](
-                           fidl::WireUnownedResult<fuchsia_fs::Query::IsNodeInFilesystem>& info) {
-        EXPECT_EQ(info.status(), ZX_OK);
-        EXPECT_FALSE(info->is_in_filesystem);
-        *query_complete = true;
-      });
-  ASSERT_EQ(loop_.RunUntilIdle(), ZX_OK);
-  ASSERT_TRUE(query_complete);
-
   std::atomic<bool> callback_called = false;
   runner_->Shutdown([callback_called = &callback_called](zx_status_t status) {
     EXPECT_EQ(status, ZX_OK);
@@ -171,37 +133,10 @@ TEST_F(BlobfsComponentRunnerTest, RequestsBeforeStartupAreQueuedAndServicedAfter
   ASSERT_TRUE(admin_endpoints.is_ok());
   fidl::BindServer(loop_.dispatcher(), std::move(admin_endpoints->server), &driver_admin);
 
-  // Start a call to the query interface. We expect that this request will be queued and won't
-  // return until Configure is called on the runner. Initially, GetSvcDir will fire off an open
-  // call on the root_ connection, but as the server end isn't serving anything yet, the request is
-  // queued there. Once root_ starts serving requests, and the svc dir exists, (which is done by
-  // StartServe below) that open call succeeds, but the Query service itself should be waiting to
-  // serve any open calls it gets, queuing any requests. Once Configure is called, the Query
-  // service should start servicing requests, and the request will succeed.
-  auto svc_dir = GetSvcDir();
-  auto query_client_end = service::ConnectAt<fuchsia_fs::Query>(svc_dir.borrow());
-  ASSERT_EQ(query_client_end.status_value(), ZX_OK);
-  fidl::WireSharedClient<fuchsia_fs::Query> query_client(std::move(*query_client_end),
-                                                         loop_.dispatcher());
-
-  zx::event event;
-  ASSERT_EQ(zx::event::create(0, &event), ZX_OK);
-
-  std::atomic<bool> query_complete = false;
-  query_client->IsNodeInFilesystem(std::move(event))
-      .ThenExactlyOnce([query_complete = &query_complete](
-                           fidl::WireUnownedResult<fuchsia_fs::Query::IsNodeInFilesystem>& info) {
-        EXPECT_EQ(info.status(), ZX_OK);
-        EXPECT_FALSE(info->is_in_filesystem);
-        *query_complete = true;
-      });
-  ASSERT_EQ(loop_.RunUntilIdle(), ZX_OK);
-  ASSERT_FALSE(query_complete);
-
   ASSERT_NO_FATAL_FAILURE(StartServe(std::move(admin_endpoints->client)));
   ASSERT_EQ(loop_.RunUntilIdle(), ZX_OK);
-  ASSERT_FALSE(query_complete);
 
+  auto svc_dir = GetSvcDir();
   auto client_end = service::ConnectAt<fuchsia_fs_startup::Startup>(svc_dir.borrow());
   ASSERT_EQ(client_end.status_value(), ZX_OK);
 
@@ -209,7 +144,6 @@ TEST_F(BlobfsComponentRunnerTest, RequestsBeforeStartupAreQueuedAndServicedAfter
   auto status = runner_->Configure(std::move(device_), options);
   ASSERT_EQ(status.status_value(), ZX_OK);
   ASSERT_EQ(loop_.RunUntilIdle(), ZX_OK);
-  ASSERT_TRUE(query_complete);
 
   std::atomic<bool> callback_called = false;
   runner_->Shutdown([callback_called = &callback_called](zx_status_t status) {

@@ -95,7 +95,7 @@ class BlobfsComponentTest : public testing::Test {
   fidl::ClientEnd<fuchsia_io::Directory> exposed_dir_;
 };
 
-TEST_F(BlobfsComponentTest, FormatCheckStartQuery) {
+TEST_F(BlobfsComponentTest, FormatCheckStart) {
   fuchsia_fs_startup::wire::FormatOptions format_options;
   auto format_res = startup_client()->Format(block_client(), std::move(format_options));
   ASSERT_EQ(format_res.status(), ZX_OK);
@@ -111,17 +111,6 @@ TEST_F(BlobfsComponentTest, FormatCheckStartQuery) {
   auto startup_res = startup_client()->Start(block_client(), std::move(start_options));
   ASSERT_EQ(startup_res.status(), ZX_OK);
   ASSERT_FALSE(startup_res->result.is_err());
-
-  auto query_client_end = service::ConnectAt<fuchsia_fs::Query>(exposed_dir());
-  ASSERT_EQ(query_client_end.status_value(), ZX_OK);
-  auto query_client = fidl::BindSyncClient(std::move(*query_client_end));
-
-  zx::event event;
-  ASSERT_EQ(zx::event::create(0, &event), ZX_OK);
-
-  auto query_res = query_client->IsNodeInFilesystem(std::move(event));
-  ASSERT_EQ(query_res.status(), ZX_OK);
-  ASSERT_FALSE(query_res->is_in_filesystem);
 
   auto admin_client_end = service::ConnectAt<fuchsia_fs::Admin>(exposed_dir());
   ASSERT_EQ(admin_client_end.status_value(), ZX_OK);
@@ -134,21 +123,6 @@ TEST_F(BlobfsComponentTest, FormatCheckStartQuery) {
 TEST_F(BlobfsComponentTest, RequestsBeforeStartupAreQueuedAndServicedAfter) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("blobfs caller test thread");
-  auto query_client_end = service::ConnectAt<fuchsia_fs::Query>(exposed_dir());
-  ASSERT_EQ(query_client_end.status_value(), ZX_OK);
-  fidl::WireSharedClient query_client(std::move(*query_client_end), loop.dispatcher());
-
-  zx::event event;
-  ASSERT_EQ(zx::event::create(0, &event), ZX_OK);
-
-  sync_completion_t query_completion;
-  query_client->IsNodeInFilesystem(std::move(event))
-      .ThenExactlyOnce([query_completion = &query_completion](
-                           fidl::WireUnownedResult<fuchsia_fs::Query::IsNodeInFilesystem>& info) {
-        EXPECT_EQ(info.status(), ZX_OK);
-        EXPECT_FALSE(info->is_in_filesystem);
-        sync_completion_signal(query_completion);
-      });
 
   fuchsia_fs_startup::wire::FormatOptions format_options;
   auto format_res = startup_client()->Format(block_client(), std::move(format_options));
@@ -165,9 +139,6 @@ TEST_F(BlobfsComponentTest, RequestsBeforeStartupAreQueuedAndServicedAfter) {
   auto startup_res = startup_client()->Start(block_client(), std::move(start_options));
   ASSERT_EQ(startup_res.status(), ZX_OK);
   ASSERT_FALSE(startup_res->result.is_err());
-
-  // Query should get a response now.
-  EXPECT_EQ(sync_completion_wait(&query_completion, ZX_TIME_INFINITE), ZX_OK);
 
   auto admin_client_end = service::ConnectAt<fuchsia_fs::Admin>(exposed_dir());
   ASSERT_EQ(admin_client_end.status_value(), ZX_OK);

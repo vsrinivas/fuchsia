@@ -10,7 +10,6 @@
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/lib/storage/vfs/cpp/query_service.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
 #include "src/storage/blobfs/service/admin.h"
 #include "src/storage/blobfs/service/health_check.h"
@@ -194,8 +193,6 @@ zx::status<> ComponentRunner::Configure(std::unique_ptr<BlockDevice> device,
   diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, inspect_tree);
 
   auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>(this);
-  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>,
-                    fbl::MakeRefCounted<fs::QueryService>(this));
 
   svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_update_verify::BlobfsVerifier>,
                     fbl::MakeRefCounted<HealthCheckService>(loop_.dispatcher(), *blobfs_));

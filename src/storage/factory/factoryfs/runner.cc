@@ -63,9 +63,6 @@ zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root) {
   outgoing->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
                      fbl::MakeRefCounted<AdminService>(loop_->dispatcher(), *this));
 
-  query_svc_ = fbl::MakeRefCounted<fs::QueryService>(factoryfs_->vfs());
-  outgoing->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>, query_svc_);
-
   status = ServeDirectory(std::move(outgoing), std::move(root));
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "mount failed; could not serve root directory";

@@ -11,7 +11,7 @@ use {
         serialized_types::LATEST_VERSION,
     },
     anyhow::{Context, Error},
-    fidl_fuchsia_fs::{AdminRequest, AdminRequestStream, QueryRequest, QueryRequestStream},
+    fidl_fuchsia_fs::{AdminRequest, AdminRequestStream},
     fidl_fuchsia_io as fio,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::{self as zx, AsHandleRef},
@@ -66,7 +66,6 @@ const FXFS_INFO_NAME_FIDL: [i8; 32] = [
 
 enum Services {
     Admin(AdminRequestStream),
-    Query(QueryRequestStream),
 }
 
 pub use remote_crypt::RemoteCrypt;
@@ -135,7 +134,7 @@ impl FxfsServer {
         // Export the root directory in our outgoing directory.
         let mut fs = ServiceFs::new();
         fs.add_remote("root", proxy);
-        fs.add_fidl_service(Services::Admin).add_fidl_service(Services::Query);
+        fs.add_fidl_service(Services::Admin);
         // Serve static Inspect instance from fuchsia_inspect::component to diagnostic directory.
         // We fall back to DeepCopy mode instead of Live mode (the default) if we could not create a
         // child copy of the backing VMO. This helps prevent issues with the reader acquiring a lock
@@ -194,10 +193,6 @@ impl FxfsServer {
         }
     }
 
-    async fn handle_query(&self, _scope: &ExecutionScope, req: QueryRequest) -> Result<(), Error> {
-        unimplemented!("req={:?}", req)
-    }
-
     async fn handle_request(&self, stream: Services, scope: &ExecutionScope) -> Result<(), Error> {
         match stream {
             Services::Admin(mut stream) => {
@@ -205,11 +200,6 @@ impl FxfsServer {
                     if self.handle_admin(scope, request).await? {
                         break;
                     }
-                }
-            }
-            Services::Query(mut stream) => {
-                while let Some(request) = stream.try_next().await.context("Reading request")? {
-                    self.handle_query(scope, request).await?;
                 }
             }
         }

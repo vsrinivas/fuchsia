@@ -240,7 +240,6 @@ config("fidl-deprecated-c-bindings") {
     "//src/storage/blobfs/test/integration:blobfs_integration",
     "//src/storage/blobfs/test/integration:blobfs_integration_fixtures",
     "//src/storage/blobfs/test/integration:blobfs_mount",
-    "//src/storage/blobfs/test/integration:blobfs_query_service",
     "//src/storage/blobfs/test/integration:blobfs_superblock",
     "//src/storage/blobfs/test/integration:blobfs_sync",
     "//src/storage/blobfs/test/integration:blobfs_verifier_service",

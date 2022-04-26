@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Context, Error},
-    fidl_fuchsia_fs::{AdminRequestStream, QueryRequestStream},
+    fidl_fuchsia_fs::AdminRequestStream,
     fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_fatfs::FatFs,
@@ -20,7 +20,6 @@ use {
 
 enum Services {
     Admin(AdminRequestStream),
-    Query(QueryRequestStream),
 }
 
 async fn handle(stream: Services, fs: Arc<FatFs>, scope: &ExecutionScope) -> Result<(), Error> {
@@ -28,11 +27,6 @@ async fn handle(stream: Services, fs: Arc<FatFs>, scope: &ExecutionScope) -> Res
         Services::Admin(mut stream) => {
             while let Some(request) = stream.try_next().await.context("Reading request")? {
                 fs.handle_admin(scope, request).await?;
-            }
-        }
-        Services::Query(mut stream) => {
-            while let Some(request) = stream.try_next().await.context("Reading request")? {
-                fs.handle_query(scope, request)?;
             }
         }
     }
@@ -73,7 +67,7 @@ async fn main() -> Result<(), Error> {
     // Export the root directory in our outgoing directory.
     let mut fs = ServiceFs::new();
     fs.add_remote("root", proxy);
-    fs.add_fidl_service(Services::Admin).add_fidl_service(Services::Query);
+    fs.add_fidl_service(Services::Admin);
     fs.take_and_serve_directory_handle()?;
 
     let fatfs = Arc::new(fatfs);

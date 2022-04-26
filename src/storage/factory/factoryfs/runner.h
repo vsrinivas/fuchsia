@@ -11,7 +11,6 @@
 #include <lib/zx/resource.h>
 
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
-#include "src/lib/storage/vfs/cpp/query_service.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/factory/factoryfs/factoryfs.h"
@@ -53,7 +52,6 @@ class Runner : public fs::ManagedVfs {
   bool IsReadonly() const;
   async::Loop* loop_;
   std::unique_ptr<Factoryfs> factoryfs_;
-  fbl::RefPtr<fs::QueryService> query_svc_;
 };
 
 }  // namespace factoryfs

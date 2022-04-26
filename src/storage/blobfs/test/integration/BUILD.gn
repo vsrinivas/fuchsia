@@ -185,48 +185,6 @@ wrap_with_decompressor("blobfs-mount") {
   ]
 }
 
-test("blobfs_query_service") {
-  output_name = "blobfs_query_service_test"
-
-  # We need some extra system flags that the _ALL_SOURCE define exposes.
-  configs += [ "//build/config:all_source" ]
-
-  sources = [ "query_service_test.cc" ]
-  deps = [
-    ":blobfs_integration_fixtures",
-    "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/lib/fdio",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/storage/blobfs",
-    "//src/storage/fvm",
-    "//src/storage/lib/utils:topological_path",
-    "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/service:service-llcpp",
-    "//zircon/system/ulib/zx",
-  ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
-}
-
-storage_driver_test_realm_v2_component("blobfs-query-service-component") {
-  deps = [
-    ":blobfs_query_service",
-    ":decompressor_includes",
-  ]
-}
-
-wrap_with_decompressor("blobfs-query-service") {
-  test_url = "fuchsia-pkg://fuchsia.com/blobfs-integration#meta/blobfs-query-service-component.cm"
-  forwarded_protocols = [
-    "fuchsia.logger.LogSink",
-    "fuchsia.process.Launcher",
-    "fuchsia.sys.Launcher",
-  ]
-}
-
 test("blobfs_component_runner_test") {
   output_name = "blobfs_component_runner_test"
   sources = [ "blobfs_component_runner_test.cc" ]
@@ -530,7 +488,6 @@ fuchsia_test_package("blobfs-integration-package") {
     ":blobfs-component-runner-test",
     ":blobfs-integration",
     ":blobfs-mount",
-    ":blobfs-query-service",
     ":blobfs-sync",
     ":blobfs-superblock",
     ":blobfs-verifier-service",
@@ -540,7 +497,6 @@ fuchsia_test_package("blobfs-integration-package") {
   deps = [
     ":blobfs-integration-component",
     ":blobfs-mount-component",
-    ":blobfs-query-service-component",
     ":blobfs-superblock-component",
     ":blobfs-sync-component",
     ":blobfs-verifier-service-component",

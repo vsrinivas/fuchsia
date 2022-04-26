@@ -5,9 +5,6 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.fs") {
-  sources = [
-    "admin.fidl",
-    "query.fidl",
-  ]
+  sources = [ "admin.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
 }

@@ -5,7 +5,7 @@ use {
     crate::{directory::FatDirectory, filesystem::FatFilesystem, node::Node},
     anyhow::Error,
     fatfs::FsOptions,
-    fidl_fuchsia_fs::{AdminRequest, QueryRequest},
+    fidl_fuchsia_fs::AdminRequest,
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon::Status,
     std::pin::Pin,
@@ -91,19 +91,6 @@ impl FatFs {
         // Make sure it's open.
         self.root.open_ref(&self.inner.lock().unwrap())?;
         Ok(self.root.clone())
-    }
-
-    pub fn handle_query(&self, scope: &ExecutionScope, req: QueryRequest) -> Result<(), Error> {
-        match req {
-            QueryRequest::IsNodeInFilesystem { token, responder } => {
-                let result = match scope.token_registry().unwrap().get_container(token.into()) {
-                    Ok(Some(_)) => true,
-                    _ => false,
-                };
-                responder.send(result)?;
-            }
-        };
-        Ok(())
     }
 
     pub async fn handle_admin(
