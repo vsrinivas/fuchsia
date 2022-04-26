@@ -334,7 +334,9 @@ TEST_F(InlineCompatibilityTest, InlineDataFuchsiaToHost) {
   // Create and write inline file on Fuchsia
   {
     target_operator_->Mkfs();
-    target_operator_->Mount();
+    MountOptions options;
+    ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineData), 1), ZX_OK);
+    target_operator_->Mount(options);
 
     auto umount = fit::defer([&] { target_operator_->Unmount(); });
 
@@ -451,7 +453,9 @@ TEST_F(InlineCompatibilityTest, DataExistFlagFuchsiaToHost) {
   // Create and write inline files on Fuchsia
   {
     target_operator_->Mkfs();
-    target_operator_->Mount();
+    MountOptions options;
+    ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineData), 1), ZX_OK);
+    target_operator_->Mount(options);
 
     auto umount = fit::defer([&] { target_operator_->Unmount(); });
 
