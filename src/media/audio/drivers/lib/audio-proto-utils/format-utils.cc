@@ -35,6 +35,10 @@ bool FrameRateIn441kFamily(uint32_t rate) {
   return ((found < RATES_44100_FAMILY_LAST) && (*found == rate));
 }
 
+size_t MaxFrameRatesIn48kFamily() { return std::size(RATES_48000_FAMILY); }
+
+size_t MaxFrameRatesIn441kFamily() { return std::size(RATES_44100_FAMILY); }
+
 // Figure out the size of an audio frame based on the sample format.  Returns 0
 // in the case of an error (bad channel count, bad sample format)
 uint32_t ComputeFrameSize(uint16_t channels, audio_sample_format_t sample_format) {

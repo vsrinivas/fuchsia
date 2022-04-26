@@ -175,9 +175,11 @@ zx_status_t UsbAudioStreamInterface::BuildFormatMap() {
   // wanted to.
   size_t worst_case_map_entries = 0;
   for (const auto& fmt : formats_) {
-    // A frame rate count of 0 indicates a continuous format range which
-    // requires only one format range entry.
-    worst_case_map_entries += fmt.frame_rate_cnt() ? fmt.frame_rate_cnt() : 1;
+    // A frame rate count of 0 indicates a continuous format range which may require up to
+    // the highest number of elements in either family.
+    worst_case_map_entries += fmt.frame_rate_cnt() ? fmt.frame_rate_cnt()
+                                                   : std::max(utils::MaxFrameRatesIn48kFamily(),
+                                                              utils::MaxFrameRatesIn441kFamily());
   }
 
   // Now reserve our memory.
@@ -299,8 +301,28 @@ zx_status_t UsbAudioStreamInterface::BuildFormatMap() {
     } else {
       range.min_frames_per_second = fmt.min_cont_frame_rate();
       range.max_frames_per_second = fmt.max_cont_frame_rate();
-      range.flags = ASF_RANGE_FLAG_FPS_CONTINUOUS;
-      format_map_.push_back({range, fmt.alt_id(), fmt.ep_addr(), fmt.max_req_size()});
+      // If min and max rates are equal we can specify a continuous range (family does not matter)
+      // otherwise we interpret a continuous range of frame rates as specific for a given family,
+      // i.e. a device reporting a continuous range from 8kHz to 48kHz does not intend to report
+      // 44.1kHz even though it falls within the range.
+      if (range.min_frames_per_second == range.max_frames_per_second) {
+        range.flags = ASF_RANGE_FLAG_FPS_CONTINUOUS;
+        format_map_.push_back({range, fmt.alt_id(), fmt.ep_addr(), fmt.max_req_size()});
+      } else {
+        if (utils::FrameRateIn441kFamily(range.min_frames_per_second)) {
+          range.flags = ASF_RANGE_FLAG_FPS_44100_FAMILY;
+        } else {
+          // If min_frames_per_second is not in either family, we pick 48kHz.
+          range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
+        }
+        audio::utils::FrameRateEnumerator enumerator(range);
+        for (uint32_t rate : enumerator) {
+          audio_stream_format_range_t sub_range = range;
+          sub_range.min_frames_per_second = rate;
+          sub_range.max_frames_per_second = rate;
+          format_map_.push_back({sub_range, fmt.alt_id(), fmt.ep_addr(), fmt.max_req_size()});
+        }
+      }
     }
   }
 

@@ -27,6 +27,8 @@ struct Format {
 // family.
 bool FrameRateIn48kFamily(uint32_t rate);
 bool FrameRateIn441kFamily(uint32_t rate);
+size_t MaxFrameRatesIn48kFamily();
+size_t MaxFrameRatesIn441kFamily();
 
 // Figure out the size of an audio frame based on the sample format.  Returns 0
 // in the case of an error (bad channel count, bad sample format)
