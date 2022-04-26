@@ -174,8 +174,8 @@ impl Waiter {
                     match contents {
                         zx::PacketContents::SignalOne(sigpkt) => {
                             let key = packet.key();
-
-                            if let Some(callback) = self.key_map.lock().remove(&key) {
+                            let handler = self.key_map.lock().remove(&key);
+                            if let Some(callback) = handler {
                                 match callback {
                                     WaitCallback::SignalHandler(handler) => {
                                         handler(sigpkt.observed())
@@ -192,7 +192,8 @@ impl Waiter {
                             mask_bytes[..4].copy_from_slice(&observed[..4]);
                             let events = FdEvents::from(u32::from_ne_bytes(mask_bytes));
                             let key = packet.key();
-                            if let Some(callback) = self.key_map.lock().remove(&key) {
+                            let handler = self.key_map.lock().remove(&key);
+                            if let Some(callback) = handler {
                                 match callback {
                                     WaitCallback::EventHandler(handler) => {
                                         assert!(events != FdEvents::empty());
