@@ -20,10 +20,10 @@ using fuchsia::buildinfo::BuildInfo;
 using fuchsia::buildinfo::Provider;
 using fuchsia::buildinfo::test::BuildInfoTestController;
 
-using sys::testing::ChildRef;
-using sys::testing::ParentRef;
-using sys::testing::Protocol;
-using sys::testing::Route;
+using component_testing::ChildRef;
+using component_testing::ParentRef;
+using component_testing::Protocol;
+using component_testing::Route;
 }  // namespace
 
 class FakeBuildInfoTestFixture : public gtest::RealLoopFixture {
