@@ -7,7 +7,6 @@ use fuchsia_component::server::ServiceFs;
 use fuchsia_inspect::*;
 use futures::prelude::*;
 
-#[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
 #[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let root = component::inspector().root();
@@ -20,7 +19,7 @@ async fn main() -> Result<(), Error> {
             child.record_lazy_values("lazy-values", || {
                 async move {
                     let inspector = Inspector::new();
-                    inspector.root().record_double("double", 3.14);
+                    inspector.root().record_double("double", 3.25);
                     Ok(inspector)
                 }
                 .boxed()

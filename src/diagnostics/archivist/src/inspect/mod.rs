@@ -344,7 +344,7 @@ mod tests {
         std::path::PathBuf,
     };
 
-    const TEST_URL: &'static str = "fuchsia-pkg://test";
+    const TEST_URL: &str = "fuchsia-pkg://test";
     const BATCH_RETRIEVAL_TIMEOUT_SECONDS: i64 = 300;
 
     fn get_vmo(text: &[u8]) -> zx::Vmo {
@@ -419,7 +419,6 @@ mod tests {
         ns.unbind(path.join("out").to_str().unwrap()).unwrap();
     }
 
-    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
     #[fuchsia::test]
     async fn inspect_data_collector_tree() {
         let path = PathBuf::from("/test-bindings2");
@@ -431,7 +430,7 @@ mod tests {
         inspector.root().record_lazy_child("lazy", || {
             async move {
                 let inspector = Inspector::new();
-                inspector.root().record_double("b", 3.14);
+                inspector.root().record_double("b", 3.25);
                 Ok(inspector)
             }
             .boxed()
@@ -472,7 +471,7 @@ mod tests {
                         assert_data_tree!(hierarchy, root: {
                             a: 1i64,
                             lazy: {
-                                b: 3.14,
+                                b: 3.25,
                             }
                         });
                     }
@@ -1041,7 +1040,7 @@ mod tests {
 
         let test_batch_iterator_stats2 = Arc::new(test_accessor_stats.new_inspect_batch_iterator());
 
-        inspect_repo.write().mark_stopped(&identity.unique_key().into());
+        inspect_repo.write().mark_stopped(&identity.unique_key());
         pipeline_wrapper.write().remove(&identity.relative_moniker);
         {
             let result_json = read_snapshot(
@@ -1205,8 +1204,9 @@ mod tests {
         server.await;
 
         let result_string = format!("[{}]", result_vec.join(","));
-        serde_json::from_str(&result_string)
-            .expect(&format!("unit tests shouldn't be creating malformed json: {}", result_string))
+        serde_json::from_str(&result_string).unwrap_or_else(|_| {
+            panic!("unit tests shouldn't be creating malformed json: {}", result_string)
+        })
     }
 
     async fn read_snapshot_verify_batch_count_and_batch_size(
@@ -1247,7 +1247,8 @@ mod tests {
         server.await;
 
         let result_string = format!("[{}]", result_vec.join(","));
-        serde_json::from_str(&result_string)
-            .expect(&format!("unit tests shouldn't be creating malformed json: {}", result_string))
+        serde_json::from_str(&result_string).unwrap_or_else(|_| {
+            panic!("unit tests shouldn't be creating malformed json: {}", result_string)
+        })
     }
 }

@@ -52,8 +52,7 @@ async fn main() -> Result<(), Error> {
         let test_name = test_case.0;
         let mut buffer = vec![0; size.try_into().expect("Unable to convert size")];
         vmo.read(&mut buffer, 0)?;
-        #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95023)
-        expected.push((test_name.clone(), test_case.2));
+        expected.push((test_name, test_case.2));
         actual.push((test_name, buffer));
     }
     assert_eq!(expected, actual);
@@ -155,10 +154,9 @@ fn test_boolean() -> TestCase {
     ("test_boolean", record, expected_result)
 }
 
-#[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
 fn test_float() -> TestCase {
     let timestamp = 6;
-    let arg = Argument { name: String::from("name"), value: Value::Floating(3.1415) };
+    let arg = Argument { name: String::from("name"), value: Value::Floating(3.25) };
     let record = Record { timestamp, severity: Severity::Warn, arguments: vec![arg] };
     // Record header = 0x59, 0, 0, 0, 0, 0, 0, 0x40
     // Timestamp = 0x6, 0, 0, 0, 0, 0, 0, 0
@@ -167,7 +165,7 @@ fn test_float() -> TestCase {
     // Arg value = 0x6F, 0x12, 0x83, 0xC0, 0xCA, 0x21, 0x09, 0x40
     let expected_result = vec![
         0x59, 0, 0, 0, 0, 0, 0, 0x40, 0x6, 0, 0, 0, 0, 0, 0, 0, 0x35, 0, 0x4, 0x80, 0, 0, 0, 0,
-        0x6E, 0x61, 0x6D, 0x65, 0, 0, 0, 0, 0x6F, 0x12, 0x83, 0xC0, 0xCA, 0x21, 0x09, 0x40,
+        0x6E, 0x61, 0x6D, 0x65, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x0a, 0x40,
     ];
     ("test_float", record, expected_result)
 }

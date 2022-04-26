@@ -9,7 +9,7 @@
         "moniker": "core/memory_monitor",
         "payload": {
             "root": {
-                "lazy-double": 3.14
+                "lazy-double": 3.25
             }
         },
         "version": 1

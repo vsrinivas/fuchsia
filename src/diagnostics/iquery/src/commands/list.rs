@@ -20,8 +20,7 @@ pub struct MonikerWithUrl {
     pub component_url: String,
 }
 
-#[allow(clippy::derive_ord_xor_partial_ord)] // TODO(fxbug.dev/95023)
-#[derive(Debug, Eq, PartialEq, Ord)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum ListResponseItem {
     Moniker(String),
     MonikerWithUrl(MonikerWithUrl),
@@ -33,6 +32,12 @@ impl ListResponseItem {
             Self::Moniker(moniker) => moniker,
             Self::MonikerWithUrl(MonikerWithUrl { moniker, .. }) => moniker,
         }
+    }
+}
+
+impl Ord for ListResponseItem {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
     }
 }
 

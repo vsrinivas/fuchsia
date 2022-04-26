@@ -171,7 +171,6 @@ mod tests {
         crate::{assert_data_tree, assert_json_diff, reader, Inspector},
     };
 
-    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
     #[fuchsia::test]
     async fn test_read() -> Result<(), anyhow::Error> {
         let inspector = test_inspector();
@@ -181,14 +180,13 @@ mod tests {
             "lazy-node": {
                 a: "test",
                 child: {
-                    double: 3.14,
+                    double: 3.25,
                 },
             }
         });
         Ok(())
     }
 
-    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
     #[fuchsia::test]
     async fn test_load_snapshot_tree() -> Result<(), anyhow::Error> {
         let inspector = test_inspector();
@@ -214,7 +212,7 @@ mod tests {
         let lazy_values_hierarchy = PartialNodeHierarchy::try_from(lazy_values.snapshot)?;
         assert_eq!(lazy_values.children.keys().len(), 0);
         assert_data_tree!(lazy_values_hierarchy, root: {
-            double: 3.14,
+            double: 3.25,
         });
 
         Ok(())
@@ -277,7 +275,6 @@ mod tests {
         Ok(())
     }
 
-    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
     fn test_inspector() -> Inspector {
         let inspector = Inspector::new();
         let root = inspector.root();
@@ -290,7 +287,7 @@ mod tests {
                 child.record_lazy_values("lazy-values", || {
                     async move {
                         let inspector = Inspector::new();
-                        inspector.root().record_double("double", 3.14);
+                        inspector.root().record_double("double", 3.25);
                         Ok(inspector)
                     }
                     .boxed()

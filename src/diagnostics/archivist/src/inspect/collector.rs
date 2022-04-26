@@ -250,7 +250,6 @@ mod tests {
         ns.unbind(path.join("out").to_str().unwrap()).unwrap();
     }
 
-    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
     #[fuchsia::test]
     async fn inspect_data_collector_tree() {
         let path = PathBuf::from("/test-bindings2");
@@ -262,7 +261,7 @@ mod tests {
         inspector.root().record_lazy_child("lazy", || {
             async move {
                 let inspector = Inspector::new();
-                inspector.root().record_double("b", 3.14);
+                inspector.root().record_double("b", 3.25);
                 Ok(inspector)
             }
             .boxed()
@@ -303,7 +302,7 @@ mod tests {
                         assert_data_tree!(hierarchy, root: {
                             a: 1i64,
                             lazy: {
-                                b: 3.14,
+                                b: 3.25,
                             }
                         });
                     }

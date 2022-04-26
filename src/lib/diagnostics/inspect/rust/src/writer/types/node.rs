@@ -841,7 +841,6 @@ mod tests {
         });
     }
 
-    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
     #[fuchsia::test]
     fn record() {
         let inspector = Inspector::new();
@@ -850,12 +849,12 @@ mod tests {
         {
             let child = inspector.root().create_child("child");
             child.record(property);
-            child.record_double("c", 3.14);
+            child.record_double("c", 3.25);
             assert_data_tree!(inspector, root: {
                 a: 1u64,
                 b: 2u64,
                 child: {
-                    c: 3.14,
+                    c: 3.25,
                 }
             });
         }
@@ -919,7 +918,6 @@ mod tests {
         })
     }
 
-    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
     #[fuchsia::test]
     fn record_weak() {
         let inspector = Inspector::new();
@@ -933,13 +931,13 @@ mod tests {
         {
             let child = main_weak.create_child("child");
             child.record(property);
-            child.record_double("c", 3.14);
+            child.record_double("c", 3.25);
             assert_data_tree!(inspector, root: { main: {
                 a: 1u64,
                 b: 2u64,
                 c: 3u64,
                 child: {
-                    c: 3.14,
+                    c: 3.25,
                 }
             }});
         }

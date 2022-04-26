@@ -116,9 +116,9 @@ impl<'a> StringRef<'a> {
     }
 }
 
-impl<'a> Into<String> for StringRef<'a> {
-    fn into(self) -> String {
-        match self {
+impl<'a> From<StringRef<'a>> for String {
+    fn from(string: StringRef<'a>) -> String {
+        match string {
             StringRef::Empty => String::new(),
             StringRef::Inline(s) => s.to_string(),
         }
@@ -139,12 +139,12 @@ pub trait SeverityExt {
 
 impl SeverityExt for Metadata<'_> {
     fn severity(&self) -> Severity {
-        match self.level() {
-            &Level::ERROR => Severity::Error,
-            &Level::WARN => Severity::Warn,
-            &Level::INFO => Severity::Info,
-            &Level::DEBUG => Severity::Debug,
-            &Level::TRACE => Severity::Trace,
+        match *self.level() {
+            Level::ERROR => Severity::Error,
+            Level::WARN => Severity::Warn,
+            Level::INFO => Severity::Info,
+            Level::DEBUG => Severity::Debug,
+            Level::TRACE => Severity::Trace,
         }
     }
 }
@@ -185,7 +185,7 @@ mod tests {
             let recorded = encoder.buf.get_ref().split_at(canonical.len()).0;
             assert_eq!(canonical, recorded, "encoded repr must match the canonical value provided");
 
-            let (zero_buf, decoded) = nom::dbg_dmp(&parser, "roundtrip")(&recorded).unwrap();
+            let (zero_buf, decoded) = nom::dbg_dmp(&parser, "roundtrip")(recorded).unwrap();
             assert_eq!(val, decoded, "decoded version must match what we tried to encode");
             assert_eq!(zero_buf.len(), 0, "must parse record exactly out of provided buffer");
         }
@@ -252,11 +252,10 @@ mod tests {
         );
     }
 
-    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
     #[fuchsia::test]
     fn float_arg_roundtrip() {
         assert_roundtrips(
-            Argument { name: String::from("float"), value: Value::Floating(3.14159) },
+            Argument { name: String::from("float"), value: Value::Floating(3.25) },
             Encoder::write_argument,
             parse_argument,
             None,
@@ -273,7 +272,6 @@ mod tests {
         );
     }
 
-    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
     #[fuchsia::test]
     fn arg_of_each_type_roundtrips() {
         assert_roundtrips(
@@ -283,7 +281,7 @@ mod tests {
                 arguments: vec![
                     Argument { name: String::from("signed"), value: Value::SignedInt(-10) },
                     Argument { name: String::from("unsigned"), value: Value::SignedInt(7) },
-                    Argument { name: String::from("float"), value: Value::Floating(3.14159) },
+                    Argument { name: String::from("float"), value: Value::Floating(3.25) },
                     Argument { name: String::from("bool"), value: Value::Boolean(true) },
                     Argument {
                         name: String::from("msg"),

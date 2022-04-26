@@ -1276,7 +1276,6 @@ mod tests {
         assert_eq!(content, expected);
     }
 
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95023)
     #[fuchsia::test]
     fn test_max_capacity_file_write() {
         struct TestCase {
@@ -1355,25 +1354,25 @@ mod tests {
                 .create(true)
                 .open(&tmp_file_path)
                 .unwrap()
-                .write(&tc.file_1_initial_state)
+                .write_all(&tc.file_1_initial_state)
                 .unwrap();
             fs::OpenOptions::new()
                 .append(true)
                 .create(true)
                 .open(&tmp_file_path.with_extension("log.old"))
                 .unwrap()
-                .write(&tc.file_2_initial_state)
+                .write_all(&tc.file_2_initial_state)
                 .unwrap();
 
             MaxCapacityFile::new(tmp_file_path.clone(), tc.file_cap)
                 .unwrap()
-                .write(&tc.write_to_perform)
+                .write_all(&tc.write_to_perform)
                 .unwrap();
 
             let mut file1 = fs::OpenOptions::new().read(true).open(&tmp_file_path).unwrap();
             let file_size = file1.metadata().unwrap().len();
             let mut buf = vec![0; file_size as usize];
-            file1.read(&mut buf).unwrap();
+            file1.read_exact(&mut buf).unwrap();
             assert_eq!(buf, tc.file_1_expected_state);
 
             let mut file2 = fs::OpenOptions::new()
@@ -1382,7 +1381,7 @@ mod tests {
                 .unwrap();
             let file_size = file2.metadata().unwrap().len();
             let mut buf = vec![0; file_size as usize];
-            file2.read(&mut buf).unwrap();
+            file2.read_exact(&mut buf).unwrap();
             assert_eq!(buf, tc.file_2_expected_state);
         }
     }

@@ -112,7 +112,6 @@ mod tests {
         serve(&inspector, &mut fs)
     }
 
-    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
     #[fuchsia::test]
     async fn connect_to_service() -> Result<(), anyhow::Error> {
         // TODO(https://fxbug.dev/81400): Change code below to
@@ -151,7 +150,7 @@ mod tests {
             "lazy-node": {
                 a: "test",
                 child: {
-                    double: 3.14,
+                    double: 3.25,
                 },
             }
         });

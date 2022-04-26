@@ -521,7 +521,6 @@ mod tests {
         }
     }
 
-    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
     #[fuchsia::test]
     async fn inspect_data_for_component() -> Result<(), anyhow::Error> {
         let instance = start_component().await?;
@@ -538,7 +537,7 @@ mod tests {
             "lazy-node": {
                 a: "test",
                 child: {
-                    double: 3.14,
+                    double: 3.25,
                 },
             }
         });
@@ -564,7 +563,6 @@ mod tests {
         Ok(())
     }
 
-    #[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
     #[fuchsia::test]
     async fn select_all_for_moniker() {
         let instance = start_component().await.expect("started component");
@@ -582,7 +580,7 @@ mod tests {
             "lazy-node": {
                 a: "test",
                 child: {
-                    double: 3.14,
+                    double: 3.25,
                 },
             }
         });

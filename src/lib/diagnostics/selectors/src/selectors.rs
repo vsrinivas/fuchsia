@@ -521,12 +521,11 @@ where
         })
         .collect::<Result<Vec<&ComponentSelector>, anyhow::Error>>();
 
-    #[allow(clippy::clone_double_ref)] // TODO(fxbug.dev/95023)
     component_selectors?
         .iter()
         .filter_map(|selector| {
             match_moniker_against_component_selector(moniker, selector)
-                .map(|is_match| if is_match { Some(selector.clone()) } else { None })
+                .map(|is_match| if is_match { Some(*selector) } else { None })
                 .transpose()
         })
         .collect::<Result<Vec<&ComponentSelector>, anyhow::Error>>()

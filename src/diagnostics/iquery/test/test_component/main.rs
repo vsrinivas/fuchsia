@@ -54,7 +54,6 @@ struct Options {
     extra_number: Option<i64>,
 }
 
-#[allow(clippy::approx_constant)] // TODO(fxbug.dev/95023)
 #[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let opts = Options::from_args();
@@ -158,7 +157,7 @@ async fn main() -> Result<(), Error> {
     root.record_lazy_values("lazy-values", || {
         async move {
             let inspector = inspect::Inspector::new();
-            inspector.root().record_double("lazy-double", 3.14);
+            inspector.root().record_double("lazy-double", 3.25);
             Ok(inspector)
         }
         .boxed()

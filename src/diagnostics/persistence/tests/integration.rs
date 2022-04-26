@@ -445,7 +445,7 @@ fn expected_stored_data(number: Option<i32>) -> String {
         Some(number) => format!("\"extra_number\": {},", number),
     };
     r#"
-  {"test_component.cmx": { %VARIANT% "lazy-double":3.14},
+  {"test_component.cmx": { %VARIANT% "lazy-double":3.25},
    "@timestamps": {"before_utc":0, "after_utc":0, "before_monotonic":0, "after_monotonic":0}
   }
     "#
@@ -489,7 +489,7 @@ fn expected_diagnostics_persistence_inspect(published: Published) -> String {
                         },
                         "test_component.cmx": {
                             %NUMBER_TEXT%
-                            "lazy-double": 3.14
+                            "lazy-double": 3.25
                         }
                     }
                 }

@@ -204,7 +204,7 @@
                         }
                     ]
                 },
-                "lazy-double": 3.14,
+                "lazy-double": 3.25,
                 "lazy-node": {
                     "uint": 3
                 },
