@@ -119,7 +119,12 @@ language-specific bindings in the `bazel-bin/` directory:
 bazel-bin/fuchsia-codelab/echo-fidl/_virtual_includes/
 ```
 
-Locate and open the `fidl.h` generated header found in the above directory.
+Locate and open the `fidl.h` generated header found in the above directory:
+
+```posix-terminal
+find bazel-bin/fuchsia-codelab/echo-fidl/_virtual_includes -name fidl.h
+```
+
 Explore the contents of these files. Below is a summary of some of the key
 generated interfaces:
 

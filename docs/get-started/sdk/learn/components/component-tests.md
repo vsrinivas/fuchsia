@@ -5,9 +5,9 @@
 ## Test runners
 
 Test runners are reusable adapters between the Test Runner Framework and common
-frameworks used by developers to write tests in their preferred
-language. Each test runner component exposes the `fuchsia.test.Suite` capability
-that enables the `test_manager` to enumerate and execute individual tests, and
+frameworks used by developers to write tests in their preferred language.
+Each test runner component exposes the `fuchsia.test.Suite` capability that
+enables the `test_manager` to enumerate and execute individual tests, and
 declares the appropriate execution `runner` with test framework support.
 
 ```json5
@@ -48,42 +48,38 @@ on validating the individual units of code within your component and isolated
 from other components on the system. Unit tests should be **hermetic**, meaning
 that they do not require or provide additional capabilities outside of the test.
 
-The Fuchsia SDK provides additional templates to facilitate unit testing
-components:
+The Fuchsia SDK provides additional templates to facilitate the creation of
+unit test components:
 
-* `cc_test()`: Compiles the C++ source code into a test binary.
-* `fuchsia_test_component()`: Generates a Fuchsia component containing tests.
-  You can combine multiple test components into the same `fuchsia_package()`.
+* `fuchsia_cc_test()`: Compiles the C++ source code into a test binary. When
+  added to a package, this rule also generates a minimal component manifest that
+  references the test binary and requires no additional capabilities.
+* `fuchsia_test_package()`: Generates a Fuchsia package containing one or more
+  test components and their dependencies.
 
 Below is an example `BUILD.bazel` snippet for including unit tests:
 
 ```bazel
 load(
-    "fuchsia_cc_binary",
-    "fuchsia_package",
-    "fuchsia_test_component",
+    "fuchsia_cc_test",
+    "fuchsia_test_package",
+    "if_fuchsia",
 )
 
-cc_test(
+fuchsia_cc_test(
     name = "hello_world_test",
-    srcs = [
-        "hello_world_test.cc",
-    ],
+    srcs = ["hello_world_test.cc"],
+    deps = if_fuchsia([
+        "@fuchsia_sdk//pkg/fdio",
+        "@fuchsia_sdk//pkg/syslog",
+    ]),
 )
 
-fuchsia_test_component(
-  name = "unit_test_component",
-  test_name = "hello_world_test",
-  deps = [
-      ":hello_world_test",
-  ],
-)
-
-fuchsia_package(
+fuchsia_test_package(
     name = "unit_test_pkg",
     visibility = ["//visibility:public"],
     deps = [
-      ":unit_test_component",
+      ":hello_world_test",
     ],
 )
 ```
@@ -114,16 +110,21 @@ Add the following unit test functions to validate the behavior of the
 
 ### Run the unit tests
 
+Update the imports section of your `BUILD.bazel` file to include the additional
+test rules:
+
+`BUILD.bazel`:
+
+```bazel
+{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/echo/BUILD.bazel" region_tag="imports" adjust_indentation="auto" %}
+```
+
 Add the following to your `BUILD.bazel` file to include your tests in the build
 configuration:
 
 `BUILD.bazel`:
 
 ```bazel
-{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/echo/BUILD.bazel" region_tag="imports" adjust_indentation="auto" %}
-
-# ...
-
 {% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/echo/BUILD.bazel" region_tag="unittest" adjust_indentation="auto" %}
 ```
 

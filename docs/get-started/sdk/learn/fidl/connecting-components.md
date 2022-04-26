@@ -311,7 +311,12 @@ Fuchsia package containing the server and client:
 `echo-realm/BUILD.bazel`:
 
 ```bazel
-{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/BUILD.bazel" region_tag="imports" adjust_indentation="auto" %}
+load(
+    "@rules_fuchsia//fuchsia:defs.bzl",
+    "fuchsia_component",
+    "fuchsia_component_manifest",
+    "fuchsia_package",
+)
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/BUILD.bazel" region_tag="component" adjust_indentation="auto" %}
 

@@ -39,58 +39,83 @@ Below is an example component manifest for a simple integration test component:
 
 This test component declaration contains the following key elements:
 
-1.  An `include`  of the necessary language-specific test runner shard. This
+1.  An `include` of the necessary language-specific test runner shard. This
     enables the test manager to properly execute the test suite.
 1.  Listing the component under test and dependent components as `children`.
 1.  Routing required capabilities between components in the test realm.
+
+The Fuchsia SDK provides additional templates to facilitate the creation of
+integration test components:
+
+* `fuchsia_cc_test()`: Compiles the C++ source code into a test binary.
+* `fuchsia_test_component()`: Generates a Fuchsia component containing tests
+  using the provided component manifest. You can combine multiple test components
+  into the same `fuchsia_test_package()`.
 
 Here is an example of how the above integration test could be included in the
 `BUILD.bazel` file:
 
 ```bazel
 load(
+    "fuchsia_cc_test",
     "fuchsia_component",
     "fuchsia_component_manifest",
-    "fuchsia_package",
     "fuchsia_test_component",
+    "fuchsia_test_package",
 )
 
 // Component under test
 fuchsia_component(
-  name = "foo_client",
-  manifest = ":foo_client_manifest",
-  visibility = ["//visibility:public"],
+    name = "foo_client",
+    manifest = ":foo_client_manifest",
+    visibility = ["//visibility:public"],
 )
 
 // Test dependencies
 fuchsia_component(
-  name = "mock_service",
-  manifest = ":mock_service_manifest",
-  visibility = ["//visibility:public"],
+    name = "mock_service",
+    manifest = ":mock_service_manifest",
+    visibility = ["//visibility:public"],
 )
 
 // Component containing integration tests
+fuchsia_cc_test(
+    name = "client_integration_test",
+    srcs = [ ... ],
+    depc = [ ... ],
+)
 fuchsia_component_manifest(
-  name = "integration_test_manifest",
-  src = "meta/integration_tests.cml",
+    name = "integration_test_manifest",
+    src = "meta/integration_tests.cml",
 )
 fuchsia_test_component(
-  name = "integration_test_component",
-  manifest = ":integration_test_manifest",
-  test_name = "client_integration_test",
-  visibility = ["//visibility:public"],
+    name = "integration_test_component",
+    manifest = ":integration_test_manifest",
+    test_name = "client_integration_test",
+    visibility = ["//visibility:public"],
+    deps = [":client_integration_test"],
 )
 
-fuchsia_package(
+// Hermetic test package
+fuchsia_test_package(
     name = "integration_test_pkg",
     visibility = ["//visibility:public"],
     deps = [
-      ":foo_client",
-      ":mock_service",
-      ":integration_test_component",
+        ":foo_client",
+        ":mock_service",
+        ":integration_test_component",
     ],
 )
 ```
+
+This integration test build configuration contains the following key elements:
+
+1.  A `fuchsia_test_component()` target describing the integration test component
+    and its component manifest.
+1.  Additional `fuchsia_component()` targets representing component dependencies
+    requited by the integration tests.
+1.  A single hermetic `fuchsia_test_package()` that bundles the test component
+    and all dependencies together.
 
 ## Exercise: Echo server integration test
 
@@ -138,13 +163,18 @@ test component in the build configuration:
 `echo-integration/BUILD.bazel`:
 
 ```bazel
-{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/integration_tests/BUILD.bazel" region_tag="imports" adjust_indentation="auto" %}
+load(
+    "@rules_fuchsia//fuchsia:defs.bzl",
+    "fuchsia_cc_test",
+    "fuchsia_component_manifest",
+    "fuchsia_test_component",
+    "fuchsia_test_package",
+)
 
-cc_test(
+fuchsia_cc_test(
     name = "echo_integration_test",
     size = "small",
     srcs = ["echo_integration_test.cc"],
-    visibility = ["//visibility:public"],
     deps = [
         "//fuchsia-codelab/echo-fidl:fidl.examples.routing.echo.fidl_cc",
         "@com_google_googletest//:gtest_main",
@@ -160,10 +190,9 @@ cc_test(
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/integration_tests/BUILD.bazel" region_tag="component" adjust_indentation="auto" %}
 
-fuchsia_package(
+fuchsia_test_package(
     name = "test_pkg",
     package_name = "echo_integration_test",
-    testonly = True,
     visibility = ["//visibility:public"],
     deps = [
         ":echo_integration_test_component",
