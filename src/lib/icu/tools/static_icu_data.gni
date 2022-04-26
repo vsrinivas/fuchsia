@@ -63,7 +63,7 @@ template("static_icu_data") {
 
     tool = "//src/lib/icu/tools/extractor:icu_data_extractor"
 
-    icu_data_file = "${root_build_dir}/icu_data/icudtl.dat"
+    icu_data_file = "//third_party/icu/common/icudtl.dat"
     tz_res_dir = "//third_party/icu/tzres/"
 
     inputs = [
@@ -77,7 +77,6 @@ template("static_icu_data") {
       "//third_party/icu/tzres/zoneinfo64.res",
     ]
     outputs = [ output ]
-    deps = [ "//src/lib/icu_data:icudtl($host_toolchain)" ]
 
     args = [
              "--icu-data-file=" + rebase_path(icu_data_file, root_build_dir),

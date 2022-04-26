@@ -25,10 +25,9 @@ dart_app("timestamp-server-dart") {
     "//src/testing/fidl:placeholders",
     "//third_party/dart-pkg/pub/intl",
   ]
-  non_dart_deps = [ "//src/lib/icu_data:icudtl($host_toolchain)" ]
   resources = [
     {
-      path = rebase_path("${root_build_dir}/icu_data/icudtl.dat")
+      path = rebase_path("//third_party/icu/common/icudtl.dat")
       dest = "icudtl.dat"
     },
   ]
@@ -57,10 +56,9 @@ flutter_app("timestamp-server-flutter") {
     "//src/testing/fidl:placeholders",
     "//third_party/dart-pkg/pub/intl",
   ]
-  non_dart_deps = [ "//src/lib/icu_data:icudtl($host_toolchain)" ]
   resources = [
     {
-      path = rebase_path("${root_build_dir}/icu_data/icudtl.dat")
+      path = rebase_path("//third_party/icu/common/icudtl.dat")
       dest = "icudtl.dat"
     },
   ]

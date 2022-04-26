@@ -26,7 +26,6 @@ group("tests") {
 }
 
 resource("icudtl") {
-  sources = [ "${root_build_dir}/icu_data/icudtl.dat" ]
+  sources = [ "//third_party/icu/common/icudtl.dat" ]
   outputs = [ "data/icudtl.dat" ]
-  deps = [ "//src/lib/icu_data:icudtl($host_toolchain)" ]
 }

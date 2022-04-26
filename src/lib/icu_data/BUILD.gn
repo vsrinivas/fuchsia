@@ -2,12 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/compiled_action.gni")
-import("//src/chromium/build_args.gni")
-
 group("icu_data") {
   deps = [
-    ":icudtl($host_toolchain)",
     "cpp",
     "rust",
   ]
@@ -16,92 +12,4 @@ group("icu_data") {
 group("tests") {
   testonly = true
   deps = [ "rust:tests" ]
-}
-
-if (is_host) {
-  _meta_dir = "${root_build_dir}/icu_data"
-
-  # Extracts the contents of the meta.far archive, which is itself packaged
-  # inside the web_engine.far.  It contains the "contents" file in its root
-  # directory, which contains the mapping between the content hash encoded files
-  # and actual file names.
-  compiled_action("_extract_meta_far") {
-    tool = "//src/sys/pkg/bin/far:bin"
-    tool_output_name = "far"
-    outputs = [ "${root_build_dir}/icu_data/meta.far" ]
-
-    if (use_chromium_canary) {
-      inputs = [ "//prebuilt/third_party/web_engine_latest/arch/${current_cpu}/web_engine.far" ]
-    } else {
-      inputs = [
-        "//prebuilt/third_party/web_engine/arch/${current_cpu}/web_engine.far",
-      ]
-    }
-
-    args = [
-      "extract-file",
-      "--archive=" + rebase_path(inputs[0], root_build_dir),
-      "--file=meta.far",
-      "--output=" + rebase_path("${_meta_dir}/meta.far", root_build_dir),
-    ]
-  }
-
-  compiled_action("_extract_contents") {
-    tool = "//src/sys/pkg/bin/far:bin"
-    tool_output_name = "far"
-    outputs = [ "${root_build_dir}/icu_data/contents" ]
-    inputs = [ "${root_build_dir}/icu_data/meta.far" ]
-
-    args = [
-      "extract-file",
-      "--archive=" + rebase_path(inputs[0], root_build_dir),
-      "--file=meta/contents",
-      "--output=" + rebase_path(outputs[0], root_build_dir),
-    ]
-
-    deps = [ ":_extract_meta_far" ]
-  }
-
-  # Refer to as "//src/lib/icu_data:icudtl($host_toolchain)".
-  # Use the file as "${root_build_dir}/icu_data/icudtl.dat".
-  # See README.md for details.
-  action("icudtl") {
-    script = "//src/lib/icu_data/make_icu_data.sh"
-    outputs = [ "${root_build_dir}/icu_data/icudtl.dat" ]
-
-    inputs = [
-      "${root_build_dir}/icu_data/contents",
-      "${root_out_dir}/far",
-    ]
-
-    if (use_chromium_canary) {
-      inputs += [ "//prebuilt/third_party/web_engine_latest/arch/${current_cpu}/web_engine.far" ]
-    } else {
-      inputs += [
-        "//prebuilt/third_party/web_engine/arch/${current_cpu}/web_engine.far",
-      ]
-    }
-
-    # See the script make_icu_data.sh in this directory for the details about
-    # the args.
-    args = [
-      # the far tool
-      rebase_path(inputs[1], root_build_dir),
-
-      # the web engine archive
-      rebase_path(inputs[2], root_build_dir),
-
-      # the contents file
-      rebase_path(inputs[0], root_build_dir),
-
-      # the output directory
-      rebase_path(_meta_dir, root_build_dir),
-    ]
-
-    deps = [
-      ":_extract_contents",
-      ":_extract_meta_far",
-      "//src/sys/pkg/bin/far:bin",
-    ]
-  }
 }
