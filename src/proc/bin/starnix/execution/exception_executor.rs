@@ -73,7 +73,7 @@ fn start_task_thread(current_task: &CurrentTask) -> Result<zx::Channel, zx::Stat
         current_task.thread.start(0, 0, 0, 0)?;
     }
     current_task.thread.wait_handle(zx::Signals::THREAD_SUSPENDED, zx::Time::INFINITE)?;
-    current_task.thread.write_state_general_regs(current_task.registers)?;
+    current_task.thread.write_state_general_regs(current_task.registers.into())?;
     mem::drop(suspend_token);
     Ok(exceptions)
 }
@@ -126,7 +126,14 @@ fn run_exception_loop(
 
         let report = thread.get_exception_report()?;
         let syscall_number = report.context.synth_data as u64;
-        current_task.registers = thread.read_state_general_regs()?;
+        current_task.registers = thread.read_state_general_regs()?.into();
+
+        // The `rax` register read from the thread's state is clobbered by zircon with
+        // ZX_ERR_BAD_SYSCALL, but it really should be the syscall number.
+        current_task.registers.rax = syscall_number;
+
+        // `orig_rax` should hold the original value loaded into `rax` by the userspace process.
+        current_task.registers.orig_rax = syscall_number;
 
         let regs = &current_task.registers;
         match info.type_ {
@@ -205,7 +212,7 @@ fn run_exception_loop(
         // importantly the instruction pointer needs to be "correct").
         set_process_debug_addr(current_task)?;
 
-        thread.write_state_general_regs(current_task.registers)?;
+        thread.write_state_general_regs(current_task.registers.into())?;
         exception.set_exception_state(&ZX_EXCEPTION_STATE_HANDLED)?;
     }
 }

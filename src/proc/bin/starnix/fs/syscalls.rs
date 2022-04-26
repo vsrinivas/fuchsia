@@ -23,7 +23,7 @@ pub fn sys_read(
     length: usize,
 ) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
-    file.read(&current_task, &[UserBuffer { address, length }])
+    file.read(&current_task, &[UserBuffer { address, length }]).restartable()
 }
 
 pub fn sys_write(
@@ -33,7 +33,7 @@ pub fn sys_write(
     length: usize,
 ) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
-    file.write(&current_task, &[UserBuffer { address, length }])
+    file.write(&current_task, &[UserBuffer { address, length }]).restartable()
 }
 
 pub fn sys_close(current_task: &CurrentTask, fd: FdNumber) -> Result<(), Errno> {

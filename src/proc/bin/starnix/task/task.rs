@@ -27,8 +27,8 @@ pub struct CurrentTask {
 
     /// A copy of the registers associated with the Zircon thread. Up-to-date values can be read
     /// from `self.handle.read_state_general_regs()`. To write these values back to the thread, call
-    /// `self.handle.write_state_general_regs(self.registers)`.
-    pub registers: zx::sys::zx_thread_state_general_regs_t,
+    /// `self.handle.write_state_general_regs(self.registers.into())`.
+    pub registers: RegisterState,
 
     /// The address of the DT_DEBUG entry in the process' ELF file.
     ///
@@ -478,7 +478,7 @@ impl CurrentTask {
         CurrentTask {
             task: Arc::new(task),
             dt_debug_address: None,
-            registers: zx::sys::zx_thread_state_general_regs_t::default(),
+            registers: RegisterState::default(),
             _not_sync: PhantomData,
         }
     }
@@ -783,7 +783,7 @@ impl CurrentTask {
             .exec(resolved_elf.file.name.clone())
             .map_err(|status| from_status_like_fdio!(status))?;
         let start_info = load_executable(self, resolved_elf, &path)?;
-        self.registers = start_info.to_registers();
+        self.registers = start_info.to_registers().into();
         self.dt_debug_address = start_info.dt_debug_address;
 
         self.thread_group.signal_actions.reset_for_exec();
@@ -853,6 +853,49 @@ impl cmp::PartialEq for Task {
 }
 
 impl cmp::Eq for Task {}
+
+/// The state of the task's registers when the thread of execution entered the kernel.
+/// This is a thin wrapper around [`zx::sys::zx_thread_state_general_regs_t`] that also stores
+/// a copy of `rax` in `orig_rax`.
+///
+/// Implements [`std::ops::Deref`] and [`std::ops::DerefMut`] as a way to get at the underlying
+/// [`zx::sys::zx_thread_state_general_regs_t`] that this type wraps.
+#[cfg(target_arch = "x86_64")]
+#[derive(Default, Debug, Clone, Copy, Eq, PartialEq)]
+pub struct RegisterState {
+    real_registers: zx::sys::zx_thread_state_general_regs_t,
+
+    /// A copy of the `rax` register at the time of the `syscall` instruction. This is important to
+    /// store, as the return value of a syscall overwrites `rax`, making it impossible to recover
+    /// the original syscall number in the case of syscall restart and strace output.
+    pub orig_rax: u64,
+}
+
+impl std::ops::Deref for RegisterState {
+    type Target = zx::sys::zx_thread_state_general_regs_t;
+
+    fn deref(&self) -> &Self::Target {
+        &self.real_registers
+    }
+}
+
+impl std::ops::DerefMut for RegisterState {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.real_registers
+    }
+}
+
+impl From<zx::sys::zx_thread_state_general_regs_t> for RegisterState {
+    fn from(regs: zx::sys::zx_thread_state_general_regs_t) -> Self {
+        RegisterState { real_registers: regs, orig_rax: 0 }
+    }
+}
+
+impl From<RegisterState> for zx::sys::zx_thread_state_general_regs_t {
+    fn from(register_state: RegisterState) -> Self {
+        register_state.real_registers
+    }
+}
 
 #[cfg(test)]
 mod test {

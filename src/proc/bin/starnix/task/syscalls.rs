@@ -532,7 +532,7 @@ pub fn sys_getgroups(
     Ok(groups.len())
 }
 
-pub fn sys_setsid(current_task: &mut CurrentTask) -> Result<pid_t, Errno> {
+pub fn sys_setsid(current_task: &CurrentTask) -> Result<pid_t, Errno> {
     current_task.thread_group.setsid()?;
     Ok(current_task.get_pid())
 }

@@ -471,7 +471,7 @@ fn wait_on_pid(
         // Return any error encountered during previous iteration's wait. This is done after the
         // zombie process has been dequeued to make sure that the zombie process is returned even
         // if the wait was interrupted.
-        wait_result?;
+        wait_result.restartable()?;
         wait_result = waiter.wait_kernel();
     }
 }
@@ -1391,7 +1391,7 @@ mod tests {
             &WaitingOptions::new_for_wait4(0).expect("WaitingOptions"),
         )
         .expect_err("wait_on_pid");
-        assert_eq!(errno, EINTR);
+        assert_eq!(errno, ERESTARTSYS);
     }
 
     #[::fuchsia::test]

@@ -24,6 +24,10 @@ use fuchsia_zircon as zx;
 #[cfg(target_arch = "x86_64")]
 const RED_ZONE_SIZE: u64 = 128;
 
+/// The size of the syscall instruction in bytes.
+#[cfg(target_arch = "x86_64")]
+const SYSCALL_INSTRUCTION_SIZE_BYTES: u64 = 2;
+
 /// A `SignalStackFrame` contains all the state that is stored on the stack prior
 /// to executing a signal handler.
 ///
@@ -199,7 +203,8 @@ pub fn restore_from_signal_handler(current_task: &mut CurrentTask) -> Result<(),
         rflags: uctx.eflags,
         fs_base: current_task.registers.fs_base,
         gs_base: current_task.registers.gs_base,
-    };
+    }
+    .into();
     current_task.write().signals.mask = signal_stack_frame.context.uc_sigmask;
     Ok(())
 }
@@ -293,6 +298,28 @@ fn action_for_signal(siginfo: &SignalInfo, sigaction: sigaction_t) -> DeliveryAc
     }
 }
 
+/// Adjusts a task's registers to restart a syscall once the task switches back to userspace.
+///
+/// This only happens if a syscall was interrupted and returned `-ERESTARTSYS`, and if the signal
+/// action that interrupted the syscall had the `SA_RESTART` flag set.
+fn prepare_to_restart_syscall(current_task: &mut CurrentTask, sigaction: &sigaction_t) {
+    if current_task.registers.rax != (-ERESTARTSYS.value()) as u64 {
+        // The syscall did not request to be restarted.
+        return;
+    }
+
+    if (sigaction.sa_flags & SA_RESTART as u64) == 0 {
+        // The signal action does not support restarts. The syscall should return -EINTR.
+        current_task.registers.rax = (-EINTR.value()) as u64;
+        return;
+    }
+
+    // The syscall should be restarted. Reload the original `rax` (syscall number) into `rax`,
+    // and backup the instruction pointer to the `syscall` instruction.
+    current_task.registers.rax = current_task.registers.orig_rax;
+    current_task.registers.rip -= SYSCALL_INSTRUCTION_SIZE_BYTES;
+}
+
 /// Dequeues and handles a pending signal for `current_task`.
 pub fn dequeue_signal(current_task: &mut CurrentTask) {
     let task = current_task.task_arc_clone();
@@ -303,6 +330,7 @@ pub fn dequeue_signal(current_task: &mut CurrentTask) {
         task_state.signals.take_next_where(|sig| !sig.signal.is_in_set(mask) || sig.force)
     {
         let sigaction = task.thread_group.signal_actions.get(siginfo.signal);
+        prepare_to_restart_syscall(current_task, &sigaction);
         match action_for_signal(&siginfo, sigaction) {
             DeliveryAction::CallHandler => {
                 dispatch_signal_handler(current_task, &mut task_state.signals, siginfo, sigaction);
@@ -323,5 +351,289 @@ pub fn dequeue_signal(current_task: &mut CurrentTask) {
                 // Nothing to do. Effect already happened when the signal was raised.
             }
         };
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::mm::{DesiredAddress, MappingOptions};
+    use crate::testing::*;
+
+    const SYSCALL_INSTRUCTION_ADDRESS: UserAddress = UserAddress::from(100);
+    const SYSCALL_NUMBER: u64 = 42;
+    const SYSCALL_ARGS: (u64, u64, u64, u64, u64, u64) = (20, 21, 22, 23, 24, 25);
+    const SA_RESTORER_ADDRESS: UserAddress = UserAddress::from(0xDEADBEEF);
+    const SA_HANDLER_ADDRESS: UserAddress = UserAddress::from(0x00BADDAD);
+
+    const SYSCALL2_INSTRUCTION_ADDRESS: UserAddress = UserAddress::from(200);
+    const SYSCALL2_NUMBER: u64 = 84;
+    const SYSCALL2_ARGS: (u64, u64, u64, u64, u64, u64) = (30, 31, 32, 33, 34, 35);
+    const SA_HANDLER2_ADDRESS: UserAddress = UserAddress::from(0xBADDAD00);
+
+    #[cfg(target_arch = "x86_64")]
+    #[::fuchsia::test]
+    fn syscall_restart_adjusts_instruction_pointer_and_rax() {
+        let (_kernel, mut current_task) = create_kernel_and_task_with_stack();
+
+        // Register the signal action.
+        current_task.thread_group.signal_actions.set(
+            SIGUSR1,
+            sigaction_t {
+                sa_flags: (SA_RESTORER | SA_RESTART | SA_SIGINFO) as u64,
+                sa_handler: SA_HANDLER_ADDRESS,
+                sa_restorer: SA_RESTORER_ADDRESS,
+                ..sigaction_t::default()
+            },
+        );
+
+        // Simulate a syscall that should be restarted by setting up the register state to what it
+        // was after the interrupted syscall. `rax` should have the return value (-ERESTARTSYS);
+        // `rdi`, `rsi`, `rdx`, `r10`, `r8`, `r9`, should be the syscall arguments;
+        // `orig_rax` should hold the syscall number;
+        // and the instruction pointer should be 2 bytes after the syscall instruction.
+        current_task.registers.rax = -ERESTARTSYS.value() as u64;
+        current_task.registers.rdi = SYSCALL_ARGS.0;
+        current_task.registers.rsi = SYSCALL_ARGS.1;
+        current_task.registers.rdx = SYSCALL_ARGS.2;
+        current_task.registers.r10 = SYSCALL_ARGS.3;
+        current_task.registers.r8 = SYSCALL_ARGS.4;
+        current_task.registers.r9 = SYSCALL_ARGS.5;
+        current_task.registers.orig_rax = SYSCALL_NUMBER;
+        current_task.registers.rip = (SYSCALL_INSTRUCTION_ADDRESS + 2u64).ptr() as u64;
+
+        // Queue the signal that interrupted the syscall.
+        current_task.write().signals.enqueue(SignalInfo::new(SIGUSR1, SI_USER, SignalDetail::None));
+
+        // Process the signal.
+        dequeue_signal(&mut current_task);
+
+        // The instruction pointer should have changed to the signal handling address.
+        assert_eq!(current_task.registers.rip, SA_HANDLER_ADDRESS.ptr() as u64);
+
+        // The syscall arguments should be overwritten with signal handling args.
+        assert_ne!(current_task.registers.rdi, SYSCALL_ARGS.0);
+        assert_ne!(current_task.registers.rsi, SYSCALL_ARGS.1);
+        assert_ne!(current_task.registers.rdx, SYSCALL_ARGS.2);
+
+        // Now we assume that execution of the signal handler completed with a call to
+        // `sys_rt_sigreturn`, which would set `rax` to that syscall number.
+        current_task.registers.rax = __NR_rt_sigreturn as u64;
+        current_task.registers.rsp += 8; // The stack was popped returning from the signal handler.
+
+        restore_from_signal_handler(&mut current_task).expect("failed to restore state");
+
+        // The state of the task is now such that when switching back to userspace, the instruction
+        // pointer will point at the original syscall instruction, with the arguments correctly
+        // restored into the registers.
+        assert_eq!(current_task.registers.rax, SYSCALL_NUMBER);
+        assert_eq!(current_task.registers.rdi, SYSCALL_ARGS.0);
+        assert_eq!(current_task.registers.rsi, SYSCALL_ARGS.1);
+        assert_eq!(current_task.registers.rdx, SYSCALL_ARGS.2);
+        assert_eq!(current_task.registers.r10, SYSCALL_ARGS.3);
+        assert_eq!(current_task.registers.r8, SYSCALL_ARGS.4);
+        assert_eq!(current_task.registers.r9, SYSCALL_ARGS.5);
+        assert_eq!(current_task.registers.rip, SYSCALL_INSTRUCTION_ADDRESS.ptr() as u64);
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[::fuchsia::test]
+    fn syscall_nested_restart() {
+        let (_kernel, mut current_task) = create_kernel_and_task_with_stack();
+
+        // Register the signal actions.
+        current_task.thread_group.signal_actions.set(
+            SIGUSR1,
+            sigaction_t {
+                sa_flags: (SA_RESTORER | SA_RESTART | SA_SIGINFO) as u64,
+                sa_handler: SA_HANDLER_ADDRESS,
+                sa_restorer: SA_RESTORER_ADDRESS,
+                ..sigaction_t::default()
+            },
+        );
+        current_task.thread_group.signal_actions.set(
+            SIGUSR2,
+            sigaction_t {
+                sa_flags: (SA_RESTORER | SA_RESTART | SA_SIGINFO) as u64,
+                sa_handler: SA_HANDLER2_ADDRESS,
+                sa_restorer: SA_RESTORER_ADDRESS,
+                ..sigaction_t::default()
+            },
+        );
+
+        // Simulate a syscall that should be restarted by setting up the register state to what it
+        // was after the interrupted syscall. `rax` should have the return value (-ERESTARTSYS);
+        // `rdi`, `rsi`, `rdx`, `r10`, `r8`, `r9`, should be the syscall arguments;
+        // `orig_rax` should hold the syscall number;
+        // and the instruction pointer should be 2 bytes after the syscall instruction.
+        current_task.registers.rax = -ERESTARTSYS.value() as u64;
+        current_task.registers.rdi = SYSCALL_ARGS.0;
+        current_task.registers.rsi = SYSCALL_ARGS.1;
+        current_task.registers.rdx = SYSCALL_ARGS.2;
+        current_task.registers.r10 = SYSCALL_ARGS.3;
+        current_task.registers.r8 = SYSCALL_ARGS.4;
+        current_task.registers.r9 = SYSCALL_ARGS.5;
+        current_task.registers.orig_rax = SYSCALL_NUMBER;
+        current_task.registers.rip = (SYSCALL_INSTRUCTION_ADDRESS + 2u64).ptr() as u64;
+
+        // Queue the signal that interrupted the syscall.
+        current_task.write().signals.enqueue(SignalInfo::new(SIGUSR1, SI_USER, SignalDetail::None));
+
+        // Process the signal.
+        dequeue_signal(&mut current_task);
+
+        // The instruction pointer should have changed to the signal handling address.
+        assert_eq!(current_task.registers.rip, SA_HANDLER_ADDRESS.ptr() as u64);
+
+        // The syscall arguments should be overwritten with signal handling args.
+        assert_ne!(current_task.registers.rdi, SYSCALL_ARGS.0);
+        assert_ne!(current_task.registers.rsi, SYSCALL_ARGS.1);
+        assert_ne!(current_task.registers.rdx, SYSCALL_ARGS.2);
+
+        // Simulate another syscall being interrupted.
+        current_task.registers.rax = -ERESTARTSYS.value() as u64;
+        current_task.registers.rdi = SYSCALL2_ARGS.0;
+        current_task.registers.rsi = SYSCALL2_ARGS.1;
+        current_task.registers.rdx = SYSCALL2_ARGS.2;
+        current_task.registers.r10 = SYSCALL2_ARGS.3;
+        current_task.registers.r8 = SYSCALL2_ARGS.4;
+        current_task.registers.r9 = SYSCALL2_ARGS.5;
+        current_task.registers.orig_rax = SYSCALL2_NUMBER;
+        current_task.registers.rip = (SYSCALL2_INSTRUCTION_ADDRESS + 2u64).ptr() as u64;
+
+        // Queue the signal that interrupted the syscall.
+        current_task.write().signals.enqueue(SignalInfo::new(SIGUSR2, SI_USER, SignalDetail::None));
+
+        // Process the signal.
+        dequeue_signal(&mut current_task);
+
+        // The instruction pointer should have changed to the signal handling address.
+        assert_eq!(current_task.registers.rip, SA_HANDLER2_ADDRESS.ptr() as u64);
+
+        // The syscall arguments should be overwritten with signal handling args.
+        assert_ne!(current_task.registers.rdi, SYSCALL2_ARGS.0);
+        assert_ne!(current_task.registers.rsi, SYSCALL2_ARGS.1);
+        assert_ne!(current_task.registers.rdx, SYSCALL2_ARGS.2);
+
+        // Now we assume that execution of the second signal handler completed with a call to
+        // `sys_rt_sigreturn`, which would set `rax` to that syscall number.
+        current_task.registers.rax = __NR_rt_sigreturn as u64;
+        current_task.registers.rsp += 8; // The stack was popped returning from the signal handler.
+
+        restore_from_signal_handler(&mut current_task).expect("failed to restore state");
+
+        // The state of the task is now such that when switching back to userspace, the instruction
+        // pointer will point at the original syscall instruction, with the arguments correctly
+        // restored into the registers.
+        assert_eq!(current_task.registers.rax, SYSCALL2_NUMBER);
+        assert_eq!(current_task.registers.rdi, SYSCALL2_ARGS.0);
+        assert_eq!(current_task.registers.rsi, SYSCALL2_ARGS.1);
+        assert_eq!(current_task.registers.rdx, SYSCALL2_ARGS.2);
+        assert_eq!(current_task.registers.r10, SYSCALL2_ARGS.3);
+        assert_eq!(current_task.registers.r8, SYSCALL2_ARGS.4);
+        assert_eq!(current_task.registers.r9, SYSCALL2_ARGS.5);
+        assert_eq!(current_task.registers.rip, SYSCALL2_INSTRUCTION_ADDRESS.ptr() as u64);
+
+        // Now we assume that execution of the first signal handler completed with a call to
+        // `sys_rt_sigreturn`, which would set `rax` to that syscall number.
+        current_task.registers.rax = __NR_rt_sigreturn as u64;
+        current_task.registers.rsp += 8; // The stack was popped returning from the signal handler.
+
+        restore_from_signal_handler(&mut current_task).expect("failed to restore state");
+
+        // The state of the task is now such that when switching back to userspace, the instruction
+        // pointer will point at the original syscall instruction, with the arguments correctly
+        // restored into the registers.
+        assert_eq!(current_task.registers.rax, SYSCALL_NUMBER);
+        assert_eq!(current_task.registers.rdi, SYSCALL_ARGS.0);
+        assert_eq!(current_task.registers.rsi, SYSCALL_ARGS.1);
+        assert_eq!(current_task.registers.rdx, SYSCALL_ARGS.2);
+        assert_eq!(current_task.registers.r10, SYSCALL_ARGS.3);
+        assert_eq!(current_task.registers.r8, SYSCALL_ARGS.4);
+        assert_eq!(current_task.registers.r9, SYSCALL_ARGS.5);
+        assert_eq!(current_task.registers.rip, SYSCALL_INSTRUCTION_ADDRESS.ptr() as u64);
+    }
+
+    #[cfg(target_arch = "x86_64")]
+    #[::fuchsia::test]
+    fn syscall_does_not_restart_if_signal_action_has_no_sa_restart_flag() {
+        let (_kernel, mut current_task) = create_kernel_and_task_with_stack();
+
+        // Register the signal action.
+        current_task.thread_group.signal_actions.set(
+            SIGUSR1,
+            sigaction_t {
+                sa_flags: (SA_RESTORER | SA_SIGINFO) as u64,
+                sa_handler: SA_HANDLER_ADDRESS,
+                sa_restorer: SA_RESTORER_ADDRESS,
+                ..sigaction_t::default()
+            },
+        );
+
+        // Simulate a syscall that should be restarted by setting up the register state to what it
+        // was after the interrupted syscall. `rax` should have the return value (-ERESTARTSYS);
+        // `rdi`, `rsi`, `rdx`, `r10`, `r8`, `r9`, should be the syscall arguments;
+        // `orig_rax` should hold the syscall number;
+        // and the instruction pointer should be 2 bytes after the syscall instruction.
+        current_task.registers.rax = -ERESTARTSYS.value() as u64;
+        current_task.registers.rdi = SYSCALL_ARGS.0;
+        current_task.registers.rsi = SYSCALL_ARGS.1;
+        current_task.registers.rdx = SYSCALL_ARGS.2;
+        current_task.registers.r10 = SYSCALL_ARGS.3;
+        current_task.registers.r8 = SYSCALL_ARGS.4;
+        current_task.registers.r9 = SYSCALL_ARGS.5;
+        current_task.registers.orig_rax = SYSCALL_NUMBER;
+        current_task.registers.rip = (SYSCALL_INSTRUCTION_ADDRESS + 2u64).ptr() as u64;
+
+        // Queue the signal that interrupted the syscall.
+        current_task.write().signals.enqueue(SignalInfo::new(SIGUSR1, SI_USER, SignalDetail::None));
+
+        // Process the signal.
+        dequeue_signal(&mut current_task);
+
+        // The instruction pointer should have changed to the signal handling address.
+        assert_eq!(current_task.registers.rip, SA_HANDLER_ADDRESS.ptr() as u64);
+
+        // The syscall arguments should be overwritten with signal handling args.
+        assert_ne!(current_task.registers.rdi, SYSCALL_ARGS.0);
+        assert_ne!(current_task.registers.rsi, SYSCALL_ARGS.1);
+        assert_ne!(current_task.registers.rdx, SYSCALL_ARGS.2);
+
+        // Now we assume that execution of the signal handler completed with a call to
+        // `sys_rt_sigreturn`, which would set `rax` to that syscall number.
+        current_task.registers.rax = __NR_rt_sigreturn as u64;
+        current_task.registers.rsp += 8; // The stack was popped returning from the signal handler.
+
+        restore_from_signal_handler(&mut current_task).expect("failed to restore state");
+
+        // The state of the task is now such that when switching back to userspace, the instruction
+        // pointer will point at the original syscall instruction, with the arguments correctly
+        // restored into the registers.
+        assert_eq!(current_task.registers.rax, -EINTR.value() as u64);
+        assert_eq!(current_task.registers.rip, (SYSCALL_INSTRUCTION_ADDRESS + 2u64).ptr() as u64);
+    }
+
+    /// Creates a kernel and initial task, giving the task a stack.
+    fn create_kernel_and_task_with_stack() -> (Arc<Kernel>, CurrentTask) {
+        let (kernel, mut current_task) = create_kernel_and_task();
+
+        const STACK_SIZE: usize = 0x1000;
+
+        // Give the task a stack.
+        let stack_base = current_task
+            .mm
+            .map(
+                DesiredAddress::Hint(UserAddress::default()),
+                Arc::new(zx::Vmo::create(STACK_SIZE as u64).expect("failed to create stack VMO")),
+                0,
+                STACK_SIZE,
+                zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE,
+                MappingOptions::empty(),
+                None,
+            )
+            .expect("failed to map stack VMO");
+        current_task.registers.rsp = (stack_base + (STACK_SIZE - 8)).ptr() as u64;
+
+        (kernel, current_task)
     }
 }

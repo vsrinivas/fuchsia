@@ -15,7 +15,10 @@ group("tests") {
 
 if (host_os == "linux") {
   test("syscalls_test") {
-    sources = [ "trivial_test.cc" ]
+    sources = [
+      "restart_read_test.cc",
+      "trivial_test.cc",
+    ]
     deps = [
       "//src/lib/fxl/test:gtest_main",
       "//third_party/googletest:gtest",

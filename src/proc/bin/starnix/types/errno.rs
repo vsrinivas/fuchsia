@@ -397,6 +397,11 @@ pub const EHWPOISON: Errno =
 // ENOTSUP is a different error in posix, but has the same value as EOPNOTSUPP in linux.
 pub const ENOTSUP: Errno = EOPNOTSUPP;
 
+/// A special error that represents an interrupted syscall that should be restarted if possible.
+// This is not defined in uapi as it is never exposed to userspace.
+pub const ERESTARTSYS: Errno =
+    Errno { value: 512, name: "ERESTARTSYS", file: None, line: None, context: None };
+
 /// `error` returns a `Err` containing an `Errno` struct tagged with the current file name and line
 /// number.
 ///
@@ -486,3 +491,16 @@ macro_rules! from_status_like_fdio {
 pub(crate) use errno;
 pub(crate) use error;
 pub(crate) use from_status_like_fdio;
+
+/// An extension trait for `Result<T, Errno>`.
+pub trait ErrnoResultExt<T> {
+    /// Maps `Err(EINTR)` to `Err(ERESTARTSYS)`, which tells the kernel to restart the syscall if
+    /// the dispatched signal action that interrupted the syscall has the `SA_RESTART` flag.
+    fn restartable(self) -> Result<T, Errno>;
+}
+
+impl<T> ErrnoResultExt<T> for Result<T, Errno> {
+    fn restartable(self) -> Result<T, Errno> {
+        self.map_err(|err| if err == EINTR { errno!(ERESTARTSYS) } else { err })
+    }
+}
