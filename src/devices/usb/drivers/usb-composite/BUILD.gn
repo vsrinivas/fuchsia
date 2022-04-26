@@ -47,4 +47,5 @@ fuchsia_driver_component("usb-composite") {
   component_name = "usb-composite"
   deps = [ ":usb-composite-driver" ]
   colocate = true
+  fallback = true
 }

@@ -389,7 +389,12 @@ const std::vector<MatchedDriver> DriverLoader::MatchPropertiesDriverIndex(
     }
 
     if (!fidl_driver_info->has_driver_url()) {
-      LOGF(ERROR, "DriverIndex: MatchDriverV1 response is missing a driver_url");
+      LOGF(ERROR, "DriverIndex: MatchDriversV1 response is missing a driver_url");
+      continue;
+    }
+
+    if (!fidl_driver_info->has_is_fallback()) {
+      LOGF(ERROR, "DriverIndex: MatchDriversV1 response is missing is_fallback");
       continue;
     }
 
@@ -404,7 +409,7 @@ const std::vector<MatchedDriver> DriverLoader::MatchPropertiesDriverIndex(
       continue;
     }
 
-    if (!loaded_driver->fallback && config.only_return_base_and_fallback_drivers &&
+    if (!fidl_driver_info->is_fallback() && config.only_return_base_and_fallback_drivers &&
         IsFuchsiaBootScheme(driver_url)) {
       continue;
     }
@@ -426,7 +431,7 @@ const std::vector<MatchedDriver> DriverLoader::MatchPropertiesDriverIndex(
     }
 
     if (config.libname.empty() || MatchesLibnameDriverIndex(driver_url, config.libname)) {
-      if (loaded_driver->fallback) {
+      if (fidl_driver_info->is_fallback()) {
         if (include_fallback_drivers_ || !config.libname.empty()) {
           matched_fallback_drivers.push_back(matched_driver);
         }

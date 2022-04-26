@@ -12,6 +12,7 @@
 #include <zxtest/zxtest.h>
 
 #include "fbl/ref_ptr.h"
+#include "src/devices/bin/driver_manager/driver.h"
 #include "src/devices/bin/driver_manager/v1/init_task.h"
 #include "src/devices/bin/driver_manager/v1/resume_task.h"
 #include "src/devices/bin/driver_manager/v1/suspend_task.h"
@@ -33,6 +34,18 @@ class FakeResolver : public internal::PackageResolverInterface {
   std::map<std::string, std::unique_ptr<Driver>> map;
 };
 
+struct FakeDriver {
+  std::string driver_url;
+  fdf::wire::DriverPackageType package_type;
+  bool is_fallback = false;
+
+  FakeDriver(std::string driver_url, fdf::wire::DriverPackageType package_type,
+             bool is_fallback = false)
+      : driver_url(std::move(driver_url)),
+        package_type(std::move(package_type)),
+        is_fallback(is_fallback) {}
+};
+
 class FakeDriverLoaderIndex final : public fidl::WireServer<fdf::DriverIndex> {
  public:
   void MatchDriver(MatchDriverRequestView request, MatchDriverCompleter::Sync& completer) override {
@@ -48,14 +61,14 @@ class FakeDriverLoaderIndex final : public fidl::WireServer<fdf::DriverIndex> {
                       MatchDriversV1Completer::Sync& completer) override {
     fidl::Arena allocator;
     fidl::VectorView<fdf::wire::MatchedDriver> drivers(allocator,
-                                                       driver_urls.size() + device_groups.size());
+                                                       fake_drivers.size() + device_groups.size());
     size_t index = 0;
-    for (auto& driver_url_pair : driver_urls) {
+    for (auto& driver : fake_drivers) {
       auto driver_info = fdf::wire::MatchedDriverInfo(allocator);
       driver_info.set_driver_url(
-          fidl::ObjectView<fidl::StringView>(allocator, allocator, driver_url_pair.first));
-
-      driver_info.set_package_type(driver_url_pair.second);
+          fidl::ObjectView<fidl::StringView>(allocator, allocator, driver.driver_url));
+      driver_info.set_package_type(driver.package_type);
+      driver_info.set_is_fallback(driver.is_fallback);
 
       drivers[index] = fdf::wire::MatchedDriver::WithDriver(
           fidl::ObjectView<fdf::wire::MatchedDriverInfo>(allocator, driver_info));
@@ -76,8 +89,7 @@ class FakeDriverLoaderIndex final : public fidl::WireServer<fdf::DriverIndex> {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  // Second item of the pair specifies the driver package type to set on the DriverInfo.
-  std::vector<std::pair<std::string, fdf::wire::DriverPackageType>> driver_urls;
+  std::vector<FakeDriver> fake_drivers;
   std::vector<fdf::wire::MatchedDeviceGroupInfo> device_groups;
 };
 
@@ -104,10 +116,10 @@ TEST_F(DriverLoaderTest, TestFallbackGetsRemoved) {
   std::string not_fallback_libname = "fuchsia_boot:///#not_fallback.so";
   std::string fallback_libname = "fuchsia_boot:///#fallback.so";
 
-  driver_index_server.driver_urls.emplace_back(not_fallback_libname,
-                                               fdf::wire::DriverPackageType::kBoot);
-  driver_index_server.driver_urls.emplace_back(fallback_libname,
-                                               fdf::wire::DriverPackageType::kBoot);
+  driver_index_server.fake_drivers.emplace_back(not_fallback_libname,
+                                                fdf::wire::DriverPackageType::kBoot);
+  driver_index_server.fake_drivers.emplace_back(fallback_libname,
+                                                fdf::wire::DriverPackageType::kBoot, true);
 
   auto not_fallback = std::make_unique<Driver>();
   not_fallback->libname = not_fallback_libname;
@@ -134,10 +146,10 @@ TEST_F(DriverLoaderTest, TestFallbackAcceptedAfterBaseLoaded) {
   std::string not_fallback_libname = "fuchsia_boot:///#not_fallback.so";
   std::string fallback_libname = "fuchsia_boot:///#fallback.so";
 
-  driver_index_server.driver_urls.emplace_back(not_fallback_libname,
-                                               fdf::wire::DriverPackageType::kBoot);
-  driver_index_server.driver_urls.emplace_back(fallback_libname,
-                                               fdf::wire::DriverPackageType::kBoot);
+  driver_index_server.fake_drivers.emplace_back(not_fallback_libname,
+                                                fdf::wire::DriverPackageType::kBoot);
+  driver_index_server.fake_drivers.emplace_back(fallback_libname,
+                                                fdf::wire::DriverPackageType::kBoot, true);
 
   auto not_fallback = std::make_unique<Driver>();
   not_fallback->libname = not_fallback_libname;
@@ -171,10 +183,10 @@ TEST_F(DriverLoaderTest, TestFallbackAcceptedWhenSystemNotRequired) {
   std::string not_fallback_libname = "fuchsia_boot:///#not_fallback.so";
   std::string fallback_libname = "fuchsia_boot:///#fallback.so";
 
-  driver_index_server.driver_urls.emplace_back(not_fallback_libname,
-                                               fdf::wire::DriverPackageType::kBoot);
-  driver_index_server.driver_urls.emplace_back(fallback_libname,
-                                               fdf::wire::DriverPackageType::kBoot);
+  driver_index_server.fake_drivers.emplace_back(not_fallback_libname,
+                                                fdf::wire::DriverPackageType::kBoot);
+  driver_index_server.fake_drivers.emplace_back(fallback_libname,
+                                                fdf::wire::DriverPackageType::kBoot, true);
 
   auto not_fallback = std::make_unique<Driver>();
   not_fallback->libname = not_fallback_libname;
@@ -203,8 +215,8 @@ TEST_F(DriverLoaderTest, TestLibname) {
   std::string name1 = "fuchsia_boot:///#driver1.so";
   std::string name2 = "fuchsia_boot:///#driver2.so";
 
-  driver_index_server.driver_urls.emplace_back(name1, fdf::wire::DriverPackageType::kBoot);
-  driver_index_server.driver_urls.emplace_back(name2, fdf::wire::DriverPackageType::kBoot);
+  driver_index_server.fake_drivers.emplace_back(name1, fdf::wire::DriverPackageType::kBoot);
+  driver_index_server.fake_drivers.emplace_back(name2, fdf::wire::DriverPackageType::kBoot);
 
   auto driver1 = std::make_unique<Driver>();
   driver1->libname = name1;
@@ -231,8 +243,8 @@ TEST_F(DriverLoaderTest, TestLibnameConvertToPath) {
   std::string name1 = "fuchsia-pkg://fuchsia.com/my-package#driver/#driver1.so";
   std::string name2 = "fuchsia-boot:///#driver/driver2.so";
 
-  driver_index_server.driver_urls.emplace_back(name1, fdf::wire::DriverPackageType::kBase);
-  driver_index_server.driver_urls.emplace_back(name2, fdf::wire::DriverPackageType::kBoot);
+  driver_index_server.fake_drivers.emplace_back(name1, fdf::wire::DriverPackageType::kBase);
+  driver_index_server.fake_drivers.emplace_back(name2, fdf::wire::DriverPackageType::kBoot);
 
   auto driver1 = std::make_unique<Driver>();
   driver1->libname = name1;
@@ -261,9 +273,9 @@ TEST_F(DriverLoaderTest, TestOnlyReturnBaseAndFallback) {
   std::string name2 = "fuchsia-boot:///#driver/driver2.so";
   std::string name3 = "fuchsia-boot:///#driver/driver3.so";
 
-  driver_index_server.driver_urls.emplace_back(name1, fdf::wire::DriverPackageType::kBase);
-  driver_index_server.driver_urls.emplace_back(name2, fdf::wire::DriverPackageType::kBoot);
-  driver_index_server.driver_urls.emplace_back(name3, fdf::wire::DriverPackageType::kBoot);
+  driver_index_server.fake_drivers.emplace_back(name1, fdf::wire::DriverPackageType::kBase);
+  driver_index_server.fake_drivers.emplace_back(name2, fdf::wire::DriverPackageType::kBoot);
+  driver_index_server.fake_drivers.emplace_back(name3, fdf::wire::DriverPackageType::kBoot, true);
 
   auto driver1 = std::make_unique<Driver>();
   driver1->libname = name1;
@@ -369,7 +381,7 @@ TEST_F(DriverLoaderTest, TestReturnDriversAndDeviceGroups) {
 
   auto driver_name = "fuchsia_boot:///#driver.so";
   driver_index_server.device_groups.push_back(device_group);
-  driver_index_server.driver_urls.emplace_back(driver_name, fdf::wire::DriverPackageType::kBoot);
+  driver_index_server.fake_drivers.emplace_back(driver_name, fdf::wire::DriverPackageType::kBoot);
 
   auto driver = std::make_unique<Driver>();
   driver->libname = driver_name;
@@ -423,8 +435,8 @@ TEST_F(DriverLoaderTest, TestEphemeralDriver) {
   std::string name1 = "fuchsia-pkg://fuchsia.com/my-package#driver/#driver1.so";
   std::string name2 = "fuchsia-boot:///#driver/driver2.so";
 
-  driver_index_server.driver_urls.emplace_back(name1, fdf::wire::DriverPackageType::kUniverse);
-  driver_index_server.driver_urls.emplace_back(name2, fdf::wire::DriverPackageType::kBoot);
+  driver_index_server.fake_drivers.emplace_back(name1, fdf::wire::DriverPackageType::kUniverse);
+  driver_index_server.fake_drivers.emplace_back(name2, fdf::wire::DriverPackageType::kBoot);
 
   // Add driver 1 to universe resolver since it is a universe driver.
   auto driver1 = std::make_unique<Driver>();

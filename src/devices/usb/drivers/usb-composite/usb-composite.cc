@@ -436,6 +436,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace usb_composite
 
-// The '*' in the version string is important. This marks this driver as a fallback, to allow other
-// drivers to bind against ZX_PROTOCOL_USB_DEVICE to handle more specific cases.
-ZIRCON_DRIVER(usb_composite, usb_composite::driver_ops, "zircon", "*0.1");
+ZIRCON_DRIVER(usb_composite, usb_composite::driver_ops, "zircon", "0.1");

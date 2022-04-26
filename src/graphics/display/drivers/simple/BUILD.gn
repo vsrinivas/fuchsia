@@ -32,37 +32,41 @@ source_set("shared") {
   configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
-simple_drivers = [
-  "amd-kaveri",
-  "bochs",
-  "gga",
-  "intel",
-  "nv",
-  "vmware",
-]
-
-tests = []
-
-foreach(driver, simple_drivers) {
-  driver_bind_rules("simple-$driver-bind") {
-    rules = "simple-$driver.bind"
-    header_output = "simple-$driver-bind.h"
-    tests = "${driver}_bind_tests.json"
+# Creates a Fuchsia driver assuming the driver's files start with the same
+# naming scheme: "simple-${target_name}" where `target_name` is the name of the
+# driver.
+#
+# This template assumes that the following files exist for the driver:
+# * simple-${target_name}.bind - the driver's bind rules
+# * ${target_name}_bind_tests.json - the driver's bind tests
+# * simple-${target_name}.cc - the driver's C++ source code
+# * simple.${target_name}-info.json - the driver's info
+#
+# Parameters
+#
+#   is_fallback (optional)
+#     Whether or not the driver is a fallback driver
+#     Type: boolean
+#     Default: false
+template("simple_fuchsia_driver") {
+  driver_name = target_name
+  driver_bind_rules("simple-${driver_name}-bind") {
+    rules = "simple-${driver_name}.bind"
+    header_output = "simple-${driver_name}-bind.h"
+    tests = "${driver_name}_bind_tests.json"
     deps = [ "//src/devices/bind/fuchsia.pci" ]
   }
 
-  tests += [ ":simple-$driver-bind_test" ]
-
-  fuchsia_driver("simple.$driver-driver") {
-    output_name = "simple.$driver"
+  fuchsia_driver("simple.${driver_name}-driver") {
+    output_name = "simple.${driver_name}"
     configs += [
       "//build/config:all_source",
       "//build/config/fuchsia:enable_zircon_asserts",
     ]
-    sources = [ "simple-$driver.cc" ]
+    sources = [ "simple-${driver_name}.cc" ]
     deps = [
       ":shared",
-      ":simple-$driver-bind",
+      ":simple-${driver_name}-bind",
       "//sdk/banjo/fuchsia.hardware.display.controller:fuchsia.hardware.display.controller_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
       "//src/devices/pci/lib/device-protocol-pci",
@@ -71,15 +75,46 @@ foreach(driver, simple_drivers) {
     ]
   }
 
-  fuchsia_driver_component("simple.$driver") {
-    component_name = "simple.$driver"
-    deps = [ ":simple.$driver-driver" ]
-    info = "simple.$driver-info.json"
+  is_fallback = false
+  if (defined(invoker.is_fallback)) {
+    is_fallback = invoker.is_fallback
+  }
+  fuchsia_driver_component("simple.${driver_name}") {
+    component_name = "simple.${driver_name}"
+    deps = [ ":simple.${driver_name}-driver" ]
+    info = "simple.${driver_name}-info.json"
     colocate = true
     root_resource = true
+    fallback = is_fallback
   }
 }
+
+simple_fuchsia_driver("amd-kaveri") {
+  is_fallback = false
+}
+simple_fuchsia_driver("bochs") {
+  is_fallback = false
+}
+simple_fuchsia_driver("gga") {
+  is_fallback = false
+}
+simple_fuchsia_driver("intel") {
+  is_fallback = true
+}
+simple_fuchsia_driver("nv") {
+  is_fallback = false
+}
+simple_fuchsia_driver("vmware") {
+  is_fallback = false
+}
+
 group("tests") {
   testonly = true
-  deps = tests
+  deps = [
+    ":simple-amd-kaveri-bind_test",
+    ":simple-bochs-bind_test",
+    ":simple-gga-bind_test",
+    ":simple-intel-bind_test",
+    ":simple-vmware-bind_test",
+  ]
 }

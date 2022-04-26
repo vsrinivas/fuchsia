@@ -20,6 +20,7 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_framework::
   struct MatchResult {
     std::string url;
     std::optional<CompositeDriverInfo> composite;
+    bool is_fallback = false;
   };
 
   using MatchCallback =
@@ -78,6 +79,7 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_framework::
     auto driver_info = fuchsia_driver_framework::wire::MatchedDriverInfo(arena);
     driver_info.set_driver_url(fidl::ObjectView<fidl::StringView>(arena, arena, match.url));
     driver_info.set_url(fidl::ObjectView<fidl::StringView>(arena, arena, match.url));
+    driver_info.set_is_fallback(match.is_fallback);
 
     if (!match.composite) {
       return fuchsia_driver_framework::wire::MatchedDriver::WithDriver(

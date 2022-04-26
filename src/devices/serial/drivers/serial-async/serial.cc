@@ -227,6 +227,6 @@ static constexpr zx_driver_ops_t serial_driver_ops = []() {
 
 // The formatter does not play nice with these macros.
 // clang-format off
-ZIRCON_DRIVER(serial, serial::serial_driver_ops, "zircon", "*0.1");
+ZIRCON_DRIVER(serial, serial::serial_driver_ops, "zircon", "0.1");
 
 // clang-format on

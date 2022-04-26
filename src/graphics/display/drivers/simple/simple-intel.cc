@@ -17,4 +17,4 @@ static zx_driver_ops_t intel_disp_driver_ops = {
     .bind = intel_disp_bind,
 };
 
-ZIRCON_DRIVER(intel_disp, intel_disp_driver_ops, "zircon", "*0.1");
+ZIRCON_DRIVER(intel_disp, intel_disp_driver_ops, "zircon", "0.1");
