@@ -15,6 +15,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",
+    "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework-rustc",
     "//sdk/fidl/fuchsia.driver.registrar:fuchsia.driver.registrar-rustc",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block-rustc",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition-rustc",
