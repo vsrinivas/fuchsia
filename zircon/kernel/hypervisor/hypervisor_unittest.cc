@@ -389,7 +389,20 @@ static bool guest_physical_address_space_write_combining() {
   END_TEST;
 }
 
-static bool id_allocator_reset_to_size() {
+template <typename T>
+[[nodiscard]] bool alloc_ids(T& allocator, hypervisor::GenType gen, uint8_t min, uint8_t max) {
+  for (uint8_t i = min; i < max; i++) {
+    auto id = allocator.Alloc();
+    if (id.val() != i || id.gen() != gen) {
+      unittest_printf("\nid.val() = %u (expected %u), id.gen() = %u (expected %u)\n", id.val(), i,
+                      id.gen(), gen);
+      return false;
+    }
+  }
+  return true;
+}
+
+static bool id_allocator_alloc_and_free() {
   BEGIN_TEST;
 
   constexpr uint8_t kMaxId = sizeof(size_t);
@@ -402,28 +415,90 @@ static bool id_allocator_reset_to_size() {
   result = allocator.Reset(kMaxId);
   EXPECT_EQ(ZX_OK, result.status_value());
 
-  // Allocate until all IDs are used.
-  for (uint8_t i = kMinId; i < kMaxId; i++) {
-    auto id = allocator.Alloc();
-    EXPECT_EQ(ZX_OK, id.status_value());
-    EXPECT_EQ(i, *id);
+  // Allocate multiple generations of IDs.
+  constexpr hypervisor::GenType kMaxGen = 4;
+  for (hypervisor::GenType gen = 0; gen < kMaxGen; gen++) {
+    // Allocate until all IDs are used.
+    EXPECT_TRUE(alloc_ids(allocator, gen, kMinId, kMaxId));
   }
+
+  // Allocate within the same generation, when no IDs are free.
+  auto try_gen = allocator.TryAlloc();
+  EXPECT_EQ(ZX_ERR_NO_RESOURCES, try_gen.status_value());
 
   // Allocate when no IDs are free.
   auto id = allocator.Alloc();
-  EXPECT_EQ(ZX_ERR_NO_RESOURCES, id.status_value());
+  EXPECT_EQ(kMinId, id.val());
+  EXPECT_EQ(kMaxGen, id.gen());
 
-  // Free an ID that was never allocated.
-  result = allocator.Free(kMaxId + 1);
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.status_value());
-
-  // Free a random ID, and then check that it gets reallocated.
-  constexpr uint8_t kIdx = kMaxId / 2;
-  result = allocator.Free(kIdx);
+  // Free an ID that was just allocated.
+  result = allocator.Free(std::move(id));
   EXPECT_EQ(ZX_OK, result.status_value());
-  id = allocator.Alloc();
-  EXPECT_EQ(ZX_OK, id.status_value());
-  EXPECT_EQ(kIdx, *id);
+
+  END_TEST;
+}
+
+static bool id_allocator_alloc_and_migrate() {
+  BEGIN_TEST;
+
+  constexpr uint8_t kMaxId = sizeof(size_t);
+  constexpr uint8_t kMinId = 1;
+  hypervisor::IdAllocator<uint8_t, kMaxId, kMinId> allocator;
+
+  // Allocate a generation of IDs, leaving the last ID free.
+  EXPECT_TRUE(alloc_ids(allocator, 0, kMinId, kMaxId - 1));
+  // Allocate a single ID.
+  auto id = allocator.Alloc();
+  EXPECT_EQ(kMaxId - 1, id.val());
+  EXPECT_EQ(0u, id.gen());
+
+  // Attempt to migrate the ID. This should leave `invalidated` as false, as
+  // there were no new allocations and the generation is the same.
+  bool invalidated = false;
+  allocator.Migrate(id, [&invalidated](auto) { invalidated = true; });
+  EXPECT_FALSE(invalidated);
+  EXPECT_EQ(kMaxId - 1, id.val());
+  EXPECT_EQ(0u, id.gen());
+
+  // Allocate a generation of IDs, leaving the last ID free.
+  EXPECT_TRUE(alloc_ids(allocator, 1, kMinId, kMaxId - 1));
+  // Attempt to migrate the ID, which should cause it to be upgraded to the new
+  // generation. As we retain the same ID value, `invalidated` should be false.
+  allocator.Migrate(id, [&invalidated](auto) { invalidated = true; });
+  EXPECT_FALSE(invalidated);
+  EXPECT_EQ(kMaxId - 1, id.val());
+  EXPECT_EQ(1u, id.gen());
+
+  // Allocate a generation of IDs, this time the last ID is taken.
+  EXPECT_TRUE(alloc_ids(allocator, 2, kMaxId - 1, kMaxId));
+  EXPECT_TRUE(alloc_ids(allocator, 2, kMinId, kMinId + 1));
+  // Attempt to migrate the ID, and verify that `invalidated` is true.
+  uint8_t invalidated_id = 0;
+  allocator.Migrate(id, [&invalidated, &invalidated_id](uint8_t id) {
+    invalidated = true;
+    invalidated_id = id;
+  });
+  EXPECT_TRUE(invalidated);
+  EXPECT_EQ(invalidated_id, id.val());
+  EXPECT_EQ(kMinId + 1, id.val());
+  EXPECT_EQ(2u, id.gen());
+
+  // Allocate two generation of IDs.
+  EXPECT_TRUE(alloc_ids(allocator, 2, kMinId + 2, kMaxId - 1));
+  EXPECT_TRUE(alloc_ids(allocator, 3, kMaxId - 1, kMaxId));
+  EXPECT_TRUE(alloc_ids(allocator, 3, kMinId, kMaxId - 1));
+  // Attempt to migrate the ID, and verify that even though we have the same ID
+  // value, `invalidated` is true, as we are more than 1 generation old.
+  invalidated = false;
+  invalidated_id = 0;
+  allocator.Migrate(id, [&invalidated, &invalidated_id](uint8_t id) {
+    invalidated = true;
+    invalidated_id = id;
+  });
+  EXPECT_TRUE(invalidated);
+  EXPECT_EQ(invalidated_id, id.val());
+  EXPECT_EQ(kMinId + 1, id.val());
+  EXPECT_EQ(4u, id.gen());
 
   END_TEST;
 }
@@ -568,7 +643,8 @@ HYPERVISOR_UNITTEST(guest_physical_address_space_map_interrupt_controller)
 HYPERVISOR_UNITTEST(guest_physical_address_space_uncached)
 HYPERVISOR_UNITTEST(guest_physical_address_space_uncached_device)
 HYPERVISOR_UNITTEST(guest_physical_address_space_write_combining)
-HYPERVISOR_UNITTEST(id_allocator_reset_to_size)
+HYPERVISOR_UNITTEST(id_allocator_alloc_and_free)
+HYPERVISOR_UNITTEST(id_allocator_alloc_and_migrate)
 HYPERVISOR_UNITTEST(interrupt_bitmap)
 HYPERVISOR_UNITTEST(trap_map_insert_trap_intersecting)
 HYPERVISOR_UNITTEST(trap_map_insert_trap_out_of_range)

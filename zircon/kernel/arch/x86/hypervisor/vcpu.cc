@@ -146,7 +146,7 @@ void register_copy(Out* out, const In& in) {
   out->r15 = in.r15;
 }
 
-zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
+zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, uintptr_t entry,
                       paddr_t msr_bitmaps_address, paddr_t pml4_address, VmxState* vmx_state,
                       VmxPage* host_msr_page, VmxPage* guest_msr_page) {
   zx_status_t status = vmclear(vmcs_address);
@@ -248,7 +248,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
   // Setup VM-entry VMCS controls.
   // Load the guest IA32_PAT MSR and IA32_EFER MSR on entry.
   uint32_t entry_ctls = kEntryCtlsLoadIa32Pat | kEntryCtlsLoadIa32Efer;
-  if (vpid == kBaseProcessorVpid) {
+  if (vpid.val() == kBaseProcessorVpid) {
     // On the BSP, go straight to IA32E mode on entry.
     entry_ctls |= kEntryCtlsIa32eMode;
   }
@@ -321,7 +321,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
   // mappings for the current VPID are invalidated even if EPT is in use.
   // Combined mappings for the current VPID are invalidated even if EPT is
   // not in use.
-  vmcs.Write(VmcsField16::VPID, vpid);
+  vmcs.Write(VmcsField16::VPID, vpid.val());
 
   // From Volume 3, Section 28.2: The extended page-table mechanism (EPT) is a
   // feature that can be used to support the virtualization of physical
@@ -394,7 +394,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
   uint64_t cr0 = X86_CR0_PE |  // Enable protected mode
                  X86_CR0_PG |  // Enable paging
                  X86_CR0_NE;   // Enable internal x87 exception handling
-  if (vpid != kBaseProcessorVpid) {
+  if (vpid.val() != kBaseProcessorVpid) {
     // Disable protected mode and paging on secondary VCPUs.
     cr0 &= ~(X86_CR0_PE | X86_CR0_PG);
   }
@@ -424,7 +424,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
   vmcs.Write(VmcsFieldXX::CR0_READ_SHADOW, X86_CR0_CD | X86_CR0_ET);
 
   uint64_t cr4 = X86_CR4_VMXE;  // Enable VMX
-  if (vpid == kBaseProcessorVpid) {
+  if (vpid.val() == kBaseProcessorVpid) {
     // Enable the PAE bit on the BSP for 64-bit paging.
     cr4 |= X86_CR4_PAE;
   }
@@ -441,7 +441,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
   vmcs.Write(VmcsField64::GUEST_IA32_PAT, read_msr(X86_MSR_IA32_PAT));
 
   uint64_t guest_efer = read_msr(X86_MSR_IA32_EFER);
-  if (vpid != kBaseProcessorVpid) {
+  if (vpid.val() != kBaseProcessorVpid) {
     // Disable LME and LMA on all but the BSP.
     guest_efer &= ~(X86_EFER_LME | X86_EFER_LMA);
   }
@@ -449,7 +449,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
 
   uint32_t cs_access_rights =
       kGuestXxAccessRightsDefault | kGuestXxAccessRightsTypeE | kGuestXxAccessRightsTypeCode;
-  if (vpid == kBaseProcessorVpid) {
+  if (vpid.val() == kBaseProcessorVpid) {
     // Ensure that the BSP starts with a 64-bit code segment.
     cs_access_rights |= kGuestXxAccessRightsL;
   }
@@ -467,7 +467,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, uintptr_t entry,
   vmcs.Write(VmcsField32::GUEST_LDTR_ACCESS_RIGHTS,
              kGuestXxAccessRightsTypeW | kGuestXxAccessRightsP);
 
-  if (vpid == kBaseProcessorVpid) {
+  if (vpid.val() == kBaseProcessorVpid) {
     // Use GUEST_RIP to set the entry point on the BSP.
     vmcs.Write(VmcsFieldXX::GUEST_CS_BASE, 0);
     vmcs.Write(VmcsField16::GUEST_CS_SELECTOR, 0);
@@ -746,8 +746,8 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   if (vpid.is_error()) {
     return vpid.status_value();
   }
-  auto free_vpid = fit::defer([guest, vpid]() {
-    auto result = guest->FreeVpid(*vpid);
+  auto free_vpid = fit::defer([guest, &vpid]() {
+    auto result = guest->FreeVpid(ktl::move(*vpid));
     DEBUG_ASSERT(result.is_ok());
   });
 
@@ -817,9 +817,9 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   return ZX_OK;
 }
 
-Vcpu::Vcpu(Guest* guest, uint16_t vpid, Thread* thread)
+Vcpu::Vcpu(Guest* guest, hypervisor::Id<uint16_t>& vpid, Thread* thread)
     : guest_(guest),
-      vpid_(vpid),
+      vpid_(ktl::move(vpid)),
       last_cpu_(thread->LastCpu()),
       thread_(thread),
       vmx_state_(/* zero-init */) {
@@ -859,7 +859,7 @@ Vcpu::~Vcpu() {
         reinterpret_cast<void*>(paddr));
   }
 
-  auto result = guest_->FreeVpid(vpid_);
+  auto result = guest_->FreeVpid(ktl::move(vpid_));
   DEBUG_ASSERT(result.is_ok());
 }
 

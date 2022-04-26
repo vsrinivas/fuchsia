@@ -13,10 +13,10 @@
 #include <arch/arm64/hypervisor/el2_state.h>
 #include <fbl/ref_ptr.h>
 #include <hypervisor/guest_physical_address_space.h>
+#include <hypervisor/id_allocator.h>
 #include <hypervisor/interrupt_tracker.h>
 #include <hypervisor/page.h>
 #include <hypervisor/trap_map.h>
-#include <hypervisor/vpid_allocator.h>
 #include <kernel/event.h>
 #include <kernel/spinlock.h>
 #include <ktl/unique_ptr.h>
@@ -51,18 +51,17 @@ class Guest {
 
   hypervisor::GuestPhysicalAddressSpace* AddressSpace() { return &gpas_; }
   hypervisor::TrapMap* Traps() { return &traps_; }
-  uint16_t Vmid() const { return vmid_; }
 
-  zx::status<uint16_t> AllocVpid() { return vpid_allocator_.Alloc(); }
-  zx::status<> FreeVpid(uint16_t vpid) { return vpid_allocator_.Free(vpid); }
+  zx::status<hypervisor::Id<uint16_t>> AllocVpid() { return vpid_allocator_.TryAlloc(); }
+  zx::status<> FreeVpid(hypervisor::Id<uint16_t> id) { return vpid_allocator_.Free(ktl::move(id)); }
 
  private:
+  hypervisor::Id<uint16_t> vmid_;
   hypervisor::GuestPhysicalAddressSpace gpas_;
   hypervisor::TrapMap traps_;
-  hypervisor::VpidAllocator<uint16_t, kMaxGuestVcpus> vpid_allocator_;
-  const uint16_t vmid_;
+  hypervisor::IdAllocator<uint16_t, kMaxGuestVcpus> vpid_allocator_;
 
-  explicit Guest(uint16_t vmid);
+  explicit Guest(hypervisor::Id<uint16_t>& vmid);
 };
 
 // Stores the state of the GICH across VM exits.
@@ -123,7 +122,7 @@ class Vcpu {
 
  private:
   Guest* const guest_;
-  const uint16_t vpid_;
+  hypervisor::Id<uint16_t> vpid_;
   cpu_num_t last_cpu_ TA_GUARDED(ThreadLock::Get());
   // |thread_| will be set to nullptr when the thread exits.
   ktl::atomic<Thread*> thread_;
@@ -135,7 +134,7 @@ class Vcpu {
   GichState gich_state_;
   uint64_t hcr_;
 
-  Vcpu(Guest* guest, uint16_t vpid, Thread* thread);
+  Vcpu(Guest* guest, hypervisor::Id<uint16_t>& vpid, Thread* thread);
 
   void MigrateCpu(Thread* thread, Thread::MigrateStage stage) TA_REQ(ThreadLock::Get());
 };

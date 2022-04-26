@@ -16,10 +16,10 @@
 #include <arch/x86/interrupts.h>
 #include <fbl/ref_ptr.h>
 #include <hypervisor/guest_physical_address_space.h>
+#include <hypervisor/id_allocator.h>
 #include <hypervisor/interrupt_tracker.h>
 #include <hypervisor/page.h>
 #include <hypervisor/trap_map.h>
-#include <hypervisor/vpid_allocator.h>
 #include <kernel/event.h>
 #include <kernel/spinlock.h>
 #include <kernel/timer.h>
@@ -56,13 +56,13 @@ class Guest {
   hypervisor::TrapMap* Traps() { return &traps_; }
   zx_paddr_t MsrBitmapsAddress() const { return msr_bitmaps_page_.PhysicalAddress(); }
 
-  zx::status<uint16_t> AllocVpid() { return vpid_allocator_.Alloc(); }
-  zx::status<> FreeVpid(uint16_t vpid) { return vpid_allocator_.Free(vpid); }
+  zx::status<hypervisor::Id<uint16_t>> AllocVpid() { return vpid_allocator_.TryAlloc(); }
+  zx::status<> FreeVpid(hypervisor::Id<uint16_t> id) { return vpid_allocator_.Free(ktl::move(id)); }
 
  private:
   hypervisor::GuestPhysicalAddressSpace gpas_;
   hypervisor::TrapMap traps_;
-  hypervisor::VpidAllocator<uint16_t, kMaxGuestVcpus> vpid_allocator_;
+  hypervisor::IdAllocator<uint16_t, kMaxGuestVcpus> vpid_allocator_;
   VmxPage msr_bitmaps_page_;
 
   Guest() = default;
@@ -108,7 +108,7 @@ class Vcpu {
 
  private:
   Guest* const guest_;
-  const uint16_t vpid_;
+  hypervisor::Id<uint16_t> vpid_;
   // |last_cpu_| contains the CPU dedicated to holding the guest's VMCS state,
   // or INVALID_CPU if there is no such VCPU. If this Vcpu is actively running,
   // then |last_cpu_| will point to that CPU.
@@ -127,7 +127,7 @@ class Vcpu {
   VmxPage vmcs_page_;
   ktl::unique_ptr<uint8_t[]> guest_extended_registers_;
 
-  Vcpu(Guest* guest, uint16_t vpid, Thread* thread);
+  Vcpu(Guest* guest, hypervisor::Id<uint16_t>& vpid, Thread* thread);
 
   void MigrateCpu(Thread* thread, Thread::MigrateStage stage) TA_REQ(ThreadLock::Get());
   void SaveGuestExtendedRegisters(Thread* thread, uint64_t cr4);

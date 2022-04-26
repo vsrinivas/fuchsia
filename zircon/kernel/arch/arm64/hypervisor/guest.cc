@@ -31,12 +31,12 @@ zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
   fbl::AllocChecker ac;
   ktl::unique_ptr<Guest> guest(new (&ac) Guest(*vmid));
   if (!ac.check()) {
-    auto result = free_vmid(*vmid);
+    auto result = free_vmid(ktl::move(*vmid));
     ZX_ASSERT(result.is_ok());
     return ZX_ERR_NO_MEMORY;
   }
 
-  auto gpas = hypervisor::GuestPhysicalAddressSpace::Create(*vmid);
+  auto gpas = hypervisor::GuestPhysicalAddressSpace::Create(vmid->val());
   if (gpas.is_error()) {
     return gpas.status_value();
   }
@@ -61,10 +61,10 @@ zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
   return ZX_OK;
 }
 
-Guest::Guest(uint16_t vmid) : vmid_(vmid) {}
+Guest::Guest(hypervisor::Id<uint16_t>& vmid) : vmid_(ktl::move(vmid)) {}
 
 Guest::~Guest() {
-  auto result = free_vmid(vmid_);
+  auto result = free_vmid(ktl::move(vmid_));
   ZX_ASSERT(result.is_ok());
 }
 
