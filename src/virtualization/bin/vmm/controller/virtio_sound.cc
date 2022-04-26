@@ -6,25 +6,40 @@
 
 #include <lib/sys/cpp/service_directory.h>
 
+#include "src/virtualization/bin/vmm/controller/realm_utils.h"
 // No features currently defined.
 static constexpr uint32_t kDeviceFeatures = 0;
-
-static constexpr char kVirtioSoundUrl[] =
-    "fuchsia-pkg://fuchsia.com/virtio_sound#meta/virtio_sound.cmx";
 
 VirtioSound::VirtioSound(const PhysMem& phys_mem)
     : VirtioComponentDevice("Virtio Sound", phys_mem, kDeviceFeatures,
                             fit::bind_member(this, &VirtioSound::ConfigureQueue),
                             fit::bind_member(this, &VirtioSound::Ready)) {}
 
-zx_status_t VirtioSound::Start(const zx::guest& guest, fuchsia::sys::Launcher* launcher,
+zx_status_t VirtioSound::Start(const zx::guest& guest, fuchsia::sys::LauncherPtr& launcher,
+                               fuchsia::component::RealmSyncPtr& realm,
                                async_dispatcher_t* dispatcher, bool enable_input) {
-  fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = kVirtioSoundUrl;
-  auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
-  launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
-  services->Connect(sound_.NewRequest());
+  if (launcher) {
+    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_sound#meta/virtio_sound.cmx";
 
+    fuchsia::sys::LaunchInfo launch_info;
+    launch_info.url = kComponentUrl;
+    auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
+    launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
+    services->Connect(sound_.NewRequest());
+  } else {
+    constexpr auto kComponentName = "virtio_sound";
+    constexpr auto kComponentCollectionName = "virtio_sound_devices";
+    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_sound#meta/virtio_sound.cm";
+
+    zx_status_t status = CreateDynamicComponent(
+        realm, kComponentCollectionName, kComponentName, kComponentUrl,
+        [sound = sound_.NewRequest()](std::shared_ptr<sys::ServiceDirectory> services) mutable {
+          return services->Connect(std::move(sound));
+        });
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
   fuchsia::virtualization::hardware::StartInfo start_info;
   zx_status_t status = PrepStart(guest, dispatcher, &start_info);
   if (status != ZX_OK) {

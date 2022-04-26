@@ -4,12 +4,13 @@
 
 #include "src/virtualization/bin/vmm/controller/virtio_block.h"
 
+#include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <zircon/errors.h>
 
+#include "src/lib/fxl/strings/string_printf.h"
+#include "src/virtualization/bin/vmm/controller/realm_utils.h"
 #include "src/virtualization/bin/vmm/device/block.h"
-
-static constexpr char kVirtioBlockUrl[] =
-    "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cmx";
 
 static uint32_t read_only(fuchsia::virtualization::BlockMode mode) {
   return mode == fuchsia::virtualization::BlockMode::READ_ONLY ? VIRTIO_BLK_F_RO : 0;
@@ -35,12 +36,31 @@ VirtioBlock::VirtioBlock(const PhysMem& phys_mem, fuchsia::virtualization::Block
       format_(format) {}
 
 zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id, zx::channel client,
-                               fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher) {
-  fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = kVirtioBlockUrl;
-  auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
-  launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
-  services->Connect(block_.NewRequest());
+                               fuchsia::sys::LauncherPtr& launcher,
+                               fuchsia::component::RealmSyncPtr& realm,
+                               async_dispatcher_t* dispatcher, size_t component_name_suffix) {
+  if (launcher) {
+    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cmx";
+
+    fuchsia::sys::LaunchInfo launch_info;
+    launch_info.url = kComponentUrl;
+    auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
+    launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
+    services->Connect(block_.NewRequest());
+  } else {
+    const auto kComponentName = fxl::StringPrintf("virtio_block_%zu", component_name_suffix);
+    constexpr auto kVirtioBlockCollectionName = "virtio_block_devices";
+    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cm";
+
+    zx_status_t status = CreateDynamicComponent(
+        realm, kVirtioBlockCollectionName, kComponentName.c_str(), kComponentUrl,
+        [block = block_.NewRequest()](std::shared_ptr<sys::ServiceDirectory> services) mutable {
+          return services->Connect(std::move(block));
+        });
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
 
   fuchsia::virtualization::hardware::StartInfo start_info;
   zx_status_t status = PrepStart(guest, dispatcher, &start_info);

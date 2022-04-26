@@ -5,6 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_NET_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_NET_H_
 
+#include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 
@@ -27,7 +28,8 @@ class VirtioNet
 
   zx_status_t Start(const zx::guest& guest,
                     const fuchsia::hardware::ethernet::MacAddress& mac_address, bool enable_bridge,
-                    fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher);
+                    fuchsia::sys::LauncherPtr& launcher, fuchsia::component::RealmSyncPtr& realm,
+                    async_dispatcher_t* dispatcher, size_t component_name_suffix);
 
  private:
   fuchsia::sys::ComponentControllerPtr controller_;

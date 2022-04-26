@@ -32,6 +32,8 @@ source_set("lib") {
   visibility = [ ":*" ]
 
   sources = [
+    "controller/realm_utils.cc",
+    "controller/realm_utils.h",
     "controller/virtio_balloon.cc",
     "controller/virtio_balloon.h",
     "controller/virtio_block.cc",
@@ -117,6 +119,8 @@ source_set("lib") {
   configs += [ "//build/config:all_source" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.component.decl",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/fidl/fuchsia.virtualization.hardware",
     "//sdk/lib/fdio",
@@ -157,6 +161,8 @@ executable("bin") {
 
   deps = [
     ":lib",
+    "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.component.decl",
     "//src/virtualization/lib/guest_config",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -179,13 +185,34 @@ resource("vmm-resources") {
   outputs = [ "data/{{source_file_part}}" ]
 }
 
-fuchsia_package_with_single_component("vmm_package") {
+# TODO(fxbug.dev/72386)
+# CFv2 migration in progress
+# v2 component is being used in device tests
+# v1 component is being used in prod code
+fuchsia_package("vmm_package") {
   package_name = "vmm"
+  deps = [
+    ":vmm_package_v1",
+    ":vmm_package_v2",
+  ]
+}
+
+fuchsia_component("vmm_package_v2") {
+  manifest = "meta/vmm.cml"
+  deps = [
+    ":bin",
+    ":vmm-resources",
+  ]
+  component_name = "vmm"
+}
+
+fuchsia_component("vmm_package_v1") {
   manifest = "meta/vmm.cmx"
   deps = [
     ":bin",
     ":vmm-resources",
   ]
+  component_name = "vmm"
 }
 
 executable("vmm_unittests") {

@@ -5,6 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_SOUND_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_SOUND_H_
 
+#include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 
@@ -20,8 +21,9 @@ class VirtioSound
  public:
   explicit VirtioSound(const PhysMem& phys_mem);
 
-  zx_status_t Start(const zx::guest& guest, fuchsia::sys::Launcher* launcher,
-                    async_dispatcher_t* dispatcher, bool enable_input);
+  zx_status_t Start(const zx::guest& guest, fuchsia::sys::LauncherPtr& launcher,
+                    fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher,
+                    bool enable_input);
 
  private:
   fuchsia::sys::ComponentControllerPtr controller_;

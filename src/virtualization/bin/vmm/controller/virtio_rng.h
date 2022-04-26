@@ -5,8 +5,10 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_RNG_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_RNG_H_
 
+#include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
+
 #include <virtio/virtio_ids.h>
 
 #include "src/virtualization/bin/vmm/virtio_device.h"
@@ -21,8 +23,8 @@ class VirtioRng
  public:
   explicit VirtioRng(const PhysMem& phys_mem);
 
-  zx_status_t Start(const zx::guest& guest, fuchsia::sys::Launcher* launcher,
-                    async_dispatcher_t* dispatcher);
+  zx_status_t Start(const zx::guest& guest, fuchsia::sys::LauncherPtr& launcher,
+                    fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher);
 
  private:
   fuchsia::sys::ComponentControllerPtr controller_;

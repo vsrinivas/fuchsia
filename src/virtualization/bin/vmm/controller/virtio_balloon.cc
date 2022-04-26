@@ -7,8 +7,7 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 
-static constexpr char kVirtioBalloonUrl[] =
-    "fuchsia-pkg://fuchsia.com/virtio_balloon#meta/virtio_balloon.cmx";
+#include "src/virtualization/bin/vmm/controller/realm_utils.h"
 
 VirtioBalloon::VirtioBalloon(const PhysMem& phys_mem)
     : VirtioComponentDevice("Virtio Balloon", phys_mem,
@@ -20,14 +19,39 @@ zx_status_t VirtioBalloon::AddPublicService(sys::ComponentContext* context) {
   return context->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
-zx_status_t VirtioBalloon::Start(const zx::guest& guest, fuchsia::sys::Launcher* launcher,
+zx_status_t VirtioBalloon::Start(const zx::guest& guest, fuchsia::sys::LauncherPtr& launcher,
+                                 fuchsia::component::RealmSyncPtr& realm,
                                  async_dispatcher_t* dispatcher) {
-  fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = kVirtioBalloonUrl;
-  auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
-  launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
-  services->Connect(balloon_.NewRequest());
-  services->Connect(stats_.NewRequest());
+  if (launcher) {
+    constexpr auto kComponentUrl =
+        "fuchsia-pkg://fuchsia.com/virtio_balloon#meta/virtio_balloon.cmx";
+
+    fuchsia::sys::LaunchInfo launch_info;
+    launch_info.url = kComponentUrl;
+    auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
+    launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
+    services->Connect(balloon_.NewRequest());
+    services->Connect(stats_.NewRequest());
+  } else {
+    constexpr auto kComponentName = "virtio_balloon";
+    constexpr auto kComponentCollectionName = "virtio_balloon_devices";
+    constexpr auto kComponentUrl =
+        "fuchsia-pkg://fuchsia.com/virtio_balloon#meta/virtio_balloon.cm";
+
+    zx_status_t status =
+        CreateDynamicComponent(realm, kComponentCollectionName, kComponentName, kComponentUrl,
+                               [ballon = balloon_.NewRequest(), stats = stats_.NewRequest()](
+                                   std::shared_ptr<sys::ServiceDirectory> services) mutable {
+                                 zx_status_t status = services->Connect(std::move(ballon));
+                                 if (status != ZX_OK) {
+                                   return status;
+                                 }
+                                 return services->Connect(std::move(stats));
+                               });
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
 
   fuchsia::virtualization::hardware::StartInfo start_info;
   zx_status_t status = PrepStart(guest, dispatcher, &start_info);

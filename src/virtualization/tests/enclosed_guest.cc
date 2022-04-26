@@ -9,6 +9,7 @@
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/net/virtualization/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
+#include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
@@ -158,13 +159,21 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
   using component_testing::RealmRoot;
   using component_testing::Route;
 
+#if defined(USE_VMM_CFV1)
   constexpr auto kVmmComponentUrl = "fuchsia-pkg://fuchsia.com/vmm#meta/vmm.cmx";
+#else
+  constexpr auto kVmmComponentUrl = "fuchsia-pkg://fuchsia.com/vmm#meta/vmm.cm";
+#endif
+
   constexpr auto kVmmComponentName = "vmm";
   constexpr auto kGuestConfigProviderComponentName = "guest_config_provider";
   constexpr auto kFakeNetstackComponentName = "fake_netstack";
   constexpr auto kHostVsockComponentName = "host_vsock";
   constexpr auto kHostVsockComponentUrl = "fuchsia-pkg://fuchsia.com/host_vsock#meta/host_vsock.cm";
   constexpr auto kFakeScenicComponentName = "fake_scenic";
+#if not defined(USE_VMM_CFV1)
+  constexpr auto kDevGpuDirectory = "dev-gpu";
+#endif
 
   fuchsia::virtualization::GuestConfig cfg;
   std::string url;
@@ -190,7 +199,12 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
       loop_.dispatcher(), package_dir_name, std::move(cfg));
 
   auto realm_builder = RealmBuilder::Create();
+#if defined(USE_VMM_CFV1)
   realm_builder.AddLegacyChild(kVmmComponentName, kVmmComponentUrl);
+#else
+  realm_builder.AddChild(kVmmComponentName, kVmmComponentUrl);
+#endif
+
   realm_builder.AddLocalChild(kGuestConfigProviderComponentName,
                               local_guest_config_provider_.get());
   realm_builder.AddLocalChild(kFakeNetstackComponentName, &fake_netstack_);
@@ -210,9 +224,21 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
                               Protocol{fuchsia::sys::Launcher::Name_},
                               Protocol{fuchsia::sysmem::Allocator::Name_},
                               Protocol{fuchsia::tracing::provider::Registry::Name_},
+                              Protocol{fuchsia::scheduler::ProfileProvider::Name_},
+#if not defined(USE_VMM_CFV1)
+                              Directory{.name = kDevGpuDirectory,
+                                        .rights = fuchsia::io::R_STAR_DIR,
+                                        .path = "/dev/class/gpu"},
+#endif
                           },
                       .source = {ParentRef()},
                       .targets = {ChildRef{kVmmComponentName}}})
+      .AddRoute(Route{.capabilities =
+                          {
+                              Protocol{fuchsia::logger::LogSink::Name_},
+                          },
+                      .source = {ParentRef()},
+                      .targets = {ChildRef{kHostVsockComponentName}}})
       .AddRoute(Route{.capabilities =
                           {
                               Protocol{fuchsia::net::virtualization::Control::Name_},

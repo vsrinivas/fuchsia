@@ -5,6 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_BLOCK_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_BLOCK_H_
 
+#include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 
@@ -22,7 +23,8 @@ class VirtioBlock
               fuchsia::virtualization::BlockFormat format);
 
   zx_status_t Start(const zx::guest& guest, const std::string& id, zx::channel client,
-                    fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher);
+                    fuchsia::sys::LauncherPtr& launcher, fuchsia::component::RealmSyncPtr& realm,
+                    async_dispatcher_t* dispatcher, size_t component_name_suffix);
 
  private:
   fuchsia::virtualization::BlockMode mode_;

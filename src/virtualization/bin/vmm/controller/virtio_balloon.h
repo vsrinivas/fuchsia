@@ -5,6 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_BALLOON_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_BALLOON_H_
 
+#include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -25,8 +26,8 @@ class VirtioBalloon : public VirtioComponentDevice<VIRTIO_ID_BALLOON, kVirtioBal
 
   zx_status_t AddPublicService(sys::ComponentContext* context);
 
-  zx_status_t Start(const zx::guest& guest, fuchsia::sys::Launcher* launcher,
-                    async_dispatcher_t* dispatcher);
+  zx_status_t Start(const zx::guest& guest, fuchsia::sys::LauncherPtr& launcher,
+                    fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher);
 
  private:
   fidl::BindingSet<fuchsia::virtualization::BalloonController> bindings_;

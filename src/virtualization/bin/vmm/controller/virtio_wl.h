@@ -5,7 +5,9 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_WL_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_WL_H_
 
+#include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/zx/vmar.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -14,7 +16,6 @@
 #include <virtio/wl.h>
 
 #include "src/virtualization/bin/vmm/virtio_device.h"
-
 #define VIRTWL_QUEUE_COUNT 2
 
 // Virtio wayland device.
@@ -27,7 +28,8 @@ class VirtioWl
                     fidl::InterfaceHandle<fuchsia::wayland::Server> wayland_server,
                     fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem_allocator,
                     fidl::InterfaceHandle<fuchsia::ui::composition::Allocator> scenic_allocator,
-                    fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher);
+                    fuchsia::sys::LauncherPtr& launcher, fuchsia::component::RealmSyncPtr& realm,
+                    async_dispatcher_t* dispatcher);
   zx_status_t GetImporter(
       fidl::InterfaceRequest<fuchsia::virtualization::hardware::VirtioWaylandImporter> request);
 

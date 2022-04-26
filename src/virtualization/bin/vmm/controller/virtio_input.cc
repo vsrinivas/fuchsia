@@ -7,10 +7,8 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/virtualization/bin/vmm/controller/realm_utils.h"
 #include "src/virtualization/bin/vmm/device/input.h"
-
-static constexpr char kVirtioInputUrl[] =
-    "fuchsia-pkg://fuchsia.com/virtio_input#meta/virtio_input.cmx";
 
 static constexpr char kDeviceName[] = "machina-input";
 static_assert(sizeof(kDeviceName) - 1 < sizeof(virtio_input_config_t::u),
@@ -70,14 +68,31 @@ VirtioInput::VirtioInput(const PhysMem& phys_mem, VirtioInputType type)
                             fit::bind_member(this, &VirtioInput::Ready)),
       type_(type) {}
 
-zx_status_t VirtioInput::Start(const zx::guest& guest, fuchsia::sys::Launcher* launcher,
-                               async_dispatcher_t* dispatcher) {
-  fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = kVirtioInputUrl;
-  services_ = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
-  launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
-  services_->Connect(input_.NewRequest());
+zx_status_t VirtioInput::Start(const zx::guest& guest, fuchsia::sys::LauncherPtr& launcher,
+                               fuchsia::component::RealmSyncPtr& realm,
+                               async_dispatcher_t* dispatcher, std::string component_name) {
+  if (launcher) {
+    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_input#meta/virtio_input.cmx";
 
+    fuchsia::sys::LaunchInfo launch_info;
+    launch_info.url = kComponentUrl;
+    services_ = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
+    launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
+    services_->Connect(input_.NewRequest());
+  } else {
+    constexpr auto kComponentCollectionName = "virtio_input_devices";
+    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_input#meta/virtio_input.cm";
+
+    zx_status_t status = CreateDynamicComponent(
+        realm, kComponentCollectionName, component_name.c_str(), kComponentUrl,
+        [&, input = input_.NewRequest()](std::shared_ptr<sys::ServiceDirectory> services) mutable {
+          services_ = services;
+          return services->Connect(std::move(input));
+        });
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
   fuchsia::virtualization::hardware::StartInfo start_info;
   zx_status_t status = PrepStart(guest, dispatcher, &start_info);
   if (status != ZX_OK) {

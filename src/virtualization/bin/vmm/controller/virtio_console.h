@@ -5,9 +5,11 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_CONSOLE_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_CONSOLE_H_
 
+#include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/zx/socket.h>
+
 #include <virtio/console.h>
 #include <virtio/virtio_ids.h>
 
@@ -28,8 +30,8 @@ class VirtioConsole : public VirtioComponentDevice<VIRTIO_ID_CONSOLE, kVirtioCon
  public:
   explicit VirtioConsole(const PhysMem& phys_mem);
 
-  zx_status_t Start(const zx::guest& guest, zx::socket socket, fuchsia::sys::Launcher* launcher,
-                    async_dispatcher_t* dispatcher);
+  zx_status_t Start(const zx::guest& guest, zx::socket socket, fuchsia::sys::LauncherPtr& launcher,
+                    fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher);
 
  private:
   fuchsia::sys::ComponentControllerPtr controller_;

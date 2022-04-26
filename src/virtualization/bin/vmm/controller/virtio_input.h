@@ -5,6 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_INPUT_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_INPUT_H_
 
+#include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/sys/cpp/service_directory.h>
@@ -27,8 +28,9 @@ class VirtioInput
 
   VirtioInput(const PhysMem& phys_mem, VirtioInputType type);
 
-  zx_status_t Start(const zx::guest& guest, fuchsia::sys::Launcher* launcher,
-                    async_dispatcher_t* dispatcher);
+  zx_status_t Start(const zx::guest& guest, fuchsia::sys::LauncherPtr& launcher,
+                    fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher,
+                    std::string component_name);
 
   template <typename Protocol>
   void Connect(fidl::InterfaceRequest<Protocol> request) {

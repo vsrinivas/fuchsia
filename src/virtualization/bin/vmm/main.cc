@@ -33,6 +33,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "lib/syslog/cpp/macros.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/bin/vmm/controller/virtio_balloon.h"
 #include "src/virtualization/bin/vmm/controller/virtio_block.h"
@@ -74,6 +75,30 @@ static zx_gpaddr_t AllocDeviceAddr(size_t device_size) {
   return ret;
 }
 
+// TODO(fxbug.dev/72386)
+// CFv2 migration in progress
+// Detect what framework model is being used
+// V2 is a current version
+// V1 is legacy
+// To be removed once virtualization CFv2 migration is complete
+bool IsCFv2() {
+  DIR* dir = opendir("/svc");
+  if (!dir) {
+    return false;
+  }
+
+  const std::string svc_name = "fuchsia.component.Realm";
+  struct dirent* ent;
+  while ((ent = readdir(dir)) != nullptr) {
+    if (svc_name == ent->d_name) {
+      closedir(dir);
+      return true;
+    }
+  }
+  closedir(dir);
+  return false;
+}
+
 int main(int argc, char** argv) {
   syslog::SetTags({"vmm"});
 
@@ -95,7 +120,13 @@ int main(int argc, char** argv) {
   DevMem dev_mem;
   GuestImpl guest_controller;
   fuchsia::sys::LauncherPtr launcher;
-  context->svc()->Connect(launcher.NewRequest());
+  fuchsia::component::RealmSyncPtr realm;
+
+  if (IsCFv2()) {
+    context->svc()->Connect(realm.NewRequest());
+  } else {
+    context->svc()->Connect(launcher.NewRequest());
+  }
 
   std::optional guest_opt = std::make_optional<Guest>();
   Guest& guest = guest_opt.value();
@@ -177,7 +208,7 @@ int main(int argc, char** argv) {
       FX_PLOGS(ERROR, status) << "Failed to connect balloon device";
       return status;
     }
-    status = balloon.Start(guest.object(), launcher.get(), device_loop.dispatcher());
+    status = balloon.Start(guest.object(), launcher, realm, device_loop.dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start balloon device";
       return status;
@@ -194,15 +225,16 @@ int main(int argc, char** argv) {
       FX_PLOGS(ERROR, status) << "Failed to connect block device";
       return status;
     }
-    status = block->Start(guest.object(), std::move(block_device.id),
-                          std::move(block_device.client), launcher.get(), device_loop.dispatcher());
+    status =
+        block->Start(guest.object(), std::move(block_device.id), std::move(block_device.client),
+                     launcher, realm, device_loop.dispatcher(), block_devices.size());
+
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start block device";
       return status;
     }
     block_devices.push_back(std::move(block));
   }
-
   // Setup console device.
   VirtioConsole console(guest.phys_mem());
   if (cfg.virtio_console()) {
@@ -211,7 +243,7 @@ int main(int argc, char** argv) {
       FX_PLOGS(ERROR, status) << "Failed to connect console device";
       return status;
     }
-    status = console.Start(guest.object(), guest_controller.ConsoleSocket(), launcher.get(),
+    status = console.Start(guest.object(), guest_controller.ConsoleSocket(), launcher, realm,
                            device_loop.dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start console device";
@@ -229,7 +261,8 @@ int main(int argc, char** argv) {
       FX_PLOGS(ERROR, status) << "Failed to connect keyboard device";
       return status;
     }
-    status = input_keyboard.Start(guest.object(), launcher.get(), device_loop.dispatcher());
+    status = input_keyboard.Start(guest.object(), launcher, realm, device_loop.dispatcher(),
+                                  "virtio_input_keyboard");
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start keyboard device";
       return status;
@@ -243,7 +276,8 @@ int main(int argc, char** argv) {
       FX_PLOGS(ERROR, status) << "Failed to connect mouse device";
       return status;
     }
-    status = input_pointer.Start(guest.object(), launcher.get(), device_loop.dispatcher());
+    status = input_pointer.Start(guest.object(), launcher, realm, device_loop.dispatcher(),
+                                 "virtio_input_pointer");
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start mouse device";
       return status;
@@ -258,7 +292,7 @@ int main(int argc, char** argv) {
       return status;
     }
     status = gpu.Start(guest.object(), std::move(keyboard_listener), std::move(pointer_listener),
-                       launcher.get(), device_loop.dispatcher());
+                       launcher, realm, device_loop.dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start GPU device";
       return status;
@@ -273,7 +307,7 @@ int main(int argc, char** argv) {
       FX_PLOGS(ERROR, status) << "Failed to connect RNG device";
       return status;
     }
-    status = rng.Start(guest.object(), launcher.get(), device_loop.dispatcher());
+    status = rng.Start(guest.object(), launcher, realm, device_loop.dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start RNG device";
       return status;
@@ -333,7 +367,7 @@ int main(int argc, char** argv) {
     }
     status = wl.Start(guest.object(), std::move(wl_vmar),
                       std::move(cfg.mutable_wayland_device()->server), std::move(sysmem_allocator),
-                      std::move(scenic_allocator), launcher.get(), device_loop.dispatcher());
+                      std::move(scenic_allocator), launcher, realm, device_loop.dispatcher());
     if (status != ZX_OK) {
       FX_LOGS(INFO) << "Could not start wayland device";
       return status;
@@ -371,7 +405,7 @@ int main(int argc, char** argv) {
       }
     }
     status = magma.Start(guest.object(), std::move(magma_vmar), std::move(wayland_importer_handle),
-                         launcher.get(), device_loop.dispatcher());
+                         launcher, realm, device_loop.dispatcher());
     if (status == ZX_ERR_NOT_FOUND) {
       FX_LOGS(INFO) << "Magma device not supported by host";
     } else if (status != ZX_OK) {
@@ -395,8 +429,8 @@ int main(int argc, char** argv) {
       FX_PLOGS(ERROR, status) << "Failed to connect Ethernet device";
       return status;
     }
-    status = net->Start(guest.object(), net_device.mac_address, net_device.enable_bridge,
-                        launcher.get(), device_loop.dispatcher());
+    status = net->Start(guest.object(), net_device.mac_address, net_device.enable_bridge, launcher,
+                        realm, device_loop.dispatcher(), net_devices.size());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Could not open Ethernet device";
       return status;
@@ -412,7 +446,7 @@ int main(int argc, char** argv) {
       FX_PLOGS(ERROR, status) << "Failed to connect sound device";
       return status;
     }
-    status = sound.Start(guest.object(), launcher.get(), device_loop.dispatcher(),
+    status = sound.Start(guest.object(), launcher, realm, device_loop.dispatcher(),
                          cfg.virtio_sound_input());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start sound device";
@@ -513,5 +547,7 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  return loop.Run();
+  status = loop.Run();
+
+  return status;
 }

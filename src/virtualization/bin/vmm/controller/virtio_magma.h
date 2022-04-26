@@ -5,6 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_MAGMA_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_MAGMA_H_
 
+#include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/zx/vmar.h>
 #include <zircon/compiler.h>
@@ -26,7 +27,8 @@ class VirtioMagma
   zx_status_t Start(const zx::guest& guest, zx::vmar vmar,
                     fidl::InterfaceHandle<fuchsia::virtualization::hardware::VirtioWaylandImporter>
                         wayland_importer,
-                    fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher);
+                    fuchsia::sys::LauncherPtr& launcher, fuchsia::component::RealmSyncPtr& realm,
+                    async_dispatcher_t* dispatcher);
 
  private:
   fuchsia::sys::ComponentControllerPtr controller_;

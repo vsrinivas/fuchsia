@@ -48,6 +48,11 @@
             rights: [ "r*" ],
             path: "/termina_guest_pkg",
         },
+        {
+            directory: "dev-gpu",
+            rights: [ "r*" ],
+            path: "/dev/class/gpu",
+        },
     ],
     offer: [
         {
@@ -57,6 +62,7 @@
                 "fuchsia.kernel.MmioResource",
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.logger.LogSink",
+                "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Launcher",
                 "fuchsia.sysinfo.SysInfo",
@@ -65,6 +71,20 @@
             ],
             from: "parent",
             to: "#realm_builder",
+        },
+        {
+            directory: "dev-gpu",
+            from: "parent",
+            to: "#realm_builder",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#debian_guest",
+                "#termina_guest",
+                "#zircon_guest",
+            ],
         },
     ],
 }
