@@ -59,6 +59,19 @@ group("test_realms") {
     ":root_presenter_scene",
     ":root_presenter_scene_with_input",
     ":scene_manager_scene",
+    ":scenic_only",
+  ]
+}
+
+fuchsia_component("scenic_only") {
+  testonly = true
+
+  component_name = "scenic_only"
+  manifest = "meta/scenic_only.cml"
+  deps = [
+    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
+    "//src/ui/scenic:component_v2",
   ]
 }
 

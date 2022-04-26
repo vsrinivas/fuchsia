@@ -42,6 +42,7 @@ using component_testing::Ref;
 using component_testing::Route;
 
 // Base realm urls.
+constexpr auto kScenicOnlyUrl = "#meta/scenic_only.cm";
 constexpr auto kRootPresenterSceneUrl = "#meta/root_presenter_scene.cm";
 constexpr auto kRootPresenterSceneWithInputUrl = "#meta/root_presenter_scene_with_input.cm";
 constexpr auto kSceneManagerSceneUrl = "#meta/scene_manager_scene.cm";
@@ -66,7 +67,6 @@ std::vector<std::string> DefaultSystemServices() {
 
 UITestManager::UITestManager(UITestManager::Config config) : config_(config) {
   FX_CHECK(!config_.use_flatland) << "Flatland not currently supported";
-  FX_CHECK(config_.scene_owner.has_value()) << "Null scene owner not currently supported";
 }
 
 void UITestManager::SetUseFlatlandConfig(bool use_flatland) {
@@ -95,7 +95,11 @@ component_testing::Realm UITestManager::AddSubrealm() {
 
 void UITestManager::AddBaseRealmComponent() {
   std::string url = "";
-  if (*config_.scene_owner == UITestManager::SceneOwnerType::ROOT_PRESENTER) {
+
+  // If no scene owner is specified, then use the base scenic realm.
+  if (!config_.scene_owner) {
+    url = kScenicOnlyUrl;
+  } else if (config_.scene_owner == UITestManager::SceneOwnerType::ROOT_PRESENTER) {
     url = config_.use_input ? kRootPresenterSceneWithInputUrl : kRootPresenterSceneUrl;
   } else if (config_.scene_owner == UITestManager::SceneOwnerType::SCENE_MANAGER) {
     url = kSceneManagerSceneUrl;
@@ -144,6 +148,10 @@ void UITestManager::ConfigureClientSubrealm() {
 }
 
 void UITestManager::ConfigureSceneOwner() {
+  if (!config_.scene_owner) {
+    return;
+  }
+
   if (config_.scene_owner == UITestManager::SceneOwnerType::ROOT_PRESENTER) {
     RouteServices(
         {fuchsia::ui::policy::Presenter::Name_, fuchsia::ui::accessibility::view::Registry::Name_},
@@ -238,6 +246,8 @@ std::unique_ptr<sys::ServiceDirectory> UITestManager::TakeExposedServicesDirecto
 }
 
 void UITestManager::InitializeScene() {
+  FX_CHECK(config_.scene_owner.has_value()) << "Scene owner must be specified";
+
   if (*config_.scene_owner == UITestManager::SceneOwnerType::ROOT_PRESENTER) {
     scene_ = std::make_unique<ui_testing::GfxRootPresenterScene>(realm_root_);
   } else if (config_.scene_owner == UITestManager::SceneOwnerType::SCENE_MANAGER) {
