@@ -74,6 +74,7 @@ zx_library("object") {
     "//zircon/kernel/lib/crashlog",
     "//zircon/kernel/lib/fbl",
     "//zircon/kernel/lib/init",
+    "//zircon/kernel/lib/kconcurrent",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/ktrace",
     "//zircon/kernel/lib/object_cache",
@@ -101,6 +102,9 @@ zx_library("object") {
 
     # <object/log_dispatcher.h> has #include <lib/debuglog.h>.
     "//zircon/kernel/lib/debuglog:headers",
+
+    # <object/clock_dispatcher.h> includes things from kconcurrent
+    "//zircon/kernel/lib/kconcurrent:headers",
 
     # <object/resource_dispatcher.h> has #include <region-alloc/region-alloc.h>.
     "//zircon/system/ulib/region-alloc:headers",

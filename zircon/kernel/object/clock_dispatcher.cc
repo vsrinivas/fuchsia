@@ -95,19 +95,35 @@ zx_status_t ClockDispatcher::Create(uint64_t options, const zx_clock_create_args
 }
 
 ClockDispatcher::ClockDispatcher(uint64_t options, zx_time_t backstop_time)
-    : options_(options),
-      backstop_time_(backstop_time),
-      mono_to_synthetic_{0, backstop_time, {0, 1}},
-      ticks_to_synthetic_{0, backstop_time, {0, 1}} {
-  // If this clock is created with the "auto start" flag, set the clock up to
-  // initially be a clone of clock monotonic instead of being in an undefined
-  // (non-started) state.
+    : options_(options), backstop_time_(backstop_time) {
+  affine::Transform local_ticks_to_synthetic;
+  Params local_params;
+
+  // Compute the initial state
   if (options & ZX_CLOCK_OPT_AUTO_START) {
     ZX_DEBUG_ASSERT(backstop_time <= current_time());  // This should have been checked by Create
     affine::Ratio ticks_to_mono_ratio = platform_get_ticks_to_time_ratio();
-    mono_to_synthetic_ = {0, 0, {1, 1}},
-    ticks_to_synthetic_ = {
+
+    zx_ticks_t now_ticks = current_ticks();
+    local_params.last_value_update_ticks = now_ticks;
+    local_params.last_rate_adjust_update_ticks = now_ticks;
+    local_ticks_to_synthetic = affine::Transform{
         0, 0, {ticks_to_mono_ratio.numerator(), ticks_to_mono_ratio.denominator()}};
+    local_params.mono_to_synthetic = affine::Transform({0, 0, {1, 1}});
+  } else {
+    local_ticks_to_synthetic = affine::Transform{0, backstop_time, {0, 1}};
+    local_params.mono_to_synthetic = affine::Transform{0, backstop_time, {0, 1}};
+  }
+
+  // Publish the state from within the SeqLock
+  {
+    Guard<SeqLock, ExclusiveIrqSave> lock{&seq_lock_};
+    ticks_to_synthetic_.Update(local_ticks_to_synthetic, concurrent::SyncOpt_Fence);
+    params_.Update(local_params, concurrent::SyncOpt_None);
+  }
+
+  // If we auto-started our clock, update our state.
+  if (options & ZX_CLOCK_OPT_AUTO_START) {
     UpdateState(0, ZX_CLOCK_STARTED);
   }
 
@@ -120,26 +136,12 @@ zx_status_t ClockDispatcher::Read(zx_time_t* out_now) {
   int64_t now_ticks;
   affine::Transform ticks_to_synthetic;
 
-  while (true) {
-    // load the generation counter.  If it is odd, we are in the middle of
-    // an update and need to wait.  Just spin; the update operation (once
-    // started) is non-preemptable and will be done very shortly.
-    auto gen = gen_counter_.load(ktl::memory_order_acquire);
-    if ((gen & 0x1) == 0) {
-      // Latch the transformation and observe the tick counter.
-      ticks_to_synthetic = ticks_to_synthetic_;
-      now_ticks = current_ticks();
-
-      // If the generation counter has not changed, then we are done.
-      // Otherwise, we need to start over.
-      if (gen == gen_counter_.load(ktl::memory_order_acquire)) {
-        break;
-      }
-    }
-
-    // Pause just a bit before trying again.
-    arch::Yield();
-  }
+  bool transaction_success;
+  do {
+    Guard<SeqLock, SharedNoIrqSave> lock{&seq_lock_, transaction_success};
+    ticks_to_synthetic_.Read(ticks_to_synthetic);
+    now_ticks = current_ticks();
+  } while (!transaction_success);
 
   *out_now = ticks_to_synthetic.Apply(now_ticks);
 
@@ -147,32 +149,26 @@ zx_status_t ClockDispatcher::Read(zx_time_t* out_now) {
 }
 
 zx_status_t ClockDispatcher::GetDetails(zx_clock_details_v1_t* out_details) {
-  while (true) {
-    // load the generation counter.  If it is odd, we are in the middle of
-    // an update and need to wait.  Just spin; the update operation (once
-    // started) is non-preemptable and will be done very shortly.
-    auto gen = gen_counter_.load(ktl::memory_order_acquire);
-    if ((gen & 0x1) == 0) {
-      // Latch the detailed information.
-      out_details->generation_counter = gen;
-      out_details->ticks_to_synthetic = CopyTransform(ticks_to_synthetic_);
-      out_details->mono_to_synthetic = CopyTransform(mono_to_synthetic_);
-      out_details->error_bound = error_bound_;
-      out_details->query_ticks = current_ticks();
-      out_details->last_value_update_ticks = last_value_update_ticks_;
-      out_details->last_rate_adjust_update_ticks = last_rate_adjust_update_ticks_;
-      out_details->last_error_bounds_update_ticks = last_error_bounds_update_ticks_;
+  int64_t now_ticks;
+  affine::Transform ticks_to_synthetic;
+  Params params;
 
-      // If the generation counter has not changed, then we are done.
-      // Otherwise, we need to start over.
-      if (gen == gen_counter_.load(ktl::memory_order_acquire)) {
-        break;
-      }
+  bool transaction_success;
+  do {
+    Guard<SeqLock, SharedNoIrqSave> lock{&seq_lock_, transaction_success};
+    ticks_to_synthetic_.Read(ticks_to_synthetic, concurrent::SyncOpt_None);
+    params_.Read(params, concurrent::SyncOpt_Fence);
+    now_ticks = current_ticks();
+  } while (!transaction_success);
 
-      // Pause just a bit before trying again.
-      arch::Yield();
-    }
-  }
+  out_details->generation_counter = params.generation_counter_;
+  out_details->ticks_to_synthetic = CopyTransform(ticks_to_synthetic);
+  out_details->mono_to_synthetic = CopyTransform(params.mono_to_synthetic);
+  out_details->error_bound = params.error_bound;
+  out_details->query_ticks = now_ticks;
+  out_details->last_value_update_ticks = params.last_value_update_ticks;
+  out_details->last_rate_adjust_update_ticks = params.last_rate_adjust_update_ticks;
+  out_details->last_error_bounds_update_ticks = params.last_error_bounds_update_ticks;
 
   // Options and backstop_time are constant over the life of the clock.  We
   // don't need to latch them during the generation counter spin.
@@ -212,12 +208,12 @@ zx_status_t ClockDispatcher::Update(uint64_t options, const UpdateArgsType& _arg
 
   bool clock_was_started = false;
   {
-    // Enter the writer lock.  Only one update can take place at a time.  We use
-    // an IrqSave spinlock for this because this operation should be very quick,
-    // and we may have observers who are spinning attempting to read the clock.
-    // We cannot afford to become preempted while we are performing an update
-    // operation.
-    Guard<SpinLock, IrqSave> writer_lock{&writer_lock_};
+    // Enter the sequence lock exclusively, ensuring that only one update can
+    // take place at a time.  We use a IrqSave for this because this operation
+    // should be very quick, and we may have observers who are spinning
+    // attempting to read the clock. We cannot afford to become preempted while
+    // we are performing an update operation.
+    Guard<SeqLock, ExclusiveIrqSave> lock{&seq_lock_};
 
     // If the clock has not yet been started, then we require the first update
     // to include a set operation.
@@ -252,6 +248,20 @@ zx_status_t ClockDispatcher::Update(uint64_t options, const UpdateArgsType& _arg
       }
     }
 
+    // Make local copies of the core state.  Note that we do not use either
+    // acquire semantics on the loads during the copy, nor an acquire thread
+    // fence.  We currently have exclusive write access, so no other threads may
+    // be writing to these variable as we read them, meaning that no data races
+    // should exist here.
+    affine::Transform local_ticks_to_synthetic;
+    Params local_params;
+    params_.Read(local_params, concurrent::SyncOpt_None);
+    ticks_to_synthetic_.Read(local_ticks_to_synthetic, concurrent::SyncOpt_None);
+
+    // Aliases make some of the typing a bit shorter.
+    affine::Transform& t2s = local_ticks_to_synthetic;
+    affine::Transform& m2s = local_params.mono_to_synthetic;
+
     // Mark the time at which this update will take place.
     int64_t now_ticks = static_cast<int64_t>(current_ticks());
 
@@ -262,11 +272,10 @@ zx_status_t ClockDispatcher::Update(uint64_t options, const UpdateArgsType& _arg
     // 2b) With no explicit reference time provided
     // 2c) Which specifies the same rate that we are already using
     const bool skip_update =
-        !do_set && (!do_rate || (!reference_valid && (args.rate_adjust() == cur_ppm_adj_)));
+        !do_set &&
+        (!do_rate || (!reference_valid && (args.rate_adjust() == local_params.cur_ppm_adj)));
 
     // Now compute the new transformations
-    affine::Transform m2s;
-    affine::Transform t2s;
     if (!skip_update) {
       // Figure out the reference times at which this change will take place at.
       affine::Ratio ticks_to_mono_ratio = platform_get_ticks_to_time_ratio();
@@ -298,8 +307,7 @@ zx_status_t ClockDispatcher::Update(uint64_t options, const UpdateArgsType& _arg
       // testing).
       int64_t target_synthetic =
           do_set ? args.synthetic_value()
-                 : (reference_valid ? mono_to_synthetic_.Apply(reference_mono)
-                                    : ticks_to_synthetic_.Apply(reference_ticks));
+                 : (reference_valid ? m2s.Apply(reference_mono) : t2s.Apply(reference_ticks));
 
       // Compute the new rate ratios.
       affine::Ratio new_m2s_ratio;
@@ -309,14 +317,15 @@ zx_status_t ClockDispatcher::Update(uint64_t options, const UpdateArgsType& _arg
         new_t2s_ratio =
             affine::Ratio::Product(ticks_to_mono_ratio, new_m2s_ratio, affine::Ratio::Exact::No);
       } else if (is_started()) {
-        new_m2s_ratio = mono_to_synthetic_.ratio();
-        new_t2s_ratio = ticks_to_synthetic_.ratio();
+        new_m2s_ratio = m2s.ratio();
+        new_t2s_ratio = t2s.ratio();
       } else {
         new_m2s_ratio = {1, 1};
         new_t2s_ratio = ticks_to_mono_ratio;
       }
 
       // Update the local copies of the structures.
+      affine::Transform old_t2s{t2s};
       m2s = {reference_mono, target_synthetic, new_m2s_ratio};
       t2s = {reference_ticks, target_synthetic, new_t2s_ratio};
 
@@ -327,56 +336,44 @@ zx_status_t ClockDispatcher::Update(uint64_t options, const UpdateArgsType& _arg
       // 2) Backstop times are not violated.
       //
       int64_t new_synthetic_now = t2s.Apply(now_ticks);
-      if (is_monotonic() && (new_synthetic_now < ticks_to_synthetic_.Apply(now_ticks))) {
+      if (is_monotonic() && (new_synthetic_now < old_t2s.Apply(now_ticks))) {
         return ZX_ERR_INVALID_ARGS;
       }
 
       if (new_synthetic_now < backstop_time_) {
         return ZX_ERR_INVALID_ARGS;
       }
-    } else {
-      m2s = mono_to_synthetic_;
-      t2s = ticks_to_synthetic_;
     }
 
-    // Everything checks out, we can proceed with the update.  Start by bumping
-    // the generation counter.  This will disable all read operations until we
-    // bump the counter again.
-    //
-    // We should only need release semantics here.  Only things which hold the
-    // writer spin-lock can make changes to the generation counter, and acquiring
-    // that spin-lock should serve as our acquire barrier.
-    auto prev_counter = gen_counter_.fetch_add(1, ktl::memory_order_release);
-    ZX_DEBUG_ASSERT((prev_counter & 0x1) == 0);
-
-    // Update the transformations, and record whether or not this is the initial
-    // start of the clock.
+    // Everything checks out, we can proceed with the update.
+    // Record whether or not this is the initial start of the clock.
     clock_was_started = !is_started();
-    mono_to_synthetic_ = m2s;
-    ticks_to_synthetic_ = t2s;
 
     // If this was a set operation, record the new last update time.
     if (do_set) {
-      last_value_update_ticks_ = now_ticks;
+      local_params.last_value_update_ticks = now_ticks;
     }
 
     // If this was a rate adjustment operation, or the clock was just started,
     // record the new last update time as well as the new current ppm
     // adjustment.
     if (do_rate || clock_was_started) {
-      last_rate_adjust_update_ticks_ = now_ticks;
-      cur_ppm_adj_ = do_rate ? args.rate_adjust() : 0;
+      local_params.last_rate_adjust_update_ticks = now_ticks;
+      local_params.cur_ppm_adj = do_rate ? args.rate_adjust() : 0;
     }
 
     // If this was an error bounds update operations, record the new last update
     // time as well as the new error bound.
     if (options & ZX_CLOCK_UPDATE_OPTION_ERROR_BOUND_VALID) {
-      last_error_bounds_update_ticks_ = now_ticks;
-      error_bound_ = args.error_bound();
+      local_params.last_error_bounds_update_ticks = now_ticks;
+      local_params.error_bound = args.error_bound();
     }
 
-    // We are finished.  Update the generation counter to allow clock reading again.
-    gen_counter_.store(prev_counter + 2, ktl::memory_order_release);
+    // We are finished.  Bump the generation counter and publish the results in
+    // the shared structures.
+    ++local_params.generation_counter_;
+    ticks_to_synthetic_.Update(local_ticks_to_synthetic, concurrent::SyncOpt_Fence);
+    params_.Update(local_params, concurrent::SyncOpt_None);
   }
 
   // Now that we are out of the time critical section, if the clock was just

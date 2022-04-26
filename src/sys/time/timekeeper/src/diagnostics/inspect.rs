@@ -695,7 +695,7 @@ mod tests {
                 primary_track: contains {
                     last_update: contains {
                         retrieval_monotonic: AnyProperty,
-                        generation_counter: 4u64,
+                        generation_counter: 2u64,
                         monotonic_offset: monotonic_time.into_nanos() as i64,
                         utc_offset: (BACKSTOP_TIME + 2345) as i64,
                         rate_ppm: RATE_ADJUST as i64,

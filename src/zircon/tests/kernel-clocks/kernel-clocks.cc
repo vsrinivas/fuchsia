@@ -348,8 +348,8 @@ TEST(KernelClocksTestCase, GetDetails) {
       ASSERT_GE(details.query_ticks, get_details_before.get());
       ASSERT_LE(details.query_ticks, get_details_after.get());
 
-      // The generation counter should have incremented by exactly 2.
-      ASSERT_EQ(last_details.generation_counter + 2, details.generation_counter);
+      // The generation counter should have incremented by exactly 1.
+      ASSERT_EQ(last_details.generation_counter + 1, details.generation_counter);
 
       // The options should not have changed.
       ASSERT_EQ(options, details.options);
@@ -424,8 +424,8 @@ TEST(KernelClocksTestCase, GetDetails) {
       ASSERT_GE(details.query_ticks, get_details_before.get());
       ASSERT_LE(details.query_ticks, get_details_after.get());
 
-      // The generation counter should have incremented by exactly 2.
-      ASSERT_EQ(last_details.generation_counter + 2, details.generation_counter);
+      // The generation counter should have incremented by exactly 1.
+      ASSERT_EQ(last_details.generation_counter + 1, details.generation_counter);
 
       // The options should not have changed.
       ASSERT_EQ(options, details.options);
@@ -518,8 +518,8 @@ TEST(KernelClocksTestCase, GetDetails) {
       ASSERT_GE(details.query_ticks, get_details_before.get());
       ASSERT_LE(details.query_ticks, get_details_after.get());
 
-      // The generation counter should have incremented by exactly 2.
-      ASSERT_EQ(last_details.generation_counter + 2, details.generation_counter);
+      // The generation counter should have incremented by exactly 1.
+      ASSERT_EQ(last_details.generation_counter + 1, details.generation_counter);
 
       // The options should not have changed.
       ASSERT_EQ(options, details.options);
@@ -1248,8 +1248,8 @@ TEST(KernelClocksTestCase, TrivialRateUpdates) {
       ASSERT_LE(before_update_ticks, curr_details.last_rate_adjust_update_ticks);
       ASSERT_GE(after_update_ticks, curr_details.last_rate_adjust_update_ticks);
 
-      // The generation counter should have incremented by exactly 2.
-      ASSERT_EQ(last_details.generation_counter + 2, curr_details.generation_counter);
+      // The generation counter should have incremented by exactly 1.
+      ASSERT_EQ(last_details.generation_counter + 1, curr_details.generation_counter);
     }
   }
 }
