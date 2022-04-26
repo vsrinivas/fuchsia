@@ -56,7 +56,7 @@ pub trait PinWeaverProtocol {
     /// If Found: Returns all log entries including and starting from the
     /// operation specified by the root hash parameter.
     /// If Not Found: Returns all known log entries.
-    async fn get_log(&self, root_hash: &mut Hash) -> Result<Vec<fcr50::LogEntry>, CredentialError>;
+    async fn get_log(&self, root_hash: &Hash) -> Result<Vec<fcr50::LogEntry>, CredentialError>;
 
     /// Applies a TryAuth operation replay log by modifying the credential
     /// metadata based on the state of the replay log.
@@ -173,10 +173,10 @@ impl PinWeaverProtocol for PinWeaver {
 
     /// Simply inserts the |root_hash| into the |get_log| method and
     /// returns the resulting vector of |LogEntry|.
-    async fn get_log(&self, root_hash: &mut Hash) -> Result<Vec<fcr50::LogEntry>, CredentialError> {
+    async fn get_log(&self, root_hash: &Hash) -> Result<Vec<fcr50::LogEntry>, CredentialError> {
         let response = self
             .proxy
-            .get_log(root_hash)
+            .get_log(&mut root_hash.clone())
             .await
             .map_err(|_| CredentialError::InternalError)?
             .map_err(|_| CredentialError::InternalError)?;
