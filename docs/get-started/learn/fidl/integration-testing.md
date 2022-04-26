@@ -316,7 +316,7 @@ fx build
 The `fuchsia_test_package()` rule generates a package with the test component
 and its dependencies. The integration test component has the following URL:
 
-```none
+```none {:.devsite-disable-click-to-copy}
 fuchsia-pkg://fuchsia.com/echo-integration-tests#meta/echo_integration.cm
 ```
 

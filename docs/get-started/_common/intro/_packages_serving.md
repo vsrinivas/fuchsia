@@ -17,7 +17,7 @@ Packages within a repository are identified by a URL with the
 `fuchsia-pkg` scheme:
 
 ```none
-fuchsia-pkg://{{ '<var>' }}repo-hostname{{ '</var>' }}[/{{ '<var>' }}pkg-name{{ '</var>' }}[#{{ '<var>' }}resource-path{{ '</var>' }}]]
+fuchsia-pkg://{{ '<var>' }}repo-hostname{{ '</var>' }}/{{ '<var>' }}pkg-name{{ '</var>' }}#{{ '<var>' }}resource-path{{ '</var>' }}
 ```
 
 * `repo-hostname`: Hostname of a trusted package repository, such as `fuchsia.com`.

@@ -184,7 +184,7 @@ In the previous exercise, your component project scaffold generated a
 This rule packages your unit tests into a component with the following URL:
 
 
-```none
+```none {:.devsite-disable-click-to-copy}
 fuchsia-pkg://fuchsia.com/echo-args-unittests#meta/echo-args-unittests.cm
 ```
 

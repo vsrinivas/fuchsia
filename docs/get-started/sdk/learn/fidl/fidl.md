@@ -115,7 +115,7 @@ bazel build --config=fuchsia_x64 //fuchsia-codelab/echo-fidl:fidl.examples.routi
 The FIDL bindings target compiles the FIDL interface and generates
 language-specific bindings in the `bazel-bin/` directory:
 
-```none
+```none {:.devsite-disable-click-to-copy}
 bazel-bin/fuchsia-codelab/echo-fidl/_virtual_includes/
 ```
 

@@ -129,7 +129,7 @@ configuration:
 
 This rule packages your unit tests into a component with the following URL:
 
-```none
+```none {:.devsite-disable-click-to-copy}
 fuchsia-pkg://fuchsiasamples.com/echo_unittests#meta/echo_unittests.cm
 ```
 
