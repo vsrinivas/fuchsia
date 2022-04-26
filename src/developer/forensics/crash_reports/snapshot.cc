@@ -9,7 +9,7 @@
 namespace forensics {
 namespace crash_reports {
 
-Snapshot::Archive::Archive(const fuchsia::feedback::Attachment& attachment)
+ManagedSnapshot::Archive::Archive(const fuchsia::feedback::Attachment& attachment)
     : key(attachment.key), value() {
   const auto& archive = attachment.value;
   if (!archive.vmo.is_valid()) {

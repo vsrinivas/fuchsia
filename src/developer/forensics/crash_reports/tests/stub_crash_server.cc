@@ -27,7 +27,7 @@ StubCrashServer::~StubCrashServer() {
 
 bool StubCrashServer::HasPendingRequest() const { return has_pending_request_; }
 
-void StubCrashServer::MakeRequest(const Report& report, Snapshot snapshot,
+void StubCrashServer::MakeRequest(const Report& report, const Snapshot& snapshot,
                                   ::fit::function<void(UploadStatus, std::string)> callback) {
   latest_annotations_ = report.Annotations();
   latest_attachment_keys_.clear();
@@ -39,14 +39,28 @@ void StubCrashServer::MakeRequest(const Report& report, Snapshot snapshot,
     latest_attachment_keys_.push_back("uploadFileMinidump");
   }
 
-  if (auto annotations = snapshot.LockAnnotations(); annotations) {
-    for (const auto& [key, value] : annotations->Raw()) {
+  if (std::holds_alternative<ManagedSnapshot>(snapshot)) {
+    const auto& s = std::get<ManagedSnapshot>(snapshot);
+    if (auto annotations = s.LockAnnotations(); annotations) {
+      for (const auto& [key, value] : annotations->Raw()) {
+        latest_annotations_.Set(key, value);
+      }
+    }
+
+    if (auto annotations = s.LockPresenceAnnotations(); annotations) {
+      for (const auto& [key, value] : annotations->Raw()) {
+        latest_annotations_.Set(key, value);
+      }
+    }
+
+    if (auto archive = s.LockArchive(); archive) {
+      latest_attachment_keys_.push_back(archive->key);
+    }
+  } else {
+    const auto& s = std::get<MissingSnapshot>(snapshot);
+    for (const auto& [key, value] : s.PresenceAnnotations().Raw()) {
       latest_annotations_.Set(key, value);
     }
-  }
-
-  if (auto archive = snapshot.LockArchive(); archive) {
-    latest_attachment_keys_.push_back(archive->key);
   }
 
   FX_CHECK(ExpectRequest()) << fxl::StringPrintf(

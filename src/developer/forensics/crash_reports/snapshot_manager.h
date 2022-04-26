@@ -94,12 +94,14 @@ class SnapshotManager {
   //   * The size of its archive.
   //   * The snapshot annotations.
   //   * The snapshot archive.
+  //   * The annotations that convey any errors affecting the snapshot data.
   struct SnapshotData {
     size_t num_clients_with_uuid;
     StorageSize annotations_size;
     StorageSize archive_size;
-    std::shared_ptr<AnnotationMap> annotations;
-    std::shared_ptr<Snapshot::Archive> archive;
+    std::shared_ptr<const AnnotationMap> annotations;
+    std::shared_ptr<const ManagedSnapshot::Archive> archive;
+    std::shared_ptr<AnnotationMap> presence_annotations;
   };
 
   // Determine if the most recent SnapshotRequest's delayed call to
@@ -160,17 +162,17 @@ class SnapshotManager {
   // SnapshotUuid and annotations to return under specific conditions, e.g., garbage collection,
   // time outs.
   struct SpecialCaseSnapshot {
-    explicit SpecialCaseSnapshot(SnapshotUuid uuid)
-        : uuid(std::move(uuid)), annotations(std::make_unique<AnnotationMap>()) {}
+    explicit SpecialCaseSnapshot(SnapshotUuid uuid, AnnotationMap annotations)
+        : uuid(std::move(uuid)), annotations(std::move(annotations)) {}
     SnapshotUuid uuid;
-    std::shared_ptr<AnnotationMap> annotations;
+    AnnotationMap annotations;
   };
 
-  SpecialCaseSnapshot garbage_collected_snapshot_;
-  SpecialCaseSnapshot not_persisted_snapshot_;
-  SpecialCaseSnapshot timed_out_snapshot_;
-  SpecialCaseSnapshot shutdown_snapshot_;
-  SpecialCaseSnapshot no_uuid_snapshot_;
+  const SpecialCaseSnapshot garbage_collected_snapshot_;
+  const SpecialCaseSnapshot not_persisted_snapshot_;
+  const SpecialCaseSnapshot timed_out_snapshot_;
+  const SpecialCaseSnapshot shutdown_snapshot_;
+  const SpecialCaseSnapshot no_uuid_snapshot_;
 };
 
 }  // namespace crash_reports

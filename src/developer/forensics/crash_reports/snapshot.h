@@ -21,7 +21,10 @@ namespace crash_reports {
 // clients and managed by the SnapshotManager. The SnapshotManager may drop the annotations or
 // archive at any point, however if a reference is held (gotten from LockAnnotations or
 // LockArchive) the data will not be deleted until the last reference is deleted.
-class Snapshot {
+//
+// The SnapshotManager may add annotations as |presence_annotations_| that convey information about
+// how its management has affected the archive.
+class ManagedSnapshot {
  public:
   struct Archive {
     Archive(const fuchsia::feedback::Attachment& archive);
@@ -29,20 +32,41 @@ class Snapshot {
     SizedData value;
   };
 
-  explicit Snapshot(std::weak_ptr<AnnotationMap> annotations)
-      : annotations_(std::move(annotations)), archive_(std::weak_ptr<Archive>()) {}
+  ManagedSnapshot(std::weak_ptr<const AnnotationMap> annotations,
+                  std::weak_ptr<const AnnotationMap> presence_annotations,
+                  std::weak_ptr<const Archive> archive = std::weak_ptr<const Archive>())
+      : annotations_(std::move(annotations)),
+        presence_annotations_(std::move(presence_annotations)),
+        archive_(std::move(archive)) {}
 
-  Snapshot(std::weak_ptr<AnnotationMap> annotations, std::weak_ptr<Archive> archive)
-      : annotations_(std::move(annotations)), archive_(std::move(archive)) {}
+  std::shared_ptr<const AnnotationMap> LockAnnotations() const { return annotations_.lock(); }
 
-  std::shared_ptr<AnnotationMap> LockAnnotations() const { return annotations_.lock(); }
+  std::shared_ptr<const AnnotationMap> LockPresenceAnnotations() const {
+    return presence_annotations_.lock();
+  }
 
-  std::shared_ptr<Archive> LockArchive() const { return archive_.lock(); }
+  std::shared_ptr<const Archive> LockArchive() const { return archive_.lock(); }
 
  private:
-  std::weak_ptr<AnnotationMap> annotations_;
-  std::weak_ptr<Archive> archive_;
+  std::weak_ptr<const AnnotationMap> annotations_;
+  std::weak_ptr<const AnnotationMap> presence_annotations_;
+  std::weak_ptr<const Archive> archive_;
 };
+
+// Replacement for a ManagedSnapshot when the Snapshot manager drops a snapshot.
+class MissingSnapshot {
+ public:
+  explicit MissingSnapshot(AnnotationMap presence_annotations)
+      : presence_annotations_(std::move(presence_annotations)) {}
+
+  // Information from the snapshot manager on why the snapshot is missing.
+  const AnnotationMap& PresenceAnnotations() const { return presence_annotations_; }
+
+ private:
+  AnnotationMap presence_annotations_;
+};
+
+using Snapshot = std::variant<ManagedSnapshot, MissingSnapshot>;
 
 }  // namespace crash_reports
 }  // namespace forensics

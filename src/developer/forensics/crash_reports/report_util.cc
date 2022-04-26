@@ -10,6 +10,7 @@
 #include <zircon/errors.h>
 
 #include <string>
+#include <variant>
 
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/dart_module_parser.h"
@@ -217,8 +218,30 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
 
 void AddSnapshotAnnotations(const SnapshotUuid& snapshot_uuid, const Snapshot& snapshot,
                             AnnotationMap* annotations) {
-  if (const auto snapshot_annotations = snapshot.LockAnnotations(); snapshot_annotations) {
+  // The underlying snapshot may have been garbage collected or its collection timed out
+  // (possibly due to shutdown). Add the annotations from the snapshot manager indicating why the
+  // annotations and archive collected from fuchsia.feedback.DataProvider aren't present.
+  //
+  // Snapshots will not be missing due to reasons like not being persisted or not having a valid
+  // snapshot uuid because neither can occur without a report entering the store and this flow is
+  // triggered before the store is used.
+  if (std::holds_alternative<MissingSnapshot>(snapshot)) {
+    const auto& s = std::get<MissingSnapshot>(snapshot);
+    annotations->Set(s.PresenceAnnotations());
+    return;
+  }
+
+  // The underlying snapshot was successfully collected and not all of its data was dropped by the
+  // snapshot manager (due to garbage collection). Add the annotations collected from
+  // fuchsia.feedback.DataProvider and any annotations about why the collected archive may be
+  // missing.
+  const auto& s = std::get<ManagedSnapshot>(snapshot);
+  if (const auto snapshot_annotations = s.LockAnnotations(); snapshot_annotations) {
     annotations->Set(*snapshot_annotations);
+  }
+
+  if (const auto presence_annotations = s.LockPresenceAnnotations(); presence_annotations) {
+    annotations->Set(*presence_annotations);
   }
 }
 

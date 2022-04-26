@@ -12,6 +12,7 @@
 #include <memory>
 #include <vector>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/developer/forensics/crash_reports/constants.h"
@@ -24,6 +25,9 @@
 namespace forensics {
 namespace crash_reports {
 namespace {
+
+using ::testing::Pair;
+using ::testing::UnorderedElementsAreArray;
 
 const std::string kUrl{"http://www.foo.com"};
 const std::string kSnapshotUuid{"snapshot-uuid"};
@@ -200,6 +204,61 @@ TEST_F(CrashServerTest, ReadBodyOnSuccess) {
 
   ASSERT_TRUE(server_report_id.has_value());
   EXPECT_EQ(server_report_id.value(), "body-203");
+}
+
+TEST_F(CrashServerTest, PreparesAnnotationsManagedSnapshot) {
+  const Report report{/*report_id=*/0,
+                      /*program_shortname=*/"program-shortname",
+                      /*annotations=*/
+                      {
+                          {"key1", "value1"},
+                          {"key2", "value2"},
+                      },
+                      /*attachments=*/{},
+                      /*snapshot_uuid=*/kSnapshotUuid,
+                      /*minidump=*/std::nullopt};
+
+  const auto snapshot_annotations = std::make_shared<AnnotationMap>(AnnotationMap{
+      {"key2", "value2.1"},
+      {"key3", "value3"},
+  });
+
+  const auto presence_annotations = std::make_shared<AnnotationMap>(AnnotationMap{
+      {"key4", "value4"},
+  });
+
+  EXPECT_THAT(CrashServer::PrepareAnnotations(
+                  report, ManagedSnapshot(snapshot_annotations, presence_annotations)),
+              UnorderedElementsAreArray({
+                  Pair("key1", "value1"),
+                  Pair("key2", "value2"),
+                  Pair("key4", "value4"),
+              }));
+}
+
+TEST_F(CrashServerTest, PreparesAnnotationsErrorSnapshot) {
+  const Report report{/*report_id=*/0,
+                      /*program_shortname=*/"program-shortname",
+                      /*annotations=*/
+                      {
+                          {"key1", "value1"},
+                          {"key2", "value2"},
+                      },
+                      /*attachments=*/{},
+                      /*snapshot_uuid=*/kSnapshotUuid,
+                      /*minidump=*/std::nullopt};
+
+  const AnnotationMap snapshot_annotations({
+      {"key2", "value2.1"},
+      {"key3", "value3"},
+  });
+
+  EXPECT_THAT(CrashServer::PrepareAnnotations(report, MissingSnapshot(snapshot_annotations)),
+              UnorderedElementsAreArray({
+                  Pair("key1", "value1"),
+                  Pair("key2", "value2.1"),
+                  Pair("key3", "value3"),
+              }));
 }
 
 }  // namespace

@@ -40,8 +40,15 @@ class CrashServer {
   // code [200-203]) and the crash report id on the server, if the request was successful.
   //
   // Note: Only a single call to MakeRequest can be outstanding at a time.
-  virtual void MakeRequest(const Report& report, Snapshot snapshot,
+  virtual void MakeRequest(const Report& report, const Snapshot& snapshot,
                            ::fit::function<void(UploadStatus, std::string)> callback);
+
+  // Combines the annotations from |report| and |snapshot| into annotations for upload.
+  //
+  // Annotations from |report| are always included and only "presence" annotations from
+  // |snapshot| are included.
+  static std::map<std::string, std::string> PrepareAnnotations(const Report& report,
+                                                               const Snapshot& snapshot);
 
  private:
   async_dispatcher_t* dispatcher_;

@@ -32,7 +32,7 @@ class StubCrashServer : public CrashServer {
 
   ~StubCrashServer();
 
-  void MakeRequest(const Report& report, Snapshot snapshot,
+  void MakeRequest(const Report& report, const Snapshot& snapshot,
                    ::fit::function<void(UploadStatus, std::string)> callback) override;
 
   bool HasPendingRequest() const override;

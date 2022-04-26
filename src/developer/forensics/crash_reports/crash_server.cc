@@ -9,6 +9,7 @@
 #include <lib/zx/time.h>
 
 #include <memory>
+#include <variant>
 
 #include <src/lib/fostr/fidl/fuchsia/net/http/formatting.h>
 
@@ -98,7 +99,7 @@ CrashServer::CrashServer(async_dispatcher_t* dispatcher,
   });
 }
 
-void CrashServer::MakeRequest(const Report& report, Snapshot snapshot,
+void CrashServer::MakeRequest(const Report& report, const Snapshot& snapshot,
                               ::fit::function<void(UploadStatus, std::string)> callback) {
   // Make sure a call to fuchsia.net.http.Loader/Fetch isn't outstanding.
   FX_CHECK(!pending_request_);
@@ -125,21 +126,17 @@ void CrashServer::MakeRequest(const Report& report, Snapshot snapshot,
   // asynchronous and we won't be able to know the upload status nor the server report ID.
   crashpad::HTTPMultipartBuilder http_multipart_builder;
   http_multipart_builder.SetGzipEnabled(true);
-  for (const auto& [key, value] : report.Annotations().Raw()) {
+
+  for (const auto& [key, value] : PrepareAnnotations(report, snapshot)) {
     http_multipart_builder.SetFormData(key, value);
   }
 
-  // Add the snapshot archive and annotations.
-  // More often than not these sets are the same, however if the snapshot manager has dropped the
-  // snapshot some reason, e.g., restart or garbage collection, the annotations will be disjoint.
-  if (const auto archive = snapshot.LockArchive(); archive) {
-    attachment_readers.emplace_back(archive->value);
-    file_readers.emplace(archive->key, &attachment_readers.back());
-  }
-
-  if (const auto annotations = snapshot.LockAnnotations(); annotations) {
-    for (const auto& [key, value] : annotations->Raw()) {
-      http_multipart_builder.SetFormData(key, value);
+  // Add the snapshot archive (only relevant for ManagedSnapshots).
+  if (std::holds_alternative<ManagedSnapshot>(snapshot)) {
+    const auto& s = std::get<ManagedSnapshot>(snapshot);
+    if (const auto archive = s.LockArchive(); archive) {
+      attachment_readers.emplace_back(archive->value);
+      file_readers.emplace(archive->key, &attachment_readers.back());
     }
   }
 
@@ -225,6 +222,32 @@ void CrashServer::MakeRequest(const Report& report, Snapshot snapshot,
   });
 
   pending_request_ = true;
+}
+
+std::map<std::string, std::string> CrashServer::PrepareAnnotations(const Report& report,
+                                                                   const Snapshot& snapshot) {
+  // Start with annotations from |report| and only add "presence" annotations.
+  //
+  // * If |snapshot| is a MissingSnapshot, they contain potentially new information about why the
+  //   underlying data was dropped by the SnapshotManager.
+  //
+  // * If |snapshot| is a ManagedSnapshot, they're either empty or contain potentially new
+  //   information about why the underlying archive (the annotations are still present) was dropped
+  //   by the SnapshotManager.
+  auto annotations = report.Annotations();
+
+  if (std::holds_alternative<MissingSnapshot>(snapshot)) {
+    const auto& s = std::get<MissingSnapshot>(snapshot);
+    annotations.Set(s.PresenceAnnotations());
+    return annotations.Raw();
+  }
+
+  const auto& s = std::get<ManagedSnapshot>(snapshot);
+  if (const auto presence_annotations = s.LockPresenceAnnotations(); presence_annotations) {
+    annotations.Set(*presence_annotations);
+  }
+
+  return annotations.Raw();
 }
 
 }  // namespace crash_reports

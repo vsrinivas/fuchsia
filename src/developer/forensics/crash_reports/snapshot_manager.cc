@@ -69,26 +69,27 @@ SnapshotManager::SnapshotManager(async_dispatcher_t* dispatcher, timekeeper::Clo
       current_annotations_size_(0u),
       max_archives_size_(max_archives_size),
       current_archives_size_(0u),
-      garbage_collected_snapshot_("garbage collected"),
-      not_persisted_snapshot_("not persisted"),
-      timed_out_snapshot_("timed out"),
-      shutdown_snapshot_("shutdown"),
-      no_uuid_snapshot_(UuidForNoSnapshotUuid()) {
-  garbage_collected_snapshot_.annotations->Set("debug.snapshot.error", "garbage collected");
-  garbage_collected_snapshot_.annotations->Set("debug.snapshot.present", false);
-
-  not_persisted_snapshot_.annotations->Set("debug.snapshot.error", "not persisted");
-  not_persisted_snapshot_.annotations->Set("debug.snapshot.present", false);
-
-  timed_out_snapshot_.annotations->Set("debug.snapshot.error", "timeout");
-  timed_out_snapshot_.annotations->Set("debug.snapshot.present", false);
-
-  shutdown_snapshot_.annotations->Set("debug.snapshot.error", "system shutdown");
-  shutdown_snapshot_.annotations->Set("debug.snapshot.present", false);
-
-  no_uuid_snapshot_.annotations->Set("debug.snapshot.error", "missing uuid");
-  no_uuid_snapshot_.annotations->Set("debug.snapshot.present", false);
-
+      garbage_collected_snapshot_("garbage collected",
+                                  AnnotationMap({
+                                      {"debug.snapshot.error", "garbage collected"},
+                                      {"debug.snapshot.present", "false"},
+                                  })),
+      not_persisted_snapshot_("not persisted", AnnotationMap({
+                                                   {"debug.snapshot.error", "not persisted"},
+                                                   {"debug.snapshot.present", "false"},
+                                               })),
+      timed_out_snapshot_("timed out", AnnotationMap({
+                                           {"debug.snapshot.error", "timeout"},
+                                           {"debug.snapshot.present", "false"},
+                                       })),
+      shutdown_snapshot_("shutdown", AnnotationMap({
+                                         {"debug.snapshot.error", "system shutdown"},
+                                         {"debug.snapshot.present", "false"},
+                                     })),
+      no_uuid_snapshot_(UuidForNoSnapshotUuid(), AnnotationMap({
+                                                     {"debug.snapshot.error", "missing uuid"},
+                                                     {"debug.snapshot.present", "false"},
+                                                 })) {
   // Load the file lines into a set of UUIDs.
   std::ifstream file(garbage_collected_snapshots_path_);
   for (std::string uuid; getline(file, uuid);) {
@@ -98,36 +99,36 @@ SnapshotManager::SnapshotManager(async_dispatcher_t* dispatcher, timekeeper::Clo
 
 Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
   if (uuid == garbage_collected_snapshot_.uuid) {
-    return Snapshot(garbage_collected_snapshot_.annotations);
+    return MissingSnapshot(garbage_collected_snapshot_.annotations);
   }
 
   if (uuid == not_persisted_snapshot_.uuid) {
-    return Snapshot(not_persisted_snapshot_.annotations);
+    return MissingSnapshot(not_persisted_snapshot_.annotations);
   }
 
   if (uuid == timed_out_snapshot_.uuid) {
-    return Snapshot(timed_out_snapshot_.annotations);
+    return MissingSnapshot(timed_out_snapshot_.annotations);
   }
 
   if (uuid == shutdown_snapshot_.uuid) {
-    return Snapshot(shutdown_snapshot_.annotations);
+    return MissingSnapshot(shutdown_snapshot_.annotations);
   }
 
   if (uuid == no_uuid_snapshot_.uuid) {
-    return Snapshot(no_uuid_snapshot_.annotations);
+    return MissingSnapshot(no_uuid_snapshot_.annotations);
   }
 
   auto* data = FindSnapshotData(uuid);
 
   if (!data) {
     if (garbage_collected_snapshots_.find(uuid) != garbage_collected_snapshots_.end()) {
-      return Snapshot(garbage_collected_snapshot_.annotations);
+      return MissingSnapshot(garbage_collected_snapshot_.annotations);
     } else {
-      return Snapshot(not_persisted_snapshot_.annotations);
+      return MissingSnapshot(not_persisted_snapshot_.annotations);
     }
   }
 
-  return Snapshot(data->annotations, data->archive);
+  return ManagedSnapshot(data->annotations, data->presence_annotations, data->archive);
 }
 
 ::fpromise::promise<SnapshotUuid> SnapshotManager::GetSnapshotUuid(zx::duration timeout) {
@@ -247,6 +248,7 @@ SnapshotUuid SnapshotManager::MakeNewSnapshotRequest(const zx::time start_time,
                           .archive_size = StorageSize::Bytes(0u),
                           .annotations = nullptr,
                           .archive = nullptr,
+                          .presence_annotations = nullptr,
                       });
 
   requests_.back()->delayed_get_snapshot.set_handler([this, timeout, uuid]() {
@@ -308,10 +310,13 @@ void SnapshotManager::CompleteWithSnapshot(const SnapshotUuid& uuid, FidlSnapsho
   FX_CHECK(data);
   FX_CHECK(request->is_pending);
 
-  // Add debug annotations.
+  data->presence_annotations = std::make_shared<AnnotationMap>();
   if (fidl_snapshot.IsEmpty()) {
-    AddAnnotation("debug.snapshot.present", std::string("false"), &fidl_snapshot);
+    data->presence_annotations->Set("debug.snapshot.present", "false");
   }
+
+  // Add annotations about the snapshot. These are not "presence" annotations because
+  // they're unchanging and not the result of the SnapshotManager's data management.
   AddAnnotation("debug.snapshot.shared-request.num-clients", data->num_clients_with_uuid,
                 &fidl_snapshot);
   AddAnnotation("debug.snapshot.shared-request.uuid", request->uuid, &fidl_snapshot);
@@ -328,7 +333,7 @@ void SnapshotManager::CompleteWithSnapshot(const SnapshotUuid& uuid, FidlSnapsho
   }
 
   if (fidl_snapshot.has_archive()) {
-    data->archive = MakeShared(Snapshot::Archive(fidl_snapshot.archive()));
+    data->archive = MakeShared(ManagedSnapshot::Archive(fidl_snapshot.archive()));
 
     data->archive_size += StorageSize::Bytes(data->archive->key.size());
     data->archive_size += StorageSize::Bytes(data->archive->value.size());
@@ -387,6 +392,7 @@ void SnapshotManager::EnforceSizeLimits() {
 
 void SnapshotManager::DropAnnotations(SnapshotData* data) {
   data->annotations = nullptr;
+  data->presence_annotations = nullptr;
 
   current_annotations_size_ -= data->annotations_size;
   data->annotations_size = StorageSize::Bytes(0u);
@@ -400,8 +406,8 @@ void SnapshotManager::DropArchive(SnapshotData* data) {
 
   // If annotations still exist, add an annotation indicating the archive was garbage collected.
   if (data->annotations) {
-    for (const auto& [k, v] : garbage_collected_snapshot_.annotations->Raw()) {
-      data->annotations->Set(k, v);
+    for (const auto& [k, v] : garbage_collected_snapshot_.annotations.Raw()) {
+      data->presence_annotations->Set(k, v);
       data->annotations_size += StorageSize::Bytes(k.size()) + StorageSize::Bytes(v.size());
       current_annotations_size_ += StorageSize::Bytes(k.size()) + StorageSize::Bytes(v.size());
     }
