@@ -77,9 +77,6 @@ func NewFile(path string, ft FileType) (*File, error) {
 	}
 
 	AllFiles[path] = f
-	if Config.Extensions[filepath.Ext(path)] {
-		AllSearchableFiles[path] = f
-	}
 	return f, nil
 }
 

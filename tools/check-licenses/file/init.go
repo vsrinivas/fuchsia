@@ -4,14 +4,10 @@
 
 package file
 
-var (
-	AllFiles           map[string]*File
-	AllSearchableFiles map[string]*File
-)
+var AllFiles map[string]*File
 
 func init() {
 	AllFiles = make(map[string]*File, 0)
-	AllSearchableFiles = make(map[string]*File, 0)
 }
 
 func Initialize(c *FileConfig) error {

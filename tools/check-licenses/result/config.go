@@ -5,12 +5,8 @@
 package result
 
 type ResultConfig struct {
-	DepFile string `json:"depFile"`
-	CWD     string `json:"cwd"`
-
 	FuchsiaDir        string      `json:"fuchsiaDir"`
 	OutDir            string      `json:"outDir"`
-	BuildDir          string      `json:"buildDir"`
 	Outputs           []string    `json:"outputs"`
 	Templates         []*Template `json:"templates"`
 	Zip               bool        `json:"zip"`
@@ -42,15 +38,6 @@ func NewConfig() *ResultConfig {
 }
 
 func (c *ResultConfig) Merge(other *ResultConfig) {
-	if c.CWD == "" {
-		c.CWD = other.CWD
-	}
-	if c.BuildDir == "" {
-		c.BuildDir = other.BuildDir
-	}
-	if c.DepFile == "" {
-		c.DepFile = other.DepFile
-	}
 	if c.FuchsiaDir == "" {
 		c.FuchsiaDir = other.FuchsiaDir
 	}
