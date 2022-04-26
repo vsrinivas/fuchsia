@@ -29,8 +29,9 @@ class CrashIntrospector : public fuchsia::sys::internal::CrashIntrospect {
   CrashIntrospector();
   virtual ~CrashIntrospector() override;
 
-  // Register the job to be monitored for thread crashes and associate it with |component_info|.
-  void RegisterJob(const zx::job& job, fuchsia::sys::internal::SourceIdentity component_info);
+  // Monitors the given exception channel for thread crashes and associate it with |component_info|.
+  void RegisterExceptionChannel(zx::channel exception_channel,
+                                fuchsia::sys::internal::SourceIdentity component_info);
 
   // Removes and returns the component associated with crashed thread which is cached in this
   // class.

@@ -1059,7 +1059,7 @@ void Realm::InstallRuntime(
     fdio_flat_namespace_t* flat, std::string args, ComponentRequestWrapper component_request,
     std::string url, ExportedDirChannels channels,
     fit::function<void(std::weak_ptr<ComponentControllerImpl> component)> callback,
-    zx::channel pkg_handle) {
+    zx::channel pkg_handle, zx::channel exception_channel) {
   if (process) {
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller;
 
@@ -1079,7 +1079,8 @@ void Realm::InstallRuntime(
     component_info.set_component_name(application->label());
     component_info.set_component_url(application->url());
     component_info.set_instance_id(application->hub_instance_id());
-    realm->RegisterJobForCrashIntrospection(application->job(), std::move(component_info));
+    realm->RegisterExceptionChannelForCrashIntrospection(std::move(exception_channel),
+                                                         std::move(component_info));
     realm->NotifyComponentStarted(application->url(), application->label(),
                                   application->hub_instance_id());
     realm->applications_.emplace(key, std::move(application));
@@ -1111,6 +1112,8 @@ void Realm::CreateElfBinaryComponentFromPackage(
       return;
     }
   }
+  zx::channel exception_channel;
+  child_job.create_exception_channel(0, &exception_channel);
 
   if (!gwp_asan_config_.empty()) {
     env_vars.push_back(gwp_asan_config_);
@@ -1123,7 +1126,7 @@ void Realm::CreateElfBinaryComponentFromPackage(
                                       std::move(launch_info), std::move(loader_service), flat);
   InstallRuntime(this, std::move(child_job), std::move(process), std::move(ns), flat, args,
                  std::move(component_request), url, std::move(channels), std::move(callback),
-                 std::move(package_handle));
+                 std::move(package_handle), std::move(exception_channel));
 }
 
 void Realm::CreateRunnerComponentFromPackage(
@@ -1366,15 +1369,17 @@ bool Realm::HasComponentEventListenerBound() {
   return component_event_provider_ && component_event_provider_->listener_bound();
 }
 
-void Realm::RegisterJobForCrashIntrospection(
-    const zx::job& job, fuchsia::sys::internal::SourceIdentity component_info) {
+void Realm::RegisterExceptionChannelForCrashIntrospection(
+    zx::channel exception_channel, fuchsia::sys::internal::SourceIdentity component_info) {
   component_info.mutable_realm_path()->push_back(label_);
   if (likely(parent_)) {
-    parent_->RegisterJobForCrashIntrospection(job, std::move(component_info));
+    parent_->RegisterExceptionChannelForCrashIntrospection(std::move(exception_channel),
+                                                           std::move(component_info));
   } else if (crash_introspector_) {
     auto* path = component_info.mutable_realm_path();
     std::reverse(path->begin(), path->end());
-    crash_introspector_->RegisterJob(job, std::move(component_info));
+    crash_introspector_->RegisterExceptionChannel(std::move(exception_channel),
+                                                  std::move(component_info));
   } else {
     FX_LOGS(ERROR) << "Cannot find parent or crash introspector for realm: " << label_;
   }

@@ -55,10 +55,8 @@ void CrashIntrospector::FindComponentByThreadKoid(zx_koid_t thread_koid,
   callback(std::move(result));
 }
 
-void CrashIntrospector::RegisterJob(const zx::job& job,
-                                    fuchsia::sys::internal::SourceIdentity component_info) {
-  zx::channel exception_channel;
-  job.create_exception_channel(0, &exception_channel);
+void CrashIntrospector::RegisterExceptionChannel(
+    zx::channel exception_channel, fuchsia::sys::internal::SourceIdentity component_info) {
   auto monitor = std::make_unique<CrashMonitor>(
       weak_ptr_factory_.GetWeakPtr(), std::move(exception_channel), std::move(component_info));
   monitors_.emplace(monitor.get(), std::move(monitor));

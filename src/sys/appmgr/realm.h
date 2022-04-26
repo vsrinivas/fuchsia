@@ -228,7 +228,8 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
                              fxl::RefPtr<Namespace> ns, fdio_flat_namespace_t* flat,
                              std::string args, ComponentRequestWrapper component_request,
                              std::string url, ExportedDirChannels channels,
-                             ComponentObjectCreatedCallback callback, zx::channel pkg_handle);
+                             ComponentObjectCreatedCallback callback, zx::channel pkg_handle,
+                             zx::channel exception_channel);
 
  private:
   static uint32_t next_numbered_label_;
@@ -274,11 +275,11 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   // Called by `FindComponent`. This function returns realm path in reverse order.
   zx::status<fuchsia::sys::internal::SourceIdentity> FindComponentInternal(zx_koid_t process_koid);
 
-  // Registers a job for crash introspection.
+  // Registers an exception channel for crash introspection.
   // This internally adds realm label to passed |component_info| and calls either it's own parent
   // or directly calls introspector if this is a root realm.
-  void RegisterJobForCrashIntrospection(const zx::job& job,
-                                        fuchsia::sys::internal::SourceIdentity component_info);
+  void RegisterExceptionChannelForCrashIntrospection(
+      zx::channel exception_channel, fuchsia::sys::internal::SourceIdentity component_info);
 
   fxl::WeakPtr<Realm> const parent_;
   fuchsia::sys::LoaderPtr loader_;

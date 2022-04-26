@@ -98,6 +98,8 @@ TEST_F(RealmTest, ProcessCreationFailure) {
   ASSERT_EQ(status, ZX_OK);
 
   zx::job child_job = zx::job(child);
+  zx::channel exception_channel;
+  child_job.create_exception_channel(0, &exception_channel);
 
   // Create a child process object, but don't actually create a process.
   zx::process child_process = zx::process();
@@ -136,7 +138,7 @@ TEST_F(RealmTest, ProcessCreationFailure) {
 
   Realm::InstallRuntime(no_realm, std::move(child_job), std::move(child_process), ns.ns(), flat_ns,
                         args, std::move(component_req), url, std::move(channels),
-                        std::move(callback), std::move(pkg_hnd));
+                        std::move(callback), std::move(pkg_hnd), std::move(exception_channel));
 
   // Check that all the things we expect to be torn down are torn down.
 
