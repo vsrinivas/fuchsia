@@ -9,6 +9,7 @@ use std::cell::RefCell;
 use async_utils::async_once::Once;
 use dhcp::protocol::IntoFidlExt as _;
 use fuchsia_async::TimeoutExt as _;
+use fuchsia_zircon as zx;
 use futures::{
     future::TryFutureExt as _,
     stream::{self, StreamExt as _, TryStreamExt as _},
@@ -138,7 +139,7 @@ async fn set_server_settings(
                 .set_parameter(parameter)
                 .await
                 .expect("failed to call dhcp/Server.SetParameter")
-                .map_err(fuchsia_zircon::Status::from_raw)
+                .map_err(zx::Status::from_raw)
                 .unwrap_or_else(|e| {
                     panic!("dhcp/Server.SetParameter({:?}) returned error: {:?}", parameter, e)
                 })
@@ -148,7 +149,7 @@ async fn set_server_settings(
             .set_option(option)
             .await
             .expect("failed to call dhcp/Server.SetOption")
-            .map_err(fuchsia_zircon::Status::from_raw)
+            .map_err(zx::Status::from_raw)
             .unwrap_or_else(|e| {
                 panic!("dhcp/Server.SetOption({:?}) returned error: {:?}", option, e)
             })
@@ -274,7 +275,7 @@ async fn assert_interface_assigned_addr(
         // loses the race here and only starts after the first request from the DHCP
         // client, which results in a 3 second toll. This test typically takes ~4.5
         // seconds; we apply a large multiple to be safe.
-        fuchsia_async::Time::after(fuchsia_zircon::Duration::from_seconds(60)),
+        fuchsia_async::Time::after(zx::Duration::from_seconds(60)),
         || Err(anyhow::anyhow!("timed out")),
     )
     .await
@@ -569,7 +570,7 @@ fn test_dhcp<'a, E: netemul::Endpoint>(
                             .start_serving()
                             .await
                             .expect("failed to call dhcp/Server.StartServing")
-                            .map_err(fuchsia_zircon::Status::from_raw)
+                            .map_err(zx::Status::from_raw)
                             .expect("dhcp/Server.StartServing returned error");
                         (dhcp_server, ifaces)
                     })
@@ -813,7 +814,7 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
             .start_serving()
             .await
             .expect("failed to call dhcp/Server.StartServing")
-            .map_err(fuchsia_zircon::Status::from_raw)
+            .map_err(zx::Status::from_raw)
             .expect("dhcp/Server.StartServing returned error");
         let () = assert_client_acquires_addr(
             &client_realm,
@@ -844,7 +845,7 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
                     .start_serving()
                     .await
                     .expect("failed to call dhcp/Server.StartServing")
-                    .map_err(fuchsia_zircon::Status::from_raw)
+                    .map_err(zx::Status::from_raw)
                     .expect("dhcp/Server.StartServing returned error");
                 dhcp_server.stop_serving().await.expect("failed to call dhcp/Server.StopServing")
             }
@@ -854,8 +855,8 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
                         .start_serving()
                         .await
                         .expect("failed to call dhcp/Server.StartServing")
-                        .map_err(fuchsia_zircon::Status::from_raw),
-                    Err(fuchsia_zircon::Status::INVALID_ARGS)
+                        .map_err(zx::Status::from_raw),
+                    Err(zx::Status::INVALID_ARGS)
                 );
             }
         };
@@ -880,7 +881,7 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
                     .start_serving()
                     .await
                     .expect("failed to call dhcp/Server.StartServing")
-                    .map_err(fuchsia_zircon::Status::from_raw)
+                    .map_err(zx::Status::from_raw)
                     .expect("dhcp/Server.StartServing returned error");
                 let () = dhcp_server
                     .stop_serving()
@@ -890,7 +891,7 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
                     .clear_leases()
                     .await
                     .expect("failed to call dhcp/Server.ClearLeases")
-                    .map_err(fuchsia_zircon::Status::from_raw)
+                    .map_err(zx::Status::from_raw)
                     .expect("dhcp/Server.ClearLeases returned error");
             }
             PersistenceMode::Ephemeral => {
@@ -899,8 +900,8 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
                         .start_serving()
                         .await
                         .expect("failed to call dhcp/Server.StartServing")
-                        .map_err(fuchsia_zircon::Status::from_raw),
-                    Err(fuchsia_zircon::Status::INVALID_ARGS)
+                        .map_err(zx::Status::from_raw),
+                    Err(zx::Status::INVALID_ARGS)
                 );
             }
         };
@@ -991,7 +992,7 @@ async fn test_dhcp_server_persistence_mode<E: netemul::Endpoint>(
                         .unwrap_or_else(|e| {
                             panic!("dhcp/Server.GetParameter({:?}): {:?}", name, e)
                         })
-                        .map_err(fuchsia_zircon::Status::from_raw)
+                        .map_err(zx::Status::from_raw)
                         .unwrap_or_else(|e| {
                             panic!("dhcp/Server.GetParameter({:?}): {:?}", name, e)
                         }),

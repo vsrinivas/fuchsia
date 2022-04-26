@@ -193,7 +193,7 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
         )
         .await
         .expect("add_ethernet_device FIDL error")
-        .map_err(fuchsia_zircon::Status::from_raw)
+        .map_err(zx::Status::from_raw)
         .expect("add_ethernet_device error");
 
     let (id_etht0, name_etht0) = interfaces_stream.select_next_some().await;
@@ -243,7 +243,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
     // These values effectively result in a large timeout of 60s which should avoid
     // flakes. This test was run locally 100 times without flakes.
     /// Duration to sleep between polls.
-    const POLL_WAIT: fuchsia_zircon::Duration = fuchsia_zircon::Duration::from_seconds(1);
+    const POLL_WAIT: zx::Duration = zx::Duration::from_seconds(1);
     /// Maximum number of times we'll poll the DHCP server to check its parameters.
     const RETRY_COUNT: u64 = 120;
 

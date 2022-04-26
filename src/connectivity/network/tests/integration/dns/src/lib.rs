@@ -169,7 +169,7 @@ async fn discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
             .set_parameter(parameter)
             .await
             .expect("failed to call dhcp/Server.SetParameter")
-            .map_err(fuchsia_zircon::Status::from_raw)
+            .map_err(zx::Status::from_raw)
             .unwrap_or_else(|e| {
                 panic!("dhcp/Server.SetParameter({:?}) returned error: {:?}", parameter, e)
             })
@@ -187,7 +187,7 @@ async fn discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
         .start_serving()
         .await
         .expect("failed to call dhcp/Server.StartServing")
-        .map_err(fuchsia_zircon::Status::from_raw)
+        .map_err(zx::Status::from_raw)
         .expect("dhcp/Server.StartServing returned error");
 
     // Start networking on client realm.

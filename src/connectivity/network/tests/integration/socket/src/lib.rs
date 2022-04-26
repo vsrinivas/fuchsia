@@ -8,6 +8,7 @@ use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fuchsia_async::TimeoutExt as _;
 
 use anyhow::Context as _;
+use fuchsia_zircon as zx;
 use futures::{
     io::AsyncReadExt as _, io::AsyncWriteExt as _, FutureExt as _, StreamExt as _,
     TryFutureExt as _, TryStreamExt as _,
@@ -395,7 +396,7 @@ async fn test_ip_endpoints_socket() {
         })
         .await
         .expect("add_port failed")
-        .map_err(fuchsia_zircon::Status::from_raw)
+        .map_err(zx::Status::from_raw)
         .expect("add_port returned error");
 
     let (client_port, client_req) =
@@ -521,7 +522,7 @@ async fn test_ip_endpoint_packets() {
             .read_frame()
             .await
             .context("read_frame_failed")?
-            .map_err(fuchsia_zircon::Status::from_raw)
+            .map_err(zx::Status::from_raw)
             .context("read_frame returned error")?;
         Ok(Some((frame, tun_dev)))
     })
@@ -587,17 +588,14 @@ async fn test_ip_endpoint_packets() {
             .write_frame(frame)
             .await
             .context("write_frame failed")?
-            .map_err(fuchsia_zircon::Status::from_raw)
+            .map_err(zx::Status::from_raw)
             .context("write_frame returned error")?;
         Ok(read_frame
             .try_next()
             .and_then(|f| {
                 futures::future::ready(f.context("frame stream ended unexpectedly").map(Some))
             })
-            .on_timeout(
-                fuchsia_async::Time::after(fuchsia_zircon::Duration::from_millis(50)),
-                || Ok(None),
-            )
+            .on_timeout(fuchsia_async::Time::after(zx::Duration::from_millis(50)), || Ok(None))
             .await
             .context("failed to read frame")?)
     }
@@ -633,7 +631,7 @@ async fn test_ip_endpoint_packets() {
         })
         .await
         .expect("write_frame failed")
-        .map_err(fuchsia_zircon::Status::from_raw)
+        .map_err(zx::Status::from_raw)
         .expect("write_frame returned error");
 
     // Read ping response.
@@ -710,7 +708,7 @@ async fn test_ip_endpoint_packets() {
         })
         .await
         .expect("write_frame failed")
-        .map_err(fuchsia_zircon::Status::from_raw)
+        .map_err(zx::Status::from_raw)
         .expect("write_frame returned error");
 
     // Read ping response.

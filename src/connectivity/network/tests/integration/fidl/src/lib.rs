@@ -83,7 +83,7 @@ async fn add_ethernet_device() {
         )
         .await
         .expect("add_ethernet_device FIDL error")
-        .map_err(fuchsia_zircon::Status::from_raw)
+        .map_err(zx::Status::from_raw)
         .expect("add_ethernet_device failed");
 
     let interface_state = realm
@@ -151,7 +151,7 @@ async fn test_no_duplicate_interface_names() {
         )
         .await
         .expect("add_ethernet_device FIDL error")
-        .map_err(fuchsia_zircon::Status::from_raw)
+        .map_err(zx::Status::from_raw)
         .expect("add_ethernet_device error");
 
     // Now try to add again with the same parameters and expect an error.
@@ -168,8 +168,8 @@ async fn test_no_duplicate_interface_names() {
         )
         .await
         .expect("add_ethernet_device FIDL error")
-        .map_err(fuchsia_zircon::Status::from_raw);
-    assert_eq!(result, Err(fuchsia_zircon::Status::ALREADY_EXISTS));
+        .map_err(zx::Status::from_raw);
+    assert_eq!(result, Err(zx::Status::ALREADY_EXISTS));
 }
 
 // TODO(https://fxbug.dev/88796): Remove this test when fuchsia.net.interfaces
