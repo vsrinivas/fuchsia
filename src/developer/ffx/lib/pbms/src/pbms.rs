@@ -7,8 +7,9 @@
 use {
     crate::{gcs::fetch_from_gcs, repo_info::RepoInfo},
     anyhow::{bail, Context, Result},
+    ffx_config::sdk::SdkVersion,
     fms::{find_product_bundle, Entries},
-    sdk_metadata::{Metadata, ProductBundleV1},
+    sdk_metadata::{Metadata, MetadataValue, ProductBundleV1},
     std::{
         collections::HashMap,
         io::Write,
@@ -87,7 +88,6 @@ fn expand_placeholders(uri: &str, version: &str, sdk_root: &str) -> Result<url::
 ///
 /// I.e. run expand_placeholders() on each element in CONFIG_METADATA.
 pub(crate) async fn pbm_repo_list() -> Result<Vec<url::Url>> {
-    use ffx_config::sdk::SdkVersion;
     let sdk = ffx_config::get_sdk().await.context("PBMS ffx config get sdk")?;
     let version = match sdk.get_version() {
         SdkVersion::Version(version) => version,
@@ -270,6 +270,34 @@ fn pb_dir_name(gcs_url: &url::Url) -> String {
     format!("{}", s.finish())
 }
 
+/// Returns the build_info_version from the metadata if present.
+async fn get_version_for_packages(
+    metadata_collection: &Option<Vec<(String, MetadataValue)>>,
+) -> Result<Option<String>> {
+    let mut version: Option<String> = None;
+    if let Some(metadata) = metadata_collection {
+        if let Some((_, version_value)) =
+            metadata.iter().find(|(key, _)| key == "build_info_version")
+        {
+            match version_value {
+                MetadataValue::StringValue(value) => version = Some(value.to_string()),
+                _ => {}
+            }
+        }
+    }
+    if version.is_none() {
+        // If there is no metadata, or it did not contain build_info_version, use the
+        // SDK version.
+        let sdk = ffx_config::get_sdk().await.context("PBMS ffx config get sdk")?;
+        version = match sdk.get_version() {
+            SdkVersion::Version(version) => Some(version.to_string()),
+            SdkVersion::InTree => None,
+            SdkVersion::Unknown => bail!("Unable to determine SDK version vs. in-tree"),
+        };
+    }
+    Ok(version)
+}
+
 /// Download and extract the packages tarball.
 async fn fetch_package_tgz<W>(
     verbose: bool,
@@ -280,16 +308,20 @@ async fn fetch_package_tgz<W>(
 where
     W: Write + Sync,
 {
-    use ffx_config::sdk::SdkVersion;
-    let sdk = ffx_config::get_sdk().await.context("PBMS ffx config get sdk")?;
-    let version = match sdk.get_version() {
-        SdkVersion::Version(version) => version,
-        SdkVersion::InTree => "",
-        SdkVersion::Unknown => bail!("Unable to determine SDK version vs. in-tree"),
-    };
+    let version = get_version_for_packages(&product_bundle.metadata)
+        .await
+        .context("determine version for package fetching")?;
 
-    let file_name = format!("{}-release.tar.gz", product_bundle.name);
-    let url = Url::parse(&format!("gs://fuchsia/development/{}/packages/{}", version, file_name))?;
+    // TODO(fxbug.dev/98529): Handle the non-standard name for terminal.qemu-arm64.
+    let file_name = match product_bundle.name.as_str() {
+        "terminal.qemu-arm64" => String::from("qemu-arm64.tar.gz"),
+        _ => format!("{}-release.tar.gz", product_bundle.name),
+    };
+    let package_url = match version {
+        Some(value) => format!("gs://fuchsia/development/{}/packages/{}", value, file_name),
+        None => format!("gs://fuchsia/development/packages/{}", file_name),
+    };
+    let url = Url::parse(&package_url)?;
 
     // Download the package tgz into a temp directory.
     let temp_dir = tempfile::TempDir::new_in(&local_dir).context("temp dir")?;
@@ -313,7 +345,7 @@ where
     // the multiple-stream-aware gzip decoder.
     let archive_path = temp_dir.path().join(&file_name);
     let file = std::fs::File::open(&archive_path)
-        .with_context(|| format!("open archive {}", file_name))?;
+        .with_context(|| format!("open archive {:?}", archive_path))?;
     let file = flate2::read::MultiGzDecoder::new(file);
     let mut archive = tar::Archive::new(file);
 
