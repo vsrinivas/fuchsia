@@ -7,5 +7,6 @@ group("tests") {
   deps = [
     "client_integration",
     "different_values",
+    "split_values_and_manifests:tests",
   ]
 }

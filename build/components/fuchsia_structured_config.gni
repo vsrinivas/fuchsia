@@ -80,8 +80,9 @@ import("//tools/configc/build/config.gni")
 #     Type: path or scope
 #
 #   component_name (optional)
-#     The basename of the component manifest within the package. If not provided, derived
-#     from the `component` parameter's target info.
+#     The basename of the component manifest within the package's meta/ dir. If not provided,
+#     derived from the `cm_label` parameter's outputs. Must be specified in order to invoke
+#     this template in a different GN module from where `cm_label` is defined.
 #
 #   deps (optional)
 #   testonly (optional)
@@ -113,13 +114,22 @@ template("fuchsia_structured_config_values") {
       _value_file = invoker.values_source
     }
 
-    # TODO(https://fxbug.dev/86798) allow defining manifest in separate gn mod from config
-    component_outputs = get_target_outputs(invoker.cm_label)
-    compiled_manifest = component_outputs[0]
-
     if (defined(invoker.component_name)) {
+      # we have the component name which means we can infer the output location ourselves
       component_name = invoker.component_name
+      _cm_out_dir = get_label_info(invoker.cm_label, "target_out_dir")
+      _cm_target_name = get_label_info(invoker.cm_label, "name")
+      compiled_manifest = "$_cm_out_dir/cml/$_cm_target_name/$component_name.cm"
     } else {
+      # make sure invoker.cm_label is in the same module, i.e. starts with ":"
+      segments = string_split(invoker.cm_label, ":")
+      assert(
+          segments[0] == "",
+          "component_name must be provided if cm_label is in a different module")
+
+      # now we can call get_target_outputs without creating unactionable error messages
+      component_outputs = get_target_outputs(invoker.cm_label)
+      compiled_manifest = component_outputs[0]
       component_name = get_path_info(compiled_manifest, "name")
     }
 
@@ -254,7 +264,6 @@ template("fuchsia_structured_config_rust_lib") {
   if (current_toolchain == default_toolchain) {
     assert(defined(invoker.cm_label), "must provide a component manifest label")
 
-    # TODO(https://fxbug.dev/86798) allow defining manifest in separate gn mod from config
     manifest_outputs = get_target_outputs(invoker.cm_label)
     compiled_manifest = manifest_outputs[0]
 
@@ -432,7 +441,6 @@ template("fuchsia_structured_config_cpp_elf_lib") {
   if (current_toolchain == default_toolchain) {
     assert(defined(invoker.cm_label), "must provide a component manifest label")
 
-    # TODO(https://fxbug.dev/86798) allow defining manifest in separate gn mod from config
     manifest_outputs = get_target_outputs(invoker.cm_label)
     compiled_manifest = manifest_outputs[0]
 
@@ -618,7 +626,6 @@ template("fuchsia_structured_config_cpp_driver_lib") {
   if (current_toolchain == default_toolchain) {
     assert(defined(invoker.cm_label), "must provide a component manifest label")
 
-    # TODO(https://fxbug.dev/86798) allow defining manifest in separate gn mod from config
     manifest_outputs = get_target_outputs(invoker.cm_label)
     compiled_manifest = manifest_outputs[0]
 

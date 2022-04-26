@@ -59,7 +59,7 @@ fuchsia_structured_config_cpp_driver_lib("receiver_config") {
 
 fuchsia_structured_config_values("values") {
   testonly = true
-  cm_label = ":receiver_component"
+  cm_label = ":receiver_manifest"
   values_source = "//src/sys/component_manager/tests/structured_config/client_integration/config/values.json5"
 }
 

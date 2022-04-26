@@ -1,0 +1,19 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This module ensures that these build templates work for components defined in other files.
+
+import("//build/components.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":values_defined_separately_from_manifest" ]
+}
+
+fuchsia_structured_config_values("values_defined_separately_from_manifest") {
+  testonly = true
+  component_name = "receiver"
+  cm_label = "//src/sys/component_manager/tests/structured_config/different_values:receiver_manifest"
+  values_source = "//src/sys/component_manager/tests/structured_config/different_values/config/values_with_false.json5"
+}
