@@ -1,0 +1,136 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//build/dist/resource.gni")
+
+# Generates a disk image in qcow2 format. The disk images created by this template are simple
+# regions of specific byte patterns that can be read in tests. The resultant image will be exposed
+# as a resource that can be included into a fuchsia package by simply adding it as a dependency.
+#
+#  disk_size (required)
+#     The size of disk to generate. This can be in bytes, or use suffixes k/M/G/T/P/E. For example,
+#     `disk_size = 10G` will create a 10 GiB disk image.
+#
+#  filename (optional, default = $target_name.qcow2)
+#     The name of the generated disk image.
+#
+#  cluster_size (optional, default = 64k)
+#     The qcow cluster size to use for the generated image. Number formats accepted are the same as
+#     described in `disk_size`.
+#
+#  writes (optional, default = [])
+#     The `writes` argument allows for some data to be written to the disk by writing a byte
+#     pattern to a range of bytes on the disk. This takes a string of the form:
+#
+#         "<disk_offset>+<length>=<byte>"
+#
+#     Where `disk_offset` and `length` both accept number formats as described in the `disk_size`
+#     option. `byte` is a integer in the range 0 <= byte < 256. For example, the string:
+#     "20M+1M=0xab" will write 1 MiB of '0xab' bytes to the disk image starting 20 MiB into the
+#     file.
+#
+#     All of the written ranges must be fully contained within the bounds of the generated file, as
+#     specified by the `disk_size` option.
+#
+# Ex:
+#    qcow_test_image("my_image") {
+#        filename = "output.qcow2"
+#        disk_size = "10G"
+#        cluster_size = "256k"
+#        writes = [
+#            # The first 1KiB of the file will be set to '0x01'.
+#            "0+1k=1",
+#            # 3 bytes of '0xaa' will be written at a 1GiB offset.
+#            "1G+3=0xaa",
+#        ]
+#    }
+#
+#    fuchsia_unittest_package("my_test") {
+#        deps = [
+#            ":my_image",
+#            ":my_test_component",
+#        ]
+#    }
+#
+template("qcow_test_image") {
+  assert(defined(invoker.disk_size), "disk_size must be specified")
+  filename = "${target_name}.qcow2"
+  if (defined(invoker.filename)) {
+    filename = invoker.filename
+  }
+  cluster_size = "64k"
+  if (defined(invoker.cluster_size)) {
+    cluster_size = invoker.cluster_size
+  }
+
+  raw_disk_target = "gen_${target_name}_raw_image"
+  qcow_disk_target = "gen_${target_name}_qcow_image"
+
+  # Generate a flat/sparse image. Despite being potentially large files these will not take up much
+  # disk space (assuming the host platform and filesystem can properly support sparse files).
+  #
+  # We do this as a first step to generate the layout of the disk image, which will then be passed
+  # to `qemu-img convert` to create a qcow image.
+  action(raw_disk_target) {
+    script = "//src/virtualization/lib/qcow/scripts/gen-sparse-image.py"
+
+    output = "${target_gen_dir}/${filename}.raw"
+    args = [
+      "--file",
+      rebase_path(output, root_build_dir),
+      "--size",
+      invoker.disk_size,
+    ]
+    if (defined(invoker.writes)) {
+      foreach(write, invoker.writes) {
+        args += [
+          "--write",
+          write,
+        ]
+      }
+    }
+    outputs = [ output ]
+  }
+
+  # Pass the flat image file through qemu-img to convert it into a qcow image file.
+  action(qcow_disk_target) {
+    script = "//prebuilt/third_party/qemu/${host_os}-${host_cpu}/bin/qemu-img"
+    deps = [ ":${raw_disk_target}" ]
+
+    raw_disk_outputs = get_target_outputs(":${raw_disk_target}")
+    inputs = raw_disk_outputs
+
+    args = [
+      "convert",
+
+      # Quiet
+      "-q",
+
+      # Input format
+      "-f",
+      "raw",
+
+      # Output format
+      "-O",
+      "qcow2",
+
+      # qcow options
+      "-o",
+      "cluster_size=${cluster_size}",
+
+      # Input file
+      rebase_path(raw_disk_outputs[0], root_build_dir),
+
+      # Output file
+      rebase_path("${target_gen_dir}/${filename}", root_build_dir),
+    ]
+    outputs = [ "$target_gen_dir/$filename" ]
+  }
+
+  # Expose the generated file as a resource so that it can be easily included into a test package.
+  resource(target_name) {
+    deps = [ ":${qcow_disk_target}" ]
+    sources = get_target_outputs(":${qcow_disk_target}")
+    outputs = [ "data/{{source_file_part}}" ]
+  }
+}

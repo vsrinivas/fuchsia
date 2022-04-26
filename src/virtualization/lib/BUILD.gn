@@ -19,6 +19,7 @@ group("tests") {
     "guest_config:tests",
     "guest_interaction:tests",
     "machina-virtio-device:tests",
+    "qcow:tests",
     "virtio-device:tests",
     "vsh:tests",
   ]
