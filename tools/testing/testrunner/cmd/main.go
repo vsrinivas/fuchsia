@@ -399,17 +399,25 @@ func execute(
 		defer localTester.Close()
 	}
 	finalize := func(t testrunner.Tester, sinks []runtests.DataSinkReference) error {
-		if ctx.Err() != nil {
-			// If the context is canceled, just return the context error.
-			// Otherwise, the RunSnapshot method will fail anyway and just
-			// mask the context error as a snapshot error.
-			return ctx.Err()
-		}
 		if t != nil {
-			if err := t.RunSnapshot(ctx, flags.snapshotFile); err != nil {
+			snapshotCtx := ctx
+			if ctx.Err() != nil {
+				// Run snapshot with a new context so we can still capture a snapshot even
+				// if we hit a timeout. The timeout for running the snapshot should be long
+				// enough to complete the command and short enough to fit within the
+				// cleanupGracePeriod in //tools/lib/subprocess/subprocess.go.
+				var cancel context.CancelFunc
+				snapshotCtx, cancel = context.WithTimeout(context.Background(), 7*time.Second)
+				defer cancel()
+			}
+			if err := t.RunSnapshot(snapshotCtx, flags.snapshotFile); err != nil {
 				// This error usually has a different root cause that gets masked when we
 				// return this error. Log it so we can keep track of it, but don't fail.
-				logger.Errorf(ctx, err.Error())
+				logger.Errorf(snapshotCtx, err.Error())
+			}
+			if ctx.Err() != nil {
+				// If the original context was cancelled, just return the context error.
+				return ctx.Err()
 			}
 			if err := t.EnsureSinks(ctx, sinks, outputs); err != nil {
 				return err
