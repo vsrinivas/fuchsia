@@ -24,7 +24,7 @@
 // Only Flatland methods are implemented, others will cause the server to crash
 // the test deliberately.
 class ViewProviderServer : public fuchsia::ui::app::ViewProvider,
-                           public sys::testing::LocalComponent {
+                           public component_testing::LocalComponent {
  public:
   explicit ViewProviderServer(async_dispatcher_t* dispatcher);
 
@@ -35,7 +35,7 @@ class ViewProviderServer : public fuchsia::ui::app::ViewProvider,
   void SetCreateView2Callback(std::function<void(fuchsia::ui::app::CreateView2Args)> callback);
 
   // LocalComponent::Start
-  void Start(std::unique_ptr<sys::testing::LocalComponentHandles> local_handles) override;
+  void Start(std::unique_ptr<component_testing::LocalComponentHandles> local_handles) override;
 
   // Gfx protocol is not implemented.
   void CreateView(
@@ -53,7 +53,7 @@ class ViewProviderServer : public fuchsia::ui::app::ViewProvider,
 
  private:
   async_dispatcher_t* dispatcher_ = nullptr;
-  std::vector<std::unique_ptr<sys::testing::LocalComponentHandles>> local_handles_;
+  std::vector<std::unique_ptr<component_testing::LocalComponentHandles>> local_handles_;
   fidl::BindingSet<fuchsia::ui::app::ViewProvider> bindings_;
 
   std::function<void(fuchsia::ui::app::CreateView2Args)> create_view2_callback_ = nullptr;

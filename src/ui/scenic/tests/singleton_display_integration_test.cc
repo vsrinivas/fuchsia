@@ -20,7 +20,7 @@ namespace integration_tests {
 using fuds_Metrics = fuchsia::ui::display::singleton::Metrics;
 using fuds_Info = fuchsia::ui::display::singleton::Info;
 using fuds_InfoPtr = fuchsia::ui::display::singleton::InfoPtr;
-using RealmRoot = sys::testing::experimental::RealmRoot;
+using RealmRoot = component_testing::RealmRoot;
 
 // Max timeout in failure cases.
 // Set this as low as you can that still works across all test platforms.

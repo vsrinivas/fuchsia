@@ -144,8 +144,8 @@ class FlutterEmbedderTest : public ::loop_fixture::RealLoop, public ::testing::T
 
   // Wrapped in optional since the view is not created until the middle of SetUp
   std::optional<embedder_tests::EmbedderView> embedder_view_;
-  sys::testing::experimental::RealmBuilder realm_builder_;
-  std::unique_ptr<sys::testing::experimental::RealmRoot> realm_;
+  component_testing::RealmBuilder realm_builder_;
+  std::unique_ptr<component_testing::RealmRoot> realm_;
 };
 
 }  // namespace flutter_embedder_test

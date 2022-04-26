@@ -32,14 +32,14 @@ namespace ui_testing {
 
 namespace {
 
-using sys::testing::Capability;
-using sys::testing::ChildRef;
-using sys::testing::LocalComponent;
-using sys::testing::LocalComponentHandles;
-using sys::testing::ParentRef;
-using sys::testing::Protocol;
-using sys::testing::Ref;
-using sys::testing::Route;
+using component_testing::Capability;
+using component_testing::ChildRef;
+using component_testing::LocalComponent;
+using component_testing::LocalComponentHandles;
+using component_testing::ParentRef;
+using component_testing::Protocol;
+using component_testing::Ref;
+using component_testing::Route;
 
 // Base realm urls.
 constexpr auto kRootPresenterSceneUrl = "#meta/root_presenter_scene.cm";

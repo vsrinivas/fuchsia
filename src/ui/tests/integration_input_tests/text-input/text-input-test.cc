@@ -79,15 +79,15 @@ using fuchsia::ui::views::ViewRef;
 using fuchsia::ui::views::ViewRefControl;
 
 // Types imported for the realm_builder library.
-using sys::testing::ChildRef;
-using sys::testing::Directory;
-using sys::testing::LocalComponent;
-using sys::testing::LocalComponentHandles;
-using sys::testing::ParentRef;
-using sys::testing::Protocol;
-using sys::testing::Route;
-using sys::testing::experimental::RealmRoot;
-using RealmBuilder = sys::testing::experimental::RealmBuilder;
+using component_testing::ChildRef;
+using component_testing::Directory;
+using component_testing::LocalComponent;
+using component_testing::LocalComponentHandles;
+using component_testing::ParentRef;
+using component_testing::Protocol;
+using component_testing::RealmRoot;
+using component_testing::Route;
+using RealmBuilder = component_testing::RealmBuilder;
 
 // Max timeout in failure cases.
 // Set this as low as you can that still works across all test platforms.

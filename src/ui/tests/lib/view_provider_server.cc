@@ -11,13 +11,13 @@
 
 #include <gtest/gtest.h>
 
+using component_testing::LocalComponent;
+using component_testing::LocalComponentHandles;
 using fuchsia::sys::ServiceProvider;
 using fuchsia::ui::app::CreateView2Args;
 using fuchsia::ui::app::ViewProvider;
 using fuchsia::ui::views::ViewRef;
 using fuchsia::ui::views::ViewRefControl;
-using sys::testing::LocalComponent;
-using sys::testing::LocalComponentHandles;
 
 ViewProviderServer::ViewProviderServer(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 

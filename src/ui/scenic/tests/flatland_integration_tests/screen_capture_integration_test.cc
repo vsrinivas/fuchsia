@@ -49,7 +49,7 @@ using fuchsia::ui::composition::ScreenCaptureError;
 using fuchsia::ui::composition::TransformId;
 using fuchsia::ui::composition::ViewportProperties;
 using fuchsia::ui::views::ViewRef;
-using RealmRoot = sys::testing::experimental::RealmRoot;
+using RealmRoot = component_testing::RealmRoot;
 
 class ScreenCaptureIntegrationTest : public gtest::RealLoopFixture {
  public:
