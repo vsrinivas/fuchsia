@@ -33,6 +33,12 @@
 //     location of a token. Enabled by procmacro2_semver_exempt or the
 //     "span-locations" Cargo cfg. This is behind a cfg because tracking
 //     location inside spans is a performance hit.
+//
+// "is_available"
+//     Use proc_macro::is_available() to detect if the proc macro API is
+//     available or needs to be polyfilled instead of trying to use the proc
+//     macro API and catching a panic if it isn't available. Enabled on Rust
+//     1.57+.
 
 use std::env;
 use std::iter;
@@ -52,9 +58,10 @@ fn main() {
         process::exit(1);
     }
 
-    let semver_exempt = cfg!(procmacro2_semver_exempt);
+    let docs_rs = env::var_os("DOCS_RS").is_some();
+    let semver_exempt = cfg!(procmacro2_semver_exempt) || docs_rs;
     if semver_exempt {
-        // https://github.com/alexcrichton/proc-macro2/issues/147
+        // https://github.com/dtolnay/proc-macro2/issues/147
         println!("cargo:rustc-cfg=procmacro2_semver_exempt");
     }
 
@@ -70,12 +77,24 @@ fn main() {
         println!("cargo:rustc-cfg=no_bind_by_move_pattern_guard");
     }
 
-    if version.minor >= 44 {
-        println!("cargo:rustc-cfg=lexerror_display");
+    if version.minor < 44 {
+        println!("cargo:rustc-cfg=no_lexerror_display");
     }
 
-    if version.minor >= 45 {
-        println!("cargo:rustc-cfg=hygiene");
+    if version.minor < 45 {
+        println!("cargo:rustc-cfg=no_hygiene");
+    }
+
+    if version.minor < 54 {
+        println!("cargo:rustc-cfg=no_literal_from_str");
+    }
+
+    if version.minor < 55 {
+        println!("cargo:rustc-cfg=no_group_open_close");
+    }
+
+    if version.minor < 57 {
+        println!("cargo:rustc-cfg=no_is_available");
     }
 
     let target = env::var("TARGET").unwrap();

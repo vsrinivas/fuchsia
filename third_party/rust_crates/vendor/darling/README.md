@@ -1,7 +1,7 @@
 Darling
 =======
 
-[![Build Status](https://travis-ci.org/TedDriggs/darling.svg?branch=master)](https://travis-ci.org/TedDriggs/darling)
+[![Build Status](https://github.com/TedDriggs/darling/workflows/CI/badge.svg)](https://github.com/TedDriggs/darling/actions)
 [![Latest Version](https://img.shields.io/crates/v/darling.svg)](https://crates.io/crates/darling)
 [![Rustc Version 1.31+](https://img.shields.io/badge/rustc-1.31+-lightgray.svg)](https://blog.rust-lang.org/2018/12/06/Rust-1.31-and-rust-2018.html)
 
@@ -106,7 +106,7 @@ Darling's features are built to work well for real-world projects.
 * **Defaults**: Supports struct- and field-level defaults, using the same path syntax as `serde`.
 * **Field Renaming**: Fields can have different names in usage vs. the backing code.
 * **Auto-populated fields**: Structs deriving `FromDeriveInput` and `FromField` can declare properties named `ident`, `vis`, `ty`, `attrs`, and `generics` to automatically get copies of the matching values from the input AST. `FromDeriveInput` additionally exposes `data` to get access to the body of the deriving type, and `FromVariant` exposes `fields`.
-* **Mapping function**: Use `#[darling(map="path")]` to specify a function that runs on the result of parsing a meta-item field. This can change the return type, which enables you to parse to an intermediate form and convert that to the type you need in your struct.
+* **Mapping function**: Use `#[darling(map="path")]` or `#[darling(and_then="path")]` to specify a function that runs on the result of parsing a meta-item field. This can change the return type, which enables you to parse to an intermediate form and convert that to the type you need in your struct.
 * **Skip fields**: Use `#[darling(skip)]` to mark a field that shouldn't be read from attribute meta-items.
 * **Multiple-occurrence fields**: Use `#[darling(multiple)]` on a `Vec` field to allow that field to appear multiple times in the meta-item. Each occurrence will be pushed into the `Vec`.
 * **Span access**: Use `darling::util::SpannedValue` in a struct to get access to that meta item's source code span. This can be used to emit warnings that point at a specific field from your proc macro. In addition, you can use `darling::Error::write_errors` to automatically get precise error location details in most cases.

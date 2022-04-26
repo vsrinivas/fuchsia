@@ -80,6 +80,7 @@ dashmap = "4.0.2"
 data-encoding = "2.1.2"
 deepsize = { version = "0.2.0", features = ["chrono", "slab", "smallvec"] }
 derivative = { version = "2.2.0", features = ["use_core"] }
+derive_builder = "0.11.1"
 derp = "0.0.14"
 difference = "2.0.0"
 ecdsa = "0.13.4"
@@ -261,8 +262,8 @@ async-net = "1.6.0"
 cargo_metadata = "0.14.1"
 crossterm = "0.19"
 concurrent-queue = "1.2.2"
-fs_extra = "1.2.0"
 easy-parallel = "3.1"
+fs_extra = "1.2.0"
 handlebars = "4.2.1"
 home = "0.5.3"
 hyper-rustls = { version = "0.20.0", default-features = false, features = ["rustls-native-certs"] }
@@ -277,10 +278,10 @@ notify = "5.0.0-pre.10"
 parking = "2"
 pem = "0.8.3"
 petgraph = "0.5.1"
-proc-macro2 = { version = "1.0.28", features = ["span-locations"] }
+proc-macro2 = { version = "1.0.32", features = ["span-locations"] }
 polling = "2.0.2"
 pulldown-cmark = "0.6.0"
-quote = "1.0.2"
+quote = "1.0.10"
 rustfix = "0.6"
 rustls-native-certs = "0.3.0"
 serial_test = "0.5.1" # Not for use on Fuchsia, only for a single process.
@@ -506,8 +507,8 @@ rustflags = []
 rustflags = ["--cfg=u128", "--cfg=use_proc_macro", "--cfg=wrap_proc_macro"]
 
 # cargo-gnaw suggested "--cfg=proc_macro_span" as well but proc_macro_span is still an unstable feature.
-[gn.package.proc-macro2."1.0.28"]
-rustflags = ["--cfg=span_locations", "--cfg=lexerror_display", "--cfg=hygiene", "--cfg=use_proc_macro", "--cfg=wrap_proc_macro"]
+[gn.package.proc-macro2."1.0.36"]
+rustflags = ["--cfg=span_locations", "--cfg=use_proc_macro", "--cfg=wrap_proc_macro"]
 
 [gn.package.rand."0.6.5"]
 rustflags = ["--cfg=rustc_1_25","--cfg=rustc_1_26",  "--cfg=rustc_1_27",]
