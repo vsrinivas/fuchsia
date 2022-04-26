@@ -1177,6 +1177,7 @@ static zx_status_t iwl_mvm_scan_uid_by_status(struct iwl_mvm* mvm, uint32_t stat
       return ZX_OK;
     }
 
+  IWL_WARN(mvm, "Scan uid list is full");
   return ZX_ERR_NOT_FOUND;
 }
 
@@ -1559,8 +1560,12 @@ void iwl_mvm_scan_timeout_wk(void* data) {
 #endif  // NEEDS_PORTING
 
   mvm->scan_status &= ~IWL_MVM_SCAN_REGULAR;
+  // TODO(fxbug.dev/98929): Support multiple scan instances.
+  mvm->scan_uid_status[0] &= ~(IWL_MVM_SCAN_REGULAR);
+
   if (mvm->scan_vif) {
     notify_mlme_scan_completion(mvm->scan_vif, ZX_ERR_TIMED_OUT);
+    mvm->scan_vif = NULL;
   } else {
     IWL_ERR(mvm, "mvm->scan_vif is not registered, but got a SCAN timeout\n");
   }
