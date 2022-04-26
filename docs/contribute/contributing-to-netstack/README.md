@@ -259,21 +259,46 @@ For example: ``Test: Added new unit tests. `fx test netstack-gotests` ``.
 
 The following code review guidelines are adopted within the Netstack team:
 
-1. When your CL is ready for review, first request review from any team member
-not part of the leads group.
-1. Put leads in CC on the CL so they can follow any ongoing discussion and build
-context.
-1. You may prefer teammates that are more familiar with that area of the code,
-but that's not mandatory. One of the goals is to spread out.
-1. Once the initial reviewer approves your CL, the CC'ed lead commits to
-assigning themselves as a reviewer and sending out comments and/or approving
-within **two working hours**.
+**Authors:**
 
-Be mindful that this scheme can increase latency for reviews, which is a side
-effect we'd like to minimize. Try to decrease your latency when asked for review
-and when addressing comments as well. Gerrit notification settings and smart
-e-mail filters can be a big help to drive those interrupts. Also, don't be
-afraid to ping for reviews.
+- When your CL is ready for review, request a review from a team member listed
+  in the closest OWNERS file.
+- If your CL introduces non-trivial changes, also add a secondary reviewer
+  picked from `src/connectivity/network/OWNERS'. This should happen
+  simultaneously to requesting review from owners. You can choose any team
+  member you want, consider the following criteria:
+  - Ramping up in the target area.
+  - Working in tangentially related area.
+  - Language/patterns experience.
+  - _TODO(https://fxbug.dev/97920): create review queue rules_.
+- Acquiring +2 from both reviewers is strongly recommended, but not strictly
+  necessary.
+
+**Reviewers:**
+
+- If you feel you don’t have enough local knowledge to +2, the right thing to do
+  is perform a best effort review in terms of language use, style, patterns, or
+  generalities and +1.
+- Always review the code as if you were the sole reviewer.
+- Avoid delegating parts of the review if possible - “you’re more familiar with
+  this part”.
+- Engage in code reviews meaningfully, regardless of local ownership.
+- Owner reviewers are encouraged to allow secondary reviewers to take first
+  pass. Once the CL is +2d by the owner, there’s a strong anchoring effect that
+  reduces the challenge and learning opportunity. Secondary reviewers may
+  request taking first pass or owner reviewers may grant secondaries first pass
+  by posting a comment on the CL stating that intent. The inverse, i.e.
+  secondary reviewers requesting that owners take first pass, is discouraged.
+
+Note that this scheme can increase latency for reviews, which is a negative side
+effect we'd like to minimize. Try to decrease your latency when either being
+asked for review or addressing comments. We strive to keep latency **under 24h**
+for both authors and reviewers. Don't be afraid to ping if it's been over 24h.
+Gerrit notification settings and smart e-mail filters can be a big help to drive
+those interrupts. Also, don't be afraid to ping for reviews.
+
+Area owners are encouraged to create Gerrit notification filters for their areas
+of interest to help enforce these guidelines and design vision.
 
 ## Tips & Tricks
 
