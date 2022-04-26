@@ -8,7 +8,6 @@ use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Weak};
 
 use once_cell::sync::OnceCell;
-use parking_lot::RwLock;
 
 use super::devpts::dev_pts_fs;
 use super::devtmpfs::dev_tmp_fs;
@@ -17,6 +16,7 @@ use super::sysfs::sys_fs;
 use super::tmpfs::TmpFs;
 use super::*;
 use crate::device::BinderFs;
+use crate::lock::RwLock;
 use crate::selinux::selinux_fs;
 use crate::task::{CurrentTask, Kernel};
 use crate::types::*;

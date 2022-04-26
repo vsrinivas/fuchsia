@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use parking_lot::Mutex;
 use std::convert::TryInto;
 use std::sync::Arc;
 
 use crate::fs::{buffers::*, *};
+use crate::lock::Mutex;
 use crate::mm::PAGE_SIZE;
 use crate::signals::*;
 use crate::syscalls::*;

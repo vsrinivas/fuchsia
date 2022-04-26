@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use fuchsia_zircon as zx;
-use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::lock::Mutex;
 use crate::task::*;
 use crate::types::*;
 

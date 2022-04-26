@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use crate::fs::*;
+use crate::lock::Mutex;
 use crate::task::*;
 use crate::types::*;
-use parking_lot::Mutex;
 use std::sync::Arc;
 
 const DATA_SIZE: usize = 8;

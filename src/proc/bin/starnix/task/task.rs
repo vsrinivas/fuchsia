@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use fuchsia_zircon as zx;
-use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::cmp;
 use std::convert::TryFrom;
 use std::ffi::CString;
@@ -15,6 +14,7 @@ use crate::auth::Credentials;
 use crate::execution::*;
 use crate::fs::*;
 use crate::loader::*;
+use crate::lock::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use crate::logging::not_implemented;
 use crate::mm::MemoryManager;
 use crate::signals::signal_handling::dequeue_signal;

@@ -89,6 +89,7 @@ if (target_cpu == "x64") {
     test_deps = [
       "//third_party/rust_crates:assert_matches",
       "//third_party/rust_crates:itertools",
+      "//third_party/rust_crates:tracing-mutex",
     ]
 
     sources = [
@@ -169,6 +170,7 @@ if (target_cpu == "x64") {
       "fs/vmo_file.rs",
       "fs/xattr.rs",
       "loader.rs",
+      "lock.rs",
       "logging.rs",
       "main.rs",
       "mm/futex_table.rs",

@@ -4,10 +4,10 @@
 
 use fuchsia_zircon as zx;
 use fuchsia_zircon::AsHandleRef;
-use parking_lot::Mutex;
 use zerocopy::AsBytes;
 
 use crate::fs::*;
+use crate::lock::Mutex;
 use crate::task::*;
 use crate::types::*;
 use std::sync::Arc;

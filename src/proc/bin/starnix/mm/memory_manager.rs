@@ -5,7 +5,6 @@
 use bitflags::bitflags;
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use lazy_static::lazy_static;
-use parking_lot::{Mutex, RwLock};
 use std::collections::{hash_map::Entry, HashMap};
 use std::convert::TryInto;
 use std::ffi::{CStr, CString};
@@ -14,6 +13,7 @@ use zerocopy::{AsBytes, FromBytes};
 
 use crate::collections::*;
 use crate::fs::*;
+use crate::lock::{Mutex, RwLock};
 use crate::logging::*;
 use crate::mm::{vmo::round_up_to_system_page_size, FutexTable};
 use crate::task::{CurrentTask, Task};

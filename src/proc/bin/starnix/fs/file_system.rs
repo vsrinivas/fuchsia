@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use once_cell::sync::OnceCell;
-use parking_lot::Mutex;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Weak};
 
 use super::*;
+use crate::lock::Mutex;
 use crate::types::*;
 
 /// A file system that can be mounted in a namespace.

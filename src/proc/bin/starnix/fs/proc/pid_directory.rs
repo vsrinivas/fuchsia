@@ -5,11 +5,10 @@
 use std::sync::Arc;
 
 use crate::fs::{proc::directory::*, *};
+use crate::lock::Mutex;
 use crate::mm::{ProcMapsFile, ProcStatFile};
 use crate::task::{CurrentTask, Task, ThreadGroup};
 use crate::types::*;
-
-use parking_lot::Mutex;
 
 /// Creates an [`FsNode`] that represents the `/proc/<pid>` directory for `task`.
 pub fn pid_directory(fs: &FileSystemHandle, task: &Arc<Task>) -> Arc<FsNode> {

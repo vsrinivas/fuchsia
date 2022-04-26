@@ -4,9 +4,9 @@
 
 #![allow(dead_code)]
 
+use crate::lock::RwLock;
 use crate::task::{WaitQueue, Waiter};
 use crate::types::*;
-use parking_lot::RwLock;
 use std::collections::VecDeque;
 use std::sync::Arc;
 use zerocopy::{AsBytes, FromBytes};

@@ -7,13 +7,13 @@
 use fuchsia_zircon as zx;
 use fuchsia_zircon::{AsHandleRef, HandleBased};
 use magma::*;
-use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use super::magma::*;
 use crate::device::wayland::image_file::*;
 use crate::fs::*;
+use crate::lock::Mutex;
 use crate::logging::impossible_error;
 use crate::syscalls::*;
 use crate::task::CurrentTask;

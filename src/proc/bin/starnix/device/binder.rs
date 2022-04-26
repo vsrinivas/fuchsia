@@ -10,6 +10,7 @@ use crate::fs::{
     FdEvents, FileObject, FileOps, FileSystem, FileSystemHandle, FileSystemOps, FsNode, FsStr,
     NamespaceNode, ROMemoryDirectory, SeekOrigin, SpecialNode,
 };
+use crate::lock::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use crate::logging::not_implemented;
 use crate::mm::vmo::round_up_to_increment;
 use crate::mm::{DesiredAddress, MappedVmo, MappingOptions, MemoryManager, UserMemoryCursor};
@@ -18,7 +19,6 @@ use crate::task::{CurrentTask, EventHandler, Kernel, WaitCallback, WaitKey, Wait
 use crate::types::*;
 use bitflags::bitflags;
 use fuchsia_zircon as zx;
-use parking_lot::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use slab::Slab;
 use std::collections::{btree_map::Entry as BTreeMapEntry, BTreeMap, VecDeque};
 use std::sync::{Arc, Weak};

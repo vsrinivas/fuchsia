@@ -4,7 +4,6 @@
 
 use fidl_fuchsia_io as fio;
 use fuchsia_zircon::{self as zx, HandleBased};
-use parking_lot::{Mutex, RwLockReadGuard, RwLockWriteGuard};
 use std::sync::Arc;
 use syncio::{
     zxio, zxio::zxio_get_posix_mode, zxio_node_attributes_t, DirentIterator, Zxio, ZxioDirent,
@@ -13,6 +12,7 @@ use syncio::{
 use tracing::warn;
 
 use crate::fs::*;
+use crate::lock::Mutex;
 use crate::logging::impossible_error;
 use crate::task::*;
 use crate::types::*;
@@ -144,11 +144,14 @@ impl FsNodeOps for RemoteNode {
         self.zxio.truncate(length).map_err(|status| from_status_like_fdio!(status))
     }
 
-    fn update_info<'a>(&self, node: &'a FsNode) -> Result<RwLockReadGuard<'a, FsNodeInfo>, Errno> {
+    fn update_info<'a>(
+        &self,
+        node: &'a FsNode,
+    ) -> Result<parking_lot::RwLockReadGuard<'a, FsNodeInfo>, Errno> {
         let attrs = self.zxio.attr_get().map_err(|status| from_status_like_fdio!(status))?;
         let mut info = node.info_write();
         update_into_from_attrs(&mut info, attrs);
-        Ok(RwLockWriteGuard::downgrade(info))
+        Ok(parking_lot::RwLockWriteGuard::downgrade(info))
     }
 }
 

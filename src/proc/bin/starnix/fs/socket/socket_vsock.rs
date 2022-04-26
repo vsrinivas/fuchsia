@@ -8,10 +8,10 @@ use super::*;
 
 use crate::fs::buffers::*;
 use crate::fs::*;
+use crate::lock::Mutex;
 use crate::task::*;
 use crate::types::*;
 
-use parking_lot::Mutex;
 use std::sync::Arc;
 
 // An implementation of AF_VSOCK.
@@ -66,7 +66,7 @@ impl VsockSocket {
     }
 
     /// Locks and returns the inner state of the Socket.
-    fn lock(&self) -> parking_lot::MutexGuard<'_, VsockSocketInner> {
+    fn lock(&self) -> crate::lock::MutexGuard<'_, VsockSocketInner> {
         self.inner.lock()
     }
 }

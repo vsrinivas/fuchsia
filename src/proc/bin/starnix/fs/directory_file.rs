@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use parking_lot::Mutex;
 use std::ops::Bound;
 
 use super::*;
 use crate::fs::fileops_impl_directory;
+use crate::lock::Mutex;
 use crate::task::*;
 use crate::types::*;
 

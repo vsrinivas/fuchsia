@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use derivative::Derivative;
-use parking_lot::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::collections::{BTreeSet, HashMap};
 use std::sync::{Arc, Weak};
 
 use crate::fs::devpts::*;
 use crate::fs::*;
+use crate::lock::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use crate::task::*;
 use crate::types::*;
 

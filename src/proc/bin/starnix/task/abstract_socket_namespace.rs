@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use parking_lot::Mutex;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::sync::{Arc, Weak};
 
 use crate::fs::socket::*;
+use crate::lock::Mutex;
 use crate::types::*;
 
 /// A registry of abstract sockets.

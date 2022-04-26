@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use fuchsia_zircon as zx;
-use parking_lot::Mutex;
 use std::fmt;
 use std::sync::Arc;
 
 use crate::fs::*;
+use crate::lock::Mutex;
 use crate::logging::{impossible_error, not_implemented};
 use crate::mm::{DesiredAddress, MappedVmo, MappingOptions};
 use crate::syscalls::SyscallResult;

@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use crate::fs::*;
+use crate::lock::RwLock;
 use crate::task::*;
 use crate::types::*;
 use fuchsia_zircon as zx;
-use parking_lot::RwLock;
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;

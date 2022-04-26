@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use bitflags::bitflags;
-use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::fs::*;
+use crate::lock::RwLock;
 use crate::types::*;
 
 bitflags! {

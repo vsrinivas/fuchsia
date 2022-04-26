@@ -9,10 +9,10 @@ use super::*;
 
 use crate::fs::buffers::*;
 use crate::fs::*;
+use crate::lock::Mutex;
 use crate::task::*;
 use crate::types::*;
 
-use parking_lot::Mutex;
 use std::sync::Arc;
 
 // From unix.go in gVisor.
@@ -220,7 +220,7 @@ impl UnixSocket {
     }
 
     /// Locks and returns the inner state of the Socket.
-    fn lock(&self) -> parking_lot::MutexGuard<'_, UnixSocketInner> {
+    fn lock(&self) -> crate::lock::MutexGuard<'_, UnixSocketInner> {
         self.inner.lock()
     }
 

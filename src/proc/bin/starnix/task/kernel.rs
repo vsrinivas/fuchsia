@@ -4,13 +4,13 @@
 
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use once_cell::sync::OnceCell;
-use parking_lot::{Mutex, RwLock};
 use std::ffi::CStr;
 use std::sync::Arc;
 
 use crate::device::{DeviceMode, DeviceRegistry};
 use crate::fs::socket::SocketAddress;
 use crate::fs::{FileOps, FileSystemHandle, FsNode};
+use crate::lock::{Mutex, RwLock};
 use crate::task::*;
 use crate::types::{DeviceType, Errno, OpenFlags};
 

@@ -13,6 +13,7 @@ mod device;
 mod execution;
 mod fs;
 mod loader;
+mod lock;
 mod logging;
 mod mm;
 mod selinux;

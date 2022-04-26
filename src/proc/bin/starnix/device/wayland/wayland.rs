@@ -13,7 +13,6 @@ use fuchsia_zircon::AsHandleRef;
 use futures::channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender};
 use futures::StreamExt;
 use futures::TryStreamExt;
-use parking_lot::Mutex;
 use wayland_bridge::dispatcher::WaylandDispatcher;
 
 use super::bridge_client::*;
@@ -93,7 +92,8 @@ pub fn serve_wayland(
     });
 
     let (view_provider_sender, view_provider_receiver) = unbounded();
-    let wayland_server = Arc::new(Mutex::new(WaylandClient::new(view_provider_sender)));
+    let wayland_server =
+        Arc::new(parking_lot::Mutex::new(WaylandClient::new(view_provider_sender)));
     let dispatcher = WaylandDispatcher::new_local(wayland_server).map_err(|_| errno!(EINVAL))?;
     let display = &dispatcher.display;
 

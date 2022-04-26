@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use parking_lot::{RwLock, RwLockWriteGuard};
 use std::collections::btree_map::Entry;
 use std::collections::BTreeMap;
 use std::fmt;
@@ -10,6 +9,7 @@ use std::sync::{Arc, Weak};
 
 use crate::fs::socket::*;
 use crate::fs::*;
+use crate::lock::{RwLock, RwLockWriteGuard};
 use crate::types::*;
 
 struct DirEntryState {

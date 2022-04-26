@@ -4,13 +4,13 @@
 
 use fuchsia_zircon::sys;
 use fuchsia_zircon::{self as zx, AsHandleRef};
-use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::collections::HashSet;
 use std::ffi::CStr;
 use std::sync::Arc;
 
 use crate::auth::Credentials;
 use crate::device::terminal::*;
+use crate::lock::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use crate::signals::syscalls::WaitingOptions;
 use crate::signals::*;
 use crate::task::*;

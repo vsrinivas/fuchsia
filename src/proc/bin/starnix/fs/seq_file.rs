@@ -148,7 +148,7 @@ mod test {
     use crate::task::*;
     use crate::testing::*;
 
-    use parking_lot::Mutex;
+    use crate::lock::Mutex;
 
     /// A test FileOps implementation that returns 256 bytes. Each byte is equal to its offset in
     /// the file.

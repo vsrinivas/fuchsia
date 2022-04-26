@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use crate::fs::FdEvents;
+use crate::lock::Mutex;
 use crate::logging::*;
 use crate::task::*;
 use crate::types::Errno;
 use crate::types::*;
 use fuchsia_zircon as zx;
-use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;

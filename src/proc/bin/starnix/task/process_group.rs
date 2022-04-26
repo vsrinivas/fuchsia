@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use parking_lot::RwLock;
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use crate::lock::RwLock;
 use crate::task::*;
 use crate::types::*;
 
