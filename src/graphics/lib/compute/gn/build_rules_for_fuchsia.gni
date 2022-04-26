@@ -280,14 +280,7 @@ template("graphics_compute_test_rule") {
     forward_variables_from(invoker, "*")
     test_package = true
     if (defined(invoker.needs_vulkan) && invoker.needs_vulkan) {
-      test_environments = [
-        astro_env,
-        atlas_env,
-        nelson_env,
-        nuc_env,
-        sherlock_env,
-        vim3_env,
-      ]
+      test_environments = [ nuc_env ]
     }
   }
 }

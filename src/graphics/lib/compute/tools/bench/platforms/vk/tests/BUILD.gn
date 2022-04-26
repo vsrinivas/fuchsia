@@ -12,13 +12,6 @@ graphics_compute_unittests_package("bench-vk-unittests") {
   testonly = true
   sources = [ "bench_vk_unittests.cc" ]
   deps = [ "${graphics_compute_dir}/tools/bench/platforms/vk:bench_vk_sources" ]
-
-  #
-  # Ensure that a host executable is built on Linux hosts
-  #
-  if (is_fuchsia && host_os == "linux") {
-    data_deps = [ ":bench-vk-unittests($host_toolchain)" ]
-  }
 }
 
 #
@@ -28,5 +21,7 @@ graphics_compute_unittests_package("bench-vk-unittests") {
 #
 group("tests") {
   testonly = true
-  public_deps = [ ":bench-vk-unittests" ]
+  if (is_fuchsia) {
+    public_deps = [ ":bench-vk-unittests" ]
+  }
 }

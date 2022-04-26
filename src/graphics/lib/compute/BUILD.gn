@@ -4,9 +4,11 @@
 
 import("gn/build_rules.gni")
 
-#
-#
-#
+# Ensure that host tests are always rebuilt with device ones on Linux hosts.
+_build_host_tests = is_fuchsia &&  #
+                    target_cpu == "x64" &&  #
+                    host_os == "linux"  # b/48603
+
 group("compute") {
   deps = [
     "common",
@@ -15,7 +17,7 @@ group("compute") {
     "hotsort",
     "rive-rs",
     "spinel",
-    "spinel-vk-rs",
+    "spinel-rs-sys",
     "spinel/platforms/vk",
     "spinel2/platforms/vk",
     "surpass",
@@ -23,25 +25,73 @@ group("compute") {
   ]
 }
 
+# IMPORTANT: Most graphics compute tests cannot run on the CQ for now
+# due to a missing appropriate bot configuration (see fxbug.dev/25516
+# for details). Thus tests are spread over two targets.
 #
+#   tests: A group that lists all the tests to build by default, and which
+#          will be run during continuous integration, since this is reachable
+#          from //bundles/tests.
 #
+#   all_tests: A group that depends on 'tests', but adds other programs
+#              and test packages that should not or cannot run during
+#              continuous integration.
+#
+# 'fx test <name>' or 'fx run-host-tests <name>' can be used to
+# manually launch a test that was defined with
+# graphics_compute_test_package() or
+# graphics_compute_unittests_package().
+#
+# Other programs (e.g. graphics_compute_executable() targets) can be
+# run with "fx shell run <name>" or "out/default/host_x64/<name>"
+# instead.
 #
 group("tests") {
   testonly = true
   public_deps = [
-    "common:common_unittests",
+    ":graphics-compute-unittests",
     "forma:forma-tests",
     "rive-rs:rive-rs-tests",
+    "spinel-rs-sys:tests",
     "surpass:surpass-tests",
-    "svg:svg_unittests",
   ]
 
-  #
-  # These tests require a Vulkan environment
-  #
-  public_deps += [
-    "spinel-vk-rs:tests",
-    "spinel2/platforms/vk/tests/spinel_vk_tests",
-    "tools/bench/platforms/vk/tests",
+  # NOTE: All dependencies here are run in continuous integration, but our
+  # host bots currently lack a proper Vulkan loader + ICD. Thus only add
+  # the device-specific Vulkan-based unit-tests for now.
+  if (is_fuchsia) {
+    public_deps += [
+      ":graphics-compute-vk-unittests",
+      "tools:tests",
+    ]
+  }
+}
+
+group("all_tests") {
+  testonly = true
+  public_deps = [
+    ":graphics-compute-vk-unittests",
+    "hotsort:tests",
   ]
+
+  if (_build_host_tests) {
+    data_deps = [ ":all_tests($host_toolchain)" ]
+  }
+}
+
+# A target used to group all simple graphics compute unit-tests
+# (i.e. those that do not depend on Vulkan for now). Unlike Vulkan-based
+# tests, these can run anywhere on the CQ.
+graphics_compute_unittests_package("graphics-compute-unittests") {
+  deps = [
+    "common:common_unittests",
+    "svg:svg_unittests",
+  ]
+}
+
+# A target used to group all graphics compute unit-tests that depend
+# on a working Vulkan environment and that link against the Spinel library.
+graphics_compute_unittests_package("graphics-compute-vk-unittests") {
+  deps = [ "spinel:vk_unittests" ]
+  needs_vulkan = true
 }
