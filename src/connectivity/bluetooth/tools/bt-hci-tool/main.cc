@@ -73,18 +73,15 @@ int main(int argc, char* argv[]) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  auto dev_wrapper = std::make_unique<::bt::hci::FidlDeviceWrapper>(std::move(local));
-  std::unique_ptr<::bt::hci::HciWrapper> hci_wrapper =
-      ::bt::hci::HciWrapper::Create(std::move(dev_wrapper), loop.dispatcher());
-
-  auto transport_result = ::bt::hci::Transport::Create(std::move(hci_wrapper));
-  if (transport_result.is_error()) {
+  auto hci_dev = std::make_unique<::bt::hci::FidlDeviceWrapper>(std::move(local));
+  auto hci_result = ::bt::hci::Transport::Create(std::move(hci_dev));
+  if (hci_result.is_error()) {
     return EXIT_FAILURE;
   }
-  auto transport = transport_result.take_value();
+  auto hci = hci_result.take_value();
 
   bluetooth_tools::CommandDispatcher dispatcher;
-  hcitool::CommandData cmd_data(transport->command_channel(), loop.dispatcher());
+  hcitool::CommandData cmd_data(hci->command_channel(), loop.dispatcher());
   RegisterCommands(&cmd_data, &dispatcher);
 
   if (cl.positional_args().empty() || cl.positional_args()[0] == "help") {
