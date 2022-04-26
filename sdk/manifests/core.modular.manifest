@@ -115,6 +115,7 @@ sdk://fidl/fuchsia.sys.test
 sdk://fidl/fuchsia.sysinfo
 sdk://fidl/fuchsia.sysmem
 sdk://fidl/fuchsia.thermal
+sdk://fidl/fuchsia.tracing.perfetto
 sdk://fidl/fuchsia.tracing.provider
 sdk://fidl/fuchsia.ui.activity
 sdk://fidl/fuchsia.ui.activity.control
