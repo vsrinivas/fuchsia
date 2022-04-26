@@ -2022,3 +2022,16 @@
   reviewers: ['markdittmer@google.com', 'geb@google.com', 'mnck@google.com', 'aniramakri@google.com', 'yaar@google.com', 'hjfreyer@google.com']
   submitted: '2022-02-07'
   reviewed: '2022-04-14'
+
+- name: 'RFC-0156'
+  title: 'Stream Append Mode'
+  short_description: 'Add an append mode to streams.'
+  authors: ['cdrllrd@google.com']
+  file: '0156_stream_append_mode.md'
+  area: ['Kernel']
+  issue: ['88678']
+  gerrit_change_id: ['664693']
+  status: 'Accepted'
+  reviewers: ['jamesr@google.com', 'abarth@google.com', 'rashaeqbal@google.com', 'csuter@google.com']
+  submitted: '2022-04-06'
+  reviewed: '2022-04-20'

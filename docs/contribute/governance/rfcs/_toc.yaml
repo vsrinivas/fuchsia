@@ -326,3 +326,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0154_subpackages.md
   - title: "RFC-0155: Optional capability routes"
     path: /docs/contribute/governance/rfcs/0155_optional_capability_routes.md
+  - title: "RFC-0156: Add an append mode to streams"
+    path: /docs/contribute/governance/rfcs/0156_stream_append_mode.md
