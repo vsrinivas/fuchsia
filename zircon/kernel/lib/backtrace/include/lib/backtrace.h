@@ -16,8 +16,10 @@
 // This class is not thread-safe.
 class Backtrace {
  public:
-  // The maximum number of elements in a backtrace.
-  static constexpr size_t kMaxSize = 16;
+  // The maximum number of elements in a backtrace.  The value should be large enough to capture the
+  // full call stack for most kernel crashes, but also small enough that it's reasonable to allocate
+  // a Backtrace on the stack.
+  static constexpr size_t kMaxSize = 32;
 
   // Returns the number of elements in this backtrace.
   size_t size() const { return size_; }
