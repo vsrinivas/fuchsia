@@ -123,10 +123,6 @@ class ViewTree {
   // Note that a valid and tracked koid may still return null, or later become null.
   EventReporterWeakPtr EventReporterOf(zx_koid_t koid) const;
 
-  // Return the global transform of the node attached to a tracked |koid|.
-  // Returns std::nullopt if no node was found or if the node is disconnected.
-  std::optional<glm::mat4> GlobalTransformOf(zx_koid_t koid) const;
-
   // Performs a hit test starting from the node corresponding to |starting_view_koid|. The hit test
   // gathers all hits owned by the sub-tree rooted at |starting_view_koid|, in the clip volume
   // defined for |starting_view_koid|.

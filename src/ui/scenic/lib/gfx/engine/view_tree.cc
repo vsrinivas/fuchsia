@@ -147,14 +147,6 @@ bool ViewTree::IsInputSuppressed(zx_koid_t koid) const {
   return std::get_if<RefNode>(&nodes_.at(koid))->is_input_suppressed();
 }
 
-std::optional<glm::mat4> ViewTree::GlobalTransformOf(zx_koid_t koid) const {
-  if (!IsTracked(koid) || !IsRefNode(koid) || !IsConnectedToScene(koid)) {
-    return std::nullopt;
-  }
-
-  return std::get_if<RefNode>(&nodes_.at(koid))->global_transform();
-}
-
 void ViewTree::HitTestFrom(zx_koid_t starting_view_koid, const escher::ray4& world_space_ray,
                            HitAccumulator<ViewHit>* accumulator, bool semantic_hit_test) const {
   if (!IsTracked(starting_view_koid) || !IsRefNode(starting_view_koid)) {
@@ -524,15 +516,7 @@ view_tree::SubtreeSnapshot ViewTree::Snapshot() const {
 
   // Set up the hit tester.
   // TODO(fxbug.dev/74533): The hit testing closures generated here are not thread safe.
-  hit_tester = [this](zx_koid_t starting_view_koid, glm::vec2 view_local_point, bool is_semantic) {
-    const std::optional<glm::mat4> world_from_view_transform =
-        GlobalTransformOf(starting_view_koid);
-    if (!world_from_view_transform.has_value()) {
-      return view_tree::SubtreeHitTestResult{};
-    }
-
-    const auto world_point =
-        utils::TransformPointerCoords(view_local_point, world_from_view_transform.value());
+  hit_tester = [this](zx_koid_t starting_view_koid, glm::vec2 world_point, bool is_semantic) {
     const auto world_z_ray = escher::ray4{
         .origin = {world_point.x, world_point.y, -1000, 1},
         .direction = {0, 0, 1, 0},
