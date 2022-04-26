@@ -29,8 +29,6 @@ type StartOptions = resource struct {
     read_only bool = false;
     /// Enable verbose logging.
     verbose bool = false;
-    /// Enable metrics collection via Cobalt.
-    collect_metrics bool = false;
     /// If true, decompression is run in a sandbox component (if the filesystem supports it).
     sandbox_decompression bool = false;
 

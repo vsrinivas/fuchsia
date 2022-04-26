@@ -508,7 +508,6 @@ TEST(BlobfsFragmentationTest, FragmentationMetrics) {
   ASSERT_TRUE(device);
 
   MountOptions mount_options{
-      .metrics = true,
       .collector_factory =
           [&logger] { return std::make_unique<cobalt_client::Collector>(std::move(logger)); },
       .metrics_flush_time = zx::msec(100)};

@@ -19,7 +19,6 @@ zx_status_t CheckMountability(std::unique_ptr<BlockDevice> device) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   MountOptions options = {};
-  options.metrics = false;
 
   auto vfs = std::make_unique<fs::ManagedVfs>(loop.dispatcher());
   return Factoryfs::Create(nullptr, std::move(device), &options, vfs.get()).status_value();

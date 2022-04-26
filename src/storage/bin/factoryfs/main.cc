@@ -66,7 +66,6 @@ zx_status_t usage() {
           "usage: factoryfs [ <options>* ] <command> [ <arg>* ]\n"
           "\n"
           "options: -v|--verbose   Additional debug logging\n"
-          "         -m|--metrics               Collect filesystem metrics\n"
           "         -h|--help                  Display this message\n"
           "\n"
           "On Fuchsia, factoryfs takes the block device argument by handle.\n"
@@ -86,7 +85,6 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
   while (1) {
     static struct option opts[] = {
         {"verbose", no_argument, nullptr, 'v'},
-        {"metrics", no_argument, nullptr, 'm'},
         {"help", no_argument, nullptr, 'h'},
         {nullptr, 0, nullptr, 0},
     };
@@ -97,9 +95,6 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
       break;
     }
     switch (c) {
-      case 'm':
-        options->metrics = true;
-        break;
       case 'v':
         options->verbose = true;
         break;

@@ -89,7 +89,6 @@ int usage(const std::vector<Command>& commands) {
           "options:\n"
           "    -v|--verbose                    Some debug messages\n"
           "    -r|--readonly                   Mount filesystem read-only (after repair)\n"
-          "    -m|--metrics                    Collect filesystem metrics\n"
           "    -s|--fvm_data_slices SLICES     When mkfs on top of FVM,\n"
           "                                    preallocate |SLICES| slices of data. \n"
           "    --fsck_after_every_transaction  Run fsck after every transaction.\n"
@@ -146,7 +145,6 @@ int main(int argc, char** argv) {
   while (true) {
     static struct option opts[] = {
         {"readonly", no_argument, nullptr, 'r'},
-        {"metrics", no_argument, nullptr, 'm'},
         {"verbose", no_argument, nullptr, 'v'},
         {"fvm_data_slices", required_argument, nullptr, 's'},
         {"fsck_after_every_transaction", no_argument, nullptr, 'f'},
@@ -161,9 +159,6 @@ int main(int argc, char** argv) {
     switch (c) {
       case 'r':
         options.readonly_after_initialization = true;
-        break;
-      case 'm':
-        options.metrics = true;
         break;
       case 'v':
         options.verbose = true;

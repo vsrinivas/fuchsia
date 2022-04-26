@@ -16,7 +16,6 @@ namespace factoryfs {
 // Toggles that may be set on factoryfs during initialization.
 struct MountOptions {
   bool verbose = false;
-  bool metrics = false;  // TODO(manalib)
 };
 
 // Begins serving requests to the filesystem by parsing the on-disk format using |device|.

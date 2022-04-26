@@ -1244,7 +1244,6 @@ zx::status<std::unique_ptr<Minfs>> Minfs::Create(FuchsiaDispatcher* dispatcher,
 
   out_fs->mount_state_ = {
       .readonly_after_initialization = options.readonly_after_initialization,
-      .collect_metrics = options.metrics,
       .verbose = options.verbose,
       .repair_filesystem = options.repair_filesystem,
       .use_journal = true,

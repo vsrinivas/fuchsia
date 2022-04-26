@@ -231,7 +231,6 @@ std::string GetTopologicalPath(int fd) {
 fuchsia_fs_startup::wire::StartOptions GetBlobfsStartOptions(
     const fshost_config::Config* config, std::shared_ptr<FshostBootArgs> boot_args) {
   fuchsia_fs_startup::wire::StartOptions options;
-  options.collect_metrics = true;
   options.write_compression_level = -1;
   options.sandbox_decompression = config->sandbox_decompression;
   if (boot_args) {
@@ -691,7 +690,6 @@ zx_status_t BlockDevice::MountFilesystem() {
     case fs_management::kDiskFormatFactoryfs: {
       FX_LOGS(INFO) << "BlockDevice::MountFilesystem(factoryfs)";
       fs_management::MountOptions options;
-      options.collect_metrics = false;
       options.readonly = true;
 
       zx_status_t status = mounter_->MountFactoryFs(std::move(block_device), options);

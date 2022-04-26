@@ -20,9 +20,6 @@ std::vector<std::string> MountOptions::as_argv(const char *binary) const {
   if (readonly) {
     argv.push_back("--readonly");
   }
-  if (collect_metrics) {
-    argv.push_back("--metrics");
-  }
   if (write_compression_algorithm) {
     argv.push_back("--compression");
     argv.push_back(write_compression_algorithm);
@@ -49,7 +46,6 @@ zx::status<fuchsia_fs_startup::wire::StartOptions> MountOptions::as_start_option
 
   options.read_only = readonly;
   options.verbose = verbose_mount;
-  options.collect_metrics = collect_metrics;
   options.sandbox_decompression = sandbox_decompression;
   options.write_compression_level = write_compression_level;
 

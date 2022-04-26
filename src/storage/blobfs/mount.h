@@ -44,7 +44,6 @@ constexpr zx::duration kMetricsFlushTime = zx::min(kMetricsFlushTimeMinutes);
 struct MountOptions {
   Writability writability = Writability::Writable;
   bool verbose = false;
-  bool metrics = false;
   CachePolicy cache_policy = CachePolicy::EvictImmediately;
 
   // Optional overriden cache policy for pager-backed blobs.

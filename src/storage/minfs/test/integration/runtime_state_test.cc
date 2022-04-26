@@ -26,7 +26,6 @@ TEST_P(MountStateTest, ReadWriteWithJournal) {
 
   ASSERT_EQ(result.value().mount_state->repair_filesystem, true);
   ASSERT_EQ(result.value().mount_state->readonly_after_initialization, false);
-  ASSERT_EQ(result.value().mount_state->collect_metrics, false);
   ASSERT_EQ(result.value().mount_state->verbose, false);
   ASSERT_EQ(result.value().mount_state->use_journal, true);
 }

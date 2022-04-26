@@ -27,6 +27,8 @@ protocol BlockWatcher {
 
 type MountOptions = resource table {
     1: read_only bool;
+    /// [DEPRECATED] Metrics are always enabled now.
+    // TODO(fxbug.dev/90702): Remove.
     2: collect_metrics bool;
     3: verbose bool;
     4: write_compression_algorithm string:32;

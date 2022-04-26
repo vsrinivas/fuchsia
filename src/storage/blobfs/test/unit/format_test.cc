@@ -21,7 +21,6 @@ using block_client::FakeFVMBlockDevice;
 zx_status_t CheckMountability(std::unique_ptr<BlockDevice> device) {
   MountOptions options = {};
   options.writability = Writability::ReadOnlyFilesystem;
-  options.metrics = false;
 
   BlobfsTestSetup setup;
   return setup.Mount(std::move(device), options);
@@ -231,7 +230,6 @@ TEST(FormatFilesystemTest, DeviceNotWritableAutoConvertReadonly) {
 
   MountOptions mount_options = {};
   mount_options.writability = Writability::Writable;
-  mount_options.metrics = false;
 
   BlobfsTestSetup setup;
   ASSERT_EQ(ZX_ERR_ACCESS_DENIED, setup.Mount(std::move(device), mount_options));
@@ -249,7 +247,6 @@ TEST(FormatFilesystemTest, FormatDeviceWithJournalCannotAutoConvertReadonly) {
 
   MountOptions options = {};
   options.writability = Writability::Writable;
-  options.metrics = false;
 
   BlobfsTestSetup setup;
   ASSERT_EQ(ZX_ERR_ACCESS_DENIED, setup.Mount(std::move(device), options));

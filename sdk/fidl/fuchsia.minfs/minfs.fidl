@@ -31,13 +31,11 @@ type Metrics = struct {
     dirty_bytes uint64;
 };
 
+// TODO(fxbug.dev/51057): Remove.
 type MountState = struct {
     /// True if the fileystem is operational in readonly state. There may have been
     /// writes during mount or during replaying journal.
     readonly_after_initialization bool;
-
-    /// True if the mounted filesystem is collecting metrics.
-    collect_metrics bool;
 
     /// True if the mounted filesystem is in verbose mode.
     verbose bool;
@@ -82,6 +80,7 @@ protocol Minfs {
     });
 
     /// Get mount state.
+    // TODO(fxbug.dev/51057): Remove.
     GetMountState() -> (struct {
         status zx.status;
         mount_state box<MountState>;

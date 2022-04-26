@@ -22,7 +22,6 @@ int usage(void) {
           "usage: mount [ <option>* ] devicepath <mount-path>\n"
           "options:\n"
           " -r|--readonly  : Open the filesystem as read-only\n"
-          " -m|--metrics   : Collect filesystem metrics\n"
           " -v|--verbose   : Verbose mode\n"
           " --fshost-path  : The path to the fshost admin service (if different from the default)\n"
           " -h|--help      : Display this message\n"
@@ -36,13 +35,9 @@ int parse_args(int argc, char** argv, fidl::AnyArena& arena,
                std::string* mount_name, std::string& fshost_path) {
   while (1) {
     static struct option opts[] = {
-        {"readonly", no_argument, NULL, 'r'},
-        {"metrics", no_argument, NULL, 'm'},
-        {"verbose", no_argument, NULL, 'v'},
-        {"compression", required_argument, NULL, 'c'},
-        {"help", no_argument, NULL, 'h'},
-        {"fshost-path", required_argument, NULL, 'p'},
-        {NULL, 0, NULL, 0},
+        {"readonly", no_argument, NULL, 'r'},          {"verbose", no_argument, NULL, 'v'},
+        {"compression", required_argument, NULL, 'c'}, {"help", no_argument, NULL, 'h'},
+        {"fshost-path", required_argument, NULL, 'p'}, {NULL, 0, NULL, 0},
     };
     int opt_index;
     int c = getopt_long(argc, argv, "rmvc:h", opts, &opt_index);
@@ -52,9 +47,6 @@ int parse_args(int argc, char** argv, fidl::AnyArena& arena,
     switch (c) {
       case 'r':
         options.set_read_only(true);
-        break;
-      case 'm':
-        options.set_collect_metrics(true);
         break;
       case 'v':
         options.set_verbose(true);

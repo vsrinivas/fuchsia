@@ -16,7 +16,6 @@ void AssertStartOptionsEqual(const fuchsia_fs_startup::wire::StartOptions a,
                              const fuchsia_fs_startup::wire::StartOptions b) {
   ASSERT_EQ(a.read_only, b.read_only);
   ASSERT_EQ(a.verbose, b.verbose);
-  ASSERT_EQ(a.collect_metrics, b.collect_metrics);
   ASSERT_EQ(a.sandbox_decompression, b.sandbox_decompression);
   ASSERT_EQ(a.write_compression_algorithm, b.write_compression_algorithm);
   ASSERT_EQ(a.write_compression_level, b.write_compression_level);
@@ -50,7 +49,6 @@ TEST(MountOptionsTest, AllOptionsSet) {
   MountOptions options{
       .readonly = true,
       .verbose_mount = true,
-      .collect_metrics = true,
       .write_compression_algorithm = "UNCOMPRESSED",
       .write_compression_level = 10,
       .cache_eviction_policy = "NEVER_EVICT",
@@ -61,7 +59,6 @@ TEST(MountOptionsTest, AllOptionsSet) {
                                             "--verbose",
                                             "mount",
                                             "--readonly",
-                                            "--metrics",
                                             "--compression",
                                             "UNCOMPRESSED",
                                             "--compression_level",
@@ -73,7 +70,6 @@ TEST(MountOptionsTest, AllOptionsSet) {
   fuchsia_fs_startup::wire::StartOptions expected_start_options{
       .read_only = true,
       .verbose = true,
-      .collect_metrics = true,
       .sandbox_decompression = true,
       .write_compression_algorithm = fuchsia_fs_startup::wire::CompressionAlgorithm::kUncompressed,
       .write_compression_level = 10,

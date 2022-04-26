@@ -183,9 +183,7 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
   fs->page_loader_ = std::move(page_loader_or).value();
   FX_LOGS(INFO) << "Initialized user pager";
 
-  if (options.metrics) {
-    fs->metrics_->Collect();
-  }
+  fs->metrics_->Collect();
 
   JournalSuperblock journal_superblock;
   if (options.writability != blobfs::Writability::ReadOnlyDisk) {

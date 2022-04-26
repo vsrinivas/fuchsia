@@ -134,7 +134,6 @@ int usage() {
       "\n"
       "options: -v|--verbose   Additional debug logging\n"
       "         -r|--readonly              Mount filesystem read-only\n"
-      "         -m|--metrics               Collect filesystem metrics\n"
       "         -c|--compression [alg]     compression algorithm to apply to newly stored blobs.\n"
       "                                    Does not affect any blobs already stored on-disk.\n"
       "                                    'alg' can be one of ZSTD_CHUNKED or UNCOMPRESSED.\n"
@@ -174,7 +173,6 @@ zx::status<Options> ProcessArgs(int argc, char** argv, CommandFunction* func) {
     static struct option opts[] = {
         {"verbose", no_argument, nullptr, 'v'},
         {"readonly", no_argument, nullptr, 'r'},
-        {"metrics", no_argument, nullptr, 'm'},
         {"pager", no_argument, nullptr, 'p'},
         {"compression", required_argument, nullptr, 'c'},
         {"compression_level", required_argument, nullptr, 'l'},
@@ -195,9 +193,6 @@ zx::status<Options> ProcessArgs(int argc, char** argv, CommandFunction* func) {
     switch (c) {
       case 'r':
         options.mount_options.writability = blobfs::Writability::ReadOnlyFilesystem;
-        break;
-      case 'm':
-        options.mount_options.metrics = true;
         break;
       case 'c': {
         std::optional<blobfs::CompressionAlgorithm> algorithm = ParseAlgorithm(optarg);

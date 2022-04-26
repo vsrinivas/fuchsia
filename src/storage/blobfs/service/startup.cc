@@ -18,7 +18,6 @@ MountOptions ParseMountOptions(fuchsia_fs_startup::wire::StartOptions start_opti
   MountOptions options;
 
   options.verbose = start_options.verbose;
-  options.metrics = start_options.collect_metrics;
   options.sandbox_decompression = start_options.sandbox_decompression;
 
   if (start_options.read_only) {

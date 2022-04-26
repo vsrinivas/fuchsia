@@ -379,7 +379,6 @@ mod tests {
         let ramdisk = ramdisk(block_size);
         let config = Blobfs {
             verbose: true,
-            metrics: true,
             readonly: true,
             blob_deprecated_padded_format: false,
             blob_compression: Some(BlobCompression::Uncompressed),
@@ -538,12 +537,7 @@ mod tests {
     async fn minfs_custom_config() {
         let block_size = 512;
         let ramdisk = ramdisk(block_size);
-        let config = Minfs {
-            verbose: true,
-            metrics: true,
-            readonly: true,
-            fsck_after_every_transaction: true,
-        };
+        let config = Minfs { verbose: true, readonly: true, fsck_after_every_transaction: true };
         let minfs = new_fs(&ramdisk, config);
 
         minfs.format().await.expect("failed to format minfs");
@@ -698,7 +692,7 @@ mod tests {
     async fn factoryfs_custom_config() {
         let block_size = 512;
         let ramdisk = ramdisk(block_size);
-        let config = Factoryfs { verbose: true, metrics: true };
+        let config = Factoryfs { verbose: true };
         let factoryfs = new_fs(&ramdisk, config);
 
         factoryfs.format().await.expect("failed to format factoryfs");

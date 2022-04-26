@@ -28,8 +28,6 @@ struct MountOptions {
   //
   // The "clean bit" is written to storage if "readonly = false".
   bool readonly_after_initialization = false;
-  // TODO(fxbug.dev/98018): Remove.
-  bool metrics = false;
   bool verbose = false;
   // Determines if the filesystem performs actions like replaying the journal, repairing the
   // superblock, etc.

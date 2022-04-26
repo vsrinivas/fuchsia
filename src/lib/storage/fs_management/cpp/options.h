@@ -16,7 +16,6 @@ namespace fs_management {
 struct MountOptions {
   bool readonly = false;
   bool verbose_mount = false;
-  bool collect_metrics = false;
 
   // Ensures that requests to the mountpoint will be propagated to the underlying FS
   bool wait_until_ready = true;

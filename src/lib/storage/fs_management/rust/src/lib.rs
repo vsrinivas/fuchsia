@@ -234,13 +234,19 @@ pub trait FSConfig {
     fn binary_path(&self) -> &CStr;
 
     /// Arguments passed to the binary for all subcommands
-    fn generic_args(&self) -> Vec<&CStr>;
+    fn generic_args(&self) -> Vec<&CStr> {
+        vec![]
+    }
 
     /// Arguments passed to the binary for formatting
-    fn format_args(&self) -> Vec<&CStr>;
+    fn format_args(&self) -> Vec<&CStr> {
+        vec![]
+    }
 
     /// Arguments passed to the binary for mounting
-    fn mount_args(&self) -> Vec<&CStr>;
+    fn mount_args(&self) -> Vec<&CStr> {
+        vec![]
+    }
 }
 
 /// Manages a block device for filesystem operations
@@ -404,7 +410,6 @@ pub enum BlobEvictionPolicy {
 pub struct Blobfs {
     pub verbose: bool,
     pub readonly: bool,
-    pub metrics: bool,
     pub blob_deprecated_padded_format: bool,
     pub blob_compression: Option<BlobCompression>,
     pub blob_eviction_policy: Option<BlobEvictionPolicy>,
@@ -447,9 +452,6 @@ impl FSConfig for Blobfs {
         if self.readonly {
             args.push(cstr!("--readonly"));
         }
-        if self.metrics {
-            args.push(cstr!("--metrics"));
-        }
         if let Some(compression) = &self.blob_compression {
             args.push(cstr!("--compression"));
             args.push(match compression {
@@ -477,7 +479,6 @@ pub struct Minfs {
     // TODO(xbhatnag): Add support for fvm_data_slices
     pub verbose: bool,
     pub readonly: bool,
-    pub metrics: bool,
     pub fsck_after_every_transaction: bool,
 }
 
@@ -506,16 +507,10 @@ impl FSConfig for Minfs {
         }
         args
     }
-    fn format_args(&self) -> Vec<&CStr> {
-        vec![]
-    }
     fn mount_args(&self) -> Vec<&CStr> {
         let mut args = vec![];
         if self.readonly {
             args.push(cstr!("--readonly"));
-        }
-        if self.metrics {
-            args.push(cstr!("--metrics"));
         }
         if self.fsck_after_every_transaction {
             args.push(cstr!("--fsck_after_every_transaction"));
@@ -557,9 +552,6 @@ impl FSConfig for Fxfs {
         }
         args
     }
-    fn format_args(&self) -> Vec<&CStr> {
-        vec![]
-    }
     fn mount_args(&self) -> Vec<&CStr> {
         let mut args = vec![];
         if self.readonly {
@@ -574,7 +566,6 @@ impl FSConfig for Fxfs {
 #[derive(Clone, Default)]
 pub struct Factoryfs {
     pub verbose: bool,
-    pub metrics: bool,
 }
 
 impl Factoryfs {
@@ -599,16 +590,6 @@ impl FSConfig for Factoryfs {
         let mut args = vec![];
         if self.verbose {
             args.push(cstr!("--verbose"));
-        }
-        args
-    }
-    fn format_args(&self) -> Vec<&CStr> {
-        vec![]
-    }
-    fn mount_args(&self) -> Vec<&CStr> {
-        let mut args = vec![];
-        if self.metrics {
-            args.push(cstr!("--metrics"));
         }
         args
     }
@@ -646,7 +627,6 @@ mod tests {
         let device = ramdisk.open().unwrap();
         let config = Blobfs {
             verbose: true,
-            metrics: true,
             readonly: true,
             blob_deprecated_padded_format: false,
             blob_compression: Some(BlobCompression::Uncompressed),
@@ -767,12 +747,7 @@ mod tests {
 
         let ramdisk = ramdisk(block_size);
         let device = ramdisk.open().unwrap();
-        let config = Minfs {
-            verbose: true,
-            metrics: true,
-            readonly: true,
-            fsck_after_every_transaction: true,
-        };
+        let config = Minfs { verbose: true, readonly: true, fsck_after_every_transaction: true };
         let mut minfs = Filesystem::from_channel(device, config).unwrap();
 
         minfs.format().expect("failed to format minfs");
@@ -895,7 +870,7 @@ mod tests {
 
         let ramdisk = ramdisk(block_size);
         let device = ramdisk.open().unwrap();
-        let config = Factoryfs { verbose: true, metrics: true };
+        let config = Factoryfs { verbose: true };
         let mut factoryfs = Filesystem::from_channel(device, config).unwrap();
 
         factoryfs.format().expect("failed to format factoryfs");

@@ -74,7 +74,6 @@ void AdminServer::Mount(MountRequestView request, MountCompleter::Sync& complete
   fs_management::MountOptions options = {
       .readonly = o.has_read_only() && o.read_only(),
       .verbose_mount = o.has_verbose() && o.verbose(),
-      .collect_metrics = o.has_collect_metrics() && o.collect_metrics(),
       .write_compression_algorithm =
           o.has_write_compression_algorithm() ? compression_algorithm.c_str() : nullptr,
   };

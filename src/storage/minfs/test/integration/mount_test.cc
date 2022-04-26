@@ -92,7 +92,6 @@ class MountTestTemplate : public testing::Test {
 
   minfs::MountOptions mount_options() const {
     return minfs::MountOptions{.readonly_after_initialization = false,
-                               .metrics = false,
                                .verbose = true,
                                .repair_filesystem = repairable,
                                .fvm_data_slices = fs_management::MkfsOptions().fvm_data_slices};
