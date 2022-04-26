@@ -266,7 +266,6 @@ protocol Validate {
 
     /// Use instead of `Initialize` on puppets which support the Tree / Lazy method of getting VMOs.
     /// The root VMO can be obtained via the returned Tree protocol.
-    @transitional
     InitializeTree(struct {
         params InitializationParams;
     }) -> (resource struct {
@@ -278,13 +277,11 @@ protocol Validate {
     ///
     /// Note: It is an error for more than one Validate connection to
     /// Publish at once. Unpublish must be called to cleanup.
-    @transitional
     Publish() -> (struct {
         result TestResult;
     });
 
     /// Instruct the puppet to unpublish any data it currently has present in out/diagnostics.
-    @transitional
     Unpublish() -> (struct {
         result TestResult;
     });
@@ -297,7 +294,6 @@ protocol Validate {
     });
 
     /// Modifies the contents of a lazy node.
-    @transitional
     ActLazy(struct {
         lazy_action LazyAction;
     }) -> (struct {
