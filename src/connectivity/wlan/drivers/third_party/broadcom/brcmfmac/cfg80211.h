@@ -68,8 +68,9 @@
 // again.
 #define BRCMF_LOW_DATA_RATE_DUR_RESET_THRESHOLD     ZX_MIN(60)
 
-// FW data rate low threshold
-#define BRCMF_LOW_DATA_RATE_THRESHOLD     (6) // 6Mbps
+// Thresholds to trigger additional debug information.
+#define BRCMF_LOW_DATA_RATE_THRESHOLD     (6)     // 6Mbps
+#define BRCMF_HIGH_ERR_RATE_THRESHOLD     (0.05)  // 5% packet err rate.
 
 #define WL_ESCAN_ACTION_START      1
 #define WL_ESCAN_ACTION_CONTINUE   2
