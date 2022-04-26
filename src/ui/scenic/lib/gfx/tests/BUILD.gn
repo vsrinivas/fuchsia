@@ -11,7 +11,6 @@ group("tests") {
     ":swapchain_tests",
     ":unittests",
     "//src/graphics/examples:vkcube-on-scenic",
-    "//src/ui/bin/hardware_display_controller_provider",
     "//src/ui/examples/bouncing_ball",
   ]
 }
@@ -153,5 +152,6 @@ executable("apptests") {
   deps = [
     ":gfx_tests_main",
     ":testing_deps",
+    "//third_party/googletest:gmock",
   ]
 }

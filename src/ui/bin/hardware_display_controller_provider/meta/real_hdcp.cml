@@ -1,15 +1,22 @@
 {
     include: [
-        "inspect/client.shard.cml",
         "syslog/client.shard.cml",
     ],
+    program: {
+        runner: "elf",
+        binary: "bin/real_hw_display_controller_provider",
+    },
     capabilities: [
         { protocol: "fuchsia.hardware.display.Provider" },
     ],
     use: [
         {
+            directory: "dev-display-controller",
+            rights: [ "rw*" ],
+            path: "/dev/class/display-controller",
+        },
+        {
             protocol: [
-                "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",

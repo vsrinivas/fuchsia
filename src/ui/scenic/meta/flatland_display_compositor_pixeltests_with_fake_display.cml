@@ -1,0 +1,35 @@
+{
+    "include": [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+        "vulkan/client.shard.cml",
+        "//src/lib/vulkan/vulkan-test.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml"
+    ],
+    "program": {
+        "binary": "bin/flatland_display_compositor_pixeltests_with_fake_display"
+    },
+    children: [
+        {
+            name: "fake_display_provider",
+            url: "#meta/hdcp.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.hardware.display.Provider" ],
+            from: "#fake_display_provider",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#fake_display_provider" ],
+        },
+    ],
+}

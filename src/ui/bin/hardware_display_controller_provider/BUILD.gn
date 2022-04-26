@@ -12,28 +12,48 @@ group("hardware_display_controller_provider") {
   ]
 }
 
-fuchsia_package_with_single_component(
-    "fake-hardware-display-controller-provider") {
+group("tests") {
   testonly = true
-  component_name = "hdcp"
+  public_deps = [ "fake/tests" ]
+}
+
+fuchsia_component("fake-hardware-display-controller-provider-cmv1-component") {
+  testonly = true
   manifest = "meta/fake_hdcp.cmx"
+  component_name = "hdcp"
   deps = [ "fake:bin" ]
 }
 
-fuchsia_package_with_single_component("hardware-display-controller-provider") {
+fuchsia_component("fake-hardware-display-controller-provider-cmv2-component") {
+  testonly = true
+  manifest = "meta/fake_hdcp.cml"
+  component_name = "hdcp"
+  deps = [ "fake:bin" ]
+}
+
+fuchsia_package("fake-hardware-display-controller-provider") {
+  testonly = true
+  deps = [
+    ":fake-hardware-display-controller-provider-cmv1-component",
+    ":fake-hardware-display-controller-provider-cmv2-component",
+  ]
+}
+
+fuchsia_component("hardware-display-controller-provider-cmv1-component") {
   manifest = "meta/real_hdcp.cmx"
   component_name = "hdcp"
   deps = [ "real:bin" ]
 }
 
-fuchsia_component("fake-hardware-display-controller-provider-cmv2-component") {
-  manifest = "meta/fake_hdcp.cml"
+fuchsia_component("hardware-display-controller-provider-cmv2-component") {
+  manifest = "meta/real_hdcp.cml"
   component_name = "hdcp"
-  testonly = true
-  deps = [ "fake:bin" ]
+  deps = [ "real:bin" ]
 }
 
-group("tests") {
-  testonly = true
-  public_deps = [ "fake/tests" ]
+fuchsia_package("hardware-display-controller-provider") {
+  deps = [
+    ":hardware-display-controller-provider-cmv1-component",
+    ":hardware-display-controller-provider-cmv2-component",
+  ]
 }

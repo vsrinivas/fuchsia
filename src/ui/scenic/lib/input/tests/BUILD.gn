@@ -42,6 +42,7 @@ executable("unittests") {
     "//src/lib/testing/loop_fixture",
     "//src/ui/scenic/lib/input",
     "//src/ui/scenic/lib/utils",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
 

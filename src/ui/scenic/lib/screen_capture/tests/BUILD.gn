@@ -24,8 +24,7 @@ executable("unittests") {
 
   deps = [
     "//sdk/lib/sys/cpp/testing:unit",
-    "//src/lib/testing/loop_fixture:gtest",
-    "//src/lib/testing/loop_fixture:gtest",
+    "//src/lib/testing/loop_fixture",
     "//src/ui/lib/display:hdcp_client",
     "//src/ui/scenic/lib/allocation",
     "//src/ui/scenic/lib/gfx/tests:testing_deps",
@@ -37,7 +36,6 @@ executable("unittests") {
   public_deps = [
     "//src/lib/fostr/fidl/fuchsia.ui.scenic",
     "//src/lib/fsl",
-    "//src/ui/examples/bouncing_ball",
     "//src/ui/lib/escher",
     "//src/ui/lib/escher/test/common:gtest_escher",
     "//src/ui/scenic/lib/gfx/tests/mocks:util",

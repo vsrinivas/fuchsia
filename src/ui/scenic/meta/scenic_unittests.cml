@@ -1,0 +1,25 @@
+{
+    "include": [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml"
+    ],
+    "program": {
+        "binary": "bin/scenic_unittests"
+    },
+    children: [
+        {
+            name: "fake_clock",
+            url: "#meta/fake_clock.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.testing.FakeClock",
+                "fuchsia.testing.FakeClockControl"
+            ],
+            from: "#fake_clock",
+        },
+    ],
+}
