@@ -20,7 +20,7 @@ use {
                 filter_tombstones, Allocator, AllocatorKey, AllocatorValue, CoalescingIterator,
                 SimpleAllocator,
             },
-            constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
+            journal::super_block::SuperBlockInstance,
             transaction::{LockKey, TransactionHandler},
             volume::root_volume,
             HandleOptions, LockState, ObjectKey, ObjectStore, ObjectValue, StoreInfo,
@@ -118,8 +118,8 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     let mut root_store_root_objects = Vec::new();
     root_store_root_objects.append(&mut vec![
         super_block.allocator_object_id,
-        SUPER_BLOCK_A_OBJECT_ID,
-        SUPER_BLOCK_B_OBJECT_ID,
+        SuperBlockInstance::A.object_id(),
+        SuperBlockInstance::B.object_id(),
     ]);
     root_store_root_objects.append(&mut root_store.root_objects());
 

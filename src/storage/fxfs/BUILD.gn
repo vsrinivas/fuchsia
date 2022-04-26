@@ -71,7 +71,6 @@ fxfs_sources = [
   "src/object_store/allocator.rs",
   "src/object_store/allocator/merge.rs",
   "src/object_store/caching_object_handle.rs",
-  "src/object_store/constants.rs",
   "src/object_store/directory.rs",
   "src/object_store/extent_record.rs",
   "src/object_store/graveyard.rs",

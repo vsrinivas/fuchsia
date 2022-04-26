@@ -30,7 +30,6 @@ use {
         object_handle::{BootstrapObjectHandle, ObjectHandle},
         object_store::{
             allocator::{Allocator, AllocatorItem, AllocatorKey, AllocatorValue, SimpleAllocator},
-            constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
             extent_record::{Checksums, ExtentKey, ExtentValue, DEFAULT_DATA_ATTRIBUTE_ID},
             graveyard::Graveyard,
             journal::{
@@ -841,7 +840,7 @@ impl Journal {
         super_block_a_handle = ObjectStore::create_object_with_id(
             &root_store,
             &mut transaction,
-            SUPER_BLOCK_A_OBJECT_ID,
+            SuperBlockInstance::A.object_id(),
             HandleOptions::default(),
             None,
         )
@@ -854,7 +853,7 @@ impl Journal {
         super_block_b_handle = ObjectStore::create_object_with_id(
             &root_store,
             &mut transaction,
-            SUPER_BLOCK_B_OBJECT_ID,
+            SuperBlockInstance::B.object_id(),
             HandleOptions::default(),
             None,
         )

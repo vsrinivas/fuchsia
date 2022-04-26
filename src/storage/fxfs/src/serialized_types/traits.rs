@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        object_store::constants::MAX_SERIALIZED_RECORD_SIZE,
-        serialized_types::types::LATEST_VERSION,
-    },
+    crate::serialized_types::{types::LATEST_VERSION, MAX_SERIALIZED_RECORD_SIZE},
     byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt},
     serde::{Deserialize, Serialize},
 };

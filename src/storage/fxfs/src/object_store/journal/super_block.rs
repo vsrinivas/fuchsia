@@ -10,7 +10,6 @@ use {
         object_handle::BootstrapObjectHandle,
         object_store::{
             allocator::Reservation,
-            constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
             journal::{
                 reader::{JournalReader, ReadResult},
                 writer::JournalWriter,
@@ -34,6 +33,10 @@ use {
     storage_device::Device,
     uuid::Uuid,
 };
+
+// These only exist in the root store.
+const SUPER_BLOCK_A_OBJECT_ID: u64 = 1;
+const SUPER_BLOCK_B_OBJECT_ID: u64 = 2;
 
 /// The block size used when reading and writing journal entries.
 const SUPER_BLOCK_BLOCK_SIZE: usize = 8192;
@@ -397,7 +400,6 @@ mod tests {
             filesystem::{Filesystem, FxFilesystem},
             lsm_tree::types::LayerIterator,
             object_store::{
-                constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
                 journal::{journal_handle_options, JournalCheckpoint},
                 testing::{fake_allocator::FakeAllocator, fake_filesystem::FakeFilesystem},
                 transaction::{Options, TransactionHandler},
@@ -447,7 +449,7 @@ mod tests {
         handle_a = ObjectStore::create_object_with_id(
             &root_store,
             &mut transaction,
-            SUPER_BLOCK_A_OBJECT_ID,
+            SuperBlockInstance::A.object_id(),
             journal_handle_options(),
             None,
         )
@@ -460,7 +462,7 @@ mod tests {
         handle_b = ObjectStore::create_object_with_id(
             &root_store,
             &mut transaction,
-            SUPER_BLOCK_B_OBJECT_ID,
+            SuperBlockInstance::B.object_id(),
             journal_handle_options(),
             None,
         )
@@ -532,7 +534,7 @@ mod tests {
         // Make sure we did actually extend the super block.
         let handle = ObjectStore::open_object(
             &fs.root_store(),
-            SUPER_BLOCK_A_OBJECT_ID,
+            SuperBlockInstance::A.object_id(),
             HandleOptions::default(),
             None,
         )

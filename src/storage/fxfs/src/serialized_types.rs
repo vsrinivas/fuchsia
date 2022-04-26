@@ -55,6 +55,8 @@
 
 mod traits;
 
+pub const MAX_SERIALIZED_RECORD_SIZE: u64 = 4096;
+
 // Re-export the traits we need.
 pub use fxfs_macros::{versioned_type, Versioned};
 pub use traits::{Version, Versioned, VersionedLatest};

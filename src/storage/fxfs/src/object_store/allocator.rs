@@ -21,7 +21,6 @@ use {
         metrics::{traits::Metric as _, UintMetric},
         object_handle::{ObjectHandle, ObjectHandleExt, INVALID_OBJECT_ID},
         object_store::{
-            constants::MAX_SERIALIZED_RECORD_SIZE,
             object_manager::ReservationUpdate,
             store_object_handle::DirectWriter,
             transaction::{AllocatorMutation, AssocObj, LockKey, Mutation, Options, Transaction},
@@ -29,7 +28,7 @@ use {
         },
         range::RangeExt,
         round::round_down,
-        serialized_types::{Versioned, VersionedLatest},
+        serialized_types::{Versioned, VersionedLatest, MAX_SERIALIZED_RECORD_SIZE},
         trace_duration,
     },
     anyhow::{anyhow, bail, ensure, Error},
