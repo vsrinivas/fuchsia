@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/forensics/crash_reports/errors.h"
+#include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/testing/gmatchers.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/stubs/data_provider.h"
@@ -86,9 +87,9 @@ class SnapshotManagerTest : public UnitTestFixture {
   void SetUpSnapshotManager(StorageSize max_annotations_size, StorageSize max_archives_size) {
     FX_CHECK(data_provider_server_);
     clock_.Set(zx::time(0u));
-    snapshot_manager_ =
-        std::make_unique<SnapshotManager>(dispatcher(), &clock_, data_provider_server_.get(),
-                                          kWindow, path_, max_annotations_size, max_archives_size);
+    snapshot_manager_ = std::make_unique<SnapshotManager>(
+        dispatcher(), &clock_, data_provider_server_.get(), &annotation_manager_, kWindow, path_,
+        max_annotations_size, max_archives_size);
   }
 
   std::set<std::string> ReadGarbageCollectedSnapshots() {
@@ -131,6 +132,7 @@ class SnapshotManagerTest : public UnitTestFixture {
 
  private:
   std::unique_ptr<stubs::DataProviderBase> data_provider_server_;
+  feedback::AnnotationManager annotation_manager_{dispatcher(), {}};
   files::ScopedTempDir tmp_dir_;
   std::string path_;
 };

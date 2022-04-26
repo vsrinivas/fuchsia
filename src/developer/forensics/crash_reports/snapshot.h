@@ -54,15 +54,26 @@ class ManagedSnapshot {
 };
 
 // Replacement for a ManagedSnapshot when the Snapshot manager drops a snapshot.
+//
+// |annotations_| stores information the SnapshotManager can collect immiediately when it's
+// requested to get a snapshot, which may be dynamic and change with time. These data are things
+// like channel and uptime.
+//
+// |presence_annotations_| store information from the SnapshotManager on the circumstances that
+// caused the underlying data to be missing.
 class MissingSnapshot {
  public:
-  explicit MissingSnapshot(AnnotationMap presence_annotations)
-      : presence_annotations_(std::move(presence_annotations)) {}
+  explicit MissingSnapshot(AnnotationMap annotations, AnnotationMap presence_annotations)
+      : annotations_(std::move(annotations)),
+        presence_annotations_(std::move(presence_annotations)) {}
+
+  const AnnotationMap& Annotations() const { return annotations_; }
 
   // Information from the snapshot manager on why the snapshot is missing.
   const AnnotationMap& PresenceAnnotations() const { return presence_annotations_; }
 
  private:
+  AnnotationMap annotations_;
   AnnotationMap presence_annotations_;
 };
 

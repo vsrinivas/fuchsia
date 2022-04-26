@@ -17,6 +17,7 @@
 
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/snapshot_manager.h"
+#include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/testing/stubs/data_provider.h"
 #include "src/developer/forensics/testing/stubs/loader.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
@@ -41,8 +42,9 @@ class CrashServerTest : public UnitTestFixture {
  protected:
   CrashServerTest()
       : data_provider_server_(std::make_unique<stubs::DataProviderReturnsEmptySnapshot>()),
-        snapshot_manager_(dispatcher(), &clock_, data_provider_server_.get(), zx::min(0),
-                          kGarbageCollectedSnapshotsPath, StorageSize::Bytes(0u),
+        annotation_manager_(dispatcher(), {}),
+        snapshot_manager_(dispatcher(), &clock_, data_provider_server_.get(), &annotation_manager_,
+                          zx::min(0), kGarbageCollectedSnapshotsPath, StorageSize::Bytes(0u),
                           StorageSize::Bytes(0u)),
         tags_() {
     RunLoopUntilIdle();
@@ -64,6 +66,7 @@ class CrashServerTest : public UnitTestFixture {
 
   timekeeper::TestClock clock_;
   std::unique_ptr<stubs::DataProviderBase> data_provider_server_;
+  feedback::AnnotationManager annotation_manager_;
   SnapshotManager snapshot_manager_;
   LogTags tags_;
   std::unique_ptr<CrashServer> crash_server_;
@@ -248,16 +251,24 @@ TEST_F(CrashServerTest, PreparesAnnotationsErrorSnapshot) {
                       /*snapshot_uuid=*/kSnapshotUuid,
                       /*minidump=*/std::nullopt};
 
-  const AnnotationMap snapshot_annotations({
+  const AnnotationMap annotations({
       {"key2", "value2.1"},
       {"key3", "value3"},
   });
 
-  EXPECT_THAT(CrashServer::PrepareAnnotations(report, MissingSnapshot(snapshot_annotations)),
+  const AnnotationMap presence_annotations({
+      {"key3", "value3.1"},
+      {"key4", "value4"},
+
+  });
+
+  EXPECT_THAT(CrashServer::PrepareAnnotations(
+                  report, MissingSnapshot(AnnotationMap({}), presence_annotations)),
               UnorderedElementsAreArray({
                   Pair("key1", "value1"),
-                  Pair("key2", "value2.1"),
-                  Pair("key3", "value3"),
+                  Pair("key2", "value2"),
+                  Pair("key3", "value3.1"),
+                  Pair("key4", "value4"),
               }));
 }
 

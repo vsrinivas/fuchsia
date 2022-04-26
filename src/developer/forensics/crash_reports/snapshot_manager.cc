@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "src/developer/forensics/crash_reports/errors.h"
+#include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/lib/uuid/uuid.h"
 
 namespace forensics {
@@ -57,12 +58,14 @@ std::shared_ptr<T> MakeShared(T&& t) {
 
 SnapshotManager::SnapshotManager(async_dispatcher_t* dispatcher, timekeeper::Clock* clock,
                                  fuchsia::feedback::DataProvider* data_provider,
+                                 feedback::AnnotationManager* annotation_manager,
                                  zx::duration shared_request_window,
                                  const std::string& garbage_collected_snapshots_path,
                                  StorageSize max_annotations_size, StorageSize max_archives_size)
     : dispatcher_(dispatcher),
       clock_(clock),
       data_provider_(data_provider),
+      annotation_manager_(annotation_manager),
       shared_request_window_(shared_request_window),
       garbage_collected_snapshots_path_(garbage_collected_snapshots_path),
       max_annotations_size_(max_annotations_size),
@@ -98,33 +101,38 @@ SnapshotManager::SnapshotManager(async_dispatcher_t* dispatcher, timekeeper::Clo
 }
 
 Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
+  auto BuildMissing = [this](const SpecialCaseSnapshot& special_case) {
+    return MissingSnapshot(AnnotationMap(annotation_manager_->ImmediatelyAvailable()),
+                           special_case.annotations);
+  };
+
   if (uuid == garbage_collected_snapshot_.uuid) {
-    return MissingSnapshot(garbage_collected_snapshot_.annotations);
+    return BuildMissing(garbage_collected_snapshot_);
   }
 
   if (uuid == not_persisted_snapshot_.uuid) {
-    return MissingSnapshot(not_persisted_snapshot_.annotations);
+    return BuildMissing(not_persisted_snapshot_);
   }
 
   if (uuid == timed_out_snapshot_.uuid) {
-    return MissingSnapshot(timed_out_snapshot_.annotations);
+    return BuildMissing(timed_out_snapshot_);
   }
 
   if (uuid == shutdown_snapshot_.uuid) {
-    return MissingSnapshot(shutdown_snapshot_.annotations);
+    return BuildMissing(shutdown_snapshot_);
   }
 
   if (uuid == no_uuid_snapshot_.uuid) {
-    return MissingSnapshot(no_uuid_snapshot_.annotations);
+    return BuildMissing(no_uuid_snapshot_);
   }
 
   auto* data = FindSnapshotData(uuid);
 
   if (!data) {
     if (garbage_collected_snapshots_.find(uuid) != garbage_collected_snapshots_.end()) {
-      return MissingSnapshot(garbage_collected_snapshot_.annotations);
+      return BuildMissing(garbage_collected_snapshot_);
     } else {
-      return MissingSnapshot(not_persisted_snapshot_.annotations);
+      return BuildMissing(not_persisted_snapshot_);
     }
   }
 
@@ -323,6 +331,7 @@ void SnapshotManager::CompleteWithSnapshot(const SnapshotUuid& uuid, FidlSnapsho
 
   // Take ownership of |fidl_snapshot| and the record the size of its annotations and archive.
   if (fidl_snapshot.has_annotations()) {
+    FX_LOGS(INFO) << ">>> HAS ANNOTATIONS";
     data->annotations = MakeShared(ToAnnotationMap(fidl_snapshot.annotations()));
 
     for (const auto& [k, v] : data->annotations->Raw()) {
@@ -333,6 +342,7 @@ void SnapshotManager::CompleteWithSnapshot(const SnapshotUuid& uuid, FidlSnapsho
   }
 
   if (fidl_snapshot.has_archive()) {
+    FX_LOGS(INFO) << ">>> HAS ARCHIVE";
     data->archive = MakeShared(ManagedSnapshot::Archive(fidl_snapshot.archive()));
 
     data->archive_size += StorageSize::Bytes(data->archive->key.size());

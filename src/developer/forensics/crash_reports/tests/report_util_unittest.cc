@@ -96,6 +96,10 @@ TEST(MakeReport, AddsMissingSnapshotAnnotations) {
       {"snapshot_annotation_key", "snapshot_annotation_value"},
   });
 
+  AnnotationMap presence_annotations({
+      {"presence_annotation_key", "presence_annotation_value"},
+  });
+
   fuchsia::feedback::CrashReport crash_report;
   crash_report.set_program_name("program_name");
 
@@ -105,13 +109,16 @@ TEST(MakeReport, AddsMissingSnapshotAnnotations) {
       .channel = "product_channel",
   };
 
-  const auto report = MakeReport(
-      std::move(crash_report), /*report_id=*/0, "snapshot_uuid", MissingSnapshot(annotations),
-      /*current_time=*/std::nullopt, ::fpromise::ok("device_id"), AnnotationMap({{"key", "value"}}),
-      product, /*is_hourly_report=*/false);
+  const auto report =
+      MakeReport(std::move(crash_report), /*report_id=*/0, "snapshot_uuid",
+                 MissingSnapshot(annotations, presence_annotations),
+                 /*current_time=*/std::nullopt, ::fpromise::ok("device_id"),
+                 AnnotationMap({{"key", "value"}}), product, /*is_hourly_report=*/false);
   ASSERT_TRUE(report.has_value());
   EXPECT_EQ(report.value().Annotations().Get("snapshot_annotation_key"),
             "snapshot_annotation_value");
+  EXPECT_EQ(report.value().Annotations().Get("presence_annotation_key"),
+            "presence_annotation_value");
 }
 
 }  // namespace

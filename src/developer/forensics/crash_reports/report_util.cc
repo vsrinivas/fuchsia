@@ -219,15 +219,19 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
 void AddSnapshotAnnotations(const SnapshotUuid& snapshot_uuid, const Snapshot& snapshot,
                             AnnotationMap* annotations) {
   // The underlying snapshot may have been garbage collected or its collection timed out
-  // (possibly due to shutdown). Add the annotations from the snapshot manager indicating why the
-  // annotations and archive collected from fuchsia.feedback.DataProvider aren't present.
+  // (possibly due to shutdown). Add the annotations from the snapshot manager could collect itself
+  // and annotations indicating why the annotations and archive collected from
+  // fuchsia.feedback.DataProvider aren't present.
   //
   // Snapshots will not be missing due to reasons like not being persisted or not having a valid
   // snapshot uuid because neither can occur without a report entering the store and this flow is
   // triggered before the store is used.
   if (std::holds_alternative<MissingSnapshot>(snapshot)) {
     const auto& s = std::get<MissingSnapshot>(snapshot);
+
+    annotations->Set(s.Annotations());
     annotations->Set(s.PresenceAnnotations());
+
     return;
   }
 
