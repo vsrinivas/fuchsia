@@ -1,0 +1,76 @@
+[
+  {
+    "name": "AEMU-(1)",
+    "tests": [
+      {
+        "name": "fuchsia-pkg://fuchsia.com/fast1#meta/fast1.cm",
+        "package_url": "fuchsia-pkg://fuchsia.com/fast1#meta/fast1.cm",
+        "path": "",
+        "label": "//src/something:fast1(//build/toolchain/fuchsia:x64)",
+        "os": "fuchsia",
+        "cpu": "x64",
+        "log_settings": {},
+        "runs": 1,
+        "timeout_nanos": 600000000000
+      },
+      {
+        "name": "fuchsia-pkg://fuchsia.com/fast3#meta/fast3.cm",
+        "package_url": "fuchsia-pkg://fuchsia.com/fast3#meta/fast3.cm",
+        "path": "",
+        "label": "//src/something:fast3(//build/toolchain/fuchsia:x64)",
+        "os": "fuchsia",
+        "cpu": "x64",
+        "log_settings": {},
+        "runs": 1,
+        "timeout_nanos": 600000000000
+      },
+      {
+        "name": "fuchsia-pkg://fuchsia.com/fast2#meta/fast2.cm",
+        "package_url": "fuchsia-pkg://fuchsia.com/fast2#meta/fast2.cm",
+        "path": "",
+        "label": "//src/something:fast2(//build/toolchain/fuchsia:x64)",
+        "os": "fuchsia",
+        "cpu": "x64",
+        "log_settings": {},
+        "runs": 1,
+        "timeout_nanos": 600000000000
+      }
+    ],
+    "environment": {
+      "dimensions": {
+        "device_type": "AEMU"
+      },
+      "is_emu": true
+    },
+    "timeout_secs": 1814,
+    "summary": {
+      "tests": null
+    }
+  },
+  {
+    "name": "AEMU-(2)",
+    "tests": [
+      {
+        "name": "fuchsia-pkg://fuchsia.com/slow#meta/slow.cm",
+        "package_url": "fuchsia-pkg://fuchsia.com/slow#meta/slow.cm",
+        "path": "",
+        "label": "//src/something:slow(//build/toolchain/fuchsia:x64)",
+        "os": "fuchsia",
+        "cpu": "x64",
+        "log_settings": {},
+        "runs": 1,
+        "timeout_nanos": 600000000000
+      }
+    ],
+    "environment": {
+      "dimensions": {
+        "device_type": "AEMU"
+      },
+      "is_emu": true
+    },
+    "timeout_secs": 1502,
+    "summary": {
+      "tests": null
+    }
+  }
+]

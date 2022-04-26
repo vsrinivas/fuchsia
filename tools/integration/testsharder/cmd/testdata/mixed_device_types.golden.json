@@ -44,7 +44,9 @@
       }
     },
     "deps": [
-      "host_x64/bar"
+      "host_x64/bar",
+      "host_x64/dep1",
+      "host_x64/dep2"
     ],
     "timeout_secs": 0,
     "summary": {

@@ -61,16 +61,27 @@ if (is_host) {
     ]
   }
 
+  # TODO(olivernewman): Consider running the test executable locally to generate
+  # a depfile so it's not necessary to copy-paste these names.
+  _golden_tests = [
+    "affected tests",
+    "mixed device types",
+    "hermetic deps",
+    "multiply",
+    "multiply affected test",
+    "sharding by time",
+    "skip unaffected tests",
+    "target test count",
+    "test list with tags",
+  ]
+
   _golden_dir = "${target_gen_dir}/goldens"
   host_test_data("copy_golden_files") {
-    sources = [
-      "cmd/testdata/affected_tests.golden.json",
-      "cmd/testdata/basic.golden.json",
-      "cmd/testdata/multiply.golden.json",
-      "cmd/testdata/skip_unaffected_tests.golden.json",
-      "cmd/testdata/target_test_count.golden.json",
-      "cmd/testdata/test_list_with_tags.golden.json",
-    ]
+    sources = []
+    foreach(test_name, _golden_tests) {
+      _file_name = string_replace(test_name, " ", "_")
+      sources += [ "cmd/testdata/${_file_name}.golden.json" ]
+    }
     outputs = [ "${_golden_dir}/{{source_file_part}}" ]
   }
 

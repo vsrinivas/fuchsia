@@ -1,0 +1,80 @@
+[
+  {
+    "name": "affected:AEMU",
+    "tests": [
+      {
+        "name": "fuchsia-pkg://fuchsia.com/affected-test#meta/affected-test.cm",
+        "package_url": "fuchsia-pkg://fuchsia.com/affected-test#meta/affected-test.cm",
+        "path": "",
+        "label": "//src/something:affected-test(//build/toolchain/fuchsia:x64)",
+        "os": "fuchsia",
+        "cpu": "x64",
+        "log_settings": {},
+        "runs": 1,
+        "affected": true
+      }
+    ],
+    "environment": {
+      "dimensions": {
+        "device_type": "AEMU"
+      },
+      "is_emu": true
+    },
+    "timeout_secs": 0,
+    "summary": {
+      "tests": null
+    }
+  },
+  {
+    "name": "AEMU",
+    "tests": [
+      {
+        "name": "fuchsia-pkg://fuchsia.com/unaffected-test#meta/unaffected-test.cm",
+        "package_url": "fuchsia-pkg://fuchsia.com/unaffected-test#meta/unaffected-test.cm",
+        "path": "",
+        "label": "//src/something:unaffected-test(//build/toolchain/fuchsia:x64)",
+        "os": "fuchsia",
+        "cpu": "x64",
+        "log_settings": {},
+        "runs": 1
+      }
+    ],
+    "environment": {
+      "dimensions": {
+        "device_type": "AEMU"
+      },
+      "is_emu": true
+    },
+    "timeout_secs": 0,
+    "summary": {
+      "tests": null
+    }
+  },
+  {
+    "name": "multiplied:AEMU-fuchsia-pkg:__fuchsia.com_multiplied-affected-test#meta_multiplied-affected-test.cm",
+    "tests": [
+      {
+        "name": "fuchsia-pkg://fuchsia.com/multiplied-affected-test#meta/multiplied-affected-test.cm",
+        "package_url": "fuchsia-pkg://fuchsia.com/multiplied-affected-test#meta/multiplied-affected-test.cm",
+        "path": "",
+        "label": "//src/something:multiplied-affected-test(//build/toolchain/fuchsia:x64)",
+        "os": "fuchsia",
+        "cpu": "x64",
+        "log_settings": {},
+        "runs": 100,
+        "run_algorithm": "STOP_ON_FAILURE",
+        "affected": true
+      }
+    ],
+    "environment": {
+      "dimensions": {
+        "device_type": "AEMU"
+      },
+      "is_emu": true
+    },
+    "timeout_secs": 0,
+    "summary": {
+      "tests": null
+    }
+  }
+]

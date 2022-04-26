@@ -11,22 +11,17 @@
         "cpu": "x64",
         "log_settings": {},
         "runs": 1
-      }
-    ],
-    "environment": {
-      "dimensions": {
-        "device_type": "AEMU"
       },
-      "is_emu": true
-    },
-    "timeout_secs": 0,
-    "summary": {
-      "tests": null
-    }
-  },
-  {
-    "name": "multiplied:AEMU-fuchsia-pkg:__fuchsia.com_foo#meta_foo.cm",
-    "tests": [
+      {
+        "name": "fuchsia-pkg://fuchsia.com/baz#meta/baz.cm",
+        "package_url": "fuchsia-pkg://fuchsia.com/baz#meta/baz.cm",
+        "path": "",
+        "label": "//src/something:baz(//build/toolchain/fuchsia:x64)",
+        "os": "fuchsia",
+        "cpu": "x64",
+        "log_settings": {},
+        "runs": 1
+      },
       {
         "name": "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm",
         "package_url": "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm",
@@ -35,8 +30,7 @@
         "os": "fuchsia",
         "cpu": "x64",
         "log_settings": {},
-        "runs": 50,
-        "run_algorithm": "STOP_ON_FAILURE"
+        "runs": 1
       }
     ],
     "environment": {
@@ -45,6 +39,10 @@
       },
       "is_emu": true
     },
+    "deps": [
+      "images.json",
+      "multiboot.bin"
+    ],
     "timeout_secs": 0,
     "summary": {
       "tests": null
