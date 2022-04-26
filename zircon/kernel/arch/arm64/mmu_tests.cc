@@ -76,8 +76,22 @@ bool arm64_test_perms() {
   END_TEST;
 }
 
+bool arm64_test_destroy_without_init() {
+  BEGIN_TEST;
+
+  // See that it's OK to Destroy even if Init was never called.
+  ArmArchVmAspace aspace(0, kTestAspaceSize, ArmAspaceType::kUser);
+  ASSERT_OK(aspace.Destroy());
+
+  // See that double Destroy is also OK.
+  ASSERT_OK(aspace.Destroy());
+
+  END_TEST;
+}
+
 }  // anonymous namespace
 
 UNITTEST_START_TESTCASE(arm64_mmu_tests)
 UNITTEST("perms", arm64_test_perms)
+UNITTEST("destroy-without-init", arm64_test_destroy_without_init)
 UNITTEST_END_TESTCASE(arm64_mmu_tests, "arm64_mmu", "arm64 mmu tests")

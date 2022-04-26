@@ -46,8 +46,10 @@ class ArchVmAspaceInterface {
 
   virtual zx_status_t Init() = 0;
 
-  // ::Destroy expects the aspace to be fully unmapped, as any mapped regions
+  // Destroy expects the aspace to be fully unmapped, as any mapped regions
   // indicate incomplete cleanup at the higher layers.
+  //
+  // It is safe to call Destroy even if Init failed.
   virtual zx_status_t Destroy() = 0;
 
   // main methods

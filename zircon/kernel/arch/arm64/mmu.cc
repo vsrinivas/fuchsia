@@ -1662,6 +1662,12 @@ zx_status_t ArmArchVmAspace::Destroy() {
   // Not okay to destroy the kernel address space
   DEBUG_ASSERT(type_ != ArmAspaceType::kKernel);
 
+  if (!tt_virt_) {
+    // Initialization must not have succeeded.
+    DEBUG_ASSERT(!tt_phys_);
+    return ZX_OK;
+  }
+
   // Check to see if the top level page table is empty. If not the user didn't
   // properly unmap everything before destroying the aspace
   if (const int index = first_used_page_table_entry(tt_virt_, page_size_shift_); index != -1) {
