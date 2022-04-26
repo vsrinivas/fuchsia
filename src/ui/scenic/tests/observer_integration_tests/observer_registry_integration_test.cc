@@ -641,7 +641,7 @@ TEST_F(FlatlandObserverRegistryIntegrationTest, ChildRequestsFocusAfterConnectin
   auto& children = root_view_descriptor.children();
 
   // Root view moves focus to the child view after it shows up in the fuog_ViewTreeSnapshot.
-  std::optional<bool> request_processed = false;
+  std::optional<bool> request_processed;
   root_focuser_->RequestFocus(fidl::Clone(child_view_ref), [&request_processed](auto result) {
     request_processed = true;
     FX_DCHECK(!result.is_err());
