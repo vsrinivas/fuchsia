@@ -449,8 +449,10 @@ fn wait_on_pid(
     options: &WaitingOptions,
 ) -> Result<Option<ZombieProcess>, Errno> {
     let waiter = Waiter::new_for_wait_on_child_thread();
-    let mut wait_result = Ok(());
-    let mut _guard = waiter.register_waiter(task);
+    let (mut _guard, mut wait_result) = match waiter.register_waiter(task) {
+        Ok(guard) => (Some(guard), Ok(())),
+        Err(err) => (None, Err(err)),
+    };
     loop {
         let child = task.thread_group.get_waitable_child(selector, options)?;
         match child {
@@ -1360,6 +1362,36 @@ mod tests {
 
         // Child is deleted, the thread must be able to terminate.
         thread.join().expect("join");
+    }
+
+    #[::fuchsia::test]
+    fn test_waiting_for_child_with_signal_pending() {
+        let (_kernel, task) = create_kernel_and_task();
+
+        // Register a signal action to ensure that the `SIGUSR1` signal interrupts the task.
+        task.thread_group.signal_actions.set(
+            SIGUSR1,
+            sigaction_t {
+                sa_handler: UserAddress::from(0xDEADBEEF),
+                sa_restorer: UserAddress::from(0xDEADBEEF),
+                ..sigaction_t::default()
+            },
+        );
+
+        // Start a child task. This will ensure that `wait_on_pid` tries to wait for the child.
+        let _child = task.clone_task_for_test(0);
+
+        // Send a signal to the task. `wait_on_pid` should realize there is a signal pending when
+        // entering a wait and return with `EINTR`.
+        send_signal(&task, SignalInfo::default(SIGUSR1));
+
+        let errno = wait_on_pid(
+            &task,
+            ProcessSelector::Any,
+            &WaitingOptions::new_for_wait4(0).expect("WaitingOptions"),
+        )
+        .expect_err("wait_on_pid");
+        assert_eq!(errno, EINTR);
     }
 
     #[::fuchsia::test]
