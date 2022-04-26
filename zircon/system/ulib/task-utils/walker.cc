@@ -50,17 +50,28 @@ static size_t koid_table_byte_capacity(koid_table_t* table) {
   return table->capacity * sizeof(table->entries[0]);
 }
 
-static void realloc_koid_table(koid_table_t* table, size_t new_capacity) {
-  table->entries = reinterpret_cast<zx_koid_t*>(
+[[nodiscard]] static bool realloc_koid_table(koid_table_t* table, size_t new_capacity) {
+  zx_koid_t* new_entries = reinterpret_cast<zx_koid_t*>(
       realloc(table->entries, new_capacity * sizeof(table->entries[0])));
+  if (!new_entries) {
+    return false;
+  }
+  table->entries = new_entries;
   table->capacity = new_capacity;
+  return true;
 }
 
-static koid_table_t* make_koid_table(void) {
+[[nodiscard]] static koid_table_t* make_koid_table(void) {
   koid_table_t* table = reinterpret_cast<koid_table_t*>(malloc(sizeof(*table)));
+  if (!table) {
+    return nullptr;
+  }
   table->num_entries = 0;
   table->entries = nullptr;
-  realloc_koid_table(table, kNumInitialKoids);
+  if (!realloc_koid_table(table, kNumInitialKoids)) {
+    free(table);
+    return nullptr;
+  }
   return table;
 }
 
@@ -78,8 +89,8 @@ static zx_status_t fetch_children(zx_handle_t parent, zx_koid_t parent_koid, int
   // this is inherently racy, but we retry once with a bit of slop to try to
   // get a complete list
   for (int pass = 0; pass < 2; ++pass) {
-    if (actual < avail) {
-      realloc_koid_table(koids, avail + kNumExtraKoids);
+    if (actual < avail && !realloc_koid_table(koids, avail + kNumExtraKoids)) {
+      return ZX_ERR_NO_MEMORY;
     }
     status = zx_object_get_info(parent, children_kind, koids->entries,
                                 koid_table_byte_capacity(koids), &actual, &avail);
@@ -149,6 +160,9 @@ static zx_status_t do_threads_worker(const walk_ctx_t* ctx, koid_table_t* koids,
 static zx_status_t do_threads(const walk_ctx_t* ctx, zx_handle_t job, zx_koid_t job_koid,
                               int depth) {
   koid_table_t* koids = make_koid_table();
+  if (!koids) {
+    return ZX_ERR_NO_MEMORY;
+  }
   zx_status_t status = do_threads_worker(ctx, koids, job, job_koid, depth);
   free_koid_table(koids);
   return status;
@@ -201,6 +215,9 @@ static zx_status_t do_processes_worker(const walk_ctx_t* ctx, koid_table_t* koid
 static zx_status_t do_processes(const walk_ctx_t* ctx, zx_handle_t job, zx_koid_t job_koid,
                                 int depth) {
   koid_table_t* koids = make_koid_table();
+  if (!koids) {
+    return ZX_ERR_NO_MEMORY;
+  }
   zx_status_t status = do_processes_worker(ctx, koids, job, job_koid, depth);
   free_koid_table(koids);
   return status;
@@ -256,6 +273,9 @@ static zx_status_t do_jobs_worker(const walk_ctx_t* ctx, koid_table_t* koids, zx
 
 static zx_status_t do_jobs(const walk_ctx_t* ctx, zx_handle_t job, zx_koid_t job_koid, int depth) {
   koid_table_t* koids = make_koid_table();
+  if (!koids) {
+    return ZX_ERR_NO_MEMORY;
+  }
   zx_status_t status = do_jobs_worker(ctx, koids, job, job_koid, depth);
   free_koid_table(koids);
   return status;
