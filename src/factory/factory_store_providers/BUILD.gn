@@ -75,13 +75,6 @@ fuchsia_package("factory_store_providers") {
   ]
 }
 
-# TODO(https://fxbug.dev/76487): Remove after reference removed first
-config_data("config") {
-  for_pkg = "sysmgr"
-
-  sources = [ "factory_store_providers.config" ]
-}
-
 rustc_test("factory_store_providers_test") {
   edition = "2018"
   source_root = "tests/factory_store_providers_test.rs"
