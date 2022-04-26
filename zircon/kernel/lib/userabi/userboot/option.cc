@@ -24,7 +24,7 @@ constexpr std::string_view kRebootOpt = "userboot.reboot";
 // sometimes generate a writable data section. While such sections are
 // prohibited, we apply the default within ParseCmdline() below and keep this
 // value as a char array.
-constexpr const char kNextDefault[] = "bin/bootsvc";
+constexpr const char kNextDefault[] = "bin/component_manager+--boot";
 
 struct KeyAndValue {
   std::string_view key, value;
