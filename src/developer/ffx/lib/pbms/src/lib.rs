@@ -115,32 +115,15 @@ pub async fn fms_entries_from(product_url: &url::Url) -> Result<Entries> {
 /// - None and there is only one product bundle available, use it.
 /// - Some(product name) and a url with that fragment is found, use it.
 /// - Some(full product url with fragment) use it.
-/// - Some(a partial match to one product bundle) use it.
 /// If a match is not found, fail with an error message.
 ///
 /// Tip: Call `update_metadata()` to get up to date choices (or not, if the
 ///      intent is to select from what's already there).
 pub async fn select_product_bundle(looking_for: &Option<String>) -> Result<url::Url> {
     let mut urls = product_bundle_urls().await.context("getting product bundle URLs")?;
-    select_in(&mut urls, looking_for).await
-}
-
-/// Helper for select_product_bundle().
-async fn select_in(urls: &mut Vec<url::Url>, looking_for: &Option<String>) -> Result<url::Url> {
-    if urls.len() == 0 {
-        bail!(
-            "There are no product bundles available.\
-            \nTips on accessing product bundles:\
-            \n - for in-tree development, `cd` into the tree and build a \
-            product bundle.\
-            \n - for SDK developers, be sure the ffx config settings for pbms \
-            are correct."
-        );
-    }
     urls.sort();
     urls.reverse();
     if let Some(looking_for) = &looking_for {
-        let mut similar = Vec::new();
         for url in urls {
             if url.as_str() == looking_for {
                 return Ok(url.to_owned());
@@ -148,25 +131,11 @@ async fn select_in(urls: &mut Vec<url::Url>, looking_for: &Option<String>) -> Re
             if url.fragment().expect("product_urls must have fragment") == looking_for {
                 return Ok(url.to_owned());
             }
-            if url.as_str().contains(looking_for) {
-                similar.push(url.to_owned());
-            }
         }
-        match similar.len() {
-            0 => bail!(
-                "A product bundle with that name was not found, \
-                please check the spelling and try again."
-            ),
-            1 => {
-                // A single item was found which partially matches what the caller
-                // is looking for. Go with it.
-                return Ok(similar[0].to_owned());
-            }
-            _ => bail!(
-                "Multiple product bundles matches were found, please be more \
-                 specific (so that there's one match) and try again."
-            ),
-        }
+        bail!(
+            "A product bundle with that name was not found, \
+            please check the spelling and try again."
+        );
     } else {
         if urls.len() == 1 {
             // There is only one product bundle available.
@@ -310,34 +279,5 @@ mod tests {
         update_metadata(/*verbose=*/ false, &mut writer).await.expect("get pbms");
         let urls = product_bundle_urls().await.expect("get pbms");
         assert!(!urls.is_empty());
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    #[should_panic(expected = "There are no product bundles available.")]
-    async fn test_select_in_empty() {
-        let mut urls = vec![];
-        let looking_for = None;
-        select_in(&mut urls, &looking_for).await.expect("selecting");
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_select_in() {
-        let url_foo = url::Url::parse("file:///example#foo").expect("creating urls");
-        let mut urls = vec![url_foo.to_owned()];
-        let looking_for = None;
-        let pb = select_in(&mut urls, &looking_for).await.expect("selecting");
-        assert_eq!(pb, url_foo);
-        let pb = select_in(&mut urls, &Some("foo".to_string())).await.expect("selecting");
-        assert_eq!(pb, url_foo);
-        let pb = select_in(&mut urls, &Some("example".to_string())).await.expect("selecting");
-        assert_eq!(pb, url_foo);
-
-        let url_bar = url::Url::parse("file:///example#bar").expect("creating urls");
-        let mut urls = vec![url_foo.to_owned(), url_bar.to_owned()];
-        let pb = select_in(&mut urls, &Some("foo".to_string())).await.expect("selecting");
-        assert_eq!(pb, url_foo);
-        let pb = select_in(&mut urls, &Some("bar".to_string())).await.expect("selecting");
-        assert_eq!(pb, url_bar);
-        assert!(select_in(&mut urls, &Some("example".to_string())).await.is_err());
     }
 }
