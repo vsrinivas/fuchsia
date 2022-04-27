@@ -87,7 +87,7 @@ async fn apply_command_line_options(
     if emu_config.host.acceleration == AccelerationMode::Auto {
         let check_kvm = match emu_config.device.cpu.architecture {
             TargetArchitecture::Arm64 if emu_config.host.architecture == "aarch64" => true,
-            TargetArchitecture::X64 if emu_config.host.architecture == "x64_64" => true,
+            TargetArchitecture::X64 if emu_config.host.architecture == "x86_64" => true,
             _ => false,
         };
 
