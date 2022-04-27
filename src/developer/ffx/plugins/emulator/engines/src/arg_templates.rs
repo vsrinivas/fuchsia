@@ -496,4 +496,84 @@ mod tests {
 
         Ok(())
     }
+
+    /// Tests invalid substitutions return errors.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_invalid_substitutions() {
+        let templates: Vec<(bool, String, String)> = vec![
+            (
+                true,
+                "empty template".to_string(),
+                r#" {
+                "args": [],
+                "envs": {},
+                "features": [],
+                "kernel_args": [],
+                "options": []
+            }"#
+                .to_string(),
+            ),
+            (
+                false,
+                "unknown top level variable".to_string(),
+                r#"
+        {
+            "args": [],
+            "envs": {},
+            "features": [],
+            "kernel_args": ["{{unknown_top_level}}"],
+            "options": []
+        }"#
+                .to_string(),
+            ),
+            (
+                false,
+                "unknown sub variable".to_string(),
+                r#"
+    {
+        "args": [],
+        "envs": {},
+        "features": [],
+        "kernel_args": ["{{guest.something}}"],
+        "options": []
+    }"#
+                .to_string(),
+            ),
+            (
+                true,
+                "optional value = None should not err.".to_string(),
+                r#"
+    {
+        "args": [],
+        "envs": {},
+        "features": [],
+        "kernel_args": ["{{runtime.upscript}}"],
+        "options": []
+    }"#
+                .to_string(),
+            ),
+            (
+                false,
+                "missing quote - invalid json should  err.".to_string(),
+                r#"
+    {
+        "args": [],
+        "envs": {},
+        "features": [],
+        "kernel_args": ["{{host.port_map}}],
+        "options": []
+    }"#
+                .to_string(),
+            ),
+        ];
+        let mut emu_config = EmulatorConfiguration::default();
+        for (expected_ok, name, template) in templates.iter() {
+            let flags = process_flag_template_inner(template, &mut emu_config);
+            if *expected_ok {
+                assert!(flags.is_ok(), "Processing {}: {:?}", name, flags);
+            } else {
+                assert!(flags.is_err(), "Processing {}: {:?}", name, flags);
+            }
+        }
+    }
 }
