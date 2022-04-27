@@ -7,8 +7,8 @@
 use anyhow::{Context as anyhow_context, Result};
 use ffx_emulator_config::{DataUnits, EmulatorConfiguration, FlagData};
 use handlebars::{
-    Context, Handlebars, Helper, HelperDef, HelperResult, JsonRender, Output, RenderContext,
-    RenderError,
+    no_escape, Context, Handlebars, Helper, HelperDef, HelperResult, JsonRender, Output,
+    RenderContext, RenderError,
 };
 
 #[derive(Clone, Copy)]
@@ -175,6 +175,7 @@ fn process_flag_template_inner(
     // This performs all the variable substitution and condition resolution.
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(true);
+    handlebars.register_escape_fn(no_escape);
     handlebars.register_helper("env", Box::new(EnvironmentHelper {}));
     handlebars.register_helper("eq", Box::new(EqHelper {}));
     handlebars.register_helper("ua", Box::new(UnitAbbreviationHelper {}));
@@ -278,6 +279,36 @@ mod tests {
 
         let flags = process_flag_template_inner(empty_template, &mut emu_config);
         assert!(flags.is_err());
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_escaping() -> Result<()> {
+        // Make sure equals characters don't get escaped.
+        let addl_kernel_args = r#"
+        {
+            "args": [],
+            "envs": {},
+            "features": [],
+            "kernel_args": [
+                "a=b"
+                {{#each runtime.addl_kernel_args}}
+                    ,"{{this}}"
+                {{/each}}
+            ],
+            "options": []
+        }"#;
+        let mut emu_config = EmulatorConfiguration::default();
+        emu_config.runtime.addl_kernel_args = vec!["b=c".to_string()];
+
+        let flags = process_flag_template_inner(addl_kernel_args, &mut emu_config);
+        assert!(flags.is_ok(), "{:?}", flags);
+        // Kernel args from the command line should be after any others, so they take precedence.
+        // Neither should have the text modified due to character escaping.
+        assert_eq!(flags.as_ref().unwrap().kernel_args.len(), 2);
+        assert_eq!(flags.as_ref().unwrap().kernel_args[0], "a=b".to_string());
+        assert_eq!(flags.as_ref().unwrap().kernel_args[1], "b=c".to_string());
 
         Ok(())
     }
