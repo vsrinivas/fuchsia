@@ -2,15 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{anyhow, Error};
-use serde::{Deserialize, Serialize};
+use {
+    anyhow::{anyhow, Error},
+    serde::{Deserialize, Serialize},
+    std::hash::Hash,
+};
 
 /// A unique identifier for a node in a hash tree.
 /// A label is defined by its value, length, and bits_per_level.
 /// Just |value| is not sufficient, because the root's length is 0 and thus the
 /// understood value is also 0. Because children are 0-indexed, then all nodes
 /// on the left-most branch of the root will have the value 0.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq, Deserialize, Serialize)]
 pub struct Label {
     value: u64,
     length: u8,

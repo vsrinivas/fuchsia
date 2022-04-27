@@ -8,19 +8,19 @@ use {
         hash_tree::HashTreeError,
     },
     fidl_fuchsia_identity_credential::CredentialError,
-    fuchsia_inspect::{Inspector, Node, NumericProperty, UintProperty},
+    fuchsia_inspect::{Inspector, Node, NumericProperty, Property, UintProperty},
     fuchsia_zircon as zx,
     lazy_static::lazy_static,
     parking_lot::Mutex,
-    std::collections::HashMap,
+    std::{collections::HashMap, fmt::Debug, hash::Hash},
 };
 
 lazy_static! {
     pub static ref INSPECTOR: Inspector = Inspector::new();
 }
 
-/// A record in inspect of the success count and failure counts for an incoming RPC method.
-struct IncomingMethodNode {
+/// A record in inspect of the success count and failure counts for an some operation.
+struct OperationNode<E: Eq + Debug + Hash> {
     /// The inspect node used to export this information.
     _node: Node,
     /// The count of successful calls.
@@ -30,10 +30,10 @@ struct IncomingMethodNode {
     /// The inpect node used to report counts of each error.
     error_node: Node,
     /// A map from (observed) errors to the count of that error.
-    per_error_counts: HashMap<CredentialError, UintProperty>,
+    per_error_counts: HashMap<E, UintProperty>,
 }
 
-impl IncomingMethodNode {
+impl<E: Eq + Debug + Hash> OperationNode<E> {
     /// Create a new `IncomingMethodNode` at the supplied inspect `Node`.
     fn new(node: Node) -> Self {
         Self {
@@ -47,25 +47,36 @@ impl IncomingMethodNode {
 
     /// Increments either the success or the error counters, creating a new error counter if
     /// this is the first time the error has been observed.
-    fn record(&mut self, result: Result<(), CredentialError>) {
+    fn record(&mut self, result: Result<(), E>) {
         match result {
             Ok(()) => self.success_count.add(1),
             Err(error) => {
                 let error_node = &self.error_node;
+                let error_name = format!("{:?}", &error);
                 self.error_count.add(1);
                 self.per_error_counts
                     .entry(error)
-                    .or_insert_with(|| error_node.create_uint(format!("{:?}", error), 0))
+                    .or_insert_with(|| error_node.create_uint(error_name, 0))
                     .add(1);
             }
         }
     }
 }
 
+/// A record in inspect of the success count and failure counts for incoming RPC methods.
+type IncomingMethodNode = OperationNode<CredentialError>;
+
+/// A record in inspect of the success count and failure counts for hash tree operations.
+type HashTreeOperationNode = OperationNode<HashTreeError>;
+
 /// The complete set of CredentialManager information exported through Inspect.
 pub struct InspectDiagnostics {
     /// Counters of success and failures for each incoming RPC.
     incoming_outcomes: Mutex<HashMap<IncomingMethod, IncomingMethodNode>>,
+    /// Counters of success and failures for each hash tree operation.
+    hash_tree_operations: Mutex<HashMap<HashTreeOperation, HashTreeOperationNode>>,
+    /// The number of credentials currently tracked in the hash tree.
+    credential_count: UintProperty,
     /// A vector of inspect nodes that must be kept in scope for the lifetime of this object.
     _nodes: Vec<Node>,
 }
@@ -82,9 +93,19 @@ impl InspectDiagnostics {
             incoming_map
                 .insert(*method, IncomingMethodNode::new(incoming_node.create_child(*name)));
         }
+        // Add new nodes for each hash tree operation.
+        let hash_tree_node = node.create_child("hash_tree");
+        let mut hash_tree_map = HashMap::new();
+        for (operation, name) in HashTreeOperation::name_map().iter() {
+            hash_tree_map
+                .insert(*operation, HashTreeOperationNode::new(hash_tree_node.create_child(*name)));
+        }
+        let credential_count = node.create_uint("credential_count", 0);
         Self {
             incoming_outcomes: Mutex::new(incoming_map),
-            _nodes: vec![node.clone_weak(), incoming_node],
+            hash_tree_operations: Mutex::new(hash_tree_map),
+            credential_count,
+            _nodes: vec![node.clone_weak(), incoming_node, hash_tree_node],
         }
     }
 }
@@ -98,12 +119,16 @@ impl Diagnostics for InspectDiagnostics {
             .record(result);
     }
 
-    fn hash_tree_outcome(&self, _operation: HashTreeOperation, _result: Result<(), HashTreeError>) {
-        //TODO(fxb/91714): Record HashTree metrics in inspect.
+    fn hash_tree_outcome(&self, operation: HashTreeOperation, result: Result<(), HashTreeError>) {
+        self.hash_tree_operations
+            .lock()
+            .get_mut(&operation)
+            .expect("Hash tree operation missing from auto-generated map")
+            .record(result);
     }
 
-    fn credential_count(&self, _count: u64) {
-        //TODO(fxb/91714): Record credential count metrics in inspect.
+    fn credential_count(&self, count: u64) {
+        self.credential_count.set(count);
     }
 }
 
@@ -111,6 +136,7 @@ impl Diagnostics for InspectDiagnostics {
 mod tests {
     use {
         super::*,
+        crate::hash_tree::HashTreeError as HTE,
         fidl_fuchsia_identity_credential::CredentialError as CE,
         fuchsia_inspect::{assert_data_tree, testing::AnyProperty},
     };
@@ -139,7 +165,20 @@ mod tests {
                         error_count: 0u64,
                         errors: {},
                     },
-                }
+                },
+                hash_tree: {
+                    load: {
+                        success_count: 0u64,
+                        error_count: 0u64,
+                        errors: {},
+                    },
+                    store: {
+                        success_count: 0u64,
+                        error_count: 0u64,
+                        errors: {},
+                    },
+                },
+                credential_count: 0u64,
             }
         );
     }
@@ -157,8 +196,7 @@ mod tests {
 
         assert_data_tree!(
             inspector,
-            root: {
-                initialization_time_nanos: AnyProperty,
+            root: contains {
                 incoming: {
                     add_credential: {
                         success_count: 1u64,
@@ -181,6 +219,52 @@ mod tests {
                         },
                     },
                 }
+            }
+        );
+    }
+
+    #[fuchsia::test]
+    fn hash_tree_outcomes() {
+        let inspector = Inspector::new();
+        let diagnostics = InspectDiagnostics::new(&inspector.root());
+        diagnostics.hash_tree_outcome(HashTreeOperation::Load, Err(HTE::DeserializationFailed));
+        diagnostics.hash_tree_outcome(HashTreeOperation::Load, Ok(()));
+        diagnostics.hash_tree_outcome(HashTreeOperation::Store, Ok(()));
+
+        assert_data_tree!(
+            inspector,
+            root: contains {
+                hash_tree: {
+                    load: {
+                        success_count: 1u64,
+                        error_count: 1u64,
+                        errors: {
+                            DeserializationFailed: 1u64,
+                        },
+                    },
+                    store: {
+                        success_count: 1u64,
+                        error_count: 0u64,
+                        errors: {},
+                    },
+                }
+            }
+        );
+    }
+
+    #[fuchsia::test]
+    fn credential_counts() {
+        let inspector = Inspector::new();
+        let diagnostics = InspectDiagnostics::new(&inspector.root());
+        diagnostics.credential_count(3);
+        diagnostics.credential_count(1);
+        diagnostics.credential_count(4);
+        diagnostics.credential_count(2);
+
+        assert_data_tree!(
+            inspector,
+            root: contains {
+                credential_count: 2u64,
             }
         );
     }

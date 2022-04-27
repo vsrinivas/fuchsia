@@ -37,7 +37,7 @@ pub const BITS_PER_LEVEL: u8 = 2;
 /// Default height of the hash tree.
 pub const TREE_HEIGHT: u8 = LABEL_LENGTH / BITS_PER_LEVEL;
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, std::hash::Hash, PartialEq, Eq)]
 pub enum HashTreeError {
     /// No available leaf nodes
     NoLeafNodes,
