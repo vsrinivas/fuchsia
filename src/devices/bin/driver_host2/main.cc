@@ -78,5 +78,8 @@ int main(int argc, char** argv) {
   // All drivers should now be shutdown and stopped.
   // Destroy all dispatchers in case any weren't freed correctly.
   fdf_internal_destroy_all_dispatchers();
+  // The driver host callback for driver shutdown may still be running,
+  // so wait until that has completed.
+  fdf_internal_wait_until_all_dispatchers_destroyed();
   return status;
 }
