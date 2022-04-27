@@ -18,12 +18,13 @@ fuchsia_driver("nxp-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  sources = [ "pcf8563-rtc.c" ]
+  sources = [ "pcf8563-rtc.cc" ]
   deps = [
     ":pcf8563_rtc_bind",
     "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
     "//src/devices/i2c/lib/device-protocol-i2c",
+    "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/rtc/lib/rtc",
     "//src/lib/ddk",
     "//src/lib/ddktl",
