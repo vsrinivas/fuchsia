@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
+#include <array>
 #include <type_traits>
 
 namespace wlan {
@@ -50,6 +51,77 @@ class BitField {
   }
 
   ValueType val_ = 0;
+};
+
+template <size_t N>
+class ByteArrayBitField {
+ public:
+  constexpr explicit ByteArrayBitField(std::array<uint8_t, N> val) : val_(val) {}
+  constexpr ByteArrayBitField() = default;
+
+  constexpr size_t len() { return N; }
+  void clear() { val_ = {}; }
+  void set_val(std::array<uint8_t, N> val) { val_ = val; }
+  std::array<uint8_t, N>* mut_val() { return &val_; }
+
+  std::array<uint8_t, N> val() const { return val_; }
+
+  template <unsigned int first_bit_idx, size_t len>
+  uint64_t get_bits() const {
+    perform_static_asserts<first_bit_idx, len>();
+    uint64_t value = 0;
+    for (size_t cell_idx = first_cell<first_bit_idx, len>();
+         cell_idx <= last_cell<first_bit_idx, len>(); cell_idx++) {
+      value = (value << 8) | val_[cell_idx];
+    }
+    return (value >> (first_bit_idx % 8)) & mask<0, len>();
+  }
+
+  template <unsigned int first_bit_idx, size_t len>
+  void set_bits(uint64_t value) {
+    perform_static_asserts<first_bit_idx, len>();
+    uint64_t offset_value = value << (first_bit_idx % 8);
+    uint64_t clear_mask = ~mask<first_bit_idx % 8, len>();
+    uint64_t cell_mask = mask<0, 8>();
+    // We generate a negative range using a subtracted offset to avoid overflow.
+    for (size_t i = 0; i <= last_cell<first_bit_idx, len>() - first_cell<first_bit_idx, len>();
+         i++) {
+      size_t idx = last_cell<first_bit_idx, len>() - i;
+      val_[idx] &= static_cast<uint8_t>(clear_mask & cell_mask);
+      val_[idx] |= static_cast<uint8_t>(offset_value & cell_mask);
+      offset_value >>= 8;
+      clear_mask >>= 8;
+    }
+  }
+
+ private:
+  template <unsigned int first_bit_idx, size_t len>
+  constexpr static void perform_static_asserts() {
+    static_assert(len > 0, "ByteArrayBitField member length must be positive");
+    static_assert(first_bit_idx % 8 + len <= 64,
+                  "ByteArrayBitField member cannot overlap more than 8 bytes");
+    static_assert(first_bit_idx + len <= N * 8, "ByteArrayBitField member cannot overflow array");
+  }
+
+  template <unsigned int first_bit_idx_in_cell, size_t len>
+  constexpr static uint64_t mask() {
+    if (len + first_bit_idx_in_cell == 64) {
+      return ~0ull << first_bit_idx_in_cell;
+    }
+    return ((1ull << len) - 1) << first_bit_idx_in_cell;
+  }
+
+  template <unsigned int first_bit_idx, size_t len>
+  constexpr static size_t first_cell() {
+    return N - (len + first_bit_idx - 1) / 8 - 1;
+  }
+
+  template <unsigned int first_bit_idx, size_t len>
+  constexpr static size_t last_cell() {
+    return N - first_bit_idx / 8 - 1;
+  }
+
+  std::array<uint8_t, N> val_;
 };
 
 // Specialize the mask function for full 64-bit fields, since (1 << 64) - 1 is

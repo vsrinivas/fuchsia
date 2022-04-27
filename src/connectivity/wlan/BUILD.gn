@@ -68,6 +68,7 @@ group("tests") {
     "lib/bitfield/wlan-bitfield-tests",
     "lib/common/cpp:ieee80211_codes_tests",
     "lib/common/cpp:mcs_rate_lookup_tests",
+    "lib/common/cpp:wlan_cpp_bitfield_tests",
     "lib/common/rust:wlan-common-tests",
     "lib/eapol:eapol-tests",
     "lib/frame_writer:wlan-frame-writer-tests",

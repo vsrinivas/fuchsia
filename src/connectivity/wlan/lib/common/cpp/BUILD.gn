@@ -135,3 +135,18 @@ fuchsia_unittest_package("mcs_rate_lookup_tests") {
   package_name = "mcs-rate-lookup-tests"
   deps = [ ":mcs_rate_lookup_test" ]
 }
+
+executable("wlan_cpp_bitfield_test") {
+  output_name = "wlan_cpp_bitfield_test"
+  testonly = true
+  sources = [ "bitfield_test.cc" ]
+  deps = [
+    ":common",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_unittest_package("wlan_cpp_bitfield_tests") {
+  package_name = "wlan-cpp-bitfield-tests"
+  deps = [ ":wlan_cpp_bitfield_test" ]
+}
