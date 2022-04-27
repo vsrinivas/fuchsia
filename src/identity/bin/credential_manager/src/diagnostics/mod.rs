@@ -12,7 +12,7 @@ pub use self::inspect::{InspectDiagnostics, INSPECTOR};
 
 use {
     crate::hash_tree::HashTreeError, fidl_fuchsia_identity_credential::CredentialError,
-    paste::paste, std::collections::HashMap,
+    fidl_fuchsia_tpm_cr50::PinWeaverError, paste::paste, std::collections::HashMap,
 };
 
 // Create an enum with a `name_map` method that returns a map of every value to its snake_case name.
@@ -36,18 +36,33 @@ macro_rules! mapped_enum {
                     ])
                 }
             }
+
+            #[allow(unused)]
+            pub fn create_hash_map<T, F>(mut name_to_value: F) -> HashMap<Self, T>
+              where F: FnMut(&'static str) -> T {
+                let mut map = HashMap::new();
+                for (key, name) in Self::name_map().iter() {
+                    map.insert(*key, name_to_value(name));
+                }
+                map
+            }
         }
     }
 }
 
 mapped_enum!(IncomingMethod { AddCredential, RemoveCredential, CheckCredential });
 
+mapped_enum!(PinweaverMethod { ResetTree, InsertLeaf, RemoveLeaf, TryAuth, GetLog, LogReplay });
+
 mapped_enum!(HashTreeOperation { Load, Store });
 
 /// A standard interface for systems that record CredentialManger events for diagnostics purposes.
-pub trait Diagnostics: 'static {
+pub trait Diagnostics: 'static + Send + Sync {
     /// Records the result of an incoming CredentialManager RPC.
     fn incoming_outcome(&self, method: IncomingMethod, result: Result<(), CredentialError>);
+
+    /// Records the result of an outgoing Pinweaver RPC.
+    fn pinweaver_outcome(&self, method: PinweaverMethod, result: Result<(), PinWeaverError>);
 
     /// Records the result of performing an operation on the hash tree.
     fn hash_tree_outcome(&self, operation: HashTreeOperation, result: Result<(), HashTreeError>);

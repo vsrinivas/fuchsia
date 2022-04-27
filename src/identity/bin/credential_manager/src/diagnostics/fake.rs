@@ -4,10 +4,11 @@
 
 use {
     crate::{
-        diagnostics::{Diagnostics, HashTreeOperation, IncomingMethod},
+        diagnostics::{Diagnostics, HashTreeOperation, IncomingMethod, PinweaverMethod},
         hash_tree::HashTreeError,
     },
     fidl_fuchsia_identity_credential::CredentialError,
+    fidl_fuchsia_tpm_cr50::PinWeaverError,
     parking_lot::Mutex,
 };
 
@@ -15,6 +16,7 @@ use {
 #[derive(Debug, PartialEq)]
 pub enum Event {
     IncomingOutcome(IncomingMethod, Result<(), CredentialError>),
+    PinweaverOutcome(PinweaverMethod, Result<(), PinWeaverError>),
     HashTreeOutcome(HashTreeOperation, Result<(), HashTreeError>),
     CredentialCount(u64),
 }
@@ -41,6 +43,10 @@ impl FakeDiagnostics {
 impl Diagnostics for FakeDiagnostics {
     fn incoming_outcome(&self, method: IncomingMethod, result: Result<(), CredentialError>) {
         self.events.lock().push(Event::IncomingOutcome(method, result));
+    }
+
+    fn pinweaver_outcome(&self, method: PinweaverMethod, result: Result<(), PinWeaverError>) {
+        self.events.lock().push(Event::PinweaverOutcome(method, result));
     }
 
     fn hash_tree_outcome(&self, operation: HashTreeOperation, result: Result<(), HashTreeError>) {
@@ -78,6 +84,21 @@ mod test {
                 IncomingMethod::AddCredential,
                 Err(CredentialError::NoFreeLabel),
             ),
+        ]);
+    }
+
+    #[fuchsia::test]
+    fn log_and_assert_pinweaver_outcomes() {
+        let diagnostics = FakeDiagnostics::new();
+
+        diagnostics.pinweaver_outcome(PinweaverMethod::TryAuth, Err(PinWeaverError::TreeInvalid));
+        diagnostics.pinweaver_outcome(PinweaverMethod::GetLog, Ok(()));
+        diagnostics.pinweaver_outcome(PinweaverMethod::ResetTree, Ok(()));
+
+        diagnostics.assert_events(&[
+            Event::PinweaverOutcome(PinweaverMethod::TryAuth, Err(PinWeaverError::TreeInvalid)),
+            Event::PinweaverOutcome(PinweaverMethod::GetLog, Ok(())),
+            Event::PinweaverOutcome(PinweaverMethod::ResetTree, Ok(())),
         ]);
     }
 

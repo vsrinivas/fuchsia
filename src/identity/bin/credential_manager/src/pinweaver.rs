@@ -2,10 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::label_generator::Label;
-use async_trait::async_trait;
-use fidl_fuchsia_identity_credential::{self as fcred, CredentialError};
-use fidl_fuchsia_tpm_cr50::{self as fcr50, PinWeaverProxy};
+use {
+    crate::{
+        diagnostics::{Diagnostics, PinweaverMethod},
+        label_generator::Label,
+    },
+    async_trait::async_trait,
+    fidl_fuchsia_identity_credential::{self as fcred, CredentialError},
+    fidl_fuchsia_tpm_cr50::{self as fcr50, PinWeaverProxy},
+    std::sync::Arc,
+};
 
 #[cfg(test)]
 use mockall::{automock, predicate::*};
@@ -72,28 +78,34 @@ pub trait PinWeaverProtocol {
     ) -> Result<fcr50::LogReplayResponse, CredentialError>;
 }
 
-pub struct PinWeaver {
+pub struct PinWeaver<D: Diagnostics> {
     proxy: PinWeaverProxy,
+    diagnostics: Arc<D>,
 }
 
-impl PinWeaver {
+impl<D: Diagnostics> PinWeaver<D> {
     /// Constructs a new |PinWeaverProtocol| provided a |PinWeaverProxy|.
-    pub fn new(proxy: PinWeaverProxy) -> Self {
-        Self { proxy }
+    pub fn new(proxy: PinWeaverProxy, diagnostics: Arc<D>) -> Self {
+        Self { proxy, diagnostics }
     }
 }
 
 #[async_trait]
-impl PinWeaverProtocol for PinWeaver {
+impl<D: Diagnostics> PinWeaverProtocol for PinWeaver<D> {
     /// Calls |PinWeaverProxy| to reset the tree with the provided
     /// |bits_per_level| and |height|. Maps |PinWeaverErrors| to
     /// |CredentialError::InternalError|.
     async fn reset_tree(&self, bits_per_level: u8, height: u8) -> Result<Hash, CredentialError> {
-        self.proxy
+        let response = self
+            .proxy
             .reset_tree(bits_per_level, height)
             .await
-            .map_err(|_| CredentialError::InternalError)?
-            .map_err(|_| CredentialError::InternalError)
+            .map_err(|_| CredentialError::InternalError)?;
+        self.diagnostics.pinweaver_outcome(
+            PinweaverMethod::ResetTree,
+            response.as_ref().map(|_| ()).map_err(|e| *e),
+        );
+        response.map_err(|_| CredentialError::InternalError)
     }
 
     /// Converts the |fcred::AddCredentialParams| into its corresponding
@@ -118,10 +130,14 @@ impl PinWeaverProtocol for PinWeaver {
             .proxy
             .insert_leaf(insert_leaf_params)
             .await
-            .map_err(|_| CredentialError::InternalError)?
             .map_err(|_| CredentialError::InternalError)?;
-        let mac = response.mac.ok_or(CredentialError::InternalError)?;
-        let cred_metadata = response.cred_metadata.ok_or(CredentialError::InternalError)?;
+        self.diagnostics.pinweaver_outcome(
+            PinweaverMethod::InsertLeaf,
+            response.as_ref().map(|_| ()).map_err(|e| *e),
+        );
+        let success = response.map_err(|_| CredentialError::InternalError)?;
+        let mac = success.mac.ok_or(CredentialError::InternalError)?;
+        let cred_metadata = success.cred_metadata.ok_or(CredentialError::InternalError)?;
         Ok((mac, cred_metadata))
     }
 
@@ -140,12 +156,14 @@ impl PinWeaverProtocol for PinWeaver {
             h_aux: Some(h_aux),
             ..fcr50::RemoveLeafParams::EMPTY
         };
-        self.proxy
+        let response = self
+            .proxy
             .remove_leaf(remove_leaf_params)
             .await
             .map_err(|_| CredentialError::InternalError)?
-            .map_err(|_| CredentialError::InternalError)?;
-        Ok(())
+            .map(|_| ());
+        self.diagnostics.pinweaver_outcome(PinweaverMethod::RemoveLeaf, response);
+        response.map_err(|_| CredentialError::InternalError)
     }
 
     /// Simply inserts |le_secret|, |h_aux| and |cred_metadata| into |TryAuthParams|
@@ -166,9 +184,12 @@ impl PinWeaverProtocol for PinWeaver {
             .proxy
             .try_auth(try_auth_params)
             .await
-            .map_err(|_| CredentialError::InternalError)?
             .map_err(|_| CredentialError::InternalError)?;
-        Ok(response)
+        self.diagnostics.pinweaver_outcome(
+            PinweaverMethod::TryAuth,
+            response.as_ref().map(|_| ()).map_err(|e| *e),
+        );
+        response.map_err(|_| CredentialError::InternalError)
     }
 
     /// Simply inserts the |root_hash| into the |get_log| method and
@@ -178,9 +199,12 @@ impl PinWeaverProtocol for PinWeaver {
             .proxy
             .get_log(&mut root_hash.clone())
             .await
-            .map_err(|_| CredentialError::InternalError)?
             .map_err(|_| CredentialError::InternalError)?;
-        Ok(response)
+        self.diagnostics.pinweaver_outcome(
+            PinweaverMethod::GetLog,
+            response.as_ref().map(|_| ()).map_err(|e| *e),
+        );
+        response.map_err(|_| CredentialError::InternalError)
     }
 
     /// Simply inserts the |root_hash|, |h_aux| and |cred_metadata| and
@@ -201,9 +225,12 @@ impl PinWeaverProtocol for PinWeaver {
             .proxy
             .log_replay(log_replay_params)
             .await
-            .map_err(|_| CredentialError::InternalError)?
             .map_err(|_| CredentialError::InternalError)?;
-        Ok(response)
+        self.diagnostics.pinweaver_outcome(
+            PinweaverMethod::LogReplay,
+            response.as_ref().map(|_| ()).map_err(|e| *e),
+        );
+        response.map_err(|_| CredentialError::InternalError)
     }
 }
 

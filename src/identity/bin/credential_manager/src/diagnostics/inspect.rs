@@ -4,10 +4,11 @@
 
 use {
     crate::{
-        diagnostics::{Diagnostics, HashTreeOperation, IncomingMethod},
+        diagnostics::{Diagnostics, HashTreeOperation, IncomingMethod, PinweaverMethod},
         hash_tree::HashTreeError,
     },
     fidl_fuchsia_identity_credential::CredentialError,
+    fidl_fuchsia_tpm_cr50::PinWeaverError,
     fuchsia_inspect::{Inspector, Node, NumericProperty, Property, UintProperty},
     fuchsia_zircon as zx,
     lazy_static::lazy_static,
@@ -66,6 +67,9 @@ impl<E: Eq + Debug + Hash> OperationNode<E> {
 /// A record in inspect of the success count and failure counts for incoming RPC methods.
 type IncomingMethodNode = OperationNode<CredentialError>;
 
+/// A record in inspect of the success count and failure counts for outgoing Pinweaver RPC methods.
+type PinweaverMethodNode = OperationNode<PinWeaverError>;
+
 /// A record in inspect of the success count and failure counts for hash tree operations.
 type HashTreeOperationNode = OperationNode<HashTreeError>;
 
@@ -73,6 +77,8 @@ type HashTreeOperationNode = OperationNode<HashTreeError>;
 pub struct InspectDiagnostics {
     /// Counters of success and failures for each incoming RPC.
     incoming_outcomes: Mutex<HashMap<IncomingMethod, IncomingMethodNode>>,
+    /// Counters of success and failures for each outgoing Pinweaver RPC.
+    pinweaver_outcomes: Mutex<HashMap<PinweaverMethod, PinweaverMethodNode>>,
     /// Counters of success and failures for each hash tree operation.
     hash_tree_operations: Mutex<HashMap<HashTreeOperation, HashTreeOperationNode>>,
     /// The number of credentials currently tracked in the hash tree.
@@ -88,24 +94,26 @@ impl InspectDiagnostics {
         node.record_int("initialization_time_nanos", zx::Time::get_monotonic().into_nanos());
         // Add new nodes for each incoming RPC.
         let incoming_node = node.create_child("incoming");
-        let mut incoming_map = HashMap::new();
-        for (method, name) in IncomingMethod::name_map().iter() {
-            incoming_map
-                .insert(*method, IncomingMethodNode::new(incoming_node.create_child(*name)));
-        }
+        let incoming_map = IncomingMethod::create_hash_map(|name| {
+            IncomingMethodNode::new(incoming_node.create_child(name))
+        });
+        // Add new nodes for each outgoing Pinweaver RPC.
+        let pinweaver_node = node.create_child("pinweaver");
+        let pinweaver_map = PinweaverMethod::create_hash_map(|name| {
+            PinweaverMethodNode::new(pinweaver_node.create_child(name))
+        });
         // Add new nodes for each hash tree operation.
         let hash_tree_node = node.create_child("hash_tree");
-        let mut hash_tree_map = HashMap::new();
-        for (operation, name) in HashTreeOperation::name_map().iter() {
-            hash_tree_map
-                .insert(*operation, HashTreeOperationNode::new(hash_tree_node.create_child(*name)));
-        }
+        let hash_tree_map = HashTreeOperation::create_hash_map(|name| {
+            HashTreeOperationNode::new(hash_tree_node.create_child(name))
+        });
         let credential_count = node.create_uint("credential_count", 0);
         Self {
             incoming_outcomes: Mutex::new(incoming_map),
+            pinweaver_outcomes: Mutex::new(pinweaver_map),
             hash_tree_operations: Mutex::new(hash_tree_map),
             credential_count,
-            _nodes: vec![node.clone_weak(), incoming_node, hash_tree_node],
+            _nodes: vec![node.clone_weak(), incoming_node, pinweaver_node, hash_tree_node],
         }
     }
 }
@@ -116,6 +124,14 @@ impl Diagnostics for InspectDiagnostics {
             .lock()
             .get_mut(&method)
             .expect("Incoming RPC method missing from auto-generated map")
+            .record(result);
+    }
+
+    fn pinweaver_outcome(&self, method: PinweaverMethod, result: Result<(), PinWeaverError>) {
+        self.pinweaver_outcomes
+            .lock()
+            .get_mut(&method)
+            .expect("Pinweaver RPC method missing from auto-generated map")
             .record(result);
     }
 
@@ -138,6 +154,7 @@ mod tests {
         super::*,
         crate::hash_tree::HashTreeError as HTE,
         fidl_fuchsia_identity_credential::CredentialError as CE,
+        fidl_fuchsia_tpm_cr50::PinWeaverError as PWE,
         fuchsia_inspect::{assert_data_tree, testing::AnyProperty},
     };
 
@@ -161,6 +178,38 @@ mod tests {
                         errors: {},
                     },
                     remove_credential: {
+                        success_count: 0u64,
+                        error_count: 0u64,
+                        errors: {},
+                    },
+                },
+                pinweaver: {
+                    insert_leaf: {
+                        success_count: 0u64,
+                        error_count: 0u64,
+                        errors: {},
+                    },
+                    remove_leaf: {
+                        success_count: 0u64,
+                        error_count: 0u64,
+                        errors: {},
+                    },
+                    reset_tree: {
+                        success_count: 0u64,
+                        error_count: 0u64,
+                        errors: {},
+                    },
+                    try_auth: {
+                        success_count: 0u64,
+                        error_count: 0u64,
+                        errors: {},
+                    },
+                    get_log: {
+                        success_count: 0u64,
+                        error_count: 0u64,
+                        errors: {},
+                    },
+                    log_replay: {
                         success_count: 0u64,
                         error_count: 0u64,
                         errors: {},
@@ -217,6 +266,39 @@ mod tests {
                         errors: {
                             InvalidLabel: 2u64,
                         },
+                    },
+                }
+            }
+        );
+    }
+
+    #[fuchsia::test]
+    fn pinweaver_outcomes() {
+        let inspector = Inspector::new();
+        let diagnostics = InspectDiagnostics::new(&inspector.root());
+        diagnostics.pinweaver_outcome(PinweaverMethod::GetLog, Ok(()));
+        diagnostics.pinweaver_outcome(PinweaverMethod::TryAuth, Err(PWE::RateLimitReached));
+
+        assert_data_tree!(
+            inspector,
+            root: contains {
+                pinweaver: contains {
+                    get_log: {
+                        success_count: 1u64,
+                        error_count: 0u64,
+                        errors: {},
+                    },
+                    try_auth: {
+                        success_count: 0u64,
+                        error_count: 1u64,
+                        errors: {
+                            RateLimitReached: 1u64,
+                        },
+                    },
+                    reset_tree: {
+                        success_count: 0u64,
+                        error_count: 0u64,
+                        errors: {},
                     },
                 }
             }

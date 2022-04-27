@@ -58,7 +58,7 @@ async fn main() -> Result<(), Error> {
     )?;
 
     let mut lookup_table = PersistentLookupTable::new(cred_data);
-    let pinweaver = PinWeaver::new(pinweaver_proxy);
+    let pinweaver = PinWeaver::new(pinweaver_proxy, Arc::clone(&diagnostics));
     let hash_tree_store = HashTreeStorageCbor::new(HASH_TREE_PATH, Arc::clone(&diagnostics));
     let hash_tree = provision(&hash_tree_store, &mut lookup_table, &pinweaver)
         .await
