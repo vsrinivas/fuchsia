@@ -10,27 +10,6 @@ import("//src/ui/lib/escher/build_args.gni")
 import("//src/ui/scenic/build_args.gni")
 import("//src/ui/scenic/lib/gfx/build_args.gni")
 
-# Runtime is the set of package dependencies typically desired for the
-# construction of a product that includes scenic, and is included in
-# many such products.
-group("runtime") {
-  deps = [
-    ":scenic",
-    "//src/devices/sysmem/bin/sysmem_connector",
-    "//src/graphics/bin/vulkan_loader",
-    "//src/sys/activity",
-    "//src/ui/bin/input-pipeline",
-    "//src/ui/bin/input-pipeline:configs",
-    "//src/ui/bin/root_presenter",
-    "//src/ui/bin/root_presenter:configs",
-
-    # TODO(fxbug.dev/82822): Remove after out-of-tree tests migrate to
-    # text_manager.
-    "//src/ui/bin/text:ime_service",
-    "//src/ui/bin/text:text_manager",
-  ]
-}
-
 group("scenic") {
   public_deps = [
     ":configs",

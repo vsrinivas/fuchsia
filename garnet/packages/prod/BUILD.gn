@@ -292,7 +292,7 @@ group("sbase") {
 
 # WARNING: Known to vendor.
 group("scenic") {
-  public_deps = [ "//src/ui/scenic:runtime" ]
+  public_deps = [ "//src/ui:runtime_with_root_presenter" ]
 }
 
 group("sched") {

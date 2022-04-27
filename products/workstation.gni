@@ -85,7 +85,7 @@ cache_package_labels += [
   "//src/ui/bin/shortcut",
   "//src/ui/bin/terminal",
   "//src/ui/scenic",
-  "//src/ui:workstation",
+  "//src/ui:runtime_with_scene_manager",
 
   # Fake build info service
   "//src/developer/build_info/testing:testing",

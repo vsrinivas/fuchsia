@@ -50,10 +50,39 @@ fuchsia_package("ui_pkg") {
   deps = [ ":ui-component" ]
 }
 
+# Deprecated. Please use runtime_with_scene_manager instead.
 group("workstation") {
+  deps = [ ":runtime_with_scene_manager" ]
+}
+
+# runtime_with_scene_manager is the set of package dependencies typically
+# desired for the construction of a product that includes UI and scene manager
+# (as opposed to root presenter).
+group("runtime_with_scene_manager") {
   deps = [
     ":ui_pkg",
     "a11y",
     "bin/scene_manager",
+  ]
+}
+
+# Runtime_root_presenter is the set of package dependencies typically desired
+# for the construction of a product that includes UI (Scenic, A11y) and root
+# presenter (as opposed to scene manager).
+group("runtime_with_root_presenter") {
+  deps = [
+    "a11y",
+    "bin/input-pipeline",
+    "bin/input-pipeline:configs",
+    "bin/root_presenter",
+    "bin/root_presenter:configs",
+    "scenic",
+    "//src/graphics/bundles:vulkan",
+    "//src/sys/activity",
+
+    # TODO(fxbug.dev/82822): Remove after out-of-tree tests migrate to
+    # text_manager.
+    "bin/text:ime_service",
+    "bin/text:text_manager",
   ]
 }
