@@ -278,7 +278,15 @@ bool CodecAdapterVaApiDecoder::ProcessOutput(scoped_refptr<VASurface> va_surface
                                              int bitstream_id) {
   gfx::Size pic_size = va_surface->size();
 
-  size_t pic_size_bytes = GetOutputStride() * pic_size.height() * 3 / 2;
+  // NV12 texture
+  auto main_plane_size = safemath::CheckMul(GetOutputStride(), pic_size.height());
+  auto uv_plane_size = main_plane_size / 2;
+  auto pic_size_checked = main_plane_size + uv_plane_size;
+  if (!pic_size_checked.IsValid()) {
+    FX_LOGS(WARNING) << "Output picture size overflowed";
+    return false;
+  }
+  size_t pic_size_bytes = pic_size_checked.ValueOrDie();
   const CodecBuffer* buffer = output_buffer_pool_.AllocateBuffer(pic_size_bytes);
   if (!buffer) {
     // Wait will succeed unless we're dropping all remaining frames of a stream.

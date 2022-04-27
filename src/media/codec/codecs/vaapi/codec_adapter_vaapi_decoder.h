@@ -407,6 +407,8 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   void DecodeAnnexBBuffer(std::vector<uint8_t> data);
 
   uint32_t GetOutputStride() {
+    // bytes_per_row_divisor must be a multiple of the size from in the output constraints.
+    ZX_ASSERT(buffer_settings_[kOutputPort]->image_format_constraints.bytes_per_row_divisor >= 16);
     return fbl::round_up(
         static_cast<uint32_t>(media_decoder_->GetPicSize().width()),
         buffer_settings_[kOutputPort]->image_format_constraints.bytes_per_row_divisor);
