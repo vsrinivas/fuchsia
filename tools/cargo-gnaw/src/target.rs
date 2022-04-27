@@ -63,7 +63,9 @@ impl std::fmt::Debug for GnTarget<'_> {
 
 impl PartialEq for GnTarget<'_> {
     fn eq(&self, other: &Self) -> bool {
-        self.cargo_pkg_id == other.cargo_pkg_id && self.target_name == other.target_name
+        self.cargo_pkg_id == other.cargo_pkg_id
+            && self.target_name == other.target_name
+            && self.target_type == other.target_type
     }
 }
 impl Eq for GnTarget<'_> {}
@@ -76,7 +78,10 @@ impl PartialOrd for GnTarget<'_> {
 
 impl Ord for GnTarget<'_> {
     fn cmp(&self, other: &GnTarget<'_>) -> Ordering {
-        self.cargo_pkg_id.cmp(&other.cargo_pkg_id).then(self.target_name.cmp(&other.target_name))
+        self.cargo_pkg_id
+            .cmp(&other.cargo_pkg_id)
+            .then(self.target_name.cmp(&other.target_name))
+            .then(self.target_type.cmp(&other.target_type))
     }
 }
 
@@ -84,6 +89,7 @@ impl Hash for GnTarget<'_> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.cargo_pkg_id.hash(state);
         self.target_name.hash(state);
+        self.target_type.hash(state);
     }
 }
 
