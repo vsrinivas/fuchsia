@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::client::protection::Protection,
+    crate::client::{protection::Protection, EstablishRsnaFailureReason},
     anyhow::{bail, ensure, format_err},
     eapol,
     fidl_fuchsia_wlan_common::DriverFeature,
@@ -44,6 +44,7 @@ pub trait Supplicant: std::fmt::Debug + std::marker::Send {
         result: EapolResultCode,
     ) -> Result<(), Error>;
     fn on_eapol_key_frame_timeout(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error>;
+    fn on_establishing_rsna_timeout(&self) -> EstablishRsnaFailureReason;
     fn on_pmk_available(
         &mut self,
         update_sink: &mut UpdateSink,
@@ -88,6 +89,12 @@ impl Supplicant for wlan_rsn::Supplicant {
 
     fn on_eapol_key_frame_timeout(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {
         wlan_rsn::Supplicant::on_eapol_key_frame_timeout(self, update_sink)
+    }
+
+    fn on_establishing_rsna_timeout(&self) -> EstablishRsnaFailureReason {
+        EstablishRsnaFailureReason::OverallTimeout(
+            wlan_rsn::Supplicant::on_establishing_rsna_timeout(self),
+        )
     }
 
     fn on_pmk_available(

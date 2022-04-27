@@ -393,6 +393,14 @@ impl State {
         }
     }
 
+    pub fn on_establishing_rsna_timeout(&self) -> Result<(), Error> {
+        match self {
+            State::AwaitingMsg1 { .. } => Err(Error::EapolHandshakeNotStarted),
+            State::AwaitingMsg3 { .. } => Err(Error::LikelyWrongCredential),
+            State::KeysInstalled { .. } => Ok(()),
+        }
+    }
+
     pub fn anonce(&self) -> Option<&[u8]> {
         match self {
             State::AwaitingMsg1 { .. } => None,

@@ -2020,7 +2020,7 @@ mod tests {
     #[test]
     fn overall_timeout_while_establishing_rsna() {
         let mut h = TestHelper::new();
-        let (supplicant, _suppl_mock) = mock_psk_supplicant();
+        let (supplicant, suppl_mock) = mock_psk_supplicant();
         let (command, mut connect_txn_stream) = connect_command_wpa2(supplicant);
         let bssid = command.bss.bssid.clone();
 
@@ -2040,15 +2040,17 @@ mod tests {
 
         expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
 
+        suppl_mock.set_on_establishing_rsna_timeout(EstablishRsnaFailureReason::OverallTimeout(
+            wlan_rsn::Error::EapolHandshakeNotStarted,
+        ));
         let _state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_ieee80211::ReasonCode::StaLeaving);
         assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
             assert_eq!(result, EstablishRsnaFailure {
                 auth_method: Some(auth::MethodName::Psk),
-                reason: EstablishRsnaFailureReason::OverallTimeout,
-            }
-            .into());
+                reason: EstablishRsnaFailureReason::OverallTimeout(wlan_rsn::Error::EapolHandshakeNotStarted),
+            }.into());
         });
     }
 
