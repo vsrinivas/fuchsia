@@ -215,22 +215,12 @@ Start the Fuchsia emulator on the host machine.
 
 The tasks include:
 
-*   Configure your network environment for the Fuchsia emulator.
 *   Download one of Fuchsia's prebuilt images from Google Cloud Storage.
 *   Start the Fuchsia emulator to run the downloaded Fuchsia prebuilt image.
 *   Set the emulator instance as the default target device.
 *   Verify that various `ffx` commands can connect to the emulator instance.
 
 Do the following:
-
-1. Configure Tun/Tap:
-
-   Note: You only need to do this once. However, if you run it again, it harmlessly
-   fails with a `Device or resource busy` message. You can safely ignore this error.
-
-   ```posix-terminal
-   sudo ip tuntap add dev qemu mode tap user $USER && sudo ip link set qemu up
-   ```
 
 1. Download the latest Fuchsia Workstation prebuilt image for the emulator
    (`workstation.qemu-x64`):
@@ -250,7 +240,7 @@ Do the following:
 1. Start a new Fuchsia emulator instance (and name it `walkthrough-emu`):
 
    ```posix-terminal
-   tools/ffx emu start --net tap --headless --name walkthrough-emu workstation.qemu-x64
+   tools/ffx emu start --headless --name walkthrough-emu workstation.qemu-x64
    ```
 
    This command starts a headless emulator instance running a Fuchsia prebuilt
@@ -260,7 +250,7 @@ Do the following:
    following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ tools/ffx emu start --net tap --headless --name walkthrough-emu workstation.qemu-x64
+   $ tools/ffx emu start --headless --name walkthrough-emu workstation.qemu-x64
    Logging to "/home/alice/.local/share/Fuchsia/ffx/emu/instances/walkthrough-emu/emulator.log"
    Waiting for Fuchsia to start (up to 60 seconds)...........
    Emulator is ready.
@@ -384,29 +374,12 @@ packages in this guide.
 
 The tasks include:
 
-*   Configure your environment to enable the Fuchsia package server features.
 *   Create a new Fuchsia package repository.
 *   Start the Fuchsia package server.
 *   Register the new local package repository to the target device (that is, the emulator instance).
 *   Register the system package repository to the target device.
 
 Do the following:
-
-1. Enable the new `ffx repository` server features:
-
-   Note: You only need to do this once.
-
-   ```posix-terminal
-   tools/ffx config set repository.server.mode ffx
-   ```
-
-1. For the new `ffx` settings to take effect, stop the `ffx` daemon:
-
-   ```posix-terminal
-   tools/ffx daemon stop
-   ```
-
-   A new instance of the `ffx` daemon starts the next time you run a `ffx` command.
 
 1. Create a new Fuchsia package repository (and map it to the
    `~/.package_repos/sdk-samples` directory):
