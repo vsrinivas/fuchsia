@@ -51,6 +51,19 @@ type PointerSample = table {
     /// Relative horizontal scrolling displacement by detent.
     5: scroll_h int64;
 
+    /// Recommended vertical scrolling displacement by physical pixel, it is
+    /// computed with accelerator, detent / mm to pixel ratio, etc.
+    8: scroll_v_physical_pixel float64;
+
+    /// Recommended horizontal scrolling displacement by physical pixel, it
+    /// is computed with accelerator, detent / mm to pixel ratio, etc.
+    9: scroll_h_physical_pixel float64;
+
+    /// Indicated if the scroll event is from a precision scroll device (HI_RES
+    /// mouse or touchpad). Clients may want to play interpolation animations
+    /// on non precision scroll device for smooth scrolling.
+   10: is_precision_scroll bool;
+
     /// Identifiers of currently pressed buttons.
     6: pressed_buttons vector<uint8>:fuchsia.input.report.MOUSE_MAX_NUM_BUTTONS;
 };

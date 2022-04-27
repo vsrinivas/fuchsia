@@ -33,13 +33,16 @@ enum/member fuchsia.ui.pointerinjector/EventPhase.CHANGE 2
 enum/member fuchsia.ui.pointerinjector/EventPhase.REMOVE 3
 strict enum fuchsia.ui.pointerinjector/EventPhase uint32
 const fuchsia.ui.pointerinjector/MAX_INJECT uint32 128
+table/member fuchsia.ui.pointerinjector/PointerSample.is_precision_scroll bool
 table/member fuchsia.ui.pointerinjector/PointerSample.phase fuchsia.ui.pointerinjector/EventPhase
 table/member fuchsia.ui.pointerinjector/PointerSample.pointer_id uint32
 table/member fuchsia.ui.pointerinjector/PointerSample.position_in_viewport array<float32,2>
 table/member fuchsia.ui.pointerinjector/PointerSample.pressed_buttons vector<uint8>:32
 table/member fuchsia.ui.pointerinjector/PointerSample.relative_motion array<float32,2>
 table/member fuchsia.ui.pointerinjector/PointerSample.scroll_h int64
+table/member fuchsia.ui.pointerinjector/PointerSample.scroll_h_physical_pixel float64
 table/member fuchsia.ui.pointerinjector/PointerSample.scroll_v int64
+table/member fuchsia.ui.pointerinjector/PointerSample.scroll_v_physical_pixel float64
 table fuchsia.ui.pointerinjector/PointerSample
 protocol/member fuchsia.ui.pointerinjector/Registry.Register(fuchsia.ui.pointerinjector/Config config,server_end:fuchsia.ui.pointerinjector/Device injector) -> ()
 protocol fuchsia.ui.pointerinjector/Registry
