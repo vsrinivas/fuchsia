@@ -794,6 +794,17 @@ cpu_num_t Scheduler::FindTargetCpu(Thread* thread) {
   const cpu_num_t starting_cpu = last_cpu != INVALID_CPU ? last_cpu : current_cpu;
   const CpuSearchSet& search_set = percpu::Get(starting_cpu).search_set;
 
+  // TODO(fxbug.dev/98291): Working on isolating a low-frequency panic due to
+  // apparent memory corruption of percpu intersecting CpuSearchSet, resulting
+  // in an invalid entry pointer and/or entry count. Adding an assert to help
+  // catch the corruption and include additional context. This assert is enabled
+  // in non-eng builds, however, the small impact is acceptable for production.
+  ASSERT_MSG(search_set.cpu_count() <= SMP_MAX_CPUS,
+             "current_cpu=%u starting_cpu=%u active_mask=%x thread=%p search_set=%p cpu_count=%zu "
+             "entries=%p",
+             current_cpu, starting_cpu, active_mask, thread, &search_set, search_set.cpu_count(),
+             search_set.const_iterator().data());
+
   // Compares candidate queues and returns true if |queue_a| is a better
   // alternative than |queue_b|. This is used by the target selection loop to
   // determine whether the next candidate is better than the current target.
