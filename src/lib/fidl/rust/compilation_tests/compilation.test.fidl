@@ -68,3 +68,36 @@ type Result = struct {
 type HasHostFidlHandleStubbing = resource struct {
     log zx.handle:LOG;
 };
+
+// Tests for https://fxbug.dev/96675.
+// Rust enums previously failed to compile when using existing constants as the
+// enum value.
+type BitsForEnum = bits {
+    SOME_CONST = 0b100000;
+};
+
+const UNSIGNED_FOR_ENUM uint32 = 3209;
+
+type UnsignedEnumStrict = strict enum : uint32 {
+    FROM_BITS = BitsForEnum.SOME_CONST;
+    FROM_CONST = UNSIGNED_FOR_ENUM;
+    FROM_BINARY_OP = 1 | 2;
+};
+
+type UnsignedEnumFlexible = flexible enum : uint32 {
+    FROM_BITS = BitsForEnum.SOME_CONST;
+    FROM_CONST = UNSIGNED_FOR_ENUM;
+    FROM_BINARY_OP = 1 | 2;
+};
+
+const SIGNED_FOR_ENUM int64 = -129;
+
+type SignedEnumStrict = strict enum : int64 {
+    FROM_CONST = UNSIGNED_FOR_ENUM;
+    FROM_BINARY_OP = 1 | 2;
+};
+
+type SignedEnumFlexible = flexible enum : int64 {
+    FROM_CONST = SIGNED_FOR_ENUM;
+    FROM_BINARY_OP = 1 | 2;
+};

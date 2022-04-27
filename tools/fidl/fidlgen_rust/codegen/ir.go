@@ -937,12 +937,7 @@ func (c *compiler) compileEnum(val fidlgen.Enum) Enum {
 		e.Members = append(e.Members, EnumMember{
 			EnumMember: v,
 			Name:       compileCamelIdentifier(v.Name),
-			// TODO(fxbug.dev/7660): When we expose types consistently in the IR, we
-			// will not need to plug this here.
-			Value: c.compileConstant(v.Value, fidlgen.Type{
-				Kind:             fidlgen.PrimitiveType,
-				PrimitiveSubtype: val.Type,
-			}),
+			Value:      v.Value.Value,
 		})
 	}
 	e.MinMember = findMinEnumMember(val.Type, e.Members).Name
