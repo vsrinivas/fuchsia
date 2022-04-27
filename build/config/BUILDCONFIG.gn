@@ -245,6 +245,22 @@ is_efi_toolchain =
 is_tsan =
     toolchain_variant.tags + [ "tsan" ] - [ "tsan" ] != toolchain_variant.tags
 
+# Whether we are in the context of a Leak Sanitizer (memory leak) toolchain.
+is_lsan =
+    toolchain_variant.tags + [ "lsan" ] - [ "lsan" ] != toolchain_variant.tags
+
+# Whether we are in the context of a MSan (uninitialized reads) toolchain.
+is_msan =
+    toolchain_variant.tags + [ "msan" ] - [ "msan" ] != toolchain_variant.tags
+
+# Whether we are in the context of an UBSan (undefined behavior) toolchain.
+is_ubsan =
+    toolchain_variant.tags + [ "ubsan" ] - [ "ubsan" ] != toolchain_variant.tags
+
+# Whether we are in the context of a fuzzer toolchain.
+is_fuzzer = toolchain_variant.tags + [ "fuzzer" ] - [ "fuzzer" ] !=
+            toolchain_variant.tags
+
 # Very unfortunately, GN never sets `current_toolchain` when executing
 # BUILDCONFIG.gn, so the logic below is used to detect when this file
 # is executed in the context of the default toolchain.

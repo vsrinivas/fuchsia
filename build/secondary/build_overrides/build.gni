@@ -5,3 +5,6 @@
 # Variable that can be used to support multiple build scenarios, like having
 # Chromium specific targets in a client project's GN file etc.
 build_with_chromium = false
+
+perfetto_root_path = "//third_party/perfetto/"
+perfetto_build_with_embedder = true

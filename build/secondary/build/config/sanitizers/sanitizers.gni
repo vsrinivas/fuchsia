@@ -1,0 +1,10 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Used by Perfetto GN rules.
+
+# When enabled, only relevant sanitizer defines are set, but compilation
+# happens with no extra flags. This is useful when in component build
+# enabling sanitizers only in some of the components.
+use_sanitizer_configs_without_instrumentation = false
