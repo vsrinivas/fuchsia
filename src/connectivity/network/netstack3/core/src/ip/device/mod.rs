@@ -392,6 +392,8 @@ fn enable_ipv4_device<C: IpDeviceContext<Ipv4> + GmpHandler<Ipv4>>(
     sync_ctx: &mut C,
     device_id: C::DeviceId,
 ) {
+    // All systems should join the all-systems multicast group.
+    join_ip_multicast(sync_ctx, device_id, Ipv4::ALL_SYSTEMS_MULTICAST_ADDRESS);
     GmpHandler::gmp_handle_maybe_enabled(sync_ctx, device_id);
 }
 
@@ -400,6 +402,7 @@ fn disable_ipv4_device<C: IpDeviceContext<Ipv4> + GmpHandler<Ipv4>>(
     device_id: C::DeviceId,
 ) {
     GmpHandler::gmp_handle_disabled(sync_ctx, device_id);
+    leave_ip_multicast(sync_ctx, device_id, Ipv4::ALL_SYSTEMS_MULTICAST_ADDRESS);
 }
 
 /// Gets the IPv4 address and subnet pairs associated with this device.

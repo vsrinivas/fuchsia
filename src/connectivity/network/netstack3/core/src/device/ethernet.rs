@@ -1632,7 +1632,7 @@ mod tests {
     #[specialize_ip]
     fn get_multicast_addr<I: Ip>() -> MulticastAddr<I::Addr> {
         #[ipv4]
-        return MulticastAddr::new(Ipv4Addr::new([224, 0, 0, 1])).unwrap();
+        return MulticastAddr::new(Ipv4Addr::new([224, 0, 0, 3])).unwrap();
 
         #[ipv6]
         return MulticastAddr::new(Ipv6Addr::new([0xff00, 0, 0, 0, 0, 0, 0, 1])).unwrap();

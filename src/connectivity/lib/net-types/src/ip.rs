@@ -371,6 +371,13 @@ impl Ipv4 {
     pub const LINK_LOCAL_MULTICAST_SUBNET: Subnet<Ipv4Addr> =
         Subnet { network: Ipv4Addr::new([224, 0, 0, 0]), prefix: 24 };
 
+    /// The multicast address subscribed to by all systems on the local network,
+    /// defined in the [IPv4 Multicast Address Space Registry].
+    ///
+    /// [IPv4 Multicast Address Space Registry]: https://www.iana.org/assignments/multicast-addresses/multicast-addresses.xhtml
+    pub const ALL_SYSTEMS_MULTICAST_ADDRESS: MulticastAddr<Ipv4Addr> =
+        unsafe { MulticastAddr::new_unchecked(Ipv4Addr::new([224, 0, 0, 1])) };
+
     /// The multicast address subscribed to by all routers on the local network,
     /// defined in the [IPv4 Multicast Address Space Registry].
     ///

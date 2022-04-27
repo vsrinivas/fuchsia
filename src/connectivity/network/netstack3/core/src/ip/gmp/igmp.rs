@@ -1177,7 +1177,17 @@ mod tests {
             AddrSubnet::new(MY_ADDR.get(), 24).unwrap(),
         )
         .unwrap();
+        ctx.ctx.timer_ctx().assert_no_timers_installed();
 
+        let now = ctx.now();
+        let timer_id = TimerId(TimerIdInner::Ipv4Device(
+            IgmpTimerId::ReportDelay {
+                device: device_id,
+                group_addr: Ipv4::ALL_SYSTEMS_MULTICAST_ADDRESS,
+            }
+            .into(),
+        ));
+        let range = now..=(now + DEFAULT_UNSOLICITED_REPORT_INTERVAL);
         struct TestConfig {
             ip_enabled: bool,
             gmp_enabled: bool,
@@ -1192,15 +1202,6 @@ mod tests {
                 config
             });
         };
-        // Enable IPv4 and IGMP.
-        set_config(&mut ctx, TestConfig { ip_enabled: true, gmp_enabled: true });
-        ctx.ctx.timer_ctx().assert_no_timers_installed();
-
-        let now = ctx.now();
-        let timer_id = TimerId(TimerIdInner::Ipv4Device(
-            IgmpTimerId::ReportDelay { device: device_id, group_addr: GROUP_ADDR }.into(),
-        ));
-        let range = now..=(now + DEFAULT_UNSOLICITED_REPORT_INTERVAL);
         let check_sent_report = |ctx: &mut crate::testutil::DummyCtx| {
             assert_matches::assert_matches!(
                 &ctx.dispatcher.take_frames()[..],
@@ -1209,22 +1210,21 @@ mod tests {
                     let (body, src_mac, dst_mac, src_ip, dst_ip, proto, ttl) =
                         parse_ip_packet_in_ethernet_frame::<Ipv4>(frame).unwrap();
                     assert_eq!(src_mac, local_mac.get());
-                    assert_eq!(dst_mac, Mac::from(&GROUP_ADDR));
+                    assert_eq!(dst_mac, Mac::from(&Ipv4::ALL_SYSTEMS_MULTICAST_ADDRESS));
                     assert_eq!(src_ip, MY_ADDR.get());
-                    assert_eq!(dst_ip, GROUP_ADDR.get());
+                    assert_eq!(dst_ip, Ipv4::ALL_SYSTEMS_MULTICAST_ADDRESS.get());
                     assert_eq!(proto, Ipv4Proto::Igmp);
                     assert_eq!(ttl, 1);
                     let mut bv = &body[..];
                     assert_matches::assert_matches!(
                         IgmpPacket::parse(&mut bv, ()).unwrap(),
                         IgmpPacket::MembershipReportV2(msg) => {
-                            assert_eq!(msg.group_addr(), GROUP_ADDR.get());
+                            assert_eq!(msg.group_addr(), Ipv4::ALL_SYSTEMS_MULTICAST_ADDRESS.get());
                         }
                     );
                 }
             );
         };
-
         let check_sent_leave = |ctx: &mut crate::testutil::DummyCtx| {
             assert_matches::assert_matches!(
                 &ctx.dispatcher.take_frames()[..],
@@ -1242,15 +1242,18 @@ mod tests {
                     assert_matches::assert_matches!(
                         IgmpPacket::parse(&mut bv, ()).unwrap(),
                         IgmpPacket::LeaveGroup(msg) => {
-                            assert_eq!(msg.group_addr(), GROUP_ADDR.get());
+                            assert_eq!(msg.group_addr(), Ipv4::ALL_SYSTEMS_MULTICAST_ADDRESS.get());
                         }
                     );
                 }
             );
         };
 
-        // Join a group.
-        crate::ip::device::join_ip_multicast::<Ipv4, _>(&mut ctx, device_id, GROUP_ADDR);
+        // Enable IPv4 and IGMP.
+        //
+        // Should send report for the all-systems multicast group that all
+        // interfaces join.
+        set_config(&mut ctx, TestConfig { ip_enabled: true, gmp_enabled: true });
         ctx.ctx.timer_ctx().assert_timers_installed([(timer_id, range.clone())]);
         check_sent_report(&mut ctx);
 
