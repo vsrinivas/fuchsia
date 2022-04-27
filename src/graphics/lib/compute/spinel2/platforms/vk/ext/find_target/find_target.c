@@ -46,7 +46,11 @@
 //
 //
 #ifndef NDEBUG
+#ifdef SPN_VK_TARGET_ARCHIVE_LINKABLE
+#define SPN_VK_TARGET_LOG(name_) fprintf(stderr, "Loading Spinel linked target: \"" name_ "\"\n");
+#else
 #define SPN_VK_TARGET_LOG(name_) fprintf(stderr, "Loading Spinel target: \"" name_ "\"\n");
+#endif
 #else
 #define SPN_VK_TARGET_LOG(name_)
 #endif
