@@ -661,7 +661,7 @@ TEST_F(EfiDevicePartitionerTests, InitializeWithTwoCandidateGPTsSucceedsAfterWip
   auto status2 = CreatePartitioner(std::move(gpt_fd));
   ASSERT_OK(status2);
   ASSERT_OK(status2->AddPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
-  ASSERT_OK(status2->WipeFvm());
+  ASSERT_OK(status2->WipePartitionTables());
   status2.value().reset();
 
   // Note that this time we don't pass in a block device fd.

@@ -496,7 +496,9 @@ zx::status<> GptDevicePartitioner::WipePartitions(FilterCallback filter) const {
   return zx::ok();
 }
 
-zx::status<> GptDevicePartitioner::WipeFvm() const { return WipePartitions(IsFvmPartition); }
+zx::status<> GptDevicePartitioner::WipeFvm() const {
+  return WipeBlockPartition(devfs_root_, std::nullopt, Uuid(GUID_FVM_VALUE));
+}
 
 zx::status<> GptDevicePartitioner::WipePartitionTables() const {
   return WipePartitions([](const gpt_partition_t&) { return true; });
