@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context, Result},
-    std::{env, ffi::OsStr, fs::read_dir, path::PathBuf},
+    std::{ffi::OsStr, fs::read_dir, path::PathBuf},
 };
 
 /// The default configs paths used if 0 paths are given.
@@ -19,8 +19,8 @@ const DEFAULT_CONFIG_PATHS_VARIABLE: &str = "triage.config_paths";
 /// We look for .jiri_root to determine whether a directory
 /// is a fuchsia checkout.
 /// Returns None if not working in tree.
-fn get_closed_enclosing_fuchsia_dir() -> Result<Option<PathBuf>> {
-    let mut current_dir = env::current_dir()?;
+fn get_closed_enclosing_fuchsia_dir(current_dir: PathBuf) -> Result<Option<PathBuf>> {
+    let mut current_dir = current_dir;
     loop {
         let jiri_root_path = current_dir.join(".jiri_root/");
         if jiri_root_path.exists() {
@@ -35,9 +35,12 @@ fn get_closed_enclosing_fuchsia_dir() -> Result<Option<PathBuf>> {
 
 /// Returns the config files passed via cmdline arguments.
 /// If 0 paths are given returns default paths.
-pub async fn get_or_default_config_files(config: Vec<String>) -> Result<Vec<PathBuf>> {
+pub async fn get_or_default_config_files(
+    config: Vec<String>,
+    current_dir: PathBuf,
+) -> Result<Vec<PathBuf>> {
     let config_paths: Vec<PathBuf> = if config.is_empty() {
-        if let Some(fuchsia_dir) = get_closed_enclosing_fuchsia_dir()? {
+        if let Some(fuchsia_dir) = get_closed_enclosing_fuchsia_dir(current_dir)? {
             DEFAULT_INTREE_RELATIVE_CONFIG_FILES
                 .iter()
                 .map(|default_file| {
@@ -86,7 +89,7 @@ pub async fn get_or_default_config_files(config: Vec<String>) -> Result<Vec<Path
 mod tests {
     use super::*;
     use std::{
-        env, fs,
+        fs,
         path::{Path, PathBuf},
     };
     use tempfile::{tempdir, NamedTempFile};
@@ -112,16 +115,18 @@ mod tests {
         fs::create_dir_all(&inner_jiri_root).expect("Unable to create inner jiri root directory.");
         fs::create_dir_all(&inner_subdir).expect("Unable to create inner subdir root directory.");
 
+        let canonical_inner_subdir = fs::canonicalize(&inner_subdir)
+            .expect("Unable to get canonical path to fuchsia checkout.");
+
         // Directory structure is
         // $root/.jiri_root
         // $root/fake/fuchsia/
         // $root/fake/fuchsia/.jiri_root
         // We invoke the plugin from $root/fake/fuchsia/subdir/
 
-        env::set_current_dir(&inner_subdir).expect("Unable to change current dir for testing.");
-
-        let config_files =
-            get_or_default_config_files(vec![]).await.expect("Unable to get config files.");
+        let config_files = get_or_default_config_files(vec![], canonical_inner_subdir)
+            .await
+            .expect("Unable to get config files.");
 
         // Get absolute path as $TMPDIR might contain symlinks.
         // Eg. on macOS /var@ -> /private/var
@@ -149,8 +154,6 @@ mod tests {
         let tempdir = tempdir().expect("Unable to create tempdir for testing.");
         let root = tempdir.path();
 
-        env::set_current_dir(&root).expect("Unable to change current dir for testing.");
-
         ffx_config::set(
             (DEFAULT_CONFIG_PATHS_VARIABLE, ffx_config::ConfigLevel::User),
             serde_json::json!(oot_test_default_configs),
@@ -158,8 +161,9 @@ mod tests {
         .await
         .expect("Unable to set oot default config variable.");
 
-        let config_files =
-            get_or_default_config_files(vec![]).await.expect("Unable to get config files.");
+        let config_files = get_or_default_config_files(vec![], root.to_path_buf())
+            .await
+            .expect("Unable to get config files.");
 
         // One reason of failure might be the existence of .jiri_root/ in the $TEMPDIR parent
         // path due to which OOT configs are not picked up.
@@ -168,6 +172,8 @@ mod tests {
 
     #[fuchsia::test]
     async fn directory_passed_to_config() {
+        let fake_cwd = tempdir().expect("Unable to create tempdir for testing.");
+
         let tempdir = tempdir().expect("Unable to create tempdir for testing.");
         let root = tempdir.path();
         let config_file1 = create_empty_file(root, "config1.triage");
@@ -177,10 +183,10 @@ mod tests {
         let config_file2 =
             NamedTempFile::new().expect("Unable to create namedtempfile for testing.");
 
-        let config_files = get_or_default_config_files(vec![
-            root.to_string_lossy().into(),
-            config_file2.path().to_string_lossy().into(),
-        ])
+        let config_files = get_or_default_config_files(
+            vec![root.to_string_lossy().into(), config_file2.path().to_string_lossy().into()],
+            fake_cwd.path().to_path_buf(),
+        )
         .await
         .expect("Unable to get config files.");
 

@@ -9,7 +9,7 @@ use {
     ffx_triage_args::TriageCommand,
     ffx_writer::Writer,
     fidl_fuchsia_feedback::DataProviderProxy,
-    std::{io::Write, path::PathBuf},
+    std::{env, io::Write, path::PathBuf},
     tempfile::tempdir,
     triage::{analyze, analyze_structured, ActionResultFormatter, ActionTagDirective},
     triage_app_lib::file_io::{config_from_files, diagnostics_from_directory},
@@ -35,7 +35,8 @@ async fn triage_impl(
 ) -> Result<()> {
     let TriageCommand { config, data, tags, exclude_tags } = cmd;
 
-    let config_files = config::get_or_default_config_files(config).await?;
+    let current_dir = env::current_dir()?;
+    let config_files = config::get_or_default_config_files(config, current_dir).await?;
 
     let data_directory = match data {
         Some(d) => PathBuf::from(d),
