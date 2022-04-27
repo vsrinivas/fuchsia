@@ -55,7 +55,9 @@ config("one_codegen_unit") {
   # Disable codegen parallelism.
   # Trades incremental rebuild speed for smaller code size.
   # See: fxbug.dev/74435, fxbug.dev/80514
-  rustflags = [ "-Ccodegen-units=1" ]
+  if (rust_incremental == "") {
+    rustflags = [ "-Ccodegen-units=1" ]
+  }
 }
 
 # Best practices for Rust binaries that go into size-constrained bootfs.
