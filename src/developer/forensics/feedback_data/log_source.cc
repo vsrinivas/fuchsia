@@ -58,6 +58,11 @@ LogSource::LogSource(async_dispatcher_t* dispatcher,
 }
 
 void LogSource::Start() {
+  if (is_stopped_ && !sink_->SafeAfterInterruption()) {
+    FX_LOGS(FATAL) << "Log streaming unsafe to resume";
+  }
+
+  is_stopped_ = false;
   services_->Connect(archive_accessor_.NewRequest(dispatcher_), kArchiveAccessorName);
 
   fuchsia::diagnostics::StreamParameters params;
@@ -72,6 +77,8 @@ void LogSource::Start() {
 }
 
 void LogSource::OnDisconnect() {
+  is_stopped_ = true;
+
   sink_->NotifyInterruption();
   if (!sink_->SafeAfterInterruption()) {
     return;
@@ -80,6 +87,7 @@ void LogSource::OnDisconnect() {
   async::PostDelayedTask(
       dispatcher_,
       [self = ptr_factory_.GetWeakPtr()] {
+        // Safe to call Start because it's confirmed the sink can safely resume receiving messages.
         if (self) {
           self->Start();
         }
@@ -113,6 +121,9 @@ void LogSource::GetNext() {
 void LogSource::Stop() {
   batch_iterator_.Unbind();
   archive_accessor_.Unbind();
+
+  is_stopped_ = true;
+  sink_->NotifyInterruption();
 }
 
 }  // namespace forensics::feedback_data

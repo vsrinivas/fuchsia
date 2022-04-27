@@ -45,7 +45,13 @@ class LogSource {
   LogSource(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
             LogSink* sink, std::unique_ptr<backoff::Backoff> backoff = nullptr);
 
+  // Starts log collection.
+  //
+  // Note: a check-fail will occur if |sink_| cannot safely receive messages after being interrupted
+  // and the log stream has stopped due to a disconnetion or call to Stop.
   void Start();
+
+  // Stops log collection and notfies |sink_| collection was interrupted.
   void Stop();
 
  private:
@@ -59,6 +65,7 @@ class LogSource {
   fuchsia::diagnostics::ArchiveAccessorPtr archive_accessor_;
   fuchsia::diagnostics::BatchIteratorPtr batch_iterator_;
 
+  bool is_stopped_{false};
   std::unique_ptr<backoff::Backoff> backoff_;
   fxl::WeakPtrFactory<LogSource> ptr_factory_{this};
 };

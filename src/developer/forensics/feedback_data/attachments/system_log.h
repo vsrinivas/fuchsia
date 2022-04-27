@@ -71,7 +71,6 @@ class LogBuffer : public LogSink {
   size_t last_msg_repeated_;
 
   bool is_sorted_{true};
-  bool was_interrupted_{false};
 
   size_t size_{0u};
   const size_t capacity_;

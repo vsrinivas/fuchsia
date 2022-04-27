@@ -126,11 +126,73 @@ class SimpleLogSink : public LogSink {
 using LogSourceTest = UnitTestFixture;
 
 TEST_F(LogSourceTest, WritesToSink) {
-  constexpr zx::duration kTimeWaitForLimitedLogs = zx::sec(60);
+  const zx::duration kTimeWaitForLimitedLogs = zx::sec(60);
   const zx::duration kArchivePeriod = zx::msec(750);
 
   SimpleLogSink sink;
   LogSource source(dispatcher(), services(), &sink, std::make_unique<MonotonicBackoff>());
+
+  const std::vector<std::vector<std::string>> batches({
+      {
+          BuildInputLogMessage("line 0"),
+          BuildInputLogMessage("line 1"),
+          BuildInputLogMessage("line 2"),
+          BuildInputLogMessage("line 3"),
+
+      },
+      {
+          BuildInputLogMessage("line 4"),
+          BuildInputLogMessage("line 5"),
+          BuildInputLogMessage("line 6"),
+          BuildInputLogMessage("line 7"),
+      },
+      {BuildInputLogMessage("line 8")},
+      {BuildInputLogMessage("line 9")},
+      {BuildInputLogMessage("line A")},
+      {BuildInputLogMessage("line B")},
+      {BuildInputLogMessage("line C")},
+      {BuildInputLogMessage("line D")},
+      {},
+  });
+
+  stubs::DiagnosticsArchive archive(std::make_unique<stubs::DiagnosticsBatchIteratorDelayedBatches>(
+      dispatcher(), batches, kTimeWaitForLimitedLogs, kArchivePeriod));
+
+  InjectServiceProvider(&archive, "fuchsia.diagnostics.FeedbackArchiveAccessor");
+
+  source.Start();
+  RunLoopFor(kTimeWaitForLimitedLogs);
+
+  std::vector<LogSink::MessageOr> expected;
+  for (const auto& batch : batches) {
+    // Break to prevent |source| from fetching more messages.
+    if (batch.empty()) {
+      break;
+    }
+
+    for (const auto& msg : batch) {
+      expected.push_back(BuildOutputLogMessage(msg));
+    }
+    EXPECT_TRUE(sink.Messages() == expected);
+    RunLoopFor(kArchivePeriod);
+  }
+
+  EXPECT_TRUE(archive.IsBound());
+  source.Stop();
+
+  RunLoopUntilIdle();
+  EXPECT_FALSE(archive.IsBound());
+}
+
+TEST_F(LogSourceTest, NotifyInterruptionOnStop) {
+  const zx::duration kTimeWaitForLimitedLogs = zx::sec(60);
+  const zx::duration kArchivePeriod = zx::msec(750);
+
+  SimpleLogSink sink(/*safe_after_interruption=*/true);
+  LogSource source(dispatcher(), services(), &sink, std::make_unique<MonotonicBackoff>());
+
+  source.Stop();
+  EXPECT_TRUE(sink.WasInterrupted());
 
   const std::vector<std::vector<std::string>> batches({
       {

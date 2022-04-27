@@ -513,13 +513,11 @@ TEST(LogBufferTest, NotifyInterruption) {
 [00020.000][00100][00101][tag1, tag2] INFO: log 1
 )");
 
+  // Should clear the buffer.
   buffer.NotifyInterruption();
 
-  EXPECT_EQ(buffer.ToString(), R"(!!! Failed to format chunk: ERRORS ERR 0 !!!
-[00020.000][00100][00101][tag1, tag2] INFO: log 1
-)");
+  EXPECT_THAT(buffer.ToString(), IsEmpty());
 
-  // Should clear the buffer.
   EXPECT_TRUE(buffer.Add(ToMessage("log 2", zx::sec(18))));
   EXPECT_TRUE(buffer.Add(ToMessage("log 2", zx::sec(18))));
   EXPECT_TRUE(buffer.Add(ToMessage("log 2", zx::sec(19))));
