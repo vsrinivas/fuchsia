@@ -132,7 +132,10 @@ impl<'a> GnBuildGraph<'a> {
                 for kind in &rust_target.kind {
                     let target_type = GnRustType::try_from(kind.as_str())?;
                     match target_type {
-                        GnRustType::Library | GnRustType::ProcMacro | GnRustType::Binary => {
+                        GnRustType::Library
+                        | GnRustType::Rlib
+                        | GnRustType::ProcMacro
+                        | GnRustType::Binary => {
                             let gn_target = GnTarget::new(
                                 &node.id,
                                 &rust_target.name,
@@ -148,12 +151,9 @@ impl<'a> GnBuildGraph<'a> {
                             self.targets.insert(gn_target);
                         }
 
-                        // FIXME(http://fxbug.dev/91791): support rlib, staticlib, dylib, and
+                        // FIXME(http://fxbug.dev/91791): support staticlib, dylib, and
                         // cdylib crate types.
-                        GnRustType::Rlib
-                        | GnRustType::Staticlib
-                        | GnRustType::Dylib
-                        | GnRustType::Cdylib => (),
+                        GnRustType::Staticlib | GnRustType::Dylib | GnRustType::Cdylib => (),
 
                         // BuildScripts are handled as part of the targets
                         GnRustType::BuildScript => (),

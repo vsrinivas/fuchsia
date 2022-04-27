@@ -143,7 +143,9 @@ impl<'a> GnTarget<'a> {
     /// with version
     pub fn gn_target_name(&self) -> String {
         let prefix = match self.target_type {
-            GnRustType::Library | GnRustType::ProcMacro => Cow::Borrowed(self.pkg_name),
+            GnRustType::Library | GnRustType::Rlib | GnRustType::ProcMacro => {
+                Cow::Borrowed(self.pkg_name)
+            }
             GnRustType::Binary => Cow::Owned(format!("{}-{}", self.pkg_name, self.target_name)),
             ty => panic!("Don't know how to represent this type \"{:?}\" in GN", ty),
         };
@@ -173,7 +175,7 @@ impl<'a> GnTarget<'a> {
 
     pub fn gn_target_type(&self) -> String {
         match self.target_type {
-            GnRustType::Library => String::from("rust_library"),
+            GnRustType::Library | GnRustType::Rlib => String::from("rust_library"),
             GnRustType::Binary => String::from("executable"),
             GnRustType::ProcMacro => String::from("rust_proc_macro"),
             ty => panic!("Don't know how to represent this type \"{:?}\" in GN", ty),
