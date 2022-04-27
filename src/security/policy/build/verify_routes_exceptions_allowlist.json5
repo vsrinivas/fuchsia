@@ -16,6 +16,49 @@
             errors: [
                 {
                     using_node: "/bootstrap",
+                    capability: "bin",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    policy_error: {
+                                        capability_use_disallowed: {
+                                            cap: "bin",
+                                            source_moniker: {
+                                                component_instance: {
+                                                    path: [
+                                                        {
+                                                            name: "bootstrap",
+                                                            collection: null,
+                                                            rep: "bootstrap",
+                                                        },
+                                                        {
+                                                            name: "fshost",
+                                                            collection: null,
+                                                            rep: "fshost",
+                                                        },
+                                                    ],
+                                                },
+                                            },
+                                            target_moniker: {
+                                                path: [
+                                                    {
+                                                        name: "bootstrap",
+                                                        collection: null,
+                                                        rep: "bootstrap",
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        message: "security policy disallows \"bin\" from \"/bootstrap/fshost\" being used at \"/bootstrap\"",
+                    },
+                },
+                {
+                    using_node: "/bootstrap",
                     capability: "build-info",
                     error: {
                         error: {

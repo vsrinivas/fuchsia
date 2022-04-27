@@ -1,0 +1,11 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# TODO(fxbug.dev/90440): delete ths file after we use cml everywhere.
+
+declare_args() {
+  # Use sshd_host.cmx or sshd_host.cml.
+  # Valid values: "cmx", "cml"
+  sshd_host_component = "cmx"
+}

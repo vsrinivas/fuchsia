@@ -219,8 +219,10 @@
                 source_name: "bin",
                 capability: "directory",
                 target_monikers: [
+                    "/bootstrap",
                     "/bootstrap/console-launcher",
                     "/bootstrap/fshost",
+                    "/core/sshd-host",
                 ],
             },
             {
@@ -250,6 +252,7 @@
                     "/core",
                     "/core/appmgr",
                     "/core/pkg-cache",
+                    "/core/sshd-host",
                 ],
             },
             {
@@ -265,6 +268,7 @@
                     "/core/appmgr",
                     "/core/minfs",
                     "/core/ssh-key-manager",
+                    "/core/sshd-host",
                 ],
             },
             {
@@ -279,6 +283,7 @@
                     "/bootstrap/fshost",
                     "/core",
                     "/core/appmgr",
+                    "/core/sshd-host",
                     "/core/system-updater",
                     "/core/system-update-checker",
                 ],
@@ -295,6 +300,7 @@
                     "/bootstrap/netsvc",
                     "/core",
                     "/core/appmgr",
+                    "/core/sshd-host",
                 ],
             },
             {
@@ -307,6 +313,7 @@
                     "/core/build-info",
                     "/core/feedback",
                     "/core/omaha-client-service",
+                    "/core/sshd-host",
                     "/core/system-updater",
 
                     // TODO(fxbug.dev/91934): Once we can define test realms out of tree

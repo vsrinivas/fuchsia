@@ -1,0 +1,67 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Add sshd-host to core
+{
+    children: [
+        {
+            name: "sshd-host",
+            url: "fuchsia-pkg://fuchsia.com/sshd-host#meta/sshd-host.cm",
+            startup: "eager",
+            environment: "#full-resolver-env",
+        },
+    ],
+    offer: [
+        // Needed to configure sshd-host.
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#sshd-host",
+            subdir: "sshd-host",
+        },
+        {
+            protocol: [
+                "fuchsia.boot.Items",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+            ],
+            from: "parent",
+            to: "#sshd-host",
+        },
+        {
+            protocol: "fuchsia.posix.socket.Provider",
+            from: "#network",
+            to: "#sshd-host",
+        },
+
+        // Needed by chrealm lib to launch `ssh` subprocess in sys realm.
+        {
+            directory: "hub-legacy",
+            from: "#appmgr",
+            to: "#sshd-host",
+        },
+
+        // Needed to create the shell environment
+        // for sshd-host children.
+        // TODO(fxbug.dev/97903): downscope this.
+        {
+            directory: [
+                "bin",
+                "blob",
+                "boot",
+                "build-info",
+                "dev",
+                "hub",
+                "minfs",
+                "mnt",
+                "pkgfs",
+                "root-ssl-certificates",
+                "system",
+                "tmp",
+            ],
+            from: "parent",
+            to: "#sshd-host",
+        },
+    ],
+}

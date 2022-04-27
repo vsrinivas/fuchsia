@@ -2,23 +2,35 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    // TODO(fxbug.dev/97903): including the below conflicts with using
-    // svc_from_sys as /svc.
-    // Once svc_from_sys is removed, uncomment the below.
-    // include: [ "syslog/client.shard.cml" ],
+    include: [ "syslog/client.shard.cml" ],
     program: {
         runner: "elf",
         binary: "bin/sshd-host",
+        forward_stdout_to: "log",
+        forward_stderr_to: "log",
     },
     use: [
+        // Needed to configure sshd-host.
         {
             directory: "config-data",
             rights: [ "r*" ],
             path: "/config/data",
         },
+        {
+            protocol: [
+                // Needed to get ssh keys from the bootloader file.
+                "fuchsia.boot.Items",
 
-        // Derived from legacy appmgr "deprecated-shell".
-        // See: fxbug.dev/35365
+                // Needed to listen on TCP port 22.
+                "fuchsia.posix.socket.Provider",
+
+                // Needed to launch `ssh` child processes.
+                "fuchsia.process.Launcher",
+            ],
+        },
+
+        // Needed to create the shell environment
+        // for the ssh child process and its children.
         // TODO(fxbug.dev/97903): try to remove each one of the below.
         // TODO(fxbug.dev/98086): specifically reduce /bin.
         {
@@ -63,7 +75,7 @@
         },
         {
             directory: "hub",
-            rights: [ "r*" ],
+            rights: [ "rw*" ],
             path: "/hub-v2",
         },
         {
@@ -85,16 +97,6 @@
             directory: "tmp",
             rights: [ "rw*" ],
             path: "/tmp",
-        },
-
-        // Put everything from the legacy sysmgr realm in /svc.
-        // This is consistent with legacy sshd-host behavior.
-        // TODO(fxbug.dev/97903): break this out into protocol capabilities
-        // specific to whatever supported shell utilities actually use.
-        {
-            directory: "svc_from_sys",
-            rights: [ "r*" ],
-            path: "/svc",
         },
     ],
 }

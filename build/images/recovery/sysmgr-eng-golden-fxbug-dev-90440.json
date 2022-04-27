@@ -1,0 +1,9 @@
+{
+    "apps": [
+        "fuchsia-pkg://fuchsia.com/system_recovery#meta/system_recovery.cmx",
+        "fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx"
+    ],
+    "update_dependencies": [
+        "fuchsia.bogus.DoesNotExist"
+    ]
+}

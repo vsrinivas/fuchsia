@@ -932,6 +932,7 @@
         },
         {
             directory: [
+                "bin",
                 "blob",
                 "build-info",
                 "config-data",

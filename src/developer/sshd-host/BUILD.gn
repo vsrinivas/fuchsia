@@ -4,6 +4,8 @@
 
 import("//build/components.gni")
 import("//build/config.gni")
+import("//src/sys/core/build/core_shard.gni")
+import("fxbug_dev_90440.gni")
 
 group("tests") {
   testonly = true
@@ -58,22 +60,34 @@ fuchsia_component("cml") {
 
 fuchsia_package("sshd-host") {
   deps = [
-    ":cml",
-    ":cmx",
-
     # Ensure this isn't included in production
     "//build/validate:non_production_tag",
 
     # Used by programs that need to load ICU locale data, such as tz-util.
     "//src/intl:icudtl",
-
-    # Configure sysmgr to start sshd-host.cmx
-    "//src/sys/sysmgr:sshd_host_config",
     "//third_party/openssh-portable:hostkeygen",
     "//third_party/openssh-portable:scp",
     "//third_party/openssh-portable:sftp-server",
     "//third_party/openssh-portable:sshd",
   ]
+
+  # TODO(fxbug.dev/90440): delete the below after we use cml everywhere
+  if (sshd_host_component == "cmx") {
+    deps += [
+      ":cmx",
+
+      # Configure sysmgr to start sshd-host.cmx
+      "//src/sys/sysmgr:sshd_host_config",
+    ]
+  } else if (sshd_host_component == "cml") {
+    deps += [ ":cml" ]
+  } else {
+    assert(false, "Invalid value sshd_host_component = $sshd_host_component")
+  }
+}
+
+core_shard("core_shard") {
+  shard_file = "meta/sshd-host.core_shard.cml"
 }
 
 config_data("config") {

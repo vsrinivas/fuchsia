@@ -6,6 +6,7 @@ import("//build/images/assemble_system.gni")
 import("//build/images/vboot/vboot.gni")
 import("//build/images/zedboot/zedboot_args.gni")
 import("//build/testing/host_test_data.gni")
+import("//src/developer/sshd-host/fxbug_dev_90440.gni")
 import("//src/sys/core/build/core.gni")
 import("//src/sys/root/build/root.gni")
 
@@ -153,7 +154,16 @@ assemble_system("recovery-eng") {
   base_packages = recovery_eng_packages
   system_image_deps = recovery_system_image_deps
 
-  sysmgr_golden = "sysmgr-eng-golden.json"
+  # TODO(fxbug.dev/90440): uncomment the below
+  #sysmgr_golden = "sysmgr-eng-golden.json"
+  # TODO(fxbug.dev/90440): delete the below
+  if (sshd_host_component == "cmx") {
+    sysmgr_golden = "sysmgr-eng-golden.json"
+  } else if (sshd_host_component == "cml") {
+    sysmgr_golden = "sysmgr-eng-golden-fxbug-dev-90440.json"
+  } else {
+    assert(false, "Invalid value sshd_host_component = $sshd_host_component")
+  }
 
   # TODO(fxbug.dev/81569): Move this metadata to assemble_system.gni.
   metadata = {
@@ -232,7 +242,16 @@ assemble_system("recovery-installer") {
   base_packages = recovery_installer_packages
   system_image_deps = recovery_system_image_deps
 
-  sysmgr_golden = "sysmgr-installer-golden.json"
+  # TODO(fxbug.dev/90440): uncomment the below
+  #sysmgr_golden = "sysmgr-installer-golden.json"
+  # TODO(fxbug.dev/90440): delete the below
+  if (sshd_host_component == "cmx") {
+    sysmgr_golden = "sysmgr-installer-golden.json"
+  } else if (sshd_host_component == "cml") {
+    sysmgr_golden = "sysmgr-installer-golden-fxbug-dev-90440.json"
+  } else {
+    assert(false, "Invalid value sshd_host_component = $sshd_host_component")
+  }
 
   # The installer needs to see all partitions on the system so that it can
   #determine the installation source and destination

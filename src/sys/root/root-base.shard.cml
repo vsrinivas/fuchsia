@@ -90,6 +90,7 @@
         // ...and the rest of these are capabilities provided by components for each other
         {
             directory: [
+                "bin",
                 "blob",
                 "build-info",
                 "config-data",

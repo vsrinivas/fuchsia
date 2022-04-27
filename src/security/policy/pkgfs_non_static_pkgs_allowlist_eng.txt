@@ -31,3 +31,6 @@ catapult_converter
 # remote-control is a v2 component that is cached (not in base)
 remote-control
 remote-diagnostics-bridge
+
+# Legacy cmx tests
+run_test_component
