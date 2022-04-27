@@ -30,7 +30,7 @@
 
 namespace futex {
 namespace {
-constexpr zx::duration kDefaultTimeout = zx::sec(5);
+constexpr zx::duration kDefaultTimeout = zx::sec(30);
 constexpr zx::duration kDefaultPollInterval = zx::usec(100);
 
 constexpr uint32_t kThreadWakeAllCount = std::numeric_limits<uint32_t>::max();
@@ -100,6 +100,16 @@ class TestThread {
     timeout_ = timeout;
     wait_result_.store(ZX_ERR_INTERNAL);
 
+    // If our thread fails to stay blocked in the futex, make an attempt to
+    // record what the result of its futex_wait operation was in order to assist
+    // with debugging.  In theory, we should only ever see TIMED_OUT, and only
+    // ever when running a test which has legitimate flake behavior.
+    auto cleanup = fit::defer([this]() {
+      if (state() == State::kWaitReturned) {
+        EXPECT_TRUE(false, "Wait status was %d\n", static_cast<uint32_t>(wait_result_.load()));
+      }
+    });
+
     ASSERT_EQ(
         thrd_create_with_name(
             &thread_,
@@ -125,6 +135,10 @@ class TestThread {
 
     // This could also fail if futex_wait() gets a spurious wakeup.
     EXPECT_EQ(state(), State::kAboutToWait, "Wrong thread state.");
+
+    if (CURRENT_TEST_HAS_FAILURES() == false) {
+      cleanup.cancel();
+    }
   }
 
   void Shutdown() {
@@ -415,7 +429,7 @@ TEST(FutexTest, RequeueUnqueuedOnTimeout) {
     }
   });
 
-  ASSERT_NO_FATAL_FAILURE(threads[0].Start(&futex_value1, zx::msec(300)));
+  ASSERT_NO_FATAL_FAILURE(threads[0].Start(&futex_value1, zx::msec(1500)));
   ASSERT_OK(zx_futex_requeue(&futex_value1, 0, 100, &futex_value2, kThreadWakeAllCount,
                              ZX_HANDLE_INVALID));
   ASSERT_NO_FATAL_FAILURE(threads[1].Start(&futex_value2));
