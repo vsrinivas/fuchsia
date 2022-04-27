@@ -161,6 +161,15 @@ macro_rules! scale_position_impl {
             }
         }
 
+        impl Mul<Position> for $t {
+            type Output = Position;
+
+            #[inline]
+            fn mul(self, other: Position) -> Position {
+                Position { x: self as f32 * other.x, y: self as f32 * other.y }
+            }
+        }
+
         impl MulAssign<$t> for Position {
             #[inline]
             fn mul_assign(&mut self, other: $t) {

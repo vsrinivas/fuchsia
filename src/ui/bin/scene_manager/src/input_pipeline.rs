@@ -175,6 +175,16 @@ async fn build_input_pipeline_assembly(
         // handler.
         assembly = add_click_drag_handler(assembly);
 
+        // Add handler to scale pointer motion based on speed of sensor
+        // motion. This allows touchpads and mice to be easily used for
+        // both precise pointing, and quick motion across the width
+        // (or height) of the screen.
+        //
+        // This handler must come before the PointerMotionDisplayScaleHandler.
+        // Otherwise the display scale will be applied quadratically in some
+        // cases.
+        assembly = add_pointer_motion_sensor_scale_handler(assembly);
+
         // Add handler to scale pointer motion on high-DPI displays.
         //
         // * This handler is added _after_ the click-drag handler, since the
@@ -294,6 +304,14 @@ fn add_pointer_motion_display_scale_handler(
             assembly
         }
     }
+}
+
+fn add_pointer_motion_sensor_scale_handler(
+    assembly: InputPipelineAssembly,
+) -> InputPipelineAssembly {
+    assembly.add_handler(
+        input_pipeline::pointer_motion_sensor_scale_handler::PointerMotionSensorScaleHandler::new(),
+    )
 }
 
 fn add_immersive_mode_shortcut_handler(assembly: InputPipelineAssembly) -> InputPipelineAssembly {
