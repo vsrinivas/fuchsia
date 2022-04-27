@@ -13,14 +13,14 @@ Run the following command to take a trace for investigating general storage
 issues:
 
 ```
-fx traceutil record --categories=storage,blobfs,kernel,kernel:sched,minfs --duration 10s
+ffx trace start --categories=storage,blobfs,kernel,kernel:sched,minfs --duration 10
 ```
 
 If you want to see detailed flows for page faults and user pager events, add the
 `kernel:vm` category as well:
 
 ```
-fx traceutil record --categories=storage,blobfs,kernel,kernel:sched,kernel:vm,minfs --duration 10s
+ffx trace start --categories=storage,blobfs,kernel,kernel:sched,kernel:vm,minfs --duration 10
 ```
 
 Once the trace is complete, an `.fxt` file will be generated. Load this file in
@@ -112,5 +112,5 @@ Most likely the trace buffer was too small. You can increase the trace buffer
 size with the `--buffer-size` flag (units are MB):
 
 ```
-fx traceutil record --categories=storage,blobfs,kernel,kernel:sched --duration 5s  --buffer-size 64
+ffx trace start --categories=storage,blobfs,kernel,kernel:sched --duration 5  --buffer-size 64
 ```
