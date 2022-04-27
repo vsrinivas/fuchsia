@@ -45,6 +45,17 @@ const (
 	// crash reports. This name is configured by the `crash_diagnostics_dir` GN
 	// arg in //build/config/clang/crash_diagnostics.gni.
 	clangCrashReportsDirName = "clang-crashreports"
+
+	// Name of the directory within the build directory that will contain traces
+	// with files accesses after a build. By default only traces for targets with
+	// unexpected accesses are persisted after a build.
+	//
+	// This name is configured in //build/config/BUILDCONFIG.gn.
+	fileAccessTracesDirName = ".traces"
+	// Name suffix of file access traces.
+	//
+	// This name is configured in //build/config/BUILDCONFIG.gn.
+	fileAccessTracesSuffix = "_trace.txt"
 )
 
 var (
@@ -181,35 +192,6 @@ func buildImpl(
 		}
 	}
 
-	if ninjaErr != nil {
-		if contextSpec.ArtifactDir != "" {
-			crashReportFiles, err := collectClangCrashReports(contextSpec.BuildDir)
-			if err != nil {
-				return artifacts, err
-			}
-			for _, path := range crashReportFiles {
-				rel, err := filepath.Rel(contextSpec.BuildDir, path)
-				if err != nil {
-					return artifacts, err
-				}
-				artifacts.DebugFiles = append(artifacts.DebugFiles, &fintpb.DebugFile{
-					Path:       path,
-					UploadDest: filepath.ToSlash(rel),
-				})
-			}
-		}
-		return artifacts, fmt.Errorf("build failed, see ninja output for details: %w", ninjaErr)
-	}
-
-	gnPath, err := toolAbsPath(modules, contextSpec.BuildDir, platform, "gn")
-	if err != nil {
-		return artifacts, err
-	}
-	if output, err := gnCheckGenerated(ctx, runner, gnPath, contextSpec.CheckoutDir, contextSpec.BuildDir); err != nil {
-		artifacts.FailureSummary = output
-		return artifacts, err
-	}
-
 	// saveLogs writes the given set of logs to files in the artifact directory,
 	// and adds each path to the output artifacts.
 	saveLogs := func(logs map[string]string) error {
@@ -231,6 +213,43 @@ func buildImpl(
 			artifacts.LogFiles[name] = f.Name()
 		}
 		return nil
+	}
+
+	if ninjaErr != nil {
+		if contextSpec.ArtifactDir != "" {
+			crashReportFiles, err := collectClangCrashReports(contextSpec.BuildDir)
+			if err != nil {
+				return artifacts, err
+			}
+			for _, path := range crashReportFiles {
+				rel, err := filepath.Rel(contextSpec.BuildDir, path)
+				if err != nil {
+					return artifacts, err
+				}
+				artifacts.DebugFiles = append(artifacts.DebugFiles, &fintpb.DebugFile{
+					Path:       path,
+					UploadDest: filepath.ToSlash(rel),
+				})
+			}
+
+			traces, err := collectFileAccessTraces(contextSpec.BuildDir)
+			if err != nil {
+				return artifacts, fmt.Errorf("collecting file access traces: %w", err)
+			}
+			if err := saveLogs(traces); err != nil {
+				return artifacts, fmt.Errorf("writing file access traces to log files: %w", err)
+			}
+		}
+		return artifacts, fmt.Errorf("build failed, see ninja output for details: %w", ninjaErr)
+	}
+
+	gnPath, err := toolAbsPath(modules, contextSpec.BuildDir, platform, "gn")
+	if err != nil {
+		return artifacts, err
+	}
+	if output, err := gnCheckGenerated(ctx, runner, gnPath, contextSpec.CheckoutDir, contextSpec.BuildDir); err != nil {
+		artifacts.FailureSummary = output
+		return artifacts, err
 	}
 
 	if !contextSpec.SkipNinjaNoopCheck {
@@ -325,6 +344,36 @@ func collectClangCrashReports(buildDir string) ([]string, error) {
 	}
 
 	return outputs, nil
+}
+
+// collectFileAccessTraces finds access traces in the build directory, and
+// returns a mapping from path to content, ready for `log_files` in
+// `BuildArtifacts`.
+func collectFileAccessTraces(buildDir string) (map[string]string, error) {
+	traceContents := make(map[string]string)
+	err := filepath.WalkDir(filepath.Join(buildDir, fileAccessTracesDirName), func(path string, info fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() || !strings.HasSuffix(path, fileAccessTracesSuffix) {
+			return nil
+		}
+
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("reading content of trace: %w", err)
+		}
+		rel, err := filepath.Rel(buildDir, path)
+		if err != nil {
+			return fmt.Errorf("rebasing trace path to build dir path: %w", err)
+		}
+		traceContents[rel] = string(content)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return traceContents, nil
 }
 
 func ninjaNoopFailureMessage(platform string) string {

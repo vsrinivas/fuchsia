@@ -162,6 +162,34 @@ func TestBuild(t *testing.T) {
 			expectErr: true,
 		},
 		{
+			name:       "failed build with file access traces",
+			staticSpec: &fintpb.Static{},
+			contextSpec: &fintpb.Context{
+				ArtifactDir: artifactDir,
+			},
+			buildDirFiles: []string{
+				filepath.Join(".traces", "accesses_trace.txt"),
+				filepath.Join(".traces", "dir", "accesses_trace.txt"),
+				filepath.Join(".traces", "dir", "other_accesses_trace.txt"),
+				filepath.Join(".traces", "dir", "not_a_trace"),
+				filepath.Join(".traces", "nested", "dir", "accesses_trace.txt"),
+				filepath.Join("not", "in", "expected", "dir", "accesses_trace.txt"),
+			},
+			runnerFunc: func(cmd []string, _ io.Writer) error {
+				return fmt.Errorf("failed to run command: %s", cmd)
+			},
+			expectedArtifacts: &fintpb.BuildArtifacts{
+				FailureSummary: unrecognizedFailureMsg + "\n",
+				LogFiles: map[string]string{
+					filepath.Join(".traces", "accesses_trace.txt"):                  filepath.Join(artifactDir, ".traces%2Faccesses_trace.txt"),
+					filepath.Join(".traces", "dir", "accesses_trace.txt"):           filepath.Join(artifactDir, ".traces%2Fdir%2Faccesses_trace.txt"),
+					filepath.Join(".traces", "dir", "other_accesses_trace.txt"):     filepath.Join(artifactDir, ".traces%2Fdir%2Fother_accesses_trace.txt"),
+					filepath.Join(".traces", "nested", "dir", "accesses_trace.txt"): filepath.Join(artifactDir, ".traces%2Fnested%2Fdir%2Faccesses_trace.txt"),
+				},
+			},
+			expectErr: true,
+		},
+		{
 			name: "incremental build",
 			staticSpec: &fintpb.Static{
 				Incremental: true,
