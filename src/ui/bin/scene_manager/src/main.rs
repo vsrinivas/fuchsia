@@ -36,10 +36,8 @@ enum ExposedServices {
     InputDeviceRegistry(InputDeviceRegistryRequestStream),
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags = [ "scene_manager" ])]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["scene_manager"]).expect("Failed to init syslog");
-
     let mut fs = ServiceFs::new_local();
 
     inspect_runtime::serve(inspect::component::inspector(), &mut fs)?;
