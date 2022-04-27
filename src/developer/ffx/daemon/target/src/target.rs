@@ -30,7 +30,7 @@ use {
     std::default::Default,
     std::fmt,
     std::fmt::Debug,
-    std::hash::Hash,
+    std::hash::{Hash, Hasher},
     std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
     std::rc::{Rc, Weak},
     std::sync::Arc,
@@ -50,12 +50,20 @@ pub enum TargetAddrType {
     Fastboot(FastbootInterface),
 }
 
-#[allow(clippy::derive_hash_xor_eq)] // TODO(fxbug.dev/99006)
-#[derive(Debug, Clone, Hash)]
+#[derive(Debug, Clone)]
 pub struct TargetAddrEntry {
     pub addr: TargetAddr,
     pub timestamp: DateTime<Utc>,
     pub addr_type: TargetAddrType,
+}
+
+impl Hash for TargetAddrEntry {
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: Hasher,
+    {
+        self.addr.hash(state)
+    }
 }
 
 impl PartialEq for TargetAddrEntry {
