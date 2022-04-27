@@ -263,16 +263,4 @@ class RealmBuilder final {
 
 }  // namespace component_testing
 
-// Until all clients of the API have been migrated, keep the legacy namespace.
-// TODO(fxbug.dev/90794): Remove this.
-namespace sys {
-namespace testing {
-namespace experimental {
-using component_testing::Realm;
-using component_testing::RealmBuilder;
-using component_testing::RealmRoot;
-}  // namespace experimental
-}  // namespace testing
-}  // namespace sys
-
 #endif  // LIB_SYS_COMPONENT_CPP_TESTING_REALM_BUILDER_H_

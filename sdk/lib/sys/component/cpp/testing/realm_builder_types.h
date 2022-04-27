@@ -244,23 +244,4 @@ class ConfigValue {
 
 }  // namespace component_testing
 
-// Until all clients of the API have been migrated, keep the legacy namespace.
-// TODO(fxbug.dev/90794): Remove this.
-namespace sys {
-namespace testing {
-using component_testing::Capability;
-using component_testing::ChildOptions;
-using component_testing::ChildRef;
-using component_testing::Directory;
-using component_testing::LocalComponent;
-using component_testing::LocalComponentHandles;
-using component_testing::ParentRef;
-using component_testing::Protocol;
-using component_testing::Ref;
-using component_testing::Route;
-using component_testing::Service;
-using component_testing::StartupMode;
-}  // namespace testing
-}  // namespace sys
-
 #endif  // LIB_SYS_COMPONENT_CPP_TESTING_REALM_BUILDER_TYPES_H_

@@ -23,8 +23,7 @@
 
 namespace {
 
-using namespace sys::testing::experimental;
-using namespace sys::testing;
+using namespace component_testing;
 
 constexpr char kEchoServiceServer[] = "echo_service_server";
 constexpr char kEchoServiceServerUrl[] = "#meta/llcpp_echo_service_server.cm";
