@@ -155,10 +155,6 @@ declare_args() {
   # Include the shell commands package.  Used as a parameter to
   # assemble_system().  See documentation there.
   include_shell_commands_package = false
-
-  # Include bootsvc in the bootfs image. Bootsvc is a legacy binary that used to be required for
-  # system boot, but is in the process of being removed (see fxb/44784).
-  include_bootsvc = true
 }
 
 assert(custom_signing_script == "" || !use_vboot,

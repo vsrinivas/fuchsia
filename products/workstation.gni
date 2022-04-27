@@ -168,6 +168,3 @@ use_flatland_by_default = true
 
 # Use Fxfs for the data partition.
 data_filesystem_format = "fxfs"
-
-# Removes the bootsvc binary from the bootfs image.
-include_bootsvc = false

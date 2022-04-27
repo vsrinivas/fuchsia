@@ -52,7 +52,6 @@ assemble_system("guest") {
     "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true",
     "//products/kernel_cmdline:kernel.enable-serial-syscalls--true",
     "//src/power/power-manager:base_config",
-    "//src/bringup/bin/bootsvc:bin",
     "//src/bringup/bin/console-launcher:bootfs",
     "//src/bringup/bin/console:bootfs",
     "//src/bringup/bin/console",
