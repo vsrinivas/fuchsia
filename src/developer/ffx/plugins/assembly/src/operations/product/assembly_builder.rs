@@ -405,8 +405,11 @@ type PackageSet = NamedMap<PackageEntry>;
 impl PackageSet {
     /// Parse the given path as a PackageManifest, and add it to the PackageSet.
     fn add_package_from_path<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
-        let entry = PackageEntry::parse_from(path)?;
-        self.try_insert_unique(entry.name().to_owned(), entry)
+        {
+            let entry = PackageEntry::parse_from(path)?;
+            self.try_insert_unique(entry.name().to_owned(), entry)
+        }
+        .with_context(|| format!("Adding package to set: {}", self.name))
     }
 
     /// Convert the PackageSet into an iterable collection of Paths.
@@ -419,6 +422,7 @@ type FileEntryMap = NamedMap<PathBuf>;
 impl FileEntryMap {
     fn add_entry(&mut self, entry: FileEntry) -> Result<()> {
         self.try_insert_unique(entry.destination, entry.source)
+            .with_context(|| format!("Adding entry to set: {}", self.name))
     }
 
     fn into_file_entries(self) -> Vec<FileEntry> {
