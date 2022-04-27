@@ -277,7 +277,7 @@ impl<'a> MultiFvmBuilder<'a> {
     ) -> Result<(Option<Image>, Filesystem)> {
         let (image, filesystem) = match &params {
             FvmFilesystem::BlobFS(config) => {
-                let (path, contents) = construct_blobfs(
+                let path = construct_blobfs(
                     tools.get_tool("blobfs")?,
                     &self.outdir,
                     &self.gendir,
@@ -287,7 +287,7 @@ impl<'a> MultiFvmBuilder<'a> {
                 )
                 .context("Constructing blobfs")?;
                 (
-                    Some(Image::BlobFS { path: path.clone(), contents }),
+                    Some(Image::BlobFS(path.clone())),
                     Filesystem::BlobFS {
                         path,
                         attributes: FilesystemAttributes {

@@ -4,7 +4,6 @@
 
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
-import("//build/images/args.gni")
 import("//build/testing/host_test_data.gni")
 
 go_library("lib") {
@@ -73,13 +72,11 @@ if (is_linux) {
   host_test_data("copy_images") {
     sources = [
       get_label_info("//build/images/fuchsia($target_toolchain)",
+                     "target_out_dir") + "/fuchsia/fvm.blk",
+      get_label_info("//build/images/fuchsia($target_toolchain)",
                      "root_out_dir") + "/fuchsia.zbi",
       "${root_build_dir}/packages.tar.gz",
     ]
-    if (!bootfs_only) {
-      sources += [ get_label_info("//build/images/fuchsia($target_toolchain)",
-                                  "target_out_dir") + "/fuchsia/fvm.blk" ]
-    }
     outputs = [ "${_build_out}/{{source_file_part}}" ]
     deps = [
       "//build/gn:package_archive($target_toolchain)",

@@ -8,7 +8,6 @@ use anyhow::{Context, Result};
 use assembly_blobfs::BlobFSBuilder;
 use assembly_config::ImageAssemblyConfig;
 use assembly_images_config::BlobFS;
-use assembly_images_manifest::BlobfsContents;
 use assembly_tool::Tool;
 use std::path::{Path, PathBuf};
 
@@ -19,19 +18,16 @@ pub fn construct_blobfs(
     image_config: &ImageAssemblyConfig,
     blobfs_config: &BlobFS,
     base_package: &BasePackage,
-) -> Result<(PathBuf, BlobfsContents)> {
-    let mut contents = BlobfsContents::default();
+) -> Result<PathBuf> {
     let mut blobfs_builder = BlobFSBuilder::new(blobfs_tool, blobfs_config.layout.to_string());
     blobfs_builder.set_compressed(blobfs_config.compress);
 
     // Add the base and cache packages.
     for package_manifest_path in &image_config.base {
         blobfs_builder.add_package(&package_manifest_path)?;
-        contents.packages.base.add_package(package_manifest_path)?;
     }
     for package_manifest_path in &image_config.cache {
         blobfs_builder.add_package(&package_manifest_path)?;
-        contents.packages.cache.add_package(package_manifest_path)?;
     }
 
     // Add the base package and its contents.
@@ -43,7 +39,7 @@ pub fn construct_blobfs(
     // Build the blobfs and return its path.
     let blobfs_path = outdir.as_ref().join("blob.blk");
     blobfs_builder.build(gendir, &blobfs_path).context("Failed to build the blobfs")?;
-    Ok((blobfs_path, contents))
+    Ok(blobfs_path)
 }
 
 #[cfg(test)]
