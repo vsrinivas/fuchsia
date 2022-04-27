@@ -1372,8 +1372,8 @@ impl FileOps for ProcMapsFile {
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        let state = self.task.mm.state.read();
         let iter = move |cursor: UserAddress, sink: &mut SeqFileBuf| {
+            let state = self.task.mm.state.read();
             let mut iter = state.mappings.iter_starting_at(&cursor);
             if let Some((range, map)) = iter.next() {
                 let line_length = write!(
