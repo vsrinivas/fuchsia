@@ -129,7 +129,7 @@ pub(crate) fn path_from_file_url(product_url: &url::Url) -> Option<PathBuf> {
 /// fragment portion of the URL.
 pub(crate) fn pb_names_from_path(path: &Path) -> Result<Vec<String>> {
     let mut entries = Entries::new();
-    entries.add_from_path(path)?;
+    entries.add_from_path(path).context("adding from path")?;
     Ok(entries
         .iter()
         .filter_map(|entry| match entry {
@@ -152,7 +152,7 @@ pub(crate) async fn local_path_helper(
         if dir {
             // TODO(fxbug.dev/98009): Unify the file layout between local and remote
             // product bundles to avoid this hack.
-            let sdk = ffx_config::get_sdk().await.context("PBMS ffx config get sdk")?;
+            let sdk = ffx_config::get_sdk().await.context("getting ffx config sdk")?;
             let sdk_root = sdk.get_path_prefix();
             if path.starts_with(&sdk_root) {
                 Ok(sdk_root.to_path_buf())
@@ -165,7 +165,7 @@ pub(crate) async fn local_path_helper(
     } else {
         let url = url_sans_fragment(&product_url)?;
         let storage_path: PathBuf =
-            ffx_config::get(CONFIG_STORAGE_PATH).await.context("get CONFIG_STORAGE_PATH")?;
+            ffx_config::get(CONFIG_STORAGE_PATH).await.context("getting CONFIG_STORAGE_PATH")?;
         Ok(storage_path.join(pb_dir_name(&url)).join(add_dir))
     }
 }
@@ -197,23 +197,23 @@ where
 
     fetch_product_metadata(&vec![url.to_owned()], verbose, writer)
         .await
-        .context("fetch metadata")?;
+        .context("fetching metadata")?;
 
     let storage_path: PathBuf =
-        ffx_config::get(CONFIG_STORAGE_PATH).await.context("get CONFIG_STORAGE_PATH")?;
+        ffx_config::get(CONFIG_STORAGE_PATH).await.context("getting CONFIG_STORAGE_PATH")?;
     let local_repo_dir = storage_path.join(pb_dir_name(&url));
     let file_path = local_repo_dir.join("product_bundles.json");
     if !file_path.is_file() {
         bail!("Failed to download metadata.");
     }
     let mut entries = Entries::new();
-    entries.add_from_path(&file_path).context("add entries from gcs")?;
+    entries.add_from_path(&file_path).context("adding entries from gcs")?;
     let product_bundle = find_product_bundle(&entries, &Some(product_name.to_string()))
-        .context("find product bundle")?;
+        .context("finding product bundle")?;
 
     writeln!(writer, "Getting product data for {:?}", product_bundle.name)?;
     let local_dir = local_repo_dir.join(&product_bundle.name).join("images");
-    async_fs::create_dir_all(&local_dir).await.context("create directory")?;
+    async_fs::create_dir_all(&local_dir).await.context("creating directory")?;
     for image in &product_bundle.images {
         if verbose {
             writeln!(writer, "    image: {:?}", image)?;
@@ -221,14 +221,14 @@ where
             write!(writer, ".")?;
         }
         let base_url = url::Url::parse(&image.base_uri)
-            .with_context(|| format!("parse image.base_uri {:?}", image.base_uri))?;
+            .with_context(|| format!("parsing image.base_uri {:?}", image.base_uri))?;
         fetch_by_format(&image.format, &base_url, &local_dir, verbose, writer)
             .await
-            .with_context(|| format!("Images for {}.", product_bundle.name))?;
+            .with_context(|| format!("fetching images for {}.", product_bundle.name))?;
     }
     writeln!(writer, "Getting package data for {:?}", product_bundle.name)?;
     let local_dir = local_repo_dir.join(&product_bundle.name).join("packages");
-    async_fs::create_dir_all(&local_dir).await.context("create directory")?;
+    async_fs::create_dir_all(&local_dir).await.context("creating directory")?;
 
     // TODO(fxbug.dev/89775): Replace this with the library from fxbug.dev/89775.
     fetch_package_tgz(verbose, writer, &local_dir, &product_bundle).await?;
@@ -288,7 +288,7 @@ async fn get_version_for_packages(
     if version.is_none() {
         // If there is no metadata, or it did not contain build_info_version, use the
         // SDK version.
-        let sdk = ffx_config::get_sdk().await.context("PBMS ffx config get sdk")?;
+        let sdk = ffx_config::get_sdk().await.context("getting ffx config sdk")?;
         version = match sdk.get_version() {
             SdkVersion::Version(version) => Some(version.to_string()),
             SdkVersion::InTree => None,
@@ -310,7 +310,7 @@ where
 {
     let version = get_version_for_packages(&product_bundle.metadata)
         .await
-        .context("determine version for package fetching")?;
+        .context("determining version for package fetching")?;
 
     // TODO(fxbug.dev/98529): Handle the non-standard name for terminal.*.
     let file_name = match product_bundle.name.as_str() {
@@ -327,7 +327,7 @@ where
     let url = Url::parse(&package_url)?;
 
     // Download the package tgz into a temp directory.
-    let temp_dir = tempfile::TempDir::new_in(&local_dir).context("temp dir")?;
+    let temp_dir = tempfile::TempDir::new_in(&local_dir).context("creating temp dir")?;
     match fetch_by_format(&"tgz", &url, &temp_dir.path(), verbose, writer).await {
         Ok(()) => {}
         Err(err) => {
@@ -348,7 +348,7 @@ where
     // the multiple-stream-aware gzip decoder.
     let archive_path = temp_dir.path().join(&file_name);
     let file = std::fs::File::open(&archive_path)
-        .with_context(|| format!("open archive {:?}", archive_path))?;
+        .with_context(|| format!("opening archive {:?}", archive_path))?;
     let file = flate2::read::MultiGzDecoder::new(file);
     let mut archive = tar::Archive::new(file);
 
@@ -506,9 +506,9 @@ where
     if product_url.scheme() == GS_SCHEME {
         fetch_from_gcs(product_url.as_str(), local_dir, verbose, writer)
             .await
-            .context("Download from GCS.")?;
+            .context("Downloading from GCS.")?;
     } else if product_url.scheme() == "http" || product_url.scheme() == "https" {
-        fetch_from_web(product_url, local_dir).await.context("fetch from http(s)")?;
+        fetch_from_web(product_url, local_dir).await.context("fetching from http(s)")?;
     } else if let Some(_) = &path_from_file_url(product_url) {
         // Since the file is already local, no fetch is necessary.
     } else {

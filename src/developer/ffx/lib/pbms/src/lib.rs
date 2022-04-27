@@ -45,8 +45,8 @@ pub async fn update_metadata<W>(verbose: bool, writer: &mut W) -> Result<()>
 where
     W: Write + Sync,
 {
-    let repos = pbm_repo_list().await.context("get repo list")?;
-    fetch_product_metadata(&repos, verbose, writer).await.context("fetch product metadata")
+    let repos = pbm_repo_list().await.context("getting repo list")?;
+    fetch_product_metadata(&repos, verbose, writer).await.context("fetching product metadata")
 }
 
 /// Gather a list of PBM reference URLs which include the product bundle entry
@@ -58,10 +58,10 @@ pub async fn product_bundle_urls() -> Result<Vec<url::Url>> {
     let mut result = Vec::new();
 
     // Collect product bundle URLs from the file paths in ffx config.
-    for repo in pbm_repo_list().await.context("get repo list")? {
+    for repo in pbm_repo_list().await.context("getting repo list")? {
         if let Some(path) = &path_from_file_url(&repo) {
             let names =
-                pb_names_from_path(&Path::new(&path)).context("load product bundle names")?;
+                pb_names_from_path(&Path::new(&path)).context("loading product bundle names")?;
             for name in names {
                 let mut product_url = repo.to_owned();
                 product_url.set_fragment(Some(&name));
@@ -71,7 +71,7 @@ pub async fn product_bundle_urls() -> Result<Vec<url::Url>> {
     }
 
     let storage_path: PathBuf =
-        ffx_config::get(CONFIG_STORAGE_PATH).await.context("get CONFIG_STORAGE_PATH")?;
+        ffx_config::get(CONFIG_STORAGE_PATH).await.context("getting CONFIG_STORAGE_PATH")?;
     if !storage_path.is_dir() {
         // Early out before calling read_dir.
         return Ok(result);
@@ -80,8 +80,8 @@ pub async fn product_bundle_urls() -> Result<Vec<url::Url>> {
     // Collect product bundle URLs from the downloaded information. These
     // entries may not be currently referenced in the ffx config. This is where
     // product bundles from old versions will be pulled in, for example.
-    let mut dir_entries = async_fs::read_dir(storage_path).await.context("read vendors dir")?;
-    while let Some(dir_entry) = dir_entries.try_next().await.context("read directory")? {
+    let mut dir_entries = async_fs::read_dir(storage_path).await.context("reading vendors dir")?;
+    while let Some(dir_entry) = dir_entries.try_next().await.context("reading directory")? {
         if dir_entry.path().is_dir() {
             if let Ok(repo_info) = RepoInfo::load(&dir_entry.path().join("info")) {
                 let names = pb_names_from_path(&dir_entry.path().join("product_bundles.json"))?;
@@ -103,9 +103,9 @@ pub async fn product_bundle_urls() -> Result<Vec<url::Url>> {
 /// If `product_url` is None or not a URL, then an attempt will be made to find
 /// default entries.
 pub async fn fms_entries_from(product_url: &url::Url) -> Result<Entries> {
-    let path = get_metadata_glob(product_url).await.context("get metadata")?;
+    let path = get_metadata_glob(product_url).await.context("getting metadata")?;
     let mut entries = Entries::new();
-    entries.add_from_path(&path).context("add entries")?;
+    entries.add_from_path(&path).context("adding entries")?;
     Ok(entries)
 }
 
@@ -120,7 +120,7 @@ pub async fn fms_entries_from(product_url: &url::Url) -> Result<Entries> {
 /// Tip: Call `update_metadata()` to get up to date choices (or not, if the
 ///      intent is to select from what's already there).
 pub async fn select_product_bundle(looking_for: &Option<String>) -> Result<url::Url> {
-    let mut urls = product_bundle_urls().await.context("get product bundle URLs")?;
+    let mut urls = product_bundle_urls().await.context("getting product bundle URLs")?;
     urls.sort();
     urls.reverse();
     if let Some(looking_for) = &looking_for {
@@ -153,7 +153,7 @@ pub async fn select_product_bundle(looking_for: &Option<String>) -> Result<url::
 /// used.
 pub async fn is_pb_ready(product_url: &url::Url) -> Result<bool> {
     assert!(product_url.as_str().contains("#"));
-    Ok(get_images_dir(product_url).await.context("get images dir")?.is_dir())
+    Ok(get_images_dir(product_url).await.context("getting images dir")?.is_dir())
 }
 
 /// Download data related to the product.
@@ -180,7 +180,9 @@ where
         writeln!(writer, "Only GCS downloads are supported at this time.")?;
         return Ok(());
     }
-    get_product_data_from_gcs(product_url, verbose, writer).await.context("read pbms entries")?;
+    get_product_data_from_gcs(product_url, verbose, writer)
+        .await
+        .context("reading pbms entries")?;
     Ok(())
 }
 
@@ -208,7 +210,7 @@ pub async fn get_metadata_dir(product_url: &url::Url) -> Result<PathBuf> {
     assert!(!product_url.fragment().is_none());
     Ok(get_metadata_glob(product_url)
         .await
-        .context("get metadata")?
+        .context("getting metadata")?
         .parent()
         .expect("Metadata files should have a parent")
         .to_path_buf())

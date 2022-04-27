@@ -65,14 +65,16 @@ impl Entries {
     /// `path` may be a glob pattern representing multiple files.
     pub fn add_from_path(&mut self, path: &Path) -> Result<()> {
         let path_str = path.to_string_lossy().to_string();
-        for path in glob(&path_str).context("Bad glob pattern.")? {
+        for path in glob(&path_str).context("globbing pattern.")? {
             let path = path?;
             if path.extension() != Some(OsStr::new("json")) {
                 bail!("Expecting only '*.json' files, got {:?}.", path);
             }
-            let file = File::open(&path).context(format!("{:?}", path))?;
+            let file = File::open(&path).with_context(|| format!("opening {:?}", path))?;
             let mut buf_reader = BufReader::new(file);
-            self.add_json(&mut buf_reader).context(format!("{:?}", path))?;
+            self.add_json(&mut buf_reader)
+                .map_err(|e| log::warn!("unable to parse {:?} {:?}", path, e))
+                .ok();
         }
         Ok(())
     }
