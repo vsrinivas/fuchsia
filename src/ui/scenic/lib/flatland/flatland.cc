@@ -126,7 +126,7 @@ Flatland::~Flatland() {
 }
 
 void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
-  TRACE_DURATION("gfx", "Flatland::Present");
+  TRACE_DURATION("gfx", "Flatland::Present", "debug_name", TA_STRING(debug_name_.c_str()));
   TRACE_FLOW_END("gfx", "Flatland::Present", present_count_);
   ++present_count_;
 
@@ -1323,6 +1323,9 @@ void Flatland::ReleaseImage(ContentId image_id) {
 }
 
 void Flatland::SetDebugName(std::string name) {
+  TRACE_INSTANT("gfx", "Flatland::SetDebugName()", TRACE_SCOPE_PROCESS, "name",
+                TA_STRING(name.c_str()));
+
   std::stringstream stream;
   if (!name.empty())
     stream << "Flatland client(" << name << "): ";

@@ -229,6 +229,21 @@ impl FlatlandViewStrategy {
             flatland.set_debug_name(&debug_name)?;
         }
 
+        // Add trace event with the Flatland channel's koid, so that it can be correlated with a
+        // Flatland session within Scenic.
+        {
+            use fidl::endpoints::Proxy;
+            use fuchsia_zircon::AsHandleRef;
+
+            let koid = flatland.as_channel().get_koid().unwrap().raw_koid();
+            instant!(
+                "gfx",
+                "FlatlandViewStrategy::new",
+                fuchsia_trace::Scope::Process,
+                "flatland_koid" => koid
+            );
+        }
+
         flatland.create_transform(&mut TRANSFORM_ID.clone())?;
         flatland.set_root_transform(&mut TRANSFORM_ID.clone())?;
         setup_handle_flatland_events(flatland.take_event_stream(), key, app_sender.clone());

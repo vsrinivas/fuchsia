@@ -12,6 +12,7 @@
 #include <utility>
 
 #include "lib/syslog/cpp/macros.h"
+#include "src/lib/fsl/handles/object_info.h"
 
 namespace flatland {
 
@@ -77,6 +78,13 @@ void FlatlandManager::CreateFlatland(
   FX_DCHECK(flatland_instances_.find(id) == flatland_instances_.end());
   FX_DCHECK(flatland_display_instances_.find(id) == flatland_display_instances_.end());
 
+  zx_koid_t endpoint_id;
+  zx_koid_t peer_endpoint_id;
+  std::tie(endpoint_id, peer_endpoint_id) = fsl::GetKoids(request.channel().get());
+
+  const std::string name =
+      "Flatland ID=" + std::to_string(id) + " PEER=" + std::to_string(peer_endpoint_id);
+
   // Allocate the worker Loop first so that the Flatland impl can be bound to its dispatcher.
   auto result = flatland_instances_.emplace(id, std::make_unique<FlatlandInstance>());
   FX_DCHECK(result.second);
@@ -89,7 +97,6 @@ void FlatlandManager::CreateFlatland(
       std::bind(&FlatlandManager::DestroyInstanceFunction, this, id), flatland_presenter_,
       link_system_, uber_struct_system_->AllocateQueueForSession(id), buffer_collection_importers_);
 
-  const std::string name = "Flatland ID=" + std::to_string(id);
   zx_status_t status = instance->loop->loop().StartThread(name.c_str());
   FX_DCHECK(status == ZX_OK);
 
