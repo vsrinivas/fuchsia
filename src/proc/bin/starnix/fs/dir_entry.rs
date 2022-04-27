@@ -321,6 +321,23 @@ impl DirEntry {
         Ok(())
     }
 
+    /// Returns whether this entry is a descendant of |other|.
+    pub fn is_descendant_of(self: &DirEntryHandle, other: &DirEntryHandle) -> bool {
+        let mut current = self.clone();
+        loop {
+            if Arc::ptr_eq(&current, &other) {
+                // We found |other|.
+                return true;
+            }
+            if let Some(next) = current.parent() {
+                current = next;
+            } else {
+                // We reached the root of the file system.
+                return false;
+            }
+        }
+    }
+
     /// Rename the file with old_basename in old_parent to new_basename in
     /// new_parent.
     ///
@@ -365,6 +382,18 @@ impl DirEntry {
             // trying to acquire these locks.
             let _lock = fs.rename_mutex.lock();
 
+            // Compute the list of ancestors of new_parent to check whether new_parent is a
+            // descendant of the renamed node. This must be computed before taking any lock to
+            // prevent lock inversions.
+            let mut new_parent_ancestor_list = Vec::<DirEntryHandle>::new();
+            {
+                let mut current = Some(new_parent.clone());
+                while let Some(entry) = current {
+                    current = entry.parent();
+                    new_parent_ancestor_list.push(entry);
+                }
+            }
+
             // We cannot simply grab the locks on old_parent and new_parent
             // independently because old_parent and new_parent might be the
             // same directory entry. Instead, we use the RenameGuard helper to
@@ -383,37 +412,9 @@ impl DirEntry {
                 return error!(EBUSY);
             }
 
-            // This specialized function ensure that we do not deadlock while
-            // walking the parent chain of the given entry. We need to check
-            // step in case we encounter old_parent or new_parent in the chain.
-            let mut is_descendant_of = |entry: &DirEntryHandle, other: &DirEntryHandle| {
-                let mut current = entry.clone();
-                loop {
-                    if Arc::ptr_eq(&current, &other) {
-                        // We found |other|.
-                        return true;
-                    }
-                    // We cannot use DirEntry::parent because that might take one of
-                    // the locks we already hold on DirEntryState.
-                    let maybe_parent = if Arc::ptr_eq(&current, old_parent) {
-                        state.old_parent().parent.clone()
-                    } else if Arc::ptr_eq(&current, new_parent) {
-                        state.new_parent().parent.clone()
-                    } else {
-                        current.parent()
-                    };
-                    if let Some(next) = maybe_parent {
-                        current = next;
-                    } else {
-                        // We reached the root of the file system.
-                        return false;
-                    }
-                }
-            };
-
             // If new_parent is a descendant of renamed, the operation would
             // create a cycle. That's disallowed.
-            if is_descendant_of(&new_parent, &renamed) {
+            if new_parent_ancestor_list.into_iter().any(|entry| Arc::ptr_eq(&entry, &renamed)) {
                 return error!(EINVAL);
             }
 
@@ -573,7 +574,14 @@ impl DirEntry {
                 node.info().mode & FileMode::IFMT != FileMode::EMPTY,
                 "FsNode initialization did not populate the FileMode in FsNodeInfo."
             );
-            Ok(DirEntry::new(node, Some(self.clone()), name.to_vec()))
+            let entry = DirEntry::new(node, Some(self.clone()), name.to_vec());
+            #[cfg(test)]
+            {
+                // Take the lock on child while holding the one on the parent to ensure any wrong ordering
+                // will trigger the tracing-mutex at the right call site.
+                let _l1 = entry.state.read();
+            }
+            Ok(entry)
         };
 
         match state.children.entry(name.to_vec()) {
@@ -656,11 +664,20 @@ impl<'a, 'b> RenameGuard<'a, 'b> {
         if Arc::ptr_eq(&old_parent, &new_parent) {
             Self { old_parent_guard: old_parent.state.write(), new_parent_guard: None }
         } else {
-            // TODO: gVisor takes these locks in ancestor-to-descendant
-            // order. Do we need to do that as well?
-            Self {
-                old_parent_guard: old_parent.state.write(),
-                new_parent_guard: Some(new_parent.state.write()),
+            // Following gVisor, these locks are taken in ancestor-to-descendant order.
+            // Moreover, if the node are not comparable, they are taken from smallest inode to
+            // biggest.
+            if new_parent.is_descendant_of(old_parent)
+                || (!old_parent.is_descendant_of(new_parent)
+                    && old_parent.node.inode_num < new_parent.node.inode_num)
+            {
+                let old_parent_guard = old_parent.state.write();
+                let new_parent_guard = new_parent.state.write();
+                Self { old_parent_guard, new_parent_guard: Some(new_parent_guard) }
+            } else {
+                let new_parent_guard = new_parent.state.write();
+                let old_parent_guard = old_parent.state.write();
+                Self { old_parent_guard, new_parent_guard: Some(new_parent_guard) }
             }
         }
     }
