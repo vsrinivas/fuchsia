@@ -97,6 +97,7 @@ pub mod handler;
 pub mod ingress;
 pub mod inspect;
 pub mod message;
+pub(crate) mod migration;
 pub mod monitor;
 pub mod service_context;
 pub mod storage;

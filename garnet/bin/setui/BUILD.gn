@@ -95,6 +95,7 @@ rustc_library("lib") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.camera3:fuchsia.camera3-rustc",
     "//sdk/fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
@@ -149,6 +150,7 @@ rustc_library("lib") {
   ]
 
   test_deps = [
+    "//src/lib/storage/vfs/rust:vfs",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:pin-utils",
   ]
@@ -269,6 +271,7 @@ rustc_library("lib") {
     "src/message/message_hub.rs",
     "src/message/messenger.rs",
     "src/message/receptor.rs",
+    "src/migration.rs",
     "src/monitor.rs",
     "src/monitor/base.rs",
     "src/monitor/environment.rs",
