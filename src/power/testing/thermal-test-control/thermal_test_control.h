@@ -11,29 +11,6 @@
 
 #include <test/thermal/cpp/fidl.h>
 
-class LegacyControllerImpl : public fuchsia::thermal::Controller, public ::test::thermal::Control {
- public:
-  explicit LegacyControllerImpl(std::unique_ptr<sys::ComponentContext>& context);
-  void Subscribe(fidl::InterfaceHandle<fuchsia::thermal::Actor> actor,
-                 fuchsia::thermal::ActorType actor_type,
-                 std::vector<fuchsia::thermal::TripPoint> trip_points,
-                 SubscribeCallback callback) override;
-  void GetSubscriberInfo(GetSubscriberInfoCallback callback) override;
-  void SetThermalState(uint32_t subscriber_index, uint32_t state,
-                       SetThermalStateCallback callback) override;
-
- private:
-  struct Subscriber {
-    fidl::InterfacePtr<fuchsia::thermal::Actor> actor;
-    fuchsia::thermal::ActorType type;
-    std::vector<fuchsia::thermal::TripPoint> points;
-  };
-
-  fidl::Binding<fuchsia::thermal::Controller> thermal_controller_binding_;
-  fidl::Binding<test::thermal::Control> test_controller_binding_;
-  std::vector<Subscriber> subscribers_;
-};
-
 class ClientStateWatcher : public fuchsia::thermal::ClientStateWatcher {
  public:
   ClientStateWatcher();
@@ -72,10 +49,6 @@ class ThermalTestControl : public fuchsia::thermal::ClientStateConnector,
   bool IsClientTypeConnectedInternal(std::string client_type);
 
   std::unique_ptr<sys::ComponentContext> context_;
-
-  // TODO(fxbug.dev/96172): Remove this legacy controller implementation after AudioCore moves to
-  // the new ClientStateController.
-  std::unique_ptr<LegacyControllerImpl> legacy_controller_impl_;
 
   fidl::Binding<fuchsia::thermal::ClientStateConnector> client_state_connector_binding_;
   fidl::Binding<test::thermal::ClientStateControl> test_controller_binding_;

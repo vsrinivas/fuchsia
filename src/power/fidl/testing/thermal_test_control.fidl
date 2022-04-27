@@ -5,45 +5,6 @@ library test.thermal;
 
 using fuchsia.thermal;
 
-type SubscriberInfo = struct {
-    /// A value to indicate which type of subsystem an Actor connection represents.
-    actor_type fuchsia.thermal.ActorType;
-
-    /// The number of states (including 0) supported by this subscriber.
-    num_thermal_states uint32;
-};
-
-/// This arbitrarily-chosen value is the maximum number of entries in the vector
-/// `thermal_states_for_subscribers` returned by `GetSupportedThermalStates`.
-const MAX_SUBSCRIBER_COUNT uint32 = 256;
-
-/// test.thermal.Control
-///
-/// This protocol enables tests to manipulate thermal states via a test service.
-/// A service would implement both this protocol and fuchsia::thermal::Controller.
-/// It would be injected into the environment of the component under test. Once
-/// thermal actors have subscribed, a test suite would retrieve the number of
-/// subscribed thermal actors and their supported thermal states, and would
-/// directly trigger state-change commands sent to subscribed actors.
-// TODO(fxbug.dev/96172): Delete this protocol after AudioCore migrates to the
-// new `ClientStateControl` protocol.
-@discoverable
-protocol Control {
-    /// Retrieve the subscriber type and the number of thermal states supported by
-    /// each subscriber, sorted by time of subscription (from earliest to latest).
-    GetSubscriberInfo() -> (struct {
-        subscribers vector<SubscriberInfo>:MAX_SUBSCRIBER_COUNT;
-    });
-
-    /// Send a thermal state change to the specified subscriber.
-    /// This method's completion occurs only after its internal
-    /// fuchsia.thermal.Agent.SetThermalState call has completed.
-    SetThermalState(struct {
-        subscriber uint32;
-        state uint32;
-    }) -> ();
-};
-
 /// Enables tests to manipulate the thermal state of clients via a test service.
 ///
 /// A service would implement both this protocol and
