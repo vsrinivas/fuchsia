@@ -20,8 +20,8 @@ test("fidl_cpp_natural_coding_tests_bin") {
   ]
   deps = [
     "//sdk/lib/stdcompat",
+    "//sdk/testing/fidl/types_tests:test.types_cpp",
     "//src/lib/fidl/cpp",
-    "//src/tests/fidl/types_tests:test.types_cpp",
     "//zircon/system/ulib/zxtest",
   ]
 }

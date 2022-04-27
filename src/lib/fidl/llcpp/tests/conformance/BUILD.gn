@@ -87,8 +87,8 @@ fuchsia_unittest_package("fidl_llcpp_manual_conformance_tests") {
 test("fidl_llcpp_request_response_tests_bin") {
   sources = [ "request_response_test.cc" ]
   deps = [
+    "//sdk/testing/fidl/types_tests:test.types_llcpp",
     "//src/lib/fxl/test:gtest_main",
-    "//src/tests/fidl/types_tests:test.types_llcpp",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

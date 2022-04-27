@@ -22,9 +22,9 @@ test("fidl_cpp_conversion_tests_bin") {
     "//third_party/googletest:gtest",
   ]
   if (is_fuchsia) {
-    deps += [ "//src/tests/fidl/types_tests:test.types_cpp" ]
+    deps += [ "//sdk/testing/fidl/types_tests:test.types_cpp" ]
   } else {
-    deps += [ "//src/tests/fidl/types_tests:test.types_type_conversions" ]
+    deps += [ "//sdk/testing/fidl/types_tests:test.types_type_conversions" ]
   }
 }
 
