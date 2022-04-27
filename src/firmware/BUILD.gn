@@ -12,5 +12,6 @@ group("tests") {
     "lib/fastboot/test",
     "lib/zbi/test",
     "lib/zircon_boot/test",
+    "tools:tests",
   ]
 }
