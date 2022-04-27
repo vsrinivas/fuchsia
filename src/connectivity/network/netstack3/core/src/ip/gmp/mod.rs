@@ -228,11 +228,13 @@ impl<A: IpAddress, T> MulticastGroupSet<A, T> {
 /// Group Management Protocol, Version 2 (IGMPv2) for IPv4 or the Multicast
 /// Listener Discovery (MLD) protocol for IPv6.
 pub(crate) trait GmpHandler<I: Ip>: IpDeviceIdContext<I> {
-    /// Handles GMP being enabled.
+    /// Handles GMP potentially being enabled.
     ///
     /// Attempts to transition memberships in the non-member state to a member
-    /// state.
-    fn gmp_handle_enabled(&mut self, device: Self::DeviceId);
+    /// state. Should be called anytime a configuration change occurs which
+    /// results in GMP potentially being enabled. E.g. when IP or GMP
+    /// transitions to being enabled.
+    fn gmp_handle_maybe_enabled(&mut self, device: Self::DeviceId);
 
     /// Handles GMP being disabled.
     ///
@@ -904,7 +906,7 @@ where
     Err(C::not_a_member_err(group_addr))
 }
 
-fn gmp_handle_enabled<C, I, PS>(sync_ctx: &mut C, device: C::DeviceId)
+fn gmp_handle_maybe_enabled<C, I, PS>(sync_ctx: &mut C, device: C::DeviceId)
 where
     C: GmpContext<I, PS> + InstantContext,
     PS: ProtocolSpecific + Default,

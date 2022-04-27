@@ -292,6 +292,7 @@ fn enable_ipv6_device<C: Ipv6DeviceContext + GmpHandler<Ipv6> + RsHandler + DadH
 
     // All nodes should join the all-nodes multicast group.
     join_ip_multicast(sync_ctx, device_id, Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS);
+    GmpHandler::gmp_handle_maybe_enabled(sync_ctx, device_id);
 
     // Perform DAD for all addresses when enabling a device.
     //
@@ -383,7 +384,22 @@ fn disable_ipv6_device<
             }
         });
 
+    GmpHandler::gmp_handle_disabled(sync_ctx, device_id);
     leave_ip_multicast(sync_ctx, device_id, Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS);
+}
+
+fn enable_ipv4_device<C: IpDeviceContext<Ipv4> + GmpHandler<Ipv4>>(
+    sync_ctx: &mut C,
+    device_id: C::DeviceId,
+) {
+    GmpHandler::gmp_handle_maybe_enabled(sync_ctx, device_id);
+}
+
+fn disable_ipv4_device<C: IpDeviceContext<Ipv4> + GmpHandler<Ipv4>>(
+    sync_ctx: &mut C,
+    device_id: C::DeviceId,
+) {
+    GmpHandler::gmp_handle_disabled(sync_ctx, device_id);
 }
 
 /// Gets the IPv4 address and subnet pairs associated with this device.
@@ -764,15 +780,23 @@ pub(crate) fn set_ipv4_configuration<C: IpDeviceContext<Ipv4> + GmpHandler<Ipv4>
     config: Ipv4DeviceConfiguration,
 ) {
     let Ipv4DeviceConfiguration {
-        ip_config: IpDeviceConfiguration { ip_enabled: _, gmp_enabled: next_gmp_enabled },
+        ip_config:
+            IpDeviceConfiguration { ip_enabled: next_ip_enabled, gmp_enabled: next_gmp_enabled },
     } = config;
     let Ipv4DeviceConfiguration {
-        ip_config: IpDeviceConfiguration { ip_enabled: _, gmp_enabled: prev_gmp_enabled },
+        ip_config:
+            IpDeviceConfiguration { ip_enabled: prev_ip_enabled, gmp_enabled: prev_gmp_enabled },
     } = sync_ctx.get_ip_device_state_mut(device_id).config;
     sync_ctx.get_ip_device_state_mut(device_id).config = config;
 
+    if !prev_ip_enabled && next_ip_enabled {
+        enable_ipv4_device(sync_ctx, device_id);
+    } else if prev_ip_enabled && !next_ip_enabled {
+        disable_ipv4_device(sync_ctx, device_id);
+    }
+
     if !prev_gmp_enabled && next_gmp_enabled {
-        GmpHandler::gmp_handle_enabled(sync_ctx, device_id);
+        GmpHandler::gmp_handle_maybe_enabled(sync_ctx, device_id);
     } else if prev_gmp_enabled && !next_gmp_enabled {
         GmpHandler::gmp_handle_disabled(sync_ctx, device_id);
     }
@@ -817,7 +841,7 @@ pub(crate) fn set_ipv6_configuration<
     }
 
     if !prev_gmp_enabled && next_gmp_enabled {
-        GmpHandler::gmp_handle_enabled(sync_ctx, device_id);
+        GmpHandler::gmp_handle_maybe_enabled(sync_ctx, device_id);
     } else if prev_gmp_enabled && !next_gmp_enabled {
         GmpHandler::gmp_handle_disabled(sync_ctx, device_id);
     }
@@ -827,22 +851,15 @@ pub(crate) fn set_ipv6_configuration<
 mod tests {
     use super::*;
 
+    use alloc::vec;
     use fakealloc::collections::HashSet;
 
     use net_types::ip::Ipv6;
 
     use crate::{
         testutil::{assert_empty, DummyCtx, DummyEventDispatcher, TestIpExt as _},
-        Ctx, DeviceId, StackStateBuilder, TimerId, TimerIdInner,
+        Ctx, StackStateBuilder, TimerId, TimerIdInner,
     };
-
-    fn dad_timer_id(device_id: DeviceId, addr: UnicastAddr<Ipv6Addr>) -> TimerId {
-        TimerId(TimerIdInner::Ipv6Device(Ipv6DeviceTimerId::Dad(DadTimerId { device_id, addr })))
-    }
-
-    fn rs_timer_id(device_id: DeviceId) -> TimerId {
-        TimerId(TimerIdInner::Ipv6Device(Ipv6DeviceTimerId::Rs(RsTimerId { device_id })))
-    }
 
     #[test]
     fn enable_disable_ipv6() {
@@ -861,29 +878,64 @@ mod tests {
 
         // Enable the device and observe an auto-generated link-local address,
         // router solicitation and DAD for the auto-generated address.
-        let test_enable_device = |ctx: &mut DummyCtx| {
-            crate::ip::device::set_ipv6_configuration(ctx, device_id, {
-                let mut config = crate::ip::device::get_ipv6_configuration(ctx, device_id);
-                config.ip_config.ip_enabled = true;
-                config
-            });
-            assert_eq!(
-                IpDeviceContext::<Ipv6>::get_ip_device_state(ctx, device_id)
-                    .ip_state
-                    .iter_addrs()
-                    .map(|Ipv6AddressEntry { addr_sub, state: _, config: _ }| {
-                        addr_sub.ipv6_unicast_addr()
-                    })
-                    .collect::<HashSet<_>>(),
-                HashSet::from([ll_addr.ipv6_unicast_addr()]),
-                "enabled device expected to generate link-local address"
-            );
-            ctx.ctx.timer_ctx().assert_timers_installed([
-                (rs_timer_id(device_id), ..),
-                (dad_timer_id(device_id, ll_addr.ipv6_unicast_addr()), ..),
-            ]);
-        };
-        test_enable_device(&mut ctx);
+        let test_enable_device =
+            |ctx: &mut DummyCtx, extra_group: Option<MulticastAddr<Ipv6Addr>>| {
+                crate::ip::device::set_ipv6_configuration(ctx, device_id, {
+                    let mut config = crate::ip::device::get_ipv6_configuration(ctx, device_id);
+                    config.ip_config.ip_enabled = true;
+                    config.ip_config.gmp_enabled = true;
+                    config
+                });
+                assert_eq!(
+                    IpDeviceContext::<Ipv6>::get_ip_device_state(ctx, device_id)
+                        .ip_state
+                        .iter_addrs()
+                        .map(|Ipv6AddressEntry { addr_sub, state: _, config: _ }| {
+                            addr_sub.ipv6_unicast_addr()
+                        })
+                        .collect::<HashSet<_>>(),
+                    HashSet::from([ll_addr.ipv6_unicast_addr()]),
+                    "enabled device expected to generate link-local address"
+                );
+                let mut timers = vec![
+                    (
+                        TimerId(TimerIdInner::Ipv6Device(Ipv6DeviceTimerId::Rs(RsTimerId {
+                            device_id,
+                        }))),
+                        ..,
+                    ),
+                    (
+                        TimerId(TimerIdInner::Ipv6Device(Ipv6DeviceTimerId::Dad(DadTimerId {
+                            device_id,
+                            addr: ll_addr.ipv6_unicast_addr(),
+                        }))),
+                        ..,
+                    ),
+                    (
+                        TimerId(TimerIdInner::Ipv6Device(Ipv6DeviceTimerId::Mld(
+                            MldReportDelay {
+                                device: device_id,
+                                group_addr: local_mac
+                                    .to_ipv6_link_local()
+                                    .addr()
+                                    .to_solicited_node_address(),
+                            }
+                            .into(),
+                        ))),
+                        ..,
+                    ),
+                ];
+                if let Some(group_addr) = extra_group {
+                    timers.push((
+                        TimerId(TimerIdInner::Ipv6Device(Ipv6DeviceTimerId::Mld(
+                            MldReportDelay { device: device_id, group_addr }.into(),
+                        ))),
+                        ..,
+                    ))
+                }
+                ctx.ctx.timer_ctx().assert_timers_installed(timers);
+            };
+        test_enable_device(&mut ctx, None);
 
         let test_disable_device = |ctx: &mut DummyCtx| {
             crate::ip::device::set_ipv6_configuration(ctx, device_id, {
@@ -898,6 +950,8 @@ mod tests {
             IpDeviceContext::<Ipv6>::get_ip_device_state(&ctx, device_id).ip_state.iter_addrs(),
         );
 
+        let multicast_addr = Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS;
+        join_ip_multicast::<Ipv6, _>(&mut ctx, device_id, multicast_addr);
         add_ipv6_addr_subnet(&mut ctx, device_id, ll_addr.to_witness(), AddrConfig::Manual)
             .expect("add MAC based IPv6 link-local address");
         assert_eq!(
@@ -911,7 +965,7 @@ mod tests {
             HashSet::from([ll_addr.ipv6_unicast_addr()])
         );
 
-        test_enable_device(&mut ctx);
+        test_enable_device(&mut ctx, Some(multicast_addr));
         test_disable_device(&mut ctx);
         assert_eq!(
             IpDeviceContext::<Ipv6>::get_ip_device_state(&ctx, device_id)
@@ -925,6 +979,7 @@ mod tests {
             "manual addresses should not be removed on device disable"
         );
 
-        test_enable_device(&mut ctx);
+        leave_ip_multicast::<Ipv6, _>(&mut ctx, device_id, multicast_addr);
+        test_enable_device(&mut ctx, None);
     }
 }

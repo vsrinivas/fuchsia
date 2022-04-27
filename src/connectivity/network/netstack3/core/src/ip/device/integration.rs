@@ -31,7 +31,10 @@ use crate::{
             route_discovery::{Ipv6RouteDiscoveryState, Ipv6RouteDiscoveryStateContext},
             router_solicitation::{Ipv6DeviceRsContext, Ipv6LayerRsContext},
             send_ip_frame,
-            state::{AddressState, IpDeviceState, Ipv6AddressEntry},
+            state::{
+                AddressState, IpDeviceConfiguration, IpDeviceState, Ipv4DeviceConfiguration,
+                Ipv6AddressEntry, Ipv6DeviceConfiguration,
+            },
             IpDeviceIpExt,
         },
         gmp::{
@@ -72,7 +75,11 @@ impl<C: device::BufferIpDeviceContext<Ipv4, EmptyBuf>> IgmpContext for C {
     }
 
     fn igmp_enabled(&self, device: C::DeviceId) -> bool {
-        C::get_ip_device_state(self, device).config.ip_config.gmp_enabled
+        let Ipv4DeviceConfiguration {
+            ip_config: IpDeviceConfiguration { ip_enabled, gmp_enabled },
+        } = C::get_ip_device_state(self, device).config;
+
+        ip_enabled && gmp_enabled
     }
 
     fn get_state_mut_and_rng(
@@ -121,7 +128,13 @@ impl<C: device::BufferIpDeviceContext<Ipv6, EmptyBuf>> MldContext for C {
     }
 
     fn mld_enabled(&self, device: C::DeviceId) -> bool {
-        C::get_ip_device_state(self, device).config.ip_config.gmp_enabled
+        let Ipv6DeviceConfiguration {
+            dad_transmits: _,
+            max_router_solicitations: _,
+            ip_config: IpDeviceConfiguration { ip_enabled, gmp_enabled },
+        } = C::get_ip_device_state(self, device).config;
+
+        ip_enabled && gmp_enabled
     }
 
     fn get_state_mut_and_rng(
