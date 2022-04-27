@@ -32,6 +32,7 @@
 #include <src/lib/uuid/uuid.h>
 
 #include "gpt.h"
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/lib/utf_conversion/utf_conversion.h"
 
 namespace gpt {
@@ -66,8 +67,7 @@ void print_array(const gpt_partition_t* const partitions[kPartitionCount], int c
 zx_status_t write_partial_block(int fd, void* data, size_t size, off_t offset, size_t blocksize) {
   // If input block is already rounded to blocksize, just directly write from our buffer.
   if (size % blocksize == 0) {
-    ssize_t ret = pwrite(fd, data, size, offset);
-    if (ret < 0 || static_cast<size_t>(ret) != size) {
+    if (block_client::SingleWriteBytes(fd, data, size, offset) != ZX_OK) {
       return ZX_ERR_IO;
     }
     return ZX_OK;
@@ -78,8 +78,7 @@ zx_status_t write_partial_block(int fd, void* data, size_t size, off_t offset, s
   std::unique_ptr<uint8_t[]> block(new uint8_t[new_size]);
   memcpy(block.get(), data, size);
   memset(block.get() + size, 0, new_size - size);
-  ssize_t ret = pwrite(fd, block.get(), new_size, offset);
-  if (ret != static_cast<ssize_t>(new_size)) {
+  if (block_client::SingleWriteBytes(fd, block.get(), new_size, offset) != ZX_OK) {
     return ZX_ERR_IO;
   }
   return ZX_OK;
@@ -664,7 +663,6 @@ zx_status_t GptDevice::GetDiffs(uint32_t idx, uint32_t* diffs) const {
 
 zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t block_count,
                             std::unique_ptr<GptDevice>* out_dev) {
-  ssize_t ret;
   off_t offset;
 
   fbl::unique_fd fdp(dup(fd));
@@ -686,8 +684,7 @@ zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t block_count,
   }
 
   offset = 0;
-  ret = pread(fdp.get(), block, blocksize, offset);
-  if (ret != blocksize) {
+  if (block_client::SingleReadBytes(fdp.get(), block, blocksize, offset) != ZX_OK) {
     return ZX_ERR_IO;
   }
 
@@ -695,9 +692,7 @@ zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t block_count,
   offset = static_cast<off_t>(kPrimaryHeaderStartBlock) * blocksize;
   size_t size = MinimumBytesPerCopy(blocksize).value();
   std::unique_ptr<uint8_t[]> buffer(new uint8_t[size]);
-  ret = pread(fdp.get(), buffer.get(), size, offset);
-
-  if (ret < 0 || static_cast<size_t>(ret) != size) {
+  if (block_client::SingleReadBytes(fdp.get(), buffer.get(), size, offset) != ZX_OK) {
     return ZX_ERR_IO;
   }
 
@@ -856,8 +851,9 @@ zx_status_t GptDevice::ClearPartition(uint64_t offset, uint64_t blocks) {
       return ZX_ERR_OUT_OF_RANGE;
     }
 
-    if (pwrite(fd_.get(), zero, sizeof(zero), offset) != static_cast<ssize_t>(sizeof(zero))) {
-      G_PRINTF("Failed to write to block %zu; errno: %d\n", i, errno);
+    auto status = block_client::SingleWriteBytes(fd_.get(), zero, sizeof(zero), offset);
+    if (status != ZX_OK) {
+      G_PRINTF("Failed to write to block %zu; errno: %d\n", i, status);
       return ZX_ERR_IO;
     }
   }

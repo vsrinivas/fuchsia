@@ -19,6 +19,7 @@
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/storage/gpt/gpt.h"
 
 extern bool gUseRamDisk;
@@ -82,7 +83,7 @@ void destroy_gpt(int fd, uint64_t block_size, uint64_t offset, uint64_t block_co
   uint64_t last = offset + block_count - 1;
 
   for (uint64_t i = first; i <= last; i++) {
-    ASSERT_EQ(pwrite(fd, zero, sizeof(zero), block_size * i), (ssize_t)sizeof(zero),
+    ASSERT_OK(block_client::SingleWriteBytes(fd, zero, sizeof(zero), block_size * i),
               "Failed to pwrite");
   }
   // fsync is not supported in rpc-server.cpp
@@ -402,8 +403,7 @@ class LibGptTest {
 
     // Read the block containing the MBR.
     char buff[blk_size_];
-    ssize_t ret = pread(fd_.get(), buff, blk_size_, 0);
-    if (ret < 0) {
+    if (block_client::SingleReadBytes(fd_.get(), buff, blk_size_, 0) != ZX_OK) {
       return ZX_ERR_IO;
     }
 
