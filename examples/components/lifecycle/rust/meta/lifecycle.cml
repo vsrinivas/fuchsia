@@ -7,10 +7,7 @@
 
 // [START example_snippet]
 {
-    include: [
-        "inspect/client.shard.cml",
-        "syslog/client.shard.cml",
-    ],
+    include: [ "syslog/client.shard.cml" ],
 
     // Information about the program to run.
     program: {

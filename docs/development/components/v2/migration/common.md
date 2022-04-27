@@ -162,17 +162,17 @@ ELF runner in Components v2.
     * {Rust}
 
       ```rust
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/lifecycle/rust/src/main.rs" region_tag="imports" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/lifecycle/rust/src/lifecycle.rs" region_tag="imports" adjust_indentation="auto" %}
       // ...
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/lifecycle/rust/src/main.rs" region_tag="lifecycle_handler" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/lifecycle/rust/src/lifecycle.rs" region_tag="lifecycle_handler" adjust_indentation="auto" %}
       ```
 
     * {C++}
 
       ```cpp
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/lifecycle/cpp/main.cc" region_tag="imports" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/lifecycle/cpp/lifecycle.cc" region_tag="imports" adjust_indentation="auto" %}
       // ...
-      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/lifecycle/cpp/main.cc" region_tag="lifecycle_handler" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/lifecycle/cpp/lifecycle.cc" region_tag="lifecycle_handler" adjust_indentation="auto" %}
       ```
 
 Note: For a complete lifecycle example, see

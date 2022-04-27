@@ -4,9 +4,7 @@
 
 use {
     fidl::{handle::AsyncChannel, prelude::*},
-    fuchsia_async::{self as fasync},
-    fuchsia_runtime::{self as fruntime, HandleInfo, HandleType},
-    fuchsia_zircon::{self as zx},
+    fuchsia_runtime::{HandleInfo, HandleType},
     futures_util::stream::TryStreamExt,
     std::process,
     tracing::{error, info},
@@ -17,25 +15,25 @@ use fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream};
 // [END imports]
 
 // [START lifecycle_handler]
-#[fuchsia::main]
+#[fuchsia::main(logging_tags = ["lifecycle", "example"])]
 async fn main() {
     // Take the lifecycle handle provided by the runner
-    match fruntime::take_startup_handle(HandleInfo::new(HandleType::Lifecycle, 0)) {
+    match fuchsia_runtime::take_startup_handle(HandleInfo::new(HandleType::Lifecycle, 0)) {
         Some(lifecycle_handle) => {
             info!("Lifecycle channel received.");
             // Begin listening for lifecycle requests on this channel
-            let x: zx::Channel = lifecycle_handle.into();
+            let x: fuchsia_zircon::Channel = lifecycle_handle.into();
             let async_x = AsyncChannel::from(
-                fasync::Channel::from_channel(x).expect("Async channel conversion failed."),
+                fuchsia_async::Channel::from_channel(x).expect("Async channel conversion failed."),
             );
             let mut req_stream = LifecycleRequestStream::from_channel(async_x);
-            info!("Awaiting request to close");
+            info!("Awaiting request to close...");
             while let Some(request) =
                 req_stream.try_next().await.expect("Failure receiving lifecycle FIDL message")
             {
                 match request {
                     LifecycleRequest::Stop { control_handle: c } => {
-                        info!("Received request to stop, bye bye!");
+                        info!("Received request to stop. Shutting down.");
                         c.shutdown();
                         process::exit(0);
                     }

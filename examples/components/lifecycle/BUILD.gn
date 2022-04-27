@@ -4,9 +4,26 @@
 
 import("//build/components.gni")
 
-fuchsia_package("lifecycle-example") {
+group("lifecycle-example") {
+  testonly = true
   deps = [
-    "cpp:cpp-component",
-    "rust:rust-component",
+    ":lifecycle-example-cpp",
+    ":lifecycle-example-rust",
+  ]
+}
+
+fuchsia_package("lifecycle-example-cpp") {
+  deps = [
+    "cpp:lifecycle-component",
+    "cpp:manager-component",
+    "//examples/components/routing/cpp/echo_server:echo_server_component",
+  ]
+}
+
+fuchsia_package("lifecycle-example-rust") {
+  deps = [
+    "rust:lifecycle-component",
+    "rust:manager-component",
+    "//examples/components/routing/rust/echo_server:echo_server_component",
   ]
 }

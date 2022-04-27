@@ -1,0 +1,68 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// For information on manifest format and features,
+// see https://fuchsia.dev/fuchsia-src/concepts/components/component_manifests.
+
+// [START example_snippet]
+{
+    include: [ "syslog/client.shard.cml" ],
+
+    // Information about the program to run.
+    program: {
+        // Use the built-in ELF runner.
+        runner: "elf",
+
+        // The binary to run for this component.
+        binary: "bin/lifecycle_manager_rust",
+
+        // Program arguments
+        args: [
+            "Hello",
+            "Fuchsia",
+        ],
+    },
+
+    // Statically declared child components
+    children: [
+        {
+            name: "lifecycle",
+            url: "#meta/lifecycle.cm",
+        },
+    ],
+
+    // Collection to hold dynamically created child components
+    collections: [
+        {
+            name: "echo",
+            durability: "transient",
+        },
+    ],
+
+    // Capabilities required by this component
+    use: [
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "#lifecycle",
+        },
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+        },
+    ],
+
+    // Capabilities required by child components
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#echo",
+                "#lifecycle",
+            ],
+        },
+    ],
+}
+
+// [END example_snippet]

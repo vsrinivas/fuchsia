@@ -5,13 +5,12 @@
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
-rustc_binary("lifecycle_example_rust") {
+rustc_binary("lifecycle_example") {
   output_name = "lifecycle_example_rust"
+  source_root = "src/lifecycle.rs"
 
   deps = [
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
-    "//src/lib/diagnostics/inspect/runtime/rust",
-    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
@@ -23,11 +22,38 @@ rustc_binary("lifecycle_example_rust") {
     "//third_party/rust_crates:tracing",
   ]
 
-  sources = [ "src/main.rs" ]
+  sources = [ "src/lifecycle.rs" ]
 }
 
-fuchsia_component("rust-component") {
-  component_name = "lifecycle_rust"
+rustc_binary("lifecycle_manager") {
+  output_name = "lifecycle_manager_rust"
+  source_root = "src/manager.rs"
+
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  sources = [ "src/manager.rs" ]
+}
+
+fuchsia_component("lifecycle-component") {
+  component_name = "lifecycle"
   manifest = "meta/lifecycle.cml"
-  deps = [ ":lifecycle_example_rust" ]
+  deps = [ ":lifecycle_example" ]
+}
+
+fuchsia_component("manager-component") {
+  component_name = "lifecycle_manager"
+  manifest = "meta/manager.cml"
+  deps = [ ":lifecycle_manager" ]
 }
