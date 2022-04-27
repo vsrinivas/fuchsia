@@ -2,16 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{
-    hash_tree::{
-        HashTree, HashTreeError, HashTreeStorage, BITS_PER_LEVEL, CHILDREN_PER_NODE, TREE_HEIGHT,
+use {
+    crate::{
+        hash_tree::{
+            HashTree, HashTreeError, HashTreeStorage, BITS_PER_LEVEL, CHILDREN_PER_NODE,
+            TREE_HEIGHT,
+        },
+        lookup_table::LookupTable,
+        pinweaver::PinWeaverProtocol,
     },
-    lookup_table::LookupTable,
-    pinweaver::PinWeaverProtocol,
+    fidl_fuchsia_identity_credential::CredentialError,
+    fidl_fuchsia_tpm_cr50 as fcr50,
+    log::{error, info},
 };
-use fidl_fuchsia_identity_credential::CredentialError;
-use fidl_fuchsia_tpm_cr50 as fcr50;
-use log::{error, info};
 
 /// Represents the state of the HashTree persisted on disk compared with the HashTree
 /// state returned by the CR50.

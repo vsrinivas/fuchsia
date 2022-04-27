@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::diagnostics::{Diagnostics, IncomingMethod},
+    crate::{
+        diagnostics::{Diagnostics, HashTreeOperation, IncomingMethod},
+        hash_tree::HashTreeError,
+    },
     fidl_fuchsia_identity_credential::CredentialError,
     fuchsia_inspect::{Inspector, Node, NumericProperty, UintProperty},
     fuchsia_zircon as zx,
@@ -93,6 +96,14 @@ impl Diagnostics for InspectDiagnostics {
             .get_mut(&method)
             .expect("Incoming RPC method missing from auto-generated map")
             .record(result);
+    }
+
+    fn hash_tree_outcome(&self, _operation: HashTreeOperation, _result: Result<(), HashTreeError>) {
+        //TODO(fxb/91714): Record HashTree metrics in inspect.
+    }
+
+    fn credential_count(&self, _count: u64) {
+        //TODO(fxb/91714): Record credential count metrics in inspect.
     }
 }
 

@@ -122,6 +122,7 @@ where
         let (label, h_aux) = self.alloc_credential().await?;
         let (mac, cred_metadata) = pinweaver.insert_leaf(&label, h_aux, params).await?;
         self.update_credential(&label, mac, cred_metadata).await?;
+        self.diagnostics.credential_count(self.hash_tree().populated_size());
         Ok(label.value())
     }
 
@@ -180,10 +181,17 @@ where
         pinweaver.remove_leaf(&label, mac, h_aux).await?;
         self.lookup_table().delete(&label).await.map_err(|_| CredentialError::InternalError)?;
         self.hash_tree().delete_leaf(&label).map_err(|_| CredentialError::InternalError)?;
-        self.hash_tree_storage
+        // TODO(fxb/98758): If the storage write fails here the persistent state will be different
+        // to the in-memory state. We should report a clear error and probably retry the file
+        // system operation to work around a transient file system issue.
+        let store_result = self
+            .hash_tree_storage
             .store(&self.hash_tree.borrow())
-            .map_err(|_| CredentialError::InternalError)?;
-        Ok(())
+            .map_err(|_| CredentialError::InternalError);
+        // Note: For consistency with `add_credential` we record the new credential count after the
+        // store event, and even if the store event failed
+        self.diagnostics.credential_count(self.hash_tree().populated_size());
+        store_result
     }
 
     /// Allocates a new empty credential in the |hash_tree| returning the
@@ -257,14 +265,14 @@ mod test {
     use {
         super::*,
         crate::{
-            diagnostics::{Event, FakeDiagnostics},
+            diagnostics::{Event, FakeDiagnostics, HashTreeOperation},
             hash_tree::{HashTreeStorageCbor, CHILDREN_PER_NODE, TREE_HEIGHT},
             lookup_table::{LookupTableError, MockLookupTable, ReadResult},
             pinweaver::MockPinWeaverProtocol,
         },
         assert_matches::assert_matches,
         fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_identity_credential::CredentialManagerMarker,
+        fidl_fuchsia_identity_credential::{CredentialError as CE, CredentialManagerMarker},
         fidl_fuchsia_tpm_cr50::{TryAuthFailed, TryAuthRateLimited, TryAuthSuccess},
         fuchsia_async as fasync,
         tempfile::TempDir,
@@ -291,7 +299,7 @@ mod test {
         cm: CredentialManager<
             MockPinWeaverProtocol,
             MockLookupTable,
-            HashTreeStorageCbor,
+            HashTreeStorageCbor<FakeDiagnostics>,
             FakeDiagnostics,
         >,
         diag: Arc<FakeDiagnostics>,
@@ -302,7 +310,8 @@ mod test {
         async fn create(params: TestParams) -> Self {
             let path = params.dir.path().join("hash_tree");
             let diag = Arc::new(FakeDiagnostics::new());
-            let hash_tree_storage = HashTreeStorageCbor::new(path.to_str().unwrap());
+            let hash_tree_storage =
+                HashTreeStorageCbor::new(path.to_str().unwrap(), Arc::clone(&diag));
             let cm = CredentialManager::new(
                 params.pinweaver,
                 params.hash_tree,
@@ -344,10 +353,14 @@ mod test {
             })
             .await
             .expect("added credential");
+        test.diag.assert_events(&[
+            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
+            Event::CredentialCount(1),
+        ]);
     }
 
     #[fuchsia::test]
-    async fn test_add_credential_write_fail() {
+    async fn test_add_credential_lookup_table_write_fail() {
         let mut params = TestParams::default();
         params
             .pinweaver
@@ -374,6 +387,7 @@ mod test {
             })
             .await;
         assert_matches!(result, Err(CredentialError::InternalError));
+        test.diag.assert_events(&[]);
     }
 
     #[fuchsia::test]
@@ -399,6 +413,7 @@ mod test {
             })
             .await;
         assert_matches!(result, Err(CredentialError::InternalError));
+        test.diag.assert_events(&[]);
     }
 
     #[fuchsia::test]
@@ -449,6 +464,11 @@ mod test {
             })
             .await
             .expect("check credential");
+        test.diag.assert_events(&[
+            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
+            Event::CredentialCount(1),
+            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
+        ]);
     }
 
     #[fuchsia::test]
@@ -496,6 +516,10 @@ mod test {
             })
             .await;
         assert_matches!(result, Err(CredentialError::TooManyAttempts));
+        test.diag.assert_events(&[
+            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
+            Event::CredentialCount(1),
+        ]);
     }
 
     #[fuchsia::test]
@@ -545,6 +569,11 @@ mod test {
             })
             .await;
         assert_matches!(result, Err(CredentialError::InvalidSecret));
+        test.diag.assert_events(&[
+            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
+            Event::CredentialCount(1),
+            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
+        ]);
     }
 
     #[fuchsia::test]
@@ -575,6 +604,12 @@ mod test {
             .expect("added credential");
         let result = test.cm.remove_credential(label).await;
         assert_matches!(result, Ok(()));
+        test.diag.assert_events(&[
+            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
+            Event::CredentialCount(1),
+            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
+            Event::CredentialCount(0),
+        ]);
     }
 
     #[fuchsia::test]
@@ -609,6 +644,10 @@ mod test {
             .expect("added credential");
         let result = test.cm.remove_credential(label).await;
         assert_matches!(result, Err(CredentialError::InternalError));
+        test.diag.assert_events(&[
+            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
+            Event::CredentialCount(1),
+        ]);
     }
 
     #[fuchsia::test]
@@ -648,11 +687,10 @@ mod test {
 
         test.cm.handle_requests_for_stream(request_stream).await;
         test.diag.assert_events(&[
+            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
+            Event::CredentialCount(1),
             Event::IncomingOutcome(IncomingMethod::AddCredential, Ok(())),
-            Event::IncomingOutcome(
-                IncomingMethod::RemoveCredential,
-                Err(CredentialError::InvalidLabel),
-            ),
+            Event::IncomingOutcome(IncomingMethod::RemoveCredential, Err(CE::InvalidLabel)),
         ]);
     }
 }

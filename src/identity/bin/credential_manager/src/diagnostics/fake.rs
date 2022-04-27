@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::diagnostics::{Diagnostics, IncomingMethod},
+    crate::{
+        diagnostics::{Diagnostics, HashTreeOperation, IncomingMethod},
+        hash_tree::HashTreeError,
+    },
     fidl_fuchsia_identity_credential::CredentialError,
     parking_lot::Mutex,
 };
@@ -12,6 +15,8 @@ use {
 #[derive(Debug, PartialEq)]
 pub enum Event {
     IncomingOutcome(IncomingMethod, Result<(), CredentialError>),
+    HashTreeOutcome(HashTreeOperation, Result<(), HashTreeError>),
+    CredentialCount(u64),
 }
 
 /// A fake `Diagnostics` implementation useful for verifying unittest.
@@ -36,6 +41,14 @@ impl FakeDiagnostics {
 impl Diagnostics for FakeDiagnostics {
     fn incoming_outcome(&self, method: IncomingMethod, result: Result<(), CredentialError>) {
         self.events.lock().push(Event::IncomingOutcome(method, result));
+    }
+
+    fn hash_tree_outcome(&self, operation: HashTreeOperation, result: Result<(), HashTreeError>) {
+        self.events.lock().push(Event::HashTreeOutcome(operation, result));
+    }
+
+    fn credential_count(&self, count: u64) {
+        self.events.lock().push(Event::CredentialCount(count));
     }
 }
 
@@ -65,6 +78,40 @@ mod test {
                 IncomingMethod::AddCredential,
                 Err(CredentialError::NoFreeLabel),
             ),
+        ]);
+    }
+
+    #[fuchsia::test]
+    fn log_and_assert_hash_tree_outcomes() {
+        let diagnostics = FakeDiagnostics::new();
+
+        diagnostics.hash_tree_outcome(HashTreeOperation::Load, Ok(()));
+        diagnostics
+            .hash_tree_outcome(HashTreeOperation::Store, Err(HashTreeError::SerializationFailed));
+        diagnostics.hash_tree_outcome(HashTreeOperation::Store, Ok(()));
+
+        diagnostics.assert_events(&[
+            Event::HashTreeOutcome(HashTreeOperation::Load, Ok(())),
+            Event::HashTreeOutcome(
+                HashTreeOperation::Store,
+                Err(HashTreeError::SerializationFailed),
+            ),
+            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
+        ]);
+    }
+
+    #[fuchsia::test]
+    fn log_and_assert_credential_counts() {
+        let diagnostics = FakeDiagnostics::new();
+
+        diagnostics.credential_count(3);
+        diagnostics.credential_count(1);
+        diagnostics.credential_count(4);
+
+        diagnostics.assert_events(&[
+            Event::CredentialCount(3),
+            Event::CredentialCount(1),
+            Event::CredentialCount(4),
         ]);
     }
 }

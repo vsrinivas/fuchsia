@@ -2,12 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::label_generator::{BitstringLabelGenerator, Label};
-use serde::{Deserialize, Serialize};
-use serde_cbor;
-use sha2::{Digest, Sha256};
-use std::collections::VecDeque;
-use std::fs::File;
+use {
+    crate::{
+        diagnostics::{Diagnostics, HashTreeOperation},
+        label_generator::{BitstringLabelGenerator, Label},
+    },
+    serde::{Deserialize, Serialize},
+    serde_cbor,
+    sha2::{Digest, Sha256},
+    std::{collections::VecDeque, fs::File, sync::Arc},
+};
 
 #[cfg(test)]
 use mockall::{automock, predicate::*};
@@ -180,21 +184,41 @@ impl HashTree {
         })
     }
 
+    /// Returns the number of populated leaf nodes in the merkle tree.
+    pub fn populated_size(&self) -> u64 {
+        let mut count = 0u64;
+        self.walk_leaf_nodes(|_| {
+            count += 1;
+        });
+        count
+    }
+
     /// Returns a list of all populated leaf nodes in the merkle tree. This
     /// combined with just the `height` and `children_per_node` is enough
     /// to reconstruct the entire tree.
     fn sparse_leaf_nodes(&self) -> Vec<(Label, Hash)> {
+        let mut sparse_leaf_nodes = Vec::new();
+        self.walk_leaf_nodes(|node| {
+            // This function should only be called on non-empty nodes, but check anyway.
+            if let Some(hash) = node.hash {
+                sparse_leaf_nodes.push((node.label, hash));
+            }
+        });
+        sparse_leaf_nodes
+    }
+
+    /// Runs the supplied function on the populated leaf nodes in the merkle tree in order.
+    fn walk_leaf_nodes<F: FnMut(&Node)>(&self, mut function: F) {
         let mut dfs_stack: VecDeque<&Node> = VecDeque::new();
         // Reversed so we preserve ordering left to right.
         for child in self.root.children.iter().rev() {
             dfs_stack.push_front(&child);
         }
-        let mut sparse_leaf_nodes = Vec::new();
         while let Some(node) = dfs_stack.pop_front() {
             if node.is_leaf() {
-                // Only add leaf nodes if they have a hash value.
-                if let Some(hash) = node.hash {
-                    sparse_leaf_nodes.push((node.label.clone(), hash.clone()));
+                // Only process leaf nodes if they have a hash value.
+                if node.hash.is_some() {
+                    function(&node);
                 }
             } else {
                 for child in node.children.iter().rev() {
@@ -202,7 +226,6 @@ impl HashTree {
                 }
             }
         }
-        sparse_leaf_nodes
     }
 }
 
@@ -214,40 +237,59 @@ pub trait HashTreeStorage {
     fn store(&self, hash_tree: &HashTree) -> Result<(), HashTreeError>;
 }
 
-pub struct HashTreeStorageCbor {
+pub struct HashTreeStorageCbor<D: Diagnostics> {
     path: String,
+    diagnostics: Arc<D>,
 }
 
-impl HashTreeStorageCbor {
-    pub fn new(path: &str) -> Self {
-        Self { path: path.into() }
+impl<D: Diagnostics> HashTreeStorageCbor<D> {
+    pub fn new(path: &str, diagnostics: Arc<D>) -> Self {
+        Self { path: path.into(), diagnostics }
     }
 }
 
-impl HashTreeStorage for HashTreeStorageCbor {
+impl<D: Diagnostics> HashTreeStorage for HashTreeStorageCbor<D> {
     /// Attempts to deserialize the HashTree from the supplied path.
     /// If no file does not exist or is corrupted an error is returned.
     fn load(&self) -> Result<HashTree, HashTreeError> {
-        let file = File::open(&self.path).map_err(|_| HashTreeError::DataStoreNotFound)?;
-        let format: StoreHashTree =
-            serde_cbor::from_reader(file).map_err(|_| HashTreeError::DeserializationFailed)?;
-        let mut hash_tree = HashTree::new(format.height, format.children_per_node)?;
-        for (label, hash) in format.sparse_leaf_nodes {
-            hash_tree.update_leaf_hash(&label, hash)?;
-        }
-        // Note: there are no know errors that could cause a valid deserialization to produce an
-        // invalid tree, since we're only storing leaf hashes, but its still a reasonable point
-        // to verify consistency.
-        hash_tree.verify_tree()?;
-        Ok(hash_tree)
+        let inner = || {
+            let file = File::open(&self.path).map_err(|_| HashTreeError::DataStoreNotFound)?;
+            let format: StoreHashTree =
+                serde_cbor::from_reader(file).map_err(|_| HashTreeError::DeserializationFailed)?;
+            let mut hash_tree = HashTree::new(format.height, format.children_per_node)?;
+            for (label, hash) in format.sparse_leaf_nodes {
+                hash_tree.update_leaf_hash(&label, hash)?;
+            }
+            // Note: there are no known errors that could cause a valid deserialization to produce
+            // an invalid tree, since we're only storing leaf hashes, but its still a reasonable
+            // point to verify consistency.
+            hash_tree.verify_tree()?;
+            Ok(hash_tree)
+        };
+        let result = inner();
+        match &result {
+            Ok(hash_tree) => {
+                self.diagnostics.hash_tree_outcome(HashTreeOperation::Load, Ok(()));
+                self.diagnostics.credential_count(hash_tree.populated_size());
+            }
+            Err(err) => {
+                self.diagnostics.hash_tree_outcome(HashTreeOperation::Load, Err(*err));
+            }
+        };
+        result
     }
 
     /// Attempts to store the HashTree |hash_tree| at the supplied path.
     /// This function only fails if it fails to serialize or write the data.
     fn store(&self, hash_tree: &HashTree) -> Result<(), HashTreeError> {
-        let file = File::create(&self.path).map_err(|_| HashTreeError::DataStoreNotFound)?;
-        let format = StoreHashTree::from(hash_tree);
-        serde_cbor::to_writer(file, &format).map_err(|_| HashTreeError::SerializationFailed)
+        let inner = || {
+            let file = File::create(&self.path).map_err(|_| HashTreeError::DataStoreNotFound)?;
+            let format = StoreHashTree::from(hash_tree);
+            serde_cbor::to_writer(file, &format).map_err(|_| HashTreeError::SerializationFailed)
+        };
+        let result = inner();
+        self.diagnostics.hash_tree_outcome(HashTreeOperation::Store, result);
+        result
     }
 }
 
@@ -532,10 +574,17 @@ impl Node {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::label_generator::BAD_LABEL;
-    use tempfile::TempDir;
+    use {
+        super::*,
+        crate::{
+            diagnostics::{Event, FakeDiagnostics},
+            label_generator::BAD_LABEL,
+        },
+        tempfile::TempDir,
+    };
 
+    /// Returns a new hash tree with the supplied parameters plus the maximum number of leaves this
+    /// hash tree can hold.
     fn create_tree(height: u8, children_per_node: u8) -> (HashTree, u8) {
         (HashTree::new(height, children_per_node).unwrap(), children_per_node.pow((height).into()))
     }
@@ -836,7 +885,8 @@ mod test {
         tree.update_leaf_hash(&node_label, hash.clone()).unwrap();
         let tmp_dir = TempDir::new().unwrap();
         let path = tmp_dir.path().join("hash_tree");
-        let store = HashTreeStorageCbor::new(path.to_str().unwrap());
+        let diag = Arc::new(FakeDiagnostics::new());
+        let store = HashTreeStorageCbor::new(path.to_str().unwrap(), Arc::clone(&diag));
         store.store(&tree).expect("could not store tree");
         let serialized_output = std::fs::read(path.to_str().unwrap()).unwrap();
         assert_eq!(
@@ -849,6 +899,7 @@ mod test {
                 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
             ]
         );
+        diag.assert_events(&[Event::HashTreeOutcome(HashTreeOperation::Store, Ok(()))]);
     }
 
     #[test]
@@ -860,9 +911,15 @@ mod test {
         tree.update_leaf_hash(&node_label, hash.clone()).unwrap();
         let tmp_dir = TempDir::new().unwrap();
         let path = tmp_dir.path().join("hash_tree");
-        let store = HashTreeStorageCbor::new(path.to_str().unwrap());
+        let diag = Arc::new(FakeDiagnostics::new());
+        let store = HashTreeStorageCbor::new(path.to_str().unwrap(), Arc::clone(&diag));
         store.store(&tree).expect("could not store tree");
         let loaded_tree = store.load().unwrap();
         assert_eq!(loaded_tree.get_leaf_hash(&node_label).expect("hash node"), &hash);
+        diag.assert_events(&[
+            Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
+            Event::HashTreeOutcome(HashTreeOperation::Load, Ok(())),
+            Event::CredentialCount(1),
+        ]);
     }
 }
