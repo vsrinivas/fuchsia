@@ -4,7 +4,7 @@
 
 use fuchsia_zircon::sys;
 use fuchsia_zircon::{self as zx, AsHandleRef};
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
 use std::ffi::CStr;
 use std::sync::{Arc, Weak};
 
@@ -26,13 +26,13 @@ pub struct ThreadGroupMutableState {
     ///
     /// The value needs to be writable so that it can be re-parent to the correct subreaper is the
     /// parent ends before the child.
-    pub parent: pid_t,
+    pub parent: Option<Arc<ThreadGroup>>,
 
     /// The tasks in the thread group.
     pub tasks: BTreeMap<pid_t, Weak<Task>>,
 
     /// The children of this thread group.
-    pub children: HashSet<pid_t>,
+    pub children: BTreeMap<pid_t, Weak<ThreadGroup>>,
 
     /// The IDs used to perform shell job control.
     pub process_group: Arc<ProcessGroup>,
@@ -158,30 +158,23 @@ impl ThreadGroup {
     pub fn new(
         kernel: Arc<Kernel>,
         process: zx::Process,
-        parent: Option<&mut ThreadGroupMutableState>,
+        parent: Option<(&Arc<ThreadGroup>, &mut ThreadGroupMutableState)>,
         leader: pid_t,
         process_group: Arc<ProcessGroup>,
         signal_actions: Arc<SignalActions>,
-    ) -> ThreadGroup {
+    ) -> Arc<ThreadGroup> {
         process_group.thread_groups.write().insert(leader);
 
-        let parent_id = if let Some(parent_tg) = parent {
-            parent_tg.children.insert(leader);
-            parent_tg.leader
-        } else {
-            leader
-        };
-
-        ThreadGroup {
+        let result = Arc::new(ThreadGroup {
             kernel,
             process,
             leader,
             signal_actions,
             mutable_state: RwLock::new(ThreadGroupMutableState {
                 leader,
-                parent: parent_id,
+                parent: parent.as_ref().map(|(p, _)| Arc::clone(p)),
                 tasks: BTreeMap::new(),
-                children: HashSet::new(),
+                children: BTreeMap::new(),
                 process_group: process_group,
                 itimers: Default::default(),
                 zombie_children: vec![],
@@ -191,7 +184,12 @@ impl ThreadGroup {
                 zombie_leader: None,
                 terminating: false,
             }),
+        });
+
+        if let Some((_, parent_tg)) = parent {
+            parent_tg.children.insert(leader, Arc::downgrade(&result));
         }
+        result
     }
 
     /// Access mutable state with a read lock.
@@ -239,13 +237,9 @@ impl ThreadGroup {
             // thread group while having a lock of the thread group itself. Instead, the set of
             // children will be computed here, the lock will be dropped and the children will be
             // passed to the reaper that will capture the state in the correct order.
-            let children = state
-                .children
-                .iter()
-                .flat_map(|pid| pids.get_thread_group(*pid))
-                .collect::<Vec<_>>();
+            let children = state.children().collect::<Vec<_>>();
             std::mem::drop(state);
-            let children_state = children.iter().map(|c| c.write()).collect::<Vec<_>>();
+            let children_state = children.iter().map(|c| (c, c.write())).collect::<Vec<_>>();
             self.write().remove(children_state, &mut pids);
         }
     }
@@ -268,7 +262,7 @@ impl ThreadGroup {
         // The target process must be either the current process of a child of the current process
         let mut target_thread_group = target.thread_group.write();
         let is_target_current_process_child =
-            target_thread_group.leader != self.leader && target_thread_group.parent == self.leader;
+            target_thread_group.parent.as_ref().map(|tg| tg.leader) == Some(self.leader);
         if target_thread_group.leader != self.leader && !is_target_current_process_child {
             return error!(ESRCH);
         }
@@ -334,7 +328,6 @@ impl ThreadGroup {
 
     /// Set the stop status of the process.
     pub fn set_stopped(&self, stopped: bool, siginfo: SignalInfo) {
-        let pids = self.kernel.pids.read();
         let mut state = self.write();
         if stopped != state.stopped {
             // TODO(qsr): When task can be running_status inside user code, task will need to be
@@ -344,7 +337,7 @@ impl ThreadGroup {
             if !stopped {
                 state.interrupt(InterruptionType::Continue);
             }
-            if let Some(parent) = state.get_parent(&pids) {
+            if let Some(parent) = state.parent.as_ref() {
                 parent.read().interrupt(InterruptionType::ChildChange);
             }
         }
@@ -382,12 +375,7 @@ impl ThreadGroup {
         let pids = self.kernel.pids.read();
         // Built a list of mutable child state before acquire a write lock to the state of this
         // object because lock ordering imposes the child lock is acquired before the parent.
-        let children = self
-            .read()
-            .children
-            .iter()
-            .flat_map(|pid| pids.get_thread_group(*pid))
-            .collect::<Vec<_>>();
+        let children = self.read().children().collect::<Vec<_>>();
         let children_state = children.iter().map(|c| c.write()).collect::<Vec<_>>();
         self.write().get_waitable_child(children_state, selector, options, &pids)
     }
@@ -544,19 +532,23 @@ impl ThreadGroup {
 }
 
 impl ThreadGroupMutableState {
-    /// Returns the parent of the process, if it exists.
-    pub fn get_parent(&self, pids: &PidTable) -> Option<Arc<ThreadGroup>> {
-        if self.leader == self.parent {
-            None
-        } else {
-            pids.get_thread_group(self.parent)
-        }
+    pub fn children(&self) -> impl Iterator<Item = Arc<ThreadGroup>> + '_ {
+        self.children.values().map(|v| {
+            v.upgrade().expect("Weak references to processes in ThreadGroup must always be valid")
+        })
     }
 
     pub fn tasks(&self) -> impl Iterator<Item = Arc<Task>> + '_ {
         self.tasks.values().map(|v| {
             v.upgrade().expect("Weak references to task in ThreadGroup must always be valid")
         })
+    }
+
+    pub fn get_ppid(&self) -> pid_t {
+        match &self.parent {
+            Some(parent) => parent.leader,
+            None => self.leader,
+        }
     }
 
     pub fn set_process_group(&mut self, process_group: Arc<ProcessGroup>, pids: &mut PidTable) {
@@ -684,20 +676,21 @@ impl ThreadGroupMutableState {
 
     pub fn adopt_children(
         &mut self,
+        thread_group: &Arc<ThreadGroup>,
         other: &mut ThreadGroupMutableState,
-        children: Vec<RwLockWriteGuard<'_, ThreadGroupMutableState>>,
+        children: Vec<(&Arc<ThreadGroup>, RwLockWriteGuard<'_, ThreadGroupMutableState>)>,
         pids: &PidTable,
     ) {
         // TODO(qsr): Implement PR_SET_CHILD_SUBREAPER
 
         // If parent != self, reparent.
-        if let Some(parent) = self.get_parent(pids) {
-            parent.write().adopt_children(other, children, pids);
+        if let Some(parent) = self.parent.as_ref() {
+            parent.write().adopt_children(&parent, other, children, pids);
         } else {
             // Else, act like init.
-            for mut child in children.into_iter() {
-                child.parent = self.leader;
-                self.children.insert(child.leader);
+            for (child, mut child_state) in children.into_iter() {
+                child_state.parent = Some(Arc::clone(thread_group));
+                self.children.insert(child.leader, Arc::downgrade(child));
             }
 
             other.children.clear();
@@ -707,16 +700,14 @@ impl ThreadGroupMutableState {
 
     pub fn remove(
         &mut self,
-        children: Vec<RwLockWriteGuard<'_, ThreadGroupMutableState>>,
+        children: Vec<(&Arc<ThreadGroup>, RwLockWriteGuard<'_, ThreadGroupMutableState>)>,
         pids: &mut PidTable,
     ) {
-        let parent_opt = self.get_parent(pids);
-
         // Before unregistering this object from other places, register the zombie.
-        if let Some(parent) = parent_opt.as_ref() {
+        if let Some(parent) = self.parent.clone() {
             let mut parent_writer = parent.write();
             // Reparent the children.
-            parent_writer.adopt_children(self, children, &pids);
+            parent_writer.adopt_children(&parent, self, children, &pids);
 
             let zombie = self.zombie_leader.take().expect("Failed to capture zombie leader.");
 
@@ -729,7 +720,7 @@ impl ThreadGroupMutableState {
         self.leave_process_group(pids);
 
         // Send signals
-        if let Some(parent) = parent_opt.as_ref() {
+        if let Some(parent) = self.parent.as_ref() {
             // TODO: Should this be zombie_leader.exit_signal?
             let parent_state = parent.read();
             if let Some(signal_target) = parent_state.get_signal_target(&SIGCHLD.into()) {
@@ -901,12 +892,12 @@ mod test {
             )
             .expect("clone process");
 
-        assert_eq!(task3.thread_group.read().parent, task2.id);
+        assert_eq!(task3.thread_group.read().get_ppid(), task2.id);
 
         task2.thread_group.exit(ExitStatus::Exit(0));
         std::mem::drop(task2);
 
         // Task3 parent should be current_task.
-        assert_eq!(task3.thread_group.read().parent, current_task.id);
+        assert_eq!(task3.thread_group.read().get_ppid(), current_task.id);
     }
 }

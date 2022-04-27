@@ -310,7 +310,7 @@ impl Task {
             let process_group = thread_group_state.process_group.clone();
             create_zircon_process(
                 kernel,
-                Some(&mut thread_group_state),
+                Some((&self.thread_group, &mut thread_group_state)),
                 pid,
                 process_group,
                 signal_actions,
@@ -932,7 +932,7 @@ mod test {
         let child_task = current_task.clone_task_for_test(0);
         assert_ne!(current_task.get_pid(), child_task.get_pid());
         assert_ne!(current_task.get_tid(), child_task.get_tid());
-        assert_eq!(current_task.get_pid(), child_task.thread_group.read().parent);
+        assert_eq!(current_task.get_pid(), child_task.thread_group.read().get_ppid());
     }
 
     #[::fuchsia::test]
