@@ -7,14 +7,11 @@
 //! IGMPv2 is a communications protocol used by hosts and adjacent routers on
 //! IPv4 networks to establish multicast group memberships.
 
-use core::{
-    fmt::{Debug, Display},
-    time::Duration,
-};
+use core::{fmt::Debug, time::Duration};
 
 use log::{debug, error};
 use net_types::{
-    ip::{AddrSubnet, Ipv4, Ipv4Addr},
+    ip::{AddrSubnet, Ip as _, Ipv4, Ipv4Addr},
     MulticastAddr, SpecifiedAddr, Witness,
 };
 use packet::{BufferMut, EmptyBuf, InnerPacketBuilder, Serializer};
@@ -203,7 +200,7 @@ impl<B: ByteSlice, M: MessageType<B, FixedHeader = Ipv4Addr>> GmpMessage<Ipv4>
 }
 
 impl<C: IgmpContext> GmpContext<Ipv4, Igmpv2ProtocolSpecific> for C {
-    type Err = IgmpError<C::DeviceId>;
+    type Err = IgmpError;
     type GroupState = IgmpGroupState<Self::Instant>;
 
     fn gmp_disabled(&self, device: Self::DeviceId, _addr: MulticastAddr<Ipv4Addr>) -> bool {
@@ -240,7 +237,7 @@ impl<C: IgmpContext> GmpContext<Ipv4, Igmpv2ProtocolSpecific> for C {
 }
 
 #[derive(Debug, Error)]
-pub(crate) enum IgmpError<D: Display + Debug + Send + Sync + 'static> {
+pub(crate) enum IgmpError {
     /// The host is trying to operate on an group address of which the host is
     /// not a member.
     #[error("the host has not already been a member of the address: {}", addr)]
@@ -248,12 +245,9 @@ pub(crate) enum IgmpError<D: Display + Debug + Send + Sync + 'static> {
     /// Failed to send an IGMP packet.
     #[error("failed to send out an IGMP packet to address: {}", addr)]
     SendFailure { addr: Ipv4Addr },
-    /// The given device does not have an assigned IP address.
-    #[error("no ip address is associated with the device: {}", device)]
-    NoIpAddress { device: D },
 }
 
-pub(crate) type IgmpResult<T, D> = Result<T, IgmpError<D>>;
+pub(crate) type IgmpResult<T> = Result<T, IgmpError>;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub(crate) enum IgmpTimerId<DeviceId> {
@@ -305,14 +299,24 @@ fn send_igmp_message<C: IgmpContext, M>(
     group_addr: MulticastAddr<Ipv4Addr>,
     dst_ip: MulticastAddr<Ipv4Addr>,
     max_resp_time: M::MaxRespTime,
-) -> IgmpResult<(), C::DeviceId>
+) -> IgmpResult<()>
 where
     M: MessageType<EmptyBuf, FixedHeader = Ipv4Addr, VariableBody = ()>,
 {
-    let src_ip = match sync_ctx.get_ip_addr_subnet(device) {
-        Some(addr_subnet) => addr_subnet.addr(),
-        None => return Err(IgmpError::NoIpAddress { device }),
-    };
+    // As per RFC 3376 section 4.2.13,
+    //
+    //   An IGMP report is sent with a valid IP source address for the
+    //   destination subnet. The 0.0.0.0 source address may be used by a
+    //   system that has not yet acquired an IP address.
+    //
+    // Note that RFC 3376 targets IGMPv3 but we implement IGMPv2. However,
+    // we still allow sending IGMP packets with the unspecified source when no
+    // address is available so that IGMP snooping switches know to forward
+    // multicast packets to us before an address is available. See RFC 4541 for
+    // some details regarding considerations for IGMP/MLD snooping switches.
+    let src_ip =
+        sync_ctx.get_ip_addr_subnet(device).map_or(Ipv4::UNSPECIFIED_ADDRESS, |a| a.addr().get());
+
     let body =
         IgmpPacketBuilder::<EmptyBuf, M>::new_with_resp_time(group_addr.get(), max_resp_time);
     let builder = match Ipv4PacketBuilderWithOptions::new(
@@ -463,7 +467,7 @@ fn run_action<C: IgmpContext>(
     device: C::DeviceId,
     action: Action<Igmpv2ProtocolSpecific>,
     group_addr: MulticastAddr<Ipv4Addr>,
-) -> IgmpResult<(), C::DeviceId> {
+) -> IgmpResult<()> {
     match action {
         Action::Generic(GmpAction::ScheduleReportTimer(duration)) => {
             let _: Option<C::Instant> = sync_ctx
@@ -527,6 +531,7 @@ mod tests {
         testutil::{parse_ip_packet, parse_ip_packet_in_ethernet_frame},
     };
     use rand_xorshift::XorShiftRng;
+    use test_case::test_case;
 
     use super::*;
     use crate::{
@@ -720,11 +725,21 @@ mod tests {
         ctx.receive_igmp_packet(DummyDeviceId, OTHER_HOST_ADDR, MY_ADDR, buff);
     }
 
-    fn setup_simple_test_environment(seed: u128) -> DummyCtx {
+    fn setup_simple_test_environment_with_addr_subnet(
+        seed: u128,
+        a: Option<AddrSubnet<Ipv4Addr>>,
+    ) -> DummyCtx {
         let mut ctx = DummyCtx::default();
         ctx.seed_rng(seed);
-        ctx.get_mut().addr_subnet = Some(AddrSubnet::new(MY_ADDR.get(), 24).unwrap());
+        ctx.get_mut().addr_subnet = a;
         ctx
+    }
+
+    fn setup_simple_test_environment(seed: u128) -> DummyCtx {
+        setup_simple_test_environment_with_addr_subnet(
+            seed,
+            Some(AddrSubnet::new(MY_ADDR.get(), 24).unwrap()),
+        )
     }
 
     fn ensure_ttl_ihl_rtr(ctx: &DummyCtx) {
@@ -735,22 +750,48 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_igmp_simple_integration() {
-        run_with_many_seeds(|seed| {
-            let mut ctx = setup_simple_test_environment(seed);
-            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+    #[test_case(Some(MY_ADDR); "specified_src")]
+    #[test_case(None; "unspecified_src")]
+    fn test_igmp_simple_integration(src_ip: Option<SpecifiedAddr<Ipv4Addr>>) {
+        let check_report = |ctx: &mut DummyCtx| {
+            let expected_src_ip = src_ip.map_or(Ipv4::UNSPECIFIED_ADDRESS, |a| a.get());
 
+            assert_matches::assert_matches!(
+                &ctx.take_frames()[..],
+                [(IgmpPacketMetadata { device: DummyDeviceId, dst_ip }, frame)] => {
+                    assert_eq!(dst_ip, &GROUP_ADDR);
+                    let (body, src_ip, dst_ip, proto, ttl) =
+                        parse_ip_packet::<Ipv4>(frame).unwrap();
+                    assert_eq!(src_ip, expected_src_ip);
+                    assert_eq!(dst_ip, GROUP_ADDR.get());
+                    assert_eq!(proto, Ipv4Proto::Igmp);
+                    assert_eq!(ttl, 1);
+                    let mut bv = &body[..];
+                    assert_matches::assert_matches!(
+                        IgmpPacket::parse(&mut bv, ()).unwrap(),
+                        IgmpPacket::MembershipReportV2(msg) => {
+                            assert_eq!(msg.group_addr(), GROUP_ADDR.get());
+                        }
+                    );
+                }
+            );
+        };
+
+        let addr_subnet = src_ip.map(|a| AddrSubnet::new(a.get(), 16).unwrap());
+        run_with_many_seeds(|seed| {
+            let mut ctx = setup_simple_test_environment_with_addr_subnet(seed, addr_subnet);
+
+            // Joining a group should send a report.
+            assert_eq!(ctx.gmp_join_group(DummyDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+            check_report(&mut ctx);
+
+            // Should send a report after a query.
             receive_igmp_query(&mut ctx, Duration::from_secs(10));
             assert_eq!(
                 ctx.trigger_next_timer(TimerHandler::handle_timer),
                 Some(REPORT_DELAY_TIMER_ID)
             );
-
-            // We should get two Igmpv2 reports - one for the unsolicited one
-            // for the host to turn into Delay Member state and the other one
-            // for the timer being fired.
-            assert_eq!(ctx.frames().len(), 2);
+            check_report(&mut ctx);
         });
     }
 
