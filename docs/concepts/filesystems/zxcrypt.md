@@ -53,6 +53,7 @@ case of zxcrypt, the [device](/src/devices/block/drivers/zxcrypt/device.h) is "M
 [BlockProtocol](/sdk/banjo/fuchsia.hardware.block/block.fidl).
 
 There are two small pieces of functionality which cannot be written in DDKTL and C++:
+
 * The driver binding logic, written using the C preprocessor macros of DDK's
   [binding.h](/src/lib/ddk/include/lib/ddk/binding.h).
 * The completion routines of [ulib/sync](/zircon/system/ulib/sync), which are used for synchronous I/O
@@ -137,6 +138,7 @@ device keys, e.g. those from a [TPM][tpm], in deriving their zxcrypt key._
 
 ## Future Work
 There are a number of areas where further work could, should, or must be done:
+
 * __Surface hidden bind failures__
 
   Currently, `zxcrypt_bind` may indicate success even though the device fails to initialize.
