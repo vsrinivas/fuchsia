@@ -271,12 +271,12 @@ test("unit_tests") {
 
 fuchsia_unittest_package("debug_agent_unit_tests") {
   component_name = "debug_agent_unit_tests"
-  manifest = "meta/debug_agent_unit_tests.cmx"
+  manifest = "meta/debug_agent_unit_tests.cml"
   deps = [ ":unit_tests" ]
 }
 
 fuchsia_unittest_package("debug_agent_integration_tests") {
-  manifest = "meta/debug_agent_integration_tests.cmx"
+  manifest = "meta/debug_agent_integration_tests.cml"
   deps = [
     "integration_tests",
     "test_data:debug_agent_test_loadable_module",
