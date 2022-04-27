@@ -159,7 +159,7 @@ void main() async {
     }
 
     var encoder = JsonEncoder.withIndent('    ');
-    await File('/custom_artifacts/results.fuchsiaperf.json').writeAsString(
+    await File('/data/results.json').writeAsString(
       encoder.convert(resultsToJson(results, benchmarks.name)),
     mode: FileMode.write);
   }, timeout: Timeout(Duration(minutes: 10)));
