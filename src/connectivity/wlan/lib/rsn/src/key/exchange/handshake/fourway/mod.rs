@@ -333,6 +333,13 @@ impl Fourway {
         }
     }
 
+    pub fn on_establishing_rsna_timeout(&self) -> Result<(), Error> {
+        match self {
+            Fourway::Authenticator(state_machine) => state_machine.on_establishing_rsna_timeout(),
+            Fourway::Supplicant(state_machine) => state_machine.on_establishing_rsna_timeout(),
+        }
+    }
+
     pub fn ptk(&self) -> Option<Ptk> {
         match self {
             Fourway::Authenticator(state_machine) => state_machine.as_ref().ptk(),

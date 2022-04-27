@@ -119,7 +119,7 @@ impl EstablishingRsna {
 
         warn!("timeout establishing RSNA");
         cancel(&mut self.rsna_timeout);
-        Err(EstablishRsnaFailureReason::OverallTimeout)
+        Err(self.rsna.supplicant.on_establishing_rsna_timeout())
     }
 }
 

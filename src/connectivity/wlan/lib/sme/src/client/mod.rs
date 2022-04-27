@@ -179,7 +179,7 @@ pub struct ClientSme {
     context: Context,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum ConnectResult {
     Success,
     Canceled,
@@ -226,7 +226,7 @@ impl ConnectTransactionSink {
 
 pub type ConnectTransactionStream = mpsc::UnboundedReceiver<ConnectTransactionEvent>;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum ConnectTransactionEvent {
     OnConnectResult { result: ConnectResult, is_reconnect: bool },
     OnDisconnect { info: fidl_sme::DisconnectInfo },
@@ -234,7 +234,7 @@ pub enum ConnectTransactionEvent {
     OnChannelSwitched { info: fidl_internal::ChannelSwitchInfo },
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum ConnectFailure {
     SelectNetworkFailure(SelectNetworkFailure),
     // TODO(fxbug.dev/68531): SME no longer performs scans when connecting. Remove the
@@ -262,7 +262,8 @@ impl ConnectFailure {
                     ..
                 }
                 | EstablishRsnaFailure {
-                    reason: EstablishRsnaFailureReason::OverallTimeout, ..
+                    reason: EstablishRsnaFailureReason::OverallTimeout(_),
+                    ..
                 } => true,
                 _ => false,
             },
@@ -297,7 +298,8 @@ impl ConnectFailure {
             // implementation, or a lost connection with the AP.
             ConnectFailure::EstablishRsnaFailure(EstablishRsnaFailure {
                 auth_method: Some(auth::MethodName::Psk),
-                reason: EstablishRsnaFailureReason::KeyFrameExchangeTimeout,
+                reason:
+                    EstablishRsnaFailureReason::OverallTimeout(wlan_rsn::Error::LikelyWrongCredential),
             }) => true,
 
             // For WEP, the entire association is always handled by
@@ -335,7 +337,7 @@ impl ConnectFailure {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum SelectNetworkFailure {
     NoScanResultWithSsid,
     IncompatibleConnectRequest,
@@ -348,7 +350,7 @@ impl From<SelectNetworkFailure> for ConnectFailure {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct AssociationFailure {
     pub bss_protection: BssProtection,
     pub code: fidl_ieee80211::StatusCode,
@@ -360,17 +362,17 @@ impl From<AssociationFailure> for ConnectFailure {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct EstablishRsnaFailure {
     pub auth_method: Option<auth::MethodName>,
     pub reason: EstablishRsnaFailureReason,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum EstablishRsnaFailureReason {
     StartSupplicantFailed,
     KeyFrameExchangeTimeout,
-    OverallTimeout,
+    OverallTimeout(wlan_rsn::Error),
     InternalError,
 }
 
@@ -988,7 +990,9 @@ mod tests {
     fn test_detection_of_rejected_wpa1_or_wpa2_credentials() {
         let failure = ConnectFailure::EstablishRsnaFailure(EstablishRsnaFailure {
             auth_method: Some(auth::MethodName::Psk),
-            reason: EstablishRsnaFailureReason::KeyFrameExchangeTimeout,
+            reason: EstablishRsnaFailureReason::OverallTimeout(
+                wlan_rsn::Error::LikelyWrongCredential,
+            ),
         });
         assert!(failure.likely_due_to_credential_rejected());
     }
