@@ -6,7 +6,7 @@ use anyhow::{anyhow, Context, Result};
 use assembly_blobfs::BlobFSBuilder;
 use assembly_images_manifest::{Image, ImagesManifest};
 use assembly_partitions_config::PartitionsConfig;
-use assembly_tool::Tool;
+use assembly_tool::ToolProvider;
 use assembly_update_packages_manifest::UpdatePackagesManifest;
 use assembly_util::PathToStringExt;
 use epoch::EpochFile;
@@ -15,10 +15,10 @@ use std::path::{Path, PathBuf};
 
 /// A builder that constructs update packages.
 pub struct UpdatePackageBuilder {
-    /// The blobfs tool from the SDK.
-    blobfs_tool: Box<dyn Tool>,
+    /// The tool provider, used to invoke the blobfs tool from the SDK.
+    tool_provider: Box<dyn ToolProvider>,
 
-    /// Name of the UpdatePackage.
+    /// Root name of the UpdatePackage and its associated images packages.
     /// This is typically only modified for OTA tests so that multiple UpdatePackages can be
     /// published to the same repository.
     name: String,
@@ -69,6 +69,32 @@ impl Slot {
             Slot::Recovery(m) => m,
         }
     }
+
+    /// Get the (preferably signed) zbi and optional vbmeta, or None if no zbi image is present in
+    /// this manifest.
+    fn zbi_and_vbmeta(&self) -> Option<(ImageMapping, Option<ImageMapping>)> {
+        let mut zbi = None;
+        let mut vbmeta = None;
+
+        for image in &self.manifest().images {
+            match image {
+                Image::ZBI { path: _, signed } => {
+                    if *signed || zbi.is_none() {
+                        zbi = Some(ImageMapping::new(image.source(), "zbi"));
+                    }
+                }
+                Image::VBMeta(_) => {
+                    vbmeta = Some(ImageMapping::new(image.source(), "vbmeta"));
+                }
+                _ => {}
+            }
+        }
+
+        match zbi {
+            Some(zbi) => Some((zbi, vbmeta)),
+            None => None,
+        }
+    }
 }
 
 /// A mapping between an image source path on host to the destination in an UpdatePackage.
@@ -110,10 +136,37 @@ impl ImageMapping {
     }
 }
 
+/// A PackageBuilder configured to build the update package or one of its subpackages.
+struct SubpackageBuilder {
+    package: PackageBuilder,
+    package_name: String,
+    manifest_path: PathBuf,
+    far_path: PathBuf,
+    gendir: PathBuf,
+}
+
+impl SubpackageBuilder {
+    /// Build and publish an update package or one of its subpackages.
+    fn build(self, blobfs_builder: &mut BlobFSBuilder) -> Result<()> {
+        let SubpackageBuilder { package: builder, package_name, manifest_path, far_path, gendir } =
+            self;
+
+        builder
+            .build(&gendir, &far_path)
+            .with_context(|| format!("Failed to build the {package_name} package"))?;
+
+        blobfs_builder.add_package(&manifest_path).with_context(|| {
+            format!("Adding the {package_name} package to update packages blobfs")
+        })?;
+
+        Ok(())
+    }
+}
+
 impl UpdatePackageBuilder {
     /// Construct a new UpdatePackageBuilder with the minimal requirements for an UpdatePackage.
     pub fn new(
-        blobfs_tool: Box<dyn Tool>,
+        tool_provider: Box<dyn ToolProvider>,
         partitions: PartitionsConfig,
         board_name: impl AsRef<str>,
         version_file: impl AsRef<Path>,
@@ -121,7 +174,7 @@ impl UpdatePackageBuilder {
         outdir: impl AsRef<Path>,
     ) -> Self {
         Self {
-            blobfs_tool: blobfs_tool,
+            tool_provider,
             name: "update".into(),
             partitions,
             board_name: board_name.as_ref().into(),
@@ -172,28 +225,111 @@ impl UpdatePackageBuilder {
         Ok(())
     }
 
-    /// Build the update package.
-    pub fn build(self) -> Result<()> {
-        use serde_json::to_string;
+    /// Start building an update package or one of its subpackages, performing the steps that
+    /// are common to all update packages.
+    fn make_subpackage_builder(&self, subname: &str) -> Result<SubpackageBuilder> {
+        let suffix = match subname {
+            "" => subname.to_owned(),
+            _ => format!("_{subname}"),
+        };
 
-        // All update packages need to be named 'update' to be accepted by the
-        // `system-updater`.
-        let mut builder = PackageBuilder::new("update");
+        // The update package needs to be named 'update' to be accepted by the
+        // `system-updater`.  Follow that convention for images packages as well.
+        let package_name = format!("update{suffix}");
+        let mut builder = PackageBuilder::new(&package_name);
+
         // However, they can have different published names.  And the name here
         // is the name to publish it under (and to include in the generated
         // package manifest).
-        builder.published_name(self.name);
+        let base_publish_name = &self.name;
+        let publish_name = format!("{base_publish_name}{suffix}");
+        builder.published_name(publish_name);
 
-        builder.add_contents_as_blob("packages.json", to_string(&self.packages)?, &self.gendir)?;
-        builder.add_contents_as_blob("epoch.json", to_string(&self.epoch)?, &self.gendir)?;
-        builder.add_contents_as_blob("board", &self.board_name, &self.gendir)?;
+        // Export the package's package manifest to paths that don't change
+        // based on the configured publishing name.
+        let manifest_path = self.outdir.join(format!("update{suffix}_package_manifest.json"));
+        builder.manifest_path(&manifest_path);
 
-        builder.add_file_as_blob("version", self.version_file.path_to_string()?)?;
+        let far_path = self.outdir.join(format!("{package_name}.far"));
+        let gendir = self.gendir.join(&package_name);
+
+        Ok(SubpackageBuilder { package: builder, package_name, manifest_path, far_path, gendir })
+    }
+
+    /// Build the update package and associated update images packages.
+    pub fn build(self) -> Result<()> {
+        use serde_json::to_string;
+
+        let blobfs_tool = self.tool_provider.get_tool("blobfs")?;
+        let mut blobfs_builder = BlobFSBuilder::new(blobfs_tool, "compact");
+
+        // Generate the update_images_fuchsia package.
+        let mut builder = self.make_subpackage_builder("images_fuchsia")?;
+        if let Some(slot) = &self.slot_primary {
+            let (zbi, vbmeta) =
+                slot.zbi_and_vbmeta().ok_or(anyhow!("primary slot missing a zbi image"))?;
+
+            builder.package.add_file_as_blob(zbi.destination, zbi.source.path_to_string()?)?;
+
+            if let Some(vbmeta) = vbmeta {
+                builder
+                    .package
+                    .add_file_as_blob(vbmeta.destination, vbmeta.source.path_to_string()?)?;
+            }
+        }
+        builder.build(&mut blobfs_builder)?;
+
+        // Generate the update_images_recovery package.
+        let mut builder = self.make_subpackage_builder("images_recovery")?;
+        if let Some(slot) = &self.slot_recovery {
+            let (zbi, vbmeta) =
+                slot.zbi_and_vbmeta().ok_or(anyhow!("recovery slot missing a zbi image"))?;
+
+            builder.package.add_file_as_blob(zbi.destination, zbi.source.path_to_string()?)?;
+
+            if let Some(vbmeta) = vbmeta {
+                builder
+                    .package
+                    .add_file_as_blob(vbmeta.destination, vbmeta.source.path_to_string()?)?;
+            }
+        }
+        builder.build(&mut blobfs_builder)?;
+
+        // Generate the update_images_firmware package.
+        let mut builder = self.make_subpackage_builder("images_firmware")?;
+        if !self.partitions.bootloader_partitions.is_empty() {
+            for bootloader in &self.partitions.bootloader_partitions {
+                let destination = match bootloader.partition_type.as_str() {
+                    "" => "firmware".to_string(),
+                    t => format!("firmware_{}", t),
+                };
+                builder
+                    .package
+                    .add_file_as_blob(destination, bootloader.image.path_to_string()?)?;
+            }
+        }
+        builder.build(&mut blobfs_builder)?;
+
+        // Generate the update package itself.
+        let mut builder = self.make_subpackage_builder("")?;
+        builder.package.add_contents_as_blob(
+            "packages.json",
+            to_string(&self.packages)?,
+            &self.gendir,
+        )?;
+        builder.package.add_contents_as_blob(
+            "epoch.json",
+            to_string(&self.epoch)?,
+            &self.gendir,
+        )?;
+        builder.package.add_contents_as_blob("board", &self.board_name, &self.gendir)?;
+
+        builder.package.add_file_as_blob("version", self.version_file.path_to_string()?)?;
 
         // Add the images.
         let slots = vec![&self.slot_primary, &self.slot_recovery];
         for slot in slots.iter().filter_map(|s| s.as_ref()) {
-            Self::add_images_to_builder(slot, &mut builder)?;
+            Self::add_images_to_builder(slot, &mut builder.package)?;
         }
 
         // Add the bootloaders.
@@ -202,26 +338,16 @@ impl UpdatePackageBuilder {
                 "" => "firmware".to_string(),
                 t => format!("firmware_{}", t),
             };
-            builder.add_file_as_blob(destination, bootloader.image.path_to_string()?)?;
+            builder.package.add_file_as_blob(destination, bootloader.image.path_to_string()?)?;
         }
+        builder.build(&mut blobfs_builder)?;
 
-        let update_package_path = self.outdir.join("update.far");
-        let update_package_manifest_path = self.outdir.join("update_package_manifest.json");
-        builder.manifest_path(&update_package_manifest_path);
-        builder
-            .build(&self.gendir, &update_package_path)
-            .context("Failed to build the update package")?;
-
-        // Generate a blobfs with only the update package inside it.
-        // This is useful for packaging up the blobs to use in adversarial tests.
-        // We do not care which blobfs layout we use, or whether it is compressed,
-        // because blobfs is mostly just being used as a content-addressed container.
+        // Generate a blobfs with the generated update package and update images packages inside
+        // it. This is useful for packaging up the blobs to use in adversarial tests. We do not
+        // care which blobfs layout we use, or whether it is compressed, because blobfs is mostly
+        // just being used as a content-addressed container.
         let update_blob_path = self.gendir.join("update.blob.blk");
-        let mut builder = BlobFSBuilder::new(self.blobfs_tool, "compact");
-        builder
-            .add_package(&update_package_manifest_path)
-            .context("Adding the update package to update package-only blobfs")?;
-        builder
+        blobfs_builder
             .build(self.gendir, update_blob_path)
             .context("Building blobfs for update package")?;
 
@@ -266,7 +392,7 @@ mod tests {
         let mut fake_version = NamedTempFile::new().unwrap();
         writeln!(fake_version, "1.2.3.4").unwrap();
         let mut builder = UpdatePackageBuilder::new(
-            tools.get_tool("blobfs").unwrap(),
+            Box::new(tools.clone()),
             partitions_config,
             "board",
             fake_version.path().to_path_buf(),
@@ -279,6 +405,7 @@ mod tests {
         builder.add_slot_images(Slot::Primary(ImagesManifest {
             images: vec![Image::ZBI { path: fake_zbi.path().to_path_buf(), signed: true }],
         }));
+
         builder.build().unwrap();
 
         // Ensure the blobfs tool was invoked correctly.
@@ -333,6 +460,230 @@ mod tests {
         "
         .to_string();
         assert_eq!(expected_contents, contents);
+
+        let far_path = outdir.path().join("update_images_fuchsia.far");
+        let mut far_reader = Reader::new(File::open(&far_path).unwrap()).unwrap();
+        let package = far_reader.read_file("meta/package").unwrap();
+        assert_eq!(package, br#"{"name":"update_images_fuchsia","version":"0"}"#);
+        let contents = far_reader.read_file("meta/contents").unwrap();
+        let contents = std::str::from_utf8(&contents).unwrap();
+        let expected_contents = "\
+            zbi=15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\n\
+        "
+        .to_string();
+        assert_eq!(expected_contents, contents);
+
+        let far_path = outdir.path().join("update_images_recovery.far");
+        let mut far_reader = Reader::new(File::open(&far_path).unwrap()).unwrap();
+        let package = far_reader.read_file("meta/package").unwrap();
+        assert_eq!(package, br#"{"name":"update_images_recovery","version":"0"}"#);
+        let contents = far_reader.read_file("meta/contents").unwrap();
+        let contents = std::str::from_utf8(&contents).unwrap();
+        let expected_contents = "\
+        "
+        .to_string();
+        assert_eq!(expected_contents, contents);
+
+        let far_path = outdir.path().join("update_images_firmware.far");
+        let mut far_reader = Reader::new(File::open(&far_path).unwrap()).unwrap();
+        let package = far_reader.read_file("meta/package").unwrap();
+        assert_eq!(package, br#"{"name":"update_images_firmware","version":"0"}"#);
+        let contents = far_reader.read_file("meta/contents").unwrap();
+        let contents = std::str::from_utf8(&contents).unwrap();
+        let expected_contents = "\
+            firmware_tpl=15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\n\
+        "
+        .to_string();
+        assert_eq!(expected_contents, contents);
+
+        // Ensure the expected package fars/manifests were generated.
+        assert!(outdir.path().join("update.far").exists());
+        assert!(outdir.path().join("update_package_manifest.json").exists());
+        assert!(outdir.path().join("update_images_fuchsia.far").exists());
+        assert!(outdir.path().join("update_images_recovery.far").exists());
+        assert!(outdir.path().join("update_images_firmware.far").exists());
+        assert!(outdir.path().join("update_images_fuchsia_package_manifest.json").exists());
+        assert!(outdir.path().join("update_images_recovery_package_manifest.json").exists());
+        assert!(outdir.path().join("update_images_firmware_package_manifest.json").exists());
+    }
+
+    #[test]
+    fn build_full() {
+        let outdir = tempdir().unwrap();
+        let tools = FakeToolProvider::default();
+
+        let fake_bootloader = NamedTempFile::new().unwrap();
+        let partitions_config = PartitionsConfig {
+            bootloader_partitions: vec![BootloaderPartition {
+                partition_type: "tpl".into(),
+                name: Some("firmware_tpl".into()),
+                image: fake_bootloader.path().to_path_buf(),
+            }],
+            partitions: vec![Partition::ZBI { name: "zircon_a".into(), slot: PartitionSlot::A }],
+        };
+        let epoch = EpochFile::Version1 { epoch: 0 };
+        let mut fake_version = NamedTempFile::new().unwrap();
+        writeln!(fake_version, "1.2.3.4").unwrap();
+        let mut builder = UpdatePackageBuilder::new(
+            Box::new(tools.clone()),
+            partitions_config,
+            "board",
+            fake_version.path().to_path_buf(),
+            epoch.clone(),
+            &outdir.path(),
+        );
+
+        // Add a ZBI to the update.
+        let fake_zbi = NamedTempFile::new().unwrap();
+        builder.add_slot_images(Slot::Primary(ImagesManifest {
+            images: vec![Image::ZBI { path: fake_zbi.path().to_path_buf(), signed: true }],
+        }));
+
+        // Add a Recovery ZBI/VBMeta to the update.
+        let fake_recovery_zbi = NamedTempFile::new().unwrap();
+        let fake_recovery_vbmeta = NamedTempFile::new().unwrap();
+        builder.add_slot_images(Slot::Recovery(ImagesManifest {
+            images: vec![
+                Image::ZBI { path: fake_recovery_zbi.path().to_path_buf(), signed: true },
+                Image::VBMeta(fake_recovery_vbmeta.path().to_path_buf()),
+            ],
+        }));
+
+        builder.build().unwrap();
+
+        // Ensure the blobfs tool was invoked correctly.
+        let blob_blk_path = outdir.path().join("update.blob.blk").path_to_string().unwrap();
+        let blobs_json_path = outdir.path().join("blobs.json").path_to_string().unwrap();
+        let blob_manifest_path = outdir.path().join("blob.manifest").path_to_string().unwrap();
+        let expected_commands: ToolCommandLog = serde_json::from_value(json!({
+            "commands": [
+                {
+                    "tool": "./host_x64/blobfs",
+                    "args": [
+                        "--json-output",
+                        blobs_json_path,
+                        blob_blk_path,
+                        "create",
+                        "--manifest",
+                        blob_manifest_path,
+                    ]
+                }
+            ]
+        }))
+        .unwrap();
+        assert_eq!(&expected_commands, tools.log());
+
+        let file = File::open(outdir.path().join("packages.json")).unwrap();
+        let reader = BufReader::new(file);
+        let p: UpdatePackagesManifest = serde_json::from_reader(reader).unwrap();
+        assert_eq!(UpdatePackagesManifest::default(), p);
+
+        let file = File::open(outdir.path().join("epoch.json")).unwrap();
+        let reader = BufReader::new(file);
+        let e: EpochFile = serde_json::from_reader(reader).unwrap();
+        assert_eq!(epoch, e);
+
+        let b = std::fs::read_to_string(outdir.path().join("board")).unwrap();
+        assert_eq!("board", b);
+
+        // Read the output and ensure it contains the right files (and their hashes).
+        let far_path = outdir.path().join("update.far");
+        let mut far_reader = Reader::new(File::open(&far_path).unwrap()).unwrap();
+        let package = far_reader.read_file("meta/package").unwrap();
+        assert_eq!(package, br#"{"name":"update","version":"0"}"#);
+        let contents = far_reader.read_file("meta/contents").unwrap();
+        let contents = std::str::from_utf8(&contents).unwrap();
+        let expected_contents = "\
+            board=9c579992f6e9f8cbd4ba81af6e23b1d5741e280af60f795e9c2bbcc76c4b7065\n\
+            epoch.json=0362de83c084397826800778a1cf927280a5d5388cb1f828d77f74108726ad69\n\
+            firmware_tpl=15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\n\
+            packages.json=85a3911ff39c118ee1a4be5f7a117f58a5928a559f456b6874440a7fb8c47a9a\n\
+            recovery=15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\n\
+            recovery.vbmeta=15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\n\
+            version=d2ff44655653e2cbbecaf89dbf33a8daa8867e41dade2c6b4f127c3f0450c96b\n\
+            zbi.signed=15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\n\
+        "
+        .to_string();
+        assert_eq!(expected_contents, contents);
+
+        let far_path = outdir.path().join("update_images_fuchsia.far");
+        let mut far_reader = Reader::new(File::open(&far_path).unwrap()).unwrap();
+        let package = far_reader.read_file("meta/package").unwrap();
+        assert_eq!(package, br#"{"name":"update_images_fuchsia","version":"0"}"#);
+        let contents = far_reader.read_file("meta/contents").unwrap();
+        let contents = std::str::from_utf8(&contents).unwrap();
+        let expected_contents = "\
+            zbi=15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\n\
+        "
+        .to_string();
+        assert_eq!(expected_contents, contents);
+
+        let far_path = outdir.path().join("update_images_recovery.far");
+        let mut far_reader = Reader::new(File::open(&far_path).unwrap()).unwrap();
+        let package = far_reader.read_file("meta/package").unwrap();
+        assert_eq!(package, br#"{"name":"update_images_recovery","version":"0"}"#);
+        let contents = far_reader.read_file("meta/contents").unwrap();
+        let contents = std::str::from_utf8(&contents).unwrap();
+        let expected_contents = "\
+            vbmeta=15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\n\
+            zbi=15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\n\
+        "
+        .to_string();
+        assert_eq!(expected_contents, contents);
+
+        let far_path = outdir.path().join("update_images_firmware.far");
+        let mut far_reader = Reader::new(File::open(&far_path).unwrap()).unwrap();
+        let package = far_reader.read_file("meta/package").unwrap();
+        assert_eq!(package, br#"{"name":"update_images_firmware","version":"0"}"#);
+        let contents = far_reader.read_file("meta/contents").unwrap();
+        let contents = std::str::from_utf8(&contents).unwrap();
+        let expected_contents = "\
+            firmware_tpl=15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\n\
+        "
+        .to_string();
+        assert_eq!(expected_contents, contents);
+
+        // Ensure the expected package fars/manifests were generated.
+        assert!(outdir.path().join("update.far").exists());
+        assert!(outdir.path().join("update_package_manifest.json").exists());
+        assert!(outdir.path().join("update_images_fuchsia.far").exists());
+        assert!(outdir.path().join("update_images_recovery.far").exists());
+        assert!(outdir.path().join("update_images_firmware.far").exists());
+        assert!(outdir.path().join("update_images_fuchsia_package_manifest.json").exists());
+        assert!(outdir.path().join("update_images_recovery_package_manifest.json").exists());
+        assert!(outdir.path().join("update_images_firmware_package_manifest.json").exists());
+    }
+
+    #[test]
+    fn build_emits_empty_image_packages() {
+        let outdir = tempdir().unwrap();
+        let tools = FakeToolProvider::default();
+
+        let partitions_config =
+            PartitionsConfig { bootloader_partitions: vec![], partitions: vec![] };
+        let epoch = EpochFile::Version1 { epoch: 0 };
+        let mut fake_version = NamedTempFile::new().unwrap();
+        writeln!(fake_version, "1.2.3.4").unwrap();
+        let builder = UpdatePackageBuilder::new(
+            Box::new(tools.clone()),
+            partitions_config,
+            "board",
+            fake_version.path().to_path_buf(),
+            epoch.clone(),
+            &outdir.path(),
+        );
+
+        builder.build().unwrap();
+
+        // Ensure the expected package fars/manifests were generated.
+        assert!(outdir.path().join("update.far").exists());
+        assert!(outdir.path().join("update_package_manifest.json").exists());
+        assert!(outdir.path().join("update_images_fuchsia.far").exists());
+        assert!(outdir.path().join("update_images_recovery.far").exists());
+        assert!(outdir.path().join("update_images_firmware.far").exists());
+        assert!(outdir.path().join("update_images_fuchsia_package_manifest.json").exists());
+        assert!(outdir.path().join("update_images_recovery_package_manifest.json").exists());
+        assert!(outdir.path().join("update_images_firmware_package_manifest.json").exists());
     }
 
     #[test]
@@ -343,7 +694,7 @@ mod tests {
         let mut fake_version = NamedTempFile::new().unwrap();
         writeln!(fake_version, "1.2.3.4").unwrap();
         let mut builder = UpdatePackageBuilder::new(
-            tools.get_tool("blobfs").unwrap(),
+            Box::new(tools.clone()),
             PartitionsConfig::default(),
             "board",
             fake_version.path().to_path_buf(),
@@ -367,7 +718,7 @@ mod tests {
         let mut fake_version = NamedTempFile::new().unwrap();
         writeln!(fake_version, "1.2.3.4").unwrap();
         let mut builder = UpdatePackageBuilder::new(
-            tools.get_tool("blobfs").unwrap(),
+            Box::new(tools.clone()),
             PartitionsConfig::default(),
             "board",
             fake_version.path().to_path_buf(),

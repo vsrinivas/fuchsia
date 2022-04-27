@@ -10,6 +10,7 @@ use assembly_util::PathToStringExt;
 use std::path::PathBuf;
 
 /// A provider for tools that no-op, but log their execution so it can be asserted in a test.
+#[derive(Clone)]
 pub struct FakeToolProvider {
     /// A log of all the tools that were run.
     log: ToolCommandLog,

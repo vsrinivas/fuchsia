@@ -22,8 +22,29 @@ template("update_package") {
     gendir = "$outdir/gen"
     update_package = "$outdir/update.far"
     update_package_manifest = "$outdir/update_package_manifest.json"
-    update_meta_package = "$gendir/meta/package"
-    update_abi_revision = "$gendir/meta/fuchsia.abi/abi-revision"
+    update_images_fuchsia_package = "$outdir/update_images_fuchsia.far"
+    update_images_fuchsia_package_manifest =
+        "$outdir/update_images_fuchsia_package_manifest.json"
+    update_images_recovery_package = "$outdir/update_images_recovery.far"
+    update_images_recovery_package_manifest =
+        "$outdir/update_images_recovery_package_manifest.json"
+    update_images_firmware_package = "$outdir/update_images_firmware.far"
+    update_images_firmware_package_manifest =
+        "$outdir/update_images_firmware_package_manifest.json"
+    update_meta_package = "$gendir/update/meta/package"
+    update_abi_revision = "$gendir/update/meta/fuchsia.abi/abi-revision"
+    update_images_fuchsia_meta_package =
+        "$gendir/update_images_fuchsia/meta/package"
+    update_images_fuchsia_abi_revision =
+        "$gendir/update_images_fuchsia/meta/fuchsia.abi/abi-revision"
+    update_images_recovery_meta_package =
+        "$gendir/update_images_recovery/meta/package"
+    update_images_recovery_abi_revision =
+        "$gendir/update_images_recovery/meta/fuchsia.abi/abi-revision"
+    update_images_firmware_meta_package =
+        "$gendir/update_images_firmware/meta/package"
+    update_images_firmware_abi_revision =
+        "$gendir/update_images_firmware/meta/fuchsia.abi/abi-revision"
     board = "$gendir/board"
     epoch = "$gendir/epoch.json"
     packages = "$gendir/packages.json"
@@ -105,8 +126,20 @@ template("update_package") {
     outputs = [
       files.update_package,
       files.update_package_manifest,
+      files.update_images_fuchsia_package,
+      files.update_images_fuchsia_package_manifest,
+      files.update_images_recovery_package,
+      files.update_images_recovery_package_manifest,
+      files.update_images_firmware_package,
+      files.update_images_firmware_package_manifest,
       files.update_meta_package,
       files.update_abi_revision,
+      files.update_images_fuchsia_meta_package,
+      files.update_images_fuchsia_abi_revision,
+      files.update_images_recovery_meta_package,
+      files.update_images_recovery_abi_revision,
+      files.update_images_firmware_meta_package,
+      files.update_images_firmware_abi_revision,
       files.board,
       files.epoch,
       files.packages,
@@ -160,9 +193,14 @@ template("update_package") {
     }
 
     metadata = {
-      # We generated a PackageManifest. We need to declare it, so that these
-      # packages are published into amber.
-      package_output_manifests = [ files.update_package_manifest ]
+      # We generated some PackageManifests. We need to declare them, so that
+      # these packages are published into TUF.
+      package_output_manifests = [
+        files.update_package_manifest,
+        files.update_images_fuchsia_package_manifest,
+        files.update_images_recovery_package_manifest,
+        files.update_images_firmware_package_manifest,
+      ]
     }
   }
 }

@@ -5,7 +5,7 @@
 use anyhow::{Context, Result};
 use assembly_images_manifest::ImagesManifest;
 use assembly_partitions_config::PartitionsConfig;
-use assembly_tool::{SdkToolProvider, ToolProvider};
+use assembly_tool::SdkToolProvider;
 use assembly_update_package::{Slot, UpdatePackageBuilder};
 use assembly_update_packages_manifest::UpdatePackagesManifest;
 use assembly_util::from_reader;
@@ -24,7 +24,7 @@ pub fn create_update(args: CreateUpdateArgs) -> Result<()> {
         .context("Failed to parse the partitions config")?;
     let epoch: EpochFile = EpochFile::Version1 { epoch: args.epoch };
     let mut builder = UpdatePackageBuilder::new(
-        sdk_tools.get_tool("blobfs")?,
+        Box::new(sdk_tools),
         partitions,
         args.board_name,
         args.version_file,
