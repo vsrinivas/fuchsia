@@ -181,8 +181,6 @@ class VnodeMinfs : public fs::Vnode,
                      ToggleMetricsCompleter::Sync& completer) final;
   void GetAllocatedRegions(GetAllocatedRegionsRequestView request,
                            GetAllocatedRegionsCompleter::Sync& completer) final;
-  void GetMountState(GetMountStateRequestView request,
-                     GetMountStateCompleter::Sync& completer) final;
 
   // Returns a copy of unowned vmo.
   zx::unowned_vmo vmo() const { return zx::unowned_vmo(vmo_.get()); }

@@ -73,8 +73,6 @@ constexpr uint32_t kExtentCount = 6;
 namespace minfs {
 
 #ifdef __Fuchsia__
-using MountState = fuchsia_minfs::wire::MountState;
-
 // How frequently we synchronize the journal. Without this, the journal will only get flushed when
 // there is no room for a new transaction, or it is explicitly asked to by some other mechanism.
 constexpr zx::duration kJournalBackgroundSyncTime = zx::sec(30);
@@ -321,11 +319,6 @@ class Minfs :
   // Record the location, size, and number of all non-free block regions.
   fbl::Vector<BlockRegion> GetAllocatedRegions() const;
 
-  // Returns the current state of mounted filesystem.
-  // "state" is intentionally losely defined to allow
-  // adding more information in the near future.
-  MountState GetMountState() const { return mount_state_; }
-
   // Get reference to the Inspector that Minfs is using.
   const inspect::Inspector& Inspector() { return inspect_tree_.Inspector(); }
 
@@ -466,8 +459,6 @@ class Minfs :
   // an event because it's returned by the fs.Query interface.
   zx::event fs_id_;
 
-  // TODO(fxbug.dev/51057): Git rid of MountState.
-  MountState mount_state_ = {};
   async::TaskClosure journal_sync_task_;
   std::unique_ptr<cobalt::CobaltLogger> cobalt_logger_ = nullptr;
 

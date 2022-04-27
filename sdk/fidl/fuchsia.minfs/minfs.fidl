@@ -31,25 +31,6 @@ type Metrics = struct {
     dirty_bytes uint64;
 };
 
-// TODO(fxbug.dev/51057): Remove.
-type MountState = struct {
-    /// True if the fileystem is operational in readonly state. There may have been
-    /// writes during mount or during replaying journal.
-    readonly_after_initialization bool;
-
-    /// True if the mounted filesystem is in verbose mode.
-    verbose bool;
-
-    /// True if the journalled writes were allowed during mount.
-    repair_filesystem bool;
-
-    /// True if the journaling is enabled.
-    use_journal bool;
-
-    /// True is dirty cache is enabled for minfs.
-    dirty_cache_enabled bool;
-};
-
 /// Describes a contiguous run of allocated blocks.
 @for_deprecated_c_bindings
 type BlockRegion = struct {
@@ -77,12 +58,5 @@ protocol Minfs {
         status zx.status;
         regions zx.handle:<VMO, optional>;
         count uint64;
-    });
-
-    /// Get mount state.
-    // TODO(fxbug.dev/51057): Remove.
-    GetMountState() -> (struct {
-        status zx.status;
-        mount_state box<MountState>;
     });
 };

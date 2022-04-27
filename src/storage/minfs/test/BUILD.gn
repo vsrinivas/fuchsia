@@ -69,7 +69,6 @@ test("minfs-integration") {
     "integration/backup_superblock.cc",
     "integration/mount_test.cc",
     "integration/power_test.cc",
-    "integration/runtime_state_test.cc",
   ]
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",

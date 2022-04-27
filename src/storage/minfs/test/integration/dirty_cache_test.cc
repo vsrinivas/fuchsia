@@ -150,12 +150,6 @@ void CheckDirtyStats(std::string mount_path, uint64_t dirty_bytes) {
   ASSERT_TRUE(fd);
 
   fdio_cpp::FdioCaller caller(std::move(fd));
-  auto mount_state_or = fidl::WireCall<fuchsia_minfs::Minfs>(caller.channel())->GetMountState();
-  ASSERT_TRUE(mount_state_or.ok());
-  ASSERT_EQ(mount_state_or.value().status, ZX_OK);
-  ASSERT_NE(mount_state_or.value().mount_state, nullptr);
-  ASSERT_EQ(mount_state_or.value().mount_state->dirty_cache_enabled, true);
-
   auto metrics_or = fidl::WireCall<fuchsia_minfs::Minfs>(caller.channel())->GetMetrics();
   ASSERT_TRUE(metrics_or.ok());
   ASSERT_EQ(metrics_or.value().status, ZX_OK);

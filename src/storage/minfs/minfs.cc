@@ -1242,14 +1242,6 @@ zx::status<std::unique_ptr<Minfs>> Minfs::Create(FuchsiaDispatcher* dispatcher,
 
   out_fs->SetReadonly(options.readonly || options.readonly_after_initialization);
 
-  out_fs->mount_state_ = {
-      .readonly_after_initialization = options.readonly_after_initialization,
-      .verbose = options.verbose,
-      .repair_filesystem = options.repair_filesystem,
-      .use_journal = true,
-      .dirty_cache_enabled = true,
-  };
-
   out_fs->InitializeInspectTree();
 #else
   BlockOffsets offsets(*bc, *sb);

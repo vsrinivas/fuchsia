@@ -714,12 +714,6 @@ void VnodeMinfs::GetAllocatedRegions(GetAllocatedRegionsRequestView request,
   };
 }
 
-void VnodeMinfs::GetMountState(GetMountStateRequestView request,
-                               GetMountStateCompleter::Sync& completer) {
-  MountState state = fs_->GetMountState();
-  completer.Reply(ZX_OK, fidl::ObjectView<MountState>::FromExternal(&state));
-}
-
 #endif
 
 zx::status<> VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
