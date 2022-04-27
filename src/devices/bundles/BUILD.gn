@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/drivers/arguments.gni")
-
 # This contains a list of all drivers in the devices area.
 group("drivers") {
   testonly = true
@@ -84,13 +82,7 @@ group("bootstrap-bin") {
     "//src/devices/bin/driver-index:bootfs",
     "//src/devices/bin/driver_manager:bootfs",
   ]
-
-  # Avoid including both driver_hosts in the same build.
-  if (enable_dfv2) {
-    deps += [ "//src/devices/bin/driver_host2" ]
-  } else {
-    deps += [ "//src/devices/bin/driver_host" ]
-  }
+  deps += [ "//src/devices/bin/driver_host" ]
 }
 
 group("usb-host-stack") {

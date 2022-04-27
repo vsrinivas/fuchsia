@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/drivers/arguments.gni")
-
 group("bootstrap") {
   deps = [
     "//src/connectivity/ethernet/drivers/ethernet",
@@ -15,10 +13,6 @@ group("bootstrap") {
     "//src/ui/input/drivers/hid-buttons",
     "//src/ui/input/drivers/hid-input-report",
   ]
-
-  if (enable_dfv2) {
-    deps += [ ":bootstrap-dfv2" ]
-  }
 }
 
 group("bootstrap-dfv2") {

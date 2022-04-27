@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/drivers/arguments.gni")
 
 visibility = [ "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/*" ]
 

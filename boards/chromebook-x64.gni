@@ -36,6 +36,9 @@ _common_bootfs_deps = [
   "//src/storage/flashmap:bootfs",
 ]
 
+# Include driver_host2 for testing.
+_common_bootfs_deps += [ "//src/devices/bin/driver_host2" ]
+
 board_bootfs_labels += _common_bootfs_deps
 
 board_zedboot_bootfs_labels += _common_bootfs_deps
