@@ -420,7 +420,7 @@ fn process_eapol_key_frame_timeout(
     let mut update_sink = rsna::UpdateSink::default();
     match rsna.supplicant.on_eapol_key_frame_timeout(&mut update_sink) {
         Err(e) => {
-            error!("error handling EAPOL key frame timeout: {}", e);
+            error!("{:?}", e);
             context.info.report_supplicant_error(anyhow::anyhow!(e));
             return RsnaStatus::Failed(EstablishRsnaFailureReason::KeyFrameExchangeTimeout);
         }
