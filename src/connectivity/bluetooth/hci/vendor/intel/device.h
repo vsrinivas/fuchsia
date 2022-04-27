@@ -83,6 +83,7 @@ class Device : public DeviceType, public ddk::BtHciProtocol<Device, ddk::base_pr
   ddk::BtHciProtocolClient hci_;
   bool secure_;
   bool firmware_loaded_;
+  std::thread init_thread_;
 };
 
 }  // namespace btintel

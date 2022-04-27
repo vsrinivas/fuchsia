@@ -24,9 +24,8 @@ Device::Device(zx_device_t* device, bt_hci_protocol_t* hci, bool secure)
 zx_status_t Device::Bind() { return DdkAdd("bt_hci_intel"); }
 
 void Device::DdkInit(ddk::InitTxn init_txn) {
-  auto f = std::async(std::launch::async, [this, txn = std::move(init_txn)]() mutable {
-    LoadFirmware(std::move(txn), secure_);
-  });
+  init_thread_ = std::thread(
+      [this, txn = std::move(init_txn)]() mutable { LoadFirmware(std::move(txn), secure_); });
 }
 
 zx_status_t Device::LoadFirmware(ddk::InitTxn init_txn, bool secure) {
@@ -99,7 +98,12 @@ void Device::DdkUnbind(ddk::UnbindTxn txn) {
   txn.Reply();
 }
 
-void Device::DdkRelease() { delete this; }
+void Device::DdkRelease() {
+  if (init_thread_.joinable()) {
+    init_thread_.join();
+  }
+  delete this;
+}
 
 zx_status_t Device::DdkGetProtocol(uint32_t proto_id, void* out_proto) {
   if (proto_id != ZX_PROTOCOL_BT_HCI) {
