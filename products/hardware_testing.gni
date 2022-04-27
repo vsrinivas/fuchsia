@@ -10,7 +10,7 @@ import("//products/core.gni")
 
 cache_package_labels += [
   "//bundles/drivers:utils",
-  "//garnet/packages/prod:hwstress",
+  "//src/zircon/bin/hwstress",
   "//garnet/packages/prod:sbase",
   "//src/devices/radar/bin/radarutil",
   "//src/ui/light/bin/lights-cli",
