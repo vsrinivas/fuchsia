@@ -1016,23 +1016,26 @@ impl BinderDriver {
             _ => unreachable!(),
         };
 
-        // Hold the lock for the thread pool until the target thread has a command queued.
-        let target_thread_pool = target_proc.thread_pool.read();
+        // Find the peer thread that is involved in a transaction with this thread. If we're in a
+        // transaction, we should prefer issuing the refcount operation to the thread that is
+        // waiting for a reply (idle).
+        let peer_tid = binder_thread.read().transactions.last().and_then(|transaction| {
+            if transaction.peer_pid == target_proc.pid {
+                Some(transaction.peer_tid)
+            } else {
+                None
+            }
+        });
+
+        // Hold an exclusive lock for the thread pool until the target thread has a command queued.
+        // This will ensure that a thread doesn't get double scheduled.
+        let target_thread_pool = target_proc.thread_pool.write();
 
         // Select a thread to handle this refcount task.
-        let target_thread = {
-            // Prefer using a thread that is part of this transaction, if it exists.
-            if let Some(tid) = binder_thread.read().transactions.last().and_then(|transaction| {
-                if transaction.peer_pid == target_proc.pid {
-                    Some(transaction.peer_tid)
-                } else {
-                    None
-                }
-            }) {
-                Some(target_thread_pool.find_thread(tid)?)
-            } else {
-                target_thread_pool.find_available_thread()
-            }
+        let target_thread = if let Some(tid) = peer_tid {
+            Some(target_thread_pool.find_thread(tid)?)
+        } else {
+            target_thread_pool.find_available_thread()
         };
 
         if let Some(target_thread) = target_thread {
