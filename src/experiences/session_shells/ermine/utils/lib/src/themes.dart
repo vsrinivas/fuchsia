@@ -65,6 +65,8 @@ class AppTheme {
         ),
         tooltipTheme: TooltipThemeData(
           padding: EdgeInsets.all(8),
+          textStyle:
+              _ErmineTypography.theme.bodyText2!.copyWith(color: Colors.white),
           decoration: BoxDecoration(
             color: FuchsiaColors.black,
             borderRadius: BorderRadius.circular(0),
@@ -85,6 +87,8 @@ class AppTheme {
             borderRadius: BorderRadius.circular(4),
             side: BorderSide(color: Colors.black),
           ),
+          titleTextStyle: _ErmineTypography.theme.headline5,
+          contentTextStyle: _ErmineTypography.theme.bodyText1,
         ),
         // Used for AppBar bottom.
         indicatorColor: FuchsiaColors.grey04,
@@ -150,9 +154,11 @@ class AppTheme {
         ),
         tooltipTheme: TooltipThemeData(
           padding: EdgeInsets.all(8),
+          textStyle:
+              _ErmineTypography.theme.bodyText2!.copyWith(color: Colors.black),
           decoration: BoxDecoration(
             color: FuchsiaColors.white,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(0),
           ),
         ),
         // Used by AppBar under QuickSettings details screen.
@@ -170,6 +176,8 @@ class AppTheme {
             borderRadius: BorderRadius.circular(4),
             side: BorderSide(color: Colors.white),
           ),
+          titleTextStyle: _ErmineTypography.theme.headline5,
+          contentTextStyle: _ErmineTypography.theme.bodyText1,
         ),
         // Used for AppBar bottom.
         indicatorColor: FuchsiaColors.grey01,
@@ -184,66 +192,79 @@ class _ErmineTypography {
 
   static TextTheme theme = TextTheme(
       headline1: TextStyle(
+          fontFamily: 'Roboto Mono',
           fontSize: 64,
           fontWeight: FontWeight.normal,
           letterSpacing: -1.5,
           height: 1.125),
       headline2: TextStyle(
+          fontFamily: 'Roboto Mono',
           fontSize: 48,
           fontWeight: FontWeight.normal,
           letterSpacing: 0,
           height: 1.17),
       headline3: TextStyle(
+          fontFamily: 'Roboto Mono',
           fontSize: 36,
           fontWeight: FontWeight.normal,
           letterSpacing: 0,
           height: 1.3),
       headline4: TextStyle(
+          fontFamily: 'Roboto Mono',
           fontSize: 28,
           fontWeight: FontWeight.normal,
           letterSpacing: 0,
           height: 1.14),
       headline5: TextStyle(
+          fontFamily: 'Roboto Mono',
           fontSize: 24,
           fontWeight: FontWeight.normal,
           letterSpacing: 0,
           height: 1.17),
       headline6: TextStyle(
+          fontFamily: 'Roboto Mono',
           fontSize: 18,
           fontWeight: FontWeight.bold,
           letterSpacing: 0,
           height: 1.3),
       subtitle1: TextStyle(
+          fontFamily: 'Roboto Mono',
           fontSize: 16,
           fontWeight: FontWeight.bold,
           letterSpacing: 0,
           height: 1.5),
       subtitle2: TextStyle(
+          fontFamily: 'Roboto Mono',
           fontSize: 14,
           fontWeight: FontWeight.bold,
           letterSpacing: 0,
           height: 1.25),
       bodyText1: TextStyle(
+          fontFamily: 'Roboto Mono',
           fontSize: 16,
-          fontWeight: FontWeight.w300,
+          fontWeight: FontWeight.normal,
           letterSpacing: 0,
           height: 1.4),
       bodyText2: TextStyle(
+          fontFamily: 'Roboto Mono',
           fontSize: 14,
-          fontWeight: FontWeight.w300,
+          fontWeight: FontWeight.normal,
           letterSpacing: 0,
           height: 1.4),
       button: TextStyle(
+          fontFamily: 'Roboto Mono',
           fontSize: 14,
           fontWeight: FontWeight.bold,
           letterSpacing: 0,
           height: 1.14),
       caption: TextStyle(
+          fontFamily: 'Roboto Mono',
           fontSize: 12,
           fontWeight: FontWeight.normal,
           letterSpacing: 0,
           color: FuchsiaColors.grey05),
       overline: TextStyle(
+          fontFamily: 'Roboto Mono',
           fontSize: 10,
           fontWeight: FontWeight.normal,
           letterSpacing: 0,
