@@ -19,7 +19,6 @@ use {
 pub mod include_target {
     use super::*;
 
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95073)
     pub(crate) async fn test_debug_run_crasher() -> Result<()> {
         // If the test is running on CI/CQ bots, it's isolated with only files listed as test_data
         // available. We have added zxdb and zxdb-meta.json in ffx-e2e-test-data but we have to
@@ -30,7 +29,7 @@ pub mod include_target {
             let manifest_file = Path::new("sdk/manifest/core");
             if !manifest_file.exists() {
                 create_dir_all(manifest_file.parent().unwrap())?;
-                File::create(manifest_file)?.write(br#"{
+                File::create(manifest_file)?.write_all(br#"{
                     "atoms": [{
                         "category": "partner",
                         "deps": [],

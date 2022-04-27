@@ -19,7 +19,6 @@ const BOOT_MAGIC: &str = "ANDROID!";
 const BOOT_SIZE: usize = 8;
 const V4_HEADER_SIZE: u32 = 1580;
 
-#[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95073)
 fn copy<R: Read, W: Write>(mut reader: BufReader<R>, writer: &mut BufWriter<W>) -> Result<()> {
     loop {
         let buffer = reader.fill_buf()?;
@@ -27,7 +26,7 @@ fn copy<R: Read, W: Write>(mut reader: BufReader<R>, writer: &mut BufWriter<W>) 
         if length == 0 {
             return Ok(());
         }
-        writer.write(buffer)?;
+        writer.write_all(buffer)?;
         reader.consume(length);
     }
 }
@@ -64,7 +63,6 @@ async fn get_boot_image<W: Write, F: FileResolver + Sync>(
     }
 }
 
-#[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95073)
 pub async fn boot<W: Write, F: FileResolver + Sync>(
     writer: &mut W,
     file_resolver: &mut F,
@@ -94,7 +92,7 @@ pub async fn boot<W: Write, F: FileResolver + Sync>(
         &mut header[BOOT_SIZE + 32..BOOT_SIZE + 36],
         4, /* header version*/
     );
-    outfile.write(&header)?;
+    outfile.write_all(&header)?;
 
     let in_file = BufReader::new(File::open(&boot_image)?);
     copy(in_file, &mut outfile)?;
@@ -102,7 +100,7 @@ pub async fn boot<W: Write, F: FileResolver + Sync>(
     // Pad to page size.
     let padding = kernal_actual - kernal_size;
     let padding_bytes: [u8; 4096] = [0u8; 4096];
-    outfile.write(&padding_bytes[..padding.try_into()?])?;
+    outfile.write_all(&padding_bytes[..padding.try_into()?])?;
     outfile.flush()?;
 
     stage_file(

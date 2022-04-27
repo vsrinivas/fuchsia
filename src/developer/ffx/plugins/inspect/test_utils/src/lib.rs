@@ -375,13 +375,12 @@ impl Entry for MockDir {
         }
     }
 
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95073)
     fn encode(&self, buf: &mut Vec<u8>) {
         buf.write_u64::<LittleEndian>(fio::INO_UNKNOWN).expect("writing mockdir ino to work");
         buf.write_u8(self.name.len() as u8).expect("writing mockdir size to work");
         buf.write_u8(fio::DirentType::Directory.into_primitive())
             .expect("writing mockdir type to work");
-        buf.write(self.name.as_ref()).expect("writing mockdir name to work");
+        buf.write_all(self.name.as_ref()).expect("writing mockdir name to work");
     }
 
     fn name(&self) -> String {
@@ -430,12 +429,11 @@ impl Entry for MockFile {
         unimplemented!();
     }
 
-    #[allow(clippy::unused_io_amount)] // TODO(fxbug.dev/95073)
     fn encode(&self, buf: &mut Vec<u8>) {
         buf.write_u64::<LittleEndian>(fio::INO_UNKNOWN).expect("writing mockdir ino to work");
         buf.write_u8(self.name.len() as u8).expect("writing mockdir size to work");
         buf.write_u8(fio::DirentType::File.into_primitive()).expect("writing mockdir type to work");
-        buf.write(self.name.as_ref()).expect("writing mockdir name to work");
+        buf.write_all(self.name.as_ref()).expect("writing mockdir name to work");
     }
 
     fn name(&self) -> String {

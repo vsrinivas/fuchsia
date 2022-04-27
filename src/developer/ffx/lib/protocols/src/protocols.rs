@@ -224,7 +224,9 @@ where
 
     async fn start_protocol(&self, cx: &Context) -> Result<()> {
         let cx = cx.clone();
-        #[allow(clippy::async_yields_async)] // TODO(fxbug.dev/95073)
+        // async_once interacts with what we're doing here in a way that causes us to need to yield
+        // a future from a future.
+        #[allow(clippy::async_yields_async)]
         let fut = self
             .start_fut
             .get_or_init(async move {
