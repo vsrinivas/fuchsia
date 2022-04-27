@@ -8,7 +8,10 @@ use {
     fidl::endpoints::{create_endpoints, create_proxy, ServerEnd},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_mem::Buffer,
-    fidl_fuchsia_pkg::{BlobId, PackageCacheMarker, PackageResolverMarker, PackageUrl},
+    fidl_fuchsia_pkg::{
+        BlobId, BlobInfo, BlobInfoIteratorMarker, NeededBlobsMarker, PackageCacheMarker,
+        PackageResolverMarker, PackageUrl,
+    },
     fidl_fuchsia_sys2::{StorageAdminMarker, StorageIteratorMarker},
     fidl_fuchsia_update_installer::{
         Initiator, InstallerMarker, MonitorMarker, MonitorRequest, Options, RebootControllerMarker,
@@ -22,7 +25,7 @@ use {
     fuchsia_merkle::MerkleTree,
     fuchsia_syslog::fx_log_info,
     fuchsia_zircon::{AsHandleRef, Rights, Status},
-    futures::{channel::oneshot::channel, join},
+    futures::{channel::oneshot::channel, join, TryFutureExt as _},
     io_util::{
         directory::{open_file, open_in_namespace},
         read_file_bytes,
@@ -95,8 +98,10 @@ struct AccessCheckResult {
     pub pkgfs_versions: Option<ReadableExecutableResult>,
     /// Result of opening via pkgfs-packages API.
     pub pkgfs_packages: Option<ReadableExecutableResult>,
-    /// Result of opening via package cache API.
-    pub pkg_cache: Option<ReadableExecutableResult>,
+    /// Result of opening via fuchsia.pkg/PackageCache.Open API.
+    pub pkg_cache_open: Option<ReadableExecutableResult>,
+    /// Result of opening via fuchsia.pkg/PackageCache.Get API.
+    pub pkg_cache_get: Option<ReadableExecutableResult>,
     /// Result of opening via package resolver API with
     /// fuchsia-pkg://[domain]/[package]/0?hash=[hash].
     pub pkg_resolver_with_hash: Option<ReadableExecutableResult>,
@@ -110,8 +115,10 @@ struct AccessCheckSelectors {
     pub pkgfs_versions: bool,
     /// Perform access check against pkgfs-packages API.
     pub pkgfs_packages: bool,
-    /// Perform access check against package cache API.
-    pub pkg_cache: bool,
+    /// Perform access check against pkg-cache's fuchsia.pkg/PackageCache.Open API.
+    pub pkg_cache_open: bool,
+    /// Perform access check against pkg-cache's fuchsia.pkg/PackageCache.Get API.
+    pub pkg_cache_get: bool,
     /// Perform access check against package resolver API with
     /// fuchsia-pkg://[domain]/[package]/0?hash=[hash].
     pub pkg_resolver_with_hash: bool,
@@ -126,7 +133,8 @@ impl AccessCheckSelectors {
         Self {
             pkgfs_versions: true,
             pkgfs_packages: true,
-            pkg_cache: true,
+            pkg_cache_open: true,
+            pkg_cache_get: true,
             pkg_resolver_with_hash: true,
             pkg_resolver_without_hash: true,
         }
@@ -139,7 +147,7 @@ struct AccessCheckConfig {
     pub package_name: String,
     /// The domain name to use for resolving the package with a hash.
     pub domain_with_hash: String,
-    /// The domain name ot use for resolving the package without a hash.
+    /// The domain name to use for resolving the package without a hash.
     pub domain_without_hash: String,
     /// The test-package-local path for side-loading the package. This mechanism
     /// is used to compute the package hash.
@@ -158,10 +166,14 @@ struct AccessCheckRequest {
 impl AccessCheckRequest {
     /// Execute the access checks encoded in this request.
     pub async fn perform_access_check(&self) -> AccessCheckResult {
-        // Determine the "name" (merkle root hash) of `hello_world_v0`.
+        // Determine the hash (the merkle root of the package meta.far) of the package.
         let mut package = File::open(&self.config.local_package_path).unwrap();
         let package_merkle = MerkleTree::from_reader(&mut package).unwrap().root();
-        let mut package_blob_id = BlobId { merkle_root: package_merkle.into() };
+        let package_blob_id = BlobId { merkle_root: package_merkle.into() };
+        let package_blob_info = BlobInfo {
+            blob_id: package_blob_id,
+            length: package.metadata().expect("access meta.far File metadata").len(),
+        };
 
         // Open package via pkgfs-versions API.
         let pkgfs_versions_path = format!("{}/versions/{}", PKGFS_PATH, package_merkle);
@@ -199,14 +211,14 @@ impl AccessCheckRequest {
             None
         };
 
-        // Open package as executable via pkg-cache API.
-        let pkg_cache_rx_result = if self.selectors.pkg_cache {
-            fx_log_info!("Opening package via pkg-cache: {}", package_merkle);
+        // Open package as executable via pkg-cache's fuchsia.pkg/PackageCache.Open API.
+        let pkg_cache_open_rx_result = if self.selectors.pkg_cache_open {
+            fx_log_info!("Opening package via fuchsia.pkg/PackageCache.Open: {}", package_merkle);
             let pkg_cache_proxy = connect_to_protocol::<PackageCacheMarker>().unwrap();
             let (package_directory_proxy, package_directory_server_end) =
                 create_proxy::<fio::DirectoryMarker>().unwrap();
             pkg_cache_proxy
-                .open(&mut package_blob_id, package_directory_server_end)
+                .open(&mut package_blob_id.clone(), package_directory_server_end)
                 .await
                 .unwrap()
                 .unwrap();
@@ -215,7 +227,75 @@ impl AccessCheckRequest {
                 self.attempt_executable(&package_directory_proxy).await,
             ))
         } else {
-            fx_log_info!("Skipping open package via pkg-cache: {}", package_merkle);
+            fx_log_info!(
+                "Skipping open package via fuchsia.pkg/PackageCache.Open: {}",
+                package_merkle
+            );
+            None
+        };
+
+        // Open package as executable via pkg-cache's fuchsia.pkg/PackageCache.Get API.
+        let pkg_cache_get_rx_result = if self.selectors.pkg_cache_get {
+            fx_log_info!("Opening package via fuchsia.pkg/PackageCache.Get: {}", package_merkle);
+            // In all of the uses of this check in these tests, the package's blobs are already
+            // present in blobfs. This means we should not need to perform any of the parts of the
+            // PackageCache.Get protocol (and therefore any of the parts of the
+            // PackageCache.NeededBlobs protocol) that actually write blobs to blobfs.
+            // If this stops being the case, one of the below assertions will trigger and the test
+            // will fail (notifying a developer to update this test).
+            let pkg_cache_proxy = connect_to_protocol::<PackageCacheMarker>().unwrap();
+            let (needed_blobs, needed_blobs_server_end) =
+                fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
+            let (package_directory_proxy, package_directory_server_end) =
+                create_proxy::<fio::DirectoryMarker>().unwrap();
+
+            let get_fut = pkg_cache_proxy
+                .get(
+                    &mut package_blob_info.clone(),
+                    needed_blobs_server_end,
+                    Some(package_directory_server_end),
+                )
+                .map_ok(|res| res.map_err(Status::from_raw));
+
+            let (_meta_blob, meta_blob_server_end) =
+                fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
+
+            // If the package is in base or active in the dynamic index, the server will close the
+            // NeededBlobs channel with a `ZX_OK` epitaph.
+            // Otherwise, the server will respond to OpenMetaBlob with Ok(false), because in these
+            // tests all the package's blobs (including the meta.far) are already in blobfs.
+            let do_missing_blobs = match needed_blobs.open_meta_blob(meta_blob_server_end).await {
+                Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. }) => false,
+                Ok(Ok(false)) => true,
+                Ok(r) => {
+                    panic!("meta.far blob not cached: unexpected response {:?}", r)
+                }
+                Err(e) => {
+                    panic!("meta.far blob not cached: unexpected FIDL error {:?}", e)
+                }
+            };
+
+            if do_missing_blobs {
+                let (blob_iterator, blob_iterator_server_end) =
+                    fidl::endpoints::create_proxy::<BlobInfoIteratorMarker>().unwrap();
+                let () = needed_blobs.get_missing_blobs(blob_iterator_server_end).unwrap();
+                // Iterator should be empty because all content blobs should be in blobfs.
+                assert!(blob_iterator.next().await.unwrap().is_empty());
+            }
+
+            // The initial PackageCache.Get request should complete now that the
+            // PackageCache.NeededBlobs procedure has been performed.
+            let () = get_fut.await.unwrap().unwrap();
+
+            Some((
+                self.attempt_readable(&package_directory_proxy).await,
+                self.attempt_executable(&package_directory_proxy).await,
+            ))
+        } else {
+            fx_log_info!(
+                "Skipping open package via fuchsia.pkg/PackageCache.Get: {}",
+                package_merkle
+            );
             None
         };
 
@@ -256,7 +336,8 @@ impl AccessCheckRequest {
             // ..._rx_result.1 contains Result<Box<Buffer>>.
             pkgfs_versions_rx_result.as_ref().map(|rx| &rx.1),
             pkgfs_packages_rx_result.as_ref().map(|rx| &rx.1),
-            pkg_cache_rx_result.as_ref().map(|rx| &rx.1),
+            pkg_cache_open_rx_result.as_ref().map(|rx| &rx.1),
+            pkg_cache_get_rx_result.as_ref().map(|rx| &rx.1),
             pkg_resolver_with_hash_rx_result.as_ref().map(|rx| &rx.1),
         ]
         .into_iter()
@@ -269,7 +350,8 @@ impl AccessCheckRequest {
         AccessCheckResult {
             pkgfs_versions: Self::pair_to_result(pkgfs_versions_rx_result),
             pkgfs_packages: Self::pair_to_result(pkgfs_packages_rx_result),
-            pkg_cache: Self::pair_to_result(pkg_cache_rx_result),
+            pkg_cache_open: Self::pair_to_result(pkg_cache_open_rx_result),
+            pkg_cache_get: Self::pair_to_result(pkg_cache_get_rx_result),
             pkg_resolver_with_hash: Self::pair_to_result(pkg_resolver_with_hash_rx_result),
             pkg_resolver_without_hash: Self::pair_to_result(pkg_resolver_without_hash_rx_result),
         }
@@ -495,7 +577,8 @@ async fn access_ota_blob_as_executable() {
             },
             selectors: AccessCheckSelectors {
                 pkgfs_versions: true,
-                pkg_cache: true,
+                pkg_cache_open: true,
+                pkg_cache_get: true,
                 pkg_resolver_with_hash: true,
 
                 // Disable non-hash-qualified checks.
@@ -518,7 +601,8 @@ async fn access_ota_blob_as_executable() {
 
                 // Disable most checks; only interested in package resolution.
                 pkgfs_versions: false,
-                pkg_cache: false,
+                pkg_cache_open: false,
+                pkg_cache_get: false,
                 pkgfs_packages: false,
                 pkg_resolver_without_hash: false,
             },
@@ -535,7 +619,8 @@ async fn access_ota_blob_as_executable() {
     // Pre-update base version access check: Access should always succeed.
     assert!(hello_world_v0_access_check_result.pkgfs_versions.unwrap().is_readable_executable_ok());
     assert!(hello_world_v0_access_check_result.pkgfs_packages.unwrap().is_readable_executable_ok());
-    assert!(hello_world_v0_access_check_result.pkg_cache.unwrap().is_readable_executable_ok());
+    assert!(hello_world_v0_access_check_result.pkg_cache_open.unwrap().is_readable_executable_ok());
+    assert!(hello_world_v0_access_check_result.pkg_cache_get.unwrap().is_readable_executable_ok());
     assert!(hello_world_v0_access_check_result
         .pkg_resolver_with_hash
         .unwrap()
@@ -564,7 +649,9 @@ async fn access_ota_blob_as_executable() {
     // Post-update new version access check: Access should fail on all
     // hash-qualified attempts to open as executable.
     assert!(hello_world_v1_access_check_result.pkgfs_versions.unwrap().is_executable_err());
-    assert!(hello_world_v1_access_check_result.pkg_cache.unwrap().is_executable_err());
+    assert!(hello_world_v1_access_check_result.pkg_cache_open.unwrap().is_executable_err());
+    assert!(hello_world_v1_access_check_result.pkg_cache_get.unwrap().is_executable_err());
+
     assert!(hello_world_v1_access_check_result.pkg_resolver_with_hash.unwrap().is_executable_err());
 
     let hello_world_v0_access_check_result =
@@ -573,7 +660,8 @@ async fn access_ota_blob_as_executable() {
     // Post-update base version access check: Access should always succeed.
     assert!(hello_world_v0_access_check_result.pkgfs_versions.unwrap().is_readable_executable_ok());
     assert!(hello_world_v0_access_check_result.pkgfs_packages.unwrap().is_readable_executable_ok());
-    assert!(hello_world_v0_access_check_result.pkg_cache.unwrap().is_readable_executable_ok());
+    assert!(hello_world_v0_access_check_result.pkg_cache_open.unwrap().is_readable_executable_ok());
+    assert!(hello_world_v0_access_check_result.pkg_cache_get.unwrap().is_readable_executable_ok());
     assert!(hello_world_v0_access_check_result
         .pkg_resolver_with_hash
         .unwrap()
