@@ -412,6 +412,58 @@ TEST(Rectangle2DTest, OrderOfOperationsTest) {
   }
 }
 
+// Ensure that when a transform node has two parents, that its data is duplicated in
+// the global topology vector, with the proper global data (i.e. matrices, images) for
+// each entry, respecting each separate chain up the hierarchy.
+TEST(Rectangle2DTest, MultipleParentTest) {
+  // Make a global topology representing the following graph.
+  // We have a diamond patter hierarchy where transform 1:4
+  // is children to both 1:1 and 1:3.
+  //
+  // 1:0 - 1:1
+  //     \    \
+  //       1:3 - 1:4
+  UberStruct::InstanceMap uber_structs;
+  auto uber_struct = std::make_unique<UberStruct>();
+
+  const uint32_t kImageId = 7;
+  uber_struct->local_topology = {{{1, 0}, 2}, {{1, 1}, 1}, {{1, 4}, 0}, {{1, 3}, 1}, {{1, 4}, 0}};
+  uber_struct->local_matrices[{1, 3}] = glm::mat3(2.0);
+  uber_struct->images[{1, 4}].identifier = kImageId;
+  uber_structs[1] = std::move(uber_struct);
+
+  auto global_topology_data =
+      GlobalTopologyData::ComputeGlobalTopologyData(uber_structs, {}, {}, {1, 0});
+  GlobalTopologyData::TopologyVector topology_vector = global_topology_data.topology_vector;
+  auto parent_indices = global_topology_data.parent_indices;
+
+  GlobalTopologyData::TopologyVector expected_topology_vector = {
+      {1, 0}, {1, 1}, {1, 4}, {1, 3}, {1, 4}};
+  GlobalTopologyData::ParentIndexVector expected_parent_indices = {0, 0, 1, 0, 3};
+
+  for (uint32_t i = 0; i < topology_vector.size(); i++) {
+    EXPECT_EQ(topology_vector[i], expected_topology_vector[i]);
+  }
+
+  for (uint32_t i = 0; i < parent_indices.size(); i++) {
+    EXPECT_EQ(parent_indices[i], expected_parent_indices[i]);
+  }
+
+  // Each entry for the doubly parented node should have a different global matrix.
+  const auto matrix_vector = ComputeGlobalMatrices(topology_vector, parent_indices, uber_structs);
+  EXPECT_EQ(matrix_vector.size(), 5U);
+  EXPECT_EQ(matrix_vector[2], glm::mat3(1.0));
+  EXPECT_EQ(matrix_vector[4], glm::mat3(2.0));
+
+  // The image data for both entries should have the same values.
+  auto [indices, images] = ComputeGlobalImageData(topology_vector, parent_indices, uber_structs);
+  EXPECT_EQ(images.size(), 2U);
+  EXPECT_EQ(indices[0], 2U);
+  EXPECT_EQ(indices[1], 4U);
+  EXPECT_EQ(images[0].identifier, kImageId);
+  EXPECT_EQ(images[1].identifier, kImageId);
+}
+
 // Check that we can set image color values besides white.
 TEST(GlobalImageDataTest, ImageMetadataColorTest) {
   UberStruct::InstanceMap uber_structs;

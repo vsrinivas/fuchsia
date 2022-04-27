@@ -1250,6 +1250,38 @@ TEST_F(FlatlandTest, MultichildUsecase) {
   PRESENT(flatland, true);
 }
 
+// Test that when a transform has multiple parents, that
+// the number of nodes in the uber_structs global topology
+// is what we would expect.
+TEST_F(FlatlandTest, MultichildTest2) {
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
+
+  const TransformId kIdRoot = {1};
+  const TransformId kIdParent1 = {2};
+  const TransformId kIdParent2 = {3};
+  const TransformId kIdChild = {4};
+
+  // Create the transforms.
+  flatland->CreateTransform(kIdRoot);
+  flatland->CreateTransform(kIdParent1);
+  flatland->CreateTransform(kIdParent2);
+  flatland->CreateTransform(kIdChild);
+  PRESENT(flatland, true);
+
+  // Setup the diamond parent hierarchy.
+  flatland->SetRootTransform(kIdRoot);
+  flatland->AddChild(kIdRoot, kIdParent1);
+  flatland->AddChild(kIdRoot, kIdParent2);
+  flatland->AddChild(kIdParent1, kIdChild);
+  flatland->AddChild(kIdParent2, kIdChild);
+  PRESENT(flatland, true);
+
+  // The transform kIdChild should be doubly listed
+  // in the uber struct.
+  auto uber_struct = GetUberStruct(flatland.get());
+  EXPECT_EQ(uber_struct->local_topology.size(), 6U);
+}
+
 // Test that Present() fails if it detects a graph cycle.
 TEST_F(FlatlandTest, CycleDetector) {
   const TransformId kId1 = {1};
