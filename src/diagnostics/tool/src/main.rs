@@ -41,10 +41,10 @@ enum Command {
     Generate {
         #[structopt(
             short,
-            name = "component",
-            help = "Generate selectors for only this component"
+            name = "moniker",
+            help = "Generate selectors for the component with this moniker"
         )]
-        component_name: Option<String>,
+        moniker: Option<String>,
         #[structopt(help = "The output file to generate")]
         selector_file: String,
     },
@@ -52,10 +52,10 @@ enum Command {
     Apply {
         #[structopt(
             short,
-            name = "component",
-            help = "Apply selectors from the provided selector_file for only this component"
+            name = "moniker",
+            help = "Apply selectors from the provided selector_file for only the component with this moniker"
         )]
-        component_name: Option<String>,
+        moniker: Option<String>,
         #[structopt(help = "The selector file to apply to the snapshot")]
         selector_file: String,
     },
@@ -246,7 +246,7 @@ fn filter_json_schema_by_selectors(
 fn filter_data_to_lines(
     selector_file: &str,
     data: &[InspectData],
-    requested_name_opt: &Option<String>,
+    requested_moniker: &Option<String>,
 ) -> Result<Vec<Line>, Error> {
     let selector_vec: Vec<Selector> =
         selectors::parse_selector_file::<VerboseError>(&PathBuf::from(selector_file))?
@@ -255,19 +255,12 @@ fn filter_data_to_lines(
 
     // Filter the source data that we diff against to only contain the component
     // of interest.
-    let mut diffable_source: Vec<InspectData> = match requested_name_opt {
-        Some(requested_name) => {
-            data.into_iter()
-                .cloned()
-                .filter(|schema| {
-                    let component_name =
-                        schema.moniker.split("/").last().expect(
-                            "Monikers in provided data dumps are required to be non-empty.",
-                        );
-                    requested_name == component_name
-                })
-                .collect()
-        }
+    let mut diffable_source: Vec<InspectData> = match requested_moniker {
+        Some(ref requested_moniker) => data
+            .into_iter()
+            .cloned()
+            .filter(|schema| *requested_moniker == schema.moniker)
+            .collect(),
         None => data.to_vec(),
     };
 
@@ -334,7 +327,7 @@ fn filter_data_to_lines(
 
 fn generate_selectors<'a>(
     data: Vec<InspectData>,
-    component_name: Option<String>,
+    moniker: Option<String>,
 ) -> Result<String, Error> {
     struct MatchedHierarchy {
         moniker: Vec<String>,
@@ -344,15 +337,11 @@ fn generate_selectors<'a>(
     let matching_hierarchies: Vec<MatchedHierarchy> = data
         .into_iter()
         .filter_map(|schema| {
-            let moniker: Vec<_> = schema.moniker.split("/").map(|s| s.to_owned()).collect();
-            let component_name_matches = component_name.is_none()
-                || component_name.as_ref().unwrap()
-                    == moniker
-                        .last()
-                        .expect("Monikers in provided data dumps are required to be non-empty.");
+            let moniker_matches = moniker.is_none() || *moniker.as_ref().unwrap() == schema.moniker;
+            let moniker = schema.moniker.split("/").map(|s| s.to_owned()).collect();
 
             schema.payload.and_then(|hierarchy| {
-                if component_name_matches {
+                if moniker_matches {
                     Some(MatchedHierarchy { moniker, hierarchy })
                 } else {
                     None
@@ -405,12 +394,12 @@ fn generate_selectors<'a>(
 fn interactive_apply(
     data: Vec<InspectData>,
     selector_file: &str,
-    component_name: Option<String>,
+    moniker: Option<String>,
 ) -> Result<(), Error> {
     let stdin = stdin();
     let mut stdout = stdout().into_raw_mode().unwrap();
 
-    let mut output = Output::new(filter_data_to_lines(&selector_file, &data, &component_name)?);
+    let mut output = Output::new(filter_data_to_lines(&selector_file, &data, &moniker)?);
 
     write!(stdout, "{}{}{}", cursor::Restore, cursor::Hide, termion::clear::All).unwrap();
 
@@ -429,7 +418,7 @@ fn interactive_apply(
                 output.refresh(&mut stdout);
                 stdout.flush().unwrap();
 
-                output.set_lines(filter_data_to_lines(&selector_file, &data, &component_name)?)
+                output.set_lines(filter_data_to_lines(&selector_file, &data, &moniker)?)
             }
             Event::Key(Key::PageUp) => {
                 output.scroll(-Output::max_lines(), 0);
@@ -475,15 +464,14 @@ fn main() -> Result<(), Error> {
     .expect(&format!("Failed to parse {} as JSON", filename));
 
     match opts.command {
-        Command::Generate { selector_file, component_name } => {
+        Command::Generate { selector_file, moniker } => {
             std::fs::write(
                 &selector_file,
-                generate_selectors(data, component_name)
-                    .expect(&format!("failed to generate selectors")),
+                generate_selectors(data, moniker).expect(&format!("failed to generate selectors")),
             )?;
         }
-        Command::Apply { selector_file, component_name } => {
-            interactive_apply(data, &selector_file, component_name)?;
+        Command::Apply { selector_file, moniker } => {
+            interactive_apply(data, &selector_file, moniker)?;
         }
     }
 
@@ -500,9 +488,11 @@ mod tests {
         let schemas: Vec<InspectData> =
             serde_json::from_value(get_v1_json_dump()).expect("schemas");
 
-        let named_selector_string =
-            generate_selectors(schemas.clone(), Some("account_manager.cmx".to_string()))
-                .expect("Generating selectors with matching name should succeed.");
+        let named_selector_string = generate_selectors(
+            schemas.clone(),
+            Some("realm1/realm2/session5/account_manager.cmx".to_string()),
+        )
+        .expect("Generating selectors with matching name should succeed.");
 
         let expected_named_selector_string = "\
             realm1/realm2/session5/account_manager.cmx:root/accounts:active\n\
@@ -531,7 +521,7 @@ mod tests {
         selector_string: &str,
         source_hierarchy: serde_json::Value,
         golden_json: serde_json::Value,
-        requested_component: Option<String>,
+        requested_moniker: Option<String>,
     ) {
         let mut selector_path =
             tempfile::NamedTempFile::new().expect("Creating tmp selector file should succeed.");
@@ -545,7 +535,7 @@ mod tests {
         let filtered_data_string = filter_data_to_lines(
             &selector_path.path().to_string_lossy(),
             &schemas,
-            &requested_component,
+            &requested_moniker,
         )
         .expect("filtering hierarchy should have succeeded.")
         .into_iter()
@@ -641,7 +631,7 @@ realm1/realm2/session5/account_manager.cmx:root/listeners:total_opened";
             full_tree_selector,
             get_v1_json_dump(),
             get_v1_json_dump(),
-            Some("account_manager.cmx".to_string()),
+            Some("realm1/realm2/session5/account_manager.cmx".to_string()),
         );
 
         let single_value_selector =
@@ -658,7 +648,7 @@ realm1/realm2/session5/account_manager.cmx:root/listeners:total_opened";
             single_value_selector,
             get_v1_json_dump(),
             get_v1_single_value_json(),
-            Some("account_manager.cmx".to_string()),
+            Some("realm1/realm2/session5/account_manager.cmx".to_string()),
         );
 
         setup_and_run_selector_filtering(
