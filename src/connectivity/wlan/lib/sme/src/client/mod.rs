@@ -266,7 +266,8 @@ impl ConnectFailure {
                     ..
                 }
                 | EstablishRsnaFailure {
-                    reason: EstablishRsnaFailureReason::OverallTimeout, ..
+                    reason: EstablishRsnaFailureReason::OverallTimeout(_),
+                    ..
                 } => true,
                 _ => false,
             },
@@ -301,7 +302,8 @@ impl ConnectFailure {
             // implementation, or a lost connection with the AP.
             ConnectFailure::EstablishRsnaFailure(EstablishRsnaFailure {
                 auth_method: Some(auth::MethodName::Psk),
-                reason: EstablishRsnaFailureReason::KeyFrameExchangeTimeout,
+                reason:
+                    EstablishRsnaFailureReason::OverallTimeout(wlan_rsn::Error::LikelyWrongCredential),
             }) => true,
 
             // For WEP, the entire association is always handled by
@@ -374,7 +376,7 @@ pub struct EstablishRsnaFailure {
 pub enum EstablishRsnaFailureReason {
     StartSupplicantFailed,
     KeyFrameExchangeTimeout,
-    OverallTimeout,
+    OverallTimeout(wlan_rsn::Error),
     InternalError,
 }
 
@@ -965,7 +967,9 @@ mod tests {
     fn test_detection_of_rejected_wpa1_or_wpa2_credentials() {
         let failure = ConnectFailure::EstablishRsnaFailure(EstablishRsnaFailure {
             auth_method: Some(auth::MethodName::Psk),
-            reason: EstablishRsnaFailureReason::KeyFrameExchangeTimeout,
+            reason: EstablishRsnaFailureReason::OverallTimeout(
+                wlan_rsn::Error::LikelyWrongCredential,
+            ),
         });
         assert!(failure.likely_due_to_credential_rejected());
     }

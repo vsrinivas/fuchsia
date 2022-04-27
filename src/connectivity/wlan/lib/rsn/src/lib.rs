@@ -161,6 +161,10 @@ impl Supplicant {
         self.esssa.on_key_frame_timeout(update_sink)
     }
 
+    pub fn on_establishing_rsna_timeout(&self) -> Error {
+        self.esssa.on_establishing_rsna_timeout()
+    }
+
     fn extract_sae_key(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {
         if let Some(pmk) = extract_sae_key_helper(&update_sink) {
             self.esssa.on_pmk_available(update_sink, pmk)?;
@@ -412,12 +416,16 @@ pub enum Error {
     UnexpectedInitiationRequest,
     #[error("cannot initiate Supplicant in current EssSa state")]
     UnexpectedEsssaInitiation,
-    #[error("too many key frame transmission retries")]
-    TooManyKeyFrameRetries,
     #[error("key frame transmission failed")]
     KeyFrameTransmissionFailed,
     #[error("no key frame transmission confirm received; dropped {} pending updates", _0)]
     NoKeyFrameTransmissionConfirm(usize),
+    #[error("eapol handshake not started")]
+    EapolHandshakeNotStarted,
+    #[error("likely wrong credential")]
+    LikelyWrongCredential,
+    #[error("eapol handshake incomplete: {}", _0)]
+    EapolHandshakeIncomplete(String),
     #[error("unsupported Key Descriptor Type: {:?}", _0)]
     UnsupportedKeyDescriptor(eapol::KeyDescriptor),
     #[error("unexpected Key Descriptor Type {:?}; expected {:?}", _0, _1)]

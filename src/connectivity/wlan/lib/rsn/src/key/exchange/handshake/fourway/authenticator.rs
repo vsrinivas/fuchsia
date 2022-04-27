@@ -125,6 +125,18 @@ impl State {
         }
     }
 
+    pub fn on_establishing_rsna_timeout(&self) -> Result<(), Error> {
+        match self {
+            State::AwaitingMsg2 { .. } => Err(Error::EapolHandshakeIncomplete(
+                "Client never responded to EAPOL message 1".to_string(),
+            )),
+            State::AwaitingMsg4 { .. } => Err(Error::EapolHandshakeIncomplete(
+                "Client never responded to EAPOL message 3".to_string(),
+            )),
+            _ => Ok(()),
+        }
+    }
+
     pub fn ptk(&self) -> Option<Ptk> {
         match self {
             State::AwaitingMsg4 { ptk, .. } => Some(ptk.clone()),
