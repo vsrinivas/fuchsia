@@ -350,6 +350,23 @@ decoding MUST fail.
 
 ## Protocol support
 
+### Events
+
+Bindings MUST provide support for handling or ignoring events in a protocol.
+Bindings MAY allow the user to specify handling logic for some events, and omit
+handling logic for some other events in a protocol.
+
+When the handling logic for an event was not specified by the user, bindings
+MUST carry on normal communication upon receiving the event. In other words,
+it is not an error to send an event for which the user did not specify
+corresponding handling logic on the client side.
+
+Bindings SHOULD seek to minimize racy behavior between specifying an event
+handler and events arriving on the endpoint.
+
+Bindings MUST close the connection upon receiving an unknown
+[strict event][strict-event].
+
 ### Error types
 
 It is OPTIONAL that bindings provide some form of special support for protocol
@@ -600,7 +617,8 @@ ensuring their rights are the same.
 [RFC2119]: https://tools.ietf.org/html/rfc2119
 [go-generated-code-comment]: https://github.com/golang/go/issues/13560#issuecomment-288457920
 [attributes]: /docs/reference/fidl/language/attributes.md
+[Life of a handle]: /docs/concepts/fidl/life-of-a-handle.md
 [llcpp]: /docs/reference/fidl/bindings/llcpp-bindings.md
 [source-compatible]: /docs/development/languages/fidl/guides/compatibility/README.md#strict-flexible
 [soft-transitions]: /docs/contribute/governance/rfcs/0002_platform_versioning.md#terminology
-[Life of a handle]: /docs/concepts/fidl/life-of-a-handle.md
+[strict-event]: /docs/contribute/governance/rfcs/0138_handling_unknown_interactions.md#changes-to-bindings
