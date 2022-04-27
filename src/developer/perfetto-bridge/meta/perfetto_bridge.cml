@@ -1,0 +1,27 @@
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/perfetto-bridge",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.tracing.perfetto.ConsumerConnector",
+                "fuchsia.tracing.perfetto.ProducerConnector",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.tracing.perfetto.ConsumerConnector",
+                "fuchsia.tracing.perfetto.ProducerConnector",
+            ],
+            from: "self",
+        },
+    ],
+}

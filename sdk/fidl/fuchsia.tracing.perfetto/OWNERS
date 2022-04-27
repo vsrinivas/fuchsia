@@ -1,4 +1,3 @@
-include /src/developer/tracing/OWNERS
-marshallk@google.com
+include /src/developer/perfetto-bridge/OWNERS
 
 # COMPONENT: PerformanceTools>tracing
