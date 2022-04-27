@@ -162,6 +162,7 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 	}
 
 	testDurations := testsharder.NewTestDurationsMap(m.TestDurations())
+	shards = testsharder.AddExpectedDurationTags(shards, testDurations)
 
 	var modifiers []testsharder.TestModifier
 	if flags.modifiersPath != "" {

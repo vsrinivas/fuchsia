@@ -11,7 +11,13 @@
         "cpu": "x64",
         "log_settings": {},
         "runs": 1,
-        "affected": true
+        "affected": true,
+        "tags": [
+          {
+            "key": "expected_duration_milliseconds",
+            "value": "0"
+          }
+        ]
       }
     ],
     "environment": {
@@ -36,7 +42,13 @@
         "os": "fuchsia",
         "cpu": "x64",
         "log_settings": {},
-        "runs": 1
+        "runs": 1,
+        "tags": [
+          {
+            "key": "expected_duration_milliseconds",
+            "value": "0"
+          }
+        ]
       }
     ],
     "environment": {

@@ -10,7 +10,13 @@
         "os": "fuchsia",
         "cpu": "x64",
         "log_settings": {},
-        "runs": 1
+        "runs": 1,
+        "tags": [
+          {
+            "key": "expected_duration_milliseconds",
+            "value": "0"
+          }
+        ]
       },
       {
         "name": "fuchsia-pkg://fuchsia.com/foo3#meta/foo3.cm",
@@ -20,7 +26,13 @@
         "os": "fuchsia",
         "cpu": "x64",
         "log_settings": {},
-        "runs": 1
+        "runs": 1,
+        "tags": [
+          {
+            "key": "expected_duration_milliseconds",
+            "value": "0"
+          }
+        ]
       }
     ],
     "environment": {
@@ -45,7 +57,13 @@
         "os": "fuchsia",
         "cpu": "x64",
         "log_settings": {},
-        "runs": 1
+        "runs": 1,
+        "tags": [
+          {
+            "key": "expected_duration_milliseconds",
+            "value": "0"
+          }
+        ]
       },
       {
         "name": "fuchsia-pkg://fuchsia.com/foo4#meta/foo4.cm",
@@ -55,7 +73,13 @@
         "os": "fuchsia",
         "cpu": "x64",
         "log_settings": {},
-        "runs": 1
+        "runs": 1,
+        "tags": [
+          {
+            "key": "expected_duration_milliseconds",
+            "value": "0"
+          }
+        ]
       }
     ],
     "environment": {

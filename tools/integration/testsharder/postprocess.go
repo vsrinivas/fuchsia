@@ -15,9 +15,11 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
@@ -42,6 +44,9 @@ const (
 
 	// The prefix added to the names of shards that run unaffected tests.
 	UnaffectedShardPrefix = "unaffected:"
+
+	// The name of the key of the expected duration test tag.
+	expectedDurationTagKey = "expected_duration_milliseconds"
 )
 
 // MultiplyShards will return an error that unwraps to this if a multiplier's
@@ -253,6 +258,24 @@ func MultiplyShards(
 	}
 
 	return shards, nil
+}
+
+// AddExpectedDurationTags uses the given TestDurations to annotate each test
+// with an expected duration tag.
+func AddExpectedDurationTags(shards []*Shard, testDurations TestDurationsMap) []*Shard {
+	for _, shard := range shards {
+		var newTests []Test
+		for _, test := range shard.Tests {
+			td := testDurations.Get(test)
+			test.Tags = append(test.Tags, build.TestTag{
+				Key:   expectedDurationTagKey,
+				Value: strconv.FormatInt(td.MedianDuration.Milliseconds(), 10),
+			})
+			newTests = append(newTests, test)
+		}
+		shard.Tests = newTests
+	}
+	return shards
 }
 
 // ApplyModifiers applies the given test modifiers to tests in the given shards.

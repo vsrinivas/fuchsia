@@ -11,7 +11,13 @@
         "cpu": "x64",
         "log_settings": {},
         "runs": 1,
-        "timeout_nanos": 600000000000
+        "timeout_nanos": 600000000000,
+        "tags": [
+          {
+            "key": "expected_duration_milliseconds",
+            "value": "2000"
+          }
+        ]
       },
       {
         "name": "fuchsia-pkg://fuchsia.com/fast3#meta/fast3.cm",
@@ -22,7 +28,13 @@
         "cpu": "x64",
         "log_settings": {},
         "runs": 1,
-        "timeout_nanos": 600000000000
+        "timeout_nanos": 600000000000,
+        "tags": [
+          {
+            "key": "expected_duration_milliseconds",
+            "value": "2000"
+          }
+        ]
       },
       {
         "name": "fuchsia-pkg://fuchsia.com/fast2#meta/fast2.cm",
@@ -33,7 +45,13 @@
         "cpu": "x64",
         "log_settings": {},
         "runs": 1,
-        "timeout_nanos": 600000000000
+        "timeout_nanos": 600000000000,
+        "tags": [
+          {
+            "key": "expected_duration_milliseconds",
+            "value": "2000"
+          }
+        ]
       }
     ],
     "environment": {
@@ -59,7 +77,13 @@
         "cpu": "x64",
         "log_settings": {},
         "runs": 1,
-        "timeout_nanos": 600000000000
+        "timeout_nanos": 600000000000,
+        "tags": [
+          {
+            "key": "expected_duration_milliseconds",
+            "value": "300000"
+          }
+        ]
       }
     ],
     "environment": {

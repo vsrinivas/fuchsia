@@ -15,6 +15,10 @@
           {
             "key": "hermetic",
             "value": "true"
+          },
+          {
+            "key": "expected_duration_milliseconds",
+            "value": "0"
           }
         ]
       },
@@ -31,6 +35,10 @@
           {
             "key": "hermetic",
             "value": "false"
+          },
+          {
+            "key": "expected_duration_milliseconds",
+            "value": "0"
           }
         ]
       }

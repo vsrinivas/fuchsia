@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strconv"
 	"testing"
 	"time"
 
@@ -299,6 +300,67 @@ func TestMultiplyShards(t *testing.T) {
 			assertEqual(t, tc.expected, actual)
 		})
 	}
+}
+
+func TestAddExpectedDurationTags(t *testing.T) {
+	env1 := build.Environment{
+		Dimensions: build.DimensionSet{DeviceType: "QEMU"},
+		Tags:       []string{},
+	}
+	env2 := build.Environment{
+		Dimensions: build.DimensionSet{OS: "linux"},
+		Tags:       []string{},
+	}
+	shardWithDurations := func(s *Shard, durations ...time.Duration) *Shard {
+		var newTests []Test
+		for i, test := range s.Tests {
+			test.Tags = append(test.Tags, build.TestTag{
+				Key:   expectedDurationTagKey,
+				Value: strconv.FormatInt(durations[i].Milliseconds(), 10),
+			})
+			newTests = append(newTests, test)
+		}
+		s.Tests = newTests
+		return s
+	}
+	durations := TestDurationsMap{
+		fullTestName(1, "fuchsia"): build.TestDuration{
+			Name:           fullTestName(1, "fuchsia"),
+			MedianDuration: 1 * time.Second,
+		},
+		fullTestName(2, "fuchsia"): build.TestDuration{
+			Name:           fullTestName(1, "fuchsia"),
+			MedianDuration: 2 * time.Second,
+		},
+		fullTestName(3, "fuchsia"): build.TestDuration{
+			Name:           fullTestName(1, "fuchsia"),
+			MedianDuration: 3 * time.Second,
+		},
+		fullTestName(1, "linux"): build.TestDuration{
+			Name:           fullTestName(1, "linux"),
+			MedianDuration: 4 * time.Second,
+		},
+		fullTestName(2, "linux"): build.TestDuration{
+			Name:           fullTestName(1, "linux"),
+			MedianDuration: 5 * time.Second,
+		},
+		fullTestName(3, "linux"): build.TestDuration{
+			Name:           fullTestName(1, "linux"),
+			MedianDuration: 6 * time.Second,
+		},
+	}
+	want := []*Shard{
+		shardWithDurations(shard(env1, "fuchsia", 1, 2, 3), 1*time.Second, 2*time.Second, 3*time.Second),
+		shardWithDurations(shard(env2, "linux", 1, 2, 3), 4*time.Second, 5*time.Second, 6*time.Second),
+	}
+	got := AddExpectedDurationTags(
+		[]*Shard{
+			shard(env1, "fuchsia", 1, 2, 3),
+			shard(env2, "linux", 1, 2, 3),
+		},
+		durations,
+	)
+	assertEqual(t, want, got)
 }
 
 func TestApplyModifiers(t *testing.T) {

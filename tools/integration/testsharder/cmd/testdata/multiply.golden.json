@@ -10,7 +10,13 @@
         "os": "fuchsia",
         "cpu": "x64",
         "log_settings": {},
-        "runs": 1
+        "runs": 1,
+        "tags": [
+          {
+            "key": "expected_duration_milliseconds",
+            "value": "0"
+          }
+        ]
       }
     ],
     "environment": {
@@ -36,7 +42,13 @@
         "cpu": "x64",
         "log_settings": {},
         "runs": 50,
-        "run_algorithm": "STOP_ON_FAILURE"
+        "run_algorithm": "STOP_ON_FAILURE",
+        "tags": [
+          {
+            "key": "expected_duration_milliseconds",
+            "value": "0"
+          }
+        ]
       }
     ],
     "environment": {
