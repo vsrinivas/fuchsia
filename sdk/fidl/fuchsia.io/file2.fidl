@@ -175,9 +175,7 @@ protocol File2 {
     }) error zx.status;
 };
 
-// TODO(https://fxbug.dev/95940): s/flexible/strict/ below when dart has a
-// Fuchsia SDK that no longer sends invalid flags.
-type VmoFlags = flexible bits : uint32 {
+type VmoFlags = strict bits : uint32 {
     /// Requests that the VMO be readable.
     READ = 0x00000001;
 
