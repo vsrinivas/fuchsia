@@ -115,7 +115,6 @@
                 "fuchsia.ui.activity.Tracker",
                 "fuchsia.ui.brightness.ColorAdjustmentHandler",
                 "fuchsia.ui.brightness.Control",
-                "fuchsia.ui.input.ImeVisibilityService",
                 "fuchsia.ui.input.PointerCaptureListenerRegistry",
                 "fuchsia.ui.policy.DeviceListenerRegistry",
                 "fuchsia.ui.policy.DisplayBacklight",

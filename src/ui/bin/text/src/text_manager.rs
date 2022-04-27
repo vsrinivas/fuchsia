@@ -4,10 +4,10 @@
 
 use {
     anyhow::Error,
-    fidl::endpoints::{ClientEnd, RequestStream, ServerEnd},
+    fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_ui_input as uii,
-    fuchsia_syslog::fx_log_err,
-    futures::{lock::Mutex, prelude::*},
+    fuchsia_syslog::*,
+    futures::lock::Mutex,
     std::sync::{Arc, Weak},
 };
 
@@ -19,7 +19,6 @@ use crate::{
 pub struct TextManagerState {
     pub keyboard_visible: bool,
     pub active_ime: Option<Weak<Mutex<ImeState>>>,
-    pub visibility_listeners: Vec<uii::ImeVisibilityServiceControlHandle>,
 }
 
 /// The internal state of the `TextManager`, usually held behind an Arc<Mutex>
@@ -27,15 +26,10 @@ pub struct TextManagerState {
 impl TextManagerState {
     pub fn update_keyboard_visibility(&mut self, visible: bool) {
         self.keyboard_visible = visible;
-
-        self.visibility_listeners.retain(|listener| {
-            // drop listeners if they error on send
-            listener.send_on_keyboard_visibility_changed(visible).is_ok()
-        });
     }
 }
 
-/// Serves several public FIDL services: `ImeService`, `ImeVisibilityService`, and
+/// Serves several public FIDL services: `ImeService` and
 /// `TextInputContext`.
 #[derive(Clone)]
 pub struct TextManager {
@@ -48,7 +42,6 @@ impl TextManager {
             state: Arc::new(Mutex::new(TextManagerState {
                 keyboard_visible: false,
                 active_ime: None,
-                visibility_listeners: Vec::new(),
             })),
         }
     }
@@ -156,24 +149,5 @@ impl TextManager {
             }
         }
         Ok(())
-    }
-
-    pub fn bind_ime_visibility_service(&self, stream: uii::ImeVisibilityServiceRequestStream) {
-        let self_clone = self.clone();
-        fuchsia_async::Task::spawn(
-            async move {
-                let control_handle = stream.control_handle();
-                let mut state = self_clone.state.lock().await;
-                if control_handle
-                    .send_on_keyboard_visibility_changed(state.keyboard_visible)
-                    .is_ok()
-                {
-                    state.visibility_listeners.push(control_handle);
-                }
-                Ok(())
-            }
-            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
-        )
-        .detach();
     }
 }

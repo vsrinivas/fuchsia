@@ -15,7 +15,6 @@
             "fuchsia.intl.PropertyProvider",
             "fuchsia.sys.Environment",
             "fuchsia.ui.input.ImeService",
-            "fuchsia.ui.input.ImeVisibilityService",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic"
         ]

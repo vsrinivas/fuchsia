@@ -12,7 +12,6 @@
                 "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/web_runner_tests#meta/netstack.cmx",
                 "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/web_runner_tests#meta/netstack.cmx",
                 "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/web_runner_tests#meta/netstack.cmx",
-                "fuchsia.ui.input.ImeVisibilityService": "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cmx",
                 "fuchsia.ui.input.InputDeviceRegistry": "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx",
                 "fuchsia.ui.pointerinjector.Registry": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
                 "fuchsia.ui.policy.Presenter": "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx",

@@ -13,9 +13,6 @@ to the consumers of the text entry APIs.
   API to establish two-way communication between the consumer (text field owner)
   and `text_manager`.
 
-* [`fuchsia.ui.input/ImeVisibilityService`][2]: used to observe the input method
-  editor visibility.
-
   There is some duplication of functionality that should be removed in the
   steady state.  See [`fuchsia.input.virtualkeyboard/Manager`][10].
 
@@ -48,7 +45,6 @@ specify the outgoing APIs, and so the CFv2 "capabilities" and "offer" sections
 must be reconstructed from the code.
 
 [1]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.ui.input/ime_service.fidl;l=8;drc=e3b39f2b57e720770773b857feca4f770ee0619e
-[2]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.ui.input/ime_service.fidl;l=23;drc=e3b39f2b57e720770773b857feca4f770ee0619e
 [3]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.ui.input/text_input.fidl?q=%22protocol%20InputMethodEditorClient%20%7B%22&ss=fuchsia%2Ffuchsia
 [4]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.ui.input/text_input.fidl?q=%22protocol%20InputMethodEditor%20%7B%22&ss=fuchsia%2Ffuchsia
 [5]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/ui/bin/text/src/main.rs;l=19;drc=d5c7f0ad7d26fac62c9495cb7024203a8e85d93d

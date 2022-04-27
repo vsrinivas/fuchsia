@@ -305,9 +305,6 @@ class WebSemanticsTest : public SemanticsIntegrationTestV2 {
     realm()->AddRoute({.capabilities = {Protocol{fuchsia::ui::input::ImeService::Name_}},
                        .source = kTextManagerRef,
                        .targets = {kWebViewRef}});
-    realm()->AddRoute({.capabilities = {Protocol{fuchsia::ui::input::ImeVisibilityService::Name_}},
-                       .source = kTextManagerRef,
-                       .targets = {kWebViewRef}});
     realm()->AddRoute({.capabilities = {Protocol{fuchsia::intl::PropertyProvider::Name_}},
                        .source = kIntlRef,
                        .targets = {kWebViewRef}});

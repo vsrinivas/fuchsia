@@ -16,12 +16,3 @@ protocol ImeService {
     ShowKeyboard();
     HideKeyboard();
 };
-
-/// Onscreen keyboard containers connect to this to know when a keyboard
-/// should be shown or hidden.
-@discoverable
-protocol ImeVisibilityService {
-    -> OnKeyboardVisibilityChanged(struct {
-        visible bool;
-    });
-};

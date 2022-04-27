@@ -84,7 +84,6 @@ services in its sandbox, as seen below.
             "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.ui.input.ImeService",
-            "fuchsia.ui.input.ImeVisibilityService",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic"
         ]

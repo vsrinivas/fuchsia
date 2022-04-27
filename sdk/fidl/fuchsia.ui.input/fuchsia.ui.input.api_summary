@@ -34,8 +34,6 @@ protocol/member fuchsia.ui.input/ImeService.GetInputMethodEditor(fuchsia.ui.inpu
 protocol/member fuchsia.ui.input/ImeService.HideKeyboard()
 protocol/member fuchsia.ui.input/ImeService.ShowKeyboard()
 protocol fuchsia.ui.input/ImeService
-protocol/member fuchsia.ui.input/ImeVisibilityService.OnKeyboardVisibilityChanged -> (bool visible)
-protocol fuchsia.ui.input/ImeVisibilityService
 protocol/member fuchsia.ui.input/InputDevice.DispatchReport(fuchsia.ui.input/InputReport report)
 protocol fuchsia.ui.input/InputDevice
 protocol/member fuchsia.ui.input/InputDeviceRegistry.RegisterDevice(fuchsia.ui.input/DeviceDescriptor descriptor,server_end:fuchsia.ui.input/InputDevice input_device)
