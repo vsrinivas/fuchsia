@@ -8,6 +8,7 @@
 #include <lib/zx/status.h>
 #include <zircon/compiler.h>
 
+#include <functional>
 #include <memory>
 #include <mutex>
 

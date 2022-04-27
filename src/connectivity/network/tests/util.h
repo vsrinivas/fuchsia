@@ -12,6 +12,7 @@
 #include <sys/uio.h>
 
 #include <chrono>
+#include <functional>
 #include <future>
 #include <random>
 

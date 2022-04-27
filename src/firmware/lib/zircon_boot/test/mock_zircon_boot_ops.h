@@ -11,6 +11,7 @@
 #include <lib/zircon_boot/zircon_boot.h>
 #include <lib/zx/status.h>
 
+#include <functional>
 #include <optional>
 #include <string>
 #include <unordered_map>

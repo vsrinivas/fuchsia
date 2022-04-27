@@ -12,6 +12,7 @@
 #include <lib/ddk/driver.h>
 #include <zircon/assert.h>
 
+#include <functional>
 #include <optional>
 #include <thread>
 #include <vector>

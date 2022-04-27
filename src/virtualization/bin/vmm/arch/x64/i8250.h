@@ -8,6 +8,7 @@
 #include <lib/stdcompat/span.h>
 #include <lib/zx/socket.h>
 
+#include <functional>
 #include <mutex>
 
 #include "src/virtualization/bin/vmm/io.h"
