@@ -38,7 +38,8 @@ MockScreenReaderMessageGenerator::DescribeNode(const fuchsia::accessibility::sem
 a11y::ScreenReaderMessageGenerator::UtteranceAndContext
 MockScreenReaderMessageGenerator::GenerateUtteranceByMessageId(
     fuchsia::intl::l10n::MessageIds message_id, zx::duration delay,
-    const std::vector<std::string>& arg_names, const std::vector<std::string>& arg_values) {
+    const std::vector<std::string>& arg_names,
+    const std::vector<a11y::i18n::MessageFormatter::ArgValue>& arg_values) {
   UtteranceAndContext utterance;
   if (messages_.find(message_id) != messages_.end()) {
     utterance = std::move(messages_[message_id]);

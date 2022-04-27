@@ -93,7 +93,8 @@ class ScreenReaderMessageGenerator {
   virtual UtteranceAndContext GenerateUtteranceByMessageId(
       fuchsia::intl::l10n::MessageIds message_id, zx::duration delay = zx::msec(0),
       const std::vector<std::string>& arg_names = std::vector<std::string>(),
-      const std::vector<std::string>& arg_values = std::vector<std::string>());
+      const std::vector<i18n::MessageFormatter::ArgValue>& arg_values =
+          std::vector<i18n::MessageFormatter::ArgValue>());
 
   // Returns an utterance that describes a character to be used when spelling a word or entering
   // text. For example, the symbol '.' may be described as 'dot', if the current language is

@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <string>
+
 #include "third_party/icu/source/common/unicode/ucnv.h"
 #include "third_party/icu/source/i18n/unicode/msgfmt.h"
 
@@ -17,7 +19,7 @@ MessageFormatter::MessageFormatter(icu::Locale locale, std::unique_ptr<intl::Loo
 
 std::optional<std::string> MessageFormatter::FormatStringById(
     const uint64_t id, const std::vector<std::string>& arg_names,
-    const std::vector<std::string>& arg_values) {
+    const std::vector<ArgValue>& arg_values) {
   auto lookup_result = lookup_->String(id);
   if (lookup_result.is_error()) {
     FX_LOGS(INFO) << "Failed to retrieve the message with ID == " << id
@@ -27,7 +29,7 @@ std::optional<std::string> MessageFormatter::FormatStringById(
   std::string_view message_pattern = lookup_result.value();
 
   if (arg_names.size() != arg_values.size()) {
-    // Different number of values than value names.
+    FX_LOGS(INFO) << "Different number of values than value names";
     return std::nullopt;
   }
 
@@ -42,7 +44,14 @@ std::optional<std::string> MessageFormatter::FormatStringById(
       << "Tried to build an icu::MessageFormat with a invalid string pattern" << message_pattern;
   std::vector<icu::Formattable> icu_arg_values;
   for (auto& value : arg_values) {
-    icu_arg_values.emplace_back(value.c_str());
+    switch (value.index()) {
+      case 0:
+        icu_arg_values.emplace_back(std::get<std::string>(value).c_str());
+        break;
+      case 1:
+        icu_arg_values.emplace_back(std::get<int64_t>(value));
+        break;
+    }
   }
   std::vector<icu::UnicodeString> icu_arg_names;
   for (auto& name : arg_names) {
@@ -53,10 +62,13 @@ std::optional<std::string> MessageFormatter::FormatStringById(
   status = U_ZERO_ERROR;
   std::unique_ptr<icu::StringEnumeration> format_names(message_format.getFormatNames(status));
   if (U_FAILURE(status)) {
+    FX_DCHECK(U_SUCCESS(status)) << "Couldn't get format names for the icu::MessageFormat";
     return std::nullopt;
   }
   status = U_ZERO_ERROR;
   if (static_cast<int32_t>(icu_arg_names.size()) != format_names->count(status)) {
+    FX_DCHECK(U_SUCCESS(status))
+        << "Wrong number of arguments provided for the given icu::MessageFormat";
     return std::nullopt;
   }
   for (const auto& name : icu_arg_names) {
@@ -74,6 +86,7 @@ std::optional<std::string> MessageFormatter::FormatStringById(
   message_format.format(icu_arg_names.data(), icu_arg_values.data(), icu_arg_values.size(),
                         unicode_result, status);
   if (U_FAILURE(status)) {
+    FX_DCHECK(U_SUCCESS(status)) << "Failed to format message";
     return std::nullopt;
   }
 

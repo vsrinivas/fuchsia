@@ -15,10 +15,11 @@
 
 namespace accessibility_test {
 
-using ArgNameAndValue = std::pair<std::string, std::string>;
 
 class MockMessageFormatter : public a11y::i18n::MessageFormatter {
  public:
+  using ArgNameAndValue = std::pair<std::string, ArgValue>;
+
   MockMessageFormatter();
   ~MockMessageFormatter() override = default;
 
@@ -28,7 +29,7 @@ class MockMessageFormatter : public a11y::i18n::MessageFormatter {
   // |MessageFormatter|
   std::optional<std::string> FormatStringById(
       const uint64_t id, const std::vector<std::string>& arg_names = std::vector<std::string>(),
-      const std::vector<std::string>& arg_values = std::vector<std::string>()) override;
+      const std::vector<ArgValue>& arg_values = std::vector<ArgValue>()) override;
 
   // Returns the set of (name, value) pairs for the args passed with the last format
   // request for the given id.

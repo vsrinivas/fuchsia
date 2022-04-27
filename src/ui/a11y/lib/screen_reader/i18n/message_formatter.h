@@ -27,6 +27,8 @@ namespace i18n {
 // documentation.
 class MessageFormatter {
  public:
+  using ArgValue = std::variant<std::string, int64_t>;
+
   // |lookup_| must be initialized and holds the icu::MessageFormat patterns.
   explicit MessageFormatter(icu::Locale locale, std::unique_ptr<intl::Lookup> lookup);
   virtual ~MessageFormatter() = default;
@@ -39,7 +41,7 @@ class MessageFormatter {
   // introduce custom error codes.
   virtual std::optional<std::string> FormatStringById(
       const uint64_t id, const std::vector<std::string>& arg_names = std::vector<std::string>(),
-      const std::vector<std::string>& arg_values = std::vector<std::string>());
+      const std::vector<ArgValue>& arg_values = std::vector<ArgValue>());
 
   // Returns the icu locale used to format messages.
   const icu::Locale& locale() const { return locale_; }

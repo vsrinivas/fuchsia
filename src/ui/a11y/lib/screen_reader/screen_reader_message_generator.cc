@@ -226,7 +226,7 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node,
 ScreenReaderMessageGenerator::UtteranceAndContext
 ScreenReaderMessageGenerator::GenerateUtteranceByMessageId(
     MessageIds message_id, zx::duration delay, const std::vector<std::string>& arg_names,
-    const std::vector<std::string>& arg_values) {
+    const std::vector<i18n::MessageFormatter::ArgValue>& arg_values) {
   UtteranceAndContext utterance;
   auto message = message_formatter_->FormatStringById(static_cast<uint64_t>(message_id), arg_names,
                                                       arg_values);

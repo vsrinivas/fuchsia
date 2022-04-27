@@ -507,7 +507,7 @@ TEST_F(ScreenReaderMessageGeneratorTest, NodeTableRowHeader) {
         mock_message_formatter_ptr_->GetArgsForId(static_cast<uint64_t>(MessageIds::COLUMN_SPAN));
     ASSERT_EQ(args.size(), 1u);
     EXPECT_EQ(args[0].first, "column_span");
-    EXPECT_EQ(args[0].second, "2");
+    EXPECT_EQ(std::get<std::string>(args[0].second), "2");
   }
 
   {
@@ -515,7 +515,7 @@ TEST_F(ScreenReaderMessageGeneratorTest, NodeTableRowHeader) {
         mock_message_formatter_ptr_->GetArgsForId(static_cast<uint64_t>(MessageIds::ROW_SUMMARY));
     ASSERT_EQ(args.size(), 1u);
     EXPECT_EQ(args[0].first, "row_index");
-    EXPECT_EQ(args[0].second, "3");
+    EXPECT_EQ(std::get<std::string>(args[0].second), "3");
   }
 }
 
@@ -553,7 +553,7 @@ TEST_F(ScreenReaderMessageGeneratorTest, NodeTableColumnHeader) {
         mock_message_formatter_ptr_->GetArgsForId(static_cast<uint64_t>(MessageIds::ROW_SPAN));
     ASSERT_EQ(args.size(), 1u);
     EXPECT_EQ(args[0].first, "row_span");
-    EXPECT_EQ(args[0].second, "2");
+    EXPECT_EQ(std::get<std::string>(args[0].second), "2");
   }
 
   {
@@ -561,7 +561,7 @@ TEST_F(ScreenReaderMessageGeneratorTest, NodeTableColumnHeader) {
         static_cast<uint64_t>(MessageIds::COLUMN_SUMMARY));
     ASSERT_EQ(args.size(), 1u);
     EXPECT_EQ(args[0].first, "column_index");
-    EXPECT_EQ(args[0].second, "3");
+    EXPECT_EQ(std::get<std::string>(args[0].second), "3");
   }
 }
 
@@ -604,7 +604,7 @@ TEST_F(ScreenReaderMessageGeneratorTest, NodeTableCellWithAllAttributes) {
         mock_message_formatter_ptr_->GetArgsForId(static_cast<uint64_t>(MessageIds::ROW_SPAN));
     ASSERT_EQ(args.size(), 1u);
     EXPECT_EQ(args[0].first, "row_span");
-    EXPECT_EQ(args[0].second, "2");
+    EXPECT_EQ(std::get<std::string>(args[0].second), "2");
   }
 
   {
@@ -612,7 +612,7 @@ TEST_F(ScreenReaderMessageGeneratorTest, NodeTableCellWithAllAttributes) {
         mock_message_formatter_ptr_->GetArgsForId(static_cast<uint64_t>(MessageIds::COLUMN_SPAN));
     ASSERT_EQ(args.size(), 1u);
     EXPECT_EQ(args[0].first, "column_span");
-    EXPECT_EQ(args[0].second, "3");
+    EXPECT_EQ(std::get<std::string>(args[0].second), "3");
   }
 
   {
@@ -620,9 +620,9 @@ TEST_F(ScreenReaderMessageGeneratorTest, NodeTableCellWithAllAttributes) {
         mock_message_formatter_ptr_->GetArgsForId(static_cast<uint64_t>(MessageIds::CELL_SUMMARY));
     ASSERT_EQ(args.size(), 2u);
     EXPECT_EQ(args[0].first, "row_index");
-    EXPECT_EQ(args[0].second, "4");
+    EXPECT_EQ(std::get<std::string>(args[0].second), "4");
     EXPECT_EQ(args[1].first, "column_index");
-    EXPECT_EQ(args[1].second, "5");
+    EXPECT_EQ(std::get<std::string>(args[1].second), "5");
   }
 }
 

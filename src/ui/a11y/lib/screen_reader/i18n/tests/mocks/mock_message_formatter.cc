@@ -12,7 +12,7 @@ MockMessageFormatter::MockMessageFormatter() : a11y::i18n::MessageFormatter() {}
 
 std::optional<std::string> MockMessageFormatter::FormatStringById(
     const uint64_t id, const std::vector<std::string>& arg_names,
-    const std::vector<std::string>& arg_values) {
+    const std::vector<ArgValue>& arg_values) {
   auto it = id_to_message_.find(id);
   if (it == id_to_message_.end()) {
     return std::nullopt;
