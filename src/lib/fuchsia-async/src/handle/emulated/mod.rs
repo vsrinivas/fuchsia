@@ -240,6 +240,7 @@ impl Handle {
         self.0 == INVALID_HANDLE
     }
 
+    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99059)
     /// If a raw handle is obtained from some other source, this method converts
     /// it into a type-safe owned handle.
     pub unsafe fn from_raw(hdl: u32) -> Handle {
@@ -253,6 +254,7 @@ impl Handle {
         h
     }
 
+    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99059)
     /// Take this handle and return a new raw handle (leaves this handle invalid)
     pub unsafe fn raw_take(&mut self) -> u32 {
         let h = self.0;

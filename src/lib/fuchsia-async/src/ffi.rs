@@ -209,16 +209,19 @@ pub extern "C" fn fasync_executor_create(cb_executor: *mut std::ffi::c_void) -> 
     Box::into_raw(Executor::new(cb_executor))
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99059)
 #[no_mangle]
 pub unsafe extern "C" fn fasync_executor_run_singlethreaded(executor: *mut Executor) {
     EPtr(executor).as_ref().run_singlethreaded()
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99059)
 #[no_mangle]
 pub unsafe extern "C" fn fasync_executor_quit(executor: *mut Executor) {
     EPtr(executor).as_ref().quit()
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99059)
 #[no_mangle]
 pub unsafe extern "C" fn fasync_executor_destroy(executor: *mut Executor) {
     drop(Box::from_raw(executor))

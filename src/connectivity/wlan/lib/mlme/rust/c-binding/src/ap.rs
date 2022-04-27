@@ -38,6 +38,7 @@ pub extern "C" fn stop_ap_sta(sta: &mut MlmeHandle) {
     sta.stop();
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99057)
 #[no_mangle]
 pub unsafe extern "C" fn delete_ap_sta(sta: *mut MlmeHandle) {
     if !sta.is_null() {
@@ -51,11 +52,13 @@ pub extern "C" fn ap_sta_queue_eth_frame_tx(sta: &mut MlmeHandle, frame: CSpan<'
     let _ = sta.queue_eth_frame_tx(frame.into());
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99057)
 #[no_mangle]
 pub unsafe extern "C" fn ap_mlme_advance_fake_time(ap: &mut MlmeHandle, nanos: i64) {
     ap.advance_fake_time(nanos);
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99057)
 #[no_mangle]
 pub unsafe extern "C" fn ap_mlme_run_until_stalled(sta: &mut MlmeHandle) {
     sta.run_until_stalled();

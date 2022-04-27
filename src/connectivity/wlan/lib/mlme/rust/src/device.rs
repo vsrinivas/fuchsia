@@ -625,6 +625,7 @@ pub(crate) mod test_utils {
     }
 
     impl CapturedWlanSoftmacPassiveScanArgs {
+        #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99057)
         pub unsafe fn from_banjo(
             banjo_args_ptr: *const banjo_wlan_softmac::WlanSoftmacPassiveScanArgs,
         ) -> CapturedWlanSoftmacPassiveScanArgs {

@@ -112,6 +112,7 @@ impl CApi for FakeLookup {
     }
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99058)
 #[no_mangle]
 pub unsafe extern "C" fn intl_lookup_new_fake_for_test(
     len: libc::size_t,
@@ -133,11 +134,13 @@ pub unsafe extern "C" fn intl_lookup_new_fake_for_test(
     }
     Box::into_raw(Box::new(FakeLookup::new()))
 }
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99058)
 #[no_mangle]
 pub unsafe extern "C" fn intl_lookup_delete_fake_for_test(this: *mut FakeLookup) {
     generic_delete(this);
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99058)
 #[no_mangle]
 pub unsafe extern "C" fn intl_lookup_new(
     len: libc::size_t,
@@ -178,11 +181,13 @@ pub unsafe extern "C" fn intl_lookup_new(
     }
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99058)
 #[no_mangle]
 pub unsafe extern "C" fn intl_lookup_delete(instance: *mut Lookup) {
     generic_delete(instance);
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99058)
 #[no_mangle]
 pub unsafe extern "C" fn intl_lookup_string_fake_for_test(
     this: *const FakeLookup,
@@ -207,6 +212,7 @@ unsafe fn generic_delete<T>(instance: *mut T) {
     let _ = Box::from_raw(instance);
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99058)
 #[no_mangle]
 pub unsafe extern "C" fn intl_lookup_string(
     this: *const Lookup,

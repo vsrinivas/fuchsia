@@ -190,6 +190,7 @@ pub extern "C" fn match_bind_rules(
     })
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99060)
 #[no_mangle]
 pub unsafe extern "C" fn dump_bytecode(
     bytecode_c: *const u8,

@@ -67,6 +67,7 @@ impl Handle {
         Handle(sys::ZX_HANDLE_INVALID)
     }
 
+    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99066)
     /// If a raw handle is obtained from some other source, this method converts
     /// it into a type-safe owned handle.
     pub const unsafe fn from_raw(raw: sys::zx_handle_t) -> Handle {
@@ -114,6 +115,7 @@ impl<'a, T> ::std::ops::Deref for Unowned<'a, T> {
 pub type HandleRef<'a> = Unowned<'a, Handle>;
 
 impl<'a, T: HandleBased> Unowned<'a, T> {
+    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99066)
     /// Create a `HandleRef` from a raw handle. Use this method when you are given a raw handle but
     /// should not take ownership of it. Examples include process-global handles like the root
     /// VMAR. This method should be called with an explicitly provided lifetime that must not
@@ -477,6 +479,7 @@ pub struct HandleDisposition<'a> {
 }
 
 impl HandleDisposition<'_> {
+    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99066)
     pub unsafe fn into_raw<'a>(self) -> sys::zx_handle_disposition_t {
         match self.handle_op {
             HandleOp::Move(mut handle) => sys::zx_handle_disposition_t {
@@ -508,6 +511,7 @@ pub struct HandleInfo {
 }
 
 impl HandleInfo {
+    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99066)
     pub const unsafe fn from_raw(raw: sys::zx_handle_info_t) -> HandleInfo {
         HandleInfo {
             handle: Handle::from_raw(raw.handle),

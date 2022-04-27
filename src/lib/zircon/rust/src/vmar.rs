@@ -95,14 +95,17 @@ impl Vmar {
         ok(status).map(|_| mapped)
     }
 
+    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99066)
     pub unsafe fn unmap(&self, addr: usize, len: usize) -> Result<(), Status> {
         ok(sys::zx_vmar_unmap(self.0.raw_handle(), addr, len))
     }
 
+    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99066)
     pub unsafe fn protect(&self, addr: usize, len: usize, flags: VmarFlags) -> Result<(), Status> {
         ok(sys::zx_vmar_protect(self.raw_handle(), flags.bits(), addr, len))
     }
 
+    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99066)
     pub unsafe fn destroy(&self) -> Result<(), Status> {
         ok(sys::zx_vmar_destroy(self.raw_handle()))
     }

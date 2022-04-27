@@ -19,6 +19,7 @@ impl Deref for Topic {
     }
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99066)
 /// A query to get info about a zircon object.
 ///
 /// Safety: `TOPIC` must correspond to a valid `zx_object_get_info` topic,

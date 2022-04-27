@@ -13,6 +13,7 @@ use {
     std::vec::Vec,
 };
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99061)
 #[allow(clippy::mut_from_ref)] // TODO(fxbug.dev/95027)
 /// BufferSource is a contiguous range of memory which may have some special properties (such as
 /// being contained within a special memory region that can be used for block transactions, e.g.

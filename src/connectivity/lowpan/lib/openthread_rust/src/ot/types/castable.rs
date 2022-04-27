@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99067)
 /// Trait used to indicate that the implementing type can be efficiently
 /// converted into a reference to the original OpenThread type identified by
 /// `Self::OtType`.

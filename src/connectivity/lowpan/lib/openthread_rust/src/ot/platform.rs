@@ -13,6 +13,7 @@ pub trait Platform {
     /// same thread that the OpenThread instance is being used on.
     ///
     /// You should never need to call this directly.
+    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99067)
     unsafe fn process_poll(
         self: &mut Self,
         instance: &crate::ot::Instance,

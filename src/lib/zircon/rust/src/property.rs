@@ -34,8 +34,10 @@ pub unsafe trait PropertyQuery {
     type PropTy;
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99066)
 /// Indicates that it is valid to get the property for an object.
 pub unsafe trait PropertyQueryGet: PropertyQuery {}
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99066)
 /// Indicates that it is valid to set the property for an object.
 pub unsafe trait PropertyQuerySet: PropertyQuery {}
 

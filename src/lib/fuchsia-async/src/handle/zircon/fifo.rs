@@ -15,6 +15,7 @@ use {
     },
 };
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99059)
 /// Marker trait for types that can be read/written with a `Fifo`.
 /// Unsafe because not all types may be represented by arbitrary bit patterns.
 pub unsafe trait FifoEntry {}

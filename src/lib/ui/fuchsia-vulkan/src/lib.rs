@@ -48,6 +48,7 @@ macro_rules! ptrs {(
             $(
                 #[inline]
                 #[allow(non_snake_case)]
+                #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99063)
                 pub unsafe fn $name(&self $(, $param_n: $param_ty)*) -> $ret {
                     let ptr = self.$name;
                     ptr($($param_n),*)

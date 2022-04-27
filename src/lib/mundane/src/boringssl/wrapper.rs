@@ -45,6 +45,7 @@ macro_rules! impl_traits {
     };
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99064)
 /// A C object from the BoringSSL API which can be allocated and constructed.
 pub unsafe trait CNew: Sealed {
     /// Returns a new, constructed, heap-allocated object, or NULL on failure.
@@ -71,6 +72,7 @@ macro_rules! c_new {
     };
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99063)
 /// A C object from the BoringSSL API which has a reference count that can be
 /// increased.
 pub unsafe trait CUpRef: Sealed {
@@ -93,6 +95,7 @@ macro_rules! c_up_ref {
     };
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99063)
 /// A C object from the BoringSSL API which can be freed.
 pub unsafe trait CFree: Sealed {
     /// Frees a heap-allocated object.
@@ -113,6 +116,7 @@ macro_rules! c_free {
     };
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99063)
 /// A C object from the BoringSSL API which can be initialized.
 pub unsafe trait CInit: Sealed {
     /// Initializes an uninitialized object.
@@ -134,6 +138,7 @@ macro_rules! c_init {
     };
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99063)
 /// A C object from the BoringSSL API which can be destructed.
 pub unsafe trait CDestruct: Sealed {
     /// Destructs an initialized object.

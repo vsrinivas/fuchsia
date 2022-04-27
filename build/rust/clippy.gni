@@ -80,6 +80,7 @@ template("clippy") {
       args += [
         "-${_level}clippy::all",
         "-Dclippy::correctness",
+        "-Dclippy::missing_safety_doc",
       ]
     }
     args += invoker.rustflags

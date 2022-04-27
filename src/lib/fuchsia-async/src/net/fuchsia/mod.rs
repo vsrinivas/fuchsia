@@ -118,6 +118,7 @@ impl<T> EventedFd<T>
 where
     T: AsRawFd,
 {
+    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99059)
     /// Creates a new EventedFd.
     ///
     /// For this function to be safe, the underlying file descriptor from `T::as_raw_fd`

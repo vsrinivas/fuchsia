@@ -9,6 +9,7 @@ pub extern "C" fn mlme_sequence_manager_new() -> *mut SequenceManager {
     Box::into_raw(Box::new(SequenceManager::new()))
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99057)
 #[no_mangle]
 pub unsafe extern "C" fn mlme_sequence_manager_delete(mgr: *mut SequenceManager) {
     if !mgr.is_null() {

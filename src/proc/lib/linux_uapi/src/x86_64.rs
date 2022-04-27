@@ -24,10 +24,12 @@ impl<T> __IncompleteArrayField<T> {
     pub fn as_mut_ptr(&mut self) -> *mut T {
         self as *mut _ as *mut T
     }
+    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99056)
     #[inline]
     pub unsafe fn as_slice(&self, len: usize) -> &[T] {
         ::std::slice::from_raw_parts(self.as_ptr(), len)
     }
+    #[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99056)
     #[inline]
     pub unsafe fn as_mut_slice(&mut self, len: usize) -> &mut [T] {
         ::std::slice::from_raw_parts_mut(self.as_mut_ptr(), len)

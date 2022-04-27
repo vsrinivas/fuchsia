@@ -16,6 +16,7 @@ use {
     std::sync::Arc,
 };
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99061)
 /// `DirectlyMutable` is a superset of `MutableDirectory` which also allows server-side management
 /// of directory entries (via `add_entry` and `remove_entry`). It also provides `rename_from` and
 /// `rename_to` to support global ordering in rename operations. You may wish to use

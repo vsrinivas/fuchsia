@@ -277,6 +277,7 @@ impl Visit for RecordBuilder {
     }
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99062)
 /// Analogous to `bytes::BufMut`, but immutably-sized and appropriate for use in shared memory.
 pub trait BufMutShared {
     /// Returns the number of total bytes this container can store. Shared memory buffers are not

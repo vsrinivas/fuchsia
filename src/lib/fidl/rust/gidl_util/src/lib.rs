@@ -80,12 +80,14 @@ impl HandleFactory {
     }
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99065)
 /// Unsafely copies `handle`, i.e. makes a new `Handle` object with the same raw
 /// value, and converts it to handle subtype `T`.
 pub unsafe fn copy_handle<T: HandleBased>(handle: &Handle) -> T {
     T::from_handle(Handle::from_raw(handle.raw_handle()))
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99065)
 /// Makes unsafe copies of handles at the given indices, i.e. new `Handle`
 /// objects with the same raw values. Callers should use `disown_handles` on
 /// one of the lists to prevent double-close errors when handles are dropped.
@@ -97,6 +99,7 @@ pub unsafe fn copy_handles_at(handles: &[Handle], indices: &[usize]) -> Vec<Hand
     copy
 }
 
+#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99065)
 /// Wraps `Vec<T>` in a structure that prevents elements from being dropped. The
 /// vector itself will release its memory, but it will not invoke `T::drop`.
 ///
