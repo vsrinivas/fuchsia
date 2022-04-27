@@ -78,16 +78,17 @@ class MBufChain {
     MBuf();
     ~MBuf();
 
-    // 8 for the linked list and 4 for the explicit uint32_t fields.
-    static constexpr size_t kHeaderSize = 8 + (4 * 4);
+    // 8 for the linked list and explicit padding and 4 for the explicit uint32_t fields.
+    static constexpr size_t kHeaderSize = (8 * 2) + (4 * 2);
     // 16 is for the malloc header.
     static constexpr size_t kMallocSize = 2048 - 16;
     static constexpr size_t kPayloadSize = kMallocSize - kHeaderSize;
 
     // Returns number of bytes of free space in this MBuf.
-    size_t rem() const;
+    size_t rem() const { return kPayloadSize - len_; }
 
-    uint32_t off_ = 0u;
+    // Length of the valid |data_| in this buffer. Writes can append more to |data_| and increment
+    // this length.
     uint32_t len_ = 0u;
     // pkt_len_ is set to the total number of bytes in a packet
     // when a socket is in ZX_SOCKET_DATAGRAM mode. A pkt_len_ of
@@ -95,7 +96,7 @@ class MBufChain {
     //
     // Always 0 in ZX_SOCKET_STREAM mode.
     uint32_t pkt_len_ = 0u;
-    uint32_t unused_;
+    uint64_t unused_;
     char data_[kPayloadSize] = {0};
     // TODO: maybe union data_ with char* blocks for large messages
   };
@@ -118,8 +119,11 @@ class MBufChain {
   // Inactive buffers that will be re-used for future writes. This serves as a cache to avoid
   // bouncing buffers in and out of the heap all the time.
   fbl::SinglyLinkedList<MBuf*> freelist_;
-  // The active buffers that make up this chain. buffers_.front() is the read cursor.
+  // The active buffers that make up this chain. buffers_.front() + read_cursor_off_ is the read
+  // cursor.
   fbl::SinglyLinkedList<MBuf*> buffers_;
+  // The byte offset of the read cursor in next MBuf.
+  uint32_t read_cursor_off_ = 0;
   // The write write_cursor_ is the last buffer in the buffers_ list, and is where writes happen.
   // This needs to be manually tracked since buffers_ is a SinglyLinkedList, but is always
   // effectively buffers_.back()
