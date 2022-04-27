@@ -299,7 +299,7 @@ impl Task {
         let pid = pids.allocate_pid();
         let comm = state.command.clone();
         let (thread, thread_group, mm) = if clone_thread {
-            create_zircon_thread(self)?
+            create_zircon_thread(self, &state)?
         } else {
             let signal_actions = if clone_sighand {
                 self.thread_group.signal_actions.clone()

@@ -208,8 +208,7 @@ pub fn sys_kill(
         pid if pid > 0 => {
             // "If pid is positive, then signal sig is sent to the process with
             // the ID specified by pid."
-            let target_thread_group =
-                &current_task.get_task(pid).ok_or(errno!(ESRCH))?.thread_group;
+            let target_thread_group = &pids.get_task(pid).ok_or(errno!(ESRCH))?.thread_group;
             let target = get_signal_target(target_thread_group, &unchecked_signal, &pids)
                 .ok_or(errno!(ESRCH))?;
             if !current_task.can_signal(&target, &unchecked_signal) {
