@@ -15,11 +15,11 @@ import("//build/dart/config.gni")
 # Arguments:
 #   * dart_test_component_name (required) - The target_name from
 #     `dart_test_component("target_name")`.
-#   * wrapper_component_name (optional) - The target_name to be used by the
-#     generated fuchsia_component("target_name"). If not provided, the template
+#   * component_name (optional) - The target_name to be used by the generated
+#     fuchsia_component("target_name"). If not provided, the template
 #     target_name is used by default.
-#   * wrapper_component_manifest (optional) - The path to the wrapper component
-#     manifest. If not provided, it is assumed to be the relative path:
+#   * manifest (optional) - The path to the wrapper component manifest. If not
+#     provided, it is assumed to be the relative path:
 #     `meta/${wrapper_component_name}.cml`
 #   * wrapper_binary (optional) - The name of the wrapper binary. If not
 #     provided, it is assumed to be the same as the `wrapper_component_name`
