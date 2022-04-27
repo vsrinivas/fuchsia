@@ -182,6 +182,7 @@ pub fn dispatch_syscall(
         setresuid[3],
         setsid[0],
         setsockopt[5],
+        setgid[1],
         setxattr[5],
         shutdown[2],
         sigaltstack[2],

@@ -8,6 +8,7 @@ use std::sync::Arc;
 use tracing::info;
 use zerocopy::AsBytes;
 
+use crate::auth::Credentials;
 use crate::execution::*;
 use crate::logging::{not_implemented, strace};
 use crate::mm::*;
@@ -122,12 +123,45 @@ pub fn sys_setpgid(current_task: &CurrentTask, pid: pid_t, pgid: pid_t) -> Resul
     Ok(())
 }
 
+// A non-root process is allowed to set any of its three uids to the value of any other. The
+// CAP_SETUID capability bypasses these checks and allows setting any uid to any integer. Likewise
+// for gids.
+fn new_uid_allowed(creds: &Credentials, uid: uid_t) -> bool {
+    creds.has_capability(CAP_SETUID)
+        || uid == creds.uid
+        || uid == creds.euid
+        || uid == creds.saved_uid
+}
+
+fn new_gid_allowed(creds: &Credentials, gid: gid_t) -> bool {
+    creds.has_capability(CAP_SETGID)
+        || gid == creds.gid
+        || gid == creds.egid
+        || gid == creds.saved_gid
+}
+
 pub fn sys_getuid(current_task: &CurrentTask) -> Result<uid_t, Errno> {
     Ok(current_task.read().creds.uid)
 }
 
 pub fn sys_getgid(current_task: &CurrentTask) -> Result<gid_t, Errno> {
     Ok(current_task.read().creds.gid)
+}
+
+pub fn sys_setgid(current_task: &CurrentTask, gid: gid_t) -> Result<(), Errno> {
+    let creds = &mut current_task.write().creds;
+    if gid == gid_t::MAX {
+        return error!(EINVAL);
+    }
+    if !new_gid_allowed(creds, gid) {
+        return error!(EPERM);
+    }
+    creds.egid = gid;
+    if creds.has_capability(CAP_SETGID) {
+        creds.gid = gid;
+        creds.saved_gid = gid;
+    }
+    Ok(())
 }
 
 pub fn sys_geteuid(current_task: &CurrentTask) -> Result<uid_t, Errno> {
@@ -144,8 +178,7 @@ pub fn sys_getresuid(
     euid_addr: UserRef<uid_t>,
     suid_addr: UserRef<uid_t>,
 ) -> Result<(), Errno> {
-    let state = current_task.read();
-    let creds = &state.creds;
+    let creds = &current_task.read().creds;
     current_task.mm.write_object(ruid_addr, &creds.uid)?;
     current_task.mm.write_object(euid_addr, &creds.euid)?;
     current_task.mm.write_object(suid_addr, &creds.saved_uid)?;
@@ -158,8 +191,7 @@ pub fn sys_getresgid(
     egid_addr: UserRef<gid_t>,
     sgid_addr: UserRef<gid_t>,
 ) -> Result<(), Errno> {
-    let state = current_task.read();
-    let creds = &state.creds;
+    let creds = &current_task.read().creds;
     current_task.mm.write_object(rgid_addr, &creds.gid)?;
     current_task.mm.write_object(egid_addr, &creds.egid)?;
     current_task.mm.write_object(sgid_addr, &creds.saved_gid)?;
@@ -172,14 +204,10 @@ pub fn sys_setresuid(
     euid: uid_t,
     suid: uid_t,
 ) -> Result<(), Errno> {
-    let mut state = current_task.write();
-    let mut creds = &mut state.creds;
-    if !creds.has_capability(CAP_SETUID) {
-        let allowed =
-            |uid| uid == u32::MAX || [creds.uid, creds.euid, creds.saved_uid].contains(&uid);
-        if !allowed(ruid) || !allowed(euid) || !allowed(suid) {
-            return error!(EPERM);
-        }
+    let creds = &mut current_task.write().creds;
+    let allowed = |uid| uid == u32::MAX || new_uid_allowed(creds, uid);
+    if !allowed(ruid) || !allowed(euid) || !allowed(suid) {
+        return error!(EPERM);
     }
     if ruid != u32::MAX {
         creds.uid = ruid;
@@ -199,14 +227,10 @@ pub fn sys_setresgid(
     egid: gid_t,
     sgid: gid_t,
 ) -> Result<(), Errno> {
-    let mut state = current_task.write();
-    let mut creds = &mut state.creds;
-    if !creds.has_capability(CAP_SETGID) {
-        let allowed =
-            |gid| gid == u32::MAX || [creds.gid, creds.egid, creds.saved_gid].contains(&gid);
-        if !allowed(rgid) || !allowed(egid) || !allowed(sgid) {
-            return error!(EPERM);
-        }
+    let creds = &mut current_task.write().creds;
+    let allowed = |gid| gid == u32::MAX || new_gid_allowed(creds, gid);
+    if !allowed(rgid) || !allowed(egid) || !allowed(sgid) {
+        return error!(EPERM);
     }
     if rgid != u32::MAX {
         creds.gid = rgid;
