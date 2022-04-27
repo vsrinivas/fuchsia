@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/components.gni")
-import("//build/rust/rustc_binary.gni")
+import("//sdk/cts/build/cts.gni")
 
-rustc_binary("echo_server_testing") {
+cts_rustc_binary("echo_server_testing") {
+  testonly = true
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//src/lib/fuchsia",
@@ -17,8 +17,9 @@ rustc_binary("echo_server_testing") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_component("echo_server") {
+cts_fuchsia_component("echo_server") {
   testonly = true
+  prebuilt_only = true
   component_name = "echo_server"
   manifest = "meta/echo_server.cml"
   deps = [ ":echo_server_testing" ]

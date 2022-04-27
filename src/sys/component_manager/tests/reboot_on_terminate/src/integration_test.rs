@@ -10,7 +10,6 @@ use {
     },
     futures::channel::mpsc,
     futures::prelude::*,
-    std::env,
     tracing::*,
 };
 
@@ -18,12 +17,9 @@ use {
 async fn reboot_on_terminate_success() {
     let (send_trigger_called, mut receive_trigger_called) = mpsc::unbounded();
     let builder = build_reboot_on_terminate_realm(send_trigger_called).await;
-
-    // TODO(fxbug.dev/86057): Use a relative URL when the component manager can load the manifest
-    // from its own package.
     set_component_manager_url(
         &builder,
-        &(env!("REBOOT_ON_TERMINATE_PACKAGE").to_owned() + "#meta/reboot_on_terminate_success.cm"),
+        "fuchsia-pkg://fuchsia.com/reboot_on_terminate_test#meta/reboot_on_terminate_success.cm",
     )
     .await;
     let _realm = builder.build().await.unwrap();
@@ -37,12 +33,9 @@ async fn reboot_on_terminate_success() {
 async fn reboot_on_terminate_policy() {
     let (send_trigger_called, mut receive_trigger_called) = mpsc::unbounded();
     let builder = build_reboot_on_terminate_realm(send_trigger_called).await;
-
-    // TODO(fxbug.dev/86057): Use a relative URL when the component manager can load the manifest
-    // from its own package.
     set_component_manager_url(
         &builder,
-        &(env!("REBOOT_ON_TERMINATE_PACKAGE").to_owned() + "#meta/reboot_on_terminate_policy.cm"),
+        "fuchsia-pkg://fuchsia.com/reboot_on_terminate_test#meta/reboot_on_terminate_policy.cm",
     )
     .await;
     let _realm = builder.build().await.unwrap();

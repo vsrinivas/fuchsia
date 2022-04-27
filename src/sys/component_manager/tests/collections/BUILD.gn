@@ -2,11 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/components.gni")
-import("//build/rust/rustc_binary.gni")
-import("//build/rust/rustc_test.gni")
+import("//sdk/cts/build/cts.gni")
 
-rustc_test("collections_integration_test_bin") {
+cts_rustc_test("collections_integration_test_bin") {
   name = "collections_integration_test"
   edition = "2018"
   source_root = "integration_test.rs"
@@ -28,7 +26,7 @@ rustc_test("collections_integration_test_bin") {
   sources = [ "integration_test.rs" ]
 }
 
-rustc_binary("write_startup_socket_bin") {
+cts_rustc_binary("write_startup_socket_bin") {
   testonly = true
   name = "write_startup_socket"
   edition = "2018"
@@ -41,30 +39,36 @@ rustc_binary("write_startup_socket_bin") {
   sources = [ "write_startup_socket.rs" ]
 }
 
-fuchsia_component("write_startup_socket") {
+cts_fuchsia_component("write_startup_socket") {
   testonly = true
+  prebuilt_only = true
   deps = [ ":write_startup_socket_bin" ]
   manifest = "meta/write_startup_socket.cml"
 }
 
-fuchsia_component("trigger_a") {
+cts_fuchsia_component("trigger_a") {
   testonly = true
+  prebuilt_only = true
   deps = [ "//src/sys/component_manager/tests:trigger_bin" ]
   manifest = "meta/trigger_a.cml"
 }
 
-fuchsia_component("trigger_b") {
+cts_fuchsia_component("trigger_b") {
   testonly = true
+  prebuilt_only = true
   deps = [ "//src/sys/component_manager/tests:trigger_bin" ]
   manifest = "meta/trigger_b.cml"
 }
 
-fuchsia_component("trigger_realm") {
+cts_fuchsia_component("trigger_realm") {
   testonly = true
+  prebuilt_only = true
   manifest = "meta/trigger_realm.cml"
 }
 
-fuchsia_unittest_package("collections_integration_test") {
+cts_fuchsia_component("collections_integration_test_component") {
+  testonly = true
+  prebuilt_only = true
   manifest = "meta/collections_integration_test.cml"
   deps = [
     ":collections_integration_test_bin",
@@ -74,4 +78,14 @@ fuchsia_unittest_package("collections_integration_test") {
     ":write_startup_socket",
     "//src/sys/component_manager/testing/echo_server",
   ]
+}
+
+cts_fuchsia_test_package("collections_integration_test") {
+  package_name = "collections_integration_test"
+  test_components = [ ":collections_integration_test_component" ]
+}
+
+sdk_molecule("test_sdks") {
+  testonly = true
+  deps = [ ":collections_integration_test_sdk" ]
 }

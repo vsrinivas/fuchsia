@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/components.gni")
-import("//build/rust/rustc_binary.gni")
+import("//sdk/cts/build/cts.gni")
 
 group("tests") {
   testonly = true
@@ -36,7 +35,8 @@ group("tests") {
   ]
 }
 
-rustc_binary("trigger_bin") {
+cts_rustc_binary("trigger_bin") {
+  testonly = true
   name = "trigger"
   edition = "2018"
   source_root = "trigger.rs"

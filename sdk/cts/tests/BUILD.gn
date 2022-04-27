@@ -89,7 +89,7 @@ sdk_molecule("test_sdks") {
     # "tools:test_sdks",
 
     # Tests not under //sdk/cts/...
-    "//src/sys/component_manager/tests/reboot_on_terminate:test_sdks",
+    "//src/sys/component_manager/tests/collections:test_sdks",
   ]
   testonly = true
 }
