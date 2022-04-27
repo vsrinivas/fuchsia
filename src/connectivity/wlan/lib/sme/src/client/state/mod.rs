@@ -840,7 +840,11 @@ impl ClientState {
                     transition.to(idle).into()
                 }
                 MlmeEvent::SignalReport { ind } => {
-                    state.connect_txn_sink.send(ConnectTransactionEvent::OnSignalReport { ind });
+                    if matches!(state.link_state, LinkState::LinkUp(_)) {
+                        state
+                            .connect_txn_sink
+                            .send(ConnectTransactionEvent::OnSignalReport { ind });
+                    }
                     state.latest_ap_state.rssi_dbm = ind.rssi_dbm;
                     state.latest_ap_state.snr_db = ind.snr_db;
                     state.last_signal_report_time = now();
