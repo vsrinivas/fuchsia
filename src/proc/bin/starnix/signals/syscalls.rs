@@ -209,7 +209,9 @@ pub fn sys_kill(
             // "If pid is positive, then signal sig is sent to the process with
             // the ID specified by pid."
             let target_thread_group = &pids.get_task(pid).ok_or(errno!(ESRCH))?.thread_group;
-            let target = get_signal_target(target_thread_group, &unchecked_signal, &pids)
+            let target = target_thread_group
+                .read()
+                .get_signal_target(&unchecked_signal)
                 .ok_or(errno!(ESRCH))?;
             if !current_task.can_signal(&target, &unchecked_signal) {
                 return error!(EPERM);
@@ -362,7 +364,6 @@ fn signal_thread_groups<F>(
 where
     F: Iterator<Item = Arc<ThreadGroup>>,
 {
-    let pids = task.thread_group.kernel.pids.read();
     let mut last_error = errno!(ESRCH);
     let mut sent_signal = false;
 
@@ -370,7 +371,7 @@ where
     // success (at least one signal was sent), zero is returned."
     for thread_group in thread_groups {
         let target =
-            get_signal_target(&thread_group, unchecked_signal, &pids).ok_or(errno!(ESRCH))?;
+            thread_group.read().get_signal_target(unchecked_signal).ok_or(errno!(ESRCH))?;
         if !task.can_signal(&target, &unchecked_signal) {
             last_error = errno!(EPERM);
             continue;

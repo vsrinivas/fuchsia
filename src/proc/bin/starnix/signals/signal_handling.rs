@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::sync::Arc;
-
 use crate::logging::strace;
 use crate::signals::*;
 use crate::task::*;
@@ -242,18 +240,6 @@ pub fn force_signal(current_task: &CurrentTask, mut siginfo: SignalInfo) {
     send_signal(current_task, siginfo)
 }
 
-/// Return the appropriate task in |thread_group| to send the given signal.
-pub fn get_signal_target(
-    thread_group: &ThreadGroup,
-    _signal: &UncheckedSignal,
-    pids: &PidTable,
-) -> Option<Arc<Task>> {
-    // TODO(fxb/96632): Consider more than the main thread or the first thread in the thread group
-    // to dispatch the signal.
-    pids.get_task(thread_group.leader)
-        .or_else(|| thread_group.read().tasks.iter().next().map(|p| pids.get_task(*p)).flatten())
-}
-
 /// Represents the action to take when signal is delivered.
 ///
 /// See https://man7.org/linux/man-pages/man7/signal.7.html.
@@ -356,6 +342,8 @@ pub fn dequeue_signal(current_task: &mut CurrentTask) {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use super::*;
     use crate::mm::{DesiredAddress, MappingOptions};
     use crate::testing::*;

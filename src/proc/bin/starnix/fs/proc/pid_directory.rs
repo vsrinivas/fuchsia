@@ -115,7 +115,7 @@ impl DirectoryDelegate for TaskListDirectory {
             .thread_group
             .read()
             .tasks
-            .iter()
+            .keys()
             .map(|tid| DynamicDirectoryEntry {
                 entry_type: DirectoryEntryType::DIR,
                 name: tid.to_string().into_bytes(),
@@ -130,7 +130,7 @@ impl DirectoryDelegate for TaskListDirectory {
             .parse::<pid_t>()
             .map_err(|_| errno!(ENOENT))?;
         // Make sure the tid belongs to this process.
-        if !self.thread_group.read().tasks.contains(&tid) {
+        if !self.thread_group.read().tasks.contains_key(&tid) {
             return error!(ENOENT);
         }
         let task =

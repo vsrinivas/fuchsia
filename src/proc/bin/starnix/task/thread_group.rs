@@ -4,9 +4,9 @@
 
 use fuchsia_zircon::sys;
 use fuchsia_zircon::{self as zx, AsHandleRef};
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::ffi::CStr;
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 
 use crate::auth::Credentials;
 use crate::device::terminal::*;
@@ -29,7 +29,7 @@ pub struct ThreadGroupMutableState {
     pub parent: pid_t,
 
     /// The tasks in the thread group.
-    pub tasks: HashSet<pid_t>,
+    pub tasks: BTreeMap<pid_t, Weak<Task>>,
 
     /// The children of this thread group.
     pub children: HashSet<pid_t>,
@@ -163,8 +163,6 @@ impl ThreadGroup {
         process_group: Arc<ProcessGroup>,
         signal_actions: Arc<SignalActions>,
     ) -> ThreadGroup {
-        let mut tasks = HashSet::new();
-        tasks.insert(leader);
         process_group.thread_groups.write().insert(leader);
 
         let parent_id = if let Some(parent_tg) = parent {
@@ -182,7 +180,7 @@ impl ThreadGroup {
             mutable_state: RwLock::new(ThreadGroupMutableState {
                 leader,
                 parent: parent_id,
-                tasks: tasks,
+                tasks: BTreeMap::new(),
                 children: HashSet::new(),
                 process_group: process_group,
                 itimers: Default::default(),
@@ -207,7 +205,6 @@ impl ThreadGroup {
     }
 
     pub fn exit(&self, exit_status: ExitStatus) {
-        let pids = self.kernel.pids.read();
         let mut state = self.write();
         if state.terminating {
             // The thread group is already terminating and all threads in the thread group have
@@ -217,20 +214,18 @@ impl ThreadGroup {
         state.terminating = true;
 
         // Interrupt each task.
-        for tid in &state.tasks {
-            if let Some(task) = pids.get_task(*tid) {
-                task.write().exit_status = Some(exit_status.clone());
-                task.interrupt(InterruptionType::Exit);
-            }
+        for task in state.tasks() {
+            task.write().exit_status = Some(exit_status.clone());
+            task.interrupt(InterruptionType::Exit);
         }
     }
 
-    pub fn add(&self, task: &Task) -> Result<(), Errno> {
+    pub fn add(&self, task: &Arc<Task>) -> Result<(), Errno> {
         let mut state = self.write();
         if state.terminating {
             return error!(EINVAL);
         }
-        state.tasks.insert(task.id);
+        state.tasks.insert(task.id, Arc::downgrade(task));
         Ok(())
     }
 
@@ -347,10 +342,10 @@ impl ThreadGroup {
             state.stopped = stopped;
             state.waitable = Some(siginfo);
             if !stopped {
-                state.interrupt(InterruptionType::Continue, &pids);
+                state.interrupt(InterruptionType::Continue);
             }
             if let Some(parent) = state.get_parent(&pids) {
-                parent.read().interrupt(InterruptionType::ChildChange, &pids);
+                parent.read().interrupt(InterruptionType::ChildChange);
             }
         }
     }
@@ -558,6 +553,12 @@ impl ThreadGroupMutableState {
         }
     }
 
+    pub fn tasks(&self) -> impl Iterator<Item = Arc<Task>> + '_ {
+        self.tasks.values().map(|v| {
+            v.upgrade().expect("Weak references to task in ThreadGroup must always be valid")
+        })
+    }
+
     pub fn set_process_group(&mut self, process_group: Arc<ProcessGroup>, pids: &mut PidTable) {
         if self.process_group == process_group {
             return;
@@ -577,8 +578,8 @@ impl ThreadGroupMutableState {
     }
 
     pub fn remove_internal(&mut self, task: &Arc<Task>, pids: &mut PidTable) -> bool {
-        pids.remove_task(task.id);
         self.tasks.remove(&task.id);
+        pids.remove_task(task.id);
 
         if task.id == self.leader {
             let exit_status = task.read().exit_status.clone();
@@ -659,7 +660,7 @@ impl ThreadGroupMutableState {
                     };
                     return Ok(WaitableChild::Available(ZombieProcess::new(
                         &child,
-                        &child.get_task(&pids)?.read().creds,
+                        &child.get_task()?.read().creds,
                         ExitStatus::Continue(siginfo),
                     )));
                 }
@@ -671,7 +672,7 @@ impl ThreadGroupMutableState {
                     };
                     return Ok(WaitableChild::Available(ZombieProcess::new(
                         &child,
-                        &child.get_task(&pids)?.read().creds,
+                        &child.get_task()?.read().creds,
                         ExitStatus::Stop(siginfo),
                     )));
                 }
@@ -730,10 +731,11 @@ impl ThreadGroupMutableState {
         // Send signals
         if let Some(parent) = parent_opt.as_ref() {
             // TODO: Should this be zombie_leader.exit_signal?
-            if let Some(signal_target) = get_signal_target(&parent, &SIGCHLD.into(), &pids) {
+            let parent_state = parent.read();
+            if let Some(signal_target) = parent_state.get_signal_target(&SIGCHLD.into()) {
                 send_signal(&signal_target, SignalInfo::default(SIGCHLD));
             }
-            parent.read().interrupt(InterruptionType::ChildChange, &pids);
+            parent_state.interrupt(InterruptionType::ChildChange);
         }
 
         // TODO: Set the error_code on the Zircon process object. Currently missing a way
@@ -743,26 +745,29 @@ impl ThreadGroupMutableState {
     }
 
     /// Returns a task in the current thread group.
-    pub fn get_task(&self, pids: &PidTable) -> Result<Arc<Task>, Errno> {
-        if let Some(task) = pids.get_task(self.leader) {
-            return Ok(task);
-        }
-        for pid in &self.children {
-            if let Some(task) = pids.get_task(*pid) {
-                return Ok(task);
-            }
-        }
-        error!(ESRCH)
+    pub fn get_task(&self) -> Result<Arc<Task>, Errno> {
+        self.tasks
+            .get(&self.leader)
+            .map(|t| {
+                t.upgrade().expect("Weak references to task in ThreadGroup must always be valid")
+            })
+            .or_else(|| self.tasks().next())
+            .ok_or(errno!(ESRCH))
+    }
+
+    /// Return the appropriate task in |thread_group| to send the given signal.
+    pub fn get_signal_target(&self, _signal: &UncheckedSignal) -> Option<Arc<Task>> {
+        // TODO(fxb/96632): Consider more than the main thread or the first thread in the thread group
+        // to dispatch the signal.
+        self.get_task().ok()
     }
 
     /// Interrupt the thread group.
     ///
     /// This will interrupt every task in the thread group.
-    pub fn interrupt(&self, interruption_type: InterruptionType, pids: &PidTable) {
-        for pid in self.tasks.iter() {
-            if let Some(task) = pids.get_task(*pid) {
-                task.interrupt(interruption_type);
-            }
+    pub fn interrupt(&self, interruption_type: InterruptionType) {
+        for task in self.tasks() {
+            task.interrupt(interruption_type);
         }
     }
 }

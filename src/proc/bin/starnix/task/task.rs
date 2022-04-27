@@ -226,6 +226,7 @@ impl Task {
             Arc::clone(&kernel.default_abstract_vsock_namespace),
             None,
         );
+        task.thread_group.add(&task.task)?;
 
         pids.add_task(&task.task);
         pids.add_thread_group(&task.thread_group);
@@ -332,7 +333,7 @@ impl Task {
             self.abstract_vsock_namespace.clone(),
             child_exit_signal,
         );
-        pids.add_task(&child.task);
+
         // Child lock must be taken before this lock. Drop the lock on the task, take a writable
         // lock on the child and take the current state back.
         std::mem::drop(state);
@@ -347,9 +348,12 @@ impl Task {
             }
         }
 
+        pids.add_task(&child.task);
+
         if clone_thread {
-            self.thread_group.add(&child)?;
+            self.thread_group.add(&child.task)?;
         } else {
+            child.thread_group.add(&child.task)?;
             let mut child_state = child.write();
             let state = self.read();
             pids.add_thread_group(&child.thread_group);
