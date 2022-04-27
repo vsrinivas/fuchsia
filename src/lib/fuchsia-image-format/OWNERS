@@ -1,2 +1,2 @@
-lindkvist@google.com
-reveman@google.com
+include /src/graphics/display/OWNERS
+# COMPONENT: Graphics>Display

@@ -1,10 +1,3 @@
-cfontas@google.com
-dworsham@google.com
-emircan@google.com
-felipearchondo@google.com
-jaeheon@google.com
-jjosh@google.com
-liyl@google.com
-mikaelpessa@google.com
-
+include /src/ui/scenic/OWNERS
+neelsa@google.com
 # COMPONENT: Scenic
