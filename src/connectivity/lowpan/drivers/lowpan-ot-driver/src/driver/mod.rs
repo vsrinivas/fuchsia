@@ -49,6 +49,15 @@ const SCAN_EXTRA_TIMEOUT: Duration = Duration::from_seconds(10);
 #[allow(unused)]
 const STD_IPV6_NET_PREFIX_LEN: u8 = 64;
 
+#[derive(thiserror::Error, Debug, Eq, PartialEq)]
+pub struct ResetRequested;
+
+impl std::fmt::Display for ResetRequested {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(self, f)
+    }
+}
+
 #[derive(Debug)]
 pub struct OtDriver<OT, NI, BI> {
     /// Internal, mutex-protected driver state.

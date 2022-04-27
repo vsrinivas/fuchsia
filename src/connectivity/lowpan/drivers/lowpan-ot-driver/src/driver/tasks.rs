@@ -39,7 +39,8 @@ where
             .driver_state
             .tasklets_stream()
             .inspect(|_| fx_log_trace!("Tasklets did run"))
-            .map(Result::Ok);
+            .map(Result::Ok)
+            .chain(futures::future::ready(Err(anyhow::Error::from(ResetRequested))).into_stream());
 
         // Stream for handling OpenThread state changes.
         let state_change_stream = self

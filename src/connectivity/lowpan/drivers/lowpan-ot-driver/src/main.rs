@@ -357,8 +357,14 @@ async fn main() -> Result<(), Error> {
         // Implement an exponential backoff for restarts.
         let delay = (1 << attempt_count).min(MAX_EXPONENTIAL_BACKOFF_DELAY_SEC);
 
-        fx_log_err!("Unexpected shutdown: {:?}", ret);
-        fx_log_err!("Will attempt to restart in {} seconds.", delay);
+        if ret.as_ref().map_err(|err| err.is::<driver::ResetRequested>()).err().unwrap_or(false) {
+            // This is an expected OpenThread reset.
+            fx_log_warn!("OpenThread Reset: {:?}", ret);
+        } else {
+            fx_log_err!("Unexpected shutdown: {:?}", ret);
+        }
+
+        fx_log_warn!("Will attempt to restart in {} seconds.", delay);
 
         fasync::Timer::new(fasync::Time::after(fz::Duration::from_seconds(delay))).await;
 
