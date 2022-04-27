@@ -261,7 +261,6 @@ test("legacy-mem-config-tests") {
 }
 
 qemu_shim_tests = [
-  "bootsvc-integration-tests",
   "core-tests",
   "phys-unittests",
 ]
@@ -311,8 +310,4 @@ qemu_shim_test("core-tests") {
   # isn't necessarily really quick, so don't impose the short timeout used for
   # raw phys tests.
   timeout = false
-}
-
-qemu_shim_test("bootsvc-integration-tests") {
-  deps = [ "//src/bringup/bin/bootsvc/integration_test:bootsvc-integration-tests.zbi($default_toolchain)" ]
 }

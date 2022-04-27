@@ -20,8 +20,6 @@ toc:
   status: experimental
 - title: "Booting"
   section:
-  - title: "Bootsvc"
-    path: /docs/concepts/process/bootsvc.md
   - title: "Everything between power on and your component"
     path: /docs/concepts/process/everything_between_power_on_and_your_component.md
   - title: "Process creation"

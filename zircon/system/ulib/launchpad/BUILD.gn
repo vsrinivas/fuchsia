@@ -33,7 +33,6 @@ zx_library("launchpad") {
     # Instead of launchpad, use fdio_spawn or fuchsia.process.Launcher.
     ":*",
     "test:*",
-    "//src/bringup/bin/bootsvc:*",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

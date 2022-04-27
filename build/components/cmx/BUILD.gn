@@ -123,7 +123,6 @@ group("cmx_allowlist") {
     "//sdk/lib/vfs/cpp:*",
     "//sdk/lib/virtualization:*",
     "//sdk/lib/zxio/tests:*",
-    "//src/bringup/bin/bootsvc:*",
     "//src/bringup/bin/virtcon:*",
     "//src/camera/bin/benchmark:*",
     "//src/camera/bin/camera-gym:*",

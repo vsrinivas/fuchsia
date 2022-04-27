@@ -159,7 +159,7 @@ executable needing various shared libraries.  The dynamic linker, the
 executable, and the shared libraries are all loaded from the same BOOTFS
 pages that will later appear as files in `/boot`.
 
-An executable that will be loaded by `userboot` (i.e. [`bootsvc`](bootsvc.md)) should
+An executable that will be loaded by `userboot` (i.e. `bootsvc`) should
 normally close its loader service channel once it's completed startup.
 That lets `userboot` know that it's no longer needed.
 

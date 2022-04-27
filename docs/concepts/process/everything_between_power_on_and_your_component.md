@@ -190,7 +190,6 @@ appmgr.
 [glossary.bootfs]: /docs/glossary#README.md#bootfs
 [glossary.virtual memory object]: /docs/glossary#README.md#virtual-memory-object
 [glossary.zircon boot image]: /docs/glossary#README.md#zircon-boot-image
-[glossary.bootsvc]: /docs/glossary#README.md#bootsvc
 [glossary.component]: /docs/glossary#README.md#component
 [glossary.driver manager]: /docs/glossary#README.md#driver-manager
 [glossary.driver host]: /docs/glossary#README.md#driver-host

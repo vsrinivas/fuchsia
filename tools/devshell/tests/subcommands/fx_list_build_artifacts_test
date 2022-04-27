@@ -141,21 +141,6 @@ cat > "${BT_TEMP_DIR}/out/default/zbi_tests.json" <<EOF
     "name": "core-tests",
     "path": "obj/zircon/system/utest/core/core-tests.zbi",
     "success_string": "***ZBI-test-successful!-MDd7/O65SuVZ23yGAaQG4CedYQGH9E1/58r73pSAVK0=***"
-  },
-  {
-    "bootserver_netboot": [
-      "--boot"
-    ],
-    "cpu": "x64",
-    "device_types": [
-      "AEMU",
-      "QEMU"
-    ],
-    "disabled": false,
-    "label": "//src/bringup/bin/bootsvc/integration_test:bootsvc-integration-tests(//build/toolchain/fuchsia:x64)",
-    "name": "bootsvc-integration-tests",
-    "path": "bootsvc-integration-tests-x64.zbi",
-    "success_string": "***ZBI-test-successful!-MDd7/O65SuVZ23yGAaQG4CedYQGH9E1/58r73pSAVK0=***"
   }
 ]
 EOF
@@ -254,7 +239,7 @@ TEST_fx-list-build-artifacts-flash() {
 }
 
 TEST_fx-list-build-artifacts-zbi-tests() {
-  BT_EXPECT_EQ "$(${fx} list-build-artifacts zbi-tests)" "obj/zircon/system/utest/core/core-tests.zbi bootsvc-integration-tests-x64.zbi"
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts zbi-tests)" "obj/zircon/system/utest/core/core-tests.zbi"
 }
 
 TEST_fx-list-build-artifacts-zbi-tests-by-name() {
