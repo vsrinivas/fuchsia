@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_CODECS_MAX98927_MAX98927_H_
 
 #include <fuchsia/hardware/i2c/c/banjo.h>
+#include <lib/device-protocol/i2c-channel.h>
 #include <zircon/types.h>
 
 #include <ddktl/device.h>
@@ -49,7 +50,7 @@ class Max98927Device : public DeviceType {
   // Debug
   void DumpRegs();
 
-  i2c_protocol_t i2c_;
+  ddk::I2cChannel i2c_;
 };
 
 }  // namespace max98927

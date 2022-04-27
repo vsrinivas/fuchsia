@@ -8,7 +8,6 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
-#include <lib/device-protocol/i2c.h>
 #include <lib/fidl-utils/bind.h>
 #include <zircon/assert.h>
 
@@ -25,7 +24,8 @@ namespace max98927 {
 uint8_t Max98927Device::ReadReg(uint16_t addr) {
   uint16_t buf = htobe16(addr);
   uint8_t val = 0;
-  zx_status_t status = i2c_write_read_sync(&i2c_, &buf, sizeof(buf), &val, sizeof(val));
+  zx_status_t status =
+      i2c_.WriteReadSync(reinterpret_cast<uint8_t*>(&buf), sizeof(buf), &val, sizeof(val));
   if (status != ZX_OK) {
     zxlogf(ERROR, "max98927: could not read reg addr: 0x%04X  status: %d", addr, status);
     return -1;
@@ -40,7 +40,7 @@ void Max98927Device::WriteReg(uint16_t addr, uint8_t val) {
   uint16_t* p = reinterpret_cast<uint16_t*>(buf);
   *p = htobe16(addr);
   buf[2] = val;
-  zx_status_t status = i2c_write_sync(&i2c_, buf, sizeof(buf));
+  zx_status_t status = i2c_.WriteSync(buf, sizeof(buf));
   if (status != ZX_OK) {
     zxlogf(ERROR, "alc5514: could not write reg addr/val: 0x%04x/0x%02x  status: %d", addr, val,
            status);
@@ -57,7 +57,8 @@ void Max98927Device::DumpRegs() {
   // the address pointer is automatically incremented after each byte read
   uint16_t buf = htobe16(first);
   uint8_t out[last];
-  zx_status_t status = i2c_write_read_sync(&i2c_, &buf, sizeof(buf), out, sizeof(out));
+  zx_status_t status =
+      i2c_.WriteReadSync(reinterpret_cast<uint8_t*>(&buf), sizeof(buf), out, sizeof(out));
   if (status != ZX_OK) {
     zxlogf(ERROR, "max98927: could not read regs status: %d", status);
   }
@@ -201,13 +202,13 @@ zx_status_t Max98927Device::Initialize() {
 }
 
 zx_status_t Max98927Device::Bind() {
-  zx_status_t st = device_get_protocol(parent(), ZX_PROTOCOL_I2C, &i2c_);
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "max98927: could not get I2C protocol: %d", st);
-    return st;
+  i2c_ = ddk::I2cChannel(parent());
+  if (!i2c_.is_valid()) {
+    zxlogf(ERROR, "max98927: could not get I2C protocol");
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  st = Initialize();
+  zx_status_t st = Initialize();
   if (st != ZX_OK) {
     return st;
   }
