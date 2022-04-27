@@ -64,6 +64,13 @@ class MockTransactionManager : public TransactionManager, public block_client::B
 
   zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) final;
 
+  zx_status_t ReadBlocks(void* buffer, size_t buffer_length, size_t offset) const final {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  zx_status_t WriteBlocks(void* buffer, size_t buffer_length, size_t offset) const final {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   zx_status_t BlockDetachVmo(storage::Vmoid vmoid) final;
 
   std::shared_ptr<BlobfsMetrics>& GetMetrics() final { return metrics_; }

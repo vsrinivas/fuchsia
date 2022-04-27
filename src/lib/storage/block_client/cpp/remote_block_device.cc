@@ -80,6 +80,74 @@ zx_status_t RemoteBlockDevice::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid
   return status;
 }
 
+zx_status_t RemoteBlockDevice::WriteBlocks(void* buffer, size_t buffer_length,
+                                           size_t offset) const {
+  zx::vmo vmo;
+  zx_status_t status = zx::vmo::create(buffer_length, 0, &vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  fuchsia_hardware_block_BlockInfo info;
+  if (status = BlockGetInfo(&info); status != ZX_OK)
+    return status;
+
+  size_t block_size = info.block_size;
+
+  if (!buffer || buffer_length % block_size != 0 || offset % block_size != 0)
+    return ZX_ERR_INVALID_ARGS;
+
+  zx::vmo read_vmo;
+  zx_status_t rw_status;
+  vmo.write(buffer, 0, buffer_length);
+  status = fuchsia_hardware_block_BlockWriteBlocks(device_.get(), vmo.release(), buffer_length,
+                                                   offset, 0, &rw_status);
+
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (rw_status != ZX_OK) {
+    return rw_status;
+  }
+  return ZX_OK;
+}
+
+zx_status_t RemoteBlockDevice::ReadBlocks(void* buffer, size_t buffer_length, size_t offset) const {
+  zx::vmo vmo;
+  zx_status_t status = zx::vmo::create(buffer_length, 0, &vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  fuchsia_hardware_block_BlockInfo info;
+  if (status = BlockGetInfo(&info); status != ZX_OK)
+    return status;
+
+  size_t block_size = info.block_size;
+
+  if (!buffer || buffer_length % block_size != 0 || offset % block_size != 0)
+    return ZX_ERR_INVALID_ARGS;
+
+  zx::vmo read_vmo;
+  zx_status_t rw_status;
+  // Duplicate the vmo so we will retain a copy.
+  status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &read_vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = fuchsia_hardware_block_BlockReadBlocks(device_.get(), vmo.release(), buffer_length,
+                                                  offset, 0, &rw_status);
+
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (rw_status != ZX_OK) {
+    return rw_status;
+  }
+
+  return read_vmo.read(buffer, 0, buffer_length);
+}
+
 zx_status_t RemoteBlockDevice::VolumeGetInfo(
     fuchsia_hardware_block_volume_VolumeManagerInfo* out_manager_info,
     fuchsia_hardware_block_volume_VolumeInfo* out_volume_info) const {
@@ -179,8 +247,7 @@ zx_status_t SingleReadBytes(int fd, void* buffer, size_t buffer_size, size_t off
   if (!client.is_ok()) {
     return client.error_value();
   }
-  Reader reader(*(client.value()));
-  return reader.Read(offset, buffer_size, buffer);
+  return client.value()->ReadBlocks(buffer, buffer_size, offset);
 }
 
 zx_status_t SingleWriteBytes(int fd, void* buffer, size_t buffer_size, size_t offset) {
@@ -188,7 +255,6 @@ zx_status_t SingleWriteBytes(int fd, void* buffer, size_t buffer_size, size_t of
   if (!client.is_ok()) {
     return client.error_value();
   }
-  Writer writer(*(client.value()));
-  return writer.Write(offset, buffer_size, buffer);
+  return client.value()->WriteBlocks(buffer, buffer_size, offset);
 }
 }  // namespace block_client

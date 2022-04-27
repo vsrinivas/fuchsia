@@ -131,6 +131,42 @@ protocol Block {
     RebindDevice() -> (struct {
         status zx.status;
     });
+
+    /// Reads from a block device.
+    ///
+    /// This read does not require exclusive access.
+    /// length, dev_offset and vmo_offset are specified in bytes, but they must be
+    /// block-aligned.
+    /// This method is provided for backward compatibility, and is not intended for new code.
+    /// New code should use the FIFO interface along with the client libraries to
+    /// read and write from block devices.
+    @transitional
+    ReadBlocks(resource struct {
+        vmo zx.handle:VMO;
+        length uint64;
+        dev_offset uint64;
+        vmo_offset uint64;
+    }) -> (struct {
+        status zx.status;
+    });
+
+    /// Writes to a block device.
+    ///
+    /// This write does not require exclusive access.
+    /// length, dev_offset and vmo_offset are specified in bytes, but they must be
+    /// block-aligned.
+    /// This method is provided for backward compatibility, and is not intended for new code.
+    /// New code should use the FIFO interface along with the client libraries to
+    /// read and write from block devices.
+    @transitional
+    WriteBlocks(resource struct {
+        vmo zx.handle:VMO;
+        length uint64;
+        dev_offset uint64;
+        vmo_offset uint64;
+    }) -> (struct {
+        status zx.status;
+    });
 };
 
 /// This protocol is intended for servers that handles both hardware.block.block

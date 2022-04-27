@@ -91,7 +91,7 @@ class BlockDevice : public BlockDeviceType,
   void UpdateStats(bool success, zx::ticks start_tick, block_op_t* op);
 
  private:
-  zx_status_t DoIo(void* buf, size_t buf_len, zx_off_t off, bool write);
+  zx_status_t DoIo(zx_handle_t vmo, size_t buf_len, zx_off_t off, zx_off_t vmo_off, bool write);
 
   zx_status_t FidlBlockGetInfo(fidl_txn_t* txn);
   zx_status_t FidlBlockGetStats(bool clear, fidl_txn_t* txn);
@@ -99,6 +99,10 @@ class BlockDevice : public BlockDeviceType,
   zx_status_t FidlBlockAttachVmo(zx_handle_t vmo, fidl_txn_t* txn);
   zx_status_t FidlBlockCloseFifo(fidl_txn_t* txn);
   zx_status_t FidlBlockRebindDevice(fidl_txn_t* txn);
+  zx_status_t FidlReadBlocks(zx_handle_t vmo, uint64_t length, uint64_t dev_offset,
+                             uint64_t vmo_offset, fidl_txn_t* txn);
+  zx_status_t FidlWriteBlocks(zx_handle_t vmo, uint64_t length, uint64_t dev_offset,
+                              uint64_t vmo_offset, fidl_txn_t* txn);
   zx_status_t FidlPartitionGetTypeGuid(fidl_txn_t* txn);
   zx_status_t FidlPartitionGetInstanceGuid(fidl_txn_t* txn);
   zx_status_t FidlPartitionGetName(fidl_txn_t* txn);
@@ -125,6 +129,8 @@ class BlockDevice : public BlockDeviceType,
         .AttachVmo = Binder::BindMember<&BlockDevice::FidlBlockAttachVmo>,
         .CloseFifo = Binder::BindMember<&BlockDevice::FidlBlockCloseFifo>,
         .RebindDevice = Binder::BindMember<&BlockDevice::FidlBlockRebindDevice>,
+        .ReadBlocks = Binder::BindMember<&BlockDevice::FidlReadBlocks>,
+        .WriteBlocks = Binder::BindMember<&BlockDevice::FidlWriteBlocks>,
     };
     return &kOps;
   }
@@ -138,6 +144,8 @@ class BlockDevice : public BlockDeviceType,
         .AttachVmo = Binder::BindMember<&BlockDevice::FidlBlockAttachVmo>,
         .CloseFifo = Binder::BindMember<&BlockDevice::FidlBlockCloseFifo>,
         .RebindDevice = Binder::BindMember<&BlockDevice::FidlBlockRebindDevice>,
+        .ReadBlocks = Binder::BindMember<&BlockDevice::FidlReadBlocks>,
+        .WriteBlocks = Binder::BindMember<&BlockDevice::FidlWriteBlocks>,
         .GetTypeGuid = Binder::BindMember<&BlockDevice::FidlPartitionGetTypeGuid>,
         .GetInstanceGuid = Binder::BindMember<&BlockDevice::FidlPartitionGetInstanceGuid>,
         .GetName = Binder::BindMember<&BlockDevice::FidlPartitionGetName>,
@@ -154,6 +162,8 @@ class BlockDevice : public BlockDeviceType,
         .AttachVmo = Binder::BindMember<&BlockDevice::FidlBlockAttachVmo>,
         .CloseFifo = Binder::BindMember<&BlockDevice::FidlBlockCloseFifo>,
         .RebindDevice = Binder::BindMember<&BlockDevice::FidlBlockRebindDevice>,
+        .ReadBlocks = Binder::BindMember<&BlockDevice::FidlReadBlocks>,
+        .WriteBlocks = Binder::BindMember<&BlockDevice::FidlWriteBlocks>,
         .GetTypeGuid = Binder::BindMember<&BlockDevice::FidlPartitionGetTypeGuid>,
         .GetInstanceGuid = Binder::BindMember<&BlockDevice::FidlPartitionGetInstanceGuid>,
         .GetName = Binder::BindMember<&BlockDevice::FidlPartitionGetName>,
@@ -263,7 +273,20 @@ void BlockDevice::UpdateStats(bool success, zx::ticks start_tick, block_op_t* op
 // be used instead.
 constexpr uint32_t kMaxMidlayerIO = 8192;
 
-zx_status_t BlockDevice::DoIo(void* buf, size_t buf_len, zx_off_t off, bool write) {
+zx_status_t BlockDevice::FidlReadBlocks(zx_handle_t vmo, uint64_t length, uint64_t dev_offset,
+                                        uint64_t vmo_offset, fidl_txn_t* txn) {
+  auto status = DoIo(vmo, length, dev_offset, vmo_offset, false);
+  return fuchsia_hardware_block_BlockReadBlocks_reply(txn, status);
+}
+
+zx_status_t BlockDevice::FidlWriteBlocks(zx_handle_t vmo, uint64_t length, uint64_t dev_offset,
+                                         uint64_t vmo_offset, fidl_txn_t* txn) {
+  auto status = DoIo(vmo, length, dev_offset, vmo_offset, true);
+  return fuchsia_hardware_block_BlockWriteBlocks_reply(txn, status);
+}
+
+zx_status_t BlockDevice::DoIo(zx_handle_t vmo, size_t buf_len, zx_off_t off, zx_off_t vmo_off,
+                              bool write) {
   fbl::AutoLock lock(&io_lock_);
   const size_t block_size = info_.block_size;
   const size_t max_xfer = std::min(info_.max_transfer_size, kMaxMidlayerIO);
@@ -274,33 +297,21 @@ zx_status_t BlockDevice::DoIo(void* buf, size_t buf_len, zx_off_t off, bool writ
   if ((buf_len % block_size) || (off % block_size)) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (!io_vmo_) {
-    if (zx::vmo::create(std::max(max_xfer, static_cast<size_t>(zx_system_get_page_size())), 0,
-                        &io_vmo_) != ZX_OK) {
-      return ZX_ERR_INTERNAL;
-    }
-  }
 
   // TODO(smklein): These requests can be queued simultaneously without
   // blocking. However, as the comment above mentions, this code probably
   // shouldn't be blocking at all.
   uint64_t sub_txn_offset = 0;
   while (sub_txn_offset < buf_len) {
-    void* sub_buf = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(buf) + sub_txn_offset);
     size_t sub_txn_length = std::min(buf_len - sub_txn_offset, max_xfer);
 
-    if (write) {
-      if (io_vmo_.write(sub_buf, 0, sub_txn_length) != ZX_OK) {
-        return ZX_ERR_INTERNAL;
-      }
-    }
     block_op_t* op = reinterpret_cast<block_op_t*>(io_op_.get());
     op->command = write ? BLOCK_OP_WRITE : BLOCK_OP_READ;
     ZX_DEBUG_ASSERT(sub_txn_length / block_size < std::numeric_limits<uint32_t>::max());
     op->rw.length = static_cast<uint32_t>(sub_txn_length / block_size);
-    op->rw.vmo = io_vmo_.get();
+    op->rw.vmo = vmo;
     op->rw.offset_dev = (off + sub_txn_offset) / block_size;
-    op->rw.offset_vmo = 0;
+    op->rw.offset_vmo = (vmo_off + sub_txn_offset) / block_size;
 
     sync_completion_reset(&io_signal_);
     auto completion_cb = [](void* cookie, zx_status_t status, block_op_t* op) {
@@ -316,11 +327,6 @@ zx_status_t BlockDevice::DoIo(void* buf, size_t buf_len, zx_off_t off, bool writ
       return io_status_;
     }
 
-    if (!write) {
-      if (io_vmo_.read(sub_buf, 0, sub_txn_length) != ZX_OK) {
-        return ZX_ERR_INTERNAL;
-      }
-    }
     sub_txn_offset += sub_txn_length;
   }
 
@@ -328,13 +334,29 @@ zx_status_t BlockDevice::DoIo(void* buf, size_t buf_len, zx_off_t off, bool writ
 }
 
 zx_status_t BlockDevice::DdkRead(void* buf, size_t buf_len, zx_off_t off, size_t* actual) {
-  zx_status_t status = DoIo(buf, buf_len, off, false);
+  zx::vmo vmo;
+  if (zx::vmo::create(std::max(buf_len, static_cast<size_t>(zx_system_get_page_size())), 0, &vmo) !=
+      ZX_OK) {
+    return ZX_ERR_INTERNAL;
+  }
+  zx_status_t status = DoIo(vmo.get(), buf_len, off, 0, false);
+  if (vmo.read(buf, 0, buf_len) != ZX_OK) {
+    return ZX_ERR_INTERNAL;
+  }
   *actual = (status == ZX_OK) ? buf_len : 0;
   return status;
 }
 
 zx_status_t BlockDevice::DdkWrite(const void* buf, size_t buf_len, zx_off_t off, size_t* actual) {
-  zx_status_t status = DoIo(const_cast<void*>(buf), buf_len, off, true);
+  zx::vmo vmo;
+  if (zx::vmo::create(std::max(buf_len, static_cast<size_t>(zx_system_get_page_size())), 0, &vmo) !=
+      ZX_OK) {
+    return ZX_ERR_INTERNAL;
+  }
+  if (vmo.write(buf, 0, buf_len) != ZX_OK) {
+    return ZX_ERR_INTERNAL;
+  }
+  zx_status_t status = DoIo(vmo.get(), buf_len, off, 0, true);
   *actual = (status == ZX_OK) ? buf_len : 0;
   return status;
 }

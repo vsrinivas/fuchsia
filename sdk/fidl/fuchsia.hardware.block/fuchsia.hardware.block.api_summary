@@ -3,7 +3,9 @@ protocol/member fuchsia.hardware.block/Block.CloseFifo() -> (int32 status)
 protocol/member fuchsia.hardware.block/Block.GetFifo() -> (int32 status,zx/handle:<FIFO,optional> fifo)
 protocol/member fuchsia.hardware.block/Block.GetInfo() -> (int32 status,box<fuchsia.hardware.block/BlockInfo> info)
 protocol/member fuchsia.hardware.block/Block.GetStats(bool clear) -> (int32 status,box<fuchsia.hardware.block/BlockStats> stats)
+protocol/member fuchsia.hardware.block/Block.ReadBlocks(zx/handle:VMO vmo,uint64 length,uint64 dev_offset,uint64 vmo_offset) -> (int32 status)
 protocol/member fuchsia.hardware.block/Block.RebindDevice() -> (int32 status)
+protocol/member fuchsia.hardware.block/Block.WriteBlocks(zx/handle:VMO vmo,uint64 length,uint64 dev_offset,uint64 vmo_offset) -> (int32 status)
 protocol fuchsia.hardware.block/Block
 protocol/member fuchsia.hardware.block/BlockAndNode.AttachVmo(zx/handle:VMO vmo) -> (int32 status,box<fuchsia.hardware.block/VmoId> vmoid)
 protocol/member fuchsia.hardware.block/BlockAndNode.Clone(fuchsia.io/OpenFlags flags,server_end:fuchsia.io/Node object)
@@ -21,6 +23,7 @@ protocol/member fuchsia.hardware.block/BlockAndNode.GetStats(bool clear) -> (int
 protocol/member fuchsia.hardware.block/BlockAndNode.OnConnectionInfo -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.hardware.block/BlockAndNode.OnOpen -> (int32 s,fuchsia.io/NodeInfo:optional info)
 protocol/member fuchsia.hardware.block/BlockAndNode.QueryFilesystem() -> (int32 s,fuchsia.io/FilesystemInfo:optional info)
+protocol/member fuchsia.hardware.block/BlockAndNode.ReadBlocks(zx/handle:VMO vmo,uint64 length,uint64 dev_offset,uint64 vmo_offset) -> (int32 status)
 protocol/member fuchsia.hardware.block/BlockAndNode.RebindDevice() -> (int32 status)
 protocol/member fuchsia.hardware.block/BlockAndNode.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.hardware.block/BlockAndNode.SetAttr(fuchsia.io/NodeAttributeFlags flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
@@ -28,6 +31,7 @@ protocol/member fuchsia.hardware.block/BlockAndNode.SetFlags(fuchsia.io/OpenFlag
 protocol/member fuchsia.hardware.block/BlockAndNode.Sync() -> (fuchsia.io/Node2_Sync_Result result)
 protocol/member fuchsia.hardware.block/BlockAndNode.SyncDeprecated() -> (int32 s)
 protocol/member fuchsia.hardware.block/BlockAndNode.UpdateAttributes(fuchsia.io/NodeAttributes2 attributes) -> (fuchsia.io/Node2_UpdateAttributes_Result result)
+protocol/member fuchsia.hardware.block/BlockAndNode.WriteBlocks(zx/handle:VMO vmo,uint64 length,uint64 dev_offset,uint64 vmo_offset) -> (int32 status)
 protocol fuchsia.hardware.block/BlockAndNode
 struct/member fuchsia.hardware.block/BlockInfo.block_count uint64
 struct/member fuchsia.hardware.block/BlockInfo.block_size uint32
