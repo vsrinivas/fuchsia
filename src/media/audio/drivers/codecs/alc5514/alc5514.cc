@@ -8,7 +8,6 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
-#include <lib/device-protocol/i2c.h>
 #include <sys/types.h>
 #include <zircon/assert.h>
 
@@ -27,7 +26,8 @@ namespace alc5514 {
 uint32_t Alc5514Device::ReadReg(uint32_t addr) {
   uint32_t buf = htobe32(addr);
   uint32_t val = 0;
-  zx_status_t status = i2c_write_read_sync(&i2c_, &buf, sizeof(buf), &val, sizeof(val));
+  zx_status_t status = i2c_.WriteReadSync(reinterpret_cast<uint8_t*>(&buf), sizeof(buf),
+                                          reinterpret_cast<uint8_t*>(&val), sizeof(val));
   if (status != ZX_OK) {
     zxlogf(ERROR, "alc5514: could not read reg addr: 0x%08x  status: %d", addr, status);
     return -1;
@@ -41,7 +41,7 @@ void Alc5514Device::WriteReg(uint32_t addr, uint32_t val) {
   uint32_t buf[2];
   buf[0] = htobe32(addr);
   buf[1] = htobe32(val);
-  zx_status_t status = i2c_write_sync(&i2c_, buf, sizeof(buf));
+  zx_status_t status = i2c_.WriteSync(reinterpret_cast<uint8_t*>(buf), sizeof(buf));
   if (status != ZX_OK) {
     zxlogf(ERROR, "alc5514: could not write reg addr/val: 0x%08x/0x%08x status: %d", addr, val,
            status);
@@ -173,13 +173,13 @@ zx_status_t Alc5514Device::Initialize() {
 }
 
 zx_status_t Alc5514Device::Bind() {
-  zx_status_t st = device_get_fragment_protocol(parent(), "i2c000", ZX_PROTOCOL_I2C, &i2c_);
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "alc5514: could not get I2C protocol: %d", st);
-    return st;
+  i2c_ = ddk::I2cChannel(parent(), "i2c000");
+  if (!i2c_.is_valid()) {
+    zxlogf(ERROR, "alc5514: could not get I2C protocol");
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  st = Initialize();
+  zx_status_t st = Initialize();
   if (st != ZX_OK) {
     return st;
   }

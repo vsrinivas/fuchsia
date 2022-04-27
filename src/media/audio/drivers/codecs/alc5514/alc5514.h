@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_CODECS_ALC5514_ALC5514_H_
 
 #include <fuchsia/hardware/i2c/c/banjo.h>
+#include <lib/device-protocol/i2c-channel.h>
 #include <zircon/types.h>
 
 #include <ddktl/device.h>
@@ -37,7 +38,7 @@ class Alc5514Device : public DeviceType {
   void WriteReg(uint32_t addr, uint32_t val);
   void UpdateReg(uint32_t addr, uint32_t mask, uint32_t bits);
 
-  i2c_protocol_t i2c_;
+  ddk::I2cChannel i2c_;
 };
 
 }  // namespace alc5514
