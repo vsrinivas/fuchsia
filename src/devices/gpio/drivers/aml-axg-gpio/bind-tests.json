@@ -66,8 +66,8 @@
             "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
             "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE"
         },
-        "expected": "abort",
-        "name": "WrongPid"
+        "expected": "match",
+        "name": "Success905D3"
     },
     {
         "device": {

@@ -97,7 +97,8 @@ zx_status_t AmlAxgGpio::Create(void* ctx, zx_device_t* parent) {
     case PDEV_PID_AMLOGIC_S905D2:
     case PDEV_PID_AMLOGIC_T931:
     case PDEV_PID_AMLOGIC_A311D:
-      // S905D2, T931, A311D are identical.
+    case PDEV_PID_AMLOGIC_S905D3:
+      // S905D2, T931, A311D, S905D3 are identical.
       gpio_blocks = s905d2_gpio_blocks;
       block_count = std::size(s905d2_gpio_blocks);
       gpio_interrupt = &s905d2_interrupt_block;
