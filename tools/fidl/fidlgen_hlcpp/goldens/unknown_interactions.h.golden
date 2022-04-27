@@ -217,21 +217,9 @@ class Example_ResponseEncoder {
       ::fidl::MessageEncoder* _encoder,
       ::test::unknowninteractions::Example_FlexibleTwoWay_Result* result) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -260,8 +248,7 @@ template <>
 struct CodingTraits<
     ::test::unknowninteractions::Example_FlexibleTwoWay_Response>
     : public EncodableCodingTraits<
-          ::test::unknowninteractions::Example_FlexibleTwoWay_Response, 1, 1> {
-};
+          ::test::unknowninteractions::Example_FlexibleTwoWay_Response, 1> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -296,13 +283,11 @@ struct IsFidlXUnion<::test::unknowninteractions::Example_FlexibleTwoWay_Result>
 template <>
 struct CodingTraits<::test::unknowninteractions::Example_FlexibleTwoWay_Result>
     : public EncodableCodingTraits<
-          ::test::unknowninteractions::Example_FlexibleTwoWay_Result, 24, 16> {
-};
+          ::test::unknowninteractions::Example_FlexibleTwoWay_Result, 16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<
     ::test::unknowninteractions::Example_FlexibleTwoWay_Result>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
@@ -374,8 +359,7 @@ template <>
 struct CodingTraits<
     ::test::unknowninteractions::ExampleFlexibleTwoWayTopResponse>
     : public EncodableCodingTraits<
-          ::test::unknowninteractions::ExampleFlexibleTwoWayTopResponse, 24,
-          16> {};
+          ::test::unknowninteractions::ExampleFlexibleTwoWayTopResponse, 16> {};
 
 template <>
 struct HasPadding<::test::unknowninteractions::ExampleFlexibleTwoWayTopResponse>

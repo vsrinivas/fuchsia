@@ -9,9 +9,6 @@
 #include <zircon/fidl.h>
 
 namespace fidl {
-namespace internal {
-std::atomic_int hlcpp_enable_v1_encode(0);
-}  // namespace internal
 
 namespace {
 
@@ -98,14 +95,8 @@ void MessageEncoder::EncodeMessageHeader(uint64_t ordinal) {
   size_t offset = Alloc(sizeof(fidl_message_header_t));
   fidl_message_header_t* header = GetPtr<fidl_message_header_t>(offset);
   fidl_init_txn_header(header, 0, ordinal);
-  switch (wire_format()) {
-    case internal::WireFormatVersion::kV1:
-      header->at_rest_flags[0] = 0;
-      break;
-    case internal::WireFormatVersion::kV2:
-      header->at_rest_flags[0] = FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
-      break;
-  }
+  ZX_DEBUG_ASSERT(wire_format() == internal::WireFormatVersion::kV2);
+  header->at_rest_flags[0] = FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
 }
 
 HLCPPOutgoingBody BodyEncoder::GetBody() {

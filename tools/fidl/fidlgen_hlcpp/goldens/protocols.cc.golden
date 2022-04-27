@@ -25,20 +25,11 @@ void WithProtocolEndsServerEndsTopResponse::Encode(
                _offset),
            this, sizeof(WithProtocolEndsServerEndsTopResponse));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &out, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, &out, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-    }
+    ::fidl::Encode(_encoder, &out, _offset + 0,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
   }
 }
 
@@ -79,20 +70,11 @@ void WithProtocolEndsServerEndsRequest::Encode(
         _encoder->template GetPtr<WithProtocolEndsServerEndsRequest>(_offset),
         this, sizeof(WithProtocolEndsServerEndsRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &in, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, &in, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-    }
+    ::fidl::Encode(_encoder, &in, _offset + 0,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
   }
 }
 
@@ -133,20 +115,11 @@ void WithProtocolEndsClientEndsTopResponse::Encode(
                _offset),
            this, sizeof(WithProtocolEndsClientEndsTopResponse));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &out, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, &out, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-    }
+    ::fidl::Encode(_encoder, &out, _offset + 0,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
   }
 }
 
@@ -187,20 +160,11 @@ void WithProtocolEndsClientEndsRequest::Encode(
         _encoder->template GetPtr<WithProtocolEndsClientEndsRequest>(_offset),
         this, sizeof(WithProtocolEndsClientEndsRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &in, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, &in, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-    }
+    ::fidl::Encode(_encoder, &in, _offset + 0,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
   }
 }
 
@@ -239,16 +203,9 @@ void WithErrorSyntax_ResponseAsStruct_Response::Encode(
                _offset),
            this, sizeof(WithErrorSyntax_ResponseAsStruct_Response));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &a, _offset + 0);
-      ::fidl::Encode(_encoder, &b, _offset + 8);
-      ::fidl::Encode(_encoder, &c, _offset + 16);
-
-    } else {
-      ::fidl::Encode(_encoder, &a, _offset + 0);
-      ::fidl::Encode(_encoder, &b, _offset + 8);
-      ::fidl::Encode(_encoder, &c, _offset + 16);
-    }
+    ::fidl::Encode(_encoder, &a, _offset + 0);
+    ::fidl::Encode(_encoder, &b, _offset + 8);
+    ::fidl::Encode(_encoder, &c, _offset + 16);
   }
 }
 
@@ -362,109 +319,63 @@ void WithErrorSyntax_ResponseAsStruct_Result::Encode(
   switch (Which()) {
     case ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
         kResponse: {
-      switch (encoder->wire_format()) {
-        case ::fidl::internal::WireFormatVersion::kV1: {
-          ::fidl::Encode(
-              encoder, &response_,
-              encoder->Alloc(::fidl::EncodingInlineSize<
-                             ::test::protocols::
-                                 WithErrorSyntax_ResponseAsStruct_Response,
-                             ::fidl::Encoder>(encoder)));
+      if (::fidl::EncodingInlineSize<
+              ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response>(
+              encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &response_,
+                       offset + offsetof(fidl_xunion_v2_t, envelope));
 
-          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
-          xunion->tag = tag_;
-          xunion->envelope.num_bytes =
-              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-          xunion->envelope.num_handles = static_cast<uint32_t>(
-              encoder->CurrentHandleCount() - handles_before);
-          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
-          break;
-        }
-        case ::fidl::internal::WireFormatVersion::kV2: {
-          if (::fidl::EncodingInlineSize<
-                  ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response>(
-                  encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-            ::fidl::Encode(encoder, &response_,
-                           offset + offsetof(fidl_xunion_v2_t, envelope));
-
-            fidl_xunion_v2_t* xunion =
-                encoder->GetPtr<fidl_xunion_v2_t>(offset);
-            xunion->tag = tag_;
-            xunion->envelope.num_handles = static_cast<uint16_t>(
-                encoder->CurrentHandleCount() - handles_before);
-            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-            break;
-          }
-
-          ::fidl::Encode(
-              encoder, &response_,
-              encoder->Alloc(::fidl::EncodingInlineSize<
-                             ::test::protocols::
-                                 WithErrorSyntax_ResponseAsStruct_Response,
-                             ::fidl::Encoder>(encoder)));
-
-          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
-          xunion->tag = tag_;
-          xunion->envelope.num_bytes =
-              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-          xunion->envelope.num_handles = static_cast<uint16_t>(
-              encoder->CurrentHandleCount() - handles_before);
-          xunion->envelope.flags = 0;
-          break;
-        }
+        fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+        xunion->tag = tag_;
+        xunion->envelope.num_handles = static_cast<uint16_t>(
+            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+        break;
       }
+
+      ::fidl::Encode(
+          encoder, &response_,
+          encoder->Alloc(
+              ::fidl::EncodingInlineSize<
+                  ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response,
+                  ::fidl::Encoder>(encoder)));
+
+      fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+      xunion->tag = tag_;
+      xunion->envelope.num_bytes =
+          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles =
+          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.flags = 0;
       break;
     }
     case ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
         kErr: {
-      switch (encoder->wire_format()) {
-        case ::fidl::internal::WireFormatVersion::kV1: {
-          ::fidl::Encode(
-              encoder, &err_,
-              encoder->Alloc(
-                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
-                      encoder)));
+      if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
+          FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &err_,
+                       offset + offsetof(fidl_xunion_v2_t, envelope));
 
-          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
-          xunion->tag = tag_;
-          xunion->envelope.num_bytes =
-              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-          xunion->envelope.num_handles = static_cast<uint32_t>(
-              encoder->CurrentHandleCount() - handles_before);
-          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
-          break;
-        }
-        case ::fidl::internal::WireFormatVersion::kV2: {
-          if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
-              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-            ::fidl::Encode(encoder, &err_,
-                           offset + offsetof(fidl_xunion_v2_t, envelope));
-
-            fidl_xunion_v2_t* xunion =
-                encoder->GetPtr<fidl_xunion_v2_t>(offset);
-            xunion->tag = tag_;
-            xunion->envelope.num_handles = static_cast<uint16_t>(
-                encoder->CurrentHandleCount() - handles_before);
-            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-            break;
-          }
-
-          ::fidl::Encode(
-              encoder, &err_,
-              encoder->Alloc(
-                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
-                      encoder)));
-
-          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
-          xunion->tag = tag_;
-          xunion->envelope.num_bytes =
-              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-          xunion->envelope.num_handles = static_cast<uint16_t>(
-              encoder->CurrentHandleCount() - handles_before);
-          xunion->envelope.flags = 0;
-          break;
-        }
+        fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+        xunion->tag = tag_;
+        xunion->envelope.num_handles = static_cast<uint16_t>(
+            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+        break;
       }
+
+      ::fidl::Encode(
+          encoder, &err_,
+          encoder->Alloc(
+              ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder)));
+
+      fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+      xunion->tag = tag_;
+      xunion->envelope.num_bytes =
+          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles =
+          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.flags = 0;
       break;
     }
     default:
@@ -602,12 +513,7 @@ void WithErrorSyntaxResponseAsStructTopResponse::Encode(
             _offset),
         this, sizeof(WithErrorSyntaxResponseAsStructTopResponse));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &result, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &result, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &result, _offset + 0);
   }
 }
 
@@ -649,20 +555,11 @@ void WithErrorSyntax_HandleInResult_Response::Encode(
                _offset),
            this, sizeof(WithErrorSyntax_HandleInResult_Response));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &h, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_NONE,
-                         .rights = 0x80000000,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, &h, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_NONE,
-                         .rights = 0x80000000,
-                     });
-    }
+    ::fidl::Encode(_encoder, &h, _offset + 0,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_NONE,
+                       .rights = 0x80000000,
+                   });
   }
 }
 
@@ -770,108 +667,62 @@ void WithErrorSyntax_HandleInResult_Result::Encode(
   switch (Which()) {
     case ::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag::
         kResponse: {
-      switch (encoder->wire_format()) {
-        case ::fidl::internal::WireFormatVersion::kV1: {
-          ::fidl::Encode(
-              encoder, &response_,
-              encoder->Alloc(::fidl::EncodingInlineSize<
-                             ::test::protocols::
-                                 WithErrorSyntax_HandleInResult_Response,
-                             ::fidl::Encoder>(encoder)));
+      if (::fidl::EncodingInlineSize<
+              ::test::protocols::WithErrorSyntax_HandleInResult_Response>(
+              encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &response_,
+                       offset + offsetof(fidl_xunion_v2_t, envelope));
 
-          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
-          xunion->tag = tag_;
-          xunion->envelope.num_bytes =
-              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-          xunion->envelope.num_handles = static_cast<uint32_t>(
-              encoder->CurrentHandleCount() - handles_before);
-          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
-          break;
-        }
-        case ::fidl::internal::WireFormatVersion::kV2: {
-          if (::fidl::EncodingInlineSize<
-                  ::test::protocols::WithErrorSyntax_HandleInResult_Response>(
-                  encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-            ::fidl::Encode(encoder, &response_,
-                           offset + offsetof(fidl_xunion_v2_t, envelope));
-
-            fidl_xunion_v2_t* xunion =
-                encoder->GetPtr<fidl_xunion_v2_t>(offset);
-            xunion->tag = tag_;
-            xunion->envelope.num_handles = static_cast<uint16_t>(
-                encoder->CurrentHandleCount() - handles_before);
-            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-            break;
-          }
-
-          ::fidl::Encode(
-              encoder, &response_,
-              encoder->Alloc(::fidl::EncodingInlineSize<
-                             ::test::protocols::
-                                 WithErrorSyntax_HandleInResult_Response,
-                             ::fidl::Encoder>(encoder)));
-
-          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
-          xunion->tag = tag_;
-          xunion->envelope.num_bytes =
-              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-          xunion->envelope.num_handles = static_cast<uint16_t>(
-              encoder->CurrentHandleCount() - handles_before);
-          xunion->envelope.flags = 0;
-          break;
-        }
+        fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+        xunion->tag = tag_;
+        xunion->envelope.num_handles = static_cast<uint16_t>(
+            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+        break;
       }
+
+      ::fidl::Encode(
+          encoder, &response_,
+          encoder->Alloc(
+              ::fidl::EncodingInlineSize<
+                  ::test::protocols::WithErrorSyntax_HandleInResult_Response,
+                  ::fidl::Encoder>(encoder)));
+
+      fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+      xunion->tag = tag_;
+      xunion->envelope.num_bytes =
+          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles =
+          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.flags = 0;
       break;
     }
     case ::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag::kErr: {
-      switch (encoder->wire_format()) {
-        case ::fidl::internal::WireFormatVersion::kV1: {
-          ::fidl::Encode(
-              encoder, &err_,
-              encoder->Alloc(
-                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
-                      encoder)));
+      if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
+          FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &err_,
+                       offset + offsetof(fidl_xunion_v2_t, envelope));
 
-          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
-          xunion->tag = tag_;
-          xunion->envelope.num_bytes =
-              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-          xunion->envelope.num_handles = static_cast<uint32_t>(
-              encoder->CurrentHandleCount() - handles_before);
-          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
-          break;
-        }
-        case ::fidl::internal::WireFormatVersion::kV2: {
-          if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
-              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-            ::fidl::Encode(encoder, &err_,
-                           offset + offsetof(fidl_xunion_v2_t, envelope));
-
-            fidl_xunion_v2_t* xunion =
-                encoder->GetPtr<fidl_xunion_v2_t>(offset);
-            xunion->tag = tag_;
-            xunion->envelope.num_handles = static_cast<uint16_t>(
-                encoder->CurrentHandleCount() - handles_before);
-            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-            break;
-          }
-
-          ::fidl::Encode(
-              encoder, &err_,
-              encoder->Alloc(
-                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
-                      encoder)));
-
-          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
-          xunion->tag = tag_;
-          xunion->envelope.num_bytes =
-              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-          xunion->envelope.num_handles = static_cast<uint16_t>(
-              encoder->CurrentHandleCount() - handles_before);
-          xunion->envelope.flags = 0;
-          break;
-        }
+        fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+        xunion->tag = tag_;
+        xunion->envelope.num_handles = static_cast<uint16_t>(
+            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+        break;
       }
+
+      ::fidl::Encode(
+          encoder, &err_,
+          encoder->Alloc(
+              ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder)));
+
+      fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+      xunion->tag = tag_;
+      xunion->envelope.num_bytes =
+          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles =
+          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.flags = 0;
       break;
     }
     default:
@@ -1007,12 +858,7 @@ void WithErrorSyntaxHandleInResultTopResponse::Encode(
                _offset),
            this, sizeof(WithErrorSyntaxHandleInResultTopResponse));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &result, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &result, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &result, _offset + 0);
   }
 }
 
@@ -1052,12 +898,7 @@ void WithErrorSyntax_ErrorAsPrimitive_Response::Encode(
                _offset),
            this, sizeof(WithErrorSyntax_ErrorAsPrimitive_Response));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &__reserved, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &__reserved, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &__reserved, _offset + 0);
   }
 }
 
@@ -1165,109 +1006,63 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::Encode(
   switch (Which()) {
     case ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
         kResponse: {
-      switch (encoder->wire_format()) {
-        case ::fidl::internal::WireFormatVersion::kV1: {
-          ::fidl::Encode(
-              encoder, &response_,
-              encoder->Alloc(::fidl::EncodingInlineSize<
-                             ::test::protocols::
-                                 WithErrorSyntax_ErrorAsPrimitive_Response,
-                             ::fidl::Encoder>(encoder)));
+      if (::fidl::EncodingInlineSize<
+              ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response>(
+              encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &response_,
+                       offset + offsetof(fidl_xunion_v2_t, envelope));
 
-          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
-          xunion->tag = tag_;
-          xunion->envelope.num_bytes =
-              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-          xunion->envelope.num_handles = static_cast<uint32_t>(
-              encoder->CurrentHandleCount() - handles_before);
-          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
-          break;
-        }
-        case ::fidl::internal::WireFormatVersion::kV2: {
-          if (::fidl::EncodingInlineSize<
-                  ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response>(
-                  encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-            ::fidl::Encode(encoder, &response_,
-                           offset + offsetof(fidl_xunion_v2_t, envelope));
-
-            fidl_xunion_v2_t* xunion =
-                encoder->GetPtr<fidl_xunion_v2_t>(offset);
-            xunion->tag = tag_;
-            xunion->envelope.num_handles = static_cast<uint16_t>(
-                encoder->CurrentHandleCount() - handles_before);
-            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-            break;
-          }
-
-          ::fidl::Encode(
-              encoder, &response_,
-              encoder->Alloc(::fidl::EncodingInlineSize<
-                             ::test::protocols::
-                                 WithErrorSyntax_ErrorAsPrimitive_Response,
-                             ::fidl::Encoder>(encoder)));
-
-          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
-          xunion->tag = tag_;
-          xunion->envelope.num_bytes =
-              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-          xunion->envelope.num_handles = static_cast<uint16_t>(
-              encoder->CurrentHandleCount() - handles_before);
-          xunion->envelope.flags = 0;
-          break;
-        }
+        fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+        xunion->tag = tag_;
+        xunion->envelope.num_handles = static_cast<uint16_t>(
+            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+        break;
       }
+
+      ::fidl::Encode(
+          encoder, &response_,
+          encoder->Alloc(
+              ::fidl::EncodingInlineSize<
+                  ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response,
+                  ::fidl::Encoder>(encoder)));
+
+      fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+      xunion->tag = tag_;
+      xunion->envelope.num_bytes =
+          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles =
+          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.flags = 0;
       break;
     }
     case ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
         kErr: {
-      switch (encoder->wire_format()) {
-        case ::fidl::internal::WireFormatVersion::kV1: {
-          ::fidl::Encode(
-              encoder, &err_,
-              encoder->Alloc(
-                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
-                      encoder)));
+      if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
+          FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &err_,
+                       offset + offsetof(fidl_xunion_v2_t, envelope));
 
-          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
-          xunion->tag = tag_;
-          xunion->envelope.num_bytes =
-              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-          xunion->envelope.num_handles = static_cast<uint32_t>(
-              encoder->CurrentHandleCount() - handles_before);
-          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
-          break;
-        }
-        case ::fidl::internal::WireFormatVersion::kV2: {
-          if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
-              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-            ::fidl::Encode(encoder, &err_,
-                           offset + offsetof(fidl_xunion_v2_t, envelope));
-
-            fidl_xunion_v2_t* xunion =
-                encoder->GetPtr<fidl_xunion_v2_t>(offset);
-            xunion->tag = tag_;
-            xunion->envelope.num_handles = static_cast<uint16_t>(
-                encoder->CurrentHandleCount() - handles_before);
-            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-            break;
-          }
-
-          ::fidl::Encode(
-              encoder, &err_,
-              encoder->Alloc(
-                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
-                      encoder)));
-
-          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
-          xunion->tag = tag_;
-          xunion->envelope.num_bytes =
-              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-          xunion->envelope.num_handles = static_cast<uint16_t>(
-              encoder->CurrentHandleCount() - handles_before);
-          xunion->envelope.flags = 0;
-          break;
-        }
+        fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+        xunion->tag = tag_;
+        xunion->envelope.num_handles = static_cast<uint16_t>(
+            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+        break;
       }
+
+      ::fidl::Encode(
+          encoder, &err_,
+          encoder->Alloc(
+              ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder)));
+
+      fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+      xunion->tag = tag_;
+      xunion->envelope.num_bytes =
+          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles =
+          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.flags = 0;
       break;
     }
     default:
@@ -1405,12 +1200,7 @@ void WithErrorSyntaxErrorAsPrimitiveTopResponse::Encode(
             _offset),
         this, sizeof(WithErrorSyntaxErrorAsPrimitiveTopResponse));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &result, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &result, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &result, _offset + 0);
   }
 }
 
@@ -1449,12 +1239,7 @@ void WithErrorSyntax_ErrorAsEnum_Response::Encode(
                _offset),
            this, sizeof(WithErrorSyntax_ErrorAsEnum_Response));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &__reserved, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &__reserved, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &__reserved, _offset + 0);
   }
 }
 
@@ -1498,12 +1283,7 @@ void WithAndWithoutRequestResponseWithRequestWithResponseTopResponse::Encode(
         sizeof(
             WithAndWithoutRequestResponseWithRequestWithResponseTopResponse));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &ret, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &ret, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &ret, _offset + 0);
   }
 }
 
@@ -1552,12 +1332,7 @@ void WithAndWithoutRequestResponseWithRequestWithResponseRequest::Encode(
            this,
            sizeof(WithAndWithoutRequestResponseWithRequestWithResponseRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &arg, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &arg, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &arg, _offset + 0);
   }
 }
 
@@ -1602,12 +1377,7 @@ void WithAndWithoutRequestResponseWithRequestNoResponseRequest::Encode(
         this,
         sizeof(WithAndWithoutRequestResponseWithRequestNoResponseRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &arg, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &arg, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &arg, _offset + 0);
   }
 }
 
@@ -1653,12 +1423,7 @@ void WithAndWithoutRequestResponseWithRequestEmptyResponseRequest::Encode(
         this,
         sizeof(WithAndWithoutRequestResponseWithRequestEmptyResponseRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &arg, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &arg, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &arg, _offset + 0);
   }
 }
 
@@ -1703,12 +1468,7 @@ void WithAndWithoutRequestResponseOnWithResponseRequest::Encode(
                WithAndWithoutRequestResponseOnWithResponseRequest>(_offset),
            this, sizeof(WithAndWithoutRequestResponseOnWithResponseRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &ret, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &ret, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &ret, _offset + 0);
   }
 }
 
@@ -1753,12 +1513,7 @@ void WithAndWithoutRequestResponseNoRequestWithResponseTopResponse::Encode(
         this,
         sizeof(WithAndWithoutRequestResponseNoRequestWithResponseTopResponse));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &ret, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &ret, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &ret, _offset + 0);
   }
 }
 
@@ -1800,12 +1555,7 @@ void TransitionalRequestTopResponse::Encode(
     memcpy(_encoder->template GetPtr<TransitionalRequestTopResponse>(_offset),
            this, sizeof(TransitionalRequestTopResponse));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &y, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &y, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &y, _offset + 0);
   }
 }
 
@@ -1839,12 +1589,7 @@ void TransitionalRequestRequest::Encode(
     memcpy(_encoder->template GetPtr<TransitionalRequestRequest>(_offset), this,
            sizeof(TransitionalRequestRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &x, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &x, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &x, _offset + 0);
   }
 }
 
@@ -1878,12 +1623,7 @@ void TransitionalOneWayRequest::Encode(
     memcpy(_encoder->template GetPtr<TransitionalOneWayRequest>(_offset), this,
            sizeof(TransitionalOneWayRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &x, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &x, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &x, _offset + 0);
   }
 }
 
@@ -1917,12 +1657,7 @@ void TransitionalEventRequest::Encode(
     memcpy(_encoder->template GetPtr<TransitionalEventRequest>(_offset), this,
            sizeof(TransitionalEventRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &x, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &x, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &x, _offset + 0);
   }
 }
 
@@ -2000,54 +1735,31 @@ void TheUnion::Encode(
 
   switch (Which()) {
     case ::test::protocols::TheUnion::Tag::kV: {
-      switch (encoder->wire_format()) {
-        case ::fidl::internal::WireFormatVersion::kV1: {
-          ::fidl::Encode(
-              encoder, &v_,
-              encoder->Alloc(
-                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
-                      encoder)));
+      if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
+          FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &v_,
+                       offset + offsetof(fidl_xunion_v2_t, envelope));
 
-          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
-          xunion->tag = tag_;
-          xunion->envelope.num_bytes =
-              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-          xunion->envelope.num_handles = static_cast<uint32_t>(
-              encoder->CurrentHandleCount() - handles_before);
-          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
-          break;
-        }
-        case ::fidl::internal::WireFormatVersion::kV2: {
-          if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
-              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-            ::fidl::Encode(encoder, &v_,
-                           offset + offsetof(fidl_xunion_v2_t, envelope));
-
-            fidl_xunion_v2_t* xunion =
-                encoder->GetPtr<fidl_xunion_v2_t>(offset);
-            xunion->tag = tag_;
-            xunion->envelope.num_handles = static_cast<uint16_t>(
-                encoder->CurrentHandleCount() - handles_before);
-            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-            break;
-          }
-
-          ::fidl::Encode(
-              encoder, &v_,
-              encoder->Alloc(
-                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
-                      encoder)));
-
-          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
-          xunion->tag = tag_;
-          xunion->envelope.num_bytes =
-              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-          xunion->envelope.num_handles = static_cast<uint16_t>(
-              encoder->CurrentHandleCount() - handles_before);
-          xunion->envelope.flags = 0;
-          break;
-        }
+        fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+        xunion->tag = tag_;
+        xunion->envelope.num_handles = static_cast<uint16_t>(
+            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+        break;
       }
+
+      ::fidl::Encode(
+          encoder, &v_,
+          encoder->Alloc(
+              ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder)));
+
+      fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+      xunion->tag = tag_;
+      xunion->envelope.num_bytes =
+          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles =
+          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.flags = 0;
       break;
     }
     case ::test::protocols::TheUnion::Tag::kUnknown: {
@@ -2165,12 +1877,7 @@ void MethodWithUnionUnionMethodRequest::Encode(
         _encoder->template GetPtr<MethodWithUnionUnionMethodRequest>(_offset),
         this, sizeof(MethodWithUnionUnionMethodRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &u, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &u, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &u, _offset + 0);
   }
 }
 
@@ -2205,14 +1912,8 @@ void SyscallProtocolMethodCRequest::Encode(
     memcpy(_encoder->template GetPtr<SyscallProtocolMethodCRequest>(_offset),
            this, sizeof(SyscallProtocolMethodCRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &a, _offset + 0);
-      ::fidl::Encode(_encoder, &b, _offset + 8);
-
-    } else {
-      ::fidl::Encode(_encoder, &a, _offset + 0);
-      ::fidl::Encode(_encoder, &b, _offset + 8);
-    }
+    ::fidl::Encode(_encoder, &a, _offset + 0);
+    ::fidl::Encode(_encoder, &b, _offset + 8);
   }
 }
 
@@ -2250,56 +1951,29 @@ void ProtocolEnds::Encode(
     memcpy(_encoder->template GetPtr<ProtocolEnds>(_offset), this,
            sizeof(ProtocolEnds));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &client, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
+    ::fidl::Encode(_encoder, &client, _offset + 0,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
 
-      ::fidl::Encode(_encoder, &server, _offset + 4,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
+    ::fidl::Encode(_encoder, &server, _offset + 4,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
 
-      ::fidl::Encode(_encoder, &client_opt, _offset + 8,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
+    ::fidl::Encode(_encoder, &client_opt, _offset + 8,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
 
-      ::fidl::Encode(_encoder, &server_opt, _offset + 12,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, &client, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-
-      ::fidl::Encode(_encoder, &server, _offset + 4,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-
-      ::fidl::Encode(_encoder, &client_opt, _offset + 8,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-
-      ::fidl::Encode(_encoder, &server_opt, _offset + 12,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-    }
+    ::fidl::Encode(_encoder, &server_opt, _offset + 12,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
   }
 }
 
@@ -2347,12 +2021,7 @@ void WithProtocolEndsStructContainingEndsTopResponse::Encode(
                 _offset),
         this, sizeof(WithProtocolEndsStructContainingEndsTopResponse));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &out, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &out, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &out, _offset + 0);
   }
 }
 
@@ -2397,12 +2066,7 @@ void WithProtocolEndsStructContainingEndsRequest::Encode(
             _offset),
         this, sizeof(WithProtocolEndsStructContainingEndsRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &in, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &in, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &in, _offset + 0);
   }
 }
 
@@ -2440,40 +2104,21 @@ void ManyParametersFifteenRequest::Encode(
     memcpy(_encoder->template GetPtr<ManyParametersFifteenRequest>(_offset),
            this, sizeof(ManyParametersFifteenRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &p1, _offset + 0);
-      ::fidl::Encode(_encoder, &p2, _offset + 1);
-      ::fidl::Encode(_encoder, &p3, _offset + 2);
-      ::fidl::Encode(_encoder, &p4, _offset + 3);
-      ::fidl::Encode(_encoder, &p5, _offset + 4);
-      ::fidl::Encode(_encoder, &p6, _offset + 5);
-      ::fidl::Encode(_encoder, &p7, _offset + 6);
-      ::fidl::Encode(_encoder, &p8, _offset + 7);
-      ::fidl::Encode(_encoder, &p9, _offset + 8);
-      ::fidl::Encode(_encoder, &p10, _offset + 9);
-      ::fidl::Encode(_encoder, &p11, _offset + 10);
-      ::fidl::Encode(_encoder, &p12, _offset + 11);
-      ::fidl::Encode(_encoder, &p13, _offset + 12);
-      ::fidl::Encode(_encoder, &p14, _offset + 13);
-      ::fidl::Encode(_encoder, &p15, _offset + 14);
-
-    } else {
-      ::fidl::Encode(_encoder, &p1, _offset + 0);
-      ::fidl::Encode(_encoder, &p2, _offset + 1);
-      ::fidl::Encode(_encoder, &p3, _offset + 2);
-      ::fidl::Encode(_encoder, &p4, _offset + 3);
-      ::fidl::Encode(_encoder, &p5, _offset + 4);
-      ::fidl::Encode(_encoder, &p6, _offset + 5);
-      ::fidl::Encode(_encoder, &p7, _offset + 6);
-      ::fidl::Encode(_encoder, &p8, _offset + 7);
-      ::fidl::Encode(_encoder, &p9, _offset + 8);
-      ::fidl::Encode(_encoder, &p10, _offset + 9);
-      ::fidl::Encode(_encoder, &p11, _offset + 10);
-      ::fidl::Encode(_encoder, &p12, _offset + 11);
-      ::fidl::Encode(_encoder, &p13, _offset + 12);
-      ::fidl::Encode(_encoder, &p14, _offset + 13);
-      ::fidl::Encode(_encoder, &p15, _offset + 14);
-    }
+    ::fidl::Encode(_encoder, &p1, _offset + 0);
+    ::fidl::Encode(_encoder, &p2, _offset + 1);
+    ::fidl::Encode(_encoder, &p3, _offset + 2);
+    ::fidl::Encode(_encoder, &p4, _offset + 3);
+    ::fidl::Encode(_encoder, &p5, _offset + 4);
+    ::fidl::Encode(_encoder, &p6, _offset + 5);
+    ::fidl::Encode(_encoder, &p7, _offset + 6);
+    ::fidl::Encode(_encoder, &p8, _offset + 7);
+    ::fidl::Encode(_encoder, &p9, _offset + 8);
+    ::fidl::Encode(_encoder, &p10, _offset + 9);
+    ::fidl::Encode(_encoder, &p11, _offset + 10);
+    ::fidl::Encode(_encoder, &p12, _offset + 11);
+    ::fidl::Encode(_encoder, &p13, _offset + 12);
+    ::fidl::Encode(_encoder, &p14, _offset + 13);
+    ::fidl::Encode(_encoder, &p15, _offset + 14);
   }
 }
 
@@ -2555,20 +2200,11 @@ void HandleRightsProtocolResponseMethodTopResponse::Encode(
                    _offset),
            this, sizeof(HandleRightsProtocolResponseMethodTopResponse));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &h, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x2,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, &h, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x2,
-                     });
-    }
+    ::fidl::Encode(_encoder, &h, _offset + 0,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x2,
+                   });
   }
 }
 
@@ -2611,20 +2247,11 @@ void HandleRightsProtocolResponseMethodRequest::Encode(
                _offset),
            this, sizeof(HandleRightsProtocolResponseMethodRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &h, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x3,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, &h, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x3,
-                     });
-    }
+    ::fidl::Encode(_encoder, &h, _offset + 0,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x3,
+                   });
   }
 }
 
@@ -2667,20 +2294,11 @@ void HandleRightsProtocolNoResponseMethodRequest::Encode(
             _offset),
         this, sizeof(HandleRightsProtocolNoResponseMethodRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &h, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x3,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, &h, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x3,
-                     });
-    }
+    ::fidl::Encode(_encoder, &h, _offset + 0,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x3,
+                   });
   }
 }
 
@@ -2722,20 +2340,11 @@ void HandleRightsProtocolAnEventRequest::Encode(
         _encoder->template GetPtr<HandleRightsProtocolAnEventRequest>(_offset),
         this, sizeof(HandleRightsProtocolAnEventRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &h, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x3,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, &h, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x3,
-                     });
-    }
+    ::fidl::Encode(_encoder, &h, _offset + 0,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x3,
+                   });
   }
 }
 
@@ -2837,108 +2446,63 @@ void WithErrorSyntax_ErrorAsEnum_Result::Encode(
   switch (Which()) {
     case ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
         kResponse: {
-      switch (encoder->wire_format()) {
-        case ::fidl::internal::WireFormatVersion::kV1: {
-          ::fidl::Encode(
-              encoder, &response_,
-              encoder->Alloc(
-                  ::fidl::EncodingInlineSize<
-                      ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response,
-                      ::fidl::Encoder>(encoder)));
+      if (::fidl::EncodingInlineSize<
+              ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response>(
+              encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &response_,
+                       offset + offsetof(fidl_xunion_v2_t, envelope));
 
-          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
-          xunion->tag = tag_;
-          xunion->envelope.num_bytes =
-              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-          xunion->envelope.num_handles = static_cast<uint32_t>(
-              encoder->CurrentHandleCount() - handles_before);
-          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
-          break;
-        }
-        case ::fidl::internal::WireFormatVersion::kV2: {
-          if (::fidl::EncodingInlineSize<
-                  ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response>(
-                  encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-            ::fidl::Encode(encoder, &response_,
-                           offset + offsetof(fidl_xunion_v2_t, envelope));
-
-            fidl_xunion_v2_t* xunion =
-                encoder->GetPtr<fidl_xunion_v2_t>(offset);
-            xunion->tag = tag_;
-            xunion->envelope.num_handles = static_cast<uint16_t>(
-                encoder->CurrentHandleCount() - handles_before);
-            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-            break;
-          }
-
-          ::fidl::Encode(
-              encoder, &response_,
-              encoder->Alloc(
-                  ::fidl::EncodingInlineSize<
-                      ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response,
-                      ::fidl::Encoder>(encoder)));
-
-          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
-          xunion->tag = tag_;
-          xunion->envelope.num_bytes =
-              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-          xunion->envelope.num_handles = static_cast<uint16_t>(
-              encoder->CurrentHandleCount() - handles_before);
-          xunion->envelope.flags = 0;
-          break;
-        }
+        fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+        xunion->tag = tag_;
+        xunion->envelope.num_handles = static_cast<uint16_t>(
+            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+        break;
       }
+
+      ::fidl::Encode(
+          encoder, &response_,
+          encoder->Alloc(
+              ::fidl::EncodingInlineSize<
+                  ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response,
+                  ::fidl::Encoder>(encoder)));
+
+      fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+      xunion->tag = tag_;
+      xunion->envelope.num_bytes =
+          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles =
+          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.flags = 0;
       break;
     }
     case ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::kErr: {
-      switch (encoder->wire_format()) {
-        case ::fidl::internal::WireFormatVersion::kV1: {
-          ::fidl::Encode(
-              encoder, &err_,
-              encoder->Alloc(
-                  ::fidl::EncodingInlineSize<::test::protocols::ErrorEnum,
-                                             ::fidl::Encoder>(encoder)));
+      if (::fidl::EncodingInlineSize<::test::protocols::ErrorEnum>(encoder) <=
+          FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &err_,
+                       offset + offsetof(fidl_xunion_v2_t, envelope));
 
-          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
-          xunion->tag = tag_;
-          xunion->envelope.num_bytes =
-              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-          xunion->envelope.num_handles = static_cast<uint32_t>(
-              encoder->CurrentHandleCount() - handles_before);
-          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
-          break;
-        }
-        case ::fidl::internal::WireFormatVersion::kV2: {
-          if (::fidl::EncodingInlineSize<::test::protocols::ErrorEnum>(
-                  encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-            ::fidl::Encode(encoder, &err_,
-                           offset + offsetof(fidl_xunion_v2_t, envelope));
-
-            fidl_xunion_v2_t* xunion =
-                encoder->GetPtr<fidl_xunion_v2_t>(offset);
-            xunion->tag = tag_;
-            xunion->envelope.num_handles = static_cast<uint16_t>(
-                encoder->CurrentHandleCount() - handles_before);
-            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-            break;
-          }
-
-          ::fidl::Encode(
-              encoder, &err_,
-              encoder->Alloc(
-                  ::fidl::EncodingInlineSize<::test::protocols::ErrorEnum,
-                                             ::fidl::Encoder>(encoder)));
-
-          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
-          xunion->tag = tag_;
-          xunion->envelope.num_bytes =
-              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-          xunion->envelope.num_handles = static_cast<uint16_t>(
-              encoder->CurrentHandleCount() - handles_before);
-          xunion->envelope.flags = 0;
-          break;
-        }
+        fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+        xunion->tag = tag_;
+        xunion->envelope.num_handles = static_cast<uint16_t>(
+            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+        break;
       }
+
+      ::fidl::Encode(
+          encoder, &err_,
+          encoder->Alloc(
+              ::fidl::EncodingInlineSize<::test::protocols::ErrorEnum,
+                                         ::fidl::Encoder>(encoder)));
+
+      fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+      xunion->tag = tag_;
+      xunion->envelope.num_bytes =
+          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles =
+          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.flags = 0;
       break;
     }
     default:
@@ -3070,12 +2634,7 @@ void WithErrorSyntaxErrorAsEnumTopResponse::Encode(
                _offset),
            this, sizeof(WithErrorSyntaxErrorAsEnumTopResponse));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &result, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &result, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &result, _offset + 0);
   }
 }
 
@@ -3114,20 +2673,11 @@ void ChannelProtocolTakeHandleRequest::Encode(
     memcpy(_encoder->template GetPtr<ChannelProtocolTakeHandleRequest>(_offset),
            this, sizeof(ChannelProtocolTakeHandleRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &h, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_NONE,
-                         .rights = 0x80000000,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, &h, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_NONE,
-                         .rights = 0x80000000,
-                     });
-    }
+    ::fidl::Encode(_encoder, &h, _offset + 0,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_NONE,
+                       .rights = 0x80000000,
+                   });
   }
 }
 
@@ -3167,20 +2717,11 @@ void ChannelProtocolMutateSocketTopResponse::Encode(
                _offset),
            this, sizeof(ChannelProtocolMutateSocketTopResponse));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &b, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x80000000,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, &b, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x80000000,
-                     });
-    }
+    ::fidl::Encode(_encoder, &b, _offset + 0,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x80000000,
+                   });
   }
 }
 
@@ -3221,20 +2762,11 @@ void ChannelProtocolMutateSocketRequest::Encode(
         _encoder->template GetPtr<ChannelProtocolMutateSocketRequest>(_offset),
         this, sizeof(ChannelProtocolMutateSocketRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &a, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x80000000,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, &a, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x80000000,
-                     });
-    }
+    ::fidl::Encode(_encoder, &a, _offset + 0,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x80000000,
+                   });
   }
 }
 
@@ -3272,12 +2804,7 @@ void ChannelProtocolMethodBTopResponse::Encode(
         _encoder->template GetPtr<ChannelProtocolMethodBTopResponse>(_offset),
         this, sizeof(ChannelProtocolMethodBTopResponse));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &result, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &result, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &result, _offset + 0);
   }
 }
 
@@ -3312,14 +2839,8 @@ void ChannelProtocolMethodBRequest::Encode(
     memcpy(_encoder->template GetPtr<ChannelProtocolMethodBRequest>(_offset),
            this, sizeof(ChannelProtocolMethodBRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &a, _offset + 0);
-      ::fidl::Encode(_encoder, &b, _offset + 8);
-
-    } else {
-      ::fidl::Encode(_encoder, &a, _offset + 0);
-      ::fidl::Encode(_encoder, &b, _offset + 8);
-    }
+    ::fidl::Encode(_encoder, &a, _offset + 0);
+    ::fidl::Encode(_encoder, &b, _offset + 8);
   }
 }
 
@@ -3356,14 +2877,8 @@ void ChannelProtocolMethodARequest::Encode(
     memcpy(_encoder->template GetPtr<ChannelProtocolMethodARequest>(_offset),
            this, sizeof(ChannelProtocolMethodARequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &a, _offset + 0);
-      ::fidl::Encode(_encoder, &b, _offset + 8);
-
-    } else {
-      ::fidl::Encode(_encoder, &a, _offset + 0);
-      ::fidl::Encode(_encoder, &b, _offset + 8);
-    }
+    ::fidl::Encode(_encoder, &a, _offset + 0);
+    ::fidl::Encode(_encoder, &b, _offset + 8);
   }
 }
 
@@ -3400,14 +2915,8 @@ void ChannelProtocolEventARequest::Encode(
     memcpy(_encoder->template GetPtr<ChannelProtocolEventARequest>(_offset),
            this, sizeof(ChannelProtocolEventARequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &a, _offset + 0);
-      ::fidl::Encode(_encoder, &b, _offset + 8);
-
-    } else {
-      ::fidl::Encode(_encoder, &a, _offset + 0);
-      ::fidl::Encode(_encoder, &b, _offset + 8);
-    }
+    ::fidl::Encode(_encoder, &a, _offset + 0);
+    ::fidl::Encode(_encoder, &b, _offset + 8);
   }
 }
 

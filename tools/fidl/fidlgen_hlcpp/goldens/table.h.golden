@@ -3386,8 +3386,7 @@ using EmptyTablePtr = ::std::unique_ptr<EmptyTable>;
 namespace fidl {
 template <>
 struct CodingTraits<::test::table::TableWithAttributes>
-    : public EncodableCodingTraits<::test::table::TableWithAttributes, 16, 16> {
-};
+    : public EncodableCodingTraits<::test::table::TableWithAttributes, 16> {};
 
 inline zx_status_t Clone(const ::test::table::TableWithAttributes& _value,
                          ::test::table::TableWithAttributes* result) {
@@ -3412,7 +3411,7 @@ struct Equality<::test::table::TableWithAttributes> {
 };
 template <>
 struct CodingTraits<::test::table::SimpleTable>
-    : public EncodableCodingTraits<::test::table::SimpleTable, 16, 16> {};
+    : public EncodableCodingTraits<::test::table::SimpleTable, 16> {};
 
 inline zx_status_t Clone(const ::test::table::SimpleTable& _value,
                          ::test::table::SimpleTable* result) {
@@ -3447,8 +3446,7 @@ struct Equality<::test::table::SimpleTable> {
 };
 template <>
 struct CodingTraits<::test::table::ReverseOrdinalTable>
-    : public EncodableCodingTraits<::test::table::ReverseOrdinalTable, 16, 16> {
-};
+    : public EncodableCodingTraits<::test::table::ReverseOrdinalTable, 16> {};
 
 inline zx_status_t Clone(const ::test::table::ReverseOrdinalTable& _value,
                          ::test::table::ReverseOrdinalTable* result) {
@@ -3493,7 +3491,7 @@ struct Equality<::test::table::ReverseOrdinalTable> {
 };
 template <>
 struct CodingTraits<::test::table::OlderSimpleTable>
-    : public EncodableCodingTraits<::test::table::OlderSimpleTable, 16, 16> {};
+    : public EncodableCodingTraits<::test::table::OlderSimpleTable, 16> {};
 
 inline zx_status_t Clone(const ::test::table::OlderSimpleTable& _value,
                          ::test::table::OlderSimpleTable* result) {
@@ -3518,7 +3516,7 @@ struct Equality<::test::table::OlderSimpleTable> {
 };
 template <>
 struct CodingTraits<::test::table::NewerSimpleTable>
-    : public EncodableCodingTraits<::test::table::NewerSimpleTable, 16, 16> {};
+    : public EncodableCodingTraits<::test::table::NewerSimpleTable, 16> {};
 
 inline zx_status_t Clone(const ::test::table::NewerSimpleTable& _value,
                          ::test::table::NewerSimpleTable* result) {
@@ -3563,7 +3561,7 @@ struct Equality<::test::table::NewerSimpleTable> {
 };
 template <>
 struct CodingTraits<::test::table::ExtensionTable>
-    : public EncodableCodingTraits<::test::table::ExtensionTable, 16, 16> {};
+    : public EncodableCodingTraits<::test::table::ExtensionTable, 16> {};
 
 inline zx_status_t Clone(const ::test::table::ExtensionTable& _value,
                          ::test::table::ExtensionTable* result) {
@@ -3578,8 +3576,7 @@ struct Equality<::test::table::ExtensionTable> {
 };
 template <>
 struct CodingTraits<::test::table::SixtyFourOrdinalTable>
-    : public EncodableCodingTraits<::test::table::SixtyFourOrdinalTable, 16,
-                                   16> {};
+    : public EncodableCodingTraits<::test::table::SixtyFourOrdinalTable, 16> {};
 
 inline zx_status_t Clone(const ::test::table::SixtyFourOrdinalTable& _value,
                          ::test::table::SixtyFourOrdinalTable* result) {
@@ -4234,7 +4231,7 @@ struct Equality<::test::table::SixtyFourOrdinalTable> {
 };
 template <>
 struct CodingTraits<::test::table::EmptyTable>
-    : public EncodableCodingTraits<::test::table::EmptyTable, 16, 16> {};
+    : public EncodableCodingTraits<::test::table::EmptyTable, 16> {};
 
 inline zx_status_t Clone(const ::test::table::EmptyTable& _value,
                          ::test::table::EmptyTable* result) {

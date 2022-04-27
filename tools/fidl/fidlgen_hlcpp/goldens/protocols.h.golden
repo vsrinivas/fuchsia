@@ -1183,21 +1183,8 @@ class WithAndWithoutRequestResponse_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage WithRequestNoResponse(
       ::fidl::MessageEncoder* _encoder, ::std::string* arg) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, arg, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, arg, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, arg, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1211,21 +1198,8 @@ class WithAndWithoutRequestResponse_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage WithRequestEmptyResponse(
       ::fidl::MessageEncoder* _encoder, ::std::string* arg) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, arg, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, arg, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, arg, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1239,21 +1213,8 @@ class WithAndWithoutRequestResponse_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage WithRequestWithResponse(
       ::fidl::MessageEncoder* _encoder, ::std::string* arg) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, arg, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, arg, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, arg, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1286,21 +1247,9 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage NoRequestWithResponse(
       ::fidl::MessageEncoder* _encoder, ::std::string* ret) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, ret, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, ret, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, ret, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1318,21 +1267,9 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage WithRequestWithResponse(
       ::fidl::MessageEncoder* _encoder, ::std::string* ret) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, ret, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, ret, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, ret, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1350,21 +1287,9 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage OnWithResponse(
       ::fidl::MessageEncoder* _encoder, ::std::string* ret) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, ret, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, ret, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, ret, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1499,21 +1424,8 @@ class Transitional_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage Request(::fidl::MessageEncoder* _encoder,
                                               int64_t* x) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, x, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, x, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(8);
+    ::fidl::Encode(_encoder, x, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
@@ -1526,21 +1438,8 @@ class Transitional_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage OneWay(::fidl::MessageEncoder* _encoder,
                                              int64_t* x) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, x, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, x, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(8);
+    ::fidl::Encode(_encoder, x, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
@@ -1564,21 +1463,9 @@ class Transitional_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage Request(::fidl::MessageEncoder* _encoder,
                                               int64_t* y) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, y, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, y, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(8);
+    ::fidl::Encode(_encoder, y, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
@@ -1591,21 +1478,9 @@ class Transitional_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage Event(::fidl::MessageEncoder* _encoder,
                                             int64_t* x) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, x, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, x, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(8);
+    ::fidl::Encode(_encoder, x, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
@@ -1744,21 +1619,8 @@ class MethodWithUnion_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage UnionMethod(
       ::fidl::MessageEncoder* _encoder, ::test::protocols::TheUnion* u) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, u, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, u, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, u, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
@@ -1926,29 +1788,12 @@ class WithProtocolEnds_RequestEncoder {
       ::fidl::MessageEncoder* _encoder,
       ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol>* in) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, in, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, in, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, in, 0 + sizeof(fidl_message_header_t),
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
@@ -1962,29 +1807,12 @@ class WithProtocolEnds_RequestEncoder {
       ::fidl::MessageEncoder* _encoder,
       ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol>* in) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, in, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, in, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, in, 0 + sizeof(fidl_message_header_t),
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
@@ -1997,21 +1825,8 @@ class WithProtocolEnds_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage StructContainingEnds(
       ::fidl::MessageEncoder* _encoder, ::test::protocols::ProtocolEnds* in) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, in, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, in, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, in, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -2038,29 +1853,13 @@ class WithProtocolEnds_ResponseEncoder {
       ::fidl::MessageEncoder* _encoder,
       ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol>* out) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, out, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, out, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, out, 0 + sizeof(fidl_message_header_t),
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
@@ -2074,29 +1873,13 @@ class WithProtocolEnds_ResponseEncoder {
       ::fidl::MessageEncoder* _encoder,
       ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol>* out) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, out, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, out, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, out, 0 + sizeof(fidl_message_header_t),
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
@@ -2109,21 +1892,9 @@ class WithProtocolEnds_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage StructContainingEnds(
       ::fidl::MessageEncoder* _encoder, ::test::protocols::ProtocolEnds* out) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, out, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, out, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, out, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -2208,77 +1979,36 @@ class ManyParameters_RequestEncoder {
                                               bool* p10, bool* p11, bool* p12,
                                               bool* p13, bool* p14, bool* p15) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(15);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(15);
-        break;
-    }
+    _encoder->Alloc(15);
+    ::fidl::Encode(_encoder, p1, 0 + sizeof(fidl_message_header_t));
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, p1, 0 + sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, p2, 1 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p2, 1 + sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, p3, 2 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p3, 2 + sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, p4, 3 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p4, 3 + sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, p5, 4 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p5, 4 + sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, p6, 5 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p6, 5 + sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, p7, 6 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p7, 6 + sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, p8, 7 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p8, 7 + sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, p9, 8 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p9, 8 + sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, p10, 9 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p10, 9 + sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, p11, 10 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p11, 10 + sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, p12, 11 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p12, 11 + sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, p13, 12 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p13, 12 + sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, p14, 13 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, p14, 13 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, p15, 14 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, p1, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, p2, 1 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, p3, 2 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, p4, 3 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, p5, 4 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, p6, 5 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, p7, 6 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, p8, 7 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, p9, 8 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, p10, 9 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, p11, 10 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, p12, 11 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, p13, 12 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, p14, 13 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, p15, 14 + sizeof(fidl_message_header_t));
-    }
+    ::fidl::Encode(_encoder, p15, 14 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
@@ -2438,29 +2168,12 @@ class HandleRightsProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage NoResponseMethod(
       ::fidl::MessageEncoder* _encoder, ::zx::socket* h) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x3,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x3,
-                     });
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x3,
+                   });
 
     fidl_trace(
         DidHLCPPEncode,
@@ -2474,29 +2187,12 @@ class HandleRightsProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage ResponseMethod(
       ::fidl::MessageEncoder* _encoder, ::zx::socket* h) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x3,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x3,
-                     });
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x3,
+                   });
 
     fidl_trace(
         DidHLCPPEncode,
@@ -2521,29 +2217,13 @@ class HandleRightsProtocol_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage ResponseMethod(
       ::fidl::MessageEncoder* _encoder, ::zx::socket* h) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x2,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x2,
-                     });
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x2,
+                   });
 
     fidl_trace(
         DidHLCPPEncode,
@@ -2557,29 +2237,13 @@ class HandleRightsProtocol_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage AnEvent(::fidl::MessageEncoder* _encoder,
                                               ::zx::socket* h) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x3,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x3,
-                     });
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x3,
+                   });
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
@@ -2787,21 +2451,9 @@ class WithErrorSyntax_ResponseEncoder {
       ::fidl::MessageEncoder* _encoder,
       ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result* result) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -2816,21 +2468,9 @@ class WithErrorSyntax_ResponseEncoder {
       ::fidl::MessageEncoder* _encoder,
       ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result* result) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -2845,21 +2485,9 @@ class WithErrorSyntax_ResponseEncoder {
       ::fidl::MessageEncoder* _encoder,
       ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result* result) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
@@ -2873,21 +2501,9 @@ class WithErrorSyntax_ResponseEncoder {
       ::fidl::MessageEncoder* _encoder,
       ::test::protocols::WithErrorSyntax_HandleInResult_Result* result) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
@@ -3139,25 +2755,10 @@ class ChannelProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage MethodA(::fidl::MessageEncoder* _encoder,
                                               int64_t* a, int64_t* b) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, b, 8 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, b, 8 + sizeof(fidl_message_header_t));
-    }
+    ::fidl::Encode(_encoder, b, 8 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
@@ -3170,25 +2771,10 @@ class ChannelProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage MethodB(::fidl::MessageEncoder* _encoder,
                                               int64_t* a, int64_t* b) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, b, 8 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, b, 8 + sizeof(fidl_message_header_t));
-    }
+    ::fidl::Encode(_encoder, b, 8 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
@@ -3201,29 +2787,12 @@ class ChannelProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage TakeHandle(
       ::fidl::MessageEncoder* _encoder, ::zx::handle* h) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_NONE,
-                         .rights = 0x80000000,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_NONE,
-                         .rights = 0x80000000,
-                     });
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, h, 0 + sizeof(fidl_message_header_t),
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_NONE,
+                       .rights = 0x80000000,
+                   });
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
@@ -3236,29 +2805,12 @@ class ChannelProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage MutateSocket(
       ::fidl::MessageEncoder* _encoder, ::zx::socket* a) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x80000000,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x80000000,
-                     });
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t),
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x80000000,
+                   });
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
@@ -3285,25 +2837,11 @@ class ChannelProtocol_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage EventA(::fidl::MessageEncoder* _encoder,
                                              int64_t* a, int64_t* b) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, b, 8 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, b, 8 + sizeof(fidl_message_header_t));
-    }
+    ::fidl::Encode(_encoder, b, 8 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
@@ -3316,21 +2854,9 @@ class ChannelProtocol_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage MethodB(::fidl::MessageEncoder* _encoder,
                                               int64_t* result) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(8);
+    ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
@@ -3347,29 +2873,13 @@ class ChannelProtocol_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage MutateSocket(
       ::fidl::MessageEncoder* _encoder, ::zx::socket* b) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, b, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x80000000,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, b, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_SOCKET,
-                         .rights = 0x80000000,
-                     });
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, b, 0 + sizeof(fidl_message_header_t),
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x80000000,
+                   });
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocols::_internal::
@@ -3390,7 +2900,7 @@ namespace fidl {
 template <>
 struct CodingTraits<::test::protocols::WithProtocolEndsServerEndsTopResponse>
     : public EncodableCodingTraits<
-          ::test::protocols::WithProtocolEndsServerEndsTopResponse, 4, 4> {};
+          ::test::protocols::WithProtocolEndsServerEndsTopResponse, 4> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -3426,7 +2936,7 @@ struct Equality<::test::protocols::WithProtocolEndsServerEndsTopResponse> {
 template <>
 struct CodingTraits<::test::protocols::WithProtocolEndsServerEndsRequest>
     : public EncodableCodingTraits<
-          ::test::protocols::WithProtocolEndsServerEndsRequest, 4, 4> {};
+          ::test::protocols::WithProtocolEndsServerEndsRequest, 4> {};
 
 template <>
 struct IsMemcpyCompatible<::test::protocols::WithProtocolEndsServerEndsRequest>
@@ -3460,7 +2970,7 @@ struct Equality<::test::protocols::WithProtocolEndsServerEndsRequest> {
 template <>
 struct CodingTraits<::test::protocols::WithProtocolEndsClientEndsTopResponse>
     : public EncodableCodingTraits<
-          ::test::protocols::WithProtocolEndsClientEndsTopResponse, 4, 4> {};
+          ::test::protocols::WithProtocolEndsClientEndsTopResponse, 4> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -3496,7 +3006,7 @@ struct Equality<::test::protocols::WithProtocolEndsClientEndsTopResponse> {
 template <>
 struct CodingTraits<::test::protocols::WithProtocolEndsClientEndsRequest>
     : public EncodableCodingTraits<
-          ::test::protocols::WithProtocolEndsClientEndsRequest, 4, 4> {};
+          ::test::protocols::WithProtocolEndsClientEndsRequest, 4> {};
 
 template <>
 struct IsMemcpyCompatible<::test::protocols::WithProtocolEndsClientEndsRequest>
@@ -3529,8 +3039,7 @@ template <>
 struct CodingTraits<
     ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response>
     : public EncodableCodingTraits<
-          ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response, 24,
-          24> {};
+          ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response, 24> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -3571,13 +3080,11 @@ struct IsFidlXUnion<::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>
 template <>
 struct CodingTraits<::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>
     : public EncodableCodingTraits<
-          ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result, 24, 16> {
-};
+          ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result, 16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<
     ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
@@ -3649,8 +3156,7 @@ template <>
 struct CodingTraits<
     ::test::protocols::WithErrorSyntaxResponseAsStructTopResponse>
     : public EncodableCodingTraits<
-          ::test::protocols::WithErrorSyntaxResponseAsStructTopResponse, 24,
-          16> {};
+          ::test::protocols::WithErrorSyntaxResponseAsStructTopResponse, 16> {};
 
 template <>
 struct HasPadding<::test::protocols::WithErrorSyntaxResponseAsStructTopResponse>
@@ -3689,7 +3195,7 @@ struct Equality<::test::protocols::WithErrorSyntaxResponseAsStructTopResponse> {
 template <>
 struct CodingTraits<::test::protocols::WithErrorSyntax_HandleInResult_Response>
     : public EncodableCodingTraits<
-          ::test::protocols::WithErrorSyntax_HandleInResult_Response, 4, 4> {};
+          ::test::protocols::WithErrorSyntax_HandleInResult_Response, 4> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -3728,12 +3234,11 @@ struct IsFidlXUnion<::test::protocols::WithErrorSyntax_HandleInResult_Result>
 template <>
 struct CodingTraits<::test::protocols::WithErrorSyntax_HandleInResult_Result>
     : public EncodableCodingTraits<
-          ::test::protocols::WithErrorSyntax_HandleInResult_Result, 24, 16> {};
+          ::test::protocols::WithErrorSyntax_HandleInResult_Result, 16> {};
 
 template <>
 struct CodingTraits<
     std::unique_ptr<::test::protocols::WithErrorSyntax_HandleInResult_Result>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
@@ -3806,8 +3311,7 @@ struct Equality<::test::protocols::WithErrorSyntax_HandleInResult_Result> {
 template <>
 struct CodingTraits<::test::protocols::WithErrorSyntaxHandleInResultTopResponse>
     : public EncodableCodingTraits<
-          ::test::protocols::WithErrorSyntaxHandleInResultTopResponse, 24, 16> {
-};
+          ::test::protocols::WithErrorSyntaxHandleInResultTopResponse, 16> {};
 
 template <>
 struct HasPadding<::test::protocols::WithErrorSyntaxHandleInResultTopResponse>
@@ -3847,8 +3351,7 @@ template <>
 struct CodingTraits<
     ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response>
     : public EncodableCodingTraits<
-          ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response, 1, 1> {
-};
+          ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response, 1> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -3883,13 +3386,11 @@ struct IsFidlXUnion<::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
 template <>
 struct CodingTraits<::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
     : public EncodableCodingTraits<
-          ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result, 24, 16> {
-};
+          ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result, 16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<
     ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
@@ -3961,8 +3462,7 @@ template <>
 struct CodingTraits<
     ::test::protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse>
     : public EncodableCodingTraits<
-          ::test::protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse, 24,
-          16> {};
+          ::test::protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse, 16> {};
 
 template <>
 struct HasPadding<::test::protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse>
@@ -3999,7 +3499,7 @@ struct Equality<::test::protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse> {
 template <>
 struct CodingTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Response>
     : public EncodableCodingTraits<
-          ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response, 1, 1> {};
+          ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response, 1> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -4034,7 +3534,7 @@ struct CodingTraits<
     : public EncodableCodingTraits<
           ::test::protocols::
               WithAndWithoutRequestResponseWithRequestWithResponseTopResponse,
-          16, 16> {};
+          16> {};
 
 template <>
 struct HasPadding<
@@ -4085,7 +3585,7 @@ struct CodingTraits<
     : public EncodableCodingTraits<
           ::test::protocols::
               WithAndWithoutRequestResponseWithRequestWithResponseRequest,
-          16, 16> {};
+          16> {};
 
 template <>
 struct HasPadding<
@@ -4135,7 +3635,7 @@ struct CodingTraits<
     : public EncodableCodingTraits<
           ::test::protocols::
               WithAndWithoutRequestResponseWithRequestNoResponseRequest,
-          16, 16> {};
+          16> {};
 
 template <>
 struct HasPadding<::test::protocols::
@@ -4183,7 +3683,7 @@ struct CodingTraits<
     : public EncodableCodingTraits<
           ::test::protocols::
               WithAndWithoutRequestResponseWithRequestEmptyResponseRequest,
-          16, 16> {};
+          16> {};
 
 template <>
 struct HasPadding<
@@ -4231,7 +3731,7 @@ struct CodingTraits<
     ::test::protocols::WithAndWithoutRequestResponseOnWithResponseRequest>
     : public EncodableCodingTraits<
           ::test::protocols::WithAndWithoutRequestResponseOnWithResponseRequest,
-          16, 16> {};
+          16> {};
 
 template <>
 struct HasPadding<
@@ -4276,7 +3776,7 @@ struct CodingTraits<
     : public EncodableCodingTraits<
           ::test::protocols::
               WithAndWithoutRequestResponseNoRequestWithResponseTopResponse,
-          16, 16> {};
+          16> {};
 
 template <>
 struct HasPadding<
@@ -4322,7 +3822,7 @@ struct Equality<
 template <>
 struct CodingTraits<::test::protocols::TransitionalRequestTopResponse>
     : public EncodableCodingTraits<
-          ::test::protocols::TransitionalRequestTopResponse, 8, 8> {};
+          ::test::protocols::TransitionalRequestTopResponse, 8> {};
 
 template <>
 struct IsMemcpyCompatible<::test::protocols::TransitionalRequestTopResponse>
@@ -4351,7 +3851,7 @@ struct Equality<::test::protocols::TransitionalRequestTopResponse> {
 template <>
 struct CodingTraits<::test::protocols::TransitionalRequestRequest>
     : public EncodableCodingTraits<
-          ::test::protocols::TransitionalRequestRequest, 8, 8> {};
+          ::test::protocols::TransitionalRequestRequest, 8> {};
 
 template <>
 struct IsMemcpyCompatible<::test::protocols::TransitionalRequestRequest>
@@ -4379,7 +3879,7 @@ struct Equality<::test::protocols::TransitionalRequestRequest> {
 template <>
 struct CodingTraits<::test::protocols::TransitionalOneWayRequest>
     : public EncodableCodingTraits<::test::protocols::TransitionalOneWayRequest,
-                                   8, 8> {};
+                                   8> {};
 
 template <>
 struct IsMemcpyCompatible<::test::protocols::TransitionalOneWayRequest>
@@ -4407,7 +3907,7 @@ struct Equality<::test::protocols::TransitionalOneWayRequest> {
 template <>
 struct CodingTraits<::test::protocols::TransitionalEventRequest>
     : public EncodableCodingTraits<::test::protocols::TransitionalEventRequest,
-                                   8, 8> {};
+                                   8> {};
 
 template <>
 struct IsMemcpyCompatible<::test::protocols::TransitionalEventRequest>
@@ -4437,11 +3937,10 @@ struct IsFidlXUnion<::test::protocols::TheUnion> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test::protocols::TheUnion>
-    : public EncodableCodingTraits<::test::protocols::TheUnion, 24, 16> {};
+    : public EncodableCodingTraits<::test::protocols::TheUnion, 16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::test::protocols::TheUnion>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(Encoder* encoder,
@@ -4497,7 +3996,7 @@ struct Equality<::test::protocols::TheUnion> {
 template <>
 struct CodingTraits<::test::protocols::MethodWithUnionUnionMethodRequest>
     : public EncodableCodingTraits<
-          ::test::protocols::MethodWithUnionUnionMethodRequest, 24, 16> {};
+          ::test::protocols::MethodWithUnionUnionMethodRequest, 16> {};
 
 template <>
 struct HasPadding<::test::protocols::MethodWithUnionUnionMethodRequest>
@@ -4530,7 +4029,7 @@ struct Equality<::test::protocols::MethodWithUnionUnionMethodRequest> {
 template <>
 struct CodingTraits<::test::protocols::SyscallProtocolMethodCRequest>
     : public EncodableCodingTraits<
-          ::test::protocols::SyscallProtocolMethodCRequest, 16, 16> {};
+          ::test::protocols::SyscallProtocolMethodCRequest, 16> {};
 
 template <>
 struct IsMemcpyCompatible<::test::protocols::SyscallProtocolMethodCRequest>
@@ -4563,7 +4062,7 @@ struct Equality<::test::protocols::SyscallProtocolMethodCRequest> {
 
 template <>
 struct CodingTraits<::test::protocols::ProtocolEnds>
-    : public EncodableCodingTraits<::test::protocols::ProtocolEnds, 16, 16> {};
+    : public EncodableCodingTraits<::test::protocols::ProtocolEnds, 16> {};
 
 template <>
 struct IsMemcpyCompatible<::test::protocols::ProtocolEnds>
@@ -4607,7 +4106,7 @@ struct CodingTraits<
     ::test::protocols::WithProtocolEndsStructContainingEndsTopResponse>
     : public EncodableCodingTraits<
           ::test::protocols::WithProtocolEndsStructContainingEndsTopResponse,
-          16, 16> {};
+          16> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -4648,8 +4147,8 @@ template <>
 struct CodingTraits<
     ::test::protocols::WithProtocolEndsStructContainingEndsRequest>
     : public EncodableCodingTraits<
-          ::test::protocols::WithProtocolEndsStructContainingEndsRequest, 16,
-          16> {};
+          ::test::protocols::WithProtocolEndsStructContainingEndsRequest, 16> {
+};
 
 template <>
 struct IsMemcpyCompatible<
@@ -4684,7 +4183,7 @@ struct Equality<
 template <>
 struct CodingTraits<::test::protocols::ManyParametersFifteenRequest>
     : public EncodableCodingTraits<
-          ::test::protocols::ManyParametersFifteenRequest, 15, 15> {};
+          ::test::protocols::ManyParametersFifteenRequest, 15> {};
 
 template <>
 struct IsMemcpyCompatible<::test::protocols::ManyParametersFifteenRequest>
@@ -4757,8 +4256,8 @@ template <>
 struct CodingTraits<
     ::test::protocols::HandleRightsProtocolResponseMethodTopResponse>
     : public EncodableCodingTraits<
-          ::test::protocols::HandleRightsProtocolResponseMethodTopResponse, 4,
-          4> {};
+          ::test::protocols::HandleRightsProtocolResponseMethodTopResponse, 4> {
+};
 
 template <>
 struct IsMemcpyCompatible<
@@ -4798,8 +4297,7 @@ template <>
 struct CodingTraits<
     ::test::protocols::HandleRightsProtocolResponseMethodRequest>
     : public EncodableCodingTraits<
-          ::test::protocols::HandleRightsProtocolResponseMethodRequest, 4, 4> {
-};
+          ::test::protocols::HandleRightsProtocolResponseMethodRequest, 4> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -4835,8 +4333,7 @@ template <>
 struct CodingTraits<
     ::test::protocols::HandleRightsProtocolNoResponseMethodRequest>
     : public EncodableCodingTraits<
-          ::test::protocols::HandleRightsProtocolNoResponseMethodRequest, 4,
-          4> {};
+          ::test::protocols::HandleRightsProtocolNoResponseMethodRequest, 4> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -4873,7 +4370,7 @@ struct Equality<
 template <>
 struct CodingTraits<::test::protocols::HandleRightsProtocolAnEventRequest>
     : public EncodableCodingTraits<
-          ::test::protocols::HandleRightsProtocolAnEventRequest, 4, 4> {};
+          ::test::protocols::HandleRightsProtocolAnEventRequest, 4> {};
 
 template <>
 struct IsMemcpyCompatible<::test::protocols::HandleRightsProtocolAnEventRequest>
@@ -4903,10 +4400,6 @@ struct Equality<::test::protocols::HandleRightsProtocolAnEventRequest> {
 
 template <>
 struct CodingTraits<::test::protocols::ErrorEnum> {
-  static constexpr size_t inline_size_old =
-      sizeof(::test::protocols::ErrorEnum);
-  static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::test::protocols::ErrorEnum);
   static constexpr size_t inline_size_v2 = sizeof(::test::protocols::ErrorEnum);
   static void Encode(
       Encoder* encoder, ::test::protocols::ErrorEnum* value, size_t offset,
@@ -4942,12 +4435,11 @@ struct IsFidlXUnion<::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>
 template <>
 struct CodingTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>
     : public EncodableCodingTraits<
-          ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result, 24, 16> {};
+          ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result, 16> {};
 
 template <>
 struct CodingTraits<
     std::unique_ptr<::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
@@ -5014,7 +4506,7 @@ struct Equality<::test::protocols::WithErrorSyntax_ErrorAsEnum_Result> {
 template <>
 struct CodingTraits<::test::protocols::WithErrorSyntaxErrorAsEnumTopResponse>
     : public EncodableCodingTraits<
-          ::test::protocols::WithErrorSyntaxErrorAsEnumTopResponse, 24, 16> {};
+          ::test::protocols::WithErrorSyntaxErrorAsEnumTopResponse, 16> {};
 
 template <>
 struct HasPadding<::test::protocols::WithErrorSyntaxErrorAsEnumTopResponse>
@@ -5052,7 +4544,7 @@ struct Equality<::test::protocols::WithErrorSyntaxErrorAsEnumTopResponse> {
 template <>
 struct CodingTraits<::test::protocols::ChannelProtocolTakeHandleRequest>
     : public EncodableCodingTraits<
-          ::test::protocols::ChannelProtocolTakeHandleRequest, 4, 4> {};
+          ::test::protocols::ChannelProtocolTakeHandleRequest, 4> {};
 
 template <>
 struct IsMemcpyCompatible<::test::protocols::ChannelProtocolTakeHandleRequest>
@@ -5085,7 +4577,7 @@ struct Equality<::test::protocols::ChannelProtocolTakeHandleRequest> {
 template <>
 struct CodingTraits<::test::protocols::ChannelProtocolMutateSocketTopResponse>
     : public EncodableCodingTraits<
-          ::test::protocols::ChannelProtocolMutateSocketTopResponse, 4, 4> {};
+          ::test::protocols::ChannelProtocolMutateSocketTopResponse, 4> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -5120,7 +4612,7 @@ struct Equality<::test::protocols::ChannelProtocolMutateSocketTopResponse> {
 template <>
 struct CodingTraits<::test::protocols::ChannelProtocolMutateSocketRequest>
     : public EncodableCodingTraits<
-          ::test::protocols::ChannelProtocolMutateSocketRequest, 4, 4> {};
+          ::test::protocols::ChannelProtocolMutateSocketRequest, 4> {};
 
 template <>
 struct IsMemcpyCompatible<::test::protocols::ChannelProtocolMutateSocketRequest>
@@ -5151,7 +4643,7 @@ struct Equality<::test::protocols::ChannelProtocolMutateSocketRequest> {
 template <>
 struct CodingTraits<::test::protocols::ChannelProtocolMethodBTopResponse>
     : public EncodableCodingTraits<
-          ::test::protocols::ChannelProtocolMethodBTopResponse, 8, 8> {};
+          ::test::protocols::ChannelProtocolMethodBTopResponse, 8> {};
 
 template <>
 struct IsMemcpyCompatible<::test::protocols::ChannelProtocolMethodBTopResponse>
@@ -5180,7 +4672,7 @@ struct Equality<::test::protocols::ChannelProtocolMethodBTopResponse> {
 template <>
 struct CodingTraits<::test::protocols::ChannelProtocolMethodBRequest>
     : public EncodableCodingTraits<
-          ::test::protocols::ChannelProtocolMethodBRequest, 16, 16> {};
+          ::test::protocols::ChannelProtocolMethodBRequest, 16> {};
 
 template <>
 struct IsMemcpyCompatible<::test::protocols::ChannelProtocolMethodBRequest>
@@ -5212,7 +4704,7 @@ struct Equality<::test::protocols::ChannelProtocolMethodBRequest> {
 template <>
 struct CodingTraits<::test::protocols::ChannelProtocolMethodARequest>
     : public EncodableCodingTraits<
-          ::test::protocols::ChannelProtocolMethodARequest, 16, 16> {};
+          ::test::protocols::ChannelProtocolMethodARequest, 16> {};
 
 template <>
 struct IsMemcpyCompatible<::test::protocols::ChannelProtocolMethodARequest>
@@ -5244,7 +4736,7 @@ struct Equality<::test::protocols::ChannelProtocolMethodARequest> {
 template <>
 struct CodingTraits<::test::protocols::ChannelProtocolEventARequest>
     : public EncodableCodingTraits<
-          ::test::protocols::ChannelProtocolEventARequest, 16, 16> {};
+          ::test::protocols::ChannelProtocolEventARequest, 16> {};
 
 template <>
 struct IsMemcpyCompatible<::test::protocols::ChannelProtocolEventARequest>

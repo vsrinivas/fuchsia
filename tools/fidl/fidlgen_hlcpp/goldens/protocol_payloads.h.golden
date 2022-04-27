@@ -1292,21 +1292,8 @@ class MainProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage OneWayComposed(
       ::fidl::MessageEncoder* _encoder, int32_t* a) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolpayloads::_internal::
@@ -1319,21 +1306,8 @@ class MainProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage TwoWayComposed(
       ::fidl::MessageEncoder* _encoder, int32_t* a) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolpayloads::_internal::
@@ -1346,21 +1320,8 @@ class MainProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage TwoWayComposedWithError(
       ::fidl::MessageEncoder* _encoder, int32_t* a) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolpayloads::_internal::
@@ -1373,25 +1334,10 @@ class MainProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage OneWayLocal(
       ::fidl::MessageEncoder* _encoder, uint32_t* a, uint32_t* b) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
-        break;
-    }
+    _encoder->Alloc(8);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
-    }
+    ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolpayloads::_internal::
@@ -1404,25 +1350,10 @@ class MainProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage TwoWayLocal(
       ::fidl::MessageEncoder* _encoder, uint32_t* a, uint32_t* b) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
-        break;
-    }
+    _encoder->Alloc(8);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
-    }
+    ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolpayloads::_internal::
@@ -1435,25 +1366,10 @@ class MainProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage TwoWayLocalWithError(
       ::fidl::MessageEncoder* _encoder, uint32_t* a, uint32_t* b) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
-        break;
-    }
+    _encoder->Alloc(8);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
-    }
+    ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolpayloads::_internal::
@@ -1466,21 +1382,8 @@ class MainProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage OneWayImport(
       ::fidl::MessageEncoder* _encoder, int32_t* a) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolpayloads::_internal::
@@ -1493,21 +1396,8 @@ class MainProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage TwoWayImport(
       ::fidl::MessageEncoder* _encoder, int32_t* a) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolpayloads::_internal::
@@ -1520,21 +1410,8 @@ class MainProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage TwoWayImportWithError(
       ::fidl::MessageEncoder* _encoder, int32_t* a) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolpayloads::_internal::
@@ -1547,25 +1424,10 @@ class MainProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage OneWayAnon(
       ::fidl::MessageEncoder* _encoder, uint32_t* a, uint32_t* b) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
-        break;
-    }
+    _encoder->Alloc(8);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
-    }
+    ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolpayloads::_internal::
@@ -1578,25 +1440,10 @@ class MainProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage TwoWayAnon(
       ::fidl::MessageEncoder* _encoder, uint32_t* a, uint32_t* b) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
-        break;
-    }
+    _encoder->Alloc(8);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
-    }
+    ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolpayloads::_internal::
@@ -1609,25 +1456,10 @@ class MainProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage TwoWayAnonWithError(
       ::fidl::MessageEncoder* _encoder, uint32_t* a, uint32_t* b) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
-        break;
-    }
+    _encoder->Alloc(8);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
-    }
+    ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1674,21 +1506,9 @@ class MainProtocol_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage TwoWayComposed(
       ::fidl::MessageEncoder* _encoder, int32_t* a) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolpayloads::_internal::
@@ -1703,21 +1523,9 @@ class MainProtocol_ResponseEncoder {
       ::test::protocolpayloads::imported::
           ComposedProtocol_TwoWayComposedWithError_Result* result) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1731,21 +1539,9 @@ class MainProtocol_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage OnComposed(
       ::fidl::MessageEncoder* _encoder, int32_t* a) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolpayloads::_internal::
@@ -1760,21 +1556,9 @@ class MainProtocol_ResponseEncoder {
       ::test::protocolpayloads::imported::
           ComposedProtocol_OnComposedWithError_Result* result) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1788,25 +1572,11 @@ class MainProtocol_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage TwoWayLocal(
       ::fidl::MessageEncoder* _encoder, uint32_t* a, uint32_t* b) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
+    _encoder->Alloc(8);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
-    }
+    ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolpayloads::_internal::
@@ -1821,21 +1591,9 @@ class MainProtocol_ResponseEncoder {
       ::test::protocolpayloads::MainProtocol_TwoWayLocalWithError_Result*
           result) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1849,25 +1607,11 @@ class MainProtocol_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage OnLocal(::fidl::MessageEncoder* _encoder,
                                               uint32_t* a, uint32_t* b) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
+    _encoder->Alloc(8);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
-    }
+    ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolpayloads::_internal::
@@ -1881,21 +1625,9 @@ class MainProtocol_ResponseEncoder {
       ::fidl::MessageEncoder* _encoder,
       ::test::protocolpayloads::MainProtocol_OnLocalWithError_Result* result) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1909,21 +1641,9 @@ class MainProtocol_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage TwoWayImport(
       ::fidl::MessageEncoder* _encoder, int32_t* a) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolpayloads::_internal::
@@ -1938,21 +1658,9 @@ class MainProtocol_ResponseEncoder {
       ::test::protocolpayloads::MainProtocol_TwoWayImportWithError_Result*
           result) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1966,21 +1674,9 @@ class MainProtocol_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage OnImport(::fidl::MessageEncoder* _encoder,
                                                int32_t* a) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolpayloads::_internal::
@@ -1994,21 +1690,9 @@ class MainProtocol_ResponseEncoder {
       ::fidl::MessageEncoder* _encoder,
       ::test::protocolpayloads::MainProtocol_OnImportWithError_Result* result) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -2022,25 +1706,11 @@ class MainProtocol_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage TwoWayAnon(
       ::fidl::MessageEncoder* _encoder, uint32_t* a, uint32_t* b) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
+    _encoder->Alloc(8);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
-    }
+    ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolpayloads::_internal::
@@ -2055,21 +1725,9 @@ class MainProtocol_ResponseEncoder {
       ::test::protocolpayloads::MainProtocol_TwoWayAnonWithError_Result*
           result) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -2083,25 +1741,11 @@ class MainProtocol_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage OnAnon(::fidl::MessageEncoder* _encoder,
                                              uint32_t* a, uint32_t* b) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
+    _encoder->Alloc(8);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
-      ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
-    }
+    ::fidl::Encode(_encoder, b, 4 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::protocolpayloads::_internal::
@@ -2115,21 +1759,9 @@ class MainProtocol_ResponseEncoder {
       ::fidl::MessageEncoder* _encoder,
       ::test::protocolpayloads::MainProtocol_OnAnonWithError_Result* result) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -2156,12 +1788,11 @@ struct CodingTraits<
     ::test::protocolpayloads::MainProtocol_TwoWayImportWithError_Result>
     : public EncodableCodingTraits<
           ::test::protocolpayloads::MainProtocol_TwoWayImportWithError_Result,
-          24, 16> {};
+          16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<
     ::test::protocolpayloads::MainProtocol_TwoWayImportWithError_Result>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
@@ -2241,7 +1872,7 @@ struct CodingTraits<
     : public EncodableCodingTraits<
           ::test::protocolpayloads::
               MainProtocolTwoWayImportWithErrorTopResponse,
-          24, 16> {};
+          16> {};
 
 template <>
 struct HasPadding<
@@ -2286,7 +1917,7 @@ struct CodingTraits<
     ::test::protocolpayloads::MainProtocol_TwoWayAnonWithError_Response>
     : public EncodableCodingTraits<
           ::test::protocolpayloads::MainProtocol_TwoWayAnonWithError_Response,
-          8, 8> {};
+          8> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -2330,13 +1961,12 @@ template <>
 struct CodingTraits<
     ::test::protocolpayloads::MainProtocol_TwoWayAnonWithError_Result>
     : public EncodableCodingTraits<
-          ::test::protocolpayloads::MainProtocol_TwoWayAnonWithError_Result, 24,
+          ::test::protocolpayloads::MainProtocol_TwoWayAnonWithError_Result,
           16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<
     ::test::protocolpayloads::MainProtocol_TwoWayAnonWithError_Result>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
@@ -2414,7 +2044,7 @@ struct CodingTraits<
     ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorTopResponse>
     : public EncodableCodingTraits<
           ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorTopResponse,
-          24, 16> {};
+          16> {};
 
 template <>
 struct HasPadding<
@@ -2461,13 +2091,12 @@ template <>
 struct CodingTraits<
     ::test::protocolpayloads::MainProtocol_OnImportWithError_Result>
     : public EncodableCodingTraits<
-          ::test::protocolpayloads::MainProtocol_OnImportWithError_Result, 24,
-          16> {};
+          ::test::protocolpayloads::MainProtocol_OnImportWithError_Result, 16> {
+};
 
 template <>
 struct CodingTraits<std::unique_ptr<
     ::test::protocolpayloads::MainProtocol_OnImportWithError_Result>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
@@ -2544,8 +2173,8 @@ template <>
 struct CodingTraits<
     ::test::protocolpayloads::MainProtocolOnImportWithErrorRequest>
     : public EncodableCodingTraits<
-          ::test::protocolpayloads::MainProtocolOnImportWithErrorRequest, 24,
-          16> {};
+          ::test::protocolpayloads::MainProtocolOnImportWithErrorRequest, 16> {
+};
 
 template <>
 struct HasPadding<
@@ -2586,8 +2215,8 @@ template <>
 struct CodingTraits<
     ::test::protocolpayloads::MainProtocol_OnAnonWithError_Response>
     : public EncodableCodingTraits<
-          ::test::protocolpayloads::MainProtocol_OnAnonWithError_Response, 8,
-          8> {};
+          ::test::protocolpayloads::MainProtocol_OnAnonWithError_Response, 8> {
+};
 
 template <>
 struct IsMemcpyCompatible<
@@ -2630,13 +2259,11 @@ template <>
 struct CodingTraits<
     ::test::protocolpayloads::MainProtocol_OnAnonWithError_Result>
     : public EncodableCodingTraits<
-          ::test::protocolpayloads::MainProtocol_OnAnonWithError_Result, 24,
-          16> {};
+          ::test::protocolpayloads::MainProtocol_OnAnonWithError_Result, 16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<
     ::test::protocolpayloads::MainProtocol_OnAnonWithError_Result>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
@@ -2708,8 +2335,7 @@ template <>
 struct CodingTraits<
     ::test::protocolpayloads::MainProtocolOnAnonWithErrorRequest>
     : public EncodableCodingTraits<
-          ::test::protocolpayloads::MainProtocolOnAnonWithErrorRequest, 24,
-          16> {};
+          ::test::protocolpayloads::MainProtocolOnAnonWithErrorRequest, 16> {};
 
 template <>
 struct HasPadding<::test::protocolpayloads::MainProtocolOnAnonWithErrorRequest>
@@ -2747,8 +2373,8 @@ template <>
 struct CodingTraits<
     ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest>
     : public EncodableCodingTraits<
-          ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest, 8,
-          8> {};
+          ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest, 8> {
+};
 
 template <>
 struct IsMemcpyCompatible<
@@ -2785,7 +2411,7 @@ struct Equality<
 template <>
 struct CodingTraits<::test::protocolpayloads::MainProtocolTwoWayAnonTopResponse>
     : public EncodableCodingTraits<
-          ::test::protocolpayloads::MainProtocolTwoWayAnonTopResponse, 8, 8> {};
+          ::test::protocolpayloads::MainProtocolTwoWayAnonTopResponse, 8> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -2819,7 +2445,7 @@ struct Equality<::test::protocolpayloads::MainProtocolTwoWayAnonTopResponse> {
 template <>
 struct CodingTraits<::test::protocolpayloads::MainProtocolTwoWayAnonRequest>
     : public EncodableCodingTraits<
-          ::test::protocolpayloads::MainProtocolTwoWayAnonRequest, 8, 8> {};
+          ::test::protocolpayloads::MainProtocolTwoWayAnonRequest, 8> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -2853,7 +2479,7 @@ struct Equality<::test::protocolpayloads::MainProtocolTwoWayAnonRequest> {
 template <>
 struct CodingTraits<::test::protocolpayloads::MainProtocolOneWayAnonRequest>
     : public EncodableCodingTraits<
-          ::test::protocolpayloads::MainProtocolOneWayAnonRequest, 8, 8> {};
+          ::test::protocolpayloads::MainProtocolOneWayAnonRequest, 8> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -2887,7 +2513,7 @@ struct Equality<::test::protocolpayloads::MainProtocolOneWayAnonRequest> {
 template <>
 struct CodingTraits<::test::protocolpayloads::MainProtocolOnAnonRequest>
     : public EncodableCodingTraits<
-          ::test::protocolpayloads::MainProtocolOnAnonRequest, 8, 8> {};
+          ::test::protocolpayloads::MainProtocolOnAnonRequest, 8> {};
 
 template <>
 struct IsMemcpyCompatible<::test::protocolpayloads::MainProtocolOnAnonRequest>
@@ -2919,7 +2545,7 @@ struct Equality<::test::protocolpayloads::MainProtocolOnAnonRequest> {
 template <>
 struct CodingTraits<::test::protocolpayloads::LocalStructPayload>
     : public EncodableCodingTraits<::test::protocolpayloads::LocalStructPayload,
-                                   8, 8> {};
+                                   8> {};
 
 template <>
 struct IsMemcpyCompatible<::test::protocolpayloads::LocalStructPayload>
@@ -2957,12 +2583,11 @@ struct CodingTraits<
     ::test::protocolpayloads::MainProtocol_TwoWayLocalWithError_Result>
     : public EncodableCodingTraits<
           ::test::protocolpayloads::MainProtocol_TwoWayLocalWithError_Result,
-          24, 16> {};
+          16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<
     ::test::protocolpayloads::MainProtocol_TwoWayLocalWithError_Result>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
@@ -3041,7 +2666,7 @@ struct CodingTraits<
     ::test::protocolpayloads::MainProtocolTwoWayLocalWithErrorTopResponse>
     : public EncodableCodingTraits<
           ::test::protocolpayloads::MainProtocolTwoWayLocalWithErrorTopResponse,
-          24, 16> {};
+          16> {};
 
 template <>
 struct HasPadding<
@@ -3088,13 +2713,12 @@ template <>
 struct CodingTraits<
     ::test::protocolpayloads::MainProtocol_OnLocalWithError_Result>
     : public EncodableCodingTraits<
-          ::test::protocolpayloads::MainProtocol_OnLocalWithError_Result, 24,
-          16> {};
+          ::test::protocolpayloads::MainProtocol_OnLocalWithError_Result, 16> {
+};
 
 template <>
 struct CodingTraits<std::unique_ptr<
     ::test::protocolpayloads::MainProtocol_OnLocalWithError_Result>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
@@ -3170,8 +2794,7 @@ template <>
 struct CodingTraits<
     ::test::protocolpayloads::MainProtocolOnLocalWithErrorRequest>
     : public EncodableCodingTraits<
-          ::test::protocolpayloads::MainProtocolOnLocalWithErrorRequest, 24,
-          16> {};
+          ::test::protocolpayloads::MainProtocolOnLocalWithErrorRequest, 16> {};
 
 template <>
 struct HasPadding<::test::protocolpayloads::MainProtocolOnLocalWithErrorRequest>

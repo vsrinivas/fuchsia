@@ -18,12 +18,7 @@ void Empty::Encode(
   if (::fidl::IsMemcpyCompatible<Empty>::value) {
     memcpy(_encoder->template GetPtr<Empty>(_offset), this, sizeof(Empty));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &__reserved, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &__reserved, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &__reserved, _offset + 0);
   }
 }
 
@@ -52,12 +47,7 @@ void EmptyProtocolSendRequest::Encode(
     memcpy(_encoder->template GetPtr<EmptyProtocolSendRequest>(_offset), this,
            sizeof(EmptyProtocolSendRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &e, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &e, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &e, _offset + 0);
   }
 }
 
@@ -93,12 +83,7 @@ void EmptyProtocolSendAndReceiveTopResponse::Encode(
                _offset),
            this, sizeof(EmptyProtocolSendAndReceiveTopResponse));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &e, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &e, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &e, _offset + 0);
   }
 }
 
@@ -136,12 +121,7 @@ void EmptyProtocolSendAndReceiveRequest::Encode(
         _encoder->template GetPtr<EmptyProtocolSendAndReceiveRequest>(_offset),
         this, sizeof(EmptyProtocolSendAndReceiveRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &e, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &e, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &e, _offset + 0);
   }
 }
 
@@ -176,12 +156,7 @@ void EmptyProtocolReceiveRequest::Encode(
     memcpy(_encoder->template GetPtr<EmptyProtocolReceiveRequest>(_offset),
            this, sizeof(EmptyProtocolReceiveRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &e, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &e, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &e, _offset + 0);
   }
 }
 

@@ -244,9 +244,6 @@ inline zx_status_t Clone(::test::bits::FlexibleBits value,
 namespace fidl {
 template <>
 struct CodingTraits<::test::bits::StrictBits> {
-  static constexpr size_t inline_size_old = sizeof(::test::bits::StrictBits);
-  static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::test::bits::StrictBits);
   static constexpr size_t inline_size_v2 = sizeof(::test::bits::StrictBits);
   static void Encode(
       Encoder* encoder, ::test::bits::StrictBits* value, size_t offset,
@@ -279,8 +276,6 @@ struct Equality<::test::bits::StrictBits> {
 };
 template <>
 struct CodingTraits<::test::bits::MyBits> {
-  static constexpr size_t inline_size_old = sizeof(::test::bits::MyBits);
-  static constexpr size_t inline_size_v1_no_ee = sizeof(::test::bits::MyBits);
   static constexpr size_t inline_size_v2 = sizeof(::test::bits::MyBits);
   static void Encode(
       Encoder* encoder, ::test::bits::MyBits* value, size_t offset,
@@ -313,9 +308,6 @@ struct Equality<::test::bits::MyBits> {
 };
 template <>
 struct CodingTraits<::test::bits::FlexibleBits> {
-  static constexpr size_t inline_size_old = sizeof(::test::bits::FlexibleBits);
-  static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::test::bits::FlexibleBits);
   static constexpr size_t inline_size_v2 = sizeof(::test::bits::FlexibleBits);
   static void Encode(
       Encoder* encoder, ::test::bits::FlexibleBits* value, size_t offset,

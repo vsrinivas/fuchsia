@@ -646,7 +646,7 @@ constexpr int32_t C = 4u;
 namespace fidl {
 template <>
 struct CodingTraits<::test::doccomments::Table>
-    : public EncodableCodingTraits<::test::doccomments::Table, 16, 16> {};
+    : public EncodableCodingTraits<::test::doccomments::Table, 16> {};
 
 inline zx_status_t Clone(const ::test::doccomments::Table& _value,
                          ::test::doccomments::Table* result) {
@@ -671,7 +671,7 @@ struct Equality<::test::doccomments::Table> {
 };
 template <>
 struct CodingTraits<::test::doccomments::Struct>
-    : public EncodableCodingTraits<::test::doccomments::Struct, 4, 4> {};
+    : public EncodableCodingTraits<::test::doccomments::Struct, 4> {};
 
 template <>
 struct IsMemcpyCompatible<::test::doccomments::Struct>
@@ -700,11 +700,10 @@ struct IsFidlXUnion<::test::doccomments::StrictUnion> : public std::true_type {
 
 template <>
 struct CodingTraits<::test::doccomments::StrictUnion>
-    : public EncodableCodingTraits<::test::doccomments::StrictUnion, 24, 16> {};
+    : public EncodableCodingTraits<::test::doccomments::StrictUnion, 16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::test::doccomments::StrictUnion>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(Encoder* encoder,
@@ -760,10 +759,6 @@ struct Equality<::test::doccomments::StrictUnion> {
 };
 template <>
 struct CodingTraits<::test::doccomments::MyStrictEnum> {
-  static constexpr size_t inline_size_old =
-      sizeof(::test::doccomments::MyStrictEnum);
-  static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::test::doccomments::MyStrictEnum);
   static constexpr size_t inline_size_v2 =
       sizeof(::test::doccomments::MyStrictEnum);
   static void Encode(
@@ -795,10 +790,6 @@ struct Equality<::test::doccomments::MyStrictEnum> {
 
 template <>
 struct CodingTraits<::test::doccomments::MyStrictBits> {
-  static constexpr size_t inline_size_old =
-      sizeof(::test::doccomments::MyStrictBits);
-  static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::test::doccomments::MyStrictBits);
   static constexpr size_t inline_size_v2 =
       sizeof(::test::doccomments::MyStrictBits);
   static void Encode(
@@ -832,10 +823,6 @@ struct Equality<::test::doccomments::MyStrictBits> {
 };
 template <>
 struct CodingTraits<::test::doccomments::MyFlexibleEnum> {
-  static constexpr size_t inline_size_old =
-      sizeof(::test::doccomments::MyFlexibleEnum);
-  static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::test::doccomments::MyFlexibleEnum);
   static constexpr size_t inline_size_v2 =
       sizeof(::test::doccomments::MyFlexibleEnum);
   static void Encode(
@@ -869,10 +856,6 @@ struct Equality<::test::doccomments::MyFlexibleEnum> {
 
 template <>
 struct CodingTraits<::test::doccomments::MyFlexibleBits> {
-  static constexpr size_t inline_size_old =
-      sizeof(::test::doccomments::MyFlexibleBits);
-  static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::test::doccomments::MyFlexibleBits);
   static constexpr size_t inline_size_v2 =
       sizeof(::test::doccomments::MyFlexibleBits);
   static void Encode(
@@ -912,12 +895,10 @@ struct IsFidlXUnion<::test::doccomments::FlexibleUnion>
 
 template <>
 struct CodingTraits<::test::doccomments::FlexibleUnion>
-    : public EncodableCodingTraits<::test::doccomments::FlexibleUnion, 24, 16> {
-};
+    : public EncodableCodingTraits<::test::doccomments::FlexibleUnion, 16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::test::doccomments::FlexibleUnion>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(Encoder* encoder,

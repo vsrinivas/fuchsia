@@ -1153,27 +1153,10 @@ class SomeProtocol_RequestEncoder {
       ::test::anonymous::UnionMember* union_member,
       ::test::anonymous::TableMember* table_member) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(40);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(32);
-        break;
-    }
+    _encoder->Alloc(32);
+    ::fidl::Encode(_encoder, union_member, 0 + sizeof(fidl_message_header_t));
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, union_member, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, table_member,
-                     24 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, union_member, 0 + sizeof(fidl_message_header_t));
-
-      ::fidl::Encode(_encoder, table_member,
-                     16 + sizeof(fidl_message_header_t));
-    }
+    ::fidl::Encode(_encoder, table_member, 16 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::anonymous::_internal::
@@ -1195,21 +1178,9 @@ class SomeProtocol_ResponseEncoder {
       ::fidl::MessageEncoder* _encoder,
       ::test::anonymous::SomeProtocol_SomeMethod_Result* result) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::anonymous::_internal::
@@ -1230,11 +1201,10 @@ struct IsFidlXUnion<::test::anonymous::UnionMember> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test::anonymous::UnionMember>
-    : public EncodableCodingTraits<::test::anonymous::UnionMember, 24, 16> {};
+    : public EncodableCodingTraits<::test::anonymous::UnionMember, 16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::test::anonymous::UnionMember>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(Encoder* encoder,
@@ -1289,7 +1259,7 @@ struct Equality<::test::anonymous::UnionMember> {
 };
 template <>
 struct CodingTraits<::test::anonymous::TableData>
-    : public EncodableCodingTraits<::test::anonymous::TableData, 1, 1> {};
+    : public EncodableCodingTraits<::test::anonymous::TableData, 1> {};
 
 template <>
 struct IsMemcpyCompatible<::test::anonymous::TableData>
@@ -1314,7 +1284,7 @@ struct Equality<::test::anonymous::TableData> {
 };
 template <>
 struct CodingTraits<::test::anonymous::TableMember>
-    : public EncodableCodingTraits<::test::anonymous::TableMember, 16, 16> {};
+    : public EncodableCodingTraits<::test::anonymous::TableMember, 16> {};
 
 inline zx_status_t Clone(const ::test::anonymous::TableMember& _value,
                          ::test::anonymous::TableMember* result) {
@@ -1340,7 +1310,7 @@ struct Equality<::test::anonymous::TableMember> {
 template <>
 struct CodingTraits<::test::anonymous::SomeProtocolSomeMethodRequest>
     : public EncodableCodingTraits<
-          ::test::anonymous::SomeProtocolSomeMethodRequest, 40, 32> {};
+          ::test::anonymous::SomeProtocolSomeMethodRequest, 32> {};
 
 template <>
 struct HasPadding<::test::anonymous::SomeProtocolSomeMethodRequest>
@@ -1376,10 +1346,6 @@ struct Equality<::test::anonymous::SomeProtocolSomeMethodRequest> {
 };
 template <>
 struct CodingTraits<::test::anonymous::SomeProtocol_SomeMethod_Error> {
-  static constexpr size_t inline_size_old =
-      sizeof(::test::anonymous::SomeProtocol_SomeMethod_Error);
-  static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::test::anonymous::SomeProtocol_SomeMethod_Error);
   static constexpr size_t inline_size_v2 =
       sizeof(::test::anonymous::SomeProtocol_SomeMethod_Error);
   static void Encode(
@@ -1416,8 +1382,6 @@ struct Equality<::test::anonymous::SomeProtocol_SomeMethod_Error> {
 
 template <>
 struct CodingTraits<::test::anonymous::Op> {
-  static constexpr size_t inline_size_old = sizeof(::test::anonymous::Op);
-  static constexpr size_t inline_size_v1_no_ee = sizeof(::test::anonymous::Op);
   static constexpr size_t inline_size_v2 = sizeof(::test::anonymous::Op);
   static void Encode(
       Encoder* encoder, ::test::anonymous::Op* value, size_t offset,
@@ -1448,7 +1412,7 @@ struct Equality<::test::anonymous::Op> {
 
 template <>
 struct CodingTraits<::test::anonymous::OverrideTest>
-    : public EncodableCodingTraits<::test::anonymous::OverrideTest, 56, 40> {};
+    : public EncodableCodingTraits<::test::anonymous::OverrideTest, 40> {};
 
 template <>
 struct HasPadding<::test::anonymous::OverrideTest> : public std::true_type {};
@@ -1484,9 +1448,6 @@ struct Equality<::test::anonymous::OverrideTest> {
 };
 template <>
 struct CodingTraits<::test::anonymous::Flags> {
-  static constexpr size_t inline_size_old = sizeof(::test::anonymous::Flags);
-  static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::test::anonymous::Flags);
   static constexpr size_t inline_size_v2 = sizeof(::test::anonymous::Flags);
   static void Encode(
       Encoder* encoder, ::test::anonymous::Flags* value, size_t offset,
@@ -1519,8 +1480,8 @@ struct Equality<::test::anonymous::Flags> {
 };
 template <>
 struct CodingTraits<::test::anonymous::FunctionApplication>
-    : public EncodableCodingTraits<::test::anonymous::FunctionApplication, 16,
-                                   16> {};
+    : public EncodableCodingTraits<::test::anonymous::FunctionApplication, 16> {
+};
 
 inline zx_status_t Clone(const ::test::anonymous::FunctionApplication& _value,
                          ::test::anonymous::FunctionApplication* result) {
@@ -1568,11 +1529,10 @@ struct IsFidlXUnion<::test::anonymous::Expression> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test::anonymous::Expression>
-    : public EncodableCodingTraits<::test::anonymous::Expression, 24, 16> {};
+    : public EncodableCodingTraits<::test::anonymous::Expression, 16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::test::anonymous::Expression>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(Encoder* encoder,
@@ -1632,10 +1592,6 @@ struct Equality<::test::anonymous::Expression> {
 };
 template <>
 struct CodingTraits<::test::anonymous::BitsMember> {
-  static constexpr size_t inline_size_old =
-      sizeof(::test::anonymous::BitsMember);
-  static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::test::anonymous::BitsMember);
   static constexpr size_t inline_size_v2 =
       sizeof(::test::anonymous::BitsMember);
   static void Encode(
@@ -1670,7 +1626,7 @@ struct Equality<::test::anonymous::BitsMember> {
 template <>
 struct CodingTraits<::test::anonymous::SomeProtocol_SomeMethod_Response>
     : public EncodableCodingTraits<
-          ::test::anonymous::SomeProtocol_SomeMethod_Response, 4, 4> {};
+          ::test::anonymous::SomeProtocol_SomeMethod_Response, 4> {};
 
 template <>
 struct IsMemcpyCompatible<::test::anonymous::SomeProtocol_SomeMethod_Response>
@@ -1703,12 +1659,11 @@ struct IsFidlXUnion<::test::anonymous::SomeProtocol_SomeMethod_Result>
 template <>
 struct CodingTraits<::test::anonymous::SomeProtocol_SomeMethod_Result>
     : public EncodableCodingTraits<
-          ::test::anonymous::SomeProtocol_SomeMethod_Result, 24, 16> {};
+          ::test::anonymous::SomeProtocol_SomeMethod_Result, 16> {};
 
 template <>
 struct CodingTraits<
     std::unique_ptr<::test::anonymous::SomeProtocol_SomeMethod_Result>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
@@ -1772,7 +1727,7 @@ struct Equality<::test::anonymous::SomeProtocol_SomeMethod_Result> {
 template <>
 struct CodingTraits<::test::anonymous::SomeProtocolSomeMethodTopResponse>
     : public EncodableCodingTraits<
-          ::test::anonymous::SomeProtocolSomeMethodTopResponse, 24, 16> {};
+          ::test::anonymous::SomeProtocolSomeMethodTopResponse, 16> {};
 
 template <>
 struct HasPadding<::test::anonymous::SomeProtocolSomeMethodTopResponse>

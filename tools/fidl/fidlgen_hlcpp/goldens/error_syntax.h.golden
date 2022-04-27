@@ -299,21 +299,8 @@ class ExampleUseOfErrorSyntax_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage ComposedCallWhichMayFail(
       ::fidl::MessageEncoder* _encoder, ::std::string* s) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, s, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, s, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, s, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -327,21 +314,8 @@ class ExampleUseOfErrorSyntax_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage CallWhichMayFail(
       ::fidl::MessageEncoder* _encoder, ::std::string* s) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, s, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, s, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, s, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -367,21 +341,9 @@ class ExampleUseOfErrorSyntax_ResponseEncoder {
       ::test::errorsyntax::parent::
           ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result* result) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -397,21 +359,9 @@ class ExampleUseOfErrorSyntax_ResponseEncoder {
       ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result*
           result) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -434,7 +384,7 @@ struct CodingTraits<
     : public EncodableCodingTraits<
           ::test::errorsyntax::
               ExampleUseOfErrorSyntax_CallWhichMayFail_Response,
-          8, 8> {};
+          8> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -477,12 +427,11 @@ struct CodingTraits<
     ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>
     : public EncodableCodingTraits<
           ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result,
-          24, 16> {};
+          16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<
     ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
@@ -562,7 +511,7 @@ struct CodingTraits<
     : public EncodableCodingTraits<
           ::test::errorsyntax::
               ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse,
-          24, 16> {};
+          16> {};
 
 template <>
 struct HasPadding<
@@ -607,7 +556,7 @@ struct CodingTraits<
     ::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
     : public EncodableCodingTraits<
           ::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest,
-          16, 16> {};
+          16> {};
 
 template <>
 struct HasPadding<

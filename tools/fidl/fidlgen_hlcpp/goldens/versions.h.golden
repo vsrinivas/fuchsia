@@ -417,11 +417,10 @@ struct IsFidlXUnion<::test::versions::Union> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test::versions::Union>
-    : public EncodableCodingTraits<::test::versions::Union, 24, 16> {};
+    : public EncodableCodingTraits<::test::versions::Union, 16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::test::versions::Union>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(Encoder* encoder,
@@ -476,7 +475,7 @@ struct Equality<::test::versions::Union> {
 };
 template <>
 struct CodingTraits<::test::versions::Table>
-    : public EncodableCodingTraits<::test::versions::Table, 16, 16> {};
+    : public EncodableCodingTraits<::test::versions::Table, 16> {};
 
 inline zx_status_t Clone(const ::test::versions::Table& _value,
                          ::test::versions::Table* result) {
@@ -501,7 +500,7 @@ struct Equality<::test::versions::Table> {
 };
 template <>
 struct CodingTraits<::test::versions::Struct>
-    : public EncodableCodingTraits<::test::versions::Struct, 4, 4> {};
+    : public EncodableCodingTraits<::test::versions::Struct, 4> {};
 
 template <>
 struct IsMemcpyCompatible<::test::versions::Struct>
@@ -526,8 +525,6 @@ struct Equality<::test::versions::Struct> {
 };
 template <>
 struct CodingTraits<::test::versions::Enum> {
-  static constexpr size_t inline_size_old = sizeof(::test::versions::Enum);
-  static constexpr size_t inline_size_v1_no_ee = sizeof(::test::versions::Enum);
   static constexpr size_t inline_size_v2 = sizeof(::test::versions::Enum);
   static void Encode(
       Encoder* encoder, ::test::versions::Enum* value, size_t offset,
@@ -558,8 +555,6 @@ struct Equality<::test::versions::Enum> {
 
 template <>
 struct CodingTraits<::test::versions::Bits> {
-  static constexpr size_t inline_size_old = sizeof(::test::versions::Bits);
-  static constexpr size_t inline_size_v1_no_ee = sizeof(::test::versions::Bits);
   static constexpr size_t inline_size_v2 = sizeof(::test::versions::Bits);
   static void Encode(
       Encoder* encoder, ::test::versions::Bits* value, size_t offset,

@@ -122,9 +122,6 @@ constexpr uint16_t ANSWER = 42u;
 namespace fidl {
 template <>
 struct CodingTraits<::test::consts::EnumType> {
-  static constexpr size_t inline_size_old = sizeof(::test::consts::EnumType);
-  static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::test::consts::EnumType);
   static constexpr size_t inline_size_v2 = sizeof(::test::consts::EnumType);
   static void Encode(
       Encoder* encoder, ::test::consts::EnumType* value, size_t offset,
@@ -155,9 +152,6 @@ struct Equality<::test::consts::EnumType> {
 
 template <>
 struct CodingTraits<::test::consts::BitsType> {
-  static constexpr size_t inline_size_old = sizeof(::test::consts::BitsType);
-  static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::test::consts::BitsType);
   static constexpr size_t inline_size_v2 = sizeof(::test::consts::BitsType);
   static void Encode(
       Encoder* encoder, ::test::consts::BitsType* value, size_t offset,

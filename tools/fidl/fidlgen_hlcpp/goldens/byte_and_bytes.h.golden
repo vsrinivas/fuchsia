@@ -47,8 +47,7 @@ using ByteAndBytesPtr = ::std::unique_ptr<ByteAndBytes>;
 namespace fidl {
 template <>
 struct CodingTraits<::test::byteandbytes::ByteAndBytes>
-    : public EncodableCodingTraits<::test::byteandbytes::ByteAndBytes, 56, 56> {
-};
+    : public EncodableCodingTraits<::test::byteandbytes::ByteAndBytes, 56> {};
 
 template <>
 struct HasPadding<::test::byteandbytes::ByteAndBytes> : public std::true_type {

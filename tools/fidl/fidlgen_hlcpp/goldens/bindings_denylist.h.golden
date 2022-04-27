@@ -1390,21 +1390,8 @@ class DenyEachBinding_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage OnlyDenyDart(
       ::fidl::MessageEncoder* _encoder, bool* a) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(1);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(1);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(1);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1418,21 +1405,8 @@ class DenyEachBinding_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage OnlyDenyGo(
       ::fidl::MessageEncoder* _encoder, bool* a) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(1);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(1);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(1);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::bindingsdenylist::_internal::
@@ -1445,21 +1419,8 @@ class DenyEachBinding_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage OnlyDenyLibfuzzer(
       ::fidl::MessageEncoder* _encoder, bool* a) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(1);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(1);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(1);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1473,21 +1434,8 @@ class DenyEachBinding_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage OnlyDenyRust(
       ::fidl::MessageEncoder* _encoder, bool* a) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(1);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(1);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(1);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1501,21 +1449,8 @@ class DenyEachBinding_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage OnlyDenySyzkaller(
       ::fidl::MessageEncoder* _encoder, bool* a) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(1);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(1);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(1);
+    ::fidl::Encode(_encoder, a, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1546,21 +1481,9 @@ class DenyEachBinding_ResponseEncoder {
       ::fidl::MessageEncoder* _encoder,
       ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result* result) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1575,21 +1498,9 @@ class DenyEachBinding_ResponseEncoder {
       ::fidl::MessageEncoder* _encoder,
       ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result* result) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1605,21 +1516,9 @@ class DenyEachBinding_ResponseEncoder {
       ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result*
           result) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1634,21 +1533,9 @@ class DenyEachBinding_ResponseEncoder {
       ::fidl::MessageEncoder* _encoder,
       ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result* result) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1664,21 +1551,9 @@ class DenyEachBinding_ResponseEncoder {
       ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result*
           result) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -1701,8 +1576,7 @@ template <>
 struct CodingTraits<
     ::test::bindingsdenylist::MemberOnlyAppearsInImportingLibrary>
     : public EncodableCodingTraits<
-          ::test::bindingsdenylist::MemberOnlyAppearsInImportingLibrary, 1, 1> {
-};
+          ::test::bindingsdenylist::MemberOnlyAppearsInImportingLibrary, 1> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -1733,7 +1607,7 @@ struct Equality<::test::bindingsdenylist::MemberOnlyAppearsInImportingLibrary> {
 template <>
 struct CodingTraits<::test::bindingsdenylist::OnlyAppearsInImportingLibrary>
     : public EncodableCodingTraits<
-          ::test::bindingsdenylist::OnlyAppearsInImportingLibrary, 1, 1> {};
+          ::test::bindingsdenylist::OnlyAppearsInImportingLibrary, 1> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -1769,7 +1643,7 @@ struct CodingTraits<
     ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response>
     : public EncodableCodingTraits<
           ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Response,
-          4, 4> {};
+          4> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -1810,12 +1684,11 @@ struct CodingTraits<
     ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>
     : public EncodableCodingTraits<
           ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result,
-          24, 16> {};
+          16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<
     ::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
@@ -1894,7 +1767,7 @@ struct CodingTraits<
     ::test::bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse>
     : public EncodableCodingTraits<
           ::test::bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse,
-          24, 16> {};
+          16> {};
 
 template <>
 struct HasPadding<
@@ -1936,8 +1809,8 @@ template <>
 struct CodingTraits<
     ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response>
     : public EncodableCodingTraits<
-          ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response, 4,
-          4> {};
+          ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Response, 4> {
+};
 
 template <>
 struct IsMemcpyCompatible<
@@ -1977,13 +1850,11 @@ template <>
 struct CodingTraits<
     ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>
     : public EncodableCodingTraits<
-          ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result, 24,
-          16> {};
+          ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result, 16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<
     ::test::bindingsdenylist::DenyEachBinding_OnlyDenyRust_Result>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
@@ -2055,7 +1926,7 @@ template <>
 struct CodingTraits<
     ::test::bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse>
     : public EncodableCodingTraits<
-          ::test::bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse, 24,
+          ::test::bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse,
           16> {};
 
 template <>
@@ -2099,7 +1970,7 @@ struct CodingTraits<
     ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response>
     : public EncodableCodingTraits<
           ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Response,
-          4, 4> {};
+          4> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -2140,12 +2011,11 @@ struct CodingTraits<
     ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result>
     : public EncodableCodingTraits<
           ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result,
-          24, 16> {};
+          16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<
     ::test::bindingsdenylist::DenyEachBinding_OnlyDenyLibfuzzer_Result>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
@@ -2224,7 +2094,7 @@ struct CodingTraits<
     ::test::bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse>
     : public EncodableCodingTraits<
           ::test::bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse,
-          24, 16> {};
+          16> {};
 
 template <>
 struct HasPadding<
@@ -2266,8 +2136,7 @@ template <>
 struct CodingTraits<
     ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response>
     : public EncodableCodingTraits<
-          ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response, 4, 4> {
-};
+          ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Response, 4> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -2302,13 +2171,11 @@ struct IsFidlXUnion<::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>
 template <>
 struct CodingTraits<::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>
     : public EncodableCodingTraits<
-          ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result, 24, 16> {
-};
+          ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result, 16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<
     ::test::bindingsdenylist::DenyEachBinding_OnlyDenyGo_Result>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
@@ -2380,8 +2247,8 @@ template <>
 struct CodingTraits<
     ::test::bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse>
     : public EncodableCodingTraits<
-          ::test::bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse, 24,
-          16> {};
+          ::test::bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse, 16> {
+};
 
 template <>
 struct HasPadding<
@@ -2421,8 +2288,8 @@ template <>
 struct CodingTraits<
     ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response>
     : public EncodableCodingTraits<
-          ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response, 4,
-          4> {};
+          ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Response, 4> {
+};
 
 template <>
 struct IsMemcpyCompatible<
@@ -2462,13 +2329,11 @@ template <>
 struct CodingTraits<
     ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>
     : public EncodableCodingTraits<
-          ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result, 24,
-          16> {};
+          ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result, 16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<
     ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
@@ -2540,7 +2405,7 @@ template <>
 struct CodingTraits<
     ::test::bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse>
     : public EncodableCodingTraits<
-          ::test::bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse, 24,
+          ::test::bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse,
           16> {};
 
 template <>
@@ -2583,7 +2448,7 @@ template <>
 struct CodingTraits<
     ::test::bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest>
     : public EncodableCodingTraits<
-          ::test::bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest, 1,
+          ::test::bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest,
           1> {};
 
 template <>
@@ -2619,8 +2484,7 @@ template <>
 struct CodingTraits<
     ::test::bindingsdenylist::DenyEachBindingOnlyDenyRustRequest>
     : public EncodableCodingTraits<
-          ::test::bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, 1, 1> {
-};
+          ::test::bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, 1> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -2652,7 +2516,7 @@ template <>
 struct CodingTraits<
     ::test::bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest>
     : public EncodableCodingTraits<
-          ::test::bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest, 1,
+          ::test::bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest,
           1> {};
 
 template <>
@@ -2687,7 +2551,7 @@ struct Equality<
 template <>
 struct CodingTraits<::test::bindingsdenylist::DenyEachBindingOnlyDenyGoRequest>
     : public EncodableCodingTraits<
-          ::test::bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, 1, 1> {};
+          ::test::bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, 1> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -2719,8 +2583,7 @@ template <>
 struct CodingTraits<
     ::test::bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>
     : public EncodableCodingTraits<
-          ::test::bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 1, 1> {
-};
+          ::test::bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 1> {};
 
 template <>
 struct IsMemcpyCompatible<

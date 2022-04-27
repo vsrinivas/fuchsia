@@ -19,21 +19,6 @@
 
 namespace fidl {
 
-namespace internal {
-
-extern std::atomic_int hlcpp_enable_v1_encode;
-
-struct HLCPPWireFormatV1Enabler {
-  HLCPPWireFormatV1Enabler() { hlcpp_enable_v1_encode++; }
-  ~HLCPPWireFormatV1Enabler() { hlcpp_enable_v1_encode--; }
-};
-
-static WireFormatVersion DefaultHLCPPEncoderWireFormat() {
-  return (hlcpp_enable_v1_encode > 0) ? WireFormatVersion::kV1 : WireFormatVersion::kV2;
-}
-
-}  // namespace internal
-
 class Encoder {
  public:
   Encoder() = default;
@@ -77,7 +62,7 @@ class Encoder {
  protected:
   std::vector<uint8_t> bytes_;
   std::vector<zx_handle_disposition_t> handles_;
-  internal::WireFormatVersion wire_format_ = internal::DefaultHLCPPEncoderWireFormat();
+  internal::WireFormatVersion wire_format_ = internal::WireFormatVersion::kV2;
 };
 
 // The MessageEncoder produces an |HLCPPOutgoingMessage|, representing a transactional message.

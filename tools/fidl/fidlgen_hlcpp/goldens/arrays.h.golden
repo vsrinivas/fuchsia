@@ -435,11 +435,10 @@ struct IsFidlXUnion<::test::arrays::UnionSmallArray> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test::arrays::UnionSmallArray>
-    : public EncodableCodingTraits<::test::arrays::UnionSmallArray, 24, 16> {};
+    : public EncodableCodingTraits<::test::arrays::UnionSmallArray, 16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::test::arrays::UnionSmallArray>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(Encoder* encoder,
@@ -498,11 +497,10 @@ struct IsFidlXUnion<::test::arrays::UnionLargeArray> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test::arrays::UnionLargeArray>
-    : public EncodableCodingTraits<::test::arrays::UnionLargeArray, 24, 16> {};
+    : public EncodableCodingTraits<::test::arrays::UnionLargeArray, 16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::test::arrays::UnionLargeArray>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(Encoder* encoder,
@@ -558,7 +556,7 @@ struct Equality<::test::arrays::UnionLargeArray> {
 };
 template <>
 struct CodingTraits<::test::arrays::TableSmallArray>
-    : public EncodableCodingTraits<::test::arrays::TableSmallArray, 16, 16> {};
+    : public EncodableCodingTraits<::test::arrays::TableSmallArray, 16> {};
 
 inline zx_status_t Clone(const ::test::arrays::TableSmallArray& _value,
                          ::test::arrays::TableSmallArray* result) {
@@ -583,7 +581,7 @@ struct Equality<::test::arrays::TableSmallArray> {
 };
 template <>
 struct CodingTraits<::test::arrays::TableLargeArray>
-    : public EncodableCodingTraits<::test::arrays::TableLargeArray, 16, 16> {};
+    : public EncodableCodingTraits<::test::arrays::TableLargeArray, 16> {};
 
 inline zx_status_t Clone(const ::test::arrays::TableLargeArray& _value,
                          ::test::arrays::TableLargeArray* result) {
@@ -608,7 +606,7 @@ struct Equality<::test::arrays::TableLargeArray> {
 };
 template <>
 struct CodingTraits<::test::arrays::StructSmallArray>
-    : public EncodableCodingTraits<::test::arrays::StructSmallArray, 8, 8> {};
+    : public EncodableCodingTraits<::test::arrays::StructSmallArray, 8> {};
 
 template <>
 struct IsMemcpyCompatible<::test::arrays::StructSmallArray>
@@ -633,8 +631,7 @@ struct Equality<::test::arrays::StructSmallArray> {
 };
 template <>
 struct CodingTraits<::test::arrays::StructLargeArray>
-    : public EncodableCodingTraits<::test::arrays::StructLargeArray, 400, 400> {
-};
+    : public EncodableCodingTraits<::test::arrays::StructLargeArray, 400> {};
 
 template <>
 struct IsMemcpyCompatible<::test::arrays::StructLargeArray>

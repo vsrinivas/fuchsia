@@ -23,20 +23,11 @@ void ParentFirstRequest::Encode(
     memcpy(_encoder->template GetPtr<ParentFirstRequest>(_offset), this,
            sizeof(ParentFirstRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &request, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, &request, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-    }
+    ::fidl::Encode(_encoder, &request, _offset + 0,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
   }
 }
 
@@ -71,20 +62,11 @@ void ChildSecondRequest::Encode(
     memcpy(_encoder->template GetPtr<ChildSecondRequest>(_offset), this,
            sizeof(ChildSecondRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &request, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, &request, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-    }
+    ::fidl::Encode(_encoder, &request, _offset + 0,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
   }
 }
 

@@ -492,8 +492,7 @@ using Padding1ByteEndPtr = ::std::unique_ptr<Padding1ByteEnd>;
 namespace fidl {
 template <>
 struct CodingTraits<::test::padding::Padding7ByteMiddle>
-    : public EncodableCodingTraits<::test::padding::Padding7ByteMiddle, 16,
-                                   16> {};
+    : public EncodableCodingTraits<::test::padding::Padding7ByteMiddle, 16> {};
 
 template <>
 struct HasPadding<::test::padding::Padding7ByteMiddle> : public std::true_type {
@@ -526,7 +525,7 @@ struct Equality<::test::padding::Padding7ByteMiddle> {
 };
 template <>
 struct CodingTraits<::test::padding::Padding7ByteEnd>
-    : public EncodableCodingTraits<::test::padding::Padding7ByteEnd, 16, 16> {};
+    : public EncodableCodingTraits<::test::padding::Padding7ByteEnd, 16> {};
 
 template <>
 struct HasPadding<::test::padding::Padding7ByteEnd> : public std::true_type {};
@@ -558,8 +557,7 @@ struct Equality<::test::padding::Padding7ByteEnd> {
 };
 template <>
 struct CodingTraits<::test::padding::Padding6ByteMiddle>
-    : public EncodableCodingTraits<::test::padding::Padding6ByteMiddle, 16,
-                                   16> {};
+    : public EncodableCodingTraits<::test::padding::Padding6ByteMiddle, 16> {};
 
 template <>
 struct HasPadding<::test::padding::Padding6ByteMiddle> : public std::true_type {
@@ -592,7 +590,7 @@ struct Equality<::test::padding::Padding6ByteMiddle> {
 };
 template <>
 struct CodingTraits<::test::padding::Padding6ByteEnd>
-    : public EncodableCodingTraits<::test::padding::Padding6ByteEnd, 16, 16> {};
+    : public EncodableCodingTraits<::test::padding::Padding6ByteEnd, 16> {};
 
 template <>
 struct HasPadding<::test::padding::Padding6ByteEnd> : public std::true_type {};
@@ -624,8 +622,7 @@ struct Equality<::test::padding::Padding6ByteEnd> {
 };
 template <>
 struct CodingTraits<::test::padding::Padding5ByteMiddle>
-    : public EncodableCodingTraits<::test::padding::Padding5ByteMiddle, 16,
-                                   16> {};
+    : public EncodableCodingTraits<::test::padding::Padding5ByteMiddle, 16> {};
 
 template <>
 struct HasPadding<::test::padding::Padding5ByteMiddle> : public std::true_type {
@@ -662,7 +659,7 @@ struct Equality<::test::padding::Padding5ByteMiddle> {
 };
 template <>
 struct CodingTraits<::test::padding::Padding5ByteEnd>
-    : public EncodableCodingTraits<::test::padding::Padding5ByteEnd, 16, 16> {};
+    : public EncodableCodingTraits<::test::padding::Padding5ByteEnd, 16> {};
 
 template <>
 struct HasPadding<::test::padding::Padding5ByteEnd> : public std::true_type {};
@@ -698,8 +695,7 @@ struct Equality<::test::padding::Padding5ByteEnd> {
 };
 template <>
 struct CodingTraits<::test::padding::Padding4ByteMiddle>
-    : public EncodableCodingTraits<::test::padding::Padding4ByteMiddle, 16,
-                                   16> {};
+    : public EncodableCodingTraits<::test::padding::Padding4ByteMiddle, 16> {};
 
 template <>
 struct HasPadding<::test::padding::Padding4ByteMiddle> : public std::true_type {
@@ -732,7 +728,7 @@ struct Equality<::test::padding::Padding4ByteMiddle> {
 };
 template <>
 struct CodingTraits<::test::padding::Padding4ByteEnd>
-    : public EncodableCodingTraits<::test::padding::Padding4ByteEnd, 16, 16> {};
+    : public EncodableCodingTraits<::test::padding::Padding4ByteEnd, 16> {};
 
 template <>
 struct HasPadding<::test::padding::Padding4ByteEnd> : public std::true_type {};
@@ -765,7 +761,7 @@ struct Equality<::test::padding::Padding4ByteEnd> {
 template <>
 struct CodingTraits<::test::padding::Padding4ByteAlignmentLength12>
     : public EncodableCodingTraits<
-          ::test::padding::Padding4ByteAlignmentLength12, 12, 12> {};
+          ::test::padding::Padding4ByteAlignmentLength12, 12> {};
 
 template <>
 struct HasPadding<::test::padding::Padding4ByteAlignmentLength12>
@@ -807,8 +803,7 @@ struct Equality<::test::padding::Padding4ByteAlignmentLength12> {
 };
 template <>
 struct CodingTraits<::test::padding::Padding3ByteMiddle>
-    : public EncodableCodingTraits<::test::padding::Padding3ByteMiddle, 8, 8> {
-};
+    : public EncodableCodingTraits<::test::padding::Padding3ByteMiddle, 8> {};
 
 template <>
 struct HasPadding<::test::padding::Padding3ByteMiddle> : public std::true_type {
@@ -841,7 +836,7 @@ struct Equality<::test::padding::Padding3ByteMiddle> {
 };
 template <>
 struct CodingTraits<::test::padding::Padding3ByteEnd>
-    : public EncodableCodingTraits<::test::padding::Padding3ByteEnd, 8, 8> {};
+    : public EncodableCodingTraits<::test::padding::Padding3ByteEnd, 8> {};
 
 template <>
 struct HasPadding<::test::padding::Padding3ByteEnd> : public std::true_type {};
@@ -873,8 +868,7 @@ struct Equality<::test::padding::Padding3ByteEnd> {
 };
 template <>
 struct CodingTraits<::test::padding::Padding2ByteMiddle>
-    : public EncodableCodingTraits<::test::padding::Padding2ByteMiddle, 8, 8> {
-};
+    : public EncodableCodingTraits<::test::padding::Padding2ByteMiddle, 8> {};
 
 template <>
 struct HasPadding<::test::padding::Padding2ByteMiddle> : public std::true_type {
@@ -907,7 +901,7 @@ struct Equality<::test::padding::Padding2ByteMiddle> {
 };
 template <>
 struct CodingTraits<::test::padding::Padding2ByteEnd>
-    : public EncodableCodingTraits<::test::padding::Padding2ByteEnd, 8, 8> {};
+    : public EncodableCodingTraits<::test::padding::Padding2ByteEnd, 8> {};
 
 template <>
 struct HasPadding<::test::padding::Padding2ByteEnd> : public std::true_type {};
@@ -940,7 +934,7 @@ struct Equality<::test::padding::Padding2ByteEnd> {
 template <>
 struct CodingTraits<::test::padding::Padding2ByteAlignmentLength6>
     : public EncodableCodingTraits<
-          ::test::padding::Padding2ByteAlignmentLength6, 6, 6> {};
+          ::test::padding::Padding2ByteAlignmentLength6, 6> {};
 
 template <>
 struct HasPadding<::test::padding::Padding2ByteAlignmentLength6>
@@ -978,8 +972,7 @@ struct Equality<::test::padding::Padding2ByteAlignmentLength6> {
 };
 template <>
 struct CodingTraits<::test::padding::Padding1ByteMiddle>
-    : public EncodableCodingTraits<::test::padding::Padding1ByteMiddle, 4, 4> {
-};
+    : public EncodableCodingTraits<::test::padding::Padding1ByteMiddle, 4> {};
 
 template <>
 struct HasPadding<::test::padding::Padding1ByteMiddle> : public std::true_type {
@@ -1012,7 +1005,7 @@ struct Equality<::test::padding::Padding1ByteMiddle> {
 };
 template <>
 struct CodingTraits<::test::padding::Padding1ByteEnd>
-    : public EncodableCodingTraits<::test::padding::Padding1ByteEnd, 4, 4> {};
+    : public EncodableCodingTraits<::test::padding::Padding1ByteEnd, 4> {};
 
 template <>
 struct HasPadding<::test::padding::Padding1ByteEnd> : public std::true_type {};

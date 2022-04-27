@@ -49,8 +49,7 @@ constexpr ::test::dependent::MyBits BITS_MEMBER =
 namespace fidl {
 template <>
 struct CodingTraits<::test::importedconstvalues::MyStruct>
-    : public EncodableCodingTraits<::test::importedconstvalues::MyStruct, 1,
-                                   1> {};
+    : public EncodableCodingTraits<::test::importedconstvalues::MyStruct, 1> {};
 
 template <>
 struct IsMemcpyCompatible<::test::importedconstvalues::MyStruct>

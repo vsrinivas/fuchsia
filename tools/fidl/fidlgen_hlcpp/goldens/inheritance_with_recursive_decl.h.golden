@@ -69,29 +69,12 @@ class Parent_RequestEncoder {
       ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>*
           request) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, request, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, request, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, request, 0 + sizeof(fidl_message_header_t),
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
 
     fidl_trace(DidHLCPPEncode,
                &::test::inheritancewithrecursivedecl::_internal::
@@ -152,29 +135,12 @@ class Child_RequestEncoder {
       ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>*
           request) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, request, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, request, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, request, 0 + sizeof(fidl_message_header_t),
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
 
     fidl_trace(DidHLCPPEncode,
                &::test::inheritancewithrecursivedecl::_internal::
@@ -189,29 +155,12 @@ class Child_RequestEncoder {
       ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>*
           request) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, request, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, request, 0 + sizeof(fidl_message_header_t),
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, request, 0 + sizeof(fidl_message_header_t),
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
 
     fidl_trace(DidHLCPPEncode,
                &::test::inheritancewithrecursivedecl::_internal::
@@ -236,7 +185,7 @@ namespace fidl {
 template <>
 struct CodingTraits<::test::inheritancewithrecursivedecl::ParentFirstRequest>
     : public EncodableCodingTraits<
-          ::test::inheritancewithrecursivedecl::ParentFirstRequest, 4, 4> {};
+          ::test::inheritancewithrecursivedecl::ParentFirstRequest, 4> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -272,7 +221,7 @@ struct Equality<::test::inheritancewithrecursivedecl::ParentFirstRequest> {
 template <>
 struct CodingTraits<::test::inheritancewithrecursivedecl::ChildSecondRequest>
     : public EncodableCodingTraits<
-          ::test::inheritancewithrecursivedecl::ChildSecondRequest, 4, 4> {};
+          ::test::inheritancewithrecursivedecl::ChildSecondRequest, 4> {};
 
 template <>
 struct IsMemcpyCompatible<

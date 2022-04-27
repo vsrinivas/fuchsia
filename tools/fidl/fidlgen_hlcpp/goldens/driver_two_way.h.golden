@@ -72,7 +72,7 @@ namespace fidl {
 template <>
 struct CodingTraits<::test::drivertwoway::TwoWayAddTopResponse>
     : public EncodableCodingTraits<::test::drivertwoway::TwoWayAddTopResponse,
-                                   2, 2> {};
+                                   2> {};
 
 template <>
 struct IsMemcpyCompatible<::test::drivertwoway::TwoWayAddTopResponse>
@@ -99,8 +99,8 @@ struct Equality<::test::drivertwoway::TwoWayAddTopResponse> {
 };
 template <>
 struct CodingTraits<::test::drivertwoway::TwoWayAddRequest>
-    : public EncodableCodingTraits<::test::drivertwoway::TwoWayAddRequest, 4,
-                                   4> {};
+    : public EncodableCodingTraits<::test::drivertwoway::TwoWayAddRequest, 4> {
+};
 
 template <>
 struct IsMemcpyCompatible<::test::drivertwoway::TwoWayAddRequest>

@@ -20,14 +20,8 @@ void ExampleUseOfVectors::Encode(
     memcpy(_encoder->template GetPtr<ExampleUseOfVectors>(_offset), this,
            sizeof(ExampleUseOfVectors));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &vector_of_uint8, _offset + 0);
-      ::fidl::Encode(_encoder, &vector_of_vector_of_bool, _offset + 16);
-
-    } else {
-      ::fidl::Encode(_encoder, &vector_of_uint8, _offset + 0);
-      ::fidl::Encode(_encoder, &vector_of_vector_of_bool, _offset + 16);
-    }
+    ::fidl::Encode(_encoder, &vector_of_uint8, _offset + 0);
+    ::fidl::Encode(_encoder, &vector_of_vector_of_bool, _offset + 16);
   }
 }
 

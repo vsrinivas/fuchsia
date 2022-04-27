@@ -67,7 +67,7 @@ using OneWaySendRequestPtr = ::std::unique_ptr<OneWaySendRequest>;
 namespace fidl {
 template <>
 struct CodingTraits<::test::driveroneway::Payload>
-    : public EncodableCodingTraits<::test::driveroneway::Payload, 4, 4> {};
+    : public EncodableCodingTraits<::test::driveroneway::Payload, 4> {};
 
 template <>
 struct IsMemcpyCompatible<::test::driveroneway::Payload>
@@ -92,8 +92,8 @@ struct Equality<::test::driveroneway::Payload> {
 };
 template <>
 struct CodingTraits<::test::driveroneway::OneWaySendRequest>
-    : public EncodableCodingTraits<::test::driveroneway::OneWaySendRequest, 4,
-                                   4> {};
+    : public EncodableCodingTraits<::test::driveroneway::OneWaySendRequest, 4> {
+};
 
 template <>
 struct IsMemcpyCompatible<::test::driveroneway::OneWaySendRequest>

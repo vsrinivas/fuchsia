@@ -20,12 +20,7 @@ void SuperFooTopResponse::Encode(
     memcpy(_encoder->template GetPtr<SuperFooTopResponse>(_offset), this,
            sizeof(SuperFooTopResponse));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &y, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &y, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &y, _offset + 0);
   }
 }
 
@@ -56,12 +51,7 @@ void SuperFooRequest::Encode(
     memcpy(_encoder->template GetPtr<SuperFooRequest>(_offset), this,
            sizeof(SuperFooRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &s, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &s, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &s, _offset + 0);
   }
 }
 

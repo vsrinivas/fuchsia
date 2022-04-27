@@ -440,21 +440,8 @@ class ExampleProtocol_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage Method(::fidl::MessageEncoder* _encoder,
                                              ::test::exampleusing::Empty* arg) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(1);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(1);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, arg, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, arg, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(1);
+    ::fidl::Encode(_encoder, arg, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::placementofattributes::_internal::
@@ -483,12 +470,11 @@ struct IsFidlXUnion<::test::placementofattributes::ExampleXUnion>
 template <>
 struct CodingTraits<::test::placementofattributes::ExampleXUnion>
     : public EncodableCodingTraits<::test::placementofattributes::ExampleXUnion,
-                                   24, 16> {};
+                                   16> {};
 
 template <>
 struct CodingTraits<
     std::unique_ptr<::test::placementofattributes::ExampleXUnion>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
@@ -553,12 +539,11 @@ struct IsFidlXUnion<::test::placementofattributes::ExampleUnion>
 template <>
 struct CodingTraits<::test::placementofattributes::ExampleUnion>
     : public EncodableCodingTraits<::test::placementofattributes::ExampleUnion,
-                                   24, 16> {};
+                                   16> {};
 
 template <>
 struct CodingTraits<
     std::unique_ptr<::test::placementofattributes::ExampleUnion>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
@@ -620,7 +605,7 @@ struct Equality<::test::placementofattributes::ExampleUnion> {
 template <>
 struct CodingTraits<::test::placementofattributes::ExampleTable>
     : public EncodableCodingTraits<::test::placementofattributes::ExampleTable,
-                                   16, 16> {};
+                                   16> {};
 
 inline zx_status_t Clone(
     const ::test::placementofattributes::ExampleTable& _value,
@@ -648,7 +633,7 @@ struct Equality<::test::placementofattributes::ExampleTable> {
 template <>
 struct CodingTraits<::test::placementofattributes::ExampleStruct>
     : public EncodableCodingTraits<::test::placementofattributes::ExampleStruct,
-                                   4, 4> {};
+                                   4> {};
 
 template <>
 struct IsMemcpyCompatible<::test::placementofattributes::ExampleStruct>
@@ -676,7 +661,7 @@ struct Equality<::test::placementofattributes::ExampleStruct> {
 template <>
 struct CodingTraits<::test::placementofattributes::ExampleProtocolMethodRequest>
     : public EncodableCodingTraits<
-          ::test::placementofattributes::ExampleProtocolMethodRequest, 1, 1> {};
+          ::test::placementofattributes::ExampleProtocolMethodRequest, 1> {};
 
 template <>
 struct IsMemcpyCompatible<
@@ -706,10 +691,6 @@ struct Equality<::test::placementofattributes::ExampleProtocolMethodRequest> {
 };
 template <>
 struct CodingTraits<::test::placementofattributes::ExampleEnum> {
-  static constexpr size_t inline_size_old =
-      sizeof(::test::placementofattributes::ExampleEnum);
-  static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::test::placementofattributes::ExampleEnum);
   static constexpr size_t inline_size_v2 =
       sizeof(::test::placementofattributes::ExampleEnum);
   static void Encode(
@@ -745,10 +726,6 @@ struct Equality<::test::placementofattributes::ExampleEnum> {
 
 template <>
 struct CodingTraits<::test::placementofattributes::ExampleBits> {
-  static constexpr size_t inline_size_old =
-      sizeof(::test::placementofattributes::ExampleBits);
-  static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::test::placementofattributes::ExampleBits);
   static constexpr size_t inline_size_v2 =
       sizeof(::test::placementofattributes::ExampleBits);
   static void Encode(

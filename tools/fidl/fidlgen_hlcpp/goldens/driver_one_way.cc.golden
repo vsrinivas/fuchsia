@@ -18,12 +18,7 @@ void Payload::Encode(
   if (::fidl::IsMemcpyCompatible<Payload>::value) {
     memcpy(_encoder->template GetPtr<Payload>(_offset), this, sizeof(Payload));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &value, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &value, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &value, _offset + 0);
   }
 }
 
@@ -54,12 +49,7 @@ void OneWaySendRequest::Encode(
     memcpy(_encoder->template GetPtr<OneWaySendRequest>(_offset), this,
            sizeof(OneWaySendRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &payload, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &payload, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &payload, _offset + 0);
   }
 }
 

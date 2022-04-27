@@ -88,29 +88,16 @@ void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset,
   if (::fidl::IsMemcpyCompatible<{{ .Name }}>::value) {
     memcpy(_encoder->template GetPtr<{{ .Name }}>(_offset), this, sizeof({{ .Name }}));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      {{- range .Members }}
-      {{- if .HandleInformation }}
-      ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .OffsetV1 }}, ::fidl::HandleInformation {
-        .object_type = {{ .HandleInformation.ObjectType }},
-        .rights = {{ .HandleInformation.Rights }},
-      });
-      {{ else -}}
-      ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .OffsetV1 }});
-      {{ end -}}
-      {{- end }}
-    } else {
-      {{- range .Members }}
-      {{- if .HandleInformation }}
-      ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .OffsetV2 }}, ::fidl::HandleInformation {
-        .object_type = {{ .HandleInformation.ObjectType }},
-        .rights = {{ .HandleInformation.Rights }},
-      });
-      {{ else -}}
-      ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .OffsetV2 }});
-      {{ end -}}
-      {{- end }}
-    }
+    {{- range .Members }}
+    {{- if .HandleInformation }}
+    ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .OffsetV2 }}, ::fidl::HandleInformation {
+      .object_type = {{ .HandleInformation.ObjectType }},
+      .rights = {{ .HandleInformation.Rights }},
+    });
+    {{ else -}}
+    ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .OffsetV2 }});
+    {{ end -}}
+    {{- end }}
   }
 }
 
@@ -145,9 +132,9 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* _result) const {
 {{- end }}
 template <>
 struct CodingTraits<{{ . }}>
-    : public EncodableCodingTraits<{{ . }}, {{ .TypeShapeV1.InlineSize }}, {{ .TypeShapeV2.InlineSize }}> {};
+    : public EncodableCodingTraits<{{ . }}, {{ .TypeShapeV2.InlineSize }}> {};
 
-{{ if .TypeShapeV1.HasPadding }}
+{{ if .TypeShapeV2.HasPadding }}
 template<>
 struct HasPadding<{{ . }}> : public std::true_type {};
 {{ end }}

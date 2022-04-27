@@ -76,10 +76,6 @@ using ExampleOfUseOfAliasesPtr = ::std::unique_ptr<ExampleOfUseOfAliases>;
 namespace fidl {
 template <>
 struct CodingTraits<::test::typealiases::obj_type> {
-  static constexpr size_t inline_size_old =
-      sizeof(::test::typealiases::obj_type);
-  static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::test::typealiases::obj_type);
   static constexpr size_t inline_size_v2 =
       sizeof(::test::typealiases::obj_type);
   static void Encode(
@@ -114,7 +110,7 @@ struct Equality<::test::typealiases::obj_type> {
 template <>
 struct CodingTraits<::test::typealiases::ExampleOfUseOfAliases>
     : public EncodableCodingTraits<::test::typealiases::ExampleOfUseOfAliases,
-                                   88, 88> {};
+                                   88> {};
 
 template <>
 struct HasPadding<::test::typealiases::ExampleOfUseOfAliases>

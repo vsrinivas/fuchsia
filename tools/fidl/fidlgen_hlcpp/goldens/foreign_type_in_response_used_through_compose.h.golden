@@ -35,21 +35,9 @@ class Top_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage GetFoo(::fidl::MessageEncoder* _encoder,
                                              ::test::bottom::Foo* foo) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(4);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(4);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, foo, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, foo, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(4);
+    ::fidl::Encode(_encoder, foo, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::foreigntypeinresponseusedthroughcompose::_internal::

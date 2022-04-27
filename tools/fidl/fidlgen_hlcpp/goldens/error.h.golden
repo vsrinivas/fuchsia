@@ -229,21 +229,8 @@ class Example_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage foo(::fidl::MessageEncoder* _encoder,
                                           ::std::string* s) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, s, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, s, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, s, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::error::_internal::test_error_ExampleFooRequestTable,
@@ -263,21 +250,9 @@ class Example_ResponseEncoder {
       ::fidl::MessageEncoder* _encoder,
       ::test::error::Example_foo_Result* result) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(24);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::error::_internal::test_error_ExampleFooTopResponseTable,
@@ -294,8 +269,7 @@ class Example_ResponseEncoder {
 namespace fidl {
 template <>
 struct CodingTraits<::test::error::Example_foo_Response>
-    : public EncodableCodingTraits<::test::error::Example_foo_Response, 8, 8> {
-};
+    : public EncodableCodingTraits<::test::error::Example_foo_Response, 8> {};
 
 template <>
 struct IsMemcpyCompatible<::test::error::Example_foo_Response>
@@ -324,12 +298,10 @@ struct IsFidlXUnion<::test::error::Example_foo_Result> : public std::true_type {
 
 template <>
 struct CodingTraits<::test::error::Example_foo_Result>
-    : public EncodableCodingTraits<::test::error::Example_foo_Result, 24, 16> {
-};
+    : public EncodableCodingTraits<::test::error::Example_foo_Result, 16> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<::test::error::Example_foo_Result>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(Encoder* encoder,
@@ -387,8 +359,7 @@ struct Equality<::test::error::Example_foo_Result> {
 };
 template <>
 struct CodingTraits<::test::error::ExampleFooTopResponse>
-    : public EncodableCodingTraits<::test::error::ExampleFooTopResponse, 24,
-                                   16> {};
+    : public EncodableCodingTraits<::test::error::ExampleFooTopResponse, 16> {};
 
 template <>
 struct HasPadding<::test::error::ExampleFooTopResponse>
@@ -417,7 +388,7 @@ struct Equality<::test::error::ExampleFooTopResponse> {
 };
 template <>
 struct CodingTraits<::test::error::ExampleFooRequest>
-    : public EncodableCodingTraits<::test::error::ExampleFooRequest, 16, 16> {};
+    : public EncodableCodingTraits<::test::error::ExampleFooRequest, 16> {};
 
 template <>
 struct HasPadding<::test::error::ExampleFooRequest> : public std::true_type {};

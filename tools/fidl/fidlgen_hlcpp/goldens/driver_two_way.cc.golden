@@ -20,12 +20,7 @@ void TwoWayAddTopResponse::Encode(
     memcpy(_encoder->template GetPtr<TwoWayAddTopResponse>(_offset), this,
            sizeof(TwoWayAddTopResponse));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &sum, _offset + 0);
-
-    } else {
-      ::fidl::Encode(_encoder, &sum, _offset + 0);
-    }
+    ::fidl::Encode(_encoder, &sum, _offset + 0);
   }
 }
 
@@ -57,14 +52,8 @@ void TwoWayAddRequest::Encode(
     memcpy(_encoder->template GetPtr<TwoWayAddRequest>(_offset), this,
            sizeof(TwoWayAddRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &addend1, _offset + 0);
-      ::fidl::Encode(_encoder, &addend2, _offset + 2);
-
-    } else {
-      ::fidl::Encode(_encoder, &addend1, _offset + 0);
-      ::fidl::Encode(_encoder, &addend2, _offset + 2);
-    }
+    ::fidl::Encode(_encoder, &addend1, _offset + 0);
+    ::fidl::Encode(_encoder, &addend2, _offset + 2);
   }
 }
 

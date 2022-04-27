@@ -44,7 +44,7 @@ namespace fidl {
 template <>
 struct CodingTraits<::test::structdefaultvalueenumlibraryreference::Foo>
     : public EncodableCodingTraits<
-          ::test::structdefaultvalueenumlibraryreference::Foo, 4, 4> {};
+          ::test::structdefaultvalueenumlibraryreference::Foo, 4> {};
 
 template <>
 struct IsMemcpyCompatible<::test::structdefaultvalueenumlibraryreference::Foo>

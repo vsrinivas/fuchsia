@@ -20,9 +20,6 @@ namespace fidl {
 namespace test {
 namespace util {
 
-constexpr fidl_message_header_t kV1Header = {
-    .magic_number = kFidlWireFormatMagicNumberInitial,
-};
 constexpr fidl_message_header_t kV2Header = {
     .at_rest_flags = {FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2, 0},
     .dynamic_flags = 0,
@@ -71,14 +68,14 @@ bool cmp_payload(const T* actual, size_t actual_size, const T* expected, size_t 
 
 template <class Output, class Input>
 Output RoundTrip(const Input& input) {
-  fidl::BodyEncoder encoder(::fidl::internal::WireFormatVersion::kV1);
+  fidl::BodyEncoder encoder(::fidl::internal::WireFormatVersion::kV2);
   auto offset = encoder.Alloc(EncodingInlineSize<Input, fidl::BodyEncoder>(&encoder));
   fidl::Clone(input).Encode(&encoder, offset);
   auto oubgoing_body = encoder.GetBody();
   const char* err_msg = nullptr;
   EXPECT_EQ(
       ZX_OK,
-      oubgoing_body.Validate(::fidl::internal::WireFormatVersion::kV1, Output::FidlType, &err_msg),
+      oubgoing_body.Validate(::fidl::internal::WireFormatVersion::kV2, Output::FidlType, &err_msg),
       "%s", err_msg);
 
   std::vector<zx_handle_info_t> handle_infos(oubgoing_body.handles().actual());
@@ -91,7 +88,7 @@ Output RoundTrip(const Input& input) {
   oubgoing_body.ClearHandlesUnsafe();
   EXPECT_EQ(
       ZX_OK,
-      incoming_body.Decode(fidl::internal::WireFormatMetadata::FromTransactionalHeader(kV1Header),
+      incoming_body.Decode(fidl::internal::WireFormatMetadata::FromTransactionalHeader(kV2Header),
                            Output::FidlType, &err_msg),
       "%s", err_msg);
 
@@ -109,7 +106,7 @@ Output DecodedBytes(std::vector<uint8_t> input) {
 
   const char* error = nullptr;
   EXPECT_EQ(ZX_OK,
-            body.Decode(fidl::internal::WireFormatMetadata::FromTransactionalHeader(kV1Header),
+            body.Decode(fidl::internal::WireFormatMetadata::FromTransactionalHeader(kV2Header),
                         Output::FidlType, &error),
             "%s", error);
 
@@ -154,7 +151,7 @@ void ForgetHandles(internal::WireFormatVersion wire_format, Input input) {
 
 template <class Input>
 bool ValueToBytes(const Input& input, const std::vector<uint8_t>& expected) {
-  fidl::BodyEncoder enc(::fidl::internal::WireFormatVersion::kV1);
+  fidl::BodyEncoder enc(::fidl::internal::WireFormatVersion::kV2);
   auto offset = enc.Alloc(EncodingInlineSize<Input, fidl::BodyEncoder>(&enc));
   fidl::Clone(input).Encode(&enc, offset);
   auto msg = enc.GetBody();

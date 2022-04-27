@@ -71,60 +71,35 @@ void UnionWithHandle::Encode(
 
   switch (Which()) {
     case ::test::handlesintypes::UnionWithHandle::Tag::kH: {
-      switch (encoder->wire_format()) {
-        case ::fidl::internal::WireFormatVersion::kV1: {
-          ::fidl::Encode(
-              encoder, &h_,
-              encoder->Alloc(
-                  ::fidl::EncodingInlineSize<::zx::vmo, ::fidl::Encoder>(
-                      encoder)),
-              ::fidl::HandleInformation{.object_type = ZX_OBJ_TYPE_VMO,
-                                        .rights = 0x80000000});
+      if (::fidl::EncodingInlineSize<::zx::vmo>(encoder) <=
+          FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        ::fidl::Encode(encoder, &h_,
+                       offset + offsetof(fidl_xunion_v2_t, envelope),
+                       ::fidl::HandleInformation{.object_type = ZX_OBJ_TYPE_VMO,
+                                                 .rights = 0x80000000});
 
-          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
-          xunion->tag = tag_;
-          xunion->envelope.num_bytes =
-              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-          xunion->envelope.num_handles = static_cast<uint32_t>(
-              encoder->CurrentHandleCount() - handles_before);
-          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
-          break;
-        }
-        case ::fidl::internal::WireFormatVersion::kV2: {
-          if (::fidl::EncodingInlineSize<::zx::vmo>(encoder) <=
-              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-            ::fidl::Encode(
-                encoder, &h_, offset + offsetof(fidl_xunion_v2_t, envelope),
-                ::fidl::HandleInformation{.object_type = ZX_OBJ_TYPE_VMO,
-                                          .rights = 0x80000000});
-
-            fidl_xunion_v2_t* xunion =
-                encoder->GetPtr<fidl_xunion_v2_t>(offset);
-            xunion->tag = tag_;
-            xunion->envelope.num_handles = static_cast<uint16_t>(
-                encoder->CurrentHandleCount() - handles_before);
-            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-            break;
-          }
-
-          ::fidl::Encode(
-              encoder, &h_,
-              encoder->Alloc(
-                  ::fidl::EncodingInlineSize<::zx::vmo, ::fidl::Encoder>(
-                      encoder)),
-              ::fidl::HandleInformation{.object_type = ZX_OBJ_TYPE_VMO,
-                                        .rights = 0x80000000});
-
-          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
-          xunion->tag = tag_;
-          xunion->envelope.num_bytes =
-              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
-          xunion->envelope.num_handles = static_cast<uint16_t>(
-              encoder->CurrentHandleCount() - handles_before);
-          xunion->envelope.flags = 0;
-          break;
-        }
+        fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+        xunion->tag = tag_;
+        xunion->envelope.num_handles = static_cast<uint16_t>(
+            encoder->CurrentHandleCount() - handles_before);
+        xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+        break;
       }
+
+      ::fidl::Encode(
+          encoder, &h_,
+          encoder->Alloc(
+              ::fidl::EncodingInlineSize<::zx::vmo, ::fidl::Encoder>(encoder)),
+          ::fidl::HandleInformation{.object_type = ZX_OBJ_TYPE_VMO,
+                                    .rights = 0x80000000});
+
+      fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+      xunion->tag = tag_;
+      xunion->envelope.num_bytes =
+          static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+      xunion->envelope.num_handles =
+          static_cast<uint16_t>(encoder->CurrentHandleCount() - handles_before);
+      xunion->envelope.flags = 0;
       break;
     }
     case ::test::handlesintypes::UnionWithHandle::Tag::kUnknown: {
@@ -284,17 +259,14 @@ void TableWithHandle::Encode(
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t envelope_size =
-      (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1)
-          ? sizeof(fidl_envelope_t)
-          : sizeof(fidl_envelope_v2_t);
-  size_t base = _encoder->Alloc(max_ordinal * envelope_size);
+  size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_v2_t));
   auto next_unknown = _unknown_data.begin();
   if (field_presence_.IsSet<0>()) {
     // Encode unknown fields that have an ordinal that should appear before this
     // field.
     while (next_unknown != _unknown_data.end() && next_unknown->first < 1) {
-      size_t envelope_base = base + (next_unknown->first - 1) * envelope_size;
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_v2_t);
       ::fidl::EncodeUnknownData(_encoder, &next_unknown->second, envelope_base);
       std::advance(next_unknown, 1);
     }
@@ -302,65 +274,42 @@ void TableWithHandle::Encode(
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
 
-    size_t envelope_base = base + (1 - 1) * envelope_size;
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1: {
-        ::fidl::Encode(
-            _encoder, &h_value_.value,
-            _encoder->Alloc(
-                ::fidl::EncodingInlineSize<::zx::vmo, ::fidl::Encoder>(
-                    _encoder)),
-            ::fidl::HandleInformation{.object_type = ZX_OBJ_TYPE_VMO,
-                                      .rights = 0x80000000});
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
 
-        fidl_envelope_t* envelope =
-            _encoder->GetPtr<fidl_envelope_t>(envelope_base);
-        envelope->num_bytes =
-            static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-        envelope->num_handles = static_cast<uint32_t>(
-            _encoder->CurrentHandleCount() - handles_before);
-        envelope->presence = FIDL_ALLOC_PRESENT;
-        break;
-      }
-      case ::fidl::internal::WireFormatVersion::kV2: {
-        if (::fidl::EncodingInlineSize<::zx::vmo>(_encoder) <=
-            FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-          ::fidl::Encode(
-              _encoder, &h_value_.value, envelope_base,
-              ::fidl::HandleInformation{.object_type = ZX_OBJ_TYPE_VMO,
-                                        .rights = 0x80000000});
+    if (::fidl::EncodingInlineSize<::zx::vmo>(_encoder) <=
+        FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      ::fidl::Encode(_encoder, &h_value_.value, envelope_base,
+                     ::fidl::HandleInformation{.object_type = ZX_OBJ_TYPE_VMO,
+                                               .rights = 0x80000000});
 
-          fidl_envelope_v2_t* envelope =
-              _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-          envelope->num_handles = static_cast<uint16_t>(
-              _encoder->CurrentHandleCount() - handles_before);
-          envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-          break;
-        }
+      fidl_envelope_v2_t* envelope =
+          _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_handles = static_cast<uint16_t>(
+          _encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+    } else {
+      ::fidl::Encode(
+          _encoder, &h_value_.value,
+          _encoder->Alloc(
+              ::fidl::EncodingInlineSize<::zx::vmo, ::fidl::Encoder>(_encoder)),
+          ::fidl::HandleInformation{.object_type = ZX_OBJ_TYPE_VMO,
+                                    .rights = 0x80000000});
 
-        ::fidl::Encode(
-            _encoder, &h_value_.value,
-            _encoder->Alloc(
-                ::fidl::EncodingInlineSize<::zx::vmo, ::fidl::Encoder>(
-                    _encoder)),
-            ::fidl::HandleInformation{.object_type = ZX_OBJ_TYPE_VMO,
-                                      .rights = 0x80000000});
-
-        fidl_envelope_v2_t* envelope =
-            _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-        envelope->num_bytes =
-            static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-        envelope->num_handles = static_cast<uint16_t>(
-            _encoder->CurrentHandleCount() - handles_before);
-        envelope->flags = 0;
-        break;
-      }
+      fidl_envelope_v2_t* envelope =
+          _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      envelope->num_bytes =
+          static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+      envelope->num_handles = static_cast<uint16_t>(
+          _encoder->CurrentHandleCount() - handles_before);
+      envelope->flags = 0;
     }
   }
+
   // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
   // the range of known ordinals)
   for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
-    size_t envelope_base = base + (curr->first - 1) * envelope_size;
+    size_t envelope_base =
+        base + (curr->first - 1) * sizeof(fidl_envelope_v2_t);
     ::fidl::EncodeUnknownData(_encoder, &curr->second, envelope_base);
   }
 }
@@ -444,60 +393,31 @@ void HandlesInTypes::Encode(
     memcpy(_encoder->template GetPtr<HandlesInTypes>(_offset), this,
            sizeof(HandlesInTypes));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &normal_handle, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_VMO,
-                         .rights = 0x80000000,
-                     });
+    ::fidl::Encode(_encoder, &normal_handle, _offset + 0,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_VMO,
+                       .rights = 0x80000000,
+                   });
 
-      ::fidl::Encode(_encoder, &handle_in_vec, _offset + 8,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_VMO,
-                         .rights = 0x80000000,
-                     });
+    ::fidl::Encode(_encoder, &handle_in_vec, _offset + 8,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_VMO,
+                       .rights = 0x80000000,
+                   });
 
-      ::fidl::Encode(_encoder, &handle_in_array, _offset + 24,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_VMO,
-                         .rights = 0x80000000,
-                     });
+    ::fidl::Encode(_encoder, &handle_in_array, _offset + 24,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_VMO,
+                       .rights = 0x80000000,
+                   });
 
-      ::fidl::Encode(_encoder, &handle_in_mixed_vec_array, _offset + 48,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_VMO,
-                         .rights = 0x80000000,
-                     });
-      ::fidl::Encode(_encoder, &table_with_handle, _offset + 64);
-      ::fidl::Encode(_encoder, &union_with_handle, _offset + 80);
-
-    } else {
-      ::fidl::Encode(_encoder, &normal_handle, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_VMO,
-                         .rights = 0x80000000,
-                     });
-
-      ::fidl::Encode(_encoder, &handle_in_vec, _offset + 8,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_VMO,
-                         .rights = 0x80000000,
-                     });
-
-      ::fidl::Encode(_encoder, &handle_in_array, _offset + 24,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_VMO,
-                         .rights = 0x80000000,
-                     });
-
-      ::fidl::Encode(_encoder, &handle_in_mixed_vec_array, _offset + 48,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_VMO,
-                         .rights = 0x80000000,
-                     });
-      ::fidl::Encode(_encoder, &table_with_handle, _offset + 64);
-      ::fidl::Encode(_encoder, &union_with_handle, _offset + 80);
-    }
+    ::fidl::Encode(_encoder, &handle_in_mixed_vec_array, _offset + 48,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_VMO,
+                       .rights = 0x80000000,
+                   });
+    ::fidl::Encode(_encoder, &table_with_handle, _offset + 64);
+    ::fidl::Encode(_encoder, &union_with_handle, _offset + 80);
   }
 }
 

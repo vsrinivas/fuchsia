@@ -319,7 +319,6 @@ func encoderWireFormat(wireFormat gidlir.WireFormat) string {
 }
 
 var supportedWireFormats = []gidlir.WireFormat{
-	gidlir.V1WireFormat,
 	gidlir.V2WireFormat,
 }
 

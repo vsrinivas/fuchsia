@@ -86,21 +86,8 @@ class super_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage foo(::fidl::MessageEncoder* _encoder,
                                           ::std::string* s) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, s, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, s, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, s, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -120,21 +107,9 @@ class super_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage foo(::fidl::MessageEncoder* _encoder,
                                           int64_t* y) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, y, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, y, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(8);
+    ::fidl::Encode(_encoder, y, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::inheritance::_internal::
@@ -154,21 +129,8 @@ class sub_RequestEncoder {
   static ::fidl::HLCPPOutgoingMessage foo(::fidl::MessageEncoder* _encoder,
                                           ::std::string* s) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(16);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(16);
-        break;
-    }
-
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, s, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, s, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16);
+    ::fidl::Encode(_encoder, s, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(
         DidHLCPPEncode,
@@ -185,21 +147,9 @@ class sub_ResponseEncoder {
   static ::fidl::HLCPPOutgoingMessage foo(::fidl::MessageEncoder* _encoder,
                                           int64_t* y) {
     fidl_trace(WillHLCPPEncode);
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1:
-        _encoder->Alloc(8);
-        break;
-      case ::fidl::internal::WireFormatVersion::kV2:
-        _encoder->Alloc(8);
-        break;
-    }
 
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, y, 0 + sizeof(fidl_message_header_t));
-
-    } else {
-      ::fidl::Encode(_encoder, y, 0 + sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(8);
+    ::fidl::Encode(_encoder, y, 0 + sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
                &::test::inheritance::_internal::
@@ -217,7 +167,7 @@ class sub_ResponseEncoder {
 namespace fidl {
 template <>
 struct CodingTraits<::test::inheritance::SuperFooTopResponse>
-    : public EncodableCodingTraits<::test::inheritance::SuperFooTopResponse, 8,
+    : public EncodableCodingTraits<::test::inheritance::SuperFooTopResponse,
                                    8> {};
 
 template <>
@@ -243,8 +193,7 @@ struct Equality<::test::inheritance::SuperFooTopResponse> {
 };
 template <>
 struct CodingTraits<::test::inheritance::SuperFooRequest>
-    : public EncodableCodingTraits<::test::inheritance::SuperFooRequest, 16,
-                                   16> {};
+    : public EncodableCodingTraits<::test::inheritance::SuperFooRequest, 16> {};
 
 template <>
 struct HasPadding<::test::inheritance::SuperFooRequest>

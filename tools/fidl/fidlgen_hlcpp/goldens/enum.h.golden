@@ -146,9 +146,6 @@ inline zx_status_t Clone(::test::enum_::MyEmptyFlexibleEnum value,
 namespace fidl {
 template <>
 struct CodingTraits<::test::enum_::MyStrictEnum> {
-  static constexpr size_t inline_size_old = sizeof(::test::enum_::MyStrictEnum);
-  static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::test::enum_::MyStrictEnum);
   static constexpr size_t inline_size_v2 = sizeof(::test::enum_::MyStrictEnum);
   static void Encode(
       Encoder* encoder, ::test::enum_::MyStrictEnum* value, size_t offset,
@@ -179,10 +176,6 @@ struct Equality<::test::enum_::MyStrictEnum> {
 
 template <>
 struct CodingTraits<::test::enum_::MyFlexibleEnumWithCustomUnknown> {
-  static constexpr size_t inline_size_old =
-      sizeof(::test::enum_::MyFlexibleEnumWithCustomUnknown);
-  static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::test::enum_::MyFlexibleEnumWithCustomUnknown);
   static constexpr size_t inline_size_v2 =
       sizeof(::test::enum_::MyFlexibleEnumWithCustomUnknown);
   static void Encode(
@@ -219,10 +212,6 @@ struct Equality<::test::enum_::MyFlexibleEnumWithCustomUnknown> {
 
 template <>
 struct CodingTraits<::test::enum_::MyFlexibleEnum> {
-  static constexpr size_t inline_size_old =
-      sizeof(::test::enum_::MyFlexibleEnum);
-  static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::test::enum_::MyFlexibleEnum);
   static constexpr size_t inline_size_v2 =
       sizeof(::test::enum_::MyFlexibleEnum);
   static void Encode(
@@ -254,10 +243,6 @@ struct Equality<::test::enum_::MyFlexibleEnum> {
 
 template <>
 struct CodingTraits<::test::enum_::MyEmptyFlexibleEnum> {
-  static constexpr size_t inline_size_old =
-      sizeof(::test::enum_::MyEmptyFlexibleEnum);
-  static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::test::enum_::MyEmptyFlexibleEnum);
   static constexpr size_t inline_size_v2 =
       sizeof(::test::enum_::MyEmptyFlexibleEnum);
   static void Encode(

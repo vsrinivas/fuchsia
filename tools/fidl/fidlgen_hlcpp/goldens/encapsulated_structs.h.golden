@@ -202,7 +202,7 @@ namespace fidl {
 template <>
 struct CodingTraits<::test::encapsulatedstructs::NonInlineStructTestStruct>
     : public EncodableCodingTraits<
-          ::test::encapsulatedstructs::NonInlineStructTestStruct, 16, 16> {};
+          ::test::encapsulatedstructs::NonInlineStructTestStruct, 16> {};
 
 template <>
 struct HasPadding<::test::encapsulatedstructs::NonInlineStructTestStruct>
@@ -243,8 +243,8 @@ struct Equality<::test::encapsulatedstructs::NonInlineStructTestStruct> {
 
 template <>
 struct CodingTraits<::test::encapsulatedstructs::Int8Int32>
-    : public EncodableCodingTraits<::test::encapsulatedstructs::Int8Int32, 8,
-                                   8> {};
+    : public EncodableCodingTraits<::test::encapsulatedstructs::Int8Int32, 8> {
+};
 
 template <>
 struct HasPadding<::test::encapsulatedstructs::Int8Int32>
@@ -277,8 +277,8 @@ struct Equality<::test::encapsulatedstructs::Int8Int32> {
 };
 template <>
 struct CodingTraits<::test::encapsulatedstructs::Int16Int8>
-    : public EncodableCodingTraits<::test::encapsulatedstructs::Int16Int8, 4,
-                                   4> {};
+    : public EncodableCodingTraits<::test::encapsulatedstructs::Int16Int8, 4> {
+};
 
 template <>
 struct HasPadding<::test::encapsulatedstructs::Int16Int8>
@@ -312,7 +312,7 @@ struct Equality<::test::encapsulatedstructs::Int16Int8> {
 template <>
 struct CodingTraits<::test::encapsulatedstructs::ArrayInt16Int8>
     : public EncodableCodingTraits<::test::encapsulatedstructs::ArrayInt16Int8,
-                                   12, 12> {};
+                                   12> {};
 
 template <>
 struct HasPadding<::test::encapsulatedstructs::ArrayInt16Int8>
@@ -346,7 +346,7 @@ struct Equality<::test::encapsulatedstructs::ArrayInt16Int8> {
 template <>
 struct CodingTraits<::test::encapsulatedstructs::StructPaddingTestStruct>
     : public EncodableCodingTraits<
-          ::test::encapsulatedstructs::StructPaddingTestStruct, 24, 24> {};
+          ::test::encapsulatedstructs::StructPaddingTestStruct, 24> {};
 
 template <>
 struct HasPadding<::test::encapsulatedstructs::StructPaddingTestStruct>
@@ -390,7 +390,7 @@ struct Equality<::test::encapsulatedstructs::StructPaddingTestStruct> {
 template <>
 struct CodingTraits<::test::encapsulatedstructs::TopLevelStruct>
     : public EncodableCodingTraits<::test::encapsulatedstructs::TopLevelStruct,
-                                   40, 40> {};
+                                   40> {};
 
 template <>
 struct HasPadding<::test::encapsulatedstructs::TopLevelStruct>

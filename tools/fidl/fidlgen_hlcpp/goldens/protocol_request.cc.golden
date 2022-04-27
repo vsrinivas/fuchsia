@@ -23,20 +23,11 @@ void ParentTakeChildRequestRequest::Encode(
     memcpy(_encoder->template GetPtr<ParentTakeChildRequestRequest>(_offset),
            this, sizeof(ParentTakeChildRequestRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &r, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, &r, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-    }
+    ::fidl::Encode(_encoder, &r, _offset + 0,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
   }
 }
 
@@ -73,20 +64,11 @@ void ParentTakeChildRequest::Encode(
     memcpy(_encoder->template GetPtr<ParentTakeChildRequest>(_offset), this,
            sizeof(ParentTakeChildRequest));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &c, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, &c, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-    }
+    ::fidl::Encode(_encoder, &c, _offset + 0,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
   }
 }
 
@@ -123,20 +105,11 @@ void ParentGetChildTopResponse::Encode(
     memcpy(_encoder->template GetPtr<ParentGetChildTopResponse>(_offset), this,
            sizeof(ParentGetChildTopResponse));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &c, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, &c, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-    }
+    ::fidl::Encode(_encoder, &c, _offset + 0,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
   }
 }
 
@@ -174,20 +147,11 @@ void ParentGetChildRequestTopResponse::Encode(
     memcpy(_encoder->template GetPtr<ParentGetChildRequestTopResponse>(_offset),
            this, sizeof(ParentGetChildRequestTopResponse));
   } else {
-    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
-      ::fidl::Encode(_encoder, &r, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-
-    } else {
-      ::fidl::Encode(_encoder, &r, _offset + 0,
-                     ::fidl::HandleInformation{
-                         .object_type = ZX_OBJ_TYPE_CHANNEL,
-                         .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
-                     });
-    }
+    ::fidl::Encode(_encoder, &r, _offset + 0,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
   }
 }
 

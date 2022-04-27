@@ -127,7 +127,7 @@ namespace fidl {
 
 template <>
 struct CodingTraits<::test::handles::Handles>
-    : public EncodableCodingTraits<::test::handles::Handles, 128, 128> {};
+    : public EncodableCodingTraits<::test::handles::Handles, 128> {};
 
 template <>
 struct IsMemcpyCompatible<::test::handles::Handles>

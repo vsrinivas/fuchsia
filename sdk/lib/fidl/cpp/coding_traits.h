@@ -29,13 +29,7 @@ struct CodingTraits;
 
 template <typename T, class EncoderImpl = Encoder>
 size_t EncodingInlineSize(EncoderImpl* encoder) {
-  switch (encoder->wire_format()) {
-    case ::fidl::internal::WireFormatVersion::kV1:
-      return CodingTraits<T>::inline_size_v1_no_ee;
-    case ::fidl::internal::WireFormatVersion::kV2:
-      return CodingTraits<T>::inline_size_v2;
-  }
-  __builtin_unreachable();
+  return CodingTraits<T>::inline_size_v2;
 }
 
 template <typename T, class DecoderImpl = Decoder>
@@ -45,7 +39,6 @@ size_t DecodingInlineSize(DecoderImpl* decoder) {
 
 template <typename T>
 struct CodingTraits<T, typename std::enable_if<IsPrimitive<T>::value>::type> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(T);
   static constexpr size_t inline_size_v2 = sizeof(T);
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, T* value, size_t offset,
@@ -61,7 +54,6 @@ struct CodingTraits<T, typename std::enable_if<IsPrimitive<T>::value>::type> {
 
 template <>
 struct CodingTraits<bool> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(bool);
   static constexpr size_t inline_size_v2 = sizeof(bool);
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, bool* value, size_t offset,
@@ -86,7 +78,6 @@ struct CodingTraits<bool> {
 #ifdef __Fuchsia__
 template <typename T>
 struct CodingTraits<T, typename std::enable_if<std::is_base_of<zx::object_base, T>::value>::type> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(zx_handle_t);
   static constexpr size_t inline_size_v2 = sizeof(zx_handle_t);
   static void Encode(Encoder* encoder, zx::object_base* value, size_t offset,
                      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
@@ -101,7 +92,6 @@ struct CodingTraits<T, typename std::enable_if<std::is_base_of<zx::object_base, 
 
 template <typename T>
 struct CodingTraits<std::unique_ptr<T>, typename std::enable_if<!IsFidlXUnion<T>::value>::type> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(uintptr_t);
   static constexpr size_t inline_size_v2 = sizeof(uintptr_t);
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, std::unique_ptr<T>* value, size_t offset,
@@ -141,7 +131,6 @@ void EncodeVectorPointer(EncoderImpl* encoder, size_t count, size_t offset) {
 
 template <typename T>
 struct CodingTraits<VectorPtr<T>> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_vector_t);
   static constexpr size_t inline_size_v2 = sizeof(fidl_vector_t);
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, VectorPtr<T>* value, size_t offset,
@@ -174,8 +163,7 @@ void EncodeVectorBody(UseStdCopy<true>, EncoderImpl* encoder,
                       typename std::vector<T>::iterator in_begin,
                       typename std::vector<T>::iterator in_end, size_t out_offset,
                       cpp17::optional<HandleInformation> maybe_handle_info) {
-  static_assert(CodingTraits<T>::inline_size_v1_no_ee == sizeof(T),
-                "stride doesn't match object size");
+  static_assert(CodingTraits<T>::inline_size_v2 == sizeof(T), "stride doesn't match object size");
   std::copy(in_begin, in_end, encoder->template GetPtr<T>(out_offset));
 }
 
@@ -194,8 +182,7 @@ void EncodeVectorBody(UseStdCopy<false>, EncoderImpl* encoder,
 template <typename T, typename DecoderImpl>
 void DecodeVectorBody(UseStdCopy<true>, DecoderImpl* decoder, size_t in_begin_offset,
                       size_t in_end_offset, std::vector<T>* out, size_t count) {
-  static_assert(CodingTraits<T>::inline_size_v1_no_ee == sizeof(T),
-                "stride doesn't match object size");
+  static_assert(CodingTraits<T>::inline_size_v2 == sizeof(T), "stride doesn't match object size");
   *out = std::vector<T>(decoder->template GetPtr<T>(in_begin_offset),
                         decoder->template GetPtr<T>(in_end_offset));
 }
@@ -216,7 +203,6 @@ void DecodeVectorBody(UseStdCopy<false>, DecoderImpl* decoder, size_t in_begin_o
 
 template <typename T>
 struct CodingTraits<::std::vector<T>> {
-  static constexpr size_t inline_size_v1_no_ee = sizeof(fidl_vector_t);
   static constexpr size_t inline_size_v2 = sizeof(fidl_vector_t);
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, ::std::vector<T>* value, size_t offset,
@@ -241,7 +227,6 @@ struct CodingTraits<::std::vector<T>> {
 
 template <typename T, size_t N>
 struct CodingTraits<::std::array<T, N>> {
-  static constexpr size_t inline_size_v1_no_ee = CodingTraits<T>::inline_size_v1_no_ee * N;
   static constexpr size_t inline_size_v2 = CodingTraits<T>::inline_size_v2 * N;
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, std::array<T, N>* value, size_t offset,
@@ -281,34 +266,20 @@ void EncodeUnknownBytesContents(EncoderImpl* encoder, std::vector<uint8_t>* valu
 
 template <class EncoderImpl>
 void EncodeUnknownBytes(EncoderImpl* encoder, std::vector<uint8_t>* value, size_t envelope_offset) {
-  // encode the envelope header
-  switch (encoder->wire_format()) {
-    case ::fidl::internal::WireFormatVersion::kV1: {
-      fidl_envelope_t* envelope = encoder->template GetPtr<fidl_envelope_t>(envelope_offset);
-      envelope->num_bytes = static_cast<uint32_t>(value->size());
-      envelope->num_handles = 0;
-      envelope->presence = FIDL_ALLOC_PRESENT;
-      EncodeUnknownBytesContents(encoder, value, encoder->Alloc(value->size()));
-      break;
-    }
-    case ::fidl::internal::WireFormatVersion::kV2: {
-      fidl_envelope_v2_t* envelope = encoder->template GetPtr<fidl_envelope_v2_t>(envelope_offset);
+  fidl_envelope_v2_t* envelope = encoder->template GetPtr<fidl_envelope_v2_t>(envelope_offset);
 
-      if (value->size() <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        std::copy(value->begin(), value->end(), envelope->inline_value);
-        envelope->num_handles = 0;
-        envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-        EncodeUnknownBytesContents(encoder, value, envelope_offset);
-        break;
-      }
-
-      envelope->num_bytes = static_cast<uint32_t>(value->size());
-      envelope->num_handles = 0;
-      envelope->flags = 0;
-      EncodeUnknownBytesContents(encoder, value, encoder->Alloc(value->size()));
-      break;
-    }
+  if (value->size() <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+    std::copy(value->begin(), value->end(), envelope->inline_value);
+    envelope->num_handles = 0;
+    envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+    EncodeUnknownBytesContents(encoder, value, envelope_offset);
+    return;
   }
+
+  envelope->num_bytes = static_cast<uint32_t>(value->size());
+  envelope->num_handles = 0;
+  envelope->flags = 0;
+  EncodeUnknownBytesContents(encoder, value, encoder->Alloc(value->size()));
 }
 
 #ifdef __Fuchsia__
@@ -330,40 +301,25 @@ void EncodeUnknownDataContents(EncoderImpl* encoder, UnknownData* value, size_t 
 
 template <class EncoderImpl>
 void EncodeUnknownData(EncoderImpl* encoder, UnknownData* value, size_t envelope_offset) {
-  // encode the envelope header
-  switch (encoder->wire_format()) {
-    case ::fidl::internal::WireFormatVersion::kV1: {
-      fidl_envelope_t* envelope = encoder->template GetPtr<fidl_envelope_t>(envelope_offset);
-      envelope->num_bytes = static_cast<uint32_t>(value->bytes.size());
-      envelope->num_handles = static_cast<uint16_t>(value->handles.size());
-      envelope->presence = FIDL_ALLOC_PRESENT;
-      EncodeUnknownDataContents(encoder, value, encoder->Alloc(value->bytes.size()));
-      break;
-    }
-    case ::fidl::internal::WireFormatVersion::kV2: {
-      fidl_envelope_v2_t* envelope = encoder->template GetPtr<fidl_envelope_v2_t>(envelope_offset);
+  fidl_envelope_v2_t* envelope = encoder->template GetPtr<fidl_envelope_v2_t>(envelope_offset);
 
-      if (value->bytes.size() <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-        memcpy(envelope->inline_value, value->bytes.data(), value->bytes.size());
-        envelope->num_handles = static_cast<uint16_t>(value->handles.size());
-        envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-        EncodeUnknownDataContents(encoder, value, envelope_offset);
-        break;
-      }
-
-      envelope->num_bytes = static_cast<uint32_t>(value->bytes.size());
-      envelope->num_handles = static_cast<uint16_t>(value->handles.size());
-      envelope->flags = 0;
-      EncodeUnknownDataContents(encoder, value, encoder->Alloc(value->bytes.size()));
-      break;
-    }
+  if (value->bytes.size() <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+    memcpy(envelope->inline_value, value->bytes.data(), value->bytes.size());
+    envelope->num_handles = static_cast<uint16_t>(value->handles.size());
+    envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+    EncodeUnknownDataContents(encoder, value, envelope_offset);
+    return;
   }
+
+  envelope->num_bytes = static_cast<uint32_t>(value->bytes.size());
+  envelope->num_handles = static_cast<uint16_t>(value->handles.size());
+  envelope->flags = 0;
+  EncodeUnknownDataContents(encoder, value, encoder->Alloc(value->bytes.size()));
 }
 #endif
 
-template <typename T, size_t InlineSizeV1NoEE, size_t InlineSizeV2>
+template <typename T, size_t InlineSizeV2>
 struct EncodableCodingTraits {
-  static constexpr size_t inline_size_v1_no_ee = InlineSizeV1NoEE;
   static constexpr size_t inline_size_v2 = InlineSizeV2;
   template <class EncoderImpl>
   static void Encode(EncoderImpl* encoder, T* value, size_t offset,

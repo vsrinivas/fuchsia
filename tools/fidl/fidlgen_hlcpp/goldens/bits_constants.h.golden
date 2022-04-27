@@ -89,10 +89,6 @@ constexpr ::test::bitsconstants::BitsType Const1 =
 namespace fidl {
 template <>
 struct CodingTraits<::test::bitsconstants::BitsType> {
-  static constexpr size_t inline_size_old =
-      sizeof(::test::bitsconstants::BitsType);
-  static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::test::bitsconstants::BitsType);
   static constexpr size_t inline_size_v2 =
       sizeof(::test::bitsconstants::BitsType);
   static void Encode(

@@ -42,8 +42,7 @@ using BazPtr = ::std::unique_ptr<Baz>;
 namespace fidl {
 template <>
 struct CodingTraits<::test::transitivedependencies::Baz>
-    : public EncodableCodingTraits<::test::transitivedependencies::Baz, 4, 4> {
-};
+    : public EncodableCodingTraits<::test::transitivedependencies::Baz, 4> {};
 
 template <>
 struct IsMemcpyCompatible<::test::transitivedependencies::Baz>
