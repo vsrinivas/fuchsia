@@ -233,7 +233,8 @@ void Device::GetMmio(GetMmioRequestView request, GetMmioCompleter::Sync& complet
   std::scoped_lock guard{lock_};
   zx_status_t st = ReportCurrentResources();
   if (st != ZX_OK) {
-    completer.ReplyError(st);
+    zxlogf(ERROR, "Internal error evaluating resources: %s", zx_status_get_string(st));
+    completer.ReplyError(ZX_ERR_INTERNAL);
     return;
   }
 
@@ -248,7 +249,7 @@ void Device::GetMmio(GetMmioRequestView request, GetMmioCompleter::Sync& complet
       ((res.address_length & (zx_system_get_page_size() - 1)) != 0)) {
     zxlogf(ERROR, "acpi-bus: memory id=%d addr=0x%08x len=0x%x is not page aligned", request->index,
            res.base_address, res.address_length);
-    completer.ReplyError(ZX_ERR_NOT_FOUND);
+    completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
   }
 
@@ -257,7 +258,8 @@ void Device::GetMmio(GetMmioRequestView request, GetMmioCompleter::Sync& complet
   // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   st = zx_vmo_create_physical(get_root_resource(), res.base_address, size, &vmo);
   if (st != ZX_OK) {
-    completer.ReplyError(st);
+    zxlogf(ERROR, "Internal error creating VMO: %s", zx_status_get_string(st));
+    completer.ReplyError(ZX_ERR_INTERNAL);
     return;
   }
 
@@ -380,7 +382,8 @@ void Device::MapInterrupt(MapInterruptRequestView request, MapInterruptCompleter
   std::scoped_lock guard{lock_};
   zx_status_t st = ReportCurrentResources();
   if (st != ZX_OK) {
-    completer.ReplyError(st);
+    zxlogf(ERROR, "Internal error evaluating resources: %s", zx_status_get_string(st));
+    completer.ReplyError(ZX_ERR_INTERNAL);
     return;
   }
 
@@ -437,7 +440,8 @@ void Device::MapInterrupt(MapInterruptRequestView request, MapInterruptCompleter
   st = zx::interrupt::create(*zx::unowned_resource{get_root_resource()}, irq.pin,
                              ZX_INTERRUPT_REMAP_IRQ | mode, &out_irq);
   if (st != ZX_OK) {
-    completer.ReplyError(st);
+    zxlogf(ERROR, "Internal error creating interrupt: %s", zx_status_get_string(st));
+    completer.ReplyError(ZX_ERR_INTERNAL);
     return;
   }
 
@@ -448,7 +452,8 @@ void Device::GetPio(GetPioRequestView request, GetPioCompleter::Sync& completer)
   std::scoped_lock guard{lock_};
   zx_status_t st = ReportCurrentResources();
   if (st != ZX_OK) {
-    completer.ReplyError(st);
+    zxlogf(ERROR, "Internal error evaluating resources: %s", zx_status_get_string(st));
+    completer.ReplyError(ZX_ERR_INTERNAL);
     return;
   }
 
@@ -468,7 +473,8 @@ void Device::GetPio(GetPioRequestView request, GetPioCompleter::Sync& completer)
       zx::resource::create(*zx::unowned_resource{get_root_resource()}, ZX_RSRC_KIND_IOPORT,
                            res.base_address, res.address_length, name, 0, &out_pio);
   if (status != ZX_OK) {
-    completer.ReplyError(status);
+    zxlogf(ERROR, "Internal error creating resource: %s", zx_status_get_string(status));
+    completer.ReplyError(ZX_ERR_INTERNAL);
   } else {
     completer.ReplySuccess(std::move(out_pio));
   }
@@ -592,6 +598,7 @@ ACPI_STATUS Device::AddressSpaceHandler(uint32_t function, ACPI_PHYSICAL_ADDRESS
   auto client = ctx->device->address_handlers_.find(ctx->space_type);
   if (client == ctx->device->address_handlers_.end()) {
     zxlogf(ERROR, "No handler found for space %u", ctx->space_type);
+    return AE_NOT_FOUND;
   }
 
   switch (function) {
