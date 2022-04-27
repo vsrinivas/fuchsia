@@ -5,20 +5,21 @@
 import("//src/graphics/lib/compute/gn/build_rules.gni")
 
 #
-# Vulkan Bench unit tests
+# Vulkan and Spinel wrapper unittests
 #
-graphics_compute_unittests_package("bench-vk-unittests") {
+graphics_compute_unittests("spinel-vk-rs-unittests-simple") {
+  testonly = true
+  sources = [ "spinel_vk_rs_unittests.cc" ]
+  deps = [
+    "//src/graphics/lib/compute/spinel-vk-rs:spinel_vk_rs",
+    graphics_compute_gtest_target,
+  ]
+}
+
+graphics_compute_unittests_package("spinel-vk-rs-tests") {
   needs_vulkan = true
   testonly = true
-  sources = [ "bench_vk_unittests.cc" ]
-  deps = [ "${graphics_compute_dir}/tools/bench/platforms/vk:bench_vk_sources" ]
-
-  #
-  # Ensure that a host executable is built on Linux hosts
-  #
-  if (is_fuchsia && host_os == "linux") {
-    data_deps = [ ":bench-vk-unittests($host_toolchain)" ]
-  }
+  deps = [ ":spinel-vk-rs-unittests-simple" ]
 }
 
 #
@@ -28,5 +29,5 @@ graphics_compute_unittests_package("bench-vk-unittests") {
 #
 group("tests") {
   testonly = true
-  public_deps = [ ":bench-vk-unittests" ]
+  deps = [ ":spinel-vk-rs-tests" ]
 }

@@ -5,6 +5,7 @@
 # These rules are only used by the Fuchsia host build
 # (i.e. generating host executables for testing with the Fuchsia build system).
 
+import("//build/testing/environments.gni")
 import("build_settings.gni")
 
 _is_fuchsia_tree = defined(is_fuchsia_tree) && is_fuchsia_tree
@@ -62,6 +63,9 @@ template("graphics_compute_test_rule") {
     test_spec(_test_spec_target_name) {
       target = get_label_info(":${invoker.target_name}", "label_with_toolchain")
       path = "${root_out_dir}/${invoker.target_name}"
+      if (defined(invoker.needs_vulkan) && invoker.needs_vulkan) {
+        environments = []  # There are no host environments with Vulkan
+      }
     }
 
     _deps += [ ":${_test_spec_target_name}" ]
