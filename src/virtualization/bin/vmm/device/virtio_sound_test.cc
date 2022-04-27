@@ -2077,7 +2077,8 @@ TEST_F(VirtioSoundTest, PcmInputXferMultiple) {
   }
 }
 
-TEST_F(VirtioSoundTest, PcmInputXferThenRelease) {
+// TODO(fxbug.dev/99083): Re-enable this test once the flake is fixed.
+TEST_F(VirtioSoundTest, DISABLED_PcmInputXferThenRelease) {
   constexpr uint32_t kBufferBytes = 64;
   constexpr uint32_t kPeriodBytes = 8;
   uint32_t bytes_per_frame;
