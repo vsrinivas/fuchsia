@@ -465,7 +465,7 @@ fuchsia_component("metadata_unittest") {
 fuchsia_component("kernel_log_ptr_integration_test") {
   testonly = true
 
-  manifest = "meta/kernel_log_ptr_integration_test.cmx"
+  manifest = "meta/kernel_log_ptr_integration_test.cml"
 
   deps = [ ":kernel_log_ptr_integration_test_exe" ]
 }
