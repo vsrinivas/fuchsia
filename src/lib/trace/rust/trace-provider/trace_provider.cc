@@ -7,6 +7,7 @@
 #include <lib/trace-provider/provider.h>
 #include <zircon/compiler.h>
 
+#include <functional>
 #include <thread>
 
 __BEGIN_CDECLS

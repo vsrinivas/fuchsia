@@ -18,6 +18,7 @@
 #include <lib/sync/completion.h>
 #include <zircon/time.h>
 
+#include <functional>
 #include <mutex>
 
 // This is the function that timer users write to receive callbacks.

@@ -10,6 +10,7 @@
 #include <lib/fpromise/result.h>
 #include <zircon/types.h>
 
+#include <functional>
 #include <sstream>
 #include <string>
 #include <unordered_map>

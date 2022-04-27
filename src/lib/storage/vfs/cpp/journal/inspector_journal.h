@@ -5,6 +5,8 @@
 #ifndef SRC_LIB_STORAGE_VFS_CPP_JOURNAL_INSPECTOR_JOURNAL_H_
 #define SRC_LIB_STORAGE_VFS_CPP_JOURNAL_INSPECTOR_JOURNAL_H_
 
+#include <functional>
+
 #include <disk_inspector/common_types.h>
 
 #include "src/lib/storage/vfs/cpp/journal/format.h"
