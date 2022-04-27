@@ -448,9 +448,9 @@ composition (children), and execution information.
 
 Combined together, the component manifests in a Fuchsia build form a "component
 instance tree" that can be explored with host-side tooling (`scrutiny`) or even
-just by inspecting the source files.[^declarative-exception] There is also a
-`verify routes` plugin for `scrutiny` run automatically on CQ, that verifies all
-routes in the static topology are intact.
+just by inspecting the source files. There is also a `verify routes` plugin for
+`scrutiny` run automatically on CQ, that verifies all routes in the static
+topology are intact.[*](#declarative-exception)
 
 [Security policy allowlists][src-security-policy] are another part of the
 declarative API.
@@ -719,24 +719,18 @@ it's likely we'll decide to incorporate some of these features in the future.
 The framework (through component manager) gives access to some capabilities not
 specifically granted by the parent, for example:
 
--   [`fuchsia.component.Realm`][fidl-realm], which
-    allows a component to control the lifecycle of its
-    children.
--   Component-scoped event streams, which allow
-    components to receive lifecycle events about
-    children. - Access to its own package through
-    `/pkg`, which every component gets even without
-    having to request it
--   [`hub`][docs-hub], which allows its client to
-    traverse part of component topology rooted at a
-    particular realm, meaning that it can observe and
-    access the services of all components within that
-    realm.
+-   [`fuchsia.component.Realm`][fidl-realm], which allows a component to control
+    the lifecycle of its children.
+-   Component-scoped event streams, which allow components to receive lifecycle
+    events about children. - Access to its own package through `/pkg`, which
+    every component gets even without having to request it
+-   [`hub`][docs-hub], which allows its client to traverse part of component
+    topology rooted at a particular realm, meaning that it can observe and
+    access the services of all components within that realm.
 
-Nevertheless, thanks to the invariant that framework
-capabilities never provide access to capabilities from
-the containing environment, these capabilities do not
-violate [least privilege](#least-privilege),
+Nevertheless, thanks to the invariant that framework capabilities never provide
+access to capabilities from the containing environment, these capabilities do
+not violate [least privilege](#least-privilege),
 [no ambient authority](#no-ambient-authority), or
 [encapsulation](#encapsulation).
 
@@ -748,10 +742,12 @@ outgoing directory. However, these APIs are locked down and only usable by
 non-production or specially privileged components like `archivist` or
 `debug_data`.
 
-[^declarative-exception]: There is a limit to how much of the topology can be
-    statically validated. When the exploration reaches a
-    collection, in general it has to stop because the
-    contents of a collection are runtime determined.
+### Limitations of static validation of the topology {#declarative-exception}
+
+There is a limit to how much of the topology can be statically validated. When
+the exploration reaches a collection, in general it has to stop because the
+contents of a collection are runtime determined.
+
 [docs-concepts]: /docs/concepts/components
 [docs-development]: /docs/development/components
 [docs-eager]: /docs/concepts/components/v2/lifecycle#eager
