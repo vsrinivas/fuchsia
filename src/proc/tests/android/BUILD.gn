@@ -24,6 +24,10 @@ fuchsia_component("sh") {
   manifest = "meta/sh.cml"
 }
 
+fuchsia_component("adbd") {
+  manifest = "meta/adbd.cml"
+}
+
 resource("binder_smoke_test_bin") {
   sources = [
     "//prebuilt/starnix/tests/syscalls/linux-amd64/android/binder_smoke_test",
@@ -68,6 +72,7 @@ fuchsia_package("android_shell") {
 
 fuchsia_test_package("test_android_distro") {
   deps = [
+    ":adbd",
     ":init",
     ":sh",
   ]

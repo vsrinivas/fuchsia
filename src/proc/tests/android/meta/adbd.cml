@@ -1,0 +1,7 @@
+{
+    program: {
+        runner: "stardroid",
+        binary: "/system/apex/com.android.adbd/bin/adbd",
+        environ: [ "ADB_TRACE=all" ],
+    },
+}
