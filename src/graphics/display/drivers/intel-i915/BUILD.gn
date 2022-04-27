@@ -11,7 +11,10 @@ driver_bind_rules("intel-i915-bind") {
   rules = "intel-i915.bind"
   header_output = "intel-i915-bind.h"
   tests = "bind_tests.json"
-  deps = [ "//src/devices/bind/fuchsia.pci" ]
+  deps = [
+    "//src/devices/bind/fuchsia.driver.framework",
+    "//src/devices/bind/fuchsia.pci",
+  ]
 }
 
 source_set("common_srcs") {
@@ -75,6 +78,7 @@ fuchsia_driver_component("intel-i915") {
   colocate = true
   root_resource = true
   uses_profiles = true
+  uses_sysmem = true
 }
 
 test("intel-i915-test") {

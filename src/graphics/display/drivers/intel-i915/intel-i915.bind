@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+using fuchsia.driver.framework;
 using fuchsia.pci;
 
 fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE;
@@ -37,4 +38,9 @@ accept fuchsia.BIND_PCI_DID {
   0x591d,
   0x3ea5,
 }
-fuchsia.BIND_COMPOSITE == 1;
+
+if fuchsia.BIND_COMPOSITE == 1 {
+  true;
+} else {
+  fuchsia.driver.framework.dfv2 == true;
+}
