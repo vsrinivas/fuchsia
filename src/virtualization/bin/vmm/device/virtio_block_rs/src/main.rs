@@ -9,6 +9,7 @@ mod block_device;
 mod file_backend;
 #[cfg(test)]
 mod memory_backend;
+mod qcow_backend;
 mod remote_backend;
 mod wire;
 
@@ -16,10 +17,11 @@ use {
     crate::backend::*,
     crate::block_device::*,
     crate::file_backend::FileBackend,
+    crate::qcow_backend::QcowBackend,
     crate::remote_backend::RemoteBackend,
     anyhow::{anyhow, Context},
     fidl::endpoints::RequestStream,
-    fidl_fuchsia_virtualization::BlockFormat,
+    fidl_fuchsia_virtualization::{BlockFormat, BlockMode},
     fidl_fuchsia_virtualization_hardware::VirtioBlockRequestStream,
     fuchsia_component::server,
     fuchsia_syslog::{self as syslog},
@@ -30,6 +32,7 @@ use {
 
 async fn create_backend(
     format: BlockFormat,
+    mode: BlockMode,
     channel: zx::Channel,
 ) -> Result<Box<dyn BlockBackend>, anyhow::Error> {
     match format {
@@ -37,11 +40,17 @@ async fn create_backend(
             let file_backend = FileBackend::new(channel)?;
             Ok(Box::new(file_backend))
         }
+        BlockFormat::Qcow => {
+            if let BlockMode::ReadWrite = mode {
+                Err(anyhow!("Writes to QCOW files is not supported"))
+            } else {
+                Ok(Box::new(QcowBackend::new(channel)?))
+            }
+        }
         BlockFormat::Block => {
             let remote_backend = RemoteBackend::new(channel).await?;
             Ok(Box::new(remote_backend))
         }
-        _ => Err(anyhow!("Unsupported block format {:?}", format)),
     }
 }
 
@@ -59,7 +68,7 @@ async fn run_virtio_block(
     // Prepare the device builder
     let (device_builder, guest_mem) = machina_virtio_device::from_start_info(start_info)?;
 
-    let backend = create_backend(format, client).await?;
+    let backend = create_backend(format, mode, client).await?;
     let block_device = BlockDevice::new(id, mode.into(), backend).await?;
     responder.send(
         block_device.attrs().capacity.to_bytes().unwrap(),

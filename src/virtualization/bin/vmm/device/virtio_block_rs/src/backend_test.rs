@@ -65,7 +65,7 @@ pub trait BackendTest {
     }
 }
 
-fn check_range<'a>(range: &DeviceRange<'a>, color: u8) {
+pub fn check_range<'a>(range: &DeviceRange<'a>, color: u8) {
     let actual_data: &[u8] =
         unsafe { std::slice::from_raw_parts(range.try_ptr().unwrap(), range.len()) };
     actual_data.iter().for_each(|c| assert_eq!(*c, color));
