@@ -312,9 +312,12 @@ where
         .await
         .context("determine version for package fetching")?;
 
-    // TODO(fxbug.dev/98529): Handle the non-standard name for terminal.qemu-arm64.
+    // TODO(fxbug.dev/98529): Handle the non-standard name for terminal.*.
     let file_name = match product_bundle.name.as_str() {
         "terminal.qemu-arm64" => String::from("qemu-arm64.tar.gz"),
+        "terminal.qemu-x64" => String::from("qemu-x64.tar.gz"),
+        "terminal.x64" => String::from("generic-x64.tar.gz"),
+        "terminal.arm64" => String::from("generic-arm64.tar.gz"),
         _ => format!("{}-release.tar.gz", product_bundle.name),
     };
     let package_url = match version {
