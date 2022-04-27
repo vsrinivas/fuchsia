@@ -87,11 +87,6 @@ fuchsia_structured_config_values("sampler-prod-config") {
   cm_label = ":sampler-manifest"
 }
 
-fuchsia_structured_config_values("sampler-test-config") {
-  values_source = "configs/integration-test.json5"
-  cm_label = ":sampler-manifest"
-}
-
 fuchsia_structured_config_rust_lib("sampler-component-config") {
   cm_label = ":sampler-manifest"
 }

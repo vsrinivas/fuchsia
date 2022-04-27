@@ -66,6 +66,12 @@ fuchsia_unittest_component("sampler-integration-test") {
   deps = [ ":integration-bin" ]
 }
 
+fuchsia_structured_config_values("sampler-test-config") {
+  values_source = "component_configs/integration-test.json5"
+  component_name = "sampler"
+  cm_label = "//src/diagnostics/sampler:sampler-manifest"
+}
+
 resource("validation-sampler-resources") {
   sources = [
     "configs/reboot_required_config.json",
@@ -93,13 +99,13 @@ fuchsia_test_package("sampler-integration-tests") {
     ":sampler-integration-test",
   ]
   deps = [
+    ":sampler-test-config",
     ":validation-fire-components",
     ":validation-fire-projects",
     ":validation-sampler-resources",
     "//src/cobalt/bin/testing/mock_cobalt:component_v2",
     "//src/diagnostics/archivist:archivist-for-embedding-v2",
     "//src/diagnostics/sampler:sampler-component",
-    "//src/diagnostics/sampler:sampler-test-config",
     "//src/diagnostics/sampler/tests/test_component:single_counter_test_component",
   ]
 }
