@@ -46,7 +46,14 @@ acpi::status<> Manager::DiscoverDevices() {
                                 }
                                 auto status = DiscoverDevice(handle);
                                 if (status.is_error()) {
-                                  return status.take_error();
+                                  auto path = acpi_->GetPath(handle).value_or("(get path failed)");
+                                  zxlogf(WARNING,
+                                         "Failed to discover device '%s': %d. Any children will "
+                                         "not be enumerated, the system may not function fully.",
+                                         path.data(), status.error_value());
+                                  // We failed to enumerate this device, so we don't enumerate any
+                                  // of its children.
+                                  ignored_depth = depth;
                                 }
                                 if (status.value()) {
                                   // This device is not present, so we should not enumerate its
