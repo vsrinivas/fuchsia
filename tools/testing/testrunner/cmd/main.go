@@ -238,7 +238,7 @@ var (
 	serialTester = testrunner.NewFuchsiaSerialTester
 )
 
-var ffxInstance = func(ctx context.Context, ffxPath, dir string, env []string, target, sshKey, outputDir string) (testrunner.FFXInstance, error) {
+var ffxInstance = func(ctx context.Context, ffxPath, dir string, env []string, addr net.IPAddr, target, sshKey, outputDir string) (testrunner.FFXInstance, error) {
 	ffx, err := func() (testrunner.FFXInstance, error) {
 		var ffx *ffxutil.FFXInstance
 		var err error
@@ -260,6 +260,10 @@ var ffxInstance = func(ctx context.Context, ffxPath, dir string, env []string, t
 		// Print the list of available targets for debugging purposes.
 		// TODO(ihuh): Remove when not needed.
 		if err := ffx.List(ctx); err != nil {
+			return ffx, err
+		}
+		// Add the target address in order to skip MDNS discovery.
+		if err := ffx.Run(ctx, "target", "add", addr.String()); err != nil {
 			return ffx, err
 		}
 		// Wait for the target to be available to interact with ffx.
@@ -303,7 +307,7 @@ func execute(
 			ffxPath = flags.ffxPath
 		}
 		ffx, err := ffxInstance(
-			ctx, ffxPath, flags.localWD, localEnv, os.Getenv(botanistconstants.NodenameEnvKey),
+			ctx, ffxPath, flags.localWD, localEnv, addr, os.Getenv(botanistconstants.NodenameEnvKey),
 			sshKeyFile, outputs.OutDir)
 		if err != nil {
 			return err

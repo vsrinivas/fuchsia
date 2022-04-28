@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/xeipuuv/gojsonpointer"
 	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
@@ -28,14 +29,11 @@ func newIsolatedFFXConfig(dir string) *FFXConfig {
 		config: make(map[string]interface{}),
 		env:    buildConfigEnv(socketPath),
 	}
-	config.Set("overnet", map[string]string{"socket": socketPath})
-	config.Set(
-		"log",
-		map[string]interface{}{"dir": []string{filepath.Join(dir, "logs")}},
-	)
-	config.Set("test", map[string][]string{"output_path": {filepath.Join(dir, "saved_test_runs")}})
-	config.Set("fastboot", map[string]map[string]bool{"usb": {"disabled": true}})
-	config.Set("ffx", map[string]map[string]bool{"analytics": {"disabled": true}})
+	config.SetJsonPointer("/overnet/socket", socketPath)
+	config.SetJsonPointer("/log/dir", []string{filepath.Join(dir, "logs")})
+	config.SetJsonPointer("/test/output_path", []string{filepath.Join(dir, "saved_test_runs")})
+	config.SetJsonPointer("/fastboot/usb/disabled", true)
+	config.SetJsonPointer("/ffx/analytics/disabled", true)
 	return config
 }
 
@@ -65,15 +63,40 @@ func (c *FFXConfig) Set(key string, value interface{}) {
 }
 
 // SetJsonPointer sets the config value at the RFC 6901 JSON Pointer provided.
-func (c *FFXConfig) SetJsonPointer(pointer string, value interface{}) error {
+func (c *FFXConfig) SetJsonPointer(pointer string, value interface{}) {
+	if p, err := gojsonpointer.NewJsonPointer(pointer); err == nil {
+		if _, err := p.Set(c.config, value); err == nil {
+			return
+		}
+	}
+	// The config field might not have been set yet, so go
+	// through the keys in the pointer and set the values
+	// where missing.
+	config := c.config
+	keys := strings.Split(strings.Trim(pointer, "/"), "/")
+	for i, key := range keys {
+		if i == len(keys)-1 {
+			config[key] = value
+			break
+		}
+		if _, ok := config[key]; !ok {
+			config[key] = make(map[string]interface{})
+		}
+		config = config[key].(map[string]interface{})
+	}
+}
+
+// GetJsonPointer gets the config value at the RFC 6901 JSON Pointer provided.
+func (c *FFXConfig) GetJsonPointer(pointer string) interface{} {
 	p, err := gojsonpointer.NewJsonPointer(pointer)
 	if err != nil {
-		return err
+		return nil
 	}
-	if _, err := p.Set(c.config, value); err != nil {
-		return err
+	value, _, err := p.Get(c.config)
+	if err != nil {
+		return nil
 	}
-	return nil
+	return value
 }
 
 // ToFile writes the config to a file.

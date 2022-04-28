@@ -9,11 +9,26 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 )
+
+func diffConfig(config1, config2 map[string]interface{}) string {
+	return cmp.Diff(
+		config1,
+		config2,
+		// Without this, map[string]interface{} might compare differently to e.g.
+		// map[string](map[string]interface{}) even when they are semantically equivalent.
+		cmp.Transformer("into_json", func(m map[string]interface{}) string {
+			b, err := json.MarshalIndent(m, "", "  ")
+			if err != nil {
+				panic(err)
+			}
+			return string(b)
+		}),
+	)
+}
 
 func TestFFXConfig(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -24,8 +39,12 @@ func TestFFXConfig(t *testing.T) {
 		t.Errorf("want socket at %s, got: %s", expectedSocket, config.socket)
 	}
 	config.Set("key", "value")
-	if err := config.SetJsonPointer("/log/level", "Trace"); err != nil {
-		t.Errorf("config.SetJsonPointer(%q, %q) = %s", "/log/level", "Trace", err)
+	if logLevel := config.GetJsonPointer("/log/level"); logLevel != nil {
+		t.Errorf("log level is unexpectedly already set: %v", logLevel)
+	}
+	config.SetJsonPointer("/log/level", "Trace")
+	if logLevel := config.GetJsonPointer("/log/level"); logLevel != "Trace" {
+		t.Errorf("GetJsonPointer returned %v, want Trace", logLevel)
 	}
 	expectedConfig := map[string]interface{}{
 		"overnet": map[string]string{
@@ -46,7 +65,7 @@ func TestFFXConfig(t *testing.T) {
 		},
 		"key": "value",
 	}
-	if diff := cmp.Diff(expectedConfig, config.config); diff != "" {
+	if diff := diffConfig(expectedConfig, config.config); diff != "" {
 		t.Errorf("Got wrong config (-want +got):\n%s", diff)
 	}
 	containsSocketPath := false
@@ -67,20 +86,7 @@ func TestFFXConfig(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to read config from file %q: %s", configFilepath, err)
 	}
-	if diff := cmp.Diff(
-		config,
-		configFromFile,
-		cmp.Exporter(func(ty reflect.Type) bool { return ty == reflect.TypeOf(*config) }),
-		// Without this, map[string]interface{} might compare differently to e.g.
-		// map[string](map[string]interface{}) even when they are semantically equivalent.
-		cmp.Transformer("into_json", func(m map[string]interface{}) string {
-			b, err := json.MarshalIndent(m, "", "  ")
-			if err != nil {
-				panic(err)
-			}
-			return string(b)
-		}),
-	); diff != "" {
+	if diff := diffConfig(config.config, configFromFile.config); diff != "" {
 		t.Errorf("config != configFromFile (-config +configFromFile):\n%s", diff)
 	}
 	if err := config.Close(); err != nil {

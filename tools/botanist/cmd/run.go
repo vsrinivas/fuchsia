@@ -285,6 +285,9 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		if err := ffx.SetLogLevel(ffxutil.Trace); err != nil {
 			return err
 		}
+		if err := ffx.SetConfigJsonPointer("/discovery/mdns/enabled", false); err != nil {
+			return err
+		}
 	}
 
 	for _, t := range targetSlice {

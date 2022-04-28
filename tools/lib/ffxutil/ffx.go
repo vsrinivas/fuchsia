@@ -74,13 +74,13 @@ func NewFFXInstance(
 		return nil, nil
 	}
 	config := newIsolatedFFXConfig(outputDir)
-	config.Set("target", map[string]string{"default": target})
+	config.SetJsonPointer("/target/default", target)
 	sshKey, err := filepath.Abs(sshKey)
 	if err != nil {
 		config.Close()
 		return nil, err
 	}
-	config.Set("ssh", map[string][]string{"priv": {sshKey}})
+	config.SetJsonPointer("/ssh/priv", []string{sshKey})
 	config.Set("test", map[string]bool{
 		"experimental_structured_output": true,
 		"experimental_json_input":        true,
@@ -128,7 +128,12 @@ func (f *FFXInstance) SetStdoutStderr(stdout, stderr io.Writer) {
 
 // SetLogLevel sets the log-level in the ffx instance's associated config.
 func (f *FFXInstance) SetLogLevel(level LogLevel) error {
-	levelStr := string(level)
+	return f.SetConfigJsonPointer(logLevelJsonPointer, string(level))
+}
+
+// SetConfigJsonPointer sets a field in the ffx instance's associated config and
+// rewrites the config file.
+func (f *FFXInstance) SetConfigJsonPointer(pointer string, value interface{}) error {
 	if f.Config == nil {
 		config, err := configFromFile(f.ConfigPath)
 		if err != nil {
@@ -136,9 +141,7 @@ func (f *FFXInstance) SetLogLevel(level LogLevel) error {
 		}
 		f.Config = config
 	}
-	if err := f.Config.SetJsonPointer(logLevelJsonPointer, levelStr); err != nil {
-		return err
-	}
+	f.Config.SetJsonPointer(pointer, value)
 	return f.Config.ToFile(f.ConfigPath)
 }
 

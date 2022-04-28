@@ -89,6 +89,27 @@ func TestFFXInstance(t *testing.T) {
 
 	assertRunsExpectedCmd(ffx.RunWithTarget(ctx, "random", "cmd", "with", "args"), stdout, ffx.ConfigPath, "--target target random cmd with args")
 
+	config := make(map[string]interface{})
+	for k, v := range ffx.Config.config {
+		config[k] = v
+	}
+	if err := ffx.SetConfigJsonPointer("/key1/key2/key3", "value"); err != nil {
+		t.Errorf("failed to set key1.key2.key3=value in config: %s", err)
+	}
+	if diff := diffConfig(config, ffx.Config.config); diff == "" {
+		t.Errorf("failed to update config")
+	}
+	fileConfig, err := configFromFile(ffx.ConfigPath)
+	if err != nil {
+		t.Errorf("failed to get config from file: %s", err)
+	}
+	if diff := diffConfig(fileConfig.config, ffx.Config.config); diff != "" {
+		t.Errorf("Got wrong config (-got +want):\n%s", diff)
+	}
+	if fileConfig.GetJsonPointer("/key1/key2/key3") != "value" {
+		t.Errorf("failed to set key1.key2.key3=value in config: %v", fileConfig)
+	}
+
 	assertRunsExpectedCmd(ffx.Stop(), stdout, ffx.ConfigPath, "daemon stop")
 	if _, err := os.Stat(ffx.Config.socket); !os.IsNotExist(err) {
 		t.Errorf("failed to remove socket %s: %s", ffx.Config.socket, err)
