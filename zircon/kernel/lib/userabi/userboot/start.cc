@@ -13,6 +13,7 @@
 #include <lib/zx/process.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/thread.h>
+#include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <sys/param.h>
@@ -23,6 +24,7 @@
 
 #include <array>
 #include <climits>
+#include <cstddef>
 #include <cstring>
 #include <optional>
 #include <utility>
@@ -40,26 +42,26 @@ constexpr const char kStackVmoName[] = "userboot-child-initial-stack";
 
 using namespace userboot;
 
-[[noreturn]] void do_powerctl(const zx::debuglog& log, const zx::resource& power_rsrc,
-                              uint32_t reason) {
+[[noreturn]] void DoPowerctl(const zx::debuglog& log, const zx::resource& power_rsrc,
+                             uint32_t reason) {
   const char* r_str = (reason == ZX_SYSTEM_POWERCTL_SHUTDOWN) ? "poweroff" : "reboot";
   if (reason == ZX_SYSTEM_POWERCTL_REBOOT) {
     printl(log, "Waiting 3 seconds...");
-    zx_nanosleep(zx_deadline_after(ZX_SEC(3u)));
+    zx::nanosleep(zx::deadline_after(zx::sec(3)));
   }
 
   printl(log, "Process exited.  Executing \"%s\".", r_str);
-  zx_system_powerctl(power_rsrc.get(), reason, NULL);
+  zx_system_powerctl(power_rsrc.get(), reason, nullptr);
   printl(log, "still here after %s!", r_str);
   while (true)
     __builtin_trap();
 }
 
-void load_child_process(const zx::debuglog& log, const Options& opts, std::string_view filename,
-                        Bootfs& bootfs, const zx::vmo& vdso_vmo, const zx::process& proc,
-                        const zx::vmar& vmar, const zx::thread& thread, const zx::channel& to_child,
-                        zx_vaddr_t* entry, zx_vaddr_t* vdso_base, size_t* stack_size,
-                        zx::channel* loader_svc) {
+void LoadChildProcess(const zx::debuglog& log, const Options& opts, std::string_view filename,
+                      Bootfs& bootfs, const zx::vmo& vdso_vmo, const zx::process& proc,
+                      const zx::vmar& vmar, const zx::thread& thread, const zx::channel& to_child,
+                      zx_vaddr_t* entry, zx_vaddr_t* vdso_base, size_t* stack_size,
+                      zx::channel* loader_svc) {
   // Examine the bootfs image and find the requested file in it.
   // This will handle a PT_INTERP by doing a second lookup in bootfs.
   *entry = elf_load_bootfs(log, bootfs, opts.root, proc, vmar, thread, filename, to_child,
@@ -75,9 +77,9 @@ void load_child_process(const zx::debuglog& log, const Options& opts, std::strin
 // allocating the initial stack) stay out of this area, and then destroyed.
 // The process's own allocations can then use the full address space; if
 // it's using a sanitizer, it will set up its shadow memory first thing.
-zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root_vmar) {
+zx::vmar ReserveLowAddressSpace(const zx::debuglog& log, const zx::vmar& root_vmar) {
   zx_info_vmar_t info;
-  check(log, root_vmar.get_info(ZX_INFO_VMAR, &info, sizeof(info), NULL, NULL),
+  check(log, root_vmar.get_info(ZX_INFO_VMAR, &info, sizeof(info), nullptr, nullptr),
         "zx_object_get_info failed on child root VMAR handle");
   zx::vmar vmar;
   uintptr_t addr;
@@ -92,8 +94,8 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
   return vmar;
 }
 
-void parse_next_process_arguments(const zx::debuglog& log, const Options& opts, uint32_t& argc,
-                                  char* argv) {
+void ParseNextProcessArguments(const zx::debuglog& log, const Options& opts, uint32_t& argc,
+                               char* argv) {
   // Extra byte for null terminator.
   size_t required_size = opts.next.size() + 1;
   if (required_size > kProcessArgsMaxBytes) {
@@ -119,7 +121,7 @@ void parse_next_process_arguments(const zx::debuglog& log, const Options& opts, 
   argv[index] = '\0';
 }
 
-std::string_view get_userboot_next_filename(const Options& opts) {
+std::string_view GetUserbootNextFilename(const Options& opts) {
   return opts.next.substr(0, opts.next.find_first_of('+'));
 }
 
@@ -130,7 +132,7 @@ std::string_view get_userboot_next_filename(const Options& opts) {
 // 4. Load up a channel with the zx_proc_args_t message for the child.
 // 5. Start the child process running.
 // 6. Optionally, wait for it to exit and then shut down.
-[[noreturn]] void bootstrap(zx::channel channel) {
+[[noreturn]] void Bootstrap(zx::channel channel) {
   // Before we've gotten the root resource and created the debuglog,
   // errors will be reported via zx_debug_write.
   zx::debuglog log;
@@ -145,7 +147,7 @@ std::string_view get_userboot_next_filename(const Options& opts) {
   constexpr uint32_t kChildHandleCount = kHandleCount + 3;
 
   // This is the processargs message the child will receive.
-  struct child_message_layout {
+  struct ChildMessageLayout {
     zx_proc_args_t pargs{};
     char args[kProcessArgsMaxBytes];
     uint32_t info[kChildHandleCount];
@@ -198,12 +200,12 @@ std::string_view get_userboot_next_filename(const Options& opts) {
   // Fill in the child message header.
   child_message.pargs.protocol = ZX_PROCARGS_PROTOCOL;
   child_message.pargs.version = ZX_PROCARGS_VERSION;
-  child_message.pargs.args_off = offsetof(struct child_message_layout, args),
-  child_message.pargs.handle_info_off = offsetof(child_message_layout, info);
+  child_message.pargs.args_off = offsetof(ChildMessageLayout, args),
+  child_message.pargs.handle_info_off = offsetof(ChildMessageLayout, info);
 
   // Fill in any '+' separated arguments provided by `userboot.next`. If arguments are longer than
   // kProcessArgsMaxBytes, this function will fail process creation.
-  parse_next_process_arguments(log, opts, child_message.pargs.args_num, child_message.args);
+  ParseNextProcessArguments(log, opts, child_message.pargs.args_num, child_message.args);
 
   // Fill in the handle info table.
   child_message.info[kBootfsVmo] = PA_HND(PA_VMO_BOOTFS, 0);
@@ -240,7 +242,7 @@ std::string_view get_userboot_next_filename(const Options& opts) {
   handles[kProcSelf] = ZX_HANDLE_INVALID;
 
   // Strips any arguments passed along with the filename to userboot.next.
-  std::string_view filename = get_userboot_next_filename(opts);
+  std::string_view filename = GetUserbootNextFilename(opts);
 
   zx::process proc;
   {
@@ -279,7 +281,7 @@ std::string_view get_userboot_next_filename(const Options& opts) {
     check(log, status, "zx_process_create");
 
     // Squat on some address space before we start loading it up.
-    zx::vmar reserve_vmar{reserve_low_address_space(log, vmar)};
+    zx::vmar reserve_vmar{ReserveLowAddressSpace(log, vmar)};
 
     // Create the initial thread in the new process
     zx::thread thread;
@@ -291,9 +293,8 @@ std::string_view get_userboot_next_filename(const Options& opts) {
     zx_vaddr_t entry, vdso_base;
     size_t stack_size = ZIRCON_DEFAULT_STACK_SIZE;
     zx::channel loader_service_channel;
-    load_child_process(log, opts, filename, bootfs, *zx::unowned_vmo{handles[kFirstVdso]}, proc,
-                       vmar, thread, to_child, &entry, &vdso_base, &stack_size,
-                       &loader_service_channel);
+    LoadChildProcess(log, opts, filename, bootfs, *zx::unowned_vmo{handles[kFirstVdso]}, proc, vmar,
+                     thread, to_child, &entry, &vdso_base, &stack_size, &loader_service_channel);
 
     // Allocate the stack for the child.
     uintptr_t sp;
@@ -331,7 +332,7 @@ std::string_view get_userboot_next_filename(const Options& opts) {
     for (const auto& h : handles) {
       zx_info_handle_basic_t info;
       status = zx_object_get_info(h, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-      check(log, status, "bad handle %d is %x", (int)(&h - handles.begin()), h);
+      check(log, status, "bad handle %d is %x", static_cast<int>(&h - handles.begin()), h);
     }
 
     // Now send the bootstrap message.  This transfers away all the handles
@@ -386,10 +387,10 @@ std::string_view get_userboot_next_filename(const Options& opts) {
       zx_process_exit(0);
     case Epilogue::kRebootAfterChildExit:
       wait_till_child_exits();
-      do_powerctl(log, power_resource, ZX_SYSTEM_POWERCTL_REBOOT);
+      DoPowerctl(log, power_resource, ZX_SYSTEM_POWERCTL_REBOOT);
     case Epilogue::kPowerOffAfterChildExit:
       wait_till_child_exits();
-      do_powerctl(log, power_resource, ZX_SYSTEM_POWERCTL_SHUTDOWN);
+      DoPowerctl(log, power_resource, ZX_SYSTEM_POWERCTL_SHUTDOWN);
   }
 
   __UNREACHABLE;
@@ -399,4 +400,4 @@ std::string_view get_userboot_next_filename(const Options& opts) {
 
 // This is the entry point for the whole show, the very first bit of code
 // to run in user mode.
-extern "C" [[noreturn]] void _start(zx_handle_t arg) { bootstrap(zx::channel{arg}); }
+extern "C" [[noreturn]] void _start(zx_handle_t arg) { Bootstrap(zx::channel{arg}); }
