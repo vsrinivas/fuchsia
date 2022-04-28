@@ -122,20 +122,19 @@ TEST(svg, svg_parse_failure_color_name)
 
 TEST(svg, svg_parse_success_arc_flags)
 {
-  char const doc[] = {
-    // all four cases of flags: 00, 01, 10, 11
-    "<svg xmlns=\"http://www.w3.org/2000/svg\">\n"
-    "  <!-- no whitespace before flags -->\n"
-    "  <path d=\"M1,1A1,1 45 001,1\"/>"
-    "  <path d=\"M1,1A1,1 45 011,1\"/>"
-    "  <path d=\"M1,1A1,1 45 101,1\"/>"
-    "  <path d=\"M1,1A1,1 45 111,1\"/>"
-    "  <!-- leading whitespace before flags -->\n"
-    "  <path d=\"M1,1A1,1 45, 0, 0, 1,1\"/>"
-    "  <path d=\"M1,1A1,1 45, 0, 1, 1,1\"/>"
-    "  <path d=\"M1,1A1,1 45, 1, 0, 1,1\"/>"
-    "  <path d=\"M1,1A1,1 45, 1, 1, 1,1\"/>"
-    "</svg>\n"
+  char const doc[] = { // all four cases of flags: 00, 01, 10, 11
+                       "<svg xmlns=\"http://www.w3.org/2000/svg\">\n"
+                       "  <!-- no whitespace before flags -->\n"
+                       "  <path d=\"M1,1A1,1 45 001,1\"/>"
+                       "  <path d=\"M1,1A1,1 45 011,1\"/>"
+                       "  <path d=\"M1,1A1,1 45 101,1\"/>"
+                       "  <path d=\"M1,1A1,1 45 111,1\"/>"
+                       "  <!-- leading whitespace before flags -->\n"
+                       "  <path d=\"M1,1A1,1 45, 0, 0, 1,1\"/>"
+                       "  <path d=\"M1,1A1,1 45, 0, 1, 1,1\"/>"
+                       "  <path d=\"M1,1A1,1 45, 1, 0, 1,1\"/>"
+                       "  <path d=\"M1,1A1,1 45, 1, 1, 1,1\"/>"
+                       "</svg>\n"
   };
 
   struct svg * svg = svg_parse(doc, false);

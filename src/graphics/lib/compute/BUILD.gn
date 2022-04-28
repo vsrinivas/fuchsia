@@ -14,7 +14,7 @@ group("compute") {
     "forma",
     "rive-rs",
     "spinel-vk-rs",
-    "spinel2/platforms/vk",
+    "spinel/platforms/vk",
     "surpass",
     "svg",
   ]
@@ -38,7 +38,7 @@ group("tests") {
   #
   public_deps += [
     "spinel-vk-rs:tests",
-    "spinel2/platforms/vk/tests/spinel_vk_tests",
+    "spinel/platforms/vk/tests/spinel_vk_tests",
     "tools/bench/platforms/vk/tests",
   ]
 }

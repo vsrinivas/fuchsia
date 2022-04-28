@@ -34,7 +34,7 @@ readonly VULKAN_DIR=$FUCHSIA_DIR/prebuilt/third_party/vulkansdk/linux/x86_64/inc
 #
 # Import <spinel/*.h>
 #
-readonly SPINEL_DIR=$COMPUTE_DIR/spinel2/include
+readonly SPINEL_DIR=$COMPUTE_DIR/spinel/include
 cd $SPINEL_DIR
 for header in $(find spinel -type f); do
   echo "#include <${header}>" >> $SCRIPT_DIR/wrapper.h
@@ -43,7 +43,7 @@ done
 #
 # Import <spinel/platforms/vk/*.h>
 #
-readonly SPINEL_VK_DIR=$COMPUTE_DIR/spinel2/platforms/vk/include
+readonly SPINEL_VK_DIR=$COMPUTE_DIR/spinel/platforms/vk/include
 cd $SPINEL_VK_DIR
 for header in $(find spinel -type f); do
   echo "#include <${header}>" >> $SCRIPT_DIR/wrapper.h

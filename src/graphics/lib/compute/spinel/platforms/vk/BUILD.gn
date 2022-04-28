@@ -1,0 +1,101 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/compute/gn/build_rules.gni")
+
+#
+# Spinel configs
+#
+config("config") {
+  include_dirs = [ "include" ]
+}
+
+#
+# Enables annotation of relevant Vulkan objects using
+# VK_EXT_debug_utils
+#
+config("config_debug_utils") {
+  defines = [ "SPN_VK_ENABLE_DEBUG_UTILS" ]
+}
+
+#
+# Disables both Fuchsia tracing and SPN_VK_ENABLE_DEBUG_UTILS
+#
+config("config_disable_trace") {
+  defines = [ "SPN_VK_DISABLE_TRACE" ]
+}
+
+#
+# Spinel headers
+#
+source_set("headers") {
+  public_configs = [
+    ":config",
+    ":config_debug_utils",
+  ]
+  public = [
+    "include/spinel/platforms/vk/spinel_vk.h",
+    "include/spinel/platforms/vk/spinel_vk_types.h",
+  ]
+  sources = [
+    "include/spinel/platforms/vk/spinel_vk.h",
+    "include/spinel/platforms/vk/spinel_vk_types.h",
+  ]
+}
+
+#
+# Spinel sources
+#
+source_set("vk") {
+  public_configs = [ ":config_disable_trace" ]
+  sources = [
+    "allocator.c",
+    "allocator.h",
+    "block_pool.c",
+    "block_pool.h",
+    "composition_impl.c",
+    "composition_impl.h",
+    "deps.c",
+    "deps.h",
+    "device.c",
+    "device.h",
+    "expand_x.h",
+    "handle_pool.c",
+    "handle_pool.h",
+    "path_builder_impl.c",
+    "path_builder_impl.h",
+    "queue_pool.c",
+    "queue_pool.h",
+    "raster_builder_impl.c",
+    "raster_builder_impl.h",
+    "ring.c",
+    "ring.h",
+    "shaders/pipelines.h",
+    "shaders/push.h",
+    "styling_impl.c",
+    "styling_impl.h",
+    "swapchain_impl.c",
+    "swapchain_impl.h",
+    "target.h",
+    "target_instance.c",
+    "target_instance.h",
+    "target_requirements.c",
+    "target_requirements.h",
+  ]
+  include_dirs = [ "${graphics_compute_dir}/spinel" ]
+  public_deps = [
+    ":headers",
+    "${graphics_compute_dir}/spinel:spinel",
+    graphics_compute_vulkan_loader_target,
+  ]
+  deps = [
+    "${graphics_compute_dir}/common",
+    "${graphics_compute_dir}/common/vk",
+    "${graphics_compute_dir}/radix_sort/platforms/vk",
+    "${graphics_compute_dir}/tools/target_archive:target_archive_headers",
+  ]
+  if (is_fuchsia) {
+    deps += [ "//zircon/system/ulib/trace" ]
+  }
+}

@@ -17,7 +17,7 @@ source_set("spinel_vk_rs_headers") {
   public_configs = [ ":config" ]
   public = [ "spinel_vk_rs.h" ]
   sources = [ "spinel_vk_rs.h" ]
-  public_deps = [ "//src/graphics/lib/compute/spinel2:headers" ]
+  public_deps = [ "//src/graphics/lib/compute/spinel:headers" ]
 }
 
 #
@@ -32,8 +32,8 @@ source_set("spinel_vk_rs") {
   deps = [
     "//src/graphics/lib/compute/common",
     "//src/graphics/lib/compute/common/vk",
-    "//src/graphics/lib/compute/spinel2/platforms/vk:headers",
-    "//src/graphics/lib/compute/spinel2/platforms/vk/ext/find_target",
+    "//src/graphics/lib/compute/spinel/platforms/vk:headers",
+    "//src/graphics/lib/compute/spinel/platforms/vk/ext/find_target",
   ]
 }
 
@@ -73,7 +73,7 @@ rustc_library("spinel-vk-rs") {
 #
 action("spinel_c_api_header_hashes") {
   script = "${graphics_compute_dir}/scripts/hash_dir.py"
-  spinel_headers = "${graphics_compute_dir}/spinel2/include"
+  spinel_headers = "${graphics_compute_dir}/spinel/include"
   sources = [ "spinel.c-api" ]
   inputs = [
     "spinel_vk_rs.h",

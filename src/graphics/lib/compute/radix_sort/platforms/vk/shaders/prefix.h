@@ -109,22 +109,22 @@ rs_prefix(RS_PREFIX_ARGS)
   // Downsweep 0
   //
   [[unroll]] for (uint32_t ii = 0; ii < RS_H_COMPONENTS; ii++)
-  {
-    const uint32_t h = RS_PREFIX_LOAD(ii * RS_WORKGROUP_SIZE);
+    {
+      const uint32_t h = RS_PREFIX_LOAD(ii * RS_WORKGROUP_SIZE);
 
-    const uint32_t h_inc = subgroupInclusiveAdd(h);
+      const uint32_t h_inc = subgroupInclusiveAdd(h);
 
-    const uint32_t smem_idx = (ii * RS_WORKGROUP_SUBGROUPS) + gl_SubgroupID;
+      const uint32_t smem_idx = (ii * RS_WORKGROUP_SUBGROUPS) + gl_SubgroupID;
 
-    RS_PREFIX_SWEEP0(smem_idx) = subgroupBroadcast(h_inc, RS_SUBGROUP_SIZE - 1);
+      RS_PREFIX_SWEEP0(smem_idx) = subgroupBroadcast(h_inc, RS_SUBGROUP_SIZE - 1);
 
-    //
+      //
 #ifndef RS_PREFIX_DISABLE_COMPONENTS_IN_REGISTERS
-    h_exc[ii] = h_inc - h;
+      h_exc[ii] = h_inc - h;
 #else
-    RS_PREFIX_STORE(ii * RS_WORKGROUP_SIZE) = h_inc - h;
+      RS_PREFIX_STORE(ii * RS_WORKGROUP_SIZE) = h_inc - h;
 #endif
-  }
+    }
 
   barrier();
 
@@ -172,16 +172,16 @@ rs_prefix(RS_PREFIX_ARGS)
   // Scan 0 and Downsweep 1
   //
   [[unroll]] for (uint32_t ii = 0; ii < RS_S0_PASSES; ii++)  // 32 invocations
-  {
-    const uint32_t idx0 = (ii * RS_WORKGROUP_SIZE) + gl_LocalInvocationID.x;
-    const uint32_t idx1 = (ii * RS_WORKGROUP_SUBGROUPS) + gl_SubgroupID;
+    {
+      const uint32_t idx0 = (ii * RS_WORKGROUP_SIZE) + gl_LocalInvocationID.x;
+      const uint32_t idx1 = (ii * RS_WORKGROUP_SUBGROUPS) + gl_SubgroupID;
 
-    const uint32_t h0_red = RS_PREFIX_SWEEP0(idx0);
-    const uint32_t h0_inc = subgroupInclusiveAdd(h0_red);
+      const uint32_t h0_red = RS_PREFIX_SWEEP0(idx0);
+      const uint32_t h0_inc = subgroupInclusiveAdd(h0_red);
 
-    RS_PREFIX_SWEEP0(idx0) = h0_inc - h0_red;
-    RS_PREFIX_SWEEP1(idx1) = subgroupBroadcast(h0_inc, RS_SUBGROUP_SIZE - 1);
-  }
+      RS_PREFIX_SWEEP0(idx0) = h0_inc - h0_red;
+      RS_PREFIX_SWEEP1(idx1) = subgroupBroadcast(h0_inc, RS_SUBGROUP_SIZE - 1);
+    }
 
 #endif
 
@@ -218,16 +218,16 @@ rs_prefix(RS_PREFIX_ARGS)
 #else
 
   [[unroll]] for (uint32_t ii = 0; ii < RS_S0_PASSES; ii++)  // 64 invocations
-  {
-    const uint32_t idx0 = (ii * RS_WORKGROUP_SIZE) + gl_LocalInvocationID.x;
-    const uint32_t idx1 = (ii * RS_WORKGROUP_SUBGROUPS) + gl_SubgroupID;
+    {
+      const uint32_t idx0 = (ii * RS_WORKGROUP_SIZE) + gl_LocalInvocationID.x;
+      const uint32_t idx1 = (ii * RS_WORKGROUP_SUBGROUPS) + gl_SubgroupID;
 
-    const uint32_t h0_red = RS_PREFIX_SWEEP0(idx0);
-    const uint32_t h0_inc = subgroupInclusiveAdd(h0_red);
+      const uint32_t h0_red = RS_PREFIX_SWEEP0(idx0);
+      const uint32_t h0_inc = subgroupInclusiveAdd(h0_red);
 
-    RS_PREFIX_SWEEP0(idx0) = h0_inc - h0_red;
-    RS_PREFIX_SWEEP1(idx1) = subgroupBroadcast(h0_inc, RS_SUBGROUP_SIZE - 1);
-  }
+      RS_PREFIX_SWEEP0(idx0) = h0_inc - h0_red;
+      RS_PREFIX_SWEEP1(idx1) = subgroupBroadcast(h0_inc, RS_SUBGROUP_SIZE - 1);
+    }
 #endif
 
   barrier();
@@ -248,16 +248,16 @@ rs_prefix(RS_PREFIX_ARGS)
 #else
 
   [[unroll]] for (uint32_t ii = 0; ii < RS_S1_PASSES; ii++)  // 16 invocations
-  {
-    const uint32_t idx1 = (ii * RS_WORKGROUP_SIZE) + gl_LocalInvocationID.x;
-    const uint32_t idx2 = (ii * RS_WORKGROUP_SUBGROUPS) + gl_SubgroupID;
+    {
+      const uint32_t idx1 = (ii * RS_WORKGROUP_SIZE) + gl_LocalInvocationID.x;
+      const uint32_t idx2 = (ii * RS_WORKGROUP_SUBGROUPS) + gl_SubgroupID;
 
-    const uint32_t h1_red = RS_PREFIX_SWEEP1(idx1);
-    const uint32_t h1_inc = subgroupInclusiveAdd(h1_red);
+      const uint32_t h1_red = RS_PREFIX_SWEEP1(idx1);
+      const uint32_t h1_inc = subgroupInclusiveAdd(h1_red);
 
-    RS_PREFIX_SWEEP1(idx1) = h1_inc - h1_red;
-    RS_PREFIX_SWEEP2(idx2) = subgroupBroadcast(h1_inc, RS_SUBGROUP_SIZE - 1);
-  }
+      RS_PREFIX_SWEEP1(idx1) = h1_inc - h1_red;
+      RS_PREFIX_SWEEP2(idx2) = subgroupBroadcast(h1_inc, RS_SUBGROUP_SIZE - 1);
+    }
 
 #endif
 
@@ -289,55 +289,55 @@ rs_prefix(RS_PREFIX_ARGS)
 #if ((RS_SUBGROUP_SIZE == 64) || (RS_SUBGROUP_SIZE == 32) || (RS_SUBGROUP_SIZE == 16))
 
   [[unroll]] for (uint32_t ii = 0; ii < RS_H_COMPONENTS; ii++)
-  {
-    const uint32_t idx0 = (ii * RS_WORKGROUP_SUBGROUPS) + gl_SubgroupID;
+    {
+      const uint32_t idx0 = (ii * RS_WORKGROUP_SUBGROUPS) + gl_SubgroupID;
 
-    // clang format issue
+      // clang format issue
 #ifndef RS_PREFIX_DISABLE_COMPONENTS_IN_REGISTERS
-    RS_PREFIX_STORE(ii * RS_WORKGROUP_SIZE) = h_exc[ii] + RS_PREFIX_SWEEP0(idx0);
+      RS_PREFIX_STORE(ii * RS_WORKGROUP_SIZE) = h_exc[ii] + RS_PREFIX_SWEEP0(idx0);
 #else
-    const uint32_t h_exc = RS_PREFIX_LOAD(ii * RS_WORKGROUP_SIZE);
+      const uint32_t h_exc = RS_PREFIX_LOAD(ii * RS_WORKGROUP_SIZE);
 
-    RS_PREFIX_STORE(ii * RS_WORKGROUP_SIZE) = h_exc + RS_PREFIX_SWEEP0(idx0);
+      RS_PREFIX_STORE(ii * RS_WORKGROUP_SIZE) = h_exc + RS_PREFIX_SWEEP0(idx0);
 #endif
-  }
+    }
 
 #elif (RS_SUBGROUP_SIZE == 8)
 
   [[unroll]] for (uint32_t ii = 0; ii < RS_H_COMPONENTS; ii++)
-  {
-    const uint32_t idx0 = (ii * RS_WORKGROUP_SUBGROUPS) + gl_SubgroupID;
-    const uint32_t idx1 = idx0 / RS_SUBGROUP_SIZE;
+    {
+      const uint32_t idx0 = (ii * RS_WORKGROUP_SUBGROUPS) + gl_SubgroupID;
+      const uint32_t idx1 = idx0 / RS_SUBGROUP_SIZE;
 
 #ifndef RS_PREFIX_DISABLE_COMPONENTS_IN_REGISTERS
-    RS_PREFIX_STORE(ii * RS_WORKGROUP_SIZE) =
-      h_exc[ii] + RS_PREFIX_SWEEP0(idx0) + RS_PREFIX_SWEEP1(idx1);
+      RS_PREFIX_STORE(ii * RS_WORKGROUP_SIZE) =
+        h_exc[ii] + RS_PREFIX_SWEEP0(idx0) + RS_PREFIX_SWEEP1(idx1);
 #else
-    const uint32_t h_exc = RS_PREFIX_LOAD(ii * RS_WORKGROUP_SIZE);
+      const uint32_t h_exc = RS_PREFIX_LOAD(ii * RS_WORKGROUP_SIZE);
 
-    RS_PREFIX_STORE(ii * RS_WORKGROUP_SIZE) =
-      h_exc + RS_PREFIX_SWEEP0(idx0) + RS_PREFIX_SWEEP1(idx1);
+      RS_PREFIX_STORE(ii * RS_WORKGROUP_SIZE) =
+        h_exc + RS_PREFIX_SWEEP0(idx0) + RS_PREFIX_SWEEP1(idx1);
 #endif
-  }
+    }
 
 #elif (RS_SUBGROUP_SIZE == 4)
 
   [[unroll]] for (uint32_t ii = 0; ii < RS_H_COMPONENTS; ii++)
-  {
-    const uint32_t idx0 = (ii * RS_WORKGROUP_SUBGROUPS) + gl_SubgroupID;
-    const uint32_t idx1 = idx0 / RS_SUBGROUP_SIZE;
-    const uint32_t idx2 = idx1 / RS_SUBGROUP_SIZE;
+    {
+      const uint32_t idx0 = (ii * RS_WORKGROUP_SUBGROUPS) + gl_SubgroupID;
+      const uint32_t idx1 = idx0 / RS_SUBGROUP_SIZE;
+      const uint32_t idx2 = idx1 / RS_SUBGROUP_SIZE;
 
 #ifndef RS_PREFIX_DISABLE_COMPONENTS_IN_REGISTERS
-    RS_PREFIX_STORE(ii * RS_WORKGROUP_SIZE) =
-      h_exc[ii] + (RS_PREFIX_SWEEP0(idx0) + RS_PREFIX_SWEEP1(idx1) + RS_PREFIX_SWEEP2(idx2));
+      RS_PREFIX_STORE(ii * RS_WORKGROUP_SIZE) =
+        h_exc[ii] + (RS_PREFIX_SWEEP0(idx0) + RS_PREFIX_SWEEP1(idx1) + RS_PREFIX_SWEEP2(idx2));
 #else
-    const uint32_t h_exc = RS_PREFIX_LOAD(ii * RS_WORKGROUP_SIZE);
+      const uint32_t h_exc = RS_PREFIX_LOAD(ii * RS_WORKGROUP_SIZE);
 
-    RS_PREFIX_STORE(ii * RS_WORKGROUP_SIZE) =
-      h_exc + (RS_PREFIX_SWEEP0(idx0) + RS_PREFIX_SWEEP1(idx1) + RS_PREFIX_SWEEP2(idx2));
+      RS_PREFIX_STORE(ii * RS_WORKGROUP_SIZE) =
+        h_exc + (RS_PREFIX_SWEEP0(idx0) + RS_PREFIX_SWEEP1(idx1) + RS_PREFIX_SWEEP2(idx2));
 #endif
-  }
+    }
 
 #else
 #error "Error: Unsupported subgroup size"

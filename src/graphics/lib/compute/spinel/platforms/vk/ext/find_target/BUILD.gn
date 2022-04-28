@@ -1,0 +1,160 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/compute/gn/build_rules.gni")
+
+_spinel_includes = "${graphics_compute_dir}/spinel/platforms/vk/include"
+
+#
+#
+#
+config("find_target_config") {
+  include_dirs = [ _spinel_includes ]
+}
+
+#
+# Mapping between Fuchsia boards and GPU targets:
+#
+#   astro_env      arm      bifrost4
+#   nelson_env     arm      bifrost4
+#   sherlock_env   arm      bifrost8
+#   vim3_env       arm      bifrost8
+#   default/x86    intel    gen8
+#
+# A host or aemu/qemu target must support multiple targets:
+#
+#   host/qemu      amd      gcn3
+#   host/qemu      intel    gen8
+#   host/qemu      nvidia   sm35
+#   host/qemu      nvidia   sm75
+#
+
+#
+# Fuchsia / ARM / Bifrost4
+#
+source_set("find_target_arm_bifrost4") {
+  public_configs = [ ":find_target_config" ]
+  public_deps = [ "${graphics_compute_dir}/spinel/platforms/vk" ]
+  public = [
+    "${_spinel_includes}/spinel/platforms/vk/ext/find_target/find_target.h",
+  ]
+  sources = [
+    "${_spinel_includes}/spinel/platforms/vk/ext/find_target/find_target.h",
+    "find_target.c",
+  ]
+  defines = [ "SPN_VK_TARGET_ARM_BIFROST4" ]
+  deps = [ "${graphics_compute_dir}/spinel/platforms/vk/targets/vendors/arm/bifrost4:spinel_vk_arm_bifrost4_resource" ]
+}
+
+#
+# Fuchsia / ARM / Bifrost8
+#
+source_set("find_target_arm_bifrost8") {
+  public_configs = [ ":find_target_config" ]
+  public_deps = [ "${graphics_compute_dir}/spinel/platforms/vk" ]
+  public = [
+    "${_spinel_includes}/spinel/platforms/vk/ext/find_target/find_target.h",
+  ]
+  sources = [
+    "${_spinel_includes}/spinel/platforms/vk/ext/find_target/find_target.h",
+    "find_target.c",
+  ]
+  defines = [ "SPN_VK_TARGET_ARM_BIFROST8" ]
+  deps = [ "${graphics_compute_dir}/spinel/platforms/vk/targets/vendors/arm/bifrost8:spinel_vk_arm_bifrost8_resource" ]
+}
+
+#
+# Fuchsia / Intel / GEN8
+#
+source_set("find_target_intel_gen8") {
+  public_configs = [ ":find_target_config" ]
+  public_deps = [ "${graphics_compute_dir}/spinel/platforms/vk" ]
+  public = [
+    "${_spinel_includes}/spinel/platforms/vk/ext/find_target/find_target.h",
+  ]
+  sources = [
+    "${_spinel_includes}/spinel/platforms/vk/ext/find_target/find_target.h",
+    "find_target.c",
+  ]
+  defines = [ "SPN_VK_TARGET_INTEL_GEN8" ]
+  deps = [ "${graphics_compute_dir}/spinel/platforms/vk/targets/vendors/intel/gen8:spinel_vk_intel_gen8_resource" ]
+}
+
+#
+# Fuchsia Default
+#
+source_set("find_target_fuchsia_default") {
+  public_configs = [ ":find_target_config" ]
+  public_deps = [ "${graphics_compute_dir}/spinel/platforms/vk" ]
+  public = [
+    "${_spinel_includes}/spinel/platforms/vk/ext/find_target/find_target.h",
+  ]
+  sources = [
+    "${_spinel_includes}/spinel/platforms/vk/ext/find_target/find_target.h",
+    "find_target.c",
+  ]
+  defines = [
+    "SPN_VK_TARGET_AMD_GCN3",
+    "SPN_VK_TARGET_INTEL_GEN8",
+    "SPN_VK_TARGET_NVIDIA_SM35",
+    "SPN_VK_TARGET_NVIDIA_SM75",
+  ]
+  deps = [
+    "${graphics_compute_dir}/spinel/platforms/vk/targets/vendors/amd/gcn3:spinel_vk_amd_gcn3_resource",
+    "${graphics_compute_dir}/spinel/platforms/vk/targets/vendors/intel/gen8:spinel_vk_intel_gen8_resource",
+    "${graphics_compute_dir}/spinel/platforms/vk/targets/vendors/nvidia/sm35:spinel_vk_nvidia_sm35_resource",
+    "${graphics_compute_dir}/spinel/platforms/vk/targets/vendors/nvidia/sm75:spinel_vk_nvidia_sm75_resource",
+  ]
+}
+
+#
+# Host Default
+#
+source_set("find_target_host_default") {
+  public_configs = [ ":find_target_config" ]
+  public_deps = [ "${graphics_compute_dir}/spinel/platforms/vk" ]
+  public = [
+    "${_spinel_includes}/spinel/platforms/vk/ext/find_target/find_target.h",
+  ]
+  sources = [
+    "${_spinel_includes}/spinel/platforms/vk/ext/find_target/find_target.h",
+    "find_target.c",
+  ]
+  defines = [
+    "SPN_VK_TARGET_ARCHIVE_LINKABLE",
+    "SPN_VK_TARGET_AMD_GCN3",
+    "SPN_VK_TARGET_INTEL_GEN8",
+    "SPN_VK_TARGET_NVIDIA_SM35",
+    "SPN_VK_TARGET_NVIDIA_SM75",
+  ]
+  deps = [
+    "${graphics_compute_dir}/spinel/platforms/vk/targets/vendors/amd/gcn3:spinel_vk_amd_gcn3_linkable",
+    "${graphics_compute_dir}/spinel/platforms/vk/targets/vendors/intel/gen8:spinel_vk_intel_gen8_linkable",
+    "${graphics_compute_dir}/spinel/platforms/vk/targets/vendors/nvidia/sm35:spinel_vk_nvidia_sm35_linkable",
+    "${graphics_compute_dir}/spinel/platforms/vk/targets/vendors/nvidia/sm75:spinel_vk_nvidia_sm75_linkable",
+  ]
+}
+
+#
+# Link or load targets based on target OS and board type.
+#
+group("find_target") {
+  if (is_fuchsia) {
+    if (board_name == "astro") {
+      public_deps = [ ":find_target_arm_bifrost4" ]
+    } else if (board_name == "nelson") {
+      public_deps = [ ":find_target_arm_bifrost4" ]
+    } else if (board_name == "sherlock") {
+      public_deps = [ ":find_target_arm_bifrost8" ]
+    } else if (board_name == "vim3") {
+      public_deps = [ ":find_target_arm_bifrost8" ]
+    } else if (board_name == "chromebook-x64") {
+      public_deps = [ ":find_target_intel_gen8" ]
+    } else {
+      public_deps = [ ":find_target_fuchsia_default" ]
+    }
+  } else {
+    public_deps = [ ":find_target_host_default" ]
+  }
+}

@@ -36,11 +36,7 @@ def main(argv):
         help='Include directory used during pre-processing')
 
     parser.add_argument(
-        '-D',
-        '--defines',
-        action='append',
-        default=[],
-        help='GLSL defines')
+        '-D', '--defines', action='append', default=[], help='GLSL defines')
 
     parser.add_argument(
         '-o', '--output', default='-', help='Output path, use - for stdout.')

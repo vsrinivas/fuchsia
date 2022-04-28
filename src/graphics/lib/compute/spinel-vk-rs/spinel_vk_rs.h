@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_RS_SYS_SPINEL_VK_RS_H_
-#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_RS_SYS_SPINEL_VK_RS_H_
+#ifndef SRC_GRAPHICS_LIB_COMPUTE_SPINEL_VK_RS_SPINEL_VK_RS_H_
+#define SRC_GRAPHICS_LIB_COMPUTE_SPINEL_VK_RS_SPINEL_VK_RS_H_
 
 //
 // Simplify creation of the Vulkan and Spinel objects used by spinel-rs-sys.
@@ -132,4 +132,4 @@ spinel_vk_rs_destroy(spinel_vk_rs_t * rs);
 //
 //
 
-#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_RS_SYS_SPINEL_VK_RS_H_
+#endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_VK_RS_SPINEL_VK_RS_H_
