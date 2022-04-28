@@ -10,7 +10,7 @@ use std::collections::VecDeque;
 /// items. It is compatible with inspect_derive.
 #[derive(Default)]
 pub(crate) struct InspectQueue<T> {
-    items: VecDeque<T>,
+    pub(crate) items: VecDeque<T>,
     // Required because VecDeque::with_capacity doesn't necessarily give the
     // exact capacity specified.
     size_limit: usize,
