@@ -18,7 +18,10 @@
 #include "src/devices/lib/log/log.h"
 #include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 
-namespace fdf = fuchsia_driver_framework;
+namespace fdf {
+using namespace fuchsia_driver_framework;
+}  // namespace fdf
+
 namespace fi = fuchsia::inspect;
 
 constexpr char kDiagnosticsDir[] = "diagnostics";

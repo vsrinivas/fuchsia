@@ -23,8 +23,11 @@
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
+namespace fdf {
+using namespace fuchsia_driver_framework;
+}  // namespace fdf
+
 namespace fdata = fuchsia_data;
-namespace fdf = fuchsia_driver_framework;
 namespace fio = fuchsia::io;
 namespace frunner = fuchsia_component_runner;
 namespace ftest = fuchsia_driverhost_test;

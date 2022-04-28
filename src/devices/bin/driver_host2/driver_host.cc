@@ -49,7 +49,7 @@ std::string_view GetManifest(std::string_view url) {
 
 }  // namespace
 
-zx::status<std::unique_ptr<Driver>> Driver::Load(std::string url, zx::vmo vmo) {
+zx::status<fbl::RefPtr<Driver>> Driver::Load(std::string url, zx::vmo vmo) {
   void* library = dlopen_vmo(vmo.get(), RTLD_NOW);
   if (library == nullptr) {
     LOGF(ERROR, "Failed to start driver '%s', could not load library: %s", url.data(), dlerror());
@@ -65,7 +65,7 @@ zx::status<std::unique_ptr<Driver>> Driver::Load(std::string url, zx::vmo vmo) {
          record->version);
     return zx::error(ZX_ERR_WRONG_TYPE);
   }
-  return zx::ok(std::make_unique<Driver>(std::move(url), library, record));
+  return zx::ok(fbl::MakeRefCounted<Driver>(std::move(url), library, record));
 }
 
 Driver::Driver(std::string url, void* library, const DriverRecordV1* record)
@@ -87,19 +87,20 @@ void Driver::set_binding(fidl::ServerBindingRef<fuchsia_driver_framework::Driver
 
 void Driver::Stop(StopRequestView request, StopCompleter::Sync& completer) { binding_->Unbind(); }
 
-zx::status<> Driver::Start(fidl::IncomingMessage& start_args, fdf_dispatcher_t* driver_dispatcher) {
+zx::status<> Driver::Start(fidl::IncomingMessage& start_args, fdf::Dispatcher dispatcher) {
+  initial_dispatcher_ = std::move(dispatcher);
+
   // After calling |record_->start|, we assume it has taken ownership of
   // the handles from |start_args|, and can therefore relinquish ownership.
   fidl_incoming_msg_t c_msg = std::move(start_args).ReleaseToEncodedCMessage();
   void* opaque = nullptr;
   // TODO(fxbug.dev/87162): change |start| to take in a fdf_dispatcher_t* rather than
   // an async_dispatcher_t*.
-  zx_status_t status =
-      record_->start(&c_msg, fdf_dispatcher_get_async_dispatcher(driver_dispatcher), &opaque);
+  zx_status_t status = record_->start(
+      &c_msg, fdf_dispatcher_get_async_dispatcher(initial_dispatcher_.get()), &opaque);
   if (status != ZX_OK) {
     return zx::error(status);
   }
-
   opaque_.emplace(opaque);
   return zx::ok();
 }
@@ -251,8 +252,17 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
       fdf_internal_push_driver((*driver).get());
       auto pop_driver = fit::defer([]() { fdf_internal_pop_driver(); });
 
-      auto dispatcher = fdf::Dispatcher::Create(
-          0, [&](fdf_dispatcher_t* dispatcher) { fdf_dispatcher_destroy(dispatcher); });
+      // The dispatcher must be shutdown before the dispatcher is destroyed.
+      // Usually we will wait for the callback from |fdf_internal::DriverShutdown| before destroying
+      // the driver object (and hence the dispatcher).
+      // In the case where we fail to start the driver, the driver object would be destructed
+      // immediately, so here we hold an extra reference to the driver object to ensure the
+      // dispatcher will not be destructed until shutdown completes.
+      //
+      // We do not destroy the dispatcher in the shutdown callback, to prevent crashes that
+      // would happen if the driver attempts to access the dispatcher in its Stop hook.
+      auto dispatcher =
+          fdf::Dispatcher::Create(0, [driver_ref = *driver](fdf_dispatcher_t* dispatcher) {});
       if (dispatcher.is_error()) {
         completer.Close(dispatcher.status_value());
         return;
@@ -266,23 +276,20 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
                        converted_message = std::move(converted_message),
                        driver = std::move(*driver),
                        driver_dispatcher = std::move(driver_dispatcher)]() mutable {
-      auto start = driver->Start(converted_message->incoming_message(), driver_dispatcher.get());
+      // Save a ptr to the dispatcher so we can shut it down if starting the driver fails.
+      fdf::UnownedDispatcher unowned_dispatcher = driver_dispatcher.borrow();
+      auto start =
+          driver->Start(converted_message->incoming_message(), std::move(driver_dispatcher));
       if (start.is_error()) {
         LOGF(ERROR, "Failed to start driver '%s': %s", driver->url().data(), start.status_string());
         completer.Close(start.error_value());
-        // Since we didn't successfully start the driver, we won't be calling
-        // |fdf_internal::DriverShutdown|, so shut down the dispatcher now.
-        driver_dispatcher.ShutdownAsync();
-        // The dispatcher will be destroyed in the shutdown callback.
-        driver_dispatcher.release();
+        // If we fail to start the driver, we need to initiate shutting down the dispatcher.
+        unowned_dispatcher->ShutdownAsync();
+        // The dispatcher will be destroyed in the shutdown callback, when the last driver reference
+        // is released.
         return;
       }
       LOGF(INFO, "Started '%s'", driver->url().data());
-
-      // We will automatically shutdown all dispatchers using |fdf_internal::DriverShutdown|,
-      // and destroy the dispatcher in the dispatcher's shutdown callback.
-      // Release it now so we don't double destroy it.
-      driver_dispatcher.release();
 
       auto unbind_callback = [this](Driver* driver, fidl::UnbindInfo info,
                                     fidl::ServerEnd<fuchsia_driver_framework::Driver> server) {

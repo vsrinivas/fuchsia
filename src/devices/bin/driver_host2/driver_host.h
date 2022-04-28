@@ -8,20 +8,22 @@
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/driver2/record.h>
-#include <lib/fdf/dispatcher.h>
+#include <lib/fdf/cpp/dispatcher.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/sys/component/llcpp/outgoing_directory.h>
 #include <lib/zx/status.h>
 #include <zircon/compiler.h>
 
 #include <fbl/intrusive_double_list.h>
+#include <fbl/ref_counted.h>
 
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 class Driver : public fidl::WireServer<fuchsia_driver_framework::Driver>,
-               public fbl::DoublyLinkedListable<std::unique_ptr<Driver>> {
+               public fbl::RefCounted<Driver>,
+               public fbl::DoublyLinkedListable<fbl::RefPtr<Driver>> {
  public:
-  static zx::status<std::unique_ptr<Driver>> Load(std::string url, zx::vmo vmo);
+  static zx::status<fbl::RefPtr<Driver>> Load(std::string url, zx::vmo vmo);
 
   Driver(std::string url, void* library, const DriverRecordV1* record);
   ~Driver();
@@ -34,7 +36,7 @@ class Driver : public fidl::WireServer<fuchsia_driver_framework::Driver>,
   // Starts the driver.
   //
   // The handles in `message` will be consumed.
-  zx::status<> Start(fidl::IncomingMessage& message, fdf_dispatcher_t* driver_dispatcher);
+  zx::status<> Start(fidl::IncomingMessage& message, fdf::Dispatcher driver_dispatcher);
 
  private:
   std::string url_;
@@ -42,6 +44,10 @@ class Driver : public fidl::WireServer<fuchsia_driver_framework::Driver>,
   const DriverRecordV1* record_;
   std::optional<void*> opaque_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Driver>> binding_;
+
+  // The initial dispatcher passed to the driver.
+  // This must be shutdown by before this driver object is destructed.
+  fdf::Dispatcher initial_dispatcher_;
 };
 
 class DriverHost : public fidl::WireServer<fuchsia_driver_framework::DriverHost> {
@@ -62,7 +68,7 @@ class DriverHost : public fidl::WireServer<fuchsia_driver_framework::DriverHost>
 
   async::Loop& loop_;
   std::mutex mutex_;
-  fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers_ __TA_GUARDED(mutex_);
+  fbl::DoublyLinkedList<fbl::RefPtr<Driver>> drivers_ __TA_GUARDED(mutex_);
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_HOST2_DRIVER_HOST_H_
