@@ -254,6 +254,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl repo_tests::TestEnv for TestEnv {
+        fn supports_range(&self) -> bool {
+            true
+        }
+
         async fn read_metadata(&self, path: &str, range: Range) -> Result<Vec<u8>, Error> {
             let mut body = vec![];
             self.repo.fetch_metadata(path, range).await?.read_to_end(&mut body).await?;
@@ -308,6 +312,13 @@ mod tests {
     async fn test_fetch() {
         let env = TestEnv::new().await;
         repo_tests::check_fetch(&env).await;
+        env.stop().await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_fetch_range() {
+        let env = TestEnv::new().await;
+        repo_tests::check_fetch_range(&env).await;
         env.stop().await;
     }
 

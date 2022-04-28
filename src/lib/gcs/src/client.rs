@@ -58,7 +58,7 @@ impl ClientFactory {
 }
 
 /// An https client capable of fetching objects from GCS.
-#[allow(dead_code)]
+#[derive(Clone, Debug)]
 pub struct Client {
     /// Base client used for HTTP/S IO.
     https: HttpsClient,

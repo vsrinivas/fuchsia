@@ -46,6 +46,7 @@ use {
 const LIST_PACKAGE_CONCURRENCY: usize = 5;
 
 mod file_system;
+mod gcs_repository;
 mod http_repository;
 mod pm;
 
@@ -53,6 +54,7 @@ mod pm;
 pub(crate) mod repo_tests;
 
 pub use file_system::FileSystemRepository;
+pub use gcs_repository::GcsRepository;
 pub use http_repository::HttpRepository;
 pub use pm::PmRepository;
 

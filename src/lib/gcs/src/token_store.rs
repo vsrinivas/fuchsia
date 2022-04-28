@@ -15,7 +15,7 @@ use {
     serde::{Deserialize, Serialize},
     serde_json,
     std::{
-        fs,
+        fmt, fs,
         io::{self, BufRead, BufReader, Read, Write},
         path::Path,
         string::String,
@@ -500,6 +500,17 @@ impl TokenStore {
             bail!(GcsError::NotFound(bucket.to_string(), prefix.to_string()));
         }
         Ok(results)
+    }
+}
+
+impl fmt::Debug for TokenStore {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TokenStore")
+            .field("api_base", &self.api_base)
+            .field("storage_base", &self.storage_base)
+            .field("refresh_token", &self.refresh_token.as_ref().map(|_| ".."))
+            .field("access_token", &"..")
+            .finish()
     }
 }
 

@@ -51,6 +51,7 @@ pub(crate) async fn add_repository_event(repo_spec: &RepositorySpec) {
         RepositorySpec::FileSystem { .. } => "filesystem",
         RepositorySpec::Pm { .. } => "pm",
         RepositorySpec::Http { .. } => "http",
+        RepositorySpec::Gcs { .. } => "gcs",
     };
 
     add_event("protocol.add-repository", Some(repo_type.into())).await

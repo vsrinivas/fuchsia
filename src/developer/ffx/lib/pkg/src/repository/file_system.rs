@@ -42,7 +42,7 @@ use {
 pub(crate) const CHUNK_SIZE: usize = 8_192;
 
 /// Serve a repository from the file system.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FileSystemRepository {
     metadata_repo_path: Utf8PathBuf,
     blob_repo_path: Utf8PathBuf,
@@ -315,6 +315,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl repo_tests::TestEnv for TestEnv {
+        fn supports_range(&self) -> bool {
+            true
+        }
+
         async fn read_metadata(&self, path: &str, range: Range) -> Result<Vec<u8>, Error> {
             let mut body = vec![];
             self.repo.fetch_metadata(path, range).await?.read_to_end(&mut body).await?;
@@ -368,6 +372,12 @@ mod tests {
     async fn test_fetch() {
         let env = TestEnv::new();
         repo_tests::check_fetch(&env).await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_fetch_range() {
+        let env = TestEnv::new();
+        repo_tests::check_fetch_range(&env).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

@@ -18,6 +18,8 @@ pub enum RepositorySpec {
     Pm { path: Utf8PathBuf },
 
     Http { metadata_repo_url: String, blob_repo_url: String },
+
+    Gcs { metadata_repo_url: String, blob_repo_url: String },
 }
 
 impl TryFrom<fidl::RepositorySpec> for RepositorySpec {
@@ -49,6 +51,14 @@ impl TryFrom<fidl::RepositorySpec> for RepositorySpec {
                     http_spec.blob_repo_url.ok_or(RepositoryError::MissingRepositorySpecField)?;
                 Ok(RepositorySpec::Http { metadata_repo_url, blob_repo_url })
             }
+            fidl::RepositorySpec::Gcs(gcs_spec) => {
+                let metadata_repo_url = gcs_spec
+                    .metadata_repo_url
+                    .ok_or(RepositoryError::MissingRepositorySpecField)?;
+                let blob_repo_url =
+                    gcs_spec.blob_repo_url.ok_or(RepositoryError::MissingRepositorySpecField)?;
+                Ok(RepositorySpec::Gcs { metadata_repo_url, blob_repo_url })
+            }
             fidl::RepositorySpecUnknown!() => Err(RepositoryError::UnknownRepositorySpec),
         }
     }
@@ -78,6 +88,13 @@ impl From<RepositorySpec> for fidl::RepositorySpec {
                     metadata_repo_url: Some(metadata_repo_url),
                     blob_repo_url: Some(blob_repo_url),
                     ..fidl::HttpRepositorySpec::EMPTY
+                })
+            }
+            RepositorySpec::Gcs { metadata_repo_url, blob_repo_url } => {
+                fidl::RepositorySpec::Gcs(fidl::GcsRepositorySpec {
+                    metadata_repo_url: Some(metadata_repo_url),
+                    blob_repo_url: Some(blob_repo_url),
+                    ..fidl::GcsRepositorySpec::EMPTY
                 })
             }
         }

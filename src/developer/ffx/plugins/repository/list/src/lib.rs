@@ -103,6 +103,13 @@ fn print_table(
                     ["blobs", blob_repo_url]
                 )));
             }
+            RepositorySpec::Gcs { metadata_repo_url, blob_repo_url } => {
+                row.add_cell(cell!("gcs"));
+                row.add_cell(cell!(table!(
+                    ["metadata", metadata_repo_url],
+                    ["blobs", blob_repo_url]
+                )));
+            }
         }
 
         rows.push(row);

@@ -211,6 +211,11 @@ async fn repo_spec_to_backend(
 
             Ok(Box::new(HttpRepository::new(https_client, metadata_repo_url, blob_repo_url)))
         }
+        RepositorySpec::Gcs { .. } => {
+            // FIXME(fxbug.dev/98994): Implement support for daemon-side GCS repositories.
+            log::error!("Trying to register a GCS repository, but that's not supported yet");
+            Err(bridge::RepositoryError::UnknownRepositorySpec)
+        }
     }
 }
 
@@ -386,7 +391,7 @@ fn create_repo_host(
     // communicate by way of the ssh host's address. This is helpful when the
     // device can access the repository only through a specific interface.
 
-    // FIXME(http://fxbug.dev/87439): Once the tunnel bug is fixed, we may
+    // FIXME(fxbug.dev/87439): Once the tunnel bug is fixed, we may
     // want to default all traffic going through the tunnel. Consider
     // creating an ffx config variable to decide if we want to always
     // tunnel, or only tunnel if the server is on a loopback address.
@@ -1633,10 +1638,9 @@ mod tests {
         static ref TEST_LOCK: Arc<Mutex<()>> = Arc::new(Mutex::new(()));
     }
 
-    // FIXME(http://fxbug.dev/80740): Rust tests on host use panic=unwind, which causes all the
-    // tests to run in the same process. Unfortunately ffx_config is global, and so each of these
-    // tests could step on each others ffx_config entries if run in parallel. To avoid this, we
-    // will:
+    // FIXME(fxbug.dev/80740): Rust tests on host use panic=unwind, which causes all the tests to
+    // run in the same process. Unfortunately ffx_config is global, and so each of these tests
+    // could step on each others ffx_config entries if run in parallel. To avoid this, we will:
     //
     // * use a global lock to make sure each test runs sequentially
     // * clear out the config keys before we run each test to make sure state isn't leaked across

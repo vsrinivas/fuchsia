@@ -16,9 +16,10 @@ type RepositorySpec = flexible union {
     1: file_system FileSystemRepositorySpec;
     2: pm PmRepositorySpec;
     3: http HttpRepositorySpec;
+    4: gcs GcsRepositorySpec;
 };
 
-/// [FileSystemRepositorySpec] describes a TUF repository found on the local filesystem.
+/// A configuration for a package repository on the local file system.
 type FileSystemRepositorySpec = table {
     /// File system path to the location of the metadata repository.
     1: metadata_repo_path string:MAX_PATH;
@@ -27,18 +28,35 @@ type FileSystemRepositorySpec = table {
     2: blob_repo_path string:MAX_PATH;
 };
 
-/// [PmRepositorySpec] describes a TUF repository created by pm found on the local filesystem.
+/// A configuration for a package repository on the local file system.
+///
+/// This is similar to [FileSystemRepositorySpec], where the metadata
+/// repository path is `$path/repository`, and the blob repository path is
+/// `$path/repository/blobs`.
 type PmRepositorySpec = table {
     /// File system path to the location of the pm repository.
     1: path string:MAX_PATH;
 };
 
-/// [HttpRepositorySpec] describes a Http TUF repository.
+/// A configuration for a package repository found on a web server.
 type HttpRepositorySpec = table {
     /// URL of the TUF repository.
     1: metadata_repo_url string:MAX_PATH;
 
     /// URL of the Blob Server.
+    2: blob_repo_url string:MAX_PATH;
+};
+
+/// A configuration for a package repository found in Google Cloud Storage.
+///
+/// This is distinct from [HttpRepositorySpec] to allow it to grow GCS-specific
+/// functionality, such as specifying which service account we should use when
+/// authenticating requests.
+type GcsRepositorySpec = table {
+    /// URL of the TUF repository. This must use the gs:// URL scheme.
+    1: metadata_repo_url string:MAX_PATH;
+
+    /// URL of the Blob Server. This must use the gs:// URL scheme.
     2: blob_repo_url string:MAX_PATH;
 };
 

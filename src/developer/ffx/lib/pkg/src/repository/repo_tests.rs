@@ -12,6 +12,9 @@ use {
 
 #[async_trait::async_trait]
 pub(crate) trait TestEnv {
+    /// Whether or not the repository backend supports Range requests.
+    fn supports_range(&self) -> bool;
+
     fn write_metadata(&self, path: &str, bytes: &[u8]);
 
     fn write_blob(&self, path: &str, bytes: &[u8]);
@@ -64,13 +67,21 @@ pub(crate) async fn check_fetch_range_small(env: &impl TestEnv) {
         .read_metadata("small-meta", Range::Inclusive { first_byte_pos: 1, last_byte_pos: 7 })
         .await
         .unwrap();
-    assert_eq!(String::from_utf8(actual).unwrap(), &meta_body[1..=7]);
+
+    assert_eq!(
+        String::from_utf8(actual).unwrap(),
+        if env.supports_range() { &meta_body[1..=7] } else { &meta_body[..] }
+    );
 
     let actual = env
         .read_blob("small-blob", Range::Inclusive { first_byte_pos: 1, last_byte_pos: 7 })
         .await
         .unwrap();
-    assert_eq!(String::from_utf8(actual).unwrap(), &blob_body[1..=7]);
+
+    assert_eq!(
+        String::from_utf8(actual).unwrap(),
+        if env.supports_range() { &blob_body[1..=7] } else { &blob_body[..] }
+    );
 }
 
 // Helper to check that we can fetch a variety of ranges that cross the chunk boundary size.
@@ -82,14 +93,27 @@ pub(crate) async fn check_fetch(env: &impl TestEnv) {
         env.write_metadata(&path, &body);
         env.write_blob(&path, &body);
 
+        let actual = env.read_metadata(&path, Range::Full).await.unwrap();
+        assert_eq!(&actual, &body[..], "size: {size}");
+
+        let actual = env.read_blob(&path, Range::Full).await.unwrap();
+        assert_eq!(&actual, &body[..], "size: {size}");
+    }
+}
+
+pub(crate) async fn check_fetch_range(env: &impl TestEnv) {
+    for size in [20, CHUNK_SIZE - 1, CHUNK_SIZE, CHUNK_SIZE + 1, CHUNK_SIZE * 2 + 1] {
+        let path = format!("{}", size);
+        let body = (0..std::u8::MAX).cycle().take(size).collect::<Vec<_>>();
+
+        env.write_metadata(&path, &body);
+        env.write_blob(&path, &body);
+
         for (range, expected) in [
-            (Range::Full, &body[..]),
             (Range::From { first_byte_pos: 0 }, &body[..]),
             (Range::From { first_byte_pos: 5 }, &body[5..]),
             (Range::From { first_byte_pos: size as u64 - 1 }, &body[size - 1..]),
-            (Range::Suffix { len: 0 }, &[]),
-            (Range::Suffix { len: 5 }, &body[size - 5..]),
-            (Range::Suffix { len: size as u64 }, &body[..]),
+            (Range::Inclusive { first_byte_pos: 0, last_byte_pos: 0 }, &body[0..=0]),
             (Range::Inclusive { first_byte_pos: 0, last_byte_pos: size as u64 - 1 }, &body[..]),
             (Range::Inclusive { first_byte_pos: 5, last_byte_pos: 5 }, &body[5..=5]),
             (Range::Inclusive { first_byte_pos: 5, last_byte_pos: 15 }, &body[5..=15]),
@@ -97,12 +121,31 @@ pub(crate) async fn check_fetch(env: &impl TestEnv) {
                 Range::Inclusive { first_byte_pos: 5, last_byte_pos: size as u64 - 5 },
                 &body[5..=size - 5],
             ),
+            (
+                Range::Inclusive {
+                    first_byte_pos: size as u64 - 1,
+                    last_byte_pos: size as u64 - 1,
+                },
+                &body[size - 1..=size - 1],
+            ),
+            (Range::Suffix { len: 0 }, &[]),
+            (Range::Suffix { len: 5 }, &body[size - 5..]),
+            (Range::Suffix { len: size as u64 }, &body[..]),
         ] {
-            let actual = env.read_metadata(&path, range.clone()).await.unwrap();
-            assert_eq!(&actual, &expected, "size: {size} range: {range:?}");
+            if env.supports_range() {
+                let actual = env.read_metadata(&path, range.clone()).await.unwrap();
+                assert_eq!(&actual, &expected, "size: {size} range: {range:?}");
 
-            let actual = env.read_blob(&path, range.clone()).await.unwrap();
-            assert_eq!(&actual, &expected, "size: {size} range: {range:?}");
+                let actual = env.read_blob(&path, range.clone()).await.unwrap();
+                assert_eq!(&actual, &expected, "size: {size} range: {range:?}");
+            } else {
+                println!("{:?} {:?}", range, expected);
+                let actual = env.read_metadata(&path, range.clone()).await.unwrap();
+                assert_eq!(&actual, &body[..], "size: {size} range: {range:?}");
+
+                let actual = env.read_blob(&path, range.clone()).await.unwrap();
+                assert_eq!(&actual, &body[..], "size: {size} range: {range:?}");
+            }
         }
     }
 }
@@ -119,6 +162,7 @@ pub(crate) async fn check_fetch_range_not_satisfiable(env: &impl TestEnv) {
         let size = size as u64;
         for range in [
             Range::From { first_byte_pos: size },
+            Range::From { first_byte_pos: size + 1 },
             Range::From { first_byte_pos: size + 5 },
             Range::Inclusive { first_byte_pos: 0, last_byte_pos: size },
             Range::Inclusive { first_byte_pos: 5, last_byte_pos: size },
@@ -126,6 +170,7 @@ pub(crate) async fn check_fetch_range_not_satisfiable(env: &impl TestEnv) {
             Range::Inclusive { first_byte_pos: size, last_byte_pos: size + 5 },
             Range::Inclusive { first_byte_pos: 4, last_byte_pos: 3 },
             Range::Inclusive { first_byte_pos: size + 3, last_byte_pos: size + 5 },
+            Range::Suffix { len: size + 1 },
             Range::Suffix { len: size + 5 },
         ] {
             assert_matches!(
