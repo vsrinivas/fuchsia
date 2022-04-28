@@ -6,6 +6,7 @@ use {
     anyhow::{anyhow, bail, Context, Result},
     chrono::{Local, TimeZone},
     errors::{ffx_bail, ffx_error},
+    ffx_component::connect_to_lifecycle_controller,
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     fidl_fuchsia_io as fio,
     fuchsia_async::unblock,
@@ -48,8 +49,6 @@ pub async fn core(rcs: RemoteControlProxy, cmd: ffx_debug_core_args::CoreCommand
 
 // Must be kept in sync with //src/sys/appmgr/config/core_component_id_index.json5.
 const STORAGE_ID: &str = "eb345fb7dcaa4260ee0c65bb73ef0ec5341b15a4f603f358d6631c4be6bf7080";
-const STORAGE_SELECTOR_CACHE: &str = "core:expose:fuchsia.sys2.StorageAdmin.cache";
-const STORAGE_SELECTOR_TEMP: &str = "core:expose:fuchsia.sys2.StorageAdmin.tmp";
 
 struct File {
     filename: String,
@@ -60,8 +59,8 @@ struct File {
 // List all remote minidumps remotely, ask the user to make a choice, copy the minidump
 // to a temp location and return that path.
 async fn choose_and_copy_remote_minidumps(rcs: &RemoteControlProxy) -> Result<TempPath> {
-    let mut minidumps = list_minidumps(rcs, STORAGE_SELECTOR_CACHE).await?;
-    minidumps.extend(list_minidumps(rcs, STORAGE_SELECTOR_TEMP).await?.into_iter());
+    let mut minidumps = list_minidumps(rcs, "cache").await?;
+    minidumps.extend(list_minidumps(rcs, "tmp").await?.into_iter());
     minidumps.sort_by_key(|f| -(f.modification_time as i64));
 
     if minidumps.is_empty() {
@@ -91,11 +90,16 @@ async fn choose_and_copy_remote_minidumps(rcs: &RemoteControlProxy) -> Result<Te
     copy_as_temp_file(&minidumps[choice - 1].proxy).await
 }
 
-// List all the "minidump.dmp" files in "/reports" directory with the given selector.
-async fn list_minidumps(rcs: &RemoteControlProxy, selector: &str) -> Result<Vec<File>> {
-    let selector = selectors::parse_selector::<selectors::VerboseError>(selector)?;
+// List all the "minidump.dmp" files in "/reports" directory with the given capability.
+async fn list_minidumps(rcs: &RemoteControlProxy, capability: &str) -> Result<Vec<File>> {
     let (client, server) = fidl::handle::Channel::create()?;
-    let _ = rcs.connect(selector, server).await?;
+    connect_to_lifecycle_controller(&rcs)
+        .await
+        .context("Error in connect_to_lifecycle_controller")?
+        .get_storage_admin("./core", capability, fidl::endpoints::ServerEnd::new(server))
+        .await
+        .context("FDIL error in get_storage_admin")?
+        .map_err(|e| anyhow!("Error in get_storage_admin: {:?}", e))?;
 
     let storage_admin =
         fidl_fuchsia_sys2::StorageAdminProxy::new(fidl::AsyncChannel::from_channel(client)?);
