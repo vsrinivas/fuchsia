@@ -190,6 +190,10 @@ impl FileSystem {
         self.next_inode.fetch_add(1, Ordering::Relaxed)
     }
 
+    /// Move |renamed| that is at |old_name| in |old_parent| to |new_name| in |new_parent|
+    /// replacing |replaced|.
+    /// If |replaced| exists and is a directory, this function must check that |renamed| is n
+    /// directory and that |replaced| is empty.
     pub fn rename(
         &self,
         old_parent: &FsNodeHandle,

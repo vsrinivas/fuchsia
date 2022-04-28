@@ -12,6 +12,7 @@ use crate::fs::socket::*;
 use crate::fs::*;
 use crate::lock::{Mutex, RwLock};
 use crate::task::*;
+use crate::types::as_any::AsAny;
 use crate::types::*;
 
 pub struct FsNode {
@@ -120,7 +121,7 @@ pub enum XattrOp {
     Replace,
 }
 
-pub trait FsNodeOps: Send + Sync {
+pub trait FsNodeOps: Send + Sync + AsAny {
     /// Open a FileObject for this node.
     ///
     /// The returned FileOps will be used to create a FileObject, which might
@@ -336,6 +337,14 @@ impl FsNode {
 
     fn ops(&self) -> &dyn FsNodeOps {
         &*self.ops.as_ref()
+    }
+
+    /// Returns the `FsNode`'s `FsNodeOps` as a `&T`, or `None` if the downcast fails.
+    pub fn downcast_ops<T>(&self) -> Option<&T>
+    where
+        T: 'static,
+    {
+        self.ops().as_any().downcast_ref::<T>()
     }
 
     pub fn open(

@@ -73,7 +73,7 @@ where
 }
 impl<F, O> FsNodeOps for SeLinuxNode<F, O>
 where
-    F: Fn() -> Result<O, Errno> + Send + Sync,
+    F: Fn() -> Result<O, Errno> + Send + Sync + 'static,
     O: FileOps + 'static,
 {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {

@@ -438,26 +438,6 @@ impl DirEntry {
                         // "oldpath can specify a directory.  In this case, newpath must"
                         // either not exist, or it must specify an empty directory."
                         if replaced.node.is_dir() {
-                            if !renamed.node.is_dir() {
-                                return error!(EISDIR);
-                            }
-
-                            // We are not allowed to replace the old_parent. This check is a
-                            // special case of not being allowed to replace a non-empty
-                            // directory, but we perform the check separately to avoid
-                            // deadlocks while trying to acquire the state lock for the
-                            // replaced entry.
-                            if Arc::ptr_eq(&old_parent, &replaced) {
-                                return error!(ENOTEMPTY);
-                            }
-                            // TODO: This check only covers whether the cache is non-empty.
-                            // We actually need to check whether the underlying directory is
-                            // empty by asking the node. (ENOTEMPTY)
-                            let replaced_state = replaced.state.write();
-                            if !replaced_state.children.is_empty() {
-                                return error!(ENOTEMPTY);
-                            }
-
                             // Check whether the replaced entry is a mountpoint.
                             // TODO: We should hold a read lock on the mount points for this
                             //       namespace to prevent the child from becoming a mount point

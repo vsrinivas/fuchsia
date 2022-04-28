@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use super::directory_file::MemoryDirectoryFile;
 use super::*;
+use crate::lock::{Mutex, MutexGuard};
 use crate::types::*;
 
 pub struct TmpFs(());
@@ -21,14 +22,37 @@ impl FileSystemOps for Arc<TmpFs> {
         renamed: &FsNodeHandle,
         replaced: Option<&FsNodeHandle>,
     ) -> Result<(), Errno> {
+        fn child_count(node: &FsNodeHandle) -> MutexGuard<'_, u32> {
+            // The following cast are safe, unless something is seriously wrong:
+            // - The filesystem should not be asked to rename node that it doesn't handle.
+            // - Parents in a rename operation need to be directories.
+            // - TmpfsDirectory is the ops for directories in this filesystem.
+            node.downcast_ops::<TmpfsDirectory>().unwrap().child_count.lock()
+        }
+        if let Some(replaced) = replaced {
+            if replaced.is_dir() {
+                if !renamed.is_dir() {
+                    return error!(EISDIR);
+                }
+                // Ensures that replaces is empty.
+                if *child_count(replaced) != 0 {
+                    return error!(ENOTEMPTY);
+                }
+            }
+        }
+        *child_count(old_parent) -= 1;
+        *child_count(new_parent) += 1;
         if renamed.is_dir() {
             old_parent.info_write().link_count -= 1;
             new_parent.info_write().link_count += 1;
         }
+        // Fix the wrong changes to new_parent due to the fact that the target element has
+        // been replaced instead of added.
         if let Some(replaced) = replaced {
             if replaced.is_dir() {
                 new_parent.info_write().link_count -= 1;
             }
+            *child_count(new_parent) -= 1;
         }
         Ok(())
     }
@@ -44,11 +68,12 @@ impl TmpFs {
 
 struct TmpfsDirectory {
     xattrs: MemoryXattrStorage,
+    child_count: Mutex<u32>,
 }
 
 impl TmpfsDirectory {
     fn new() -> Self {
-        Self { xattrs: MemoryXattrStorage::default() }
+        Self { xattrs: MemoryXattrStorage::default(), child_count: Mutex::new(0) }
     }
 }
 
@@ -74,6 +99,7 @@ impl FsNodeOps for TmpfsDirectory {
 
     fn mkdir(&self, node: &FsNode, _name: &FsStr) -> Result<FsNodeHandle, Errno> {
         node.info_write().link_count += 1;
+        *self.child_count.lock() += 1;
         create_node(node, Box::new(TmpfsDirectory::new()), FileMode::IFDIR)
     }
 
@@ -86,6 +112,7 @@ impl FsNodeOps for TmpfsDirectory {
             FileMode::IFSOCK => Box::new(SpecialNode),
             _ => return error!(EACCES),
         };
+        *self.child_count.lock() += 1;
         create_node(node, ops, mode)
     }
 
@@ -95,11 +122,13 @@ impl FsNodeOps for TmpfsDirectory {
         _name: &FsStr,
         target: &FsStr,
     ) -> Result<FsNodeHandle, Errno> {
+        *self.child_count.lock() += 1;
         create_node(node, Box::new(SymlinkNode::new(target)), FileMode::IFLNK)
     }
 
     fn link(&self, _node: &FsNode, _name: &FsStr, child: &FsNodeHandle) -> Result<(), Errno> {
         child.info_write().link_count += 1;
+        *self.child_count.lock() += 1;
         Ok(())
     }
 
@@ -108,6 +137,7 @@ impl FsNodeOps for TmpfsDirectory {
             node.info_write().link_count -= 1;
         }
         child.info_write().link_count -= 1;
+        *self.child_count.lock() -= 1;
         Ok(())
     }
 }
