@@ -571,6 +571,7 @@ pub fn spawn_vmo(
 /// Events that can occur while watching a directory, including files that already exist prior to
 /// running a Watcher.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum WatchEvent {
     /// A file was added.
     AddFile,
@@ -583,11 +584,6 @@ pub enum WatchEvent {
     Idle,
 
     Unknown(i32),
-
-    #[doc(hidden)]
-    #[allow(non_camel_case_types)]
-    // Try to prevent exhaustive matching since this enum may grow if fdio's events expand.
-    __do_not_match,
 }
 
 impl From<raw::c_int> for WatchEvent {
@@ -596,7 +592,7 @@ impl From<raw::c_int> for WatchEvent {
             fdio_sys::WATCH_EVENT_ADD_FILE => WatchEvent::AddFile,
             fdio_sys::WATCH_EVENT_REMOVE_FILE => WatchEvent::RemoveFile,
             fdio_sys::WATCH_EVENT_IDLE => WatchEvent::Idle,
-            _ => WatchEvent::Unknown(i),
+            i => WatchEvent::Unknown(i),
         }
     }
 }
@@ -608,7 +604,6 @@ impl From<WatchEvent> for raw::c_int {
             WatchEvent::RemoveFile => fdio_sys::WATCH_EVENT_REMOVE_FILE,
             WatchEvent::Idle => fdio_sys::WATCH_EVENT_IDLE,
             WatchEvent::Unknown(i) => i as raw::c_int,
-            _ => -1 as raw::c_int,
         }
     }
 }
