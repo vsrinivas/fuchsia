@@ -325,8 +325,8 @@ class CustomStageTest : public testing::Test {
 
     // Push one packet of the requested size.
     std::vector<float> packet_payload(packet_frames * input_channels, 1.0f);
-    producer_stage->push(PacketView(
-        PacketView::Args{source_format, Fixed(0), packet_frames, packet_payload.data()}));
+    producer_stage->push(
+        PacketView({source_format, Fixed(0), packet_frames, packet_payload.data()}));
 
     {
       // Read the first packet. Since our effect adds 1.0 to each sample, and we populated the
@@ -440,8 +440,8 @@ TEST_F(CustomStageTest, AddOneWithSourceOffset) {
 
     // Push one packet with `source_offset`.
     std::vector<float> packet_payload(kPacketFrames, 1.0f);
-    producer_stage->push(PacketView(
-        PacketView::Args{source_format, source_offset, kPacketFrames, packet_payload.data()}));
+    producer_stage->push(
+        PacketView({source_format, source_offset, kPacketFrames, packet_payload.data()}));
 
     // Source frame 100.5 is sampled at dest frame 101.
     const int64_t dest_offset_frames = source_offset.Ceiling();
