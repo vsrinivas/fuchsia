@@ -22,6 +22,9 @@
             protocol: [
                 "fuchsia.session.scene.Manager",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
+
+                // TODO(fxbug.dev/95901): Remove once migration done.
+                "fuchsia.ui.focus.FocusChainListenerRegistry-workstation",
                 "fuchsia.ui.keyboard.focus.Controller",
                 "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.views.ViewRefInstalled",

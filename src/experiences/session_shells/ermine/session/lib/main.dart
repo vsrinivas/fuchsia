@@ -50,7 +50,8 @@ void main(List args) async {
 
     // Hook up focus chain to IME and shortcut manager.
     final focusChainRegistry = FocusChainListenerRegistryProxy();
-    Incoming.fromSvcPath().connectToService(focusChainRegistry);
+    Incoming.fromSvcPath().connectToService(focusChainRegistry,
+        name: 'fuchsia.ui.focus.FocusChainListenerRegistry-workstation');
     await focusChainRegistry
         .register(FocusChainListenerBinding().wrap(_FocusChainListener()));
     // ignore: avoid_catches_without_on_clauses
