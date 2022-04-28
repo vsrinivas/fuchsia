@@ -29,19 +29,24 @@ const char kTagsLabel[] = "tags";
 const char kMessageLabel[] = "value";
 const char kVerbosityLabel[] = "verbosity";
 
-inline int32_t StringToSeverity(const std::string& input) {
+inline fuchsia::logger::LogLevelFilter StringToSeverity(const std::string& input) {
   if (strcasecmp(input.c_str(), "trace") == 0) {
-    return static_cast<int32_t>(fuchsia::logger::LogLevelFilter::TRACE);
-  } else if (strcasecmp(input.c_str(), "debug") == 0) {
-    return static_cast<int32_t>(fuchsia::logger::LogLevelFilter::DEBUG);
-  } else if (strcasecmp(input.c_str(), "info") == 0) {
-    return static_cast<int32_t>(fuchsia::logger::LogLevelFilter::INFO);
-  } else if (strcasecmp(input.c_str(), "warn") == 0) {
-    return static_cast<int32_t>(fuchsia::logger::LogLevelFilter::WARN);
-  } else if (strcasecmp(input.c_str(), "error") == 0) {
-    return static_cast<int32_t>(fuchsia::logger::LogLevelFilter::ERROR);
-  } else if (strcasecmp(input.c_str(), "fatal") == 0) {
-    return static_cast<int32_t>(fuchsia::logger::LogLevelFilter::FATAL);
+    return fuchsia::logger::LogLevelFilter::TRACE;
+  }
+  if (strcasecmp(input.c_str(), "debug") == 0) {
+    return fuchsia::logger::LogLevelFilter::DEBUG;
+  }
+  if (strcasecmp(input.c_str(), "info") == 0) {
+    return fuchsia::logger::LogLevelFilter::INFO;
+  }
+  if (strcasecmp(input.c_str(), "warn") == 0) {
+    return fuchsia::logger::LogLevelFilter::WARN;
+  }
+  if (strcasecmp(input.c_str(), "error") == 0) {
+    return fuchsia::logger::LogLevelFilter::ERROR;
+  }
+  if (strcasecmp(input.c_str(), "fatal") == 0) {
+    return fuchsia::logger::LogLevelFilter::FATAL;
   }
 
   return fuchsia::logger::LOG_LEVEL_DEFAULT;
@@ -77,7 +82,7 @@ inline fpromise::result<LogMessage, std::string> JsonToHostLogMessage(rapidjson:
   if (severity == metadata->value.MemberEnd() || !severity->value.IsString()) {
     return fpromise::error("Expected metadata.severity key");
   }
-  ret.severity = StringToSeverity(severity->value.GetString());
+  ret.severity = static_cast<int32_t>(StringToSeverity(severity->value.GetString()));
 
   auto moniker = value.FindMember("moniker");
   std::string moniker_string;
@@ -264,7 +269,7 @@ inline fpromise::result<LogMessage, std::string> JsonToLogMessage(rapidjson::Val
   if (severity == metadata->value.MemberEnd() || !severity->value.IsString()) {
     return fpromise::error("Expected metadata.severity key");
   }
-  ret.severity = StringToSeverity(severity->value.GetString());
+  ret.severity = static_cast<int32_t>(StringToSeverity(severity->value.GetString()));
 
   auto moniker = value.FindMember("moniker");
   std::string moniker_string;

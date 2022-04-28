@@ -35,7 +35,7 @@ const LOG_SEVERITY_MAX_STEP uint8 = 6;
 const LOG_VERBOSITY_STEP_SIZE uint8 = 0x1;
 
 /// Default log level used to initialize loggers.
-const LOG_LEVEL_DEFAULT uint8 = 0x30; // LogLevel.INFO
+const LOG_LEVEL_DEFAULT LogLevelFilter = LogLevelFilter.INFO;
 
 /// Max number of tags that can be passed to filter by listener.
 const MAX_TAGS uint8 = 16;

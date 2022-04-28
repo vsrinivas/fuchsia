@@ -100,7 +100,7 @@ where
                             pid: LOG_MSG_PID,
                             tid: LOG_MSG_TID,
                             time: zx::Duration::from_seconds(v).into_nanos(),
-                            severity: fidl_fuchsia_logger::LOG_LEVEL_DEFAULT.into(),
+                            severity: fidl_fuchsia_logger::LOG_LEVEL_DEFAULT.into_primitive().into(),
                             dropped_logs: 0,
                             tags: vec![LOG_MSG_TAG.to_string()],
                             msg: LOG_MSG_CONTENTS.to_string(),
