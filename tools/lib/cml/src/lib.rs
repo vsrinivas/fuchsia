@@ -873,6 +873,7 @@ impl Right {
 /// [doc-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md
 /// [doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
 /// [doc-event]: /docs/concepts/components/v2/capabilities/event.md
+/// [doc-service]: /docs/concepts/components/v2/capabilities/service.md
 /// [doc-directory-rights]: /docs/concepts/components/v2/capabilities/directory#directory-capability-rights
 ///
 /// ## Top-level keys
