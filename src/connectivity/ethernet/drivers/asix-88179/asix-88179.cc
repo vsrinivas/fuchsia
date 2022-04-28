@@ -961,7 +961,18 @@ zx_status_t Asix88179Ethernet::Initialize() {
   }
   */
 
-  status = DdkAdd("ax88179");
+  auto args = ddk::DeviceAddArgs("ax88179");
+  zx_device_str_prop_t str_props[] = {
+      zx_device_str_prop_t{
+          .key = "fuchsia.ethernet.NETDEVICE_MIGRATION",
+          .property_value = str_prop_bool_val(true),
+      },
+  };
+
+  if (device_is_dfv2(parent())) {
+    args.set_str_props(cpp20::span<const zx_device_str_prop_t>(str_props));
+  }
+  status = DdkAdd(args);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ax88179: failed to create device: %d", status);
     Shutdown();
