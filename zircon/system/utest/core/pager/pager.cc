@@ -2375,7 +2375,7 @@ TEST(Pager, EvictPages) {
   uint64_t a1, a2;
   ASSERT_OK(
       zx_object_get_info(get_root_resource(), ZX_INFO_KMEM_STATS, &stats, sizeof(stats), &a1, &a2));
-  uint64_t free_before = stats.free_bytes;
+  // uint64_t free_before = stats.free_bytes;
 
   // Transfer pages to pager vmo.
   ASSERT_OK(pager.supply_pages(vmo, 0, kNumPages * zx_system_get_page_size(), aux, 0));
@@ -2415,15 +2415,17 @@ TEST(Pager, EvictPages) {
   // Get free memory after evicting.
   ASSERT_OK(
       zx_object_get_info(get_root_resource(), ZX_INFO_KMEM_STATS, &stats, sizeof(stats), &a1, &a2));
-  uint64_t free_after = stats.free_bytes;
+  // uint64_t free_after = stats.free_bytes;
 
+  // TODO(fxbug.dev/98494): Disable flaky free memory checks which can fail if there are other
+  // allocations happening simultaneously.
   // Free memory after eviction is more than before.
-  ASSERT_GT(free_after, free_before);
+  // ASSERT_GT(free_after, free_before);
   // At least half of the vmo size has been freed. With 16MB this allows for 8MB of parallel
   // allocations which might have already consumed the newly freed pages. Typically this test should
   // not be running in parallel with something else, so we shouldn't see any parallel allocations.
   // This guards against that scenario just in case.
-  ASSERT_GT(free_after - free_before, kNumPages * zx_system_get_page_size() / 2);
+  // ASSERT_GT(free_after - free_before, kNumPages * zx_system_get_page_size() / 2);
 }
 
 // Test that if we resize a vmo while it is waiting on a page to fullfill the commit for a pin
