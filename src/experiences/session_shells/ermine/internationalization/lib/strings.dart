@@ -1232,6 +1232,36 @@ class Strings {
             'open User Feedback when the data sharing is disabled',
       );
 
+  static String get firstTimeUserFeedback1 => Intl.message(
+        'All data submitted through this form will be uploaded to the crash '
+        'server and a corresponding bug will be created in Monorail. You may '
+        'later be cc\'d on the bug with the username you provide in the form.',
+        name: 'first time user feedback message 1',
+        desc: 'The first paragraph of the first-time user feedback message',
+      );
+
+  static String firstTimeUserFeedback2(String url) => Intl.message(
+        'If you want to directly create a Monorail bug by yourself, '
+        'please visit $url',
+        name: 'first time user feedback message 2',
+        desc: 'The second paragraph of the first-time user feedback message.',
+        args: [url],
+        examples: const {'url': 'https://bugs.fuchsia.dev'},
+      );
+
+  static String get doNotShowAgain => Intl.message(
+        'Don\'t show this message again',
+        name: 'do not show this message again',
+        desc: 'The checkbox label for the option to supress the user feedback '
+            'first-time dialog',
+      );
+
+  static String get acknowledged => Intl.message(
+        'Acknowledged',
+        name: 'acknowledged',
+        desc: 'The label of the button on the user feedback first-time dialog',
+      );
+
   static String get sendFeedback => Intl.message(
         'Send feedback to Google',
         name: 'send feedback',

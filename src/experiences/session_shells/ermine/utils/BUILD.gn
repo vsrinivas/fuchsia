@@ -11,6 +11,7 @@ dart_library("ermine_utils") {
   sources = [
     "ermine_utils.dart",
     "src/crash.dart",
+    "src/dialogs/checkbox_prompt.dart",
     "src/dialogs/dialog.dart",
     "src/dialogs/dialogs.dart",
     "src/dialogs/password_prompt.dart",

@@ -19,10 +19,20 @@ class UserFeedback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Observer(builder: (context) {
+        final isScrim = app.feedbackPage == FeedbackPage.scrim;
         // TODO(fxb/88445): Implement other pages
         switch (app.feedbackPage) {
+          case FeedbackPage.scrim:
           case FeedbackPage.ready:
-            return UserFeedbackForm(app);
+            return Stack(
+              children: [
+                UserFeedbackForm(app, isOutFocused: isScrim),
+                if (app.feedbackPage == FeedbackPage.scrim)
+                  Container(
+                    color: Theme.of(context).canvasColor.withOpacity(0.6),
+                  ),
+              ],
+            );
           case FeedbackPage.submitted:
             return UserFeedbackSubmitted(app);
           default:
@@ -34,12 +44,13 @@ class UserFeedback extends StatelessWidget {
 /// A page that displays a form to get the user data to file their feedback
 class UserFeedbackForm extends StatelessWidget {
   final AppState app;
+  final bool isOutFocused;
   final _formKey = GlobalKey<FormState>();
   final _summaryController = TextEditingController();
   final _descController = TextEditingController();
   final _usernameController = TextEditingController();
 
-  UserFeedbackForm(this.app);
+  UserFeedbackForm(this.app, {required this.isOutFocused});
 
   @override
   Widget build(BuildContext context) {
@@ -98,7 +109,7 @@ class UserFeedbackForm extends StatelessWidget {
                               TextFormField(
                                 maxLines: 1,
                                 controller: _summaryController,
-                                autofocus: true,
+                                autofocus: !isOutFocused,
                                 decoration: InputDecoration(
                                   labelText: Strings.summary,
                                   border: OutlineInputBorder(

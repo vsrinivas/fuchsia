@@ -19,8 +19,8 @@ import 'package:fuchsia_scenic/views.dart';
 
 enum FeedbackPage {
   preparing,
+  scrim,
   ready,
-  deviceLogs,
   submitting,
   submitted,
   failed,

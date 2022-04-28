@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:flutter/material.dart';
+
 /// A base class for information of alert dialogs.
 class DialogInfo {
   /// The title of the alert dialog box.
@@ -57,6 +59,38 @@ class AlertDialogInfo extends DialogInfo {
           width: width,
           onAction: onAction,
           onClose: onClose,
+        );
+}
+
+/// A class for holding information for an alert dialog widgets with a check
+/// box in its content and will be carried by [AppState.dialogs].
+class CheckboxDialogInfo extends DialogInfo {
+  /// The text label next to the checkbox.
+  final String checkboxLabel;
+
+  /// Optional. The body text of the dialog box.
+  final String? body;
+
+  /// The callback to receive the checkbox status.
+  final void Function(bool? status) onSubmit;
+
+  CheckboxDialogInfo({
+    required this.checkboxLabel,
+    required this.onSubmit,
+    required List<String> actions,
+    this.body,
+    String? title,
+    String? defaultAction,
+    void Function(String action)? onAction,
+    void Function()? onClose,
+    double? width,
+  }) : super(
+          actions: actions,
+          title: title,
+          defaultAction: defaultAction,
+          onAction: onAction,
+          onClose: onClose,
+          width: width,
         );
 }
 

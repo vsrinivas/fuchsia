@@ -13,6 +13,9 @@ import 'package:mobx/mobx.dart';
 class PreferencesService with Disposable {
   /// The JSON file that stores preferences persistently.
   static const kPreferencesJson = '/data/preferences.json';
+  static const kDarkModeKey = 'dark_mode';
+  static const kScreensaverKey = 'screensaver';
+  static const kUserFeedbackStartupKey = 'show_user_feedback_startup';
 
   /// The JSON file that provides preferences as part of package install.
   static const kStartupPreferencesJson = '/pkg/data/preferences.json';
@@ -23,16 +26,29 @@ class PreferencesService with Disposable {
   // Show screensaver: true | false.
   bool showScreensaver = false;
 
+  // Show user feedback startup dialog: true | false
+  final showUserFeedbackStartUpDialog = true.asObservable();
+
   final Map<String, dynamic> _data;
 
   PreferencesService() : _data = _readPreferences() {
-    darkMode.value = _data['dark_mode'] ?? true;
-    showScreensaver = _data['screensaver'] ?? true;
-    reactions.add(reaction<bool>((_) => darkMode.value, _setDarkMode));
+    darkMode.value = _data[kDarkModeKey] ?? true;
+    showScreensaver = _data[kScreensaverKey] ?? true;
+    showUserFeedbackStartUpDialog.value =
+        _data[kUserFeedbackStartupKey] ?? true;
+    reactions
+      ..add(reaction<bool>((_) => darkMode.value, _setDarkMode))
+      ..add(reaction<bool>((_) => showUserFeedbackStartUpDialog.value,
+          _setUserFeedbackStartUpDialog));
   }
 
   void _setDarkMode(bool value) {
-    _data['dark_mode'] = value;
+    _data[kDarkModeKey] = value;
+    _writePreferences(_data);
+  }
+
+  void _setUserFeedbackStartUpDialog(bool value) {
+    _data[kUserFeedbackStartupKey] = value;
     _writePreferences(_data);
   }
 
@@ -40,12 +56,18 @@ class PreferencesService with Disposable {
     Map<String, dynamic> parsePreferences(String data) {
       return json.decode(data, reviver: (key, value) {
         // Sanitize input.
-        if (key == 'dark_mode') {
+        if (key == kDarkModeKey) {
           return value is bool && value;
         }
 
         // Screensaver.
-        if (key == 'screensaver') {
+        if (key == kScreensaverKey) {
+          // ignore: avoid_bool_literals_in_conditional_expressions
+          return value is bool ? value : true;
+        }
+
+        // User feedback startup dialog.
+        if (key == kUserFeedbackStartupKey) {
           // ignore: avoid_bool_literals_in_conditional_expressions
           return value is bool ? value : true;
         }

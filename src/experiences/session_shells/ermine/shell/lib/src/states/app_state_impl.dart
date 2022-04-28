@@ -414,20 +414,45 @@ class AppStateImpl with Disposable implements AppState {
 
   @override
   void showUserFeedback() async {
-    runInAction(() {
-      if (settingsState.dataSharingConsentEnabled) {
-        // TODO(fxb/97464): Take a screenshot here when the bug is fixed.
-        userFeedbackVisibility.value = true;
-        _feedbackPage.value = FeedbackPage.ready;
-        return;
-      }
-
+    if (!settingsState.dataSharingConsentEnabled) {
       _displayDialog(AlertDialogInfo(
         title: Strings.enableDataSharingTitle,
         body: Strings.enableDataSharingBody,
         actions: [Strings.close],
         width: 714,
       ));
+      return;
+    }
+
+    runInAction(() {
+      // TODO(fxb/97464): Take a screenshot here when the bug is fixed.
+      userFeedbackVisibility.value = true;
+
+      if (preferencesService.showUserFeedbackStartUpDialog.value) {
+        _feedbackPage.value = FeedbackPage.scrim;
+        _displayDialog(CheckboxDialogInfo(
+          body: '${Strings.firstTimeUserFeedback1}\n\n'
+              '${Strings.firstTimeUserFeedback2('go/workstation-feedback')}',
+          checkboxLabel: Strings.doNotShowAgain,
+          onSubmit: (value) {
+            runInAction(() {
+              if (value == true) {
+                preferencesService.showUserFeedbackStartUpDialog.value = false;
+                log.info(
+                    'Set to not show the user feedback startup message again.');
+              }
+              _feedbackPage.value = FeedbackPage.ready;
+            });
+          },
+          actions: [Strings.acknowledged],
+          defaultAction: Strings.acknowledged,
+          width: 790,
+        ));
+
+        return;
+      }
+
+      _feedbackPage.value = FeedbackPage.ready;
     });
   }
 
