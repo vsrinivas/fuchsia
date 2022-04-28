@@ -93,22 +93,37 @@ class Git:
 class Repo:
     """Wraps operations on a `repo` checkout."""
 
-    def __init__(self, root):
+    # Repo spec is a {path, alias} mapping for when we need to handle
+    # more complicated repo checkouts.
+    #
+    # If alias is None, it means to use the project name.
+    Spec = Dict[str, Optional[str]]
+
+    def __init__(self, root: str, spec: Optional[Spec] = None):
         """Initializes the Repo object.
 
         Args:
             root: path to repo root.
-        """
-        self.root = root
-        self.git_repos = self._list_git_repos()
+            spec: a Spec of gits to track, None to track all.
 
-    def _list_git_repos(self):
+        Raises:
+            ValueError if there are multiple git projects mapped to the same
+            name (provide a spec to disambiguate) or if the spec had items
+            that were not found in the manifest.
+        """
+        # Use the real path so that we can correlate between the root,
+        # mount path, and relative spec paths.
+        self.root = os.path.realpath(root)
+        self.git_repos = self._list_git_repos(spec)
+
+    def _list_git_repos(self, spec: Optional[Spec] = None) -> Dict[str, Git]:
         """Returns a {name: Git} mapping of all repos in this checkout."""
         # `repo info` gives us the information we need. Output format is:
         #   ---------------
         #   Project: <name>
         #   Mount path: <absolute_path>
         #   Current revision: <revision>
+        #   Manifest revision: <revision>
         #   Local Branches: <#> [names]
         #   ---------------
         repo_info = subprocess.run(
@@ -122,19 +137,64 @@ class Repo:
         matches = re.findall(
             r"Project: (.*?)$\s*Mount path: (.*?)$", repo_info.stdout,
             re.MULTILINE)
-        return {m[0]: Git(m[1]) for m in matches}
+
+        gits = {}
+        used_specs = set()
+        for name, path in matches:
+            relative_path = os.path.relpath(path, self.root)
+
+            # If a spec was given, only use the gits listed in the spec and
+            # apply the alias if provided.
+            if spec:
+                if relative_path not in spec:
+                    continue
+                name = spec[relative_path] or name
+                used_specs.add(relative_path)
+
+            # Project names are not guaranteed to be unique, make sure that we
+            # aren't clobbering any other git.
+            if name in gits:
+                raise ValueError(
+                    f"Duplicate git '{name}' at {[gits[name], path]}")
+
+            gits[name] = Git(path)
+
+        # Make sure we used all the provided specs.
+        if spec:
+            unused_specs = set(spec.keys()).difference(used_specs)
+            if unused_specs:
+                raise ValueError(f"Unused specs: {unused_specs}")
+
+        return gits
 
 
-def get_cipd_version_manifest(package: str, version: str) -> Dict[str, str]:
+def get_cipd_version_manifest(package: str,
+                              version_or_path: str) -> Dict[str, str]:
     """Returns the contents of the manifest.json file in a CIPD package.
+
+    We accept a version or a local path here because it's useful to produce
+    a changelist between an existing CIPD package and a not-yet-submitted
+    package locally *before* uploading it, to double-check we're uploading
+    the right thing.
 
     Args:
         package: CIPD package name.
-        version: CIPD package version.
+        version: CIPD package version or path.
 
     Returns:
         A {name: version} mapping, or empty dict if manifest.json wasn't found.
     """
+
+    def read_manifest(path):
+        try:
+            with open(path, "r") as file:
+                return json.load(file)
+        except FileNotFoundError:
+            return {}
+
+    if os.path.isdir(version_or_path):
+        return read_manifest(os.path.join(version_or_path, "manifest.json"))
+
     with tempfile.TemporaryDirectory() as temp_dir:
         # Download the package so we can read the manifest file.
         subprocess.run(
@@ -143,30 +203,27 @@ def get_cipd_version_manifest(package: str, version: str) -> Dict[str, str]:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             text=True,
-            input=f"{package} {version}")
+            input=f"{package} {version_or_path}")
 
-        try:
-            with open(os.path.join(temp_dir, "manifest.json"), "r") as file:
-                return json.load(file)
-        except FileNotFoundError:
-            return {}
+        return read_manifest(os.path.join(temp_dir, "manifest.json"))
 
 
 def changelog(
-        repo: Repo, package: str, old_version: str, new_version: str) -> str:
+        repo: Repo, package: str, old_version_or_path: str,
+        new_version_or_path: str) -> str:
     """Generates a changelog between the two versions.
 
     Args:
         repo: Repo object.
         package: CIPD package name.
-        old_version: old CIPD version.
-        new_version: new CIPD version.
+        old_version_or_path: old CIPD version or path.
+        new_version_or_path: new CIPD version or path.
 
     Returns:
         A changelog formatted for use in a git commit message.
     """
-    old_manifest = get_cipd_version_manifest(package, old_version)
-    new_manifest = get_cipd_version_manifest(package, new_version)
+    old_manifest = get_cipd_version_manifest(package, old_version_or_path)
+    new_manifest = get_cipd_version_manifest(package, new_version_or_path)
 
     # The manifests don't necessarily have the exact same items, repos may be
     # added or removed over time, make sure we track them all.
@@ -209,6 +266,10 @@ def changelog(
             lines.append(removed)
         lines.append("")
 
+    if len(lines) == 1:
+        lines.append("[no changes]")
+        lines.append("")
+
     lines.append("-- Source Revisions --")
     for name, revision, _, _ in diffs:
         if name in new_manifest:
@@ -229,10 +290,16 @@ def _parse_args() -> argparse.Namespace:
     changelog_parser.add_argument("repo", help="Path to the repo root")
     changelog_parser.add_argument("package", help="The CIPD package name")
     changelog_parser.add_argument(
-        "old_version", help="The old CIPD version (ref, tag, or ID)")
+        "old_version", help="The old CIPD version (ref/tag/ID) or path")
     changelog_parser.add_argument(
-        "new_version", help="The new CIPD version (ref, tag, or ID)")
-
+        "new_version", help="The new CIPD version (ref/tag/ID) or path")
+    changelog_parser.add_argument(
+        "--spec-file",
+        help="Repo specification file as a JSON {path, alias} mapping. By"
+        " default all git repos in the manifest are used, but if a spec is"
+        " provided only the listed git repos are included. Alias is the name"
+        " to give the git repo in the changelog, or null to use the project"
+        " name.")
     return parser.parse_args()
 
 
@@ -245,9 +312,15 @@ def main() -> int:
     args = _parse_args()
 
     if args.action == "changelog":
+        if args.spec_file:
+            with open(args.spec_file, "r") as f:
+                spec = json.load(f)
+        else:
+            spec = None
+
         print(
             changelog(
-                Repo(args.repo), args.package, args.old_version,
+                Repo(args.repo, spec=spec), args.package, args.old_version,
                 args.new_version))
 
     return 0
