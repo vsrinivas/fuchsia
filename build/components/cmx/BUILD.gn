@@ -309,7 +309,6 @@ group("cmx_allowlist") {
     "//src/graphics/examples/vkproto/transaction-elimination-test:*",
     "//src/graphics/examples/vulkaninfo:*",
     "//src/graphics/lib/compute:*",
-    "//src/graphics/lib/compute/hotsort/platforms/vk/tests/hotsort_vk_bench:*",
     "//src/graphics/lib/compute/radix_sort/platforms/vk/tests/radix_sort_vk_bench:*",
     "//src/graphics/lib/compute/spinel-vk-rs/tests:*",
     "//src/graphics/lib/compute/spinel2/platforms/vk/tests/spinel_vk_bench:*",

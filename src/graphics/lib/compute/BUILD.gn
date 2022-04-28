@@ -12,7 +12,6 @@ group("compute") {
     "common",
     "common/vk",
     "forma",
-    "hotsort",
     "rive-rs",
     "spinel-vk-rs",
     "spinel2/platforms/vk",
