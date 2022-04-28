@@ -69,7 +69,11 @@ impl GfxTouchHandler {
         display_size: Size,
     ) -> Result<Rc<Self>, Error> {
         if display_size == Size::zero() {
-            Err(format_err!("Display height: {} and width: {} are required to be non-zero."))
+            Err(format_err!(
+                "Display height: {} and width: {} are required to be non-zero.",
+                display_size.height,
+                display_size.width
+            ))
         } else {
             Ok(Rc::new(Self { scenic_session, scenic_compositor_id, display_size }))
         }

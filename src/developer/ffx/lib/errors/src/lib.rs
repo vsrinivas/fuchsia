@@ -165,7 +165,7 @@ pub fn write_result<T>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use anyhow::*;
+    use anyhow::{anyhow, Error, Result};
     use assert_matches::assert_matches;
     use std::io::Cursor;
 

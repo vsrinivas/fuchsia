@@ -4,7 +4,7 @@
 
 use {
     crate::test::*,
-    anyhow::*,
+    anyhow::{ensure, Result},
     errors::ffx_bail,
     fuchsia_async::{unblock, TimeoutExt},
     std::fs::{create_dir_all, File},

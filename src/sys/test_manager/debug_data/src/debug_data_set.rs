@@ -460,7 +460,9 @@ mod inner {
         let moniker_is_valid = moniker.up_path().is_empty() && moniker.down_path().len() == 1;
         match moniker_is_valid {
             true => Ok(moniker.down_path()[0].clone()),
-            false => Err(anyhow!("Moniker {:?} invalidates assumptions about test topology")),
+            false => {
+                Err(anyhow!("Moniker {:?} invalidates assumptions about test topology", moniker))
+            }
         }
     }
 

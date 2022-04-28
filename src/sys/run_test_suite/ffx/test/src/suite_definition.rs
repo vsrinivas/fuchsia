@@ -37,7 +37,7 @@ pub fn test_params_from_reader<R: Read>(
 }
 
 fn maybe_convert_test_list_entry_to_test_params(entry: TestListEntry) -> Result<TestParams> {
-    let TestListEntry { tags, execution, .. } = entry;
+    let TestListEntry { tags, execution, name, .. } = entry;
 
     match execution {
         Some(ExecutionEntry::FuchsiaComponent(component_execution)) => {

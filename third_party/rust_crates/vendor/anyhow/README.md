@@ -1,5 +1,5 @@
-Anyhow&ensp;¯\\\_(ツ)\_/¯
-=========================
+Anyhow&ensp;¯\\\_(°ペ)\_/¯
+==========================
 
 [<img alt="github" src="https://img.shields.io/badge/github-dtolnay/anyhow-8da0cb?style=for-the-badge&labelColor=555555&logo=github" height="20">](https://github.com/dtolnay/anyhow)
 [<img alt="crates.io" src="https://img.shields.io/crates/v/anyhow.svg?style=for-the-badge&color=fc8d62&logo=rust" height="20">](https://crates.io/crates/anyhow)
@@ -16,7 +16,7 @@ for easy idiomatic error handling in Rust applications.
 anyhow = "1.0"
 ```
 
-*Compiler support: requires rustc 1.34+*
+*Compiler support: requires rustc 1.38+*
 
 <br>
 
@@ -75,10 +75,10 @@ anyhow = "1.0"
   }
   ```
 
-- If using the nightly channel, a backtrace is captured and printed with the
-  error if the underlying error type does not already provide its own. In order
-  to see backtraces, they must be enabled through the environment variables
-  described in [`std::backtrace`]:
+- If using the nightly channel, or stable with `features = ["backtrace"]`, a
+  backtrace is captured and printed with the error if the underlying error type
+  does not already provide its own. In order to see backtraces, they must be
+  enabled through the environment variables described in [`std::backtrace`]:
 
   - If you want panics and errors to both have backtraces, set
     `RUST_BACKTRACE=1`;

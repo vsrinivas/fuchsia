@@ -81,7 +81,7 @@ pub async fn shell_starnix(manager_proxy: ManagerProxy, _shell: ShellStarnixComm
 
     manager_proxy
         .start_shell(params, controller_server_end)
-        .map_err(|_| anyhow!("Error starting shell: {:?}"))?;
+        .with_context(|| format!("Error starting shell"))?;
 
     let (copy_result, return_code) = futures::join!(copy_futures, term_event_future);
     copy_result?;

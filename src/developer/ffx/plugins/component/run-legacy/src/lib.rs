@@ -117,10 +117,8 @@ async fn run_component_cmd<W: std::io::Write>(
         flat_namespace: None,
     };
 
-    launcher_proxy.create_component(&mut info, Some(control_server_end)).map_err(|_| {
-        anyhow!(
-            "Error starting component: {:?}. Ensure there is a target connected with `ffx list`"
-        )
+    launcher_proxy.create_component(&mut info, Some(control_server_end)).with_context(|| {
+        format!("Error starting component. Ensure there is a target connected with `ffx list`")
     })?;
 
     if run.background {

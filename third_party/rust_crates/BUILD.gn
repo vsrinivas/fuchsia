@@ -21,7 +21,7 @@ group("ansi_term") {
 }
 
 group("anyhow") {
-  public_deps = [ ":anyhow-v1_0_38" ]
+  public_deps = [ ":anyhow-v1_0_57" ]
 }
 
 group("arbitrary") {
@@ -1266,10 +1266,10 @@ rust_library("ansi_term-v0_11_0") {
   visibility = [ ":*" ]
 }
 
-rust_library("anyhow-v1_0_38") {
+rust_library("anyhow-v1_0_57") {
   crate_name = "anyhow"
   crate_root = "//third_party/rust_crates/vendor/anyhow/src/lib.rs"
-  output_name = "anyhow-34b5b8ef286e2000"
+  output_name = "anyhow-6015da1b46818404"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -1282,8 +1282,8 @@ rust_library("anyhow-v1_0_38") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=34b5b8ef286e2000",
-    "-Cextra-filename=-34b5b8ef286e2000",
+    "-Cmetadata=6015da1b46818404",
+    "-Cextra-filename=-6015da1b46818404",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -8456,7 +8456,7 @@ rust_proc_macro("prost-derive-v0_10_1") {
   ]
 
   deps = []
-  deps += [ ":anyhow-v1_0_38" ]
+  deps += [ ":anyhow-v1_0_57" ]
   deps += [ ":itertools-v0_10_1" ]
   deps += [ ":proc-macro2-v1_0_36" ]
   deps += [ ":quote-v1_0_18" ]
@@ -9446,7 +9446,7 @@ rust_library("rust_icu_common-v2_0_2") {
   ]
 
   deps = []
-  deps += [ ":anyhow-v1_0_38" ]
+  deps += [ ":anyhow-v1_0_57" ]
   deps += [ ":rust_icu_sys-v2_0_2" ]
   deps += [ ":thiserror-v1_0_23" ]
 
@@ -9831,7 +9831,7 @@ rust_library("rustfix-v0_6_0") {
   ]
 
   deps = []
-  deps += [ ":anyhow-v1_0_38" ]
+  deps += [ ":anyhow-v1_0_57" ]
   deps += [ ":log-v0_4_11" ]
   deps += [ ":serde-v1_0_116" ]
   deps += [ ":serde_json-v1_0_59" ]
