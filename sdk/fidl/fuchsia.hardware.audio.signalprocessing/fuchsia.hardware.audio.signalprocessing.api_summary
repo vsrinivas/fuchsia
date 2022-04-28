@@ -1,5 +1,37 @@
 protocol/member fuchsia.hardware.audio.signalprocessing/Connector.SignalProcessingConnect(server_end:fuchsia.hardware.audio.signalprocessing/SignalProcessing protocol)
 protocol fuchsia.hardware.audio.signalprocessing/Connector
+table/member fuchsia.hardware.audio.signalprocessing/Dynamics.bands vector<fuchsia.hardware.audio.signalprocessing/DynamicsBand>:64
+table/member fuchsia.hardware.audio.signalprocessing/Dynamics.supported_controls fuchsia.hardware.audio.signalprocessing/DynamicsSupportedControls
+table fuchsia.hardware.audio.signalprocessing/Dynamics
+table/member fuchsia.hardware.audio.signalprocessing/DynamicsBand.id uint64
+table fuchsia.hardware.audio.signalprocessing/DynamicsBand
+table/member fuchsia.hardware.audio.signalprocessing/DynamicsBandState.attack int64
+table/member fuchsia.hardware.audio.signalprocessing/DynamicsBandState.id uint64
+table/member fuchsia.hardware.audio.signalprocessing/DynamicsBandState.input_gain_db float32
+table/member fuchsia.hardware.audio.signalprocessing/DynamicsBandState.knee_width_db float32
+table/member fuchsia.hardware.audio.signalprocessing/DynamicsBandState.level_type fuchsia.hardware.audio.signalprocessing/LevelType
+table/member fuchsia.hardware.audio.signalprocessing/DynamicsBandState.linked_channels bool
+table/member fuchsia.hardware.audio.signalprocessing/DynamicsBandState.lookahead int64
+table/member fuchsia.hardware.audio.signalprocessing/DynamicsBandState.max_frequency uint32
+table/member fuchsia.hardware.audio.signalprocessing/DynamicsBandState.min_frequency uint32
+table/member fuchsia.hardware.audio.signalprocessing/DynamicsBandState.output_gain_db float32
+table/member fuchsia.hardware.audio.signalprocessing/DynamicsBandState.ratio float32
+table/member fuchsia.hardware.audio.signalprocessing/DynamicsBandState.release int64
+table/member fuchsia.hardware.audio.signalprocessing/DynamicsBandState.threshold_db float32
+table/member fuchsia.hardware.audio.signalprocessing/DynamicsBandState.threshold_type fuchsia.hardware.audio.signalprocessing/ThresholdType
+table fuchsia.hardware.audio.signalprocessing/DynamicsBandState
+table/member fuchsia.hardware.audio.signalprocessing/DynamicsElementState.band_states vector<fuchsia.hardware.audio.signalprocessing/DynamicsBandState>:64
+table fuchsia.hardware.audio.signalprocessing/DynamicsElementState
+bits/member fuchsia.hardware.audio.signalprocessing/DynamicsSupportedControls.ATTACK 2
+bits/member fuchsia.hardware.audio.signalprocessing/DynamicsSupportedControls.INPUT_GAIN 16
+bits/member fuchsia.hardware.audio.signalprocessing/DynamicsSupportedControls.KNEE_WIDTH 1
+bits/member fuchsia.hardware.audio.signalprocessing/DynamicsSupportedControls.LEVEL_TYPE 64
+bits/member fuchsia.hardware.audio.signalprocessing/DynamicsSupportedControls.LINKED_CHANNELS 128
+bits/member fuchsia.hardware.audio.signalprocessing/DynamicsSupportedControls.LOOKAHEAD 32
+bits/member fuchsia.hardware.audio.signalprocessing/DynamicsSupportedControls.OUTPUT_GAIN 8
+bits/member fuchsia.hardware.audio.signalprocessing/DynamicsSupportedControls.RELEASE 4
+bits/member fuchsia.hardware.audio.signalprocessing/DynamicsSupportedControls.THREDSHOLD_TYPE 256
+flexible bits fuchsia.hardware.audio.signalprocessing/DynamicsSupportedControls uint64
 struct/member fuchsia.hardware.audio.signalprocessing/EdgePair.processing_element_id_from uint64
 struct/member fuchsia.hardware.audio.signalprocessing/EdgePair.processing_element_id_to uint64
 struct fuchsia.hardware.audio.signalprocessing/EdgePair
@@ -17,7 +49,7 @@ enum/member fuchsia.hardware.audio.signalprocessing/ElementType.AUTOMATIC_GAIN_C
 enum/member fuchsia.hardware.audio.signalprocessing/ElementType.AUTOMATIC_GAIN_LIMITER 6
 enum/member fuchsia.hardware.audio.signalprocessing/ElementType.CONNECTION_POINT 3
 enum/member fuchsia.hardware.audio.signalprocessing/ElementType.DELAY 9
-enum/member fuchsia.hardware.audio.signalprocessing/ElementType.DYNAMIC_RANGE_COMPRESSION 7
+enum/member fuchsia.hardware.audio.signalprocessing/ElementType.DYNAMICS 7
 enum/member fuchsia.hardware.audio.signalprocessing/ElementType.END_POINT 2
 enum/member fuchsia.hardware.audio.signalprocessing/ElementType.EQUALIZER 10
 enum/member fuchsia.hardware.audio.signalprocessing/ElementType.GAIN 4
@@ -79,6 +111,10 @@ strict enum fuchsia.hardware.audio.signalprocessing/GainType uint8
 union/member fuchsia.hardware.audio.signalprocessing/Latency.latency_frames uint32
 union/member fuchsia.hardware.audio.signalprocessing/Latency.latency_time int64
 flexible union fuchsia.hardware.audio.signalprocessing/Latency
+enum/member fuchsia.hardware.audio.signalprocessing/LevelType.PEAK 1
+enum/member fuchsia.hardware.audio.signalprocessing/LevelType.RMS 2
+strict enum fuchsia.hardware.audio.signalprocessing/LevelType uint8
+const fuchsia.hardware.audio.signalprocessing/MAX_COUNT_DYNAMICS_BANDS uint32 64
 const fuchsia.hardware.audio.signalprocessing/MAX_COUNT_EQUALIZER_BANDS uint32 64
 const fuchsia.hardware.audio.signalprocessing/MAX_COUNT_PROCESSING_ELEMENTS uint32 64
 const fuchsia.hardware.audio.signalprocessing/MAX_COUNT_PROCESSING_ELEMENTS_EDGE_PAIRS uint32 64
@@ -112,13 +148,18 @@ struct fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetTopology_Resp
 union/member fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetTopology_Result.err int32
 union/member fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetTopology_Result.response fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetTopology_Response
 strict union fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetTopology_Result
+enum/member fuchsia.hardware.audio.signalprocessing/ThresholdType.ABOVE 1
+enum/member fuchsia.hardware.audio.signalprocessing/ThresholdType.BELOW 2
+strict enum fuchsia.hardware.audio.signalprocessing/ThresholdType uint8
 table/member fuchsia.hardware.audio.signalprocessing/Topology.id uint64
 table/member fuchsia.hardware.audio.signalprocessing/Topology.processing_elements_edge_pairs vector<fuchsia.hardware.audio.signalprocessing/EdgePair>:64
 table fuchsia.hardware.audio.signalprocessing/Topology
+union/member fuchsia.hardware.audio.signalprocessing/TypeSpecificElement.dynamics fuchsia.hardware.audio.signalprocessing/Dynamics
 union/member fuchsia.hardware.audio.signalprocessing/TypeSpecificElement.equalizer fuchsia.hardware.audio.signalprocessing/Equalizer
 union/member fuchsia.hardware.audio.signalprocessing/TypeSpecificElement.gain fuchsia.hardware.audio.signalprocessing/Gain
 union/member fuchsia.hardware.audio.signalprocessing/TypeSpecificElement.vendor_specific fuchsia.hardware.audio.signalprocessing/VendorSpecific
 flexible union fuchsia.hardware.audio.signalprocessing/TypeSpecificElement
+union/member fuchsia.hardware.audio.signalprocessing/TypeSpecificElementState.dynamics fuchsia.hardware.audio.signalprocessing/DynamicsElementState
 union/member fuchsia.hardware.audio.signalprocessing/TypeSpecificElementState.equalizer fuchsia.hardware.audio.signalprocessing/EqualizerElementState
 union/member fuchsia.hardware.audio.signalprocessing/TypeSpecificElementState.gain fuchsia.hardware.audio.signalprocessing/GainElementState
 union/member fuchsia.hardware.audio.signalprocessing/TypeSpecificElementState.vendor_specific fuchsia.hardware.audio.signalprocessing/VendorSpecificState

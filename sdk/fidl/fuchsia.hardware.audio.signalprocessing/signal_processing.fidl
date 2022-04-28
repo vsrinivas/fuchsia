@@ -34,10 +34,8 @@ type ElementType = flexible enum {
     /// Input below the level is unaffected, and peaks above the level are attenuated.
     AUTOMATIC_GAIN_LIMITER = 6;
 
-    /// Dynamic Range Compression.
-    /// Reduces the dynamic range by lowering higher signal levels and increasing lower signal
-    /// levels.
-    DYNAMIC_RANGE_COMPRESSION = 7;
+    /// Alters the dynamic range of the signal, e.g. dynamic range compression.
+    DYNAMICS = 7;
 
     /// Mute.
     MUTE = 8;
@@ -62,6 +60,9 @@ type TypeSpecificElement = flexible union {
 
     // See equalizer.fidl.
     3: equalizer Equalizer;
+
+    // See dynamics.fidl.
+    4: dynamics Dynamics;
 };
 
 type Latency = flexible union {
@@ -106,6 +107,9 @@ type TypeSpecificElementState = flexible union {
 
     // See equalizer.fidl.
     3: equalizer EqualizerElementState;
+
+    // See dynamics.fidl.
+    4: dynamics DynamicsElementState;
 };
 
 type ElementState = table {
