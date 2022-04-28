@@ -326,7 +326,6 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 }
 
 var supportedWireFormats = []gidlir.WireFormat{
-	gidlir.V1WireFormat,
 	gidlir.V2WireFormat,
 }
 
