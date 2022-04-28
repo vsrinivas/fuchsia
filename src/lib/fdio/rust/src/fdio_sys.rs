@@ -5,9 +5,7 @@
 // This file was generated with bindgen, then modified to consume already bound
 // types and remove various bindgen-isms that we don't want.
 
-// TODO(fxbug.dev/74605): Remove once toolchain rolls and deref_nulptr is known.
-#![cfg_attr(test, allow(unknown_lints))]
-// TODO(fxbug.dev/74605): Remove once bindgen is fixed.
+// TODO(https://github.com/rust-lang/rust-bindgen/issues/1651): Remove once bindgen is fixed.
 #![cfg_attr(test, allow(deref_nullptr))]
 
 use {fuchsia_zircon::sys::*, std::os::raw};
