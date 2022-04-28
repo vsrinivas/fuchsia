@@ -39,7 +39,7 @@ devices.
 
 After the system has bootstrapped itself, the files in the primary
 BOOTFS become the read-only filesystem tree rooted at `/boot` (and served by
-bootsvc).
+component manager).
 
 ## Kernel loads userboot
 
@@ -126,7 +126,7 @@ kernel, which represent the kernel command line.  If there is a string
 `userboot.next=`*file*+*optional_arg1*+*optional_arg2=foo*+... then *file*
 will be loaded as the first real user process with the '+' separated
 arguments passed to it. If no such option is present, the default *file* is
-`bin/bootsvc`.  The files are found in the BOOTFS image.
+`bin/component_manager+--boot`.  The files are found in the BOOTFS image.
 
 To load the file, `userboot` implements a full-featured ELF program loader.
 Usually the file being loaded is a dynamically-linked executable with a
@@ -159,7 +159,7 @@ executable needing various shared libraries.  The dynamic linker, the
 executable, and the shared libraries are all loaded from the same BOOTFS
 pages that will later appear as files in `/boot`.
 
-An executable that will be loaded by `userboot` (i.e. `bootsvc`) should
+An executable that will be loaded by `userboot` (i.e. `component manager`) should
 normally close its loader service channel once it's completed startup.
 That lets `userboot` know that it's no longer needed.
 

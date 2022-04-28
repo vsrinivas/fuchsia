@@ -48,7 +48,7 @@ on the [kernel command line][kernel-command-line].
 Component manager, the next process, is [dynamically linked][dynamic-linking] by userboot. This
 makes it a better home than userboot for early boot complex logic, as it can use
 libraries. Because of this component manager runs various FIDL services for its children,
-the most notable of which is bootfs, a [FIDL-based filesystem][fuchsia-io]
+the most notable of which for boot purposes is bootfs, a [FIDL-based filesystem][fuchsia-io]
 backed by the bootfs image that userboot decompressed. It also finishes parsing the ZBI and
 decommits unnecessary pages, and uses the extracted information to host item, item factory, and
 argument services.
@@ -57,9 +57,6 @@ Component manager marks its process as [critical][critical-processes], which mea
 something goes wrong and it crashes, the [job][job] that it is in is killed. As it runs in
 the root job which has the special property that if it is killed the kernel force restarts the
 system, component manager crashing will cause a reboot.
-
-![A diagram showing that userboot comes first, then bootsvc, then component
-manager](images/userboot-bootsvc-cm.png)
 
 ## Component manager {#component-manager}
 
