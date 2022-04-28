@@ -361,3 +361,49 @@ async fn power_manager_not_present_mexec() -> Result<(), Error> {
     assert_matches!(recv_signals.next().await, Some(Signal::Sys2Shutdown(_)));
     Ok(())
 }
+
+#[fasync::run_singlethreaded(test)]
+async fn power_manager_not_present_reboot_oom() -> Result<(), Error> {
+    let (realm_instance, mut recv_signals) =
+        new_realm(RealmVariant::PowerManagerNotPresent).await?;
+    let shim_statecontrol =
+        realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
+
+    fasync::Task::spawn(async move {
+        shim_statecontrol.reboot(fstatecontrol::RebootReason::OutOfMemory).await.expect_err(
+            "the shutdown shim should close the channel when manual shutdown driving is complete",
+        );
+    })
+    .detach();
+
+    assert_matches!(
+        recv_signals.next().await,
+        Some(Signal::DeviceManager(fstatecontrol::SystemPowerState::RebootKernelInitiated))
+    );
+    assert_matches!(recv_signals.next().await, Some(Signal::Sys2Shutdown(_)));
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+// If this test fails it is because a new variant was introduced. If a new
+// variant is introduced the `send_command` function in shutdown-shim must be
+// updated to support it.
+async fn test_variant_coverage() -> Result<(), Error> {
+    struct Mock {}
+
+    impl std::convert::From<fstatecontrol::SystemPowerState> for Mock {
+        fn from(ps: fstatecontrol::SystemPowerState) -> Mock {
+            match ps {
+                fstatecontrol::SystemPowerState::Reboot
+                | fstatecontrol::SystemPowerState::FullyOn
+                | fstatecontrol::SystemPowerState::RebootBootloader
+                | fstatecontrol::SystemPowerState::RebootRecovery
+                | fstatecontrol::SystemPowerState::Poweroff
+                | fstatecontrol::SystemPowerState::Mexec
+                | fstatecontrol::SystemPowerState::SuspendRam
+                | fstatecontrol::SystemPowerState::RebootKernelInitiated => Mock {},
+            }
+        }
+    }
+    Ok(())
+}

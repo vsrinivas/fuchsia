@@ -315,6 +315,16 @@ zx_status_t send_command(fidl::WireSyncClient<statecontrol_fidl::Admin> statecon
         return ZX_OK;
       }
     } break;
+    case statecontrol_fidl::wire::SystemPowerState::kRebootKernelInitiated: {
+      auto resp = statecontrol_client->Reboot(*reboot_reason);
+      if (resp.status() != ZX_OK) {
+        return ZX_ERR_UNAVAILABLE;
+      } else if (resp->result.is_err()) {
+        return resp->result.err();
+      } else {
+        return ZX_OK;
+      }
+    } break;
     case statecontrol_fidl::wire::SystemPowerState::kRebootBootloader: {
       auto resp = statecontrol_client->RebootToBootloader();
       if (resp.status() != ZX_OK) {
@@ -411,8 +421,12 @@ void StateControlAdminServer::PowerFullyOn(PowerFullyOnRequestView request,
 }
 
 void StateControlAdminServer::Reboot(RebootRequestView request, RebootCompleter::Sync& completer) {
-  zx_status_t status =
-      forward_command(statecontrol_fidl::wire::SystemPowerState::kReboot, &request->reason);
+  statecontrol_fidl::wire::SystemPowerState target_state =
+      statecontrol_fidl::wire::SystemPowerState::kReboot;
+  if (request->reason == statecontrol_fidl::wire::RebootReason::kOutOfMemory) {
+    target_state = statecontrol_fidl::wire::SystemPowerState::kRebootKernelInitiated;
+  }
+  zx_status_t status = forward_command(target_state, &request->reason);
   if (status == ZX_OK) {
     completer.ReplySuccess();
   } else {
