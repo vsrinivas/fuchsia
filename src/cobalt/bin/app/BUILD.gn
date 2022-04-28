@@ -134,13 +134,6 @@ config_data("userdebug_config") {
   outputs = [ "config.json" ]
 }
 
-# TODO(fxbug.dev/83213): Delete once nothing references this file
-fuchsia_component("component") {
-  component_name = "cobalt"
-  manifest = "meta/cobalt.cmx"
-  deps = [ ":app" ]
-}
-
 fuchsia_component("component-v2") {
   component_name = "cobalt"
   manifest = "meta/cobalt.cml"
@@ -203,9 +196,6 @@ fuchsia_package("cobalt") {
     ":component-v2",
     ":shuffler_devel_public",
     ":shuffler_prod_public",
-
-    # TODO(fxbug.dev/83213): Delete once nothing references this file
-    ":component",
   ]
 }
 
