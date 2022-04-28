@@ -15,10 +15,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	versionHistory "go.fuchsia.dev/fuchsia/src/lib/versioning/version-history/go"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/repo"
-	versionHistory "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/version-history/go"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 

@@ -23,10 +23,10 @@ go_library("host-target-testing") {
   testonly = true
   name = "go.fuchsia.dev/fuchsia/src/testing/host-target-testing/..."
   deps = [
+    "//src/lib/versioning/version-history/go:version-history",
     "//src/sys/pkg/bin/pm:pm_lib",
     "//src/sys/pkg/lib/far/go:far",
     "//src/sys/pkg/lib/repo",
-    "//src/sys/pkg/lib/version-history/go:version-history",
     "//third_party/golibs:github.com/theupdateframework/go-tuf",
     "//third_party/golibs:golang.org/x/crypto",
     "//tools/lib/retry",

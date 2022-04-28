@@ -9,7 +9,7 @@ rustc_library("util") {
   version = "0.1.0"
   with_unit_tests = true
   deps = [
-    "//src/sys/pkg/lib/version-history/rust:version-history",
+    "//src/lib/versioning/version-history/rust:version-history",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:camino",
     "//third_party/rust_crates:pathdiff",
