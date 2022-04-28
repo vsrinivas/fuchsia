@@ -563,7 +563,6 @@ template("carnelian_example") {
   }
   fuchsia_package_with_single_component(target_name) {
     forward_variables_from(invoker, [ "manifest" ])
-    visibility = [ ":*" ]
     deps = example_deps
     manifest_deps = invoker.manifest_deps
   }
