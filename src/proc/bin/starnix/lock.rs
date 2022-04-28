@@ -2,33 +2,33 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(not(test))]
+#[cfg(not(any(testing, debug_assertions)))]
 pub type Mutex<T> = parking_lot::Mutex<T>;
-#[cfg(not(test))]
+#[cfg(not(any(testing, debug_assertions)))]
 pub type MutexGuard<'a, T> = parking_lot::MutexGuard<'a, T>;
-#[cfg(not(test))]
+#[cfg(not(any(testing, debug_assertions)))]
 pub type RwLock<T> = parking_lot::RwLock<T>;
-#[cfg(not(test))]
+#[cfg(not(any(testing, debug_assertions)))]
 pub type RwLockReadGuard<'a, T> = parking_lot::RwLockReadGuard<'a, T>;
-#[cfg(not(test))]
+#[cfg(not(any(testing, debug_assertions)))]
 pub type RwLockWriteGuard<'a, T> = parking_lot::RwLockWriteGuard<'a, T>;
 
 // TODO(qsr): tracing-mutex doesn't currently have wrapper for parking_lot mutex. The support exist
 // in the repository, but no version has been published yet. When tracing-mutex is upgraded, all
 // these types should point to the parking_lot implementation.
-#[cfg(test)]
-pub type Mutex<T> = test::PoisonFreeTracingMutex<T>;
-#[cfg(test)]
-pub type MutexGuard<'a, T> = test::PoisonFreeTracingMutexGuard<'a, T>;
-#[cfg(test)]
-pub type RwLock<T> = test::PoisonFreeTracingRwLock<T>;
-#[cfg(test)]
+#[cfg(any(testing, debug_assertions))]
+pub type Mutex<T> = debug_assertions::PoisonFreeTracingMutex<T>;
+#[cfg(any(testing, debug_assertions))]
+pub type MutexGuard<'a, T> = debug_assertions::PoisonFreeTracingMutexGuard<'a, T>;
+#[cfg(any(testing, debug_assertions))]
+pub type RwLock<T> = debug_assertions::PoisonFreeTracingRwLock<T>;
+#[cfg(any(testing, debug_assertions))]
 pub type RwLockReadGuard<'a, T> = tracing_mutex::stdsync::TracingReadGuard<'a, T>;
-#[cfg(test)]
+#[cfg(any(testing, debug_assertions))]
 pub type RwLockWriteGuard<'a, T> = tracing_mutex::stdsync::TracingWriteGuard<'a, T>;
 
-#[cfg(test)]
-mod test {
+#[cfg(any(testing, debug_assertions))]
+mod debug_assertions {
     use std::fmt;
     use std::ops;
     use tracing_mutex::stdsync::*;

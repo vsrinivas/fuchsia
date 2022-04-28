@@ -86,6 +86,10 @@ if (target_cpu == "x64") {
       "//third_party/rust_crates:vk-sys",
     ]
 
+    if (is_debug) {
+      deps += [ "//third_party/rust_crates:tracing-mutex" ]
+    }
+
     test_deps = [
       "//third_party/rust_crates:assert_matches",
       "//third_party/rust_crates:itertools",

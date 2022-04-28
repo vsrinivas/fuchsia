@@ -555,7 +555,7 @@ impl DirEntry {
                 "FsNode initialization did not populate the FileMode in FsNodeInfo."
             );
             let entry = DirEntry::new(node, Some(self.clone()), name.to_vec());
-            #[cfg(test)]
+            #[cfg(any(testing, debug_assertions))]
             {
                 // Take the lock on child while holding the one on the parent to ensure any wrong ordering
                 // will trigger the tracing-mutex at the right call site.
