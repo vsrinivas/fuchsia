@@ -4,18 +4,18 @@
 use {
     crate::arguments,
     crate::services,
+    anyhow::anyhow,
     anyhow::{Context, Error},
     fidl_fuchsia_virtualization::{
         GuestConfig, GuestMarker, GuestProxy, ManagerMarker, RealmMarker, RealmProxy,
     },
-    fuchsia_async::{self as fasync, futures::TryFutureExt, futures::TryStreamExt},
+    fuchsia_async::{self as fasync, futures::TryFutureExt},
     fuchsia_component::client::connect_to_protocol,
     fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon::{self as zx, sys},
     fuchsia_zircon_status as zx_status,
     lazy_static::lazy_static,
     std::convert::TryFrom,
-    std::io::{self, Write},
 };
 
 lazy_static! {
@@ -96,31 +96,39 @@ impl GuestLaunch {
             .guest
             .get_serial()
             .await?
-            .map_err(|status| Error::new(zx_status::Status::from_raw(status)))?;
+            .map_err(|status| anyhow!(zx_status::Status::from_raw(status)))?;
         let guest_console_response = self
             .guest
             .get_console()
             .await?
-            .map_err(|status| Error::new(zx_status::Status::from_raw(status)))?;
+            .map_err(|status| anyhow!(zx_status::Status::from_raw(status)))?;
 
         // Turn this stream socket into a a rust stream of data
-        let guest_serial_stream =
-            fasync::Socket::from_socket(guest_serial_response)?.into_datagram_stream();
+        let guest_serial_sock = fasync::Socket::from_socket(guest_serial_response)?;
 
-        let mut console = services::GuestConsole::new(guest_console_response)?;
+        let console = services::GuestConsole::new(guest_console_response)?;
 
-        let serial_output = guest_serial_stream.try_for_each(|message| {
-            match io::stdout().write_all(&message) {
-                Ok(()) => (),
-                Err(err) => return futures::future::ready(Err(From::from(err))),
-            }
-            futures::future::ready(io::stdout().flush().map_err(From::from))
-        });
+        // SAFETY: This block is unsafe due to the use of `get_evented_stdout`
+        // See services.rs for proper usage of these methods. This usage is
+        // valid as it only calls these methods once (ie a safe usage)
+        unsafe {
+            let stdout = services::get_evented_stdout();
 
-        futures::future::try_join(serial_output, console.run())
+            let serial_output = async {
+                futures::io::copy(guest_serial_sock, &mut &stdout)
+                    .await
+                    .map(|_| ())
+                    .map_err(anyhow::Error::from)
+            };
+
+            futures::future::try_join(
+                serial_output,
+                console.run(&services::get_evented_stdin(), &stdout),
+            )
             .await
             .map(|_| ())
-            .map_err(From::from)
+            .map_err(anyhow::Error::from)
+        }
     }
 }
 
@@ -134,8 +142,6 @@ mod test {
         fuchsia_zircon::{self as zx},
         futures::future::join,
     };
-
-    // TODO(fxbug.dev/93808): add success tests for launch
 
     #[fasync::run_until_stalled(test)]
     async fn launch_invalid_serial_returns_error() {

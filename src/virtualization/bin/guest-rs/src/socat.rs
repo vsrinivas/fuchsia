@@ -48,9 +48,9 @@ pub async fn handle_socat_listen(
 
     let (socket, remote_socket) = zx::Socket::create(zx::SocketOpts::STREAM)?;
     responder.send(zx_status::Status::OK.into_raw(), Some(remote_socket.into_handle()))?;
-    let mut io = services::GuestConsole::new(socket)?;
+    let io = services::GuestConsole::new(socket)?;
 
-    io.run().await.map_err(From::from)
+    io.run_with_stdio().await.map_err(From::from)
 }
 
 pub async fn handle_socat(
@@ -63,8 +63,8 @@ pub async fn handle_socat(
         zx::Status::ok(vsock_endpoint.connect(cid, port, Some(remote_socket.into_handle())).await?)
             .map_err(Error::new)?;
 
-    let mut io = services::GuestConsole::new(socket)?;
-    io.run().await.map_err(From::from)
+    let io = services::GuestConsole::new(socket)?;
+    io.run_with_stdio().await.map_err(From::from)
 }
 
 #[cfg(test)]
@@ -74,8 +74,6 @@ mod test {
         fuchsia_async as fasync, futures::future::join, futures::StreamExt,
         pretty_assertions::assert_eq,
     };
-
-    // TODO(fxbug.dev/93808): add success tests for socat (same blocker as launch)
 
     #[fasync::run_until_stalled(test)]
     async fn socat_listen_invalid_host_returns_err() {

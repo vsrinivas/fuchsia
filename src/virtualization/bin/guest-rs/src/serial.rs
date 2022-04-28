@@ -9,8 +9,8 @@ use {
 
 pub async fn handle_serial(guest: GuestProxy) -> Result<(), Error> {
     let serial = guest.get_serial().await?.map_err(zx_status::Status::from_raw)?;
-    let mut io = services::GuestConsole::new(serial)?;
-    io.run().await.map_err(From::from)
+    let io = services::GuestConsole::new(serial)?;
+    io.run_with_stdio().await.map_err(From::from)
 }
 
 #[cfg(test)]
