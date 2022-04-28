@@ -51,10 +51,12 @@ developers, don't hesitate to reach out! We hang out on the
   config lines instruct `cargo` where to find the build artifacts for BoringSSL,
   which we use for some cryptographic operations.
 * Configure `rustup` to use the Fuchsia Rust toolchain by running:
+
   ```shell
   rustup toolchain link fuchsia $($FUCHSIA_DIR/scripts/youcompleteme/paths.py VSCODE_RUST_TOOLCHAIN)
   rustup default fuchsia
   ```
+
 * Run a `cargo` command like `cargo check` or `cargo test` to see it in action!
 
 From now on, you will mostly be able to just use `cargo` for development.
