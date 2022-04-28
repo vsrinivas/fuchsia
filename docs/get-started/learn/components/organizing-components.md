@@ -114,7 +114,7 @@ write to the system log. You were able to successfully view the log output
 because this capability is **offered** to components in the `ffx-laboratory`
 collection from the `core` realm:
 
-```json5
+```json5 {:.devsite-disable-click-to-copy}
 {
     collections: [
         {
