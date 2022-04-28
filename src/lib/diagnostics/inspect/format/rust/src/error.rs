@@ -45,6 +45,9 @@ pub enum Error {
 
     #[error("Invalid reference count. Reference count must be in range (0, 2^32)")]
     InvalidReferenceCount,
+
+    #[error("Size (={0}) of the inspect VMO could not be written to the header")]
+    SizeNotWritten(u32),
 }
 
 impl Error {

@@ -269,18 +269,20 @@ mod tests {
 
     #[fuchsia::test]
     fn scan() -> Result<(), Error> {
-        let (mapping, vmo) = Mapping::allocate(4096)?;
+        let size = 4096;
+        let (mapping, vmo) = Mapping::allocate(size)?;
         let mapping_ref = Arc::new(mapping);
-        let mut header = Block::new_free(mapping_ref.clone(), 0, 0, 0)?;
+        let mut header =
+            Block::new_free(mapping_ref.clone(), 0, constants::HEADER_ORDER as usize, 0)?;
         header.become_reserved()?;
-        header.become_header()?;
+        header.become_header(size)?;
 
-        let b = Block::new_free(mapping_ref.clone(), 1, 2, 0)?;
+        let b = Block::new_free(mapping_ref.clone(), 2, 2, 0)?;
         b.become_reserved()?;
-        b.become_extent(5)?;
-        let b = Block::new_free(mapping_ref.clone(), 5, 0, 0)?;
+        b.become_extent(6)?;
+        let b = Block::new_free(mapping_ref.clone(), 6, 0, 0)?;
         b.become_reserved()?;
-        b.become_int_value(1, 2, 3)?;
+        b.become_int_value(1, 3, 4)?;
 
         let snapshot = Snapshot::try_from(&vmo)?;
 
@@ -289,28 +291,29 @@ mod tests {
 
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[0].index(), 0);
-        assert_eq!(blocks[0].order(), 0);
+        assert_eq!(blocks[0].order(), constants::HEADER_ORDER as usize);
         assert_eq!(blocks[0].header_magic().unwrap(), constants::HEADER_MAGIC_NUMBER);
         assert_eq!(blocks[0].header_version().unwrap(), constants::HEADER_VERSION_NUMBER);
 
         assert_eq!(blocks[1].block_type(), BlockType::Extent);
-        assert_eq!(blocks[1].index(), 1);
+        assert_eq!(blocks[1].index(), 2);
         assert_eq!(blocks[1].order(), 2);
-        assert_eq!(blocks[1].next_extent().unwrap(), 5);
+        assert_eq!(blocks[1].next_extent().unwrap(), 6);
 
         assert_eq!(blocks[2].block_type(), BlockType::IntValue);
-        assert_eq!(blocks[2].index(), 5);
+        assert_eq!(blocks[2].index(), 6);
         assert_eq!(blocks[2].order(), 0);
-        assert_eq!(blocks[2].name_index().unwrap(), 2);
-        assert_eq!(blocks[2].parent_index().unwrap(), 3);
+        assert_eq!(blocks[2].name_index().unwrap(), 3);
+        assert_eq!(blocks[2].parent_index().unwrap(), 4);
         assert_eq!(blocks[2].int_value().unwrap(), 1);
-        assert!(blocks[6..].iter().all(|b| b.block_type() == BlockType::Free));
+
+        assert!(blocks[3..].iter().all(|b| b.block_type() == BlockType::Free));
 
         // Verify get_block
         assert_eq!(snapshot.get_block(0).unwrap().block_type(), BlockType::Header);
-        assert_eq!(snapshot.get_block(1).unwrap().block_type(), BlockType::Extent);
-        assert_eq!(snapshot.get_block(5).unwrap().block_type(), BlockType::IntValue);
-        assert_eq!(snapshot.get_block(6).unwrap().block_type(), BlockType::Free);
+        assert_eq!(snapshot.get_block(2).unwrap().block_type(), BlockType::Extent);
+        assert_eq!(snapshot.get_block(6).unwrap().block_type(), BlockType::IntValue);
+        assert_eq!(snapshot.get_block(7).unwrap().block_type(), BlockType::Free);
         assert!(snapshot.get_block(4096).is_none());
 
         Ok(())
@@ -356,11 +359,12 @@ mod tests {
 
     #[fuchsia::test]
     fn invalid_pending_write() -> Result<(), Error> {
-        let (mapping, vmo) = Mapping::allocate(4096)?;
+        let size = 4096;
+        let (mapping, vmo) = Mapping::allocate(size)?;
         let mapping_ref = Arc::new(mapping);
         let mut header = Block::new_free(mapping_ref.clone(), 0, 0, 0)?;
         header.become_reserved()?;
-        header.become_header()?;
+        header.become_header(size)?;
         header.lock_header()?;
         assert!(Snapshot::try_from(&vmo).is_err());
         Ok(())
@@ -368,11 +372,12 @@ mod tests {
 
     #[fuchsia::test]
     fn invalid_magic_number() -> Result<(), Error> {
-        let (mapping, vmo) = Mapping::allocate(4096)?;
+        let size = 4096;
+        let (mapping, vmo) = Mapping::allocate(size)?;
         let mapping_ref = Arc::new(mapping);
         let mut header = Block::new_free(mapping_ref.clone(), 0, 0, 0)?;
         header.become_reserved()?;
-        header.become_header()?;
+        header.become_header(size)?;
         header.set_header_magic(3)?;
         assert!(Snapshot::try_from(&vmo).is_err());
         Ok(())
@@ -380,11 +385,12 @@ mod tests {
 
     #[fuchsia::test]
     fn invalid_generation_count() -> Result<(), Error> {
-        let (mapping, vmo) = Mapping::allocate(4096)?;
+        let size = 4096;
+        let (mapping, vmo) = Mapping::allocate(size)?;
         let mapping_ref = Arc::new(mapping);
         let mut header = Block::new_free(mapping_ref.clone(), 0, 0, 0)?;
         header.become_reserved()?;
-        header.become_header()?;
+        header.become_header(size)?;
         assert!(Snapshot::try_from_with_callback(&vmo, || {
             header.lock_header().unwrap();
             header.unlock_header().unwrap();
@@ -404,11 +410,12 @@ mod tests {
 
     #[fuchsia::test]
     fn snapshot_frozen_vmo() -> Result<(), Error> {
-        let (mapping, vmo) = Mapping::allocate(4096)?;
+        let size = 4096;
+        let (mapping, vmo) = Mapping::allocate(size)?;
         let mapping_ref = Arc::new(mapping);
         let mut header = Block::new_free(mapping_ref.clone(), 0, 0, 0)?;
         header.become_reserved()?;
-        header.become_header()?;
+        header.become_header(size)?;
         vmo.write(&[0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF], 8).unwrap();
 
         let snapshot = Snapshot::try_from(&vmo)?;

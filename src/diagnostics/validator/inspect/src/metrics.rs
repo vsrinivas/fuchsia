@@ -150,8 +150,8 @@ impl Metrics {
         let block_type = block.block_type_or()?;
 
         let data_bytes = match block_type {
-            BlockType::Header
-            | BlockType::Reserved
+            BlockType::Header => 4,
+            BlockType::Reserved
             | BlockType::NodeValue
             | BlockType::Free
             | BlockType::BufferValue
@@ -213,8 +213,8 @@ mod tests {
         assert!(json.contains(&format!("\"size\":{}", puppet::VMO_SIZE)), "{}", json);
         assert!(json.contains("\"step_index\":42"), "{}", json);
         assert!(json.contains("\"step_name\":\"stepfoo\""), "{}", json);
-        assert!(json.contains("\"block_count\":9"), "{}", json);
-        assert!(json.contains("\"HEADER\":{\"count\":1,\"header_bytes\":16,\"data_bytes\":0,\"total_bytes\":16,\"data_percent\":0}"), "{}", json);
+        assert!(json.contains("\"block_count\":8"), "{}", json);
+        assert!(json.contains("\"HEADER\":{\"count\":1,\"header_bytes\":16,\"data_bytes\":4,\"total_bytes\":32,\"data_percent\":12}"), "{}", json);
         Ok(())
     }
 
@@ -279,7 +279,7 @@ mod tests {
         };
     }
 
-    const NAME_INDEX: u32 = 2;
+    const NAME_INDEX: u32 = 3;
 
     // Creates the required Header block. Also creates a Name block because
     // lots of things use it.
@@ -288,7 +288,7 @@ mod tests {
         const HEADER_INDEX: usize = 0;
 
         let mut header = BlockHeader(0);
-        header.set_order(0);
+        header.set_order(constants::HEADER_ORDER as u8);
         set_type!(header, Header);
         header.set_header_magic(constants::HEADER_MAGIC_NUMBER);
         header.set_header_version(constants::HEADER_VERSION_NUMBER);
@@ -303,9 +303,9 @@ mod tests {
     fn header_metrics() -> Result<(), Error> {
         let mut buffer = [0u8; 256];
         init_vmo_contents(&mut buffer);
-        test_metrics(&buffer, 16, 256, "HEADER", 1, 16, 0, 16, 0)?;
-        test_metrics(&buffer, 16, 256, "FREE", 14, 224, 0, 224, 0)?;
-        test_metrics(&buffer, 16, 256, "NAME(UNUSED)", 1, 8, 0, 16, 0)?;
+        test_metrics(&buffer, 15, 256, "HEADER", 1, 16, 4, 32, 12)?;
+        test_metrics(&buffer, 15, 256, "FREE", 13, 208, 0, 208, 0)?;
+        test_metrics(&buffer, 15, 256, "NAME(UNUSED)", 1, 8, 0, 16, 0)?;
         Ok(())
     }
 
@@ -316,8 +316,8 @@ mod tests {
         let mut reserved_header = BlockHeader(0);
         set_type!(reserved_header, Reserved);
         reserved_header.set_order(1);
-        put_header!(reserved_header, 1, &mut buffer);
-        test_metrics(&buffer, 15, 256, "RESERVED", 1, 16, 0, 32, 0)?;
+        put_header!(reserved_header, 2, &mut buffer);
+        test_metrics(&buffer, 14, 256, "RESERVED", 1, 16, 0, 32, 0)?;
         Ok(())
     }
 
@@ -328,17 +328,17 @@ mod tests {
         let mut node_header = BlockHeader(0);
         set_type!(node_header, NodeValue);
         node_header.set_value_parent_index(1);
-        put_header!(node_header, 1, &mut buffer);
-        test_metrics(&buffer, 16, 256, "NODE_VALUE(UNUSED)", 1, 16, 0, 16, 0)?;
+        put_header!(node_header, 2, &mut buffer);
+        test_metrics(&buffer, 15, 256, "NODE_VALUE(UNUSED)", 1, 16, 0, 16, 0)?;
         node_header.set_value_name_index(NAME_INDEX);
         node_header.set_value_parent_index(0);
-        put_header!(node_header, 1, &mut buffer);
-        test_metrics(&buffer, 16, 256, "NODE_VALUE", 1, 16, 0, 16, 0)?;
-        test_metrics(&buffer, 16, 256, "NAME", 1, 8, 4, 16, 25)?;
+        put_header!(node_header, 2, &mut buffer);
+        test_metrics(&buffer, 15, 256, "NODE_VALUE", 1, 16, 0, 16, 0)?;
+        test_metrics(&buffer, 15, 256, "NAME", 1, 8, 4, 16, 25)?;
         set_type!(node_header, Tombstone);
-        put_header!(node_header, 1, &mut buffer);
-        test_metrics(&buffer, 16, 256, "TOMBSTONE", 1, 16, 0, 16, 0)?;
-        test_metrics(&buffer, 16, 256, "NAME(UNUSED)", 1, 8, 0, 16, 0)?;
+        put_header!(node_header, 2, &mut buffer);
+        test_metrics(&buffer, 15, 256, "TOMBSTONE", 1, 16, 0, 16, 0)?;
+        test_metrics(&buffer, 15, 256, "NAME(UNUSED)", 1, 8, 0, 16, 0)?;
         Ok(())
     }
 
@@ -352,8 +352,8 @@ mod tests {
                 set_type!(value_header, $number_type);
                 value_header.set_value_name_index(NAME_INDEX);
                 value_header.set_value_parent_index($parent);
-                put_header!(value_header, 1, &mut buffer);
-                test_metrics(&buffer, 16, 256, $block_string, 1, 8, $data_size, 16, $data_percent)?;
+                put_header!(value_header, 2, &mut buffer);
+                test_metrics(&buffer, 15, 256, $block_string, 1, 8, $data_size, 16, $data_percent)?;
             };
         }
         test_number!(IntValue, 0, "INT_VALUE", 8, 50);
@@ -373,28 +373,28 @@ mod tests {
         set_type!(value_header, BufferValue);
         value_header.set_value_name_index(NAME_INDEX);
         value_header.set_value_parent_index(0);
-        put_header!(value_header, 1, &mut buffer);
+        put_header!(value_header, 2, &mut buffer);
         let mut property_payload = Payload(0);
         property_payload.set_total_length(12);
         property_payload.set_property_extent_index(4);
         property_payload.set_property_flags(enum_value!(PropertyFormat::String));
-        put_payload!(property_payload, 1, &mut buffer);
+        put_payload!(property_payload, 2, &mut buffer);
         let mut extent_header = BlockHeader(0);
         set_type!(extent_header, Extent);
         extent_header.set_extent_next_index(5);
         put_header!(extent_header, 4, &mut buffer);
         extent_header.set_extent_next_index(0);
         put_header!(extent_header, 5, &mut buffer);
-        test_metrics(&buffer, 16, 256, "EXTENT", 2, 16, 12, 32, 37)?;
-        test_metrics(&buffer, 16, 256, "STRING", 1, 16, 0, 16, 0)?;
+        test_metrics(&buffer, 15, 256, "EXTENT", 2, 16, 12, 32, 37)?;
+        test_metrics(&buffer, 15, 256, "STRING", 1, 16, 0, 16, 0)?;
         property_payload.set_property_flags(enum_value!(PropertyFormat::Bytes));
-        put_payload!(property_payload, 1, &mut buffer);
-        test_metrics(&buffer, 16, 256, "EXTENT", 2, 16, 12, 32, 37)?;
-        test_metrics(&buffer, 16, 256, "BYTES", 1, 16, 0, 16, 0)?;
+        put_payload!(property_payload, 2, &mut buffer);
+        test_metrics(&buffer, 15, 256, "EXTENT", 2, 16, 12, 32, 37)?;
+        test_metrics(&buffer, 15, 256, "BYTES", 1, 16, 0, 16, 0)?;
         value_header.set_value_parent_index(7);
-        put_header!(value_header, 1, &mut buffer);
-        test_metrics(&buffer, 16, 256, "EXTENT(UNUSED)", 2, 16, 0, 32, 0)?;
-        test_metrics(&buffer, 16, 256, "BYTES(UNUSED)", 1, 16, 0, 16, 0)?;
+        put_header!(value_header, 2, &mut buffer);
+        test_metrics(&buffer, 15, 256, "EXTENT(UNUSED)", 2, 16, 0, 32, 0)?;
+        test_metrics(&buffer, 15, 256, "BYTES(UNUSED)", 1, 16, 0, 16, 0)?;
         Ok(())
     }
 
@@ -413,28 +413,28 @@ mod tests {
         property_payload.set_array_flags(enum_value!(ArrayFormat::Default));
         property_payload.set_array_slots_count(4);
         put_payload!(property_payload, 4, &mut buffer);
-        test_metrics(&buffer, 9, 256, "ARRAY(Default, INT_VALUE)", 1, 16, 32, 128, 25)?;
+        test_metrics(&buffer, 8, 256, "ARRAY(Default, INT_VALUE)", 1, 16, 32, 128, 25)?;
         property_payload.set_array_flags(enum_value!(ArrayFormat::LinearHistogram));
         property_payload.set_array_slots_count(8);
         put_payload!(property_payload, 4, &mut buffer);
-        test_metrics(&buffer, 9, 256, "ARRAY(LinearHistogram, INT_VALUE)", 1, 16, 64, 128, 50)?;
+        test_metrics(&buffer, 8, 256, "ARRAY(LinearHistogram, INT_VALUE)", 1, 16, 64, 128, 50)?;
         property_payload.set_array_flags(enum_value!(ArrayFormat::ExponentialHistogram));
         // avoid line-wrapping the parameter list of test_metrics()
         let name = "ARRAY(ExponentialHistogram, INT_VALUE)";
         put_payload!(property_payload, 4, &mut buffer);
-        test_metrics(&buffer, 9, 256, name, 1, 16, 64, 128, 50)?;
+        test_metrics(&buffer, 8, 256, name, 1, 16, 64, 128, 50)?;
         property_payload.set_array_entry_type(enum_value!(BlockType::UintValue));
         let name = "ARRAY(ExponentialHistogram, UINT_VALUE)";
         put_payload!(property_payload, 4, &mut buffer);
-        test_metrics(&buffer, 9, 256, name, 1, 16, 64, 128, 50)?;
+        test_metrics(&buffer, 8, 256, name, 1, 16, 64, 128, 50)?;
         property_payload.set_array_entry_type(enum_value!(BlockType::DoubleValue));
         let name = "ARRAY(ExponentialHistogram, DOUBLE_VALUE)";
         put_payload!(property_payload, 4, &mut buffer);
-        test_metrics(&buffer, 9, 256, name, 1, 16, 64, 128, 50)?;
+        test_metrics(&buffer, 8, 256, name, 1, 16, 64, 128, 50)?;
         value_header.set_value_parent_index(1);
         let name = "ARRAY(ExponentialHistogram, DOUBLE_VALUE)(UNUSED)";
         put_header!(value_header, 4, &mut buffer);
-        test_metrics(&buffer, 9, 256, name, 1, 16, 0, 128, 0)?;
+        test_metrics(&buffer, 8, 256, name, 1, 16, 0, 128, 0)?;
         Ok(())
     }
 }

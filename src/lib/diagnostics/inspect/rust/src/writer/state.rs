@@ -254,8 +254,10 @@ impl State {
     /// Create a |State| object wrapping the given Heap. This will cause the
     /// heap to be initialized with a header.
     pub fn create(mut heap: Heap, vmo: Arc<zx::Vmo>) -> Result<Self, Error> {
-        let mut block = heap.allocate_block(16)?;
-        block.become_header()?;
+        let mut block = heap.allocate_block(inspect_format::utils::order_to_size(
+            constants::HEADER_ORDER as usize,
+        ))?;
+        block.become_header(heap.current_size())?;
         let inner = Arc::new(Mutex::new(InnerState::new(heap, vmo)));
         Ok(Self { inner, header: block })
     }
@@ -1064,7 +1066,7 @@ mod tests {
         let state = get_state(4096);
         let snapshot = Snapshot::try_from(state.copy_vmo_bytes()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
-        assert_eq!(blocks.len(), 9);
+        assert_eq!(blocks.len(), 8);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
@@ -1142,13 +1144,13 @@ mod tests {
             // Create a node value and verify its fields
             let block = state.create_node("test-node", 0).unwrap();
             assert_eq!(block.block_type(), BlockType::NodeValue);
-            assert_eq!(block.index(), 1);
+            assert_eq!(block.index(), 2);
             assert_eq!(block.child_count().unwrap(), 0);
-            assert_eq!(block.name_index().unwrap(), 2);
+            assert_eq!(block.name_index().unwrap(), 4);
             assert_eq!(block.parent_index().unwrap(), 0);
 
             // Verify name block.
-            let name_block = state.heap().get_block(2).unwrap();
+            let name_block = state.heap().get_block(block.name_index().unwrap()).unwrap();
             assert_eq!(name_block.block_type(), BlockType::StringReference);
             assert_eq!(name_block.total_length().unwrap(), 9);
             assert_eq!(name_block.order(), 1);
@@ -1159,19 +1161,20 @@ mod tests {
         // Verify blocks.
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
-        assert_eq!(blocks.len(), 9);
+        assert_eq!(blocks.len(), 10);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::NodeValue);
-        assert_eq!(blocks[2].block_type(), BlockType::StringReference);
-        assert!(blocks[3..].iter().all(|b| b.block_type() == BlockType::Free));
+        assert_eq!(blocks[2].block_type(), BlockType::Free);
+        assert_eq!(blocks[3].block_type(), BlockType::StringReference);
+        assert!(blocks[4..].iter().all(|b| b.block_type() == BlockType::Free));
 
         {
             let mut state = core_state.try_lock().expect("lock state");
-            let child_block = state.create_node("child1", 1).unwrap();
+            let child_block = state.create_node("child1", block.index()).unwrap();
             assert_eq!(block.child_count().unwrap(), 1);
 
             // Create a child of the child and verify child counts.
-            let child11_block = state.create_node("child1-1", 4).unwrap();
+            let child11_block = state.create_node("child1-1", child_block.index()).unwrap();
             assert_eq!(child11_block.child_count().unwrap(), 0);
             assert_eq!(child_block.child_count().unwrap(), 1);
             assert_eq!(block.child_count().unwrap(), 1);
@@ -1180,8 +1183,8 @@ mod tests {
             assert_eq!(child_block.child_count().unwrap(), 0);
 
             // Add a couple more children to the block and verify count.
-            let child_block2 = state.create_node("child2", 1).unwrap();
-            let child_block3 = state.create_node("child3", 1).unwrap();
+            let child_block2 = state.create_node("child2", block.index()).unwrap();
+            let child_block3 = state.create_node("child3", block.index()).unwrap();
             assert_eq!(block.child_count().unwrap(), 3);
 
             // Free children and verify count.
@@ -1207,12 +1210,12 @@ mod tests {
             // Creates with value
             let block = state.create_int_metric("test", 3, 0).unwrap();
             assert_eq!(block.block_type(), BlockType::IntValue);
-            assert_eq!(block.index(), 1);
+            assert_eq!(block.index(), 2);
             assert_eq!(block.int_value().unwrap(), 3);
-            assert_eq!(block.name_index().unwrap(), 2);
+            assert_eq!(block.name_index().unwrap(), 3);
             assert_eq!(block.parent_index().unwrap(), 0);
 
-            let name_block = state.heap().get_block(2).unwrap();
+            let name_block = state.heap().get_block(block.name_index().unwrap()).unwrap();
             assert_eq!(name_block.block_type(), BlockType::StringReference);
             assert_eq!(name_block.total_length().unwrap(), 4);
             assert_eq!(state.load_string(name_block.index()).unwrap(), "test");
@@ -1221,7 +1224,7 @@ mod tests {
 
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
-        assert_eq!(blocks.len(), 10);
+        assert_eq!(blocks.len(), 9);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::IntValue);
         assert_eq!(blocks[2].block_type(), BlockType::StringReference);
@@ -1263,12 +1266,12 @@ mod tests {
             // Creates with value
             let block = state.create_uint_metric("test", 3, 0).unwrap();
             assert_eq!(block.block_type(), BlockType::UintValue);
-            assert_eq!(block.index(), 1);
+            assert_eq!(block.index(), 2);
             assert_eq!(block.uint_value().unwrap(), 3);
-            assert_eq!(block.name_index().unwrap(), 2);
+            assert_eq!(block.name_index().unwrap(), 3);
             assert_eq!(block.parent_index().unwrap(), 0);
 
-            let name_block = state.heap().get_block(2).unwrap();
+            let name_block = state.heap().get_block(block.name_index().unwrap()).unwrap();
             assert_eq!(name_block.block_type(), BlockType::StringReference);
             assert_eq!(name_block.total_length().unwrap(), 4);
             assert_eq!(state.load_string(name_block.index()).unwrap(), "test");
@@ -1277,7 +1280,7 @@ mod tests {
         };
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
-        assert_eq!(blocks.len(), 10);
+        assert_eq!(blocks.len(), 9);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::UintValue);
         assert_eq!(blocks[2].block_type(), BlockType::StringReference);
@@ -1319,12 +1322,12 @@ mod tests {
             let mut state = core_state.try_lock().expect("lock state");
             let block = state.create_double_metric("test", 3.0, 0).unwrap();
             assert_eq!(block.block_type(), BlockType::DoubleValue);
-            assert_eq!(block.index(), 1);
+            assert_eq!(block.index(), 2);
             assert_eq!(block.double_value().unwrap(), 3.0);
-            assert_eq!(block.name_index().unwrap(), 2);
+            assert_eq!(block.name_index().unwrap(), 3);
             assert_eq!(block.parent_index().unwrap(), 0);
 
-            let name_block = state.heap().get_block(2).unwrap();
+            let name_block = state.heap().get_block(block.name_index().unwrap()).unwrap();
             assert_eq!(name_block.block_type(), BlockType::StringReference);
             assert_eq!(name_block.total_length().unwrap(), 4);
             assert_eq!(state.load_string(name_block.index()).unwrap(), "test");
@@ -1333,7 +1336,7 @@ mod tests {
 
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
-        assert_eq!(blocks.len(), 10);
+        assert_eq!(blocks.len(), 9);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::DoubleValue);
         assert_eq!(blocks[2].block_type(), BlockType::StringReference);
@@ -1487,13 +1490,13 @@ mod tests {
             let block =
                 state.create_property("test", b"test-property", PropertyFormat::String, 0).unwrap();
             assert_eq!(block.block_type(), BlockType::BufferValue);
-            assert_eq!(block.index(), 1);
+            assert_eq!(block.index(), 2);
             assert_eq!(block.parent_index().unwrap(), 0);
-            assert_eq!(block.name_index().unwrap(), 2);
+            assert_eq!(block.name_index().unwrap(), 3);
             assert_eq!(block.total_length().unwrap(), 13);
             assert_eq!(block.property_format().unwrap(), PropertyFormat::String);
 
-            let name_block = state.heap().get_block(2).unwrap();
+            let name_block = state.heap().get_block(block.name_index().unwrap()).unwrap();
             assert_eq!(name_block.block_type(), BlockType::StringReference);
             assert_eq!(name_block.total_length().unwrap(), 4);
             assert_eq!(state.load_string(name_block.index()).unwrap(), "test");
@@ -1510,13 +1513,12 @@ mod tests {
 
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
-        assert_eq!(blocks.len(), 11);
+        assert_eq!(blocks.len(), 10);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::BufferValue);
         assert_eq!(blocks[2].block_type(), BlockType::StringReference);
-        assert_eq!(blocks[3].block_type(), BlockType::Free);
-        assert_eq!(blocks[4].block_type(), BlockType::Extent);
-        assert!(blocks[5..].iter().all(|b| b.block_type() == BlockType::Free));
+        assert_eq!(blocks[3].block_type(), BlockType::Extent);
+        assert!(blocks[4..].iter().all(|b| b.block_type() == BlockType::Free));
 
         {
             let mut state = core_state.try_lock().expect("lock state");
@@ -1603,14 +1605,14 @@ mod tests {
             let block =
                 state.create_property("test", b"test-property", PropertyFormat::Bytes, 0).unwrap();
             assert_eq!(block.block_type(), BlockType::BufferValue);
-            assert_eq!(block.index(), 1);
+            assert_eq!(block.index(), 2);
             assert_eq!(block.parent_index().unwrap(), 0);
-            assert_eq!(block.name_index().unwrap(), 2);
+            assert_eq!(block.name_index().unwrap(), 3);
             assert_eq!(block.total_length().unwrap(), 13);
             assert_eq!(block.property_extent_index().unwrap(), 4);
             assert_eq!(block.property_format().unwrap(), PropertyFormat::Bytes);
 
-            let name_block = state.heap().get_block(2).unwrap();
+            let name_block = state.heap().get_block(block.name_index().unwrap()).unwrap();
             assert_eq!(name_block.block_type(), BlockType::StringReference);
             assert_eq!(name_block.total_length().unwrap(), 4);
             assert_eq!(state.load_string(name_block.index()).unwrap(), "test");
@@ -1627,13 +1629,12 @@ mod tests {
 
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
-        assert_eq!(blocks.len(), 11);
+        assert_eq!(blocks.len(), 10);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::BufferValue);
         assert_eq!(blocks[2].block_type(), BlockType::StringReference);
-        assert_eq!(blocks[3].block_type(), BlockType::Free);
-        assert_eq!(blocks[4].block_type(), BlockType::Extent);
-        assert!(blocks[5..].iter().all(|b| b.block_type() == BlockType::Free));
+        assert_eq!(blocks[3].block_type(), BlockType::Extent);
+        assert!(blocks[4..].iter().all(|b| b.block_type() == BlockType::Free));
 
         // Free property.
         {
@@ -1654,12 +1655,12 @@ mod tests {
             // Creates with value
             let block = state.create_bool("test", true, 0).unwrap();
             assert_eq!(block.block_type(), BlockType::BoolValue);
-            assert_eq!(block.index(), 1);
+            assert_eq!(block.index(), 2);
             assert_eq!(block.bool_value().unwrap(), true);
-            assert_eq!(block.name_index().unwrap(), 2);
+            assert_eq!(block.name_index().unwrap(), 3);
             assert_eq!(block.parent_index().unwrap(), 0);
 
-            let name_block = state.heap().get_block(2).unwrap();
+            let name_block = state.heap().get_block(block.name_index().unwrap()).unwrap();
             assert_eq!(name_block.block_type(), BlockType::StringReference);
             assert_eq!(name_block.total_length().unwrap(), 4);
             assert_eq!(state.load_string(name_block.index()).unwrap(), "test");
@@ -1668,7 +1669,7 @@ mod tests {
 
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
-        assert_eq!(blocks.len(), 10);
+        assert_eq!(blocks.len(), 9);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::BoolValue);
         assert_eq!(blocks[2].block_type(), BlockType::StringReference);
@@ -1693,13 +1694,13 @@ mod tests {
             assert_eq!(block.block_type(), BlockType::ArrayValue);
             assert_eq!(block.order(), 2);
             assert_eq!(block.index(), 4);
-            assert_eq!(block.name_index().unwrap(), 1);
+            assert_eq!(block.name_index().unwrap(), 2);
             assert_eq!(block.parent_index().unwrap(), 0);
             assert_eq!(block.array_slots().unwrap(), 5);
             assert_eq!(block.array_format().unwrap(), ArrayFormat::Default);
             assert_eq!(block.array_entry_type().unwrap(), BlockType::IntValue);
 
-            let name_block = state.heap().get_block(1).unwrap();
+            let name_block = state.heap().get_block(block.name_index().unwrap()).unwrap();
             assert_eq!(name_block.block_type(), BlockType::StringReference);
             assert_eq!(name_block.total_length().unwrap(), 4);
             assert_eq!(state.load_string(name_block.index()).unwrap(), "test");
@@ -1742,14 +1743,14 @@ mod tests {
             let block =
                 state.create_property("test", data.as_bytes(), PropertyFormat::String, 0).unwrap();
             assert_eq!(block.block_type(), BlockType::BufferValue);
-            assert_eq!(block.index(), 1);
+            assert_eq!(block.index(), 2);
             assert_eq!(block.parent_index().unwrap(), 0);
-            assert_eq!(block.name_index().unwrap(), 2);
+            assert_eq!(block.name_index().unwrap(), 3);
             assert_eq!(block.total_length().unwrap(), 6000);
             assert_eq!(block.property_extent_index().unwrap(), 128);
             assert_eq!(block.property_format().unwrap(), PropertyFormat::String);
 
-            let name_block = state.heap().get_block(2).unwrap();
+            let name_block = state.heap().get_block(block.name_index().unwrap()).unwrap();
             assert_eq!(name_block.block_type(), BlockType::StringReference);
             assert_eq!(name_block.total_length().unwrap(), 4);
             assert_eq!(state.load_string(name_block.index()).unwrap(), "test");
@@ -1786,15 +1787,14 @@ mod tests {
 
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
-        assert_eq!(blocks.len(), 12);
+        assert_eq!(blocks.len(), 11);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::BufferValue);
         assert_eq!(blocks[2].block_type(), BlockType::StringReference);
-        assert!(blocks[3..9].iter().all(|b| b.block_type() == BlockType::Free));
+        assert!(blocks[3..8].iter().all(|b| b.block_type() == BlockType::Free));
+        assert_eq!(blocks[8].block_type(), BlockType::Extent);
         assert_eq!(blocks[9].block_type(), BlockType::Extent);
         assert_eq!(blocks[10].block_type(), BlockType::Extent);
-        assert_eq!(blocks[11].block_type(), BlockType::Extent);
-
         // Free property.
         {
             let mut state = core_state.try_lock().expect("lock state");
@@ -1858,8 +1858,9 @@ mod tests {
 
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::NodeValue);
-        assert_eq!(blocks[2].block_type(), BlockType::StringReference);
-        assert!(blocks[3..].iter().all(|b| b.block_type() == BlockType::Free));
+        assert_eq!(blocks[2].block_type(), BlockType::Free);
+        assert_eq!(blocks[3].block_type(), BlockType::StringReference);
+        assert!(blocks[4..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
     #[fuchsia::test]
@@ -1894,11 +1895,10 @@ mod tests {
         // put in the buffer where it would seem they should based on the literal order of allocation.
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::Tombstone);
-        assert_eq!(blocks[2].block_type(), BlockType::Free);
-        assert_eq!(blocks[3].block_type(), BlockType::NodeValue);
-        assert_eq!(blocks[4].block_type(), BlockType::Free);
-        assert_eq!(blocks[5].block_type(), BlockType::StringReference);
-        assert!(blocks[6..].iter().all(|b| b.block_type() == BlockType::Free));
+        assert_eq!(blocks[2].block_type(), BlockType::NodeValue);
+        assert_eq!(blocks[3].block_type(), BlockType::Free);
+        assert_eq!(blocks[4].block_type(), BlockType::StringReference);
+        assert!(blocks[5..].iter().all(|b| b.block_type() == BlockType::Free));
 
         // Freeing the child, causes all blocks to be freed.
         {
@@ -1920,9 +1920,9 @@ mod tests {
         let mut lock_guard = state.try_lock().expect("lock state");
         assert!(state.header.check_locked(true).is_ok());
         assert_eq!(state.header.header_generation_count().unwrap(), 1);
-        // Operations on the lock  guard do not change the generation counter.
+        // Operations on the lock guard do not change the generation counter.
         let _ = lock_guard.create_node("test", 0).unwrap();
-        let _ = lock_guard.create_node("test2", 1).unwrap();
+        let _ = lock_guard.create_node("test2", 2).unwrap();
         assert_eq!(state.header.header_generation_count().unwrap(), 1);
 
         // Dropping the guard releases the lock.
@@ -1964,14 +1964,14 @@ mod tests {
 
             // Verify link block.
             assert_eq!(block.block_type(), BlockType::LinkValue);
-            assert_eq!(block.index(), 1);
+            assert_eq!(block.index(), 2);
             assert_eq!(block.parent_index().unwrap(), 0);
-            assert_eq!(block.name_index().unwrap(), 2);
-            assert_eq!(block.link_content_index().unwrap(), 4);
+            assert_eq!(block.name_index().unwrap(), 4);
+            assert_eq!(block.link_content_index().unwrap(), 6);
             assert_eq!(block.link_node_disposition().unwrap(), LinkNodeDisposition::Inline);
 
             // Verify link's name block.
-            let name_block = state_guard.heap().get_block(2).unwrap();
+            let name_block = state_guard.heap().get_block(block.name_index().unwrap()).unwrap();
             assert_eq!(name_block.block_type(), BlockType::StringReference);
             assert_eq!(name_block.total_length().unwrap(), 9);
             assert_eq!(state_guard.load_string(name_block.index()).unwrap(), "link-name");
@@ -1991,9 +1991,9 @@ mod tests {
         assert_eq!(blocks.len(), 10);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::LinkValue);
-        assert_eq!(blocks[2].block_type(), BlockType::StringReference);
+        assert_eq!(blocks[2].block_type(), BlockType::Free);
         assert_eq!(blocks[3].block_type(), BlockType::StringReference);
-        assert_eq!(blocks[4].block_type(), BlockType::Free);
+        assert_eq!(blocks[4].block_type(), BlockType::StringReference);
         assert!(blocks[5..].iter().all(|b| b.block_type() == BlockType::Free));
 
         // Free link
@@ -2015,7 +2015,7 @@ mod tests {
                 async move { Ok(Inspector::new()) }.boxed()
             })
             .unwrap();
-        let content_block = state_guard.heap().get_block(4).unwrap();
+        let content_block = state_guard.heap().get_block(6).unwrap();
         assert_eq!(state_guard.load_string(content_block.index()).unwrap(), "link-name-1");
     }
 

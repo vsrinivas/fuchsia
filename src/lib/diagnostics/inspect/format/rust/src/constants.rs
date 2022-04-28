@@ -58,3 +58,11 @@ pub const STRING_REFERENCE_TOTAL_LENGTH_BYTES: usize = 4;
 /// This generation count indicates a VMO is frozen.
 /// It is even to allow creating an inspector that can write to the VMO.
 pub const VMO_FROZEN: u64 = u64::max_value() - 1;
+
+/// The order of the header block.
+pub const HEADER_ORDER: HeaderSize = HeaderSize::LARGE;
+
+#[repr(u8)]
+pub enum HeaderSize {
+    LARGE = 1,
+}

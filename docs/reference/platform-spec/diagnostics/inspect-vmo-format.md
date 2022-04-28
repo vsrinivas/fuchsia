@@ -259,6 +259,10 @@ not treated as free).
 | O | R | Type  | Version       | Magic number                  |
 |---------------------------------------------------------------|
 | Generation count                                              |
+|-------------------------------+-------------------------------|
+| Size in bytes                 | Unused                        |
+|---------------------------------------------------------------|
+|                                                               |
 '---------------------------------------------------------------'
 
 O = Order
@@ -269,9 +273,10 @@ Magic number = "INSP"
 ```
 
 There must be one `HEADER` block at the beginning of the file. It consists
-of a **Magic Number** ("INSP"), a **Version** (currently 2), and the
-**Generation Count** for concurrency control. The first byte of the header
-must not be a valid ASCII character.
+of a **Magic Number** ("INSP"), a **Version** (currently 2), the
+**Generation Count** for concurrency control and the size of the part of the VMO
+that is allocated in bytes. The first byte of the header must not be a valid
+ASCII character.
 
 See the [next section](#concurrency) for how concurrency control must be
 implemented using the generation count.

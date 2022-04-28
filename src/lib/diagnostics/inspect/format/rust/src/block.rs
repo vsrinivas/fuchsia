@@ -71,6 +71,14 @@ impl<T: ReadableBlockContainer> Block<T> {
         Ok(self.read_payload().header_generation_count())
     }
 
+    /// Returns the size saved in the HEADER block.
+    pub fn header_size(&self) -> Result<u32, Error> {
+        self.check_type(BlockType::Header)?;
+        let mut bytes = [0u8; 4];
+        self.container.read_bytes(utils::offset_for_index(self.index + 1), &mut bytes);
+        Ok(u32::from_le_bytes(bytes))
+    }
+
     /// True if the header is locked, false otherwise.
     pub fn header_is_locked(&self) -> Result<bool, Error> {
         self.check_type(BlockType::Header)?;
@@ -468,15 +476,16 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     }
 
     /// Initializes a HEADER block.
-    pub fn become_header(&mut self) -> Result<(), Error> {
+    pub fn become_header(&mut self, size: usize) -> Result<(), Error> {
         self.check_type(BlockType::Reserved)?;
         self.index = 0;
         let mut header = BlockHeader(0);
-        header.set_order(0);
+        header.set_order(constants::HEADER_ORDER as u8);
         header.set_block_type(BlockType::Header.to_u8().unwrap());
         header.set_header_magic(constants::HEADER_MAGIC_NUMBER);
         header.set_header_version(constants::HEADER_VERSION_NUMBER);
         self.write(header, Payload(0));
+        self.set_header_size(size.try_into().unwrap())?;
         Ok(())
     }
 
@@ -487,6 +496,18 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         let mut header = self.read_header();
         header.set_header_magic(value);
         self.write_header(header);
+        Ok(())
+    }
+
+    /// Set the size field in header block.
+    pub fn set_header_size(&self, size: u32) -> Result<(), Error> {
+        self.check_type(BlockType::Header)?;
+        let bytes_written = self
+            .container
+            .write_bytes(utils::offset_for_index(self.index + 1), &size.to_le_bytes());
+        if bytes_written != 4 {
+            return Err(Error::SizeNotWritten(size));
+        }
         Ok(())
     }
 
@@ -1191,60 +1212,76 @@ mod tests {
 
     #[fuchsia::test]
     fn test_become_header() {
-        let container = [0u8; constants::MIN_ORDER_SIZE];
+        let container = [0u8; constants::MIN_ORDER_SIZE * 2];
         let mut block = get_reserved(&container);
-        assert!(block.become_header().is_ok());
+        assert!(block.become_header((constants::MIN_ORDER_SIZE * 2).try_into().unwrap()).is_ok());
         assert_eq!(block.block_type(), BlockType::Header);
         assert_eq!(block.index(), 0);
-        assert_eq!(block.order(), 0);
+        assert_eq!(block.order(), constants::HEADER_ORDER as usize);
         assert_eq!(block.header_magic().unwrap(), constants::HEADER_MAGIC_NUMBER);
         assert_eq!(block.header_version().unwrap(), constants::HEADER_VERSION_NUMBER);
-        assert_eq!(container[..8], [0x00, 0x02, 0x02, 0x00, 0x49, 0x4e, 0x53, 0x50]);
-        assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(block.header_size().unwrap() as usize, constants::MIN_ORDER_SIZE * 2);
+        assert_eq!(container[..8], [0x01, 0x02, 0x02, 0x00, 0x49, 0x4e, 0x53, 0x50]);
+        assert_eq!(container[8..16], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[16..24], [0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[24..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
 
-        test_ok_types(move |b| b.become_header(), &BTreeSet::from_iter(vec![BlockType::Reserved]));
+        test_ok_types(
+            move |b| b.become_header((constants::MIN_ORDER_SIZE * 2).try_into().unwrap()),
+            &BTreeSet::from_iter(vec![BlockType::Reserved]),
+        );
         test_ok_types(move |b| b.header_magic(), &BTreeSet::from_iter(vec![BlockType::Header]));
         test_ok_types(move |b| b.header_version(), &BTreeSet::from_iter(vec![BlockType::Header]));
     }
 
     #[fuchsia::test]
     fn test_freeze_thaw_header() {
-        let container = [0u8; constants::MIN_ORDER_SIZE];
+        let container = [0u8; constants::MIN_ORDER_SIZE * 2];
         let mut block = get_reserved(&container);
-        assert!(block.become_header().is_ok());
+        assert!(block.become_header((constants::MIN_ORDER_SIZE * 2).try_into().unwrap()).is_ok());
         assert_eq!(block.block_type(), BlockType::Header);
         assert_eq!(block.index(), 0);
-        assert_eq!(block.order(), 0);
+        assert_eq!(block.order(), constants::HEADER_ORDER as usize);
         assert_eq!(block.header_magic().unwrap(), constants::HEADER_MAGIC_NUMBER);
         assert_eq!(block.header_version().unwrap(), constants::HEADER_VERSION_NUMBER);
-        assert_eq!(container[..8], [0x00, 0x02, 0x02, 0x00, 0x49, 0x4e, 0x53, 0x50]);
-        assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x01, 0x02, 0x02, 0x00, 0x49, 0x4e, 0x53, 0x50]);
+        assert_eq!(container[8..16], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[16..24], [0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[24..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
 
         let old = block.freeze_header().unwrap();
-        assert_eq!(container[8..], [0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+        assert_eq!(container[8..16], [0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+        assert_eq!(container[16..24], [0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[24..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         assert!(block.thaw_header(old).is_ok());
-        assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[8..16], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[16..24], [0x020, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[24..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
     }
 
     #[fuchsia::test]
     fn test_lock_unlock_header() {
-        let container = [0u8; constants::MIN_ORDER_SIZE];
-        let block = get_header(&container);
-        let header_bytes: [u8; 8] = [0x00, 0x02, 0x02, 0x00, 0x49, 0x4e, 0x53, 0x50];
+        let container = [0u8; constants::MIN_ORDER_SIZE * 2];
+        let block = get_header(&container, (constants::MIN_ORDER_SIZE * 2).try_into().unwrap());
+        let header_bytes: [u8; 8] = [0x01, 0x02, 0x02, 0x00, 0x49, 0x4e, 0x53, 0x50];
         // Can't unlock unlocked header.
         assert!(block.unlock_header().is_err());
         assert!(block.lock_header().is_ok());
         assert!(block.header_is_locked().unwrap());
         assert_eq!(block.header_generation_count().unwrap(), 1);
         assert_eq!(container[..8], header_bytes[..]);
-        assert_eq!(container[8..], [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[8..16], [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[16..24], [0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[24..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         // Can't lock locked header.
         assert!(block.lock_header().is_err());
         assert!(block.unlock_header().is_ok());
         assert!(!block.header_is_locked().unwrap());
         assert_eq!(block.header_generation_count().unwrap(), 2);
         assert_eq!(container[..8], header_bytes[..]);
-        assert_eq!(container[8..], [0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[8..16], [0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[16..24], [0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[24..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
 
         // Test overflow: set payload bytes to max u64 value. Ensure we cannot lock
         // and after unlocking, the value is zero.
@@ -1253,7 +1290,9 @@ mod tests {
         assert!(block.unlock_header().is_ok());
         assert_eq!(block.header_generation_count().unwrap(), 0);
         assert_eq!(container[..8], header_bytes[..]);
-        assert_eq!(container[8..], [0, 0, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(container[8..16], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[16..24], [0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[24..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         test_ok_types(
             move |b| {
                 b.header_generation_count()?;
@@ -1262,6 +1301,27 @@ mod tests {
             },
             &BTreeSet::from_iter(vec![BlockType::Header]),
         );
+    }
+
+    #[fuchsia::test]
+    fn test_header_size() {
+        let container = [0u8; constants::MIN_ORDER_SIZE * 2];
+        let block = get_header(&container, (constants::MIN_ORDER_SIZE * 2).try_into().unwrap());
+        assert!(block
+            .set_header_size(constants::DEFAULT_VMO_SIZE_BYTES.try_into().unwrap())
+            .is_ok());
+        assert_eq!(container[..8], [0x01, 0x02, 0x02, 0x00, 0x49, 0x4e, 0x53, 0x50]);
+        assert_eq!(container[8..16], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[16..24], [0x00, 0x00, 0x4, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[24..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(block.header_size().unwrap() as usize, constants::DEFAULT_VMO_SIZE_BYTES);
+    }
+
+    #[fuchsia::test]
+    fn test_header_size_wrong_block() {
+        let valid = BTreeSet::from_iter(vec![BlockType::Header]);
+        test_ok_types(move |b| b.header_size(), &valid);
+        test_ok_types(move |b| b.set_header_size(1), &valid);
     }
 
     #[fuchsia::test]
@@ -1836,9 +1896,9 @@ mod tests {
         );
     }
 
-    fn get_header(container: &[u8]) -> Block<&[u8]> {
+    fn get_header(container: &[u8], size: usize) -> Block<&[u8]> {
         let mut block = get_reserved(container);
-        assert!(block.become_header().is_ok());
+        assert!(block.become_header(size).is_ok());
         block
     }
 
