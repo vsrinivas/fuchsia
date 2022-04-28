@@ -679,17 +679,8 @@ def main_arg_parser() -> argparse.ArgumentParser:
         "Path to fsatrace binary.  If omitted, it will search for one in PATH.")
     parser.add_argument(
         "--label", required=True, help="The wrapped target's label")
-
     parser.add_argument(
         "--trace-output", required=True, help="Where to store the trace")
-    parser.add_argument(
-        "--keep-raw-trace",
-        action="store_true",
-        default=False,
-        help="Whether to keep trace output after the checks are successful")
-    parser.add_argument(
-        "--no-keep-raw-trace", action="store_false", dest="keep_raw_trace")
-
     parser.add_argument(
         "--target-type",
         choices=["action", "action_foreach"],
@@ -758,7 +749,6 @@ def _tool_is_python(tool: str) -> bool:
     base = os.path.basename(tool)
     return base == "python" or base.startswith("python3")
 
-
 def get_python_script(command: ToolCommand) -> Optional[str]:
     """If the script being invoked is python, return the relevant .py file"""
     # Cover both cases when the tool:
@@ -784,9 +774,7 @@ def is_known_wrapper(command: ToolCommand) -> bool:
         another command in tail position after '--'.
     """
     if python_script := get_python_script(command):
-        return os.path.basename(python_script) in {
-            "action_tracer.py", "output_cacher.py"
-        }
+        return os.path.basename(python_script) in {"action_tracer.py", "output_cacher.py"}
     return False
 
 
@@ -1007,15 +995,14 @@ should not be declared as dependencies.
 Unexpected file accesses building {args.label}:
 {unexpected_accesses_formatted}
 
-Full access trace in build directory: {args.trace_output}
+Full access trace:
+{raw_trace}
 
 See: https://fuchsia.dev/fuchsia-src/development/build/hermetic_actions
 
 """,
                 file=sys.stderr)
             exit_code = args.failed_check_status
-        elif not args.keep_raw_trace:
-            os.remove(args.trace_output)
 
     if action.parsed_depfile:
         allowed_abspaths = {"/usr/bin/env"}
