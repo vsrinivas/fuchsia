@@ -11,8 +11,8 @@
 #include <string>
 
 #include "src/lib/json_parser/json_parser.h"
-#include "third_party/cobalt/src/lib/statusor/statusor.h"
 #include "third_party/cobalt/src/public/cobalt_service_interface.h"
+#include "third_party/cobalt/src/public/lib/statusor/statusor.h"
 #include "third_party/cobalt/src/registry/metric_definition.pb.h"
 #include "third_party/cobalt/src/system_data/configuration_data.h"
 

@@ -12,9 +12,9 @@
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/trim.h"
 #include "src/lib/json_parser/json_parser.h"
-#include "third_party/cobalt/src/lib/statusor/status_macros.h"
 #include "third_party/cobalt/src/lib/util/file_util.h"
 #include "third_party/cobalt/src/public/cobalt_service_interface.h"
+#include "third_party/cobalt/src/public/lib/statusor/status_macros.h"
 
 namespace cobalt {
 

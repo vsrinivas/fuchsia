@@ -22,8 +22,8 @@ source_set("fuchsia_http_client") {
   public_deps = [
     "//sdk/fidl/fuchsia.net.http",
     "//src/lib/callback",
-    "//third_party/cobalt/src/lib/statusor",
     "//third_party/cobalt/src/public/lib:http_client",
+    "//third_party/cobalt/src/public/lib/statusor",
   ]
 }
 

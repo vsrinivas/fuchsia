@@ -11,8 +11,8 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/callback/scoped_task_runner.h"
-#include "third_party/cobalt/src/lib/statusor/statusor.h"
 #include "third_party/cobalt/src/public/lib/http_client.h"
+#include "third_party/cobalt/src/public/lib/statusor/statusor.h"
 
 namespace cobalt {
 namespace utils {
