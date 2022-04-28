@@ -540,7 +540,7 @@ a value. The callback function is invoked when the property value is read.
   of an Inspect hierarchy that has a lot of repeated data. For instance,
 
   ```rust
-  use fuchisa_inspect::Inspector;
+  use fuchsia_inspect::Inspector;
 
   let inspector = Inspector::new();
   for _ in 0..100 {
