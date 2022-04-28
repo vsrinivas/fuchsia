@@ -86,8 +86,6 @@ class PacketView {
   std::optional<PacketView> IntersectionWith(Fixed range_start, int64_t range_length) const;
 
  private:
-  PacketView(const Format& format, Fixed start, int64_t length, void* payload);
-
   Format format_;
   Fixed start_;
   Fixed end_;

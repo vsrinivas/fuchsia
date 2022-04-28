@@ -9,15 +9,12 @@
 namespace media_audio_mixer_service {
 
 PacketView::PacketView(Args args)
-    : PacketView(args.format, args.start, args.length, args.payload) {}
-
-PacketView::PacketView(const Format& format, Fixed start, int64_t length, void* payload)
-    : format_(format),
-      start_(start),
-      end_(start + Fixed(length)),
-      length_(length),
-      payload_(payload) {
-  FX_CHECK(length > 0) << "packet length '" << length << "' must be positive";
+    : format_(args.format),
+      start_(args.start),
+      end_(args.start + Fixed(args.length)),
+      length_(args.length),
+      payload_(args.payload) {
+  FX_CHECK(args.length > 0) << "packet length '" << args.length << "' must be positive";
 }
 
 PacketView PacketView::Slice(int64_t start_offset, int64_t end_offset) const {
@@ -26,11 +23,10 @@ PacketView PacketView::Slice(int64_t start_offset, int64_t end_offset) const {
 
   auto byte_offset = static_cast<size_t>(start_offset * format().bytes_per_frame());
 
-  return PacketView(
-      /* format          = */ format(),
-      /* start           = */ start() + Fixed(start_offset),
-      /* length          = */ end_offset - start_offset,
-      /* payload         = */ reinterpret_cast<uint8_t*>(payload()) + byte_offset);
+  return PacketView({.format = format(),
+                     .start = start() + Fixed(start_offset),
+                     .length = end_offset - start_offset,
+                     .payload = reinterpret_cast<uint8_t*>(payload()) + byte_offset});
 }
 
 std::optional<PacketView> PacketView::IntersectionWith(Fixed range_start,

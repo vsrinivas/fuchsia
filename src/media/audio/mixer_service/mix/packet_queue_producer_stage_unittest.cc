@@ -32,7 +32,7 @@ class PacketQueueProducerStageTest : public ::testing::Test {
     void* payload =
         packet_payloads_.emplace(packet_id, std::vector<float>(length, 0.0f)).first->second.data();
     packet_queue_producer_stage_.push(
-        PacketView(PacketView::Args{kFormat, Fixed(start), length, payload}),
+        PacketView({kFormat, Fixed(start), length, payload}),
         [this, packet_id]() { released_packets_.push_back(packet_id); });
     return payload;
   }

@@ -498,8 +498,7 @@ TEST_F(CustomStageTest, AddOneWithReadSmallerThanProcessingBuffer) {
   auto custom_stage = MakeCustomStage(info.config, producer_stage);
 
   std::vector<float> packet_payload(480, 1.0f);
-  producer_stage->push(
-      PacketView(PacketView::Args{source_format, Fixed(0), 480, packet_payload.data()}));
+  producer_stage->push(PacketView({source_format, Fixed(0), 480, packet_payload.data()}));
 
   {
     // Read the first packet.
@@ -551,8 +550,7 @@ TEST_F(CustomStageTest, AddOneWithReadSmallerThanProcessingBufferAndSourceOffset
   auto custom_stage = MakeCustomStage(info.config, producer_stage);
 
   std::vector<float> packet_payload(480, 1.0f);
-  producer_stage->push(
-      PacketView(PacketView::Args{source_format, Fixed(720), 480, packet_payload.data()}));
+  producer_stage->push(PacketView({source_format, Fixed(720), 480, packet_payload.data()}));
 
   {
     // This `Read` will attempt read 720 frames from the source, but the source is empty.
