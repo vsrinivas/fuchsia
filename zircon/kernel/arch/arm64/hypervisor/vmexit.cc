@@ -35,77 +35,18 @@
     ZX_OK;                                                                  \
   })
 
-static constexpr size_t kPageTableLevelShift = 3;
-static constexpr uint32_t kPsciMajorVersion = 0;
-static constexpr uint32_t kPsciMinorVersion = 2;
-static constexpr uint16_t kSmcPsci = 0;
+namespace {
+
+constexpr size_t kPageTableLevelShift = 3;
+constexpr uint32_t kPsciMajorVersion = 0;
+constexpr uint32_t kPsciMinorVersion = 2;
+constexpr uint16_t kSmcPsci = 0;
 
 enum TimerControl : uint32_t {
   ENABLE = 1u << 0,
   IMASK = 1u << 1,
   ISTATUS = 1u << 2,
 };
-
-ExceptionSyndrome::ExceptionSyndrome(uint32_t esr) {
-  ec = static_cast<ExceptionClass>(BITS_SHIFT(esr, 31, 26));
-  iss = BITS(esr, 24, 0);
-}
-
-WaitInstruction::WaitInstruction(uint32_t iss) { is_wfe = BIT(iss, 0); }
-
-SmcInstruction::SmcInstruction(uint32_t iss) { imm = static_cast<uint16_t>(BITS(iss, 15, 0)); }
-
-SystemInstruction::SystemInstruction(uint32_t iss) {
-  sysreg = static_cast<SystemRegister>(BITS(iss, 21, 10) >> 6 | BITS_SHIFT(iss, 4, 1));
-  xt = static_cast<uint8_t>(BITS_SHIFT(iss, 9, 5));
-  read = BIT(iss, 0);
-}
-
-SgiRegister::SgiRegister(uint64_t sgir) {
-  aff3 = static_cast<uint8_t>(BITS_SHIFT(sgir, 55, 48));
-  aff2 = static_cast<uint8_t>(BITS_SHIFT(sgir, 39, 32));
-  aff1 = static_cast<uint8_t>(BITS_SHIFT(sgir, 23, 16));
-  rs = static_cast<uint8_t>(BITS_SHIFT(sgir, 47, 44));
-  target_list = static_cast<uint8_t>(BITS_SHIFT(sgir, 15, 0));
-  int_id = static_cast<uint8_t>(BITS_SHIFT(sgir, 27, 24));
-  all_but_local = BIT(sgir, 40);
-}
-
-DataAbort::DataAbort(uint32_t iss) {
-  valid = BIT_SHIFT(iss, 24);
-  access_size = static_cast<uint8_t>(1u << BITS_SHIFT(iss, 23, 22));
-  sign_extend = BIT(iss, 21);
-  xt = static_cast<uint8_t>(BITS_SHIFT(iss, 20, 16));
-  read = !BIT(iss, 6);
-}
-
-std::string_view ErrorTypeToString(SError::ErrorType type) {
-  switch (type) {
-    case SError::ErrorType::kUncontainable:
-      return "Uncontainable";
-    case SError::ErrorType::kUnrecoverableState:
-      return "Unrecoverable State";
-    case SError::ErrorType::kRestartableState:
-      return "Restartable State";
-    case SError::ErrorType::kRecoverableState:
-      return "Recoverable State";
-    case SError::ErrorType::kCorrected:
-      return "Corrected";
-    default:
-      return "Unknown";
-  }
-}
-
-std::string_view DataFaultStatusCodeToString(SError::DataFaultStatusCode code) {
-  switch (code) {
-    case SError::DataFaultStatusCode::kUncategorized:
-      return "Uncategorized";
-    case SError::DataFaultStatusCode::kAsyncSError:
-      return "Async SError";
-    default:
-      return "Unknown";
-  }
-}
 
 // Note: This function assumes that the timer being used by the host is the
 // virtual view of the ARM system timer, or equivalent (eg. the physical timer
@@ -114,29 +55,20 @@ std::string_view DataFaultStatusCodeToString(SError::DataFaultStatusCode code) {
 // there for all time.  If this ever changes, this code will need to be updated
 // to account for the difference between the physical and virtual views of the
 // system timer.
-static inline zx_ticks_t convert_raw_ticks_to_ticks(zx_ticks_t raw_ticks) {
+zx_ticks_t convert_raw_ticks_to_ticks(zx_ticks_t raw_ticks) {
   return raw_ticks + platform_get_raw_ticks_to_ticks_offset();
 }
 
-static void next_pc(GuestState* guest_state) { guest_state->system_state.elr_el2 += 4; }
+void next_pc(GuestState* guest_state) { guest_state->system_state.elr_el2 += 4; }
 
-static bool timer_enabled(GuestState* guest_state) {
+bool timer_enabled(GuestState* guest_state) {
   bool enabled = guest_state->cntv_ctl_el0 & TimerControl::ENABLE;
   bool masked = guest_state->cntv_ctl_el0 & TimerControl::IMASK;
   return enabled && !masked;
 }
 
-void timer_maybe_interrupt(GuestState* guest_state, GichState* gich_state) {
-  if (timer_enabled(guest_state)) {
-    zx_ticks_t guest_ticks_deadline = convert_raw_ticks_to_ticks(guest_state->cntv_cval_el0);
-    if (current_ticks() >= guest_ticks_deadline) {
-      gich_state->Track(kTimerVector, hypervisor::InterruptType::PHYSICAL);
-    }
-  }
-}
-
-static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_state,
-                                              GichState* gich_state) {
+zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_state,
+                                       GichState* gich_state) {
   next_pc(guest_state);
   const WaitInstruction wi(iss);
   if (wi.is_wfe) {
@@ -161,8 +93,8 @@ static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_st
   return gich_state->Wait(deadline);
 }
 
-static zx_status_t handle_smc_instruction(uint32_t iss, GuestState* guest_state,
-                                          zx_port_packet_t* packet) {
+zx_status_t handle_smc_instruction(uint32_t iss, GuestState* guest_state,
+                                   zx_port_packet_t* packet) {
   const SmcInstruction si(iss);
   if (si.imm != kSmcPsci) {
     dprintf(CRITICAL, "hypervisor: Unhandled guest SMC instruction %#lx\n", guest_state->x[0]);
@@ -199,7 +131,7 @@ static zx_status_t handle_smc_instruction(uint32_t iss, GuestState* guest_state,
   }
 }
 
-static void clean_invalidate_cache(zx_paddr_t table, size_t index_shift) {
+void clean_invalidate_cache(zx_paddr_t table, size_t index_shift) {
   // TODO(abdulla): Make this understand concatenated page tables.
   auto* pte = static_cast<pte_t*>(paddr_to_physmap(table));
   pte_t page = index_shift > MMU_GUEST_PAGE_SIZE_SHIFT ? MMU_PTE_L012_DESCRIPTOR_BLOCK
@@ -220,9 +152,9 @@ static void clean_invalidate_cache(zx_paddr_t table, size_t index_shift) {
   arch::InvalidateGlobalInstructionCache();
 }
 
-static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestState* guest_state,
-                                             hypervisor::GuestPhysicalAddressSpace* gpas,
-                                             zx_port_packet_t* packet) {
+zx_status_t handle_system_instruction(uint32_t iss, uint64_t& hcr, GuestState* guest_state,
+                                      hypervisor::GuestPhysicalAddressSpace* gpas,
+                                      zx_port_packet_t* packet) {
   const SystemInstruction si(iss);
   const uint64_t reg = guest_state->x[si.xt];
 
@@ -258,11 +190,11 @@ static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestS
         //
         // We'll start monitoring again if the guest does a set/way cache
         // operation.
-        *hcr &= ~HCR_EL2_TVM;
+        hcr &= ~HCR_EL2_TVM;
       }
 
       LTRACEF("guest sctlr_el1: %#x\n", sctlr_el1);
-      LTRACEF("guest hcr_el2: %#lx\n", *hcr);
+      LTRACEF("guest hcr_el2: %#lx\n", hcr);
 
       guest_state->system_state.sctlr_el1 = sctlr_el1;
       next_pc(guest_state);
@@ -344,7 +276,7 @@ static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestS
       bool mmu_enabled = (sctlr_el1 & SCTLR_ELX_M) != 0;
       bool dcaches_enabled = (sctlr_el1 & SCTLR_ELX_C) != 0;
       if (!mmu_enabled || !dcaches_enabled) {
-        *hcr |= HCR_EL2_TVM;
+        hcr |= HCR_EL2_TVM;
       }
 
       next_pc(guest_state);
@@ -357,8 +289,8 @@ static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestS
   }
 }
 
-static zx_status_t handle_instruction_abort(GuestState* guest_state,
-                                            hypervisor::GuestPhysicalAddressSpace* gpas) {
+zx_status_t handle_instruction_abort(GuestState* guest_state,
+                                     hypervisor::GuestPhysicalAddressSpace* gpas) {
   const zx_vaddr_t guest_paddr = guest_state->hpfar_el2;
   if (auto result = gpas->PageFault(guest_paddr); result.is_error()) {
     dprintf(CRITICAL, "hypervisor: Unhandled guest instruction abort %#lx\n", guest_paddr);
@@ -367,9 +299,9 @@ static zx_status_t handle_instruction_abort(GuestState* guest_state,
   return ZX_OK;
 }
 
-static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
-                                     hypervisor::GuestPhysicalAddressSpace* gpas,
-                                     hypervisor::TrapMap* traps, zx_port_packet_t* packet) {
+zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
+                              hypervisor::GuestPhysicalAddressSpace* gpas,
+                              hypervisor::TrapMap* traps, zx_port_packet_t* packet) {
   zx_vaddr_t guest_paddr = guest_state->hpfar_el2;
   zx::status<hypervisor::Trap*> trap = traps->FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr);
   switch (trap.status_value()) {
@@ -423,7 +355,35 @@ static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
   }
 }
 
-static zx_status_t handle_serror_interrupt(GuestState* guest_state, uint32_t iss) {
+std::string_view ErrorTypeToString(SError::ErrorType type) {
+  switch (type) {
+    case SError::ErrorType::kUncontainable:
+      return "Uncontainable";
+    case SError::ErrorType::kUnrecoverableState:
+      return "Unrecoverable State";
+    case SError::ErrorType::kRestartableState:
+      return "Restartable State";
+    case SError::ErrorType::kRecoverableState:
+      return "Recoverable State";
+    case SError::ErrorType::kCorrected:
+      return "Corrected";
+    default:
+      return "Unknown";
+  }
+}
+
+std::string_view DataFaultStatusCodeToString(SError::DataFaultStatusCode code) {
+  switch (code) {
+    case SError::DataFaultStatusCode::kUncategorized:
+      return "Uncategorized";
+    case SError::DataFaultStatusCode::kAsyncSError:
+      return "Async SError";
+    default:
+      return "Unknown";
+  }
+}
+
+zx_status_t handle_serror_interrupt(GuestState* guest_state, uint32_t iss) {
   // We received a system error (SError) exception.
   //
   // This isn't necessarily the guest's fault. It might be the host (kernel or
@@ -444,6 +404,50 @@ static zx_status_t handle_serror_interrupt(GuestState* guest_state, uint32_t iss
           static_cast<uint32_t>(serror.dfsc()), static_cast<int>(dfsc_string.size()),
           dfsc_string.data());
   return ZX_OK;
+}
+
+}  // namespace
+
+ExceptionSyndrome::ExceptionSyndrome(uint32_t esr) {
+  ec = static_cast<ExceptionClass>(BITS_SHIFT(esr, 31, 26));
+  iss = BITS(esr, 24, 0);
+}
+
+WaitInstruction::WaitInstruction(uint32_t iss) { is_wfe = BIT(iss, 0); }
+
+SmcInstruction::SmcInstruction(uint32_t iss) { imm = static_cast<uint16_t>(BITS(iss, 15, 0)); }
+
+SystemInstruction::SystemInstruction(uint32_t iss) {
+  sysreg = static_cast<SystemRegister>(BITS(iss, 21, 10) >> 6 | BITS_SHIFT(iss, 4, 1));
+  xt = static_cast<uint8_t>(BITS_SHIFT(iss, 9, 5));
+  read = BIT(iss, 0);
+}
+
+SgiRegister::SgiRegister(uint64_t sgir) {
+  aff3 = static_cast<uint8_t>(BITS_SHIFT(sgir, 55, 48));
+  aff2 = static_cast<uint8_t>(BITS_SHIFT(sgir, 39, 32));
+  aff1 = static_cast<uint8_t>(BITS_SHIFT(sgir, 23, 16));
+  rs = static_cast<uint8_t>(BITS_SHIFT(sgir, 47, 44));
+  target_list = static_cast<uint8_t>(BITS_SHIFT(sgir, 15, 0));
+  int_id = static_cast<uint8_t>(BITS_SHIFT(sgir, 27, 24));
+  all_but_local = BIT(sgir, 40);
+}
+
+DataAbort::DataAbort(uint32_t iss) {
+  valid = BIT_SHIFT(iss, 24);
+  access_size = static_cast<uint8_t>(1u << BITS_SHIFT(iss, 23, 22));
+  sign_extend = BIT(iss, 21);
+  xt = static_cast<uint8_t>(BITS_SHIFT(iss, 20, 16));
+  read = !BIT(iss, 6);
+}
+
+void timer_maybe_interrupt(GuestState* guest_state, GichState* gich_state) {
+  if (timer_enabled(guest_state)) {
+    zx_ticks_t guest_ticks_deadline = convert_raw_ticks_to_ticks(guest_state->cntv_cval_el0);
+    if (current_ticks() >= guest_ticks_deadline) {
+      gich_state->Track(kTimerVector, hypervisor::InterruptType::PHYSICAL);
+    }
+  }
 }
 
 zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gich_state,
@@ -472,7 +476,7 @@ zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gi
       LTRACEF("handling system instruction\n");
       GUEST_STATS_INC(system_instructions);
       ktrace_vcpu_exit(VCPU_SYSTEM_INSTRUCTION, guest_state->system_state.elr_el2);
-      status = handle_system_instruction(syndrome.iss, hcr, guest_state, gpas, packet);
+      status = handle_system_instruction(syndrome.iss, *hcr, guest_state, gpas, packet);
       break;
     case ExceptionClass::INSTRUCTION_ABORT:
       LTRACEF("handling instruction abort at %#lx\n", guest_state->hpfar_el2);

@@ -152,9 +152,6 @@ struct SError {
   explicit SError(uint32_t iss) : iss(iss) {}
 };
 
-std::string_view ErrorTypeToString(SError::ErrorType type);
-std::string_view DataFaultStatusCodeToString(SError::DataFaultStatusCode code);
-
 void timer_maybe_interrupt(GuestState* guest_state, GichState* gich_state);
 zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gich_state,
                            hypervisor::GuestPhysicalAddressSpace* gpas, hypervisor::TrapMap* traps,

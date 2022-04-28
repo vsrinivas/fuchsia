@@ -41,30 +41,33 @@
 
 #define LOCAL_TRACE 0
 
-static constexpr uint64_t kLocalApicPhysBase =
+extern "C" void x86_call_external_interrupt_handler(uint64_t vector);
+
+namespace {
+
+constexpr uint64_t kLocalApicPhysBase =
     APIC_PHYS_BASE | IA32_APIC_BASE_XAPIC_ENABLE | IA32_APIC_BASE_X2APIC_ENABLE;
 
-static constexpr uint64_t kX2ApicMsrBase = 0x800;
-static constexpr uint64_t kX2ApicMsrMax = 0x83f;
+constexpr uint64_t kX2ApicMsrBase = 0x800;
+constexpr uint64_t kX2ApicMsrMax = 0x83f;
 
-static constexpr uint64_t kMiscEnableFastStrings = 1u << 0;
+constexpr uint64_t kMiscEnableFastStrings = 1u << 0;
 
-static constexpr uint32_t kFirstExtendedStateComponent = 2;
-static constexpr uint32_t kLastExtendedStateComponent = 9;
+constexpr uint32_t kFirstExtendedStateComponent = 2;
+constexpr uint32_t kLastExtendedStateComponent = 9;
 // From Volume 1, Section 13.4.
-static constexpr uint32_t kXsaveLegacyRegionSize = 512;
-static constexpr uint32_t kXsaveHeaderSize = 64;
+constexpr uint32_t kXsaveLegacyRegionSize = 512;
+constexpr uint32_t kXsaveHeaderSize = 64;
 
 // NOTE: x86 instructions are guaranteed to be 15 bytes or fewer.
-static constexpr uint8_t kMaxInstructionSize = 15;
+constexpr uint8_t kMaxInstructionSize = 15;
 
-static constexpr char kHypVendorId[] = "KVMKVMKVM\0\0\0";
-static constexpr size_t kHypVendorIdLength = 12;
-static_assert(sizeof(kHypVendorId) - 1 == kHypVendorIdLength, "");
+constexpr char kHypVendorId[] = "KVMKVMKVM\0\0\0";
+static_assert(sizeof(kHypVendorId) - 1 == 12, "Vendor ID must be 12 characters long");
 
-static constexpr uint64_t kKvmFeatureNoIoDelay = 1u << 1;
+constexpr uint64_t kKvmFeatureNoIoDelay = 1u << 1;
 
-static void dump_guest_state(const GuestState& guest_state, const ExitInfo& exit_info) {
+void dump_guest_state(const GuestState& guest_state, const ExitInfo& exit_info) {
   dprintf(INFO, " RAX: %#18lx  RCX: %#18lx  RDX: %#18lx  RBX: %#18lx\n", guest_state.rax,
           guest_state.rcx, guest_state.rdx, guest_state.rbx);
   dprintf(INFO, " RBP: %#18lx  RSI: %#18lx  RDI: %#18lx\n", guest_state.rbp, guest_state.rsi,
@@ -82,84 +85,7 @@ static void dump_guest_state(const GuestState& guest_state, const ExitInfo& exit
   dprintf(INFO, "guest physical address: %#lx\n", exit_info.guest_physical_address);
 }
 
-extern "C" void x86_call_external_interrupt_handler(uint64_t vector);
-
-ExitInfo::ExitInfo(const AutoVmcs& vmcs) {
-  // From Volume 3, Section 26.7.
-  uint32_t full_exit_reason = vmcs.Read(VmcsField32::EXIT_REASON);
-  entry_failure = BIT(full_exit_reason, 31);
-  exit_reason = static_cast<ExitReason>(BITS(full_exit_reason, 15, 0));
-
-  exit_qualification = vmcs.Read(VmcsFieldXX::EXIT_QUALIFICATION);
-  exit_instruction_length = vmcs.Read(VmcsField32::EXIT_INSTRUCTION_LENGTH);
-  guest_physical_address = vmcs.Read(VmcsField64::GUEST_PHYSICAL_ADDRESS);
-  guest_rip = vmcs.Read(VmcsFieldXX::GUEST_RIP);
-
-  if (exit_reason == ExitReason::EXTERNAL_INTERRUPT || exit_reason == ExitReason::IO_INSTRUCTION) {
-    return;
-  }
-
-  LTRACEF("entry failure: %d\n", entry_failure);
-  LTRACEF("exit reason: %#x (%s)\n", static_cast<uint32_t>(exit_reason),
-          exit_reason_name(exit_reason));
-  LTRACEF("exit qualification: %#lx\n", exit_qualification);
-  LTRACEF("exit instruction length: %#x\n", exit_instruction_length);
-  LTRACEF("guest activity state: %#x\n", vmcs.Read(VmcsField32::GUEST_ACTIVITY_STATE));
-  LTRACEF("guest interruptibility state: %#x\n",
-          vmcs.Read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE));
-  LTRACEF("guest physical address: %#lx\n", guest_physical_address);
-  LTRACEF("guest linear address: %#lx\n", vmcs.Read(VmcsFieldXX::GUEST_LINEAR_ADDRESS));
-  LTRACEF("guest rip: %#lx\n", guest_rip);
-}
-
-ExitInterruptionInformation::ExitInterruptionInformation(const AutoVmcs& vmcs) {
-  uint32_t int_info = vmcs.Read(VmcsField32::EXIT_INTERRUPTION_INFORMATION);
-  vector = static_cast<uint8_t>(BITS(int_info, 7, 0));
-  interruption_type = static_cast<InterruptionType>(BITS_SHIFT(int_info, 10, 8));
-  valid = BIT(int_info, 31);
-}
-
-CrAccessInfo::CrAccessInfo(uint64_t qualification) {
-  // From Volume 3, Table 27-3.
-  cr_number = static_cast<uint8_t>(BITS(qualification, 3, 0));
-  access_type = static_cast<CrAccessType>(BITS_SHIFT(qualification, 5, 4));
-  reg = static_cast<uint8_t>(BITS_SHIFT(qualification, 11, 8));
-}
-
-IoInfo::IoInfo(uint64_t qualification) {
-  access_size = static_cast<uint8_t>(BITS(qualification, 2, 0) + 1);
-  input = BIT_SHIFT(qualification, 3);
-  string = BIT_SHIFT(qualification, 4);
-  repeat = BIT_SHIFT(qualification, 5);
-  port = static_cast<uint16_t>(BITS_SHIFT(qualification, 31, 16));
-}
-
-EptViolationInfo::EptViolationInfo(uint64_t qualification) {
-  // From Volume 3C, Table 27-7.
-  read = BIT(qualification, 0);
-  write = BIT(qualification, 1);
-  instruction = BIT(qualification, 2);
-}
-
-InterruptCommandRegister::InterruptCommandRegister(uint32_t hi, uint32_t lo) {
-  destination = hi;
-  destination_mode = static_cast<InterruptDestinationMode>(BIT_SHIFT(lo, 11));
-  delivery_mode = static_cast<InterruptDeliveryMode>(BITS_SHIFT(lo, 10, 8));
-  destination_shorthand = static_cast<InterruptDestinationShorthand>(BITS_SHIFT(lo, 19, 18));
-  vector = static_cast<uint8_t>(BITS(lo, 7, 0));
-}
-
-VmCallInfo::VmCallInfo(const GuestState* guest_state) {
-  // ABI is documented in Linux kernel documentation, see
-  // Documents/virtual/kvm/hypercalls.txt
-  type = static_cast<VmCallType>(guest_state->rax);
-  arg[0] = guest_state->rbx;
-  arg[1] = guest_state->rcx;
-  arg[2] = guest_state->rdx;
-  arg[3] = guest_state->rsi;
-}
-
-static void next_rip(const ExitInfo& exit_info, AutoVmcs* vmcs) {
+void next_rip(const ExitInfo& exit_info, AutoVmcs* vmcs) {
   vmcs->Write(VmcsFieldXX::GUEST_RIP, exit_info.guest_rip + exit_info.exit_instruction_length);
 
   // Clear any flags blocking interrupt injection for a single instruction.
@@ -171,7 +97,7 @@ static void next_rip(const ExitInfo& exit_info, AutoVmcs* vmcs) {
   }
 }
 
-static zx_status_t handle_external_interrupt(AutoVmcs* vmcs) {
+zx_status_t handle_external_interrupt(AutoVmcs* vmcs) {
   ExitInterruptionInformation int_info(*vmcs);
   DEBUG_ASSERT(int_info.valid);
   DEBUG_ASSERT(int_info.interruption_type == InterruptionType::EXTERNAL_INTERRUPT);
@@ -180,7 +106,7 @@ static zx_status_t handle_external_interrupt(AutoVmcs* vmcs) {
   return ZX_OK;
 }
 
-static zx_status_t handle_interrupt_window(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
+zx_status_t handle_interrupt_window(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
   vmcs->InterruptWindowExiting(false);
   return ZX_OK;
 }
@@ -191,7 +117,7 @@ static zx_status_t handle_interrupt_window(AutoVmcs* vmcs, LocalApicState* local
 // Bits 31-00: Maximum size (bytes, from the beginning of the XSAVE/XRSTOR save
 // area) required by enabled features in XCR0. May be different than ECX if some
 // features at the end of the XSAVE save area are not enabled.
-static zx_status_t compute_xsave_size(uint64_t guest_xcr0, uint32_t* xsave_size) {
+zx_status_t compute_xsave_size(uint64_t guest_xcr0, uint32_t* xsave_size) {
   *xsave_size = kXsaveLegacyRegionSize + kXsaveHeaderSize;
   for (uint32_t i = kFirstExtendedStateComponent; i <= kLastExtendedStateComponent; ++i) {
     cpuid_leaf leaf;
@@ -211,8 +137,7 @@ static zx_status_t compute_xsave_size(uint64_t guest_xcr0, uint32_t* xsave_size)
   return ZX_OK;
 }
 
-static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                GuestState* guest_state) {
+zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState* guest_state) {
   const uint32_t leaf = guest_state->eax();
   const uint32_t subleaf = guest_state->ecx();
 
@@ -336,7 +261,7 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
       return ZX_OK;
     case X86_CPUID_HYP_VENDOR: {
       // This leaf is commonly used to identify a hypervisor via ebx:ecx:edx.
-      static const uint32_t* regs = reinterpret_cast<const uint32_t*>(kHypVendorId);
+      auto regs = reinterpret_cast<const uint32_t*>(kHypVendorId);
       // Since Zircon hypervisor disguises itself as KVM, it needs to return
       // in EAX max CPUID function supported by hypervisor. Zero in EAX
       // should be interpreted as 0x40000001. Details are available in the
@@ -367,14 +292,13 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
   }
 }
 
-static zx_status_t handle_hlt(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                              LocalApicState* local_apic_state) {
+zx_status_t handle_hlt(const ExitInfo& exit_info, AutoVmcs* vmcs,
+                       LocalApicState* local_apic_state) {
   next_rip(exit_info, vmcs);
   return local_apic_state->interrupt_tracker.Wait(ZX_TIME_INFINITE, vmcs).status_value();
 }
 
-static zx_status_t handle_cr0_write(AutoVmcs* vmcs, uint64_t val,
-                                    LocalApicState* local_apic_state) {
+zx_status_t handle_cr0_write(AutoVmcs* vmcs, uint64_t val, LocalApicState* local_apic_state) {
   // X86_CR0_NE is masked so that guests may write to it, but depending on
   // IA32_VMX_CR0_FIXED0 it might be unsupported in VMX operation to set it to
   // zero. Allow the guest to control its value in CR0_READ_SHADOW but not in
@@ -424,8 +348,8 @@ static zx_status_t handle_cr0_write(AutoVmcs* vmcs, uint64_t val,
                           read_msr(X86_MSR_IA32_VMX_ENTRY_CTLS), kEntryCtlsIa32eMode, 0);
 }
 
-static zx_status_t register_value(AutoVmcs* vmcs, const GuestState& guest_state,
-                                  uint8_t register_id, uint64_t* out) {
+zx_status_t register_value(AutoVmcs* vmcs, const GuestState& guest_state, uint8_t register_id,
+                           uint64_t* out) {
   switch (register_id) {
     // From Intel Volume 3, Table 27-3.
     case 0:
@@ -481,9 +405,9 @@ static zx_status_t register_value(AutoVmcs* vmcs, const GuestState& guest_state,
   }
 }
 
-static zx_status_t handle_control_register_access(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                                  const GuestState& guest_state,
-                                                  LocalApicState* local_apic_state) {
+zx_status_t handle_control_register_access(const ExitInfo& exit_info, AutoVmcs* vmcs,
+                                           const GuestState& guest_state,
+                                           LocalApicState* local_apic_state) {
   CrAccessInfo cr_access_info(exit_info.exit_qualification);
   switch (cr_access_info.access_type) {
     case CrAccessType::MOV_TO_CR: {
@@ -508,9 +432,9 @@ static zx_status_t handle_control_register_access(const ExitInfo& exit_info, Aut
   }
 }
 
-static zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                         GuestState* guest_state, hypervisor::TrapMap* traps,
-                                         zx_port_packet_t* packet) {
+zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vmcs,
+                                  GuestState* guest_state, hypervisor::TrapMap* traps,
+                                  zx_port_packet_t* packet) {
   IoInfo io_info(exit_info.exit_qualification);
   if (io_info.string || io_info.repeat) {
     dprintf(INFO, "hypervisor: Unsupported guest IO instruction\n");
@@ -549,8 +473,8 @@ static zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vm
   return ZX_ERR_NEXT;
 }
 
-static zx_status_t handle_apic_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                     GuestState* guest_state, LocalApicState* local_apic_state) {
+zx_status_t handle_apic_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState* guest_state,
+                              LocalApicState* local_apic_state) {
   switch (static_cast<X2ApicMsr>(guest_state->ecx())) {
     case X2ApicMsr::ID:
       next_rip(exit_info, vmcs);
@@ -603,8 +527,8 @@ static zx_status_t handle_apic_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
   }
 }
 
-static zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState* guest_state,
-                                LocalApicState* local_apic_state) {
+zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState* guest_state,
+                         LocalApicState* local_apic_state) {
   // On execution of rdmsr, ecx specifies the MSR and the result is stored in edx:eax.
   switch (guest_state->ecx()) {
     case X86_MSR_IA32_APIC_BASE: {
@@ -666,7 +590,7 @@ static zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
   }
 }
 
-static zx_time_t lvt_deadline(LocalApicState* local_apic_state) {
+zx_time_t lvt_deadline(LocalApicState* local_apic_state) {
   if ((local_apic_state->lvt_timer & LVT_TIMER_MODE_MASK) != LVT_TIMER_MODE_ONESHOT &&
       (local_apic_state->lvt_timer & LVT_TIMER_MODE_MASK) != LVT_TIMER_MODE_PERIODIC) {
     return 0;
@@ -680,9 +604,9 @@ static zx_time_t lvt_deadline(LocalApicState* local_apic_state) {
   return zx_time_add_duration(current_time(), duration);
 }
 
-static void update_timer(LocalApicState* local_apic_state, zx_time_t deadline);
+void update_timer(LocalApicState* local_apic_state, zx_time_t deadline);
 
-static void deadline_callback(Timer* timer, zx_time_t now, void* arg) {
+void deadline_callback(Timer* timer, zx_time_t now, void* arg) {
   LocalApicState* local_apic_state = static_cast<LocalApicState*>(arg);
   if (local_apic_state->lvt_timer & LVT_MASKED) {
     return;
@@ -694,14 +618,14 @@ static void deadline_callback(Timer* timer, zx_time_t now, void* arg) {
   local_apic_state->interrupt_tracker.VirtualInterrupt(vector);
 }
 
-static void update_timer(LocalApicState* local_apic_state, zx_time_t deadline) {
+void update_timer(LocalApicState* local_apic_state, zx_time_t deadline) {
   local_apic_state->timer.Cancel();
   if (deadline > 0) {
     local_apic_state->timer.SetOneshot(deadline, deadline_callback, local_apic_state);
   }
 }
 
-static uint64_t ipi_target_mask(const InterruptCommandRegister& icr, uint16_t self) {
+uint64_t ipi_target_mask(const InterruptCommandRegister& icr, uint16_t self) {
   DEBUG_ASSERT(self < kMaxGuestVcpus);
 
   switch (icr.destination_shorthand) {
@@ -732,8 +656,8 @@ static uint64_t ipi_target_mask(const InterruptCommandRegister& icr, uint16_t se
   return 0;
 }
 
-static zx_status_t handle_ipi(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                              const GuestState& guest_state, zx_port_packet* packet) {
+zx_status_t handle_ipi(const ExitInfo& exit_info, AutoVmcs* vmcs, const GuestState& guest_state,
+                       zx_port_packet* packet) {
   InterruptCommandRegister icr(guest_state.edx(), guest_state.eax());
   if (icr.destination_mode == InterruptDestinationMode::LOGICAL) {
     dprintf(INFO, "hypervisor: Logical IPI destination mode requested by guest is not supported\n");
@@ -787,9 +711,9 @@ static zx_status_t handle_ipi(const ExitInfo& exit_info, AutoVmcs* vmcs,
   }
 }
 
-static zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                     const GuestState& guest_state,
-                                     LocalApicState* local_apic_state, zx_port_packet* packet) {
+zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
+                              const GuestState& guest_state, LocalApicState* local_apic_state,
+                              zx_port_packet* packet) {
   // Check for writes to reserved bits.
   //
   // From Volume 3, Section 10.12.1.2: "The upper 32-bits of all x2APIC MSRs
@@ -855,10 +779,9 @@ static zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
   }
 }
 
-static zx_status_t handle_kvm_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                    const GuestState& guest_state, LocalApicState* local_apic_state,
-                                    PvClockState* pv_clock,
-                                    hypervisor::GuestPhysicalAddressSpace* gpas) {
+zx_status_t handle_kvm_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
+                             const GuestState& guest_state, LocalApicState* local_apic_state,
+                             PvClockState* pv_clock, hypervisor::GuestPhysicalAddressSpace* gpas) {
   zx_paddr_t guest_paddr = guest_state.EdxEax();
 
   next_rip(exit_info, vmcs);
@@ -883,10 +806,9 @@ static zx_status_t handle_kvm_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
   }
 }
 
-static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                const GuestState& guest_state, LocalApicState* local_apic_state,
-                                PvClockState* pv_clock, hypervisor::GuestPhysicalAddressSpace* gpas,
-                                zx_port_packet* packet) {
+zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, const GuestState& guest_state,
+                         LocalApicState* local_apic_state, PvClockState* pv_clock,
+                         hypervisor::GuestPhysicalAddressSpace* gpas, zx_port_packet* packet) {
   // On execution of wrmsr, rcx specifies the MSR and edx:eax contains the value to be written.
   switch (guest_state.ecx()) {
     case X86_MSR_IA32_APIC_BASE:
@@ -940,7 +862,7 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
   }
 }
 
-static uint8_t default_operand_size(uint64_t efer, uint32_t cs_access_rights) {
+uint8_t default_operand_size(uint64_t efer, uint32_t cs_access_rights) {
   // See Volume 3, Section 5.2.1.
   if ((efer & X86_EFER_LMA) && (cs_access_rights & kGuestXxAccessRightsL)) {
     // IA32-e 64 bit mode.
@@ -954,9 +876,9 @@ static uint8_t default_operand_size(uint64_t efer, uint32_t cs_access_rights) {
   }
 }
 
-static zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs* vmcs, bool read,
-                               zx_vaddr_t guest_paddr, hypervisor::TrapMap* traps,
-                               zx_port_packet_t* packet) {
+zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs* vmcs, bool read,
+                        zx_vaddr_t guest_paddr, hypervisor::TrapMap* traps,
+                        zx_port_packet_t* packet) {
   zx::status<hypervisor::Trap*> trap = traps->FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr);
   if (trap.is_error()) {
     return trap.status_value();
@@ -994,9 +916,9 @@ static zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs* vmcs, bool r
   }
 }
 
-static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                        hypervisor::GuestPhysicalAddressSpace* gpas,
-                                        hypervisor::TrapMap* traps, zx_port_packet_t* packet) {
+zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmcs,
+                                 hypervisor::GuestPhysicalAddressSpace* gpas,
+                                 hypervisor::TrapMap* traps, zx_port_packet_t* packet) {
   EptViolationInfo ept_violation_info(exit_info.exit_qualification);
   zx_gpaddr_t guest_paddr = exit_info.guest_physical_address;
   zx_status_t status =
@@ -1024,8 +946,8 @@ static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmc
   return ZX_OK;
 }
 
-static zx_status_t handle_ept_misconfiguration(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                               hypervisor::GuestPhysicalAddressSpace* gpas) {
+zx_status_t handle_ept_misconfiguration(const ExitInfo& exit_info, AutoVmcs* vmcs,
+                                        hypervisor::GuestPhysicalAddressSpace* gpas) {
   // We may have to take a lock while querying MMU flags.
   vmcs->Invalidate();
 
@@ -1039,8 +961,7 @@ static zx_status_t handle_ept_misconfiguration(const ExitInfo& exit_info, AutoVm
   return ZX_ERR_INTERNAL;
 }
 
-static zx_status_t handle_xsetbv(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                 GuestState* guest_state) {
+zx_status_t handle_xsetbv(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState* guest_state) {
   uint64_t guest_cr4 = vmcs->Read(VmcsFieldXX::GUEST_CR4);
   if (!(guest_cr4 & X86_CR4_OSXSAVE)) {
     return ZX_ERR_INVALID_ARGS;
@@ -1071,14 +992,13 @@ static zx_status_t handle_xsetbv(const ExitInfo& exit_info, AutoVmcs* vmcs,
   return ZX_OK;
 }
 
-static zx_status_t handle_pause(const ExitInfo& exit_info, AutoVmcs* vmcs) {
+zx_status_t handle_pause(const ExitInfo& exit_info, AutoVmcs* vmcs) {
   next_rip(exit_info, vmcs);
   return ZX_OK;
 }
 
-static zx_status_t handle_vmcall(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                 hypervisor::GuestPhysicalAddressSpace* gpas,
-                                 GuestState* guest_state) {
+zx_status_t handle_vmcall(const ExitInfo& exit_info, AutoVmcs* vmcs,
+                          hypervisor::GuestPhysicalAddressSpace* gpas, GuestState* guest_state) {
   next_rip(exit_info, vmcs);
 
   const uint32_t access_rights = vmcs->Read(VmcsField32::GUEST_SS_ACCESS_RIGHTS);
@@ -1116,6 +1036,83 @@ static zx_status_t handle_vmcall(const ExitInfo& exit_info, AutoVmcs* vmcs,
   }
   // We never fail in case of hypercalls, we just return/propagate errors to the caller.
   return ZX_OK;
+}
+
+}  // namespace
+
+ExitInfo::ExitInfo(const AutoVmcs& vmcs) {
+  // From Volume 3, Section 26.7.
+  uint32_t full_exit_reason = vmcs.Read(VmcsField32::EXIT_REASON);
+  entry_failure = BIT(full_exit_reason, 31);
+  exit_reason = static_cast<ExitReason>(BITS(full_exit_reason, 15, 0));
+
+  exit_qualification = vmcs.Read(VmcsFieldXX::EXIT_QUALIFICATION);
+  exit_instruction_length = vmcs.Read(VmcsField32::EXIT_INSTRUCTION_LENGTH);
+  guest_physical_address = vmcs.Read(VmcsField64::GUEST_PHYSICAL_ADDRESS);
+  guest_rip = vmcs.Read(VmcsFieldXX::GUEST_RIP);
+
+  if (exit_reason == ExitReason::EXTERNAL_INTERRUPT || exit_reason == ExitReason::IO_INSTRUCTION) {
+    return;
+  }
+
+  LTRACEF("entry failure: %d\n", entry_failure);
+  LTRACEF("exit reason: %#x (%s)\n", static_cast<uint32_t>(exit_reason),
+          exit_reason_name(exit_reason));
+  LTRACEF("exit qualification: %#lx\n", exit_qualification);
+  LTRACEF("exit instruction length: %#x\n", exit_instruction_length);
+  LTRACEF("guest activity state: %#x\n", vmcs.Read(VmcsField32::GUEST_ACTIVITY_STATE));
+  LTRACEF("guest interruptibility state: %#x\n",
+          vmcs.Read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE));
+  LTRACEF("guest physical address: %#lx\n", guest_physical_address);
+  LTRACEF("guest linear address: %#lx\n", vmcs.Read(VmcsFieldXX::GUEST_LINEAR_ADDRESS));
+  LTRACEF("guest rip: %#lx\n", guest_rip);
+}
+
+ExitInterruptionInformation::ExitInterruptionInformation(const AutoVmcs& vmcs) {
+  uint32_t int_info = vmcs.Read(VmcsField32::EXIT_INTERRUPTION_INFORMATION);
+  vector = static_cast<uint8_t>(BITS(int_info, 7, 0));
+  interruption_type = static_cast<InterruptionType>(BITS_SHIFT(int_info, 10, 8));
+  valid = BIT(int_info, 31);
+}
+
+CrAccessInfo::CrAccessInfo(uint64_t qualification) {
+  // From Volume 3, Table 27-3.
+  cr_number = static_cast<uint8_t>(BITS(qualification, 3, 0));
+  access_type = static_cast<CrAccessType>(BITS_SHIFT(qualification, 5, 4));
+  reg = static_cast<uint8_t>(BITS_SHIFT(qualification, 11, 8));
+}
+
+IoInfo::IoInfo(uint64_t qualification) {
+  access_size = static_cast<uint8_t>(BITS(qualification, 2, 0) + 1);
+  input = BIT_SHIFT(qualification, 3);
+  string = BIT_SHIFT(qualification, 4);
+  repeat = BIT_SHIFT(qualification, 5);
+  port = static_cast<uint16_t>(BITS_SHIFT(qualification, 31, 16));
+}
+
+EptViolationInfo::EptViolationInfo(uint64_t qualification) {
+  // From Volume 3C, Table 27-7.
+  read = BIT(qualification, 0);
+  write = BIT(qualification, 1);
+  instruction = BIT(qualification, 2);
+}
+
+InterruptCommandRegister::InterruptCommandRegister(uint32_t hi, uint32_t lo) {
+  destination = hi;
+  destination_mode = static_cast<InterruptDestinationMode>(BIT_SHIFT(lo, 11));
+  delivery_mode = static_cast<InterruptDeliveryMode>(BITS_SHIFT(lo, 10, 8));
+  destination_shorthand = static_cast<InterruptDestinationShorthand>(BITS_SHIFT(lo, 19, 18));
+  vector = static_cast<uint8_t>(BITS(lo, 7, 0));
+}
+
+VmCallInfo::VmCallInfo(const GuestState* guest_state) {
+  // ABI is documented in Linux kernel documentation, see
+  // Documents/virtual/kvm/hypercalls.txt
+  type = static_cast<VmCallType>(guest_state->rax);
+  arg[0] = guest_state->rbx;
+  arg[1] = guest_state->rcx;
+  arg[2] = guest_state->rdx;
+  arg[3] = guest_state->rsi;
 }
 
 zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
