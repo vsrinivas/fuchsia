@@ -8,6 +8,7 @@ use {
     super::common::{self, Device},
     anyhow::Result,
     args::ListCommand,
+    bind::debugger::debug_dump::dump_bind_rules,
     fidl_fuchsia_driver_development::BindRulesBytecode,
     futures::join,
     std::{collections::HashSet, iter::FromIterator},
@@ -85,7 +86,13 @@ pub async fn list(
                 }
                 Some(BindRulesBytecode::BytecodeV2(bytecode)) => {
                     println!("{0: <10}: {1}", "Bytecode Version", 2);
-                    println!("{0: <10}({1} bytes): {2:?}", "Bytecode:", bytecode.len(), bytecode);
+                    println!("{0: <10}({1} bytes): ", "Bytecode:", bytecode.len());
+                    match dump_bind_rules(bytecode.clone()) {
+                        Ok(bytecode_dump) => println!("{}", bytecode_dump),
+                        Err(err) => {
+                            println!("  Issue parsing bytecode \"{}\": {:?}", err, bytecode);
+                        }
+                    }
                 }
                 _ => println!("{0: <10}: {1}", "Bytecode Version", "Unknown"),
             }
