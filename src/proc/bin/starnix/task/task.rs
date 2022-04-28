@@ -338,7 +338,7 @@ impl Task {
         // lock on the child and take the current state back.
         std::mem::drop(state);
 
-        #[cfg(any(testing, debug_assertions))]
+        #[cfg(any(test, debug_assertions))]
         {
             // Take the lock on the thread group and its child in the correct order to ensure any wrong ordering
             // will trigger the tracing-mutex at the right call site.
