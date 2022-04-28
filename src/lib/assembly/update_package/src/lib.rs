@@ -8,4 +8,4 @@
 
 mod update_package;
 
-pub use update_package::{Slot, UpdatePackageBuilder};
+pub use crate::update_package::{Slot, UpdatePackageBuilder};

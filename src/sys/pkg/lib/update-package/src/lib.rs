@@ -23,7 +23,8 @@ pub use crate::{
     image::{Image, ImageClass, ImageType, OpenImageError},
     images::{
         BootSlot, BootSlotImagePackage, FirmwareImagePackage, ImageMetadata, ImagePackage,
-        ImagePackagesError, ImagePackagesManifest, VersionedImagePackagesManifest,
+        ImagePackagesError, ImagePackagesManifest, ImagePackagesManifestBuilder,
+        VersionedImagePackagesManifest,
     },
     images::{ImageList, ResolveImagesError, UnverifiedImageList},
     name::VerifyNameError,

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use ::update_package::{ImageMetadata, ImagePackagesManifest};
 use anyhow::{anyhow, Context, Result};
 use assembly_blobfs::BlobFSBuilder;
 use assembly_images_manifest::{Image, ImagesManifest};
@@ -11,6 +12,8 @@ use assembly_update_packages_manifest::UpdatePackagesManifest;
 use assembly_util::PathToStringExt;
 use epoch::EpochFile;
 use fuchsia_pkg::PackageBuilder;
+use fuchsia_url::pkg_url::PinnedPkgUrl;
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 /// A builder that constructs update packages.
@@ -134,6 +137,11 @@ impl ImageMapping {
             },
         }
     }
+
+    fn metadata(&self) -> Result<ImageMetadata> {
+        ImageMetadata::for_path(&self.source)
+            .with_context(|| format!("Failed to read/hash {:?}", self.source))
+    }
 }
 
 /// A PackageBuilder configured to build the update package or one of its subpackages.
@@ -146,12 +154,13 @@ struct SubpackageBuilder {
 }
 
 impl SubpackageBuilder {
-    /// Build and publish an update package or one of its subpackages.
-    fn build(self, blobfs_builder: &mut BlobFSBuilder) -> Result<()> {
+    /// Build and publish an update package or one of its subpackages. Returns a merkle-pinned
+    /// fuchsia-pkg:// URL for the package with the hostname set to "fuchsia.com".
+    fn build(self, blobfs_builder: &mut BlobFSBuilder) -> Result<PinnedPkgUrl> {
         let SubpackageBuilder { package: builder, package_name, manifest_path, far_path, gendir } =
             self;
 
-        builder
+        let manifest = builder
             .build(&gendir, &far_path)
             .with_context(|| format!("Failed to build the {package_name} package"))?;
 
@@ -159,7 +168,23 @@ impl SubpackageBuilder {
             format!("Adding the {package_name} package to update packages blobfs")
         })?;
 
-        Ok(())
+        // Okay to unwrap because:
+        // * "fuchsia.com" is a valid hostname,
+        // * the formatted package path is valid if the package name and variant are valid, which
+        //   both are statically known to be here, and
+        // * all Hash instances are valid.
+        let url = PinnedPkgUrl::new_package(
+            "fuchsia.com".into(),
+            format!(
+                "/{}/{}",
+                manifest.package_path().name().to_string(),
+                manifest.package_path().variant().to_string()
+            ),
+            manifest.hash(),
+        )
+        .unwrap();
+
+        Ok(url)
     }
 }
 
@@ -262,6 +287,7 @@ impl UpdatePackageBuilder {
 
         let blobfs_tool = self.tool_provider.get_tool("blobfs")?;
         let mut blobfs_builder = BlobFSBuilder::new(blobfs_tool, "compact");
+        let mut images_manifest = ImagePackagesManifest::builder();
 
         // Generate the update_images_fuchsia package.
         let mut builder = self.make_subpackage_builder("images_fuchsia")?;
@@ -269,15 +295,23 @@ impl UpdatePackageBuilder {
             let (zbi, vbmeta) =
                 slot.zbi_and_vbmeta().ok_or(anyhow!("primary slot missing a zbi image"))?;
 
-            builder.package.add_file_as_blob(zbi.destination, zbi.source.path_to_string()?)?;
+            builder.package.add_file_as_blob(&zbi.destination, zbi.source.path_to_string()?)?;
 
-            if let Some(vbmeta) = vbmeta {
+            if let Some(vbmeta) = &vbmeta {
                 builder
                     .package
-                    .add_file_as_blob(vbmeta.destination, vbmeta.source.path_to_string()?)?;
+                    .add_file_as_blob(&vbmeta.destination, vbmeta.source.path_to_string()?)?;
             }
+
+            let url = builder.build(&mut blobfs_builder)?;
+            images_manifest.fuchsia_package(
+                url,
+                zbi.metadata()?,
+                vbmeta.map(|vbmeta| vbmeta.metadata()).transpose()?,
+            );
+        } else {
+            builder.build(&mut blobfs_builder)?;
         }
-        builder.build(&mut blobfs_builder)?;
 
         // Generate the update_images_recovery package.
         let mut builder = self.make_subpackage_builder("images_recovery")?;
@@ -285,19 +319,29 @@ impl UpdatePackageBuilder {
             let (zbi, vbmeta) =
                 slot.zbi_and_vbmeta().ok_or(anyhow!("recovery slot missing a zbi image"))?;
 
-            builder.package.add_file_as_blob(zbi.destination, zbi.source.path_to_string()?)?;
+            builder.package.add_file_as_blob(&zbi.destination, zbi.source.path_to_string()?)?;
 
-            if let Some(vbmeta) = vbmeta {
+            if let Some(vbmeta) = &vbmeta {
                 builder
                     .package
-                    .add_file_as_blob(vbmeta.destination, vbmeta.source.path_to_string()?)?;
+                    .add_file_as_blob(&vbmeta.destination, vbmeta.source.path_to_string()?)?;
             }
+
+            let url = builder.build(&mut blobfs_builder)?;
+            images_manifest.recovery_package(
+                url,
+                zbi.metadata()?,
+                vbmeta.map(|vbmeta| vbmeta.metadata()).transpose()?,
+            );
+        } else {
+            builder.build(&mut blobfs_builder)?;
         }
-        builder.build(&mut blobfs_builder)?;
 
         // Generate the update_images_firmware package.
         let mut builder = self.make_subpackage_builder("images_firmware")?;
         if !self.partitions.bootloader_partitions.is_empty() {
+            let mut firmware = BTreeMap::new();
+
             for bootloader in &self.partitions.bootloader_partitions {
                 let destination = match bootloader.partition_type.as_str() {
                     "" => "firmware".to_string(),
@@ -306,15 +350,35 @@ impl UpdatePackageBuilder {
                 builder
                     .package
                     .add_file_as_blob(destination, bootloader.image.path_to_string()?)?;
+                firmware.insert(
+                    bootloader.partition_type.clone(),
+                    ImageMetadata::for_path(&bootloader.image)
+                        .with_context(|| format!("Failed to read/hash {:?}", &bootloader.image))?,
+                );
             }
+
+            let url = builder.build(&mut blobfs_builder)?;
+            images_manifest.firmware_package(url, firmware);
+        } else {
+            builder.build(&mut blobfs_builder)?;
         }
-        builder.build(&mut blobfs_builder)?;
+
+        let images_manifest = images_manifest.build();
 
         // Generate the update package itself.
         let mut builder = self.make_subpackage_builder("")?;
         builder.package.add_contents_as_blob(
             "packages.json",
             to_string(&self.packages)?,
+            &self.gendir,
+        )?;
+        builder.package.add_contents_as_blob(
+            // Emit images.json as images.json.orig so the system-updater can differentiate
+            // between an images.json that hasn't been modified by downstream tooling and one
+            // that has. Once that tooling is modified to also modify/rename this manifest,
+            // this can be updated to write to images.json directly.
+            "images.json.orig",
+            to_string(&images_manifest)?,
             &self.gendir,
         )?;
         builder.package.add_contents_as_blob(
@@ -430,6 +494,36 @@ mod tests {
         .unwrap();
         assert_eq!(&expected_commands, tools.log());
 
+        let file = File::open(outdir.path().join("images.json.orig")).unwrap();
+        let reader = BufReader::new(file);
+        let i: serde_json::Value = serde_json::from_reader(reader).unwrap();
+        assert_eq!(
+            serde_json::json!({
+                "version": "1",
+                "contents": {
+                    "fuchsia": {
+                        "url": "fuchsia-pkg://fuchsia.com/update_images_fuchsia/0?hash=f9e2033364bdbb0e28d07882c8811a6219d266b7f5e1a7810b424f878ea19b30",
+                        "images": {
+                            "zbi": {
+                                "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                                "size": 0,
+                            },
+                        },
+                    },
+                    "firmware": {
+                        "url": "fuchsia-pkg://fuchsia.com/update_images_firmware/0?hash=795b05ab882f4f5959b50fcddeea18dba67b5ec6309c761460f0777e73c3f12d",
+                        "images": {
+                            "tpl": {
+                                "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                                "size": 0,
+                            },
+                        },
+                    },
+                },
+            }),
+            i
+        );
+
         let file = File::open(outdir.path().join("packages.json")).unwrap();
         let reader = BufReader::new(file);
         let p: UpdatePackagesManifest = serde_json::from_reader(reader).unwrap();
@@ -454,6 +548,7 @@ mod tests {
             board=9c579992f6e9f8cbd4ba81af6e23b1d5741e280af60f795e9c2bbcc76c4b7065\n\
             epoch.json=0362de83c084397826800778a1cf927280a5d5388cb1f828d77f74108726ad69\n\
             firmware_tpl=15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\n\
+            images.json.orig=73894a190e5658901049dc9f83087309669b687ee5d6f40fd63de20e0196e76a\n\
             packages.json=85a3911ff39c118ee1a4be5f7a117f58a5928a559f456b6874440a7fb8c47a9a\n\
             version=d2ff44655653e2cbbecaf89dbf33a8daa8867e41dade2c6b4f127c3f0450c96b\n\
             zbi.signed=15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\n\
@@ -573,6 +668,49 @@ mod tests {
         .unwrap();
         assert_eq!(&expected_commands, tools.log());
 
+        let file = File::open(outdir.path().join("images.json.orig")).unwrap();
+        let reader = BufReader::new(file);
+        let i: serde_json::Value = serde_json::from_reader(reader).unwrap();
+        assert_eq!(
+            serde_json::json!({
+                "version": "1",
+                "contents": {
+                    "fuchsia": {
+                        "url": "fuchsia-pkg://fuchsia.com/update_images_fuchsia/0?hash=f9e2033364bdbb0e28d07882c8811a6219d266b7f5e1a7810b424f878ea19b30",
+                        "images": {
+                            "zbi": {
+                                "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                                "size": 0,
+                            },
+                        },
+                    },
+                    "recovery": {
+                        "url": "fuchsia-pkg://fuchsia.com/update_images_recovery/0?hash=c0be02242469c633ddcaeaef1493b67158688f10e41131c7e19fbd2b5bc86acd",
+                        "images": {
+                            "vbmeta": {
+                                "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                                "size": 0,
+                            },
+                            "zbi": {
+                                "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                                "size": 0,
+                            },
+                        },
+                    },
+                    "firmware": {
+                        "url": "fuchsia-pkg://fuchsia.com/update_images_firmware/0?hash=795b05ab882f4f5959b50fcddeea18dba67b5ec6309c761460f0777e73c3f12d",
+                        "images": {
+                            "tpl": {
+                                "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                                "size": 0,
+                            },
+                        },
+                    },
+                },
+            }),
+            i
+        );
+
         let file = File::open(outdir.path().join("packages.json")).unwrap();
         let reader = BufReader::new(file);
         let p: UpdatePackagesManifest = serde_json::from_reader(reader).unwrap();
@@ -597,6 +735,7 @@ mod tests {
             board=9c579992f6e9f8cbd4ba81af6e23b1d5741e280af60f795e9c2bbcc76c4b7065\n\
             epoch.json=0362de83c084397826800778a1cf927280a5d5388cb1f828d77f74108726ad69\n\
             firmware_tpl=15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\n\
+            images.json.orig=9ad58f6f9d561c019c85fa616be925828a0d02b5c1805d02cebdbe47a4d5dbad\n\
             packages.json=85a3911ff39c118ee1a4be5f7a117f58a5928a559f456b6874440a7fb8c47a9a\n\
             recovery=15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\n\
             recovery.vbmeta=15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\n\
@@ -674,6 +813,13 @@ mod tests {
         );
 
         builder.build().unwrap();
+
+        // Ensure the generated images.json manifest is empty.
+        let file = File::open(outdir.path().join("images.json.orig")).unwrap();
+        let reader = BufReader::new(file);
+        let i: ::update_package::VersionedImagePackagesManifest =
+            serde_json::from_reader(reader).unwrap();
+        assert_eq!(ImagePackagesManifest::builder().build(), i);
 
         // Ensure the expected package fars/manifests were generated.
         assert!(outdir.path().join("update.far").exists());

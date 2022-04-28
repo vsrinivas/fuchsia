@@ -49,6 +49,15 @@ impl PackageManifest {
         }
     }
 
+    /// Returns the merkle root of the meta.far.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the PackageManifest is missing a "meta/" entry
+    pub fn hash(&self) -> Hash {
+        self.blobs().iter().find(|blob| blob.path == "meta/").unwrap().merkle
+    }
+
     /// Create a `PackageManifest` from a blobs directory and the meta.far hash.
     ///
     /// This directory must be a flat file that contains all the package blobs.
