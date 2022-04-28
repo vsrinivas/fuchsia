@@ -220,7 +220,7 @@ mod tests {
     async fn test_configuration_node() {
         let inspector = Inspector::new();
         let node = ConfigurationNode::new(inspector.root().create_child("configuration"));
-        node.set(&get_config("0.1.2").await);
+        node.set(&get_config("0.1.2", None));
 
         assert_data_tree!(
             inspector,
