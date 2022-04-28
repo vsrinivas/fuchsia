@@ -56,18 +56,6 @@
             from: "#full-resolver",
             to: "#test_manager",
         },
-
-        // Temporarily route old protocol as we soft-transition usages of
-        // this protocol. This is necessary in cases where the Fuchsia image
-        // doesn't align with the `test_manager` package used in a test build.
-        // In that scenario, the older `test_manager` package is expecting the
-        // older Resolver protocol.
-        // TODO(http://fxbug.dev/94581): Remove this.
-        {
-            protocol: "fuchsia.sys2.ComponentResolver",
-            from: "#full-resolver",
-            to: "#test_manager",
-        },
         {
             storage: "tmp",
             from: "self",
