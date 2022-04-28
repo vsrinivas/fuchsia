@@ -11,7 +11,6 @@ use {
     fuchsia_runtime::HandleType,
     fuchsia_syslog, fuchsia_zircon as zx,
     fxfs::{
-        crypt::{Crypt, InsecureCrypt},
         filesystem::{mkfs, FxFilesystem, OpenOptions},
         fsck,
         platform::{FxfsServer, RemoteCrypt},
@@ -82,21 +81,15 @@ async fn main() -> Result<(), Error> {
     ))
     .await?;
 
-    let crypt: Arc<dyn Crypt> = match fuchsia_runtime::take_startup_handle(
-        fuchsia_runtime::HandleInfo::new(HandleType::User0, 2),
-    ) {
-        Some(handle) => Arc::new(RemoteCrypt::new(CryptProxy::new(fasync::Channel::from_channel(
-            zx::Channel::from(handle),
-        )?))),
-        None => {
-            // TODO(fxbug.dev/92275): We should find a way to ensure that InsecureCrypt isn't
-            // compiled in production builds, and make this case throw an error.
-            log::info!(
-                "fxfs: Remote `Crypt` is `InsecureCrypt`! In a production build, this is a bug."
-            );
-            Arc::new(InsecureCrypt::new())
-        }
-    };
+    let crypt = Arc::new(RemoteCrypt::new(CryptProxy::new(fasync::Channel::from_channel(
+        zx::Channel::from(
+            fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleInfo::new(
+                HandleType::User0,
+                2,
+            ))
+            .ok_or(format_err!("Missing crypt service"))?,
+        ),
+    )?)));
 
     match args {
         TopLevel { nested: SubCommand::Format(_), .. } => {

@@ -148,5 +148,41 @@ TEST(BlockDeviceTest, StartBlockDeviceFilesystemWorks) {
   EXPECT_EQ(contents, kFileContents);
 }
 
+TEST(BlockDeviceTest, StartBlockDeviceFilesystemWorksWithFxfs) {
+  constexpr char kFileName[] = "file";
+  constexpr std::string_view kFileContents = "file-contents";
+  constexpr ssize_t kFileSize = kFileContents.size();
+
+  constexpr uint64_t kFxfsBlockSize = 4096;
+  constexpr uint64_t kFxfsBlockCount = 12288;
+  constexpr uint64_t kFxfsVolumeSize = 8192 * kFxfsBlockSize;
+
+  auto ramdisk = storage::RamDisk::Create(kFxfsBlockSize, kFxfsBlockCount);
+  ASSERT_OK(ramdisk.status_value());
+  auto fvm_path = storage::CreateFvmInstance(ramdisk->path(), kFvmSliceSize);
+  ASSERT_OK(fvm_path.status_value());
+  auto fvm_client = ConnectToFvm(ramdisk->path());
+  ASSERT_OK(fvm_client.status_value());
+  auto fvm_volume = FvmVolume::Create(*fvm_client, kFxfsVolumeSize);
+  ASSERT_OK(fvm_volume.status_value());
+  auto status = FormatBlockDevice(fvm_volume->path(), fs_management::kDiskFormatFxfs);
+  ASSERT_OK(status.status_value());
+  std::string block_device_path = fvm_volume->path();
+
+  auto fs = StartBlockDeviceFilesystem(block_device_path, fs_management::kDiskFormatFxfs,
+                                       *std::move(fvm_volume));
+  ASSERT_OK(fs.status_value());
+
+  auto root = fs->GetFilesystemRoot();
+  ASSERT_OK(root.status_value());
+  fbl::unique_fd dir;
+  ASSERT_OK(fdio_fd_create(root->TakeChannel().release(), dir.reset_and_get_address()));
+  fbl::unique_fd file(openat(dir.get(), kFileName, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
+  ASSERT_EQ(pwrite(file.get(), kFileContents.data(), kFileSize, 0), kFileSize);
+  std::string contents(kFileSize, 0);
+  ASSERT_EQ(pread(file.get(), contents.data(), kFileSize, 0), kFileSize);
+  EXPECT_EQ(contents, kFileContents);
+}
+
 }  // namespace
 }  // namespace storage_benchmark

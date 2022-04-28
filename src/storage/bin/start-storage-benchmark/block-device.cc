@@ -5,10 +5,15 @@
 #include "src/storage/bin/start-storage-benchmark/block-device.h"
 
 #include <fcntl.h>
+#include <fidl/fuchsia.fxfs/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/spawn.h>
 #include <lib/service/llcpp/service.h>
+#include <lib/zx/process.h>
 #include <zircon/device/block.h>
 #include <zircon/hw/gpt.h>
+#include <zircon/processargs.h>
 #include <zircon/status.h>
 
 #include <filesystem>
@@ -23,6 +28,7 @@
 #include "src/lib/storage/fs_management/cpp/fvm.h"
 #include "src/security/zxcrypt/client.h"
 #include "src/storage/bin/start-storage-benchmark/running-filesystem.h"
+#include "src/storage/fs_test/crypt_service.h"
 #include "src/storage/lib/utils/topological_path.h"
 
 namespace storage_benchmark {
@@ -74,6 +80,70 @@ class BlockDeviceFilesystem : public RunningFilesystem {
   FvmVolume volume_;
   fs_management::MountedFilesystem filesystem_;
 };
+
+// Whilst this runs as a v1 component, we use this slightly hacky way of launching the crypt
+// service.  Once we have migrated to a v2 component, then we should be able to instantiate the
+// crypt service via the manifest and run it as a child.
+zx::status<zx::channel> GetCryptService() {
+  static zx_handle_t svc_directory = [] {
+    zx::process process;
+    char error_message[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+    constexpr char kFxfsCryptPath[] = "/pkg/bin/fxfs_crypt";
+    const char *argv[] = {kFxfsCryptPath, nullptr};
+
+    auto outgoing_directory_or = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    if (outgoing_directory_or.is_error()) {
+      fprintf(stderr, "Unable to create endpoints: %s\n", outgoing_directory_or.status_string());
+      return ZX_HANDLE_INVALID;
+    }
+    fdio_spawn_action_t actions[] = {
+        {.action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+         .h = {.id = PA_DIRECTORY_REQUEST,
+               .handle = outgoing_directory_or->server.TakeChannel().release()}}};
+    if (fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, kFxfsCryptPath, argv, nullptr, 1,
+                       actions, process.reset_and_get_address(), error_message)) {
+      fprintf(stderr, "Failed to launch crypt service: %s\n", error_message);
+      return ZX_HANDLE_INVALID;
+    }
+
+    auto service_endpoints_or = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    if (service_endpoints_or.is_error()) {
+      fprintf(stderr, "Unable to create endpoints: %s\n", service_endpoints_or.status_string());
+      return ZX_HANDLE_INVALID;
+    }
+
+    if (auto result = fidl::WireCall(outgoing_directory_or->client)
+                          ->Open(fuchsia_io::wire::OpenFlags::kRightReadable |
+                                     fuchsia_io::wire::OpenFlags::kRightWritable,
+                                 0, "svc",
+                                 fidl::ServerEnd<fuchsia_io::Node>(
+                                     service_endpoints_or->server.TakeChannel()));
+        result.status() != ZX_OK) {
+      fprintf(stderr, "Failed to open svc directory: %s\n", result.status_string());
+      return ZX_HANDLE_INVALID;
+    }
+
+    if (auto status = fs_test::SetUpCryptWithRandomKeys(service_endpoints_or->client);
+        status.is_error()) {
+      fprintf(stderr, "Unable to set up the crypt service: %s\n", status.status_string());
+      return ZX_HANDLE_INVALID;
+    }
+
+    return service_endpoints_or->client.TakeChannel().release();
+  }();
+
+  if (svc_directory == ZX_HANDLE_INVALID)
+    return zx::error(ZX_ERR_INTERNAL);
+
+  if (auto crypt_service_or = service::ConnectAt<fuchsia_fxfs::Crypt>(
+          fidl::UnownedClientEnd<fuchsia_io::Directory>(svc_directory));
+      crypt_service_or.is_error()) {
+    fprintf(stderr, "Unable to connect to crypt service: %s\n", crypt_service_or.status_string());
+    return crypt_service_or.take_error();
+  } else {
+    return zx::ok(crypt_service_or->TakeChannel());
+  }
+}
 
 }  // namespace
 
@@ -174,6 +244,16 @@ zx::status<fidl::ClientEnd<VolumeManager>> ConnectToFvm(const std::string &fvm_b
 zx::status<> FormatBlockDevice(const std::string &block_device_path,
                                fs_management::DiskFormat format) {
   fs_management::MkfsOptions mkfs_options;
+
+  if (format == fs_management::kDiskFormatFxfs) {
+    if (auto service_or = GetCryptService(); service_or.is_error()) {
+      fprintf(stderr, "Failed to get crypt service: %s\n", service_or.status_string());
+      return service_or.take_error();
+    } else {
+      mkfs_options.crypt_client = service_or->release();
+    }
+  }
+
   zx::status<> status = zx::make_status(fs_management::Mkfs(
       block_device_path.c_str(), format, fs_management::LaunchStdioSync, mkfs_options));
   if (status.is_error()) {
@@ -189,6 +269,14 @@ zx::status<std::unique_ptr<RunningFilesystem>> StartBlockDeviceFilesystem(
     const std::string &block_device_path, fs_management::DiskFormat format, FvmVolume fvm_volume) {
   fs_management::MountOptions mount_options;
   fbl::unique_fd volume_fd(open(block_device_path.c_str(), O_RDWR));
+  if (format == fs_management::kDiskFormatFxfs) {
+    if (auto service_or = GetCryptService(); service_or.is_error()) {
+      fprintf(stderr, "Failed to get crypt service: %s\n", service_or.status_string());
+      return service_or.take_error();
+    } else {
+      mount_options.crypt_client = service_or->release();
+    }
+  }
   auto mounted_filesystem = fs_management::Mount(std::move(volume_fd), nullptr, format,
                                                  mount_options, fs_management::LaunchStdioAsync);
   if (mounted_filesystem.is_error()) {

@@ -1237,7 +1237,7 @@ impl<'a, S: AsRef<ObjectStore> + Send + Sync + 'static> WriteBytes for DirectWri
 mod tests {
     use {
         crate::{
-            crypt::{Crypt, InsecureCrypt},
+            crypt::{insecure::InsecureCrypt, Crypt},
             filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem},
             lsm_tree::types::{ItemRef, LayerIterator},
             object_handle::{

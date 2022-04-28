@@ -7,7 +7,7 @@ use {
     argh::FromArgs,
     fuchsia_async as fasync,
     fxfs::{
-        crypt::{Crypt, InsecureCrypt},
+        crypt::{insecure::InsecureCrypt, Crypt},
         filesystem::{mkfs, FxFilesystem},
         fsck,
     },

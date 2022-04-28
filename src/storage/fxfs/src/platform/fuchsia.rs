@@ -266,7 +266,7 @@ impl FsInspect for FxfsServer {
 #[cfg(test)]
 mod tests {
     use {
-        crate::{crypt::InsecureCrypt, filesystem::FxFilesystem, platform::fuchsia::FxfsServer},
+        crate::{crypt::insecure::InsecureCrypt, filesystem::FxFilesystem, platform::FxfsServer},
         anyhow::Error,
         fidl_fuchsia_fs::AdminMarker,
         fidl_fuchsia_io as fio, fuchsia_async as fasync,

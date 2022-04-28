@@ -1505,7 +1505,7 @@ impl AssociatedObject for ObjectStore {}
 mod tests {
     use {
         crate::{
-            crypt::{Crypt, InsecureCrypt},
+            crypt::{insecure::InsecureCrypt, Crypt},
             errors::FxfsError,
             filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem, SyncOptions},
             fsck::fsck,

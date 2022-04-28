@@ -4,6 +4,8 @@
 
 #include "src/storage/fs_test/json_filesystem.h"
 
+#include "src/storage/fs_test/crypt_service.h"
+
 namespace fs_test {
 
 zx::status<std::unique_ptr<JsonFilesystem>> JsonFilesystem::NewFilesystem(
@@ -45,6 +47,7 @@ zx::status<std::unique_ptr<JsonFilesystem>> JsonFilesystem::NewFilesystem(
           .supports_inspect = ConfigGetOrDefault<bool>(config, "supports_inspect", false),
           .supports_shutdown_on_no_connections =
               ConfigGetOrDefault<bool>(config, "supports_shutdown_on_no_connections", false),
+          .uses_crypt = ConfigGetOrDefault<bool>(config, "uses_crypt", false),
       },
       format, sectors_per_cluster));
 }
@@ -59,6 +62,13 @@ class JsonInstance : public FilesystemInstance {
   virtual zx::status<> Format(const TestFilesystemOptions& options) override {
     fs_management::MkfsOptions mkfs_options;
     mkfs_options.sectors_per_cluster = filesystem_.sectors_per_cluster();
+    if (filesystem_.GetTraits().uses_crypt) {
+      if (auto service_or = GetCryptService(); service_or.is_error()) {
+        return service_or.take_error();
+      } else {
+        mkfs_options.crypt_client = service_or->release();
+      }
+    }
     return FsFormat(device_path_, filesystem_.format(), mkfs_options);
   }
 
@@ -78,6 +88,13 @@ class JsonInstance : public FilesystemInstance {
         .always_modify = false,
         .force = true,
     };
+    if (filesystem_.GetTraits().uses_crypt) {
+      if (auto service_or = GetCryptService(); service_or.is_error()) {
+        return service_or.take_error();
+      } else {
+        options.crypt_client = service_or->release();
+      }
+    }
     return zx::make_status(fs_management::Fsck(device_path_.c_str(), filesystem_.format(), options,
                                                fs_management::LaunchStdioSync));
   }

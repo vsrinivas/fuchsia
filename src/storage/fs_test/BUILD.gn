@@ -15,8 +15,10 @@ static_library("fs_test") {
     "json_filesystem.cc",
     "json_filesystem.h",
     "misc.cc",
+    "test_filesystem.cc",
   ]
   deps = [
+    ":crypt_service",
     "//sdk/fidl/fuchsia.fs",
     "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_llcpp",
     "//sdk/lib/fdio",
@@ -587,4 +589,24 @@ test("truncate_large_tests") {
   # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
   # Consider switching to the C++ bindings. See linked bug for details.
   configs += [ "//build/c:fidl-deprecated-c-bindings" ]
+}
+
+expect_includes("test_crypt_service") {
+  testonly = true
+  includes = [ "meta/fxfs_crypt_test.shard.cml" ]
+}
+
+source_set("crypt_service") {
+  testonly = true
+  sources = [
+    "crypt_service.cc",
+    "crypt_service.h",
+  ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:cpp-macros",
+    "//src/storage/fxfs:fuchsia.fxfs_llcpp",
+    "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zxc",
+  ]
 }

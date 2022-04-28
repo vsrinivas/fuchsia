@@ -396,7 +396,7 @@ impl FxVolumeAndRoot {
 mod tests {
     use {
         crate::{
-            crypt::InsecureCrypt,
+            crypt::insecure::InsecureCrypt,
             filesystem::FxFilesystem,
             object_handle::{ObjectHandle, ObjectHandleExt},
             object_store::{

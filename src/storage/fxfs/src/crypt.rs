@@ -11,7 +11,6 @@ use {
     anyhow::{anyhow, Error},
     async_trait::async_trait,
     chacha20::{ChaCha20, Key},
-    rand::RngCore,
     serde::{
         de::{Error as SerdeError, Visitor},
         Deserialize, Deserializer, Serialize, Serializer,
@@ -272,67 +271,84 @@ pub trait Crypt: Send + Sync {
     async fn unwrap_keys(&self, keys: &WrappedKeys, owner: u64) -> Result<UnwrappedKeys, Error>;
 }
 
-/// This struct provides the `Crypt` trait without any strong security.
-///
-/// It is intended for use only in test code where actual security is inconsequential.
-pub struct InsecureCrypt {}
+#[cfg(any(test, feature = "insecure_crypt"))]
+pub mod insecure {
+    use {
+        super::{
+            Crypt, KeyBytes, KeyPurpose, UnwrappedKey, UnwrappedKeys, WrappedKey, WrappedKeyBytes,
+            WrappedKeys, KEY_SIZE, WRAPPED_KEY_SIZE,
+        },
+        anyhow::Error,
+        async_trait::async_trait,
+        rand::RngCore,
+    };
 
-/// Used by `InsecureCrypt` as an extremely weak form of 'encryption'.
-const DATA_WRAP_XOR: [u8; 8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef];
-const METADATA_WRAP_XOR: [u8; 8] = [0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10];
+    /// This struct provides the `Crypt` trait without any strong security.
+    ///
+    /// It is intended for use only in test code where actual security is inconsequential.
+    pub struct InsecureCrypt {}
 
-impl InsecureCrypt {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
+    /// Used by `InsecureCrypt` as an extremely weak form of 'encryption'.
+    const DATA_WRAP_XOR: [u8; 8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef];
+    const METADATA_WRAP_XOR: [u8; 8] = [0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10];
 
-#[async_trait]
-impl Crypt for InsecureCrypt {
-    async fn create_key(
-        &self,
-        owner: u64,
-        purpose: KeyPurpose,
-    ) -> Result<(WrappedKeys, UnwrappedKeys), Error> {
-        let mut rng = rand::thread_rng();
-        let mut key: KeyBytes = [0; KEY_SIZE];
-        rng.fill_bytes(&mut key);
-        let mut wrapped: WrappedKeyBytes = WrappedKeyBytes([0; WRAPPED_KEY_SIZE]);
-        let owner_bytes = owner.to_le_bytes();
-        let (wrap_xor, wrapping_key_id) = match purpose {
-            KeyPurpose::Data => (&DATA_WRAP_XOR, 0),
-            KeyPurpose::Metadata => (&METADATA_WRAP_XOR, 1),
-        };
-        // This intentionally leaves the extra bytes in the wrapped key as zero.  They are unused.
-        for i in 0..key.len() {
-            let j = i % wrap_xor.len();
-            wrapped[i] = key[i] ^ wrap_xor[j] ^ owner_bytes[j];
+    impl InsecureCrypt {
+        pub fn new() -> Self {
+            Self {}
         }
-        Ok((
-            WrappedKeys(vec![WrappedKey { wrapping_key_id, key_id: 0, key: wrapped }]),
-            vec![UnwrappedKey::new(0, key)],
-        ))
     }
 
-    /// Unwraps the keys and stores the result in UnwrappedKeys.
-    async fn unwrap_keys(&self, keys: &WrappedKeys, owner: u64) -> Result<UnwrappedKeys, Error> {
-        Ok(keys
-            .iter()
-            .map(|key| {
-                let mut unwrapped: KeyBytes = [0; KEY_SIZE];
-                let owner_bytes = owner.to_le_bytes();
-                let wrap_xor = match key.wrapping_key_id {
-                    0 => &DATA_WRAP_XOR,
-                    1 => &METADATA_WRAP_XOR,
-                    _ => panic!("Unexpected wrapping key ID for {:?}", key),
-                };
-                for i in 0..unwrapped.len() {
-                    let j = i % wrap_xor.len();
-                    unwrapped[i] = key.key[i] ^ wrap_xor[j] ^ owner_bytes[j];
-                }
-                UnwrappedKey::new(key.key_id, unwrapped)
-            })
-            .collect())
+    #[async_trait]
+    impl Crypt for InsecureCrypt {
+        async fn create_key(
+            &self,
+            owner: u64,
+            purpose: KeyPurpose,
+        ) -> Result<(WrappedKeys, UnwrappedKeys), Error> {
+            let mut rng = rand::thread_rng();
+            let mut key: KeyBytes = [0; KEY_SIZE];
+            rng.fill_bytes(&mut key);
+            let mut wrapped: WrappedKeyBytes = WrappedKeyBytes([0; WRAPPED_KEY_SIZE]);
+            let owner_bytes = owner.to_le_bytes();
+            let (wrap_xor, wrapping_key_id) = match purpose {
+                KeyPurpose::Data => (&DATA_WRAP_XOR, 0),
+                KeyPurpose::Metadata => (&METADATA_WRAP_XOR, 1),
+            };
+            // This intentionally leaves the extra bytes in the wrapped key as zero.  They are unused.
+            for i in 0..key.len() {
+                let j = i % wrap_xor.len();
+                wrapped[i] = key[i] ^ wrap_xor[j] ^ owner_bytes[j];
+            }
+            Ok((
+                WrappedKeys(vec![WrappedKey { wrapping_key_id, key_id: 0, key: wrapped }]),
+                vec![UnwrappedKey::new(0, key)],
+            ))
+        }
+
+        /// Unwraps the keys and stores the result in UnwrappedKeys.
+        async fn unwrap_keys(
+            &self,
+            keys: &WrappedKeys,
+            owner: u64,
+        ) -> Result<UnwrappedKeys, Error> {
+            Ok(keys
+                .iter()
+                .map(|key| {
+                    let mut unwrapped: KeyBytes = [0; KEY_SIZE];
+                    let owner_bytes = owner.to_le_bytes();
+                    let wrap_xor = match key.wrapping_key_id {
+                        0 => &DATA_WRAP_XOR,
+                        1 => &METADATA_WRAP_XOR,
+                        _ => panic!("Unexpected wrapping key ID for {:?}", key),
+                    };
+                    for i in 0..unwrapped.len() {
+                        let j = i % wrap_xor.len();
+                        unwrapped[i] = key.key[i] ^ wrap_xor[j] ^ owner_bytes[j];
+                    }
+                    UnwrappedKey::new(key.key_id, unwrapped)
+                })
+                .collect())
+        }
     }
 }
 

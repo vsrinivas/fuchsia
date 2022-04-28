@@ -7,7 +7,7 @@ use {
     anyhow::{bail, Context, Error},
     chrono::Local,
     fxfs::{
-        crypt::{Crypt, InsecureCrypt},
+        crypt::{insecure::InsecureCrypt, Crypt},
         filesystem::{mkfs, FxFilesystem},
         serialized_types::LATEST_VERSION,
     },

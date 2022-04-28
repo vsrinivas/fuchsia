@@ -58,6 +58,9 @@ template("fs_test_config") {
 #
 #   extra_components (optional)
 #     Additional test components to be included in the package.
+#
+#   component_deps (optional)
+#     Additional dependencies applied to every component
 template("fs_test_suite") {
   suite_name = target_name
 
@@ -67,138 +70,144 @@ template("fs_test_suite") {
     }
   }
 
+  if (defined(invoker.component_deps)) {
+    extra_deps = invoker.component_deps
+  } else {
+    extra_deps = []
+  }
+
   storage_driver_test_realm_v2_component("${suite_name}-access-tests") {
-    deps = [ "//src/storage/fs_test:access_tests" ]
+    deps = [ "//src/storage/fs_test:access_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-append-tests") {
-    deps = [ "//src/storage/fs_test:append_tests" ]
+    deps = [ "//src/storage/fs_test:append_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-attr-tests") {
-    deps = [ "//src/storage/fs_test:attr_tests" ]
+    deps = [ "//src/storage/fs_test:attr_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-basic-tests") {
-    deps = [ "//src/storage/fs_test:basic_tests" ]
+    deps = [ "//src/storage/fs_test:basic_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component(
       "${suite_name}-case-sensitivity-tests") {
-    deps = [ "//src/storage/fs_test:case_sensitivity_tests" ]
+    deps = [ "//src/storage/fs_test:case_sensitivity_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-clone-tests") {
-    deps = [ "//src/storage/fs_test:clone_tests" ]
+    deps = [ "//src/storage/fs_test:clone_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-corrupt-tests") {
-    deps = [ "//src/storage/fs_test:corrupt_tests" ]
+    deps = [ "//src/storage/fs_test:corrupt_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-directory-tests") {
-    deps = [ "//src/storage/fs_test:directory_tests" ]
+    deps = [ "//src/storage/fs_test:directory_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-dot-dot-tests") {
-    deps = [ "//src/storage/fs_test:dot_dot_tests" ]
+    deps = [ "//src/storage/fs_test:dot_dot_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-fcntl-tests") {
-    deps = [ "//src/storage/fs_test:fcntl_tests" ]
+    deps = [ "//src/storage/fs_test:fcntl_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-filename-tests") {
-    deps = [ "//src/storage/fs_test:filename_tests" ]
+    deps = [ "//src/storage/fs_test:filename_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-full-tests") {
-    deps = [ "//src/storage/fs_test:full_tests" ]
+    deps = [ "//src/storage/fs_test:full_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-inspect-tests") {
-    deps = [ "//src/storage/fs_test:inspect_tests" ]
+    deps = [ "//src/storage/fs_test:inspect_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-link-tests") {
-    deps = [ "//src/storage/fs_test:link_tests" ]
+    deps = [ "//src/storage/fs_test:link_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-lseek-tests") {
-    deps = [ "//src/storage/fs_test:lseek_tests" ]
+    deps = [ "//src/storage/fs_test:lseek_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-mmap-tests") {
-    deps = [ "//src/storage/fs_test:mmap_tests" ]
+    deps = [ "//src/storage/fs_test:mmap_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-open-tests") {
-    deps = [ "//src/storage/fs_test:open_tests" ]
+    deps = [ "//src/storage/fs_test:open_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-overflow-tests") {
-    deps = [ "//src/storage/fs_test:overflow_tests" ]
+    deps = [ "//src/storage/fs_test:overflow_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-persist-tests") {
-    deps = [ "//src/storage/fs_test:persist_tests" ]
+    deps = [ "//src/storage/fs_test:persist_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component(
       "${suite_name}-query-filesystem-tests") {
-    deps = [ "//src/storage/fs_test:query_filesystem_tests" ]
+    deps = [ "//src/storage/fs_test:query_filesystem_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-random-op-tests") {
-    deps = [ "//src/storage/fs_test:random_op_tests" ]
+    deps = [ "//src/storage/fs_test:random_op_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-realpath-tests") {
-    deps = [ "//src/storage/fs_test:realpath_tests" ]
+    deps = [ "//src/storage/fs_test:realpath_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-rename-tests") {
-    deps = [ "//src/storage/fs_test:rename_tests" ]
+    deps = [ "//src/storage/fs_test:rename_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-resize-tests") {
-    deps = [ "//src/storage/fs_test:resize_tests" ]
+    deps = [ "//src/storage/fs_test:resize_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-rw-tests") {
-    deps = [ "//src/storage/fs_test:rw_tests" ]
+    deps = [ "//src/storage/fs_test:rw_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-rw-workers-tests") {
-    deps = [ "//src/storage/fs_test:rw_workers_tests" ]
+    deps = [ "//src/storage/fs_test:rw_workers_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-sparse-tests") {
-    deps = [ "//src/storage/fs_test:sparse_tests" ]
+    deps = [ "//src/storage/fs_test:sparse_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-sync-tests") {
-    deps = [ "//src/storage/fs_test:sync_tests" ]
+    deps = [ "//src/storage/fs_test:sync_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-threading-tests") {
-    deps = [ "//src/storage/fs_test:threading_tests" ]
+    deps = [ "//src/storage/fs_test:threading_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-truncate-tests") {
-    deps = [ "//src/storage/fs_test:truncate_tests" ]
+    deps = [ "//src/storage/fs_test:truncate_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-unicode-tests") {
-    deps = [ "//src/storage/fs_test:unicode_tests" ]
+    deps = [ "//src/storage/fs_test:unicode_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-unlink-tests") {
-    deps = [ "//src/storage/fs_test:unlink_tests" ]
+    deps = [ "//src/storage/fs_test:unlink_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-watcher-tests") {
-    deps = [ "//src/storage/fs_test:watcher_tests" ]
+    deps = [ "//src/storage/fs_test:watcher_tests" ] + extra_deps
   }
 
   fuchsia_test_package("${suite_name}-fs-tests") {
@@ -274,21 +283,27 @@ template("slow_fs_test_suite") {
     }
   }
 
+  if (defined(invoker.component_deps)) {
+    extra_deps = invoker.component_deps
+  } else {
+    extra_deps = []
+  }
+
   storage_driver_test_realm_v2_component(
       "${suite_name}-directory-large-tests") {
-    deps = [ "//src/storage/fs_test:directory_large_tests" ]
+    deps = [ "//src/storage/fs_test:directory_large_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-max-file-tests") {
-    deps = [ "//src/storage/fs_test:max_file_tests" ]
+    deps = [ "//src/storage/fs_test:max_file_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-sparse-large-tests") {
-    deps = [ "//src/storage/fs_test:sparse_large_tests" ]
+    deps = [ "//src/storage/fs_test:sparse_large_tests" ] + extra_deps
   }
 
   storage_driver_test_realm_v2_component("${suite_name}-truncate-large-tests") {
-    deps = [ "//src/storage/fs_test:truncate_large_tests" ]
+    deps = [ "//src/storage/fs_test:truncate_large_tests" ] + extra_deps
   }
 
   fuchsia_test_package("${suite_name}-slow-fs-tests") {

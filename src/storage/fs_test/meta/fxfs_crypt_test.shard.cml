@@ -1,0 +1,28 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "fxfs-crypt",
+            url: "#meta/fxfs-crypt.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.fxfs.Crypt",
+            from: "#fxfs-crypt",
+        },
+        {
+            protocol: "fuchsia.fxfs.CryptManagement",
+            from: "#fxfs-crypt",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#fxfs-crypt",
+        },
+    ],
+}

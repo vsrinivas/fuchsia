@@ -91,6 +91,9 @@ TestFilesystemOptions OptionsWithDescription(std::string_view description);
 // Returns device and device path.
 zx::status<std::pair<RamDevice, std::string>> CreateRamDevice(const TestFilesystemOptions& options);
 
+// Returns a handle to a test crypt service.
+zx::status<zx::channel> GetCryptService();
+
 // A file system instance is a specific instance created for test purposes.
 class FilesystemInstance {
  public:
@@ -138,6 +141,7 @@ class Filesystem {
     bool supports_watch_event_deleted = true;
     bool supports_inspect = false;
     bool supports_shutdown_on_no_connections = false;
+    bool uses_crypt = false;
   };
 
   virtual ~Filesystem() = default;

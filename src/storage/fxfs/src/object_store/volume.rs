@@ -148,7 +148,7 @@ mod tests {
     use {
         super::root_volume,
         crate::{
-            crypt::InsecureCrypt,
+            crypt::insecure::InsecureCrypt,
             filesystem::{Filesystem, FxFilesystem, SyncOptions},
             object_store::{
                 directory::Directory,

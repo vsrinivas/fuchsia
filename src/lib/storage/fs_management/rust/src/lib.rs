@@ -56,7 +56,7 @@ use {
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, AsHandleRef, Task},
     fuchsia_zircon_status as zx_status,
-    std::ffi::CStr,
+    std::{ffi::CStr, sync::Arc},
 };
 
 // Re-export errors as public.
@@ -92,11 +92,12 @@ impl FSInstance {
         block_device: zx::Channel,
         args: Vec<&CStr>,
         mount_point: &str,
+        crypt_client: Option<zx::Channel>,
     ) -> Result<Self, Error> {
         let (export_root, server_end) = fidl::endpoints::create_endpoints::<fio::NodeMarker>()?;
         let export_root = fio::DirectorySynchronousProxy::new(export_root.into_channel());
 
-        let actions = vec![
+        let mut actions = vec![
             // export root handle is passed in as a PA_DIRECTORY_REQUEST handle at argument 0
             SpawnAction::add_handle(
                 HandleInfo::new(HandleType::DirectoryRequest, 0),
@@ -105,7 +106,12 @@ impl FSInstance {
             // device handle is passed in as a PA_USER0 handle at argument 1
             SpawnAction::add_handle(HandleInfo::new(HandleType::User0, 1), block_device.into()),
         ];
-
+        if let Some(crypt_client) = crypt_client {
+            actions.push(SpawnAction::add_handle(
+                HandleInfo::new(HandleType::User0, 2),
+                crypt_client.into(),
+            ));
+        }
         let process = launch_process(&args, actions)?;
 
         // Wait until the filesystem is ready to take incoming requests. We want
@@ -206,11 +212,18 @@ fn launch_process(
 fn run_command_and_wait_for_clean_exit(
     args: Vec<&CStr>,
     block_device: zx::Channel,
+    crypt_client: Option<zx::Channel>,
 ) -> Result<(), Error> {
-    let actions = vec![
+    let mut actions = vec![
         // device handle is passed in as a PA_USER0 handle at argument 1
         SpawnAction::add_handle(HandleInfo::new(HandleType::User0, 1), block_device.into()),
     ];
+    if let Some(crypt_client) = crypt_client {
+        actions.push(SpawnAction::add_handle(
+            HandleInfo::new(HandleType::User0, 2),
+            crypt_client.into(),
+        ));
+    }
 
     let process = launch_process(&args, actions)?;
 
@@ -246,6 +259,12 @@ pub trait FSConfig {
     /// Arguments passed to the binary for mounting
     fn mount_args(&self) -> Vec<&CStr> {
         vec![]
+    }
+
+    /// Returns a handle for the crypt service (if any).
+    fn crypt_client(&self) -> Option<zx::Channel> {
+        // By default, filesystems don't need a crypt service.
+        None
     }
 }
 
@@ -298,7 +317,8 @@ impl<FSC: FSConfig> Filesystem<FSC> {
         args.push(cstr!("mount"));
         args.append(&mut self.config.mount_args());
 
-        self.instance = Some(FSInstance::mount(block_device, args, mount_point)?);
+        self.instance =
+            Some(FSInstance::mount(block_device, args, mount_point, self.config.crypt_client())?);
 
         Ok(())
     }
@@ -316,7 +336,8 @@ impl<FSC: FSConfig> Filesystem<FSC> {
         args.push(cstr!("mkfs"));
         args.append(&mut self.config.format_args());
 
-        run_command_and_wait_for_clean_exit(args, block_device).context("failed to format device")
+        run_command_and_wait_for_clean_exit(args, block_device, self.config.crypt_client())
+            .context("failed to format device")
     }
 
     /// Run fsck on the filesystem partition. Returns Ok(()) if fsck succeeds, or the associated
@@ -332,7 +353,8 @@ impl<FSC: FSConfig> Filesystem<FSC> {
         args.append(&mut self.config.generic_args());
         args.push(cstr!("fsck"));
 
-        run_command_and_wait_for_clean_exit(args, block_device).context("failed to fsck device")
+        run_command_and_wait_for_clean_exit(args, block_device, self.config.crypt_client())
+            .context("failed to fsck device")
     }
 
     /// Unmount the filesystem partition. The partition must already be mounted.
@@ -519,25 +541,35 @@ impl FSConfig for Minfs {
     }
 }
 
+type CryptClientFn = Arc<dyn Fn() -> zx::Channel + Send + Sync>;
+
 /// Fxfs Filesystem Configuration
 /// If fields are None or false, they will not be set in arguments.
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct Fxfs {
     pub verbose: bool,
     pub readonly: bool,
+    pub crypt_client_fn: CryptClientFn,
 }
 
 impl Fxfs {
+    pub fn with_crypt_client(crypt_client_fn: CryptClientFn) -> Self {
+        Fxfs { verbose: false, readonly: false, crypt_client_fn }
+    }
+
     /// Manages a block device at a given path using
     /// the default configuration.
-    pub fn new(path: &str) -> Result<Filesystem<Self>, Error> {
-        Filesystem::from_path(path, Self::default())
+    pub fn new(path: &str, crypt_client_fn: CryptClientFn) -> Result<Filesystem<Self>, Error> {
+        Filesystem::from_path(path, Self::with_crypt_client(crypt_client_fn))
     }
 
     /// Manages a block device at a given channel using
     /// the default configuration.
-    pub fn from_channel(channel: zx::Channel) -> Result<Filesystem<Self>, Error> {
-        Filesystem::from_channel(channel, Self::default())
+    pub fn from_channel(
+        channel: zx::Channel,
+        crypt_client_fn: CryptClientFn,
+    ) -> Result<Filesystem<Self>, Error> {
+        Filesystem::from_channel(channel, Self::with_crypt_client(crypt_client_fn))
     }
 }
 
@@ -558,6 +590,9 @@ impl FSConfig for Fxfs {
             args.push(cstr!("--readonly"));
         }
         args
+    }
+    fn crypt_client(&self) -> Option<zx::Channel> {
+        Some((self.crypt_client_fn)())
     }
 }
 

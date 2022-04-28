@@ -75,7 +75,10 @@ fuchsia_component("minfs-short") {
 fuchsia_component("fxfs-short") {
   testonly = true
   manifest = "fxfs/meta/short.cml"
-  deps = [ "genericfs:stressor-bin" ]
+  deps = [
+    "genericfs:stressor-bin",
+    "//src/storage/fxfs-crypt",
+  ]
 }
 
 # This test package is designed to run on `core.qemu-x64-stress`.

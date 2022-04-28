@@ -10,9 +10,14 @@ mod instance_actor;
 use {
     argh::FromArgs,
     environment::FsEnvironment,
+    fidl::endpoints::Proxy,
+    fidl_fuchsia_fxfs::{CryptManagementMarker, CryptMarker, KeyPurpose},
     fs_management::{Fxfs, Minfs},
     fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_protocol,
+    fuchsia_zircon as zx,
     log::LevelFilter,
+    std::sync::Arc,
     stress_test::{run_test, StdoutLogger},
 };
 
@@ -71,7 +76,42 @@ async fn test() {
 
     match args.target_filesystem.as_str() {
         "fxfs" => {
-            let env = FsEnvironment::new(Fxfs::default(), args).await;
+            let crypt_management_service = connect_to_protocol::<CryptManagementMarker>()
+                .expect("Failed to connect to the crypt management service");
+            let mut key = [0; 32];
+            zx::cprng_draw(&mut key);
+            crypt_management_service
+                .add_wrapping_key(0, &key)
+                .await
+                .expect("FIDL failed")
+                .expect("add_wrapping_key failed");
+            zx::cprng_draw(&mut key);
+            crypt_management_service
+                .add_wrapping_key(1, &key)
+                .await
+                .expect("FIDL failed")
+                .expect("add_wrapping_key failed");
+            crypt_management_service
+                .set_active_key(KeyPurpose::Data, 0)
+                .await
+                .expect("FIDL failed")
+                .expect("set_active_key failed");
+            crypt_management_service
+                .set_active_key(KeyPurpose::Metadata, 1)
+                .await
+                .expect("FIDL failed")
+                .expect("set_active_key failed");
+            let env = FsEnvironment::new(
+                Fxfs::with_crypt_client(Arc::new(|| {
+                    connect_to_protocol::<CryptMarker>()
+                        .expect("Failed to connect to crypt service")
+                        .into_channel()
+                        .expect("Unable to get channel")
+                        .into()
+                })),
+                args,
+            )
+            .await;
             run_test(env).await;
         }
         "minfs" => {

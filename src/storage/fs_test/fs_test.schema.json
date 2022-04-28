@@ -33,6 +33,10 @@
             "description": "The format known to fs-management",
             "type": "integer"
         },
+        "uses_crypt": {
+            "description": "True if the filesystem uses a crypt service",
+            "type": "boolean"
+        },
         "has_directory_size_limit": {
             "default": false,
             "description": "True if the filesystem has a directory size limit (unrelated to available disk space)",

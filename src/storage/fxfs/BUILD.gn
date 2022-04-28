@@ -168,8 +168,12 @@ rustc_library("lib") {
   sources = fxfs_sources
   test_deps = fxfs_test_deps
 
+  features = []
   if (tracing_enabled && is_fuchsia) {
-    features = [ "tracing" ]
+    features += [ "tracing" ]
+  }
+  if (is_host) {
+    features += [ "insecure_crypt" ]
   }
 }
 
@@ -241,6 +245,7 @@ fs_test_config("fxfs") {
   supports_mmap_shared_write = false
   supports_shutdown_on_no_connections = true
   max_file_size = 9223372036854775807
+  uses_crypt = true
 
   options = [
     {
@@ -260,6 +265,7 @@ test("fxfs-interop-fs") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/block_client/cpp",
     "//src/storage/fs_test",
+    "//src/storage/fs_test:test_crypt_service",
     "//src/storage/fxfs",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
@@ -278,15 +284,19 @@ fs_test_suite("fxfs") {
   deps = [
     ":fxfs_fs_test_config",
     "//src/storage/fxfs",
+    "//src/storage/fxfs-crypt",
   ]
   extra_components = [ ":fxfs-interop-fs-tests" ]
+  component_deps = [ "//src/storage/fs_test:test_crypt_service" ]
 }
 
 slow_fs_test_suite("fxfs") {
   deps = [
     ":fxfs_fs_test_config",
     "//src/storage/fxfs",
+    "//src/storage/fxfs-crypt",
   ]
+  component_deps = [ "//src/storage/fs_test:test_crypt_service" ]
 }
 
 group("tests") {

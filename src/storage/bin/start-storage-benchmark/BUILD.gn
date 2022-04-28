@@ -7,6 +7,7 @@ import("//build/test.gni")
 import("//src/storage/testing/driver_test_realm.gni")
 
 source_set("start-storage-benchmark-lib") {
+  testonly = true
   public = [
     "block-device.h",
     "command-line-options.h",
@@ -38,6 +39,8 @@ source_set("start-storage-benchmark-lib") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/uuid",
     "//src/security/zxcrypt:zxcrypt-client",
+    "//src/storage/fs_test:crypt_service",
+    "//src/storage/fxfs:fuchsia.fxfs_llcpp",
     "//src/storage/lib/utils:topological_path",
     "//zircon/system/public",
     "//zircon/system/ulib/service:service-llcpp",
@@ -47,10 +50,12 @@ source_set("start-storage-benchmark-lib") {
     "//src/storage/bin/f2fs",
     "//src/storage/bin/minfs",
     "//src/storage/fxfs",
+    "//src/storage/fxfs-crypt:fxfs_crypt",
   ]
 }
 
 executable("start-storage-benchmark-bin") {
+  testonly = true
   output_name = "start-storage-benchmark"
   sources = [ "main.cc" ]
   deps = [
@@ -62,6 +67,7 @@ executable("start-storage-benchmark-bin") {
 }
 
 fuchsia_package_with_single_component("start-storage-benchmark") {
+  testonly = true
   manifest = "meta/start-storage-benchmark.cmx"
   deps = [ ":start-storage-benchmark-bin" ]
 }

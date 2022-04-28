@@ -16,6 +16,7 @@
 
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
+#include "src/storage/fs_test/crypt_service.h"
 #include "src/storage/testing/ram_disk.h"
 
 namespace fs_management {
@@ -63,6 +64,13 @@ class OutgoingDirectoryFixture : public testing::Test {
         .component_child_name = options_.component_child_name,
         .component_collection_name = options_.component_collection_name,
     };
+    if (format_ == kDiskFormatFxfs) {
+      if (auto service_or = fs_test::GetCryptService(); service_or.is_error()) {
+        ADD_FAILURE() << "Unable to get crypt service";
+      } else {
+        mkfs_options.crypt_client = service_or->release();
+      }
+    }
     ASSERT_EQ(status = Mkfs(ramdisk_.path().c_str(), format_, LaunchStdioSync, mkfs_options), ZX_OK)
         << zx_status_get_string(status);
     state_ = kFormatted;
@@ -71,6 +79,13 @@ class OutgoingDirectoryFixture : public testing::Test {
         .component_child_name = options_.component_child_name,
         .component_collection_name = options_.component_collection_name,
     };
+    if (format_ == kDiskFormatFxfs) {
+      if (auto service_or = fs_test::GetCryptService(); service_or.is_error()) {
+        ADD_FAILURE() << "Unable to get crypt service";
+      } else {
+        fsck_options.crypt_client = service_or->release();
+      }
+    }
     ASSERT_EQ(status = Fsck(ramdisk_.path().c_str(), format_, fsck_options, LaunchStdioSync), ZX_OK)
         << zx_status_get_string(status);
 
@@ -96,7 +111,16 @@ class OutgoingDirectoryFixture : public testing::Test {
     fbl::unique_fd device_fd(open(ramdisk_.path().c_str(), O_RDWR));
     ASSERT_TRUE(device_fd);
 
-    auto fs_or = Mount(std::move(device_fd), nullptr, format_, options, LaunchStdioAsync);
+    MountOptions actual_options = options;
+    if (format_ == kDiskFormatFxfs) {
+      if (auto service_or = fs_test::GetCryptService(); service_or.is_error()) {
+        ADD_FAILURE() << "Unable to get crypt service";
+      } else {
+        actual_options.crypt_client = service_or->release();
+      }
+    }
+
+    auto fs_or = Mount(std::move(device_fd), nullptr, format_, actual_options, LaunchStdioAsync);
     ASSERT_TRUE(fs_or.is_ok()) << fs_or.status_string();
     export_client_ = fidl::WireSyncClient<Directory>(std::move(*fs_or).TakeExportRoot());
 

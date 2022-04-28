@@ -28,14 +28,7 @@ class TestFilesystem {
   const std::string& mount_path() const { return mount_path_; }
   bool is_mounted() const { return mounted_; }
 
-  fs_management::MountOptions DefaultMountOptions() const {
-    fs_management::MountOptions options;
-    if (options_.blob_compression_algorithm) {
-      options.write_compression_algorithm =
-          blobfs::CompressionAlgorithmToString(*options_.blob_compression_algorithm);
-    }
-    return options;
-  }
+  fs_management::MountOptions DefaultMountOptions() const;
 
   // Mounts the file system (only necessary after calling Unmount).
   zx::status<> Mount(const fs_management::MountOptions& mount_options);
