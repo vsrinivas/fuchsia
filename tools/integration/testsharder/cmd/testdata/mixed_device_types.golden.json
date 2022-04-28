@@ -1,68 +1,68 @@
 [
-  {
-    "name": "AEMU",
-    "tests": [
-      {
-        "name": "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm",
-        "package_url": "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm",
-        "path": "",
-        "label": "//src/something:foo(//build/toolchain/fuchsia:x64)",
-        "os": "fuchsia",
-        "cpu": "x64",
-        "log_settings": {},
-        "runs": 1,
-        "tags": [
-          {
-            "key": "expected_duration_milliseconds",
-            "value": "0"
-          }
-        ]
-      }
-    ],
-    "environment": {
-      "dimensions": {
-        "device_type": "AEMU"
-      },
-      "is_emu": true
+    {
+        "name": "AEMU",
+        "tests": [
+            {
+                "name": "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm",
+                "package_url": "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm",
+                "path": "",
+                "label": "//src/something:foo(//build/toolchain/fuchsia:x64)",
+                "os": "fuchsia",
+                "cpu": "x64",
+                "log_settings": {},
+                "runs": 1,
+                "tags": [
+                    {
+                        "key": "expected_duration_milliseconds",
+                        "value": "0"
+                    }
+                ]
+            }
+        ],
+        "environment": {
+            "dimensions": {
+                "device_type": "AEMU"
+            },
+            "is_emu": true
+        },
+        "timeout_secs": 0,
+        "summary": {
+            "tests": null
+        }
     },
-    "timeout_secs": 0,
-    "summary": {
-      "tests": null
+    {
+        "name": "Linux",
+        "tests": [
+            {
+                "name": "host_x64/bar",
+                "path": "host_x64/bar",
+                "label": "//tools/other:bar(//build/toolchain/host_x64)",
+                "os": "linux",
+                "cpu": "x64",
+                "log_settings": {},
+                "runs": 1,
+                "tags": [
+                    {
+                        "key": "expected_duration_milliseconds",
+                        "value": "0"
+                    }
+                ]
+            }
+        ],
+        "environment": {
+            "dimensions": {
+                "os": "Linux",
+                "cpu": "x64"
+            }
+        },
+        "deps": [
+            "host_x64/bar",
+            "host_x64/dep1",
+            "host_x64/dep2"
+        ],
+        "timeout_secs": 0,
+        "summary": {
+            "tests": null
+        }
     }
-  },
-  {
-    "name": "Linux",
-    "tests": [
-      {
-        "name": "host_x64/bar",
-        "path": "host_x64/bar",
-        "label": "//tools/other:bar(//build/toolchain/host_x64)",
-        "os": "linux",
-        "cpu": "x64",
-        "log_settings": {},
-        "runs": 1,
-        "tags": [
-          {
-            "key": "expected_duration_milliseconds",
-            "value": "0"
-          }
-        ]
-      }
-    ],
-    "environment": {
-      "dimensions": {
-        "os": "Linux",
-        "cpu": "x64"
-      }
-    },
-    "deps": [
-      "host_x64/bar",
-      "host_x64/dep1",
-      "host_x64/dep2"
-    ],
-    "timeout_secs": 0,
-    "summary": {
-      "tests": null
-    }
-  }
 ]

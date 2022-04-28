@@ -263,7 +263,8 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 	}
 
 	encoder := json.NewEncoder(f)
-	encoder.SetIndent("", "  ")
+	// Use 4-space indents so golden files are compatible with `fx format-code`.
+	encoder.SetIndent("", "    ")
 	if err := encoder.Encode(&shards); err != nil {
 		return fmt.Errorf("failed to encode shards: %v", err)
 	}
