@@ -763,7 +763,7 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
                                     )
                                     .await?;
 
-                                const PIPELINED_REQUESTS: usize = 16;
+                                const PIPELINED_REQUESTS: usize = 4;
                                 let unprocessed_data_stream =
                                     futures::stream::repeat_with(move || iterator.get_next())
                                         .buffered(PIPELINED_REQUESTS);
@@ -793,7 +793,7 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
                                                     .new_file(&PathBuf::from(name))
                                                     .map_err(anyhow::Error::from)
                                             });
-                                        async move {
+                                        fasync::Task::spawn(async move {
                                             let mut output = output?;
                                             let file = debug_data
                                                 .file
@@ -806,7 +806,7 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
                                                 debug_data.name.unwrap_or_default()
                                             );
                                             read_file_to_writer(&file, &mut output).await
-                                        }
+                                        })
                                     })
                                     .collect::<Vec<_>>()
                                     .await;
@@ -916,9 +916,8 @@ async fn read_file_to_writer<T: Write>(
     const READ_SIZE: u64 = fio::MAX_BUF;
 
     let mut vector = VecDeque::new();
-    // Arbitrary number of reads to pipeline. Works for
-    // a bandwidth delay product of 800kB.
-    const PIPELINED_READ_COUNT: u64 = 100;
+    // Arbitrary number of reads to pipeline.
+    const PIPELINED_READ_COUNT: u64 = 4;
     for _n in 0..PIPELINED_READ_COUNT {
         vector.push_back(file.read(READ_SIZE));
     }
