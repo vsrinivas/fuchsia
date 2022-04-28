@@ -351,11 +351,26 @@ async fn regular_echo_at_service_instance(
         )
         .expect("failed to connect to filtered service instance");
 
-    service_instance
+    let response = service_instance
         .regular_echo()
         .expect("failed to connect to regular_echo member from original service")
         .echo_string(echo_string)
-        .await
+        .await;
+
+    // Ensure that calling the protocol directly produces the same result as opening the
+    // service instance directory first, then connecting to the protocol through the open
+    // directory.
+    let direct_protocol_response =
+        client::connect_to_named_protocol_at_dir_root::<fexamples::EchoMarker>(
+            exposed_dir,
+            vec!["fuchsia.examples.EchoService", instance_name, "regular_echo"].join("/").as_str(),
+        )
+        .expect("failed to connect to protocol directly")
+        .echo_string(echo_string)
+        .await;
+    assert_eq!(response.clone().ok(), direct_protocol_response.ok());
+
+    return response;
 }
 
 // Confirm that the original service exposes the expected service instances.

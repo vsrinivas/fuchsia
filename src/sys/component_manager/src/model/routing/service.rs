@@ -107,26 +107,40 @@ impl DirectoryEntry for FilteredServiceDirectory {
         path: vfs::path::Path,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
+        if path.is_empty() {
+            // If path is empty just connect to itself as a directory.
+            ImmutableConnection::create_connection(scope, self, flags, server_end);
+            return;
+        }
         let input_path_string = path.clone().into_string();
-
-        if self.path_matches_allowed_instance(&input_path_string) {
-            let source_path_string = self
+        let service_instance_name =
+            path.peek().map(ToString::to_string).expect("path should not be empty");
+        if self.path_matches_allowed_instance(&service_instance_name) {
+            let source_path = self
                 .instance_name_target_to_source
-                .get(&input_path_string)
-                .map_or(input_path_string, |source_str| source_str.clone());
+                .get(&service_instance_name)
+                .map_or(input_path_string, |source| {
+                    // Valid paths are "<instance_name>" or "<instance_name>/<protocol_name>".
+                    // If the incoming path is just a service instance name return the source component instance name.
+                    if path.is_single_component() {
+                        return source.to_string();
+                    }
+                    let mut mut_path = path.clone();
+                    // If the incoming path is "<instance_name>/<protocol_name>" replace <instance_name> with the source component instance name.
+                    mut_path.next();
+                    // Since we check above if the path is a single component it's safe to unwrap here.
+                    let protocol_name = mut_path.next().unwrap();
+                    format!("{}/{}", source, protocol_name).to_string()
+                });
 
-            if let Err(e) = self.source_dir_proxy.open(flags, mode, &source_path_string, server_end)
-            {
+            if let Err(e) = self.source_dir_proxy.open(flags, mode, &source_path, server_end) {
                 error!(
                     error = %e,
-                    path = source_path_string.as_str(),
+                    path = source_path.as_str(),
                     "Error opening instance in FilteredServiceDirectory"
                 );
             }
             return;
-        } else if path.is_empty() {
-            // Otherwise just connect to itself as a directory.
-            ImmutableConnection::create_connection(scope, self, flags, server_end);
         } else {
             send_on_open_with_error(flags, server_end, zx::Status::NOT_FOUND);
         }
