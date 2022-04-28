@@ -8,6 +8,7 @@
 #include <map>
 #include <memory>
 #include <queue>
+#include <set>
 #include <thread>
 
 #include "command_buffer.h"
@@ -39,12 +40,11 @@ class MsdIntelContext {
   // The context has a single target command streamer so that mapping release batches and pipeline
   // fence batches are processed by the appropriate command streamer.
   void SetTargetCommandStreamer(EngineCommandStreamerId id) {
-    DASSERT(!target_command_streamer_);
-    target_command_streamer_ = id;
+    target_command_streamers_.insert(id);
   }
 
-  std::optional<EngineCommandStreamerId> GetTargetCommandStreamer() {
-    return target_command_streamer_;
+  std::set<EngineCommandStreamerId> GetTargetCommandStreamers() {
+    return target_command_streamers_;
   }
 
   void SetEngineState(EngineCommandStreamerId id, std::unique_ptr<MsdIntelBuffer> context_buffer,
@@ -96,7 +96,11 @@ class MsdIntelContext {
     return state_map_.find(id) != state_map_.end();
   }
 
-  std::queue<std::unique_ptr<MappedBatch>>& pending_batch_queue() { return pending_batch_queue_; }
+  std::queue<std::unique_ptr<MappedBatch>>& pending_batch_queue(EngineCommandStreamerId id) {
+    auto iter = state_map_.find(id);
+    DASSERT(iter != state_map_.end());
+    return iter->second.pending_batch_queue;
+  }
 
   std::shared_ptr<AddressSpace> exec_address_space() { return address_space_; }
 
@@ -112,13 +116,13 @@ class MsdIntelContext {
     std::shared_ptr<MsdIntelBuffer> context_buffer;
     std::unique_ptr<GpuMapping> context_mapping;
     std::unique_ptr<Ringbuffer> ringbuffer;
+    std::queue<std::unique_ptr<MappedBatch>> pending_batch_queue;
     gpu_addr_t ringbuffer_gpu_addr = 0;
     void* context_buffer_cpu_addr = nullptr;
   };
 
-  std::optional<EngineCommandStreamerId> target_command_streamer_;
+  std::set<EngineCommandStreamerId> target_command_streamers_;
   std::map<EngineCommandStreamerId, PerEngineState> state_map_;
-  std::queue<std::unique_ptr<MappedBatch>> pending_batch_queue_;
   std::shared_ptr<AddressSpace> address_space_;
 
   std::weak_ptr<MsdIntelConnection> connection_;

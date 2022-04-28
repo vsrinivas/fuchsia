@@ -23,8 +23,6 @@ std::unique_ptr<CommandBuffer> CommandBuffer::Create(std::weak_ptr<MsdIntelConte
 
   switch (cmd_buf->flags) {
     case 0:
-      cmd_buf->flags = kMagmaIntelGenCommandBufferForRender;
-      break;
     case kMagmaIntelGenCommandBufferForRender:
     case kMagmaIntelGenCommandBufferForVideo:
       break;
@@ -63,7 +61,22 @@ std::unique_ptr<CommandBuffer> CommandBuffer::Create(std::weak_ptr<MsdIntelConte
 
 CommandBuffer::CommandBuffer(std::weak_ptr<MsdIntelContext> context,
                              std::unique_ptr<magma_command_buffer> cmd_buf)
-    : context_(context), command_buffer_(std::move(cmd_buf)), nonce_(TRACE_NONCE()) {}
+    : MappedBatch(COMMAND_BUFFER),
+      context_(context),
+      command_buffer_(std::move(cmd_buf)),
+      nonce_(TRACE_NONCE()) {
+  switch (command_buffer_->flags) {
+    case 0:
+    case kMagmaIntelGenCommandBufferForRender:
+      MappedBatch::set_command_streamer(RENDER_COMMAND_STREAMER);
+      break;
+    case kMagmaIntelGenCommandBufferForVideo:
+      MappedBatch::set_command_streamer(VIDEO_COMMAND_STREAMER);
+      break;
+    default:
+      DASSERT(false);
+  }
+}
 
 CommandBuffer::~CommandBuffer() {
   if (!prepared_to_execute_)

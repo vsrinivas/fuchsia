@@ -15,6 +15,16 @@ class MsdIntelContext;
 
 class MappedBatch {
  public:
+  enum BatchType {
+    UNKNOWN,
+    SIMPLE_BATCH,
+    COMMAND_BUFFER,
+    MAPPING_RELEASE_BATCH,
+    PIPELINE_FENCE_BATCH,
+  };
+
+  explicit MappedBatch(BatchType type = UNKNOWN) : type_(type) {}
+
   virtual ~MappedBatch() {}
 
   virtual std::weak_ptr<MsdIntelContext> GetContext() = 0;
@@ -22,21 +32,31 @@ class MappedBatch {
   virtual void SetSequenceNumber(uint32_t sequence_number) = 0;
   virtual uint64_t GetBatchBufferId() { return 0; }
   virtual uint32_t GetPipeControlFlags() { return 0; }
-  virtual bool IsCommandBuffer() { return false; }
+  virtual BatchType GetType() { return type_; }
   virtual const GpuMappingView* GetBatchMapping() = 0;
 
   void scheduled() { scheduled_ = true; }
   bool was_scheduled() { return scheduled_; }
 
+  void set_command_streamer(EngineCommandStreamerId command_streamer) {
+    command_streamer_ = command_streamer;
+  }
+
+  EngineCommandStreamerId get_command_streamer() { return command_streamer_; }
+
  private:
+  BatchType type_;
   bool scheduled_ = false;
+  EngineCommandStreamerId command_streamer_ = RENDER_COMMAND_STREAMER;
 };
 
 class SimpleMappedBatch : public MappedBatch {
  public:
   SimpleMappedBatch(std::shared_ptr<MsdIntelContext> context,
                     std::unique_ptr<GpuMapping> batch_buffer_mapping)
-      : context_(context), batch_buffer_mapping_(std::move(batch_buffer_mapping)) {}
+      : MappedBatch(SIMPLE_BATCH),
+        context_(std::move(context)),
+        batch_buffer_mapping_(std::move(batch_buffer_mapping)) {}
 
   std::weak_ptr<MsdIntelContext> GetContext() override { return context_; }
 
@@ -58,6 +78,8 @@ class SimpleMappedBatch : public MappedBatch {
 // Has no batch.
 class NullBatch : public MappedBatch {
  public:
+  explicit NullBatch(BatchType type) : MappedBatch(type) {}
+
   bool GetGpuAddress(gpu_addr_t* gpu_addr_out) override { return false; }
   void SetSequenceNumber(uint32_t sequence_number) override {}
   const GpuMappingView* GetBatchMapping() override { return nullptr; }
@@ -66,23 +88,30 @@ class NullBatch : public MappedBatch {
 // Releases the list of bus mappings when destroyed.
 class MappingReleaseBatch : public NullBatch {
  public:
-  MappingReleaseBatch(std::shared_ptr<MsdIntelContext> context,
-                      std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> mappings)
-      : context_(std::move(context)), mappings_(std::move(mappings)) {}
+  struct BusMappingsWrapper {
+    std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> bus_mappings;
+  };
+
+  explicit MappingReleaseBatch(std::shared_ptr<BusMappingsWrapper> wrapper)
+      : NullBatch(MAPPING_RELEASE_BATCH), wrapper_(std::move(wrapper)) {}
+
+  void SetContext(std::shared_ptr<MsdIntelContext> context) { context_ = std::move(context); }
 
   std::weak_ptr<MsdIntelContext> GetContext() override { return context_; }
 
+  BusMappingsWrapper* wrapper() { return wrapper_.get(); }
+
  private:
   std::shared_ptr<MsdIntelContext> context_;
-  std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> mappings_;
+  std::shared_ptr<BusMappingsWrapper> wrapper_;
 };
 
 // Signals an event upon completion.
 class PipelineFenceBatch : public NullBatch {
  public:
-  PipelineFenceBatch(std::shared_ptr<MsdIntelContext> context,
-                     std::shared_ptr<magma::PlatformEvent> event)
-      : context_(std::move(context)), event_(std::move(event)) {}
+  explicit PipelineFenceBatch(std::shared_ptr<MsdIntelContext> context,
+                              std::shared_ptr<magma::PlatformEvent> event)
+      : NullBatch(PIPELINE_FENCE_BATCH), context_(std::move(context)), event_(std::move(event)) {}
 
   ~PipelineFenceBatch() override { event_->Signal(); }
 

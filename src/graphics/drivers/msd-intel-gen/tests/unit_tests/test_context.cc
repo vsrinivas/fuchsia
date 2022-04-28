@@ -160,7 +160,7 @@ class MsdIntelContextSubmit : public testing::TestWithParam<Param> {
     }
 
     void SubmitBatch(std::unique_ptr<MappedBatch> batch) override {
-      DASSERT(batch->IsCommandBuffer());
+      ASSERT_EQ(batch->GetType(), MappedBatch::BatchType::COMMAND_BUFFER);
       auto command_buffer = static_cast<CommandBuffer*>(batch.release());
       callback_(std::unique_ptr<CommandBuffer>(command_buffer));
     }
@@ -237,11 +237,11 @@ TEST_P(MsdIntelContextSubmit, SubmitCommandBuffer) {
     magma::Status status = context->SubmitCommandBuffer(std::move(command_buffers[i]));
 
     EXPECT_EQ(MAGMA_STATUS_OK, status.get());
-    EXPECT_TRUE(context->GetTargetCommandStreamer());
+    EXPECT_EQ(1u, context->GetTargetCommandStreamers().size());
     if (p.flags == kMagmaIntelGenCommandBufferForVideo) {
-      EXPECT_EQ(*context->GetTargetCommandStreamer(), VIDEO_COMMAND_STREAMER);
+      EXPECT_EQ(*context->GetTargetCommandStreamers().begin(), VIDEO_COMMAND_STREAMER);
     } else {
-      EXPECT_EQ(*context->GetTargetCommandStreamer(), RENDER_COMMAND_STREAMER);
+      EXPECT_EQ(*context->GetTargetCommandStreamers().begin(), RENDER_COMMAND_STREAMER);
     }
     EXPECT_EQ(submitted_command_buffers.empty(), p.semaphore_count > 0);
   }

@@ -40,20 +40,17 @@ class TestScheduler {
     auto context = scheduler->ScheduleContext();
     EXPECT_EQ(nullptr, context);
 
-    context_[0]->pending_batch_queue().push(std::make_unique<MockMappedBatch>());
     scheduler->CommandBufferQueued(context_[0]);
 
     context = scheduler->ScheduleContext();
     EXPECT_EQ(context, context_[0]);
 
-    context_[1]->pending_batch_queue().push(std::make_unique<MockMappedBatch>());
     scheduler->CommandBufferQueued(context_[1]);
 
     // 0 is still current
     context = scheduler->ScheduleContext();
     EXPECT_EQ(nullptr, context);
 
-    context_[2]->pending_batch_queue().push(std::make_unique<MockMappedBatch>());
     scheduler->CommandBufferQueued(context_[2]);
 
     // 0 is still current

@@ -62,17 +62,9 @@ class MsdIntelConnection {
 
   void ReleaseBuffer(magma::PlatformBuffer* buffer);
 
-  // Submit pending release mappings on the given context
-  bool SubmitPendingReleaseMappings(std::shared_ptr<MsdIntelContext> context);
-
  private:
   MsdIntelConnection(Owner* owner, std::shared_ptr<PerProcessGtt> ppgtt, msd_client_id_t client_id)
       : owner_(owner), ppgtt_(std::move(ppgtt)), client_id_(client_id) {}
-
-  const std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>>& mappings_to_release()
-      const {
-    return mappings_to_release_;
-  }
 
   bool sent_context_killed() { return sent_context_killed_; }
 
@@ -85,7 +77,6 @@ class MsdIntelConnection {
   Owner* owner_;
   std::shared_ptr<PerProcessGtt> ppgtt_;
   msd_client_id_t client_id_;
-  std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> mappings_to_release_;
   bool sent_context_killed_ = false;
   std::list<std::shared_ptr<MsdIntelContext>> context_list_;
 

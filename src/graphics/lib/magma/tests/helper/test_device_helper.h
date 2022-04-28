@@ -25,6 +25,8 @@ class TestDeviceBase {
 
   explicit TestDeviceBase(uint64_t vendor_id) { InitializeFromVendorId(vendor_id); }
 
+  TestDeviceBase() = default;
+
   void InitializeFromFileName(const char* device_name) {
     auto client = service::Connect<fuchsia_device::Controller>(device_name);
     ASSERT_TRUE(client.is_ok());

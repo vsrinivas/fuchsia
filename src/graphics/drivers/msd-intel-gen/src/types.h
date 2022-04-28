@@ -33,4 +33,7 @@ enum EngineCommandStreamerId {
   VIDEO_COMMAND_STREAMER,
 };
 
+constexpr EngineCommandStreamerId kCommandStreamers[2] = {RENDER_COMMAND_STREAMER,
+                                                          VIDEO_COMMAND_STREAMER};
+
 #endif  // TYPES_H

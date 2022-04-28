@@ -153,50 +153,56 @@ void MsdIntelConnection::ReleaseBuffer(
 
     // Send pipeline fence batch for each context which may have queued command buffers.
     for (auto& context : context_list_) {
-      if (!context->GetTargetCommandStreamer())
-        continue;
+      // Also send one per command streamer since command streamers may operate in parallel.
+      std::set<EngineCommandStreamerId> command_streamers = context->GetTargetCommandStreamers();
+      for (auto command_streamer : command_streamers) {
+        auto event = std::shared_ptr<magma::PlatformEvent>(magma::PlatformEvent::Create());
 
-      auto event = std::shared_ptr<magma::PlatformEvent>(magma::PlatformEvent::Create());
-
-      context->SubmitBatch(std::make_unique<PipelineFenceBatch>(context, event));
-
-      // Wait for the event to signal.  There can be lots of work queued up and it can take an
-      // unpredictable amount of time for it to complete because other contexts may be competing
-      // for the hardware, so we wait forever (unless there's a stuck command buffer).
-      while (true) {
         {
-          TRACE_DURATION("magma", "stall on release");
-          constexpr uint32_t kStallMaxMs = 1000;
-          auto status = wait_callback(event.get(), kStallMaxMs);
-          if (status.ok()) {
-            // Event signaled
-            break;
+          auto batch = std::make_unique<PipelineFenceBatch>(context, event);
+          batch->set_command_streamer(command_streamer);
+
+          context->SubmitBatch(std::move(batch));
+        }
+
+        // Wait for the event to signal.  There can be lots of work queued up and it can take an
+        // unpredictable amount of time for it to complete because other contexts may be competing
+        // for the hardware, so we wait forever (unless there's a stuck command buffer).
+        while (true) {
+          {
+            TRACE_DURATION("magma", "stall on release");
+            constexpr uint32_t kStallMaxMs = 1000;
+            auto status = wait_callback(event.get(), kStallMaxMs);
+            if (status.ok()) {
+              // Event signaled
+              break;
+            }
           }
+
+          uint64_t stall_ns = magma::get_monotonic_ns() - start_ns;
+
+          excess_use_count = 0;
+          for (const auto& mapping : mappings) {
+            excess_use_count += mapping.use_count() - 1;
+          }
+
+          // If queue has size > 0 after the stall, there's probably a stuck command buffer that
+          // will prevent the pipeline fence batch from ever completing.
+          size_t queue_size = context->GetQueueSize();
+
+          if (queue_size) {
+            MAGMA_LOG(WARNING,
+                      "ReleaseBuffer %lu excess_use_count %zd after stall (%lu us) context queue "
+                      "size %zd - probable stuck command buffer, closing connection",
+                      buffer->id(), excess_use_count, stall_ns / 1000, queue_size);
+            if (!sent_context_killed())
+              SendContextKilled();
+            return;
+          }
+
+          DMESSAGE("ReleaseBuffer %lu excess_use_count %zd after stall (%lu us)", buffer->id(),
+                   excess_use_count, stall_ns / 1000);
         }
-
-        uint64_t stall_ns = magma::get_monotonic_ns() - start_ns;
-
-        excess_use_count = 0;
-        for (const auto& mapping : mappings) {
-          excess_use_count += mapping.use_count() - 1;
-        }
-
-        // If queue has size > 0 after the stall, there's probably a stuck command buffer that
-        // will prevent the pipeline fence batch from ever completing.
-        size_t queue_size = context->GetQueueSize();
-
-        if (queue_size) {
-          MAGMA_LOG(WARNING,
-                    "ReleaseBuffer %lu excess_use_count %zd after stall (%lu us) context queue "
-                    "size %zd - probable stuck command buffer, closing connection",
-                    buffer->id(), excess_use_count, stall_ns / 1000, queue_size);
-          if (!sent_context_killed())
-            SendContextKilled();
-          return;
-        }
-
-        DMESSAGE("ReleaseBuffer %lu excess_use_count %zd after stall (%lu us)", buffer->id(),
-                 excess_use_count, stall_ns / 1000);
       }
     }
   }
@@ -205,13 +211,16 @@ void MsdIntelConnection::ReleaseBuffer(
     size_t use_count = mapping.use_count();
 
     if (use_count == 1) {
-      // Bus mappings are held in the connection and passed through the command stream to
-      // ensure the memory isn't released until the tlbs are invalidated, which happens
-      // implicitly on every pipeline flush.
-      std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> bus_mappings;
-      mapping->Release(&bus_mappings);
-      for (uint32_t i = 0; i < bus_mappings.size(); i++) {
-        mappings_to_release_.emplace_back(std::move(bus_mappings[i]));
+      // Bus mappings are passed through all command streamers to ensure memory is not
+      // released until TLBS are flushed, which happens implicitly on every pipeline flush
+      // and context switch.
+      auto wrapper = std::make_shared<MappingReleaseBatch::BusMappingsWrapper>();
+      mapping->Release(&wrapper->bus_mappings);
+
+      for (EngineCommandStreamerId command_streamer : kCommandStreamers) {
+        auto batch = std::make_unique<MappingReleaseBatch>(wrapper);
+        batch->set_command_streamer(command_streamer);
+        SubmitBatch(std::move(batch));
       }
     } else {
       // If there are no contexts, the connection is in the process of shutting down.
@@ -220,14 +229,6 @@ void MsdIntelConnection::ReleaseBuffer(
       DASSERT(context_list_.empty());
     }
   }
-}
-
-bool MsdIntelConnection::SubmitPendingReleaseMappings(std::shared_ptr<MsdIntelContext> context) {
-  if (!mappings_to_release_.empty()) {
-    SubmitBatch(std::make_unique<MappingReleaseBatch>(context, std::move(mappings_to_release_)));
-    mappings_to_release_.clear();
-  }
-  return true;
 }
 
 std::unique_ptr<MsdIntelConnection> MsdIntelConnection::Create(Owner* owner,

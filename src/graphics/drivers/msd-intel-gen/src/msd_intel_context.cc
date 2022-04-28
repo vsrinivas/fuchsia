@@ -21,7 +21,7 @@ void MsdIntelContext::SetEngineState(EngineCommandStreamerId id,
   auto iter = state_map_.find(id);
   DASSERT(iter == state_map_.end());
 
-  state_map_[id] = PerEngineState{std::move(context_buffer), nullptr, std::move(ringbuffer)};
+  state_map_[id] = PerEngineState{std::move(context_buffer), nullptr, std::move(ringbuffer), {}};
 }
 
 bool MsdIntelContext::Map(std::shared_ptr<AddressSpace> address_space, EngineCommandStreamerId id) {
@@ -126,36 +126,8 @@ magma::Status MsdIntelContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer
   uint64_t ATTRIBUTE_UNUSED buffer_id = command_buffer->GetBatchBufferId();
   TRACE_FLOW_STEP("magma", "command_buffer", buffer_id);
 
-  {
-    auto context_command_streamer = GetTargetCommandStreamer();
-
-    EngineCommandStreamerId desired_command_streamer =
-        (command_buffer->GetFlags() & kMagmaIntelGenCommandBufferForVideo)
-            ? VIDEO_COMMAND_STREAMER
-            : RENDER_COMMAND_STREAMER;
-
-    if (context_command_streamer) {
-      if (*context_command_streamer != desired_command_streamer)
-        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
-                        "Context command streamer %d != desired command streamer %d",
-                        *context_command_streamer, desired_command_streamer);
-
-    } else {
-      SetTargetCommandStreamer(desired_command_streamer);
-    }
-  }
-
-  {
-    std::shared_ptr<MsdIntelContext> context = command_buffer->GetContext().lock();
-    DASSERT(context.get() == static_cast<MsdIntelContext*>(this));
-
-    std::shared_ptr<MsdIntelConnection> connection = context->connection().lock();
-    if (!connection)
-      return DRET(MAGMA_STATUS_CONNECTION_LOST);
-
-    // If there are any mappings pending release, submit them now.
-    connection->SubmitPendingReleaseMappings(context);
-  }
+  // Keep track of which command streamers are used by this context.
+  SetTargetCommandStreamer(command_buffer->get_command_streamer());
 
   if (killed())
     return DRET(MAGMA_STATUS_CONTEXT_KILLED);
@@ -201,7 +173,7 @@ magma::Status MsdIntelContext::SubmitBatchLocked() {
 
     auto& batch = presubmit_queue_.front();
 
-    if (batch->IsCommandBuffer()) {
+    if (batch->GetType() == MappedBatch::BatchType::COMMAND_BUFFER) {
       // Takes ownership
       semaphores = static_cast<CommandBuffer*>(batch.get())->wait_semaphores();
     }
@@ -214,7 +186,7 @@ magma::Status MsdIntelContext::SubmitBatchLocked() {
       if (killed())
         return DRET(MAGMA_STATUS_CONTEXT_KILLED);
 
-      if (batch->IsCommandBuffer()) {
+      if (batch->GetType() == MappedBatch::BatchType::COMMAND_BUFFER) {
         TRACE_DURATION("magma", "SubmitBatchLocked");
         uint64_t ATTRIBUTE_UNUSED buffer_id =
             static_cast<CommandBuffer*>(batch.get())->GetBatchBufferId();

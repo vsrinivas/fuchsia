@@ -69,8 +69,6 @@ class CommandBuffer : public MappedBatch {
   CommandBuffer(std::weak_ptr<MsdIntelContext> context,
                 std::unique_ptr<magma_command_buffer> command_buffer);
 
-  bool IsCommandBuffer() override { return true; }
-
   uint32_t batch_buffer_resource_index() const {
     DASSERT(num_resources() > 0);
     return command_buffer_->batch_buffer_resource_index;

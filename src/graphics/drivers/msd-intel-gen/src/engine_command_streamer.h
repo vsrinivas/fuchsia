@@ -128,6 +128,7 @@ class EngineCommandStreamer : public HardwareStatusPage::Owner {
   GlobalHardwareStatusPage hw_status_page_;
   std::unique_ptr<GpuMapping> hw_status_page_mapping_;
   void* hw_status_page_cpu_addr_{};
+  uint64_t context_status_read_index_ = 0;
 
   std::unique_ptr<Scheduler> scheduler_;
   std::queue<InflightCommandSequence> inflight_command_sequences_;

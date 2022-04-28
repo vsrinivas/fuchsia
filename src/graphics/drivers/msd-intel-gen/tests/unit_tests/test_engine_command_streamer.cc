@@ -312,9 +312,17 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
     std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> bus_mappings;
     mapping->Release(&bus_mappings);
 
-    auto render_cs = reinterpret_cast<RenderEngineCommandStreamer*>(engine_cs_.get());
-    render_cs->MoveBatchToInflight(
-        std::make_unique<MappingReleaseBatch>(context_, std::move(bus_mappings)));
+    {
+      auto wrapper = std::make_shared<MappingReleaseBatch::BusMappingsWrapper>();
+      wrapper->bus_mappings = std::move(bus_mappings);
+
+      auto render_cs = reinterpret_cast<RenderEngineCommandStreamer*>(engine_cs_.get());
+
+      auto batch = std::make_unique<MappingReleaseBatch>(std::move(wrapper));
+      batch->SetContext(context_);
+
+      render_cs->MoveBatchToInflight(std::move(batch));
+    }
 
     // Validate ringbuffer
     uint32_t dword_count = 0;

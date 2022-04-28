@@ -27,7 +27,7 @@ class InflightList {
 
   void release(uint64_t buffer_id) {
     auto iter = std::find(buffers_.begin(), buffers_.end(), buffer_id);
-    DASSERT(iter == buffers_.begin());
+    DASSERT(iter != buffers_.end());
     buffers_.erase(iter);
   }
 

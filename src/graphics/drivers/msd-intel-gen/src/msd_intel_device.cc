@@ -238,11 +238,8 @@ bool MsdIntelDevice::BaseInit(void* device_handle) {
 
   // Creates the context backing store.
   // Global context used to execute the render init batch.
-  if (!render_engine_cs_->InitContext(global_context_.get()))
-    return DRETF(false, "render_engine_cs failed to init global context");
-
-  if (!global_context_->Map(gtt_, render_engine_cs_->id()))
-    return DRETF(false, "global context init failed");
+  if (!InitContextForEngine(global_context_.get(), render_engine_cs_.get()))
+    return DRETF(false, "Failed to init global context for RCS");
 
   device_request_semaphore_ = magma::PlatformSemaphore::Create();
 
@@ -696,20 +693,25 @@ magma::Status MsdIntelDevice::ProcessBatch(std::unique_ptr<MappedBatch> batch) {
   CHECK_THREAD_IS_CURRENT(device_thread_id_);
   TRACE_DURATION("magma", "Device::ProcessBatch");
 
-  DLOG("preparing command buffer for execution");
+  DLOG("preparing batch for execution");
 
   auto context = batch->GetContext().lock();
+
+  if (!context && batch->GetType() == MappedBatch::BatchType::MAPPING_RELEASE_BATCH) {
+    // Use the global context for submitting release batches.
+    reinterpret_cast<MappingReleaseBatch*>(batch.get())->SetContext(global_context_);
+
+    context = batch->GetContext().lock();
+  }
+
   DASSERT(context);
 
   if (context->killed())
     return DRET_MSG(MAGMA_STATUS_CONTEXT_KILLED, "Context killed");
 
-  auto context_command_streamer = context->GetTargetCommandStreamer();
-  DASSERT(context_command_streamer);
-
   EngineCommandStreamer* command_streamer = nullptr;
 
-  switch (*context_command_streamer) {
+  switch (batch->get_command_streamer()) {
     case RENDER_COMMAND_STREAMER:
       command_streamer = render_engine_cs_.get();
       break;

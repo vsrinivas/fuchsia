@@ -119,6 +119,9 @@ void EngineCommandStreamer::InitHardware() {
   registers::HardwareStatusMask::write(register_io(), mmio_base_,
                                        registers::InterruptRegisterBase::CONTEXT_SWITCH,
                                        registers::InterruptRegisterBase::UNMASK);
+
+  context_status_read_index_ = 0;
+  context_switch_pending_ = false;
 }
 
 void EngineCommandStreamer::InvalidateTlbs() {
@@ -429,7 +432,7 @@ void EngineCommandStreamer::SubmitExeclists(MsdIntelContext* context) {
       if (std::chrono::duration<double, std::micro>(std::chrono::high_resolution_clock::now() -
                                                     start)
               .count() > kTimeoutUs) {
-        MAGMA_LOG(WARNING, "Timeout waiting for execlist port");
+        MAGMA_LOG(WARNING, "%s: Timeout waiting for execlist port", Name());
         break;
       }
     }
@@ -541,17 +544,33 @@ void EngineCommandStreamer::SubmitBatch(std::unique_ptr<MappedBatch> batch) {
   if (!context)
     return;
 
-  context->pending_batch_queue().emplace(std::move(batch));
+  context->pending_batch_queue(id_).emplace(std::move(batch));
 
   scheduler_->CommandBufferQueued(context);
 
+  // It should be possible to submit additional work for the current context without waiting,
+  // but I ran into a problem where an execlist submission can be missed leading to a false GPU
+  // hang detection; so for now we only submit work when the command streamer is idle.
   if (!context_switch_pending_)
     ScheduleContext();
 }
 
 void EngineCommandStreamer::ContextSwitched() {
-  context_switch_pending_ = false;
-  ScheduleContext();
+  std::optional<bool> idle;
+  hardware_status_page()->ReadContextStatus(context_status_read_index_, &idle);
+
+  if (idle) {
+    DLOG("%s: idle %d", Name(), *idle);
+
+    if (*idle)
+      context_switch_pending_ = false;
+  }
+
+  // Because of delays in processing context switch interrupts, we often handle multiple
+  // context status events in one shot; however the command completion interrupts may be handled
+  // after we process an idle event, so always attempt scheduling here when possible.
+  if (!context_switch_pending_)
+    ScheduleContext();
 }
 
 void EngineCommandStreamer::ScheduleContext() {
@@ -560,9 +579,9 @@ void EngineCommandStreamer::ScheduleContext() {
     return;
 
   while (true) {
-    auto mapped_batch = std::move(context->pending_batch_queue().front());
+    auto mapped_batch = std::move(context->pending_batch_queue(id_).front());
     mapped_batch->scheduled();
-    context->pending_batch_queue().pop();
+    context->pending_batch_queue(id_).pop();
 
     // TODO(fxbug.dev/12764) - MoveBatchToInflight should not fail.  Scheduler should verify there
     // is sufficient room in the ringbuffer before selecting a context. For now, drop the command

@@ -5,6 +5,8 @@
 #ifndef HARDWARE_STATUS_PAGE_H
 #define HARDWARE_STATUS_PAGE_H
 
+#include <optional>
+
 #include "magma_util/macros.h"
 #include "types.h"
 
@@ -43,6 +45,10 @@ class GlobalHardwareStatusPage : public HardwareStatusPage {
   }
 
   uint32_t read_sequence_number() { return read_general_purpose_offset(kSequenceNumberOffset); }
+
+  // Reads all available context status entries; if there are any, then |idle_out| is set
+  // according to the most recent status.  Updates |read_index|.
+  void ReadContextStatus(uint64_t& read_index, std::optional<bool>* idle_out);
 
   // from intel-gfx-prm-osrc-kbl-vol02d-commandreference-structures.pdf pp.284-286
   static constexpr uint32_t kGeneralPurposeStartOffset = 48 * sizeof(uint32_t);

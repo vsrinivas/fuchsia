@@ -115,7 +115,7 @@ void MsdIntelDevice::FormatDump(DumpState& dump_state, std::vector<std::string>&
         faulted_batch_mapping = batch_mapping;
       }
 
-      if (!batch->IsCommandBuffer())
+      if (batch->GetType() != MappedBatch::BatchType::COMMAND_BUFFER)
         continue;
 
       auto cmd_buf = static_cast<CommandBuffer*>(batch);

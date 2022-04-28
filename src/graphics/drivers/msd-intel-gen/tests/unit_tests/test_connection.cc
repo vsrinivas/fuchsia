@@ -13,7 +13,8 @@
 class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection::Owner {
  public:
   void SubmitBatch(std::unique_ptr<MappedBatch> batch) override {
-    // Destroy the batch - needed for ReleaseBufferWhileMapped*
+    if (submit_batch_handler_)
+      submit_batch_handler_(std::move(batch));
   }
 
   void DestroyContext(std::shared_ptr<MsdIntelContext> client_context) override {}
@@ -73,13 +74,18 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
     ASSERT_TRUE(mapping);
     EXPECT_TRUE(connection->per_process_gtt()->AddMapping(mapping));
 
+    size_t batch_count = 0;
+    submit_batch_handler_ = [&](std::unique_ptr<MappedBatch> batch) {
+      batch_count += 1;
+      EXPECT_EQ(
+          1u, reinterpret_cast<MappingReleaseBatch*>(batch.get())->wrapper()->bus_mappings.size());
+    };
+
     mapping.reset();
     connection->ReleaseBuffer(buffer->platform_buffer());
     EXPECT_EQ(0u, callback_count_);
 
-    const std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>>& mappings =
-        connection->mappings_to_release();
-    EXPECT_EQ(1u, mappings.size());
+    EXPECT_EQ(2u, batch_count);
   }
 
   void ReleaseBufferWhileMapped() {
@@ -90,6 +96,8 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
     auto context = MsdIntelConnection::CreateContext(connection);
 
     context->SetTargetCommandStreamer(RENDER_COMMAND_STREAMER);
+
+    size_t expected_flush_batches = context->GetTargetCommandStreamers().size();
 
     connection->SetNotificationCallback(KillCallbackStatic, this);
 
@@ -121,14 +129,21 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
       return magma::Status(MAGMA_STATUS_OK);
     };
 
+    size_t batch_count = 0;
+    submit_batch_handler_ = [&](std::unique_ptr<MappedBatch> batch) {
+      batch_count += 1;
+      if (batch_count > expected_flush_batches)
+        EXPECT_EQ(
+            1u,
+            reinterpret_cast<MappingReleaseBatch*>(batch.get())->wrapper()->bus_mappings.size());
+    };
+
     connection->ReleaseBuffer(buffer->platform_buffer(), wait_callback);
 
     EXPECT_EQ(0u, callback_count_);
     EXPECT_FALSE(connection->sent_context_killed());
 
-    const std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>>& mappings =
-        connection->mappings_to_release();
-    EXPECT_EQ(1u, mappings.size());
+    EXPECT_EQ(expected_flush_batches + 2, batch_count);
 
     connection->DestroyContext(context);
   }
@@ -143,8 +158,10 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
     contexts.push_back(MsdIntelConnection::CreateContext(connection));
     contexts.push_back(MsdIntelConnection::CreateContext(connection));
 
+    size_t expected_flush_batches = 0;
     for (auto& context : contexts) {
       context->SetTargetCommandStreamer(RENDER_COMMAND_STREAMER);
+      expected_flush_batches += context->GetTargetCommandStreamers().size();
     }
 
     std::shared_ptr<MsdIntelBuffer> buffer = MsdIntelBuffer::Create(PAGE_SIZE, "test");
@@ -164,15 +181,22 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
       return magma::Status(MAGMA_STATUS_OK);
     };
 
+    size_t batch_count = 0;
+    submit_batch_handler_ = [&](std::unique_ptr<MappedBatch> batch) {
+      batch_count += 1;
+      if (batch_count > expected_flush_batches)
+        EXPECT_EQ(
+            1u, reinterpret_cast<MappingReleaseBatch*>(batch.get())->wrapper()->bus_mappings.size())
+            << "batch_count: " << batch_count;
+    };
+
     connection->ReleaseBuffer(buffer->platform_buffer(), wait_callback);
 
     EXPECT_EQ(wait_callback_count, contexts.size());
     EXPECT_EQ(0u, callback_count_);
     EXPECT_FALSE(connection->sent_context_killed());
 
-    const std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>>& mappings =
-        connection->mappings_to_release();
-    EXPECT_EQ(1u, mappings.size());
+    EXPECT_EQ(expected_flush_batches + 2, batch_count);
 
     for (auto& context : contexts) {
       connection->DestroyContext(context);
@@ -220,15 +244,16 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
       return MAGMA_STATUS_TIMED_OUT;
     };
 
+    size_t batch_count = 0;
+    submit_batch_handler_ = [&](std::unique_ptr<MappedBatch> batch) { batch_count += 1; };
+
     connection->ReleaseBuffer(buffer->platform_buffer(), wait_callback);
 
     EXPECT_EQ(1u, wait_callback_count);
     EXPECT_EQ(1u, callback_count_);
     EXPECT_TRUE(connection->sent_context_killed());
 
-    const std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>>& mappings =
-        connection->mappings_to_release();
-    EXPECT_EQ(0u, mappings.size());
+    EXPECT_EQ(0u, batch_count);
 
     connection->SetNotificationCallback(nullptr, nullptr);
 
@@ -255,13 +280,14 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
       return MAGMA_STATUS_OK;
     };
 
+    size_t batch_count = 0;
+    submit_batch_handler_ = [&](std::unique_ptr<MappedBatch> batch) { batch_count += 1; };
+
     connection->ReleaseBuffer(buffer->platform_buffer(), wait_callback);
 
     EXPECT_FALSE(connection->sent_context_killed());
 
-    const std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>>& mappings =
-        connection->mappings_to_release();
-    EXPECT_EQ(0u, mappings.size());
+    EXPECT_EQ(0u, batch_count);
   }
 
   void ReuseGpuAddrWithoutRelease() {
@@ -292,6 +318,7 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
   MockBusMapper mock_bus_mapper_;
   std::vector<uint64_t> test_buffer_ids_;
   uint32_t callback_count_ = 0;
+  std::function<void(std::unique_ptr<MappedBatch> batch)> submit_batch_handler_;
 };
 
 TEST_F(TestMsdIntelConnection, Notification) { Notification(); }

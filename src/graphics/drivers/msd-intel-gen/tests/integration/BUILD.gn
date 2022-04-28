@@ -21,6 +21,7 @@ executable("msd_intel_gen_integration_tests") {
       [ "ENABLE_HARDWARE_UNIT_TESTS=$msd_intel_gen_enable_hardware_unit_tests" ]
 
   sources = [
+    "test_execute.cc",
     "test_hang_recovery.cc",
     "test_hardware_unit_tests.cc",
     "test_icd_list.cc",

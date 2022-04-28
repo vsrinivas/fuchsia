@@ -29,6 +29,8 @@ source_set("src") {
     "gpu_progress.h",
     "gtt.h",
     "gtt_shim.cc",
+    "hardware_status_page.cc",
+    "hardware_status_page.h",
     "interrupt_manager.h",
     "interrupt_manager_shim.cc",
     "msd_intel_buffer.cc",
