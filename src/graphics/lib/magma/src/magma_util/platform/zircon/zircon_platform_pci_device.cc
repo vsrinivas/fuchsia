@@ -25,9 +25,9 @@ std::unique_ptr<PlatformMmio> ZirconPlatformPciDevice::CpuMapPciMmio(
   if (status != ZX_OK)
     return DRETP(nullptr, "map_resource failed");
 
-  DASSERT(bar.type == ZX_PCI_BAR_TYPE_MMIO);
+  DASSERT(bar.type == PCI_BAR_TYPE_MMIO);
   mmio_buffer_t mmio_buffer;
-  mmio_buffer_init(&mmio_buffer, 0, bar.size, bar.handle, cache_policy);
+  mmio_buffer_init(&mmio_buffer, 0, bar.size, bar.result.vmo, cache_policy);
 
   std::unique_ptr<ZirconPlatformMmio> mmio(new ZirconPlatformMmio(mmio_buffer));
 
@@ -42,7 +42,7 @@ bool ZirconPlatformPciDevice::ReadPciConfig16(uint64_t addr, uint16_t* value) {
     return DRETF(false, "bad value");
 
   DASSERT(addr <= std::numeric_limits<uint16_t>::max());
-  zx_status_t status = pci_config_read16(&pci(), static_cast<uint16_t>(addr), value);
+  zx_status_t status = pci_read_config16(&pci(), static_cast<uint16_t>(addr), value);
   if (status != ZX_OK)
     return DRETF(false, "failed to read config: %d\n", status);
 
@@ -59,7 +59,7 @@ std::unique_ptr<PlatformHandle> ZirconPlatformPciDevice::GetBusTransactionInitia
 }
 
 std::unique_ptr<PlatformInterrupt> ZirconPlatformPciDevice::RegisterInterrupt() {
-  pci_irq_mode_t mode = {};
+  pci_interrupt_mode_t mode = {};
   zx_status_t status = pci_configure_interrupt_mode(&pci(), /*irq count*/ 1, /*mode=*/&mode);
   if (status != ZX_OK) {
     return DRETP(nullptr, "configure_interrupt_mode failed (%d)", status);

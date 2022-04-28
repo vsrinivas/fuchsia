@@ -1084,7 +1084,7 @@ void iwl_pci_remove(struct iwl_pci_dev* pdev) {
 
 #if 0  // NEEDS_PORTING
 /* PCI registers */
-#define PCI_CFG_RETRY_TIMEOUT 0x041
+#define PCI_CONFIG_RETRY_TIMEOUT 0x041
 
 #ifdef CONFIG_PM_SLEEP
 
@@ -1111,7 +1111,7 @@ static int iwl_pci_resume(struct device* device) {
      * We disable the RETRY_TIMEOUT register (0x41) to keep
      * PCI Tx retries from interfering with C3 CPU state.
      */
-    pci_write_config_byte(pdev, PCI_CFG_RETRY_TIMEOUT, 0x00);
+    pci_write_config_byte(pdev, PCI_CONFIG_RETRY_TIMEOUT, 0x00);
 
     if (!trans->op_mode) {
         return 0;

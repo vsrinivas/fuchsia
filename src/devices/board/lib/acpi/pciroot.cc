@@ -54,32 +54,32 @@ zx_status_t x64Pciroot::PcirootGetPciPlatformInfo(pci_platform_info_t* info) {
   return ZX_OK;
 }
 
-zx_status_t x64Pciroot::PcirootConfigRead8(const pci_bdf_t* address, uint16_t offset,
+zx_status_t x64Pciroot::PcirootReadConfig8(const pci_bdf_t* address, uint16_t offset,
                                            uint8_t* value) {
   return pci_pio_read8(*address, static_cast<uint8_t>(offset), value);
 }
 
-zx_status_t x64Pciroot::PcirootConfigRead16(const pci_bdf_t* address, uint16_t offset,
+zx_status_t x64Pciroot::PcirootReadConfig16(const pci_bdf_t* address, uint16_t offset,
                                             uint16_t* value) {
   return pci_pio_read16(*address, static_cast<uint8_t>(offset), value);
 }
 
-zx_status_t x64Pciroot::PcirootConfigRead32(const pci_bdf_t* address, uint16_t offset,
+zx_status_t x64Pciroot::PcirootReadConfig32(const pci_bdf_t* address, uint16_t offset,
                                             uint32_t* value) {
   return pci_pio_read32(*address, static_cast<uint8_t>(offset), value);
 }
 
-zx_status_t x64Pciroot::PcirootConfigWrite8(const pci_bdf_t* address, uint16_t offset,
+zx_status_t x64Pciroot::PcirootWriteConfig8(const pci_bdf_t* address, uint16_t offset,
                                             uint8_t value) {
   return pci_pio_write8(*address, static_cast<uint8_t>(offset), value);
 }
 
-zx_status_t x64Pciroot::PcirootConfigWrite16(const pci_bdf_t* address, uint16_t offset,
+zx_status_t x64Pciroot::PcirootWriteConfig16(const pci_bdf_t* address, uint16_t offset,
                                              uint16_t value) {
   return pci_pio_write16(*address, static_cast<uint8_t>(offset), value);
 }
 
-zx_status_t x64Pciroot::PcirootConfigWrite32(const pci_bdf_t* address, uint16_t offset,
+zx_status_t x64Pciroot::PcirootWriteConfig32(const pci_bdf_t* address, uint16_t offset,
                                              uint32_t value) {
   return pci_pio_write32(*address, static_cast<uint8_t>(offset), value);
 }

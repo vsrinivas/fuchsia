@@ -43,7 +43,7 @@ typedef struct ethernet_device {
   mtx_t tx_lock;
   cnd_t tx_cond;
   pci_protocol_t pci;
-  pci_irq_mode_t irq_mode;
+  pci_interrupt_mode_t irq_mode;
   zx_handle_t irqh;
   mmio_buffer_t mmio;
   thrd_t irq_thread;
@@ -197,7 +197,7 @@ static int irq_thread(void* arg) {
 
     WRITE16(RTL_ISR, 0xffff);
 
-    if (edev->irq_mode == PCI_IRQ_MODE_LEGACY) {
+    if (edev->irq_mode == PCI_INTERRUPT_MODE_LEGACY) {
       pci_ack_interrupt(&edev->pci);
     }
 
@@ -325,7 +325,7 @@ static void rtl8111_release(void* ctx) {
   ethernet_device_t* edev = ctx;
 
   WRITE8(RTL_CR, READ8(RTL_CR) | RTL_CR_RST);
-  pci_enable_bus_master(&edev->pci, false);
+  pci_set_bus_mastering(&edev->pci, false);
 
   zx_handle_close(edev->irqh);
   thrd_join(edev->irq_thread, NULL);
@@ -379,7 +379,7 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
     goto fail;
   }
 
-  if ((res = pci_enable_bus_master(&edev->pci, true)) != ZX_OK) {
+  if ((res = pci_set_bus_mastering(&edev->pci, true)) != ZX_OK) {
     zxlogf(ERROR, "rtl8111: cannot enable bus master %d", res);
     goto fail;
   }

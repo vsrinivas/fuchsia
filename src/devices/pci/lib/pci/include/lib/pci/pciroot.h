@@ -68,27 +68,27 @@ class PcirootBase : public ddk::Device<PcirootBase>,
   // systems we only intend to use PIO access if MMIO config is unavailable.
   // In the event we do use them though, we're restricted to the base 256 byte
   // PCI config header.
-  virtual zx_status_t PcirootConfigRead8(const pci_bdf_t* address, uint16_t offset,
+  virtual zx_status_t PcirootReadConfig8(const pci_bdf_t* address, uint16_t offset,
                                          uint8_t* value) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  virtual zx_status_t PcirootConfigRead16(const pci_bdf_t* address, uint16_t offset,
+  virtual zx_status_t PcirootReadConfig16(const pci_bdf_t* address, uint16_t offset,
                                           uint16_t* value) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  virtual zx_status_t PcirootConfigRead32(const pci_bdf_t* address, uint16_t offset,
+  virtual zx_status_t PcirootReadConfig32(const pci_bdf_t* address, uint16_t offset,
                                           uint32_t* value) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  virtual zx_status_t PcirootConfigWrite8(const pci_bdf_t* address, uint16_t offset,
+  virtual zx_status_t PcirootWriteConfig8(const pci_bdf_t* address, uint16_t offset,
                                           uint8_t value) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  virtual zx_status_t PcirootConfigWrite16(const pci_bdf_t* address, uint16_t offset,
+  virtual zx_status_t PcirootWriteConfig16(const pci_bdf_t* address, uint16_t offset,
                                            uint16_t value) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  virtual zx_status_t PcirootConfigWrite32(const pci_bdf_t* address, uint16_t offset,
+  virtual zx_status_t PcirootWriteConfig32(const pci_bdf_t* address, uint16_t offset,
                                            uint32_t value) {
     return ZX_ERR_NOT_SUPPORTED;
   }

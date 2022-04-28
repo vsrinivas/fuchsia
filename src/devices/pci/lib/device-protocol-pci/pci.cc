@@ -6,12 +6,13 @@
 #include <lib/mmio/mmio.h>
 
 zx_status_t pci_configure_interrupt_mode(const pci_protocol_t* pci, uint32_t requested_irq_count,
-                                         pci_irq_mode_t* out_mode) {
+                                         pci_interrupt_mode_t* out_mode) {
   pci_interrupt_modes modes{};
   pci_get_interrupt_modes(pci, &modes);
-  std::pair<pci_irq_mode_t, uint32_t> pairs[] = {{PCI_IRQ_MODE_MSI_X, modes.msix},
-                                                 {PCI_IRQ_MODE_MSI, modes.msi},
-                                                 {PCI_IRQ_MODE_LEGACY, modes.legacy}};
+  std::pair<pci_interrupt_mode_t, uint32_t> pairs[] = {
+      {PCI_INTERRUPT_MODE_MSI_X, modes.msix_count},
+      {PCI_INTERRUPT_MODE_MSI, modes.msi_count},
+      {PCI_INTERRUPT_MODE_LEGACY, modes.has_legacy}};
   for (auto& [mode, irq_cnt] : pairs) {
     if (irq_cnt >= requested_irq_count) {
       zx_status_t status = pci_set_interrupt_mode(pci, mode, requested_irq_count);
@@ -34,18 +35,18 @@ zx_status_t pci_map_bar_buffer(const pci_protocol_t* pci, uint32_t bar_id, uint3
     return st;
   }
   // TODO(cja): PIO may be mappable on non-x86 architectures
-  if (bar.type == ZX_PCI_BAR_TYPE_PIO || bar.handle == ZX_HANDLE_INVALID) {
+  if (bar.type == PCI_BAR_TYPE_IO) {
     return ZX_ERR_WRONG_TYPE;
   }
 
   size_t vmo_size;
-  st = zx_vmo_get_size(bar.handle, &vmo_size);
+  st = zx_vmo_get_size(bar.result.vmo, &vmo_size);
   if (st != ZX_OK) {
-    zx_handle_close(bar.handle);
+    zx_handle_close(bar.result.vmo);
     return st;
   }
 
-  return mmio_buffer_init(buffer, 0, vmo_size, bar.handle, cache_policy);
+  return mmio_buffer_init(buffer, 0, vmo_size, bar.result.vmo, cache_policy);
 }
 
 namespace ddk {
@@ -59,11 +60,11 @@ zx_status_t Pci::MapMmio(uint32_t index, uint32_t cache_policy,
   }
 
   // TODO(cja): PIO may be mappable on non-x86 architectures
-  if (bar.type == ZX_PCI_BAR_TYPE_PIO || bar.handle == ZX_HANDLE_INVALID) {
+  if (bar.type == PCI_BAR_TYPE_IO) {
     return ZX_ERR_WRONG_TYPE;
   }
 
-  zx::vmo vmo(bar.handle);
+  zx::vmo vmo(bar.result.vmo);
 
   size_t vmo_size;
   status = vmo.get_size(&vmo_size);
@@ -74,7 +75,8 @@ zx_status_t Pci::MapMmio(uint32_t index, uint32_t cache_policy,
   return fdf::MmioBuffer::Create(0, vmo_size, std::move(vmo), cache_policy, mmio);
 }
 
-zx_status_t Pci::ConfigureInterruptMode(uint32_t requested_irq_count, pci_irq_mode_t* out_mode) {
+zx_status_t Pci::ConfigureInterruptMode(uint32_t requested_irq_count,
+                                        pci_interrupt_mode_t* out_mode) {
   pci_protocol_t proto{};
   GetProto(&proto);
   return pci_configure_interrupt_mode(&proto, requested_irq_count, out_mode);

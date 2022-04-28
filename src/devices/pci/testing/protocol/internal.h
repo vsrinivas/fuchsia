@@ -18,7 +18,7 @@
 #define PCI_DEVICE_BAR_COUNT 6
 #define MSI_MAX_VECTORS 32
 #define MSIX_MAX_VECTORS 8
-#define PCI_CFG_HEADER_SIZE 64
+#define PCI_CONFIG_HEADER_SIZE 64
 #define kFakePciInternalError "Internal FakePciProtocol Error"
 
 namespace pci {
@@ -34,31 +34,31 @@ class FakePciProtocolInternal
   zx_status_t PciAckInterrupt();
   zx_status_t PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle);
   void PciGetInterruptModes(pci_interrupt_modes* modes);
-  zx_status_t PciSetInterruptMode(pci_irq_mode_t mode, uint32_t requested_irq_count);
-  zx_status_t PciEnableBusMaster(bool enable);
+  zx_status_t PciSetInterruptMode(pci_interrupt_mode_t mode, uint32_t requested_irq_count);
+  zx_status_t PciSetBusMastering(bool enable);
   zx_status_t PciResetDevice();
-  zx_status_t PciGetDeviceInfo(pcie_device_info_t* out_info);
+  zx_status_t PciGetDeviceInfo(pci_device_info_t* out_info);
 
-  constexpr zx_status_t PciConfigRead8(uint16_t offset, uint8_t* out_value) {
-    return ConfigRead(offset, out_value);
+  constexpr zx_status_t PciReadConfig8(uint16_t offset, uint8_t* out_value) {
+    return ReadConfig(offset, out_value);
   }
 
-  constexpr zx_status_t PciConfigRead16(uint16_t offset, uint16_t* out_value) {
-    return ConfigRead(offset, out_value);
+  constexpr zx_status_t PciReadConfig16(uint16_t offset, uint16_t* out_value) {
+    return ReadConfig(offset, out_value);
   }
 
-  constexpr zx_status_t PciConfigRead32(uint16_t offset, uint32_t* out_value) {
-    return ConfigRead(offset, out_value);
+  constexpr zx_status_t PciReadConfig32(uint16_t offset, uint32_t* out_value) {
+    return ReadConfig(offset, out_value);
   }
 
-  zx_status_t PciConfigWrite8(uint16_t offset, uint8_t value) { return ConfigWrite(offset, value); }
+  zx_status_t PciWriteConfig8(uint16_t offset, uint8_t value) { return WriteConfig(offset, value); }
 
-  zx_status_t PciConfigWrite16(uint16_t offset, uint16_t value) {
-    return ConfigWrite(offset, value);
+  zx_status_t PciWriteConfig16(uint16_t offset, uint16_t value) {
+    return WriteConfig(offset, value);
   }
 
-  zx_status_t PciConfigWrite32(uint16_t offset, uint32_t value) {
-    return ConfigWrite(offset, value);
+  zx_status_t PciWriteConfig32(uint16_t offset, uint32_t value) {
+    return WriteConfig(offset, value);
   }
 
   zx_status_t PciGetFirstCapability(uint8_t id, uint8_t* out_offset);
@@ -74,7 +74,7 @@ class FakePciProtocolInternal
  protected:
   struct FakeBar {
     size_t size;
-    uint32_t type;
+    pci_bar_type_t type;
     std::optional<zx::vmo> vmo;
   };
 
@@ -98,37 +98,37 @@ class FakePciProtocolInternal
   // layout of the capabilities as necessary to match their device, but we can provide helper
   // methods to ensure they're doing it properly.
   void AddCapabilityInternal(uint8_t capability_id, uint8_t position, uint8_t size);
-  zx::interrupt& AddInterrupt(pci_irq_mode_t mode);
-  pcie_device_info_t SetDeviceInfoInternal(pcie_device_info_t new_info);
+  zx::interrupt& AddInterrupt(pci_interrupt_mode_t mode);
+  pci_device_info_t SetDeviceInfoInternal(pci_device_info_t new_info);
 
-  pci_irq_mode_t irq_mode() const { return irq_mode_; }
+  pci_interrupt_mode_t irq_mode() const { return irq_mode_; }
   uint32_t irq_cnt() const { return irq_cnt_; }
   std::array<FakeBar, PCI_DEVICE_BAR_COUNT>& bars() { return bars_; }
   std::vector<FakeCapability>& capabilities() { return capabilities_; }
 
   uint32_t reset_cnt() const { return reset_cnt_; }
   std::optional<bool> bus_master_en() const { return bus_master_en_; }
-  pcie_device_info_t& info() { return info_; }
+  pci_device_info_t& info() { return info_; }
   zx::vmo& config() { return config_; }
 
   void reset();
 
  private:
   template <typename T>
-  zx_status_t ConfigRead(uint16_t offset, T* out_value) {
+  zx_status_t ReadConfig(uint16_t offset, T* out_value) {
     ZX_ASSERT_MSG(offset + sizeof(T) <= PCI_BASE_CONFIG_SIZE,
-                  "FakePciProtocol: PciConfigRead reads must fit in the range [%#x, %#x] (offset "
+                  "FakePciProtocol: PciReadConfig reads must fit in the range [%#x, %#x] (offset "
                   "= %#x, io width = %#lx).",
                   0, PCI_BASE_CONFIG_SIZE - 1, offset, sizeof(T));
     return config_.read(out_value, offset, sizeof(T));
   }
 
   template <typename T>
-  zx_status_t ConfigWrite(uint16_t offset, T value) {
-    ZX_ASSERT_MSG(offset >= PCI_CFG_HEADER_SIZE && offset + sizeof(T) <= PCI_BASE_CONFIG_SIZE,
-                  "FakePciProtocol: PciConfigWrite writes must fit in the range [%#x, %#x] (offset "
+  zx_status_t WriteConfig(uint16_t offset, T value) {
+    ZX_ASSERT_MSG(offset >= PCI_CONFIG_HEADER_SIZE && offset + sizeof(T) <= PCI_BASE_CONFIG_SIZE,
+                  "FakePciProtocol: PciWriteConfig writes must fit in the range [%#x, %#x] (offset "
                   "= %#x, io width = %#lx).",
-                  PCI_CFG_HEADER_SIZE, PCI_BASE_CONFIG_SIZE - 1, offset, sizeof(T));
+                  PCI_CONFIG_HEADER_SIZE, PCI_BASE_CONFIG_SIZE - 1, offset, sizeof(T));
     return config_.write(&value, offset, sizeof(T));
   }
 
@@ -143,7 +143,7 @@ class FakePciProtocolInternal
   std::optional<zx::interrupt> legacy_interrupt_;
   std::vector<zx::interrupt> msi_interrupts_;
   std::vector<zx::interrupt> msix_interrupts_;
-  pci_irq_mode_t irq_mode_;
+  pci_interrupt_mode_t irq_mode_;
   uint32_t irq_cnt_ = 0;
   uint32_t msi_count_ = 0;
   uint32_t msix_count_ = 0;
@@ -154,7 +154,7 @@ class FakePciProtocolInternal
   zx::bti bti_;
   uint32_t reset_cnt_;
   std::optional<bool> bus_master_en_;
-  pcie_device_info_t info_ = {};
+  pci_device_info_t info_ = {};
   zx::vmo config_;
   pci_protocol_t protocol_ = {.ops = &pci_protocol_ops_, .ctx = this};
 };

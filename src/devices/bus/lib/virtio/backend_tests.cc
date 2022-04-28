@@ -189,8 +189,8 @@ class VirtioTests : public fake_ddk::Bind, public zxtest::Test {
   // Even in the fake device we have to deal with registers being in different
   // places depending on whether MSI has been enabled or not.
   uint16_t LegacyDeviceCfgOffset() {
-    return (fake_pci().GetIrqMode() == PCI_IRQ_MODE_MSI_X) ? VIRTIO_PCI_CONFIG_OFFSET_MSIX
-                                                           : VIRTIO_PCI_CONFIG_OFFSET_NOMSIX;
+    return (fake_pci().GetIrqMode() == PCI_INTERRUPT_MODE_MSI_X) ? VIRTIO_PCI_CONFIG_OFFSET_MSIX
+                                                                 : VIRTIO_PCI_CONFIG_OFFSET_NOMSIX;
   }
 
   void SetUpLegacyQueue() { bars_[kLegacyBar]->Write(kQueueSize, VIRTIO_PCI_QUEUE_SIZE); }
@@ -308,7 +308,7 @@ TEST_F(VirtioTests, LegacyIoBackendSuccess) {
   // With a manually crafted backend using the test interface it should succeed.
   ddk::PciProtocolClient pci(fake_ddk::kFakeParent);
   ASSERT_TRUE(pci.is_valid());
-  pcie_device_info_t info{};
+  pci_device_info_t info{};
   ASSERT_OK(pci.GetDeviceInfo(&info));
   zx::bti bti{};
   ASSERT_OK(fake_bti_create(bti.reset_and_get_address()));
@@ -332,7 +332,7 @@ TEST_F(VirtioTests, LegacyMsiX) {
 
   ddk::PciProtocolClient pci(fake_ddk::kFakeParent);
   ASSERT_TRUE(pci.is_valid());
-  pcie_device_info_t info{};
+  pci_device_info_t info{};
   ASSERT_OK(pci.GetDeviceInfo(&info));
   zx::bti bti{};
   ASSERT_OK(fake_bti_create(bti.reset_and_get_address()));
@@ -345,7 +345,7 @@ TEST_F(VirtioTests, LegacyMsiX) {
   ASSERT_OK(device.Init());
 
   // Verify MSI-X state
-  ASSERT_EQ(fake_pci().GetIrqMode(), PCI_IRQ_MODE_MSI_X);
+  ASSERT_EQ(fake_pci().GetIrqMode(), PCI_INTERRUPT_MODE_MSI_X);
   uint16_t value{};
   value = bars()[kLegacyBar]->Read16(VIRTIO_PCI_MSI_CONFIG_VECTOR);
   ASSERT_EQ(value, virtio::PciBackend::kMsiConfigVector);

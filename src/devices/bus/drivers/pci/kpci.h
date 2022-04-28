@@ -27,7 +27,7 @@ struct kpci_device {
   zx_handle_t handle;
   // nth device index
   uint32_t index;
-  zx_pcie_device_info_t info;
+  pci_device_info_t info;
   char name[ZX_DEVICE_NAME_MAX];
 };
 
@@ -43,19 +43,19 @@ class KernelPci : public KernelPciType, public ddk::PciProtocol<pci::KernelPci> 
   static zx_status_t CreateComposite(zx_device_t* parent, kpci_device device, bool uses_acpi);
   // Pci Protocol
   zx_status_t PciGetBar(uint32_t bar_id, pci_bar_t* out_res);
-  zx_status_t PciEnableBusMaster(bool enable);
+  zx_status_t PciSetBusMastering(bool enable);
   zx_status_t PciResetDevice();
   zx_status_t PciAckInterrupt();
   zx_status_t PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle);
   void PciGetInterruptModes(pci_interrupt_modes_t* out_modes);
-  zx_status_t PciSetInterruptMode(pci_irq_mode_t mode, uint32_t requested_irq_count);
-  zx_status_t PciGetDeviceInfo(pcie_device_info_t* out_into);
-  zx_status_t PciConfigRead8(uint16_t offset, uint8_t* out_value);
-  zx_status_t PciConfigRead16(uint16_t offset, uint16_t* out_value);
-  zx_status_t PciConfigRead32(uint16_t offset, uint32_t* out_value);
-  zx_status_t PciConfigWrite8(uint16_t offset, uint8_t value);
-  zx_status_t PciConfigWrite16(uint16_t offset, uint16_t value);
-  zx_status_t PciConfigWrite32(uint16_t offset, uint32_t value);
+  zx_status_t PciSetInterruptMode(pci_interrupt_mode_t mode, uint32_t requested_irq_count);
+  zx_status_t PciGetDeviceInfo(pci_device_info_t* out_into);
+  zx_status_t PciReadConfig8(uint16_t offset, uint8_t* out_value);
+  zx_status_t PciReadConfig16(uint16_t offset, uint16_t* out_value);
+  zx_status_t PciReadConfig32(uint16_t offset, uint32_t* out_value);
+  zx_status_t PciWriteConfig8(uint16_t offset, uint8_t value);
+  zx_status_t PciWriteConfig16(uint16_t offset, uint16_t value);
+  zx_status_t PciWriteConfig32(uint16_t offset, uint32_t value);
   zx_status_t PciGetFirstCapability(uint8_t cap_id, uint8_t* out_offset);
   zx_status_t PciGetNextCapability(uint8_t cap_id, uint8_t offset, uint8_t* out_offset);
   zx_status_t PciGetFirstExtendedCapability(uint16_t cap_id, uint16_t* out_offset);

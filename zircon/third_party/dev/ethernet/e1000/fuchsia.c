@@ -149,7 +149,7 @@ struct adapter {
   mmio_buffer_t flash_mmio;
   struct txrx_funcs* txrx;
 
-  pci_irq_mode_t irq_mode;
+  pci_interrupt_mode_t irq_mode;
 };
 
 static inline void eth_enable_rx(struct adapter* adapter) {
@@ -243,7 +243,7 @@ static void e1000_release(void* ctx) {
   DEBUGOUT("entry");
   struct adapter* adapter = ctx;
   e1000_reset_hw(&adapter->hw);
-  pci_enable_bus_master(&adapter->osdep.pci, false);
+  pci_set_bus_mastering(&adapter->osdep.pci, false);
 
   io_buffer_release(&adapter->buffer);
   mmio_buffer_release(&adapter->bar0_mmio);
@@ -418,7 +418,7 @@ static int e1000_irq_thread(void* arg) {
         }
       }
     }
-    if (adapter->irq_mode == PCI_IRQ_MODE_LEGACY) {
+    if (adapter->irq_mode == PCI_INTERRUPT_MODE_LEGACY) {
       pci_ack_interrupt(&adapter->osdep.pci);
     }
     mtx_unlock(&adapter->lock);
@@ -532,10 +532,10 @@ static void e1000_identify_hardware(struct adapter* adapter) {
   pci_protocol_t* pci = &adapter->osdep.pci;
 
   /* Make sure our PCI config space has the necessary stuff set */
-  pci_config_read16(pci, PCI_CONFIG_COMMAND, &adapter->hw.bus.pci_cmd_word);
+  pci_read_config16(pci, PCI_CONFIG_COMMAND, &adapter->hw.bus.pci_cmd_word);
 
   /* Save off the information about this board */
-  pcie_device_info_t pci_info;
+  pci_device_info_t pci_info;
   zx_status_t status = pci_get_device_info(pci, &pci_info);
   if (status != ZX_OK) {
     zxlogf(ERROR, "pci_get_device_info failure");
@@ -545,8 +545,8 @@ static void e1000_identify_hardware(struct adapter* adapter) {
   adapter->hw.vendor_id = pci_info.vendor_id;
   adapter->hw.device_id = pci_info.device_id;
   adapter->hw.revision_id = pci_info.revision_id;
-  pci_config_read16(pci, PCI_CONFIG_SUBSYS_VENDOR_ID, &adapter->hw.subsystem_vendor_id);
-  pci_config_read16(pci, PCI_CONFIG_SUBSYS_ID, &adapter->hw.subsystem_device_id);
+  pci_read_config16(pci, PCI_CONFIG_SUBSYSTEM_VENDOR_ID, &adapter->hw.subsystem_vendor_id);
+  pci_read_config16(pci, PCI_CONFIG_SUBSYSTEM_ID, &adapter->hw.subsystem_device_id);
 
   /* Do Shared Code Init and Setup */
   if (e1000_set_mac_type(&adapter->hw)) {
@@ -575,8 +575,8 @@ static zx_status_t e1000_allocate_pci_resources(struct adapter* adapter) {
     pci_bar_t bar = {};
     bool found_io_bar = false;
     for (uint32_t i = 1; i < PCI_MAX_BAR_REGS; i++) {
-      if ((status = pci_get_bar(pci, i, &bar)) == ZX_OK && bar.type == ZX_PCI_BAR_TYPE_PIO) {
-        adapter->osdep.iobase = bar.address;
+      if ((status = pci_get_bar(pci, i, &bar)) == ZX_OK && bar.type == PCI_BAR_TYPE_IO) {
+        adapter->osdep.iobase = bar.result.io.address;
         adapter->hw.io_base = 0;
         found_io_bar = true;
         break;
@@ -927,7 +927,7 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
 
   pci_protocol_t* pci = &adapter->osdep.pci;
 
-  status = pci_enable_bus_master(pci, true);
+  status = pci_set_bus_mastering(pci, true);
   if (status != ZX_OK) {
     zxlogf(ERROR, "cannot enable bus master %d", status);
     goto fail;
@@ -1114,7 +1114,7 @@ fail:
     zx_handle_close(adapter->btih);
   }
   if (adapter->osdep.pci.ops) {
-    pci_enable_bus_master(&adapter->osdep.pci, false);
+    pci_set_bus_mastering(&adapter->osdep.pci, false);
   }
   zx_handle_close(adapter->irqh);
   mmio_buffer_release(&adapter->bar0_mmio);

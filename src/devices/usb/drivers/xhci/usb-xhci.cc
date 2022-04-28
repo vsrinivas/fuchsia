@@ -1633,7 +1633,7 @@ void UsbXhci::Shutdown(zx_status_t status) {
 }
 
 void UsbXhci::InitQuirks() {
-  pcie_device_info_t info;
+  pci_device_info_t info;
   pci_.GetDeviceInfo(&info);
   if ((info.vendor_id == 0x1033) && (info.device_id == 0x194)) {
     qemu_quirk_ = true;
@@ -1644,14 +1644,14 @@ void UsbXhci::InitQuirks() {
     // Quirk for some older Intel chipsets
     // Switch ports from EHCI to XHCI.
     uint32_t ports_available;
-    pci_.ConfigRead32(0xdc, &ports_available);
+    pci_.ReadConfig32(0xdc, &ports_available);
     if (ports_available) {
-      pci_.ConfigWrite32(0xd8, ports_available);
+      pci_.WriteConfig32(0xd8, ports_available);
     }
     // Route power and data lines for USB 2.0 ports
-    pci_.ConfigRead32(0xd4, &ports_available);
+    pci_.ReadConfig32(0xd4, &ports_available);
     if (ports_available) {
-      pci_.ConfigWrite32(0xD0, ports_available);
+      pci_.WriteConfig32(0xD0, ports_available);
     }
     // Handoff takes 5 seconds if we're contending with the EHCI controller.
     // (have to wait for enumeration to time out)
@@ -1676,7 +1676,7 @@ zx_status_t UsbXhci::InitPci() {
   // Make sure irq_count_ doesn't exceed supported max PCI IRQs.
   pci_interrupt_modes_t modes{};
   pci_.GetInterruptModes(&modes);
-  uint32_t mode_irq_max = std::max(modes.msi, modes.msix);
+  uint32_t mode_irq_max = std::max(static_cast<uint16_t>(modes.msi_count), modes.msix_count);
   irq_count_ = std::min(irq_count_, static_cast<uint16_t>(mode_irq_max));
   status = pci_.ConfigureInterruptMode(irq_count_, /*out_mode=*/nullptr);
   if (status != ZX_OK) {
@@ -1693,7 +1693,7 @@ zx_status_t UsbXhci::InitPci() {
       return status;
     }
   }
-  status = pci_.EnableBusMaster(true);
+  status = pci_.SetBusMastering(true);
   if (status != ZX_OK) {
     return status;
   }

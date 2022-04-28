@@ -94,7 +94,7 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
   }
 
   bool PcirootDriverShouldProxyConfig() { return enable_driver_should_proxy_config_; }
-  zx_status_t PcirootConfigRead8(const pci_bdf_t* address, uint16_t offset, uint8_t* value) {
+  zx_status_t PcirootReadConfig8(const pci_bdf_t* address, uint16_t offset, uint8_t* value) {
     if (!enable_config_read_) {
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -106,7 +106,7 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
     memcpy(value, &ecam_.get(*address).ext_config[offset], sizeof(*value));
     return ZX_OK;
   }
-  zx_status_t PcirootConfigRead16(const pci_bdf_t* address, uint16_t offset, uint16_t* value) {
+  zx_status_t PcirootReadConfig16(const pci_bdf_t* address, uint16_t offset, uint16_t* value) {
     if (!enable_config_read_) {
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -118,7 +118,7 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
     memcpy(value, &ecam_.get(*address).ext_config[offset], sizeof(*value));
     return ZX_OK;
   }
-  zx_status_t PcirootConfigRead32(const pci_bdf_t* address, uint16_t offset, uint32_t* value) {
+  zx_status_t PcirootReadConfig32(const pci_bdf_t* address, uint16_t offset, uint32_t* value) {
     if (!enable_config_read_) {
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -130,7 +130,7 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
     memcpy(value, &ecam_.get(*address).ext_config[offset], sizeof(*value));
     return ZX_OK;
   }
-  zx_status_t PcirootConfigWrite8(const pci_bdf_t* address, uint16_t offset, uint8_t value) {
+  zx_status_t PcirootWriteConfig8(const pci_bdf_t* address, uint16_t offset, uint8_t value) {
     if (!enable_config_write_) {
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -141,7 +141,7 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
     memcpy(&ecam_.get(*address).ext_config[offset], &value, sizeof(value));
     return ZX_OK;
   }
-  zx_status_t PcirootConfigWrite16(const pci_bdf_t* address, uint16_t offset, uint16_t value) {
+  zx_status_t PcirootWriteConfig16(const pci_bdf_t* address, uint16_t offset, uint16_t value) {
     if (!enable_config_write_) {
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -152,7 +152,7 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
     memcpy(&ecam_.get(*address).ext_config[offset], &value, sizeof(value));
     return ZX_OK;
   }
-  zx_status_t PcirootConfigWrite32(const pci_bdf_t* address, uint16_t offset, uint32_t value) {
+  zx_status_t PcirootWriteConfig32(const pci_bdf_t* address, uint16_t offset, uint32_t value) {
     if (!enable_config_write_) {
       return ZX_ERR_NOT_SUPPORTED;
     }

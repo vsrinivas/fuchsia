@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
-#include <lib/pci/hw.h>
 
 #include "simple-display.h"
 #include "src/graphics/display/drivers/simple/simple-vmware-bind.h"

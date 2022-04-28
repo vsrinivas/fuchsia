@@ -44,9 +44,9 @@ void Device::Release() {
 
 void Device::IrqWorker() {
   const auto irq_mode = backend_->InterruptMode();
-  ZX_DEBUG_ASSERT(irq_mode == PCI_IRQ_MODE_LEGACY || irq_mode == PCI_IRQ_MODE_MSI_X);
+  ZX_DEBUG_ASSERT(irq_mode == PCI_INTERRUPT_MODE_LEGACY || irq_mode == PCI_INTERRUPT_MODE_MSI_X);
   zxlogf(DEBUG, "%s: starting %s irq worker", tag(),
-         (irq_mode == PCI_IRQ_MODE_LEGACY) ? "legacy" : "msi-x");
+         (irq_mode == PCI_INTERRUPT_MODE_LEGACY) ? "legacy" : "msi-x");
 
   while (backend_->InterruptValid() == ZX_OK) {
     auto result = backend_->WaitForInterrupt();
@@ -67,7 +67,7 @@ void Device::IrqWorker() {
 
     // Read the status before completing the interrupt in case
     // another interrupt fires and changes the status.
-    if (irq_mode == PCI_IRQ_MODE_LEGACY) {
+    if (irq_mode == PCI_INTERRUPT_MODE_LEGACY) {
       uint32_t irq_status = IsrStatus();
       zxlogf(TRACE, "%s: irq_status: %#x\n", __func__, irq_status);
 

@@ -4,9 +4,10 @@
 
 #include "pci-bus.h"
 
+#include <endian.h>
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/device-protocol/pci.h>
-#include <lib/pci/hw.h>
 
 #include "fuchsia/hardware/pci/c/banjo.h"
 
@@ -40,7 +41,7 @@ zx_status_t PciBus::Configure(zx_device_t* parent) {
   }
   mmio_ = fdf::MmioBuffer(buf);
 
-  pcie_device_info_t config;
+  pci_device_info_t config;
   status = pci_get_device_info(&pci_, &config);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ahci: error getting pci config information");
@@ -55,7 +56,7 @@ zx_status_t PciBus::Configure(zx_device_t* parent) {
 
   // FIXME intel devices need to set SATA port enable at config + 0x92
   // ahci controller is bus master
-  status = pci_enable_bus_master(&pci_, true);
+  status = pci_set_bus_mastering(&pci_, true);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ahci: error %d enabling bus master", status);
     return status;
@@ -108,7 +109,7 @@ zx_status_t PciBus::BtiPin(uint32_t options, const zx::unowned_vmo& vmo, uint64_
 }
 
 zx_status_t PciBus::InterruptWait() {
-  if (irq_mode_ == PCI_IRQ_MODE_LEGACY) {
+  if (irq_mode_ == PCI_INTERRUPT_MODE_LEGACY) {
     pci_ack_interrupt(&pci_);
   }
 

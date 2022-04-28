@@ -38,7 +38,7 @@ class Device {
 
   void StartIrqThread();
   // interrupt cases that devices may override
-  pci_irq_mode_t InterruptMode() { return backend_->InterruptMode(); }
+  pci_interrupt_mode_t InterruptMode() { return backend_->InterruptMode(); }
   virtual void IrqRingUpdate() = 0;
   virtual void IrqConfigChange() = 0;
 

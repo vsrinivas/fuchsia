@@ -45,7 +45,7 @@ zx_status_t Device::DdkGetProtocol(uint32_t proto_id, void* out) {
 }
 
 template <typename V, typename R>
-zx_status_t Device::ConfigRead(uint16_t offset, V* value) {
+zx_status_t Device::ReadConfig(uint16_t offset, V* value) {
   if (offset >= PCI_EXT_CONFIG_SIZE) {
     return ZX_ERR_OUT_OF_RANGE;
   }
@@ -54,23 +54,23 @@ zx_status_t Device::ConfigRead(uint16_t offset, V* value) {
   return ZX_OK;
 }
 
-zx_status_t Device::PciConfigRead8(uint16_t offset, uint8_t* out_value) {
-  zx_status_t status = ConfigRead<uint8_t, PciReg8>(offset, out_value);
+zx_status_t Device::PciReadConfig8(uint16_t offset, uint8_t* out_value) {
+  zx_status_t status = ReadConfig<uint8_t, PciReg8>(offset, out_value);
   return LOG_STATUS(TRACE, status, "%#x", offset);
 }
 
-zx_status_t Device::PciConfigRead16(uint16_t offset, uint16_t* out_value) {
-  zx_status_t status = ConfigRead<uint16_t, PciReg16>(offset, out_value);
+zx_status_t Device::PciReadConfig16(uint16_t offset, uint16_t* out_value) {
+  zx_status_t status = ReadConfig<uint16_t, PciReg16>(offset, out_value);
   return LOG_STATUS(TRACE, status, "%#x", offset);
 }
 
-zx_status_t Device::PciConfigRead32(uint16_t offset, uint32_t* out_value) {
-  zx_status_t status = ConfigRead<uint32_t, PciReg32>(offset, out_value);
+zx_status_t Device::PciReadConfig32(uint16_t offset, uint32_t* out_value) {
+  zx_status_t status = ReadConfig<uint32_t, PciReg32>(offset, out_value);
   return LOG_STATUS(TRACE, status, "%#x", offset);
 }
 
 template <typename V, typename R>
-zx_status_t Device::ConfigWrite(uint16_t offset, V value) {
+zx_status_t Device::WriteConfig(uint16_t offset, V value) {
   // Don't permit writes inside the config header.
   if (offset < PCI_CONFIG_HDR_SIZE) {
     return ZX_ERR_ACCESS_DENIED;
@@ -84,24 +84,24 @@ zx_status_t Device::ConfigWrite(uint16_t offset, V value) {
   return ZX_OK;
 }
 
-zx_status_t Device::PciConfigWrite8(uint16_t offset, uint8_t value) {
-  zx_status_t status = ConfigWrite<uint8_t, PciReg8>(offset, value);
+zx_status_t Device::PciWriteConfig8(uint16_t offset, uint8_t value) {
+  zx_status_t status = WriteConfig<uint8_t, PciReg8>(offset, value);
   return LOG_STATUS(TRACE, status, "%#x, %#x", offset, value);
 }
 
-zx_status_t Device::PciConfigWrite16(uint16_t offset, uint16_t value) {
-  zx_status_t status = ConfigWrite<uint16_t, PciReg16>(offset, value);
+zx_status_t Device::PciWriteConfig16(uint16_t offset, uint16_t value) {
+  zx_status_t status = WriteConfig<uint16_t, PciReg16>(offset, value);
   return LOG_STATUS(TRACE, status, "%#x, %#x", offset, value);
 }
 
-zx_status_t Device::PciConfigWrite32(uint16_t offset, uint32_t value) {
-  zx_status_t status = ConfigWrite<uint32_t, PciReg32>(offset, value);
+zx_status_t Device::PciWriteConfig32(uint16_t offset, uint32_t value) {
+  zx_status_t status = WriteConfig<uint32_t, PciReg32>(offset, value);
   return LOG_STATUS(TRACE, status, "%#x, %#x", offset, value);
 }
 
-zx_status_t Device::PciEnableBusMaster(bool enable) {
+zx_status_t Device::PciSetBusMastering(bool enable) {
   fbl::AutoLock dev_lock(&dev_lock_);
-  zx_status_t status = EnableBusMaster(enable);
+  zx_status_t status = SetBusMastering(enable);
   return LOG_STATUS(DEBUG, status, "%d", enable);
 }
 
@@ -133,10 +133,9 @@ zx_status_t Device::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
   }
 #endif
 
-  out_bar->id = bar_id;
-  out_bar->address = bar.address;
+  out_bar->bar_id = bar_id;
   out_bar->size = bar_size;
-  out_bar->type = (bar.is_mmio) ? ZX_PCI_BAR_TYPE_MMIO : ZX_PCI_BAR_TYPE_PIO;
+  out_bar->type = (bar.is_mmio) ? PCI_BAR_TYPE_MMIO : PCI_BAR_TYPE_IO;
 
   // MMIO Bars have an associated VMO for the driver to map, whereas IO bars
   // have a Resource corresponding to an IO range for the driver to access.
@@ -145,13 +144,14 @@ zx_status_t Device::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
   if (bar.is_mmio) {
     zx::vmo vmo = {};
     if ((status = bar.allocation->CreateVmObject(&vmo)) == ZX_OK) {
-      out_bar->handle = vmo.release();
+      out_bar->result.vmo = vmo.release();
     }
   } else {  // Bar using IOports
     zx::resource res = {};
     if (bar.allocation->resource() &&
         (status = bar.allocation->resource().duplicate(ZX_RIGHT_SAME_RIGHTS, &res)) == ZX_OK) {
-      out_bar->handle = res.release();
+      out_bar->result.io.resource = res.release();
+      out_bar->result.io.address = bar.address;
     }
   }
 
@@ -170,7 +170,7 @@ zx_status_t Device::PciGetBti(uint32_t index, zx::bti* out_bti) {
   return LOG_STATUS(DEBUG, status, "%u", index);
 }
 
-zx_status_t Device::PciGetDeviceInfo(pcie_device_info_t* out_info) {
+zx_status_t Device::PciGetDeviceInfo(pci_device_info_t* out_info) {
   out_info->vendor_id = vendor_id();
   out_info->device_id = device_id();
   out_info->base_class = class_id();
@@ -242,7 +242,7 @@ zx_status_t Device::PciGetNextExtendedCapability(uint16_t cap_id, uint16_t offse
 
 void Device::PciGetInterruptModes(pci_interrupt_modes_t* modes) { *modes = GetInterruptModes(); }
 
-zx_status_t Device::PciSetInterruptMode(pci_irq_mode_t mode, uint32_t requested_irq_count) {
+zx_status_t Device::PciSetInterruptMode(pci_interrupt_mode_t mode, uint32_t requested_irq_count) {
   zx_status_t status = SetIrqMode(mode, requested_irq_count);
   return LOG_STATUS(DEBUG, status, "%u, %u", mode, requested_irq_count);
 }

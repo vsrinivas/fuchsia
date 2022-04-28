@@ -12,7 +12,6 @@
 #include <lib/ddk/io-buffer.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/mmio/mmio-buffer.h>
-#include <lib/pci/hw.h>
 #include <lib/sync/completion.h>
 #include <limits.h>
 #include <stdio.h>
@@ -609,7 +608,7 @@ static void nvme_release(void* ctx) {
   zxlogf(DEBUG, "release");
   nvme->flags |= FLAG_SHUTDOWN;
   if (nvme->mmio.vmo != ZX_HANDLE_INVALID) {
-    pci_enable_bus_master(&nvme->pci, false);
+    pci_set_bus_mastering(&nvme->pci, false);
     zx_handle_close(nvme->bti);
     mmio_buffer_release(&nvme->mmio);
     // TODO: risks a handle use-after-close, will be resolved by IRQ api
@@ -1033,7 +1032,7 @@ static zx_status_t nvme_bind(void* ctx, zx_device_t* dev) {
     goto fail;
   }
 
-  status = pci_enable_bus_master(&nvme->pci, true);
+  status = pci_set_bus_mastering(&nvme->pci, true);
   if (status != ZX_OK) {
     zxlogf(ERROR, "cannot enable bus mastering: %s", zx_status_get_string(status));
     goto fail;

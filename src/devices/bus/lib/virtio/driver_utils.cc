@@ -31,7 +31,7 @@ zx::status<std::pair<zx::bti, std::unique_ptr<virtio::Backend>>> GetBtiAndBacken
     return zx::error(ZX_ERR_NOT_FOUND);
   }
 
-  pcie_device_info_t info;
+  pci_device_info_t info;
   status = pci.GetDeviceInfo(&info);
   if (status != ZX_OK) {
     return zx::error(status);
@@ -49,7 +49,7 @@ zx::status<std::pair<zx::bti, std::unique_ptr<virtio::Backend>>> GetBtiAndBacken
   // interface.
   std::unique_ptr<virtio::Backend> backend = nullptr;
   uint8_t offset = 0;
-  bool is_modern = (pci.GetFirstCapability(PCI_CAP_ID_VENDOR, &offset) == ZX_OK);
+  bool is_modern = (pci.GetFirstCapability(PCI_CAPABILITY_ID_VENDOR, &offset) == ZX_OK);
   if (is_modern) {
     backend = std::make_unique<virtio::PciModernBackend>(pci, info);
   } else {

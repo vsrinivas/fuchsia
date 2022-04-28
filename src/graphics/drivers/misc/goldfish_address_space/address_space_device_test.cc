@@ -119,15 +119,15 @@ class AddressSpaceDeviceTest : public zxtest::Test {
     // Simulate expected PCI banjo methods.
     mock_pci_.ExpectGetBti(ZX_OK, 0 /*index*/, std::move(out_bti))
         .ExpectGetBar(ZX_OK, PCI_CONTROL_BAR_ID,
-                      pci_bar_t{.id = 0,
-                                .type = ZX_PCI_BAR_TYPE_MMIO,
+                      pci_bar_t{.bar_id = 0,
                                 .size = kCtrlSize,
-                                .handle = vmo_control.release()})
+                                .type = PCI_BAR_TYPE_MMIO,
+                                .result = {.vmo = vmo_control.release()}})
         .ExpectGetBar(ZX_OK, PCI_AREA_BAR_ID,
-                      pci_bar_t{.id = 1,
-                                .type = ZX_PCI_BAR_TYPE_MMIO,
+                      pci_bar_t{.bar_id = 1,
                                 .size = kAreaSize,
-                                .handle = vmo_area.release()});
+                                .type = PCI_BAR_TYPE_MMIO,
+                                .result = {.vmo = vmo_area.release()}});
 
     fake_root_->AddProtocol(ZX_PROTOCOL_PCI, mock_pci_.GetProto()->ops, mock_pci_.GetProto()->ctx,
                             "pci");

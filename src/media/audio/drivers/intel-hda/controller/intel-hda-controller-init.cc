@@ -42,10 +42,10 @@ constexpr unsigned int MAX_CAPS = 10;  // Arbitrary number of capabilities to ch
 void IntelHDAController::UpdateMiscbdcge(bool enable) {
   ddk::Pci pci(pci_);
   uint32_t cgctl = 0;
-  pci.ConfigRead32(kPciRegCgctl, &cgctl);
+  pci.ReadConfig32(kPciRegCgctl, &cgctl);
   cgctl &= ~kPciRegCgctlBitMaskMiscbdcge;
   cgctl |= enable ? kPciRegCgctlBitMaskMiscbdcge : 0;
-  pci.ConfigWrite32(kPciRegCgctl, cgctl);
+  pci.WriteConfig32(kPciRegCgctl, cgctl);
 }
 
 void IntelHDAController::PreResetControllerHardware() {
@@ -307,7 +307,7 @@ zx_status_t IntelHDAController::SetupPCIInterrupts() {
   irq_handler_.set_object(irq_.get());
 
   // Enable Bus Mastering so we can DMA data and receive MSIs
-  res = pci.EnableBusMaster(true);
+  res = pci.SetBusMastering(true);
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to enable PCI bus mastering!");
     return res;

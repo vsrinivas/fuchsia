@@ -7,7 +7,7 @@ using zx;
 
 /// PCI Configuration Header registers.
 /// PCI Local Bus Specification v3, chapter 6.1.
-type PciCfg = strict enum : uint16 {
+type PciConfig = flexible enum : uint16 {
     VENDOR_ID = 0x00;
     DEVICE_ID = 0x02;
     COMMAND = 0x04;
@@ -32,9 +32,49 @@ type PciCfg = strict enum : uint16 {
     MAX_LATENCY = 0x3f;
 };
 
+type PciCommand = flexible bits : uint16 {
+    IO_EN = 0x1;
+    MEM_EN = 0x2;
+    BUS_MASTER_EN = 0x4;
+    SPECIAL_EN = 0x8;
+    MEM_WR_INV_EN = 0x10;
+    PAL_SNOOP_EN = 0x20;
+    PERR_RESP_EN = 0x40;
+    AD_STEP_EN = 0x80;
+    SERR_EN = 0x100;
+    FAST_B2B_EN = 0x200;
+};
+
+type PciStatus = flexible bits : uint16 {
+    // 0:2 reserved
+    INTERRUPT = 0x8;
+    NEW_CAPS = 0x10;
+    SIXTYSIX_MHZ = 0x20;
+    // 6 reserved
+    FAST_B2B = 0x80;
+    MSTR_PERR = 0x100;
+    DEVSEL_LOW = 0x200;
+    DEVSEL_HIGH = 0x400;
+    TARG_ABORT_SIG = 0x800;
+    TARG_ABORT_RCV = 0x1000;
+    MSTR_ABORT_RCV = 0x2000;
+    SERR_SIG = 0x4000;
+    PERR = 0x8000;
+};
+
+type PciHeaderType = flexible enum : uint8 {
+    STANDARD = 0x0;
+    BRIDGE = 0x1;
+    CARD_BUS = 0x2;
+    MASK = 0x7F;
+    MULTI_FN = 0x80;
+};
+
+const PCI_STATUS_DEVSEL_MASK PciStatus = PciStatus.DEVSEL_HIGH | PciStatus.DEVSEL_LOW;
+
 /// PCI Capability ID.
 /// PCI Local Bus Specification v3, appendex H.
-type PciCapId = strict enum : uint8 {
+type PciCapabilityId = flexible enum : uint8 {
     NULL = 0x00;
     PCI_PWR_MGMT = 0x01;
     AGP = 0x02;
@@ -61,7 +101,7 @@ type PciCapId = strict enum : uint8 {
 
 /// PCI Extended Capability IDs.
 /// PCIe Base Specification rev4, chapter 7.6.
-type PciExtCapId = strict enum : uint16 {
+type PciExtendedCapabilityId = flexible enum : uint16 {
     NULL = 0x00;
     ADVANCED_ERROR_REPORTING = 0x01;
     VIRTUAL_CHANNEL_NO_MFVC = 0x02;
@@ -114,7 +154,7 @@ type PciExtCapId = strict enum : uint16 {
 /// servicing by calling |AckInterrupt|. To avoid this, LEGACY_NOACK can be
 /// used, but the driver's interrupt function will be disabled by the PCI Bus
 /// Driver if it sees excessive interrupt triggers in a given period.
-type PciIrqMode = strict enum : uint8 {
+type PciInterruptMode = flexible enum : uint8 {
     DISABLED = 0;
     /// Legacy interrupt mode.
     LEGACY = 1;
@@ -131,21 +171,20 @@ type PciIrqMode = strict enum : uint8 {
 /// by a given PCI device interrupt mode. 0 is returned for a mode if
 /// unsupported.
 type PciInterruptModes = struct {
-    /// The number of legacy interrupts supported. Will be 0, or 1 depending on
-    /// device support.
-    legacy uint32;
+    /// |True| if the device supports a legacy interrupt.
+    has_legacy bool;
     /// The number of Message-Signaled interrupted supported. Will be in the
     /// range of [0, 0x8) depending on device support.
-    msi uint32;
+    msi_count uint8;
     /// The number of MSI-X interrupts supported. Will be in the range of [0,
-    /// 2048) depending on device support.
-    msix uint32;
+    /// 0x800), depending on device and platform support.
+    msix_count uint16;
 };
 
 /// Device specific information from a device's configuration header.
 /// PCI Local Bus Specification v3, chapter 6.1.
 // TODO(33713): Pcie prefix exists due to legacy syscall interactions.
-type PcieDeviceInfo = struct {
+type PciDeviceInfo = struct {
     /// Device identification information.
     vendor_id uint16;
     device_id uint16;
@@ -163,31 +202,49 @@ type PcieDeviceInfo = struct {
     padding1 uint8;
 };
 
-/// The type of address space used by a given Base Address Register.
-type PciBarType = strict enum : uint32 {
-    MMIO = 0;
-    IO = 1;
+type PciBarType = flexible enum : uint8 {
+    UNUSED = 0;
+    MMIO = 1;
+    IO = 2;
 };
 
-/// Describes and provides access to a given Base Address Register (BAR) for the device.
+type PciIoBar = resource struct {
+    address uint64;
+    resource zx.handle:RESOURCE;
+};
+
+type PciBarResult = flexible resource union {
+    1: io PciIoBar;
+    2: vmo zx.handle:VMO;
+};
+
+/// Describes and provides access to a given Base Address Register for the device.
 type PciBar = resource struct {
     /// The BAR id, [0-5).
-    id uint32;
-    type PciBarType;
-    /// The size of the region in bytes.
+    bar_id uint32;
     size uint64;
-    /// If |type| == PciBarType::IO then this address will represent the start
-    /// address of the IO region.
-    address uint64;
-    /// If |type| == PciBarType::MMIO then a handle to a VMO representing the
-    /// MMIO region will be returned.
-    handle zx.handle:VMO;
+    type PciBarType;
+    result PciBarResult;
 };
 
+const PCI_MAX_BAR_COUNT uint8 = 6;
 
+/// An offset from the beginning of a device's PCI configuration space. [0, 0x100) is valid.
+alias PciConfigOffset = uint8;
+/// An offset from the beginning of a device's PCIe configuration space. [0, 0x800) is valid.
+alias PciExtendedConfigOffset = uint16;
+
+
+// fxbug.dev/33713: Remove the zx_pcie types and implement them here
 @transport("Banjo")
 @banjo_layout("ddk-protocol")
 protocol Pci {
+    /// Returns a structure containing device information from the configuration header.
+    GetDeviceInfo() -> (struct {
+        s zx.status;
+        info PciDeviceInfo;
+    });
+
     /// Retrieves information for a specified Base Address Register.
     ///
     /// Parameters:
@@ -201,7 +258,7 @@ protocol Pci {
         bar_id uint32;
     }) -> (resource struct {
         s zx.status;
-        res PciBar;
+        result PciBar;
     });
 
     /// Enables or disables the bus mastering capability for the device.
@@ -211,8 +268,8 @@ protocol Pci {
     ///
     /// Errors:
     /// |ZX_ERR_BAD_STATE|: Method was called while the device is disabled.
-    EnableBusMaster(struct {
-        enable bool;
+    SetBusMastering(struct {
+        enabled bool;
     }) -> (struct {
         s zx.status;
     });
@@ -247,7 +304,9 @@ protocol Pci {
     /// |GetInterruptModes|. A Legacy interrupt may be mapped multiple times,
     /// but the handles will point to the same interrupt object. MSI & MSI-X
     /// interrupts may only have one outstanding mapping at a time per
-    /// interrupt.
+    /// interrupt. Outstanding MSI & MSI-X interrupt handles must be closed
+    /// before attempting to change the interrupt mode in a subsequent call to
+    /// |SetInterruptMode|.
     ///
     /// Parameters:
     /// |which_irq|: The id of the interrupt to map.
@@ -261,7 +320,7 @@ protocol Pci {
         which_irq uint32;
     }) -> (resource struct {
         s zx.status;
-        handle zx.handle:INTERRUPT;
+        interrupt zx.handle:INTERRUPT;
     });
 
     /// Returns the supported interrupt modes for a device.
@@ -271,10 +330,10 @@ protocol Pci {
 
     /// Configures the interrupt mode for a device. When changing from one
     /// interrupt mode to another the driver must ensure existing interrupt
-    /// handles are freed beforehand.
+    /// handles are closed beforehand.
     ///
     /// Parameters:
-    /// |mode|: The |PciIrqMode| to request from the bus driver.
+    /// |mode|: The |PciInterruptMode| to request from the bus driver.
     /// |requested_irq_count|: The number of interrupts requested.
     ///
     /// Errors:
@@ -283,20 +342,14 @@ protocol Pci {
     /// |ZX_ERR_INVALID_ARGS|: |requested_irq_count| is 0.
     /// |ZX_ERR_NOT_SUPPORTED|: The provided |mode| is not supported, or invalid.
     SetInterruptMode(struct {
-        mode PciIrqMode;
+        mode PciInterruptMode;
         requested_irq_count uint32;
     }) -> (struct {
         s zx.status;
     });
 
-    /// Returns a structure containing device information from the configuration header.
-    GetDeviceInfo() -> (struct {
-        s zx.status;
-        info PcieDeviceInfo;
-    });
-
-    /// Reads a value from the device's configuration space. |Offset| must be
-    /// within [0x0, 100) if PCI, or [0x0, 0x1000) if PCIe. For most purposes a
+    /// Reads a byte from the device's configuration space. |Offset| must be
+    /// within [0x0, 0xFF] if PCI, or [0x0, 0xFFF) if PCIe. In most cases a
     /// device will be PCIe.
     ///
     /// Parameters:
@@ -304,28 +357,48 @@ protocol Pci {
     ///
     /// Errors:
     /// |ZX_ERR_OUT_OF_RANGE|: |offset| is an invalid address.
-    ConfigRead8(struct {
-        offset uint16;
+    ReadConfig8(struct {
+        offset PciExtendedConfigOffset;
     }) -> (struct {
         s zx.status;
         value uint8;
     });
-    ConfigRead16(struct {
-        offset uint16;
+
+    /// Reads two bytes from the device's configuration space. |Offset| must be
+    /// within [0x0, 0xFE] if PCI, or [0x0, 0xFFE] if PCIe. In most cases a
+    /// device will be PCIe.
+    ///
+    /// Parameters:
+    /// |offset|: The offset into the device's configuration space to read.
+    ///
+    /// Errors:
+    /// |ZX_ERR_OUT_OF_RANGE|: |offset| is an invalid address.
+    ReadConfig16(struct {
+        offset PciExtendedConfigOffset;
     }) -> (struct {
         s zx.status;
         value uint16;
     });
-    ConfigRead32(struct {
-        offset uint16;
+
+    /// Reads four bytes from the device's configuration space. |Offset| must be
+    /// within [0x0, 0xFC] if PCI, or [0x0, 0xFFC] if PCIe. In most cases a
+    /// device will be PCIe.
+    ///
+    /// Parameters:
+    /// |offset|: The offset into the device's configuration space to read.
+    ///
+    /// Errors:
+    /// |ZX_ERR_OUT_OF_RANGE|: |offset| is an invalid address.
+    ReadConfig32(struct {
+        offset PciExtendedConfigOffset;
     }) -> (struct {
         s zx.status;
         value uint32;
     });
 
-    /// Writes a value to the device's configuration space. The acceptable
-    /// ranges of |offset| for writes are [0x40, 0x100) if PCI, or [0x40,
-    /// 0x1000) if PCIe. For most purposes a device will be PCIe.
+    /// Writes a byte to the device's configuration space. The acceptable
+    /// ranges of |offset| for writes are [0x40, 0xFF] if PCI, or [0x40,
+    /// 0xFFF] if PCIe. For most purposes a device will be PCIe.
     ///
     ///
     /// Parameters
@@ -335,20 +408,46 @@ protocol Pci {
     /// Errors:
     /// |ZX_ERR_ACCESS_DENIED|: |offset| is within the device's configuration header.
     /// |ZX_ERR_OUT_OF_RANGE|: |offset| is an invalid address.
-    ConfigWrite8(struct {
-        offset uint16;
+    WriteConfig8(struct {
+        offset PciExtendedConfigOffset;
         value uint8;
     }) -> (struct {
         s zx.status;
     });
-    ConfigWrite16(struct {
-        offset uint16;
+
+    /// Writes two bytes to the device's configuration space. The acceptable
+    /// ranges of |offset| for writes are [0x40, 0xFE] if PCI, or [0x40,
+    /// 0xFFE] if PCIe. For most purposes a device will be PCIe.
+    ///
+    ///
+    /// Parameters
+    /// |offset|: The offset into the device's configuration space to read.
+    /// |value|: The value to write.
+    ///
+    /// Errors:
+    /// |ZX_ERR_ACCESS_DENIED|: |offset| is within the device's configuration header.
+    /// |ZX_ERR_OUT_OF_RANGE|: |offset| is an invalid address.
+    WriteConfig16(struct {
+        offset PciExtendedConfigOffset;
         value uint16;
     }) -> (struct {
         s zx.status;
     });
-    ConfigWrite32(struct {
-        offset uint16;
+
+    /// Writes four bytes to the device's configuration space. The acceptable
+    /// ranges of |offset| for writes are [0x40, 0xFC] if PCI, or [0x40,
+    /// 0xFFC] if PCIe. For most purposes a device will be PCIe.
+    ///
+    ///
+    /// Parameters
+    /// |offset|: The offset into the device's configuration space to read.
+    /// |value|: The value to write.
+    ///
+    /// Errors:
+    /// |ZX_ERR_ACCESS_DENIED|: |offset| is within the device's configuration header.
+    /// |ZX_ERR_OUT_OF_RANGE|: |offset| is an invalid address.
+    WriteConfig32(struct {
+        offset PciExtendedConfigOffset;
         value uint32;
     }) -> (struct {
         s zx.status;
@@ -358,33 +457,35 @@ protocol Pci {
     /// capability matching the capability id.
     ///
     /// Parameters:
-    /// |id|: the capability id to search for
+    /// |id|: the capability id to search for.
     ///
     /// Errors:
     /// |ZX_ERR_NOT_FOUND|: A capability of id |id| was not found.
     GetFirstCapability(struct {
-        id PciCapId;
+        id PciCapabilityId;
     }) -> (struct {
         s zx.status;
-        offset uint8;
+        offset PciConfigOffset;
     });
 
+    // TODO(96829): Update these interfaces post-FIDL to be easier to use.
     /// Returns the offset into the device's configuration space of the next
     /// capability matching the provided capability id, starting at |offset|.
     ///
     /// Parameters:
     /// |id|: the capability id to search for.
-    /// |offset|: the offset of the previous capability to start searching from.
+    /// |start_offset|: the configuration space offset of the previous
+    /// capability to start searching from.
     ///
     /// Errors:
     /// |ZX_ERR_NOT_FOUND|: A capability of id |id| was not found in a scan
     /// starting from |offset|
     GetNextCapability(struct {
-        id PciCapId;
-        offset uint8;
+        id PciCapabilityId;
+        start_offset PciConfigOffset;
     }) -> (struct {
         s zx.status;
-        offset uint8;
+        offset PciConfigOffset;
     });
 
     /// Returns the offset into the device's configuration space of first
@@ -396,10 +497,10 @@ protocol Pci {
     /// Errors:
     /// |ZX_ERR_NOT_FOUND|: A extended capability of id |id| was not found.
     GetFirstExtendedCapability(struct {
-        id PciExtCapId;
+        id PciExtendedCapabilityId;
     }) -> (struct {
         s zx.status;
-        offset uint16;
+        offset PciExtendedConfigOffset;
     });
 
     /// Returns the offset into the device's configuration space of the next
@@ -408,18 +509,18 @@ protocol Pci {
     ///
     /// Parameters:
     /// |id|: the capability id to search for.
-    /// |offset|: the offset of the previous extended capability to start
-    ///           searching from.
+    /// |start_offset|: the configuration space offset of the previous extended
+    /// capability to start searching from.
     ///
     /// Errors
     /// |ZX_ERR_NOT_FOUND|: A extended capability of id |id| was not found in a
     /// scan starting from |offset|.
     GetNextExtendedCapability(struct {
-        id PciExtCapId;
-        offset uint16;
+        id PciExtendedCapabilityId;
+        start_offset PciExtendedConfigOffset;
     }) -> (struct {
         s zx.status;
-        offset uint16;
+        offset PciExtendedConfigOffset;
     });
 
     /// Returns the Bus Transaction Intiator (BTI) at a given index for the device.

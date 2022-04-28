@@ -366,7 +366,7 @@ void IntelHDAController::HandleIrq(async_dispatcher_t* dispatcher, async::IrqBas
   ProcessCORB();
 
   irq_.ack();
-  if (irq_mode_ == PCI_IRQ_MODE_LEGACY) {
+  if (irq_mode_ == PCI_INTERRUPT_MODE_LEGACY) {
     pci_ack_interrupt(&pci_);
   }
 }

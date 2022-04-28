@@ -462,7 +462,7 @@ zx_status_t IntelDsp::ProcessSetStreamFmt(Channel* channel, const ihda_proto::Se
 }
 
 Status IntelDsp::SetupDspDevice() {
-  const pcie_device_info_t& hda_dev_info = controller_->dev_info();
+  const pci_device_info_t& hda_dev_info = controller_->dev_info();
   snprintf(log_prefix_, sizeof(log_prefix_), "IHDA DSP %02x:%02x.%01x", hda_dev_info.bus_id,
            hda_dev_info.dev_id, hda_dev_info.func_id);
   // Fetch the BAR which holds the Audio DSP registers (BAR 4).

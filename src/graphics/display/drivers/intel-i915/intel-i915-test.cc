@@ -99,7 +99,7 @@ class IntegrationTest : public ::testing::Test {
     // This configures the "GMCH Graphics Control" register to report 2MB for the available GTT
     // Graphics Memory. All other bits of this register are set to zero and should get populated as
     // required for the tests below.
-    pci_.PciConfigWrite16(registers::GmchGfxControl::kAddr, 0x40);
+    pci_.PciWriteConfig16(registers::GmchGfxControl::kAddr, 0x40);
 
     parent_ = MockDevice::FakeRootParent();
     parent_->AddProtocol(ZX_PROTOCOL_SYSMEM, sysmem_.proto_ops(), &sysmem_, "sysmem");

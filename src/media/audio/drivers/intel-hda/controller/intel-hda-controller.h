@@ -50,7 +50,7 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
 
   // one-liner accessors.
   zx_device_t* dev_node() { return dev_node_; }
-  const pcie_device_info_t& dev_info() const { return pci_dev_info_; }
+  const pci_device_info_t& dev_info() const { return pci_dev_info_; }
   unsigned int id() const { return id_; }
   const char* log_prefix() const { return log_prefix_; }
   const pci_protocol_t* pci() const { return &pci_; }
@@ -174,8 +174,8 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
   // Upstream PCI device, protocol interface, and device info.
   zx_device_t* pci_dev_ = nullptr;
   pci_protocol_t pci_ = {nullptr, nullptr};
-  pci_irq_mode_t irq_mode_ = PCI_IRQ_MODE_DISABLED;
-  pcie_device_info_t pci_dev_info_;
+  pci_interrupt_mode_t irq_mode_ = PCI_INTERRUPT_MODE_DISABLED;
+  pci_device_info_t pci_dev_info_;
   static zx_protocol_device_t ROOT_DEVICE_THUNKS;
 
   // Unique ID and published HDA device node.

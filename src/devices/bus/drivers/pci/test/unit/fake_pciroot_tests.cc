@@ -54,30 +54,30 @@ TEST_F(FakePcirootTests, GetPciPlatformInfo) {
   ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, pciroot().PcirootGetPciPlatformInfo(&info));
 }
 
-TEST_F(FakePcirootTests, ConfigRead) {
+TEST_F(FakePcirootTests, ReadConfig) {
   uint8_t u8;
   uint16_t u16;
   uint32_t u32;
 
   pci_bdf_t bdf = {0, 0, 0};
-  ASSERT_OK(pciroot().PcirootConfigRead8(&bdf, 0, &u8));
-  ASSERT_OK(pciroot().PcirootConfigRead16(&bdf, 0, &u16));
-  ASSERT_OK(pciroot().PcirootConfigRead32(&bdf, 0, &u32));
+  ASSERT_OK(pciroot().PcirootReadConfig8(&bdf, 0, &u8));
+  ASSERT_OK(pciroot().PcirootReadConfig16(&bdf, 0, &u16));
+  ASSERT_OK(pciroot().PcirootReadConfig32(&bdf, 0, &u32));
   pciroot().enable_config_read(false);
-  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, pciroot().PcirootConfigRead8(&bdf, 0, &u8));
-  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, pciroot().PcirootConfigRead16(&bdf, 0, &u16));
-  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, pciroot().PcirootConfigRead32(&bdf, 0, &u32));
+  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, pciroot().PcirootReadConfig8(&bdf, 0, &u8));
+  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, pciroot().PcirootReadConfig16(&bdf, 0, &u16));
+  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, pciroot().PcirootReadConfig32(&bdf, 0, &u32));
 }
 
-TEST_F(FakePcirootTests, ConfigWrite) {
+TEST_F(FakePcirootTests, WriteConfig) {
   pci_bdf_t bdf = {0, 0, 0};
-  ASSERT_OK(pciroot().PcirootConfigWrite8(&bdf, 0, 0xA5));
-  ASSERT_OK(pciroot().PcirootConfigWrite16(&bdf, 0, 0xA5A5));
-  ASSERT_OK(pciroot().PcirootConfigWrite32(&bdf, 0, 0xA5A5A5A5));
+  ASSERT_OK(pciroot().PcirootWriteConfig8(&bdf, 0, 0xA5));
+  ASSERT_OK(pciroot().PcirootWriteConfig16(&bdf, 0, 0xA5A5));
+  ASSERT_OK(pciroot().PcirootWriteConfig32(&bdf, 0, 0xA5A5A5A5));
   pciroot().enable_config_write(false);
-  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, pciroot().PcirootConfigWrite8(&bdf, 0, 0xA5));
-  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, pciroot().PcirootConfigWrite16(&bdf, 0, 0xA5A5));
-  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, pciroot().PcirootConfigWrite32(&bdf, 0, 0xA5A5A5A5));
+  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, pciroot().PcirootWriteConfig8(&bdf, 0, 0xA5));
+  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, pciroot().PcirootWriteConfig16(&bdf, 0, 0xA5A5));
+  ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, pciroot().PcirootWriteConfig32(&bdf, 0, 0xA5A5A5A5));
 }
 
 TEST_F(FakePcirootTests, DriverShouldProxyConfig) {

@@ -174,7 +174,7 @@ Function            | Description
 `set_irq_mode`      | Requests the specified IRQ mode to be used for the device
 `map_interrupt`     | Creates an IRQ handle associated with the device's interrupt
 `map_bar`           | Returns a pointer to the Base Address Register (**BAR**) of the PCI device
-`enable_bus_master` | Enables / disables bus mastering for the device
+`set_bus_mastering` | Enables / disables bus mastering for the device
 
 > Note that the function names given in the table above are the member names within
 > the `pci_protocol_t` structure; throughout the code we'll use the **pci_...()** accessor

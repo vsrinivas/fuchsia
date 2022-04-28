@@ -502,7 +502,7 @@ static zx_status_t test_vreg(vreg_protocol_t* vreg) {
 }
 
 static zx_status_t test_pci(pci_protocol_t* pci) {
-  pcie_device_info_t info = {0};
+  pci_device_info_t info = {0};
   zx_status_t status = pci_get_device_info(pci, &info);
   if (status == ZX_OK) {
     status = (info.device_id = PDEV_DID_TEST_PCI) ? ZX_OK : ZX_ERR_INTERNAL;

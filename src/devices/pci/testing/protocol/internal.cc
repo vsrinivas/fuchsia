@@ -31,16 +31,20 @@ zx_status_t FakePciProtocolInternal::FakePciProtocolInternal::PciGetBar(uint32_t
     return ZX_ERR_NOT_FOUND;
   }
 
-  out_res->id = bar_id;
+  out_res->bar_id = bar_id;
   out_res->size = bar.size;
   out_res->type = bar.type;
-  out_res->address = 0;  // PIO bars use the address, MMIO uses the VMO.
-  out_res->handle = bar.vmo->get();
+  if (bar.type == PCI_BAR_TYPE_MMIO) {
+    out_res->result.vmo = bar.vmo->get();
+  } else {
+    out_res->result.io.address = 0;
+    out_res->result.io.resource = bar.vmo->get();
+  }
   return ZX_OK;
 }
 
 zx_status_t FakePciProtocolInternal::PciAckInterrupt() {
-  return (irq_mode_ == PCI_IRQ_MODE_LEGACY) ? ZX_OK : ZX_ERR_BAD_STATE;
+  return (irq_mode_ == PCI_INTERRUPT_MODE_LEGACY) ? ZX_OK : ZX_ERR_BAD_STATE;
 }
 
 zx_status_t FakePciProtocolInternal::PciMapInterrupt(uint32_t which_irq,
@@ -50,18 +54,18 @@ zx_status_t FakePciProtocolInternal::PciMapInterrupt(uint32_t which_irq,
   }
 
   switch (irq_mode_) {
-    case PCI_IRQ_MODE_LEGACY:
-    case PCI_IRQ_MODE_LEGACY_NOACK:
+    case PCI_INTERRUPT_MODE_LEGACY:
+    case PCI_INTERRUPT_MODE_LEGACY_NOACK:
       if (which_irq > 0) {
         return ZX_ERR_INVALID_ARGS;
       }
       return legacy_interrupt_->duplicate(ZX_RIGHT_SAME_RIGHTS, out_handle);
-    case PCI_IRQ_MODE_MSI:
+    case PCI_INTERRUPT_MODE_MSI:
       if (which_irq >= msi_interrupts_.size()) {
         return ZX_ERR_INVALID_ARGS;
       }
       return msi_interrupts_[which_irq].duplicate(ZX_RIGHT_SAME_RIGHTS, out_handle);
-    case PCI_IRQ_MODE_MSI_X:
+    case PCI_INTERRUPT_MODE_MSI_X:
       if (which_irq >= msix_interrupts_.size()) {
         return ZX_ERR_INVALID_ARGS;
       }
@@ -74,29 +78,29 @@ zx_status_t FakePciProtocolInternal::PciMapInterrupt(uint32_t which_irq,
 void FakePciProtocolInternal::PciGetInterruptModes(pci_interrupt_modes* out_modes) {
   pci_interrupt_modes_t modes{};
   if (legacy_interrupt_) {
-    modes.legacy = 1;
+    modes.has_legacy = true;
   }
   if (!msi_interrupts_.empty()) {
     // MSI interrupts are only supported in powers of 2.
-    modes.msi = static_cast<uint32_t>((msi_interrupts_.size() <= 1)
-                                          ? msi_interrupts_.size()
-                                          : fbl::round_down(msi_interrupts_.size(), 2u));
+    modes.msi_count = static_cast<uint8_t>((msi_interrupts_.size() <= 1)
+                                               ? msi_interrupts_.size()
+                                               : fbl::round_down(msi_interrupts_.size(), 2u));
   }
   if (!msix_interrupts_.empty()) {
-    modes.msix = static_cast<uint32_t>(msix_interrupts_.size());
+    modes.msix_count = static_cast<uint16_t>(msix_interrupts_.size());
   }
   *out_modes = modes;
 }
 
-zx_status_t FakePciProtocolInternal::PciSetInterruptMode(pci_irq_mode_t mode,
+zx_status_t FakePciProtocolInternal::PciSetInterruptMode(pci_interrupt_mode_t mode,
                                                          uint32_t requested_irq_count) {
   if (!AllMappedInterruptsFreed()) {
     return ZX_ERR_BAD_STATE;
   }
 
   switch (mode) {
-    case PCI_IRQ_MODE_LEGACY:
-    case PCI_IRQ_MODE_LEGACY_NOACK:
+    case PCI_INTERRUPT_MODE_LEGACY:
+    case PCI_INTERRUPT_MODE_LEGACY_NOACK:
       if (requested_irq_count > 1) {
         return ZX_ERR_INVALID_ARGS;
       }
@@ -106,7 +110,7 @@ zx_status_t FakePciProtocolInternal::PciSetInterruptMode(pci_irq_mode_t mode,
         irq_cnt_ = 1;
       }
       return ZX_OK;
-    case PCI_IRQ_MODE_MSI:
+    case PCI_INTERRUPT_MODE_MSI:
       if (msi_interrupts_.empty()) {
         break;
       }
@@ -116,10 +120,10 @@ zx_status_t FakePciProtocolInternal::PciSetInterruptMode(pci_irq_mode_t mode,
       if (msi_interrupts_.size() < requested_irq_count) {
         return ZX_ERR_INVALID_ARGS;
       }
-      irq_mode_ = PCI_IRQ_MODE_MSI;
+      irq_mode_ = PCI_INTERRUPT_MODE_MSI;
       irq_cnt_ = requested_irq_count;
       return ZX_OK;
-    case PCI_IRQ_MODE_MSI_X:
+    case PCI_INTERRUPT_MODE_MSI_X:
       if (msix_interrupts_.empty()) {
         break;
       }
@@ -130,7 +134,7 @@ zx_status_t FakePciProtocolInternal::PciSetInterruptMode(pci_irq_mode_t mode,
       if (msix_interrupts_.size() < requested_irq_count) {
         return ZX_ERR_INVALID_ARGS;
       }
-      irq_mode_ = PCI_IRQ_MODE_MSI_X;
+      irq_mode_ = PCI_INTERRUPT_MODE_MSI_X;
       irq_cnt_ = requested_irq_count;
       return ZX_OK;
   }
@@ -138,7 +142,7 @@ zx_status_t FakePciProtocolInternal::PciSetInterruptMode(pci_irq_mode_t mode,
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t FakePciProtocolInternal::PciEnableBusMaster(bool enable) {
+zx_status_t FakePciProtocolInternal::PciSetBusMastering(bool enable) {
   bus_master_en_ = enable;
   return ZX_OK;
 }
@@ -148,7 +152,7 @@ zx_status_t FakePciProtocolInternal::PciResetDevice() {
   return ZX_OK;
 }
 
-zx_status_t FakePciProtocolInternal::PciGetDeviceInfo(pcie_device_info_t* out_info) {
+zx_status_t FakePciProtocolInternal::PciGetDeviceInfo(pci_device_info_t* out_info) {
   ZX_ASSERT(out_info);
   *out_info = info_;
   return ZX_OK;
@@ -183,17 +187,17 @@ zx_status_t FakePciProtocolInternal::PciGetBti(uint32_t index, zx::bti* out_bti)
 __EXPORT void FakePciProtocolInternal::AddCapabilityInternal(uint8_t capability_id,
                                                              uint8_t position, uint8_t size) {
   ZX_ASSERT_MSG(
-      capability_id > 0 && capability_id <= PCI_CAP_ID_FLATTENING_PORTAL_BRIDGE,
+      capability_id > 0 && capability_id <= PCI_CAPABILITY_ID_FLATTENING_PORTAL_BRIDGE,
       "FakePciProtocol Error: capability_id must be non-zero and <= %#x (capability_id = %#x).",
-      PCI_CAP_ID_FLATTENING_PORTAL_BRIDGE, capability_id);
-  ZX_ASSERT_MSG(position >= PCI_CFG_HEADER_SIZE && position + size < PCI_BASE_CONFIG_SIZE,
+      PCI_CAPABILITY_ID_FLATTENING_PORTAL_BRIDGE, capability_id);
+  ZX_ASSERT_MSG(position >= PCI_CONFIG_HEADER_SIZE && position + size < PCI_BASE_CONFIG_SIZE,
                 "FakePciProtocolError: capability must fit the range [%#x, %#x] (capability = "
                 "[%#x, %#x]).",
-                PCI_CFG_HEADER_SIZE, PCI_BASE_CONFIG_SIZE - 1, position, position + size - 1);
+                PCI_CONFIG_HEADER_SIZE, PCI_BASE_CONFIG_SIZE - 1, position, position + size - 1);
 
   // We need to update the next pointer of the previous capability, or the
   // original header capabilities pointer if this is the first.
-  uint8_t next_ptr = PCI_CFG_CAPABILITIES_PTR;
+  uint8_t next_ptr = PCI_CONFIG_CAPABILITIES_PTR;
   if (!capabilities().empty()) {
     for (auto& cap : capabilities()) {
       ZX_ASSERT_MSG(!(position <= cap.position && position + size > cap.position) &&
@@ -214,10 +218,10 @@ __EXPORT void FakePciProtocolInternal::AddCapabilityInternal(uint8_t capability_
   std::sort(capabilities().begin(), capabilities().end());
 }
 
-__EXPORT zx::interrupt& FakePciProtocolInternal::AddInterrupt(pci_irq_mode_t mode) {
-  ZX_ASSERT_MSG(!(mode == PCI_IRQ_MODE_LEGACY && legacy_interrupt_),
+__EXPORT zx::interrupt& FakePciProtocolInternal::AddInterrupt(pci_interrupt_mode_t mode) {
+  ZX_ASSERT_MSG(!(mode == PCI_INTERRUPT_MODE_LEGACY && legacy_interrupt_),
                 "FakePciProtocol Error: Legacy interrupt mode only supports 1 interrupt.");
-  ZX_ASSERT_MSG(!(mode == PCI_IRQ_MODE_MSI && msi_interrupts_.size() == MSI_MAX_VECTORS),
+  ZX_ASSERT_MSG(!(mode == PCI_INTERRUPT_MODE_MSI && msi_interrupts_.size() == MSI_MAX_VECTORS),
                 "FakePciProtocol Error: MSI interrupt mode only supports up to %u interrupts.",
                 MSI_MAX_VECTORS);
 
@@ -227,14 +231,14 @@ __EXPORT zx::interrupt& FakePciProtocolInternal::AddInterrupt(pci_irq_mode_t mod
   ZX_ASSERT_MSG(status == ZX_OK, kFakePciInternalError);
 
   switch (mode) {
-    case PCI_IRQ_MODE_LEGACY:
+    case PCI_INTERRUPT_MODE_LEGACY:
       legacy_interrupt_ = std::move(interrupt);
       return *legacy_interrupt_;
-    case PCI_IRQ_MODE_MSI:
+    case PCI_INTERRUPT_MODE_MSI:
       msi_interrupts_.insert(msi_interrupts_.end(), std::move(interrupt));
       msi_count_++;
       return msi_interrupts_[msi_count_ - 1];
-    case PCI_IRQ_MODE_MSI_X:
+    case PCI_INTERRUPT_MODE_MSI_X:
       msix_interrupts_.insert(msix_interrupts_.end(), std::move(interrupt));
       msix_count_++;
       return msix_interrupts_[msix_count_ - 1];
@@ -243,14 +247,14 @@ __EXPORT zx::interrupt& FakePciProtocolInternal::AddInterrupt(pci_irq_mode_t mod
   ZX_PANIC("%s", kFakePciInternalError);
 }
 
-__EXPORT pcie_device_info_t
-FakePciProtocolInternal::SetDeviceInfoInternal(pcie_device_info_t new_info) {
-  config().write(&new_info.vendor_id, PCI_CFG_VENDOR_ID, sizeof(info().vendor_id));
-  config().write(&new_info.device_id, PCI_CFG_DEVICE_ID, sizeof(info().device_id));
-  config().write(&new_info.revision_id, PCI_CFG_REVISION_ID, sizeof(info().revision_id));
-  config().write(&new_info.base_class, PCI_CFG_CLASS_CODE_BASE, sizeof(info().base_class));
-  config().write(&new_info.sub_class, PCI_CFG_CLASS_CODE_SUB, sizeof(info().sub_class));
-  config().write(&new_info.program_interface, PCI_CFG_CLASS_CODE_INTR,
+__EXPORT pci_device_info_t
+FakePciProtocolInternal::SetDeviceInfoInternal(pci_device_info_t new_info) {
+  config().write(&new_info.vendor_id, PCI_CONFIG_VENDOR_ID, sizeof(info().vendor_id));
+  config().write(&new_info.device_id, PCI_CONFIG_DEVICE_ID, sizeof(info().device_id));
+  config().write(&new_info.revision_id, PCI_CONFIG_REVISION_ID, sizeof(info().revision_id));
+  config().write(&new_info.base_class, PCI_CONFIG_CLASS_CODE_BASE, sizeof(info().base_class));
+  config().write(&new_info.sub_class, PCI_CONFIG_CLASS_CODE_SUB, sizeof(info().sub_class));
+  config().write(&new_info.program_interface, PCI_CONFIG_CLASS_CODE_INTR,
                  sizeof(info().program_interface));
   info_ = new_info;
 
@@ -263,7 +267,7 @@ __EXPORT void FakePciProtocolInternal::reset() {
   msi_count_ = 0;
   msix_interrupts_.clear();
   msix_count_ = 0;
-  irq_mode_ = PCI_IRQ_MODE_DISABLED;
+  irq_mode_ = PCI_INTERRUPT_MODE_DISABLED;
 
   bars_ = {};
   capabilities_.clear();

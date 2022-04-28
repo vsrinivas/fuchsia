@@ -88,39 +88,39 @@ namespace virtio {
 zx_status_t PciModernBackend::ReadVirtioCap(uint8_t offset, virtio_pci_cap* cap) {
   zx_status_t status;
   uint8_t value8;
-  status = pci().ConfigRead8(cap_field(offset, cap_vndr), &value8);
+  status = pci().ReadConfig8(cap_field(offset, cap_vndr), &value8);
   if (status != ZX_OK) {
     return status;
   }
   cap->cap_vndr = value8;
-  status = pci().ConfigRead8(cap_field(offset, cap_next), &value8);
+  status = pci().ReadConfig8(cap_field(offset, cap_next), &value8);
   if (status != ZX_OK) {
     return status;
   }
   cap->cap_next = value8;
-  status = pci().ConfigRead8(cap_field(offset, cap_len), &value8);
+  status = pci().ReadConfig8(cap_field(offset, cap_len), &value8);
   if (status != ZX_OK) {
     return status;
   }
   cap->cap_len = value8;
-  status = pci().ConfigRead8(cap_field(offset, cfg_type), &value8);
+  status = pci().ReadConfig8(cap_field(offset, cfg_type), &value8);
   if (status != ZX_OK) {
     return status;
   }
   cap->cfg_type = value8;
-  status = pci().ConfigRead8(cap_field(offset, bar), &value8);
+  status = pci().ReadConfig8(cap_field(offset, bar), &value8);
   if (status != ZX_OK) {
     return status;
   }
   cap->bar = value8;
 
   uint32_t value32;
-  status = pci().ConfigRead32(cap_field(offset, offset), &value32);
+  status = pci().ReadConfig32(cap_field(offset, offset), &value32);
   if (status != ZX_OK) {
     return status;
   }
   cap->offset = value32;
-  status = pci().ConfigRead32(cap_field(offset, length), &value32);
+  status = pci().ReadConfig32(cap_field(offset, length), &value32);
   if (status != ZX_OK) {
     return status;
   }
@@ -135,8 +135,8 @@ zx_status_t PciModernBackend::Init() {
   // try to parse capabilities
   uint8_t off = 0;
   zx_status_t st;
-  for (st = pci().GetFirstCapability(PCI_CAP_ID_VENDOR, &off); st == ZX_OK;
-       st = pci().GetNextCapability(PCI_CAP_ID_VENDOR, off, &off)) {
+  for (st = pci().GetFirstCapability(PCI_CAPABILITY_ID_VENDOR, &off); st == ZX_OK;
+       st = pci().GetNextCapability(PCI_CAPABILITY_ID_VENDOR, off, &off)) {
     virtio_pci_cap_t cap;
 
     st = ReadVirtioCap(off, &cap);
@@ -151,7 +151,7 @@ zx_status_t PciModernBackend::Init() {
       case VIRTIO_PCI_CAP_NOTIFY_CFG:
         // Virtio 1.0 section 4.1.4.4
         // notify_off_multiplier is a 32bit field following this capability
-        pci().ConfigRead32(static_cast<uint8_t>(off + sizeof(virtio_pci_cap_t)), &notify_off_mul_);
+        pci().ReadConfig32(static_cast<uint8_t>(off + sizeof(virtio_pci_cap_t)), &notify_off_mul_);
         NotifyCfgCallbackLocked(cap);
         break;
       case VIRTIO_PCI_CAP_ISR_CFG:
@@ -315,7 +315,7 @@ zx_status_t PciModernBackend::SetRing(uint16_t index, uint16_t count, zx_paddr_t
   MmioWrite(&common_cfg_->queue_avail, pa_avail);
   MmioWrite(&common_cfg_->queue_used, pa_used);
 
-  if (irq_mode() == PCI_IRQ_MODE_MSI_X) {
+  if (irq_mode() == PCI_INTERRUPT_MODE_MSI_X) {
     uint16_t vector = 0;
     MmioWrite(&common_cfg_->config_msix_vector, PciBackend::kMsiConfigVector);
     MmioRead(&common_cfg_->config_msix_vector, &vector);

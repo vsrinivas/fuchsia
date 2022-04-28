@@ -237,7 +237,7 @@ TEST_F(PciBusTests, LegacyIrqSignalTest) {
   // different pins, but the pins are mapped to the same vector.
   for (uint8_t i = 0; i < 2; i++) {
     auto* bus_device = bus->GetDevice({0, 0, i});
-    ASSERT_OK(bus_device->SetIrqMode(PCI_IRQ_MODE_LEGACY, 1));
+    ASSERT_OK(bus_device->SetIrqMode(PCI_INTERRUPT_MODE_LEGACY, 1));
     // Map the interrupt the same way a driver would.
     auto result = bus->GetDevice({0, 0, i})->MapInterrupt(0);
     ASSERT_TRUE(result.is_ok());
@@ -287,7 +287,7 @@ TEST_F(PciBusTests, LegacyIrqNoAckTest) {
   auto bus = std::make_unique<TestBus>(fake_ddk::kFakeParent, pciroot().proto(), pciroot().info(),
                                        pciroot().ecam().CopyEcam());
   ASSERT_OK(bus->Initialize());
-  ASSERT_OK(bus->GetDevice(device)->SetIrqMode(PCI_IRQ_MODE_LEGACY_NOACK, 1));
+  ASSERT_OK(bus->GetDevice(device)->SetIrqMode(PCI_INTERRUPT_MODE_LEGACY_NOACK, 1));
 
   auto* bus_device = bus->GetDevice(device);
   // Quick method to check if the disabled flag is set for a legacy interrupt.

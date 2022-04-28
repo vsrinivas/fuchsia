@@ -1884,7 +1884,7 @@ zx_status_t Controller::DisplayControllerImplSetBufferCollectionConstraints(
 // Intel GPU core methods
 
 zx_status_t Controller::IntelGpuCoreReadPciConfig16(uint16_t addr, uint16_t* value_out) {
-  return pci_config_read16(&pci_, addr, value_out);
+  return pci_read_config16(&pci_, addr, value_out);
 }
 
 zx_status_t Controller::IntelGpuCoreMapPciMmio(uint32_t pci_bar, uint8_t** addr_out,
@@ -2122,7 +2122,7 @@ void Controller::DdkSuspend(ddk::SuspendTxn txn) {
     // mexec by mapping gfx stolen memory to gaddr 0.
 
     auto bdsm_reg = registers::BaseDsm::Get().FromValue(0);
-    zx_status_t status = pci_config_read32(&pci_, bdsm_reg.kAddr, bdsm_reg.reg_value_ptr());
+    zx_status_t status = pci_read_config32(&pci_, bdsm_reg.kAddr, bdsm_reg.reg_value_ptr());
     if (status != ZX_OK) {
       zxlogf(TRACE, "Failed to read dsm base");
       txn.Reply(ZX_OK, txn.requested_state());
@@ -2215,7 +2215,7 @@ zx_status_t Controller::Init() {
     return status;
   }
 
-  pci_config_read16(&pci_, PCI_CONFIG_DEVICE_ID, &device_id_);
+  pci_read_config16(&pci_, PCI_CONFIG_DEVICE_ID, &device_id_);
   zxlogf(TRACE, "Device id %x", device_id_);
   if (device_id_ == INTEL_I915_BROADWELL_DID) {
     // TODO: this should be based on the specific target

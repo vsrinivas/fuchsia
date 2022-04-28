@@ -180,7 +180,7 @@ class IntelI2cController : public IntelI2cControllerType,
  private:
   zx_status_t Init();
   ddk::Pci pci_;
-  pci_irq_mode_t irq_mode_;
+  pci_interrupt_mode_t irq_mode_;
   fidl::WireSyncClient<fuchsia_hardware_acpi::Device> acpi_;
 
   thrd_t irq_thread_;

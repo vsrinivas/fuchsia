@@ -93,13 +93,13 @@ void PcieDevice::DdkInit(::ddk::InitTxn txn) {
       IWL_ERR(nullptr, "Failed to get PCI BTI: %s\n", zx_status_get_string(status));
       return status;
     }
-    pcie_device_info_t pci_info = {};
+    pci_device_info_t pci_info = {};
     if ((status = pci_get_device_info(&pci_dev_.proto, &pci_info)) != ZX_OK) {
       return status;
     }
     uint16_t subsystem_device_id = 0;
-    if ((status = pci_config_read16(&pci_dev_.proto, PCI_CFG_SUBSYSTEM_ID, &subsystem_device_id)) !=
-        ZX_OK) {
+    if ((status = pci_read_config16(&pci_dev_.proto, PCI_CONFIG_SUBSYSTEM_ID,
+                                    &subsystem_device_id)) != ZX_OK) {
       IWL_ERR(nullptr, "Failed to read PCI subsystem device ID: %s\n",
               zx_status_get_string(status));
       return status;

@@ -13,7 +13,6 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
-#include <lib/pci/hw.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -168,22 +167,24 @@ zx_status_t KernelPci::PciGetBar(uint32_t bar_id, pci_bar_t* out_res) {
   zx_pci_bar_t bar{};
   zx_status_t st = zx_pci_get_bar(device_.handle, bar_id, &bar, &handle);
   if (st == ZX_OK) {
-    out_res->id = bar_id;
+    out_res->bar_id = bar_id;
     out_res->size = bar.size;
     out_res->type = bar.type;
-    out_res->address = bar.addr;
-    if (out_res->type == ZX_PCI_BAR_TYPE_PIO) {
+    if (out_res->type == PCI_BAR_TYPE_IO) {
       char name[] = "kPCI IO";
       st = zx_resource_create(get_root_resource(), ZX_RSRC_KIND_IOPORT, bar.addr, bar.size, name,
                               sizeof(name), &handle);
+      out_res->result.io.address = bar.addr;
+      out_res->result.io.resource = handle;
+    } else {
+      out_res->result.vmo = handle;
     }
-    out_res->handle = handle;
   }
 
   return st;
 }
 
-zx_status_t KernelPci::PciEnableBusMaster(bool enable) {
+zx_status_t KernelPci::PciSetBusMastering(bool enable) {
   return zx_pci_enable_bus_master(device_.handle, enable);
 }
 
@@ -197,23 +198,28 @@ zx_status_t KernelPci::PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_ha
 
 void KernelPci::PciGetInterruptModes(pci_interrupt_modes_t* out_modes) {
   pci_interrupt_modes_t modes{};
-  zx_pci_query_irq_mode(device_.handle, PCI_IRQ_MODE_LEGACY, &modes.legacy);
-  zx_pci_query_irq_mode(device_.handle, PCI_IRQ_MODE_MSI, &modes.msi);
-  zx_pci_query_irq_mode(device_.handle, PCI_IRQ_MODE_MSI_X, &modes.msix);
+  uint32_t count = 0;
+  zx_pci_query_irq_mode(device_.handle, PCI_INTERRUPT_MODE_LEGACY, &count);
+  modes.has_legacy = !!count;
+  zx_pci_query_irq_mode(device_.handle, PCI_INTERRUPT_MODE_MSI, &count);
+  modes.msi_count = static_cast<uint8_t>(count);
+  zx_pci_query_irq_mode(device_.handle, PCI_INTERRUPT_MODE_MSI_X, &count);
+  modes.msix_count = static_cast<uint16_t>(count);
   *out_modes = modes;
 }
 
-zx_status_t KernelPci::PciSetInterruptMode(pci_irq_mode_t mode, uint32_t requested_irq_count) {
+zx_status_t KernelPci::PciSetInterruptMode(pci_interrupt_mode_t mode,
+                                           uint32_t requested_irq_count) {
   return zx_pci_set_irq_mode(device_.handle, mode, requested_irq_count);
 }
 
-zx_status_t KernelPci::PciGetDeviceInfo(pcie_device_info_t* out_info) {
+zx_status_t KernelPci::PciGetDeviceInfo(pci_device_info_t* out_info) {
   memcpy(out_info, &device_.info, sizeof(*out_info));
   return ZX_OK;
 }
 
 template <typename T>
-zx_status_t ConfigRead(zx_handle_t device, uint16_t offset, T* out_value) {
+zx_status_t ReadConfig(zx_handle_t device, uint16_t offset, T* out_value) {
   uint32_t value;
   zx_status_t st = zx_pci_config_read(device, offset, sizeof(T), &value);
   if (st == ZX_OK) {
@@ -222,31 +228,31 @@ zx_status_t ConfigRead(zx_handle_t device, uint16_t offset, T* out_value) {
   return st;
 }
 
-zx_status_t KernelPci::PciConfigRead8(uint16_t offset, uint8_t* out_value) {
-  return ConfigRead(device_.handle, offset, out_value);
+zx_status_t KernelPci::PciReadConfig8(uint16_t offset, uint8_t* out_value) {
+  return ReadConfig(device_.handle, offset, out_value);
 }
 
-zx_status_t KernelPci::PciConfigRead16(uint16_t offset, uint16_t* out_value) {
-  return ConfigRead(device_.handle, offset, out_value);
+zx_status_t KernelPci::PciReadConfig16(uint16_t offset, uint16_t* out_value) {
+  return ReadConfig(device_.handle, offset, out_value);
 }
 
-zx_status_t KernelPci::PciConfigRead32(uint16_t offset, uint32_t* out_value) {
-  return ConfigRead(device_.handle, offset, out_value);
+zx_status_t KernelPci::PciReadConfig32(uint16_t offset, uint32_t* out_value) {
+  return ReadConfig(device_.handle, offset, out_value);
 }
-zx_status_t KernelPci::PciConfigWrite8(uint16_t offset, uint8_t value) {
+zx_status_t KernelPci::PciWriteConfig8(uint16_t offset, uint8_t value) {
   return zx_pci_config_write(device_.handle, offset, sizeof(value), value);
 }
 
-zx_status_t KernelPci::PciConfigWrite16(uint16_t offset, uint16_t value) {
+zx_status_t KernelPci::PciWriteConfig16(uint16_t offset, uint16_t value) {
   return zx_pci_config_write(device_.handle, offset, sizeof(value), value);
 }
 
-zx_status_t KernelPci::PciConfigWrite32(uint16_t offset, uint32_t value) {
+zx_status_t KernelPci::PciWriteConfig32(uint16_t offset, uint32_t value) {
   return zx_pci_config_write(device_.handle, offset, sizeof(value), value);
 }
 
 zx_status_t KernelPci::PciGetFirstCapability(uint8_t cap_id, uint8_t* out_offset) {
-  return PciGetNextCapability(cap_id, PCI_CFG_CAPABILITIES_PTR, out_offset);
+  return PciGetNextCapability(cap_id, PCI_CONFIG_CAPABILITIES_PTR, out_offset);
 }
 
 zx_status_t KernelPci::PciGetNextCapability(uint8_t cap_id, uint8_t offset, uint8_t* out_offset) {
@@ -254,7 +260,7 @@ zx_status_t KernelPci::PciGetNextCapability(uint8_t cap_id, uint8_t offset, uint
   // since it contains 0x34 which ppints to the start of the list. Otherwise, we
   // have an existing capability's offset and need to advance one byte to its
   // next pointer.
-  if (offset != PCI_CFG_CAPABILITIES_PTR) {
+  if (offset != PCI_CONFIG_CAPABILITIES_PTR) {
     offset++;
   }
 
@@ -337,10 +343,19 @@ static zx_status_t pci_init_child(zx_device_t* parent, uint32_t index,
     return status;
   }
 
-  kpci_device device{};
-  device.info = info;
-  device.handle = handle;
-  device.index = index;
+  kpci_device device{
+      .handle = handle,
+      .index = index,
+      .info = {.vendor_id = info.vendor_id,
+               .device_id = info.device_id,
+               .base_class = info.base_class,
+               .sub_class = info.sub_class,
+               .program_interface = info.program_interface,
+               .revision_id = info.revision_id,
+               .bus_id = info.bus_id,
+               .dev_id = info.dev_id,
+               .func_id = info.func_id},
+  };
 
   // Store the PCIROOT protocol for use with get_bti in the pci protocol It is
   // not fatal if this fails, but bti protocol methods will not work.

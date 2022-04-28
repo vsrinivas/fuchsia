@@ -222,7 +222,7 @@ bool IgdOpRegion::ProcessDdiConfigs() {
 bool IgdOpRegion::Swsci(pci_protocol_t* pci, uint16_t function, uint16_t subfunction,
                         uint32_t additional_param, uint16_t* exit_param, uint32_t* additional_res) {
   uint16_t val;
-  if (pci_config_read16(pci, kIgdSwSciReg, &val) != ZX_OK) {
+  if (pci_read_config16(pci, kIgdSwSciReg, &val) != ZX_OK) {
     zxlogf(WARNING, "Failed to read SWSCI register");
     return false;
   }
@@ -242,7 +242,7 @@ bool IgdOpRegion::Swsci(pci_protocol_t* pci, uint16_t function, uint16_t subfunc
   sci_interface->entry_and_exit_params = sci_entry_param.reg_value();
   sci_interface->additional_params = additional_param;
 
-  if (pci_config_write16(pci, kIgdSwSciReg,
+  if (pci_write_config16(pci, kIgdSwSciReg,
                          gmch_swsci_reg.set_gmch_sw_sci_trigger(1).reg_value()) != ZX_OK) {
     zxlogf(WARNING, "Failed to write SWSCI register");
     return false;
@@ -342,7 +342,7 @@ void IgdOpRegion::ProcessBacklightData() {
 
 zx_status_t IgdOpRegion::Init(pci_protocol_t* pci) {
   uint32_t igd_addr;
-  zx_status_t status = pci_config_read32(pci, kIgdOpRegionAddrReg, &igd_addr);
+  zx_status_t status = pci_read_config32(pci, kIgdOpRegionAddrReg, &igd_addr);
   if (status != ZX_OK || !igd_addr) {
     zxlogf(ERROR, "Failed to locate IGD OpRegion (%d)", status);
     return status;

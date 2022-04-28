@@ -13,7 +13,6 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/device-protocol/pci.h>
-#include <lib/pci/hw.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -17,7 +17,6 @@
 #include <lib/ddk/driver.h>
 #include <lib/ddk/metadata.h>
 #include <lib/device-protocol/pci.h>
-#include <lib/pci/hw.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
@@ -107,8 +106,8 @@ zx_status_t IntelI2cController::Init() {
 
   uint16_t vendor_id;
   uint16_t device_id;
-  pci_.ConfigRead16(PCI_CONFIG_VENDOR_ID, &vendor_id);
-  pci_.ConfigRead16(PCI_CONFIG_DEVICE_ID, &device_id);
+  pci_.ReadConfig16(PCI_CONFIG_VENDOR_ID, &vendor_id);
+  pci_.ReadConfig16(PCI_CONFIG_DEVICE_ID, &device_id);
 
   status = pci_.MapMmio(0u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio_);
   if (status != ZX_OK) {
@@ -400,7 +399,7 @@ zx_status_t IntelI2cController::SetBusFrequency(const uint32_t frequency) {
 int IntelI2cController::IrqThread() {
   zx_status_t status;
   for (;;) {
-    if (irq_mode_ == PCI_IRQ_MODE_LEGACY) {
+    if (irq_mode_ == PCI_INTERRUPT_MODE_LEGACY) {
       pci_.AckInterrupt();
     }
 

@@ -5,9 +5,9 @@
 #define SRC_DEVICES_BUS_DRIVERS_PCI_DEVICE_H_
 
 #include <assert.h>
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/inspect/cpp/inspector.h>
-#include <lib/pci/hw.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 #include <sys/types.h>
@@ -69,7 +69,7 @@ class Device : public PciDeviceType,
   static constexpr char kInspectLegacyInterrupt[] = "Legacy Interrupt";
   static constexpr char kInspectMsi[] = "Message Signaled Interrupts";
   static constexpr char kInspectLegacyDisabled[] = "Disabled";
-  static const constexpr char* kInspectIrqModes[PCI_IRQ_MODE_COUNT] = {
+  static const constexpr char* kInspectIrqModes[PCI_INTERRUPT_MODE_COUNT] = {
       "Disabled", "Legacy Interrupt", "Legacy Interrupt (No Acknowledge)",
       "Message Signaled Interrupts (MSI)", "MSI-X"};
   static constexpr char kInspectLegacyInterruptLine[] = "InterruptLine";
@@ -102,16 +102,17 @@ class Device : public PciDeviceType,
   };
 
   // This structure contains all bookkeeping and state for a device's
-  // configured IRQ mode. It is initialized to PCI_IRQ_MODE_DISABLED.
+  // configured IRQ mode. It is initialized to PCI_INTERRUPT_MODE_DISABLED.
   struct Irqs {
-    pci_irq_mode_t mode;     // The mode currently configured.
-    zx::interrupt legacy;    // Virtual interrupt for legacy signaling.
+    pci_interrupt_mode_t mode;  // The mode currently configured.
+    zx::interrupt legacy;       // Virtual interrupt for legacy signaling.
     uint32_t legacy_vector;  // Vector for the legacy interrupt, mirrors kInterruptLine in Config.
     zx_time_t legacy_irq_period_start;  // Timestamp of the current second we're monitoring for IRQ
                                         // floods.
     bool legacy_disabled;               // Whether  the legacy vector has been disabled
     zx::msi msi_allocation;             // The MSI allocation object for MSI & MSI-X
-    uint64_t irqs_in_period;  // Current count of interrupts per PCI_IRQ_MODE_LEGACY_NOACK period.
+    uint64_t
+        irqs_in_period;  // Current count of interrupts per PCI_INTERRUPT_MODE_LEGACY_NOACK period.
   };
 
   struct Capabilities {
@@ -142,24 +143,24 @@ class Device : public PciDeviceType,
 
   // Templated helpers to assist with differently sized protocol reads and writes.
   template <typename V, typename R>
-  zx_status_t ConfigWrite(uint16_t offset, V value);
+  zx_status_t WriteConfig(uint16_t offset, V value);
   template <typename V, typename R>
-  zx_status_t ConfigRead(uint16_t offset, V* value);
+  zx_status_t ReadConfig(uint16_t offset, V* value);
   // ddk::PciProtocol implementations.
   zx_status_t PciGetBar(uint32_t bar_id, pci_bar_t* out_bar);
-  zx_status_t PciEnableBusMaster(bool enable);
+  zx_status_t PciSetBusMastering(bool enable);
   zx_status_t PciResetDevice();
   zx_status_t PciAckInterrupt();
   zx_status_t PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle);
   void PciGetInterruptModes(pci_interrupt_modes_t* out_modes);
-  zx_status_t PciSetInterruptMode(pci_irq_mode_t mode, uint32_t requested_irq_count);
-  zx_status_t PciGetDeviceInfo(pcie_device_info_t* out_info);
-  zx_status_t PciConfigRead8(uint16_t offset, uint8_t* out_value);
-  zx_status_t PciConfigRead16(uint16_t offset, uint16_t* out_value);
-  zx_status_t PciConfigRead32(uint16_t offset, uint32_t* out_value);
-  zx_status_t PciConfigWrite8(uint16_t offset, uint8_t value);
-  zx_status_t PciConfigWrite16(uint16_t offset, uint16_t value);
-  zx_status_t PciConfigWrite32(uint16_t offset, uint32_t value);
+  zx_status_t PciSetInterruptMode(pci_interrupt_mode_t mode, uint32_t requested_irq_count);
+  zx_status_t PciGetDeviceInfo(pci_device_info_t* out_info);
+  zx_status_t PciReadConfig8(uint16_t offset, uint8_t* out_value);
+  zx_status_t PciReadConfig16(uint16_t offset, uint16_t* out_value);
+  zx_status_t PciReadConfig32(uint16_t offset, uint32_t* out_value);
+  zx_status_t PciWriteConfig8(uint16_t offset, uint8_t value);
+  zx_status_t PciWriteConfig16(uint16_t offset, uint16_t value);
+  zx_status_t PciWriteConfig32(uint16_t offset, uint32_t value);
   zx_status_t PciGetFirstCapability(uint8_t cap_id, uint8_t* out_offset);
   zx_status_t PciGetNextCapability(uint8_t cap_id, uint8_t offset, uint8_t* out_offset);
   zx_status_t PciGetFirstExtendedCapability(uint16_t cap_id, uint16_t* out_offset);
@@ -207,7 +208,7 @@ class Device : public PciDeviceType,
   // @param enable If true, allow the device to access main system memory as a bus
   // master.
   // @return A zx_status_t indicating success or failure of the operation.
-  zx_status_t EnableBusMaster(bool enabled) __TA_REQUIRES(dev_lock_);
+  zx_status_t SetBusMastering(bool enabled) __TA_REQUIRES(dev_lock_);
 
   // Enable or disable PIO access in a device's configuration.
   //
@@ -275,9 +276,9 @@ class Device : public PciDeviceType,
   // These methods handle IRQ configuration and are generally called by the
   // PciProtocol methods, though they may be used to disable IRQs on
   // initialization as well.
-  zx::status<uint32_t> QueryIrqMode(pci_irq_mode_t mode) __TA_EXCLUDES(dev_lock_);
+  zx::status<uint32_t> QueryIrqMode(pci_interrupt_mode_t mode) __TA_EXCLUDES(dev_lock_);
   pci_interrupt_modes_t GetInterruptModes() __TA_EXCLUDES(dev_lock_);
-  zx_status_t SetIrqMode(pci_irq_mode_t mode, uint32_t irq_cnt) __TA_EXCLUDES(dev_lock_);
+  zx_status_t SetIrqMode(pci_interrupt_mode_t mode, uint32_t irq_cnt) __TA_EXCLUDES(dev_lock_);
   zx::status<zx::interrupt> MapInterrupt(uint32_t which_irq) __TA_EXCLUDES(dev_lock_);
   zx_status_t DisableInterrupts() __TA_REQUIRES(dev_lock_);
   zx_status_t EnableLegacy(bool needs_ack) __TA_REQUIRES(dev_lock_);
@@ -318,8 +319,10 @@ class Device : public PciDeviceType,
     ModifyCmdLocked(UINT16_MAX, value);
   }
 
-  bool IoEnabled() __TA_REQUIRES(dev_lock_) { return ReadCmdLocked() & PCI_CFG_COMMAND_IO_EN; }
-  bool MmioEnabled() __TA_REQUIRES(dev_lock_) { return ReadCmdLocked() & PCI_CFG_COMMAND_MEM_EN; }
+  bool IoEnabled() __TA_REQUIRES(dev_lock_) { return ReadCmdLocked() & PCI_CONFIG_COMMAND_IO_EN; }
+  bool MmioEnabled() __TA_REQUIRES(dev_lock_) {
+    return ReadCmdLocked() & PCI_CONFIG_COMMAND_MEM_EN;
+  }
 
   zx_status_t ProbeCapabilities() __TA_REQUIRES(dev_lock_);
   zx_status_t ParseCapabilities() __TA_REQUIRES(dev_lock_);
@@ -388,7 +391,7 @@ class Device : public PciDeviceType,
   bool is_pcie_ = false;
 
   Capabilities caps_ __TA_GUARDED(dev_lock_){};
-  Irqs irqs_ __TA_GUARDED(dev_lock_){.mode = PCI_IRQ_MODE_DISABLED};
+  Irqs irqs_ __TA_GUARDED(dev_lock_){.mode = PCI_INTERRUPT_MODE_DISABLED};
 
   // Diagnostics
   mutable Inspect metrics_;

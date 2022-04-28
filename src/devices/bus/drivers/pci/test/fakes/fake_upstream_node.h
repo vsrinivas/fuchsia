@@ -20,7 +20,7 @@ class FakeUpstreamNode : public UpstreamNode {
 
   void UnplugDownstream() final { UpstreamNode::UnplugDownstream(); }
   void DisableDownstream() final { UpstreamNode::DisableDownstream(); }
-  zx_status_t EnableBusMasterUpstream(bool) { return ZX_OK; }
+  zx_status_t SetBusMasteringUpstream(bool) { return ZX_OK; }
 
   PCI_IMPLEMENT_REFCOUNTED;
 

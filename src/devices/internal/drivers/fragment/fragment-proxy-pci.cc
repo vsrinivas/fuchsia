@@ -81,28 +81,30 @@ zx_status_t FragmentProxy::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
     return resp.header.status;
   }
 
-  out_bar->id = resp.bar.id;
+  out_bar->bar_id = resp.bar.id;
   out_bar->size = resp.bar.size;
-  out_bar->type = (resp.bar.is_mmio) ? ZX_PCI_BAR_TYPE_MMIO : ZX_PCI_BAR_TYPE_PIO;
-  out_bar->address = resp.bar.address;
-  if (!resp.bar.is_mmio) {
+  out_bar->type = (resp.bar.is_mmio) ? PCI_BAR_TYPE_MMIO : PCI_BAR_TYPE_IO;
+  if (resp.bar.is_mmio) {
+    out_bar->result.vmo = handle;
+  } else {
     // x86 PIO space access requires permission in the I/O bitmap.  If an IO BAR
     // is used then the handle returned corresponds to a resource with access to
     // this range of IO space.  On other platforms, like ARM, IO bars are still
     // handled in MMIO space so this type will be unused.
+    out_bar->result.io.address = resp.bar.address;
     st = zx_ioports_request(handle, static_cast<uint16_t>(resp.bar.address),
                             static_cast<uint32_t>(resp.bar.size));
     if (st != ZX_OK) {
-      zxlogf(ERROR, "Failed to map IO window for bar into process: %d", st);
+      zxlogf(ERROR, "Failed to map IO window %#lx for bar into process: %d", resp.bar.address, st);
       return st;
     }
+    out_bar->result.io.resource = handle;
   }
-  out_bar->handle = handle;
 
   return ZX_OK;
 }
 
-zx_status_t FragmentProxy::PciEnableBusMaster(bool enable) {
+zx_status_t FragmentProxy::PciSetBusMastering(bool enable) {
   PciRpcRequest req{};
   PciRpcResponse resp{};
 
@@ -149,7 +151,8 @@ void FragmentProxy::PciGetInterruptModes(pci_interrupt_modes_t* out_modes) {
   }
 }
 
-zx_status_t FragmentProxy::PciSetInterruptMode(pci_irq_mode_t mode, uint32_t requested_irq_count) {
+zx_status_t FragmentProxy::PciSetInterruptMode(pci_interrupt_mode_t mode,
+                                               uint32_t requested_irq_count) {
   PciRpcRequest req{};
   PciRpcResponse resp{};
 
@@ -159,7 +162,7 @@ zx_status_t FragmentProxy::PciSetInterruptMode(pci_irq_mode_t mode, uint32_t req
                 &resp);
 }
 
-zx_status_t FragmentProxy::PciGetDeviceInfo(pcie_device_info_t* out_info) {
+zx_status_t FragmentProxy::PciGetDeviceInfo(pci_device_info_t* out_info) {
   PciRpcRequest req{};
   PciRpcResponse resp{};
   zx_status_t st = PciRpc(pci::PCI_OP_GET_DEVICE_INFO, /*rd_handle=*/nullptr,
@@ -171,7 +174,7 @@ zx_status_t FragmentProxy::PciGetDeviceInfo(pcie_device_info_t* out_info) {
 }
 
 template <typename T>
-zx_status_t FragmentProxy::PciConfigRead(uint16_t offset, T* out_value) {
+zx_status_t FragmentProxy::PciReadConfig(uint16_t offset, T* out_value) {
   PciRpcRequest req{};
   PciRpcResponse resp{};
 
@@ -185,20 +188,20 @@ zx_status_t FragmentProxy::PciConfigRead(uint16_t offset, T* out_value) {
   return st;
 }
 
-zx_status_t FragmentProxy::PciConfigRead8(uint16_t offset, uint8_t* out_value) {
-  return PciConfigRead(offset, out_value);
+zx_status_t FragmentProxy::PciReadConfig8(uint16_t offset, uint8_t* out_value) {
+  return PciReadConfig(offset, out_value);
 }
 
-zx_status_t FragmentProxy::PciConfigRead16(uint16_t offset, uint16_t* out_value) {
-  return PciConfigRead(offset, out_value);
+zx_status_t FragmentProxy::PciReadConfig16(uint16_t offset, uint16_t* out_value) {
+  return PciReadConfig(offset, out_value);
 }
 
-zx_status_t FragmentProxy::PciConfigRead32(uint16_t offset, uint32_t* out_value) {
-  return PciConfigRead(offset, out_value);
+zx_status_t FragmentProxy::PciReadConfig32(uint16_t offset, uint32_t* out_value) {
+  return PciReadConfig(offset, out_value);
 }
 
 template <typename T>
-zx_status_t FragmentProxy::PciConfigWrite(uint16_t offset, T value) {
+zx_status_t FragmentProxy::PciWriteConfig(uint16_t offset, T value) {
   PciRpcRequest req{};
   PciRpcResponse resp{};
 
@@ -209,16 +212,16 @@ zx_status_t FragmentProxy::PciConfigWrite(uint16_t offset, T value) {
                 &resp);
 }
 
-zx_status_t FragmentProxy::PciConfigWrite8(uint16_t offset, uint8_t value) {
-  return PciConfigWrite(offset, value);
+zx_status_t FragmentProxy::PciWriteConfig8(uint16_t offset, uint8_t value) {
+  return PciWriteConfig(offset, value);
 }
 
-zx_status_t FragmentProxy::PciConfigWrite16(uint16_t offset, uint16_t value) {
-  return PciConfigWrite(offset, value);
+zx_status_t FragmentProxy::PciWriteConfig16(uint16_t offset, uint16_t value) {
+  return PciWriteConfig(offset, value);
 }
 
-zx_status_t FragmentProxy::PciConfigWrite32(uint16_t offset, uint32_t value) {
-  return PciConfigWrite(offset, value);
+zx_status_t FragmentProxy::PciWriteConfig32(uint16_t offset, uint32_t value) {
+  return PciWriteConfig(offset, value);
 }
 
 zx_status_t FragmentProxy::PciGetFirstCapability(uint8_t cap_id, uint8_t* out_offset) {

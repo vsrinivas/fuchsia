@@ -21,7 +21,7 @@ constexpr size_t kPageSize = PAGE_SIZE;
 // graphics control register set to 0x01.
 constexpr size_t kTableSize = (1 << 21);
 void Configure2MbGtt(pci::FakePciProtocol* pci) {
-  pci->PciConfigWrite16(registers::GmchGfxControl::kAddr, 0x40);
+  pci->PciWriteConfig16(registers::GmchGfxControl::kAddr, 0x40);
 }
 
 fdf::MmioBuffer MakeMmioBuffer(uint8_t* buffer, size_t size) {

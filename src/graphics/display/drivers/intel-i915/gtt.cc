@@ -68,7 +68,7 @@ zx_status_t Gtt::Init(const pci_protocol_t* pci, fdf::MmioBuffer buffer, uint32_
 
   // Calculate the size of the gtt.
   auto gmch_gfx_ctrl = registers::GmchGfxControl::Get().FromValue(0);
-  status = pci_config_read16(pci, gmch_gfx_ctrl.kAddr, gmch_gfx_ctrl.reg_value_ptr());
+  status = pci_read_config16(pci, gmch_gfx_ctrl.kAddr, gmch_gfx_ctrl.reg_value_ptr());
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to read GfxControl");
     return status;

@@ -637,27 +637,27 @@ static zx_status_t pciroot_op_get_pci_platform_info(void* ctx, pci_platform_info
 
 static bool pciroot_op_driver_should_proxy_config(void* /*ctx*/) { return false; }
 
-static zx_status_t pciroot_op_config_read8(void*, const pci_bdf_t*, uint16_t, uint8_t*) {
+static zx_status_t pciroot_op_read_config8(void*, const pci_bdf_t*, uint16_t, uint8_t*) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t pciroot_op_config_read16(void*, const pci_bdf_t*, uint16_t, uint16_t*) {
+static zx_status_t pciroot_op_read_config16(void*, const pci_bdf_t*, uint16_t, uint16_t*) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t pciroot_op_config_read32(void*, const pci_bdf_t*, uint16_t, uint32_t*) {
+static zx_status_t pciroot_op_read_config32(void*, const pci_bdf_t*, uint16_t, uint32_t*) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t pciroot_op_config_write8(void*, const pci_bdf_t*, uint16_t, uint8_t) {
+static zx_status_t pciroot_op_write_config8(void*, const pci_bdf_t*, uint16_t, uint8_t) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t pciroot_op_config_write16(void*, const pci_bdf_t*, uint16_t, uint16_t) {
+static zx_status_t pciroot_op_write_config16(void*, const pci_bdf_t*, uint16_t, uint16_t) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t pciroot_op_config_write32(void*, const pci_bdf_t*, uint16_t, uint32_t) {
+static zx_status_t pciroot_op_write_config32(void*, const pci_bdf_t*, uint16_t, uint32_t) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -674,12 +674,12 @@ static pciroot_protocol_ops_t pciroot_proto = {
     .get_bti = pciroot_op_get_bti,
     .get_pci_platform_info = pciroot_op_get_pci_platform_info,
     .driver_should_proxy_config = pciroot_op_driver_should_proxy_config,
-    .config_read8 = pciroot_op_config_read8,
-    .config_read16 = pciroot_op_config_read16,
-    .config_read32 = pciroot_op_config_read32,
-    .config_write8 = pciroot_op_config_write8,
-    .config_write16 = pciroot_op_config_write16,
-    .config_write32 = pciroot_op_config_write32,
+    .read_config8 = pciroot_op_read_config8,
+    .read_config16 = pciroot_op_read_config16,
+    .read_config32 = pciroot_op_read_config32,
+    .write_config8 = pciroot_op_write_config8,
+    .write_config16 = pciroot_op_write_config16,
+    .write_config32 = pciroot_op_write_config32,
     .get_address_space = pciroot_op_get_address_space,
     .allocate_msi = pciroot_op_allocate_msi,
 };

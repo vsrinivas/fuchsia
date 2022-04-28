@@ -60,7 +60,7 @@ class Interrupts {
 
   // Initialized by |Init|.
   zx::interrupt irq_;
-  pci_irq_mode_t irq_mode_;
+  pci_interrupt_mode_t irq_mode_;
   std::optional<thrd_t> irq_thread_;  // Valid while irq_ is valid.
 
   intel_gpu_core_interrupt_t interrupt_cb_ __TA_GUARDED(lock_) = {};

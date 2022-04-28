@@ -92,7 +92,7 @@ protocol Pciroot {
         use_proxy bool;
     });
     /// Read 8 bytes from config space for device at bdf address |address|:we, offset |offset|.
-    ConfigRead8(struct {
+    ReadConfig8(struct {
         address PciBdf;
         offset uint16;
     }) -> (struct {
@@ -100,7 +100,7 @@ protocol Pciroot {
         value uint8;
     });
     /// Read 16 bytes from config space for device at bdf address |address|, offset |offset|.
-    ConfigRead16(struct {
+    ReadConfig16(struct {
         address PciBdf;
         offset uint16;
     }) -> (struct {
@@ -108,7 +108,7 @@ protocol Pciroot {
         value uint16;
     });
     /// Read 32 bytes from config space for device at bdf address |address|, offset |offset|.
-    ConfigRead32(struct {
+    ReadConfig32(struct {
         address PciBdf;
         offset uint16;
     }) -> (struct {
@@ -116,7 +116,7 @@ protocol Pciroot {
         value uint32;
     });
     /// Write 8 bytes to config space for device at bdf |address| offset |offset|.
-    ConfigWrite8(struct {
+    WriteConfig8(struct {
         address PciBdf;
         offset uint16;
         value uint8;
@@ -124,7 +124,7 @@ protocol Pciroot {
         s zx.status;
     });
     /// Write 16 bytes to config space for device at bdf |address| offset |offset|.
-    ConfigWrite16(struct {
+    WriteConfig16(struct {
         address PciBdf;
         offset uint16;
         value uint16;
@@ -132,7 +132,7 @@ protocol Pciroot {
         s zx.status;
     });
     /// Write 32 bytes to config space for device at bdf |address| offset |offset|.
-    ConfigWrite32(struct {
+    WriteConfig32(struct {
         address PciBdf;
         offset uint16;
         value uint32;

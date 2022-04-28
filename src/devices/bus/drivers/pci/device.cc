@@ -106,7 +106,7 @@ Device::Device(zx_device_t* parent, std::unique_ptr<Config>&& config, UpstreamNo
   metrics_.msi.node = metrics_.node.CreateChild(kInspectMsi);
 
   metrics_.irq_mode =
-      metrics_.node.CreateString(kInspectIrqMode, kInspectIrqModes[PCI_IRQ_MODE_DISABLED]);
+      metrics_.node.CreateString(kInspectIrqMode, kInspectIrqModes[PCI_INTERRUPT_MODE_DISABLED]);
   uint8_t pin = cfg_->Read(Config::kInterruptPin);
   switch (pin) {
     case 1:
@@ -139,8 +139,8 @@ Device::~Device() {
   // Make certain that all bus access (MMIO, PIO, Bus mastering) has been
   // disabled and disable IRQs.
   DisableInterrupts();
-  EnableBusMaster(false);
-  ModifyCmd(/*clr_bits=*/PCI_CFG_COMMAND_IO_EN | PCI_CFG_COMMAND_MEM_EN, /*set_bits=*/0);
+  SetBusMastering(false);
+  ModifyCmd(/*clr_bits=*/PCI_CONFIG_COMMAND_IO_EN | PCI_CONFIG_COMMAND_MEM_EN, /*set_bits=*/0);
   // TODO(cja/fxbug.dev/32979): Remove this after porting is finished.
   zxlogf(TRACE, "%s [%s] dtor finished", is_bridge() ? "bridge" : "device", cfg_->addr());
 }
@@ -273,7 +273,7 @@ zx_status_t Device::InitInterrupts() {
     return status;
   }
 
-  irqs_.mode = PCI_IRQ_MODE_DISABLED;
+  irqs_.mode = PCI_INTERRUPT_MODE_DISABLED;
   return ZX_OK;
 }
 
@@ -363,15 +363,15 @@ void Device::DisableLocked() {
   }
 }
 
-zx_status_t Device::EnableBusMaster(bool enabled) {
+zx_status_t Device::SetBusMastering(bool enabled) {
   // Only allow bus mastering to be turned off if the device is disabled.
   if (enabled && disabled_) {
     return ZX_ERR_BAD_STATE;
   }
 
-  ModifyCmdLocked(enabled ? /*clr_bits=*/0 : /*set_bits=*/PCI_CFG_COMMAND_BUS_MASTER_EN,
-                  enabled ? /*clr_bits=*/PCI_CFG_COMMAND_BUS_MASTER_EN : /*set_bits=*/0);
-  return upstream_->EnableBusMasterUpstream(enabled);
+  ModifyCmdLocked(enabled ? /*clr_bits=*/0 : /*set_bits=*/PCI_CONFIG_COMMAND_BUS_MASTER_EN,
+                  enabled ? /*clr_bits=*/PCI_CONFIG_COMMAND_BUS_MASTER_EN : /*set_bits=*/0);
+  return upstream_->SetBusMasteringUpstream(enabled);
 }
 
 // Configures the BAR represented by |bar| by writing to its register and configuring
@@ -380,7 +380,7 @@ zx_status_t Device::WriteBarInformation(const Bar& bar) {
   // Now write the allocated address space to the BAR.
   uint16_t cmd_backup = cfg_->Read(Config::kCommand);
   // Figure out the IO type of the bar and disable that while we adjust the bar address.
-  uint16_t mem_io_en_flag = (bar.is_mmio) ? PCI_CFG_COMMAND_MEM_EN : PCI_CFG_COMMAND_IO_EN;
+  uint16_t mem_io_en_flag = (bar.is_mmio) ? PCI_CONFIG_COMMAND_MEM_EN : PCI_CONFIG_COMMAND_IO_EN;
   ModifyCmdLocked(mem_io_en_flag, cmd_backup);
 
   cfg_->Write(Config::kBar(bar.bar_id), static_cast<uint32_t>(bar.address));
@@ -429,7 +429,7 @@ zx_status_t Device::ProbeBar(uint8_t bar_id) {
   // some minor glitching while access is disabled.
   bool enabled = MmioEnabled() || IoEnabled();
   uint16_t cmd_backup = ReadCmdLocked();
-  ModifyCmdLocked(/*clr_bits=*/PCI_CFG_COMMAND_MEM_EN | PCI_CFG_COMMAND_IO_EN,
+  ModifyCmdLocked(/*clr_bits=*/PCI_CONFIG_COMMAND_MEM_EN | PCI_CONFIG_COMMAND_IO_EN,
                   /*set_bits=*/cmd_backup);
   uint32_t addr_mask = (bar.is_mmio) ? PCI_BAR_MMIO_ADDR_MASK : PCI_BAR_PIO_ADDR_MASK;
 

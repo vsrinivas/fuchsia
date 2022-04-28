@@ -102,7 +102,7 @@ void iwl_trans_pcie_dump_regs(struct iwl_trans* trans) {
     }
     print_hex_dump(KERN_ERR, prefix, DUMP_PREFIX_OFFSET, 32, 4, buf, i, 0);
 
-    pos = pci_find_ext_capability(pdev, PCI_EXT_CAP_ID_ERR);
+    pos = pci_find_ext_capability(pdev, PCI_EXTENDED_CAPABILITY_ID_ERR);
     if (pos) {
         IWL_ERR(trans, "iwlwifi device AER capability structure:\n");
         for (i = 0, ptr = buf; i < PCI_ERR_ROOT_COMMAND; i += 4, ptr++)
@@ -124,7 +124,7 @@ void iwl_trans_pcie_dump_regs(struct iwl_trans* trans) {
     /* Print root port AER registers */
     pos = 0;
     pdev = pcie_find_root_port(pdev);
-    if (pdev) { pos = pci_find_ext_capability(pdev, PCI_EXT_CAP_ID_ERR); }
+    if (pdev) { pos = pci_find_ext_capability(pdev, PCI_EXTENDED_CAPABILITY_ID_ERR); }
     if (pos) {
         IWL_ERR(trans, "iwlwifi root port (%s) AER cap structure:\n", pci_name(pdev));
         sprintf(prefix, "iwlwifi %s: ", pci_name(pdev));
@@ -249,7 +249,7 @@ static void iwl_pcie_set_pwr(struct iwl_trans* trans, bool vaux) {
 }
 
 /* PCI registers */
-#define PCI_CFG_RETRY_TIMEOUT 0x041
+#define PCI_CONFIG_RETRY_TIMEOUT 0x041
 
 void iwl_pcie_apm_config(struct iwl_trans* trans) {
 #if 1  // NEEDS_PORTING
@@ -1609,10 +1609,10 @@ enable_msi:
   const uint32_t request_irq_count = 1;  // Currently we only request 1 interrupt.
   pci_interrupt_modes_t irq_modes = {};
   pci_get_interrupt_modes(trans_pcie->pci, &irq_modes);
-  pci_irq_mode_t irq_mode = PCI_IRQ_MODE_LEGACY;
+  pci_interrupt_mode_t irq_mode = PCI_INTERRUPT_MODE_LEGACY;
   // Favor MSI interrupt mode if it can supply enough interrupts.
-  if (irq_modes.msi >= request_irq_count) {
-    irq_mode = PCI_IRQ_MODE_MSI;
+  if (irq_modes.msi_count >= request_irq_count) {
+    irq_mode = PCI_INTERRUPT_MODE_MSI;
   }
 
   zx_status_t status = pci_set_interrupt_mode(trans_pcie->pci, irq_mode, request_irq_count);
@@ -3225,7 +3225,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(struct iwl_pci_dev* pdev,
   trans->max_skb_frags = IWL_PCIE_MAX_FRAGS(trans_pcie);
 
   trans_pcie->pci = &pdev->proto;
-  status = pci_enable_bus_master(trans_pcie->pci, true);
+  status = pci_set_bus_mastering(trans_pcie->pci, true);
   if (status != ZX_OK) {
     IWL_ERR(trans, "Failed to enable bus mastering: %s\n", zx_status_get_string(status));
     goto out_no_pci;
@@ -3254,7 +3254,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(struct iwl_pci_dev* pdev,
 
   /* We disable the RETRY_TIMEOUT register (0x41) to keep
    * PCI Tx retries from interfering with C3 CPU state */
-  pci_config_write8(trans_pcie->pci, PCI_CFG_RETRY_TIMEOUT, 0x00);
+  pci_write_config8(trans_pcie->pci, PCI_CONFIG_RETRY_TIMEOUT, 0x00);
 
   trans_pcie->pci_dev = pdev;
   iwl_disable_interrupts(trans);

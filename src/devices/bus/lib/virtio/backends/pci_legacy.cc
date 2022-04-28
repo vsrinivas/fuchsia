@@ -23,15 +23,15 @@ zx_status_t PciLegacyBackend::Init() {
     return status;
   }
 
-  if (bar0.type != ZX_PCI_BAR_TYPE_PIO) {
+  if (bar0.type != PCI_BAR_TYPE_IO) {
     return ZX_ERR_WRONG_TYPE;
   }
 
-  bar0_base_ = static_cast<uint16_t>(bar0.address & std::numeric_limits<uint16_t>::max());
+  bar0_base_ = static_cast<uint16_t>(bar0.result.io.address & std::numeric_limits<uint16_t>::max());
 
   device_cfg_offset_ =
-      bar0_base_ + ((irq_mode() == PCI_IRQ_MODE_MSI_X) ? VIRTIO_PCI_CONFIG_OFFSET_MSIX
-                                                       : VIRTIO_PCI_CONFIG_OFFSET_NOMSIX);
+      bar0_base_ + ((irq_mode() == PCI_INTERRUPT_MODE_MSI_X) ? VIRTIO_PCI_CONFIG_OFFSET_MSIX
+                                                             : VIRTIO_PCI_CONFIG_OFFSET_NOMSIX);
   zxlogf(DEBUG, "%s: using legacy backend (io base = %#04x, io size = %#04zx, device base = %#04x)",
          tag(), bar0_base_, bar0.size, device_cfg_offset_);
 
@@ -104,7 +104,7 @@ zx_status_t PciLegacyBackend::SetRing(uint16_t index, uint16_t count, zx_paddr_t
   legacy_io_->Write(bar0_base_ + VIRTIO_PCI_QUEUE_PFN, static_cast<uint32_t>(pa_desc / 4096));
 
   // Virtio 1.0 section 4.1.4.8
-  if (irq_mode() == PCI_IRQ_MODE_MSI_X) {
+  if (irq_mode() == PCI_INTERRUPT_MODE_MSI_X) {
     uint16_t vector = 0;
     legacy_io_->Write(bar0_base_ + VIRTIO_PCI_MSI_CONFIG_VECTOR, PciBackend::kMsiConfigVector);
     legacy_io_->Read(bar0_base_ + VIRTIO_PCI_MSI_CONFIG_VECTOR, &vector);

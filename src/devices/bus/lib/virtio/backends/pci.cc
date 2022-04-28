@@ -22,7 +22,7 @@
 
 namespace virtio {
 
-PciBackend::PciBackend(ddk::PciProtocolClient pci, pcie_device_info_t info)
+PciBackend::PciBackend(ddk::PciProtocolClient pci, pci_device_info_t info)
     : pci_(pci), info_(info) {
   snprintf(tag_, sizeof(tag_), "pci[%02x:%02x.%1x]", info_.bus_id, info_.dev_id, info_.func_id);
 }
@@ -38,7 +38,7 @@ zx_status_t PciBackend::Bind() {
   }
 
   // enable bus mastering
-  if ((st = pci().EnableBusMaster(true)) != ZX_OK) {
+  if ((st = pci().SetBusMastering(true)) != ZX_OK) {
     zxlogf(ERROR, "%s: cannot enable bus master %d", tag(), st);
     return st;
   }
@@ -65,13 +65,13 @@ zx_status_t PciBackend::ConfigureInterruptMode() {
   // vectors it means rolling it by hand.
   pci_interrupt_modes_t modes{};
   pci().GetInterruptModes(&modes);
-  pci_irq_mode_t mode = PCI_IRQ_MODE_LEGACY;
+  pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_LEGACY;
   uint32_t irq_cnt = 1;
 
-  if (modes.msix >= 2) {
-    mode = PCI_IRQ_MODE_MSI_X;
+  if (modes.msix_count >= 2) {
+    mode = PCI_INTERRUPT_MODE_MSI_X;
     irq_cnt = 2;
-  } else if (modes.legacy == 0) {
+  } else if (modes.has_legacy == 0) {
     zxlogf(ERROR, "No interrupt support found for device!");
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -100,7 +100,7 @@ zx_status_t PciBackend::ConfigureInterruptMode() {
   }
   irq_mode() = mode;
   zxlogf(DEBUG, "%s: using %s IRQ mode (irq_cnt = %u)", tag(),
-         (irq_mode() == PCI_IRQ_MODE_MSI_X ? "MSI-X" : "legacy"), irq_cnt);
+         (irq_mode() == PCI_INTERRUPT_MODE_MSI_X ? "MSI-X" : "legacy"), irq_cnt);
   return ZX_OK;
 }
 
@@ -117,7 +117,7 @@ zx::status<uint32_t> PciBackend::WaitForInterrupt() {
 void PciBackend::InterruptAck(uint32_t key) {
   ZX_DEBUG_ASSERT(key < irq_handles().size());
   irq_handles()[key].ack();
-  if (irq_mode() == PCI_IRQ_MODE_LEGACY) {
+  if (irq_mode() == PCI_INTERRUPT_MODE_LEGACY) {
     pci().AckInterrupt();
   }
 }

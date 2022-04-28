@@ -48,7 +48,6 @@
 #include <lib/ddk/io-buffer.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/mmio/mmio-buffer.h>
-#include <lib/pci/hw.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>

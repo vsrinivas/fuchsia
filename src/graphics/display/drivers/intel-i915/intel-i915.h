@@ -12,7 +12,6 @@
 #include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/mmio/mmio.h>
-#include <lib/pci/hw.h>
 #include <lib/zx/channel.h>
 #include <threads.h>
 

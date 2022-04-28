@@ -296,14 +296,14 @@ TEST_F(PciDeviceTests, MsixCapabilityTest) {
 TEST_F(PciDeviceTests, InspectIrqMode) {
   auto& dev = CreateTestDevice(kFakeQuadroDeviceConfig.data(), kFakeQuadroDeviceConfig.max_size());
   {
-    pci_irq_mode_t mode = PCI_IRQ_MODE_DISABLED;
+    pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_DISABLED;
     ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
     ASSERT_NO_FATAL_FAILURE(
         CheckProperty(hierarchy().GetByPath({kTestNodeName})->node(), Device::kInspectIrqMode,
                       inspect::StringPropertyValue(Device::kInspectIrqModes[mode])));
   }
   {
-    pci_irq_mode_t mode = PCI_IRQ_MODE_LEGACY;
+    pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_LEGACY;
     ASSERT_OK(dev.PciSetInterruptMode(mode, 1));
     ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
     auto* node = hierarchy().GetByPath({kTestNodeName});
@@ -312,7 +312,7 @@ TEST_F(PciDeviceTests, InspectIrqMode) {
                       inspect::StringPropertyValue(Device::kInspectIrqModes[mode])));
   }
   {
-    pci_irq_mode_t mode = PCI_IRQ_MODE_LEGACY_NOACK;
+    pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_LEGACY_NOACK;
     ASSERT_OK(dev.PciSetInterruptMode(mode, 1));
     ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
     auto* node = hierarchy().GetByPath({kTestNodeName});
@@ -321,7 +321,7 @@ TEST_F(PciDeviceTests, InspectIrqMode) {
                       inspect::StringPropertyValue(Device::kInspectIrqModes[mode])));
   }
   {
-    pci_irq_mode_t mode = PCI_IRQ_MODE_MSI;
+    pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_MSI;
     ASSERT_OK(dev.PciSetInterruptMode(mode, 1));
     ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
     auto* node = hierarchy().GetByPath({kTestNodeName});
@@ -332,7 +332,7 @@ TEST_F(PciDeviceTests, InspectIrqMode) {
 
 #ifdef ENABLE_MSIX
   {
-    pci_irq_mode_t mode = PCI_IRQ_MODE_MSI_X;
+    pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_MSI_X;
     ASSERT_OK(dev.PciSetInterruptMode(mode, 1));
     ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
     auto* node = hierarchy().GetByPath({kTestNodeName});
@@ -345,7 +345,7 @@ TEST_F(PciDeviceTests, InspectIrqMode) {
 
 TEST_F(PciDeviceTests, InspectLegacyNoPin) {
   auto quadro_copy = kFakeQuadroDeviceConfig;
-  quadro_copy[PCI_CFG_INTERRUPT_PIN] = 0;
+  quadro_copy[PCI_CONFIG_INTERRUPT_PIN] = 0;
   CreateTestDevice(quadro_copy.data(), quadro_copy.max_size());
   ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
   auto& node = hierarchy().GetByPath({kTestNodeName, Device::kInspectLegacyInterrupt})->node();
@@ -356,7 +356,7 @@ TEST_F(PciDeviceTests, InspectLegacyNoPin) {
 TEST_F(PciDeviceTests, InspectLegacy) {
   // Signal and Ack the legacy IRQ once each to ensure add is happening.
   auto& dev = CreateTestDevice(kFakeQuadroDeviceConfig.data(), kFakeQuadroDeviceConfig.max_size());
-  ASSERT_OK(dev.PciSetInterruptMode(PCI_IRQ_MODE_LEGACY, 1));
+  ASSERT_OK(dev.PciSetInterruptMode(PCI_INTERRUPT_MODE_LEGACY, 1));
   {
     fbl::AutoLock _(dev.dev_lock());
     ASSERT_OK(dev.SignalLegacyIrq(0x10000));
@@ -396,7 +396,7 @@ TEST_F(PciDeviceTests, InspectLegacy) {
 TEST_F(PciDeviceTests, InspectMSI) {
   uint32_t irq_cnt = 4;
   auto& dev = CreateTestDevice(kFakeQuadroDeviceConfig.data(), kFakeQuadroDeviceConfig.max_size());
-  ASSERT_OK(dev.PciSetInterruptMode(PCI_IRQ_MODE_MSI_X, irq_cnt));
+  ASSERT_OK(dev.PciSetInterruptMode(PCI_INTERRUPT_MODE_MSI_X, irq_cnt));
 
   zx_info_msi_t info{};
   {

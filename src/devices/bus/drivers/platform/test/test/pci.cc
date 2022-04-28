@@ -32,7 +32,7 @@ class TestPciDevice : public DeviceType, public FakePciProtocol {
 zx_status_t TestPciDevice::Create(void* ctx, zx_device_t* parent) {
   auto dev = std::make_unique<TestPciDevice>(parent);
 
-  pcie_device_info_t info = {.device_id = PDEV_DID_TEST_PCI };
+  pci_device_info_t info = {.device_id = PDEV_DID_TEST_PCI};
   dev->SetDeviceInfo(info);
 
   auto status = dev->DdkAdd("test-pci");

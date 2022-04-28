@@ -5,8 +5,8 @@
 #include "src/virtualization/bin/vmm/pci.h"
 
 #include <endian.h>
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/async/default.h>
-#include <lib/pci/hw.h>
 
 #include <gtest/gtest.h>
 
@@ -217,7 +217,7 @@ TEST(PciDeviceTest, ReadCapability) {
   // Read the cap pointer from config space. Here just verify it points to
   // some location beyond the pre-defined header.
   IoValue cap_ptr = IoValue::FromU8(0);
-  EXPECT_EQ(test_device.ReadConfig(PCI_CONFIG_CAPABILITIES, &cap_ptr), ZX_OK);
+  EXPECT_EQ(test_device.ReadConfig(PCI_CONFIG_CAPABILITIES_PTR, &cap_ptr), ZX_OK);
   EXPECT_LT(0x40u, cap_ptr.u8);
 
   // Read the capability. This will be the Cap ID (9), next pointer (0), followed
@@ -244,7 +244,7 @@ TEST(PciDeviceTest, ReadChainedCapability) {
   }
 
   IoValue cap_ptr = IoValue::FromU8(0);
-  EXPECT_EQ(test_device.ReadConfig(PCI_CONFIG_CAPABILITIES, &cap_ptr), ZX_OK);
+  EXPECT_EQ(test_device.ReadConfig(PCI_CONFIG_CAPABILITIES_PTR, &cap_ptr), ZX_OK);
   for (uint8_t i = 0; i < kNumCaps; ++i) {
     IoValue cap_header = IoValue::FromU32(0);
 

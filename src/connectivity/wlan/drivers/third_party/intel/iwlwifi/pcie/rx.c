@@ -1475,7 +1475,7 @@ zx_status_t iwl_pcie_isr(struct iwl_trans* trans) {
   mtx_unlock(&trans_pcie->irq_lock);
 
 out:
-  if (trans_pcie->irq_mode == PCI_IRQ_MODE_LEGACY) {
+  if (trans_pcie->irq_mode == PCI_INTERRUPT_MODE_LEGACY) {
     pci_ack_interrupt(trans_pcie->pci);
   }
   return ZX_OK;

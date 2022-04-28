@@ -413,7 +413,7 @@ void Bus::LegacyIrqWorker(const zx::port& port, fbl::Mutex* lock, SharedIrqMap* 
                    device.config()->addr(), zx_status_get_string(signal_status));
           }
 
-          // In the case of PCI_IRQ_MODE_LEGACY, disable the legacy interrupt on
+          // In the case of PCI_INTERRUPT_MODE_LEGACY, disable the legacy interrupt on
           // a device until a driver services and acknowledges it. If we're in
           // the NOACK mode then we update the running total we keep of
           // interrupts per period. If they exceed the configured limit then
@@ -421,7 +421,7 @@ void Bus::LegacyIrqWorker(const zx::port& port, fbl::Mutex* lock, SharedIrqMap* 
           // no way to re-enable it without changing IRQ modes.
           auto& irqs = device.irqs();
           bool disable_irq = true;
-          if (irqs.mode == PCI_IRQ_MODE_LEGACY_NOACK) {
+          if (irqs.mode == PCI_INTERRUPT_MODE_LEGACY_NOACK) {
             irqs.irqs_in_period++;
             if (packet.interrupt.timestamp - irqs.legacy_irq_period_start >= kLegacyNoAckPeriod) {
               irqs.legacy_irq_period_start = packet.interrupt.timestamp;

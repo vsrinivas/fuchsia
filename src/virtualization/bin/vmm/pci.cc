@@ -5,7 +5,7 @@
 #include "src/virtualization/bin/vmm/pci.h"
 
 #include <endian.h>
-#include <lib/pci/hw.h>
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/stdcompat/bit.h>
 #include <lib/trace/event.h>
 #include <stdio.h>
@@ -560,7 +560,7 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) const {
     // |   (31..16)        |         (15..0)       |
     // |   subsystem_id    |  subsystem_vendor_id  |
     //  -------------------------------------------
-    case PCI_CONFIG_SUBSYS_VENDOR_ID:
+    case PCI_CONFIG_SUBSYSTEM_VENDOR_ID:
       *value = attrs_.subsystem_vendor_id;
       *value |= attrs_.subsystem_id << 16;
       return ZX_OK;
@@ -568,7 +568,7 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) const {
     // |     (31..8)     |         (7..0)         |
     // |     Reserved    |  capabilities_pointer  |
     //  ------------------------------------------
-    case PCI_CONFIG_CAPABILITIES: {
+    case PCI_CONFIG_CAPABILITIES_PTR: {
       *value = 0;
       std::lock_guard<std::mutex> lock(mutex_);
       if (!capabilities_.empty()) {

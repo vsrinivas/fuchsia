@@ -2640,8 +2640,8 @@ static zx_status_t ath10k_pci_init_irq(struct ath10k* ar) {
   /* Try MSI */
   pci_interrupt_modes_t irq_modes = {};
   pci_get_interrupt_modes(pdev, &irq_modes);
-  if ((ath10k_pci_irq_mode != ATH10K_PCI_IRQ_LEGACY) && (irq_modes.msi >= 1) &&
-      (pci_set_interrupt_mode(pdev, ZX_PCIE_IRQ_MODE_MSI, 1) == ZX_OK)) {
+  if ((ath10k_pci_irq_mode != ATH10K_PCI_IRQ_LEGACY) && (irq_modes.msi_count >= 1) &&
+      (pci_set_interrupt_mode(pdev, PCI_INTERRUPT_MODE_MSI, 1) == ZX_OK)) {
     ar_pci->oper_irq_mode = ATH10K_PCI_IRQ_MSI;
 
     return ZX_OK;
@@ -2656,8 +2656,8 @@ static zx_status_t ath10k_pci_init_irq(struct ath10k* ar) {
    * For now, fix the race by repeating the write in below
    * synchronization checking.
    */
-  if ((irq_modes.legacy == 1) &&
-      (pci_set_interrupt_mode(pdev, ZX_PCIE_IRQ_MODE_LEGACY, 1) == ZX_OK)) {
+  if ((irq_modes.has_legacy) &&
+      (pci_set_interrupt_mode(pdev, PCI_INTERRUPT_MODE_LEGACY, 1) == ZX_OK)) {
     ar_pci->oper_irq_mode = ATH10K_PCI_IRQ_LEGACY;
 
     ath10k_pci_write32(ar, SOC_CORE_BASE_ADDRESS + PCIE_INTR_ENABLE_ADDRESS,
@@ -2819,7 +2819,7 @@ static zx_status_t ath10k_pci_claim(struct ath10k* ar) {
         goto err_region;
     }
 #endif
-  ret = pci_enable_bus_master(pdev, true);
+  ret = pci_set_bus_mastering(pdev, true);
   if (ret != ZX_OK) {
     ath10k_err("failed to enable bus mastering\n");
     goto err_region;
@@ -3442,7 +3442,7 @@ static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  pcie_device_info_t pci_info;
+  pci_device_info_t pci_info;
   if (pci_get_device_info(&pci, &pci_info) != ZX_OK) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -3532,13 +3532,13 @@ static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {
   }
 
   uint16_t subsystem_vendor_id;
-  ret = pci_config_read16(&pci, PCI_CFG_SUBSYSTEM_VENDOR_ID, &subsystem_vendor_id);
+  ret = pci_read_config16(&pci, PCI_CONFIG_SUBSYSTEM_VENDOR_ID, &subsystem_vendor_id);
   if (ret != ZX_OK) {
     ath10k_err("failed to read PCI subsystem vendor ID: %s\n", zx_status_get_string(ret));
   }
 
   uint16_t subsystem_device_id;
-  ret = pci_config_read16(&pci, PCI_CFG_SUBSYSTEM_ID, &subsystem_device_id);
+  ret = pci_read_config16(&pci, PCI_CONFIG_SUBSYSTEM_ID, &subsystem_device_id);
   if (ret != ZX_OK) {
     ath10k_err("failed to read PCI subsystem device ID: %s\n", zx_status_get_string(ret));
   }

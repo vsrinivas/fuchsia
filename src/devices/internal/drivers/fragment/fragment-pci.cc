@@ -11,9 +11,9 @@
 
 namespace fragment {
 
-zx_status_t RpcEnableBusMaster(const ddk::PciProtocolClient& pci, const PciRpcRequest* req,
+zx_status_t RpcSetBusMastering(const ddk::PciProtocolClient& pci, const PciRpcRequest* req,
                                PciRpcResponse* resp) {
-  return pci.EnableBusMaster(req->enable);
+  return pci.SetBusMastering(req->enable);
 }
 
 zx_status_t RpcResetDevice(const ddk::PciProtocolClient& pci, const PciRpcRequest* req,
@@ -29,11 +29,11 @@ zx_status_t RpcConfigRead(const ddk::PciProtocolClient& pci, const PciRpcRequest
   resp->cfg = req->cfg;
   switch (req->cfg.width) {
     case 1:
-      return pci.ConfigRead8(req->cfg.offset, reinterpret_cast<uint8_t*>(&resp->cfg.value));
+      return pci.ReadConfig8(req->cfg.offset, reinterpret_cast<uint8_t*>(&resp->cfg.value));
     case 2:
-      return pci.ConfigRead16(req->cfg.offset, reinterpret_cast<uint16_t*>(&resp->cfg.value));
+      return pci.ReadConfig16(req->cfg.offset, reinterpret_cast<uint16_t*>(&resp->cfg.value));
     case 4:
-      return pci.ConfigRead32(req->cfg.offset, &resp->cfg.value);
+      return pci.ReadConfig32(req->cfg.offset, &resp->cfg.value);
   }
 
   return ZX_ERR_INVALID_ARGS;
@@ -43,11 +43,11 @@ zx_status_t RpcConfigWrite(const ddk::PciProtocolClient& pci, const PciRpcReques
                            PciRpcResponse* resp) {
   switch (req->cfg.width) {
     case 1:
-      return pci.ConfigWrite8(req->cfg.offset, req->cfg.value);
+      return pci.WriteConfig8(req->cfg.offset, req->cfg.value);
     case 2:
-      return pci.ConfigWrite16(req->cfg.offset, req->cfg.value);
+      return pci.WriteConfig16(req->cfg.offset, req->cfg.value);
     case 4:
-      return pci.ConfigWrite32(req->cfg.offset, req->cfg.value);
+      return pci.WriteConfig32(req->cfg.offset, req->cfg.value);
   }
   return ZX_ERR_INVALID_ARGS;
 }
@@ -60,13 +60,21 @@ zx_status_t RpcGetBar(const ddk::PciProtocolClient& pci, const PciRpcRequest* re
   zx_status_t st = pci.GetBar(req->bar.id, &bar);
   if (st == ZX_OK) {
     resp->bar = {
-        .id = bar.id,
-        .is_mmio = (bar.type == ZX_PCI_BAR_TYPE_MMIO),
+        .id = bar.bar_id,
+        .is_mmio = (bar.type == PCI_BAR_TYPE_MMIO),
         .size = bar.size,
-        .address = bar.address,
+        .address = 0,
     };
 
-    handle->reset(bar.handle);
+    switch (bar.type) {
+      case PCI_BAR_TYPE_MMIO:
+        handle->reset(bar.result.vmo);
+        break;
+      case PCI_BAR_TYPE_IO:
+        resp->bar.address = bar.result.io.address;
+        handle->reset(bar.result.io.resource);
+        break;
+    }
   }
 
   return st;
@@ -138,7 +146,7 @@ zx_status_t Fragment::RpcPci(const uint8_t* req_buf, uint32_t req_size, uint8_t*
       status = RpcConfigWrite(pci_client_.proto_client(), request, response);
       break;
     case pci::PCI_OP_ENABLE_BUS_MASTER:
-      status = RpcEnableBusMaster(pci_client_.proto_client(), request, response);
+      status = RpcSetBusMastering(pci_client_.proto_client(), request, response);
       break;
     case pci::PCI_OP_GET_BAR:
       status = RpcGetBar(pci_client_.proto_client(), request, response, resp_handles);

@@ -240,7 +240,7 @@ zx_status_t Bridge::AllocateBridgeWindowsLocked() {
   return ZX_OK;
 }
 
-zx_status_t Bridge::EnableBusMasterUpstream(bool enabled) {
+zx_status_t Bridge::SetBusMasteringUpstream(bool enabled) {
   // If being asked to disable Bus Mastering then we should ensure that no other
   // devices downstream of this bridge still have it enabled. If any do then we
   // leave BusMastering enabled.
@@ -257,11 +257,11 @@ zx_status_t Bridge::EnableBusMasterUpstream(bool enabled) {
   // Only make a change to the bridge's configuration in a case where the
   // state of the children has changed meaningfully.
   if (downstream_bus_mastering_cnt_ == 0) {
-    return pci::Device::EnableBusMaster(false);
+    return pci::Device::SetBusMastering(false);
   }
 
   if (downstream_bus_mastering_cnt_ == 1 && enabled) {
-    return pci::Device::EnableBusMaster(true);
+    return pci::Device::SetBusMastering(true);
   }
 
   return ZX_OK;
