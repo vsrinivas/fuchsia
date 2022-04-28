@@ -61,9 +61,9 @@ to denote upwards traversal so some inverse traversal information is missing.
 To maintain invertibility, the syntax for denoting paths varies slightly
 for upward and downward traversals. A downward path segment is a child moniker
 of one of the current component instance's children: `./carol:2`. Conversely,
-an upward path segment *is* the child moniker of on the current component
-instance, according to its parent: `.\alice:2/bob:0`. The reason that the child
-moniker is explicitly specified in the upward path
+an upward path segment *is* the child moniker of one of the current component
+instances, according to its parent: `.\alice:2/bob:0`.
+The reason that the child moniker is explicitly specified in the upward path
 (instead of a generic "upward traversal" marker like `..`) is that otherwise the
 relative moniker would not be invertible, and would not uniquely identify a
 component instance. For downward traversals, the paths don't need to include
