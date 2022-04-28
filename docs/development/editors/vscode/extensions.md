@@ -163,7 +163,7 @@ rustup toolchain link fuchsia {{ '<var>' }}FUCHSIA_DIR{{ '</var>' }}/prebuilt/th
 ```
 
 After configuring `rustup`, the `rust-analyzer` extension supports additional configuration
-with Fuchisa's Rust style guide, [`rustfmt.toml`](/rustfmt.toml).
+with Fuchsia's Rust style guide, [`rustfmt.toml`](/rustfmt.toml).
 
 Add the following snippet to your `settings.json` using the same steps
 from [Configuring workflow](#rust-configure-workflow):
