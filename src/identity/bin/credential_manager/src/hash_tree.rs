@@ -7,6 +7,7 @@ use {
         diagnostics::{Diagnostics, HashTreeOperation},
         label_generator::{BitstringLabelGenerator, Label},
     },
+    fidl_fuchsia_identity_credential::CredentialError,
     serde::{Deserialize, Serialize},
     serde_cbor,
     sha2::{Digest, Sha256},
@@ -55,6 +56,18 @@ pub enum HashTreeError {
     DeserializationFailed,
     /// Unable to serialize tree
     SerializationFailed,
+}
+
+// TODO(fxbug.dev/98758) Revise how these errors map into CredentialError types.
+impl From<HashTreeError> for CredentialError {
+    fn from(error: HashTreeError) -> Self {
+        match error {
+            HashTreeError::NoLeafNodes => CredentialError::NoFreeLabel,
+            HashTreeError::NonLeafLabel => CredentialError::InvalidLabel,
+            HashTreeError::UnknownLeafLabel => CredentialError::InvalidLabel,
+            _ => CredentialError::InternalError,
+        }
+    }
 }
 
 /// A HashTree is a representation of a Merkle Tree where each of the leaf

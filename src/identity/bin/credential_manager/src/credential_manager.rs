@@ -169,41 +169,31 @@ where
     async fn remove_credential(&self, label: u64) -> Result<(), CredentialError> {
         let pinweaver = self.pinweaver.lock().await;
         let label = Label::leaf_label(label, LABEL_LENGTH);
-        let h_aux = self
-            .hash_tree()
-            .get_auxiliary_hashes_flattened(&label)
-            .map_err(|_| CredentialError::InvalidLabel)?;
-        let mac = self
-            .hash_tree()
-            .get_leaf_hash(&label)
-            .map_err(|_| CredentialError::InvalidLabel)?
-            .clone();
+        let h_aux = self.hash_tree().get_auxiliary_hashes_flattened(&label)?;
+        let mac = self.hash_tree().get_leaf_hash(&label)?.clone();
         pinweaver.remove_leaf(&label, mac, h_aux).await?;
-        self.lookup_table().delete(&label).await.map_err(|_| CredentialError::InternalError)?;
-        self.hash_tree().delete_leaf(&label).map_err(|_| CredentialError::InternalError)?;
+        self.lookup_table().delete(&label).await?;
+        self.hash_tree().delete_leaf(&label)?;
         // TODO(fxb/98758): If the storage write fails here the persistent state will be different
         // to the in-memory state. We should report a clear error and probably retry the file
         // system operation to work around a transient file system issue.
-        let store_result = self
-            .hash_tree_storage
-            .store(&self.hash_tree.borrow())
-            .map_err(|_| CredentialError::InternalError);
+        let store_result = self.hash_tree_storage.store(&self.hash_tree.borrow());
         // Note: For consistency with `add_credential` we record the new credential count after the
         // store event, and even if the store event failed
         self.diagnostics.credential_count(self.hash_tree().populated_size());
-        store_result
+        if let Err(err) = store_result {
+            Err(CredentialError::from(err))
+        } else {
+            Ok(())
+        }
     }
 
     /// Allocates a new empty credential in the |hash_tree| returning the
     /// leaf |label| and the auxiliary hashes |h_aux| from the leaf through to
     /// the root of the tree.
     async fn alloc_credential(&self) -> Result<(Label, Vec<Hash>), CredentialError> {
-        let label =
-            self.hash_tree().get_free_leaf_label().map_err(|_| CredentialError::NoFreeLabel)?;
-        let h_aux = self
-            .hash_tree()
-            .get_auxiliary_hashes_flattened(&label)
-            .map_err(|_| CredentialError::InternalError)?;
+        let label = self.hash_tree().get_free_leaf_label()?;
+        let h_aux = self.hash_tree().get_auxiliary_hashes_flattened(&label)?;
         Ok((label, h_aux))
     }
 
@@ -214,16 +204,8 @@ where
         &self,
         label: &Label,
     ) -> Result<(Vec<Hash>, CredentialMetadata), CredentialError> {
-        let h_aux = self
-            .hash_tree()
-            .get_auxiliary_hashes_flattened(&label)
-            .map_err(|_| CredentialError::InvalidLabel)?;
-        let stored_cred_metadata = self
-            .lookup_table()
-            .read(&label)
-            .await
-            .map_err(|_| CredentialError::InternalError)?
-            .bytes;
+        let h_aux = self.hash_tree().get_auxiliary_hashes_flattened(&label)?;
+        let stored_cred_metadata = self.lookup_table().read(&label).await?.bytes;
         Ok((h_aux, stored_cred_metadata))
     }
 
@@ -236,16 +218,9 @@ where
         mac: Mac,
         cred_metadata: CredentialMetadata,
     ) -> Result<(), CredentialError> {
-        self.hash_tree()
-            .update_leaf_hash(&label, mac)
-            .map_err(|_| CredentialError::CorruptedMetadata)?;
-        self.lookup_table()
-            .write(&label, cred_metadata)
-            .await
-            .map_err(|_| CredentialError::InternalError)?;
-        self.hash_tree_storage
-            .store(&self.hash_tree.borrow())
-            .map_err(|_| CredentialError::InternalError)?;
+        self.hash_tree().update_leaf_hash(&label, mac)?;
+        self.lookup_table().write(&label, cred_metadata).await?;
+        self.hash_tree_storage.store(&self.hash_tree.borrow())?;
         Ok(())
     }
 

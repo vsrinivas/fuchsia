@@ -5,6 +5,7 @@
 use {
     crate::label_generator::Label,
     async_trait::async_trait,
+    fidl_fuchsia_identity_credential::CredentialError,
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     identity_common::StagedFile,
     log::{info, warn},
@@ -46,6 +47,13 @@ pub enum LookupTableError {
     StagedFileError(#[from] identity_common::StagedFileError),
     #[error("Unknown lookup table error")]
     Unknown,
+}
+
+// TODO(fxbug.dev/98758) Revise how these errors map into CredentialError types.
+impl From<LookupTableError> for CredentialError {
+    fn from(_error: LookupTableError) -> Self {
+        CredentialError::InternalError
+    }
 }
 
 #[cfg_attr(test, automock)]

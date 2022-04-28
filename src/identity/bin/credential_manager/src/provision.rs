@@ -71,7 +71,7 @@ async fn reset_state<HS: HashTreeStorage, PW: PinWeaverProtocol, LT: LookupTable
         HashTree::new(TREE_HEIGHT, CHILDREN_PER_NODE).expect("Unable to create hash tree");
     lookup_table.reset().await.map_err(|_| CredentialError::InternalError)?;
     pinweaver.reset_tree(BITS_PER_LEVEL, TREE_HEIGHT).await?;
-    hash_tree_storage.store(&hash_tree).map_err(|_| CredentialError::InternalError)?;
+    hash_tree_storage.store(&hash_tree)?;
     Ok(hash_tree)
 }
 
@@ -81,7 +81,7 @@ async fn get_sync_state<PW: PinWeaverProtocol>(
     hash_tree: HashTree,
     pinweaver: &PW,
 ) -> Result<HashTreeSyncState, CredentialError> {
-    let stored_root_hash = hash_tree.get_root_hash().map_err(|_| CredentialError::InternalError)?;
+    let stored_root_hash = hash_tree.get_root_hash()?;
     let pinweaver_log = pinweaver.get_log(&stored_root_hash).await?;
     Ok(match &pinweaver_log[..] {
         // We are caught up to pinweaver so we only get one entry.
