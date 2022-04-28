@@ -48,7 +48,7 @@ bool ends_with(const char* str, const fbl::String& suffix) {
 void output_compare_helper(zx::socket local, fx_log_severity_t severity, const char* msg,
                            const char** tags, int num_tags, int line) {
   fx_log_packet_t packet;
-  ASSERT_EQ(ZX_OK, local.read(0, &packet, sizeof(packet), nullptr));
+  ASSERT_OK(local.read(0, &packet, sizeof(packet), nullptr));
   EXPECT_EQ(severity, packet.metadata.severity);
   int pos = 0;
   for (int i = 0; i < num_tags; i++) {
@@ -69,8 +69,8 @@ void output_compare_helper(zx::socket local, fx_log_severity_t severity, const c
 
 TEST(SyslogSocketTests, TestLogSimpleWrite) {
   zx::socket local, remote;
-  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
-  ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
+  EXPECT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  ASSERT_OK(init_helper(remote.release(), nullptr, 0));
   const char* msg = "test message";
   int line = __LINE__ + 1;
   FX_LOG(INFO, nullptr, msg);
@@ -79,8 +79,8 @@ TEST(SyslogSocketTests, TestLogSimpleWrite) {
 
 TEST(SyslogSocketTests, TestLogWrite) {
   zx::socket local, remote;
-  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
-  ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
+  EXPECT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  ASSERT_OK(init_helper(remote.release(), nullptr, 0));
   int line = __LINE__ + 1;
   FX_LOGF(INFO, nullptr, "%d, %s", 10, "just some number");
   output_compare_helper(std::move(local), FX_LOG_INFO, "10, just some number", nullptr, 0, line);
@@ -88,8 +88,8 @@ TEST(SyslogSocketTests, TestLogWrite) {
 
 TEST(SyslogSocketTests, TestLogPreprocessedMessage) {
   zx::socket local, remote;
-  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
-  ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
+  EXPECT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  ASSERT_OK(init_helper(remote.release(), nullptr, 0));
   int line = __LINE__ + 1;
   FX_LOG(INFO, nullptr, "%d, %s");
   output_compare_helper(std::move(local), FX_LOG_INFO, "%d, %s", nullptr, 0, line);
@@ -107,13 +107,13 @@ static zx_status_t GetAvailableBytes(const zx::socket& socket, size_t* out_avail
 
 TEST(SyslogSocketTests, TestLogSeverity) {
   zx::socket local, remote;
-  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
-  ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
+  EXPECT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  ASSERT_OK(init_helper(remote.release(), nullptr, 0));
 
   FX_LOG_SET_SEVERITY(WARNING);
   FX_LOGF(INFO, nullptr, "%d, %s", 10, "just some number");
   size_t outstanding_bytes = 10u;  // init to non zero value.
-  ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
+  ASSERT_OK(GetAvailableBytes(local, &outstanding_bytes));
   EXPECT_EQ(0u, outstanding_bytes);
 
   int line = __LINE__ + 1;
@@ -123,8 +123,8 @@ TEST(SyslogSocketTests, TestLogSeverity) {
 
 TEST(SyslogSocketTests, TestLogWriteWithTag) {
   zx::socket local, remote;
-  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
-  ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
+  EXPECT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  ASSERT_OK(init_helper(remote.release(), nullptr, 0));
   int line = __LINE__ + 1;
   FX_LOGF(INFO, "tag", "%d, %s", 10, "just some string");
   const char* tags[] = {"tag"};
@@ -133,9 +133,9 @@ TEST(SyslogSocketTests, TestLogWriteWithTag) {
 
 TEST(SyslogSocketTests, TestLogWriteWithGlobalTag) {
   zx::socket local, remote;
-  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  EXPECT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   const char* gtags[] = {"gtag"};
-  ASSERT_EQ(ZX_OK, init_helper(remote.release(), gtags, 1));
+  ASSERT_OK(init_helper(remote.release(), gtags, 1));
   int line = __LINE__ + 1;
   FX_LOGF(INFO, "tag", "%d, %s", 10, "just some string");
   const char* tags[] = {"gtag", "tag"};
@@ -144,9 +144,9 @@ TEST(SyslogSocketTests, TestLogWriteWithGlobalTag) {
 
 TEST(SyslogSocketTests, TestLogWriteWithMultiGlobalTag) {
   zx::socket local, remote;
-  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  EXPECT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   const char* gtags[] = {"gtag", "gtag2"};
-  ASSERT_EQ(ZX_OK, init_helper(remote.release(), gtags, 2));
+  ASSERT_OK(init_helper(remote.release(), gtags, 2));
   int line = __LINE__ + 1;
   FX_LOGF(INFO, "tag", "%d, %s", 10, "just some string");
   const char* tags[] = {"gtag", "gtag2", "tag"};
@@ -155,9 +155,9 @@ TEST(SyslogSocketTests, TestLogWriteWithMultiGlobalTag) {
 
 TEST(SyslogSocketTests, TestLogFallback) {
   zx::socket local, remote;
-  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  EXPECT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   const char* gtags[] = {"gtag", "gtag2"};
-  ASSERT_EQ(ZX_OK, init_helper(remote.release(), gtags, 2));
+  ASSERT_OK(init_helper(remote.release(), gtags, 2));
 
   int pipefd[2];
   EXPECT_EQ(pipe2(pipefd, O_NONBLOCK), 0);
@@ -180,9 +180,9 @@ TEST(SyslogSocketTests, TestLogFallback) {
 
 TEST(SyslogSocketTestsEdgeCases, TestMsgLengthLimit) {
   zx::socket local, remote;
-  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  EXPECT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   const char* gtags[] = {"gtag", "gtag2"};
-  ASSERT_EQ(ZX_OK, init_helper(remote.release(), gtags, 2));
+  ASSERT_OK(init_helper(remote.release(), gtags, 2));
   char msg[FX_LOG_MAX_DATAGRAM_LEN + 4 + 12] = {0};
   memset(msg, 'a', sizeof(msg) - 1);
   int line = __LINE__ + 1;
@@ -200,9 +200,9 @@ TEST(SyslogSocketTestsEdgeCases, TestMsgLengthLimit) {
 
 TEST(SyslogSocketTestsEdgeCases, TestMsgLengthLimitForPreprocessedMsg) {
   zx::socket local, remote;
-  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  EXPECT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   const char* gtags[] = {"gtag", "gtag2"};
-  ASSERT_EQ(ZX_OK, init_helper(remote.release(), gtags, 2));
+  ASSERT_OK(init_helper(remote.release(), gtags, 2));
   char msg[FX_LOG_MAX_DATAGRAM_LEN + 4 + 12] = {0};
   memset(msg, 'a', sizeof(msg) - 1);
   msg[0] = '%';
@@ -224,7 +224,7 @@ TEST(SyslogSocketTestsEdgeCases, TestMsgLengthLimitForPreprocessedMsg) {
 
 TEST(SyslogSocketTestsEdgeCases, TestTagLengthLimit) {
   zx::socket local, remote;
-  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  EXPECT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
   char gtags_buffer[FX_LOG_MAX_TAGS][FX_LOG_MAX_TAG_LEN + 1];
   memset(gtags_buffer, 't', sizeof(gtags_buffer));
   const char* gtags[FX_LOG_MAX_TAGS];
@@ -233,7 +233,7 @@ TEST(SyslogSocketTestsEdgeCases, TestTagLengthLimit) {
     gtags_buffer[i][FX_LOG_MAX_TAG_LEN] = 0;
     gtags[i] = gtags_buffer[i];
   }
-  ASSERT_EQ(ZX_OK, init_helper(remote.release(), gtags, FX_LOG_MAX_TAGS));
+  ASSERT_OK(init_helper(remote.release(), gtags, FX_LOG_MAX_TAGS));
 
   char tag[FX_LOG_MAX_TAG_LEN + 1];
   memcpy(tag, gtags[FX_LOG_MAX_TAGS - 1], sizeof(tag));
@@ -253,8 +253,8 @@ TEST(SyslogSocketTestsEdgeCases, TestTagLengthLimit) {
 
 TEST(SyslogSocketTests, TestVlogSimpleWrite) {
   zx::socket local, remote;
-  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
-  ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
+  EXPECT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  ASSERT_OK(init_helper(remote.release(), nullptr, 0));
   const char* msg = "test message";
   FX_LOG_SET_VERBOSITY(1);  // INFO - 1
   int line = __LINE__ + 1;
@@ -264,8 +264,8 @@ TEST(SyslogSocketTests, TestVlogSimpleWrite) {
 
 TEST(SyslogSocketTests, TestVlogWrite) {
   zx::socket local, remote;
-  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
-  ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
+  EXPECT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  ASSERT_OK(init_helper(remote.release(), nullptr, 0));
   FX_LOG_SET_VERBOSITY(1);  // INFO - 1
   int line = __LINE__ + 1;
   FX_VLOGF(1, nullptr, "%d, %s", 10, "just some number");
@@ -275,8 +275,8 @@ TEST(SyslogSocketTests, TestVlogWrite) {
 
 TEST(SyslogSocketTests, TestVlogWriteWithTag) {
   zx::socket local, remote;
-  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
-  ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
+  EXPECT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  ASSERT_OK(init_helper(remote.release(), nullptr, 0));
   FX_LOG_SET_VERBOSITY(5);  // INFO - 5
   int line = __LINE__ + 1;
   FX_VLOGF(5, "tag", "%d, %s", 10, "just some string");
@@ -286,17 +286,17 @@ TEST(SyslogSocketTests, TestVlogWriteWithTag) {
 
 TEST(SyslogSocketTests, TestLogVerbosity) {
   zx::socket local, remote;
-  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
-  ASSERT_EQ(ZX_OK, init_helper(remote.release(), nullptr, 0));
+  EXPECT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  ASSERT_OK(init_helper(remote.release(), nullptr, 0));
 
   FX_VLOGF(10, nullptr, "%d, %s", 10, "just some number");
   size_t outstanding_bytes = 10u;  // init to non zero value.
-  ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
+  ASSERT_OK(GetAvailableBytes(local, &outstanding_bytes));
   EXPECT_EQ(0u, outstanding_bytes);
 
   FX_VLOGF(1, nullptr, "%d, %s", 10, "just some number");
   outstanding_bytes = 10u;  // init to non zero value.
-  ASSERT_EQ(ZX_OK, GetAvailableBytes(local, &outstanding_bytes));
+  ASSERT_OK(GetAvailableBytes(local, &outstanding_bytes));
   EXPECT_EQ(0u, outstanding_bytes);
 
   FX_LOG_SET_VERBOSITY(1);  // INFO - 1
