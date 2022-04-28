@@ -19,6 +19,7 @@ use fidl_fuchsia_hardware_display::{ControllerEvent, VirtconMode};
 use fidl_fuchsia_input_report as hid_input_report;
 use fuchsia_async::{self as fasync, DurationExt, Timer};
 use fuchsia_component::{self as component};
+use fuchsia_trace::duration;
 use fuchsia_zircon::{self as zx, DurationNum};
 use futures::{
     channel::mpsc::{unbounded, UnboundedSender},
@@ -83,6 +84,11 @@ const fn display_resource_release_delay_default() -> std::time::Duration {
     const DISPLAY_RESOURCE_RELEASE_DELAY_DEFAULT: std::time::Duration =
         std::time::Duration::from_secs(5);
     DISPLAY_RESOURCE_RELEASE_DELAY_DEFAULT
+}
+
+const fn startup_delay_default() -> std::time::Duration {
+    const STARTUP_DELAY_DEFAULT: std::time::Duration = std::time::Duration::from_secs(0);
+    STARTUP_DELAY_DEFAULT
 }
 
 #[derive(Debug, Deserialize)]
@@ -156,6 +162,9 @@ pub struct Config {
     #[serde(default)]
     /// Whether output can be translucent and needs blending.
     pub needs_blending: bool,
+    #[serde(default = "startup_delay_default", deserialize_with = "deserialize_millis")]
+    /// How long to wait before entering event loop.
+    pub startup_delay: std::time::Duration,
 }
 
 impl Config {
@@ -181,6 +190,7 @@ impl Default for Config {
             buffer_count: None,
             input: true,
             needs_blending: false,
+            startup_delay: Default::default(),
         }
     }
 }
@@ -426,6 +436,11 @@ impl App {
             let strat = create_app_strategy(&internal_sender).await?;
             let mut app = App::new(internal_sender, strat, assistant);
             app.app_init_common().await?;
+            let startup_delay = Config::get().startup_delay;
+            if !startup_delay.is_zero() {
+                duration!("gfx", "App::run-startup-delay");
+                std::thread::sleep(Config::get().startup_delay);
+            }
             while let Some(message) = internal_receiver.next().await {
                 app.handle_message(message).await.expect("handle_message failed");
             }

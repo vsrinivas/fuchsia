@@ -40,6 +40,7 @@ impl AppAssistant for CursorManagerAppAssistant {
         config.view_mode = carnelian::app::ViewMode::Hosted;
         config.input = false;
         config.needs_blending = true;
+        config.startup_delay = std::time::Duration::from_millis(500);
     }
 }
 
