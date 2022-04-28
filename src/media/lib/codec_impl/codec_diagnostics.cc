@@ -76,11 +76,7 @@ void CodecDiagnostics::UpdateHardwareUtilizationStatus(zx::time now, bool is_uti
   allocation_.Set(utilization);
   utilizing_hardware_.Set(is_utilizing_hardware);
 
-  if (TRACE_ENABLED()) {
-    PostToSharedDiagnostics([this, utilization] {
-      TRACE_COUNTER("media", "Decoder Utilization", trace_counter_id_, "utilization", utilization);
-    });
-  }
+  TRACE_COUNTER("media", "Decoder Utilization", trace_counter_id_, "utilization", utilization);
 
   // See if there was a change in value of currently_utilizing_hardware_ and if so
   // let the DriverDiagnostics class know that our hardware status has changed.
@@ -94,23 +90,11 @@ void CodecDiagnostics::UpdateHardwareUtilizationStatus(zx::time now, bool is_uti
   currently_utilizing_hardware_ = is_utilizing_hardware;
 }
 
-void CodecDiagnostics::PostToSharedDiagnostics(fit::closure operation) {
-  driver_diagnostics_.get().PostToSharedDiagnostics(std::move(operation));
-}
-
 DriverDiagnostics::DriverDiagnostics(std::string_view driver_name)
     : root_(inspector_.GetRoot().CreateChild(driver_name)),
       bind_time_(root_.CreateUint(kBindTime, 0)),
       num_of_active_codecs_(root_.CreateUint(kNumOfActiveCodecs, 0)),
-      currently_decoding_(root_.CreateBool(kCurrentlyDecoding, false)) {
-  shared_diagnostics_loop_.StartThread("shared_diagnostics_loop_", &shared_diagnostics_thread_);
-}
-
-DriverDiagnostics::~DriverDiagnostics() {
-  shared_diagnostics_loop_.Quit();
-  shared_diagnostics_loop_.JoinThreads();
-  shared_diagnostics_loop_.Shutdown();
-}
+      currently_decoding_(root_.CreateBool(kCurrentlyDecoding, false)) {}
 
 zx::vmo DriverDiagnostics::DuplicateVmo() const { return inspector_.DuplicateVmo(); }
 
@@ -142,11 +126,3 @@ CodecDiagnostics DriverDiagnostics::CreateCodec(std::string_view codec_name) {
 }
 
 void DriverDiagnostics::RemoveCodec() { num_of_active_codecs_.Subtract(1); }
-
-void DriverDiagnostics::PostToSharedDiagnostics(fit::closure operation) {
-  zx_status_t task_result =
-      async::PostTask(shared_diagnostics_loop_.dispatcher(), std::move(operation));
-  if (task_result != ZX_OK) {
-    LOG(ERROR, "Could not post task to shared thread");
-  }
-}
