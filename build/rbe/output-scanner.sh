@@ -86,27 +86,25 @@ test "$command_break" = 1 || {
 err=0
 for f in "${outputs[@]}"
 do
-  case "$f" in
-    *"$build_subdir"* )
-      err=1
-      error_msg "Output path '$f' contains '$build_subdir'." \
-        "Adding rebase_path(..., root_build_dir) may fix this to be relative." \
-        "If this command requires an absolute path, mark this action in GN with 'no_output_dir_leaks = false'."
-      ;;
-  esac
+  if printf %s "$f" | grep -qwF "$build_subdir"
+  then
+    err=1
+    error_msg "Output path '$f' contains '$build_subdir'." \
+      "Adding rebase_path(..., root_build_dir) may fix this to be relative." \
+      "If this command requires an absolute path, mark this action in GN with 'no_output_dir_leaks = false'."
+  fi
 done
 
 # Command is in "$@".  Scan its tokens for $build_dir.
 for tok
 do
-  case "$tok" in
-    *"$build_subdir"* )
-      err=1
-      error_msg "Command token '$tok' contains '$build_subdir'." \
-        "Adding rebase_path(..., root_build_dir) may fix this to be relative." \
-        "If this command requires an absolute path, mark this action in GN with 'no_output_dir_leaks = false'."
-      ;;
-  esac
+  if printf %s "$tok" | grep -qwF "$build_subdir"
+  then
+    err=1
+    error_msg "Command token '$tok' contains '$build_subdir'." \
+      "Adding rebase_path(..., root_build_dir) may fix this to be relative." \
+      "If this command requires an absolute path, mark this action in GN with 'no_output_dir_leaks = false'."
+  fi
   # Do not shift, keep tokens for execution.
 done
 
@@ -121,7 +119,7 @@ then
   test "$status" != 0 || {
     for f in "${outputs[@]}"
     do
-      if grep -q "$build_subdir" "$f"
+      if grep -qwF "$build_subdir" "$f"
       then
         err=1
         error_msg "Output file $f contains '$build_subdir'." \
