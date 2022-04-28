@@ -52,6 +52,7 @@ test("vim3-mcu-test-bin") {
   deps = [
     ":vim3_mcu_bind",
     "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
     "//sdk/lib/fit",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",

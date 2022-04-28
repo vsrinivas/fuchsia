@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_I2C_TESTING_MOCK_I2C_INCLUDE_LIB_MOCK_I2C_MOCK_I2C_H_
 #define SRC_DEVICES_I2C_TESTING_MOCK_I2C_INCLUDE_LIB_MOCK_I2C_MOCK_I2C_H_
 
+#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
 #include <fuchsia/hardware/i2c/c/banjo.h>
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
 

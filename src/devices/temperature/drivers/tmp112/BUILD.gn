@@ -50,6 +50,7 @@ test("tmp112-test-bin") {
   ]
   deps = [
     ":tmp112-bind",
+    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
     "//sdk/fidl/fuchsia.hardware.temperature:fuchsia.hardware.temperature_llcpp",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",

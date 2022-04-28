@@ -23,7 +23,6 @@ executable("aml-g12-tdm-test-bin") {
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/testing/fake-pdev",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
-    "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/mmio",
     "//src/devices/testing/fake-mmio-reg",

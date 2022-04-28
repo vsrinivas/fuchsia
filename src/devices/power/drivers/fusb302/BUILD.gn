@@ -64,6 +64,7 @@ test("fusb302-test-bin") {
   configs += [ "//build/config:all_source" ]
   deps = [
     ":common",
+    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
     "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/testing/no_ddk",

@@ -24,6 +24,7 @@ test("libhwreg-i2c-test") {
   deps = [
     "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_banjo_cpp",
     "//sdk/lib/fdio",
+    "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/i2c/testing/mock-i2c",
     "//src/lib/ddk",
     "//src/lib/ddktl",
