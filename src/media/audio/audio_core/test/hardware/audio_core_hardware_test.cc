@@ -9,6 +9,7 @@
 
 #include <cmath>
 #include <optional>
+#include <sstream>
 
 // TODO(fxbug.dev/49807): This test should automatically fail if underflows are detected. That
 // functionality should be ported from HermeticAudioTest to here.
@@ -101,16 +102,34 @@ void AudioCoreHardwareTest::WaitForCaptureDevice() {
 void AudioCoreHardwareTest::FailOnDeviceAddRemoveDefaultEvent() {
   audio_device_enumerator_.events().OnDeviceAdded =
       ([](fuchsia::media::AudioDeviceInfo added_device) {
-        FAIL() << "Received OnDeviceAdded during testing";
+        if (added_device.is_input) {
+          FAIL() << "Received OnDeviceAdded for an input device, during testing";
+        } else {
+          FX_LOGS(INFO) << "OnDeviceAdded for " << added_device.token_id << ", an output";
+        }
       });
 
-  audio_device_enumerator_.events().OnDeviceRemoved =
-      ([](uint64_t removed_token_id) { FAIL() << "Received OnDeviceRemoved during testing"; });
+  audio_device_enumerator_.events().OnDeviceRemoved = ([this](uint64_t removed_token_id) {
+    if (default_capture_device_token().value() == removed_token_id) {
+      FAIL() << "Received OnDeviceRemoved for our default capture device, during testing";
+    } else {
+      FX_LOGS(INFO) << "OnDeviceRemoved for " << removed_token_id
+                    << ", a device other than our default capture device";
+    }
+  });
 
-  audio_device_enumerator_.events().OnDefaultDeviceChanged =
-      ([](uint64_t old_default_token_id, uint64_t new_default_token_id) {
-        FAIL() << "Received OnDefaultDeviceChanged during testing";
-      });
+  audio_device_enumerator_.events().OnDefaultDeviceChanged = ([this](
+                                                                  uint64_t old_default_token_id,
+                                                                  uint64_t new_default_token_id) {
+    if (default_capture_device_token().value() == old_default_token_id) {
+      FAIL()
+          << "Received OnDefaultDeviceChanged AWAY from our default capture device, during testing";
+    } else {
+      FX_LOGS(INFO) << "OnDefaultDeviceChanged from " << old_default_token_id << " to "
+                    << new_default_token_id << " (our default capture device is "
+                    << default_capture_device_token().value() << ")";
+    }
+  });
 }
 
 void AudioCoreHardwareTest::ConnectToAudioCore() {
@@ -200,6 +219,16 @@ void AudioCoreHardwareTest::DisplayReceivedAudio() {
   printf("\n");
 }
 
+std::ostringstream AudioCoreHardwareTest::AllZeroesWarning() {
+  std::ostringstream stream;
+  stream << "Things to check:" << std::endl
+         << " - Is a Mic-Mute switch on?" << std::endl
+         << " - Did the audio driver set the input HW sensitivity too low?" << std::endl
+         << " - Is this a DIGITAL audio input?" << std::endl
+         << " - Is a VirtualAudioDevice the default audio input?";
+  return stream;
+}
+
 // When capturing from the real built-in microphone, the analog noise floor ensures that there
 // should be at least 1 bit of ongoing broad-spectrum signal (excluding professional-grade
 // products). Thus, if we are accurately capturing the analog noise floor, a span of received
@@ -226,11 +255,7 @@ TEST_F(AudioCoreHardwareTest, AnalogNoiseDetectable) {
   for (auto idx = 0u; idx < received_payload_frames_ * kNumChannels; ++idx) {
     sum_squares += (payload_buffer_[idx] * payload_buffer_[idx]);
   }
-  ASSERT_GT(sum_squares, 0.0f) << "Captured signal is all zeroes. "
-                               << "Things to check: Is Mic-Mute switch on? "
-                               << "Did audio driver set input HW sensitivity too low? "
-                               << "Is this a digital input? "
-                               << "Is VirtualAudioDevice the default input?";
+  ASSERT_GT(sum_squares, 0.0f) << "Captured signal is all zeroes. " << AllZeroesWarning().str();
 
   float rms = std::sqrt(sum_squares / static_cast<float>(received_payload_frames_));
   FX_LOGS(INFO) << "Across " << received_payload_frames_ << " frames, we measured " << std::fixed
@@ -254,7 +279,8 @@ TEST_F(AudioCoreHardwareTest, MinimalDcOffset) {
     nonzero_sample_found = nonzero_sample_found || (payload_buffer_[idx] != 0.0f);
   }
   if (!nonzero_sample_found) {
-    GTEST_SKIP() << "Captured signal is all zeroes. DC offset cannot be measured";
+    GTEST_SKIP() << "Captured signal is all zeroes. DC offset cannot be measured. "
+                 << AllZeroesWarning().str();
   }
 
   float mean = sum / static_cast<float>(received_payload_frames_);
@@ -267,10 +293,18 @@ TEST_F(AudioCoreHardwareTest, MinimalDcOffset) {
 
   float std_dev = std::sqrt(sum_square_diffs / static_cast<float>(received_payload_frames_));
   EXPECT_TRUE(std_dev > std::abs(mean))
-      << "This device has a detectable " << (mean > 0.0f ? "positive" : "negative")
-      << " DC Offset. Standard deviation (" << std::fixed << std::setprecision(7) << std_dev
-      << ") should exceed the absolute mean (" << mean << ", approx " << std::setprecision(2)
-      << ScaleToDb(std::abs(mean)) << " dB)";
+      << "The audio input device has a detectable " << (mean > 0.0f ? "positive" : "negative")
+      << " DC Offset bias. Standard deviation (" << std::fixed << std::setprecision(7) << std_dev
+      << ") should exceed absolute mean (" << mean << ", approx " << std::setprecision(2)
+      << ScaleToDb(std::abs(mean)) << " dB)." << std::endl
+      << "This device should probably be retired, since DC Offset can cause malfunctions for "
+      << "services that process the audio input stream, such as speech recognition or WebRTC";
+
+  FX_LOGS(INFO) << "Across " << received_payload_frames_ << " frames, mean captured value was "
+                << std::fixed << std::setprecision(7) << mean << " (" << std::setprecision(2)
+                << ScaleToDb(std::abs(mean)) << " dB)" << std::endl
+                << "stddev " << std::setprecision(7) << std_dev << " was " << std::setprecision(2)
+                << std_dev / std::abs(mean) << " x mean";
 }
 
 }  // namespace media::audio::test

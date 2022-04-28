@@ -54,6 +54,8 @@ class AudioCoreHardwareTest : public TestFixture {
   void OnPacketProduced(fuchsia::media::StreamPacket packet);
   void DisplayReceivedAudio();
 
+  std::ostringstream AllZeroesWarning();
+
   fuchsia::media::AudioDeviceEnumeratorPtr audio_device_enumerator_;
   fuchsia::media::AudioCorePtr audio_core_;
   fuchsia::media::AudioCapturerPtr audio_capturer_;
