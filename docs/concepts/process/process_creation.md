@@ -52,12 +52,13 @@ between a number of components with compatible security constraints.
 
 Early on in the boot process, the system does create a number of processes
 manually. For example, the kernel manually creates the first userspace process,
-`userboot`, which creates `devmgr` in turn. These low-level mechanisms use the
-`liblaunchpad.so` shared library, which contains the logic for parsing ELF
-files. Direct construction of processes is prohibited in the `fuchsia` job tree
-using a job policy.
+`userboot`.
 
-The `liblaunchpad.so` shared library is available in Zircon but should be used
-only during early boot and for low-level tests of process creation. Libraries
-or programs that might be used from the `fuchsia` job tree should use
-`fdio_spawn` (or its companions) to conform to the security policy.
+Userboot's most important job is to load the next process from the bootfs image
+in the ZBI, which by default is `component_manager`.
+
+Direct construction of processes (such as how `userboot` loads
+`component_manager`) is prohibited in the `fuchsia` job tree using a job
+policy. Libraries or programs that might be used from the `fuchsia` job tree
+may use `fdio_spawn` (or its companions) to create processes while conforming
+to the security policy.

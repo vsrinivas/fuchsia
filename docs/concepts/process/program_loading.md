@@ -75,18 +75,6 @@ used by an `ET_EXEC` executable file. Zircon does not support
 fixed-address program loading (ELF `ET_EXEC` files) at all, only
 position-independent executables or *PIE*s, which are ELF `ET_DYN` files.
 
-## The **launchpad** library
-
-The main implementation of program loading resides in
-the [`launchpad` library](/zircon/system/ulib/launchpad/). It has a C API
-in
-[`<launchpad/launchpad.h>`](/zircon/system/ulib/launchpad/include/launchpad/launchpad.h) but
-is not formally documented. The `launchpad` API is not described here. Its
-treatment of executable files and process startup forms the Zircon system
-ABI for program loading.
-The [lowest userspace layers of the system](userboot.md) implement the same
-protocols.
-
 Filesystems are not part of the lower layers of Zircon API. Instead,
 program loading is based on [VMOs](/docs/reference/kernel_objects/vm_object.md) and on IPC
 protocols used through [channels](/docs/reference/kernel_objects/channel.md).
