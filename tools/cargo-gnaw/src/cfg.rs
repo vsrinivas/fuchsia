@@ -132,7 +132,7 @@ pub fn cfg_to_gn_conditional(cfg: &str) -> Result<String, Error> {
         Ok(String::from("current_cpu == \"x64\""))
     } else if cfg == "target_arch = \"wasm32\"" {
         Ok(String::from("current_cpu == \"wasm32\""))
-    } else if cfg == "windows" {
+    } else if cfg == "windows" || cfg == "target_family = \"windows\"" {
         // don't support host builds on windows right now
         Ok(String::from("false"))
 
