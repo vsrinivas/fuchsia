@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"strconv"
-	"sync/atomic"
 	"syscall/zx"
 	"time"
 
@@ -45,6 +44,7 @@ import (
 	rawsocket "fidl/fuchsia/posix/socket/raw"
 	"fidl/fuchsia/stash"
 
+	"gvisor.dev/gvisor/pkg/atomicbitops"
 	glog "gvisor.dev/gvisor/pkg/log"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
@@ -135,7 +135,9 @@ const (
 	handleRAs = ipv6.HandlingRAsAlwaysEnabled
 )
 
-type atomicBool uint32
+type atomicBool struct {
+	v *atomicbitops.Uint32
+}
 
 // IsBoolFlag implements flag.boolFlag.IsBoolFlag.
 //
@@ -154,18 +156,18 @@ func (a *atomicBool) Set(s string) error {
 	if v {
 		val = 1
 	}
-	atomic.StoreUint32((*uint32)(a), val)
+	a.v.Store(val)
 	return nil
 }
 
 // String implements flag.Value.String.
 func (a *atomicBool) String() string {
-	return strconv.FormatBool(atomic.LoadUint32((*uint32)(a)) != 0)
+	return strconv.FormatBool(a.v.Load() != 0)
 }
 
 func init() {
 	// As of this writing the default is 1.
-	atomic.StoreUint32(&sniffer.LogPackets, 0)
+	sniffer.LogPackets.Store(0)
 }
 
 type glogEmitter struct{}
@@ -188,7 +190,7 @@ func Main() {
 	logLevel := syslog.InfoLevel
 
 	flags := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
-	flags.Var((*atomicBool)(&sniffer.LogPackets), "log-packets", "enable packet logging")
+	flags.Var(&atomicBool{v: &sniffer.LogPackets}, "log-packets", "enable packet logging")
 	flags.Var(&logLevel, "verbosity", "set the logging verbosity")
 
 	var socketStatsTimerPeriod time.Duration

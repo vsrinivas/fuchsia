@@ -10,7 +10,6 @@ package netstack
 import (
 	"errors"
 	"fmt"
-	"sync/atomic"
 	"syscall/zx"
 	"syscall/zx/fidl"
 
@@ -26,6 +25,7 @@ import (
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
 
+	"gvisor.dev/gvisor/pkg/atomicbitops"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	tcpipstack "gvisor.dev/gvisor/pkg/tcpip/stack"
 )
@@ -338,7 +338,7 @@ func (ni *stackImpl) GetDnsServerWatcher(ctx_ fidl.Context, watcher name.DnsServ
 var _ stack.LogWithCtx = (*logImpl)(nil)
 
 type logImpl struct {
-	logPackets *uint32
+	logPackets *atomicbitops.Uint32
 }
 
 func (li *logImpl) SetLogPackets(_ fidl.Context, enabled bool) error {
@@ -346,7 +346,7 @@ func (li *logImpl) SetLogPackets(_ fidl.Context, enabled bool) error {
 	if enabled {
 		val = 1
 	}
-	atomic.StoreUint32(li.logPackets, val)
+	li.logPackets.Store(val)
 	syslog.VLogTf(syslog.DebugVerbosity, "fuchsia_net_stack", "SetLogPackets: %t", enabled)
 	return nil
 }

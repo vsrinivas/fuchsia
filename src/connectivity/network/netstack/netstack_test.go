@@ -16,7 +16,6 @@ import (
 	"net"
 	"os"
 	"sort"
-	"sync/atomic"
 	"syscall/zx"
 	"testing"
 	"time"
@@ -81,7 +80,7 @@ func TestMain(m *testing.M) {
 		syslog.SetDefaultLogger(l)
 
 		// As of this writing we set this value to 0 in netstack/main.go.
-		atomic.StoreUint32(&sniffer.LogPackets, 1)
+		sniffer.LogPackets.Store(1)
 	}
 
 	os.Exit(m.Run())
