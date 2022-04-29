@@ -293,7 +293,7 @@ func validHostname(hostname string) bool {
 	// Host name is of the forms
 	//   somename.region.zone.doman.tld
 	// use a regex to make sure each part is at least 1 character only separated by period
-	var re = regexp.MustCompile(`(?m)^[\w-]*(?:\.\w+)+$`)
+	var re = regexp.MustCompile(`(?m)^[\w-]+(?:\.\w+)*$`)
 	return re.MatchString(hostname)
 }
 

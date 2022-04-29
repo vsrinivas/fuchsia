@@ -453,6 +453,7 @@ func TestValidHostname(t *testing.T) {
 		"d.lax.corp.google.com",
 		"host-with_different_90-names.lax.corp.google.com",
 		"123.123.22.2",
+		"hostname-alias",
 	}
 	for i, name := range validNames {
 		t.Run(fmt.Sprintf("TestValidHostname %d", i), func(t *testing.T) {
@@ -466,8 +467,8 @@ func TestValidHostname(t *testing.T) {
 func TestInvalidHostname(t *testing.T) {
 	invalidNames := []string{
 		"",                 // Empty.
-		"host",             // No domain.
 		"user@my.host.com", // Invalid to have user prefix.
+		"host..name",       // Invalid empty label.
 	}
 	for i, name := range invalidNames {
 		t.Run(fmt.Sprintf("TestInvalidHostname %d", i), func(t *testing.T) {
