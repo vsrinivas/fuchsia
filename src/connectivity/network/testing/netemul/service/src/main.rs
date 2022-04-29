@@ -15,8 +15,8 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceFsDir},
     fuchsia_component_test::{
-        self as fcomponent, Capability, ChildOptions, ChildRef, LocalComponentHandles,
-        RealmBuilder, RealmInstance, Ref, Route,
+        self as fcomponent, Capability, ChildOptions, LocalComponentHandles, RealmBuilder,
+        RealmInstance, Ref, Route,
     },
     fuchsia_driver_test::DriverTestRealmBuilder as _,
     fuchsia_zircon as zx,
@@ -320,18 +320,33 @@ async fn create_realm_instance(
                                 UniqueCapability::DevFs { name: capability_name.into() }
                             }
                             fnetemul::Capability::NetemulNetworkContext(fnetemul::Empty {}) => {
-                                let () = route_network_context_to_component(
-                                    &builder,
-                                    &netemul_services,
-                                    &child_ref,
-                                )
-                                .await?;
+                                builder
+                                    .add_route(
+                                        Route::new()
+                                            .capability(Capability::protocol::<
+                                                fnetemul_network::NetworkContextMarker,
+                                            >(
+                                            ))
+                                            .from(&netemul_services)
+                                            .to(&child_ref),
+                                    )
+                                    .await?;
                                 UniqueCapability::new_protocol::<
                                     fnetemul_network::NetworkContextMarker,
                                 >()
                             }
                             fnetemul::Capability::LogSink(fnetemul::Empty {}) => {
-                                let () = route_log_sink_to_component(&builder, &child_ref).await?;
+                                builder
+                                    .add_route(
+                                        Route::new()
+                                            .capability(Capability::protocol::<
+                                                flogger::LogSinkMarker,
+                                            >(
+                                            ))
+                                            .from(Ref::parent())
+                                            .to(&child_ref),
+                                    )
+                                    .await?;
                                 UniqueCapability::new_protocol::<flogger::LogSinkMarker>()
                             }
                             fnetemul::Capability::ChildDep(fnetemul::ChildDep {
@@ -762,37 +777,6 @@ async fn open_or_create_dir(
         })
         .await?;
     Ok(root)
-}
-
-async fn route_network_context_to_component(
-    builder: &RealmBuilder,
-    from: &ChildRef,
-    target: &ChildRef,
-) -> Result<(), fcomponent::error::Error> {
-    let () = builder
-        .add_route(
-            Route::new()
-                .capability(Capability::protocol::<fnetemul_network::NetworkContextMarker>())
-                .from(from)
-                .to(target),
-        )
-        .await?;
-    Ok(())
-}
-
-async fn route_log_sink_to_component(
-    builder: &RealmBuilder,
-    target: &ChildRef,
-) -> Result<(), fcomponent::error::Error> {
-    let () = builder
-        .add_route(
-            Route::new()
-                .capability(Capability::protocol::<flogger::LogSinkMarker>())
-                .from(Ref::parent())
-                .to(target),
-        )
-        .await?;
-    Ok(())
 }
 
 async fn run_netemul_services(
