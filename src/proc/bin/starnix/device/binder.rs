@@ -1532,7 +1532,10 @@ impl BinderDriver {
             let mut thread_state = binder_thread.write();
 
             // Select which command queue to read from, preferring the thread-local one.
-            let command_queue = if !thread_state.command_queue.is_empty() {
+            // If a transaction is pending, deadlocks can happen if reading from the process queue.
+            let command_queue = if !thread_state.command_queue.is_empty()
+                || !thread_state.transactions.is_empty()
+            {
                 &mut thread_state.command_queue
             } else {
                 &mut *proc_command_queue
@@ -1545,8 +1548,11 @@ impl BinderDriver {
                 // SAFETY: There is an item in the queue since we're in the `Some` branch.
                 match command_queue.pop_front().unwrap() {
                     Command::Transaction(t) => {
-                        // A transaction has begun, push it onto the transaction stack.
-                        thread_state.transactions.push(t);
+                        // If the transaction is not oneway, we're expected to give a reply, so
+                        // push the transaction onto the transaction stack.
+                        if t.flags & transaction_flags_TF_ONE_WAY == 0 {
+                            thread_state.transactions.push(t);
+                        }
                     }
                     Command::Reply(..) | Command::TransactionComplete => {
                         // A transaction is complete, pop it from the transaction stack.
