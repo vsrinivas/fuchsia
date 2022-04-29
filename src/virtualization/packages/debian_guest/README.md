@@ -24,7 +24,7 @@ To boot on an ARM64 device, replace `x64` with `arm64`.
 Once booted:
 
 ```
-guest launch debian_guest
+guest launch debian
 ```
 
 ## Telnet shell
@@ -35,8 +35,8 @@ identify the environment ID and the guest context ID (CID) to use:
 
 ```
 $ guest list
-env:0             debian_guest
- guest:3          debian_guest
+env:0             debian
+ guest:3          debian
 ```
 
 The above indicates the debian guest is CID 3 in environment 0. Open a shell

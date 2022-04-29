@@ -127,7 +127,7 @@ async fn main() -> Result<(), Error> {
     match options.nested {
         SubCommands::Launch(launch_args) => {
             let guest_config = launch::parse_vmm_args(&launch_args);
-            let guest = launch::GuestLaunch::new(launch_args.package, guest_config).await?;
+            let guest = launch::GuestLaunch::new(launch_args.guest_type, guest_config).await?;
             guest.run().await
         }
         SubCommands::Balloon(balloon_args) => {

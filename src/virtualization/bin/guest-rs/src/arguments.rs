@@ -2,15 +2,60 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use argh::FromArgs;
+use {
+    argh::{FromArgValue, FromArgs},
+    std::fmt,
+};
+
+#[derive(Debug, PartialEq)]
+pub enum GuestType {
+    Debian,
+    Termina,
+    Zircon,
+}
+
+impl FromArgValue for GuestType {
+    fn from_arg_value(value: &str) -> Result<Self, String> {
+        match value {
+            "debian" => Ok(Self::Debian),
+            "termina" => Ok(Self::Termina),
+            "zircon" => Ok(Self::Zircon),
+            _ => Err(format!(
+                "Unrecognized guest type \"{}\". Supported guest types are: \
+                \"debian\", \"termina\", \"zircon\".",
+                value
+            )),
+        }
+    }
+}
+
+impl fmt::Display for GuestType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            GuestType::Debian => write!(f, "debian"),
+            GuestType::Termina => write!(f, "termina"),
+            GuestType::Zircon => write!(f, "zircon"),
+        }
+    }
+}
+
+impl GuestType {
+    pub fn package_url(&self) -> &str {
+        match *self {
+            GuestType::Debian => "fuchsia-pkg://fuchsia.com/debian_guest#meta/debian_guest.cmx",
+            GuestType::Termina => "fuchsia-pkg://fuchsia.com/termina_guest#meta/termina_guest.cmx",
+            GuestType::Zircon => "fuchsia-pkg://fuchsia.com/zircon_guest#meta/zircon_guest.cmx",
+        }
+    }
+}
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Launch a guest image. Usage: guest-rs launch package [--cmdline-add <arg>...] [--interrupt <interrupt>...] [--default-net <bool>] [--memory <memory-size>] [--cpus <num-cpus>] [--virtio-* <bool>]
+/// Launch a guest image. Usage: guest-rs launch guest_type [--cmdline-add <arg>...] [--interrupt <interrupt>...] [--default-net <bool>] [--memory <memory-size>] [--cpus <num-cpus>] [--virtio-* <bool>]
 #[argh(subcommand, name = "launch")]
 pub struct LaunchArgs {
     #[argh(positional)]
-    /// package name to launch e.g. 'zircon_guest'.
-    pub package: String,
+    /// guest type to launch e.g. 'zircon'.
+    pub guest_type: GuestType,
     /// adds provided strings to the existing kernel command line
     #[argh(option)]
     pub cmdline_add: Vec<String>,

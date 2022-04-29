@@ -33,12 +33,12 @@ create them before running `fx build` by following the instructions in
 
 After booting the target device, to run Zircon:
 ```sh
-guest launch zircon_guest
+guest launch zircon
 ```
 
 Likewise, to launch a Debian guest:
 ```sh
-guest launch debian_guest
+guest launch debian
 ```
 
 ## Running on QEMU

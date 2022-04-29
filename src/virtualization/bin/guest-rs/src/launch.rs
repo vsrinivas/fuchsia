@@ -11,7 +11,6 @@ use {
     },
     fuchsia_async::{self as fasync, futures::TryFutureExt},
     fuchsia_component::client::connect_to_protocol,
-    fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon::{self as zx, sys},
     fuchsia_zircon_status as zx_status,
     lazy_static::lazy_static,
@@ -56,7 +55,11 @@ pub struct GuestLaunch {
 }
 
 impl GuestLaunch {
-    pub async fn new(package_name: String, config: GuestConfig) -> Result<Self, Error> {
+    pub async fn new(guest_type: arguments::GuestType, config: GuestConfig) -> Result<Self, Error> {
+        let guest_url = guest_type.package_url();
+        let guest_name = guest_type.to_string();
+        println!("Starting {} with package {}", guest_name, guest_url);
+
         // Take a package, connect to a Manager, create a Guest Realm,
         // launch the package, return guest proxy on success
         // as we need a reference to both the manager and the realm,
@@ -67,22 +70,14 @@ impl GuestLaunch {
             .context("Failed to create Realm proxy")?;
 
         manager
-            .create(Some(&package_name), realm_server_end)
+            .create(Some(&guest_name), realm_server_end)
             .context("Failed to connect Realm to Manager")?;
-
-        // Launch the specified guest
-        let url = PkgUrl::new_resource(
-            "fuchsia.com".to_string(),
-            format!("/{}", package_name),
-            None,
-            format!("meta/{}.cmx", package_name),
-        )?;
 
         let (guest, guest_server_end) =
             fidl::endpoints::create_proxy::<GuestMarker>().context("Failed to create Guest")?;
 
         let _guest_cid = realm
-            .launch_instance(&url.to_string(), None, config, guest_server_end)
+            .launch_instance(guest_url, None, config, guest_server_end)
             .map_err(Error::new)
             .await?;
 
