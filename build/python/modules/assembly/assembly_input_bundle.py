@@ -61,6 +61,7 @@ class AssemblyInputBundle(ImageAssemblyConfig):
                 <file name>
         kernel/
             kernel.zbi
+            multiboot.bin
 
     assembly_config.json schema::
 
@@ -85,7 +86,8 @@ class AssemblyInputBundle(ImageAssemblyConfig):
                 "path": "kernel/kernel.zbi",
                 "args": [ "arg1", "arg2", ... ],
                 "clock_backstop": 01234
-            }
+            },
+            "qemu_kernel": "kernel/multiboot.bin",
             "boot_args": [ "arg1", "arg2", ... ],
         }
 
@@ -142,6 +144,8 @@ class AssemblyInputBundle(ImageAssemblyConfig):
         file_paths.extend([entry.source for entry in self.bootfs_files])
         if self.kernel.path is not None:
             file_paths.append(self.kernel.path)
+        if self.qemu_kernel is not None:
+            file_paths.append(self.qemu_kernel)
         for entries in self.config_data.values():
             file_paths.extend([entry.source for entry in entries])
         if self.blobs is not None:
@@ -216,6 +220,9 @@ class AIBCreator:
         # The kernel info
         self.kernel = KernelInfo()
         self.boot_args: Set[str] = set()
+
+        # The emulator kernel.
+        self.qemu_kernel: Optional[FilePath] = None
 
         # Bootfs info
         self.bootfs_files: Set[FileEntry] = set()
@@ -306,6 +313,19 @@ class AIBCreator:
             kernel_filename = os.path.basename(kernel_src_path)
             kernel_dst_path = os.path.join("kernel", kernel_filename)
             result.kernel.path = kernel_dst_path
+
+            # Copy the kernel itself into the out-of-tree layout
+            local_kernel_dst_path = os.path.join(self.outdir, kernel_dst_path)
+            os.makedirs(os.path.dirname(local_kernel_dst_path), exist_ok=True)
+            fast_copy(kernel_src_path, local_kernel_dst_path)
+            deps.add(kernel_src_path)
+
+        # Rebase the path to the qemu kernel into the out-of-tree layout
+        if self.qemu_kernel:
+            kernel_src_path: Any = self.qemu_kernel
+            kernel_filename = os.path.basename(kernel_src_path)
+            kernel_dst_path = os.path.join("kernel", kernel_filename)
+            result.qemu_kernel = kernel_dst_path
 
             # Copy the kernel itself into the out-of-tree layout
             local_kernel_dst_path = os.path.join(self.outdir, kernel_dst_path)

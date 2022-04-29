@@ -227,6 +227,10 @@ pub struct ProductArgs {
     /// the directory in which to find the platform assembly input bundles
     #[argh(option)]
     pub input_bundles_dir: PathBuf,
+
+    /// the directory in which to find the legacy assembly input bundle
+    #[argh(option)]
+    pub legacy_bundle_dir: PathBuf,
 }
 
 #[cfg(test)]

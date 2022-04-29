@@ -9,7 +9,7 @@ import os
 import sys
 from typing import List
 
-from assembly import FileEntry, FilePath, ImageAssemblyConfig, PackageManifest
+from assembly import FileEntry, FilePath, PackageManifest
 from serialization import json_load
 
 

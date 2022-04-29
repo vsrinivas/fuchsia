@@ -240,6 +240,7 @@ template("assemble_system") {
     pkgfs_package_label = "//src/sys/pkg/bin/pkgfs"
     compare_command_logs = "${image_name}_compare_command_logs"
     compare_images_manifests = "${image_name}_compare_images_manifests"
+    platform_aib = "//build/assembly"
   }
 
   # Intermediate files produced for Image Assembly.
@@ -259,6 +260,9 @@ template("assemble_system") {
 
     legacy_assembly_input_bundle_manifest =
         "${outdir}/legacy/assembly_config.json"
+    platform_aib_dir = get_label_info(labels.platform_aib, "target_out_dir")
+    emulator_aib_manifest =
+        "$platform_aib_dir/emulator_support/assembly_config.json"
 
     # This file is created implicitly by ffx assembly product, so this is the
     # path that it's expected to be found at, not the path that it's to be
@@ -608,6 +612,7 @@ template("assemble_system") {
 
     sources = [
       "${files.outdir}/legacy",
+      "${files.platform_aib_dir}/emulator_support",
       "${files.product_assembly_config}",
     ]
 
@@ -649,6 +654,8 @@ template("assemble_system") {
       "--product",
       rebase_path(files.product_assembly_config, root_build_dir),
       "--input-bundles-dir",
+      rebase_path(files.platform_aib_dir, root_build_dir),
+      "--legacy-bundle-dir",
       rebase_path(files.outdir, root_build_dir),
       "--outdir",
       rebase_path(files.outdir, root_build_dir),
@@ -657,11 +664,13 @@ template("assemble_system") {
     deps = [
       ":${labels.legacy_assembly_input_bundle}",
       ":${labels.product_assembly_config}",
+      labels.platform_aib,
     ]
 
     inputs = [
-      files.product_assembly_config,
+      files.emulator_aib_manifest,
       files.legacy_assembly_input_bundle_manifest,
+      files.product_assembly_config,
     ]
 
     outputs = [ files.regenerated_image_assembly_config ]

@@ -360,6 +360,7 @@ mod tests {
                 args: Vec::new(),
                 clock_backstop: 0,
             },
+            qemu_kernel: "path/to/qemu/kernel".into(),
             boot_args: Vec::new(),
             bootfs_files: Vec::new(),
         };
@@ -402,6 +403,7 @@ mod tests {
                 args: Vec::new(),
                 clock_backstop: 0,
             },
+            qemu_kernel: "path/to/qemu/kernel".into(),
             boot_args: Vec::new(),
             bootfs_files: Vec::new(),
         };
@@ -462,6 +464,7 @@ mod tests {
                 args: Vec::new(),
                 clock_backstop: 0,
             },
+            qemu_kernel: "path/to/qemu/kernel".into(),
             boot_args: Vec::new(),
             bootfs_files: Vec::new(),
         };
@@ -579,6 +582,7 @@ mod tests {
                 args: Vec::new(),
                 clock_backstop: 0,
             },
+            qemu_kernel: "path/to/qemu/kernel".into(),
             boot_args: Vec::new(),
             bootfs_files: Vec::new(),
         };
@@ -698,6 +702,7 @@ mod tests {
                 args: Vec::new(),
                 clock_backstop: 0,
             },
+            qemu_kernel: "path/to/qemu/kernel".into(),
             boot_args: Vec::new(),
             bootfs_files: Vec::new(),
         };

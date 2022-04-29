@@ -7,37 +7,27 @@ import("//build/assembly/legacy.gni")
 import("//build/security.gni")
 
 if (is_fuchsia) {
-  # Create an OOT-usable Image Assembly configuration, with all supporting
-  # artifacts, based on the currently configured product configuration.
-  #
-  # This takes the image assembly config from the legacy_image_assembly label, and creates
-  # a package from it that contains all the base, cache, bootfs, and config data
-  # files, the kernel, and a new version of the image assembly config whose paths
-  # are all relative to the file (in the same package as those artifacts.)
-  legacy_assembly_input_bundle("legacy") {
-    testonly = true
-    image_assembly_label = "//build/images/fuchsia"
-    create_package_archive = true
+  qemu_kernel_file = ""
+  qemu_kernel_target = ""
+  if (target_cpu == "x64") {
+    qemu_kernel_file = "$root_build_dir/multiboot.bin"
+    qemu_kernel_target =
+        "//zircon/kernel/arch/x86/phys/boot-shim:multiboot-shim"
+  } else if (target_cpu == "arm64") {
+    qemu_kernel_file = "$root_build_dir/qemu-boot-shim.bin"
+    qemu_kernel_target = "//zircon/kernel/target/arm64/boot-shim:qemu"
+  } else {
+    assert(false, "Unsupported target cpu: $target_cpu")
   }
 
-  # This is an example of creating an assembly input bundle, it's only for use
-  # to show how to use the template, and isn't meant to be used (it will be
-  # removed after there are other, "real" usages of the template.)
-  assembly_input_bundle("additional_packages") {
-    testonly = base_cache_packages_testonly
-    visibility = [ ":*" ]
-    base_packages = [ "//:additional_base_packages" ]
-    cache_packages = [ "//:additional_cache_packages" ]
-    create_aib_package = true
-    create_aib_archive = true
+  assembly_input_bundle("emulator_support") {
+    qemu_kernel = qemu_kernel_file
+    deps = [ qemu_kernel_target ]
   }
 
   group("assembly") {
-    testonly = true
     public_deps = [
-      ":additional_packages",
-      ":legacy",
-      ":legacy.tgz",
+      ":emulator_support",
       "scripts:assembly_input_bundle_tool_install($host_toolchain)",
     ]
   }

@@ -64,6 +64,9 @@ pub enum Image {
 
     /// Fastboot FVM.
     FVMFastboot(PathBuf),
+
+    /// Qemu Kernel.
+    QemuKernel(PathBuf),
 }
 
 impl Image {
@@ -78,6 +81,7 @@ impl Image {
             Image::FVMSparse(s) => s,
             Image::FVMSparseBlob(s) => s,
             Image::FVMFastboot(s) => s,
+            Image::QemuKernel(s) => s,
         }
     }
 }
@@ -143,6 +147,12 @@ impl Serialize for Image {
                 path,
                 signed: None,
             },
+            Image::QemuKernel(path) => ImageSerializeHelper {
+                partition_type: "kernel",
+                name: "qemu-kernel",
+                path,
+                signed: None,
+            },
         };
         helper.serialize(serializer)
     }
@@ -174,6 +184,7 @@ impl<'de> Deserialize<'de> for Image {
             ("blk", "storage-sparse", None) => Ok(Image::FVMSparse(helper.path)),
             ("blk", "storage-sparse-blob", None) => Ok(Image::FVMSparseBlob(helper.path)),
             ("blk", "fvm.fastboot", None) => Ok(Image::FVMFastboot(helper.path)),
+            ("kernel", "qemu-kernel", None) => Ok(Image::QemuKernel(helper.path)),
             (partition_type, name, _) => Err(de::Error::unknown_variant(
                 &format!("({}, {})", partition_type, name),
                 &[
@@ -185,6 +196,7 @@ impl<'de> Deserialize<'de> for Image {
                     "(blk, storage-sparse)",
                     "(blk, storage-sparse-blob)",
                     "(blk, fvm.fastboot)",
+                    "(kernel, qemu-kernel)",
                 ],
             )),
         }
@@ -208,6 +220,7 @@ mod tests {
                 Image::FVMSparse("path/to/fvm.sparse.blk".into()),
                 Image::FVMSparseBlob("path/to/fvm.blob.sparse.blk".into()),
                 Image::FVMFastboot("path/to/fvm.fastboot.blk".into()),
+                Image::QemuKernel("path/to/qemu/kernel".into()),
             ],
         };
 
@@ -247,7 +260,7 @@ mod tests {
     #[test]
     fn deserialize() {
         let manifest: ImagesManifest = serde_json::from_value(generate_test_value()).unwrap();
-        assert_eq!(manifest.images.len(), 8);
+        assert_eq!(manifest.images.len(), 9);
 
         for image in &manifest.images {
             let (expected, actual) = match image {
@@ -262,6 +275,7 @@ mod tests {
                 Image::FVMSparse(path) => ("path/to/fvm.sparse.blk", path),
                 Image::FVMSparseBlob(path) => ("path/to/fvm.blob.sparse.blk", path),
                 Image::FVMFastboot(path) => ("path/to/fvm.fastboot.blk", path),
+                Image::QemuKernel(path) => ("path/to/qemu/kernel", path),
             };
             assert_eq!(&PathBuf::from(expected), actual);
         }
@@ -322,6 +336,11 @@ mod tests {
                 "type": "blk",
                 "name": "fvm.fastboot",
                 "path": "path/to/fvm.fastboot.blk",
+            },
+            {
+                "type": "kernel",
+                "name": "qemu-kernel",
+                "path": "path/to/qemu/kernel",
             },
         ])
     }

@@ -70,6 +70,8 @@ generated_product_config("test_image_assembly_config") {
 # for the host_test_data() template is very difficult right now.
 # TODO(https://fxbug.dev/96877) archive the AIB into a tgz for host_test_data()
 stamp = "$target_out_dir/test_fail_without_config.stamp"
+platform_bundles_target = "//build/assembly($default_toolchain)"
+platform_bundles_dir = get_label_info(platform_bundles_target, "target_out_dir")
 python_action("fail_without_config") {
   testonly = true
 
@@ -81,8 +83,10 @@ python_action("fail_without_config") {
     rebase_path(ffx_output, root_build_dir),
     "--product-assembly-config",
     rebase_path(config_output, root_build_dir),
-    "--input-bundles-dir",
+    "--legacy-bundle-dir",
     rebase_path(outdir, root_build_dir),
+    "--input-bundles-dir",
+    rebase_path(platform_bundles_dir, root_build_dir),
     "--outdir",
     rebase_path(outdir, root_build_dir),
     "--stamp",
@@ -94,6 +98,7 @@ python_action("fail_without_config") {
     ":test_config",
     ":test_ffx",
     "//build/python:interpreter",
+    platform_bundles_target,
   ]
   outputs = [ stamp ]
 }

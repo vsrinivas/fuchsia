@@ -192,6 +192,9 @@ template("assembly_input_bundle_archive") {
 #  cache_packages (optional; default: empty)
 #    [list of labels] A list of GN labels to walk for cache packages.
 #
+#  qemu_kernel (optional; default: false)
+#    [path] Path to the qemu kernel.
+#
 #  create_aib_package (optional; default: false)
 #    [boolean] Set to true to also create a package that contains the contents
 #    of the AIB.
@@ -280,6 +283,9 @@ template("assembly_input_bundle") {
   creation_args = []
   creation_inputs = []
   creation_deps = []
+  if (defined(invoker.deps)) {
+    creation_deps += invoker.deps
+  }
 
   # Only add the base packages list if it's non-empty
   if (defined(invoker.base_packages) && invoker.base_packages != []) {
@@ -319,6 +325,13 @@ template("assembly_input_bundle") {
     ]
     creation_inputs += [ files.cache_packages_list ]
     creation_deps += [ ":${labels.cache_packages_list}" ]
+  }
+
+  if (defined(invoker.qemu_kernel)) {
+    creation_args += [
+      "--qemu-kernel",
+      rebase_path(invoker.qemu_kernel, root_build_dir),
+    ]
   }
 
   # Create the out-of-tree-usable Assembly Input Bundle

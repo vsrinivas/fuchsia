@@ -12,7 +12,7 @@ use log::info;
 mod assembly_builder;
 
 pub fn assemble(args: ProductArgs) -> Result<()> {
-    let ProductArgs { product, outdir, gendir: _, input_bundles_dir } = args;
+    let ProductArgs { product, outdir, gendir: _, input_bundles_dir, legacy_bundle_dir } = args;
 
     info!("Loading configuration files.");
     info!("  product: {}", product.display());
@@ -26,8 +26,10 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
         builder.set_structured_config(package, config)?;
     }
 
-    let legacy_bundle_path = input_bundles_dir.join("legacy").join("assembly_config.json");
-    for bundle_path in vec![legacy_bundle_path] {
+    let legacy_bundle_path = legacy_bundle_dir.join("legacy").join("assembly_config.json");
+    let emulator_bundle_path =
+        input_bundles_dir.join("emulator_support").join("assembly_config.json");
+    for bundle_path in vec![legacy_bundle_path, emulator_bundle_path] {
         builder
             .add_bundle(&bundle_path)
             .context(format!("Adding input bundle: {}", bundle_path.display()))?;

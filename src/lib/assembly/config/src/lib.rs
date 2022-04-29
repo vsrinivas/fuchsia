@@ -38,6 +38,10 @@ pub struct PartialImageAssemblyConfig {
     /// The parameters that specify which kernel to put into the ZBI.
     pub kernel: Option<PartialKernelConfig>,
 
+    /// The qemu kernel to use when starting the emulator.
+    #[serde(default)]
+    pub qemu_kernel: Option<PathBuf>,
+
     /// The list of additional boot args to add.
     #[serde(default)]
     pub boot_args: Vec<String>,
@@ -75,6 +79,7 @@ impl PartialImageAssemblyConfig {
         let mut kernel_path = None;
         let mut kernel_args = Vec::new();
         let mut kernel_clock_backstop = None;
+        let mut qemu_kernel = None;
 
         for config in configs.into_iter() {
             system.extend(config.system);
@@ -101,6 +106,12 @@ impl PartialImageAssemblyConfig {
                     anyhow!("Only one product configuration can specify a backstop time"),
                 )?;
             }
+
+            util::set_option_once_or(
+                &mut qemu_kernel,
+                config.qemu_kernel,
+                anyhow!("Only one product configuration can specify a qemu kernel path"),
+            )?;
         }
 
         Ok(Self {
@@ -112,6 +123,7 @@ impl PartialImageAssemblyConfig {
                 args: kernel_args,
                 clock_backstop: kernel_clock_backstop,
             }),
+            qemu_kernel,
             boot_args: boot_args.into_iter().collect(),
             bootfs_files: bootfs_files.into_values().collect(),
             bootfs_packages: bootfs_packages.into_iter().collect(),
@@ -146,6 +158,9 @@ pub struct ImageAssemblyConfig {
     /// The parameters that specify which kernel to put into the ZBI.
     pub kernel: KernelConfig,
 
+    /// The qemu kernel to use when starting the emulator.
+    pub qemu_kernel: PathBuf,
+
     /// The list of additional boot args to add.
     #[serde(default)]
     pub boot_args: Vec<String>,
@@ -176,6 +191,7 @@ impl ImageAssemblyConfig {
                 args: Vec::default(),
                 clock_backstop,
             },
+            qemu_kernel: "path/to/qemu/kernel".into(),
         }
     }
 
@@ -196,6 +212,7 @@ impl ImageAssemblyConfig {
             base,
             cache,
             kernel,
+            qemu_kernel,
             boot_args,
             bootfs_files,
             bootfs_packages,
@@ -209,11 +226,15 @@ impl ImageAssemblyConfig {
         let clock_backstop = clock_backstop
             .ok_or(anyhow!("No product configurations specify a clock backstop time"))?;
 
+        let qemu_kernel =
+            qemu_kernel.ok_or(anyhow!("A qemu kernel configuration must be specified"))?;
+
         Ok(Self {
             system,
             base,
             cache,
             kernel: KernelConfig { path: kernel_path, args: cmdline_args, clock_backstop },
+            qemu_kernel,
             boot_args,
             bootfs_files,
             bootfs_packages,
@@ -602,6 +623,7 @@ mod tests {
                 "args": ["arg1", "arg2"],
                 "clock_backstop": 0
               },
+              "qemu_kernel": "path/to/qemu/kernel",
               "bootfs_files": [
                 {
                     "source": "path/to/source",
@@ -632,6 +654,7 @@ mod tests {
                 args: ["arg1", "arg2"],
                 clock_backstop: 0,
               },
+              qemu_kernel: "path/to/qemu/kernel",
               // and lists can have trailing commas
               boot_args: ["arg1", "arg2", ],
               bootfs_files: [
@@ -640,7 +663,7 @@ mod tests {
                     destination: "path/to/destination",
                 }
               ],
-              "bootfs_packages": ["package5", "package6"],
+              bootfs_packages: ["package5", "package6"],
             }
         "#;
 
@@ -798,6 +821,7 @@ mod tests {
                 "args": ["arg10", "arg20"],
                 "clock_backstop": 0
             },
+            "qemu_kernel": "path/to/qemu/kernel",
             "bootfs_files": [
                 {
                     "source": "path/to/source/a",
@@ -851,6 +875,7 @@ mod tests {
                 "args": ["arg10", "arg20"],
                 "clock_backstop": 0
             },
+            "qemu_kernel": "path/to/qemu/kernel",
             "bootfs_files": [
                 {
                     "source": "path/to/source/a",

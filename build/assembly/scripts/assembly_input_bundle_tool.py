@@ -27,6 +27,10 @@ def create_bundle(args: argparse.Namespace) -> None:
     if args.cache_pkg_list:
         add_pkg_list_from_file(aib_creator, args.cache_pkg_list, "cache")
 
+    # Add any bootloaders.
+    if args.qemu_kernel:
+        aib_creator.qemu_kernel = args.qemu_kernel
+
     # Create the AIB itself.
     (assembly_input_bundle, assembly_config, deps) = aib_creator.build()
 
@@ -207,7 +211,7 @@ def main():
     bundle_creation_parser.add_argument(
         "--outdir",
         required=True,
-        help="Path to the outdir that will contain the AIB.")
+        help="Path to the outdir that will contain the AIB")
     bundle_creation_parser.add_argument(
         "--base-pkg-list",
         type=argparse.FileType('r'),
@@ -219,13 +223,15 @@ def main():
         help=
         "Path to a json list of package manifests for the 'cache' package set")
     bundle_creation_parser.add_argument(
+        "--qemu-kernel", help="Path to the qemu kernel")
+    bundle_creation_parser.add_argument(
         "--depfile",
         type=argparse.FileType('w'),
         help="Path to write a dependency file to")
     bundle_creation_parser.add_argument(
         "--export-manifest",
         type=argparse.FileType('w'),
-        help="Path to write a FINI manifest of the contents of the AIB.")
+        help="Path to write a FINI manifest of the contents of the AIB")
     bundle_creation_parser.set_defaults(handler=create_bundle)
 
     ###

@@ -34,6 +34,11 @@ def main():
         required=True,
         help="Path to input bundles directory.")
     parser.add_argument(
+        "--legacy-bundle-dir",
+        type=pathlib.Path,
+        required=True,
+        help="Path to the legacy input bundle directory.")
+    parser.add_argument(
         "--outdir",
         type=pathlib.Path,
         required=True,
@@ -49,6 +54,7 @@ def main():
         ffx_bin=args.ffx_bin,
         product=args.product_assembly_config,
         input_bundles=args.input_bundles_dir,
+        legacy_bundle=args.legacy_bundle_dir,
         outdir=args.outdir)
     stdout, stderr = (
         output.stdout.decode("UTF-8"), output.stderr.decode("UTF-8"))

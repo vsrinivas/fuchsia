@@ -7,7 +7,12 @@ import subprocess
 
 
 def run_product_assembly(
-        ffx_bin, product, input_bundles, outdir, extra_config=[]):
+        ffx_bin,
+        product,
+        input_bundles,
+        legacy_bundle,
+        outdir,
+        extra_config=[]):
     """
     Run `ffx assembly product ...` with appropriate configuration and arguments for host tests.
 
@@ -43,6 +48,8 @@ def run_product_assembly(
         product,
         "--input-bundles-dir",
         input_bundles,
+        "--legacy-bundle-dir",
+        legacy_bundle,
         "--outdir",
         outdir,
     ]

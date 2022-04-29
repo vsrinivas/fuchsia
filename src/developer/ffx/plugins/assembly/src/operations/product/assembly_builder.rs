@@ -44,12 +44,14 @@ pub struct ImageAssemblyConfigBuilder {
     /// The config_data entries, by package and by destination path.
     config_data: ConfigDataMap,
 
-    // Modifications that must be made to structured config within packages.
+    /// Modifications that must be made to structured config within packages.
     structured_config: StructuredConfigPatches,
 
     kernel_path: Option<PathBuf>,
     kernel_args: BTreeSet<String>,
     kernel_clock_backstop: Option<u64>,
+
+    qemu_kernel: Option<PathBuf>,
 }
 
 impl Default for ImageAssemblyConfigBuilder {
@@ -72,6 +74,7 @@ impl ImageAssemblyConfigBuilder {
             kernel_path: None,
             kernel_args: BTreeSet::default(),
             kernel_clock_backstop: None,
+            qemu_kernel: None,
         }
     }
 
@@ -139,6 +142,13 @@ impl ImageAssemblyConfigBuilder {
                 self.add_config_data_entry(&package, entry)?;
             }
         }
+
+        assembly_util::set_option_once_or(
+            &mut self.qemu_kernel,
+            bundle.qemu_kernel.map(|p| bundle_path.join(p)),
+            anyhow!("Only one input bundle can specify a qemu kernel path"),
+        )?;
+
         Ok(())
     }
 
@@ -232,6 +242,7 @@ impl ImageAssemblyConfigBuilder {
             kernel_path,
             kernel_args,
             kernel_clock_backstop,
+            qemu_kernel,
         } = self;
 
         // repackage any matching packages, ignoring whether we actually succeed. if a patch has
@@ -294,6 +305,7 @@ impl ImageAssemblyConfigBuilder {
                 args: kernel_args.into_iter().collect(),
                 clock_backstop: kernel_clock_backstop,
             }),
+            qemu_kernel,
             boot_args: boot_args.into_iter().collect(),
             bootfs_files: bootfs_files.into_file_entries(),
             bootfs_packages: bootfs_packages.into_paths().collect(),
@@ -463,6 +475,7 @@ mod tests {
                     args: vec!["kernel_arg0".into()],
                     clock_backstop: Some(56244),
                 }),
+                qemu_kernel: Some("path/to/qemu/kernel".into()),
                 boot_args: vec!["boot_arg0".into()],
                 bootfs_files: vec![FileEntry {
                     source: "source/path/to/file".into(),
@@ -497,6 +510,7 @@ mod tests {
         assert_eq!(result.kernel.path, outdir.path().join("kernel/path"));
         assert_eq!(result.kernel.args, vec!("kernel_arg0".to_string()));
         assert_eq!(result.kernel.clock_backstop, 56244);
+        assert_eq!(result.qemu_kernel, outdir.path().join("path/to/qemu/kernel"));
     }
 
     #[test]
@@ -583,6 +597,7 @@ mod tests {
                     args: Vec::default(),
                     clock_backstop: Some(0),
                 }),
+                qemu_kernel: Some("kernel/qemu/path".into()),
                 ..image_assembly_config::PartialImageAssemblyConfig::default()
             },
             config_data: BTreeMap::default(),
@@ -622,6 +637,7 @@ mod tests {
                     args: Vec::default(),
                     clock_backstop: Some(0),
                 }),
+                qemu_kernel: Some("kernel/qemu/path".into()),
                 ..image_assembly_config::PartialImageAssemblyConfig::default()
             },
             config_data: BTreeMap::default(),

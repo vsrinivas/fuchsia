@@ -50,7 +50,6 @@ python_binary("compare_image_assembly_configs") {
 # needed to have `${host_tools_dir}` defined.
 #
 copy("assembly_input_bundle_tool_install") {
-  testonly = true
   deps = [ ":assembly_input_bundle_tool" ]
   outputs = [ "${host_tools_dir}/assembly_input_bundle_tool" ]
   sources = [ "${target_out_dir}/assembly_input_bundle_tool.pyz" ]

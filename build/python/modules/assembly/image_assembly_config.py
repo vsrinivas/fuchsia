@@ -59,6 +59,7 @@ class ImageAssemblyConfig:
     cache: Set[FilePath] = field(default_factory=set)
     system: Set[FilePath] = field(default_factory=set)
     kernel: KernelInfo = field(default_factory=KernelInfo)
+    qemu_kernel: Optional[FilePath] = None
     boot_args: Set[str] = field(default_factory=set)
     bootfs_files: Set[FileEntry] = field(default_factory=set)
     bootfs_packages: Set[FilePath] = field(default_factory=set)
@@ -77,6 +78,7 @@ class ImageAssemblyConfig:
         result.cache = self.cache.intersection(other.cache)
         result.system = self.system.intersection(other.system)
         result.kernel = self.kernel.intersection(other.kernel)
+        intersect_field(self, other, 'qemu_kernel', result)
         result.boot_args = self.boot_args.intersection(other.boot_args)
         result.bootfs_files = self.bootfs_files.intersection(other.bootfs_files)
         result.bootfs_packages = self.bootfs_packages.intersection(
@@ -93,6 +95,7 @@ class ImageAssemblyConfig:
         result.cache = self.cache.difference(other.cache)
         result.system = self.system.difference(other.system)
         result.kernel = self.kernel.difference(other.kernel)
+        difference_field(self, other, 'qemu_kernel', result)
         result.boot_args = self.boot_args.difference(other.boot_args)
         result.bootfs_files = self.bootfs_files.difference(other.bootfs_files)
         result.bootfs_packages = self.bootfs_packages.difference(

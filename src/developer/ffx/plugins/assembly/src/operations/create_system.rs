@@ -37,8 +37,11 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
     let tools = SdkToolProvider::try_new()?;
 
     let mut images_manifest = ImagesManifest::default();
+    images_manifest.images.push(assembly_images_manifest::Image::QemuKernel(
+        image_assembly_config.qemu_kernel.clone(),
+    ));
 
-    // 1. Create the base package if needed.
+    // Create the base package if needed.
     let base_package: Option<BasePackage> = if has_base_package(&image_assembly_config) {
         info!("Creating base package");
         Some(construct_base_package(
@@ -59,7 +62,7 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
         _ => None,
     });
 
-    // 2. Create all the filesystems and FVMs.
+    // Create all the filesystems and FVMs.
     if let Some(fvm_config) = fvm_config {
         // TODO: warn if bootfs_only mode
         if let Some(base_package) = &base_package {
