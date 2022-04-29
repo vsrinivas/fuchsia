@@ -213,22 +213,6 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device,
   return ZX_OK;
 }
 
-zx_status_t FilesystemMounter::MountInstall(zx::channel block_device,
-                                            const fs_management::MountOptions& options) {
-  if (install_mounted_) {
-    return ZX_ERR_ALREADY_BOUND;
-  }
-
-  if (auto result = MountFilesystem(FsManager::MountPoint::kInstall, kMinfsPath, options,
-                                    std::move(block_device), FS_SVC);
-      result.is_error()) {
-    return result.error_value();
-  }
-
-  install_mounted_ = true;
-  return ZX_OK;
-}
-
 zx_status_t FilesystemMounter::MountFactoryFs(zx::channel block_device,
                                               const fs_management::MountOptions& options) {
   if (factory_mounted_) {

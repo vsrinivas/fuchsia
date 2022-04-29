@@ -17,7 +17,6 @@ std::array<GuidProperties, kKnownGuidEntries> const KnownGuid::nametab_ = {{
     GUID_NAMETAB(EFI),
     GUID_NAMETAB(SYSTEM),
     GUID_NAMETAB(DATA),
-    GUID_NAMETAB(INSTALL),
     GUID_NAMETAB(BLOB),
     GUID_NAMETAB(FVM),
     GUID_NAMETAB(ZIRCON_A),

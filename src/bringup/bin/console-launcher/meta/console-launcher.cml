@@ -48,11 +48,6 @@
             path: "/hub-v2",
         },
         {
-            directory: "install",
-            rights: [ "rw*" ],
-            path: "/install",
-        },
-        {
             directory: "mnt",
             rights: [ "rw*" ],
             path: "/mnt",

@@ -1478,11 +1478,6 @@ TEST(KnownGuidTest, CheckTypeGuids) {
 TEST(KnownGuidTest, FindByTypeGuid) {
   std::list<const GuidProperties*> matches;
 
-  // Legacy partition scheme.
-  matches = KnownGuid::Find(std::nullopt, uuid::Uuid(GUID_INSTALL_VALUE), std::nullopt);
-  EXPECT_EQ(matches.size(), 1);
-  EXPECT_EQ(matches.front()->name(), "fuchsia-install");
-
   matches = KnownGuid::Find(std::nullopt, uuid::Uuid(GUID_BOOTLOADER_VALUE), std::nullopt);
   EXPECT_EQ(matches.size(), 1);
   EXPECT_EQ(matches.front()->name(), "bootloader");
@@ -1542,7 +1537,7 @@ TEST(KnownGuidTest, FindByName) {
 }
 
 TEST(KnownGuidTest, FindByPartitionScheme) {
-  ASSERT_EQ(KnownGuid::Find(std::nullopt, std::nullopt, PartitionScheme::kLegacy).size(), 27);
+  ASSERT_EQ(KnownGuid::Find(std::nullopt, std::nullopt, PartitionScheme::kLegacy).size(), 26);
   ASSERT_EQ(KnownGuid::Find(std::nullopt, std::nullopt, PartitionScheme::kNew).size(), 14);
 }
 

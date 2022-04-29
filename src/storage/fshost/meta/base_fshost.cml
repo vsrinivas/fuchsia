@@ -18,11 +18,6 @@
             path: "/fs/durable",
         },
         {
-            directory: "install",
-            rights: [ "rw*" ],
-            path: "/fs/install",
-        },
-        {
             directory: "mnt",
             rights: [ "rw*" ],
             path: "/fs/mnt",
@@ -65,7 +60,6 @@
             directory: [
                 "durable",
                 "factory",
-                "install",
                 "mnt",
                 "tmp",
             ],

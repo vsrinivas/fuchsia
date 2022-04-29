@@ -241,16 +241,6 @@ static_assert(GPT_ENTRY_SIZE == sizeof(gpt_entry_t), "Gpt entry size invalid");
 }
 #define GUID_DATA_NAME "fuchsia-data"
 
-// GUID for a installer partition
-#define GUID_INSTALL_STRING "48435546-4953-2041-494E-5354414C4C52"
-#define GUID_INSTALL_VALUE {                       \
-    0x46, 0x55, 0x43, 0x48,                        \
-    0x53, 0x49,                                    \
-    0x41, 0x20,                                    \
-    0x49, 0x4E, 0x53, 0x54, 0x41, 0x4C, 0x4C, 0x52 \
-}
-#define GUID_INSTALL_NAME "fuchsia-install"
-
 #define GUID_BLOB_STRING "2967380E-134C-4CBB-B6DA-17E7CE1CA45D"
 #define GUID_BLOB_VALUE {                          \
     0x0e, 0x38, 0x67, 0x29,                        \

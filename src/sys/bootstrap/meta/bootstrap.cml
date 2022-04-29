@@ -568,7 +568,6 @@
             directory: [
                 "bin",
                 "blob",
-                "install",
                 "minfs",
                 "mnt",
                 "pkgfs",

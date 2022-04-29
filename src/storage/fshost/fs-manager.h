@@ -52,7 +52,6 @@ class FsManager {
   // MountPoint is a possible location that a filesystem can be installed at.
   enum class MountPoint {
     kData,
-    kInstall,
     kPkgfs,
     kFactory,
     kDurable,
@@ -62,9 +61,9 @@ class FsManager {
   // Returns the fully qualified for the given mount point.
   static const char* MountPointPath(MountPoint);
 
-  constexpr static std::array<MountPoint, 6> kAllMountPoints{
-      MountPoint::kData,    MountPoint::kInstall, MountPoint::kPkgfs,
-      MountPoint::kFactory, MountPoint::kDurable, MountPoint::kMnt,
+  constexpr static std::array<MountPoint, 5> kAllMountPoints{
+      MountPoint::kData,    MountPoint::kPkgfs, MountPoint::kFactory,
+      MountPoint::kDurable, MountPoint::kMnt,
   };
 
   // Installs the filesystem with |root_directory| at |mount_point| (which must not already have an

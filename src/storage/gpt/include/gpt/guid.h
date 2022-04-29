@@ -25,7 +25,7 @@ namespace gpt {
 enum class PartitionScheme { kNew, kLegacy };
 
 // Number of GUID_.*[STRING|VALUE|NAME] pairs
-constexpr uint8_t kKnownGuidEntries = 41;
+constexpr uint8_t kKnownGuidEntries = 40;
 
 class GuidProperties {
  public:

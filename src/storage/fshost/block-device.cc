@@ -807,9 +807,6 @@ zx_status_t BlockDevice::MountData(fs_management::MountOptions* options, zx::cha
       MaybeChangeDataPartitionFormat();
     }
     return mounter_->MountData(std::move(block_device), *options, content_format());
-  } else if (gpt_is_install_guid(guid, GPT_GUID_LEN)) {
-    options->readonly = true;
-    return mounter_->MountInstall(std::move(block_device), *options);
   } else if (gpt_is_durable_guid(guid, GPT_GUID_LEN)) {
     return mounter_->MountDurable(std::move(block_device), *options);
   }
