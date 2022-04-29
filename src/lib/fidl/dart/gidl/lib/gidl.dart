@@ -16,11 +16,6 @@ import 'handles.dart';
 // ignore: avoid_classes_with_only_static_members
 abstract class Encoders {
   // ignore: prefer_constructors_over_static_methods
-  static fidl.Encoder get v1 {
-    return fidl.Encoder(fidl.WireFormat.v1);
-  }
-
-  // ignore: prefer_constructors_over_static_methods
   static fidl.Encoder get v2 {
     return fidl.Encoder(fidl.WireFormat.v2);
   }
@@ -36,11 +31,9 @@ fidl.OutgoingMessage _encode<T, I extends Iterable<T>>(
   encoder.encodeMessageHeader(0, 0, fidl.CallStrictness.strict);
   fidl.MemberType member = fidl.MemberType(
     type: type,
-    offsetV1: 0,
-    offsetV2: 0,
+    offset: 0,
   );
-  fidl.encodeMessage(
-      encoder, type.inlineSize(encoder.wireFormat), member, value);
+  fidl.encodeMessage(encoder, type.inlineSize, member, value);
   return encoder.message;
 }
 
@@ -61,18 +54,15 @@ T _decode<T, I extends Iterable<T>>(fidl.WireFormat wireFormat,
     ..add(bytes);
   ByteData messageBytes = ByteData.view(
       messageBytesBuilder.toBytes().buffer, 0, messageBytesBuilder.length);
-  if (wireFormat == fidl.WireFormat.v2) {
-    // Mark that the message contains wire format v2 bytes.
-    messageBytes.setUint8(4, 2);
-  }
+  // Mark that the message contains wire format v2 bytes.
+  messageBytes.setUint8(4, 2);
   fidl.IncomingMessage message =
       fidl.IncomingMessage(messageBytes, handleInfos);
   fidl.MemberType member = fidl.MemberType(
     type: type,
-    offsetV1: 0,
-    offsetV2: 0,
+    offset: 0,
   );
-  return fidl.decodeMessage(message, type.inlineSize(wireFormat), member);
+  return fidl.decodeMessage(message, type.inlineSize, member);
 }
 
 typedef FactoryFromHandles<T> = T Function(List<Handle> handles);

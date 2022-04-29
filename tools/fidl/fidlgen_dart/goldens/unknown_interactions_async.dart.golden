@@ -164,25 +164,13 @@ class ExampleFlexibleTwoWayResponse extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
   }
 
   static ExampleFlexibleTwoWayResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 0, 1);
-        return ExampleFlexibleTwoWayResponse(
-            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         $decoder.checkPadding($offset + 0, 1);
         return ExampleFlexibleTwoWayResponse(
@@ -198,8 +186,7 @@ class ExampleFlexibleTwoWayResponse extends $fidl.Struct {
 const $fidl.StructType<ExampleFlexibleTwoWayResponse>
     kExample_FlexibleTwoWay_Response_Type =
     $fidl.StructType<ExampleFlexibleTwoWayResponse>(
-        inlineSizeV1: 1,
-        inlineSizeV2: 1,
+        inlineSize: 1,
         structDecode: ExampleFlexibleTwoWayResponse._structDecode);
 
 // strictOneWay: ()
@@ -208,9 +195,7 @@ const $fidl.MethodType _kExample_StrictOneWay_Type = $fidl.MethodType(
   request: [],
   response: [],
   name: r"Example.StrictOneWay",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // flexibleOneWay: ()
@@ -219,9 +204,7 @@ const $fidl.MethodType _kExample_FlexibleOneWay_Type = $fidl.MethodType(
   request: [],
   response: [],
   name: r"Example.FlexibleOneWay",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // strictTwoWay: () -> ()
@@ -230,9 +213,7 @@ const $fidl.MethodType _kExample_StrictTwoWay_Type = $fidl.MethodType(
   request: [],
   response: [],
   name: r"Example.StrictTwoWay",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // flexibleTwoWay: () -> ()
@@ -241,12 +222,10 @@ const $fidl.MethodType _kExample_FlexibleTwoWay_Type = $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
     $fidl.MemberType<ExampleFlexibleTwoWayResult>(
-        type: kExample_FlexibleTwoWay_Result_Type, offsetV1: 0, offsetV2: 0),
+        type: kExample_FlexibleTwoWay_Result_Type, offset: 0),
   ],
   name: r"Example.FlexibleTwoWay",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // strictEvent:  -> ()
@@ -255,9 +234,7 @@ const $fidl.MethodType _kExample_StrictEvent_Type = $fidl.MethodType(
   request: [],
   response: [],
   name: r"Example.StrictEvent",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // flexibleEvent:  -> ()
@@ -266,9 +243,7 @@ const $fidl.MethodType _kExample_FlexibleEvent_Type = $fidl.MethodType(
   request: [],
   response: [],
   name: r"Example.FlexibleEvent",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 

@@ -223,17 +223,13 @@ const int _kProtocol_RequestStrictResponseFlexible_Ordinal = 0x9b8c7d3d118df13;
 const $fidl.MethodType _kProtocol_RequestStrictResponseFlexible_Type =
     $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<StrictFoo>(
-        type: kStrictFoo_Type, offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<StrictFoo>(type: kStrictFoo_Type, offset: 0),
   ],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<FlexibleFoo>(
-        type: kFlexibleFoo_Type, offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<FlexibleFoo>(type: kFlexibleFoo_Type, offset: 0),
   ],
   name: r"Protocol.RequestStrictResponseFlexible",
-  requestInlineSizeV1: 24,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // requestFlexibleResponseStrict: (FlexibleFoo s) -> (StrictFoo f)
@@ -241,17 +237,13 @@ const int _kProtocol_RequestFlexibleResponseStrict_Ordinal = 0x480c77690533acb7;
 const $fidl.MethodType _kProtocol_RequestFlexibleResponseStrict_Type =
     $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<FlexibleFoo>(
-        type: kFlexibleFoo_Type, offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<FlexibleFoo>(type: kFlexibleFoo_Type, offset: 0),
   ],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<StrictFoo>(
-        type: kStrictFoo_Type, offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<StrictFoo>(type: kStrictFoo_Type, offset: 0),
   ],
   name: r"Protocol.RequestFlexibleResponseStrict",
-  requestInlineSizeV1: 24,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 

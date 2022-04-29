@@ -76,25 +76,13 @@ class MyStruct extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
   }
 
   static MyStruct _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 0, 1);
-        return MyStruct(
-            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         $decoder.checkPadding($offset + 0, 1);
         return MyStruct(
@@ -108,4 +96,4 @@ class MyStruct extends $fidl.Struct {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<MyStruct> kMyStruct_Type = $fidl.StructType<MyStruct>(
-    inlineSizeV1: 1, inlineSizeV2: 1, structDecode: MyStruct._structDecode);
+    inlineSize: 1, structDecode: MyStruct._structDecode);

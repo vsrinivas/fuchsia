@@ -641,27 +641,14 @@ class LocalStructPayload extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 4, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 4, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 4, $depth);
   }
 
   static LocalStructPayload _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return LocalStructPayload(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 4, $depth));
       case $fidl.WireFormat.v2:
         return LocalStructPayload(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
@@ -676,9 +663,7 @@ class LocalStructPayload extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<LocalStructPayload> kLocalStructPayload_Type =
     $fidl.StructType<LocalStructPayload>(
-        inlineSizeV1: 8,
-        inlineSizeV2: 8,
-        structDecode: LocalStructPayload._structDecode);
+        inlineSize: 8, structDecode: LocalStructPayload._structDecode);
 
 class MainProtocolOnAnonWithErrorResponse extends $fidl.Struct {
   const MainProtocolOnAnonWithErrorResponse({
@@ -720,27 +705,14 @@ class MainProtocolOnAnonWithErrorResponse extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 4, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 4, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 4, $depth);
   }
 
   static MainProtocolOnAnonWithErrorResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return MainProtocolOnAnonWithErrorResponse(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 4, $depth));
       case $fidl.WireFormat.v2:
         return MainProtocolOnAnonWithErrorResponse(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
@@ -756,8 +728,7 @@ class MainProtocolOnAnonWithErrorResponse extends $fidl.Struct {
 const $fidl.StructType<MainProtocolOnAnonWithErrorResponse>
     kMainProtocol_OnAnonWithError_Response_Type =
     $fidl.StructType<MainProtocolOnAnonWithErrorResponse>(
-        inlineSizeV1: 8,
-        inlineSizeV2: 8,
+        inlineSize: 8,
         structDecode: MainProtocolOnAnonWithErrorResponse._structDecode);
 
 class MainProtocolTwoWayAnonWithErrorResponse extends $fidl.Struct {
@@ -800,27 +771,14 @@ class MainProtocolTwoWayAnonWithErrorResponse extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 4, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 4, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 4, $depth);
   }
 
   static MainProtocolTwoWayAnonWithErrorResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return MainProtocolTwoWayAnonWithErrorResponse(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 4, $depth));
       case $fidl.WireFormat.v2:
         return MainProtocolTwoWayAnonWithErrorResponse(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
@@ -836,36 +794,31 @@ class MainProtocolTwoWayAnonWithErrorResponse extends $fidl.Struct {
 const $fidl.StructType<MainProtocolTwoWayAnonWithErrorResponse>
     kMainProtocol_TwoWayAnonWithError_Response_Type =
     $fidl.StructType<MainProtocolTwoWayAnonWithErrorResponse>(
-        inlineSizeV1: 8,
-        inlineSizeV2: 8,
+        inlineSize: 8,
         structDecode: MainProtocolTwoWayAnonWithErrorResponse._structDecode);
 
 // oneWayComposed: (int a)
 const int _kMainProtocol_OneWayComposed_Ordinal = 0x241e4384443ccb10;
 const $fidl.MethodType _kMainProtocol_OneWayComposed_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int32Type(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<int>(type: $fidl.Int32Type(), offset: 0),
   ],
   response: [],
   name: r"MainProtocol.OneWayComposed",
-  requestInlineSizeV1: 4,
   requestInlineSizeV2: 4,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // twoWayComposed: (int a) -> (int a)
 const int _kMainProtocol_TwoWayComposed_Ordinal = 0x2348a1331ca4cfb0;
 const $fidl.MethodType _kMainProtocol_TwoWayComposed_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int32Type(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<int>(type: $fidl.Int32Type(), offset: 0),
   ],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int32Type(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<int>(type: $fidl.Int32Type(), offset: 0),
   ],
   name: r"MainProtocol.TwoWayComposed",
-  requestInlineSizeV1: 4,
   requestInlineSizeV2: 4,
-  responseInlineSizeV1: 4,
   responseInlineSizeV2: 4,
 );
 // twoWayComposedWithError: (int a) -> (int a)
@@ -873,7 +826,7 @@ const int _kMainProtocol_TwoWayComposedWithError_Ordinal = 0x6a9be48b574d1557;
 const $fidl.MethodType _kMainProtocol_TwoWayComposedWithError_Type =
     $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int32Type(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<int>(type: $fidl.Int32Type(), offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<
@@ -881,13 +834,10 @@ const $fidl.MethodType _kMainProtocol_TwoWayComposedWithError_Type =
                 .ComposedProtocolTwoWayComposedWithErrorResult>(
         type: lib$test_protocolpayloads_imported
             .kComposedProtocol_TwoWayComposedWithError_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        offset: 0),
   ],
   name: r"MainProtocol.TwoWayComposedWithError",
-  requestInlineSizeV1: 4,
   requestInlineSizeV2: 4,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // onComposed:  -> (int a)
@@ -895,12 +845,10 @@ const int _kMainProtocol_OnComposed_Ordinal = 0x19fbe2b2f6f9273a;
 const $fidl.MethodType _kMainProtocol_OnComposed_Type = $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int32Type(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<int>(type: $fidl.Int32Type(), offset: 0),
   ],
   name: r"MainProtocol.OnComposed",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 4,
   responseInlineSizeV2: 4,
 );
 // onComposedWithError:  -> (int a)
@@ -914,44 +862,37 @@ const $fidl.MethodType _kMainProtocol_OnComposedWithError_Type =
                 .ComposedProtocolOnComposedWithErrorResult>(
         type: lib$test_protocolpayloads_imported
             .kComposedProtocol_OnComposedWithError_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        offset: 0),
   ],
   name: r"MainProtocol.OnComposedWithError",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // oneWayLocal: (int a, int b)
 const int _kMainProtocol_OneWayLocal_Ordinal = 0x6b9feaf9305b0715;
 const $fidl.MethodType _kMainProtocol_OneWayLocal_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offsetV1: 0, offsetV2: 0),
-    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offsetV1: 4, offsetV2: 4),
+    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offset: 0),
+    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offset: 4),
   ],
   response: [],
   name: r"MainProtocol.OneWayLocal",
-  requestInlineSizeV1: 8,
   requestInlineSizeV2: 8,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // twoWayLocal: (int a, int b) -> (int a, int b)
 const int _kMainProtocol_TwoWayLocal_Ordinal = 0x743776548de3af0f;
 const $fidl.MethodType _kMainProtocol_TwoWayLocal_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offsetV1: 0, offsetV2: 0),
-    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offsetV1: 4, offsetV2: 4),
+    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offset: 0),
+    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offset: 4),
   ],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offsetV1: 0, offsetV2: 0),
-    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offsetV1: 4, offsetV2: 4),
+    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offset: 0),
+    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offset: 4),
   ],
   name: r"MainProtocol.TwoWayLocal",
-  requestInlineSizeV1: 8,
   requestInlineSizeV2: 8,
-  responseInlineSizeV1: 8,
   responseInlineSizeV2: 8,
 );
 // twoWayLocalWithError: (int a, int b) -> (int a, int b)
@@ -959,19 +900,15 @@ const int _kMainProtocol_TwoWayLocalWithError_Ordinal = 0x2839c029915cb8fc;
 const $fidl.MethodType _kMainProtocol_TwoWayLocalWithError_Type =
     $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offsetV1: 0, offsetV2: 0),
-    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offsetV1: 4, offsetV2: 4),
+    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offset: 0),
+    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offset: 4),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<MainProtocolTwoWayLocalWithErrorResult>(
-        type: kMainProtocol_TwoWayLocalWithError_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        type: kMainProtocol_TwoWayLocalWithError_Result_Type, offset: 0),
   ],
   name: r"MainProtocol.TwoWayLocalWithError",
-  requestInlineSizeV1: 8,
   requestInlineSizeV2: 8,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // onLocal:  -> (int a, int b)
@@ -979,13 +916,11 @@ const int _kMainProtocol_OnLocal_Ordinal = 0x4745f7438cd80819;
 const $fidl.MethodType _kMainProtocol_OnLocal_Type = $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offsetV1: 0, offsetV2: 0),
-    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offsetV1: 4, offsetV2: 4),
+    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offset: 0),
+    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offset: 4),
   ],
   name: r"MainProtocol.OnLocal",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 8,
   responseInlineSizeV2: 8,
 );
 // onLocalWithError:  -> (int a, int b)
@@ -994,42 +929,34 @@ const $fidl.MethodType _kMainProtocol_OnLocalWithError_Type = $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
     $fidl.MemberType<MainProtocolOnLocalWithErrorResult>(
-        type: kMainProtocol_OnLocalWithError_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        type: kMainProtocol_OnLocalWithError_Result_Type, offset: 0),
   ],
   name: r"MainProtocol.OnLocalWithError",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // oneWayImport: (int a)
 const int _kMainProtocol_OneWayImport_Ordinal = 0x2e6b091ae4cee40c;
 const $fidl.MethodType _kMainProtocol_OneWayImport_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int32Type(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<int>(type: $fidl.Int32Type(), offset: 0),
   ],
   response: [],
   name: r"MainProtocol.OneWayImport",
-  requestInlineSizeV1: 4,
   requestInlineSizeV2: 4,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // twoWayImport: (int a) -> (int a)
 const int _kMainProtocol_TwoWayImport_Ordinal = 0x20f4a8f65ff69473;
 const $fidl.MethodType _kMainProtocol_TwoWayImport_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int32Type(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<int>(type: $fidl.Int32Type(), offset: 0),
   ],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int32Type(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<int>(type: $fidl.Int32Type(), offset: 0),
   ],
   name: r"MainProtocol.TwoWayImport",
-  requestInlineSizeV1: 4,
   requestInlineSizeV2: 4,
-  responseInlineSizeV1: 4,
   responseInlineSizeV2: 4,
 );
 // twoWayImportWithError: (int a) -> (int a)
@@ -1037,18 +964,14 @@ const int _kMainProtocol_TwoWayImportWithError_Ordinal = 0x3b7b706d42eb9bbd;
 const $fidl.MethodType _kMainProtocol_TwoWayImportWithError_Type =
     $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int32Type(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<int>(type: $fidl.Int32Type(), offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<MainProtocolTwoWayImportWithErrorResult>(
-        type: kMainProtocol_TwoWayImportWithError_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        type: kMainProtocol_TwoWayImportWithError_Result_Type, offset: 0),
   ],
   name: r"MainProtocol.TwoWayImportWithError",
-  requestInlineSizeV1: 4,
   requestInlineSizeV2: 4,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // onImport:  -> (int a)
@@ -1056,12 +979,10 @@ const int _kMainProtocol_OnImport_Ordinal = 0x1bb4f4c30b6f8909;
 const $fidl.MethodType _kMainProtocol_OnImport_Type = $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int32Type(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<int>(type: $fidl.Int32Type(), offset: 0),
   ],
   name: r"MainProtocol.OnImport",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 4,
   responseInlineSizeV2: 4,
 );
 // onImportWithError:  -> (int a)
@@ -1070,45 +991,37 @@ const $fidl.MethodType _kMainProtocol_OnImportWithError_Type = $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
     $fidl.MemberType<MainProtocolOnImportWithErrorResult>(
-        type: kMainProtocol_OnImportWithError_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        type: kMainProtocol_OnImportWithError_Result_Type, offset: 0),
   ],
   name: r"MainProtocol.OnImportWithError",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // oneWayAnon: (int a, int b)
 const int _kMainProtocol_OneWayAnon_Ordinal = 0xb43565c01ab54ac;
 const $fidl.MethodType _kMainProtocol_OneWayAnon_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offsetV1: 0, offsetV2: 0),
-    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offsetV1: 4, offsetV2: 4),
+    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offset: 0),
+    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offset: 4),
   ],
   response: [],
   name: r"MainProtocol.OneWayAnon",
-  requestInlineSizeV1: 8,
   requestInlineSizeV2: 8,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // twoWayAnon: (int a, int b) -> (int a, int b)
 const int _kMainProtocol_TwoWayAnon_Ordinal = 0x8bdc969ff7dd759;
 const $fidl.MethodType _kMainProtocol_TwoWayAnon_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offsetV1: 0, offsetV2: 0),
-    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offsetV1: 4, offsetV2: 4),
+    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offset: 0),
+    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offset: 4),
   ],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offsetV1: 0, offsetV2: 0),
-    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offsetV1: 4, offsetV2: 4),
+    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offset: 0),
+    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offset: 4),
   ],
   name: r"MainProtocol.TwoWayAnon",
-  requestInlineSizeV1: 8,
   requestInlineSizeV2: 8,
-  responseInlineSizeV1: 8,
   responseInlineSizeV2: 8,
 );
 // twoWayAnonWithError: (int a, int b) -> (int a, int b)
@@ -1116,19 +1029,15 @@ const int _kMainProtocol_TwoWayAnonWithError_Ordinal = 0x5862bf8170c87a36;
 const $fidl.MethodType _kMainProtocol_TwoWayAnonWithError_Type =
     $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offsetV1: 0, offsetV2: 0),
-    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offsetV1: 4, offsetV2: 4),
+    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offset: 0),
+    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offset: 4),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<MainProtocolTwoWayAnonWithErrorResult>(
-        type: kMainProtocol_TwoWayAnonWithError_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        type: kMainProtocol_TwoWayAnonWithError_Result_Type, offset: 0),
   ],
   name: r"MainProtocol.TwoWayAnonWithError",
-  requestInlineSizeV1: 8,
   requestInlineSizeV2: 8,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // onAnon:  -> (int a, int b)
@@ -1136,13 +1045,11 @@ const int _kMainProtocol_OnAnon_Ordinal = 0x42d321dacc4df000;
 const $fidl.MethodType _kMainProtocol_OnAnon_Type = $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offsetV1: 0, offsetV2: 0),
-    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offsetV1: 4, offsetV2: 4),
+    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offset: 0),
+    $fidl.MemberType<int>(type: $fidl.Uint32Type(), offset: 4),
   ],
   name: r"MainProtocol.OnAnon",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 8,
   responseInlineSizeV2: 8,
 );
 // onAnonWithError:  -> (int a, int b)
@@ -1151,14 +1058,10 @@ const $fidl.MethodType _kMainProtocol_OnAnonWithError_Type = $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
     $fidl.MemberType<MainProtocolOnAnonWithErrorResult>(
-        type: kMainProtocol_OnAnonWithError_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        type: kMainProtocol_OnAnonWithError_Result_Type, offset: 0),
   ],
   name: r"MainProtocol.OnAnonWithError",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 

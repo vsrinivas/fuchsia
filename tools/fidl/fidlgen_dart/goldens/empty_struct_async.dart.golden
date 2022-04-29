@@ -71,24 +71,12 @@ class Empty extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
   }
 
   static Empty _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 0, 1);
-        return Empty(
-            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         $decoder.checkPadding($offset + 0, 1);
         return Empty(
@@ -101,20 +89,18 @@ class Empty extends $fidl.Struct {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.StructType<Empty> kEmpty_Type = $fidl.StructType<Empty>(
-    inlineSizeV1: 1, inlineSizeV2: 1, structDecode: Empty._structDecode);
+const $fidl.StructType<Empty> kEmpty_Type =
+    $fidl.StructType<Empty>(inlineSize: 1, structDecode: Empty._structDecode);
 
 // send: (Empty e)
 const int _kEmptyProtocol_Send_Ordinal = 0x132262fd8b200708;
 const $fidl.MethodType _kEmptyProtocol_Send_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<Empty>(type: kEmpty_Type, offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<Empty>(type: kEmpty_Type, offset: 0),
   ],
   response: [],
   name: r"EmptyProtocol.Send",
-  requestInlineSizeV1: 1,
   requestInlineSizeV2: 1,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // receive:  -> (Empty e)
@@ -122,27 +108,23 @@ const int _kEmptyProtocol_Receive_Ordinal = 0x1ff0ccf9b710e23f;
 const $fidl.MethodType _kEmptyProtocol_Receive_Type = $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<Empty>(type: kEmpty_Type, offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<Empty>(type: kEmpty_Type, offset: 0),
   ],
   name: r"EmptyProtocol.Receive",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 1,
   responseInlineSizeV2: 1,
 );
 // sendAndReceive: (Empty e) -> (Empty e)
 const int _kEmptyProtocol_SendAndReceive_Ordinal = 0x76a931254962cea;
 const $fidl.MethodType _kEmptyProtocol_SendAndReceive_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<Empty>(type: kEmpty_Type, offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<Empty>(type: kEmpty_Type, offset: 0),
   ],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<Empty>(type: kEmpty_Type, offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<Empty>(type: kEmpty_Type, offset: 0),
   ],
   name: r"EmptyProtocol.SendAndReceive",
-  requestInlineSizeV1: 1,
   requestInlineSizeV2: 1,
-  responseInlineSizeV1: 1,
   responseInlineSizeV2: 1,
 );
 

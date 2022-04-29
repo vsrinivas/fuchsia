@@ -4688,23 +4688,13 @@
               "returnType": "void",
               "type": "MethodDeclarationImpl"
             },
-            "inlineSizeV1": {
+            "inlineSize": {
               "isAbstract": false,
               "isGetter": true,
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "inlineSizeV1",
-              "returnType": "int",
-              "type": "MethodDeclarationImpl"
-            },
-            "inlineSizeV2": {
-              "isAbstract": false,
-              "isGetter": true,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "inlineSizeV2",
+              "name": "inlineSize",
               "returnType": "int",
               "type": "MethodDeclarationImpl"
             }
@@ -4890,23 +4880,13 @@
               "returnType": "void",
               "type": "MethodDeclarationImpl"
             },
-            "inlineSizeV1": {
+            "inlineSize": {
               "isAbstract": false,
               "isGetter": true,
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "inlineSizeV1",
-              "returnType": "int",
-              "type": "MethodDeclarationImpl"
-            },
-            "inlineSizeV2": {
-              "isAbstract": false,
-              "isGetter": true,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "inlineSizeV2",
+              "name": "inlineSize",
               "returnType": "int",
               "type": "MethodDeclarationImpl"
             }
@@ -5328,23 +5308,13 @@
               "returnType": "void",
               "type": "MethodDeclarationImpl"
             },
-            "inlineSizeV1": {
+            "inlineSize": {
               "isAbstract": false,
               "isGetter": true,
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "inlineSizeV1",
-              "returnType": "int",
-              "type": "MethodDeclarationImpl"
-            },
-            "inlineSizeV2": {
-              "isAbstract": false,
-              "isGetter": true,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "inlineSizeV2",
+              "name": "inlineSize",
               "returnType": "int",
               "type": "MethodDeclarationImpl"
             }
@@ -5554,12 +5524,8 @@
           "ConstructorDeclarationImpl": {
             "FidlType": {
               "FieldFormalParameterImpl": {
-                "required this.inlineSizeV1": {
-                  "name": "required this.inlineSizeV1",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "required this.inlineSizeV2": {
-                  "name": "required this.inlineSizeV2",
+                "required this.inlineSize": {
+                  "name": "required this.inlineSize",
                   "type": "FieldFormalParameterImpl"
                 }
               },
@@ -5893,32 +5859,6 @@
               "name": "encodeArray",
               "returnType": "void",
               "type": "MethodDeclarationImpl"
-            },
-            "inlineSize": {
-              "SimpleFormalParameterImpl": {
-                "wireFormat": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "wireFormat",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "WireFormat"
-                }
-              },
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "inlineSize",
-              "returnType": "int",
-              "type": "MethodDeclarationImpl"
             }
           },
           "TypeParameterListImpl": {
@@ -5938,19 +5878,11 @@
             }
           },
           "VariableDeclarationImpl": {
-            "inlineSizeV1": {
+            "inlineSize": {
               "isConst": false,
               "isFinal": true,
               "isLate": false,
-              "name": "inlineSizeV1",
-              "type": "VariableDeclarationImpl",
-              "varType": "int"
-            },
-            "inlineSizeV2": {
-              "isConst": false,
-              "isFinal": true,
-              "isLate": false,
-              "name": "inlineSizeV2",
+              "name": "inlineSize",
               "type": "VariableDeclarationImpl",
               "varType": "int"
             }
@@ -8004,12 +7936,8 @@
           "ConstructorDeclarationImpl": {
             "MemberType": {
               "FieldFormalParameterImpl": {
-                "required this.offsetV1": {
-                  "name": "required this.offsetV1",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "required this.offsetV2": {
-                  "name": "required this.offsetV2",
+                "required this.offset": {
+                  "name": "required this.offset",
                   "type": "FieldFormalParameterImpl"
                 },
                 "required this.type": {
@@ -8158,19 +8086,11 @@
             }
           },
           "VariableDeclarationImpl": {
-            "offsetV1": {
+            "offset": {
               "isConst": false,
               "isFinal": true,
               "isLate": false,
-              "name": "offsetV1",
-              "type": "VariableDeclarationImpl",
-              "varType": "int"
-            },
-            "offsetV2": {
-              "isConst": false,
-              "isFinal": true,
-              "isLate": false,
-              "name": "offsetV2",
+              "name": "offset",
               "type": "VariableDeclarationImpl",
               "varType": "int"
             },
@@ -8198,20 +8118,12 @@
                   "name": "required this.request",
                   "type": "FieldFormalParameterImpl"
                 },
-                "required this.requestInlineSizeV1": {
-                  "name": "required this.requestInlineSizeV1",
-                  "type": "FieldFormalParameterImpl"
-                },
                 "required this.requestInlineSizeV2": {
                   "name": "required this.requestInlineSizeV2",
                   "type": "FieldFormalParameterImpl"
                 },
                 "required this.response": {
                   "name": "required this.response",
-                  "type": "FieldFormalParameterImpl"
-                },
-                "required this.responseInlineSizeV1": {
-                  "name": "required this.responseInlineSizeV1",
                   "type": "FieldFormalParameterImpl"
                 },
                 "required this.responseInlineSizeV2": {
@@ -8294,14 +8206,6 @@
               "type": "VariableDeclarationImpl",
               "varType": "List<MemberType>?"
             },
-            "requestInlineSizeV1": {
-              "isConst": false,
-              "isFinal": true,
-              "isLate": false,
-              "name": "requestInlineSizeV1",
-              "type": "VariableDeclarationImpl",
-              "varType": "int"
-            },
             "requestInlineSizeV2": {
               "isConst": false,
               "isFinal": true,
@@ -8317,14 +8221,6 @@
               "name": "response",
               "type": "VariableDeclarationImpl",
               "varType": "List<MemberType>?"
-            },
-            "responseInlineSizeV1": {
-              "isConst": false,
-              "isFinal": true,
-              "isLate": false,
-              "name": "responseInlineSizeV1",
-              "type": "VariableDeclarationImpl",
-              "varType": "int"
             },
             "responseInlineSizeV2": {
               "isConst": false,
@@ -9528,7 +9424,7 @@
           "ConstructorDeclarationImpl": {
             "SimpleFidlType": {
               "SimpleFormalParameterImpl": {
-                "inlineSizeV1": {
+                "inlineSize": {
                   "isConst": false,
                   "isFinal": false,
                   "isOptional": false,
@@ -9538,21 +9434,7 @@
                   "isRequired": true,
                   "isRequiredNamed": true,
                   "isRequiredPositional": false,
-                  "name": "inlineSizeV1",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
-                },
-                "inlineSizeV2": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": false,
-                  "isRequired": true,
-                  "isRequiredNamed": true,
-                  "isRequiredPositional": false,
-                  "name": "inlineSizeV2",
+                  "name": "inlineSize",
                   "type": "SimpleFormalParameterImpl",
                   "varType": "int"
                 }
@@ -9940,7 +9822,7 @@
                 }
               },
               "SimpleFormalParameterImpl": {
-                "inlineSizeV1": {
+                "inlineSize": {
                   "isConst": false,
                   "isFinal": false,
                   "isOptional": false,
@@ -9950,21 +9832,7 @@
                   "isRequired": true,
                   "isRequiredNamed": true,
                   "isRequiredPositional": false,
-                  "name": "inlineSizeV1",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "int"
-                },
-                "inlineSizeV2": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": false,
-                  "isRequired": true,
-                  "isRequiredNamed": true,
-                  "isRequiredPositional": false,
-                  "name": "inlineSizeV2",
+                  "name": "inlineSize",
                   "type": "SimpleFormalParameterImpl",
                   "varType": "int"
                 }

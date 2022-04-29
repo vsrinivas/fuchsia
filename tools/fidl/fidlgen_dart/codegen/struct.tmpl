@@ -81,39 +81,15 @@ class {{ .Name }} extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        {{- range $index, $member := .Members }}
-        $fieldType{{ $index }}.encode(
-          $encoder, {{ $member.Name }}, $offset + {{ $member.OffsetV1 }}, $depth);
-        {{- end }}
-        break;
-      case $fidl.WireFormat.v2:
-        {{- range $index, $member := .Members }}
-        $fieldType{{ $index }}.encode(
-          $encoder, {{ $member.Name }}, $offset + {{ $member.OffsetV2 }}, $depth);
-        {{- end }}
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    {{- range $index, $member := .Members }}
+    $fieldType{{ $index }}.encode(
+      $encoder, {{ $member.Name }}, $offset + {{ $member.OffsetV2 }}, $depth);
+    {{- end }}
   }
 
   static {{ .Name }} _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        {{- range $padding := .Paddings }}
-        {{- if ne $padding.PaddingV1 0 }}
-        $decoder.checkPadding($offset + {{ $padding.OffsetV1 }}, {{ $padding.PaddingV1 }});
-        {{- end }}
-        {{- end }}
-        return {{ .Name }}(
-        {{ range $index, $member := .Members }}
-        {{- if ne $index 0 }},{{ end }}
-        {{ $member.Name }}: $fieldType{{ $index }}.decode(
-          $decoder, $offset + {{ $member.OffsetV1 }}, $depth)
-        {{- end -}}
-        );
       case $fidl.WireFormat.v2:
         {{- range $padding := .Paddings }}
         {{- if ne $padding.PaddingV2 0 }}

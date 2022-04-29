@@ -109,35 +109,16 @@ class ByteAndBytes extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, singleByte, $offset + 0, $depth);
-        $fieldType1.encode($encoder, manyBytes, $offset + 8, $depth);
-        $fieldType2.encode($encoder, onlyOneKBytes, $offset + 24, $depth);
-        $fieldType3.encode($encoder, optOnlyOneKBytes, $offset + 40, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, singleByte, $offset + 0, $depth);
-        $fieldType1.encode($encoder, manyBytes, $offset + 8, $depth);
-        $fieldType2.encode($encoder, onlyOneKBytes, $offset + 24, $depth);
-        $fieldType3.encode($encoder, optOnlyOneKBytes, $offset + 40, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, singleByte, $offset + 0, $depth);
+    $fieldType1.encode($encoder, manyBytes, $offset + 8, $depth);
+    $fieldType2.encode($encoder, onlyOneKBytes, $offset + 24, $depth);
+    $fieldType3.encode($encoder, optOnlyOneKBytes, $offset + 40, $depth);
   }
 
   static ByteAndBytes _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 1, 7);
-        return ByteAndBytes(
-            singleByte: $fieldType0.decode($decoder, $offset + 0, $depth),
-            manyBytes: $fieldType1.decode($decoder, $offset + 8, $depth),
-            onlyOneKBytes: $fieldType2.decode($decoder, $offset + 24, $depth),
-            optOnlyOneKBytes:
-                $fieldType3.decode($decoder, $offset + 40, $depth));
       case $fidl.WireFormat.v2:
         $decoder.checkPadding($offset + 1, 7);
         return ByteAndBytes(
@@ -156,6 +137,4 @@ class ByteAndBytes extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<ByteAndBytes> kByteAndBytes_Type =
     $fidl.StructType<ByteAndBytes>(
-        inlineSizeV1: 56,
-        inlineSizeV2: 56,
-        structDecode: ByteAndBytes._structDecode);
+        inlineSize: 56, structDecode: ByteAndBytes._structDecode);

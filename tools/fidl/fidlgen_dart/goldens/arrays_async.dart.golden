@@ -220,24 +220,13 @@ class StructLargeArray extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
   }
 
   static StructLargeArray _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return StructLargeArray(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         return StructLargeArray(
             a: $fieldType0.decode($decoder, $offset + 0, $depth));
@@ -251,9 +240,7 @@ class StructLargeArray extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<StructLargeArray> kStructLargeArray_Type =
     $fidl.StructType<StructLargeArray>(
-        inlineSizeV1: 400,
-        inlineSizeV2: 400,
-        structDecode: StructLargeArray._structDecode);
+        inlineSize: 400, structDecode: StructLargeArray._structDecode);
 
 class StructSmallArray extends $fidl.Struct {
   const StructSmallArray({
@@ -288,24 +275,13 @@ class StructSmallArray extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
   }
 
   static StructSmallArray _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return StructSmallArray(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         return StructSmallArray(
             a: $fieldType0.decode($decoder, $offset + 0, $depth));
@@ -319,9 +295,7 @@ class StructSmallArray extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<StructSmallArray> kStructSmallArray_Type =
     $fidl.StructType<StructSmallArray>(
-        inlineSizeV1: 8,
-        inlineSizeV2: 8,
-        structDecode: StructSmallArray._structDecode);
+        inlineSize: 8, structDecode: StructSmallArray._structDecode);
 
 class TableLargeArray extends $fidl.Table {
   const TableLargeArray({

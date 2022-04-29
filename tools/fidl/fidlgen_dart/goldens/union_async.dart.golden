@@ -2000,24 +2000,12 @@ class Empty extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
   }
 
   static Empty _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 0, 1);
-        return Empty(
-            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         $decoder.checkPadding($offset + 0, 1);
         return Empty(
@@ -2030,8 +2018,8 @@ class Empty extends $fidl.Struct {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.StructType<Empty> kEmpty_Type = $fidl.StructType<Empty>(
-    inlineSizeV1: 1, inlineSizeV2: 1, structDecode: Empty._structDecode);
+const $fidl.StructType<Empty> kEmpty_Type =
+    $fidl.StructType<Empty>(inlineSize: 1, structDecode: Empty._structDecode);
 
 class NullableUnionStruct extends $fidl.Struct {
   const NullableUnionStruct({
@@ -2073,24 +2061,13 @@ class NullableUnionStruct extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, theUnion, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, theUnion, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, theUnion, $offset + 0, $depth);
   }
 
   static NullableUnionStruct _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return NullableUnionStruct(
-            theUnion: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         return NullableUnionStruct(
             theUnion: $fieldType0.decode($decoder, $offset + 0, $depth));
@@ -2104,9 +2081,7 @@ class NullableUnionStruct extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<NullableUnionStruct> kNullableUnionStruct_Type =
     $fidl.StructType<NullableUnionStruct>(
-        inlineSizeV1: 24,
-        inlineSizeV2: 16,
-        structDecode: NullableUnionStruct._structDecode);
+        inlineSize: 16, structDecode: NullableUnionStruct._structDecode);
 
 class Pasta extends $fidl.Struct {
   const Pasta({
@@ -2140,22 +2115,12 @@ class Pasta extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, sauce, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, sauce, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, sauce, $offset + 0, $depth);
   }
 
   static Pasta _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return Pasta(sauce: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         return Pasta(sauce: $fieldType0.decode($decoder, $offset + 0, $depth));
       default:
@@ -2166,8 +2131,8 @@ class Pasta extends $fidl.Struct {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.StructType<Pasta> kPasta_Type = $fidl.StructType<Pasta>(
-    inlineSizeV1: 16, inlineSizeV2: 16, structDecode: Pasta._structDecode);
+const $fidl.StructType<Pasta> kPasta_Type =
+    $fidl.StructType<Pasta>(inlineSize: 16, structDecode: Pasta._structDecode);
 
 class Pizza extends $fidl.Struct {
   const Pizza({
@@ -2203,23 +2168,12 @@ class Pizza extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, toppings, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, toppings, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, toppings, $offset + 0, $depth);
   }
 
   static Pizza _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return Pizza(
-            toppings: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         return Pizza(
             toppings: $fieldType0.decode($decoder, $offset + 0, $depth));
@@ -2231,8 +2185,8 @@ class Pizza extends $fidl.Struct {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.StructType<Pizza> kPizza_Type = $fidl.StructType<Pizza>(
-    inlineSizeV1: 16, inlineSizeV2: 16, structDecode: Pizza._structDecode);
+const $fidl.StructType<Pizza> kPizza_Type =
+    $fidl.StructType<Pizza>(inlineSize: 16, structDecode: Pizza._structDecode);
 
 class StructWithNullableXUnion extends $fidl.Struct {
   const StructWithNullableXUnion({
@@ -2274,24 +2228,13 @@ class StructWithNullableXUnion extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, x1, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, x1, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, x1, $offset + 0, $depth);
   }
 
   static StructWithNullableXUnion _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return StructWithNullableXUnion(
-            x1: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         return StructWithNullableXUnion(
             x1: $fieldType0.decode($decoder, $offset + 0, $depth));
@@ -2305,9 +2248,7 @@ class StructWithNullableXUnion extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<StructWithNullableXUnion>
     kStructWithNullableXUnion_Type = $fidl.StructType<StructWithNullableXUnion>(
-        inlineSizeV1: 24,
-        inlineSizeV2: 16,
-        structDecode: StructWithNullableXUnion._structDecode);
+        inlineSize: 16, structDecode: StructWithNullableXUnion._structDecode);
 
 class UnionSandwich extends $fidl.Struct {
   const UnionSandwich({
@@ -2357,32 +2298,15 @@ class UnionSandwich extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, u, $offset + 8, $depth);
-        $fieldType2.encode($encoder, b, $offset + 32, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, u, $offset + 8, $depth);
-        $fieldType2.encode($encoder, b, $offset + 24, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, u, $offset + 8, $depth);
+    $fieldType2.encode($encoder, b, $offset + 24, $depth);
   }
 
   static UnionSandwich _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 4, 4);
-        $decoder.checkPadding($offset + 36, 4);
-        return UnionSandwich(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            u: $fieldType1.decode($decoder, $offset + 8, $depth),
-            b: $fieldType2.decode($decoder, $offset + 32, $depth));
       case $fidl.WireFormat.v2:
         $decoder.checkPadding($offset + 4, 4);
 
@@ -2401,9 +2325,7 @@ class UnionSandwich extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<UnionSandwich> kUnionSandwich_Type =
     $fidl.StructType<UnionSandwich>(
-        inlineSizeV1: 40,
-        inlineSizeV2: 32,
-        structDecode: UnionSandwich._structDecode);
+        inlineSize: 32, structDecode: UnionSandwich._structDecode);
 
 // strictXUnionHenceResponseMayBeStackAllocated: () -> (StrictBoundedXUnion xu)
 const int _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal =
@@ -2414,12 +2336,10 @@ const $fidl.MethodType
   request: [],
   response: <$fidl.MemberType>[
     $fidl.MemberType<StrictBoundedXUnion>(
-        type: kStrictBoundedXUnion_Type, offsetV1: 0, offsetV2: 0),
+        type: kStrictBoundedXUnion_Type, offset: 0),
   ],
   name: r"TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // flexibleXUnionHenceResponseMustBeHeapAllocated: () -> (OlderSimpleUnion xu)
@@ -2431,13 +2351,10 @@ const $fidl.MethodType
     $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<OlderSimpleUnion>(
-        type: kOlderSimpleUnion_Type, offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<OlderSimpleUnion>(type: kOlderSimpleUnion_Type, offset: 0),
   ],
   name: r"TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 

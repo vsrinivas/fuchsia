@@ -567,31 +567,15 @@ class OverrideTest extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, op, $offset + 0, $depth);
-        $fieldType1.encode($encoder, left, $offset + 8, $depth);
-        $fieldType2.encode($encoder, right, $offset + 32, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, op, $offset + 0, $depth);
-        $fieldType1.encode($encoder, left, $offset + 8, $depth);
-        $fieldType2.encode($encoder, right, $offset + 24, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, op, $offset + 0, $depth);
+    $fieldType1.encode($encoder, left, $offset + 8, $depth);
+    $fieldType2.encode($encoder, right, $offset + 24, $depth);
   }
 
   static OverrideTest _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 4, 4);
-        return OverrideTest(
-            op: $fieldType0.decode($decoder, $offset + 0, $depth),
-            left: $fieldType1.decode($decoder, $offset + 8, $depth),
-            right: $fieldType2.decode($decoder, $offset + 32, $depth));
       case $fidl.WireFormat.v2:
         $decoder.checkPadding($offset + 4, 4);
         return OverrideTest(
@@ -608,9 +592,7 @@ class OverrideTest extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<OverrideTest> kOverrideTest_Type =
     $fidl.StructType<OverrideTest>(
-        inlineSizeV1: 56,
-        inlineSizeV2: 40,
-        structDecode: OverrideTest._structDecode);
+        inlineSize: 40, structDecode: OverrideTest._structDecode);
 
 class SomeProtocolSomeMethodResponse extends $fidl.Struct {
   const SomeProtocolSomeMethodResponse({
@@ -644,24 +626,13 @@ class SomeProtocolSomeMethodResponse extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, bitsMember, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, bitsMember, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, bitsMember, $offset + 0, $depth);
   }
 
   static SomeProtocolSomeMethodResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return SomeProtocolSomeMethodResponse(
-            bitsMember: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         return SomeProtocolSomeMethodResponse(
             bitsMember: $fieldType0.decode($decoder, $offset + 0, $depth));
@@ -676,8 +647,7 @@ class SomeProtocolSomeMethodResponse extends $fidl.Struct {
 const $fidl.StructType<SomeProtocolSomeMethodResponse>
     kSomeProtocol_SomeMethod_Response_Type =
     $fidl.StructType<SomeProtocolSomeMethodResponse>(
-        inlineSizeV1: 4,
-        inlineSizeV2: 4,
+        inlineSize: 4,
         structDecode: SomeProtocolSomeMethodResponse._structDecode);
 
 class TableData extends $fidl.Struct {
@@ -712,24 +682,13 @@ class TableData extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, data, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, data, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, data, $offset + 0, $depth);
   }
 
   static TableData _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return TableData(
-            data: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         return TableData(
             data: $fieldType0.decode($decoder, $offset + 0, $depth));
@@ -742,7 +701,7 @@ class TableData extends $fidl.Struct {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<TableData> kTableData_Type = $fidl.StructType<TableData>(
-    inlineSizeV1: 1, inlineSizeV2: 1, structDecode: TableData._structDecode);
+    inlineSize: 1, structDecode: TableData._structDecode);
 
 class FunctionApplication extends $fidl.Table {
   const FunctionApplication({
@@ -886,19 +845,15 @@ const $fidl.TableType<TableMember> kTableMember_Type =
 const int _kSomeProtocol_SomeMethod_Ordinal = 0x22ea52ec7a5146d8;
 const $fidl.MethodType _kSomeProtocol_SomeMethod_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<UnionMember>(
-        type: kUnionMember_Type, offsetV1: 0, offsetV2: 0),
-    $fidl.MemberType<TableMember>(
-        type: kTableMember_Type, offsetV1: 24, offsetV2: 16),
+    $fidl.MemberType<UnionMember>(type: kUnionMember_Type, offset: 0),
+    $fidl.MemberType<TableMember>(type: kTableMember_Type, offset: 16),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<SomeProtocolSomeMethodResult>(
-        type: kSomeProtocol_SomeMethod_Result_Type, offsetV1: 0, offsetV2: 0),
+        type: kSomeProtocol_SomeMethod_Result_Type, offset: 0),
   ],
   name: r"SomeProtocol.SomeMethod",
-  requestInlineSizeV1: 40,
   requestInlineSizeV2: 32,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 

@@ -309,24 +309,13 @@ class ExampleStruct extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, member, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, member, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, member, $offset + 0, $depth);
   }
 
   static ExampleStruct _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return ExampleStruct(
-            member: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         return ExampleStruct(
             member: $fieldType0.decode($decoder, $offset + 0, $depth));
@@ -340,9 +329,7 @@ class ExampleStruct extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<ExampleStruct> kExampleStruct_Type =
     $fidl.StructType<ExampleStruct>(
-        inlineSizeV1: 4,
-        inlineSizeV2: 4,
-        structDecode: ExampleStruct._structDecode);
+        inlineSize: 4, structDecode: ExampleStruct._structDecode);
 
 class ExampleTable extends $fidl.Table {
   const ExampleTable({
@@ -405,13 +392,11 @@ const int _kExampleProtocol_Method_Ordinal = 0x53978e6fc7476749;
 const $fidl.MethodType _kExampleProtocol_Method_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<lib$test_exampleusing.Empty>(
-        type: lib$test_exampleusing.kEmpty_Type, offsetV1: 0, offsetV2: 0),
+        type: lib$test_exampleusing.kEmpty_Type, offset: 0),
   ],
   response: [],
   name: r"ExampleProtocol.Method",
-  requestInlineSizeV1: 1,
   requestInlineSizeV2: 1,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 

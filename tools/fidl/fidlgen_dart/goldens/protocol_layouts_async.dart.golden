@@ -1216,14 +1216,11 @@ const $fidl.MethodType _kMainProtocol_OneWayAnonComposed_Type =
                 .ComposedProtocolOneWayAnonComposedRequest>(
         type: lib$test_protocollayouts_imported
             .kComposedProtocolOneWayAnonComposedRequest_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        offset: 0),
   ],
   response: [],
   name: r"MainProtocol.OneWayAnonComposed",
-  requestInlineSizeV1: 16,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // twoWayAnonComposed: (lib$test_protocollayouts_imported.ComposedProtocolTwoWayAnonComposedRequest payload) -> (lib$test_protocollayouts_imported.ComposedProtocolTwoWayAnonComposedResponse payload)
@@ -1236,8 +1233,7 @@ const $fidl.MethodType _kMainProtocol_TwoWayAnonComposed_Type =
                 .ComposedProtocolTwoWayAnonComposedRequest>(
         type: lib$test_protocollayouts_imported
             .kComposedProtocolTwoWayAnonComposedRequest_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<
@@ -1245,13 +1241,10 @@ const $fidl.MethodType _kMainProtocol_TwoWayAnonComposed_Type =
                 .ComposedProtocolTwoWayAnonComposedResponse>(
         type: lib$test_protocollayouts_imported
             .kComposedProtocolTwoWayAnonComposedResponse_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        offset: 0),
   ],
   name: r"MainProtocol.TwoWayAnonComposed",
-  requestInlineSizeV1: 24,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 16,
   responseInlineSizeV2: 16,
 );
 // twoWayAnonComposedWithError: (lib$test_protocollayouts_imported.ComposedProtocolTwoWayAnonComposedWithErrorRequest payload) -> (lib$test_protocollayouts_imported.ComposedProtocolTwoWayAnonComposedWithErrorResponse payload)
@@ -1265,8 +1258,7 @@ const $fidl.MethodType _kMainProtocol_TwoWayAnonComposedWithError_Type =
                 .ComposedProtocolTwoWayAnonComposedWithErrorRequest>(
         type: lib$test_protocollayouts_imported
             .kComposedProtocolTwoWayAnonComposedWithErrorRequest_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<
@@ -1274,13 +1266,10 @@ const $fidl.MethodType _kMainProtocol_TwoWayAnonComposedWithError_Type =
                 .ComposedProtocolTwoWayAnonComposedWithErrorResult>(
         type: lib$test_protocollayouts_imported
             .kComposedProtocol_TwoWayAnonComposedWithError_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        offset: 0),
   ],
   name: r"MainProtocol.TwoWayAnonComposedWithError",
-  requestInlineSizeV1: 16,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // onAnonComposed:  -> (lib$test_protocollayouts_imported.ComposedProtocolOnAnonComposedRequest payload)
@@ -1293,13 +1282,10 @@ const $fidl.MethodType _kMainProtocol_OnAnonComposed_Type = $fidl.MethodType(
                 .ComposedProtocolOnAnonComposedRequest>(
         type: lib$test_protocollayouts_imported
             .kComposedProtocolOnAnonComposedRequest_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        offset: 0),
   ],
   name: r"MainProtocol.OnAnonComposed",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // onAnonComposedWithError:  -> (lib$test_protocollayouts_imported.ComposedProtocolOnAnonComposedWithErrorResponse payload)
@@ -1313,13 +1299,10 @@ const $fidl.MethodType _kMainProtocol_OnAnonComposedWithError_Type =
                 .ComposedProtocolOnAnonComposedWithErrorResult>(
         type: lib$test_protocollayouts_imported
             .kComposedProtocol_OnAnonComposedWithError_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        offset: 0),
   ],
   name: r"MainProtocol.OnAnonComposedWithError",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // oneWayNamedComposed: (lib$test_protocollayouts_imported.ImportTablePayload payload)
@@ -1329,14 +1312,11 @@ const $fidl.MethodType _kMainProtocol_OneWayNamedComposed_Type =
   request: <$fidl.MemberType>[
     $fidl.MemberType<lib$test_protocollayouts_imported.ImportTablePayload>(
         type: lib$test_protocollayouts_imported.kImportTablePayload_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        offset: 0),
   ],
   response: [],
   name: r"MainProtocol.OneWayNamedComposed",
-  requestInlineSizeV1: 16,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // twoWayNamedComposed: (lib$test_protocollayouts_imported.ImportUnionPayload payload) -> (lib$test_protocollayouts_imported.ImportTablePayload payload)
@@ -1346,19 +1326,15 @@ const $fidl.MethodType _kMainProtocol_TwoWayNamedComposed_Type =
   request: <$fidl.MemberType>[
     $fidl.MemberType<lib$test_protocollayouts_imported.ImportUnionPayload>(
         type: lib$test_protocollayouts_imported.kImportUnionPayload_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<lib$test_protocollayouts_imported.ImportTablePayload>(
         type: lib$test_protocollayouts_imported.kImportTablePayload_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        offset: 0),
   ],
   name: r"MainProtocol.TwoWayNamedComposed",
-  requestInlineSizeV1: 24,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 16,
   responseInlineSizeV2: 16,
 );
 // twoWayNamedComposedWithError: (lib$test_protocollayouts_imported.ImportTablePayload payload) -> (lib$test_protocollayouts_imported.ImportUnionPayload payload)
@@ -1369,8 +1345,7 @@ const $fidl.MethodType _kMainProtocol_TwoWayNamedComposedWithError_Type =
   request: <$fidl.MemberType>[
     $fidl.MemberType<lib$test_protocollayouts_imported.ImportTablePayload>(
         type: lib$test_protocollayouts_imported.kImportTablePayload_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<
@@ -1378,13 +1353,10 @@ const $fidl.MethodType _kMainProtocol_TwoWayNamedComposedWithError_Type =
                 .ComposedProtocolTwoWayNamedComposedWithErrorResult>(
         type: lib$test_protocollayouts_imported
             .kComposedProtocol_TwoWayNamedComposedWithError_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        offset: 0),
   ],
   name: r"MainProtocol.TwoWayNamedComposedWithError",
-  requestInlineSizeV1: 16,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // onNamedComposed:  -> (lib$test_protocollayouts_imported.ImportUnionPayload payload)
@@ -1394,13 +1366,10 @@ const $fidl.MethodType _kMainProtocol_OnNamedComposed_Type = $fidl.MethodType(
   response: <$fidl.MemberType>[
     $fidl.MemberType<lib$test_protocollayouts_imported.ImportUnionPayload>(
         type: lib$test_protocollayouts_imported.kImportUnionPayload_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        offset: 0),
   ],
   name: r"MainProtocol.OnNamedComposed",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // onNamedComposedWithError:  -> (lib$test_protocollayouts_imported.ImportTablePayload payload)
@@ -1414,13 +1383,10 @@ const $fidl.MethodType _kMainProtocol_OnNamedComposedWithError_Type =
                 .ComposedProtocolOnNamedComposedWithErrorResult>(
         type: lib$test_protocollayouts_imported
             .kComposedProtocol_OnNamedComposedWithError_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        offset: 0),
   ],
   name: r"MainProtocol.OnNamedComposedWithError",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // oneWayImport: (lib$test_protocollayouts_imported.ImportTablePayload payload)
@@ -1429,14 +1395,11 @@ const $fidl.MethodType _kMainProtocol_OneWayImport_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<lib$test_protocollayouts_imported.ImportTablePayload>(
         type: lib$test_protocollayouts_imported.kImportTablePayload_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        offset: 0),
   ],
   response: [],
   name: r"MainProtocol.OneWayImport",
-  requestInlineSizeV1: 16,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // twoWayImport: (lib$test_protocollayouts_imported.ImportUnionPayload payload) -> (lib$test_protocollayouts_imported.ImportTablePayload payload)
@@ -1445,19 +1408,15 @@ const $fidl.MethodType _kMainProtocol_TwoWayImport_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<lib$test_protocollayouts_imported.ImportUnionPayload>(
         type: lib$test_protocollayouts_imported.kImportUnionPayload_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<lib$test_protocollayouts_imported.ImportTablePayload>(
         type: lib$test_protocollayouts_imported.kImportTablePayload_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        offset: 0),
   ],
   name: r"MainProtocol.TwoWayImport",
-  requestInlineSizeV1: 24,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 16,
   responseInlineSizeV2: 16,
 );
 // twoWayImportWithError: (lib$test_protocollayouts_imported.ImportTablePayload payload) -> (lib$test_protocollayouts_imported.ImportUnionPayload payload)
@@ -1467,19 +1426,14 @@ const $fidl.MethodType _kMainProtocol_TwoWayImportWithError_Type =
   request: <$fidl.MemberType>[
     $fidl.MemberType<lib$test_protocollayouts_imported.ImportTablePayload>(
         type: lib$test_protocollayouts_imported.kImportTablePayload_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<MainProtocolTwoWayImportWithErrorResult>(
-        type: kMainProtocol_TwoWayImportWithError_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        type: kMainProtocol_TwoWayImportWithError_Result_Type, offset: 0),
   ],
   name: r"MainProtocol.TwoWayImportWithError",
-  requestInlineSizeV1: 16,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // onImport:  -> (lib$test_protocollayouts_imported.ImportUnionPayload payload)
@@ -1489,13 +1443,10 @@ const $fidl.MethodType _kMainProtocol_OnImport_Type = $fidl.MethodType(
   response: <$fidl.MemberType>[
     $fidl.MemberType<lib$test_protocollayouts_imported.ImportUnionPayload>(
         type: lib$test_protocollayouts_imported.kImportUnionPayload_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        offset: 0),
   ],
   name: r"MainProtocol.OnImport",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // onImportWithError:  -> (lib$test_protocollayouts_imported.ImportTablePayload payload)
@@ -1504,14 +1455,10 @@ const $fidl.MethodType _kMainProtocol_OnImportWithError_Type = $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
     $fidl.MemberType<MainProtocolOnImportWithErrorResult>(
-        type: kMainProtocol_OnImportWithError_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        type: kMainProtocol_OnImportWithError_Result_Type, offset: 0),
   ],
   name: r"MainProtocol.OnImportWithError",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // oneWayLocal: (LocalTablePayload payload)
@@ -1519,13 +1466,11 @@ const int _kMainProtocol_OneWayLocal_Ordinal = 0x54759b55efd60f43;
 const $fidl.MethodType _kMainProtocol_OneWayLocal_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<LocalTablePayload>(
-        type: kLocalTablePayload_Type, offsetV1: 0, offsetV2: 0),
+        type: kLocalTablePayload_Type, offset: 0),
   ],
   response: [],
   name: r"MainProtocol.OneWayLocal",
-  requestInlineSizeV1: 16,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // twoWayLocal: (LocalUnionPayload payload) -> (LocalTablePayload payload)
@@ -1533,16 +1478,14 @@ const int _kMainProtocol_TwoWayLocal_Ordinal = 0x6bbeeb18f39c539b;
 const $fidl.MethodType _kMainProtocol_TwoWayLocal_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<LocalUnionPayload>(
-        type: kLocalUnionPayload_Type, offsetV1: 0, offsetV2: 0),
+        type: kLocalUnionPayload_Type, offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<LocalTablePayload>(
-        type: kLocalTablePayload_Type, offsetV1: 0, offsetV2: 0),
+        type: kLocalTablePayload_Type, offset: 0),
   ],
   name: r"MainProtocol.TwoWayLocal",
-  requestInlineSizeV1: 24,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 16,
   responseInlineSizeV2: 16,
 );
 // twoWayLocalWithError: (LocalTablePayload payload) -> (LocalUnionPayload payload)
@@ -1551,18 +1494,14 @@ const $fidl.MethodType _kMainProtocol_TwoWayLocalWithError_Type =
     $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<LocalTablePayload>(
-        type: kLocalTablePayload_Type, offsetV1: 0, offsetV2: 0),
+        type: kLocalTablePayload_Type, offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<MainProtocolTwoWayLocalWithErrorResult>(
-        type: kMainProtocol_TwoWayLocalWithError_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        type: kMainProtocol_TwoWayLocalWithError_Result_Type, offset: 0),
   ],
   name: r"MainProtocol.TwoWayLocalWithError",
-  requestInlineSizeV1: 16,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // onLocal:  -> (LocalUnionPayload payload)
@@ -1571,12 +1510,10 @@ const $fidl.MethodType _kMainProtocol_OnLocal_Type = $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
     $fidl.MemberType<LocalUnionPayload>(
-        type: kLocalUnionPayload_Type, offsetV1: 0, offsetV2: 0),
+        type: kLocalUnionPayload_Type, offset: 0),
   ],
   name: r"MainProtocol.OnLocal",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // onLocalWithError:  -> (LocalTablePayload payload)
@@ -1585,14 +1522,10 @@ const $fidl.MethodType _kMainProtocol_OnLocalWithError_Type = $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
     $fidl.MemberType<MainProtocolOnLocalWithErrorResult>(
-        type: kMainProtocol_OnLocalWithError_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        type: kMainProtocol_OnLocalWithError_Result_Type, offset: 0),
   ],
   name: r"MainProtocol.OnLocalWithError",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // oneWayAnon: (MainProtocolOneWayAnonRequest payload)
@@ -1600,13 +1533,11 @@ const int _kMainProtocol_OneWayAnon_Ordinal = 0x3a552f30c77c76ec;
 const $fidl.MethodType _kMainProtocol_OneWayAnon_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<MainProtocolOneWayAnonRequest>(
-        type: kMainProtocolOneWayAnonRequest_Type, offsetV1: 0, offsetV2: 0),
+        type: kMainProtocolOneWayAnonRequest_Type, offset: 0),
   ],
   response: [],
   name: r"MainProtocol.OneWayAnon",
-  requestInlineSizeV1: 16,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // twoWayAnon: (MainProtocolTwoWayAnonRequest payload) -> (MainProtocolTwoWayAnonResponse payload)
@@ -1614,16 +1545,14 @@ const int _kMainProtocol_TwoWayAnon_Ordinal = 0x672eb5e71efdabcf;
 const $fidl.MethodType _kMainProtocol_TwoWayAnon_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<MainProtocolTwoWayAnonRequest>(
-        type: kMainProtocolTwoWayAnonRequest_Type, offsetV1: 0, offsetV2: 0),
+        type: kMainProtocolTwoWayAnonRequest_Type, offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<MainProtocolTwoWayAnonResponse>(
-        type: kMainProtocolTwoWayAnonResponse_Type, offsetV1: 0, offsetV2: 0),
+        type: kMainProtocolTwoWayAnonResponse_Type, offset: 0),
   ],
   name: r"MainProtocol.TwoWayAnon",
-  requestInlineSizeV1: 24,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 16,
   responseInlineSizeV2: 16,
 );
 // twoWayAnonWithError: (MainProtocolTwoWayAnonWithErrorRequest payload) -> (MainProtocolTwoWayAnonWithErrorResponse payload)
@@ -1632,20 +1561,14 @@ const $fidl.MethodType _kMainProtocol_TwoWayAnonWithError_Type =
     $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<MainProtocolTwoWayAnonWithErrorRequest>(
-        type: kMainProtocolTwoWayAnonWithErrorRequest_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        type: kMainProtocolTwoWayAnonWithErrorRequest_Type, offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<MainProtocolTwoWayAnonWithErrorResult>(
-        type: kMainProtocol_TwoWayAnonWithError_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        type: kMainProtocol_TwoWayAnonWithError_Result_Type, offset: 0),
   ],
   name: r"MainProtocol.TwoWayAnonWithError",
-  requestInlineSizeV1: 16,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // onAnon:  -> (MainProtocolOnAnonRequest payload)
@@ -1654,12 +1577,10 @@ const $fidl.MethodType _kMainProtocol_OnAnon_Type = $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
     $fidl.MemberType<MainProtocolOnAnonRequest>(
-        type: kMainProtocolOnAnonRequest_Type, offsetV1: 0, offsetV2: 0),
+        type: kMainProtocolOnAnonRequest_Type, offset: 0),
   ],
   name: r"MainProtocol.OnAnon",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // onAnonWithError:  -> (MainProtocolOnAnonWithErrorResponse payload)
@@ -1668,14 +1589,10 @@ const $fidl.MethodType _kMainProtocol_OnAnonWithError_Type = $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
     $fidl.MemberType<MainProtocolOnAnonWithErrorResult>(
-        type: kMainProtocol_OnAnonWithError_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        type: kMainProtocol_OnAnonWithError_Result_Type, offset: 0),
   ],
   name: r"MainProtocol.OnAnonWithError",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 

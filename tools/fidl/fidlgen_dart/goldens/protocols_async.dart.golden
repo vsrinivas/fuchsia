@@ -602,33 +602,16 @@ class ProtocolEnds extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, client, $offset + 0, $depth);
-        $fieldType1.encode($encoder, server, $offset + 4, $depth);
-        $fieldType2.encode($encoder, clientOpt, $offset + 8, $depth);
-        $fieldType3.encode($encoder, serverOpt, $offset + 12, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, client, $offset + 0, $depth);
-        $fieldType1.encode($encoder, server, $offset + 4, $depth);
-        $fieldType2.encode($encoder, clientOpt, $offset + 8, $depth);
-        $fieldType3.encode($encoder, serverOpt, $offset + 12, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, client, $offset + 0, $depth);
+    $fieldType1.encode($encoder, server, $offset + 4, $depth);
+    $fieldType2.encode($encoder, clientOpt, $offset + 8, $depth);
+    $fieldType3.encode($encoder, serverOpt, $offset + 12, $depth);
   }
 
   static ProtocolEnds _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return ProtocolEnds(
-            client: $fieldType0.decode($decoder, $offset + 0, $depth),
-            server: $fieldType1.decode($decoder, $offset + 4, $depth),
-            clientOpt: $fieldType2.decode($decoder, $offset + 8, $depth),
-            serverOpt: $fieldType3.decode($decoder, $offset + 12, $depth));
       case $fidl.WireFormat.v2:
         return ProtocolEnds(
             client: $fieldType0.decode($decoder, $offset + 0, $depth),
@@ -645,9 +628,7 @@ class ProtocolEnds extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<ProtocolEnds> kProtocolEnds_Type =
     $fidl.StructType<ProtocolEnds>(
-        inlineSizeV1: 16,
-        inlineSizeV2: 16,
-        structDecode: ProtocolEnds._structDecode);
+        inlineSize: 16, structDecode: ProtocolEnds._structDecode);
 
 class WithErrorSyntaxErrorAsEnumResponse extends $fidl.Struct {
   const WithErrorSyntaxErrorAsEnumResponse({
@@ -681,25 +662,13 @@ class WithErrorSyntaxErrorAsEnumResponse extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
   }
 
   static WithErrorSyntaxErrorAsEnumResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 0, 1);
-        return WithErrorSyntaxErrorAsEnumResponse(
-            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         $decoder.checkPadding($offset + 0, 1);
         return WithErrorSyntaxErrorAsEnumResponse(
@@ -715,8 +684,7 @@ class WithErrorSyntaxErrorAsEnumResponse extends $fidl.Struct {
 const $fidl.StructType<WithErrorSyntaxErrorAsEnumResponse>
     kWithErrorSyntax_ErrorAsEnum_Response_Type =
     $fidl.StructType<WithErrorSyntaxErrorAsEnumResponse>(
-        inlineSizeV1: 1,
-        inlineSizeV2: 1,
+        inlineSize: 1,
         structDecode: WithErrorSyntaxErrorAsEnumResponse._structDecode);
 
 class WithErrorSyntaxErrorAsPrimitiveResponse extends $fidl.Struct {
@@ -751,25 +719,13 @@ class WithErrorSyntaxErrorAsPrimitiveResponse extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
   }
 
   static WithErrorSyntaxErrorAsPrimitiveResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        $decoder.checkPadding($offset + 0, 1);
-        return WithErrorSyntaxErrorAsPrimitiveResponse(
-            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         $decoder.checkPadding($offset + 0, 1);
         return WithErrorSyntaxErrorAsPrimitiveResponse(
@@ -785,8 +741,7 @@ class WithErrorSyntaxErrorAsPrimitiveResponse extends $fidl.Struct {
 const $fidl.StructType<WithErrorSyntaxErrorAsPrimitiveResponse>
     kWithErrorSyntax_ErrorAsPrimitive_Response_Type =
     $fidl.StructType<WithErrorSyntaxErrorAsPrimitiveResponse>(
-        inlineSizeV1: 1,
-        inlineSizeV2: 1,
+        inlineSize: 1,
         structDecode: WithErrorSyntaxErrorAsPrimitiveResponse._structDecode);
 
 class WithErrorSyntaxHandleInResultResponse extends $fidl.Struct {
@@ -822,24 +777,13 @@ class WithErrorSyntaxHandleInResultResponse extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, h, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, h, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, h, $offset + 0, $depth);
   }
 
   static WithErrorSyntaxHandleInResultResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return WithErrorSyntaxHandleInResultResponse(
-            h: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         return WithErrorSyntaxHandleInResultResponse(
             h: $fieldType0.decode($decoder, $offset + 0, $depth));
@@ -854,8 +798,7 @@ class WithErrorSyntaxHandleInResultResponse extends $fidl.Struct {
 const $fidl.StructType<WithErrorSyntaxHandleInResultResponse>
     kWithErrorSyntax_HandleInResult_Response_Type =
     $fidl.StructType<WithErrorSyntaxHandleInResultResponse>(
-        inlineSizeV1: 4,
-        inlineSizeV2: 4,
+        inlineSize: 4,
         structDecode: WithErrorSyntaxHandleInResultResponse._structDecode);
 
 class WithErrorSyntaxResponseAsStructResponse extends $fidl.Struct {
@@ -906,30 +849,15 @@ class WithErrorSyntaxResponseAsStructResponse extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 8, $depth);
-        $fieldType2.encode($encoder, c, $offset + 16, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        $fieldType1.encode($encoder, b, $offset + 8, $depth);
-        $fieldType2.encode($encoder, c, $offset + 16, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    $fieldType1.encode($encoder, b, $offset + 8, $depth);
+    $fieldType2.encode($encoder, c, $offset + 16, $depth);
   }
 
   static WithErrorSyntaxResponseAsStructResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return WithErrorSyntaxResponseAsStructResponse(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth),
-            b: $fieldType1.decode($decoder, $offset + 8, $depth),
-            c: $fieldType2.decode($decoder, $offset + 16, $depth));
       case $fidl.WireFormat.v2:
         return WithErrorSyntaxResponseAsStructResponse(
             a: $fieldType0.decode($decoder, $offset + 0, $depth),
@@ -946,22 +874,19 @@ class WithErrorSyntaxResponseAsStructResponse extends $fidl.Struct {
 const $fidl.StructType<WithErrorSyntaxResponseAsStructResponse>
     kWithErrorSyntax_ResponseAsStruct_Response_Type =
     $fidl.StructType<WithErrorSyntaxResponseAsStructResponse>(
-        inlineSizeV1: 24,
-        inlineSizeV2: 24,
+        inlineSize: 24,
         structDecode: WithErrorSyntaxResponseAsStructResponse._structDecode);
 
 // methodA: (int a, int b)
 const int _kChannelProtocol_MethodA_Ordinal = 0x2bc8d7d32bc66ba2;
 const $fidl.MethodType _kChannelProtocol_MethodA_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 8, offsetV2: 8),
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offset: 0),
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offset: 8),
   ],
   response: [],
   name: r"ChannelProtocol.MethodA",
-  requestInlineSizeV1: 16,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // eventA:  -> (int a, int b)
@@ -969,29 +894,25 @@ const int _kChannelProtocol_EventA_Ordinal = 0x1ed0a220297145ce;
 const $fidl.MethodType _kChannelProtocol_EventA_Type = $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 8, offsetV2: 8),
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offset: 0),
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offset: 8),
   ],
   name: r"ChannelProtocol.EventA",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 16,
   responseInlineSizeV2: 16,
 );
 // methodB: (int a, int b) -> (int result)
 const int _kChannelProtocol_MethodB_Ordinal = 0x7b8dd3d6c741c9c6;
 const $fidl.MethodType _kChannelProtocol_MethodB_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 8, offsetV2: 8),
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offset: 0),
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offset: 8),
   ],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offset: 0),
   ],
   name: r"ChannelProtocol.MethodB",
-  requestInlineSizeV1: 16,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 8,
   responseInlineSizeV2: 8,
 );
 // takeHandle: ($zircon.Handle h) -> ()
@@ -999,15 +920,11 @@ const int _kChannelProtocol_TakeHandle_Ordinal = 0x836fa31201a0a65;
 const $fidl.MethodType _kChannelProtocol_TakeHandle_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<$zircon.Handle>(
-        type: $fidl.HandleType(objectType: 0, rights: 2147483648),
-        offsetV1: 0,
-        offsetV2: 0),
+        type: $fidl.HandleType(objectType: 0, rights: 2147483648), offset: 0),
   ],
   response: [],
   name: r"ChannelProtocol.TakeHandle",
-  requestInlineSizeV1: 4,
   requestInlineSizeV2: 4,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // mutateSocket: ($zircon.Socket a) -> ($zircon.Socket b)
@@ -1015,20 +932,14 @@ const int _kChannelProtocol_MutateSocket_Ordinal = 0x66dbcccc06f7f14f;
 const $fidl.MethodType _kChannelProtocol_MutateSocket_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<$zircon.Socket>(
-        type: $fidl.SocketType(objectType: 14, rights: 2147483648),
-        offsetV1: 0,
-        offsetV2: 0),
+        type: $fidl.SocketType(objectType: 14, rights: 2147483648), offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<$zircon.Socket>(
-        type: $fidl.SocketType(objectType: 14, rights: 2147483648),
-        offsetV1: 0,
-        offsetV2: 0),
+        type: $fidl.SocketType(objectType: 14, rights: 2147483648), offset: 0),
   ],
   name: r"ChannelProtocol.MutateSocket",
-  requestInlineSizeV1: 4,
   requestInlineSizeV2: 4,
-  responseInlineSizeV1: 4,
   responseInlineSizeV2: 4,
 );
 
@@ -1452,9 +1363,7 @@ const $fidl.MethodType _kDiscoverableProtocol_Method_Type = $fidl.MethodType(
   request: [],
   response: [],
   name: r"DiscoverableProtocol.Method",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 
@@ -1573,15 +1482,11 @@ const $fidl.MethodType _kHandleRightsProtocol_NoResponseMethod_Type =
     $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<$zircon.Socket>(
-        type: $fidl.SocketType(objectType: 14, rights: 3),
-        offsetV1: 0,
-        offsetV2: 0),
+        type: $fidl.SocketType(objectType: 14, rights: 3), offset: 0),
   ],
   response: [],
   name: r"HandleRightsProtocol.NoResponseMethod",
-  requestInlineSizeV1: 4,
   requestInlineSizeV2: 4,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // responseMethod: ($zircon.Socket h) -> ($zircon.Socket h)
@@ -1590,20 +1495,14 @@ const $fidl.MethodType _kHandleRightsProtocol_ResponseMethod_Type =
     $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<$zircon.Socket>(
-        type: $fidl.SocketType(objectType: 14, rights: 3),
-        offsetV1: 0,
-        offsetV2: 0),
+        type: $fidl.SocketType(objectType: 14, rights: 3), offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<$zircon.Socket>(
-        type: $fidl.SocketType(objectType: 14, rights: 2),
-        offsetV1: 0,
-        offsetV2: 0),
+        type: $fidl.SocketType(objectType: 14, rights: 2), offset: 0),
   ],
   name: r"HandleRightsProtocol.ResponseMethod",
-  requestInlineSizeV1: 4,
   requestInlineSizeV2: 4,
-  responseInlineSizeV1: 4,
   responseInlineSizeV2: 4,
 );
 // anEvent:  -> ($zircon.Socket h)
@@ -1612,14 +1511,10 @@ const $fidl.MethodType _kHandleRightsProtocol_AnEvent_Type = $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
     $fidl.MemberType<$zircon.Socket>(
-        type: $fidl.SocketType(objectType: 14, rights: 3),
-        offsetV1: 0,
-        offsetV2: 0),
+        type: $fidl.SocketType(objectType: 14, rights: 3), offset: 0),
   ],
   name: r"HandleRightsProtocol.AnEvent",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 4,
   responseInlineSizeV2: 4,
 );
 
@@ -1889,27 +1784,25 @@ class HandleRightsProtocolBinding
 const int _kManyParameters_Fifteen_Ordinal = 0x59233bcecd338967;
 const $fidl.MethodType _kManyParameters_Fifteen_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 0, offsetV2: 0),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 1, offsetV2: 1),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 2, offsetV2: 2),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 3, offsetV2: 3),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 4, offsetV2: 4),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 5, offsetV2: 5),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 6, offsetV2: 6),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 7, offsetV2: 7),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 8, offsetV2: 8),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 9, offsetV2: 9),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 10, offsetV2: 10),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 11, offsetV2: 11),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 12, offsetV2: 12),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 13, offsetV2: 13),
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 14, offsetV2: 14),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offset: 0),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offset: 1),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offset: 2),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offset: 3),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offset: 4),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offset: 5),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offset: 6),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offset: 7),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offset: 8),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offset: 9),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offset: 10),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offset: 11),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offset: 12),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offset: 13),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offset: 14),
   ],
   response: [],
   name: r"ManyParameters.Fifteen",
-  requestInlineSizeV1: 15,
   requestInlineSizeV2: 15,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 
@@ -2088,13 +1981,11 @@ class ManyParametersBinding extends $fidl.AsyncBinding<ManyParameters> {
 const int _kMethodWithUnion_UnionMethod_Ordinal = 0x393e7f5b2b821218;
 const $fidl.MethodType _kMethodWithUnion_UnionMethod_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<TheUnion>(type: kTheUnion_Type, offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<TheUnion>(type: kTheUnion_Type, offset: 0),
   ],
   response: [],
   name: r"MethodWithUnion.UnionMethod",
-  requestInlineSizeV1: 24,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 
@@ -2216,28 +2107,24 @@ class MethodWithUnionBinding extends $fidl.AsyncBinding<MethodWithUnion> {
 const int _kTransitional_Request_Ordinal = 0x512cc1ba467fef08;
 const $fidl.MethodType _kTransitional_Request_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offset: 0),
   ],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offset: 0),
   ],
   name: r"Transitional.Request",
-  requestInlineSizeV1: 8,
   requestInlineSizeV2: 8,
-  responseInlineSizeV1: 8,
   responseInlineSizeV2: 8,
 );
 // oneWay: (int x)
 const int _kTransitional_OneWay_Ordinal = 0x3c2ee8512dc7f7e7;
 const $fidl.MethodType _kTransitional_OneWay_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offset: 0),
   ],
   response: [],
   name: r"Transitional.OneWay",
-  requestInlineSizeV1: 8,
   requestInlineSizeV2: 8,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // event:  -> (int x)
@@ -2245,12 +2132,10 @@ const int _kTransitional_Event_Ordinal = 0x76113c4b4d484841;
 const $fidl.MethodType _kTransitional_Event_Type = $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<int>(type: $fidl.Int64Type(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<int>(type: $fidl.Int64Type(), offset: 0),
   ],
   name: r"Transitional.Event",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 8,
   responseInlineSizeV2: 8,
 );
 
@@ -2515,9 +2400,7 @@ const $fidl.MethodType
   request: [],
   response: [],
   name: r"WithAndWithoutRequestResponse.NoRequestNoResponse",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // noRequestEmptyResponse: () -> ()
@@ -2529,9 +2412,7 @@ const $fidl.MethodType
   request: [],
   response: [],
   name: r"WithAndWithoutRequestResponse.NoRequestEmptyResponse",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // noRequestWithResponse: () -> (String ret)
@@ -2543,14 +2424,10 @@ const $fidl.MethodType
   request: [],
   response: <$fidl.MemberType>[
     $fidl.MemberType<String>(
-        type: $fidl.StringType(maybeElementCount: null),
-        offsetV1: 0,
-        offsetV2: 0),
+        type: $fidl.StringType(maybeElementCount: null), offset: 0),
   ],
   name: r"WithAndWithoutRequestResponse.NoRequestWithResponse",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 16,
   responseInlineSizeV2: 16,
 );
 // withRequestNoResponse: (String arg)
@@ -2561,15 +2438,11 @@ const $fidl.MethodType
     $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<String>(
-        type: $fidl.StringType(maybeElementCount: null),
-        offsetV1: 0,
-        offsetV2: 0),
+        type: $fidl.StringType(maybeElementCount: null), offset: 0),
   ],
   response: [],
   name: r"WithAndWithoutRequestResponse.WithRequestNoResponse",
-  requestInlineSizeV1: 16,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // withRequestEmptyResponse: (String arg) -> ()
@@ -2580,15 +2453,11 @@ const $fidl.MethodType
     $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<String>(
-        type: $fidl.StringType(maybeElementCount: null),
-        offsetV1: 0,
-        offsetV2: 0),
+        type: $fidl.StringType(maybeElementCount: null), offset: 0),
   ],
   response: [],
   name: r"WithAndWithoutRequestResponse.WithRequestEmptyResponse",
-  requestInlineSizeV1: 16,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // withRequestWithResponse: (String arg) -> (String ret)
@@ -2599,20 +2468,14 @@ const $fidl.MethodType
     $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<String>(
-        type: $fidl.StringType(maybeElementCount: null),
-        offsetV1: 0,
-        offsetV2: 0),
+        type: $fidl.StringType(maybeElementCount: null), offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<String>(
-        type: $fidl.StringType(maybeElementCount: null),
-        offsetV1: 0,
-        offsetV2: 0),
+        type: $fidl.StringType(maybeElementCount: null), offset: 0),
   ],
   name: r"WithAndWithoutRequestResponse.WithRequestWithResponse",
-  requestInlineSizeV1: 16,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 16,
   responseInlineSizeV2: 16,
 );
 // onEmptyResponse:  -> ()
@@ -2623,9 +2486,7 @@ const $fidl.MethodType _kWithAndWithoutRequestResponse_OnEmptyResponse_Type =
   request: [],
   response: [],
   name: r"WithAndWithoutRequestResponse.OnEmptyResponse",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // onWithResponse:  -> (String ret)
@@ -2636,14 +2497,10 @@ const $fidl.MethodType _kWithAndWithoutRequestResponse_OnWithResponse_Type =
   request: [],
   response: <$fidl.MemberType>[
     $fidl.MemberType<String>(
-        type: $fidl.StringType(maybeElementCount: null),
-        offsetV1: 0,
-        offsetV2: 0),
+        type: $fidl.StringType(maybeElementCount: null), offset: 0),
   ],
   name: r"WithAndWithoutRequestResponse.OnWithResponse",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 16,
   responseInlineSizeV2: 16,
 );
 
@@ -3227,14 +3084,10 @@ const $fidl.MethodType _kWithErrorSyntax_ResponseAsStruct_Type =
   request: [],
   response: <$fidl.MemberType>[
     $fidl.MemberType<WithErrorSyntaxResponseAsStructResult>(
-        type: kWithErrorSyntax_ResponseAsStruct_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        type: kWithErrorSyntax_ResponseAsStruct_Result_Type, offset: 0),
   ],
   name: r"WithErrorSyntax.ResponseAsStruct",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // errorAsPrimitive: () -> ()
@@ -3244,14 +3097,10 @@ const $fidl.MethodType _kWithErrorSyntax_ErrorAsPrimitive_Type =
   request: [],
   response: <$fidl.MemberType>[
     $fidl.MemberType<WithErrorSyntaxErrorAsPrimitiveResult>(
-        type: kWithErrorSyntax_ErrorAsPrimitive_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        type: kWithErrorSyntax_ErrorAsPrimitive_Result_Type, offset: 0),
   ],
   name: r"WithErrorSyntax.ErrorAsPrimitive",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // errorAsEnum: () -> ()
@@ -3260,14 +3109,10 @@ const $fidl.MethodType _kWithErrorSyntax_ErrorAsEnum_Type = $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
     $fidl.MemberType<WithErrorSyntaxErrorAsEnumResult>(
-        type: kWithErrorSyntax_ErrorAsEnum_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        type: kWithErrorSyntax_ErrorAsEnum_Result_Type, offset: 0),
   ],
   name: r"WithErrorSyntax.ErrorAsEnum",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // handleInResult: () -> ($zircon.Handle h)
@@ -3276,14 +3121,10 @@ const $fidl.MethodType _kWithErrorSyntax_HandleInResult_Type = $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
     $fidl.MemberType<WithErrorSyntaxHandleInResultResult>(
-        type: kWithErrorSyntax_HandleInResult_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        type: kWithErrorSyntax_HandleInResult_Result_Type, offset: 0),
   ],
   name: r"WithErrorSyntax.HandleInResult",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 
@@ -3715,20 +3556,15 @@ const int _kWithProtocolEnds_ClientEnds_Ordinal = 0x51780563edb15042;
 const $fidl.MethodType _kWithProtocolEnds_ClientEnds_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<$fidl.InterfaceHandle<DiscoverableProtocol>>(
-        type: $fidl.InterfaceHandleType<DiscoverableProtocol>(),
-        offsetV1: 0,
-        offsetV2: 0),
+        type: $fidl.InterfaceHandleType<DiscoverableProtocol>(), offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<$fidl.InterfaceHandle<DiscoverableProtocol>?>(
         type: $fidl.NullableInterfaceHandleType<DiscoverableProtocol>(),
-        offsetV1: 0,
-        offsetV2: 0),
+        offset: 0),
   ],
   name: r"WithProtocolEnds.ClientEnds",
-  requestInlineSizeV1: 4,
   requestInlineSizeV2: 4,
-  responseInlineSizeV1: 4,
   responseInlineSizeV2: 4,
 );
 // serverEnds: ($fidl.InterfaceRequest<DiscoverableProtocol>? in$) -> ($fidl.InterfaceRequest<DiscoverableProtocol> out)
@@ -3737,19 +3573,14 @@ const $fidl.MethodType _kWithProtocolEnds_ServerEnds_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<$fidl.InterfaceRequest<DiscoverableProtocol>?>(
         type: $fidl.NullableInterfaceRequestType<DiscoverableProtocol>(),
-        offsetV1: 0,
-        offsetV2: 0),
+        offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<$fidl.InterfaceRequest<DiscoverableProtocol>>(
-        type: $fidl.InterfaceRequestType<DiscoverableProtocol>(),
-        offsetV1: 0,
-        offsetV2: 0),
+        type: $fidl.InterfaceRequestType<DiscoverableProtocol>(), offset: 0),
   ],
   name: r"WithProtocolEnds.ServerEnds",
-  requestInlineSizeV1: 4,
   requestInlineSizeV2: 4,
-  responseInlineSizeV1: 4,
   responseInlineSizeV2: 4,
 );
 // structContainingEnds: (ProtocolEnds in$) -> (ProtocolEnds out)
@@ -3757,17 +3588,13 @@ const int _kWithProtocolEnds_StructContainingEnds_Ordinal = 0x3893f0baad26f5d5;
 const $fidl.MethodType _kWithProtocolEnds_StructContainingEnds_Type =
     $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<ProtocolEnds>(
-        type: kProtocolEnds_Type, offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<ProtocolEnds>(type: kProtocolEnds_Type, offset: 0),
   ],
   response: <$fidl.MemberType>[
-    $fidl.MemberType<ProtocolEnds>(
-        type: kProtocolEnds_Type, offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<ProtocolEnds>(type: kProtocolEnds_Type, offset: 0),
   ],
   name: r"WithProtocolEnds.StructContainingEnds",
-  requestInlineSizeV1: 16,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 16,
   responseInlineSizeV2: 16,
 );
 

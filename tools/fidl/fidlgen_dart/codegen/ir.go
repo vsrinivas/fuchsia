@@ -94,7 +94,7 @@ func (u *PayloadableName) AsParameters(ty Type) []Parameter {
 			TypeSymbol: ty.typeExpr,
 			Name:       unflattenedPayloadName,
 			Flattened:  false,
-			typeExpr:   fmt.Sprintf("$fidl.MemberType<%s>(type: %s, offsetV1: 0, offsetV2: 0)", ty.Decl, ty.typeExpr),
+			typeExpr:   fmt.Sprintf("$fidl.MemberType<%s>(type: %s, offset: 0)", ty.Decl, ty.typeExpr),
 		},
 	}
 }
@@ -178,15 +178,14 @@ type StructMember struct {
 	TypeSymbol   string
 	Name         string
 	DefaultValue string
-	OffsetV1     int
 	OffsetV2     int
 	typeExpr     string
 	Documented
 }
 
 type StructPadding struct {
-	OffsetV1, OffsetV2   int
-	PaddingV1, PaddingV2 int
+	OffsetV2  int
+	PaddingV2 int
 }
 
 // Table represents a table declaration.
@@ -683,17 +682,13 @@ func (c *compiler) compileParameters(t *fidlgen.Type) []Parameter {
 
 func (c *compiler) typeExprForMethod(val fidlgen.Method, request []Parameter, response []Parameter, name string) string {
 	var (
-		requestSizeV1  = 0
 		requestSizeV2  = 0
-		responseSizeV1 = 0
 		responseSizeV2 = 0
 	)
 	if val.RequestPayload != nil {
-		requestSizeV1 = val.RequestPayload.TypeShapeV1.InlineSize
 		requestSizeV2 = val.RequestPayload.TypeShapeV2.InlineSize
 	}
 	if val.ResponsePayload != nil {
-		responseSizeV1 = val.ResponsePayload.TypeShapeV1.InlineSize
 		responseSizeV2 = val.ResponsePayload.TypeShapeV2.InlineSize
 	}
 
@@ -705,12 +700,10 @@ func (c *compiler) typeExprForMethod(val fidlgen.Method, request []Parameter, re
 	    request: %s,
 		response: %s,
 		name: r"%s",
-		requestInlineSizeV1: %d,
 		requestInlineSizeV2: %d,
-		responseInlineSizeV1: %d,
 		responseInlineSizeV2: %d,
 	  )`, formatParameterList(request), formatParameterList(response), name,
-		requestSizeV1, requestSizeV2, responseSizeV1, responseSizeV2)
+		requestSizeV2, responseSizeV2)
 }
 
 func (c *compiler) inExternalLibrary(ci fidlgen.CompoundIdentifier) bool {
@@ -1191,10 +1184,9 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 		TypeSymbol:   t.typeExpr,
 		Name:         c.compileLowerCamelIdentifier(val.Name, structMemberContext),
 		DefaultValue: defaultValue,
-		OffsetV1:     val.FieldShapeV1.Offset,
 		OffsetV2:     val.FieldShapeV2.Offset,
-		typeExpr: fmt.Sprintf("$fidl.MemberType<%s>(type: %s, offsetV1: %v, offsetV2: %v)",
-			t.Decl, t.typeExpr, val.FieldShapeV1.Offset, val.FieldShapeV2.Offset),
+		typeExpr: fmt.Sprintf("$fidl.MemberType<%s>(type: %s, offset: %v)",
+			t.Decl, t.typeExpr, val.FieldShapeV2.Offset),
 		Documented: docString(val),
 	}
 }
@@ -1207,8 +1199,8 @@ func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 		Struct:          val,
 		TypeSymbol:      c.typeSymbolForCompoundIdentifier(ci),
 		TypeExpr: fmt.Sprintf(
-			`$fidl.StructType<%s>(inlineSizeV1: %v, inlineSizeV2: %v, structDecode: %s._structDecode)`,
-			name, val.TypeShapeV1.InlineSize, val.TypeShapeV2.InlineSize, name),
+			`$fidl.StructType<%s>(inlineSize: %v, structDecode: %s._structDecode)`,
+			name, val.TypeShapeV2.InlineSize, name),
 		Documented: docString(val),
 	}
 
@@ -1220,9 +1212,7 @@ func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 		}
 		r.Paddings = []StructPadding{
 			{
-				OffsetV1:  0,
 				OffsetV2:  0,
-				PaddingV1: 1,
 				PaddingV2: 1,
 			},
 		}
@@ -1230,8 +1220,8 @@ func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 	}
 
 	var (
-		isFirst                              = true
-		previousPaddingV1, previousPaddingV2 int
+		isFirst           = true
+		previousPaddingV2 int
 	)
 	for _, v := range val.Members {
 		member := c.compileStructMember(v)
@@ -1243,19 +1233,14 @@ func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 			isFirst = false
 		} else {
 			r.Paddings = append(r.Paddings, StructPadding{
-				OffsetV1:  v.FieldShapeV1.Offset - previousPaddingV1,
 				OffsetV2:  v.FieldShapeV2.Offset - previousPaddingV2,
-				PaddingV1: previousPaddingV1,
 				PaddingV2: previousPaddingV2,
 			})
 		}
-		previousPaddingV1 = v.FieldShapeV1.Padding
 		previousPaddingV2 = v.FieldShapeV2.Padding
 	}
 	r.Paddings = append(r.Paddings, StructPadding{
-		OffsetV1:  val.TypeShapeV1.InlineSize - previousPaddingV1,
 		OffsetV2:  val.TypeShapeV2.InlineSize - previousPaddingV2,
-		PaddingV1: previousPaddingV1,
 		PaddingV2: previousPaddingV2,
 	})
 	return r
@@ -1297,7 +1282,7 @@ func (c *compiler) compileTable(val fidlgen.Table) Table {
   members: %s,
   ctor: %s._ctor,
   resource: %t,
-)`, r.Name, val.TypeShapeV1.InlineSize, formatTableMemberList(r.Members), r.Name, r.IsResourceType())
+)`, r.Name, val.TypeShapeV2.InlineSize, formatTableMemberList(r.Members), r.Name, r.IsResourceType())
 	return r
 }
 

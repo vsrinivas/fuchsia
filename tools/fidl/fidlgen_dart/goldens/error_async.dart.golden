@@ -159,24 +159,13 @@ class ExampleFooResponse extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, y, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, y, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, y, $offset + 0, $depth);
   }
 
   static ExampleFooResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return ExampleFooResponse(
-            y: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         return ExampleFooResponse(
             y: $fieldType0.decode($decoder, $offset + 0, $depth));
@@ -190,27 +179,21 @@ class ExampleFooResponse extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<ExampleFooResponse> kExample_foo_Response_Type =
     $fidl.StructType<ExampleFooResponse>(
-        inlineSizeV1: 8,
-        inlineSizeV2: 8,
-        structDecode: ExampleFooResponse._structDecode);
+        inlineSize: 8, structDecode: ExampleFooResponse._structDecode);
 
 // foo: (String s) -> (int y)
 const int _kExample_foo_Ordinal = 0xf5f1179dc411e44;
 const $fidl.MethodType _kExample_foo_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<String>(
-        type: $fidl.StringType(maybeElementCount: null),
-        offsetV1: 0,
-        offsetV2: 0),
+        type: $fidl.StringType(maybeElementCount: null), offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<ExampleFooResult>(
-        type: kExample_foo_Result_Type, offsetV1: 0, offsetV2: 0),
+        type: kExample_foo_Result_Type, offset: 0),
   ],
   name: r"Example.foo",
-  requestInlineSizeV1: 16,
   requestInlineSizeV2: 16,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 

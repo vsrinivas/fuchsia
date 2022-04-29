@@ -71,24 +71,13 @@ class Payload extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, value, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, value, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, value, $offset + 0, $depth);
   }
 
   static Payload _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return Payload(
-            value: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         return Payload(
             value: $fieldType0.decode($decoder, $offset + 0, $depth));
@@ -101,4 +90,4 @@ class Payload extends $fidl.Struct {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Payload> kPayload_Type = $fidl.StructType<Payload>(
-    inlineSizeV1: 4, inlineSizeV2: 4, structDecode: Payload._structDecode);
+    inlineSize: 4, structDecode: Payload._structDecode);

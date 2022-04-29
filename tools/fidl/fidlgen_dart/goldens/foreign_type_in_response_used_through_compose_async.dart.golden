@@ -47,12 +47,10 @@ const $fidl.MethodType _kTop_GetFoo_Type = $fidl.MethodType(
   request: [],
   response: <$fidl.MemberType>[
     $fidl.MemberType<lib$test_bottom.Foo>(
-        type: lib$test_bottom.kFoo_Type, offsetV1: 0, offsetV2: 0),
+        type: lib$test_bottom.kFoo_Type, offset: 0),
   ],
   name: r"Top.GetFoo",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 4,
   responseInlineSizeV2: 4,
 );
 

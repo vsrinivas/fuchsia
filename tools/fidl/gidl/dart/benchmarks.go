@@ -117,7 +117,7 @@ void encode{{ .Name }}Benchmark(run, teardown) {
 	final value = {{ .Value }};
 	run(() {
 		final Encoder encoder = Encoder(kWireFormatDefault)
-			..alloc({{ .ValueType}}.inlineSize(kWireFormatDefault), 0);
+			..alloc({{ .ValueType}}.inlineSize, 0);
 		{{ .ValueType }}.encode(encoder, value, 0, 1);
   });
 }
@@ -130,11 +130,11 @@ void decode{{ .Name }}Benchmark(run, teardown) {
 {{- end }}
 	final value = {{ .Value }};
 	final Encoder encoder = Encoder(kWireFormatDefault)
-    ..alloc(kMessageHeaderSize + {{ .ValueType}}.inlineSize(kWireFormatDefault), 0);
+    ..alloc(kMessageHeaderSize + {{ .ValueType}}.inlineSize, 0);
 	{{ .ValueType }}.encode(encoder, value, kMessageHeaderSize, 1);
 	run(() {
 		final Decoder decoder = Decoder(IncomingMessage.fromOutgoingMessage(encoder.message))
-			..claimBytes(kMessageHeaderSize + {{ .ValueType}}.inlineSize(kWireFormatDefault), 0);
+			..claimBytes(kMessageHeaderSize + {{ .ValueType}}.inlineSize, 0);
 			{{ .ValueType }}.decode(decoder, kMessageHeaderSize, 1);
   });
 }

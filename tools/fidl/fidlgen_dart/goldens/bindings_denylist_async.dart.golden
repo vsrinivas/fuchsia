@@ -580,24 +580,13 @@ class DenyEachBindingOnlyDenyCppResponse extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, b, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, b, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, b, $offset + 0, $depth);
   }
 
   static DenyEachBindingOnlyDenyCppResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return DenyEachBindingOnlyDenyCppResponse(
-            b: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         return DenyEachBindingOnlyDenyCppResponse(
             b: $fieldType0.decode($decoder, $offset + 0, $depth));
@@ -612,8 +601,7 @@ class DenyEachBindingOnlyDenyCppResponse extends $fidl.Struct {
 const $fidl.StructType<DenyEachBindingOnlyDenyCppResponse>
     kDenyEachBinding_OnlyDenyCpp_Response_Type =
     $fidl.StructType<DenyEachBindingOnlyDenyCppResponse>(
-        inlineSizeV1: 4,
-        inlineSizeV2: 4,
+        inlineSize: 4,
         structDecode: DenyEachBindingOnlyDenyCppResponse._structDecode);
 
 class DenyEachBindingOnlyDenyGoResponse extends $fidl.Struct {
@@ -648,24 +636,13 @@ class DenyEachBindingOnlyDenyGoResponse extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, b, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, b, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, b, $offset + 0, $depth);
   }
 
   static DenyEachBindingOnlyDenyGoResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return DenyEachBindingOnlyDenyGoResponse(
-            b: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         return DenyEachBindingOnlyDenyGoResponse(
             b: $fieldType0.decode($decoder, $offset + 0, $depth));
@@ -680,8 +657,7 @@ class DenyEachBindingOnlyDenyGoResponse extends $fidl.Struct {
 const $fidl.StructType<DenyEachBindingOnlyDenyGoResponse>
     kDenyEachBinding_OnlyDenyGo_Response_Type =
     $fidl.StructType<DenyEachBindingOnlyDenyGoResponse>(
-        inlineSizeV1: 4,
-        inlineSizeV2: 4,
+        inlineSize: 4,
         structDecode: DenyEachBindingOnlyDenyGoResponse._structDecode);
 
 class DenyEachBindingOnlyDenyLibfuzzerResponse extends $fidl.Struct {
@@ -716,24 +692,13 @@ class DenyEachBindingOnlyDenyLibfuzzerResponse extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, b, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, b, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, b, $offset + 0, $depth);
   }
 
   static DenyEachBindingOnlyDenyLibfuzzerResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return DenyEachBindingOnlyDenyLibfuzzerResponse(
-            b: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         return DenyEachBindingOnlyDenyLibfuzzerResponse(
             b: $fieldType0.decode($decoder, $offset + 0, $depth));
@@ -748,8 +713,7 @@ class DenyEachBindingOnlyDenyLibfuzzerResponse extends $fidl.Struct {
 const $fidl.StructType<DenyEachBindingOnlyDenyLibfuzzerResponse>
     kDenyEachBinding_OnlyDenyLibfuzzer_Response_Type =
     $fidl.StructType<DenyEachBindingOnlyDenyLibfuzzerResponse>(
-        inlineSizeV1: 4,
-        inlineSizeV2: 4,
+        inlineSize: 4,
         structDecode: DenyEachBindingOnlyDenyLibfuzzerResponse._structDecode);
 
 class DenyEachBindingOnlyDenyRustResponse extends $fidl.Struct {
@@ -784,24 +748,13 @@ class DenyEachBindingOnlyDenyRustResponse extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, b, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, b, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, b, $offset + 0, $depth);
   }
 
   static DenyEachBindingOnlyDenyRustResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return DenyEachBindingOnlyDenyRustResponse(
-            b: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         return DenyEachBindingOnlyDenyRustResponse(
             b: $fieldType0.decode($decoder, $offset + 0, $depth));
@@ -816,8 +769,7 @@ class DenyEachBindingOnlyDenyRustResponse extends $fidl.Struct {
 const $fidl.StructType<DenyEachBindingOnlyDenyRustResponse>
     kDenyEachBinding_OnlyDenyRust_Response_Type =
     $fidl.StructType<DenyEachBindingOnlyDenyRustResponse>(
-        inlineSizeV1: 4,
-        inlineSizeV2: 4,
+        inlineSize: 4,
         structDecode: DenyEachBindingOnlyDenyRustResponse._structDecode);
 
 class DenyEachBindingOnlyDenySyzkallerResponse extends $fidl.Struct {
@@ -852,24 +804,13 @@ class DenyEachBindingOnlyDenySyzkallerResponse extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, b, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, b, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, b, $offset + 0, $depth);
   }
 
   static DenyEachBindingOnlyDenySyzkallerResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return DenyEachBindingOnlyDenySyzkallerResponse(
-            b: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         return DenyEachBindingOnlyDenySyzkallerResponse(
             b: $fieldType0.decode($decoder, $offset + 0, $depth));
@@ -884,8 +825,7 @@ class DenyEachBindingOnlyDenySyzkallerResponse extends $fidl.Struct {
 const $fidl.StructType<DenyEachBindingOnlyDenySyzkallerResponse>
     kDenyEachBinding_OnlyDenySyzkaller_Response_Type =
     $fidl.StructType<DenyEachBindingOnlyDenySyzkallerResponse>(
-        inlineSizeV1: 4,
-        inlineSizeV2: 4,
+        inlineSize: 4,
         structDecode: DenyEachBindingOnlyDenySyzkallerResponse._structDecode);
 
 class MemberOnlyAppearsInImportingLibrary extends $fidl.Struct {
@@ -920,24 +860,13 @@ class MemberOnlyAppearsInImportingLibrary extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode($encoder, a, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode($encoder, a, $offset + 0, $depth);
   }
 
   static MemberOnlyAppearsInImportingLibrary _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return MemberOnlyAppearsInImportingLibrary(
-            a: $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         return MemberOnlyAppearsInImportingLibrary(
             a: $fieldType0.decode($decoder, $offset + 0, $depth));
@@ -952,8 +881,7 @@ class MemberOnlyAppearsInImportingLibrary extends $fidl.Struct {
 const $fidl.StructType<MemberOnlyAppearsInImportingLibrary>
     kMemberOnlyAppearsInImportingLibrary_Type =
     $fidl.StructType<MemberOnlyAppearsInImportingLibrary>(
-        inlineSizeV1: 1,
-        inlineSizeV2: 1,
+        inlineSize: 1,
         structDecode: MemberOnlyAppearsInImportingLibrary._structDecode);
 
 class OnlyAppearsInImportingLibrary extends $fidl.Struct {
@@ -992,27 +920,14 @@ class OnlyAppearsInImportingLibrary extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    switch ($encoder.wireFormat) {
-      case $fidl.WireFormat.v1:
-        $fieldType0.encode(
-            $encoder, memberOnlyAppearsInImportingLibrary, $offset + 0, $depth);
-        break;
-      case $fidl.WireFormat.v2:
-        $fieldType0.encode(
-            $encoder, memberOnlyAppearsInImportingLibrary, $offset + 0, $depth);
-        break;
-      default:
-        throw $fidl.FidlError('unknown wire format');
-    }
+    $fieldType0.encode(
+        $encoder, memberOnlyAppearsInImportingLibrary, $offset + 0, $depth);
   }
 
   static OnlyAppearsInImportingLibrary _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
-        return OnlyAppearsInImportingLibrary(
-            memberOnlyAppearsInImportingLibrary:
-                $fieldType0.decode($decoder, $offset + 0, $depth));
       case $fidl.WireFormat.v2:
         return OnlyAppearsInImportingLibrary(
             memberOnlyAppearsInImportingLibrary:
@@ -1028,8 +943,7 @@ class OnlyAppearsInImportingLibrary extends $fidl.Struct {
 const $fidl.StructType<OnlyAppearsInImportingLibrary>
     kOnlyAppearsInImportingLibrary_Type =
     $fidl.StructType<OnlyAppearsInImportingLibrary>(
-        inlineSizeV1: 1,
-        inlineSizeV2: 1,
+        inlineSize: 1,
         structDecode: OnlyAppearsInImportingLibrary._structDecode);
 
 abstract class Allowed {
@@ -1104,36 +1018,28 @@ class AllowedBinding extends $fidl.AsyncBinding<Allowed> {
 const int _kDenyEachBinding_OnlyDenyCpp_Ordinal = 0x290bad96051b1b92;
 const $fidl.MethodType _kDenyEachBinding_OnlyDenyCpp_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<DenyEachBindingOnlyDenyCppResult>(
-        type: kDenyEachBinding_OnlyDenyCpp_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        type: kDenyEachBinding_OnlyDenyCpp_Result_Type, offset: 0),
   ],
   name: r"DenyEachBinding.OnlyDenyCpp",
-  requestInlineSizeV1: 1,
   requestInlineSizeV2: 1,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // onlyDenyGo: (bool a) -> (int b)
 const int _kDenyEachBinding_OnlyDenyGo_Ordinal = 0x657655b981478d99;
 const $fidl.MethodType _kDenyEachBinding_OnlyDenyGo_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<DenyEachBindingOnlyDenyGoResult>(
-        type: kDenyEachBinding_OnlyDenyGo_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        type: kDenyEachBinding_OnlyDenyGo_Result_Type, offset: 0),
   ],
   name: r"DenyEachBinding.OnlyDenyGo",
-  requestInlineSizeV1: 1,
   requestInlineSizeV2: 1,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // onlyDenyLibfuzzer: (bool a) -> (int b)
@@ -1141,36 +1047,28 @@ const int _kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal = 0x1e4f89c329617b1e;
 const $fidl.MethodType _kDenyEachBinding_OnlyDenyLibfuzzer_Type =
     $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<DenyEachBindingOnlyDenyLibfuzzerResult>(
-        type: kDenyEachBinding_OnlyDenyLibfuzzer_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        type: kDenyEachBinding_OnlyDenyLibfuzzer_Result_Type, offset: 0),
   ],
   name: r"DenyEachBinding.OnlyDenyLibfuzzer",
-  requestInlineSizeV1: 1,
   requestInlineSizeV2: 1,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // onlyDenyRust: (bool a) -> (int b)
 const int _kDenyEachBinding_OnlyDenyRust_Ordinal = 0x339f67244edd5cb6;
 const $fidl.MethodType _kDenyEachBinding_OnlyDenyRust_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<DenyEachBindingOnlyDenyRustResult>(
-        type: kDenyEachBinding_OnlyDenyRust_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        type: kDenyEachBinding_OnlyDenyRust_Result_Type, offset: 0),
   ],
   name: r"DenyEachBinding.OnlyDenyRust",
-  requestInlineSizeV1: 1,
   requestInlineSizeV2: 1,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 // onlyDenySyzkaller: (bool a) -> (int b)
@@ -1178,18 +1076,14 @@ const int _kDenyEachBinding_OnlyDenySyzkaller_Ordinal = 0x202ee614a749e98a;
 const $fidl.MethodType _kDenyEachBinding_OnlyDenySyzkaller_Type =
     $fidl.MethodType(
   request: <$fidl.MemberType>[
-    $fidl.MemberType<bool>(type: $fidl.BoolType(), offsetV1: 0, offsetV2: 0),
+    $fidl.MemberType<bool>(type: $fidl.BoolType(), offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<DenyEachBindingOnlyDenySyzkallerResult>(
-        type: kDenyEachBinding_OnlyDenySyzkaller_Result_Type,
-        offsetV1: 0,
-        offsetV2: 0),
+        type: kDenyEachBinding_OnlyDenySyzkaller_Result_Type, offset: 0),
   ],
   name: r"DenyEachBinding.OnlyDenySyzkaller",
-  requestInlineSizeV1: 1,
   requestInlineSizeV2: 1,
-  responseInlineSizeV1: 24,
   responseInlineSizeV2: 16,
 );
 
@@ -1728,9 +1622,7 @@ const $fidl.MethodType _kImportsSameNameContext_Unattributed_Type =
   request: [],
   response: [],
   name: r"ImportsSameNameContext.Unattributed",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 // alwaysAppearsInImportingLibrary: ()
@@ -1742,9 +1634,7 @@ const $fidl.MethodType
   request: [],
   response: [],
   name: r"ImportsSameNameContext.AlwaysAppearsInImportingLibrary",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 

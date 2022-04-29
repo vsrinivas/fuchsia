@@ -45,9 +45,7 @@ const $fidl.MethodType _kFirstProtocol_MethodOnFirst_Type = $fidl.MethodType(
   request: [],
   response: [],
   name: r"FirstProtocol.MethodOnFirst",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 
@@ -161,9 +159,7 @@ const $fidl.MethodType _kSecondProtocol_MethodOnSecond_Type = $fidl.MethodType(
   request: [],
   response: [],
   name: r"SecondProtocol.MethodOnSecond",
-  requestInlineSizeV1: 0,
   requestInlineSizeV2: 0,
-  responseInlineSizeV1: 0,
   responseInlineSizeV2: 0,
 );
 
