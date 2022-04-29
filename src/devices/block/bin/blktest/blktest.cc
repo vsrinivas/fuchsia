@@ -33,8 +33,12 @@
 #include <zxtest/zxtest.h>
 
 #include "src/lib/storage/block_client/cpp/client.h"
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 
 namespace tests {
+
+zx_status_t (&BRead)(int, void*, size_t, size_t) = block_client::SingleReadBytes;
+zx_status_t (&BWrite)(int, void*, size_t, size_t) = block_client::SingleWriteBytes;
 
 static void get_testdev(uint64_t* blk_size, uint64_t* blk_count, fbl::unique_fd* fd_result) {
   const char* blkdev_path = getenv(BLKTEST_BLK_DEV);
@@ -73,14 +77,13 @@ TEST(BlkdevTests, blkdev_test_simple) {
   memset(out.get(), 0, sizeof(out));
 
   // Write three blocks.
-  ASSERT_EQ(write(fd.get(), buf.get(), buffer_size), buffer_size);
-  ASSERT_EQ(write(fd.get(), buf.get(), buffer_size / 2), buffer_size / 2);
+  ASSERT_EQ(BWrite(fd.get(), buf.get(), buffer_size, 0), ZX_OK);
+  ASSERT_EQ(BWrite(fd.get(), buf.get(), buffer_size / 2, buffer_size), ZX_OK);
 
   // Seek to the start of the device and read the contents
-  ASSERT_EQ(lseek(fd.get(), 0, SEEK_SET), 0);
-  ASSERT_EQ(read(fd.get(), out.get(), buffer_size), buffer_size);
+  ASSERT_EQ(BRead(fd.get(), out.get(), buffer_size, 0), ZX_OK);
   ASSERT_EQ(memcmp(out.get(), buf.get(), buffer_size), 0);
-  ASSERT_EQ(read(fd.get(), out.get(), buffer_size / 2), buffer_size / 2);
+  ASSERT_EQ(BRead(fd.get(), out.get(), buffer_size / 2, buffer_size), ZX_OK);
   ASSERT_EQ(memcmp(out.get(), buf.get(), buffer_size / 2), 0);
 }
 
@@ -95,38 +98,20 @@ TEST(BlkdevTests, blkdev_test_bad_requests) {
   memset(buf.get(), 'a', blk_size * 4);
 
   // Read / write non-multiples of the block size
-  ASSERT_EQ(write(fd.get(), buf.get(), blk_size - 1), -1);
-  EXPECT_EQ(errno, EINVAL);
-  ASSERT_EQ(write(fd.get(), buf.get(), blk_size / 2), -1);
-  EXPECT_EQ(errno, EINVAL);
-  const int len = static_cast<int>(blk_size) * 2 - 1;
-  ssize_t result = write(fd.get(), buf.get(), len);
-  // Fuchsia.io will break writes up into chunks, so it's possible that a partial write succeeded,
-  // so check for an error or check for a short write that happens to be a multiple of blk_size.
-  ASSERT_TRUE((result < 0 && errno == EINVAL) || (result < len && result % blk_size == 0),
-              "result=%ld, errno=%d", result, errno);
-  ASSERT_EQ(read(fd.get(), buf.get(), blk_size - 1), -1);
-  EXPECT_EQ(errno, EINVAL);
-  ASSERT_EQ(read(fd.get(), buf.get(), blk_size / 2), -1);
-  EXPECT_EQ(errno, EINVAL);
-  result = read(fd.get(), buf.get(), blk_size * 2 - 1);
-  ASSERT_TRUE((result < 0 && errno == EINVAL) || (result < len && result % blk_size == 0),
-              "result=%ld, errno=%d", result, errno);
+  ASSERT_NE(BWrite(fd.get(), buf.get(), blk_size - 1, 0), ZX_OK);
+  ASSERT_NE(BWrite(fd.get(), buf.get(), blk_size / 2, 0), ZX_OK);
+
+  ASSERT_NE(BRead(fd.get(), buf.get(), blk_size - 1, 0), ZX_OK);
+  ASSERT_NE(BRead(fd.get(), buf.get(), blk_size / 2, 0), ZX_OK);
 
   // Read / write from unaligned offset
-  ASSERT_EQ(lseek(fd.get(), 1, SEEK_SET), 1);
-  ASSERT_EQ(write(fd.get(), buf.get(), blk_size), -1);
-  ASSERT_EQ(errno, EINVAL);
-  ASSERT_EQ(read(fd.get(), buf.get(), blk_size), -1);
-  ASSERT_EQ(errno, EINVAL);
+  ASSERT_NE(BWrite(fd.get(), buf.get(), blk_size, 1), ZX_OK);
+  ASSERT_NE(BRead(fd.get(), buf.get(), blk_size, 1), ZX_OK);
 
   // Read / write from beyond end of device
   off_t dev_size = blk_size * blk_count;
-  ASSERT_EQ(lseek(fd.get(), dev_size, SEEK_SET), dev_size);
-  ASSERT_EQ(write(fd.get(), buf.get(), blk_size), -1);
-  EXPECT_EQ(errno, EINVAL);
-  ASSERT_EQ(read(fd.get(), buf.get(), blk_size), -1);
-  EXPECT_EQ(errno, EINVAL);
+  ASSERT_NE(BWrite(fd.get(), buf.get(), blk_size, dev_size), ZX_OK);
+  ASSERT_NE(BRead(fd.get(), buf.get(), blk_size, dev_size), ZX_OK);
 }
 
 TEST(BlkdevTests, blkdev_test_fifo_no_op) {

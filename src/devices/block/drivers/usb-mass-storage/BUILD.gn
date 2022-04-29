@@ -115,6 +115,7 @@ test("ums-integration") {
     "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
+    "//src/lib/storage/block_client/cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fidl-async",

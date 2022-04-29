@@ -29,8 +29,13 @@
 #include <fbl/string.h>
 #include <zxtest/zxtest.h>
 
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
+
 namespace usb_virtual_bus {
 namespace {
+
+zx_status_t (&BRead)(int, void*, size_t, size_t) = block_client::SingleReadBytes;
+zx_status_t (&BWrite)(int, void*, size_t, size_t) = block_client::SingleWriteBytes;
 
 namespace usb_peripheral = fuchsia_hardware_usb_peripheral;
 namespace usb_peripheral_block = fuchsia_hardware_usb_peripheral_block;
@@ -250,7 +255,7 @@ TEST_F(UmsTest, DISABLED_CachedWriteWithNoFlushShouldBeDiscarded) {
 
   std::unique_ptr<uint8_t[]> write_buffer(new uint8_t[blk_size]);
   std::unique_ptr<uint8_t[]> read_buffer(new uint8_t[blk_size]);
-  ASSERT_EQ(blk_size, static_cast<uint64_t>(read(fd.get(), read_buffer.get(), blk_size)));
+  ASSERT_EQ(ZX_OK, BRead(fd.get(), read_buffer.get(), blk_size, 0));
   fd.reset(openat(bus_.GetRootFd(), GetTestdevPath().c_str(), O_RDWR));
   ASSERT_GE(fd.get(), 0);
   // Create a pattern to write to the block device
@@ -258,7 +263,7 @@ TEST_F(UmsTest, DISABLED_CachedWriteWithNoFlushShouldBeDiscarded) {
     write_buffer.get()[i] = static_cast<unsigned char>(i);
   }
   // Write the data to the block device
-  ASSERT_EQ(blk_size, static_cast<uint64_t>(write(fd.get(), write_buffer.get(), blk_size)));
+  ASSERT_EQ(ZX_OK, BWrite(fd.get(), write_buffer.get(), blk_size, 0));
   ASSERT_EQ(-1, fsync(fd.get()));
   fd.reset();
   // Disconnect the block device without flushing the cache.
@@ -267,7 +272,7 @@ TEST_F(UmsTest, DISABLED_CachedWriteWithNoFlushShouldBeDiscarded) {
   ASSERT_NO_FATAL_FAILURE(controller.Connect());
   fd.reset(openat(bus_.GetRootFd(), GetTestdevPath().c_str(), O_RDWR));
   ASSERT_GE(fd.get(), 0);
-  ASSERT_EQ(blk_size, static_cast<uint64_t>(read(fd.get(), write_buffer.get(), blk_size)));
+  ASSERT_EQ(ZX_OK, BRead(fd.get(), write_buffer.get(), blk_size, 0));
   ASSERT_NE(0, memcmp(read_buffer.get(), write_buffer.get(), blk_size));
 }
 
@@ -295,7 +300,7 @@ TEST_F(UmsTest, DISABLED_UncachedWriteShouldBePersistedToBlockDevice) {
   for (size_t i = 0; i < blk_size; i++) {
     write_buffer.get()[i] = static_cast<unsigned char>(i);
   }
-  ASSERT_EQ(blk_size, static_cast<uint64_t>(write(fd.get(), write_buffer.get(), blk_size)));
+  ASSERT_EQ(ZX_OK, BWrite(fd.get(), write_buffer.get(), blk_size, 0));
   memset(write_buffer.get(), 0, blk_size);
   fd.reset();
   // Disconnect and re-connect the block device
@@ -305,7 +310,7 @@ TEST_F(UmsTest, DISABLED_UncachedWriteShouldBePersistedToBlockDevice) {
   ASSERT_GE(fd.get(), 0);
   // Read back the pattern, which should match what was written
   // since writeback caching was disabled.
-  ASSERT_EQ(blk_size, static_cast<uint64_t>(read(fd.get(), write_buffer.get(), blk_size)));
+  ASSERT_EQ(ZX_OK, BRead(fd.get(), write_buffer.get(), blk_size, 0));
   for (size_t i = 0; i < blk_size; i++) {
     ASSERT_EQ(write_buffer.get()[i], static_cast<unsigned char>(i));
   }
