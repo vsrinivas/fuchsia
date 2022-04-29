@@ -46,14 +46,65 @@ class LeafDriver {
   void Run() {
     // Start the driver.
     auto task = driver::Connect<ft::Waiter>(ns_, dispatcher_)
-                    .and_then(fit::bind_member(this, &LeafDriver::CallAck))
+                    .and_then(fit::bind_member(this, &LeafDriver::DoWork))
                     .or_else(fit::bind_member(this, &LeafDriver::UnbindNode))
                     .wrap_with(scope_);
     executor_.schedule_task(std::move(task));
   }
 
-  result<void, zx_status_t> CallAck(const fidl::WireSharedClient<ft::Waiter>& waiter) {
-    __UNUSED auto result = waiter->Ack();
+  zx::status<uint32_t> ConnectToDeviceAndGetNumber(std::string path) {
+    auto device = ns_.Connect<ft::Device>(path);
+    if (device.status_value() != ZX_OK) {
+      FDF_LOG(ERROR, "Failed to connect to %s: %s", path.data(), device.status_string());
+      return device.take_error();
+    }
+
+    auto result = fidl::WireCall(*device)->GetNumber();
+    if (result.status() != ZX_OK) {
+      FDF_LOG(ERROR, "Failed to call number on %s: %s", path.data(), result.lossy_description());
+      return zx::error(result.status());
+    }
+    return zx::ok(result->number);
+  }
+
+  result<void, zx_status_t> DoWork(const fidl::WireSharedClient<ft::Waiter>& waiter) {
+    // Check the left device.
+    auto number = ConnectToDeviceAndGetNumber("/fuchsia.composite.test.Service/left/device");
+    if (number.is_error()) {
+      __UNUSED auto result = waiter->Ack(number.error_value());
+      return ok();
+    }
+    if (*number != 1) {
+      FDF_LOG(ERROR, "Wrong number for left: expecting 1, saw %d", *number);
+      __UNUSED auto result = waiter->Ack(ZX_ERR_INTERNAL);
+      return ok();
+    }
+
+    // Check the right device.
+    number = ConnectToDeviceAndGetNumber("/fuchsia.composite.test.Service/right/device");
+    if (number.is_error()) {
+      __UNUSED auto result = waiter->Ack(number.error_value());
+      return ok();
+    }
+    if (*number != 2) {
+      FDF_LOG(ERROR, "Wrong number for right: expecting 2, saw %d", *number);
+      __UNUSED auto result = waiter->Ack(ZX_ERR_INTERNAL);
+      return ok();
+    }
+
+    // Check the default device (which is the left device).
+    number = ConnectToDeviceAndGetNumber("/fuchsia.composite.test.Service/default/device");
+    if (number.is_error()) {
+      __UNUSED auto result = waiter->Ack(number.error_value());
+      return ok();
+    }
+    if (*number != 1) {
+      FDF_LOG(ERROR, "Wrong number for default: expecting 1, saw %d", *number);
+      __UNUSED auto result = waiter->Ack(ZX_ERR_INTERNAL);
+      return ok();
+    }
+
+    __UNUSED auto result = waiter->Ack(ZX_OK);
     return ok();
   }
 

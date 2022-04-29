@@ -14,6 +14,7 @@ group("tests") {
 fidl("fuchsia.composite.test") {
   testonly = true
   sources = [ "composite.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 
 driver_bind_rules("root_bind") {
@@ -31,6 +32,7 @@ fuchsia_driver("root_driver") {
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_llcpp",
     "//sdk/lib/driver2:llcpp",
     "//src/devices/bind/fuchsia.test:bind.fuchsia.test",
+    "//src/devices/lib/compat",
     "//zircon/system/ulib/service:service-llcpp",
   ]
 
@@ -84,6 +86,7 @@ rustc_test("bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]

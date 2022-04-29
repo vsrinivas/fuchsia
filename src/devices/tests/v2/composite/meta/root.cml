@@ -11,4 +11,17 @@
         binary: "driver/composite_root.so",
         bind: "meta/bind/root.bindbc",
     },
+    capabilities: [
+        {
+            directory: "fuchsia.composite.test.Service",
+            rights: [ "rw*" ],
+            path: "/fuchsia.composite.test.Service",
+        },
+    ],
+    expose: [
+        {
+            directory: "fuchsia.composite.test.Service",
+            from: "self",
+        },
+    ],
 }

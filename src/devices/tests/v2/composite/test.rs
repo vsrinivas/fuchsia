@@ -11,14 +11,17 @@ use {
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
+    fuchsia_zircon as zx,
     futures::channel::mpsc,
 };
 
 const WAITER_NAME: &'static str = "waiter";
 
 async fn waiter_serve(mut stream: ft::WaiterRequestStream, mut sender: mpsc::Sender<()>) {
-    while let Some(ft::WaiterRequest::Ack { .. }) = stream.try_next().await.expect("Stream failed")
+    while let Some(ft::WaiterRequest::Ack { status, .. }) =
+        stream.try_next().await.expect("Stream failed")
     {
+        assert_eq!(status, zx::Status::OK.into_raw());
         sender.try_send(()).expect("Sender failed")
     }
 }

@@ -27,6 +27,11 @@
 // Note, all of the logic here assumes we are operating on a single-threaded
 // dispatcher. It is not safe to use a multi-threaded dispatcher with this code.
 
+// This function creates a composite offer based on a 'directory service' offer.
+std::optional<fuchsia_component_decl::wire::Offer> CreateCompositeDirOffer(
+    fidl::AnyArena& arena, fuchsia_component_decl::wire::Offer& offer,
+    std::string_view parents_name);
+
 class Node;
 
 class DriverComponent : public fidl::WireServer<fuchsia_component_runner::ComponentController>,
@@ -185,6 +190,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   void set_controller_ref(
       fidl::ServerBindingRef<fuchsia_driver_framework::NodeController> controller_ref);
   void set_driver_component(std::optional<DriverComponent*> driver_component);
+  void set_parents_names(std::vector<std::string> names) { parents_names_ = std::move(names); }
 
   std::string TopoName() const;
   fidl::VectorView<fuchsia_component_decl::wire::Offer> CreateOffers(fidl::AnyArena& arena) const;
@@ -211,6 +217,8 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   void AddChild(AddChildRequestView request, AddChildCompleter::Sync& completer) override;
 
   const std::string name_;
+  // If this is a composite device, this stores the list of each parent's names.
+  std::vector<std::string> parents_names_;
   std::vector<Node*> parents_;
   std::list<std::shared_ptr<Node>> children_;
   fit::nullable<DriverBinder*> driver_binder_;

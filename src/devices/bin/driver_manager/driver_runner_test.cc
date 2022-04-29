@@ -28,6 +28,7 @@ namespace fprocess = fuchsia_process;
 namespace frunner = fuchsia_component_runner;
 namespace fcomponent = fuchsia::component;
 namespace fdecl = fuchsia::component::decl;
+namespace fcd = fuchsia_component_decl;
 
 using namespace testing;
 using namespace inspect::testing;
@@ -239,6 +240,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
             .composite = std::make_optional(FakeDriverIndex::CompositeDriverInfo{
                 .node_index = 0u,
                 .num_nodes = 2u,
+                .node_names = {"one", "two"},
             })});
       } else if (args.name().get() == "part-2") {
         return zx::ok(FakeDriverIndex::MatchResult{
@@ -246,6 +248,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
             .composite = std::make_optional(FakeDriverIndex::CompositeDriverInfo{
                 .node_index = 1u,
                 .num_nodes = 2u,
+                .node_names = {"one", "two"},
             }),
         });
       } else {
@@ -1800,4 +1803,22 @@ TEST_F(DriverRunnerTest, TestTearDownNodeTreeWithManyChildren) {
   auto root_driver = StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner);
   ASSERT_EQ(ZX_OK, root_driver.status_value());
   Unbind();
+}
+
+TEST(CompositeDirOfferTest, WorkingOffer) {
+  const std::string_view kServiceName = "fuchsia.service";
+  fidl::Arena<> arena;
+  auto service = fcd::wire::OfferDirectory::Builder(arena);
+  service.source_name(arena, kServiceName);
+  service.target_name(arena, std::string(kServiceName) + "-default");
+  service.rights(fuchsia_io::wire::kRwStarDir);
+  service.dependency_type(fcd::wire::DependencyType::kStrong);
+
+  auto offer = fcd::wire::Offer::WithDirectory(arena, service.Build());
+  auto new_offer = CreateCompositeDirOffer(arena, offer, "parent_node");
+  ASSERT_TRUE(new_offer);
+
+  std::string new_target(new_offer->directory().target_name().data(),
+                         new_offer->directory().target_name().size());
+  ASSERT_EQ(new_target, std::string(kServiceName).append("-parent_node"));
 }

@@ -13,5 +13,20 @@
     },
     use: [
         { protocol: "fuchsia.composite.test.Waiter" },
+        {
+            directory: "fuchsia.composite.test.Service-left",
+            rights: [ "rw*" ],
+            path: "/fuchsia.composite.test.Service/left",
+        },
+        {
+            directory: "fuchsia.composite.test.Service-right",
+            rights: [ "rw*" ],
+            path: "/fuchsia.composite.test.Service/right",
+        },
+        {
+            directory: "fuchsia.composite.test.Service-default",
+            rights: [ "rw*" ],
+            path: "/fuchsia.composite.test.Service/default",
+        },
     ],
 }

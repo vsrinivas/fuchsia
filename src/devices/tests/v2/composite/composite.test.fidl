@@ -4,7 +4,21 @@
 
 library fuchsia.composite.test;
 
+using zx;
+
 @discoverable
 protocol Waiter {
-    Ack();
+    Ack(struct {
+        status zx.status;
+    });
+};
+
+protocol Device {
+    GetNumber() -> (struct {
+        number uint32;
+    });
+};
+
+service Service {
+    device client_end:Device;
 };

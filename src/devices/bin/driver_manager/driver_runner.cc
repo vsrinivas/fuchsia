@@ -164,6 +164,50 @@ void UnbindAndReset(std::optional<fidl::ServerBindingRef<T>>& ref) {
 
 }  // namespace
 
+std::optional<fdecl::wire::Offer> CreateCompositeDirOffer(fidl::AnyArena& arena,
+                                                          fdecl::wire::Offer& offer,
+                                                          std::string_view parents_name) {
+  if (!offer.is_directory() || !offer.directory().has_target_name()) {
+    return std::nullopt;
+  }
+
+  std::string target_name =
+      std::string(offer.directory().target_name().data(), offer.directory().target_name().size());
+  size_t split_index = target_name.rfind('-');
+  if (split_index == std::string::npos) {
+    return std::nullopt;
+  }
+  std::string dir_name = target_name.substr(0, split_index);
+  std::string instance_name = target_name.substr(split_index + 1, target_name.size());
+
+  // We only update directories that route the 'default' instance.
+  if (instance_name != "default") {
+    return std::nullopt;
+  }
+  // We have to create a new offer so we aren't manipulating our parent's offer.
+  auto dir = fdecl::wire::OfferDirectory::Builder(arena);
+  if (offer.directory().has_source_name()) {
+    dir.source_name(offer.directory().source_name());
+  }
+  dir.target_name(arena, dir_name + std::string("-").append(parents_name));
+  if (offer.directory().has_rights()) {
+    dir.rights(offer.directory().rights());
+  }
+  if (offer.directory().has_subdir()) {
+    dir.subdir(offer.directory().subdir());
+  }
+  if (offer.directory().has_dependency_type()) {
+    dir.dependency_type(offer.directory().dependency_type());
+  }
+  if (offer.directory().has_source()) {
+    dir.source(offer.directory().source());
+  }
+  if (offer.directory().has_target()) {
+    dir.target(offer.directory().target());
+  }
+  return fdecl::wire::Offer::WithDirectory(arena, dir.Build());
+}
+
 DriverComponent::DriverComponent(fidl::ClientEnd<fdf::Driver> driver,
                                  async_dispatcher_t* dispatcher, std::string_view url)
     : driver_(std::move(driver), dispatcher, this), url_(url) {}
@@ -358,6 +402,8 @@ std::string Node::TopoName() const {
 
 fidl::VectorView<fdecl::wire::Offer> Node::CreateOffers(fidl::AnyArena& arena) const {
   std::vector<fdecl::wire::Offer> node_offers;
+  size_t parent_index = 0;
+  bool is_composite = parents_.size() > 1;
   for (const Node* parent : parents_) {
     // Find a parent node with a collection. This indicates that a driver has
     // been bound to the node, and the driver is running within the collection.
@@ -366,8 +412,9 @@ fidl::VectorView<fdecl::wire::Offer> Node::CreateOffers(fidl::AnyArena& arena) c
          source_node = PrimaryParent(source_node->parents_)) {
     }
     // If this is a composite node, then the offers come from the parent nodes.
-    auto& parent_offers = parents_.size() == 1 ? offers() : parent->offers();
+    auto& parent_offers = is_composite ? parent->offers() : offers();
     node_offers.reserve(node_offers.size() + parent_offers.size());
+
     for (auto& parent_offer : parent_offers) {
       fdecl::wire::Offer& offer = parent_offer->get();
       VisitOffer<bool>(offer, [&arena, source_node](auto& decl) mutable {
@@ -379,8 +426,22 @@ fidl::VectorView<fdecl::wire::Offer> Node::CreateOffers(fidl::AnyArena& arena) c
         decl.set_source(arena, fdecl::wire::Ref::WithChild(arena, source_ref));
         return true;
       });
+
+      // If we are a composite node, then we route 'service' directories based on the parent's name.
+      if (is_composite && offer.is_directory()) {
+        auto new_offer = CreateCompositeDirOffer(arena, offer, parents_names_[parent_index]);
+        if (new_offer) {
+          node_offers.push_back(*new_offer);
+
+          // If we aren't the primary parent, then skip adding the "default" directory.
+          if (parent_index != 0) {
+            continue;
+          }
+        }
+      }
       node_offers.push_back(offer);
     }
+    parent_index++;
   }
   fidl::VectorView<fdecl::wire::Offer> out(arena, node_offers.size());
   std::copy(node_offers.begin(), node_offers.end(), out.begin());
@@ -923,6 +984,12 @@ zx::status<Node*> DriverRunner::CreateCompositeNode(
 
   // We have all the nodes, create a composite node for the composite driver.
   auto composite = std::make_shared<Node>("composite", std::move(parents), this, dispatcher_);
+  std::vector<std::string> parents_names;
+  for (auto name : matched_driver.node_names()) {
+    parents_names.emplace_back(name.data(), name.size());
+  }
+
+  composite->set_parents_names(std::move(parents_names));
   composite->AddToParents();
   // We can return a pointer, as the composite node is owned by its parents.
   return zx::ok(composite.get());
