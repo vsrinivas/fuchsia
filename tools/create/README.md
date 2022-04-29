@@ -62,14 +62,12 @@ E.g. file layout:
 
 * `templates/`
   - `_copyright.tmpl`
-  - `component-v1/`
-    * `_header.tmpl`
   - `component-v2/`
     * `_common.tmpl`
 
-When creating a project of type `component-v1`, the partial templates `_copyright.tmpl` and
-`component-v1/_header.tmpl` are visible and can be executed with `{{>copyright}}` and
-`{{>component-v1/header}}`.
+When creating a project of type `component-v2`, the partial templates `_copyright.tmpl` and
+`component-v2/_header.tmpl` are visible and can be executed with `{{>copyright}}` and
+`{{>component-v2/header}}`.
 
 ### Variables
 

@@ -105,7 +105,6 @@ followed by zero or more alphanumeric characters, or the `-` character.",
 Supports the following project types:
     create component        # CML-based component launched by Component Manager
     create component test   # Integration test component
-    create component legacy # CMX-based component launched by appmgr
     create driver           # Driver launched in a devhost"
 )]
 struct CreateArgs {
@@ -732,8 +731,7 @@ mod tests {
             r#"[
                 "_partial.tmpl",
                 "component-default/_partial.tmpl",
-                "component-default/src/main.rs.tmpl-rust",
-                "component-legacy/_partial.tmpl"
+                "component-default/src/main.rs.tmpl-rust"
             ]"#,
         );
         files.insert(Path::new("create-templates/_partial.tmpl"), r#"root {{PROJECT_NAME}}"#);
@@ -744,10 +742,6 @@ mod tests {
         files.insert(
             Path::new("create-templates/component-default/src/main.rs.tmpl-rust"),
             r#"component {{PROJECT_NAME}}"#,
-        );
-        files.insert(
-            Path::new("create-templates/component-legacy/_partial.tmpl"),
-            r#"component-legacy {{PROJECT_NAME}}"#,
         );
         let mut files = find_template_files(
             Path::new("create-templates/templates.json"),
