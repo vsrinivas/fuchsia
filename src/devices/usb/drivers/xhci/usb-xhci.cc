@@ -212,7 +212,7 @@ TRBPromise UsbXhci::DisableSlotCommand(uint32_t slot_id) {
     fbl::AutoLock _(&state.transaction_lock());
     if (state.IsDisconnecting()) {
       return fpromise::make_result_promise(
-                 fpromise::result<TRB*, zx_status_t>(fpromise::error(ZX_ERR_BAD_STATE)))
+                 fpromise::result<TRB*, zx_status_t>(fpromise::error(ZX_OK)))
           .box();
     }
     state.Disconnect();
@@ -1531,6 +1531,9 @@ size_t UsbXhci::UsbHciGetMaxTransferSize(uint32_t device_id, uint8_t ep_address)
 }
 
 zx_status_t UsbXhci::UsbHciCancelAll(uint32_t device_id, uint8_t ep_address) {
+  if (!running_) {
+    return ZX_ERR_IO_NOT_PRESENT;
+  }
   return RunSynchronously(kPrimaryInterrupter, UsbHciCancelAllAsync(device_id, ep_address));
 }
 
