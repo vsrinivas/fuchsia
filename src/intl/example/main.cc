@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 // [START includes]
-#include <iostream>
 #include <memory>
 
 // This header file has been generated from the strings library fuchsia.intl.l10n.
 #include "fuchsia/intl/l10n/cpp/fidl.h"
+#include "sdk/lib/syslog/cpp/log_settings.h"
 #include "sdk/lib/syslog/cpp/macros.h"
 #include "src/lib/intl/lookup/cpp/lookup.h"
 // [END includes]
@@ -21,8 +21,9 @@ using intl::Lookup;
 
 // [START usage_example]
 int main() {
+  syslog::SetTags({"intl-example"});
   static const uint64_t MESSAGE_ID = static_cast<uint64_t>(MessageIds::STRING_NAME);
-  std::cout << "Message ID: " << MESSAGE_ID << std::endl;
+  FX_LOGS(INFO) << "Message ID: " << MESSAGE_ID << std::endl;
 
   // "es" is the most preferred locale. "en-US" will be used if "es" is unavailable.  In addition,
   // "en-US" automatically falls back to "en".
@@ -35,7 +36,7 @@ int main() {
   FX_CHECK(translation.is_ok()) << "Could not load a message translation"
                                 << static_cast<int8_t>(result.error());
 
-  std::cout << "Translated message: " << translation.value();
+  FX_LOGS(INFO) << "Translated message: " << translation.value();
   return 0;
 }
 // [END usage_example]

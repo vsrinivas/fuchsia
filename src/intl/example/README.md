@@ -53,6 +53,6 @@ fx test //src/intl/example
 **Prerequisite.** You will need to have `fx serve` running.
 
 ```
-fx shell run \
-  fuchsia-pkg://fuchsia.com/src-intl-example#meta/src-intl-example.cmx
+fx ffx component run \
+  fuchsia-pkg://fuchsia.com/src-intl-example#meta/src-intl-example.cm
 ```

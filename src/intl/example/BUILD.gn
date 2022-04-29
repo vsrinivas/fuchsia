@@ -41,10 +41,10 @@ executable("src_intl_example_bin") {
 # [START exec]
 
 # [START pkg]
-fuchsia_unittest_package("pkg") {
+fuchsia_package_with_single_component("pkg") {
   package_name = "src-intl-example"
   component_name = package_name
-  manifest = "meta/src-intl-example.cmx"
+  manifest = "meta/src-intl-example.cml"
 
   # [START pkg_deps]
   deps = [
