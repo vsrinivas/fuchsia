@@ -158,6 +158,8 @@ pub enum Payload {
 payload_convert!(Setting, Payload);
 
 #[derive(thiserror::Error, Debug, Clone, PartialEq)]
+// If any new variants are added here, they should also be updated in the response types
+// for inspect in inspect::utils::enums::ResponseType.
 pub enum Error {
     #[error("Unimplemented Request:{0:?} for setting type: {1:?}")]
     UnimplementedRequest(SettingType, Request),

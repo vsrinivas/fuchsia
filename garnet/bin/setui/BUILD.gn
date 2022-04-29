@@ -242,6 +242,7 @@ rustc_library("lib") {
     "src/inspect/config_logger.rs",
     "src/inspect/stash_logger.rs",
     "src/inspect/utils.rs",
+    "src/inspect/utils/enums.rs",
     "src/inspect/utils/inspect_map.rs",
     "src/inspect/utils/inspect_queue.rs",
     "src/intl.rs",
