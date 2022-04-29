@@ -9,10 +9,12 @@ use {
     },
     fuchsia_hash::Hash,
     serde::{Deserialize, Serialize},
+    std::path::PathBuf,
     std::{
         collections::BTreeMap,
         fs::{self, File},
         io,
+        io::{Read, Seek, SeekFrom, Write},
         path::Path,
     },
 };
@@ -38,6 +40,33 @@ impl PackageManifest {
         match &self.0 {
             VersionedPackageManifest::Version1(manifest) => &manifest.package.name,
         }
+    }
+
+    pub async fn archive(
+        self,
+        build_dir: PathBuf,
+        out: impl Write,
+    ) -> Result<(), PackageManifestError> {
+        let mut contents: BTreeMap<_, (_, Box<dyn Read>)> = BTreeMap::new();
+        for blob in self.into_blobs() {
+            let source_path = build_dir.join(blob.source_path);
+            if blob.path == "meta/" {
+                let mut meta_far_blob = File::open(&source_path)?;
+                meta_far_blob.seek(SeekFrom::Start(0))?;
+                contents.insert(
+                    "meta.far".to_string(),
+                    (meta_far_blob.metadata()?.len(), Box::new(meta_far_blob)),
+                );
+            } else {
+                let blob_file = File::open(&source_path)?;
+                contents.insert(
+                    blob.merkle.to_string(),
+                    (blob_file.metadata()?.len(), Box::new(blob_file)),
+                );
+            }
+        }
+        fuchsia_archive::write(out, contents)?;
+        Ok(())
     }
 
     pub fn package_path(&self) -> PackagePath {
