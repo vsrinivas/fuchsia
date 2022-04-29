@@ -329,6 +329,10 @@ class MouseInputBase : public gtest::RealLoopFixture {
 
     // Connect to the scene graph.
     auto flatland = realm_->Connect<fuchsia::ui::composition::Flatland>();
+
+    // After each Present call we need to wait until a frame is presented.
+    std::optional<bool> presented;
+    flatland.events().OnFramePresented = [&presented](auto) { presented = true; };
     flatland.events().OnError = [](fuchsia::ui::composition::FlatlandError error) {
       FX_LOGS(ERROR) << "Flatland present OnError received: " << static_cast<uint32_t>(error);
     };
@@ -373,12 +377,14 @@ class MouseInputBase : public gtest::RealLoopFixture {
     flatland->SetRootTransform(TransformId{.value = 42});
 
     // Commit all previously scheduled operations.
+    presented = std::nullopt;
     flatland->Present(PresentArgs{});
 
     FX_LOGS(INFO) << "Waiting for status info.";
     RunLoopUntil([&] {
       return status_info.has_value() &&
-             status_info.value() == ParentViewportStatus::CONNECTED_TO_DISPLAY;
+             status_info.value() == ParentViewportStatus::CONNECTED_TO_DISPLAY &&
+             presented.has_value() && presented == true;
     });
 
     FX_LOGS(INFO) << "Waiting for view_ref";
@@ -398,6 +404,7 @@ class MouseInputBase : public gtest::RealLoopFixture {
     flatland->CreateViewport(ContentId{.value = 43},
                              std::move(view_creation_token_pair.viewport_token),
                              std::move(viewport_properties), child_view_watcher.NewRequest());
+    presented = std::nullopt;
     flatland->Present(PresentArgs{});
 
     // Now create a viewport (parent side of the scene rendering), and let the child view
@@ -434,7 +441,8 @@ class MouseInputBase : public gtest::RealLoopFixture {
     FX_LOGS(INFO) << "Wait for the child window to render";
     RunLoopUntil([&]() {
       return child_view_status.has_value() &&
-             child_view_status.value() == ChildViewStatus::CONTENT_HAS_PRESENTED;
+             child_view_status.value() == ChildViewStatus::CONTENT_HAS_PRESENTED &&
+             presented.has_value() && presented == true;
     });
   }
 

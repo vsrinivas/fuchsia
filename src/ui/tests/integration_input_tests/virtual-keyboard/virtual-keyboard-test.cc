@@ -378,12 +378,21 @@ class WebEngineTest : public VirtualKeyboardBase {
   }
 
   std::vector<Route> GetTestRoutes() override {
-    return merge({GetWebEngineRoutes(ChildRef{kWebVirtualKeyboardClient}),
-                  {
-                      {.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
-                       .source = ChildRef{kWebVirtualKeyboardClient},
-                       .targets = {ParentRef()}},
-                  }});
+    return merge({
+        GetWebEngineRoutes(ChildRef{kWebVirtualKeyboardClient}),
+        {
+            {
+                .capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
+                .source = ChildRef{kWebVirtualKeyboardClient},
+                .targets = {ParentRef()},
+            },
+            {
+                .capabilities = {Protocol{fuchsia::logger::LogSink::Name_}},
+                .source = ParentRef(),
+                .targets = {ChildRef{kWebVirtualKeyboardClient}},
+            },
+        },
+    });
   }
 
   // Injects an input event, and posts a task to retry after `kTapRetryInterval`.

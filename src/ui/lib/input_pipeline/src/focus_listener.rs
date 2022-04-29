@@ -4,10 +4,10 @@
 
 use fidl_fuchsia_ui_keyboard_focus as fidl_focus;
 use {
-    anyhow::{format_err, Context, Error},
+    anyhow::{Context, Error},
     fidl_fuchsia_ui_focus as focus, fidl_fuchsia_ui_shortcut as fidl_ui_shortcut,
     fuchsia_component::client::connect_to_protocol,
-    fuchsia_syslog::fx_log_err,
+    fuchsia_syslog::{fx_log_err, fx_log_warn},
     futures::StreamExt,
 };
 
@@ -26,11 +26,23 @@ pub struct FocusListener {
 impl FocusListener {
     /// Creates a new focus listener that holds proxy to text manager and shortcut manager.
     /// The caller is expected to spawn a task to continually listen to focus change event.
-    /// Example:
+    ///
+    /// # Example
+    ///
+    /// ```ignore
     /// let mut listener = FocusListener::new();
-    /// fuchsia_async::Task::local(async move {
-    ///     let _ = listener.dispatch_focus_changes().await;
-    /// }).detach();
+    /// let task = fuchsia_async::Task::local(async move {
+    ///     listener.dispatch_focus_changes().await
+    /// });
+    /// ```
+    ///
+    /// # FIDL
+    ///
+    /// Required:
+    ///
+    /// - `fuchsia.ui.views.FocusChainListener`
+    /// - `fuchsia.ui.shortcut.Manager`
+    /// - `fuchsia.ui.keyboard.focus.Controller`
     ///
     /// # Errors
     /// If unable to connect to text_manager, shortcut manager or protocols.
@@ -93,8 +105,8 @@ impl FocusListener {
                 Err(e) => fx_log_err!("FocusChainListenerRequest has error: {}.", e),
             }
         }
-
-        Err(format_err!("Stopped dispatching focus changes."))
+        fx_log_warn!("Stopped dispatching focus changes.");
+        Ok(())
     }
 }
 

@@ -125,17 +125,18 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
     const auto& input_pos = input_position.value();
     for (const auto& element : {"left", "right", "top", "bottom"}) {
       FX_CHECK(input_pos.HasMember(element)) << "HasMember failed for " << element;
-      FX_CHECK(input_pos[element].IsInt()) << "IsInt failed for " << element;
+      // Apparently sometimes these values can be floating points too.
+      FX_CHECK(input_pos[element].IsNumber()) << "IsNumber failed for " << element;
     }
 
     // Relay position to parent.
     test::virtualkeyboard::InputPositionListenerSyncPtr position_listener_proxy;
     context_->svc()->Connect(position_listener_proxy.NewRequest());
-    position_listener_proxy->Notify(
-        test::virtualkeyboard::BoundingBox{.x0 = input_pos["left"].GetUint(),
-                                           .y0 = input_pos["top"].GetUint(),
-                                           .x1 = input_pos["right"].GetUint(),
-                                           .y1 = input_pos["bottom"].GetUint()});
+    position_listener_proxy->Notify(test::virtualkeyboard::BoundingBox{
+        .x0 = static_cast<uint32_t>(input_pos["left"].GetFloat()),
+        .y0 = static_cast<uint32_t>(input_pos["top"].GetFloat()),
+        .x1 = static_cast<uint32_t>(input_pos["right"].GetFloat()),
+        .y1 = static_cast<uint32_t>(input_pos["bottom"].GetFloat())});
 
     loop_.Run();
   }

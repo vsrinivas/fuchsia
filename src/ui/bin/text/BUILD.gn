@@ -13,6 +13,7 @@ group("text") {
     ":ime_service",
     ":tests",
     ":text_manager",
+    ":text_manager_v2",
   ]
 }
 
@@ -90,6 +91,10 @@ fuchsia_component("text_manager_comp_v2") {
   component_name = "text_manager"
   manifest = "meta/text_manager.cml"
   deps = [ ":bin" ]
+}
+
+fuchsia_package("text_manager_v2") {
+  deps = [ ":text_manager_comp_v2" ]
 }
 
 # This is the same component as `text_manager_comp`, with the legacy name.

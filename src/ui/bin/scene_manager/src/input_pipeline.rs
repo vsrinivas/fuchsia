@@ -209,6 +209,10 @@ async fn build_input_pipeline_assembly(
         // for the rest of the pipeline at exit.  We compare these values to the
         // values at entry.
         assembly = add_inspect_handler(node.create_child("input_pipeline_exit"), assembly);
+
+        // Forward focus.
+        // This requires `fuchsia.ui.focus.FocusChainListenerRegistry`
+        assembly = assembly.add_focus_listener();
     }
 
     {

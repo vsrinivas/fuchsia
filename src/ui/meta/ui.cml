@@ -23,6 +23,8 @@
             protocol: [
                 "fuchsia.logger.LogSink",
                 "fuchsia.tracing.provider.Registry",
+
+                // Used by the input pipeline library to distribute focus.
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
                 "fuchsia.ui.pointerinjector.Registry",
                 "fuchsia.ui.scenic.Scenic",
@@ -49,6 +51,8 @@
                 "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.input3.KeyEventInjector",
+
+                // Used by the input pipeline library to distribute focus.
                 "fuchsia.ui.keyboard.focus.Controller",
                 "fuchsia.ui.views.ViewRefInstalled",
                 "fuchsia.vulkan.loader.Loader",
@@ -57,7 +61,10 @@
             to: [ "#scene_manager" ],
         },
         {
-            protocol: [ "fuchsia.ui.shortcut.Manager" ],
+            protocol: [
+                // Used by the input pipeline library to distribute focus.
+                "fuchsia.ui.shortcut.Manager",
+            ],
             from: "#shortcut_manager",
             to: [ "#scene_manager" ],
         },

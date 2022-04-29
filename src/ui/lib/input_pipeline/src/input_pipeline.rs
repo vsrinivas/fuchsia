@@ -4,8 +4,8 @@
 
 use {
     crate::{
-        autorepeater::Autorepeater, display_ownership::DisplayOwnership, input_device,
-        input_handler,
+        autorepeater::Autorepeater, display_ownership::DisplayOwnership,
+        focus_listener::FocusListener, input_device, input_handler,
     },
     anyhow::{format_err, Context, Error},
     fidl_fuchsia_input_injection, fidl_fuchsia_io as fio, fuchsia_async as fasync,
@@ -148,6 +148,42 @@ impl InputPipelineAssembly {
         Vec<fuchsia_async::Task<()>>,
     ) {
         (self.sender, self.receiver, self.tasks)
+    }
+
+    /// Adds a focus listener task into the input pipeline assembly.  The focus
+    /// listener forwards focus chain changes to `fuchsia.ui.shortcut.Manager`
+    /// and `fuchsia.ui.keyboard.focus.Controller`.  It is required for the
+    /// correct operation of the implementors of those protocols (typically,
+    /// `text_manager` and `shortcut`.)
+    ///
+    /// Requires:
+    /// * `fuchsia.ui.views.FocusChainListenerRegistry`: to register for updates.
+    /// * `fuchsia.iu.keyboard.focus.Controller`: to forward to text_manager.
+    /// * `fuchsia.ui.shortcut.Manager`: to forward t shortcut manager.
+    pub fn add_focus_listener(self) -> Self {
+        let (sender, receiver, mut tasks) = self.into_components();
+        tasks.push(fasync::Task::local(async move {
+            if let Ok(mut focus_listener) = FocusListener::new().map_err(|e| {
+                fx_log_warn!(
+                    "could not create focus listener, focus will not be dispatched: {:?}",
+                    e
+                )
+            }) {
+                // This will await indefinitely and process focus messages in a loop, unless there is a problem.
+                let _result = focus_listener
+                    .dispatch_focus_changes()
+                    .await
+                    .map(|_| {
+                        fx_log_warn!(
+                            "dispatch focus loop ended, focus will no longer be dispatched"
+                        )
+                    })
+                    .map_err(|e| {
+                        panic!("could not dispatch focus changes, this is a fatal error: {:?}", e)
+                    });
+            }
+        }));
+        InputPipelineAssembly { sender, receiver, tasks }
     }
 }
 

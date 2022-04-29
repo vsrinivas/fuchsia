@@ -36,7 +36,7 @@ group("tests") {
     "//src/testing/fidl/intl_property_manager",
     "//src/ui/a11y/bin/a11y_manager:a11y-manager",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
-    "//src/ui/bin/text:text_manager",
+    "//src/ui/bin/text:text_manager_v2",
   ]
 }
 
@@ -134,11 +134,10 @@ fuchsia_test_package("text-input-test") {
     "//src/sys/stash:stash_v2",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
     "//src/ui/bin/scene_manager:scene_manager_component",
-    "//src/ui/bin/text:text_manager_comp",
+    "//src/ui/bin/text:text_manager_comp_v2",
     "//src/ui/tests/integration_input_tests:scenic-for-test",
     "//src/ui/tests/integration_input_tests:scenic-test-realm",
     "//src/ui/tests/integration_input_tests:workstation-test-realm",
-    "//src/ui/tests/integration_input_tests:wrapped-text-manager",
   ]
   test_specs = {
     log_settings = {

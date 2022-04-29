@@ -280,13 +280,6 @@
             to: "#session",
         },
         {
-            // TODO(fxbug.dev/95901): Remove once migration is over.
-            protocol: "fuchsia.ui.focus.FocusChainListenerRegistry",
-            from: "parent",
-            as: "fuchsia.ui.focus.FocusChainListenerRegistry-workstation",
-            to: "#session",
-        },
-        {
             storage: "cache",
             from: "parent",
             to: "#session",

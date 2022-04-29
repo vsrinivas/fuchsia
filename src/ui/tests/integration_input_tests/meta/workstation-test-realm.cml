@@ -17,7 +17,7 @@
     children: [
         {
             name: "text_manager",
-            url: "#meta/wrapped-text-manager.cm",
+            url: "#meta/text_manager.cm",
 
             // Known missing capabilities
             //
