@@ -26,6 +26,7 @@ group("tests") {
     ":keyboard_test_parallel",
     ":text_manager",
     ":text_manager_test",
+    ":text_manager_v2",
   ]
 }
 
