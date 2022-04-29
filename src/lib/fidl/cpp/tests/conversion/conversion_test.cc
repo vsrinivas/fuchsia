@@ -329,17 +329,65 @@ TEST(NaturalToWireConversion, MoveOnlyUnion) {
 }
 
 TEST(WireToNaturalConversion, MoveOnlyTable) {
+  zx::event ev;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &ev));
+  zx_handle_t handle = ev.get();
+
   fidl::Arena arena;
-  test_types::TestHandleTable table =
-      fidl::ToNatural(test_types::wire::TestHandleTable::Builder(arena).hs({}).Build());
-  EXPECT_FALSE(table.hs()->h().is_valid());
+  test_types::wire::TestHandleTable wire_table =
+      test_types::wire::TestHandleTable::Builder(arena).hs({std::move(ev)}).Build();
+  test_types::TestHandleTable table = fidl::ToNatural(wire_table);
+  EXPECT_FALSE(wire_table.hs().h.is_valid());
+  EXPECT_TRUE(table.hs()->h().is_valid());
+  EXPECT_EQ(handle, table.hs()->h().get());
 }
 
 TEST(NaturalToWireConversion, MoveOnlyTable) {
+  zx::event ev;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &ev));
+  zx_handle_t handle = ev.get();
+
   fidl::Arena arena;
-  test_types::wire::TestHandleTable table =
-      fidl::ToWire(arena, test_types::TestHandleTable({.hs = {}}));
-  EXPECT_FALSE(table.has_hs());
+  test_types::TestHandleTable natural_table = test_types::TestHandleTable({.hs = std::move(ev)});
+  test_types::wire::TestHandleTable table = fidl::ToWire(arena, std::move(natural_table));
+  EXPECT_TRUE(natural_table.hs().has_value());
+  EXPECT_FALSE(natural_table.hs().value().h().is_valid());
+  EXPECT_TRUE(table.has_hs());
+  EXPECT_EQ(handle, table.hs().h.get());
+}
+
+TEST(WireToNaturalConversion, MoveOnlyTableNonInlinableField) {
+  zx::event ev;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &ev));
+  zx_handle_t handle = ev.get();
+
+  fidl::Arena arena;
+  test_types::wire::TestHandleTableNonInlinableField wire_table =
+      test_types::wire::TestHandleTableNonInlinableField::Builder(arena)
+          .hs(test_types::wire::NonInlinableHandleStruct{.h = std::move(ev), .i = 100})
+          .Build();
+  test_types::TestHandleTableNonInlinableField table = fidl::ToNatural(wire_table);
+  EXPECT_FALSE(wire_table.hs().h.is_valid());
+  EXPECT_TRUE(table.hs()->h().is_valid());
+  EXPECT_EQ(handle, table.hs()->h().get());
+  EXPECT_EQ(100, table.hs()->i());
+}
+
+TEST(NaturalToWireConversion, MoveOnlyTableNonInlinableField) {
+  zx::event ev;
+  ASSERT_EQ(ZX_OK, zx::event::create(0, &ev));
+  zx_handle_t handle = ev.get();
+
+  fidl::Arena arena;
+  test_types::TestHandleTableNonInlinableField natural_table =
+      test_types::TestHandleTableNonInlinableField({.hs = {{std::move(ev), 100}}});
+  test_types::wire::TestHandleTableNonInlinableField table =
+      fidl::ToWire(arena, std::move(natural_table));
+  EXPECT_TRUE(natural_table.hs().has_value());
+  EXPECT_FALSE(natural_table.hs().value().h().is_valid());
+  EXPECT_TRUE(table.has_hs());
+  EXPECT_EQ(handle, table.hs().h.get());
+  EXPECT_EQ(100, table.hs().i);
 }
 
 TEST(WireToNaturalConversion, Request) {

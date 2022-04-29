@@ -272,10 +272,10 @@ template("_fidl_cpp_library_impl") {
 #    a particular layer for a FIDL library depends on the corresponding
 #    layers of the dependencies of that FIDL library.
 #
-#    In LLCPP the valid layers are:
+#    Some examples of valid layers are:
 #      * llcpp: Wire messaging over channel transport
-#      * llcpp_wire_types: Wire domain objects
-#      * driver: Wire messaging over driver transport
+#      * wire_types: Wire domain objects
+#      * driver: Unified messaging over driver transport
 #
 #    If missing, defaults to bindings_flavor.
 #
@@ -548,6 +548,7 @@ template("fidl_cpp_family") {
                                ])
         forward_variables_from(common_options, "*")
         bindings_flavor = "llcpp"
+        bindings_layer = layer.layer
         if (defined(layer.headers)) {
           generated_headers = layer.headers
         }

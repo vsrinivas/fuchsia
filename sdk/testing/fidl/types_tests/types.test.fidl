@@ -165,6 +165,15 @@ type TestHandleTable = resource table {
     1: hs HandleStruct;
 };
 
+type NonInlinableHandleStruct = resource struct {
+    h zx.handle:EVENT;
+    i int64;
+};
+
+type TestHandleTableNonInlinableField = resource table {
+    1: hs NonInlinableHandleStruct;
+};
+
 type TableMaxOrdinal3WithReserved2 = table {
     1: field_1 uint8;
     2: reserved;

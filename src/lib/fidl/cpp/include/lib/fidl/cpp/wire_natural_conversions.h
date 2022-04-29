@@ -162,7 +162,7 @@ struct WireNaturalConversionTraits<fidl::ObjectView<WireType>, std::unique_ptr<N
       return nullptr;
     }
     return std::make_unique<NaturalType>(
-        WireNaturalConversionTraits<WireType, NaturalType>::ToNatural(*src));
+        WireNaturalConversionTraits<WireType, NaturalType>::ToNatural(std::move(*src)));
   }
   static fidl::ObjectView<WireType> ToWire(fidl::AnyArena& arena,
                                            std::unique_ptr<NaturalType> src) {
@@ -293,4 +293,4 @@ auto ToWire(fidl::AnyArena& arena, NaturalType value) {
 
 }  // namespace fidl
 
-#endif
+#endif  // SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_WIRE_NATURAL_CONVERSIONS_H_
