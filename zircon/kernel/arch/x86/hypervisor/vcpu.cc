@@ -436,7 +436,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, uint
     // Disable protected mode and paging on secondary VCPUs.
     cr0 &= ~(X86_CR0_PE | X86_CR0_PG);
   }
-  if (cr0_is_invalid(&vmcs, cr0)) {
+  if (cr0_is_invalid(vmcs, cr0)) {
     return ZX_ERR_BAD_STATE;
   }
   vmcs.Write(VmcsFieldXX::GUEST_CR0, cr0);
@@ -763,11 +763,11 @@ zx_status_t AutoVmcs::SetControl(VmcsField32 controls, uint64_t true_msr, uint64
   return ZX_OK;
 }
 
-bool cr0_is_invalid(AutoVmcs* vmcs, uint64_t cr0_value) {
+bool cr0_is_invalid(AutoVmcs& vmcs, uint64_t cr0_value) {
   uint64_t check_value = cr0_value;
   // From Volume 3, Section 26.3.1.1: PE and PG bits of CR0 are not checked when unrestricted
   // guest is enabled. Set both here to avoid clashing with X86_MSR_IA32_VMX_CR0_FIXED1.
-  if (vmcs->Read(VmcsField32::PROCBASED_CTLS2) & kProcbasedCtls2UnrestrictedGuest) {
+  if (vmcs.Read(VmcsField32::PROCBASED_CTLS2) & kProcbasedCtls2UnrestrictedGuest) {
     check_value |= X86_CR0_PE | X86_CR0_PG;
   }
   return cr_is_invalid(check_value, X86_MSR_IA32_VMX_CR0_FIXED0, X86_MSR_IA32_VMX_CR0_FIXED1);
@@ -775,8 +775,8 @@ bool cr0_is_invalid(AutoVmcs* vmcs, uint64_t cr0_value) {
 
 // static
 zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* out) {
-  hypervisor::GuestPhysicalAddressSpace* gpas = guest->AddressSpace();
-  if (entry >= gpas->size()) {
+  hypervisor::GuestPhysicalAddressSpace& gpas = guest->AddressSpace();
+  if (entry >= gpas.size()) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -843,7 +843,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   thread->SetMigrateFn([vcpu = vcpu.get()](Thread* thread, auto stage)
                            TA_NO_THREAD_SAFETY_ANALYSIS { vcpu->MigrateCpu(thread, stage); });
 
-  zx_paddr_t pml4_address = gpas->arch_table_phys();
+  zx_paddr_t pml4_address = gpas.arch_table_phys();
   status =
       vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), *vpid, entry, guest->MsrBitmapsAddress(),
                 pml4_address, &vcpu->vmx_state_, &vcpu->host_msr_page_, &vcpu->guest_msr_page_);
@@ -962,7 +962,7 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
               reinterpret_cast<uint64_t>(&percpu->default_tss));
 
       // Invalidate TLB mappings for the EPT.
-      zx_paddr_t pml4_address = guest_->AddressSpace()->arch_table_phys();
+      zx_paddr_t pml4_address = guest_->AddressSpace().arch_table_phys();
       invept(InvEpt::SINGLE_CONTEXT, ept_pointer_from_pml4(pml4_address));
       break;
     }
@@ -1071,7 +1071,7 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
     RestoreGuestExtendedRegisters(current_thread, vmcs.Read(VmcsFieldXX::GUEST_CR4));
 
     // Updates guest system time if the guest subscribed to updates.
-    pv_clock_update_system_time(&pv_clock_state_, guest_->AddressSpace());
+    pv_clock_update_system_time(&pv_clock_state_, &guest_->AddressSpace());
 
     if (x86_cpu_should_l1d_flush_on_vmentry()) {
       // L1TF: Flush L1D$ before entering vCPU. If the CPU is affected by MDS, also flush
@@ -1110,8 +1110,8 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
       dprintf(INFO, "VCPU enter failed: %#lx\n", error);
     } else {
       vmx_state_.resume = true;
-      status = vmexit_handler(&vmcs, &vmx_state_.guest_state, &local_apic_state_, &pv_clock_state_,
-                              guest_->AddressSpace(), guest_->Traps(), packet);
+      status = vmexit_handler(vmcs, vmx_state_.guest_state, local_apic_state_, pv_clock_state_,
+                              guest_->AddressSpace(), guest_->Traps(), *packet);
     }
   } while (status == ZX_OK);
   return status == ZX_ERR_NEXT ? ZX_OK : status;

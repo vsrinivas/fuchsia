@@ -263,7 +263,7 @@ struct ExitInfo {
   uint64_t guest_physical_address;
   uint64_t guest_rip;
 
-  ExitInfo(const AutoVmcs& vmcs);
+  explicit ExitInfo(const AutoVmcs& vmcs);
 };
 
 // Stores VM exit interruption information. See Volume 3, Section 24.9.2.
@@ -272,7 +272,7 @@ struct ExitInterruptionInformation {
   InterruptionType interruption_type;
   bool valid;
 
-  ExitInterruptionInformation(const AutoVmcs& vmcs);
+  explicit ExitInterruptionInformation(const AutoVmcs& vmcs);
 };
 
 // Stores EPT violation info from the VMCS exit qualification field.
@@ -281,7 +281,7 @@ struct EptViolationInfo {
   bool write;
   bool instruction;
 
-  EptViolationInfo(uint64_t qualification);
+  explicit EptViolationInfo(uint64_t qualification);
 };
 
 // Stores control register access info from the VMCS exit qualification field.
@@ -290,7 +290,7 @@ struct CrAccessInfo {
   CrAccessType access_type;
   uint8_t reg;
 
-  CrAccessInfo(uint64_t qualification);
+  explicit CrAccessInfo(uint64_t qualification);
 };
 
 // Stores IO instruction info from the VMCS exit qualification field.
@@ -301,7 +301,7 @@ struct IoInfo {
   bool repeat;
   uint16_t port;
 
-  IoInfo(uint64_t qualification);
+  explicit IoInfo(uint64_t qualification);
 };
 
 // Stores VMCALL type and arguments.
@@ -309,7 +309,7 @@ struct VmCallInfo {
   VmCallType type;
   uint64_t arg[4];
 
-  VmCallInfo(const GuestState* guest_state);
+  explicit VmCallInfo(const GuestState& guest_state);
 };
 
 // Interrupt command register.
@@ -323,9 +323,9 @@ struct InterruptCommandRegister {
   InterruptCommandRegister(uint32_t hi, uint32_t lo);
 };
 
-zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
-                           LocalApicState* local_apic_state, PvClockState* pv_clock,
-                           hypervisor::GuestPhysicalAddressSpace* gpas, hypervisor::TrapMap* traps,
-                           zx_port_packet_t* packet);
+zx_status_t vmexit_handler(AutoVmcs& vmcs, GuestState& guest_state,
+                           LocalApicState& local_apic_state, PvClockState& pv_clock,
+                           hypervisor::GuestPhysicalAddressSpace& gpas, hypervisor::TrapMap& traps,
+                           zx_port_packet_t& packet);
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_VMEXIT_PRIV_H_

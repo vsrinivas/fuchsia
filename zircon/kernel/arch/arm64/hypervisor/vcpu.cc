@@ -167,8 +167,8 @@ static uint8_t num_aprs(uint8_t num_pres) { return static_cast<uint8_t>(1u << (n
 
 // static
 zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* out) {
-  hypervisor::GuestPhysicalAddressSpace* gpas = guest->AddressSpace();
-  if (entry >= gpas->size()) {
+  hypervisor::GuestPhysicalAddressSpace& gpas = guest->AddressSpace();
+  if (entry >= gpas.size()) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -262,7 +262,7 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
     return ZX_ERR_BAD_STATE;
   }
 
-  const auto& gpas = *guest_->AddressSpace();
+  const hypervisor::GuestPhysicalAddressSpace& gpas = guest_->AddressSpace();
   zx_paddr_t vttbr = arm64_vttbr(gpas.arch_asid(), gpas.arch_table_phys());
   GuestState* guest_state = &el2_state_->guest_state;
   IchState* ich_state = &el2_state_->ich_state;
@@ -307,8 +307,8 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
       GUEST_STATS_INC(interrupts);
       status = ZX_OK;
     } else if (status == ZX_OK) {
-      status = vmexit_handler(&hcr_, guest_state, &gich_state_, guest_->AddressSpace(),
-                              guest_->Traps(), packet);
+      status = vmexit_handler(&hcr_, guest_state, &gich_state_, &guest_->AddressSpace(),
+                              &guest_->Traps(), packet);
     } else {
       ktrace_vcpu_exit(VCPU_FAILURE, guest_state->system_state.elr_el2);
       dprintf(INFO, "hypervisor: VCPU enter failed: %d\n", status);

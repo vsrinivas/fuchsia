@@ -49,8 +49,8 @@ class Guest {
   zx_status_t SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port,
                       uint64_t key);
 
-  hypervisor::GuestPhysicalAddressSpace* AddressSpace() { return &gpas_; }
-  hypervisor::TrapMap* Traps() { return &traps_; }
+  hypervisor::GuestPhysicalAddressSpace& AddressSpace() { return gpas_; }
+  hypervisor::TrapMap& Traps() { return traps_; }
 
   zx::status<hypervisor::Id<uint16_t>> AllocVpid() { return vpid_allocator_.TryAlloc(); }
   zx::status<> FreeVpid(hypervisor::Id<uint16_t> id) { return vpid_allocator_.Free(ktl::move(id)); }

@@ -85,29 +85,29 @@ void dump_guest_state(const GuestState& guest_state, const ExitInfo& exit_info) 
   dprintf(INFO, "guest physical address: %#lx\n", exit_info.guest_physical_address);
 }
 
-void next_rip(const ExitInfo& exit_info, AutoVmcs* vmcs) {
-  vmcs->Write(VmcsFieldXX::GUEST_RIP, exit_info.guest_rip + exit_info.exit_instruction_length);
+void next_rip(const ExitInfo& exit_info, AutoVmcs& vmcs) {
+  vmcs.Write(VmcsFieldXX::GUEST_RIP, exit_info.guest_rip + exit_info.exit_instruction_length);
 
   // Clear any flags blocking interrupt injection for a single instruction.
-  uint32_t guest_interruptibility = vmcs->Read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE);
+  uint32_t guest_interruptibility = vmcs.Read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE);
   uint32_t new_interruptibility =
       guest_interruptibility & ~(kInterruptibilityStiBlocking | kInterruptibilityMovSsBlocking);
   if (new_interruptibility != guest_interruptibility) {
-    vmcs->Write(VmcsField32::GUEST_INTERRUPTIBILITY_STATE, new_interruptibility);
+    vmcs.Write(VmcsField32::GUEST_INTERRUPTIBILITY_STATE, new_interruptibility);
   }
 }
 
-zx_status_t handle_external_interrupt(AutoVmcs* vmcs) {
-  ExitInterruptionInformation int_info(*vmcs);
+zx_status_t handle_external_interrupt(AutoVmcs& vmcs) {
+  ExitInterruptionInformation int_info(vmcs);
   DEBUG_ASSERT(int_info.valid);
   DEBUG_ASSERT(int_info.interruption_type == InterruptionType::EXTERNAL_INTERRUPT);
-  vmcs->Invalidate();
+  vmcs.Invalidate();
   x86_call_external_interrupt_handler(int_info.vector);
   return ZX_OK;
 }
 
-zx_status_t handle_interrupt_window(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
-  vmcs->InterruptWindowExiting(false);
+zx_status_t handle_interrupt_window(AutoVmcs& vmcs) {
+  vmcs.InterruptWindowExiting(false);
   return ZX_OK;
 }
 
@@ -117,8 +117,8 @@ zx_status_t handle_interrupt_window(AutoVmcs* vmcs, LocalApicState* local_apic_s
 // Bits 31-00: Maximum size (bytes, from the beginning of the XSAVE/XRSTOR save
 // area) required by enabled features in XCR0. May be different than ECX if some
 // features at the end of the XSAVE save area are not enabled.
-zx_status_t compute_xsave_size(uint64_t guest_xcr0, uint32_t* xsave_size) {
-  *xsave_size = kXsaveLegacyRegionSize + kXsaveHeaderSize;
+zx_status_t compute_xsave_size(uint64_t guest_xcr0, uint32_t& xsave_size) {
+  xsave_size = kXsaveLegacyRegionSize + kXsaveHeaderSize;
   for (uint32_t i = kFirstExtendedStateComponent; i <= kLastExtendedStateComponent; ++i) {
     cpuid_leaf leaf;
     if (!(guest_xcr0 & (1 << i))) {
@@ -132,78 +132,78 @@ zx_status_t compute_xsave_size(uint64_t guest_xcr0, uint32_t* xsave_size) {
     }
     const uint32_t component_offset = leaf.b;
     const uint32_t component_size = leaf.a;
-    *xsave_size = component_offset + component_size;
+    xsave_size = component_offset + component_size;
   }
   return ZX_OK;
 }
 
-zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState* guest_state) {
-  const uint32_t leaf = guest_state->eax();
-  const uint32_t subleaf = guest_state->ecx();
+zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs& vmcs, GuestState& guest_state) {
+  const uint32_t leaf = guest_state.eax();
+  const uint32_t subleaf = guest_state.ecx();
 
   next_rip(exit_info, vmcs);
   switch (leaf) {
     case X86_CPUID_BASE:
     case X86_CPUID_EXT_BASE:
-      cpuid(leaf, reinterpret_cast<uint32_t*>(&guest_state->rax),
-            reinterpret_cast<uint32_t*>(&guest_state->rbx),
-            reinterpret_cast<uint32_t*>(&guest_state->rcx),
-            reinterpret_cast<uint32_t*>(&guest_state->rdx));
+      cpuid(leaf, reinterpret_cast<uint32_t*>(&guest_state.rax),
+            reinterpret_cast<uint32_t*>(&guest_state.rbx),
+            reinterpret_cast<uint32_t*>(&guest_state.rcx),
+            reinterpret_cast<uint32_t*>(&guest_state.rdx));
       return ZX_OK;
     case X86_CPUID_BASE + 1 ... MAX_SUPPORTED_CPUID:
     case X86_CPUID_EXT_BASE + 1 ... MAX_SUPPORTED_CPUID_EXT:
-      cpuid_c(leaf, subleaf, reinterpret_cast<uint32_t*>(&guest_state->rax),
-              reinterpret_cast<uint32_t*>(&guest_state->rbx),
-              reinterpret_cast<uint32_t*>(&guest_state->rcx),
-              reinterpret_cast<uint32_t*>(&guest_state->rdx));
+      cpuid_c(leaf, subleaf, reinterpret_cast<uint32_t*>(&guest_state.rax),
+              reinterpret_cast<uint32_t*>(&guest_state.rbx),
+              reinterpret_cast<uint32_t*>(&guest_state.rcx),
+              reinterpret_cast<uint32_t*>(&guest_state.rdx));
       switch (leaf) {
         case X86_CPUID_MODEL_FEATURES:
           // Override the initial local APIC ID. From Vol 2, Table 3-8.
-          guest_state->rbx &= ~(0xff << 24);
-          guest_state->rbx |= (vmcs->Read(VmcsField16::VPID) - 1) << 24;
+          guest_state.rbx &= ~(0xff << 24);
+          guest_state.rbx |= (vmcs.Read(VmcsField16::VPID) - 1) << 24;
           // Enable the hypervisor bit.
-          guest_state->rcx |= 1u << X86_FEATURE_HYPERVISOR.bit;
+          guest_state.rcx |= 1u << X86_FEATURE_HYPERVISOR.bit;
           // Enable the x2APIC bit.
-          guest_state->rcx |= 1u << X86_FEATURE_X2APIC.bit;
+          guest_state.rcx |= 1u << X86_FEATURE_X2APIC.bit;
           // Disable the VMX bit.
-          guest_state->rcx &= ~(1u << X86_FEATURE_VMX.bit);
+          guest_state.rcx &= ~(1u << X86_FEATURE_VMX.bit);
           // Disable the PDCM bit.
-          guest_state->rcx &= ~(1u << X86_FEATURE_PDCM.bit);
+          guest_state.rcx &= ~(1u << X86_FEATURE_PDCM.bit);
           // Disable MONITOR/MWAIT.
-          guest_state->rcx &= ~(1u << X86_FEATURE_MON.bit);
+          guest_state.rcx &= ~(1u << X86_FEATURE_MON.bit);
           // Disable THERM_INTERRUPT and THERM_STATUS MSRs
-          guest_state->rcx &= ~(1u << X86_FEATURE_TM2.bit);
+          guest_state.rcx &= ~(1u << X86_FEATURE_TM2.bit);
           // Enable the SEP (SYSENTER support).
-          guest_state->rdx |= 1u << X86_FEATURE_SEP.bit;
+          guest_state.rdx |= 1u << X86_FEATURE_SEP.bit;
           // Disable the Thermal Monitor bit.
-          guest_state->rdx &= ~(1u << X86_FEATURE_TM.bit);
+          guest_state.rdx &= ~(1u << X86_FEATURE_TM.bit);
           // Disable the THERM_CONTROL_MSR bit.
-          guest_state->rdx &= ~(1u << X86_FEATURE_ACPI.bit);
+          guest_state.rdx &= ~(1u << X86_FEATURE_ACPI.bit);
           break;
         case X86_CPUID_TOPOLOGY:
-          guest_state->rax = 0;
-          guest_state->rbx = 0;
-          guest_state->rcx = 0;
-          guest_state->rdx = vmcs->Read(VmcsField16::VPID) - 1;
+          guest_state.rax = 0;
+          guest_state.rbx = 0;
+          guest_state.rcx = 0;
+          guest_state.rdx = vmcs.Read(VmcsField16::VPID) - 1;
           break;
         case X86_CPUID_XSAVE:
           if (subleaf == 0) {
             uint32_t xsave_size = 0;
-            zx_status_t status = compute_xsave_size(guest_state->xcr0, &xsave_size);
+            zx_status_t status = compute_xsave_size(guest_state.xcr0, xsave_size);
             if (status != ZX_OK) {
               return status;
             }
-            guest_state->rbx = xsave_size;
+            guest_state.rbx = xsave_size;
           } else if (subleaf == 1) {
-            guest_state->rax &= ~(1u << 3);
+            guest_state.rax &= ~(1u << 3);
           }
           break;
         case X86_CPUID_THERMAL_AND_POWER:
           // Disable the performance energy bias bit.
-          guest_state->rcx &= ~(1u << X86_FEATURE_PERF_BIAS.bit);
+          guest_state.rcx &= ~(1u << X86_FEATURE_PERF_BIAS.bit);
           // Disable the hardware coordination feedback bit.
-          guest_state->rcx &= ~(1u << X86_FEATURE_HW_FEEDBACK.bit);
-          guest_state->rax &= ~(
+          guest_state.rcx &= ~(1u << X86_FEATURE_HW_FEEDBACK.bit);
+          guest_state.rax &= ~(
               // Disable Digital Thermal Sensor
               1u << X86_FEATURE_DTS.bit |
               // Disable Package Thermal Status MSR.
@@ -220,18 +220,18 @@ zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState* 
           // Disable all performance monitoring.
           // 31-07 = Reserved 0, 06-00 = 1 if event is not available.
           const uint32_t performance_monitoring_no_events = 0b1111111;
-          guest_state->rax = 0;
-          guest_state->rbx = performance_monitoring_no_events;
-          guest_state->rcx = 0;
-          guest_state->rdx = 0;
+          guest_state.rax = 0;
+          guest_state.rbx = performance_monitoring_no_events;
+          guest_state.rcx = 0;
+          guest_state.rdx = 0;
           break;
         }
         case X86_CPUID_MON:
           // MONITOR/MWAIT are not implemented.
-          guest_state->rax = 0;
-          guest_state->rbx = 0;
-          guest_state->rcx = 0;
-          guest_state->rdx = 0;
+          guest_state.rax = 0;
+          guest_state.rbx = 0;
+          guest_state.rcx = 0;
+          guest_state.rdx = 0;
           break;
         case X86_CPUID_EXTENDED_FEATURE_FLAGS:
           // It's possible when running under KVM in nVMX mode, that host
@@ -239,23 +239,23 @@ zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState* 
           // to enable INVPCID bit in secondary processor based controls.
           // Therefore explicitly clear INVPCID bit in CPUID if the VMX flag
           // wasn't set.
-          if ((vmcs->Read(VmcsField32::PROCBASED_CTLS2) & kProcbasedCtls2Invpcid) == 0) {
-            guest_state->rbx &= ~(1u << X86_FEATURE_INVPCID.bit);
+          if ((vmcs.Read(VmcsField32::PROCBASED_CTLS2) & kProcbasedCtls2Invpcid) == 0) {
+            guest_state.rbx &= ~(1u << X86_FEATURE_INVPCID.bit);
           }
           // Disable the Processor Trace bit.
-          guest_state->rbx &= ~(1u << X86_FEATURE_PT.bit);
+          guest_state.rbx &= ~(1u << X86_FEATURE_PT.bit);
           // Disable:
           //  * Indirect Branch Prediction Barrier bit
           //  * Single Thread Indirect Branch Predictors bit
           //  * Speculative Store Bypass Disable bit
           // These imply support for the IA32_SPEC_CTRL and IA32_PRED_CMD
           // MSRs, which are not implemented.
-          guest_state->rdx &= ~(1u << X86_FEATURE_IBRS_IBPB.bit | 1u << X86_FEATURE_STIBP.bit |
-                                1u << X86_FEATURE_SSBD.bit);
+          guest_state.rdx &= ~(1u << X86_FEATURE_IBRS_IBPB.bit | 1u << X86_FEATURE_STIBP.bit |
+                               1u << X86_FEATURE_SSBD.bit);
           // Disable support for the IA32_ARCH_CAPABILITIES MSR.
-          guest_state->rdx &= ~(1u << X86_FEATURE_ARCH_CAPABILITIES.bit);
+          guest_state.rdx &= ~(1u << X86_FEATURE_ARCH_CAPABILITIES.bit);
           // Disable support for the IA32_FLUSH_CMD MSR.
-          guest_state->rdx &= ~(1u << X86_FEATURE_L1D_FLUSH.bit);
+          guest_state.rdx &= ~(1u << X86_FEATURE_L1D_FLUSH.bit);
           break;
       }
       return ZX_OK;
@@ -266,39 +266,39 @@ zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState* 
       // in EAX max CPUID function supported by hypervisor. Zero in EAX
       // should be interpreted as 0x40000001. Details are available in the
       // Linux kernel documentation (Documentation/virtual/kvm/cpuid.txt).
-      guest_state->rax = X86_CPUID_KVM_FEATURES;
-      guest_state->rbx = regs[0];
-      guest_state->rcx = regs[1];
-      guest_state->rdx = regs[2];
+      guest_state.rax = X86_CPUID_KVM_FEATURES;
+      guest_state.rbx = regs[0];
+      guest_state.rcx = regs[1];
+      guest_state.rdx = regs[2];
       return ZX_OK;
     }
     case X86_CPUID_KVM_FEATURES:
       // We support KVM clock.
-      guest_state->rax = kKvmFeatureClockSourceOld | kKvmFeatureClockSource | kKvmFeatureNoIoDelay;
-      guest_state->rbx = 0;
-      guest_state->rcx = 0;
-      guest_state->rdx = 0;
+      guest_state.rax = kKvmFeatureClockSourceOld | kKvmFeatureClockSource | kKvmFeatureNoIoDelay;
+      guest_state.rbx = 0;
+      guest_state.rcx = 0;
+      guest_state.rdx = 0;
       return ZX_OK;
     // From Volume 2A, CPUID instruction reference. If the EAX value is outside
     // the range recognized by CPUID then the information for the highest
     // supported base information leaf is returned. Any value in ECX is
     // honored.
     default:
-      cpuid_c(MAX_SUPPORTED_CPUID, subleaf, reinterpret_cast<uint32_t*>(&guest_state->rax),
-              reinterpret_cast<uint32_t*>(&guest_state->rbx),
-              reinterpret_cast<uint32_t*>(&guest_state->rcx),
-              reinterpret_cast<uint32_t*>(&guest_state->rdx));
+      cpuid_c(MAX_SUPPORTED_CPUID, subleaf, reinterpret_cast<uint32_t*>(&guest_state.rax),
+              reinterpret_cast<uint32_t*>(&guest_state.rbx),
+              reinterpret_cast<uint32_t*>(&guest_state.rcx),
+              reinterpret_cast<uint32_t*>(&guest_state.rdx));
       return ZX_OK;
   }
 }
 
-zx_status_t handle_hlt(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                       LocalApicState* local_apic_state) {
+zx_status_t handle_hlt(const ExitInfo& exit_info, AutoVmcs& vmcs,
+                       LocalApicState& local_apic_state) {
   next_rip(exit_info, vmcs);
-  return local_apic_state->interrupt_tracker.Wait(ZX_TIME_INFINITE, vmcs).status_value();
+  return local_apic_state.interrupt_tracker.Wait(ZX_TIME_INFINITE, &vmcs).status_value();
 }
 
-zx_status_t handle_cr0_write(AutoVmcs* vmcs, uint64_t val, LocalApicState* local_apic_state) {
+zx_status_t handle_cr0_write(AutoVmcs& vmcs, uint64_t val, LocalApicState& local_apic_state) {
   // X86_CR0_NE is masked so that guests may write to it, but depending on
   // IA32_VMX_CR0_FIXED0 it might be unsupported in VMX operation to set it to
   // zero. Allow the guest to control its value in CR0_READ_SHADOW but not in
@@ -311,7 +311,7 @@ zx_status_t handle_cr0_write(AutoVmcs* vmcs, uint64_t val, LocalApicState* local
   // From Volume 3, Table 11-5: CD=0 and NW=1 is an invalid setting and should
   // generate a GP fault.
   if (!(val & X86_CR0_CD) && (val & X86_CR0_NW)) {
-    local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
+    local_apic_state.interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
     return ZX_OK;
   }
 
@@ -326,7 +326,7 @@ zx_status_t handle_cr0_write(AutoVmcs* vmcs, uint64_t val, LocalApicState* local
   // simpler.
   cr0 &= ~(X86_CR0_NW | X86_CR0_CD);
   cr0 |= X86_CR0_ET;
-  vmcs->Write(VmcsFieldXX::GUEST_CR0, cr0);
+  vmcs.Write(VmcsFieldXX::GUEST_CR0, cr0);
 
   // From Volume 3, Section 25.3: For each position corresponding to a bit clear
   // in the CR0 guest/host mask, the destination operand is loaded with the
@@ -335,79 +335,79 @@ zx_status_t handle_cr0_write(AutoVmcs* vmcs, uint64_t val, LocalApicState* local
   // the value of the corresponding bit in the CR0 read shadow.
   //
   // Allow the guest to control the shadow.
-  vmcs->Write(VmcsFieldXX::CR0_READ_SHADOW, val);
+  vmcs.Write(VmcsFieldXX::CR0_READ_SHADOW, val);
 
   // From Volume 3, Section 26.3.1.1: If CR0.PG and EFER.LME are set then
   // EFER.LMA and the IA-32e mode guest entry control must also be set.
-  uint64_t efer = vmcs->Read(VmcsField64::GUEST_IA32_EFER);
+  uint64_t efer = vmcs.Read(VmcsField64::GUEST_IA32_EFER);
   if (!(efer & X86_EFER_LME && cr0 & X86_CR0_PG)) {
     return ZX_OK;
   }
-  vmcs->Write(VmcsField64::GUEST_IA32_EFER, efer | X86_EFER_LMA);
-  return vmcs->SetControl(VmcsField32::ENTRY_CTLS, read_msr(X86_MSR_IA32_VMX_TRUE_ENTRY_CTLS),
-                          read_msr(X86_MSR_IA32_VMX_ENTRY_CTLS), kEntryCtlsIa32eMode, 0);
+  vmcs.Write(VmcsField64::GUEST_IA32_EFER, efer | X86_EFER_LMA);
+  return vmcs.SetControl(VmcsField32::ENTRY_CTLS, read_msr(X86_MSR_IA32_VMX_TRUE_ENTRY_CTLS),
+                         read_msr(X86_MSR_IA32_VMX_ENTRY_CTLS), kEntryCtlsIa32eMode, 0);
 }
 
-zx_status_t register_value(AutoVmcs* vmcs, const GuestState& guest_state, uint8_t register_id,
-                           uint64_t* out) {
+zx_status_t register_value(AutoVmcs& vmcs, const GuestState& guest_state, uint8_t register_id,
+                           uint64_t& out) {
   switch (register_id) {
     // From Intel Volume 3, Table 27-3.
     case 0:
-      *out = guest_state.rax;
+      out = guest_state.rax;
       return ZX_OK;
     case 1:
-      *out = guest_state.rcx;
+      out = guest_state.rcx;
       return ZX_OK;
     case 2:
-      *out = guest_state.rdx;
+      out = guest_state.rdx;
       return ZX_OK;
     case 3:
-      *out = guest_state.rbx;
+      out = guest_state.rbx;
       return ZX_OK;
     case 4:
-      *out = vmcs->Read(VmcsFieldXX::GUEST_RSP);
+      out = vmcs.Read(VmcsFieldXX::GUEST_RSP);
       return ZX_OK;
     case 5:
-      *out = guest_state.rbp;
+      out = guest_state.rbp;
       return ZX_OK;
     case 6:
-      *out = guest_state.rsi;
+      out = guest_state.rsi;
       return ZX_OK;
     case 7:
-      *out = guest_state.rdi;
+      out = guest_state.rdi;
       return ZX_OK;
     case 8:
-      *out = guest_state.r8;
+      out = guest_state.r8;
       return ZX_OK;
     case 9:
-      *out = guest_state.r9;
+      out = guest_state.r9;
       return ZX_OK;
     case 10:
-      *out = guest_state.r10;
+      out = guest_state.r10;
       return ZX_OK;
     case 11:
-      *out = guest_state.r11;
+      out = guest_state.r11;
       return ZX_OK;
     case 12:
-      *out = guest_state.r12;
+      out = guest_state.r12;
       return ZX_OK;
     case 13:
-      *out = guest_state.r13;
+      out = guest_state.r13;
       return ZX_OK;
     case 14:
-      *out = guest_state.r14;
+      out = guest_state.r14;
       return ZX_OK;
     case 15:
-      *out = guest_state.r15;
+      out = guest_state.r15;
       return ZX_OK;
     default:
       return ZX_ERR_INVALID_ARGS;
   }
 }
 
-zx_status_t handle_control_register_access(const ExitInfo& exit_info, AutoVmcs* vmcs,
+zx_status_t handle_control_register_access(const ExitInfo& exit_info, AutoVmcs& vmcs,
                                            const GuestState& guest_state,
-                                           LocalApicState* local_apic_state) {
+                                           LocalApicState& local_apic_state) {
   CrAccessInfo cr_access_info(exit_info.exit_qualification);
   switch (cr_access_info.access_type) {
     case CrAccessType::MOV_TO_CR: {
@@ -416,7 +416,7 @@ zx_status_t handle_control_register_access(const ExitInfo& exit_info, AutoVmcs* 
         return ZX_ERR_NOT_SUPPORTED;
       }
       uint64_t val;
-      zx_status_t status = register_value(vmcs, guest_state, cr_access_info.reg, &val);
+      zx_status_t status = register_value(vmcs, guest_state, cr_access_info.reg, val);
       if (status != ZX_OK) {
         return status;
       }
@@ -432,16 +432,16 @@ zx_status_t handle_control_register_access(const ExitInfo& exit_info, AutoVmcs* 
   }
 }
 
-zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                  GuestState* guest_state, hypervisor::TrapMap* traps,
-                                  zx_port_packet_t* packet) {
+zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs& vmcs,
+                                  GuestState& guest_state, hypervisor::TrapMap& traps,
+                                  zx_port_packet_t& packet) {
   IoInfo io_info(exit_info.exit_qualification);
   if (io_info.string || io_info.repeat) {
     dprintf(INFO, "hypervisor: Unsupported guest IO instruction\n");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx::status<hypervisor::Trap*> trap = traps->FindTrap(ZX_GUEST_TRAP_IO, io_info.port);
+  zx::status<hypervisor::Trap*> trap = traps.FindTrap(ZX_GUEST_TRAP_IO, io_info.port);
   if (trap.is_error()) {
     dprintf(INFO, "hypervisor: Unhandled guest IO port %s %#x\n", io_info.input ? "read" : "write",
             io_info.port);
@@ -449,23 +449,23 @@ zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vmcs,
   }
   next_rip(exit_info, vmcs);
 
-  memset(packet, 0, sizeof(*packet));
-  packet->key = (*trap)->key();
-  packet->type = ZX_PKT_TYPE_GUEST_IO;
-  packet->guest_io.port = io_info.port;
-  packet->guest_io.access_size = io_info.access_size;
-  packet->guest_io.input = io_info.input;
+  memset(&packet, 0, sizeof(packet));
+  packet.key = (*trap)->key();
+  packet.type = ZX_PKT_TYPE_GUEST_IO;
+  packet.guest_io.port = io_info.port;
+  packet.guest_io.access_size = io_info.access_size;
+  packet.guest_io.input = io_info.input;
   if (io_info.input) {
     // From Volume 1, Section 3.4.1.1: 32-bit operands generate a 32-bit
     // result, zero-extended to a 64-bit result in the destination general-
     // purpose register.
     if (io_info.access_size == 4) {
-      guest_state->rax = 0;
+      guest_state.rax = 0;
     }
   } else {
-    memcpy(packet->guest_io.data, &guest_state->rax, io_info.access_size);
+    memcpy(packet.guest_io.data, &guest_state.rax, io_info.access_size);
     if ((*trap)->HasPort()) {
-      return (*trap)->Queue(*packet, vmcs).status_value();
+      return (*trap)->Queue(packet, &vmcs).status_value();
     }
     // If there was no port for the range, then return to user-space.
   }
@@ -473,12 +473,12 @@ zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs* vmcs,
   return ZX_ERR_NEXT;
 }
 
-zx_status_t handle_apic_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState* guest_state,
-                              LocalApicState* local_apic_state) {
-  switch (static_cast<X2ApicMsr>(guest_state->ecx())) {
+zx_status_t handle_apic_rdmsr(const ExitInfo& exit_info, AutoVmcs& vmcs, GuestState& guest_state,
+                              LocalApicState& local_apic_state) {
+  switch (static_cast<X2ApicMsr>(guest_state.ecx())) {
     case X2ApicMsr::ID:
       next_rip(exit_info, vmcs);
-      guest_state->rax = vmcs->Read(VmcsField16::VPID) - 1;
+      guest_state.rax = vmcs.Read(VmcsField16::VPID) - 1;
       return ZX_OK;
     case X2ApicMsr::VERSION: {
       next_rip(exit_info, vmcs);
@@ -487,13 +487,13 @@ zx_status_t handle_apic_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestSt
       const uint32_t version = 0x15;
       const uint32_t max_lvt_entry = 0x6;  // LVT entries minus 1.
       const uint32_t eoi_suppression = 0;  // Disable support for EOI-broadcast suppression.
-      guest_state->rax = version | (max_lvt_entry << 16) | (eoi_suppression << 24);
+      guest_state.rax = version | (max_lvt_entry << 16) | (eoi_suppression << 24);
       return ZX_OK;
     }
     case X2ApicMsr::SVR:
       // Spurious interrupt vector resets to 0xff. See Volume 3 Section 10.12.5.1.
       next_rip(exit_info, vmcs);
-      guest_state->rax = 0xff;
+      guest_state.rax = 0xff;
       return ZX_OK;
     case X2ApicMsr::TPR:
     case X2ApicMsr::LDR:
@@ -504,7 +504,7 @@ zx_status_t handle_apic_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestSt
     case X2ApicMsr::LVT_MONITOR:
       // These registers reset to 0. See Volume 3 Section 10.12.5.1.
       next_rip(exit_info, vmcs);
-      guest_state->rax = 0;
+      guest_state.rax = 0;
       return ZX_OK;
     case X2ApicMsr::LVT_LINT0:
     case X2ApicMsr::LVT_LINT1:
@@ -512,38 +512,38 @@ zx_status_t handle_apic_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestSt
     case X2ApicMsr::LVT_CMCI:
       // LVT registers reset with the mask bit set. See Volume 3 Section 10.12.5.1.
       next_rip(exit_info, vmcs);
-      guest_state->rax = LVT_MASKED;
+      guest_state.rax = LVT_MASKED;
       return ZX_OK;
     case X2ApicMsr::LVT_TIMER:
       next_rip(exit_info, vmcs);
-      guest_state->rax = local_apic_state->lvt_timer;
+      guest_state.rax = local_apic_state.lvt_timer;
       return ZX_OK;
     default:
       // Issue a general protection fault for write only and unimplemented
       // registers.
-      dprintf(INFO, "hypervisor: Unhandled guest x2APIC RDMSR %#lx\n", guest_state->rcx);
-      local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
+      dprintf(INFO, "hypervisor: Unhandled guest x2APIC RDMSR %#lx\n", guest_state.rcx);
+      local_apic_state.interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
       return ZX_OK;
   }
 }
 
-zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState* guest_state,
-                         LocalApicState* local_apic_state) {
+zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs& vmcs, GuestState& guest_state,
+                         LocalApicState& local_apic_state) {
   // On execution of rdmsr, ecx specifies the MSR and the result is stored in edx:eax.
-  switch (guest_state->ecx()) {
+  switch (guest_state.ecx()) {
     case X86_MSR_IA32_APIC_BASE: {
       next_rip(exit_info, vmcs);
       uint64_t result = kLocalApicPhysBase;
-      if (vmcs->Read(VmcsField16::VPID) == 1) {
+      if (vmcs.Read(VmcsField16::VPID) == 1) {
         result |= IA32_APIC_BASE_BSP;
       }
-      guest_state->SetEdxEax(result);
+      guest_state.SetEdxEax(result);
       return ZX_OK;
     }
     // From Volume 4, Section 2.1, Table 2-2: For now, only enable fast strings.
     case X86_MSR_IA32_MISC_ENABLE:
       next_rip(exit_info, vmcs);
-      guest_state->SetEdxEax(read_msr(X86_MSR_IA32_MISC_ENABLE) & kMiscEnableFastStrings);
+      guest_state.SetEdxEax(read_msr(X86_MSR_IA32_MISC_ENABLE) & kMiscEnableFastStrings);
       return ZX_OK;
     case X86_MSR_DRAM_ENERGY_STATUS:
     case X86_MSR_DRAM_POWER_LIMIT:
@@ -579,49 +579,49 @@ zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState* 
     // We report 0 interrupts.
     case X86_MSR_SMI_COUNT:
       next_rip(exit_info, vmcs);
-      guest_state->SetEdxEax(0);
+      guest_state.SetEdxEax(0);
       return ZX_OK;
     case kX2ApicMsrBase ... kX2ApicMsrMax:
       return handle_apic_rdmsr(exit_info, vmcs, guest_state, local_apic_state);
     default:
-      dprintf(INFO, "hypervisor: Unhandled guest RDMSR %#lx\n", guest_state->rcx);
-      local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
+      dprintf(INFO, "hypervisor: Unhandled guest RDMSR %#lx\n", guest_state.rcx);
+      local_apic_state.interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
       return ZX_OK;
   }
 }
 
-zx_time_t lvt_deadline(LocalApicState* local_apic_state) {
-  if ((local_apic_state->lvt_timer & LVT_TIMER_MODE_MASK) != LVT_TIMER_MODE_ONESHOT &&
-      (local_apic_state->lvt_timer & LVT_TIMER_MODE_MASK) != LVT_TIMER_MODE_PERIODIC) {
+zx_time_t lvt_deadline(LocalApicState& local_apic_state) {
+  if ((local_apic_state.lvt_timer & LVT_TIMER_MODE_MASK) != LVT_TIMER_MODE_ONESHOT &&
+      (local_apic_state.lvt_timer & LVT_TIMER_MODE_MASK) != LVT_TIMER_MODE_PERIODIC) {
     return 0;
   }
-  uint32_t shift = BITS_SHIFT(local_apic_state->lvt_divide_config, 1, 0) |
-                   (BIT_SHIFT(local_apic_state->lvt_divide_config, 3) << 2);
+  uint32_t shift = BITS_SHIFT(local_apic_state.lvt_divide_config, 1, 0) |
+                   (BIT_SHIFT(local_apic_state.lvt_divide_config, 3) << 2);
   uint32_t divisor_shift = (shift + 1) & 7;
   int64_t duration_tsc_ticks =
-      static_cast<int64_t>(local_apic_state->lvt_initial_count << divisor_shift);
+      static_cast<int64_t>(local_apic_state.lvt_initial_count << divisor_shift);
   zx_duration_t duration = convert_raw_tsc_duration_to_nanoseconds(duration_tsc_ticks);
   return zx_time_add_duration(current_time(), duration);
 }
 
-void update_timer(LocalApicState* local_apic_state, zx_time_t deadline);
+void update_timer(LocalApicState& local_apic_state, zx_time_t deadline);
 
 void deadline_callback(Timer* timer, zx_time_t now, void* arg) {
-  LocalApicState* local_apic_state = static_cast<LocalApicState*>(arg);
-  if (local_apic_state->lvt_timer & LVT_MASKED) {
+  auto& local_apic_state = *static_cast<LocalApicState*>(arg);
+  if (local_apic_state.lvt_timer & LVT_MASKED) {
     return;
   }
-  if ((local_apic_state->lvt_timer & LVT_TIMER_MODE_MASK) == LVT_TIMER_MODE_PERIODIC) {
+  if ((local_apic_state.lvt_timer & LVT_TIMER_MODE_MASK) == LVT_TIMER_MODE_PERIODIC) {
     update_timer(local_apic_state, lvt_deadline(local_apic_state));
   }
-  uint8_t vector = local_apic_state->lvt_timer & LVT_TIMER_VECTOR_MASK;
-  local_apic_state->interrupt_tracker.VirtualInterrupt(vector);
+  uint8_t vector = local_apic_state.lvt_timer & LVT_TIMER_VECTOR_MASK;
+  local_apic_state.interrupt_tracker.VirtualInterrupt(vector);
 }
 
-void update_timer(LocalApicState* local_apic_state, zx_time_t deadline) {
-  local_apic_state->timer.Cancel();
+void update_timer(LocalApicState& local_apic_state, zx_time_t deadline) {
+  local_apic_state.timer.Cancel();
   if (deadline > 0) {
-    local_apic_state->timer.SetOneshot(deadline, deadline_callback, local_apic_state);
+    local_apic_state.timer.SetOneshot(deadline, deadline_callback, &local_apic_state);
   }
 }
 
@@ -656,8 +656,8 @@ uint64_t ipi_target_mask(const InterruptCommandRegister& icr, uint16_t self) {
   return 0;
 }
 
-zx_status_t handle_ipi(const ExitInfo& exit_info, AutoVmcs* vmcs, const GuestState& guest_state,
-                       zx_port_packet* packet) {
+zx_status_t handle_ipi(const ExitInfo& exit_info, AutoVmcs& vmcs, const GuestState& guest_state,
+                       zx_port_packet& packet) {
   InterruptCommandRegister icr(guest_state.edx(), guest_state.eax());
   if (icr.destination_mode == InterruptDestinationMode::LOGICAL) {
     dprintf(INFO, "hypervisor: Logical IPI destination mode requested by guest is not supported\n");
@@ -665,30 +665,30 @@ zx_status_t handle_ipi(const ExitInfo& exit_info, AutoVmcs* vmcs, const GuestSta
   }
   switch (icr.delivery_mode) {
     case InterruptDeliveryMode::FIXED: {
-      uint16_t self = static_cast<uint16_t>(vmcs->Read(VmcsField16::VPID) - 1);
-      memset(packet, 0, sizeof(*packet));
-      packet->type = ZX_PKT_TYPE_GUEST_VCPU;
-      packet->guest_vcpu.type = ZX_PKT_GUEST_VCPU_INTERRUPT;
-      packet->guest_vcpu.interrupt.mask = ipi_target_mask(icr, self);
-      packet->guest_vcpu.interrupt.vector = icr.vector;
+      uint16_t self = static_cast<uint16_t>(vmcs.Read(VmcsField16::VPID) - 1);
+      memset(&packet, 0, sizeof(packet));
+      packet.type = ZX_PKT_TYPE_GUEST_VCPU;
+      packet.guest_vcpu.type = ZX_PKT_GUEST_VCPU_INTERRUPT;
+      packet.guest_vcpu.interrupt.mask = ipi_target_mask(icr, self);
+      packet.guest_vcpu.interrupt.vector = icr.vector;
       next_rip(exit_info, vmcs);
       return ZX_ERR_NEXT;
     }
     case InterruptDeliveryMode::NMI: {
-      uint16_t self = static_cast<uint16_t>(vmcs->Read(VmcsField16::VPID) - 1);
-      memset(packet, 0, sizeof(*packet));
-      packet->type = ZX_PKT_TYPE_GUEST_VCPU;
-      packet->guest_vcpu.type = ZX_PKT_GUEST_VCPU_INTERRUPT;
+      uint16_t self = static_cast<uint16_t>(vmcs.Read(VmcsField16::VPID) - 1);
+      memset(&packet, 0, sizeof(packet));
+      packet.type = ZX_PKT_TYPE_GUEST_VCPU;
+      packet.guest_vcpu.type = ZX_PKT_GUEST_VCPU_INTERRUPT;
       // Intel Volume 3a, Table 10-4 specifies that NMI to self is an invalid configuration and
       // behavior is undefined for invalid configurations.
       //
       // For simplicity we'll just clear the self-bit in the mask.
-      packet->guest_vcpu.interrupt.mask = ipi_target_mask(icr, self) & ~(1 << self);
+      packet.guest_vcpu.interrupt.mask = ipi_target_mask(icr, self) & ~(1 << self);
 
       // Intel Volume 3a, Section 10.6.1 Interrupt Command Register.
       //
       // For NMI the target information is ignored since the NMI vector is already defined.
-      packet->guest_vcpu.interrupt.vector = X86_INT_NMI;
+      packet.guest_vcpu.interrupt.vector = X86_INT_NMI;
       next_rip(exit_info, vmcs);
       return ZX_ERR_NEXT;
     }
@@ -697,11 +697,11 @@ zx_status_t handle_ipi(const ExitInfo& exit_info, AutoVmcs* vmcs, const GuestSta
       next_rip(exit_info, vmcs);
       return ZX_OK;
     case InterruptDeliveryMode::STARTUP:
-      memset(packet, 0, sizeof(*packet));
-      packet->type = ZX_PKT_TYPE_GUEST_VCPU;
-      packet->guest_vcpu.type = ZX_PKT_GUEST_VCPU_STARTUP;
-      packet->guest_vcpu.startup.id = icr.destination;
-      packet->guest_vcpu.startup.entry = icr.vector << 12;
+      memset(&packet, 0, sizeof(packet));
+      packet.type = ZX_PKT_TYPE_GUEST_VCPU;
+      packet.guest_vcpu.type = ZX_PKT_GUEST_VCPU_STARTUP;
+      packet.guest_vcpu.startup.id = icr.destination;
+      packet.guest_vcpu.startup.entry = icr.vector << 12;
       next_rip(exit_info, vmcs);
       return ZX_ERR_NEXT;
     default:
@@ -711,16 +711,16 @@ zx_status_t handle_ipi(const ExitInfo& exit_info, AutoVmcs* vmcs, const GuestSta
   }
 }
 
-zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                              const GuestState& guest_state, LocalApicState* local_apic_state,
-                              zx_port_packet* packet) {
+zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs& vmcs,
+                              const GuestState& guest_state, LocalApicState& local_apic_state,
+                              zx_port_packet& packet) {
   // Check for writes to reserved bits.
   //
   // From Volume 3, Section 10.12.1.2: "The upper 32-bits of all x2APIC MSRs
   // (except for the ICR) are reserved."
   X2ApicMsr reg = static_cast<X2ApicMsr>(guest_state.ecx());
   if (unlikely(guest_state.edx() != 0 && reg != X2ApicMsr::ICR)) {
-    local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
+    local_apic_state.interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
     return ZX_OK;
   }
 
@@ -729,7 +729,7 @@ zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     case X2ApicMsr::ESR:
       // From Volume 3, Section 10.12.1.2: "WRMSR of a non-zero value causes #GP(0)."
       if (guest_state.eax() != 0) {
-        local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
+        local_apic_state.interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
         return ZX_OK;
       }
       next_rip(exit_info, vmcs);
@@ -749,23 +749,23 @@ zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
         return ZX_ERR_INVALID_ARGS;
       }
       next_rip(exit_info, vmcs);
-      local_apic_state->lvt_timer = guest_state.eax();
+      local_apic_state.lvt_timer = guest_state.eax();
       update_timer(local_apic_state, lvt_deadline(local_apic_state));
       return ZX_OK;
     case X2ApicMsr::INITIAL_COUNT:
       next_rip(exit_info, vmcs);
-      local_apic_state->lvt_initial_count = guest_state.eax();
+      local_apic_state.lvt_initial_count = guest_state.eax();
       update_timer(local_apic_state, lvt_deadline(local_apic_state));
       return ZX_OK;
     case X2ApicMsr::DCR:
       next_rip(exit_info, vmcs);
-      local_apic_state->lvt_divide_config = guest_state.eax();
+      local_apic_state.lvt_divide_config = guest_state.eax();
       update_timer(local_apic_state, lvt_deadline(local_apic_state));
       return ZX_OK;
     case X2ApicMsr::SELF_IPI: {
       next_rip(exit_info, vmcs);
       uint32_t vector = guest_state.eax() & UINT8_MAX;
-      local_apic_state->interrupt_tracker.VirtualInterrupt(vector);
+      local_apic_state.interrupt_tracker.VirtualInterrupt(vector);
       return ZX_OK;
     }
     case X2ApicMsr::ICR:
@@ -774,41 +774,41 @@ zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
       // Issue a general protection fault for read only and unimplemented
       // registers.
       dprintf(INFO, "hypervisor: Unhandled guest x2APIC WRMSR %#" PRIx32 "\n", guest_state.ecx());
-      local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
+      local_apic_state.interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
       return ZX_OK;
   }
 }
 
-zx_status_t handle_kvm_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                             const GuestState& guest_state, LocalApicState* local_apic_state,
-                             PvClockState* pv_clock, hypervisor::GuestPhysicalAddressSpace* gpas) {
+zx_status_t handle_kvm_wrmsr(const ExitInfo& exit_info, AutoVmcs& vmcs,
+                             const GuestState& guest_state, LocalApicState& local_apic_state,
+                             PvClockState& pv_clock, hypervisor::GuestPhysicalAddressSpace& gpas) {
   zx_paddr_t guest_paddr = guest_state.EdxEax();
 
   next_rip(exit_info, vmcs);
   switch (guest_state.ecx()) {
     case kKvmSystemTimeMsrOld:
     case kKvmSystemTimeMsr:
-      vmcs->Invalidate();
+      vmcs.Invalidate();
       if ((guest_paddr & 1) != 0) {
-        return pv_clock_reset_clock(pv_clock, gpas, guest_paddr & ~static_cast<zx_paddr_t>(1))
+        return pv_clock_reset_clock(&pv_clock, &gpas, guest_paddr & ~static_cast<zx_paddr_t>(1))
             .status_value();
       } else {
-        pv_clock_stop_clock(pv_clock);
+        pv_clock_stop_clock(&pv_clock);
       }
       return ZX_OK;
     case kKvmBootTimeOld:
     case kKvmBootTime:
-      vmcs->Invalidate();
-      return pv_clock_update_boot_time(gpas, guest_paddr).status_value();
+      vmcs.Invalidate();
+      return pv_clock_update_boot_time(&gpas, guest_paddr).status_value();
     default:
-      local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
+      local_apic_state.interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
       return ZX_OK;
   }
 }
 
-zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, const GuestState& guest_state,
-                         LocalApicState* local_apic_state, PvClockState* pv_clock,
-                         hypervisor::GuestPhysicalAddressSpace* gpas, zx_port_packet* packet) {
+zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs& vmcs, const GuestState& guest_state,
+                         LocalApicState& local_apic_state, PvClockState& pv_clock,
+                         hypervisor::GuestPhysicalAddressSpace& gpas, zx_port_packet& packet) {
   // On execution of wrmsr, rcx specifies the MSR and edx:eax contains the value to be written.
   switch (guest_state.ecx()) {
     case X86_MSR_IA32_APIC_BASE:
@@ -839,7 +839,7 @@ zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, const GuestS
       next_rip(exit_info, vmcs);
       return ZX_OK;
     case X86_MSR_IA32_TSC_DEADLINE: {
-      if ((local_apic_state->lvt_timer & LVT_TIMER_MODE_MASK) != LVT_TIMER_MODE_TSC_DEADLINE) {
+      if ((local_apic_state.lvt_timer & LVT_TIMER_MODE_MASK) != LVT_TIMER_MODE_TSC_DEADLINE) {
         return ZX_ERR_INVALID_ARGS;
       }
       next_rip(exit_info, vmcs);
@@ -857,7 +857,7 @@ zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, const GuestS
       return handle_kvm_wrmsr(exit_info, vmcs, guest_state, local_apic_state, pv_clock, gpas);
     default:
       dprintf(INFO, "hypervisor: Unhandled guest WRMSR %#lx\n", guest_state.rcx);
-      local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
+      local_apic_state.interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
       return ZX_OK;
   }
 }
@@ -876,10 +876,10 @@ uint8_t default_operand_size(uint64_t efer, uint32_t cs_access_rights) {
   }
 }
 
-zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs* vmcs, bool read,
-                        zx_vaddr_t guest_paddr, hypervisor::TrapMap* traps,
-                        zx_port_packet_t* packet) {
-  zx::status<hypervisor::Trap*> trap = traps->FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr);
+zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs& vmcs, bool read,
+                        zx_vaddr_t guest_paddr, hypervisor::TrapMap& traps,
+                        zx_port_packet_t& packet) {
+  zx::status<hypervisor::Trap*> trap = traps.FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr);
   if (trap.is_error()) {
     return trap.status_value();
   }
@@ -890,35 +890,34 @@ zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs* vmcs, bool read,
       if (read) {
         return ZX_ERR_NOT_SUPPORTED;
       }
-      packet->key = (*trap)->key();
-      packet->type = ZX_PKT_TYPE_GUEST_BELL;
-      packet->guest_bell.addr = guest_paddr;
+      packet.key = (*trap)->key();
+      packet.type = ZX_PKT_TYPE_GUEST_BELL;
+      packet.guest_bell.addr = guest_paddr;
       if (!(*trap)->HasPort()) {
         return ZX_ERR_BAD_STATE;
       }
-      return (*trap)->Queue(*packet, vmcs).status_value();
+      return (*trap)->Queue(packet, &vmcs).status_value();
     case ZX_GUEST_TRAP_MEM:
       if (exit_info.exit_instruction_length > kMaxInstructionSize) {
         return ZX_ERR_INTERNAL;
       }
-      packet->key = (*trap)->key();
-      packet->type = ZX_PKT_TYPE_GUEST_MEM;
-      packet->guest_mem.addr = guest_paddr;
-      packet->guest_mem.cr3 = vmcs->Read(VmcsFieldXX::GUEST_CR3);
-      packet->guest_mem.rip = exit_info.guest_rip;
-      packet->guest_mem.instruction_size = static_cast<uint8_t>(exit_info.exit_instruction_length);
-      packet->guest_mem.default_operand_size =
-          default_operand_size(vmcs->Read(VmcsField64::GUEST_IA32_EFER),
-                               vmcs->Read(VmcsField32::GUEST_CS_ACCESS_RIGHTS));
+      packet.key = (*trap)->key();
+      packet.type = ZX_PKT_TYPE_GUEST_MEM;
+      packet.guest_mem.addr = guest_paddr;
+      packet.guest_mem.cr3 = vmcs.Read(VmcsFieldXX::GUEST_CR3);
+      packet.guest_mem.rip = exit_info.guest_rip;
+      packet.guest_mem.instruction_size = static_cast<uint8_t>(exit_info.exit_instruction_length);
+      packet.guest_mem.default_operand_size = default_operand_size(
+          vmcs.Read(VmcsField64::GUEST_IA32_EFER), vmcs.Read(VmcsField32::GUEST_CS_ACCESS_RIGHTS));
       return ZX_ERR_NEXT;
     default:
       return ZX_ERR_BAD_STATE;
   }
 }
 
-zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                 hypervisor::GuestPhysicalAddressSpace* gpas,
-                                 hypervisor::TrapMap* traps, zx_port_packet_t* packet) {
+zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs& vmcs,
+                                 hypervisor::GuestPhysicalAddressSpace& gpas,
+                                 hypervisor::TrapMap& traps, zx_port_packet_t& packet) {
   EptViolationInfo ept_violation_info(exit_info.exit_qualification);
   zx_gpaddr_t guest_paddr = exit_info.guest_physical_address;
   zx_status_t status =
@@ -931,28 +930,28 @@ zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmcs,
       return status;
   }
   // We may have to block when handling the page fault.
-  vmcs->Invalidate();
+  vmcs.Invalidate();
 
   // If there was no trap associated with this address and it is outside of
   // guest physical address space, return failure.
-  if (guest_paddr >= gpas->size()) {
+  if (guest_paddr >= gpas.size()) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  if (auto result = gpas->PageFault(guest_paddr); result.is_error()) {
+  if (auto result = gpas.PageFault(guest_paddr); result.is_error()) {
     dprintf(CRITICAL, "hypervisor: Unhandled EPT violation %#lx\n", guest_paddr);
     return result.status_value();
   }
   return ZX_OK;
 }
 
-zx_status_t handle_ept_misconfiguration(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                                        hypervisor::GuestPhysicalAddressSpace* gpas) {
+zx_status_t handle_ept_misconfiguration(const ExitInfo& exit_info, AutoVmcs& vmcs,
+                                        hypervisor::GuestPhysicalAddressSpace& gpas) {
   // We may have to take a lock while querying MMU flags.
-  vmcs->Invalidate();
+  vmcs.Invalidate();
 
   zx_gpaddr_t guest_paddr = exit_info.guest_physical_address;
-  auto mmu_flags = gpas->QueryFlags(guest_paddr);
+  auto mmu_flags = gpas.QueryFlags(guest_paddr);
   if (mmu_flags.is_error()) {
     return mmu_flags.status_value();
   }
@@ -961,14 +960,14 @@ zx_status_t handle_ept_misconfiguration(const ExitInfo& exit_info, AutoVmcs* vmc
   return ZX_ERR_INTERNAL;
 }
 
-zx_status_t handle_xsetbv(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState* guest_state) {
-  uint64_t guest_cr4 = vmcs->Read(VmcsFieldXX::GUEST_CR4);
+zx_status_t handle_xsetbv(const ExitInfo& exit_info, AutoVmcs& vmcs, GuestState& guest_state) {
+  uint64_t guest_cr4 = vmcs.Read(VmcsFieldXX::GUEST_CR4);
   if (!(guest_cr4 & X86_CR4_OSXSAVE)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
   // We only support XCR0.
-  if (guest_state->rcx != 0) {
+  if (guest_state.rcx != 0) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -979,7 +978,7 @@ zx_status_t handle_xsetbv(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState*
 
   // Check that XCR0 is valid.
   uint64_t xcr0_bitmap = (static_cast<uint64_t>(leaf.d) << 32) | leaf.a;
-  uint64_t xcr0 = guest_state->EdxEax();
+  uint64_t xcr0 = guest_state.EdxEax();
   if (~xcr0_bitmap & xcr0 ||
       // x87 state must be enabled.
       (xcr0 & X86_XSAVE_STATE_BIT_X87) != X86_XSAVE_STATE_BIT_X87 ||
@@ -987,51 +986,51 @@ zx_status_t handle_xsetbv(const ExitInfo& exit_info, AutoVmcs* vmcs, GuestState*
       (xcr0 & (X86_XSAVE_STATE_BIT_AVX | X86_XSAVE_STATE_BIT_SSE)) == X86_XSAVE_STATE_BIT_AVX)
     return ZX_ERR_INVALID_ARGS;
 
-  guest_state->xcr0 = xcr0;
+  guest_state.xcr0 = xcr0;
   next_rip(exit_info, vmcs);
   return ZX_OK;
 }
 
-zx_status_t handle_pause(const ExitInfo& exit_info, AutoVmcs* vmcs) {
+zx_status_t handle_pause(const ExitInfo& exit_info, AutoVmcs& vmcs) {
   next_rip(exit_info, vmcs);
   return ZX_OK;
 }
 
-zx_status_t handle_vmcall(const ExitInfo& exit_info, AutoVmcs* vmcs,
-                          hypervisor::GuestPhysicalAddressSpace* gpas, GuestState* guest_state) {
+zx_status_t handle_vmcall(const ExitInfo& exit_info, AutoVmcs& vmcs,
+                          hypervisor::GuestPhysicalAddressSpace& gpas, GuestState& guest_state) {
   next_rip(exit_info, vmcs);
 
-  const uint32_t access_rights = vmcs->Read(VmcsField32::GUEST_SS_ACCESS_RIGHTS);
+  const uint32_t access_rights = vmcs.Read(VmcsField32::GUEST_SS_ACCESS_RIGHTS);
   if ((access_rights & kGuestXxAccessRightsDplUser) != 0) {
     // We only accept a VMCALL if CPL is 0.
-    guest_state->rax = VmCallStatus::NOT_PERMITTED;
+    guest_state.rax = VmCallStatus::NOT_PERMITTED;
     return ZX_OK;
   }
 
-  vmcs->Invalidate();
+  vmcs.Invalidate();
   VmCallInfo info(guest_state);
   switch (info.type) {
     case VmCallType::CLOCK_PAIRING: {
       if (info.arg[1] != 0) {
         dprintf(INFO, "hypervisor: CLOCK_PAIRING hypercall doesn't support clock type %lu\n",
                 info.arg[1]);
-        guest_state->rax = VmCallStatus::NOT_SUPPORTED;
+        guest_state.rax = VmCallStatus::NOT_SUPPORTED;
         break;
       }
-      if (auto result = pv_clock_populate_offset(gpas, info.arg[0]); result.is_error()) {
+      if (auto result = pv_clock_populate_offset(&gpas, info.arg[0]); result.is_error()) {
         dprintf(INFO, "hypervisor: Failed to populate lock offset with error %d\n",
                 result.status_value());
-        guest_state->rax = VmCallStatus::FAULT;
+        guest_state.rax = VmCallStatus::FAULT;
         break;
       }
-      guest_state->rax = VmCallStatus::OK;
+      guest_state.rax = VmCallStatus::OK;
       break;
     }
     default:
       dprintf(INFO,
               "hypervisor: Unknown hypercall %lu (arg0=%#lx, arg1=%#lx, arg2=%#lx, arg3=%#lx)\n",
               static_cast<uint64_t>(info.type), info.arg[0], info.arg[1], info.arg[2], info.arg[3]);
-      guest_state->rax = VmCallStatus::UNKNOWN_HYPERCALL;
+      guest_state.rax = VmCallStatus::UNKNOWN_HYPERCALL;
       break;
   }
   // We never fail in case of hypercalls, we just return/propagate errors to the caller.
@@ -1105,22 +1104,22 @@ InterruptCommandRegister::InterruptCommandRegister(uint32_t hi, uint32_t lo) {
   vector = static_cast<uint8_t>(BITS(lo, 7, 0));
 }
 
-VmCallInfo::VmCallInfo(const GuestState* guest_state) {
+VmCallInfo::VmCallInfo(const GuestState& guest_state) {
   // ABI is documented in Linux kernel documentation, see
   // Documents/virtual/kvm/hypercalls.txt
-  type = static_cast<VmCallType>(guest_state->rax);
-  arg[0] = guest_state->rbx;
-  arg[1] = guest_state->rcx;
-  arg[2] = guest_state->rdx;
-  arg[3] = guest_state->rsi;
+  type = static_cast<VmCallType>(guest_state.rax);
+  arg[0] = guest_state.rbx;
+  arg[1] = guest_state.rcx;
+  arg[2] = guest_state.rdx;
+  arg[3] = guest_state.rsi;
 }
 
-zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
-                           LocalApicState* local_apic_state, PvClockState* pv_clock,
-                           hypervisor::GuestPhysicalAddressSpace* gpas, hypervisor::TrapMap* traps,
-                           zx_port_packet_t* packet) {
+zx_status_t vmexit_handler(AutoVmcs& vmcs, GuestState& guest_state,
+                           LocalApicState& local_apic_state, PvClockState& pv_clock,
+                           hypervisor::GuestPhysicalAddressSpace& gpas, hypervisor::TrapMap& traps,
+                           zx_port_packet_t& packet) {
   zx_status_t status;
-  ExitInfo exit_info(*vmcs);
+  ExitInfo exit_info(vmcs);
   switch (exit_info.exit_reason) {
     case ExitReason::EXTERNAL_INTERRUPT:
       ktrace_vcpu_exit(VCPU_EXTERNAL_INTERRUPT, exit_info.guest_rip);
@@ -1131,7 +1130,7 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
       LTRACEF("handling interrupt window\n\n");
       ktrace_vcpu_exit(VCPU_INTERRUPT_WINDOW, exit_info.guest_rip);
       GUEST_STATS_INC(interrupt_windows);
-      status = handle_interrupt_window(vmcs, local_apic_state);
+      status = handle_interrupt_window(vmcs);
       break;
     case ExitReason::CPUID:
       LTRACEF("handling CPUID\n\n");
@@ -1149,7 +1148,7 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
       LTRACEF("handling control-register access\n\n");
       ktrace_vcpu_exit(VCPU_CONTROL_REGISTER_ACCESS, exit_info.guest_rip);
       GUEST_STATS_INC(control_register_accesses);
-      status = handle_control_register_access(exit_info, vmcs, *guest_state, local_apic_state);
+      status = handle_control_register_access(exit_info, vmcs, guest_state, local_apic_state);
       break;
     case ExitReason::IO_INSTRUCTION:
       ktrace_vcpu_exit(VCPU_IO_INSTRUCTION, exit_info.guest_rip);
@@ -1157,17 +1156,16 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
       status = handle_io_instruction(exit_info, vmcs, guest_state, traps, packet);
       break;
     case ExitReason::RDMSR:
-      LTRACEF("handling RDMSR %#lx\n\n", guest_state->rcx);
+      LTRACEF("handling RDMSR %#lx\n\n", guest_state.rcx);
       ktrace_vcpu_exit(VCPU_RDMSR, exit_info.guest_rip);
       GUEST_STATS_INC(rdmsr_instructions);
       status = handle_rdmsr(exit_info, vmcs, guest_state, local_apic_state);
       break;
     case ExitReason::WRMSR:
-      LTRACEF("handling WRMSR %#lx\n\n", guest_state->rcx);
+      LTRACEF("handling WRMSR %#lx\n\n", guest_state.rcx);
       ktrace_vcpu_exit(VCPU_WRMSR, exit_info.guest_rip);
       GUEST_STATS_INC(wrmsr_instructions);
-      status =
-          handle_wrmsr(exit_info, vmcs, *guest_state, local_apic_state, pv_clock, gpas, packet);
+      status = handle_wrmsr(exit_info, vmcs, guest_state, local_apic_state, pv_clock, gpas, packet);
       break;
     case ExitReason::ENTRY_FAILURE_GUEST_STATE:
     case ExitReason::ENTRY_FAILURE_MSR_LOADING:
@@ -1222,7 +1220,7 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
       dprintf(CRITICAL, "hypervisor: VM exit handler for %s (%u) returned %d\n",
               exit_reason_name(exit_info.exit_reason), static_cast<uint32_t>(exit_info.exit_reason),
               status);
-      dump_guest_state(*guest_state, exit_info);
+      dump_guest_state(guest_state, exit_info);
       break;
   }
   return status;

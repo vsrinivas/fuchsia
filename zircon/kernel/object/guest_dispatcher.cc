@@ -34,7 +34,7 @@ zx_status_t GuestDispatcher::Create(KernelHandle<GuestDispatcher>* guest_handle,
   }
 
   status = VmAddressRegionDispatcher::Create(
-      new_guest_handle.dispatcher()->guest()->AddressSpace()->RootVmar(), 0, vmar_handle,
+      new_guest_handle.dispatcher()->guest()->AddressSpace().RootVmar(), 0, vmar_handle,
       vmar_rights);
   if (status != ZX_OK) {
     return status;

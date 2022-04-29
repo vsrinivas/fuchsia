@@ -238,6 +238,6 @@ class AutoVmcs : public hypervisor::StateInvalidator {
 // Constructs an EPTP from a physical EPT PML4.
 uint64_t ept_pointer_from_pml4(paddr_t pml4_address);
 
-bool cr0_is_invalid(AutoVmcs* vmcs, uint64_t cr0_value);
+bool cr0_is_invalid(AutoVmcs& vmcs, uint64_t cr0_value);
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_VCPU_PRIV_H_
