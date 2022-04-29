@@ -49,11 +49,10 @@ class ViewTreeSnapshotter final : public scheduling::SessionUpdater {
   UpdateResults UpdateSessions(
       const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
       uint64_t trace_id) override {
-    UpdateSnapshot();
     return {};
   }
   // |scheduling::SessionUpdater|
-  void OnCpuWorkDone() override {}
+  void OnCpuWorkDone() override { UpdateSnapshot(); }
   // |scheduling::SessionUpdater|
   void OnFramePresented(
       const std::unordered_map<scheduling::SessionId, std::map<scheduling::PresentId, zx::time>>&

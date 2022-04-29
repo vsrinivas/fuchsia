@@ -603,7 +603,7 @@ void App::InitializeHeartbeat() {
   TRACE_DURATION("gfx", "App::InitializeHeartbeat");
   {  // Initialize ViewTreeSnapshotter
 
-    // These callbacks are be called once per frame (at the end of UpdateSessions()) and the results
+    // These callbacks are be called once per frame (at the end of OnCpuWorkDone()) and the results
     // used to build the ViewTreeSnapshot.
     // We create one per compositor.
     std::vector<view_tree::SubtreeSnapshotGenerator> subtrees_generator_callbacks;
