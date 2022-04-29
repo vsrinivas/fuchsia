@@ -102,15 +102,15 @@ static void add_cluster(zbi_topology_node_t* node, uint8_t performance_class) {
 
 static void add_cpu(zbi_topology_node_t* node, size_t cpu_num, size_t parent_index) {
   // 0, 0x100, 0x200, ...
-  uint32_t mpidr = cpu_num << 8;
+  uint32_t mpidr = (uint32_t)cpu_num << 8;
 
   // clang-format off
   *node = (zbi_topology_node_t) {
     .entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR,
-    .parent_index = parent_index,
+    .parent_index = (uint16_t)parent_index,
     .entity = {
       .processor = {
-        .logical_ids = { cpu_num },
+        .logical_ids = { (uint16_t)cpu_num },
         .logical_id_count = 1,
         .flags = (cpu_num == 0) ? ZBI_TOPOLOGY_PROCESSOR_PRIMARY : 0,
         .architecture = ZBI_TOPOLOGY_ARCH_ARM,
@@ -118,7 +118,7 @@ static void add_cpu(zbi_topology_node_t* node, size_t cpu_num, size_t parent_ind
           .arm = {
             .cluster_1_id = (mpidr >> 8) & 0xff,
             .cpu_id = mpidr & 0xff,
-            .gic_id = mpidr,
+            .gic_id = 0, // unused with GICv3
           }
         }
       }
