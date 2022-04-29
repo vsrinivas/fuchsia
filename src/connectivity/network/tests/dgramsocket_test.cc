@@ -2937,6 +2937,10 @@ class DatagramLinearizedSendSemanticsCloseInstance
 };
 
 TEST_P(DatagramLinearizedSendSemanticsTest, Close) {
+#if defined(__linux__)
+  GTEST_SKIP() << "Linux does not guarantee linearized send semantics with respect to close().";
+#endif
+
   ASSERT_NO_FATAL_FAILURE(
       ValidateLinearizedSendSemantics<DatagramLinearizedSendSemanticsCloseInstance>(GetParam()));
 }
