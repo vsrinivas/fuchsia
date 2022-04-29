@@ -328,3 +328,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0155_optional_capability_routes.md
   - title: "RFC-0156: Add an append mode to streams"
     path: /docs/contribute/governance/rfcs/0156_stream_append_mode.md
+  - title: "RFC-0157: Fxfs Encryption and Multi-Volume Support"
+    path: /docs/contribute/governance/rfcs/0157_fxfs_encryption_and_multi_volume_support.md

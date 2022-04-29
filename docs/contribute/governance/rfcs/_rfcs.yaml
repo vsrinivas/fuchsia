@@ -2035,3 +2035,16 @@
   reviewers: ['jamesr@google.com', 'abarth@google.com', 'rashaeqbal@google.com', 'csuter@google.com']
   submitted: '2022-04-06'
   reviewed: '2022-04-20'
+
+- name: 'RFC-0157'
+  title: 'Fxfs encryption and multi-volume support'
+  short_description: 'Describes encryption and multi-volume support in Fxfs.'
+  authors: ['csuter@google.com']
+  file: '0157_fxfs_encryption_and_multi_volume_support.md'
+  area: ['Storage']
+  issue: ['92275']
+  gerrit_change_id: ['666884']
+  status: 'Accepted'
+  reviewers: ['abarth@google.com', 'enoharemaien@google.com', 'palmer@google.com', 'jfsulliv@google.com', 'jsankey@google.com', 'zarvox@google.com']
+  submitted: '2022-04-07'
+  reviewed: '2022-04-28'
