@@ -10,6 +10,7 @@ use {
     std::{
         collections::{HashMap, HashSet},
         fs,
+        io::Read,
         path::{Path, PathBuf},
         sync::Arc,
     },
@@ -71,10 +72,15 @@ impl BlobFsArtifactReader {
                 )
             })?;
 
-        let blobfs_reader = BlobFsReader::new(&blobfs_path)?;
-        let blobs = blobfs_reader
-            .read_blobs()
-            .context("Failed to parse blobfs archive for artifact reader")?;
+        let mut blobfs_file = fs::File::open(blobfs_path)
+            .context("Failed to open blobfs archive for artifact reader")?;
+        let mut blobfs_buffer = Vec::new();
+        blobfs_file
+            .read_to_end(&mut blobfs_buffer)
+            .context("Failed to read blobfs archive for artifact reader")?;
+        let mut blobfs_reader = BlobFsReader::new(blobfs_buffer);
+        let blobs =
+            blobfs_reader.parse().context("Failed to parse blobfs archive for artifact reader")?;
         Ok(Self {
             blobfs_dep_path,
             blobs: Arc::new(
