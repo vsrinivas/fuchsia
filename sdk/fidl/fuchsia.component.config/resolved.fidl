@@ -1,0 +1,18 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.component.config;
+
+using fuchsia.component.decl;
+
+/// A configuration that has been completely resolved by component manager.
+type ResolvedConfig = struct {
+    fields vector<ResolvedConfigField>:MAX;
+    checksum fuchsia.component.decl.ConfigChecksum;
+};
+
+type ResolvedConfigField = struct {
+    key string:MAX;
+    value Value;
+};

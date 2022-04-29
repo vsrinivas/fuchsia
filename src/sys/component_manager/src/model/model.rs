@@ -5,13 +5,13 @@
 use {
     crate::model::{
         actions::{ActionKey, DiscoverAction},
-        component::{ComponentInstance, ComponentManagerInstance, StartReason},
+        component::{ComponentInstance, ComponentManagerInstance, InstanceState, StartReason},
         context::ModelContext,
         environment::Environment,
         error::ModelError,
         starter::Starter,
     },
-    ::routing::config::RuntimeConfig,
+    ::routing::{component_id_index::ComponentIdIndex, config::RuntimeConfig},
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     std::sync::Arc,
 };
@@ -71,6 +71,10 @@ impl Model {
         &self.root
     }
 
+    pub fn component_id_index(&self) -> Arc<ComponentIdIndex> {
+        self.context.component_id_index()
+    }
+
     /// Looks up a component by absolute moniker. The component instance in the component will be
     /// resolved if that has not already happened.
     pub async fn look_up(
@@ -90,6 +94,31 @@ impl Model {
         }
         cur.lock_resolved_state().await?;
         Ok(cur)
+    }
+
+    /// Finds a component matching the absolute moniker, if such a component exists.
+    /// This function has no side-effects.
+    pub async fn find(
+        &self,
+        look_up_abs_moniker: &AbsoluteMoniker,
+    ) -> Option<Arc<ComponentInstance>> {
+        let mut cur = self.root.clone();
+        for moniker in look_up_abs_moniker.path().iter() {
+            cur = {
+                let state = cur.lock_state().await;
+                match &*state {
+                    InstanceState::Resolved(r) => {
+                        if let Some(c) = r.get_live_child(moniker) {
+                            c
+                        } else {
+                            return None;
+                        }
+                    }
+                    _ => return None,
+                }
+            };
+        }
+        Some(cur)
     }
 
     /// Starts root, starting the component tree.

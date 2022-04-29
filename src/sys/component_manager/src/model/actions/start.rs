@@ -93,6 +93,7 @@ async fn do_start(
             component_info.package,
             &component_info.decl,
             component_info.config,
+            start_reason.clone(),
         )
         .await?;
 
@@ -217,6 +218,7 @@ async fn make_execution_runtime(
     package: Option<Package>,
     decl: &cm_rust::ComponentDecl,
     config: Option<ConfigFields>,
+    start_reason: StartReason,
 ) -> Result<
     (Runtime, fcrunner::ComponentStartInfo, ServerEnd<fcrunner::ComponentControllerMarker>),
     ModelError,
@@ -269,6 +271,7 @@ async fn make_execution_runtime(
         outgoing_dir_client,
         runtime_dir_client,
         Some(controller),
+        start_reason,
     )?;
     let numbered_handles = component.numbered_handles.lock().await.take();
     let start_info = fcrunner::ComponentStartInfo {
@@ -482,13 +485,14 @@ mod tests {
         );
         let (_, child) = build_tree_with_single_child(TEST_CHILD_NAME).await;
         let decl = ComponentDeclBuilder::new().add_lazy_child("bar").build();
-        let ris = ResolvedInstanceState::new(&child, decl).await.unwrap();
+        let ris = ResolvedInstanceState::new(&child, decl, None, None).await.unwrap();
         assert!(should_return_early(&InstanceState::Resolved(ris), &es, &m).is_none());
 
         // Check for already_started:
         {
             let mut es = ExecutionState::new();
-            es.runtime = Some(Runtime::start_from(None, None, None, None).unwrap());
+            es.runtime =
+                Some(Runtime::start_from(None, None, None, None, StartReason::Debug).unwrap());
             assert!(!es.is_shut_down());
             assert_matches!(
                 should_return_early(&InstanceState::New, &es, &m),

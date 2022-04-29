@@ -1,3 +1,9 @@
+struct/member fuchsia.component.config/ResolvedConfig.checksum fuchsia.component.decl/ConfigChecksum
+struct/member fuchsia.component.config/ResolvedConfig.fields vector<fuchsia.component.config/ResolvedConfigField>
+struct fuchsia.component.config/ResolvedConfig
+struct/member fuchsia.component.config/ResolvedConfigField.key string
+struct/member fuchsia.component.config/ResolvedConfigField.value fuchsia.component.config/Value
+struct fuchsia.component.config/ResolvedConfigField
 union/member fuchsia.component.config/SingleValue.bool bool
 union/member fuchsia.component.config/SingleValue.int16 int16
 union/member fuchsia.component.config/SingleValue.int32 int32

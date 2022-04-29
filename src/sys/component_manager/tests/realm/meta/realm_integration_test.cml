@@ -1,0 +1,33 @@
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/realm_integration_test_bin",
+    },
+    children: [
+        {
+            name: "echo_server",
+            url: "#meta/echo_server.cm",
+        },
+        {
+            name: "will_not_resolve",
+            url: "fuchsia-pkg://fake.com",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.sys2.RealmExplorer",
+            from: "framework",
+        },
+        {
+            protocol: "fuchsia.sys2.RealmQuery",
+            from: "framework",
+        },
+        {
+            protocol: "fidl.examples.routing.echo.Echo",
+            from: "#echo_server",
+        },
+    ],
+}

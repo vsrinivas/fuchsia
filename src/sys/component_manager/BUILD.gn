@@ -8,9 +8,11 @@ import("//build/images/filesystem_limits.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/testing/environments.gni")
+import("//tools/fidl/measure-tape/measure_tape.gni")
 
 template("component_manager") {
   _deps = [
+    ":measure_tape_for_instance_info",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
@@ -111,6 +113,8 @@ template("component_manager") {
     "src/builtin/power_resource.rs",
     "src/builtin/process_launcher.rs",
     "src/builtin/realm_builder.rs",
+    "src/builtin/realm_explorer.rs",
+    "src/builtin/realm_query.rs",
     "src/builtin/relative_resolver.rs",
     "src/builtin/root_job.rs",
     "src/builtin/root_resource.rs",
@@ -384,6 +388,12 @@ fuchsia_test_package("component-manager-tests") {
     "//src/sys/component_manager/testing/echo_server",
     "//src/sys/component_manager/testing/lifecycle",
   ]
+}
+
+measure_tape("measure_tape_for_instance_info") {
+  target_binding = "rust"
+  target_types = [ "fuchsia.sys2/InstanceInfo" ]
+  fidls = [ "//sdk/fidl/fuchsia.sys2" ]
 }
 
 group("tests") {

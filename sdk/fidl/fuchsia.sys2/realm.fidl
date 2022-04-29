@@ -1,0 +1,90 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.sys2;
+
+using fuchsia.io;
+using fuchsia.component;
+using fuchsia.component.decl;
+using fuchsia.component.config;
+using fuchsia.url;
+
+/// The maximum length of a component ID.
+/// A component ID is a 128-bit UUID, which when encoded
+/// in hex notation is 32 characters long.
+const MAX_COMPONENT_ID_LENGTH uint32 = 32;
+
+/// Describes the current state of instance
+type InstanceState = strict enum {
+    /// The component is created, but has not been resolved by component manager.
+    /// Most information about this component is unknown.
+    UNRESOLVED = 0;
+
+    /// The component has been resolved by component manager but is not currently running.
+    RESOLVED = 1;
+
+    /// The component has been resolved and started by component manager.
+    STARTED = 2;
+};
+
+/// Basic information about a component instance.
+/// This object contains information that is readily available to component manager.
+type InstanceInfo = struct {
+    moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
+    url fuchsia.url.Url;
+    component_id string:<MAX_COMPONENT_ID_LENGTH, optional>;
+    state InstanceState;
+};
+
+/// The detailed resolved state of a component instance
+type ResolvedState = resource struct {
+    uses vector<fuchsia.component.decl.Use>:MAX;
+    exposes vector<fuchsia.component.decl.Expose>:MAX;
+    config fuchsia.component.config.ResolvedConfig:optional;
+    pkg_dir client_end:<fuchsia.io.Directory, optional>;
+    started StartedState:optional;
+};
+
+/// The detailed started state of a component instance
+type StartedState = resource struct {
+    out_dir client_end:<fuchsia.io.Directory, optional>;
+    runtime_dir client_end:<fuchsia.io.Directory, optional>;
+    start_reason string:MAX;
+};
+
+/// An iterator over basic information of all instances in the realm
+protocol InstanceInfoIterator {
+    Next() -> (struct {
+        infos vector<InstanceInfo>:MAX;
+    });
+};
+
+/// Offers detailed introspection into component instances under a realm.
+@discoverable
+protocol RealmQuery {
+    /// Gets the detailed information of a particular instance identified by its moniker.
+    /// This response contains handles to resources of the instance. As a result, component manager
+    /// pays a non-trivial cost when this method is invoked.
+    GetInstanceInfo(struct {
+        moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
+    }) -> (resource struct {
+        /// Basic information about the component instance.
+        info InstanceInfo;
+
+        /// Detailed information about the resolved component instance.
+        /// If this object does not exist, the instance is not resolved.
+        resolved ResolvedState:optional;
+    }) error fuchsia.component.Error;
+};
+
+/// Offers basic introspection into component instances under a realm.
+@discoverable
+protocol RealmExplorer {
+    /// Returns an iterator over basic information of each instance scoped to this realm.
+    /// When the server receives this call, it will take a snapshot of the current component
+    /// topology and relays that over the iterator. Any changes to the topology *after* this method
+    /// call is received by the server will not be shown by the iterator.
+    GetAllInstanceInfos() -> (resource struct {
+        iterator client_end:InstanceInfoIterator;
+    }) error fuchsia.component.Error;
+};

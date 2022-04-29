@@ -8,9 +8,10 @@
 
 use cm_rust::{
     ConfigChecksum, ConfigDecl, ConfigField as ConfigFieldDecl, ConfigNestedValueType,
-    ConfigValueType, SingleValue, Value, ValueSpec, ValuesData, VectorValue,
+    ConfigValueType, NativeIntoFidl, SingleValue, Value, ValueSpec, ValuesData, VectorValue,
 };
 use dynfidl::{BasicField, Field, Structure, VectorField};
+use fidl_fuchsia_component_config as fconfig;
 use thiserror::Error;
 
 /// The resolved configuration for a component.
@@ -137,6 +138,14 @@ impl ConfigFields {
     }
 }
 
+impl Into<fconfig::ResolvedConfig> for ConfigFields {
+    fn into(self) -> fconfig::ResolvedConfig {
+        let checksum = self.checksum.native_into_fidl();
+        let fields = self.fields.into_iter().map(|f| f.into()).collect();
+        fconfig::ResolvedConfig { checksum, fields }
+    }
+}
+
 /// A single resolved configuration field.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ConfigField {
@@ -220,6 +229,12 @@ impl ConfigField {
         }
 
         Ok(ConfigField { key, value: spec_field.value })
+    }
+}
+
+impl Into<fconfig::ResolvedConfigField> for ConfigField {
+    fn into(self) -> fconfig::ResolvedConfigField {
+        fconfig::ResolvedConfigField { key: self.key, value: self.value.native_into_fidl() }
     }
 }
 

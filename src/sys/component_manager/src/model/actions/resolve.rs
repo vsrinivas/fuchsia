@@ -74,7 +74,13 @@ async fn do_resolve(component: &Arc<ComponentInstance>) -> Result<Component, Mod
                     InstanceState::New | InstanceState::Discovered => {}
                 }
                 state.set(InstanceState::Resolved(
-                    ResolvedInstanceState::new(component, component_info.decl.clone()).await?,
+                    ResolvedInstanceState::new(
+                        component,
+                        component_info.decl.clone(),
+                        component_info.package.clone(),
+                        component_info.config.clone(),
+                    )
+                    .await?,
                 ));
             }
         }

@@ -28,6 +28,8 @@ use {
                 RealmBuilderResolver, RealmBuilderRunner, RUNNER_NAME as REALM_BUILDER_RUNNER_NAME,
                 SCHEME as REALM_BUILDER_SCHEME,
             },
+            realm_explorer::RealmExplorer,
+            realm_query::RealmQuery,
             relative_resolver::{RelativeResolver, SCHEME as RELATIVE_SCHEME},
             root_job::{RootJob, ROOT_JOB_CAPABILITY_NAME, ROOT_JOB_FOR_INSPECT_CAPABILITY_NAME},
             root_resource::RootResource,
@@ -118,7 +120,7 @@ pub struct BuiltinEnvironmentBuilder {
     utc_clock: Option<Arc<Clock>>,
     add_environment_resolvers: bool,
     inspector: Option<Inspector>,
-    enable_hub: bool,
+    enable_introspection: bool,
     crash_records: CrashRecords,
 }
 
@@ -132,7 +134,7 @@ impl Default for BuiltinEnvironmentBuilder {
             utc_clock: None,
             add_environment_resolvers: false,
             inspector: None,
-            enable_hub: true,
+            enable_introspection: true,
             crash_records: CrashRecords::new(),
         }
     }
@@ -162,8 +164,8 @@ impl BuiltinEnvironmentBuilder {
         self
     }
 
-    pub fn enable_hub(mut self, val: bool) -> Self {
-        self.enable_hub = val;
+    pub fn enable_introspection(mut self, val: bool) -> Self {
+        self.enable_introspection = val;
         self
     }
 
@@ -338,7 +340,7 @@ impl BuiltinEnvironmentBuilder {
             realm_builder_resolver,
             self.utc_clock,
             self.inspector.unwrap_or(component::inspector().clone()),
-            self.enable_hub,
+            self.enable_introspection,
             self.crash_records,
         )
         .await?)
@@ -388,6 +390,8 @@ pub struct BuiltinEnvironment {
     pub collection_capability_host: Arc<CollectionCapabilityHost>,
     pub storage_admin_capability_host: Arc<StorageAdmin>,
     pub hub: Option<Arc<Hub>>,
+    pub realm_explorer: Option<Arc<RealmExplorer>>,
+    pub realm_query: Option<Arc<RealmQuery>>,
     pub builtin_runners: Vec<Arc<BuiltinRunner>>,
     pub event_registry: Arc<EventRegistry>,
     pub event_source_factory: Arc<EventSourceFactory>,
@@ -415,7 +419,7 @@ impl BuiltinEnvironment {
         realm_builder_resolver: Option<Arc<RealmBuilderResolver>>,
         utc_clock: Option<Arc<Clock>>,
         inspector: Inspector,
-        enable_hub: bool,
+        enable_introspection: bool,
         crash_records: CrashRecords,
     ) -> Result<BuiltinEnvironment, Error> {
         let execution_mode = if runtime_config.debug {
@@ -768,13 +772,29 @@ impl BuiltinEnvironment {
         let stop_notifier = Arc::new(RootStopNotifier::new());
         model.root().hooks.install(stop_notifier.hooks()).await;
 
-        let hub = if enable_hub {
+        let hub = if enable_introspection {
             let hub = Arc::new(Hub::new(
                 root_component_url.as_str().to_owned(),
                 LifecycleControllerFactory::new(Arc::downgrade(&model)),
             )?);
             model.root().hooks.install(hub.hooks()).await;
             Some(hub)
+        } else {
+            None
+        };
+
+        let realm_explorer = if enable_introspection {
+            let realm_explorer = Arc::new(RealmExplorer::new(model.clone()));
+            model.root().hooks.install(realm_explorer.hooks()).await;
+            Some(realm_explorer)
+        } else {
+            None
+        };
+
+        let realm_query = if enable_introspection {
+            let realm_query = Arc::new(RealmQuery::new(model.clone()));
+            model.root().hooks.install(realm_query.hooks()).await;
+            Some(realm_query)
         } else {
             None
         };
@@ -855,6 +875,8 @@ impl BuiltinEnvironment {
             collection_capability_host,
             storage_admin_capability_host,
             hub,
+            realm_explorer,
+            realm_query,
             builtin_runners,
             event_registry,
             event_source_factory,

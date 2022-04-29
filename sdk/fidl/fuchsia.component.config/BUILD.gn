@@ -9,6 +9,7 @@ fidl("fuchsia.component.config") {
 
   sources = [
     "overview.fidl",
+    "resolved.fidl",
     "specs.fidl",
     "value.fidl",
   ]

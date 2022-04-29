@@ -14,6 +14,7 @@ fidl("fuchsia.sys2") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.component.config",
     "//sdk/fidl/fuchsia.component.decl",
     "//sdk/fidl/fuchsia.component.types",
     "//sdk/fidl/fuchsia.data",
@@ -28,6 +29,7 @@ fidl("fuchsia.sys2") {
     "crash_introspect.fidl",
     "events.fidl",
     "lifecycle_controller.fidl",
+    "realm.fidl",
     "runtime/component.fidl",
     "runtime/component_resolver.fidl",
     "runtime/package.fidl",

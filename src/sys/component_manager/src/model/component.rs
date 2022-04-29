@@ -38,11 +38,13 @@ use {
     clonable_error::ClonableError,
     cm_moniker::{InstanceId, InstancedAbsoluteMoniker, InstancedChildMoniker},
     cm_runner::{component_controller::ComponentController, NullRunner, RemoteRunner, Runner},
-    cm_rust::{self, CapabilityName, ChildDecl, CollectionDecl, ComponentDecl, UseDecl},
+    cm_rust::{
+        self, CapabilityName, ChildDecl, CollectionDecl, ComponentDecl, NativeIntoFidl, UseDecl,
+    },
     cm_task_scope::TaskScope,
     cm_util::channel,
     config_encoder::ConfigFields,
-    fidl::endpoints::{self, Proxy, ServerEnd},
+    fidl::endpoints::{self, ClientEnd, Proxy, ServerEnd},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fidl_fuchsia_io as fio,
@@ -467,6 +469,41 @@ impl ComponentInstance {
     /// occurs.
     pub async fn resolve(self: &Arc<Self>) -> Result<Component, ModelError> {
         ActionSet::register(self.clone(), ResolveAction::new()).await
+    }
+
+    /// Locks on the instance and execution state of the component and creates a FIDL
+    /// fuchsia.sys2.ResolvedState object.
+    pub async fn create_fidl_resolved_state(
+        self: &Arc<ComponentInstance>,
+    ) -> Option<Box<fsys::ResolvedState>> {
+        let state = self.lock_state().await;
+        let execution = self.lock_execution().await;
+
+        match &*state {
+            InstanceState::Resolved(r) => {
+                let uses =
+                    r.decl().uses.clone().into_iter().map(|u| u.native_into_fidl()).collect();
+                let exposes =
+                    r.decl().exposes.clone().into_iter().map(|e| e.native_into_fidl()).collect();
+                let config = r.config().cloned().map(|c| Box::new(c.into()));
+
+                let pkg_dir = r.package().map(|p| &p.package_dir);
+                let pkg_dir = try_clone_dir_endpoint(pkg_dir);
+
+                let started = if let Some(runtime) = &execution.runtime {
+                    let out_dir = try_clone_dir_endpoint(runtime.outgoing_dir.as_ref());
+                    let runtime_dir = try_clone_dir_endpoint(runtime.runtime_dir.as_ref());
+                    let start_reason = runtime.start_reason.to_string();
+
+                    Some(Box::new(fsys::StartedState { out_dir, runtime_dir, start_reason }))
+                } else {
+                    None
+                };
+
+                Some(Box::new(fsys::ResolvedState { uses, exposes, config, pkg_dir, started }))
+            }
+            _ => None,
+        }
     }
 
     /// Resolves a runner for this component.
@@ -1311,6 +1348,10 @@ pub struct ResolvedInstanceState {
     environments: HashMap<String, Arc<Environment>>,
     /// Hosts a directory mapping the component's exposed capabilities.
     exposed_dir: ExposedDir,
+    /// Contains information about the package, if one exists
+    package: Option<Package>,
+    /// Contains the resolved configuration fields for this component, if they exist
+    config: Option<ConfigFields>,
     /// Dynamic offers targeting this component's dynamic children.
     ///
     /// Invariant: the `target` field of all offers must refer to a live dynamic
@@ -1323,6 +1364,8 @@ impl ResolvedInstanceState {
     pub async fn new(
         component: &Arc<ComponentInstance>,
         decl: ComponentDecl,
+        package: Option<Package>,
+        config: Option<ConfigFields>,
     ) -> Result<Self, ModelError> {
         let exposed_dir = ExposedDir::new(
             ExecutionScope::new(),
@@ -1337,6 +1380,8 @@ impl ResolvedInstanceState {
             next_dynamic_instance_id: 1,
             environments: Self::instantiate_environments(component, &decl),
             exposed_dir,
+            package,
+            config,
             dynamic_offers: vec![],
         };
         state.add_static_children(component, &decl).await;
@@ -1425,6 +1470,16 @@ impl ResolvedInstanceState {
     /// Returns the exposed directory bound to this instance.
     pub fn get_exposed_dir(&self) -> &ExposedDir {
         &self.exposed_dir
+    }
+
+    /// Returns the resolved structured configuration of this instance, if any.
+    pub fn config(&self) -> Option<&ConfigFields> {
+        self.config.as_ref()
+    }
+
+    /// Returns information about the package of the instance, if any.
+    pub fn package(&self) -> Option<&Package> {
+        self.package.as_ref()
     }
 
     /// Extends an instanced absolute moniker with the live child with moniker `p`. Returns `None`
@@ -1668,6 +1723,9 @@ pub struct Runtime {
     /// Approximates when the component was started.
     pub timestamp: zx::Time,
 
+    /// Describes why the component instance was started
+    pub start_reason: StartReason,
+
     /// Allows the spawned background context, which is watching for the
     /// controller channel to close, to be aborted when the `Runtime` is
     /// dropped.
@@ -1749,6 +1807,7 @@ impl Runtime {
         outgoing_dir: Option<fio::DirectoryProxy>,
         runtime_dir: Option<fio::DirectoryProxy>,
         controller: Option<fcrunner::ComponentControllerProxy>,
+        start_reason: StartReason,
     ) -> Result<Self, ModelError> {
         let timestamp = zx::Time::get_monotonic();
         Ok(Runtime {
@@ -1759,6 +1818,7 @@ impl Runtime {
             timestamp,
             exit_listener: None,
             binder_server_ends: vec![],
+            start_reason,
         })
     }
 
@@ -1877,6 +1937,21 @@ async fn do_runner_stop<'a>(
     match futures::future::select(stop_timer, channel_close).await {
         Either::Left(((), _channel_close)) => None,
         Either::Right((_timer, _close_result)) => Some(Ok(StopRequestSuccess::Stopped)),
+    }
+}
+
+fn try_clone_dir_endpoint(
+    dir: Option<&fio::DirectoryProxy>,
+) -> Option<ClientEnd<fio::DirectoryMarker>> {
+    if let Some(dir) = dir {
+        if let Ok(cloned_dir) = io_util::clone_directory(&dir, fio::OpenFlags::CLONE_SAME_RIGHTS) {
+            let cloned_dir_channel = cloned_dir.into_channel().unwrap().into_zx_channel();
+            Some(ClientEnd::new(cloned_dir_channel))
+        } else {
+            None
+        }
+    } else {
+        None
     }
 }
 
@@ -3015,7 +3090,7 @@ pub mod tests {
     async fn new_resolved() -> InstanceState {
         let comp = new_component().await;
         let decl = ComponentDeclBuilder::new().build();
-        let ris = ResolvedInstanceState::new(&comp, decl).await.unwrap();
+        let ris = ResolvedInstanceState::new(&comp, decl, None, None).await.unwrap();
         InstanceState::Resolved(ris)
     }
 
