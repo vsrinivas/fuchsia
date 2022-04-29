@@ -642,7 +642,7 @@ mod tests {
     fn ramdisk(block_size: u64) -> RamdiskClient {
         ramdevice_client::wait_for_device(
             "/dev/sys/platform/00:00:2d/ramctl",
-            std::time::Duration::from_secs(30),
+            std::time::Duration::from_secs(60),
         )
         .unwrap();
         RamdiskClient::create(block_size, 1 << 16).unwrap()
