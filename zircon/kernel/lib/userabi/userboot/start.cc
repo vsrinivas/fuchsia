@@ -173,9 +173,7 @@ std::string_view GetUserbootNextFilename(const Options& opts) {
 
   // Now that we have the root resource, we can use it to get a debuglog.
   status = zx::debuglog::create(*zx::unowned_resource{handles[kRootResource]}, 0, &log);
-  if (status != ZX_OK || !log) {
-    printl(log, "zx_debuglog_create failed: %d, using zx_debug_write instead", status);
-  }
+  check(log, status, "zx_debuglog_create failed: %d", status);
 
   // We need our own root VMAR handle to map in the ZBI.
   zx::vmar vmar_self{handles[kVmarRootSelf]};
