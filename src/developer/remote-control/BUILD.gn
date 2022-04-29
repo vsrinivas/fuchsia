@@ -171,18 +171,11 @@ shell_command("remote-control-runner_shell_command") {
   deps = [ "//src/developer/remote-control/runner" ]
 }
 
-fuchsia_component("remote-control-runner-component") {
-  component_name = "remote-control-runner"
-  manifest = "runner/meta/remote-control-runner.cmx"
-  deps = [ "//src/developer/remote-control/runner" ]
-}
-
 fuchsia_package("pkg") {
   package_name = "remote-control"
   deps = [
     ":maps",
     ":remote-control-component",
-    ":remote-control-runner-component",
     ":remote-control-runner_shell_command",
   ]
 }

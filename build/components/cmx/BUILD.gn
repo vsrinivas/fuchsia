@@ -235,7 +235,6 @@ group("cmx_allowlist") {
     "//src/developer/memory/metrics/tests:*",
     "//src/developer/memory/monitor:*",
     "//src/developer/memory/monitor/tests:*",
-    "//src/developer/remote-control:*",
     "//src/developer/shell:*",
     "//src/developer/shell/interpreter:*",
     "//src/developer/shell/mirror:*",

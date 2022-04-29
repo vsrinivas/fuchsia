@@ -12,12 +12,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
     example = "To run the 'hello_world_rust' component:
 
     $ ffx component run-legacy \\
-    fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cmx
-
-To run the Remote Control Service:
-
-    $ ffx component run-legacy \\
-    fuchsia-pkg://fuchsia.com/remote-control#meta/remote-control-runner.cmx",
+    fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cmx",
     description = "Runs a legacy (CMX) component instance on the target",
     note = "To learn more about component URLs, visit https://fuchsia.dev/fuchsia-src/concepts/components/component_urls"
 )]
