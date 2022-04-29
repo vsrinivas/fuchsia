@@ -11936,7 +11936,7 @@ rust_library("trust-dns-proto-v0_21_2") {
 
 rust_library("trust-dns-resolver-v0_21_2") {
   crate_name = "trust_dns_resolver"
-  crate_root = "//third_party/rust_crates/vendor/trust-dns-resolver/src/lib.rs"
+  crate_root = "//third_party/rust_crates/forks/trust-dns-resolver/src/lib.rs"
   output_name = "trust_dns_resolver-fda24c7930416b60"
   configs -= [
     "//build/config/rust:edition_2018",
