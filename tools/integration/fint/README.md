@@ -1,19 +1,53 @@
 # fint
 
+Self-link: [go/fint](https://goto.google.com/fint)
+
 `fint` provides a common high-level interface for continuous integration
 infrastructure and local developer tools to build Fuchsia.
 
+## Interface with fx
+
+### fx set
+
 `fx set` is a wrapper around fint with a minimal layer of logic to present a
-nice command-line interface, because fint's command-line interface is not
-particularly ergonomic for human use. fint's interface is more optimized for
-automated use (e.g. it accepts inputs via protobuf files instead of separate
+nice command-line interface on top of fint.
+
+fint's own command-line interface is not ergonomic for human use; it's optimized
+for automation (e.g. it accepts inputs via protobuf files instead of separate
 command-line flags) to make it easy for the infrastructure to use fint directly.
 
-On the other hand, `fx build` does not use fint for performance reasons. `fx
-build` is a trivially thin wrapper around ninja and does not need the vast
-majority of the ninja-wrapping logic that fint provides to the infrastructure.
-Using fint would require a bootstrapping step that would add significant latency
-to `fx build`.
+### fx build
+
+On the other hand, `fx build` does not use fint by default, and instead invokes
+`ninja` directly with very minimal wrapping logic.
+
+This is because typical local workflows don't need most of what `fint build`
+provides. The core implementation of `fint build` involves translating the input
+abstraction layer into a list of targets. This simplifies infrastructure build
+configurations and avoids over-building. But local workflows generally involve
+either building "everything" – by invoking `fx build` (and thus `ninja`) with no
+arguments so it builds the `default` target – or building just one target at a
+time. So `fx build` does not need to use the complicated target selection logic
+that `fint build` provides to the infrastructure.
+
+Additionally, using fint would require a bootstrapping step that would add
+noticeable latency to `fx build`, particularly when doing a null build, where
+low latency is critical. It's not worthwhile to incur that latency given that
+`fx build`'s needs are so basic and there's little code duplication between `fx
+build` and `fint build`.
+
+### fx repro
+
+`fx repro` is a command that takes an infrastructure Buildbucket build ID and
+prints `fx set` and `fx build` commands that will reproduce the fint commands
+run by the infrastructure build.
+
+The `fx set` and `fx build` commands that `fx repro` prints both set the
+`--fint-params-path <path>` flag, which has the following effects:
+
+- `fx set` loads arguments from the specified fint parameters file rather than
+  from standard command-line arguments.
+- `fx build` will bootstrap and run `fint` instead of running `ninja` directly.
 
 ## CLI
 
