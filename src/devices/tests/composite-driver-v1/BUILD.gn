@@ -50,16 +50,26 @@ fuchsia_driver_component("component") {
 test("composite-driver-v1-test") {
   sources = [ "test.cc" ]
   deps = [
-    ":component",
-    "test-root:component",
+    "//sdk/fidl/fuchsia.driver.test",
+    "//sdk/fidl/fuchsia.io",
     "//sdk/lib/device-watcher/cpp",
-    "//sdk/lib/driver_test_realm/simple",
-    "//src/devices/internal/drivers/fragment",
+    "//sdk/lib/driver_test_realm/realm_builder/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 
 fuchsia_unittest_package("pkg") {
   package_name = "composite-driver-v1-test"
-  deps = [ ":composite-driver-v1-test" ]
+  deps = [
+    ":component",
+    ":composite-driver-v1-test",
+    "test-root:component",
+    "//src/devices/internal/drivers/fragment",
+    "//src/devices/misc/drivers/test-parent",
+  ]
 }
