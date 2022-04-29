@@ -40,7 +40,7 @@ pub struct TestTag {
 
 impl TestTag {
     pub fn new(key: impl Into<String>, value: impl Into<String>) -> Self {
-        TestTag { key: key.into(), value: value.into() }
+        Self { key: key.into(), value: value.into() }
     }
 }
 

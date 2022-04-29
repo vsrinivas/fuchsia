@@ -104,8 +104,10 @@ template("fuchsia_test_package") {
       manifest_name = get_target_outputs(test)
       manifest_name = get_path_info(manifest_name[0], "file")
 
+      _wrapped_legacy_test = false
       if (wrap_cmx_test_with_cml_test &&
           get_path_info(manifest_name, "extension") == "cmx") {
+        _wrapped_legacy_test = true
         modern_generated_name =
             "${target_name}_${test_target_name}_modern_generated"
         generated_manifest_target = "${modern_generated_name}_manifest"
@@ -148,7 +150,11 @@ template("fuchsia_test_package") {
 
       test_spec(test_target) {
         forward_variables_from(test_specs, "*")
+        if (!defined(build_rule)) {
+          build_rule = "fuchsia_test_package"
+        }
         target = get_label_info(":$target_name", "label_with_toolchain")
+        wrapped_legacy_test = _wrapped_legacy_test
         package_label = package_label
         package_manifests = [ package_manifest ]
         package_url =

@@ -368,6 +368,9 @@ template("test_spec") {
                                "package_label",
                                "package_manifests",
                                "timeout_secs",
+                               "build_rule",
+                               "has_generated_manifest",
+                               "wrapped_legacy_test",
                              ])
       if (defined(_parallel)) {
         parallel = _parallel

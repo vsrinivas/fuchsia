@@ -107,14 +107,23 @@ template("fuchsia_unittest_package") {
       visibility = [ ":*" ]
     }
 
+    _test_specs = {
+    }
+    if (defined(invoker.test_specs)) {
+      _test_specs = invoker.test_specs
+    }
+
+    _test_specs.build_rule = "fuchsia_unittest_package"
+    _test_specs.has_generated_manifest = !defined(invoker.manifest)
+
     fuchsia_test_package(target_name) {
       forward_variables_from(invoker,
                              [
                                "package_name",
-                               "test_specs",
                                "visibility",
                                "wrap_cmx_test_with_cml_test",
                              ])
+      test_specs = _test_specs
       test_components = [ ":$component_target" ]
     }
   } else {
