@@ -87,7 +87,8 @@ rustc_library("lib") {
     "src/xdg_shell.rs",
   ]
   features = []
-  if (board_name == "chromebook-x64") {
+  if (target_cpu == "x64") {
+    # This enables Intel format modifiers
     features += [ "i915" ]
   }
   if (wayland_server_fatal_object_lookup_failures) {
