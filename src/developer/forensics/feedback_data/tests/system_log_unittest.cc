@@ -28,6 +28,9 @@
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/developer/forensics/utils/redact/redactor.h"
+#include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/timekeeper/async_test_clock.h"
+#include "src/lib/timekeeper/clock.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -36,7 +39,9 @@ namespace {
 using testing::IsEmpty;
 using testing::UnorderedElementsAreArray;
 
-constexpr char kMessage1Json[] = R"JSON(
+std::string MessageJson(const int id) {
+  return fxl::StringPrintf(
+      R"JSON(
 [
   {
     "metadata": {
@@ -44,152 +49,164 @@ constexpr char kMessage1Json[] = R"JSON(
       "severity": "INFO",
       "pid": 200,
       "tid": 300,
-      "tags": ["tag_1", "tag_a"]
+      "tags": ["tag_%d"]
     },
     "payload": {
       "root": {
         "message": {
-          "value": "Message 1"
+          "value": "Message %d"
         }
       }
     }
   }
 ]
-)JSON";
+)JSON",
+      id, id);
+}
 
-constexpr char kMessage2Json[] = R"JSON(
-[
-  {
-    "metadata": {
-      "timestamp": 1234000000000,
-      "severity": "INFO",
-      "pid": 200,
-      "tid": 300,
-      "tags": ["tag_2"]
-    },
-    "payload": {
-      "root": {
-        "message": {
-          "value": "Message 2"
-        }
-      }
-    }
-  }
-]
-)JSON";
+std::vector<std::string> Messages() { return {MessageJson(1), MessageJson(2), MessageJson(3)}; }
 
-constexpr char kMessage3Json[] = R"JSON(
-[
-  {
-    "metadata": {
-      "timestamp": 1234000000000,
-      "severity": "INFO",
-      "pid": 200,
-      "tid": 300,
-      "tags": ["tag_3"]
-    },
-    "payload": {
-      "root": {
-        "message": {
-          "value": "Message 3"
-        }
-      }
-    }
-  }
-]
-)JSON";
-
-class CollectLogDataTest : public UnitTestFixture {
+class SystemLogTest : public UnitTestFixture {
  public:
-  CollectLogDataTest() : executor_(dispatcher()) {}
+  SystemLogTest()
+      : executor_(dispatcher()),
+        clock_(dispatcher()),
+        system_log_(dispatcher(), services(), &clock_, &redactor_, kActivePeriod) {}
 
  protected:
-  void SetupLogServer(std::unique_ptr<stubs::DiagnosticsArchiveBase> server) {
-    log_server_ = std::move(server);
-    if (log_server_) {
-      InjectServiceProvider(log_server_.get(), kArchiveAccessorName);
-    }
+  void SetUpLogServer(std::vector<std::string> messages) {
+    log_server_ = std::make_unique<stubs::DiagnosticsArchive>(
+        std::make_unique<stubs::DiagnosticsBatchIteratorNeverRespondsAfterOneBatch>(
+            std::move(messages)));
+    InjectServiceProvider(log_server_.get(), kArchiveAccessorName);
   }
 
-  ::fpromise::result<AttachmentValue> CollectSystemLog(const zx::duration timeout = zx::sec(1)) {
-    return CollectSystemLog(&redactor_, timeout);
-  }
-
-  ::fpromise::result<AttachmentValue> CollectSystemLog(RedactorBase* redactor,
-                                                       const zx::duration timeout = zx::sec(1)) {
-    ::fpromise::result<AttachmentValue> result;
-    executor_.schedule_task(feedback_data::CollectSystemLog(dispatcher(), services(),
-                                                            fit::Timeout(timeout, /*action=*/[] {}),
-                                                            redactor)
-                                .then([&result](::fpromise::result<AttachmentValue>& res) {
-                                  result = std::move(res);
-                                }));
+  AttachmentValue CollectSystemLog(const zx::duration timeout = zx::sec(1)) {
+    AttachmentValue result(Error::kNotSet);
+    executor_.schedule_task(
+        system_log_.Get(timeout)
+            .and_then([&result](AttachmentValue& res) { result = std::move(res); })
+            .or_else([] { FX_LOGS(FATAL) << "Bad path"; }));
     RunLoopFor(timeout);
     return result;
   }
 
-  async::Executor executor_;
+ protected:
+  static constexpr auto kActivePeriod = zx::hour(1);
+  static constexpr auto kLogTimestamp = zx::sec(1234);
+
+  timekeeper::Clock* Clock() { return &clock_; }
+  const stubs::DiagnosticsArchiveBase& LogServer() const { return *log_server_; }
 
  private:
-  std::unique_ptr<stubs::DiagnosticsArchiveBase> log_server_;
+  async::Executor executor_;
+  timekeeper::AsyncTestClock clock_;
   IdentityRedactor redactor_{inspect::BoolProperty()};
+  std::unique_ptr<stubs::DiagnosticsArchiveBase> log_server_;
+
+  SystemLog system_log_;
 };
 
-TEST_F(CollectLogDataTest, Succeed_AllSystemLogs) {
-  SetupLogServer(std::make_unique<stubs::DiagnosticsArchive>(
-      std::make_unique<stubs::DiagnosticsBatchIterator>(std::vector<std::vector<std::string>>({
-          {kMessage1Json, kMessage2Json},
-          {kMessage3Json},
-          {},
-      }))));
+TEST_F(SystemLogTest, GetTerminatesDueToLogTimestamp) {
+  SetUpLogServer(Messages());
 
-  ::fpromise::result<AttachmentValue> result = CollectSystemLog();
-  ASSERT_TRUE(result.is_ok());
+  const auto log = CollectSystemLog();
+  EXPECT_FALSE(log.HasError());
 
-  const AttachmentValue& logs = result.value();
-  ASSERT_EQ(logs.State(), AttachmentValue::State::kComplete);
-  ASSERT_STREQ(logs.Value().c_str(), R"([01234.000][00200][00300][tag_1, tag_a] INFO: Message 1
+  ASSERT_TRUE(log.HasValue());
+  EXPECT_EQ(log.Value(), R"([01234.000][00200][00300][tag_1] INFO: Message 1
 [01234.000][00200][00300][tag_2] INFO: Message 2
 [01234.000][00200][00300][tag_3] INFO: Message 3
 )");
 }
 
-TEST_F(CollectLogDataTest, Succeed_PartialSystemLogs) {
-  SetupLogServer(std::make_unique<stubs::DiagnosticsArchive>(
-      std::make_unique<stubs::DiagnosticsBatchIteratorNeverRespondsAfterOneBatch>(
-          std::vector<std::string>({kMessage1Json, kMessage2Json}))));
+TEST_F(SystemLogTest, GetTerminatesDueToTimeout) {
+  SetUpLogServer(Messages());
 
-  ::fpromise::result<AttachmentValue> result = CollectSystemLog();
-  ASSERT_TRUE(result.is_ok());
+  // Prime the clock so log collection won't be completed due to message timestamps.
+  RunLoopFor(kLogTimestamp + zx::sec(1));
 
-  const AttachmentValue& logs = result.value();
-  ASSERT_EQ(logs.State(), AttachmentValue::State::kPartial);
-  ASSERT_STREQ(logs.Value().c_str(), R"([01234.000][00200][00300][tag_1, tag_a] INFO: Message 1
-[01234.000][00200][00300][tag_2] INFO: Message 2
-)");
-  EXPECT_EQ(logs.Error(), Error::kTimeout);
-}
+  const auto log = CollectSystemLog(zx::min(1));
+  ASSERT_TRUE(log.HasError());
+  EXPECT_EQ(log.Error(), Error::kTimeout);
 
-TEST_F(CollectLogDataTest, Succeed_FormattingErrors) {
-  SetupLogServer(std::make_unique<stubs::DiagnosticsArchive>(
-      std::make_unique<stubs::DiagnosticsBatchIterator>(std::vector<std::vector<std::string>>({
-          {kMessage1Json, kMessage2Json},
-          {kMessage3Json},
-          {"foo", "bar"},
-          {},
-      }))));
-
-  ::fpromise::result<AttachmentValue> result = CollectSystemLog();
-  ASSERT_TRUE(result.is_ok());
-
-  const AttachmentValue& logs = result.value();
-  ASSERT_EQ(logs.State(), AttachmentValue::State::kComplete);
-  ASSERT_STREQ(logs.Value().c_str(), R"([01234.000][00200][00300][tag_1, tag_a] INFO: Message 1
+  ASSERT_TRUE(log.HasValue());
+  EXPECT_EQ(log.Value(), R"([01234.000][00200][00300][tag_1] INFO: Message 1
 [01234.000][00200][00300][tag_2] INFO: Message 2
 [01234.000][00200][00300][tag_3] INFO: Message 3
-!!! Failed to format chunk: Failed to parse content as JSON. Offset 1: Invalid value. !!!
-!!! Failed to format chunk: Failed to parse content as JSON. Offset 0: Invalid value. !!!
 )");
+}
+
+TEST_F(SystemLogTest, GetEmptyLog) {
+  SetUpLogServer({});
+
+  const auto log = CollectSystemLog();
+  ASSERT_TRUE(log.HasError());
+  EXPECT_EQ(log.Error(), Error::kMissingValue);
+
+  EXPECT_FALSE(log.HasValue());
+}
+
+TEST_F(SystemLogTest, ActivePeriodExpires) {
+  SetUpLogServer(Messages());
+
+  auto log = CollectSystemLog();
+  ASSERT_FALSE(log.HasError());
+
+  ASSERT_TRUE(log.HasValue());
+  EXPECT_EQ(log.Value(), R"([01234.000][00200][00300][tag_1] INFO: Message 1
+[01234.000][00200][00300][tag_2] INFO: Message 2
+[01234.000][00200][00300][tag_3] INFO: Message 3
+)");
+
+  // Become disconnected from the server after |kActivePeriod| expires.
+  RunLoopFor(kActivePeriod);
+  ASSERT_FALSE(LogServer().IsBound());
+
+  log = CollectSystemLog();
+
+  // Get empty logs because the original data was cleared and the server doesn't respond.
+  ASSERT_TRUE(log.HasError());
+  EXPECT_EQ(log.Error(), Error::kMissingValue);
+
+  // Ensure reconnection happened.
+  EXPECT_TRUE(LogServer().IsBound());
+}
+
+TEST_F(SystemLogTest, ActivePeriodResets) {
+  SetUpLogServer(Messages());
+
+  auto log = CollectSystemLog(zx::min(1));
+  ASSERT_FALSE(log.HasError());
+
+  ASSERT_TRUE(log.HasValue());
+  EXPECT_EQ(log.Value(), R"([01234.000][00200][00300][tag_1] INFO: Message 1
+[01234.000][00200][00300][tag_2] INFO: Message 2
+[01234.000][00200][00300][tag_3] INFO: Message 3
+)");
+
+  RunLoopFor(kActivePeriod / 2);
+  ASSERT_TRUE(LogServer().IsBound());
+
+  log = CollectSystemLog();
+
+  // Expect a timeout because the stub isn't supposed to respond.
+  ASSERT_TRUE(log.HasError());
+  EXPECT_EQ(log.Error(), Error::kTimeout);
+
+  // And the original data wasn't cleared.
+  ASSERT_TRUE(log.HasValue());
+  EXPECT_EQ(log.Value(), R"([01234.000][00200][00300][tag_1] INFO: Message 1
+[01234.000][00200][00300][tag_2] INFO: Message 2
+[01234.000][00200][00300][tag_3] INFO: Message 3
+)");
+
+  // Become disconnected |kActivePeriod| after the last collection request completes.
+  RunLoopFor(kActivePeriod / 2);
+  ASSERT_TRUE(LogServer().IsBound());
+
+  RunLoopFor(kActivePeriod / 2);
+  ASSERT_FALSE(LogServer().IsBound());
 }
 
 class SimpleRedactor : public RedactorBase {
@@ -207,28 +224,6 @@ class SimpleRedactor : public RedactorBase {
   std::string UnredactedCanary() const override { return ""; }
   std::string RedactedCanary() const override { return ""; }
 };
-
-TEST_F(CollectLogDataTest, Succeed_AppliesRedaction) {
-  SetupLogServer(std::make_unique<stubs::DiagnosticsArchive>(
-      std::make_unique<stubs::DiagnosticsBatchIterator>(std::vector<std::vector<std::string>>({
-          {kMessage1Json, kMessage2Json},
-          {kMessage3Json},
-          {"foo", "bar"},
-          {},
-      }))));
-
-  SimpleRedactor redactor;
-  ::fpromise::result<AttachmentValue> result = CollectSystemLog(&redactor);
-  ASSERT_TRUE(result.is_ok());
-
-  const AttachmentValue& logs = result.value();
-  ASSERT_EQ(logs.State(), AttachmentValue::State::kComplete);
-  ASSERT_STREQ(logs.Value().c_str(), R"([01234.000][00200][00300][tag_1, tag_a] INFO: REDACTED
-!!! MESSAGE REPEATED 2 MORE TIMES !!!
-!!! Failed to format chunk: Failed to parse content as JSON. Offset 1: Invalid value. !!!
-!!! Failed to format chunk: Failed to parse content as JSON. Offset 0: Invalid value. !!!
-)");
-}
 
 LogSink::MessageOr ToMessage(const std::string& msg) {
   return ::fpromise::ok(fuchsia::logger::LogMessage{
@@ -525,6 +520,57 @@ TEST(LogBufferTest, NotifyInterruption) {
   EXPECT_EQ(buffer.ToString(), R"([00018.000][00100][00101][tag1, tag2] INFO: log 2
 !!! MESSAGE REPEATED 2 MORE TIMES !!!
 )");
+}
+
+TEST(LogBufferTest, RunsActions) {
+  IdentityRedactor redactor(inspect::BoolProperty{});
+
+  LogBuffer buffer(StorageSize::Gigabytes(100), &redactor);
+
+  bool run1{false};
+  buffer.ExecuteAfter(zx::sec(0), [&run1] { run1 = true; });
+
+  bool run2{false};
+  buffer.ExecuteAfter(zx::sec(0), [&run2] { run2 = true; });
+
+  bool run3{false};
+  buffer.ExecuteAfter(zx::sec(5), [&run3] { run3 = true; });
+
+  bool run4{false};
+  buffer.ExecuteAfter(zx::sec(5), [&run4] { run4 = true; });
+
+  bool run5{false};
+  buffer.ExecuteAfter(zx::sec(7), [&run5] { run5 = true; });
+
+  bool run6{false};
+  buffer.ExecuteAfter(zx::sec(30), [&run6] { run6 = true; });
+
+  buffer.Add(ToMessage("unused", zx::sec(0)));
+
+  EXPECT_TRUE(run1);
+  EXPECT_TRUE(run2);
+  EXPECT_FALSE(run3);
+  EXPECT_FALSE(run4);
+  EXPECT_FALSE(run5);
+  EXPECT_FALSE(run6);
+
+  buffer.Add(ToMessage("unused", zx::sec(10)));
+
+  EXPECT_TRUE(run1);
+  EXPECT_TRUE(run2);
+  EXPECT_TRUE(run3);
+  EXPECT_TRUE(run4);
+  EXPECT_TRUE(run5);
+  EXPECT_FALSE(run6);
+
+  buffer.NotifyInterruption();
+
+  EXPECT_TRUE(run1);
+  EXPECT_TRUE(run2);
+  EXPECT_TRUE(run3);
+  EXPECT_TRUE(run4);
+  EXPECT_TRUE(run5);
+  EXPECT_TRUE(run6);
 }
 
 }  // namespace

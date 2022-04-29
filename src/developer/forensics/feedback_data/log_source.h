@@ -48,7 +48,7 @@ class LogSource {
   // Starts log collection.
   //
   // Note: a check-fail will occur if |sink_| cannot safely receive messages after being interrupted
-  // and the log stream has stopped due to a disconnetion or call to Stop.
+  // and the log stream has stopped due to a disconnection or call to Stop.
   void Start();
 
   // Stops log collection and notfies |sink_| collection was interrupted.

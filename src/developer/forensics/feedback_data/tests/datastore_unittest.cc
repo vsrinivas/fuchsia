@@ -127,6 +127,15 @@ class DatastoreTest : public UnitTestFixture {
     InjectServiceProvider(diagnostics_server_.get(), kArchiveAccessorName);
   }
 
+  void SetUpLogServer(const std::string& inspect_chunk) {
+    diagnostics_server_ = std::make_unique<stubs::DiagnosticsArchive>(
+        std::make_unique<stubs::DiagnosticsBatchIteratorNeverRespondsAfterOneBatch>(
+            std::vector<std::string>({
+                {inspect_chunk},
+            })));
+    InjectServiceProvider(diagnostics_server_.get(), kArchiveAccessorName);
+  }
+
   void SetUpDiagnosticsServer(std::unique_ptr<stubs::DiagnosticsArchiveBase> server) {
     diagnostics_server_ = std::move(server);
     if (diagnostics_server_) {
@@ -368,7 +377,7 @@ TEST_F(DatastoreTest, GetAttachments_DropPreviousSyslog) {
 TEST_F(DatastoreTest, GetAttachments_SysLog) {
   // CollectSystemLogs() has its own set of unit tests so we only cover one log message here to
   // check that we are attaching the logs.
-  SetUpDiagnosticsServer(R"JSON(
+  SetUpLogServer(R"JSON(
 [
   {
     "metadata": {

@@ -77,7 +77,9 @@ executable("data_provider_unittest_exe") {
   sources = [ "data_provider_unittest.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.diagnostics",
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
@@ -319,6 +321,7 @@ executable("system_log_unittest_exe") {
     "//src/developer/forensics/testing/stubs:diagnostics",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/redact",
+    "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

@@ -43,6 +43,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       annotation_metrics_(cobalt_),
       annotation_manager_(annotation_manager),
       static_attachments_(feedback_data::GetStaticAttachments(attachment_allowlist_)),
+      system_log_(dispatcher_, services_, &clock_, redactor_, kActiveLoggingPeriod),
       reusable_annotation_providers_(
           GetReusableProviders(dispatcher_, services_, device_id_provider)),
       inspect_data_budget_(inspect_data_budget) {
@@ -77,6 +78,7 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       // is intended for tests.
       annotation_manager_(nullptr),
       static_attachments_({}),
+      system_log_(dispatcher_, services_, &clock_, redactor_, zx::sec(30)),
       reusable_annotation_providers_(
           GetReusableProviders(dispatcher_, services_, device_id_provider)) {}
 
@@ -187,9 +189,12 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
                             MakeCobaltTimeout(cobalt::TimedOutData::kKernelLog, timeout),
                             redactor_);
   } else if (key == kAttachmentLogSystem) {
-    return CollectSystemLog(dispatcher_, services_,
-                            MakeCobaltTimeout(cobalt::TimedOutData::kSystemLog, timeout),
-                            redactor_);
+    return system_log_.Get(timeout).and_then([this](AttachmentValue& log) {
+      if (log.HasError() && log.Error() == Error::kTimeout) {
+        cobalt_->LogOccurrence(cobalt::TimedOutData::kSystemLog);
+      }
+      return ::fpromise::ok(std::move(log));
+    });
   } else if (key == kAttachmentInspect) {
     return CollectInspectData(dispatcher_, services_,
                               MakeCobaltTimeout(cobalt::TimedOutData::kInspect, timeout),

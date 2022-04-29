@@ -139,6 +139,7 @@ source_set("datastore") {
     "//src/developer/forensics/feedback:redactor_factory",
     "//src/developer/forensics/feedback_data/annotations:annotation_providers",
     "//src/developer/forensics/feedback_data/annotations:types",
+    "//src/developer/forensics/feedback_data/attachments:attachment_providers",
     "//src/developer/forensics/feedback_data/attachments:types",
     "//src/developer/forensics/utils:previous_boot_file",
     "//src/developer/forensics/utils/cobalt",
@@ -152,7 +153,6 @@ source_set("datastore") {
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback_data/annotations:annotation_providers",
     "//src/developer/forensics/feedback_data/annotations:static_annotations",
-    "//src/developer/forensics/feedback_data/attachments:attachment_providers",
     "//src/developer/forensics/feedback_data/attachments:static_attachments",
   ]
 }

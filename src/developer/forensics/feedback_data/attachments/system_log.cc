@@ -1,16 +1,22 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 #include "src/developer/forensics/feedback_data/attachments/system_log.h"
 
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/defer.h>
+#include <lib/fit/function.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
 #include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <ios>
 #include <memory>
 #include <string>
 #include <vector>
@@ -21,61 +27,13 @@
 #include "src/developer/forensics/utils/fit/promise.h"
 #include "src/developer/forensics/utils/fit/timeout.h"
 #include "src/developer/forensics/utils/log_format.h"
+#include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/diagnostics/accessor2logger/log_message.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics {
 namespace feedback_data {
-
-::fpromise::promise<AttachmentValue> CollectSystemLog(
-    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    fit::Timeout timeout, RedactorBase* redactor) {
-  auto log_service =
-      std::make_unique<ArchiveAccessor>(dispatcher, services, fuchsia::diagnostics::DataType::LOGS,
-                                        fuchsia::diagnostics::StreamMode::SNAPSHOT);
-
-  // The system log shouldn't exceed 4 MiB, but use 10 MiB as a precaution.
-  auto buffer = std::make_shared<LogBuffer>(StorageSize::Megabytes(10), redactor);
-
-  // System log collection task.
-  log_service->Collect([buffer](fuchsia::diagnostics::FormattedContent chunk) {
-    auto chunk_result =
-        diagnostics::accessor2logger::ConvertFormattedContentToLogMessages(std::move(chunk));
-    if (chunk_result.is_error()) {
-      buffer->Add(::fpromise::error(std::move(chunk_result.error())));
-      return;
-    }
-
-    for (auto& log : chunk_result.value()) {
-      buffer->Add(std::move(log));
-    }
-  });
-
-  // Post-collection task.
-  ::fpromise::promise<AttachmentValue> log_promise =
-      log_service->WaitForDone(std::move(timeout))
-          .then([buffer](::fpromise::result<void, Error>& result)
-                    -> ::fpromise::result<AttachmentValue> {
-            std::string log = buffer->ToString();
-            if (log.empty()) {
-              FX_LOGS(WARNING) << "Empty system log";
-              AttachmentValue value = (result.is_ok()) ? AttachmentValue(Error::kMissingValue)
-                                                       : AttachmentValue(result.error());
-              return ::fpromise::ok(std::move(value));
-            }
-
-            AttachmentValue value = (result.is_ok())
-                                        ? AttachmentValue(std::move(log))
-                                        : AttachmentValue(std::move(log), result.error());
-
-            return ::fpromise::ok(std::move(value));
-          });
-
-  return fit::ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(log_promise),
-                                              /*args=*/std::move(log_service));
-}
-
 namespace {
 
 size_t AppendRepeated(const size_t last_msg_repeated, std::string& append_to) {
@@ -93,8 +51,6 @@ LogBuffer::LogBuffer(const StorageSize capacity, RedactorBase* redactor)
     : redactor_(redactor), capacity_(capacity.ToBytes()) {}
 
 bool LogBuffer::Add(LogSink::MessageOr message) {
-  auto enforce_capacity = ::fit::defer([this] { EnforceCapacity(); });
-
   if (message.is_ok()) {
     redactor_->Redact(message.value().msg);
   } else {
@@ -116,6 +72,12 @@ bool LogBuffer::Add(LogSink::MessageOr message) {
 
     return true;
   };
+
+  const int64_t action_timestamp = (message.is_ok()) ? message.value().time : last_timestamp;
+  auto on_return = ::fit::defer([this, action_timestamp] {
+    RunActions(action_timestamp);
+    EnforceCapacity();
+  });
 
   if (messages_.empty()) {
     return AddNew();
@@ -141,6 +103,13 @@ void LogBuffer::NotifyInterruption() {
   last_msg_repeated_ = 0u;
   is_sorted_ = true;
   size_ = 0u;
+
+  // Executing and deleting all remaining actions is safe because non-SystemLog controlled
+  // interruptions aren't expected to occur.
+  for (auto& [_, action] : actions_at_time_) {
+    action();
+  }
+  actions_at_time_.clear();
 }
 
 std::string LogBuffer::ToString() {
@@ -160,6 +129,10 @@ std::string LogBuffer::ToString() {
   }
 
   return out;
+}
+
+void LogBuffer::ExecuteAfter(const zx::duration uptime, ::fit::closure action) {
+  actions_at_time_.insert({uptime.get(), std::move(action)});
 }
 
 void LogBuffer::Sort() {
@@ -194,6 +167,13 @@ void LogBuffer::Sort() {
   last_msg_repeated_ = 0;
 }
 
+void LogBuffer::RunActions(const int64_t timestamp) {
+  for (auto it = actions_at_time_.lower_bound(timestamp); it != actions_at_time_.end();) {
+    it->second();
+    actions_at_time_.erase(it++);
+  }
+}
+
 void LogBuffer::EnforceCapacity() {
   if (size_ <= capacity_) {
     return;
@@ -212,6 +192,96 @@ LogBuffer::Message::Message(const LogSink::MessageOr& message, int64_t default_t
       msg(message.is_ok() ? Format(message.value())
                           : fxl::StringPrintf("!!! Failed to format chunk: %s !!!\n",
                                               message.error().c_str())) {}
+
+SystemLog::SystemLog(async_dispatcher_t* dispatcher,
+                     std::shared_ptr<sys::ServiceDirectory> services, timekeeper::Clock* clock,
+                     RedactorBase* redactor, const zx::duration active_period)
+    : dispatcher_(dispatcher),
+      buffer_(kCurrentLogBufferSize, redactor),
+      source_(dispatcher, services, &buffer_,
+              std::make_unique<backoff::ExponentialBackoff>(zx::min(1), 2u, zx::hour(1))),
+      clock_(clock),
+      active_period_(active_period) {}
+
+namespace {
+
+// Creates a callable object that can be used to complete the system log collection flow with an
+// ok status or a timeout and a promise to consume that result.
+auto CompletesAndConsume() {
+  ::fpromise::bridge<void, Error> bridge;
+  auto completer =
+      std::make_shared<::fpromise::completer<void, Error>>(std::move(bridge.completer));
+
+  return std::make_tuple(
+      [completer] {
+        if (!*(completer)) {
+          return;
+        }
+
+        completer->complete_ok();
+      },
+      [completer] {
+        if (!*(completer)) {
+          return;
+        }
+
+        FX_LOGS(WARNING) << " System log collection timed out";
+        completer->complete_error(Error::kTimeout);
+      },
+      std::move(bridge.consumer).promise_or(::fpromise::error(Error::kLogicError)));
+}
+
+}  // namespace
+
+::fpromise::promise<AttachmentValue> SystemLog::Get(const zx::duration timeout) {
+  if (!is_active_) {
+    is_active_ = true;
+    source_.Start();
+  }
+
+  auto [complete_ok, complete_timeout, consume] = CompletesAndConsume();
+
+  // Cancel the outstanding |make_inactive_| because logs are being requested.
+  make_inactive_.Cancel();
+
+  // Complete the call after |timeout| elapses or a message with a timestamp greater than or equal
+  // to the current uptime is added to |buffer_|.
+  async::PostDelayedTask(dispatcher_, std::move(complete_timeout), timeout);
+  buffer_.ExecuteAfter(zx::nsec(clock_->Now().get()), std::move(complete_ok));
+
+  auto self = ptr_factory_.GetWeakPtr();
+  return consume.then(
+      [self](const ::fpromise::result<void, Error>& result) -> ::fpromise::result<AttachmentValue> {
+        if (!self) {
+          return ::fpromise::ok(AttachmentValue(Error::kLogicError));
+        }
+
+        if (result.is_error() && result.error() == Error::kLogicError) {
+          FX_LOGS(FATAL) << "Log collection promise was incorrectly dropped";
+        }
+
+        // Cancel the outstanding |make_inactive_| because the "active" period should be extended.
+        self->make_inactive_.Cancel();
+        self->make_inactive_.PostDelayed(self->dispatcher_, self->active_period_);
+
+        auto system_log = self->buffer_.ToString();
+        if (system_log.empty()) {
+          return ::fpromise::ok(AttachmentValue(Error::kMissingValue));
+        }
+
+        return ::fpromise::ok(result.is_ok()
+                                  ? AttachmentValue(std::move(system_log))
+                                  : AttachmentValue(std::move(system_log), result.error()));
+      });
+}
+
+void SystemLog::MakeInactive() {
+  FX_LOGS(INFO) << "System log not requested for " << active_period_.to_secs()
+                << " seconds after last collection terminated, stopping streaming";
+
+  is_active_ = false;
+  source_.Stop();
+}
 
 }  // namespace feedback_data
 }  // namespace forensics

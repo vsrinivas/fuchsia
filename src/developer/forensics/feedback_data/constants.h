@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_CONSTANTS_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <lib/zx/time.h>
 
 #include <cstdint>
 #include <set>
@@ -105,6 +106,19 @@ constexpr char kCurrentBuildVersionPath[] = "/data/build_version.txt";
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 constexpr char kUtcMonotonicDifferenceFile[] = "current_utc_monotonic_difference.txt";
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Logs from current boot.
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Buffer up to 4MiB of logs in memory.
+constexpr StorageSize kCurrentLogBufferSize = StorageSize::Megabytes(4);
+
+// Stream and buffer logs for 5 minutes after a snapshot collected.
+//
+// TODO(fxbug.dev/99223): Set the default value for userdebug to at least 1 hour. Logs will be
+// streamed indefinitely because of hourly snapshots.
+constexpr zx::duration kActiveLoggingPeriod = zx::min(5);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Logs from previous boot cycle.

@@ -18,6 +18,7 @@
 #include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/annotation_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/types.h"
+#include "src/developer/forensics/feedback_data/attachments/system_log.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/inspect_data_budget.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
@@ -25,6 +26,7 @@
 #include "src/developer/forensics/utils/fit/timeout.h"
 #include "src/developer/forensics/utils/previous_boot_file.h"
 #include "src/developer/forensics/utils/redact/redactor.h"
+#include "src/lib/timekeeper/system_clock.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -75,6 +77,7 @@ class Datastore {
   const std::shared_ptr<sys::ServiceDirectory> services_;
   cobalt::Logger* cobalt_;
   RedactorBase* redactor_;
+  timekeeper::SystemClock clock_;
   const AnnotationKeys annotation_allowlist_;
   AttachmentKeys attachment_allowlist_;
 
@@ -82,6 +85,7 @@ class Datastore {
   feedback::AnnotationManager* annotation_manager_;
   Attachments static_attachments_;
 
+  SystemLog system_log_;
   std::vector<std::unique_ptr<AnnotationProvider>> reusable_annotation_providers_;
 
   InspectDataBudget* inspect_data_budget_;
