@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 #include "src/devices/lib/fidl-metadata/spi.h"
 
-#include <fidl/fuchsia.hardware.spi/cpp/wire.h>
+#include <fidl/fuchsia.hardware.spi.businfo/cpp/wire.h>
 
 namespace fidl_metadata::spi {
 zx::status<std::vector<uint8_t>> SpiChannelsToFidl(const cpp20::span<const Channel> channels) {
   fidl::Arena allocator;
-  fidl::VectorView<fuchsia_hardware_spi::wire::SpiChannel> spi_channels(allocator, channels.size());
+  fidl::VectorView<fuchsia_hardware_spi_businfo::wire::SpiChannel> spi_channels(allocator,
+                                                                                channels.size());
 
   for (size_t i = 0; i < channels.size(); i++) {
     auto& chan = spi_channels[i];
@@ -21,10 +22,10 @@ zx::status<std::vector<uint8_t>> SpiChannelsToFidl(const cpp20::span<const Chann
     chan.set_vid(channels[i].vid);
   }
 
-  fuchsia_hardware_spi::wire::SpiBusMetadata metadata(allocator);
+  fuchsia_hardware_spi_businfo::wire::SpiBusMetadata metadata(allocator);
   metadata.set_channels(allocator, spi_channels);
 
-  fidl::unstable::OwnedEncodedMessage<fuchsia_hardware_spi::wire::SpiBusMetadata> encoded(
+  fidl::unstable::OwnedEncodedMessage<fuchsia_hardware_spi_businfo::wire::SpiBusMetadata> encoded(
       fidl::internal::WireFormatVersion::kV2, &metadata);
   if (!encoded.ok()) {
     return zx::error(encoded.status());

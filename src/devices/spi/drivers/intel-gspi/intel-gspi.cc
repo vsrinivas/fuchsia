@@ -4,6 +4,7 @@
 
 #include "intel-gspi.h"
 
+#include <fidl/fuchsia.hardware.spi.businfo/cpp/wire.h>
 #include <fidl/fuchsia.hardware.spi/cpp/wire.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/ddk/debug.h>
@@ -360,13 +361,13 @@ void GspiDevice::DeassertChipSelect() {
 }
 
 zx_status_t GspiDevice::ValidateChildConfig(Con1Reg& con1) {
-  auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_spi::wire::SpiBusMetadata>(
+  auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_spi_businfo::wire::SpiBusMetadata>(
       zxdev(), DEVICE_METADATA_SPI_CHANNELS);
   if (!decoded.is_ok()) {
     return decoded.error_value();
   }
 
-  fuchsia_hardware_spi::wire::SpiBusMetadata* metadata = decoded->PrimaryObject();
+  fuchsia_hardware_spi_businfo::wire::SpiBusMetadata* metadata = decoded->PrimaryObject();
   if (!metadata->has_channels()) {
     zxlogf(INFO, "%s: no channels supplied.", __func__);
     return ZX_OK;
@@ -377,7 +378,7 @@ zx_status_t GspiDevice::ValidateChildConfig(Con1Reg& con1) {
     zxlogf(ERROR, "%s: too many SPI children!", __func__);
     return ZX_ERR_NOT_SUPPORTED;
   }
-  fuchsia_hardware_spi::wire::SpiClockPhase phase = channels[0].clock_phase();
+  fuchsia_hardware_spi_businfo::wire::SpiClockPhase phase = channels[0].clock_phase();
   bool cs_high = channels[0].cs_polarity_high();
   bool clk_high = channels[0].clock_polarity_high();
   for (auto& chan : channels) {
@@ -390,7 +391,8 @@ zx_status_t GspiDevice::ValidateChildConfig(Con1Reg& con1) {
     }
   }
 
-  con1.set_sph(phase == fuchsia_hardware_spi::wire::SpiClockPhase::kClockPhaseFirst ? 0 : 1);
+  con1.set_sph(phase == fuchsia_hardware_spi_businfo::wire::SpiClockPhase::kClockPhaseFirst ? 0
+                                                                                            : 1);
   con1.set_spo(clk_high ? 1 : 0);
   con1.set_ifs(cs_high ? 1 : 0);
 

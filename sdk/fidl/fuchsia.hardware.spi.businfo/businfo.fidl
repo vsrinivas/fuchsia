@@ -1,0 +1,43 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.hardware.spi.businfo;
+
+const MAX_SPI_CHANNEL uint32 = 32; // arbitrary.
+type SpiClockPhase = flexible enum {
+    CLOCK_PHASE_FIRST = 0;
+    CLOCK_PHASE_SECOND = 1;
+};
+
+/// Represents a single device on a SPI bus.
+type SpiChannel = table {
+    /// ID of the bus that this device is on.
+    1: bus_id uint32;
+    /// Chip select number for the device.
+    2: cs uint32;
+
+    /// Vendor ID. Used when binding via platform bus device IDs.
+    3: vid uint32;
+    /// Product ID. Used when binding via platform bus device IDs.
+    4: pid uint32;
+    /// Device ID. Used when binding via platform bus device IDs.
+    5: did uint32;
+
+    // Bus configuration.
+    /// Chip select polarity: true == high, false == low.
+    6: cs_polarity_high bool;
+    /// Size in bits of a single word on the SPI bus.
+    7: word_length_bits uint8;
+
+    /// Are we in charge of the bus?
+    8: is_bus_controller bool;
+    /// Clock polarity. true == high, false == low.
+    9: clock_polarity_high bool;
+    ///  Clock phase.
+   10: clock_phase SpiClockPhase;
+};
+
+/// Passed to the spi driver in metadata as DEVICE_METADATA_SPI_CHANNELS.
+type SpiBusMetadata = table {
+    1: channels vector<SpiChannel>:MAX_SPI_CHANNEL;
+};

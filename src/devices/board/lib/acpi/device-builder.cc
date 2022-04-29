@@ -4,7 +4,7 @@
 
 #include "src/devices/board/lib/acpi/device-builder.h"
 
-#include <fidl/fuchsia.hardware.spi/cpp/wire.h>
+#include <fidl/fuchsia.hardware.spi.businfo/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <zircon/compiler.h>
@@ -231,7 +231,7 @@ size_t DeviceBuilder::AddBusChild(DeviceChildEntry d) {
 }
 
 zx::status<std::vector<uint8_t>> DeviceBuilder::FidlEncodeMetadata() {
-  using SpiChannel = fuchsia_hardware_spi::wire::SpiChannel;
+  using SpiChannel = fuchsia_hardware_spi_businfo::wire::SpiChannel;
   using I2CChannel = fuchsia_hardware_i2c_businfo::wire::I2CChannel;
   fidl::Arena<> allocator;
   return std::visit(
@@ -241,7 +241,7 @@ zx::status<std::vector<uint8_t>> DeviceBuilder::FidlEncodeMetadata() {
           return zx::ok(std::vector<uint8_t>());
         } else if constexpr (std::is_same_v<T, std::vector<SpiChannel>>) {
           ZX_ASSERT(HasBusId());  // Bus ID should get set when a child device is added.
-          fuchsia_hardware_spi::wire::SpiBusMetadata metadata(allocator);
+          fuchsia_hardware_spi_businfo::wire::SpiBusMetadata metadata(allocator);
           for (auto& chan : arg) {
             chan.set_bus_id(GetBusId());
           }
@@ -391,7 +391,7 @@ std::vector<zx_bind_inst_t> DeviceBuilder::GetFragmentBindInsnsForChild(size_t c
   std::visit(
       [&ret, child_index](auto&& arg) {
         using T = std::decay_t<decltype(arg)>;
-        using SpiChannel = fuchsia_hardware_spi::wire::SpiChannel;
+        using SpiChannel = fuchsia_hardware_spi_businfo::wire::SpiChannel;
         using I2CChannel = fuchsia_hardware_i2c_businfo::wire::I2CChannel;
         if constexpr (std::is_same_v<T, std::monostate>) {
           ZX_ASSERT_MSG(false, "bus should have children");

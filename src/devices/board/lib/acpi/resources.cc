@@ -5,7 +5,7 @@
 #include "src/devices/board/lib/acpi/resources.h"
 
 #include <fidl/fuchsia.hardware.i2c.businfo/cpp/wire.h>
-#include <fidl/fuchsia.hardware.spi/cpp/wire.h>
+#include <fidl/fuchsia.hardware.spi.businfo/cpp/wire.h>
 
 #include "src/devices/board/lib/acpi/acpi.h"
 #include "src/devices/board/lib/acpi/status.h"
@@ -202,11 +202,11 @@ zx_status_t resource_parse_irq(ACPI_RESOURCE* res, resource_irq_t* out) {
   return ZX_OK;
 }
 
-acpi::status<fuchsia_hardware_spi::wire::SpiChannel> resource_parse_spi(
+acpi::status<fuchsia_hardware_spi_businfo::wire::SpiChannel> resource_parse_spi(
     acpi::Acpi* acpi, ACPI_HANDLE device, ACPI_RESOURCE* res, fidl::AnyArena& allocator,
     ACPI_HANDLE* resource_source) {
   auto& spi_bus = res->Data.SpiSerialBus;
-  fuchsia_hardware_spi::wire::SpiChannel result(allocator);
+  fuchsia_hardware_spi_businfo::wire::SpiChannel result(allocator);
 
   // Figure out which bus the SPI device belongs to.
   auto found_result = acpi->GetHandle(device, spi_bus.ResourceSource.StringPtr);
@@ -219,9 +219,10 @@ acpi::status<fuchsia_hardware_spi::wire::SpiChannel> resource_parse_spi(
   result.set_word_length_bits(spi_bus.DataBitLength);
   result.set_is_bus_controller(spi_bus.SlaveMode == ACPI_CONTROLLER_INITIATED);
   result.set_clock_polarity_high(spi_bus.ClockPolarity == ACPI_SPI_START_HIGH);
-  result.set_clock_phase(spi_bus.ClockPhase == ACPI_SPI_FIRST_PHASE
-                             ? fuchsia_hardware_spi::wire::SpiClockPhase::kClockPhaseFirst
-                             : fuchsia_hardware_spi::wire::SpiClockPhase::kClockPhaseSecond);
+  result.set_clock_phase(
+      spi_bus.ClockPhase == ACPI_SPI_FIRST_PHASE
+          ? fuchsia_hardware_spi_businfo::wire::SpiClockPhase::kClockPhaseFirst
+          : fuchsia_hardware_spi_businfo::wire::SpiClockPhase::kClockPhaseSecond);
 
   return zx::ok(result);
 }

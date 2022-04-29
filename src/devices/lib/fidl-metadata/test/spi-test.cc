@@ -4,7 +4,7 @@
 
 #include "src/devices/lib/fidl-metadata/spi.h"
 
-#include <fidl/fuchsia.hardware.spi/cpp/wire.h>
+#include <fidl/fuchsia.hardware.spi.businfo/cpp/wire.h>
 
 #include <zxtest/zxtest.h>
 
@@ -15,7 +15,7 @@ static void check_encodes(cpp20::span<const fidl_metadata::spi::Channel> spi_cha
   std::vector<uint8_t>& data = result.value();
 
   // Decode.
-  fidl::unstable::DecodedMessage<fuchsia_hardware_spi::wire::SpiBusMetadata> decoded(
+  fidl::unstable::DecodedMessage<fuchsia_hardware_spi_businfo::wire::SpiBusMetadata> decoded(
       fidl::internal::WireFormatVersion::kV2, data.data(), data.size());
   ASSERT_OK(decoded.status());
 

@@ -7,7 +7,7 @@ import("//build/test.gni")
 test("fidl-metadata-unittest") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.i2c.businfo:fuchsia.hardware.i2c.businfo_llcpp",
-    "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp",
+    "//sdk/fidl/fuchsia.hardware.spi.businfo:fuchsia.hardware.spi.businfo_llcpp",
     "//sdk/fidl/fuchsia.hardware.tee:fuchsia.hardware.tee_llcpp",
     "//src/devices/lib/fidl-metadata",
     "//zircon/system/ulib/zxtest",

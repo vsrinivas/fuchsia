@@ -4,6 +4,7 @@
 
 #include "spi.h"
 
+#include <fidl/fuchsia.hardware.spi.businfo/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
 
@@ -66,13 +67,13 @@ zx_status_t SpiDevice::Create(void* ctx, zx_device_t* parent) {
 }
 
 void SpiDevice::AddChildren(const ddk::SpiImplProtocolClient& spi) {
-  auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_spi::wire::SpiBusMetadata>(
+  auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_spi_businfo::wire::SpiBusMetadata>(
       zxdev(), DEVICE_METADATA_SPI_CHANNELS);
   if (!decoded.is_ok()) {
     return;
   }
 
-  fuchsia_hardware_spi::wire::SpiBusMetadata* metadata = decoded->PrimaryObject();
+  fuchsia_hardware_spi_businfo::wire::SpiBusMetadata* metadata = decoded->PrimaryObject();
   if (!metadata->has_channels()) {
     zxlogf(INFO, "No channels supplied.");
     return;

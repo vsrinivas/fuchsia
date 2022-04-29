@@ -27,6 +27,7 @@ common_deps = [
   "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
   "//sdk/banjo/fuchsia.hardware.spiimpl:fuchsia.hardware.spiimpl_banjo_cpp",
   "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp",
+  "//sdk/fidl/fuchsia.hardware.spi.businfo:fuchsia.hardware.spi.businfo_llcpp",
   "//src/devices/lib/acpi",
   "//src/devices/lib/driver",
   "//src/devices/lib/mmio",
