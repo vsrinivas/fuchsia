@@ -612,11 +612,13 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::ProcessDontNeedAndLruQueues(u
   ASSERT(target_gen <= mru_gen_.load(ktl::memory_order_relaxed) - (kNumActiveQueues - 1));
 
   // Calculate a truly worst case loop iteration count based on every page being in either the LRU
-  // queue or the wrong DontNeed queue. Further we assume a single page per iteration to give some
-  // additional buffer, even though multiple pages should be processed per iteration.
+  // queue or the wrong DontNeed queue and needing to iterate the LRU multiple steps to the
+  // target_gen. Instead of reading the LRU and comparing the target_gen, just add a buffer of the
+  // maximum number of page queues.
   ActiveInactiveCounts active_inactive = GetActiveInactiveCounts();
   const uint64_t max_dont_need_iterations = page_queue_counts_[PageQueuePagerBackedDontNeed] + 1;
-  const uint64_t max_lru_iterations = active_inactive.active + active_inactive.inactive + 1;
+  const uint64_t max_lru_iterations =
+      active_inactive.active + active_inactive.inactive + kNumPagerBacked;
   // Loop iteration counting is just for diagnostic purposes.
   uint64_t loop_iterations = 0;
 
