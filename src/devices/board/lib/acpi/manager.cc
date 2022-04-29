@@ -54,6 +54,7 @@ acpi::status<> Manager::DiscoverDevices() {
                                   // We failed to enumerate this device, so we don't enumerate any
                                   // of its children.
                                   ignored_depth = depth;
+                                  return acpi::ok();
                                 }
                                 if (status.value()) {
                                   // This device is not present, so we should not enumerate its
