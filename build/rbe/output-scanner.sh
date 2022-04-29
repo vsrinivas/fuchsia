@@ -121,7 +121,7 @@ then
   test "$status" != 0 || {
     for f in "${outputs[@]}"
     do
-      if grep -q "$build_subdir" "$f"
+      if grep -qwF "$build_subdir" "$f"
       then
         err=1
         error_msg "Output file $f contains '$build_subdir'." \
