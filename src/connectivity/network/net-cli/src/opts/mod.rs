@@ -216,7 +216,7 @@ pub struct IfAddrAdd {
     pub interface: InterfaceIdentifier,
     #[argh(positional)]
     pub addr: String,
-    #[argh(positional)]
+    #[argh(positional, from_str_fn(parse_netmask_or_prefix_length))]
     pub prefix: Option<u8>,
     #[argh(switch)]
     /// skip adding a local subnet route for this interface and address
@@ -231,7 +231,7 @@ pub struct IfAddrDel {
     pub interface: InterfaceIdentifier,
     #[argh(positional)]
     pub addr: String,
-    #[argh(positional)]
+    #[argh(positional, from_str_fn(parse_netmask_or_prefix_length))]
     pub prefix: Option<u8>,
 }
 
