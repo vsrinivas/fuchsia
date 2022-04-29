@@ -23,7 +23,6 @@ pub struct fx_logger_config_t {
 }
 
 // Constants defined via logger.fidl
-pub const FX_LOG_ALL: fx_log_severity_t = flogger::LogLevelFilter::All as i32;
 pub const FX_LOG_TRACE: fx_log_severity_t = flogger::LogLevelFilter::Trace as i32;
 pub const FX_LOG_DEBUG: fx_log_severity_t = flogger::LogLevelFilter::Debug as i32;
 pub const FX_LOG_INFO: fx_log_severity_t = flogger::LogLevelFilter::Info as i32;

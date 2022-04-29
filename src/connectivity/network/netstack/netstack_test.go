@@ -70,8 +70,8 @@ func TestMain(m *testing.M) {
 		appCtx.ConnectToEnvService(req)
 		options := syslog.LogInitOptions{
 			LogSink:                       logSink,
-			LogLevel:                      syslog.AllLevel,
-			MinSeverityForFileAndLineInfo: syslog.AllLevel,
+			LogLevel:                      syslog.TraceLevel,
+			MinSeverityForFileAndLineInfo: syslog.TraceLevel,
 		}
 		l, err := syslog.NewLogger(options)
 		if err != nil {

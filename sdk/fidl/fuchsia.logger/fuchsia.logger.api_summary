@@ -16,7 +16,6 @@ struct/member fuchsia.logger/LogFilterOptions.tags vector<string:63>:16
 struct/member fuchsia.logger/LogFilterOptions.tid uint64
 struct/member fuchsia.logger/LogFilterOptions.verbosity uint8
 struct fuchsia.logger/LogFilterOptions
-enum/member fuchsia.logger/LogLevelFilter.ALL -127
 enum/member fuchsia.logger/LogLevelFilter.DEBUG 32
 enum/member fuchsia.logger/LogLevelFilter.DEPRECATED_INFO_LOAD_BEARING_IN_CHROMIUM 0
 enum/member fuchsia.logger/LogLevelFilter.ERROR 80

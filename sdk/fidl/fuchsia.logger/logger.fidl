@@ -15,7 +15,6 @@ using fuchsia.diagnostics;
 type LogLevelFilter = strict enum : int8 {
     @deprecated("TODO(https://crrev.com/c/3606917): Remove when no longer used in Chromium")
     DEPRECATED_INFO_LOAD_BEARING_IN_CHROMIUM = 0;
-    ALL = -0x7F;
     TRACE = 0x10;
     DEBUG = 0x20;
     INFO = 0x30;

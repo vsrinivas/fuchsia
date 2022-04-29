@@ -45,7 +45,6 @@ const (
 type LogLevel int32
 
 const (
-	AllLevel     = LogLevel(logger.LogLevelFilterAll)
 	TraceLevel   = LogLevel(logger.LogLevelFilterTrace)
 	DebugLevel   = LogLevel(logger.LogLevelFilterDebug)
 	InfoLevel    = LogLevel(logger.LogLevelFilterInfo)
@@ -76,7 +75,7 @@ func (ll *LogLevel) Set(s string) error {
 func logLevelFromString(s string) LogLevel {
 	switch s {
 	case "ALL":
-		return AllLevel
+		return TraceLevel
 	case "TRACE":
 		return TraceLevel
 	case "DEBUG":
@@ -96,8 +95,6 @@ func logLevelFromString(s string) LogLevel {
 
 func (ll LogLevel) String() string {
 	switch ll {
-	case AllLevel:
-		return "ALL"
 	case TraceLevel:
 		return "TRACE"
 	case DebugLevel:

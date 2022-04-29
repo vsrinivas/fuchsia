@@ -23,9 +23,6 @@ pub mod levels {
     /// Defines log levels for clients.
     pub type LogLevel = i32;
 
-    /// ALL log level
-    pub const ALL: LogLevel = syslog::FX_LOG_ALL;
-
     /// TRACE log level
     pub const TRACE: LogLevel = syslog::FX_LOG_TRACE;
 
@@ -80,7 +77,6 @@ pub fn get_fx_logger_level(level: Level) -> levels::LogLevel {
 /// Maps syslog severity levels to  log crate log filters.
 fn get_log_filter(level: levels::LogLevel) -> LevelFilter {
     match level {
-        syslog::FX_LOG_ALL => LevelFilter::Trace, // log::LevelFilter fidelity
         syslog::FX_LOG_TRACE => LevelFilter::Trace,
         syslog::FX_LOG_DEBUG => LevelFilter::Debug,
         syslog::FX_LOG_INFO => LevelFilter::Info,
