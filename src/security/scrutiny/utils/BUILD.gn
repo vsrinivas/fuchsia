@@ -93,13 +93,14 @@ if (is_host) {
 
     non_rust_deps = [
       "//src/lib/chunked-compression",
-      "//src/security/scrutiny/utils/ffi-bridge",
+      "//src/security/scrutiny/utils/ffi",
       "//third_party/zstd",
     ]
 
     sources = [
       "src/artifact.rs",
       "src/blobfs.rs",
+      "src/blobfs_export.rs",
       "src/bootfs.rs",
       "src/fvm.rs",
       "src/golden.rs",
@@ -145,7 +146,7 @@ if (is_host) {
 
     non_rust_deps = [
       "//src/lib/chunked-compression",
-      "//src/security/scrutiny/utils/ffi-bridge",
+      "//src/security/scrutiny/utils/ffi",
       "//third_party/zstd",
     ]
   }

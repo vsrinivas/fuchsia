@@ -28,8 +28,8 @@ extern "C" {
     fn ZSTD_getErrorName(code: size_t) -> *const c_char;
 }
 
-// "C" externs for ffi-bridged compression functions.
-#[link(name = "ffi-bridge")]
+// "C" externs for ffi compression functions.
+#[link(name = "ffi")]
 extern "C" {
     fn zstd_chunked_decompress(
         src: *const c_void,
