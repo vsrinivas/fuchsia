@@ -11,9 +11,7 @@ use {
             },
             environment::Environment,
             error::ModelError,
-            resolver::{
-                ResolvedComponent, ResolvedPackage, Resolver, ResolverError, ResolverRegistry,
-            },
+            resolver::{ResolvedComponent, Resolver, ResolverError, ResolverRegistry},
             starter::Starter,
         },
     },
@@ -31,7 +29,7 @@ use {
         epitaph::ChannelEpitaphExt,
     },
     fidl_fidl_examples_routing_echo::{EchoMarker, EchoRequest, EchoRequestStream},
-    fidl_fuchsia_component_runner as fcrunner,
+    fidl_fuchsia_component_resolution as fresolution, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_diagnostics_types::{
         ComponentDiagnostics, ComponentTasks, Task as DiagnosticsTask,
     },
@@ -207,9 +205,10 @@ impl MockResolver {
         Ok(ResolvedComponent {
             resolved_url: format!("test:///{}_resolved", name),
             decl: decl.clone(),
-            package: Some(ResolvedPackage {
+            package: Some(fresolution::Package {
                 url: Some("pkg".to_string()),
                 directory: Some(client),
+                ..fresolution::Package::EMPTY
             }),
             config_values,
         })

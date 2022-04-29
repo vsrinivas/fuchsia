@@ -6,10 +6,7 @@ use {
     crate::model::{
         component::{ComponentInstance, WeakComponentInstance},
         error::ModelError,
-        routing::{
-            route_and_open_capability_for_resolver, OpenOptions, OpenResolverOptions,
-            ResolverCapability, RouteRequest,
-        },
+        routing::{route_and_open_capability, OpenOptions, OpenResolverOptions, RouteRequest},
     },
     ::routing::component_instance::ComponentInstanceInterface,
     anyhow::Error,
@@ -17,7 +14,7 @@ use {
     clonable_error::ClonableError,
     cm_rust::{FidlIntoNative, ResolverRegistration},
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_resolution as fresolution,
-    fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem,
     fuchsia_zircon::Status,
     std::{collections::HashMap, sync::Arc},
     thiserror::Error,
@@ -43,30 +40,8 @@ pub trait Resolver {
 pub struct ResolvedComponent {
     pub resolved_url: String,
     pub decl: cm_rust::ComponentDecl,
-    pub package: Option<ResolvedPackage>,
+    pub package: Option<fresolution::Package>,
     pub config_values: Option<cm_rust::ValuesData>,
-}
-
-/// The response returned from a Resolver. This struct is derived from the FIDL
-/// [`fuchsia.component.resolution.Package`][fidl_fuchsia_component_resolution::Package]
-/// table.
-// TODO(https://fxbug.dev/94581): Remove this post-migration.
-#[derive(Debug)]
-pub struct ResolvedPackage {
-    pub url: Option<String>,
-    pub directory: Option<fidl::endpoints::ClientEnd<fidl_fuchsia_io::DirectoryMarker>>,
-}
-
-impl From<fsys::Package> for ResolvedPackage {
-    fn from(package: fsys::Package) -> ResolvedPackage {
-        ResolvedPackage { url: package.package_url, directory: package.package_dir }
-    }
-}
-
-impl From<fresolution::Package> for ResolvedPackage {
-    fn from(package: fresolution::Package) -> ResolvedPackage {
-        ResolvedPackage { url: package.url, directory: package.directory }
-    }
 }
 
 /// Resolves a component URL using a resolver selected based on the URL's scheme.
@@ -158,75 +133,35 @@ impl Resolver for RemoteResolver {
         component_url: &str,
         _target: &Arc<ComponentInstance>,
     ) -> Result<ResolvedComponent, ResolverError> {
-        let (client_end, mut server_end) =
-            fidl::Channel::create().map_err(ResolverError::internal)?;
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fresolution::ResolverMarker>()
+            .map_err(ResolverError::internal)?;
         let component = self.component.upgrade().map_err(ResolverError::routing_error)?;
         let open_options = OpenResolverOptions {
             flags: fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             open_mode: fio::MODE_TYPE_SERVICE,
-            server_chan: &mut server_end,
+            server_chan: &mut server_end.into_channel(),
         };
-
-        // In order to allow the soft transitioning of resolver components
-        // using fuchsia.sys2.ComponentResolver to its SDK counterpart,
-        // fuchsia.component.resolution.Resolver, component_manager will
-        // briefly support both protocols.
-        // TODO(https://fxbug.dev/94581): Remove dual-support when all clients
-        // are migrated.
-        let cap = route_and_open_capability_for_resolver(
+        route_and_open_capability(
             RouteRequest::Resolver(self.registration.clone()),
             &component,
             OpenOptions::Resolver(open_options),
         )
         .await
         .map_err(ResolverError::routing_error)?;
-
-        let (resolved_url, package, decl_buffer, config_values) = match cap {
-            ResolverCapability::Internal => {
-                let proxy =
-                    fidl::endpoints::ClientEnd::<fsys::ComponentResolverMarker>::new(client_end)
-                        .into_proxy()
-                        .map_err(ResolverError::fidl_error)?;
-                let component =
-                    proxy.resolve(component_url).await.map_err(ResolverError::fidl_error)??;
-                let decl_buffer: fmem::Data =
-                    component.decl.ok_or(ResolverError::RemoteInvalidData)?;
-                (
-                    component.resolved_url,
-                    component.package.map(Into::into),
-                    decl_buffer,
-                    component.config_values,
-                )
-            }
-            ResolverCapability::SDK => {
-                let proxy =
-                    fidl::endpoints::ClientEnd::<fresolution::ResolverMarker>::new(client_end)
-                        .into_proxy()
-                        .map_err(ResolverError::fidl_error)?;
-                let component =
-                    proxy.resolve(component_url).await.map_err(ResolverError::fidl_error)??;
-                let decl_buffer: fmem::Data =
-                    component.decl.ok_or(ResolverError::RemoteInvalidData)?;
-                (
-                    component.url,
-                    component.package.map(Into::into),
-                    decl_buffer,
-                    component.config_values,
-                )
-            }
-        };
+        let component = proxy.resolve(component_url).await.map_err(ResolverError::fidl_error)??;
+        let decl_buffer: fmem::Data = component.decl.ok_or(ResolverError::RemoteInvalidData)?;
         let decl = read_and_validate_manifest(&decl_buffer).await?;
         let config_values = if decl.config.is_some() {
             Some(read_and_validate_config_values(
-                &config_values.ok_or(ResolverError::RemoteInvalidData)?,
+                &component.config_values.ok_or(ResolverError::RemoteInvalidData)?,
             )?)
         } else {
             None
         };
         Ok(ResolvedComponent {
-            resolved_url: resolved_url.ok_or(ResolverError::RemoteInvalidData)?,
+            resolved_url: component.url.ok_or(ResolverError::RemoteInvalidData)?,
             decl,
-            package,
+            package: component.package,
             config_values,
         })
     }
@@ -338,33 +273,6 @@ impl ResolverError {
     }
 }
 
-impl From<fsys::ResolverError> for ResolverError {
-    fn from(err: fsys::ResolverError) -> ResolverError {
-        match err {
-            fsys::ResolverError::Internal => ResolverError::internal(InternalRemoteError(err)),
-            fsys::ResolverError::Io => ResolverError::io(InternalRemoteError(err)),
-            fsys::ResolverError::PackageNotFound
-            | fsys::ResolverError::NoSpace
-            | fsys::ResolverError::ResourceUnavailable
-            | fsys::ResolverError::NotSupported => {
-                ResolverError::package_not_found(InternalRemoteError(err))
-            }
-            fsys::ResolverError::ManifestNotFound => {
-                ResolverError::manifest_not_found(InternalRemoteError(err))
-            }
-            fsys::ResolverError::InvalidArgs => {
-                ResolverError::malformed_url(InternalRemoteError(err))
-            }
-            fsys::ResolverError::InvalidManifest => {
-                ResolverError::ManifestInvalid(anyhow::Error::from(InternalRemoteError(err)).into())
-            }
-            fsys::ResolverError::ConfigValuesNotFound => {
-                ResolverError::ConfigValuesIo(Status::NOT_FOUND)
-            }
-        }
-    }
-}
-
 impl From<fresolution::ResolverError> for ResolverError {
     fn from(err: fresolution::ResolverError) -> ResolverError {
         match err {
@@ -391,10 +299,6 @@ impl From<fresolution::ResolverError> for ResolverError {
         }
     }
 }
-
-#[derive(Error, Clone, Debug)]
-#[error("remote resolver responded with {0:?}")]
-struct InternalRemoteError(fsys::ResolverError);
 
 #[derive(Error, Clone, Debug)]
 #[error("remote resolver responded with {0:?}")]

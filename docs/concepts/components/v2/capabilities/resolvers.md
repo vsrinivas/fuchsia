@@ -122,7 +122,7 @@ support standard Fuchsia URL schemes:
 [capability-routing]: /docs/concepts/components/v2/capabilities/README.md#routing
 [component-manifest]: /docs/concepts/components/v2/component_manifests.md
 [environment]: /docs/concepts/components/v2/environments.md
-[fidl-resolver]: /sdk/fidl/fuchsia.sys2/runtime/component_resolver.fidl
+[fidl-resolver]: /sdk/fidl/fuchsia.component.resolution/resolver.fidl
 [fidl-decl]: /sdk/fidl/fuchsia.component.decl/component.fidl
 [fidl-directory]: /sdk/fidl/fuchsia.io/directory.fidl
 [url-boot]: /docs/reference/components/url.md#fuchsia-boot

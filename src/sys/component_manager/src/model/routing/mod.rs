@@ -21,12 +21,9 @@ use {
         },
     },
     ::routing::{
-        capability_source::{CapabilitySourceInterface, ComponentCapability},
-        component_instance::ComponentInstanceInterface,
-        path::PathBufExt,
-        route_capability, route_storage_and_backing_directory,
+        capability_source::ComponentCapability, component_instance::ComponentInstanceInterface,
+        path::PathBufExt, route_capability, route_storage_and_backing_directory,
     },
-    anyhow::anyhow,
     async_trait::async_trait,
     cm_moniker::{InstancedExtendedMoniker, InstancedRelativeMoniker},
     cm_rust::{self, CapabilityName, CapabilityPath, ExposeDecl, UseDecl, UseStorageDecl},
@@ -62,74 +59,6 @@ pub(super) async fn route_and_open_capability(
         _ => {
             let (route_source, _route) = route_capability(route_request, target).await?;
             open_capability_at_source(OpenRequest::new(route_source, target, open_options)).await
-        }
-    }
-}
-
-pub(super) enum ResolverCapability {
-    SDK,
-    Internal,
-}
-
-// In order to allow the soft transitioning of resolver components
-// using fuchsia.sys2.ComponentResolver to its SDK counterpart,
-// fuchsia.component.resolution.Resolver, component_manager will
-// briefly support both protocols. This function should
-// *only* be used by a struct implementing the Resolver trait.
-// TODO(https://fxbug.dev/94581): Remove dual-support when all clients
-// are migrated.
-pub(super) async fn route_and_open_capability_for_resolver(
-    route_request: RouteRequest,
-    target: &Arc<ComponentInstance>,
-    open_options: OpenOptions<'_>,
-) -> Result<ResolverCapability, ModelError> {
-    match route_request {
-        RouteRequest::Resolver(ref _registration) => {
-            let (route_source, _route) = route_capability(route_request, target).await?;
-            let result = match route_source {
-                RouteSource::Resolver(ref source) => match source {
-                    CapabilitySourceInterface::Component { capability, .. } => {
-                        match capability.source_path() {
-                            Some(path) => match path.basename.as_str() {
-                                "fuchsia.sys2.ComponentResolver" => ResolverCapability::Internal,
-                                "fuchsia.component.resolution.Resolver" => ResolverCapability::SDK,
-                                _ => {
-                                    return Err(ModelError::internal(anyhow!(
-                                        "Received invalid path from component resolver: {:?}",
-                                        path
-                                    )));
-                                }
-                            },
-                            None => {
-                                return Err(ModelError::internal(anyhow!("Encountered empty source path for CapabilitySourceInterface::Component: {:?}", source)));
-                            }
-                        }
-                    }
-                    CapabilitySourceInterface::Builtin { .. } => ResolverCapability::SDK,
-                    _ => {
-                        return Err(ModelError::internal(anyhow!(
-                            "Encountered resolver route source from non-component entity: {:?}",
-                            source
-                        )));
-                    }
-                },
-                _ => {
-                    return Err(ModelError::internal(anyhow!(
-                        "Encountered non-resolver route source: {:?}",
-                        route_source
-                    )));
-                }
-            };
-            let () =
-                open_capability_at_source(OpenRequest::new(route_source, target, open_options))
-                    .await?;
-            Ok(result)
-        }
-        _ => {
-            return Err(ModelError::internal(anyhow!(
-                "Encountered non-resolver route request: {:?}",
-                route_request
-            )));
         }
     }
 }

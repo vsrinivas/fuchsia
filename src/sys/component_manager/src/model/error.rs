@@ -170,12 +170,6 @@ pub enum ModelError {
     VmoCreateFailed(#[source] zx::Status),
     #[error("couldn't write to vmo: {_0}")]
     VmoWriteFailed(#[source] zx::Status),
-    // TODO(https://fxbug.dev/94581): Remove this variant post-migration.
-    #[error("internal error: {}", err)]
-    Internal {
-        #[source]
-        err: ClonableError,
-    },
 }
 
 impl ModelError {
@@ -282,10 +276,6 @@ impl ModelError {
 
     pub fn stream_creation_error(err: impl Into<Error>) -> ModelError {
         ModelError::StreamCreationError { err: err.into().into() }
-    }
-
-    pub fn internal(err: impl Into<Error>) -> ModelError {
-        ModelError::Internal { err: err.into().into() }
     }
 
     pub fn as_zx_status(&self) -> zx::Status {

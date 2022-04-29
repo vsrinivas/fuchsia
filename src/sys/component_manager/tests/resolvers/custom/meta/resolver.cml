@@ -12,18 +12,10 @@
             resolver: "test_resolver",
             path: "/svc/fuchsia.component.resolution.Resolver",
         },
-        {
-            resolver: "test_internal_resolver",
-            path: "/svc/fuchsia.sys2.ComponentResolver",
-        },
     ],
     expose: [
         {
             resolver: "test_resolver",
-            from: "self",
-        },
-        {
-            resolver: "test_internal_resolver",
             from: "self",
         },
     ],

@@ -16,11 +16,6 @@
             url: "test://trigger",
             environment: "#env",
         },
-        {
-            name: "trigger_internal",
-            url: "test-internal://trigger",
-            environment: "#env",
-        },
     ],
     offer: [
         {
@@ -30,19 +25,11 @@
                 "#integration_test",
                 "#resolver",
                 "#trigger",
-                "#trigger_internal",
             ],
         },
         {
             protocol: "fidl.test.components.Trigger",
             from: "#trigger",
-            as: "fidl.test.components.Trigger.sdk",
-            to: "#integration_test",
-        },
-        {
-            protocol: "fidl.test.components.Trigger",
-            from: "#trigger_internal",
-            as: "fidl.test.components.Trigger.internal",
             to: "#integration_test",
         },
     ],
@@ -61,11 +48,6 @@
                     resolver: "test_resolver",
                     from: "#resolver",
                     scheme: "test",
-                },
-                {
-                    resolver: "test_internal_resolver",
-                    from: "#resolver",
-                    scheme: "test-internal",
                 },
             ],
         },

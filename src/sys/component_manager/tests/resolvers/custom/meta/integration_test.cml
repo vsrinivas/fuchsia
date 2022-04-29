@@ -11,10 +11,7 @@
     },
     use: [
         {
-            protocol: [
-                "fidl.test.components.Trigger.internal",
-                "fidl.test.components.Trigger.sdk",
-            ],
+            protocol: [ "fidl.test.components.Trigger" ],
         },
     ],
 }

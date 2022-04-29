@@ -14,7 +14,7 @@ use {
         exposed_dir::ExposedDir,
         hooks::{Event, EventPayload, Hooks},
         namespace::IncomingNamespace,
-        resolver::{ResolvedComponent, ResolvedPackage},
+        resolver::ResolvedComponent,
         routing::{
             self, route_and_open_capability, OpenOptions, OpenResourceError, OpenRunnerOptions,
             RouteRequest, RoutingError,
@@ -46,7 +46,7 @@ use {
     config_encoder::ConfigFields,
     fidl::endpoints::{self, ClientEnd, Proxy, ServerEnd},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_component_runner as fcrunner,
+    fidl_fuchsia_component_resolution as fresolution, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fidl_fuchsia_io as fio,
     fidl_fuchsia_process as fprocess, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client,
@@ -161,10 +161,10 @@ impl TryFrom<ResolvedComponent> for Component {
     }
 }
 
-impl TryFrom<ResolvedPackage> for Package {
+impl TryFrom<fresolution::Package> for Package {
     type Error = ModelError;
 
-    fn try_from(package: ResolvedPackage) -> Result<Self, Self::Error> {
+    fn try_from(package: fresolution::Package) -> Result<Self, Self::Error> {
         Ok(Self {
             package_url: package.url.ok_or(ModelError::PackageUrlMissing)?,
             package_dir: package

@@ -7,9 +7,6 @@ import("//build/fidl/fidl.gni")
 # NOTE: fuchsia.sys2 is slowly being unpacked into a set of
 # `fuchsia.component.*` libraries.
 fidl("fuchsia.sys2") {
-  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [ "string-bounds-not-specified" ]
-
   sdk_category = "internal"
 
   public_deps = [
@@ -30,9 +27,6 @@ fidl("fuchsia.sys2") {
     "events.fidl",
     "lifecycle_controller.fidl",
     "realm.fidl",
-    "runtime/component.fidl",
-    "runtime/component_resolver.fidl",
-    "runtime/package.fidl",
     "storage_admin.fidl",
     "system_controller.fidl",
   ]
