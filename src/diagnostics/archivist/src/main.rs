@@ -38,8 +38,6 @@ pub enum ArchivistOptionV1 {
     WithKlog,
     /// Don't connect to the LogConnector.
     NoLogConnector,
-    /// Archivist will consume and attribute its own logs.
-    ConsumeOwnLogs,
 }
 
 impl FromStr for ArchivistOptionV1 {
@@ -50,7 +48,6 @@ impl FromStr for ArchivistOptionV1 {
             "default" => Ok(ArchivistOptionV1::Default),
             "with-klog" => Ok(ArchivistOptionV1::WithKlog),
             "no-log-connector" => Ok(ArchivistOptionV1::NoLogConnector),
-            "consume-own-logs" => Ok(ArchivistOptionV1::ConsumeOwnLogs),
             s => Err(format_err!("Invalid V1 flavor {}", s)),
         }
     }
@@ -58,7 +55,6 @@ impl FromStr for ArchivistOptionV1 {
 
 fn load_v1_config(options: Vec<ArchivistOptionV1>) -> Config {
     let mut config = Config {
-        consume_own_logs: false,
         // All v1 flavors include the event provider
         enable_component_event_provider: true,
         enable_klog: false,
@@ -83,9 +79,6 @@ fn load_v1_config(options: Vec<ArchivistOptionV1>) -> Config {
             ArchivistOptionV1::NoLogConnector => {
                 config.enable_log_connector = false;
             }
-            ArchivistOptionV1::ConsumeOwnLogs => {
-                config.consume_own_logs = true;
-            }
         }
     }
     config
@@ -94,33 +87,18 @@ fn load_v1_config(options: Vec<ArchivistOptionV1>) -> Config {
 fn main() -> Result<(), Error> {
     let args: Args = argh::from_env();
     let mut config = if args.v1.is_empty() { Config::from_args() } else { load_v1_config(args.v1) };
-    let log_server = init_diagnostics(&config).context("initializing diagnostics")?;
+    init_diagnostics(&config).context("initializing diagnostics")?;
     config = config.record_to_inspect(component::inspector().root());
 
     let num_threads = config.num_threads;
     debug!("Running executor with {} threads.", num_threads);
-    SendExecutor::new(num_threads as usize)?
-        .run(async_main(config, log_server))
-        .context("async main")?;
+    SendExecutor::new(num_threads as usize)?.run(async_main(config)).context("async main")?;
     debug!("Exiting.");
     Ok(())
 }
 
-fn init_diagnostics(config: &Config) -> Result<Option<zx::Socket>, Error> {
-    let mut log_server = None;
-    if config.consume_own_logs {
-        assert!(
-            !config.log_to_debuglog,
-            "cannot specify both consume-own-logs and log-to-debuglog"
-        );
-        let (log_client, server) = zx::Socket::create(zx::SocketOpts::DATAGRAM)?;
-        log_server = Some(server);
-        fuchsia_syslog::init_with_socket_and_name(log_client, "archivist")?;
-    } else if config.log_to_debuglog {
-        assert!(
-            !config.consume_own_logs,
-            "cannot specify both consume-own-logs and log-to-debuglog"
-        );
+fn init_diagnostics(config: &Config) -> Result<(), Error> {
+    if config.log_to_debuglog {
         LocalExecutor::new()?.run_singlethreaded(stdout_to_debuglog::init()).unwrap();
 
         log::set_logger(&STDOUT_LOGGER).unwrap();
@@ -129,15 +107,15 @@ fn init_diagnostics(config: &Config) -> Result<Option<zx::Socket>, Error> {
         fuchsia_syslog::init_with_tags(&["embedded"])?;
     }
 
-    if config.consume_own_logs || config.log_to_debuglog {
+    if config.log_to_debuglog {
         info!("Logging started.");
     }
 
     diagnostics::init();
-    Ok(log_server)
+    Ok(())
 }
 
-async fn async_main(config: Config, log_server: Option<zx::Socket>) -> Result<(), Error> {
+async fn async_main(config: Config) -> Result<(), Error> {
     let mut archivist = Archivist::new(&config)?;
     debug!("Archivist initialized from configuration.");
 
@@ -149,10 +127,6 @@ async fn async_main(config: Config, log_server: Option<zx::Socket>) -> Result<()
 
     if config.enable_component_event_provider {
         archivist.install_component_event_provider();
-    }
-
-    if let Some(socket) = log_server {
-        archivist.consume_own_logs(socket);
     }
 
     assert!(

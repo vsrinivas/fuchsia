@@ -62,9 +62,6 @@
         },
     ],
     config: {
-        // Manually ingest and attribute archivist's own logs.
-        consume_own_logs: { type: "bool" },
-
         // Ingest events coming from CFv1.
         enable_component_event_provider: { type: "bool" },
 

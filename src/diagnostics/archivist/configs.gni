@@ -10,7 +10,6 @@ default_config = {
     "fuchsia.component.PersistenceBinder",
     "fuchsia.component.SamplerBinder",
   ]
-  consume_own_logs = false
   enable_component_event_provider = true
   enable_event_source = true
   enable_klog = true

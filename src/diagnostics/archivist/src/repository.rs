@@ -4,10 +4,9 @@
 
 use {
     crate::{
-        constants::{ARCHIVIST_MONIKER, ARCHIVIST_URL},
         container::ComponentDiagnostics,
         error::Error,
-        events::types::{ComponentIdentifier, UniqueKey},
+        events::types::UniqueKey,
         identity::ComponentIdentity,
         inspect::container::{InspectArtifactsContainer, UnpopulatedInspectDataContainer},
         lifecycle::container::{LifecycleArtifactsContainer, LifecycleDataContainer},
@@ -369,13 +368,6 @@ impl DataRepoState {
             },
             None => insert_component!(),
         }
-    }
-
-    pub fn get_own_log_container(&mut self) -> Arc<LogsArtifactsContainer> {
-        self.get_log_container(ComponentIdentity::from_identifier_and_url(
-            ComponentIdentifier::parse_from_moniker(ARCHIVIST_MONIKER).unwrap(),
-            ARCHIVIST_URL,
-        ))
     }
 
     pub fn update_logs_interest(

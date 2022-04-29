@@ -14,7 +14,7 @@ use {
             types::*,
         },
         identity::ComponentIdentity,
-        logs::{budget::BudgetManager, socket::LogMessageSocket, KernelDebugLog},
+        logs::{budget::BudgetManager, KernelDebugLog},
         pipeline::Pipeline,
         repository::DataRepo,
     },
@@ -75,10 +75,6 @@ pub struct Archivist {
 
     /// Listens for lifecycle requests, to handle Stop requests.
     _lifecycle_task: Option<fasync::Task<()>>,
-
-    /// When the archivist is consuming its own logs, this task drains the archivist log stream
-    /// socket.
-    _consume_own_logs_task: Option<fasync::Task<()>>,
 
     /// Tasks that drains klog.
     _drain_klog_task: Option<fasync::Task<()>>,
@@ -141,7 +137,6 @@ impl Archivist {
             listen_sender,
             event_router: EventRouter::new(component::inspector().root().create_child("events")),
             stop_recv: None,
-            _consume_own_logs_task: None,
             _lifecycle_task: None,
             _drain_klog_task: None,
             drain_listeners_task: fasync::Task::spawn(async move {
@@ -157,17 +152,6 @@ impl Archivist {
 
     pub fn log_sender(&self) -> &mpsc::UnboundedSender<Task<()>> {
         &self.log_sender
-    }
-
-    // TODO(fxbug.dev/72046) delete when netemul no longer using
-    pub fn consume_own_logs(&mut self, socket: zx::Socket) {
-        let container = self.data_repo().write().get_own_log_container();
-        self._consume_own_logs_task = Some(fasync::Task::spawn(async move {
-            let log_stream = LogMessageSocket::new(socket, container.stats.clone())
-                .expect("failed to create internal LogMessageSocket");
-            container.drain_messages(log_stream).await;
-            unreachable!();
-        }));
     }
 
     /// Install controller protocol.
@@ -554,7 +538,6 @@ mod tests {
 
     fn init_archivist() -> Archivist {
         let config = Config {
-            consume_own_logs: false,
             enable_component_event_provider: false,
             enable_klog: false,
             enable_event_source: false,
