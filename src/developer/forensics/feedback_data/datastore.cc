@@ -70,7 +70,8 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       // Somewhat risky, but the Cobalt's constructor sets up a bunch of stuff and this constructor
       // is intended for tests.
       cobalt_(nullptr),
-      redactor_(nullptr /*TODO*/),
+      // Somewhat risky, but redaction isn't needed in tests that use this constructor.
+      redactor_(nullptr),
       annotation_allowlist_({}),
       attachment_allowlist_({}),
       annotation_metrics_(cobalt_),

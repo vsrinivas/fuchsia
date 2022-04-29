@@ -331,7 +331,6 @@ void SnapshotManager::CompleteWithSnapshot(const SnapshotUuid& uuid, FidlSnapsho
 
   // Take ownership of |fidl_snapshot| and the record the size of its annotations and archive.
   if (fidl_snapshot.has_annotations()) {
-    FX_LOGS(INFO) << ">>> HAS ANNOTATIONS";
     data->annotations = MakeShared(ToAnnotationMap(fidl_snapshot.annotations()));
 
     for (const auto& [k, v] : data->annotations->Raw()) {
@@ -342,7 +341,6 @@ void SnapshotManager::CompleteWithSnapshot(const SnapshotUuid& uuid, FidlSnapsho
   }
 
   if (fidl_snapshot.has_archive()) {
-    FX_LOGS(INFO) << ">>> HAS ARCHIVE";
     data->archive = MakeShared(ManagedSnapshot::Archive(fidl_snapshot.archive()));
 
     data->archive_size += StorageSize::Bytes(data->archive->key.size());
