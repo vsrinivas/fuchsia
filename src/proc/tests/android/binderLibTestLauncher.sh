@@ -14,5 +14,30 @@ function cleanup {
 }
 trap cleanup EXIT
 
+GTEST_FILTER=""
+
+# Basic transaction tests.
+GTEST_FILTER="$GTEST_FILTER:BinderLibTest.NopTransaction"
+GTEST_FILTER="$GTEST_FILTER:BinderLibTest.NopTransactionOneway"
+GTEST_FILTER="$GTEST_FILTER:BinderLibTest.NopTransactionClear"
+GTEST_FILTER="$GTEST_FILTER:BinderLibTest.SetError"
+GTEST_FILTER="$GTEST_FILTER:BinderLibTest.GetId"
+GTEST_FILTER="$GTEST_FILTER:BinderLibTest.IndirectGetId2"
+GTEST_FILTER="$GTEST_FILTER:BinderLibTest.IndirectGetId3"
+GTEST_FILTER="$GTEST_FILTER:BinderLibTest.Callback"
+GTEST_FILTER="$GTEST_FILTER:BinderLibTest.AddServer"
+
+# Death notification tests.
+GTEST_FILTER="$GTEST_FILTER:BinderLibTest.DeathNotificationStrongRef"
+GTEST_FILTER="$GTEST_FILTER:BinderLibTest.DeathNotificationMultiple"
+GTEST_FILTER="$GTEST_FILTER:BinderLibTest.DeathNotificationThread"
+
+# Misc tests.
+GTEST_FILTER="$GTEST_FILTER:BinderLibTest.WasParceled"
+GTEST_FILTER="$GTEST_FILTER:BinderLibTest.PtrSize"
+GTEST_FILTER="$GTEST_FILTER:BinderLibTest.PromoteLocal"
+GTEST_FILTER="$GTEST_FILTER:BinderLibTest.LocalGetExtension"
+GTEST_FILTER="$GTEST_FILTER:BinderLibTest.RemoteGetExtension"
+
 # Start the actual test.
-/vendor/data/nativetest64/binderLibTest/binderLibTest "--gtest_filter=BinderLibTest.NopTransaction"
+/vendor/data/nativetest64/binderLibTest/binderLibTest "--gtest_filter=${GTEST_FILTER}"
