@@ -123,7 +123,8 @@ static bool evictor_combine_targets_test() {
 
 // Helper to create a pager backed vmo and commit all its pages.
 static zx_status_t create_precommitted_pager_backed_vmo(uint64_t size,
-                                                        fbl::RefPtr<VmObjectPaged>* vmo_out) {
+                                                        fbl::RefPtr<VmObjectPaged>* vmo_out,
+                                                        vm_page_t** out_pages = nullptr) {
   // The size should be page aligned for TakePages and SupplyPages to work.
   if (size % PAGE_SIZE) {
     return ZX_ERR_INVALID_ARGS;
@@ -175,6 +176,16 @@ static zx_status_t create_precommitted_pager_backed_vmo(uint64_t size,
   // free.
   ASSERT(ZX_OK == vmo->CommitRangePinned(0, size));
   vmo->Unpin(0, size);
+
+  // Get the pages after the pin, so that we find non-loaned pages.
+  if (out_pages) {
+    for (uint64_t i = 0; i < size; i += PAGE_SIZE) {
+      status = vmo->GetPage(i, 0, nullptr, nullptr, &out_pages[i / PAGE_SIZE], nullptr);
+      if (status != ZX_OK) {
+        return status;
+      }
+    }
+  }
 
   *vmo_out = ktl::move(vmo);
   return ZX_OK;
@@ -847,6 +858,74 @@ static bool evictor_dont_need_pager_backed_test() {
   END_TEST;
 }
 
+// Tests that evicted pages are removed from the VMO *and* added to the pmm free pool. Regression
+// test for fxbug.dev/73865.
+static bool evictor_evicted_pages_are_freed_test() {
+  BEGIN_TEST;
+  AutoVmScannerDisable scanner_disable;
+
+  // Create a pager backed vmo with committed pages.
+  fbl::RefPtr<VmObjectPaged> vmo;
+  static constexpr size_t kNumPages = 5;
+  vm_page_t* pages[kNumPages];
+  ASSERT_EQ(ZX_OK, create_precommitted_pager_backed_vmo(kNumPages * PAGE_SIZE, &vmo, pages));
+
+  // Verify that the vmo has committed pages.
+  EXPECT_EQ(kNumPages, vmo->AttributedPages());
+
+  // Rotate page queues a few times so the newly committed pages above are eligible for eviction.
+  for (int i = 0; i < 3; i++) {
+    pmm_page_queues()->RotatePagerBackedQueues();
+  }
+
+  TestPmmNode node;
+  // Only evict from pager backed vmos.
+  node.evictor()->SetDiscardableEvictionsPercent(0);
+
+  auto target = Evictor::EvictionTarget{
+      .pending = true,
+      // Ensure that all evictable pages end up evicted, so we can verify that the vmo we created
+      // has no pages remaining.
+      .free_pages_target = UINT64_MAX,
+      .min_pages_to_free = 0,
+      .level = Evictor::EvictionLevel::IncludeNewest,
+  };
+
+  // The node starts off with zero pages.
+  uint64_t free_count = node.FreePages();
+  EXPECT_EQ(free_count, 0u);
+
+  node.evictor()->SetOneShotEvictionTarget(target);
+  auto counts = node.evictor()->EvictOneShotFromPreloadedTarget();
+
+  // No discardable pages were evicted.
+  EXPECT_EQ(counts.discardable, 0u);
+  // Evicted pager backed pages should be more than or equal to the vmo's pages. If there were no
+  // other evictable pages, we should at least have been able to evict from the vmo we created.
+  EXPECT_GE(counts.pager_backed, kNumPages);
+  EXPECT_GE(counts.pager_backed, target.min_pages_to_free);
+
+  // The node has the desired number of free pages now, and a minimum of min pages have been freed.
+  free_count = node.FreePages();
+  EXPECT_GE(free_count, kNumPages);
+  EXPECT_GE(free_count, target.min_pages_to_free);
+
+  // All the evicted pages should have ended up in the node's free list. Pages that were evicted in
+  // this test is the only way we can end up with free pages in this node. This verifies that
+  // pages evicted from pager-backed vmos are freed.
+  EXPECT_EQ(free_count, counts.pager_backed);
+
+  // Verify that the vmo has no committed pages remaining. Evicted pages are removed from the vmo.
+  EXPECT_EQ(0u, vmo->AttributedPages());
+
+  // Verify free state for each page.
+  for (auto page : pages) {
+    EXPECT_TRUE(page->is_free());
+  }
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(evictor_tests)
 VM_UNITTEST(evictor_set_target_test)
 VM_UNITTEST(evictor_combine_targets_test)
@@ -858,6 +937,7 @@ VM_UNITTEST(evictor_continuous_test)
 VM_UNITTEST(evictor_continuous_combine_targets_test)
 VM_UNITTEST(evictor_continuous_repeated_test)
 VM_UNITTEST(evictor_dont_need_pager_backed_test)
+VM_UNITTEST(evictor_evicted_pages_are_freed_test)
 UNITTEST_END_TESTCASE(evictor_tests, "evictor", "Evictor tests")
 
 }  // namespace vm_unittest
