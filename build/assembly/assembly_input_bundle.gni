@@ -19,6 +19,10 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #   package_name (optional; default: target_name)
 #     [string] The name of the package, if not $target_name
 #
+#   package_outdir (optional; default: target_out_dir)
+#     [path] A different directory to write the bundle into, if not to write it
+#     to '$target_out_dir/$bundle_name'.
+#
 # GN usual meanings
 #   deps, testonly, visibility
 #
@@ -27,13 +31,22 @@ template("assembly_input_bundle_package") {
          "A manifest path must be specified: " +
              get_label_info(target_name, "label_with_toolchain"))
 
+  package_outdir = target_out_dir
+  if (defined(invoker.package_outdir)) {
+    package_outdir = invoker.package_outdir
+  }
+
+  package_name = target_name
+  if (defined(invoker.bundle_name)) {
+    package_name = invoker.package_name
+  }
+
   labels = {
     package_manifest_creation = "${target_name}.creation_manifest.fini"
     package = target_name
   }
 
   files = {
-    package_outdir = "$target_out_dir/$target_name"
     meta_package_file = "$package_outdir/meta_package"
     creation_manifest = "$package_outdir/creation_manifest.fini"
   }
@@ -57,7 +70,7 @@ template("assembly_input_bundle_package") {
     args = [
       "generate-package-creation-manifest",
       "--name",
-      target_name,
+      package_name,
       "--contents-manifest",
       rebase_path(invoker.manifest, root_build_dir),
       "--meta-package",
@@ -71,10 +84,11 @@ template("assembly_input_bundle_package") {
     forward_variables_from(invoker,
                            [
                              "deps",
-                             "package_name",
                              "testonly",
                              "visibility",
                            ])
+    package_name = package_name
+    package_out_dir = package_outdir
     manifest = ":${labels.package_manifest_creation}"
     metadata = {
       if (defined(invoker.metadata)) {
@@ -101,6 +115,12 @@ template("assembly_input_bundle_package") {
 #
 # Parameters
 #
+#   archive_name (optional; default: target_name)
+#     [string] A different name for the archive, if not the name of the target.
+#
+#   archive_outdir (optional; default: target_out_dir)
+#     [path] A different directory to write the archive into.
+#
 #   manifest
 #     [path] The path to the FINI manifest created for the
 #     assembly input bundle
@@ -113,6 +133,16 @@ template("assembly_input_bundle_archive") {
          "A manifest path must be specified: " +
              get_label_info(target_name, "label_with_toolchain"))
 
+  archive_outdir = target_out_dir
+  if (defined(invoker.archive_outdir)) {
+    archive_outdir = invoker.archive_outdir
+  }
+
+  archive_name = target_name
+  if (defined(invoker.archive_name)) {
+    archive_name = invoker.archive_name
+  }
+
   labels = {
     tarmaker = "//build/tools/tarmaker($host_toolchain)"
   }
@@ -120,7 +150,7 @@ template("assembly_input_bundle_archive") {
   files = {
     tarmaker = host_out_dir + "/tarmaker"
 
-    archive = "${target_out_dir}/${target_name}"
+    archive = "${archive_outdir}/${archive_name}.tgz"
     archive_creation_manifest = "${archive}.creation_manifest.fini"
     depfile = "${archive}.d"
   }
@@ -147,8 +177,6 @@ template("assembly_input_bundle_archive") {
       rebase_path(files.tarmaker, root_build_dir),
       "--contents-manifest",
       rebase_path(invoker.manifest, root_build_dir),
-      "--meta-far",
-      rebase_path(invoker.meta_far, root_build_dir),
       "--creation-manifest",
       rebase_path(files.archive_creation_manifest, root_build_dir),
       "--output",
@@ -159,6 +187,12 @@ template("assembly_input_bundle_archive") {
     deps = [ labels.tarmaker ]
     if (defined(invoker.deps)) {
       deps += invoker.deps
+    }
+    if (defined(invoker.meta_far)) {
+      args += [
+        "--meta-far",
+        rebase_path(invoker.meta_far, root_build_dir),
+      ]
     }
     metadata = {
       assembly_input_archives = [
@@ -263,11 +297,9 @@ template("assembly_input_bundle") {
     assembly_input_bundle_manifest =
         "${assembly_input_bundle_dir}.fini_manifest"
 
-    # The AIB package's meta.far and output package manifest (optionally used)
+    # The AIB package's meta.far (optionally used)
     assembly_input_bundle_package_metafar =
         "${assembly_input_bundle_dir}.pkg/meta.far"
-    assembly_input_bundle_package_manifest =
-        "${assembly_input_bundle_dir}.pkg/package_manifest.json"
 
     # The AIB archive and the manifest used to create it (optionally used)
     assembly_input_bundle_archive = "${assembly_input_bundle_dir}.tgz"
@@ -401,8 +433,9 @@ template("assembly_input_bundle") {
                                "testonly",
                                "visibility",
                              ])
+      package_name = bundle_name
+      package_outdir = "${bundles_dir}/${bundle_name}.pkg"
       manifest = files.assembly_input_bundle_manifest
-      package_name = target_name
       deps = [ ":${labels.assembly_input_bundle}" ]
     }
   }
@@ -415,6 +448,8 @@ template("assembly_input_bundle") {
                                "testonly",
                                "visibility",
                              ])
+      archive_name = bundle_name
+      archive_outdir = bundles_dir
       manifest = files.assembly_input_bundle_manifest
       deps = [ ":${labels.assembly_input_bundle}" ]
 
