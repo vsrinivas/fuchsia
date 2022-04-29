@@ -3,10 +3,25 @@
 # found in the LICENSE file.
 
 import("//build/components/fuchsia_unittest_package.gni")
+import("//build/cpp/cpp_fuzzer.gni")
+import("//build/fuzzing/fuzzer.gni")
 
 group("test") {
   testonly = true
-  deps = [ ":vaapi_tests_package" ]
+  deps = [
+    ":vaapi_fuzzers",
+    ":vaapi_tests_package",
+  ]
+}
+
+source_set("vaapi_stubs") {
+  testonly = true
+  sources = [
+    "vaapi_stubs.cc",
+    "vaapi_stubs.h",
+  ]
+  public_deps = [ "//third_party/intel/libva/fuchsia:headers" ]
+  deps = [ "//third_party/googletest:gtest" ]
 }
 
 executable("vaapi_tests") {
@@ -14,11 +29,11 @@ executable("vaapi_tests") {
 
   sources = [
     "h264_vaapi_test.cc",
-    "vaapi_stubs.cc",
     "vp9_vaapi_test.cc",
   ]
 
   deps = [
+    ":vaapi_stubs",
     "..:codec_runner_vaapi",
     "../../test:test_codec_packets",
     "//src/lib/files",
@@ -47,4 +62,37 @@ fuchsia_unittest_package("vaapi_tests_package") {
     ":test_25fps",
     ":vaapi_tests",
   ]
+}
+
+source_set("decoder_fuzzer") {
+  testonly = true
+  sources = [
+    "decoder_fuzzer.cc",
+    "decoder_fuzzer.h",
+  ]
+  public_deps = [
+    ":vaapi_stubs",
+    "..:codec_runner_vaapi",
+    "../../test:test_codec_packets",
+    "//sdk/fidl/fuchsia.mediacodec",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+cpp_fuzzer("vaapi_h264_decode_fuzzer") {
+  sources = [ "h264_decode_fuzzer.cc" ]
+  deps = [ ":decoder_fuzzer" ]
+}
+
+cpp_fuzzer("vaapi_vp9_decode_fuzzer") {
+  sources = [ "vp9_decode_fuzzer.cc" ]
+  deps = [ ":decoder_fuzzer" ]
+}
+
+fuzzers_package("vaapi_fuzzers") {
+  cpp_fuzzers = [
+    ":vaapi_h264_decode_fuzzer",
+    ":vaapi_vp9_decode_fuzzer",
+  ]
+  fuzz_host = false
 }

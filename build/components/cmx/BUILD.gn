@@ -425,6 +425,7 @@ group("cmx_allowlist") {
     "//src/media/audio/tools/virtual_audio_util:*",
     "//src/media/audio/virtual_audio_service:*",
     "//src/media/codec:*",
+    "//src/media/codec/codecs/vaapi/test:*",
     "//src/media/codec/examples:*",
     "//src/media/codec/factory:*",
     "//src/media/lib/codec_impl/unit_tests:*",

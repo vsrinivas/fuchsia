@@ -54,7 +54,7 @@ struct TestPackets {
   CodecPacket* ptr(size_t i) { return packets[i].get(); }
 };
 
-static TestPackets Packets(size_t count) {
+static inline TestPackets Packets(size_t count) {
   TestPackets packets;
   for (size_t i = 0; i < count; ++i) {
     packets.packets.push_back(std::make_unique<CodecPacketForTest>(i));
@@ -67,7 +67,7 @@ struct TestBuffers {
   const CodecBuffer* ptr(size_t i) { return buffers[i].get(); }
 };
 
-static TestBuffers Buffers(std::vector<size_t> sizes) {
+static inline TestBuffers Buffers(std::vector<size_t> sizes) {
   TestBuffers buffers;
   for (size_t i = 0; i < sizes.size(); ++i) {
     constexpr bool kIsSecure = false;
