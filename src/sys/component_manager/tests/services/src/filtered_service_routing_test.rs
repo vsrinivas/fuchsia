@@ -49,34 +49,34 @@ async fn renamed_instances_test() {
 
     let _ = verify_original_service(&provider_exposed_dir).await;
 
-    let original_to_renamed = HashMap::from([
-        ("default".to_string(), "renamed_default".to_string()),
-        ("goodbye".to_string(), "goodbye".to_string()),
-        ("hello".to_string(), "hello".to_string()),
-    ]);
-    let expected_renamed_instance_list = {
-        let mut expected_renamed_instance_list: Vec<String> =
-            original_to_renamed.values().cloned().collect();
-        expected_renamed_instance_list.sort();
-        expected_renamed_instance_list
-    };
+    let expected_renamed_instance_list = vec![
+        "goodbye".to_string(),
+        "hello".to_string(),
+        "renamed_default".to_string(),
+        "renamed_default_again".to_string(),
+    ];
 
-    let renamed_instances = {
-        let mut renaming = vec![];
-        for (k, v) in &original_to_renamed {
-            if k != v {
-                renaming
-                    .push(fdecl::NameMapping { source_name: k.clone(), target_name: v.clone() });
-            }
-        }
-        Some(renaming)
-    };
+    let renamed_instances = vec![
+        fdecl::NameMapping {
+            source_name: "default".to_string(),
+            target_name: "renamed_default".to_string(),
+        },
+        fdecl::NameMapping {
+            source_name: "default".to_string(),
+            target_name: "renamed_default_again".to_string(),
+        },
+    ];
     let provider_source = fdecl::Ref::Child(fdecl::ChildRef {
         name: PROVIDER_CHILD_NAME.to_string(),
         collection: None,
     });
-    create_dynamic_service_client(dynamic_child_name, provider_source, renamed_instances, None)
-        .await;
+    create_dynamic_service_client(
+        dynamic_child_name,
+        provider_source,
+        Some(renamed_instances),
+        None,
+    )
+    .await;
     let filtered_exposed_dir = client::open_childs_exposed_directory(
         dynamic_child_name,
         Some(TEST_COLLECTION_NAME.to_string()),
@@ -104,6 +104,18 @@ async fn renamed_instances_test() {
         regular_echo_at_service_instance(&filtered_exposed_dir, "renamed_default", "hello world!")
             .await
             .unwrap(),
+    );
+    assert_eq!(
+        regular_echo_at_service_instance(&provider_exposed_dir, "default", "hello world!")
+            .await
+            .unwrap(),
+        regular_echo_at_service_instance(
+            &filtered_exposed_dir,
+            "renamed_default_again",
+            "hello world!"
+        )
+        .await
+        .unwrap(),
     );
     assert_eq!(
         regular_echo_at_service_instance(&provider_exposed_dir, "hello", "hello world!")

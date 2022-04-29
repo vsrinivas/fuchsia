@@ -1338,14 +1338,10 @@ impl<'a> ValidationContext<'a> {
             }
         }
         if let Some(renamed_instances) = renamed_instances {
-            // Should be a one-to-one relationship between source names and target names in the mapping
-            // list.
+            // Multiple sources shouldn't map to the same target name
             let mut seen_target_names = HashSet::<String>::new();
-            let mut seen_source_names = HashSet::<String>::new();
             for mapping in renamed_instances {
-                if !seen_target_names.insert(mapping.target_name.clone())
-                    || !seen_source_names.insert(mapping.source_name.clone())
-                {
+                if !seen_target_names.insert(mapping.target_name.clone()) {
                     self.errors.push(Error::invalid_field(decl_type, "renamed_instances"));
                     break;
                 }

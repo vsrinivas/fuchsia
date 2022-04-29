@@ -50,7 +50,7 @@ pub struct FilteredServiceProvider {
     source_instance_filter: HashSet<String>,
 
     /// Mapping of service instance names in the source component to new names in the target.
-    instance_name_source_to_target: HashMap<String, String>,
+    instance_name_source_to_target: HashMap<String, Vec<String>>,
 
     /// The underlying un-filtered service capability provider.
     source_service_provider: Box<dyn CapabilityProvider>,
@@ -60,7 +60,7 @@ impl FilteredServiceProvider {
     pub async fn new(
         source_component: &Arc<ComponentInstance>,
         source_instances: Vec<String>,
-        instance_name_source_to_target: HashMap<String, String>,
+        instance_name_source_to_target: HashMap<String, Vec<String>>,
         source_service_provider: Box<dyn CapabilityProvider>,
     ) -> Result<Self, ModelError> {
         let execution_scope =
@@ -79,7 +79,7 @@ impl FilteredServiceProvider {
 pub struct FilteredServiceDirectory {
     source_instance_filter: HashSet<String>,
     source_dir_proxy: fio::DirectoryProxy,
-    instance_name_source_to_target: HashMap<String, String>,
+    instance_name_source_to_target: HashMap<String, Vec<String>>,
     instance_name_target_to_source: HashMap<String, String>,
 }
 
@@ -172,31 +172,34 @@ impl Directory for FilteredServiceDirectory {
             Ok(dirent_vec) => {
                 for dirent in dirent_vec {
                     let entry_name = dirent.name;
-                    let target_entry_name = self
+                    let target_entry_name_vec = self
                         .instance_name_source_to_target
                         .get(&entry_name)
-                        .map_or(&entry_name, |t_name| t_name);
-                    // Only reveal allowed source instances,
-                    if !self.path_matches_allowed_instance(&target_entry_name.clone()) {
-                        continue;
-                    }
-                    if let Some(next_entry_name) = next_entry {
-                        if target_entry_name < next_entry_name {
+                        .map_or(vec![entry_name.clone()], |t_names| t_names.clone());
+
+                    for target_entry_name in target_entry_name_vec {
+                        // Only reveal allowed source instances,
+                        if !self.path_matches_allowed_instance(&target_entry_name) {
                             continue;
                         }
-                    }
-                    sink = match sink.append(
-                        &EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory),
-                        target_entry_name,
-                    ) {
-                        dirents_sink::AppendResult::Ok(sink) => sink,
-                        dirents_sink::AppendResult::Sealed(sealed) => {
-                            // There is not enough space to return this entry. Record it as the next
-                            // entry to start at for subsequent calls.
-                            return Ok((
-                                TraversalPosition::Name(target_entry_name.clone()),
-                                sealed,
-                            ));
+                        if let Some(next_entry_name) = next_entry {
+                            if target_entry_name < next_entry_name.to_string() {
+                                continue;
+                            }
+                        }
+                        sink = match sink.append(
+                            &EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory),
+                            &target_entry_name,
+                        ) {
+                            dirents_sink::AppendResult::Ok(sink) => sink,
+                            dirents_sink::AppendResult::Sealed(sealed) => {
+                                // There is not enough space to return this entry. Record it as the next
+                                // entry to start at for subsequent calls.
+                                return Ok((
+                                    TraversalPosition::Name(target_entry_name.clone()),
+                                    sealed,
+                                ));
+                            }
                         }
                     }
                 }
@@ -279,22 +282,18 @@ impl CapabilityProvider for FilteredServiceProvider {
 
         let instance_name_target_to_source = {
             let mut m = HashMap::new();
-            // We want to ensure that there is a one-to-one mapping from
-            // source to target names. This is validated by cm_fidl_validator, so we
-            // can safely panic and not proceed if that is violated here.
-            let mut existing_values = HashSet::<String>::new();
+            // We want to ensure that there is a one-to-many mapping from
+            // source to target names, with no target names being used for multiple source names.
+            // This is validated by cm_fidl_validator, so we can safely panic and not proceed
+            // if that is violated here.
             for (k, v) in self.instance_name_source_to_target.iter() {
-                if m.insert(v.clone(), k.clone()).is_some() {
-                    panic!(
-                        "duplicate target name found in instance_name_source_to_target, name: {}",
-                        v
-                    );
-                }
-                if !existing_values.insert(k.clone()) {
-                    panic!(
-                        "duplicate source name found in instance_name_source_to_target, name: {}",
-                        k
-                    );
+                for name in v {
+                    if m.insert(name.clone(), k.clone()).is_some() {
+                        panic!(
+                            "duplicate target name found in instance_name_source_to_target, name: {:?}",
+                            v
+                        );
+                    }
                 }
             }
             m
@@ -1027,6 +1026,95 @@ mod tests {
         const MAX_BYTES: u64 = 20;
         // Make sure expected instances are found
         for n in ["default", "two"] {
+            let (status, buf) = service_proxy.read_dirents(MAX_BYTES).await.expect("read_dirents");
+            assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+            let entries = files_async::parse_dir_entries(&buf);
+            assert_eq!(entries.len(), 1);
+            assert_eq!(entries[0].as_ref().expect("complete entry").name, n);
+        }
+
+        // Confirm no more entries found after allow listed instances.
+        let (status, buf) = service_proxy.read_dirents(MAX_BYTES).await.expect("read_dirents");
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+        let entries = files_async::parse_dir_entries(&buf);
+        assert_eq!(entries.len(), 0);
+    }
+
+    #[fuchsia::test]
+    async fn test_filtered_service_renaming() {
+        let components = create_test_component_decls();
+
+        let mock_instance_foo = pseudo_directory! {
+            "default" => pseudo_directory! {},
+            "one" => pseudo_directory! {},
+            "two" => pseudo_directory! {},
+        };
+
+        let test = RoutingTestBuilder::new("root", components)
+            .add_outgoing_path(
+                "foo",
+                "/svc/my.service.Service".try_into().unwrap(),
+                mock_instance_foo.clone(),
+            )
+            .build()
+            .await;
+
+        test.create_dynamic_child(
+            AbsoluteMoniker::root(),
+            "coll",
+            ChildDeclBuilder::new_lazy_child("foo"),
+        )
+        .await;
+        let foo_component = test
+            .model
+            .look_up(&vec!["coll:foo"].into())
+            .await
+            .expect("failed to find foo instance");
+
+        let execution_scope = foo_component
+            .lock_resolved_state()
+            .await
+            .expect("failed to get execution scope")
+            .execution_scope()
+            .clone();
+        let source_provider = DirectoryEntryCapabilityProvider {
+            execution_scope,
+            dir_entry: mock_instance_foo.clone(),
+        };
+
+        let (service_proxy, server_end) =
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+        let mut server_end = server_end.into_channel();
+
+        let host = Box::new(
+            FilteredServiceProvider::new(
+                &test.model.root(),
+                vec![],
+                HashMap::from([
+                    ("default".to_string(), vec!["aaaaaaa".to_string(), "bbbbbbb".to_string()]),
+                    ("one".to_string(), vec!["one_a".to_string()]),
+                ]),
+                Box::new(source_provider),
+            )
+            .await
+            .expect("failed to create FilteredServiceProvider"),
+        );
+
+        let task_scope = TaskScope::new();
+        host.open(
+            task_scope.clone(),
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            fio::MODE_TYPE_DIRECTORY,
+            PathBuf::new(),
+            &mut server_end,
+        )
+        .await
+        .expect("failed to open path in filtered service directory.");
+
+        // Choose a value such that there is only room for a single entry.
+        const MAX_BYTES: u64 = 20;
+        // Make sure expected instances are found
+        for n in ["aaaaaaa", "bbbbbbb", "one_a", "two"] {
             let (status, buf) = service_proxy.read_dirents(MAX_BYTES).await.expect("read_dirents");
             assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
             let entries = files_async::parse_dir_entries(&buf);

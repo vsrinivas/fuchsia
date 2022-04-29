@@ -74,7 +74,7 @@ pub enum CapabilitySourceInterface<C: ComponentInstanceInterface> {
         capability: ComponentCapability,
         component: WeakComponentInstanceInterface<C>,
         source_instance_filter: Vec<String>,
-        instance_name_source_to_target: HashMap<String, String>,
+        instance_name_source_to_target: HashMap<String, Vec<String>>,
     },
 }
 

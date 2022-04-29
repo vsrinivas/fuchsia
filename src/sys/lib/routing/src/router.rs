@@ -16,9 +16,9 @@ use {
         DebugRouteMapper, RegistrationDecl,
     },
     cm_rust::{
-        CapabilityDecl, CapabilityDeclCommon, CapabilityName, ExposeDecl, ExposeDeclCommon,
-        ExposeSource, ExposeTarget, OfferDecl, OfferDeclCommon, OfferSource, OfferTarget,
-        RegistrationDeclCommon, RegistrationSource, UseDecl, UseDeclCommon, UseSource,
+        name_mappings_to_map, CapabilityDecl, CapabilityDeclCommon, CapabilityName, ExposeDecl,
+        ExposeDeclCommon, ExposeSource, ExposeTarget, OfferDecl, OfferDeclCommon, OfferSource,
+        OfferTarget, RegistrationDeclCommon, RegistrationSource, UseDecl, UseDeclCommon, UseSource,
     },
     derivative::Derivative,
     from_enum::FromEnum,
@@ -403,16 +403,7 @@ where
                                     .unwrap_or(vec![]),
                                 instance_name_source_to_target: offer_service_decl
                                     .renamed_instances
-                                    .map_or(HashMap::new(), |mappings| {
-                                        let mut m = HashMap::new();
-                                        for mapping in mappings.iter() {
-                                            m.insert(
-                                                mapping.source_name.clone(),
-                                                mapping.target_name.clone(),
-                                            );
-                                        }
-                                        m
-                                    }),
+                                    .map_or(HashMap::new(), name_mappings_to_map),
                             });
                         }
                     }
@@ -1120,17 +1111,7 @@ where
                                             .unwrap_or(vec![]),
                                         instance_name_source_to_target: offer_service_decl
                                             .renamed_instances
-                                            .map_or(HashMap::new(), |mappings| {
-                                                mappings
-                                                    .into_iter()
-                                                    .map(|mapping| {
-                                                        (
-                                                            mapping.source_name.clone(),
-                                                            mapping.target_name.clone(),
-                                                        )
-                                                    })
-                                                    .collect()
-                                            }),
+                                            .map_or(HashMap::new(), name_mappings_to_map),
                                     },
                                 ))
                             } else {

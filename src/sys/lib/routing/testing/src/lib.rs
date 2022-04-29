@@ -4233,7 +4233,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         }]);
         let expected_rename_map = {
             let mut m = HashMap::new();
-            m.insert("instance_0".to_string(), "renamed_instance_0".to_string());
+            m.insert("instance_0".to_string(), vec!["renamed_instance_0".to_string()]);
             m
         };
 
