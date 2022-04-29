@@ -437,7 +437,7 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 		mergedFile := filepath.Join(tempDir, fmt.Sprintf("merged%d.profdata", version))
 		args := []string{
 			"merge",
-			"--failure-mode=all",
+			"--failure-mode=any",
 			"--sparse",
 			"--output", mergedFile,
 		}
@@ -456,7 +456,7 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 	mergedFile := filepath.Join(tempDir, "merged.profdata")
 	args := []string{
 		"merge",
-		"--failure-mode=all",
+		"--failure-mode=any",
 		"--sparse",
 		"--output", mergedFile,
 	}
