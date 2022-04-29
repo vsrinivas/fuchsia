@@ -82,6 +82,26 @@ class Device : public fuchsia::bluetooth::test::HciEmulator {
                                     bt::hci_spec::ConnectionHandle handle, bool connected,
                                     bool canceled);
 
+  // Starts listening for command/event packets on the given channel.
+  // Returns false if already listening on a command channel
+  bool StartCmdChannel(zx::channel chan);
+
+  // Starts listening for acl packets on the given channel.
+  // Returns false if already listening on a acl channel
+  bool StartAclChannel(zx::channel chan);
+
+  void CloseCommandChannel();
+  void CloseAclDataChannel();
+
+  void SendEvent(std::unique_ptr<bt::hci::EventPacket> event);
+  void SendAclPacket(std::unique_ptr<bt::hci::ACLDataPacket> packet);
+
+  // Read and handle packets received over the channels.
+  void HandleCommandPacket(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                           zx_status_t wait_status, const zx_packet_signal_t* signal);
+  void HandleAclPacket(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                       zx_status_t wait_status, const zx_packet_signal_t* signal);
+
   static constexpr fuchsia_hardware_bluetooth_Hci_ops_t hci_fidl_ops_ = {
       .OpenCommandChannel = OpenCommandChannel,
       .OpenAclDataChannel = OpenAclDataChannel,
@@ -128,6 +148,12 @@ class Device : public fuchsia::bluetooth::test::HciEmulator {
       controller_parameters_getter_;
   bt_lib_fidl::HangingVectorGetter<fuchsia::bluetooth::test::LegacyAdvertisingState>
       legacy_adv_state_getter_;
+
+  zx::channel cmd_channel_;
+  zx::channel acl_channel_;
+
+  async::WaitMethod<Device, &Device::HandleCommandPacket> cmd_channel_wait_{this};
+  async::WaitMethod<Device, &Device::HandleAclPacket> acl_channel_wait_{this};
 };
 
 }  // namespace bt_hci_emulator

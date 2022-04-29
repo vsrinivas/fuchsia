@@ -144,6 +144,10 @@ zx_status_t Device::Bind(std::string_view name) {
   }
 
   fake_device_ = fbl::AdoptRef(new FakeController());
+  fake_device_->set_error_callback([this](zx_status_t status) {
+    logf(WARNING, "FakeController error: %s", zx_status_get_string(status));
+    UnpublishHci();
+  });
   fake_device_->set_controller_parameters_callback(
       fit::bind_member<&Device::OnControllerParametersChanged>(this));
   fake_device_->set_advertising_state_callback(
@@ -247,13 +251,11 @@ zx_status_t Device::OpenChan(Channel chan_type, zx_handle_t in_h) {
   zx::channel in(in_h);
 
   if (chan_type == Channel::COMMAND) {
-    async::PostTask(loop_.dispatcher(), [device = fake_device_, in = std::move(in)]() mutable {
-      device->StartCmdChannel(std::move(in));
-    });
+    async::PostTask(loop_.dispatcher(),
+                    [this, in = std::move(in)]() mutable { StartCmdChannel(std::move(in)); });
   } else if (chan_type == Channel::ACL) {
-    async::PostTask(loop_.dispatcher(), [device = fake_device_, in = std::move(in)]() mutable {
-      device->StartAclChannel(std::move(in));
-    });
+    async::PostTask(loop_.dispatcher(),
+                    [this, in = std::move(in)]() mutable { StartAclChannel(std::move(in)); });
   } else if (chan_type == Channel::SNOOP) {
     async::PostTask(loop_.dispatcher(), [device = fake_device_, in = std::move(in)]() mutable {
       device->StartSnoopChannel(std::move(in));
@@ -447,6 +449,169 @@ void Device::OnPeerConnectionStateChanged(const bt::DeviceAddress& address,
   auto iter = peers_.find(address);
   if (iter != peers_.end()) {
     iter->second->UpdateConnectionState(connected);
+  }
+}
+
+// Starts listening for command/event packets on the given channel.
+// Returns false if already listening on a command channel
+bool Device::StartCmdChannel(zx::channel chan) {
+  if (cmd_channel_.is_valid()) {
+    return false;
+  }
+
+  fake_device_->StartCmdChannel(fit::bind_member<&Device::SendEvent>(this));
+
+  cmd_channel_ = std::move(chan);
+  cmd_channel_wait_.set_object(cmd_channel_.get());
+  cmd_channel_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+  zx_status_t status = cmd_channel_wait_.Begin(async_get_default_dispatcher());
+  if (status != ZX_OK) {
+    cmd_channel_.reset();
+    logf(ERROR, "failed to start command channel: %s", zx_status_get_string(status));
+    return false;
+  }
+  return true;
+}
+
+// Starts listening for acl packets on the given channel.
+// Returns false if already listening on a acl channel
+bool Device::StartAclChannel(zx::channel chan) {
+  if (acl_channel_.is_valid()) {
+    return false;
+  }
+
+  // Enable FakeController to send packets to bt-host.
+  fake_device_->StartAclChannel(fit::bind_member<&Device::SendAclPacket>(this));
+
+  // Enable bt-host to send packets to FakeController.
+  acl_channel_ = std::move(chan);
+  acl_channel_wait_.set_object(acl_channel_.get());
+  acl_channel_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+  zx_status_t status = acl_channel_wait_.Begin(async_get_default_dispatcher());
+  if (status != ZX_OK) {
+    acl_channel_.reset();
+    logf(ERROR, "failed to start ACL channel: %s", zx_status_get_string(status));
+    return false;
+  }
+  return true;
+}
+
+void Device::CloseCommandChannel() {
+  if (cmd_channel_.is_valid()) {
+    cmd_channel_wait_.Cancel();
+    cmd_channel_.reset();
+  }
+  fake_device_->Stop();
+}
+
+void Device::CloseAclDataChannel() {
+  if (acl_channel_.is_valid()) {
+    acl_channel_wait_.Cancel();
+    acl_channel_.reset();
+  }
+  fake_device_->Stop();
+}
+
+void Device::SendEvent(std::unique_ptr<bt::hci::EventPacket> event) {
+  zx_status_t status =
+      cmd_channel_.write(/*flags=*/0, event->view().data().data(), event->view().size(),
+                         /*handles=*/nullptr, /*num_handles=*/0);
+  if (status != ZX_OK) {
+    logf(WARNING, "failed to write event");
+  }
+}
+
+void Device::SendAclPacket(std::unique_ptr<bt::hci::ACLDataPacket> packet) {
+  zx_status_t status =
+      acl_channel_.write(/*flags=*/0, packet->view().data().data(), packet->view().size(),
+                         /*handles=*/nullptr, /*num_handles=*/0);
+  if (status != ZX_OK) {
+    logf(WARNING, "failed to write ACL packet");
+  }
+}
+
+// Read and handle packets received over the channels.
+void Device::HandleCommandPacket(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                 zx_status_t wait_status, const zx_packet_signal_t* signal) {
+  bt::StaticByteBuffer<bt::hci_spec::kMaxCommandPacketPayloadSize> buffer;
+  uint32_t read_size;
+  zx_status_t status = cmd_channel_.read(0u, buffer.mutable_data(), /*handles=*/nullptr,
+                                         bt::hci_spec::kMaxCommandPacketPayloadSize, 0, &read_size,
+                                         /*actual_handles=*/nullptr);
+  ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_PEER_CLOSED);
+  if (status < 0) {
+    if (status == ZX_ERR_PEER_CLOSED) {
+      logf(INFO, "command channel was closed");
+    } else {
+      logf(ERROR, "failed to read on cmd channel: %s", zx_status_get_string(status));
+    }
+    CloseCommandChannel();
+    return;
+  }
+
+  if (read_size < sizeof(bt::hci_spec::CommandHeader)) {
+    logf(ERROR, "malformed command packet received");
+  } else {
+    bt::MutableBufferView view(buffer.mutable_data(), read_size);
+    bt::PacketView<bt::hci_spec::CommandHeader> packet_view(
+        &view, read_size - sizeof(bt::hci_spec::CommandHeader));
+
+    std::unique_ptr<bt::hci::CommandPacket> packet =
+        bt::hci::CommandPacket::New(packet_view.header().opcode, packet_view.payload_size());
+    bt::MutableBufferView dest = packet->mutable_view()->mutable_data();
+    view.Copy(&dest);
+
+    fake_device_->SendSnoopChannelPacket(packet_view.data(), BT_HCI_SNOOP_TYPE_CMD,
+                                         /*is_received=*/false);
+    fake_device_->HandleCommandPacket(std::move(packet));
+  }
+
+  status = wait->Begin(dispatcher);
+  if (status != ZX_OK) {
+    bt_log(ERROR, "fake-hci", "failed to wait on cmd channel: %s", zx_status_get_string(status));
+    CloseCommandChannel();
+  }
+}
+
+void Device::HandleAclPacket(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                             zx_status_t wait_status, const zx_packet_signal_t* signal) {
+  bt::StaticByteBuffer<bt::hci_spec::kMaxACLPayloadSize + sizeof(bt::hci_spec::ACLDataHeader)>
+      buffer;
+  uint32_t read_size;
+  zx_status_t status = acl_channel_.read(0u, buffer.mutable_data(), /*handles=*/nullptr,
+                                         buffer.size(), 0, &read_size, /*actual_handles=*/nullptr);
+  ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_PEER_CLOSED);
+  if (status < 0) {
+    if (status == ZX_ERR_PEER_CLOSED) {
+      logf(INFO, "ACL channel was closed");
+    } else {
+      logf(ERROR, "failed to read on ACL channel: %s", zx_status_get_string(status));
+    }
+
+    CloseAclDataChannel();
+    return;
+  }
+
+  if (read_size < sizeof(bt::hci_spec::ACLDataHeader)) {
+    logf(ERROR, "malformed ACL packet received");
+  } else {
+    bt::BufferView view(buffer.data(), read_size);
+
+    fake_device_->SendSnoopChannelPacket(view, BT_HCI_SNOOP_TYPE_ACL, /*is_received=*/false);
+
+    bt::hci::ACLDataPacketPtr packet = bt::hci::ACLDataPacket::New(
+        /*payload_size=*/read_size - sizeof(bt::hci_spec::ACLDataHeader));
+    bt::MutableBufferView dest = packet->mutable_view()->mutable_data();
+    view.Copy(&dest);
+    packet->InitializeFromBuffer();
+
+    fake_device_->HandleACLPacket(std::move(packet));
+  }
+
+  status = wait->Begin(dispatcher);
+  if (status != ZX_OK) {
+    logf(ERROR, "failed to wait on ACL channel: %s", zx_status_get_string(status));
+    CloseAclDataChannel();
   }
 }
 
