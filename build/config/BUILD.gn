@@ -814,7 +814,6 @@ config("Wno-conversion") {
     "//src/modular/lib/modular_test_harness/cpp:*",
     "//src/modular/tests:*",
     "//src/security/tee_manager:*",
-    "//src/sys/activity:*",
     "//src/sys/appmgr:*",
     "//src/sys/appmgr/integration_tests/mock_runner:*",
     "//src/sys/appmgr/integration_tests/sandbox/features/storage:*",
