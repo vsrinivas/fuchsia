@@ -9,6 +9,7 @@
 
 #include <lib/fit/defer.h>
 #include <lib/ktrace.h>
+#include <lib/zx/status.h>
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
@@ -152,7 +153,7 @@ class InterruptTracker {
   void Cancel() { event_.Signal(ZX_ERR_INTERNAL_INTR_RETRY); }
 
   // Waits for an interrupt.
-  zx::status<> Wait(zx_time_t deadline, StateInvalidator* invalidator) {
+  zx::status<> Wait(zx_time_t deadline, StateInvalidator* invalidator = nullptr) {
     if (invalidator != nullptr) {
       invalidator->Invalidate();
     }

@@ -334,7 +334,7 @@ zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
       if (!(*trap)->HasPort()) {
         return ZX_ERR_BAD_STATE;
       }
-      return (*trap)->Queue(*packet, nullptr).status_value();
+      return (*trap)->Queue(*packet).status_value();
     case ZX_GUEST_TRAP_MEM:
       if (!data_abort.valid) {
         return ZX_ERR_IO_DATA_INTEGRITY;

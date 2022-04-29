@@ -39,7 +39,7 @@ class Trap : public fbl::WAVLTreeContainable<ktl::unique_ptr<Trap>> {
   ~Trap();
 
   zx::status<> Init();
-  zx::status<> Queue(const zx_port_packet_t& packet, StateInvalidator* invalidator);
+  zx::status<> Queue(const zx_port_packet_t& packet, StateInvalidator* invalidator = nullptr);
 
   zx_gpaddr_t GetKey() const { return addr_; }
   bool Contains(zx_gpaddr_t val) const { return val >= addr_ && val < addr_ + len_; }

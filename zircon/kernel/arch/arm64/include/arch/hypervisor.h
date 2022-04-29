@@ -78,9 +78,7 @@ class GichState {
     interrupt_tracker_.Interrupt(vector, type);
   }
   void Cancel() { interrupt_tracker_.Cancel(); }
-  zx_status_t Wait(zx_time_t deadline) {
-    return interrupt_tracker_.Wait(deadline, nullptr).status_value();
-  }
+  zx_status_t Wait(zx_time_t deadline) { return interrupt_tracker_.Wait(deadline).status_value(); }
 
   bool IsUsingListRegister() { return !lr_tracker_.Scan(0, kNumInterrupts, false); }
   bool InListRegister(uint32_t vector) { return lr_tracker_.GetOne(vector); }
