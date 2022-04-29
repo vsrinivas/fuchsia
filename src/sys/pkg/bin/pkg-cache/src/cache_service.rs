@@ -956,13 +956,14 @@ async fn serve_base_package_index(
     base_packages: Arc<BasePackages>,
     stream: PackageIndexIteratorRequestStream,
 ) {
-    let package_entries = base_packages
-        .paths_to_hashes()
+    let mut package_entries = base_packages
+        .paths_and_hashes()
         .map(|(path, hash)| PackageIndexEntry {
             package_url: PackageUrl { url: format!("fuchsia-pkg://fuchsia.com/{}", path.name()) },
             meta_far_blob_id: BlobId::from(hash.clone()).into(),
         })
         .collect::<Vec<PackageIndexEntry>>();
+    package_entries.sort_unstable_by(|a, b| a.package_url.url.cmp(&b.package_url.url));
     serve_fidl_iterator(package_entries, stream).await.unwrap_or_else(|e| {
         fx_log_err!("error serving PackageIndexIteratorRequestStream protocol: {:#}", anyhow!(e))
     })
@@ -3047,18 +3048,25 @@ mod serve_base_package_index_tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn base_packages_entries_converted_correctly() {
-        let base_package_hashes = vec![
-            (
-                PackagePath::from_name_and_variant("name0".parse().unwrap(), "0".parse().unwrap()),
-                Hash::from([0u8; 32]),
-            ),
-            (
-                PackagePath::from_name_and_variant("name1".parse().unwrap(), "1".parse().unwrap()),
-                Hash::from([1u8; 32]),
-            ),
-        ];
-
-        let base_packages = BasePackages::new_test_only(HashSet::new(), base_package_hashes);
+        let base_packages = BasePackages::new_test_only(
+            HashSet::new(),
+            [
+                (
+                    PackagePath::from_name_and_variant(
+                        "name0".parse().unwrap(),
+                        "0".parse().unwrap(),
+                    ),
+                    Hash::from([0u8; 32]),
+                ),
+                (
+                    PackagePath::from_name_and_variant(
+                        "name1".parse().unwrap(),
+                        "1".parse().unwrap(),
+                    ),
+                    Hash::from([1u8; 32]),
+                ),
+            ],
+        );
 
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<PackageIndexIteratorMarker>().unwrap();

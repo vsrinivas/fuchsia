@@ -57,7 +57,7 @@ impl PkgfsPackages {
         let mut res: HashMap<PackageName, HashMap<PackageVariant, Hash>> = HashMap::new();
 
         // First populate with base packages.
-        for (path, hash) in self.base_packages.paths_to_hashes() {
+        for (path, hash) in self.base_packages.paths_and_hashes() {
             let name = path.name().to_owned();
             let variant = path.variant().to_owned();
 
@@ -201,7 +201,7 @@ mod tests {
 
     impl PkgfsPackages {
         pub fn new_test(
-            base_packages: Vec<(PackagePath, Hash)>,
+            base_packages: impl IntoIterator<Item = (PackagePath, Hash)>,
             non_static_allow_list: NonStaticAllowList,
         ) -> (Arc<Self>, Arc<Mutex<PackageIndex>>) {
             let (blobfs, _) = blobfs::Client::new_mock();
@@ -273,7 +273,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn minimal_lifecycle() {
         let (pkgfs_packages, _package_index) =
-            PkgfsPackages::new_test(vec![], non_static_allow_list(&[]));
+            PkgfsPackages::new_test([], non_static_allow_list(&[]));
 
         drop(pkgfs_packages);
     }
@@ -281,7 +281,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn packages_listing_unions_indices() {
         let (pkgfs_packages, package_index) = PkgfsPackages::new_test(
-            vec![(path("static", "0"), hash(0))],
+            [(path("static", "0"), hash(0))],
             non_static_allow_list(&["dynamic"]),
         );
 
@@ -305,7 +305,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn packages_listing_dynamic_overrides_static() {
         let (pkgfs_packages, package_index) = PkgfsPackages::new_test(
-            vec![(path("replaceme", "0"), hash(0)), (path("replaceme", "butnotme"), hash(1))],
+            [(path("replaceme", "0"), hash(0)), (path("replaceme", "butnotme"), hash(1))],
             non_static_allow_list(&["replaceme"]),
         );
 
@@ -325,7 +325,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn packages_listing_ignores_disallowed_dynamic_packages() {
         let (pkgfs_packages, package_index) = PkgfsPackages::new_test(
-            vec![(path("allowed", "0"), hash(0)), (path("static", "0"), hash(1))],
+            [(path("allowed", "0"), hash(0)), (path("static", "0"), hash(1))],
             non_static_allow_list(&["allowed"]),
         );
 
@@ -349,7 +349,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn readdir_empty() {
         let (pkgfs_packages, _package_index) =
-            PkgfsPackages::new_test(vec![], non_static_allow_list(&[]));
+            PkgfsPackages::new_test([], non_static_allow_list(&[]));
 
         // Given adequate buffer space, the only entry is itself (".").
         let (pos, sealed) = Directory::read_dirents(
@@ -370,7 +370,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn readdir_enumerates_all_allowed_entries() {
         let (pkgfs_packages, package_index) = PkgfsPackages::new_test(
-            vec![
+            [
                 (path("allowed", "0"), hash(0)),
                 (path("static", "0"), hash(1)),
                 (path("static", "1"), hash(2)),
@@ -415,7 +415,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn open_rejects_invalid_name() {
         let (pkgfs_packages, _package_index) =
-            PkgfsPackages::new_test(vec![], non_static_allow_list(&[]));
+            PkgfsPackages::new_test([], non_static_allow_list(&[]));
 
         let proxy = pkgfs_packages.proxy(fio::OpenFlags::RIGHT_READABLE);
 
@@ -433,7 +433,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn open_rejects_missing_package() {
         let (pkgfs_packages, _package_index) =
-            PkgfsPackages::new_test(vec![], non_static_allow_list(&[]));
+            PkgfsPackages::new_test([], non_static_allow_list(&[]));
 
         let proxy = pkgfs_packages.proxy(fio::OpenFlags::RIGHT_READABLE);
 
@@ -446,10 +446,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn open_opens_static_package_variants() {
-        let (pkgfs_packages, _package_index) = PkgfsPackages::new_test(
-            vec![(path("static", "0"), hash(0))],
-            non_static_allow_list(&[]),
-        );
+        let (pkgfs_packages, _package_index) =
+            PkgfsPackages::new_test([(path("static", "0"), hash(0))], non_static_allow_list(&[]));
 
         let proxy = pkgfs_packages.proxy(fio::OpenFlags::RIGHT_READABLE);
 
@@ -463,7 +461,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn open_opens_allowed_dynamic_variants() {
         let (pkgfs_packages, package_index) =
-            PkgfsPackages::new_test(vec![], non_static_allow_list(&["dynamic"]));
+            PkgfsPackages::new_test([], non_static_allow_list(&["dynamic"]));
 
         let proxy = pkgfs_packages.proxy(fio::OpenFlags::RIGHT_READABLE);
 
@@ -487,7 +485,7 @@ mod tests {
         let package_index = Arc::new(Mutex::new(PackageIndex::new_test()));
         let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
         let pkgfs_packages = Arc::new(PkgfsPackages::new(
-            Arc::new(BasePackages::new_test_only(HashSet::new(), vec![])),
+            Arc::new(BasePackages::new_test_only(HashSet::new(), [])),
             Arc::clone(&package_index),
             Arc::new(non_static_allow_list(&["dynamic"])),
             blobfs_client,
@@ -518,7 +516,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn open_unsets_posix_writable() {
         let (pkgfs_packages, _package_index) =
-            PkgfsPackages::new_test(vec![], non_static_allow_list(&[]));
+            PkgfsPackages::new_test([], non_static_allow_list(&[]));
 
         let proxy =
             pkgfs_packages.proxy(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::POSIX_WRITABLE);
@@ -531,7 +529,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn open_converts_posix_deprecated_to_posix_exec() {
         let (pkgfs_packages, _package_index) =
-            PkgfsPackages::new_test(vec![], non_static_allow_list(&[]));
+            PkgfsPackages::new_test([], non_static_allow_list(&[]));
 
         let proxy =
             pkgfs_packages.proxy(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::POSIX_DEPRECATED);

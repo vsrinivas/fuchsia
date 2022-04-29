@@ -9,7 +9,7 @@ use {
     fuchsia_merkle::Hash,
     fuchsia_pkg::PackagePath,
     futures::{StreamExt, TryStreamExt},
-    std::collections::HashSet,
+    std::collections::{HashMap, HashSet},
 };
 
 const SYSTEM_IMAGE_NAME: &str = "system_image";
@@ -20,11 +20,16 @@ const SYSTEM_IMAGE_VARIANT: &str = "0";
 #[derive(Debug)]
 pub struct BasePackages {
     base_blobs: BaseBlobs,
-    paths_to_hashes: Vec<(PackagePath, Hash)>,
+    hashes_to_paths: HashMap<Hash, Vec<PackagePath>>,
     #[allow(unused)]
     node: finspect::Node,
 }
 
+/// All of the base blobs.
+/// If the system is configured to have a system_image package, then:
+///   1. the meta.far and content blobs of the system_image package
+///   2. the meta.fars and content blobs of all the static_packages.
+/// Otherwise, empty.
 #[derive(Debug)]
 struct BaseBlobs {
     blobs: InspectableLen<HashSet<Hash>>,
@@ -49,7 +54,7 @@ impl BasePackages {
         // packages. If we're constructing BasePackages, we must have a system image package.
         // However, not all systems have a system image, like recovery, which starts pkg-cache with
         // an empty blobfs.
-        let paths_to_hashes: Vec<(PackagePath, Hash)> = system_image
+        let paths_and_hashes = system_image
             .static_packages()
             .await
             .context("failed to load static packages from system image")?
@@ -60,13 +65,18 @@ impl BasePackages {
                     SYSTEM_IMAGE_VARIANT.parse().unwrap(),
                 ),
                 *system_image.hash(),
-            )))
-            .collect();
+            )));
 
-        match Self::load_base_blobs(blobfs, paths_to_hashes.iter().map(|p| p.1)).await {
+        let mut hashes_to_paths =
+            HashMap::<Hash, Vec<PackagePath>>::with_capacity(paths_and_hashes.size_hint().0);
+        for (path, hash) in paths_and_hashes {
+            hashes_to_paths.entry(hash).or_default().push(path)
+        }
+
+        match Self::load_base_blobs(blobfs, hashes_to_paths.iter().map(|p| *p.0)).await {
             Ok(blobs) => Ok(Self {
                 base_blobs: BaseBlobs::new(blobs, node.create_child("base-blobs")),
-                paths_to_hashes,
+                hashes_to_paths,
                 node,
             }),
             Err(e) => Err(anyhow!(e).context("Error determining base blobs")),
@@ -78,7 +88,7 @@ impl BasePackages {
     pub fn empty(node: finspect::Node) -> Self {
         Self {
             base_blobs: BaseBlobs::new(HashSet::new(), node.create_child("base-blobs")),
-            paths_to_hashes: vec![],
+            hashes_to_paths: HashMap::new(),
             node,
         }
     }
@@ -115,29 +125,33 @@ impl BasePackages {
         Ok(std::iter::once(package.clone()).chain(external_hashes))
     }
 
-    /// Iterator over the mapping of package paths to hashes.
-    pub fn paths_to_hashes(
-        &self,
-    ) -> impl Iterator<Item = &(PackagePath, Hash)> + ExactSizeIterator {
-        self.paths_to_hashes.iter()
+    /// Returns `true` iff `pkg` is the hash of a base package.
+    pub fn is_base_package(&self, pkg: Hash) -> bool {
+        self.hashes_to_paths.contains_key(&pkg)
     }
 
-    // TODO(fxbug.dev/43635) use this function, remove allow
-    #[allow(dead_code)]
-    pub fn is_blob_in_base(&self, hash: &Hash) -> bool {
-        self.base_blobs.blobs.contains(hash)
+    /// Iterator over tuples of the base package paths and hashes. Iteration order is arbitrary.
+    pub fn paths_and_hashes(&self) -> impl Iterator<Item = (&PackagePath, &Hash)> {
+        self.hashes_to_paths.iter().flat_map(|(hash, paths)| paths.iter().map(move |p| (p, hash)))
     }
 
     /// Test-only constructor to allow testing with this type without constructing a pkgfs.
     #[cfg(test)]
     pub(crate) fn new_test_only(
         blobs: HashSet<Hash>,
-        paths_to_hashes: Vec<(PackagePath, Hash)>,
+        paths_and_hashes: impl IntoIterator<Item = (PackagePath, Hash)>,
     ) -> Self {
+        let paths_and_hashes = paths_and_hashes.into_iter();
+        let mut hashes_to_paths =
+            HashMap::<Hash, Vec<PackagePath>>::with_capacity(paths_and_hashes.size_hint().0);
+        for (path, hash) in paths_and_hashes {
+            hashes_to_paths.entry(hash).or_default().push(path)
+        }
+
         let inspector = finspect::Inspector::new();
         Self {
             base_blobs: BaseBlobs::new(blobs, inspector.root().clone_weak()),
-            paths_to_hashes,
+            hashes_to_paths,
             node: inspector.root().clone_weak(),
         }
     }
@@ -146,8 +160,8 @@ impl BasePackages {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fuchsia_inspect::assert_data_tree, fuchsia_pkg::PackagePath,
-        fuchsia_pkg_testing::PackageBuilder, maplit::hashset,
+        super::*, fuchsia_inspect::assert_data_tree, fuchsia_pkg_testing::PackageBuilder,
+        std::iter::FromIterator as _,
     };
 
     struct TestEnv {
@@ -210,10 +224,6 @@ mod tests {
             .collect();
         assert_eq!(base_packages.list_blobs(), &expected_blobs);
 
-        for blob in expected_blobs.iter() {
-            assert!(base_packages.is_blob_in_base(blob));
-        }
-
         assert_data_tree!(env.inspector, root: {
             "base-packages": {
                 "base-blobs": {
@@ -255,7 +265,7 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn paths_to_hashes_includes_system_image() {
+    async fn paths_and_hashes_includes_system_image() {
         let a_base_package = PackageBuilder::new("a-base-package")
             .add_resource_at("a-base-blob", &b"a-base-blob-contents"[..])
             .build()
@@ -265,24 +275,43 @@ mod tests {
         let (env, base_packages) = TestEnv::new(&[&a_base_package]).await;
 
         assert_eq!(
-            base_packages.paths_to_hashes().cloned().collect::<HashSet<(PackagePath, Hash)>>(),
-            hashset! {
+            base_packages
+                .paths_and_hashes()
+                .map(|(p, h)| (p.clone(), h.clone()))
+                .collect::<HashSet<_>>(),
+            HashSet::from_iter([
                 ("system_image/0".parse().unwrap(), *env.system_image.meta_far_merkle_root()),
-                ("a-base-package/0".parse().unwrap(), a_base_package_hash)
-            }
+                ("a-base-package/0".parse().unwrap(), a_base_package_hash),
+            ])
         );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn paths_to_hashes_includes_system_image_even_if_no_static_packages() {
+    async fn paths_and_hashes_includes_system_image_even_if_no_static_packages() {
         let (env, base_packages) = TestEnv::new(&[]).await;
 
         assert_eq!(
-            base_packages.paths_to_hashes().cloned().collect::<HashSet<(PackagePath, Hash)>>(),
-            hashset! {
-                ("system_image/0".parse().unwrap(), *env.system_image.meta_far_merkle_root()),
-            }
+            base_packages
+                .paths_and_hashes()
+                .map(|(p, h)| (p.clone(), h.clone()))
+                .collect::<HashSet<_>>(),
+            HashSet::from_iter([(
+                "system_image/0".parse().unwrap(),
+                *env.system_image.meta_far_merkle_root()
+            ),])
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn is_base_package() {
+        let (env, base_packages) = TestEnv::new(&[]).await;
+        let system_image = *env.system_image.meta_far_merkle_root();
+        let mut not_system_image = Into::<[u8; 32]>::into(system_image);
+        not_system_image[0] = !not_system_image[0];
+        let not_system_image = Hash::from(not_system_image);
+
+        assert!(base_packages.is_base_package(system_image));
+        assert!(!base_packages.is_base_package(not_system_image));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

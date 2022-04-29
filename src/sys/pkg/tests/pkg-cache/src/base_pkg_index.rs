@@ -109,9 +109,8 @@ async fn base_pkg_index_with_one_package() {
         .await;
 }
 
-/// Verifies that the internal cache is not re-ordering packages based on sorting.
 #[fasync::run_singlethreaded(test)]
-async fn base_pkg_index_verify_ordering() {
+async fn base_pkg_index_sorted_by_url() {
     let pkg_0 = PackageBuilder::new("base-package-zzz")
         .add_resource_at("resource", &[][..])
         .build()
@@ -131,7 +130,7 @@ async fn base_pkg_index_verify_ordering() {
     let pkg_iterator = get_pkg_iterator(&env).await;
     assert_base_packages_match(
         pkg_iterator,
-        &[&pkg_0, &pkg_1, &pkg_2],
+        &[&pkg_1, &pkg_2, &pkg_0],
         env.pkgfs.system_image_merkle().unwrap(),
     )
     .await;
@@ -148,7 +147,7 @@ async fn base_pkg_index_verify_multiple_chunks() {
     let mut system_image = SystemImageBuilder::new();
     let mut expected_entries = Vec::with_capacity(bundle_size);
 
-    let pkg_0 = PackageBuilder::new("base-package-zzz")
+    let pkg_0 = PackageBuilder::new("base-package")
         .add_resource_at("resource", &[][..])
         .build()
         .await
@@ -156,7 +155,7 @@ async fn base_pkg_index_verify_multiple_chunks() {
     let hash = *pkg_0.meta_far_merkle_root();
 
     for i in 0..bundle_size {
-        let name = format!("base-package-{}", i);
+        let name = format!("base-package-{:04}", i);
         let url = format!("fuchsia-pkg://fuchsia.com/{}", name);
         let path = PackagePath::from_name_and_variant(name.parse().unwrap(), "0".parse().unwrap());
 

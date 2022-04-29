@@ -54,7 +54,7 @@ impl PkgfsVersions {
     async fn directory_entries(&self) -> BTreeMap<String, super::DirentType> {
         let active_packages = self.non_base_packages.lock().await.active_packages();
         self.base_packages
-            .paths_to_hashes()
+            .paths_and_hashes()
             .map(|(_path, hash)| hash.to_string())
             .chain(active_packages.into_iter().map(|(_path, hash)| hash.to_string()))
             .map(|hash| (hash, super::DirentType::Directory))
@@ -215,7 +215,7 @@ async fn get_package_status(
     package_index: &Mutex<PackageIndex>,
     package: &fuchsia_hash::Hash,
 ) -> PackageStatus {
-    if base_packages.paths_to_hashes().any(|(_, hash)| hash == package) {
+    if base_packages.is_base_package(*package) {
         return PackageStatus::Base;
     }
 
@@ -288,7 +288,7 @@ mod tests {
 
     impl TestEnv {
         pub fn new(
-            base_packages: Vec<(PackagePath, Hash)>,
+            base_packages: impl IntoIterator<Item = (PackagePath, Hash)>,
             non_static_allow_list: NonStaticAllowList,
             executability_restrictions: ExecutabilityRestrictions,
             packages_on_disk: &[&Package],
@@ -332,7 +332,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn directory_entries_unions_base_and_dynamic() {
         let (env, pkgfs_versions) = TestEnv::new(
-            vec![(create_path("base_package"), hash(0))],
+            [(create_path("base_package"), hash(0))],
             non_static_allow_list(&[]),
             ExecutabilityRestrictions::Enforce,
             &[],
@@ -351,12 +351,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn readdir_empty() {
-        let (_env, pkgfs_versions) = TestEnv::new(
-            vec![],
-            non_static_allow_list(&[]),
-            ExecutabilityRestrictions::Enforce,
-            &[],
-        );
+        let (_env, pkgfs_versions) =
+            TestEnv::new([], non_static_allow_list(&[]), ExecutabilityRestrictions::Enforce, &[]);
 
         // Given adequate buffer space, the only entry is itself (".").
         let (pos, sealed) = Directory::read_dirents(
@@ -377,7 +373,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn readdir_enumerates_all_entries() {
         let (env, pkgfs_versions) = TestEnv::new(
-            vec![
+            [
                 (create_path("allowed"), hash(0)),
                 (create_path("base"), hash(1)),
                 (create_path("same-hash"), hash(2)),
@@ -421,12 +417,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn executable_open_access_denied_not_allowlisted() {
-        let (env, pkgfs_versions) = TestEnv::new(
-            vec![],
-            non_static_allow_list(&[]),
-            ExecutabilityRestrictions::Enforce,
-            &[],
-        );
+        let (env, pkgfs_versions) =
+            TestEnv::new([], non_static_allow_list(&[]), ExecutabilityRestrictions::Enforce, &[]);
 
         register_dynamic_package(&env.package_index, create_path("dynamic"), hash(1)).await;
 
@@ -449,7 +441,7 @@ mod tests {
         let pkg = PackageBuilder::new("dynamic").build().await.unwrap();
 
         let (env, pkgfs_versions) = TestEnv::new(
-            vec![],
+            [],
             non_static_allow_list(&[]),
             ExecutabilityRestrictions::Enforce,
             &[&pkg],
@@ -490,12 +482,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn directory_entry_open_strips_posix_write() {
-        let (_env, pkgfs_versions) = TestEnv::new(
-            vec![],
-            non_static_allow_list(&[]),
-            ExecutabilityRestrictions::Enforce,
-            &[],
-        );
+        let (_env, pkgfs_versions) =
+            TestEnv::new([], non_static_allow_list(&[]), ExecutabilityRestrictions::Enforce, &[]);
 
         let proxy =
             pkgfs_versions.proxy(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::POSIX_WRITABLE);
@@ -507,12 +495,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn directory_entry_open_converts_posix_deprecated_to_posix_exec() {
-        let (_env, pkgfs_versions) = TestEnv::new(
-            vec![],
-            non_static_allow_list(&[]),
-            ExecutabilityRestrictions::Enforce,
-            &[],
-        );
+        let (_env, pkgfs_versions) =
+            TestEnv::new([], non_static_allow_list(&[]), ExecutabilityRestrictions::Enforce, &[]);
 
         let proxy =
             pkgfs_versions.proxy(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::POSIX_DEPRECATED);
@@ -524,12 +508,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn directory_entry_open_not_found_takes_precedence_over_access_denied() {
-        let (_env, pkgfs_versions) = TestEnv::new(
-            vec![],
-            non_static_allow_list(&[]),
-            ExecutabilityRestrictions::Enforce,
-            &[],
-        );
+        let (_env, pkgfs_versions) =
+            TestEnv::new([], non_static_allow_list(&[]), ExecutabilityRestrictions::Enforce, &[]);
 
         let proxy =
             pkgfs_versions.proxy(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE);
@@ -548,7 +528,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn directory_entry_open_executable_no_enforcement_not_found() {
         let (_env, pkgfs_versions) = TestEnv::new(
-            vec![],
+            [],
             non_static_allow_list(&[]),
             ExecutabilityRestrictions::DoNotEnforce,
             &[],
@@ -581,7 +561,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn directory_entry_open_self() {
         let (_env, pkgfs_versions) = TestEnv::new(
-            vec![(create_path("base"), hash(0))],
+            [(create_path("base"), hash(0))],
             non_static_allow_list(&[]),
             ExecutabilityRestrictions::DoNotEnforce,
             &[],
@@ -615,7 +595,7 @@ mod tests {
             .expect("created pkg");
 
         let (env, pkgfs_versions) = TestEnv::new(
-            vec![],
+            [],
             non_static_allow_list(&["dynamic"]),
             ExecutabilityRestrictions::Enforce,
             &[&pkg],
