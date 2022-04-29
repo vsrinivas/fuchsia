@@ -911,19 +911,26 @@ impl BinderDriver {
     ) -> Result<(), Errno> {
         let command = cursor.read_object::<binder_driver_command_protocol>()?;
         match command {
-            binder_driver_command_protocol_BC_ENTER_LOOPER
-            | binder_driver_command_protocol_BC_REGISTER_LOOPER => {
-                self.handle_looper_registration(command, binder_thread)
+            binder_driver_command_protocol_BC_ENTER_LOOPER => {
+                self.handle_looper_registration(binder_thread, RegistrationState::MAIN)
+            }
+            binder_driver_command_protocol_BC_REGISTER_LOOPER => {
+                self.handle_looper_registration(binder_thread, RegistrationState::REGISTERED)
             }
             binder_driver_command_protocol_BC_INCREFS
             | binder_driver_command_protocol_BC_ACQUIRE
             | binder_driver_command_protocol_BC_DECREFS
             | binder_driver_command_protocol_BC_RELEASE => {
-                self.handle_refcount_operation(command, binder_proc, binder_thread, cursor)
+                let handle = cursor.read_object::<u32>()?.into();
+                self.handle_refcount_operation(command, binder_proc, binder_thread, handle)
             }
             binder_driver_command_protocol_BC_INCREFS_DONE
             | binder_driver_command_protocol_BC_ACQUIRE_DONE => {
-                self.handle_refcount_operation_done(command, binder_thread, cursor)
+                let object = BinderObject {
+                    weak_ref_addr: UserAddress::from(cursor.read_object::<binder_uintptr_t>()?),
+                    strong_ref_addr: UserAddress::from(cursor.read_object::<binder_uintptr_t>()?),
+                };
+                self.handle_refcount_operation_done(command, binder_thread, object)
             }
             binder_driver_command_protocol_BC_FREE_BUFFER => {
                 // A binder thread is done reading a buffer allocated to a transaction. The binder
@@ -947,10 +954,12 @@ impl BinderDriver {
                 Ok(())
             }
             binder_driver_command_protocol_BC_TRANSACTION => {
-                self.handle_transaction(current_task, binder_proc, binder_thread, cursor)
+                let data = cursor.read_object::<binder_transaction_data>()?;
+                self.handle_transaction(current_task, binder_proc, binder_thread, data)
             }
             binder_driver_command_protocol_BC_REPLY => {
-                self.handle_reply(current_task, binder_proc, binder_thread, cursor)
+                let data = cursor.read_object::<binder_transaction_data>()?;
+                self.handle_reply(current_task, binder_proc, binder_thread, data)
             }
             _ => {
                 tracing::error!("binder received unknown RW command: 0x{:08x}", command);
@@ -963,8 +972,8 @@ impl BinderDriver {
     /// This makes the binder thread eligible for receiving commands from the driver.
     fn handle_looper_registration(
         &self,
-        command: binder_driver_command_protocol,
         binder_thread: &Arc<BinderThread>,
+        registration: RegistrationState,
     ) -> Result<(), Errno> {
         let mut thread_state = binder_thread.write();
         if thread_state
@@ -974,27 +983,22 @@ impl BinderDriver {
             // This thread is already registered.
             error!(EINVAL)
         } else {
-            thread_state.registration |= match command {
-                binder_driver_command_protocol_BC_ENTER_LOOPER => RegistrationState::MAIN,
-                binder_driver_command_protocol_BC_REGISTER_LOOPER => RegistrationState::REGISTERED,
-                _ => unreachable!(),
-            };
+            thread_state.registration |= registration;
             Ok(())
         }
     }
 
     /// Handle a binder thread's request to increment/decrement a strong/weak reference to a remote
     /// binder object.
-    fn handle_refcount_operation<'a>(
+    fn handle_refcount_operation(
         &self,
         command: binder_driver_command_protocol,
         binder_proc: &Arc<BinderProcess>,
         binder_thread: &Arc<BinderThread>,
-        cursor: &mut UserMemoryCursor<'a>,
+        handle: Handle,
     ) -> Result<(), Errno> {
         // TODO: Keep track of reference counts internally and only send a command to the owning
         // binder process on the first increment/last decrement.
-        let handle = cursor.read_object::<u32>()?.into();
 
         // Find the process that owns the remote object.
         let (object, target_proc) = self.find_object_and_owner_for_handle(binder_proc, handle)?;
@@ -1050,19 +1054,15 @@ impl BinderDriver {
     /// Handle a binder thread's notification that it successfully incremented a strong/weak
     /// reference to a local (in-process) binder object. This is in response to a
     /// `BR_ACQUIRE`/`BR_INCREFS` command.
-    fn handle_refcount_operation_done<'a>(
+    fn handle_refcount_operation_done(
         &self,
         command: binder_driver_command_protocol,
         binder_thread: &Arc<BinderThread>,
-        cursor: &mut UserMemoryCursor<'a>,
+        object: BinderObject,
     ) -> Result<(), Errno> {
         // TODO: When the binder driver keeps track of references internally, this should
         // reduce the temporary refcount that is held while the binder thread performs the
         // refcount.
-        let object = BinderObject {
-            weak_ref_addr: UserAddress::from(cursor.read_object::<binder_uintptr_t>()?),
-            strong_ref_addr: UserAddress::from(cursor.read_object::<binder_uintptr_t>()?),
-        };
         let msg = match command {
             binder_driver_command_protocol_BC_INCREFS_DONE => "BC_INCREFS_DONE",
             binder_driver_command_protocol_BC_ACQUIRE_DONE => "BC_ACQUIRE_DONE",
@@ -1073,15 +1073,13 @@ impl BinderDriver {
     }
 
     /// A binder thread is starting a transaction on a remote binder object.
-    fn handle_transaction<'a>(
+    fn handle_transaction(
         &self,
         current_task: &CurrentTask,
         binder_proc: &Arc<BinderProcess>,
         binder_thread: &Arc<BinderThread>,
-        cursor: &mut UserMemoryCursor<'a>,
+        data: binder_transaction_data,
     ) -> Result<(), Errno> {
-        let data = cursor.read_object::<binder_transaction_data>()?;
-
         // SAFETY: Transactions can only refer to handles.
         let handle = unsafe { data.target.handle }.into();
 
@@ -1135,15 +1133,13 @@ impl BinderDriver {
     }
 
     /// A binder thread is sending a reply to a transaction.
-    fn handle_reply<'a>(
+    fn handle_reply(
         &self,
         current_task: &CurrentTask,
         binder_proc: &Arc<BinderProcess>,
         binder_thread: &Arc<BinderThread>,
-        cursor: &mut UserMemoryCursor<'a>,
+        data: binder_transaction_data,
     ) -> Result<(), Errno> {
-        let data = cursor.read_object::<binder_transaction_data>()?;
-
         // Find the process and thread that initiated the transaction. This reply is for them.
         let (target_proc, target_thread) = {
             let inner = binder_thread.read();
