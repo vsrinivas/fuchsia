@@ -15,9 +15,7 @@ import 'package:login/src/services/ssh_keys_service.dart';
 import 'package:login/src/states/oobe_state_impl.dart';
 
 /// The oobe screens the user navigates through.
-// TODO(fxbug.dev/73407): Skip data sharing screen until privacy policy is
-// finalized.
-enum OobeScreen { /* channel,  dataSharing, sshKeys,*/ password, done }
+enum OobeScreen { /* channel, sshKeys,*/ loading, dataSharing, password, done }
 
 /// The screens the user navigates through to add SSH keys.
 enum SshScreen { add, confirm, error, exit }
@@ -39,26 +37,22 @@ abstract class OobeState {
   SshImport get importMethod;
   List<String> get sshKeys;
   abstract int sshKeyIndex;
-  bool get privacyVisible;
   bool get launchOobe;
   bool get ready;
   bool get hasAccount;
   bool get loginDone;
   bool get wait;
+  bool get showDataSharing;
   String get authError;
   List<DialogInfo> get dialogs;
 
   FuchsiaViewConnection get ermineViewConnection;
-  String get privacyPolicy;
 
   void showDialog(DialogInfo dialog);
   void setCurrentChannel(String channel);
   void nextScreen();
   void prevScreen();
-  void agree();
-  void disagree();
-  void showPrivacy();
-  void hidePrivacy();
+  void setPrivacyConsent({required bool consent});
   void sshImportMethod(SshImport? method);
   void sshBackScreen();
   void sshAdd(String userNameOrKey);

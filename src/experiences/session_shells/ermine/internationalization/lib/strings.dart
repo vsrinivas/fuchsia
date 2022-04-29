@@ -551,37 +551,33 @@ class Strings {
       );
 
   static String get dataSharingTitle => Intl.message(
-        'Send Usage & Diagnostics Data to Google',
+        'Share usage & diagnostics information with Google',
         name: 'dataSharingTitle',
         desc:
             'The title displayed for choosing whether to consent to send usage and diagnostics data to Google in the OOBE',
       );
 
-  static String get dataSharingDesc1 => Intl.message(
-        'We will use the information you give to us to help address technical issues and to improve our services, subject to our ',
+  static String get dataSharingDesc => Intl.message(
+        'You can later change the preference in Settings > Usage & Diagnostics.',
         name: 'dataSharingDesc1',
         desc:
-            'The description of what is being agreed to when choosing to send usage and diagnostics data to Google in the OOBE',
+            'The description of where the user can mange the data sharing consent status',
       );
 
-  static String get dataSharingDesc2 => Intl.message(
-        'privacy policy',
-        name: 'dataSharingDesc2',
+  static String get dataSharingCheckboxLabel => Intl.message(
+        'Help improve Fuchsia Workstation by automatically sending usage and diagnostic data to Google.',
+        name: 'data sharing checkbox label',
         desc:
-            'The text from the data sharing description that when clicked will display the privacy policy',
+            'The text label for the checkbox that the user can opt in/out the automated telemetry data sharing service with',
       );
 
-  static String get dataSharingDesc3 => Intl.message(
-        '. You can change this set-up at anytime later in Settings.',
-        name: 'dataSharingDesc3',
+  static String dataSharingPrivacyTerms(String url) => Intl.message(
+        'Google’s Privacy & Terms is available at $url',
+        name: 'data sharing privacy terms',
         desc:
-            'The description of what is being agreed to when choosing to send usage and diagnostics data to Google in the OOBE',
-      );
-
-  static String get privacyPolicyTitle => Intl.message(
-        'Privacy Policy',
-        name: 'privacyPolicyTitle',
-        desc: 'The title displayed for the privacy policy',
+            'The description of where the user can find Google\'s privacy terms',
+        args: [url],
+        examples: {'url': 'policies.google.com/privacy'},
       );
 
   static String get oobeSshKeysAddTitle => Intl.message(

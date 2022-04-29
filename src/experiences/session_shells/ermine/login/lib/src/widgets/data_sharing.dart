@@ -6,12 +6,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:internationalization/strings.dart';
 import 'package:login/src/states/oobe_state.dart';
+import 'package:login/src/widgets/header.dart';
+import 'package:mobx/mobx.dart';
 
-/// Defines a widget to configure software update channels.
+/// Defines a widget to configure usage and diagnostic data sharing preference.
 class DataSharing extends StatelessWidget {
   final OobeState oobe;
+  final isOptedIn = true.asObservable();
 
-  const DataSharing(this.oobe);
+  DataSharing(this.oobe);
 
   @override
   Widget build(BuildContext context) {
@@ -22,122 +25,75 @@ class DataSharing extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Title.
-              Text(
-                oobe.privacyVisible
-                    ? Strings.privacyPolicyTitle
-                    : Strings.dataSharingTitle,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headline3,
+              Header(
+                title: Strings.dataSharingTitle,
+                description: Strings.dataSharingDesc,
               ),
-
-              // Description.
-              if (!oobe.privacyVisible)
-                Container(
-                  alignment: Alignment.center,
-                  padding: EdgeInsets.all(24),
-                  child: SizedBox(
-                    width: 600,
-                    child: RichText(
-                      text: TextSpan(
-                        text: Strings.dataSharingDesc1,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyText1!
-                            .copyWith(height: 1.55),
+              SizedBox(height: 48),
+              Expanded(
+                child: Column(
+                  children: [
+                    Container(
+                      width: 696,
+                      padding: EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        border:
+                            Border.all(color: Theme.of(context).dividerColor),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          WidgetSpan(
-                            alignment: PlaceholderAlignment.baseline,
-                            baseline: TextBaseline.alphabetic,
-                            child: TextButton(
-                              onPressed: oobe.showPrivacy,
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.zero,
-                                minimumSize: Size.zero,
-                              ),
-                              child: Text(
-                                Strings.dataSharingDesc2,
-                                style: TextStyle(
-                                  shadows: [
-                                    Shadow(
-                                      color: Theme.of(context)
-                                              .textTheme
-                                              .bodyText1!
-                                              .copyWith(height: 1.55)
-                                              .color ??
-                                          Colors.white,
-                                      offset: Offset(0, -3),
-                                    )
-                                  ],
-                                  color: Colors.transparent,
-                                  decoration: TextDecoration.underline,
-                                  decorationColor: Colors.white,
-                                ),
-                              ),
+                          Checkbox(
+                            value: isOptedIn.value,
+                            onChanged: (value) => runInAction(
+                                () => isOptedIn.value = value == true),
+                            checkColor: Theme.of(context).bottomAppBarColor,
+                          ),
+                          SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              Strings.dataSharingCheckboxLabel,
+                              style: Theme.of(context).textTheme.bodyText1,
                             ),
                           ),
-                          TextSpan(text: Strings.dataSharingDesc3),
                         ],
                       ),
-                      textAlign: TextAlign.center,
                     ),
-                  ),
+                    SizedBox(height: 40),
+                    Text(
+                      Strings.dataSharingPrivacyTerms(
+                          'policies.google.com/privacy'),
+                      style: Theme.of(context).textTheme.bodyText1,
+                    ),
+                  ],
                 ),
-
-              Expanded(
-                child: oobe.privacyVisible
-                    ? Container(
-                        alignment: Alignment.center,
-                        margin: EdgeInsets.all(24),
-                        child: SizedBox(
-                          width: 600,
-                          child: SingleChildScrollView(
-                            child: Text(
-                              oobe.privacyPolicy,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyText1!
-                                  .copyWith(height: 1.55),
-                            ),
-                          ),
-                        ),
-                      )
-                    : Offstage(),
               ),
 
               // Buttons.
               Container(
                 alignment: Alignment.center,
                 padding: EdgeInsets.all(24),
-                child: oobe.privacyVisible
-                    ? OutlinedButton(
-                        autofocus: true,
-                        onPressed: oobe.hidePrivacy,
-                        child: Text(Strings.close.toUpperCase()),
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // Back button.
-                          OutlinedButton(
-                            onPressed: oobe.prevScreen,
-                            child: Text(Strings.back.toUpperCase()),
-                          ),
-                          SizedBox(width: 24),
-                          // Disagree button.
-                          OutlinedButton(
-                            onPressed: oobe.disagree,
-                            child: Text(Strings.disagree.toUpperCase()),
-                          ),
-                          SizedBox(width: 24),
-                          // Agree button.
-                          OutlinedButton(
-                            autofocus: true,
-                            onPressed: oobe.agree,
-                            child: Text(Strings.agree.toUpperCase()),
-                          ),
-                        ],
-                      ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Back button.
+                    OutlinedButton(
+                      onPressed: oobe.prevScreen,
+                      child: Text(Strings.back),
+                    ),
+                    SizedBox(width: 24),
+                    // Next button.
+                    ElevatedButton(
+                      autofocus: true,
+                      onPressed: () {
+                        oobe
+                          ..setPrivacyConsent(consent: isOptedIn.value)
+                          ..nextScreen();
+                      },
+                      child: Text(Strings.next),
+                    ),
+                  ],
+                ),
               ),
             ],
           );

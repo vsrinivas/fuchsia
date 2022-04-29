@@ -8,6 +8,11 @@ import("//build/fidl/fidl.gni")
 import("//build/flutter/flutter_component.gni")
 import("//build/testing/flutter_driver.gni")
 
+declare_args() {
+  # Whether or not to provide the data sharing consent step in OOBE
+  data_sharing_oobe_enabled = false
+}
+
 dart_library("lib") {
   package_name = "login"
   null_safe = true
@@ -103,16 +108,23 @@ flutter_component("component") {
     ":lib",
     ":resources",
   ]
+
+  if (data_sharing_oobe_enabled) {
+    deps += [ ":enable_data_sharing_oobe" ]
+  }
 }
 
 resource("resources") {
-  sources = [
-    "config/privacy_policy.txt",
-    rebase_path(
-        "//prebuilt/third_party/dart/${host_platform}/bin/resources/devtools/assets/fonts/MaterialIcons-Regular.otf"),
-  ]
+  sources = [ rebase_path(
+          "//prebuilt/third_party/dart/${host_platform}/bin/resources/devtools/assets/fonts/MaterialIcons-Regular.otf") ]
 
   outputs = [ "data/{{source_file_part}}" ]
+}
+
+# With this JSON, data sharing setup step will be provided in OOBE.
+resource("enable_data_sharing_oobe") {
+  sources = [ "config/enable_data_sharing_oobe" ]
+  outputs = [ "config/enable_data_sharing_oobe" ]
 }
 
 # With the default config, OOBE will be skipped on startup.
@@ -121,16 +133,6 @@ config_data("default_config") {
 
   sources = [
     "//src/experiences/session_shells/ermine/login/config/default_config.json",
-  ]
-  outputs = [ "startup_config.json" ]
-}
-
-# With the OOBE config, OOBE will launch at startup.
-config_data("oobe_config") {
-  for_pkg = "ermine"
-
-  sources = [
-    "//src/experiences/session_shells/ermine/login/config/oobe_config.json",
   ]
   outputs = [ "startup_config.json" ]
 }

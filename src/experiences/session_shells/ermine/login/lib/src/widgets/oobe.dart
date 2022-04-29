@@ -6,12 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:internationalization/strings.dart';
 import 'package:login/src/states/oobe_state.dart';
+import 'package:login/src/widgets/data_sharing.dart';
 import 'package:login/src/widgets/password.dart';
 import 'package:login/src/widgets/ready.dart';
-// TODO(fxbug.dev/73407): Skip data sharing screen until privacy policy is
-// finalized.
 // import 'package:login/src/widgets/channels.dart';
-// import 'package:login/src/widgets/data_sharing.dart';
 // import 'package:login/src/widgets/ssh_keys.dart';
 
 /// Defines a widget that handles the OOBE flow.
@@ -55,12 +53,13 @@ class Oobe extends StatelessWidget {
           Expanded(
             child: Observer(builder: (context) {
               switch (oobe.screen) {
-                // TODO(fxbug.dev/73407): Skip data sharing screen until privacy
+                case OobeScreen.loading:
+                  return Offstage();
                 // policy is finalized.
                 // case OobeScreen.channel:
                 //   return Channels(oobe);
-                // case OobeScreen.dataSharing:
-                //   return DataSharing(oobe);
+                case OobeScreen.dataSharing:
+                  return DataSharing(oobe);
                 // case OobeScreen.sshKeys:
                 //   return SshKeys(oobe);
                 case OobeScreen.password:
@@ -78,7 +77,9 @@ class Oobe extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                for (var index = OobeScreen.password.index;
+                for (var index = oobe.showDataSharing
+                        ? OobeScreen.dataSharing.index
+                        : OobeScreen.password.index;
                     index <= OobeScreen.done.index;
                     index++)
                   Padding(

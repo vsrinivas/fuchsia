@@ -29,6 +29,7 @@ const kHostedDirectories = 'hosted_directories';
 class OobeStateImpl with Disposable implements OobeState {
   static const kDefaultConfigJson = '/config/data/ermine/startup_config.json';
   static const kStartupConfigJson = '/data/startup_config.json';
+  static const kDataSharingMarkerFile = '/pkg/config/enable_data_sharing_oobe';
 
   final ComponentContext componentContext;
   final AuthService authService;
@@ -45,9 +46,8 @@ class OobeStateImpl with Disposable implements OobeState {
     required this.channelService,
     required this.sshKeysService,
     required this.privacyConsentService,
-  })  : componentContext = ComponentContext.create(),
+  })   : componentContext = ComponentContext.create(),
         _localeStream = channelService.stream.asObservable() {
-    privacyPolicy = privacyConsentService.privacyPolicy;
     shellService
       ..onShellReady = _onErmineShellReady
       ..onShellExit = _onErmineShellExit;
@@ -141,6 +141,20 @@ class OobeStateImpl with Disposable implements OobeState {
   final _loginDone = false.asObservable();
 
   @override
+  bool get showDataSharing => _showDataSharing.value;
+  late final _showDataSharing = Observable<bool>(() {
+    File config = File(kDataSharingMarkerFile);
+    if (!config.existsSync()) {
+      log.info('Data sharing setup disabled.');
+      _screen.value = OobeScreen.password;
+      return false;
+    }
+    log.info('Data sharing setup enabled.');
+    _screen.value = OobeScreen.dataSharing;
+    return true;
+  }());
+
+  @override
   Locale? get locale => _localeStream.value;
   final ObservableStream<Locale> _localeStream;
 
@@ -151,7 +165,7 @@ class OobeStateImpl with Disposable implements OobeState {
 
   @override
   OobeScreen get screen => _screen.value;
-  final Observable<OobeScreen> _screen = OobeScreen.password.asObservable();
+  final Observable<OobeScreen> _screen = OobeScreen.loading.asObservable();
 
   @override
   bool get updateChannelsAvailable => _updateChannelsAvailable.value;
@@ -215,13 +229,6 @@ class OobeStateImpl with Disposable implements OobeState {
   final _sshKeyIndex = 0.asObservable();
 
   @override
-  bool get privacyVisible => _privacyVisible.value;
-  final Observable<bool> _privacyVisible = false.asObservable();
-
-  @override
-  late final String privacyPolicy;
-
-  @override
   String get authError => _authError.value;
   final _authError = ''.asObservable();
 
@@ -258,22 +265,9 @@ class OobeStateImpl with Disposable implements OobeState {
       });
 
   @override
-  void agree() => runInAction(() {
-        privacyConsentService.setConsent(consent: true);
-        nextScreen();
+  void setPrivacyConsent({required bool consent}) => runInAction(() {
+        privacyConsentService.setConsent(consent: consent);
       });
-
-  @override
-  void disagree() => runInAction(() {
-        privacyConsentService.setConsent(consent: false);
-        nextScreen();
-      });
-
-  @override
-  void showPrivacy() => runInAction(() => _privacyVisible.value = true);
-
-  @override
-  void hidePrivacy() => runInAction(() => _privacyVisible.value = false);
 
   @override
   void sshImportMethod(SshImport? method) =>
