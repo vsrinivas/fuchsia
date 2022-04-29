@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_bluetooth_gatt2 as gatt;
+use fidl_fuchsia_bluetooth_le as le;
 use thiserror::Error;
 
 /// Errors that occur during the operation of the Fast Pair Provider component.
@@ -15,6 +16,10 @@ pub enum Error {
     /// Error encountered specifically in the `gatt2.Server.PublishService` method.
     #[error("Error publishing GATT service: {0:?}")]
     PublishError(gatt::PublishServiceError),
+
+    /// Error encountered when trying to advertise via `le.Peripheral`.
+    #[error("Error trying to advertise over LE: {:?}", .0)]
+    AdvertiseError(le::PeripheralError),
 
     /// An invalid Model ID was provided to the component.
     #[error("Invalid device Model ID: {0}")]
@@ -37,5 +42,11 @@ impl From<gatt::Error> for Error {
 impl From<gatt::PublishServiceError> for Error {
     fn from(src: gatt::PublishServiceError) -> Error {
         Self::PublishError(src)
+    }
+}
+
+impl From<le::PeripheralError> for Error {
+    fn from(src: le::PeripheralError) -> Error {
+        Self::AdvertiseError(src)
     }
 }

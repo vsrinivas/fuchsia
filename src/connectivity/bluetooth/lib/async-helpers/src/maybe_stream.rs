@@ -16,9 +16,9 @@ use std::pin::Pin;
 pub struct MaybeStream<S: Stream>(Option<S>);
 
 impl<S: Stream + Unpin> MaybeStream<S> {
-    /// Resets the underlying stream back into a Pending state and drops the set Stream, if set.
-    pub fn reset(&mut self) {
-        let _ = self.0.take();
+    /// Resets the underlying stream back into a Pending state and returns the Stream, if set.
+    pub fn take(&mut self) -> Option<S> {
+        self.0.take()
     }
 
     /// Set the current stream.

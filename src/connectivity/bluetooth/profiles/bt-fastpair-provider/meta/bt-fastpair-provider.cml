@@ -11,6 +11,7 @@
         {
             protocol: [
                 "fuchsia.bluetooth.gatt2.Server",
+                "fuchsia.bluetooth.le.Peripheral",
                 "fuchsia.bluetooth.sys.HostWatcher",
             ],
             from: "parent",

@@ -25,7 +25,7 @@ use crate::config::Config;
 use crate::error::Error;
 
 /// The UUID of the Fast Pair Service.
-const FAST_PAIR_SERVICE_UUID: u16 = 0xFE2C;
+pub const FAST_PAIR_SERVICE_UUID: u16 = 0xFE2C;
 
 /// Custom characteristic - Model ID.
 const MODEL_ID_CHARACTERISTIC_UUID: &str = "FE2C1233-8366-4814-8EB0-01DE32100BEA";

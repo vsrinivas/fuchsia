@@ -229,6 +229,7 @@ mod tests {
     use super::*;
 
     use assert_matches::assert_matches;
+    use async_test_helpers::{expect_stream_item, expect_stream_pending};
     use async_utils::PollExt;
     use fuchsia_async as fasync;
     use futures::pin_mut;
@@ -254,26 +255,6 @@ mod tests {
         };
 
         (exec, client, upstream_battery_notifier)
-    }
-
-    #[track_caller]
-    fn expect_stream_item<S>(exec: &mut fasync::TestExecutor, client: &mut S) -> S::Item
-    where
-        S: Stream + Unpin,
-    {
-        let fut = client.next();
-        pin_mut!(fut);
-        exec.run_until_stalled(&mut fut).expect("stream item is ready").expect("valid stream item")
-    }
-
-    #[track_caller]
-    fn expect_stream_pending<S>(exec: &mut fasync::TestExecutor, stream: &mut S)
-    where
-        S: Stream + Unpin,
-    {
-        let stream_fut = stream.next();
-        pin_mut!(stream_fut);
-        exec.run_until_stalled(&mut stream_fut).expect_pending("stream waiting for item");
     }
 
     /// Simulates a battery update by sending the `update` via the `upstream_battery_notifier`.

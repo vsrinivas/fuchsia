@@ -23,6 +23,7 @@ rustc_library("battery-client") {
   ]
 
   test_deps = [
+    "//src/connectivity/bluetooth/lib/async-helpers:async-test-helpers",
     "//src/lib/async-utils",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",

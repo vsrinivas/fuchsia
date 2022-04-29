@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use async_utils::PollExt;
 use fuchsia_async as fasync;
+use futures::stream::{Stream, StreamExt};
 use futures::{future::Either, pin_mut, task::Poll, Future};
 
 ///! Utilities for tests
@@ -31,4 +33,19 @@ where
             Poll::Pending => {}
         }
     }
+}
+
+/// Polls the provided `stream` and expects that it is Pending (e.g no stream items).
+#[track_caller]
+pub fn expect_stream_pending<S: Stream + Unpin>(exec: &mut fasync::TestExecutor, stream: &mut S) {
+    let _ = exec.run_until_stalled(&mut stream.next()).expect_pending("stream pending");
+}
+
+/// Polls the provided `stream` and expects a non-null item to be produced.
+#[track_caller]
+pub fn expect_stream_item<S: Stream + Unpin>(
+    exec: &mut fasync::TestExecutor,
+    stream: &mut S,
+) -> S::Item {
+    exec.run_until_stalled(&mut stream.next()).expect("stream item").expect("not terminated")
 }

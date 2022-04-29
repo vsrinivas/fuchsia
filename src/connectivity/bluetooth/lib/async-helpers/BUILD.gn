@@ -32,6 +32,7 @@ rustc_library("async-helpers") {
 rustc_library("async-test-helpers") {
   testonly = true
   deps = [
+    "//src/lib/async-utils",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:futures",
   ]
