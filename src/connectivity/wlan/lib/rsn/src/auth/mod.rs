@@ -10,7 +10,6 @@ use crate::{
     Error,
 };
 
-use anyhow;
 use fidl_fuchsia_wlan_mlme::SaeFrame;
 use ieee80211::MacAddr;
 use log::warn;
@@ -18,10 +17,10 @@ use wlan_common::ie::rsn::akm::AKM_SAE;
 use wlan_sae as sae;
 use zerocopy::ByteSlice;
 
-#[derive(Error, Debug)]
+#[derive(Clone, Error, Debug)]
 pub enum AuthError {
-    #[error("Failed to construct auth method from the given configuration: {:?}", _0)]
-    FailedConstruction(anyhow::Error),
+    #[error("Failed to construct auth method from the given configuration: {}", _0)]
+    FailedConstruction(String),
     #[error("Non-SAE auth method received an SAE event")]
     UnexpectedSaeEvent,
 }
@@ -94,7 +93,7 @@ impl Method {
                     mac,
                     peer_mac.clone(),
                 )
-                .map_err(AuthError::FailedConstruction)?;
+                .map_err(|e| AuthError::FailedConstruction(e.to_string()))?;
                 Ok(Method::Sae(SaeData {
                     peer: peer_mac,
                     pmk: None,

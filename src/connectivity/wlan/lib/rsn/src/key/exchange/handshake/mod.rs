@@ -7,7 +7,7 @@ pub mod group_key;
 
 // This enum is primarily used for identifying the
 // origin of different `wlan_rsn::Error`s.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum HandshakeMessageNumber {
     FourwayMessageNumber(fourway::MessageNumber),
 }

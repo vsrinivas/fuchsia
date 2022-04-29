@@ -28,7 +28,7 @@ macro_rules! if_remaining (
 pub const ID: u8 = 48;
 pub const VERSION: u16 = 1;
 
-#[derive(Debug, Error, Eq, PartialEq)]
+#[derive(Clone, Debug, Error, Eq, PartialEq)]
 pub enum Error {
     #[error("no group data cipher suite")]
     NoGroupDataCipherSuite,

@@ -352,7 +352,7 @@ impl Authenticator {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Clone, Debug, Error)]
 pub enum Error {
     #[error("invalid OUI length; expected 3 bytes but received {}", _0)]
     InvalidOuiLength(usize),
