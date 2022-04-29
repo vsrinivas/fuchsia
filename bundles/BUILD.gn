@@ -46,7 +46,6 @@ group("tools") {
     "//src/sys/pkg/bin/pm:host",
     "//src/sys/run_test_suite",
     "//src/sys/tools/activity-ctl",
-    "//src/sys/tools/cs",
     "//src/sys/tools/log",
     "//src/sys/tools/runmany",
     "//src/ui/tools:scenic",

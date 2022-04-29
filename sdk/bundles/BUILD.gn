@@ -33,7 +33,6 @@ group("core-tools") {
     "//src/recovery/factory_reset:tools",
     "//src/sys/locate",
     "//src/sys/pkg/bin/pm:host",
-    "//src/sys/tools/cs",
     "//src/sys/tools/runmany",
     "//src/ui/tools/tiles_ctl",
     "//third_party/curl",
