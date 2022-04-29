@@ -30,13 +30,6 @@ import (
 
 const watcherProtocolName = "fuchsia.net.interfaces/Watcher"
 
-func makeInterfacesAddress(ifAddr net.InterfaceAddress, validUntil int64) interfaces.Address {
-	var a interfaces.Address
-	a.SetValue(ifAddr)
-	a.SetValidUntil(validUntil)
-	return a
-}
-
 func initialProperties(ifs *ifState, name string) interfaces.Properties {
 	var p interfaces.Properties
 
