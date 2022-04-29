@@ -49,8 +49,33 @@ zx_status_t TestRoot::Bind(void* ctx, zx_device_t* dev) {
 }
 
 zx_status_t TestRoot::Bind(const char* name, cpp20::span<const zx_device_prop_t> props) {
+  server_ = NumberServer(props[0].value);
+  if (auto status = loop_.StartThread("test-root-dispatcher-thread"); status != ZX_OK) {
+    return status;
+  }
+  outgoing_ = component::OutgoingDirectory::Create(loop_.dispatcher());
+  auto serve_status = outgoing_->AddProtocol<fuchsia_composite_test::Device>(&this->server_);
+  if (serve_status.status_value() != ZX_OK) {
+    return serve_status.status_value();
+  }
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (endpoints.is_error()) {
+    return endpoints.status_value();
+  }
+  serve_status = outgoing_->Serve(std::move(endpoints->server));
+  if (serve_status.status_value() != ZX_OK) {
+    return serve_status.status_value();
+  }
+  std::array<const char*, 1> offers = {"fuchsia.composite.test.Device"};
+
   is_bound.Set(true);
-  return DdkAdd(ddk::DeviceAddArgs(name).set_props(props).set_inspect_vmo(inspect_.DuplicateVmo()));
+  return DdkAdd(ddk::DeviceAddArgs(name)
+                    .set_props(props)
+                    .set_inspect_vmo(inspect_.DuplicateVmo())
+                    .set_fidl_protocol_offers(offers)
+                    .set_flags(DEVICE_ADD_MUST_ISOLATE)
+                    .set_outgoing_dir(endpoints->client.TakeChannel()));
 }
 
 void TestRoot::DdkInit(ddk::InitTxn txn) { txn.Reply(ZX_OK); }

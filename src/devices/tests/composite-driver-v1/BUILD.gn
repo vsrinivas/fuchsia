@@ -20,6 +20,11 @@ group("drivers") {
   ]
 }
 
+fidl("fuchsia.composite.test") {
+  testonly = true
+  sources = [ "composite.test.fidl" ]
+}
+
 driver_bind_rules("bind") {
   rules = "composite_driver_v1.bind"
   header_output = "composite_driver_v1-bind.h"
@@ -28,10 +33,12 @@ driver_bind_rules("bind") {
 }
 
 fuchsia_driver("driver") {
+  testonly = true
   output_name = "composite-driver-v1"
   sources = [ "composite_driver_v1.cc" ]
   deps = [
     ":bind",
+    ":fuchsia.composite.test_llcpp",
     "//src/devices/lib/driver",
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",
@@ -41,6 +48,7 @@ fuchsia_driver("driver") {
 }
 
 fuchsia_driver_component("component") {
+  testonly = true
   component_name = "composite-driver-v1"
   deps = [ ":driver" ]
   info = "component-info.json"

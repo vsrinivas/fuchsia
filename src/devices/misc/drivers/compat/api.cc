@@ -223,6 +223,15 @@ __EXPORT zx_status_t device_connect_fidl_protocol(zx_device_t* dev, const char* 
   return status.status_value();
 }
 
+__EXPORT zx_status_t device_connect_fragment_fidl_protocol(zx_device_t* device,
+                                                           const char* fragment_name,
+                                                           const char* protocol_name,
+                                                           zx_handle_t request) {
+  // TODO(fxbug.dev/93678): Fully support composite devices.
+  FDF_LOGL(ERROR, device->logger(), "DFv2 does not support device_connect_fragment_fidl_protocol");
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 __EXPORT async_dispatcher_t* device_get_dispatcher(zx_device_t* dev) {
   return dev->driver()->dispatcher();
 }

@@ -5,17 +5,34 @@
 #ifndef SRC_DEVICES_TESTS_COMPOSITE_DRIVER_V1_TEST_ROOT_TEST_ROOT_H_
 #define SRC_DEVICES_TESTS_COMPOSITE_DRIVER_V1_TEST_ROOT_TEST_ROOT_H_
 
+#include <fidl/fuchsia.composite.test/cpp/wire.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/inspect/cpp/inspect.h>
+#include <lib/sys/component/llcpp/outgoing_directory.h>
 
 #include <ddktl/device.h>
 
 namespace test_root {
 
+class NumberServer : public fidl::WireServer<fuchsia_composite_test::Device> {
+ public:
+  explicit NumberServer(uint32_t number) : number_(number) {}
+
+  void GetNumber(GetNumberRequestView request, GetNumberCompleter::Sync& completer) override {
+    completer.Reply(number_);
+  }
+
+ private:
+  uint32_t number_;
+};
+
 class TestRoot;
 using DeviceType = ddk::Device<TestRoot, ddk::Initializable>;
 class TestRoot : public DeviceType {
  public:
-  explicit TestRoot(zx_device_t* parent) : DeviceType(parent) {}
+  explicit TestRoot(zx_device_t* parent)
+      : DeviceType(parent), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
   virtual ~TestRoot() = default;
 
   static zx_status_t Bind(void* ctx, zx_device_t* dev);
@@ -29,6 +46,10 @@ class TestRoot : public DeviceType {
  private:
   inspect::Inspector inspect_;
   inspect::BoolProperty is_bound = inspect_.GetRoot().CreateBool("is_bound", false);
+
+  NumberServer server_ = NumberServer(0);
+  async::Loop loop_;
+  std::optional<component::OutgoingDirectory> outgoing_;
 };
 
 }  // namespace test_root

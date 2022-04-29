@@ -15,12 +15,17 @@ driver_bind_rules("bind") {
 }
 
 fuchsia_driver("driver") {
+  testonly = true
   output_name = "test-root"
   sources = [ "test_root.cc" ]
   deps = [
     ":bind",
+    "//sdk/lib/sys/component/llcpp",
     "//src/devices/lib/driver",
+    "//src/devices/tests/composite-driver-v1:fuchsia.composite.test_llcpp",
     "//src/lib/ddktl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/zx",
@@ -28,6 +33,7 @@ fuchsia_driver("driver") {
 }
 
 fuchsia_driver_component("component") {
+  testonly = true
   component_name = "test-root"
   deps = [ ":driver" ]
   info = "component-info.json"

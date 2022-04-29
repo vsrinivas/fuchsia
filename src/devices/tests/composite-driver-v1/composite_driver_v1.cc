@@ -4,11 +4,29 @@
 
 #include "src/devices/tests/composite-driver-v1/composite_driver_v1.h"
 
+#include <fidl/fuchsia.composite.test/cpp/wire.h>
+
 #include <set>
 
 #include "src/devices/tests/composite-driver-v1/composite_driver_v1-bind.h"
 
 namespace composite_driver_v1 {
+
+zx::status<uint32_t> DoFidlConnections(zx_device_t* dev, const char* fragment) {
+  auto endpoints = fidl::CreateEndpoints<fuchsia_composite_test::Device>();
+  zx_status_t status = device_connect_fragment_fidl_protocol(
+      dev, fragment, "fuchsia.composite.test.Device", endpoints->server.TakeChannel().release());
+  if (status != ZX_OK) {
+    zxlogf(INFO, "Failed to connect: %s", zx_status_get_string(status));
+    return zx::error(status);
+  }
+  auto result = fidl::WireCall(endpoints->client)->GetNumber();
+  if (result.status() != ZX_OK) {
+    zxlogf(ERROR, "Failed to call number: %s", result.lossy_description());
+    return zx::error(result.status());
+  }
+  return zx::ok(result->number);
+}
 
 zx_status_t CompositeDriverV1::Bind(void* ctx, zx_device_t* dev) {
   uint32_t count = device_get_fragment_count(dev);
@@ -42,6 +60,25 @@ zx_status_t CompositeDriverV1::Bind(void* ctx, zx_device_t* dev) {
   }
   if (error) {
     return ZX_ERR_INTERNAL;
+  }
+
+  if (!device_is_dfv2(dev)) {
+    auto result = DoFidlConnections(dev, "a");
+    if (result.status_value() != ZX_OK) {
+      return result.status_value();
+    }
+    if (*result != 1) {
+      zxlogf(ERROR, "Result for a is not correct: expected 1: got %d", *result);
+      return ZX_ERR_INTERNAL;
+    }
+    result = DoFidlConnections(dev, "b");
+    if (result.status_value() != ZX_OK) {
+      return result.status_value();
+    }
+    if (*result != 2) {
+      zxlogf(ERROR, "Result for b is not correct: expected 2: got %d", *result);
+      return ZX_ERR_INTERNAL;
+    }
   }
 
   auto device = std::make_unique<CompositeDriverV1>(dev);
