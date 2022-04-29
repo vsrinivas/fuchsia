@@ -22,6 +22,10 @@
 
 namespace compat {
 
+// Get the list of fragment names routed to this driver.
+std::vector<std::string> GetFragmentNames(
+    fuchsia_driver_framework::wire::DriverStartArgs& start_args);
+
 // Driver is the compatibility driver that loads DFv1 drivers.
 class Driver {
  public:

@@ -337,6 +337,7 @@ class DriverTest : public gtest::TestLoopFixture {
     start_args.set_symbols(arena, std::move(symbols));
     start_args.set_program(arena, std::move(program));
     start_args.set_outgoing_dir(std::move(outgoing_dir_endpoints->server));
+    start_args.set_ns(arena, ns_entries);
 
     // Start driver.
     auto result = compat::Driver::Start(start_args, dispatcher(), std::move(node), std::move(*ns),
@@ -633,4 +634,31 @@ TEST_F(DriverTest, GetDeadlineProfile) {
 
   driver.reset();
   ASSERT_TRUE(RunLoopUntilIdle());
+}
+
+TEST(GetFragmentNames, TestEdgeCases) {
+  fidl::Arena<> arena;
+  auto args = fdf::wire::DriverStartArgs::Builder(arena);
+  fidl::VectorView<fuchsia_component_runner::wire::ComponentNamespaceEntry> entries(arena, 3);
+
+  auto entry = fuchsia_component_runner::wire::ComponentNamespaceEntry::Builder(arena);
+  entry.path(arena, "/short-path");
+  entries[0] = entry.Build();
+
+  entry = fuchsia_component_runner::wire::ComponentNamespaceEntry::Builder(arena);
+  entry.path(arena,
+             std::string("/").append(fuchsia_driver_compat::Service::Name).append("/default"));
+  entries[1] = entry.Build();
+
+  entry = fuchsia_component_runner::wire::ComponentNamespaceEntry::Builder(arena);
+  entry.path(arena, std::string("/").append(fuchsia_driver_compat::Service::Name).append("/test"));
+  entries[2] = entry.Build();
+
+  args.ns(entries);
+  auto built_args = args.Build();
+  auto fragments = compat::GetFragmentNames(built_args);
+
+  // We only have one fragment because default is skipped.
+  ASSERT_EQ(fragments.size(), 1ul);
+  ASSERT_EQ(fragments[0], "test");
 }

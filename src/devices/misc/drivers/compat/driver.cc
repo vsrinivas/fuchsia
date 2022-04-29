@@ -51,6 +51,27 @@ constexpr auto kLibDriverPath = "/pkg/driver/compat.so";
 
 namespace compat {
 
+std::vector<std::string> GetFragmentNames(
+    fuchsia_driver_framework::wire::DriverStartArgs& start_args) {
+  std::vector<std::string> fragments;
+  for (auto entry : start_args.ns()) {
+    if (entry.has_path() && entry.path().size() > sizeof(fuchsia_driver_compat::Service::Name)) {
+      std::string_view path(entry.path().data(), entry.path().size());
+      if (strncmp(&path[1], fuchsia_driver_compat::Service::Name,
+                  sizeof(fuchsia_driver_compat::Service::Name) - 1) == 0) {
+        size_t index = path.rfind('/');
+        if (index != std::string::npos) {
+          std::string_view fragment = path.substr(index + 1);
+          if (fragment != "default") {
+            fragments.emplace_back(fragment);
+          }
+        }
+      }
+    }
+  }
+  return fragments;
+}
+
 DriverList global_driver_list;
 
 zx_driver_t* DriverList::ZxDriver() { return static_cast<zx_driver_t*>(this); }
@@ -109,9 +130,15 @@ zx::status<std::unique_ptr<Driver>> Driver::Start(fdf::wire::DriverStartArgs& st
 
   auto outgoing = component::OutgoingDirectory::Create(dispatcher);
 
+  std::vector<std::string> fragments = GetFragmentNames(start_args);
+
   auto driver =
       std::make_unique<Driver>(dispatcher, std::move(node), std::move(ns), std::move(logger),
                                start_args.url().get(), *compat_device, ops, std::move(outgoing));
+
+  if (!fragments.empty()) {
+    driver->device_.set_fragments(std::move(fragments));
+  }
 
   auto result = driver->Run(std::move(start_args.outgoing_dir()), "/pkg/" + *compat);
   if (result.is_error()) {

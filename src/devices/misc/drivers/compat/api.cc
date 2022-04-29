@@ -156,16 +156,23 @@ __EXPORT void device_fidl_transaction_take_ownership(fidl_txn_t* txn, device_fid
 }
 
 __EXPORT uint32_t device_get_fragment_count(zx_device_t* dev) {
-  // TODO(fxbug.dev/93678): Fully support composite devices.
-  FDF_LOGL(ERROR, dev->logger(), "DFv2 does not support device_get_fragment_count API yet");
-  return 0;
+  return static_cast<uint32_t>(dev->fragments().size());
 }
 
 __EXPORT void device_get_fragments(zx_device_t* dev, composite_device_fragment_t* comp_list,
                                    size_t comp_count, size_t* comp_actual) {
-  // TODO(fxbug.dev/93678): Fully support composite devices.
-  FDF_LOGL(ERROR, dev->logger(), "DFv2 does not support device_get_fragments API yet");
-  *comp_actual = 0;
+  size_t i = 0;
+  for (auto& fragment : dev->fragments()) {
+    size_t size = sizeof(comp_list[0].name);
+    if (fragment.size() < size) {
+      size = fragment.size();
+    }
+    strncpy(comp_list[i].name, fragment.data(), size);
+    // TODO(fxbug.dev/93678): We currently don't set the device pointer.
+    comp_list[i].device = nullptr;
+    i++;
+  }
+  *comp_actual = i;
 }
 
 __EXPORT zx_status_t device_get_fragment_protocol(zx_device_t* dev, const char* name,

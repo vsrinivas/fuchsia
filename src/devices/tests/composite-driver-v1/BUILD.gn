@@ -44,6 +44,11 @@ fuchsia_driver_component("component") {
   component_name = "composite-driver-v1"
   deps = [ ":driver" ]
   info = "component-info.json"
+  composite_nodes = [
+    "a",
+    "b",
+    "c",
+  ]
   colocate = true
 }
 

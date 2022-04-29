@@ -4,11 +4,46 @@
 
 #include "src/devices/tests/composite-driver-v1/composite_driver_v1.h"
 
+#include <set>
+
 #include "src/devices/tests/composite-driver-v1/composite_driver_v1-bind.h"
 
 namespace composite_driver_v1 {
 
 zx_status_t CompositeDriverV1::Bind(void* ctx, zx_device_t* dev) {
+  uint32_t count = device_get_fragment_count(dev);
+  if (count != 3) {
+    zxlogf(ERROR, "Wrong fragment count: expected 3, got %d", count);
+    return ZX_ERR_INTERNAL;
+  }
+
+  std::vector<composite_device_fragment_t> fragments(count);
+  std::set<std::string> expected_fragments;
+  expected_fragments.insert("a");
+  expected_fragments.insert("b");
+  expected_fragments.insert("c");
+
+  size_t actual = 0;
+  bool error = false;
+  device_get_fragments(dev, fragments.data(), fragments.size(), &actual);
+  for (auto& fragment : fragments) {
+    if (expected_fragments.count(fragment.name) == 1) {
+      expected_fragments.erase(fragment.name);
+    } else {
+      zxlogf(ERROR, "Found unexpected fragment: %s", fragment.name);
+      error = true;
+    }
+  }
+  if (!expected_fragments.empty()) {
+    error = true;
+    for (auto& fragment : expected_fragments) {
+      zxlogf(ERROR, "Didn't find expected fragment: %s", fragment.data());
+    }
+  }
+  if (error) {
+    return ZX_ERR_INTERNAL;
+  }
+
   auto device = std::make_unique<CompositeDriverV1>(dev);
   zx_status_t status = device->Bind();
   if (status != ZX_OK) {

@@ -76,6 +76,7 @@ class Device : public std::enable_shared_from_this<Device> {
 
   std::string_view topological_path() const { return topological_path_; }
   void set_topological_path(std::string path) { topological_path_ = std::move(path); }
+  void set_fragments(std::vector<std::string> names) { fragments_ = std::move(names); }
   Driver* driver() { return driver_; }
 
   fpromise::scope& scope() { return scope_; }
@@ -83,6 +84,8 @@ class Device : public std::enable_shared_from_this<Device> {
   async::Executor& executor() { return executor_; }
   Child& compat_child() { return compat_child_; }
   fbl::RefPtr<DevfsVnode>& dev_vnode() { return dev_vnode_; }
+
+  const std::vector<std::string>& fragments() { return fragments_; }
 
  private:
   Device(Device&&) = delete;
@@ -105,6 +108,7 @@ class Device : public std::enable_shared_from_this<Device> {
   driver::Logger& logger_;
   async_dispatcher_t* const dispatcher_;
   uint32_t device_flags_ = 0;
+  std::vector<std::string> fragments_;
 
   // This device's driver. The driver owns all of its Device objects, so it
   // is garaunteed to outlive the Device.
