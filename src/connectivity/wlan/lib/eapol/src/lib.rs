@@ -17,7 +17,7 @@ use {
     zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
 };
 
-#[derive(Debug, Error)]
+#[derive(Clone, Debug, Error)]
 pub enum Error {
     #[error("unexpected end of buffer while parsing frame")]
     FrameTruncated,
@@ -28,7 +28,7 @@ pub enum Error {
     #[error("packet body length is {} but {} bytes are available", _0, _1)]
     WrongPacketBodyLength(u16, u16),
     #[error("failed to calculate mic: {}", _0)]
-    MicFunctionFailed(anyhow::Error),
+    MicFunctionFailed(String),
     #[error("expected mic length of {} but got a mic of length {}", _0, _1)]
     WrongMicLen(usize, usize),
     #[error("called finalize with a mic, but key_mic is false")]

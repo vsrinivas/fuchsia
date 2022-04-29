@@ -21,7 +21,7 @@ use wlan_common::ie::rsn::{cipher::Cipher, rsne::Rsne, suite_filter::DEFAULT_GRO
 use wlan_statemachine::StateMachine;
 use zerocopy::ByteSlice;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum MessageNumber {
     Message1 = 1,
     Message2 = 2,

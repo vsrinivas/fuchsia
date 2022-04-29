@@ -423,7 +423,9 @@ mod tests {
         let stats = stats_collector.report_connect_finished(
             EstablishRsnaFailure {
                 auth_method: Some(auth::MethodName::Psk),
-                reason: EstablishRsnaFailureReason::OverallTimeout,
+                reason: EstablishRsnaFailureReason::OverallTimeout(
+                    wlan_rsn::Error::LikelyWrongCredential,
+                ),
             }
             .into(),
         );
@@ -455,7 +457,9 @@ mod tests {
         assert!(stats_collector.report_connect_started(Ssid::try_from("foo").unwrap()).is_none());
         let failure2: ConnectFailure = EstablishRsnaFailure {
             auth_method: Some(auth::MethodName::Psk),
-            reason: EstablishRsnaFailureReason::OverallTimeout,
+            reason: EstablishRsnaFailureReason::OverallTimeout(
+                wlan_rsn::Error::LikelyWrongCredential,
+            ),
         }
         .into();
         let stats = stats_collector.report_connect_finished(failure2.clone().into());
@@ -491,7 +495,9 @@ mod tests {
         assert!(stats_collector.report_connect_started(Ssid::try_from("bar").unwrap()).is_none());
         let failure2: ConnectFailure = EstablishRsnaFailure {
             auth_method: Some(auth::MethodName::Psk),
-            reason: EstablishRsnaFailureReason::OverallTimeout,
+            reason: EstablishRsnaFailureReason::OverallTimeout(
+                wlan_rsn::Error::LikelyWrongCredential,
+            ),
         }
         .into();
         let stats = stats_collector.report_connect_finished(failure2.clone().into());

@@ -1082,7 +1082,9 @@ mod tests {
         let connect_stats = ConnectStats {
             result: EstablishRsnaFailure {
                 auth_method: None,
-                reason: EstablishRsnaFailureReason::OverallTimeout,
+                reason: EstablishRsnaFailureReason::OverallTimeout(
+                    wlan_rsn::Error::LikelyWrongCredential,
+                ),
             }
             .into(),
             ..fake_connect_stats()
