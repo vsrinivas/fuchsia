@@ -581,19 +581,19 @@ class WebEngineTestIp : public TouchInputBase {
   std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
     return {
         std::make_pair(kOneChromiumClient, kOneChromiumUrl),
-        std::make_pair(kFontsProvider, kFontsProviderUrl),
-        std::make_pair(kTextManager, kTextManagerUrl),
-        std::make_pair(kIntl, kIntlUrl),
-        std::make_pair(kMemoryPressureProvider, kMemoryPressureProviderUrl),
-        std::make_pair(kNetstack, kNetstackUrl),
         std::make_pair(kWebContextProvider, kWebContextProviderUrl),
-        std::make_pair(kMockCobalt, kMockCobaltUrl),
     };
   }
 
   std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
     return {
         std::make_pair(kBuildInfoProvider, kBuildInfoProviderUrl),
+        std::make_pair(kFontsProvider, kFontsProviderUrl),
+        std::make_pair(kTextManager, kTextManagerUrl),
+        std::make_pair(kIntl, kIntlUrl),
+        std::make_pair(kMemoryPressureProvider, kMemoryPressureProviderUrl),
+        std::make_pair(kNetstack, kNetstackUrl),
+        std::make_pair(kMockCobalt, kMockCobaltUrl),
     };
   }
 
@@ -747,35 +747,29 @@ class WebEngineTestIp : public TouchInputBase {
 
  private:
   static constexpr auto kFontsProvider = "fonts_provider";
-  static constexpr auto kFontsProviderUrl = "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx";
+  static constexpr auto kFontsProviderUrl = "#meta/fonts.cm";
 
   static constexpr auto kTextManager = "text_manager";
-  static constexpr auto kTextManagerUrl =
-      "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cmx";
+  static constexpr auto kTextManagerUrl = "#meta/text_manager.cm";
 
   static constexpr auto kIntl = "intl";
-  static constexpr auto kIntlUrl =
-      "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cmx";
+  static constexpr auto kIntlUrl = "#meta/intl_property_manager.cm";
 
   static constexpr auto kMemoryPressureProvider = "memory_pressure_provider";
-  static constexpr auto kMemoryPressureProviderUrl =
-      "fuchsia-pkg://fuchsia.com/memory_monitor#meta/memory_monitor.cmx";
+  static constexpr auto kMemoryPressureProviderUrl = "#meta/memory_monitor.cm";
 
   static constexpr auto kNetstack = "netstack";
-  static constexpr auto kNetstackUrl =
-      "fuchsia-pkg://fuchsia.com/touch-input-test-ip#meta/netstack.cmx";
+  static constexpr auto kNetstackUrl = "#meta/netstack.cm";
 
   static constexpr auto kWebContextProvider = "web_context_provider";
   static constexpr auto kWebContextProviderUrl =
       "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx";
 
   static constexpr auto kBuildInfoProvider = "build_info_provider";
-  static constexpr auto kBuildInfoProviderUrl =
-      "fuchsia-pkg://fuchsia.com/touch-input-test-ip#meta/fake_build_info.cm";
+  static constexpr auto kBuildInfoProviderUrl = "#meta/fake_build_info.cm";
 
   static constexpr auto kMockCobalt = "cobalt";
-  static constexpr auto kMockCobaltUrl =
-      "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx";
+  static constexpr auto kMockCobaltUrl = "#meta/mock_cobalt.cm";
 
   // The typical latency on devices we've tested is ~60 msec. The retry interval is chosen to be
   // a) Long enough that it's unlikely that we send a new tap while a previous tap is still being
@@ -925,6 +919,10 @@ class WebInFlutterTestIp : public WebEngineTestIp, public EmbeddingFlutterTestIp
         GetEmbeddingFlutterComponents(),
         WebEngineTestIp::GetTestComponents(),
     });
+  }
+
+  std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
+    return WebEngineTestIp::GetTestV2Components();
   }
 
   std::vector<Route> GetTestRoutes() override {
