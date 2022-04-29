@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <optional>
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
@@ -29,16 +30,20 @@
 
 namespace {
 
-// This thread's koid.
-// Initialized on first use.
-thread_local zx_koid_t tls_thread_koid{ZX_KOID_INVALID};
-
 zx_koid_t GetCurrentThreadKoid() {
-  if (unlikely(tls_thread_koid == ZX_KOID_INVALID)) {
-    tls_thread_koid = GetKoid(zx_thread_self());
+  thread_local std::optional<zx_koid_t> koid;
+
+  if (unlikely(!koid.has_value())) {
+    koid = []() {
+      zx_info_handle_basic_t info;
+      zx_status_t status = zx_object_get_info(zx_thread_self(), ZX_INFO_HANDLE_BASIC, &info,
+                                              sizeof(info), nullptr, nullptr);
+      ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "zx_object_get_info(zx_thread_self(), ...): %s",
+                          zx_status_get_string(status));
+      return info.koid;
+    }();
   }
-  ZX_DEBUG_ASSERT(tls_thread_koid != ZX_KOID_INVALID);
-  return tls_thread_koid;
+  return koid.value();
 }
 
 }  // namespace
@@ -51,11 +56,11 @@ void fx_logger::ActivateFallback(int fallback_fd) {
   ZX_DEBUG_ASSERT(fallback_fd >= -1);
   if (tagstr_.empty()) {
     fbl::AutoLock tag_lock(&tags_mutex_);
-    for (size_t i = 0; i < tags_.size(); i++) {
+    for (const auto& tag : tags_) {
       if (tagstr_.empty()) {
-        tagstr_ = tags_[i];
+        tagstr_ = tag;
       } else {
-        tagstr_ = fbl::String::Concat({tagstr_, ", ", tags_[i]});
+        tagstr_ = fbl::String::Concat({tagstr_, ", ", tag});
       }
     }
   }
@@ -105,14 +110,14 @@ zx_status_t fx_logger::Reconfigure(const fx_logger_config_t* config, bool is_str
       return status;
     }
 
-    fidl::WireSyncClient<fuchsia_logger::LogSink> logger_client(
-        zx::channel(config->log_sink_channel));
+    fidl::UnownedClientEnd<fuchsia_logger::LogSink> log_sink{
+        zx::unowned_channel{config->log_sink_channel}};
 
-    auto result = logger_client->ConnectStructured(std::move(remote));
-    is_structured_ = true;
-    if (result.status() != ZX_OK) {
+    const fidl::WireResult result = fidl::WireCall(log_sink)->ConnectStructured(std::move(remote));
+    if (!result.ok()) {
       return result.status();
     }
+    is_structured_ = true;
 #endif
   }
 
@@ -158,7 +163,7 @@ cpp17::optional<cpp17::string_view> ViewFromC(const char* c_str) {
 
 zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char* tag,
                                          const char* file, uint32_t line, const char* msg,
-                                         va_list args, bool format_args) {
+                                         va_list args, bool perform_format) {
 #ifndef SYSLOG_STATIC
   if (syslog_backend::HasStructuredBackend() && this->socket_.is_valid()) {
     std::unique_ptr<syslog_backend::LogBuffer> buf_ptr =
@@ -171,7 +176,7 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char*
     // Format
     // Number of bytes written not including null terminator
     int count = 0;
-    if (format_args) {
+    if (perform_format) {
       count = vsnprintf(fmt_string, n, msg, args) + 1;
       if (count < 0) {
         return ZX_ERR_INVALID_ARGS;
@@ -199,10 +204,10 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char*
     }
     {
       fbl::AutoLock tag_lock(&tags_mutex_);
-      for (size_t i = 0; i < tags_.size(); i++) {
-        size_t len = tags_[i].length();
+      for (const auto& tag : tags_) {
+        size_t len = tag.length();
         ZX_DEBUG_ASSERT(len < 128);
-        syslog_backend::WriteKeyValue(&buffer, "tag", tags_[i].data());
+        syslog_backend::WriteKeyValue(&buffer, "tag", tag.data());
       }
     }
     syslog_backend::EndRecord(&buffer);
@@ -221,7 +226,7 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char*
     // Format
     // Number of bytes written not including null terminator
     int count = 0;
-    if (format_args) {
+    if (perform_format) {
       count = vsnprintf(fmt_string, n, msg, args) + 1;
       if (count < 0) {
         return ZX_ERR_INVALID_ARGS;
@@ -249,10 +254,10 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char*
     }
     {
       fbl::AutoLock tags_lock(&tags_mutex_);
-      for (size_t i = 0; i < tags_.size(); i++) {
-        size_t len = tags_[i].length();
+      for (const auto& tag : tags_) {
+        size_t len = tag.length();
         ZX_DEBUG_ASSERT(len < 128);
-        buf_ptr->WriteKeyValue("tag", tags_[i].data());
+        buf_ptr->WriteKeyValue("tag", tag.data());
       }
     }
     if (buf_ptr->FlushRecord()) {
@@ -277,18 +282,18 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char*
   size_t pos = 0;
   {
     fbl::AutoLock tag_lock(&tags_mutex_);
-    for (size_t i = 0; i < tags_.size(); i++) {
-      size_t len = tags_[i].length();
+    for (const auto& tag : tags_) {
+      size_t len = tag.length();
       ZX_DEBUG_ASSERT(len < 128);
       if (pos + 1 + len > sizeof(packet.data)) {
         return ZX_ERR_OUT_OF_RANGE;
       }
       packet.data[pos++] = static_cast<char>(len);
-      memcpy(packet.data + pos, tags_[i].c_str(), len);
+      memcpy(packet.data + pos, tag.c_str(), len);
       pos += len;
     }
   }
-  if (tag != NULL) {
+  if (tag != nullptr) {
     size_t len = strlen(tag);
     if (len > 0) {
       size_t write_len = std::min(len, static_cast<size_t>(FX_LOG_MAX_TAG_LEN - 1));
@@ -318,7 +323,7 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char*
   int n = static_cast<int>(kDataSize - pos);
   int count = 0;
   size_t msg_pos = pos;
-  if (!format_args) {
+  if (!perform_format) {
     size_t write_len = std::min(strlen(msg), static_cast<size_t>(n - 1));
     memcpy(packet.data + pos, msg, write_len);
     pos += write_len;
@@ -369,7 +374,7 @@ zx_status_t fx_logger::VLogWriteToFd(int fd, fx_log_severity_t severity, const c
     buf.Append(tagstr_);
   }
 
-  if (tag != NULL) {
+  if (tag != nullptr) {
     size_t len = strlen(tag);
     if (len > 0) {
       if (!tagstr_.empty()) {
@@ -427,7 +432,7 @@ zx_status_t fx_logger::VLogWriteToFd(int fd, fx_log_severity_t severity, const c
 zx_status_t fx_logger::VLogWrite(fx_log_severity_t severity, const char* tag, const char* file,
                                  uint32_t line, const char* msg, va_list args,
                                  bool perform_format) {
-  if (msg == NULL || severity > (FX_LOG_SEVERITY_MAX * FX_LOG_SEVERITY_STEP_SIZE) ||
+  if (msg == nullptr || severity > (FX_LOG_SEVERITY_MAX * FX_LOG_SEVERITY_STEP_SIZE) ||
       (file && line == 0)) {
     return ZX_ERR_INVALID_ARGS;
   }

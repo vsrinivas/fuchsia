@@ -8,8 +8,9 @@
 #include "export.h"
 #include "fx_logger.h"
 
-#ifndef STATIC_LIBRARY
-#include "fdio_connect.h"
+#ifndef SYSLOG_STATIC
+#include <fidl/fuchsia.logger/cpp/wire.h>
+#include <lib/service/llcpp/service.h>
 #endif
 
 SYSLOG_EXPORT
@@ -159,10 +160,25 @@ zx_status_t fx_logger_create_internal(const fx_logger_config_t* config, fx_logge
 #ifndef SYSLOG_STATIC
   if (connect && config->console_fd == -1 && config->log_sink_channel == ZX_HANDLE_INVALID &&
       log_sink_socket == ZX_HANDLE_INVALID) {
-    zx::socket sock = connect_to_logger(true);
-
-    if (sock.is_valid()) {
-      c.log_sink_socket = sock.release();
+    zx::status socket = []() -> zx::status<zx::socket> {
+      zx::status logger = service::Connect<fuchsia_logger::LogSink>();
+      if (logger.is_error()) {
+        return logger.take_error();
+      }
+      zx::socket local, remote;
+      if (zx_status_t status = zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote);
+          status != ZX_OK) {
+        return zx::error(status);
+      }
+      const fidl::WireResult result =
+          fidl::WireCall(logger.value())->ConnectStructured(std::move(remote));
+      if (!result.ok()) {
+        return zx::error(result.status());
+      }
+      return zx::ok(std::move(local));
+    }();
+    if (socket.is_ok()) {
+      c.log_sink_socket = socket.value().release();
       // For simplicity, the line above sets the value to the new name regardless of where it came
       // from. Ensure that the old name is invalid in case the value came from it.
       // TODO(fxbug.dev/63529): Rename all |log_service_channel| uses and remove this line, which

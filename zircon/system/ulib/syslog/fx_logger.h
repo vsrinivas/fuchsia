@@ -9,6 +9,7 @@
 #include <lib/zx/process.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/thread.h>
+#include <zircon/status.h>
 
 #include <atomic>
 
@@ -18,30 +19,20 @@
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 
-namespace {
-
-zx_koid_t GetKoid(zx_handle_t handle) {
-  zx_info_handle_basic_t info;
-  zx_status_t status =
-      zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-  return status == ZX_OK ? info.koid : ZX_KOID_INVALID;
-}
-
-zx_koid_t GetCurrentProcessKoid() {
-  auto koid = GetKoid(zx_process_self());
-  ZX_DEBUG_ASSERT(koid != ZX_KOID_INVALID);
-  return koid;
-}
-
-}  // namespace
-
 struct fx_logger {
  public:
   // If tags or ntags are out of bound, this constructor will not fail but it
   // will not store all the tags and global tag behaviour would be undefined.
   // So they should be validated before calling this constructor.
   explicit fx_logger(const fx_logger_config_t* config, bool structured) {
-    pid_ = GetCurrentProcessKoid();
+    pid_ = []() {
+      zx_info_handle_basic_t info;
+      zx_status_t status = zx_object_get_info(zx_process_self(), ZX_INFO_HANDLE_BASIC, &info,
+                                              sizeof(info), nullptr, nullptr);
+      ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "zx_object_get_info(zx_process_self(), ...): %s",
+                          zx_status_get_string(status));
+      return info.koid;
+    }();
     dropped_logs_.store(0, std::memory_order_relaxed);
     Reconfigure(config, structured);
     if (GetLogConnectionStatus() == ZX_ERR_BAD_STATE) {
@@ -93,7 +84,7 @@ struct fx_logger {
 
  private:
   zx_status_t VLogWrite(fx_log_severity_t severity, const char* tag, const char* file,
-                        uint32_t line, const char* format, va_list args, bool perform_format);
+                        uint32_t line, const char* msg, va_list args, bool perform_format);
 
   zx_status_t VLogWriteToSocket(fx_log_severity_t severity, const char* tag, const char* file,
                                 uint32_t line, const char* msg, va_list args, bool perform_format);
