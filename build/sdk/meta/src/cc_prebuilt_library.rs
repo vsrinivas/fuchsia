@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::common::{CcLibraryName, ElementType, File, TargetArchitecture};
+use crate::common::{CcLibraryName, CpuArchitecture, ElementType, File};
 use crate::json::JsonObject;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -39,7 +39,7 @@ pub struct CcPrebuiltLibrary {
     pub headers: Vec<File>,
     pub include_dir: File,
     pub deps: Vec<CcLibraryName>,
-    pub binaries: HashMap<TargetArchitecture, BinaryGroup>,
+    pub binaries: HashMap<CpuArchitecture, BinaryGroup>,
 }
 
 impl JsonObject for CcPrebuiltLibrary {

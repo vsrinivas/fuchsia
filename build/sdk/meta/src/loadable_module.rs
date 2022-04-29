@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::common::{ElementType, File, TargetArchitecture};
+use crate::common::{CpuArchitecture, ElementType, File};
 use crate::json::JsonObject;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -16,7 +16,7 @@ pub struct LoadableModule {
     #[serde(rename = "type")]
     pub kind: ElementType,
     pub resources: Vec<File>,
-    pub binaries: HashMap<TargetArchitecture, Vec<File>>,
+    pub binaries: HashMap<CpuArchitecture, Vec<File>>,
     pub root: File,
 }
 

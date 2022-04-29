@@ -29,6 +29,7 @@ if (is_host) {
       "src/lib.rs",
       "src/pbm.rs",
     ]
+    test_deps = [ "//third_party/rust_crates:tempfile" ]
   }
 
   group("tests") {

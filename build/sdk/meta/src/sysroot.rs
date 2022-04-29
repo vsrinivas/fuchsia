@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::common::{ElementType, File, TargetArchitecture};
+use crate::common::{CpuArchitecture, ElementType, File};
 use crate::json::JsonObject;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -27,7 +27,7 @@ pub struct Sysroot {
     pub name: String,
     #[serde(rename = "type")]
     pub kind: ElementType,
-    pub versions: HashMap<TargetArchitecture, Version>,
+    pub versions: HashMap<CpuArchitecture, Version>,
 }
 
 impl JsonObject for Sysroot {

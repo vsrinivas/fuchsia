@@ -5,7 +5,7 @@
 //! Representation of the virtual_device metadata.
 
 use crate::common::{
-    AudioModel, DataUnits, ElementType, Envelope, PointingDevice, ScreenUnits, TargetArchitecture,
+    AudioModel, CpuArchitecture, DataUnits, ElementType, Envelope, PointingDevice, ScreenUnits,
 };
 use crate::json::{schema, JsonObject};
 use serde::{Deserialize, Serialize};
@@ -16,7 +16,7 @@ use std::collections::HashMap;
 #[serde(deny_unknown_fields)]
 pub struct Cpu {
     /// Target CPU architecture.
-    pub arch: TargetArchitecture,
+    pub arch: CpuArchitecture,
 }
 
 /// Details of virtual input devices, such as mice.

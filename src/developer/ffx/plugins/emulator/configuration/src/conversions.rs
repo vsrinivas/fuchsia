@@ -76,8 +76,8 @@ mod tests {
     use super::*;
     use sdk_metadata::{
         virtual_device::{Cpu, Hardware},
-        AudioDevice, AudioModel, DataAmount, DataUnits, ElementType, EmuManifest, InputDevice,
-        Manifests, PointingDevice, Screen, ScreenUnits, TargetArchitecture,
+        AudioDevice, AudioModel, CpuArchitecture, DataAmount, DataUnits, ElementType, EmuManifest,
+        InputDevice, Manifests, PointingDevice, Screen, ScreenUnits,
     };
     use std::collections::HashMap;
 
@@ -106,7 +106,7 @@ mod tests {
             description: Some("A fake virtual device".to_string()),
             kind: ElementType::VirtualDevice,
             hardware: Hardware {
-                cpu: Cpu { arch: TargetArchitecture::X64 },
+                cpu: Cpu { arch: CpuArchitecture::X64 },
                 audio: AudioDevice { model: AudioModel::Hda },
                 storage: DataAmount { quantity: 512, units: DataUnits::Megabytes },
                 inputs: InputDevice { pointing_device: PointingDevice::Mouse },
@@ -151,7 +151,7 @@ mod tests {
             flash: None,
         });
         device.hardware = Hardware {
-            cpu: Cpu { arch: TargetArchitecture::Arm64 },
+            cpu: Cpu { arch: CpuArchitecture::Arm64 },
             audio: AudioDevice { model: AudioModel::None },
             storage: DataAmount { quantity: 8, units: DataUnits::Gigabytes },
             inputs: InputDevice { pointing_device: PointingDevice::Touch },

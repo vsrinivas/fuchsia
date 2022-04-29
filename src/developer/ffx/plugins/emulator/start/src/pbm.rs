@@ -6,12 +6,12 @@
 
 use anyhow::{bail, Context, Result};
 use ffx_emulator_common::{
-    config::{FfxConfigWrapper, EMU_UPSCRIPT_FILE},
+    config::{FfxConfigWrapper, EMU_UPSCRIPT_FILE, KVM_PATH},
     split_once, tap_available,
 };
 use ffx_emulator_config::{
     convert_bundle_to_configs, AccelerationMode, ConsoleType, EmulatorConfiguration, LogLevel,
-    NetworkingMode, TargetArchitecture,
+    NetworkingMode, OperatingSystem,
 };
 use ffx_emulator_engines::get_instance_dir;
 use ffx_emulator_start_args::StartCommand;
@@ -47,6 +47,10 @@ pub(crate) async fn make_configs(
     let mut emu_config = convert_bundle_to_configs(product_bundle, virtual_device, &data_root)
         .context("problem with convert_bundle_to_configs")?;
 
+    // HostConfig values that come from the OS environment.
+    emu_config.host.os = std::env::consts::OS.to_string().into();
+    emu_config.host.architecture = std::env::consts::ARCH.to_string().into();
+
     // Integrate the values from command line flags into the emulation configuration, and
     // return the result to the caller.
     emu_config = apply_command_line_options(emu_config, cmd, ffx_config)
@@ -67,10 +71,6 @@ async fn apply_command_line_options(
     cmd: &StartCommand,
     ffx_config: &FfxConfigWrapper,
 ) -> Result<EmulatorConfiguration> {
-    // HostConfig overrides, starting with env constants.
-    emu_config.host.os = std::env::consts::OS.to_string();
-    emu_config.host.architecture = std::env::consts::ARCH.to_string();
-
     // Clone any fields that can simply copy over.
     emu_config.host.acceleration = cmd.accel.clone();
     emu_config.host.gpu = cmd.gpu.clone();
@@ -85,17 +85,18 @@ async fn apply_command_line_options(
     }
 
     if emu_config.host.acceleration == AccelerationMode::Auto {
-        let check_kvm = match emu_config.device.cpu.architecture {
-            TargetArchitecture::Arm64 if emu_config.host.architecture == "aarch64" => true,
-            TargetArchitecture::X64 if emu_config.host.architecture == "x86_64" => true,
-            _ => false,
-        };
+        let check_kvm = emu_config.device.cpu.architecture == emu_config.host.architecture;
 
-        match emu_config.host.os.as_str() {
-            "linux" => {
+        match emu_config.host.os {
+            OperatingSystem::Linux => {
                 emu_config.host.acceleration = AccelerationMode::None;
                 if check_kvm {
-                    if let Ok(kvm) = std::fs::File::open("/dev/kvm") {
+                    if let Ok(kvm) = std::fs::File::open(
+                        ffx_config
+                            .get(KVM_PATH)
+                            .await
+                            .context("getting KVM path from ffx config")?,
+                    ) {
                         if let Ok(metadata) = kvm.metadata() {
                             if !metadata.permissions().readonly() {
                                 emu_config.host.acceleration = AccelerationMode::Hyper
@@ -104,13 +105,14 @@ async fn apply_command_line_options(
                     }
                 }
             }
+            OperatingSystem::MacOS => {
+                // We assume Macs always have HVF installed.
+                emu_config.host.acceleration =
+                    if check_kvm { AccelerationMode::Hyper } else { AccelerationMode::None };
+            }
             _ => {
-                // We assume everything else is a mac, and they have HVF installed.
-                if check_kvm {
-                    emu_config.host.acceleration = AccelerationMode::Hyper;
-                } else {
-                    emu_config.host.acceleration = AccelerationMode::None;
-                }
+                // For anything else, acceleration is unsupported.
+                emu_config.host.acceleration = AccelerationMode::None;
             }
         }
     }
@@ -268,12 +270,17 @@ fn generate_mac_address(name: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ffx_emulator_common::config::EMU_INSTANCE_ROOT_DIR;
     use ffx_emulator_config::{
-        AccelerationMode, ConsoleType, EmulatorConfiguration, EngineType, GpuType, LogLevel,
-        NetworkingMode, PortMapping,
+        AccelerationMode, ConsoleType, CpuArchitecture, EmulatorConfiguration, EngineType, GpuType,
+        LogLevel, NetworkingMode, PortMapping,
     };
     use regex::Regex;
-    use std::collections::HashMap;
+    use std::{
+        collections::HashMap,
+        fs::{create_dir_all, File},
+    };
+    use tempfile::tempdir;
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_apply_command_line_options() -> Result<()> {
@@ -333,6 +340,101 @@ mod tests {
         cmd.monitor = true;
         let opts = apply_command_line_options(opts, &cmd, &ffx_config).await?;
         assert_eq!(opts.runtime.console, ConsoleType::Monitor);
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_accel_auto() -> Result<()> {
+        let temp_path = PathBuf::from(tempdir().unwrap().path());
+        let file_path = temp_path.join("kvm");
+        create_dir_all(&temp_path).expect("Create all temp directory");
+        // The file at KVM_PATH is only tested for writability. It need not have contents.
+        let file = File::create(&file_path).expect("Create temp file");
+        let mut perms = file.metadata().expect("Get file metadata").permissions();
+
+        let mut ffx_config = FfxConfigWrapper::new();
+        ffx_config.overrides.insert(
+            KVM_PATH,
+            file_path.as_path().to_str().expect("Couldn't convert file_path to str").to_string(),
+        );
+        ffx_config.overrides.insert(
+            EMU_INSTANCE_ROOT_DIR,
+            temp_path.as_path().to_str().expect("Couldn't convert temp_path to str").to_string(),
+        );
+
+        // Set up some test data to be applied.
+        let cmd = StartCommand { accel: AccelerationMode::Auto, ..Default::default() };
+        let mut emu_config = EmulatorConfiguration::default();
+        emu_config.host.os = OperatingSystem::Linux;
+
+        perms.set_readonly(false);
+        assert!(file.set_permissions(perms.clone()).is_ok());
+
+        emu_config.device.cpu.architecture = CpuArchitecture::X64;
+        emu_config.host.architecture = CpuArchitecture::X64;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        assert_eq!(opts.host.acceleration, AccelerationMode::Hyper);
+
+        emu_config.device.cpu.architecture = CpuArchitecture::X64;
+        emu_config.host.architecture = CpuArchitecture::Arm64;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        assert_eq!(opts.host.acceleration, AccelerationMode::None);
+
+        emu_config.device.cpu.architecture = CpuArchitecture::Arm64;
+        emu_config.host.architecture = CpuArchitecture::Arm64;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        assert_eq!(opts.host.acceleration, AccelerationMode::Hyper);
+
+        emu_config.device.cpu.architecture = CpuArchitecture::Arm64;
+        emu_config.host.architecture = CpuArchitecture::X64;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        assert_eq!(opts.host.acceleration, AccelerationMode::None);
+
+        perms.set_readonly(true);
+        assert!(file.set_permissions(perms.clone()).is_ok());
+
+        emu_config.device.cpu.architecture = CpuArchitecture::X64;
+        emu_config.host.architecture = CpuArchitecture::X64;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        assert_eq!(opts.host.acceleration, AccelerationMode::None);
+
+        emu_config.device.cpu.architecture = CpuArchitecture::X64;
+        emu_config.host.architecture = CpuArchitecture::Arm64;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        assert_eq!(opts.host.acceleration, AccelerationMode::None);
+
+        emu_config.device.cpu.architecture = CpuArchitecture::Arm64;
+        emu_config.host.architecture = CpuArchitecture::Arm64;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        assert_eq!(opts.host.acceleration, AccelerationMode::None);
+
+        emu_config.device.cpu.architecture = CpuArchitecture::Arm64;
+        emu_config.host.architecture = CpuArchitecture::X64;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        assert_eq!(opts.host.acceleration, AccelerationMode::None);
+
+        emu_config.host.os = OperatingSystem::MacOS;
+
+        emu_config.device.cpu.architecture = CpuArchitecture::X64;
+        emu_config.host.architecture = CpuArchitecture::X64;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        assert_eq!(opts.host.acceleration, AccelerationMode::Hyper);
+
+        emu_config.device.cpu.architecture = CpuArchitecture::X64;
+        emu_config.host.architecture = CpuArchitecture::Arm64;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        assert_eq!(opts.host.acceleration, AccelerationMode::None);
+
+        emu_config.device.cpu.architecture = CpuArchitecture::Arm64;
+        emu_config.host.architecture = CpuArchitecture::Arm64;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        assert_eq!(opts.host.acceleration, AccelerationMode::Hyper);
+
+        emu_config.device.cpu.architecture = CpuArchitecture::Arm64;
+        emu_config.host.architecture = CpuArchitecture::X64;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        assert_eq!(opts.host.acceleration, AccelerationMode::None);
 
         Ok(())
     }

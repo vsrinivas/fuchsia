@@ -16,5 +16,5 @@ pub use enumerations::*;
 pub use interface_types::*;
 
 pub use sdk_metadata::{
-    AudioDevice, AudioModel, DataAmount, DataUnits, PointingDevice, TargetArchitecture,
+    AudioDevice, AudioModel, CpuArchitecture, DataAmount, DataUnits, PointingDevice,
 };

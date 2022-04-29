@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::common::{ElementType, File, TargetArchitecture};
+use crate::common::{CpuArchitecture, ElementType, File};
 use crate::json::JsonObject;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -19,7 +19,7 @@ pub struct HostTool {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub files: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub target_files: Option<HashMap<TargetArchitecture, Vec<String>>>,
+    pub target_files: Option<HashMap<CpuArchitecture, Vec<String>>>,
 }
 
 impl JsonObject for HostTool {

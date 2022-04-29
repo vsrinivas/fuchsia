@@ -6,14 +6,14 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use crate::common::{ElementType, TargetArchitecture};
+use crate::common::{CpuArchitecture, ElementType};
 use crate::json::JsonObject;
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(deny_unknown_fields)]
 pub struct Architectures {
     pub host: String,
-    pub target: Vec<TargetArchitecture>,
+    pub target: Vec<CpuArchitecture>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Hash, PartialEq, Eq, Clone, PartialOrd, Ord)]

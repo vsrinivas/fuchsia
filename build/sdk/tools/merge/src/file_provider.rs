@@ -6,13 +6,13 @@ use std::collections::{HashMap, HashSet};
 
 use thiserror::Error;
 
-use sdk_metadata::TargetArchitecture;
+use sdk_metadata::CpuArchitecture;
 
 use crate::app::Result;
 use crate::tarball::{InputTarball, OutputTarball, TarballContent};
 
 pub type CommonFiles = Vec<String>;
-pub type ArchFiles = HashMap<TargetArchitecture, Vec<String>>;
+pub type ArchFiles = HashMap<CpuArchitecture, Vec<String>>;
 
 /// A trait to extract files references from SDK elements.
 pub trait FileProvider {
@@ -63,7 +63,7 @@ enum Error {
     #[error("contents of {} are different", path)]
     CommonFilesContentDiffer { path: String },
     #[error("arch files are different for {:?}", arch)]
-    ArchFilesDiffer { arch: TargetArchitecture },
+    ArchFilesDiffer { arch: CpuArchitecture },
 }
 
 /// Verifies that the files in two input tarballs are consistent and copies them over to an output
@@ -117,7 +117,7 @@ pub fn merge_files<F: TarballContent>(
 
 #[cfg(test)]
 mod tests {
-    use sdk_metadata::TargetArchitecture;
+    use sdk_metadata::CpuArchitecture;
 
     use crate::testing::{MockInputTarball, MockOutputTarball};
 
@@ -135,7 +135,7 @@ mod tests {
         ( $( $arch:ident => [$( $element:expr ),*] ),* ) => {{
             let mut result = HashMap::new();
             $(
-                result.insert(TargetArchitecture::$arch, list![$($element),*]);
+                result.insert(CpuArchitecture::$arch, list![$($element),*]);
             )*
             result
         }}

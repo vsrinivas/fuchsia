@@ -15,7 +15,7 @@ use ffx_emulator_common::{
     process,
 };
 use ffx_emulator_config::{
-    EmulatorConfiguration, EmulatorEngine, EngineType, PointingDevice, TargetArchitecture,
+    CpuArchitecture, EmulatorConfiguration, EmulatorEngine, EngineType, PointingDevice,
 };
 use fidl_fuchsia_developer_ffx as bridge;
 use serde::{Deserialize, Serialize};
@@ -45,8 +45,9 @@ impl QemuEngine {
     /// TODO(http://fxdev.bug/98862): Improve the SDK metadata to have multiple binaries per tool.
     async fn get_qemu_path(&self) -> Result<PathBuf> {
         let cli_name = match self.emulator_configuration.device.cpu.architecture {
-            TargetArchitecture::Arm64 => Some("qemu-system-aarch64"),
-            TargetArchitecture::X64 => None,
+            CpuArchitecture::Arm64 => Some("qemu-system-aarch64"),
+            CpuArchitecture::X64 => None,
+            CpuArchitecture::Unsupported => None,
         };
 
         // Realistically, the file is always in a directory, so the empty path is a reasonable

@@ -4,14 +4,14 @@
 
 use std::collections::HashMap;
 
-use sdk_metadata::{JsonObject, Sysroot, TargetArchitecture};
+use sdk_metadata::{CpuArchitecture, JsonObject, Sysroot};
 
 use crate::app::Result;
 use crate::file_provider::{merge_files, FileProvider};
 use crate::tarball::{InputTarball, OutputTarball, TarballContent};
 
 impl FileProvider for Sysroot {
-    fn get_arch_files(&self) -> HashMap<TargetArchitecture, Vec<String>> {
+    fn get_arch_files(&self) -> HashMap<CpuArchitecture, Vec<String>> {
         let mut result = HashMap::new();
         for (arch, version) in &self.versions {
             let mut files = Vec::new();
@@ -26,7 +26,9 @@ impl FileProvider for Sysroot {
 }
 
 pub fn merge_sysroot<F: TarballContent>(
-    meta_path: &str, base: &impl InputTarball<F>, complement: &impl InputTarball<F>,
+    meta_path: &str,
+    base: &impl InputTarball<F>,
+    complement: &impl InputTarball<F>,
     output: &mut impl OutputTarball<F>,
 ) -> Result<()> {
     let base_meta: Sysroot = base.get_metadata(meta_path)?;

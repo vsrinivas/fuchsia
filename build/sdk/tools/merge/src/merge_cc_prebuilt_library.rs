@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 
-use sdk_metadata::{CcPrebuiltLibrary, JsonObject, TargetArchitecture};
+use sdk_metadata::{CcPrebuiltLibrary, CpuArchitecture, JsonObject};
 
 use crate::app::Result;
 use crate::file_provider::{merge_files, FileProvider};
@@ -15,7 +15,7 @@ impl FileProvider for CcPrebuiltLibrary {
         self.headers.clone()
     }
 
-    fn get_arch_files(&self) -> HashMap<TargetArchitecture, Vec<String>> {
+    fn get_arch_files(&self) -> HashMap<CpuArchitecture, Vec<String>> {
         let mut result = HashMap::new();
         for (arch, group) in &self.binaries {
             let mut files = Vec::new();
@@ -33,7 +33,9 @@ impl FileProvider for CcPrebuiltLibrary {
 }
 
 pub fn merge_cc_prebuilt_library<F: TarballContent>(
-    meta_path: &str, base: &impl InputTarball<F>, complement: &impl InputTarball<F>,
+    meta_path: &str,
+    base: &impl InputTarball<F>,
+    complement: &impl InputTarball<F>,
     output: &mut impl OutputTarball<F>,
 ) -> Result<()> {
     let base_meta: CcPrebuiltLibrary = base.get_metadata(meta_path)?;

@@ -8,14 +8,14 @@
 //! runtime.
 
 use crate::enumerations::{
-    AccelerationMode, ConsoleType, EngineType, GpuType, LogLevel, NetworkingMode, PortMapping,
-    VirtualCpu,
+    AccelerationMode, ConsoleType, EngineType, GpuType, LogLevel, NetworkingMode, OperatingSystem,
+    PortMapping, VirtualCpu,
 };
 use anyhow::Result;
 use async_trait::async_trait;
 use fidl_fuchsia_developer_ffx as bridge;
-use sdk_metadata::{AudioDevice, DataAmount, PointingDevice, Screen};
-use serde::{Deserialize, Serialize};
+use sdk_metadata::{AudioDevice, CpuArchitecture, DataAmount, PointingDevice, Screen};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::{collections::HashMap, path::PathBuf, time::Duration};
 
 #[async_trait]
@@ -136,7 +136,8 @@ pub struct HostConfig {
     pub acceleration: AccelerationMode,
 
     /// Indicates the CPU architecture of the host system.
-    pub architecture: String,
+    #[serde(deserialize_with = "parse_cpu_architecture")]
+    pub architecture: CpuArchitecture,
 
     /// Determines the type of graphics acceleration, to improve rendering in the guest OS.
     pub gpu: GpuType,
@@ -148,7 +149,7 @@ pub struct HostConfig {
     pub networking: NetworkingMode,
 
     /// Indicates the operating system the host system is running.
-    pub os: String,
+    pub os: OperatingSystem,
 
     /// Holds a set of named ports, with the mapping from host to guest for each one.
     /// Generally only useful when networking is set to "user".
@@ -210,4 +211,19 @@ pub struct RuntimeConfig {
     /// Optional path to a Tap upscript file, which is passed to the emulator when Tap networking
     /// is enabled.
     pub upscript: Option<PathBuf>,
+}
+
+// TODO(fxbug.dev/99291): The following is a temporary measure to ensure older emulators can still
+// be deserialized with the new data model change. The deserializer below will take both the old
+// env::consts::ARCH strings and the new CpuArchitecture serialized strings as valid input and
+// produce the CpuArchitecture enum as output. This can be removed after a few weeks, to give
+// pre-existing emulators time to be recycled.
+fn parse_cpu_architecture<'de, D>(d: D) -> Result<CpuArchitecture, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Deserialize::deserialize(d).map(|x: Option<String>| match x {
+        Some(val) => CpuArchitecture::from(val),
+        None => CpuArchitecture::Unsupported,
+    })
 }

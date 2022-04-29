@@ -34,6 +34,10 @@ pub const ZBI_HOST_TOOL: &'static str = "zbi";
 /// should create a subdirectory in this directory to store data.
 pub const EMU_INSTANCE_ROOT_DIR: &'static str = "emu.instance_dir";
 
+/// The filesystem path to the system's KVM device. Must be writable by the
+/// running process to utilize KVM for acceleration.
+pub const KVM_PATH: &'static str = "emu.kvm_path";
+
 /// The full path to the script to run initializing any network interfaces
 /// before starting the emulator. See the --upscript command line option
 /// for details.
@@ -43,7 +47,7 @@ pub const EMU_UPSCRIPT_FILE: &'static str = "emu.upscript";
 pub const SSH_PUBLIC_KEY: &'static str = "ssh.pub";
 
 const ALL_KEYS: &'static [&'static str] =
-    &[EMU_UPSCRIPT_FILE, EMU_INSTANCE_ROOT_DIR, SSH_PUBLIC_KEY];
+    &[EMU_UPSCRIPT_FILE, EMU_INSTANCE_ROOT_DIR, KVM_PATH, SSH_PUBLIC_KEY];
 
 macro_rules! missing_key_message {
     ($key_name:expr) => {

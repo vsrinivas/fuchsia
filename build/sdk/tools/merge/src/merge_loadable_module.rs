@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 
-use sdk_metadata::{JsonObject, LoadableModule, TargetArchitecture};
+use sdk_metadata::{CpuArchitecture, JsonObject, LoadableModule};
 
 use crate::app::Result;
 use crate::file_provider::{merge_files, FileProvider};
@@ -15,7 +15,7 @@ impl FileProvider for LoadableModule {
         self.resources.clone()
     }
 
-    fn get_arch_files(&self) -> HashMap<TargetArchitecture, Vec<String>> {
+    fn get_arch_files(&self) -> HashMap<CpuArchitecture, Vec<String>> {
         self.binaries.clone()
     }
 }

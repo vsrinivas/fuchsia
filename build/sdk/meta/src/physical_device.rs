@@ -4,7 +4,7 @@
 
 //! Representation of the physical_device metadata.
 
-use crate::common::{ElementType, Envelope, TargetArchitecture};
+use crate::common::{CpuArchitecture, ElementType, Envelope};
 use crate::json::{schema, JsonObject};
 use serde::{Deserialize, Serialize};
 
@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 #[serde(deny_unknown_fields)]
 pub struct Cpu {
     /// Target CPU architecture.
-    arch: TargetArchitecture,
+    arch: CpuArchitecture,
 }
 
 /// Specifics for a given hardware platform.

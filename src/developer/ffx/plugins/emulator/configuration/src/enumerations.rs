@@ -7,7 +7,7 @@
 //! types will be directly deserializable from the PBM, and converted into engine-specific types at
 //! runtime.
 
-use sdk_metadata::{display_impl, TargetArchitecture};
+use sdk_metadata::{display_impl, CpuArchitecture};
 use serde::{Deserialize, Serialize};
 
 /// Selector for which type of hardware acceleration will be enabled for the emulator.
@@ -124,6 +124,34 @@ impl Default for LogLevel {
 
 display_impl!(LogLevel);
 
+/// Indicates the Operating System the system is running.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum OperatingSystem {
+    Linux,
+    MacOS,
+    Unsupported,
+}
+
+impl Default for OperatingSystem {
+    fn default() -> Self {
+        OperatingSystem::Unsupported
+    }
+}
+
+impl From<String> for OperatingSystem {
+    fn from(item: String) -> Self {
+        match &item[..] {
+            // Values based on https://doc.rust-lang.org/std/env/consts/constant.OS.html
+            "linux" => Self::Linux,
+            "macos" => Self::MacOS,
+            _ => Self::Unsupported,
+        }
+    }
+}
+
+display_impl!(OperatingSystem);
+
 /// Selector for the mode of networking to enable between the guest and host systems.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -154,7 +182,7 @@ display_impl!(NetworkingMode);
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct VirtualCpu {
     /// The guest system's CPU architecture, i.e. the CPU type that will be emulated in the guest.
-    pub architecture: TargetArchitecture,
+    pub architecture: CpuArchitecture,
 
     /// The number of virtual CPUs that will emulated in the virtual device.
     pub count: usize,

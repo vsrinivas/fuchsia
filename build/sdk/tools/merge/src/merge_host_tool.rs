@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 
-use sdk_metadata::{HostTool, JsonObject, TargetArchitecture};
+use sdk_metadata::{CpuArchitecture, HostTool, JsonObject};
 
 use crate::app::Result;
 use crate::file_provider::{merge_files, FileProvider};
@@ -18,7 +18,7 @@ impl FileProvider for HostTool {
         Vec::new()
     }
 
-    fn get_arch_files(&self) -> HashMap<TargetArchitecture, Vec<String>> {
+    fn get_arch_files(&self) -> HashMap<CpuArchitecture, Vec<String>> {
         if let Some(files) = self.target_files.clone() {
             return files;
         }
@@ -27,7 +27,9 @@ impl FileProvider for HostTool {
 }
 
 pub fn merge_host_tool<F: TarballContent>(
-    meta_path: &str, base: &impl InputTarball<F>, complement: &impl InputTarball<F>,
+    meta_path: &str,
+    base: &impl InputTarball<F>,
+    complement: &impl InputTarball<F>,
     output: &mut impl OutputTarball<F>,
 ) -> Result<()> {
     let base_meta: HostTool = base.get_metadata(meta_path)?;
@@ -121,9 +123,6 @@ mod tests {
         output.assert_has_file("tools/foobar_arm64");
         let data = HostTool::new(output.get_content(meta).as_bytes()).unwrap();
         assert!(data.target_files.is_some());
-        assert!(
-            data.target_files.unwrap().len() == 2,
-            "Invalid number of architectures"
-        );
+        assert!(data.target_files.unwrap().len() == 2, "Invalid number of architectures");
     }
 }

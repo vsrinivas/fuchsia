@@ -66,18 +66,39 @@ macro_rules! display_impl {
 
 #[derive(Serialize, Deserialize, Debug, Hash, Clone, PartialOrd, Ord, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
-pub enum TargetArchitecture {
+pub enum CpuArchitecture {
     Arm64,
     X64,
+    Unsupported,
 }
 
-impl Default for TargetArchitecture {
+impl Default for CpuArchitecture {
     fn default() -> Self {
-        TargetArchitecture::X64
+        CpuArchitecture::X64
     }
 }
 
-display_impl!(TargetArchitecture);
+impl From<String> for CpuArchitecture {
+    fn from(item: String) -> Self {
+        CpuArchitecture::from(&item[..])
+    }
+}
+
+impl From<&str> for CpuArchitecture {
+    fn from(item: &str) -> Self {
+        match item {
+            // Values based on https://doc.rust-lang.org/std/env/consts/constant.ARCH.html.
+            "aarch64" => Self::Arm64,
+            "x86_64" => Self::X64,
+            // Values from deserialization.
+            "arm64" => Self::Arm64,
+            "x64" => Self::X64,
+            _ => Self::Unsupported,
+        }
+    }
+}
+
+display_impl!(CpuArchitecture);
 
 #[derive(Serialize, Deserialize, Debug, Hash, Clone, PartialOrd, Ord, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
