@@ -281,22 +281,26 @@ impl<'a> TryFrom<SecurityContext<'a, Credential>> for Authentication {
                     credentials: Some(Box::new(credentials)),
                 })
             }
-            // Use WPA3 if possible, but use WPA2 if the credential is incompatible with WPA3
-            // (namely, if the credential is a PSK).
+            // Use WPA3 if possible, but use WPA2 if WPA3 is not supported by the client or the
+            // credential is incompatible with WPA3 (namely, if the credential is a PSK).
             Wpa2Wpa3Personal => credential
                 .to_wpa3_personal_credentials()
-                .map(|credentials| Authentication {
-                    protocol: Protocol::Wpa3Personal,
-                    credentials: Some(Box::new(credentials)),
+                .ok()
+                .and_then(|credentials| {
+                    context.config.wpa3_supported.then(|| Authentication {
+                        protocol: Protocol::Wpa3Personal,
+                        credentials: Some(Box::new(credentials)),
+                    })
                 })
-                .or_else(|_| {
-                    credential.to_wpa1_wpa2_personal_credentials().map(|credentials| {
+                .or_else(|| {
+                    credential.to_wpa1_wpa2_personal_credentials().ok().map(|credentials| {
                         Authentication {
                             protocol: Protocol::Wpa2Personal,
                             credentials: Some(Box::new(credentials)),
                         }
                     })
-                }),
+                })
+                .ok_or_else(|| format_err!("Failed to construct credential for WPA2 or WPA3")),
             Wpa3Personal => {
                 credential.to_wpa3_personal_credentials().map(|credentials| Authentication {
                     protocol: Protocol::Wpa3Personal,
@@ -844,5 +848,41 @@ mod tests {
         context
             .authentication_config()
             .expect_err("created WPA3 auth config for incompatible device");
+    }
+
+    #[test]
+    fn authentication_from_credential_wpa2_wpa3_transitional() {
+        let device = crate::test_utils::fake_device_info([1u8; 6]);
+        let mut security_support = fake_security_support_empty();
+        security_support.mfp.supported = true;
+        security_support.sae.driver_handler_supported = true;
+        security_support.sae.sme_handler_supported = true;
+        let bss = fake_bss_description!(Wpa2Wpa3);
+        let credential = Credential::Password("password".as_bytes().into());
+
+        // WPA3 Personal should be used for transitional networks when driver support is available.
+        let config = ClientConfig { wpa3_supported: true, ..Default::default() };
+        let authentication = Authentication::try_from(SecurityContext {
+            security: &credential,
+            device: &device,
+            security_support: &security_support,
+            config: &config,
+            bss: &bss,
+        })
+        .unwrap();
+        assert!(matches!(authentication.protocol, Protocol::Wpa3Personal));
+
+        // WPA2 Personal should be used for transitional networks when driver support is
+        // unavailable.
+        let config = ClientConfig { wpa3_supported: false, ..Default::default() };
+        let authentication = Authentication::try_from(SecurityContext {
+            security: &credential,
+            device: &device,
+            security_support: &security_support,
+            config: &config,
+            bss: &bss,
+        })
+        .unwrap();
+        assert!(matches!(authentication.protocol, Protocol::Wpa2Personal));
     }
 }
