@@ -183,6 +183,7 @@ fn create_socket_ops(domain: SocketDomain, socket_type: SocketType) -> Box<dyn S
     match domain {
         SocketDomain::Unix => Box::new(UnixSocket::new(socket_type)),
         SocketDomain::Vsock => Box::new(VsockSocket::new(socket_type)),
+        SocketDomain::Inet => Box::new(InetSocket::new(socket_type)),
     }
 }
 

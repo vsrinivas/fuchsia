@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::logging::not_implemented;
 use bitflags::bitflags;
 use zerocopy::AsBytes;
 
@@ -52,6 +53,9 @@ pub enum SocketDomain {
 
     /// An AF_VSOCK socket for communication from a controlling operating system
     Vsock,
+
+    /// An AF_INET socket (currently stubbed out)
+    Inet,
 }
 
 impl SocketDomain {
@@ -59,6 +63,10 @@ impl SocketDomain {
         match raw {
             AF_UNIX => Some(SocketDomain::Unix),
             AF_VSOCK => Some(SocketDomain::Vsock),
+            // Conflate AF_INET and AF_INET6 while they are both stubbed
+            AF_INET => Some(SocketDomain::Inet),
+            AF_INET6 => Some(SocketDomain::Inet),
+
             _ => None,
         }
     }
@@ -104,6 +112,9 @@ pub enum SocketAddress {
 
     /// An AF_VSOCK socket is just referred to by its listening port on the client
     Vsock(u32),
+
+    /// No address for Inet sockets while stubbed
+    Inet(u32),
 }
 
 pub const SA_FAMILY_SIZE: usize = std::mem::size_of::<uapi::__kernel_sa_family_t>();
@@ -113,6 +124,7 @@ impl SocketAddress {
         match domain {
             SocketDomain::Unix => SocketAddress::Unix(FsString::new()),
             SocketDomain::Vsock => SocketAddress::Vsock(0xffff),
+            SocketDomain::Inet => SocketAddress::Inet(0),
         }
     }
 
@@ -121,6 +133,7 @@ impl SocketAddress {
             SocketAddress::Unspecified => false,
             SocketAddress::Unix(_) => domain == SocketDomain::Unix,
             SocketAddress::Vsock(_) => domain == SocketDomain::Vsock,
+            SocketAddress::Inet(_) => domain == SocketDomain::Inet,
         }
     }
 
@@ -145,6 +158,10 @@ impl SocketAddress {
                 let vm_addr = sockaddr_vm::new(*port);
                 vm_addr.write_to(&mut bytes[..]);
                 bytes
+            }
+            SocketAddress::Inet(_) => {
+                not_implemented!("SocketAddress::to_bytes is stubbed for Inet");
+                vec![]
             }
         }
     }

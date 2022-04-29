@@ -4,7 +4,7 @@
 
 use fuchsia_zircon as zx;
 use std::convert::TryInto;
-use zerocopy::AsBytes;
+use zerocopy::{AsBytes, FromBytes};
 
 use super::*;
 use crate::fs::buffers::*;
@@ -104,6 +104,16 @@ fn parse_socket_address(
                 }
             }
         }
+        AF_VSOCK => {
+            let vsock_address = sockaddr_vm::read_from(&*address);
+            if let Some(address) = vsock_address {
+                SocketAddress::Vsock(address.svm_port)
+            } else {
+                SocketAddress::Unspecified
+            }
+        }
+        // TODO replace this with the parsed address when AF_INET is implemented
+        AF_INET | AF_INET6 => SocketAddress::default_for_domain(SocketDomain::Inet),
         _ => SocketAddress::Unspecified,
     };
     Ok(address)
@@ -173,6 +183,10 @@ pub fn sys_bind(
         }
         SocketAddress::Vsock(port) => {
             current_task.abstract_vsock_namespace.bind(port, socket)?;
+        }
+        // TODO use namespace when implemented
+        SocketAddress::Inet(_) => {
+            socket.bind(SocketAddress::default_for_domain(SocketDomain::Inet))?
         }
     }
 
@@ -261,6 +275,7 @@ pub fn sys_connect(
         }
         // Connect not available for AF_VSOCK
         SocketAddress::Vsock(_) => return error!(ENOSYS),
+        SocketAddress::Inet(_) => return error!(ENOSYS),
     };
 
     // TODO(tbodt): Support blocking when the UNIX domain socket queue fills up. This one's weird
