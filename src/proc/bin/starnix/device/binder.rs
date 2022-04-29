@@ -206,6 +206,8 @@ struct BinderProcess {
     /// Outstanding references to handles within transaction buffers.
     /// When the process frees them with the BC_FREE_BUFFER, they will be released.
     transaction_refs: Mutex<BTreeMap<UserAddress, TransactionRefs>>,
+    /// The list of processes that should be notified if this process dies.
+    death_subscribers: Mutex<Vec<(Weak<BinderProcess>, binder_uintptr_t)>>,
 }
 
 /// References to binder objects that should be dropped when the buffer they're attached to is
@@ -226,6 +228,7 @@ impl BinderProcess {
             command_queue: Mutex::new(VecDeque::new()),
             waiters: Mutex::new(WaitQueue::default()),
             transaction_refs: Mutex::new(BTreeMap::new()),
+            death_subscribers: Mutex::new(Vec::new()),
         }
     }
 
@@ -257,6 +260,23 @@ impl BinderProcess {
                 let binder_object = Arc::new(BinderObject { owner: Arc::downgrade(self), local });
                 entry.insert(Arc::downgrade(&binder_object));
                 binder_object
+            }
+        }
+    }
+}
+
+impl Drop for BinderProcess {
+    fn drop(&mut self) {
+        // Notify any subscribers that the objects this process owned are now dead.
+        let death_subscribers = self.death_subscribers.lock();
+        for (proc, cookie) in &*death_subscribers {
+            if let Some(target_proc) = proc.upgrade() {
+                let thread_pool = target_proc.thread_pool.read();
+                if let Some(target_thread) = thread_pool.find_available_thread() {
+                    target_thread.write().enqueue_command(Command::DeadBinder(*cookie));
+                } else {
+                    target_proc.enqueue_command(Command::DeadBinder(*cookie));
+                }
             }
         }
     }
@@ -721,6 +741,8 @@ enum Command {
     TransactionComplete,
     /// Notifies the initiator of a transaction that the recipient is dead.
     DeadReply,
+    /// Notifies a binder process that a binder object has died.
+    DeadBinder(binder_uintptr_t),
 }
 
 impl Command {
@@ -733,6 +755,7 @@ impl Command {
             Command::Reply(..) => binder_driver_return_protocol_BR_REPLY,
             Command::TransactionComplete => binder_driver_return_protocol_BR_TRANSACTION_COMPLETE,
             Command::DeadReply => binder_driver_return_protocol_BR_DEAD_REPLY,
+            Command::DeadBinder(..) => binder_driver_return_protocol_BR_DEAD_BINDER,
         }
     }
 
@@ -788,6 +811,21 @@ impl Command {
                     return error!(ENOMEM);
                 }
                 mm.write_object(UserRef::new(buffer.address), &self.driver_return_code())
+            }
+            Command::DeadBinder(cookie) => {
+                #[repr(C, packed)]
+                #[derive(AsBytes)]
+                struct DeadBinderData {
+                    command: binder_driver_return_protocol,
+                    cookie: binder_uintptr_t,
+                }
+                if buffer.length < std::mem::size_of::<DeadBinderData>() {
+                    return error!(ENOMEM);
+                }
+                mm.write_object(
+                    UserRef::new(buffer.address),
+                    &DeadBinderData { command: self.driver_return_code(), cookie: *cookie },
+                )
             }
         }
     }
@@ -1163,16 +1201,17 @@ impl BinderDriver {
                 self.handle_free_buffer(binder_proc, buffer_ptr)
             }
             binder_driver_command_protocol_BC_REQUEST_DEATH_NOTIFICATION => {
-                // A binder thread is requesting to be sent a notification when a remote binder
-                // object dies.
-                let handle = cursor.read_object::<u32>()?;
+                let handle = cursor.read_object::<u32>()?.into();
                 let cookie = cursor.read_object::<binder_uintptr_t>()?;
-                not_implemented!(
-                    "binder thread {} BC_REQUEST_DEATH_NOTIFICATION for handle {} (cookie={:?})",
-                    binder_thread.tid,
-                    handle,
-                    UserAddress::from(cookie)
-                );
+                self.handle_request_death_notification(binder_proc, binder_thread, handle, cookie)
+            }
+            binder_driver_command_protocol_BC_CLEAR_DEATH_NOTIFICATION => {
+                let handle = cursor.read_object::<u32>()?.into();
+                let cookie = cursor.read_object::<binder_uintptr_t>()?;
+                self.handle_clear_death_notification(binder_proc, handle, cookie)
+            }
+            binder_driver_command_protocol_BC_DEAD_BINDER_DONE => {
+                let _cookie = cursor.read_object::<binder_uintptr_t>()?;
                 Ok(())
             }
             binder_driver_command_protocol_BC_TRANSACTION => {
@@ -1286,6 +1325,66 @@ impl BinderDriver {
         let mut shared_memory_lock = binder_proc.shared_memory.lock();
         let shared_memory = shared_memory_lock.as_mut().ok_or_else(|| errno!(ENOMEM))?;
         shared_memory.free_buffer(buffer_ptr)
+    }
+
+    /// Subscribe a process to the death of the owner of `handle`.
+    fn handle_request_death_notification(
+        &self,
+        binder_proc: &Arc<BinderProcess>,
+        binder_thread: &Arc<BinderThread>,
+        handle: Handle,
+        cookie: binder_uintptr_t,
+    ) -> Result<(), Errno> {
+        let proxy = match handle {
+            Handle::SpecialServiceManager => {
+                not_implemented!("death notification for service manager");
+                return Ok(());
+            }
+            Handle::Object { index } => binder_proc.handles.lock().get(index)?,
+        };
+        if let Some(owner) = proxy.owner.upgrade() {
+            owner.death_subscribers.lock().push((Arc::downgrade(binder_proc), cookie));
+        } else {
+            // The object is already dead. Notify immediately. However, the requesting thread
+            // cannot handle the notification, in case it is holding some mutex while processing a
+            // oneway transaction (where its transaction stack will be empty).
+            let thread_pool = binder_proc.thread_pool.write();
+            if let Some(target_thread) =
+                thread_pool.find_available_thread().filter(|th| th.tid != binder_thread.tid)
+            {
+                target_thread.write().enqueue_command(Command::DeadBinder(cookie));
+            } else {
+                binder_proc.enqueue_command(Command::DeadBinder(cookie));
+            }
+        }
+        Ok(())
+    }
+
+    /// Remove a previously subscribed death notification.
+    fn handle_clear_death_notification(
+        &self,
+        binder_proc: &Arc<BinderProcess>,
+        handle: Handle,
+        cookie: binder_uintptr_t,
+    ) -> Result<(), Errno> {
+        let proxy = match handle {
+            Handle::SpecialServiceManager => {
+                not_implemented!("clear death notification for service manager");
+                return Ok(());
+            }
+            Handle::Object { index } => binder_proc.handles.lock().get(index)?,
+        };
+        if let Some(owner) = proxy.owner.upgrade() {
+            let mut death_subscribers = owner.death_subscribers.lock();
+            if let Some((idx, _)) =
+                death_subscribers.iter().enumerate().find(|(_idx, (proc, c))| {
+                    std::ptr::eq(proc.as_ptr(), Arc::as_ptr(binder_proc)) && *c == cookie
+                })
+            {
+                death_subscribers.swap_remove(idx);
+            }
+        }
+        Ok(())
     }
 
     /// A binder thread is starting a transaction on a remote binder object.
@@ -1453,7 +1552,10 @@ impl BinderDriver {
                         // A transaction is complete, pop it from the transaction stack.
                         thread_state.transactions.pop();
                     }
-                    Command::AcquireRef(..) | Command::ReleaseRef(..) | Command::DeadReply => {}
+                    Command::AcquireRef(..)
+                    | Command::ReleaseRef(..)
+                    | Command::DeadReply
+                    | Command::DeadBinder(..) => {}
                 }
 
                 return Ok(bytes_written);
@@ -2384,5 +2486,196 @@ mod tests {
             .driver
             .find_process(current_task.get_pid())
             .expect_err("process was not cleaned up");
+    }
+
+    #[fuchsia::test]
+    fn decrementing_refs_on_dead_binder_succeeds() {
+        let driver = BinderDriver::new();
+
+        let owner_proc = driver.create_process(1);
+        let client_proc = driver.create_process(2);
+
+        // Register an object with the owner.
+        let object = owner_proc.find_or_register_object(LocalBinderObject {
+            weak_ref_addr: UserAddress::from(0x0000000000000001),
+            strong_ref_addr: UserAddress::from(0x0000000000000002),
+        });
+
+        // Keep a weak reference to the object.
+        let weak_object = Arc::downgrade(&object);
+
+        // Insert a handle to the object in the client. This also retains a strong reference.
+        let handle = client_proc.handles.lock().insert_for_transaction(object);
+
+        // Grab a weak reference.
+        client_proc.handles.lock().inc_weak(handle.object_index()).expect("inc_weak");
+
+        // Now the owner process dies.
+        drop(owner_proc);
+
+        // Confirm that the object is considered dead. The representation is still alive, but the
+        // owner is dead.
+        assert!(
+            client_proc
+                .handles
+                .lock()
+                .get(handle.object_index())
+                .expect("object should be present")
+                .owner
+                .upgrade()
+                .is_none(),
+            "owner should be dead"
+        );
+
+        // Decrement the weak reference. This should prove that the handle is still occupied.
+        client_proc.handles.lock().dec_weak(handle.object_index()).expect("dec_weak");
+
+        // Decrement the last strong reference.
+        client_proc.handles.lock().dec_strong(handle.object_index()).expect("dec_strong");
+
+        // Confirm that now the handle has been removed from the table.
+        client_proc
+            .handles
+            .lock()
+            .get(handle.object_index())
+            .expect_err("handle should have been dropped");
+
+        // Now the binder object representation should also be gone.
+        assert!(weak_object.upgrade().is_none(), "object should be dead");
+    }
+
+    #[fuchsia::test]
+    fn death_notification_fires_when_process_dies() {
+        let driver = BinderDriver::new();
+
+        let owner_proc = driver.create_process(1);
+        let (client_proc, client_thread) = driver.create_process_and_thread(2);
+
+        // Register an object with the owner.
+        let object = owner_proc.find_or_register_object(LocalBinderObject {
+            weak_ref_addr: UserAddress::from(0x0000000000000001),
+            strong_ref_addr: UserAddress::from(0x0000000000000002),
+        });
+
+        // Insert a handle to the object in the client. This also retains a strong reference.
+        let handle = client_proc.handles.lock().insert_for_transaction(object);
+
+        let death_notification_cookie = 0xDEADBEEF;
+
+        // Register a death notification handler.
+        driver
+            .handle_request_death_notification(
+                &client_proc,
+                &client_thread,
+                handle,
+                death_notification_cookie,
+            )
+            .expect("request death notification");
+
+        // Pretend the client thread is waiting for commands, so that it can be scheduled commands.
+        {
+            let mut client_state = client_thread.write();
+            client_state.registration = RegistrationState::MAIN;
+            client_state.waiter = Some(Waiter::new());
+        }
+
+        // Now the owner process dies.
+        drop(owner_proc);
+
+        // The client thread should have a notification waiting.
+        assert_eq!(
+            client_thread.read().command_queue.front(),
+            Some(&Command::DeadBinder(death_notification_cookie))
+        );
+    }
+
+    #[fuchsia::test]
+    fn death_notification_fires_when_request_for_death_notification_is_made_on_dead_binder() {
+        let driver = BinderDriver::new();
+
+        let owner_proc = driver.create_process(1);
+        let (client_proc, client_thread) = driver.create_process_and_thread(2);
+
+        // Register an object with the owner.
+        let object = owner_proc.find_or_register_object(LocalBinderObject {
+            weak_ref_addr: UserAddress::from(0x0000000000000001),
+            strong_ref_addr: UserAddress::from(0x0000000000000002),
+        });
+
+        // Insert a handle to the object in the client. This also retains a strong reference.
+        let handle = client_proc.handles.lock().insert_for_transaction(object);
+
+        // Now the owner process dies.
+        drop(owner_proc);
+
+        let death_notification_cookie = 0xDEADBEEF;
+
+        // Register a death notification handler.
+        driver
+            .handle_request_death_notification(
+                &client_proc,
+                &client_thread,
+                handle,
+                death_notification_cookie,
+            )
+            .expect("request death notification");
+
+        // The client thread should not have a notification, as the calling thread is not allowed
+        // to receive it, or else a deadlock may occur if the thread is in the middle of a
+        // transaction. Since there is only one thread, check the process command queue.
+        assert_eq!(
+            client_proc.command_queue.lock().front(),
+            Some(&Command::DeadBinder(death_notification_cookie))
+        );
+    }
+
+    #[fuchsia::test]
+    fn death_notification_is_cleared_before_process_dies() {
+        let driver = BinderDriver::new();
+
+        let owner_proc = driver.create_process(1);
+        let (client_proc, client_thread) = driver.create_process_and_thread(2);
+
+        // Register an object with the owner.
+        let object = owner_proc.find_or_register_object(LocalBinderObject {
+            weak_ref_addr: UserAddress::from(0x0000000000000001),
+            strong_ref_addr: UserAddress::from(0x0000000000000002),
+        });
+
+        // Insert a handle to the object in the client. This also retains a strong reference.
+        let handle = client_proc.handles.lock().insert_for_transaction(object);
+
+        let death_notification_cookie = 0xDEADBEEF;
+
+        // Register a death notification handler.
+        driver
+            .handle_request_death_notification(
+                &client_proc,
+                &client_thread,
+                handle,
+                death_notification_cookie,
+            )
+            .expect("request death notification");
+
+        // Now clear the death notification handler.
+        driver
+            .handle_clear_death_notification(&client_proc, handle, death_notification_cookie)
+            .expect("clear death notification");
+
+        // Pretend the client thread is waiting for commands, so that it can be scheduled commands.
+        {
+            let mut client_state = client_thread.write();
+            client_state.registration = RegistrationState::MAIN;
+            client_state.waiter = Some(Waiter::new());
+        }
+
+        // Now the owner process dies.
+        drop(owner_proc);
+
+        // The client thread should have no notification.
+        assert!(client_thread.read().command_queue.is_empty());
+
+        // The client process should have no notification.
+        assert!(client_proc.command_queue.lock().is_empty());
     }
 }
