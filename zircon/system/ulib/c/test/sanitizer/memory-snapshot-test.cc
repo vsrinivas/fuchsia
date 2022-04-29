@@ -162,6 +162,16 @@ void StacksCallback(void* mem, size_t len, void* arg) {
 void TlsCallback(void* mem, size_t len, void* arg) {
   auto result = static_cast<SnapshotResult*>(arg);
   result->tls.push_back({mem, len});
+
+  // TODO(fxbug.dev/99246): Currently, the TLS callback receives two kinds of
+  // buffers: (1) An actual TLS segment and (2) libc internals (start_arg, tsd,
+  // etc.). The tests here just check for values found in (2) which will always
+  // be 8-byte aligned. Since we don't expect any of these values to be in (1),
+  // we can ignore checking potentially unaligned regions from there. But we
+  // should come back and add tests that ensure known TLS segments are found.
+  if (reinterpret_cast<uintptr_t>(mem) % alignof(uintptr_t) != 0)
+    return;
+
   const auto* words = reinterpret_cast<uintptr_t*>(mem);
   for (size_t i = 0; i < len / sizeof(words[0]); ++i) {
     if (words[i] == kTssPattern) {
