@@ -146,6 +146,11 @@ If your `lib.rs` contains tests, they can be invoked using `fx test`:
 fx test ffx_example_lib_test
 ```
 
+If fx test doesn't find your test, check that the product configuration includes your test. You can include all the ffx tests with this command:
+```posix-terminal
+fx set ... --with=//src/developer/ffx:tests
+```
+
 ## FIDL protocols {#fidl-proxy}
 
 FFX plugins can communicate with a target device using FIDL protocols through
