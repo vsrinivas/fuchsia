@@ -21,6 +21,7 @@
 #include "src/developer/forensics/feedback_data/metadata_schema.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/errors.h"
+#include "src/developer/forensics/utils/redact/redactor.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/timekeeper/test_clock.h"
@@ -113,6 +114,38 @@ namespace {
 constexpr zx::duration kPreviousBootUtcMonotonicDifference = zx::sec(100);
 constexpr const char* kSnapshotUuid = "snapshot_uuid";
 
+template <typename C>
+std::vector<std::string> ToVector(const C& json_array) {
+  FX_CHECK(json_array.IsArray());
+  std::vector<std::string> v;
+  for (const auto& e : json_array.GetArray()) {
+    FX_CHECK(e.IsString());
+    v.push_back(e.GetString());
+  }
+
+  return v;
+}
+
+static const std::string kSuccessfullyRedactedCanary = "SUCCESSFULLY REDACTED CANARY";
+static const std::string kUnsuccessfullyRedactedCanary = "UNSUCCESSFULLY REDACTED CANARY";
+
+class RedactorForTest : public RedactorBase {
+ public:
+  RedactorForTest() : RedactorBase(inspect::BoolProperty{}) {}
+
+  std::string& Redact(std::string& text) override {
+    if (text == UnredactedCanary()) {
+      text = std::string(kSuccessfullyRedactedCanary);
+    } else {
+      text = std::string(kUnsuccessfullyRedactedCanary);
+    }
+    return text;
+  }
+
+  std::string UnredactedCanary() const override { return "UNREDACTED CANARY MESSAGE"; }
+  std::string RedactedCanary() const override { return ""; }
+};
+
 class MetadataTest : public UnitTestFixture {
  protected:
   void SetUp() override {
@@ -127,8 +160,9 @@ class MetadataTest : public UnitTestFixture {
 
   void SetUpMetadata(const AnnotationKeys& annotation_allowlist,
                      const AttachmentKeys& attachment_allowlist) {
-    metadata_ = std::make_unique<Metadata>(dispatcher(), &clock_, /*is_first_instance=*/true,
-                                           annotation_allowlist, attachment_allowlist);
+    metadata_ =
+        std::make_unique<Metadata>(dispatcher(), &clock_, &redactor_, /*is_first_instance=*/true,
+                                   annotation_allowlist, attachment_allowlist);
   }
 
   // Get the integrity metadata for the provided annotations and attachments, check that it adheres
@@ -153,11 +187,14 @@ class MetadataTest : public UnitTestFixture {
     FX_CHECK(json["snapshot_version"].GetString() == std::string(SnapshotVersion::kString));
     FX_CHECK(json["metadata_version"].GetString() == std::string(Metadata::kVersion));
     FX_CHECK(json["snapshot_uuid"].GetString() == std::string(kSnapshotUuid));
+    FX_CHECK(ToVector(json["log_redaction_canary"]) ==
+             std::vector<std::string>({kSuccessfullyRedactedCanary}));
 
     return json;
   }
 
   timekeeper::TestClock clock_;
+  RedactorForTest redactor_;
   std::unique_ptr<Metadata> metadata_;
 };
 
@@ -379,6 +416,8 @@ TEST_F(MetadataTest, Check_EmptySnapshot) {
   EXPECT_STREQ(json["snapshot_version"].GetString(), SnapshotVersion::kString);
   EXPECT_STREQ(json["metadata_version"].GetString(), Metadata::kVersion);
   EXPECT_STREQ(json["snapshot_uuid"].GetString(), kSnapshotUuid);
+  EXPECT_EQ(ToVector(json["log_redaction_canary"]),
+            std::vector<std::string>({kSuccessfullyRedactedCanary}));
 
   EXPECT_TRUE(json.HasMember("files"));
   EXPECT_TRUE(json["files"].IsObject());

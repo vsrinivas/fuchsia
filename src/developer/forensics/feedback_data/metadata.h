@@ -13,6 +13,7 @@
 
 #include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
+#include "src/developer/forensics/utils/redact/redactor.h"
 #include "src/developer/forensics/utils/utc_time_provider.h"
 #include "src/lib/timekeeper/clock.h"
 
@@ -22,8 +23,9 @@ namespace feedback_data {
 // Constructs metadata describing the rest of the content of the snapshot archive.
 class Metadata {
  public:
-  Metadata(async_dispatcher_t* dispatcher, timekeeper::Clock* clock, bool is_first_instance,
-           const AnnotationKeys& annotation_allowlist, const AttachmentKeys& attachment_allowlist);
+  Metadata(async_dispatcher_t* dispatcher, timekeeper::Clock* clock, RedactorBase* redactor,
+           bool is_first_instance, const AnnotationKeys& annotation_allowlist,
+           const AttachmentKeys& attachment_allowlist);
 
   // Return a JSON metadata string.
   //
@@ -37,6 +39,7 @@ class Metadata {
   static constexpr const char* kVersion = "1";
 
  private:
+  std::string log_redaction_canary_;
   AnnotationKeys annotation_allowlist_;
   AttachmentKeys attachment_allowlist_;
 

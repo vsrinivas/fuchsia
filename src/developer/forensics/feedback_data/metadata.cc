@@ -15,6 +15,7 @@
 #include "src/developer/forensics/feedback_data/errors.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/developer/forensics/utils/errors.h"
+#include "src/lib/fxl/strings/split_string.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"
 #include "third_party/rapidjson/include/rapidjson/prettywriter.h"
 #include "third_party/rapidjson/include/rapidjson/rapidjson.h"
@@ -215,15 +216,30 @@ void AddAnnotationsJson(const AnnotationKeys& annotation_allowlist,
   (*metadata_json)["files"].AddMember("annotations.json", annotations_json, allocator);
 }
 
+void AddLogRedactionCanary(const std::string& log_redaction_canary, Document* metadata_json) {
+  auto& allocator = metadata_json->GetAllocator();
+  Value lines(kArrayType);
+  for (const std::string& line :
+       fxl::SplitStringCopy(log_redaction_canary, "\n", fxl::WhiteSpaceHandling::kTrimWhitespace,
+                            fxl::SplitResult::kSplitWantNonEmpty)) {
+    lines.PushBack(Value(line, allocator), allocator);
+  }
+
+  metadata_json->AddMember("log_redaction_canary", lines, allocator);
+}
+
 }  // namespace
 
-Metadata::Metadata(async_dispatcher_t* dispatcher, timekeeper::Clock* clock,
+Metadata::Metadata(async_dispatcher_t* dispatcher, timekeeper::Clock* clock, RedactorBase* redactor,
                    const bool is_first_instance, const AnnotationKeys& annotation_allowlist,
                    const AttachmentKeys& attachment_allowlist)
-    : annotation_allowlist_(annotation_allowlist),
+    : log_redaction_canary_(redactor->UnredactedCanary()),
+      annotation_allowlist_(annotation_allowlist),
       attachment_allowlist_(attachment_allowlist),
       utc_provider_(dispatcher, zx::unowned_clock(zx_utc_reference_get()), clock,
-                    PreviousBootFile::FromCache(is_first_instance, kUtcMonotonicDifferenceFile)) {}
+                    PreviousBootFile::FromCache(is_first_instance, kUtcMonotonicDifferenceFile)) {
+  redactor->Redact(log_redaction_canary_);
+}
 
 std::string Metadata::MakeMetadata(const ::fpromise::result<Annotations>& annotations_result,
                                    const ::fpromise::result<Attachments>& attachments_result,
@@ -247,6 +263,7 @@ std::string Metadata::MakeMetadata(const ::fpromise::result<Annotations>& annota
   metadata_json.AddMember("metadata_version", Value(Metadata::kVersion, allocator), allocator);
   metadata_json.AddMember("snapshot_uuid", Value(snapshot_uuid, allocator), allocator);
   metadata_json.AddMember("files", Value(kObjectType), allocator);
+  AddLogRedactionCanary(log_redaction_canary_, &metadata_json);
 
   const bool has_non_platform_annotations =
       annotations_result.is_ok() &&

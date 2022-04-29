@@ -52,14 +52,15 @@ const zx::duration kScreenshotTimeout = zx::sec(10);
 
 DataProvider::DataProvider(async_dispatcher_t* dispatcher,
                            std::shared_ptr<sys::ServiceDirectory> services,
-                           timekeeper::Clock* clock, const bool is_first_instance,
-                           const AnnotationKeys& annotation_allowlist,
+                           timekeeper::Clock* clock, RedactorBase* redactor,
+                           const bool is_first_instance, const AnnotationKeys& annotation_allowlist,
                            const AttachmentKeys& attachment_allowlist, cobalt::Logger* cobalt,
                            feedback::AnnotationManager* annotation_manager, Datastore* datastore,
                            InspectDataBudget* inspect_data_budget)
     : dispatcher_(dispatcher),
       services_(services),
-      metadata_(dispatcher_, clock, is_first_instance, annotation_allowlist, attachment_allowlist),
+      metadata_(dispatcher_, clock, redactor, is_first_instance, annotation_allowlist,
+                attachment_allowlist),
       cobalt_(cobalt),
       annotation_manager_(annotation_manager),
       datastore_(datastore),

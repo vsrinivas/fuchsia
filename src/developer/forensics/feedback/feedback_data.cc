@@ -34,7 +34,7 @@ FeedbackData::FeedbackData(async_dispatcher_t* dispatcher,
       datastore_(dispatcher_, services_, cobalt_, redactor, options.config.annotation_allowlist,
                  options.config.attachment_allowlist, annotation_manager, device_id_provider,
                  &inspect_data_budget_),
-      data_provider_(dispatcher_, services_, clock_, options.is_first_instance,
+      data_provider_(dispatcher_, services_, clock_, redactor, options.is_first_instance,
                      options.config.annotation_allowlist, options.config.attachment_allowlist,
                      cobalt_, annotation_manager, &datastore_, &inspect_data_budget_),
       data_provider_controller_() {

@@ -152,16 +152,6 @@ int main() {
 
                 const auto startup_annotations = GetStartupAnnotations(reboot_log);
 
-                // Emit the log redaction canary during startup. Split it by newlines to prevent
-                // data from being sent in multiple messages.
-                const auto canary =
-                    RedactorFromConfig(nullptr /*inspect not needed*/)->UnredactedCanary();
-                for (const auto& line :
-                     fxl::SplitStringCopy(canary, "\n", fxl::WhiteSpaceHandling::kTrimWhitespace,
-                                          fxl::SplitResult::kSplitWantNonEmpty)) {
-                  FX_LOGS(INFO) << line;
-                }
-
                 main_service = std::make_unique<MainService>(
                     component.Dispatcher(), component.Services(), component.Clock(),
                     component.InspectRoot(), cobalt.get(), startup_annotations,

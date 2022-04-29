@@ -19,6 +19,9 @@ constexpr const char* kMetadataSchema = R"({
    "snapshot_uuid": {
       "type": "string"
    },
+   "log_redaction_canary": {
+      "type": "string"
+   },
    "files": {
        "type": "object",
        "patternProperties":{
@@ -36,8 +39,7 @@ constexpr const char* kMetadataSchema = R"({
                       },
                       "required":[
                         "value",
-                        "units"
-                      ]
+                        "units" ]
                   }
                 },
                 "state":{
@@ -99,6 +101,7 @@ constexpr const char* kMetadataSchema = R"({
       "snapshot_version",
       "metadata_version",
       "snapshot_uuid",
+      "log_redaction_canary",
       "files"
     ]
 })";

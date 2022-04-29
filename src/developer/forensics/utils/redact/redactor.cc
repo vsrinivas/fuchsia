@@ -34,8 +34,7 @@ constexpr std::string_view kHexPattern = R"((\b[0-9a-fA-F]{32}\b))";
 constexpr std::string_view kGaiaPattern = R"((\b1[0-9]{20}\b))";
 
 constexpr std::string_view kUnredactedCanary =
-    R"(Log redaction canary:
-Email: alice@website.tld,
+    R"(Email: alice@website.tld,
 IPv4: 8.8.8.8,
 IPv4_New: 8.9.10.42,
 IPv4_Dup: 8.8.8.8,
@@ -67,8 +66,7 @@ v6Multicast: ff77:111:222:333:444:555:666:777,
 obfuscatedGaiaId: 106986199446298680449)";
 
 constexpr std::string_view kRedactedCanary =
-    R"(Log redaction canary:
-Email: <REDACTED-EMAIL>,
+    R"(Email: <REDACTED-EMAIL>,
 IPv4: <REDACTED-IPV4: 1>,
 IPv4_New: <REDACTED-IPV4: 2>,
 IPv4_Dup: <REDACTED-IPV4: 1>,
