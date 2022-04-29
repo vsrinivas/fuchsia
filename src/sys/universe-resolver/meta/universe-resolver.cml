@@ -13,11 +13,6 @@
             path: "/svc/fuchsia.component.resolution.Resolver",
         },
         { protocol: "fuchsia.component.resolution.Resolver" },
-
-        // This component will temporarily serve the legacy protocol until
-        // all clients are migrated to the SDK version.
-        // TODO(http://fxbug.dev/94581): Remove this.
-        { protocol: "fuchsia.sys2.ComponentResolver" },
     ],
     use: [
         {
@@ -34,10 +29,6 @@
         },
         {
             protocol: "fuchsia.component.resolution.Resolver",
-            from: "self",
-        },
-        {
-            protocol: "fuchsia.sys2.ComponentResolver",
             from: "self",
         },
     ],

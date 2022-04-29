@@ -8,7 +8,6 @@ use {
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_resolution as fresolution,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxy},
-    fidl_fuchsia_sys2 as fsys,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_url::{
         errors::{ParseError as PkgUrlParseError, ResourcePathError},
@@ -21,7 +20,6 @@ use {
 
 enum IncomingService {
     Resolver(fresolution::ResolverRequestStream),
-    DeprecatedResolver(fsys::ComponentResolverRequestStream),
 }
 
 #[fuchsia::main]
@@ -29,7 +27,6 @@ async fn main() -> anyhow::Result<()> {
     info!("started");
     let mut service_fs = ServiceFs::new_local();
     service_fs.dir("svc").add_fidl_service(IncomingService::Resolver);
-    service_fs.dir("svc").add_fidl_service(IncomingService::DeprecatedResolver);
 
     service_fs.take_and_serve_directory_handle().context("failed to serve outgoing namespace")?;
 
@@ -37,7 +34,6 @@ async fn main() -> anyhow::Result<()> {
         .for_each_concurrent(None, |request| async {
             if let Err(err) = match request {
                 IncomingService::Resolver(stream) => serve(stream).await,
-                IncomingService::DeprecatedResolver(stream) => serve_deprecated(stream).await,
             } {
                 error!("failed to serve resolve request: {:?}", err);
             }
@@ -55,24 +51,6 @@ async fn serve(mut stream: fresolution::ResolverRequestStream) -> anyhow::Result
     {
         match resolve_component(&component_url, &package_resolver).await {
             Ok(result) => responder.send(&mut Ok(result)),
-            Err(err) => {
-                info!("failed to resolve component URL {}: {}", &component_url, &err);
-                responder.send(&mut Err(err.into()))
-            }
-        }
-        .context("failed sending response")?;
-    }
-    Ok(())
-}
-
-async fn serve_deprecated(mut stream: fsys::ComponentResolverRequestStream) -> anyhow::Result<()> {
-    let package_resolver = connect_to_protocol::<PackageResolverMarker>()
-        .context("failed to connect to PackageResolver service")?;
-    while let Some(fsys::ComponentResolverRequest::Resolve { component_url, responder }) =
-        stream.try_next().await.context("failed to read request from FIDL stream")?
-    {
-        match resolve_component(&component_url, &package_resolver).await {
-            Ok(result) => responder.send(&mut Ok(to_deprecated_component(result))),
             Err(err) => {
                 info!("failed to resolve component URL {}: {}", &component_url, &err);
                 responder.send(&mut Err(err.into()))
@@ -207,40 +185,6 @@ impl From<ResolverError> for fresolution::ResolverError {
                 fresolution::ResolverError::InvalidManifest
             }
         }
-    }
-}
-
-impl From<ResolverError> for fsys::ResolverError {
-    fn from(err: ResolverError) -> fsys::ResolverError {
-        match err {
-            ResolverError::Internal => fsys::ResolverError::Internal,
-            ResolverError::InvalidUrl(_) => fsys::ResolverError::InvalidArgs,
-            ResolverError::ManifestNotFound { .. } => fsys::ResolverError::ManifestNotFound,
-            ResolverError::ConfigValuesNotFound { .. } => fsys::ResolverError::ConfigValuesNotFound,
-            ResolverError::PackageNotFound => fsys::ResolverError::PackageNotFound,
-            ResolverError::ReadingManifest(_) | ResolverError::IoError(_) => {
-                fsys::ResolverError::Io
-            }
-            ResolverError::NoSpace => fsys::ResolverError::NoSpace,
-            ResolverError::Unavailable => fsys::ResolverError::ResourceUnavailable,
-            ResolverError::ParsingManifest(..)
-            | ResolverError::MissingConfigSource
-            | ResolverError::UnsupportedConfigStrategy(..) => fsys::ResolverError::InvalidManifest,
-        }
-    }
-}
-
-fn to_deprecated_component(component: fresolution::Component) -> fsys::Component {
-    fsys::Component {
-        resolved_url: component.url,
-        decl: component.decl,
-        package: component.package.map(|pkg| fsys::Package {
-            package_url: pkg.url,
-            package_dir: pkg.directory,
-            ..fsys::Package::EMPTY
-        }),
-        config_values: component.config_values,
-        ..fsys::Component::EMPTY
     }
 }
 
