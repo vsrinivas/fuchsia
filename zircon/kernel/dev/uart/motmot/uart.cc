@@ -149,9 +149,44 @@ static interrupt_eoi motmot_uart_irq(void* arg) {
         }
       }
 
+      // See if there are any pending errors queued up in the error stack.
+      // The hardware keeps a parallel stack of pending errors next to the RX fifo
+      // with the idea that the error only rises to the surface when the character
+      // that it was triggered on is the current top of the rx stack. Thusly we
+      // need to read the error status register on every char and make sure we're
+      // not actually looking at a fouled read.
+      //
+      // It's a bit unclear, but it seems that overrun and break detects are somewhat
+      // independent of the character in the fifo itself, but are really triggered
+      // at the boundary between it and the next character, so only discard fifo reads
+      // for framing and parity errors.
+      bool discard_char = false;
+      uint32_t err = UARTREG(uart_base, UART_UERSTAT);
+      if (unlikely(err & 0b1111)) {
+        if (err & (1 << 0)) {  // overrun error
+          // not much we can do except log and move on
+          printf("UART: rx overrun\n");
+        }
+        if (err & (1 << 1)) {  // parity error
+          printf("UART: rx parity\n");
+          // discard the next char
+          discard_char = true;
+        }
+        if (err & (1 << 2)) {  // framing error
+          printf("UART: rx frame err\n");
+          // discard the next char
+          discard_char = true;
+        }
+        if (err & (1 << 3)) {  // break detect
+          printf("UART: brk\n");
+        }
+      }
+
       char c = static_cast<char>(UARTREG(uart_base, UART_URXH));
-      LTRACEF("%#hhx in cbuf\n", c);
-      uart_rx_buf.WriteChar(c);
+      if (!discard_char) {
+        LTRACEF("%#hhx in cbuf\n", c);
+        uart_rx_buf.WriteChar(c);
+      }
     }
     pending_ack |= (1 << 0);  // clear rxd
   }
@@ -170,8 +205,6 @@ static interrupt_eoi motmot_uart_irq(void* arg) {
       }
     }
   }
-
-  // TODO: fxb/86569 handle rx error interrupts
 
   // ack any pending irqs
   if (pending_ack) {
@@ -209,10 +242,19 @@ static void motmot_uart_pputc(char c) {
 }
 
 static int motmot_uart_pgetc() {
-  if ((UARTREG(uart_base, UART_UFSTAT) & (0x1ff)) != 0) {  // rx fifo count
-    return UARTREG(uart_base, UART_URXH);
-  } else {
-    return -1;
+  for (;;) {
+    if ((UARTREG(uart_base, UART_UFSTAT) & (0x1ff)) != 0) {  // rx fifo count
+      // read and discard character if framing or parity error is queued
+      uint32_t err = UARTREG(uart_base, UART_UERSTAT);
+      if (err & 0b0110) {  // framing and parity error
+        volatile uint32_t discard __UNUSED = UARTREG(uart_base, UART_URXH);
+        continue;
+      }
+
+      return UARTREG(uart_base, UART_URXH);
+    } else {
+      return -1;
+    }
   }
 }
 
@@ -360,9 +402,6 @@ void MotmotUartInitLate() {
   LTRACEF("UFCON %#x\n", UARTREG(uart_base, UART_UFCON));
   LTRACEF("UMCON %#x\n", UARTREG(uart_base, UART_UMCON));
   LTRACEF("UERSTAT %#x\n", UARTREG(uart_base, UART_UERSTAT));
-
-  // unmask error interrupt
-  uartreg_and_eq(uart_base, UART_UINTM, ~(1 << 1));
 
   // unmask rx interrupt
   {
