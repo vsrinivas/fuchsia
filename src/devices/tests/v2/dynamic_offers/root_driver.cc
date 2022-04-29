@@ -16,8 +16,11 @@
 
 #include <bind/fuchsia/test/cpp/fidl.h>
 
+namespace fdf {
+using namespace fuchsia_driver_framework;
+}  // namespace fdf
+
 namespace fcd = fuchsia_component_decl;
-namespace fdf = fuchsia_driver_framework;
 namespace fio = fuchsia_io;
 namespace ft = fuchsia_offers_test;
 
@@ -42,12 +45,12 @@ class RootDriver : public fidl::WireServer<ft::Handshake> {
   static constexpr const char* Name() { return "root"; }
 
   static zx::status<std::unique_ptr<RootDriver>> Start(fdf::wire::DriverStartArgs& start_args,
-                                                       async_dispatcher_t* dispatcher,
+                                                       fdf::UnownedDispatcher dispatcher,
                                                        fidl::WireSharedClient<fdf::Node> node,
                                                        driver::Namespace ns,
                                                        driver::Logger logger) {
-    auto driver =
-        std::make_unique<RootDriver>(dispatcher, std::move(node), std::move(ns), std::move(logger));
+    auto driver = std::make_unique<RootDriver>(dispatcher->async_dispatcher(), std::move(node),
+                                               std::move(ns), std::move(logger));
     auto result = driver->Run(std::move(start_args.outgoing_dir()));
     if (result.is_error()) {
       return result.take_error();

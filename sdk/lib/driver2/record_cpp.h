@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/driver2/logger.h>
 #include <lib/driver2/record.h>
+#include <lib/fdf/cpp/dispatcher.h>
 
 namespace driver::internal {
 
@@ -19,12 +20,12 @@ namespace driver::internal {
 // 2. A member function `T::Start` with the signature:
 //    zx::status<std::unique_ptr<T>> Start(
 //      fuchsia_driver_framework::wire::DriverStartArgs& start_args,
-//      async_dispatcher_t* dispatcher,
+//      fdf::UnownedDispatcher dispatcher,
 //      fidl::WireSharedClient<fuchsia_driver_framework::Node> node,
 //      driver::Namespace ns,
 //      driver::Logger logger)
 template <typename T>
-zx_status_t Start(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher, void** driver) {
+zx_status_t Start(fidl_incoming_msg_t* msg, fdf_dispatcher_t* dispatcher, void** driver) {
   // Decode the incoming `msg`.
   // TODO(fxbug.dev/45252): Use FIDL at rest.
   fidl::unstable::DecodedMessage<fuchsia_driver_framework::wire::DriverStartArgs> decoded(
@@ -35,8 +36,8 @@ zx_status_t Start(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher, void
   auto start_args = decoded.PrimaryObject();
 
   // Bind the node.
-  fidl::WireSharedClient<fuchsia_driver_framework::Node> node(std::move(start_args->node()),
-                                                              dispatcher);
+  fidl::WireSharedClient<fuchsia_driver_framework::Node> node(
+      std::move(start_args->node()), fdf_dispatcher_get_async_dispatcher(dispatcher));
 
   // Create the namespace.
   auto ns = driver::Namespace::Create(start_args->ns());
@@ -45,14 +46,15 @@ zx_status_t Start(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher, void
   }
 
   // Create the logger.
-  auto logger = driver::Logger::Create(*ns, dispatcher, T::Name());
+  auto logger =
+      driver::Logger::Create(*ns, fdf_dispatcher_get_async_dispatcher(dispatcher), T::Name());
   if (logger.is_error()) {
     return logger.status_value();
   }
 
   // Create the driver.
-  auto self =
-      T::Start(*start_args, dispatcher, std::move(node), std::move(*ns), std::move(*logger));
+  auto self = T::Start(*start_args, fdf::UnownedDispatcher(dispatcher), std::move(node),
+                       std::move(*ns), std::move(*logger));
   if (self.is_error()) {
     return self.status_value();
   }

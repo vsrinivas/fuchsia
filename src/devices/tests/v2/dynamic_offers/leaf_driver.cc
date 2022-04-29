@@ -12,7 +12,10 @@
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/scope.h>
 
-namespace fdf = fuchsia_driver_framework;
+namespace fdf {
+using namespace fuchsia_driver_framework;
+}  // namespace fdf
+
 namespace ft = fuchsia_offers_test;
 
 using fpromise::error;
@@ -35,12 +38,12 @@ class LeafDriver {
   static constexpr const char* Name() { return "leaf"; }
 
   static zx::status<std::unique_ptr<LeafDriver>> Start(fdf::wire::DriverStartArgs& start_args,
-                                                       async_dispatcher_t* dispatcher,
+                                                       fdf::UnownedDispatcher dispatcher,
                                                        fidl::WireSharedClient<fdf::Node> node,
                                                        driver::Namespace ns,
                                                        driver::Logger logger) {
-    auto driver =
-        std::make_unique<LeafDriver>(dispatcher, std::move(node), std::move(ns), std::move(logger));
+    auto driver = std::make_unique<LeafDriver>(dispatcher->async_dispatcher(), std::move(node),
+                                               std::move(ns), std::move(logger));
     driver->Run();
     return zx::ok(std::move(driver));
   }

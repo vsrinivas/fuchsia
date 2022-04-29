@@ -32,7 +32,10 @@
 #include "lib/fidl/llcpp/string_view.h"
 #include "lib/fidl/llcpp/vector_view.h"
 
-namespace fdf = fuchsia_driver_framework;
+namespace fdf {
+using namespace fuchsia_driver_framework;
+}  // namespace fdf
+
 namespace scr = test_structuredconfig_receiver;
 namespace scrs = test_structuredconfig_receiver_shim;
 
@@ -75,13 +78,14 @@ class ReceiverDriver : public fidl::WireServer<scr::ConfigReceiverPuppet> {
   static constexpr const char* Name() { return "receiver"; }
 
   static zx::status<std::unique_ptr<ReceiverDriver>> Start(fdf::wire::DriverStartArgs& start_args,
-                                                           async_dispatcher_t* dispatcher,
+                                                           fdf::UnownedDispatcher dispatcher,
                                                            fidl::WireSharedClient<fdf::Node> node,
                                                            driver::Namespace ns,
                                                            driver::Logger logger) {
     auto config = receiver_config::Config::from_args(start_args);
-    auto driver = std::make_unique<ReceiverDriver>(dispatcher, std::move(node), std::move(ns),
-                                                   std::move(logger), std::move(config));
+    auto driver =
+        std::make_unique<ReceiverDriver>(dispatcher->async_dispatcher(), std::move(node),
+                                         std::move(ns), std::move(logger), std::move(config));
     auto result = driver->Run(std::move(start_args.outgoing_dir()));
     if (result.is_error()) {
       return result.take_error();

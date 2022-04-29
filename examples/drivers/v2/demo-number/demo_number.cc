@@ -40,13 +40,14 @@ class DemoNumber : public fidl::WireServer<fuchsia_hardware_demo::Demo> {
   static constexpr const char* Name() { return "demo_number"; }
 
   static zx::status<std::unique_ptr<DemoNumber>> Start(fdf2::wire::DriverStartArgs& start_args,
-                                                       async_dispatcher_t* dispatcher,
+                                                       fdf::UnownedDispatcher dispatcher,
                                                        fidl::WireSharedClient<fdf2::Node> node,
                                                        driver::Namespace ns,
                                                        driver::Logger logger) {
-    auto outgoing = component::OutgoingDirectory::Create(dispatcher);
-    auto driver = std::make_unique<DemoNumber>(dispatcher, std::move(node), std::move(ns),
-                                               std::move(outgoing), std::move(logger));
+    auto outgoing = component::OutgoingDirectory::Create(dispatcher->async_dispatcher());
+    auto driver =
+        std::make_unique<DemoNumber>(dispatcher->async_dispatcher(), std::move(node), std::move(ns),
+                                     std::move(outgoing), std::move(logger));
 
     auto result = driver->Run(std::move(start_args.outgoing_dir()));
     if (result.is_error()) {

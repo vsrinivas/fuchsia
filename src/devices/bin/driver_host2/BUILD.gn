@@ -57,6 +57,7 @@ fuchsia_driver("test_driver_driver") {
     ":fuchsia.driverhost.test_llcpp",
     "//sdk/lib/driver2:llcpp",
     "//sdk/lib/sys/component/llcpp",
+    "//src/devices/lib/driver:driver_runtime",
     "//zircon/system/ulib/service:service-llcpp",
   ]
 }

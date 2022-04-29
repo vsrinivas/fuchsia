@@ -37,11 +37,12 @@ class InputReportDriver {
   static constexpr const char* Name() { return "InputReport"; }
 
   static zx::status<std::unique_ptr<InputReportDriver>> Start(
-      fdf2::wire::DriverStartArgs& start_args, async_dispatcher_t* dispatcher,
+      fdf2::wire::DriverStartArgs& start_args, fdf::UnownedDispatcher dispatcher,
       fidl::WireSharedClient<fdf2::Node> node, driver::Namespace ns, driver::Logger logger) {
-    auto outgoing = component::OutgoingDirectory::Create(dispatcher);
-    auto driver = std::make_unique<InputReportDriver>(dispatcher, std::move(node), std::move(ns),
-                                                      std::move(outgoing), std::move(logger));
+    auto outgoing = component::OutgoingDirectory::Create(dispatcher->async_dispatcher());
+    auto driver =
+        std::make_unique<InputReportDriver>(dispatcher->async_dispatcher(), std::move(node),
+                                            std::move(ns), std::move(outgoing), std::move(logger));
     auto parent_symbol = driver::GetSymbol<compat::device_t*>(start_args, compat::kDeviceSymbol);
 
     hid_device_protocol_t proto = {};

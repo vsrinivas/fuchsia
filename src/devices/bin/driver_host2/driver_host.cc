@@ -94,10 +94,7 @@ zx::status<> Driver::Start(fidl::IncomingMessage& start_args, fdf::Dispatcher di
   // the handles from |start_args|, and can therefore relinquish ownership.
   fidl_incoming_msg_t c_msg = std::move(start_args).ReleaseToEncodedCMessage();
   void* opaque = nullptr;
-  // TODO(fxbug.dev/87162): change |start| to take in a fdf_dispatcher_t* rather than
-  // an async_dispatcher_t*.
-  zx_status_t status = record_->start(
-      &c_msg, fdf_dispatcher_get_async_dispatcher(initial_dispatcher_.get()), &opaque);
+  zx_status_t status = record_->start(&c_msg, initial_dispatcher_.get(), &opaque);
   if (status != ZX_OK) {
     return zx::error(status);
   }

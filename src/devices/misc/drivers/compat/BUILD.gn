@@ -44,6 +44,7 @@ source_set("lib") {
     "//sdk/lib/driver2:devfs_exporter",
     "//sdk/lib/driver2:llcpp",
     "//sdk/lib/stdcompat",
+    "//src/devices/lib/driver:driver_runtime",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -159,10 +160,12 @@ executable("unittests") {
     ":lib",
     ":test-firmware-file",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp_testing",
+    "//sdk/lib/driver_runtime:driver_runtime_internal",
     "//src/devices/lib/compat",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/testing/fidl:placeholders_llcpp",
+    "//zircon/system/ulib/sync:sync-cpp",
   ]
 
   # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,

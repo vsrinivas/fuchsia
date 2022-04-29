@@ -16,6 +16,7 @@ fuchsia_driver("lib") {
     "//sdk/lib/driver2:inspect",
     "//sdk/lib/driver2:llcpp",
     "//sdk/lib/sys/component/llcpp",
+    "//src/devices/lib/driver:driver_runtime",
   ]
 }
 

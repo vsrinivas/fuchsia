@@ -12,8 +12,11 @@
 #include <fidl/fuchsia.logger/cpp/wire.h>
 #include <fidl/fuchsia.scheduler/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fdf/internal.h>
 #include <lib/fdio/directory.h>
+#include <lib/fit/defer.h>
 #include <lib/gtest/test_loop_fixture.h>
+#include <lib/sync/cpp/completion.h>
 
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
@@ -221,6 +224,20 @@ class DriverTest : public gtest::TestLoopFixture {
   TestNode& node() { return node_; }
   TestFile& compat_file() { return compat_file_; }
 
+  void SetUp() override {
+    TestLoopFixture::SetUp();
+
+    // When creating a new dispatcher, we need to associate it with some owner so that the driver
+    // runtime library doesn't complain.
+    fdf_internal_push_driver(this);
+    auto pop_driver = fit::defer([]() { fdf_internal_pop_driver(); });
+
+    auto dispatcher = fdf::Dispatcher::Create(
+        0, [this](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown_.Signal(); });
+    EXPECT_EQ(ZX_OK, dispatcher.status_value());
+    dispatcher_ = *std::move(dispatcher);
+  }
+
   std::unique_ptr<compat::Driver> StartDriver(std::string_view v1_driver_path,
                                               const zx_protocol_device_t* ops) {
     auto node_endpoints = fidl::CreateEndpoints<fdf::Node>();
@@ -340,10 +357,30 @@ class DriverTest : public gtest::TestLoopFixture {
     start_args.set_ns(arena, ns_entries);
 
     // Start driver.
-    auto result = compat::Driver::Start(start_args, dispatcher(), std::move(node), std::move(*ns),
-                                        std::move(*logger));
+    auto result = compat::Driver::Start(start_args, dispatcher_.borrow(), std::move(node),
+                                        std::move(*ns), std::move(*logger));
     EXPECT_EQ(ZX_OK, result.status_value());
     return std::move(result.value());
+  }
+
+  void RunUntilDispatchersIdle() {
+    bool ran = false;
+    do {
+      fdf_internal_wait_until_all_dispatchers_idle();
+      ran = RunLoopUntilIdle();
+    } while (ran);
+  }
+
+  void WaitForChildDeviceAdded() {
+    while (!node().HasChildren()) {
+      RunUntilDispatchersIdle();
+    }
+    EXPECT_TRUE(node().HasChildren());
+  }
+
+  void ShutdownDriverDispatcher() {
+    dispatcher_.ShutdownAsync();
+    EXPECT_EQ(ZX_OK, dispatcher_shutdown_.Wait());
   }
 
   TestProfileProvider profile_provider_;
@@ -360,6 +397,9 @@ class DriverTest : public gtest::TestLoopFixture {
   TestDirectory svc_directory_;
   TestDirectory compat_service_directory_;
   TestExporter exporter_;
+
+  fdf::Dispatcher dispatcher_;
+  libsync::Completion dispatcher_shutdown_;
 };
 
 TEST_F(DriverTest, Start) {
@@ -369,9 +409,7 @@ TEST_F(DriverTest, Start) {
   auto driver = StartDriver("/pkg/driver/v1_test.so", &ops);
 
   // Verify that v1_test.so has added a child device.
-  EXPECT_FALSE(node().HasChildren());
-  ASSERT_TRUE(RunLoopUntilIdle());
-  EXPECT_TRUE(node().HasChildren());
+  WaitForChildDeviceAdded();
 
   // Verify that v1_test.so has set a context.
   std::unique_ptr<V1Test> v1_test(static_cast<V1Test*>(driver->Context()));
@@ -384,6 +422,7 @@ TEST_F(DriverTest, Start) {
   EXPECT_FALSE(v1_test->did_release);
 
   // Verify v1_test.so state after release.
+  ShutdownDriverDispatcher();
   driver.reset();
   ASSERT_TRUE(RunLoopUntilIdle());
   EXPECT_TRUE(v1_test->did_release);
@@ -394,9 +433,7 @@ TEST_F(DriverTest, Start_WithCreate) {
   auto driver = StartDriver("/pkg/driver/v1_create_test.so", &ops);
 
   // Verify that v1_test.so has added a child device.
-  EXPECT_FALSE(node().HasChildren());
-  ASSERT_TRUE(RunLoopUntilIdle());
-  EXPECT_TRUE(node().HasChildren());
+  WaitForChildDeviceAdded();
 
   // Verify that v1_test.so has set a context.
   std::unique_ptr<V1Test> v1_test(static_cast<V1Test*>(driver->Context()));
@@ -409,6 +446,7 @@ TEST_F(DriverTest, Start_WithCreate) {
   EXPECT_FALSE(v1_test->did_release);
 
   // Verify v1_test.so state after release.
+  ShutdownDriverDispatcher();
   driver.reset();
   ASSERT_TRUE(RunLoopUntilIdle());
   EXPECT_TRUE(v1_test->did_release);
@@ -419,12 +457,13 @@ TEST_F(DriverTest, Start_MissingBindAndCreate) {
   auto driver = StartDriver("/pkg/driver/v1_missing_test.so", &ops);
 
   // Verify that v1_test.so has not added a child device.
-  EXPECT_FALSE(node().HasChildren());
-  ASSERT_TRUE(RunLoopUntilIdle());
+  RunUntilDispatchersIdle();
   EXPECT_FALSE(node().HasChildren());
 
   // Verify that v1_test.so has not set a context.
   EXPECT_EQ(nullptr, driver->Context());
+
+  ShutdownDriverDispatcher();
 }
 
 TEST_F(DriverTest, Start_DeviceAddNull) {
@@ -432,9 +471,9 @@ TEST_F(DriverTest, Start_DeviceAddNull) {
   auto driver = StartDriver("/pkg/driver/v1_device_add_null_test.so", &ops);
 
   // Verify that v1_test.so has added a child device.
-  EXPECT_FALSE(node().HasChildren());
-  ASSERT_TRUE(RunLoopUntilIdle());
-  EXPECT_TRUE(node().HasChildren());
+  WaitForChildDeviceAdded();
+
+  ShutdownDriverDispatcher();
 }
 
 TEST_F(DriverTest, Start_CheckCompatService) {
@@ -442,9 +481,7 @@ TEST_F(DriverTest, Start_CheckCompatService) {
   auto driver = StartDriver("/pkg/driver/v1_device_add_null_test.so", &ops);
 
   // Verify that v1_test.so has added a child device.
-  EXPECT_FALSE(node().HasChildren());
-  ASSERT_TRUE(RunLoopUntilIdle());
-  EXPECT_TRUE(node().HasChildren());
+  WaitForChildDeviceAdded();
 
   // Check topological path.
   ASSERT_STREQ(driver->GetDevice().topological_path().data(), "/dev/test/my-device");
@@ -463,6 +500,8 @@ TEST_F(DriverTest, Start_CheckCompatService) {
   ASSERT_EQ(size, 3ul);
   expected_metadata = {4, 5, 6};
   ASSERT_EQ(metadata, expected_metadata);
+
+  ShutdownDriverDispatcher();
 }
 
 TEST_F(DriverTest, Start_RootResourceIsConstant) {
@@ -477,12 +516,14 @@ TEST_F(DriverTest, Start_RootResourceIsConstant) {
   zx_protocol_device_t ops{};
   auto driver = StartDriver("/pkg/driver/v1_device_add_null_test.so", &ops);
 
-  ASSERT_TRUE(RunLoopUntilIdle());
+  RunUntilDispatchersIdle();
 
   zx_handle_t resource2 = get_root_resource();
 
   // Check that the root resource's value did not change.
   ASSERT_EQ(resource, resource2);
+
+  ShutdownDriverDispatcher();
 }
 
 TEST_F(DriverTest, Start_GetBackingMemory) {
@@ -492,26 +533,28 @@ TEST_F(DriverTest, Start_GetBackingMemory) {
   auto driver = StartDriver("/pkg/driver/v1_test.so", &ops);
 
   // Verify that v1_test.so has not added a child device.
-  EXPECT_FALSE(node().HasChildren());
-  ASSERT_TRUE(RunLoopUntilIdle());
+  RunUntilDispatchersIdle();
   EXPECT_FALSE(node().HasChildren());
 
   // Verify that v1_test.so has not set a context.
   EXPECT_EQ(nullptr, driver->Context());
+
+  ShutdownDriverDispatcher();
 }
 
 TEST_F(DriverTest, Start_BindFailed) {
   zx_protocol_device_t ops{};
   auto driver = StartDriver("/pkg/driver/v1_test.so", &ops);
 
-  // Verify that v1_test.so has added a child device.
-  EXPECT_FALSE(node().HasChildren());
-  ASSERT_TRUE(RunLoopUntilIdle());
-  EXPECT_FALSE(node().HasChildren());
-
   // Verify that v1_test.so has set a context.
+  while (!driver->Context()) {
+    RunUntilDispatchersIdle();
+  }
   std::unique_ptr<V1Test> v1_test(static_cast<V1Test*>(driver->Context()));
   ASSERT_NE(nullptr, v1_test.get());
+
+  // Verify that v1_test.so has not added a child device.
+  EXPECT_FALSE(node().HasChildren());
 
   // Verify v1_test.so state after bind.
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, v1_test->status);
@@ -520,6 +563,7 @@ TEST_F(DriverTest, Start_BindFailed) {
   EXPECT_FALSE(v1_test->did_release);
 
   // Verify v1_test.so state after release.
+  ShutdownDriverDispatcher();
   driver.reset();
   ASSERT_TRUE(RunLoopUntilIdle());
   EXPECT_TRUE(v1_test->did_release);
@@ -529,14 +573,15 @@ TEST_F(DriverTest, LoadFirwmareAsync) {
   zx_protocol_device_t ops{};
   auto driver = StartDriver("/pkg/driver/v1_test.so", &ops);
 
-  // Verify that v1_test.so has added a child device.
-  EXPECT_FALSE(node().HasChildren());
-  ASSERT_TRUE(RunLoopUntilIdle());
-  EXPECT_FALSE(node().HasChildren());
-
   // Verify that v1_test.so has set a context.
+  while (!driver->Context()) {
+    RunUntilDispatchersIdle();
+  }
   std::unique_ptr<V1Test> v1_test(static_cast<V1Test*>(driver->Context()));
   ASSERT_NE(nullptr, v1_test.get());
+
+  // Verify that v1_test.so has not added a child device.
+  EXPECT_FALSE(node().HasChildren());
 
   bool was_called = false;
 
@@ -554,9 +599,12 @@ TEST_F(DriverTest, LoadFirwmareAsync) {
         *reinterpret_cast<bool*>(ctx) = true;
       },
       &was_called);
-  ASSERT_TRUE(RunLoopUntilIdle());
+  while (!was_called) {
+    RunUntilDispatchersIdle();
+  }
   ASSERT_TRUE(was_called);
 
+  ShutdownDriverDispatcher();
   driver.reset();
   ASSERT_TRUE(RunLoopUntilIdle());
 }
@@ -572,9 +620,7 @@ TEST_F(DriverTest, GetProfile) {
   };
   auto driver = StartDriver("/pkg/driver/v1_test.so", &ops);
   // Verify that v1_test.so has added a child device.
-  EXPECT_FALSE(node().HasChildren());
-  ASSERT_TRUE(RunLoopUntilIdle());
-  EXPECT_TRUE(node().HasChildren());
+  WaitForChildDeviceAdded();
 
   // Verify that v1_test.so has set a context.
   std::unique_ptr<V1Test> v1_test(static_cast<V1Test*>(driver->Context()));
@@ -588,10 +634,11 @@ TEST_F(DriverTest, GetProfile) {
     sync_completion_signal(&finished);
   });
   do {
-    RunLoopUntilIdle();
+    RunUntilDispatchersIdle();
   } while (sync_completion_wait(&finished, ZX_TIME_INFINITE_PAST) == ZX_ERR_TIMED_OUT);
   thread.join();
 
+  ShutdownDriverDispatcher();
   driver.reset();
   ASSERT_TRUE(RunLoopUntilIdle());
 }
@@ -611,9 +658,7 @@ TEST_F(DriverTest, GetDeadlineProfile) {
   };
   auto driver = StartDriver("/pkg/driver/v1_test.so", &ops);
   // Verify that v1_test.so has added a child device.
-  EXPECT_FALSE(node().HasChildren());
-  ASSERT_TRUE(RunLoopUntilIdle());
-  EXPECT_TRUE(node().HasChildren());
+  WaitForChildDeviceAdded();
 
   // Verify that v1_test.so has set a context.
   std::unique_ptr<V1Test> v1_test(static_cast<V1Test*>(driver->Context()));
@@ -628,10 +673,11 @@ TEST_F(DriverTest, GetDeadlineProfile) {
     sync_completion_signal(&finished);
   });
   do {
-    RunLoopUntilIdle();
+    RunUntilDispatchersIdle();
   } while (sync_completion_wait(&finished, ZX_TIME_INFINITE_PAST) == ZX_ERR_TIMED_OUT);
   thread.join();
 
+  ShutdownDriverDispatcher();
   driver.reset();
   ASSERT_TRUE(RunLoopUntilIdle());
 }

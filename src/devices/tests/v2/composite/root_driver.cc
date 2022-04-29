@@ -15,8 +15,11 @@
 
 #include "src/devices/lib/compat/compat.h"
 
+namespace fdf {
+using namespace fuchsia_driver_framework;
+}  // namespace fdf
+
 namespace fcd = fuchsia_component_decl;
-namespace fdf = fuchsia_driver_framework;
 namespace fio = fuchsia_io;
 namespace ft = fuchsia_composite_test;
 
@@ -58,13 +61,14 @@ class RootDriver {
   static constexpr const char* Name() { return "root"; }
 
   static zx::status<std::unique_ptr<RootDriver>> Start(fdf::wire::DriverStartArgs& start_args,
-                                                       async_dispatcher_t* dispatcher,
+                                                       fdf::UnownedDispatcher dispatcher,
                                                        fidl::WireSharedClient<fdf::Node> node,
                                                        driver::Namespace ns,
                                                        driver::Logger logger) {
-    auto outgoing = component::OutgoingDirectory::Create(dispatcher);
-    auto driver = std::make_unique<RootDriver>(dispatcher, std::move(node), std::move(ns),
-                                               std::move(logger), std::move(outgoing));
+    auto outgoing = component::OutgoingDirectory::Create(dispatcher->async_dispatcher());
+    auto driver =
+        std::make_unique<RootDriver>(dispatcher->async_dispatcher(), std::move(node), std::move(ns),
+                                     std::move(logger), std::move(outgoing));
 
     auto serve = driver->outgoing_.Serve(std::move(start_args.outgoing_dir()));
     if (serve.is_error()) {

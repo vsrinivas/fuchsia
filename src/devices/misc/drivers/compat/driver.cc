@@ -113,7 +113,7 @@ Driver::~Driver() {
 }
 
 zx::status<std::unique_ptr<Driver>> Driver::Start(fdf::wire::DriverStartArgs& start_args,
-                                                  async_dispatcher_t* dispatcher,
+                                                  fdf::UnownedDispatcher dispatcher,
                                                   fidl::WireSharedClient<fdf::Node> node,
                                                   driver::Namespace ns, driver::Logger logger) {
   auto compat_device =
@@ -128,13 +128,13 @@ zx::status<std::unique_ptr<Driver>> Driver::Start(fdf::wire::DriverStartArgs& st
     return compat.take_error();
   }
 
-  auto outgoing = component::OutgoingDirectory::Create(dispatcher);
+  auto outgoing = component::OutgoingDirectory::Create(dispatcher->async_dispatcher());
 
   std::vector<std::string> fragments = GetFragmentNames(start_args);
 
-  auto driver =
-      std::make_unique<Driver>(dispatcher, std::move(node), std::move(ns), std::move(logger),
-                               start_args.url().get(), *compat_device, ops, std::move(outgoing));
+  auto driver = std::make_unique<Driver>(dispatcher->async_dispatcher(), std::move(node),
+                                         std::move(ns), std::move(logger), start_args.url().get(),
+                                         *compat_device, ops, std::move(outgoing));
 
   if (!fragments.empty()) {
     driver->device_.set_fragments(std::move(fragments));

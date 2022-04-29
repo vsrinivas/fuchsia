@@ -18,7 +18,7 @@ sdk_source_set("record") {
 
   sources = [ "record.h" ]
 
-  public_deps = [ "//zircon/system/ulib/async" ]
+  public_deps = [ "//sdk/lib/driver_runtime:driver_runtime" ]
 }
 
 source_set("devfs_exporter") {
@@ -71,6 +71,7 @@ sdk_source_set("llcpp") {
     "//sdk/fidl/fuchsia.data:fuchsia.data_llcpp",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
+    "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/structured_backend",

@@ -5,7 +5,7 @@
 #ifndef LIB_DRIVER2_RECORD_H_
 #define LIB_DRIVER2_RECORD_H_
 
-#include <lib/async/dispatcher.h>
+#include <lib/fdf/dispatcher.h>
 #include <zircon/fidl.h>
 
 struct DriverRecordV1 {
@@ -17,10 +17,10 @@ struct DriverRecordV1 {
   //
   // |msg| contains a `fuchsia.driver.framework.DriverStartArgs` table. The
   // table is "moved" to the driver, and is then presumed to be owned by it.
-  // |dispatcher| is the default async dispatcher on which to run the driver.
+  // |dispatcher| is the default fdf dispatcher on which to run the driver.
   // The driver is free to ignore this and use its own.
   // |driver| provides a place to store the opaque driver structure.
-  zx_status_t (*start)(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher, void** driver);
+  zx_status_t (*start)(fidl_incoming_msg_t* msg, fdf_dispatcher_t* dispatcher, void** driver);
 
   // Pointer to a function that can stop execution of the driver. This function
   // is executed on the shared driver thread within a `driver_host`.

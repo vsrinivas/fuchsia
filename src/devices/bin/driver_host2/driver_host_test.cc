@@ -356,7 +356,7 @@ TEST_F(DriverHostTest, Start_NodeSymbols) {
 
 // Start two drivers, and verify that different dispatchers are used.
 TEST_F(DriverHostTest, Start_DifferentDispatcher) {
-  async_dispatcher_t* dispatcher_1 = nullptr;
+  fdf_dispatcher_t* dispatcher_1 = nullptr;
   fidl::Arena arena_1;
   fidl::VectorView<fdf::wire::NodeSymbol> symbols_1(arena_1, 1);
   symbols_1[0].Allocate(arena_1);
@@ -364,7 +364,7 @@ TEST_F(DriverHostTest, Start_DifferentDispatcher) {
   symbols_1[0].set_address(arena_1, reinterpret_cast<zx_vaddr_t>(&dispatcher_1));
   auto [driver_1, outgoing_dir_1] = StartDriver(std::move(symbols_1));
 
-  async_dispatcher_t* dispatcher_2 = nullptr;
+  fdf_dispatcher_t* dispatcher_2 = nullptr;
   fidl::Arena arena_2;
   fidl::VectorView<fdf::wire::NodeSymbol> symbols_2(arena_2, 1);
   symbols_2[0].Allocate(arena_2);

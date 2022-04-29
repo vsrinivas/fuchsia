@@ -11,7 +11,10 @@
 
 #include <optional>
 
-namespace fdf = fuchsia_driver_framework;
+namespace fdf {
+using namespace fuchsia_driver_framework;
+}  // namespace fdf
+
 namespace fio = fuchsia_io;
 
 namespace {
@@ -28,13 +31,13 @@ class PackagedDriver {
   static constexpr const char* Name() { return "packaged"; }
 
   static zx::status<std::unique_ptr<PackagedDriver>> Start(fdf::wire::DriverStartArgs& start_args,
-                                                           async_dispatcher_t* dispatcher,
+                                                           fdf::UnownedDispatcher dispatcher,
                                                            fidl::WireSharedClient<fdf::Node> node,
                                                            driver::Namespace ns,
                                                            driver::Logger logger) {
-    auto driver = std::make_unique<PackagedDriver>(dispatcher, std::move(node), std::move(ns),
-                                                   std::move(logger));
-    auto result = driver->Run(dispatcher, std::move(start_args.outgoing_dir()));
+    auto driver = std::make_unique<PackagedDriver>(dispatcher->async_dispatcher(), std::move(node),
+                                                   std::move(ns), std::move(logger));
+    auto result = driver->Run(dispatcher->async_dispatcher(), std::move(start_args.outgoing_dir()));
     if (result.is_error()) {
       return result.take_error();
     }

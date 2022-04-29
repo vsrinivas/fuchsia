@@ -62,6 +62,7 @@ sdk_source_set("driver_runtime_internal") {
     "//src/devices/bin/driver_host/*",
     "//src/devices/bin/driver_host2/*",
     "//src/devices/bin/driver_runtime/*",
+    "//src/devices/misc/drivers/compat:unittests",
 
     # This should be migrated to mock_ddk to avoid this.
     "//src/devices/securemem/drivers/aml-securemem:aml-securemem-test-bin",

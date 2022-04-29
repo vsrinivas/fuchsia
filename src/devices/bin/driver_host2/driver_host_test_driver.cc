@@ -15,8 +15,11 @@ namespace ftest = fuchsia_driverhost_test;
 
 class TestDriver {
  public:
-  explicit TestDriver(async_dispatcher_t* dispatcher)
-      : dispatcher_(dispatcher), outgoing_(component::OutgoingDirectory::Create(dispatcher)) {}
+  explicit TestDriver(fdf_dispatcher_t* dispatcher)
+      : dispatcher_(dispatcher),
+        outgoing_(
+            component::OutgoingDirectory::Create(fdf_dispatcher_get_async_dispatcher(dispatcher))) {
+  }
 
   zx::status<> Init(fdf::wire::DriverStartArgs* start_args) {
     auto error = driver::SymbolValue<zx_status_t*>(*start_args, "error");
@@ -31,7 +34,7 @@ class TestDriver {
     }
 
     // Set the "dispatcher" driver symbol.
-    auto dispatcher = driver::SymbolValue<async_dispatcher_t**>(*start_args, "dispatcher");
+    auto dispatcher = driver::SymbolValue<fdf_dispatcher_t**>(*start_args, "dispatcher");
     if (dispatcher.is_ok()) {
       **dispatcher = dispatcher_;
     }
@@ -59,11 +62,11 @@ class TestDriver {
   }
 
  private:
-  async_dispatcher_t* dispatcher_;
+  fdf_dispatcher_t* dispatcher_;
   component::OutgoingDirectory outgoing_;
 };
 
-zx_status_t test_driver_start(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher,
+zx_status_t test_driver_start(fidl_incoming_msg_t* msg, fdf_dispatcher_t* dispatcher,
                               void** driver) {
   // TODO(fxbug.dev/45252): Use FIDL at rest.
   fidl::unstable::DecodedMessage<fdf::wire::DriverStartArgs> decoded(

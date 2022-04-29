@@ -11,6 +11,7 @@
 #include <lib/driver2/devfs_exporter.h>
 #include <lib/driver2/logger.h>
 #include <lib/driver2/namespace.h>
+#include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fpromise/scope.h>
 
 #include <unordered_set>
@@ -38,7 +39,8 @@ class Driver {
   static constexpr const char* Name() { return "compat"; }
 
   static zx::status<std::unique_ptr<Driver>> Start(
-      fuchsia_driver_framework::wire::DriverStartArgs& start_args, async_dispatcher_t* dispatcher,
+      fuchsia_driver_framework::wire::DriverStartArgs& start_args,
+      fdf::UnownedDispatcher dispatcher,
       fidl::WireSharedClient<fuchsia_driver_framework::Node> node, driver::Namespace ns,
       driver::Logger logger);
 

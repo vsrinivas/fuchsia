@@ -31,6 +31,7 @@ fuchsia_driver("root_driver") {
     "//sdk/lib/driver2:devfs_exporter",
     "//sdk/lib/driver2:llcpp",
     "//sdk/lib/sys/component/llcpp",
+    "//src/devices/lib/driver:driver_runtime",
     "//zircon/system/ulib/service:service-llcpp",
   ]
 }
