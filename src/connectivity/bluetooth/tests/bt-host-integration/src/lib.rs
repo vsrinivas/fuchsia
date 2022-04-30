@@ -46,7 +46,7 @@ async fn test_lifecycle(_: ()) -> Result<(), Error> {
     let realm = HostDriverRealm::create().await?;
     let address = Address::Public([1, 2, 3, 4, 5, 6]);
     let settings = EmulatorSettings {
-        address: Some(address.to_fidl()),
+        address: Some(address.into()),
         hci_config: None,
         extended_advertising: None,
         acl_buffer_settings: None,

@@ -611,7 +611,7 @@ pub mod tests {
             };
             let result =
                 BondingData::try_from(src).expect("failed to convert from sys.BondingData");
-            assert_eq!(result.address, addr.into());
+            assert_eq!(result.address, Address::from(addr));
         }
 
         #[test]

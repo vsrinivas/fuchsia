@@ -18,7 +18,7 @@ pub fn bonding_data_key(device_id: PeerId) -> String {
 }
 
 pub fn host_data_key(host_address: &Address) -> String {
-    format!("{}{}", HOST_DATA_PREFIX, host_address.to_string())
+    format!("{}{}", HOST_DATA_PREFIX, host_address.as_hex_string())
 }
 
 pub fn host_id_from_key(key: &str) -> Result<String, Error> {

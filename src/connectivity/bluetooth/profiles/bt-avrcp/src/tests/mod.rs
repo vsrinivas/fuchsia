@@ -376,18 +376,10 @@ async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Err
                         .expect("unable to decode continuting response");
                     assert_eq!(request_cont_response.pdu_id_response(), 0x20); // GetElementAttributes
 
-                    #[allow(clippy::if_same_then_else)] // TODO(fxbug.dev/95033)
-                    if additional_packets.len() > 1 {
-                        let _ = avc_command.send_response(
-                            AvcResponseType::ImplementedStable,
-                            &additional_packets[0][..],
-                        );
-                    } else {
-                        let _ = avc_command.send_response(
-                            AvcResponseType::ImplementedStable,
-                            &additional_packets[0][..],
-                        );
-                    }
+                    let _ = avc_command.send_response(
+                        AvcResponseType::ImplementedStable,
+                        &additional_packets[0][..],
+                    );
                     drop(additional_packets.remove(0));
                 }
                 PduId::RegisterNotification => {

@@ -425,41 +425,37 @@ mod tests {
     async fn emulate_peripheral(
         mut stream: PeripheralRequestStream,
     ) -> Result<(MockPeripheral, ServerEnd<ConnectionMarker>), Error> {
-        #[allow(clippy::never_loop)] // TODO(fxbug.dev/95033)
-        while let Some(msg) = stream.try_next().await? {
-            match msg {
-                PeripheralRequest::Advertise {
-                    parameters,
-                    advertised_peripheral,
-                    responder,
-                    ..
-                } => {
-                    let (conn_client_end, conn_server_end) =
-                        create_endpoints::<ConnectionMarker>()?;
-                    let peer = Peer {
-                        id: Some(fidl_fuchsia_bluetooth::PeerId { value: 1 }),
-                        connectable: Some(true),
-                        rssi: None,
-                        advertising_data: None,
-                        ..Peer::EMPTY
-                    };
+        match stream.try_next().await? {
+            None => Err(format_err!("le.Peripheral connection failed")),
+            Some(PeripheralRequest::Advertise {
+                parameters,
+                advertised_peripheral,
+                responder,
+                ..
+            }) => {
+                let (conn_client_end, conn_server_end) = create_endpoints::<ConnectionMarker>()?;
+                let peer = Peer {
+                    id: Some(fidl_fuchsia_bluetooth::PeerId { value: 1 }),
+                    connectable: Some(true),
+                    rssi: None,
+                    advertising_data: None,
+                    ..Peer::EMPTY
+                };
 
-                    let proxy = advertised_peripheral.into_proxy()?;
-                    let _ = proxy.on_connected(peer, conn_client_end).await;
+                let proxy = advertised_peripheral.into_proxy()?;
+                let _ = proxy.on_connected(peer, conn_client_end).await;
 
-                    responder.send(&mut Ok(()))?;
+                responder.send(&mut Ok(()))?;
 
-                    let mock = MockPeripheral {
-                        _stream: stream,
-                        _adv_peripheral: proxy,
-                        adv_params: Some(parameters),
-                    };
-                    return Ok((mock, conn_server_end));
-                }
-                _ => return Err(format_err!("le.Peripheral method mock not implemented")),
+                let mock = MockPeripheral {
+                    _stream: stream,
+                    _adv_peripheral: proxy,
+                    adv_params: Some(parameters),
+                };
+                Ok((mock, conn_server_end))
             }
+            Some(x) => Err(format_err!("le.Peripheral method {:?} not implemented", x)),
         }
-        Err(format_err!("le.Peripheral connection failed"))
     }
 
     #[fuchsia_async::run_until_stalled(test)]

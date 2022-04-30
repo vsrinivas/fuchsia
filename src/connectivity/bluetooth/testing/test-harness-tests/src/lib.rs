@@ -49,13 +49,14 @@ mod test {
             fn init(
                 shared_state: &Arc<SharedState>,
             ) -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
-                let shared = shared_state.get(SHARED_KEY).unwrap_or_else(|| {
-                    #[allow(clippy::let_underscore_lock)] // TODO(fxbug.dev/95033)
-                    let _ = shared_state.try_insert(SHARED_KEY, Mutex::new(INITIAL_VAL));
-                    shared_state.get(SHARED_KEY).unwrap()
-                });
-                async move { shared.map(|s| (IntHarness { val: s }, (), future::pending())) }
-                    .boxed()
+                let state = shared_state.clone();
+                async move {
+                    let s = state
+                        .get_or_insert_with(SHARED_KEY, || async { Ok(Mutex::new(INITIAL_VAL)) })
+                        .await;
+                    s.map(|val| (IntHarness { val }, (), future::pending()))
+                }
+                .boxed()
             }
 
             fn terminate(_env: Self::Env) -> BoxFuture<'static, Result<(), Error>> {

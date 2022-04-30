@@ -240,7 +240,7 @@ fn to_identifier(state: &Mutex<State>, key: &str) -> Option<PeerId> {
     let address_pattern = Regex::new(r"^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$")
         .expect("Could not compile mac address regex pattern.");
     if address_pattern.is_match(key) {
-        state.lock().peers.values().find(|peer| peer.address.to_string() == key).map(|peer| peer.id)
+        state.lock().peers.values().find(|peer| &peer.address == key).map(|peer| peer.id)
     } else {
         key.parse().ok()
     }
