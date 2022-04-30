@@ -62,23 +62,21 @@ zx_status_t CompositeDriverV1::Bind(void* ctx, zx_device_t* dev) {
     return ZX_ERR_INTERNAL;
   }
 
-  if (!device_is_dfv2(dev)) {
-    auto result = DoFidlConnections(dev, "a");
-    if (result.status_value() != ZX_OK) {
-      return result.status_value();
-    }
-    if (*result != 1) {
-      zxlogf(ERROR, "Result for a is not correct: expected 1: got %d", *result);
-      return ZX_ERR_INTERNAL;
-    }
-    result = DoFidlConnections(dev, "b");
-    if (result.status_value() != ZX_OK) {
-      return result.status_value();
-    }
-    if (*result != 2) {
-      zxlogf(ERROR, "Result for b is not correct: expected 2: got %d", *result);
-      return ZX_ERR_INTERNAL;
-    }
+  auto result = DoFidlConnections(dev, "a");
+  if (result.status_value() != ZX_OK) {
+    return result.status_value();
+  }
+  if (*result != 1) {
+    zxlogf(ERROR, "Result for a is not correct: expected 1: got %d", *result);
+    return ZX_ERR_INTERNAL;
+  }
+  result = DoFidlConnections(dev, "b");
+  if (result.status_value() != ZX_OK) {
+    return result.status_value();
+  }
+  if (*result != 2) {
+    zxlogf(ERROR, "Result for b is not correct: expected 2: got %d", *result);
+    return ZX_ERR_INTERNAL;
   }
 
   auto device = std::make_unique<CompositeDriverV1>(dev);

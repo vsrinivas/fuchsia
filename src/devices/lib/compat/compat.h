@@ -82,14 +82,18 @@ class DeviceServer : public fidl::WireServer<fuchsia_driver_compat::Device> {
   zx_status_t GetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual);
   zx_status_t GetMetadataSize(uint32_t type, size_t* out_size);
 
+  void set_dir(fidl::ClientEnd<fuchsia_io::Directory> dir) { dir_ = std::move(dir); }
+
  private:
   // fuchsia.driver.compat.Compat
   void GetTopologicalPath(GetTopologicalPathRequestView request,
                           GetTopologicalPathCompleter::Sync& completer) override;
   void GetMetadata(GetMetadataRequestView request, GetMetadataCompleter::Sync& completer) override;
+  void ConnectFidl(ConnectFidlRequestView request, ConnectFidlCompleter::Sync& completer) override;
 
   std::string topological_path_;
   MetadataMap metadata_;
+  fidl::ClientEnd<fuchsia_io::Directory> dir_;
 };
 
 class Child;

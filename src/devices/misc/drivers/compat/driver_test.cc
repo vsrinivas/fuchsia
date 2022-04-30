@@ -171,6 +171,9 @@ class TestDevice : public fidl::WireServer<fuchsia_driver_compat::Device> {
     completer.ReplySuccess(fidl::VectorView<fuchsia_driver_compat::wire::Metadata>::FromExternal(
         metadata.data(), metadata.size()));
   }
+
+  void ConnectFidl(ConnectFidlRequestView request, ConnectFidlCompleter::Sync& completer) override {
+  }
 };
 
 class TestProfileProvider : public fidl::testing::WireTestBase<fuchsia_scheduler::ProfileProvider> {

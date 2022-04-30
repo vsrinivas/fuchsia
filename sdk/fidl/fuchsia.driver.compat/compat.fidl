@@ -22,6 +22,15 @@ protocol Device {
     GetMetadata() -> (resource struct {
         metadata vector<Metadata>:MAX;
     }) error zx.status;
+
+    /// Connect to a FIDL protocol that this device is exposing.
+    /// TODO(fxbug.dev/98844): This should be replaced by routing
+    /// services instead, and services can be routed directly into the
+    // incoming namespace.
+    ConnectFidl(resource struct {
+        name string:MAX;
+        server zx.handle:CHANNEL;
+    }) -> ();
 };
 
 /// This represents a service that the compatibility driver will offer to

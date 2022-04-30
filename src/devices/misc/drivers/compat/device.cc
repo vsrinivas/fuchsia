@@ -13,6 +13,7 @@
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 
+#include "driver.h"
 #include "src/devices/lib/compat/symbols.h"
 
 namespace fdf {
@@ -134,6 +135,10 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
   device->compat_child_ = Child(std::string(zx_args->name), zx_args->proto_id,
                                 std::string(device->topological_path()), MetadataMap());
 
+  if (zx_args->outgoing_dir_channel != ZX_HANDLE_INVALID) {
+    device->compat_child_.compat_device().set_dir(
+        fidl::ClientEnd<fuchsia_io::Directory>(zx::channel(zx_args->outgoing_dir_channel)));
+  }
   auto device_ptr = device.get();
 
   // Add the metadata from add_args:
@@ -512,6 +517,42 @@ fpromise::promise<void, zx_status_t> Device::RebindToLibname(std::string_view li
           .wrap_with(scope_);
   Remove();
   return promise;
+}
+
+zx_status_t Device::ConnectFragmentFidl(const char* fragment_name, const char* protocol_name,
+                                        zx::channel request) {
+  bool fragment_exists = false;
+  for (auto& fragment : fragments_) {
+    if (fragment == fragment_name) {
+      fragment_exists = true;
+      break;
+    }
+  }
+  if (!fragment_exists) {
+    FDF_LOG(ERROR, "Tried to connect to fragment '%s' but it's not in the fragment list",
+            fragment_name);
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  auto connect_string = std::string("/")
+                            .append(fuchsia_driver_compat::Service::Name)
+                            .append("/")
+                            .append(fragment_name)
+                            .append("/device");
+
+  auto device = driver_->driver_namespace().Connect<fuchsia_driver_compat::Device>(connect_string);
+  if (device.status_value() != ZX_OK) {
+    FDF_LOG(ERROR, "Error connecting: %s", device.status_string());
+    return device.status_value();
+  }
+  auto result = fidl::WireCall(*device)->ConnectFidl(fidl::StringView::FromExternal(protocol_name),
+                                                     std::move(request));
+  if (result.status() != ZX_OK) {
+    FDF_LOG(ERROR, "Error calling connect fidl: %s", result.status_string());
+    return result.status();
+  }
+
+  return ZX_OK;
 }
 
 }  // namespace compat

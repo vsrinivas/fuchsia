@@ -63,6 +63,8 @@ class Device : public std::enable_shared_from_this<Device> {
   zx_status_t GetMetadataSize(uint32_t type, size_t* out_size);
   zx_status_t MessageOp(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void InitReply(zx_status_t status);
+  zx_status_t ConnectFragmentFidl(const char* fragment_name, const char* protocol_name,
+                                  zx::channel request);
 
   // TODO(fxbug.dev/33822): Remove these when R/W are removed.
   zx_status_t ReadOp(void* data, size_t len, size_t off, size_t* out_actual);

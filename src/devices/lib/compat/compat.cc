@@ -5,6 +5,7 @@
 #include "compat.h"
 
 #include <lib/driver2/devfs_exporter.h>
+#include <lib/fdio/directory.h>
 
 #include "lib/fpromise/promise.h"
 
@@ -84,6 +85,15 @@ void DeviceServer::GetMetadata(GetMetadataRequestView request,
   }
   completer.ReplySuccess(fidl::VectorView<fuchsia_driver_compat::wire::Metadata>::FromExternal(
       metadata.data(), metadata.size()));
+}
+
+void DeviceServer::ConnectFidl(ConnectFidlRequestView request,
+                               ConnectFidlCompleter::Sync& completer) {
+  if (dir_.is_valid()) {
+    auto path = std::string("svc/").append(request->name.data(), request->name.size());
+    fdio_service_connect_at(dir_.channel().get(), path.data(), request->server.release());
+  }
+  completer.Reply();
 }
 
 zx::status<Interop> Interop::Create(async_dispatcher_t* dispatcher, const driver::Namespace* ns,

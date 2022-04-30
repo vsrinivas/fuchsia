@@ -57,7 +57,6 @@ fuchsia_driver_component("component") {
     "b",
     "c",
   ]
-  colocate = true
 }
 
 test("composite-driver-v1-test") {
