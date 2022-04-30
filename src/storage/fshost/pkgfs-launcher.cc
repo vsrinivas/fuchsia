@@ -64,14 +64,14 @@ zx::status<> LaunchPkgfs(FilesystemMounter* filesystems) {
     return loader_conn.take_error();
   }
 
-  zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
-  if (endpoints.is_error()) {
-    FX_PLOGS(ERROR, endpoints.status_value()) << "cannot create pkgfs root channel";
-    return endpoints.take_error();
+  std::optional server_end = filesystems->TakePkgfsServerEnd();
+  if (!server_end.has_value()) {
+    FX_LOGS(ERROR) << "failed to get /pkgfs server end";
+    return zx::error(ZX_ERR_BAD_STATE);
   }
 
   constexpr size_t kHandles = 1;
-  const zx_handle_t handles[kHandles] = {endpoints->server.TakeChannel().release()};
+  const zx_handle_t handles[kHandles] = {server_end->TakeChannel().release()};
   const uint32_t handle_types[kHandles] = {PA_HND(PA_USER0, 0)};
   zx::process proc;
   FX_LOGS(INFO) << "starting " << args << "...";
@@ -88,12 +88,6 @@ zx::status<> LaunchPkgfs(FilesystemMounter* filesystems) {
     return status;
   }
 
-  if (zx::status result = filesystems->InstallFs(FsManager::MountPoint::kPkgfs, {}, {},
-                                                 std::move(endpoints->client));
-      result.is_error()) {
-    FX_PLOGS(ERROR, result.status_value()) << "failed to install /pkgfs";
-    return result;
-  }
   return zx::ok();
 }
 

@@ -76,18 +76,18 @@ class BlockDeviceTest : public testing::Test {
     // Initialize FilesystemMounter.
     fidl::ServerEnd<fuchsia_io::Directory> dir_request;
     fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle_request;
-    ASSERT_EQ(manager_.Initialize(std::move(dir_request), std::move(lifecycle_request), watcher_),
+    ASSERT_EQ(manager_.Initialize(std::move(dir_request), std::move(lifecycle_request), config_,
+                                  watcher_),
               ZX_OK);
     manager_.DisableCrashReporting();
 
     // Fshost really likes mounting filesystems at "/fs".
     // Let's make that available in our namespace.
-    auto root = fidl::CreateEndpoints<fuchsia_io::Directory>();
-    ASSERT_EQ(root.status_value(), ZX_OK);
-    ASSERT_EQ(manager_.ServeRoot(std::move(root->server)), ZX_OK);
+    auto fs_dir_or = manager_.GetFsDir();
+    ASSERT_EQ(fs_dir_or.status_value(), ZX_OK);
     fdio_ns_t* ns;
     ASSERT_EQ(fdio_ns_get_installed(&ns), ZX_OK);
-    ASSERT_EQ(fdio_ns_bind(ns, "/fs", root->client.TakeChannel().release()), ZX_OK);
+    ASSERT_EQ(fdio_ns_bind(ns, "/fs", fs_dir_or->TakeChannel().release()), ZX_OK);
 
     // fshost uses hardcoded /boot/bin paths to launch filesystems, but this test is packaged now.
     // Make /boot redirect to /pkg in our namespace, which contains the needed binaries.
@@ -225,7 +225,6 @@ TEST_F(BlockDeviceTest, TestMinfsReformat) {
 
   // Before formatting the device, this isn't a valid minfs partition.
   EXPECT_NE(device.CheckFilesystem(), ZX_OK);
-  EXPECT_NE(device.MountFilesystem(), ZX_OK);
 
   // After formatting the device, it is a valid partition. We can check the device,
   // and also mount it.
@@ -249,7 +248,6 @@ TEST_F(BlockDeviceTest, TestBlobfs) {
   // Before formatting the device, this isn't a valid blobfs partition.
   // However, as implemented, we always validate the consistency of the filesystem.
   EXPECT_EQ(device.CheckFilesystem(), ZX_OK);
-  EXPECT_NE(device.MountFilesystem(), ZX_OK);
 
   // Additionally, blobfs does not yet support reformatting within fshost.
   EXPECT_NE(device.FormatFilesystem(), ZX_OK);

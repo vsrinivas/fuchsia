@@ -92,11 +92,11 @@ zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, con
     device_path = result->result.response().path.get();
   }
 
-  zx::status create_export = fidl::CreateEndpoints<fio::Directory>();
-  if (create_export.is_error()) {
-    return create_export.take_error();
+  std::optional endpoints_or = fshost_.TakeMountPointServerEnd(point, device_path);
+  if (!endpoints_or.has_value()) {
+    return zx::error(ZX_ERR_BAD_STATE);
   }
-  auto [export_root, server_end] = std::move(create_export.value());
+  auto [export_root, server_end] = std::move(endpoints_or.value());
 
   size_t num_handles = crypt_client ? 3 : 2;
   zx_handle_t handles[] = {server_end.TakeChannel().release(), block_device_client.release(),
@@ -135,23 +135,7 @@ zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, con
     return zx::error(result.status());
   }
 
-  zx::status create_root = fidl::CreateEndpoints<fio::Directory>();
-  if (create_root.is_error()) {
-    return create_root.take_error();
-  }
-  auto [root_client, root_server] = std::move(create_root.value());
-
-  if (auto resp =
-          fidl::WireCall(export_root)
-              ->Open(fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kPosixWritable |
-                         fio::wire::OpenFlags::kPosixExecutable,
-                     0, fidl::StringView("root"),
-                     fidl::ServerEnd<fio::Node>{root_server.TakeChannel()});
-      !resp.ok()) {
-    return zx::error(resp.status());
-  }
-
-  return InstallFs(point, device_path, std::move(export_root), std::move(root_client));
+  return zx::ok();
 }
 
 zx_status_t FilesystemMounter::MountData(zx::channel block_device,
@@ -277,14 +261,6 @@ void FilesystemMounter::TryMountPkgfs() {
     FX_PLOGS(ERROR, status.status_value()) << "failed to launch pkgfs";
   }
   pkgfs_mounted_ = true;
-}
-
-bool FilesystemMounter::TryStartDelayedVfs() {
-  if (blob_mounted_ && pkgfs_mounted_ && data_mounted_) {
-    FuchsiaStart();
-    return true;
-  }
-  return false;
 }
 
 void FilesystemMounter::ReportDataPartitionCorrupted() {

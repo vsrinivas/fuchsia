@@ -44,13 +44,14 @@ fbl::RefPtr<fs::PseudoDir> InspectManager::Initialize(async_dispatcher* dispatch
   return diagnostics_dir;
 }
 
-void InspectManager::ServeStats(const std::string& name, fbl::RefPtr<fs::Vnode> root) {
+void InspectManager::ServeStats(const std::string& name,
+                                fidl::ClientEnd<fuchsia_io::Directory> root) {
   inspector_.GetRoot().CreateLazyNode(
       name + "_stats",
       [this, name = std::move(name), root = std::move(root)] {
         inspect::Inspector insp;
         fidl::ClientEnd<fio::Node> root_chan;
-        zx_status_t status = OpenNode(root->GetRemote(), ".", S_IFDIR, &root_chan);
+        zx_status_t status = OpenNode(root, ".", S_IFDIR, &root_chan);
         if (status != ZX_OK) {
           return fpromise::make_result_promise(fpromise::ok(std::move(insp)));
         }
@@ -58,7 +59,7 @@ void InspectManager::ServeStats(const std::string& name, fbl::RefPtr<fs::Vnode> 
         // i.e. speaks |fuchsia.io/Directory|.
         fidl::ClientEnd<fio::Directory> root_dir(root_chan.TakeChannel());
         FillFileTreeSizes(std::move(root_dir), insp.GetRoot().CreateChild(name), &insp);
-        FillStats(root->GetRemote(), &insp);
+        FillStats(root, &insp);
         return fpromise::make_result_promise(fpromise::ok(std::move(insp)));
       },
       &inspector_);

@@ -182,32 +182,26 @@ int Main(bool disable_block_watcher, bool ignore_component_config) {
   BlockWatcher watcher(fs_manager, &config);
 
   zx_status_t status =
-      fs_manager.Initialize(std::move(dir_request), std::move(lifecycle_request), watcher);
+      fs_manager.Initialize(std::move(dir_request), std::move(lifecycle_request), config, watcher);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Cannot initialize FsManager: " << zx_status_get_string(status);
     return EXIT_FAILURE;
   }
 
   // Serve the root filesystems in our own namespace.
-  zx::status create_fs_root = fidl::CreateEndpoints<fio::Directory>();
-  if (create_fs_root.is_error()) {
-    FX_PLOGS(ERROR, create_fs_root.status_value()) << "Cannot create root filesystem channel";
-    return EXIT_FAILURE;
-  }
-  auto [fs_root_client, fs_root_server] = std::move(create_fs_root).value();
-
-  status = fs_manager.ServeRoot(std::move(fs_root_server));
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot serve devmgr's root filesystem";
+  zx::status fs_dir_or = fs_manager.GetFsDir();
+  if (fs_dir_or.is_error()) {
+    FX_PLOGS(ERROR, fs_dir_or.status_value()) << "Cannot serve root filesystems";
     return EXIT_FAILURE;
   }
 
   // Initialize namespace, and begin monitoring for a termination event.
-  status = BindNamespace(std::move(fs_root_client));
+  status = BindNamespace(std::move(*fs_dir_or));
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "cannot bind namespace";
     return EXIT_FAILURE;
   }
+
   fs_manager.ReadyForShutdown();
 
   // If there is a ramdisk, setup the ramctl filesystems.

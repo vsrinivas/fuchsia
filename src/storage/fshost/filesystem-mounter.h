@@ -33,20 +33,8 @@ class FilesystemMounter {
 
   virtual ~FilesystemMounter() = default;
 
-  void FuchsiaStart() const { fshost_.FuchsiaStart(); }
-
-  // Installs the filesystem rooted at |root_directory| at |point|.
-  //
-  // |export_root| should be a channel connected to the export root of the filesystem. Passing an
-  // invalid handle should be avoided if possible, but if it isn't, then the filesystem will not get
-  // shut down.
-  //
-  // |root_directory| can be an arbitrary Directory connection (although the fact that the) peer is
-  // a directory is not verified).
-  zx::status<> InstallFs(FsManager::MountPoint point, std::string_view device_path,
-                         fidl::ClientEnd<fuchsia_io::Directory> export_root,
-                         fidl::ClientEnd<fuchsia_io::Directory> root_directory) {
-    return fshost_.InstallFs(point, device_path, std::move(export_root), std::move(root_directory));
+  std::optional<fidl::ServerEnd<fuchsia_io::Directory>> TakePkgfsServerEnd() {
+    return fshost_.TakePkgfsServerEnd();
   }
 
   bool Netbooting() const { return config_.netboot; }
@@ -76,14 +64,6 @@ class FilesystemMounter {
   // - Pkgfs has not previously been mounted
   // - Blobfs has been mounted
   void TryMountPkgfs();
-
-  // Attempts to start servicing the delayed portion of the outoing directory if all the
-  // preconditions have been met:
-  // - Blobfs has been mounted
-  // - Pkgfs has been mounted
-  // - Data has been mounted
-  // Returns true iff the preconditions are met and the delayed VFS was started.
-  bool TryStartDelayedVfs();
 
   std::shared_ptr<FshostBootArgs> boot_args() { return fshost_.boot_args(); }
   void ReportDataPartitionCorrupted();

@@ -39,7 +39,7 @@ class InspectManagerTest : public zxtest::Test {
   void TearDown() override { memfs_.reset(); }
 
  protected:
-  fbl::RefPtr<fs::RemoteDir> GetRemoteDir() {
+  fidl::ClientEnd<fuchsia_io::Directory> GetDir() {
     auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     EXPECT_TRUE(endpoints.is_ok());
     auto [client, server] = *std::move(endpoints);
@@ -47,7 +47,7 @@ class InspectManagerTest : public zxtest::Test {
                                static_cast<uint32_t>(fuchsia_io::wire::OpenFlags::kRightReadable |
                                                      fuchsia_io::wire::OpenFlags::kRightExecutable),
                                server.TakeChannel().release()));
-    return fbl::MakeRefCounted<fs::RemoteDir>(std::move(client));
+    return std::move(client);
   }
 
   fpromise::result<inspect::Hierarchy> ReadInspect(const inspect::Inspector& inspector) {
@@ -99,8 +99,8 @@ TEST_F(InspectManagerTest, ServeStats) {
 
   // Serve inspect stats.
   auto inspect_manager = fshost::InspectManager();
-  auto remote_dir = GetRemoteDir();
-  inspect_manager.ServeStats("test_dir", remote_dir);
+  auto test_dir = GetDir();
+  inspect_manager.ServeStats("test_dir", std::move(test_dir));
 
   //// Read inspect
   auto result = ReadInspect(inspect_manager.inspector());

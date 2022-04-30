@@ -121,7 +121,7 @@ TEST_F(BlockDeviceManagerIntegration, MaxSize) {
   // Now reattach the ram-disk and fshost should format it.
   auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(vmo), kBlockSize);
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
-  auto [fd, fs_type] = WaitForMount("minfs-not-delayed");
+  auto [fd, fs_type] = WaitForMount("minfs");
   ASSERT_TRUE(fd);
   EXPECT_TRUE(fs_type == VFS_TYPE_MINFS || fs_type == VFS_TYPE_FXFS);
 
@@ -190,7 +190,7 @@ TEST_F(BlockDeviceManagerIntegration, SetPartitionName) {
   // Now reattach the ram-disk and fshost should format it.
   auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(vmo), kBlockSize);
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
-  auto [fd, fs_type] = WaitForMount("minfs-not-delayed");
+  auto [fd, fs_type] = WaitForMount("minfs");
   ASSERT_TRUE(fd);
   EXPECT_TRUE(fs_type == VFS_TYPE_MINFS || fs_type == VFS_TYPE_FXFS);
 

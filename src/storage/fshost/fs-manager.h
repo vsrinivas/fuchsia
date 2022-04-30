@@ -19,6 +19,8 @@
 #include <iterator>
 #include <map>
 
+#include <fshost_config/config.h>
+
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/storage/fshost/delayed-outdir.h"
 #include "src/storage/fshost/fdio.h"
@@ -42,39 +44,39 @@ class FsManager {
 
   zx_status_t Initialize(fidl::ServerEnd<fuchsia_io::Directory> dir_request,
                          fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle_request,
-                         BlockWatcher& watcher);
-
-  // TODO(fxbug.dev/39588): delete this
-  // Starts servicing the delayed portion of the outgoing directory, called once
-  // "/system" has been mounted.
-  void FuchsiaStart() { delayed_outdir_.Start(); }
+                         const fshost_config::Config& config, BlockWatcher& watcher);
 
   // MountPoint is a possible location that a filesystem can be installed at.
   enum class MountPoint {
     kData,
-    kPkgfs,
     kFactory,
     kDurable,
-    kMnt,
   };
 
   // Returns the fully qualified for the given mount point.
   static const char* MountPointPath(MountPoint);
 
-  constexpr static std::array<MountPoint, 5> kAllMountPoints{
-      MountPoint::kData,    MountPoint::kPkgfs, MountPoint::kFactory,
-      MountPoint::kDurable, MountPoint::kMnt,
+  struct MountPointEndpoints {
+    fidl::UnownedClientEnd<fuchsia_io::Directory> export_root;
+    fidl::ServerEnd<fuchsia_io::Directory> server_end;
   };
+  // Takes the server end of the specified mount point to send to a hosted filesystem. This channel
+  // pair will have been collecting queued requests since fshost was started. If applicable, it
+  // asynchronously registers a device path for the mount point, based on the fs_id it gets from
+  // QueryFilesystem once the filesystem starts serving.
+  //
+  // This can only be called once per mount point, any calls beyond that will return std::nullopt.
+  std::optional<MountPointEndpoints> TakeMountPointServerEnd(MountPoint point,
+                                                             std::string_view device_path);
 
-  // Installs the filesystem with |root_directory| at |mount_point| (which must not already have an
-  // installed filesystem).
-  // |root_directory| should be a connection to a Directory, but this is not verified.
-  zx::status<> InstallFs(MountPoint mount_point, std::string_view device_path,
-                         fidl::ClientEnd<fuchsia_io::Directory> export_root_directory,
-                         fidl::ClientEnd<fuchsia_io::Directory> root_directory);
+  // Takes the server end reserved for pkgfs. This channel pair will have been collecting queued
+  // requests since fshost was started.
+  //
+  // This function can only be called once, any calls beyond that will return std::nullopt.
+  std::optional<fidl::ServerEnd<fuchsia_io::Directory>> TakePkgfsServerEnd();
 
-  // Serves connection to the root directory ("/") on |server|.
-  zx_status_t ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> server);
+  // Creates a connection to the /fs dir in the outgoing directory.
+  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> GetFsDir();
 
   // Asynchronously shut down all the filesystems managed by fshost and then signal the main thread
   // to exit. Calls |callback| when complete. The Shutdown process would block until
@@ -126,7 +128,7 @@ class FsManager {
 
   zx_status_t DetachMount(std::string_view name);
 
-  zx::status<std::string> GetDevicePath(uint64_t fs_id) const;
+  zx::status<std::string> GetDevicePath(uint64_t fs_id);
 
  private:
   class MountedFilesystem {
@@ -148,8 +150,8 @@ class FsManager {
     };
 
     MountedFilesystem(std::string_view name, fidl::ClientEnd<fuchsia_io::Directory> export_root,
-                      fbl::RefPtr<fs::Vnode> node, uint64_t fs_id)
-        : name_(name), export_root_(std::move(export_root)), node_(node), fs_id_(fs_id) {}
+                      uint64_t fs_id)
+        : name_(name), export_root_(std::move(export_root)), fs_id_(fs_id) {}
     ~MountedFilesystem();
 
     uint64_t fs_id() const { return fs_id_; }
@@ -157,35 +159,31 @@ class FsManager {
    private:
     std::string name_;
     fidl::ClientEnd<fuchsia_io::Directory> export_root_;
-    fbl::RefPtr<fs::Vnode> node_;
     uint64_t fs_id_;
   };
 
-  zx_status_t SetupOutgoingDirectory(fidl::ServerEnd<fuchsia_io::Directory> dir_request,
-                                     BlockWatcher& watcher);
-
-  zx_status_t SetupLifecycleServer(
-      fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle_request);
-
+  // Represents a channel pair for an expected filesystem instance. When fshost starts, it creates
+  // these channel pairs and exposes them in its outgoing directory. They queue filesystem
+  // requests, which are then serviced when the server_end is provided to the filesystem on
+  // startup.
+  //
+  // When a filesystem to be started, the server_end is taken with TakeMountPointServerEnd and
+  // replaced with std::nullopt. The server_end is then passed to the filesystem.
   struct MountNode {
-    // Set by |InstallFs()|.
     fidl::ClientEnd<fuchsia_io::Directory> export_root;
-    fbl::RefPtr<fs::Vnode> root_directory;
-
-    bool Installed() const { return export_root.is_valid(); }
+    std::optional<fidl::ServerEnd<fuchsia_io::Directory>> server_end;
   };
   std::map<MountPoint, MountNode> mount_nodes_;
 
-  // The Root VFS manages the following filesystems:
-  // - The global root filesystem (including the mount points)
-  // - "/tmp"
-  std::unique_ptr<memfs::Memfs> root_vfs_;
+  // pkgfs is special - it doesn't serve a compliant filesystem export root, and it doesn't have a
+  // device path. Because of this we keep track of it separately.
+  std::optional<fidl::ServerEnd<fuchsia_io::Directory>> pkgfs_server_end_;
+
+  // The memfs which serves the /tmp directory.
+  std::unique_ptr<memfs::Memfs> tmp_;
 
   std::unique_ptr<async::Loop> global_loop_;
-  fs::ManagedVfs outgoing_vfs_;
-
-  // The base, root directory which serves the rest of the fshost.
-  fbl::RefPtr<memfs::VnodeDir> global_root_;
+  fs::ManagedVfs vfs_;
 
   // Keeps a collection of metrics being track at the FsHost level.
   std::unique_ptr<FsHostMetrics> metrics_;
@@ -196,28 +194,25 @@ class FsManager {
   // Used to lookup configuration options stored in fuchsia.boot.Arguments
   std::shared_ptr<fshost::FshostBootArgs> boot_args_;
 
-  // The outgoing service directory for fshost.
   fbl::RefPtr<fs::PseudoDir> svc_dir_;
-
-  // TODO(fxbug.dev/39588): delete this
-  // A RemoteDir in the outgoing directory that ignores requests until Start is
-  // called on it.
-  DelayedOutdir delayed_outdir_;
+  fbl::RefPtr<fs::PseudoDir> fs_dir_;
+  fbl::RefPtr<fs::PseudoDir> mnt_dir_;
 
   // The diagnostics directory for the fshost inspect tree.
   // Each filesystem gets a subdirectory to host their own inspect tree.
   // Archivist will parse all the inspect trees found in this directory tree.
   fbl::RefPtr<fs::PseudoDir> diagnostics_dir_;
 
-  std::mutex lock_;
-  bool shutdown_called_ __TA_GUARDED(lock_) = false;
+  std::mutex shutdown_lock_;
+  bool shutdown_called_ __TA_GUARDED(shutdown_lock_) = false;
   sync_completion_t shutdown_;
   sync_completion_t ready_for_shutdown_;
 
   bool file_crash_report_ = true;
 
   std::set<std::unique_ptr<MountedFilesystem>, MountedFilesystem::Compare> mounted_filesystems_;
-  std::unordered_map<uint64_t, std::string> device_paths_;
+  std::mutex device_paths_lock_;
+  std::unordered_map<uint64_t, std::string> device_paths_ __TA_GUARDED(device_paths_lock_);
 };
 
 }  // namespace fshost

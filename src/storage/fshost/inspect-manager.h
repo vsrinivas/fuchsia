@@ -28,7 +28,7 @@ class InspectManager {
   fbl::RefPtr<fs::PseudoDir> Initialize(async_dispatcher* dispatcher);
 
   // Creates a lazy node which serves stats about the given path.
-  void ServeStats(const std::string& path, fbl::RefPtr<fs::Vnode> root);
+  void ServeStats(const std::string& path, fidl::ClientEnd<fuchsia_io::Directory> root);
 
   const inspect::Inspector& inspector() const { return inspector_; }
 

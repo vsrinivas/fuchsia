@@ -20,12 +20,12 @@
         {
             directory: "mnt",
             rights: [ "rw*" ],
-            path: "/fs/mnt",
+            path: "/mnt",
         },
         {
             directory: "tmp",
             rights: [ "rw*" ],
-            path: "/fs/tmp",
+            path: "/tmp",
         },
         {
             protocol: [

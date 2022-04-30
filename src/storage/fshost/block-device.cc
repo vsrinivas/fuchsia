@@ -709,7 +709,6 @@ zx_status_t BlockDevice::MountFilesystem() {
         return status;
       }
       mounter_->TryMountPkgfs();
-      mounter_->TryStartDelayedVfs();
       return ZX_OK;
     }
     case fs_management::kDiskFormatFxfs:
@@ -723,7 +722,6 @@ zx_status_t BlockDevice::MountFilesystem() {
         MaybeDumpMetadata(fd_.duplicate(), {.disk_format = format_});
         return status;
       }
-      mounter_->TryStartDelayedVfs();
       return ZX_OK;
     }
     default:

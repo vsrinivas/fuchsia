@@ -59,14 +59,14 @@ TEST_F(AdminServerTest, MountAndUnmount) {
   ASSERT_EQ(return_code, 0);
 
   constexpr const char* kFilePath =
-      "/hub/children/fshost-collection:test-fshost/exec/out/fs/mnt/test/hello";
+      "/hub/children/fshost-collection:test-fshost/exec/out/mnt/test/hello";
   fbl::unique_fd fd(open(kFilePath, O_RDWR | O_CREAT, 0666));
   ASSERT_TRUE(fd);
   ASSERT_EQ(write(fd.get(), "hello", 5), 5);
   fd.reset();
 
   // Check GetDevicePath.
-  constexpr const char* kRoot = "/hub/children/fshost-collection:test-fshost/exec/out/fs/mnt/test/";
+  constexpr const char* kRoot = "/hub/children/fshost-collection:test-fshost/exec/out/mnt/test/";
   struct statvfs buf;
   ASSERT_EQ(statvfs(kRoot, &buf), 0);
 
