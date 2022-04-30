@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/fuchsia/sdk.gni")
 import("//build/dart/dart.gni")
 import("//build/dart/dart_package_config.gni")
 import("//build/dart/toolchain.gni")
@@ -138,12 +137,8 @@ if (current_toolchain == dart_toolchain) {
       # Compute a package name from the label:
       #   //foo/bar --> foo.bar
       #   //foo/bar:blah --> foo.bar._blah
-      #   //garnet/public/foo/bar --> foo.bar
       # Strip public directories.
       full_dir = get_label_info(":$target_name", "dir")
-      foreach(sdk_dir, sdk_dirs) {
-        full_dir = string_replace(full_dir, "$sdk_dir/", "")
-      }
       package_name = full_dir
       package_name = string_replace(package_name, "//", "")
       package_name = string_replace(package_name, "/", ".")

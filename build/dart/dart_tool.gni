@@ -125,12 +125,8 @@ template("dart_tool") {
     # Compute a package name from the label:
     #   //foo/bar --> foo.bar
     #   //foo/bar:blah --> foo.bar._blah
-    #   //garnet/public/foo/bar --> foo.bar
     # Strip public directories.
     full_dir = get_label_info(":$dart_library_target_name", "dir")
-    foreach(sdk_dir, sdk_dirs) {
-      full_dir = string_replace(full_dir, "$sdk_dir/", "")
-    }
     package_name = full_dir
     package_name = string_replace(package_name, "//", "")
     package_name = string_replace(package_name, "/", ".")
