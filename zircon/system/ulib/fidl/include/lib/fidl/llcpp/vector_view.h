@@ -9,6 +9,7 @@
 #include <lib/fidl/walker.h>
 #include <zircon/fidl.h>
 
+#include <algorithm>
 #include <iterator>
 #include <type_traits>
 
@@ -52,6 +53,12 @@ class VectorView {
     ZX_DEBUG_ASSERT(initial_count <= capacity);
   }
   VectorView(std::nullptr_t data, size_t count) {}
+
+  // Allocates a vector using an arena and copies the data from the supplied std::vector.
+  VectorView(AnyArena& allocator, std::vector<T>& vector)
+      : count_(vector.size()), data_(allocator.AllocateVector<T>(vector.size())) {
+    std::copy(vector.begin(), vector.end(), data_);
+  }
 
   template <typename U>
   VectorView(VectorView<U>&& other) {
