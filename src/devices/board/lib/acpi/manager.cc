@@ -178,11 +178,24 @@ acpi::status<bool> Manager::DiscoverDevice(ACPI_HANDLE handle) {
     return acpi::ok(true);
   }
 
-  auto parent = acpi_->GetParent(handle);
-  if (parent.is_error()) {
-    zxlogf(ERROR, "Device '%s' failed to get parent: %d", name.data(), parent.status_value());
-    return parent.take_error();
-  }
+  acpi::status<ACPI_HANDLE> parent = acpi::ok(handle);
+  bool is_device = false;
+  do {
+    parent = acpi_->GetParent(*parent);
+    if (parent.is_error()) {
+      zxlogf(ERROR, "Device '%s' failed to get parent: %d", name.data(), parent.status_value());
+      return parent.take_error();
+    }
+
+    auto parent_info = acpi_->GetObjectInfo(*parent);
+    if (parent_info.is_error()) {
+      zxlogf(ERROR, "Failed to get object info: %d", parent_info.status_value());
+      return parent_info.take_error();
+    }
+
+    is_device = parent_info->Type == ACPI_TYPE_DEVICE;
+
+  } while (!is_device);
 
   DeviceBuilder* parent_ptr = LookupDevice(parent.value());
   if (parent_ptr == nullptr) {
