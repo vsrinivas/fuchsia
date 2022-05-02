@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Context, Error},
-    fidl_fuchsia_metrics::{MetricEventLoggerFactoryMarker, MetricEventLoggerProxy, ProjectSpec},
+    fidl_fuchsia_cobalt::{LoggerFactoryMarker, LoggerProxy},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
@@ -19,19 +19,15 @@ use {
 ///
 /// # Returns
 /// `LoggerProxy` for log messages to be sent to.
-pub fn get_logger() -> Result<MetricEventLoggerProxy, Error> {
+pub fn get_logger() -> Result<LoggerProxy, Error> {
     let (logger_proxy, server_end) =
         fidl::endpoints::create_proxy().context("Failed to create endpoints")?;
-    let logger_factory = connect_to_protocol::<MetricEventLoggerFactoryMarker>()
-        .context("Failed to connect to the Cobalt MetricEventLoggerFactory")?;
+    let logger_factory = connect_to_protocol::<LoggerFactoryMarker>()
+        .context("Failed to connect to the Cobalt LoggerFactory")?;
 
     fasync::Task::spawn(async move {
-        if let Err(err) = logger_factory
-            .create_metric_event_logger(
-                ProjectSpec { project_id: Some(metrics::PROJECT_ID), ..ProjectSpec::EMPTY },
-                server_end,
-            )
-            .await
+        if let Err(err) =
+            logger_factory.create_logger_from_project_id(metrics::PROJECT_ID, server_end).await
         {
             error!(%err, "Failed to create Cobalt logger");
         }
@@ -52,7 +48,7 @@ pub fn get_logger() -> Result<MetricEventLoggerProxy, Error> {
 /// # Returns
 /// `Ok` if the time elapsed was logged successfully.
 pub async fn log_session_launch_time(
-    logger_proxy: MetricEventLoggerProxy,
+    logger_proxy: LoggerProxy,
     start_time: zx::Time,
     end_time: zx::Time,
 ) -> Result<(), Error> {
@@ -62,10 +58,11 @@ pub async fn log_session_launch_time(
     }
 
     logger_proxy
-        .log_integer(
-            metrics::SESSION_LAUNCH_TIME_MIGRATED_METRIC_ID,
+        .log_elapsed_time(
+            metrics::SESSION_LAUNCH_TIME_METRIC_ID,
+            metrics::SessionLaunchTimeMetricDimensionStatus::Success as u32,
+            "",
             elapsed_time,
-            &[metrics::SessionLaunchTimeMetricDimensionStatus::Success as u32],
         )
         .await
         .context("Could not log session launch time.")?;
@@ -76,9 +73,7 @@ pub async fn log_session_launch_time(
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_metrics::{MetricEventLoggerMarker, MetricEventLoggerRequest},
+        super::*, fidl::endpoints::create_proxy_and_stream, fidl_fuchsia_cobalt::LoggerMarker,
         futures::TryStreamExt,
     };
 
@@ -86,8 +81,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_log_session_launch_time() {
         let (logger_proxy, mut logger_server) =
-            create_proxy_and_stream::<MetricEventLoggerMarker>()
-                .expect("Failed to create Logger FIDL.");
+            create_proxy_and_stream::<LoggerMarker>().expect("Failed to create Logger FIDL.");
         let start_time = zx::Time::from_nanos(0);
         let end_time = zx::Time::from_nanos(5000);
 
@@ -97,19 +91,20 @@ mod tests {
         .detach();
 
         if let Some(log_request) = logger_server.try_next().await.unwrap() {
-            if let MetricEventLoggerRequest::LogInteger {
+            if let fidl_fuchsia_cobalt::LoggerRequest::LogElapsedTime {
                 metric_id,
-                value,
-                event_codes,
+                event_code,
+                component: _,
+                elapsed_micros,
                 responder: _,
             } = log_request
             {
-                assert_eq!(metric_id, metrics::SESSION_LAUNCH_TIME_MIGRATED_METRIC_ID);
+                assert_eq!(metric_id, metrics::SESSION_LAUNCH_TIME_METRIC_ID);
                 assert_eq!(
-                    event_codes,
-                    vec![metrics::SessionLaunchTimeMetricDimensionStatus::Success as u32]
+                    event_code,
+                    metrics::SessionLaunchTimeMetricDimensionStatus::Success as u32
                 );
-                assert_eq!(value, 5);
+                assert_eq!(elapsed_micros, 5);
             } else {
                 assert!(false);
             }
@@ -121,8 +116,8 @@ mod tests {
     /// Tests that an error is raised if end_time < start_time.
     #[fasync::run_singlethreaded(test)]
     async fn test_log_session_launch_time_swap_start_end_time() {
-        let (logger_proxy, _logger_server) = create_proxy_and_stream::<MetricEventLoggerMarker>()
-            .expect("Failed to create Logger FIDL.");
+        let (logger_proxy, _logger_server) =
+            create_proxy_and_stream::<LoggerMarker>().expect("Failed to create Logger FIDL.");
         let start_time = zx::Time::from_nanos(0);
         let end_time = zx::Time::from_nanos(5000);
 

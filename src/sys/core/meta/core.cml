@@ -955,6 +955,7 @@
                 "#pkg-cache",
                 "#pkg-resolver",
                 "#sampler",
+                "#session-manager",
                 "#sysmem_connector",
             ],
         },
@@ -965,7 +966,6 @@
                 "#feedback",
                 "#log-stats",
                 "#sampler",
-                "#session-manager",
             ],
         },
         {

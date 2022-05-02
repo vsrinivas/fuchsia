@@ -31,7 +31,7 @@
             from: "framework",
         },
         {
-            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
+            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
             from: "parent",
         },
         {
