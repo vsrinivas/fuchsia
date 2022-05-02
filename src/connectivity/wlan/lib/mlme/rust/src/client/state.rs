@@ -740,11 +740,15 @@ impl Associated {
 
     fn on_block_ack_frame<B: ByteSlice>(
         &mut self,
-        sta: &mut BoundClient<'_>,
-        action: mac::BlockAckAction,
-        body: B,
+        _sta: &mut BoundClient<'_>,
+        _action: mac::BlockAckAction,
+        _body: B,
     ) {
-        self.0.block_ack_state.replace_state(|state| state.on_block_ack_frame(sta, action, body));
+        // TODO(fxbug.dev/29887): Handle BlockAck frames. The following code has been disabled as a
+        //                        fix for fxbug.dev/98298. Without this code, the BlockAck state
+        //                        machine is dormant and, importantly, never transmits BlockAck
+        //                        frames.
+        //self.0.block_ack_state.replace_state(|state| state.on_block_ack_frame(sta, action, body));
     }
 
     fn on_sme_eapol(&self, sta: &mut BoundClient<'_>, req: fidl_mlme::EapolRequest) {
@@ -2096,9 +2100,15 @@ mod tests {
         match state.on_mac_frame(&mut client, &frame[..], MockWlanRxInfo::default().into()) {
             States::Associated(state) => {
                 let (_, associated) = state.release_data();
+                // TODO(fxbug.dev/29887): Handle BlockAck frames. The following code has been
+                //                        altered as part of a fix for fxbug.dev/98298. This check
+                //                        should ensure that the state has transitioned to
+                //                        `Established`, but since the state machine has been
+                //                        disabled it instead checks that the state has remained
+                //                        `Closed`.
                 match *associated.0.block_ack_state.as_ref() {
-                    BlockAckState::Established(_) => {}
-                    _ => panic!("client has not established BlockAck"),
+                    BlockAckState::Closed(_) => {}
+                    _ => panic!("client has transitioned BlockAck"),
                 }
             }
             _ => panic!("client no longer associated"),

@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(fxbug.dev/29887): Deny this lint once this code is exercised by the client state machine.
+//                        See `Associated::on_block_ack_frame` and fxbug.dev/98298.
+#![allow(dead_code)]
+
 //! BlockAck API and state.
 //!
 //! This module provides a BlockAck state machine and a trait implemented by types that interact
