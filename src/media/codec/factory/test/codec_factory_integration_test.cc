@@ -262,3 +262,73 @@ TEST_F(Integration, MagmaDeviceNoIcd) {
 
   loop_.Run();
 }
+
+TEST_F(Integration, MagmaEncoder) {
+  auto builder = RealmBuilder::Create();
+  InitializeRoutes(builder);
+  auto realm = builder.Build(loop_.dispatcher());
+  auto factory = realm.Connect<fuchsia::mediacodec::CodecFactory>();
+
+  factory.set_error_handler([&](zx_status_t status) {
+    EXPECT_TRUE(false);
+    loop_.Quit();
+  });
+
+  fuchsia::mediacodec::CreateEncoder_Params params;
+  fuchsia::media::FormatDetails input_details;
+  input_details.set_mime_type("video/h264");
+  fuchsia::media::EncoderSettings encoder_settings;
+  encoder_settings.set_h264({});
+  input_details.set_encoder_settings(std::move(encoder_settings));
+  params.set_input_details(std::move(input_details));
+  params.set_require_hw(true);
+  ;
+  fuchsia::media::StreamProcessorPtr processor;
+  factory->CreateEncoder(std::move(params), processor.NewRequest());
+  processor.set_error_handler([&](zx_status_t status) {
+    EXPECT_TRUE(false);
+    loop_.Quit();
+  });
+
+  processor.events().OnInputConstraints = [&](fuchsia::media::StreamBufferConstraints constraints) {
+    loop_.Quit();
+    processor.Unbind();
+  };
+
+  loop_.Run();
+
+  magma_device_.CloseAll();
+
+  // Eventually codecs from the device should disappear.
+  while (true) {
+    loop_.ResetQuit();
+
+    fuchsia::mediacodec::CreateEncoder_Params params;
+    fuchsia::media::FormatDetails input_details;
+    input_details.set_mime_type("video/h264");
+    fuchsia::media::EncoderSettings encoder_settings;
+    encoder_settings.set_h264({});
+    input_details.set_encoder_settings(std::move(encoder_settings));
+    params.set_input_details(std::move(input_details));
+    params.set_require_hw(true);
+    fuchsia::media::StreamProcessorPtr processor;
+    factory->CreateEncoder(std::move(params), processor.NewRequest());
+    bool processor_failed = false;
+    processor.set_error_handler([&](zx_status_t status) {
+      loop_.Quit();
+      processor_failed = true;
+    });
+
+    processor.events().OnInputConstraints =
+        [&](fuchsia::media::StreamBufferConstraints constraints) {
+          // Ignore this success and try again.
+          loop_.Quit();
+          processor.Unbind();
+        };
+
+    loop_.Run();
+    if (processor_failed)
+      break;
+    sleep(1);
+  }
+}

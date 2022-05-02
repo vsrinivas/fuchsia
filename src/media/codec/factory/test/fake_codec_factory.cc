@@ -32,6 +32,9 @@ class CodecFactoryImpl final : public fuchsia::mediacodec::CodecFactory {
     description.codec_type = fuchsia::mediacodec::CodecType::DECODER;
     description.mime_type = "video/h264";
     std::vector<fuchsia::mediacodec::CodecDescription> descriptions{description};
+    description.codec_type = fuchsia::mediacodec::CodecType::ENCODER;
+    description.mime_type = "video/h264";
+    descriptions.push_back(description);
     binding_.events().OnCodecList(std::move(descriptions));
   }
 
@@ -46,7 +49,13 @@ class CodecFactoryImpl final : public fuchsia::mediacodec::CodecFactory {
 
   void CreateEncoder(
       fuchsia::mediacodec::CreateEncoder_Params encoder_params,
-      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request) override {}
+      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request) override {
+    StreamProcessorImpl impl;
+
+    fidl::Binding<fuchsia::media::StreamProcessor> processor(&impl);
+    processor.Bind(std::move(encoder_request));
+    processor.events().OnInputConstraints(fuchsia::media::StreamBufferConstraints());
+  }
 
   void AttachLifetimeTracking(zx::eventpair codec_end) override {}
 

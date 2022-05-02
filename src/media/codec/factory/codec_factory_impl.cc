@@ -301,17 +301,29 @@ void CodecFactoryImpl::CreateEncoder(
     (*factory)->CreateEncoder(std::move(encoder_params), std::move(encoder_request));
     return;
   }
+  auto hw_isolate = app_->FindHwIsolate(
+      [&encoder_params](const fuchsia::mediacodec::CodecDescription& hw_codec_description) -> bool {
+        return (fuchsia::mediacodec::CodecType::ENCODER == hw_codec_description.codec_type) &&
+               (encoder_params.input_details().mime_type() == hw_codec_description.mime_type);
+      });
+  IsolateType isolate_type = IsolateType::kSw;
+  if (hw_isolate) {
+    isolate_type = IsolateType::kMagma;
+  }
 
-  if (encoder_params.has_require_hw() && encoder_params.require_hw()) {
+  if (encoder_params.has_require_hw() && encoder_params.require_hw() && !hw_isolate) {
     FX_LOGS(WARNING) << "require_hw, but no matching HW encoder factory found ("
                      << encoder_params.input_details().mime_type() << "); closing";
     // ~encoder
     return;
   }
 
-  auto maybe_encoder_isolate_url =
-      FindEncoder(encoder_params.input_details().mime_type(),
-                  encoder_params.input_details().encoder_settings(), is_v2_);
+  auto maybe_encoder_isolate_url = hw_isolate;
+  if (!maybe_encoder_isolate_url) {
+    maybe_encoder_isolate_url =
+        FindEncoder(encoder_params.input_details().mime_type(),
+                    encoder_params.input_details().encoder_settings(), is_v2_);
+  }
 
   if (!maybe_encoder_isolate_url) {
     FX_LOGS(WARNING) << "No encoder supports " << encoder_params.input_details().mime_type()
@@ -320,7 +332,7 @@ void CodecFactoryImpl::CreateEncoder(
   }
 
   ForwardToIsolate(
-      *maybe_encoder_isolate_url, is_v2_, IsolateType::kSw, component_context_,
+      *maybe_encoder_isolate_url, is_v2_, isolate_type, component_context_,
       [self = self_, encoder_params = std::move(encoder_params),
        encoder_request = std::move(encoder_request)](
           fuchsia::mediacodec::CodecFactoryPtr factory_delegate) mutable {
