@@ -242,7 +242,8 @@ impl EpollFileObject {
             // The wait could have been deleted by here,
             // so ignore the None case.
             if let Some(wait) = state.wait_objects.get(&pending_event.key) {
-                result.push(EpollEvent { events: pending_event.observed.mask(), data: wait.data });
+                let reported_events = pending_event.observed.mask() & wait.events.mask();
+                result.push(EpollEvent { events: reported_events, data: wait.data });
                 // TODO When edge-triggered epoll, EPOLLET, is
                 // implemented, we would enable to wait here,
                 // instead of adding it to the rearm list.

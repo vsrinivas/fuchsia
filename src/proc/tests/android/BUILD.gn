@@ -50,6 +50,10 @@ fuchsia_test_component("binder_test") {
   deps = [ ":binder_test_script" ]
 }
 
+fuchsia_test_component("libutils_test") {
+  manifest = "meta/libutils_test.cml"
+}
+
 fuchsia_test_component("java_hello_world") {
   manifest = "meta/java_hello_world.cml"
 }
@@ -83,6 +87,7 @@ fuchsia_test_package("test_android_distro") {
     ":sh_test",
     ":binder_smoke_test",
     ":binder_test",
+    ":libutils_test",
   ]
 
   # This package intentionally contains many non-Fuchia ELF binaries that

@@ -1,0 +1,7 @@
+{
+    include: [ "//src/proc/tests/android/stardroid_test.shard.cml" ],
+    program: {
+        binary: "/vendor/data/nativetest64/libutils_test/libutils_test",
+        args: [ "--gtest_filter=LooperTest.PollOnce_WhenNon*:LooperTest.PollOnce_WhenZero*:LooperTest.AddFd*:LooperTest.RemoveFd*:LooperTest.SendMessage*:LooperTest.RemoveMessage*:LooperTest.MultiThreaded*" ],
+    },
+}
