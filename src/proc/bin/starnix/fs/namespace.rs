@@ -307,7 +307,7 @@ impl NamespaceNode {
             Ok(self.parent().unwrap_or_else(|| self.clone()))
         } else {
             let mut child = self.with_new_entry(self.entry.component_lookup(basename)?);
-            while child.entry.node.info().mode.is_lnk() {
+            while child.entry.node.is_lnk() {
                 match context.symlink_mode {
                     SymlinkMode::NoFollow => {
                         break;

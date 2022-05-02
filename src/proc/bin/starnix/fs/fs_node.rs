@@ -465,6 +465,11 @@ impl FsNode {
         self.info().mode.is_sock()
     }
 
+    /// Whether this node is a symbolic link.
+    pub fn is_lnk(&self) -> bool {
+        self.info().mode.is_lnk()
+    }
+
     /// Update the access and modify time for this node to now.
     pub fn touch(&self) {
         let now = fuchsia_runtime::utc_time();

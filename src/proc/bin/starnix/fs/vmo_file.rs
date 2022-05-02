@@ -75,26 +75,29 @@ impl VmoFileObject {
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        let mut info = file.node().info_write();
-        let file_length = info.size;
-        let want_read = UserBuffer::get_total_length(data)?;
-        if want_read > MAX_LFS_FILESIZE - offset {
-            return error!(EINVAL);
-        }
-        let actual = if offset < file_length {
-            let to_read =
-                if file_length < offset + want_read { file_length - offset } else { want_read };
-            let mut buf = vec![0u8; to_read];
-            vmo.read(&mut buf[..], offset as u64).map_err(|_| errno!(EIO))?;
-            // TODO(steveaustin) - write_each might might be more efficient
-            current_task.mm.write_all(data, &mut buf[..])?;
-            to_read
-        } else {
-            0
+        let actual = {
+            let info = file.node().info();
+            let file_length = info.size;
+            let want_read = UserBuffer::get_total_length(data)?;
+            if want_read > MAX_LFS_FILESIZE - offset {
+                return error!(EINVAL);
+            }
+            if offset < file_length {
+                let to_read =
+                    if file_length < offset + want_read { file_length - offset } else { want_read };
+                let mut buf = vec![0u8; to_read];
+                vmo.read(&mut buf[..], offset as u64).map_err(|_| errno!(EIO))?;
+                drop(info);
+                // TODO(steveaustin) - write_each might might be more efficient
+                current_task.mm.write_all(data, &mut buf[..])?;
+                to_read
+            } else {
+                0
+            }
         };
         // TODO(steveaustin) - omit updating time_access to allow info to be immutable
         // and thus allow simultaneous reads.
-        info.time_access = fuchsia_runtime::utc_time();
+        file.node().info_write().time_access = fuchsia_runtime::utc_time();
         Ok(actual)
     }
 
@@ -105,11 +108,14 @@ impl VmoFileObject {
         offset: usize,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        let mut info = file.node().info_write();
         let want_write = UserBuffer::get_total_length(data)?;
         if want_write > MAX_LFS_FILESIZE - offset {
             return error!(EINVAL);
         }
+        let mut buf = vec![0u8; want_write];
+        current_task.mm.read_all(data, &mut buf[..])?;
+
+        let mut info = file.node().info_write();
         let write_end = offset + want_write;
         let mut update_content_size = false;
         if write_end > info.size {
@@ -120,10 +126,8 @@ impl VmoFileObject {
             }
             update_content_size = true;
         }
-
-        let mut buf = vec![0u8; want_write];
-        current_task.mm.read_all(data, &mut buf[..])?;
         vmo.write(&mut buf[..], offset as u64).map_err(|_| errno!(EIO))?;
+
         if update_content_size {
             info.size = write_end;
         }

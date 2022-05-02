@@ -138,11 +138,11 @@ impl FileOps for MemoryDirectoryFile {
             {
                 if let Some(entry) = maybe_entry.upgrade() {
                     let next_offset = *offset + 1;
-                    let info = entry.node.info();
+                    let mode = entry.node.info().mode;
                     sink.add(
                         entry.node.inode_num,
                         next_offset,
-                        DirectoryEntryType::from_mode(info.mode),
+                        DirectoryEntryType::from_mode(mode),
                         &name,
                     )?;
                     *offset = next_offset;

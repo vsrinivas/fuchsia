@@ -574,7 +574,7 @@ impl CurrentTask {
         let mut child_context = context.with(SymlinkMode::NoFollow);
         match parent.lookup_child(self, &mut child_context, basename) {
             Ok(name) => {
-                if name.entry.node.info().mode.is_lnk() {
+                if name.entry.node.is_lnk() {
                     if context.symlink_mode == SymlinkMode::NoFollow
                         || context.remaining_follows == 0
                     {
