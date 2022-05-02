@@ -522,6 +522,116 @@ func TestHandleDeclConforms(t *testing.T) {
 	)
 }
 
+func TestProtocolEndpointConforms(t *testing.T) {
+	decl, ok := testSchema(t).lookupDeclByName("ExampleEndpointStruct", false)
+	if !ok {
+		t.Fatalf("lookupDeclByName failed")
+	}
+	structDecl := decl.(*StructDecl)
+	checkConforms(t,
+		context{
+			handleDefs: []gidlir.HandleDef{
+				{Subtype: fidlgen.Channel}, // #0
+				{Subtype: fidlgen.Channel}, // #1
+				{Subtype: fidlgen.Channel}, // #2
+				{Subtype: fidlgen.Channel}, // #3
+			},
+		},
+		structDecl,
+		[]conformTest{
+			conformOk{gidlir.Record{
+				Name: "ExampleEndpointStruct",
+				Fields: []gidlir.Field{
+					{
+						Key: gidlir.FieldKey{
+							Name: "client_end",
+						},
+						Value: defaultMetadataForHandle(0),
+					},
+					{
+						Key: gidlir.FieldKey{
+							Name: "optional_client_end",
+						},
+						Value: defaultMetadataForHandle(1),
+					},
+					{
+						Key: gidlir.FieldKey{
+							Name: "server_end",
+						},
+						Value: defaultMetadataForHandle(2),
+					},
+					{
+						Key: gidlir.FieldKey{
+							Name: "optional_server_end",
+						},
+						Value: defaultMetadataForHandle(3),
+					},
+				},
+			}},
+			conformOk{gidlir.Record{
+				Name: "ExampleEndpointStruct",
+				Fields: []gidlir.Field{
+					{
+						Key: gidlir.FieldKey{
+							Name: "client_end",
+						},
+						Value: defaultMetadataForHandle(0),
+					},
+					{
+						Key: gidlir.FieldKey{
+							Name: "server_end",
+						},
+						Value: defaultMetadataForHandle(2),
+					},
+				},
+			}},
+			conformFail{
+				gidlir.Record{
+					Name: "ExampleEndpointStruct",
+					Fields: []gidlir.Field{
+						{
+							Key: gidlir.FieldKey{
+								Name: "client_end",
+							},
+							Value: defaultMetadataForHandle(0),
+						},
+					},
+				}, "missing non-nullable field server_end",
+			},
+		},
+	)
+	checkConforms(t,
+		context{
+			handleDefs: []gidlir.HandleDef{
+				{Subtype: fidlgen.Channel}, // #0
+				{Subtype: fidlgen.Channel}, // #1
+				{Subtype: fidlgen.Event},   // #2
+				{Subtype: fidlgen.Channel}, // #3
+			},
+		},
+		structDecl,
+		[]conformTest{
+			conformFail{gidlir.Record{
+				Name: "ExampleEndpointStruct",
+				Fields: []gidlir.Field{
+					{
+						Key: gidlir.FieldKey{
+							Name: "client_end",
+						},
+						Value: defaultMetadataForHandle(0),
+					},
+					{
+						Key: gidlir.FieldKey{
+							Name: "server_end",
+						},
+						Value: defaultMetadataForHandle(2),
+					},
+				},
+			}, "expecting handle:channel, found handle:event"},
+		},
+	)
+}
+
 func TestStrictBitsConforms(t *testing.T) {
 	decl, ok := testSchema(t).lookupDeclByName("ExampleStrictBits", false)
 	if !ok {

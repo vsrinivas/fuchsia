@@ -38,3 +38,12 @@ type ExampleFlexibleUnion = flexible union {
 type ExampleHandleStruct = resource struct {
     channel zx.handle:<CHANNEL, zx.rights.DUPLICATE>;
 };
+
+protocol Protocol {};
+
+type ExampleEndpointStruct = resource struct {
+    client_end client_end:Protocol;
+    optional_client_end client_end:<Protocol, optional>;
+    server_end server_end:Protocol;
+    optional_server_end server_end:<Protocol, optional>;
+};

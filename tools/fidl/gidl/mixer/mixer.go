@@ -35,6 +35,8 @@ var _ = []Declaration{
 	(*FloatDecl)(nil),
 	(*StringDecl)(nil),
 	(*HandleDecl)(nil),
+	(*ClientEndDecl)(nil),
+	(*ServerEndDecl)(nil),
 	(*BitsDecl)(nil),
 	(*EnumDecl)(nil),
 	(*StructDecl)(nil),
@@ -68,6 +70,19 @@ var _ = []PrimitiveDeclaration{
 	(*BoolDecl)(nil),
 	(*IntegerDecl)(nil),
 	(*FloatDecl)(nil),
+}
+
+type EndpointDeclaration interface {
+	Declaration
+
+	// ProtocolName returns the fully qualified name of the protocol.
+	// TODO(fxbug.dev/39407): Return common.DeclName.
+	ProtocolName() string
+}
+
+var _ = []EndpointDeclaration{
+	(*ClientEndDecl)(nil),
+	(*ServerEndDecl)(nil),
 }
 
 type NamedDeclaration interface {
@@ -309,6 +324,56 @@ func (decl *HandleDecl) conforms(value gidlir.Value, ctx context) error {
 	}
 }
 
+type ClientEndDecl struct {
+	AlwaysInlinable
+	protocolDecl fidlgen.Protocol
+	nullable     bool
+}
+
+func (decl *ClientEndDecl) IsNullable() bool {
+	return decl.nullable
+}
+
+func (decl *ClientEndDecl) ProtocolName() string {
+	return string(decl.protocolDecl.Name)
+}
+
+func (decl *ClientEndDecl) UnderlyingHandleDecl() *HandleDecl {
+	return &HandleDecl{
+		subtype:  fidlgen.Channel,
+		nullable: decl.nullable,
+	}
+}
+
+func (decl *ClientEndDecl) conforms(value gidlir.Value, ctx context) error {
+	return decl.UnderlyingHandleDecl().conforms(value, ctx)
+}
+
+type ServerEndDecl struct {
+	AlwaysInlinable
+	protocolDecl fidlgen.Protocol
+	nullable     bool
+}
+
+func (decl *ServerEndDecl) IsNullable() bool {
+	return decl.nullable
+}
+
+func (decl *ServerEndDecl) ProtocolName() string {
+	return string(decl.protocolDecl.Name)
+}
+
+func (decl *ServerEndDecl) UnderlyingHandleDecl() *HandleDecl {
+	return &HandleDecl{
+		subtype:  fidlgen.Channel,
+		nullable: decl.nullable,
+	}
+}
+
+func (decl *ServerEndDecl) conforms(value gidlir.Value, ctx context) error {
+	return decl.UnderlyingHandleDecl().conforms(value, ctx)
+}
+
 type BitsDecl struct {
 	NeverNullable
 	Underlying IntegerDecl
@@ -467,8 +532,8 @@ func (decl *StructDecl) conforms(value gidlir.Value, ctx context) error {
 	for _, member := range decl.structDecl.Members {
 		// TODO(fxbug.dev/49939) Allow omitted non-nullable fields that have defaults.
 		if _, ok := provided[string(member.Name)]; !ok && !member.Type.Nullable {
-			panic(fmt.Sprintf("missing non-nullable field %s in struct %s",
-				member.Name, decl.Name()))
+			return fmt.Errorf("missing non-nullable field %s in struct %s",
+				member.Name, decl.Name())
 		}
 	}
 	return nil
@@ -556,8 +621,8 @@ func (decl *TableDecl) conforms(value gidlir.Value, ctx context) error {
 type UnionDecl struct {
 	NeverInlinable
 	unionDecl fidlgen.Union
-	nullable bool
-	schema   Schema
+	nullable  bool
+	schema    Schema
 }
 
 func (decl *UnionDecl) IsNullable() bool {
@@ -759,6 +824,10 @@ func BuildSchema(fidl fidlgen.Root) Schema {
 		decl := &fidl.Unions[i]
 		types[string(decl.Name)] = decl
 	}
+	for i := range fidl.Protocols {
+		decl := &fidl.Protocols[i]
+		types[string(decl.Name)] = decl
+	}
 	return Schema{libraryName: string(fidl.Name), types: types}
 }
 
@@ -861,6 +930,11 @@ func (s Schema) lookupDeclByQualifiedName(name string, nullable bool) (Declarati
 			nullable:  nullable,
 			schema:    s,
 		}, true
+	case *fidlgen.Protocol:
+		return &ClientEndDecl{
+			protocolDecl: *typ,
+			nullable:     nullable,
+		}, true
 	}
 	return nil, false
 }
@@ -915,8 +989,14 @@ func (s Schema) lookupDeclByType(typ fidlgen.Type) (Declaration, bool) {
 		return &ArrayDecl{schema: s, typ: typ}, true
 	case fidlgen.VectorType:
 		return &VectorDecl{schema: s, typ: typ}, true
+	case fidlgen.RequestType:
+		fidlType := s.types[string(typ.RequestSubtype)]
+		protocolDecl, ok := fidlType.(*fidlgen.Protocol)
+		if !ok {
+			panic(fmt.Sprintf("malformed FIDL schema: %+v refers to a %+v but we expect a protocol", typ.RequestSubtype, fidlType))
+		}
+		return &ServerEndDecl{protocolDecl: *protocolDecl, nullable: typ.Nullable}, true
 	default:
-		// TODO(fxbug.dev/36441): RequestType
 		panic("not implemented")
 	}
 }

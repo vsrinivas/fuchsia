@@ -26,6 +26,7 @@ fidl("conformance_fidl") {
     "//src/tests/fidl/conformance_suite/padding.test.fidl",
     "//src/tests/fidl/conformance_suite/persistent.test.fidl",
     "//src/tests/fidl/conformance_suite/primitives.test.fidl",
+    "//src/tests/fidl/conformance_suite/protocol_endpoints.test.fidl",
     "//src/tests/fidl/conformance_suite/recursive_depth.test.fidl",
     "//src/tests/fidl/conformance_suite/recursive_types.test.fidl",
     "//src/tests/fidl/conformance_suite/strings.test.fidl",

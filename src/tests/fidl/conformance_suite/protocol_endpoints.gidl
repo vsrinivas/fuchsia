@@ -1,0 +1,289 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+encode_success("EncodeStructOfEndpoints_ExpectedRights") {
+    // TODO(fxbug.dev/62647): Support protocol endpoints.
+    bindings_allowlist = [cpp],
+    handle_defs = {
+        #0 = channel(rights: channel_default),
+        #1 = channel(rights: channel_default),
+        #2 = channel(rights: channel_default),
+        #3 = channel(rights: channel_default),
+    },
+    value = StructOfEndpoints{
+        client_end: #0,
+        optional_client_end: #1,
+        server_end: #2,
+        optional_server_end: #3,
+    },
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+        ],
+    },
+    handle_dispositions = {
+        v1, v2 = [
+            {#0, type: channel, rights: channel_default},
+            {#1, type: channel, rights: channel_default},
+            {#2, type: channel, rights: channel_default},
+            {#3, type: channel, rights: channel_default},
+        ],
+    },
+}
+
+encode_success("EncodeStructOfEndpoints_TypeAndRightsComeFromFIDL") {
+    // TODO(fxbug.dev/62647): Support protocol endpoints.
+    bindings_allowlist = [cpp],
+    // These types and rights should be ignored by the encoder.
+    // The output types and rights metadata should come from FIDL schema.
+    handle_defs = {
+        #0 = event(rights: event_default),
+        #1 = event(rights: event_default),
+        #2 = event(rights: event_default),
+        #3 = event(rights: event_default),
+    },
+    value = StructOfEndpoints{
+        client_end: #0,
+        optional_client_end: #1,
+        server_end: #2,
+        optional_server_end: #3,
+    },
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+        ],
+    },
+    handle_dispositions = {
+        v1, v2 = [
+            {#0, type: channel, rights: channel_default},
+            {#1, type: channel, rights: channel_default},
+            {#2, type: channel, rights: channel_default},
+            {#3, type: channel, rights: channel_default},
+        ],
+    },
+}
+
+decode_success("DecodeStructOfEndpoints_ExpectedRights") {
+    // TODO(fxbug.dev/62647): Support protocol endpoints.
+    bindings_allowlist = [cpp],
+    handle_defs = {
+        #0 = channel(rights: channel_default),
+        #1 = channel(rights: channel_default),
+        #2 = channel(rights: channel_default),
+        #3 = channel(rights: channel_default),
+    },
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2, #3,
+        ],
+    },
+    value = StructOfEndpoints{
+        client_end: #0,
+        optional_client_end: #1,
+        server_end: #2,
+        optional_server_end: #3,
+    },
+}
+
+decode_failure("DecodeStructOfEndpoints_WrongType") {
+    // TODO(fxbug.dev/62647): Support protocol endpoints.
+    bindings_allowlist = [cpp],
+    handle_defs = {
+        #0 = channel(rights: channel_default),
+        #1 = channel(rights: channel_default),
+        #2 = event(rights: event_default),
+        #3 = channel(rights: channel_default),
+    },
+    type = StructOfEndpoints,
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2, #3,
+        ],
+    },
+    err = INCORRECT_HANDLE_TYPE,
+}
+
+decode_failure("DecodeStructOfEndpoints_InsufficientRights") {
+    // TODO(fxbug.dev/62647): Support protocol endpoints.
+    bindings_allowlist = [cpp],
+    handle_defs = {
+        #0 = channel(rights: channel_default),
+        #1 = channel(rights: channel_default - signal),
+        #2 = channel(rights: channel_default),
+        #3 = channel(rights: channel_default),
+    },
+    type = StructOfEndpoints,
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+            repeat(0xff):4,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0, #1, #2, #3,
+        ],
+    },
+    err = MISSING_REQUIRED_HANDLE_RIGHTS,
+}
+
+success("StructOfEndpoints_Absent") {
+    // TODO(fxbug.dev/62647): Support protocol endpoints.
+    bindings_allowlist = [cpp],
+    handle_defs = {
+        #0 = channel(),
+        #1 = channel(),
+    },
+    value = StructOfEndpoints{
+        client_end: #0,
+        server_end: #1,
+    },
+    bytes = {
+        v1, v2 = [
+            repeat(0xff):4,
+            repeat(0x00):4,
+            repeat(0xff):4,
+            repeat(0x00):4,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0,
+            #1,
+        ],
+    },
+}
+
+success("TableOfEndpoints") {
+    // TODO(fxbug.dev/62647): Support protocol endpoints.
+    bindings_allowlist = [cpp],
+    handle_defs = {
+        #0 = channel(),
+        #1 = channel(),
+    },
+    value = TableOfEndpoints{
+        t: TableOfEndpointsTable{
+            client_end: #0,
+            server_end: #1,
+        },
+    },
+    bytes = {
+        v1 = [
+            // Header
+            num(2):8,
+            repeat(0xff):8,
+
+            num(8):4, num(1):4,
+            repeat(0xff):8,
+
+            repeat(0xff):4, padding:4,
+
+            num(8):4, num(1):4,
+            repeat(0xff):8,
+
+            repeat(0xff):4, padding:4,
+        ],
+        v2 = [
+            // Header
+            num(2):8,
+            repeat(0xff):8,
+
+            // client_end
+            repeat(0xff):4, num(1):2, num(1):2,
+
+            // server_end
+            repeat(0xff):4, num(1):2, num(1):2,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0,
+            #1,
+        ],
+    },
+}
+
+success("UnionOfEndpoints_ClientEnd") {
+    // TODO(fxbug.dev/62647): Support protocol endpoints.
+    bindings_allowlist = [cpp],
+    handle_defs = {
+        #0 = channel(),
+    },
+    value = UnionOfEndpoints{
+        u: UnionOfEndpointsUnion{
+            client_end: #0,
+        },
+    },
+    bytes = {
+        v1 = [
+            num(1):8,
+            num(8):4, num(1):4, repeat(0xff):8,
+
+            repeat(0xff):4, padding:4,
+        ],
+        v2 = [
+            num(1):8,
+            repeat(0xff):4, num(1):2, num(1):2,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0,
+        ],
+    },
+}
+
+success("UnionOfEndpoints_ServerEnd") {
+    // TODO(fxbug.dev/62647): Support protocol endpoints.
+    bindings_allowlist = [cpp],
+    handle_defs = {
+        #0 = channel(),
+    },
+    value = UnionOfEndpoints{
+        u: UnionOfEndpointsUnion{
+            server_end: #0,
+        },
+    },
+    bytes = {
+        v1 = [
+            num(2):8,
+            num(8):4, num(1):4, repeat(0xff):8,
+
+            repeat(0xff):4, padding:4,
+        ],
+        v2 = [
+            num(2):8,
+            repeat(0xff):4, num(1):2, num(1):2,
+        ],
+    },
+    handles = {
+        v1, v2 = [
+            #0,
+        ],
+    },
+}

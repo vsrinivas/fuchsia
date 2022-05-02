@@ -606,6 +606,8 @@ struct NaturalCodingTraits<cpp17::optional<std::string>, Constraint> {
 #ifdef __Fuchsia__
 template <typename T, typename Constraint>
 struct NaturalCodingTraits<ClientEnd<T>, Constraint> {
+  static constexpr size_t inline_size_v1_no_ee = sizeof(zx_handle_t);
+  static constexpr size_t inline_size_v2 = sizeof(zx_handle_t);
   static constexpr bool is_memcpy_compatible = false;
 
   static void Encode(NaturalEncoder* encoder, ClientEnd<T>* value, size_t offset,
@@ -633,6 +635,8 @@ struct NaturalCodingTraits<ClientEnd<T>, Constraint> {
 
 template <typename T, typename Constraint>
 struct NaturalCodingTraits<ServerEnd<T>, Constraint> {
+  static constexpr size_t inline_size_v1_no_ee = sizeof(zx_handle_t);
+  static constexpr size_t inline_size_v2 = sizeof(zx_handle_t);
   static constexpr bool is_memcpy_compatible = false;
 
   static void Encode(NaturalEncoder* encoder, ServerEnd<T>* value, size_t offset,

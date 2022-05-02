@@ -47,7 +47,7 @@ func (b *equalityCheckBuilder) write(format string, vals ...interface{}) {
 
 func (b *equalityCheckBuilder) createAndAssignVar(val string) string {
 	varName := b.varSeq.next()
-	b.write("[[maybe_unused]] auto& %s = %s;\n", varName, val)
+	b.write("[[maybe_unused]] const auto& %s = %s;\n", varName, val)
 	return varName
 }
 
@@ -106,8 +106,17 @@ func (b *equalityCheckBuilder) visit(actualExpr string, expectedValue gidlir.Val
 		b.assertStringEquals(dereferencedActual, escapeStr(expectedValue))
 		return
 	case gidlir.HandleWithRights:
-		b.visitHandle(actualExpr, expectedValue, decl.(*gidlmixer.HandleDecl))
-		return
+		switch decl := decl.(type) {
+		case *gidlmixer.HandleDecl:
+			b.visitHandle(actualExpr, expectedValue, decl, ownedHandle)
+			return
+		case *gidlmixer.ClientEndDecl:
+			b.visitClientEnd(actualExpr, expectedValue, decl)
+			return
+		case *gidlmixer.ServerEndDecl:
+			b.visitServerEnd(actualExpr, expectedValue, decl)
+			return
+		}
 	case gidlir.Record:
 		switch decl := decl.(type) {
 		case *gidlmixer.StructDecl:
@@ -145,20 +154,42 @@ func (b *equalityCheckBuilder) visit(actualExpr string, expectedValue gidlir.Val
 	panic(fmt.Sprintf("not implemented: %T (decl: %T)", expectedValue, decl))
 }
 
-func (b *equalityCheckBuilder) visitHandle(actualExpr string, expectedValue gidlir.HandleWithRights, decl *gidlmixer.HandleDecl) {
+type handleOwnership int64
+
+const (
+	unownedHandle handleOwnership = iota
+	ownedHandle
+)
+
+func (b *equalityCheckBuilder) visitHandle(actualExpr string, expectedValue gidlir.HandleWithRights, decl *gidlmixer.HandleDecl, ownership handleOwnership) {
 	actualVar := b.createAndAssignVar(actualExpr)
 	resultVar := b.varSeq.next()
+	var handleValueExpr string
+	switch ownership {
+	case unownedHandle:
+		handleValueExpr = fmt.Sprintf("%s->get()", actualVar)
+	case ownedHandle:
+		handleValueExpr = fmt.Sprintf("%s.get()", actualVar)
+	}
 	// Check:
 	// - Original handle's koid matches final handle (it could be replaced so can't check handle value).
 	// - Type matches expectation.
 	// - Rights matches expectation.
 	b.write(`
 	zx_info_handle_basic_t %[1]s_info;
-	ASSERT_OK(zx_object_get_info(%[2]s.get(), ZX_INFO_HANDLE_BASIC, &%[1]s_info, sizeof(%[1]s_info), nullptr, nullptr));
+	ASSERT_OK(zx_object_get_info(%[2]s, ZX_INFO_HANDLE_BASIC, &%[1]s_info, sizeof(%[1]s_info), nullptr, nullptr));
 	ASSERT_EQ(%[1]s_info.koid, %[3]s[%[4]d]);
 	ASSERT_TRUE(%[1]s_info.type == %[5]d || %[5]d == ZX_OBJ_TYPE_NONE);
 	ASSERT_TRUE(%[1]s_info.rights == %[6]d || %[6]d == ZX_RIGHT_SAME_RIGHTS);
-  `, resultVar, actualVar, b.handleKoidVectorName, expectedValue.Handle, expectedValue.Type, expectedValue.Rights)
+  `, resultVar, handleValueExpr, b.handleKoidVectorName, expectedValue.Handle, expectedValue.Type, expectedValue.Rights)
+}
+
+func (b *equalityCheckBuilder) visitClientEnd(actualExpr string, expectedValue gidlir.HandleWithRights, decl *gidlmixer.ClientEndDecl) {
+	b.visitHandle(fmt.Sprintf("(%s).handle()", actualExpr), expectedValue, decl.UnderlyingHandleDecl(), unownedHandle)
+}
+
+func (b *equalityCheckBuilder) visitServerEnd(actualExpr string, expectedValue gidlir.HandleWithRights, decl *gidlmixer.ServerEndDecl) {
+	b.visitHandle(fmt.Sprintf("(%s).handle()", actualExpr), expectedValue, decl.UnderlyingHandleDecl(), unownedHandle)
 }
 
 func (b *equalityCheckBuilder) visitStruct(actualExpr string, expectedValue gidlir.Record, decl *gidlmixer.StructDecl) {

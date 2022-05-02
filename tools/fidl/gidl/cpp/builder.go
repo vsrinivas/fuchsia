@@ -62,6 +62,13 @@ func (b *builder) construct(typename string, isPointer bool, fmtStr string, args
 	return fmt.Sprintf("std::make_unique<%s>(%s)", typename, val)
 }
 
+func (b *builder) adoptHandle(decl gidlmixer.Declaration, value gidlir.HandleWithRights) string {
+	if b.handleRepr == handleReprDisposition || b.handleRepr == handleReprInfo {
+		return fmt.Sprintf("%s(handle_defs[%d].handle)", typeName(decl), value.Handle)
+	}
+	return fmt.Sprintf("%s(handle_defs[%d])", typeName(decl), value.Handle)
+}
+
 func formatPrimitive(value gidlir.Value) string {
 	switch value := value.(type) {
 	case int64:
@@ -103,10 +110,14 @@ func (a *builder) visit(value gidlir.Value, decl gidlmixer.Declaration) string {
 	case string:
 		return a.construct(typeNameIgnoreNullable(decl), isPointer, "%q, %d", value, len(value))
 	case gidlir.HandleWithRights:
-		if a.handleRepr == handleReprDisposition || a.handleRepr == handleReprInfo {
-			return fmt.Sprintf("%s(handle_defs[%d].handle)", typeName(decl), value.Handle)
+		switch decl := decl.(type) {
+		case *gidlmixer.HandleDecl:
+			return a.adoptHandle(decl, value)
+		case *gidlmixer.ClientEndDecl:
+			return fmt.Sprintf("%s(%s)", typeName(decl), a.adoptHandle(decl.UnderlyingHandleDecl(), value))
+		case *gidlmixer.ServerEndDecl:
+			return fmt.Sprintf("%s(%s)", typeName(decl), a.adoptHandle(decl.UnderlyingHandleDecl(), value))
 		}
-		return fmt.Sprintf("%s(handle_defs[%d])", typeName(decl), value.Handle)
 	case gidlir.Record:
 		switch decl := decl.(type) {
 		case *gidlmixer.StructDecl:
@@ -254,8 +265,6 @@ func typeNameImpl(decl gidlmixer.Declaration, ignoreNullable bool) string {
 			return fmt.Sprintf("std::unique_ptr<%s>", declName(decl))
 		}
 		return declName(decl)
-	case gidlmixer.NamedDeclaration:
-		return declName(decl)
 	case *gidlmixer.ArrayDecl:
 		return fmt.Sprintf("std::array<%s, %d>", typeName(decl.Elem()), decl.Size())
 	case *gidlmixer.VectorDecl:
@@ -274,6 +283,12 @@ func typeNameImpl(decl gidlmixer.Declaration, ignoreNullable bool) string {
 		default:
 			panic(fmt.Sprintf("Handle subtype not supported %s", decl.Subtype()))
 		}
+	case *gidlmixer.ClientEndDecl:
+		return fmt.Sprintf("fidl::ClientEnd<%s>", endpointDeclName(decl))
+	case *gidlmixer.ServerEndDecl:
+		return fmt.Sprintf("fidl::ServerEnd<%s>", endpointDeclName(decl))
+	case gidlmixer.NamedDeclaration:
+		return declName(decl)
 	default:
 		panic("unhandled case")
 	}
@@ -288,8 +303,13 @@ func typeNameIgnoreNullable(decl gidlmixer.Declaration) string {
 }
 
 func declName(decl gidlmixer.NamedDeclaration) string {
-	// Note: only works for domain objects (not protocols & services)
 	parts := strings.SplitN(decl.Name(), "/", 2)
+	return fmt.Sprintf("%s::%s", strings.ReplaceAll(parts[0], ".", "_"), fidlgen.ToUpperCamelCase(parts[1]))
+}
+
+func endpointDeclName(decl gidlmixer.EndpointDeclaration) string {
+	// TODO(fxbug.dev/62647): Only works in new C++ bindings, not HLCPP.
+	parts := strings.SplitN(decl.ProtocolName(), "/", 2)
 	return fmt.Sprintf("%s::%s", strings.ReplaceAll(parts[0], ".", "_"), fidlgen.ToUpperCamelCase(parts[1]))
 }
 
