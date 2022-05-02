@@ -1259,7 +1259,7 @@ main(int argc, char const * argv[])
           "Count, "
           "CPU, "
           "Algo, "
-          "Msecs, "
+          "Usecs, "
           "Mkeys/s, "
           "GPU, "
           "Trials, ");
@@ -1442,25 +1442,31 @@ main(int argc, char const * argv[])
                                      sizeof(timestamps[0]),
                                      VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT));
 
-              // split times
-              for (uint32_t jj = 0; jj < ext_timestamps.timestamps_set - 1; jj++)
+              //
+              // Any timestamps?
+              //
+              if (ext_timestamps.timestamps_set > 0)
                 {
-                  uint64_t const t = timestamps[jj + 1] - timestamps[jj];
+                  // split times
+                  for (uint32_t jj = 0; jj < ext_timestamps.timestamps_set - 1; jj++)
+                    {
+                      uint64_t const t = timestamps[jj + 1] - timestamps[jj];
 
-                  elapsed_min[jj] = MIN_MACRO(uint64_t, elapsed_min[jj], t);
-                  elapsed_max[jj] = MAX_MACRO(uint64_t, elapsed_max[jj], t);
-                  elapsed_sum[jj] += t;
+                      elapsed_min[jj] = MIN_MACRO(uint64_t, elapsed_min[jj], t);
+                      elapsed_max[jj] = MAX_MACRO(uint64_t, elapsed_max[jj], t);
+                      elapsed_sum[jj] += t;
+                    }
+
+                  // total time
+                  {
+                    uint32_t const last = ext_timestamps.timestamps_set - 1;
+                    uint64_t const t    = timestamps[last] - timestamps[0];
+
+                    elapsed_min[last] = MIN_MACRO(uint64_t, elapsed_min[last], t);
+                    elapsed_max[last] = MAX_MACRO(uint64_t, elapsed_max[last], t);
+                    elapsed_sum[last] += t;
+                  }
                 }
-
-              // total time
-              {
-                uint32_t const last = ext_timestamps.timestamps_set - 1;
-                uint64_t const t    = timestamps[last] - timestamps[0];
-
-                elapsed_min[last] = MIN_MACRO(uint64_t, elapsed_min[last], t);
-                elapsed_max[last] = MAX_MACRO(uint64_t, elapsed_max[last], t);
-                elapsed_sum[last] += t;
-              }
             }
         }
 
@@ -1474,7 +1480,7 @@ main(int argc, char const * argv[])
         {
           for (uint32_t ii = 0; ii < ext_timestamps.timestamps_set; ii++)
             {
-              fprintf(stdout, "Min Msecs, ");
+              fprintf(stdout, "Min Usecs, ");
             }
 
           fprintf(stdout, "Max Mkeys/s\n");
@@ -1628,7 +1634,7 @@ main(int argc, char const * argv[])
       // timestamps are in nanoseconds
       //
       fprintf(stdout,
-              "%s, %u.%u.%u.%u, %s, %s, %s, %10u, CPU, %s, %9.3f, %6.2f, GPU, %9u, ",
+              "%s, %u.%u.%u.%u, %s, %s, %s, %10u, CPU, %s, %12.3f, %7.2f, GPU, %9u, ",
               pdp.deviceName,
               VK_API_VERSION_VARIANT(pdp.driverVersion),
               VK_API_VERSION_MAJOR(pdp.driverVersion),
@@ -1636,11 +1642,11 @@ main(int argc, char const * argv[])
               VK_API_VERSION_PATCH(pdp.driverVersion),
               is_direct ? "direct" : "indirect",
               (rs_mr.keyval_size == sizeof(uint32_t)) ? "uint" : "ulong",
-              is_verify ? (verified ? "  OK  " : "*FAIL*") : "UNVERIFIED",
+              is_verify ? (verified ? "    OK" : "*FAIL*") : "UNVERIFIED",
               count,
               // CPU
               is_verify ? cpu_algo : "UNVERIFIED",
-              is_verify ? (cpu_ns / 1000000.0) : 0.0,       // milliseconds
+              is_verify ? (cpu_ns / 1e3) : 0.0,             // usecs
               is_verify ? (1000.0 * count / cpu_ns) : 0.0,  // mkeys / sec
               loops);
 
@@ -1651,7 +1657,7 @@ main(int argc, char const * argv[])
           {
             elapsed_ns_min_f64 = (double)elapsed_min[ii] * vk_timestamp_period;
 
-            fprintf(stdout, "%8.3f, ", elapsed_ns_min_f64 / 1e6);
+            fprintf(stdout, "%12.3f, ", elapsed_ns_min_f64 / 1e3);
           }
 
         fprintf(stdout, "%7.2f\n", 1000.0 * count / elapsed_ns_min_f64);
