@@ -9,7 +9,7 @@ use std::os::raw::c_char;
 #[must_use = "pointers to this type should never be dereferenced"]
 pub struct fx_logger_t {}
 
-pub type fx_log_severity_t = i32;
+pub type fx_log_severity_t = i8;
 
 #[repr(C)]
 pub struct fx_logger_config_t {
@@ -23,15 +23,16 @@ pub struct fx_logger_config_t {
 }
 
 // Constants defined via logger.fidl
-pub const FX_LOG_TRACE: fx_log_severity_t = flogger::LogLevelFilter::Trace as i32;
-pub const FX_LOG_DEBUG: fx_log_severity_t = flogger::LogLevelFilter::Debug as i32;
-pub const FX_LOG_INFO: fx_log_severity_t = flogger::LogLevelFilter::Info as i32;
-pub const FX_LOG_WARN: fx_log_severity_t = flogger::LogLevelFilter::Warn as i32;
-pub const FX_LOG_ERROR: fx_log_severity_t = flogger::LogLevelFilter::Error as i32;
-pub const FX_LOG_FATAL: fx_log_severity_t = flogger::LogLevelFilter::Fatal as i32;
+pub const FX_LOG_TRACE: fx_log_severity_t = flogger::LogLevelFilter::Trace.into_primitive();
+pub const FX_LOG_DEBUG: fx_log_severity_t = flogger::LogLevelFilter::Debug.into_primitive();
+pub const FX_LOG_INFO: fx_log_severity_t = flogger::LogLevelFilter::Info.into_primitive();
+pub const FX_LOG_WARN: fx_log_severity_t = flogger::LogLevelFilter::Warn.into_primitive();
+pub const FX_LOG_ERROR: fx_log_severity_t = flogger::LogLevelFilter::Error.into_primitive();
+pub const FX_LOG_FATAL: fx_log_severity_t = flogger::LogLevelFilter::Fatal.into_primitive();
 
-pub const FX_LOG_VERBOSITY_STEP_SIZE: i32 = flogger::LOG_VERBOSITY_STEP_SIZE as i32;
-pub const FX_LOG_SEVERITY_DEFAULT: fx_log_severity_t = flogger::LOG_LEVEL_DEFAULT as i32;
+pub const FX_LOG_SEVERITY_DEFAULT: fx_log_severity_t = flogger::LOG_LEVEL_DEFAULT.into_primitive();
+
+pub const FX_LOG_VERBOSITY_STEP_SIZE: u8 = flogger::LOG_VERBOSITY_STEP_SIZE;
 
 #[link(name = "syslog")]
 #[allow(improper_ctypes)]

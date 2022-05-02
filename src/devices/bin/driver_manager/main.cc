@@ -28,6 +28,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 #include <memory>
 
 #include <fbl/string_printf.h>
@@ -247,7 +248,10 @@ int main(int argc, char** argv) {
   auto driver_manager_args = ParseDriverManagerArgs(argc, argv);
 
   if (driver_manager_params.verbose) {
-    FX_LOG_SET_SEVERITY(ALL);
+    fx_logger_t* logger = fx_log_get_logger();
+    if (logger) {
+      fx_logger_set_min_severity(logger, std::numeric_limits<fx_log_severity_t>::min());
+    }
   }
   if (driver_manager_params.log_to_debuglog || driver_manager_args.log_to_debuglog) {
     status = log_to_debuglog();

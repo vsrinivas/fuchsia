@@ -231,7 +231,7 @@ impl Puppet {
     async fn emit_packet(&self) -> MessageReceipt {
         let timestamp = zx::Time::get_monotonic().into_nanos();
         let mut packet: fx_log_packet_t = Default::default();
-        packet.metadata.severity = fuchsia_syslog::levels::INFO;
+        packet.metadata.severity = i32::from(fuchsia_syslog::levels::INFO);
         packet.metadata.time = timestamp;
         packet.fill_data(1..(TEST_PACKET_LEN - METADATA_SIZE), b'A' as _);
         self.proxy.emit_packet(packet.as_bytes()).await.unwrap();

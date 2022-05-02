@@ -139,7 +139,9 @@ async fn same_log_sink_simultaneously_via_connector() {
     assert!(archivist.wait().await.unwrap().success());
     assert_eq!(
         logs,
-        std::iter::repeat((INFO, "repeated log".to_owned())).take(250).collect::<Vec<_>>()
+        std::iter::repeat((i32::from(INFO), "repeated log".to_owned()))
+            .take(250)
+            .collect::<Vec<_>>()
     );
 }
 

@@ -26,8 +26,9 @@ constexpr LogSeverity LOG_FATAL = 0x60;
 constexpr LogSeverity LOG_NONE = 0x7F;
 
 constexpr LogSeverity DefaultLogLevel = LOG_INFO;
-constexpr int LogSeverityStepSize = 0x10;
-constexpr int LogVerbosityStepSize = 0x1;
+
+constexpr uint8_t LogSeverityStepSize = 0x10;
+constexpr uint8_t LogVerbosityStepSize = 0x1;
 
 // LOG_DFATAL is LOG_FATAL in debug mode, LOG_ERROR in normal mode
 #ifdef NDEBUG

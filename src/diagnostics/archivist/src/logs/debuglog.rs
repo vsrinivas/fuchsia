@@ -208,7 +208,7 @@ mod tests {
                 pid: klog.record.pid,
                 tid: klog.record.tid,
                 time: klog.record.timestamp,
-                severity: fuchsia_syslog::levels::INFO,
+                severity: i32::from(fuchsia_syslog::levels::INFO),
                 dropped_logs: 0,
                 tags: vec!["klog".to_string()],
                 msg: "test log".to_string(),

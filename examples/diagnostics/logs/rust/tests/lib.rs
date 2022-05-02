@@ -19,7 +19,7 @@ async fn launch_example_and_read_hello_world() {
     pin_utils::pin_mut!(logs);
 
     let (next, new_next) = (logs.next().await.unwrap(), new_logs.next().await.unwrap());
-    assert_eq!(next.severity, syslog::levels::INFO);
+    assert_eq!(next.severity, i32::from(syslog::levels::INFO));
     assert_eq!(next.tags, vec!["logs_example"]);
     assert_eq!(next.msg, "should print");
     assert_ne!(next.pid, 0);
@@ -36,7 +36,7 @@ async fn launch_example_and_read_hello_world() {
     });
 
     let (next, new_next) = (logs.next().await.unwrap(), new_logs.next().await.unwrap());
-    assert_eq!(next.severity, syslog::levels::INFO);
+    assert_eq!(next.severity, i32::from(syslog::levels::INFO));
     assert_eq!(next.tags, vec!["logs_example"]);
     assert_eq!(next.msg, "hello, world! bar=baz foo=1");
     assert_ne!(next.pid, 0);
@@ -60,7 +60,7 @@ async fn launch_example_and_read_hello_world() {
     });
 
     let (next, new_next) = (logs.next().await.unwrap(), new_logs.next().await.unwrap());
-    assert_eq!(next.severity, syslog::levels::WARN);
+    assert_eq!(next.severity, i32::from(syslog::levels::WARN));
     assert_eq!(next.tags, vec!["logs_example"]);
     assert_eq!(next.msg, "warning: using old api");
     assert_ne!(next.pid, 0);

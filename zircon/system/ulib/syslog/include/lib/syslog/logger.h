@@ -16,37 +16,38 @@
 #include <unistd.h>
 #include <zircon/types.h>
 
+__BEGIN_CDECLS
+
 // Max no of tags associated with a logger.
 #define FX_LOG_MAX_TAGS (4)
 
 // Max individual tag length including terminating character.
 #define FX_LOG_MAX_TAG_LEN (64)
 
-// Step size between discrete values that define log severity.
-#define FX_LOG_SEVERITY_STEP_SIZE (16)
-
-// Step size between discrete values that define log verbosity.
-#define FX_LOG_VERBOSITY_STEP_SIZE (1)
-
 // Log entry severity. Used for coarse filtering of log messages.
-typedef int fx_log_severity_t;
-#define FX_LOG_ALL (-0x7F)
-#define FX_LOG_TRACE (0x10)    // 1 * FX_LOG_SEVERITY_STEP_SIZE
-#define FX_LOG_DEBUG (0x20)    // 2 * FX_LOG_SEVERITY_STEP_SIZE
-#define FX_LOG_INFO (0x30)     // 3 * FX_LOG_SEVERITY_STEP_SIZE
-#define FX_LOG_WARNING (0x40)  // 4 * FX_LOG_SEVERITY_STEP_SIZE
-#define FX_LOG_ERROR (0x50)    // 5 * FX_LOG_SEVERITY_STEP_SIZE
-#define FX_LOG_FATAL (0x60)    // 6 * FX_LOG_SEVERITY_STEP_SIZE
-#define FX_LOG_NONE (0x7F)
+typedef int8_t fx_log_severity_t;
 
-#define FX_LOG_SEVERITY_MAX (6)  // FX_LOG_FATAL
+#define FX_LOG_TRACE ((fx_log_severity_t)0x10)    // 1 * FX_LOG_SEVERITY_STEP_SIZE
+#define FX_LOG_DEBUG ((fx_log_severity_t)0x20)    // 2 * FX_LOG_SEVERITY_STEP_SIZE
+#define FX_LOG_INFO ((fx_log_severity_t)0x30)     // 3 * FX_LOG_SEVERITY_STEP_SIZE
+#define FX_LOG_WARNING ((fx_log_severity_t)0x40)  // 4 * FX_LOG_SEVERITY_STEP_SIZE
+#define FX_LOG_ERROR ((fx_log_severity_t)0x50)    // 5 * FX_LOG_SEVERITY_STEP_SIZE
+#define FX_LOG_FATAL ((fx_log_severity_t)0x60)    // 6 * FX_LOG_SEVERITY_STEP_SIZE
+
+#define FX_LOG_NONE ((fx_log_severity_t)0x7F)
 
 // Default log severity used in the standard logger config. To create a
 // build that uses a higher/lower level of severity as the threshold
 // for printed logs, redefine this on the command line.
 #define FX_LOG_SEVERITY_DEFAULT (FX_LOG_INFO)
 
-__BEGIN_CDECLS
+// Step size between discrete values that define log severity.
+#define FX_LOG_SEVERITY_STEP_SIZE ((uint8_t)0x10)
+
+// Step size between discrete values that define log verbosity.
+#define FX_LOG_VERBOSITY_STEP_SIZE ((uint8_t)0x1)
+
+#define FX_LOG_SEVERITY_MAX ((fx_log_severity_t)6)  // FX_LOG_FATAL
 
 // Configuration for a logger object.
 // Specifies the destination to which log messages should be written.

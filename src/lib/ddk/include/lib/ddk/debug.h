@@ -48,7 +48,7 @@ __BEGIN_CDECLS
 // Serial messages are intended for low-level debugging, and
 // should always be written to debuglog. They are not displayed
 // by default.
-#define DDK_LOG_SERIAL INT32_MIN
+#define DDK_LOG_SERIAL ((fx_log_severity_t)INT8_MIN)
 
 // Do not use this function directly, use zxlog_level_enabled() instead.
 bool driver_log_severity_enabled_internal(const zx_driver_t* drv, fx_log_severity_t flag);

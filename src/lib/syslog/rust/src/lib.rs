@@ -21,7 +21,7 @@ pub mod levels {
     use crate::syslog;
 
     /// Defines log levels for clients.
-    pub type LogLevel = i32;
+    pub type LogLevel = i8;
 
     /// TRACE log level
     pub const TRACE: LogLevel = syslog::FX_LOG_TRACE;
@@ -299,12 +299,12 @@ lazy_static! {
 }
 
 /// macro helper function to convert strings and call log
-pub fn log_helper(args: Arguments<'_>, lvl: i32, tag: &str) {
+pub fn log_helper(args: Arguments<'_>, lvl: levels::LogLevel, tag: &str) {
     LOGGER.log_f(lvl, args, Some(tag));
 }
 
 /// macro helper function to convert strings and call log with null tag
-pub fn log_helper_null(args: Arguments<'_>, lvl: i32) {
+pub fn log_helper_null(args: Arguments<'_>, lvl: levels::LogLevel) {
     LOGGER.log_f(lvl, args, None);
 }
 
@@ -440,14 +440,20 @@ pub fn set_severity(severity: levels::LogLevel) {
 /// Get the severity corresponding to the given verbosity. Note that
 /// verbosity relative to the default severity and can be thought of
 /// as incrementally "more vebose than" the baseline.
-pub fn get_severity_from_verbosity(mut verbosity: i32) -> i32 {
-    verbosity = std::cmp::max(0, verbosity);
+pub fn get_severity_from_verbosity(verbosity: i32) -> levels::LogLevel {
+    use std::convert::TryFrom as _;
+
+    let verbosity = u8::try_from(verbosity).unwrap_or(0);
 
     // verbosity scale sits in the interstitial space between INFO and DEBUG
-    std::cmp::max(
-        syslog::FX_LOG_DEBUG + 1,
-        syslog::FX_LOG_INFO - (verbosity * syslog::FX_LOG_VERBOSITY_STEP_SIZE),
-    )
+    let default = syslog::FX_LOG_DEBUG + 1;
+    match i8::try_from(verbosity * syslog::FX_LOG_VERBOSITY_STEP_SIZE) {
+        Err(std::num::TryFromIntError { .. }) => default,
+        Ok(offset) => match syslog::FX_LOG_INFO.checked_sub(offset) {
+            None => default,
+            Some(severity) => std::cmp::max(severity, default),
+        },
+    }
 }
 
 /// Set default logger verbosity.

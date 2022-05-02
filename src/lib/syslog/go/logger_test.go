@@ -59,10 +59,10 @@ func (impl *logSinkImpl) WaitForInterestChange(fidl.Context) (logger.LogSinkWait
 
 func TestLogSimple(t *testing.T) {
 	actual := bytes.Buffer{}
-	log, err := syslog.NewLogger(syslog.LogInitOptions{
-		MinSeverityForFileAndLineInfo: syslog.ErrorLevel,
-		Writer:                        &actual,
-	})
+	var options syslog.LogInitOptions
+	options.MinSeverityForFileAndLineInfo = syslog.ErrorLevel
+	options.Writer = &actual
+	log, err := syslog.NewLogger(options)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,12 +120,13 @@ func setup(t *testing.T, tags ...string) (chan<- logger.LogSinkWaitForInterestCh
 		})
 	}()
 
-	log, err := syslog.NewLogger(syslog.LogInitOptions{
-		LogSink:                       logSink,
-		LogLevel:                      syslog.InfoLevel,
-		MinSeverityForFileAndLineInfo: syslog.ErrorLevel,
-		Tags:                          tags,
-	})
+	options := syslog.LogInitOptions{
+		LogLevel: syslog.InfoLevel,
+	}
+	options.LogSink = logSink
+	options.MinSeverityForFileAndLineInfo = syslog.ErrorLevel
+	options.Tags = tags
+	log, err := syslog.NewLogger(options)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -362,9 +363,8 @@ func TestLoggerRegisterInterest(t *testing.T) {
 }
 
 func TestGlobalTagLimits(t *testing.T) {
-	options := syslog.LogInitOptions{
-		Writer: os.Stdout,
-	}
+	var options syslog.LogInitOptions
+	options.Writer = os.Stdout
 	var tags [logger.MaxTags + 1]string
 	for i := 0; i < len(tags); i++ {
 		tags[i] = "a"

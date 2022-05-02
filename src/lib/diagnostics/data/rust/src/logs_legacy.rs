@@ -213,7 +213,7 @@ mod test {
 
     macro_rules! severity_roundtrip_test {
         ($raw:expr, $expected:expr) => {
-            let legacy = LegacySeverity::try_from($raw).unwrap();
+            let legacy = LegacySeverity::try_from(i32::from($raw)).unwrap();
             let (severity, verbosity) = legacy.for_structured();
             let mut msg = LogsDataBuilder::new(BuilderArgs {
                 timestamp_nanos: 0i64.into(),
@@ -228,9 +228,13 @@ mod test {
 
             let legacy_msg: LogMessage = (&msg).into();
             assert_eq!(
-                legacy_msg.severity, $expected,
+                legacy_msg.severity,
+                i32::from($expected),
                 "failed to round trip severity for {:?} (raw {}), intermediates: {:#?}\n{:#?}",
-                legacy, $raw, msg, legacy_msg
+                legacy,
+                $raw,
+                msg,
+                legacy_msg
             );
         };
     }

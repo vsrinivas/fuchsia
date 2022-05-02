@@ -35,6 +35,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 
+#include <limits>
 #include <memory>
 #include <new>
 #include <utility>
@@ -244,7 +245,7 @@ static fx_log_severity_t log_min_severity(const char* name, const char* flag) {
     return DDK_LOG_SERIAL;
   }
   LOGF(WARNING, "Invalid minimum log severity '%s' for driver '%s', will log all", flag, name);
-  return FX_LOG_ALL;
+  return std::numeric_limits<fx_log_severity_t>::min();
 }
 
 zx_status_t log_rpc_result(const fbl::RefPtr<zx_device_t>& dev, const char* opname,
@@ -905,7 +906,9 @@ int main(int argc, char** argv) {
   zx::process::self()->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
   const char* tags[] = {process_name, "device"};
   fx_logger_config_t config{
-      .min_severity = getenv_bool("devmgr.verbose", false) ? FX_LOG_ALL : FX_LOG_SEVERITY_DEFAULT,
+      .min_severity = getenv_bool("devmgr.verbose", false)
+                          ? std::numeric_limits<fx_log_severity_t>::min()
+                          : FX_LOG_SEVERITY_DEFAULT,
       .console_fd = getenv_bool("devmgr.log-to-debuglog", false) ? dup(STDOUT_FILENO) : -1,
       .log_service_channel = ZX_HANDLE_INVALID,
       .tags = tags,

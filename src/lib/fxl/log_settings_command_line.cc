@@ -61,10 +61,7 @@ bool ParseLogSettings(const fxl::CommandLine& command_line, syslog::LogSettings*
       return false;
     }
 
-    // verbosity scale sits in the interstitial space between INFO and DEBUG
-    settings.min_log_level = std::max<syslog::LogSeverity>(
-        syslog::LOG_INFO - static_cast<syslog::LogSeverity>(level * syslog::LogVerbosityStepSize),
-        syslog::LOG_DEBUG + 1);
+    settings.min_log_level = GetSeverityFromVerbosity(level);
   }
 #ifndef __Fuchsia__
   // --log-file=<file>

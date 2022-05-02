@@ -8,24 +8,27 @@
 #include <stdint.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
+
 __BEGIN_CDECLS
 
 // REVIEWERS: DO NOT +2 any changes to this header
 // file unless this number is incremented with each change.
 #define FUCHSIA_LOG_API_VERSION (0)
 
+typedef int8_t FuchsiaLogSeverity;
+
 // Default log levels.
-#define FUCHSIA_LOG_TRACE (0x10)
-#define FUCHSIA_LOG_DEBUG (0x20)
-#define FUCHSIA_LOG_INFO (0x30)
-#define FUCHSIA_LOG_WARNING (0x40)
-#define FUCHSIA_LOG_ERROR (0x50)
-#define FUCHSIA_LOG_FATAL (0x60)
+#define FUCHSIA_LOG_TRACE ((FuchsiaLogSeverity)0x10)
+#define FUCHSIA_LOG_DEBUG ((FuchsiaLogSeverity)0x20)
+#define FUCHSIA_LOG_INFO ((FuchsiaLogSeverity)0x30)
+#define FUCHSIA_LOG_WARNING ((FuchsiaLogSeverity)0x40)
+#define FUCHSIA_LOG_ERROR ((FuchsiaLogSeverity)0x50)
+#define FUCHSIA_LOG_FATAL ((FuchsiaLogSeverity)0x60)
 
-#define FUCHSIA_LOG_NONE (0x7F)
+#define FUCHSIA_LOG_NONE ((FuchsiaLogSeverity)0x7F)
 
-#define FUCHSIA_LOG_SEVERITY_STEP_SIZE (0x10)
-#define FUCHSIA_LOG_VERBOSITY_STEP_SIZE (0x1)
+#define FUCHSIA_LOG_SEVERITY_STEP_SIZE ((uint8_t)0x10)
+#define FUCHSIA_LOG_VERBOSITY_STEP_SIZE ((uint8_t)0x1)
 
 // Max size of log buffer
 #define FUCHSIA_SYSLOG_BUFFER_SIZE ((1 << 15) / 8)
@@ -65,8 +68,6 @@ typedef struct fuchsia_log_buffer {
   // for this is backend-specific.
   uint64_t data[FUCHSIA_SYSLOG_BUFFER_SIZE];
 } fuchsia_syslog_log_buffer_t;
-
-typedef int8_t FuchsiaLogSeverity;
 
 // THIS IS DEPRECATED! Please use syslog_begin_record_transitional instead.
 void syslog_begin_record(fuchsia_syslog_log_buffer_t* buffer, FuchsiaLogSeverity severity,

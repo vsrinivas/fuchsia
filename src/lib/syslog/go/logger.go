@@ -14,6 +14,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"runtime"
 	"strconv"
@@ -42,7 +43,7 @@ const (
 	TraceVerbosity
 )
 
-type LogLevel int32
+type LogLevel int8
 
 const (
 	TraceLevel   = LogLevel(logger.LogLevelFilterTrace)
@@ -75,7 +76,7 @@ func (ll *LogLevel) Set(s string) error {
 func logLevelFromString(s string) LogLevel {
 	switch s {
 	case "ALL":
-		return TraceLevel
+		return math.MinInt8
 	case "TRACE":
 		return TraceLevel
 	case "DEBUG":
@@ -95,6 +96,8 @@ func logLevelFromString(s string) LogLevel {
 
 func (ll LogLevel) String() string {
 	switch ll {
+	case math.MinInt8:
+		return "ALL"
 	case TraceLevel:
 		return "TRACE"
 	case DebugLevel:
@@ -132,11 +135,16 @@ func (l *Writer) Write(data []byte) (n int, err error) {
 	return origLen, nil
 }
 
+type logOptions struct {
+	LogSink                       *logger.LogSinkWithCtxInterface
+	MinSeverityForFileAndLineInfo LogLevel
+	Tags                          []string
+	Writer                        io.Writer
+}
+
 type LogInitOptions struct {
-	LogSink                                 *logger.LogSinkWithCtxInterface
-	LogLevel, MinSeverityForFileAndLineInfo LogLevel
-	Tags                                    []string
-	Writer                                  io.Writer
+	logOptions
+	LogLevel LogLevel
 }
 
 type Logger struct {
@@ -144,7 +152,8 @@ type Logger struct {
 	cancel context.CancelFunc
 
 	droppedLogs uint32
-	options     LogInitOptions
+	options     logOptions
+	level       int32 // LogLevel; accessed atomically.
 	pid         uint64
 }
 
@@ -158,7 +167,8 @@ func NewLogger(options LogInitOptions) (*Logger, error) {
 		}
 	}
 	l := Logger{
-		options: options,
+		options: options.logOptions,
+		level:   int32(options.LogLevel),
 		pid:     uint64(os.Getpid()),
 	}
 	if logSink := options.LogSink; logSink != nil {
@@ -221,11 +231,12 @@ func NewLogger(options LogInitOptions) (*Logger, error) {
 }
 
 func NewLoggerWithDefaults(tags ...string) (*Logger, error) {
-	return NewLogger(LogInitOptions{
-		LogLevel:                      InfoLevel,
-		MinSeverityForFileAndLineInfo: ErrorLevel,
-		Tags:                          tags,
-	})
+	options := LogInitOptions{
+		LogLevel: InfoLevel,
+	}
+	options.MinSeverityForFileAndLineInfo = ErrorLevel
+	options.Tags = tags
+	return NewLogger(options)
 }
 
 func (l *Logger) Close() error {
@@ -335,7 +346,7 @@ func (l *Logger) logToSocket(time zx.Time, logLevel LogLevel, tag, msg string) e
 }
 
 func (l *Logger) logf(callDepth int, logLevel LogLevel, tag string, format string, a ...interface{}) error {
-	if LogLevel(atomic.LoadInt32((*int32)(&l.options.LogLevel))) > logLevel {
+	if LogLevel(atomic.LoadInt32(&l.level)) > logLevel {
 		return nil
 	}
 	time := zx.Sys_clock_get_monotonic()
@@ -380,7 +391,7 @@ func (l *Logger) logf(callDepth int, logLevel LogLevel, tag string, format strin
 }
 
 func (l *Logger) SetSeverity(severity diagnostics.Severity) {
-	atomic.StoreInt32((*int32)(&l.options.LogLevel), int32(severity))
+	atomic.StoreInt32(&l.level, int32(severity))
 }
 
 // severityFromVerbosity provides the severity corresponding to the given
@@ -400,7 +411,7 @@ func severityFromVerbosity(verbosity int) LogLevel {
 }
 
 func (l *Logger) SetVerbosity(verbosity int) {
-	atomic.StoreInt32((*int32)(&l.options.LogLevel), int32(severityFromVerbosity(verbosity)))
+	atomic.StoreInt32(&l.level, int32(severityFromVerbosity(verbosity)))
 }
 
 func (l *Logger) Tracef(format string, a ...interface{}) error {
@@ -460,8 +471,8 @@ func (l *Logger) VLogTf(verbosity int, tag, format string, a ...interface{}) err
 }
 
 var defaultLogger = &Logger{
-	options: LogInitOptions{
-		LogLevel:                      InfoLevel,
+	level: int32(InfoLevel),
+	options: logOptions{
 		MinSeverityForFileAndLineInfo: ErrorLevel,
 		Writer:                        os.Stderr,
 	},
@@ -487,14 +498,12 @@ func SetDefaultLogger(l *Logger) {
 
 func SetSeverity(logLevel LogLevel) {
 	if l := GetDefaultLogger(); l != nil {
-		atomic.StoreInt32((*int32)(&l.options.LogLevel), int32(logLevel))
+		atomic.StoreInt32(&l.level, int32(logLevel))
 	}
 }
 
 func SetVerbosity(verbosity int) {
-	if l := GetDefaultLogger(); l != nil {
-		atomic.StoreInt32((*int32)(&l.options.LogLevel), int32(severityFromVerbosity(verbosity)))
-	}
+	SetSeverity(severityFromVerbosity(verbosity))
 }
 
 func Tracef(format string, a ...interface{}) error {

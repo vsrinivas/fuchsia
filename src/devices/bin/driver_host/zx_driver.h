@@ -78,7 +78,7 @@ struct zx_driver : fbl::DoublyLinkedListable<fbl::RefPtr<zx_driver>>, fbl::RefCo
     inspect_.set_status(status);
   }
 
-  zx_status_t set_driver_min_log_severity(uint32_t severity) {
+  zx_status_t set_driver_min_log_severity(fx_log_severity_t severity) {
     inspect_.set_driver_min_log_severity(severity);
     return fx_logger_set_min_severity(logger(), severity);
   }

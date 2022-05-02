@@ -39,7 +39,7 @@ async fn timestamp_sorting_for_batches() {
     let messages = packets
         .iter()
         .map(|p| LogMessage {
-            severity: INFO,
+            severity: i32::from(INFO),
             time: p.metadata.time,
             dropped_logs: 0,
             msg: "timing log".to_owned(),

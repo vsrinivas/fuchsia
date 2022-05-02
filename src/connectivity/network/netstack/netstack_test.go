@@ -69,10 +69,10 @@ func TestMain(m *testing.M) {
 		}
 		appCtx.ConnectToEnvService(req)
 		options := syslog.LogInitOptions{
-			LogSink:                       logSink,
-			LogLevel:                      syslog.TraceLevel,
-			MinSeverityForFileAndLineInfo: syslog.TraceLevel,
+			LogLevel: math.MinInt8,
 		}
+		options.LogSink = logSink
+		options.MinSeverityForFileAndLineInfo = math.MinInt8
 		l, err := syslog.NewLogger(options)
 		if err != nil {
 			panic(fmt.Sprintf("syslog.NewLogger(%#v) = %s", options, err))

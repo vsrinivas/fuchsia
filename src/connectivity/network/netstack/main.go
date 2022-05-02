@@ -216,12 +216,14 @@ func Main() {
 		}
 		appCtx.ConnectToEnvService(req)
 
-		l, err := syslog.NewLogger(syslog.LogInitOptions{
-			LogSink:                       logSink,
-			LogLevel:                      logLevel,
-			MinSeverityForFileAndLineInfo: logLevel,
-			Tags:                          []string{"netstack"},
-		})
+		options := syslog.LogInitOptions{
+			LogLevel: logLevel,
+		}
+		options.LogSink = logSink
+		options.MinSeverityForFileAndLineInfo = logLevel
+		options.Tags = []string{"netstack"}
+
+		l, err := syslog.NewLogger(options)
 		if err != nil {
 			panic(err)
 		}
