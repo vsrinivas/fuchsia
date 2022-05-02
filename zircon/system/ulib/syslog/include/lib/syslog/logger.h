@@ -111,10 +111,8 @@ zx_status_t fx_logger_create(const fx_logger_config_t* config, fx_logger_t** out
 // This will return ZX_ERR_INVALID_ARGS if |num_tags| is more than
 // |FX_LOG_MAX_TAGS|.
 // |config| can be safely deleted after this function returns.
-// |connect| true to attempt early, auto-connection to logging service.
 // Otherwise, false to defer logger connection.
-zx_status_t fx_logger_create_internal(const fx_logger_config_t* config, fx_logger_t** out_logger,
-                                      bool connect);
+zx_status_t fx_logger_create_internal(const fx_logger_config_t* config, fx_logger_t** out_logger);
 
 // Destroys a logger object.
 //

@@ -18,7 +18,7 @@ __WEAK bool HasStructuredBackend() { return false; }
 
 namespace {
 
-fx_logger_t* MakeDefaultLogger(bool connect) {
+fx_logger_t* MakeDefaultLogger() {
   char process_name[ZX_MAX_NAME_LEN] = "";
   const char* tag = process_name;
 
@@ -33,7 +33,7 @@ fx_logger_t* MakeDefaultLogger(bool connect) {
                                .tags = &tag,
                                .num_tags = 1};
   fx_logger_t* logger = NULL;
-  status = fx_logger_create_internal(&config, &logger, connect);
+  status = fx_logger_create_internal(&config, &logger);
   // Making the default logger should never fail.
   ZX_DEBUG_ASSERT(status == ZX_OK);
   return logger;
@@ -41,22 +41,21 @@ fx_logger_t* MakeDefaultLogger(bool connect) {
 
 }  // namespace
 
-fx_logger_t* get_or_create_global_logger(bool connect) {
+fx_logger_t* get_or_create_global_logger() {
   // Upon initialization, the default logger is either provided with a
   // socket connection, or a fallback file-descriptor (which it will use)
   // or it will be initialized to log to STDERR. This object is contructed on
   // the first call to this function and will be leaked on shutdown.
-  static fx_logger_t* logger = MakeDefaultLogger(connect);
+  static fx_logger_t* logger = MakeDefaultLogger();
   return logger;
 }
 
 SYSLOG_EXPORT
-fx_logger_t* fx_log_get_logger() { return get_or_create_global_logger(true); }
+fx_logger_t* fx_log_get_logger() { return get_or_create_global_logger(); }
 
 SYSLOG_EXPORT
 zx_status_t fx_log_reconfigure(const fx_logger_config_t* config) {
-  fx_logger_t* logger = get_or_create_global_logger(
-      config->console_fd == -1 && config->log_service_channel == ZX_HANDLE_INVALID);
+  fx_logger_t* logger = get_or_create_global_logger();
   return logger->Reconfigure(
       config, (config->console_fd == -1 && config->log_service_channel == ZX_HANDLE_INVALID &&
                config->log_sink_socket == ZX_HANDLE_INVALID));

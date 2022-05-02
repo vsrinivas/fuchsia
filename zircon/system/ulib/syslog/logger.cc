@@ -121,8 +121,7 @@ zx_status_t fx_logger_reconfigure_structured(fx_logger_t* logger,
 }
 
 SYSLOG_EXPORT
-zx_status_t fx_logger_create_internal(const fx_logger_config_t* config, fx_logger_t** out_logger,
-                                      bool connect) {
+zx_status_t fx_logger_create_internal(const fx_logger_config_t* config, fx_logger_t** out_logger) {
   // TODO(fxbug.dev/63529): Share the input checks and handle closing logic with
   // fx_logger::Reconfigure().
   if (!config || !out_logger) {
@@ -158,7 +157,7 @@ zx_status_t fx_logger_create_internal(const fx_logger_config_t* config, fx_logge
   // should continue to instantiate the logger (which defaults to using stderr)
   // and the client can provide the appropriate channel / fd later.
 #ifndef SYSLOG_STATIC
-  if (connect && config->console_fd == -1 && config->log_sink_channel == ZX_HANDLE_INVALID &&
+  if (config->console_fd == -1 && config->log_sink_channel == ZX_HANDLE_INVALID &&
       log_sink_socket == ZX_HANDLE_INVALID) {
     zx::status socket = []() -> zx::status<zx::socket> {
       zx::status logger = service::Connect<fuchsia_logger::LogSink>();
@@ -202,7 +201,7 @@ void fx_logger_get_tags(fx_logger_t* logger, void (*callback)(void* context, con
 
 SYSLOG_EXPORT
 zx_status_t fx_logger_create(const fx_logger_config_t* config, fx_logger_t** out_logger) {
-  return fx_logger_create_internal(config, out_logger, true);
+  return fx_logger_create_internal(config, out_logger);
 }
 
 SYSLOG_EXPORT
