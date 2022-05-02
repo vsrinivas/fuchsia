@@ -565,22 +565,6 @@
                 source_name: "fuchsia.debugdata.Publisher",
                 target_moniker: "/core/test_manager",
             },
-
-            // Deprecated, will be removed once we complete protocol renaming.
-            {
-                debug: "protocol",
-                environment_name: "test-env",
-                source_moniker: "/core/test_manager/debug_data",
-                source_name: "fuchsia.debugdata.DebugData",
-                target_moniker: "/core/test_manager",
-            },
-            {
-                debug: "protocol",
-                environment_name: "legacy-test-env",
-                source_moniker: "/core/test_manager/debug_data",
-                source_name: "fuchsia.debugdata.DebugData",
-                target_moniker: "/core/test_manager",
-            },
         ],
     },
 }

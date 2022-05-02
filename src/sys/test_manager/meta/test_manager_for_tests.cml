@@ -12,11 +12,6 @@
     // under a nearly identical setup.
     offer: [
         {
-            protocol: "fuchsia.debugdata.DebugData",
-            from: "#debug_data",
-            to: "#tests",
-        },
-        {
             protocol: "fuchsia.debugdata.Publisher",
             from: "#debug_data",
             to: "#tests",

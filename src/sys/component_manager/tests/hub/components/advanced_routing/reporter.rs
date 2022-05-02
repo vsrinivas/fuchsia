@@ -37,7 +37,7 @@ async fn main() {
         "/parent_hub/children/reporter/exec/in/svc",
         vec!["fidl.examples.routing.echo.Echo", "fuchsia.logger.LogSink"],
         // Coverage builds also use debugdata.Publisher
-        vec!["fuchsia.debugdata.DebugData", "fuchsia.debugdata.Publisher"],
+        vec!["fuchsia.debugdata.Publisher"],
     )
     .await;
 
@@ -45,7 +45,7 @@ async fn main() {
         "/parent_hub/children/reporter/resolved/use/svc",
         vec!["fidl.examples.routing.echo.Echo", "fuchsia.logger.LogSink"],
         // Coverage builds also use debugdata.Publisher
-        vec!["fuchsia.debugdata.DebugData", "fuchsia.debugdata.Publisher"],
+        vec!["fuchsia.debugdata.Publisher"],
     )
     .await;
 

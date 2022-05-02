@@ -41,39 +41,15 @@ class Publisher : public fidl::WireServer<fuchsia_debugdata::Publisher> {
   // VMO is ready.
   void DrainData();
 
-  // Bind Debug data service using provided dispatcher.
-  void BindDeprecatedDebugData(fidl::ServerEnd<fuchsia_debugdata::DebugData> server_end,
-                               async_dispatcher_t* dispatcher = nullptr);
-
   // Bind Publisher service using provided dispatcher.
   void Bind(fidl::ServerEnd<fuchsia_debugdata::Publisher> server_end,
             async_dispatcher_t* dispatcher = nullptr);
 
  private:
-  // This is deprecated. Kept for backward compatibility.
-  // DebugData implements the |fuchsia.debugdata.DebugData| protocol. When a VMO
-  // is ready for processing it invokes the |vmo_callback| function.
-  // DebugData is not thread safe.
-  class DebugData : public fidl::WireServer<fuchsia_debugdata::DebugData> {
-   public:
-    explicit DebugData(Publisher* parent);
-    ~DebugData() override = default;
-
-    void Publish(PublishRequestView request, PublishCompleter::Sync& completer) override;
-    void LoadConfig(LoadConfigRequestView request, LoadConfigCompleter::Sync& completer) override;
-    // Invoke |vmo_callback| on any outstanding VMOs, without waiting for the signal indicating the
-    // VMO is ready.
-    void DrainData() { parent_->DrainData(); }
-
-   private:
-    Publisher* parent_;
-  };
-
   async_dispatcher_t* dispatcher_;
   std::list<std::tuple<std::shared_ptr<async::WaitOnce>, std::string, zx::vmo>> pending_handlers_;
   VmoHandler vmo_callback_;
   fbl::unique_fd root_dir_fd_;
-  DebugData deprecated_debug_data_;
 };
 
 }  // namespace debugdata

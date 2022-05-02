@@ -3,7 +3,7 @@
 Reviewed on: 2022-02-14
 
 The debug_data components collect debug data output by test components
-via the [`fuchsia.debugdata.DebugData`][debug-fidl] protocols. This protocol
+via the [`fuchsia.debugdata.Publisher`][debug-fidl] protocols. This protocol
 is most commonly used in tests to output profiling information that is used
 to produce coverage data. Currently, debug_data components also merge together
 profiles produced for reporting coverage, which reduces the size of profiles

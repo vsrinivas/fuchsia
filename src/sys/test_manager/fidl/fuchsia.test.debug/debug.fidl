@@ -8,8 +8,8 @@ using fuchsia.io;
 using zx;
 
 /// A test-manager internal protocol used for communicating between the debug data
-/// component, which implements `fuchsia.debugdata.DebugData`, and the component that
-/// actually processes the VMOs passed to `fuchsia.debugdata.DebugData`.
+/// component, which implements `fuchsia.debugdata.Publisher`, and the component that
+/// actually processes the VMOs passed to `fuchsia.debugdata.Publisher`.
 /// In the future, this protocol may be moved to the SDK, to enable "pluggable" VMO
 /// processing, or removed entirely if VMO processing is moved to the host.
 @discoverable

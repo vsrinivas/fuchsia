@@ -297,7 +297,7 @@ And the following deprecated event types:
 - `Capability Requested`: This event was introduced as a temporary solution to
   provide component attribution to `fuchsia.logger/LogSink` connections. Since
   then it's also been used to provide attribution to
-  `fuchsia.debugdata/DebugData` connections. This was never meant to be a long
+  `fuchsia.debugdata/Publisher` connections. This was never meant to be a long
   term solution. Since the events system was for privileged components only,
   building this feature with Component Events was a low-commitment approach.
   It was understood that, if the use cases grew, the time will come to invent a

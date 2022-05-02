@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::message::{PublisherRequest, PublisherRequestMessage};
+use crate::message::PublisherRequestMessage;
 use anyhow::{anyhow, Error};
 use async_trait::async_trait;
 use fidl::endpoints::{RequestStream, ServerEnd};
@@ -201,8 +201,6 @@ async fn serve_debug_data_set_controller(
 }
 
 mod inner {
-    use fidl::endpoints::DiscoverableProtocolMarker;
-
     use {
         super::*,
         fuchsia_async as fasync,
@@ -466,19 +464,14 @@ mod inner {
         }
     }
 
-    fn publish_request_from_event(event: fsys::Event) -> PublisherRequest {
+    fn publish_request_from_event(event: fsys::Event) -> ServerEnd<fdebug::PublisherMarker> {
         let result = event.event_result.unwrap();
         match result {
             fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(
-                fsys::CapabilityRequestedPayload { name, capability, .. },
+                fsys::CapabilityRequestedPayload { name: _, capability, .. },
             )) => {
-                if let Some(name) = name {
-                    if &name == fdebug::DebugDataMarker::PROTOCOL_NAME {
-                        return PublisherRequest::DebugData(ServerEnd::new(capability.unwrap()));
-                    }
-                }
-
-                PublisherRequest::Publisher(ServerEnd::new(capability.unwrap()))
+                // TODO: Check name and other stuff.
+                ServerEnd::new(capability.unwrap())
             }
             _ => panic!("unexpected payload"),
         }
@@ -961,7 +954,7 @@ mod testing {
             .into(),
             event_result: Some(fsys::EventResult::Payload(
                 fsys::EventPayload::CapabilityRequested(fsys::CapabilityRequestedPayload {
-                    name: fdebug::DebugDataMarker::NAME.to_string().into(),
+                    name: fdebug::PublisherMarker::NAME.to_string().into(),
                     capability: Some(server),
                     ..fsys::CapabilityRequestedPayload::EMPTY
                 }),

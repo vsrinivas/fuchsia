@@ -233,12 +233,6 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
           debug_data_publisher->Bind(std::move(channel), dispatcher);
           return ZX_OK;
         });
-    auto deprecated_node = fbl::MakeRefCounted<fs::Service>(
-        [dispatcher = loop.dispatcher(),
-         &debug_data_publisher](fidl::ServerEnd<fuchsia_debugdata::DebugData> channel) {
-          debug_data_publisher->BindDeprecatedDebugData(std::move(channel), dispatcher);
-          return ZX_OK;
-        });
 
     vfs.emplace(loop.dispatcher());
 
@@ -271,8 +265,6 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
 
         fbl::RefPtr proxy_dir = fbl::MakeRefCounted<ServiceProxyDir>(std::move(client_end));
         proxy_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_debugdata::Publisher>, node);
-        proxy_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_debugdata::DebugData>,
-                            deprecated_node);
 
         vfs->ServeDirectory(std::move(proxy_dir), std::move(endpoints->server), fs::Rights::All());
 

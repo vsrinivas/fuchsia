@@ -1815,15 +1815,6 @@ async fn get_realm(
     let mut enclosing_env_decl = wrapper_realm.get_component_decl(&enclosing_env).await?;
     enclosing_env_decl.uses.push(cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
         source: cm_rust::UseSource::Debug,
-        source_name: fdebugdata::DebugDataMarker::PROTOCOL_NAME.into(),
-        target_path: format!("/svc/{}", fdebugdata::DebugDataMarker::PROTOCOL_NAME)
-            .as_str()
-            .try_into()
-            .unwrap(),
-        dependency_type: cm_rust::DependencyType::Strong,
-    }));
-    enclosing_env_decl.uses.push(cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
-        source: cm_rust::UseSource::Debug,
         source_name: fdebugdata::PublisherMarker::PROTOCOL_NAME.into(),
         target_path: format!("/svc/{}", fdebugdata::PublisherMarker::PROTOCOL_NAME)
             .as_str()
@@ -2063,7 +2054,6 @@ impl EnclosingEnvironment {
         let (additional_svc, additional_directory_request) = zx::Channel::create()?;
         let incoming_svc = Arc::new(incoming_svc);
         let incoming_svc_clone = incoming_svc.clone();
-        let incoming_svc_clone2 = incoming_svc.clone();
         let mut fs = ServiceFs::new();
         let mut loader_tasks = vec![];
         let loader_service = connect_to_protocol::<fv1sys::LoaderMarker>()?;
@@ -2095,28 +2085,18 @@ impl EnclosingEnvironment {
             }
         }
         fs.add_service_at(
-            fdebugdata::DebugDataMarker::NAME,
+            fdebugdata::PublisherMarker::NAME,
             move |chan: fuchsia_zircon::Channel| {
                 if let Err(e) = fdio::service_connect_at(
-                    incoming_svc_clone2.as_channel().as_ref(),
-                    fdebugdata::DebugDataMarker::NAME,
+                    incoming_svc_clone.as_channel().as_ref(),
+                    fdebugdata::PublisherMarker::NAME,
                     chan,
                 ) {
-                    warn!("cannot connect to DebugData: {}", e);
+                    warn!("cannot connect to debug data Publisher: {}", e);
                 }
                 None
             },
         )
-        .add_service_at(fdebugdata::PublisherMarker::NAME, move |chan: fuchsia_zircon::Channel| {
-            if let Err(e) = fdio::service_connect_at(
-                incoming_svc_clone.as_channel().as_ref(),
-                fdebugdata::PublisherMarker::NAME,
-                chan,
-            ) {
-                warn!("cannot connect to debug data Publisher: {}", e);
-            }
-            None
-        })
         .add_service_at("fuchsia.logger.LogSink", move |chan: fuchsia_zircon::Channel| {
             if let Err(e) = fdio::service_connect_at(
                 incoming_svc.as_channel().as_ref(),
@@ -2136,7 +2116,6 @@ impl EnclosingEnvironment {
         let mut service_list = fv1sys::ServiceList {
             names: vec![
                 fv1sys::LoaderMarker::NAME.to_string(),
-                fdebugdata::DebugDataMarker::NAME.to_string(),
                 fdebugdata::PublisherMarker::NAME.to_string(),
                 "fuchsia.logger.LogSink".into(),
             ],

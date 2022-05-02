@@ -53,7 +53,6 @@ class EnvironmentServices {
     ParentOverrides(ParentOverrides&&) noexcept;
 
     std::shared_ptr<vfs::Service> loader_service_;
-    std::shared_ptr<vfs::Service> deprecated_debug_data_service_;
     std::shared_ptr<vfs::Service> debug_data_publisher_service_;
   };
 

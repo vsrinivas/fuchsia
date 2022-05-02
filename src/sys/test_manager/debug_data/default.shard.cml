@@ -1,10 +1,7 @@
 {
     use: [
         {
-            protocol: [
-                "fuchsia.debugdata.DebugData",
-                "fuchsia.debugdata.Publisher",
-            ],
+            protocol: [ "fuchsia.debugdata.Publisher" ],
             from: "debug",
         },
     ],

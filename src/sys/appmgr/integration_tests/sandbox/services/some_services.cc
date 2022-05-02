@@ -38,11 +38,7 @@ TEST_F(NamespaceTest, SomeServices) {
   ASSERT_TRUE(files::ReadDirContents("/svc", &files));
 
   // Remove debug service if present due variant build.
-  files.erase(std::remove_if(files.begin(), files.end(),
-                             [](const std::string& str) {
-                               return str == fuchsia::debugdata::DebugData::Name_ ||
-                                      str == fuchsia::debugdata::Publisher::Name_;
-                             }),
+  files.erase(std::remove(files.begin(), files.end(), fuchsia::debugdata::Publisher::Name_),
               files.end());
 
   EXPECT_THAT(

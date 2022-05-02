@@ -67,10 +67,6 @@
             ],
             debug: [
                 {
-                    protocol: "fuchsia.debugdata.DebugData",
-                    from: "#debug_data",
-                },
-                {
                     protocol: "fuchsia.debugdata.Publisher",
                     from: "#debug_data",
                 },
@@ -159,10 +155,6 @@
                 },
             ],
             debug: [
-                {
-                    protocol: "fuchsia.debugdata.DebugData",
-                    from: "#debug_data",
-                },
                 {
                     protocol: "fuchsia.debugdata.Publisher",
                     from: "#debug_data",

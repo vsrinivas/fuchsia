@@ -17,7 +17,6 @@
         },
     ],
     capabilities: [
-        { protocol: "fuchsia.debugdata.DebugData" },
         { protocol: "fuchsia.debugdata.Publisher" },
         { protocol: "fuchsia.test.internal.DebugDataController" },
     ],
@@ -28,12 +27,6 @@
         },
         {
             protocol: [ "fuchsia.sys2.EventSource" ],
-        },
-        {
-            event: "deprecated_debug_data_requested",
-            from: "parent",
-            as: "debug_data_requested",
-            filter: { name: "fuchsia.debugdata.DebugData" },
         },
         {
             event: "capability_requested",
@@ -52,7 +45,6 @@
         {
             event_stream_deprecated: "EventStream",
             subscriptions: [
-                { event: "debug_data_requested" },
                 { event: "publisher_requested" },
                 { event: "started" },
                 { event: "destroyed" },
@@ -72,10 +64,6 @@
         },
     ],
     expose: [
-        {
-            protocol: "fuchsia.debugdata.DebugData",
-            from: "self",
-        },
         {
             protocol: "fuchsia.debugdata.Publisher",
             from: "self",

@@ -321,29 +321,6 @@ TEST_F(EnclosingEnvTest, CanLaunchMoreThanOneService) {
   ASSERT_EQ(loader.component_urls(), urls);
 }
 
-class FakeDebugData : public fuchsia::debugdata::DebugData {
- public:
-  void Publish(std::string data_sink, ::zx::vmo data,
-               fidl::InterfaceRequest<fuchsia::debugdata::DebugDataVmoToken> token) override {
-    call_count_++;
-  }
-
-  void LoadConfig(std::string config_name, LoadConfigCallback callback) override {
-    // not implemented
-  }
-
-  fidl::InterfaceRequestHandler<fuchsia::debugdata::DebugData> GetHandler(
-      async_dispatcher_t* dispatcher = nullptr) {
-    return bindings_.GetHandler(this, dispatcher);
-  }
-
-  uint64_t call_count() const { return call_count_; }
-
- private:
-  fidl::BindingSet<fuchsia::debugdata::DebugData> bindings_;
-  uint64_t call_count_ = 0;
-};
-
 class FakePublisher : public fuchsia::debugdata::Publisher {
  public:
   void Publish(std::string data_sink, ::zx::vmo data, zx::eventpair token) override {
@@ -400,43 +377,6 @@ TEST_F(EnclosingEnvTest, DebugDataServicePlumbedCorrectly) {
 
     RunLoopUntil([&publisher]() { return publisher.call_count() == 2; });
   }
-}
-
-TEST_F(EnclosingEnvTest, DeprecatedDebugDataServicePlumbedCorrectly) {
-  zx::vmo data;
-  fuchsia::debugdata::DebugDataPtr ptr;
-  FakeDebugData debug_data;
-
-  // Add to first enclosing env and override plumbing
-  EnvironmentServices::ParentOverrides parent_overrides;
-  parent_overrides.deprecated_debug_data_service_ =
-      std::make_shared<vfs::Service>(debug_data.GetHandler());
-  auto svc = CreateServicesWithParentOverrides(std::move(parent_overrides));
-
-  auto env = CreateNewEnclosingEnvironment("test-env1", std::move(svc));
-  WaitForEnclosingEnvToStart(env.get());
-  // make sure count was 0
-  ASSERT_EQ(0u, debug_data.call_count());
-
-  // make sure out fake servcie can be called.
-  env->ConnectToService(ptr.NewRequest());
-  ASSERT_EQ(ZX_OK, zx::vmo::create(8, 0, &data));
-  fuchsia::debugdata::DebugDataVmoTokenPtr token_ptr;
-  ptr->Publish("data_sink", std::move(data), token_ptr.NewRequest());
-
-  RunLoopUntil([&debug_data]() { return debug_data.call_count() == 1; });
-
-  // make sure service is automatically plumbed to sub environments
-  auto sub_env = env->CreateNestedEnclosingEnvironment("test-env2");
-
-  ptr.Unbind();
-
-  sub_env->ConnectToService(ptr.NewRequest());
-  ASSERT_EQ(ZX_OK, zx::vmo::create(8, 0, &data));
-  fuchsia::debugdata::DebugDataVmoTokenPtr token_ptr_2;
-  ptr->Publish("data_sink", std::move(data), token_ptr_2.NewRequest());
-
-  RunLoopUntil([&debug_data]() { return debug_data.call_count() == 2; });
 }
 
 }  // namespace sys::testing::test

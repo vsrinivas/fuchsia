@@ -24,6 +24,7 @@
 #include <gtest/gtest.h>
 
 #include "lib/fit/defer.h"
+#include "lib/zx/eventpair.h"
 #include "src/lib/files/file.h"
 
 TEST(Run, TestHermeticEnv) {
@@ -33,20 +34,14 @@ TEST(Run, TestHermeticEnv) {
   EXPECT_THAT(hub_name, testing::MatchesRegex("^test_env_[0-9a-f]{8}$"));
 }
 
-class FakeDebugData : public fuchsia::debugdata::DebugData {
+class FakeDebugPublisher : public fuchsia::debugdata::Publisher {
  public:
-  void Publish(std::string /*unused*/, ::zx::vmo /*unused*/,
-               fidl::InterfaceRequest<fuchsia::debugdata::DebugDataVmoToken> /*unused*/
+  void Publish(std::string /*unused*/, ::zx::vmo /*unused*/, zx::eventpair /*unused*/
                ) override {
     call_count_++;
   }
 
-  void LoadConfig(std::string /*unused*/, LoadConfigCallback /*unused*/) override {
-    call_count_++;
-    // not implemented
-  }
-
-  fidl::InterfaceRequestHandler<fuchsia::debugdata::DebugData> GetHandler(
+  fidl::InterfaceRequestHandler<fuchsia::debugdata::Publisher> GetHandler(
       async_dispatcher_t* dispatcher = nullptr) {
     return bindings_.GetHandler(this, dispatcher);
   }
@@ -54,7 +49,7 @@ class FakeDebugData : public fuchsia::debugdata::DebugData {
   uint64_t call_count() const { return call_count_; }
 
  private:
-  fidl::BindingSet<fuchsia::debugdata::DebugData> bindings_;
+  fidl::BindingSet<fuchsia::debugdata::Publisher> bindings_;
   uint64_t call_count_ = 0;
 };
 
@@ -73,8 +68,8 @@ TEST_F(RunFixture, ExposesDebugDataService) {
   uint32_t flags = FDIO_SPAWN_DEFAULT_LDSVC | (FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_NAMESPACE);
 
   sys::testing::ServiceDirectoryProvider service_provider(dispatcher());
-  FakeDebugData debugdata;
-  service_provider.AddService(debugdata.GetHandler(dispatcher()));
+  FakeDebugPublisher publisher;
+  service_provider.AddService(publisher.GetHandler(dispatcher()));
 
   auto allow_parent_service = [&service_provider,
                                env_services = env_services](const std::string& service_name) {
@@ -133,7 +128,7 @@ TEST_F(RunFixture, ExposesDebugDataService) {
                                   run_process.reset_and_get_address(), err_msg))
       << err_msg;
 
-  RunLoopUntil([&]() { return debugdata.call_count() >= 1u; });
+  RunLoopUntil([&]() { return publisher.call_count() >= 1u; });
 }
 
 TEST_F(RunFixture, TestTimeout) {

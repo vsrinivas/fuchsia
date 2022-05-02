@@ -190,11 +190,6 @@ fpromise::promise<> Suite::RunTest(zx::socket out, zx::socket err,
                                    const std::vector<std::string>& arguments,
                                    fidl::InterfacePtr<fuchsia::test::CaseListener> case_listener) {
   sys::testing::EnvironmentServices::ParentOverrides parent_overrides;
-  parent_overrides.deprecated_debug_data_service_ =
-      std::make_shared<vfs::Service>([namespace_services = test_component_svc_](
-                                         zx::channel channel, async_dispatcher_t* /*unused*/) {
-        namespace_services->Connect(fuchsia::debugdata::DebugData::Name_, std::move(channel));
-      });
   parent_overrides.debug_data_publisher_service_ =
       std::make_shared<vfs::Service>([namespace_services = test_component_svc_](
                                          zx::channel channel, async_dispatcher_t* /*unused*/) {

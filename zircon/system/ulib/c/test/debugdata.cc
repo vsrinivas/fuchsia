@@ -55,6 +55,7 @@ struct Publisher : public fidl::WireServer<fuchsia_debugdata::Publisher> {
         [dispatcher, this](fidl::ServerEnd<fuchsia_debugdata::Publisher> server_end) {
           return fidl::BindSingleInFlightOnly(dispatcher, std::move(server_end), this);
         });
+
     dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_debugdata::Publisher>, node);
 
     zx::status server_end = fidl::CreateEndpoints(client_end);
