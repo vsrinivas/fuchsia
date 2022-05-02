@@ -16,10 +16,12 @@ class Scrim extends StatelessWidget {
     return MouseRegion(
       child: GestureDetector(
         onTapDown: (_) => app.hideOverlay(),
-        child: Container(
-            color: app.views.isEmpty
-                ? Colors.transparent
-                : Colors.black.withOpacity(0.8)),
+        // TODO(https://fxbug.dev/99036): Uncomment once screen flickering is
+        // fixed.
+        // child: Container(
+        //     color: app.views.isEmpty
+        //         ? Colors.transparent
+        //         : Colors.black.withOpacity(0.8)),
       ),
     );
   }
