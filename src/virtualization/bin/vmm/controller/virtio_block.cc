@@ -12,14 +12,31 @@
 #include "src/virtualization/bin/vmm/controller/realm_utils.h"
 #include "src/virtualization/bin/vmm/device/block.h"
 
-static uint32_t read_only(fuchsia::virtualization::BlockMode mode) {
+namespace {
+
+uint32_t read_only(fuchsia::virtualization::BlockMode mode) {
   return mode == fuchsia::virtualization::BlockMode::READ_ONLY ? VIRTIO_BLK_F_RO : 0;
 }
 
-static uint32_t discardable(fuchsia::virtualization::BlockFormat format) {
+uint32_t discardable(fuchsia::virtualization::BlockFormat format) {
   // TODO(fxbug.dev/90622): Enable discard support if BLOCK is the format used.
   return 0;
 }
+
+bool UseRustDevice(fuchsia::virtualization::BlockMode mode,
+                   fuchsia::virtualization::BlockFormat format) {
+  // TODO(fxbug.dev/95529): These configurations are not yet implemented in the rust device, but we
+  // prefer to rust device for configurations that are supported.
+  if (mode == fuchsia::virtualization::BlockMode::VOLATILE_WRITE) {
+    FX_LOGS(INFO) << "Selecting legacy block device for VOLATILE_WRITE device";
+    return false;
+  }
+
+  FX_LOGS(INFO) << "Using rust block device implementation";
+  return true;
+}
+
+}  // namespace
 
 VirtioBlock::VirtioBlock(const PhysMem& phys_mem, fuchsia::virtualization::BlockMode mode,
                          fuchsia::virtualization::BlockFormat format)
@@ -40,20 +57,23 @@ zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id, zx
                                fuchsia::component::RealmSyncPtr& realm,
                                async_dispatcher_t* dispatcher, size_t component_name_suffix) {
   if (launcher) {
-    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cmx";
+    constexpr auto kCppUrl = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cmx";
+    constexpr auto kRustUrl= "fuchsia-pkg://fuchsia.com/virtio_block_rs#meta/virtio_block_rs.cmx";
 
     fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = kComponentUrl;
+    launch_info.url = UseRustDevice(mode_, format_) ? kRustUrl : kCppUrl;
     auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
     launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
     services->Connect(block_.NewRequest());
   } else {
     const auto kComponentName = fxl::StringPrintf("virtio_block_%zu", component_name_suffix);
     constexpr auto kVirtioBlockCollectionName = "virtio_block_devices";
-    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cm";
+    constexpr auto kCppUrl = "fuchsia-pkg://fuchsia.com/virtio_block#meta/virtio_block.cm";
+    constexpr auto kRustUrl= "fuchsia-pkg://fuchsia.com/virtio_block_rs#meta/virtio_block_rs.cm";
+    auto component_url = UseRustDevice(mode_, format_) ? kRustUrl : kCppUrl;
 
     zx_status_t status = CreateDynamicComponent(
-        realm, kVirtioBlockCollectionName, kComponentName.c_str(), kComponentUrl,
+        realm, kVirtioBlockCollectionName, kComponentName.c_str(), component_url,
         [block = block_.NewRequest()](std::shared_ptr<sys::ServiceDirectory> services) mutable {
           return services->Connect(std::move(block));
         });
