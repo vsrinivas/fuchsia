@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 rustc_library("lib") {
   name = "sl4f_lib"
@@ -334,6 +335,8 @@ rustc_binary("bin") {
   }
 }
 
+# V1
+# TODO(http://fxbug.dev/77056) Delete once all sl4f products moved to V2
 fuchsia_component("sl4f_comp") {
   component_name = "sl4f"
   manifest = "meta/sl4f.cmx"
@@ -346,11 +349,34 @@ fuchsia_component("data_proxy_comp") {
   deps = [ "proxy:bin" ]
 }
 
+# V2
+fuchsia_component("sl4f_comp_v2") {
+  component_name = "sl4f"
+  manifest = "meta/sl4f.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("data_proxy_comp_v2") {
+  component_name = "data_proxy"
+  manifest = "proxy/meta/data_proxy.cml"
+  deps = [ "proxy:bin" ]
+}
+
+core_shard("sl4f_core_shard") {
+  shard_file = "meta/sl4f.core_shard.cml"
+}
+
+core_shard("sl4f_terminal_core_shard") {
+  shard_file = "meta/sl4f_terminal.core_shard.cml"
+}
+
 # WARNING: Known to infrastructure.
 fuchsia_package("sl4f") {
   deps = [
     ":data_proxy_comp",
+    ":data_proxy_comp_v2",
     ":sl4f_comp",
+    ":sl4f_comp_v2",
   ]
 }
 
@@ -406,10 +432,4 @@ group("tests") {
     ":sl4f-tests",
     "proxy:data-proxy-test",
   ]
-}
-
-config_data("sl4f_sysmgr_config") {
-  for_pkg = "sysmgr"
-  outputs = [ "sl4f.config" ]
-  sources = [ "config/sl4f_sysmgr.config" ]
 }

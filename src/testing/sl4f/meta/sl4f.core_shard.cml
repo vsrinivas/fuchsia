@@ -1,0 +1,241 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Adds sl4f to core
+{
+    children: [
+        {
+            name: "sl4f",
+            url: "fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cm",
+        },
+        {
+            name: "data_proxy",
+            url: "fuchsia-pkg://fuchsia.com/sl4f#meta/data_proxy.cm",
+        },
+    ],
+    capabilities: [
+        {
+            // Test-only protocols from v1 components.
+            // See also //src/sys/appmgr/meta/appmgr.core_shard.cml
+            // Capabilities here are test-only and used only by SL4F, they are not guaranteed to exist for every product.
+            protocol: [
+                "fuchsia.bluetooth.avdtp.PeerManager", // test-only
+                "fuchsia.bluetooth.hfp.test.HfpTest", // test-only
+                "fuchsia.bluetooth.rfcomm.test.RfcommTest", // test-only
+                "fuchsia.developer.tiles.Controller", // test-only
+                "fuchsia.input.injection.InputDeviceRegistry", // test-only
+                "fuchsia.ui.input.InputDeviceRegistry", // test-only
+
+                // TODO(yuanzhi) Remove after https://fxrev.dev/670470
+                "fuchsia.virtualaudio.Control", // test-only
+                "fuchsia.virtualaudio.Input", // test-only
+                "fuchsia.virtualaudio.Output", // test-only
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.testing.sl4f.FacadeProvider",
+                "sl4f.Binder",
+            ],
+            from: "#sl4f",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.bluetooth.bredr.Profile",
+                "fuchsia.bluetooth.gatt.Server",
+                "fuchsia.bluetooth.le.Central",
+                "fuchsia.bluetooth.le.Peripheral",
+                "fuchsia.bluetooth.sys.Access",
+                "fuchsia.bluetooth.sys.Configuration",
+                "fuchsia.bluetooth.sys.HostWatcher",
+            ],
+            from: "#bluetooth-core",
+            to: "#sl4f",
+        },
+        {
+            protocol: "fuchsia.buildinfo.Provider",
+            from: "#build-info",
+            to: "#sl4f",
+        },
+        {
+            protocol: "fuchsia.buildinfo.Provider",
+            from: "#build-info",
+            to: "#sl4f",
+        },
+        {
+            protocol: "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
+            from: "#regulatory_region",
+            to: "#sl4f",
+        },
+        {
+            protocol: "fuchsia.recovery.FactoryReset",
+            from: "#factory_reset",
+            to: "#sl4f",
+        },
+        {
+            protocol: "fuchsia.feedback.DataProvider",
+            from: "#feedback",
+            to: "#sl4f",
+        },
+        {
+            protocol: [
+                "fuchsia.hwinfo.Board",
+                "fuchsia.hwinfo.Device",
+                "fuchsia.hwinfo.Product",
+            ],
+            from: "#hwinfo",
+            to: "#sl4f",
+        },
+        {
+            protocol: "fuchsia.memorypressure.Provider",
+            from: "#memory_monitor",
+            to: "#sl4f",
+        },
+        {
+            protocol: [
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#network",
+            to: [
+                "#data_proxy",
+                "#sl4f",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.settings.Audio",
+                "fuchsia.settings.Display",
+                "fuchsia.settings.Input",
+                "fuchsia.settings.Intl",
+                "fuchsia.settings.Setup",
+            ],
+            from: "#setui_service",
+            to: "#sl4f",
+        },
+        {
+            protocol: "fuchsia.systemmetrics.test.SystemMetricsLogger",
+            from: "#system-metrics-logger",
+            to: "#sl4f",
+        },
+        {
+            protocol: "fuchsia.thermal.test.TemperatureLogger",
+            from: "#temperature-logger",
+            to: "#sl4f",
+        },
+        {
+            protocol: [
+                "fuchsia.wlan.policy.AccessPointListener",
+                "fuchsia.wlan.policy.AccessPointProvider",
+                "fuchsia.wlan.policy.ClientListener",
+                "fuchsia.wlan.policy.ClientProvider",
+                "fuchsia.wlan.product.deprecatedconfiguration.DeprecatedConfigurator",
+            ],
+            from: "#wlancfg",
+            to: "#sl4f",
+        },
+        {
+            protocol: [ "fuchsia.wlan.device.service.DeviceMonitor" ],
+            from: "#wlandevicemonitor",
+            to: "#sl4f",
+        },
+        {
+            protocol: [ "fuchsia.wlan.device.service.DeviceService" ],
+            from: "#wlanstack",
+            to: "#sl4f",
+        },
+        {
+            protocol: [
+                "fuchsia.device.NameProvider",
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.diagnostics.FeedbackArchiveAccessor",
+                "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.logger.LogSink",
+                "fuchsia.paver.Paver",
+                "fuchsia.sysmem.Allocator",
+            ],
+            from: "parent",
+            to: "#sl4f",
+        },
+        {
+            protocol: [
+                "fuchsia.bluetooth.avdtp.PeerManager", // test-only
+                "fuchsia.bluetooth.hfp.test.HfpTest", // test-only
+                "fuchsia.bluetooth.rfcomm.test.RfcommTest", // test-only
+                "fuchsia.developer.tiles.Controller", // test-only
+                "fuchsia.factory.AlphaFactoryStoreProvider", // #appmgr
+                "fuchsia.factory.CastCredentialsFactoryStoreProvider", // #appmgr
+                "fuchsia.factory.MiscFactoryStoreProvider", // #appmgr
+                "fuchsia.factory.PlayReadyFactoryStoreProvider", // #appmgr
+                "fuchsia.factory.WeaveFactoryStoreProvider", // #appmgr
+                "fuchsia.factory.WidevineFactoryStoreProvider", // #appmgr
+                "fuchsia.input.injection.InputDeviceRegistry", // test-only
+                "fuchsia.lowpan.device.Lookup", // #appmgr
+                "fuchsia.media.ProfileProvider", // #appmgr
+                "fuchsia.sys.Launcher", // #appmgr
+                "fuchsia.tracing.controller.Controller", // #appmgr
+                "fuchsia.tracing.provider.Registry", // #appmgr
+                "fuchsia.ui.composition.Allocator", // #appmgr
+                "fuchsia.ui.composition.ScreenCapture", // #appmgr
+                "fuchsia.ui.input.InputDeviceRegistry", // test-only
+                "fuchsia.ui.scenic.Scenic", // #appmgr
+                "fuchsia.virtualaudio.Control", // test-only
+                "fuchsia.virtualaudio.Input", // test-only
+                "fuchsia.virtualaudio.Output", // test-only
+                "fuchsia.weave.FactoryDataManager", // #appmgr
+            ],
+            from: "self",
+            to: "#sl4f",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [ "fuchsia.session.Launcher" ],
+            from: "#session-manager",
+            to: "#sl4f",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#data_proxy",
+        },
+        {
+            protocol: "fuchsia.testing.proxy.TcpProxyControl",
+            from: "#data_proxy",
+            to: "#sl4f",
+        },
+
+        // TODO(https://fxbug.dev/98760): Remove once fixed.
+        {
+            directory: "minfs",
+            from: "parent",
+            to: "#sl4f",
+        },
+
+        // TODO(https://fxbug.dev/98755): Remove once https://fxbug.dev/86575 is fixed.
+        {
+            directory: "tmp",
+            from: "parent",
+            to: "#sl4f",
+        },
+        {
+            directory: "hub",
+            from: "parent",
+            to: "#sl4f",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-temperature",
+            to: "#sl4f",
+            subdir: "class/temperature",
+        },
+    ],
+}

@@ -1,0 +1,35 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Adds sl4f to core for terminal and workstation
+{
+    include: [ "//src/testing/sl4f/meta/sl4f.core_shard.cml" ],
+    capabilities: [
+        {
+            // WARNING: Capabilities here are not guaranteed to be availble in terminal or workstation.
+            // But to make sl4f compile, we put the extra capabilities here.
+            protocol: [
+                "fuchsia.bluetooth.avrcp.PeerManager",
+                "fuchsia.bluetooth.hfp.Hfp",
+                "fuchsia.location.position.EmergencyProvider",
+                "fuchsia.weave.Stack",
+                "fuchsia.web.ContextProvider",
+            ],
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.bluetooth.avrcp.PeerManager",
+                "fuchsia.bluetooth.hfp.Hfp",
+                "fuchsia.location.position.EmergencyProvider",
+                "fuchsia.weave.Stack",
+                "fuchsia.web.ContextProvider",
+            ],
+            from: "self",
+            to: "#sl4f",
+            dependency: "weak_for_migration",
+        },
+    ],
+}

@@ -30,7 +30,7 @@ void main() {
     });
 
     test('Component search a running component', () async {
-      final result = await sl4f.Component(sl4fDriver).search('sl4f.cmx');
+      final result = await sl4f.Component(sl4fDriver).search('/core/sl4f');
       expect(result, true);
     });
 

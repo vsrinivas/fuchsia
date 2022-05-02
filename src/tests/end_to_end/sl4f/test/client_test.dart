@@ -21,14 +21,7 @@ void main() {
   });
 
   test('tests isRunning correctly returns true', () async {
-    await sl4fDriver.startServer();
     final result = await sl4fDriver.isRunning();
     expect(result, isTrue);
-  }, timeout: Timeout.none);
-
-  test('tests isRunning correctly returns false', () async {
-    // Do not start server
-    final result = await sl4fDriver.isRunning();
-    expect(result, isFalse);
   }, timeout: Timeout.none);
 }
