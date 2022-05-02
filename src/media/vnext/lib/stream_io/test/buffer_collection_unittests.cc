@@ -392,4 +392,46 @@ TEST_F(BufferCollectionUnitTest, GetPayloadBuffer) {
       fuchsia::media2::PayloadRange{.buffer_id = 0, .offset = 0, .size = max_size + 1}));
 }
 
+// Tests buffer lead time accounting.
+TEST_F(BufferCollectionUnitTest, LeadTime) {
+  std::unique_ptr<OutputBufferCollection> under_test = CreateOutputBufferCollection();
+
+  // Allocate all the buffers, checking lead time.
+  std::vector<PayloadBuffer> buffers(kExpectedBufferCount);
+  for (auto& buffer : buffers) {
+    buffer = under_test->AllocatePayloadBuffer(kMinBufferSize);
+    EXPECT_TRUE(!!buffer);
+    EXPECT_TRUE(!!buffer.data());
+    EXPECT_EQ(kMinBufferSize, buffer.size());
+
+    // Lead time should be default, because this buffer wasn't previously allocated and freed.
+    EXPECT_EQ(zx::duration(), buffer.lead_time());
+  }
+
+  // Free all the buffers.
+  for (auto& buffer : buffers) {
+    buffer.Reset();
+  }
+
+  RunLoopUntilIdle();
+
+  // Wait a bit so we get non-zero lead times.
+  zx::time free_time = zx::clock::get_monotonic();
+  RunLoopUntil([&free_time]() { return zx::clock::get_monotonic() - free_time > zx::msec(500); });
+
+  // We sampled the current time immediately after all buffers were released, and we're sampling
+  // again immediately prior to allocating them again. The lead times on the buffers should be at
+  // least as large as the interval between those two samples.
+  auto lead_time_lower_bound = zx::clock::get_monotonic() - free_time;
+
+  // Allocate all the buffers again, checking lead time.
+  for (auto& buffer : buffers) {
+    buffer = under_test->AllocatePayloadBuffer(kMinBufferSize);
+    EXPECT_TRUE(!!buffer);
+    EXPECT_TRUE(!!buffer.data());
+    EXPECT_EQ(kMinBufferSize, buffer.size());
+    EXPECT_LE(lead_time_lower_bound, buffer.lead_time());
+  }
+}
+
 }  // namespace fmlib::test

@@ -5,8 +5,10 @@
 #ifndef SRC_MEDIA_VNEXT_LIB_STREAM_IO_PAYLOAD_BUFFER_H_
 #define SRC_MEDIA_VNEXT_LIB_STREAM_IO_PAYLOAD_BUFFER_H_
 
+#include <fuchsia/media2/cpp/fidl.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/time.h>
 
 #include <memory>
 
@@ -19,8 +21,9 @@ class PayloadBuffer {
   PayloadBuffer() = default;
 
   // Constructs a valid |PayloadBuffer| for a mapped buffer.
-  PayloadBuffer(fuchsia::media2::PayloadRange payload_range, void* data)
-      : is_valid_(true), payload_range_(payload_range), data_(data) {
+  PayloadBuffer(fuchsia::media2::PayloadRange payload_range, void* data,
+                zx::duration lead_time = zx::duration())
+      : is_valid_(true), payload_range_(payload_range), data_(data), lead_time_(lead_time) {
     FX_CHECK(payload_range_.size != 0);
     FX_CHECK(data_);
   }
@@ -39,6 +42,7 @@ class PayloadBuffer {
     destroyed_completer_ = std::move(other.destroyed_completer_);
     payload_range_ = other.payload_range_;
     data_ = other.data_;
+    lead_time_ = other.lead_time_;
     other.Reset();
   }
   PayloadBuffer& operator=(PayloadBuffer&& other) noexcept {
@@ -49,6 +53,7 @@ class PayloadBuffer {
     destroyed_completer_ = std::move(other.destroyed_completer_);
     payload_range_ = other.payload_range_;
     data_ = other.data_;
+    lead_time_ = other.lead_time_;
     other.Reset();
     return *this;
   }
@@ -69,6 +74,7 @@ class PayloadBuffer {
     payload_range_.offset = 0;
     payload_range_.size = 0;
     data_ = nullptr;
+    lead_time_ = zx::duration();
   }
 
   // Returns the payload range for this payload buffer.
@@ -90,6 +96,11 @@ class PayloadBuffer {
     return payload_range_.size;
   }
 
+  // Returns the lead time for this buffer. The lead time indicates how far in advance of allocation
+  // a buffer was freed to make the allocation possible. This value can be used to predict
+  // overflow conditions in which a producer runs out of free buffers to allocate.
+  zx::duration lead_time() const { return lead_time_; }
+
  private:
   // Returns a promise that completes when this buffer is destroyed or reset. This method may only
   // be called once for any given instance of |PayloadBuffer|. This is used by
@@ -110,6 +121,7 @@ class PayloadBuffer {
   fpromise::completer<> destroyed_completer_;
   fuchsia::media2::PayloadRange payload_range_;
   void* data_ = nullptr;
+  zx::duration lead_time_;
 
   friend class OutputBufferCollection;
 };

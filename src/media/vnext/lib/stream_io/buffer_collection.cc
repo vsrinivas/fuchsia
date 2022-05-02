@@ -139,6 +139,15 @@ OutputBufferCollection::Create(async::Executor& executor, fuchsia::media2::Buffe
           });
 }
 
+OutputBufferCollection::OutputBufferCollection(async::Executor& executor,
+                                               std::vector<BufferVmo> buffer_vmos)
+    : BufferCollection(std::move(buffer_vmos)), executor_(executor) {
+  // Supply place-holder arrival times for each buffer.
+  for (size_t i = 0; i < this->buffer_vmos().size(); ++i) {
+    arrival_times_.push(zx::time());
+  }
+}
+
 OutputBufferCollection::~OutputBufferCollection() {
   FailPendingAllocation();
 
@@ -240,14 +249,23 @@ PayloadBuffer OutputBufferCollection::AllocatePayloadBufferUnsafe(size_t size) {
 
       buffer_vmos()[vmo_index].Allocate();
 
+      FX_CHECK(!arrival_times_.empty());
+      zx::time arrival_time = arrival_times_.front();
+      arrival_times_.pop();
+      zx::duration lead_time = (arrival_time == zx::time())
+                                   ? zx::duration()
+                                   : (zx::clock::get_monotonic() - arrival_time);
+
       PayloadBuffer result(
           fuchsia::media2::PayloadRange{
               .buffer_id = static_cast<uint32_t>(vmo_index), .offset = 0, .size = size},
-          buffer_vmos()[vmo_index].data());
+          buffer_vmos()[vmo_index].data(), lead_time);
 
       executor_.schedule_task(result.WhenDestroyed()
                                   .and_then([this, vmo_index]() {
                                     std::lock_guard<std::mutex> locker(mutex_);
+
+                                    arrival_times_.push(zx::clock::get_monotonic());
 
                                     buffer_vmos()[vmo_index].Free();
 
@@ -310,7 +328,7 @@ InputBufferCollection::Create(fuchsia::media2::BufferProvider& provider, zx::eve
               -> fpromise::result<std::unique_ptr<InputBufferCollection>,
                                   fuchsia::media2::ConnectionError> {
             if (result.is_error()) {
-              FX_LOGS(ERROR) << "BufferCollection: GetBuffers failed " << result.error();
+              FX_LOGS(ERROR) << "InputBufferCollection: GetBuffers failed " << result.error();
               return fpromise::error(ToConnectionError(result.error()));
             }
 

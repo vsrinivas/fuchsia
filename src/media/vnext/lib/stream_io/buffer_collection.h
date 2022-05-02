@@ -173,8 +173,7 @@ class OutputBufferCollection : public BufferCollection {
     OutputBufferCollection* collection_ FXL_GUARDED_BY(mutex_);
   };
 
-  OutputBufferCollection(async::Executor& executor, std::vector<BufferVmo> buffer_vmos)
-      : BufferCollection(std::move(buffer_vmos)), executor_(executor) {}
+  OutputBufferCollection(async::Executor& executor, std::vector<BufferVmo> buffer_vmos);
 
   PayloadBuffer AllocatePayloadBufferUnsafe(size_t size) FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
@@ -187,6 +186,7 @@ class OutputBufferCollection : public BufferCollection {
   size_t when_available_size_ FXL_GUARDED_BY(mutex_);
   sync_completion completion_;
   std::shared_ptr<ClosureContext> closure_context_ FXL_GUARDED_BY(mutex_);
+  std::queue<zx::time> arrival_times_;
   fpromise::scope scope_;
 };
 
