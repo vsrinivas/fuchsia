@@ -43,6 +43,11 @@ base_package_labels += [
 
   # Setting service configuration
   "//src/settings/config:workstation_interface_config",
+
+  # TODO(fxbug.dev/73586): session_control is launched by ermine e2e tests via
+  # ssh, so session_control must be in base. Remove when tests use
+  # `ffx session`.
+  "//src/session/tools/session_control",
 ]
 base_package_labels -= [
   # TODO(fxbug.dev/90430): Complete CFv2 migration and remove.
