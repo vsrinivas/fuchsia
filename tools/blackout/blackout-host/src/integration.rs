@@ -18,22 +18,14 @@ use crate::CommonOpts;
 /// things like "system partitions".
 const BLOCK_DEVICE: &'static str = "/dev/sys/platform/05:00:f/aml-raw_nand/nand/fvm/ftl/block";
 
-/// The ipv4 address of the device under test is injected into our environment via this variable.
-const FUCHSIA_IPV4_ADDR: &'static str = "FUCHSIA_IPV4_ADDR";
-const FUCHSIA_SSH_KEY: &'static str = "FUCHSIA_SSH_KEY";
-const SSH_AUTH_SOCK: &'static str = "SSH_AUTH_SOCK";
-
 /// Construct the options for running in an infra-specific environment.
 pub fn options() -> CommonOpts {
     CommonOpts {
         block_device: BLOCK_DEVICE.into(),
-        target: std::env::var(FUCHSIA_IPV4_ADDR).expect("missing ipv4 env var for target"),
         seed: None,
         relay: None,
         // eventually we may want to bump this up to do multiple iterations in a single run.
         iterations: None,
         run_until_failure: false,
-        ssh_key: std::env::var(FUCHSIA_SSH_KEY).ok(),
-        ssh_agent: std::env::var(SSH_AUTH_SOCK).is_ok(),
     }
 }

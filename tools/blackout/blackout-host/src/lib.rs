@@ -7,13 +7,17 @@
 #![deny(missing_docs)]
 
 use {
+    anyhow::{self, bail, ensure, Context},
+    ffx_isolate,
     rand::random,
+    serde_json::Value,
     std::{
         cell::Cell,
         fmt,
         path::PathBuf,
         process::{ExitStatus, Output},
         rc::Rc,
+        sync::Arc,
         time::Duration,
     },
     thiserror::Error,
@@ -89,9 +93,9 @@ pub enum BlackoutError {
     #[error("host command failed: {:?}", _0)]
     HostCommand(#[from] std::io::Error),
 
-    /// We got an ssh failure. We know it's an ssh failure because it returned 255.
-    #[error("failed to ssh into '{}': {:?}", _0, _1)]
-    Ssh(String, CommandError),
+    /// Timed out during target discovery.
+    #[error("no targets found after 5s: {:?}", _0)]
+    TargetDiscoveryTimeout(CommandError),
 
     /// The command run on the target device failed to run. Either it returned a non-zero exit code
     /// or it exited when it shouldn't have.
@@ -114,9 +118,6 @@ pub struct CommonOpts {
     /// The block device on the target device to use for testing. WARNING: the test can (and likely
     /// will!) format this device. Don't use a main system partition!
     pub block_device: String,
-    /// The target device to ssh into and execute the test on. A good way to configure this locally
-    /// is by using `$(fx get-device-addr)`.
-    pub target: String,
     /// [Optional] A seed to use for all random operations. Tests are NOT deterministic relative to
     /// the provided seed. The operations will be identical, but because of the non-deterministic
     /// timing-dependent nature of the tests, the exact time the reboot is triggered in relation to
@@ -133,14 +134,6 @@ pub struct CommonOpts {
     pub iterations: Option<u64>,
     /// Run the test until a verification failure is detected, then exit.
     pub run_until_failure: bool,
-    /// Path to the ssh private key to use when authenticating with the target device. If neither
-    /// this flag or the --ssh-agent flag is set, the test will open `$FUCHSIA_DIR/.ssh/pkey` if
-    /// `$FUCHSIA_DIR` exists, otherwise it will attempt to open `$CWD/.ssh/pkey`. If none of these
-    /// attempts succeed the test will fail to run.
-    pub ssh_key: Option<String>,
-    /// Use the ssh agent to authenticate with the target device. If both this option and --ssh-key
-    /// are provided, --ssk-key will take precedence.
-    pub ssh_agent: bool,
 }
 
 /// the seed for a run of the test.
@@ -184,39 +177,14 @@ enum RunMode {
     IterationsUntilFailure(u64),
 }
 
-/// method for authenticating over ssh
-#[derive(Clone, Debug)]
-enum SshAuth {
-    Agent,
-    PKey(String),
-}
-
-impl SshAuth {
-    /// generate the required ssh args for using the auth method
-    fn args(&self) -> Vec<String> {
-        match &self {
-            SshAuth::Agent => vec![],
-            SshAuth::PKey(key) => vec!["-o".into(), format!("IdentityFile={}", key)],
-        }
-    }
-}
-
-/// Unconfigured test. Knows how to configure itself based on the set of common options.
-pub struct UnconfiguredTest {
-    bin: String,
-}
-
 /// Test definition. This contains all the information to make a test reproducible in a particular
 /// environment, and allows host binaries to configure the steps taken by the test.
-pub struct Test {
-    /// net address of the target device.
-    target: String,
+struct Test {
     bin: String,
     seed: Seed,
     block_device: String,
     reboot_type: RebootType,
     run_mode: RunMode,
-    auth: SshAuth,
     steps: Vec<Box<dyn TestStep>>,
 }
 
@@ -225,32 +193,25 @@ impl fmt::Display for Test {
         write!(
             f,
             "Test {{
-    target: {:?},
     bin: {:?},
     seed: {:?},
     block_device: {:?},
     reboot_type: {:?},
     run_mode: {:?},
-    auth: {:?},
 }}",
-            self.target,
-            self.bin,
-            self.seed,
-            self.block_device,
-            self.reboot_type,
-            self.run_mode,
-            self.auth,
+            self.bin, self.seed, self.block_device, self.reboot_type, self.run_mode,
         )
     }
 }
 
-impl UnconfiguredTest {
-    /// Add the set of common options manually. This can be used if additional options need to be
-    /// collected at run time that aren't one of the common options.
-    pub fn add_options(self, opts: CommonOpts) -> Test {
+impl Test {
+    /// Create a new test with the provided name. The name needs to match the associated package
+    /// that will be present on the target device. The package should be callable with `run` from
+    /// the command line.
+    pub fn new_component(package: &'static str, component: &'static str, opts: CommonOpts) -> Test {
+        let bin = format!("fuchsia-pkg://fuchsia.com/{}#meta/{}.cmx", package, component);
         Test {
-            target: opts.target,
-            bin: self.bin,
+            bin,
             seed: Seed::new(opts.seed),
             block_device: opts.block_device,
             reboot_type: match opts.relay {
@@ -263,104 +224,12 @@ impl UnconfiguredTest {
                 (Some(iterations), false) => RunMode::Iterations(iterations),
                 (Some(iterations), true) => RunMode::IterationsUntilFailure(iterations),
             },
-            auth: match (opts.ssh_key, opts.ssh_agent) {
-                (Some(key), _) => SshAuth::PKey(key),
-                (None, true) => SshAuth::Agent,
-                (None, false) => {
-                    if let Ok(fuchsia_dir) = std::env::var("FUCHSIA_DIR") {
-                        SshAuth::PKey(format!("{}/.ssh/pkey", fuchsia_dir))
-                    } else if let Ok(cwd) = std::env::current_dir() {
-                        SshAuth::PKey(format!("{}/.ssh/pkey", cwd.to_str().unwrap()))
-                    } else {
-                        panic!("can't figure out where to get private key - use --ssh-key");
-                    }
-                }
-            },
             steps: Vec::new(),
         }
     }
-}
-
-impl Test {
-    /// Create a new test with the provided name. The name needs to match the associated package that
-    /// will be present on the target device. The package should be callable with `run` from the
-    /// command line.
-    pub fn new_component(package: &'static str, component: &'static str) -> UnconfiguredTest {
-        UnconfiguredTest {
-            bin: format!("run fuchsia-pkg://fuchsia.com/{}#meta/{}.cmx", package, component),
-        }
-    }
-
-    /// Add a test step for setting up the filesystem in the way we want it for the test. This
-    /// executes the `setup` subcommand on the target binary and waits for completion, checking the
-    /// result.
-    pub fn setup_step(mut self) -> Self {
-        self.steps.push(Box::new(SetupStep::new(
-            &self.target,
-            &self.auth,
-            &self.bin,
-            self.seed.clone(),
-            &self.block_device,
-        )));
-        self
-    }
-
-    /// Add a test step for generating load on the device using the `test` subcommand on the target
-    /// binary. This load doesn't terminate. After `duration`, it checks to make sure the command is
-    /// still running, then return.
-    pub fn load_step(mut self, duration: Duration) -> Self {
-        self.steps.push(Box::new(LoadStep::new(
-            &self.target,
-            &self.auth,
-            &self.bin,
-            self.seed.clone(),
-            &self.block_device,
-            duration,
-        )));
-        self
-    }
-
-    /// Add an operation step. This runs the `test` subcommand on the target binary to completion and
-    /// checks the result.
-    pub fn operation_step(mut self) -> Self {
-        self.steps.push(Box::new(OperationStep::new(
-            &self.target,
-            &self.auth,
-            &self.bin,
-            self.seed.clone(),
-            &self.block_device,
-        )));
-        self
-    }
-
-    /// Add a reboot step. This reboots the target machine using the configured reboot mechanism,
-    /// then waits for the machine to come back up. Right now, it waits by sleeping for 30 seconds.
-    /// TODO(fxbug.dev/34504): instead of waiting for 30 seconds, we should have a retry loop around the ssh in
-    /// the verification step.
-    pub fn reboot_step(mut self) -> Self {
-        self.steps.push(Box::new(RebootStep::new(&self.target, &self.auth, &self.reboot_type)));
-        self
-    }
-
-    /// Add a verify step. This runs the `verify` subcommand on the target binary, waiting for
-    /// completion, and checks the result. The verification is done in a retry loop, attempting to
-    /// run the verification command `num_retries` times, sleeping for `retry_timeout` duration
-    /// between each attempt.
-    pub fn verify_step(mut self, num_retries: u32, retry_timeout: Duration) -> Self {
-        self.steps.push(Box::new(VerifyStep::new(
-            &self.target,
-            &self.auth,
-            &self.bin,
-            self.seed.clone(),
-            &self.block_device,
-            num_retries,
-            retry_timeout,
-        )));
-        self
-    }
 
     /// Add a custom test step implementation.
-    pub fn add_step(mut self, step: Box<dyn TestStep>) -> Self {
+    pub fn add_step(&mut self, step: Box<dyn TestStep>) -> &mut Self {
         self.steps.push(step);
         self
     }
@@ -462,6 +331,177 @@ impl Test {
     }
 }
 
+async fn get_target(isolate: Arc<ffx_isolate::Isolate>) -> Result<String, anyhow::Error> {
+    if let Ok(name) = std::env::var("FUCHSIA_NODENAME") {
+        return Ok(name);
+    }
+
+    // ensure a daemon is spun up first, so we have a moment to discover targets.
+    let start = std::time::Instant::now();
+    loop {
+        let out = isolate.ffx(&["ffx", "target", "list"]).await?;
+        if out.stdout.len() > 10 {
+            break;
+        }
+        if start.elapsed() > std::time::Duration::from_secs(5) {
+            bail!("No targets found after 5s")
+        }
+    }
+
+    let out = isolate.ffx(&["target", "list", "-f", "j"]).await.context("getting target list")?;
+
+    ensure!(out.status.success(), "Looking up a target name failed: {:?}", out);
+
+    let targets: Value =
+        serde_json::from_str(&out.stdout).context("parsing output from target list")?;
+
+    let targets =
+        targets.as_array().ok_or(anyhow::anyhow!("expected target list ot return an array"))?;
+
+    let target = targets
+        .iter()
+        .find(|target| {
+            target["nodename"] != ""
+                && target["target_state"]
+                    .as_str()
+                    .map(|s| s.to_lowercase().contains("product"))
+                    .unwrap_or(false)
+        })
+        .ok_or(anyhow::anyhow!("did not find any named targets in a product state"))?;
+    target["nodename"]
+        .as_str()
+        .map(|s| s.to_string())
+        .ok_or(anyhow::anyhow!("expected product state target to have a nodename"))
+}
+
+/// A test environment. This wraps a test configuration with the environmental context to run it,
+/// such as the isolated ffx instance.
+pub struct TestEnv {
+    test: Test,
+    isolated_ffx: Arc<ffx_isolate::Isolate>,
+    target: String,
+}
+
+impl TestEnv {
+    /// Create a new test with the provided name. The name needs to match the associated package
+    /// that will be present on the target device. The package should be callable with `ffx
+    /// component run-legacy` from the command line.
+    ///
+    /// At this point, the test environment will also perform target discovery, selecting either a
+    /// node specified by $FUCHSIA_NODENAME or whatever the first target that gets enumerated by
+    /// ffx is.
+    ///
+    /// If either creating the isolated ffx instance or the target discovery fails, this function
+    /// will panic.
+    pub async fn new_component(
+        package: &'static str,
+        component: &'static str,
+        opts: CommonOpts,
+    ) -> TestEnv {
+        let isolate = Arc::new(
+            ffx_isolate::Isolate::new("blackout-ffx")
+                .await
+                .expect("failed to make new isolated ffx"),
+        );
+        let target = get_target(isolate.clone()).await.expect("failed to discover target");
+
+        TestEnv {
+            test: Test::new_component(package, component, opts),
+            isolated_ffx: isolate,
+            target,
+        }
+    }
+
+    /// Add a test step for setting up the filesystem in the way we want it for the test. This
+    /// executes the `setup` subcommand on the target binary and waits for completion, checking the
+    /// result.
+    pub fn setup_step(&mut self) -> &mut Self {
+        self.test.add_step(Box::new(SetupStep::new(
+            self.isolated_ffx.clone(),
+            &self.target,
+            &self.test.bin,
+            self.test.seed.clone(),
+            &self.test.block_device,
+        )));
+        self
+    }
+
+    /// Add a test step for generating load on the device using the `test` subcommand on the target
+    /// binary. This load doesn't terminate. After `duration`, it checks to make sure the command is
+    /// still running, then return.
+    pub fn load_step(&mut self, duration: Duration) -> &mut Self {
+        self.test.add_step(Box::new(LoadStep::new(
+            self.isolated_ffx.clone(),
+            &self.target,
+            &self.test.bin,
+            self.test.seed.clone(),
+            &self.test.block_device,
+            duration,
+        )));
+        self
+    }
+
+    /// Add an operation step. This runs the `test` subcommand on the target binary to completion
+    /// and checks the result.
+    pub fn operation_step(&mut self) -> &mut Self {
+        self.test.add_step(Box::new(OperationStep::new(
+            self.isolated_ffx.clone(),
+            &self.target,
+            &self.test.bin,
+            self.test.seed.clone(),
+            &self.test.block_device,
+        )));
+        self
+    }
+
+    /// Add a reboot step. This reboots the target machine using the configured reboot mechanism.
+    pub fn reboot_step(&mut self) -> &mut Self {
+        self.test.add_step(Box::new(RebootStep::new(
+            self.isolated_ffx.clone(),
+            &self.target,
+            &self.test.reboot_type,
+        )));
+        self
+    }
+
+    /// Add a verify step. This runs the `verify` subcommand on the target binary, waiting for
+    /// completion, and checks the result. The verification is done in a retry loop, attempting to
+    /// run the verification command `num_retries` times, sleeping for `retry_timeout` duration
+    /// between each attempt.
+    pub fn verify_step(&mut self, num_retries: u32, retry_timeout: Duration) -> &mut Self {
+        self.test.add_step(Box::new(VerifyStep::new(
+            self.isolated_ffx.clone(),
+            &self.target,
+            &self.test.bin,
+            self.test.seed.clone(),
+            &self.test.block_device,
+            num_retries,
+            retry_timeout,
+        )));
+        self
+    }
+
+    /// Run the provided test. The test is provided as a function that takes a clone of the command
+    /// line options and produces a test to run. This
+    /// There are essentially 4 possible types of test runs that we may be doing here.
+    /// 1. one iteration (iterations == None && run_until_failure == false)
+    ///    this is the simplest case. run one iteration of the test by constructing the test and
+    ///    calling test.run(), returning the result.
+    /// 2. some number of iterations (iterations == Some(N) && run_until_failure == false)
+    ///    essentially the InfiniteExecutor code, except instead of an infinite loop we use a
+    ///    bounded one.
+    /// 3. run until verification failure (iterations == None && run_until_failure == true)
+    ///    run tests until an Error::Verification is returned. keep track of the number of runs,
+    ///    but there is no need to tabulate other errors.
+    /// 4. run until verification failure, except with a max number of iterations
+    ///    (iterations == Some(N) && run_until_failure == true)
+    ///    if both flags are present, we combine the functionality. only run a certain number of
+    ///    iterations, but quit early if there is a failure instead of aggregating the results.
+    pub fn run(self) -> Result<(), BlackoutError> {
+        self.test.run()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::BlackoutError as Error;
@@ -495,18 +535,14 @@ mod tests {
     }
 
     fn fake_test(iterations: Option<u64>, run_until_failure: bool) -> Test {
-        let test = Test::new_component("fake_package", "fake_component");
         let opts = CommonOpts {
             block_device: "/fake/block/device".into(),
-            target: "fake target".into(),
             seed: None,
             relay: None,
             iterations,
             run_until_failure,
-            ssh_key: Some("/fake/ssh/key".into()),
-            ssh_agent: false,
         };
-        test.add_options(opts)
+        Test::new_component("fake_package", "fake_component", opts)
     }
 
     #[test]
@@ -529,7 +565,8 @@ mod tests {
         let (step1, step1_runs) = FakeStep::new(step1_func);
         let (step2, step2_runs) = FakeStep::new(step2_func);
 
-        let test = fake_test(None, false).add_step(Box::new(step1)).add_step(Box::new(step2));
+        let mut test = fake_test(None, false);
+        test.add_step(Box::new(step1)).add_step(Box::new(step2));
 
         test.run().expect("failed to run test");
 
@@ -548,10 +585,8 @@ mod tests {
             )))
         });
         let (step3, step3_runs) = FakeStep::new(|_| panic!("step 3 should never be run"));
-        let test = fake_test(None, false)
-            .add_step(Box::new(step1))
-            .add_step(Box::new(step2))
-            .add_step(Box::new(step3));
+        let mut test = fake_test(None, false);
+        test.add_step(Box::new(step1)).add_step(Box::new(step2)).add_step(Box::new(step3));
         match test.run() {
             Err(BlackoutError::Verification(..)) => (),
             Ok(..) => panic!("test returned Ok on an error"),
@@ -569,7 +604,8 @@ mod tests {
         // expected number of times.
         let iterations = 10;
         let (step, runs) = FakeStep::new(|_| Ok(()));
-        let test = fake_test(Some(iterations), false).add_step(Box::new(step));
+        let mut test = fake_test(Some(iterations), false);
+        test.add_step(Box::new(step));
         test.run().expect("failed to run test");
         assert_eq!(runs.get(), iterations, "step wasn't run the expected number of times");
     }
@@ -584,7 +620,8 @@ mod tests {
                 "(fake stderr)".into(),
             )))
         });
-        let test = fake_test(Some(iterations), false).add_step(Box::new(step));
+        let mut test = fake_test(Some(iterations), false);
+        test.add_step(Box::new(step));
         test.run().expect("failed to run test");
         assert_eq!(runs.get(), iterations, "step wasn't run the expected number of times");
     }
@@ -593,16 +630,14 @@ mod tests {
     fn run_n_executes_steps_n_times_other_error() {
         let iterations = 10;
         let (step, runs) = FakeStep::new(|_| {
-            Err(BlackoutError::Ssh(
-                "(fake target)".into(),
-                CommandError(
-                    ExitStatus::from_raw(1),
-                    "(fake stdout)".into(),
-                    "(fake stderr)".into(),
-                ),
-            ))
+            Err(BlackoutError::TargetCommand(CommandError(
+                ExitStatus::from_raw(1),
+                "(fake stdout)".into(),
+                "(fake stderr)".into(),
+            )))
         });
-        let test = fake_test(Some(iterations), false).add_step(Box::new(step));
+        let mut test = fake_test(Some(iterations), false);
+        test.add_step(Box::new(step));
         test.run().expect("failed to run test");
         assert_eq!(runs.get(), iterations, "step wasn't run the expected number of times");
     }

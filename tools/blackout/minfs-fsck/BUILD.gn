@@ -11,6 +11,7 @@ if (is_host) {
     testonly = true
     edition = "2018"
     deps = [
+      "//src/lib/fuchsia-async",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:structopt",
       "//tools/blackout/blackout-host",

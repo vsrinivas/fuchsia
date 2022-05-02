@@ -5,51 +5,20 @@
 //! test steps
 
 use {
-    crate::{BlackoutError, RebootError, Seed, SshAuth},
+    crate::{BlackoutError, RebootError, Seed},
+    ffx_isolate,
     std::{
         fs::OpenOptions,
         io::Write,
         path::{Path, PathBuf},
         process::{Child, Command, Output, Stdio},
+        sync::Arc,
         thread::sleep,
         time::Duration,
     },
 };
 
-#[rustfmt::skip]
-/// ssh options for connecting to a target machine.
-static SSH_OPTIONS: &'static [&str] = &[
-    // use the fuchsia user
-    "-o", "User=fuchsia",
-    // don't bother with any of the known hosts stuff
-    "-o", "UserKnownHostsFile=/dev/null",
-    "-o", "StrictHostKeyChecking=no",
-    "-o", "CheckHostIP=no",
-    // don't forward anything
-    "-o", "ForwardAgent=no",
-    "-o", "ForwardX11=no",
-    // allow the ssh connection to be reused
-    "-o", "ControlPersist=yes",
-    "-o", "ControlMaster=auto",
-    "-o", "ControlPath=/tmp/fuchsia--%r@%h:%p",
-    // the next three control how long ssh will wait in different situations before giving up.
-    // wait 100 seconds for the server to be routable. overrides the system default tcp timeout.
-    "-o", "ConnectTimeout=100",
-    // send a ping to the server every 10 seconds if no data has been received from the server
-    "-o", "ServerAliveInterval=10",
-    // send 6 of those pings before giving up. this is equivalent to a timeout of about 60 seconds
-    // before giving up the connection, when the server is routable but we aren't getting responses
-    // from the server yet.
-    "-o", "ServerAliveCountMax=6",
-];
-
-fn ssh(target: &str, auth: &SshAuth) -> Command {
-    let mut command = Command::new("ssh");
-    command.args(SSH_OPTIONS);
-    command.args(auth.args());
-    command.arg(target);
-    command
-}
+const VERIFICATION_FAILURE_EXIT_CODE: i32 = 42;
 
 /// Type of reboot to perform.
 #[derive(Clone, Debug)]
@@ -74,75 +43,75 @@ fn hard_reboot(dev: impl AsRef<Path>) -> Result<(), RebootError> {
     Ok(())
 }
 
-/// Reboot the target system using `dm reboot`.
-fn soft_reboot(target: &str, auth: &SshAuth) -> Result<(), RebootError> {
-    // ignore the return value because it's garbage
-    let _ = ssh(target, auth).arg("dm").arg("reboot").status()?;
-    Ok(())
-}
-
 trait Runner {
+    /// Run a subcommand of the originally provided binary on the target. The command is spawned as
+    /// a separate process, and a reference to the child process is returned. stdout and stderr are
+    /// piped (see [`std::process::Stdio::piped()`] for details).
     fn run_spawn(&self, subc: &str) -> Result<Child, BlackoutError>;
+
+    /// Run a subcommand to completion and collect the output from the process.
     fn run_output(&self, subc: &str) -> Result<Output, BlackoutError>;
+
+    /// Run a subcommand to completion but throw out the output.
     fn run(&self, subc: &str) -> Result<(), BlackoutError>;
 }
 
-/// run a target binary on a target device over ssh.
-struct CmdRunner {
+struct FfxRunner {
+    ffx: Arc<ffx_isolate::Isolate>,
     target: String,
-    auth: SshAuth,
     bin: String,
     seed: Seed,
     block_device: String,
 }
 
-impl CmdRunner {
+impl FfxRunner {
     fn new(
+        ffx: Arc<ffx_isolate::Isolate>,
         target: &str,
-        auth: &SshAuth,
         bin: &str,
         seed: Seed,
         block_device: &str,
     ) -> Box<dyn Runner> {
-        Box::new(CmdRunner {
-            target: target.into(),
-            auth: auth.clone(),
-            bin: bin.into(),
+        Box::new(FfxRunner {
+            ffx,
+            target: target.to_string(),
+            bin: bin.to_string(),
             seed,
-            block_device: block_device.into(),
+            block_device: block_device.to_string(),
         })
     }
 
     fn run_bin(&self) -> Command {
-        let mut command = ssh(&self.target, &self.auth);
-        command.arg(&self.bin).arg(self.seed.to_string()).arg(&self.block_device);
+        let mut command = self.ffx.ffx_cmd(&[]);
+        command
+            .arg("--target")
+            .arg(&self.target)
+            .arg("component")
+            .arg("run-legacy")
+            .arg(&self.bin)
+            .arg(self.seed.to_string())
+            .arg(&self.block_device);
         command
     }
 }
 
-impl Runner for CmdRunner {
-    /// Run a subcommand of the originally provided binary on the target. The command is spawned as a
-    /// separate process, and a reference to the child process is returned. stdout and stderr are
-    /// piped (see [`std::process::Stdio::piped()`] for details).
+impl Runner for FfxRunner {
     fn run_spawn(&self, subc: &str) -> Result<Child, BlackoutError> {
         let child =
             self.run_bin().arg(subc).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
 
         Ok(child)
     }
-
-    /// Run a subcommand to completion and collect the output from the process.
     fn run_output(&self, subc: &str) -> Result<Output, BlackoutError> {
         let out = self.run_bin().arg(subc).output()?;
         if out.status.success() {
             Ok(out)
-        } else if out.status.code().unwrap() == 255 {
-            Err(BlackoutError::Ssh(self.target.clone(), out.into()))
+        } else if out.status.code().unwrap() == VERIFICATION_FAILURE_EXIT_CODE {
+            Err(BlackoutError::Verification(out.into()))
         } else {
             Err(BlackoutError::TargetCommand(out.into()))
         }
     }
-
     fn run(&self, subc: &str) -> Result<(), BlackoutError> {
         self.run_output(subc).map(|_| ())
     }
@@ -164,13 +133,13 @@ pub struct SetupStep {
 impl SetupStep {
     /// Create a new operation step.
     pub(crate) fn new(
+        ffx: Arc<ffx_isolate::Isolate>,
         target: &str,
-        auth: &SshAuth,
         bin: &str,
         seed: Seed,
         block_device: &str,
     ) -> Self {
-        Self { runner: CmdRunner::new(target, auth, bin, seed, block_device) }
+        Self { runner: FfxRunner::new(ffx, target, bin, seed, block_device) }
     }
 }
 
@@ -191,14 +160,14 @@ pub struct LoadStep {
 impl LoadStep {
     /// Create a new test step.
     pub(crate) fn new(
+        ffx: Arc<ffx_isolate::Isolate>,
         target: &str,
-        auth: &SshAuth,
         bin: &str,
         seed: Seed,
         block_device: &str,
         duration: Duration,
     ) -> Self {
-        Self { runner: CmdRunner::new(target, auth, bin, seed, block_device), duration }
+        Self { runner: FfxRunner::new(ffx, target, bin, seed, block_device), duration }
     }
 }
 
@@ -228,13 +197,13 @@ pub struct OperationStep {
 impl OperationStep {
     /// Create a new operation step.
     pub(crate) fn new(
+        ffx: Arc<ffx_isolate::Isolate>,
         target: &str,
-        auth: &SshAuth,
         bin: &str,
         seed: Seed,
         block_device: &str,
     ) -> Self {
-        Self { runner: CmdRunner::new(target, auth, bin, seed, block_device) }
+        Self { runner: FfxRunner::new(ffx, target, bin, seed, block_device) }
     }
 }
 
@@ -247,15 +216,19 @@ impl TestStep for OperationStep {
 
 /// A test step for rebooting the target machine. This uses the configured reboot mechanism.
 pub struct RebootStep {
+    ffx: Arc<ffx_isolate::Isolate>,
     target: String,
-    auth: SshAuth,
     reboot_type: RebootType,
 }
 
 impl RebootStep {
     /// Create a new reboot step.
-    pub(crate) fn new(target: &str, auth: &SshAuth, reboot_type: &RebootType) -> Self {
-        Self { target: target.into(), auth: auth.clone(), reboot_type: reboot_type.clone() }
+    pub(crate) fn new(
+        ffx: Arc<ffx_isolate::Isolate>,
+        target: &str,
+        reboot_type: &RebootType,
+    ) -> Self {
+        Self { ffx, target: target.to_string(), reboot_type: reboot_type.clone() }
     }
 }
 
@@ -263,7 +236,10 @@ impl TestStep for RebootStep {
     fn execute(&self) -> Result<(), BlackoutError> {
         println!("rebooting device...");
         match &self.reboot_type {
-            RebootType::Software => soft_reboot(&self.target, &self.auth)?,
+            RebootType::Software => {
+                let _ =
+                    self.ffx.ffx_cmd(&["--target", &self.target, "target", "reboot"]).status()?;
+            }
             RebootType::Hardware(relay) => hard_reboot(&relay)?,
         }
         Ok(())
@@ -283,8 +259,8 @@ impl VerifyStep {
     /// verification command `num_retries` times and sleeping for `retry_timeout` duration in between
     /// each attempt.
     pub(crate) fn new(
+        ffx: Arc<ffx_isolate::Isolate>,
         target: &str,
-        auth: &SshAuth,
         bin: &str,
         seed: Seed,
         block_device: &str,
@@ -292,7 +268,7 @@ impl VerifyStep {
         retry_timeout: Duration,
     ) -> Self {
         Self {
-            runner: CmdRunner::new(target, auth, bin, seed, block_device),
+            runner: FfxRunner::new(ffx, target, bin, seed, block_device),
             num_retries,
             retry_timeout,
         }
@@ -301,7 +277,7 @@ impl VerifyStep {
 
 impl TestStep for VerifyStep {
     fn execute(&self) -> Result<(), BlackoutError> {
-        let mut last_ssh_error = Ok(());
+        let mut last_error = Ok(());
         let start_time = std::time::Instant::now();
         for i in 1..self.num_retries + 1 {
             println!("verifying device...(attempt #{})", i);
@@ -310,22 +286,19 @@ impl TestStep for VerifyStep {
                     println!("verification successful.");
                     return Ok(());
                 }
-                Err(ssh_error @ BlackoutError::Ssh(..)) => {
-                    // always print out the ssh error so it doesn't get buried to help with debugging.
-                    println!("{}", ssh_error);
-                    last_ssh_error = Err(ssh_error);
+                Err(e @ BlackoutError::Verification(..)) => return Err(e),
+                Err(e) => {
+                    // always print out the error so it doesn't get buried to help with debugging.
+                    println!("{}", e);
+                    last_error = Err(e);
                     sleep(self.retry_timeout);
                 }
-                // during the verification stage, we expect that any time the target command fails,
-                // it's a verification failure.
-                Err(BlackoutError::TargetCommand(e)) => return Err(BlackoutError::Verification(e)),
-                Err(e) => return Err(e),
             }
         }
         let elapsed = std::time::Instant::now().duration_since(start_time);
         println!("stopping verification attempt after {}s", elapsed.as_secs());
-        // we failed to ssh into the device too many times in a row. something's wrong.
-        last_ssh_error
+        // we failed to run a command on the device too many times in a row. something's wrong.
+        last_error
     }
 }
 
@@ -438,9 +411,9 @@ mod tests {
     }
 
     #[test]
-    fn verify_target_command_error() {
+    fn verify_error() {
         let error = || {
-            Err(BlackoutError::TargetCommand(CommandError(
+            Err(BlackoutError::Verification(CommandError(
                 ExitStatus::from_raw(1),
                 "(fake stdout)".into(),
                 "(fake stderr)".into(),
@@ -452,11 +425,7 @@ mod tests {
             retry_timeout: Duration::from_secs(0),
         };
         match step.execute() {
-            // verify step is expected to tranform target command errors into verification errors.
             Err(BlackoutError::Verification(_)) => (),
-            Err(BlackoutError::TargetCommand(_)) => {
-                panic!("verify step returned target command error instead of verification error")
-            }
             Ok(()) => panic!("verify step returned success when runner failed"),
             _ => panic!("verify step returned an unexpected error"),
         }
@@ -468,14 +437,11 @@ mod tests {
         let attempts = outer_attempts.clone();
         let error = move || {
             attempts.set(attempts.get() + 1);
-            Err(BlackoutError::Ssh(
-                "fake target".into(),
-                CommandError(
-                    ExitStatus::from_raw(255),
-                    "(fake stdout)".into(),
-                    "(fake stderr)".into(),
-                ),
-            ))
+            Err(BlackoutError::TargetCommand(CommandError(
+                ExitStatus::from_raw(255),
+                "(fake stdout)".into(),
+                "(fake stderr)".into(),
+            )))
         };
         let step = VerifyStep {
             runner: Box::new(FakeRunner::new("verify", error)),
@@ -483,7 +449,7 @@ mod tests {
             retry_timeout: Duration::from_secs(0),
         };
         match step.execute() {
-            Err(BlackoutError::Ssh(..)) => (),
+            Err(BlackoutError::TargetCommand(..)) => (),
             Ok(()) => panic!("verify step returned success when runner failed"),
             _ => panic!("verify step returned an unexpected error"),
         }
@@ -497,14 +463,11 @@ mod tests {
         let error = move || {
             attempts.set(attempts.get() + 1);
             if attempts.get() <= 5 {
-                Err(BlackoutError::Ssh(
-                    "fake target".into(),
-                    CommandError(
-                        ExitStatus::from_raw(255),
-                        "(fake stdout)".into(),
-                        "(fake stderr)".into(),
-                    ),
-                ))
+                Err(BlackoutError::TargetCommand(CommandError(
+                    ExitStatus::from_raw(255),
+                    "(fake stdout)".into(),
+                    "(fake stderr)".into(),
+                )))
             } else {
                 Ok(())
             }
@@ -516,7 +479,7 @@ mod tests {
         };
         match step.execute() {
             Ok(()) => (),
-            Err(BlackoutError::Ssh(..)) => {
+            Err(BlackoutError::TargetCommand(..)) => {
                 panic!("verify step returned error when runner succeeded")
             }
             _ => panic!("verify step returned an unexpected error"),

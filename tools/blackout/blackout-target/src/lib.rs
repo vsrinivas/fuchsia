@@ -18,6 +18,12 @@ use {
 
 pub mod static_tree;
 
+/// The exit code a target command is expected to return if the error is related to verification of
+/// the underlying filesystem. This primarily indicates to the host framework that it shouldn't
+/// retry when running a verification step - that it actually failed instead of seeing a transient
+/// failure such as a communication failure with the target device.
+pub const VERIFICATION_FAILURE_EXIT_CODE: i32 = 42;
+
 /// Common options for the target test binary
 #[derive(Debug, StructOpt)]
 #[structopt(rename_all = "kebab-case")]

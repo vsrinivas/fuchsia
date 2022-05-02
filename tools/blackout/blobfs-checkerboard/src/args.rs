@@ -14,10 +14,6 @@ pub struct BlobfsCheckerboardCommand {
     /// will!) format this device. Don't use a main system partition!
     #[argh(positional)]
     pub block_device: String,
-    /// the target device to ssh into and execute the test on. A good way to configure this locally
-    /// is by using `$(fx get-device-addr)`.
-    #[argh(positional)]
-    pub target: String,
     /// a seed to use for all random operations. Tests are NOT deterministic relative to the
     /// provided seed. The operations will be identical, but because of the non-deterministic
     /// timing-dependent nature of the tests, the exact time the reboot is triggered in relation to
@@ -38,14 +34,4 @@ pub struct BlobfsCheckerboardCommand {
     /// run the test until a verification failure is detected, then exit.
     #[argh(switch, short = 'f', long = "run-until-failure")]
     pub run_until_failure: bool,
-    /// path to the ssh private key to use when authenticating with the target device. If neither
-    /// this flag or the --ssh-agent flag is set, the test will open `$FUCHSIA_DIR/.ssh/pkey` if
-    /// `$FUCHSIA_DIR` exists, otherwise it will attempt to open `$CWD/.ssh/pkey`. If none of these
-    /// attempts succeed the test will fail to run.
-    #[argh(option, short = 'k', long = "ssh-key")]
-    pub ssh_key: Option<String>,
-    /// use the ssh agent to authenticate with the target device. If both this option and --ssh-key
-    /// are provided, --ssk-key will take precedence.
-    #[argh(switch, short = 'a', long = "ssh-agent")]
-    pub ssh_agent: bool,
 }

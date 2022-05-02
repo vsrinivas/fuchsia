@@ -669,6 +669,7 @@ group("cmx_allowlist") {
     "//src/zircon/bin/vsock_service:*",
     "//src/zircon/tests/profile:*",
     "//src/zircon/tests/stress-tests:*",
+    "//tools/blackout/blackout-integration:*",
     "//tools/blackout/blobfs-checkerboard:*",
     "//tools/blackout/minfs-fsck:*",
     "//tools/cmc:*",

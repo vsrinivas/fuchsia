@@ -48,7 +48,7 @@ fn write_blob(root: &str, i: u64) -> Result<String, Error> {
     Ok(path)
 }
 
-fn setup(blobfs: &mut Filesystem<Blobfs>) -> Result<(), Error> {
+fn setup(mut blobfs: Filesystem<Blobfs>) -> Result<(), Error> {
     let mut rng = rand::thread_rng();
 
     println!("formatting provided block device with blobfs");
@@ -79,7 +79,7 @@ fn setup(blobfs: &mut Filesystem<Blobfs>) -> Result<(), Error> {
     Ok(())
 }
 
-async fn test(blobfs: &mut Filesystem<Blobfs>) -> Result<(), Error> {
+async fn test(mut blobfs: Filesystem<Blobfs>) -> Result<(), Error> {
     let mut rng = rand::thread_rng();
     let root = format!("/test-fs-root-{}", rng.gen::<u16>());
 
@@ -173,9 +173,12 @@ async fn test(blobfs: &mut Filesystem<Blobfs>) -> Result<(), Error> {
     }
 }
 
-fn verify(blobfs: &mut Filesystem<Blobfs>) -> Result<(), Error> {
+fn verify(mut blobfs: Filesystem<Blobfs>) -> Result<(), Error> {
     println!("verifying disk with fsck");
-    blobfs.fsck().context("failed to run fsck")?;
+    if let Err(e) = blobfs.fsck() {
+        println!("fsck failed: {:?}", e);
+        std::process::exit(blackout_target::VERIFICATION_FAILURE_EXIT_CODE);
+    }
 
     println!("verification successful");
     Ok(())
@@ -188,11 +191,18 @@ async fn main() -> Result<(), Error> {
     println!("provided block device: {}", opts.common.block_device);
     let dev = blackout_target::find_dev(&opts.common.block_device).await?;
     println!("using equivalent block device: {}", dev);
-    let mut blobfs = Blobfs::new(&dev)?;
+    let blobfs = Blobfs::new(&dev)?;
 
     match opts.commands {
-        CommonCommand::Setup => setup(&mut blobfs),
-        CommonCommand::Test => test(&mut blobfs).await,
-        CommonCommand::Verify => verify(&mut blobfs),
+        CommonCommand::Setup => setup(blobfs)?,
+        CommonCommand::Test => test(blobfs).await?,
+        CommonCommand::Verify => {
+            if let Err(e) = verify(blobfs) {
+                println!("{:?}", e);
+                std::process::exit(blackout_target::VERIFICATION_FAILURE_EXIT_CODE);
+            }
+        }
     }
+
+    Ok(())
 }
