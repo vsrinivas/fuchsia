@@ -19,6 +19,7 @@
 #include <lib/fdio/watcher.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fzl/time.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>

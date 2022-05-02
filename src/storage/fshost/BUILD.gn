@@ -262,7 +262,6 @@ executable("fshost") {
 
 test("fshost_test") {
   sources = [
-    "delayed-outdir-test.cc",
     "fshost-boot-args-test.cc",
     "fshost-test.cc",
   ]
