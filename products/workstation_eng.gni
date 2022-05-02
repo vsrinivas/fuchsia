@@ -1,0 +1,123 @@
+# Copyright 2022 The Fuchsia Authors.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//products/common/workstation.gni")
+
+# Add build type config data
+base_package_labels += [ "//src/fonts:build_type_eng" ]
+
+# Always report DEBUG metrics in Cobalt
+base_package_labels -= [ "//src/cobalt/bin/app:user_config" ]
+base_package_labels += [ "//src/cobalt/bin/app:config" ]
+
+base_package_labels += [ "//src/developer/ssh-key-manager" ]
+
+# TODO: Remove this once Scenic supports multiple displays.
+base_package_labels += [ "//src/sys/tools/stash_ctl" ]
+
+# Used by integration tests to inject v1 networking components.
+base_package_labels +=
+    [ "//src/connectivity/network:network-legacy-deprecated" ]
+
+# Improve DX by allowing iteration on these packages without and OTA.
+_developer_packages = [
+  "//src/sys/activity",
+  "//src/intl/intl_services:pkg",
+  "//src/media/audio/bundles:services",
+  "//src/power:battery",
+  "//src/ui:workstation",
+  "//src/ui/bin/text:text_manager",
+  "//src/ui/bin/brightness_manager",
+  "//src/ui/bin/screensaver",
+  "//src/ui/bin/shortcut",
+  "//src/chromium:chrome_browser",
+  "//src/experiences/bin/settings/license:license_settings",
+  "//src/experiences/session_shells/ermine",
+  "//src/media/playback/bundles:services",
+  "//src/media/playback/bundles:audio_consumer_config",
+  "//src/session",
+  "//src/ui/bin/terminal",
+  "//src/ui/scenic",
+
+  # Starnix
+  "//src/proc/bundles:examples",
+]
+base_package_labels -= _developer_packages
+cache_package_labels += _developer_packages
+
+# Add examples to universe.
+universe_package_labels += [
+  "//examples/fidl:tests",
+  "//src/lib/ui/carnelian:examples",
+  "//src/ui/examples/bouncing_ball",
+  "//src/ui/examples/spinning_square_view",
+  "//src/proc/bundles:examples",
+]
+
+# E2E Product Tests. Currently used for Chrome smoke test.
+# They don't produce fuchsia packages, but host executables used by the tests.
+host_labels += [ "//src/experiences/tests/chrome:test" ]
+
+# Set the SWD policy for workstation_eng, details can be found in //build/security/policies_swd.gni.
+policy_labels.swd = "unrestricted"
+
+# End to end (E2E) product test runtime dependencies. Must be added to cache,
+# not universe, so the test can run on bots where there is no package server.
+#
+# TODO(fxbug.dev/9892): Support a package server on bots so this can be added to
+# universe like the tests.
+cache_package_labels += [
+  # Used for Chromium tests for example: web_runner_tests.
+  "//src/testing/fidl/intl_property_manager",
+
+  "//src/tests/end_to_end/bundles:end_to_end_deps",
+  "//src/experiences/tests/e2e:end_to_end_deps",
+  "//src/experiences/tests/performance:performance_deps",
+
+  # CFv2 test framework.
+  "//src/sys/run_test_suite",
+
+  # Fake build info for testing support.
+  "//src/developer/build_info/testing:testing",
+]
+
+# E2E Product Tests. They don't produce fuchsia packages, but host executables
+# used by the tests.
+host_labels += [
+  "//src/experiences/tests/e2e:test",
+  "//src/experiences/tests/performance:test",
+  "//src/tests/end_to_end/copy_files:test",
+]
+
+universe_package_labels += [
+  # E2E Product Tests. They don't produce fuchsia packages, but host
+  # executables, and must just be included somewhere in the build configuration
+  # of the product.
+  "//src/tests/end_to_end/screen_is_not_black",
+  "//src/tests/end_to_end/sl4f:test",
+  "//src/tests/end_to_end/time_sync:test",
+
+  # Only for products in which Flutter is supported.
+  "//src/tests/intl/timezone:tests-for-flutter",
+
+  "//src/fonts:open-fonts",
+]
+
+# Add SDK tools set to "cache" so these tools are automatically available in
+# QEMU images generated for the SDK, but in cache, so they can be updated.
+cache_package_labels += [ "//sdk/bundles:core-tools" ]
+
+# Enable the live_usb component.
+with_live_usb = true
+product_bootfs_labels += [ "//src/sys/live_usb:live_usb_is_system" ]
+
+# Build with both JIT and AOT non-product runners. JIT is used for debug builds, and AOT is used
+# for release builds.
+cache_package_labels += [
+  "//src/dart:dart_jit",
+  "//src/flutter:flutter_jit",
+  "//src/dart:dart_aot",
+  "//src/flutter:flutter_aot",
+  "//src/experiences/session_shells/ermine/session:session_manager",
+]

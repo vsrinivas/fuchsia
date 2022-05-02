@@ -1,0 +1,152 @@
+# Copyright 2022 The Fuchsia Authors.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Common workstation product configuration. This configuration is shared by the _eng,
+# _userdebug, and _user build types.
+
+import("//products/core.gni")
+core_realm_package_name = "core-workstation"
+
+core_realm_shards += [
+  "//src/developer/build_info:build_info_core_shard",
+  "//src/developer/memory/monitor:memory_monitor_core_shard",
+  "//src/identity/bin/account:account-core-shard",
+  "//src/intl/intl_services:intl_services_shard",
+  "//src/media/audio/drivers/configurator:configurator_provider_shard",
+  "//src/power/battery-manager:battery-manager-core-shard",
+  "//src/session/bin/session_manager:workstation_core_shard",
+  "//src/ui:ui-core-shard",
+]
+
+base_package_labels += [
+  "//src/connectivity/wlan/drivers:iwlwifi",
+  "//src/developer/memory/buckets:workstation_memory_monitor_config",
+  "//src/fonts",
+  "//src/fonts:open-fonts-collection",
+  "//src/graphics/bin/vulkan_loader",
+  "//src/identity/bin:minimal_auth",
+
+  # TODO(fxbug.dev/90430): Complete CFv2 migration and remove.
+  "//src/intl/intl_services/config:sysmgr",
+  "//src/intl/intl_services:pkg",
+  "//src/media/audio/bundles:services",
+  "//src/media/audio/drivers/configurator:package",
+  "//src/power:battery",
+  "//src/sys/activity",
+  "//src/ui:workstation",
+  "//src/ui/bin/brightness_manager",
+  "//src/ui/bin/screensaver",
+  "//src/ui/bin/text:text_manager",
+  "//src/ui/bin/shortcut",
+  "//third_party/openssh-portable:openssh-tools",
+]
+base_package_labels -= [
+  # TODO(fxbug.dev/90430): Complete CFv2 migration and remove.
+  "//src/intl/intl_services/config:sysmgr_small",
+]
+core_realm_shards -= [ "//src/intl/intl_services:intl_services_small_shard" ]
+
+# Add Linux runner
+base_package_labels += [
+  "//src/ui/wayland/bin/bridge",
+  "//src/virtualization/bin/vmm",
+  "//src/virtualization/bin/guest_manager",
+  "//src/virtualization/bin/guest_runner",
+  "//src/virtualization/bin/linux_runner",
+  "//src/virtualization/packages/termina_guest",
+  "//src/virtualization/bin/guest",
+]
+
+# Add Bluetooth packages
+core_realm_shards +=
+    [ "//src/connectivity/bluetooth/profiles/bt-a2dp:eager_core_shard" ]
+
+# To use the eager shard, cache the packages so they are available before network.
+cache_package_labels += [
+  "//src/connectivity/bluetooth/profiles/bt-a2dp:source-only",
+  "//src/connectivity/bluetooth/profiles/bt-avrcp-target",
+
+  # TODO(fxbug.dev/79542): Demote to universe when sysui handles pairing+connecting
+  "//src/connectivity/bluetooth/tools/bt-cli",
+  "//src/connectivity/bluetooth/tools/bt-pairing-tool",
+]
+
+# Disable reporting DEBUG metrics in Cobalt
+base_package_labels -= [ "//src/cobalt/bin/app:config" ]
+base_package_labels += [ "//src/cobalt/bin/app:user_config" ]
+
+# Explicitly prefer wired networking on workstation
+base_package_labels -= [ "//src/connectivity/network/netcfg:config-default" ]
+base_package_labels +=
+    [ "//src/connectivity/network/netcfg:config-prefer-wired" ]
+
+# This package is only used for tests, so it must stay out of non-eng workstation products.
+base_package_labels -=
+    [ "//src/connectivity/network:network-legacy-deprecated" ]
+
+base_package_labels += [
+  "//src/chromium:chrome_browser",
+  "//src/experiences/bin/settings/license:license_settings",
+  "//src/experiences/session_shells/ermine",
+  "//src/media/playback/bundles:services",
+  "//src/media/playback/bundles:audio_consumer_config",
+  "//src/session",
+  "//src/ui/bin/terminal",
+  "//src/ui/scenic",
+
+  # Starnix
+  "//src/proc/bundles:examples",
+]
+
+product_bootfs_labels += [
+  # hide the virtual console on boot
+  "//products/kernel_cmdline:virtcon.hide-on-boot",
+
+  # enable boot animation
+  "//products/kernel_cmdline:virtcon.boot-animation--true",
+
+  # enable DPI based scale factors, 1.25x above 160 DPI, 2x above 240, etc.
+  "//products/kernel_cmdline:virtcon.dpi--160-240-360-480",
+
+  # enable double buffered output
+  "//products/kernel_cmdline:virtcon.buffer-count--2",
+]
+
+# Include Fxfs in the build so that it's available for enablement at runtime.
+product_bootfs_labels += [
+  "//src/storage/fxfs",
+  "//src/storage/fxfs-crypt",
+]
+
+# USB peripheral drivers are not necessary for workstation.
+product_bootfs_labels += [ "//bundles/drivers:usb-peripheral-stack" ]
+product_bootfs_labels -= [ "//bundles/drivers:usb-peripheral-stack" ]
+
+core_realm_shards += [ "//src/media/codec:codec_factory_shard" ]
+
+# Enable input injection for testing through `fuchsia.input.injection.InputDeviceRegistry`.
+use_modern_input_injection = true
+
+# Create an additional (initially empty) account partition in FVM to enable
+# user data protection.
+include_account_in_fvm = true
+
+# Use Flatland as the default graphics protocol in Scenic.
+use_flatland_by_default = true
+
+# Storage is budgeted as follows:
+# FVM: 56GiB
+#   Guest partition: 40GiB (not enforced here)
+#   /blob: 4GiB
+#   /data: 4GiB
+#   <the rest is available for /account and future use>
+# These limits are intentionally conservative since we can increase them later, but it's hard to
+# decrease them (it requires resetting the disk state, which for /blob requires a re-pave).
+# We could be tying FVM's size to the actual disk size but the paver isn't smart enough to do that
+# yet.
+blobfs_maximum_runtime_bytes = 4294967296
+minfs_maximum_runtime_bytes = 4294967296
+
+# TODO(fxbug.dev/96494): Switch to Fxfs.
+data_filesystem_format = "minfs"
