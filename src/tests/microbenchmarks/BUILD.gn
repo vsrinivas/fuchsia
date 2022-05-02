@@ -66,6 +66,7 @@ executable("bin") {
       "syscalls.cc",
       "threads.cc",
       "timer.cc",
+      "tracing.cc",
       "util.cc",
       "vmar.cc",
       "vmo.cc",
