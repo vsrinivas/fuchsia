@@ -45,6 +45,17 @@ const (
 	// crash reports. This name is configured by the `crash_diagnostics_dir` GN
 	// arg in //build/config/clang/crash_diagnostics.gni.
 	clangCrashReportsDirName = "clang-crashreports"
+
+	// Name of the directory within the build directory that will contain traces
+	// with files accesses after a build. By default only traces for targets with
+	// unexpected accesses are persisted after a build.
+	//
+	// This name is configured in //build/config/BUILDCONFIG.gn.
+	fileAccessTracesDirName = ".traces"
+	// Name suffix of file access traces.
+	//
+	// This name is configured in //build/config/BUILDCONFIG.gn.
+	fileAccessTracesSuffix = "_trace.txt"
 )
 
 var (
@@ -181,21 +192,36 @@ func buildImpl(
 		}
 	}
 
+	saveDebugFiles := func(paths []string) error {
+		for _, path := range paths {
+			rel, err := filepath.Rel(contextSpec.BuildDir, path)
+			if err != nil {
+				return err
+			}
+			artifacts.DebugFiles = append(artifacts.DebugFiles, &fintpb.DebugFile{
+				Path:       path,
+				UploadDest: filepath.ToSlash(rel),
+			})
+		}
+		return nil
+	}
+
 	if ninjaErr != nil {
 		if contextSpec.ArtifactDir != "" {
 			crashReportFiles, err := collectClangCrashReports(contextSpec.BuildDir)
 			if err != nil {
 				return artifacts, err
 			}
-			for _, path := range crashReportFiles {
-				rel, err := filepath.Rel(contextSpec.BuildDir, path)
-				if err != nil {
-					return artifacts, err
-				}
-				artifacts.DebugFiles = append(artifacts.DebugFiles, &fintpb.DebugFile{
-					Path:       path,
-					UploadDest: filepath.ToSlash(rel),
-				})
+			if err := saveDebugFiles(crashReportFiles); err != nil {
+				return artifacts, err
+			}
+
+			traces, err := collectFileAccessTraces(contextSpec.BuildDir)
+			if err != nil {
+				return artifacts, fmt.Errorf("collecting file access traces: %w", err)
+			}
+			if err := saveDebugFiles(traces); err != nil {
+				return artifacts, fmt.Errorf("writing file access traces to debug files: %w", err)
 			}
 		}
 		return artifacts, fmt.Errorf("build failed, see ninja output for details: %w", ninjaErr)
@@ -325,6 +351,26 @@ func collectClangCrashReports(buildDir string) ([]string, error) {
 	}
 
 	return outputs, nil
+}
+
+// collectFileAccessTraces finds access traces in the build directory, and
+// returns paths to them. Note this function returns absolute paths because they
+// are expected by `debug_files`.
+func collectFileAccessTraces(buildDir string) ([]string, error) {
+	var traces []string
+	err := filepath.WalkDir(filepath.Join(buildDir, fileAccessTracesDirName), func(path string, info fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && strings.HasSuffix(path, fileAccessTracesSuffix) {
+			traces = append(traces, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return traces, nil
 }
 
 func ninjaNoopFailureMessage(platform string) string {
