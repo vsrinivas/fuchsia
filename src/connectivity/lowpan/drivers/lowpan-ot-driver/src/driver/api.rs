@@ -732,4 +732,26 @@ where
             .dataset_set_active_tlvs(&dataset)
             .map_err(|e| ZxStatus::from(ErrorAdapter(e)))
     }
+
+    async fn attach_all_nodes_to(&self, dataset: &[u8]) -> ZxResult {
+        let dataset = ot::OperationalDatasetTlvs::try_from_slice(dataset)
+            .map_err(|e| ZxStatus::from(ErrorAdapter(e)))?;
+
+        let driver_state = self.driver_state.lock();
+
+        if !driver_state.is_active() {
+            return Err(ZxStatus::BAD_STATE);
+        }
+
+        if driver_state.is_ready() {
+            // Transition all devices over to the new dataset.
+            warn!("attach_all_nodes_to: Migrating all devices is not supported");
+            Err(ZxStatus::NOT_SUPPORTED)
+        } else {
+            driver_state
+                .ot_instance
+                .dataset_set_active_tlvs(&dataset)
+                .map_err(|e| ZxStatus::from(ErrorAdapter(e)))
+        }
+    }
 }
