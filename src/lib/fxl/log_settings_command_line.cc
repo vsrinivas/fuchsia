@@ -55,7 +55,7 @@ bool ParseLogSettings(const fxl::CommandLine& command_line, syslog::LogSettings*
       return false;
     }
 
-    int level = 1;
+    uint8_t level = 1;
     if (!verbosity.empty() && (!fxl::StringToNumberWithError(verbosity, &level) || level < 0)) {
       FX_LOGS(ERROR) << "Error parsing --verbose option: " << verbosity;
       return false;

@@ -69,12 +69,9 @@ bool fx_log_is_enabled(fx_log_severity_t severity) {
 }
 
 SYSLOG_EXPORT
-fx_log_severity_t fx_log_severity_from_verbosity(int verbosity) {
-  if (verbosity < 0) {
-    verbosity = 0;
-  }
+fx_log_severity_t fx_log_severity_from_verbosity(uint8_t verbosity) {
   // verbosity scale sits in the interstitial space between INFO and DEBUG
-  fx_log_severity_t severity = FX_LOG_INFO - ((uint8_t)verbosity * FX_LOG_VERBOSITY_STEP_SIZE);
+  fx_log_severity_t severity = FX_LOG_INFO - (verbosity * FX_LOG_VERBOSITY_STEP_SIZE);
   if (severity < FX_LOG_DEBUG + 1) {
     return FX_LOG_DEBUG + 1;
   }
@@ -82,8 +79,7 @@ fx_log_severity_t fx_log_severity_from_verbosity(int verbosity) {
 }
 
 SYSLOG_EXPORT
-bool fx_vlog_is_enabled(int verbosity) {
+bool fx_vlog_is_enabled(uint8_t verbosity) {
   fx_logger_t* logger = fx_log_get_logger();
-  return logger && (verbosity >= 0) &&
-         fx_log_severity_from_verbosity(verbosity) >= fx_logger_get_min_severity(logger);
+  return logger && fx_log_severity_from_verbosity(verbosity) >= fx_logger_get_min_severity(logger);
 }

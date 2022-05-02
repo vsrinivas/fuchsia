@@ -27,11 +27,11 @@ bool fx_log_is_enabled(fx_log_severity_t severity);
 // Get the severity corresponding to the given verbosity. Note that
 // verbosity relative to the default severity and can be thought of
 // as incrementally "more vebose than" the baseline.
-fx_log_severity_t fx_log_severity_from_verbosity(int verbosity);
+fx_log_severity_t fx_log_severity_from_verbosity(uint8_t verbosity);
 
 // Returns true if writing messages with the given verbosity is enabled
 // in the global logger.
-bool fx_vlog_is_enabled(int verbosity);
+bool fx_vlog_is_enabled(uint8_t verbosity);
 
 // Reconfigures the global logger for this process with the specified
 // configuration.

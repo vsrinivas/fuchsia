@@ -95,8 +95,8 @@ bool LogFirstNState::ShouldLog(uint32_t n) {
   return counter_value < n;
 }
 
-int GetVlogVerbosity() {
-  int min_level = GetMinLogLevel();
+uint8_t GetVlogVerbosity() {
+  LogSeverity min_level = GetMinLogLevel();
   if (min_level < LOG_INFO && min_level > LOG_DEBUG) {
     return LOG_INFO - min_level;
   }
@@ -111,15 +111,11 @@ bool ShouldCreateLogMessage(const LogSeverityAndId& severity_and_id) {
 
 }  // namespace syslog
 
-syslog::LogSeverity GetSeverityFromVerbosity(int verbosity) {
+syslog::LogSeverity GetSeverityFromVerbosity(uint8_t verbosity) {
   // Clamp verbosity scale to the interstitial space between INFO and DEBUG
-  if (verbosity < 0) {
-    verbosity = 0;
-  } else {
-    int max_verbosity = (syslog::LOG_INFO - syslog::LOG_DEBUG) / syslog::LogVerbosityStepSize;
-    if (verbosity > max_verbosity) {
-      verbosity = max_verbosity;
-    }
+  uint8_t max_verbosity = (syslog::LOG_INFO - syslog::LOG_DEBUG) / syslog::LogVerbosityStepSize;
+  if (verbosity > max_verbosity) {
+    verbosity = max_verbosity;
   }
   int severity = syslog::LOG_INFO - (verbosity * syslog::LogVerbosityStepSize);
   if (severity < syslog::LOG_DEBUG + 1) {

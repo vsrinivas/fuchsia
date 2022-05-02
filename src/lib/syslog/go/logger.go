@@ -38,7 +38,7 @@ func (e *ErrMsgTooLong) Error() string {
 }
 
 const (
-	_ = iota
+	_ uint8 = iota
 	DebugVerbosity
 	TraceVerbosity
 )
@@ -397,12 +397,8 @@ func (l *Logger) SetSeverity(severity diagnostics.Severity) {
 // severityFromVerbosity provides the severity corresponding to the given
 // verbosity. Note that verbosity relative to the default severity and can
 // be thought of as incrementally "more vebose than" the baseline.
-func severityFromVerbosity(verbosity int) LogLevel {
-	if verbosity < 0 {
-		verbosity = 0
-	}
-
-	level := InfoLevel - LogLevel(uint8(verbosity)*logger.LogVerbosityStepSize)
+func severityFromVerbosity(verbosity uint8) LogLevel {
+	level := InfoLevel - LogLevel(verbosity*logger.LogVerbosityStepSize)
 	// verbosity scale sits in the interstitial space between INFO and DEBUG
 	if level < (DebugLevel + 1) {
 		return DebugLevel + 1
@@ -410,7 +406,7 @@ func severityFromVerbosity(verbosity int) LogLevel {
 	return level
 }
 
-func (l *Logger) SetVerbosity(verbosity int) {
+func (l *Logger) SetVerbosity(verbosity uint8) {
 	atomic.StoreInt32(&l.level, int32(severityFromVerbosity(verbosity)))
 }
 
@@ -438,7 +434,7 @@ func (l *Logger) Fatalf(format string, a ...interface{}) error {
 	return l.logf(2, FatalLevel, "", format, a...)
 }
 
-func (l *Logger) VLogf(verbosity int, format string, a ...interface{}) error {
+func (l *Logger) VLogf(verbosity uint8, format string, a ...interface{}) error {
 	return l.logf(2, severityFromVerbosity(verbosity), "", format, a...)
 }
 
@@ -466,7 +462,7 @@ func (l *Logger) FatalTf(tag, format string, a ...interface{}) error {
 	return l.logf(2, FatalLevel, tag, format, a...)
 }
 
-func (l *Logger) VLogTf(verbosity int, tag, format string, a ...interface{}) error {
+func (l *Logger) VLogTf(verbosity uint8, tag, format string, a ...interface{}) error {
 	return l.logf(2, severityFromVerbosity(verbosity), tag, format, a...)
 }
 
@@ -502,7 +498,7 @@ func SetSeverity(logLevel LogLevel) {
 	}
 }
 
-func SetVerbosity(verbosity int) {
+func SetVerbosity(verbosity uint8) {
 	SetSeverity(severityFromVerbosity(verbosity))
 }
 
@@ -530,7 +526,7 @@ func Fatalf(format string, a ...interface{}) error {
 	return logf(2, FatalLevel, "", format, a...)
 }
 
-func VLogf(verbosity int, format string, a ...interface{}) error {
+func VLogf(verbosity uint8, format string, a ...interface{}) error {
 	return logf(2, severityFromVerbosity(verbosity), "", format, a...)
 }
 
@@ -558,6 +554,6 @@ func FatalTf(tag, format string, a ...interface{}) error {
 	return logf(2, FatalLevel, tag, format, a...)
 }
 
-func VLogTf(verbosity int, tag, format string, a ...interface{}) error {
+func VLogTf(verbosity uint8, tag, format string, a ...interface{}) error {
 	return logf(2, severityFromVerbosity(verbosity), tag, format, a...)
 }

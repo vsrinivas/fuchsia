@@ -131,7 +131,7 @@ inline fpromise::result<LogMessage, std::string> JsonToHostLogMessage(rapidjson:
     if ((name == kVerbosityLabel) && it->value.IsInt()) {
       verbosity = it->value.GetInt();
       if (ret.severity != verbosity.value_or(ret.severity)) {
-        ret.severity = GetSeverityFromVerbosity(verbosity.value());
+        ret.severity = GetSeverityFromVerbosity(static_cast<uint8_t>(verbosity.value()));
       }
     }
   }

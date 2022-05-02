@@ -45,7 +45,7 @@ async fn listen_for_syslog() {
             dropped_logs: 0,
 
             // these are checked
-            severity: LogLevelFilter::Error as i32,
+            severity: LogLevelFilter::Error.into_primitive().into(),
             tags: vec!["panicker".to_string()],
             msg: "PANIC: oh no, I panicked".to_string(),
         }],

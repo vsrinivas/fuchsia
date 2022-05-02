@@ -440,10 +440,8 @@ pub fn set_severity(severity: levels::LogLevel) {
 /// Get the severity corresponding to the given verbosity. Note that
 /// verbosity relative to the default severity and can be thought of
 /// as incrementally "more vebose than" the baseline.
-pub fn get_severity_from_verbosity(verbosity: i32) -> levels::LogLevel {
+pub fn get_severity_from_verbosity(verbosity: u8) -> levels::LogLevel {
     use std::convert::TryFrom as _;
-
-    let verbosity = u8::try_from(verbosity).unwrap_or(0);
 
     // verbosity scale sits in the interstitial space between INFO and DEBUG
     let default = syslog::FX_LOG_DEBUG + 1;
@@ -458,8 +456,8 @@ pub fn get_severity_from_verbosity(verbosity: i32) -> levels::LogLevel {
 
 /// Set default logger verbosity.
 #[inline]
-pub fn set_verbosity(verbosity: u16) {
-    set_severity(get_severity_from_verbosity(verbosity as i32));
+pub fn set_verbosity(verbosity: u8) {
+    set_severity(get_severity_from_verbosity(verbosity));
 }
 
 /// Checks if default logger is enabled for given log level.

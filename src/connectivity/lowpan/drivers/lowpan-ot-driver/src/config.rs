@@ -46,7 +46,7 @@ pub(crate) struct DriverArgs {
         long = "verbosity",
         description = "verbosity, larger number means more logging"
     )]
-    pub verbosity: Option<i32>,
+    pub verbosity: Option<u8>,
 
     #[argh(
         option,

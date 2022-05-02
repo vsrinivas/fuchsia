@@ -19,7 +19,6 @@ use {
 };
 
 static LOG_TAG: &str = "battery_manager";
-static LOG_VERBOSITY: i32 = 1;
 
 enum IncomingService {
     BatteryManager(BatteryManagerRequestStream),

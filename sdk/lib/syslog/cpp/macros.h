@@ -253,7 +253,7 @@ class LogFirstNState {
 };
 
 // Gets the FX_VLOGS default verbosity level.
-int GetVlogVerbosity();
+uint8_t GetVlogVerbosity();
 
 // Returns true if |severity| is at or above the current minimum log level.
 // LOG_FATAL and above is always true.
@@ -330,7 +330,7 @@ bool ShouldCreateLogMessage(const LogSeverityAndId& severity_and_id);
 // Get the severity corresponding to the given verbosity. Note that
 // verbosity relative to the default severity and can be thought of
 // as incrementally "more vebose than" the baseline.
-syslog::LogSeverity GetSeverityFromVerbosity(int verbosity);
+syslog::LogSeverity GetSeverityFromVerbosity(uint8_t verbosity);
 
 #define FX_VLOG_IS_ON(verbose_level) (verbose_level <= ::syslog::GetVlogVerbosity())
 

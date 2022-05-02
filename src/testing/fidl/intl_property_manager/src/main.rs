@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_test_intl_manager::{PropertyManagerRequest, PropertyManagerRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObjLocal},
-    fuchsia_syslog::{self, fx_log_err, fx_log_info},
+    fuchsia_syslog::{self, fx_log_debug, fx_log_err, fx_log_info},
     futures::{self, lock::Mutex, prelude::*},
     std::{
         collections::HashMap,
@@ -24,14 +24,6 @@ use {
 };
 
 static LOG_TAG: &str = "intl_property_manager";
-static LOG_VERBOSITY: u16 = 1;
-
-/// Convenience wrapper around `fx_vlog`, with a pre-set verbosity.
-macro_rules! fx_log_verbose {
-    ($($arg:tt)*) => {
-        fuchsia_syslog::fx_vlog!(LOG_VERBOSITY as i32, $($arg)*);
-    };
-}
 
 #[derive(Clone)]
 struct Server(Arc<ServerState>);
@@ -122,10 +114,10 @@ impl Server {
 
     /// Send `OnChange` event to registered listeners of `PropertyProvider`.
     async fn notify_listeners(&mut self) {
-        fx_log_verbose!("Notifying listeners");
+        fx_log_debug!("Notifying listeners");
         let fut = self.0.listeners.lock().map(|mut listeners| listeners.notify());
         fut.await;
-        fx_log_verbose!("Notified listeners");
+        fx_log_debug!("Notified listeners");
     }
 
     /// Entry point into the service. Register handlers for both of the protocols
@@ -134,11 +126,11 @@ impl Server {
         let self_ = Rc::new(self.clone());
         fs.for_each_concurrent(None, move |service| self_.clone().handle_service_stream(service))
             .await;
-        fx_log_verbose!("Registered services");
+        fx_log_debug!("Registered services");
     }
 
     async fn handle_service_stream(self: Rc<Self>, service: Service) {
-        fx_log_verbose!("handle_service_stream: {:#?}", service);
+        fx_log_debug!("handle_service_stream: {:#?}", service);
         let mut self_ = self.as_ref().clone();
         match service {
             Service::Provider(stream) => self_.run_provider(stream).await.unwrap_or_default(),
@@ -157,11 +149,11 @@ impl Server {
             stream.try_next().await.context("Error running property provider server")?
         {
             {
-                fx_log_verbose!("Received profile get request");
+                fx_log_debug!("Received profile get request");
                 match self.get_profile() {
                     Some(profile) => {
                         responder.send(profile).context("Error sending response")?;
-                        fx_log_verbose!("Sent profile");
+                        fx_log_debug!("Sent profile");
                     }
                     None => {
                         fx_log_err!("Profile not initialized");
@@ -174,7 +166,7 @@ impl Server {
                                 ..Profile::EMPTY
                             })
                             .context("Error sending response")?;
-                        fx_log_verbose!("Sent empty profile");
+                        fx_log_debug!("Sent empty profile");
                     }
                 }
             }
@@ -191,10 +183,10 @@ impl Server {
         while let Some(PropertyManagerRequest::SetProfile { intl_profile, responder }) =
             stream.try_next().await.context("Error running property manager server")?
         {
-            fx_log_verbose!("Received profile set request: {:#?}", &intl_profile);
+            fx_log_debug!("Received profile set request: {:#?}", &intl_profile);
             let changed = self.set_profile(intl_profile);
             responder.send().context("Error sending response")?;
-            fx_log_verbose!("Sent profile set response");
+            fx_log_debug!("Sent profile set response");
             if changed {
                 self.notify_listeners().await;
             }

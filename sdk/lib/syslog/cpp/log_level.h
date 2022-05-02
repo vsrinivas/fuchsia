@@ -13,7 +13,7 @@
 
 namespace syslog {
 
-typedef int8_t LogSeverity;
+using LogSeverity = int8_t;
 
 // Default log levels.
 constexpr LogSeverity LOG_TRACE = 0x10;
