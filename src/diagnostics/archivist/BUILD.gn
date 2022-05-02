@@ -197,12 +197,6 @@ fuchsia_component("archivist-with-klog") {
   deps = [ ":bin" ]
 }
 
-fuchsia_component("archivist-for-embedding-v1-no-log-connector") {
-  component_name = "archivist-for-embedding-no-log-connector"
-  manifest = "meta/archivist-for-embedding-no-log-connector.cmx"
-  deps = [ ":bin" ]
-}
-
 fuchsia_component("archivist-for-embedding-v1") {
   component_name = "archivist-for-embedding"
   manifest = "meta/archivist-for-embedding.cmx"
@@ -255,7 +249,6 @@ group("archivist-for-embedding-v2") {
 fuchsia_package("archivist-for-embedding") {
   deps = [
     ":archivist-for-embedding-v1",
-    ":archivist-for-embedding-v1-no-log-connector",
     ":archivist-for-embedding-v2",
     ":archivist-with-klog",
   ]

@@ -171,7 +171,9 @@ std::unique_ptr<run::Component> launch_archivist(const fuchsia::sys::LauncherPtr
                                                  async_dispatcher_t* dispatcher) {
   fuchsia::sys::LaunchInfo launch_info{.url =
                                            "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/"
-                                           "archivist-for-embedding-no-log-connector.cmx"};
+                                           "archivist-for-embedding.cmx",
+                                      };
+  launch_info.arguments.emplace({"--v1", "no-log-connector"});
 
   return run::Component::Launch(launcher, std::move(launch_info), dispatcher);
 }
