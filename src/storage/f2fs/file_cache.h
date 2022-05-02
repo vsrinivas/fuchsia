@@ -87,10 +87,6 @@ class Page : public PageRefCounted<Page>,
   // it fails, it means the kernel has decommitted the page of |vmo_| due to memory pressure,
   // and thus it commits a page to |vmo_| and requests ZX_VMO_OP_TRY_LOCK again.
   zx_status_t GetPage(bool need_vmo_lock);
-  // f2fs should unlock a Page when it got the Page from FileCache::GetPage().
-  // It unlocks |this| and resets a reference. When |unlock| is set to false, it just resets the
-  // reference.
-  static void PutPage(fbl::RefPtr<Page> &&page, bool unlock);
   zx_status_t VmoOpUnlock();
   zx_status_t VmoOpLock(bool commit = false);
   template <typename T = void>
@@ -222,24 +218,20 @@ class Page : public PageRefCounted<Page>,
   F2fs *fs_ = nullptr;
 };
 
-// LockedPage<T> is a wrapper class for f2fs::Page lock management.
-// It holds a fbl::RefPtr<T> object, and T should be a subclass of f2fs::Page.
-// When LockedPage holds "fbl::RefPtr<T> page" and the page is not nullptr, it guarantees that the
-// page is locked.
+// LockedPage is a wrapper class for f2fs::Page lock management.
+// When LockedPage holds "fbl::RefPtr<Page> page" and the page is not nullptr, it guarantees that
+// the page is locked.
 //
 // The syntax looks something like...
 // fbl::RefPtr<Page> unlocked_page;
 // {
-//   LockedPage<Page> locked_page(unlocked_page);
+//   LockedPage locked_page(unlocked_page);
 //   do something requiring page lock...
 // }
 //
 // When Page is used as a function parameter, you should use `Page&` type for unlocked page, and use
-// `LockedPage<Page>&` type for locked page.
-template <typename T>
+// `LockedPage&` type for locked page.
 class LockedPage final {
-  static_assert(std::is_base_of<Page, T>::value, "LockedPage<T>: T must inherit from f2fs::Page");
-
  public:
   LockedPage() : page_(nullptr) {}
 
@@ -257,7 +249,7 @@ class LockedPage final {
     return *this;
   }
 
-  explicit LockedPage(fbl::RefPtr<T> page) {
+  LockedPage(fbl::RefPtr<Page> page) {
     page_ = page;
     page_->Lock();
   }
@@ -266,23 +258,40 @@ class LockedPage final {
 
   void reset() {
     if (page_ != nullptr) {
-      ZX_ASSERT(page_->IsLocked());
+      ZX_DEBUG_ASSERT(page_->IsLocked());
       page_->Unlock();
       page_.reset();
     }
   }
 
-  fbl::RefPtr<T> release() {
+  // release() returns the unlocked page without changing its ref_count.
+  // After release() is called, the LockedPage instance no longer has the ownership of the Page.
+  // Therefore, the LockedPage instance should no longer be referenced.
+  fbl::RefPtr<Page> release() {
     page_->Unlock();
-    return fbl::RefPtr<T>(std::move(page_));
+    return fbl::RefPtr<Page>(std::move(page_));
   }
 
-  T *get() { return page_.get(); }
-  T &operator*() { return *page_; }
-  T *operator->() { return page_.get(); }
+  // CopyRefPtr() returns copied RefPtr, so that increases ref_count of page.
+  // The page remains locked, and still managed by the LockedPage instance.
+  fbl::RefPtr<Page> CopyRefPtr() { return fbl::RefPtr<Page>(page_); }
+
+  template <typename T = Page>
+  T &GetPage() {
+    return static_cast<T &>(*page_);
+  }
+
+  Page *get() { return page_.get(); }
+  Page &operator*() { return *page_; }
+  Page *operator->() { return page_.get(); }
+  explicit operator bool() const { return bool(page_); }
+
+  // Comparison against nullptr operators (of the form, myptr == nullptr).
+  bool operator==(decltype(nullptr)) const { return (page_ == nullptr); }
+  bool operator!=(decltype(nullptr)) const { return (page_ != nullptr); }
 
  private:
-  fbl::RefPtr<T> page_ = nullptr;
+  fbl::RefPtr<Page> page_ = nullptr;
 };
 
 class FileCache {
@@ -299,7 +308,7 @@ class FileCache {
   // If there is no corresponding Page in |page_tree_|, it returns a locked Page after creating
   // and inserting it into |page_tree_|.
   // Do release a Page lock before calling methods acquiring |page_lock_|.
-  zx_status_t GetPage(const pgoff_t index, fbl::RefPtr<Page> *out) __TA_EXCLUDES(tree_lock_);
+  zx_status_t GetPage(const pgoff_t index, LockedPage *out) __TA_EXCLUDES(tree_lock_);
   // It does the same things as GetPage() except that it returns a unlocked Page.
   zx_status_t FindPage(const pgoff_t index, fbl::RefPtr<Page> *out) __TA_EXCLUDES(tree_lock_);
   // It tries to write out dirty Pages that |operation| indicates from |page_tree_|.
@@ -315,7 +324,7 @@ class FileCache {
 
  private:
   // It returns a set of dirty Pages that meet |operation|. A caller should unlock the Pages.
-  std::vector<fbl::RefPtr<Page>> GetLockedDirtyPagesUnsafe(const WritebackOperation &operation)
+  std::vector<LockedPage> GetLockedDirtyPagesUnsafe(const WritebackOperation &operation)
       __TA_REQUIRES(tree_lock_);
   zx::status<bool> GetPageUnsafe(const pgoff_t index, fbl::RefPtr<Page> *out)
       __TA_REQUIRES(tree_lock_);

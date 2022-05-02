@@ -36,7 +36,7 @@ class SegmentWriteBuffer {
   ~SegmentWriteBuffer();
 
   PageOperations TakeOperations() __TA_EXCLUDES(mutex_);
-  zx::status<uint32_t> ReserveOperation(storage::Operation &operation, fbl::RefPtr<Page> page)
+  zx::status<uint32_t> ReserveOperation(storage::Operation &operation, LockedPage &page)
       __TA_EXCLUDES(mutex_);
   void ReleaseBuffers(const PageOperations &operation) __TA_EXCLUDES(mutex_);
   block_t GetCapacity() const { return safemath::checked_cast<block_t>(buffer_.capacity()); }
@@ -84,7 +84,7 @@ class PageOperations {
   void Completion(PageCallback put_page) {
     release_buffers_(*this);
     for (auto &page : pages_) {
-      put_page(page);
+      put_page(*page);
     }
     pages_.clear();
     pages_.shrink_to_fit();
@@ -114,7 +114,7 @@ class Writer {
   void ScheduleSubmitPages(sync_completion_t *completion = nullptr,
                            PageType type = PageType::kNrPageType);
   // It merges Pages to be written.
-  void EnqueuePage(storage::Operation &operation, fbl::RefPtr<f2fs::Page> page, PageType type);
+  void EnqueuePage(storage::Operation &operation, LockedPage &page, PageType type);
 
  private:
   // It takes writeback operations from |builder_| and passes them to RunReqeusts().

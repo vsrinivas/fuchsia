@@ -18,15 +18,17 @@ TEST_F(FileCacheTest, WaitOnLock) {
   fbl::RefPtr<fs::Vnode> test_file;
   root_dir_->Create("test", S_IFREG, &test_file);
   fbl::RefPtr<f2fs::File> vn = fbl::RefPtr<f2fs::File>::Downcast(std::move(test_file));
-  fbl::RefPtr<Page> page;
 
-  vn->GrabCachePage(0, &page);
-  ASSERT_EQ(page->TryLock(), true);
-  std::thread thread([&]() { page->Unlock(); });
-  // Wait for |thread| to unlock |page|.
-  page->Lock();
-  thread.join();
-  Page::PutPage(std::move(page), true);
+  {
+    LockedPage page;
+
+    vn->GrabCachePage(0, &page);
+    ASSERT_EQ(page->TryLock(), true);
+    std::thread thread([&]() { page->Unlock(); });
+    // Wait for |thread| to unlock |page|.
+    page->Lock();
+    thread.join();
+  }
 
   vn->Close();
   vn = nullptr;
@@ -36,27 +38,29 @@ TEST_F(FileCacheTest, WaitOnWriteback) {
   fbl::RefPtr<fs::Vnode> test_file;
   root_dir_->Create("test", S_IFREG, &test_file);
   fbl::RefPtr<f2fs::File> vn = fbl::RefPtr<f2fs::File>::Downcast(std::move(test_file));
-  fbl::RefPtr<Page> page;
 
-  vn->GrabCachePage(0, &page);
-  page->SetWriteback();
-  std::thread thread([&]() {
-    page->ClearWriteback();
-    page->Lock();
+  {
+    LockedPage page;
+
+    vn->GrabCachePage(0, &page);
+    page->SetWriteback();
+    std::thread thread([&]() {
+      page->ClearWriteback();
+      page->Lock();
+      ASSERT_EQ(page->IsWriteback(), true);
+      page->ClearWriteback();
+    });
+
+    // Wait for |thread| to run.
+    page->WaitOnWriteback();
+    page->SetWriteback();
     ASSERT_EQ(page->IsWriteback(), true);
-    page->ClearWriteback();
-  });
-
-  // Wait for |thread| to run.
-  page->WaitOnWriteback();
-  page->SetWriteback();
-  ASSERT_EQ(page->IsWriteback(), true);
-  page->Unlock();
-  // Wait for |thread| to clear kPageWriteback.
-  page->WaitOnWriteback();
-  ASSERT_EQ(page->IsWriteback(), false);
-  thread.join();
-  Page::PutPage(std::move(page), true);
+    page->Unlock();
+    // Wait for |thread| to clear kPageWriteback.
+    page->WaitOnWriteback();
+    ASSERT_EQ(page->IsWriteback(), false);
+    thread.join();
+  }
 
   vn->Close();
   vn = nullptr;
@@ -66,26 +70,32 @@ TEST_F(FileCacheTest, Map) {
   fbl::RefPtr<fs::Vnode> test_file;
   root_dir_->Create("test", S_IFREG, &test_file);
   fbl::RefPtr<f2fs::File> vn = fbl::RefPtr<f2fs::File>::Downcast(std::move(test_file));
-  fbl::RefPtr<Page> page;
 
-  vn->GrabCachePage(0, &page);
-  // Set kPageUptodate to keep |page| in FileCache.
-  page->SetUptodate();
-  // Since FileCache hold the last reference to |page|, it is safe to use |raw_ptr| here.
-  Page *raw_ptr = page.get();
-  // If kDirtyPage is set, FileCache keeps the mapping of |page| since writeback will use it soon.
-  // Otherwise, |page| is unmapped when there is no reference except for FileCache.
-  Page::PutPage(std::move(page), true);
-  // After PutPage(), |page| should be unmapped since kPageDirty is clear and there is no reference
-  // but for FileCache.
+  Page *raw_ptr;
+  {
+    LockedPage page;
+
+    vn->GrabCachePage(0, &page);
+    // Set kPageUptodate to keep |page| in FileCache.
+    page->SetUptodate();
+    // Since FileCache hold the last reference to |page|, it is safe to use |raw_ptr| here.
+    raw_ptr = page.get();
+    // If kDirtyPage is set, FileCache keeps the mapping of |page| since writeback will use it soon.
+    // Otherwise, |page| is unmapped when there is no reference except for FileCache.
+  }
+
+  // After LockedPage is destructed, |page| should be unmapped since kPageDirty is clear and there
+  // is no reference but for FileCache.
   ASSERT_EQ(raw_ptr->IsLocked(), false);
   ASSERT_EQ(raw_ptr->IsMapped(), false);
 
-  vn->GrabCachePage(0, &page);
-  // |page| should be mapped as a new reference is added.
-  ASSERT_EQ(raw_ptr->IsMapped(), true);
-  ASSERT_EQ(page->IsLocked(), true);
-  Page::PutPage(std::move(page), true);
+  {
+    LockedPage page;
+    vn->GrabCachePage(0, &page);
+    // |page| should be mapped as a new reference is added.
+    ASSERT_EQ(raw_ptr->IsMapped(), true);
+    ASSERT_EQ(page->IsLocked(), true);
+  }
 
   vn->Close();
   vn = nullptr;
@@ -106,10 +116,9 @@ TEST_F(FileCacheTest, EvictActivePages) {
   vn->Writeback(op);
 
   for (auto i = 0; i < 2; ++i) {
-    fbl::RefPtr<Page> page;
+    LockedPage page;
     vn->GrabCachePage(0, &page);
     ASSERT_TRUE(page->IsWriteback());
-    Page::PutPage(std::move(page), true);
   }
 
   // Invalidate Pages from the 2nd one, which causes flushing all Pages in Writer.
@@ -125,39 +134,39 @@ TEST_F(FileCacheTest, WritebackOperation) {
   fbl::RefPtr<fs::Vnode> test_file;
   root_dir_->Create("test", S_IFREG, &test_file);
   fbl::RefPtr<f2fs::File> vn = fbl::RefPtr<f2fs::File>::Downcast(std::move(test_file));
-  fbl::RefPtr<Page> page;
   char buf[kPageSize];
+  WritebackOperation op;
+  pgoff_t key;
 
   // |vn| should not have any dirty Pages.
   ASSERT_EQ(vn->GetDirtyPageCount(), 0);
   FileTester::AppendToFile(vn.get(), buf, kPageSize);
   FileTester::AppendToFile(vn.get(), buf, kPageSize);
+
   // Get the Page of 2nd block.
-  vn->GrabCachePage(1, &page);
-  ASSERT_EQ(vn->GetDirtyPageCount(), 2);
+  {
+    LockedPage page;
+    vn->GrabCachePage(1, &page);
+    ASSERT_EQ(vn->GetDirtyPageCount(), 2);
 
-  auto key = page->GetKey();
-  WritebackOperation op = {.start = 0,
-                           .end = 2,
-                           .to_write = 2,
-                           .bSync = false,
-                           .if_page = [&key](fbl::RefPtr<Page> &page) {
-                             if (page->GetKey() <= key) {
-                               return ZX_OK;
-                             }
-                             return ZX_ERR_NEXT;
-                           }};
+    key = page->GetKey();
+    op = {.start = 0, .end = 2, .to_write = 2, .bSync = false, .if_page = [&key](Page &page) {
+            if (page.GetKey() <= key) {
+              return ZX_OK;
+            }
+            return ZX_ERR_NEXT;
+          }};
 
-  // Request writeback for dirty Pages. The Page of 1st block should be written out.
-  ASSERT_EQ(vn->Writeback(op), 1UL);
-  // Writeback() should not touch active Pages such as |page|.
-  ASSERT_EQ(vn->GetDirtyPageCount(), 1);
-  ASSERT_EQ(op.to_write, 1UL);
-  ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback), 1);
-  ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kDirtyData), 1);
-  ASSERT_EQ(page->IsWriteback(), false);
-  ASSERT_EQ(page->IsDirty(), true);
-  Page::PutPage(std::move(page), true);
+    // Request writeback for dirty Pages. The Page of 1st block should be written out.
+    ASSERT_EQ(vn->Writeback(op), 1UL);
+    // Writeback() should not touch active Pages such as |page|.
+    ASSERT_EQ(vn->GetDirtyPageCount(), 1);
+    ASSERT_EQ(op.to_write, 1UL);
+    ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback), 1);
+    ASSERT_EQ(fs_->GetSuperblockInfo().GetPageCount(CountType::kDirtyData), 1);
+    ASSERT_EQ(page->IsWriteback(), false);
+    ASSERT_EQ(page->IsDirty(), true);
+  }
 
   key = 0;
   // Request writeback for dirty Pages, but there is no Page meeting op.if_page.
@@ -182,24 +191,32 @@ TEST_F(FileCacheTest, WritebackOperation) {
   // It should not release any clean Pages.
   ASSERT_EQ(vn->Writeback(op), 0UL);
   // Pages at 1st and 2nd blocks should be uptodate
-  vn->GrabCachePage(0, &page);
-  ASSERT_EQ(page->IsUptodate(), true);
-  Page::PutPage(std::move(page), true);
-  vn->GrabCachePage(1, &page);
-  ASSERT_EQ(page->IsUptodate(), true);
-  Page::PutPage(std::move(page), true);
+  {
+    LockedPage page;
+    vn->GrabCachePage(0, &page);
+    ASSERT_EQ(page->IsUptodate(), true);
+  }
+  {
+    LockedPage page;
+    vn->GrabCachePage(1, &page);
+    ASSERT_EQ(page->IsUptodate(), true);
+  }
 
   // Release clean Pages
   op.bReleasePages = true;
   // It should release and evict clean Pages from FileCache.
   ASSERT_EQ(vn->Writeback(op), 0UL);
   // There is no uptodate Page.
-  vn->GrabCachePage(0, &page);
-  ASSERT_EQ(page->IsUptodate(), false);
-  Page::PutPage(std::move(page), true);
-  vn->GrabCachePage(1, &page);
-  ASSERT_EQ(page->IsUptodate(), false);
-  Page::PutPage(std::move(page), true);
+  {
+    LockedPage page;
+    vn->GrabCachePage(0, &page);
+    ASSERT_EQ(page->IsUptodate(), false);
+  }
+  {
+    LockedPage page;
+    vn->GrabCachePage(1, &page);
+    ASSERT_EQ(page->IsUptodate(), false);
+  }
 
   vn->Close();
   vn = nullptr;
@@ -213,13 +230,15 @@ TEST_F(FileCacheTest, Recycle) {
 
   FileTester::AppendToFile(vn.get(), buf, kPageSize);
 
-  fbl::RefPtr<Page> page;
-  vn->GrabCachePage(0, &page);
-  ASSERT_EQ(page->IsDirty(), true);
-  Page *raw_page = page.get();
-  Page::PutPage(std::move(page), true);
+  Page *raw_page;
+  {
+    LockedPage locked_page;
+    vn->GrabCachePage(0, &locked_page);
+    ASSERT_EQ(locked_page->IsDirty(), true);
+    raw_page = locked_page.get();
+  }
 
-  page = fbl::ImportFromRawPtr(raw_page);
+  fbl::RefPtr<Page> page = fbl::ImportFromRawPtr(raw_page);
   // ref_count should be set to one in Page::fbl_recycle().
   ASSERT_EQ(page->IsLastReference(), true);
   // Leak it to keep alive in FileCache.
@@ -231,20 +250,18 @@ TEST_F(FileCacheTest, Recycle) {
   std::thread thread1([&]() {
     int i = 1000;
     while (--i) {
-      fbl::RefPtr<Page> page;
+      LockedPage page;
       vn->GrabCachePage(0, &page);
       ASSERT_EQ(page->IsDirty(), true);
-      Page::PutPage(std::move(page), true);
     }
   });
 
   std::thread thread2([&]() {
     int i = 1000;
     while (--i) {
-      fbl::RefPtr<Page> page;
+      LockedPage page;
       vn->GrabCachePage(0, &page);
       ASSERT_EQ(page->IsDirty(), true);
-      Page::PutPage(std::move(page), true);
     }
   });
   // Start threads.
@@ -254,9 +271,11 @@ TEST_F(FileCacheTest, Recycle) {
 
   // Test FileCache::Downgrade() and FileCache::Reset() with multiple threads
   // Before FileCache::Reset(), a caller should ensure that there is no dirty Pages in FileCache.
-  vn->GrabCachePage(0, &page);
-  page->Invalidate();
-  Page::PutPage(std::move(page), true);
+  {
+    LockedPage locked_page;
+    vn->GrabCachePage(0, &locked_page);
+    locked_page->Invalidate();
+  }
 
   std::thread thread_get_page([&]() {
     bool bStop = false;
@@ -268,10 +287,9 @@ TEST_F(FileCacheTest, Recycle) {
 
     int i = 1000;
     while (--i) {
-      fbl::RefPtr<Page> page;
+      LockedPage page;
       vn->GrabCachePage(0, &page);
       ASSERT_EQ(page->IsUptodate(), false);
-      Page::PutPage(std::move(page), true);
     }
     bStop = true;
     thread_reset.join();
@@ -293,7 +311,7 @@ TEST_F(FileCacheTest, Basic) {
 
   // All pages should not be uptodated.
   for (uint16_t i = 0; i < nblocks; ++i) {
-    fbl::RefPtr<Page> page;
+    LockedPage page;
     uint8_t r_buf[kPageSize], w_buf[kPageSize];
     vn->GrabCachePage(i, &page);
     // A newly created page should have kPageUptodate/kPageDirty/kPageWriteback flags clear.
@@ -309,7 +327,6 @@ TEST_F(FileCacheTest, Basic) {
     ASSERT_EQ(page->VmoWrite(w_buf, 0, kPageSize), ZX_OK);
     ASSERT_EQ(page->VmoRead(r_buf, 0, kPageSize), ZX_OK);
     ASSERT_EQ(memcmp(r_buf, w_buf, kPageSize), 0);
-    Page::PutPage(std::move(page), true);
   }
 
   // Append |nblocks| * |kPageSize|.
@@ -321,13 +338,12 @@ TEST_F(FileCacheTest, Basic) {
 
   // All pages should be uptodated and dirty.
   for (uint16_t i = 0; i < nblocks; ++i) {
-    fbl::RefPtr<Page> page;
+    LockedPage page;
     memset(buf, i, kPageSize);
     vn->GrabCachePage(i, &page);
     ASSERT_EQ(page->IsUptodate(), true);
     ASSERT_EQ(page->IsDirty(), true);
     ASSERT_EQ(memcmp(buf, page->GetAddress(), kPageSize), 0);
-    Page::PutPage(std::move(page), true);
   }
 
   // Write out some dirty pages
@@ -336,7 +352,7 @@ TEST_F(FileCacheTest, Basic) {
 
   // Check if each page has a correct dirty flag.
   for (size_t i = 0; i < nblocks; ++i) {
-    fbl::RefPtr<Page> page;
+    LockedPage page;
     vn->GrabCachePage(i, &page);
     ASSERT_EQ(page->IsUptodate(), true);
     if (i < nblocks / 2) {
@@ -344,7 +360,6 @@ TEST_F(FileCacheTest, Basic) {
     } else {
       ASSERT_EQ(page->IsDirty(), true);
     }
-    Page::PutPage(std::move(page), true);
   }
 
   vn->Close();
@@ -368,11 +383,10 @@ TEST_F(FileCacheTest, Truncate) {
 
   // All pages should be uptodated and dirty.
   for (uint16_t i = 0; i < nblocks; ++i) {
-    fbl::RefPtr<Page> page;
+    LockedPage page;
     vn->GrabCachePage(i, &page);
     ASSERT_EQ(page->IsUptodate(), true);
     ASSERT_EQ(page->IsDirty(), true);
-    Page::PutPage(std::move(page), true);
   }
 
   // Truncate the size of |vn| to the half.
@@ -381,7 +395,7 @@ TEST_F(FileCacheTest, Truncate) {
 
   // Check if each page has correct flags.
   for (size_t i = 0; i < nblocks; ++i) {
-    fbl::RefPtr<Page> page;
+    LockedPage page;
     vn->GrabCachePage(i, &page);
     auto data_blkaddr = vn->FindDataBlkAddr(i);
     ASSERT_TRUE(data_blkaddr.is_ok());
@@ -394,22 +408,22 @@ TEST_F(FileCacheTest, Truncate) {
       ASSERT_EQ(page->IsUptodate(), true);
       ASSERT_EQ(data_blkaddr.value(), kNewAddr);
     }
-    Page::PutPage(std::move(page), true);
   }
 
   --start;
   // Punch a hole at start
   vn->TruncateHole(start, start + 1);
 
-  fbl::RefPtr<Page> page;
-  vn->GrabCachePage(start, &page);
-  auto data_blkaddr = vn->FindDataBlkAddr(start);
-  ASSERT_TRUE(data_blkaddr.is_ok());
-  // |page| for the hole should be invalidated.
-  ASSERT_EQ(page->IsDirty(), false);
-  ASSERT_EQ(page->IsUptodate(), false);
-  ASSERT_EQ(data_blkaddr.value(), kNullAddr);
-  Page::PutPage(std::move(page), true);
+  {
+    LockedPage page;
+    vn->GrabCachePage(start, &page);
+    auto data_blkaddr = vn->FindDataBlkAddr(start);
+    ASSERT_TRUE(data_blkaddr.is_ok());
+    // |page| for the hole should be invalidated.
+    ASSERT_EQ(page->IsDirty(), false);
+    ASSERT_EQ(page->IsUptodate(), false);
+    ASSERT_EQ(data_blkaddr.value(), kNullAddr);
+  }
 
   vn->Close();
   vn = nullptr;
@@ -420,17 +434,19 @@ TEST_F(FileCacheTest, LockedPageBasic) {
   root_dir_->Create("test", S_IFREG, &test_file);
   fbl::RefPtr<f2fs::File> vn = fbl::RefPtr<f2fs::File>::Downcast(std::move(test_file));
 
-  fbl::RefPtr<Page> page;
-  ASSERT_EQ(vn->GrabCachePage(0, &page), ZX_OK);
-  page->Unlock();
+  {
+    LockedPage page;
+    ASSERT_EQ(page, nullptr);
+    ASSERT_EQ(vn->GrabCachePage(0, &page), ZX_OK);
+  }
 
+  fbl::RefPtr<Page> page;
   ASSERT_EQ(vn->FindPage(0, &page), ZX_OK);
   {
-    LockedPage<Page> locked_page(page);
-    ASSERT_EQ(page->TryLock(), true);
+    LockedPage locked_page(page);
+    ASSERT_TRUE(page->IsLocked());
   }
-  ASSERT_EQ(page->TryLock(), false);
-  Page::PutPage(std::move(page), true);
+  ASSERT_FALSE(page->IsLocked());
 
   vn->Close();
   vn = nullptr;
@@ -441,20 +457,20 @@ TEST_F(FileCacheTest, LockedPageRelease) {
   root_dir_->Create("test", S_IFREG, &test_file);
   fbl::RefPtr<f2fs::File> vn = fbl::RefPtr<f2fs::File>::Downcast(std::move(test_file));
 
-  fbl::RefPtr<Page> page;
-  ASSERT_EQ(vn->GrabCachePage(0, &page), ZX_OK);
-  page->Unlock();
+  {
+    LockedPage page;
+    ASSERT_EQ(vn->GrabCachePage(0, &page), ZX_OK);
+  }
 
+  fbl::RefPtr<Page> page;
   ASSERT_EQ(vn->FindPage(0, &page), ZX_OK);
 
-  LockedPage<Page> locked_page(page);
-  ASSERT_EQ(page->TryLock(), true);
+  LockedPage locked_page(page);
+  ASSERT_TRUE(page->IsLocked());
   fbl::RefPtr<Page> released_page = locked_page.release();
-  ASSERT_EQ(released_page->TryLock(), false);
+  ASSERT_FALSE(released_page->IsLocked());
 
   ASSERT_EQ(page, released_page);
-  Page::PutPage(std::move(page), true);
-  Page::PutPage(std::move(released_page), false);
 
   vn->Close();
   vn = nullptr;

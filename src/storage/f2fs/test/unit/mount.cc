@@ -82,33 +82,42 @@ void TestSegmentType(F2fs *fs, Dir *root_dir, std::string_view name, bool is_dir
   nid_t nid = 100;
   uint32_t inode_ofs = 0;
   uint32_t indirect_node_ofs = 3;
+  CursegType type;
   ASSERT_EQ(root_dir->Create(name, flag, &vnode), ZX_OK);
   VnodeF2fs *vn = static_cast<VnodeF2fs *>(vnode.get());
 
   // data block test
-  fbl::RefPtr<Page> page;
-  vn->GrabCachePage(0, &page);
-  CursegType type = fs->GetSegmentManager().GetSegmentType(*page, PageType::kData);
-  out.push_back(type);
-  Page::PutPage(std::move(page), true);
+  {
+    LockedPage page;
+    vn->GrabCachePage(0, &page);
+    type = fs->GetSegmentManager().GetSegmentType(*page, PageType::kData);
+    out.push_back(type);
+  }
 
   // Dnode block test
-  fbl::RefPtr<NodePage> node_page;
-  fs->GetNodeVnode().GrabCachePage(vn->Ino(), &node_page);
-  node_page->FillNodeFooter(static_cast<nid_t>(node_page->GetIndex()), vn->Ino(), inode_ofs, true);
-  node_page->SetColdNode(*vn);
-  type = fs->GetSegmentManager().GetSegmentType(*node_page, PageType::kNode);
-  out.push_back(type);
-  Page::PutPage(std::move(node_page), true);
+  {
+    LockedPage page;
+    fs->GetNodeVnode().GrabCachePage(vn->Ino(), &page);
+    NodePage *node_page = &page.GetPage<NodePage>();
+    node_page->FillNodeFooter(static_cast<nid_t>(node_page->GetIndex()), vn->Ino(), inode_ofs,
+                              true);
+    node_page->SetColdNode(*vn);
+    type = fs->GetSegmentManager().GetSegmentType(*node_page, PageType::kNode);
+    out.push_back(type);
+  }
 
   // indirect node block test
-  fs->GetNodeVnode().GrabCachePage(nid, &node_page);
-  node_page->FillNodeFooter(static_cast<nid_t>(node_page->GetIndex()), vn->Ino(), indirect_node_ofs,
-                            true);
-  node_page->SetColdNode(*vn);
-  type = fs->GetSegmentManager().GetSegmentType(*node_page, PageType::kNode);
-  out.push_back(type);
-  Page::PutPage(std::move(node_page), true);
+  {
+    LockedPage page;
+    fs->GetNodeVnode().GrabCachePage(nid, &page);
+    NodePage *node_page = &page.GetPage<NodePage>();
+    node_page->FillNodeFooter(static_cast<nid_t>(node_page->GetIndex()), vn->Ino(),
+                              indirect_node_ofs, true);
+    node_page->SetColdNode(*vn);
+    type = fs->GetSegmentManager().GetSegmentType(*node_page, PageType::kNode);
+    out.push_back(type);
+  }
+
   vnode->Close();
 }
 

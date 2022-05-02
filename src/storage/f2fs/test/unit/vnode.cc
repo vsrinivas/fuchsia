@@ -32,14 +32,15 @@ void VgetFaultInjetionAndTest(F2fs &fs, Dir &root_dir, std::string_view name, T 
   ASSERT_EQ(test_vnode->Close(), ZX_OK);
 
   // fault injection
-  fbl::RefPtr<NodePage> node_page;
-  ASSERT_EQ(fs.GetNodeManager().GetNodePage(nid, &node_page), ZX_OK);
-  Node *rn = node_page->GetAddress<Node>();
+  {
+    LockedPage node_page;
+    ASSERT_EQ(fs.GetNodeManager().GetNodePage(nid, &node_page), ZX_OK);
+    Node *rn = node_page->GetAddress<Node>();
 
-  fault_injection(rn);
+    fault_injection(rn);
 
-  node_page->SetDirty();
-  Page::PutPage(std::move(node_page), true);
+    node_page->SetDirty();
+  }
 
   ASSERT_EQ(fs.GetVCache().RemoveDirty(test_vnode.get()), ZX_OK);
   fs.EvictVnode(test_vnode.get());

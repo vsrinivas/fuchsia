@@ -223,12 +223,11 @@ zx_status_t VnodeF2fs::SetMmamppedPages(size_t offset, size_t length) {
   uint64_t blk_end = (offset + length) / kBlockSize;
 
   for (pgoff_t n = blk_start; n <= blk_end; ++n) {
-    fbl::RefPtr<Page> data_page;
+    LockedPage data_page;
     if (zx_status_t status = GrabCachePage(n, &data_page); status != ZX_OK) {
       return status;
     }
     data_page->SetMmapped();
-    Page::PutPage(std::move(data_page), true);
   }
   return ZX_OK;
 }
@@ -277,8 +276,6 @@ void VnodeF2fs::Allocate(F2fs *fs, ino_t ino, uint32_t mode, fbl::RefPtr<VnodeF2
 }
 
 zx_status_t VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) {
-  fbl::RefPtr<NodePage> node_page;
-
   if (ino == fs->GetSuperblockInfo().GetNodeIno() || ino == fs->GetSuperblockInfo().GetMetaIno()) {
     *out = fbl::MakeRefCounted<VnodeF2fs>(fs, ino);
     return ZX_OK;
@@ -287,6 +284,7 @@ zx_status_t VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) 
   /* Check if ino is within scope */
   fs->GetNodeManager().CheckNidRange(ino);
 
+  LockedPage node_page;
   if (fs->GetNodeManager().GetNodePage(ino, &node_page) != ZX_OK) {
     return ZX_ERR_NOT_FOUND;
   }
@@ -331,7 +329,6 @@ zx_status_t VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) 
     failed->SetFlag(InodeInfoFlag::kBad);
     failed.reset();
     out = nullptr;
-    Page::PutPage(std::move(node_page), true);
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -350,7 +347,6 @@ zx_status_t VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) 
     vnode->SetFlag(InodeInfoFlag::kDataExist);
   }
 
-  Page::PutPage(std::move(node_page), true);
   return ZX_OK;
 }
 
@@ -585,12 +581,11 @@ zx_status_t VnodeF2fs::WriteInode(bool is_reclaim) {
 
   if (IsDirty()) {
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kNodeOp));
-    fbl::RefPtr<NodePage> node_page;
+    LockedPage node_page;
     if (ret = Vfs()->GetNodeManager().GetNodePage(ino_, &node_page); ret != ZX_OK) {
       return ret;
     }
     UpdateInode(node_page.get());
-    Page::PutPage(std::move(node_page), true);
   }
 
   return ZX_OK;
@@ -655,17 +650,15 @@ void VnodeF2fs::TruncatePartialDataPage(uint64_t from) {
   if (FindDataPage(from >> kPageCacheShift, &page) != ZX_OK)
     return;
 
-  page->Lock();
-  page->WaitOnWriteback();
-  page->ZeroUserSegment(static_cast<uint32_t>(offset), kPageSize);
-  page->SetDirty();
+  LockedPage locked_page(page);
+  locked_page->WaitOnWriteback();
+  locked_page->ZeroUserSegment(static_cast<uint32_t>(offset), kPageSize);
+  locked_page->SetDirty();
 
-  if (page->IsMmapped()) {
-    ZX_ASSERT(WritePagedVmo(page->GetAddress(), (from >> kPageCacheShift) * kBlockSize,
+  if (locked_page->IsMmapped()) {
+    ZX_ASSERT(WritePagedVmo(locked_page->GetAddress(), (from >> kPageCacheShift) * kBlockSize,
                             kBlockSize) == ZX_OK);
   }
-
-  Page::PutPage(std::move(page), true);
 }
 
 zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
@@ -684,7 +677,7 @@ zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
 
     do {
-      LockedPage<NodePage> node_page;
+      LockedPage node_page;
       err = Vfs()->GetNodeManager().FindLockedDnodePage(*this, free_from, &node_page);
       if (err) {
         if (err == ZX_ERR_NOT_FOUND)
@@ -709,7 +702,7 @@ zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
       ZX_ASSERT(count >= 0);
 
       if (ofs_in_node || IsInode(*node_page)) {
-        TruncateDataBlocksRange(*node_page, ofs_in_node, count);
+        TruncateDataBlocksRange(node_page.GetPage<NodePage>(), ofs_in_node, count);
         free_from += count;
       }
     } while (false);
@@ -724,7 +717,7 @@ zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
 
 zx_status_t VnodeF2fs::TruncateHole(pgoff_t pg_start, pgoff_t pg_end) {
   for (pgoff_t index = pg_start; index < pg_end; ++index) {
-    LockedPage<NodePage> dnode_page;
+    LockedPage dnode_page;
     if (zx_status_t err = Vfs()->GetNodeManager().GetLockedDnodePage(*this, index, &dnode_page);
         err != ZX_OK) {
       if (err == ZX_ERR_NOT_FOUND) {
@@ -743,8 +736,8 @@ zx_status_t VnodeF2fs::TruncateHole(pgoff_t pg_start, pgoff_t pg_end) {
       ofs_in_dnode = result.value();
     }
 
-    if (DatablockAddr(dnode_page.get(), ofs_in_dnode) != kNullAddr) {
-      TruncateDataBlocksRange(*dnode_page, ofs_in_dnode, 1);
+    if (DatablockAddr(&dnode_page.GetPage<NodePage>(), ofs_in_dnode) != kNullAddr) {
+      TruncateDataBlocksRange(dnode_page.GetPage<NodePage>(), ofs_in_dnode, 1);
     }
   }
   return ZX_OK;
@@ -850,17 +843,16 @@ zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
     // support logging nodes for roll-forward recovery.
     // kMountDisableRollForward can be removed when gc is available
     // since LFS cannot be used for nodes without gc.
-    fbl::RefPtr<NodePage> node_page;
+    LockedPage node_page;
     bool mark = !Vfs()->GetNodeManager().IsCheckpointedNode(Ino());
     if (ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &node_page); ret != ZX_OK) {
       return ret;
     }
 
-    node_page->SetFsyncMark(true);
-    node_page->SetDentryMark(mark);
+    node_page.GetPage<NodePage>().SetFsyncMark(true);
+    node_page.GetPage<NodePage>().SetDentryMark(mark);
 
     UpdateInode(node_page.get());
-    Page::PutPage(std::move(node_page), true);
   }
   return ret;
 }

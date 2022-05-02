@@ -300,7 +300,6 @@ zx_status_t File::Read(void *data, size_t len, size_t off, size_t *out_actual) {
   uint64_t blk_end = (off + len) / kBlockSize;
   size_t off_in_block = off % kBlockSize;
   size_t off_in_buf = 0;
-  fbl::RefPtr<Page> data_page;
   uint64_t npages = (GetSize() + kBlockSize - 1) / kBlockSize;
 
   if (off >= GetSize()) {
@@ -316,6 +315,7 @@ zx_status_t File::Read(void *data, size_t len, size_t off, size_t *out_actual) {
 
   for (pgoff_t n = blk_start; n <= blk_end; ++n) {
     bool is_empty_page = false;
+    LockedPage data_page;
     if (zx_status_t ret = GetLockDataPage(n, &data_page); ret != ZX_OK) {
       if (ret == ZX_ERR_NOT_FOUND) {  // truncated page
         is_empty_page = true;
@@ -337,10 +337,6 @@ zx_status_t File::Read(void *data, size_t len, size_t off, size_t *out_actual) {
     off_in_buf += cur_len;
     left -= cur_len;
     off_in_block = 0;
-
-    if (!is_empty_page) {
-      Page::PutPage(std::move(data_page), true);
-    }
 
     if (left == 0)
       break;
@@ -375,7 +371,7 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
     ConvertInlineData();
   }
 
-  std::vector<fbl::RefPtr<Page>> data_pages(blk_end - blk_start + 1, nullptr);
+  std::vector<LockedPage> data_pages(blk_end - blk_start + 1);
 
   for (uint64_t n = blk_start; n <= blk_end; ++n) {
     uint64_t index = n - blk_start;
@@ -389,11 +385,6 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
       // If it succeeds, data_pages[index] has a page of valid virtual memory.
       // If it fails with any reasons such as no space/memory,
       // every data_pages[less than index] is released, and DoWrite() returns with the err code.
-      for (uint64_t m = 0; m < index; ++m) {
-        if (data_pages[m] != nullptr)
-          Page::PutPage(std::move(data_pages[m]), true);
-      }
-
       *out_actual = 0;
       return ret;
     }
@@ -435,7 +426,7 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
                               std::min(blocksize, left + cur_len)) == ZX_OK);
     }
 
-    Page::PutPage(std::move(data_pages[index]), true);
+    data_pages[index].reset();
 
     if (left == 0)
       break;

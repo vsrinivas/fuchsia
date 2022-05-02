@@ -305,7 +305,7 @@ bool F2fs::IsValid() const {
 }
 
 // Fill the locked page with data located in the block address.
-zx_status_t F2fs::MakeReadOperation(fbl::RefPtr<Page> page, block_t blk_addr, bool is_sync) {
+zx_status_t F2fs::MakeReadOperation(LockedPage& page, block_t blk_addr, bool is_sync) {
   if (page->IsUptodate()) {
     return ZX_OK;
   }
@@ -322,7 +322,7 @@ zx_status_t F2fs::MakeReadOperation(fbl::RefPtr<Page> page, block_t blk_addr, bo
   return ret;
 }
 
-zx_status_t F2fs::MakeWriteOperation(fbl::RefPtr<Page> page, block_t blk_addr, PageType type) {
+zx_status_t F2fs::MakeWriteOperation(LockedPage& page, block_t blk_addr, PageType type) {
   if (blk_addr >= GetBc().Maxblk()) {
     return ZX_ERR_OUT_OF_RANGE;
   }
@@ -332,24 +332,28 @@ zx_status_t F2fs::MakeWriteOperation(fbl::RefPtr<Page> page, block_t blk_addr, P
       .dev_offset = blk_addr,
       .length = 1,
   };
-  writer_->EnqueuePage(op, std::move(page), type);
+  writer_->EnqueuePage(op, page, type);
 
   return ZX_OK;
 }
 
-zx_status_t F2fs::MakeOperation(storage::OperationType op, fbl::RefPtr<Page> page, block_t blk_addr,
+zx_status_t F2fs::MakeOperation(storage::OperationType op, LockedPage& page, block_t blk_addr,
                                 PageType type, block_t nblocks) {
   // TODO: verify_block_addr(superblock_info, blk_addr);
   switch (op) {
     case storage::OperationType::kWrite:
-      return MakeWriteOperation(std::move(page), blk_addr, type);
+      return MakeWriteOperation(page, blk_addr, type);
     case storage::OperationType::kRead:
-      return MakeReadOperation(std::move(page), blk_addr, true);
-    case storage::OperationType::kTrim:
-      return GetBc().Trim(blk_addr, nblocks);
+      return MakeReadOperation(page, blk_addr, true);
     default:
       return ZX_ERR_INVALID_ARGS;
   };
 }
 
+zx_status_t F2fs::MakeOperation(storage::OperationType op, block_t blk_addr, block_t nblocks) {
+  if (op != storage::OperationType::kTrim) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return GetBc().Trim(blk_addr, nblocks);
+}
 }  // namespace f2fs

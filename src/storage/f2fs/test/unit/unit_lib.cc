@@ -250,8 +250,6 @@ void FileTester::CheckChildrenInBlock(Dir *vn, uint64_t bidx,
   }
 
   ASSERT_TRUE(childs.empty());
-
-  Page::PutPage(std::move(page), false);
 }
 
 std::string FileTester::GetRandomName(unsigned int len) {
@@ -279,7 +277,7 @@ void FileTester::ReadFromFile(File *file, void *data, size_t len, size_t off) {
 }
 
 void MapTester::CheckNodeLevel(F2fs *fs, VnodeF2fs *vn, int level) {
-  fbl::RefPtr<NodePage> ipage;
+  LockedPage ipage;
   ASSERT_EQ(fs->GetNodeManager().GetNodePage(vn->Ino(), &ipage), ZX_OK);
   Inode *inode = &(ipage->GetAddress<Node>()->i);
 
@@ -289,8 +287,6 @@ void MapTester::CheckNodeLevel(F2fs *fs, VnodeF2fs *vn, int level) {
 
   for (; i < kNidsPerInode; ++i)
     ASSERT_EQ(inode->i_nid[i], 0U);
-
-  Page::PutPage(std::move(ipage), true);
 }
 
 void MapTester::CheckNidsFree(F2fs *fs, std::unordered_set<nid_t> &nids) {

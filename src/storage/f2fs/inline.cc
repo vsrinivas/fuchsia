@@ -36,23 +36,21 @@ uint8_t (*Dir::InlineDentryFilenameArray(Page *page))[kDentrySlotLen] {
 }
 
 DirEntry *Dir::FindInInlineDir(std::string_view name, fbl::RefPtr<Page> *res_page) {
-  fbl::RefPtr<NodePage> ipage = nullptr;
+  LockedPage ipage;
   if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); ret != ZX_OK)
     return nullptr;
-  *res_page = std::move(ipage);
   f2fs_hash_t namehash = DentryHash(name);
 
   for (uint32_t bit_pos = 0; bit_pos < MaxInlineDentry();) {
-    bit_pos = FindNextBit(InlineDentryBitmap((*res_page).get()), MaxInlineDentry(), bit_pos);
+    bit_pos = FindNextBit(InlineDentryBitmap(ipage.get()), MaxInlineDentry(), bit_pos);
     if (bit_pos >= MaxInlineDentry()) {
       break;
     }
 
-    DirEntry *de = &InlineDentryArray((*res_page).get())[bit_pos];
+    DirEntry *de = &InlineDentryArray(ipage.get())[bit_pos];
     if (EarlyMatchName(name, namehash, *de)) {
-      if (!memcmp(InlineDentryFilenameArray((*res_page).get())[bit_pos], name.data(),
-                  name.length())) {
-        (*res_page)->Unlock();
+      if (!memcmp(InlineDentryFilenameArray(ipage.get())[bit_pos], name.data(), name.length())) {
+        *res_page = ipage.release();
 
 #ifdef __Fuchsia__
         if (de != nullptr) {
@@ -75,24 +73,22 @@ DirEntry *Dir::FindInInlineDir(std::string_view name, fbl::RefPtr<Page> *res_pag
     bit_pos += GetDentrySlots(LeToCpu(de->name_len));
   }
 
-  Page::PutPage(std::move(*res_page), true);
   return nullptr;
 }
 
 DirEntry *Dir::ParentInlineDir(fbl::RefPtr<Page> *out) {
-  fbl::RefPtr<NodePage> ipage;
+  LockedPage ipage;
   if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); ret != ZX_OK) {
     return nullptr;
   }
 
   DirEntry *de = &InlineDentryArray(ipage.get())[1];
-  ipage->Unlock();
-  *out = std::move(ipage);
+  *out = ipage.release();
   return de;
 }
 
 zx_status_t Dir::MakeEmptyInlineDir(VnodeF2fs *vnode) {
-  fbl::RefPtr<NodePage> ipage;
+  LockedPage ipage;
 
   if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(vnode->Ino(), &ipage); err != ZX_OK)
     return err;
@@ -121,8 +117,6 @@ zx_status_t Dir::MakeEmptyInlineDir(VnodeF2fs *vnode) {
     vnode->SetFlag(InodeInfoFlag::kUpdateDir);
   }
 
-  Page::PutPage(std::move(ipage), true);
-
   return ZX_OK;
 }
 
@@ -147,13 +141,12 @@ unsigned int Dir::RoomInInlineDir(Page *ipage, int slots) {
 }
 
 zx_status_t Dir::ConvertInlineDir() {
-  fbl::RefPtr<Page> page;
+  LockedPage page;
   if (zx_status_t ret = GrabCachePage(0, &page); ret != ZX_OK) {
     return ret;
   }
-  auto free_page = fit::defer([&] { Page::PutPage(std::move(page), true); });
 
-  LockedPage<NodePage> dnode_page;
+  LockedPage dnode_page;
   if (zx_status_t err = Vfs()->GetNodeManager().GetLockedDnodePage(*this, 0, &dnode_page);
       err != ZX_OK) {
     return err;
@@ -166,9 +159,10 @@ zx_status_t Dir::ConvertInlineDir() {
     ofs_in_dnode = result.value();
   }
 
-  block_t data_blkaddr = DatablockAddr(dnode_page.get(), ofs_in_dnode);
+  NodePage *ipage = &dnode_page.GetPage<NodePage>();
+  block_t data_blkaddr = DatablockAddr(ipage, ofs_in_dnode);
   if (data_blkaddr == kNullAddr) {
-    if (zx_status_t err = ReserveNewBlock(*dnode_page, ofs_in_dnode); err != ZX_OK) {
+    if (zx_status_t err = ReserveNewBlock(*ipage, ofs_in_dnode); err != ZX_OK) {
       return err;
     }
     data_blkaddr = kNewAddr;
@@ -179,7 +173,6 @@ zx_status_t Dir::ConvertInlineDir() {
 
   DentryBlock *dentry_blk = page->GetAddress<DentryBlock>();
 
-  Page *ipage = dnode_page.get();
   // copy data from inline dentry block to new dentry block
   memcpy(dentry_blk->dentry_bitmap, InlineDentryBitmap(ipage), InlineDentryBitmapSize());
   memcpy(dentry_blk->dentry, InlineDentryArray(ipage), sizeof(DirEntry) * MaxInlineDentry());
@@ -193,10 +186,9 @@ zx_status_t Dir::ConvertInlineDir() {
   // TODO: Use writeback() while keeping the lock
   if (page->ClearDirtyForIo(true)) {
     page->SetWriteback();
-    fbl::RefPtr<Page> written_page = page;
-    Vfs()->GetSegmentManager().WriteDataPage(this, std::move(written_page), dnode_page->NidOfNode(),
-                                             ofs_in_dnode, data_blkaddr, &data_blkaddr);
-    SetDataBlkaddr(*dnode_page, ofs_in_dnode, data_blkaddr);
+    Vfs()->GetSegmentManager().WriteDataPage(this, page, ipage->NidOfNode(), ofs_in_dnode,
+                                             data_blkaddr, &data_blkaddr);
+    SetDataBlkaddr(*ipage, ofs_in_dnode, data_blkaddr);
     UpdateExtentCache(data_blkaddr, 0);
     UpdateVersion();
   }
@@ -222,7 +214,7 @@ zx_status_t Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode, bool *i
 
   f2fs_hash_t name_hash = DentryHash(name);
 
-  fbl::RefPtr<NodePage> ipage;
+  LockedPage ipage;
   if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); err != ZX_OK) {
     return err;
   }
@@ -230,7 +222,7 @@ zx_status_t Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode, bool *i
   int slots = GetDentrySlots(static_cast<uint16_t>(name.length()));
   unsigned int bit_pos = RoomInInlineDir(ipage.get(), slots);
   if (bit_pos >= MaxInlineDentry()) {
-    Page::PutPage(std::move(ipage), true);
+    ipage.reset();
     ZX_ASSERT(ConvertInlineDir() == ZX_OK);
 
     *is_converted = true;
@@ -252,7 +244,6 @@ zx_status_t Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode, bool *i
       UpdateInode(ipage.get());
       ClearFlag(InodeInfoFlag::kUpdateDir);
     }
-    Page::PutPage(std::move(ipage), true);
     return err;
   }
 
@@ -285,24 +276,25 @@ zx_status_t Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode, bool *i
     ClearFlag(InodeInfoFlag::kUpdateDir);
   }
 
-  Page::PutPage(std::move(ipage), true);
   return ZX_OK;
 }
 
-void Dir::DeleteInlineEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
-  page->Lock();
+void Dir::DeleteInlineEntry(DirEntry *dentry, fbl::RefPtr<Page> &page, VnodeF2fs *vnode) {
+  LockedPage lock_page(page);
   page->WaitOnWriteback();
 
-  unsigned int bit_pos = static_cast<uint32_t>(dentry - InlineDentryArray(page));
+  unsigned int bit_pos = static_cast<uint32_t>(dentry - InlineDentryArray(page.get()));
   int slots = GetDentrySlots(LeToCpu(dentry->name_len));
-  for (int i = 0; i < slots; ++i)
-    TestAndClearBit(bit_pos + i, InlineDentryBitmap(page));
+  for (int i = 0; i < slots; ++i) {
+    TestAndClearBit(bit_pos + i, InlineDentryBitmap(page.get()));
+  }
 
   page->SetDirty();
 
 #ifdef __Fuchsia__
-  std::string_view remove_name(reinterpret_cast<char *>(InlineDentryFilenameArray(page)[bit_pos]),
-                               LeToCpu(dentry->name_len));
+  std::string_view remove_name(
+      reinterpret_cast<char *>(InlineDentryFilenameArray(page.get())[bit_pos]),
+      LeToCpu(dentry->name_len));
 
   Vfs()->GetDirEntryCache().RemoveDirEntry(Ino(), remove_name);
 #endif  // __Fuchsia__
@@ -331,20 +323,17 @@ void Dir::DeleteInlineEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
       Vfs()->AddOrphanInode(vnode);
     }
   }
-  UpdateInode(page);
-  page->Unlock();
+  UpdateInode(page.get());
 }
 
 bool Dir::IsEmptyInlineDir() {
-  fbl::RefPtr<NodePage> ipage;
+  LockedPage ipage;
 
   if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); err != ZX_OK)
     return false;
 
   unsigned int bit_pos = 2;
   bit_pos = FindNextBit(InlineDentryBitmap(ipage.get()), MaxInlineDentry(), bit_pos);
-
-  Page::PutPage(std::move(ipage), true);
 
   if (bit_pos < MaxInlineDentry()) {
     return false;
@@ -363,7 +352,7 @@ zx_status_t Dir::ReadInlineDir(fs::VdirCookie *cookie, void *dirents, size_t len
     return ZX_OK;
   }
 
-  fbl::RefPtr<NodePage> ipage;
+  LockedPage ipage;
 
   if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); err != ZX_OK)
     return err;
@@ -388,7 +377,6 @@ zx_status_t Dir::ReadInlineDir(fs::VdirCookie *cookie, void *dirents, size_t len
     if (de->ino && name != "..") {
       if (zx_status_t ret = df.Next(name, d_type, LeToCpu(de->ino)); ret != ZX_OK) {
         *pos_cookie = bit_pos;
-        Page::PutPage(std::move(ipage), true);
 
         *out_actual = df.BytesFilled();
         return ZX_OK;
@@ -399,8 +387,6 @@ zx_status_t Dir::ReadInlineDir(fs::VdirCookie *cookie, void *dirents, size_t len
   }
 
   *pos_cookie = MaxInlineDentry();
-  Page::PutPage(std::move(ipage), true);
-
   *out_actual = df.BytesFilled();
 
   return ZX_OK;
@@ -414,7 +400,7 @@ uint8_t *File::InlineDataPtr(Page *page) {
 }
 
 zx_status_t File::ReadInline(void *data, size_t len, size_t off, size_t *out_actual) {
-  fbl::RefPtr<NodePage> inline_page;
+  LockedPage inline_page;
   if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret != ZX_OK) {
     return ret;
   }
@@ -423,21 +409,18 @@ zx_status_t File::ReadInline(void *data, size_t len, size_t off, size_t *out_act
   size_t cur_len = std::min(len, GetSize() - off);
   memcpy(static_cast<uint8_t *>(data), inline_data + off, cur_len);
 
-  Page::PutPage(std::move(inline_page), true);
-
   *out_actual = cur_len;
 
   return ZX_OK;
 }
 
 zx_status_t File::ConvertInlineData() {
-  fbl::RefPtr<Page> page;
+  LockedPage page;
   if (zx_status_t ret = GrabCachePage(0, &page); ret != ZX_OK) {
     return ret;
   }
-  auto free_page = fit::defer([&] { Page::PutPage(std::move(page), true); });
 
-  LockedPage<NodePage> dnode_page;
+  LockedPage dnode_page;
   if (zx_status_t err = Vfs()->GetNodeManager().GetLockedDnodePage(*this, 0, &dnode_page);
       err != ZX_OK) {
     return err;
@@ -450,9 +433,10 @@ zx_status_t File::ConvertInlineData() {
     ofs_in_dnode = result.value();
   }
 
-  block_t data_blkaddr = DatablockAddr(dnode_page.get(), ofs_in_dnode);
+  NodePage *ipage = &dnode_page.GetPage<NodePage>();
+  block_t data_blkaddr = DatablockAddr(ipage, ofs_in_dnode);
   if (data_blkaddr == kNullAddr) {
-    if (zx_status_t err = ReserveNewBlock(*dnode_page, ofs_in_dnode); err != ZX_OK) {
+    if (zx_status_t err = ReserveNewBlock(*ipage, ofs_in_dnode); err != ZX_OK) {
       return err;
     }
   }
@@ -460,7 +444,6 @@ zx_status_t File::ConvertInlineData() {
   page->WaitOnWriteback();
   page->ZeroUserSegment(0, kPageSize);
 
-  Page *ipage = dnode_page.get();
   uint8_t *inline_data = InlineDataPtr(ipage);
   memcpy(page->GetAddress(), inline_data, GetSize());
 
@@ -476,7 +459,7 @@ zx_status_t File::ConvertInlineData() {
 }
 
 zx_status_t File::WriteInline(const void *data, size_t len, size_t offset, size_t *out_actual) {
-  fbl::RefPtr<NodePage> inline_page;
+  LockedPage inline_page;
   if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret != ZX_OK) {
     return ret;
   }
@@ -489,7 +472,6 @@ zx_status_t File::WriteInline(const void *data, size_t len, size_t offset, size_
   SetSize(std::max(static_cast<size_t>(GetSize()), offset + len));
   SetFlag(InodeInfoFlag::kDataExist);
   inline_page->SetDirty();
-  Page::PutPage(std::move(inline_page), true);
 
   timespec cur_time;
   clock_gettime(CLOCK_REALTIME, &cur_time);
@@ -503,25 +485,25 @@ zx_status_t File::WriteInline(const void *data, size_t len, size_t offset, size_
 }
 
 zx_status_t File::TruncateInline(size_t len) {
-  fbl::RefPtr<NodePage> inline_page;
-  if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret != ZX_OK) {
-    return ret;
+  {
+    LockedPage inline_page;
+    if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret != ZX_OK) {
+      return ret;
+    }
+
+    inline_page->WaitOnWriteback();
+
+    uint8_t *inline_data = InlineDataPtr(inline_page.get());
+    size_t size_diff = (len > GetSize()) ? (len - GetSize()) : (GetSize() - len);
+    memset(inline_data + ((len > GetSize()) ? GetSize() : len), 0, size_diff);
+
+    SetSize(len);
+    if (GetSize() == 0) {
+      ClearFlag(InodeInfoFlag::kDataExist);
+    }
+
+    inline_page->SetDirty();
   }
-
-  inline_page->WaitOnWriteback();
-
-  uint8_t *inline_data = InlineDataPtr(inline_page.get());
-  size_t size_diff = (len > GetSize()) ? (len - GetSize()) : (GetSize() - len);
-  memset(inline_data + ((len > GetSize()) ? GetSize() : len), 0, size_diff);
-
-  SetSize(len);
-  if (GetSize() == 0) {
-    ClearFlag(InodeInfoFlag::kDataExist);
-  }
-
-  inline_page->SetDirty();
-  Page::PutPage(std::move(inline_page), true);
-
   timespec cur_time;
   clock_gettime(CLOCK_REALTIME, &cur_time);
   SetCTime(cur_time);

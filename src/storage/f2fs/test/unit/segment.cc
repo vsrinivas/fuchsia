@@ -23,13 +23,13 @@ TEST_F(SegmentManagerTest, BlkChaining) {
   // write the root inode, and read the block where the previous version of the root inode is stored
   // to check if the block has a proper lba address to the next node block
   for (int i = 0; i < nwritten; ++i) {
-    fbl::RefPtr<NodePage> read_page;
     NodeInfo ni;
-
-    fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &read_page);
-    blk_chain.push_back(read_page->NextBlkaddrOfNode());
-    read_page->SetDirty();
-    Page::PutPage(std::move(read_page), true);
+    {
+      LockedPage read_page;
+      fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &read_page);
+      blk_chain.push_back(read_page.GetPage<NodePage>().NextBlkaddrOfNode());
+      read_page->SetDirty();
+    }
     WritebackOperation op = {.bSync = true};
     fs_->GetNodeVnode().Writeback(op);
 
@@ -54,17 +54,18 @@ TEST_F(SegmentManagerTest, DirtyToFree) {
 
   // write the root inode repeatedly as much as 2 segments
   for (int i = 0; i < nwritten; ++i) {
-    fbl::RefPtr<NodePage> read_page;
     NodeInfo ni;
-
-    fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &read_page);
     fs_->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
     ASSERT_NE(ni.blk_addr, kNullAddr);
     ASSERT_NE(ni.blk_addr, kNewAddr);
     block_t old_addr = ni.blk_addr;
 
-    read_page->SetDirty();
-    Page::PutPage(std::move(read_page), true);
+    {
+      LockedPage read_page;
+      fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &read_page);
+      read_page->SetDirty();
+    }
+
     WritebackOperation op = {.bSync = true};
     fs_->GetNodeVnode().Writeback(op);
 
@@ -114,7 +115,7 @@ TEST_F(SegmentManagerTest, BalanceFs) {
 
 TEST_F(SegmentManagerTest, InvalidateBlocksExceptionCase) {
   // read the root inode block
-  fbl::RefPtr<NodePage> root_node_page;
+  LockedPage root_node_page;
   SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
   fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
   ASSERT_NE(root_node_page, nullptr);
@@ -123,8 +124,6 @@ TEST_F(SegmentManagerTest, InvalidateBlocksExceptionCase) {
   block_t temp_written_valid_blocks = fs_->GetSegmentManager().GetSitInfo().written_valid_blocks;
   fs_->GetSegmentManager().InvalidateBlocks(kNewAddr);
   ASSERT_EQ(temp_written_valid_blocks, fs_->GetSegmentManager().GetSitInfo().written_valid_blocks);
-
-  Page::PutPage(std::move(root_node_page), true);
 }
 
 TEST_F(SegmentManagerTest, GetNewSegmentHeap) {
@@ -135,16 +134,16 @@ TEST_F(SegmentManagerTest, GetNewSegmentHeap) {
   uint32_t nwritten = kDefaultBlocksPerSegment * 3;
 
   for (uint32_t i = 0; i < nwritten; ++i) {
-    fbl::RefPtr<NodePage> read_page;
     NodeInfo ni, new_ni;
-
-    fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &read_page);
     fs_->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
     ASSERT_NE(ni.blk_addr, kNullAddr);
     ASSERT_NE(ni.blk_addr, kNewAddr);
 
-    read_page->SetDirty();
-    Page::PutPage(std::move(read_page), true);
+    {
+      LockedPage read_page;
+      fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &read_page);
+      read_page->SetDirty();
+    }
     WritebackOperation op = {.bSync = true};
     fs_->GetNodeVnode().Writeback(op);
 
@@ -267,7 +266,7 @@ TEST_F(SegmentManagerTest, AllocateNewSegments) {
 
 TEST_F(SegmentManagerTest, DirtySegments) {
   // read the root inode block
-  fbl::RefPtr<NodePage> root_node_page;
+  LockedPage root_node_page;
   SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
   fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
   ASSERT_NE(root_node_page, nullptr);
@@ -282,8 +281,6 @@ TEST_F(SegmentManagerTest, DirtySegments) {
                                dirty_info.nr_dirty[static_cast<int>(DirtyType::kDirtyColdNode)];
 
   ASSERT_EQ(fs_->GetSegmentManager().DirtySegments(), dirtyDataSegments + dirtyNodeSegments);
-
-  Page::PutPage(std::move(root_node_page), true);
 }
 
 TEST(SegmentManagerOptionTest, Section) {
@@ -302,14 +299,16 @@ TEST(SegmentManagerOptionTest, Section) {
 
   for (uint32_t i = 0; i < blocks_per_section; ++i) {
     NodeInfo ni;
-    fbl::RefPtr<NodePage> root_node_page;
     CursegInfo *cur_segment = fs->GetSegmentManager().CURSEG_I(CursegType::kCursegHotNode);
-    fs->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
-    ASSERT_NE(root_node_page, nullptr);
 
-    // Consume a block in the current section
-    root_node_page->SetDirty();
-    Page::PutPage(std::move(root_node_page), true);
+    {
+      LockedPage root_node_page;
+      fs->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
+      ASSERT_NE(root_node_page, nullptr);
+
+      // Consume a block in the current section
+      root_node_page->SetDirty();
+    }
     WritebackOperation op = {.bSync = true};
     fs->GetNodeVnode().Writeback(op);
 
@@ -354,16 +353,17 @@ TEST(SegmentManagerOptionTest, GetNewSegmentHeap) {
 
   for (uint32_t i = 0; i < nwritten; ++i) {
     NodeInfo ni, new_ni;
-    fbl::RefPtr<NodePage> root_node_page;
-    fs->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
-    ASSERT_NE(root_node_page, nullptr);
-
     fs->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
     ASSERT_NE(ni.blk_addr, kNullAddr);
     ASSERT_NE(ni.blk_addr, kNewAddr);
 
-    root_node_page->SetDirty();
-    Page::PutPage(std::move(root_node_page), true);
+    {
+      LockedPage root_node_page;
+      fs->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
+      ASSERT_NE(root_node_page, nullptr);
+      root_node_page->SetDirty();
+    }
+
     WritebackOperation op = {.bSync = true};
     fs->GetNodeVnode().Writeback(op);
 
@@ -405,16 +405,16 @@ TEST(SegmentManagerOptionTest, GetNewSegmentNoHeap) {
 
   for (uint32_t i = 0; i < nwritten; ++i) {
     NodeInfo ni, new_ni;
-    fbl::RefPtr<NodePage> root_node_page;
-    fs->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
-    ASSERT_NE(root_node_page, nullptr);
-
     fs->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
     ASSERT_NE(ni.blk_addr, kNullAddr);
     ASSERT_NE(ni.blk_addr, kNewAddr);
 
-    root_node_page->SetDirty();
-    Page::PutPage(std::move(root_node_page), true);
+    {
+      LockedPage root_node_page;
+      fs->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
+      ASSERT_NE(root_node_page, nullptr);
+      root_node_page->SetDirty();
+    }
     WritebackOperation op = {.bSync = true};
     fs->GetNodeVnode().Writeback(op);
 

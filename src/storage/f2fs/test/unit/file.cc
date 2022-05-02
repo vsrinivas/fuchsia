@@ -113,34 +113,32 @@ TEST_F(FileTest, NidAndBlkaddrAllocFree) {
   std::unordered_set<block_t> blkaddr_set;
 
   nid_set.insert(test_file_ptr->Ino());
-  fbl::RefPtr<NodePage> ipage;
-  ASSERT_EQ(fs_->GetNodeManager().GetNodePage(test_file_ptr->Ino(), &ipage), ZX_OK);
-  Inode *inode = &(ipage->GetAddress<Node>()->i);
+  {
+    LockedPage ipage;
+    ASSERT_EQ(fs_->GetNodeManager().GetNodePage(test_file_ptr->Ino(), &ipage), ZX_OK);
+    Inode *inode = &(ipage->GetAddress<Node>()->i);
 
-  for (int i = 0; i < kNidsPerInode; ++i) {
-    if (inode->i_nid[i] != 0U)
-      nid_set.insert(inode->i_nid[i]);
-  }
-
-  for (int i = 0; i < kAddrsPerInode; ++i) {
-    ASSERT_NE(inode->i_addr[i], kNullAddr);
-    blkaddr_set.insert(inode->i_addr[i]);
-  }
-
-  for (int i = 0; i < 2; ++i) {
-    fbl::RefPtr<NodePage> direct_node_page;
-    ASSERT_EQ(fs_->GetNodeManager().GetNodePage(inode->i_nid[i], &direct_node_page), ZX_OK);
-    DirectNode *direct_node = &(direct_node_page->GetAddress<Node>()->dn);
-
-    for (int j = 0; j < kAddrsPerBlock; j++) {
-      ASSERT_NE(direct_node->addr[j], kNullAddr);
-      blkaddr_set.insert(direct_node->addr[j]);
+    for (int i = 0; i < kNidsPerInode; ++i) {
+      if (inode->i_nid[i] != 0U)
+        nid_set.insert(inode->i_nid[i]);
     }
 
-    Page::PutPage(std::move(direct_node_page), true);
-  }
+    for (int i = 0; i < kAddrsPerInode; ++i) {
+      ASSERT_NE(inode->i_addr[i], kNullAddr);
+      blkaddr_set.insert(inode->i_addr[i]);
+    }
 
-  Page::PutPage(std::move(ipage), true);
+    for (int i = 0; i < 2; ++i) {
+      LockedPage direct_node_page;
+      ASSERT_EQ(fs_->GetNodeManager().GetNodePage(inode->i_nid[i], &direct_node_page), ZX_OK);
+      DirectNode *direct_node = &(direct_node_page->GetAddress<Node>()->dn);
+
+      for (int j = 0; j < kAddrsPerBlock; j++) {
+        ASSERT_NE(direct_node->addr[j], kNullAddr);
+        blkaddr_set.insert(direct_node->addr[j]);
+      }
+    }
+  }
 
   ASSERT_EQ(nid_set.size(), level + 1);
   ASSERT_EQ(blkaddr_set.size(), static_cast<uint32_t>(kAddrsPerInode + kAddrsPerBlock * 2));

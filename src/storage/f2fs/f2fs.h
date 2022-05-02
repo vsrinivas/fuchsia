@@ -207,9 +207,9 @@ class F2fs : public fs::Vfs {
 #endif
 
   // checkpoint.cc
-  zx_status_t GrabMetaPage(pgoff_t index, fbl::RefPtr<Page> *out);
-  zx_status_t GetMetaPage(pgoff_t index, fbl::RefPtr<Page> *out);
-  zx_status_t F2fsWriteMetaPage(fbl::RefPtr<Page> page, bool is_reclaim = false);
+  zx_status_t GrabMetaPage(pgoff_t index, LockedPage *out);
+  zx_status_t GetMetaPage(pgoff_t index, LockedPage *out);
+  zx_status_t F2fsWriteMetaPage(LockedPage &page, bool is_reclaim = false);
 
   zx_status_t CheckOrphanSpace();
   void AddOrphanInode(VnodeF2fs *vnode);
@@ -219,7 +219,7 @@ class F2fs : public fs::Vfs {
   int RecoverOrphanInodes();
   void WriteOrphanInodes(block_t start_blk);
   zx_status_t GetValidCheckpoint();
-  zx_status_t ValidateCheckpoint(block_t cp_addr, uint64_t *version, fbl::RefPtr<Page> *out);
+  zx_status_t ValidateCheckpoint(block_t cp_addr, uint64_t *version, LockedPage *out);
   void BlockOperations();
   void UnblockOperations();
   void DoCheckpoint(bool is_umount);
@@ -265,8 +265,10 @@ class F2fs : public fs::Vfs {
   // Flush all dirty data Pages for dirty vnodes that meet |operation|.if_vnode and if_page.
   pgoff_t SyncDirtyDataPages(WritebackOperation &operation);
 
-  zx_status_t MakeOperation(storage::OperationType op, fbl::RefPtr<Page> page, block_t blk_addr,
+  zx_status_t MakeOperation(storage::OperationType op, LockedPage &page, block_t blk_addr,
                             PageType type, block_t nblocks = 1);
+
+  zx_status_t MakeOperation(storage::OperationType op, block_t blk_addr, block_t nblocks = 1);
 
   void ScheduleWriterSubmitPages(sync_completion_t *completion = nullptr,
                                  PageType type = PageType::kNrPageType) {
@@ -274,8 +276,8 @@ class F2fs : public fs::Vfs {
   }
 
  private:
-  zx_status_t MakeReadOperation(fbl::RefPtr<Page> page, block_t blk_addr, bool is_sync = true);
-  zx_status_t MakeWriteOperation(fbl::RefPtr<Page> page, block_t blk_addr, PageType type);
+  zx_status_t MakeReadOperation(LockedPage &page, block_t blk_addr, bool is_sync = true);
+  zx_status_t MakeWriteOperation(LockedPage &page, block_t blk_addr, PageType type);
 
   std::unique_ptr<f2fs::Bcache> bc_;
 

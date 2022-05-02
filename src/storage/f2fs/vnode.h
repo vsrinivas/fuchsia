@@ -147,12 +147,12 @@ class VnodeF2fs : public fs::Vnode,
 
   void UpdateExtentCache(block_t blk_addr, pgoff_t fofs);
   zx_status_t FindDataPage(pgoff_t index, fbl::RefPtr<Page> *out);
-  zx_status_t GetLockDataPage(pgoff_t index, fbl::RefPtr<Page> *out);
-  zx_status_t GetNewDataPage(pgoff_t index, bool new_i_size, fbl::RefPtr<Page> *out);
+  zx_status_t GetLockDataPage(pgoff_t index, LockedPage *out);
+  zx_status_t GetNewDataPage(pgoff_t index, bool new_i_size, LockedPage *out);
 
-  zx_status_t DoWriteDataPage(fbl::RefPtr<Page> page);
-  zx_status_t WriteDataPage(fbl::RefPtr<Page> page, bool is_reclaim = false);
-  zx_status_t WriteBegin(size_t pos, size_t len, fbl::RefPtr<Page> *page);
+  zx_status_t DoWriteDataPage(LockedPage &page);
+  zx_status_t WriteDataPage(LockedPage &page, bool is_reclaim = false);
+  zx_status_t WriteBegin(size_t pos, size_t len, LockedPage *page);
 
 #ifdef __Fuchsia__
   void Notify(std::string_view name, fuchsia_io::wire::WatchEvent event) final;
@@ -380,19 +380,7 @@ class VnodeF2fs : public fs::Vnode,
     return file_cache_.FindPage(index, out);
   }
 
-  zx_status_t GrabCachePage(pgoff_t index, fbl::RefPtr<NodePage> *out) {
-    if (!IsNode()) {
-      return ZX_ERR_INVALID_ARGS;
-    }
-    fbl::RefPtr<Page> page;
-    if (auto err = file_cache_.GetPage(index, &page); err != ZX_OK) {
-      return err;
-    }
-    *out = fbl::RefPtr<NodePage>::Downcast(std::move(page));
-    return ZX_OK;
-  }
-
-  zx_status_t GrabCachePage(pgoff_t index, fbl::RefPtr<Page> *out) {
+  zx_status_t GrabCachePage(pgoff_t index, LockedPage *out) {
     return file_cache_.GetPage(index, out);
   }
 
@@ -402,7 +390,7 @@ class VnodeF2fs : public fs::Vnode,
   }
 
   // TODO: When |is_reclaim| is set, release |page| after the IO completion
-  zx_status_t WriteDirtyPage(fbl::RefPtr<Page> page, bool is_reclaim);
+  zx_status_t WriteDirtyPage(LockedPage &page, bool is_reclaim);
 
   PageType GetPageType() {
     if (IsNode()) {

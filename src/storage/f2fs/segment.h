@@ -218,7 +218,7 @@ class SegmentManager {
   void InvalidateBlocks(block_t addr);
   void AddSumEntry(CursegType type, Summary *sum, uint16_t offset);
   int NpagesForSummaryFlush();
-  void GetSumPage(uint32_t segno, fbl::RefPtr<Page> *page);
+  void GetSumPage(uint32_t segno, LockedPage *page);
   void WriteSumPage(SummaryBlock *sum_blk, block_t blk_addr);
   uint32_t CheckPrefreeSegments(int ofs_unit, CursegType type);
   void GetNewSegment(uint32_t *newseg, bool new_sec, int dir);
@@ -238,16 +238,15 @@ class SegmentManager {
   CursegType GetSegmentType4(Page &page, PageType p_type);
   CursegType GetSegmentType6(Page &page, PageType p_type);
   CursegType GetSegmentType(Page &page, PageType p_type);
-  zx_status_t DoWritePage(fbl::RefPtr<Page> page, block_t old_blkaddr, block_t *new_blkaddr,
-                          Summary *sum, PageType p_type);
-  zx_status_t WriteMetaPage(fbl::RefPtr<Page> page, bool is_reclaim = false);
-  zx_status_t WriteNodePage(fbl::RefPtr<Page> page, uint32_t nid, block_t old_blkaddr,
+  zx_status_t DoWritePage(LockedPage &page, block_t old_blkaddr, block_t *new_blkaddr, Summary *sum,
+                          PageType p_type);
+  zx_status_t WriteMetaPage(LockedPage &page, bool is_reclaim = false);
+  zx_status_t WriteNodePage(LockedPage &page, uint32_t nid, block_t old_blkaddr,
                             block_t *new_blkaddr);
-  zx_status_t WriteDataPage(VnodeF2fs *vnode, fbl::RefPtr<Page> page, nid_t nid,
-                            uint32_t ofs_in_node, block_t old_blkaddr, block_t *new_blkaddr);
-  zx_status_t RewriteDataPage(fbl::RefPtr<Page> page, block_t old_blk_addr);
-  void RewriteNodePage(fbl::RefPtr<NodePage> page, Summary *sum, block_t old_blkaddr,
-                       block_t new_blkaddr);
+  zx_status_t WriteDataPage(VnodeF2fs *vnode, LockedPage &page, nid_t nid, uint32_t ofs_in_node,
+                            block_t old_blkaddr, block_t *new_blkaddr);
+  zx_status_t RewriteDataPage(LockedPage &page, block_t old_blk_addr);
+  void RewriteNodePage(LockedPage &page, Summary *sum, block_t old_blkaddr, block_t new_blkaddr);
   void RecoverDataPage(Page *page, Summary *sum, block_t old_blkaddr, block_t new_blkaddr);
 
   zx_status_t ReadCompactedSummaries();
@@ -258,8 +257,8 @@ class SegmentManager {
   void WriteDataSummaries(block_t start_blk);
   void WriteNodeSummaries(block_t start_blk);
 
-  void GetCurrentSitPage(uint32_t segno, fbl::RefPtr<Page> *out);
-  void GetNextSitPage(uint32_t start, fbl::RefPtr<Page> *out);
+  void GetCurrentSitPage(uint32_t segno, LockedPage *out);
+  void GetNextSitPage(uint32_t start, LockedPage *out);
   bool FlushSitsInJournal();
   void FlushSitEntries();
 

@@ -35,7 +35,7 @@ void SegmentWriteBuffer::ReleaseBuffers(const PageOperations &operation) {
 }
 
 zx::status<uint32_t> SegmentWriteBuffer::ReserveOperation(storage::Operation &operation,
-                                                          fbl::RefPtr<Page> page) {
+                                                          LockedPage &page) {
   // It will be unmapped when there is no reference.
   ZX_ASSERT(page->Map() == ZX_OK);
 
@@ -56,7 +56,7 @@ zx::status<uint32_t> SegmentWriteBuffer::ReserveOperation(storage::Operation &op
   }
   // Here, |operation| can be merged into a previous operation.
   builder_.Add(operation, &buffer_);
-  pages_.push_back(std::move(page));
+  pages_.push_back(page.CopyRefPtr());
   if (++start_index_ == buffer_.capacity()) {
     start_index_ = 0;
   }
@@ -78,11 +78,9 @@ Writer::~Writer() {
   ZX_ASSERT(sync_completion_wait(&completion, ZX_TIME_INFINITE) == ZX_OK);
 }
 
-void Writer::EnqueuePage(storage::Operation &operation, fbl::RefPtr<f2fs::Page> page,
-                         PageType type) {
+void Writer::EnqueuePage(storage::Operation &operation, LockedPage &page, PageType type) {
   ZX_DEBUG_ASSERT(type < PageType::kNrPageType);
-  auto ret =
-      write_buffer_[static_cast<uint32_t>(type)]->ReserveOperation(operation, std::move(page));
+  auto ret = write_buffer_[static_cast<uint32_t>(type)]->ReserveOperation(operation, page);
   if (ret.is_error()) {
     // Should not happen.
     ZX_ASSERT(0);
@@ -106,13 +104,12 @@ fpromise::promise<> Writer::SubmitPages(sync_completion_t *completion, PageType 
     if (ret = transaction_handler_->RunRequests(operations.TakeOperations()); ret != ZX_OK) {
       FX_LOGS(WARNING) << "[f2fs] RunRequest fails..Redirty Pages..";
     }
-    operations.Completion([ret](fbl::RefPtr<Page> &page) {
-      if (ret != ZX_OK && page->IsUptodate()) {
+    operations.Completion([ret](Page &page) {
+      if (ret != ZX_OK && page.IsUptodate()) {
         // Just redirty it in case of IO failure.
-        page->SetDirty();
+        page.SetDirty();
       }
-      page->ClearWriteback();
-      Page::PutPage(std::move(page), false);
+      page.ClearWriteback();
       return ZX_OK;
     });
     if (fs_->GetSuperblockInfo().GetPageCount(CountType::kWriteback) >

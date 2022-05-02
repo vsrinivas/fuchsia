@@ -27,9 +27,9 @@ void FaultInjectToDnodeAndTruncate(NodeManager &node_manager, fbl::RefPtr<VnodeF
                                    zx_status_t exception_type) {
   ino_t node_id;
   {
-    LockedPage<NodePage> dnode_page;
+    LockedPage dnode_page;
     ASSERT_EQ(node_manager.GetLockedDnodePage(*vnode, page_index, &dnode_page), ZX_OK);
-    node_id = dnode_page->NidOfNode();
+    node_id = dnode_page.GetPage<NodePage>().NidOfNode();
   }
   block_t temp_block_address;
 
@@ -256,15 +256,15 @@ TEST_F(NodeManagerTest, NodePage) {
   nid_t node_nid = vnode->Ino();
   const pgoff_t direct_index = 1;
   {
-    LockedPage<NodePage> dnode_page;
+    LockedPage dnode_page;
     ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, direct_index, &dnode_page), ZX_OK);
-    MapTester::CheckDnodePage(*dnode_page, node_nid);
+    MapTester::CheckDnodePage(dnode_page.GetPage<NodePage>(), node_nid);
   }
 
   {
-    LockedPage<NodePage> dnode_page;
+    LockedPage dnode_page;
     ASSERT_EQ(fs_->GetNodeManager().FindLockedDnodePage(*vnode, direct_index, &dnode_page), ZX_OK);
-    MapTester::CheckDnodePage(*dnode_page, node_nid);
+    MapTester::CheckDnodePage(dnode_page.GetPage<NodePage>(), node_nid);
   }
   ASSERT_EQ(node_manager.GetFreeNidCount(), free_node_cnt);
 
@@ -273,17 +273,17 @@ TEST_F(NodeManagerTest, NodePage) {
   const pgoff_t indirect_index_lv1 = direct_index + kAddrsPerInode;
 
   {
-    LockedPage<NodePage> dnode_page;
+    LockedPage dnode_page;
     ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_lv1, &dnode_page),
               ZX_OK);
-    MapTester::CheckDnodePage(*dnode_page, node_nid);
+    MapTester::CheckDnodePage(dnode_page.GetPage<NodePage>(), node_nid);
   }
 
   {
-    LockedPage<NodePage> dnode_page;
+    LockedPage dnode_page;
     ASSERT_EQ(fs_->GetNodeManager().FindLockedDnodePage(*vnode, indirect_index_lv1, &dnode_page),
               ZX_OK);
-    MapTester::CheckDnodePage(*dnode_page, node_nid);
+    MapTester::CheckDnodePage(dnode_page.GetPage<NodePage>(), node_nid);
   }
   ASSERT_EQ(node_manager.GetFreeNidCount(), free_node_cnt -= 1);
 
@@ -293,17 +293,17 @@ TEST_F(NodeManagerTest, NodePage) {
   const pgoff_t indirect_index_lv2 = indirect_index_lv1 + direct_blks * 2;
 
   {
-    LockedPage<NodePage> dnode_page;
+    LockedPage dnode_page;
     ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_lv2, &dnode_page),
               ZX_OK);
-    MapTester::CheckDnodePage(*dnode_page, node_nid);
+    MapTester::CheckDnodePage(dnode_page.GetPage<NodePage>(), node_nid);
   }
 
   {
-    LockedPage<NodePage> dnode_page;
+    LockedPage dnode_page;
     ASSERT_EQ(fs_->GetNodeManager().FindLockedDnodePage(*vnode, indirect_index_lv2, &dnode_page),
               ZX_OK);
-    MapTester::CheckDnodePage(*dnode_page, node_nid);
+    MapTester::CheckDnodePage(dnode_page.GetPage<NodePage>(), node_nid);
   }
   ASSERT_EQ(node_manager.GetFreeNidCount(), free_node_cnt -= 2);
 
@@ -312,19 +312,19 @@ TEST_F(NodeManagerTest, NodePage) {
   const pgoff_t indirect_blks = kAddrsPerBlock * kNidsPerBlock;
 
   {
-    LockedPage<NodePage> dnode_page;
+    LockedPage dnode_page;
     ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_lv2 + indirect_blks,
                                                        &dnode_page),
               ZX_OK);
-    MapTester::CheckDnodePage(*dnode_page, node_nid);
+    MapTester::CheckDnodePage(dnode_page.GetPage<NodePage>(), node_nid);
   }
 
   {
-    LockedPage<NodePage> dnode_page;
+    LockedPage dnode_page;
     ASSERT_EQ(fs_->GetNodeManager().FindLockedDnodePage(*vnode, indirect_index_lv2 + indirect_blks,
                                                         &dnode_page),
               ZX_OK);
-    MapTester::CheckDnodePage(*dnode_page, node_nid);
+    MapTester::CheckDnodePage(dnode_page.GetPage<NodePage>(), node_nid);
   }
   ASSERT_EQ(node_manager.GetFreeNidCount(), free_node_cnt -= 2);
 
@@ -333,17 +333,17 @@ TEST_F(NodeManagerTest, NodePage) {
   pgoff_t indirect_index_lv3 = indirect_index_lv2 + indirect_blks * 2;
 
   {
-    LockedPage<NodePage> dnode_page;
+    LockedPage dnode_page;
     ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_lv3, &dnode_page),
               ZX_OK);
-    MapTester::CheckDnodePage(*dnode_page, node_nid);
+    MapTester::CheckDnodePage(dnode_page.GetPage<NodePage>(), node_nid);
   }
 
   {
-    LockedPage<NodePage> dnode_page;
+    LockedPage dnode_page;
     ASSERT_EQ(fs_->GetNodeManager().FindLockedDnodePage(*vnode, indirect_index_lv3, &dnode_page),
               ZX_OK);
-    MapTester::CheckDnodePage(*dnode_page, node_nid);
+    MapTester::CheckDnodePage(dnode_page.GetPage<NodePage>(), node_nid);
   }
   ASSERT_EQ(node_manager.GetFreeNidCount(), free_node_cnt -= 3);
 
@@ -384,7 +384,7 @@ TEST_F(NodeManagerTest, NodePageExceptionCase) {
   // Check invalid page offset exception case
   pgoff_t indirect_index_invalid_lv4 = indirect_index_lv3 + indirect_blks * kNidsPerBlock;
   {
-    LockedPage<NodePage> dnode_page;
+    LockedPage dnode_page;
     ASSERT_EQ(
         fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_invalid_lv4, &dnode_page),
         ZX_ERR_NOT_FOUND);
@@ -393,10 +393,10 @@ TEST_F(NodeManagerTest, NodePageExceptionCase) {
   // Check invalid address
   nid_t nid;
   {
-    LockedPage<NodePage> dnode_page;
+    LockedPage dnode_page;
     ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_lv3 + 1, &dnode_page),
               ZX_OK);
-    nid = dnode_page->NidOfNode();
+    nid = dnode_page.GetPage<NodePage>().NidOfNode();
   }
 
   // fault injection for ReadNodePage()
@@ -404,7 +404,7 @@ TEST_F(NodeManagerTest, NodePageExceptionCase) {
   MapTester::SetCachedNatEntryBlockAddress(node_manager, nid, kNullAddr);
 
   {
-    LockedPage<NodePage> dnode_page;
+    LockedPage dnode_page;
     ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_lv3, &dnode_page),
               ZX_ERR_NOT_FOUND);
   }
@@ -413,7 +413,7 @@ TEST_F(NodeManagerTest, NodePageExceptionCase) {
   block_t tmp_total_valid_block_count = superblock_info.GetTotalValidBlockCount();
   superblock_info.SetTotalValidBlockCount(superblock_info.GetUserBlockCount());
   {
-    LockedPage<NodePage> dnode_page;
+    LockedPage dnode_page;
     ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_lv1 + direct_blks,
                                                        &dnode_page),
               ZX_ERR_NO_SPACE);
@@ -423,7 +423,7 @@ TEST_F(NodeManagerTest, NodePageExceptionCase) {
   block_t tmp_total_valid_node_count = superblock_info.GetTotalValidNodeCount();
   superblock_info.SetTotalValidNodeCount(superblock_info.GetTotalNodeCount());
   {
-    LockedPage<NodePage> dnode_page;
+    LockedPage dnode_page;
     ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, indirect_index_lv1 + direct_blks,
                                                        &dnode_page),
               ZX_ERR_NO_SPACE);
@@ -494,10 +494,10 @@ TEST_F(NodeManagerTest, TruncateDoubleIndirect) {
 
   // Alloc a direct node at double_indirect_index
   {
-    LockedPage<NodePage> dnode_page;
+    LockedPage dnode_page;
     ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, double_indirect_index, &dnode_page),
               ZX_OK);
-    nids.push_back(dnode_page->NidOfNode());
+    nids.push_back(dnode_page.GetPage<NodePage>().NidOfNode());
   }
 
   // # of alloc nodes = 1 double indirect + 1 indirect + 1 direct
@@ -553,9 +553,9 @@ TEST_F(NodeManagerTest, TruncateIndirect) {
 
   // Start from kAddrsPerInode to alloc new dnodes
   for (pgoff_t i = kAddrsPerInode; i <= indirect_index; i += kAddrsPerBlock) {
-    LockedPage<NodePage> dnode_page;
+    LockedPage dnode_page;
     ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, i, &dnode_page), ZX_OK);
-    nids.push_back(dnode_page->NidOfNode());
+    nids.push_back(dnode_page.GetPage<NodePage>().NidOfNode());
   }
 
   uint32_t indirect_node_cnt = 1;
@@ -633,9 +633,9 @@ TEST_F(NodeManagerTest, TruncateExceptionCase) {
 
   // Start from kAddrsPerInode to alloc new dnodes
   for (pgoff_t i = kAddrsPerInode; i <= indirect_index_lv3 + kNidsPerBlock; i += kAddrsPerBlock) {
-    LockedPage<NodePage> dnode_page;
+    LockedPage dnode_page;
     ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, i, &dnode_page), ZX_OK);
-    nids.push_back(dnode_page->NidOfNode());
+    nids.push_back(dnode_page.GetPage<NodePage>().NidOfNode());
   }
 
   uint32_t direct_node_cnt = 4 + kNidsPerBlock * 2;
@@ -699,12 +699,15 @@ TEST_F(NodeManagerTest, NodeFooter) {
 
   {
     const pgoff_t direct_index = 1;
-    LockedPage<NodePage> dnode_page;
-    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, direct_index, &dnode_page), ZX_OK);
+    LockedPage locked_dnode_page;
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vnode, direct_index, &locked_dnode_page),
+              ZX_OK);
+    NodePage *dnode_page = &locked_dnode_page.GetPage<NodePage>();
     MapTester::CheckDnodePage(*dnode_page, inode_nid);
 
-    fbl::RefPtr<NodePage> page;
-    fs_->GetNodeVnode().GrabCachePage(direct_index, &page);
+    LockedPage locked_page;
+    fs_->GetNodeVnode().GrabCachePage(direct_index, &locked_page);
+    NodePage *page = &locked_page.GetPage<NodePage>();
 
     // Check CopyNodeFooterFrom()
     page->CopyNodeFooterFrom(*dnode_page);
@@ -738,8 +741,6 @@ TEST_F(NodeManagerTest, NodeFooter) {
     mark = !fs_->GetNodeManager().IsCheckpointedNode(page->InoOfNode());
     page->SetDentryMark(mark);
     ASSERT_EQ(page->IsDentDnode(), false);
-
-    Page::PutPage(std::move(page), true);
   }
   ASSERT_EQ(vnode->Close(), ZX_OK);
   vnode.reset();

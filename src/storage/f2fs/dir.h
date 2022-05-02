@@ -33,7 +33,7 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
   // delete & set link
   zx_status_t Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname,
                      std::string_view newname, bool src_must_be_dir, bool dst_must_be_dir) final;
-  void SetLink(DirEntry *de, Page *page, VnodeF2fs *inode);
+  void SetLink(DirEntry *de, fbl::RefPtr<Page> &page, VnodeF2fs *inode);
   DirEntry *ParentDir(fbl::RefPtr<Page> *out);
   DirEntry *ParentInlineDir(fbl::RefPtr<Page> *out);
   bool IsEmptyDir();
@@ -61,8 +61,8 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
   zx_status_t Unlink(std::string_view name, bool must_be_dir) final;
   zx_status_t Rmdir(Dir *vnode, std::string_view name);
   zx_status_t DoUnlink(VnodeF2fs *vnode, std::string_view name);
-  void DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode);
-  void DeleteInlineEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode);
+  void DeleteEntry(DirEntry *dentry, fbl::RefPtr<Page> &page, VnodeF2fs *vnode);
+  void DeleteInlineEntry(DirEntry *dentry, fbl::RefPtr<Page> &page, VnodeF2fs *vnode);
 
   // helper
   ino_t InodeByName(std::string_view name);

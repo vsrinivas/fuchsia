@@ -235,8 +235,6 @@ TEST_F(DirEntryCacheTest, CacheDataValidation) {
     }
     // If not found, |bit_pos| exceeds the bitmap length, |kNrDentryInBlock|
     ASSERT_LT(bit_pos, safemath::checked_cast<uint32_t>(kNrDentryInBlock));
-
-    Page::PutPage(std::move(page), false);
   }
 }
 
