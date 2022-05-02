@@ -43,37 +43,16 @@ class ScreenReaderMessageGenerator {
   // Holds relevant information about a node's surrounding context that may be
   // required to describe the node.
   struct ScreenReaderMessageContext {
-    // The node corresponding to the container to which the described node
-    // belongs. A value of nullptr indicates that the described node does not
-    // belong to a container. This field is used to give users a hint that they have
-    // entered or exited a container, and describe the container if the former.
-    const fuchsia::accessibility::semantics::Node* current_container = nullptr;
+    // All containers from which we just exited, sorted 'deepest-last'.
+    std::vector<const fuchsia::accessibility::semantics::Node*> exited_containers;
 
-    // The node corresponding to the container to which the previuosly described
-    // node belongs. A value of nullptr indicates that the previously described
-    // node did not belong to a container. This field is used to give users a
-    // hint that they have entered or exited a container.
-    const fuchsia::accessibility::semantics::Node* previous_container = nullptr;
+    // All containers which we just entered, sorted 'deepest-first'.
+    std::vector<const fuchsia::accessibility::semantics::Node*> entered_containers;
 
-    // We need to treat the case where a user has exited a nested container
-    // differently from the case where a user has exited a top-level container
-    // and immediately entered a new one. These cases are indistinguishable
-    // without semantic knowledge (which the ScreenReaderMessageGenerator
-    // doesn't have), so we need an extra bit of state.
-    bool exited_nested_container = false;
-
-    // Holds information required to describe a table cell node that's not
-    // present in the node's data.
-    std::optional<TableCellContext> table_cell_context;
-
-    ScreenReaderMessageContext()
-        : current_container(nullptr),
-          previous_container(nullptr),
-          table_cell_context(std::nullopt) {}
-
-    // Returns true if the current and/or previous containers are
-    // describable.
-    bool HasDescribableContainer() { return current_container || previous_container; }
+    // If the focused node's nearest ancestor container is a table, this holds extra
+    // information required to describe it. Only holds information that has changed since the
+    // previous message.
+    std::optional<TableCellContext> changed_table_cell_context;
   };
 
   // |message_formatter| is the resourses object used by this class tto retrieeve localized message
@@ -109,10 +88,10 @@ class ScreenReaderMessageGenerator {
   ScreenReaderMessageGenerator() = default;
 
  private:
-  // Gives the appropriate entered/exited container hint and describes the
-  // current container, if necessary.
-  std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> DescribeContainer(
-      ScreenReaderMessageContext message_context);
+  // Gives any appropriate entered/exited container hints. Also describes the
+  // current container, if it's changed.
+  std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> DescribeContainerChanges(
+      const ScreenReaderMessageContext& message_context);
 
   // Helper method to describe a node that is a radio button.
   UtteranceAndContext DescribeRadioButton(const fuchsia::accessibility::semantics::Node* node);
@@ -151,6 +130,14 @@ class ScreenReaderMessageGenerator {
   // <label>, row <row span>, spans <row/column span> rows/columns, row/column
   // header
   std::vector<UtteranceAndContext> DescribeRowOrColumnHeader(
+      const fuchsia::accessibility::semantics::Node* node);
+
+  // Helper method to describe entering a node that represents a list.
+  // The message will be:
+  //
+  // Entered list, <label>*, with [0 items / 1 item / n items]
+  // *If present.
+  std::vector<UtteranceAndContext> DescribeEnteredList(
       const fuchsia::accessibility::semantics::Node* node);
 
   std::unique_ptr<i18n::MessageFormatter> message_formatter_;

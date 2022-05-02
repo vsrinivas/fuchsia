@@ -541,7 +541,7 @@ TEST(ScreenReaderUtilTest, GetSliderValueBothValueAndRangeValue) {
   EXPECT_EQ(a11y::GetSliderValue(node), "50");
 }
 
-TEST(ScreenReaderUtilTest, GetContainerNodeContainerIsTable) {
+TEST(ScreenReaderUtilTest, GetContainerNodesContainerIsTable) {
   MockSemanticsSource mock_semantics_source;
   const zx_koid_t koid = 0;
 
@@ -566,12 +566,45 @@ TEST(ScreenReaderUtilTest, GetContainerNodeContainerIsTable) {
     mock_semantics_source.CreateSemanticNode(koid, std::move(node));
   }
 
-  auto* container_node = GetContainerNode(koid, 2u, &mock_semantics_source);
-  ASSERT_TRUE(container_node);
-  EXPECT_EQ(container_node->node_id(), 0u);
+  auto container_nodes = GetContainerNodes(koid, 2u, &mock_semantics_source);
+  ASSERT_EQ(container_nodes.size(), 1u);
+  EXPECT_EQ(container_nodes[0]->node_id(), 0u);
 }
 
-TEST(ScreenReaderUtilTest, GetContainerNodeNoContainer) {
+TEST(ScreenReaderUtilTest, GetContainerNodesNestedContainers) {
+  MockSemanticsSource mock_semantics_source;
+  const zx_koid_t koid = 0;
+
+  {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(0u);
+    *(node.mutable_child_ids()) = {1u};
+    node.set_role(fuchsia::accessibility::semantics::Role::TABLE);
+    mock_semantics_source.CreateSemanticNode(koid, std::move(node));
+  }
+
+  {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(1u);
+    *(node.mutable_child_ids()) = {2u};
+    node.set_role(fuchsia::accessibility::semantics::Role::LIST);
+    mock_semantics_source.CreateSemanticNode(koid, std::move(node));
+  }
+
+  {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(2u);
+    *(node.mutable_child_ids()) = {3u};
+    mock_semantics_source.CreateSemanticNode(koid, std::move(node));
+  }
+
+  auto container_nodes = GetContainerNodes(koid, 3u, &mock_semantics_source);
+  ASSERT_EQ(container_nodes.size(), 2u);
+  EXPECT_EQ(container_nodes[0]->node_id(), 0u);
+  EXPECT_EQ(container_nodes[1]->node_id(), 1u);
+}
+
+TEST(ScreenReaderUtilTest, GetContainerNodesNoContainers) {
   MockSemanticsSource mock_semantics_source;
   const zx_koid_t koid = 0;
 
@@ -596,8 +629,30 @@ TEST(ScreenReaderUtilTest, GetContainerNodeNoContainer) {
     mock_semantics_source.CreateSemanticNode(koid, std::move(node));
   }
 
-  auto* container_node = GetContainerNode(koid, 1u, &mock_semantics_source);
-  ASSERT_FALSE(container_node);
+  auto container_node = GetContainerNodes(koid, 1u, &mock_semantics_source);
+  ASSERT_TRUE(container_node.empty());
+}
+
+TEST(ScreenReaderUtilTest, GetContainerNodesTargetNodeIsItselfAContainer) {
+  MockSemanticsSource mock_semantics_source;
+  const zx_koid_t koid = 0;
+
+  {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(0u);
+    *(node.mutable_child_ids()) = {1u};
+    mock_semantics_source.CreateSemanticNode(koid, std::move(node));
+  }
+
+  {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(1u);
+    node.set_role(fuchsia::accessibility::semantics::Role::TABLE);
+    mock_semantics_source.CreateSemanticNode(koid, std::move(node));
+  }
+
+  auto container_node = GetContainerNodes(koid, 1u, &mock_semantics_source);
+  ASSERT_TRUE(container_node.empty());
 }
 
 }  // namespace

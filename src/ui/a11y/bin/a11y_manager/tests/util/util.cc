@@ -36,7 +36,8 @@ int OpenAsFD(vfs::internal::Node *node, async_dispatcher_t *dispatcher) {
   return fd;
 }
 
-fuchsia::accessibility::semantics::Node CreateTestNode(uint32_t node_id, std::string label,
+fuchsia::accessibility::semantics::Node CreateTestNode(uint32_t node_id,
+                                                       std::optional<std::string> label,
                                                        std::vector<uint32_t> child_ids) {
   fuchsia::accessibility::semantics::Node node = fuchsia::accessibility::semantics::Node();
   node.set_node_id(node_id);
@@ -45,7 +46,9 @@ fuchsia::accessibility::semantics::Node CreateTestNode(uint32_t node_id, std::st
   }
   node.set_role(fuchsia::accessibility::semantics::Role::UNKNOWN);
   node.set_attributes(fuchsia::accessibility::semantics::Attributes());
-  node.mutable_attributes()->set_label(std::move(label));
+  if (label) {
+    node.mutable_attributes()->set_label(std::move(label.value()));
+  }
   fuchsia::ui::gfx::BoundingBox box;
   node.set_location(box);
   return node;

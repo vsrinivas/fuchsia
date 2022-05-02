@@ -68,22 +68,36 @@ class ScreenReaderContext {
     // indicates that no row/column information is present.
     uint32_t row_index = 0;
     uint32_t column_index = 0;
+
+    bool operator==(const TableContext& rhs) const {
+      return this->row_headers == rhs.row_headers && this->column_headers == rhs.column_headers &&
+             this->row_index == rhs.row_index && this->column_index == rhs.column_index;
+    }
   };
 
   // TODO(fxb.dev/90733): Investigate whether we need to both a current and
   // previous copy of all this state.
   struct NavigationContext {
-    // Holds koid of the view for the node to which this context applies.
+    // Holds koid of the view for the 'current node' (the node to which this context applies).
+    // Note: It's possible for the screen reader to be in a degraded state where no node is in
+    // focus, in which case this will be `nullopt`.
     std::optional<zx_koid_t> view_ref_koid;
 
-    // The id of the container to which the currently focused node belongs (if
-    // any).
-    std::optional<uint32_t> current_container;
+    struct Container {
+      uint32_t node_id;
 
-    // If the node specified by |current_container| is a table, then
-    // |table_context| holds additional info about the navigation state within
-    // that table.
-    std::optional<TableContext> table_context;
+      // If the container is a table, this holds additional info about the navigation state within
+      // that table.
+      std::optional<TableContext> table_context;
+
+      bool operator==(const Container& rhs) const {
+        return this->node_id == rhs.node_id && this->table_context == rhs.table_context;
+      }
+    };
+
+    // Holds all containers that are ancestors of the current node. Sorted 'deepest-last'.
+    // Will not include the current node itself.
+    std::vector<Container> containers;
   };
 
   // Defines the signature for a callback invoked when a node update is

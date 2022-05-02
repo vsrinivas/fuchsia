@@ -6,7 +6,9 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <algorithm>
 #include <string>
+#include <vector>
 
 #include "fuchsia/accessibility/semantics/cpp/fidl.h"
 
@@ -83,19 +85,22 @@ bool NodeIsDescribable(const fuchsia::accessibility::semantics::Node* node) {
   return (contains_text || is_actionable) && !IsContainer(node);
 }
 
-const fuchsia::accessibility::semantics::Node* GetContainerNode(zx_koid_t koid, uint32_t node_id,
-                                                                SemanticsSource* semantics_source) {
-  const auto* node = semantics_source->GetParentNode(koid, node_id);
+std::vector<const fuchsia::accessibility::semantics::Node*> GetContainerNodes(
+    zx_koid_t koid, uint32_t node_id, SemanticsSource* semantics_source) {
+  std::vector<const fuchsia::accessibility::semantics::Node*> result;
 
+  const fuchsia::accessibility::semantics::Node* node =
+      semantics_source->GetParentNode(koid, node_id);
   while (node) {
     if (IsContainer(node)) {
-      return node;
+      result.push_back(node);
     }
-
     node = semantics_source->GetParentNode(koid, node->node_id());
   }
 
-  return nullptr;
+  // We reverse the result to get 'deepest-last' order.
+  std::reverse(result.begin(), result.end());
+  return result;
 }
 
 std::string FormatFloat(float input) {

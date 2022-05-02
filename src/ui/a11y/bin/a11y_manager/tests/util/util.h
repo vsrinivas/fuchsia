@@ -21,7 +21,8 @@ int OpenAsFD(vfs::internal::Node *node, async_dispatcher_t *dispatcher);
 
 // Create a test node with only a node id and a label.
 fuchsia::accessibility::semantics::Node CreateTestNode(
-    uint32_t node_id, std::string label, std::vector<uint32_t> child_ids = std::vector<uint32_t>());
+    uint32_t node_id, std::optional<std::string> label,
+    std::vector<uint32_t> child_ids = std::vector<uint32_t>());
 
 }  // namespace accessibility_test
 

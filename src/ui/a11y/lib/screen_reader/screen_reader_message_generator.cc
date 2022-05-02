@@ -110,32 +110,32 @@ ScreenReaderMessageGenerator::ScreenReaderMessageGenerator(
 }
 
 std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
-ScreenReaderMessageGenerator::DescribeContainer(ScreenReaderMessageContext message_context) {
+ScreenReaderMessageGenerator::DescribeContainerChanges(
+    const ScreenReaderMessageContext& message_context) {
   std::vector<UtteranceAndContext> description;
 
-  if (message_context.current_container != message_context.previous_container) {
-    // If the current container is null, then the previous container must NOT be
-    // null, so the user has exited a container. It's also possible that the
-    // current container was a descendant of the previous container, in
-    // which case we only want to announce that we've exited the previous
-    // container.
-    //
-    // Otherwise, we must have entered a new container.
-    if (!message_context.current_container ||
-        (message_context.previous_container && message_context.exited_nested_container)) {
-      if (message_context.previous_container->has_role() &&
-          message_context.previous_container->role() == Role::TABLE) {
-        description.emplace_back(GenerateUtteranceByMessageId(MessageIds::EXITED_TABLE));
-      }
-    } else {
-      if (message_context.current_container->has_role() &&
-          message_context.current_container->role() == Role::TABLE) {
-        description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ENTERED_TABLE));
-        auto container_description = DescribeTable(message_context.current_container);
-        std::copy(std::make_move_iterator(container_description.begin()),
-                  std::make_move_iterator(container_description.end()),
-                  std::back_inserter(description));
-      }
+  // Give hints for exited containers.
+  for (auto container : message_context.exited_containers) {
+    if (container->has_role() && container->role() == Role::TABLE) {
+      description.emplace_back(GenerateUtteranceByMessageId(MessageIds::EXITED_TABLE));
+    } else if (container->has_role() && container->role() == Role::LIST) {
+      description.emplace_back(GenerateUtteranceByMessageId(MessageIds::EXITED_LIST));
+    }
+  }
+
+  // Give hints for entered containers.
+  for (auto container : message_context.entered_containers) {
+    if (container->has_role() && container->role() == Role::TABLE) {
+      description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ENTERED_TABLE));
+      auto container_description = DescribeTable(container);
+      std::copy(std::make_move_iterator(container_description.begin()),
+                std::make_move_iterator(container_description.end()),
+                std::back_inserter(description));
+    } else if (container->has_role() && container->role() == Role::LIST) {
+      auto container_description = DescribeEnteredList(container);
+      std::copy(std::make_move_iterator(container_description.begin()),
+                std::make_move_iterator(container_description.end()),
+                std::back_inserter(description));
     }
   }
 
@@ -147,9 +147,7 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node,
                                            ScreenReaderMessageContext message_context) {
   // TODO(fxbug.dev/81707): Clean up the logic in this method.
   std::vector<UtteranceAndContext> description;
-  if (message_context.HasDescribableContainer()) {
-    description = DescribeContainer(message_context);
-  }
+  description = DescribeContainerChanges(message_context);
 
   {
     const std::string label = node->has_attributes() && node->attributes().has_label() &&
@@ -338,8 +336,8 @@ ScreenReaderMessageGenerator::DescribeTable(const fuchsia::accessibility::semant
     if (attributes.has_table_attributes()) {
       const auto& table_attributes = attributes.table_attributes();
 
-      // The table dimensions will only make sense if we have both the number of rows and the number
-      // of columns.
+      // The table dimensions will only make sense if we have both the number of rows and the
+      // number of columns.
       if (table_attributes.has_number_of_rows() && table_attributes.has_number_of_columns()) {
         auto num_rows = std::to_string(table_attributes.number_of_rows());
         auto num_columns = std::to_string(table_attributes.number_of_columns());
@@ -368,17 +366,17 @@ ScreenReaderMessageGenerator::DescribeTableCell(const fuchsia::accessibility::se
     // Add the cell label to the description.
     std::string label;
     if (attributes.has_label() && !attributes.label().empty()) {
-      if (message_context.table_cell_context) {
+      if (message_context.changed_table_cell_context) {
         // The message context will only have the row/column header fields
         // populated if the user has navigated to a new row/column since the
         // last cell was read. So, we can add them to the description unconditionally
         // here if they are present.
-        if (!message_context.table_cell_context->row_header.empty()) {
-          label += message_context.table_cell_context->row_header + ", ";
+        if (!message_context.changed_table_cell_context->row_header.empty()) {
+          label += message_context.changed_table_cell_context->row_header + ", ";
         }
 
-        if (!message_context.table_cell_context->column_header.empty()) {
-          label += message_context.table_cell_context->column_header + ", ";
+        if (!message_context.changed_table_cell_context->column_header.empty()) {
+          label += message_context.changed_table_cell_context->column_header + ", ";
         }
       }
 
@@ -484,6 +482,44 @@ ScreenReaderMessageGenerator::DescribeRowOrColumnHeader(
     description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_TABLE_ROW_HEADER));
   } else {
     description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_TABLE_COLUMN_HEADER));
+  }
+
+  return description;
+}
+
+std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
+ScreenReaderMessageGenerator::DescribeEnteredList(
+    const fuchsia::accessibility::semantics::Node* node) {
+  FX_DCHECK(node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::LIST);
+
+  std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> description;
+
+  description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ENTERED_LIST));
+
+  if (node->has_attributes()) {
+    const auto& attributes = node->attributes();
+
+    // Add the list label to the description.
+    std::string label;
+    if (attributes.has_label() && !attributes.label().empty()) {
+      label = attributes.label();
+      Utterance utterance;
+      utterance.set_message(label);
+      description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
+    }
+
+    // Add the list size to the description.
+    if (attributes.has_list_attributes()) {
+      const auto& list_attributes = attributes.list_attributes();
+
+      if (list_attributes.has_size()) {
+        int64_t num_items = list_attributes.size();
+        // TODO(fxbug.dev/99346) There's kind of an uncanny pause, it sounds like 'Entered list ...
+        // with N items'. We can fix that by combining them into one message.
+        description.emplace_back(GenerateUtteranceByMessageId(
+            MessageIds::LIST_ITEMS, zx::duration(zx::msec(0)), {"num_items"}, {num_items}));
+      }
+    }
   }
 
   return description;

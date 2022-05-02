@@ -7,6 +7,7 @@
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 
+#include <cstdint>
 #include <set>
 
 #include "src/ui/a11y/lib/semantics/semantics_source.h"
@@ -24,9 +25,10 @@ std::string FormatFloat(float input);
 std::set<uint32_t> GetNodesToExclude(zx_koid_t koid, uint32_t node_id,
                                      SemanticsSource* semantics_source);
 
-// Get the container for the current node (if any).
-const fuchsia::accessibility::semantics::Node* GetContainerNode(zx_koid_t koid, uint32_t node_id,
-                                                                SemanticsSource* semantics_source);
+// Returns a list of all container IDs that are ancestors of the given node,
+// sorted 'deepest-last'. Will not include the node itself.
+std::vector<const fuchsia::accessibility::semantics::Node*> GetContainerNodes(
+    zx_koid_t koid, uint32_t node_id, SemanticsSource* semantics_source);
 
 // Returns true if the node represents a slider.
 bool NodeIsSlider(const fuchsia::accessibility::semantics::Node& node);

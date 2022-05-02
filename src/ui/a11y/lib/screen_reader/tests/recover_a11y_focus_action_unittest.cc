@@ -62,7 +62,7 @@ TEST_F(RecoverA11YFocusActionTest, ViewChangeClearsPreviousNavigationContext) {
   MockSemanticProvider semantic_provider_2(nullptr, nullptr);
   a11y::ScreenReaderContext::NavigationContext navigation_context;
   navigation_context.view_ref_koid = semantic_provider_2.koid();
-  navigation_context.current_container = 2u;
+  navigation_context.containers = {{.node_id = 2u}};
   mock_screen_reader_context()->set_current_navigation_context(navigation_context);
 
   mock_a11y_focus_manager()->SetA11yFocus(mock_semantic_provider()->koid(), 0,
@@ -78,7 +78,7 @@ TEST_F(RecoverA11YFocusActionTest, ViewChangeClearsPreviousNavigationContext) {
   const auto& previous_navigation_context =
       mock_screen_reader_context()->previous_navigation_context();
   EXPECT_FALSE(previous_navigation_context.view_ref_koid.has_value());
-  EXPECT_FALSE(previous_navigation_context.current_container.has_value());
+  EXPECT_TRUE(previous_navigation_context.containers.empty());
 }
 
 TEST_F(RecoverA11YFocusActionTest, InvalidFocusRecoversToFirstDescribableNode) {
@@ -88,7 +88,7 @@ TEST_F(RecoverA11YFocusActionTest, InvalidFocusRecoversToFirstDescribableNode) {
   // Set a fake navigation context to ensure that it's cleared when the screen
   // reader recovers to node 1, which does not belong to a container.
   a11y::ScreenReaderContext::NavigationContext navigation_context;
-  navigation_context.current_container.emplace(100u);
+  navigation_context.containers = {{.node_id = 100u}};
   mock_screen_reader_context()->set_current_navigation_context(navigation_context);
 
   a11y::RecoverA11YFocusAction action(action_context(), mock_screen_reader_context());
@@ -99,8 +99,7 @@ TEST_F(RecoverA11YFocusActionTest, InvalidFocusRecoversToFirstDescribableNode) {
   EXPECT_EQ(mock_semantic_provider()->koid(), focus->view_ref_koid);
   EXPECT_EQ(focus->node_id, 1u);
   EXPECT_TRUE(mock_speaker()->node_ids().empty());
-  EXPECT_FALSE(
-      mock_screen_reader_context()->current_navigation_context().current_container.has_value());
+  EXPECT_TRUE(mock_screen_reader_context()->current_navigation_context().containers.empty());
 }
 
 }  // namespace

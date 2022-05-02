@@ -7,6 +7,7 @@
 #include <lib/fpromise/bridge.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <algorithm>
 #include <string>
 
 #include "fuchsia/accessibility/semantics/cpp/fidl.h"
@@ -138,21 +139,20 @@ void ScreenReaderAction::UpdateNavigationContext() {
         screen_reader_context_->current_navigation_context());
   }
 
-  auto* new_container = GetContainerNode(view_koid, node_id, action_context_->semantics_source);
-
   ScreenReaderContext::NavigationContext new_navigation_context;
   new_navigation_context.view_ref_koid = view_koid;
 
-  if (new_container) {
-    new_navigation_context.current_container.emplace(new_container->node_id());
+  for (const fuchsia::accessibility::semantics::Node* container :
+       GetContainerNodes(view_koid, node_id, action_context_->semantics_source)) {
+    ScreenReaderContext::NavigationContext::Container result;
+    result.node_id = container->node_id();
 
-    if (new_container->has_role() &&
-        new_container->role() == fuchsia::accessibility::semantics::Role::TABLE &&
-        new_container->has_attributes() && new_container->attributes().has_table_attributes()) {
-      const auto& table_attributes = new_container->attributes().table_attributes();
+    if (container->has_role() &&
+        container->role() == fuchsia::accessibility::semantics::Role::TABLE &&
+        container->has_attributes() && container->attributes().has_table_attributes()) {
+      const auto& table_attributes = container->attributes().table_attributes();
 
-      new_navigation_context.table_context.emplace();
-      auto& new_table_context = new_navigation_context.table_context;
+      auto& new_table_context = result.table_context.emplace();
 
       if (table_attributes.has_row_header_ids()) {
         for (const auto row_header_node_id : table_attributes.row_header_ids()) {
@@ -166,7 +166,7 @@ void ScreenReaderAction::UpdateNavigationContext() {
             row_header = row_header_node->attributes().label();
           }
 
-          new_table_context->row_headers.push_back(row_header);
+          new_table_context.row_headers.push_back(row_header);
         }
       }
 
@@ -182,7 +182,7 @@ void ScreenReaderAction::UpdateNavigationContext() {
             column_header = column_header_node->attributes().label();
           }
 
-          new_table_context->column_headers.push_back(column_header);
+          new_table_context.column_headers.push_back(column_header);
         }
       }
 
@@ -190,10 +190,12 @@ void ScreenReaderAction::UpdateNavigationContext() {
 
       if (node && node->has_attributes() && node->attributes().has_table_cell_attributes()) {
         const auto& table_cell_attributes = node->attributes().table_cell_attributes();
-        new_table_context->row_index = table_cell_attributes.row_index();
-        new_table_context->column_index = table_cell_attributes.column_index();
+        new_table_context.row_index = table_cell_attributes.row_index();
+        new_table_context.column_index = table_cell_attributes.column_index();
       }
     }
+
+    new_navigation_context.containers.push_back(std::move(result));
   }
 
   screen_reader_context_->set_current_navigation_context(new_navigation_context);
@@ -201,68 +203,93 @@ void ScreenReaderAction::UpdateNavigationContext() {
 
 ScreenReaderMessageGenerator::ScreenReaderMessageContext ScreenReaderAction::GetMessageContext() {
   ScreenReaderMessageGenerator::ScreenReaderMessageContext message_context;
-  ScreenReaderMessageGenerator::TableCellContext table_cell_context;
+  const ScreenReaderContext::NavigationContext& old_navigation_context =
+      screen_reader_context_->previous_navigation_context();
+  const ScreenReaderContext::NavigationContext& new_navigation_context =
+      screen_reader_context_->current_navigation_context();
 
-  auto old_navigation_context = screen_reader_context_->previous_navigation_context();
-  auto new_navigation_context = screen_reader_context_->current_navigation_context();
-
-  auto* a11y_focus_manager = screen_reader_context_->GetA11yFocusManager();
-  if (!a11y_focus_manager) {
+  if (!new_navigation_context.view_ref_koid) {
     return {};
   }
 
-  auto a11y_focus = a11y_focus_manager->GetA11yFocus();
-  if (!a11y_focus) {
-    return {};
+  // We need to report out what has changed during this navigation:
+  // - which containers, if any, were entered (i.e., they are only in new_navigation_context)
+  // - which containers, if any, were exited (i.e., they are only in old_navigation_context)
+  // - TODO(fxbug.dev/99248): Eventually, we will likely want to report 'whether anything changed
+  //   about our context in the deepest common container' (e.g., table row/column index changes)
+  auto previous_containers_iter = old_navigation_context.containers.begin();
+  auto current_containers_iter = new_navigation_context.containers.begin();
+
+  auto& entered_containers = message_context.entered_containers;
+  auto& exited_containers = message_context.exited_containers;
+
+  if (old_navigation_context.view_ref_koid &&
+      old_navigation_context.view_ref_koid == new_navigation_context.view_ref_koid) {
+    // Ignore all containers that are common to both navigation_contexts.
+    while (previous_containers_iter < old_navigation_context.containers.end() &&
+           current_containers_iter < new_navigation_context.containers.end() &&
+           previous_containers_iter->node_id == current_containers_iter->node_id) {
+      previous_containers_iter++;
+      current_containers_iter++;
+    }
+
+    // Report any containers that were just exited.
+    // Note that we won't report anything if we changed views. This is intentional.
+    // (At time of writing, we clear the old navigation context when changing views anyway:
+    // https://cs.opensource.google/fuchsia/fuchsia/+/main:src/ui/a11y/lib/screen_reader/screen_reader_action.cc;drc=183bd4d4b67728b9220a8bb5ee68acdf0d5deb43;l=129-135)
+    while (previous_containers_iter < old_navigation_context.containers.end()) {
+      exited_containers.push_back(action_context_->semantics_source->GetSemanticNode(
+          *old_navigation_context.view_ref_koid, previous_containers_iter->node_id));
+      previous_containers_iter++;
+    }
+    // (Reversed to give 'deepest-first' order.)
+    std::reverse(exited_containers.begin(), exited_containers.end());
   }
 
-  // Set the current and previous container nodes, if any.
-  if (new_navigation_context.current_container) {
-    message_context.current_container = action_context_->semantics_source->GetSemanticNode(
-        a11y_focus->view_ref_koid, *new_navigation_context.current_container);
-  }
-  if (old_navigation_context.current_container) {
-    message_context.previous_container = action_context_->semantics_source->GetSemanticNode(
-        a11y_focus->view_ref_koid, *old_navigation_context.current_container);
+  // Report the containers that were just entered.
+  while (current_containers_iter < new_navigation_context.containers.end()) {
+    entered_containers.push_back(action_context_->semantics_source->GetSemanticNode(
+        *new_navigation_context.view_ref_koid, current_containers_iter->node_id));
+    current_containers_iter++;
   }
 
-  // Set the exited_nested_container bit.
-  message_context.exited_nested_container =
-      message_context.current_container && message_context.previous_container &&
-      GetContainerNode(a11y_focus->view_ref_koid, message_context.previous_container->node_id(),
-                       action_context_->semantics_source) == message_context.current_container;
+  // Report table-related changes, but only if the navigation ended directly inside a table
+  // (i.e., if the deepest container in new_navigation_context.containers is a table).
+  // We only report anything that changed since the last navigation.
+  if (!new_navigation_context.containers.empty() &&
+      new_navigation_context.containers.back().table_context) {
+    ScreenReaderMessageGenerator::TableCellContext changed_table_cell_context;
 
-  // If we've entered a new container or we've changed row/column index within
-  // the same container, we need to fill the message context.
-  if (new_navigation_context.current_container && new_navigation_context.table_context) {
-    if (old_navigation_context.current_container != new_navigation_context.current_container ||
-        new_navigation_context.table_context->row_index !=
-            old_navigation_context.table_context->row_index) {
+    const ScreenReaderContext::TableContext& new_table_context =
+        new_navigation_context.containers.back().table_context.value();
+    const ScreenReaderContext::TableContext* old_table_context = nullptr;
+    if (!old_navigation_context.containers.empty() &&
+        old_navigation_context.containers.back().node_id ==
+            new_navigation_context.containers.back().node_id) {
+      old_table_context = &old_navigation_context.containers.back().table_context.value();
+    }
+
+    if (!old_table_context || new_table_context.row_index != old_table_context->row_index) {
       // Some tables may not have row headers, or they may not populate the row headers
       // field. In that case, we should not try to read the header.
-      if (new_navigation_context.table_context->row_index <
-          new_navigation_context.table_context->row_headers.size()) {
-        table_cell_context.row_header =
-            new_navigation_context.table_context
-                ->row_headers[new_navigation_context.table_context->row_index];
+      if (new_table_context.row_index < new_table_context.row_headers.size()) {
+        changed_table_cell_context.row_header =
+            new_table_context.row_headers[new_table_context.row_index];
       }
     }
 
-    if (old_navigation_context.current_container != new_navigation_context.current_container ||
-        new_navigation_context.table_context->column_index !=
-            old_navigation_context.table_context->column_index) {
+    if (!old_table_context || new_table_context.column_index != old_table_context->column_index) {
       // Some tables may not have column headers, or they may not populate the column headers
       // field. In that case, we should not try to read the header.
-      if (new_navigation_context.table_context->column_index <
-          new_navigation_context.table_context->column_headers.size()) {
-        table_cell_context.column_header =
-            new_navigation_context.table_context
-                ->column_headers[new_navigation_context.table_context->column_index];
+      if (new_table_context.column_index < new_table_context.column_headers.size()) {
+        changed_table_cell_context.column_header =
+            new_table_context.column_headers[new_table_context.column_index];
       }
     }
 
-    if (!table_cell_context.row_header.empty() || !table_cell_context.column_header.empty()) {
-      message_context.table_cell_context.emplace(table_cell_context);
+    if (!changed_table_cell_context.row_header.empty() ||
+        !changed_table_cell_context.column_header.empty()) {
+      message_context.changed_table_cell_context.emplace(changed_table_cell_context);
     }
   }
 

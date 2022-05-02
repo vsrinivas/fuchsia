@@ -281,12 +281,13 @@ TEST_F(LinearNavigationActionTest, NextActionEntersTable) {
   ASSERT_EQ(mock_speaker()->node_ids().size(), 1u);
   EXPECT_EQ(mock_speaker()->node_ids()[0], 3u);
   ASSERT_EQ(mock_speaker()->message_contexts().size(), 1u);
-  EXPECT_EQ(mock_speaker()->message_contexts()[0].table_cell_context->row_header, "row 1 header");
-  EXPECT_EQ(mock_speaker()->message_contexts()[0].table_cell_context->column_header,
+  EXPECT_EQ(mock_speaker()->message_contexts()[0].changed_table_cell_context->row_header,
+            "row 1 header");
+  EXPECT_EQ(mock_speaker()->message_contexts()[0].changed_table_cell_context->column_header,
             "column 1 header");
-  ASSERT_TRUE(mock_speaker()->message_contexts()[0].current_container);
-  EXPECT_EQ(mock_speaker()->message_contexts()[0].current_container->node_id(), 2u);
-  ASSERT_FALSE(mock_speaker()->message_contexts()[0].previous_container);
+  ASSERT_EQ(mock_speaker()->message_contexts()[0].entered_containers.size(), 1u);
+  EXPECT_EQ(mock_speaker()->message_contexts()[0].entered_containers[0]->node_id(), 2u);
+  ASSERT_TRUE(mock_speaker()->message_contexts()[0].exited_containers.empty());
 
   // Navigate to the next table cell.
   a11y::LinearNavigationAction next_action_2(action_context(), mock_screen_reader_context(),
@@ -299,13 +300,11 @@ TEST_F(LinearNavigationActionTest, NextActionEntersTable) {
   ASSERT_EQ(mock_speaker()->node_ids().size(), 2u);
   EXPECT_EQ(mock_speaker()->node_ids()[1], 4u);
   ASSERT_EQ(mock_speaker()->message_contexts().size(), 2u);
-  EXPECT_TRUE(mock_speaker()->message_contexts()[1].table_cell_context->row_header.empty());
-  EXPECT_EQ(mock_speaker()->message_contexts()[1].table_cell_context->column_header,
+  EXPECT_TRUE(mock_speaker()->message_contexts()[1].changed_table_cell_context->row_header.empty());
+  EXPECT_EQ(mock_speaker()->message_contexts()[1].changed_table_cell_context->column_header,
             "column 2 header");
-  ASSERT_TRUE(mock_speaker()->message_contexts()[1].current_container);
-  EXPECT_EQ(mock_speaker()->message_contexts()[1].current_container->node_id(), 2u);
-  ASSERT_TRUE(mock_speaker()->message_contexts()[1].previous_container);
-  EXPECT_EQ(mock_speaker()->message_contexts()[1].previous_container->node_id(), 2u);
+  ASSERT_TRUE(mock_speaker()->message_contexts()[1].entered_containers.empty());
+  ASSERT_TRUE(mock_speaker()->message_contexts()[0].exited_containers.empty());
 }
 
 TEST_F(LinearNavigationActionTest, PreviousActionExitsTable) {
@@ -343,8 +342,8 @@ TEST_F(LinearNavigationActionTest, PreviousActionExitsTable) {
   mock_a11y_focus_manager()->UpdateA11yFocus(mock_semantic_provider()->koid(), 3u);
 
   a11y::ScreenReaderContext::NavigationContext navigation_context;
-  navigation_context.current_container = 2u;
-  navigation_context.table_context.emplace();
+  navigation_context.containers = {{.node_id = 2u, .table_context = {}}};
+  navigation_context.view_ref_koid = mock_semantic_provider()->koid();
   mock_screen_reader_context()->set_current_navigation_context(navigation_context);
 
   a11y::LinearNavigationAction previous_action(action_context(), mock_screen_reader_context(),
@@ -363,9 +362,9 @@ TEST_F(LinearNavigationActionTest, PreviousActionExitsTable) {
   EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
   EXPECT_EQ(mock_speaker()->node_ids().size(), 1u);
   EXPECT_EQ(mock_speaker()->node_ids()[0], 1u);
-  ASSERT_FALSE(mock_speaker()->message_contexts()[0].current_container);
-  ASSERT_TRUE(mock_speaker()->message_contexts()[0].previous_container);
-  EXPECT_EQ(mock_speaker()->message_contexts()[0].previous_container->node_id(), 2u);
+  ASSERT_TRUE(mock_speaker()->message_contexts()[0].entered_containers.empty());
+  ASSERT_EQ(mock_speaker()->message_contexts()[0].exited_containers.size(), 1u);
+  EXPECT_EQ(mock_speaker()->message_contexts()[0].exited_containers[0]->node_id(), 2u);
 }
 
 TEST_F(LinearNavigationActionTest, NextActionEntersNestedTable) {
@@ -415,8 +414,8 @@ TEST_F(LinearNavigationActionTest, NextActionEntersNestedTable) {
   mock_a11y_focus_manager()->UpdateA11yFocus(mock_semantic_provider()->koid(), 3u);
 
   a11y::ScreenReaderContext::NavigationContext navigation_context;
-  navigation_context.current_container = 2u;
-  navigation_context.table_context.emplace();
+  navigation_context.containers = {{.node_id = 2u, .table_context = {}}};
+  navigation_context.view_ref_koid = mock_semantic_provider()->koid();
   mock_screen_reader_context()->set_current_navigation_context(navigation_context);
 
   a11y::LinearNavigationAction next_action(action_context(), mock_screen_reader_context(),
@@ -434,11 +433,9 @@ TEST_F(LinearNavigationActionTest, NextActionEntersNestedTable) {
   EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
   EXPECT_EQ(mock_speaker()->node_ids().size(), 1u);
   EXPECT_EQ(mock_speaker()->node_ids()[0], 5u);
-  ASSERT_TRUE(mock_speaker()->message_contexts()[0].current_container);
-  EXPECT_EQ(mock_speaker()->message_contexts()[0].current_container->node_id(), 4u);
-  ASSERT_TRUE(mock_speaker()->message_contexts()[0].previous_container);
-  EXPECT_EQ(mock_speaker()->message_contexts()[0].previous_container->node_id(), 2u);
-  EXPECT_FALSE(mock_speaker()->message_contexts()[0].exited_nested_container);
+  ASSERT_EQ(mock_speaker()->message_contexts()[0].entered_containers.size(), 1u);
+  EXPECT_EQ(mock_speaker()->message_contexts()[0].entered_containers[0]->node_id(), 4u);
+  ASSERT_TRUE(mock_speaker()->message_contexts()[0].exited_containers.empty());
 }
 
 TEST_F(LinearNavigationActionTest, PreviousActionExitsNestedTable) {
@@ -488,8 +485,8 @@ TEST_F(LinearNavigationActionTest, PreviousActionExitsNestedTable) {
   mock_a11y_focus_manager()->UpdateA11yFocus(mock_semantic_provider()->koid(), 5u);
 
   a11y::ScreenReaderContext::NavigationContext navigation_context;
-  navigation_context.current_container = 4u;
-  navigation_context.table_context.emplace();
+  navigation_context.containers = {{.node_id = 2u}, {.node_id = 4u, .table_context = {}}};
+  navigation_context.view_ref_koid = mock_semantic_provider()->koid();
   mock_screen_reader_context()->set_current_navigation_context(navigation_context);
 
   a11y::LinearNavigationAction previous_action(action_context(), mock_screen_reader_context(),
@@ -507,11 +504,134 @@ TEST_F(LinearNavigationActionTest, PreviousActionExitsNestedTable) {
   EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
   EXPECT_EQ(mock_speaker()->node_ids().size(), 1u);
   EXPECT_EQ(mock_speaker()->node_ids()[0], 3u);
-  ASSERT_TRUE(mock_speaker()->message_contexts()[0].current_container);
-  EXPECT_EQ(mock_speaker()->message_contexts()[0].current_container->node_id(), 2u);
-  ASSERT_TRUE(mock_speaker()->message_contexts()[0].previous_container);
-  EXPECT_EQ(mock_speaker()->message_contexts()[0].previous_container->node_id(), 4u);
-  EXPECT_TRUE(mock_speaker()->message_contexts()[0].exited_nested_container);
+  ASSERT_TRUE(mock_speaker()->message_contexts()[0].entered_containers.empty());
+  ASSERT_EQ(mock_speaker()->message_contexts()[0].exited_containers.size(), 1u);
+  EXPECT_EQ(mock_speaker()->message_contexts()[0].exited_containers[0]->node_id(), 4u);
+}
+
+TEST_F(LinearNavigationActionTest, NextActionEntersList) {
+  Node root_node = CreateTestNode(0u, "root");
+  root_node.set_child_ids({1u, 2u, 5u});
+
+  Node node_before_list = CreateTestNode(1u, "node before list");
+  node_before_list.set_child_ids({2u});
+
+  Node list_node = CreateTestNode(2u, "list");
+  list_node.set_role(fuchsia::accessibility::semantics::Role::LIST);
+  list_node.set_child_ids({3u});
+
+  // We use an empty label so that node won't be read - this is a common pattern in practice,
+  // e.g.
+  // https://source.chromium.org/chromium/chromium/src/+/main:content/test/data/accessibility/html/list-expected-fuchsia.txt;l=1;drc=504fbe94c3c2ad609aabc12f3958e4aa16a0d2e0
+  Node list_element_node = CreateTestNode(3u, std::nullopt);
+  list_element_node.set_role(fuchsia::accessibility::semantics::Role::LIST_ELEMENT);
+  list_element_node.set_child_ids({4u});
+
+  Node static_text_node = CreateTestNode(4u, "static text node inside list");
+
+  Node node_after_list = CreateTestNode(5u, "node after list");
+  node_after_list.set_child_ids({5u});
+
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                              std::move(root_node));
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                              std::move(node_before_list));
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                              std::move(list_node));
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                              std::move(list_element_node));
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                              std::move(static_text_node));
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                              std::move(node_after_list));
+
+  // Start at the element before the list.
+  mock_a11y_focus_manager()->UpdateA11yFocus(mock_semantic_provider()->koid(), 1u);
+
+  // Navigate from node 1 -> node 4, entering the list.
+  a11y::LinearNavigationAction next_action(action_context(), mock_screen_reader_context(),
+                                           kNextAction);
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = mock_semantic_provider()->koid();
+
+  next_action.Run(gesture_context);
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(mock_a11y_focus_manager()->IsSetA11yFocusCalled());
+  EXPECT_EQ(mock_a11y_focus_manager()->GetA11yFocus().value().node_id, 4u);
+  EXPECT_EQ(mock_semantic_provider()->koid(),
+            mock_a11y_focus_manager()->GetA11yFocus().value().view_ref_koid);
+  EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
+  ASSERT_EQ(mock_speaker()->node_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker()->node_ids()[0], 4u);
+  ASSERT_EQ(mock_speaker()->message_contexts().size(), 1u);
+  ASSERT_EQ(mock_speaker()->message_contexts()[0].entered_containers.size(), 1u);
+  EXPECT_EQ(mock_speaker()->message_contexts()[0].entered_containers[0]->node_id(), 2u);
+  ASSERT_TRUE(mock_speaker()->message_contexts()[0].exited_containers.empty());
+}
+
+TEST_F(LinearNavigationActionTest, NextActionExitsList) {
+  Node root_node = CreateTestNode(0u, "root");
+  root_node.set_child_ids({1u, 2u, 5u});
+
+  Node node_before_list = CreateTestNode(1u, "node before list");
+  node_before_list.set_child_ids({2u});
+
+  Node list_node = CreateTestNode(2u, "list");
+  list_node.set_role(fuchsia::accessibility::semantics::Role::LIST);
+  list_node.set_child_ids({3u});
+
+  // We use an empty label so that node won't be read - this is a common pattern in practice,
+  // e.g.
+  // https://source.chromium.org/chromium/chromium/src/+/main:content/test/data/accessibility/html/list-expected-fuchsia.txt;l=1;drc=504fbe94c3c2ad609aabc12f3958e4aa16a0d2e0
+  Node list_element_node = CreateTestNode(3u, std::nullopt);
+  list_element_node.set_role(fuchsia::accessibility::semantics::Role::LIST_ELEMENT)
+      .set_child_ids({4u});
+
+  Node static_text_node = CreateTestNode(4u, "static text node inside list");
+
+  Node node_after_list = CreateTestNode(5u, "node after list");
+
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                              std::move(root_node));
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                              std::move(node_before_list));
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                              std::move(list_node));
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                              std::move(list_element_node));
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                              std::move(static_text_node));
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                              std::move(node_after_list));
+
+  // Start inside the list.
+  mock_a11y_focus_manager()->UpdateA11yFocus(mock_semantic_provider()->koid(), 4u);
+  a11y::ScreenReaderContext::NavigationContext navigation_context;
+  navigation_context.containers = {{.node_id = 2u, .table_context = {}}};
+  navigation_context.view_ref_koid = mock_semantic_provider()->koid();
+  mock_screen_reader_context()->set_current_navigation_context(navigation_context);
+
+  // Navigate from node 4 -> node 5, entering the list.
+  a11y::LinearNavigationAction next_action(action_context(), mock_screen_reader_context(),
+                                           kNextAction);
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = mock_semantic_provider()->koid();
+
+  next_action.Run(gesture_context);
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(mock_a11y_focus_manager()->IsSetA11yFocusCalled());
+  EXPECT_EQ(mock_a11y_focus_manager()->GetA11yFocus().value().node_id, 5u);
+  EXPECT_EQ(mock_semantic_provider()->koid(),
+            mock_a11y_focus_manager()->GetA11yFocus().value().view_ref_koid);
+  EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
+  ASSERT_EQ(mock_speaker()->node_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker()->node_ids()[0], 5u);
+  ASSERT_EQ(mock_speaker()->message_contexts().size(), 1u);
+  ASSERT_TRUE(mock_speaker()->message_contexts()[0].entered_containers.empty());
+  ASSERT_EQ(mock_speaker()->message_contexts()[0].exited_containers.size(), 1u);
+  EXPECT_EQ(mock_speaker()->message_contexts()[0].exited_containers[0]->node_id(), 2u);
 }
 
 }  // namespace
