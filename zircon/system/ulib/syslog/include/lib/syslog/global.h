@@ -35,7 +35,7 @@ bool fx_vlog_is_enabled(uint8_t verbosity);
 
 // Reconfigures the global logger for this process with the specified
 // configuration.
-// If |console_fd| and |log_service_channel| are invalid in |config|,
+// If |console_fd| and |log_sink_socket| are invalid in |config|,
 // this function doesn't change the currently used file descriptor or channel.
 // |config| can be safely deallocated after this function returns.
 // This function is NOT thread-safe and must be called early in the program

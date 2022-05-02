@@ -122,22 +122,16 @@ zx_status_t fx_logger_reconfigure_structured(fx_logger_t* logger,
 
 SYSLOG_EXPORT
 zx_status_t fx_logger_create_internal(const fx_logger_config_t* config, fx_logger_t** out_logger) {
-  // TODO(fxbug.dev/63529): Share the input checks and handle closing logic with
+  // TODO(https://fxbug.dev/65995): Share the input checks and handle closing logic with
   // fx_logger::Reconfigure().
   if (!config || !out_logger) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // TODO(fxbug.dev/63529): Rename all |log_service_channel| uses and remove.
-  ZX_ASSERT(config->log_sink_socket == ZX_HANDLE_INVALID ||
-            config->log_service_channel == ZX_HANDLE_INVALID);
-  zx_handle_t log_sink_socket = (config->log_sink_socket != ZX_HANDLE_INVALID)
-                                    ? config->log_sink_socket
-                                    : config->log_service_channel;
-
   if ((config->num_tags > FX_LOG_MAX_TAGS) ||
 #ifndef SYSLOG_STATIC
-      (config->log_sink_channel != ZX_HANDLE_INVALID && log_sink_socket != ZX_HANDLE_INVALID)
+      (config->log_sink_channel != ZX_HANDLE_INVALID &&
+       config->log_sink_socket != ZX_HANDLE_INVALID)
 #else
       // |log_sink_channel| is not supported by SYSLOG_STATIC.
       config->log_sink_channel != ZX_HANDLE_INVALID
@@ -146,8 +140,8 @@ zx_status_t fx_logger_create_internal(const fx_logger_config_t* config, fx_logge
     if (config->log_sink_channel != ZX_HANDLE_INVALID) {
       zx_handle_close(config->log_sink_channel);
     }
-    if (log_sink_socket != ZX_HANDLE_INVALID) {
-      zx_handle_close(log_sink_socket);
+    if (config->log_sink_socket != ZX_HANDLE_INVALID) {
+      zx_handle_close(config->log_sink_socket);
     }
     return ZX_ERR_INVALID_ARGS;
   }
@@ -158,7 +152,7 @@ zx_status_t fx_logger_create_internal(const fx_logger_config_t* config, fx_logge
   // and the client can provide the appropriate channel / fd later.
 #ifndef SYSLOG_STATIC
   if (config->console_fd == -1 && config->log_sink_channel == ZX_HANDLE_INVALID &&
-      log_sink_socket == ZX_HANDLE_INVALID) {
+      config->log_sink_socket == ZX_HANDLE_INVALID) {
     zx::status socket = []() -> zx::status<zx::socket> {
       zx::status logger = service::Connect<fuchsia_logger::LogSink>();
       if (logger.is_error()) {
@@ -178,12 +172,7 @@ zx_status_t fx_logger_create_internal(const fx_logger_config_t* config, fx_logge
     }();
     if (socket.is_ok()) {
       c.log_sink_socket = socket.value().release();
-      // For simplicity, the line above sets the value to the new name regardless of where it came
-      // from. Ensure that the old name is invalid in case the value came from it.
-      // TODO(fxbug.dev/63529): Rename all |log_service_channel| uses and remove this line, which
-      // ensures only one of these is set.
       is_structured = true;
-      c.log_service_channel = ZX_HANDLE_INVALID;
     }
   }
 #endif

@@ -198,11 +198,13 @@ TEST_F(LoggerIntegrationTest, NoKlogs) {
   const char* tag = "my-tag";
   const char** tags = &tag;
 
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                               .console_fd = -1,
-                               .log_service_channel = logger_sock.release(),
-                               .tags = tags,
-                               .num_tags = 1};
+  fx_logger_config_t config = {
+      .min_severity = FX_LOG_INFO,
+      .console_fd = -1,
+      .log_sink_socket = logger_sock.release(),
+      .tags = tags,
+      .num_tags = 1,
+  };
 
   fx_logger_t* logger;
   ASSERT_EQ(ZX_OK, fx_logger_create(&config, &logger));

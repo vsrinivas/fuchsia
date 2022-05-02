@@ -68,11 +68,13 @@ class LoggingSocketTest : public LoggingBaseSocketTest {
     zx::socket local;
     ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &socket_));
 
-    fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                                 .console_fd = -1,
-                                 .log_service_channel = local.release(),
-                                 .tags = nullptr,
-                                 .num_tags = 0};
+    fx_logger_config_t config = {
+        .min_severity = FX_LOG_INFO,
+        .console_fd = -1,
+        .log_sink_socket = local.release(),
+        .tags = nullptr,
+        .num_tags = 0,
+    };
 
     fx_log_reconfigure(&config);
   }
@@ -80,11 +82,12 @@ class LoggingSocketTest : public LoggingBaseSocketTest {
 
 TEST_F(LoggingBaseSocketTest, LoggerCreatedNotConnected) {
   fx_logger_t* logger = NULL;
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                               .console_fd = -1,
-                               .log_service_channel = ZX_HANDLE_INVALID,
-                               .tags = nullptr,
-                               .num_tags = 0};
+  fx_logger_config_t config = {
+      .min_severity = FX_LOG_INFO,
+      .console_fd = -1,
+      .tags = nullptr,
+      .num_tags = 0,
+  };
 
   fx_logger_create_internal(&config, &logger, false);
 
@@ -96,11 +99,12 @@ TEST_F(LoggingBaseSocketTest, LoggerCreatedNotConnected) {
 
 TEST_F(LoggingBaseSocketTest, LoggerCreatedConnected) {
   fx_logger_t* logger = NULL;
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                               .console_fd = -1,
-                               .log_service_channel = ZX_HANDLE_INVALID,
-                               .tags = nullptr,
-                               .num_tags = 0};
+  fx_logger_config_t config = {
+      .min_severity = FX_LOG_INFO,
+      .console_fd = -1,
+      .tags = nullptr,
+      .num_tags = 0,
+  };
 
   fx_logger_create_internal(&config, &logger, true);
 
@@ -112,11 +116,12 @@ TEST_F(LoggingBaseSocketTest, LoggerCreatedConnected) {
 
 TEST_F(LoggingBaseSocketTest, LoggerReconfiguredConnected) {
   fx_logger_t* logger = NULL;
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                               .console_fd = -1,
-                               .log_service_channel = ZX_HANDLE_INVALID,
-                               .tags = nullptr,
-                               .num_tags = 0};
+  fx_logger_config_t config = {
+      .min_severity = FX_LOG_INFO,
+      .console_fd = -1,
+      .tags = nullptr,
+      .num_tags = 0,
+  };
 
   fx_logger_create_internal(&config, &logger, false);
 
@@ -126,11 +131,13 @@ TEST_F(LoggingBaseSocketTest, LoggerReconfiguredConnected) {
   zx::socket local;
   ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &socket_));
 
-  config = {.min_severity = FX_LOG_INFO,
-            .console_fd = -1,
-            .log_service_channel = local.release(),
-            .tags = nullptr,
-            .num_tags = 0};
+  config = {
+      .min_severity = FX_LOG_INFO,
+      .console_fd = -1,
+      .log_sink_socket = local.release(),
+      .tags = nullptr,
+      .num_tags = 0,
+  };
 
   fx_logger_reconfigure(logger, &config);
 
@@ -142,11 +149,12 @@ TEST_F(LoggingBaseSocketTest, LoggerReconfiguredConnected) {
 
 TEST_F(LoggingBaseSocketTest, LoggerSetConnected) {
   fx_logger_t* logger = NULL;
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                               .console_fd = -1,
-                               .log_service_channel = ZX_HANDLE_INVALID,
-                               .tags = nullptr,
-                               .num_tags = 0};
+  fx_logger_config_t config = {
+      .min_severity = FX_LOG_INFO,
+      .console_fd = -1,
+      .tags = nullptr,
+      .num_tags = 0,
+  };
 
   fx_logger_create_internal(&config, &logger, false);
 

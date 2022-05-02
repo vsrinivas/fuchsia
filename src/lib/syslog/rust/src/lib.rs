@@ -403,7 +403,6 @@ fn with_default_config_with_tags_and_handle<R>(
         fd: -1,
         log_sink_channel: zx::sys::ZX_HANDLE_INVALID,
         log_sink_socket: handle,
-        log_service_channel: zx::sys::ZX_HANDLE_INVALID,
         tags: c_tags.as_ptr(),
         num_tags: c_tags.len(),
     };
@@ -529,7 +528,6 @@ mod test {
             fd: tmp_file.as_raw_fd(),
             log_sink_channel: zx::sys::ZX_HANDLE_INVALID,
             log_sink_socket: zx::sys::ZX_HANDLE_INVALID,
-            log_service_channel: zx::sys::ZX_HANDLE_INVALID,
             tags: ptr::null(),
             num_tags: 0,
         };

@@ -143,7 +143,6 @@ class StatusWatcherTest : public ::testing::Test {
     fx_logger_config_t log_cfg = {
         .min_severity = -2,
         .console_fd = dup(STDOUT_FILENO),
-        .log_service_channel = ZX_HANDLE_INVALID,
         .tags = nullptr,
         .num_tags = 0,
     };

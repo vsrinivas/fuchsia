@@ -24,10 +24,9 @@ zx_status_t log_to_debuglog() {
   char process_name[ZX_MAX_NAME_LEN] = {};
   zx::process::self()->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
   const char* tag = process_name;
-  fx_logger_config_t logger_config{
+  fx_logger_config_t logger_config = {
       .min_severity = fx_logger_get_min_severity(fx_log_get_logger()),
       .console_fd = -1,
-      .log_service_channel = ZX_HANDLE_INVALID,
       .tags = &tag,
       .num_tags = 1,
   };

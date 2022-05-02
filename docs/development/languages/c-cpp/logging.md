@@ -63,11 +63,12 @@ FX_LOGF(INFO, NULL, "my msg: %d", 10);
 #include <lib/syslog/global.h>
 
 int main(int argc, char** argv) {
-    fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                                 .console_fd = -1,
-                                 .log_service_channel = ZX_HANDLE_INVALID,
-                                 .tags = (const char * []) {"gtag", "gtag2"},
-                                 .num_tags = 2};
+    fx_logger_config_t config = {
+      .min_severity = FX_LOG_INFO,
+      .console_fd = -1,
+      .tags = (const char * []) {"gtag", "gtag2"},
+      .num_tags = 2,
+    };
     fx_log_reconfigure(&config);
 }
 ```

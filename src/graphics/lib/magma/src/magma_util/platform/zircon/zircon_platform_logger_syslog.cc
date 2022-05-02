@@ -23,13 +23,13 @@ bool g_is_logging_initialized = false;
 
 bool PlatformLogger::IsInitialized() { return g_is_logging_initialized; }
 
-bool PlatformLogger::Initialize(std::unique_ptr<PlatformHandle> handle) {
+bool PlatformLogger::Initialize(std::unique_ptr<PlatformHandle> channel) {
   zx::socket local_socket, remote_socket;
   zx_status_t status = zx::socket::create(ZX_SOCKET_DATAGRAM, &local_socket, &remote_socket);
   if (status != ZX_OK)
     return false;
 
-  auto zircon_handle = static_cast<ZirconPlatformHandle*>(handle.get());
+  auto zircon_handle = static_cast<ZirconPlatformHandle*>(channel.get());
 
   auto result = fidl::WireCall<fuchsia_logger::LogSink>(zx::unowned_channel(zircon_handle->get()))
                     ->Connect(std::move(remote_socket));
@@ -38,7 +38,7 @@ bool PlatformLogger::Initialize(std::unique_ptr<PlatformHandle> handle) {
 
   fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
                                .console_fd = -1,
-                               .log_service_channel = local_socket.release(),
+                               .log_sink_socket = local_socket.release(),
                                .tags = nullptr,
                                .num_tags = 0};
 

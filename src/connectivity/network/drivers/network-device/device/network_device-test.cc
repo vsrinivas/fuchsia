@@ -97,7 +97,6 @@ class NetworkDeviceTest : public ::testing::Test {
     fx_logger_config_t log_cfg = {
         .min_severity = FX_LOG_TRACE,
         .console_fd = dup(STDOUT_FILENO),
-        .log_service_channel = ZX_HANDLE_INVALID,
         .tags = nullptr,
         .num_tags = 0,
     };

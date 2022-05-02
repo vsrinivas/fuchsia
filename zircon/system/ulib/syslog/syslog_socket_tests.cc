@@ -26,11 +26,13 @@ const char* kFileName = syslog::internal::StripPath(__FILE__);
 const char* kFilePath = syslog::internal::StripDots(__FILE__);
 
 inline zx_status_t init_helper(zx_handle_t handle, const char** tags, size_t ntags) {
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                               .console_fd = -1,
-                               .log_service_channel = handle,
-                               .tags = tags,
-                               .num_tags = ntags};
+  fx_logger_config_t config = {
+      .min_severity = FX_LOG_INFO,
+      .console_fd = -1,
+      .log_sink_socket = handle,
+      .tags = tags,
+      .num_tags = ntags,
+  };
 
   return fx_log_reconfigure(&config);
 }

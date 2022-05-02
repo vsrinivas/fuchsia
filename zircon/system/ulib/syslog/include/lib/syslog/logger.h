@@ -76,10 +76,6 @@ typedef struct fx_logger_config {
   // logger takes ownership of this handle.
   zx_handle_t log_sink_socket;
 
-  // Deprecated. Use the new name |log_sink_socket| instead.
-  // TODO(fxbug.dev/63529): Rename all uses and remove.
-  zx_handle_t log_service_channel;
-
   // An array of tag strings to associate with all messages written
   // by this logger.  Tags will be truncated if they are (individually) longer
   // than |FX_LOG_MAX_TAG_LEN|.

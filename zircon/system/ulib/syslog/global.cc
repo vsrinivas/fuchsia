@@ -27,11 +27,12 @@ fx_logger_t* MakeDefaultLogger() {
   if (status != ZX_OK)
     process_name[0] = '\0';
 
-  fx_logger_config_t config = {.min_severity = FX_LOG_SEVERITY_DEFAULT,
-                               .console_fd = -1,
-                               .log_service_channel = ZX_HANDLE_INVALID,
-                               .tags = &tag,
-                               .num_tags = 1};
+  fx_logger_config_t config = {
+      .min_severity = FX_LOG_SEVERITY_DEFAULT,
+      .console_fd = -1,
+      .tags = &tag,
+      .num_tags = 1,
+  };
   fx_logger_t* logger = NULL;
   status = fx_logger_create_internal(&config, &logger);
   // Making the default logger should never fail.
@@ -44,7 +45,7 @@ fx_logger_t* MakeDefaultLogger() {
 fx_logger_t* get_or_create_global_logger() {
   // Upon initialization, the default logger is either provided with a
   // socket connection, or a fallback file-descriptor (which it will use)
-  // or it will be initialized to log to STDERR. This object is contructed on
+  // or it will be initialized to log to STDERR. This object is constructed on
   // the first call to this function and will be leaked on shutdown.
   static fx_logger_t* logger = MakeDefaultLogger();
   return logger;
@@ -57,8 +58,7 @@ SYSLOG_EXPORT
 zx_status_t fx_log_reconfigure(const fx_logger_config_t* config) {
   fx_logger_t* logger = get_or_create_global_logger();
   return logger->Reconfigure(
-      config, (config->console_fd == -1 && config->log_service_channel == ZX_HANDLE_INVALID &&
-               config->log_sink_socket == ZX_HANDLE_INVALID));
+      config, (config->console_fd == -1 && config->log_sink_socket == ZX_HANDLE_INVALID));
 }
 
 SYSLOG_EXPORT

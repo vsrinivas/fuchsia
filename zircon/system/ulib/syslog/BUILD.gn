@@ -67,7 +67,7 @@ zx_library("syslog-compat") {
 # except libzircon, so it may be used from magma client driver libraries
 # such as the Vulkan ICD.
 # This library cannot connect to the logging service, so a console_fd
-# or log_service_channel must be provided at initialization.
+# or log_sink_socket must be provided at initialization.
 zx_library("syslog-static") {
   sdk = "static"
   sdk_headers = syslog_headers

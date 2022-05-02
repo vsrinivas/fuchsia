@@ -17,7 +17,6 @@ pub struct fx_logger_config_t {
     pub fd: i32,
     pub log_sink_channel: zx_handle_t,
     pub log_sink_socket: zx_handle_t,
-    pub log_service_channel: zx_handle_t,
     pub tags: *const *const c_char,
     pub num_tags: usize,
 }

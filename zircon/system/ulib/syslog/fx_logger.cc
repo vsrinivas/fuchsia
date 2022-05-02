@@ -74,16 +74,10 @@ void fx_logger::ActivateFallback(int fallback_fd) {
 }
 
 zx_status_t fx_logger::Reconfigure(const fx_logger_config_t* config, bool is_structured) {
-  // TODO(fxbug.dev/63529): Rename all |log_service_channel| uses and remove.
-  ZX_ASSERT(config->log_sink_socket == ZX_HANDLE_INVALID ||
-            config->log_service_channel == ZX_HANDLE_INVALID);
-  zx_handle_t log_sink_socket = (config->log_sink_socket != ZX_HANDLE_INVALID)
-                                    ? config->log_sink_socket
-                                    : config->log_service_channel;
-
   if ((config->num_tags > FX_LOG_MAX_TAGS) ||
 #ifndef SYSLOG_STATIC
-      (config->log_sink_channel != ZX_HANDLE_INVALID && log_sink_socket != ZX_HANDLE_INVALID)
+      (config->log_sink_channel != ZX_HANDLE_INVALID &&
+       config->log_sink_socket != ZX_HANDLE_INVALID)
 #else
       // |log_sink_channel| is not supported by SYSLOG_STATIC.
       config->log_sink_channel != ZX_HANDLE_INVALID
@@ -92,16 +86,16 @@ zx_status_t fx_logger::Reconfigure(const fx_logger_config_t* config, bool is_str
     if (config->log_sink_channel != ZX_HANDLE_INVALID) {
       zx_handle_close(config->log_sink_channel);
     }
-    if (log_sink_socket != ZX_HANDLE_INVALID) {
-      zx_handle_close(log_sink_socket);
+    if (config->log_sink_socket != ZX_HANDLE_INVALID) {
+      zx_handle_close(config->log_sink_socket);
     }
     return ZX_ERR_INVALID_ARGS;
   }
 
   zx::socket socket;
-  if (log_sink_socket != ZX_HANDLE_INVALID) {
+  if (config->log_sink_socket != ZX_HANDLE_INVALID) {
     is_structured_ = is_structured;
-    socket.reset(log_sink_socket);
+    socket.reset(config->log_sink_socket);
 #ifndef SYSLOG_STATIC
   } else if (config->log_sink_channel != ZX_HANDLE_INVALID) {
     zx::socket remote;
