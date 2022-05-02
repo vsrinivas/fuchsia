@@ -11,6 +11,7 @@ fn now_monotonic_nanos() -> i64 {
 }
 
 /// Wraps the Inspect state of package resolves.
+#[derive(Debug)]
 pub struct ResolverService {
     /// How many times the resolver service has fallen back to the
     /// cache package set due to a remote repository returning NOT_FOUND.

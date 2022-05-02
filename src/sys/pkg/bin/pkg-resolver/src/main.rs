@@ -230,7 +230,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
     let resolver_service_inspect_state = Arc::new(ResolverServiceInspectState::from_node(
         inspector.root().create_child("resolver_service"),
     ));
-    let (package_fetch_queue, package_fetcher) = resolver_service::PackageFetcher::new(
+    let (package_fetch_queue, package_resolver) = resolver_service::QueuedResolver::new(
         pkg_cache,
         Arc::clone(&base_package_index),
         Arc::clone(&system_cache_list),
@@ -245,7 +245,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
     let resolver_cb = {
         let repo_manager = Arc::clone(&repo_manager);
         let rewrite_manager = Arc::clone(&rewrite_manager);
-        let package_fetcher = package_fetcher.clone();
+        let package_resolver = package_resolver.clone();
         let base_package_index = Arc::clone(&base_package_index);
         let system_cache_list = Arc::clone(&system_cache_list);
         let cobalt_sender = cobalt_sender.clone();
@@ -255,7 +255,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
                 resolver_service::run_resolver_service(
                     Arc::clone(&repo_manager),
                     Arc::clone(&rewrite_manager),
-                    package_fetcher.clone(),
+                    package_resolver.clone(),
                     Arc::clone(&base_package_index),
                     Arc::clone(&system_cache_list),
                     stream,
@@ -269,13 +269,13 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
     };
 
     let font_resolver_cb = {
-        let package_fetcher = package_fetcher.clone();
+        let package_resolver = package_resolver.clone();
         let cobalt_sender = cobalt_sender.clone();
         move |stream| {
             fasync::Task::local(
                 resolver_service::run_font_resolver_service(
                     Arc::clone(&font_package_manager),
-                    package_fetcher.clone(),
+                    package_resolver.clone(),
                     stream,
                     cobalt_sender.clone(),
                 )

@@ -6,15 +6,17 @@
 use {
     assert_matches::assert_matches,
     fuchsia_async as fasync,
+    fuchsia_pkg_testing::serve::responder,
     fuchsia_pkg_testing::{Package, PackageBuilder, RepositoryBuilder, SystemImageBuilder},
     fuchsia_zircon::Status,
+    futures::future,
     lib::{pkgfs_with_system_image_and_pkg, TestEnvBuilder, EMPTY_REPO_PATH},
     std::sync::Arc,
 };
 
 async fn test_package(name: &str, contents: &str) -> Package {
     PackageBuilder::new(name)
-        .add_resource_at("p/t/o", format!("contents: {}\n", contents).as_bytes())
+        .add_resource_at("p/t/o", format!("contents: {contents}\n").as_bytes())
         .build()
         .await
         .expect("build package")
@@ -43,7 +45,7 @@ async fn test_base_package_found() {
     let served_repository = repo.server().start().unwrap();
 
     env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
-    let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
+    let pkg_url = format!("fuchsia-pkg://fuchsia.com/{pkg_name}");
     let package_dir = env.resolve_package(&pkg_url).await.unwrap();
     // Make sure we got the base version, not the repo version.
     base_pkg.verify_contents(&package_dir).await.unwrap();
@@ -72,7 +74,7 @@ async fn test_base_pinning_rejects_urls_with_resource() {
     let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, Some(&pkg)).await;
     let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
 
-    let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}/0#should-not-be-here", pkg_name,);
+    let pkg_url = format!("fuchsia-pkg://fuchsia.com/{pkg_name}/0#should-not-be-here");
     assert_matches!(
         env.resolve_package(&pkg_url).await,
         Err(fidl_fuchsia_pkg::ResolveError::InvalidUrl)
@@ -105,7 +107,7 @@ async fn test_base_package_with_variant_found() {
     let served_repository = repo.server().start().unwrap();
 
     env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
-    let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}/0", pkg_name);
+    let pkg_url = format!("fuchsia-pkg://fuchsia.com/{pkg_name}/0");
     let package_dir = env.resolve_package(&pkg_url).await.unwrap();
     // Make sure we got the static version, not the repo version.
     base_pkg.verify_contents(&package_dir).await.unwrap();
@@ -145,7 +147,7 @@ async fn test_base_package_with_merkle_pin() {
     env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
     // Merkle pin the request to the repo version.
     let pkg_url =
-        format!("fuchsia-pkg://fuchsia.com/{}?hash={}", pkg_name, repo_pkg.meta_far_merkle_root());
+        format!("fuchsia-pkg://fuchsia.com/{pkg_name}?hash={}", repo_pkg.meta_far_merkle_root());
     let package_dir = env.resolve_package(&pkg_url).await.unwrap();
 
     // Make sure we got the repo (pinned) version, not the static version.
@@ -177,7 +179,7 @@ async fn test_base_package_while_tuf_broken() {
 
     served_repository.stop().await;
 
-    let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
+    let pkg_url = format!("fuchsia-pkg://fuchsia.com/{pkg_name}");
     let package_dir = env.resolve_package(&pkg_url).await.unwrap();
     // Make sure we got the static version.
     base_pkg.verify_contents(&package_dir).await.unwrap();
@@ -199,7 +201,7 @@ async fn test_base_package_without_repo_configured() {
 
     let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
 
-    let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
+    let pkg_url = format!("fuchsia-pkg://fuchsia.com/{pkg_name}");
     let package_dir = env.resolve_package(&pkg_url).await.unwrap();
     // Make sure we got the static version.
     base_pkg.verify_contents(&package_dir).await.unwrap();
@@ -207,6 +209,52 @@ async fn test_base_package_without_repo_configured() {
     // Check that get_hash fallback behavior matches resolve.
     let hash = env.get_hash(pkg_url).await;
     assert_eq!(hash.unwrap(), base_pkg.meta_far_merkle_root().clone().into());
+
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_base_package_while_queue_full() {
+    let mut repo = RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH);
+    let mut pkg_urls: Vec<String> = vec![];
+    // MAX_CONCURRENT_PACKAGE_FETCHES is currently set to 5.
+    // Add 5 packages that would fill up the worker queue.
+    for i in 1..=5 {
+        let pkg_name = format!("blob_causes_timeout{i}");
+        pkg_urls.push(format!("fuchsia-pkg://test/{pkg_name}"));
+        repo = repo.add_package(PackageBuilder::new(pkg_name).build().await.unwrap());
+    }
+    let repo = Arc::new(repo.build().await.unwrap());
+
+    let pkg_name = "test_base_package_while_queue_full";
+    let base_pkg = test_package(pkg_name, "static").await;
+    let system_image_package =
+        SystemImageBuilder::new().static_packages(&[&base_pkg]).build().await;
+    let pkgfs = pkgfs_with_system_image_and_pkg(&system_image_package, Some(&base_pkg)).await;
+
+    let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
+
+    let server = repo
+        .server()
+        .response_overrider(responder::ForPathPrefix::new("/blobs/", responder::Hang))
+        .start()
+        .expect("Starting server succeeds");
+    let repo_config = server.make_repo_config("fuchsia-pkg://test".parse().unwrap());
+    env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
+
+    // Add a base-pinned package to the end of the resolve list.
+    pkg_urls.push(format!("fuchsia-pkg://fuchsia.com/{pkg_name}"));
+
+    let resolves_fut =
+        pkg_urls.into_iter().map(|url| Box::pin(env.resolve_package(&url))).collect::<Vec<_>>();
+
+    let (pkg_dir, i, _) = future::select_all(resolves_fut).await;
+
+    // Assert it's the base pinned package which got resolved.
+    assert_eq!(i, 5);
+
+    // Make sure we got the static version.
+    base_pkg.verify_contents(&pkg_dir.unwrap()).await.unwrap();
 
     env.stop().await;
 }

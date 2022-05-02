@@ -15,6 +15,7 @@ use {
     },
     anyhow::{anyhow, Context as _, Error},
     async_lock::RwLock as AsyncRwLock,
+    async_trait::async_trait,
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio,
@@ -38,19 +39,77 @@ use {
 mod inspect;
 pub use inspect::ResolverService as ResolverServiceInspectState;
 
-/// A clonable handle to the package fetch queue.  When all clones of
-/// [`PackageFetcher`] are dropped, the queue will resolve all remaining
+/// Work-queue based package resolver. When all clones of
+/// [`QueuedResolver`] are dropped, the queue will resolve all remaining
 /// packages and terminate its output stream.
 #[derive(Clone, Debug)]
-pub struct PackageFetcher(
-    work_queue::WorkSender<PkgUrl, (), Result<PackageDirectory, pkg::ResolveError>>,
-);
+pub struct QueuedResolver {
+    queue: work_queue::WorkSender<PkgUrl, (), Result<PackageDirectory, Arc<GetPackageError>>>,
+    cache: pkg::cache::Client,
+    base_package_index: Arc<BasePackageIndex>,
+    rewriter: Arc<AsyncRwLock<RewriteManager>>,
+    system_cache_list: Arc<CachePackages>,
+    inspect: Arc<ResolverServiceInspectState>,
+}
 
-impl PackageFetcher {
+/// This trait represents an instance which can be used to resolve package URLs, which typically
+/// ensures that packages are available on the local filesystem and/or fetch them from remote
+/// repository if necessary and possible.
+#[async_trait]
+pub trait Resolver: std::fmt::Debug {
+    /// Returns local package directory for the package provided as a `url` parameter.
+    async fn resolve(&self, url: PkgUrl) -> Result<PackageDirectory, pkg::ResolveError>;
+}
+
+#[async_trait]
+impl Resolver for QueuedResolver {
+    async fn resolve(&self, pkg_url: PkgUrl) -> Result<PackageDirectory, pkg::ResolveError> {
+        trace::duration_begin!("app", "resolve", "url" => pkg_url.to_string().as_str());
+        // While the fuchsia-pkg:// spec allows resource paths, the package resolver should not be
+        // given one.
+        if pkg_url.resource().is_some() {
+            fx_log_err!("package url should not contain a resource name: {}", pkg_url);
+            return Err(pkg::ResolveError::InvalidUrl);
+        }
+
+        // Base pin.
+        let package_inspect = self.inspect.resolve(&pkg_url);
+        if let Some(blob) = self.base_package_index.is_unpinned_base_package(&pkg_url) {
+            let dir = self.cache.open(blob).await.map_err(|e| {
+                let error = e.to_resolve_error();
+                fx_log_err!("failed to open base package url {:?}: {:#}", pkg_url, anyhow!(e));
+                error
+            })?;
+            fx_log_info!("resolved {} to {} with base pin", pkg_url, blob);
+            return Ok(dir);
+        }
+
+        // Rewrite the url.
+        let rewritten_url =
+            rewrite_url(&self.rewriter, &pkg_url).await.map_err(|e| e.to_resolve_error())?;
+        let _package_inspect = package_inspect.rewritten_url(&rewritten_url);
+
+        // Fetch from TUF.
+        let queued_fetch = self.queue.push(rewritten_url.clone(), ());
+        let pkg_or_status = match queued_fetch.await.expect("expected queue to be open") {
+            Ok(v) => Ok(v),
+            Err(e) => self.handle_cache_fallbacks(e, &pkg_url, &rewritten_url).await,
+        };
+
+        let err_str = match pkg_or_status {
+            Ok(_) => "no error".to_string(),
+            Err(ref e) => e.to_string(),
+        };
+        trace::duration_end!("app", "resolve", "status" => err_str.as_str());
+        pkg_or_status
+    }
+}
+
+impl QueuedResolver {
     /// Creates an unbounded queue that will resolve up to `max_concurrency`
     /// packages at once.
     pub fn new(
-        cache: pkg::cache::Client,
+        cache_client: pkg::cache::Client,
         base_package_index: Arc<BasePackageIndex>,
         system_cache_list: Arc<CachePackages>,
         repo_manager: Arc<AsyncRwLock<RepositoryManager>>,
@@ -58,62 +117,161 @@ impl PackageFetcher {
         blob_fetcher: BlobFetcher,
         max_concurrency: usize,
         inspect: Arc<ResolverServiceInspectState>,
-    ) -> (impl Future<Output = ()>, PackageFetcher) {
-        let (package_fetch_queue, package_fetcher) =
-            work_queue::work_queue(max_concurrency, move |url: PkgUrl, _: ()| {
-                let cache = cache.clone();
-                let base_package_index = Arc::clone(&base_package_index);
-                let system_cache_list = Arc::clone(&system_cache_list);
+    ) -> (impl Future<Output = ()>, Self) {
+        let cache = cache_client.clone();
+        let (package_fetch_queue, queue) =
+            work_queue::work_queue(max_concurrency, move |rewritten_url: PkgUrl, _: ()| {
+                let cache = cache_client.clone();
                 let repo_manager = Arc::clone(&repo_manager);
-                let rewriter = Arc::clone(&rewriter);
                 let blob_fetcher = blob_fetcher.clone();
-                let inspect = Arc::clone(&inspect);
                 async move {
-                    Ok(package_from_base_or_repo_or_cache(
-                        &repo_manager,
-                        &rewriter,
-                        &base_package_index,
-                        &system_cache_list,
-                        &url,
-                        cache,
-                        blob_fetcher,
-                        &inspect,
-                    )
-                    .await?)
+                    Ok(package_from_repo(&repo_manager, &rewritten_url, cache, blob_fetcher)
+                        .await
+                        .map_err(Arc::new)?)
                 }
             });
-        (package_fetch_queue.into_future(), PackageFetcher(package_fetcher))
+        let fetcher =
+            Self { queue, inspect, base_package_index, cache, rewriter, system_cache_list };
+        (package_fetch_queue.into_future(), fetcher)
     }
 
-    /// Creates a mocked PackageFetcher that resolves any url using the given callback.
-    #[cfg(test)]
-    pub fn new_mock<W, F>(callback: W) -> Self
+    async fn handle_cache_fallbacks(
+        &self,
+        error: Arc<GetPackageError>,
+        pkg_url: &PkgUrl,
+        rewritten_url: &PkgUrl,
+    ) -> Result<PackageDirectory, pkg::ResolveError> {
+        // NB: Combination of {:#} formatting applied to an `anyhow::Error` allows to print the
+        // display impls of all the source errors.
+
+        let error_clone = error.clone();
+        // Declare an error to extend lifetime of errors generated inside match.
+        let outer_error;
+        let maybe_package: Result<PackageDirectory, &GetPackageError> = match &*error {
+            Cache(MerkleFor(NotFound)) => {
+                // If we can get metadata but the repo doesn't know about the package,
+                // it shouldn't be in the cache, BUT some SDK customers currently rely on this
+                // behavior.
+                // TODO(fxbug.dev/50764): remove this behavior.
+                match missing_cache_package_disk_fallback(
+                    &rewritten_url,
+                    pkg_url,
+                    &self.system_cache_list,
+                    &self.inspect,
+                ) {
+                    Some(blob) => match self.cache.open(blob).await {
+                        Ok(pkg) => {
+                            fx_log_info!(
+                                "resolved {} as {} to {} with cache_packages due to {:#}",
+                                pkg_url,
+                                rewritten_url,
+                                blob,
+                                anyhow!(error)
+                            );
+                            Ok(pkg)
+                        }
+                        Err(open_error) => {
+                            outer_error = Into::into(open_error);
+                            Err(&outer_error)
+                        }
+                    },
+                    None => Err(&error),
+                }
+            }
+            RepoNotFound(..)
+            | OpenRepo(..)
+            | Cache(Fidl(..))
+            | Cache(ListNeeds(..))
+            | Cache(MerkleFor(FetchTargetDescription(..)))
+            | Cache(MerkleFor(InvalidTargetPath(..)))
+            | Cache(MerkleFor(NoCustomMetadata))
+            | Cache(MerkleFor(SerdeError(..))) => {
+                // If we couldn't get TUF metadata, we might not have networking. Check in
+                // system/data/cache_packages (not to be confused with pkg-cache). The
+                // cache_packages manifest pkg URLs are for fuchsia.com, so do not use the
+                // rewritten URL.
+                match hash_from_cache_packages_manifest(&pkg_url, &self.system_cache_list) {
+                    Some(blob) => match self.cache.open(blob).await {
+                        Ok(pkg) => {
+                            fx_log_info!(
+                                "resolved {} as {} to {} with cache_packages due to {:#}",
+                                pkg_url,
+                                rewritten_url,
+                                blob,
+                                anyhow!(error)
+                            );
+                            Ok(pkg)
+                        }
+                        Err(open_error) => {
+                            outer_error = Into::into(open_error);
+                            Err(&outer_error)
+                        }
+                    },
+                    None => Err(&error),
+                }
+            }
+            OpenPackage(..)
+            | Cache(FetchContentBlob(..))
+            | Cache(FetchMetaFar(..))
+            | Cache(Get(_)) => {
+                // We could talk to TUF and we know there's a new version of this package,
+                // but we coldn't retrieve its blobs for some reason. Refuse to fall back to
+                // cache_packages and instead return an error for the resolve, which is consistent
+                // with the path for packages which are not in cache_packages.
+                //
+                // We don't use cache_packages in production, and when developers resolve a package
+                // on a bench they expect the newest version, or a failure. cache_packages are great
+                // for running packages before networking is up, but for these two error conditions,
+                // we know we have networking because we could talk to TUF.
+                Err(&error)
+            }
+        };
+        maybe_package.map_err(|e| {
+            fx_log_warn!(
+                "error resolving {} as {}: {:#}",
+                pkg_url,
+                rewritten_url,
+                anyhow!(error_clone)
+            );
+            e.to_resolve_error()
+        })
+    }
+}
+
+#[derive(Clone, Debug)]
+#[cfg(test)]
+/// Creates a mocked PackageResolver that resolves any url using the given callback.
+pub struct MockResolver {
+    queue: work_queue::WorkSender<PkgUrl, (), Result<PackageDirectory, Arc<GetPackageError>>>,
+}
+
+#[cfg(test)]
+impl MockResolver {
+    pub fn new<W, F>(callback: W) -> Self
     where
         W: Fn(PkgUrl) -> F + Send + 'static,
-        F: Future<Output = Result<PackageDirectory, pkg::ResolveError>> + Send,
+        F: Future<Output = Result<PackageDirectory, Arc<GetPackageError>>> + Send,
     {
-        let (package_fetch_queue, package_fetcher) =
+        let (package_fetch_queue, queue) =
             work_queue::work_queue(1, move |url, _: ()| callback(url));
         fuchsia_async::Task::spawn(package_fetch_queue.into_future()).detach();
-        Self(package_fetcher)
+        Self { queue }
     }
+}
 
-    /// Enqueue the given package to be resolved, or attach to an existing
-    /// resolution of the same URL.
-    pub fn push(
-        &self,
-        key: PkgUrl,
-        context: (),
-    ) -> impl Future<Output = Result<Result<PackageDirectory, pkg::ResolveError>, work_queue::Closed>>
-    {
-        self.0.push(key, context)
+#[cfg(test)]
+#[async_trait]
+impl Resolver for MockResolver {
+    async fn resolve(&self, url: PkgUrl) -> Result<PackageDirectory, pkg::ResolveError> {
+        let queued_fetch = self.queue.push(url, ());
+        queued_fetch.await.expect("expected queue to be open").map_err(|e| e.to_resolve_error())
     }
 }
 
 pub async fn run_resolver_service(
     repo_manager: Arc<AsyncRwLock<RepositoryManager>>,
     rewriter: Arc<AsyncRwLock<RewriteManager>>,
-    package_fetcher: PackageFetcher,
+    package_resolver: QueuedResolver,
     base_package_index: Arc<BasePackageIndex>,
     system_cache_list: Arc<CachePackages>,
     stream: PackageResolverRequestStream,
@@ -122,76 +280,71 @@ pub async fn run_resolver_service(
 ) -> Result<(), Error> {
     stream
         .map_err(anyhow::Error::new)
-        .try_for_each_concurrent(None, |event| {
-            async {
-                let mut cobalt_sender = cobalt_sender.clone();
-                match event {
-                    PackageResolverRequest::Resolve {
-                        package_url,
-                        dir,
-                        responder,
-                    } => {
-                        let start_time = Instant::now();
-                        let response = resolve_and_reopen(&package_fetcher, package_url.clone(), dir).await;
+        .try_for_each_concurrent(None, |event| async {
+            let mut cobalt_sender = cobalt_sender.clone();
+            match event {
+                PackageResolverRequest::Resolve { package_url, dir, responder } => {
+                    let start_time = Instant::now();
+                    let response =
+                        resolve_and_reopen(&package_resolver, package_url.clone(), dir).await;
 
-                        cobalt_sender.log_event_count(
-                            metrics::RESOLVE_STATUS_METRIC_ID,
-                            (
-                                resolve_result_to_resolve_status_code(&response),
-                            ),
-                            0,
-                            1,
-                        );
+                    cobalt_sender.log_event_count(
+                        metrics::RESOLVE_STATUS_METRIC_ID,
+                        (resolve_result_to_resolve_status_code(&response),),
+                        0,
+                        1,
+                    );
 
-                        cobalt_sender.log_elapsed_time(
-                            metrics::RESOLVE_DURATION_METRIC_ID,
-                            (
-                                resolve_result_to_resolve_duration_code(&response),
-                                metrics::ResolveDurationMetricDimensionResolverType::Regular,
-                            ),
-                            Instant::now().duration_since(start_time).as_micros() as i64,
-                        );
-                        responder
-                            .send(&mut response.map_err(|status| status.into()))
-                            .with_context(
-                                || format!(
-                                    "sending fuchsia.pkg/PackageResolver.Resolve response for {:?}",
-                                    package_url
+                    cobalt_sender.log_elapsed_time(
+                        metrics::RESOLVE_DURATION_METRIC_ID,
+                        (
+                            resolve_result_to_resolve_duration_code(&response),
+                            metrics::ResolveDurationMetricDimensionResolverType::Regular,
+                        ),
+                        Instant::now().duration_since(start_time).as_micros() as i64,
+                    );
+                    responder.send(&mut response.map_err(|status| status.into())).with_context(
+                        || {
+                            format!(
+                                "sending fuchsia.pkg/PackageResolver.Resolve response for {:?}",
+                                package_url
+                            )
+                        },
+                    )?;
+                    Ok(())
+                }
+
+                PackageResolverRequest::GetHash { package_url, responder } => {
+                    match get_hash(
+                        &rewriter,
+                        &repo_manager,
+                        &base_package_index,
+                        &system_cache_list,
+                        &package_url.url,
+                        &inspect,
+                    )
+                    .await
+                    {
+                        Ok(blob_id) => {
+                            responder.send(&mut Ok(blob_id.into())).with_context(|| {
+                                format!(
+                                    "sending fuchsia.pkg/PackageResolver.GetHash success \
+                                         response for {:?}",
+                                    package_url.url
                                 )
-                            )?;
-                        Ok(())
-                    }
-
-                    PackageResolverRequest::GetHash { package_url, responder } => {
-                        match get_hash(
-                            &rewriter,
-                            &repo_manager,
-                            &base_package_index,
-                            &system_cache_list,
-                            &package_url.url,
-                            &inspect,
-                        )
-                        .await
-                        {
-                            Ok(blob_id) => {
-                                responder.send(&mut Ok(blob_id.into())).with_context(
-                                    || format!(
-                                        "sending fuchsia.pkg/PackageResolver.GetHash success response for {:?}",
-                                        package_url.url
-                                        )
-                                    )?;
-                            }
-                            Err(status) => {
-                                responder.send(&mut Err(status.into_raw())).with_context(
-                                    || format!(
-                                        "sending fuchsia.pkg/PackageResolver.GetHash failure response for {:?}",
-                                        package_url.url
-                                    )
-                                )?;
-                            }
+                            })?;
                         }
-                        Ok(())
+                        Err(status) => {
+                            responder.send(&mut Err(status.into_raw())).with_context(|| {
+                                format!(
+                                    "sending fuchsia.pkg/PackageResolver.GetHash failure \
+                                         response for {:?}",
+                                    package_url.url
+                                )
+                            })?;
+                        }
                     }
+                    Ok(())
                 }
             }
         })
@@ -226,11 +379,6 @@ fn missing_cache_package_disk_fallback(
         inspect.cache_fallback_due_to_not_found();
     }
     possible_fallback
-}
-
-enum PackageSource<TufError> {
-    Tuf(BlobId, PackageDirectory),
-    SystemImageCachePackages(BlobId, PackageDirectory, TufError),
 }
 
 enum HashSource<TufError> {
@@ -315,117 +463,22 @@ async fn hash_from_repo_or_cache(
     }
 }
 
-async fn package_from_base_or_repo_or_cache(
+async fn package_from_repo(
     repo_manager: &AsyncRwLock<RepositoryManager>,
-    rewriter: &AsyncRwLock<RewriteManager>,
-    base_package_index: &BasePackageIndex,
-    system_cache_list: &CachePackages,
-    pkg_url: &PkgUrl,
-    cache: pkg::cache::Client,
-    blob_fetcher: BlobFetcher,
-    inspect: &ResolverServiceInspectState,
-) -> Result<PackageDirectory, pkg::ResolveError> {
-    let package_inspect = inspect.resolve(pkg_url);
-    if let Some(blob) = base_package_index.is_unpinned_base_package(pkg_url) {
-        fx_log_info!("resolved {} to {} with base pin", pkg_url, blob);
-        let dir = cache.open(blob).await.map_err(|e| {
-            let error = e.to_resolve_error();
-            fx_log_err!("failed to open base package url {:?}: {:#}", pkg_url, anyhow!(e));
-            error
-        })?;
-        return Ok(dir);
-    }
-
-    let rewritten_url = rewrite_url(rewriter, &pkg_url).await.map_err(|e| e.to_resolve_error())?;
-    let _package_inspect = package_inspect.rewritten_url(&rewritten_url);
-    package_from_repo_or_cache(
-        repo_manager,
-        system_cache_list,
-        pkg_url,
-        &rewritten_url,
-        cache,
-        blob_fetcher,
-        inspect,
-    )
-    .await
-    .map_err(|e| {
-        let error = e.to_resolve_error();
-        fx_log_warn!("error resolving {} as {}: {:#}", pkg_url, rewritten_url, anyhow!(e));
-        error
-    })
-    .map(|hash| match hash {
-        PackageSource::Tuf(blob, pkg) => {
-            fx_log_info!("resolved {} as {} to {} with TUF", pkg_url, rewritten_url, blob);
-            pkg
-        }
-        PackageSource::SystemImageCachePackages(blob, pkg, tuf_err) => {
-            fx_log_info!(
-                "resolved {} as {} to {} with cache_packages due to {:#}",
-                pkg_url,
-                rewritten_url,
-                blob,
-                anyhow!(tuf_err)
-            );
-            pkg
-        }
-    })
-}
-
-async fn package_from_repo_or_cache(
-    repo_manager: &AsyncRwLock<RepositoryManager>,
-    system_cache_list: &CachePackages,
-    pkg_url: &PkgUrl,
     rewritten_url: &PkgUrl,
     cache: pkg::cache::Client,
     blob_fetcher: BlobFetcher,
-    inspect_state: &ResolverServiceInspectState,
-) -> Result<PackageSource<GetPackageError>, GetPackageError> {
+) -> Result<PackageDirectory, GetPackageError> {
     // The RwLock created by `.read()` must not exist across the `.await` (to e.g. prevent
     // deadlock). Rust temporaries are kept alive for the duration of the innermost enclosing
     // statement, so the following two lines should not be combined.
     let fut = repo_manager.read().await.get_package(&rewritten_url, &cache, &blob_fetcher);
     match fut.await {
-        Ok((b, dir)) => Ok(PackageSource::Tuf(b, dir)),
-        Err(e @ Cache(MerkleFor(NotFound))) => {
-            // If we can get metadata but the repo doesn't know about the package,
-            // it shouldn't be in the cache, BUT some SDK customers currently rely on this behavior.
-            // TODO(fxbug.dev/50764): remove this behavior.
-            match missing_cache_package_disk_fallback(
-                &rewritten_url,
-                pkg_url,
-                system_cache_list,
-                inspect_state,
-            ) {
-                Some(blob) => {
-                    let dir = cache.open(blob).await?;
-                    Ok(PackageSource::SystemImageCachePackages(blob, dir, e))
-                }
-                None => Err(e),
-            }
+        Ok((blob, dir)) => {
+            fx_log_info!("resolved {} to {} with TUF", rewritten_url, blob);
+            Ok(dir)
         }
-        Err(e @ RepoNotFound(..))
-        | Err(e @ OpenRepo(..))
-        | Err(e @ Cache(Fidl(..)))
-        | Err(e @ Cache(ListNeeds(..)))
-        | Err(e @ Cache(MerkleFor(FetchTargetDescription(..))))
-        | Err(e @ Cache(MerkleFor(InvalidTargetPath(..))))
-        | Err(e @ Cache(MerkleFor(NoCustomMetadata)))
-        | Err(e @ Cache(MerkleFor(SerdeError(..)))) => {
-            // If we couldn't get TUF metadata, we might not have networking. Check in
-            // system/data/cache_packages (not to be confused with pkg-cache). The cache_packages
-            // manifest pkg URLs are for fuchsia.com, so do not use the rewritten URL.
-            match hash_from_cache_packages_manifest(&pkg_url, system_cache_list) {
-                Some(blob) => {
-                    let dir = cache.open(blob).await?;
-                    Ok(PackageSource::SystemImageCachePackages(blob, dir, e))
-                }
-                None => Err(e),
-            }
-        }
-        Err(e @ OpenPackage(..))
-        | Err(e @ Cache(FetchContentBlob(..)))
-        | Err(e @ Cache(FetchMetaFar(..)))
-        | Err(e @ Cache(Get(_))) => {
+        Err(e) => {
             // We could talk to TUF and we know there's a new version of this package,
             // but we coldn't retrieve its blobs for some reason. Refuse to fall back to
             // cache_packages and instead return an error for the resolve, which is consistent with
@@ -507,39 +560,18 @@ async fn get_hash(
         inspect_state,
     )
     .await;
-    trace::duration_end!("app", "get-hash", "status" => hash_or_status.err().unwrap_or(Status::OK).to_string().as_str());
+    trace::duration_end!("app", "get-hash",
+        "status" => hash_or_status.err().unwrap_or(Status::OK).to_string().as_str());
     hash_or_status
 }
 
-pub async fn resolve(
-    package_fetcher: &PackageFetcher,
-    pkg_url: PkgUrl,
-) -> Result<PackageDirectory, pkg::ResolveError> {
-    trace::duration_begin!("app", "resolve", "url" => pkg_url.to_string().as_str());
-    // While the fuchsia-pkg:// spec allows resource paths, the package resolver should not be
-    // given one.
-    if pkg_url.resource().is_some() {
-        fx_log_err!("package url should not contain a resource name: {}", pkg_url);
-        return Err(pkg::ResolveError::InvalidUrl);
-    }
-
-    let queued_fetch = package_fetcher.push(pkg_url, ());
-    let pkg_or_status = queued_fetch.await.expect("expected queue to be open");
-    let err_str = match pkg_or_status {
-        Ok(_) => "no error".to_string(),
-        Err(ref e) => e.to_string(),
-    };
-    trace::duration_end!("app", "resolve", "status" => err_str.as_str());
-    pkg_or_status
-}
-
 async fn resolve_and_reopen(
-    package_fetcher: &PackageFetcher,
+    package_resolver: &QueuedResolver,
     url: String,
     dir_request: ServerEnd<fio::DirectoryMarker>,
 ) -> Result<(), pkg::ResolveError> {
     let pkg_url = PkgUrl::parse(&url).map_err(|e| handle_bad_package_url_error(e, &url))?;
-    let pkg = resolve(package_fetcher, pkg_url.clone()).await?;
+    let pkg = package_resolver.resolve(pkg_url.clone()).await?;
 
     pkg.reopen(dir_request).map_err(|clone_err| {
         fx_log_err!("failed to open package url {:?}: {:#}", pkg_url, anyhow!(clone_err));
@@ -550,7 +582,7 @@ async fn resolve_and_reopen(
 /// Run a service that only resolves registered font packages.
 pub async fn run_font_resolver_service(
     font_package_manager: Arc<FontPackageManager>,
-    package_fetcher: PackageFetcher,
+    package_resolver: QueuedResolver,
     stream: FontResolverRequestStream,
     cobalt_sender: CobaltSender,
 ) -> Result<(), Error> {
@@ -562,7 +594,7 @@ pub async fn run_font_resolver_service(
             let start_time = Instant::now();
             let response = resolve_font(
                 &font_package_manager,
-                &package_fetcher,
+                &package_resolver,
                 package_url,
                 directory_request,
                 cobalt_sender.clone(),
@@ -596,7 +628,7 @@ pub async fn run_font_resolver_service(
 /// Resolve a single font package.
 async fn resolve_font<'a>(
     font_package_manager: &'a Arc<FontPackageManager>,
-    package_fetcher: &'a PackageFetcher,
+    package_resolver: &'a QueuedResolver,
     package_url: String,
     directory_request: ServerEnd<fio::DirectoryMarker>,
     mut cobalt_sender: CobaltSender,
@@ -615,7 +647,7 @@ async fn resolve_font<'a>(
         1,
     );
     if is_font_package {
-        resolve_and_reopen(&package_fetcher, package_url, directory_request).await
+        resolve_and_reopen(&package_resolver, package_url, directory_request).await
     } else {
         fx_log_err!("font resolver asked to resolve non-font package: {}", package_url);
         Err(pkg::ResolveError::PackageNotFound)
