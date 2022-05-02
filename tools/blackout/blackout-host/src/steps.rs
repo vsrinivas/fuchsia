@@ -6,6 +6,7 @@
 
 use {
     crate::{BlackoutError, RebootError, Seed},
+    async_trait::async_trait,
     ffx_isolate,
     std::{
         fs::OpenOptions,
@@ -43,17 +44,18 @@ fn hard_reboot(dev: impl AsRef<Path>) -> Result<(), RebootError> {
     Ok(())
 }
 
-trait Runner {
+#[async_trait]
+trait Runner: Send + Sync {
     /// Run a subcommand of the originally provided binary on the target. The command is spawned as
     /// a separate process, and a reference to the child process is returned. stdout and stderr are
     /// piped (see [`std::process::Stdio::piped()`] for details).
     fn run_spawn(&self, subc: &str) -> Result<Child, BlackoutError>;
 
     /// Run a subcommand to completion and collect the output from the process.
-    fn run_output(&self, subc: &str) -> Result<Output, BlackoutError>;
+    async fn run_output(&self, subc: &str) -> Result<Output, BlackoutError>;
 
     /// Run a subcommand to completion but throw out the output.
-    fn run(&self, subc: &str) -> Result<(), BlackoutError>;
+    async fn run(&self, subc: &str) -> Result<(), BlackoutError>;
 }
 
 struct FfxRunner {
@@ -71,8 +73,8 @@ impl FfxRunner {
         bin: &str,
         seed: Seed,
         block_device: &str,
-    ) -> Box<dyn Runner> {
-        Box::new(FfxRunner {
+    ) -> Arc<dyn Runner> {
+        Arc::new(FfxRunner {
             ffx,
             target: target.to_string(),
             bin: bin.to_string(),
@@ -95,6 +97,7 @@ impl FfxRunner {
     }
 }
 
+#[async_trait]
 impl Runner for FfxRunner {
     fn run_spawn(&self, subc: &str) -> Result<Child, BlackoutError> {
         let child =
@@ -102,32 +105,43 @@ impl Runner for FfxRunner {
 
         Ok(child)
     }
-    fn run_output(&self, subc: &str) -> Result<Output, BlackoutError> {
-        let out = self.run_bin().arg(subc).output()?;
-        if out.status.success() {
-            Ok(out)
-        } else if out.status.code().unwrap() == VERIFICATION_FAILURE_EXIT_CODE {
-            Err(BlackoutError::Verification(out.into()))
-        } else {
-            Err(BlackoutError::TargetCommand(out.into()))
-        }
+
+    async fn run_output(&self, subc: &str) -> Result<Output, BlackoutError> {
+        let mut cmd = self.run_bin();
+        cmd.arg(subc);
+        // std::process::Command is sync, so we need to get this off the main async thread.
+        // isolated_ffx has a function that does this but we need to do it ourselves so we can get
+        // at the exit code.
+        fuchsia_async::unblock(move || {
+            let out = cmd.output()?;
+            if out.status.success() {
+                Ok(out)
+            } else if out.status.code().unwrap() == VERIFICATION_FAILURE_EXIT_CODE {
+                Err(BlackoutError::Verification(out.into()))
+            } else {
+                Err(BlackoutError::TargetCommand(out.into()))
+            }
+        })
+        .await
     }
-    fn run(&self, subc: &str) -> Result<(), BlackoutError> {
-        self.run_output(subc).map(|_| ())
+
+    async fn run(&self, subc: &str) -> Result<(), BlackoutError> {
+        self.run_output(subc).await.map(|_| ())
     }
 }
 
 /// A step for a test to take. These steps can be added to the test runner in the root of the host
 /// library.
+#[async_trait]
 pub trait TestStep {
     /// Execute this test step.
-    fn execute(&self) -> Result<(), BlackoutError>;
+    async fn execute(&self) -> Result<(), BlackoutError>;
 }
 
 /// A test step for setting up the filesystem in the way we want it for the test. This executes the
 /// `setup` subcommand on the target binary and waits for completion, checking the result.
 pub struct SetupStep {
-    runner: Box<dyn Runner>,
+    runner: Arc<dyn Runner>,
 }
 
 impl SetupStep {
@@ -143,17 +157,18 @@ impl SetupStep {
     }
 }
 
+#[async_trait]
 impl TestStep for SetupStep {
-    fn execute(&self) -> Result<(), BlackoutError> {
+    async fn execute(&self) -> Result<(), BlackoutError> {
         println!("setting up test...");
-        self.runner.run("setup")
+        self.runner.run("setup").await
     }
 }
 
 /// A test step for generating load on a filesystem. This executes the `test` subcommand on the
 /// target binary and then checks to make sure it didn't exit after `duration`.
 pub struct LoadStep {
-    runner: Box<dyn Runner>,
+    runner: Arc<dyn Runner>,
     duration: Duration,
 }
 
@@ -171,12 +186,13 @@ impl LoadStep {
     }
 }
 
+#[async_trait]
 impl TestStep for LoadStep {
-    fn execute(&self) -> Result<(), BlackoutError> {
+    async fn execute(&self) -> Result<(), BlackoutError> {
         println!("generating filesystem load...");
         let mut child = self.runner.run_spawn("test")?;
 
-        sleep(self.duration);
+        fuchsia_async::Timer::new(self.duration).await;
 
         // make sure child process is still running
         if let Some(_) = child.try_wait()? {
@@ -191,7 +207,7 @@ impl TestStep for LoadStep {
 /// A test step for running an operation to completion. This executes the `test` subcommand and waits
 /// for completion, checking the result.
 pub struct OperationStep {
-    runner: Box<dyn Runner>,
+    runner: Arc<dyn Runner>,
 }
 
 impl OperationStep {
@@ -207,10 +223,11 @@ impl OperationStep {
     }
 }
 
+#[async_trait]
 impl TestStep for OperationStep {
-    fn execute(&self) -> Result<(), BlackoutError> {
+    async fn execute(&self) -> Result<(), BlackoutError> {
         println!("running filesystem operation...");
-        self.runner.run("test")
+        self.runner.run("test").await
     }
 }
 
@@ -232,8 +249,9 @@ impl RebootStep {
     }
 }
 
+#[async_trait]
 impl TestStep for RebootStep {
-    fn execute(&self) -> Result<(), BlackoutError> {
+    async fn execute(&self) -> Result<(), BlackoutError> {
         println!("rebooting device...");
         match &self.reboot_type {
             RebootType::Software => {
@@ -249,7 +267,7 @@ impl TestStep for RebootStep {
 /// A test step for verifying the machine. This executes the `verify` subcommand on the target binary
 /// and waits for completion, checking the result.
 pub struct VerifyStep {
-    runner: Box<dyn Runner>,
+    runner: Arc<dyn Runner>,
     num_retries: u32,
     retry_timeout: Duration,
 }
@@ -275,13 +293,14 @@ impl VerifyStep {
     }
 }
 
+#[async_trait]
 impl TestStep for VerifyStep {
-    fn execute(&self) -> Result<(), BlackoutError> {
+    async fn execute(&self) -> Result<(), BlackoutError> {
         let mut last_error = Ok(());
         let start_time = std::time::Instant::now();
         for i in 1..self.num_retries + 1 {
             println!("verifying device...(attempt #{})", i);
-            match self.runner.run("verify") {
+            match self.runner.run("verify").await {
                 Ok(()) => {
                     println!("verification successful.");
                     return Ok(());
@@ -291,7 +310,7 @@ impl TestStep for VerifyStep {
                     // always print out the error so it doesn't get buried to help with debugging.
                     println!("{}", e);
                     last_error = Err(e);
-                    sleep(self.retry_timeout);
+                    fuchsia_async::Timer::new(self.retry_timeout).await;
                 }
             }
         }
@@ -306,56 +325,60 @@ impl TestStep for VerifyStep {
 mod tests {
     use super::{OperationStep, Runner, SetupStep, TestStep, VerifyStep};
     use crate::{BlackoutError, CommandError};
-    use std::{
-        cell::Cell,
-        os::unix::process::ExitStatusExt,
-        process::{Child, ExitStatus, Output},
-        rc::Rc,
-        time::Duration,
+    use {
+        async_trait::async_trait,
+        fuchsia_async as fasync,
+        std::{
+            os::unix::process::ExitStatusExt,
+            process::{Child, ExitStatus, Output},
+            sync::{Arc, Mutex},
+            time::Duration,
+        },
     };
 
     struct FakeRunner<F>
     where
-        F: Fn() -> Result<(), BlackoutError>,
+        F: Fn() -> Result<(), BlackoutError> + Send + Sync,
     {
         command: &'static str,
         res: F,
     }
     impl<F> FakeRunner<F>
     where
-        F: Fn() -> Result<(), BlackoutError>,
+        F: Fn() -> Result<(), BlackoutError> + Send + Sync,
     {
         pub fn new(command: &'static str, res: F) -> FakeRunner<F> {
             FakeRunner { command, res }
         }
     }
+    #[async_trait]
     impl<F> Runner for FakeRunner<F>
     where
-        F: Fn() -> Result<(), BlackoutError>,
+        F: Fn() -> Result<(), BlackoutError> + Send + Sync,
     {
         fn run_spawn(&self, _subc: &str) -> Result<Child, BlackoutError> {
             unimplemented!()
         }
-        fn run_output(&self, _subc: &str) -> Result<Output, BlackoutError> {
+        async fn run_output(&self, _subc: &str) -> Result<Output, BlackoutError> {
             unimplemented!()
         }
-        fn run(&self, subc: &str) -> Result<(), BlackoutError> {
+        async fn run(&self, subc: &str) -> Result<(), BlackoutError> {
             assert_eq!(subc, self.command);
             (self.res)()
         }
     }
 
-    #[test]
-    fn setup_success() {
-        let step = SetupStep { runner: Box::new(FakeRunner::new("setup", || Ok(()))) };
-        match step.execute() {
+    #[fasync::run_singlethreaded(test)]
+    async fn setup_success() {
+        let step = SetupStep { runner: Arc::new(FakeRunner::new("setup", || Ok(()))) };
+        match step.execute().await {
             Ok(()) => (),
             _ => panic!("setup step returned an error on a successful run"),
         }
     }
 
-    #[test]
-    fn setup_error() {
+    #[fasync::run_singlethreaded(test)]
+    async fn setup_error() {
         let error = || {
             Err(BlackoutError::TargetCommand(CommandError(
                 ExitStatus::from_raw(1),
@@ -363,25 +386,25 @@ mod tests {
                 "(fake stderr)".into(),
             )))
         };
-        let step = SetupStep { runner: Box::new(FakeRunner::new("setup", error)) };
-        match step.execute() {
+        let step = SetupStep { runner: Arc::new(FakeRunner::new("setup", error)) };
+        match step.execute().await {
             Err(BlackoutError::TargetCommand(_)) => (),
             Ok(()) => panic!("setup step returned success when runner failed"),
             _ => panic!("setup step returned an unexpected error"),
         }
     }
 
-    #[test]
-    fn operation_success() {
-        let step = OperationStep { runner: Box::new(FakeRunner::new("test", || Ok(()))) };
-        match step.execute() {
+    #[fasync::run_singlethreaded(test)]
+    async fn operation_success() {
+        let step = OperationStep { runner: Arc::new(FakeRunner::new("test", || Ok(()))) };
+        match step.execute().await {
             Ok(()) => (),
             _ => panic!("operation step returned an error on a successful run"),
         }
     }
 
-    #[test]
-    fn operation_error() {
+    #[fasync::run_singlethreaded(test)]
+    async fn operation_error() {
         let error = || {
             Err(BlackoutError::TargetCommand(CommandError(
                 ExitStatus::from_raw(1),
@@ -389,29 +412,29 @@ mod tests {
                 "(fake stderr)".into(),
             )))
         };
-        let step = OperationStep { runner: Box::new(FakeRunner::new("test", error)) };
-        match step.execute() {
+        let step = OperationStep { runner: Arc::new(FakeRunner::new("test", error)) };
+        match step.execute().await {
             Err(BlackoutError::TargetCommand(_)) => (),
             Ok(()) => panic!("operation step returned success when runner failed"),
             _ => panic!("operation step returned an unexpected error"),
         }
     }
 
-    #[test]
-    fn verify_success() {
+    #[fasync::run_singlethreaded(test)]
+    async fn verify_success() {
         let step = VerifyStep {
-            runner: Box::new(FakeRunner::new("verify", || Ok(()))),
+            runner: Arc::new(FakeRunner::new("verify", || Ok(()))),
             num_retries: 10,
             retry_timeout: Duration::from_secs(0),
         };
-        match step.execute() {
+        match step.execute().await {
             Ok(()) => (),
             _ => panic!("verify step returned an error on a successful run"),
         }
     }
 
-    #[test]
-    fn verify_error() {
+    #[fasync::run_singlethreaded(test)]
+    async fn verify_error() {
         let error = || {
             Err(BlackoutError::Verification(CommandError(
                 ExitStatus::from_raw(1),
@@ -420,23 +443,24 @@ mod tests {
             )))
         };
         let step = VerifyStep {
-            runner: Box::new(FakeRunner::new("verify", error)),
+            runner: Arc::new(FakeRunner::new("verify", error)),
             num_retries: 10,
             retry_timeout: Duration::from_secs(0),
         };
-        match step.execute() {
+        match step.execute().await {
             Err(BlackoutError::Verification(_)) => (),
             Ok(()) => panic!("verify step returned success when runner failed"),
             _ => panic!("verify step returned an unexpected error"),
         }
     }
 
-    #[test]
-    fn verify_ssh_error_retry_loop_timeout() {
-        let outer_attempts = Rc::new(Cell::new(0));
+    #[fasync::run_singlethreaded(test)]
+    async fn verify_ssh_error_retry_loop_timeout() {
+        let outer_attempts = Arc::new(Mutex::new(0));
         let attempts = outer_attempts.clone();
         let error = move || {
-            attempts.set(attempts.get() + 1);
+            let mut attempts = attempts.lock().unwrap();
+            *attempts += 1;
             Err(BlackoutError::TargetCommand(CommandError(
                 ExitStatus::from_raw(255),
                 "(fake stdout)".into(),
@@ -444,25 +468,27 @@ mod tests {
             )))
         };
         let step = VerifyStep {
-            runner: Box::new(FakeRunner::new("verify", error)),
+            runner: Arc::new(FakeRunner::new("verify", error)),
             num_retries: 10,
             retry_timeout: Duration::from_secs(0),
         };
-        match step.execute() {
+        match step.execute().await {
             Err(BlackoutError::TargetCommand(..)) => (),
             Ok(()) => panic!("verify step returned success when runner failed"),
             _ => panic!("verify step returned an unexpected error"),
         }
-        assert_eq!(outer_attempts.get(), 10);
+        let outer_attempts = outer_attempts.lock().unwrap();
+        assert_eq!(*outer_attempts, 10);
     }
 
-    #[test]
-    fn verify_ssh_error_retry_loop_success() {
-        let outer_attempts = Rc::new(Cell::new(0));
+    #[fasync::run_singlethreaded(test)]
+    async fn verify_ssh_error_retry_loop_success() {
+        let outer_attempts = Arc::new(Mutex::new(0));
         let attempts = outer_attempts.clone();
         let error = move || {
-            attempts.set(attempts.get() + 1);
-            if attempts.get() <= 5 {
+            let mut attempts = attempts.lock().unwrap();
+            *attempts += 1;
+            if *attempts <= 5 {
                 Err(BlackoutError::TargetCommand(CommandError(
                     ExitStatus::from_raw(255),
                     "(fake stdout)".into(),
@@ -473,17 +499,18 @@ mod tests {
             }
         };
         let step = VerifyStep {
-            runner: Box::new(FakeRunner::new("verify", error)),
+            runner: Arc::new(FakeRunner::new("verify", error)),
             num_retries: 10,
             retry_timeout: Duration::from_secs(0),
         };
-        match step.execute() {
+        match step.execute().await {
             Ok(()) => (),
             Err(BlackoutError::TargetCommand(..)) => {
                 panic!("verify step returned error when runner succeeded")
             }
             _ => panic!("verify step returned an unexpected error"),
         }
-        assert_eq!(outer_attempts.get(), 6);
+        let outer_attempts = outer_attempts.lock().unwrap();
+        assert_eq!(*outer_attempts, 6);
     }
 }

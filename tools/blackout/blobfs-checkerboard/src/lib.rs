@@ -26,6 +26,6 @@ pub async fn blobfs_checkerboard(cmd: BlobfsCheckerboardCommand) -> Result<()> {
         .load_step(Duration::from_secs(30))
         .reboot_step()
         .verify_step(20, Duration::from_secs(5));
-    test.run()?;
+    test.run().await?;
     Ok(())
 }

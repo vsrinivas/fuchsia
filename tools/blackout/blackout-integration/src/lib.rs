@@ -22,7 +22,7 @@ async fn failure() -> Result<()> {
     )
     .await;
     test.setup_step().load_step(Duration::from_secs(1)).verify_step(10, Duration::from_secs(0));
-    match test.run() {
+    match test.run().await {
         Ok(()) => Err(anyhow::anyhow!("got a successful return from a failing test")),
         Err(blackout_host::BlackoutError::Verification(_)) => Ok(()),
         Err(e) => Err(anyhow::anyhow!("got the wrong error from a failing test: {:?}", e)),
@@ -44,7 +44,7 @@ async fn success() -> Result<()> {
     )
     .await;
     test.setup_step().load_step(Duration::from_secs(1)).verify_step(20, Duration::from_secs(15));
-    test.run()?;
+    test.run().await?;
 
     Ok(())
 }
