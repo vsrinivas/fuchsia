@@ -4,10 +4,11 @@
 
 #![cfg(test)]
 
-use fidl_fuchsia_net_stack_ext::FidlReturn as _;
-use fuchsia_async::TimeoutExt as _;
-
 use anyhow::Context as _;
+use assert_matches::assert_matches;
+use fidl_fuchsia_net as fnet;
+use fidl_fuchsia_net_stack_ext::FidlReturn as _;
+use fuchsia_async::{self as fasync, TimeoutExt as _};
 use fuchsia_zircon as zx;
 use futures::{
     io::AsyncReadExt as _, io::AsyncWriteExt as _, FutureExt as _, StreamExt as _,
@@ -27,9 +28,9 @@ use test_case::test_case;
 
 async fn run_udp_socket_test(
     server: &netemul::TestRealm<'_>,
-    server_addr: fidl_fuchsia_net::IpAddress,
+    server_addr: fnet::IpAddress,
     client: &netemul::TestRealm<'_>,
-    client_addr: fidl_fuchsia_net::IpAddress,
+    client_addr: fnet::IpAddress,
 ) {
     let fidl_fuchsia_net_ext::IpAddress(client_addr) =
         fidl_fuchsia_net_ext::IpAddress::from(client_addr);
@@ -39,11 +40,11 @@ async fn run_udp_socket_test(
         fidl_fuchsia_net_ext::IpAddress::from(server_addr);
     let server_addr = std::net::SocketAddr::new(server_addr, 8080);
 
-    let client_sock = fuchsia_async::net::UdpSocket::bind_in_realm(client, client_addr)
+    let client_sock = fasync::net::UdpSocket::bind_in_realm(client, client_addr)
         .await
         .expect("failed to create client socket");
 
-    let server_sock = fuchsia_async::net::UdpSocket::bind_in_realm(server, server_addr)
+    let server_sock = fasync::net::UdpSocket::bind_in_realm(server, server_addr)
         .await
         .expect("failed to create server socket");
 
@@ -64,10 +65,10 @@ async fn run_udp_socket_test(
     let ((), ()) = futures::future::join(client_fut, server_fut).await;
 }
 
-const CLIENT_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.2/24");
-const SERVER_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
-const CLIENT_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:00:00:00:00:02");
-const SERVER_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:00:00:00:00:01");
+const CLIENT_SUBNET: fnet::Subnet = fidl_subnet!("192.168.0.2/24");
+const SERVER_SUBNET: fnet::Subnet = fidl_subnet!("192.168.0.1/24");
+const CLIENT_MAC: fnet::MacAddress = fidl_mac!("02:00:00:00:00:02");
+const SERVER_MAC: fnet::MacAddress = fidl_mac!("02:00:00:00:00:01");
 
 enum UdpProtocol {
     Synchronous,
@@ -135,9 +136,9 @@ async fn test_udp_socket<E: netemul::Endpoint>(name: &str, protocol: UdpProtocol
 
 async fn run_tcp_socket_test(
     server: &netemul::TestRealm<'_>,
-    server_addr: fidl_fuchsia_net::IpAddress,
+    server_addr: fnet::IpAddress,
     client: &netemul::TestRealm<'_>,
-    client_addr: fidl_fuchsia_net::IpAddress,
+    client_addr: fnet::IpAddress,
 ) {
     let fidl_fuchsia_net_ext::IpAddress(client_addr) = client_addr.into();
     let client_addr = std::net::SocketAddr::new(client_addr, 1234);
@@ -149,7 +150,7 @@ async fn run_tcp_socket_test(
     // client and server can read the entire payload in a single `read`.
     const PAYLOAD: &'static str = "Hello World";
 
-    let listener = fuchsia_async::net::TcpListener::listen_in_realm(server, server_addr)
+    let listener = fasync::net::TcpListener::listen_in_realm(server, server_addr)
         .await
         .expect("failed to create server socket");
 
@@ -169,7 +170,7 @@ async fn run_tcp_socket_test(
     };
 
     let client_fut = async {
-        let mut stream = fuchsia_async::net::TcpStream::connect_in_realm(client, server_addr)
+        let mut stream = fasync::net::TcpStream::connect_in_realm(client, server_addr)
             .await
             .expect("failed to create client socket");
 
@@ -237,7 +238,7 @@ async fn test_tcp_socket<E: netemul::Endpoint>(name: &str) {
 async fn install_ip_device(
     realm: &netemul::TestRealm<'_>,
     port: fidl_fuchsia_hardware_network::PortProxy,
-    addrs: impl IntoIterator<Item = fidl_fuchsia_net::Subnet>,
+    addrs: impl IntoIterator<Item = fnet::Subnet>,
 ) -> (
     u64,
     fidl_fuchsia_net_interfaces_ext::admin::Control,
@@ -286,17 +287,15 @@ async fn install_ip_device(
                 fidl_fuchsia_net_interfaces_admin::AddressStateProviderMarker,
             >()
             .expect("create proxy");
-            let fidl_fuchsia_net::Subnet { addr, prefix_len } = &subnet;
+            let fnet::Subnet { addr, prefix_len } = &subnet;
             let mut interface_address = match addr {
-                fidl_fuchsia_net::IpAddress::Ipv4(a) => fidl_fuchsia_net::InterfaceAddress::Ipv4(
-                    fidl_fuchsia_net::Ipv4AddressWithPrefix {
+                fnet::IpAddress::Ipv4(a) => {
+                    fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix {
                         addr: a.clone(),
                         prefix_len: *prefix_len,
-                    },
-                ),
-                fidl_fuchsia_net::IpAddress::Ipv6(a) => {
-                    fidl_fuchsia_net::InterfaceAddress::Ipv6(a.clone())
+                    })
                 }
+                fnet::IpAddress::Ipv6(a) => fnet::InterfaceAddress::Ipv6(a.clone()),
             };
 
             // We're not interested in maintaining the address' lifecycle through
@@ -366,7 +365,7 @@ fn base_ip_device_port_config() -> fidl_fuchsia_net_tun::BasePortConfig {
     }
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fasync::run_singlethreaded(test)]
 async fn test_ip_endpoints_socket() {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let client = sandbox
@@ -409,10 +408,10 @@ async fn test_ip_endpoints_socket() {
     let () = tun_pair.get_right_port(TUN_DEFAULT_PORT_ID, server_req).expect("get_right failed");
 
     // Addresses must be in the same subnet.
-    const SERVER_ADDR_V4: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
-    const SERVER_ADDR_V6: fidl_fuchsia_net::Subnet = fidl_subnet!("2001::1/120");
-    const CLIENT_ADDR_V4: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.2/24");
-    const CLIENT_ADDR_V6: fidl_fuchsia_net::Subnet = fidl_subnet!("2001::2/120");
+    const SERVER_ADDR_V4: fnet::Subnet = fidl_subnet!("192.168.0.1/24");
+    const SERVER_ADDR_V6: fnet::Subnet = fidl_subnet!("2001::1/120");
+    const CLIENT_ADDR_V4: fnet::Subnet = fidl_subnet!("192.168.0.2/24");
+    const CLIENT_ADDR_V6: fnet::Subnet = fidl_subnet!("2001::2/120");
 
     // We install both devices in parallel because a DevicePair will only have
     // its link signal set to up once both sides have sessions attached. This
@@ -432,7 +431,7 @@ async fn test_ip_endpoints_socket() {
     let () = run_udp_socket_test(&server, SERVER_ADDR_V6.addr, &client, CLIENT_ADDR_V6.addr).await;
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
+#[fasync::run_singlethreaded(test)]
 async fn test_ip_endpoint_packets() {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let realm = sandbox
@@ -484,23 +483,17 @@ async fn test_ip_endpoint_packets() {
     // end of the tun device that we'll use to inject frames.
     const PREFIX_V4: u8 = 24;
     const PREFIX_V6: u8 = 120;
-    const ALICE_ADDR_V4: fidl_fuchsia_net::Ipv4Address = fidl_ip_v4!("192.168.0.1");
-    const ALICE_ADDR_V6: fidl_fuchsia_net::Ipv6Address = fidl_ip_v6!("2001::1");
-    const BOB_ADDR_V4: fidl_fuchsia_net::Ipv4Address = fidl_ip_v4!("192.168.0.2");
-    const BOB_ADDR_V6: fidl_fuchsia_net::Ipv6Address = fidl_ip_v6!("2001::2");
+    const ALICE_ADDR_V4: fnet::Ipv4Address = fidl_ip_v4!("192.168.0.1");
+    const ALICE_ADDR_V6: fnet::Ipv6Address = fidl_ip_v6!("2001::1");
+    const BOB_ADDR_V4: fnet::Ipv4Address = fidl_ip_v4!("192.168.0.2");
+    const BOB_ADDR_V6: fnet::Ipv6Address = fidl_ip_v6!("2001::2");
 
     let (_id, _control, _device_control) = install_ip_device(
         &realm,
         port,
         [
-            fidl_fuchsia_net::Subnet {
-                addr: fidl_fuchsia_net::IpAddress::Ipv4(ALICE_ADDR_V4),
-                prefix_len: PREFIX_V4,
-            },
-            fidl_fuchsia_net::Subnet {
-                addr: fidl_fuchsia_net::IpAddress::Ipv6(ALICE_ADDR_V6),
-                prefix_len: PREFIX_V6,
-            },
+            fnet::Subnet { addr: fnet::IpAddress::Ipv4(ALICE_ADDR_V4), prefix_len: PREFIX_V4 },
+            fnet::Subnet { addr: fnet::IpAddress::Ipv6(ALICE_ADDR_V6), prefix_len: PREFIX_V6 },
         ],
     )
     .await;
@@ -595,7 +588,7 @@ async fn test_ip_endpoint_packets() {
             .and_then(|f| {
                 futures::future::ready(f.context("frame stream ended unexpectedly").map(Some))
             })
-            .on_timeout(fuchsia_async::Time::after(zx::Duration::from_millis(50)), || Ok(None))
+            .on_timeout(fasync::Time::after(zx::Duration::from_millis(50)), || Ok(None))
             .await
             .context("failed to read frame")?)
     }
@@ -660,7 +653,7 @@ async fn test_ip_endpoint_packets() {
 
     // Send the same data again, but with an IPv6 frame type, expect that it'll
     // fail parsing and no response will be generated.
-    assert_matches::assert_matches!(
+    assert_matches!(
         write_frame_and_read_with_timeout(
             &tun_dev,
             fidl_fuchsia_net_tun::Frame {
@@ -737,7 +730,7 @@ async fn test_ip_endpoint_packets() {
 
     // Send the same data again, but with an IPv4 frame type, expect that it'll
     // fail parsing and no response will be generated.
-    assert_matches::assert_matches!(
+    assert_matches!(
         write_frame_and_read_with_timeout(
             &tun_dev,
             fidl_fuchsia_net_tun::Frame {
@@ -799,7 +792,7 @@ async fn udpv4_loopback<N: Netstack>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let realm = sandbox.create_netstack_realm::<N, _>(name).expect("failed to create realm");
 
-    const IPV4_LOOPBACK: fidl_fuchsia_net::IpAddress = fidl_ip!("127.0.0.1");
+    const IPV4_LOOPBACK: fnet::IpAddress = fidl_ip!("127.0.0.1");
     run_udp_socket_test(&realm, IPV4_LOOPBACK, &realm, IPV4_LOOPBACK).await
 }
 
@@ -808,6 +801,6 @@ async fn udpv6_loopback<N: Netstack>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let realm = sandbox.create_netstack_realm::<N, _>(name).expect("failed to create realm");
 
-    const IPV6_LOOPBACK: fidl_fuchsia_net::IpAddress = fidl_ip!("::1");
+    const IPV6_LOOPBACK: fnet::IpAddress = fidl_ip!("::1");
     run_udp_socket_test(&realm, IPV6_LOOPBACK, &realm, IPV6_LOOPBACK).await
 }
