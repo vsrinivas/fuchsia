@@ -103,7 +103,7 @@ HELP = """\
 TEMP_BRANCH_NAME = "_fx-sync-to"
 
 # Matches release branch names in the integration repository.
-RELEASE_BRANCH_REGEX = r"^refs/heads/([/0-9.A-Za-z]+)$"
+RELEASE_BRANCH_REGEX = r"^refs/heads/([/0-9.A-Za-z-]+)$"
 # Matches release tags in the integration repository.
 RELEASE_TAG_REGEX = r"^releases\/[0-9.A-Z]+$"
 # Matches a timestamp of the form that Jiri uses for names of snapshot files in
