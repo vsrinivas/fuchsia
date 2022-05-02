@@ -27,7 +27,7 @@ use {
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_io as fio,
     fidl_fuchsia_logger::LogSinkMarker,
     fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::future::{AbortHandle, Abortable, BoxFuture},
+    futures::future::BoxFuture,
     log::*,
     std::{collections::HashMap, sync::Arc},
     vfs::{
@@ -41,22 +41,14 @@ type Directory = Arc<pfs::Simple>;
 
 pub struct IncomingNamespace {
     pub package_dir: Option<fio::DirectoryProxy>,
-    dir_abort_handles: Vec<AbortHandle>,
+    dir_waiters: Vec<fasync::Task<()>>,
     logger: Option<ScopedLogger>,
-}
-
-impl Drop for IncomingNamespace {
-    fn drop(&mut self) {
-        for abort_handle in &self.dir_abort_handles {
-            abort_handle.abort();
-        }
-    }
 }
 
 impl IncomingNamespace {
     pub fn new(package: Option<Package>) -> Result<Self, ModelError> {
         let package_dir = package.map(|p| p.package_dir);
-        Ok(Self { package_dir, dir_abort_handles: vec![], logger: None })
+        Ok(Self { package_dir, dir_waiters: vec![], logger: None })
     }
 
     /// Returns a Logger whose output is attributed to this component's
@@ -351,24 +343,17 @@ impl IncomingNamespace {
         Ok(())
     }
 
-    /// start_directory_waiters will spawn the futures in directory_waiters as abortables, and adds
-    /// the abort handles to the IncomingNamespace.
+    /// start_directory_waiters will spawn the futures in directory_waiters
     fn start_directory_waiters(
         &mut self,
         directory_waiters: Vec<BoxFuture<'static, ()>>,
     ) -> Result<(), ModelError> {
         for waiter in directory_waiters {
-            let (abort_handle, abort_registration) = AbortHandle::new_pair();
-            self.dir_abort_handles.push(abort_handle);
-            let future = Abortable::new(waiter, abort_registration);
             // The future for a directory waiter will only terminate once the directory channel is
             // first used, so we must start up a new task here to run the future instead of calling
-            // await on it directly. This is wrapped in an async move {.await;}` block to drop
-            // the unused return value.
-            fasync::Task::spawn(async move {
-                future.await.unwrap_or_else(|e| warn!("directory waiter aborted: {}", e));
-            })
-            .detach();
+            // await on it directly.
+            let waiter = fasync::Task::spawn(waiter);
+            self.dir_waiters.push(waiter);
         }
         Ok(())
     }
