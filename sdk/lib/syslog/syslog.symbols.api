@@ -1,5 +1,7 @@
 fx_log_get_logger
+fx_log_is_enabled
 fx_log_reconfigure
+fx_log_severity_from_verbosity
 fx_logger_activate_fallback
 fx_logger_create
 fx_logger_create_internal
@@ -17,3 +19,4 @@ fx_logger_reconfigure
 fx_logger_reconfigure_structured
 fx_logger_set_connection
 fx_logger_set_min_severity
+fx_vlog_is_enabled

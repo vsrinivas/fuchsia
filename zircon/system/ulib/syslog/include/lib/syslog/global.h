@@ -22,33 +22,16 @@ fx_logger_t* fx_log_get_logger(void);
 
 // Returns true if writing messages with the given severity is enabled in the
 // global logger.
-static inline bool fx_log_is_enabled(fx_log_severity_t severity) {
-  fx_logger_t* logger = fx_log_get_logger();
-  return severity >= fx_logger_get_min_severity(logger);
-}
+bool fx_log_is_enabled(fx_log_severity_t severity);
 
 // Get the severity corresponding to the given verbosity. Note that
 // verbosity relative to the default severity and can be thought of
 // as incrementally "more vebose than" the baseline.
-static inline fx_log_severity_t fx_log_severity_from_verbosity(int verbosity) {
-  if (verbosity < 0) {
-    verbosity = 0;
-  }
-  // verbosity scale sits in the interstitial space between INFO and DEBUG
-  int severity = FX_LOG_INFO - (verbosity * FX_LOG_VERBOSITY_STEP_SIZE);
-  if (severity < FX_LOG_DEBUG + 1) {
-    return FX_LOG_DEBUG + 1;
-  }
-  return severity;
-}
+fx_log_severity_t fx_log_severity_from_verbosity(int verbosity);
 
 // Returns true if writing messages with the given verbosity is enabled
 // in the global logger.
-static inline bool fx_vlog_is_enabled(int verbosity) {
-  fx_logger_t* logger = fx_log_get_logger();
-  return logger && (verbosity >= 0) &&
-         fx_log_severity_from_verbosity(verbosity) >= fx_logger_get_min_severity(logger);
-}
+bool fx_vlog_is_enabled(int verbosity);
 
 // Reconfigures the global logger for this process with the specified
 // configuration.

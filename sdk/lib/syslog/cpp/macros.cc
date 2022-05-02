@@ -110,3 +110,20 @@ bool ShouldCreateLogMessage(const LogSeverityAndId& severity_and_id) {
 }
 
 }  // namespace syslog
+
+syslog::LogSeverity GetSeverityFromVerbosity(int verbosity) {
+  // Clamp verbosity scale to the interstitial space between INFO and DEBUG
+  if (verbosity < 0) {
+    verbosity = 0;
+  } else {
+    int max_verbosity = (syslog::LOG_INFO - syslog::LOG_DEBUG) / syslog::LogVerbosityStepSize;
+    if (verbosity > max_verbosity) {
+      verbosity = max_verbosity;
+    }
+  }
+  int severity = syslog::LOG_INFO - (verbosity * syslog::LogVerbosityStepSize);
+  if (severity < syslog::LOG_DEBUG + 1) {
+    return syslog::LOG_DEBUG + 1;
+  }
+  return static_cast<syslog::LogSeverity>(severity);
+}

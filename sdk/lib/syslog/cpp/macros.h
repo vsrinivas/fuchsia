@@ -330,29 +330,7 @@ bool ShouldCreateLogMessage(const LogSeverityAndId& severity_and_id);
 // Get the severity corresponding to the given verbosity. Note that
 // verbosity relative to the default severity and can be thought of
 // as incrementally "more vebose than" the baseline.
-static inline syslog::LogSeverity GetSeverityFromVerbosity(int verbosity) {
-  // Clamp verbosity scale to the interstitial space between INFO and DEBUG
-  if (verbosity < 0) {
-    verbosity = 0;
-  } else {
-    int max_verbosity = (syslog::LOG_INFO - syslog::LOG_DEBUG) / syslog::LogVerbosityStepSize;
-    if (verbosity > max_verbosity) {
-      verbosity = max_verbosity;
-    }
-  }
-  int severity = syslog::LOG_INFO - (verbosity * syslog::LogVerbosityStepSize);
-  if (severity < syslog::LOG_DEBUG + 1) {
-    return syslog::LOG_DEBUG + 1;
-  }
-  return static_cast<syslog::LogSeverity>(severity);
-}
-
-// this class exists solely to fix a compilation error.
-// we can't use __UNUSED here because it has to compile for both host and device code.
-class FixCompilationErrorCausedByUnusedGetSeverityFromVerbosity {
- public:
-  FixCompilationErrorCausedByUnusedGetSeverityFromVerbosity() { GetSeverityFromVerbosity(0); }
-};
+syslog::LogSeverity GetSeverityFromVerbosity(int verbosity);
 
 #define FX_VLOG_IS_ON(verbose_level) (verbose_level <= ::syslog::GetVlogVerbosity())
 

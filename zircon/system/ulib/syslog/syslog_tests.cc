@@ -47,7 +47,16 @@ void smallest_unused_fd(int* fd_out) {
   FAIL("did not find unused FD");
 }
 
-}  // namespace
+zx_status_t init_helper(int fd, const char** tags, size_t ntags) {
+  fx_logger_config_t config = {
+      .min_severity = FX_LOG_INFO,
+      .console_fd = fd,
+      .tags = tags,
+      .num_tags = ntags,
+  };
+
+  return fx_log_reconfigure(&config);
+}
 
 // Ensure accessing the global logger is safe when a global object is being torn down.
 class LogDuringTeardownTest {
@@ -87,16 +96,6 @@ TEST(SyslogTests, test_log_enabled_macro) {
   if (!FX_LOG_IS_ENABLED(ERROR)) {
     EXPECT_TRUE(false, "control should not reach this line");
   }
-}
-
-static inline zx_status_t init_helper(int fd, const char** tags, size_t ntags) {
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                               .console_fd = fd,
-                               .log_sink_socket = ZX_HANDLE_INVALID,
-                               .tags = tags,
-                               .num_tags = ntags};
-
-  return fx_log_reconfigure(&config);
 }
 
 TEST(SyslogTests, test_log_simple_write) {
@@ -550,3 +549,5 @@ TEST(SyslogTests, test_reconfigure_with_log_sink_channel_not_supported) {
   EXPECT_STATUS(ZX_ERR_BAD_HANDLE, zx_handle_close(passed_handle));
 }
 #endif
+
+}  // namespace
