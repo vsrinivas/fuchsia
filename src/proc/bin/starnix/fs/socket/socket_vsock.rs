@@ -292,8 +292,16 @@ impl SocketOps for VsockSocket {
         error!(ENOPROTOOPT)
     }
 
-    fn getsockopt(&self, _socket: &Socket, _level: u32, _optname: u32) -> Result<Vec<u8>, Errno> {
-        error!(ENOPROTOOPT)
+    fn getsockopt(&self, socket: &Socket, level: u32, optname: u32) -> Result<Vec<u8>, Errno> {
+        let opt_value = match level {
+            SOL_SOCKET => match optname {
+                SO_TYPE => socket.socket_type.as_raw().to_ne_bytes().to_vec(),
+                SO_DOMAIN => AF_VSOCK.to_ne_bytes().to_vec(),
+                _ => return error!(ENOPROTOOPT),
+            },
+            _ => return error!(ENOPROTOOPT),
+        };
+        Ok(opt_value)
     }
 
     fn get_receive_timeout(&self, _socket: &Socket) -> Option<zx::Duration> {
