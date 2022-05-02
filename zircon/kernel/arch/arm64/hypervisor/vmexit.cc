@@ -498,7 +498,7 @@ zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gi
     default:
       LTRACEF("unhandled exception syndrome, ec %#x iss %#x\n", static_cast<uint32_t>(syndrome.ec),
               syndrome.iss);
-      ktrace_vcpu_exit(VCPU_UNKNOWN, guest_state->system_state.elr_el2);
+      ktrace_vcpu_exit(VCPU_NOT_SUPPORTED, guest_state->system_state.elr_el2);
       status = ZX_ERR_NOT_SUPPORTED;
       break;
   }

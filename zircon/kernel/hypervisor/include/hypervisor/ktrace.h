@@ -45,7 +45,7 @@ enum VcpuExit : uint32_t {
   VCPU_PAUSE,
   VCPU_VMCALL,
 #endif
-  VCPU_UNKNOWN,
+  VCPU_NOT_SUPPORTED,
   VCPU_FAILURE,
 
   // Do not use.

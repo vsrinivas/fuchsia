@@ -47,7 +47,7 @@ static const char* const vcpu_exit[] = {
     [VCPU_PAUSE] = "exit:pause",
     [VCPU_VMCALL] = "exit:vmcall",
 #endif
-    [VCPU_UNKNOWN] = "exit:unknown",
+    [VCPU_NOT_SUPPORTED] = "exit:not_supported",
     [VCPU_FAILURE] = "exit:failure",
 };
 #if defined(__clang__)

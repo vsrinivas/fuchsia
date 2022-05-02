@@ -1206,7 +1206,7 @@ zx_status_t vmexit_handler(AutoVmcs& vmcs, GuestState& guest_state,
     // and handled by host via IDT as any other interrupt/exception.
     case ExitReason::EXCEPTION:
     default:
-      ktrace_vcpu_exit(VCPU_UNKNOWN, exit_info.guest_rip);
+      ktrace_vcpu_exit(VCPU_NOT_SUPPORTED, exit_info.guest_rip);
       status = ZX_ERR_NOT_SUPPORTED;
       break;
   }
