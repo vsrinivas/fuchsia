@@ -19,6 +19,9 @@ source_set("boringssl") {
     "zircon-mem.c",
   ]
 
+  # This gets the main source's include_dirs and cflags for warnings.
+  configs += [ "//third_party/boringssl:boringssl_config" ]
+
   deps = [ "//zircon/kernel/lib/libc" ]
 }
 
@@ -38,8 +41,8 @@ config("config") {
   # "#define BORINGSSL_NO_CXX" statement before any "#include <openssl/...>"
   # statements to avoid pulling in C++ headers.
   include_dirs = [
-    ".",
     "//third_party/boringssl/src/include",
+    ".",
   ]
 
   if (is_gcc) {

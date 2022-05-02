@@ -41,7 +41,7 @@ if (current_cpu == "arm64" && (is_fuchsia || is_linux)) {
   crypto_sources += crypto_sources_linux_x86_64
 } else if (current_cpu == "x64" && is_mac) {
   crypto_sources += crypto_sources_apple_x86_64
-} else {
+} else if (!is_kernel) {
   assert(false, "unsupported OS or CPU: $current_os/$current_cpu")
 }
 
@@ -52,11 +52,21 @@ crypto_sources += [ "src/decrepit/xts/xts.c" ]
 # libcrypto.so #
 ################
 
-foreach(lib_type,
-        [
-          "static",
-          "shared",
-        ]) {
+if (is_kernel) {
+  lib_types = []
+  lib_names = []
+} else {
+  lib_types = [
+    "static",
+    "shared",
+  ]
+  lib_names = [
+    "crypto",
+    "ssl",
+  ]
+}
+
+foreach(lib_type, lib_types) {
   target("${lib_type}_library", "crypto-${lib_type}") {
     if (default_library_type == "${lib_type}_library") {
       output_name = "crypto"
@@ -103,11 +113,7 @@ foreach(lib_type,
   }
 }
 
-foreach(lib_name,
-        [
-          "crypto",
-          "ssl",
-        ]) {
+foreach(lib_name, lib_names) {
   group("$lib_name") {
     if (default_library_type == "shared_library") {
       public_deps = [ ":${lib_name}-shared" ]
@@ -119,172 +125,191 @@ foreach(lib_name,
   }
 }
 
-source_set("crypto_unsafe") {
-  testonly = true
-  visibility = [ ":*" ]
-  sources = crypto_sources
-  public = crypto_headers
-  configs += [ ":fuzz_config" ]
-
-  if (is_fuchsia) {
-    # TODO(46910): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
-
-    # sysrand() uses Zircon system call.
-    deps = [ "//src/zircon/lib/zircon" ]
-  }
-}
-
-source_set("ssl_unsafe") {
-  testonly = true
-  visibility = [ ":*" ]
-  sources = ssl_sources
-  public = ssl_headers
-  configs += [ ":fuzz_config" ]
-  deps = [ ":crypto_unsafe" ]
-}
-
-##########################
-# bssl command line tool #
-##########################
-if (is_fuchsia) {
-  fuchsia_shell_package("boringssl_tool") {
-    deps = [ ":bssl" ]
-  }
-} else {
-  group("boringssl_tool") {
-    deps = [ ":bssl" ]
-  }
-}
-
-# See //third_party/boringssl/tool/CMakeLists.txt
-executable("bssl") {
-  visibility = [ ":*" ]
-  sources = tool_sources
-  configs += [ "//third_party/boringssl:internal_config" ]
-  deps = [
-    ":crypto",
-    ":ssl",
-  ]
-}
-
-##############
-# Unit tests #
-##############
-
-crypto_tests = []
-common_crypto_test_sources = [
-  "crypto_test_data.cc",
-
-  # This test does nothing when BORINGSSL_SHARED_LIBRARY is defined and is
-  # needed to resolve missing symbols. /shrug
-  "src/crypto/test/abi_test.cc",
-  "src/crypto/test/file_test_gtest.cc",
-  "src/crypto/test/gtest_main.cc",
-]
-_crypto_test_sources = crypto_test_sources - common_crypto_test_sources
-foreach(crypto_test_source, _crypto_test_sources) {
-  name = get_path_info(crypto_test_source, "name")
-  target_name = "${name}_crypto_test"
-  crypto_tests += [ target_name ]
-  test(target_name) {
+if (!is_kernel) {
+  source_set("crypto_unsafe") {
+    testonly = true
     visibility = [ ":*" ]
-    sources = [ crypto_test_source ] + common_crypto_test_sources +
-              test_support_sources
+    sources = crypto_sources
+    public = crypto_headers
+    configs += [ ":fuzz_config" ]
+
+    if (is_fuchsia) {
+      # TODO(46910): UBSan has found an instance of undefined behavior in this target.
+      # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+      configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
+
+      # sysrand() uses Zircon system call.
+      deps = [ "//src/zircon/lib/zircon" ]
+    }
+  }
+
+  source_set("ssl_unsafe") {
+    testonly = true
+    visibility = [ ":*" ]
+    sources = ssl_sources
+    public = ssl_headers
+    configs += [ ":fuzz_config" ]
+    deps = [ ":crypto_unsafe" ]
+  }
+
+  ##########################
+  # bssl command line tool #
+  ##########################
+  if (is_fuchsia) {
+    fuchsia_shell_package("boringssl_tool") {
+      deps = [ ":bssl" ]
+    }
+  } else {
+    group("boringssl_tool") {
+      deps = [ ":bssl" ]
+    }
+  }
+
+  # See //third_party/boringssl/tool/CMakeLists.txt
+  executable("bssl") {
+    visibility = [ ":*" ]
+    sources = tool_sources
+    configs += [ "//third_party/boringssl:internal_config" ]
+    deps = [
+      ":crypto",
+      ":ssl",
+    ]
+  }
+
+  ##############
+  # Unit tests #
+  ##############
+
+  crypto_tests = []
+  common_crypto_test_sources = [
+    "crypto_test_data.cc",
+
+    # This test does nothing when BORINGSSL_SHARED_LIBRARY is defined and is
+    # needed to resolve missing symbols. /shrug
+    "src/crypto/test/abi_test.cc",
+    "src/crypto/test/file_test_gtest.cc",
+    "src/crypto/test/gtest_main.cc",
+  ]
+  _crypto_test_sources = crypto_test_sources - common_crypto_test_sources
+  foreach(crypto_test_source, _crypto_test_sources) {
+    name = get_path_info(crypto_test_source, "name")
+    target_name = "${name}_crypto_test"
+    crypto_tests += [ target_name ]
+    test(target_name) {
+      visibility = [ ":*" ]
+      sources = [ crypto_test_source ] + common_crypto_test_sources +
+                test_support_sources
+      configs += [ ":test_config" ]
+      deps = [
+        ":crypto",
+        "//third_party/googletest:gtest",
+      ]
+    }
+  }
+
+  test("ssl_test") {
+    visibility = [ ":*" ]
+    sources = ssl_test_sources + test_support_sources
     configs += [ ":test_config" ]
     deps = [
       ":crypto",
+      ":ssl",
       "//third_party/googletest:gtest",
     ]
   }
-}
 
-test("ssl_test") {
-  visibility = [ ":*" ]
-  sources = ssl_test_sources + test_support_sources
-  configs += [ ":test_config" ]
-  deps = [
-    ":crypto",
-    ":ssl",
-    "//third_party/googletest:gtest",
-  ]
-}
-
-if (is_fuchsia) {
-  crypto_test_components = []
-  needs_custom_component_manifest = [ "bio_test_crypto_test" ]
-  foreach(crypto_test, crypto_tests) {
-    _component_name = "${crypto_test}_component"
-    crypto_test_components += [ ":${_component_name}" ]
-    fuchsia_unittest_component(_component_name) {
-      if (needs_custom_component_manifest + [ crypto_test ] - [ crypto_test ] !=
-          needs_custom_component_manifest) {
-        manifest = "meta/${crypto_test}.cml"
-      }
-      deps = [ ":${crypto_test}" ]
-    }
-  }
-  fuchsia_unittest_component("ssl_test_component") {
-    deps = [ ":ssl_test" ]
-  }
-  fuchsia_test_package("boringssl_tests") {
-    test_components = crypto_test_components + [ ":ssl_test_component" ]
-    deps = [
-      "//src/connectivity/network/netstack:component",
-      "//src/sys/stash:stash_secure_v2",
-    ]
-  }
-}
-
-group("tests") {
-  testonly = true
   if (is_fuchsia) {
-    deps = [ ":boringssl_tests" ]
-  } else {
-    deps = [ ":ssl_test" ]
+    crypto_test_components = []
+    needs_custom_component_manifest = [ "bio_test_crypto_test" ]
     foreach(crypto_test, crypto_tests) {
-      deps += [ ":${crypto_test}" ]
+      _component_name = "${crypto_test}_component"
+      crypto_test_components += [ ":${_component_name}" ]
+      fuchsia_unittest_component(_component_name) {
+        if (needs_custom_component_manifest + [ crypto_test ] -
+            [ crypto_test ] != needs_custom_component_manifest) {
+          manifest = "meta/${crypto_test}.cml"
+        }
+        deps = [ ":${crypto_test}" ]
+      }
+    }
+    fuchsia_unittest_component("ssl_test_component") {
+      deps = [ ":ssl_test" ]
+    }
+    fuchsia_test_package("boringssl_tests") {
+      test_components = crypto_test_components + [ ":ssl_test_component" ]
+      deps = [
+        "//src/connectivity/network/netstack:component",
+        "//src/sys/stash:stash_secure_v2",
+      ]
     }
   }
-}
 
-################################################################################
-# Fuzzers
-
-# Upstream BoringSSL defines a `fuzzers` global variable in the generated
-# GNI files; we rename it to avoid colliding with the similarly-named parameter
-# on the fuzzers_package.
-fuzzer_names = fuzzers
-
-# Explicitly remove the arm_cpuinfo fuzzer, which tests Linux-specific routines
-if (is_fuchsia) {
-  fuzzer_names -= [ "arm_cpuinfo" ]
-}
-
-foreach(name, fuzzer_names) {
-  fuzzer("${name}_fuzzer") {
-    visibility = [ ":*" ]
-    sources = [ "src/fuzz/${name}.cc" ]
-    configs += [ ":fuzz_config" ]
-    deps = [
-      ":crypto_unsafe",
-      ":ssl_unsafe",
-    ]
+  group("tests") {
+    testonly = true
+    if (is_fuchsia) {
+      deps = [ ":boringssl_tests" ]
+    } else {
+      deps = [ ":ssl_test" ]
+      foreach(crypto_test, crypto_tests) {
+        deps += [ ":${crypto_test}" ]
+      }
+    }
   }
-}
 
-fuzzers_package("boringssl_fuzzers") {
-  fuzzers = []
+  ################################################################################
+  # Fuzzers
+
+  # Upstream BoringSSL defines a `fuzzers` global variable in the generated
+  # GNI files; we rename it to avoid colliding with the similarly-named parameter
+  # on the fuzzers_package.
+  fuzzer_names = fuzzers
+
+  # Explicitly remove the arm_cpuinfo fuzzer, which tests Linux-specific routines
+  if (is_fuchsia) {
+    fuzzer_names -= [ "arm_cpuinfo" ]
+  }
+
   foreach(name, fuzzer_names) {
-    fuzzers += [ ":${name}_fuzzer" ]
+    fuzzer("${name}_fuzzer") {
+      visibility = [ ":*" ]
+      sources = [ "src/fuzz/${name}.cc" ]
+      configs += [ ":fuzz_config" ]
+      deps = [
+        ":crypto_unsafe",
+        ":ssl_unsafe",
+      ]
+    }
+  }
+
+  fuzzers_package("boringssl_fuzzers") {
+    fuzzers = []
+    foreach(name, fuzzer_names) {
+      fuzzers += [ ":${name}_fuzzer" ]
+    }
   }
 }
 
 ################################################################################
 # Configs
+
+# Note that //zircon/kernel/lib/crypto/boringssl/BUILD.gn uses this config but
+# it doesn't use the rest of this file's targets or configs for kernel cases.
 config("boringssl_config") {
   include_dirs = [ "src/include" ]
+
+  cflags = [
+    "-Wno-conversion",
+    "-Wno-unused-but-set-variable",
+    "-Wno-unused-function",
+  ]
+
+  cflags_cc = [ "-Wno-deprecated-copy" ]
+
+  if (is_gcc) {
+    cflags_cc += [ "-Wno-extra-semi" ]
+  } else {
+    cflags += [ "-Wno-extra-semi" ]
+  }
 }
 
 config("internal_config") {
@@ -300,13 +325,6 @@ config("internal_config") {
     # pthread_rwlock_t on Linux requires a feature flag.
     defines += [ "_XOPEN_SOURCE=700" ]
   }
-  cflags = [
-    "-Wno-conversion",
-    "-Wno-deprecated-copy",
-    "-Wno-extra-semi",
-    "-Wno-unused-but-set-variable",
-    "-Wno-unused-function",
-  ]
   configs = [
     ":boringssl_config",
     "//build/config:shared_library_config",
