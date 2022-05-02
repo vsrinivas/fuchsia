@@ -367,20 +367,19 @@ bench_statistics(struct bench_config const * const      config,
             {
               if (!config->is_quiet)
                 {
-                  fprintf(
-                    stdout,
-                    "%s, %u.%u.%u, %s, %s, %s, %u, %u, %zu, ",
-                    config->vk.pdp.deviceName,
-                    // TODO(allanmac): Use undeprecated VK_API_VERSION_* once headers are updated
-                    VK_VERSION_MAJOR(config->vk.pdp.driverVersion),
-                    VK_VERSION_MINOR(config->vk.pdp.driverVersion),
-                    VK_VERSION_PATCH(config->vk.pdp.driverVersion),
-                    name,
-                    bench_wait_to_string(wait),
-                    config->is_calibrated ? "TRUE " : "FALSE",
-                    iter->repetitions,
-                    iter->warmup,
-                    bytes);
+                  fprintf(stdout,
+                          "%s, %u.%u.%u.%u, %s, %s, %s, %u, %u, %zu, ",
+                          config->vk.pdp.deviceName,
+                          VK_API_VERSION_VARIANT(config->vk.pdp.driverVersion),
+                          VK_API_VERSION_MAJOR(config->vk.pdp.driverVersion),
+                          VK_API_VERSION_MINOR(config->vk.pdp.driverVersion),
+                          VK_API_VERSION_PATCH(config->vk.pdp.driverVersion),
+                          name,
+                          bench_wait_to_string(wait),
+                          config->is_calibrated ? "TRUE " : "FALSE",
+                          iter->repetitions,
+                          iter->warmup,
+                          bytes);
                 }
 
               double const h_ns_start   = BENCH_HOST_NS(splits[ii].host.start);
