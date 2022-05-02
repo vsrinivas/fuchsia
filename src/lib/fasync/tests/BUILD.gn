@@ -38,13 +38,32 @@ test("fasync-test") {
   ]
 }
 
+test("fexecutor-test") {
+  sources = [ "fexecutor_tests.cc" ]
+  deps = [
+    "//src/lib/fasync",
+    "//src/lib/fasync:fexecutor",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
 fuchsia_unittest_component("fasync-test-component") {
   component_name = "fasync-test"
   deps = [ ":fasync-test" ]
 }
 
+fuchsia_unittest_component("fexecutor-test-component") {
+  component_name = "fexecutor-test"
+  deps = [ ":fexecutor-test" ]
+}
+
 fuchsia_test_package("fasync-tests") {
-  test_components = [ ":fasync-test-component" ]
+  test_components = [
+    ":fasync-test-component",
+    ":fexecutor-test-component",
+  ]
   test_specs = {
     environments = [ emu_env ]
   }
