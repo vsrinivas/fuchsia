@@ -7,6 +7,7 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
+import("//build/test.gni")
 import("//src/go/grand_unified_binary/gub.gni")
 import("gentool/generated.gni")
 import("tracing/go_tracing_include_dirs.gni")
@@ -218,10 +219,46 @@ fuchsia_unittest_package("netstack-gotests") {
   manifest = "meta/netstack_test.cml"
 }
 
+shared_library("udp_serde") {
+  sources = [ "udp_serde.cc" ]
+  public = [ "udp_serde.h" ]
+  public_deps = [ "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp" ]
+  deps = [ "//src/lib/fxl" ]
+}
+
+test("udp_serde_test") {
+  sources = [ "udp_serde_test.cc" ]
+
+  deps = [
+    ":udp_serde",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
+  ]
+}
+
+test("udp_serde_c_compilation_test") {
+  sources = [ "udp_serde_c_compilation_test.c" ]
+
+  deps = [
+    ":udp_serde",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("udp_serde-unittests") {
+  deps = [ ":udp_serde_test" ]
+}
+
+fuchsia_unittest_package("udp_serde_c_compilation-unittest") {
+  deps = [ ":udp_serde_c_compilation_test" ]
+}
+
 group("tests") {
   testonly = true
   deps = [
     ":netstack-gotests",
+    ":udp_serde-unittests",
+    ":udp_serde_c_compilation-unittest",
     "bench:tests",
     "dhcp:tests",
     "dns:tests",
