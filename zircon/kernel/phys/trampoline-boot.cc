@@ -418,9 +418,8 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity,
     BootZbi::Boot(argument);
   }
 
-  LogAddresses();
-  LogFixedAddresses();
-  LogBoot(KernelEntryAddress());
+  Log();
+
   uintptr_t zbi_location =
       reinterpret_cast<uintptr_t>(argument.value_or(DataZbi().storage().data()));
   auto kernel_blob = ktl::span<const ktl::byte>(reinterpret_cast<const ktl::byte*>(KernelImage()),
@@ -444,6 +443,14 @@ fitx::result<TrampolineBoot::Error> TrampolineBoot::Init(InputZbi zbi,
   auto res = BootZbi::Init(zbi, kernel_item);
   SetKernelAddresses();
   return res;
+}
+
+void TrampolineBoot::Log() {
+  LogAddresses();
+  if (trampoline_) {
+    LogFixedAddresses();
+  }
+  LogBoot(KernelEntryAddress());
 }
 
 // This output lines up with what BootZbi::LogAddresses() prints.

@@ -85,6 +85,11 @@ class BootZbi {
                            ktl::optional<uintptr_t> kernel_load_address = ktl::nullopt,
                            ktl::optional<uintptr_t> data_load_address = ktl::nullopt);
 
+  // Log the address and size details.  This is meant to be nearly the very
+  // last thing done before Boot(), perhaps before final handoff details that
+  // render it impossible to print later.
+  void Log();
+
   // Boot into the kernel loaded by Load(), which must have been called first.
   // This cannot fail and never returns.  If the optional pointer argument is
   // supplied it is given the to the new kernel instead of DataLoadAddress().

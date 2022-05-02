@@ -36,6 +36,8 @@ class TrampolineBoot : public BootZbi {
 
   [[noreturn]] void Boot(ktl::optional<void*> argument = {});
 
+  void Log();
+
  private:
   class Trampoline;
 

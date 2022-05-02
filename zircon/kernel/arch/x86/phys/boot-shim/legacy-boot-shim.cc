@@ -49,6 +49,7 @@ void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
   if (shim.Load(boot)) {
     ArchSetUpAddressSpaceLate();
     memory.PrintMemoryRanges(symbolize.name());
+    boot.Log();
     boot.Boot();
   }
 

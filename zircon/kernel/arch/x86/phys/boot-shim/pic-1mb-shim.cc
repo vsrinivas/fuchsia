@@ -35,5 +35,6 @@ void ZbiMain(void* ptr, arch::EarlyTicks boot_ticks) {
     abort();
   }
 
+  boot.Log();
   boot.Boot();
 }

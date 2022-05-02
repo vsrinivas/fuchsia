@@ -188,6 +188,7 @@ void TurduckenTestBase::Boot() {
   printf("%s: Loaded kernel and data; data ZBI occupies %#zx of %#zx bytes.\n", test_name(),
          boot.DataZbi().size_bytes(), boot.DataZbi().storage().size());
 
+  boot.Log();
   boot.Boot();
 }
 

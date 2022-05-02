@@ -417,10 +417,14 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
   return fitx::ok();
 }
 
-[[noreturn]] void BootZbi::Boot(ktl::optional<void*> argument) {
-  ZX_ASSERT_MSG(KernelCanLoadInPlace(), "Has Load() been called?");
+void BootZbi::Log() {
   LogAddresses();
   LogBoot(KernelEntryAddress());
+}
+
+[[noreturn]] void BootZbi::Boot(ktl::optional<void*> argument) {
+  ZX_ASSERT_MSG(KernelCanLoadInPlace(), "Has Load() been called?");
+  Log();
   auto kernel_hdr = const_cast<zircon_kernel_t*>(kernel_);
   arch::ZbiBoot(kernel_hdr, argument.value_or(data_.storage().data()));
 }
