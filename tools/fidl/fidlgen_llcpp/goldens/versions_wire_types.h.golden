@@ -309,6 +309,8 @@ class Union {
 
 constexpr uint32_t kConst = 0u;
 
+constexpr bool kAddedAtHead = true;
+
 }  // namespace wire
 }  // namespace test_versions
 namespace fidl {

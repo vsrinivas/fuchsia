@@ -39,6 +39,8 @@ import 'package:zircon/zircon.dart' as $zircon;
 // ignore_for_file: avoid_unused_constructor_parameters
 // ignore_for_file: prefer_interpolation_to_compose_strings
 
+const bool addedAtHead = true;
+
 const int const$ = 0x0;
 
 class Enum extends $fidl.Enum {

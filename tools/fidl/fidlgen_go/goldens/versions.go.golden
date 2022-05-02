@@ -8,7 +8,8 @@ import (
 )
 
 const (
-	Const uint32 = 0
+	AddedAtHead bool   = true
+	Const       uint32 = 0
 )
 
 var _ _bindings.Enum = Enum(0)

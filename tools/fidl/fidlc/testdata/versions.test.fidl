@@ -57,3 +57,7 @@ service Service {
     @available(added=2, deprecated=3)
     p client_end:Protocol;
 };
+
+// Previously there was a bug where HEAD would violate the JSON IR schema.
+@available(added=HEAD)
+const ADDED_AT_HEAD bool = true;

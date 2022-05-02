@@ -236,6 +236,8 @@ class Struct {
 
 constexpr uint32_t kConst = 0u;
 
+constexpr bool kAddedAtHead = true;
+
 }  // namespace test_versions
 namespace fidl {
 

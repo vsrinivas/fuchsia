@@ -143,18 +143,7 @@ void JSONGenerator::Generate(const flat::Constant& value) {
     switch (value.kind) {
       case flat::Constant::Kind::kIdentifier: {
         auto identifier = static_cast<const flat::IdentifierConstant*>(&value);
-        // TODO(fxbug.dev/92422): The naming functions do not include the
-        // library name for builtins, otherwise error messages would refer to
-        // fidl/uint32 etc. But if we emit "MAX" here it fails JSON schema
-        // validation, so we manually emit "fidl/MAX". We likely shouldn't be
-        // emitting anything in the IR for MAX bounds.
-        if (identifier->reference.resolved().element()->kind == flat::Element::Kind::kBuiltin &&
-            static_cast<const flat::Builtin*>(identifier->reference.resolved().element())->id ==
-                flat::Builtin::Identity::kMax) {
-          GenerateObjectMember("identifier", std::string_view("fidl/MAX"));
-        } else {
-          GenerateObjectMember("identifier", identifier->reference.resolved().name());
-        }
+        GenerateObjectMember("identifier", identifier->reference.resolved().name());
         break;
       }
       case flat::Constant::Kind::kLiteral: {
@@ -288,12 +277,19 @@ void JSONGenerator::GenerateDeclName(const flat::Name& name) {
   }
 }
 
-void JSONGenerator::Generate(const flat::Name& value) {
-  // These look like (when there is a library)
-  //     { "LIB.LIB.LIB", "ID" }
-  // or (when there is not)
-  //     { "ID" }
-  Generate(NameFlatName(value));
+void JSONGenerator::Generate(const flat::Name& name) {
+  // TODO(fxbug.dev/92422): NameFlatName omits the library name for builtins,
+  // since we want error messages to say "uint32" not "fidl/uint32". However,
+  // builtins MAX and HEAD can end up in the JSON IR as identifier constants,
+  // and to satisfy the schema we must produce a proper compound identifier
+  // (with a library name). We should solve this in a cleaner way.
+  if (name.is_intrinsic() && name.decl_name() == "MAX") {
+    Generate(std::string_view("fidl/MAX"));
+  } else if (name.is_intrinsic() && name.decl_name() == "HEAD") {
+    Generate(std::string_view("fidl/HEAD"));
+  } else {
+    Generate(NameFlatName(name));
+  }
 }
 
 void JSONGenerator::Generate(const flat::Bits& value) {

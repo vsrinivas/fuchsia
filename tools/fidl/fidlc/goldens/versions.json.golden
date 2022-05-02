@@ -202,6 +202,76 @@
   ],
   "const_declarations": [
     {
+      "name": "test.versions/ADDED_AT_HEAD",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+        "line": 63,
+        "column": 7,
+        "length": 13
+      },
+      "maybe_attributes": [
+        {
+          "name": "available",
+          "arguments": [
+            {
+              "name": "added",
+              "type": "uint64",
+              "value": {
+                "kind": "identifier",
+                "value": "18446744073709551615",
+                "expression": "HEAD",
+                "identifier": "fidl/HEAD"
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 62,
+                "column": 12,
+                "length": 10
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "line": 62,
+            "column": 1,
+            "length": 22
+          }
+        }
+      ],
+      "type": {
+        "kind": "primitive",
+        "subtype": "bool",
+        "type_shape_v1": {
+          "inline_size": 1,
+          "alignment": 1,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 1,
+          "alignment": 1,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "literal",
+        "value": "true",
+        "expression": "true",
+        "literal": {
+          "kind": "bool",
+          "value": "true",
+          "expression": "true"
+        }
+      }
+    },
+    {
       "name": "test.versions/Const",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
@@ -1537,10 +1607,12 @@
     "test.versions/Enum",
     "test.versions/Const",
     "test.versions/Bits",
-    "test.versions/Alias"
+    "test.versions/Alias",
+    "test.versions/ADDED_AT_HEAD"
   ],
   "declarations": {
     "test.versions/Bits": "bits",
+    "test.versions/ADDED_AT_HEAD": "const",
     "test.versions/Const": "const",
     "test.versions/Enum": "enum",
     "test.versions/OtherProtocol": "interface",

@@ -55,6 +55,8 @@ fidl_bits! {
     flexible: true,
 }
 
+pub const ADDED_AT_HEAD: bool = true;
+
 pub const CONST: u32 = 0;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
