@@ -1184,7 +1184,7 @@ zx_status_t vmexit_handler(AutoVmcs& vmcs, GuestState& guest_state,
       break;
     // Currently all exceptions except NMI delivered to guest directly. NMI causes vmexit
     // and handled by host via IDT as any other interrupt/exception.
-    case ExitReason::EXCEPTION:
+    case ExitReason::EXCEPTION_OR_NMI:
     default:
       ktrace_vcpu_exit(VCPU_NOT_SUPPORTED, exit_info.guest_rip);
       status = ZX_ERR_NOT_SUPPORTED;

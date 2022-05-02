@@ -16,7 +16,7 @@
 
 // VM exit reasons.
 enum class ExitReason : uint32_t {
-    EXCEPTION                   = 0u,  // NMI is an exception too
+    EXCEPTION_OR_NMI            = 0u,
     EXTERNAL_INTERRUPT          = 1u,
     TRIPLE_FAULT                = 2u,
     INIT_SIGNAL                 = 3u,
@@ -67,7 +67,7 @@ enum class ExitReason : uint32_t {
     RDTSCP                      = 51u,
     VMX_PREEMPT_TIMER_EXPIRED   = 52u,
     INVVPID                     = 53u,
-    WBINVD                      = 54u,
+    WBINVD_OR_WBNOINVD          = 54u,
     XSETBV                      = 55u,
     APIC_WRITE                  = 56u,
     RDRAND                      = 57u,
@@ -78,12 +78,16 @@ enum class ExitReason : uint32_t {
     PAGE_MODIFICATION_LOG_FULL  = 62u,
     XSAVES                      = 63u,
     XRSTORS                     = 64u,
+    SPP_EVENT                   = 66u,
+    UMWAIT                      = 67u,
+    TPAUSE                      = 68u,
+    LOADIWKEY                   = 69u,
 };
 
 static inline const char* exit_reason_name(ExitReason exit_reason) {
 #define EXIT_REASON_NAME(name) case ExitReason::name: return #name
     switch (exit_reason) {
-    EXIT_REASON_NAME(EXCEPTION);
+    EXIT_REASON_NAME(EXCEPTION_OR_NMI);
     EXIT_REASON_NAME(EXTERNAL_INTERRUPT);
     EXIT_REASON_NAME(TRIPLE_FAULT);
     EXIT_REASON_NAME(INIT_SIGNAL);
@@ -134,7 +138,7 @@ static inline const char* exit_reason_name(ExitReason exit_reason) {
     EXIT_REASON_NAME(RDTSCP);
     EXIT_REASON_NAME(VMX_PREEMPT_TIMER_EXPIRED);
     EXIT_REASON_NAME(INVVPID);
-    EXIT_REASON_NAME(WBINVD);
+    EXIT_REASON_NAME(WBINVD_OR_WBNOINVD);
     EXIT_REASON_NAME(XSETBV);
     EXIT_REASON_NAME(APIC_WRITE);
     EXIT_REASON_NAME(RDRAND);
@@ -145,6 +149,10 @@ static inline const char* exit_reason_name(ExitReason exit_reason) {
     EXIT_REASON_NAME(PAGE_MODIFICATION_LOG_FULL);
     EXIT_REASON_NAME(XSAVES);
     EXIT_REASON_NAME(XRSTORS);
+    EXIT_REASON_NAME(SPP_EVENT);
+    EXIT_REASON_NAME(UMWAIT);
+    EXIT_REASON_NAME(TPAUSE);
+    EXIT_REASON_NAME(LOADIWKEY);
 #undef EXIT_REASON_NAME
     default: return "UNKNOWN";
     }
