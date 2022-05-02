@@ -21,6 +21,7 @@ test("inspect") {
     "heap_unittest.cc",
     "inspect_unittest.cc",
     "lazy_unittest.cc",
+    "node_unittest.cc",
     "reader_unittest.cc",
     "scanner_unittest.cc",
     "snapshot_unittest.cc",

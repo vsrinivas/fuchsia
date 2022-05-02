@@ -15,8 +15,6 @@
 #include <zxtest/zxtest.h>
 
 using inspect::Inspector;
-using inspect::Node;
-using inspect::internal::State;
 
 namespace {
 

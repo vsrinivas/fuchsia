@@ -30,6 +30,8 @@ namespace inspect {
 
 namespace internal {
 
+class AutoGenerationIncrement;
+
 // |State| wraps a |Heap| and implements the Inspect VMO API on top of
 // that heap. This class contains the low-level operations necessary to
 // deal with the various Inspect types and wrappers to denote ownership of
@@ -196,6 +198,10 @@ class State final {
   void FreeLazyNode(LazyNode* lazy_node);
   void ReleaseStringReference(BlockIndex index);
 
+  // Use transactions to ensure that all operations appear in the same generation.
+  void BeginTransaction();
+  void EndTransaction();
+
   // Get the names of all links in this state.
   std::vector<std::string> GetLinkNames() const;
 
@@ -259,10 +265,18 @@ class State final {
     std::shared_ptr<Inner> inner_;
   };
 
-  State(std::unique_ptr<Heap> heap, BlockIndex header)
-      : heap_(std::move(heap)), header_(header), next_unique_id_(0), next_unique_link_number_(0) {}
+  State(std::unique_ptr<Heap> heap, BlockIndex header);
 
   void DecrementParentRefcount(BlockIndex value_index) __TA_REQUIRES(mutex_);
+
+  // Transaction-conscious helper functions for using AutoGenerationIncrement.
+  // In the event that at
+  // least one transaction is open (indicated by |transaction_count_|), the caller should _not_
+  // increment the generation counter. These return an empty pointer in that case.
+  std::unique_ptr<AutoGenerationIncrement> MaybeIncrementGeneration() __TA_REQUIRES(mutex_);
+
+  std::unique_ptr<AutoGenerationIncrement> MaybeFreezeAndIncrementGeneration() const
+      __TA_REQUIRES(mutex_);
 
   // Helper method for creating a new VALUE block type.
   zx_status_t InnerCreateValue(BorrowedStringValue name, BlockType type, BlockIndex parent_index,
@@ -377,6 +391,12 @@ class State final {
   //
   // Uses the fastest available atomic uint64 type for fetch_and_add.
   std::atomic_uint_fast64_t next_unique_link_number_;
+
+  // Track how many transactions are currently open on this object. When a transaction is open,
+  // all operations will appear as part of the same generation, rather than each operation moving
+  // the generation counter separately.
+  uint32_t transaction_count_ FIT_GUARDED(mutex_);
+  std::unique_ptr<AutoGenerationIncrement> transaction_gen_ FIT_GUARDED(mutex_);
 
   // Map StringReference.ID to an index in the VMO and vice-versa.
   class {

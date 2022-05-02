@@ -28,6 +28,7 @@ class Node;
 class Inspector;
 
 using LazyNodeCallbackFn = fit::function<fpromise::promise<Inspector>()>;
+using AtomicUpdateCallbackFn = fit::function<void(Node&)>;
 
 // StringReference is a type that can be used as a name of a Node in the Inspect API.
 // Each StringReference will have a single allocation in the appropriate VMO.
@@ -693,6 +694,12 @@ class Node final {
   void CreateLazyValues(BorrowedStringValue name, F callback, T* list) {
     list->emplace(CreateLazyValues(name, std::move(callback)));
   }
+
+  // Runs |callback| on this node.
+  //
+  // All operations performed by |callback| are guaranteed to appear in the same generation when
+  // reading Inspect data.
+  void AtomicUpdate(AtomicUpdateCallbackFn callback);
 
   // Return true if this node is stored in a buffer. False otherwise.
   explicit operator bool() const { return state_ != nullptr; }

@@ -7,6 +7,7 @@
 
 #include <lib/fpromise/result.h>
 #include <lib/inspect/cpp/value_list.h>
+#include <lib/inspect/cpp/vmo/types.h>
 #include <lib/zx/vmo.h>
 
 #include <mutex>
@@ -15,7 +16,6 @@
 namespace inspect {
 
 class Inspector;
-class Node;
 
 namespace internal {
 class State;
@@ -128,6 +128,11 @@ class Inspector final {
   //
   // Returns a promise for the opened inspector.
   fpromise::promise<Inspector> OpenChild(const std::string& name) const;
+
+  // Execute |callback| under a single lock of the Inspect VMO.
+  //
+  // This callback receives a reference to the root of the inspect hierarchy.
+  void AtomicUpdate(AtomicUpdateCallbackFn callback);
 
  private:
   friend std::shared_ptr<internal::State> internal::GetState(const Inspector* inspector);

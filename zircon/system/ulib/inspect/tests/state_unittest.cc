@@ -38,7 +38,6 @@ using inspect::Node;
 using inspect::Snapshot;
 using inspect::StringArray;
 using inspect::StringProperty;
-using inspect::StringReference;
 using inspect::UintArray;
 using inspect::UintProperty;
 using inspect::internal::ArrayBlockFormat;
@@ -54,7 +53,6 @@ using inspect::internal::kMagicNumber;
 using inspect::internal::kNumOrders;
 using inspect::internal::LinkBlockDisposition;
 using inspect::internal::LinkBlockPayload;
-using inspect::internal::NameBlockFields;
 using inspect::internal::PropertyBlockFormat;
 using inspect::internal::PropertyBlockPayload;
 using inspect::internal::ScanBlocks;
@@ -1643,6 +1641,78 @@ TEST(State, OutOfOrderDeletion) {
     ASSERT_TRUE(!!b);
     ASSERT_TRUE(!!a);
   }
+}
+
+TEST(State, CreateNodeHierarchyInTransaction) {
+  auto state = InitState(4096);
+  ASSERT_TRUE(state != nullptr);
+
+  CheckVmoGenCount(0, state->GetVmo());
+  state->BeginTransaction();
+  Node root = state->CreateNode("objs", 0);
+  auto req = root.CreateChild("reqs");
+  auto network = req.CreateUint("netw", 10);
+  auto wifi = req.CreateUint("wifi", 5);
+
+  auto version = root.CreateString("vrsn", "1.0beta2");
+  state->EndTransaction();
+  CheckVmoGenCount(2, state->GetVmo());
+
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
+  size_t free_blocks, allocated_blocks;
+  auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
+  ASSERT_TRUE(snapshot);
+
+  // Header (1), root (2), requests (2), 2 metrics (4), small property (3)
+  EXPECT_EQ(1u + 2u + 2u + 4u + 3u, allocated_blocks);
+  EXPECT_EQ(5u, free_blocks);
+  CompareBlock(blocks.find(0)->block, MakeHeader(2));
+
+  // Root object is at index 1.
+  // It has 2 references (req and version).
+  CompareBlock(
+      blocks.find(1)->block,
+      MakeBlock(ValueBlockFields::Type::Make(BlockType::kNodeValue) |
+                    ValueBlockFields::ParentIndex::Make(0) | ValueBlockFields::NameIndex::Make(2),
+                2));
+  CompareBlock(blocks.find(2)->block, MakeInlinedOrder0StringReferenceBlock("objs"));
+
+  // Requests object is at index 3.
+  // It has 2 references (wifi and network).
+  CompareBlock(
+      blocks.find(3)->block,
+      MakeBlock(ValueBlockFields::Type::Make(BlockType::kNodeValue) |
+                    ValueBlockFields::ParentIndex::Make(1) | ValueBlockFields::NameIndex::Make(4),
+                2));
+  CompareBlock(blocks.find(4)->block, MakeInlinedOrder0StringReferenceBlock("reqs"));
+
+  // Network value
+  CompareBlock(
+      blocks.find(5)->block,
+      MakeBlock(ValueBlockFields::Type::Make(BlockType::kUintValue) |
+                    ValueBlockFields::ParentIndex::Make(3) | ValueBlockFields::NameIndex::Make(6),
+                10));
+  CompareBlock(blocks.find(6)->block, MakeInlinedOrder0StringReferenceBlock("netw"));
+
+  // Wifi value
+  CompareBlock(
+      blocks.find(7)->block,
+      MakeBlock(ValueBlockFields::Type::Make(BlockType::kUintValue) |
+                    ValueBlockFields::ParentIndex::Make(3) | ValueBlockFields::NameIndex::Make(8),
+                5));
+  CompareBlock(blocks.find(8)->block, MakeInlinedOrder0StringReferenceBlock("wifi"));
+
+  // Version property
+  CompareBlock(
+      blocks.find(9)->block,
+      MakeBlock(ValueBlockFields::Type::Make(BlockType::kBufferValue) |
+                    ValueBlockFields::ParentIndex::Make(1) | ValueBlockFields::NameIndex::Make(10),
+                PropertyBlockPayload::ExtentIndex::Make(11) |
+                    PropertyBlockPayload::TotalLength::Make(8)));
+  CompareBlock(blocks.find(10)->block, MakeInlinedOrder0StringReferenceBlock("vrsn"));
+
+  CompareBlock(blocks.find(11)->block,
+               MakeBlock(ExtentBlockFields::Type::Make(BlockType::kExtent), "1.0beta2"));
 }
 
 }  // namespace

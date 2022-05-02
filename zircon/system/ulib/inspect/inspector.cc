@@ -112,6 +112,10 @@ fpromise::promise<Inspector> Inspector::OpenChild(const std::string& child_name)
   return state_->CallLinkCallback(child_name);
 }
 
+void Inspector::AtomicUpdate(AtomicUpdateCallbackFn callback) {
+  GetRoot().AtomicUpdate(std::move(callback));
+}
+
 namespace {
 // The metric node name, as exposed by the stats node.
 const char* FUCHSIA_INSPECT_STATS = "fuchsia.inspect.Stats";

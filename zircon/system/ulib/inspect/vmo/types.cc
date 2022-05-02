@@ -527,6 +527,14 @@ LazyNode Node::CreateLazyValues(BorrowedStringValue name, LazyNodeCallbackFn cal
   return LazyNode();
 }
 
+void Node::AtomicUpdate(AtomicUpdateCallbackFn callback) {
+  if (state_) {
+    state_->BeginTransaction();
+    callback(*this);
+    state_->EndTransaction();
+  }
+}
+
 Link& Link::operator=(Link&& other) noexcept {
   if (this == &other) {
     return *this;
