@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_developer_remotecontrol as fremotecontrol,
 };
 
-#[ffx_plugin("driver")]
+#[ffx_plugin()]
 pub async fn driver(
     remote_control: fremotecontrol::RemoteControlProxy,
     cmd: DriverCommand,
