@@ -39,17 +39,8 @@ rm -rf "${TESTS_DIR}"
 # Build Debian.
 "${DEBIAN_GUEST_DIR}"/build-image.sh "${IMAGE_DIR}" "${ARCH}"
 
-# Build tests.
-${DEBIAN_GUEST_DIR}/mktests.sh \
-    -d "${TESTS_DIR}" \
-    -o "${IMAGE_DIR}/tests.img" \
-    -u \
-    ${ARCH}
-TESTS_GIT_HASH="$( cd ${TESTS_DIR} && git rev-parse --verify HEAD )"
-
 declare -r CIPD_PATH="fuchsia_internal/linux/debian_guest-${ARCH}"
 ${CIPD} create \
     -in "${IMAGE_DIR}" \
     -name "${CIPD_PATH}" \
-    -install-mode copy \
-    -tag "tests_git_revision:${TESTS_GIT_HASH}"
+    -install-mode copy
