@@ -71,14 +71,21 @@ protocol Device {
         buffer zx.handle:VMO;
     }) error zx.status;
 
-    /// Creates a connection to the device comprised of two IPC channels.
-    /// The primary channel is for the Primary protocol (see below).  The notification channel is
-    /// used for vendor-specific messages which are sent only in the reverse (server-client)
-    /// direction, typically in response to client command completion.
+    /// DEPRECATED
     Connect(struct {
         client_id uint64;
     }) -> (resource struct {
         primary_channel client_end:Primary;
+        notification_channel zx.handle:CHANNEL;
+    });
+
+    /// Creates a connection to the device comprised of two IPC channels.
+    /// The primary channel is for the Primary protocol (see below).  The notification channel is
+    /// used for vendor-specific messages which are sent only in the reverse (server-client)
+    /// direction, typically in response to client command completion.
+    Connect2(resource struct {
+        client_id uint64;
+        primary_channel server_end:Primary;
         notification_channel zx.handle:CHANNEL;
     });
 };

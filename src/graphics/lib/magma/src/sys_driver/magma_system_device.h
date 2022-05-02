@@ -44,7 +44,9 @@ class MagmaSystemDevice {
   // default profile.
   static std::shared_ptr<magma::PlatformConnection> Open(
       std::shared_ptr<MagmaSystemDevice>, msd_client_id_t client_id,
-      std::unique_ptr<magma::PlatformHandle> thread_profile);
+      std::unique_ptr<magma::PlatformHandle> thread_profile,
+      std::unique_ptr<magma::PlatformHandle> server_endpoint,
+      std::unique_ptr<magma::PlatformHandle> server_notification_endpoint);
 
   msd_device_t* msd_dev() { return msd_dev_.get(); }
 

@@ -699,14 +699,26 @@ std::unique_ptr<TestPlatformConnection> TestPlatformConnection::Create(
   client_connection = std::make_unique<magma::LinuxPlatformConnectionClient>(delegate.get());
 #endif
 
-  auto connection =
-      magma::PlatformConnection::Create(std::move(delegate), 1u, /*thread_profile*/ nullptr);
+  auto endpoints = fidl::CreateEndpoints<fuchsia_gpu_magma::Primary>();
+  if (!endpoints.is_ok())
+    return DRETP(nullptr, "Failed to create primary endpoints");
+
+  zx::channel client_notification_endpoint, server_notification_endpoint;
+  zx_status_t status =
+      zx::channel::create(0, &server_notification_endpoint, &client_notification_endpoint);
+  if (status != ZX_OK)
+    return DRETP(nullptr, "zx::channel::create failed");
+
+  auto connection = magma::PlatformConnection::Create(
+      std::move(delegate), 1u, /*thread_profile*/ nullptr,
+      magma::PlatformHandle::Create(endpoints->server.channel().release()),
+      magma::PlatformHandle::Create(server_notification_endpoint.release()));
   if (!connection)
     return DRETP(nullptr, "failed to create PlatformConnection");
 
   if (!client_connection) {
     client_connection = magma::PlatformConnectionClient::Create(
-        connection->GetClientEndpoint(), connection->GetClientNotificationEndpoint(),
+        endpoints->client.channel().release(), client_notification_endpoint.release(),
         max_inflight_messages, max_inflight_bytes);
   }
 

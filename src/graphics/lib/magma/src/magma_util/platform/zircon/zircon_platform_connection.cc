@@ -475,33 +475,22 @@ void ZirconPlatformConnection::ClearPerformanceCounters(
 
 std::shared_ptr<PlatformConnection> PlatformConnection::Create(
     std::unique_ptr<PlatformConnection::Delegate> delegate, msd_client_id_t client_id,
-    std::unique_ptr<magma::PlatformHandle> thread_profile) {
+    std::unique_ptr<magma::PlatformHandle> thread_profile,
+    std::unique_ptr<magma::PlatformHandle> server_endpoint,
+    std::unique_ptr<magma::PlatformHandle> server_notification_endpoint) {
   if (!delegate)
     return DRETP(nullptr, "attempting to create PlatformConnection with null delegate");
-
-  zx::channel server_endpoint;
-  zx::channel client_endpoint;
-  zx_status_t status = zx::channel::create(0, &server_endpoint, &client_endpoint);
-  if (status != ZX_OK)
-    return DRETP(nullptr, "zx::channel::create failed");
-
-  zx::channel server_notification_endpoint;
-  zx::channel client_notification_endpoint;
-  status = zx::channel::create(0, &server_notification_endpoint, &client_notification_endpoint);
-  if (status != ZX_OK)
-    return DRETP(nullptr, "zx::channel::create failed");
 
   auto shutdown_event = magma::PlatformEvent::Create();
   if (!shutdown_event)
     return DRETP(nullptr, "Failed to create shutdown event");
 
   auto connection = std::make_shared<ZirconPlatformConnection>(
-      std::move(delegate), client_id, std::move(client_endpoint),
-      std::move(server_notification_endpoint), std::move(client_notification_endpoint),
+      std::move(delegate), client_id, zx::channel(server_notification_endpoint->release()),
       std::shared_ptr<magma::PlatformEvent>(std::move(shutdown_event)), std::move(thread_profile));
 
-  if (!connection->Bind(std::move(server_endpoint)))
-    return DRETP(nullptr, "fidl::BindSingleInFlightOnly failed: %d", status);
+  if (!connection->Bind(zx::channel(server_endpoint->release())))
+    return DRETP(nullptr, "Bind failed");
 
   if (!connection->BeginShutdownWait())
     return DRETP(nullptr, "Failed to begin shutdown wait");

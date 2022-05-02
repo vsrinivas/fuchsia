@@ -20,20 +20,28 @@ class ZirconPlatformDeviceClient : public PlatformDeviceClient {
     if (!Query(MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS, &inflight_params))
       return DRETP(nullptr, "Query(MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS) failed");
 
-    uint32_t device_handle;
-    uint32_t device_notification_handle;
-    auto result = fidl::WireCall<fuchsia_gpu_magma::Device>(channel_.borrow())
-                      ->Connect(magma::PlatformThreadId().id());
-    if (result.status() != ZX_OK)
-      return DRETP(nullptr, "magma_DeviceConnect failed: %d", result.status());
+    auto endpoints = fidl::CreateEndpoints<fuchsia_gpu_magma::Primary>();
+    if (!endpoints.is_ok())
+      return DRETP(nullptr, "Failed to create primary endpoints");
 
-    device_handle = result->primary_channel.TakeChannel().release();
-    device_notification_handle = result->notification_channel.release();
+    zx::channel client_notification_endpoint, server_notification_endpoint;
+    zx_status_t status =
+        zx::channel::create(0, &server_notification_endpoint, &client_notification_endpoint);
+    if (status != ZX_OK)
+      return DRETP(nullptr, "zx::channel::create failed");
+
+    auto result = fidl::WireCall<fuchsia_gpu_magma::Device>(channel_.borrow())
+                      ->Connect2(magma::PlatformThreadId().id(), std::move(endpoints->server),
+                                 std::move(server_notification_endpoint));
+
+    if (result.status() != ZX_OK)
+      return DRETP(nullptr, "magma_DeviceConnect2 failed: %d", result.status());
 
     uint64_t max_inflight_messages = magma::upper_32_bits(inflight_params);
     uint64_t max_inflight_bytes = magma::lower_32_bits(inflight_params) * 1024 * 1024;
 
-    return magma::PlatformConnectionClient::Create(device_handle, device_notification_handle,
+    return magma::PlatformConnectionClient::Create(endpoints->client.channel().release(),
+                                                   client_notification_endpoint.release(),
                                                    max_inflight_messages, max_inflight_bytes);
   }
 

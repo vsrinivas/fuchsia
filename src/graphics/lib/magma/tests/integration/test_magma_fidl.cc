@@ -98,15 +98,23 @@ class TestMagmaFidl : public gtest::RealLoopFixture {
       max_inflight_messages_ = static_cast<uint32_t>(params >> 32);
     }
 
+    auto endpoints = fidl::CreateEndpoints<fuchsia_gpu_magma::Primary>();
+    ASSERT_TRUE(endpoints.is_ok());
+
+    zx::channel client_notification_endpoint, server_notification_endpoint;
+    zx_status_t status =
+        zx::channel::create(0, &server_notification_endpoint, &client_notification_endpoint);
+    ASSERT_EQ(status, ZX_OK);
+
     uint64_t client_id = 0xabcd;  // anything
-    auto wire_result = device_->Connect(client_id);
+    auto wire_result = device_->Connect2(client_id, std::move(endpoints->server),
+                                         std::move(server_notification_endpoint));
     ASSERT_TRUE(wire_result.ok());
 
-    primary_ = PrimaryClient(std::move(wire_result.Unwrap()->primary_channel), dispatcher(),
-                             &async_handler_);
+    primary_ = PrimaryClient(std::move(endpoints->client), dispatcher(), &async_handler_);
     ASSERT_TRUE(primary_.is_valid());
 
-    notification_channel_ = std::move(wire_result.Unwrap()->notification_channel);
+    notification_channel_ = std::move(client_notification_endpoint);
   }
 
   void TearDown() override {}

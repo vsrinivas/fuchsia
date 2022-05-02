@@ -104,8 +104,28 @@ struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::CombinedDevi
     if (!CheckSystemDevice(_completer))
       return;
 
-    auto connection = MagmaSystemDevice::Open(this->magma_system_device, request->client_id,
-                                              /*thread_profile*/ nullptr);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_gpu_magma::Primary>();
+    if (!endpoints.is_ok()) {
+      DLOG("Failed to create primary endpoints");
+      _completer.Close(endpoints.status_value());
+      return;
+    }
+
+    zx::channel server_notification_endpoint;
+    zx::channel client_notification_endpoint;
+    zx_status_t status =
+        zx::channel::create(0, &server_notification_endpoint, &client_notification_endpoint);
+    if (status != ZX_OK) {
+      DLOG("zx::channel::create failed");
+      _completer.Close(status);
+      return;
+    }
+
+    auto connection = MagmaSystemDevice::Open(
+        this->magma_system_device, request->client_id,
+        /*thread_profile*/ nullptr,
+        magma::PlatformHandle::Create(endpoints->server.channel().release()),
+        magma::PlatformHandle::Create(server_notification_endpoint.release()));
 
     if (!connection) {
       DLOG("MagmaSystemDevice::Open failed");
@@ -113,9 +133,28 @@ struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::CombinedDevi
       return;
     }
 
-    _completer.Reply(
-        fidl::ClientEnd<fuchsia_gpu_magma::Primary>(zx::channel(connection->GetClientEndpoint())),
-        zx::channel(connection->GetClientNotificationEndpoint()));
+    _completer.Reply(std::move(endpoints->client), std::move(client_notification_endpoint));
+
+    this->magma_system_device->StartConnectionThread(std::move(connection));
+  }
+
+  void Connect2(Connect2RequestView request, Connect2Completer::Sync& _completer) override {
+    DLOG("sysdrv_device_t::Connect2");
+    std::lock_guard lock(magma_mutex);
+    if (!CheckSystemDevice(_completer))
+      return;
+
+    auto connection = MagmaSystemDevice::Open(
+        this->magma_system_device, request->client_id,
+        /*thread_profile*/ nullptr,
+        magma::PlatformHandle::Create(request->primary_channel.channel().release()),
+        magma::PlatformHandle::Create(request->notification_channel.release()));
+
+    if (!connection) {
+      DLOG("MagmaSystemDevice::Open failed");
+      _completer.Close(ZX_ERR_INTERNAL);
+      return;
+    }
 
     this->magma_system_device->StartConnectionThread(std::move(connection));
   }

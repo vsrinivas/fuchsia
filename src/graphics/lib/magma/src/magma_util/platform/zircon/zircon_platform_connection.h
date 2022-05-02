@@ -72,15 +72,12 @@ class ZirconPlatformConnection : public fidl::WireServer<fuchsia_gpu_magma::Prim
   };
 
   ZirconPlatformConnection(std::unique_ptr<Delegate> delegate, msd_client_id_t client_id,
-                           zx::channel client_endpoint, zx::channel server_notification_endpoint,
-                           zx::channel client_notification_endpoint,
+                           zx::channel server_notification_endpoint,
                            std::shared_ptr<magma::PlatformEvent> shutdown_event,
                            std::unique_ptr<magma::PlatformHandle> thread_profile)
       : magma::PlatformConnection(shutdown_event, client_id, std::move(thread_profile)),
         delegate_(std::move(delegate)),
-        client_endpoint_(std::move(client_endpoint)),
         server_notification_endpoint_(std::move(server_notification_endpoint)),
-        client_notification_endpoint_(std::move(client_notification_endpoint)),
         async_loop_(&kAsyncLoopConfigNeverAttachToThread),
         async_wait_shutdown_(
             this, static_cast<magma::ZirconPlatformEvent*>(shutdown_event.get())->zx_handle(),
@@ -89,16 +86,6 @@ class ZirconPlatformConnection : public fidl::WireServer<fuchsia_gpu_magma::Prim
   }
 
   ~ZirconPlatformConnection() { delegate_->SetNotificationCallback(nullptr, 0); }
-
-  uint32_t GetClientEndpoint() override {
-    DASSERT(client_endpoint_);
-    return client_endpoint_.release();
-  }
-
-  uint32_t GetClientNotificationEndpoint() override {
-    DASSERT(client_notification_endpoint_);
-    return client_notification_endpoint_.release();
-  }
 
   bool Bind(zx::channel server_endpoint);
 
@@ -203,10 +190,8 @@ class ZirconPlatformConnection : public fidl::WireServer<fuchsia_gpu_magma::Prim
   cpp17::optional<fidl::ServerBindingRef<fuchsia_gpu_magma::Primary>> server_binding_;
 
   std::unique_ptr<Delegate> delegate_;
-  zx::channel client_endpoint_;
   magma_status_t error_{};
   zx::channel server_notification_endpoint_;
-  zx::channel client_notification_endpoint_;
   zx::channel performance_counter_event_channel_;
   async::Loop async_loop_;
   AsyncWait async_wait_shutdown_;

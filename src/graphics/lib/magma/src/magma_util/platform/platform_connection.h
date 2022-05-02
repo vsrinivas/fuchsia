@@ -94,12 +94,9 @@ class PlatformConnection {
   // if no specific profile is needed.
   static std::shared_ptr<PlatformConnection> Create(
       std::unique_ptr<Delegate> Delegate, msd_client_id_t client_id,
-      std::unique_ptr<magma::PlatformHandle> thread_profile);
-
-  virtual uint32_t GetClientEndpoint() = 0;
-
-  // This handle is used to asynchronously return information to the client.
-  virtual uint32_t GetClientNotificationEndpoint() = 0;
+      std::unique_ptr<magma::PlatformHandle> thread_profile,
+      std::unique_ptr<magma::PlatformHandle> server_endpoint,
+      std::unique_ptr<magma::PlatformHandle> server_notification_endpoint);
 
   // handles a single request, returns false if anything has put it into an illegal state
   // or if the remote has closed
