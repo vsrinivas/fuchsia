@@ -2,21 +2,40 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fuchsia_async as fasync, test_utils_lib::opaque_test::*};
+use {
+    component_events::{events::*, matcher::*},
+    fuchsia_async as fasync,
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, Ref, Route},
+};
 
 #[fasync::run_singlethreaded(test)]
-async fn test() {
-    let mut test = OpaqueTest::default(
-        "fuchsia-pkg://fuchsia.com/shutdown_integration_test#meta/shutdown_integration_root.cm",
-    )
-    .await
-    .unwrap();
-
-    test.start_component_tree().await.unwrap();
-
-    test.component_manager_app
-        .wait()
+async fn shutdown_test() {
+    let builder = RealmBuilder::new().await.unwrap();
+    let root = builder
+        .add_child("root", "#meta/shutdown_integration_root.cm", ChildOptions::new().eager())
         .await
-        .and_then(|exit_status| exit_status.ok().map_err(|e| e.into()))
+        .unwrap();
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .capability(Capability::protocol_by_name("fuchsia.sys2.SystemController"))
+                .from(Ref::parent())
+                .to(&root),
+        )
+        .await
+        .unwrap();
+    let _instance =
+        builder.build_in_nested_component_manager("#meta/component_manager.cm").await.unwrap();
+
+    let event_source = EventSource::new().unwrap();
+
+    let mut event_stream = event_source.take_static_event_stream("stopped_stream").await.unwrap();
+
+    // Expect component manager to stop cleanly
+    EventMatcher::ok()
+        .stop(Some(ExitStatusMatcher::Clean))
+        .wait::<Stopped>(&mut event_stream)
+        .await
         .unwrap();
 }

@@ -11,9 +11,10 @@ rustc_test("shutdown_integration_test_bin") {
   edition = "2018"
   source_root = "shutdown_integration.rs"
   deps = [
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fuchsia-async",
-    "//src/sys/component_manager/testing:test_utils_lib",
-    "//third_party/rust_crates:anyhow",
+    "//src/lib/fuchsia-component-test",
+    "//src/sys/lib/component-events",
   ]
 
   sources = [ "shutdown_integration.rs" ]
@@ -44,10 +45,11 @@ fuchsia_component("system_controller_consumer") {
 }
 
 fuchsia_unittest_package("shutdown_integration_test") {
-  manifest = "meta/shutdown_integration_test.cmx"
+  manifest = "meta/shutdown_integration_test.cml"
   deps = [
     ":shutdown_integration_root",
     ":shutdown_integration_test_bin",
     ":system_controller_consumer",
+    "//src/sys/component_manager:component-manager-realm-builder-cmp",
   ]
 }
