@@ -42,7 +42,14 @@ pub extern "C" fn stop_client_mlme(mlme: &mut MlmeHandle) {
     mlme.stop();
 }
 
-#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99057)
+/// FFI interface: Stop and delete a Client MLME via the MlmeHandle. Takes ownership
+/// and invalidates the passed MlmeHandle.
+///
+/// # Safety
+///
+/// This fn accepts a raw pointer that is held by the FFI caller as a handle to
+/// the MLME. This API is fundamentally unsafe, and relies on the caller to
+/// pass the correct pointer and make no further calls on it later.
 #[no_mangle]
 pub unsafe extern "C" fn delete_client_mlme(mlme: *mut MlmeHandle) {
     if !mlme.is_null() {
@@ -51,20 +58,17 @@ pub unsafe extern "C" fn delete_client_mlme(mlme: *mut MlmeHandle) {
     }
 }
 
-#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99057)
 #[no_mangle]
-pub unsafe extern "C" fn client_mlme_queue_eth_frame_tx(mlme: &mut MlmeHandle, frame: CSpan<'_>) {
+pub extern "C" fn client_mlme_queue_eth_frame_tx(mlme: &mut MlmeHandle, frame: CSpan<'_>) {
     let _ = mlme.queue_eth_frame_tx(frame.into());
 }
 
-#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99057)
 #[no_mangle]
-pub unsafe extern "C" fn client_mlme_advance_fake_time(mlme: &mut MlmeHandle, nanos: i64) {
+pub extern "C" fn client_mlme_advance_fake_time(mlme: &mut MlmeHandle, nanos: i64) {
     mlme.advance_fake_time(nanos);
 }
 
-#[allow(clippy::missing_safety_doc)] // TODO(fxbug.dev/99057)
 #[no_mangle]
-pub unsafe extern "C" fn client_mlme_run_until_stalled(mlme: &mut MlmeHandle) {
+pub extern "C" fn client_mlme_run_until_stalled(mlme: &mut MlmeHandle) {
     mlme.run_until_stalled();
 }

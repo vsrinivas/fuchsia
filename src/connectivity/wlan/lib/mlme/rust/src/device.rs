@@ -417,7 +417,7 @@ pub struct DeviceInterface {
         extern "C" fn(device: *mut c_void) -> banjo_common::SpectrumManagementSupport,
     /// Configure the device's BSS.
     /// |cfg| is mutable because the underlying API does not take a const bss_config_t.
-    configure_bss: extern "C" fn(device: *mut c_void, cfg: *mut BssConfig) -> i32,
+    configure_bss: extern "C" fn(device: *mut c_void, cfg: &mut BssConfig) -> i32,
     /// Enable hardware offload of beaconing on the device.
     enable_beaconing: extern "C" fn(
         device: *mut c_void,
@@ -548,7 +548,7 @@ impl DeviceInterface {
     }
 
     fn configure_bss(&self, mut cfg: BssConfig) -> Result<(), zx::Status> {
-        let status = (self.configure_bss)(self.device, &mut cfg as *mut BssConfig);
+        let status = (self.configure_bss)(self.device, &mut cfg);
         zx::ok(status)
     }
 
@@ -874,11 +874,9 @@ pub(crate) mod test_utils {
             unsafe { (*(device as *const Self)).spectrum_management_support }
         }
 
-        // Cannot mark fn unsafe because it has to match fn signature in DeviceInterface
-        #[allow(clippy::not_unsafe_ptr_arg_deref)]
-        pub extern "C" fn configure_bss(device: *mut c_void, cfg: *mut BssConfig) -> i32 {
+        pub extern "C" fn configure_bss(device: *mut c_void, cfg: &mut BssConfig) -> i32 {
             unsafe {
-                (*(device as *mut Self)).bss_cfg.replace((*cfg).clone());
+                (*(device as *mut Self)).bss_cfg.replace(cfg.clone());
             }
             zx::sys::ZX_OK
         }
