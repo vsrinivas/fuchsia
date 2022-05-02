@@ -181,5 +181,25 @@
             "exclusive": false,
             "localizedDescription": "increaseVolumeKeyboardShortcut"
         }
+    ],
+    "zoomIn": [
+        {
+            "char": "up",
+            "chord": "Shift + Ctrl + Arrow Up",
+            "modifier": "shift + control",
+            "exclusive": false,
+            "description": "Zoom In",
+            "localizedDescription": "zoomInKeyboardShortcut"
+        }
+    ],
+    "zoomOut": [
+        {
+            "char": "down",
+            "chord": "Shift + Ctrl + Arrow Down",
+            "modifier": "shift + control",
+            "exclusive": false,
+            "description": "Zoom Out",
+            "localizedDescription": "zoomOutKeyboardShortcut"
+        }
     ]
 }

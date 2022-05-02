@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:ermine/src/services/preferences_service.dart';
 import 'package:ermine/src/states/app_state.dart';
 import 'package:ermine/src/widgets/settings/about_settings.dart';
 import 'package:ermine/src/widgets/settings/channel_settings.dart';
@@ -13,6 +14,7 @@ import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:internationalization/strings.dart';
+import 'package:mobx/mobx.dart';
 
 /// Defines a widget to display status and update system settings.
 class QuickSettings extends StatelessWidget {
@@ -24,7 +26,6 @@ class QuickSettings extends StatelessWidget {
   Widget build(BuildContext context) {
     return RepaintBoundary(
       child: Container(
-        height: MediaQuery.of(context).size.height / 2,
         decoration: BoxDecoration(
           border:
               Border(top: BorderSide(color: Theme.of(context).dividerColor)),
@@ -177,6 +178,47 @@ class _ListSettings extends StatelessWidget {
                   ),
                   onTap: appState.settingsState.showTimezoneSettings,
                 ),
+                // Scale
+                Builder(builder: (context) {
+                  var currentScale = appState.scale.asObservable();
+                  final focusNode = FocusNode();
+                  return Observer(builder: (_) {
+                    return ListTile(
+                      enabled: true,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                      leading: Icon(Icons.display_settings),
+                      title: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(Strings.scale),
+                          Expanded(
+                            child: Slider(
+                              focusNode: focusNode,
+                              value: currentScale.value,
+                              min: PreferencesService.kScaleLowerBound,
+                              max: PreferencesService.kScaleUpperBound,
+                              divisions: ((PreferencesService.kScaleUpperBound /
+                                          PreferencesService.kScaleLowerBound) -
+                                      1)
+                                  .toInt(),
+                              onChanged: (value) {
+                                runInAction(() => currentScale.value = value);
+                                focusNode.requestFocus();
+                              },
+                              label: currentScale.value.toString(),
+                            ),
+                          ),
+                        ],
+                      ),
+                      trailing: OutlinedButton(
+                        style:
+                            ErmineButtonStyle.outlinedButton(Theme.of(context)),
+                        onPressed: () => appState.setScale(currentScale.value),
+                        child: Text(Strings.apply.toUpperCase()),
+                      ),
+                    );
+                  });
+                }),
                 // Brightness
                 Observer(builder: (_) {
                   return ListTile(

@@ -343,6 +343,18 @@ class Strings {
         desc: 'A shorthand for "automatic" setting.',
       );
 
+  static String get apply => Intl.message(
+        'Apply',
+        name: 'apply',
+        desc: 'Button label to apply changes.',
+      );
+
+  static String get scale => Intl.message(
+        'Scale',
+        name: 'scale',
+        desc: 'Text label for scaling the UI.',
+      );
+
   static String get mockWirelessNetwork => Intl.message(
         'Wireless_Network',
         name: 'mockWirelessNetwork',
@@ -984,6 +996,16 @@ class Strings {
         'Logout',
         name: 'logout',
         desc: 'Keyboard shortcut description to logout.',
+      );
+  static String get zoomInShortcut => Intl.message(
+        'Zoom In',
+        name: 'zoomIn',
+        desc: 'Keyboard shortcut description to zoom in the shell UI.',
+      );
+  static String get zoomOutShortcut => Intl.message(
+        'Zoom Out',
+        name: 'zoomOut',
+        desc: 'Keyboard shortcut description to zoom out the shell UI.',
       );
   static String get update => Intl.message(
         'Update',

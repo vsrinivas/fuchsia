@@ -18,6 +18,7 @@ dart_library("ermine_utils") {
     "src/markdown_rich_text.dart",
     "src/mobx_disposable.dart",
     "src/mobx_extensions.dart",
+    "src/scale_widget.dart",
     "src/themes.dart",
     "src/view_handle.dart",
     "src/widget_extension.dart",

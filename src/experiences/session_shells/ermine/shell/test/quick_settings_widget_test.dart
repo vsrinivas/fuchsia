@@ -26,6 +26,7 @@ void main() async {
   final wifiPageVisible = false.asObservable();
   final dataSharingConsentPageVisible = false.asObservable();
   final dateTime = '12:00 AM'.asObservable();
+  final scale = 1.0.asObservable();
   final currentNetwork = 'WiFi'.asObservable();
   final brightnessLevel = 1.0.asObservable();
   final brightnessAuto = false.asObservable();
@@ -44,6 +45,7 @@ void main() async {
     when(app.hasDarkTheme).thenAnswer((_) => hasDarkTheme.value);
     when(app.isUserFeedbackEnabled)
         .thenAnswer((_) => isUserFeedbackEnabled.value);
+    when(app.scale).thenAnswer((_) => scale.value);
     when(settings.dateTime).thenAnswer((_) => dateTime.value);
     when(settings.selectedTimezone).thenReturn('America/Los_Angeles');
     when(settings.currentChannel).thenReturn('testing');

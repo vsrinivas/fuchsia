@@ -25,22 +25,28 @@ class SideBar extends StatelessWidget {
       shape: Border(
         left: BorderSide(color: Theme.of(context).dividerColor),
       ),
-      child: Container(
-        width: kWidth,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // App Launcher.
-            Expanded(child: WidgetFactory.create(() => AppLauncher(appState))),
+      child: LayoutBuilder(builder: (context, constraints) {
+        return Container(
+          width: kWidth,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // App Launcher.
+              Expanded(
+                  child: WidgetFactory.create(() => AppLauncher(appState))),
 
-            // Status.
-            WidgetFactory.create(() => Status(appState)),
+              // Status.
+              WidgetFactory.create(() => Status(appState)),
 
-            // Quick Settings.
-            WidgetFactory.create(() => QuickSettings(appState)),
-          ],
-        ),
-      ),
+              // Quick Settings.
+              SizedBox(
+                height: constraints.maxHeight / 2,
+                child: WidgetFactory.create(() => QuickSettings(appState)),
+              ),
+            ],
+          ),
+        );
+      }),
     );
   }
 }

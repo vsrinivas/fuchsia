@@ -31,45 +31,48 @@ class App extends StatelessWidget {
         return Offstage();
       }
       Intl.defaultLocale = locale.toString();
-      return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: app.theme,
-        locale: locale,
-        localizationsDelegates: [
-          localizations.delegate(),
-          ...GlobalMaterialLocalizations.delegates,
-          GlobalWidgetsLocalizations.delegate,
-        ],
-        supportedLocales: supported_locales.locales,
-        scrollBehavior: MaterialScrollBehavior().copyWith(
-          dragDevices: {PointerDeviceKind.mouse, PointerDeviceKind.touch},
+      return ScaleWidget(
+        scale: app.scale,
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: app.theme,
+          locale: locale,
+          localizationsDelegates: [
+            localizations.delegate(),
+            ...GlobalMaterialLocalizations.delegates,
+            GlobalWidgetsLocalizations.delegate,
+          ],
+          supportedLocales: supported_locales.locales,
+          scrollBehavior: MaterialScrollBehavior().copyWith(
+            dragDevices: {PointerDeviceKind.mouse, PointerDeviceKind.touch},
+          ),
+          home: Builder(builder: (context) {
+            FocusManager.instance.highlightStrategy =
+                FocusHighlightStrategy.alwaysTraditional;
+            return Material(
+              type: MaterialType.canvas,
+              child: Observer(builder: (_) {
+                return Stack(
+                  fit: StackFit.expand,
+                  children: <Widget>[
+                    // Show fullscreen top view.
+                    if (app.views.isNotEmpty)
+                      WidgetFactory.create(() => AppView(app)),
+
+                    // Show scrim and overlay layers if an overlay is visible.
+                    if (app.overlaysVisible)
+                      WidgetFactory.create(() => Overlays(app)),
+
+                    // Show dialogs above all.
+                    if (app.dialogsVisible)
+                      WidgetFactory.create(
+                          () => Dialogs(app.dialogs, onClose: app.hideOverlay)),
+                  ],
+                );
+              }),
+            );
+          }),
         ),
-        home: Builder(builder: (context) {
-          FocusManager.instance.highlightStrategy =
-              FocusHighlightStrategy.alwaysTraditional;
-          return Material(
-            type: MaterialType.canvas,
-            child: Observer(builder: (_) {
-              return Stack(
-                fit: StackFit.expand,
-                children: <Widget>[
-                  // Show fullscreen top view.
-                  if (app.views.isNotEmpty)
-                    WidgetFactory.create(() => AppView(app)),
-
-                  // Show scrim and overlay layers if an overlay is visible.
-                  if (app.overlaysVisible)
-                    WidgetFactory.create(() => Overlays(app)),
-
-                  // Show dialogs above all.
-                  if (app.dialogsVisible)
-                    WidgetFactory.create(
-                        () => Dialogs(app.dialogs, onClose: app.hideOverlay)),
-                ],
-              );
-            }),
-          );
-        }),
       );
     });
   }

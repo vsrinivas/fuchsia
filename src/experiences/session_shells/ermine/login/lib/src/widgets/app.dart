@@ -43,29 +43,39 @@ class OobeApp extends StatelessWidget {
         scrollBehavior: MaterialScrollBehavior().copyWith(
           dragDevices: {PointerDeviceKind.mouse, PointerDeviceKind.touch},
         ),
-        home: Builder(builder: (context) {
+        home: LayoutBuilder(builder: (context, constraints) {
           FocusManager.instance.highlightStrategy =
               FocusHighlightStrategy.alwaysTraditional;
-          return Material(
-            type: MaterialType.canvas,
-            child: Observer(builder: (_) {
-              return Stack(
-                fit: StackFit.expand,
-                children: <Widget>[
-                  if (oobe.hasAccount)
-                    WidgetFactory.create(() => Login(oobe))
-                  else
-                    WidgetFactory.create(() => Oobe(oobe)),
+          return ScaleWidget(
+            scale: _scaleFromConstraints(constraints),
+            child: Material(
+              type: MaterialType.canvas,
+              child: Observer(builder: (_) {
+                return Stack(
+                  fit: StackFit.expand,
+                  children: <Widget>[
+                    if (oobe.hasAccount)
+                      WidgetFactory.create(() => Login(oobe))
+                    else
+                      WidgetFactory.create(() => Oobe(oobe)),
 
-                  // Dialogs.
-                  if (oobe.dialogs.isNotEmpty)
-                    WidgetFactory.create(() => Dialogs(oobe.dialogs))
-                ],
-              );
-            }),
+                    // Dialogs.
+                    if (oobe.dialogs.isNotEmpty)
+                      WidgetFactory.create(() => Dialogs(oobe.dialogs))
+                  ],
+                );
+              }),
+            ),
           );
         }),
       );
     });
   }
+}
+
+// TODO(https://fxbug.dev/62096): Remove once hardware resolution is supported.
+// Login UX is designed for an ideal height of 1080. Return a scale that
+// results in that height.
+double _scaleFromConstraints(BoxConstraints constraints) {
+  return constraints.maxHeight / 1080.0;
 }

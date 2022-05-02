@@ -4,6 +4,7 @@
 
 import 'package:ermine/src/states/app_state.dart';
 import 'package:ermine/src/widgets/timeout.dart';
+import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
@@ -19,11 +20,17 @@ class AppView extends StatelessWidget {
     return Observer(builder: (_) {
       final view = state.topView;
       return Stack(
+        fit: StackFit.expand,
         children: [
-          FuchsiaView(
-            controller: view.viewConnection,
-            hitTestable: view.hitTestable,
-            focusable: view.focusable,
+          // Scaling applied at the top of this app's widget hierarchy does not
+          // apply to child view. So undo the scaling here.
+          ScaleWidget(
+            scale: 1.0 / state.scale,
+            child: FuchsiaView(
+              controller: view.viewConnection,
+              hitTestable: view.hitTestable,
+              focusable: view.focusable,
+            ),
           ),
 
           // Loading and timeout UX.

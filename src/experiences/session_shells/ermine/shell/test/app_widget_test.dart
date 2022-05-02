@@ -28,6 +28,7 @@ void main() async {
     state = MockAppState();
     app = App(state);
 
+    when(state.scale).thenAnswer((_) => 1.0);
     when(state.theme).thenAnswer((_) => AppTheme.darkTheme);
     WidgetFactory.mockFactory = (type) => Container(key: ValueKey(type));
   });
