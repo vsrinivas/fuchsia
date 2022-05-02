@@ -37,9 +37,25 @@ assemble_system(_assemble_system_target_name) {
   pkgfs_package_label = ":empty_pkgfs"
 }
 
+# `assemble_system` builds a zbi, specifying `ramdisk_fvm_in_zbi = true`
+# tests the path where the blobfs exists in the zbi and is automatically
+# extracted as part of the zbi, such as in recovery images.
+_assemble_system_recovery_target_name = "assembly_recovery"
+assemble_system(_assemble_system_recovery_target_name) {
+  testonly = true
+  bootfs_labels = []
+  ramdisk_fvm_in_zbi = true
+  base_packages = [
+    ":empty-pkg",
+    ":empty_config",
+  ]
+  pkgfs_package_label = ":empty_pkgfs"
+}
+
 if (is_host) {
   host_test_data("testdata") {
     deps = [
+      ":${_assemble_system_recovery_target_name}_image_assembler($target_toolchain)",
       ":${_assemble_system_target_name}_image_assembler($target_toolchain)",
     ]
     sources = [
@@ -49,6 +65,9 @@ if (is_host) {
       get_label_info(
               ":${_assemble_system_target_name}_image_assembler($target_toolchain)",
               "target_out_dir") + "/${_assemble_system_target_name}/${_assemble_system_target_name}.zbi",
+      get_label_info(
+              ":${_assemble_system_recovery_target_name}_image_assembler($target_toolchain)",
+              "target_out_dir") + "/${_assemble_system_recovery_target_name}/${_assemble_system_recovery_target_name}.zbi",
     ]
     outputs = [ "$target_out_dir/testdata/{{source_file_part}}" ]
 
@@ -72,11 +91,13 @@ if (is_host) {
     ffx_path = "$host_tools_out_dir/host_tools/ffx"
     blobfs_path = "$testdata_out_dir/testdata/blob.blk"
     zbi_path = "$testdata_out_dir/testdata/${_assemble_system_target_name}.zbi"
+    recovery_zbi_path = "$testdata_out_dir/testdata/${_assemble_system_recovery_target_name}.zbi"
 
     rustenv = [
       "FFX_TOOL_PATH=" + rebase_path(ffx_path, root_build_dir),
       "BLOBFS_PATH=" + rebase_path(blobfs_path, root_build_dir),
       "ZBI_PATH=" + rebase_path(zbi_path, root_build_dir),
+      "RECOVERY_ZBI_PATH=" + rebase_path(recovery_zbi_path, root_build_dir),
     ]
   }
 
