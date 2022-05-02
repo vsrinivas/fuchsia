@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:internationalization/strings.dart';
 import 'package:login/src/states/oobe_state.dart';
+import 'package:login/src/widgets/details.dart';
 
 /// Defines a widget for the final screen when oobe is complete.
 class Ready extends StatelessWidget {
@@ -14,58 +15,20 @@ class Ready extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.all(16),
-      child: FocusScope(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Title.
-            Text(
-              Strings.passwordIsSet,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headline3,
-            ),
+    return Details(
+      // Header: Title and description.
+      title: Strings.passwordIsSet,
+      description: Strings.readyToUse,
 
-            // Description.
-            Container(
-              alignment: Alignment.center,
-              padding: EdgeInsets.all(24),
-              child: SizedBox(
-                width: 600,
-                child: Text(
-                  Strings.readyToUse,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyText1!
-                      .copyWith(height: 1.55),
-                ),
-              ),
-            ),
-
-            // Empty.
-            Expanded(child: Container()),
-
-            // Start workstation button.
-            Container(
-              alignment: Alignment.center,
-              padding: EdgeInsets.all(24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  OutlinedButton(
-                    key: ValueKey('startWorkstation'),
-                    autofocus: true,
-                    onPressed: oobe.finish,
-                    child: Text(Strings.startWorkstation.toUpperCase()),
-                  ),
-                ],
-              ),
-            ),
-          ],
+      // Button: Start workstation.
+      buttons: [
+        OutlinedButton(
+          key: ValueKey('startWorkstation'),
+          autofocus: true,
+          onPressed: oobe.finish,
+          child: Text(Strings.startWorkstation.toUpperCase()),
         ),
-      ),
+      ],
     );
   }
 }

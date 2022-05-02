@@ -9,7 +9,8 @@ import 'package:mobx/mobx.dart';
 import 'package:login/src/states/oobe_state.dart';
 import 'package:login/src/widgets/header.dart';
 
-/// Defines a widget to configure software update channels.
+// TODO(fxb/99347): Update the layout using Details.
+/// Define a widget to gather SSH keys.
 class SshKeys extends StatelessWidget {
   final OobeState oobe;
 

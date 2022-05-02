@@ -23,6 +23,8 @@ enum SshScreen { add, confirm, error, exit }
 /// The ssh key import methods.
 enum SshImport { github, manual }
 
+const kContentWidth = 696.0;
+
 /// Defines the state of an application view.
 abstract class OobeState {
   Locale? get locale;

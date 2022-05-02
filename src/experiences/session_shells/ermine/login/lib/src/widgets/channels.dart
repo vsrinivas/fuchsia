@@ -8,6 +8,7 @@ import 'package:internationalization/strings.dart';
 import 'package:login/src/states/oobe_state.dart';
 import 'package:login/src/widgets/header.dart';
 
+// TODO(fxb/99347): Update the layout using Details.
 /// Defines a widget to configure software update channels.
 class Channels extends StatelessWidget {
   final OobeState oobe;

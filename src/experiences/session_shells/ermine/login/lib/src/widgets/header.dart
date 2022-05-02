@@ -14,28 +14,18 @@ class Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Title.
         Text(
           title,
-          textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.headline3,
         ),
-
+        SizedBox(height: 24),
         // Description.
-        Container(
-          alignment: Alignment.center,
-          padding: EdgeInsets.all(16),
-          child: SizedBox(
-            width: 600,
-            child: Text(
-              description,
-              textAlign: TextAlign.center,
-              style:
-                  Theme.of(context).textTheme.bodyText1!.copyWith(height: 1.55),
-            ),
-          ),
+        Text(
+          description,
+          style: Theme.of(context).textTheme.bodyText1,
         ),
       ],
     );

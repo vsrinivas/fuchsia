@@ -22,84 +22,86 @@ class Oobe extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Color.fromARGB(0xff, 0x0c, 0x0c, 0x0c),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Header: Fuchsia logo and welcome.
-          Padding(
-            padding: EdgeInsets.only(top: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                // Fuchsia logo.
-                Image(
-                  image: AssetImage('images/Fuchsia-logo-2x.png'),
-                  color: Theme.of(context).colorScheme.primary,
-                  width: 24,
-                  height: 24,
-                ),
-                SizedBox(width: 16),
-                // Welcome text.
-                Text(
-                  Strings.fuchsiaWelcome,
-                  style: Theme.of(context).textTheme.headline6,
-                ),
-              ],
-            ),
-          ),
-
-          // Body: Oobe screens.
-          Expanded(
-            child: Observer(builder: (context) {
-              switch (oobe.screen) {
-                case OobeScreen.loading:
-                  return Offstage();
-                // policy is finalized.
-                // case OobeScreen.channel:
-                //   return Channels(oobe);
-                case OobeScreen.dataSharing:
-                  return DataSharing(oobe);
-                // case OobeScreen.sshKeys:
-                //   return SshKeys(oobe);
-                case OobeScreen.password:
-                  return Password(oobe);
-                case OobeScreen.done:
-                  return Ready(oobe);
-              }
-            }),
-          ),
-
-          // Footer: progress dots.
-          SizedBox(
-            height: 68,
-            child: Row(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 100),
+        child: Center(
+          child: SizedBox(
+            width: kContentWidth,
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                for (var index = oobe.showDataSharing
-                        ? OobeScreen.dataSharing.index
-                        : OobeScreen.password.index;
-                    index <= OobeScreen.done.index;
-                    index++)
-                  Padding(
-                    padding: EdgeInsets.all(6.0),
-                    child: Observer(builder: (context) {
-                      return Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.white),
-                          color:
-                              index == oobe.screen.index ? Colors.white : null,
-                        ),
-                      );
-                    }),
-                  ),
+                // Header: Fuchsia logo and welcome.
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Fuchsia logo.
+                    Image(
+                      image: AssetImage('images/Fuchsia-logo-2x.png'),
+                      color: Colors.white,
+                      width: 24,
+                      height: 24,
+                    ),
+                    SizedBox(width: 16),
+                    // Welcome text.
+                    Flexible(
+                        child: Text(
+                      Strings.fuchsiaWelcome,
+                      style: Theme.of(context).textTheme.subtitle1,
+                    )),
+                  ],
+                ),
+                SizedBox(height: 56),
+
+                // Page indicator.
+                Row(
+                  children: [
+                    for (var index = oobe.showDataSharing
+                            ? OobeScreen.dataSharing.index
+                            : OobeScreen.password.index;
+                        index <= OobeScreen.done.index;
+                        index++)
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 6.0),
+                        child: Observer(builder: (context) {
+                          return Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.white),
+                              color: index == oobe.screen.index
+                                  ? Colors.white
+                                  : null,
+                            ),
+                          );
+                        }),
+                      ),
+                  ],
+                ),
+                SizedBox(height: 24),
+
+                // Body: Oobe screens.
+                Expanded(
+                  child: Observer(builder: (context) {
+                    switch (oobe.screen) {
+                      case OobeScreen.loading:
+                        return Offstage();
+                      // case OobeScreen.channel:
+                      //   return Channels(oobe);
+                      case OobeScreen.dataSharing:
+                        return DataSharing(oobe);
+                      // case OobeScreen.sshKeys:
+                      //   return SshKeys(oobe);
+                      case OobeScreen.password:
+                        return Password(oobe);
+                      case OobeScreen.done:
+                        return Ready(oobe);
+                    }
+                  }),
+                ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
