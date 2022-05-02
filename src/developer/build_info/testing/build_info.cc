@@ -8,9 +8,24 @@
 
 void FakeProviderImpl::GetBuildInfo(GetBuildInfoCallback callback) {
   fuchsia::buildinfo::BuildInfo build_info;
+  if (info_ref_->product_config_.empty()) {
+    info_ref_->product_config_ = FakeProviderImpl::kProductFileNameDefault;
+  }
   build_info.set_product_config(info_ref_->product_config_);
+
+  if (info_ref_->board_config_.empty()) {
+    info_ref_->board_config_ = FakeProviderImpl::kBoardFileNameDefault;
+  }
   build_info.set_board_config(info_ref_->board_config_);
+
+  if (info_ref_->version_.empty()) {
+    info_ref_->version_ = FakeProviderImpl::kVersionFileNameDefault;
+  }
   build_info.set_version(info_ref_->version_);
+
+  if (info_ref_->latest_commit_date_.empty()) {
+    info_ref_->latest_commit_date_ = FakeProviderImpl::kLastCommitDateFileNameDefault;
+  }
   build_info.set_latest_commit_date(info_ref_->latest_commit_date_);
 
   callback(std::move(build_info));

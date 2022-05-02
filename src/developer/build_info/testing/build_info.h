@@ -33,6 +33,11 @@ class BuildInfoTestControllerImpl : public fuchsia::buildinfo::test::BuildInfoTe
 // Returns fake system build information. Used for testing.
 class FakeProviderImpl : public fuchsia::buildinfo::Provider {
  public:
+  static constexpr auto kProductFileNameDefault = "core";
+  static constexpr auto kBoardFileNameDefault = "chromebook-x64";
+  static constexpr auto kVersionFileNameDefault = "2019-03-28T09:00:20+00:00";
+  static constexpr auto kLastCommitDateFileNameDefault = "2019-03-28T09:00:20+00:00";
+
   explicit FakeProviderImpl(std::shared_ptr<struct fake_info> info_ref)
       : info_ref_(std::move(info_ref)) {}
 

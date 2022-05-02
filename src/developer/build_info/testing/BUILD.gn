@@ -45,7 +45,10 @@ fuchsia_package("fake-build-info") {
 executable("test-bin") {
   testonly = true
   output_name = "fake_build_info_integration_test"
-  sources = [ "build_info_test.cc" ]
+  sources = [
+    "build_info.h",
+    "build_info_test.cc",
+  ]
 
   deps = [
     "//sdk/fidl/fuchsia.buildinfo",

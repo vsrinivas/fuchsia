@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "build_info.h"
+
 #include <fuchsia/buildinfo/cpp/fidl.h>
 #include <fuchsia/buildinfo/test/cpp/fidl.h>
 #include <fuchsia/component/cpp/fidl.h>
@@ -34,8 +36,8 @@ class FakeBuildInfoTestFixture : public gtest::RealLoopFixture {
 
   static constexpr auto kProductFileName = "workstation";
   static constexpr auto kBoardFileName = "x64";
-  static constexpr auto kVersionFileName = "2019-03-28T15:42:20+00:00";
-  static constexpr auto kLastCommitDateFileName = "2019-03-28T15:42:20+00:00";
+  static constexpr auto kVersionFileName = "2022-03-28T15:42:20+00:00";
+  static constexpr auto kLastCommitDateFileName = "2022-03-28T15:42:20+00:00";
 
   FakeBuildInfoTestFixture()
       : realm_builder_(std::make_unique<RealmBuilder>(RealmBuilder::Create())) {}
@@ -71,13 +73,13 @@ TEST_F(FakeBuildInfoTestFixture, SetBuildInfo) {
   provider->GetBuildInfo(&result);
 
   EXPECT_TRUE(result.has_product_config());
-  EXPECT_TRUE(result.product_config().empty());
+  EXPECT_EQ(result.product_config(), FakeProviderImpl::kProductFileNameDefault);
   EXPECT_TRUE(result.has_board_config());
-  EXPECT_TRUE(result.board_config().empty());
+  EXPECT_EQ(result.board_config(), FakeProviderImpl::kBoardFileNameDefault);
   EXPECT_TRUE(result.has_version());
-  EXPECT_TRUE(result.version().empty());
+  EXPECT_EQ(result.version(), FakeProviderImpl::kVersionFileNameDefault);
   EXPECT_TRUE(result.has_latest_commit_date());
-  EXPECT_TRUE(result.latest_commit_date().empty());
+  EXPECT_EQ(result.latest_commit_date(), FakeProviderImpl::kLastCommitDateFileNameDefault);
 
   auto build_info = BuildInfo();
   build_info.set_board_config(FakeBuildInfoTestFixture::kBoardFileName);
