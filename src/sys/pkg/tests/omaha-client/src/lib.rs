@@ -39,7 +39,8 @@ use {
     mock_crash_reporter::{CrashReport, MockCrashReporterService, ThrottleHook},
     mock_installer::MockUpdateInstallerService,
     mock_omaha_server::{
-        OmahaResponse, OmahaServer, PrivateKey, PrivateKeyAndId, PrivateKeys, ResponseAndMetadata,
+        OmahaResponse, OmahaServer, OmahaServerBuilder, PrivateKey, PrivateKeyAndId, PrivateKeys,
+        ResponseAndMetadata,
     },
     mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
     mock_reboot::{MockRebootService, RebootReason},
@@ -260,12 +261,19 @@ impl TestEnvBuilder {
         fs.dir("config").add_remote("data", config_data);
         fs.dir("config").add_remote("build-info", build_info);
 
-        let server = OmahaServer::builder()
-            .set(self.responses_by_appid)
-            .private_keys(self.private_keys)
-            .etag_override(self.etag_override)
-            .build();
-        let url = server.clone().start().expect("start server");
+        let server = Arc::new(Mutex::new(
+            OmahaServerBuilder::default()
+                .responses_by_appid(
+                    self.responses_by_appid
+                        .into_iter()
+                        .collect::<HashMap<String, ResponseAndMetadata>>(),
+                )
+                .private_keys(Some(self.private_keys))
+                .etag_override(self.etag_override)
+                .build()
+                .unwrap(),
+        ));
+        let url = OmahaServer::start(server.clone()).expect("start server");
         mounts.write_url(&url);
         mounts.write_appid("integration-test-appid");
         mounts.write_version(self.version);
@@ -628,7 +636,7 @@ struct TestEnv {
     realm_instance: RealmInstance,
     _mounts: Mounts,
     proxies: Proxies,
-    server: OmahaServer,
+    server: Arc<Mutex<OmahaServer>>,
     reboot_called: oneshot::Receiver<()>,
 }
 
@@ -2000,11 +2008,11 @@ async fn test_update_check_sets_updatedisabled_when_opted_out() {
     let env = TestEnvBuilder::new().default_with_response(OmahaResponse::NoUpdate).build().await;
 
     // The default is to enable updates.
-    env.server.set_all_update_check_assertions(Some(UpdateCheckAssertion::UpdatesEnabled));
+    env.server.lock().set_all_update_check_assertions(UpdateCheckAssertion::UpdatesEnabled);
     do_nop_update_check(&env).await;
 
     // The user preference is read for each update check.
-    env.server.set_all_update_check_assertions(Some(UpdateCheckAssertion::UpdatesDisabled));
+    env.server.lock().set_all_update_check_assertions(UpdateCheckAssertion::UpdatesDisabled);
     env.proxies
         .config_optout
         .set(fuchsia_update_config_optout::OptOutPreference::AllowOnlySecurityUpdates);

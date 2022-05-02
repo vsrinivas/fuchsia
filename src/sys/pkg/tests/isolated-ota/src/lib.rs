@@ -20,8 +20,11 @@ use {
     futures::prelude::*,
     http::uri::Uri,
     isolated_ota::{download_and_apply_update, OmahaConfig, UpdateError},
-    mock_omaha_server::{OmahaResponse, OmahaServer, ResponseAndMetadata},
+    mock_omaha_server::{
+        OmahaResponse, OmahaServer, OmahaServerBuilder, ResponseAndMetadata, ResponseMap,
+    },
     mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
+    parking_lot::Mutex,
     serde_json::json,
     std::{
         collections::{BTreeSet, HashMap},
@@ -228,11 +231,19 @@ impl TestEnv {
             OmahaState::Disabled => Ok(None),
             OmahaState::Manual(cfg) => Ok(Some(cfg)),
             OmahaState::Auto(response) => {
-                let server = OmahaServer::new_with_metadata(vec![(
-                    "integration-test-appid".to_string(),
-                    ResponseAndMetadata { response, merkle, ..Default::default() },
-                )]);
-                let addr = server.start().context("Starting omaha server")?;
+                let server = OmahaServerBuilder::default()
+                    .responses_by_appid(
+                        vec![(
+                            "integration-test-appid".to_string(),
+                            ResponseAndMetadata { response, merkle, ..Default::default() },
+                        )]
+                        .into_iter()
+                        .collect::<ResponseMap>(),
+                    )
+                    .build()
+                    .unwrap();
+                let addr = OmahaServer::start(Arc::new(Mutex::new(server)))
+                    .context("Starting omaha server")?;
                 let config =
                     OmahaConfig { app_id: "integration-test-appid".to_owned(), server_url: addr };
 

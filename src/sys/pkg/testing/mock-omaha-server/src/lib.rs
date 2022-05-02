@@ -4,6 +4,7 @@
 
 use {
     anyhow::Error,
+    derive_builder::Builder,
     fuchsia_async::{self as fasync, net::TcpListener},
     fuchsia_merkle::Hash,
     futures::prelude::*,
@@ -36,17 +37,11 @@ pub enum OmahaResponse {
     InvalidURL,
 }
 
-/// A mock Omaha server.
-#[derive(Clone, Debug)]
-pub struct OmahaServer {
-    inner: Arc<Mutex<Inner>>,
-}
-
 #[derive(Clone, Debug)]
 pub struct ResponseAndMetadata {
     pub response: OmahaResponse,
     pub merkle: Hash,
-    pub check_assertion: Option<UpdateCheckAssertion>,
+    pub check_assertion: UpdateCheckAssertion,
     pub version: String,
 }
 
@@ -58,23 +53,9 @@ impl Default for ResponseAndMetadata {
                 "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
             )
             .unwrap(),
-            check_assertion: None,
+            check_assertion: UpdateCheckAssertion::UpdatesEnabled,
             version: "0.1.2.3".to_string(),
         }
-    }
-}
-
-/// Shared state.
-#[derive(Clone, Debug)]
-struct Inner {
-    pub responses_by_appid: HashMap<String, ResponseAndMetadata>,
-    pub private_keys: Option<PrivateKeys>,
-    pub etag_override: Option<String>,
-}
-
-impl Inner {
-    pub fn num_apps(&self) -> usize {
-        self.responses_by_appid.len()
     }
 }
 
@@ -108,9 +89,10 @@ impl PrivateKeys {
     }
 }
 
-#[derive(Debug)]
-pub struct OmahaServerBuilder {
-    inner: Inner,
+pub type ResponseMap = HashMap<String, ResponseAndMetadata>;
+
+fn make_default_responses_by_appid() -> ResponseMap {
+    ResponseMap::from([("integration-test-appid".to_string(), ResponseAndMetadata::default())])
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -119,71 +101,29 @@ pub enum UpdateCheckAssertion {
     UpdatesDisabled,
 }
 
-impl OmahaServerBuilder {
-    /// Sets the server's response to update checks
-    pub fn set(
-        mut self,
-        responses_by_appid: impl IntoIterator<Item = (String, ResponseAndMetadata)>,
-    ) -> Self {
-        self.inner.responses_by_appid = responses_by_appid.into_iter().collect();
-        self
-    }
-
-    pub fn private_keys(mut self, private_keys: PrivateKeys) -> Self {
-        self.inner.private_keys = Some(private_keys);
-        self
-    }
-
-    pub fn etag_override(mut self, etag_override: Option<String>) -> Self {
-        self.inner.etag_override = etag_override;
-        self
-    }
-
-    /// Constructs the OmahaServer
-    pub fn build(self) -> OmahaServer {
-        OmahaServer { inner: Arc::new(Mutex::new(self.inner)) }
-    }
+#[derive(Clone, Debug, Builder)]
+#[builder(pattern = "owned")]
+#[builder(derive(Debug))]
+pub struct OmahaServer {
+    #[builder(setter(into))]
+    #[builder(default = "make_default_responses_by_appid()")]
+    pub responses_by_appid: ResponseMap,
+    #[builder(default = "None")]
+    pub private_keys: Option<PrivateKeys>,
+    #[builder(default = "None")]
+    pub etag_override: Option<String>,
 }
 
 impl OmahaServer {
-    /// Returns an OmahaServer builder with the following defaults:
-    /// * response: [NoUpdate]
-    /// * merkle: [0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef]
-    /// * no special request assertions beyond the defaults
-    pub fn builder() -> OmahaServerBuilder {
-        OmahaServerBuilder {
-            inner: Inner {
-                responses_by_appid: HashMap::from([(
-                    "integration-test-appid".to_string(),
-                    ResponseAndMetadata::default(),
-                )]),
-                private_keys: None,
-                etag_override: None,
-            },
-        }
-    }
-
-    pub fn new(responses: Vec<(String, OmahaResponse)>) -> Self {
-        Self::builder()
-            .set(responses.into_iter().map(|(appid, response)| {
-                (appid, ResponseAndMetadata { response, ..Default::default() })
-            }))
-            .build()
-    }
-
-    pub fn new_with_metadata(responses_by_appid: Vec<(String, ResponseAndMetadata)>) -> Self {
-        Self::builder().set(responses_by_appid).build()
-    }
-
     /// Sets the special assertion to make on any future update check requests
-    pub fn set_all_update_check_assertions(&self, value: Option<UpdateCheckAssertion>) {
-        for response_and_metadata in self.inner.lock().responses_by_appid.values_mut() {
+    pub fn set_all_update_check_assertions(&mut self, value: UpdateCheckAssertion) {
+        for response_and_metadata in self.responses_by_appid.values_mut() {
             response_and_metadata.check_assertion = value;
         }
     }
 
     /// Spawn the server on the current executor, returning the address of the server.
-    pub fn start(self) -> Result<String, Error> {
+    pub fn start(arc_server: Arc<Mutex<OmahaServer>>) -> Result<String, Error> {
         let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0);
 
         let (connections, addr) = {
@@ -197,13 +137,12 @@ impl OmahaServer {
             )
         };
 
-        let inner = Arc::clone(&self.inner);
         let make_svc = make_service_fn(move |_socket| {
-            let inner = Arc::clone(&inner);
+            let arc_server = Arc::clone(&arc_server);
             async move {
                 Ok::<_, Infallible>(service_fn(move |req| {
-                    let inner = Arc::clone(&inner);
-                    async move { handle_omaha_request(req, &*inner).await }
+                    let arc_server = Arc::clone(&arc_server);
+                    async move { handle_omaha_request(req, &*arc_server).await }
                 }))
             }
         });
@@ -222,7 +161,7 @@ impl OmahaServer {
 fn make_etag(
     request_body: &Bytes,
     uri: &str,
-    inner: &Inner,
+    private_keys: &PrivateKeys,
     response_data: &[u8],
 ) -> Option<String> {
     use p256::ecdsa::signature::Signer;
@@ -239,8 +178,7 @@ fn make_etag(
 
     let (public_key_id_str, _nonce_str) = cup2key_val.split_once(':').unwrap();
     let public_key_id: PublicKeyId = public_key_id_str.parse().unwrap();
-
-    let private_key: &PrivateKey = inner.private_keys.as_ref().unwrap().find(public_key_id)?;
+    let private_key: &PrivateKey = private_keys.find(public_key_id)?;
 
     let request_hash = Sha256::digest(&request_body);
     let response_hash = Sha256::digest(&response_data);
@@ -260,9 +198,9 @@ fn make_etag(
 
 async fn handle_omaha_request(
     req: Request<Body>,
-    inner: &Mutex<Inner>,
+    omaha_server: &Mutex<OmahaServer>,
 ) -> Result<Response<Body>, Error> {
-    let inner = inner.lock().clone();
+    let omaha_server = omaha_server.lock().clone();
 
     assert_eq!(req.method(), Method::POST);
 
@@ -277,14 +215,14 @@ async fn handle_omaha_request(
     // If this request contains updatecheck, make sure the mock has the right number of configured apps.
     match apps.iter().filter(|app| app.get("updatecheck").is_some()).count() {
         0 => {}
-        x => assert_eq!(x, inner.num_apps()),
+        x => assert_eq!(x, omaha_server.responses_by_appid.len()),
     }
 
     let apps: Vec<serde_json::Value> = apps
         .iter()
         .map(|app| {
             let appid = app.get("appid").unwrap();
-            let expected = &inner.responses_by_appid[appid.as_str().unwrap()];
+            let expected = &omaha_server.responses_by_appid[appid.as_str().unwrap()];
 
             let version = app.get("version").unwrap();
             assert_eq!(version, &expected.version);
@@ -296,13 +234,12 @@ async fn handle_omaha_request(
                     .map(|v| v.as_bool().unwrap())
                     .unwrap_or(false);
                 match expected.check_assertion {
-                    Some(UpdateCheckAssertion::UpdatesEnabled) => {
+                    UpdateCheckAssertion::UpdatesEnabled => {
                         assert!(!updatedisabled);
                     }
-                    Some(UpdateCheckAssertion::UpdatesDisabled) => {
+                    UpdateCheckAssertion::UpdatesDisabled => {
                         assert!(updatedisabled);
                     }
-                    None => {}
                 }
 
                 let updatecheck = match expected.response {
@@ -420,12 +357,14 @@ async fn handle_omaha_request(
         .status(StatusCode::OK)
         .header(header::CONTENT_LENGTH, response_data.len());
 
-    if let Some(etag) =
-        (inner.etag_override.as_ref())
-            .or(make_etag(&req_body, &uri_string, &inner, &response_data).as_ref())
+    if let Some(etag) = (omaha_server.etag_override.as_ref()).or(omaha_server
+        .private_keys
+        .and_then(|keys| make_etag(&req_body, &uri_string, &keys, &response_data))
+        .as_ref())
     {
         builder = builder.header(header::ETAG, etag);
     }
+
     Ok(builder.body(Body::from(response_data)).unwrap())
 }
 
@@ -439,25 +378,29 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_server_replies() -> Result<(), Error> {
-        let server = OmahaServer::new_with_metadata(vec![
-            (
-                "integration-test-appid-1".to_string(),
-                ResponseAndMetadata {
-                    response: OmahaResponse::NoUpdate,
-                    version: "0.0.0.1".to_string(),
-                    ..Default::default()
-                },
-            ),
-            (
-                "integration-test-appid-2".to_string(),
-                ResponseAndMetadata {
-                    response: OmahaResponse::NoUpdate,
-                    version: "0.0.0.2".to_string(),
-                    ..Default::default()
-                },
-            ),
-        ])
-        .start()
+        let server = OmahaServer::start(Arc::new(Mutex::new(
+            OmahaServerBuilder::default()
+                .responses_by_appid([
+                    (
+                        "integration-test-appid-1".to_string(),
+                        ResponseAndMetadata {
+                            response: OmahaResponse::NoUpdate,
+                            version: "0.0.0.1".to_string(),
+                            ..Default::default()
+                        },
+                    ),
+                    (
+                        "integration-test-appid-2".to_string(),
+                        ResponseAndMetadata {
+                            response: OmahaResponse::NoUpdate,
+                            version: "0.0.0.2".to_string(),
+                            ..Default::default()
+                        },
+                    ),
+                ])
+                .build()
+                .unwrap(),
+        )))
         .context("starting server")?;
 
         let client = fuchsia_hyper::new_client();
