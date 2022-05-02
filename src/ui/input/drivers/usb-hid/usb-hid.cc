@@ -4,8 +4,11 @@
 
 #include "usb-hid.h"
 
+#include <endian.h>
 #include <fuchsia/hardware/hidbus/c/banjo.h>
 #include <fuchsia/hardware/usb/c/banjo.h>
+#include <fuchsia/hardware/usb/cpp/banjo.h>
+#include <fuchsia/hardware/usb/descriptor/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -269,6 +272,12 @@ void UsbHidbus::FindDescriptors(usb::Interface interface, usb_hid_descriptor_t**
 zx_status_t UsbHidbus::Bind(ddk::UsbProtocolClient usbhid) {
   zx_status_t status;
   usb_ = usbhid;
+
+  usb_device_descriptor_t device_desc;
+  usb_.GetDeviceDescriptor(&device_desc);
+  info_.vendor_id = le16toh(device_desc.id_vendor);
+  info_.product_id = le16toh(device_desc.id_product);
+
   parent_req_size_ = usb_.GetRequestSize();
   status = usb::InterfaceList::Create(usb_, true, &usb_interface_list_);
   if (status != ZX_OK) {

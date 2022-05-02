@@ -46,6 +46,8 @@ void USBVirtualBus::InitUsbHid(fbl::String* devpath,
       ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
   usb_peripheral::wire::DeviceDescriptor device_desc = {};
   device_desc.bcd_usb = htole16(0x0200);
+  device_desc.id_vendor = htole16(0x18d1);
+  device_desc.id_product = htole16(0xaf10);
   device_desc.b_max_packet_size0 = 64;
   device_desc.bcd_device = htole16(0x0100);
   device_desc.b_num_configurations = 1;
@@ -159,6 +161,14 @@ class UsbTwoEndpointTest : public zxtest::Test {
   fbl::String devpath_;
   fidl::WireSyncClient<fuchsia_hardware_input::Device> sync_client_;
 };
+
+TEST_F(UsbOneEndpointTest, GetDeviceIdsVidPid) {
+  // Check USB device descriptor VID/PID plumbing.
+  auto result = sync_client_->GetDeviceIds();
+  ASSERT_OK(result.status());
+  EXPECT_EQ(0x18d1, result->ids.vendor_id);
+  EXPECT_EQ(0xaf10, result->ids.product_id);
+}
 
 TEST_F(UsbOneEndpointTest, SetAndGetReport) {
   uint8_t buf[sizeof(hid_boot_mouse_report_t)] = {0xab, 0xbc, 0xde};
