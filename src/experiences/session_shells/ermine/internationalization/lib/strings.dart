@@ -584,7 +584,7 @@ class Strings {
       );
 
   static String dataSharingPrivacyTerms(String url) => Intl.message(
-        'Google’s Privacy & Terms is available at $url',
+        'Google\'s Privacy & Terms is available at $url',
         name: 'data sharing privacy terms',
         desc:
             'The description of where the user can find Google\'s privacy terms',
@@ -783,7 +783,7 @@ class Strings {
         desc: 'The label for the "feedback" text field.',
       );
   static String get userFeedback => Intl.message(
-        'User Feedback',
+        'Report an Issue (internal)',
         name: 'user feedback',
         desc: 'The label for the "user feedback" text field.',
       );
@@ -1288,7 +1288,7 @@ class Strings {
 
   static String get noPII => Intl.message(
         'Please do not include personal information in the summary or '
-        'the description unless it is necessary to describe the issue.',
+        'description unless it is necessary to describe the issue.',
         name: 'noPII',
         desc:
             'A warning message not to include personal data in the user feedback form',
@@ -1334,7 +1334,7 @@ class Strings {
   static String get submittedDesc1 => Intl.message(
         'Thanks for taking the time to submit your report. '
         'It is successfully filed and you will be able to see the submitted data '
-        'on Crash once the upload is done. Here is the UUID of the report:',
+        'on crash once the upload is done. Here is the UUID of the report:',
         name: 'user feedback submission description 1',
         desc:
             'The first sentence of the description on the user feedback submission complete page',
