@@ -132,6 +132,17 @@ func (r *socketReader) Len() int {
 	return n
 }
 
+func transProtoToString(proto tcpip.TransportProtocolNumber) string {
+	switch proto {
+	case tcp.ProtocolNumber:
+		return "TCP"
+	case udp.ProtocolNumber:
+		return "UDP"
+	default:
+		return fmt.Sprintf("0x%x", proto)
+	}
+}
+
 func eventsToDatagramSignals(events waiter.EventMask) zx.Signals {
 	signals := zx.SignalNone
 	if events&waiter.EventIn != 0 {
@@ -1462,11 +1473,71 @@ func (s *streamSocketImpl) accept(wantAddr bool) (posix.Errno, *tcpip.FullAddres
 	}
 }
 
+// handleZxSocketReadError contains handling logic for zx socket read errors.
+// Returns true iff the error was found to be terminal.
+func (eps *endpointWithSocket) handleZxSocketReadError(err zx.Error) bool {
+	const sigs = zx.SignalSocketReadable | zx.SignalSocketPeerWriteDisabled | localSignalClosing
+	switch err.Status {
+	case zx.ErrShouldWait:
+		obs, err := zxwait.WaitContext(context.Background(), zx.Handle(eps.local), sigs)
+		if err != nil {
+			panic(err)
+		}
+		switch {
+		case obs&zx.SignalSocketReadable != 0:
+			// The client might have written some data into the socket.
+			// Continue trying to read even if the signals show the client has
+			// closed the socket.
+			return false
+		case obs&localSignalClosing != 0:
+			// We're closing the endpoint.
+			return true
+		case obs&zx.SignalSocketPeerWriteDisabled != 0:
+			// Fallthrough.
+		default:
+			panic(fmt.Sprintf("impossible signals observed: %b/%b", obs, sigs))
+		}
+		fallthrough
+	case zx.ErrBadState:
+		// Reading has been disabled for this socket endpoint.
+		switch err := eps.ep.Shutdown(tcpip.ShutdownWrite); err.(type) {
+		case nil, *tcpip.ErrNotConnected:
+			// Shutdown can return ErrNotConnected if the endpoint was
+			// connected but no longer is.
+		default:
+			panic(err)
+		}
+		return true
+	default:
+		panic(err)
+	}
+}
+
+// handleEndpointWriteError contains handling logic for tcpip.Endpoint write errors.
+// Returns true iff the error was found to be terminal.
+func (eps *endpointWithSocket) handleEndpointWriteError(err tcpip.Error, transProto tcpip.TransportProtocolNumber) bool {
+	switch err.(type) {
+	case *tcpip.ErrClosedForSend:
+		// Shut the endpoint down *only* if it is not already in an error
+		// state; an endpoint in an error state will soon be fully closed down,
+		// and shutting it down here would cause signals to be asserted twice,
+		// which can produce races in the client.
+		if eps.ep.Readiness(waiter.EventErr)&waiter.EventErr == 0 {
+			if err := eps.local.SetDisposition(0, zx.SocketDispositionWriteDisabled); err != nil {
+				panic(err)
+			}
+			_ = syslog.DebugTf("zx_socket_set_disposition", "%p: disposition=0, disposition_peer=ZX_SOCKET_DISPOSITION_WRITE_DISABLED", eps)
+		}
+		return true
+	default:
+		_ = syslog.Errorf("%s Endpoint.Write(): %s", transProtoToString(transProto), err)
+		return false
+	}
+}
+
 // loopWrite shuttles signals and data from the zircon socket to the tcpip.Endpoint.
 func (s *streamSocketImpl) loopWrite(ch chan<- struct{}) {
 	defer close(ch)
-
-	const sigs = zx.SignalSocketReadable | zx.SignalSocketPeerWriteDisabled | localSignalClosing
 
 	waitEntry, notifyCh := waiter.NewChannelEntry(waiter.EventOut)
 	s.wq.EventRegister(&waitEntry)
@@ -1498,40 +1569,12 @@ func (s *streamSocketImpl) loopWrite(ch chan<- struct{}) {
 			case nil:
 				continue
 			case *zx.Error:
-				switch err.Status {
-				case zx.ErrShouldWait:
-					obs, err := zxwait.WaitContext(context.Background(), zx.Handle(s.local), sigs)
-					if err != nil {
-						panic(err)
-					}
-					switch {
-					case obs&zx.SignalSocketReadable != 0:
-						// The client might have written some data into the socket.
-						// Always continue to the loop below and try to read even if the
-						// signals show the client has closed the socket.
-						continue
-					case obs&localSignalClosing != 0:
-						// We're closing the endpoint.
-						return
-					case obs&zx.SignalSocketPeerWriteDisabled != 0:
-						// Fallthrough.
-					default:
-						panic(fmt.Sprintf("impossible signals observed: %b/%b", obs, sigs))
-					}
-					fallthrough
-				case zx.ErrBadState:
-					// Reading has been disabled for this socket endpoint.
-					switch err := s.ep.Shutdown(tcpip.ShutdownWrite); err.(type) {
-					case nil, *tcpip.ErrNotConnected:
-						// Shutdown can return ErrNotConnected if the endpoint was
-						// connected but no longer is.
-					default:
-						panic(err)
-					}
+				if s.handleZxSocketReadError(*err) {
 					return
 				}
+			default:
+				panic(err)
 			}
-			panic(err)
 		case *tcpip.ErrNotConnected:
 			// Write never returns ErrNotConnected except for endpoints that were
 			// never connected. Such endpoints should never reach this loop.
@@ -1552,18 +1595,6 @@ func (s *streamSocketImpl) loopWrite(ch chan<- struct{}) {
 			// TODO(https://fxbug.dev/61594): Allow the socket to be reused for
 			// another connection attempt to match Linux.
 			return
-		case *tcpip.ErrClosedForSend:
-			// Shut the endpoint down *only* if it is not already in an error
-			// state; an endpoint in an error state will soon be fully closed down,
-			// and shutting it down here would cause signals to be asserted twice,
-			// which can produce races in the client.
-			if s.ep.Readiness(waiter.EventErr)&waiter.EventErr == 0 {
-				if err := s.local.SetDisposition(0, zx.SocketDispositionWriteDisabled); err != nil {
-					panic(err)
-				}
-				_ = syslog.DebugTf("zx_socket_set_disposition", "%p: disposition=0, disposition_peer=ZX_SOCKET_DISPOSITION_WRITE_DISABLED", s)
-			}
-			return
 		case *tcpip.ErrConnectionAborted, *tcpip.ErrConnectionReset, *tcpip.ErrNetworkUnreachable, *tcpip.ErrNoRoute:
 			return
 		case *tcpip.ErrTimeout:
@@ -1571,16 +1602,82 @@ func (s *streamSocketImpl) loopWrite(ch chan<- struct{}) {
 			// number of unacknowledged keepalives was reached.
 			return
 		default:
-			_ = syslog.Errorf("TCP Endpoint.Write(): %s", err)
+			if s.handleEndpointWriteError(err, tcp.ProtocolNumber) {
+				return
+			}
 		}
+	}
+}
+
+// handleEndpointReadError contains handling logic for tcpip.Endpoint read errors.
+// Returns true iff the error was found to be terminal.
+func (eps *endpointWithSocket) handleEndpointReadError(err tcpip.Error, inCh <-chan struct{}, transProto tcpip.TransportProtocolNumber) bool {
+	// TODO(https://fxbug.dev/35006): Handle all transport read errors.
+	switch err.(type) {
+	case *tcpip.ErrWouldBlock:
+		select {
+		case <-inCh:
+			return false
+		case <-eps.closing:
+			// We're shutting down.
+			return true
+		}
+	case *tcpip.ErrClosedForReceive:
+		// Shut the endpoint down *only* if it is not already in an error
+		// state; an endpoint in an error state will soon be fully closed down,
+		// and shutting it down here would cause signals to be asserted twice,
+		// which can produce races in the client.
+		if eps.ep.Readiness(waiter.EventErr)&waiter.EventErr == 0 {
+			if err := eps.local.SetDisposition(zx.SocketDispositionWriteDisabled, 0); err != nil {
+				panic(err)
+			}
+			_ = syslog.DebugTf("zx_socket_set_disposition", "%p: disposition=ZX_SOCKET_DISPOSITION_WRITE_DISABLED, disposition_peer=0", eps)
+		}
+		return true
+	default:
+		_ = syslog.Errorf("%s Endpoint.Read(): %s", transProtoToString(transProto), err)
+		return false
+	}
+}
+
+// handleZxSocketWriteError contains handling logic for zircon socket read errors.
+// Returns true iff the error was found to be terminal.
+func (eps *endpointWithSocket) handleZxSocketWriteError(err zx.Error) bool {
+	const sigs = zx.SignalSocketWritable | zx.SignalSocketWriteDisabled | localSignalClosing
+	switch err.Status {
+	case zx.ErrShouldWait:
+		obs, err := zxwait.WaitContext(context.Background(), zx.Handle(eps.local), sigs)
+		if err != nil {
+			panic(err)
+		}
+		switch {
+		case obs&zx.SignalSocketWritable != 0:
+			return false
+		case obs&localSignalClosing != 0:
+			// We're shutting down.
+			return true
+		case obs&zx.SignalSocketWriteDisabled != 0:
+			// Fallthrough.
+		default:
+			panic(fmt.Sprintf("impossible signals observed: %b/%b", obs, sigs))
+		}
+		fallthrough
+	case zx.ErrBadState:
+		// Writing has been disabled for this zircon socket endpoint. This
+		// happens when the client called the Shutdown FIDL method, with
+		// socket.ShutdownModeRead: because the client will not read from this
+		// zircon socket endpoint anymore, writes are disabled.
+		//
+		// Clients can't revert a shutdown, so we can terminate.
+		return true
+	default:
+		panic(err)
 	}
 }
 
 // loopRead shuttles signals and data from the tcpip.Endpoint to the zircon socket.
 func (s *streamSocketImpl) loopRead(ch chan<- struct{}) {
 	defer close(ch)
-
-	const sigs = zx.SignalSocketWritable | zx.SignalSocketWriteDisabled | localSignalClosing
 
 	inEntry, inCh := waiter.NewChannelEntry(waiter.EventIn)
 	s.wq.EventRegister(&inEntry)
@@ -1614,26 +1711,6 @@ func (s *streamSocketImpl) loopRead(ch chan<- struct{}) {
 			// TODO(https://fxbug.dev/61594): Allow the socket to be reused for
 			// another connection attempt to match Linux.
 			return
-		case *tcpip.ErrWouldBlock:
-			select {
-			case <-inCh:
-				continue
-			case <-s.closing:
-				// We're shutting down.
-				return
-			}
-		case *tcpip.ErrClosedForReceive:
-			// Shut the endpoint down *only* if it is not already in an error
-			// state; an endpoint in an error state will soon be fully closed down,
-			// and shutting it down here would cause signals to be asserted twice,
-			// which can produce races in the client.
-			if s.ep.Readiness(waiter.EventErr)&waiter.EventErr == 0 {
-				if err := s.local.SetDisposition(zx.SocketDispositionWriteDisabled, 0); err != nil {
-					panic(err)
-				}
-				_ = syslog.DebugTf("zx_socket_set_disposition", "%p: disposition=ZX_SOCKET_DISPOSITION_WRITE_DISABLED, disposition_peer=0", s)
-			}
-			return
 		case *tcpip.ErrConnectionAborted, *tcpip.ErrConnectionReset, *tcpip.ErrNetworkUnreachable, *tcpip.ErrNoRoute:
 			return
 		case nil, *tcpip.ErrBadBuffer:
@@ -1647,38 +1724,16 @@ func (s *streamSocketImpl) loopRead(ch chan<- struct{}) {
 			case nil:
 				continue
 			case *zx.Error:
-				switch err.Status {
-				case zx.ErrShouldWait:
-					obs, err := zxwait.WaitContext(context.Background(), zx.Handle(s.local), sigs)
-					if err != nil {
-						panic(err)
-					}
-					switch {
-					case obs&zx.SignalSocketWritable != 0:
-						continue
-					case obs&localSignalClosing != 0:
-						// We're shutting down.
-						return
-					case obs&zx.SignalSocketWriteDisabled != 0:
-						// Fallthrough.
-					default:
-						panic(fmt.Sprintf("impossible signals observed: %b/%b", obs, sigs))
-					}
-					fallthrough
-				case zx.ErrBadState:
-					// Writing has been disabled for this zircon socket endpoint. This
-					// happens when the client called the Shutdown FIDL method, with
-					// socket.ShutdownModeRead: because the client will not read from this
-					// zircon socket endpoint anymore, writes are disabled.
-					//
-					// Clients can't revert a shutdown, so we can terminate this infinite
-					// loop here.
+				if s.handleZxSocketWriteError(*err) {
 					return
 				}
+			default:
+				panic(err)
 			}
-			panic(err)
 		default:
-			_ = syslog.Errorf("Endpoint.Read(): %s", err)
+			if s.handleEndpointReadError(err, inCh, tcp.ProtocolNumber) {
+				return
+			}
 		}
 	}
 }
