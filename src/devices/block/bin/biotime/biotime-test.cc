@@ -19,6 +19,7 @@ namespace {
 // returns a success status.
 void run_biotime(fbl::Vector<const char*>&& args) {
   ramdisk_client_t* ramdisk;
+  ASSERT_EQ(wait_for_device("/dev/sys/platform/00:00:2d/ramctl", ZX_TIME_INFINITE), ZX_OK);
   ASSERT_EQ(ramdisk_create(1024, 100, &ramdisk), ZX_OK);
   auto cleanup = fit::defer([&] { EXPECT_EQ(ramdisk_destroy(ramdisk), 0); });
 
