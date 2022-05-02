@@ -12,6 +12,7 @@
 #include <lib/mmio/mmio.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zx/time.h>
+#include <zircon/errors.h>
 #include <zircon/hw/pci.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/port.h>
@@ -19,6 +20,7 @@
 #include <list>
 #include <thread>
 
+#include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <fbl/vector.h>
@@ -56,8 +58,9 @@ zx_status_t pci_bus_bind(void* ctx, zx_device_t* parent) {
     }
   }
 
-  auto bus = std::make_unique<pci::Bus>(parent, &pciroot, info, std::move(ecam));
-  if (!bus) {
+  fbl::AllocChecker ac;
+  auto bus = std::unique_ptr<pci::Bus>(new (&ac) pci::Bus(parent, &pciroot, info, std::move(ecam)));
+  if (!ac.check()) {
     zxlogf(ERROR, "failed to allocate bus object");
     return ZX_ERR_NO_MEMORY;
   }
@@ -85,7 +88,12 @@ zx_status_t Bus::Initialize() {
   // them to the allocators provided by Pci(e)Root. The initial root is
   // created to manage the start of the bus id range given to use by the
   // pciroot protocol.
-  root_ = std::unique_ptr<PciRoot>(new PciRoot(info_.start_bus_num, pciroot_));
+  fbl::AllocChecker ac;
+  root_ = std::unique_ptr<PciRoot>(new (&ac) PciRoot(info_.start_bus_num, pciroot_));
+  if (!ac.check()) {
+    zxlogf(ERROR, "failed to allocate root");
+    return ZX_ERR_NO_MEMORY;
+  }
 
   acpi_devices_ = cpp20::span<const pci_bdf_t>(info_.acpi_bdfs_list, info_.acpi_bdfs_count);
   irqs_ = cpp20::span<const pci_legacy_irq>(info_.legacy_irqs_list, info_.legacy_irqs_count);
@@ -278,7 +286,12 @@ zx_status_t Bus::SetUpLegacyIrqHandlers() {
       return status;
     }
 
-    auto shared_vector = std::make_unique<SharedVector>();
+    fbl::AllocChecker ac;
+    auto shared_vector = std::unique_ptr<SharedVector>(new (&ac) SharedVector());
+    if (!ac.check()) {
+      zxlogf(ERROR, "failed to allocate shared vector for irq %#x", irq.vector);
+      return ZX_ERR_NO_MEMORY;
+    }
     shared_vector->interrupt = std::move(interrupt);
 
     // Every vector has a list of devices associated with it that are wired to that IRQ.
@@ -356,9 +369,10 @@ zx_status_t Bus::ConfigureLegacyIrqs() {
 }
 
 Bus::~Bus() {
-  ZX_DEBUG_ASSERT(root_);
-  root_->DisableDownstream();
-  root_->UnplugDownstream();
+  if (root_) {
+    root_->DisableDownstream();
+    root_->UnplugDownstream();
+  }
   zx_status_t status = StopIrqWorker();
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to stop the irq thread: %s", zx_status_get_string(status));
