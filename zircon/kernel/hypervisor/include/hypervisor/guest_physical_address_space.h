@@ -79,7 +79,6 @@ class GuestPhysicalAddressSpace {
   zx::status<> MapInterruptController(zx_gpaddr_t guest_paddr, zx_paddr_t host_paddr, size_t len);
   zx::status<> UnmapRange(zx_gpaddr_t guest_paddr, size_t len);
   zx::status<> PageFault(zx_gpaddr_t guest_paddr);
-  zx::status<uint> QueryFlags(zx_gpaddr_t guest_paddr);
   zx::status<GuestPtr> CreateGuestPtr(zx_gpaddr_t guest_paddr, size_t len, const char* name);
 
  private:

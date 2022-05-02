@@ -945,21 +945,6 @@ zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs& vmcs,
   return ZX_OK;
 }
 
-zx_status_t handle_ept_misconfiguration(const ExitInfo& exit_info, AutoVmcs& vmcs,
-                                        hypervisor::GuestPhysicalAddressSpace& gpas) {
-  // We may have to take a lock while querying MMU flags.
-  vmcs.Invalidate();
-
-  zx_gpaddr_t guest_paddr = exit_info.guest_physical_address;
-  auto mmu_flags = gpas.QueryFlags(guest_paddr);
-  if (mmu_flags.is_error()) {
-    return mmu_flags.status_value();
-  }
-
-  dprintf(CRITICAL, "hypervisor: EPT misconfiguration %#lx flags %#x\n", guest_paddr, *mmu_flags);
-  return ZX_ERR_INTERNAL;
-}
-
 zx_status_t handle_xsetbv(const ExitInfo& exit_info, AutoVmcs& vmcs, GuestState& guest_state) {
   uint64_t guest_cr4 = vmcs.Read(VmcsFieldXX::GUEST_CR4);
   if (!(guest_cr4 & X86_CR4_OSXSAVE)) {
@@ -1178,11 +1163,6 @@ zx_status_t vmexit_handler(AutoVmcs& vmcs, GuestState& guest_state,
       ktrace_vcpu_exit(VCPU_EPT_VIOLATION, exit_info.guest_rip);
       GUEST_STATS_INC(ept_violations);
       status = handle_ept_violation(exit_info, vmcs, gpas, traps, packet);
-      break;
-    case ExitReason::EPT_MISCONFIGURATION:
-      LTRACEF("handling EPT misconfiguration\n\n");
-      ktrace_vcpu_exit(VCPU_EPT_MISCONFIGURATION, exit_info.guest_rip);
-      status = handle_ept_misconfiguration(exit_info, vmcs, gpas);
       break;
     case ExitReason::XSETBV:
       LTRACEF("handling XSETBV\n\n");

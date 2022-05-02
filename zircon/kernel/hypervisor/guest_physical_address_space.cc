@@ -144,26 +144,6 @@ zx::status<> GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr) {
   return zx::make_status(status);
 }
 
-zx::status<uint> GuestPhysicalAddressSpace::QueryFlags(zx_gpaddr_t guest_paddr) {
-  fbl::RefPtr<VmMapping> mapping = FindMapping(RootVmar(), guest_paddr);
-  if (!mapping) {
-    return zx::error(ZX_ERR_NOT_FOUND);
-  }
-
-  uint mmu_flags;
-  zx_gpaddr_t offset;
-  {
-    Guard<Mutex> guard(mapping->lock());
-    offset = guest_paddr - mapping->base() + mapping->object_offset_locked();
-  }
-
-  zx_status_t status = mapping->aspace()->arch_aspace().Query(offset, nullptr, &mmu_flags);
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-  return zx::ok(mmu_flags);
-}
-
 zx::status<GuestPtr> GuestPhysicalAddressSpace::CreateGuestPtr(zx_gpaddr_t guest_paddr, size_t len,
                                                                const char* name) {
   const zx_gpaddr_t begin = ROUNDDOWN(guest_paddr, PAGE_SIZE);
