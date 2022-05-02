@@ -13,12 +13,14 @@ use fidl_fuchsia_net_debug as fdebug;
 use fidl_fuchsia_net_dhcp as fdhcp;
 use fidl_fuchsia_net_filter as ffilter;
 use fidl_fuchsia_net_interfaces as finterfaces;
+use fidl_fuchsia_net_name as fname;
 use fidl_fuchsia_net_neighbor as fneighbor;
 use fidl_fuchsia_net_stack as fstack;
 use fidl_fuchsia_netstack as fnetstack;
 
 const DEBUG_SELECTOR_SUFFIX: &str = "/netstack:expose:fuchsia.net.debug.Interfaces";
 const DHCPD_SELECTOR_SUFFIX: &str = "/dhcpd:expose:fuchsia.net.dhcp.Server";
+const DNS_SELECTOR_SUFFIX: &str = "/dns-resolver:expose:fuchsia.net.name.Lookup";
 const FILTER_SELECTOR_SUFFIX: &str = "/netstack:expose:fuchsia.net.filter.Filter";
 const INTERFACES_SELECTOR_SUFFIX: &str = "/netstack:expose:fuchsia.net.interfaces.State";
 const NEIGHBOR_CONTROLLER_SELECTOR_SUFFIX: &str =
@@ -137,6 +139,15 @@ impl net_cli::ServiceConnector<fnetstack::NetstackMarker> for FfxConnector<'_> {
         &self,
     ) -> Result<<fnetstack::NetstackMarker as ProtocolMarker>::Proxy, anyhow::Error> {
         self.remotecontrol_connect::<fnetstack::NetstackMarker>(NETSTACK_SELECTOR_SUFFIX).await
+    }
+}
+
+#[async_trait::async_trait]
+impl net_cli::ServiceConnector<fname::LookupMarker> for FfxConnector<'_> {
+    async fn connect(
+        &self,
+    ) -> Result<<fname::LookupMarker as ProtocolMarker>::Proxy, anyhow::Error> {
+        self.remotecontrol_connect::<fname::LookupMarker>(DNS_SELECTOR_SUFFIX).await
     }
 }
 

@@ -9,6 +9,7 @@ use fidl_fuchsia_net_debug as fdebug;
 use fidl_fuchsia_net_dhcp as fdhcp;
 use fidl_fuchsia_net_filter as ffilter;
 use fidl_fuchsia_net_interfaces as finterfaces;
+use fidl_fuchsia_net_name as fname;
 use fidl_fuchsia_net_neighbor as fneighbor;
 use fidl_fuchsia_net_stack as fstack;
 use fidl_fuchsia_netstack as fnetstack;
@@ -52,6 +53,9 @@ const NETSTACK_EXPOSED_DIR: &str =
     "/hub-v2/children/core/children/network/children/netstack/exec/expose";
 // Path to hub-v2 dhcpd exposed directory.
 const DHCPD_EXPOSED_DIR: &str = "/hub-v2/children/core/children/network/children/dhcpd/exec/expose";
+// Path to hub-v2 dns-resolver exposed directory.
+const DNS_RESOLVER_EXPOSED_DIR: &str =
+    "/hub-v2/children/core/children/network/children/dns-resolver/exec/expose";
 
 #[async_trait::async_trait]
 impl net_cli::ServiceConnector<fdebug::InterfacesMarker> for Connector {
@@ -115,6 +119,13 @@ impl net_cli::ServiceConnector<fstack::StackMarker> for Connector {
 impl net_cli::ServiceConnector<fnetstack::NetstackMarker> for Connector {
     async fn connect(&self) -> Result<<fnetstack::NetstackMarker as ProtocolMarker>::Proxy, Error> {
         connect_to_protocol_at::<fnetstack::NetstackMarker>(NETSTACK_EXPOSED_DIR)
+    }
+}
+
+#[async_trait::async_trait]
+impl net_cli::ServiceConnector<fname::LookupMarker> for Connector {
+    async fn connect(&self) -> Result<<fname::LookupMarker as ProtocolMarker>::Proxy, Error> {
+        connect_to_protocol_at::<fname::LookupMarker>(DNS_RESOLVER_EXPOSED_DIR)
     }
 }
 

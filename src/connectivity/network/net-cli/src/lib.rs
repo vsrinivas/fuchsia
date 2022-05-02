@@ -12,6 +12,7 @@ use fidl_fuchsia_net_filter as ffilter;
 use fidl_fuchsia_net_interfaces as finterfaces;
 use fidl_fuchsia_net_interfaces_admin as finterfaces_admin;
 use fidl_fuchsia_net_interfaces_ext as finterfaces_ext;
+use fidl_fuchsia_net_name as fname;
 use fidl_fuchsia_net_neighbor as fneighbor;
 use fidl_fuchsia_net_neighbor_ext as fneighbor_ext;
 use fidl_fuchsia_net_stack as fstack;
@@ -71,6 +72,7 @@ pub trait NetCliDepsConnector:
     + ServiceConnector<fnetstack::NetstackMarker>
     + ServiceConnector<fstack::LogMarker>
     + ServiceConnector<fstack::StackMarker>
+    + ServiceConnector<fname::LookupMarker>
 {
     /// Acquires a connection to the device at the provided path.
     ///
@@ -112,6 +114,11 @@ pub async fn do_root<C: NetCliDepsConnector>(
         }
         CommandEnum::Neigh(opts::Neigh { neigh_cmd: cmd }) => {
             do_neigh(cmd, connector).await.context("failed during neigh command")
+        }
+        CommandEnum::Dns(opts::dns::Dns { dns_cmd: cmd }) => {
+            do_dns(&mut std::io::stdout(), cmd, connector)
+                .await
+                .context("failed during dns command")
         }
     }
 }
@@ -1221,6 +1228,33 @@ async fn do_dhcpd_clear_leases(server: fdhcp::Server_Proxy) -> Result<(), Error>
     server.clear_leases().await?.map_err(zx::Status::from_raw).context("clear_leases() failed")
 }
 
+async fn do_dns<W: std::io::Write, C: NetCliDepsConnector>(
+    mut out: W,
+    cmd: opts::dns::DnsEnum,
+    connector: &C,
+) -> Result<(), Error> {
+    let lookup = connect_with_context::<fname::LookupMarker, _>(connector).await?;
+    let opts::dns::DnsEnum::Lookup(opts::dns::Lookup { hostname, ipv4, ipv6, sort }) = cmd;
+    let result = lookup
+        .lookup_ip(
+            &hostname,
+            fname::LookupIpOptions {
+                ipv4_lookup: Some(ipv4),
+                ipv6_lookup: Some(ipv6),
+                sort_addresses: Some(sort),
+                ..fname::LookupIpOptions::EMPTY
+            },
+        )
+        .await?
+        .map_err(|e| anyhow::anyhow!("DNS lookup failed: {:?}", e))?;
+    let fname::LookupResult { addresses, .. } = result;
+    let addrs = addresses.context("`addresses` not set in response from DNS resolver")?;
+    for addr in addrs {
+        writeln!(out, "{}", fnet_ext::IpAddress::from(addr))?;
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1230,6 +1264,7 @@ mod tests {
     use fidl::endpoints::ProtocolMarker;
     use fidl_fuchsia_hardware_network as fhardware_network;
     use fuchsia_async::{self as fasync, TimeoutExt as _};
+    use net_declare::{fidl_ip, fidl_ip_v4};
     use std::convert::TryInto as _;
     use test_case::test_case;
 
@@ -1246,6 +1281,7 @@ mod tests {
         interfaces_state: Option<finterfaces::StateProxy>,
         netstack: Option<fnetstack::NetstackProxy>,
         stack: Option<fstack::StackProxy>,
+        name_lookup: Option<fname::LookupProxy>,
     }
 
     #[async_trait::async_trait]
@@ -1253,9 +1289,7 @@ mod tests {
         async fn connect(
             &self,
         ) -> Result<<fdebug::InterfacesMarker as ProtocolMarker>::Proxy, Error> {
-            let Self { debug_interfaces, dhcpd: _, interfaces_state: _, netstack: _, stack: _ } =
-                self;
-            debug_interfaces
+            self.debug_interfaces
                 .as_ref()
                 .cloned()
                 .ok_or(anyhow::anyhow!("connector has no dhcp server instance"))
@@ -1265,9 +1299,10 @@ mod tests {
     #[async_trait::async_trait]
     impl ServiceConnector<fdhcp::Server_Marker> for TestConnector {
         async fn connect(&self) -> Result<<fdhcp::Server_Marker as ProtocolMarker>::Proxy, Error> {
-            let Self { debug_interfaces: _, dhcpd, interfaces_state: _, netstack: _, stack: _ } =
-                self;
-            dhcpd.as_ref().cloned().ok_or(anyhow::anyhow!("connector has no dhcp server instance"))
+            self.dhcpd
+                .as_ref()
+                .cloned()
+                .ok_or(anyhow::anyhow!("connector has no dhcp server instance"))
         }
     }
 
@@ -1283,9 +1318,7 @@ mod tests {
         async fn connect(
             &self,
         ) -> Result<<finterfaces::StateMarker as ProtocolMarker>::Proxy, Error> {
-            let Self { debug_interfaces: _, dhcpd: _, interfaces_state, netstack: _, stack: _ } =
-                self;
-            interfaces_state
+            self.interfaces_state
                 .as_ref()
                 .cloned()
                 .ok_or(anyhow::anyhow!("connector has no interfaces state instance"))
@@ -1313,9 +1346,10 @@ mod tests {
         async fn connect(
             &self,
         ) -> Result<<fnetstack::NetstackMarker as ProtocolMarker>::Proxy, Error> {
-            let Self { debug_interfaces: _, dhcpd: _, interfaces_state: _, netstack, stack: _ } =
-                self;
-            netstack.as_ref().cloned().ok_or(anyhow::anyhow!("connector has no netstack instance"))
+            self.netstack
+                .as_ref()
+                .cloned()
+                .ok_or(anyhow::anyhow!("connector has no netstack instance"))
         }
     }
 
@@ -1329,9 +1363,17 @@ mod tests {
     #[async_trait::async_trait]
     impl ServiceConnector<fstack::StackMarker> for TestConnector {
         async fn connect(&self) -> Result<<fstack::StackMarker as ProtocolMarker>::Proxy, Error> {
-            let Self { debug_interfaces: _, dhcpd: _, interfaces_state: _, netstack: _, stack } =
-                self;
-            stack.as_ref().cloned().ok_or(anyhow::anyhow!("connector has no stack instance"))
+            self.stack.as_ref().cloned().ok_or(anyhow::anyhow!("connector has no stack instance"))
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl ServiceConnector<fname::LookupMarker> for TestConnector {
+        async fn connect(&self) -> Result<<fname::LookupMarker as ProtocolMarker>::Proxy, Error> {
+            self.name_lookup
+                .as_ref()
+                .cloned()
+                .ok_or(anyhow::anyhow!("connector has no name lookup instance"))
         }
     }
 
@@ -2818,9 +2860,8 @@ mac             -
                         );
                         // We don't care what the value is here, we just need something to give as
                         // an argument to responder.send().
-                        let mut dummy_result = Ok(fdhcp::Option_::SubnetMask(
-                            net_declare::fidl_ip_v4!("255.255.255.0"),
-                        ));
+                        let mut dummy_result =
+                            Ok(fdhcp::Option_::SubnetMask(fidl_ip_v4!("255.255.255.0")));
                         let () = responder
                             .send(&mut dummy_result)
                             .expect("responder.send should succeed");
@@ -2926,5 +2967,67 @@ mac             -
         let ((), ()) = futures::future::try_join(op, op_succeeds)
             .await
             .expect("dhcp server command should succeed");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn dns_lookup() {
+        let (lookup, mut requests) =
+            fidl::endpoints::create_proxy_and_stream::<fname::LookupMarker>().unwrap();
+        let connector = TestConnector { name_lookup: Some(lookup), ..Default::default() };
+
+        let cmd = opts::dns::DnsEnum::Lookup(opts::dns::Lookup {
+            hostname: "example.com".to_string(),
+            ipv4: true,
+            ipv6: true,
+            sort: true,
+        });
+        let mut output = Vec::new();
+        let dns_command = do_dns(&mut output, cmd.clone(), &connector)
+            .map(|result| result.expect("dns command should succeed"));
+
+        let handle_request = async move {
+            let (hostname, options, responder) = requests
+                .try_next()
+                .await
+                .expect("FIDL error")
+                .expect("request stream should not have ended")
+                .into_lookup_ip()
+                .expect("request should be of type LookupIp");
+            let opts::dns::DnsEnum::Lookup(opts::dns::Lookup {
+                hostname: want_hostname,
+                ipv4,
+                ipv6,
+                sort,
+            }) = cmd;
+            let want_options = fname::LookupIpOptions {
+                ipv4_lookup: Some(ipv4),
+                ipv6_lookup: Some(ipv6),
+                sort_addresses: Some(sort),
+                ..fname::LookupIpOptions::EMPTY
+            };
+            assert_eq!(
+                hostname, want_hostname,
+                "received IP lookup request for unexpected hostname"
+            );
+            assert_eq!(options, want_options, "received unexpected IP lookup options");
+
+            responder
+                .send(&mut Ok(fname::LookupResult {
+                    addresses: Some(vec![fidl_ip!("203.0.113.1"), fidl_ip!("2001:db8::1")]),
+                    ..fname::LookupResult::EMPTY
+                }))
+                .expect("send response");
+        };
+        let ((), ()) = futures::future::join(dns_command, handle_request).await;
+
+        const WANT_OUTPUT: &str = "
+203.0.113.1
+2001:db8::1
+";
+        let got_output = std::str::from_utf8(&output).unwrap();
+        pretty_assertions::assert_eq!(
+            trim_whitespace_for_comparison(got_output),
+            trim_whitespace_for_comparison(WANT_OUTPUT),
+        );
     }
 }

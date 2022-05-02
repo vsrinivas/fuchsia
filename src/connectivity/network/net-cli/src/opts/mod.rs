@@ -11,6 +11,7 @@ use fidl_fuchsia_net_interfaces_ext as finterfaces_ext;
 use std::convert::{TryFrom as _, TryInto as _};
 
 pub(crate) mod dhcpd;
+pub(crate) mod dns;
 
 fn parse_ip_version_str(value: &str) -> Result<fnet::IpVersion, String> {
     match &value.to_lowercase()[..] {
@@ -37,6 +38,7 @@ pub enum CommandEnum {
     Route(Route),
     Dhcp(Dhcp),
     Dhcpd(dhcpd::Dhcpd),
+    Dns(dns::Dns),
 }
 
 #[derive(FromArgs, Clone, Debug, PartialEq)]
