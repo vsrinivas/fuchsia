@@ -37,9 +37,6 @@ zx_library("syslog") {
     "//sdk/lib/fdio:fdio_sdk",
     "//zircon/system/ulib/trace-engine:trace-engine_sdk",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 zx_library("syslog-compat") {
@@ -64,9 +61,6 @@ zx_library("syslog-compat") {
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # This static library should have no shared library dependencies,
@@ -89,9 +83,6 @@ zx_library("syslog-static") {
     "//zircon/system/ulib/zx",
   ]
   defines = [ "SYSLOG_STATIC" ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 zx_library("syslog-headers") {
