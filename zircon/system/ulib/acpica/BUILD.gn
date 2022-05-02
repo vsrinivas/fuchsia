@@ -9,36 +9,41 @@ config("acpica-config") {
   include_dirs = [ "include" ]
 }
 
-source_set("acpica-fuchsia") {
-  deps = [
-    "//src/devices/pci/lib/pci",
-    "//src/lib/ddk",
-    "//third_party/acpica:headers",
-    "//zircon/system/ulib/bitmap",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/zircon-internal",
-  ]
+if (is_fuchsia) {
+  source_set("acpica-fuchsia") {
+    deps = [
+      "//src/devices/pci/lib/pci",
+      "//src/lib/ddk",
+      "//third_party/acpica:headers",
+      "//zircon/system/ulib/bitmap",
+      "//zircon/system/ulib/fbl",
+      "//zircon/system/ulib/zircon-internal",
+    ]
 
-  public_configs = [ ":acpica-config" ]
+    public_configs = [ ":acpica-config" ]
 
-  sources = [
-    "ioport.cc",
-    "irq.cc",
-    "mmio.cc",
-    "mutex.cc",
-    "osfuchsia.cc",
-    "pci.cc",
-    "semaphore.cc",
-    "task.cc",
-  ]
+    sources = [
+      "ioport.cc",
+      "irq.cc",
+      "mmio.cc",
+      "mutex.cc",
+      "osfuchsia.cc",
+      "pci.cc",
+      "semaphore.cc",
+      "task.cc",
+    ]
 
-  defines = [ "_ALL_SOURCE" ]
+    defines = [ "_ALL_SOURCE" ]
 
-  if (platform_enable_user_pci) {
-    defines += [ "ENABLE_USER_PCI" ]
+    if (platform_enable_user_pci) {
+      defines += [ "ENABLE_USER_PCI" ]
+    }
+
+    if (acpica_debug_output) {
+      defines += [ "ACPI_DEBUG_OUTPUT" ]
+    }
   }
-
-  if (acpica_debug_output) {
-    defines += [ "ACPI_DEBUG_OUTPUT" ]
+} else {
+  group("acpica-fuchsia") {
   }
 }
