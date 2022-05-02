@@ -268,6 +268,7 @@
                     "/core/appmgr",
                     "/core/minfs",
                     "/core/ssh-key-manager",
+                    "/core/sshd-host",
 
                     // TODO(https://fxbug.dev/98760): Remove once fixed.
                     "/core/sl4f",
@@ -302,6 +303,7 @@
                     "/bootstrap/netsvc",
                     "/core",
                     "/core/appmgr",
+                    "/core/sshd-host",
 
                     // TODO(https://fxbug.dev/98755): Remove once https://fxbug.dev/86575 is fixed.
                     "/core/sl4f",
