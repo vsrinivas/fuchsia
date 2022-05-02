@@ -6,6 +6,7 @@ use crate::base::{Dependency, Entity, SettingType};
 use crate::handler::base::Error;
 use crate::ingress::registration::{self, Registrant, Registrar};
 use crate::job::source::Seeder;
+use crate::policy::PolicyType;
 use crate::service::message::Delegate;
 use fidl_fuchsia_settings::{
     AccessibilityRequestStream, AudioRequestStream, DisplayRequestStream,
@@ -13,6 +14,7 @@ use fidl_fuchsia_settings::{
     KeyboardRequestStream, LightRequestStream, NightModeRequestStream, PrivacyRequestStream,
     SetupRequestStream,
 };
+use fidl_fuchsia_settings_policy::VolumePolicyControllerRequestStream;
 use fuchsia_component::server::{ServiceFsDir, ServiceObj};
 use fuchsia_zircon;
 use serde::Deserialize;
@@ -28,8 +30,9 @@ impl From<Error> for fuchsia_zircon::Status {
 /// [Interface] defines the FIDL interfaces supported by the settings service.
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum Interface {
-    Audio,
     Accessibility,
+    Audio,
+    AudioPolicy,
     Display(display::InterfaceFlags),
     DoNotDisturb,
     FactoryReset,
@@ -42,11 +45,14 @@ pub enum Interface {
     Setup,
 }
 
-/// [Interface] defines the FIDL interfaces supported by the settings service.
+/// [InterfaceSpec] is the serializable type that defines the configuration for FIDL interfaces
+/// supported by the settings service. It's read in from configuration files to modify what
+/// interfaces the settings service provides.
 #[derive(Clone, Deserialize, PartialEq, Eq, Hash, Debug)]
 pub enum InterfaceSpec {
-    Audio,
     Accessibility,
+    Audio,
+    AudioPolicy,
     // Should ideally be a HashSet, but HashSet does not impl Hash.
     Display(Vec<display::InterfaceSpec>),
     DoNotDisturb,
@@ -64,6 +70,7 @@ impl From<InterfaceSpec> for Interface {
     fn from(spec: InterfaceSpec) -> Self {
         match spec {
             InterfaceSpec::Audio => Interface::Audio,
+            InterfaceSpec::AudioPolicy => Interface::AudioPolicy,
             InterfaceSpec::Accessibility => Interface::Accessibility,
             InterfaceSpec::Display(variants) => Interface::Display(variants.into()),
             InterfaceSpec::DoNotDisturb => Interface::DoNotDisturb,
@@ -129,6 +136,9 @@ impl Interface {
             Interface::Audio => {
                 vec![Dependency::Entity(Entity::Handler(SettingType::Audio))]
             }
+            Interface::AudioPolicy => {
+                vec![Dependency::Entity(Entity::PolicyHandler(PolicyType::Audio))]
+            }
             Interface::Display(interfaces) => {
                 let mut dependencies = Vec::new();
 
@@ -191,6 +201,16 @@ impl Interface {
                         let _ = service_dir.add_fidl_service(move |stream: AudioRequestStream| {
                             seeder.seed(stream);
                         });
+                    }
+                    Interface::AudioPolicy => {
+                        let _ = service_dir.add_fidl_service(
+                            move |stream: VolumePolicyControllerRequestStream| {
+                                crate::audio::policy::volume_policy_fidl_handler::fidl_io::spawn(
+                                    delegate.clone(),
+                                    stream,
+                                );
+                            },
+                        );
                     }
                     Interface::Accessibility => {
                         let seeder = seeder.clone();

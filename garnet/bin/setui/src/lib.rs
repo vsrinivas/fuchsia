@@ -44,7 +44,6 @@ use crate::setup::setup_controller::SetupController;
 #[cfg(test)]
 use anyhow::format_err;
 use anyhow::{Context, Error};
-use fidl_fuchsia_settings_policy::VolumePolicyControllerRequestStream;
 use fuchsia_async as fasync;
 #[cfg(test)]
 use fuchsia_component::server::NestedEnvironment;
@@ -81,6 +80,7 @@ mod service;
 mod setup;
 pub mod task;
 
+use crate::fidl::Interface;
 pub use audio::policy::AudioPolicyConfig;
 pub use display::display_configuration::DisplayConfiguration;
 pub use display::LightSensorConfig;
@@ -420,7 +420,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         // Define top level MessageHub for service communication.
         let delegate = service::MessageHub::create_hub();
 
-        let (agent_types, fidl_interfaces, policies, flags) = match self.configuration {
+        let (agent_types, fidl_interfaces, mut policies, flags) = match self.configuration {
             Some(configuration) => (
                 configuration.agent_types,
                 configuration.fidl_interfaces,
@@ -429,6 +429,13 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             ),
             _ => (HashSet::new(), HashSet::new(), HashSet::new(), HashSet::new()),
         };
+
+        // TODO(fxbug.dev/60925): remove temporary logic used for soft transition.
+        if policies.contains(&PolicyType::Audio) {
+            // If audio policy is specified through policy config instead of interface config, add
+            // it to the registrants.
+            self.registrants.push(Interface::AudioPolicy.registrant())
+        }
 
         self.registrants.extend(fidl_interfaces.into_iter().map(|x| x.registrant()));
 
@@ -440,6 +447,9 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
                 match dependency {
                     Dependency::Entity(Entity::Handler(setting_type)) => {
                         let _ = settings.insert(*setting_type);
+                    }
+                    Dependency::Entity(Entity::PolicyHandler(policy_type)) => {
+                        let _ = policies.insert(*policy_type);
                     }
                 }
             }
@@ -463,8 +473,8 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             self.storage_factory.clone(),
             context_id_counter,
         );
-        // If policy registration becomes configurable, then this initialization needs to be made
-        // configurable with the registration.
+        // TODO(fxbug.dev/673662): If policy registration becomes configurable, then this
+        // initialization needs to be made configurable with the registration.
         PolicyType::Audio
             .initialize_storage(&self.storage_factory)
             .await
@@ -776,6 +786,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         if components.contains(&setting_type) {
             PolicyProxy::create(*policy_type, policy_handler_factory.clone(), delegate.clone())
                 .await?;
+            let _ = entities.insert(Entity::PolicyHandler(*policy_type));
         }
     }
 
@@ -789,11 +800,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
             registrant.register(&delegate, &job_seeder, &mut service_dir);
         }
     }
-
-    // TODO(fxbug.dev/60925): allow configuration of policy API
-    let _ = service_dir.add_fidl_service(move |stream: VolumePolicyControllerRequestStream| {
-        crate::audio::policy::volume_policy_fidl_handler::fidl_io::spawn(delegate.clone(), stream);
-    });
 
     // The service does not work without storage, so ensure it is always included first.
     agent_authority

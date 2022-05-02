@@ -26,6 +26,7 @@ use crate::light::types::LightInfo;
 use crate::night_mode::types::NightModeInfo;
 use crate::privacy::types::PrivacyInfo;
 use crate::setup::types::SetupInfo;
+use crate::PolicyType;
 #[cfg(test)]
 use serde::Deserialize;
 use serde::Serialize;
@@ -60,6 +61,8 @@ pub enum SettingType {
 pub enum Entity {
     /// A component that handles requests for the specified [SettingType].
     Handler(SettingType),
+    /// A component that handles requests for the specified [PolicyType].
+    PolicyHandler(PolicyType),
 }
 
 /// A [Dependency] declares a reliance of a particular configuration/feature/component/etc. within
