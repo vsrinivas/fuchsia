@@ -298,18 +298,6 @@ int main(int argv, char** argc) {
   }
   console_launcher::Arguments args = get_args.value();
 
-  if (!args.run_shell) {
-    if (!args.autorun_boot.empty()) {
-      FX_LOGS(ERROR) << "cannot launch autorun command '" << args.autorun_boot << "'";
-    }
-    FX_LOGS(INFO) << "console.shell: disabled";
-    // TODO(https://fxbug.dev/97657): Hang around. If we exit before archivist has started, our logs
-    // will be lost, and this log is load bearing in shell_disabled_test.
-    std::promise<void>().get_future().wait();
-    return 0;
-  }
-  FX_LOGS(INFO) << "console.shell: enabled";
-
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
   async_dispatcher_t* dispatcher = loop.dispatcher();
   fbl::RefPtr root = fbl::MakeRefCounted<fs::PseudoDir>();
@@ -406,8 +394,7 @@ int main(int argv, char** argc) {
   }
   const auto& launcher = result.value();
 
-  std::vector<std::thread> autorun = LaunchAutorun(launcher, vfs, root, threads, args);
-
+  // Always start virtual consoles.
   if (zx_status_t status =
           CreateVirtualConsoles(launcher, vfs, root, args.virtual_console_need_debuglog, args.term);
       status != ZX_OK) {
@@ -416,5 +403,26 @@ int main(int argv, char** argc) {
     FX_PLOGS(ERROR, status) << "failed to set up virtcon";
   }
 
-  RunSerialConsole(launcher, vfs, root, args);
+  if (args.run_shell) {
+    FX_LOGS(INFO) << "console.shell: enabled";
+
+    std::vector<std::thread> autorun = LaunchAutorun(launcher, vfs, root, threads, args);
+
+    // This loops indefinitely.
+    RunSerialConsole(launcher, vfs, root, args);
+  } else {
+    if (!args.autorun_boot.empty()) {
+      FX_LOGS(ERROR) << "cannot launch autorun command '" << args.autorun_boot << "'";
+    }
+    FX_LOGS(INFO) << "console.shell: disabled";
+
+    for (auto& [_, thread] : threads) {
+      thread.join();
+    }
+    thread.join();
+
+    // TODO(https://fxbug.dev/97657): Hang around. If we exit before archivist has started, our logs
+    // will be lost, and this log is load bearing in shell_disabled_test.
+    std::promise<void>().get_future().wait();
+  }
 }
