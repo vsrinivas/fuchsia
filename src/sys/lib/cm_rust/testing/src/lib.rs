@@ -232,9 +232,9 @@ impl CollectionDeclBuilder {
         CollectionDeclBuilder(cm_rust::CollectionDecl {
             name: String::new(),
             durability: fdecl::Durability::Transient,
+            environment: None,
             allowed_offers: cm_types::AllowedOffers::StaticOnly,
             allow_long_names: false,
-            environment: None,
         })
     }
 
@@ -260,6 +260,12 @@ impl CollectionDeclBuilder {
         self
     }
 
+    /// Sets the CollectionDecl's environment name.
+    pub fn environment(mut self, environment: &str) -> Self {
+        self.0.environment = Some(environment.to_string());
+        self
+    }
+
     /// Sets the kinds of offers that may target the instances in the
     /// collection.
     pub fn allowed_offers(mut self, allowed_offers: cm_types::AllowedOffers) -> Self {
@@ -271,12 +277,6 @@ impl CollectionDeclBuilder {
     // limit.
     pub fn allow_long_names(mut self, allow_long_names: bool) -> Self {
         self.0.allow_long_names = allow_long_names;
-        self
-    }
-
-    /// Sets the CollectionDecl's environment name.
-    pub fn environment(mut self, environment: &str) -> Self {
-        self.0.environment = Some(environment.to_string());
         self
     }
 

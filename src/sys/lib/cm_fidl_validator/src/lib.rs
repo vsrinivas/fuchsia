@@ -900,7 +900,6 @@ impl<'a> ValidationContext<'a> {
         if collection.durability.is_none() {
             self.errors.push(Error::missing_field("Collection", "durability"));
         }
-        // Allow `allowed_offers` & `allow_long_names` to be unset, for backwards compatibility.
         if let Some(environment) = collection.environment.as_ref() {
             if !self.all_environment_names.contains(environment.as_str()) {
                 self.errors.push(Error::invalid_environment(
@@ -915,6 +914,7 @@ impl<'a> ValidationContext<'a> {
                 self.add_strong_dep(None, Some(source), Some(target));
             }
         }
+        // Allow `allowed_offers` & `allow_long_names` to be unset/unvalidated, for backwards compatibility.
     }
 
     fn validate_environment_decl(&mut self, environment: &'a fdecl::Environment) {
@@ -6076,9 +6076,9 @@ mod tests {
                     fdecl::Collection {
                         name: Some("modular".to_string()),
                         durability: Some(fdecl::Durability::Persistent),
+                        environment: None,
                         allowed_offers: Some(fdecl::AllowedOffers::StaticAndDynamic),
                         allow_long_names: None,
-                        environment: None,
                         ..fdecl::Collection::EMPTY
                     },
                 ]);
@@ -6261,9 +6261,9 @@ mod tests {
                     fdecl::Collection{
                         name: Some("modular".to_string()),
                         durability: Some(fdecl::Durability::Persistent),
+                        environment: None,
                         allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
                         allow_long_names: None,
-                        environment: None,
                         ..fdecl::Collection::EMPTY
                     },
                 ]);
@@ -6614,9 +6614,9 @@ mod tests {
                     fdecl::Collection {
                         name: Some("modular".to_string()),
                         durability: Some(fdecl::Durability::Persistent),
+                        environment: None,
                         allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
                         allow_long_names: None,
-                        environment: None,
                         ..fdecl::Collection::EMPTY
                     },
                 ]);
@@ -7336,9 +7336,9 @@ mod tests {
                 decl.collections = Some(vec![fdecl::Collection{
                     name: None,
                     durability: None,
+                    environment: None,
                     allowed_offers: None,
                     allow_long_names: None,
-                    environment: None,
                     ..fdecl::Collection::EMPTY
                 }]);
                 decl
@@ -7354,9 +7354,9 @@ mod tests {
                 decl.collections = Some(vec![fdecl::Collection{
                     name: Some("^bad".to_string()),
                     durability: Some(fdecl::Durability::Persistent),
+                    environment: None,
                     allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
                     allow_long_names: None,
-                    environment: None,
                     ..fdecl::Collection::EMPTY
                 }]);
                 decl
@@ -7371,9 +7371,9 @@ mod tests {
                 decl.collections = Some(vec![fdecl::Collection{
                     name: Some("a".repeat(1025)),
                     durability: Some(fdecl::Durability::Transient),
+                    environment: None,
                     allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
                     allow_long_names: None,
-                    environment: None,
                     ..fdecl::Collection::EMPTY
                 }]);
                 decl
@@ -7388,9 +7388,9 @@ mod tests {
                 decl.collections = Some(vec![fdecl::Collection {
                     name: Some("foo".to_string()),
                     durability: Some(fdecl::Durability::Transient),
+                    environment: Some("test_env".to_string()),
                     allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
                     allow_long_names: None,
-                    environment: Some("test_env".to_string()),
                     ..fdecl::Collection::EMPTY
                 }]);
                 decl

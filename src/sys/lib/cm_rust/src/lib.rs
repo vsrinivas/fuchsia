@@ -834,12 +834,12 @@ impl NativeIntoFidl<fdecl::ChildRef> for ChildRef {
 pub struct CollectionDecl {
     pub name: String,
     pub durability: fdecl::Durability,
+    pub environment: Option<String>,
 
     #[fidl_decl(default)]
     pub allowed_offers: cm_types::AllowedOffers,
     #[fidl_decl(default)]
     pub allow_long_names: bool,
-    pub environment: Option<String>,
 }
 
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
@@ -2457,17 +2457,17 @@ mod tests {
                      fdecl::Collection {
                          name: Some("modular".to_string()),
                          durability: Some(fdecl::Durability::Persistent),
+                         environment: None,
                          allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
                          allow_long_names: Some(true),
-                         environment: None,
                          ..fdecl::Collection::EMPTY
                      },
                      fdecl::Collection {
                          name: Some("tests".to_string()),
                          durability: Some(fdecl::Durability::Transient),
+                         environment: Some("test_env".to_string()),
                          allowed_offers: Some(fdecl::AllowedOffers::StaticAndDynamic),
                          allow_long_names: Some(true),
-                         environment: Some("test_env".to_string()),
                          ..fdecl::Collection::EMPTY
                      },
                 ]),
@@ -2792,16 +2792,16 @@ mod tests {
                         CollectionDecl {
                             name: "modular".to_string(),
                             durability: fdecl::Durability::Persistent,
+                            environment: None,
                             allowed_offers: cm_types::AllowedOffers::StaticOnly,
                             allow_long_names: true,
-                            environment: None,
                         },
                         CollectionDecl {
                             name: "tests".to_string(),
                             durability: fdecl::Durability::Transient,
+                            environment: Some("test_env".to_string()),
                             allowed_offers: cm_types::AllowedOffers::StaticAndDynamic,
                             allow_long_names: true,
-                            environment: Some("test_env".to_string()),
                         },
                     ],
                     facets: Some(fdata::Dictionary {
@@ -3053,17 +3053,17 @@ mod tests {
                      fdecl::Collection {
                          name: Some("modular".to_string()),
                          durability: Some(fdecl::Durability::Persistent),
+                         environment: None,
                          allowed_offers: None,
                          allow_long_names: None,
-                         environment: None,
                          ..fdecl::Collection::EMPTY
                      },
                      fdecl::Collection {
                          name: Some("tests".to_string()),
                          durability: Some(fdecl::Durability::Transient),
+                         environment: Some("test_env".to_string()),
                          allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
                          allow_long_names: None,
-                         environment: Some("test_env".to_string()),
                          ..fdecl::Collection::EMPTY
                      },
                      fdecl::Collection {
@@ -3106,30 +3106,30 @@ mod tests {
                         CollectionDecl {
                             name: "modular".to_string(),
                             durability: fdecl::Durability::Persistent,
+                            environment: None,
                             allowed_offers: cm_types::AllowedOffers::StaticOnly,
                             allow_long_names: false,
-                            environment: None,
                         },
                         CollectionDecl {
                             name: "tests".to_string(),
                             durability: fdecl::Durability::Transient,
+                            environment: Some("test_env".to_string()),
                             allowed_offers: cm_types::AllowedOffers::StaticOnly,
                             allow_long_names: false,
-                            environment: Some("test_env".to_string()),
                         },
                         CollectionDecl {
                             name: "dyn_offers".to_string(),
                             durability: fdecl::Durability::Transient,
+                            environment: None,
                             allowed_offers: cm_types::AllowedOffers::StaticAndDynamic,
                             allow_long_names: false,
-                            environment: None,
                         },
                         CollectionDecl {
                             name: "long_child_names".to_string(),
                             durability: fdecl::Durability::Transient,
+                            environment: None,
                             allowed_offers: cm_types::AllowedOffers::StaticOnly,
                             allow_long_names: true,
-                            environment: None,
                         },
                     ],
                     facets: Some(fdata::Dictionary{

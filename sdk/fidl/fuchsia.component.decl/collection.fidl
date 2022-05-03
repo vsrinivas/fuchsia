@@ -12,6 +12,13 @@ type Collection = table {
     /// The durability of instances in the collection.
     2: durability Durability;
 
+    /// The environment assigned to child instances in this collection.
+    ///
+    /// Must be non-empty, reference an environment defined in the containing
+    /// `ComponentDecl`, and contain only the following characters:
+    /// [a-z0-9-_.].
+    3: environment name;
+
     /// The kinds of offers that can target the child instances in this
     /// collection. The default value is `STATIC_ONLY`.
     ///
@@ -25,13 +32,6 @@ type Collection = table {
     /// Only components using the `allow_long_names` restricted feature may set
     /// this field.
     5: allow_long_names bool;
-
-    /// The environment assigned to child instances in this collection.
-    ///
-    /// Must be non-empty, reference an environment defined in the containing
-    /// `ComponentDecl`, and contain only the following characters:
-    /// [a-z0-9-_.].
-    3: environment name;
 };
 
 /// The durability of component instances created in a collection.

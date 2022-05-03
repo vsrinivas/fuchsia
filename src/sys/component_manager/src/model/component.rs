@@ -2805,8 +2805,8 @@ pub mod tests {
                     )
                     .add_collection(
                         CollectionDeclBuilder::new_transient_collection("coll_2")
-                            .allowed_offers(cm_types::AllowedOffers::StaticAndDynamic)
                             .environment("env_b")
+                            .allowed_offers(cm_types::AllowedOffers::StaticAndDynamic)
                             .build(),
                     )
                     .offer(example_offer.clone())

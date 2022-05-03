@@ -2278,6 +2278,12 @@ pub struct Collection {
     ///     when it is stopped.
     pub durability: Durability,
 
+    /// If present, the environment that will be
+    /// assigned to instances in this collection, one of
+    /// [`environments`](#environments). If omitted, instances in this collection
+    /// will inherit the same environment assigned to this component.
+    pub environment: Option<EnvironmentRef>,
+
     /// Constraints on the dynamic offers that target the components in this collection.
     /// Dynamic offers are specified when calling `fuchsia.component.Realm/CreateChild`.
     /// -   `static_only`: Only those specified in this `.cml` file. No dynamic offers.
@@ -2289,12 +2295,6 @@ pub struct Collection {
     /// Allow child names up to 1024 characters long instead of the usual 100 character limit.
     /// Default is false.
     pub allow_long_names: Option<bool>,
-
-    /// If present, the environment that will be
-    /// assigned to instances in this collection, one of
-    /// [`environments`](#environments). If omitted, instances in this collection
-    /// will inherit the same environment assigned to this component.
-    pub environment: Option<EnvironmentRef>,
 }
 
 pub trait FromClause {

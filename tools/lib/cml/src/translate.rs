@@ -713,9 +713,9 @@ fn translate_collections(
         out_collections.push(fdecl::Collection {
             name: Some(collection.name.clone().into()),
             durability: Some(collection.durability.clone().into()),
+            environment: extract_environment_ref(collection.environment.as_ref()).map(|e| e.into()),
             allowed_offers: collection.allowed_offers.clone().map(|a| a.into()),
             allow_long_names: collection.allow_long_names.clone(),
-            environment: extract_environment_ref(collection.environment.as_ref()).map(|e| e.into()),
             ..fdecl::Collection::EMPTY
         });
     }
@@ -2905,8 +2905,8 @@ mod tests {
                     fdecl::Collection {
                         name: Some("modular".to_string()),
                         durability: Some(fdecl::Durability::Persistent),
-                        allowed_offers: None,
                         environment: None,
+                        allowed_offers: None,
                         ..fdecl::Collection::EMPTY
                     }
                 ]),
@@ -3007,15 +3007,15 @@ mod tests {
                     fdecl::Collection {
                         name: Some("modular".to_string()),
                         durability: Some(fdecl::Durability::Persistent),
-                        allowed_offers: None,
                         environment: None,
+                        allowed_offers: None,
                         ..fdecl::Collection::EMPTY
                     },
                     fdecl::Collection {
                         name: Some("tests".to_string()),
                         durability: Some(fdecl::Durability::Transient),
-                        allowed_offers: None,
                         environment: Some("myenv".to_string()),
+                        allowed_offers: None,
                         ..fdecl::Collection::EMPTY
                     }
                 ]),
@@ -3620,8 +3620,8 @@ mod tests {
                     fdecl::Collection {
                         name: Some("modular".to_string()),
                         durability: Some(fdecl::Durability::Persistent),
-                        allowed_offers: None,
                         environment: None,
+                        allowed_offers: None,
                         ..fdecl::Collection::EMPTY
                     }
                 ]),

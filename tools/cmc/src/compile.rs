@@ -449,9 +449,9 @@ mod tests {
                     fdecl::Collection {
                         name: Some("coll".to_string()),
                         durability: Some(fdecl::Durability::Transient),
+                        environment: None,
                         allowed_offers: None,
                         allow_long_names: None,
-                        environment: None,
                         ..fdecl::Collection::EMPTY
                     }
                 ]),
@@ -595,9 +595,9 @@ mod tests {
                     fdecl::Collection {
                         name: Some("coll".to_string()),
                         durability: Some(fdecl::Durability::Transient),
+                        environment: None,
                         allowed_offers: None,
                         allow_long_names: None,
-                        environment: None,
                         ..fdecl::Collection::EMPTY
                     }
                 ]),
