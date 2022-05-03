@@ -39,9 +39,9 @@ namespace flutter_embedder_test {
 
 constexpr char kParentViewUrl[] = "fuchsia-pkg://fuchsia.com/parent-view#meta/parent-view.cmx";
 constexpr char kParentViewDisabledHittestUrl[] =
-    "fuchsia-pkg://fuchsia.com/parent-view-disabled-hittest#meta/parent-view-disabled-hittest.cmx";
+    "fuchsia-pkg://fuchsia.com/parent-view#meta/parent-view-disabled-hittest.cmx";
 constexpr char kParentViewShowOverlayUrl[] =
-    "fuchsia-pkg://fuchsia.com/parent-view-show-overlay#meta/parent-view-show-overlay.cmx";
+    "fuchsia-pkg://fuchsia.com/parent-view#meta/parent-view-show-overlay.cmx";
 
 constexpr scenic::Color kParentBackgroundColor = {0x00, 0x00, 0xFF, 0xFF};  // Blue
 constexpr scenic::Color kParentTappedColor = {0x00, 0x00, 0x00, 0xFF};      // Black

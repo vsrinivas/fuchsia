@@ -20,8 +20,6 @@ group("tests") {
     "//src/ui/bin/text:text_manager",
     "//src/ui/tests/integration_flutter_tests/embedder/child-view",
     "//src/ui/tests/integration_flutter_tests/embedder/parent-view",
-    "//src/ui/tests/integration_flutter_tests/embedder/parent-view:parent-view-disabled-hittest",
-    "//src/ui/tests/integration_flutter_tests/embedder/parent-view:parent-view-show-overlay",
   ]
 }
 
@@ -35,8 +33,6 @@ fuchsia_unittest_package("flutter-embedder-test") {
     "//src/ui/scenic:component",
     "//src/ui/tests/integration_flutter_tests/embedder/child-view",
     "//src/ui/tests/integration_flutter_tests/embedder/parent-view",
-    "//src/ui/tests/integration_flutter_tests/embedder/parent-view:parent-view-disabled-hittest",
-    "//src/ui/tests/integration_flutter_tests/embedder/parent-view:parent-view-show-overlay",
     "//src/ui/tests/integration_input_tests:scenic-test-realm",
   ]
   test_specs = {
@@ -90,8 +86,6 @@ fuchsia_unittest_package("flutter-embedder-test-ip") {
     "//src/ui/scenic:component",
     "//src/ui/tests/integration_flutter_tests/embedder/child-view",
     "//src/ui/tests/integration_flutter_tests/embedder/parent-view",
-    "//src/ui/tests/integration_flutter_tests/embedder/parent-view:parent-view-disabled-hittest",
-    "//src/ui/tests/integration_flutter_tests/embedder/parent-view:parent-view-show-overlay",
     "//src/ui/tests/integration_input_tests:input-pipeline-test-realm",
   ]
   test_specs = {

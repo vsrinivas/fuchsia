@@ -1,18 +1,13 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+import("//build/components.gni")
+import("//build/dart/dart_library.gni")
+import("//build/flutter/flutter_component.gni")
 
-import("//build/flutter/flutter_app.gni")
-
-flutter_app("parent-view") {
-  main_dart = "parent_view.dart"
-  manifest = "pubspec.yaml"
-  meta = [
-    {
-      path = rebase_path("meta/parent-view.cmx")
-      dest = "parent-view.cmx"
-    },
-  ]
+dart_library("lib") {
+  package_name = "parent-view"
+  sources = [ "parent_view.dart" ]
   deps = [
     "//sdk/dart/fuchsia_scenic_flutter",
     "//sdk/dart/fuchsia_services",
@@ -23,51 +18,40 @@ flutter_app("parent-view") {
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/pub/args",
   ]
+}
+
+flutter_component("parent-view-component") {
+  component_name = "parent-view"
+  manifest = "meta/parent-view.cmx"
+  main_package = "parent-view"
+  main_dart = "parent_view.dart"
+  deps = [ ":lib" ]
 }
 
 # The following build targets build new packages that use the same parent-view
 # flutter app but specify arguments at launch.
 # TODO(fxb/97018): Replace parent-view with CFv2 manifest and consolidate
 # different build targets to config changes.
-
-flutter_app("parent-view-disabled-hittest") {
+flutter_component("parent-view-disabled-hittest-component") {
+  component_name = "parent-view-disabled-hittest"
+  manifest = "meta/parent-view-disabled-hittest.cmx"
+  main_package = "parent-view"
   main_dart = "parent_view.dart"
-  manifest = "pubspec.yaml"
-  meta = [
-    {
-      path = rebase_path("meta/parent-view-disabled-hittest.cmx")
-      dest = "parent-view-disabled-hittest.cmx"
-    },
-  ]
-  deps = [
-    "//sdk/dart/fuchsia_scenic_flutter",
-    "//sdk/dart/fuchsia_services",
-    "//sdk/dart/zircon",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//third_party/dart-pkg/git/flutter/packages/flutter",
-    "//third_party/dart-pkg/pub/args",
-  ]
+  deps = [ ":lib" ]
 }
 
-flutter_app("parent-view-show-overlay") {
+flutter_component("parent-view-show-overlay-component") {
+  component_name = "parent-view-show-overlay"
+  manifest = "meta/parent-view-show-overlay.cmx"
+  main_package = "parent-view"
   main_dart = "parent_view.dart"
-  manifest = "pubspec.yaml"
-  meta = [
-    {
-      path = rebase_path("meta/parent-view-show-overlay.cmx")
-      dest = "parent-view-show-overlay.cmx"
-    },
-  ]
+  deps = [ ":lib" ]
+}
+
+fuchsia_package("parent-view") {
   deps = [
-    "//sdk/dart/fuchsia_scenic_flutter",
-    "//sdk/dart/fuchsia_services",
-    "//sdk/dart/zircon",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//third_party/dart-pkg/git/flutter/packages/flutter",
-    "//third_party/dart-pkg/pub/args",
+    ":parent-view-component",
+    ":parent-view-disabled-hittest-component",
+    ":parent-view-show-overlay-component",
   ]
 }
