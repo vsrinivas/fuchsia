@@ -567,13 +567,12 @@ impl Daemon {
                 responder.send(true).context("error sending response")?;
             }
             DaemonRequest::GetVersionInfo { responder } => {
-                return responder.send(build_info()).context("sending GetVersionInfo response");
-            }
-            DaemonRequest::GetHash { responder } => {
-                let hash: String =
+                let mut info = build_info();
+                let build_id: String =
                     ffx_config::get((CURRENT_EXE_BUILDID, ffx_config::ConfigLevel::Runtime))
                         .await?;
-                responder.send(&hash).context("error sending response")?;
+                info.build_id = Some(build_id);
+                return responder.send(info).context("sending GetVersionInfo response");
             }
             DaemonRequest::ConnectToProtocol { name, server_end, responder } => {
                 let name_for_analytics = name.clone();

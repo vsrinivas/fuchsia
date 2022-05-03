@@ -97,6 +97,7 @@ fn build_info_impl(raw_version_info: String, raw_build_version: String) -> Versi
         build_version: Some(raw_build_version.trim().to_string()),
         abi_revision: Some(vh.abi_revision),
         api_level: Some(vh.api_level),
+        exec_path: std::env::current_exe().map(|x| x.to_string_lossy().to_string()).ok(),
         ..VersionInfo::EMPTY
     };
 }
@@ -124,6 +125,7 @@ mod test {
                 build_version: Some(FAKE_BUILD_VERSION.to_string()),
                 abi_revision: Some(ABI_REVISION),
                 api_level: Some(API_LEVEL),
+                exec_path: std::env::current_exe().map(|x| x.to_string_lossy().to_string()).ok(),
                 ..VersionInfo::EMPTY
             }
         );
@@ -142,6 +144,7 @@ mod test {
                 build_version: Some(FAKE_BUILD_VERSION.to_string()),
                 abi_revision: Some(ABI_REVISION),
                 api_level: Some(API_LEVEL),
+                exec_path: std::env::current_exe().map(|x| x.to_string_lossy().to_string()).ok(),
                 ..VersionInfo::EMPTY
             }
         );
@@ -193,6 +196,7 @@ mod test {
                 build_version: Some(FAKE_BUILD_VERSION.to_string()),
                 abi_revision: Some(ABI_REVISION),
                 api_level: Some(API_LEVEL),
+                exec_path: std::env::current_exe().map(|x| x.to_string_lossy().to_string()).ok(),
                 ..VersionInfo::EMPTY
             }
         );
