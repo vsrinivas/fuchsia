@@ -26,12 +26,9 @@
         // These system capabilities are offered for use by the chromium tests.
         {
             protocol: [
+                "fuchsia.fonts.Provider",
                 "fuchsia.hwinfo.Product",
                 "fuchsia.media.ProfileProvider",
-
-                // some chromium tests require access to the network.
-                "fuchsia.net.http.Loader",
-                "fuchsia.net.name.Lookup",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.vulkan.loader.Loader",
@@ -42,12 +39,15 @@
             to: "#chromium-tests",
         },
 
-        // some chromium tests require access to the network.
+        // Some Chromium tests require access to network services.
         {
             protocol: [
+                "fuchsia.device.NameProvider",
                 "fuchsia.net.http.Loader",
+                "fuchsia.net.interfaces.State",
                 "fuchsia.net.name.Lookup",
                 "fuchsia.posix.socket.Provider",
+                "fuchsia.stash.SecureStore",
             ],
             from: "parent",
             to: "#chromium-tests",
@@ -63,6 +63,11 @@
         },
         {
             directory: "build-info",
+            from: "parent",
+            to: "#chromium-tests",
+        },
+        {
+            directory: "root-ssl-certificates",
             from: "parent",
             to: "#chromium-tests",
         },

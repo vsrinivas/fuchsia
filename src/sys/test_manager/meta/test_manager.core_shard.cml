@@ -76,6 +76,7 @@
             protocol: [
                 "fuchsia.boot.FactoryItems",
                 "fuchsia.boot.RootResource",
+                "fuchsia.device.NameProvider",
                 "fuchsia.kernel.Counter",
                 "fuchsia.kernel.CpuResource",
                 "fuchsia.kernel.DebugResource",
@@ -93,8 +94,11 @@
             from: "parent",
             to: "#test_manager",
         },
-
-        // Needed by some non-hermetic tests.
+        {
+            protocol: [ "fuchsia.fonts.Provider" ],
+            from: "#font_provider",
+            to: "#test_manager",
+        },
         {
             protocol: [ "fuchsia.exception.Handler" ],
             from: "#exceptions",
@@ -282,13 +286,14 @@
         {
             protocol: [
                 "fuchsia.net.http.Loader",
+                "fuchsia.net.interfaces.State",
                 "fuchsia.net.name.Lookup",
             ],
             from: "#network",
             to: "#test_manager",
         },
 
-        // Needed by dart and flutter runners
+        // Needed by Chromium and Dart + Flutter runners
         {
             protocol: "fuchsia.posix.socket.Provider",
             from: "#network",
