@@ -141,25 +141,26 @@ impl vfs::directory::entry::DirectoryEntry for PkgfsVersions {
             match path.next().map(Hash::from_str) {
                 None => ImmutableConnection::create_connection(scope, self, flags, server_end),
                 Some(Ok(package_hash)) => {
-                    let package_status = get_package_status(
+                    let package_status = crate::cache_service::get_package_status(
                         self.base_packages.as_ref(),
                         self.non_base_packages.as_ref(),
                         &package_hash,
                     )
                     .await;
-                    if let PackageStatus::Other = package_status {
+                    if let crate::cache_service::PackageStatus::Other = package_status {
                         let () = send_on_open_with_error(flags, server_end, zx::Status::NOT_FOUND);
                         return;
                     }
 
-                    let executability_status = executability_status(
+                    let executability_status = crate::cache_service::executability_status(
                         self.executability_restrictions,
                         &package_status,
                         self.non_static_allow_list.as_ref(),
                     );
                     let executablity_requested = flags.intersects(fio::OpenFlags::RIGHT_EXECUTABLE);
+                    use crate::cache_service::ExecutabilityStatus::*;
                     let flags = match (executability_status, executablity_requested) {
-                        (ExecutabilityStatus::Forbidden, true) => {
+                        (Forbidden, true) => {
                             let () = send_on_open_with_error(
                                 flags,
                                 server_end,
@@ -167,10 +168,8 @@ impl vfs::directory::entry::DirectoryEntry for PkgfsVersions {
                             );
                             return;
                         }
-                        (ExecutabilityStatus::Forbidden, false) => {
-                            flags.difference(fio::OpenFlags::POSIX_EXECUTABLE)
-                        }
-                        (ExecutabilityStatus::Allowed, _) => flags,
+                        (Forbidden, false) => flags.difference(fio::OpenFlags::POSIX_EXECUTABLE),
+                        (Allowed, _) => flags,
                     };
                     if let Err(e) = package_directory::serve_path(
                         scope,
@@ -200,52 +199,6 @@ impl vfs::directory::entry::DirectoryEntry for PkgfsVersions {
 
     fn entry_info(&self) -> EntryInfo {
         EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)
-    }
-}
-
-enum PackageStatus {
-    Base,
-    Active(fuchsia_pkg::PackageName),
-    Other,
-}
-
-async fn get_package_status(
-    base_packages: &BasePackages,
-    package_index: &async_lock::RwLock<PackageIndex>,
-    package: &fuchsia_hash::Hash,
-) -> PackageStatus {
-    if base_packages.is_base_package(*package) {
-        return PackageStatus::Base;
-    }
-
-    match package_index.read().await.get_name_if_active(package) {
-        Some(name) => PackageStatus::Active(name.clone()),
-        None => PackageStatus::Other,
-    }
-}
-
-enum ExecutabilityStatus {
-    Allowed,
-    Forbidden,
-}
-
-fn executability_status(
-    executability_restrictions: system_image::ExecutabilityRestrictions,
-    package_status: &PackageStatus,
-    non_static_allow_list: &system_image::NonStaticAllowList,
-) -> ExecutabilityStatus {
-    use {system_image::ExecutabilityRestrictions::*, ExecutabilityStatus::*, PackageStatus::*};
-    match (executability_restrictions, package_status) {
-        (Enforce, Base) => Allowed,
-        (Enforce, Active(name)) => {
-            if non_static_allow_list.allows(name) {
-                Allowed
-            } else {
-                Forbidden
-            }
-        }
-        (Enforce, Other) => Forbidden,
-        (DoNotEnforce, _) => Allowed,
     }
 }
 

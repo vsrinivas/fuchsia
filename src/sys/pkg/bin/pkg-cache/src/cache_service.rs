@@ -113,6 +113,52 @@ pub async fn serve(
         .await
 }
 
+pub(crate) enum PackageStatus {
+    Base,
+    Active(fuchsia_pkg::PackageName),
+    Other,
+}
+
+pub(crate) async fn get_package_status(
+    base_packages: &BasePackages,
+    package_index: &async_lock::RwLock<PackageIndex>,
+    package: &fuchsia_hash::Hash,
+) -> PackageStatus {
+    if base_packages.is_base_package(*package) {
+        return PackageStatus::Base;
+    }
+
+    match package_index.read().await.get_name_if_active(package) {
+        Some(name) => PackageStatus::Active(name.clone()),
+        None => PackageStatus::Other,
+    }
+}
+
+pub(crate) enum ExecutabilityStatus {
+    Allowed,
+    Forbidden,
+}
+
+pub(crate) fn executability_status(
+    executability_restrictions: system_image::ExecutabilityRestrictions,
+    package_status: &PackageStatus,
+    non_static_allow_list: &system_image::NonStaticAllowList,
+) -> ExecutabilityStatus {
+    use {system_image::ExecutabilityRestrictions::*, ExecutabilityStatus::*, PackageStatus::*};
+    match (executability_restrictions, package_status) {
+        (Enforce, Base) => Allowed,
+        (Enforce, Active(name)) => {
+            if non_static_allow_list.allows(name) {
+                Allowed
+            } else {
+                Forbidden
+            }
+        }
+        (Enforce, Other) => Forbidden,
+        (DoNotEnforce, _) => Allowed,
+    }
+}
+
 /// Fetch a package, and optionally open it.
 async fn get<'a>(
     pkgfs_versions: &'a pkgfs::versions::Client,
