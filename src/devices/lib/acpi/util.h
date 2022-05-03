@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_LIB_ACPI_UTIL_H_
 #define SRC_DEVICES_LIB_ACPI_UTIL_H_
 
-#include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <lib/zx/status.h>
 #include <stdint.h>
 #include <zircon/status.h>

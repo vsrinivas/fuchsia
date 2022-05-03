@@ -303,6 +303,7 @@ config("fidl-wire-deprecated-mutable-tables") {
     "//src/devices/board/drivers/vim3:vim3-driver",
     "//src/devices/board/lib/acpi",
     "//src/devices/board/lib/acpi:acpi-test",
+    "//src/devices/board/lib/acpi:host-acpi",
     "//src/devices/i2c/drivers/i2c:i2c-test-bin",
     "//src/devices/lib/fidl-metadata",
     "//src/devices/light-sensor/drivers/ams-light:ams-light-driver",

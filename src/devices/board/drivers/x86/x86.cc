@@ -23,6 +23,7 @@
 #include "src/devices/board/drivers/x86/include/smbios.h"
 #include "src/devices/board/drivers/x86/include/sysmem.h"
 #include "src/devices/board/drivers/x86/x64-bind.h"
+#include "src/devices/board/lib/acpi/manager-fuchsia.h"
 
 using fuchsia_hardware_acpi::wire::kMaxAcpiTableEntries;
 using fuchsia_hardware_acpi::wire::TableInfo;
@@ -179,7 +180,7 @@ zx_status_t X86::Bind() {
   }
 
   // Create the ACPI manager.
-  acpi_manager_ = std::make_unique<acpi::Manager>(acpi_.get(), zxdev());
+  acpi_manager_ = std::make_unique<acpi::FuchsiaManager>(acpi_.get(), zxdev());
 
   // Start up our protocol helpers and platform devices.
   return Start();

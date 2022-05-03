@@ -9,7 +9,10 @@
 #include <fidl/fuchsia.hardware.spi.businfo/cpp/wire.h>
 #include <lib/ddk/binding.h>
 #include <lib/ddk/device.h>
+#include <lib/zx/status.h>
 #include <stdint.h>
+
+#include <string>
 
 #include "src/devices/board/lib/acpi/acpi.h"
 #include "src/devices/board/lib/acpi/bus-type.h"
@@ -125,6 +128,8 @@ class DeviceBuilder {
 
   const char* name() { return name_.data(); }
   ACPI_HANDLE handle() { return handle_; }
+  bool built() { return zx_device_ != nullptr; }
+  DeviceBuilder* parent() { return parent_; }
 
   // Walk this device's resources, checking to see if any are a SerialBus type.
   // If they are, calls |callback| with the handle to the bus, and the type of the bus, and a

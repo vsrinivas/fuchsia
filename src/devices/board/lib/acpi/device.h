@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_BOARD_LIB_ACPI_DEVICE_H_
 #define SRC_DEVICES_BOARD_LIB_ACPI_DEVICE_H_
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
-#include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/ddk/binding.h>
 #include <lib/fpromise/promise.h>
 #include <lib/svc/outgoing.h>
@@ -17,12 +16,16 @@
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 
+#include "src/devices/board/lib/acpi/device-args.h"
 #include "src/devices/board/lib/acpi/event.h"
 #include "src/devices/board/lib/acpi/manager.h"
 #include "src/devices/board/lib/acpi/resources.h"
 
+#ifndef __Fuchsia__
+#error "Use device-for-host.h!"
+#endif
+
 namespace acpi {
-const char* BusTypeToString(BusType t);
 
 struct DevicePioResource {
   explicit DevicePioResource(const resource_io& io)
@@ -70,35 +73,6 @@ struct DeviceIrqResource {
 #define ACPI_IRQ_SHARED 1
   uint8_t wake_capable;
   uint8_t pin;
-};
-
-struct DeviceArgs {
-  zx_device_t* parent_;
-  acpi::Manager* manager_;
-  ACPI_HANDLE handle_;
-
-  // Bus metadata
-  std::vector<uint8_t> metadata_;
-  BusType bus_type_ = BusType::kUnknown;
-  uint32_t bus_id_ = UINT32_MAX;
-
-  // PCI metadata
-  std::vector<pci_bdf_t> bdfs_;
-
-  DeviceArgs(zx_device_t* parent, acpi::Manager* manager, ACPI_HANDLE handle)
-      : parent_(parent), manager_(manager), handle_(handle) {}
-  DeviceArgs(DeviceArgs&) = delete;
-
-  DeviceArgs& SetBusMetadata(std::vector<uint8_t> metadata, BusType bus_type, uint32_t bus_id) {
-    metadata_ = std::move(metadata);
-    bus_type_ = bus_type;
-    bus_id_ = bus_id;
-    return *this;
-  }
-  DeviceArgs& SetPciMetadata(std::vector<pci_bdf_t> bdfs) {
-    bdfs_ = std::move(bdfs);
-    return *this;
-  }
 };
 
 class Device;

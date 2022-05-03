@@ -8,6 +8,8 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/zx/status.h>
+#include <zircon/status.h>
 
 #include <memory>
 
@@ -113,12 +115,13 @@ acpi::status<> Manager::ConfigureDiscoveredDevices() {
 }
 
 acpi::status<> Manager::PublishDevices(zx_device_t* platform_bus) {
+#ifdef __Fuchsia__
   zx_status_t result = StartFidlLoop();
   if (result != ZX_OK) {
-    zxlogf(ERROR, "Failed to launch thread for ACPI FIDL requests: %s",
-           zx_status_get_string(result));
+    zxlogf(ERROR, "Failed to launch thread for ACPI FIDL requests: %d", result);
     return acpi::error(AE_ERROR);
   }
+#endif
   for (auto handle : device_publish_order_) {
     DeviceBuilder* d = LookupDevice(handle);
     if (d == nullptr) {

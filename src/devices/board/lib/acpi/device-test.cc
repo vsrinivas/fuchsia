@@ -11,6 +11,7 @@
 
 #include "fidl/fuchsia.hardware.acpi/cpp/markers.h"
 #include "lib/fidl/llcpp/channel.h"
+#include "src/devices/board/lib/acpi/manager-fuchsia.h"
 #include "src/devices/board/lib/acpi/manager.h"
 #include "src/devices/board/lib/acpi/test/device.h"
 #include "src/devices/board/lib/acpi/test/mock-acpi.h"
@@ -170,7 +171,7 @@ class AcpiDeviceTest : public zxtest::Test {
 
  protected:
   std::shared_ptr<MockDevice> mock_root_;
-  acpi::Manager manager_;
+  acpi::FuchsiaManager manager_;
   acpi::test::MockAcpi acpi_;
   fidl::WireSyncClient<fuchsia_hardware_acpi::Device> fidl_client_;
 };

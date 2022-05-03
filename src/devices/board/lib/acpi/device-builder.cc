@@ -12,7 +12,11 @@
 #include <fbl/string_printf.h>
 
 #include "src/devices/board/lib/acpi/acpi.h"
+#ifdef __Fuchsia__
 #include "src/devices/board/lib/acpi/device.h"
+#else
+#include "src/devices/board/lib/acpi/device-for-host.h"
+#endif
 #include "src/devices/board/lib/acpi/manager.h"
 #include "src/devices/board/lib/acpi/resources.h"
 #include "src/devices/lib/acpi/util.h"
@@ -170,7 +174,7 @@ zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Manager* manager) {
   if (HasBusId() && bus_type_ != BusType::kPci) {
     zx::status<std::vector<uint8_t>> metadata = FidlEncodeMetadata();
     if (metadata.is_error()) {
-      zxlogf(ERROR, "Error while encoding metadata for '%s': %s", name(), metadata.status_string());
+      zxlogf(ERROR, "Error while encoding metadata for '%s': %d", name(), metadata.status_value());
       return metadata.take_error();
     }
     device_args.SetBusMetadata(std::move(*metadata), bus_type_, GetBusId());
@@ -196,8 +200,8 @@ zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Manager* manager) {
   auto result = device->AddDevice(name(), cpp20::span(dev_props_),
                                   cpp20::span(str_props_for_ddkadd), add_flags);
   if (result.is_error()) {
-    zxlogf(ERROR, "failed to publish acpi device '%s' (parent=%s): %s", name(), parent_->name(),
-           result.status_string());
+    zxlogf(ERROR, "failed to publish acpi device '%s' (parent=%s): %d", name(), parent_->name(),
+           result.status_value());
     return result.take_error();
   }
   zx_device_ = device.release()->zxdev();
@@ -231,6 +235,7 @@ size_t DeviceBuilder::AddBusChild(DeviceChildEntry d) {
 }
 
 zx::status<std::vector<uint8_t>> DeviceBuilder::FidlEncodeMetadata() {
+#ifdef __Fuchsia__
   using SpiChannel = fuchsia_hardware_spi_businfo::wire::SpiChannel;
   using I2CChannel = fuchsia_hardware_i2c_businfo::wire::I2CChannel;
   fidl::Arena<> allocator;
@@ -263,6 +268,9 @@ zx::status<std::vector<uint8_t>> DeviceBuilder::FidlEncodeMetadata() {
         }
       },
       bus_children_);
+#else  // __Fuchsia__
+  return zx::error(ZX_ERR_NOT_SUPPORTED);
+#endif
 }
 
 zx::status<> DeviceBuilder::BuildComposite(acpi::Manager* manager,

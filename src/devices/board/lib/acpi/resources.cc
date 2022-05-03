@@ -6,6 +6,7 @@
 
 #include <fidl/fuchsia.hardware.i2c.businfo/cpp/wire.h>
 #include <fidl/fuchsia.hardware.spi.businfo/cpp/wire.h>
+#include <lib/zx/status.h>
 
 #include "src/devices/board/lib/acpi/acpi.h"
 #include "src/devices/board/lib/acpi/status.h"

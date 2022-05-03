@@ -13,6 +13,7 @@
 #include <zxtest/zxtest.h>
 
 #include "src/devices/board/lib/acpi/acpi.h"
+#include "src/devices/board/lib/acpi/manager-fuchsia.h"
 #include "src/devices/board/lib/acpi/test/mock-acpi.h"
 #include "src/devices/board/lib/acpi/test/mock-pci.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
@@ -98,7 +99,7 @@ class AcpiManagerTest : public zxtest::Test {
  protected:
   std::shared_ptr<MockDevice> mock_root_;
   acpi::test::MockAcpi acpi_;
-  acpi::Manager manager_;
+  acpi::FuchsiaManager manager_;
 };
 
 TEST_F(AcpiManagerTest, TestEnumerateEmptyTables) {

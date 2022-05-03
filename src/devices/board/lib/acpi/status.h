@@ -6,6 +6,8 @@
 #define SRC_DEVICES_BOARD_LIB_ACPI_STATUS_H_
 
 #include <lib/fitx/result.h>
+#include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <acpica/acpi.h>
 

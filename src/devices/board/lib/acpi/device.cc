@@ -5,6 +5,7 @@
 #include "src/devices/board/lib/acpi/device.h"
 
 #include <fuchsia/hardware/sysmem/c/banjo.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
 #include <lib/fidl-async/cpp/bind.h>
@@ -30,19 +31,6 @@ namespace {
 // Maximum number of pending Device Object Notifications before we stop sending them to a device.
 constexpr size_t kMaxPendingNotifications = 1000;
 }  // namespace
-
-const char* BusTypeToString(BusType t) {
-  switch (t) {
-    case kPci:
-      return "pci";
-    case kSpi:
-      return "spi";
-    case kI2c:
-      return "i2c";
-    case kUnknown:
-      return "unknown";
-  }
-}
 
 ACPI_STATUS Device::AddResource(ACPI_RESOURCE* res) {
   if (resource_is_memory(res)) {
