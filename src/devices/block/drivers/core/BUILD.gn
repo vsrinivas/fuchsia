@@ -45,9 +45,10 @@ test("core-unittest-bin") {
   ]
   deps = [
     ":shared",
-    "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
     "//sdk/lib/fdio",
-    "//src/devices/testing/no_ddk",
+    "//src/devices/testing/mock-ddk",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/io-scheduler",
     "//zircon/system/ulib/sync",
@@ -55,6 +56,10 @@ test("core-unittest-bin") {
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_unittest_package("core-unittest") {
@@ -74,6 +79,7 @@ source_set("shared") {
   configs += [ "//build/config:all_source" ]
   sources = [
     "block-device.cc",
+    "block-device.h",
     "iobuffer.cc",
     "manager.cc",
     "message-group.cc",
@@ -82,25 +88,27 @@ source_set("shared") {
   ]
   deps = [
     ":block-core-bind",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/zircon-internal",
+    "//zircon/system/ulib/zx",
+  ]
+  public_deps = [
     "//sdk/banjo/fuchsia.hardware.block:fuchsia.hardware.block_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
-    "//sdk/lib/syslog/cpp",
     "//src/devices/lib/block",
     "//src/devices/lib/dev-operation",
-    "//src/lib/ddk",
-    "//src/lib/ddktl",
-    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-utils",
-    "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/storage-metrics",
-    "//zircon/system/ulib/sync",
-    "//zircon/system/ulib/trace",
-    "//zircon/system/ulib/zircon-internal",
-    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.

@@ -3,12 +3,16 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/block/c/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <string.h>
 #include <unistd.h>
 
 #include <zxtest/zxtest.h>
 
+#include "block-device.h"
 #include "manager.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 #include "test/stub-block-device.h"
 
 namespace {
@@ -264,6 +268,37 @@ TEST(ManagerTest, TestLargeGroupedTransaction) {
   ASSERT_EQ(reqs[0].reqid, res.reqid);
   ASSERT_EQ(res.count, 2);
   ASSERT_EQ(res.group, 0);
+}
+
+TEST(BlockTest, TestReadWriteSingle) {
+  auto fake_parent = MockDevice::FakeRootParent();
+  StubBlockDevice blkdev;
+  fake_parent->AddProtocol(ZX_PROTOCOL_BLOCK_IMPL, blkdev.proto()->ops, &blkdev);
+  ASSERT_OK(BlockDevice::Bind(nullptr, fake_parent.get()));
+  MockDevice* child_dev = fake_parent->GetLatestChild();
+  auto* dut = child_dev->GetDeviceContext<BlockDevice>();
+  // Set up fidl connection
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread("fidl-thread"));
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_block::Block>();
+  ASSERT_OK(endpoints.status_value());
+
+  fidl_bind(loop.dispatcher(), endpoints->server.TakeChannel().release(),
+            (fidl_dispatch_t*)fuchsia_hardware_block_Block_dispatch, dut, BlockDevice::BlockOps());
+  auto sync_client =
+      fidl::WireSyncClient<fuchsia_hardware_block::Block>(std::move(endpoints->client));
+  auto info_result = sync_client->GetInfo();
+  ASSERT_TRUE(info_result.ok());
+
+  zx::vmo vmo;
+  constexpr uint64_t kBufferLength = kBlockCount * 5;
+  ASSERT_OK(zx::vmo::create(kBufferLength, 0, &vmo));
+
+  // Now, call write:
+  auto result = sync_client->WriteBlocks(std::move(vmo), kBufferLength, 0, 0);
+
+  ASSERT_TRUE(result.ok());
 }
 
 }  // namespace

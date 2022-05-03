@@ -112,6 +112,7 @@ config("fidl-deprecated-c-bindings") {
     "//src/devices/block/bin/iotime:iotime",
     "//src/devices/block/bin/lsblk:lsblk",
     "//src/devices/block/drivers/block-verity:block-verity-test",
+    "//src/devices/block/drivers/core:core-unittest-bin",
     "//src/devices/block/drivers/core:shared",
     "//src/devices/block/drivers/ftl/tests:ftl-integration",
     "//src/devices/block/drivers/ramdisk/test:ramdisk",
