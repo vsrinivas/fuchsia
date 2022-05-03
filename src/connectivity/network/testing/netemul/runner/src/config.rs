@@ -952,7 +952,7 @@ mod tests {
             expected_netstack, netstack
         );
         for expected_config in expected_configs {
-            let fnetemul::ConfigurableNetstackRequest::ConfigureInterface { options, responder } =
+            let fnetemul::ConfigurableNetstackRequest::ConfigureInterface { payload, responder } =
                 stream
                     .next()
                     .await
@@ -967,7 +967,7 @@ mod tests {
                 enable_ipv6_forwarding,
                 device: _,
                 ..
-            } = options;
+            } = payload;
             assert_eq!(
                 Interface {
                     name: name.expect("missing interface name"),
@@ -989,9 +989,9 @@ mod tests {
         let remaining = stream
             .map_ok(
                 |fnetemul::ConfigurableNetstackRequest::ConfigureInterface {
-                     options,
+                     payload,
                      responder: _,
-                 }| options,
+                 }| payload,
             )
             .try_collect::<Vec<_>>()
             .await

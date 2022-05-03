@@ -45,8 +45,8 @@ async fn main() {
 
 async fn handle_request(request: fnetemul::ConfigurableNetstackRequest) -> Result<(), fidl::Error> {
     match request {
-        fnetemul::ConfigurableNetstackRequest::ConfigureInterface { options, responder } => {
-            let mut result = match configure_interface(options).await {
+        fnetemul::ConfigurableNetstackRequest::ConfigureInterface { payload, responder } => {
+            let mut result = match configure_interface(payload).await {
                 Ok(()) => Ok(()),
                 Err(e) => {
                     error!("error configuring interface: {:?}", e);
