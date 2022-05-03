@@ -163,35 +163,30 @@ The driver should make no assumptions about the state of the hardware in
 state. Because the system recovers from a driver crash by re-spawning the driver
 host, the hardware may be in an unknown state when `bind()` is invoked.
 
-A driver is required to publish a `zx_device_t` in `bind()` by calling
-`device_add()`. This is necessary for the driver manager to keep track of the
-device lifecycle. If the driver is not able to publish a functional device in
-`bind()`, for example if it is initializing the full device in a thread, it
-should publish an invisible device by implementing the device `init()` hook, and
-call `device_init_reply()` once initialization is complete.
-`device_init_reply()` does not necessarily need to be called from the `init()`
-hook. For example, it may be called from another worker thread. The device is
-also guaranteed not to be removed until the reply is received. See `init()` in
-[src/lib/ddk/include/lib/ddk/device.h](/src/lib/ddk/include/lib/ddk/device.h)
-and `device_init_reply()` in
-[src/lib/ddk/include/lib/ddk/driver.h](/src/lib/ddk/include/lib/ddk/driver.h).
-
 There are generally four outcomes from `bind()`:
 
 1.  The driver determines the device is supported and does not need to do any
-    heavy lifting, so publishes a new device with `device_add()` and returns
-    `ZX_OK`.
+    heavy lifting, so publishes a new device with `device_add()` in C or
+    `ddk::Device::DdkAdd()` in the
+    [DDKTL](/docs/development/drivers/concepts/driver_development/using-ddktl.md)
+    C++ wrapper library and returns `ZX_OK.
 
 2.  The driver determines that even though the bind program matched, the device
     cannot be supported (maybe due to checking hw version bits or whatnot) and
     returns an error.
 
 3.  The driver needs to do further initialization before the device is ready or
-    it's sure it can support it, so it publishes a device that implements the
-    `init()` hook and kicks off a thread to keep working, while returning
-    `ZX_OK` to `bind()`. That thread will eventually call `device_init_reply()`
-    with a status indicating whether it was able to successfully initialize the
-    device and should be made visible, or that the device should be removed.
+    it's sure it can support it, so it publishes a invisible device that
+    implements the [`init()`](/src/lib/ddk/include/lib/ddk/device.h) hook and
+    kicks off a thread to keep working, while returning `ZX_OK` to `bind()`.
+    That thread will eventually call
+    [`device_init_reply()`](/src/lib/ddk/include/lib/ddk/driver.h) in C or
+    `ddk::InitTxn::Reply()` in the
+    [DDKTL](/docs/development/drivers/concepts/driver_development/using-ddktl.md)
+    C++ wrapper library. The device is guaranteed not to be removed until the
+    reply is received. The status indicates `ZX_OK` if it was able to
+    successfully initialize the device and it should be made visible, or an
+    error to indicate that the device should be removed.
 
 4.  The driver represents a bus or controller with 0..n children that may
     dynamically appear or disappear. In this case it should publish a device
