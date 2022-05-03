@@ -98,7 +98,7 @@ you have broken links.
 To run `doc-checker` locally, use the `fx format-code` tool:
 
 ```posix-terminal
-fx format code
+fx format-code
 ```
 
 ## Headers
