@@ -31,13 +31,14 @@ $ fx test input_pipeline_lib_tests
 Change the keymap using the following commands, for example:
 
 ```bash
-fx shell run fuchsia-pkg://fuchsia.com/setui_client#meta/setui_client.cmx keyboard --keymap UsQwerty
+ffx config set setui true // only need to run once
+ffx setui keyboard --keymap UsQwerty
 ```
 
 Use:
 
 ```bash
-fx shell run fuchsia-pkg://fuchsia.com/setui_client#meta/setui_client.cmx keyboard --help
+ffx setui keyboard --help
 ```
 
 for more information.

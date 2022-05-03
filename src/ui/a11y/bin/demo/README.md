@@ -7,6 +7,7 @@
 * Compile and pave the image
 * fx shell
 * Run :
-  $ run fuchsia-pkg://fuchsia.com/setui_client#meta/setui_client.cmx accessibility --screen_reader true
+  $ ffx config set setui true // only need to run once
+  $ ffx setui accessibility set --screen_reader true
   $ tiles_ctl start
   $ tiles_ctl add fuchsia-pkg://fuchsia.com/a11y-demo#meta/a11y-demo.cmx

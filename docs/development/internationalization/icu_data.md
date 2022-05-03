@@ -120,10 +120,11 @@ initialize the loader with the path to the data directory and revision file:
 
 During development, use the `setui_client` program to check or set the current
 time zone ID on a Fuchsia target. For more information about the available
-options, run the following command:
+options, run the following commands:
 
 ```posix-terminal
-fx shell run setui_client.cmx intl --help
+ffx config set setui true // only need to run once
+ffx setui intl --help
 ```
 
 <!-- xrefs -->
