@@ -74,6 +74,8 @@ action("cargo_toml_gen") {
     "//:additional_base_packages",
     "//:additional_cache_packages",
     "//:additional_universe_packages",
+    "//:developer_universe_packages",
+    "//:legacy_universe_packages",
   ]
   script = "//scripts/generate_cargo.py"
   sources = []
