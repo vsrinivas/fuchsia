@@ -29,12 +29,6 @@ class PassThroughReadOnlyBlockDevice : public BlockDevice {
   zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) override {
     return device_.BlockAttachVmo(vmo, out);
   }
-  zx_status_t ReadBlocks(void* buffer, size_t buffer_length, size_t offset) const final {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zx_status_t WriteBlocks(void* buffer, size_t buffer_length, size_t offset) const final {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
 
   zx_status_t VolumeGetInfo(
       fuchsia_hardware_block_volume_VolumeManagerInfo* out_manager_info,

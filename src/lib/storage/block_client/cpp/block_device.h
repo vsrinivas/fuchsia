@@ -28,12 +28,6 @@ class BlockDevice : public storage::VmoidRegistry {
   // FIFO protocol. This is the normal way to read from and write to the block device.
   virtual zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) = 0;
 
-  // block protocol. This a non-exclusive way to read from and write to the block device.
-  virtual zx_status_t ReadBlocks(void* buffer, size_t buffer_length, size_t offset) const = 0;
-
-  // block protocol. This a non-exclusive way to read from and write to the block device.
-  virtual zx_status_t WriteBlocks(void* buffer, size_t buffer_length, size_t offset) const = 0;
-
   // Queries the device path using the fuchsia.device.Controller interface.
   virtual zx::status<std::string> GetDevicePath() const = 0;
 

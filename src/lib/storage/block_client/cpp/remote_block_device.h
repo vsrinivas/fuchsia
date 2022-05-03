@@ -33,8 +33,6 @@ class RemoteBlockDevice final : public BlockDevice {
   ~RemoteBlockDevice();
 
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) final;
-  zx_status_t ReadBlocks(void* buffer, size_t buffer_length, size_t offset) const final;
-  zx_status_t WriteBlocks(void* buffer, size_t buffer_length, size_t offset) const final;
   zx::status<std::string> GetDevicePath() const final;
   zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const final;
   zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) final;

@@ -132,6 +132,7 @@ test("block_client_unit_test") {
     ":cpp",
     ":fake_device",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/fvm",
     "//zircon/system/ulib/async-loop",

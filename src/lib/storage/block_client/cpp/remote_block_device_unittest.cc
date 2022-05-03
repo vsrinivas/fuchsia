@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fdio/fd.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fzl/fifo.h>
 #include <lib/zx/vmo.h>
@@ -30,17 +31,49 @@ constexpr uint16_t kGoldenVmoid = 2;
 constexpr uint32_t kBlockSize = 4096;
 constexpr uint64_t kBlockCount = 10;
 
+class FidlTransaction : public fidl::Transaction {
+ public:
+  FidlTransaction(FidlTransaction&&) = default;
+  explicit FidlTransaction(zx_txid_t transaction_id, zx::unowned_channel channel)
+      : txid_(transaction_id), channel_(channel) {}
+
+  std::unique_ptr<fidl::Transaction> TakeOwnership() override {
+    return std::make_unique<FidlTransaction>(std::move(*this));
+  }
+
+  zx_status_t Reply(fidl::OutgoingMessage* message, fidl::WriteOptions write_options) override {
+    ZX_ASSERT(txid_ != 0);
+    message->set_txid(txid_);
+    txid_ = 0;
+    message->Write(channel_, std::move(write_options));
+    return message->status();
+  }
+
+  void Close(zx_status_t epitaph) override { ZX_ASSERT(false); }
+
+  void InternalError(fidl::UnbindInfo info, fidl::ErrorOrigin origin) override {
+    detected_error_ = info;
+  }
+
+  ~FidlTransaction() override = default;
+
+  const std::optional<fidl::UnbindInfo>& detected_error() const { return detected_error_; }
+
+ private:
+  zx_txid_t txid_;
+  zx::unowned_channel channel_;
+  std::optional<fidl::UnbindInfo> detected_error_;
+};
+
 class MockBlockDevice {
  public:
   using Binder = fidl::Binder<MockBlockDevice>;
   zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel channel) {
     dispatcher_ = dispatcher;
+    channel_ = zx::unowned(channel);
     mock_node_ = std::make_unique<MockNode>(this);
-    // Create vmo for read / write calls
-    zx_status_t status = zx::vmo::create(kBlockSize * kBlockCount, 0, &rw_vmo_);
-    if (status != ZX_OK) {
-      return status;
-    }
+    // Create buffer for read / write calls
+    buffer_.resize(kBlockSize * kBlockCount);
     return fidl_bind(dispatcher_, channel.release(), FidlDispatch, this, nullptr);
   }
 
@@ -75,7 +108,8 @@ class MockBlockDevice {
       return status;
     }
     auto incoming_msg = fidl::IncomingMessage::FromEncodedCMessage(msg);
-    return fidl::WireTryDispatch<fio::Node>(mock_node_.get(), incoming_msg, nullptr) ==
+    FidlTransaction ftxn(incoming_msg.header()->txid, zx::unowned(channel_));
+    return fidl::WireTryDispatch<fio::Node>(mock_node_.get(), incoming_msg, &ftxn) ==
                    fidl::DispatchResult::kFound
                ? ZX_OK
                : ZX_ERR_PEER_CLOSED;
@@ -108,7 +142,9 @@ class MockBlockDevice {
     void CloseDeprecated(CloseDeprecatedRequestView request,
                          CloseDeprecatedCompleter::Sync& completer) override {}
     void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {}
-    void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {}
+    void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
+      completer.Reply(fuchsia_io::wire::NodeInfo::WithDevice({}));
+    }
     void Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) override {}
     void SyncDeprecated(SyncDeprecatedRequestView request,
                         SyncDeprecatedCompleter::Sync& completer) override {}
@@ -157,27 +193,20 @@ class MockBlockDevice {
 
   zx_status_t BlockReadBlocks(zx_handle_t vmo, uint64_t length, uint64_t dev_offset,
                               uint64_t vmo_offset, fidl_txn_t* txn) {
-    std::vector<uint8_t> buffer(length);
-    auto status = rw_vmo_.read(buffer.data(), dev_offset, length);
-    if (status == ZX_OK) {
-      status = zx_vmo_write(vmo, buffer.data(), vmo_offset, length);
-    }
+    auto status = zx_vmo_write(vmo, buffer_.data() + dev_offset, vmo_offset, length);
     return fuchsia_hardware_block_BlockReadBlocks_reply(txn, status);
   }
 
   zx_status_t BlockWriteBlocks(zx_handle_t vmo, uint64_t length, uint64_t dev_offset,
                                uint64_t vmo_offset, fidl_txn_t* txn) {
-    std::vector<uint8_t> buffer(length);
-    auto status = zx_vmo_read(vmo, buffer.data(), vmo_offset, length);
-    if (status == ZX_OK) {
-      status = rw_vmo_.write(buffer.data(), dev_offset, length);
-    }
+    auto status = zx_vmo_read(vmo, buffer_.data() + dev_offset, vmo_offset, length);
     return fuchsia_hardware_block_BlockWriteBlocks_reply(txn, status);
   }
   async_dispatcher_t* dispatcher_ = nullptr;
+  zx::unowned_channel channel_;
   fzl::fifo<block_fifo_response_t, block_fifo_request_t> fifo_;
   std::unique_ptr<MockNode> mock_node_;
-  zx::vmo rw_vmo_;
+  std::vector<uint8_t> buffer_;
 };
 
 // Tests that the RemoteBlockDevice can be created and immediately destroyed.
@@ -279,9 +308,8 @@ TEST(RemoteBlockDeviceTest, WriteReadBlock) {
   MockBlockDevice mock_device;
   ASSERT_EQ(mock_device.Bind(loop.dispatcher(), std::move(server)), ZX_OK);
 
-  std::unique_ptr<RemoteBlockDevice> device;
-  ASSERT_EQ(RemoteBlockDevice::Create(std::move(client), &device), ZX_OK);
-
+  int client_fd;
+  ASSERT_EQ(fdio_fd_create(client.get(), &client_fd), ZX_OK);
   constexpr size_t max_count = 3;
 
   std::vector<uint8_t> write_buffer(kBlockSize * max_count + 5),
@@ -291,22 +319,23 @@ TEST(RemoteBlockDeviceTest, WriteReadBlock) {
     write_buffer[i] = static_cast<uint8_t>(i % 251);
   }
   // Test that unaligned counts and offsets result in failures:
-  ASSERT_NE(device->WriteBlocks(write_buffer.data(), 5, 0), ZX_OK);
-  ASSERT_NE(device->WriteBlocks(write_buffer.data(), kBlockSize, 5), ZX_OK);
-  ASSERT_NE(device->WriteBlocks(nullptr, kBlockSize, 0), ZX_OK);
-  ASSERT_NE(device->ReadBlocks(read_buffer.data(), 5, 0), ZX_OK);
-  ASSERT_NE(device->ReadBlocks(read_buffer.data(), kBlockSize, 5), ZX_OK);
-  ASSERT_NE(device->ReadBlocks(nullptr, kBlockSize, 0), ZX_OK);
+  ASSERT_NE(SingleWriteBytes(client_fd, write_buffer.data(), 5, 0), ZX_OK);
+  ASSERT_NE(SingleWriteBytes(client_fd, write_buffer.data(), kBlockSize, 5), ZX_OK);
+  ASSERT_NE(SingleWriteBytes(client_fd, nullptr, kBlockSize, 0), ZX_OK);
+  ASSERT_NE(SingleReadBytes(client_fd, read_buffer.data(), 5, 0), ZX_OK);
+  ASSERT_NE(SingleReadBytes(client_fd, read_buffer.data(), kBlockSize, 5), ZX_OK);
+  ASSERT_NE(SingleReadBytes(client_fd, nullptr, kBlockSize, 0), ZX_OK);
 
   // test multiple counts, multiple offsets
   for (uint64_t count = 1; count < max_count; ++count) {
     for (uint64_t offset = 0; offset < 2; ++offset) {
       size_t buffer_offset = count + 10 * offset;
-      ASSERT_EQ(device->WriteBlocks(write_buffer.data() + buffer_offset, kBlockSize * count,
-                                    kBlockSize * offset),
+      ASSERT_EQ(SingleWriteBytes(client_fd, write_buffer.data() + buffer_offset, kBlockSize * count,
+                                 kBlockSize * offset),
                 ZX_OK);
-      ASSERT_EQ(device->ReadBlocks(read_buffer.data(), kBlockSize * count, kBlockSize * offset),
-                ZX_OK);
+      ASSERT_EQ(
+          SingleReadBytes(client_fd, read_buffer.data(), kBlockSize * count, kBlockSize * offset),
+          ZX_OK);
       ASSERT_EQ(memcmp(write_buffer.data() + buffer_offset, read_buffer.data(), kBlockSize * count),
                 0);
     }
