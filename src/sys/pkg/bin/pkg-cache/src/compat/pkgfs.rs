@@ -101,7 +101,7 @@ async fn read_dirents<'a>(
 /// The "system" directory will only be added and served if `system_image.is_some()`.
 pub fn make_dir(
     base_packages: Arc<crate::BasePackages>,
-    package_index: Arc<futures::lock::Mutex<crate::PackageIndex>>,
+    package_index: Arc<async_lock::RwLock<crate::PackageIndex>>,
     non_static_allow_list: Arc<system_image::NonStaticAllowList>,
     executability_restrictions: system_image::ExecutabilityRestrictions,
     blobfs: blobfs::Client,

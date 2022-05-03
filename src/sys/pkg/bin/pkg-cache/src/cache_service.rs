@@ -25,7 +25,7 @@ use {
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_trace as trace, fuchsia_zircon as zx,
     fuchsia_zircon::Status,
-    futures::{lock::Mutex, prelude::*, select_biased, stream::FuturesUnordered},
+    futures::{prelude::*, select_biased, stream::FuturesUnordered},
     pkgfs::install::BlobKind,
     std::{
         collections::HashSet,
@@ -40,7 +40,7 @@ pub async fn serve(
     pkgfs_versions: pkgfs::versions::Client,
     pkgfs_install: pkgfs::install::Client,
     pkgfs_needs: pkgfs::needs::Client,
-    package_index: Arc<Mutex<PackageIndex>>,
+    package_index: Arc<async_lock::RwLock<PackageIndex>>,
     blobfs: blobfs::Client,
     base_packages: Arc<BasePackages>,
     cache_packages: Arc<Option<system_image::CachePackages>>,
@@ -118,7 +118,7 @@ async fn get<'a>(
     pkgfs_versions: &'a pkgfs::versions::Client,
     pkgfs_install: &'a pkgfs::install::Client,
     pkgfs_needs: &'a pkgfs::needs::Client,
-    package_index: &Arc<Mutex<PackageIndex>>,
+    package_index: &Arc<async_lock::RwLock<PackageIndex>>,
     blobfs: &blobfs::Client,
     meta_far_blob: BlobInfo,
     needed_blobs: ServerEnd<NeededBlobsMarker>,
@@ -345,7 +345,7 @@ async fn serve_needed_blobs(
     meta_far_info: BlobInfo,
     pkgfs_install: &pkgfs::install::Client,
     pkgfs_needs: &pkgfs::needs::Client,
-    package_index: &Arc<Mutex<PackageIndex>>,
+    package_index: &Arc<async_lock::RwLock<PackageIndex>>,
     blobfs: &blobfs::Client,
     node: &finspect::Node,
 ) -> Result<(), ServeNeededBlobsError> {
@@ -375,9 +375,9 @@ async fn serve_needed_blobs(
     .await;
 
     if res.is_ok() {
-        package_index.lock().await.complete_install(meta_far_info.blob_id.into())?;
+        package_index.write().await.complete_install(meta_far_info.blob_id.into())?;
     } else {
-        package_index.lock().await.cancel_install(&meta_far_info.blob_id.into());
+        package_index.write().await.cancel_install(&meta_far_info.blob_id.into());
     }
 
     // TODO in the Err(_) case, a responder was likely dropped, which would have already shutdown
@@ -397,11 +397,11 @@ async fn handle_open_meta_blob(
     stream: &mut NeededBlobsRequestStream,
     meta_far_info: BlobInfo,
     blobfs: &blobfs::Client,
-    package_index: &Arc<Mutex<PackageIndex>>,
+    package_index: &Arc<async_lock::RwLock<PackageIndex>>,
     state: &StringProperty,
 ) -> Result<HashSet<Hash>, ServeNeededBlobsError> {
     let hash = meta_far_info.blob_id.into();
-    package_index.lock().await.start_install(hash);
+    package_index.write().await.start_install(hash);
 
     loop {
         let (file, responder) =
@@ -1024,7 +1024,7 @@ mod serve_needed_blobs_tests {
         let (pkgfs_needs, _) = pkgfs::needs::Client::new_test();
         let (blobfs, _) = blobfs::Client::new_test();
         let inspector = finspect::Inspector::new();
-        let package_index = Arc::new(Mutex::new(PackageIndex::new(
+        let package_index = Arc::new(async_lock::RwLock::new(PackageIndex::new(
             inspector.root().create_child("test_does_not_use_inspect "),
         )));
 
@@ -1059,7 +1059,7 @@ mod serve_needed_blobs_tests {
         let (pkgfs_needs, pkgfs_needs_mock) = pkgfs::needs::Client::new_mock();
         let (blobfs, blobfs_mock) = blobfs::Client::new_mock();
         let inspector = finspect::Inspector::new();
-        let package_index = Arc::new(Mutex::new(PackageIndex::new(
+        let package_index = Arc::new(async_lock::RwLock::new(PackageIndex::new(
             inspector.root().create_child("test_does_not_use_inspect "),
         )));
 
@@ -2380,7 +2380,7 @@ mod get_handler_tests {
         let (pkgfs_needs, pkgfs_needs_mock) = pkgfs::needs::Client::new_mock();
         let (blobfs, blobfs_mock) = blobfs::Client::new_mock();
         let inspector = finspect::Inspector::new();
-        let package_index = Arc::new(Mutex::new(PackageIndex::new(
+        let package_index = Arc::new(async_lock::RwLock::new(PackageIndex::new(
             inspector.root().create_child("test_does_not_use_inspect "),
         )));
 
@@ -2422,7 +2422,7 @@ mod get_handler_tests {
         let (pkgfs_needs, _) = pkgfs::needs::Client::new_test();
         let (blobfs, _) = blobfs::Client::new_test();
         let inspector = finspect::Inspector::new();
-        let package_index = Arc::new(Mutex::new(PackageIndex::new(
+        let package_index = Arc::new(async_lock::RwLock::new(PackageIndex::new(
             inspector.root().create_child("test_does_not_use_inspect "),
         )));
 

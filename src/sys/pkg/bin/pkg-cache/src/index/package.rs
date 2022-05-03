@@ -12,7 +12,6 @@ use {
     fuchsia_hash::Hash,
     fuchsia_inspect as finspect,
     fuchsia_pkg::{PackageName, PackagePath},
-    futures::lock::Mutex,
     std::{
         collections::{HashMap, HashSet},
         sync::Arc,
@@ -151,7 +150,7 @@ pub async fn load_cache_packages(
 /// Notifies the appropriate inner indices that the given meta far blob is now available in blobfs.
 /// Do not use this for regular blob (unless it's also a meta far).
 pub async fn fulfill_meta_far_blob(
-    index: &Arc<Mutex<PackageIndex>>,
+    index: &Arc<async_lock::RwLock<PackageIndex>>,
     blobfs: &blobfs::Client,
     meta_hash: Hash,
 ) -> Result<HashSet<Hash>, FulfillMetaFarError> {
@@ -159,14 +158,14 @@ pub async fn fulfill_meta_far_blob(
         .await?
         .ok_or_else(|| FulfillMetaFarError::BlobNotFound(meta_hash))?;
 
-    let () = index.lock().await.fulfill_meta_far(meta_hash, path, content_blobs.clone())?;
+    let () = index.write().await.fulfill_meta_far(meta_hash, path, content_blobs.clone())?;
 
     Ok(content_blobs)
 }
 
 /// Replaces the retained index with one that tracks the given meta far hashes.
 pub async fn set_retained_index(
-    index: &Arc<Mutex<PackageIndex>>,
+    index: &Arc<async_lock::RwLock<PackageIndex>>,
     blobfs: &blobfs::Client,
     meta_hashes: &[Hash],
 ) {
@@ -176,16 +175,16 @@ pub async fn set_retained_index(
 
     // Then, atomically, merge in available data from the dynamic/retained indices and swap in
     // the new retained index.
-    index.lock().await.set_retained_index(new_retained);
+    index.write().await.set_retained_index(new_retained);
 }
 
 #[cfg(test)]
 pub async fn register_dynamic_package(
-    index: &Arc<Mutex<PackageIndex>>,
+    index: &Arc<async_lock::RwLock<PackageIndex>>,
     path: PackagePath,
     hash: Hash,
 ) {
-    let mut index = index.lock().await;
+    let mut index = index.write().await;
 
     index.start_install(hash);
     index.fulfill_meta_far(hash, path, HashSet::new()).unwrap();
@@ -443,7 +442,7 @@ mod tests {
         );
         index.start_install(hash(2));
 
-        let index = Arc::new(Mutex::new(index));
+        let index = Arc::new(async_lock::RwLock::new(index));
 
         let (blobfs_fake, blobfs) = fuchsia_pkg_testing::blobfs::Fake::new();
 
@@ -451,7 +450,7 @@ mod tests {
 
         fulfill_meta_far_blob(&index, &blobfs, hash(2)).await.unwrap();
 
-        let index = index.lock().await;
+        let index = index.read().await;
         assert_eq!(
             index.dynamic.packages(),
             hashmap! {
@@ -467,7 +466,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn fulfill_meta_far_blob_not_needed() {
         let index = PackageIndex::new_test();
-        let index = Arc::new(Mutex::new(index));
+        let index = Arc::new(async_lock::RwLock::new(index));
 
         let (blobfs_fake, blobfs) = fuchsia_pkg_testing::blobfs::Fake::new();
 
@@ -487,7 +486,7 @@ mod tests {
         let meta_far_hash = Hash::from([2; 32]);
         index.start_install(meta_far_hash);
 
-        let index = Arc::new(Mutex::new(index));
+        let index = Arc::new(async_lock::RwLock::new(index));
 
         let (_blobfs_fake, blobfs) = fuchsia_pkg_testing::blobfs::Fake::new();
 

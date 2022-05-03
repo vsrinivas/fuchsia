@@ -9,12 +9,12 @@ use {
     fidl_fuchsia_pkg::{
         BlobIdIteratorMarker, RetainedPackagesRequest, RetainedPackagesRequestStream,
     },
-    futures::{lock::Mutex, TryStreamExt},
+    futures::TryStreamExt,
     std::{collections::HashSet, sync::Arc},
 };
 
 pub async fn serve(
-    package_index: Arc<Mutex<PackageIndex>>,
+    package_index: Arc<async_lock::RwLock<PackageIndex>>,
     blobfs: blobfs::Client,
     stream: RetainedPackagesRequestStream,
 ) -> Result<(), Error> {

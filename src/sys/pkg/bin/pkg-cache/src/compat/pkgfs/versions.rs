@@ -11,7 +11,6 @@ use {
     fuchsia_hash::Hash,
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
-    futures::lock::Mutex,
     std::{collections::BTreeMap, str::FromStr, sync::Arc},
     system_image::{ExecutabilityRestrictions, NonStaticAllowList},
     vfs::{
@@ -28,7 +27,7 @@ use {
 #[derive(Debug)]
 pub struct PkgfsVersions {
     base_packages: Arc<BasePackages>,
-    non_base_packages: Arc<Mutex<PackageIndex>>,
+    non_base_packages: Arc<async_lock::RwLock<PackageIndex>>,
     non_static_allow_list: Arc<NonStaticAllowList>,
     executability_restrictions: ExecutabilityRestrictions,
     blobfs: blobfs::Client,
@@ -37,7 +36,7 @@ pub struct PkgfsVersions {
 impl PkgfsVersions {
     pub fn new(
         base_packages: Arc<BasePackages>,
-        non_base_packages: Arc<Mutex<PackageIndex>>,
+        non_base_packages: Arc<async_lock::RwLock<PackageIndex>>,
         non_static_allow_list: Arc<NonStaticAllowList>,
         executability_restrictions: ExecutabilityRestrictions,
         blobfs: blobfs::Client,
@@ -52,7 +51,7 @@ impl PkgfsVersions {
     }
 
     async fn directory_entries(&self) -> BTreeMap<String, super::DirentType> {
-        let active_packages = self.non_base_packages.lock().await.active_packages();
+        let active_packages = self.non_base_packages.read().await.active_packages();
         self.base_packages
             .paths_and_hashes()
             .map(|(_path, hash)| hash.to_string())
@@ -212,14 +211,14 @@ enum PackageStatus {
 
 async fn get_package_status(
     base_packages: &BasePackages,
-    package_index: &Mutex<PackageIndex>,
+    package_index: &async_lock::RwLock<PackageIndex>,
     package: &fuchsia_hash::Hash,
 ) -> PackageStatus {
     if base_packages.is_base_package(*package) {
         return PackageStatus::Base;
     }
 
-    match package_index.lock().await.get_name_if_active(package) {
+    match package_index.read().await.get_name_if_active(package) {
         Some(name) => PackageStatus::Active(name.clone()),
         None => PackageStatus::Other,
     }
@@ -283,7 +282,7 @@ mod tests {
 
     struct TestEnv {
         _blobfs: BlobfsRamdisk,
-        package_index: Arc<Mutex<PackageIndex>>,
+        package_index: Arc<async_lock::RwLock<PackageIndex>>,
     }
 
     impl TestEnv {
@@ -299,7 +298,7 @@ mod tests {
                 pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
             }
 
-            let index = Arc::new(Mutex::new(PackageIndex::new_test()));
+            let index = Arc::new(async_lock::RwLock::new(PackageIndex::new_test()));
             let versions = PkgfsVersions::new(
                 // PkgfsVersions only uses the path-hash mapping, so tests do not need to
                 // populate the blob hashes.

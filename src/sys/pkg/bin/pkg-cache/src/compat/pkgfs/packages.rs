@@ -10,7 +10,6 @@ use {
     fuchsia_hash::Hash,
     fuchsia_pkg::{PackageName, PackageVariant},
     fuchsia_zircon as zx,
-    futures::lock::Mutex,
     std::{
         collections::{BTreeMap, HashMap},
         str::FromStr,
@@ -38,7 +37,7 @@ use variants::PkgfsPackagesVariants;
 #[derive(Debug)]
 pub struct PkgfsPackages {
     base_packages: Arc<BasePackages>,
-    non_base_packages: Arc<Mutex<PackageIndex>>,
+    non_base_packages: Arc<async_lock::RwLock<PackageIndex>>,
     non_static_allow_list: Arc<NonStaticAllowList>,
     blobfs: blobfs::Client,
 }
@@ -46,7 +45,7 @@ pub struct PkgfsPackages {
 impl PkgfsPackages {
     pub fn new(
         base_packages: Arc<BasePackages>,
-        non_base_packages: Arc<Mutex<PackageIndex>>,
+        non_base_packages: Arc<async_lock::RwLock<PackageIndex>>,
         non_static_allow_list: Arc<NonStaticAllowList>,
         blobfs: blobfs::Client,
     ) -> Self {
@@ -65,7 +64,7 @@ impl PkgfsPackages {
         }
 
         // Then fill in allowed dynamic packages, which may override existing base packages.
-        let active_packages = self.non_base_packages.lock().await.active_packages();
+        let active_packages = self.non_base_packages.read().await.active_packages();
         for (path, hash) in active_packages {
             if !self.non_static_allow_list.allows(path.name()) {
                 continue;
@@ -203,9 +202,9 @@ mod tests {
         pub fn new_test(
             base_packages: impl IntoIterator<Item = (PackagePath, Hash)>,
             non_static_allow_list: NonStaticAllowList,
-        ) -> (Arc<Self>, Arc<Mutex<PackageIndex>>) {
+        ) -> (Arc<Self>, Arc<async_lock::RwLock<PackageIndex>>) {
             let (blobfs, _) = blobfs::Client::new_mock();
-            let index = Arc::new(Mutex::new(PackageIndex::new_test()));
+            let index = Arc::new(async_lock::RwLock::new(PackageIndex::new_test()));
 
             (
                 Arc::new(PkgfsPackages::new(
@@ -482,7 +481,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn open_opens_path_within_known_package_variant() {
-        let package_index = Arc::new(Mutex::new(PackageIndex::new_test()));
+        let package_index = Arc::new(async_lock::RwLock::new(PackageIndex::new_test()));
         let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
         let pkgfs_packages = Arc::new(PkgfsPackages::new(
             Arc::new(BasePackages::new_test_only(HashSet::new(), [])),

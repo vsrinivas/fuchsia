@@ -16,7 +16,7 @@ use {
     fuchsia_component::client::connect_to_protocol,
     fuchsia_inspect as finspect,
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
-    futures::{lock::Mutex, prelude::*},
+    futures::prelude::*,
     std::sync::{atomic::AtomicU32, Arc},
     vfs::directory::{entry::DirectoryEntry as _, helper::DirectlyMutable as _},
 };
@@ -145,7 +145,7 @@ async fn main_inner() -> Result<(), Error> {
         .record_child("non_static_allow_list", |n| non_static_allow_list.record_inspect(n));
 
     let base_packages = Arc::new(base_packages);
-    let package_index = Arc::new(Mutex::new(package_index));
+    let package_index = Arc::new(async_lock::RwLock::new(package_index));
 
     // Use VFS to serve the out dir because ServiceFs does not support OPEN_RIGHT_EXECUTABLE and
     // pkgfs/{packages|versions|system} require it.

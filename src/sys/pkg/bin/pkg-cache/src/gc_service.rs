@@ -13,14 +13,14 @@ use {
     fidl_fuchsia_update::CommitStatusProviderProxy,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon::{self as zx, AsHandleRef},
-    futures::{lock::Mutex, prelude::*},
+    futures::prelude::*,
     std::sync::Arc,
 };
 
 pub async fn serve(
     blobfs: blobfs::Client,
     base_packages: Arc<BasePackages>,
-    package_index: Arc<Mutex<PackageIndex>>,
+    package_index: Arc<async_lock::RwLock<PackageIndex>>,
     commit_status_provider: CommitStatusProviderProxy,
     mut stream: SpaceManagerRequestStream,
 ) -> Result<(), Error> {
@@ -40,7 +40,7 @@ pub async fn serve(
 async fn gc(
     blobfs: &blobfs::Client,
     base_packages: &BasePackages,
-    package_index: &Arc<Mutex<PackageIndex>>,
+    package_index: &Arc<async_lock::RwLock<PackageIndex>>,
     event_pair: &zx::EventPair,
 ) -> Result<(), SpaceErrorCode> {
     fx_log_info!("performing gc");
@@ -66,7 +66,7 @@ async fn gc(
         let mut eligible_blobs = blobfs.list_known_blobs().await?;
 
         // Any blobs protected by the package index are ineligible for collection.
-        let package_index = package_index.lock().await;
+        let package_index = package_index.read().await;
         package_index.all_blobs().iter().for_each(|blob| {
             eligible_blobs.remove(blob);
         });
