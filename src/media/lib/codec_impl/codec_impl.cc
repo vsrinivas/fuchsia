@@ -595,8 +595,7 @@ void CodecImpl::FlushEndOfStreamAndCloseStream_StreamControl(uint64_t stream_lif
       // TODO(fxbug.dev/43490): Cancel wait immediately on failure without waiting for
       // timeout.
       if (std::cv_status::timeout ==
-          output_end_of_stream_seen_.wait_until(
-              lock, std::chrono::system_clock::now() + std::chrono::seconds(5))) {
+          output_end_of_stream_seen_.wait_for(lock, std::chrono::seconds(5))) {
         LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_EndOfStreamTimeoutError);
         FailLocked("Timeout waiting for end of stream");
         break;
