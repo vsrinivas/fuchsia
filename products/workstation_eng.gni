@@ -108,6 +108,13 @@ universe_package_labels += [
 # QEMU images generated for the SDK, but in cache, so they can be updated.
 cache_package_labels += [ "//sdk/bundles:core-tools" ]
 
+# Add cfv2 sl4f to base.
+core_realm_shards += [ "//src/testing/sl4f:sl4f_terminal_core_shard" ]
+base_package_labels += [
+  "//src/testing/sl4f",
+  "//src/sys/bin/start_sl4f",
+]
+
 # Enable the live_usb component.
 with_live_usb = true
 product_bootfs_labels += [ "//src/sys/live_usb:live_usb_is_system" ]
@@ -121,3 +128,6 @@ cache_package_labels += [
   "//src/flutter:flutter_aot",
   "//src/experiences/session_shells/ermine/session:session_manager",
 ]
+
+# Use Fxfs for the data partition.
+data_filesystem_format = "fxfs"

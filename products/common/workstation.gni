@@ -40,6 +40,11 @@ base_package_labels += [
   "//src/ui/bin/text:text_manager",
   "//src/ui/bin/shortcut",
   "//third_party/openssh-portable:openssh-tools",
+
+  # TODO(fxbug.dev/73586): session_control is launched by ermine e2e tests via
+  # ssh, so session_control must be in base. Remove when tests use
+  # `ffx session`.
+  "//src/session/tools/session_control",
 ]
 base_package_labels -= [
   # TODO(fxbug.dev/90430): Complete CFv2 migration and remove.
@@ -112,6 +117,14 @@ product_bootfs_labels += [
   # enable double buffered output
   "//products/kernel_cmdline:virtcon.buffer-count--2",
 ]
+
+# Add bold and italic Virtcon fonts.
+virtcon_bold_font_path =
+    "//prebuilt/third_party/fonts/robotomono/RobotoMono-Bold.ttf"
+virtcon_italic_font_path =
+    "//prebuilt/third_party/fonts/robotomono/RobotoMono-Italic.ttf"
+virtcon_bold_italic_font_path =
+    "//prebuilt/third_party/fonts/robotomono/RobotoMono-BoldItalic.ttf"
 
 # Include Fxfs in the build so that it's available for enablement at runtime.
 product_bootfs_labels += [
