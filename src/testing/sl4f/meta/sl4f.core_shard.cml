@@ -20,8 +20,6 @@
             // See also //src/sys/appmgr/meta/appmgr.core_shard.cml
             // Capabilities here are test-only and used only by SL4F, they are not guaranteed to exist for every product.
             protocol: [
-                "fuchsia.bluetooth.avdtp.PeerManager", // test-only
-                "fuchsia.bluetooth.hfp.test.HfpTest", // test-only
                 "fuchsia.bluetooth.rfcomm.test.RfcommTest", // test-only
                 "fuchsia.developer.tiles.Controller", // test-only
                 "fuchsia.input.injection.InputDeviceRegistry", // test-only
@@ -166,8 +164,6 @@
         },
         {
             protocol: [
-                "fuchsia.bluetooth.avdtp.PeerManager", // test-only
-                "fuchsia.bluetooth.hfp.test.HfpTest", // test-only
                 "fuchsia.bluetooth.rfcomm.test.RfcommTest", // test-only
                 "fuchsia.developer.tiles.Controller", // test-only
                 "fuchsia.factory.AlphaFactoryStoreProvider", // #appmgr

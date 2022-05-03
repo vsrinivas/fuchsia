@@ -10,8 +10,10 @@
             // WARNING: Capabilities here are not guaranteed to be availble in terminal or workstation.
             // But to make sl4f compile, we put the extra capabilities here.
             protocol: [
+                "fuchsia.bluetooth.avdtp.PeerManager",
                 "fuchsia.bluetooth.avrcp.PeerManager",
                 "fuchsia.bluetooth.hfp.Hfp",
+                "fuchsia.bluetooth.hfp.test.HfpTest",
                 "fuchsia.location.position.EmergencyProvider",
                 "fuchsia.weave.Stack",
                 "fuchsia.web.ContextProvider",
@@ -21,8 +23,10 @@
     offer: [
         {
             protocol: [
+                "fuchsia.bluetooth.avdtp.PeerManager",
                 "fuchsia.bluetooth.avrcp.PeerManager",
                 "fuchsia.bluetooth.hfp.Hfp",
+                "fuchsia.bluetooth.hfp.test.HfpTest",
                 "fuchsia.location.position.EmergencyProvider",
                 "fuchsia.weave.Stack",
                 "fuchsia.web.ContextProvider",
