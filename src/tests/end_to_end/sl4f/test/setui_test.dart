@@ -37,24 +37,36 @@ void main() {
     });
 
     test('get intl', () async {
-      final intlInfo = await setUi.getLocale();
+      final intlInfo = await setUi.getIntl();
       expect(intlInfo, isNotNull);
     });
 
     test('set Locale', () async {
-      final originalInfo = await setUi.getLocale();
+      final originalInfo = await setUi.getIntl();
 
       await setUi.setLocale('he-FR');
-      var intlInfo = await setUi.getLocale();
+      var intlInfo = await setUi.getIntl();
       expect(intlInfo.locales.contains('he-FR'), true);
 
       await setUi.setLocale('zh-TW');
-      intlInfo = await setUi.getLocale();
+      intlInfo = await setUi.getIntl();
       expect(intlInfo.locales.contains('zh-TW'), true);
 
       // Restore the original locale, to avoid confusion when this test gets run
       // on a developer's device.
       await setUi.setLocale(originalInfo.locales.first);
+    });
+
+    test('set Time Zone', () async {
+      final originalInfo = await setUi.getIntl();
+
+      await setUi.setTimeZone('UTC');
+      var intlInfo = await setUi.getIntl();
+      expect(intlInfo.timeZoneId.contains('UTC'), true);
+
+      // Restore the original timeZoneId, to avoid confusion when this test gets run
+      // on a developer's device.
+      await setUi.setTimeZone(originalInfo.timeZoneId);
     });
 
     test('talks to SL4F setMicMute and changes mic InputState without error',

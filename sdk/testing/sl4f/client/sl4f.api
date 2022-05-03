@@ -5341,13 +5341,13 @@
               "returnType": "Future<NetworkOption>",
               "type": "MethodDeclarationImpl"
             },
-            "getLocale": {
+            "getIntl": {
               "isAbstract": false,
               "isGetter": false,
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "getLocale",
+              "name": "getIntl",
               "returnType": "Future<IntlInfo>",
               "type": "MethodDeclarationImpl"
             },
@@ -5436,6 +5436,32 @@
               "isSetter": false,
               "isStatic": false,
               "name": "setMicMute",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "setTimeZone": {
+              "SimpleFormalParameterImpl": {
+                "id": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "id",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "String"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "setTimeZone",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             }

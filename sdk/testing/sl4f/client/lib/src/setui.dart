@@ -114,7 +114,12 @@ class SetUi {
     });
   }
 
-  Future<IntlInfo> getLocale() async {
+  Future<void> setTimeZone(String id) async {
+    _log.info('Setting Time Zone to $id}');
+    await _sl4f.request('setui_facade.SetIntl', {'time_zone_id': id});
+  }
+
+  Future<IntlInfo> getIntl() async {
     final result = await _sl4f.request('setui_facade.GetIntl');
     return IntlInfo.fromJson(result);
   }
