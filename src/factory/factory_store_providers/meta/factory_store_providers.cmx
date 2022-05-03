@@ -12,7 +12,6 @@
         ],
         "features": [
             "config-data",
-            "factory-data"
         ],
         "services": [
             "fuchsia.boot.FactoryItems",
