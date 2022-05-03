@@ -50,6 +50,12 @@ def main():
         "--deprecated-fuchsia-only-c-server",
         help="The path for the C simple server file to generate, if any")
     parser.add_argument(
+        "--target-api-level",
+        help="Compile only APIs available at this API level")
+    parser.add_argument(
+        "--target-platform",
+        help="Compile only APIs available on this platform")
+    parser.add_argument(
         "--name", help="The name for the generated FIDL library, if any")
     parser.add_argument(
         "--depfile", help="The name for the generated depfile, if any")
@@ -78,6 +84,17 @@ def main():
     response_file = []
 
     response_file.append('--experimental new_syntax_only')
+
+    available = ""
+    if args.target_api_level and args.target_platform:
+        available = "{}:{}".format(args.target_platform, args.target_api_level)
+    elif args.target_api_level:
+        available = args.target_api_level
+    elif args.target_platform:
+        available = args.target_platform
+
+    if available:
+        response_file.append("--available %s" % available)
 
     if args.json:
         response_file.append("--json %s" % args.json)

@@ -17,6 +17,12 @@ import("//build/fidl/toolchain.gni")
 #   json_representation (required)
 #     The path to the JSON to generate.
 #
+#   target_api_level
+#     Only compile APIs available at this level. Defaults to "HEAD".
+#
+#   target_api_platform
+#     Only compile APIs available on this platform. Defaults to "fuchsia"
+#
 #   fidl_deps
 #   non_fidl_deps
 #   sources
@@ -28,6 +34,7 @@ template("fidlc") {
   assert(defined(invoker.json_representation),
          "json_representation is required")
   assert(defined(invoker.library_name), "library_name is required")
+  assert(defined(invoker.fidl_deps), "fidl_deps is required")
   assert(defined(invoker.sources), "sources is required")
 
   experimental_flags = []
@@ -105,6 +112,18 @@ template("fidlc") {
              "--sources",
            ] + rebase_path(sources, root_build_dir)
 
+    if (defined(invoker.target_api_level)) {
+      args += [
+        "--target-api-level",
+        invoker.target_api_level,
+      ]
+    }
+    if (defined(invoker.target_api_platform)) {
+      args += [
+        "--target-platform",
+        invoker.target_api_platform,
+      ]
+    }
     if (defined(invoker.fidl_deps)) {
       dep_libraries = []
       foreach(dep, invoker.fidl_deps) {
@@ -116,11 +135,13 @@ template("fidlc") {
       inputs = dep_libraries
     }
 
-    foreach(flag, experimental_flags) {
-      args += [
-        "--experimental-flag",
-        flag,
-      ]
+    if (defined(experimental_flags)) {
+      foreach(flag, experimental_flags) {
+        args += [
+          "--experimental-flag",
+          flag,
+        ]
+      }
     }
   }
 
