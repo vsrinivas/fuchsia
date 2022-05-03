@@ -151,7 +151,7 @@ async fn run_test<W: 'static + Write + Send + Sync>(
             false => run_test_suite_lib::TimeoutBehavior::TerminateRemaining,
             true => run_test_suite_lib::TimeoutBehavior::Continue,
         },
-        stop_after_failures: match cmd.stop_after_failures.map(std::num::NonZeroU16::new) {
+        stop_after_failures: match cmd.stop_after_failures.map(std::num::NonZeroU32::new) {
             None => None,
             Some(None) => ffx_bail!("--stop-after-failures should be greater than zero."),
             Some(Some(stop_after)) => Some(stop_after),
@@ -251,7 +251,7 @@ where
             };
 
             let count = cmd.count.unwrap_or(1);
-            let count = std::num::NonZeroU16::new(count)
+            let count = std::num::NonZeroU32::new(count)
                 .ok_or_else(|| ffx_error!("--count should be greater than zero."))?;
             Ok(vec![
                 run_test_suite_lib::TestParams {

@@ -39,7 +39,7 @@ struct Args {
     /// stop running unfinished suites after the number of provided failures has occurred.
     /// By default, all suites are run to completion if a suite fails.
     #[argh(option)]
-    stop_after_failures: Option<u16>,
+    stop_after_failures: Option<u32>,
 
     /// run test cases in parallel, up to the number provided.
     #[argh(option)]
@@ -49,7 +49,7 @@ struct Args {
     /// If an iteration of test times out, no further iterations
     /// would be executed.
     #[argh(option)]
-    count: Option<u16>,
+    count: Option<u32>,
 
     /// when set, only logs with a severity equal to the given one or higher will be printed.
     #[argh(option)]
@@ -128,7 +128,7 @@ async fn main() {
             false => run_test_suite_lib::TimeoutBehavior::TerminateRemaining,
             true => run_test_suite_lib::TimeoutBehavior::Continue,
         },
-        stop_after_failures: match stop_after_failures.map(std::num::NonZeroU16::new) {
+        stop_after_failures: match stop_after_failures.map(std::num::NonZeroU32::new) {
             None => None,
             Some(None) => {
                 println!("--stop-after-failures should be greater than zero.");

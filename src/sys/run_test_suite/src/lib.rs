@@ -131,7 +131,7 @@ pub struct RunParams {
     pub timeout_behavior: TimeoutBehavior,
 
     /// If set, stop executing tests after this number of normal test failures occur.
-    pub stop_after_failures: Option<std::num::NonZeroU16>,
+    pub stop_after_failures: Option<std::num::NonZeroU32>,
 }
 
 /// Sets the behavior of the overall run if a suite terminates with a timeout.

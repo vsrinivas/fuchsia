@@ -92,7 +92,7 @@ pub struct RunCommand {
     /// stop running unfinished suites after the number of provided failures has occurred.
     /// By default, all suites are run to completion if a suite fails.
     #[argh(option)]
-    pub stop_after_failures: Option<u16>,
+    pub stop_after_failures: Option<u32>,
 
     /// run tests in parallel, up to the number provided.
     #[argh(option)]
@@ -101,7 +101,7 @@ pub struct RunCommand {
     /// number of times to run the test. By default run 1 time. If an iteration
     /// of the test times out, no further iterations are executed.
     #[argh(option)]
-    pub count: Option<u16>,
+    pub count: Option<u32>,
 
     /// when set, only logs with a severity equal to the given one or higher will be printed.
     #[argh(option)]

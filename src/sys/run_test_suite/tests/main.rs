@@ -1236,7 +1236,7 @@ async fn test_stop_after_n_failures(
                 ); 10],
                 run_test_suite_lib::RunParams {
                     timeout_behavior: run_test_suite_lib::TimeoutBehavior::Continue,
-                    stop_after_failures: Some(5u16.try_into().unwrap()),
+                    stop_after_failures: Some(5u32.try_into().unwrap()),
                 },
                 None, reporter, futures::future::pending(),
         )
