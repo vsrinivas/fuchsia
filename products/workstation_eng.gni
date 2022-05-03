@@ -131,3 +131,10 @@ cache_package_labels += [
 
 # Use Fxfs for the data partition.
 data_filesystem_format = "fxfs"
+
+# TODO(fxbug.dev/90440): delete the below after sshd-host.cml is used everywhere
+import("//src/developer/sshd-host/fxbug_dev_90440.gni")
+sshd_host_component = "cml"
+
+# TODO(fxbug.dev/90440): move this to core.gni
+core_realm_shards += [ "//src/developer/sshd-host:core_shard" ]
