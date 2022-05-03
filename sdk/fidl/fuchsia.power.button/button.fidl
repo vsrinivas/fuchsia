@@ -14,8 +14,6 @@ type Action = flexible enum {
 type PowerButtonEvent = flexible enum {
     /// Button Pressed.
     PRESS = 0;
-    /// Button Released.
-    RELEASE = 1;
 };
 
 /// Protocol to manage the power button monitor.

@@ -67,10 +67,6 @@ TEST_F(MonitorTest, TestSendButtonEvent) {
   ASSERT_OK(monitor_.SendButtonEvent(binding_.value(), PwrButtonEvent::kPress));
   ASSERT_OK(client_.HandleOneEvent(event_handler));
   ASSERT_EQ(event_handler.e, PwrButtonEvent::kPress);
-
-  ASSERT_OK(monitor_.SendButtonEvent(binding_.value(), PwrButtonEvent::kRelease));
-  ASSERT_OK(client_.HandleOneEvent(event_handler));
-  ASSERT_EQ(event_handler.e, PwrButtonEvent::kRelease);
 }
 
 TEST_F(MonitorTest, TestShutdownFailsWithNoService) { ASSERT_NOT_OK(monitor_.DoAction()); }

@@ -198,7 +198,7 @@ zx_status_t get_button_report_event(zx::event* event_out, PowerButtonInfo* info_
 void process_power_event(
     zx::event* report_event, pwrbtn::PowerButtonMonitor* monitor,
     std::unordered_map<size_t, fidl::ServerBindingRef<fuchsia_power_button::Monitor>>* bindings,
-    PowerButtonInfo* info, bool* was_pressed, zx_status_t status, async::Loop* loop) {
+    PowerButtonInfo* info, zx_status_t status, async::Loop* loop) {
   if (status == ZX_ERR_CANCELED) {
     return;
   }
@@ -224,28 +224,16 @@ void process_power_event(
   // Check if the power button is pressed, and request a poweroff if so.
   const size_t byte_index = info->has_report_id_byte + info->bit_offset / 8;
   if (report[byte_index] & (1u << (info->bit_offset % 8))) {
-    if (!*was_pressed) {
-      *was_pressed = true;
-      for (auto& binding : *bindings) {
-        monitor->SendButtonEvent(binding.second,
-                                 fuchsia_power_button::wire::PowerButtonEvent::kPress);
-      }
+    // Sends a Press event to clients, regardless of the Action set.
+    for (auto& binding : *bindings) {
+      monitor->SendButtonEvent(binding.second,
+                               fuchsia_power_button::wire::PowerButtonEvent::kPress);
     }
 
     auto status = monitor->DoAction();
     if (status != ZX_OK) {
       printf("pwrbtn-monitor: input-watcher: failed to handle press.\n");
       return;
-    }
-  } else {
-    // Check if the button has just been released, and send a message to clients if so.
-    if (*was_pressed) {
-      *was_pressed = false;
-
-      for (auto& binding : *bindings) {
-        monitor->SendButtonEvent(binding.second,
-                                 fuchsia_power_button::wire::PowerButtonEvent::kRelease);
-      }
     }
   }
 }
@@ -270,13 +258,12 @@ int main(int argc, char** argv) {
   // Create a task which watches for the power button device to appear and then
   // starts monitoring it for events.
   zx::event report_event;
-  bool was_pressed = false;
   async::Wait pwrbtn_waiter(ZX_HANDLE_INVALID, ZX_USER_SIGNAL_0, 0,
-                            [&pwrbtn_waiter, &loop, &monitor, &bindings, &info, &was_pressed,
-                             &report_event](async_dispatcher_t*, async::Wait*, zx_status_t status,
-                                            const zx_packet_signal_t*) mutable {
-                              process_power_event(&report_event, &monitor, &bindings, &info,
-                                                  &was_pressed, status, &loop);
+                            [&pwrbtn_waiter, &loop, &monitor, &bindings, &info, &report_event](
+                                async_dispatcher_t*, async::Wait*, zx_status_t status,
+                                const zx_packet_signal_t*) mutable {
+                              process_power_event(&report_event, &monitor, &bindings, &info, status,
+                                                  &loop);
                               pwrbtn_waiter.Begin(loop.dispatcher());
                             });
 
