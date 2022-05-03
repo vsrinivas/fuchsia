@@ -1079,6 +1079,15 @@ environment to form a full <a href=\"/docs/glossary#fuchsia-sdk\">Fuchsia SDK</a
   related_guides: ["<a href=\"docs/development/build/concepts/build_system/bringup.md\">Bringup Product Definition</a>"]
   area: ["System"]
 
+- term: "Product bundle"
+  short_description: "The set of artifacts that are needed to run a product, excluding tools and APIs found in the SDK."
+  full_description: "Artifacts include, but are not limited to, the product image and packages associated with it.  Metadata for the product bundle was originally specified in <a
+href=\"docs/contribute/governance/rfcs/0100_product_metadata\">RFC-0100</a>."
+  see_also: ["<a href=\"/docs/glossary#product\">Product</a>",
+             "<a href=\"/docs/glossary#product-owner\">Product Owner</a>"]
+  related_guides: [""]
+  area: ["System"]
+
 - term: "Product owner"
   short_description: "Whoever defines a product, and is responsible for its provenance and releases."
   full_description: ""
