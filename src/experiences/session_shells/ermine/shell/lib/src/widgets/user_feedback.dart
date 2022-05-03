@@ -5,6 +5,7 @@
 import 'package:ermine/src/states/app_state.dart';
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:internationalization/strings.dart';
 
@@ -49,6 +50,7 @@ class UserFeedbackForm extends StatelessWidget {
   final _summaryController = TextEditingController();
   final _descController = TextEditingController();
   final _usernameController = TextEditingController();
+  final _descFocusNode = FocusNode();
 
   UserFeedbackForm(this.app, {required this.isOutFocused});
 
@@ -118,7 +120,6 @@ class UserFeedbackForm extends StatelessWidget {
                               ),
                               SizedBox(height: 36),
                               // Description
-                              // TODO(fxb/97851): Enter doesn't add a new line in the field.
                               TextFormField(
                                 minLines: 5,
                                 maxLines: 5,
@@ -126,6 +127,7 @@ class UserFeedbackForm extends StatelessWidget {
                                 keyboardType: TextInputType.multiline,
                                 textInputAction: TextInputAction.newline,
                                 controller: _descController,
+                                focusNode: _descFocusNode,
                                 autovalidateMode:
                                     AutovalidateMode.onUserInteraction,
                                 decoration: InputDecoration(
@@ -134,6 +136,24 @@ class UserFeedbackForm extends StatelessWidget {
                                   border: OutlineInputBorder(
                                       borderRadius: BorderRadius.zero),
                                 ),
+                                // TODO(fxb/79807): Remove this workaround once the bug is fixed.
+                                onFieldSubmitted: (desc) {
+                                  final cursorPos =
+                                      _descController.selection.base.offset;
+                                  final textBeforeCursor = _descController
+                                      .value.selection
+                                      .textBefore(desc);
+                                  final textAfterCursor = _descController
+                                      .value.selection
+                                      .textAfter(desc);
+                                  _descController
+                                    ..text =
+                                        '$textBeforeCursor\n$textAfterCursor'
+                                    ..selection = TextSelection.fromPosition(
+                                        TextPosition(offset: cursorPos + 1));
+                                  FocusScope.of(context)
+                                      .requestFocus(_descFocusNode);
+                                },
                                 validator: (value) =>
                                     value == null || value.isEmpty
                                         ? Strings.needDescription
@@ -187,12 +207,12 @@ class UserFeedbackForm extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
                       OutlinedButton(
-                        child: Text(Strings.cancel),
+                        child: Text(Strings.cancel.toUpperCase()),
                         onPressed: app.closeUserFeedback,
                       ),
                       SizedBox(width: 16),
                       ElevatedButton(
-                        child: Text(Strings.submit),
+                        child: Text(Strings.submit.toUpperCase()),
                         onPressed: () =>
                             _formKey.currentState?.validate() ?? false
                                 ? app.userFeedbackSubmit(
@@ -251,7 +271,7 @@ class UserFeedbackSubmitted extends StatelessWidget {
                     ),
                   ),
                   OutlinedButton(
-                    child: Text(Strings.close),
+                    child: Text(Strings.close.toUpperCase()),
                     style: ErmineButtonStyle.outlinedButton(Theme.of(context)),
                     onPressed: app.closeUserFeedback,
                   ),
