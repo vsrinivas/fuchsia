@@ -60,6 +60,7 @@ rustc_test("driver") {
     "src/base_pkg_index.rs",
     "src/cache_pkg_index.rs",
     "src/cobalt.rs",
+    "src/executability_enforcement.rs",
     "src/get.rs",
     "src/inspect.rs",
     "src/lib.rs",

@@ -49,6 +49,7 @@ use {
 mod base_pkg_index;
 mod cache_pkg_index;
 mod cobalt;
+mod executability_enforcement;
 mod get;
 mod inspect;
 mod open;
@@ -142,7 +143,8 @@ async fn verify_fetches_succeed(proxy: &PackageCacheProxy, packages: &[Package])
         .await;
 }
 
-async fn verify_package_cached(proxy: &PackageCacheProxy, pkg: &Package) {
+// Returns the package directory obtained from PackageCache.Get
+async fn verify_package_cached(proxy: &PackageCacheProxy, pkg: &Package) -> fio::DirectoryProxy {
     let mut meta_blob_info =
         BlobInfo { blob_id: BlobId::from(*pkg.meta_far_merkle_root()).into(), length: 0 };
 
@@ -207,6 +209,8 @@ async fn verify_package_cached(proxy: &PackageCacheProxy, pkg: &Package) {
 
     // `dir` is resolved to package directory.
     let () = pkg.verify_contents(&dir).await.unwrap();
+
+    dir
 }
 
 pub async fn replace_retained_packages(
@@ -226,7 +230,7 @@ pub async fn replace_retained_packages(
 
 async fn verify_packages_cached(proxy: &PackageCacheProxy, packages: &[Package]) {
     let () = futures::stream::iter(packages)
-        .for_each_concurrent(None, move |pkg| verify_package_cached(proxy, pkg))
+        .for_each_concurrent(None, move |pkg| verify_package_cached(proxy, pkg).map(|_| ()))
         .await;
 }
 

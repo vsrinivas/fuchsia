@@ -27,6 +27,14 @@ async fn get_multiple_packages_with_no_content_blobs() {
         PackageBuilder::new("pkg-d").build().await.unwrap(),
     ];
 
+    // Assert the packages are not present before the get
+    for pkg in &packages {
+        assert_eq!(
+            env.open_package(&pkg.meta_far_merkle_root().to_string()).await.map(|_| ()),
+            Err(Status::NOT_FOUND)
+        );
+    }
+
     let () = verify_fetches_succeed(&env.proxies.package_cache, &packages).await;
 
     let () = env.stop().await;
@@ -317,6 +325,50 @@ async fn get_package_already_present_on_fs() {
 
     // `dir` is resolved to package directory.
     let () = pkg.verify_contents(&dir).await.unwrap();
+
+    let () = env.stop().await;
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn get_package_already_present_on_fs_with_pre_closed_needed_blobs() {
+    let pkg = PackageBuilder::new("some-package")
+        .add_resource_at("some-blob", &b"some contents"[..])
+        .build()
+        .await
+        .unwrap();
+    let system_image_package = SystemImageBuilder::new().cache_packages(&[&pkg]).build().await;
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    pkg.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
+
+    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+
+    let mut meta_blob_info =
+        BlobInfo { blob_id: BlobId::from(*pkg.meta_far_merkle_root()).into(), length: 0 };
+
+    let (needed_blobs, needed_blobs_server_end) =
+        fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
+    let (pkgdir, pkgdir_server_end) =
+        fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+
+    drop(needed_blobs);
+
+    // Call `PackageCache.Get()` for already cached package.
+    let get_fut = env
+        .proxies
+        .package_cache
+        .get(&mut meta_blob_info, needed_blobs_server_end, Some(pkgdir_server_end))
+        .map_ok(|res| res.map_err(Status::from_raw));
+
+    let () = get_fut.await.unwrap().unwrap();
+
+    let () = pkg.verify_contents(&pkgdir).await.unwrap();
 
     let () = env.stop().await;
 }
