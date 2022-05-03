@@ -38,120 +38,136 @@ zx_koid_t GetKoid(const zx::vmo& vmo) {
 
 CustomStage::CustomStage(ProcessorConfiguration config)
     : PipelineStage("CustomStage", Format::CreateOrDie(config.inputs()[0].format())),
-      block_size_frames_(config.block_size_frames()),
-      max_frames_per_call_(config.max_frames_per_call()),
+      block_size_frames_(static_cast<int64_t>(config.block_size_frames())),
+      latency_frames_(static_cast<int64_t>(config.outputs()[0].latency_frames())),
+      max_frames_per_call_(static_cast<int64_t>(config.max_frames_per_call())),
       fidl_buffers_(config.inputs()[0].buffer(), config.outputs()[0].buffer()),
       fidl_processor_(fidl::BindSyncClient(std::move(config.processor()))),
-      source_buffer_(format(), static_cast<int64_t>(max_frames_per_call_)) {
+      source_(format(),
+              Fixed(latency_frames_ + static_cast<int64_t>(config.outputs()[0].ring_out_frames())),
+              /*round_down_fractional_frames=*/false),
+      source_buffer_(format(), max_frames_per_call_) {
   // Validate processor config.
   FX_CHECK(block_size_frames_ > 0);
   FX_CHECK(max_frames_per_call_ >= block_size_frames_);
   FX_CHECK(max_frames_per_call_ % block_size_frames_ == 0);
-  FX_CHECK(max_frames_per_call_ * format().bytes_per_frame() <= config.inputs()[0].buffer().size);
+  FX_CHECK(static_cast<uint64_t>(max_frames_per_call_) * format().bytes_per_frame() <=
+           config.inputs()[0].buffer().size);
 }
 
 void CustomStage::AdvanceImpl(Fixed frame) {
   // `CustomStage` always produces data on integrally-aligned frames.
   frame = Fixed(frame.Floor());
-  if (has_valid_output_ && frame >= source_buffer_.end()) {
+  if (output_ && frame >= next_frame_to_process_) {
     // Invalidate output beyond the valid frames.
-    has_valid_output_ = false;
+    output_ = nullptr;
   }
-  source_->Advance(frame);
+  source_.Advance(frame);
+
+  // Update `latency_frames_processed_` to compensate for the gap between the last processed frame
+  // and the target `frame`. For example, given a sequence of calls with a latency of 3 frames and a
+  // block size of 1:
+  //
+  // ```
+  // Read(0, 10)
+  // Advance(12)
+  // Read(12, 10)
+  // Advance(25)
+  // Read(25, 1)
+  // Advance(30)
+  // ```
+  //
+  // The first `Read(0, 10)` call will process 13 frames in total, and return the range [3, 13) of
+  // the output buffer to compensate for the 3 latency frames, setting `latency_frames_processed_`
+  // to 3, and `next_frame_to_process_` to 10 respectively.
+  //
+  // The following `Advance(12)` call will set `latency_frames_processed_` back to 1 to indicate
+  // that the previously processed lookahead frames at range [10, 12) are no longer valid. Then, the
+  // following `Read(12, 10)` call will process 12 frames this time, returning its output frames at
+  // range [2, 12), setting `latency_frames_processed_` back to 3, and `next_frame_to_process_` to
+  // 22 respectively.
+  //
+  // After that, the `Advance(25)` call will reset `latency_frames_processed_` to 0 since the frames
+  // at range [22, 25) are skipped. Then, the next `Read(25, 1)` call will process 4 frames to
+  // compensate for the latency frames again, returning the output frames at range [3, 4), setting
+  // `latency_frames_processed_` to 1, and `next_frame_to_process_` to 26. Finally, the last
+  // `Advance(30)` call will reset `latency_frames_processed_` to 0, by advancing to frame 30, which
+  // is beyond the previously processed lookahead frames at range [26, 27).
+  if (const int64_t frames_to_skip = frame.Floor() - next_frame_to_process_; frames_to_skip > 0) {
+    latency_frames_processed_ = std::max(latency_frames_processed_ - frames_to_skip, 0L);
+    next_frame_to_process_ = frame.Floor();
+  }
 }
 
 std::optional<PipelineStage::Packet> CustomStage::ReadImpl(Fixed start_frame, int64_t frame_count) {
-  if (!source_) {
-    // No source has been set.
-    return std::nullopt;
+  // `CustomStage` always produces data on integrally-aligned frames.
+  start_frame = Fixed(start_frame.Floor());
+
+  // Advance until `start_frame`.
+  if (next_frame_to_process_ < start_frame) {
+    Advance(start_frame);
   }
 
   // `ReadImpl` should not be called until we've `Advance`'d past the last cached packet. Also see
   // comments in `PipelineStage::MakeCachedPacket` for more information.
-  FX_CHECK(!has_valid_output_);
+  FX_CHECK(!output_);
 
-  // `CustomStage` always produces data on integrally-aligned frames.
-  start_frame = Fixed(start_frame.Floor());
-
-  // Advance to our source's next available frame. This is needed when the source stream contains
-  // gaps. For example, given a sequence of calls:
+  // Skip frames that were already processed. This is needed when the source stream contains gaps.
+  // For example, given a sequence of calls:
   //
-  //   Read(0, 20)
-  //   Read(20, 20)
+  // ```
+  // Read(0, 20)
+  // Read(20, 20)
+  // ```
   //
   // If our block size is 30, then at the first call, we will attempt to produce 30 frames starting
   // at frame 0. If the source has data for that range, we'll cache all 30 processed frames and the
   // second `Read` call will be handled by our cache.
   //
   // However, if the source has no data for the range [0, 30), the first `Read` call will return
-  // `std::nullopt`. At the second call, we shouldn't ask the source for any frames before frame 30
-  // because we already know that range is empty.
-  if (const auto next_readable_frame = source_->next_readable_frame()) {
-    // SampleAndHold: source frame 1.X overlaps dest frame 2.0, so always round up.
-    const int64_t frames_to_advance = next_readable_frame->Ceiling() - start_frame.Floor();
-    if (frames_to_advance > 0) {
-      frame_count -= frames_to_advance;
-      start_frame += Fixed(frames_to_advance);
-    }
+  // `std::nullopt`. At the second call, `next_frame_to_process_` will be at frame 30, so we
+  // shouldn't read any frames before frame 30 since we already know that we have passed that range.
+  if (const int64_t frames_to_skip = next_frame_to_process_ - start_frame.Floor();
+      frames_to_skip > 0) {
+    frame_count -= frames_to_skip;
+    start_frame += frames_to_skip;
   }
 
+  // Process next `frame_count` frames.
   while (frame_count > 0) {
-    const int64_t frames_read_from_source = ProcessBuffer(start_frame, frame_count);
-    if (has_valid_output_) {
-      FX_CHECK(source_buffer_.length() > 0);
-      FX_CHECK(fidl_buffers_.output);
-      return MakeCachedPacket(source_buffer_.start(), source_buffer_.length(),
-                              fidl_buffers_.output);
+    source_buffer_.Reset(start_frame + latency_frames_processed_);
+    const int64_t frames_processed = Process(frame_count);
+    next_frame_to_process_ += frames_processed;
+    if (output_) {
+      FX_CHECK(frames_processed > 0);
+      return MakeCachedPacket(start_frame, frames_processed, output_);
     }
-    // We tried to process an entire block, however the source had no data.
-    // If `frame_count > max_frames_per_call_`, try the next block.
-    start_frame += Fixed(frames_read_from_source);
-    frame_count -= frames_read_from_source;
+    // We tried to process an entire block, however there was no data to process. This implies
+    // `frame_count > max_frames_per_call_`, so try the next block.
+    start_frame += Fixed(frames_processed);
+    frame_count -= frames_processed;
   }
 
-  // The source has no data for the requested range.
+  // No data left to process.
   return std::nullopt;
 }
 
-void CustomStage::CallFidlProcess() {
-  // TODO(fxbug.dev/87651): Add traces and stage metrics.
-
-  // The source data needs to be copied into the pre-negotiated input buffer.
-  std::memmove(fidl_buffers_.input, source_buffer_.payload(),
-               source_buffer_.length() * static_cast<int64_t>(source_->format().bytes_per_frame()));
-
-  const auto num_frames = source_buffer_.length();
-  // TODO(fxbug.dev/87651): Do we need to populate the `options`?
-  const auto result =
-      fidl_processor_.buffer(fidl_process_buffer_.view())->Process(num_frames, /*options=*/{});
-
-  auto status = result.status();
-  if (result.ok() && result->result.is_err()) {
-    status = result->result.err();
-  }
-  // Zero fill the output buffer on failure.
-  if (status != ZX_OK) {
-    std::memset(fidl_buffers_.output, 0, fidl_buffers_.output_size);
-  }
-}
-
-int64_t CustomStage::ProcessBuffer(Fixed start_frame, int64_t frame_count) {
-  has_valid_output_ = false;
-
-  source_buffer_.Reset(start_frame);
-  bool has_data = false;
+int64_t CustomStage::Process(int64_t frame_count) {
+  // Make sure to read enough frames to compensate for `latency_frames_`.
+  int64_t latency_frames_to_process = latency_frames_ - latency_frames_processed_;
+  frame_count += latency_frames_to_process;
 
   // Clamp `frame_count` with a multiple of `block_size_frames_`, at most `max_frames_per_call_`.
-  frame_count =
-      static_cast<int64_t>(fbl::round_up(static_cast<uint64_t>(frame_count), block_size_frames_));
-  frame_count = std::min(frame_count, static_cast<int64_t>(max_frames_per_call_));
+  frame_count = static_cast<int64_t>(
+      fbl::round_up(static_cast<uint64_t>(frame_count), static_cast<uint64_t>(block_size_frames_)));
+  frame_count = std::min(frame_count, max_frames_per_call_);
 
-  // Read `frame_count` frames.
+  // Read next `frame_count` frames from `source_`.
+  bool has_data = false;
   while (source_buffer_.length() < frame_count) {
     const Fixed read_start_frame = source_buffer_.end();
     const int64_t read_frame_count = frame_count - source_buffer_.length();
-
-    const auto packet = source_->Read(read_start_frame, read_frame_count);
+    const auto packet = source_.Read(read_start_frame, read_frame_count);
     if (packet) {
       // SampleAndHold: source frame 1.X overlaps dest frame 2.0, so always round up.
       source_buffer_.AppendData(Fixed(packet->start().Ceiling()), packet->length(),
@@ -162,20 +178,50 @@ int64_t CustomStage::ProcessBuffer(Fixed start_frame, int64_t frame_count) {
     }
   }
 
-  FX_CHECK(source_buffer_.length() % block_size_frames_ == 0)
-      << "Bad buffer size " << source_buffer_.length() << " must be divisible by "
-      << block_size_frames_;
-
-  // If the source had no frames, we don't need to process anything.
   if (!has_data) {
+    // No data to process, mark this buffer processed and reset `latency_frames_processed_`.
+    latency_frames_processed_ = std::max(latency_frames_processed_ - frame_count, 0L);
     return frame_count;
   }
 
   // Process this buffer via FIDL connection, the result will be filled into `fidl_buffers_.output`.
+  FX_CHECK(source_buffer_.length() == frame_count);
   CallFidlProcess();
-  has_valid_output_ = true;
 
-  return frame_count;
+  if (latency_frames_to_process >= frame_count) {
+    // The process buffer has not reached to contain any target output frames yet. This could happen
+    // when `max_frames_per_call_ <= latency_frames_`.
+    latency_frames_processed_ += frame_count;
+    return 0;
+  }
+
+  // Set `output_` with the corresponding `latency_frames_to_process` offset.
+  output_ = static_cast<char*>(fidl_buffers_.output) +
+            static_cast<size_t>(latency_frames_to_process * format().bytes_per_frame());
+  latency_frames_processed_ += latency_frames_to_process;
+  return frame_count - latency_frames_to_process;
+}
+
+void CustomStage::CallFidlProcess() {
+  // TODO(fxbug.dev/87651): Add traces and stage metrics.
+  const int64_t frame_count = source_buffer_.length();
+
+  // The source data needs to be copied into the pre-negotiated input buffer.
+  std::memmove(fidl_buffers_.input, source_buffer_.payload(),
+               frame_count * static_cast<int64_t>(source_.format().bytes_per_frame()));
+
+  // TODO(fxbug.dev/87651): Do we need to populate the `options`?
+  const auto result =
+      fidl_processor_.buffer(fidl_process_buffer_.view())->Process(frame_count, /*options=*/{});
+
+  auto status = result.status();
+  if (result.ok() && result->result.is_err()) {
+    status = result->result.err();
+  }
+  // Zero fill the output buffer on failure.
+  if (status != ZX_OK) {
+    std::memset(fidl_buffers_.output, 0, fidl_buffers_.output_size);
+  }
 }
 
 CustomStage::FidlBuffers::FidlBuffers(const Range& input_range, const Range& output_range) {

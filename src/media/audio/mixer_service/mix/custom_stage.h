@@ -18,6 +18,7 @@
 #include "src/media/audio/mixer_service/mix/pipeline_stage.h"
 #include "src/media/audio/mixer_service/mix/ptr_decls.h"
 #include "src/media/audio/mixer_service/mix/reusable_buffer.h"
+#include "src/media/audio/mixer_service/mix/silence_padding_stage.h"
 
 namespace media_audio_mixer_service {
 
@@ -28,17 +29,8 @@ class CustomStage : public PipelineStage {
   explicit CustomStage(fuchsia_audio_effects::wire::ProcessorConfiguration config);
 
   // Implements `PipelineStage`.
-  void AddSource(PipelineStagePtr src) final {
-    FX_CHECK(!source_) << "CustomStage does not currently support multiple input sources";
-    FX_CHECK(src->format() == format())
-        << "CustomStage format does not match with input source format";
-    source_ = std::move(src);
-  }
-  void RemoveSource(PipelineStagePtr src) final {
-    FX_CHECK(source_) << "CustomStage input source was not found";
-    FX_CHECK(source_ == src) << "CustomStage input source does not match with: " << src->name();
-    source_ = nullptr;
-  }
+  void AddSource(PipelineStagePtr src) final { source_.AddSource(std::move(src)); }
+  void RemoveSource(PipelineStagePtr src) final { source_.RemoveSource(std::move(src)); }
 
  protected:
   void AdvanceImpl(Fixed frame) final;
@@ -63,40 +55,42 @@ class CustomStage : public PipelineStage {
     std::vector<fzl::VmoMapper> mappers;
   };
 
+  // Processes next `frame_count` frames.
+  int64_t Process(int64_t frame_count);
+
   // Calls FIDL `Process`.
   void CallFidlProcess();
 
-  // Processes the next buffer at `start_frame` with `frame_count`.
-  int64_t ProcessBuffer(Fixed start_frame, int64_t frame_count);
-
-  const uint64_t block_size_frames_;
-  const uint64_t max_frames_per_call_;
+  const int64_t block_size_frames_;
+  const int64_t latency_frames_;
+  const int64_t max_frames_per_call_;
 
   FidlBuffers fidl_buffers_;
   fidl::WireSyncClient<fuchsia_audio_effects::Processor> fidl_processor_;
 
-  PipelineStagePtr source_ = nullptr;
+  // Silence padding source stage to compensate for "ring out" frames.
+  SilencePaddingStage source_;
 
-  // This will be true while the output buffer is valid for use.
-  //
-  // We must process frames in batches that are multiples of `block_size_frames_`. This is done by
-  // accumulating data from `source_` into `source_buffer_` until we have buffered at least one full
-  // batch of frames, at which point we call `ProcessBuffer` to fill the next buffer into
-  // `fidl_buffers_.output`. This output buffer will remain valid until we `Advance` past
-  // `source_buffer_.end()`.
+  // Custom stage frames are processed in batches that are multiples of `block_size_frames_`. It is
+  // done by accumulating data from the input `source_` into `source_buffer_`, also compensating for
+  // `latency_frames_`, until we have buffered at least one full batch of frames. At which point we
+  // call `Process` to fill the next buffer into `fidl_buffers_.output`. Then, we update
+  // `latency_frames_processed_`, and set `output_` with a corresponding offset to compensate for
+  // the processed latency frames. After each process, we set `next_frame_to_process` to the first
+  // output frame that needs to be processed in the next call, so that, `output` will remain valid
+  // until we `Advance` past `next_frame_to_process`.
   //
   // For example:
   //
-  //   +------------------------+
-  //   |    `source_buffer_`    |
-  //   +------------------------+
-  //   ^       ^        ^       ^      ^
-  //   A       B        C       D      E
+  //   +-----------------------+
+  //   |       `source_`       |
+  //   +-----------------------+
+  //   ^       ^        ^      ^      ^
+  //   A       B        C      D      E
   //
-  // 1. Caller asks for frames [A,B). Assume D = A+block_size. We read frames [A,D) from `source_`
+  // 1. Caller asks for frames [A,B). Assume D = A + block_size. We read frames [A,D) from `source_`
   //    into `source_buffer_`, then process those frames, which will fill the processed data into
-  //    `fidl_buffers_.output`. Then, we set `has_valid_output_` to true, and return processed
-  //    frames [A,B).
+  //    `output_`, and return processed frames [A,B).
   //
   // 2. Caller asks for frames [B,C). This intersects `source_buffer_`, so we return processed
   //    frames [B,C).
@@ -104,15 +98,17 @@ class CustomStage : public PipelineStage {
   // 3. Caller asks for frames [C,E). This intersects `source_buffer_`, so we return processed
   //    frames [C,D). When the caller is done with those frames, we receive an `Advance(D)` call
   //    (via `PipelineStage::Packet::~Packet`), which invalidates the output buffer by setting
-  //    `has_valid_output_` to false.
+  //    `output_` to nullptr.
   //
   // 4. Caller asks for frames [D,E). The above process repeats.
-  bool has_valid_output_ = false;
+  void* output_ = nullptr;
+  int64_t latency_frames_processed_ = 0;
+  int64_t next_frame_to_process_ = 0;
 
   // Buffer holding one pair of encoded FIDL `Process` request and response message.
   fidl::SyncClientBuffer<fuchsia_audio_effects::Processor::Process> fidl_process_buffer_;
 
-  // This is non-empty while `has_valid_output_` is true.
+  // This is non-empty while `output_` is valid.
   ReusableBuffer source_buffer_;
 };
 

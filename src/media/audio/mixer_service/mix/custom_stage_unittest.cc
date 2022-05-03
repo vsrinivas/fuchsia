@@ -63,6 +63,8 @@ struct ConfigOptions {
   };
   uint64_t max_frames_per_call = 0;
   uint64_t block_size_frames = 1;
+  uint64_t latency_frames = 0;
+  uint64_t ring_out_frames = 0;
 };
 
 zx::vmo CreateVmoOrDie(uint64_t size_bytes) {
@@ -133,6 +135,8 @@ ConfigOptions DupConfigOptions(const ConfigOptions& options) {
           },
       .max_frames_per_call = options.max_frames_per_call,
       .block_size_frames = options.block_size_frames,
+      .latency_frames = options.latency_frames,
+      .ring_out_frames = options.ring_out_frames,
   };
 }
 
@@ -164,8 +168,8 @@ ProcessorConfiguration MakeProcessorConfig(Arena& arena, ConfigOptions options,
   outputs.at(0) = fuchsia_audio_effects::wire::OutputConfiguration::Builder(arena)
                       .buffer(std::move(options.output_buffer))
                       .format(options.output_format)
-                      .latency_frames(0)
-                      .ring_out_frames(0)
+                      .latency_frames(options.latency_frames)
+                      .ring_out_frames(options.ring_out_frames)
                       .Build();
   builder.outputs(fidl::ObjectView{arena, outputs});
 
@@ -331,28 +335,30 @@ class CustomStageTest : public testing::Test {
     {
       // Read the first packet. Since our effect adds 1.0 to each sample, and we populated the
       // packet with 1.0 samples, we expect to see only 2.0 samples in the result.
-      auto packet = custom_stage->Read(Fixed(0), packet_frames);
+      const auto packet = custom_stage->Read(Fixed(0), packet_frames);
       ASSERT_TRUE(packet);
       EXPECT_EQ(packet->start().Floor(), 0);
       EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
       EXPECT_EQ(packet->length(), read_buffer_frames);
 
-      auto vec = ToVector(packet->payload(), 0, read_buffer_frames * output_channels);
+      const auto vec = ToVector(packet->payload(), 0, read_buffer_frames * output_channels);
       EXPECT_THAT(vec, Each(FloatEq(2.0f)));
 
       // If the process is in-place, input should be overwritten. Otherwise it should be unchanged.
       if (info.in_place) {
-        auto vec = ToVector(info.processor.input_data(), 0, read_buffer_frames * input_channels);
+        const auto vec =
+            ToVector(info.processor.input_data(), 0, read_buffer_frames * input_channels);
         EXPECT_THAT(vec, Each(FloatEq(2.0f)));
       } else {
-        auto vec = ToVector(info.processor.input_data(), 0, read_buffer_frames * input_channels);
+        const auto vec =
+            ToVector(info.processor.input_data(), 0, read_buffer_frames * input_channels);
         EXPECT_THAT(vec, Each(FloatEq(1.0f)));
       }
     }
 
     {
       // Read the next packet. This should be null, because there are no more packets.
-      auto packet = custom_stage->Read(Fixed(packet_frames), packet_frames);
+      const auto packet = custom_stage->Read(Fixed(packet_frames), packet_frames);
       ASSERT_FALSE(packet);
     }
   }
@@ -450,7 +456,7 @@ TEST_F(CustomStageTest, AddOneWithSourceOffset) {
       // Read the first packet. Since the first source packet is offset by `source_offset`, we
       // should read silence from the source followed by 1.0s. The effect adds one to these values,
       // so we should see 1.0s followed by 2.0s.
-      auto packet = custom_stage->Read(Fixed(0), kPacketFrames);
+      const auto packet = custom_stage->Read(Fixed(0), kPacketFrames);
       ASSERT_TRUE(packet);
       EXPECT_EQ(packet->start().Floor(), 0);
       EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
@@ -464,7 +470,7 @@ TEST_F(CustomStageTest, AddOneWithSourceOffset) {
 
     {
       // Read the second packet. This should contain the remainder of the 2.0s, followed by 1.0s.
-      auto packet = custom_stage->Read(Fixed(kPacketFrames), kPacketFrames);
+      const auto packet = custom_stage->Read(Fixed(kPacketFrames), kPacketFrames);
       ASSERT_TRUE(packet);
       EXPECT_EQ(packet->start().Floor(), kPacketFrames);
       EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
@@ -478,7 +484,7 @@ TEST_F(CustomStageTest, AddOneWithSourceOffset) {
 
     {
       // Read the next packet. This should be null, because there are no more packets.
-      auto packet = custom_stage->Read(Fixed(2 * kPacketFrames), kPacketFrames);
+      const auto packet = custom_stage->Read(Fixed(2 * kPacketFrames), kPacketFrames);
       ASSERT_FALSE(packet);
     }
   }
@@ -502,14 +508,14 @@ TEST_F(CustomStageTest, AddOneWithReadSmallerThanProcessingBuffer) {
 
   {
     // Read the first packet.
-    auto packet = custom_stage->Read(Fixed(0), 480);
+    const auto packet = custom_stage->Read(Fixed(0), 480);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start().Floor(), 0);
     EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
     EXPECT_EQ(packet->length(), 480);
 
     // Our effect adds 1.0, and the source packet is 1.0, so the payload should contain all 2.0.
-    auto vec = ToVector(packet->payload(), 0, 480);
+    const auto vec = ToVector(packet->payload(), 0, 480);
     EXPECT_THAT(vec, Each(FloatEq(2.0f)));
   }
 
@@ -517,21 +523,21 @@ TEST_F(CustomStageTest, AddOneWithReadSmallerThanProcessingBuffer) {
     // The source stream does not have a second packet, however when we processed the first packet,
     // we processed 720 frames total (480 from the first packet + 240 of silence). This `Read`
     // should return those 240 frames.
-    auto packet = custom_stage->Read(Fixed(480), 480);
+    const auto packet = custom_stage->Read(Fixed(480), 480);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start().Floor(), 480);
     EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
     EXPECT_EQ(packet->length(), 240);
 
     // Since the source stream was silent, and our effect adds 1.0, the payload is 1.0.
-    auto vec = ToVector(packet->payload(), 0, 240);
+    const auto vec = ToVector(packet->payload(), 0, 240);
     EXPECT_THAT(vec, Each(FloatEq(1.0f)));
   }
 
   {
     // Read again where we left off. This should be null, because our cache is exhausted and the
     // source has no more data.
-    auto packet = custom_stage->Read(Fixed(720), 480);
+    const auto packet = custom_stage->Read(Fixed(720), 480);
     ASSERT_FALSE(packet);
   }
 }
@@ -554,48 +560,48 @@ TEST_F(CustomStageTest, AddOneWithReadSmallerThanProcessingBufferAndSourceOffset
 
   {
     // This `Read` will attempt read 720 frames from the source, but the source is empty.
-    auto packet = custom_stage->Read(Fixed(0), 480);
+    const auto packet = custom_stage->Read(Fixed(0), 480);
     ASSERT_FALSE(packet);
   }
 
   {
     // This `Read` should not read anything from the source because we know from the prior `Read`
     // that the source is empty until 720.
-    auto packet = custom_stage->Read(Fixed(480), 240);
+    const auto packet = custom_stage->Read(Fixed(480), 240);
     ASSERT_FALSE(packet);
   }
 
   {
     // Now we have data.
-    auto packet = custom_stage->Read(Fixed(720), 480);
+    const auto packet = custom_stage->Read(Fixed(720), 480);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start().Floor(), 720);
     EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
     EXPECT_EQ(packet->length(), 480);
 
     // Our effect adds 1.0, and the source packet is 1.0, so the payload should contain all 2.0.
-    auto vec = ToVector(packet->payload(), 0, 480);
+    const auto vec = ToVector(packet->payload(), 0, 480);
     EXPECT_THAT(vec, Each(FloatEq(2.0f)));
   }
 
   {
     // The source stream ends at frame 720+480=1200, however the last `Read` processed 240
     // additional frames from the source. This `Read` should return those 240 frames.
-    auto packet = custom_stage->Read(Fixed(1200), 480);
+    const auto packet = custom_stage->Read(Fixed(1200), 480);
     ASSERT_TRUE(packet);
     EXPECT_EQ(packet->start().Floor(), 1200);
     EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
     EXPECT_EQ(packet->length(), 240);
 
     // Our effect adds 1.0, and the source range is silent, so the payload should contain all 1.0s.
-    auto vec = ToVector(packet->payload(), 0, 240);
+    const auto vec = ToVector(packet->payload(), 0, 240);
     EXPECT_THAT(vec, Each(FloatEq(1.0f)));
   }
 
   {
     // Read again where we left off. This should be null, because our cache is exhausted and the
     // source has no more data.
-    auto packet = custom_stage->Read(Fixed(1440), 480);
+    const auto packet = custom_stage->Read(Fixed(1440), 480);
     ASSERT_FALSE(packet);
   }
 }
@@ -709,6 +715,350 @@ TEST_F(CustomStageTest, AddOneAndRemoveChannelWithSameVmoDifferentRanges) {
       .output_format = DefaultFormatWithChannels(1),
   });
   TestAddOneWithSinglePacket(std::move(processor_info));
+}
+
+// Processor that adds 1.0 to each sample with latency, and ring out with a constant value of -2.0.
+template <size_t LatencyFrames>
+class AddOneWithLatencyProcessor : public CustomStageTestProcessor {
+ public:
+  AddOneWithLatencyProcessor(const ConfigOptions& options, fidl::ServerEnd<Processor> server_end,
+                             async_dispatcher_t* dispatcher)
+      : CustomStageTestProcessor(options, std::move(server_end), dispatcher),
+        ring_out_frame_count_(static_cast<int64_t>(options.ring_out_frames)) {
+    FX_CHECK(options.input_format.channel_count == 1);
+    FX_CHECK(options.output_format.channel_count == 1);
+    FX_CHECK(options.latency_frames == LatencyFrames);
+    delayed_frames_.fill(0.0f);
+  }
+
+  void Process(ProcessRequestView request, ProcessCompleter::Sync& completer) override {
+    float* input = input_data();
+    float* output = output_data();
+    for (uint64_t i = 0; i < request->num_frames; ++i) {
+      output[i] = delayed_frames_[delayed_frame_index_] + 1.0f;
+
+      if (input[i] > 0.0f) {
+        delayed_frames_[delayed_frame_index_] = input[i];
+        ring_out_index_ = 0;
+      } else if (ring_out_index_ >= 0 && ring_out_index_ < ring_out_frame_count_) {
+        delayed_frames_[delayed_frame_index_] = -2.0f;
+        ++ring_out_index_;
+      } else {
+        delayed_frames_[delayed_frame_index_] = 0.0f;
+      }
+
+      delayed_frame_index_ = (delayed_frame_index_ + 1) % LatencyFrames;
+    }
+    completer.ReplySuccess(fidl::VectorView<fuchsia_audio_effects::wire::ProcessMetrics>());
+  }
+
+ private:
+  const int64_t ring_out_frame_count_;
+  int ring_out_index_ = -1;
+
+  static inline std::array<float, LatencyFrames> delayed_frames_{0.0f};
+  int delayed_frame_index_ = 0;
+};
+
+TEST_F(CustomStageTest, AddOneWithLatencyWithDifferentVmos) {
+  auto processor_info = MakeProcessorWithDifferentVmos<AddOneWithLatencyProcessor<3>>({
+      .input_format = DefaultFormatWithChannels(1),
+      .output_format = DefaultFormatWithChannels(1),
+      .latency_frames = 3,
+  });
+  TestAddOneWithSinglePacket(std::move(processor_info));
+}
+
+TEST_F(CustomStageTest, AddOneWithLatencyWithSameVmoDifferentRanges) {
+  auto processor_info = MakeProcessorWithSameVmoDifferentRanges<AddOneWithLatencyProcessor<5>>({
+      .input_format = DefaultFormatWithChannels(1),
+      .output_format = DefaultFormatWithChannels(1),
+      .latency_frames = 5,
+  });
+  TestAddOneWithSinglePacket(std::move(processor_info));
+}
+
+TEST_F(CustomStageTest, AddOneWithLatencyLessThanBlockSize) {
+  // First `Read` processes exactly 32 frames, so no additional block is left to be read in the
+  // second `Read` call.
+  auto processor_info = MakeProcessorWithDifferentVmos<AddOneWithLatencyProcessor<6>>({
+      .input_format = DefaultFormatWithChannels(1),
+      .output_format = DefaultFormatWithChannels(1),
+      .block_size_frames = 16,
+      .latency_frames = 6,
+  });
+  TestAddOneWithSinglePacket(std::move(processor_info), /*packet_frames=*/26,
+                             /*read_buffer_frames=*/26);
+}
+
+TEST_F(CustomStageTest, AddOneWithLatencyLessThanBlockSizeWithMaxFramesPerCall) {
+  // First `Read` returns the first 6 frames, then test jumps to read frame 100 which has no data.
+  auto processor_info = MakeProcessorWithDifferentVmos<AddOneWithLatencyProcessor<4>>({
+      .input_format = DefaultFormatWithChannels(1),
+      .output_format = DefaultFormatWithChannels(1),
+      .max_frames_per_call = 10,
+      .block_size_frames = 10,
+      .latency_frames = 4,
+  });
+  TestAddOneWithSinglePacket(std::move(processor_info), /*packet_frames=*/100,
+                             /*read_buffer_frames=*/6);
+}
+
+TEST_F(CustomStageTest, AddOneWithLatencyMoreThanMaxFramesPerCall) {
+  auto processor_info = MakeProcessorWithDifferentVmos<AddOneWithLatencyProcessor<102>>({
+      .input_format = DefaultFormatWithChannels(1),
+      .output_format = DefaultFormatWithChannels(1),
+      .max_frames_per_call = 10,
+      .block_size_frames = 10,
+      .latency_frames = 102,
+  });
+  const Format source_format = Format::CreateOrDie(processor_info.config.inputs()[0].format());
+  auto producer_stage = MakePacketQueueProducerStage(source_format);
+  auto custom_stage = MakeCustomStage(std::move(processor_info.config), producer_stage);
+
+  // Push the packet.
+  std::vector<float> packet_payload(15, 1.0f);
+  producer_stage->push(PacketView({source_format, Fixed(0), 10, packet_payload.data()}));
+
+  {
+    // Attempt to read the first 10 frames. This will process all frames up to frame 110, to
+    // compensate for latency, 10 at a time, which should return the first 8 frames of the packet.
+    const auto packet = custom_stage->Read(Fixed(0), 10);
+    ASSERT_TRUE(packet);
+    EXPECT_EQ(packet->start().Floor(), 0);
+    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->length(), 8);
+    EXPECT_THAT(ToVector(packet->payload(), 0, 8), Each(2.0f));
+  }
+
+  {
+    // Read the remaining 2 frames.
+    const auto packet = custom_stage->Read(Fixed(8), 2);
+    ASSERT_TRUE(packet);
+    EXPECT_EQ(packet->start().Floor(), 8);
+    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->length(), 2);
+    EXPECT_THAT(ToVector(packet->payload(), 0, 2), Each(2.0f));
+  }
+}
+
+TEST_F(CustomStageTest, AddOneWithLatencyReadOnePacketWithOffset) {
+  auto processor_info = MakeProcessorWithDifferentVmos<AddOneWithLatencyProcessor<2>>({
+      .input_format = DefaultFormatWithChannels(1),
+      .output_format = DefaultFormatWithChannels(1),
+      .max_frames_per_call = 150,
+      .block_size_frames = 15,
+      .latency_frames = 2,
+  });
+  const Format source_format = Format::CreateOrDie(processor_info.config.inputs()[0].format());
+  auto producer_stage = MakePacketQueueProducerStage(source_format);
+  auto custom_stage = MakeCustomStage(std::move(processor_info.config), producer_stage);
+
+  // Push the packet.
+  std::vector<float> packet_payload(15);
+  for (int i = 0; i < 15; ++i) {
+    packet_payload[i] = static_cast<float>(i);
+  }
+  producer_stage->push(PacketView({source_format, Fixed(16), 15, packet_payload.data()}));
+
+  {
+    // Read the first 10 frames, this will process the first 15 frames, which should not return
+    // anything as the packet starts at frame 16.
+    const auto packet = custom_stage->Read(Fixed(0), 10);
+    ASSERT_FALSE(packet);
+  }
+
+  {
+    // Read the next 10 frames, this should process the next 15 frames up to frame 30, and return
+    // one frame of silence starting at frame 15, followed by the first 4 frames of the packet
+    // starting at frame 16.
+    const auto packet = custom_stage->Read(Fixed(10), 10);
+    ASSERT_TRUE(packet);
+    EXPECT_EQ(packet->start().Floor(), 15);
+    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->length(), 5);
+
+    const auto vec = ToVector(packet->payload(), 0, 5);
+    EXPECT_FLOAT_EQ(vec[0], 1.0f);
+    for (int i = 1; i < 5; ++i) {
+      EXPECT_FLOAT_EQ(vec[i], static_cast<float>(i)) << i;
+    }
+  }
+
+  {
+    // Attempt to read another 10 frames, this should return the cached 8 frames of the packet
+    // starting at frame 20.
+    const auto packet = custom_stage->Read(Fixed(20), 10);
+    ASSERT_TRUE(packet);
+    EXPECT_EQ(packet->start().Floor(), 20);
+    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->length(), 8);
+
+    const auto vec = ToVector(packet->payload(), 0, 8);
+    for (int i = 0; i < 5; ++i) {
+      EXPECT_FLOAT_EQ(vec[i], static_cast<float>(4 + i + 1)) << i;
+    }
+  }
+
+  {
+    // Finally attempt to read another 10 frames from frame 28, this should return the remaining 3
+    // frames followed by silence.
+    const auto packet = custom_stage->Read(Fixed(28), 5);
+    ASSERT_TRUE(packet);
+    EXPECT_EQ(packet->start().Floor(), 28);
+    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->length(), 5);
+
+    const auto vec = ToVector(packet->payload(), 0, 5);
+    for (int i = 0; i < 3; ++i) {
+      EXPECT_FLOAT_EQ(vec[i], static_cast<float>(12 + i + 1)) << i;
+    }
+    for (int i = 3; i < 5; ++i) {
+      EXPECT_FLOAT_EQ(vec[i], 1.0f) << i;
+    }
+  }
+}
+
+TEST_F(CustomStageTest, AddOneWithLatencyReadTwoPacketsWithGaps) {
+  auto processor_info = MakeProcessorWithDifferentVmos<AddOneWithLatencyProcessor<2>>({
+      .input_format = DefaultFormatWithChannels(1),
+      .output_format = DefaultFormatWithChannels(1),
+      .max_frames_per_call = 150,
+      .block_size_frames = 15,
+      .latency_frames = 2,
+  });
+  const Format source_format = Format::CreateOrDie(processor_info.config.inputs()[0].format());
+  auto producer_stage = MakePacketQueueProducerStage(source_format);
+  auto custom_stage = MakeCustomStage(std::move(processor_info.config), producer_stage);
+
+  // Push two packets with a gap of 10 frames in between.
+  std::vector<float> packet_payload_1(10);
+  std::vector<float> packet_payload_2(10);
+  for (int i = 0; i < 10; ++i) {
+    packet_payload_1[i] = static_cast<float>(i);
+    packet_payload_2[i] = static_cast<float>(20 + i);
+  }
+  producer_stage->push(PacketView({source_format, Fixed(0), 10, packet_payload_1.data()}));
+  producer_stage->push(PacketView({source_format, Fixed(20), 10, packet_payload_2.data()}));
+
+  {
+    // Read the first 10 frames, this should return the first packet's frames.
+    const auto packet = custom_stage->Read(Fixed(0), 10);
+    ASSERT_TRUE(packet);
+    EXPECT_EQ(packet->start().Floor(), 0);
+    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->length(), 10);
+
+    const auto vec = ToVector(packet->payload(), 0, 10);
+    for (int i = 0; i < 10; ++i) {
+      EXPECT_FLOAT_EQ(vec[i], static_cast<float>(i + 1)) << i;
+    }
+  }
+
+  {
+    // Attempt to read the next 10 frames, this should return the cached 3 frames of silence that
+    // was processed in the first read call.
+    const auto packet = custom_stage->Read(Fixed(10), 10);
+    ASSERT_TRUE(packet);
+    EXPECT_EQ(packet->start().Floor(), 10);
+    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->length(), 3);
+
+    const auto vec = ToVector(packet->payload(), 0, 3);
+    for (int i = 0; i < 3; ++i) {
+      EXPECT_FLOAT_EQ(vec[i], 1.0f) << i;
+    }
+  }
+
+  {
+    // Read the remaining 7 frames until the start of the second packet, this will read the next 15
+    // frames as a result, which should return the first 7 frames of silence, since the remaining
+    // frames contain the first 8 frames of the second packet.
+    const auto packet = custom_stage->Read(Fixed(13), 7);
+    ASSERT_TRUE(packet);
+    EXPECT_EQ(packet->start().Floor(), 13);
+    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->length(), 7);
+
+    const auto vec = ToVector(packet->payload(), 0, 7);
+    for (int i = 0; i < 7; ++i) {
+      EXPECT_FLOAT_EQ(vec[i], 1.0f) << i;
+    }
+  }
+
+  {
+    // Read the next 10 frames, this should return the cached first 8 frames of the second packet.
+    const auto packet = custom_stage->Read(Fixed(20), 30);
+    ASSERT_TRUE(packet);
+    EXPECT_EQ(packet->start().Floor(), 20);
+    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->length(), 8);
+
+    const auto vec = ToVector(packet->payload(), 0, 8);
+    for (int i = 0; i < 8; ++i) {
+      EXPECT_FLOAT_EQ(vec[i], static_cast<float>(20 + i + 1)) << i;
+    }
+  }
+}
+
+TEST_F(CustomStageTest, AddOneWithLatencyAndRingout) {
+  auto processor_info = MakeProcessorWithDifferentVmos<AddOneWithLatencyProcessor<4>>({
+      .input_format = DefaultFormatWithChannels(1),
+      .output_format = DefaultFormatWithChannels(1),
+      .max_frames_per_call = 100,
+      .block_size_frames = 10,
+      .latency_frames = 4,
+      .ring_out_frames = 15,
+  });
+  const Format source_format = Format::CreateOrDie(processor_info.config.inputs()[0].format());
+  auto producer_stage = MakePacketQueueProducerStage(source_format);
+  auto custom_stage = MakeCustomStage(std::move(processor_info.config), producer_stage);
+
+  // Push a single frame of impulse at frame 10.
+  float impulse = 1.0f;
+  producer_stage->push(PacketView({source_format, Fixed(10), 1, &impulse}));
+
+  {
+    // Read first 10 frames, which should return silence.
+    const auto packet = custom_stage->Read(Fixed(0), 10);
+    ASSERT_TRUE(packet);
+    EXPECT_EQ(packet->start().Floor(), 0);
+    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->length(), 10);
+    EXPECT_THAT(ToVector(packet->payload(), 0, 10), Each(1.0f));
+  }
+
+  {
+    // Attempt to read another 10 frames, which should return the cached 6 frames, starting with the
+    // the impulse followed by 5 ring out frames.
+    const auto packet = custom_stage->Read(Fixed(10), 10);
+    ASSERT_TRUE(packet);
+    EXPECT_EQ(packet->start().Floor(), 10);
+    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->length(), 6);
+
+    const auto vec = ToVector(packet->payload(), 0, 6);
+    EXPECT_FLOAT_EQ(vec[0], 2.0f);
+    for (int i = 1; i < 6; ++i) {
+      EXPECT_FLOAT_EQ(vec[i], -1.0f) << i;
+    }
+  }
+
+  {
+    // Read 10 more frames which should return the remaining 10 ring out frames.
+    const auto packet = custom_stage->Read(Fixed(16), 10);
+    ASSERT_TRUE(packet);
+    EXPECT_EQ(packet->start().Floor(), 16);
+    EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
+    EXPECT_EQ(packet->length(), 10);
+    EXPECT_THAT(ToVector(packet->payload(), 0, 10), Each(-1.0f));
+  }
+
+  {
+    // Attempt to read 10 more frames, which should not return any output beyond ring out frames.
+    const auto packet = custom_stage->Read(Fixed(26), 10);
+    ASSERT_FALSE(packet);
+  }
 }
 
 }  // namespace media_audio_mixer_service
