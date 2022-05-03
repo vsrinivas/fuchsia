@@ -93,7 +93,7 @@ zx_status_t Nelson::Spi0Init() {
       },
   };
 
-  static const amlspi_config_t spi_0_config = {
+  static const amlogic_spi::amlspi_config_t spi_0_config = {
       .capacity = 0,
       .period = 0,
       .bus_id = NELSON_SPICC0,
@@ -191,7 +191,7 @@ zx_status_t Nelson::Spi1Init() {
       },
   };
 
-  static const amlspi_config_t spi_1_config = {
+  static const amlogic_spi::amlspi_config_t spi_1_config = {
       .capacity = 0,
       .period = 0,
       .bus_id = NELSON_SPICC1,

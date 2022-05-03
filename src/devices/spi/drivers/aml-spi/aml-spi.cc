@@ -286,7 +286,9 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
     IntReg::Get().FromValue(0).set_tcen(1).WriteTo(&mmio_);
   }
 
-  gpio(cs).Write(0);
+  if (gpio(cs).is_valid()) {
+    gpio(cs).Write(0);
+  }
 
   // Only use 64-bit words if we will be able to reset the controller.
   if (reset_) {
@@ -297,7 +299,9 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
 
   IntReg::Get().FromValue(0).WriteTo(&mmio_);
 
-  gpio(cs).Write(1);
+  if (gpio(cs).is_valid()) {
+    gpio(cs).Write(1);
+  }
 
   if (out_rxdata && out_rxdata_actual) {
     *out_rxdata_actual = rxdata_size;
@@ -424,7 +428,8 @@ zx_status_t AmlSpi::SpiImplExchangeVmo(uint32_t chip_select, uint32_t tx_vmo_id,
   return SpiImplExchange(chip_select, tx_buffer->data(), size, rx_buffer->data(), size, nullptr);
 }
 
-fbl::Array<AmlSpi::ChipInfo> AmlSpi::InitChips(amlspi_config_t* map, zx_device_t* device) {
+fbl::Array<AmlSpi::ChipInfo> AmlSpi::InitChips(amlogic_spi::amlspi_config_t* map,
+                                               zx_device_t* device) {
   fbl::Array<ChipInfo> chips(new ChipInfo[map->cs_count], map->cs_count);
   if (!chips) {
     return chips;
@@ -432,6 +437,10 @@ fbl::Array<AmlSpi::ChipInfo> AmlSpi::InitChips(amlspi_config_t* map, zx_device_t
 
   for (uint32_t i = 0; i < map->cs_count; i++) {
     uint32_t index = map->cs[i];
+    if (index == amlogic_spi::amlspi_config_t::kCsClientManaged) {
+      continue;
+    }
+
     char fragment_name[32] = {};
     snprintf(fragment_name, 32, "gpio-cs-%d", index);
     chips[i].gpio = ddk::GpioProtocolClient(device, fragment_name);
@@ -459,7 +468,7 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
   }
 
   size_t actual;
-  amlspi_config_t config = {};
+  amlogic_spi::amlspi_config_t config = {};
   status =
       device_get_metadata(device, DEVICE_METADATA_AMLSPI_CONFIG, &config, sizeof config, &actual);
   if ((status != ZX_OK) || (actual != sizeof config)) {

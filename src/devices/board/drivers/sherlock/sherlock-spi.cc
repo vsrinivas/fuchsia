@@ -51,7 +51,7 @@ static const spi_channel_t spi_channels[] = {
     },
 };
 
-static const amlspi_config_t spi_config = {
+static const amlogic_spi::amlspi_config_t spi_config = {
     .capacity = 0,
     .period = 0,
     .bus_id = SHERLOCK_SPICC0,

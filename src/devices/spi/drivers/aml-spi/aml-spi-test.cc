@@ -174,11 +174,11 @@ class FakeDdkSpi : public fake_ddk::Bind {
   }
 
  private:
-  static constexpr amlspi_config_t kSpiConfig[] = {
+  static constexpr amlogic_spi::amlspi_config_t kSpiConfig[] = {
       {
           .bus_id = 0,
-          .cs_count = 2,
-          .cs = {5, 3},
+          .cs_count = 3,
+          .cs = {5, 3, amlogic_spi::amlspi_config_t::kCsClientManaged},
           .clock_divider_register_value = 0,
           .use_enhanced_clock_mode = false,
       },
@@ -251,7 +251,7 @@ TEST(AmlSpiTest, ChipSelectCount) {
   ASSERT_EQ(bind.children().size(), 1);
   AmlSpi& spi0 = *bind.children()[0].device;
 
-  EXPECT_EQ(spi0.SpiImplGetChipSelectCount(), 2);
+  EXPECT_EQ(spi0.SpiImplGetChipSelectCount(), 3);
 }
 
 TEST(AmlSpiTest, Exchange) {
@@ -282,6 +282,35 @@ TEST(AmlSpiTest, Exchange) {
 
   EXPECT_FALSE(bind.ControllerReset());
 
+  ASSERT_NO_FATAL_FAILURE(bind.gpio().VerifyAndClear());
+}
+
+TEST(AmlSpiTest, ExchangeCsManagedByClient) {
+  constexpr uint8_t kTxData[] = {0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12};
+  constexpr uint8_t kExpectedRxData[] = {0xab, 0xab, 0xab, 0xab, 0xab, 0xab, 0xab};
+
+  FakeDdkSpi bind;
+
+  EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
+
+  ASSERT_EQ(bind.children().size(), 1);
+  AmlSpi& spi0 = *bind.children()[0].device;
+
+  bind.mmio()[AML_SPI_TESTREG / sizeof(uint32_t)] = 0;
+
+  bind.mmio()[AML_SPI_RXDATA / sizeof(uint32_t)] = kExpectedRxData[0];
+
+  uint8_t rxbuf[sizeof(kTxData)] = {};
+  size_t rx_actual;
+  EXPECT_OK(spi0.SpiImplExchange(2, kTxData, sizeof(kTxData), rxbuf, sizeof(rxbuf), &rx_actual));
+
+  EXPECT_EQ(rx_actual, sizeof(rxbuf));
+  EXPECT_BYTES_EQ(rxbuf, kExpectedRxData, rx_actual);
+  EXPECT_EQ(bind.mmio()[AML_SPI_TXDATA / sizeof(uint32_t)], kTxData[0]);
+
+  EXPECT_FALSE(bind.ControllerReset());
+
+  // There should be no GPIO calls as the client manages CS for this device.
   ASSERT_NO_FATAL_FAILURE(bind.gpio().VerifyAndClear());
 }
 
@@ -747,7 +776,7 @@ TEST(AmlSpiTest, ReleaseVmos) {
 }
 
 TEST(AmlSpiTest, NormalClockMode) {
-  constexpr amlspi_config_t kTestSpiConfig[] = {
+  constexpr amlogic_spi::amlspi_config_t kTestSpiConfig[] = {
       {
           .bus_id = 0,
           .cs_count = 2,
@@ -781,7 +810,7 @@ TEST(AmlSpiTest, NormalClockMode) {
 }
 
 TEST(AmlSpiTest, EnhancedClockMode) {
-  constexpr amlspi_config_t kTestSpiConfig[] = {
+  constexpr amlogic_spi::amlspi_config_t kTestSpiConfig[] = {
       {
           .bus_id = 0,
           .cs_count = 2,
@@ -822,7 +851,7 @@ TEST(AmlSpiTest, EnhancedClockMode) {
 }
 
 TEST(AmlSpiTest, NormalClockModeInvalidDivider) {
-  constexpr amlspi_config_t kTestSpiConfig[] = {
+  constexpr amlogic_spi::amlspi_config_t kTestSpiConfig[] = {
       {
           .bus_id = 0,
           .cs_count = 2,
@@ -839,7 +868,7 @@ TEST(AmlSpiTest, NormalClockModeInvalidDivider) {
 }
 
 TEST(AmlSpiTest, EnhancedClockModeInvalidDivider) {
-  constexpr amlspi_config_t kTestSpiConfig[] = {
+  constexpr amlogic_spi::amlspi_config_t kTestSpiConfig[] = {
       {
           .bus_id = 0,
           .cs_count = 2,

@@ -71,7 +71,7 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
   AmlSpi(zx_device_t* device, fdf::MmioBuffer mmio,
          fidl::WireSyncClient<fuchsia_hardware_registers::Device> reset, uint32_t reset_mask,
          fbl::Array<ChipInfo> chips, zx::profile thread_profile, zx::interrupt interrupt,
-         const amlspi_config_t& config)
+         const amlogic_spi::amlspi_config_t& config)
       : DeviceType(device),
         mmio_(std::move(mmio)),
         reset_(std::move(reset)),
@@ -81,7 +81,7 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
         interrupt_(std::move(interrupt)),
         config_(config) {}
 
-  static fbl::Array<ChipInfo> InitChips(amlspi_config_t* config, zx_device_t* device);
+  static fbl::Array<ChipInfo> InitChips(amlogic_spi::amlspi_config_t* config, zx_device_t* device);
   void DumpState() TA_REQ(bus_lock_);
 
   void Exchange8(const uint8_t* txdata, uint8_t* out_rxdata, size_t size) TA_REQ(bus_lock_);
@@ -116,7 +116,7 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
   bool need_reset_ TA_GUARDED(bus_lock_) = false;
   zx::profile thread_profile_;
   zx::interrupt interrupt_;
-  const amlspi_config_t config_;
+  const amlogic_spi::amlspi_config_t config_;
   // Protects mmio_ and need_reset_.
   fbl::Mutex bus_lock_;
   // Protects registered_vmos members of chips_.
