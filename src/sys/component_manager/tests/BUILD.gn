@@ -22,7 +22,6 @@ group("tests") {
     "hub:hub_integration_test",
     "namespace_capabilities:tests",
     "panic-test:component_manager_panic_test",
-    "realm:realm_integration_test",
     "reboot_on_terminate:tests",
     "resolvers:tests",
     "rights:tests",
@@ -34,6 +33,12 @@ group("tests") {
     "structured_config:tests",
     "utc-time:tests",
   ]
+
+  # TODO(https://fxbug.dev/99342): Fix realm_integration_test in coverage and
+  # re-enable.
+  if (!is_coverage) {
+    deps += [ "realm:realm_integration_test" ]
+  }
 }
 
 cts_rustc_binary("trigger_bin") {
