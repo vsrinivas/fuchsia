@@ -74,9 +74,9 @@ impl BlockBackend for MemoryBackend {
         });
     }
 
-    async fn read<'a>(&self, request: Request<'a>) -> Result<(), Error> {
+    async fn read<'a, 'b>(&self, request: Request<'a, 'b>) -> Result<(), Error> {
         let mut offset = request.sector.to_bytes().unwrap() as usize;
-        for range in request.ranges {
+        for range in request.ranges.into_iter() {
             let top = offset.checked_add(range.len()).unwrap();
             if top > self.0.borrow().len() {
                 return Err(anyhow!(
@@ -98,9 +98,9 @@ impl BlockBackend for MemoryBackend {
         Ok(())
     }
 
-    async fn write<'a>(&self, request: Request<'a>) -> Result<(), Error> {
+    async fn write<'a, 'b>(&self, request: Request<'a, 'b>) -> Result<(), Error> {
         let mut offset = request.sector.to_bytes().unwrap() as usize;
-        for range in request.ranges {
+        for range in request.ranges.into_iter() {
             let top = offset.checked_add(range.len()).unwrap();
             if top > self.0.borrow().len() {
                 return Err(anyhow!(

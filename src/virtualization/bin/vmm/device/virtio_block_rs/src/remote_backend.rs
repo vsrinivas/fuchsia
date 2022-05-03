@@ -34,13 +34,13 @@ impl RemoteBackend {
         Ok(Self { block_client: RemoteBlockClient::new(channel).await? })
     }
 
-    async fn read_range<'a>(&self, offset: u64, range: DeviceRange<'a>) -> Result<(), Error> {
+    async fn read_range<'a, 'b>(&self, offset: u64, range: DeviceRange<'a>) -> Result<(), Error> {
         let buffer = self.build_mutable_buffer_slice(offset, &range)?;
         self.block_client.read_at(buffer, offset).await?;
         Ok(())
     }
 
-    async fn write_range<'a>(&self, offset: u64, range: DeviceRange<'a>) -> Result<(), Error> {
+    async fn write_range<'a, 'b>(&self, offset: u64, range: DeviceRange<'a>) -> Result<(), Error> {
         let buffer = self.build_buffer_slice(offset, &range)?;
         self.block_client.write_at(buffer, offset).await?;
         Ok(())
@@ -91,7 +91,7 @@ impl BlockBackend for RemoteBackend {
         })
     }
 
-    async fn read<'a>(&self, request: Request<'a>) -> Result<(), Error> {
+    async fn read<'a, 'b>(&self, request: Request<'a, 'b>) -> Result<(), Error> {
         let mut offset = request.sector.to_bytes().unwrap();
         try_join_all(request.ranges.iter().cloned().map(|range| {
             let len = range.len() as u64;
@@ -103,7 +103,7 @@ impl BlockBackend for RemoteBackend {
         Ok(())
     }
 
-    async fn write<'a>(&self, request: Request<'a>) -> Result<(), Error> {
+    async fn write<'a, 'b>(&self, request: Request<'a, 'b>) -> Result<(), Error> {
         let mut offset = request.sector.to_bytes().unwrap();
         try_join_all(request.ranges.iter().cloned().map(|range| {
             let len = range.len() as u64;

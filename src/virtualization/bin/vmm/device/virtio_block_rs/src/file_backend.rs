@@ -38,7 +38,7 @@ impl FileBackend {
     /// Reads a single DeviceRange from the file.
     ///
     /// The caller must ensure that `DeviceRange` is no longer that `fidl_fuchsia_io::MAX_BUF`.
-    async fn read_range<'a>(&self, offset: u64, range: DeviceRange<'a>) -> Result<(), Error> {
+    async fn read_range<'a, 'b>(&self, offset: u64, range: DeviceRange<'a>) -> Result<(), Error> {
         assert!(range.len() <= MAX_BUF as usize);
         let bytes = {
             let _ticket = self.semaphore.acquire().await;
@@ -64,7 +64,7 @@ impl FileBackend {
     /// Writes a single DeviceRange to the file.
     ///
     /// The caller must ensure that `DeviceRange` is no longer that `fidl_fuchsia_io::MAX_BUF`.
-    async fn write_range<'a>(&self, offset: u64, range: DeviceRange<'a>) -> Result<(), Error> {
+    async fn write_range<'a, 'b>(&self, offset: u64, range: DeviceRange<'a>) -> Result<(), Error> {
         assert!(range.len() <= MAX_BUF as usize);
         // SAFETY: the range comes from the virtio chain and alignment is verified by `try_ptr`.
         let slice = unsafe { std::slice::from_raw_parts(range.try_ptr().unwrap(), range.len()) };
@@ -94,7 +94,7 @@ impl BlockBackend for FileBackend {
         });
     }
 
-    async fn read<'a>(&self, request: Request<'a>) -> Result<(), Error> {
+    async fn read<'a, 'b>(&self, request: Request<'a, 'b>) -> Result<(), Error> {
         try_join_all(
             request
                 .ranges_bounded(MAX_BUF as usize)
@@ -104,7 +104,7 @@ impl BlockBackend for FileBackend {
         Ok(())
     }
 
-    async fn write<'a>(&self, request: Request<'a>) -> Result<(), Error> {
+    async fn write<'a, 'b>(&self, request: Request<'a, 'b>) -> Result<(), Error> {
         try_join_all(
             request
                 .ranges_bounded(MAX_BUF as usize)

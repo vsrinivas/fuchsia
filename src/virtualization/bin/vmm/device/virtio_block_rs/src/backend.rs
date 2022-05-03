@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::wire, anyhow::Error, async_trait::async_trait, virtio_device::mem::DeviceRange};
+use {
+    crate::wire, anyhow::Error, async_trait::async_trait, std::borrow::Cow,
+    virtio_device::mem::DeviceRange,
+};
 
 /// Represents a 512 byte sector.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -102,16 +105,20 @@ impl<'a, I: Iterator<Item = DeviceRange<'a>>> Iterator for RangesBounded<'a, I> 
 }
 
 #[derive(Debug, Clone)]
-pub struct Request<'a> {
+pub struct Request<'a, 'b> {
     /// The offset, in bytes, from the start of the device to access.
     pub sector: Sector,
 
     /// A set of device memory regions that will be read from or written to based on the
     /// operation.
-    pub ranges: &'a [DeviceRange<'a>],
+    pub ranges: Cow<'b, [DeviceRange<'a>]>,
 }
 
-impl<'a> Request<'a> {
+impl<'a, 'b> Request<'a, 'b> {
+    pub fn from_ref(ranges: &'b [DeviceRange<'a>], sector: Sector) -> Self {
+        Self { ranges: Cow::Borrowed(ranges), sector }
+    }
+
     /// Returns an unbounded iterator of the ranges in a Request that includes an accumulated
     /// disk offset.
     ///
@@ -133,19 +140,19 @@ impl<'a> Request<'a> {
     /// ```
     #[allow(dead_code)]
     pub fn ranges_unbounded(
-        &self,
-    ) -> RangesBounded<'a, std::iter::Cloned<std::slice::Iter<'a, DeviceRange<'a>>>> {
+        &'b self,
+    ) -> RangesBounded<'a, std::iter::Cloned<std::slice::Iter<'b, DeviceRange<'a>>>> {
         self.ranges_bounded(usize::MAX)
     }
 
     /// Returns an iterator over the `DeviceRange`s in this request, splitting any ranges that
     /// have a length that exceeds `bound`.
     pub fn ranges_bounded(
-        &self,
+        &'b self,
         bound: usize,
-    ) -> RangesBounded<'a, std::iter::Cloned<std::slice::Iter<'a, DeviceRange<'a>>>> {
+    ) -> RangesBounded<'a, std::iter::Cloned<std::slice::Iter<'b, DeviceRange<'a>>>> {
         RangesBounded {
-            iter: self.ranges.iter().cloned(),
+            iter: self.ranges.as_ref().iter().cloned(),
             current: None,
             offset: self.sector.to_bytes().unwrap(),
             bound,
@@ -159,13 +166,13 @@ pub trait BlockBackend {
     async fn get_attrs(&self) -> Result<DeviceAttrs, Error>;
 
     /// Read bytes from a starting sector into a set of DeviceRanges.
-    async fn read<'a>(&self, request: Request<'a>) -> Result<(), Error>;
+    async fn read<'a, 'b>(&self, request: Request<'a, 'b>) -> Result<(), Error>;
 
     /// Writes bytes from a starting sector into a set of DeviceRanges.
     ///
     /// Writes will be considered volatile after this operation completes, up until a subsequent
     /// flush command.
-    async fn write<'a>(&self, requests: Request<'a>) -> Result<(), Error>;
+    async fn write<'a, 'b>(&self, requests: Request<'a, 'b>) -> Result<(), Error>;
 
     /// Commit any pending writes to non-volatile storage. The driver may consider a write to be
     /// durable after this operation completes.
@@ -185,7 +192,7 @@ mod tests {
             mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap(),
             mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap(),
         ];
-        let request = Request { ranges: ranges.as_slice(), sector: Sector::from_raw_sector(0) };
+        let request = Request::from_ref(ranges.as_slice(), Sector::from_raw_sector(0));
 
         // Create an iterator with a sector size bound. Since we only created sector-sized ranges
         // this should produce the same ranges as our input.
@@ -203,7 +210,7 @@ mod tests {
         // Create a Request with 3 ranges.
         let mem = IdentityDriverMem::new();
         let ranges = vec![mem.new_range(4 * wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap()];
-        let request = Request { ranges: ranges.as_slice(), sector: Sector::from_raw_sector(0) };
+        let request = Request::from_ref(ranges.as_slice(), Sector::from_raw_sector(0));
 
         // Create an iterator with a sector size bound. We have one large range as an input so
         // we expect to have that split up into 4 sector-sized ranges.
@@ -229,7 +236,7 @@ mod tests {
             mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap(),
             mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap(),
         ];
-        let request = Request { ranges: ranges.as_slice(), sector: Sector::from_raw_sector(0) };
+        let request = Request::from_ref(ranges.as_slice(), Sector::from_raw_sector(0));
 
         // Check that the unbounded iterator is the same as the slice iterator but with the
         // accumulated offset.
@@ -248,7 +255,7 @@ mod tests {
         // Create a Request with 3 ranges.
         let mem = IdentityDriverMem::new();
         let ranges = vec![mem.new_range(4 * wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap()];
-        let request = Request { ranges: ranges.as_slice(), sector: Sector::from_raw_sector(0) };
+        let request = Request::from_ref(ranges.as_slice(), Sector::from_raw_sector(0));
 
         // Create an iterator with a sector size bound. Since we only created sector-sized ranges
         // this should produce the same ranges as our input.

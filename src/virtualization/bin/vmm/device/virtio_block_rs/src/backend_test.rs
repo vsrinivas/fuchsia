@@ -112,7 +112,7 @@ pub async fn test_read_per_sector_ranges<T: BackendTest>() -> Result<(), Error> 
         mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap(),
         mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap(),
     ];
-    let request = Request { ranges: ranges.as_slice(), sector: Sector::from_raw_sector(0) };
+    let request = Request::from_ref(ranges.as_slice(), Sector::from_raw_sector(0));
 
     // Create the backend and process the request.
     backend.read(request).await?;
@@ -135,7 +135,7 @@ pub async fn test_read_multiple_sectors_per_range<T: BackendTest>() -> Result<()
     // Create a request to read all 3 sectors into a single descriptor.
     let mem = IdentityDriverMem::new();
     let range = mem.new_range(3 * wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap();
-    let request = Request { ranges: slice::from_ref(&range), sector: Sector::from_raw_sector(0) };
+    let request = Request::from_ref(slice::from_ref(&range), Sector::from_raw_sector(0));
 
     // Process the request.
     backend.read(request).await?;
@@ -164,7 +164,7 @@ pub async fn test_read_subsector_range<T: BackendTest>() -> Result<(), Error> {
         mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize / 4).unwrap(),
         mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize / 4).unwrap(),
     ];
-    let request = Request { ranges: ranges.as_slice(), sector: Sector::from_raw_sector(0) };
+    let request = Request::from_ref(ranges.as_slice(), Sector::from_raw_sector(0));
 
     // Process the request.
     backend.read(request).await?;
@@ -195,7 +195,7 @@ pub async fn test_read_large<T: BackendTest>() -> Result<(), Error> {
     // Create a request to read all the sectors colored above.
     let mem = IdentityDriverMem::new();
     let range = mem.new_range(BYTE_SIZE as usize).unwrap();
-    let request = Request { ranges: slice::from_ref(&range), sector: Sector::from_raw_sector(0) };
+    let request = Request::from_ref(slice::from_ref(&range), Sector::from_raw_sector(0));
 
     // Process the request.
     backend.read(request).await?;
@@ -223,10 +223,10 @@ pub async fn test_read_concurrent<T: BackendTest>() -> Result<(), Error> {
         .collect();
     let futures: Vec<_> = (0..CONCURRENCY_COUNT)
         .map(|sector| {
-            backend.read(Request {
-                ranges: slice::from_ref(&ranges[sector as usize]),
-                sector: Sector::from_raw_sector(sector),
-            })
+            backend.read(Request::from_ref(
+                slice::from_ref(&ranges[sector as usize]),
+                Sector::from_raw_sector(sector),
+            ))
         })
         .collect();
 
@@ -248,7 +248,7 @@ pub async fn test_write_per_sector_ranges<T: BackendTest>() -> Result<(), Error>
         mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap(),
         mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap(),
     ];
-    let request = Request { ranges: ranges.as_slice(), sector: Sector::from_raw_sector(0) };
+    let request = Request::from_ref(ranges.as_slice(), Sector::from_raw_sector(0));
 
     // Fill each range with a different byte value.
     color_range(&ranges[0], 0xaa);
@@ -281,7 +281,7 @@ pub async fn test_write_multiple_sectors_per_range<T: BackendTest>() -> Result<(
         color_range(&sector1, 0xbb);
         color_range(&sector2, 0xcc);
     }
-    let request = Request { ranges: ranges.as_slice(), sector: Sector::from_raw_sector(0) };
+    let request = Request::from_ref(ranges.as_slice(), Sector::from_raw_sector(0));
 
     // Execute the write.
     let (backend, mut controller) = T::create_with_sectors(Sector::from_raw_sector(3)).await?;
@@ -304,7 +304,7 @@ pub async fn test_write_subsector_range<T: BackendTest>() -> Result<(), Error> {
         mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize / 4).unwrap(),
         mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize / 4).unwrap(),
     ];
-    let request = Request { ranges: ranges.as_slice(), sector: Sector::from_raw_sector(0) };
+    let request = Request::from_ref(ranges.as_slice(), Sector::from_raw_sector(0));
 
     // Color them all the same.
     color_range(&ranges[0], 0xaa);
@@ -333,7 +333,7 @@ pub async fn test_write_large<T: BackendTest>() -> Result<(), Error> {
     // Create a request with a single large descriptor.
     let mem = IdentityDriverMem::new();
     let range = mem.new_range(BYTE_SIZE as usize).unwrap();
-    let request = Request { ranges: slice::from_ref(&range), sector: Sector::from_raw_sector(0) };
+    let request = Request::from_ref(slice::from_ref(&range), Sector::from_raw_sector(0));
 
     // Fill the descrioptor memory with a specific value.
     color_range(&range, 0xcd);
@@ -370,10 +370,10 @@ pub async fn test_write_concurrent<T: BackendTest>() -> Result<(), Error> {
         T::create_with_sectors(Sector::from_raw_sector(CONCURRENCY_COUNT)).await?;
     let futures: Vec<_> = (0..CONCURRENCY_COUNT)
         .map(|sector| {
-            backend.write(Request {
-                ranges: slice::from_ref(&ranges[sector as usize]),
-                sector: Sector::from_raw_sector(sector),
-            })
+            backend.write(Request::from_ref(
+                slice::from_ref(&ranges[sector as usize]),
+                Sector::from_raw_sector(sector),
+            ))
         })
         .collect();
 
@@ -398,19 +398,13 @@ pub async fn test_read_write_loop<T: BackendTest>() -> Result<(), Error> {
             let write_range = mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap();
             color_range(&write_range, i as u8);
             backend
-                .write(Request {
-                    ranges: slice::from_ref(&write_range),
-                    sector: Sector::from_raw_sector(0),
-                })
+                .write(Request::from_ref(slice::from_ref(&write_range), Sector::from_raw_sector(0)))
                 .await?;
         }
         {
             let read_range = mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap();
             backend
-                .read(Request {
-                    ranges: slice::from_ref(&read_range),
-                    sector: Sector::from_raw_sector(0),
-                })
+                .read(Request::from_ref(slice::from_ref(&read_range), Sector::from_raw_sector(0)))
                 .await?;
             check_range(&read_range, i as u8);
         }

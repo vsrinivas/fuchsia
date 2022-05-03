@@ -264,10 +264,8 @@ impl BlockDevice {
         }
 
         // Dispatch the request to the backend.
-        let request = Request {
-            sector: Sector::from_raw_sector(header.sector.get()),
-            ranges: ranges.as_slice(),
-        };
+        let request =
+            Request::from_ref(ranges.as_slice(), Sector::from_raw_sector(header.sector.get()));
 
         let block_status = match self.backend.read(request).await {
             Err(_e) => wire::VirtioBlockStatus::IoError,
@@ -306,7 +304,7 @@ impl BlockDevice {
         while let Some(range) = chain.next().transpose()? {
             ranges.push(range);
         }
-        let request = Request { sector, ranges: ranges.as_slice() };
+        let request = Request::from_ref(ranges.as_slice(), sector);
         if let Err(_e) = self.backend.write(request).await {
             Ok((WritableChain::from_readable(chain)?, wire::VirtioBlockStatus::IoError))
         } else {

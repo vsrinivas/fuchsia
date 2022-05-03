@@ -37,7 +37,7 @@ impl BlockBackend for QcowBackend {
         });
     }
 
-    async fn read<'a>(&self, request: Request<'a>) -> Result<(), Error> {
+    async fn read<'a, 'b>(&self, request: Request<'a, 'b>) -> Result<(), Error> {
         let offset = request.sector.to_bytes().unwrap();
         let length = request.ranges.iter().fold(0, |a, x| a + x.len()) as u64;
         let linear_range = std::ops::Range { start: offset, end: offset + length };
@@ -80,7 +80,7 @@ impl BlockBackend for QcowBackend {
         Ok(())
     }
 
-    async fn write<'a>(&self, _request: Request<'a>) -> Result<(), Error> {
+    async fn write<'a, 'b>(&self, _request: Request<'a, 'b>) -> Result<(), Error> {
         Err(anyhow!("Not Implemented"))
     }
 
@@ -117,7 +117,7 @@ mod tests {
             mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap(),
             mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap(),
         ];
-        let request = Request { ranges: ranges.as_slice(), sector: Sector::from_raw_sector(0) };
+        let request = Request::from_ref(ranges.as_slice(), Sector::from_raw_sector(0));
 
         // Create the backend and process the request.
         let backend = create_backend();
@@ -134,8 +134,7 @@ mod tests {
         // Create a request to read all 3 sectors into a single descriptor.
         let mem = IdentityDriverMem::new();
         let range = mem.new_range(3 * wire::VIRTIO_BLOCK_SECTOR_SIZE as usize).unwrap();
-        let request =
-            Request { ranges: std::slice::from_ref(&range), sector: Sector::from_raw_sector(0) };
+        let request = Request::from_ref(std::slice::from_ref(&range), Sector::from_raw_sector(0));
 
         // Create the backend and process the request.
         let backend = create_backend();
@@ -159,7 +158,7 @@ mod tests {
             mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize / 4).unwrap(),
             mem.new_range(wire::VIRTIO_BLOCK_SECTOR_SIZE as usize / 4).unwrap(),
         ];
-        let request = Request { ranges: ranges.as_slice(), sector: Sector::from_raw_sector(0) };
+        let request = Request::from_ref(ranges.as_slice(), Sector::from_raw_sector(0));
 
         // Create the backend and process the request.
         let backend = create_backend();
