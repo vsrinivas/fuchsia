@@ -1523,14 +1523,14 @@ zx_status_t AmlSdmmc::Bind() {
 }
 
 zx_status_t AmlSdmmc::Create(void* ctx, zx_device_t* parent) {
-  zx_status_t status = ZX_OK;
   auto pdev = ddk::PDev::FromFragment(parent);
   if (!pdev.is_valid()) {
-    AML_SDMMC_ERROR("Could not get pdev: %d", status);
+    AML_SDMMC_ERROR("Could not get pdev.");
     return ZX_ERR_NO_RESOURCES;
   }
 
   zx::bti bti;
+  zx_status_t status = ZX_OK;
   if ((status = pdev.GetBti(0, &bti)) != ZX_OK) {
     AML_SDMMC_ERROR("Failed to get BTI: %d", status);
     return status;
