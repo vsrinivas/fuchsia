@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::target::{Target, TargetAddrEntry},
+    crate::target::Target,
+    crate::MDNS_MAX_AGE,
     addr::TargetAddr,
     anyhow::Result,
     async_trait::async_trait,
     bridge::DaemonError,
+    chrono::Utc,
     ffx_daemon_core::events::{self, EventSynthesizer},
     ffx_daemon_events::{DaemonEvent, TargetEvent, TargetInfo},
     fidl_fuchsia_developer_ffx as bridge,
@@ -152,7 +154,13 @@ impl TargetCollection {
             to_update.update_last_response(new_target.last_response());
             let mut addrs = new_target.addrs.borrow().iter().cloned().collect::<Vec<_>>();
             addrs.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
-            to_update.addrs_extend(addrs.drain(..).collect::<Vec<TargetAddrEntry>>());
+            to_update.addrs_extend(addrs.into_iter());
+            to_update.addrs.borrow_mut().retain(|t| {
+                let is_too_old = Utc::now().signed_duration_since(t.timestamp).num_milliseconds()
+                    as i128
+                    > MDNS_MAX_AGE.as_millis() as i128;
+                !is_too_old
+            });
             to_update.update_boot_timestamp(new_target.boot_timestamp_nanos());
 
             to_update.update_connection_state(|_| new_target.get_connection_state());
@@ -165,7 +173,7 @@ impl TargetCollection {
                     .push(DaemonEvent::UpdatedTarget(new_target.target_info()))
                     .unwrap_or_else(|e| log::warn!("unalbe to push target update event: {}", e));
             }
-            to_update.clone()
+            to_update
         } else {
             self.targets.borrow_mut().insert(new_target.id(), new_target.clone());
 
@@ -379,7 +387,7 @@ mod tests {
     use {
         super::*,
         crate::target::clone_target,
-        crate::target::TargetAddrType,
+        crate::target::{TargetAddrEntry, TargetAddrType},
         chrono::{TimeZone, Utc},
         ffx_daemon_events::TargetConnectionState,
         fuchsia_async::Task,
@@ -426,6 +434,37 @@ mod tests {
             Some(_) => panic!("string lookup should return None"),
             _ => (),
         }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_merge_evict_old_addresses() {
+        let tc = TargetCollection::new_with_queue();
+        let nodename = String::from("schplew");
+        let t = Target::new_with_time(&nodename, Utc.ymd(2014, 10, 31).and_hms(9, 10, 12));
+        let a1 = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
+        let a2 = IpAddr::V6(Ipv6Addr::new(
+            0xfe80, 0xcafe, 0xf00d, 0xf000, 0xb412, 0xb455, 0x1337, 0xfeed,
+        ));
+        let tae1 = TargetAddrEntry {
+            addr: (a1, 1).into(),
+            timestamp: Utc.ymd(2014, 10, 31).and_hms(9, 10, 12),
+            addr_type: TargetAddrType::Ssh,
+        };
+        let tae2 = TargetAddrEntry {
+            addr: (a2, 1).into(),
+            timestamp: Utc.ymd(2014, 10, 31).and_hms(9, 10, 12),
+            addr_type: TargetAddrType::Ssh,
+        };
+        t.addrs.borrow_mut().insert(tae1);
+        t.addrs.borrow_mut().insert(tae2);
+        tc.merge_insert(clone_target(&t));
+        let t2 = Target::new_with_time(&nodename, Utc.ymd(2014, 11, 2).and_hms(13, 2, 1));
+        let a1 = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 10));
+        t2.addrs_insert((a1.clone(), 1).into());
+        let merged_target = tc.merge_insert(t2);
+        assert_eq!(merged_target.nodename(), Some(nodename));
+        assert_eq!(merged_target.addrs().len(), 1);
+        assert!(merged_target.addrs().contains(&(a1, 1).into()));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
