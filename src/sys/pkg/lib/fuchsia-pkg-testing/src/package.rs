@@ -459,7 +459,7 @@ impl PackageBuilder {
     pub fn api_level(self, api_level: u64) -> Result<Self, Error> {
         for v in version_history::VERSION_HISTORY {
             if v.api_level == api_level {
-                return Ok(self.abi_revision(v.abi_revision));
+                return Ok(self.abi_revision(v.abi_revision.0));
             }
         }
 
@@ -564,6 +564,7 @@ impl PackageBuilder {
                 .find(|v| v.api_level == 7)
                 .expect("API Level 7 to exist")
                 .abi_revision
+                .0
         };
 
         // indir contains temporary inputs to package creation
@@ -833,7 +834,7 @@ mod tests {
             fs::create_dir(dir.path().join("meta/fuchsia.abi")).unwrap();
             fs::write(
                 dir.path().join("meta/fuchsia.abi/abi-revision"),
-                &abi_revision.to_le_bytes(),
+                &abi_revision.0.to_le_bytes(),
             )
             .unwrap();
 
@@ -845,7 +846,7 @@ mod tests {
         let from_dir = Package::from_dir(root.path()).await.unwrap();
 
         let pkg = PackageBuilder::new("asdf")
-            .abi_revision(abi_revision)
+            .abi_revision(abi_revision.0)
             .add_resource_at("data/hello", "world".as_bytes())
             .build()
             .await

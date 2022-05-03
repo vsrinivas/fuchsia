@@ -254,7 +254,7 @@ impl PackageBuilder {
     pub fn api_level(&mut self, api_level: u64) -> Result<()> {
         for v in version_history::VERSION_HISTORY {
             if v.api_level == api_level {
-                self.abi_revision(v.abi_revision);
+                self.abi_revision(v.abi_revision.0);
                 return Ok(());
             }
         }
@@ -391,7 +391,7 @@ impl std::ops::Deref for ABIRevision {
 
 impl From<&version_history::Version> for ABIRevision {
     fn from(version: &version_history::Version) -> Self {
-        ABIRevision(version.abi_revision)
+        ABIRevision(version.abi_revision.0)
     }
 }
 
@@ -485,7 +485,7 @@ mod tests {
         let abi_revision_data = far_reader.read_file("meta/fuchsia.abi/abi-revision").unwrap();
         let abi_revision_data: [u8; 8] = abi_revision_data.try_into().unwrap();
         let abi_revision = u64::from_le_bytes(abi_revision_data);
-        assert_eq!(abi_revision, version_history::LATEST_VERSION.abi_revision);
+        assert_eq!(abi_revision, version_history::LATEST_VERSION.abi_revision.0);
     }
 
     #[test]
@@ -499,7 +499,7 @@ mod tests {
         let published_name = "some_other_pkg_name";
         first_builder.published_name(published_name);
         // Set a non-default ABI revision
-        let fake_abi_revision = version_history::LATEST_VERSION.abi_revision + 1;
+        let fake_abi_revision = version_history::LATEST_VERSION.abi_revision.0 + 1;
         first_builder.abi_revision(fake_abi_revision);
 
         // Create a file to write to the package metafar

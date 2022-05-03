@@ -98,7 +98,7 @@ impl<'a> RepositoryBuilder<'a> {
             .options(fdio::SpawnOptions::CLONE_ALL - fdio::SpawnOptions::CLONE_NAMESPACE)
             .arg("pm")?
             .arg("-abi-revision")?
-            .arg(version.abi_revision.to_string())?
+            .arg(version.abi_revision.0.to_string())?
             .arg("publish")?
             .arg("-lp")?
             .arg("-f=/in/manifests.list")?

@@ -4,7 +4,7 @@
 
 use serde::{
     de::{Error, Unexpected},
-    Deserialize, Serialize,
+    Deserialize, Deserializer, Serialize, Serializer,
 };
 
 const VERSION_HISTORY_BYTES: &[u8] = include_bytes!(env!("SDK_VERSION_HISTORY"));
@@ -12,12 +12,47 @@ const VERSION_HISTORY_SCHEMA_ID: &str = "https://fuchsia.dev/schema/version_hist
 const VERSION_HISTORY_NAME: &str = "Platform version map";
 const VERSION_HISTORY_TYPE: &str = "version_history";
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct ABIRevision {
+    pub value: u64,
+}
+
+impl ABIRevision {
+    pub fn new(u: u64) -> ABIRevision {
+        ABIRevision { value: u }
+    }
+}
+
+impl Serialize for ABIRevision {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        format!("{:#X}", self.value).serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for ABIRevision {
+    fn deserialize<D>(deserializer: D) -> Result<ABIRevision, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        if let Some(s) = s.strip_prefix("0x") {
+            u64::from_str_radix(&s, 16)
+        } else {
+            u64::from_str_radix(&s, 10)
+        }
+        .map_err(|_| D::Error::invalid_value(Unexpected::Str(&s), &"an unsigned integer"))
+        .map(|v| ABIRevision { value: v })
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Serialize, Deserialize)]
 pub struct Version {
     #[serde(with = "serde_u64")]
     pub api_level: u64,
-    #[serde(with = "serde_hex")]
-    pub abi_revision: u64,
+    pub abi_revision: ABIRevision,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -89,34 +124,6 @@ mod serde_u64 {
     }
 }
 
-// Helpers to serialize and deserialize hex strings into u64s.
-mod serde_hex {
-    use serde::{
-        de::{Error, Unexpected},
-        Deserialize, Deserializer, Serialize, Serializer,
-    };
-
-    pub fn serialize<S>(value: &u64, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        format!("{:#X}", value).serialize(serializer)
-    }
-
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<u64, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        if let Some(s) = s.strip_prefix("0x") {
-            u64::from_str_radix(&s, 16)
-        } else {
-            u64::from_str_radix(&s, 10)
-        }
-        .map_err(|_| D::Error::invalid_value(Unexpected::Str(&s), &"a hex unsigned integer"))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -124,7 +131,10 @@ mod tests {
     #[test]
     fn test_version_history_works() {
         let versions = version_history().unwrap();
-        assert_eq!(versions[0], Version { api_level: 4, abi_revision: 0x601665C5B1A89C7F })
+        assert_eq!(
+            versions[0],
+            Version { api_level: 4, abi_revision: ABIRevision::new(0x601665C5B1A89C7F) }
+        )
     }
 
     #[test]
@@ -150,8 +160,8 @@ mod tests {
         assert_eq!(
             parse_version_history(&expected_bytes[..]).unwrap(),
             vec![
-                Version { api_level: 1, abi_revision: 10 },
-                Version { api_level: 2, abi_revision: 0x20 },
+                Version { api_level: 1, abi_revision: ABIRevision::new(10) },
+                Version { api_level: 2, abi_revision: ABIRevision::new(0x20) },
             ],
         );
     }
@@ -223,12 +233,12 @@ mod tests {
             (
                 "1",
                 "some-revision",
-                "invalid value: string \"some-revision\", expected a hex unsigned integer at line 1 column 107",
+                "invalid value: string \"some-revision\", expected an unsigned integer at line 1 column 107",
             ),
             (
                 "1",
                 "-1",
-                "invalid value: string \"-1\", expected a hex unsigned integer at line 1 column 96",
+                "invalid value: string \"-1\", expected an unsigned integer at line 1 column 96",
             ),
         ] {
             let expected_bytes = serde_json::to_vec(&serde_json::json!({

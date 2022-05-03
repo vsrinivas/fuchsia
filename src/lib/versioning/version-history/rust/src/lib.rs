@@ -9,6 +9,15 @@ pub const VERSION_HISTORY: &[Version] = &version_history_macro::declare_version_
 /// LATEST_VERSION is the latest known SDK version.
 pub const LATEST_VERSION: &Version = &version_history_macro::latest_sdk_version!();
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Copy, Clone)]
+pub struct ABIRevision(pub u64);
+
+impl ABIRevision {
+    pub fn new(u: u64) -> ABIRevision {
+        ABIRevision(u)
+    }
+}
+
 /// Version is a mapping between the supported API level and the ABI revisions.
 ///
 /// See https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0002_platform_versioning for more
@@ -21,12 +30,12 @@ pub struct Version {
 
     /// The ABI revision denotes the semantics of the Fuchsia System Interface that an application
     /// expects the platform to provide.
-    pub abi_revision: u64,
+    pub abi_revision: ABIRevision,
 }
 
 /// Returns true if the given abi_revision is listed in the VERSION_HISTORY of
 /// known SDK versions.
-pub fn is_valid_abi_revision(abi_revision: u64) -> bool {
+pub fn is_valid_abi_revision(abi_revision: ABIRevision) -> bool {
     VERSION_HISTORY.iter().any(|v| v.abi_revision == abi_revision)
 }
 
@@ -41,7 +50,10 @@ mod tests {
         version_history_shared::version_history()
             .unwrap()
             .into_iter()
-            .map(|v| Version { api_level: v.api_level, abi_revision: v.abi_revision })
+            .map(|v| Version {
+                api_level: v.api_level,
+                abi_revision: ABIRevision::new(v.abi_revision.value),
+            })
             .collect::<Vec<_>>()
     }
 
@@ -69,12 +81,12 @@ mod tests {
     // values which are not in the current VERSION_HISTORY list.
     proptest! {
         #[test]
-        fn test_invalid_abi_revision(abi_revision in any::<u64>().prop_filter("using u64 that isn't in VERSION_HISTORY", |abi_revision|
+        fn test_invalid_abi_revision(u in any::<u64>().prop_filter("using u64 that isn't in VERSION_HISTORY", |u|
             // The randomly chosen 'abi_revision' must not equal any of the
             // abi_revisions in the VERSION_HISTORY list.
-            VERSION_HISTORY.iter().all(|v| &v.abi_revision != abi_revision)
+            VERSION_HISTORY.iter().all(|v| v.abi_revision != ABIRevision::new(*u))
         )) {
-            assert!(!is_valid_abi_revision(abi_revision))
+            assert!(!is_valid_abi_revision(ABIRevision::new(u)))
         }
     }
 }
