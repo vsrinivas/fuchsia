@@ -119,11 +119,6 @@ config("v0_symbol_mangling") {
   }
 }
 
-# TODO(fxbug.dev/76297) Remove this to re-enable mutable-noalias.
-config("no_mutable_noalias") {
-  rustflags = [ "-Zmutable-noalias=off" ]
-}
-
 config("allow_unknown_lints") {
   rustflags = [ "-Aunknown-lints" ]
 }
