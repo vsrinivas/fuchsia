@@ -105,6 +105,25 @@ func TestEmulatorWorksWithFfx(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	emulatorDone := make(chan error)
+	defer func() {
+		for err := range emulatorDone {
+			if err != nil {
+				t.Error(err)
+			}
+		}
+	}()
+
+	// Ensure that cancel() is run before we try to drain the emulator error
+	// channel.
+	defer cancel()
+
+	go func() {
+		_, err := i.Wait()
+		emulatorDone <- err
+		close(emulatorDone)
+	}()
+
 	sourceRootRelativeDir := filepath.Join(
 		hostOutDir,
 		"src",
@@ -162,11 +181,6 @@ func TestEmulatorWorksWithFfx(t *testing.T) {
 		"target",
 		"wait",
 	); err != nil {
-		t.Fatal(err)
-	}
-
-	cancel()
-	if _, err := i.Wait(); err != nil {
 		t.Fatal(err)
 	}
 }
