@@ -1,6 +1,6 @@
 {
     include: [
-        "//src/sys/test_manager/debug_data/default.shard.cml",
+        "//sdk/lib/sys/testing/coverage.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "syslog/client.shard.cml",
     ],

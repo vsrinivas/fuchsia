@@ -1,3 +1,3 @@
 {
-    include: [ "//src/sys/test_manager/debug_data/default.shard.cml" ],
+    include: [ "//sdk/lib/sys/testing/coverage.shard.cml" ],
 }

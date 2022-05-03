@@ -1,7 +1,7 @@
 {
     include: [
+        "//sdk/lib/sys/testing/coverage.shard.cml",
         "//sdk/lib/syslog/client.shard.cml",
-        "//src/sys/test_manager/debug_data/default.shard.cml",
         "sys/testing/elf_test_runner.shard.cml",
     ],
     program: {
