@@ -4,13 +4,19 @@
 
 #![cfg(test)]
 
-use std::{convert::TryFrom as _, num::NonZeroU16, str::FromStr as _};
+use std::{
+    convert::{TryFrom as _, TryInto as _},
+    num::NonZeroU16,
+    str::FromStr as _,
+};
 
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_dhcp as net_dhcp;
 use fidl_fuchsia_net_dhcpv6 as net_dhcpv6;
+use fidl_fuchsia_net_ext as fnet_ext;
 use fidl_fuchsia_net_interfaces as net_interfaces;
 use fidl_fuchsia_net_name as net_name;
+use fidl_fuchsia_testing as ftesting;
 use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
 
@@ -461,7 +467,7 @@ fn answer_for_hostname(
     use trust_dns_proto::rr::{DNSClass, Name, RData, Record, RecordType};
 
     let mut answer = Record::new();
-    let fidl_fuchsia_net_ext::IpAddress(addr) = resolved_addr.into();
+    let fnet_ext::IpAddress(addr) = resolved_addr.into();
     let _: &mut Record = match addr {
         std::net::IpAddr::V4(addr) => {
             answer.set_rr_type(RecordType::A).set_data(Some(RData::A(addr)))
@@ -495,8 +501,8 @@ async fn successfully_retrieves_ipv6_record_despite_ipv4_timeout() {
         )
         .expect("failed to create realm");
 
-    let fake_clock: fidl_fuchsia_testing::FakeClockControlProxy = realm
-        .connect_to_protocol::<fidl_fuchsia_testing::FakeClockControlMarker>()
+    let fake_clock: ftesting::FakeClockControlProxy = realm
+        .connect_to_protocol::<ftesting::FakeClockControlMarker>()
         .expect("failed to connect to FakeClockControl");
     fake_clock.pause().await.expect("failed to pause fake clock");
 
@@ -622,7 +628,7 @@ async fn successfully_retrieves_ipv6_record_despite_ipv4_timeout() {
         .take_until(lookup_fut)
         .for_each(|()| async {
             let () = fake_clock
-                .advance(&mut fidl_fuchsia_testing::Increment::Determined(
+                .advance(&mut ftesting::Increment::Determined(
                     // Advance the fake clock by a larger amount than the real time we are waiting
                     // in order to speed up the test run-time.
                     zx::Duration::from_seconds(1).into_nanos(),
@@ -682,8 +688,8 @@ async fn fallback_on_error_response_code() {
         let erroring_dns_server: std::net::SocketAddr = std_socket_addr!("127.0.0.1:1234");
         let fallback_dns_server: std::net::SocketAddr = std_socket_addr!("127.0.0.2:5678");
         let mut dns_servers = [
-            fidl_fuchsia_net_ext::SocketAddress(erroring_dns_server).into(),
-            fidl_fuchsia_net_ext::SocketAddress(fallback_dns_server).into(),
+            fnet_ext::SocketAddress(erroring_dns_server).into(),
+            fnet_ext::SocketAddress(fallback_dns_server).into(),
         ];
         let lookup_admin = realm
             .connect_to_protocol::<net_name::LookupAdminMarker>()
@@ -819,7 +825,7 @@ async fn setup_dns_server(
     realm: &netemul::TestRealm<'_>,
     addr: std::net::SocketAddr,
 ) -> (fuchsia_async::net::UdpSocket, fuchsia_async::net::TcpListener) {
-    let mut dns_servers = [fidl_fuchsia_net_ext::SocketAddress(addr).into()];
+    let mut dns_servers = [fnet_ext::SocketAddress(addr).into()];
     let lookup_admin =
         realm.connect_to_protocol::<net_name::LookupAdminMarker>().expect("connect to protocol");
     let () = lookup_admin
@@ -1004,4 +1010,205 @@ async fn fallback_to_tcp_on_truncated_response() {
         () = udp_fut => panic!("mock UDP name server future should never complete"),
         () = tcp_fut => panic!("mock TCP name server future should never complete"),
     };
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn query_preferred_name_servers_first() {
+    use trust_dns_proto::op::{Message, MessageType, OpCode, ResponseCode};
+
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox
+        .create_netstack_realm_with::<Netstack2, _, _>(
+            "realm",
+            &[KnownServiceProvider::DnsResolver, KnownServiceProvider::FakeClock],
+        )
+        .expect("create realm");
+    // Pause the clock so that we can always trigger timeouts manually.
+    let fake_clock = realm
+        .connect_to_protocol::<ftesting::FakeClockControlMarker>()
+        .expect("connect to protocol");
+    fake_clock.pause().await.expect("pause fake clock");
+
+    struct NameServer {
+        addr: std::net::SocketAddr,
+        socket: fuchsia_async::net::UdpSocket,
+    }
+
+    impl NameServer {
+        async fn bind_in_realm(addr: std::net::SocketAddr, realm: &netemul::TestRealm<'_>) -> Self {
+            let socket = fuchsia_async::net::UdpSocket::bind_in_realm(realm, addr)
+                .await
+                .expect("create UDP socket and bind in realm");
+            Self { addr, socket }
+        }
+
+        async fn ignore_next_query(&self) {
+            let mut buf = [0; MAX_DNS_UDP_MESSAGE_LEN];
+            let (read, src_addr) =
+                self.socket.recv_from(&mut buf).await.expect("receive DNS query");
+            assert_eq!(src_addr.ip(), std::net::Ipv4Addr::LOCALHOST);
+            let query = Message::from_vec(&buf[..read]).expect("deserialize DNS query");
+            assert_eq!(query.message_type(), MessageType::Query);
+        }
+
+        async fn handle_next_query(
+            &self,
+            configure_response: impl Fn(&mut trust_dns_proto::op::Message),
+        ) {
+            let mut buf = [0; MAX_DNS_UDP_MESSAGE_LEN];
+            let (read, src_addr) =
+                self.socket.recv_from(&mut buf).await.expect("receive DNS query");
+            let query = Message::from_vec(&buf[..read]).expect("deserialize DNS query");
+            let mut response = Message::new();
+            configure_response(&mut response);
+            let _: &mut Message = response
+                .set_message_type(MessageType::Response)
+                .set_op_code(OpCode::Update)
+                .set_id(query.id())
+                .add_queries(query.queries().to_vec());
+            let response = response.to_vec().expect("serialize DNS response");
+            let written =
+                self.socket.send_to(&response, src_addr).await.expect("send DNS response");
+            assert_eq!(written, response.len());
+        }
+    }
+
+    // NB: this should match the setting for `ResolverOpts::num_concurrent_reqs` set
+    // in the DNS resolver, to ensure that the test is deterministic and doesn't
+    // rely on external factors to avoid flakiness.
+    const CONCURRENT_NAME_SERVER_QUERIES: usize = 10;
+    const QUERY_TIMEOUT: zx::Duration = zx::Duration::from_minutes(1);
+
+    let preferred_servers: Vec<_> =
+        futures::future::join_all((0..CONCURRENT_NAME_SERVER_QUERIES).map(|i| {
+            NameServer::bind_in_realm(
+                std::net::SocketAddr::new(
+                    std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST),
+                    (8000 + i).try_into().unwrap(),
+                ),
+                &realm,
+            )
+        }))
+        .await;
+    let secondary_server =
+        NameServer::bind_in_realm(std_socket_addr!("127.0.0.1:1234"), &realm).await;
+
+    // Configure name servers in priority order.
+    {
+        let mut dns_servers = preferred_servers
+            .iter()
+            .chain(std::iter::once(&secondary_server))
+            .map(|name_server| fnet_ext::SocketAddress(name_server.addr).into())
+            .collect::<Vec<_>>();
+        let lookup_admin = realm
+            .connect_to_protocol::<net_name::LookupAdminMarker>()
+            .expect("connect to protocol");
+        lookup_admin
+            .set_dns_servers(&mut dns_servers.iter_mut())
+            .await
+            .expect("call set DNS servers")
+            .expect("set DNS servers");
+    }
+
+    let name_servers_fut = async {
+        // First, expect a query to each of the preferred servers. Ignore the queries to
+        // cause Trust-DNS to note that queries to the preferred servers have failed.
+        for server in &preferred_servers {
+            server.ignore_next_query().await;
+        }
+
+        // Advance the clock in order to trigger the timeout on the first batch of
+        // queries.
+        fake_clock
+            .advance(&mut ftesting::Increment::Determined(QUERY_TIMEOUT.into_nanos()))
+            .await
+            .expect("call advance")
+            .expect("advance fake clock");
+
+        // Then, respond to a query to the other name server with a successful response,
+        // so Trust-DNS will note that a query to it has succeeded.
+        secondary_server
+            .handle_next_query(|response| {
+                let _: &mut Message = response
+                    .set_response_code(ResponseCode::NoError)
+                    .add_answer(answer_for_hostname(EXAMPLE_HOSTNAME, EXAMPLE_IPV4_ADDR));
+            })
+            .await;
+
+        // At this point, either Trust-DNS is (correctly) respecting its static
+        // configuration of preferred servers, and on the next query will again query
+        // the preferred servers first, or it is (incorrectly) performing sorting
+        // internally based on query stats, which would cause it to query the secondary
+        // server first, given it's responded successfully and the preferred servers
+        // haven't.
+        //
+        // Expect that the preferred name servers are queried first.
+        let preferred_queried =
+            futures::future::select_all(preferred_servers.iter().map(|server| {
+                server
+                    .handle_next_query(|message| {
+                        let _: &mut Message = message
+                            .set_response_code(ResponseCode::NoError)
+                            .add_answer(answer_for_hostname(EXAMPLE_HOSTNAME, EXAMPLE_IPV6_ADDR));
+                    })
+                    .boxed()
+            }))
+            .fuse();
+        let secondary_queried = secondary_server.ignore_next_query().fuse();
+        futures::pin_mut!(preferred_queried, secondary_queried);
+        futures::select! {
+            ((), i, _remaining) = preferred_queried =>
+                println!("observed a query to preferred name server {}, exiting", i),
+            () = secondary_queried => panic!("a preferred name server was not queried first"),
+        }
+    };
+
+    let name_lookup =
+        realm.connect_to_protocol::<net_name::LookupMarker>().expect("connect to protocol");
+    let lookup_fut = async {
+        // First, send a query that we expect to be answered by the non-preferred
+        // server. If Trust-DNS is (incorrectly) doing its own internal
+        // reprioritization, then the follow-up query will fail, because that server
+        // only responds once and then drops future queries.
+        let lookup_result = name_lookup
+            .lookup_ip(
+                EXAMPLE_HOSTNAME,
+                net_name::LookupIpOptions {
+                    ipv4_lookup: Some(true),
+                    ..net_name::LookupIpOptions::EMPTY
+                },
+            )
+            .await
+            .expect("call lookup IP");
+        assert_eq!(
+            lookup_result,
+            Ok(net_name::LookupResult {
+                addresses: Some(vec![EXAMPLE_IPV4_ADDR]),
+                ..net_name::LookupResult::EMPTY
+            })
+        );
+
+        // Then make another query (for AAAA records this time to distinguish it from
+        // the first), to ensure that the resolver still queries the preferred servers
+        // first, even though they failed to respond the first time.
+        let lookup_result = name_lookup
+            .lookup_ip(
+                EXAMPLE_HOSTNAME,
+                net_name::LookupIpOptions {
+                    ipv6_lookup: Some(true),
+                    ..net_name::LookupIpOptions::EMPTY
+                },
+            )
+            .await
+            .expect("call lookup IP");
+        assert_eq!(
+            lookup_result,
+            Ok(net_name::LookupResult {
+                addresses: Some(vec![EXAMPLE_IPV6_ADDR]),
+                ..net_name::LookupResult::EMPTY
+            })
+        );
+    };
+
+    futures::join!(name_servers_fut, lookup_fut);
 }

@@ -182,7 +182,9 @@ where
         // select the highest priority connection
         //   reorder the connections based on current view...
         //   this reorders the inner set
-        conns.sort_unstable();
+        if opts.prioritize_name_servers {
+            conns.sort_unstable();
+        }
         let request_loop = request.clone();
 
         parallel_conn_loop(conns, request_loop, opts).await

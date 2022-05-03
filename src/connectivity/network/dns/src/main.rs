@@ -311,6 +311,11 @@ impl QueryWindow {
 fn update_resolver<T: ResolverLookup>(resolver: &SharedResolver<T>, servers: ServerList) {
     let mut resolver_opts = ResolverOpts::default();
     resolver_opts.ip_strategy = LookupIpStrategy::Ipv4AndIpv6;
+    resolver_opts.num_concurrent_reqs = 10;
+    // TODO(https://github.com/bluejekyll/trust-dns/issues/1702): possibly reenable
+    // Trust-DNS's internal name server sorting once it is more correct and
+    // configurable.
+    resolver_opts.prioritize_name_servers = false;
 
     // We're going to add each server twice, once with protocol UDP and
     // then with protocol TCP.

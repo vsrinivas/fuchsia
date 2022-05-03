@@ -785,6 +785,9 @@ pub struct ResolverOpts {
     pub preserve_intermediates: bool,
     /// Try queries over TCP if they fail over UDP.
     pub try_tcp_on_error: bool,
+    /// Query name servers in priority order based on statistics collected on successful and failed
+    /// queries.
+    pub prioritize_name_servers: bool,
 }
 
 impl Default for ResolverOpts {
@@ -808,11 +811,10 @@ impl Default for ResolverOpts {
             positive_max_ttl: None,
             negative_max_ttl: None,
             num_concurrent_reqs: 2,
-
             // Defaults to `true` to match the behavior of dig and nslookup.
             preserve_intermediates: true,
-
             try_tcp_on_error: false,
+            prioritize_name_servers: true,
         }
     }
 }
