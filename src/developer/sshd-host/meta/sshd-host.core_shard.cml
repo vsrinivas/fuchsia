@@ -9,7 +9,6 @@
             name: "sshd-host",
             url: "fuchsia-pkg://fuchsia.com/sshd-host#meta/sshd-host.cm",
             startup: "eager",
-            environment: "#full-resolver-env",
         },
     ],
     offer: [
