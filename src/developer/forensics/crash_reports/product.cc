@@ -7,6 +7,16 @@
 namespace forensics {
 namespace crash_reports {
 
+bool Product::IsDefaultPlatformProduct() const { return *this == DefaultPlatformProduct(); }
+
+Product Product::DefaultPlatformProduct() {
+  return Product{
+      .name = "Fuchsia",
+      .version = Error::kMissingValue,
+      .channel = Error::kMissingValue,
+  };
+}
+
 bool operator==(const Product& a, const Product& b) {
   return a.name == b.name && a.version == b.version && a.channel == b.channel;
 }

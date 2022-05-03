@@ -6,19 +6,14 @@
 #define SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_CRASH_REGISTER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
-#include <lib/async/dispatcher.h>
-#include <lib/fpromise/promise.h>
-#include <lib/sys/cpp/service_directory.h>
 
 #include <map>
 #include <memory>
 #include <string>
 
 #include "src/developer/forensics/crash_reports/info/crash_register_info.h"
-#include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/product.h"
-#include "src/developer/forensics/utils/errors.h"
-#include "src/developer/forensics/utils/fit/timeout.h"
+#include "src/developer/forensics/feedback/annotations/types.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"
 
 namespace forensics {
@@ -26,28 +21,26 @@ namespace crash_reports {
 
 class CrashRegister : public fuchsia::feedback::CrashReportingProductRegister {
  public:
-  explicit CrashRegister(async_dispatcher_t* dispatcher,
-                         std::shared_ptr<sys::ServiceDirectory> services,
-                         std::shared_ptr<InfoContext> info_context,
-                         const ErrorOr<std::string>& build_version, std::string register_filepath);
+  explicit CrashRegister(std::shared_ptr<InfoContext> info_context, std::string register_filepath);
 
   // |fuchsia::feedback::CrashReportingProductRegister|
   void Upsert(std::string component_url, fuchsia::feedback::CrashReportingProduct product) override;
   void UpsertWithAck(std::string component_url, fuchsia::feedback::CrashReportingProduct product,
                      UpsertWithAckCallback callback) override;
 
-  // Returns the Product registered by clients for a given component URL, otherwise the default
-  // Product for the platform.
-  ::fpromise::promise<Product> GetProduct(const std::string& program_name, fit::Timeout timeout);
+  bool HasProduct(const std::string& program_name) const;
+
+  // Returns the Product registered by clients for a given component URL. Check-fails if non-exists.
+  Product GetProduct(const std::string& program_name) const;
+
+  // Adds the version and channel in |annotations| to |product|, if they exist.
+  static void AddVersionAndChannel(Product& product, const feedback::Annotations& annotations);
 
  private:
   void RestoreFromJson();
   void UpdateJson(const std::string& component_url, const Product& product);
 
-  async_dispatcher_t* dispatcher_;
-  const std::shared_ptr<sys::ServiceDirectory> services_;
   CrashRegisterInfo info_;
-  const ErrorOr<std::string> build_version_;
 
   std::map<std::string, Product> component_to_products_;
 

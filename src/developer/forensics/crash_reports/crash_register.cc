@@ -4,11 +4,10 @@
 
 #include "src/developer/forensics/crash_reports/crash_register.h"
 
-#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/developer/forensics/utils/fidl/channel_provider_ptr.h"
-#include "src/developer/forensics/utils/fit/timeout.h"
+#include "src/developer/forensics/feedback/annotations/constants.h"
+#include "src/developer/forensics/feedback/constants.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -20,21 +19,13 @@
 namespace forensics {
 namespace crash_reports {
 
-CrashRegister::CrashRegister(async_dispatcher_t* dispatcher,
-                             std::shared_ptr<sys::ServiceDirectory> services,
-                             std::shared_ptr<InfoContext> info_context,
-                             const ErrorOr<std::string>& build_version,
+CrashRegister::CrashRegister(std::shared_ptr<InfoContext> info_context,
                              std::string register_filepath)
-    : dispatcher_(dispatcher),
-      services_(services),
-      info_(std::move(info_context)),
-      build_version_(build_version),
-      register_filepath_(register_filepath) {
+    : info_(std::move(info_context)), register_filepath_(register_filepath) {
   RestoreFromJson();
 }
 
 namespace {
-
 Product ToInternalProduct(const fuchsia::feedback::CrashReportingProduct& fidl_product) {
   FX_CHECK(fidl_product.has_name());
   return {.name = fidl_product.name(),
@@ -66,21 +57,24 @@ void CrashRegister::UpsertWithAck(std::string component_url,
   callback();
 }
 
-::fpromise::promise<Product> CrashRegister::GetProduct(const std::string& program_name,
-                                                       fit::Timeout timeout) {
-  if (component_to_products_.find(program_name) != component_to_products_.end()) {
-    return ::fpromise::make_result_promise<Product>(
-        ::fpromise::ok<Product>(component_to_products_.at(program_name)));
+bool CrashRegister::HasProduct(const std::string& program_name) const {
+  return component_to_products_.count(program_name) != 0;
+}
+
+Product CrashRegister::GetProduct(const std::string& program_name) const {
+  FX_CHECK(HasProduct(program_name)) << "No product for " << program_name;
+  return component_to_products_.at(program_name);
+}
+
+void CrashRegister::AddVersionAndChannel(Product& product,
+                                         const feedback::Annotations& annotations) {
+  if (annotations.count(feedback::kBuildVersionKey) != 0) {
+    product.version = annotations.at(feedback::kBuildVersionKey);
   }
 
-  return fidl::GetCurrentChannel(dispatcher_, services_, std::move(timeout))
-      .then([build_version = build_version_](::fpromise::result<std::string, Error>& result) {
-        return ::fpromise::ok<Product>({.name = "Fuchsia",
-                                        .version = build_version,
-                                        .channel = result.is_ok()
-                                                       ? ErrorOr<std::string>(result.value())
-                                                       : ErrorOr<std::string>(result.error())});
-      });
+  if (annotations.count(feedback::kSystemUpdateChannelCurrentKey) != 0) {
+    product.channel = annotations.at(feedback::kSystemUpdateChannelCurrentKey);
+  }
 }
 
 // The content of the component register will be stored as json where each product for a component

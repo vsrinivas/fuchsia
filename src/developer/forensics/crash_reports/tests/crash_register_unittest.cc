@@ -17,8 +17,7 @@
 
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/product.h"
-#include "src/developer/forensics/testing/stubs/channel_control.h"
-#include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
+#include "src/developer/forensics/feedback/annotations/constants.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -38,7 +37,6 @@ using inspect::testing::StringIs;
 using testing::Not;
 using testing::UnorderedElementsAreArray;
 
-constexpr char kBuildVersion[] = "some-version";
 constexpr char kComponentUrl[] = "fuchsia-pkg://fuchsia.com/my-pkg#meta/my-component.cmx";
 
 // Unit-tests the server of fuchsia.feedback.CrashReportingProductRegister.
@@ -47,25 +45,13 @@ constexpr char kComponentUrl[] = "fuchsia-pkg://fuchsia.com/my-pkg#meta/my-compo
 // connecting through FIDL.
 class CrashRegisterTest : public UnitTestFixture {
  public:
-  CrashRegisterTest() : executor_(dispatcher()) {}
+  CrashRegisterTest()
+      : info_context_(
+            std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services())) {}
 
-  void SetUp() override {
-    info_context_ =
-        std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
-    MakeNewCrashRegister();
-
-    SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
-    RunLoopUntilIdle();
-  }
+  void SetUp() override { MakeNewCrashRegister(); }
 
  protected:
-  void SetUpChannelControlServer(std::unique_ptr<stubs::ChannelControlBase> server) {
-    channel_provider_server_ = std::move(server);
-    if (channel_provider_server_) {
-      InjectServiceProvider(channel_provider_server_.get());
-    }
-  }
-
   void Upsert(const std::string& component_url, CrashReportingProduct product) {
     crash_register_->Upsert(component_url, std::move(product));
   }
@@ -75,21 +61,12 @@ class CrashRegisterTest : public UnitTestFixture {
     crash_register_->UpsertWithAck(component_url, std::move(product), std::move(callback));
   }
 
-  Product GetProduct(const std::string& program_name) {
-    const zx::duration timeout = zx::sec(1);
-    auto promise = crash_register_->GetProduct(program_name, fit::Timeout(timeout));
+  bool HasProduct(const std::string& program_name) const {
+    return crash_register_->HasProduct(program_name);
+  }
 
-    bool was_called = false;
-    ::fpromise::result<Product> product;
-    executor_.schedule_task(
-        std::move(promise).then([&was_called, &product](::fpromise::result<Product>& result) {
-          was_called = true;
-          product = std::move(result);
-        }));
-    FX_CHECK(RunLoopFor(timeout));
-    FX_CHECK(was_called);
-    FX_CHECK(product.is_ok());
-    return product.take_value();
+  Product GetProduct(const std::string& program_name) const {
+    return crash_register_->GetProduct(program_name);
   }
 
   std::string RegisterJsonPath() { return files::JoinPath(tmp_dir_.path(), "register.json"); }
@@ -101,17 +78,14 @@ class CrashRegisterTest : public UnitTestFixture {
   }
 
   void MakeNewCrashRegister() {
-    crash_register_ = std::make_unique<CrashRegister>(dispatcher(), services(), info_context_,
-                                                      kBuildVersion, RegisterJsonPath());
+    crash_register_ = std::make_unique<CrashRegister>(info_context_, RegisterJsonPath());
   }
 
  private:
-  async::Executor executor_;
   timekeeper::TestClock clock_;
   files::ScopedTempDir tmp_dir_;
   std::shared_ptr<InfoContext> info_context_;
   std::unique_ptr<CrashRegister> crash_register_;
-  std::unique_ptr<stubs::ChannelControlBase> channel_provider_server_;
 };
 
 TEST_F(CrashRegisterTest, Upsert_Basic) {
@@ -232,30 +206,7 @@ TEST_F(CrashRegisterTest, Upsert_UpdateIfSameComponentUrl) {
 }
 
 TEST_F(CrashRegisterTest, GetProduct_NoUpsert) {
-  SetUpChannelControlServer(
-      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
-          .current = "some channel",
-          .target = std::nullopt,
-      }));
-
-  const auto expected = Product{
-      .name = "Fuchsia",
-      .version = std::string(kBuildVersion),
-      .channel = std::string("some channel"),
-  };
-  EXPECT_THAT(GetProduct("some program name"), expected);
-  EXPECT_TRUE(ReadRegisterJson().empty());
-}
-
-TEST_F(CrashRegisterTest, GetProduct_NoUpsert_NoChannelControl) {
-  SetUpChannelControlServer(nullptr);
-
-  const auto expected = Product{
-      .name = "Fuchsia",
-      .version = kBuildVersion,
-      .channel = Error::kConnectionError,
-  };
-  EXPECT_THAT(GetProduct("some program name"), expected);
+  EXPECT_FALSE(HasProduct("some program name"));
   EXPECT_TRUE(ReadRegisterJson().empty());
 }
 
@@ -282,24 +233,13 @@ TEST_F(CrashRegisterTest, GetProduct_FromUpsert) {
 }
 
 TEST_F(CrashRegisterTest, GetProduct_DifferentUpsert) {
-  SetUpChannelControlServer(
-      std::make_unique<stubs::ChannelControl>(stubs::ChannelControlBase::Params{
-          .current = "some channel",
-          .target = std::nullopt,
-      }));
-
   CrashReportingProduct product;
   product.set_name("some name");
   product.set_version("some version");
   product.set_channel("some channel");
   Upsert(kComponentUrl, std::move(product));
 
-  const auto expected = Product{
-      .name = "Fuchsia",
-      .version = std::string(kBuildVersion),
-      .channel = std::string("some channel"),
-  };
-  EXPECT_THAT(GetProduct("some program name"), expected);
+  EXPECT_FALSE(HasProduct("some program name"));
   EXPECT_EQ(ReadRegisterJson(), R"({
     "fuchsia-pkg://fuchsia.com/my-pkg#meta/my-component.cmx": {
         "name": "some name",
@@ -307,6 +247,65 @@ TEST_F(CrashRegisterTest, GetProduct_DifferentUpsert) {
         "channel": "some channel"
     }
 })");
+}
+
+TEST_F(CrashRegisterTest, BuildDefaultProduct) {
+  {
+    Product actual{
+        .name = std::string("Fuchsia"),
+        .version = Error::kMissingValue,
+        .channel = Error::kMissingValue,
+    };
+
+    CrashRegister::AddVersionAndChannel(actual, {});
+
+    const Product expected{
+        .name = std::string("Fuchsia"),
+        .version = Error::kMissingValue,
+        .channel = Error::kMissingValue,
+    };
+    EXPECT_EQ(actual, expected);
+  }
+
+  {
+    Product actual{
+        .name = std::string("Fuchsia"),
+        .version = Error::kMissingValue,
+        .channel = Error::kMissingValue,
+    };
+
+    CrashRegister::AddVersionAndChannel(actual, {
+                                                    {feedback::kBuildVersionKey, "some version"},
+                                                });
+
+    const Product expected{
+        .name = std::string("Fuchsia"),
+        .version = std::string("some version"),
+        .channel = Error::kMissingValue,
+    };
+    EXPECT_EQ(actual, expected);
+  }
+
+  {
+    Product actual{
+        .name = std::string("Fuchsia"),
+        .version = Error::kMissingValue,
+        .channel = Error::kMissingValue,
+    };
+
+    CrashRegister::AddVersionAndChannel(
+        actual, {
+                    {feedback::kBuildVersionKey, "some version"},
+                    {feedback::kSystemUpdateChannelCurrentKey, "some channel"},
+                });
+
+    const Product expected{
+        .name = std::string("Fuchsia"),
+        .version = std::string("some version"),
+        .channel = std::string("some channel"),
+    };
+    EXPECT_EQ(actual, expected);
+  }
 }
 
 TEST_F(CrashRegisterTest, ReinitializesFromJson) {

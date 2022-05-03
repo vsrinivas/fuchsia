@@ -17,6 +17,11 @@ struct Product {
   std::string name;
   ErrorOr<std::string> version;
   ErrorOr<std::string> channel;
+
+  bool IsDefaultPlatformProduct() const;
+
+  // Returns a default product for the platform.
+  static Product DefaultPlatformProduct();
 };
 
 bool operator==(const Product& a, const Product& b);

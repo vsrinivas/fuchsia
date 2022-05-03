@@ -53,13 +53,11 @@ source_set("crash_register") {
   public_deps = [
     ":product",
     "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/fit-promise",
-    "//sdk/lib/sys/cpp",
     "//src/developer/forensics/crash_reports/info",
+    "//src/developer/forensics/feedback:constants",
+    "//src/developer/forensics/feedback/annotations",
     "//src/developer/forensics/utils:errors",
-    "//src/developer/forensics/utils/fit",
     "//third_party/rapidjson",
-    "//zircon/system/ulib/async",
   ]
 
   deps = [
