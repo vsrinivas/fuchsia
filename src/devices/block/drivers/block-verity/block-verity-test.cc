@@ -20,6 +20,7 @@
 #include <zxtest/zxtest.h>
 
 #include "constants.h"
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/storage/fvm/test_support.h"
 #include "verified-volume-client.h"
 
@@ -33,6 +34,9 @@ constexpr uint64_t kIntegrityStartBlock = 1;
 constexpr uint64_t kDataStartBlock = 66;
 
 using driver_integration_test::IsolatedDevmgr;
+
+auto BRead = block_client::SingleReadBytes;
+auto BWrite = block_client::SingleWriteBytes;
 
 const char* kDriverLib = "/boot/driver/block-verity.so";
 
@@ -93,9 +97,8 @@ class BlockVerityTest : public zxtest::Test {
   void ZeroUnderlyingRamdisk() {
     fbl::Array<uint8_t> write_buf(new uint8_t[kBlockSize], kBlockSize);
     memset(write_buf.get(), 0, write_buf.size());
-    ASSERT_EQ(lseek(ramdisk_->fd(), 0, SEEK_SET), 0);
     for (uint64_t block = 0; block < kBlockCount; block++) {
-      ASSERT_EQ(write(ramdisk_->fd(), write_buf.get(), write_buf.size()), kBlockSize);
+      ASSERT_OK(BWrite(ramdisk_->fd(), write_buf.get(), write_buf.size(), block * kBlockSize));
     }
   }
 
@@ -141,9 +144,8 @@ TEST_F(BlockVerityTest, BasicWrites) {
   for (uint64_t block = 0; block < inner_block_count; block++) {
     // Seek to start of block
     off_t offset = block * kBlockSize;
-    ASSERT_EQ(lseek(mutable_block_fd.get(), offset, SEEK_SET), offset);
-    // Verify read succeeds
-    ASSERT_EQ(read(mutable_block_fd.get(), read_buf.get(), read_buf.size()), kBlockSize);
+    // Verify read succeed
+    ASSERT_OK(BRead(mutable_block_fd.get(), read_buf.get(), read_buf.size(), offset));
     // Expect to read all zeroes.
     ASSERT_EQ(memcmp(zero_buf.get(), read_buf.get(), zero_buf.size()), 0);
   }
@@ -155,12 +157,10 @@ TEST_F(BlockVerityTest, BasicWrites) {
   }
 
   // Write the first block on the mutable device with that pattern.
-  ASSERT_EQ(lseek(mutable_block_fd.get(), 0, SEEK_SET), 0);
-  ASSERT_EQ(write(mutable_block_fd.get(), write_buf.get(), write_buf.size()), kBlockSize);
+  ASSERT_OK(BWrite(mutable_block_fd.get(), write_buf.get(), write_buf.size(), 0));
 
   // Read it back.
-  ASSERT_EQ(lseek(mutable_block_fd.get(), 0, SEEK_SET), 0);
-  ASSERT_EQ(read(mutable_block_fd.get(), read_buf.get(), read_buf.size()), kBlockSize);
+  ASSERT_OK(BRead(mutable_block_fd.get(), read_buf.get(), read_buf.size(), 0));
   ASSERT_EQ(memcmp(write_buf.get(), read_buf.get(), read_buf.size()), 0);
 
   // Find a block that matches from the underlying device.
@@ -168,8 +168,7 @@ TEST_F(BlockVerityTest, BasicWrites) {
   for (uint64_t block = 0; block < kBlockCount; block++) {
     // Seek to start of block
     off_t offset = block * kBlockSize;
-    ASSERT_EQ(lseek(ramdisk_->fd(), offset, SEEK_SET), offset);
-    ASSERT_EQ(read(ramdisk_->fd(), read_buf.get(), read_buf.size()), kBlockSize);
+    ASSERT_OK(BRead(ramdisk_->fd(), read_buf.get(), read_buf.size(), offset));
     if (memcmp(read_buf.get(), write_buf.get(), read_buf.size()) == 0) {
       found = true;
       // Expect to find the block at block 66 (after one superblock & 65 integrity blocks)
@@ -268,8 +267,7 @@ TEST_F(BlockVerityTest, BasicSeal) {
   for (size_t integrity_block_index = 0; integrity_block_index < 65; integrity_block_index++) {
     size_t absolute_block_index = integrity_block_index + 1;
     off_t offset = absolute_block_index * kBlockSize;
-    ASSERT_EQ(lseek(ramdisk_->fd(), offset, SEEK_SET), offset);
-    ASSERT_EQ(read(ramdisk_->fd(), read_buf.get(), read_buf.size()), kBlockSize);
+    ASSERT_OK(BRead(ramdisk_->fd(), read_buf.get(), read_buf.size(), offset));
     uint8_t* expected_block;
     if (integrity_block_index < 63) {
       expected_block = expected_early_tier_0_integrity_block.get();
@@ -318,8 +316,7 @@ TEST_F(BlockVerityTest, BasicSeal) {
       // * 4032 zero bytes padding the rest of the block, autofilled by compiler.
   };
 
-  ASSERT_EQ(lseek(ramdisk_->fd(), 0, SEEK_SET), 0);
-  ASSERT_EQ(read(ramdisk_->fd(), read_buf.get(), read_buf.size()), kBlockSize);
+  ASSERT_OK(BRead(ramdisk_->fd(), read_buf.get(), read_buf.size(), 0));
   EXPECT_EQ(memcmp(expected_superblock, read_buf.get(), kBlockSize), 0,
             "superblock did not contain expected contents");
 
@@ -375,16 +372,14 @@ TEST_F(BlockVerityTest, SealAndVerifiedRead) {
   for (uint64_t verified_block = 0; verified_block < inner_block_count; verified_block++) {
     memset(read_buf.get(), 0xcc, kBlockSize);
     off_t offset = verified_block * kBlockSize;
-    ASSERT_EQ(lseek(verified_block_fd.get(), offset, SEEK_SET), offset);
-    ASSERT_EQ(kBlockSize, read(verified_block_fd.get(), read_buf.get(), read_buf.size()),
+    ASSERT_OK(BRead(verified_block_fd.get(), read_buf.get(), read_buf.size(), offset),
               "read failed on block %lu", verified_block);
     EXPECT_EQ(0, memcmp(zero_block.get(), read_buf.get(), kBlockSize),
               "verified data block %lu did not contain expected contents", verified_block);
   }
 
   // Writes should fail.  This is a readonly device.
-  ASSERT_EQ(lseek(verified_block_fd.get(), 0, SEEK_SET), 0);
-  EXPECT_EQ(-1, write(verified_block_fd.get(), read_buf.get(), read_buf.size()));
+  ASSERT_NE(BWrite(verified_block_fd.get(), read_buf.get(), read_buf.size(), 0), ZX_OK);
 
   Close();
   verified_block_fd.release();
@@ -394,40 +389,32 @@ TEST_F(BlockVerityTest, SealAndVerifiedRead) {
   fbl::Array<uint8_t> one_block(new uint8_t[kBlockSize], kBlockSize);
   memset(one_block.get(), 0xff, kBlockSize);
   off_t data_start = kDataStartBlock * kBlockSize;
-  ASSERT_EQ(lseek(ramdisk_->fd(), data_start, SEEK_SET), data_start);
-  ASSERT_EQ(kBlockSize, write(ramdisk_->fd(), one_block.get(), one_block.size()));
+  ASSERT_OK(BWrite(ramdisk_->fd(), one_block.get(), one_block.size(), data_start));
   ASSERT_OK(OpenForVerifiedRead(seal, verified_block_fd));
 
   // Verify that attempting to read that block returns failure
-  ASSERT_EQ(lseek(verified_block_fd.get(), 0, SEEK_SET), 0);
-  EXPECT_EQ(-1, read(verified_block_fd.get(), read_buf.get(), read_buf.size()));
-  EXPECT_EQ(errno, EIO);
+  ASSERT_NE(BRead(verified_block_fd.get(), read_buf.get(), read_buf.size(), 0), ZX_OK);
 
   // Verify that reading a different (uncorrupted) block still works.
-  ASSERT_EQ(lseek(verified_block_fd.get(), kBlockSize, SEEK_SET), kBlockSize);
-  EXPECT_EQ(kBlockSize, read(verified_block_fd.get(), read_buf.get(), read_buf.size()));
+  ASSERT_OK(BRead(verified_block_fd.get(), read_buf.get(), read_buf.size(), kBlockSize));
   Close();
   verified_block_fd.release();
 
   // Corrupt an integrity block, and attempt to perform reads guarded by it.
   off_t integrity_start = kIntegrityStartBlock * kBlockSize;
-  ASSERT_EQ(lseek(ramdisk_->fd(), integrity_start, SEEK_SET), integrity_start);
-  ASSERT_EQ(kBlockSize, write(ramdisk_->fd(), one_block.get(), one_block.size()));
+  ASSERT_OK(BWrite(ramdisk_->fd(), one_block.get(), one_block.size(), integrity_start));
   ASSERT_OK(OpenForVerifiedRead(seal, verified_block_fd));
 
   // Verify that read of each block under that integrity block returns failure.
   for (uint64_t data_block = 0; data_block < kBlockSize / 32; data_block++) {
     off_t offset = data_block * kBlockSize;
-    ASSERT_EQ(lseek(verified_block_fd.get(), offset, SEEK_SET), offset);
-    EXPECT_EQ(-1, read(verified_block_fd.get(), read_buf.get(), read_buf.size()));
-    EXPECT_EQ(errno, EIO);
+    ASSERT_NE(BRead(verified_block_fd.get(), read_buf.get(), read_buf.size(), offset), ZX_OK);
   }
 
   // Other block reads should succeed.  Try one.
   off_t first_uncorrupted_data_block = (kBlockSize / 32) * kBlockSize;
-  ASSERT_EQ(lseek(verified_block_fd.get(), first_uncorrupted_data_block, SEEK_SET),
-            first_uncorrupted_data_block);
-  EXPECT_EQ(kBlockSize, read(verified_block_fd.get(), read_buf.get(), read_buf.size()));
+  ASSERT_OK(BRead(verified_block_fd.get(), read_buf.get(), read_buf.size(),
+                  first_uncorrupted_data_block));
 
   Close();
   verified_block_fd.release();
@@ -444,13 +431,11 @@ TEST_F(BlockVerityTest, SealAndVerifiedRead) {
   // Corrupt the superblock, then attempt to open the superblock with the last working seal.
   // Expect OpenForVerifiedRead to fail.
   fbl::Array<uint8_t> superblock_buf(new uint8_t[kBlockSize], kBlockSize);
-  ASSERT_EQ(lseek(ramdisk_->fd(), 0, SEEK_SET), 0);
   // Load up the superblock.
-  ASSERT_EQ(kBlockSize, read(ramdisk_->fd(), superblock_buf.get(), superblock_buf.size()));
+  ASSERT_OK(BRead(ramdisk_->fd(), superblock_buf.get(), superblock_buf.size(), 0));
   // Corrupt the root integrity hash.
   memset(superblock_buf.data() + 32, 0, 32);
-  ASSERT_EQ(lseek(ramdisk_->fd(), 0, SEEK_SET), 0);
-  ASSERT_EQ(kBlockSize, write(ramdisk_->fd(), superblock_buf.get(), superblock_buf.size()));
+  ASSERT_OK(BWrite(ramdisk_->fd(), superblock_buf.get(), superblock_buf.size(), 0));
   ASSERT_EQ(OpenForVerifiedRead(seal, verified_block_fd), ZX_ERR_IO_DATA_INTEGRITY);
 }
 

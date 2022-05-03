@@ -189,6 +189,7 @@ test("block-verity-test") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//src/devices/testing/driver-integration-test-shim",
     "//src/lib/digest",
+    "//src/lib/storage/block_client/cpp",
     "//src/lib/storage/ramdevice_client/cpp",
     "//src/storage/fvm:test_support",
     "//zircon/system/ulib/fdio-caller",

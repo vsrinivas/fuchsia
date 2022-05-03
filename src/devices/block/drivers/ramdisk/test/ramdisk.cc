@@ -48,9 +48,13 @@
 #include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
 #include "src/lib/storage/block_client/cpp/client.h"
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 
 namespace ramdisk {
 namespace {
+
+auto BRead = block_client::SingleReadBytes;
+auto BWrite = block_client::SingleWriteBytes;
 
 // Make sure isolated_devmgr is ready to go before all tests.
 class Environment : public testing::Environment {
@@ -160,12 +164,11 @@ TEST(RamdiskTests, RamdiskTestSimple) {
   memset(out.data(), 0, out.size());
 
   // Write a page and a half
-  ASSERT_EQ(write(ramdisk->block_fd(), buf.data(), buf.size()), (ssize_t)buf.size());
-  ASSERT_EQ(write(ramdisk->block_fd(), buf.data(), buf.size() / 2), (ssize_t)(buf.size() / 2));
+  ASSERT_EQ(BWrite(ramdisk->block_fd(), buf.data(), buf.size(), 0), ZX_OK);
+  ASSERT_EQ(BWrite(ramdisk->block_fd(), buf.data(), buf.size() / 2, buf.size()), ZX_OK);
 
   // Seek to the start of the device and read the contents
-  ASSERT_EQ(lseek(ramdisk->block_fd(), 0, SEEK_SET), 0);
-  ASSERT_EQ(read(ramdisk->block_fd(), out.data(), out.size()), (ssize_t)out.size());
+  ASSERT_EQ(BRead(ramdisk->block_fd(), out.data(), out.size(), 0), ZX_OK);
   ASSERT_EQ(memcmp(out.data(), buf.data(), out.size()), 0);
 }
 
@@ -298,17 +301,15 @@ TEST(RamdiskTests, RamdiskGrowTestReadFromOldBlocks) {
   memset(out.data(), 0, out.size());
 
   // Write a page and a half
-  ASSERT_EQ(write(ramdisk->block_fd(), buf.data(), buf.size()), static_cast<ssize_t>(buf.size()));
-  ASSERT_EQ(write(ramdisk->block_fd(), buf.data(), buf.size() / 2),
-            static_cast<ssize_t>(buf.size() / 2));
+  ASSERT_EQ(BWrite(ramdisk->block_fd(), buf.data(), buf.size(), 0), ZX_OK);
+  ASSERT_EQ(BWrite(ramdisk->block_fd(), buf.data(), buf.size() / 2, buf.size()), ZX_OK);
 
   // Grow the ramdisk.
   ASSERT_EQ(ramdisk_grow(ramdisk->ramdisk_client(), 2 * kBlockSize * kBlockCount), ZX_OK)
       << "Failed to grow ramdisk";
 
   // Seek to the start of the device and read the contents
-  ASSERT_EQ(lseek(ramdisk->block_fd(), 0, SEEK_SET), 0);
-  ASSERT_EQ(read(ramdisk->block_fd(), out.data(), out.size()), static_cast<ssize_t>(out.size()));
+  ASSERT_EQ(BRead(ramdisk->block_fd(), out.data(), out.size(), 0), ZX_OK);
   ASSERT_EQ(memcmp(out.data(), buf.data(), out.size()), 0);
 }
 
@@ -328,17 +329,13 @@ TEST(RamdiskTests, RamdiskGrowTestWriteToAddedBlocks) {
       << "Failed to grow ramdisk";
 
   // Write a page and a half
-  ASSERT_EQ(lseek(ramdisk->block_fd(), kBlockSize * kBlockCount, SEEK_SET),
-            static_cast<off_t>(kBlockSize * kBlockCount))
-      << strerror(errno);
-  ASSERT_EQ(write(ramdisk->block_fd(), buf.data(), buf.size()), static_cast<ssize_t>(buf.size()));
-  ASSERT_EQ(write(ramdisk->block_fd(), buf.data(), buf.size() / 2),
-            static_cast<ssize_t>(buf.size() / 2));
+  ASSERT_EQ(BWrite(ramdisk->block_fd(), buf.data(), buf.size(), kBlockSize * kBlockCount), ZX_OK);
+  ASSERT_EQ(BWrite(ramdisk->block_fd(), buf.data(), buf.size() / 2,
+                   buf.size() + kBlockSize * kBlockCount),
+            ZX_OK);
 
   // Verify written data is readable from the new blocks.
-  ASSERT_EQ(lseek(ramdisk->block_fd(), kBlockCount * kBlockSize, SEEK_SET),
-            static_cast<off_t>(kBlockSize * kBlockCount));
-  ASSERT_EQ(read(ramdisk->block_fd(), out.data(), out.size()), static_cast<ssize_t>(out.size()));
+  ASSERT_EQ(BRead(ramdisk->block_fd(), out.data(), out.size(), kBlockCount * kBlockSize), ZX_OK);
   ASSERT_EQ(memcmp(out.data(), buf.data(), out.size()), 0);
 }
 
@@ -375,12 +372,11 @@ TEST(RamdiskTests, RamdiskTestVmo) {
   memset(buf.data(), 'a', buf.size());
   memset(out.data(), 0, out.size());
 
-  EXPECT_EQ(write(block_fd, buf.data(), buf.size()), (ssize_t)buf.size());
-  EXPECT_EQ(write(block_fd, buf.data(), buf.size() / 2), (ssize_t)(buf.size() / 2));
+  EXPECT_EQ(BWrite(block_fd, buf.data(), buf.size(), 0), ZX_OK);
+  EXPECT_EQ(BWrite(block_fd, buf.data(), buf.size() / 2, buf.size()), ZX_OK);
 
   // Seek to the start of the device and read the contents
-  EXPECT_EQ(lseek(block_fd, 0, SEEK_SET), 0);
-  EXPECT_EQ(read(block_fd, out.data(), out.size()), (ssize_t)out.size());
+  EXPECT_EQ(BRead(block_fd, out.data(), out.size(), 0), ZX_OK);
   EXPECT_EQ(memcmp(out.data(), buf.data(), out.size()), 0);
 
   EXPECT_GE(ramdisk_destroy(ramdisk), 0) << "Could not unlink ramdisk device";
@@ -411,12 +407,11 @@ TEST(RamdiskTests, RamdiskTestVmoWithBlockSize) {
   memset(buf, 'a', sizeof(buf));
   memset(out, 0, sizeof(out));
 
-  EXPECT_EQ(write(block_fd, buf, sizeof(buf)), (ssize_t)sizeof(buf));
-  EXPECT_EQ(write(block_fd, buf, sizeof(buf) / 2), (ssize_t)(sizeof(buf) / 2));
+  EXPECT_EQ(BWrite(block_fd, buf, sizeof(buf), 0), ZX_OK);
+  EXPECT_EQ(BWrite(block_fd, buf, sizeof(buf) / 2, sizeof(buf)), ZX_OK);
 
   // Seek to the start of the device and read the contents
-  EXPECT_EQ(lseek(block_fd, 0, SEEK_SET), 0);
-  EXPECT_EQ(read(block_fd, out, sizeof(out)), (ssize_t)sizeof(out));
+  EXPECT_EQ(BRead(block_fd, out, sizeof(out), 0), ZX_OK);
   EXPECT_EQ(memcmp(out, buf, sizeof(out)), 0);
 
   EXPECT_GE(ramdisk_destroy(ramdisk), 0) << "Could not unlink ramdisk device";
@@ -549,27 +544,19 @@ TEST(RamdiskTests, RamdiskTestBadRequests) {
   memset(buf.data(), 'a', buf.size());
 
   // Read / write non-multiples of the block size
-  ASSERT_EQ(write(ramdisk->block_fd(), buf.data(), zx_system_get_page_size() - 1), -1);
-  ASSERT_EQ(errno, EINVAL);
-  ASSERT_EQ(write(ramdisk->block_fd(), buf.data(), zx_system_get_page_size() / 2), -1);
-  ASSERT_EQ(errno, EINVAL);
-  ASSERT_EQ(read(ramdisk->block_fd(), buf.data(), zx_system_get_page_size() - 1), -1);
-  ASSERT_EQ(errno, EINVAL);
-  ASSERT_EQ(read(ramdisk->block_fd(), buf.data(), zx_system_get_page_size() / 2), -1);
-  ASSERT_EQ(errno, EINVAL);
+  ASSERT_NE(BWrite(ramdisk->block_fd(), buf.data(), zx_system_get_page_size() - 1, 0), ZX_OK);
+  ASSERT_NE(BWrite(ramdisk->block_fd(), buf.data(), zx_system_get_page_size() / 2, 0), ZX_OK);
+  ASSERT_NE(BRead(ramdisk->block_fd(), buf.data(), zx_system_get_page_size() - 1, 0), ZX_OK);
+  ASSERT_NE(BRead(ramdisk->block_fd(), buf.data(), zx_system_get_page_size() / 2, 0), ZX_OK);
 
   // Read / write from unaligned offset
-  ASSERT_EQ(lseek(ramdisk->block_fd(), 1, SEEK_SET), 1);
-  ASSERT_EQ(write(ramdisk->block_fd(), buf.data(), zx_system_get_page_size()), -1);
-  ASSERT_EQ(errno, EINVAL);
-  ASSERT_EQ(read(ramdisk->block_fd(), buf.data(), zx_system_get_page_size()), -1);
-  ASSERT_EQ(errno, EINVAL);
+  ASSERT_NE(BWrite(ramdisk->block_fd(), buf.data(), zx_system_get_page_size(), 1), ZX_OK);
+  ASSERT_NE(BRead(ramdisk->block_fd(), buf.data(), zx_system_get_page_size(), 1), ZX_OK);
 
   // Read / write at end of device
   off_t offset = zx_system_get_page_size() * 512;
-  ASSERT_EQ(lseek(ramdisk->block_fd(), offset, SEEK_SET), offset);
-  ASSERT_EQ(write(ramdisk->block_fd(), buf.data(), zx_system_get_page_size()), -1);
-  ASSERT_EQ(read(ramdisk->block_fd(), buf.data(), zx_system_get_page_size()), -1);
+  ASSERT_NE(BWrite(ramdisk->block_fd(), buf.data(), zx_system_get_page_size(), offset), ZX_OK);
+  ASSERT_NE(BRead(ramdisk->block_fd(), buf.data(), zx_system_get_page_size(), offset), ZX_OK);
 }
 
 TEST(RamdiskTests, RamdiskTestReleaseDuringAccess) {
@@ -583,13 +570,12 @@ TEST(RamdiskTests, RamdiskTestReleaseDuringAccess) {
     while (true) {
       uint8_t in[8192];
       memset(in, 'a', sizeof(in));
-      if (write(fd, in, sizeof(in)) != static_cast<ssize_t>(sizeof(in))) {
+      if (BWrite(fd, in, sizeof(in), 0) != ZX_OK) {
         return 0;
       }
       uint8_t out[8192];
       memset(out, 0, sizeof(out));
-      lseek(fd, 0, SEEK_SET);
-      if (read(fd, out, sizeof(out)) != static_cast<ssize_t>(sizeof(out))) {
+      if (BRead(fd, out, sizeof(out), 0) != ZX_OK) {
         return 0;
       }
       // If we DID manage to read it, then the data should be valid...
@@ -623,20 +609,17 @@ TEST(RamdiskTests, RamdiskTestMultiple) {
 
   // Write 'a' to fd1, write 'b', to fd2
   memset(buf.data(), 'a', buf.size());
-  ASSERT_EQ(write(ramdisk1->block_fd(), buf.data(), buf.size()), (ssize_t)buf.size());
+  ASSERT_EQ(BWrite(ramdisk1->block_fd(), buf.data(), buf.size(), 0), ZX_OK);
   memset(buf.data(), 'b', buf.size());
-  ASSERT_EQ(write(ramdisk2->block_fd(), buf.data(), buf.size()), (ssize_t)buf.size());
-
-  ASSERT_EQ(lseek(ramdisk1->block_fd(), 0, SEEK_SET), 0);
-  ASSERT_EQ(lseek(ramdisk2->block_fd(), 0, SEEK_SET), 0);
+  ASSERT_EQ(BWrite(ramdisk2->block_fd(), buf.data(), buf.size(), 0), ZX_OK);
 
   // Read 'b' from fd2, read 'a' from fd1
-  ASSERT_EQ(read(ramdisk2->block_fd(), out.data(), buf.size()), (ssize_t)buf.size());
+  ASSERT_EQ(BRead(ramdisk2->block_fd(), out.data(), buf.size(), 0), ZX_OK);
   ASSERT_EQ(memcmp(out.data(), buf.data(), out.size()), 0);
   ASSERT_NO_FATAL_FAILURE(ramdisk2->Terminate()) << "Could not unlink ramdisk device";
 
   memset(buf.data(), 'a', buf.size());
-  ASSERT_EQ(read(ramdisk1->block_fd(), out.data(), buf.size()), (ssize_t)buf.size());
+  ASSERT_EQ(BRead(ramdisk1->block_fd(), out.data(), buf.size(), 0), ZX_OK);
   ASSERT_EQ(memcmp(out.data(), buf.data(), out.size()), 0);
   ASSERT_NO_FATAL_FAILURE(ramdisk1->Terminate()) << "Could not unlink ramdisk device";
 }
