@@ -52,22 +52,6 @@ impl PolicyType {
             PolicyType::Audio => SettingType::Audio,
         }
     }
-
-    /// Initialize the storage needed for this particular policy handler.
-    pub(crate) async fn initialize_storage<T>(&self, storage_factory: &Arc<T>) -> Result<(), Error>
-    where
-        T: DeviceStorageFactory,
-    {
-        match self {
-            #[cfg(test)]
-            Self::Unknown => Ok(()),
-            Self::Audio => {
-                storage_factory
-                    .initialize::<audio::audio_policy_handler::AudioPolicyHandler>()
-                    .await
-            }
-        }
-    }
 }
 
 generate_inspect_with_info! {

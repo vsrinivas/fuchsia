@@ -8,8 +8,7 @@ use fuchsia_syslog::fx_log_info;
 use serde::de::DeserializeOwned;
 use settings::{
     AgentConfiguration, AudioPolicyConfig, DisplayConfiguration, EnabledInterfacesConfiguration,
-    EnabledPoliciesConfiguration, InputConfiguration, LightHardwareConfiguration,
-    LightSensorConfig, ServiceFlags,
+    InputConfiguration, LightHardwareConfiguration, LightSensorConfig, ServiceFlags,
 };
 use std::ffi::{OsStr, OsString};
 use std::fs::File;
@@ -22,11 +21,6 @@ struct TestConfig {
     /// display settings.
     #[argh(option, short = 'd')]
     display_config: Vec<OsString>,
-
-    /// these configurations are the ones that will determine which policies are enabled within the
-    /// settings service.
-    #[argh(option, short = 'p')]
-    policy_config: Vec<OsString>,
 
     /// these configurations are the one that will determine the behavior of individual controllers.
     #[argh(option, short = 'f')]
@@ -74,10 +68,6 @@ fn main() -> Result<(), Error> {
 
     for config in test_config.display_config.into_iter() {
         read_config::<DisplayConfiguration>(&config)?;
-    }
-
-    for config in test_config.policy_config.into_iter() {
-        read_config::<EnabledPoliciesConfiguration>(&config)?;
     }
 
     for config in test_config.controller_flags.into_iter() {

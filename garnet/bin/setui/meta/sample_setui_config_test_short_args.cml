@@ -10,8 +10,6 @@
         args: [
             "-d",
             "/pkg/data/display_configuration.json",
-            "-p",
-            "/pkg/data/policy_configuration.json",
             "-f",
             "/pkg/data/service_flags.json",
             "-i",

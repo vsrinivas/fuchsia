@@ -19,11 +19,9 @@ use settings::handler::setting_proxy_inspect_info::SettingProxyInspectInfo;
 use settings::inspect::stash_logger::StashInspectLoggerHandle;
 use settings::AgentConfiguration;
 use settings::EnabledInterfacesConfiguration;
-use settings::EnabledPoliciesConfiguration;
 use settings::EnvironmentBuilder;
 use settings::ServiceConfiguration;
 use settings::ServiceFlags;
-use std::collections::HashSet;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -44,10 +42,6 @@ fn main() -> Result<(), Error> {
     let default_enabled_interfaces_configuration =
         EnabledInterfacesConfiguration::with_interfaces(get_default_interfaces());
 
-    // By default, no policies are enabled.
-    let default_enabled_policy_configuration =
-        EnabledPoliciesConfiguration::with_policies(HashSet::default());
-
     let enabled_interface_configuration = DefaultSetting::new(
         Some(default_enabled_interfaces_configuration),
         "/config/data/interface_configuration.json",
@@ -55,14 +49,6 @@ fn main() -> Result<(), Error> {
     .load_default_value()
     .expect("invalid default enabled interface configuration")
     .expect("no default enabled interfaces configuration");
-
-    let enabled_policy_configuration = DefaultSetting::new(
-        Some(default_enabled_policy_configuration),
-        "/config/data/policy_configuration.json",
-    )
-    .load_default_value()
-    .expect("invalid default enabled policy configuration")
-    .expect("no default enabled policy configuration");
 
     let flags =
         DefaultSetting::new(Some(ServiceFlags::default()), "/config/data/service_flags.json")
@@ -84,12 +70,8 @@ fn main() -> Result<(), Error> {
     .expect("invalid default agent configuration")
     .expect("no default agent types");
 
-    let configuration = ServiceConfiguration::from(
-        agent_types,
-        enabled_interface_configuration,
-        enabled_policy_configuration,
-        flags,
-    );
+    let configuration =
+        ServiceConfiguration::from(agent_types, enabled_interface_configuration, flags);
 
     let storage_factory = StashDeviceStorageFactory::new(
         STASH_IDENTITY,

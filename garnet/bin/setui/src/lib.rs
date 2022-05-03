@@ -5,6 +5,33 @@
 #![deny(unused_results)]
 #![warn(clippy::all)]
 
+use std::collections::{HashMap, HashSet};
+use std::sync::atomic::AtomicU64;
+use std::sync::Arc;
+
+#[cfg(test)]
+use anyhow::format_err;
+use anyhow::{Context, Error};
+use fuchsia_async as fasync;
+#[cfg(test)]
+use fuchsia_component::server::NestedEnvironment;
+use fuchsia_component::server::{ServiceFs, ServiceFsDir, ServiceObj};
+use fuchsia_inspect::component;
+use fuchsia_syslog::fx_log_warn;
+use fuchsia_zircon::{Duration, DurationNum};
+use futures::lock::Mutex;
+use futures::StreamExt;
+
+pub use audio::policy::AudioPolicyConfig;
+pub use display::display_configuration::DisplayConfiguration;
+pub use display::LightSensorConfig;
+use handler::setting_handler::Handler;
+pub use handler::setting_proxy_inspect_info::SettingProxyInspectInfo;
+pub use input::input_device_configuration::InputConfiguration;
+pub use light::light_hardware_configuration::LightHardwareConfiguration;
+use serde::Deserialize;
+pub use service::{Address, Payload, Role};
+
 use crate::accessibility::accessibility_controller::AccessibilityController;
 use crate::agent::authority::Authority;
 use crate::agent::storage::storage_factory::DeviceStorageFactory;
@@ -41,23 +68,6 @@ use crate::service::message::Delegate;
 use crate::service_context::GenerateService;
 use crate::service_context::ServiceContext;
 use crate::setup::setup_controller::SetupController;
-#[cfg(test)]
-use anyhow::format_err;
-use anyhow::{Context, Error};
-use fuchsia_async as fasync;
-#[cfg(test)]
-use fuchsia_component::server::NestedEnvironment;
-use fuchsia_component::server::{ServiceFs, ServiceFsDir, ServiceObj};
-use fuchsia_inspect::component;
-use fuchsia_syslog::fx_log_warn;
-use fuchsia_zircon::{Duration, DurationNum};
-use futures::lock::Mutex;
-use futures::StreamExt;
-use handler::setting_handler::Handler;
-use serde::Deserialize;
-use std::collections::{HashMap, HashSet};
-use std::sync::atomic::AtomicU64;
-use std::sync::Arc;
 
 mod accessibility;
 mod audio;
@@ -79,15 +89,6 @@ mod privacy;
 mod service;
 mod setup;
 pub mod task;
-
-use crate::fidl::Interface;
-pub use audio::policy::AudioPolicyConfig;
-pub use display::display_configuration::DisplayConfiguration;
-pub use display::LightSensorConfig;
-pub use handler::setting_proxy_inspect_info::SettingProxyInspectInfo;
-pub use input::input_device_configuration::InputConfiguration;
-pub use light::light_hardware_configuration::LightHardwareConfiguration;
-pub use service::{Address, Payload, Role};
 
 pub mod agent;
 pub mod base;
@@ -142,17 +143,6 @@ impl EnabledInterfacesConfiguration {
     }
 }
 
-#[derive(PartialEq, Debug, Clone, Deserialize)]
-pub struct EnabledPoliciesConfiguration {
-    pub policies: HashSet<PolicyType>,
-}
-
-impl EnabledPoliciesConfiguration {
-    pub fn with_policies(policies: HashSet<PolicyType>) -> Self {
-        Self { policies }
-    }
-}
-
 #[derive(Default, Debug, Clone, Deserialize)]
 pub struct ServiceFlags {
     pub controller_flags: HashSet<ControllerFlag>,
@@ -162,7 +152,6 @@ pub struct ServiceFlags {
 pub struct ServiceConfiguration {
     agent_types: HashSet<AgentType>,
     fidl_interfaces: HashSet<fidl::Interface>,
-    policies: HashSet<PolicyType>,
     controller_flags: HashSet<ControllerFlag>,
 }
 
@@ -170,7 +159,6 @@ impl ServiceConfiguration {
     pub fn from(
         agent_types: AgentConfiguration,
         interfaces: EnabledInterfacesConfiguration,
-        policies: EnabledPoliciesConfiguration,
         flags: ServiceFlags,
     ) -> Self {
         let fidl_interfaces: HashSet<fidl::Interface> =
@@ -179,7 +167,6 @@ impl ServiceConfiguration {
         Self {
             agent_types: agent_types.agent_types,
             fidl_interfaces,
-            policies: policies.policies,
             controller_flags: flags.controller_flags,
         }
     }
@@ -207,10 +194,6 @@ impl ServiceConfiguration {
                 configuration"
             );
         }
-    }
-
-    fn set_policies(&mut self, policies: HashSet<PolicyType>) {
-        self.policies = policies;
     }
 
     fn set_controller_flags(&mut self, controller_flags: HashSet<ControllerFlag>) {
@@ -329,19 +312,6 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         self
     }
 
-    /// Sets policies types that are enabled.
-    pub fn policies(mut self, policies: &[PolicyType]) -> EnvironmentBuilder<T> {
-        if self.configuration.is_none() {
-            self.configuration = Some(ServiceConfiguration::default());
-        }
-
-        if let Some(c) = self.configuration.as_mut() {
-            c.set_policies(policies.iter().copied().collect());
-        }
-
-        self
-    }
-
     /// Setting types to participate with customized controllers.
     pub fn flags(mut self, controller_flags: &[ControllerFlag]) -> EnvironmentBuilder<T> {
         if self.configuration.is_none() {
@@ -420,27 +390,21 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         // Define top level MessageHub for service communication.
         let delegate = service::MessageHub::create_hub();
 
-        let (agent_types, fidl_interfaces, mut policies, flags) = match self.configuration {
+        let (agent_types, fidl_interfaces, flags) = match self.configuration {
             Some(configuration) => (
                 configuration.agent_types,
                 configuration.fidl_interfaces,
-                configuration.policies,
                 configuration.controller_flags,
             ),
-            _ => (HashSet::new(), HashSet::new(), HashSet::new(), HashSet::new()),
+            _ => (HashSet::new(), HashSet::new(), HashSet::new()),
         };
-
-        // TODO(fxbug.dev/60925): remove temporary logic used for soft transition.
-        if policies.contains(&PolicyType::Audio) {
-            // If audio policy is specified through policy config instead of interface config, add
-            // it to the registrants.
-            self.registrants.push(Interface::AudioPolicy.registrant())
-        }
 
         self.registrants.extend(fidl_interfaces.into_iter().map(|x| x.registrant()));
 
         let mut settings = HashSet::new();
         settings.extend(self.settings);
+
+        let mut policies = HashSet::new();
 
         for registrant in &self.registrants {
             for dependency in registrant.get_dependencies() {
@@ -473,18 +437,15 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             self.storage_factory.clone(),
             context_id_counter,
         );
-        // TODO(fxbug.dev/673662): If policy registration becomes configurable, then this
-        // initialization needs to be made configurable with the registration.
-        PolicyType::Audio
-            .initialize_storage(&self.storage_factory)
-            .await
-            .expect("was not able to initialize storage for audio policy");
-        policy_handler_factory.register(
-            PolicyType::Audio,
-            Box::new(policy_handler::create_handler::<AudioPolicyHandler, _>),
-        );
 
-        EnvironmentBuilder::get_configuration_handlers(
+        EnvironmentBuilder::register_policy_handlers(
+            &policies,
+            Arc::clone(&self.storage_factory),
+            &mut policy_handler_factory,
+        )
+        .await;
+
+        EnvironmentBuilder::register_setting_handlers(
             &settings,
             Arc::clone(&self.storage_factory),
             &flags,
@@ -571,7 +532,29 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         environment.nested_environment.ok_or_else(|| format_err!("nested environment not created"))
     }
 
-    async fn get_configuration_handlers(
+    /// Initializes storage and registers handler generation functions for the configured policy
+    /// types.
+    async fn register_policy_handlers(
+        policies: &HashSet<PolicyType>,
+        storage_factory: Arc<T>,
+        policy_handler_factory: &mut PolicyHandlerFactoryImpl<T>,
+    ) {
+        // Audio
+        if policies.contains(&PolicyType::Audio) {
+            storage_factory
+                .initialize::<AudioPolicyHandler>()
+                .await
+                .expect("storage should still be initializing");
+            policy_handler_factory.register(
+                PolicyType::Audio,
+                Box::new(policy_handler::create_handler::<AudioPolicyHandler, _>),
+            );
+        }
+    }
+
+    /// Initializes storage and registers handler generation functions for the configured setting
+    /// types.
+    async fn register_setting_handlers(
         components: &HashSet<SettingType>,
         storage_factory: Arc<T>,
         controller_flags: &HashSet<ControllerFlag>,

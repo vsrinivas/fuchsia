@@ -10,8 +10,6 @@
         args: [
             "--display-config",
             "/pkg/data/display_configuration.json",
-            "--policy-config",
-            "/pkg/data/policy_configuration.json",
             "--controller-flags",
             "/pkg/data/service_flags.json",
             "--input-device-config",

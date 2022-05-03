@@ -60,8 +60,7 @@ async fn create_test_environment_with_data(data: Option<&State>) -> TestEnvironm
 
     let env = EnvironmentBuilder::new(storage_factory)
         .service(ServiceRegistry::serve(service_registry))
-        .fidl_interfaces(&[Interface::Audio])
-        .policies(&[PolicyType::Audio])
+        .fidl_interfaces(&[Interface::Audio, Interface::AudioPolicy])
         .agents(&[AgentType::Restore.into()])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
