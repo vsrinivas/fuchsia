@@ -715,29 +715,9 @@ __NO_SAFESTACK static int printf_core(FILE* f, const char* fmt, va_list* ap, uni
 
     switch (t) {
       case 'n':
-        switch (ps) {
-          case BARE:
-            *(int*)arg.p = cnt;
-            break;
-          case LPRE:
-            *(long*)arg.p = cnt;
-            break;
-          case LLPRE:
-            *(long long*)arg.p = cnt;
-            break;
-          case HPRE:
-            *(unsigned short*)arg.p = cnt;
-            break;
-          case HHPRE:
-            *(unsigned char*)arg.p = cnt;
-            break;
-          case ZTPRE:
-            *(size_t*)arg.p = cnt;
-            break;
-          case JPRE:
-            *(uintmax_t*)arg.p = cnt;
-            break;
-        }
+        fprintf(stderr, "%%n not supported\n");
+        fflush(NULL);
+        abort();
         continue;
       case 'p':
         p = MAX(p, 2 * sizeof(void*));
