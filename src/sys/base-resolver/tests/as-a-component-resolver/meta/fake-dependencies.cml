@@ -16,7 +16,7 @@
     capabilities: [
         { protocol: "fuchsia.boot.Arguments" },
         {
-            directory: "blob",
+            directory: "blob-exec",
             rights: [ "rx*" ],
             path: "/blob",
         },
@@ -46,7 +46,7 @@
         },
         {
             directory: [
-                "blob",
+                "blob-exec",
                 "pkgfs-packages",
             ],
             from: "self",

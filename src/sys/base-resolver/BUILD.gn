@@ -62,6 +62,7 @@ rustc_binary("bin") {
   ]
 
   sources = [
+    "src/base_resolver.rs",
     "src/main.rs",
     "src/pkg_cache_resolver.rs",
   ]
@@ -74,6 +75,12 @@ component_manifest_resources("root-manifest") {
 fuchsia_component("base-resolver-component") {
   manifest = "meta/base-resolver.cml"
   component_name = "base-resolver"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("pkg-cache-resolver-component") {
+  manifest = "meta/pkg-cache-resolver.cml"
+  component_name = "pkg-cache-resolver"
   deps = [ ":bin" ]
 }
 

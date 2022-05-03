@@ -11,9 +11,3 @@ group("tests") {
     "using-realm-builder:tests",
   ]
 }
-
-fuchsia_component("base-resolver-component-for-integration-test") {
-  manifest = "meta/base-resolver-for-integration-test.cml"
-  component_name = "base-resolver"
-  deps = [ "//src/sys/base-resolver:bin" ]
-}

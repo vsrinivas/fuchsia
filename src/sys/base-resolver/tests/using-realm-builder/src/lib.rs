@@ -16,8 +16,8 @@ use {
     vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope},
 };
 
-static BASE_RESOLVER_URL: &str =
-    "fuchsia-pkg://fuchsia.com/base-resolver-integration-tests#meta/base-resolver.cm";
+static PKG_CACHE_RESOLVER_URL: &str =
+    "fuchsia-pkg://fuchsia.com/base-resolver-integration-tests#meta/pkg-cache-resolver.cm";
 static PKGFS_BOOT_ARG_KEY: &'static str = "zircon.system.pkgfs.cmd";
 static PKGFS_BOOT_ARG_VALUE_PREFIX: &'static str = "bin/pkgsvr+";
 static PKG_CACHE_COMPONENT_URL: &'static str = "fuchsia-pkg-cache:///#meta/pkg-cache.cm";
@@ -48,8 +48,8 @@ impl TestEnvBuilder {
 
         let builder = RealmBuilder::new().await.unwrap();
 
-        let base_resolver = builder
-            .add_child("base_resolver", BASE_RESOLVER_URL, ChildOptions::new())
+        let resolver = builder
+            .add_child("resolver", PKG_CACHE_RESOLVER_URL, ChildOptions::new())
             .await
             .unwrap();
 
@@ -89,7 +89,7 @@ impl TestEnvBuilder {
             .add_route(
                 Route::new()
                     .capability(
-                        Capability::directory("blob").path("/blob").rights(fio::RX_STAR_DIR),
+                        Capability::directory("blob-exec").path("/blob").rights(fio::RX_STAR_DIR),
                     )
                     .capability(
                         Capability::directory("pkgfs-packages")
@@ -98,7 +98,7 @@ impl TestEnvBuilder {
                     )
                     .capability(Capability::protocol_by_name("fuchsia.boot.Arguments"))
                     .from(&local_mocks)
-                    .to(&base_resolver),
+                    .to(&resolver),
             )
             .await
             .unwrap();
@@ -108,7 +108,7 @@ impl TestEnvBuilder {
                 Route::new()
                     .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
                     .from(Ref::parent())
-                    .to(&base_resolver),
+                    .to(&resolver),
             )
             .await
             .unwrap();
@@ -117,9 +117,9 @@ impl TestEnvBuilder {
             .add_route(
                 Route::new()
                     .capability(Capability::protocol_by_name(
-                        "fuchsia.component.resolution.Resolver-ForPkgCache",
+                        "fuchsia.component.resolution.Resolver",
                     ))
-                    .from(&base_resolver)
+                    .from(&resolver)
                     .to(Ref::parent()),
             )
             .await
@@ -138,7 +138,7 @@ impl TestEnv {
         self.realm_instance
             .root
             .connect_to_named_protocol_at_exposed_dir::<ResolverMarker>(
-                "fuchsia.component.resolution.Resolver-ForPkgCache",
+                "fuchsia.component.resolution.Resolver",
             )
             .unwrap()
     }

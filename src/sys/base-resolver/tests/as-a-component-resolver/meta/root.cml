@@ -13,23 +13,29 @@
             url: "#meta/base-resolver.cm",
         },
         {
+            name: "pkg_cache_resolver",
+            url: "#meta/pkg-cache-resolver.cm",
+        },
+        {
             name: "integration_test",
             url: "#meta/integration-test.cm",
         },
     ],
     offer: [
         {
-            directory: [
-                "blob",
-                "pkgfs-packages",
-            ],
+            directory: "pkgfs-packages",
             from: "#fake_dependencies",
             to: "#base_resolver",
         },
         {
+            directory: "blob-exec",
+            from: "#fake_dependencies",
+            to: "#pkg_cache_resolver",
+        },
+        {
             protocol: "fuchsia.boot.Arguments",
             from: "#fake_dependencies",
-            to: "#base_resolver",
+            to: "#pkg_cache_resolver",
         },
         {
             storage: "tmp",
@@ -52,6 +58,7 @@
                 "#base_resolver",
                 "#fake_dependencies",
                 "#integration_test",
+                "#pkg_cache_resolver",
             ],
         },
         {
@@ -61,7 +68,7 @@
         },
         {
             resolver: "pkg_cache_resolver",
-            from: "#base_resolver",
+            from: "#pkg_cache_resolver",
             to: "#integration_test",
         },
     ],

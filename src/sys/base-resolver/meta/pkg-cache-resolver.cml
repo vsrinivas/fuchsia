@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
@@ -6,25 +6,29 @@
     program: {
         runner: "elf",
         binary: "bin/base_resolver",
-        args: [ "base_resolver" ],
+        args: [ "pkg_cache_resolver" ],
     },
     capabilities: [
         {
-            resolver: "base_resolver",
+            resolver: "pkg_cache_resolver",
             path: "/svc/fuchsia.component.resolution.Resolver",
         },
         { protocol: "fuchsia.component.resolution.Resolver" },
     ],
     use: [
         {
-            directory: "pkgfs-packages",
+            directory: "blob-exec",
             rights: [ "rx*" ],
-            path: "/pkgfs/packages",
+            path: "/blob",
+        },
+        {
+            protocol: [ "fuchsia.boot.Arguments" ],
+            from: "parent",
         },
     ],
     expose: [
         {
-            resolver: "base_resolver",
+            resolver: "pkg_cache_resolver",
             from: "self",
         },
         {

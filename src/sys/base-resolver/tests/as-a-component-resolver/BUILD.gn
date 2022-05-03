@@ -120,6 +120,7 @@ fuchsia_test_package("base-resolver-tests") {
     ":integration-test",
     ":mock-component",
     ":mock-pkg-cache-component",
-    "//src/sys/base-resolver/tests:base-resolver-component-for-integration-test",
+    "//src/sys/base-resolver:base-resolver-component",
+    "//src/sys/base-resolver:pkg-cache-resolver-component",
   ]
 }
