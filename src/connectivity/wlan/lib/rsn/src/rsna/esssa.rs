@@ -2,22 +2,32 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::key::exchange::{
-    self,
-    handshake::{fourway::Fourway, group_key::GroupKey},
-    Key,
+use {
+    crate::{
+        format_rsn_err,
+        key::{
+            exchange::{
+                self,
+                handshake::{fourway::Fourway, group_key::GroupKey},
+                Key,
+            },
+            gtk::Gtk,
+            igtk::Igtk,
+            ptk::Ptk,
+        },
+        rsna::{
+            Dot11VerifiedKeyFrame, NegotiatedProtection, Role, SecAssocStatus, SecAssocUpdate,
+            UpdateSink,
+        },
+        Error,
+    },
+    eapol,
+    fidl_fuchsia_wlan_mlme::EapolResultCode,
+    log::{error, info},
+    std::collections::HashSet,
+    wlan_statemachine::StateMachine,
+    zerocopy::ByteSlice,
 };
-use crate::key::{gtk::Gtk, igtk::Igtk, ptk::Ptk};
-use crate::rsna::{
-    Dot11VerifiedKeyFrame, NegotiatedProtection, Role, SecAssocStatus, SecAssocUpdate, UpdateSink,
-};
-use crate::{format_rsn_err, Error};
-use eapol;
-use fidl_fuchsia_wlan_mlme::EapolResultCode;
-use log::{error, info};
-use std::collections::HashSet;
-use wlan_statemachine::StateMachine;
-use zerocopy::ByteSlice;
 
 const MAX_KEY_FRAME_RETRIES: u32 = 3;
 
@@ -367,11 +377,26 @@ impl EssSa {
     }
 
     // Do any necessary final processing before passing updates to the higher layer.
-    fn push_updates(&mut self, update_sink: &mut UpdateSink, new_updates: UpdateSink) {
+    fn push_updates(&mut self, update_sink: &mut UpdateSink, mut new_updates: UpdateSink) {
+        if let Some(updates_awaiting_confirm) = &mut self.updates_awaiting_confirm {
+            // We're still waiting on a previous eapol confirm, and are not ready
+            // to do anything with these new updates. This can happen if we receive
+            // 4-way message 3 before we've received a confirm for message 2, in which
+            // case we defer all updates. We'll go through the logic below after we
+            // receive the expected confirm.
+            updates_awaiting_confirm.append(&mut new_updates);
+            return;
+        }
         for update in new_updates {
-            // If we've sent an eapol frame, buffer all remaining updates until we receive a confirm.
-            if let Some(buffered_updates) = &mut self.updates_awaiting_confirm {
-                buffered_updates.push(update);
+            if let SecAssocUpdate::Key(_) = update {
+                // Always install keys immediately to avoid race conditions after the eapol
+                // exchange completes. This is a particular issue for WPA1, where we may miss
+                // the first PTK-encrypted frame of the group key handshake.
+                update_sink.push(update);
+            } else if let Some(updates_awaiting_confirm) = &mut self.updates_awaiting_confirm {
+                // If we've sent an eapol frame, buffer all other non-key
+                // updates until we receive a confirm.
+                updates_awaiting_confirm.push(update);
             } else {
                 if let SecAssocUpdate::TxEapolKeyFrame { frame, expect_response } = &update {
                     if *expect_response {
@@ -380,6 +405,7 @@ impl EssSa {
                         // We don't expect a response, so we don't need to keep the frame around.
                         self.last_key_frame_buf = None;
                     }
+                    // Subsequent non-key updates should be buffered until this frame is confirmed.
                     self.updates_awaiting_confirm.replace(Default::default());
                 }
                 update_sink.push(update);
@@ -593,14 +619,18 @@ impl EssSa {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::key::exchange::compute_mic;
-    use crate::rsna::test_util;
-    use crate::rsna::test_util::expect_eapol_resp;
-    use crate::rsna::AuthStatus;
-    use crate::{Authenticator, Supplicant};
-    use wlan_common::assert_variant;
-    use wlan_common::ie::{get_rsn_ie_bytes, rsn::fake_wpa2_s_rsne};
+    use {
+        super::*,
+        crate::{
+            key::exchange::compute_mic,
+            rsna::{test_util, test_util::expect_eapol_resp, AuthStatus},
+            Authenticator, Supplicant,
+        },
+        wlan_common::{
+            assert_variant,
+            ie::{get_rsn_ie_bytes, rsn::fake_wpa2_s_rsne},
+        },
+    };
 
     const ANONCE: [u8; 32] = [0x1A; 32];
     const GTK: [u8; 16] = [0x1B; 16];
@@ -1340,15 +1370,16 @@ mod tests {
         supplicant
             .on_eapol_conf(&mut update_sink, EapolResultCode::Success)
             .expect("Failed to send eapol conf");
-        assert_eq!(update_sink.len(), 1);
+        assert_eq!(update_sink.len(), 3);
         test_util::expect_eapol_resp(&update_sink[..]);
+        test_util::expect_reported_ptk(&update_sink[..]);
+        test_util::expect_reported_gtk(&update_sink[..]);
 
         // On another confirm, we receive the remaining updates.
         supplicant
             .on_eapol_conf(&mut update_sink, EapolResultCode::Success)
             .expect("Failed to send eapol conf");
-        test_util::expect_reported_ptk(&update_sink[..]);
-        test_util::expect_reported_gtk(&update_sink[..]);
+        test_util::expect_reported_status(&update_sink[..], SecAssocStatus::EssSaEstablished);
     }
 
     #[test]
@@ -1451,20 +1482,22 @@ mod tests {
         let mut s_updates = vec![];
         let result = supplicant.on_eapol_frame(&mut s_updates, eapol::Frame::Key(msg3.keyframe()));
         assert!(result.is_ok(), "Supplicant failed processing msg #3: {}", result.unwrap_err());
-        assert_eq!(s_updates.len(), 1); // We shouldn't see the ptk or gtk until an eapol conf is received.
+
         let msg4 = test_util::expect_eapol_resp(&s_updates[..]);
-        supplicant
-            .on_eapol_conf(&mut s_updates, EapolResultCode::Success)
-            .expect("Failed eapol conf");
         let s_ptk = test_util::expect_reported_ptk(&s_updates[..]);
         let s_gtk = test_util::expect_reported_gtk(&s_updates[..]);
         let s_igtk = if wpa3 {
-            assert_eq!(s_updates.len(), 5, "{:?}", s_updates);
+            assert_eq!(s_updates.len(), 4, "{:?}", s_updates);
             Some(test_util::expect_reported_igtk(&s_updates[..]))
         } else {
-            assert_eq!(s_updates.len(), 4, "{:?}", s_updates);
+            assert_eq!(s_updates.len(), 3, "{:?}", s_updates);
             None
         };
+
+        // We shouldn't see the esssa established until a confirm is received.
+        supplicant
+            .on_eapol_conf(&mut s_updates, EapolResultCode::Success)
+            .expect("Failed eapol conf");
         test_util::expect_reported_status(&s_updates, SecAssocStatus::EssSaEstablished);
 
         // Send msg #4 to Authenticator.
