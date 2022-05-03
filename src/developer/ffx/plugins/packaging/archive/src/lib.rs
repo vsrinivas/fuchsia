@@ -2,17 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use ffx_core::ffx_plugin;
 pub use ffx_packaging_archive_args::ArchiveCommand;
 use fuchsia_pkg::PackageManifest;
-use std::fs::File;
+use std::fs::{create_dir_all, File};
 
 #[ffx_plugin("ffx_package")]
 pub async fn cmd_archive(cmd: ArchiveCommand) -> Result<()> {
     let package_manifest = PackageManifest::try_load_from(&cmd.package_manifest)?;
-    let output = File::create(cmd.output)?;
-    package_manifest.archive(cmd.build_dir, output).await?;
+    let output_dir = cmd.output.parent().expect("output path needs to have a parent").to_path_buf();
+    create_dir_all(&output_dir)
+        .with_context(|| format!("creating directory {}", output_dir.display()))?;
+    let output = File::create(&cmd.output)
+        .with_context(|| format!("creating package archive file {}", cmd.output.display()))?;
+    package_manifest.archive(cmd.root_dir, output).await?;
     Ok(())
 }
 
@@ -96,12 +100,12 @@ mod test {
 
         let result_dir = tempdir.path().join("results");
         fs::create_dir_all(&result_dir).unwrap();
-        let result_far = result_dir.join("fortune-teller.far");
+        let result_far = result_dir.join("test_package.far");
 
         let cmd = ArchiveCommand {
             package_manifest: package_manifest_path,
             output: result_far.clone(),
-            build_dir: result_dir.clone(),
+            root_dir: result_dir.clone(),
         };
         cmd_archive(cmd).await.unwrap();
         assert!(result_far.exists());

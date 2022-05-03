@@ -44,21 +44,25 @@ impl PackageManifest {
 
     pub async fn archive(
         self,
-        build_dir: PathBuf,
+        root_dir: PathBuf,
         out: impl Write,
     ) -> Result<(), PackageManifestError> {
         let mut contents: BTreeMap<_, (_, Box<dyn Read>)> = BTreeMap::new();
         for blob in self.into_blobs() {
-            let source_path = build_dir.join(blob.source_path);
+            let source_path = root_dir.join(blob.source_path);
             if blob.path == "meta/" {
-                let mut meta_far_blob = File::open(&source_path)?;
+                let mut meta_far_blob = File::open(&source_path).map_err(|err| {
+                    PackageManifestError::IoErrorWithPath { cause: err, path: source_path }
+                })?;
                 meta_far_blob.seek(SeekFrom::Start(0))?;
                 contents.insert(
                     "meta.far".to_string(),
                     (meta_far_blob.metadata()?.len(), Box::new(meta_far_blob)),
                 );
             } else {
-                let blob_file = File::open(&source_path)?;
+                let blob_file = File::open(&source_path).map_err(|err| {
+                    PackageManifestError::IoErrorWithPath { cause: err, path: source_path }
+                })?;
                 contents.insert(
                     blob.merkle.to_string(),
                     (blob_file.metadata()?.len(), Box::new(blob_file)),

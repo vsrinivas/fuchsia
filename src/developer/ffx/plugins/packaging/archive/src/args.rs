@@ -17,14 +17,14 @@ pub struct ArchiveCommand {
     #[argh(positional, description = "package_manifest.json to archive")]
     pub package_manifest: PathBuf,
 
-    #[argh(option, description = "output", short = 'o')]
+    #[argh(option, description = "output package archive", short = 'o')]
     pub output: PathBuf,
 
     #[argh(
         option,
-        description = "build directory for package_manifest.json",
+        description = "root directory for paths in package_manifest.json",
         default = "PathBuf::from(\".\")",
-        short = 'b'
+        short = 'r'
     )]
-    pub build_dir: PathBuf,
+    pub root_dir: PathBuf,
 }
