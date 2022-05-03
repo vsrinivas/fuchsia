@@ -44,6 +44,7 @@
             "fuchsia.ui.input3.KeyEventInjector",
             "fuchsia.ui.input3.Keyboard",
             "fuchsia.ui.scenic.Scenic",
+            "fuchsia.update.channelcontrol.ChannelControl",
             "fuchsia.update.Manager",
             "fuchsia.virtualization.LinuxManager",
             "fuchsia.virtualization.Manager"
