@@ -68,4 +68,9 @@ void ParseCmdline(const zx::debuglog& log, std::string_view cmdline, Options& op
     printl(log, "OPTION %.*s%s%.*s\n", static_cast<int>(key.size()), key.data(),
            value.empty() ? "" : "=", static_cast<int>(value.size()), value.data());
   }
+
+  if (!opts.root.empty() && opts.root.front() == '/') {
+    fail(log, "`userboot.root` (\"%.*s\" must not begin with a \'/\'",
+         static_cast<int>(opts.root.size()), opts.root.data());
+  }
 }

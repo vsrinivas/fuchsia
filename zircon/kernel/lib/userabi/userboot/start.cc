@@ -125,6 +125,38 @@ std::string_view GetUserbootNextFilename(const Options& opts) {
   return opts.next.substr(0, opts.next.find_first_of('+'));
 }
 
+// We don't need our own thread handle, but the child does. In addition we pass on a decompressed
+// BOOTFS VMO, and a debuglog handle (tied to stdout).
+//
+// In total we're passing along three more handles than we got.
+constexpr uint32_t kThreadSelf = kHandleCount;
+constexpr uint32_t kBootfsVmo = kHandleCount + 1;
+constexpr uint32_t kDebugLog = kHandleCount + 2;
+constexpr uint32_t kChildHandleCount = kHandleCount + 3;
+
+// This is the processargs message the child will receive.
+struct ChildMessageLayout {
+  zx_proc_args_t pargs{};
+  char args[kProcessArgsMaxBytes];
+  uint32_t info[kChildHandleCount];
+};
+
+std::array<zx_handle_t, kChildHandleCount> ExtractHandles(zx::channel bootstrap) {
+  // Default constructed debuglog will force check/fail to fallback to |zx_debug_write|.
+  zx::debuglog log;
+  // Read the command line and the essential handles from the kernel.
+  std::array<zx_handle_t, kChildHandleCount> handles = {};
+  uint32_t actual_handles;
+  zx_status_t status =
+      bootstrap.read(0, nullptr, handles.data(), 0, handles.size(), nullptr, &actual_handles);
+
+  check(log, status, "cannot read bootstrap message");
+  if (actual_handles != kHandleCount) {
+    fail(log, "read %u handles instead of %u", actual_handles, kHandleCount);
+  }
+  return handles;
+}
+
 // This is the main logic:
 // 1. Read the kernel's bootstrap message.
 // 2. Load up the child process from ELF file(s) on the bootfs.
@@ -133,51 +165,27 @@ std::string_view GetUserbootNextFilename(const Options& opts) {
 // 5. Start the child process running.
 // 6. Optionally, wait for it to exit and then shut down.
 [[noreturn]] void Bootstrap(zx::channel channel) {
-  // Before we've gotten the root resource and created the debuglog,
-  // errors will be reported via zx_debug_write.
-  zx::debuglog log;
-
-  // We don't need our own thread handle, but the child does. In addition we pass on a decompressed
-  // BOOTFS VMO, and a debuglog handle (tied to stdout).
-  //
-  // In total we're passing along three more handles than we got.
-  constexpr uint32_t kThreadSelf = kHandleCount;
-  constexpr uint32_t kBootfsVmo = kHandleCount + 1;
-  constexpr uint32_t kDebugLog = kHandleCount + 2;
-  constexpr uint32_t kChildHandleCount = kHandleCount + 3;
-
-  // This is the processargs message the child will receive.
-  struct ChildMessageLayout {
-    zx_proc_args_t pargs{};
-    char args[kProcessArgsMaxBytes];
-    uint32_t info[kChildHandleCount];
-  } child_message;
+  ChildMessageLayout child_message;
 
   // We pass all the same handles the kernel gives us along to the child,
   // except replacing our own process/root-VMAR handles with its, and
   // passing along the three extra handles (BOOTFS, thread-self, and a debuglog
   // handle tied to stdout).
-  std::array<zx_handle_t, kChildHandleCount> handles;
-
-  // Read the command line and the essential handles from the kernel.
-  uint32_t nhandles;
-  zx_status_t status =
-      channel.read(0, nullptr, handles.data(), 0, handles.size(), nullptr, &nhandles);
-  check(log, status, "cannot read bootstrap message");
-  if (nhandles != kHandleCount) {
-    fail(log, "read %u handles instead of %u", nhandles, kHandleCount);
-  }
-
-  // All done with the channel from the kernel now.  Let it go.
-  channel.reset();
+  std::array<zx_handle_t, kChildHandleCount> handles = ExtractHandles(std::move(channel));
 
   // Now that we have the root resource, we can use it to get a debuglog.
-  status = zx::debuglog::create(*zx::unowned_resource{handles[kRootResource]}, 0, &log);
+  zx::debuglog log;
+  auto status = zx::debuglog::create(*zx::unowned_resource{handles[kRootResource]}, 0, &log);
   check(log, status, "zx_debuglog_create failed: %d", status);
 
   // We need our own root VMAR handle to map in the ZBI.
   zx::vmar vmar_self{handles[kVmarRootSelf]};
   handles[kVmarRootSelf] = ZX_HANDLE_INVALID;
+
+  // Hang on to our own process handle.  If we closed it, our process
+  // would be killed.  Exiting will clean it up.
+  zx::process proc_self{handles[kProcSelf]};
+  handles[kProcSelf] = ZX_HANDLE_INVALID;
 
   // Locate the ZBI_TYPE_STORAGE_BOOTFS item and decompress it. This will be used to load
   // the binary referenced by userboot.next, as well as libc. Bootfs will be fully parsed
@@ -234,11 +242,6 @@ std::string_view GetUserbootNextFilename(const Options& opts) {
   handles[kDebugLog] = log_dup.release();
   child_message.info[kDebugLog] = PA_HND(PA_FD, kFdioFlagUseForStdio);
 
-  // Hang on to our own process handle.  If we closed it, our process
-  // would be killed.  Exiting will clean it up.
-  zx::process proc_self{handles[kProcSelf]};
-  handles[kProcSelf] = ZX_HANDLE_INVALID;
-
   // Strips any arguments passed along with the filename to userboot.next.
   std::string_view filename = GetUserbootNextFilename(opts);
 
@@ -261,11 +264,6 @@ std::string_view GetUserbootNextFilename(const Options& opts) {
 
     // Pass the decompressed bootfs VMO on.
     handles[kBootfsVmo] = bootfs_vmo.release();
-
-    if (!opts.root.empty() && opts.root.front() == '/') {
-      fail(log, "`userboot.root` (\"%.*s\" must not begin with a \'/\'",
-           static_cast<int>(opts.root.size()), opts.root.data());
-    }
 
     // Make the channel for the bootstrap message.
     zx::channel to_child, child_start_handle;
