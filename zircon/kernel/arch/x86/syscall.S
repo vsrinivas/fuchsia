@@ -22,11 +22,7 @@
 .endm
 
 .macro post_pop n
-.if \n % 2 == 1
-    add_to_sp ((\n + 1) * 8)
-.elseif \n != 0
-    add_to_sp (\n * 8)
-.endif
+    add_to_sp ((\n + (\n % 2)) * 8)
 .endm
 
 // Macros for preparing ABI conformant calls for syscall wrappers.
