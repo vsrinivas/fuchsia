@@ -1,0 +1,38 @@
+{
+    children: [
+        {
+            name: "debug_agent",
+            url: "fuchsia-pkg://fuchsia.com/debug_agent#meta/debug_agent.cm",
+            environment: "#full-resolver-env",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.kernel.RootJob",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+            ],
+            from: "parent",
+            to: "#debug_agent",
+        },
+        {
+            protocol: [ "fuchsia.exception.ProcessLimbo" ],
+            from: "#exceptions",
+            to: "#debug_agent",
+        },
+        {
+            protocol: [
+                "fuchsia.process.Resolver",
+                "fuchsia.sys.Launcher",
+            ],
+            from: "self",
+            to: "#debug_agent",
+        },
+        {
+            directory: "boot",
+            from: "parent",
+            to: "#debug_agent",
+        },
+    ],
+}

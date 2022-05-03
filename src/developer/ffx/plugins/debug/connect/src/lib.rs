@@ -16,7 +16,7 @@ mod debug_agent;
 pub use debug_agent::DebugAgentSocket;
 
 #[ffx_core::ffx_plugin(
-    fidl_fuchsia_debugger::DebugAgentProxy = "core/appmgr:out:fuchsia.debugger.DebugAgent"
+    fidl_fuchsia_debugger::DebugAgentProxy = "core/debug_agent:expose:fuchsia.debugger.DebugAgent"
 )]
 pub async fn connect(
     debugger_proxy: fidl_fuchsia_debugger::DebugAgentProxy,

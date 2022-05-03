@@ -148,7 +148,7 @@ int main(int argc, const char* argv[]) {
       debug_agent::DebugAgent debug_agent(std::make_unique<debug_agent::ZirconSystemInterface>());
 
       debug_agent::SocketServer server;
-      if (!server.Init(options.port)) {
+      if (!options.channel_mode && !server.Init(options.port)) {
         message_loop->Cleanup();
         return 1;
       }

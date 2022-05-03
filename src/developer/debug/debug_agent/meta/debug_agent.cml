@@ -1,0 +1,43 @@
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/debug_agent",
+        args: [ "--channel-mode" ],
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.debugger.DebugAgent" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                // To attach to processes in limbo.
+                "fuchsia.exception.ProcessLimbo",
+
+                // To attach to the root job.
+                "fuchsia.kernel.RootJob",
+
+                // Used by fdio for running executables.
+                "fuchsia.process.Launcher",
+                "fuchsia.process.Resolver", // for executables with "#!resolve" directive.
+
+                // For running v1 components.
+                "fuchsia.sys.Launcher",
+            ],
+        },
+        {
+            // Some tests depend on "run /boot/bin/crasher".
+            directory: "boot",
+            rights: [ "x*" ],
+            path: "/boot",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.debugger.DebugAgent",
+            from: "self",
+        },
+    ],
+}

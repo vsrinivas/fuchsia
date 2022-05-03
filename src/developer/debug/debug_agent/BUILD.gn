@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/test.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 # Set manually to true to compile the zxdb_test_app.cc file for manual debugger
 # testing of various conditions.
@@ -161,23 +162,27 @@ executable("bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-fuchsia_component("debug_agent-component") {
+fuchsia_component("debug_agent-component-legacy") {
   component_name = "debug_agent"
   manifest = "meta/debug_agent.cmx"
   deps = [ ":bin" ]
 }
 
-fuchsia_component("debug_agent_channel-component") {
-  component_name = "debug_agent_channel"
-  manifest = "meta/debug_agent_channel.cmx"
+fuchsia_component("debug_agent-component") {
+  component_name = "debug_agent"
+  manifest = "meta/debug_agent.cml"
   deps = [ ":bin" ]
 }
 
 fuchsia_package("debug_agent") {
   deps = [
     ":debug_agent-component",
-    ":debug_agent_channel-component",
+    ":debug_agent-component-legacy",
   ]
+}
+
+core_shard("core_shard") {
+  shard_file = "meta/debug_agent.core_shard.cml"
 }
 
 # Common functionality used by tests.
