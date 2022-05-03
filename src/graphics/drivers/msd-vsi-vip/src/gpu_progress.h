@@ -44,10 +44,6 @@ class GpuProgress {
     }
   }
 
-  bool IsIdle() const {
-    return (last_completed_sequence_number_ == last_submitted_sequence_number_);
-  }
-
   std::chrono::steady_clock::duration GetHangcheckTimeout(
       uint64_t max_completion_time_ms, std::chrono::steady_clock::time_point now) {
     if (hangcheck_start_time_ == std::chrono::steady_clock::time_point::max())

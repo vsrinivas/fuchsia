@@ -13,15 +13,6 @@ namespace registers {
 
 class ClockControl : public hwreg::RegisterBase<ClockControl, uint32_t> {
  public:
-  static constexpr uint32_t kFscaleOn = 0x20;
-  static constexpr uint32_t kFscaleIdle = 0x1;
-  static constexpr uint32_t kFscaleSuspend = 0x1;
-  static constexpr uint32_t kFscaleOff = 0x1;
-
-  DEF_BIT(0, clk3d_dis);
-  DEF_BIT(1, clk2d_dis);
-  DEF_FIELD(8, 2, fscale_val);
-  DEF_BIT(9, fscale_cmd_load);
   DEF_BIT(12, soft_reset);
   DEF_BIT(16, idle_3d);
   DEF_BIT(19, isolate_gpu);

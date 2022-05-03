@@ -123,9 +123,6 @@ TEST_F(MsdVsiDeviceTest, FetchEngineDma) {
   constexpr uint32_t kTimeoutMs = 100;
   EXPECT_TRUE(device_->WaitUntilIdle(kTimeoutMs));
 
-  // This test accesses registers directly, need to ensure device is powered on.
-  device_->PowerOn();
-
   auto dma_addr = registers::DmaAddress::Get().ReadFrom(device_->register_io());
   EXPECT_EQ(dma_addr.reg_value(), bus_mapping->Get()[0] + prefetch * sizeof(uint64_t));
 }
@@ -200,9 +197,6 @@ TEST_F(MsdVsiDeviceTest, LoadAddressSpace) {
     constexpr uint32_t kTimeoutMs = 100;
     EXPECT_TRUE(device->WaitUntilIdle(kTimeoutMs));
 
-    // This test accesses registers directly, need to ensure device is powered on.
-    device->PowerOn();
-
     auto dma_addr = registers::DmaAddress::Get().ReadFrom(device->register_io());
     EXPECT_EQ(dma_addr.reg_value(), bus_mapping->Get()[0] + prefetch * sizeof(uint64_t));
 
@@ -237,9 +231,6 @@ TEST_F(MsdVsiDeviceTest, RingbufferCanHoldMaxEvents) {
 }
 
 TEST_F(MsdVsiDeviceTest, PulseEater) {
-  // This test accesses registers directly, need to ensure device is powered on.
-  device_->PowerOn();
-
   uint32_t pulse_eater = device_->register_io()->Read32(0x10C);
   EXPECT_TRUE(pulse_eater & (1 << 18)) << "missing performance fix";
 }

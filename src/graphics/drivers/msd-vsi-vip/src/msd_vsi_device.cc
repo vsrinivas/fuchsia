@@ -23,7 +23,6 @@
 #include "platform_logger.h"
 #include "platform_mmio.h"
 #include "platform_thread.h"
-#include "platform_trace.h"
 #include "registers.h"
 
 static constexpr uint32_t kInterruptIndex = 0;
@@ -122,10 +121,10 @@ bool MsdVsiDevice::Init(void* device_handle) {
   if (!mmio)
     return DRETF(false, "failed to map registers");
 
-  register_io_ = std::make_unique<VsiRegisterIo>(std::move(mmio), *this);
+  register_io_ = std::make_unique<magma::RegisterIo>(std::move(mmio));
 
-  device_id_ = registers::ChipId::Get().ReadFrom(register_io()).chip_id();
-  customer_id_ = registers::CustomerId::Get().ReadFrom(register_io()).customer_id();
+  device_id_ = registers::ChipId::Get().ReadFrom(register_io_.get()).chip_id();
+  customer_id_ = registers::CustomerId::Get().ReadFrom(register_io_.get()).customer_id();
   DLOG("Detected vsi chip id 0x%x customer id 0x%x", device_id_, customer_id_);
 
   if (HasAxiSram()) {
@@ -140,9 +139,9 @@ bool MsdVsiDevice::Init(void* device_handle) {
   if (device_id_ != 0x7000 && device_id_ != 0x8000)
     return DRETF(false, "Unspported gpu model 0x%x\n", device_id_);
 
-  revision_ = registers::Revision::Get().ReadFrom(register_io()).chip_revision();
+  revision_ = registers::Revision::Get().ReadFrom(register_io_.get()).chip_revision();
 
-  gpu_features_ = std::make_unique<GpuFeatures>(register_io());
+  gpu_features_ = std::make_unique<GpuFeatures>(register_io_.get());
   DLOG("gpu features: 0x%x minor features 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n",
        gpu_features_->features().reg_value(), gpu_features_->minor_features(0),
        gpu_features_->minor_features(1), gpu_features_->minor_features(2),
@@ -205,33 +204,30 @@ bool MsdVsiDevice::Init(void* device_handle) {
   if (!reset) {
     return DRETF(false, "Failed to reset hardware");
   }
-
   HardwareInit();
-
-  PowerSuspend();
 
   return true;
 }
 
 void MsdVsiDevice::HardwareInit() {
   {
-    auto reg = registers::PulseEater::Get().ReadFrom(register_io());
+    auto reg = registers::PulseEater::Get().ReadFrom(register_io_.get());
     reg.set_disable_internal_dfs(1);
-    reg.WriteTo(register_io());
+    reg.WriteTo(register_io_.get());
   }
 
   {
     auto reg = registers::IrqEnable::Get().FromValue(~0);
-    reg.WriteTo(register_io());
+    reg.WriteTo(register_io_.get());
   }
 
   {
-    auto reg = registers::SecureAhbControl::Get().ReadFrom(register_io());
+    auto reg = registers::SecureAhbControl::Get().ReadFrom(register_io_.get());
     reg.set_non_secure_access(1);
-    reg.WriteTo(register_io());
+    reg.WriteTo(register_io_.get());
   }
 
-  page_table_arrays_->HardwareInit(register_io());
+  page_table_arrays_->HardwareInit(register_io_.get());
 }
 
 void MsdVsiDevice::KillCurrentContext() {
@@ -295,7 +291,7 @@ void MsdVsiDevice::DisableInterrupts() {
     return;
   }
   auto reg = registers::IrqEnable::Get().FromValue(0);
-  reg.WriteTo(register_io());
+  reg.WriteTo(register_io_.get());
 }
 
 void MsdVsiDevice::HangCheckTimeout() {
@@ -342,15 +338,6 @@ int MsdVsiDevice::DeviceThreadLoop() {
 
     auto timeout = std::chrono::duration_cast<std::chrono::milliseconds>(
         progress_->GetHangcheckTimeout(kTimeoutMs, std::chrono::steady_clock::now()));
-
-#if defined(MSD_VSI_VIP_ENABLE_SUSPEND)
-    constexpr uint32_t kWaitMs = 10;
-    // If there are no more command buffers to execute wait before suspending
-    if (progress_->IsIdle() && power_state_ != PowerState::kSuspended) {
-      timeout = std::chrono::milliseconds(kWaitMs);
-    }
-#endif
-
     magma::Status status = device_request_semaphore_->Wait(timeout.count());
     switch (status.get()) {
       case MAGMA_STATUS_OK:
@@ -361,11 +348,7 @@ int MsdVsiDevice::DeviceThreadLoop() {
         bool empty = device_request_list_.empty();
         lock.unlock();
         if (empty) {
-          if (progress_->IsIdle()) {
-            StopRingBufferAndSuspend();
-          } else {
-            HangCheckTimeout();
-          }
+          HangCheckTimeout();
         }
       } break;
       default:
@@ -380,7 +363,6 @@ int MsdVsiDevice::DeviceThreadLoop() {
         lock.unlock();
         break;
       }
-
       auto request = std::move(device_request_list_.front());
       device_request_list_.pop_front();
       lock.unlock();
@@ -550,74 +532,6 @@ void MsdVsiDevice::ProcessRequestBacklog() {
   }
 }
 
-#if defined(MSD_VSI_VIP_ENABLE_SUSPEND)
-bool MsdVsiDevice::IsSuspendSupported() const { return true; }
-
-void MsdVsiDevice::PowerOn() {
-  CHECK_THREAD_IS_CURRENT(device_thread_id_);
-
-  if (power_state_ != PowerState::kOn) {
-    auto clock_control = registers::ClockControl::Get().FromValue(0);
-
-    clock_control.set_clk3d_dis(0);
-    clock_control.set_clk2d_dis(0);
-    clock_control.set_fscale_val(registers::ClockControl::kFscaleOn);
-    clock_control.set_fscale_cmd_load(1);
-    clock_control.WriteTo(register_io_.get());
-
-    clock_control.set_fscale_cmd_load(0);
-    clock_control.WriteTo(register_io_.get());
-
-    power_state_ = PowerState::kOn;
-
-    DLOG("NNA on");
-  }
-}
-
-void MsdVsiDevice::PowerSuspend() {
-  CHECK_THREAD_IS_CURRENT(device_thread_id_);
-
-  if (power_state_ != PowerState::kSuspended) {
-    auto clock_control = registers::ClockControl::Get().FromValue(0);
-
-    clock_control.set_clk3d_dis(1);
-    clock_control.set_clk2d_dis(1);
-    clock_control.set_fscale_val(registers::ClockControl::kFscaleSuspend);
-    clock_control.set_fscale_cmd_load(1);
-    clock_control.WriteTo(register_io_.get());
-
-    clock_control.set_fscale_cmd_load(0);
-    clock_control.WriteTo(register_io_.get());
-
-    power_state_ = PowerState::kSuspended;
-
-    DLOG("NNA suspended");
-  }
-}
-
-void MsdVsiDevice::StopRingBufferAndSuspend() {
-  CHECK_THREAD_IS_CURRENT(device_thread_id_);
-
-  if (!StopRingbuffer()) {
-    MAGMA_LOG(WARNING, "Wait for idle failed");
-    DASSERT(false);
-  }
-
-  constexpr uint32_t kTimeoutMs = 100;
-  if (!WaitUntilIdle(kTimeoutMs)) {
-    MAGMA_LOG(WARNING, "Stop ringbuffer failed");
-    DASSERT(false);
-  }
-
-  PowerSuspend();
-}
-#else
-bool MsdVsiDevice::IsSuspendSupported() const { return false; }
-void MsdVsiDevice::PowerSuspend() {}
-void MsdVsiDevice::StopRingBufferAndSuspend() {}
-void MsdVsiDevice::PowerOn() {}
-#endif
-
 bool MsdVsiDevice::AllocInterruptEvent(bool free_on_complete, uint32_t* out_event_id) {
   CHECK_THREAD_IS_CURRENT(device_thread_id_);
 
@@ -642,7 +556,6 @@ bool MsdVsiDevice::FreeInterruptEvent(uint32_t event_id) {
     return DRETF(false, "Event id %u was not allocated", event_id);
   }
   events_[event_id] = {};
-
   return true;
 }
 
@@ -688,7 +601,6 @@ bool MsdVsiDevice::CompleteInterruptEvent(uint32_t event_id) {
   bool free_on_complete = events_[event_id].free_on_complete;
   events_[event_id] = {};
   events_[event_id].allocated = !free_on_complete;
-
   return true;
 }
 
@@ -706,25 +618,21 @@ bool MsdVsiDevice::HardwareReset() {
              .count() < kResetTimeoutMs) {
     auto clock_control = registers::ClockControl::Get().FromValue(0);
     clock_control.set_isolate_gpu(1);
-    clock_control.WriteTo(register_io_.get());
-
-#if defined(MSD_VSI_VIP_ENABLE_SUSPEND)
-    power_state_ = PowerState::kUnknown;
-#endif
+    clock_control.WriteTo(register_io());
 
     {
       auto reg = registers::SecureAhbControl::Get().FromValue(0);
       reg.set_reset(1);
-      reg.WriteTo(register_io());
+      reg.WriteTo(register_io_.get());
     }
 
     std::this_thread::sleep_for(std::chrono::microseconds(100));
 
     clock_control.set_soft_reset(0);
-    clock_control.WriteTo(register_io_.get());
+    clock_control.WriteTo(register_io());
 
     clock_control.set_isolate_gpu(0);
-    clock_control.WriteTo(register_io_.get());
+    clock_control.WriteTo(register_io());
 
     clock_control = registers::ClockControl::Get().ReadFrom(register_io_.get());
 
@@ -754,15 +662,10 @@ bool MsdVsiDevice::StopRingbuffer() {
   if (!ringbuffer_->Overwrite32(prev_wait_link, MiEnd::kCommandType)) {
     return DRETF(false, "Failed to overwrite WAIT in ringbuffer");
   }
-
-  DLOG("Ringbuffer stopped (0x%X)", prev_wait_link);
-
   return true;
 }
 
 bool MsdVsiDevice::WaitUntilIdle(uint32_t timeout_ms) {
-  TRACE_DURATION("magma", "WaitUntilIdle");
-
   auto start = std::chrono::high_resolution_clock::now();
   while (std::chrono::duration_cast<std::chrono::milliseconds>(
              std::chrono::high_resolution_clock::now() - start)
@@ -778,9 +681,6 @@ bool MsdVsiDevice::WaitUntilIdle(uint32_t timeout_ms) {
 
 bool MsdVsiDevice::LoadInitialAddressSpace(std::shared_ptr<MsdVsiContext> context,
                                            uint32_t address_space_index) {
-  // Ensure NNA is on before register access.
-  PowerOn();
-
   // Check if we have already configured an address space and enabled the MMU.
   if (page_table_arrays_->IsEnabled(register_io())) {
     return DRETF(false, "MMU already enabled");
@@ -851,9 +751,6 @@ bool MsdVsiDevice::SubmitCommandBufferNoMmu(uint64_t bus_addr, uint32_t length,
 
   DLOG("Submitting buffer at bus addr 0x%lx", bus_addr);
 
-  // Ensure NNA is on before register access.
-  PowerOn();
-
   auto reg_cmd_addr = registers::FetchEngineCommandAddress::Get().FromValue(0);
   reg_cmd_addr.set_addr(bus_addr & 0xFFFFFFFF);
 
@@ -865,9 +762,9 @@ bool MsdVsiDevice::SubmitCommandBufferNoMmu(uint64_t bus_addr, uint32_t length,
   reg_sec_cmd_ctrl.set_enable(1);
   reg_sec_cmd_ctrl.set_prefetch(prefetch);
 
-  reg_cmd_addr.WriteTo(register_io());
-  reg_cmd_ctrl.WriteTo(register_io());
-  reg_sec_cmd_ctrl.WriteTo(register_io());
+  reg_cmd_addr.WriteTo(register_io_.get());
+  reg_cmd_ctrl.WriteTo(register_io_.get());
+  reg_sec_cmd_ctrl.WriteTo(register_io_.get());
 
   return true;
 }
@@ -876,11 +773,6 @@ bool MsdVsiDevice::StartRingbuffer(std::shared_ptr<MsdVsiContext> context) {
   if (!IsIdle()) {
     return true;  // Already running and looping on WAIT-LINK.
   }
-  DLOG("Starting ringbuffer");
-
-  // On a restart of the RingBuffer the buffer needs resetting.
-  ringbuffer_->Reset(0);
-
   uint64_t rb_gpu_addr;
   bool res = context->exec_address_space()->GetRingbufferGpuAddress(&rb_gpu_addr);
   if (!res) {
@@ -905,11 +797,9 @@ bool MsdVsiDevice::StartRingbuffer(std::shared_ptr<MsdVsiContext> context) {
   reg_sec_cmd_ctrl.set_enable(1);
   reg_sec_cmd_ctrl.set_prefetch(kRbPrefetch);
 
-  reg_cmd_addr.WriteTo(register_io());
-  reg_cmd_ctrl.WriteTo(register_io());
-  reg_sec_cmd_ctrl.WriteTo(register_io());
-
-  DLOG("Ringbuffer started (0x%X)", wait_gpu_addr);
+  reg_cmd_addr.WriteTo(register_io_.get());
+  reg_cmd_ctrl.WriteTo(register_io_.get());
+  reg_sec_cmd_ctrl.WriteTo(register_io_.get());
 
   return true;
 }
@@ -1045,9 +935,6 @@ bool MsdVsiDevice::SubmitCommandBuffer(std::shared_ptr<MsdVsiContext> context,
   }
 
   auto kill_context = fit::defer([context]() { context->Kill(); });
-
-  // Ensure NNA is on before register access.
-  PowerOn();
 
   // Check if we have loaded an address space and enabled the MMU.
   bool initial_address_space_loaded = page_table_arrays_->IsEnabled(register_io());
@@ -1258,14 +1145,10 @@ magma_status_t MsdVsiDevice::ChipIdentity(magma_vsi_vip_chip_identity* out_ident
     // TODO(fxbug.dev/37962): Read hardcoded values from features database instead.
     return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "unhandled device id 0x%x", device_id());
   }
-
-  // Ensure NNA is on before register access.
-  PowerOn();
-
   memset(out_identity, 0, sizeof(*out_identity));
   out_identity->chip_model = device_id();
   out_identity->chip_revision = revision();
-  out_identity->chip_date = registers::ChipDate::Get().ReadFrom(register_io()).chip_date();
+  out_identity->chip_date = registers::ChipDate::Get().ReadFrom(register_io_.get()).chip_date();
 
   out_identity->stream_count = gpu_features_->stream_count();
   out_identity->pixel_pipes = gpu_features_->pixel_pipes();
@@ -1275,9 +1158,9 @@ magma_status_t MsdVsiDevice::ChipIdentity(magma_vsi_vip_chip_identity* out_ident
   out_identity->varyings_count = gpu_features_->varyings_count();
   out_identity->gpu_core_count = 0x1;
 
-  out_identity->product_id = registers::ProductId::Get().ReadFrom(register_io()).product_id();
+  out_identity->product_id = registers::ProductId::Get().ReadFrom(register_io_.get()).product_id();
   out_identity->chip_flags = 0x4;
-  out_identity->eco_id = registers::EcoId::Get().ReadFrom(register_io()).eco_id();
+  out_identity->eco_id = registers::EcoId::Get().ReadFrom(register_io_.get()).eco_id();
   out_identity->customer_id = customer_id();
   return MAGMA_STATUS_OK;
 }
@@ -1287,7 +1170,6 @@ magma_status_t MsdVsiDevice::ChipOption(magma_vsi_vip_chip_option* out_option) {
     // TODO(fxbug.dev/37962): Read hardcoded values from features database instead.
     return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "unhandled device id 0x%x", device_id());
   }
-
   memset(out_option, 0, sizeof(*out_option));
   out_option->gpu_profiler = false;
   out_option->allow_fast_clear = false;
