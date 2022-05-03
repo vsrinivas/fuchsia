@@ -262,6 +262,11 @@
     },
     {
         "kind": "bits/member",
+        "name": "zx/rights.MANAGE_SOCKET",
+        "value": "1048576"
+    },
+    {
+        "kind": "bits/member",
         "name": "zx/rights.MANAGE_THREAD",
         "value": "262144"
     },

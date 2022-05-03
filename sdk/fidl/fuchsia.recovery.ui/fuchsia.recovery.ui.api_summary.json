@@ -1,0 +1,24 @@
+[
+    {
+        "declaration": "() -> (fuchsia.recovery.ui/FactoryResetCountdownState state)",
+        "kind": "protocol/member",
+        "name": "fuchsia.recovery.ui/FactoryResetCountdown.Watch"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.recovery.ui/FactoryResetCountdown"
+    },
+    {
+        "declaration": "int64",
+        "kind": "table/member",
+        "name": "fuchsia.recovery.ui/FactoryResetCountdownState.scheduled_reset_time"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.recovery.ui/FactoryResetCountdownState"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.recovery.ui"
+    }
+]

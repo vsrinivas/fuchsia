@@ -1,0 +1,15 @@
+[
+    {
+        "declaration": "(fuchsia.mem/Buffer thread_settings_json) -> ()",
+        "kind": "protocol/member",
+        "name": "fuchsia.lowpan.bootstrap/Thread.ImportSettings"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.lowpan.bootstrap/Thread"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.lowpan.bootstrap"
+    }
+]

@@ -1,0 +1,15 @@
+[
+    {
+        "declaration": "() -> (int32 status)",
+        "kind": "protocol/member",
+        "name": "fuchsia.recovery/FactoryReset.Reset"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.recovery/FactoryReset"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.recovery"
+    }
+]

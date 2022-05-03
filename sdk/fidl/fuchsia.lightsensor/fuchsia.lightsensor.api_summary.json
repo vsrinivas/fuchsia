@@ -1,0 +1,102 @@
+[
+    {
+        "declaration": "(fuchsia.lightsensor/Rgbc data) -> (fuchsia.lightsensor/Calibrator_Calibrate_Result result)",
+        "kind": "protocol/member",
+        "name": "fuchsia.lightsensor/Calibrator.Calibrate"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.lightsensor/Calibrator"
+    },
+    {
+        "declaration": "fuchsia.lightsensor/Rgbc",
+        "kind": "struct/member",
+        "name": "fuchsia.lightsensor/Calibrator_Calibrate_Response.data"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.lightsensor/Calibrator_Calibrate_Response"
+    },
+    {
+        "declaration": "fuchsia.lightsensor/Error",
+        "kind": "union/member",
+        "name": "fuchsia.lightsensor/Calibrator_Calibrate_Result.err"
+    },
+    {
+        "declaration": "fuchsia.lightsensor/Calibrator_Calibrate_Response",
+        "kind": "union/member",
+        "name": "fuchsia.lightsensor/Calibrator_Calibrate_Result.response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.lightsensor/Calibrator_Calibrate_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.lightsensor/Error.INVALID_INPUT",
+        "value": "1"
+    },
+    {
+        "declaration": "uint32",
+        "kind": "enum",
+        "name": "fuchsia.lightsensor/Error",
+        "strictness": "strict"
+    },
+    {
+        "declaration": "float32",
+        "kind": "table/member",
+        "name": "fuchsia.lightsensor/LightSensorData.calculated_lux"
+    },
+    {
+        "declaration": "float32",
+        "kind": "table/member",
+        "name": "fuchsia.lightsensor/LightSensorData.correlated_color_temperature"
+    },
+    {
+        "declaration": "fuchsia.lightsensor/Rgbc",
+        "kind": "table/member",
+        "name": "fuchsia.lightsensor/LightSensorData.rgbc"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.lightsensor/LightSensorData"
+    },
+    {
+        "declaration": "float32",
+        "kind": "struct/member",
+        "name": "fuchsia.lightsensor/Rgbc.blue_intensity"
+    },
+    {
+        "declaration": "float32",
+        "kind": "struct/member",
+        "name": "fuchsia.lightsensor/Rgbc.clear_intensity"
+    },
+    {
+        "declaration": "float32",
+        "kind": "struct/member",
+        "name": "fuchsia.lightsensor/Rgbc.green_intensity"
+    },
+    {
+        "declaration": "float32",
+        "kind": "struct/member",
+        "name": "fuchsia.lightsensor/Rgbc.red_intensity"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.lightsensor/Rgbc"
+    },
+    {
+        "declaration": "() -> (fuchsia.lightsensor/LightSensorData data)",
+        "kind": "protocol/member",
+        "name": "fuchsia.lightsensor/Sensor.Watch"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.lightsensor/Sensor"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.lightsensor"
+    }
+]
