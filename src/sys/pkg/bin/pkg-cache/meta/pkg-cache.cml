@@ -17,10 +17,7 @@
         },
         {
             directory: "pkgfs",
-            rights: [
-                "execute",
-                "rw*",
-            ],
+            rights: [ "rx*" ],
             path: "/pkgfs",
         },
         {
@@ -32,6 +29,26 @@
             directory: "pkgfs-packages",
             rights: [ "rx*" ],
             path: "/pkgfs/packages",
+        },
+        {
+            directory: "bin",
+            rights: [ "rx*" ],
+            path: "/pkgfs/packages/shell-commands/0/bin",
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/pkgfs/packages/config-data/0/meta/data",
+        },
+        {
+            directory: "root-ssl-certificates",
+            rights: [ "r*" ],
+            path: "/pkgfs/packages/root_ssl_certificates/0/data",
+        },
+        {
+            directory: "build-info",
+            rights: [ "r*" ],
+            path: "/pkgfs/packages/build-info/0/data",
         },
         {
             directory: "pkgfs-versions",
@@ -71,19 +88,16 @@
             from: "self",
         },
         {
-            directory: "pkgfs",
-            from: "self",
-        },
-        {
-            directory: "system",
-            from: "self",
-        },
-        {
-            directory: "pkgfs-packages",
-            from: "self",
-        },
-        {
-            directory: "pkgfs-versions",
+            directory: [
+                "bin",
+                "build-info",
+                "config-data",
+                "pkgfs",
+                "pkgfs-packages",
+                "pkgfs-versions",
+                "root-ssl-certificates",
+                "system",
+            ],
             from: "self",
         },
     ],
