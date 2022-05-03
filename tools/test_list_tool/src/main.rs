@@ -15,7 +15,6 @@ use {
     serde_json,
     std::{
         cmp::{Eq, PartialEq},
-        collections::BTreeSet,
         fmt::Debug,
         fs,
         io::Read,
@@ -29,9 +28,6 @@ const META_FAR_PREFIX: &'static str = "meta/";
 const TEST_REALM_FACET_NAME: &'static str = "fuchsia.test.type";
 const HERMETIC_TEST_REALM: &'static str = "hermetic";
 const HERMETIC_TIER_2_TEST_REALM: &'static str = "hermetic-tier-2";
-const TEST_REALM_TAG_KEY: &'static str = "realm";
-const HERMETIC_TAG_KEY: &'static str = "hermetic";
-const TEST_SCOPE_TAG_KEY: &'static str = "scope";
 
 mod error;
 mod opts;
@@ -60,6 +56,42 @@ struct LogSettings {
     max_severity: Option<diagnostics_data::Severity>,
 }
 
+/// This struct contains the set of tags that can be added to tests in the fuchsia.git build.
+#[derive(Default, Debug, PartialEq, Eq)]
+struct FuchsiaTestTags {
+    os: Option<String>,
+    cpu: Option<String>,
+    scope: Option<String>,
+    realm: Option<String>,
+    hermetic: Option<bool>,
+    legacy_test: Option<bool>,
+}
+
+impl FuchsiaTestTags {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn into_vec(self) -> Vec<TestTag> {
+        let string_to_val = |v: Option<String>| v.unwrap_or_else(|| "".to_string());
+        let bool_to_val = |v: Option<bool>| match v {
+            None => "".to_string(),
+            Some(true) => "true".to_string(),
+            Some(false) => "false".to_string(),
+        };
+        btreeset![
+            TestTag { key: "os".to_string(), value: string_to_val(self.os) },
+            TestTag { key: "cpu".to_string(), value: string_to_val(self.cpu) },
+            TestTag { key: "scope".to_string(), value: string_to_val(self.scope) },
+            TestTag { key: "realm".to_string(), value: string_to_val(self.realm) },
+            TestTag { key: "hermetic".to_string(), value: bool_to_val(self.hermetic) },
+            TestTag { key: "legacy_test".to_string(), value: bool_to_val(self.legacy_test) },
+        ]
+        .into_iter()
+        .collect()
+    }
+}
+
 impl TestEntry {
     fn get_max_log_severity(&self) -> Option<diagnostics_data::Severity> {
         self.log_settings.as_ref().map(|settings| settings.max_severity).unwrap_or(None)
@@ -86,7 +118,10 @@ fn cm_decl_from_meta_far(meta_far_path: &PathBuf, cm_path: &str) -> Result<Compo
     Ok(decl)
 }
 
-fn tags_from_facets(facets: &fdata::Dictionary) -> Result<BTreeSet<TestTag>, Error> {
+fn update_tags_from_facets(
+    test_tags: &mut FuchsiaTestTags,
+    facets: &fdata::Dictionary,
+) -> Result<(), Error> {
     for facet in facets.entries.as_ref().unwrap_or(&vec![]) {
         // TODO(rudymathu): CFv1 tests should not have a hermetic tag.
         if facet.key.eq(TEST_REALM_FACET_NAME) {
@@ -96,13 +131,9 @@ fn tags_from_facets(facets: &fdata::Dictionary) -> Result<BTreeSet<TestTag>, Err
                 .ok_or(error::TestListToolError::NullFacet(facet.key.clone()))?;
             match &**val {
                 fdata::DictionaryValue::Str(s) => {
-                    return Ok(btreeset![
-                        TestTag { key: TEST_REALM_TAG_KEY.to_string(), value: s.to_string() },
-                        TestTag {
-                            key: HERMETIC_TAG_KEY.to_string(),
-                            value: s.eq(HERMETIC_TEST_REALM).to_string(),
-                        },
-                    ]);
+                    test_tags.realm = Some(s.to_string());
+                    test_tags.hermetic = Some(s.eq(HERMETIC_TEST_REALM));
+                    return Ok(());
                 }
                 _ => {
                     return Err(error::TestListToolError::InvalidFacetValue(
@@ -114,10 +145,9 @@ fn tags_from_facets(facets: &fdata::Dictionary) -> Result<BTreeSet<TestTag>, Err
             }
         }
     }
-    Ok(btreeset![
-        TestTag { key: TEST_REALM_TAG_KEY.to_string(), value: HERMETIC_TEST_REALM.to_string() },
-        TestTag { key: HERMETIC_TAG_KEY.to_string(), value: "true".to_string() },
-    ])
+    test_tags.realm = Some(HERMETIC_TEST_REALM.to_string());
+    test_tags.hermetic = Some(true);
+    Ok(())
 }
 
 fn to_test_list_entry(test_entry: &TestEntry) -> TestListEntry {
@@ -142,18 +172,8 @@ fn to_test_list_entry(test_entry: &TestEntry) -> TestListEntry {
     }
 }
 
-fn update_tags_with_test_entry(tags: &mut BTreeSet<TestTag>, test_entry: &TestEntry) {
-    let realm = tags.iter().fold(None, |acc, tag| match acc {
-        Some(v) => Some(v),
-        None => {
-            if tag.key == TEST_REALM_TAG_KEY {
-                Some(&tag.value)
-            } else {
-                None
-            }
-        }
-    });
-
+fn update_tags_with_test_entry(tags: &mut FuchsiaTestTags, test_entry: &TestEntry) {
+    let realm = &tags.realm;
     let (build_rule, has_generated_manifest, wrapped_legacy_test) = (
         test_entry.build_rule.as_ref().map(|s| s.as_str()),
         test_entry.has_generated_manifest.unwrap_or_default(),
@@ -187,11 +207,9 @@ fn update_tags_with_test_entry(tags: &mut BTreeSet<TestTag>, test_entry: &TestEn
         }
     };
 
-    tags.extend([
-        TestTag { key: "cpu".to_string(), value: test_entry.cpu.clone() },
-        TestTag { key: "os".to_string(), value: test_entry.os.clone() },
-        TestTag { key: TEST_SCOPE_TAG_KEY.to_string(), value: test_type.to_string() },
-    ]);
+    tags.os = Some(test_entry.os.clone());
+    tags.cpu = Some(test_entry.cpu.clone());
+    tags.scope = Some(test_type.to_string());
 }
 
 fn main() -> Result<(), Error> {
@@ -205,23 +223,24 @@ fn read_tests_json(file: &PathBuf) -> Result<Vec<TestsJsonEntry>, Error> {
     Ok(t)
 }
 
-fn tags_from_manifest(
+fn update_tags_from_manifest(
+    test_tags: &mut FuchsiaTestTags,
     package_url: String,
     meta_far_path: &PathBuf,
-) -> Result<BTreeSet<TestTag>, Error> {
+) -> Result<(), Error> {
     let pkg_url = PkgUrl::parse(&package_url)?;
     let cm_path =
         pkg_url.resource().ok_or(error::TestListToolError::InvalidPackageURL(package_url))?;
     // CFv1 manifests don't generate the same FIDL declarations, so just skip generating tags
     // from them.
     if &cm_path[cm_path.len() - 3..] == "cmx" {
-        return Ok(btreeset![TestTag {
-            key: "legacy_test".to_string(),
-            value: "true".to_string()
-        }]);
+        test_tags.legacy_test = Some(true);
+        Ok(())
+    } else {
+        let decl = cm_decl_from_meta_far(&meta_far_path, cm_path)?;
+        update_tags_from_facets(test_tags, &decl.facets.unwrap_or(fdata::Dictionary::EMPTY))?;
+        Ok(())
     }
-    let decl = cm_decl_from_meta_far(&meta_far_path, cm_path)?;
-    tags_from_facets(&decl.facets.unwrap_or(fdata::Dictionary::EMPTY))
 }
 
 fn write_depfile(depfile: &PathBuf, output: &PathBuf, inputs: &Vec<PathBuf>) -> Result<(), Error> {
@@ -248,7 +267,7 @@ fn run_tool() -> Result<(), Error> {
     for entry in tests_json {
         // Construct the base TestListEntry.
         let mut test_list_entry = to_test_list_entry(&entry.test);
-        let mut test_tags = btreeset![];
+        let mut test_tags = FuchsiaTestTags::new();
         let pkg_manifests = entry.test.package_manifests.clone().unwrap_or(vec![]);
 
         // Aggregate any tags from the component manifest of the test.
@@ -270,16 +289,16 @@ fn run_tool() -> Result<(), Error> {
             inputs.push(meta_far_path.clone());
 
             // Find additional tags. Note that this can override existing tags (e.g. to set the test type based on realm)
-            match tags_from_manifest(pkg_url.clone(), &meta_far_path) {
-                Ok(tags) => test_tags.extend(tags.into_iter()),
+            match update_tags_from_manifest(&mut test_tags, pkg_url.clone(), &meta_far_path) {
                 Err(e) => {
                     println!("error processing manifest for package URL {}: {:?}", &pkg_url, e)
                 }
+                _ => {}
             }
         }
 
         update_tags_with_test_entry(&mut test_tags, &entry.test);
-        test_list_entry.tags = test_tags.into_iter().collect();
+        test_list_entry.tags = test_tags.into_vec();
         test_list.tests.push(test_list_entry);
     }
     let test_list_json = serde_json::to_string_pretty(&test_list)?;
@@ -349,31 +368,35 @@ mod tests {
     }
 
     #[test]
-    fn test_tags_from_facets() {
+    fn test_update_tags_from_facets() {
         // Test that empty facets return the hermetic tags.
         let mut facets = fdata::Dictionary::EMPTY;
-        let mut tags = tags_from_facets(&facets).expect("failed get tags in tags_from_facets");
-        let hermetic_tags = btreeset![
-            TestTag { key: TEST_REALM_TAG_KEY.to_string(), value: HERMETIC_TEST_REALM.to_string() },
-            TestTag { key: HERMETIC_TAG_KEY.to_string(), value: "true".to_string() },
-        ];
+        let mut tags = FuchsiaTestTags::default();
+        update_tags_from_facets(&mut tags, &facets).expect("failed get tags in tags_from_facets");
+        let hermetic_tags = FuchsiaTestTags {
+            realm: Some(HERMETIC_TEST_REALM.to_string()),
+            hermetic: Some(true),
+            ..FuchsiaTestTags::default()
+        };
         assert_eq!(tags, hermetic_tags);
 
         // Test that a facet of fuchsia.test: tests returns hermetic tags.
+        let mut tags = FuchsiaTestTags::default();
         facets.entries = Some(vec![fdata::DictionaryEntry {
             key: TEST_REALM_FACET_NAME.to_string(),
             value: Some(Box::new(fdata::DictionaryValue::Str(HERMETIC_TEST_REALM.to_string()))),
         }]);
-        tags = tags_from_facets(&facets).expect("failed get tags in tags_from_facets");
+        update_tags_from_facets(&mut tags, &facets).expect("failed get tags in tags_from_facets");
         assert_eq!(tags, hermetic_tags);
 
         // Test that a null fuchsia.test facet returns a NullFacet error.
+        let mut tags = FuchsiaTestTags::default();
         facets.entries = Some(vec![fdata::DictionaryEntry {
             key: TEST_REALM_FACET_NAME.to_string(),
             value: None,
         }]);
-        let err =
-            tags_from_facets(&facets).expect_err("tags_from_facets succeeded on null facet value");
+        let err = update_tags_from_facets(&mut tags, &facets)
+            .expect_err("tags_from_facets succeeded on null facet value");
         match err.downcast_ref::<error::TestListToolError>() {
             Some(error::TestListToolError::NullFacet(key)) => {
                 assert_eq!(*key, TEST_REALM_FACET_NAME.to_string());
@@ -383,14 +406,15 @@ mod tests {
         }
 
         // Test that an invalid fuchsia.test facet returns an InvalidFacetValue error.
+        let mut tags = FuchsiaTestTags::default();
         facets.entries = Some(vec![fdata::DictionaryEntry {
             key: TEST_REALM_FACET_NAME.to_string(),
             value: Some(Box::new(fdata::DictionaryValue::StrVec(vec![
                 HERMETIC_TEST_REALM.to_string()
             ]))),
         }]);
-        let err =
-            tags_from_facets(&facets).expect_err("tags_from_facets succeeded on null facet value");
+        let err = update_tags_from_facets(&mut tags, &facets)
+            .expect_err("tags_from_facets succeeded on null facet value");
         match err.downcast_ref::<error::TestListToolError>() {
             Some(error::TestListToolError::InvalidFacetValue(k, _)) => {
                 assert_eq!(*k, TEST_REALM_FACET_NAME.to_string());
@@ -487,10 +511,13 @@ mod tests {
                     os: "fuchsia".to_string(),
                     ..TestEntry::default()
                 },
-                btreeset![],
-                btreeset![
-                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
+                FuchsiaTestTags { ..FuchsiaTestTags::default() },
+                vec![
                     TestTag { key: "cpu".to_string(), value: "x64".to_string() },
+                    TestTag { key: "hermetic".to_string(), value: "".to_string() },
+                    TestTag { key: "legacy_test".to_string(), value: "".to_string() },
+                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
+                    TestTag { key: "realm".to_string(), value: "".to_string() },
                     TestTag { key: "scope".to_string(), value: "unknown".to_string() },
                 ],
             ),
@@ -501,10 +528,13 @@ mod tests {
                     wrapped_legacy_test: Some(true),
                     ..TestEntry::default()
                 },
-                btreeset![],
-                btreeset![
-                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
+                FuchsiaTestTags { ..FuchsiaTestTags::default() },
+                vec![
                     TestTag { key: "cpu".to_string(), value: "x64".to_string() },
+                    TestTag { key: "hermetic".to_string(), value: "".to_string() },
+                    TestTag { key: "legacy_test".to_string(), value: "".to_string() },
+                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
+                    TestTag { key: "realm".to_string(), value: "".to_string() },
                     TestTag { key: "scope".to_string(), value: "wrapped_legacy".to_string() },
                 ],
             ),
@@ -517,10 +547,13 @@ mod tests {
                     has_generated_manifest: Some(true),
                     ..TestEntry::default()
                 },
-                btreeset![],
-                btreeset![
-                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
+                FuchsiaTestTags { ..FuchsiaTestTags::default() },
+                vec![
                     TestTag { key: "cpu".to_string(), value: "x64".to_string() },
+                    TestTag { key: "hermetic".to_string(), value: "".to_string() },
+                    TestTag { key: "legacy_test".to_string(), value: "".to_string() },
+                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
+                    TestTag { key: "realm".to_string(), value: "".to_string() },
                     TestTag { key: "scope".to_string(), value: "unit".to_string() },
                 ],
             ),
@@ -533,10 +566,13 @@ mod tests {
                     has_generated_manifest: Some(false),
                     ..TestEntry::default()
                 },
-                btreeset![],
-                btreeset![
-                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
+                FuchsiaTestTags { ..FuchsiaTestTags::default() },
+                vec![
                     TestTag { key: "cpu".to_string(), value: "x64".to_string() },
+                    TestTag { key: "hermetic".to_string(), value: "".to_string() },
+                    TestTag { key: "legacy_test".to_string(), value: "".to_string() },
+                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
+                    TestTag { key: "realm".to_string(), value: "".to_string() },
                     TestTag { key: "scope".to_string(), value: "integration".to_string() },
                 ],
             ),
@@ -549,10 +585,13 @@ mod tests {
                     has_generated_manifest: Some(true),
                     ..TestEntry::default()
                 },
-                btreeset![],
-                btreeset![
-                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
+                FuchsiaTestTags { ..FuchsiaTestTags::default() },
+                vec![
                     TestTag { key: "cpu".to_string(), value: "x64".to_string() },
+                    TestTag { key: "hermetic".to_string(), value: "".to_string() },
+                    TestTag { key: "legacy_test".to_string(), value: "".to_string() },
+                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
+                    TestTag { key: "realm".to_string(), value: "".to_string() },
                     TestTag { key: "scope".to_string(), value: "unit".to_string() },
                 ],
             ),
@@ -565,10 +604,13 @@ mod tests {
                     has_generated_manifest: Some(false),
                     ..TestEntry::default()
                 },
-                btreeset![],
-                btreeset![
-                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
+                FuchsiaTestTags { ..FuchsiaTestTags::default() },
+                vec![
                     TestTag { key: "cpu".to_string(), value: "x64".to_string() },
+                    TestTag { key: "hermetic".to_string(), value: "".to_string() },
+                    TestTag { key: "legacy_test".to_string(), value: "".to_string() },
+                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
+                    TestTag { key: "realm".to_string(), value: "".to_string() },
                     TestTag { key: "scope".to_string(), value: "integration".to_string() },
                 ],
             ),
@@ -581,35 +623,18 @@ mod tests {
                     has_generated_manifest: Some(true),
                     ..TestEntry::default()
                 },
-                btreeset![TestTag {
-                    key: "realm".to_string(),
-                    value: "hermetic-tier-2".to_string()
-                },],
-                btreeset![
-                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
-                    TestTag { key: "cpu".to_string(), value: "x64".to_string() },
-                    TestTag { key: "scope".to_string(), value: "unit".to_string() },
-                    TestTag { key: "realm".to_string(), value: "hermetic-tier-2".to_string() }
-                ],
-            ),
-            (
-                TestEntry {
-                    cpu: "x64".to_string(),
-                    os: "fuchsia".to_string(),
-                    wrapped_legacy_test: Some(false),
-                    build_rule: Some("fuchsia_test_package".to_string()),
-                    has_generated_manifest: Some(false),
-                    ..TestEntry::default()
+                FuchsiaTestTags {
+                    realm: Some("hermetic-tier-2".to_string()),
+                    hermetic: Some(true),
+                    ..FuchsiaTestTags::default()
                 },
-                btreeset![TestTag {
-                    key: "realm".to_string(),
-                    value: "hermetic-tier-2".to_string()
-                },],
-                btreeset![
-                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
+                vec![
                     TestTag { key: "cpu".to_string(), value: "x64".to_string() },
-                    TestTag { key: "scope".to_string(), value: "integration".to_string() },
+                    TestTag { key: "hermetic".to_string(), value: "true".to_string() },
+                    TestTag { key: "legacy_test".to_string(), value: "".to_string() },
+                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
                     TestTag { key: "realm".to_string(), value: "hermetic-tier-2".to_string() },
+                    TestTag { key: "scope".to_string(), value: "unit".to_string() },
                 ],
             ),
             (
@@ -621,12 +646,37 @@ mod tests {
                     has_generated_manifest: Some(false),
                     ..TestEntry::default()
                 },
-                btreeset![TestTag { key: "realm".to_string(), value: "vulkan".to_string() },],
-                btreeset![
-                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
+                FuchsiaTestTags {
+                    realm: Some("hermetic-tier-2".to_string()),
+                    hermetic: Some(true),
+                    ..FuchsiaTestTags::default()
+                },
+                vec![
                     TestTag { key: "cpu".to_string(), value: "x64".to_string() },
-                    TestTag { key: "scope".to_string(), value: "system".to_string() },
+                    TestTag { key: "hermetic".to_string(), value: "true".to_string() },
+                    TestTag { key: "legacy_test".to_string(), value: "".to_string() },
+                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
+                    TestTag { key: "realm".to_string(), value: "hermetic-tier-2".to_string() },
+                    TestTag { key: "scope".to_string(), value: "integration".to_string() },
+                ],
+            ),
+            (
+                TestEntry {
+                    cpu: "x64".to_string(),
+                    os: "fuchsia".to_string(),
+                    wrapped_legacy_test: Some(false),
+                    build_rule: Some("fuchsia_test_package".to_string()),
+                    has_generated_manifest: Some(false),
+                    ..TestEntry::default()
+                },
+                FuchsiaTestTags { realm: Some("vulkan".to_string()), ..FuchsiaTestTags::default() },
+                vec![
+                    TestTag { key: "cpu".to_string(), value: "x64".to_string() },
+                    TestTag { key: "hermetic".to_string(), value: "".to_string() },
+                    TestTag { key: "legacy_test".to_string(), value: "".to_string() },
+                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
                     TestTag { key: "realm".to_string(), value: "vulkan".to_string() },
+                    TestTag { key: "scope".to_string(), value: "system".to_string() },
                 ],
             ),
             (
@@ -636,10 +686,13 @@ mod tests {
                     name: "host_x64/test".to_string(),
                     ..TestEntry::default()
                 },
-                btreeset![],
-                btreeset![
-                    TestTag { key: "os".to_string(), value: "linux".to_string() },
+                FuchsiaTestTags { ..FuchsiaTestTags::default() },
+                vec![
                     TestTag { key: "cpu".to_string(), value: "x64".to_string() },
+                    TestTag { key: "hermetic".to_string(), value: "".to_string() },
+                    TestTag { key: "legacy_test".to_string(), value: "".to_string() },
+                    TestTag { key: "os".to_string(), value: "linux".to_string() },
+                    TestTag { key: "realm".to_string(), value: "".to_string() },
                     TestTag { key: "scope".to_string(), value: "host".to_string() },
                 ],
             ),
@@ -647,7 +700,7 @@ mod tests {
 
         for (entry, mut tags, expected) in cases.into_iter() {
             update_tags_with_test_entry(&mut tags, &entry);
-            assert_eq!(tags, expected, "entry was {:?}", entry);
+            assert_eq!(tags.into_vec(), expected, "entry was {:?}", entry);
         }
     }
 
