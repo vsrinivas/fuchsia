@@ -960,6 +960,10 @@ group("tui") {
   public_deps = [ ":tui-v0_16_0" ]
 }
 
+group("typed-builder") {
+  public_deps = [ ":typed-builder-v0_10_0($host_toolchain)" ]
+}
+
 group("unic-char-range") {
   public_deps = [ ":unic-char-range-v0_9_0" ]
 }
@@ -8338,8 +8342,6 @@ rust_library("proc-macro2-v1_0_36") {
     "--cfg=feature=\"proc-macro\"",
     "--cfg=feature=\"span-locations\"",
     "--cfg=span_locations",
-    "--cfg=lexerror_display",
-    "--cfg=hygiene",
     "--cfg=use_proc_macro",
     "--cfg=wrap_proc_macro",
   ]
@@ -12279,6 +12281,32 @@ rust_library("typed-arena-v1_4_1") {
     "-Cextra-filename=-18c1bf68df33fe8c",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_proc_macro("typed-builder-v0_10_0") {
+  crate_name = "typed_builder"
+  crate_root = "//third_party/rust_crates/vendor/typed-builder/src/lib.rs"
+  output_name = "typed_builder-f76e7f80de675bf9"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":proc-macro2-v1_0_36" ]
+  deps += [ ":quote-v1_0_18" ]
+  deps += [ ":syn-v1_0_74" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=f76e7f80de675bf9",
+    "-Cextra-filename=-f76e7f80de675bf9",
   ]
 
   visibility = [ ":*" ]

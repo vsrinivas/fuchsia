@@ -1503,6 +1503,7 @@ dependencies = [
  "ttf-parser",
  "tuf",
  "tui",
+ "typed-builder",
  "unic-char-range",
  "unic-ucd-block",
  "unicase",
@@ -4336,6 +4337,17 @@ name = "typed-arena"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c6c06a92aef38bb4dc5b0df00d68496fc31307c5344c867bb61678c6e1671ec5"
+
+[[package]]
+name = "typed-builder"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "89851716b67b937e393b3daa8423e67ddfc4bbbf1654bcf05488e95e0828db0c"
+dependencies = [
+ "proc-macro2 1.0.36",
+ "quote 1.0.18",
+ "syn 1.0.74",
+]
 
 [[package]]
 name = "typenum"
