@@ -199,16 +199,12 @@ class FactoryResetTest : public Test {
   }
 
   void CreateRamdisk() {
-    zx::vmo disk;
-    ASSERT_EQ(zx::vmo::create(kDeviceSize, 0, &disk), ZX_OK);
-    int fd = -1;
-    ASSERT_EQ(fdio_fd_create(disk.get(), &fd), ZX_OK);
-    ASSERT_GE(fd, 0);
-    ASSERT_EQ(fs_management::FvmInitWithSize(fd, kDeviceSize, kSliceSize), ZX_OK);
-
     fbl::unique_fd ramctl;
     WaitForDevice(kRamCtlPath, &ramctl);
-    ASSERT_EQ(ramdisk_create_at_from_vmo(devfs_root().get(), disk.release(), &ramdisk_client_),
+    ASSERT_EQ(ramdisk_create_at(devfs_root().get(), kBlockSize, kBlockCount, &ramdisk_client_),
+              ZX_OK);
+    ASSERT_EQ(fs_management::FvmInitPreallocated(ramdisk_get_block_fd(ramdisk_client_), kDeviceSize,
+                                                 kDeviceSize, kSliceSize),
               ZX_OK);
   }
 
