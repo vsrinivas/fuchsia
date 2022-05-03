@@ -14,189 +14,6 @@
 #define DW_REG_rsp        0x7
 #define DW_REG_rip        0x10
 
-//
-// Macros for preparing ABI conformant calls for syscall wrappers.
-//
-// syscall_8(arg_1, arg_2, arg_3, arg_4, arg_5, arg_6, arg_7, arg_8, rip)
-//
-// arg_1 from rdi to rdi
-// arg_2 from rsi to rsi
-// arg_3 from rdx to rdx
-// arg_4 from r10 to rcx
-// arg_5 from r8  to r8
-// arg_6 from r9  to r9
-// arg_7 from r12 to (%rsp)
-// arg_8 from r13 to 8(%rsp)
-// rip   from rcx to 16(%rsp)
-//
-.macro pre_8_args
-    pre_push 3
-    push_value %rcx
-    push_value %r13
-    push_value %r12
-
-    // move arg 4 into the proper register for calling convention
-    mov      %r10, %rcx
-.endm
-
-.macro post_8_args
-    post_pop 3
-    jmp     x86_syscall_cleanup_and_return
-.endm
-
-//
-// syscall_7(arg_1, arg_2, arg_3, arg_4, arg_5, arg_6, arg_7, rip)
-//
-// arg_1 from rdi to rdi
-// arg_2 from rsi to rsi
-// arg_3 from rdx to rdx
-// arg_4 from r10 to rcx
-// arg_5 from r8  to r8
-// arg_6 from r9  to r9
-// arg_7 from r12 to (rsp)
-// rip   from rcx to 8(rsp)
-//
-.macro pre_7_args
-    pre_push 2
-    push_value %rcx
-    push_value %r12
-    mov      %r10, %rcx
-.endm
-
-.macro post_7_args
-    post_pop 2
-    jmp     x86_syscall_cleanup_and_return
-.endm
-
-//
-// syscall_6(arg_1, arg_2, arg_3, arg_4, arg_5, arg_6, rip)
-//
-// arg_1 from rdi to rdi
-// arg_2 from rsi to rsi
-// arg_3 from rdx to rdx
-// arg_4 from r10 to rcx
-// arg_5 from r8  to r8
-// arg_6 from r9  to r9
-// rip   from rcx to (rsp)
-//
-.macro pre_6_args
-    pre_push 1
-    push_value %rcx
-    mov      %r10, %rcx
-.endm
-
-.macro post_6_args
-    post_pop 1
-    jmp     x86_syscall_cleanup_and_return
-.endm
-
-//
-// syscall_5(arg_1, arg_2, arg_3, arg_4, arg_5, rip)
-//
-// arg_1 from rdi to rdi
-// arg_2 from rsi to rsi
-// arg_3 from rdx to rdx
-// arg_4 from r10 to rcx
-// arg_5 from r8  to r8
-// rip   from rcx to r9
-//
-.macro pre_5_args
-    pre_push 0
-    mov     %rcx, %r9
-    mov     %r10, %rcx
-.endm
-
-.macro post_5_args
-    post_pop 0
-    jmp     x86_syscall_cleanup_and_return
-.endm
-
-//
-// syscall_4(arg_1, arg_2, arg_3, arg_4, rip)
-//
-// arg_1 from rdi to rdi
-// arg_2 from rsi to rsi
-// arg_3 from rdx to rdx
-// arg_4 from r10 to rcx
-// rip   from rcx to r8
-//
-.macro pre_4_args
-    pre_push 0
-    mov     %rcx, %r8
-    mov     %r10, %rcx
-.endm
-
-.macro post_4_args
-    post_pop 0
-    jmp     x86_syscall_cleanup_and_return
-.endm
-
-//
-// syscall_3(arg_1, arg_2, arg_3, rip)
-//
-// arg_1 from rdi to rdi
-// arg_2 from rsi to rsi
-// arg_3 from rdx to rdx
-// rip   from rcx to rcx
-//
-.macro pre_3_args
-    pre_push 0
-.endm
-
-.macro post_3_args
-    post_pop 0
-    jmp     x86_syscall_cleanup_and_return
-.endm
-
-//
-// syscall_2(arg_1, arg_2, rip)
-//
-// arg_1 from rdi to rdi
-// arg_2 from rsi to rsi
-// rip   from rcx to rdx
-//
-.macro pre_2_args
-    pre_push 0
-    mov     %rcx, %rdx
-.endm
-
-.macro post_2_args
-    post_pop 0
-    jmp     x86_syscall_cleanup_and_return
-.endm
-
-//
-// syscall_1(arg_1, rip)
-//
-// arg_1 from rdi to rdi
-// rip   from rcx to rsi
-//
-.macro pre_1_args
-    pre_push 0
-    mov    %rcx, %rsi
-.endm
-
-.macro post_1_args
-    post_pop 0
-    jmp     x86_syscall_cleanup_and_return
-.endm
-
-
-//
-// syscall_0(rip)
-//
-// rip   from rcx to rdi
-//
-.macro pre_0_args
-    pre_push 0
-    mov    %rcx, %rdi
-.endm
-
-.macro post_0_args
-    post_pop 0
-    jmp     x86_syscall_cleanup_and_return
-.endm
-
 // These macros ensure the stack pointer remains 16-byte aligned.
 .macro pre_push n
 .if \n % 2 == 1
@@ -210,6 +27,113 @@
 .elseif \n != 0
     add_to_sp (\n * 8)
 .endif
+.endm
+
+// Macros for preparing ABI conformant calls for syscall wrappers.
+.macro pre_args n
+.if \n > 5
+    // We use the stack for arguments 6, 7, and 8.
+    pre_push (\n - 5)
+.endif
+
+.if \n == 0
+    // syscall_0(rip)
+    //
+    // rip   from rcx to rdi
+    mov %rcx, %rdi
+.elseif \n == 1
+    // syscall_1(arg_1, rip)
+    //
+    // arg_1 from rdi to rdi
+    // rip   from rcx to rsi
+    mov %rcx, %rsi
+.elseif \n == 2
+    // syscall_2(arg_1, arg_2, rip)
+    //
+    // arg_1 from rdi to rdi
+    // arg_2 from rsi to rsi
+    // rip   from rcx to rdx
+    mov %rcx, %rdx
+.elseif \n == 3
+    // syscall_3(arg_1, arg_2, arg_3, rip)
+    //
+    // arg_1 from rdi to rdi
+    // arg_2 from rsi to rsi
+    // arg_3 from rdx to rdx
+    // rip   from rcx to rcx
+.elseif \n == 4
+    // syscall_4(arg_1, arg_2, arg_3, arg_4, rip)
+    //
+    // arg_1 from rdi to rdi
+    // arg_2 from rsi to rsi
+    // arg_3 from rdx to rdx
+    // arg_4 from r10 to rcx
+    // rip   from rcx to r8
+    mov %rcx, %r8
+    mov %r10, %rcx
+.elseif \n == 5
+    // syscall_5(arg_1, arg_2, arg_3, arg_4, arg_5, rip)
+    //
+    // arg_1 from rdi to rdi
+    // arg_2 from rsi to rsi
+    // arg_3 from rdx to rdx
+    // arg_4 from r10 to rcx
+    // arg_5 from r8  to r8
+    // rip   from rcx to r9
+    mov %rcx, %r9
+    mov %r10, %rcx
+.elseif \n == 6
+    // syscall_6(arg_1, arg_2, arg_3, arg_4, arg_5, arg_6, rip)
+    //
+    // arg_1 from rdi to rdi
+    // arg_2 from rsi to rsi
+    // arg_3 from rdx to rdx
+    // arg_4 from r10 to rcx
+    // arg_5 from r8  to r8
+    // arg_6 from r9  to r9
+    // rip   from rcx to (rsp)
+    push_value %rcx
+    mov  %r10, %rcx
+.elseif \n == 7
+    // syscall_7(arg_1, arg_2, arg_3, arg_4, arg_5, arg_6, arg_7, rip)
+    //
+    // arg_1 from rdi to rdi
+    // arg_2 from rsi to rsi
+    // arg_3 from rdx to rdx
+    // arg_4 from r10 to rcx
+    // arg_5 from r8  to r8
+    // arg_6 from r9  to r9
+    // arg_7 from r12 to (rsp)
+    // rip   from rcx to 8(rsp)
+    push_value %rcx
+    push_value %r12
+    mov  %r10, %rcx
+.elseif \n == 8
+    // syscall_8(arg_1, arg_2, arg_3, arg_4, arg_5, arg_6, arg_7, arg_8, rip)
+    //
+    // arg_1 from rdi to rdi
+    // arg_2 from rsi to rsi
+    // arg_3 from rdx to rdx
+    // arg_4 from r10 to rcx
+    // arg_5 from r8  to r8
+    // arg_6 from r9  to r9
+    // arg_7 from r12 to (%rsp)
+    // arg_8 from r13 to 8(%rsp)
+    // rip   from rcx to 16(%rsp)
+    push_value %rcx
+    push_value %r13
+    push_value %r12
+    mov %r10, %rcx
+.endif
+.endm
+
+.macro post_args n
+.if \n > 5
+    // We use the stack for arguments 6, 7, and 8.
+    post_pop (\n - 5)
+.endif
+
+    jmp x86_syscall_cleanup_and_return
 .endm
 
 .macro cfi_outermost_frame
@@ -226,9 +150,9 @@
     LOCAL_FUNCTION(x86_syscall_call_\syscall\())
         // See x86_syscall for why this is here.
         cfi_outermost_frame
-        pre_\nargs\()_args
+        pre_args \nargs
         call wrapper_\syscall
-        post_\nargs\()_args
+        post_args \nargs
     END_FUNCTION(x86_syscall_call_\syscall\())
     .popsection
     .pushsection .rodata.syscall-table,"a",%progbits
