@@ -26,7 +26,7 @@ use {
 #[derive(Debug)]
 pub struct TouchInjectorHandler {
     /// The mutable fields of this handler.
-    inner: RefCell<TouchInjectorHandlerInner>,
+    mutable_state: RefCell<MutableState>,
 
     /// The scope and coordinate system of injection.
     /// See fidl_fuchsia_pointerinjector::Context for more details.
@@ -49,7 +49,7 @@ pub struct TouchInjectorHandler {
 }
 
 #[derive(Debug)]
-struct TouchInjectorHandlerInner {
+struct MutableState {
     /// A rectangular region that directs injected events into a target.
     /// See fidl_fuchsia_pointerinjector::Viewport for more details.
     viewport: Option<pointerinjector::Viewport>,
@@ -159,10 +159,7 @@ impl TouchInjectorHandler {
         let (context_view_ref, target_view_ref) = configuration_proxy.get_view_refs().await?;
 
         let handler = Rc::new(Self {
-            inner: RefCell::new(TouchInjectorHandlerInner {
-                viewport: None,
-                injectors: HashMap::new(),
-            }),
+            mutable_state: RefCell::new(MutableState { viewport: None, injectors: HashMap::new() }),
             context_view_ref,
             target_view_ref,
             display_size,
@@ -182,7 +179,7 @@ impl TouchInjectorHandler {
         self: &Rc<Self>,
         touch_descriptor: &touch_binding::TouchDeviceDescriptor,
     ) -> Result<(), anyhow::Error> {
-        if self.inner.borrow().injectors.contains_key(&touch_descriptor.device_id) {
+        if self.mutable_state.borrow().injectors.contains_key(&touch_descriptor.device_id) {
             return Ok(());
         }
 
@@ -193,7 +190,7 @@ impl TouchInjectorHandler {
             .context("Failed to duplicate context view ref.")?;
         let target = fuchsia_scenic::duplicate_view_ref(&self.target_view_ref)
             .context("Failed to duplicate target view ref.")?;
-        let viewport = self.inner.borrow().viewport.clone();
+        let viewport = self.mutable_state.borrow().viewport.clone();
         if viewport.is_none() {
             // An injector without a viewport is not valid. The event will be dropped
             // since the handler will not have a registered injector to inject into.
@@ -215,7 +212,7 @@ impl TouchInjectorHandler {
         };
 
         // Keep track of the injector.
-        self.inner.borrow_mut().injectors.insert(touch_descriptor.device_id, device_proxy);
+        self.mutable_state.borrow_mut().injectors.insert(touch_descriptor.device_id, device_proxy);
 
         // Register the new injector.
         self.injector_registry_proxy
@@ -264,7 +261,8 @@ impl TouchInjectorHandler {
             events.extend(new_events);
         }
 
-        let injector = self.inner.borrow().injectors.get(&touch_descriptor.device_id).cloned();
+        let injector =
+            self.mutable_state.borrow().injectors.get(&touch_descriptor.device_id).cloned();
         if let Some(injector) = injector {
             let events_to_send = &mut events.into_iter();
             let _ = injector.inject(events_to_send).await;
@@ -366,11 +364,11 @@ impl TouchInjectorHandler {
             match viewport_stream.next().await {
                 Some(Ok(new_viewport)) => {
                     // Update the viewport tracked by this handler.
-                    self.inner.borrow_mut().viewport = Some(new_viewport.clone());
+                    self.mutable_state.borrow_mut().viewport = Some(new_viewport.clone());
 
                     // Update Scenic with the latest viewport.
                     let injectors: Vec<pointerinjector::DeviceProxy> =
-                        self.inner.borrow_mut().injectors.values().cloned().collect();
+                        self.mutable_state.borrow_mut().injectors.values().cloned().collect();
                     for injector in injectors {
                         let events = &mut vec![pointerinjector::Event {
                             timestamp: Some(fuchsia_async::Time::now().into_nanos()),
@@ -506,7 +504,7 @@ mod tests {
         let (injector_device_proxy, mut injector_device_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<pointerinjector::DeviceMarker>()
                 .expect("Failed to create pointerinjector Registry proxy and stream.");
-        touch_handler.inner.borrow_mut().injectors.insert(1, injector_device_proxy);
+        touch_handler.mutable_state.borrow_mut().injectors.insert(1, injector_device_proxy);
 
         // This nested block is used to bound the lifetime of `watch_viewport_fut`.
         {
@@ -579,7 +577,7 @@ mod tests {
 
         // Check the viewport on the handler is accurate.
         let expected_viewport = create_viewport(100.0, 200.0);
-        assert_eq!(touch_handler.inner.borrow().viewport, Some(expected_viewport));
+        assert_eq!(touch_handler.mutable_state.borrow().viewport, Some(expected_viewport));
     }
 
     // Tests that an add contact event is dropped without a viewport.
@@ -664,7 +662,7 @@ mod tests {
         let (injector_device_proxy, mut injector_device_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<pointerinjector::DeviceMarker>()
                 .expect("Failed to create pointerinjector Registry proxy and stream.");
-        touch_handler.inner.borrow_mut().injectors.insert(1, injector_device_proxy);
+        touch_handler.mutable_state.borrow_mut().injectors.insert(1, injector_device_proxy);
 
         // Request a viewport update.
         let watch_viewport_fut = fasync::Task::local(touch_handler.clone().watch_viewport());
