@@ -129,6 +129,9 @@ template("fidl_summary_json") {
           dest = "${dest}/" + rebase_path(_summary_file_json, target_gen_dir)
         },
       ]
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
     }
   }
 }

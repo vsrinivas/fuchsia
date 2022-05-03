@@ -52,6 +52,17 @@ generated_file("all_fidl_sdk_json") {
   data_keys = [ "fidl_json" ]
 }
 
+# Compatibility testing goldens for SDK publishable FIDLs.
+# This is a list of scopes like { src = "", dst = "" } specifying which files
+# to copy from the build directory into the source tree.
+generated_file("compatibility_testing_goldens") {
+  testonly = true
+  deps = [ "//sdk" ]
+  outputs = [ "$root_build_dir/compatibility_testing_goldens.json" ]
+  output_conversion = "json"
+  data_keys = [ "compatibility_testing_goldens" ]
+}
+
 # TODO(96110): Remove this and use //sdk/cts:plasa_manifest.
 # Contains the list of all plasa fragment files, which have a dump of the
 # public API surfaces.

@@ -212,6 +212,16 @@ template("fidl_library") {
     outputs = [ summary_file_json ]
     dest = "fidl"
     deps = [ ":$compilation_target_name" ]
+    if (is_sdk_publishable) {
+      metadata = {
+        compatibility_testing_goldens = [
+          {
+            src = rebase_path(summary_file_json, root_build_dir)
+            dst = rebase_path("$library_name.api_summary.json", root_build_dir)
+          },
+        ]
+      }
+    }
   }
 
   # Enforce summary checks only for the FIDL files in the SDK.
