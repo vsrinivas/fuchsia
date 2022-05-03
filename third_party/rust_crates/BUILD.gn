@@ -4086,6 +4086,7 @@ rust_library("elliptic-curve-v0_11_12") {
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"arithmetic\"",
     "--cfg=feature=\"default\"",
+    "--cfg=feature=\"ecdh\"",
     "--cfg=feature=\"ff\"",
     "--cfg=feature=\"group\"",
     "--cfg=feature=\"hazmat\"",
