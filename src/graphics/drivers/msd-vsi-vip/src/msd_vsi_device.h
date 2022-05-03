@@ -121,6 +121,47 @@ class MsdVsiDevice : public msd_device_t,
     std::shared_ptr<AddressSpace> prev_address_space;
   };
 
+  class VsiRegisterIo : public magma::RegisterIo {
+   public:
+#if !defined(MSD_VSI_VIP_ENABLE_SUSPEND)
+    VsiRegisterIo(std::unique_ptr<magma::PlatformMmio> mmio, MsdVsiDevice& device)
+        : RegisterIo(std::move(mmio)) {}
+#else
+    VsiRegisterIo(std::unique_ptr<magma::PlatformMmio> mmio, MsdVsiDevice& device)
+        : RegisterIo(std::move(mmio)), device_(device) {}
+    static constexpr uint32_t kOffsetToRestrictedRegisters = 0x20;
+
+    // For hwreg::RegisterBase::WriteTo.
+    template <typename T>
+    void Write(T val, uint32_t offset) {
+      static_assert(sizeof(T) == sizeof(uint32_t));
+      if (offset >= kOffsetToRestrictedRegisters &&
+          device_.power_state_ == PowerState::kSuspended) {
+        MAGMA_LOG(WARNING, "Writing register 0x%02X when suspended", offset);
+        DASSERT(false);
+      }
+      this->Write32(val, offset);
+    }
+
+    // For hwreg::RegisterBase::ReadFrom.
+    template <typename T>
+    uint32_t Read(uint32_t offset) {
+      static_assert(sizeof(T) == sizeof(uint32_t));
+      if (offset >= kOffsetToRestrictedRegisters &&
+          device_.power_state_ == PowerState::kSuspended) {
+        MAGMA_LOG(WARNING, "Reading register 0x%02X when suspended", offset);
+        DASSERT(false);
+      }
+      return this->Read32(offset);
+    }
+
+   private:
+    MsdVsiDevice& device_;
+#endif
+  };
+
+  enum class PowerState { kUnknown = 0, kSuspended, kOn };
+
 #define CHECK_THREAD_IS_CURRENT(x) \
   if (x)                           \
   DASSERT(magma::ThreadIdCheck::IsCurrent(*x))
@@ -158,6 +199,12 @@ class MsdVsiDevice : public msd_device_t,
   magma::Status ProcessInterrupt();
   magma::Status ProcessDumpStatusToLog();
   void ProcessRequestBacklog();
+
+  // Power management
+  bool IsSuspendSupported() const;
+  void PowerSuspend();
+  void StopRingBufferAndSuspend();
+  void PowerOn();
 
   // Events for triggering interrupts.
   // If |free_on_complete| is true, the event will be freed automatically after the corresponding
@@ -205,7 +252,7 @@ class MsdVsiDevice : public msd_device_t,
 
   magma::Status ProcessBatch(std::unique_ptr<MappedBatch> batch, bool do_flush);
 
-  magma::RegisterIo* register_io() { return register_io_.get(); }
+  VsiRegisterIo* register_io() { return register_io_.get(); }
 
   // AddressSpace::Owner
   magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_.get(); }
@@ -226,7 +273,7 @@ class MsdVsiDevice : public msd_device_t,
   static const uint32_t kMagic = 0x64657669;  //"devi"
 
   std::unique_ptr<MsdVsiPlatformDevice> platform_device_;
-  std::unique_ptr<magma::RegisterIo> register_io_;
+  std::unique_ptr<VsiRegisterIo> register_io_;
   std::unique_ptr<magma::PlatformBuffer> external_sram_;
   std::unique_ptr<GpuFeatures> gpu_features_;
   uint32_t device_id_ = 0;
@@ -277,6 +324,13 @@ class MsdVsiDevice : public msd_device_t,
 
   Event events_[kNumEvents] = {};
 
+#if defined(MSD_VSI_VIP_ENABLE_SUSPEND)
+  PowerState power_state_ = PowerState::kUnknown;
+#else
+  PowerState power_state_ = PowerState::kOn;
+#endif
+  PowerState power_state() const { return power_state_; }
+
   // For testing and debugging purposes.
   uint32_t num_events_completed_ = 0;
 
@@ -310,6 +364,7 @@ class MsdVsiDevice : public msd_device_t,
   friend class TestEvents_WriteUnorderedEventIds_Test;
   friend class TestFaultRecovery_ManyBatches_Test;
   friend class TestFaultRecovery_MultipleContexts_Test;
+  friend class TestSuspend_SubmitBatchCheckSuspend_Test;
   friend class MsdVsiDeviceTest_FetchEngineDma_Test;
   friend class MsdVsiDeviceTest_LoadAddressSpace_Test;
   friend class MsdVsiDeviceTest_RingbufferCanHoldMaxEvents_Test;

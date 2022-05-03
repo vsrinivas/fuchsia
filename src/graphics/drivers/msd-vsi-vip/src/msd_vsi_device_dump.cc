@@ -82,6 +82,10 @@ const char* FaultTypeToString(uint32_t mmu_status) {
 }  // namespace
 
 void MsdVsiDevice::Dump(DumpState* dump_out, bool fault_present) {
+#if defined(MSD_VSI_VIP_ENABLE_SUSPEND)
+  PowerOn();
+#endif
+
   dump_out->last_completed_sequence_number = progress_->last_completed_sequence_number();
   dump_out->last_submitted_sequence_number = progress_->last_submitted_sequence_number();
   dump_out->idle = IsIdle();

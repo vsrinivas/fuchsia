@@ -7,6 +7,20 @@ import("//build/components.gni")
 import("//build/drivers.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
+declare_args() {
+  # Enable suspend.
+  # This will stop the ring buffer and suspend the clks when there are no
+  # submitted commands.
+  msd_vsi_vip_enable_suspend = true
+}
+
+config("msd_vsi_vip_config") {
+  defines = []
+  if (msd_vsi_vip_enable_suspend) {
+    defines += [ "MSD_VSI_VIP_ENABLE_SUSPEND" ]
+  }
+}
+
 fuchsia_driver_package("msd-vsi-vip") {
   driver_components = [ ":msd_vsi" ]
 }
