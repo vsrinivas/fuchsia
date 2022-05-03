@@ -17,7 +17,7 @@ pub mod value;
 pub type ConfigResult = Result<ConfigValue>;
 
 #[derive(Debug, Error)]
-#[error("Configuraton error")]
+#[error("Configuration error")]
 pub struct ConfigError(#[from] anyhow::Error);
 
 impl ConfigError {
