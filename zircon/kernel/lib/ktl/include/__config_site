@@ -23,6 +23,10 @@
 #define _LIBCPP_ABI_VERSION 2
 #define _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS
 
+// When compiling in the UEFI environment, the predefines look like Windows
+// but there is no Windows runtime environment to use.
+#define _LIBCPP_NO_VCRUNTIME
+
 // This tells the headers not to use `extern template` declarations that
 // expect specific instantiations/specializations to come from the libc++
 // library rather than the headers.  In the kernel, only the headers are

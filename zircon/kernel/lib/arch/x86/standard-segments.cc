@@ -68,6 +68,7 @@ void X86StandardSegments::Load(uintptr_t entry, uintptr_t arg) {
   // returns anyway.  The frame pointer is cleared to avoid leaving any
   // misleading breadcrumbs for the new code.
   __asm__ volatile(
+#ifdef __ELF__
       R"""(
       push %[cs]
       .cfi_adjust_cfa_offset 8
@@ -77,6 +78,14 @@ void X86StandardSegments::Load(uintptr_t entry, uintptr_t arg) {
       lretq
       .cfi_adjust_cfa_offset -16
       )"""
+#else
+      R"""(
+      push %[cs]
+      push %[pc]
+      xor %%ebp, %%ebp
+      lretq
+      )"""
+#endif
       :
       : [cs] "ir"(kCs64), [pc] "ir"(entry),  // lretq
         "S"(arg)                             // %rsi

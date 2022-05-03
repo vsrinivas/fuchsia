@@ -137,7 +137,7 @@ template("zx_library") {
 
     group(_headers_target) {
       # Used to represent header dependencies.
-      # Direct us of public_configs should be rare but is sometimes needed.
+      # Direct use of public_configs should be rare but is sometimes needed.
       forward_variables_from(invoker,
                              [
                                "public_configs",
@@ -149,6 +149,10 @@ template("zx_library") {
         public_configs = []
       }
       public_configs += [ ":${_headers_config_target}" ]
+      if (!defined(public_deps)) {
+        public_deps = []
+      }
+      public_deps += [ "//zircon/system/public" ]
     }
 
     config(_headers_config_target) {

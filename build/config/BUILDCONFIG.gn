@@ -2950,6 +2950,12 @@ template("executable") {
 
     rebased_output_file = rebase_path(output_file, root_build_dir)
     rebased_link_output_file = rebase_path(link_output_file, root_build_dir)
+    if (current_os == "win") {
+      rebased_debug_file =
+          rebase_path("$output_dir/$output_name.pdb", root_build_dir)
+    } else {
+      rebased_debug_file = rebased_link_output_file
+    }
 
     metadata = {
       binaries = []
@@ -2964,9 +2970,9 @@ template("executable") {
           label = get_label_info(":$target_name", "label_with_toolchain")
           cpu = current_cpu
           os = current_os
-          debug = rebased_link_output_file
+          debug = rebased_debug_file
           dist = rebased_output_file
-          if (current_os != "mac" && current_os != "win") {
+          if (current_os != "mac") {
             elf_build_id =
                 rebase_path("$output_file.build-id.stamp", root_build_dir)
           }

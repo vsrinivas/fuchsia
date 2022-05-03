@@ -357,8 +357,9 @@ template("zircon_toolchain") {
   # All other OS possibilities are ELF and so might have ELF build IDs.
   is_elf = invoker.os != "mac" && invoker.os != "win"
 
-  # buildidtool only supports ELF build IDs.
-  use_buildidtool = is_elf
+  # buildidtool supports ELF build IDs and PE-COFF PDB GUIDs.
+  # TODO(mcgrathr): broken for aarch64 PE-COFF
+  use_buildidtool = is_elf || (invoker.os == "win" && invoker.cpu != "arm64")
 
   # The prebuilt dump_syms tool is the one that only supports ELF.
   # Breakpad has dump_syms tools for Mach-O (macOS) and PE-COFF
@@ -455,15 +456,19 @@ template("zircon_toolchain") {
       # This assumes "-Wl,/debug" or suchlike is in ldflags.  If it's not
       # but nothing depends on the .pdb file, then it should be OK that
       # Ninja thinks it's an additional output but it doesn't get created.
-      outputs += [ "{{output_dir}}/{{target_output_name}}.pdb" ]
+      debug_outfile = "{{output_dir}}/{{target_output_name}}.pdb"
+      outputs += [ debug_outfile ]
     }
 
     if (use_buildidtool) {
+      if (!defined(debug_outfile)) {
+        debug_outfile = unstripped_outfile
+      }
       buildid_stampfile = "${outfile}.build-id.stamp"
-      strip_command +=
-          " && $_buildidtool -build-id-dir \".build-id\"" +
-          " -stamp \"$buildid_stampfile\"" +
-          " -entry \"=$outfile\" -entry \".debug=$unstripped_outfile\""
+      strip_command += " && $_buildidtool -build-id-dir \".build-id\"" +
+                       " -stamp \"$buildid_stampfile\"" +
+                       " -entry \"=$outfile\" -entry \".debug=$debug_outfile\""
+      outputs += [ buildid_stampfile ]
     }
 
     if (use_breakpad) {

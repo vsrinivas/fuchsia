@@ -39,7 +39,10 @@ zx_library("x86") {
     }
 
     if (is_kernel) {
-      deps += [ "//zircon/kernel/lib/ktl" ]
+      deps += [
+        "//zircon/kernel/lib/ktl",
+        "//zircon/kernel/lib/libc",
+      ]
     }
   }
 

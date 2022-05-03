@@ -19,6 +19,9 @@ sdk_source_set("zx") {
   sdk_name = "zx-experimental-driver-only"
   sources = [ "include/lib/zx/status.h" ]
   public_deps = [ ":fitx" ]
+  if (zircon_toolchain != false) {
+    public_deps += [ "//zircon/system/public" ]
+  }
 }
 
 zx_library("zxc") {

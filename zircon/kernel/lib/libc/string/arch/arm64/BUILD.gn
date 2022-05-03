@@ -5,8 +5,8 @@
 # https://opensource.org/licenses/MIT
 
 source_set("arm64") {
-  if (toolchain_variant.tags + [ "strict-align" ] - [ "strict-align" ] !=
-      toolchain_variant.tags) {
+  if (current_os == "win" || toolchain_variant.tags + [ "strict-align" ] -
+                             [ "strict-align" ] != toolchain_variant.tags) {
     # This environment can't handled unaligned accesses, which the
     # optimized assembly routines do.
     sources = [

@@ -149,6 +149,9 @@ template("fidl_c_header") {
       foreach(dep, fidl_deps) {
         public_deps += [ "$dep.c_header" ]
       }
+      if (zircon_toolchain != false) {
+        public_deps += [ "//zircon/system/public" ]
+      }
     }
   }
 }

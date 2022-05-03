@@ -18,8 +18,15 @@
 // remove it if it's not referenced by anything else in the link.  Using them
 // all ensures that just the declaration being compiled in will guarantee the
 // element appears in the special section at runtime.
-#define SPECIAL_SECTION(name, type) \
-  alignas(type) [[gnu::used, gnu::retain, gnu::section(name), SPECIAL_SECTION_NO_ASAN]]
+#define SPECIAL_SECTION(name, type)                                                 \
+  alignas(type) [[gnu::used, gnu::retain, gnu::section(SPECIAL_SECTION_NAME(name)), \
+                  SPECIAL_SECTION_NO_ASAN]]
+
+#ifdef _WIN32
+#define SPECIAL_SECTION_NAME(name) "." name "$M"
+#else
+#define SPECIAL_SECTION_NAME(name) name
+#endif
 
 // AddressSanitizer instrumentation normally places red zones around global
 // variables.  This must be suppressed in special sections so as not to break

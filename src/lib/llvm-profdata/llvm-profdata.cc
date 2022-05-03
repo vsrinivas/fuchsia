@@ -75,8 +75,8 @@ extern const int INSTR_PROF_PROFILE_RUNTIME_VAR = 0;
 
 }  // extern "C"
 
-// Here _WIN32 really means EFI (Gigaboot).  At link-time, it's Windows/x64
-// essentially.  InstrProfData.inc uses #ifdef _WIN32, so match that.
+// Here _WIN32 really means EFI.  At link-time, it's Windows/x64 essentially.
+// InstrProfData.inc uses #ifdef _WIN32, so match that.
 #if defined(_WIN32)
 
 // These magic section names don't have macros in InstrProfData.inc,
@@ -101,20 +101,20 @@ extern const int INSTR_PROF_PROFILE_RUNTIME_VAR = 0;
 
 // The ".blah$A" and ".blah$Z" placeholder sections get magically sorted with
 // ".blah$M" in between them, so these symbols identify the bounds of the
-// compiler-emitted data at link time.  The all-zero placeholder records don't
-// matter to `llvm-profdata`.
+// compiler-emitted data at link time.  The compiler seems to accept emitting
+// a zero-length array if it has an explicit initializer.
 
-// This data is morally `const`, i.e. it's a RELRO case in the ELF world.
-// But the compiler complains about a mismatch with the #pragma section
-// above if these are declared `const` in the PE-COFF case.
-[[gnu::visibility("hidden"), gnu::section(".lprfd$A"), gnu::used]] __llvm_profile_data DataBegin[];
-[[gnu::visibility("hidden"), gnu::section(".lprfd$Z"), gnu::used]] __llvm_profile_data DataEnd[];
+// This data is morally `const`, i.e. it's a RELRO case in the ELF world.  But
+// there is no RELRO in PE-COFF (?) so it's just a writable section and the
+// compiler wants the declaration's constness to match #pragma section above.
+[[gnu::section(".lprfd$A")]] static __llvm_profile_data DataBegin[0] = {};
+[[gnu::section(".lprfd$Z")]] static __llvm_profile_data DataEnd[0] = {};
 
-[[gnu::visibility("hidden"), gnu::section(".lprfn$A"), gnu::used]] const char NamesBegin[];
-[[gnu::visibility("hidden"), gnu::section(".lprfn$Z"), gnu::used]] const char NamesEnd[];
+[[gnu::section(".lprfn$A")]] static const char NamesBegin[0] = {};
+[[gnu::section(".lprfn$Z")]] static const char NamesEnd[0] = {};
 
-[[gnu::visibility("hidden"), gnu::section(".lprfc$A"), gnu::used]] uint64_t CountersBegin[];
-[[gnu::visibility("hidden"), gnu::section(".lprfc$Z"), gnu::used]] uint64_t CountersEnd[];
+[[gnu::section(".lprfc$A")]] static uint64_t CountersBegin[0] = {};
+[[gnu::section(".lprfc$Z")]] static uint64_t CountersEnd[0] = {};
 
 #elif defined(__APPLE__)
 

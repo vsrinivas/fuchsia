@@ -1,0 +1,67 @@
+# Copyright 2022 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/toolchain/toolchain_environment.gni")
+
+_is_efi = toolchain_environment == "kernel.efi"
+
+_efi_toolchain = "//zircon/kernel/phys/efi:kernel.efi_$current_cpu"
+
+# This is the UEFI-specified "machine type short-name", as used in
+# the canonical file name "\efi\boot\boot${efi_cpu}.efi".
+if (current_cpu == "arm64") {
+  efi_cpu = "aa64"
+} else if (current_cpu == "x86") {
+  efi_cpu = "ia32"
+} else {
+  efi_cpu = current_cpu
+}
+
+# Build an executable for the kernel.efi environment.
+#
+# This just defines an executable() target, but it's always in the toolchain
+# for the kernel.efi environment for $current_cpu.
+#
+# TODO(mcgrathr): images metadata?
+#
+# Parameters
+#
+#   * output_extension
+#     - Optional: See executable(), but defaults to "efi".
+#     - Type: string
+#     - Default: "efi"
+#
+# See executable() for other parameters.
+template("efi_executable") {
+  if (!_is_efi) {
+    group(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      public_deps = [ ":$target_name($_efi_toolchain)" ]
+    }
+    not_needed(invoker, "*")
+  } else {
+    executable(target_name) {
+      forward_variables_from(invoker, "*")
+      if (defined(visibility)) {
+        # Make sure it's visible to the redirector group above.
+        visibility += [ ":$target_name" ]
+      }
+      if (!defined(output_extension)) {
+        output_extension = "efi"
+      }
+    }
+  }
+}
+
+if (_is_efi) {
+  set_defaults("efi_executable") {
+    configs = default_executable_configs
+  }
+}

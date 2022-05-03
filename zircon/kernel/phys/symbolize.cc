@@ -18,15 +18,17 @@
 #include <phys/stack.h>
 #include <pretty/hexdump.h>
 
-#include <ktl/enforce.h>
-
 // The zx_*_t types used in the exception stuff aren't defined for 32-bit.
 // There is no exception handling implementation for 32-bit.
 #ifndef __i386__
 #include <phys/exception.h>
 #endif
 
+#include <ktl/enforce.h>
+
 Symbolize* gSymbolize = nullptr;
+
+#ifdef __ELF__
 
 namespace {
 
@@ -101,27 +103,7 @@ class BuildId {
 
 BuildId BuildId::gInstance;
 
-#if defined(__aarch64__)
-
-#elif defined(__x86_64__)
-
-#endif
-
 }  // namespace
-
-const char* ProgramName() {
-  if (gSymbolize) {
-    return gSymbolize->name();
-  }
-  return "early-init";
-}
-
-void Symbolize::Printf(const char* fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  vfprintf(output_, fmt, args);
-  va_end(args);
-}
 
 ktl::string_view Symbolize::BuildIdString() { return BuildId::GetInstance().Print(); }
 
@@ -145,6 +127,27 @@ void Symbolize::ContextAlways() {
       .LoadImageMmap(start, static_cast<size_t>(end - start), 0, kRWX,
                      reinterpret_cast<uint64_t>(kLinkTimeAddress))
       .Newline();
+}
+
+#elif defined(_WIN32)
+
+// TODO(mcgrathr): extract pdb guid as build id
+void Symbolize::ContextAlways() {}
+
+#endif  // __ELF__
+
+const char* ProgramName() {
+  if (gSymbolize) {
+    return gSymbolize->name();
+  }
+  return "early-init";
+}
+
+void Symbolize::Printf(const char* fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  vfprintf(output_, fmt, args);
+  va_end(args);
 }
 
 void Symbolize::Context() {

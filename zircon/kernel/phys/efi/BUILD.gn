@@ -1,0 +1,118 @@
+# Copyright 2022 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/config/zircon/standard.gni")
+import("//build/toolchain/toolchain_environment.gni")
+import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
+import("//build/zircon/zircon_cpu.gni")
+
+if (current_toolchain == default_toolchain) {
+  # The default toolchain just defines the EFI environment.
+  foreach(cpu, standard_fuchsia_cpus) {
+    zircon_toolchain_suite("kernel.efi_$cpu") {
+      cpu = cpu
+      os = "win"
+      environment = "kernel.efi"
+      with_shared = false
+
+      toolchain_tags = [
+        "kernel",
+        "efi",
+      ]
+
+      configs = [ "//zircon/kernel/phys/efi:efi_config" ]
+
+      # Always enable frame pointers.  This works because frame_pointers
+      # is added as part of :efi_config below.
+      remove_common_configs = [ "//build/config:default_frame_pointers" ]
+
+      exclude_variant_tags = [
+        # There is no GCC toolchain for EFI, only Clang.
+        "gcc",
+
+        # There is no possibility of fancy runtimes like ASan for EFI.
+        "instrumentation-runtime",
+      ]
+    }
+  }
+} else if (toolchain_environment == "kernel.efi") {
+  config("efi_config") {
+    configs = [
+      "//zircon/kernel:standalone",
+      "//zircon/kernel:warnings",
+
+      # Don't emit extra code making static initializers thread-safe (we don't
+      # have threads or any of the corresponding library support.)
+      "//build/config/zircon:no_threadsafe_statics",
+
+      # All EFI code is inherently sensitive and in a position for any bug to
+      # be unusually dangerous.  So compile with minimal undefined behavior
+      # checking in all builds, regardless of variant.
+      "//build/config/zircon/instrumentation:ubsan-trap",
+    ]
+
+    # Always enable frame pointers.
+    configs += [ "//build/config:frame_pointers" ]
+
+    # Don't set MSVC predefines.
+    cflags = [
+      "-U_MSC_VER",
+      "-U_MSC_FULL_VER",
+    ]
+
+    ldflags = [
+      # Generate an EFI executable with EfiMain as its entry point.
+      "-Wl,/subsystem:efi_application",
+      "-Wl,/entry:EfiMain",
+
+      # There are no toolchain-provided libraries that can be used with EFI.
+      "-noprofilelib",
+      "-Wl,/nodefaultlib",
+    ]
+  }
+
+  group("efi_config_deps") {
+    deps = [
+      ":main",
+
+      # In instrumented builds, every TU has a reference that needs to be
+      # satisfied by the runtime even if the data isn't being used.  The
+      # library is tiny to build and doesn't bring anything into the link for
+      # uninstrumented builds.  It's simplest to just always include it.
+      "//src/lib/llvm-profdata",
+    ]
+  }
+
+  config("includes") {
+    visibility = [ ":*" ]
+    include_dirs = [ "include" ]
+  }
+
+  source_set("main") {
+    public = [ "include/phys/efi/main.h" ]
+    public_deps = [
+      "//zircon/kernel/lib/arch",
+      "//zircon/kernel/lib/efi",
+    ]
+    public_configs = [ ":includes" ]
+    sources = [
+      "allocation.cc",
+      "efi-main.cc",
+      "stdout.cc",
+    ]
+    deps = [
+      "..:allocation",
+      "..:main",
+      "..:stdio",
+      "//zircon/kernel/arch/$zircon_cpu/phys/efi",
+      "//zircon/kernel/lib/boot-options",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+      "//zircon/system/ulib/fbl",
+      "//zircon/system/ulib/uart",
+    ]
+  }
+}

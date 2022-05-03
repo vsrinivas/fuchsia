@@ -45,14 +45,18 @@
 /// This is only really useful when the scope and/or type is set to a
 /// non-default value.  `.label name, local` is just `name:`.
 .macro .label name, scope=local, type=notype, value:vararg
+#ifdef __ELF__
   // Set ELF symbol type.
   .type \name, %\type
+#endif
 
   // Set ELF symbol visibility and binding, which represent scope.
   .ifnc \scope, local
     .globl \name
     .ifnc \scope, export
+#ifdef __ELF__
       .hidden \name
+#endif
     .else
       .ifnc \scope, global
 	.error "`scope` argument `\scope` not `local`, `global`, or `export`"

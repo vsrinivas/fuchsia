@@ -1,0 +1,21 @@
+// Copyright 2022 The Fuchsia Authors
+//
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT
+
+#ifndef ZIRCON_KERNEL_LIB_KTL_INCLUDE___CONFIG_
+#define ZIRCON_KERNEL_LIB_KTL_INCLUDE___CONFIG_
+
+// The libc++ internal header <__config> unconditionally responds to some
+// predefines set in the EFI environment.  So this header wraps it and then
+// undoes the damage that our __config_site header can't prevent.
+
+#include_next <__config>
+
+#undef _LIBCPP_WIN32API
+#undef _LIBCPP_MSVCRT_LIKE
+#undef _LIBCPP_MSVCRT
+#undef _LIBCPP_HAS_OPEN_WITH_WCHAR
+
+#endif  // ZIRCON_KERNEL_LIB_KTL_INCLUDE___CONFIG_

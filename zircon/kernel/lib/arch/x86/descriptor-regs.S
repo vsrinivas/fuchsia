@@ -8,6 +8,13 @@
 
 .text
 
+// EFI uses different argument registers in the C calling convention.
+#ifdef _WIN32
+#define ARG0 %rcx
+#else
+#define ARG0 %rdi
+#endif
+
 // void LoadCodeSegmentSelector(uint16_t code_segment);
 //
 // Load the %cs segment selector with `code_segment`.
@@ -26,7 +33,7 @@
   // We do this by doing a far return operation (which pops the new %rip and
   // new %cs off the stack) to the label "1".
   leaq   1f(%rip), %rax
-  pushq  %rdi  // `code_segment`
+  pushq  ARG0  // `code_segment`
   .cfi_adjust_cfa_offset 8
   pushq  %rax  // new PC
   .cfi_adjust_cfa_offset 8

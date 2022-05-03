@@ -181,16 +181,18 @@ config("standalone") {
     "-faligned-new=8",
   ]
 
-  if (current_cpu == "x64") {
-    # This only matters in an environment where interrupt handlers might
-    # push trap frames in the same privilege level, like the kernel.
-    # e.g. Multiboot probably doesn't actually need it, but it doesn't hurt.
-    cflags += [ "-mno-red-zone" ]
-  } else if (current_cpu == "arm64") {
-    # This matters if vector registers are not available, e.g. in the kernel
-    # since the they hold unsaved user state, or in the physmem environment
-    # because they might not be enabled in hardware yet.
-    cflags += [ "-mgeneral-regs-only" ]
+  if (current_os != "win") {
+    if (current_cpu == "x64") {
+      # This only matters in an environment where interrupt handlers might
+      # push trap frames in the same privilege level, like the kernel.
+      # e.g. Multiboot probably doesn't actually need it, but it doesn't hurt.
+      cflags += [ "-mno-red-zone" ]
+    } else if (current_cpu == "arm64") {
+      # This matters if vector registers are not available, e.g. in the kernel
+      # since the they hold unsaved user state, or in the physmem environment
+      # because they might not be enabled in hardware yet.
+      cflags += [ "-mgeneral-regs-only" ]
+    }
   }
 
   if (is_gcc && current_os == "fuchsia") {

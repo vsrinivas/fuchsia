@@ -77,26 +77,46 @@
 // Subroutines of _.entity selected by the \type argument.
 
 .macro _.entity.pushsection.function name
+#ifdef __ELF__
   // The function goes into the .text section in its own section group.
   // This lets any metadata associated with the function travel in its
   // group by using `.pushsection .metadata-section, "...?", ...`.
   .pushsection .text, "axG", %progbits, \name
+#else
+  .text
+#endif
 .endm
 
 .macro _.entity.pushsection.bss name
+#ifdef __ELF__
   .pushsection .bss.\name, "aw", %nobits
+#else
+  .bss
+#endif
 .endm
 
 .macro _.entity.pushsection.data name
+#ifdef __ELF__
   .pushsection .data.\name, "aw", %progbits
+#else
+  .data
+#endif
 .endm
 
 .macro _.entity.pushsection.relro name
+#ifdef __ELF__
   .pushsection .data.rel.ro.\name, "aw", %progbits
+#else
+  .section .rdata, "dr"
+#endif
 .endm
 
 .macro _.entity.pushsection.rodata name
+#ifdef __ELF__
   .pushsection .rodata.\name, "a", %progbits
+#else
+  .section .rdata, "dr"
+#endif
 .endm
 
 // Subroutine of `.end_\entity` macros defined by `_.entity`, above.
@@ -112,6 +132,7 @@
   // Do the epilogue for the entity, e.g. .cfi_endproc.
   \epilogue
 
+#ifdef __ELF__
   // Set the ELF symbol's `st_size`.
   .size \name, . - \name
 
@@ -119,6 +140,7 @@
   .ifb \nosection
     .popsection
   .endif
+#endif
 .endm  // _.entity.end
 
 // Subroutines of .function, start/end pairs for each `cfi` mode.

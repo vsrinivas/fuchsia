@@ -124,7 +124,7 @@ template("test_spec") {
 
   # Set default environments: Emu for a fuchsia test, and VMs for linux and mac
   # tests.
-  if (is_fuchsia) {
+  if (is_fuchsia || is_kernel) {
     if (!defined(environments)) {
       environments = basic_envs
     }

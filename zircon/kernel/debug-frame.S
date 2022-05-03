@@ -8,4 +8,9 @@
 // to ensure that all assembly code going into kernel links is consistent with
 // compiler-generated code: it has only .debug_frame (offline) unwind info and
 // no .eh_frame (runtime) unwind info.
+
+#ifdef _WIN32
+.cfi_sections  // PE-COFF doesn't use DWARF CFI, so emit none at all.
+#else
 .cfi_sections .debug_frame
+#endif

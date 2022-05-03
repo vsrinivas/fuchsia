@@ -128,7 +128,7 @@ config("internal.config") {
     "ZSTDLIB_VISIBLE=",
   ]
 
-  if (!is_fuchsia) {
+  if (!is_fuchsia && !is_kernel) {
     defines += [ "ZSTD_MULTITHREAD" ]
   }
 

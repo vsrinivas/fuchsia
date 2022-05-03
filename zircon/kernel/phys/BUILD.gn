@@ -80,7 +80,8 @@ if (current_toolchain == default_toolchain) {
 }
 
 if (toolchain_environment == "kernel.phys" ||
-    toolchain_environment == "kernel.phys32") {
+    toolchain_environment == "kernel.phys32" ||
+    toolchain_environment == "kernel.efi") {
   # All the code gets built here in the phys environment.
 
   source_set("trampoline-boot") {
@@ -216,8 +217,10 @@ if (toolchain_environment == "kernel.phys" ||
 
     public_configs = [ ":includes" ]
 
-    sources = [ "self-relocation.cc" ]
-    deps = [ "//src/lib/elfldltl" ]
+    if (toolchain_environment != "kernel.efi") {
+      sources = [ "self-relocation.cc" ]
+      deps = [ "//src/lib/elfldltl" ]
+    }
   }
 
   # Transitive dependencies for the <phys/page-table.h> header.
@@ -302,15 +305,17 @@ if (toolchain_environment == "kernel.phys" ||
 
   source_set("allocation") {
     public = [ "include/phys/allocation.h" ]
-    sources = [
-      "//zircon/kernel/arch/$zircon_cpu/phys/include/phys/arch/arch-allocation.h",
-      "allocation.cc",
-    ]
-    deps = [
-      ":main",
-      "//zircon/kernel/phys/lib/memalloc",
-      "//zircon/kernel/phys/lib/page-table",
-    ]
+    if (toolchain_environment != "kernel.efi") {
+      sources = [
+        "//zircon/kernel/arch/$zircon_cpu/phys/include/phys/arch/arch-allocation.h",
+        "allocation.cc",
+      ]
+      deps = [
+        ":main",
+        "//zircon/kernel/phys/lib/memalloc",
+        "//zircon/kernel/phys/lib/page-table",
+      ]
+    }
     public_deps = [
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",

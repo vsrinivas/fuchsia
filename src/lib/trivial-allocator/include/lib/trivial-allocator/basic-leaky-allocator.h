@@ -6,6 +6,7 @@
 #define SRC_LIB_TRIVIAL_ALLOCATOR_INCLUDE_LIB_TRIVIAL_ALLOCATOR_BASIC_LEAKY_ALLOCATOR_H_
 
 #include <lib/stdcompat/span.h>
+#include <zircon/compiler.h>
 
 #include <cassert>
 #include <cstddef>
@@ -138,7 +139,7 @@ class BasicLeakyAllocator {
   const AllocateFunction& allocate_function() const { return allocate_; }
 
  private:
-  [[no_unique_address]] AllocateFunction allocate_;
+  __NO_UNIQUE_ADDRESS AllocateFunction allocate_;
   void* frontier_ = nullptr;
   size_t space_ = 0;
   void* last_new_ = nullptr;

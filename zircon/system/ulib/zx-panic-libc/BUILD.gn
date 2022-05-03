@@ -15,6 +15,7 @@ zx_library("zx-panic-libc") {
 source_set("as_source") {
   visibility = [ "//zircon/system/ulib/c:*" ]
   sources = [ "zx_panic_libc.cc" ]
+  public_deps = [ "//zircon/system/public" ]
 
   # This library is linked into libc, which is used by libfuzzer.
   # Don't instrument it to avoid getting noise in code coverage.

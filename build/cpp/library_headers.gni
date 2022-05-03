@@ -152,6 +152,13 @@ template("library_headers") {
     if (!defined(public_configs)) {
       public_configs = []
     }
-    public_configs = [ ":${target_name}.config" ]
+    public_configs += [ ":${target_name}.config" ]
+
+    if (is_kernel) {
+      if (!defined(public_deps)) {
+        public_deps = []
+      }
+      public_deps += [ "//zircon/system/public" ]
+    }
   }
 }

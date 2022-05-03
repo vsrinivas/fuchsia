@@ -22,38 +22,38 @@ if (is_kernel) {
       "//zircon/system/ulib/fbl",
     ]
   }
-}
+} else {
+  group("tests") {
+    testonly = true
+    deps = [
+      ":boot-options-fuzzers",
+      ":boot-options-tests",
+      ":boot-options-unittests($host_toolchain)",
+    ]
+  }
 
-group("tests") {
-  testonly = true
-  deps = [
-    ":boot-options-fuzzers",
-    ":boot-options-tests",
-    ":boot-options-unittests($host_toolchain)",
-  ]
-}
+  test("boot-options-unittests") {
+    sources = [ "user-tests.cc" ]
+    deps = [
+      "//sdk/lib/fit",
+      "//zircon/kernel/lib/boot-options",
+      "//zircon/system/ulib/zxtest",
+    ]
+  }
 
-test("boot-options-unittests") {
-  sources = [ "user-tests.cc" ]
-  deps = [
-    "//sdk/lib/fit",
-    "//zircon/kernel/lib/boot-options",
-    "//zircon/system/ulib/zxtest",
-  ]
-}
+  fuchsia_unittest_package("boot-options-tests") {
+    deps = [ ":boot-options-unittests" ]
+    manifest = "meta/boot-options-tests.cmx"
+  }
 
-fuchsia_unittest_package("boot-options-tests") {
-  deps = [ ":boot-options-unittests" ]
-  manifest = "meta/boot-options-tests.cmx"
-}
+  fuzzer_package("boot-options-fuzzers") {
+    fuzz_host = true
+    cpp_fuzzers = [ ":boot-options-basic-fuzzer" ]
+  }
 
-fuzzer_package("boot-options-fuzzers") {
-  fuzz_host = true
-  cpp_fuzzers = [ ":boot-options-basic-fuzzer" ]
-}
-
-cpp_fuzzer("boot-options-basic-fuzzer") {
-  sources = [ "fuzzer.cc" ]
-  deps = [ "//zircon/kernel/lib/boot-options" ]
-  dictionary = "fuzzer-dictionary.txt"
+  cpp_fuzzer("boot-options-basic-fuzzer") {
+    sources = [ "fuzzer.cc" ]
+    deps = [ "//zircon/kernel/lib/boot-options" ]
+    dictionary = "fuzzer-dictionary.txt"
+  }
 }

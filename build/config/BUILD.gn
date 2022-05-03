@@ -425,21 +425,27 @@ config("default_optimize") {
 
 config("debuginfo_none") {
   cflags = [ "-g0" ]
-  asmflags = cflags
+  if (current_os != "win") {
+    asmflags = cflags
+  }
   ldflags = cflags
   rustflags = [ "-Cdebuginfo=0" ]
 }
 
 config("debuginfo_backtrace") {
   cflags = [ "-g1" ]
-  asmflags = cflags
+  if (current_os != "win") {
+    asmflags = cflags
+  }
   ldflags = cflags
   rustflags = [ "-Cdebuginfo=1" ]
 }
 
 config("debuginfo_debug") {
   cflags = [ "-g3" ]
-  asmflags = cflags
+  if (current_os != "win") {
+    asmflags = cflags
+  }
   ldflags = cflags
   rustflags = [ "-Cdebuginfo=2" ]
 }

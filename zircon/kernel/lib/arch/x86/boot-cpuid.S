@@ -151,3 +151,34 @@ mov %edx, CPUID_EDX + \addr
   jmp .Lstore
 
 .end_function
+
+#ifdef _WIN32
+
+// The equivalent of the __start/__stop magic symbols for PE-COFF is
+// to declare $A and $Z sections and symbols within.
+
+.section .drectve, "yn"
+.ascii " /MERGE:.BootCpuidData=.data"
+.ascii " /MERGE:.BootCpuidLeaf=.rdata"
+
+.section  .BootCpuidData$A, "dw"
+.balign 4
+.int 0
+.label __start_BootCpuidData
+
+.section  .BootCpuidData$Z, "dw"
+.balign 4
+.label __stop_BootCpuidData
+.int 0
+
+.section  .BootCpuidLeaf$A, "dr"
+.balign 4
+.int 0
+.label __start_BootCpuidLeaf
+
+.section  .BootCpuidLeaf$Z, "dr"
+.balign 4
+.label __stop_BootCpuidLeaf
+.int 0
+
+#endif  // _WIN32

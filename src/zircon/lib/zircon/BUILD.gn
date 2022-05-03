@@ -30,7 +30,7 @@ group("headers") {
     "//zircon/vdso:public($default_toolchain)",
   ]
   public_configs = [ "//zircon/vdso:public.config($default_toolchain)" ]
-  if (!is_fuchsia) {
+  if (!is_fuchsia && !is_kernel) {
     public_deps += [ "//zircon/system/public" ]
   }
 }

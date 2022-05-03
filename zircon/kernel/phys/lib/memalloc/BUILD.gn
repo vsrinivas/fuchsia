@@ -61,57 +61,59 @@ source_set("testing") {
   ]
 }
 
-test("memalloc-test") {
-  sources = [
-    "algorithm-test.cc",
-    "pool-mem-config-test.cc",
-    "pool-test.cc",
-  ]
-  deps = [
-    ":memalloc",
-    ":testing",
-    "//sdk/lib/fit",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-  ]
-}
+if (!is_kernel) {
+  test("memalloc-test") {
+    sources = [
+      "algorithm-test.cc",
+      "pool-mem-config-test.cc",
+      "pool-test.cc",
+    ]
+    deps = [
+      ":memalloc",
+      ":testing",
+      "//sdk/lib/fit",
+      "//src/lib/fxl/test:gtest_main",
+      "//third_party/googletest:gmock",
+      "//third_party/googletest:gtest",
+    ]
+  }
 
-fuchsia_unittest_package("memalloc-test-package") {
-  package_name = "memalloc-tests"
-  manifest = "meta/memalloc-test.cmx"
-  deps = [ ":memalloc-test" ]
-}
+  fuchsia_unittest_package("memalloc-test-package") {
+    package_name = "memalloc-tests"
+    manifest = "meta/memalloc-test.cmx"
+    deps = [ ":memalloc-test" ]
+  }
 
-fuzzer_package("memalloc-fuzzers") {
-  fuzz_host = true
-  cpp_fuzzers = [
-    ":find-fuzzer",
-    ":pool-fuzzer",
-  ]
-}
+  fuzzer_package("memalloc-fuzzers") {
+    fuzz_host = true
+    cpp_fuzzers = [
+      ":find-fuzzer",
+      ":pool-fuzzer",
+    ]
+  }
 
-cpp_fuzzer("find-fuzzer") {
-  sources = [ "find-fuzzer.cc" ]
-  deps = [
-    ":memalloc",
-    ":testing",
-  ]
-}
+  cpp_fuzzer("find-fuzzer") {
+    sources = [ "find-fuzzer.cc" ]
+    deps = [
+      ":memalloc",
+      ":testing",
+    ]
+  }
 
-cpp_fuzzer("pool-fuzzer") {
-  sources = [ "pool-fuzzer.cc" ]
-  deps = [
-    ":memalloc",
-    ":testing",
-  ]
-}
+  cpp_fuzzer("pool-fuzzer") {
+    sources = [ "pool-fuzzer.cc" ]
+    deps = [
+      ":memalloc",
+      ":testing",
+    ]
+  }
 
-group("tests") {
-  testonly = true
-  deps = [
-    ":memalloc-fuzzers",
-    ":memalloc-test($host_toolchain)",
-    ":memalloc-test-package",
-  ]
+  group("tests") {
+    testonly = true
+    deps = [
+      ":memalloc-fuzzers",
+      ":memalloc-test($host_toolchain)",
+      ":memalloc-test-package",
+    ]
+  }
 }

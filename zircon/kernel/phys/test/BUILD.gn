@@ -9,10 +9,12 @@ if (current_toolchain != default_toolchain) {
   import("//build/zbi/kernel_cmdline.gni")
   import("//build/zbi/zbi_input.gni")
   import("//src/bringup/lib/mexec/testing/zbi_test.gni")
+  import("//zircon/kernel/phys/efi/efi_executable.gni")
   import("//zircon/kernel/phys/qemu.gni")
   import("//zircon/kernel/phys/zbi_executable.gni")
 
-  assert(toolchain_environment == "kernel.phys" || in_qemu_environment,
+  assert(toolchain_environment == "kernel.phys" || in_qemu_environment ||
+             toolchain_environment == "kernel.efi",
          "phys/test/BUILD.gn evaluated in $current_toolchain")
 
   # This provides a PhysMain function appropriate for zbi_test() targets.
@@ -40,6 +42,17 @@ if (current_toolchain != default_toolchain) {
     defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
     public_deps = [ ":test-main" ]
     deps = [ "//zircon/kernel/lib/libc" ]
+  }
+
+  source_set("efi-test-main") {
+    testonly = true
+    sources = [ "efi-test-main.cc" ]
+    defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
+    public_deps = [ ":test-main" ]
+    deps = [
+      "//zircon/kernel/lib/libc",
+      "//zircon/kernel/phys/efi:main",
+    ]
   }
 
   source_set("test-main") {
@@ -121,9 +134,24 @@ if (current_toolchain != default_toolchain) {
       forward_variables_from(invoker, "*", [ "target_name" ])
     }
 
+    # TODO(mcgrathr): wire this up to get run as a zbi_test() somehow
+    efi_executable("efi-$target_name") {
+      visibility = [ ":*" ]
+      testonly = true
+      deps = []
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "target_name",
+                               "testonly",
+                             ])
+      deps += [ ":efi-test-main" ]
+    }
+
     group(target_name) {
       testonly = true
       deps = [
+        ":efi-$target_name",
         ":qemu-$target_name",
         ":zbi-$target_name",
       ]
@@ -177,7 +205,7 @@ if (current_toolchain != default_toolchain) {
     ]
   }
 
-  common_test("handoff-entropy-test") {
+  phys_zbi_test("zbi-handoff-entropy-test") {
     sources = [ "handoff-entropy-test.cc" ]
 
     deps = [
@@ -192,6 +220,7 @@ if (current_toolchain != default_toolchain) {
     ]
   }
 
+  # The phys_qemu_test only works on x86, but it's nowhere in deps.
   common_test("memory-test") {
     sources = [ "phys-memory-test.cc" ]
     deps = [
@@ -316,7 +345,9 @@ if (current_toolchain != default_toolchain) {
       sources = []
       forward_variables_from(invoker, [ "visibility" ])
       forward_variables_from(invoker, "*", [ "visibility" ])
-      sources += get_target_outputs(kernel)
+      if (toolchain_environment == "kernel.phys") {
+        sources += get_target_outputs(kernel)
+      }
     }
   }
 
@@ -352,11 +383,13 @@ if (current_toolchain != default_toolchain) {
 
   turducken_zbi_test("zbi-chain-load-hello-world-test") {
     kernel = ":chain-load-test"
-    sources = get_target_outputs(":zbi-hello-world-test.executable")
+    if (toolchain_environment == "kernel.phys") {
+      sources = get_target_outputs(":zbi-hello-world-test.executable")
 
-    # Prefer `data_deps` since `zhi_input` adds a `zbi_input_barrier`, preventing
-    # this zbi's kernel image from being prepended.
-    data_deps = [ ":zbi-hello-world-test.executable" ]
+      # Prefer `data_deps` since zbi_input() adds `zbi_input_barrier` metadata,
+      # preventing this zbi_executable()'s kernel item from being prepended.
+      data_deps = [ ":zbi-hello-world-test.executable" ]
+    }
   }
 
   core_tests_label =
@@ -439,7 +472,7 @@ if (current_toolchain != default_toolchain) {
     testonly = true
     deps = [
       ":backtrace-test",
-      ":handoff-entropy-test",
+      ":efi-memory-test",
       ":hello-world-test",
       ":phys-unittests",
       ":trampoline-boot-zbi-test",
@@ -447,6 +480,7 @@ if (current_toolchain != default_toolchain) {
       ":zbi-chain-load-core-tests",
       ":zbi-chain-load-hello-world-test",
       ":zbi-decompress-test",
+      ":zbi-handoff-entropy-test",
       ":zbi-memory-test",
       "code-patching",
       "elf-loading",
