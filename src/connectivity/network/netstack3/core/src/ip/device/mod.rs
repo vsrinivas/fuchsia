@@ -36,7 +36,8 @@ use crate::{
             },
         },
         gmp::{
-            igmp::IgmpTimerId, mld::MldReportDelay, GmpHandler, GroupJoinResult, GroupLeaveResult,
+            igmp::IgmpTimerId, mld::MldDelayedReportTimerId, GmpHandler, GroupJoinResult,
+            GroupLeaveResult,
         },
         IpDeviceIdContext,
     },
@@ -76,14 +77,14 @@ pub(crate) fn handle_ipv4_timer<C: BufferIpDeviceContext<Ipv4, EmptyBuf>>(
 /// A timer ID for IPv6 devices.
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub(crate) enum Ipv6DeviceTimerId<DeviceId> {
-    Mld(MldReportDelay<DeviceId>),
+    Mld(MldDelayedReportTimerId<DeviceId>),
     Dad(DadTimerId<DeviceId>),
     Rs(RsTimerId<DeviceId>),
     RouteDiscovery(Ipv6DiscoveredRouteTimerId<DeviceId>),
 }
 
-impl<DeviceId> From<MldReportDelay<DeviceId>> for Ipv6DeviceTimerId<DeviceId> {
-    fn from(id: MldReportDelay<DeviceId>) -> Ipv6DeviceTimerId<DeviceId> {
+impl<DeviceId> From<MldDelayedReportTimerId<DeviceId>> for Ipv6DeviceTimerId<DeviceId> {
+    fn from(id: MldDelayedReportTimerId<DeviceId>) -> Ipv6DeviceTimerId<DeviceId> {
         Ipv6DeviceTimerId::Mld(id)
     }
 }
@@ -111,7 +112,7 @@ impl<DeviceId> From<Ipv6DiscoveredRouteTimerId<DeviceId>> for Ipv6DeviceTimerId<
 impl_timer_context!(
     IpDeviceIdContext<Ipv6>,
     Ipv6DeviceTimerId<C::DeviceId>,
-    MldReportDelay<C::DeviceId>,
+    MldDelayedReportTimerId<C::DeviceId>,
     Ipv6DeviceTimerId::Mld(id),
     id
 );
@@ -143,7 +144,7 @@ pub(crate) fn handle_ipv6_timer<
         + DadHandler
         + RsHandler
         + TimerHandler<Ipv6DiscoveredRouteTimerId<C::DeviceId>>
-        + TimerHandler<MldReportDelay<C::DeviceId>>,
+        + TimerHandler<MldDelayedReportTimerId<C::DeviceId>>,
 >(
     sync_ctx: &mut C,
     id: Ipv6DeviceTimerId<C::DeviceId>,
@@ -860,6 +861,7 @@ mod tests {
     use net_types::ip::Ipv6;
 
     use crate::{
+        ip::gmp::GmpDelayedReportTimerId,
         testutil::{assert_empty, DummyCtx, DummyEventDispatcher, TestIpExt as _},
         Ctx, StackStateBuilder, TimerId, TimerIdInner,
     };
@@ -916,13 +918,13 @@ mod tests {
                     ),
                     (
                         TimerId(TimerIdInner::Ipv6Device(Ipv6DeviceTimerId::Mld(
-                            MldReportDelay {
+                            MldDelayedReportTimerId(GmpDelayedReportTimerId {
                                 device: device_id,
                                 group_addr: local_mac
                                     .to_ipv6_link_local()
                                     .addr()
                                     .to_solicited_node_address(),
-                            }
+                            })
                             .into(),
                         ))),
                         ..,
@@ -931,7 +933,11 @@ mod tests {
                 if let Some(group_addr) = extra_group {
                     timers.push((
                         TimerId(TimerIdInner::Ipv6Device(Ipv6DeviceTimerId::Mld(
-                            MldReportDelay { device: device_id, group_addr }.into(),
+                            MldDelayedReportTimerId(GmpDelayedReportTimerId {
+                                device: device_id,
+                                group_addr,
+                            })
+                            .into(),
                         ))),
                         ..,
                     ))

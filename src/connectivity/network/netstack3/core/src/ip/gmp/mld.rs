@@ -8,7 +8,7 @@
 //! IGMPv2. One important difference to note is that MLD uses ICMPv6 (IP
 //! Protocol 58) message types, rather than IGMP (IP Protocol 2) message types.
 
-use core::time::Duration;
+use core::{convert::Infallible as Never, time::Duration};
 
 use log::{debug, error};
 use net_types::{
@@ -29,6 +29,7 @@ use packet_formats::{
         ext_hdrs::{ExtensionHeaderOptionAction, HopByHopOption, HopByHopOptionData},
         Ipv6PacketBuilder, Ipv6PacketBuilderWithHbhOptions,
     },
+    utils::NonZeroDuration,
 };
 use thiserror::Error;
 use zerocopy::ByteSlice;
@@ -37,10 +38,10 @@ use crate::{
     context::{FrameContext, InstantContext, RngContext, TimerContext, TimerHandler},
     ip::{
         gmp::{
-            gmp_handle_disabled, gmp_handle_maybe_enabled, gmp_join_group, gmp_leave_group,
-            handle_gmp_message, Action, Actions, GmpAction, GmpContext, GmpHandler, GmpMessage,
-            GmpStateMachine, GroupJoinResult, GroupLeaveResult, MulticastGroupSet,
-            ProtocolSpecific,
+            gmp_handle_disabled, gmp_handle_maybe_enabled, gmp_handle_timer, gmp_join_group,
+            gmp_leave_group, handle_query_message, handle_report_message, GmpContext,
+            GmpDelayedReportTimerId, GmpHandler, GmpMessage, GmpMessageType, GmpStateMachine,
+            GroupJoinResult, GroupLeaveResult, MulticastGroupSet, ProtocolSpecific, QueryTarget,
         },
         IpDeviceIdContext,
     },
@@ -70,7 +71,7 @@ impl<D> MldFrameMetadata<D> {
 pub(crate) trait MldContext:
     IpDeviceIdContext<Ipv6>
     + RngContext
-    + TimerContext<MldReportDelay<Self::DeviceId>>
+    + TimerContext<MldDelayedReportTimerId<Self::DeviceId>>
     + FrameContext<EmptyBuf, MldFrameMetadata<Self::DeviceId>>
 {
     /// Gets the IPv6 link local address on `device`.
@@ -162,16 +163,22 @@ impl<C: MldContext> MldPacketHandler<C::DeviceId> for C {
     ) {
         if let Err(e) = match packet {
             MldPacket::MulticastListenerQuery(msg) => {
-                let now = self.now();
-                let max_response_delay: Duration = msg.body().max_response_delay();
-                handle_gmp_message(self, device, msg.body(), |rng, MldGroupState(state)| {
-                    state.query_received(rng, max_response_delay, now)
-                })
+                let body = msg.body();
+                let addr = body.group_addr();
+                SpecifiedAddr::new(addr)
+                    .map_or(Some(QueryTarget::Unspecified), |addr| {
+                        MulticastAddr::new(addr.get()).map(QueryTarget::Specified)
+                    })
+                    .map_or(Err(MldError::NotAMember { addr }), |group_addr| {
+                        handle_query_message(self, device, group_addr, body.max_response_delay())
+                    })
             }
             MldPacket::MulticastListenerReport(msg) => {
-                handle_gmp_message(self, device, msg.body(), |_, MldGroupState(state)| {
-                    state.report_received()
-                })
+                let addr = msg.body().group_addr();
+                MulticastAddr::new(msg.body().group_addr())
+                    .map_or(Err(MldError::NotAMember { addr }), |group_addr| {
+                        handle_report_message(self, device, group_addr)
+                    })
             }
             MldPacket::MulticastListenerDone(_) => {
                 debug!("Hosts are not interested in Done messages");
@@ -212,17 +219,42 @@ impl<C: MldContext> GmpContext<Ipv6, MldProtocolSpecific> for C {
                 .contains(&group_addr.scope())
     }
 
-    fn run_actions(
+    fn send_message(
         &mut self,
-        device: C::DeviceId,
-        actions: Actions<MldProtocolSpecific>,
+        device: Self::DeviceId,
         group_addr: MulticastAddr<Ipv6Addr>,
+        msg_type: GmpMessageType<MldProtocolSpecific>,
     ) {
-        for action in actions {
-            if let Err(err) = run_action(self, device, action, group_addr) {
-                error!("Error performing action on {} on device {}: {}", group_addr, device, err);
-            }
+        let result = match msg_type {
+            GmpMessageType::Report(MldProtocolSpecific) => send_mld_packet::<_, &[u8], _>(
+                self,
+                device,
+                group_addr,
+                MulticastListenerReport,
+                group_addr,
+                (),
+            ),
+            GmpMessageType::Leave => send_mld_packet::<_, &[u8], _>(
+                self,
+                device,
+                Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS,
+                MulticastListenerDone,
+                group_addr,
+                (),
+            ),
+        };
+
+        match result {
+            Ok(()) => {}
+            Err(err) => error!(
+                "error sending MLD message ({:?}) on device {} for group {}: {}",
+                msg_type, device, group_addr, err
+            ),
         }
+    }
+
+    fn run_actions(&mut self, device: C::DeviceId, actions: Never) {
+        unreachable!("actions ({:?} should not be constructable; device = {}", actions, device)
     }
 
     fn not_a_member_err(addr: Ipv6Addr) -> Self::Err {
@@ -281,8 +313,7 @@ impl Default for MldConfig {
 }
 
 impl ProtocolSpecific for MldProtocolSpecific {
-    /// The action to turn an MLD host to Idle state immediately.
-    type Action = ImmediateIdleState;
+    type Actions = Never;
     type Config = MldConfig;
 
     fn cfg_unsolicited_report_interval(cfg: &Self::Config) -> Duration {
@@ -293,20 +324,16 @@ impl ProtocolSpecific for MldProtocolSpecific {
         cfg.send_leave_anyway
     }
 
-    fn get_max_resp_time(resp_time: Duration) -> Duration {
-        resp_time
+    fn get_max_resp_time(resp_time: Duration) -> Option<NonZeroDuration> {
+        NonZeroDuration::new(resp_time)
     }
 
     fn do_query_received_specific(
         _cfg: &Self::Config,
-        actions: &mut Actions<Self>,
-        max_resp_time: Duration,
+        _max_resp_time: Duration,
         old: Self,
-    ) -> Self {
-        if max_resp_time.as_millis() == 0 {
-            actions.push_specific(ImmediateIdleState);
-        }
-        old
+    ) -> (Self, Option<Never>) {
+        (old, None)
     }
 }
 
@@ -333,81 +360,32 @@ impl<I: Instant> AsMut<GmpStateMachine<I, MldProtocolSpecific>> for MldGroupStat
     }
 }
 
-impl<I: Instant> MulticastGroupSet<Ipv6Addr, MldGroupState<I>> {
-    fn report_timer_expired(
-        &mut self,
-        addr: MulticastAddr<Ipv6Addr>,
-    ) -> MldResult<Actions<MldProtocolSpecific>> {
-        match self.get_mut(&addr) {
-            Some(MldGroupState(state)) => Ok(state.report_timer_expired()),
-            None => Err(MldError::NotAMember { addr: addr.get() }),
-        }
-    }
-}
-
-/// An MLD timer to delay an MLD report for the link device type `D`.
+/// An MLD timer to delay the sending of a report.
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Hash)]
-pub(crate) struct MldReportDelay<DeviceId> {
-    pub(crate) device: DeviceId,
-    pub(crate) group_addr: MulticastAddr<Ipv6Addr>,
-}
+pub(crate) struct MldDelayedReportTimerId<DeviceId>(
+    pub(crate) GmpDelayedReportTimerId<Ipv6Addr, DeviceId>,
+);
 
-impl<DeviceId> MldReportDelay<DeviceId> {
-    fn new(device: DeviceId, group_addr: MulticastAddr<Ipv6Addr>) -> MldReportDelay<DeviceId> {
-        MldReportDelay { device, group_addr }
+impl<DeviceId> From<GmpDelayedReportTimerId<Ipv6Addr, DeviceId>>
+    for MldDelayedReportTimerId<DeviceId>
+{
+    fn from(id: GmpDelayedReportTimerId<Ipv6Addr, DeviceId>) -> MldDelayedReportTimerId<DeviceId> {
+        MldDelayedReportTimerId(id)
     }
 }
 
-impl<C: MldContext> TimerHandler<MldReportDelay<C::DeviceId>> for C {
-    fn handle_timer(&mut self, timer: MldReportDelay<C::DeviceId>) {
-        let MldReportDelay { device, group_addr } = timer;
-        match self.get_state_mut(device).report_timer_expired(group_addr) {
-            Ok(actions) => self.run_actions(device, actions, group_addr),
-            Err(e) => error!("MLD timer fired, but an error has occurred: {}", e),
-        }
-    }
-}
+impl_timer_context!(
+    IpDeviceIdContext<Ipv6>,
+    MldDelayedReportTimerId<C::DeviceId>,
+    GmpDelayedReportTimerId<Ipv6Addr, C::DeviceId>,
+    MldDelayedReportTimerId(id),
+    id
+);
 
-/// Interpret the actions generated by the state machine.
-fn run_action<C: MldContext>(
-    sync_ctx: &mut C,
-    device: C::DeviceId,
-    action: Action<MldProtocolSpecific>,
-    group_addr: MulticastAddr<Ipv6Addr>,
-) -> MldResult<()> {
-    match action {
-        Action::Generic(GmpAction::ScheduleReportTimer(delay)) => {
-            let _: Option<C::Instant> =
-                sync_ctx.schedule_timer(delay, MldReportDelay::new(device, group_addr));
-            Ok(())
-        }
-        Action::Generic(GmpAction::StopReportTimer) => {
-            let _: Option<C::Instant> =
-                sync_ctx.cancel_timer(MldReportDelay::new(device, group_addr));
-            Ok(())
-        }
-        Action::Generic(GmpAction::SendLeave) => send_mld_packet::<_, &[u8], _>(
-            sync_ctx,
-            device,
-            Ipv6::ALL_ROUTERS_LINK_LOCAL_MULTICAST_ADDRESS,
-            MulticastListenerDone,
-            group_addr,
-            (),
-        ),
-        Action::Generic(GmpAction::SendReport(_)) => send_mld_packet::<_, &[u8], _>(
-            sync_ctx,
-            device,
-            group_addr,
-            MulticastListenerReport,
-            group_addr,
-            (),
-        ),
-        Action::Specific(ImmediateIdleState) => {
-            let _: Option<C::Instant> =
-                sync_ctx.cancel_timer(MldReportDelay::new(device, group_addr));
-            let actions = sync_ctx.get_state_mut(device).report_timer_expired(group_addr)?;
-            Ok(sync_ctx.run_actions(device, actions, group_addr))
-        }
+impl<C: MldContext> TimerHandler<MldDelayedReportTimerId<C::DeviceId>> for C {
+    fn handle_timer(&mut self, timer: MldDelayedReportTimerId<C::DeviceId>) {
+        let MldDelayedReportTimerId(id) = timer;
+        gmp_handle_timer(self, id);
     }
 }
 
@@ -454,7 +432,6 @@ fn send_mld_packet<C: MldContext, B: ByteSlice, M: IcmpMldv1MessageType<B>>(
 
 #[cfg(test)]
 mod tests {
-    use alloc::vec::Vec;
     use core::convert::TryInto;
 
     use net_types::ethernet::Mac;
@@ -476,7 +453,7 @@ mod tests {
         },
         ip::{
             device::Ipv6DeviceTimerId,
-            gmp::{Action, MemberState},
+            gmp::{MemberState, QueryReceivedActions, QueryReceivedGenericAction},
             DummyDeviceId,
         },
         testutil::{
@@ -507,7 +484,7 @@ mod tests {
 
     type DummyCtx = crate::context::testutil::DummyCtx<
         DummyMldCtx,
-        MldReportDelay<DummyDeviceId>,
+        MldDelayedReportTimerId<DummyDeviceId>,
         MldFrameMetadata<DummyDeviceId>,
         (),
         DummyDeviceId,
@@ -560,10 +537,15 @@ mod tests {
                 DummyInstant::default(),
                 false,
             );
-            let actions =
-                s.query_received(&mut rng, Duration::from_secs(0), DummyInstant::default());
-            let vec = actions.into_iter().collect::<Vec<Action<_>>>();
-            assert_eq!(vec, [Action::Specific(ImmediateIdleState)]);
+            assert_eq!(
+                s.query_received(&mut rng, Duration::from_secs(0), DummyInstant::default()),
+                QueryReceivedActions {
+                    generic: Some(QueryReceivedGenericAction::StopTimerAndSendReport(
+                        MldProtocolSpecific
+                    )),
+                    protocol_specific: None
+                }
+            );
         });
     }
 
@@ -576,8 +558,11 @@ mod tests {
     const ROUTER_MAC: Mac = Mac::new([6, 5, 4, 3, 2, 1]);
     const GROUP_ADDR: MulticastAddr<Ipv6Addr> =
         unsafe { MulticastAddr::new_unchecked(Ipv6Addr::new([0xff02, 0, 0, 0, 0, 0, 0, 3])) };
-    const TIMER_ID: MldReportDelay<DummyDeviceId> =
-        MldReportDelay { device: DummyDeviceId, group_addr: GROUP_ADDR };
+    const TIMER_ID: MldDelayedReportTimerId<DummyDeviceId> =
+        MldDelayedReportTimerId(GmpDelayedReportTimerId {
+            device: DummyDeviceId,
+            group_addr: GROUP_ADDR,
+        });
 
     fn receive_mld_query(
         ctx: &mut DummyCtx,
@@ -1106,7 +1091,11 @@ mod tests {
         let ll_addr = local_mac.to_ipv6_link_local().addr();
         let snmc_addr = ll_addr.to_solicited_node_address();
         let snmc_timer_id = TimerId(TimerIdInner::Ipv6Device(Ipv6DeviceTimerId::Mld(
-            MldReportDelay { device: device_id, group_addr: snmc_addr }.into(),
+            MldDelayedReportTimerId(GmpDelayedReportTimerId {
+                device: device_id,
+                group_addr: snmc_addr,
+            })
+            .into(),
         )));
         let range = now..=(now + DEFAULT_UNSOLICITED_REPORT_INTERVAL);
         struct TestConfig {

@@ -78,6 +78,7 @@ lib_deps = [
   "//third_party/rust_crates:anyhow",
   "//third_party/rust_crates:assert_matches",
   "//third_party/rust_crates:derivative",
+  "//third_party/rust_crates:either",
   "//third_party/rust_crates:log",
   "//third_party/rust_crates:nonzero_ext",
   "//third_party/rust_crates:num",
