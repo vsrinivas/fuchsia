@@ -955,6 +955,8 @@
                 "#pkg-cache",
                 "#pkg-resolver",
                 "#sampler",
+                // TODO(fxbug.dev/96053): remove once basemgr has migrated to
+                // Cobalt 1.1.
                 "#session-manager",
                 "#sysmem_connector",
             ],
@@ -966,6 +968,7 @@
                 "#feedback",
                 "#log-stats",
                 "#sampler",
+                "#session-manager",
             ],
         },
         {
