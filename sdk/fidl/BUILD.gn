@@ -132,7 +132,10 @@ sdk_fidl_targets = [
 ]
 
 # The list of FIDLs to include in the core testing IDK.
-sdk_fidl_testing_targets = [ "//sdk/fidl/fuchsia.test:fuchsia.test" ]
+sdk_fidl_testing_targets = [
+  "//sdk/fidl/fuchsia.test:fuchsia.test",
+  "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata",
+]
 
 # The FIDL portion of the platform surface area (plasa).
 sdk_molecule("plasa") {

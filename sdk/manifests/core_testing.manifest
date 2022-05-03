@@ -6,6 +6,7 @@ sdk://fidl/fuchsia.component.runner
 sdk://fidl/fuchsia.component.test
 sdk://fidl/fuchsia.component.types
 sdk://fidl/fuchsia.data
+sdk://fidl/fuchsia.debugdata
 sdk://fidl/fuchsia.diagnostics.types
 sdk://fidl/fuchsia.io
 sdk://fidl/fuchsia.ldsvc
