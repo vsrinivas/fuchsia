@@ -25,6 +25,7 @@
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
 
+#include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/fvm.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/security/fcrypto/secret.h"
@@ -145,6 +146,32 @@ class FactoryResetTest : public Test {
 
     ssize_t res = write(fd.get(), block.get(), block_size);
     ASSERT_EQ(res, block_size);
+  }
+
+  void CreateFakeFxfs() {
+    // Writes just the Fxfs magic byte sequence (FxfsSupr) so that we detect that the filesystem
+    // is Fxfs and shred it accordingly.
+    fbl::unique_fd fd;
+    WaitForDevice(fvm_block_path_, &fd);
+
+    ssize_t block_size;
+    GetBlockSize(fd, &block_size);
+    std::unique_ptr<uint8_t[]> block = std::make_unique<uint8_t[]>(block_size);
+
+    // Initialize one megabyte of NULL for the A/B super block extents.
+    memset(block.get(), 0, block_size);
+    const int num_blocks = (1L << 20) / block_size;
+    for (int i = 0; i < num_blocks; i++) {
+      ssize_t res = write(fd.get(), block.get(), block_size);
+      ASSERT_EQ(res, block_size);
+    }
+
+    // Add magic bytes at the correct offsets.
+    memcpy(block.get(), fs_management::kFxfsMagic, sizeof(fs_management::kFxfsMagic));
+    for (off_t ofs : {0L, 512L << 10}) {
+      ASSERT_GE(lseek(fd.get(), ofs, SEEK_SET), 0);
+      ASSERT_EQ(write(fd.get(), block.get(), block_size), block_size);
+    }
   }
 
   fbl::unique_fd devfs_root() { return devmgr_->devfs_root().duplicate(); }
@@ -305,7 +332,7 @@ TEST_F(FactoryResetTest, ShredsVolumeWithInvalidSuperblockIfMagicPresent) {
   EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatUnknown));
 }
 
-TEST_F(FactoryResetTest, DoesntShredVolumeIfNotZxcryptFormat) {
+TEST_F(FactoryResetTest, DoesntShredUnknownVolumeType) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   // Make this block device look like it contains blobfs.
@@ -328,6 +355,27 @@ TEST_F(FactoryResetTest, DoesntShredVolumeIfNotZxcryptFormat) {
   // shred this block device anyway, but that won't happen until we have a
   // clearer block device topology story.
   EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatBlobfs));
+}
+
+TEST_F(FactoryResetTest, ShredsFxfs) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  // Make this block device look like it contains blobfs.
+  CreateFakeFxfs();
+
+  MockAdmin mock_admin;
+  fidl::BindingSet<fuchsia::hardware::power::statecontrol::Admin> binding;
+  fidl::InterfacePtr<fuchsia::hardware::power::statecontrol::Admin> admin =
+      binding.AddBinding(&mock_admin).Bind();
+
+  factory_reset::FactoryReset reset((fbl::unique_fd(devfs_root())), std::move(admin));
+  EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatFxfs));
+  zx_status_t status = ZX_ERR_BAD_STATE;
+  reset.Reset([&status](zx_status_t s) { status = s; });
+  loop.RunUntilIdle();
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_TRUE(mock_admin.suspend_called());
+  EXPECT_FALSE(PartitionHasFormat(fs_management::kDiskFormatFxfs));
 }
 
 }  // namespace

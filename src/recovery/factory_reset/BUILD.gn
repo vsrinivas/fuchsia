@@ -16,16 +16,18 @@ source_set("lib") {
 
   public_deps = [
     # <factory_reset.h> has #include <fuchsia/recovery/cpp/fidl.h>
-    "//sdk/fidl/fuchsia.recovery",
+    "//sdk/fidl/fuchsia.fs",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
 
     # <factory_reset.h> has #include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+    "//sdk/fidl/fuchsia.recovery",
 
     # <factory_reset.h> has #include <fbl/unique_fd.h>
     "//zircon/system/ulib/fbl",
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.hardware.block",
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/lib/storage/fs_management",
