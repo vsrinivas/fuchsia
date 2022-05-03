@@ -21,6 +21,8 @@ using GenType = uint32_t;
 template <typename T>
 class [[nodiscard]] Id {
  public:
+  static_assert(ktl::is_unsigned_v<T>, "T must be unsigned");
+
   Id(T val, GenType gen) : val_(val), gen_(gen) {}
 
   Id(Id&&) noexcept = default;
