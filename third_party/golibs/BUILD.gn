@@ -2323,7 +2323,6 @@ go_library("gvisor.dev/gvisor") {
     "pkg/tcpip/stack/packet_buffer.go",
     "pkg/tcpip/stack/packet_buffer_list.go",
     "pkg/tcpip/stack/packet_buffer_refs.go",
-    "pkg/tcpip/stack/packet_buffer_state.go",
     "pkg/tcpip/stack/packet_buffer_unsafe.go",
     "pkg/tcpip/stack/pending_packets.go",
     "pkg/tcpip/stack/rand.go",

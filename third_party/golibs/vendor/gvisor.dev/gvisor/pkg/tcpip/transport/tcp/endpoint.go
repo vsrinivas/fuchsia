@@ -801,8 +801,9 @@ type keepalive struct {
 	interval   time.Duration
 	count      int
 	unacked    int
-	timer      timer       `state:"nosave"`
-	waker      sleep.Waker `state:"nosave"`
+	// should never be a zero timer if the endpoint is not closed.
+	timer timer       `state:"nosave"`
+	waker sleep.Waker `state:"nosave"`
 }
 
 func newEndpoint(s *stack.Stack, protocol *protocol, netProto tcpip.NetworkProtocolNumber, waiterQueue *waiter.Queue) *endpoint {
@@ -879,6 +880,8 @@ func newEndpoint(s *stack.Stack, protocol *protocol, netProto tcpip.NetworkProto
 
 	e.segmentQueue.ep = e
 
+	// TODO(https://gvisor.dev/issues/7493): Defer creating the timer until TCP connection becomes
+	// established.
 	e.keepalive.timer.init(e.stack.Clock(), maybeFailTimerHandler(e, e.keepaliveTimerExpired))
 
 	return e
@@ -1372,7 +1375,7 @@ func (e *endpoint) Read(dst io.Writer, opts tcpip.ReadOptions) (tcpip.ReadResult
 	s := first
 	for s != nil {
 		var n int
-		n, err = s.ReadTo(dst, opts.Peek)
+		n, err = s.data.ReadTo(dst, opts.Peek)
 		// Book keeping first then error handling.
 
 		done += n
@@ -1472,7 +1475,7 @@ func (e *endpoint) commitRead(done int) *segment {
 	e.rcvQueueInfo.rcvQueueMu.Lock()
 	memDelta := 0
 	s := e.rcvQueueInfo.rcvQueue.Front()
-	for s != nil && s.payloadSize() == 0 {
+	for s != nil && s.data.Size() == 0 {
 		e.rcvQueueInfo.rcvQueue.Remove(s)
 		// Memory is only considered released when the whole segment has been
 		// read.
@@ -2488,7 +2491,6 @@ func (e *endpoint) Shutdown(flags tcpip.ShutdownFlags) tcpip.Error {
 		// method because that method is called during a close(2) (and closing a
 		// connecting socket is not an error).
 		e.handshakeFailed(&tcpip.ErrConnectionReset{})
-		e.cleanupLocked()
 		e.waiterQueue.Notify(waiter.WritableEvents | waiter.EventHUp | waiter.EventErr)
 		return nil
 	}
