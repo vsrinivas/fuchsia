@@ -79,7 +79,6 @@ DeviceCtx::DeviceCtx(DriverCtx* driver, zx_device_t* parent)
       codec_admission_control_(driver->shared_fidl_loop()->dispatcher()) {
   video_ = std::make_unique<AmlogicVideo>(this);
   video_->SetMetrics(&metrics());
-  video_->SetDiagnostics(&diagnostics());
   device_fidl_ = std::make_unique<DeviceFidl>(this);
 }
 
@@ -151,6 +150,6 @@ void DeviceCtx::SetAuxServiceDirectory(SetAuxServiceDirectoryRequestView request
 
 CodecMetrics& DeviceCtx::metrics() { return driver_->metrics(); }
 
-DriverDiagnostics& DeviceCtx::diagnostics() { return driver_->diagnostics(); }
+CodecDiagnostics& DeviceCtx::diagnostics() { return driver_->diagnostics(); }
 
 }  // namespace amlogic_decoder

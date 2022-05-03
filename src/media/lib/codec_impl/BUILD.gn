@@ -50,6 +50,7 @@ source_set("codec_impl") {
     "//sdk/fidl/fuchsia.mediacodec",
     "//sdk/lib/fit",
     "//sdk/lib/stdcompat",
+    "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//src/lib/cobalt/cpp:cobalt_logger",
@@ -64,6 +65,8 @@ source_set("codec_impl") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/thread-safe-deleter",
+    "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/trace-vthread",
   ]
   public_configs = [ ":codec_impl_include_config" ]
   deps = [

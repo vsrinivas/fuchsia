@@ -31,6 +31,7 @@ class CodecAdapterH264Multi : public AmlogicCodecAdapter,
                                  DeviceCtx* device);
   ~CodecAdapterH264Multi();
 
+  void SetCodecDiagnostics(CodecDiagnostics* codec_diagnostics) override;
   std::optional<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>
   CoreCodecMetricsImplementation() override;
 
@@ -147,6 +148,8 @@ class CodecAdapterH264Multi : public AmlogicCodecAdapter,
   std::vector<const CodecBuffer*> all_output_buffers_;
   std::vector<CodecPacket*> all_output_packets_;
   std::vector<uint32_t> free_output_packets_;
+
+  std::optional<DriverCodecDiagnostics> codec_diagnostics_;
 
   uint32_t min_buffer_count_[kPortCount] = {};
   uint32_t max_buffer_count_[kPortCount] = {};

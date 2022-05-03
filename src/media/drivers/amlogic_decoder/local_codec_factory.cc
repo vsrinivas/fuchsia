@@ -309,6 +309,8 @@ void LocalCodecFactory::CreateDecoder(
         ZX_DEBUG_ASSERT(core_codec->CoreCodecMetricsImplementation());
         codec->SetCoreCodecAdapter(std::move(core_codec));
 
+        codec->SetCodecDiagnostics(&device_->diagnostics());
+
         device_->device_fidl()->BindCodecImpl(std::move(codec));
       });
 }

@@ -25,9 +25,7 @@
 void CodecAdapterVaApiDecoder::CoreCodecInit(
     const fuchsia::media::FormatDetails& initial_input_format_details) {
   if (!initial_input_format_details.has_format_details_version_ordinal()) {
-    events_->onCoreCodecFailCodec(
-        "CoreCodecInit(): Initial input format details missing version "
-        "ordinal.");
+    SetCodecFailure("CoreCodecInit(): Initial input format details missing version ordinal.");
     return;
   }
   // Will always be 0 for now.
@@ -43,13 +41,19 @@ void CodecAdapterVaApiDecoder::CoreCodecInit(
     media_decoder_ = std::make_unique<media::VP9Decoder>(std::make_unique<VP9Accelerator>(this),
                                                          media::VP9PROFILE_PROFILE0);
   } else {
-    events_->onCoreCodecFailCodec("CodecCodecInit(): Unknown mime_type %s\n", mime_type.c_str());
+    SetCodecFailure("CodecCodecInit(): Unknown mime_type %s\n", mime_type.c_str());
     return;
   }
+
+  if (codec_diagnostics_) {
+    std::string codec_name = is_h264_ ? "H264" : "VP9";
+    codec_instance_diagnostics_ = codec_diagnostics_->CreateComponentCodec(codec_name);
+  }
+
   zx_status_t result =
       input_processing_loop_.StartThread("input_processing_thread_", &input_processing_thread_);
   if (result != ZX_OK) {
-    events_->onCoreCodecFailCodec(
+    SetCodecFailure(
         "CodecCodecInit(): Failed to start input processing thread with "
         "zx_status_t: %d",
         result);
@@ -81,7 +85,9 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(std::vector<uint8_t> data) {
   media_decoder_->SetStream(next_stream_id_++, buffer);
 
   while (true) {
+    state_ = DecoderState::kDecoding;
     auto result = media_decoder_->Decode();
+    state_ = DecoderState::kIdle;
 
     if (result == media::AcceleratedVideoDecoder::kConfigChange) {
       events_->onCoreCodecMidStreamOutputConstraintsChange(true);
@@ -91,7 +97,7 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(std::vector<uint8_t> data) {
                                         pic_size.width(), pic_size.height(), VA_PROGRESSIVE,
                                         nullptr, 0, &context_id);
       if (va_res != VA_STATUS_SUCCESS) {
-        events_->onCoreCodecFailCodec("vaCreateContext failed: %s", vaErrorStr(va_res));
+        SetCodecFailure("vaCreateContext failed: %s", vaErrorStr(va_res));
         return;
       }
       context_id_.emplace(context_id);
@@ -109,7 +115,7 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(std::vector<uint8_t> data) {
                                 pic_size.width(), pic_size.height(), va_surfaces.data(),
                                 static_cast<uint32_t>(va_surfaces.size()), nullptr, 0);
       if (va_res != VA_STATUS_SUCCESS) {
-        events_->onCoreCodecFailCodec("vaCreateSurfaces failed: %s", vaErrorStr(va_res));
+        SetCodecFailure("vaCreateSurfaces failed: %s", vaErrorStr(va_res));
         return;
       }
 
@@ -124,7 +130,7 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(std::vector<uint8_t> data) {
     } else {
       decoder_failures_ += 1;
       if (decoder_failures_ >= kMaxDecoderFailures) {
-        events_->onCoreCodecFailCodec(
+        SetCodecFailure(
             "Decoder exceeded the number of allowed failures. media_decoder::Decode result: "
             "%d",
             result);
@@ -142,6 +148,25 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(std::vector<uint8_t> data) {
   }
 }
 
+const char* CodecAdapterVaApiDecoder::DecoderStateName(DecoderState state) {
+  switch (state) {
+    case DecoderState::kIdle:
+      return "Idle";
+    case DecoderState::kDecoding:
+      return "Decoding";
+    case DecoderState::kError:
+      return "Error";
+    default:
+      return "UNKNOWN";
+  }
+}
+
+template <class... Args>
+void CodecAdapterVaApiDecoder::SetCodecFailure(const char* format, Args&&... args) {
+  state_ = DecoderState::kError;
+  events_->onCoreCodecFailCodec(format, std::forward<Args>(args)...);
+}
+
 void CodecAdapterVaApiDecoder::ProcessInputLoop() {
   std::optional<CodecInputItem> maybe_input_item;
   while ((maybe_input_item = input_queue_.WaitForElement())) {
@@ -157,7 +182,7 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
 
         if ((!is_h264_ && (mime_type == "video/h264-multi" || mime_type == "video/h264")) ||
             (is_h264_ && mime_type == "video/vp9")) {
-          events_->onCoreCodecFailCodec(
+          SetCodecFailure(
               "CodecCodecInit(): Can not switch codec type after setting it in CoreCodecInit(). "
               "Attempting to switch it to %s\n",
               mime_type.c_str());
@@ -172,13 +197,12 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
               vaCreateConfig(VADisplayWrapper::GetSingleton()->display(), VAProfileVP9Profile0,
                              VAEntrypointVLD, attribs, std::size(attribs), &config_id);
         } else {
-          events_->onCoreCodecFailCodec("CodecCodecInit(): Unknown mime_type %s\n",
-                                        mime_type.c_str());
+          SetCodecFailure("CodecCodecInit(): Unknown mime_type %s\n", mime_type.c_str());
           return;
         }
 
         if (va_status != VA_STATUS_SUCCESS) {
-          events_->onCoreCodecFailCodec("Failed to create config.");
+          SetCodecFailure("Failed to create config.");
           return;
         }
         config_.emplace(config_id);
@@ -196,10 +220,11 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
 
         media::DecoderBuffer buffer(std::move(end_of_stream_delimiter), nullptr, 0, {});
         media_decoder_->SetStream(next_stream_id_++, buffer);
+        state_ = DecoderState::kDecoding;
         auto result = media_decoder_->Decode();
+        state_ = DecoderState::kIdle;
         if (result != media::AcceleratedVideoDecoder::kRanOutOfStreamData) {
-          events_->onCoreCodecFailCodec(
-              "Unexpected media_decoder::Decode result for end of stream: %d", result);
+          SetCodecFailure("Unexpected media_decoder::Decode result for end of stream: %d", result);
           return;
         }
       }
@@ -239,10 +264,11 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
 
         media::DecoderBuffer buffer(std::move(access_unit_delimiter), nullptr, 0, {});
         media_decoder_->SetStream(next_stream_id_++, buffer);
+        state_ = DecoderState::kDecoding;
         auto result = media_decoder_->Decode();
+        state_ = DecoderState::kIdle;
         if (result != media::AcceleratedVideoDecoder::kRanOutOfStreamData) {
-          events_->onCoreCodecFailCodec("Unexpected media_decoder::Decode result for delimiter: %d",
-                                        result);
+          SetCodecFailure("Unexpected media_decoder::Decode result for delimiter: %d", result);
           return;
         }
       }
@@ -261,8 +287,7 @@ void CodecAdapterVaApiDecoder::CleanUpAfterStream() {
       media_decoder_->SetStream(next_stream_id_++, buffer);
       auto result = media_decoder_->Decode();
       if (result != media::AcceleratedVideoDecoder::kRanOutOfStreamData) {
-        events_->onCoreCodecFailCodec(
-            "Unexpected media_decoder::Decode result for end of stream: %d", result);
+        SetCodecFailure("Unexpected media_decoder::Decode result for end of stream: %d", result);
         return;
       }
     }

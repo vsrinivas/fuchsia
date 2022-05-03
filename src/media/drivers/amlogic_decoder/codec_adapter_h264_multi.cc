@@ -123,6 +123,10 @@ CodecAdapterH264Multi::~CodecAdapterH264Multi() {
   core_loop_.Shutdown();
 }
 
+void CodecAdapterH264Multi::SetCodecDiagnostics(CodecDiagnostics* codec_diagnostics) {
+  codec_diagnostics_ = codec_diagnostics->CreateDriverCodec("H264");
+}
+
 std::optional<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>
 CodecAdapterH264Multi::CoreCodecMetricsImplementation() {
   return media_metrics::StreamProcessorEvents2MetricDimensionImplementation_AmlogicDecoderH264;
@@ -250,6 +254,10 @@ void CodecAdapterH264Multi::CoreCodecStartStream() {
   // decoder, since the HW can read from secure or non-secure even when in
   // secure mode, but can only write to secure memory when in secure mode.
   auto decoder = std::make_unique<H264MultiDecoder>(video_, this, this, IsOutputSecure());
+
+  if (codec_diagnostics_) {
+    decoder->SetCodecDiagnostics(&codec_diagnostics_.value());
+  }
 
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());

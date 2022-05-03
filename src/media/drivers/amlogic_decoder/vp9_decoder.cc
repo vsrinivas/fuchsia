@@ -193,7 +193,7 @@ Vp9Decoder::Vp9Decoder(Owner* owner, Client* client, InputType input_type,
                        bool use_compressed_output, bool is_secure)
     : VideoDecoder(
           media_metrics::StreamProcessorEvents2MetricDimensionImplementation_AmlogicDecoderVp9,
-          kImplementationName, owner, client, is_secure),
+          owner, client, is_secure),
       input_type_(input_type),
       use_compressed_output_(use_compressed_output) {
   constexpr uint32_t kStreamOffsetBitWidth = 32;

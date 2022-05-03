@@ -26,6 +26,7 @@
 #include "codec_adapter_events.h"
 #include "codec_admission_control.h"
 #include "codec_buffer.h"
+#include "codec_diagnostics.h"
 #include "codec_packet.h"
 #include "fake_map_range.h"
 
@@ -111,6 +112,13 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // Codec such that the stream's input format doesn't exactly match the Codec's
   // input format (at least for now).
   void SetCoreCodecAdapter(std::unique_ptr<CodecAdapter> codec_adapter);
+
+  // The LocalCodecFactory optionally calls this method after SetCoreCodecAdapter() and before
+  // CoreCodecInit(). This method is a passthrough to the underlying
+  // CodecAdapter::SetCodecDiagnostics() method. Not that the codec does not retain any ownership
+  // of the CodecDiagnostics. The pointer is guaranteed to live longer than the codec_impl and if
+  // this method is called, the pointer will not be nullptr.
+  void SetCodecDiagnostics(CodecDiagnostics* codec_diagnostics) override;
 
   // BindAsync()
   //

@@ -21,8 +21,8 @@ class Mpeg12Decoder : public VideoDecoder {
   explicit Mpeg12Decoder(Owner* owner, Client* client)
       : VideoDecoder(
             // Unspecified because we don't need metrics from this decoder.
-            media_metrics::StreamProcessorEvents2MetricDimensionImplementation_Unspecified,
-            kImplementationName, owner, client,
+            media_metrics::StreamProcessorEvents2MetricDimensionImplementation_Unspecified, owner,
+            client,
             /*is_secure=*/false) {
     power_ref_ = std::make_unique<PowerReference>(owner_->core());
   }
@@ -37,8 +37,6 @@ class Mpeg12Decoder : public VideoDecoder {
   void CallErrorHandler() override { exit(-1); }
 
  private:
-  constexpr static std::string_view kImplementationName = "Mpeg12";
-
   struct ReferenceFrame {
     std::shared_ptr<VideoFrame> frame;
     std::unique_ptr<CanvasEntry> y_canvas;

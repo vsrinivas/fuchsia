@@ -52,7 +52,7 @@ class DeviceCtx : public DdkDeviceType,
 
   CodecMetrics& metrics();
 
-  DriverDiagnostics& diagnostics();
+  CodecDiagnostics& diagnostics();
 
   void DdkRelease() { delete this; }
 

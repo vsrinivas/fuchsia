@@ -169,8 +169,6 @@ class Vp9Decoder : public VideoDecoder {
   friend class CodecAdapterVp9;
   class WorkingBuffer;
 
-  constexpr static std::string_view kImplementationName = "VP9";
-
   class BufferAllocator {
    public:
     void Register(WorkingBuffer* buffer);
@@ -326,8 +324,8 @@ class Vp9Decoder : public VideoDecoder {
   FrameDataProvider* frame_data_provider_ = nullptr;
 
   WorkingBuffers working_buffers_;
-  DiagnosticStateWrapper<DecoderState> state_{
-      this, DecoderState::kSwappedOut, [](DecoderState state) { return DecoderStateName(state); }};
+  DiagnosticStateWrapper<DecoderState> state_{[this]() { UpdateDiagnostics(); },
+                                              DecoderState::kSwappedOut, &DecoderStateName};
   std::unique_ptr<PowerReference> power_ref_;
 
   // While frames_ always has size() == kMaxFrames, the actual number of valid frames that are fully

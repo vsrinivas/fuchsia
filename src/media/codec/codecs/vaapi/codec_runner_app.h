@@ -9,6 +9,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/inspect/cpp/inspector.h>
+#include <lib/inspect/service/cpp/service.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
@@ -25,14 +27,18 @@ template <typename Decoder, typename Encoder>
 class CodecRunnerApp {
  public:
   CodecRunnerApp()
-      : loop_(&kAsyncLoopConfigAttachToCurrentThread),
-        component_context_(sys::ComponentContext::Create()),
-        codec_admission_control_(std::make_unique<CodecAdmissionControl>(loop_.dispatcher())) {}
+      : codec_admission_control_(std::make_unique<CodecAdmissionControl>(loop_.dispatcher())) {}
 
   void Init() {
     syslog::SetTags({"vaapi_codec_runner"});
 
-    trace::TraceProviderWithFdio trace_provider(loop_.dispatcher(), "vaapi_codec_runner");
+    trace_provider_ =
+        std::make_unique<trace::TraceProviderWithFdio>(loop_.dispatcher(), "vaapi_codec_runner");
+
+    // This is bit of a misnomer since CodecRunnerApp isn't a driver but instead a component. Since
+    // we need a new instance for every FIDL connection a driver does not make sense currently.
+    codec_diagnostics_ =
+        std::make_unique<CodecDiagnostics>(component_context_, "vaapi_codec_runner");
 
     component_context_->outgoing()->AddPublicService(
         fidl::InterfaceRequestHandler<fuchsia::mediacodec::CodecFactory>(
@@ -81,7 +87,8 @@ class CodecRunnerApp {
                     if (!codec_instance_) {
                       loop_.Quit();
                     }
-                  });
+                  },
+                  codec_diagnostics_.get());
               // This runner only expects a single Local Codec Factory to ever
               // be requested.
               //
@@ -110,11 +117,13 @@ class CodecRunnerApp {
   std::unique_ptr<sys::ComponentContext>& component_context() { return component_context_; }
 
  private:
-  async::Loop loop_;
-  std::unique_ptr<sys::ComponentContext> component_context_;
+  async::Loop loop_{&kAsyncLoopConfigAttachToCurrentThread};
+  std::unique_ptr<sys::ComponentContext> component_context_{sys::ComponentContext::Create()};
   std::unique_ptr<CodecAdmissionControl> codec_admission_control_;
   std::unique_ptr<LocalSingleCodecFactory<Decoder, Encoder>> codec_factory_;
   std::unique_ptr<CodecImpl> codec_instance_;
+  std::unique_ptr<trace::TraceProviderWithFdio> trace_provider_;
+  std::unique_ptr<CodecDiagnostics> codec_diagnostics_;
 };
 
 #endif  // SRC_MEDIA_CODEC_CODECS_VAAPI_CODEC_RUNNER_APP_H_

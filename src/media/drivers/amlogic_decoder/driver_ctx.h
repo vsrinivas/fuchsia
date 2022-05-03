@@ -64,7 +64,7 @@ class DriverCtx {
 
   CodecMetrics& metrics();
 
-  DriverDiagnostics& diagnostics();
+  CodecDiagnostics& diagnostics();
 
  private:
   static constexpr std::string_view kDriverName = "amlogic-video-decoder";
@@ -79,7 +79,7 @@ class DriverCtx {
   CodecMetrics metrics_;
 
   // Inspector diagnostics
-  DriverDiagnostics diagnostics_{kDriverName};
+  CodecDiagnostics diagnostics_{kDriverName};
 };
 
 }  // namespace amlogic_decoder

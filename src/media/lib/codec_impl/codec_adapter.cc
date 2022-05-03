@@ -28,6 +28,10 @@ CodecAdapter::~CodecAdapter() {
 
 void SetCodecMetrics(CodecMetrics* codec_metrics);
 
+void CodecAdapter::SetCodecDiagnostics(CodecDiagnostics* codec_diagnostics) {
+  // Default implementation does nothing with diagnostic data
+}
+
 std::optional<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>
 CodecAdapter::CoreCodecMetricsImplementation() {
   // This will cause a ZX_PANIC() if LogEvent() is being used by a sub-class, in which case the

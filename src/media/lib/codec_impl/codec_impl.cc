@@ -238,6 +238,11 @@ void CodecImpl::SetCoreCodecAdapter(std::unique_ptr<CodecAdapter> codec_adapter)
   codec_metrics_implementation_dimension_ = codec_adapter_->CoreCodecMetricsImplementation();
 }
 
+void CodecImpl::SetCodecDiagnostics(CodecDiagnostics* codec_diagnostics) {
+  ZX_DEBUG_ASSERT(codec_adapter_);
+  codec_adapter_->SetCodecDiagnostics(codec_diagnostics);
+}
+
 void CodecImpl::BindAsync(fit::closure error_handler) {
   // While it would potentially be safe to call Bind() from a thread other than
   // fidl_thread(), we have no reason to permit that.

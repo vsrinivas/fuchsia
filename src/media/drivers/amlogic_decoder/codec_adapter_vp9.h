@@ -8,8 +8,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/media/codec_impl/codec_adapter.h>
+#include <lib/media/codec_impl/codec_diagnostics.h>
 #include <lib/zx/bti.h>
 
+#include <optional>
 #include <random>
 
 #include <fbl/macros.h>
@@ -37,6 +39,7 @@ class CodecAdapterVp9 : public AmlogicCodecAdapter, public Vp9Decoder::FrameData
                            DeviceCtx* device);
   ~CodecAdapterVp9();
 
+  void SetCodecDiagnostics(CodecDiagnostics* codec_diagnostics) override;
   std::optional<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>
   CoreCodecMetricsImplementation() override;
   bool IsCoreCodecRequiringOutputConfigForFormatDetection() override;
@@ -143,6 +146,8 @@ class CodecAdapterVp9 : public AmlogicCodecAdapter, public Vp9Decoder::FrameData
   async::Loop input_processing_loop_;
   thrd_t input_processing_thread_ = 0;
   bool is_process_input_queued_ = false;
+
+  std::optional<DriverCodecDiagnostics> codec_diagnostics_;
 
   // Skip any further processing in ProcessInput().
   bool is_cancelling_input_processing_ = false;

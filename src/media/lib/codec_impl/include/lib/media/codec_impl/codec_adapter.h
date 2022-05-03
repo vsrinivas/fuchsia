@@ -15,6 +15,7 @@
 #include <fbl/macros.h>
 
 #include "codec_adapter_events.h"
+#include "codec_diagnostics.h"
 #include "codec_input_item.h"
 #include "codec_port.h"
 
@@ -50,6 +51,11 @@ class CodecAdapter {
   // This is called if a CodecMetrics instance is available, and not called if not.  See also
   // LogEvent().
   void SetCodecMetrics(CodecMetrics* codec_metrics);
+
+  // This is called if CodecDiagnostics is available, and not called if not. Codec should not retain
+  // ownership of the CodecDiagnostics object and instead call CreateCodec() and then retain
+  // ownership of that object.
+  virtual void SetCodecDiagnostics(CodecDiagnostics* codec_diagnostics);
 
   // This will return std::nullopt by default.  A sub-class must implement this method if the
   // sub-class ever calls LogEvent().

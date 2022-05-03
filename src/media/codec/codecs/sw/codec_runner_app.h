@@ -25,13 +25,12 @@ template <typename Decoder, typename Encoder>
 class CodecRunnerApp {
  public:
   CodecRunnerApp()
-      : loop_(&kAsyncLoopConfigAttachToCurrentThread),
-        component_context_(sys::ComponentContext::Create()),
-        codec_admission_control_(std::make_unique<CodecAdmissionControl>(loop_.dispatcher())) {}
+      : codec_admission_control_(std::make_unique<CodecAdmissionControl>(loop_.dispatcher())) {}
 
   void Run() {
     syslog::SetTags({"codec_runner"});
 
+    // Create trace provider
     trace::TraceProviderWithFdio trace_provider(loop_.dispatcher(), "codec_runner");
 
     component_context_->outgoing()->AddPublicService(
@@ -105,8 +104,8 @@ class CodecRunnerApp {
   }
 
  private:
-  async::Loop loop_;
-  std::unique_ptr<sys::ComponentContext> component_context_;
+  async::Loop loop_{&kAsyncLoopConfigAttachToCurrentThread};
+  std::unique_ptr<sys::ComponentContext> component_context_{sys::ComponentContext::Create()};
   std::unique_ptr<CodecAdmissionControl> codec_admission_control_;
   std::unique_ptr<LocalSingleCodecFactory<Decoder, Encoder>> codec_factory_;
   std::unique_ptr<CodecImpl> codec_instance_;

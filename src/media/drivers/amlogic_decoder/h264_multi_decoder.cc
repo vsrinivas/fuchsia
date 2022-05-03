@@ -383,7 +383,7 @@ H264MultiDecoder::H264MultiDecoder(Owner* owner, Client* client, FrameDataProvid
                                    bool is_secure)
     : VideoDecoder(
           media_metrics::StreamProcessorEvents2MetricDimensionImplementation_AmlogicDecoderH264,
-          kImplementationName, owner, client, is_secure),
+          owner, client, is_secure),
       frame_data_provider_(provider) {
   media_decoder_ = std::make_unique<media::H264Decoder>(std::make_unique<MultiAccelerator>(this),
                                                         media::H264PROFILE_HIGH);

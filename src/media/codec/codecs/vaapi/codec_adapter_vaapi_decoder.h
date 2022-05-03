@@ -10,6 +10,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/media/codec_impl/codec_adapter.h>
 #include <lib/media/codec_impl/codec_buffer.h>
+#include <lib/media/codec_impl/codec_diagnostics.h>
 #include <lib/media/codec_impl/codec_input_item.h>
 #include <lib/media/codec_impl/codec_packet.h>
 #include <lib/trace/event.h>
@@ -69,6 +70,10 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
     // Tear down first to make sure the H264Accelerator doesn't reference other variables in this
     // class later.
     media_decoder_.reset();
+  }
+
+  void SetCodecDiagnostics(CodecDiagnostics* codec_diagnostics) override {
+    codec_diagnostics_ = codec_diagnostics;
   }
 
   bool IsCoreCodecRequiringOutputConfigForFormatDetection() override { return false; }
@@ -361,6 +366,15 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
 
  private:
   friend class VaApiOutput;
+
+  // Used from trace events
+  enum DecoderState { kIdle, kDecoding, kError };
+
+  static const char* DecoderStateName(DecoderState state);
+
+  template <class... Args>
+  void SetCodecFailure(const char* format, Args&&... args);
+
   void WaitForInputProcessingLoopToEnd() {
     ZX_DEBUG_ASSERT(thrd_current() != input_processing_thread_);
 
@@ -468,6 +482,12 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
 
   std::optional<fuchsia::sysmem::SingleBufferSettings> buffer_settings_[kPortCount];
 
+  // Since CoreCodecInit() is called after SetDriverDiagnostics() we need to save a pointer to the
+  // codec diagnostics object so that we can create the codec diagnotcis when we construct the
+  // codec.
+  CodecDiagnostics* codec_diagnostics_{nullptr};
+  std::optional<ComponentCodecDiagnostics> codec_instance_diagnostics_;
+
   // DPB surfaces.
   std::mutex surfaces_lock_;
   // Incremented whenever new surfaces are allocated and old surfaces should be released.
@@ -482,6 +502,9 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   std::unique_ptr<media::AcceleratedVideoDecoder> media_decoder_;
   bool is_h264_{false};  // TODO(stefanbossbaly): Remove in favor abstraction in VAAPI layer
   uint32_t decoder_failures_{0};  // The amount of failures the decoder has encountered
+  DiagnosticStateWrapper<DecoderState> state_{
+      []() {}, DecoderState::kIdle,
+      &DecoderStateName};  // Used for trace events to show when we are waiting on the iGPU for data
 
   std::deque<std::pair<int32_t, uint64_t>> stream_to_pts_map_;
   int32_t next_stream_id_{};

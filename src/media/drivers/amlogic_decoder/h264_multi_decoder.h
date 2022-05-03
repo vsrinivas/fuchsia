@@ -158,8 +158,6 @@ class H264MultiDecoder : public VideoDecoder {
   void set_use_parser(bool use_parser) { use_parser_ = use_parser; }
 
  private:
-  constexpr static std::string_view kImplementationName = "H264";
-
   // This struct contains parameters for the current frame that are dumped from
   // lmem
   struct HardwareRenderParams {
@@ -366,7 +364,8 @@ class H264MultiDecoder : public VideoDecoder {
   // HW state.  We separately track some similar SW state with bool values such as
   // waiting_for_input_.
   DiagnosticStateWrapper<DecoderState> state_{
-      this, DecoderState::kSwappedOut, [](DecoderState state) { return DecoderStateName(state); }};
+      [this]() { UpdateDiagnostics(); }, DecoderState::kSwappedOut,
+      [](DecoderState state) { return DecoderStateName(state); }};
 
   // The client doesn't round-trip these so stash them here:
   uint32_t pending_display_width_ = 0;

@@ -763,11 +763,6 @@ void AmlogicVideo::SetMetrics(CodecMetrics* metrics) {
   metrics_ = metrics;
 }
 
-void AmlogicVideo::SetDiagnostics(DriverDiagnostics* diagnostics) {
-  ZX_DEBUG_ASSERT(diagnostics);
-  diagnostics_ = diagnostics;
-}
-
 zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   TRACE_DURATION("media", "AmlogicVideo::InitRegisters");
   parent_ = parent;

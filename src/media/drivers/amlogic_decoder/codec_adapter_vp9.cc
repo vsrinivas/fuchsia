@@ -156,6 +156,10 @@ CodecAdapterVp9::~CodecAdapterVp9() {
   // CoreCodecStopStream().
 }
 
+void CodecAdapterVp9::SetCodecDiagnostics(CodecDiagnostics* codec_diagnostics) {
+  codec_diagnostics_ = codec_diagnostics->CreateDriverCodec("VP9");
+}
+
 std::optional<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>
 CodecAdapterVp9::CoreCodecMetricsImplementation() {
   return media_metrics::StreamProcessorEvents2MetricDimensionImplementation_AmlogicDecoderVp9;
@@ -506,6 +510,10 @@ void CodecAdapterVp9::CoreCodecStartStream() {
   auto decoder = std::make_unique<Vp9Decoder>(video_, this, Vp9Decoder::InputType::kMultiStream,
                                               false, IsOutputSecure());
   decoder->SetFrameDataProvider(this);
+
+  if (codec_diagnostics_) {
+    decoder->SetCodecDiagnostics(&codec_diagnostics_.value());
+  }
 
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());

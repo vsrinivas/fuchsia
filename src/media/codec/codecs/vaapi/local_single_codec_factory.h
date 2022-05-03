@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/media/codec_impl/codec_adapter.h>
 #include <lib/media/codec_impl/codec_admission_control.h>
+#include <lib/media/codec_impl/codec_diagnostics.h>
 #include <lib/media/codec_impl/codec_impl.h>
 #include <lib/syslog/cpp/macros.h>
 #include <threads.h>
@@ -30,12 +31,14 @@ class LocalSingleCodecFactory : public fuchsia::mediacodec::CodecFactory {
                           fidl::InterfaceRequest<CodecFactory> request,
                           fit::function<void(std::unique_ptr<CodecImpl>)> factory_done_callback,
                           CodecAdmissionControl* codec_admission_control,
-                          fit::function<void(zx_status_t)> error_handler)
+                          fit::function<void(zx_status_t)> error_handler,
+                          CodecDiagnostics* codec_diagnostics = nullptr)
       : fidl_dispatcher_(fidl_dispatcher),
         sysmem_(std::move(sysmem)),
         binding_(this),
         factory_done_callback_(std::move(factory_done_callback)),
-        codec_admission_control_(codec_admission_control) {
+        codec_admission_control_(codec_admission_control),
+        codec_diagnostics_(codec_diagnostics) {
     binding_.set_error_handler(std::move(error_handler));
     zx_status_t status = binding_.Bind(std::move(request), fidl_dispatcher);
     ZX_ASSERT(status == ZX_OK);
@@ -108,6 +111,10 @@ class LocalSingleCodecFactory : public fuchsia::mediacodec::CodecFactory {
           codec_impl->SetCoreCodecAdapter(
               std::make_unique<Adapter>(codec_impl->lock(), codec_impl.get()));
 
+          if (codec_diagnostics_) {
+            codec_impl->SetCodecDiagnostics(codec_diagnostics_);
+          }
+
           // This hands off the codec impl to the creator of |this| and is
           // expected to |~this|.
           factory_done_callback_(std::move(codec_impl));
@@ -141,6 +148,7 @@ class LocalSingleCodecFactory : public fuchsia::mediacodec::CodecFactory {
   fit::function<void(std::unique_ptr<CodecImpl>)> factory_done_callback_;
   CodecAdmissionControl* codec_admission_control_;
   std::vector<zx::eventpair> lifetime_tracking_;
+  CodecDiagnostics* codec_diagnostics_;
 };
 
 #endif  // SRC_MEDIA_CODEC_CODECS_VAAPI_LOCAL_SINGLE_CODEC_FACTORY_H_

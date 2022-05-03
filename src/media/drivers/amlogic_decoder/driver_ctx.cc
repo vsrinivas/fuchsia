@@ -157,6 +157,6 @@ void DriverCtx::SetAuxServiceDirectory(
 
 CodecMetrics& DriverCtx::metrics() { return metrics_; }
 
-DriverDiagnostics& DriverCtx::diagnostics() { return diagnostics_; }
+CodecDiagnostics& DriverCtx::diagnostics() { return diagnostics_; }
 
 }  // namespace amlogic_decoder
