@@ -70,25 +70,28 @@ compatible with through bind rules, which should be placed in a `.bind` file
 alongside the driver. The bind compiler compiles those rules and creates a
 driver declaration macro containing those rules in a C header file. The
 following bind program declares the
-[AHCI driver](/src/devices/block/drivers/ahci/ahci.h):
+[AHCI driver](/src/devices/block/drivers/ahci/):
 
 ```
-using deprecated.pci;
+using fuchsia.pci;
+using fuchsia.pci.massstorage;
 
-deprecated.BIND_PROTOCOL == deprecated.pci.BIND_PROTOCOL.DEVICE;
-deprecated.BIND_PCI_CLASS == 0x01;
-deprecated.BIND_PCI_SUBCLASS == 0x06;
-deprecated.BIND_PCI_INTERFACE == 0x01;
+fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PCI_CLASS == fuchsia.pci.BIND_PCI_CLASS.MASS_STORAGE;
+fuchsia.BIND_PCI_SUBCLASS == fuchsia.pci.massstorage.BIND_PCI_SUBCLASS_SATA;
+fuchsia.BIND_PCI_INTERFACE == 0x01;
+fuchsia.BIND_COMPOSITE == 1;
 ```
 
 These bind rules state that the driver binds to devices with a `BIND_PROTOCOL`
-property that matches `DEVICE` from the `pci` namespace and with PCI class 1,
-subclass 6, interface 1. The `pci` namespace is imported from the
-`deprecated.pci` library on the first line. For more details, refer to the
-[binding documentation](/docs/concepts/drivers/device_driver_model/driver-binding.md).
+property that matches `DEVICE` from the `pci` namespace and the given PCI
+class/subclass/interface. The `pci` namespace is imported from the `fucnsia.pci`
+library on the first line. For more details, refer to the [binding
+documentation](/docs/concepts/drivers/device_driver_model/driver-binding.md).
 
 To generate a driver declaration macro including these bind rules, there should
-be a corresponding `bind_rules` build target.
+be a corresponding `bind_rules` build target. This should declare dependencies
+corresponding to the "using" statements in the bind file.
 
 ```
 driver_bind_rules("bind") {
@@ -96,7 +99,8 @@ driver_bind_rules("bind") {
     header_output = "ahci-bind.h"
     bind_output = "ahci.bindbc"
     deps = [
-        "//src/devices/bind/deprecated.pci",
+        "//src/devices/bind/fuchsia.pci",
+        "//src/devices/bind/fuchsia.pci.massstorage",
     ]
 }
 ```
