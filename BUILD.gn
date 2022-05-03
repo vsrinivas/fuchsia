@@ -21,10 +21,22 @@ import("//build/toolchain/zircon/clang.gni")
 import("//build/zbi/zbi.gni")
 
 declare_args() {
+  ## NOTE:  The "legacy_*" versions of these args are part of multi-month
+  #         transition to using product assembly and separate the definition of
+  #         the platform from the definition of the product.
+  #
+  #         These args replace the use of the non-"legacy_" prefixed arg
+  #         throughout the product definition files (//products/**/*.gni).
+  #
+  #  NOTE:  These "legacy_*" args will go away when the long-term transition to
+  #         product assembly is complete, and they should not be relied upon
+  #         within developer's own args.gn files or BUILD.gn files.
+
   # If you add fuchsia_driver_package labels to this variable, any drivers in these packages will
   # be visible to Driver Manager. These package labels are also considered to be in the
   # 'base' package set (for more info see 'base_package_labels').
   base_driver_package_labels = []
+  legacy_base_driver_package_labels = []
 
   # If you add package labels to this variable, the packages will be included in
   # the 'base' package set, which represents the set of packages that are part
@@ -32,6 +44,7 @@ declare_args() {
   # process and are immutable and are a superset of the TCB (Trusted Computing
   # Base) for a product. These packages are never evicted by the system.
   base_package_labels = []
+  legacy_base_package_labels = []
 
   # If you add package labels to this variable, the packages will be included
   # in the 'cache' package set, which represents an additional set of software
@@ -40,12 +53,7 @@ declare_args() {
   # ephemerally. This cache of software can be evicted by the system if storage
   # pressure arises or other policies indicate.
   cache_package_labels = []
-
-  # A file in containing historical test duration data for this build
-  # configuration, used used by testsharder to evenly split tests across
-  # shards. It should be set for any builds where testsharder will be run
-  # afterwards.
-  test_durations_file = ""
+  legacy_cache_package_labels = []
 
   # If you add package labels to this variable, the packages will be included
   # in the 'universe' package set, which represents all software that is
@@ -54,11 +62,27 @@ declare_args() {
   # the base and cache package sets, which means you do not need to redundantly
   # include those labels in this variable.
   universe_package_labels = []
+  legacy_universe_package_labels = []
+
+  # A list of binary labels to include in ZBIs built for this product.
+  # product_bootfs_labels = []  (defined in product.gni)
+  legacy_product_bootfs_labels = []
+
+  # A list of binary labels to include in the system_image package.
+  # product_system_image_deps = []  (defined in product.gni)
+  legacy_product_system_image_deps = []
 
   # If you add labels to this variable, these will be included in the 'host'
   # artifact set, which represents an additional set of host-only software that
   # is produced by the build.
   host_labels = []
+  legacy_host_labels = []
+
+  # A file containing historical test duration data for this build
+  # configuration, used used by testsharder to evenly split tests across
+  # shards. It should be set for any builds where testsharder will be run
+  # afterwards.
+  test_durations_file = ""
 
   # Extra sdk() archive labels to be uploaded to the artifacts store. This is
   # an extension mechanism for SDK bits outside of the main repository.
@@ -1140,43 +1164,155 @@ group("default") {
   }
 }
 
+###
+# GN-Argument configured groups for product definitions.
+#
+
+##
+# "Developer-Added" package groups
+#
 # These groups exist at the root of the build so relative labels specified
-# through GN args are interpreted as if they were absolute.
+# through GN args are interpreted as if they were absolute.  e.g.
+#
+# public_deps = [ "build/images/fuchsia:fuchsia" ]
+#
+# is the same as
+#
+# public_deps = [ "//build/images/fuchsia:fuchsia" ]
+#
+# For any target in this file, but only in this file.
+#
+#
+# NOTE: These are not yet usable, but here for reference with visibility, see
+#       http://fxbug.dev/99024 for more information.
+
+# Base driver packages added by the developer, using `fx set` or `fx args`
+group("developer_base_driver_packages") {
+  testonly = base_cache_packages_testonly
+  visibility = [ "//build/images/*" ]
+  public_deps = []
+}
+
+# Base packages added by the developer, using `fx set` or `fx args`
+group("developer_base_packages") {
+  testonly = base_cache_packages_testonly
+  visibility = [
+    "//build/assembly/*",
+    "//build/images/*",
+  ]
+  public_deps = []
+}
+
+# Cache packages added by the developer, using `fx set --with <foo>` or
+# `fx args`
+group("developer_cache_packages") {
+  testonly = base_cache_packages_testonly
+  visibility = [
+    "//build/assembly/*",
+    "//build/images/*",
+  ]
+  public_deps = []
+}
+
+# Universe packages added by the developer, using `fx set` or `fx args`
+group("developer_universe_packages") {
+  testonly = fuchsia_zbi_testonly
+  visibility = [ "//build/images/*" ]
+  public_deps = []
+}
+
+##
+# "Legacy Product Definition" package groups.  These are only manipulated by
+# product definitions, not changed by developer options like
+# `fx set --with <foo>` or `fx args`
+#
+# NOTE: These are not yet usable, but here for reference with visibility, see
+#       http://fxbug.dev/99024 for more information.
+#
+# Product+Board base driver packages
+group("legacy_base_driver_packages") {
+  testonly = base_cache_packages_testonly
+  visibility = [ "//build/images/*" ]
+  public_deps = []
+}
+
+# Product+Board base packages
+group("legacy_base_packages") {
+  testonly = base_cache_packages_testonly
+  visibility = [
+    "//build/assembly/*",
+    "//build/images/*",
+  ]
+  public_deps = []
+}
+
+# Product+Board cache packages
+group("legacy_cache_packages") {
+  testonly = base_cache_packages_testonly
+  visibility = [
+    "//build/assembly/*",
+    "//build/images/*",
+  ]
+  public_deps = []
+}
+
+# Product+Board universe packages
+group("legacy_universe_packages") {
+  testonly = fuchsia_zbi_testonly
+  visibility = [ "//build/images/*" ]
+  public_deps = []
+}
+
+##
+# "Additional" groups.
+#
+#  These are all deprecated, and in the process of being removed for the above
+#  two groups.  They are currently a mirror of the "legacy_*" groups during the
+#  transition.
+#
+#  See http://fxbug.dev/99024 for more information.
+
+# deprecated, and are in the process of being removed.
 group("additional_base_driver_packages") {
   testonly = base_cache_packages_testonly
   visibility = [ "//build/images/*" ]
-  public_deps = base_driver_package_labels + board_driver_package_labels
+  public_deps = base_driver_package_labels + legacy_base_driver_package_labels +
+                board_driver_package_labels
 }
 
+# deprecated, and are in the process of being removed.
 group("additional_base_packages") {
   testonly = base_cache_packages_testonly
   visibility = [
     "//build/assembly/*",
     "//build/images/*",
   ]
-  public_deps = base_package_labels + board_package_labels
+  public_deps =
+      base_package_labels + legacy_base_package_labels + board_package_labels
 }
 
+# deprecated, and are in the process of being removed.
 group("additional_cache_packages") {
   testonly = base_cache_packages_testonly
   visibility = [
     "//build/assembly/*",
     "//build/images/*",
   ]
-  public_deps = cache_package_labels
+  public_deps = cache_package_labels + legacy_cache_package_labels
 }
 
+# deprecated, and are in the process of being removed.
 group("additional_universe_packages") {
   testonly = fuchsia_zbi_testonly
   visibility = [ "//build/images/*" ]
-  public_deps = universe_package_labels
+  public_deps = universe_package_labels + legacy_universe_package_labels
 }
 
 group("host") {
   # TODO(fxbug.dev/80548) investigate removing testonly here
   testonly = true
   public_deps = []
-  foreach(label, host_labels) {
+  foreach(label, host_labels + legacy_host_labels) {
     public_deps += [ "$label($host_toolchain)" ]
   }
 }
