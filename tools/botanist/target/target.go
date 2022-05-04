@@ -5,38 +5,323 @@
 package target
 
 import (
+	"bufio"
+	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"errors"
+	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
-	"go.fuchsia.dev/fuchsia/tools/bootserver"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/repo"
+	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/serial"
+	"go.fuchsia.dev/fuchsia/tools/lib/syslog"
+	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 )
 
-// Target represents a fuchsia instance.
-type Target interface {
-	// Nodename returns the name of the target node.
-	Nodename() string
+const (
+	localhostPlaceholder = "localhost"
+	repoID               = "fuchsia-pkg://fuchsia.com"
+)
 
-	// Serial returns the serial device associated with the target for serial i/o.
-	Serial() io.ReadWriteCloser
+// target is a generic Fuchsia instance.
+// It is not intended to be instantiated directly, but rather embedded into a
+// more concrete implementation.
+type target struct {
+	targetCtx       context.Context
+	targetCtxCancel context.CancelFunc
 
-	// SSHKey returns the private key corresponding an authorized SSH key of the target.
-	SSHKey() string
+	nodename     string
+	serial       io.ReadWriteCloser
+	serialSocket string
+	sshKeys      []string
 
-	// Start starts the target.
-	Start(ctx context.Context, images []bootserver.Image, args []string, serialSocketPath string) error
-
-	// Stop stops the target.
-	Stop(context.Context) error
-
-	// Wait waits for the target to finish running.
-	Wait(context.Context) error
+	ipv4         net.IP
+	ipv6         *net.IPAddr
+	serialServer *serial.Server
 }
 
-// ConfiguredTarget represents a target that has static configuration.
-type ConfiguredTarget interface {
-	// Address returns the target's configured IP address.
-	Address() net.IP
+// newTarget creates a new generic Fuchsia target.
+func newTarget(ctx context.Context, nodename, serialSocket string, sshKeys []string, serial io.ReadWriteCloser) (*target, error) {
+	targetCtx, cancel := context.WithCancel(ctx)
+	t := &target{
+		targetCtx:       targetCtx,
+		targetCtxCancel: cancel,
+
+		nodename:     nodename,
+		serial:       serial,
+		serialSocket: serialSocket,
+		sshKeys:      sshKeys,
+	}
+	return t, nil
+}
+
+// StartSerialServer spawns a new serial server fo the given target.
+// This is a no-op if a serial socket already exists, or if there is
+// no attached serial device.
+func (t *target) StartSerialServer() error {
+	// We have to no-op instead of returning an error as there are code
+	// paths that directly write to the serial log using QEMU's chardev
+	// flag, and throwing an error here would break those paths.
+	if t.serial == nil || t.serialSocket != "" {
+		return nil
+	}
+	t.serialSocket = createSocketPath()
+	t.serialServer = serial.NewServer(t.serial, serial.ServerOptions{})
+	addr := &net.UnixAddr{
+		Name: t.serialSocket,
+		Net:  "unix",
+	}
+	l, err := net.ListenUnix("unix", addr)
+	if err != nil {
+		return err
+	}
+	go func() {
+		t.serialServer.Run(t.targetCtx, l)
+	}()
+	return nil
+}
+
+// resolveIP uses mDNS to resolve the IPv6 and IPv4 addresses of the
+// target. It then caches the results so future requests are fast.
+func (t *target) resolveIP() error {
+	ctx, cancel := context.WithTimeout(t.targetCtx, 2*time.Minute)
+	defer cancel()
+	ipv4, ipv6, err := resolveIP(ctx, t.nodename)
+	if err != nil {
+		return err
+	}
+	t.ipv4 = ipv4
+	t.ipv6 = &ipv6
+	return nil
+}
+
+// SerialSocketPath returns the path to the unix socket multiplexing serial
+// logs.
+func (t *target) SerialSocketPath() string {
+	return t.serialSocket
+}
+
+// IPv4 returns the IPv4 address of the target.
+func (t *target) IPv4() (net.IP, error) {
+	if t.ipv4 == nil {
+		if err := t.resolveIP(); err != nil {
+			return nil, err
+		}
+	}
+	return t.ipv4, nil
+}
+
+// IPv6 returns the IPv6 address of the target.
+func (t *target) IPv6() (*net.IPAddr, error) {
+	if t.ipv6 == nil {
+		if err := t.resolveIP(); err != nil {
+			return nil, err
+		}
+	}
+	return t.ipv6, nil
+}
+
+// CaptureSerialLog starts copying serial logs from the serial server
+// to the given filename. This is a blocking function; it will not return
+// until either the serial server disconnects or the target is stopped.
+func (t *target) CaptureSerialLog(filename string) error {
+	if t.serialSocket == "" {
+		return errors.New("CaptureSerialLog() failed; serialSocket was empty")
+	}
+	serialLog, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	conn, err := net.Dial("unix", t.serialSocket)
+	if err != nil {
+		return err
+	}
+	// Set up a goroutine to terminate this capture on target context cancel.
+	go func() {
+		<-t.targetCtx.Done()
+		conn.Close()
+		serialLog.Close()
+	}()
+
+	// Start capturing serial logs.
+	b := bufio.NewReader(conn)
+	for {
+		line, err := b.ReadString('\n')
+		if err != nil {
+			if !errors.Is(err, net.ErrClosed) {
+				return fmt.Errorf("%s: %w", constants.SerialReadErrorMsg, err)
+			}
+			return nil
+		}
+		if _, err := io.WriteString(serialLog, line); err != nil {
+			return fmt.Errorf("failed to write line to serial log: %w", err)
+		}
+	}
+}
+
+// sshClient is a helper function that returns an SSH client connected to the
+// target, which can be found at the given address.
+func (t *target) sshClient(addr *net.IPAddr) (*sshutil.Client, error) {
+	if len(t.sshKeys) == 0 {
+		return nil, errors.New("SSHClient() failed; no ssh keys provided")
+	}
+
+	p, err := ioutil.ReadFile(t.sshKeys[0])
+	if err != nil {
+		return nil, err
+	}
+	config, err := sshutil.DefaultSSHConfig(p)
+	if err != nil {
+		return nil, err
+	}
+	return sshutil.NewClient(
+		t.targetCtx,
+		sshutil.ConstantAddrResolver{
+			Addr: &net.TCPAddr{
+				IP:   addr.IP,
+				Zone: addr.Zone,
+				Port: sshutil.SSHPort,
+			},
+		},
+		config,
+		sshutil.DefaultConnectBackoff(),
+	)
+}
+
+// AddPackageRepository adds the given package repository to the target.
+func (t *target) AddPackageRepository(client *sshutil.Client, repoURL, blobURL string) error {
+	localhost := strings.Contains(repoURL, localhostPlaceholder) || strings.Contains(blobURL, localhostPlaceholder)
+	lScopedRepoURL := repoURL
+	if localhost {
+		host := localScopedLocalHost(client.LocalAddr().String())
+		lScopedRepoURL = strings.Replace(repoURL, localhostPlaceholder, host, 1)
+		logger.Infof(t.targetCtx, "local-scoped package repository address: %s\n", lScopedRepoURL)
+	}
+
+	rScopedRepoURL := repoURL
+	rScopedBlobURL := blobURL
+	if localhost {
+		host, err := remoteScopedLocalHost(t.targetCtx, client)
+		if err != nil {
+			return err
+		}
+		rScopedRepoURL = strings.Replace(repoURL, localhostPlaceholder, host, 1)
+		logger.Infof(t.targetCtx, "remote-scoped package repository address: %s\n", rScopedRepoURL)
+		rScopedBlobURL = strings.Replace(blobURL, localhostPlaceholder, host, 1)
+		logger.Infof(t.targetCtx, "remote-scoped package blob address: %s\n", rScopedBlobURL)
+	}
+
+	rootMeta, err := repo.GetRootMetadataInsecurely(t.targetCtx, lScopedRepoURL)
+	if err != nil {
+		return fmt.Errorf("failed to derive root metadata: %w", err)
+	}
+
+	cfg := &repo.Config{
+		URL:           repoID,
+		RootKeys:      rootMeta.RootKeys,
+		RootVersion:   rootMeta.RootVersion,
+		RootThreshold: rootMeta.RootThreshold,
+		Mirrors: []repo.MirrorConfig{
+			{
+				URL:     rScopedRepoURL,
+				BlobURL: rScopedBlobURL,
+			},
+		},
+	}
+
+	return repo.AddFromConfig(t.targetCtx, client, cfg)
+}
+
+// CaptureSyslog collects the target's syslog in the given file.
+// This requires SSH to be running on the target. We pass the repoURL
+// and blobURL of the package repo as a matter of convenience - it makes
+// it easy to re-register the package repository on reboot. This function
+// blocks until the target is stopped.
+func (t *target) CaptureSyslog(client *sshutil.Client, filename, repoURL, blobURL string) error {
+	syslogger := syslog.NewSyslogger(client)
+
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	errs := syslogger.Stream(t.targetCtx, f)
+	for range errs {
+		if !syslogger.IsRunning() {
+			return nil
+		}
+		// TODO(rudymathu): This is a bit of a hack that results from the fact that
+		// we don't know when test binaries restart the device. Eventually, we should
+		// build out a more resilient framework in which we register "restart handlers"
+		// that are triggered on reboot.
+		if repoURL != "" && blobURL != "" {
+			t.AddPackageRepository(client, repoURL, blobURL)
+		}
+	}
+	return nil
+}
+
+// Stop cleans up all of the resources used by the target.
+func (t *target) Stop() {
+	// Cancelling the target context will stop any background goroutines.
+	// This includes serial/syslog capture and any serial servers that may
+	// be running.
+	t.targetCtxCancel()
+}
+
+func localScopedLocalHost(laddr string) string {
+	tokens := strings.Split(laddr, ":")
+	host := strings.Join(tokens[:len(tokens)-1], ":") // Strips the port.
+	return escapePercentSign(host)
+}
+
+func remoteScopedLocalHost(ctx context.Context, client *sshutil.Client) (string, error) {
+	// From the ssh man page:
+	// "SSH_CONNECTION identifies the client and server ends of the connection.
+	// The variable contains four space-separated values: client IP address,
+	// client port number, server IP address, and server port number."
+	// We wish to obtain the client IP address, as will be scoped from the
+	// remote address.
+	var stdout bytes.Buffer
+	if err := client.Run(ctx, []string{"echo", "${SSH_CONNECTION}"}, &stdout, nil); err != nil {
+		return "", fmt.Errorf("failed to derive $SSH_CONNECTION: %w", err)
+	}
+	val := stdout.String()
+	tokens := strings.Split(val, " ")
+	if len(tokens) != 4 {
+		return "", fmt.Errorf("$SSH_CONNECTION should be four space-separated values and not %q", val)
+	}
+	host := escapePercentSign("[" + tokens[0] + "]")
+	return host, nil
+}
+
+// From the spec https://tools.ietf.org/html/rfc6874#section-2:
+// "%" is always treated as an escape character in a URI, so, according to
+// the established URI syntax any occurrences of literal "%" symbols in a
+// URI MUST be percent-encoded and represented in the form "%25".
+func escapePercentSign(addr string) string {
+	if strings.Contains(addr, "%25") {
+		return addr
+	}
+	return strings.Replace(addr, "%", "%25", 1)
+}
+
+func createSocketPath() string {
+	// We randomly construct a socket path that is highly improbable to collide with anything.
+	randBytes := make([]byte, 16)
+	rand.Read(randBytes)
+	return filepath.Join(os.TempDir(), "serial"+hex.EncodeToString(randBytes)+".sock")
 }
 
 // Options represents lifecycle options for a target. The options will not necessarily make

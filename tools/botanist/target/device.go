@@ -22,6 +22,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/serial"
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
+	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
 
 	"golang.org/x/crypto/ssh"
@@ -78,13 +79,9 @@ func LoadDeviceConfigs(path string) ([]DeviceConfig, error) {
 	return configs, nil
 }
 
-var (
-	_ Target           = (*DeviceTarget)(nil)
-	_ ConfiguredTarget = (*DeviceTarget)(nil)
-)
-
 // DeviceTarget represents a target device.
 type DeviceTarget struct {
+	*target
 	config   DeviceConfig
 	opts     Options
 	signers  []ssh.Signer
@@ -114,6 +111,11 @@ func NewDeviceTarget(ctx context.Context, config DeviceConfig, opts Options) (*D
 		if _, err := io.WriteString(s, dlogCmd); err != nil {
 			return nil, fmt.Errorf("failed to tail serial logs: %w", err)
 		}
+		// After we've made a serial connection to determine the device is ready,
+		// we should close this socket since it is no longer needed. New interactions
+		// with the device over serial will create new connections with the serial mux.
+		s.Close()
+		s = nil
 	} else if config.Serial != "" {
 		s, err = serial.Open(config.Serial)
 		if err != nil {
@@ -124,7 +126,12 @@ func NewDeviceTarget(ctx context.Context, config DeviceConfig, opts Options) (*D
 			return nil, fmt.Errorf("failed to tail serial logs: %w", err)
 		}
 	}
+	base, err := newTarget(ctx, config.Network.Nodename, config.SerialMux, config.SSHKeys, s)
+	if err != nil {
+		return nil, err
+	}
 	return &DeviceTarget{
+		target:  base,
 		config:  config,
 		opts:    opts,
 		signers: signers,
@@ -147,9 +154,16 @@ func (t *DeviceTarget) Serial() io.ReadWriteCloser {
 	return t.serial
 }
 
-// Address implements ConfiguredTarget.
-func (t *DeviceTarget) Address() net.IP {
-	return net.ParseIP(t.config.Network.IPv4Addr)
+// IPv4 returns the IPv4 address of the device.
+func (t *DeviceTarget) IPv4() (net.IP, error) {
+	return net.ParseIP(t.config.Network.IPv4Addr), nil
+}
+
+// IPv6 returns the IPv6 of the device.
+// TODO(rudymathu): Re-enable mDNS resolution of IPv6 once it is no longer
+// flaky on hardware.
+func (t *DeviceTarget) IPv6() (*net.IPAddr, error) {
+	return nil, nil
 }
 
 // SSHKey returns the private SSH key path associated with the authorized key to be paved.
@@ -157,8 +171,18 @@ func (t *DeviceTarget) SSHKey() string {
 	return t.config.SSHKeys[0]
 }
 
+// SSHClient returns an SSH client connected to the device.
+func (t *DeviceTarget) SSHClient() (*sshutil.Client, error) {
+	addr, err := t.IPv4()
+	if err != nil {
+		return nil, err
+	}
+	return t.sshClient(&net.IPAddr{IP: addr})
+}
+
 // Start starts the device target.
-func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, args []string, serialSocketPath string) error {
+func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, args []string) error {
+	serialSocketPath := t.SerialSocketPath()
 	// Initialize the tftp client if:
 	// 1. It is currently uninitialized.
 	// 2. The device cannot be accessed via fastboot.
@@ -292,7 +316,8 @@ func (t *DeviceTarget) flash(ctx context.Context, images []bootserver.Image) err
 }
 
 // Stop stops the device.
-func (t *DeviceTarget) Stop(context.Context) error {
+func (t *DeviceTarget) Stop() error {
+	t.target.Stop()
 	atomic.StoreUint32(&t.stopping, 1)
 	return nil
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package botanist
+package target
 
 import (
 	"context"
@@ -18,7 +18,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/net/mdns"
 )
 
-// Interval at which ResolveIP will send a question packet as long as it doesn't
+// Interval at which resolveIP will send a question packet as long as it doesn't
 // receive a response. If it receives a response it may send packets more
 // quickly.
 const mDNSQuestionInterval = 2 * time.Second
@@ -27,12 +27,12 @@ func getLocalDomain(nodename string) string {
 	return nodename + ".local"
 }
 
-// ResolveIP returns the IPv4 and IPv6 addresses of a fuchsia node via mDNS.
+// resolveIP returns the IPv4 and IPv6 addresses of a fuchsia node via mDNS.
 //
 // It makes a best effort at returning *both* the IPv4 and IPv6 addresses, but if
 // both interfaces do not come up within a reasonable amount of time, it returns
 // only the first one that it finds (and no error).
-func ResolveIP(ctx context.Context, nodename string) (net.IP, net.IPAddr, error) {
+func resolveIP(ctx context.Context, nodename string) (net.IP, net.IPAddr, error) {
 	// Keep track of the start time to log the duration after which a timeout
 	// occurred.
 	startTime := time.Now()

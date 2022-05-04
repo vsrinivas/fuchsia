@@ -5,6 +5,8 @@
 package target
 
 import (
+	"context"
+
 	"go.fuchsia.dev/fuchsia/tools/qemu"
 )
 
@@ -13,16 +15,14 @@ const (
 	aemuBinaryName = "emulator"
 )
 
-var _ Target = (*AEMUTarget)(nil)
-
 // AEMUTarget is a AEMU target.
 type AEMUTarget struct {
 	QEMUTarget
 }
 
 // NewAEMUTarget returns a new AEMU target with a given configuration.
-func NewAEMUTarget(config QEMUConfig, opts Options) (*AEMUTarget, error) {
-	target, err := NewQEMUTarget(config, opts)
+func NewAEMUTarget(ctx context.Context, config QEMUConfig, opts Options) (*AEMUTarget, error) {
+	target, err := NewQEMUTarget(ctx, config, opts)
 	if err != nil {
 		return nil, err
 	}

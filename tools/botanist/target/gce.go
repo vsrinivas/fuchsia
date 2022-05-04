@@ -26,6 +26,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/lib/serial"
+	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -163,6 +164,7 @@ type GCEConfig struct {
 
 // GCETarget represents a GCE VM running Fuchsia.
 type GCETarget struct {
+	*target
 	config      GCEConfig
 	currentUser string
 	ipv4        net.IP
@@ -243,7 +245,11 @@ func NewGCETarget(ctx context.Context, config GCEConfig, opts Options) (*GCETarg
 			return nil, err
 		}
 	}
-
+	base, err := newTarget(ctx, "", "", []string{g.opts.SSHKey}, g.serial)
+	if err != nil {
+		return nil, err
+	}
+	g.target = base
 	return g, nil
 }
 
@@ -406,17 +412,22 @@ func generatePublicKey(pkeyFile string) (string, error) {
 	return f.Name(), err
 }
 
-func (g *GCETarget) Address() net.IP {
+func (g *GCETarget) IPv4() (net.IP, error) {
 	if g.ipv4 == nil {
 		fqdn := fmt.Sprintf("%s.%s.c.%s.internal", g.config.InstanceName, g.config.Zone, g.config.CloudProject)
 		addr, err := net.ResolveIPAddr("ip4", fqdn)
 		if err != nil {
 			logger.Infof(g.loggerCtx, "failed to resolve IPv4 of instance %s: %s", g.config.InstanceName, err)
-			return nil
+			return nil, err
 		}
 		g.ipv4 = addr.IP
 	}
-	return g.ipv4
+	return g.ipv4, nil
+}
+
+// GCE targets don't have IPv6 addresses.
+func (g *GCETarget) IPv6() (*net.IPAddr, error) {
+	return nil, nil
 }
 
 func (g *GCETarget) Nodename() string {
@@ -432,14 +443,24 @@ func (g *GCETarget) SSHKey() string {
 	return g.opts.SSHKey
 }
 
-func (g *GCETarget) Start(ctx context.Context, _ []bootserver.Image, args []string, _ string) error {
+func (g *GCETarget) Start(ctx context.Context, _ []bootserver.Image, args []string) error {
 	return nil
 }
 
-func (g *GCETarget) Stop(context.Context) error {
+func (g *GCETarget) Stop() error {
+	g.target.Stop()
 	return g.serial.Close()
 }
 
 func (g *GCETarget) Wait(context.Context) error {
 	return ErrUnimplemented
+}
+
+func (g *GCETarget) SSHClient() (*sshutil.Client, error) {
+	addr, err := g.IPv4()
+	if err != nil {
+		return nil, err
+	}
+
+	return g.sshClient(&net.IPAddr{IP: addr})
 }
