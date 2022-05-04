@@ -6,10 +6,12 @@
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>
 #include <lib/fdf/cpp/dispatcher.h>
+#include <lib/zx/status.h>
+
+#include <ddktl/fidl.h>
 
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_bind.h"
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_device_impl.h"
-#include "src/media/audio/drivers/virtual_audio/virtual_audio_stream.h"
 
 namespace virtual_audio {
 
@@ -53,209 +55,257 @@ zx_status_t VirtualAudioControlImpl::DdkBind(void* ctx, zx_device_t* parent_bus)
 }
 
 // static
-//
-// Unbind any published children (which will remove them), shut down any async loop, ensure nothing
-// is in flight, then remove ourselves from the dev tree.
-//
-// Unbind proceeds "down" from parent to child, while Release proceeds "up" (called for parent once
-// all children have been released).
 void VirtualAudioControlImpl::DdkUnbind(void* ctx) {
   ZX_ASSERT(ctx);
 
   auto self = static_cast<VirtualAudioControlImpl*>(ctx);
+  if (self->devices_.empty()) {
+    device_unbind_reply(self->dev_node_);
+    return;
+  }
 
-  // Close any remaining control (or stream) bindings, freeing those drivers.
-  self->ReleaseBindings();
+  // Close any remaining device bindings, freeing those drivers.
+  auto remaining = std::make_shared<size_t>(self->devices_.size());
 
-  // Now remove the control device itself (this later calls our DdkRelease).
-  device_unbind_reply(self->dev_node());
+  for (auto& d : self->devices_) {
+    d->ShutdownAsync([remaining, self]() {
+      ZX_ASSERT(*remaining > 0);
+      // After all devices are gone we can remove the control device itself.
+      if (--(*remaining) == 0) {
+        device_unbind_reply(self->dev_node_);
+      }
+    });
+  }
+  self->devices_.clear();
 }
 
 // static
-//
-// Always called after DdkUnbind, which should guarantee that lists are emptied. Any last cleanup or
-// logical consistency checks would be done here. By the time this is called, all child devices have
-// already been released.
 void VirtualAudioControlImpl::DdkRelease(void* ctx) {
   ZX_ASSERT(ctx);
 
-  // DevMgr has returned ownership of whatever we provided as driver ctx (our
-  // VirtualAudioControlImpl). When this functions returns, this unique_ptr will go out of scope,
-  // triggering ~VirtualAudioControlImpl.
+  // Always called after DdkUnbind.
+  // By now, all our lists should be empty and we can destroy the ctx.
   std::unique_ptr<VirtualAudioControlImpl> control_ptr(static_cast<VirtualAudioControlImpl*>(ctx));
-
-  // By now, all our lists should be empty.
-  ZX_ASSERT(control_ptr->bindings_.size() == 0);
-  ZX_ASSERT(control_ptr->input_bindings_.size() == 0);
-  ZX_ASSERT(control_ptr->output_bindings_.size() == 0);
+  ZX_ASSERT(control_ptr->devices_.empty());
 }
 
 // static
-//
 zx_status_t VirtualAudioControlImpl::DdkMessage(void* ctx, fidl_incoming_msg_t* msg,
                                                 fidl_txn_t* txn) {
-  ZX_ASSERT(ctx);
-
-  return fuchsia_virtualaudio_Forwarder_dispatch(ctx, txn, msg, &fidl_ops_);
+  VirtualAudioControlImpl* self = static_cast<VirtualAudioControlImpl*>(ctx);
+  DdkTransaction transaction(txn);
+  fidl::WireDispatch<fuchsia_virtualaudio::Control>(
+      self, fidl::IncomingMessage::FromEncodedCMessage(msg), &transaction);
+  return transaction.Status();
 }
 
-// static
-//
-fuchsia_virtualaudio_Forwarder_ops_t VirtualAudioControlImpl::fidl_ops_ = {
-    .SendControl =
-        [](void* ctx, zx_handle_t control_request) {
-          ZX_ASSERT(ctx);
-          return static_cast<VirtualAudioControlImpl*>(ctx)->SendControl(
-              zx::channel(control_request));
-        },
-    .SendInput =
-        [](void* ctx, zx_handle_t input_request) {
-          ZX_ASSERT(ctx);
-          return static_cast<VirtualAudioControlImpl*>(ctx)->SendInput(zx::channel(input_request));
-        },
-    .SendOutput =
-        [](void* ctx, zx_handle_t output_request) {
-          ZX_ASSERT(ctx);
-          return static_cast<VirtualAudioControlImpl*>(ctx)->SendOutput(
-              zx::channel(output_request));
-        },
-};
+namespace {
+VirtualAudioDeviceImpl::Config DefaultConfig(bool is_input) {
+  VirtualAudioDeviceImpl::Config config;
+  config.is_input = is_input;
 
-// A client connected to fuchsia.virtualaudio.Control hosted by the virtual audio service, which is
-// forwarding the server-side binding to us.
-zx_status_t VirtualAudioControlImpl::SendControl(zx::channel control_request_channel) {
-  if (!control_request_channel.is_valid()) {
-    zxlogf(ERROR, "%s: channel from request handle is invalid", __func__);
-    return ZX_ERR_INVALID_ARGS;
-  }
+  // Arbitrary.
+  config.device_name = "Virtual Audio Device";
+  config.manufacturer_name = "Fuchsia Virtual Audio Group";
+  config.product_name = "Virgil v1, a Virtual Volume Vessel";
+  config.unique_id = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0};
 
-  // VirtualAudioControlImpl is a singleton so just save the binding in a list. Using the default
-  // dispatcher means that we will be running on the same that drives all of our peer devices in the
-  // /dev/test device host. We should ensure there are no long VirtualAudioControl operations.
-  bindings_.AddBinding(
-      this,
-      fidl::InterfaceRequest<fuchsia::virtualaudio::Control>(std::move(control_request_channel)),
-      dispatcher_);
-  return ZX_OK;
+  // Default FIFO is 250 usec, at 48k stereo 16
+  config.fifo_depth_bytes = 48;
+  config.external_delay = zx::nsec(0);
+
+  // Default is 48kHz stereo 16bit.
+  config.supported_formats.push_back({
+      .sample_formats = AUDIO_SAMPLE_FORMAT_16BIT,
+      .min_frames_per_second = 48000,
+      .max_frames_per_second = 48000,
+      .min_channels = 2,
+      .max_channels = 2,
+      .flags = ASF_RANGE_FLAG_FPS_48000_FAMILY,
+  });
+
+  // Default is CLOCK_MONOTONIC.
+  config.clock.domain = 0;
+  config.clock.initial_rate_adjustment_ppm = 0;
+
+  // Default ring buffer size is at least 250msec (assuming default rate 48k).
+  config.ring_buffer.min_frames = 12000;
+  config.ring_buffer.max_frames = 1 << 19;  // (10+ sec, at default 48k!)
+  config.ring_buffer.modulo_frames = 1;
+
+  // By default, support a wide gain range with good precision.
+  config.gain = fuchsia_virtualaudio::wire::GainProperties{
+      .min_gain_db = -160.f,
+      .max_gain_db = 24.f,
+      .gain_step_db = 0.25f,
+      .current_gain_db = -0.75f,
+      .can_mute = true,
+      .current_mute = false,
+      .can_agc = false,
+      .current_agc = false,
+  };
+
+  // By default, device is hot-pluggable
+  config.plug.plug_change_time = zx::clock::get_monotonic().get();
+  config.plug.plugged = true;
+  config.plug.hardwired = false;
+  config.plug.can_notify = true;
+
+  return config;
 }
 
-// A client connected to fuchsia.virtualaudio.Input hosted by the virtual audio service, which is
-// forwarding the server-side binding to us.
-zx_status_t VirtualAudioControlImpl::SendInput(zx::channel input_request_channel) {
-  if (!input_request_channel.is_valid()) {
-    zxlogf(ERROR, "%s: channel from request handle is invalid", __func__);
-    return ZX_ERR_INVALID_ARGS;
-  }
+zx::status<VirtualAudioDeviceImpl::Config> ConfigFromFIDL(
+    const fuchsia_virtualaudio::wire::Configuration& fidl, bool is_input) {
+  auto config = DefaultConfig(is_input);
 
-  // Create an VirtualAudioDeviceImpl for this binding; save it in our list. Using the default
-  // dispatcher means that we will be running on the same that drives all of our peer devices in the
-  // /dev/test device host. We should be mindful of this if doing long VirtualAudioInput operations.
-  auto device = VirtualAudioDeviceImpl::Create(this, true);
-  input_bindings_.AddBinding(
-      device,
-      fidl::InterfaceRequest<fuchsia::virtualaudio::Input>(std::move(input_request_channel)),
-      dispatcher_, [this, device](zx_status_t status) {
-        if (status != ZX_ERR_PEER_CLOSED) {
-          zxlogf(ERROR, "input device %p closed with status %d", device.get(), status);
-        } else {
-          zxlogf(TRACE, "input device %p closed with status %d", device.get(), status);
-        }
-        input_bindings_.RemoveBinding(device);
-        device->RemoveStream();
+  if (fidl.has_device_name()) {
+    config.device_name = std::string(fidl.device_name().get());
+  }
+  if (fidl.has_manufacturer_name()) {
+    config.manufacturer_name = std::string(fidl.manufacturer_name().get());
+  }
+  if (fidl.has_product_name()) {
+    config.product_name = std::string(fidl.product_name().get());
+  }
+  if (fidl.has_unique_id()) {
+    memmove(config.unique_id.data(), fidl.unique_id().data(), sizeof(config.unique_id));
+  }
+  if (fidl.has_fifo_depth_bytes()) {
+    config.fifo_depth_bytes = fidl.fifo_depth_bytes();
+  }
+  if (fidl.has_external_delay()) {
+    config.external_delay = zx::nsec(fidl.external_delay());
+  }
+  if (fidl.has_supported_formats()) {
+    config.supported_formats.clear();
+    for (auto& fmt : fidl.supported_formats()) {
+      if (fmt.min_frame_rate > fmt.max_frame_rate) {
+        zxlogf(ERROR, "Invalid FormatRange: min_frame_rate=%u > max_frame_rate=%u",
+               fmt.min_frame_rate, fmt.max_frame_rate);
+        return zx::error(ZX_ERR_INVALID_ARGS);
+      }
+      if (fmt.min_channels > fmt.max_channels) {
+        zxlogf(ERROR, "Invalid FormatRange: min_channels=%u > max_channels=%u", fmt.min_channels,
+               fmt.max_channels);
+        return zx::error(ZX_ERR_INVALID_ARGS);
+      }
+      config.supported_formats.push_back({
+          .sample_formats = fmt.sample_format_flags,
+          .min_frames_per_second = fmt.min_frame_rate,
+          .max_frames_per_second = fmt.max_frame_rate,
+          .min_channels = fmt.min_channels,
+          .max_channels = fmt.max_channels,
+          .flags = fmt.rate_family_flags,
       });
-
-  auto* binding = input_bindings_.bindings().back().get();
-  device->SetBinding(binding);
-
-  return ZX_OK;
-}
-
-zx_status_t VirtualAudioControlImpl::SendOutput(zx::channel output_request_channel) {
-  if (!output_request_channel.is_valid()) {
-    zxlogf(ERROR, "%s: channel from request handle is invalid", __func__);
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  // Create a VirtualAudioDeviceImpl for this binding; save it in our list. Using the default
-  // dispatcher means that we will be running on the same that drives all of our peer devices in the
-  // /dev/test device host. We should be mindful of this if doing long VirtualAudioOutput
-  // operations.
-  auto device = VirtualAudioDeviceImpl::Create(this, false);
-  output_bindings_.AddBinding(
-      device,
-      fidl::InterfaceRequest<fuchsia::virtualaudio::Output>(std::move(output_request_channel)),
-      dispatcher_, [this, device](zx_status_t status) {
-        if (status != ZX_ERR_PEER_CLOSED) {
-          zxlogf(ERROR, "output device closed with status %d", status);
-        } else {
-          zxlogf(TRACE, "output device closed with status %d", status);
-        }
-        output_bindings_.RemoveBinding(device);
-        device->RemoveStream();
-      });
-
-  auto* binding = output_bindings_.bindings().back().get();
-  device->SetBinding(binding);
-
-  return ZX_OK;
-}
-
-// Reset any remaining bindings of Controls, Inputs and Outputs. This is called during Unbind, at
-// which time child drivers should be gone (and input_bindings_ and output_bindings_ empty).
-void VirtualAudioControlImpl::ReleaseBindings() {
-  bindings_.CloseAll();
-  input_bindings_.CloseAll();
-  output_bindings_.CloseAll();
-}
-
-// Allow subsequent new stream creation -- but do not automatically reactivate
-// any streams that may have been deactivated (removed) by the previous Disable.
-// Upon construction, the default state of this object is Enabled. The (empty)
-// callback is used to synchronize with other in-flight asynchronous operations.
-void VirtualAudioControlImpl::Enable(EnableCallback enable_callback) {
-  enabled_ = true;
-
-  enable_callback();
-}
-
-// Deactivate active streams and prevent subsequent new stream creation. Audio devices vanish from
-// the dev tree (VirtualAudioStream objects are freed), but Input and Output channels remain open
-// and can be reconfigured. Once Enable is called; they can be re-added without losing configuration
-// state. The (empty) callback is used to synchronize with other in-flight asynchronous operations.
-void VirtualAudioControlImpl::Disable(DisableCallback disable_callback) {
-  if (enabled_) {
-    for (auto& binding : input_bindings_.bindings()) {
-      binding->impl()->RemoveStream();
-    }
-
-    for (auto& binding : output_bindings_.bindings()) {
-      binding->impl()->RemoveStream();
-    }
-
-    enabled_ = false;
-  }
-
-  disable_callback();
-}
-
-// Return the number of active input and output streams. The callback is used to synchronize with
-// other in-flight asynchronous operations.
-void VirtualAudioControlImpl::GetNumDevices(GetNumDevicesCallback get_num_devices_callback) {
-  uint32_t num_inputs = 0, num_outputs = 0;
-
-  for (auto& binding : input_bindings_.bindings()) {
-    if (binding->impl()->IsActive()) {
-      ++num_inputs;
     }
   }
-
-  for (auto& binding : output_bindings_.bindings()) {
-    if (binding->impl()->IsActive()) {
-      ++num_outputs;
+  if (fidl.has_clock_properties()) {
+    auto& fidl_clock = fidl.clock_properties();
+    if (fidl_clock.initial_rate_adjustment_ppm != 0 && fidl_clock.domain == 0) {
+      zxlogf(ERROR, "Invalid ClockProperties: domain=%u, initial_rate_adjustment_ppm=%u",
+             fidl_clock.domain, fidl_clock.initial_rate_adjustment_ppm);
+      return zx::error(ZX_ERR_INVALID_ARGS);
     }
+    config.clock = fidl_clock;
+  }
+  if (fidl.has_ring_buffer_constraints()) {
+    auto& fidl_rb = fidl.ring_buffer_constraints();
+    if (fidl_rb.modulo_frames == 0 || fidl_rb.min_frames > fidl_rb.max_frames ||
+        fidl_rb.min_frames % fidl_rb.modulo_frames != 0 ||
+        fidl_rb.max_frames % fidl_rb.modulo_frames != 0) {
+      zxlogf(ERROR, "Invalid RingBufferConstraints: min_frames=%u, max_frames=%u, modulo_frames=%u",
+             fidl_rb.min_frames, fidl_rb.max_frames, fidl_rb.modulo_frames);
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
+    config.ring_buffer = fidl_rb;
+  }
+  if (fidl.has_gain_properties()) {
+    config.gain = fidl.gain_properties();
+  }
+  if (fidl.has_plug_properties()) {
+    config.plug = fidl.plug_properties();
+  }
+  if (fidl.has_initial_notifications_per_ring()) {
+    config.initial_notifications_per_ring = fidl.initial_notifications_per_ring();
   }
 
-  get_num_devices_callback(num_inputs, num_outputs);
+  return zx::ok(config);
+}
+}  // namespace
+
+void VirtualAudioControlImpl::AddInput(AddInputRequestView request,
+                                       AddInputCompleter::Sync& completer) {
+  auto cfg = ConfigFromFIDL(request->config, true);
+  auto result = VirtualAudioDeviceImpl::Create(cfg.value(), std::move(request->server), dev_node_,
+                                               dispatcher_);
+  if (!result.is_ok()) {
+    zxlogf(ERROR, "Input device creation failed with status %d",
+           static_cast<int32_t>(result.error_value()));
+    completer.ReplyError(result.error_value());
+    return;
+  }
+  auto device = result.value();
+  devices_.insert(device);
+  completer.ReplySuccess();
+}
+
+void VirtualAudioControlImpl::AddOutput(AddOutputRequestView request,
+                                        AddOutputCompleter::Sync& completer) {
+  auto cfg = ConfigFromFIDL(request->config, false);
+  auto result = VirtualAudioDeviceImpl::Create(cfg.value(), std::move(request->server), dev_node_,
+                                               dispatcher_);
+  if (!result.is_ok()) {
+    zxlogf(ERROR, "Output device creation failed with status %d",
+           static_cast<int32_t>(result.error_value()));
+    completer.ReplyError(result.error_value());
+    return;
+  }
+  auto device = result.value();
+  devices_.insert(device);
+  completer.ReplySuccess();
+}
+
+void VirtualAudioControlImpl::GetNumDevices(GetNumDevicesRequestView request,
+                                            GetNumDevicesCompleter::Sync& completer) {
+  uint32_t num_inputs = 0;
+  uint32_t num_outputs = 0;
+  for (auto& d : devices_) {
+    if (d->is_input()) {
+      num_inputs++;
+    } else {
+      num_outputs++;
+    }
+  }
+  completer.Reply(num_inputs, num_outputs);
+}
+
+void VirtualAudioControlImpl::RemoveAll(RemoveAllRequestView request,
+                                        RemoveAllCompleter::Sync& completer) {
+  if (devices_.empty()) {
+    completer.Reply();
+    return;
+  }
+
+  // This callback waits until all devices have shut down. We wrap the async completer in a
+  // shared_ptr so the callback can be copied into each ShutdownAsync call.
+  struct ShutdownState {
+    explicit ShutdownState(RemoveAllCompleter::Sync& sync) : completer(sync.ToAsync()) {}
+    RemoveAllCompleter::Async completer;
+    size_t remaining;
+  };
+  auto state = std::make_shared<ShutdownState>(completer);
+  state->remaining = devices_.size();
+
+  for (auto& d : devices_) {
+    d->ShutdownAsync([state]() {
+      ZX_ASSERT(state->remaining > 0);
+      // After all devices are gone, notify the completer.
+      if ((--state->remaining) == 0) {
+        state->completer.Reply();
+      }
+    });
+  }
+  devices_.clear();
 }
 
 }  // namespace virtual_audio

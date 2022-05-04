@@ -35,7 +35,6 @@ struct DeviceClockProperties {
 };
 
 // This class is thread hostile: none of its methods can be called concurrently.
-template <class Interface>
 class VirtualDevice {
  public:
   static constexpr uint32_t kNotifyMs = 10;
@@ -44,7 +43,7 @@ class VirtualDevice {
 
   ~VirtualDevice();
 
-  fidl::InterfacePtr<Interface>& fidl() { return fidl_; }
+  fidl::InterfacePtr<fuchsia::virtualaudio::Device>& fidl() { return fidl_; }
   int64_t frame_count() const { return frame_count_; }
 
   uint64_t token() const { return token_; }
@@ -66,8 +65,11 @@ class VirtualDevice {
   // For validating properties exported by inspect.
   size_t inspect_id() const { return inspect_id_; }
 
+  // Reports whether this is an input device.
+  bool is_input() const { return is_input_; }
+
  protected:
-  VirtualDevice(TestFixture* fixture, HermeticAudioEnvironment* environment,
+  VirtualDevice(TestFixture* fixture, HermeticAudioEnvironment* environment, bool is_input,
                 const audio_stream_unique_id_t& device_id, Format format, int64_t frame_count,
                 size_t inspect_id, std::optional<DevicePlugProperties> plug_properties,
                 float expected_gain_db,
@@ -76,12 +78,13 @@ class VirtualDevice {
   void ResetEvents();
   void WatchEvents();
 
+  const bool is_input_;
   const Format format_;
   int64_t frame_count_;
   const size_t inspect_id_;
   const float expected_gain_db_;
 
-  fidl::InterfacePtr<Interface> fidl_;
+  fidl::InterfacePtr<fuchsia::virtualaudio::Device> fidl_;
   audio_sample_format_t driver_format_;
   zx::vmo rb_vmo_;
   VmoBackedBuffer rb_;
@@ -97,11 +100,8 @@ class VirtualDevice {
   uint64_t token_;
 };
 
-using VirtualOutputImpl = VirtualDevice<fuchsia::virtualaudio::Output>;
-using VirtualInputImpl = VirtualDevice<fuchsia::virtualaudio::Input>;
-
 template <fuchsia::media::AudioSampleFormat SampleFormat>
-class VirtualOutput : public VirtualOutputImpl {
+class VirtualOutput : public VirtualDevice {
  public:
   using SampleT = typename AudioBuffer<SampleFormat>::SampleT;
 
@@ -115,12 +115,12 @@ class VirtualOutput : public VirtualOutputImpl {
                 size_t inspect_id, std::optional<DevicePlugProperties> plug_properties,
                 float expected_gain_db,
                 std::optional<DeviceClockProperties> device_clock_properties)
-      : VirtualDevice(fixture, environment, device_id, format, frame_count, inspect_id,
-                      plug_properties, expected_gain_db, device_clock_properties) {}
+      : VirtualDevice(fixture, environment, /*is_input=*/false, device_id, format, frame_count,
+                      inspect_id, plug_properties, expected_gain_db, device_clock_properties) {}
 };
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
-class VirtualInput : public VirtualInputImpl {
+class VirtualInput : public VirtualDevice {
  public:
   using SampleT = typename AudioBuffer<SampleFormat>::SampleT;
 
@@ -135,8 +135,8 @@ class VirtualInput : public VirtualInputImpl {
                const audio_stream_unique_id_t& device_id, Format format, int64_t frame_count,
                size_t inspect_id, std::optional<DevicePlugProperties> plug_properties,
                float expected_gain_db, std::optional<DeviceClockProperties> device_clock_properties)
-      : VirtualDevice(fixture, environment, device_id, format, frame_count, inspect_id,
-                      plug_properties, expected_gain_db, device_clock_properties) {}
+      : VirtualDevice(fixture, environment, /*is_input=*/true, device_id, format, frame_count,
+                      inspect_id, plug_properties, expected_gain_db, device_clock_properties) {}
 };
 
 }  // namespace media::audio::test

@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_LIB_TEST_HERMETIC_AUDIO_ENVIRONMENT_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
@@ -74,10 +75,14 @@ class HermeticAudioEnvironment {
     return *hermetic_environment_;
   }
 
+  // There is just one of these. There's no need to connect manually.
+  fidl::SynchronousInterfacePtr<fuchsia::virtualaudio::Control>& virtual_audio_control() {
+    return virtual_audio_control_;
+  }
+
   // Components started by this environment.
   enum ComponentType {
     kAudioCoreComponent,
-    kVirtualAudioComponent,
     kThermalTestControlComponent,
     kProcessorCreatorComponent,
   };
@@ -106,6 +111,7 @@ class HermeticAudioEnvironment {
   std::unordered_map<ComponentType, std::string> component_urls_;
   fuchsia::sys::ComponentControllerPtr controller_;
   TestEffectsV2 test_effects_v2_;
+  fidl::SynchronousInterfacePtr<fuchsia::virtualaudio::Control> virtual_audio_control_;
 };
 
 }  // namespace media::audio::test

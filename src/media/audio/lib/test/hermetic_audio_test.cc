@@ -57,12 +57,6 @@ void HermeticAudioTest::SetUpEnvironment() {
   auto options = test_suite_options_.value_or(HermeticAudioEnvironment::Options());
   environment_ = std::make_unique<HermeticAudioEnvironment>(options);
 
-  {
-    TRACE_DURATION("audio", "HermeticAudioTest::ConnectToVAD");
-    environment_->ConnectToService(virtual_audio_control_sync_.NewRequest());
-    virtual_audio_control_sync_->Enable();
-  }
-
   environment_->ConnectToService(thermal_client_state_connector_.NewRequest());
   environment_->ConnectToService(thermal_test_client_state_control_sync_.NewRequest());
 }
@@ -115,8 +109,7 @@ void HermeticAudioTest::TearDown() {
 
   // Remove all components.
   for (auto& [_, device] : devices_) {
-    device.output = nullptr;
-    device.input = nullptr;
+    device.device = nullptr;
   }
   capturers_.clear();
   renderers_.clear();
@@ -144,7 +137,7 @@ VirtualOutput<SampleFormat>* HermeticAudioTest::CreateOutput(
       virtual_output_next_inspect_id_++, plug_properties, device_gain_db, device_clock_properties);
   auto out = ptr.get();
   auto id = AudioDevice::UniqueIdToString(device_id);
-  devices_[id].output = std::move(ptr);
+  devices_[id].device = std::move(ptr);
 
   // Wait until the device is connected.
   RunLoopUntil([this, id, out]() { return out->Ready() && devices_[id].info != std::nullopt; });
@@ -169,7 +162,7 @@ VirtualInput<SampleFormat>* HermeticAudioTest::CreateInput(
       virtual_input_next_inspect_id_++, plug_properties, device_gain_db, device_clock_properties);
   auto out = ptr.get();
   auto id = AudioDevice::UniqueIdToString(device_id);
-  devices_[id].input = std::move(ptr);
+  devices_[id].device = std::move(ptr);
 
   // Wait until the device is connected.
   RunLoopUntil([this, out, id]() { return out->Ready() && devices_[id].info != std::nullopt; });
@@ -236,18 +229,9 @@ UltrasoundCapturerShim<SampleFormat>* HermeticAudioTest::CreateUltrasoundCapture
   return out;
 }
 
-void HermeticAudioTest::Unbind(VirtualInputImpl* device) {
+void HermeticAudioTest::Unbind(VirtualDevice* device) {
   auto it = std::find_if(devices_.begin(), devices_.end(),
-                         [device](const auto& it) { return it.second.input.get() == device; });
-  FX_CHECK(it != devices_.end());
-
-  device->fidl().Unbind();
-  devices_.erase(it);
-}
-
-void HermeticAudioTest::Unbind(VirtualOutputImpl* device) {
-  auto it = std::find_if(devices_.begin(), devices_.end(),
-                         [device](const auto& it) { return it.second.output.get() == device; });
+                         [device](const auto& it) { return it.second.device.get() == device; });
   FX_CHECK(it != devices_.end());
 
   device->fidl().Unbind();
@@ -371,23 +355,15 @@ void HermeticAudioTest::WaitForDeviceDepartures() {
 void HermeticAudioTest::OnDeviceAdded(fuchsia::media::AudioDeviceInfo info) {
   auto id = info.unique_id;
   token_to_unique_id_[info.token_id] = id;
-  if (info.is_input) {
-    if (!devices_[id].input) {
-      ADD_FAILURE() << "Unexpected arrival of input device " << id << ", no such device exists";
-    }
-    if (devices_[id].info != std::nullopt) {
-      ADD_FAILURE() << "Duplicate arrival of input device " << id;
-    }
-    devices_[id].input->set_token(info.token_id);
-  } else {
-    if (!devices_[id].output) {
-      ADD_FAILURE() << "Unexpected arrival of output device " << id << ", no such device exists";
-    }
-    if (devices_[id].info != std::nullopt) {
-      ADD_FAILURE() << "Duplicate arrival of output device " << id;
-    }
-    devices_[id].output->set_token(info.token_id);
+  if (!devices_[id].device) {
+    ADD_FAILURE() << "Unexpected arrival of " << (info.is_input ? "input" : "output") << " device "
+                  << id << ", no such device exists";
   }
+  if (devices_[id].info != std::nullopt) {
+    ADD_FAILURE() << "Duplicate arrival of " << (info.is_input ? "input" : "output") << " device "
+                  << id;
+  }
+  devices_[id].device->set_token(info.token_id);
   token_to_unique_id_[info.token_id] = id;
   devices_[id].info = info;
   FX_LOGS(DEBUG) << "Output device (token = " << info.token_id << ", id = " << id
@@ -486,8 +462,8 @@ void HermeticAudioTest::ExpectNoOverflowsOrUnderflows() {
 // Fail if data was lost because we awoke too late to provide data.
 void HermeticAudioTest::ExpectNoOutputUnderflows() {
   for (auto& [_, device] : devices_) {
-    if (device.output) {
-      ExpectInspectMetrics(device.output.get(),
+    if (!device.device->is_input()) {
+      ExpectInspectMetrics(device.device.get(),
                            {.children = {
                                 {"device underflows", {.uints = {{"count", 0}}}},
                             }});
@@ -499,8 +475,8 @@ void HermeticAudioTest::ExpectNoOutputUnderflows() {
 // time overrun did not necessarily result in data loss).
 void HermeticAudioTest::ExpectNoPipelineUnderflows() {
   for (auto& [_, device] : devices_) {
-    if (device.output) {
-      ExpectInspectMetrics(device.output.get(),
+    if (!device.device->is_input()) {
+      ExpectInspectMetrics(device.device.get(),
                            {.children = {
                                 {"pipeline underflows", {.uints = {{"count", 0}}}},
                             }});
@@ -526,14 +502,15 @@ void HermeticAudioTest::ExpectNoCapturerOverflows() {
   }
 }
 
-void HermeticAudioTest::ExpectInspectMetrics(VirtualOutputImpl* output,
+void HermeticAudioTest::ExpectInspectMetrics(VirtualDevice* device,
                                              const ExpectedInspectProperties& props) {
-  ExpectInspectMetrics({"output devices", fxl::StringPrintf("%03lu", output->inspect_id())}, props);
-}
-
-void HermeticAudioTest::ExpectInspectMetrics(VirtualInputImpl* input,
-                                             const ExpectedInspectProperties& props) {
-  ExpectInspectMetrics({"input devices", fxl::StringPrintf("%03lu", input->inspect_id())}, props);
+  if (device->is_input()) {
+    ExpectInspectMetrics({"input devices", fxl::StringPrintf("%03lu", device->inspect_id())},
+                         props);
+  } else {
+    ExpectInspectMetrics({"output devices", fxl::StringPrintf("%03lu", device->inspect_id())},
+                         props);
+  }
 }
 
 void HermeticAudioTest::ExpectInspectMetrics(RendererShimImpl* renderer,

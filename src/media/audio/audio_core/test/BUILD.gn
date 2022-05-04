@@ -10,9 +10,6 @@ group("test") {
 
     # TODO(fxbug.dev/90408): remove this
     "//src/media/audio/audio_core:audio-core-for-test",
-
-    # TODO(fxbug.dev/90408): remove this
-    "//src/media/audio/virtual_audio_service:virtual-audio-service-for-test",
   ]
 
   # These tests must run in release builds because they have hard real-time restraints.

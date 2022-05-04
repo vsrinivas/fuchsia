@@ -94,8 +94,7 @@ class HermeticAudioTest : public TestFixture {
                                                                  bool wait_for_creation = true);
 
   // Validate inspect metrics.
-  void ExpectInspectMetrics(VirtualOutputImpl* output, const ExpectedInspectProperties& props);
-  void ExpectInspectMetrics(VirtualInputImpl* input, const ExpectedInspectProperties& props);
+  void ExpectInspectMetrics(VirtualDevice* device, const ExpectedInspectProperties& props);
   void ExpectInspectMetrics(RendererShimImpl* renderer, const ExpectedInspectProperties& props);
   void ExpectInspectMetrics(CapturerShimImpl* capturer, const ExpectedInspectProperties& props);
 
@@ -115,8 +114,7 @@ class HermeticAudioTest : public TestFixture {
   bool DeviceHasUnderflows(VirtualOutput<OutputFormat>* device);
 
   // Unbind and forget about the given object.
-  void Unbind(VirtualOutputImpl* device);
-  void Unbind(VirtualInputImpl* device);
+  void Unbind(VirtualDevice* device);
   void Unbind(CapturerShimImpl* capturer);
 
   template <fuchsia::media::AudioSampleFormat SampleFormat>
@@ -165,8 +163,7 @@ class HermeticAudioTest : public TestFixture {
                             const ExpectedInspectProperties& props);
 
   struct DeviceInfo {
-    std::unique_ptr<VirtualOutputImpl> output;
-    std::unique_ptr<VirtualInputImpl> input;
+    std::unique_ptr<VirtualDevice> device;
     std::optional<fuchsia::media::AudioDeviceInfo> info;
     bool is_removed = false;
     bool is_default = false;
@@ -183,7 +180,6 @@ class HermeticAudioTest : public TestFixture {
   std::vector<std::unique_ptr<RendererShimImpl>> renderers_;
 
   std::unique_ptr<HermeticAudioEnvironment> environment_;
-  fuchsia::virtualaudio::ControlSyncPtr virtual_audio_control_sync_;
 
   fuchsia::thermal::ClientStateConnectorPtr thermal_client_state_connector_;
   ::test::thermal::ClientStateControlSyncPtr thermal_test_client_state_control_sync_;

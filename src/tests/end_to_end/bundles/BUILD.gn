@@ -20,9 +20,6 @@ group("end_to_end_deps") {
     # Needed to start sl4f from ssh.
     "//garnet/packages/prod:run",
 
-    # Needed to inject and capture audio.
-    "//src/media/audio/bundles:virtual_audio_service_with_config",
-
     # SL4F to translate JSON-RPC to calls.
     "//src/testing/sl4f:sl4f",
 

@@ -14,7 +14,9 @@
 #include <fuchsia/ultrasound/cpp/fidl.h>
 #include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/device-watcher/cpp/device-watcher.h>
 #include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
 #include <lib/inspect/service/cpp/reader.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
@@ -91,6 +93,31 @@ std::string ComponentManifestFromURL(const std::string& component_url) {
   return component_url.substr(k + strlen(kMeta));
 }
 
+void ConnectToVirtualAudio(fuchsia::io::DirectorySyncPtr dev,
+                           fidl::SynchronousInterfacePtr<fuchsia::virtualaudio::Control>& out) {
+  // Open /dev.
+  fbl::unique_fd dev_fd;
+  auto status =
+      fdio_fd_create(dev.Unbind().TakeChannel().release(), dev_fd.reset_and_get_address());
+  ASSERT_EQ(status, ZX_OK);
+
+  // This file hosts a fuchsia.virtualaudio.Control channel.
+  const char* const kControlName = fuchsia::virtualaudio::CONTROL_NODE_NAME;
+  ASSERT_EQ(std::string_view(kControlName).substr(0, 5), "/dev/")
+      << "unexpected file name: " << kControlName;
+  std::string control_file_name = kControlName + 5;
+
+  // Wait for the driver to load.
+  fbl::unique_fd file_fd;
+  ASSERT_EQ(ZX_OK,
+            device_watcher::RecursiveWaitForFile(dev_fd, control_file_name.c_str(), &file_fd));
+
+  // Turn the connection into FIDL.
+  zx_handle_t handle;
+  ASSERT_EQ(ZX_OK, fdio_fd_clone(file_fd.get(), &handle));
+  out.Bind(zx::channel(handle));
+}
+
 }  // namespace
 
 // Runs a thread with a dedicated loop for managing the enclosing environment. We use a thread here
@@ -121,23 +148,15 @@ HermeticAudioEnvironment::HermeticAudioEnvironment(Options options) : options_(s
     cv_.wait(lock);
   }
 
-  // IsolatedDevmgr will not serve any messages on the directory until
-  // /dev/sys/platform/00:00:2f/virtual_audio is ready. Run a simple Describe operation to ensure
-  // the devmgr is ready for traffic.
-  //
-  // Note we specifically use the |TextFixture| overrides of the virtual methods. This is needed
-  // because some test fixtures override these methods and include some asserts that will not
-  // be valid when this is run.
+  // Wait until the virtual audio service is running.
   fuchsia::io::DirectorySyncPtr devfs_dir;
   {
     TRACE_DURATION("audio", "HermeticAudioEnvironment::ConnectDevFS");
     devmgr_services_->Connect(devfs_dir.NewRequest(), kIsolatedDevmgrServiceName);
   }
   {
-    TRACE_DURATION("audio", "HermeticAudioEnvironment::DescribeDevFS");
-    fuchsia::io::NodeInfo info;
-    zx_status_t status = devfs_dir->Describe(&info);
-    FX_CHECK(status == ZX_OK) << status;
+    TRACE_DURATION("audio", "HermeticAudioEnvironment::ConnectToVirtualAudio");
+    ConnectToVirtualAudio(std::move(devfs_dir), virtual_audio_control_);
   }
 }
 
@@ -198,17 +217,6 @@ void HermeticAudioEnvironment::StartEnvThread(async::Loop* loop) {
                   fuchsia::media::UsageReporter::Name_,
                   fuchsia::media::audio::EffectsController::Name_,
                   fuchsia::ultrasound::Factory::Name_,
-              },
-      },
-      {
-          .type = kVirtualAudioComponent,
-          .url = virtual_audio_url,
-          .launch_info = LaunchInfoWithIsolatedDevmgrForUrl(virtual_audio_url, devmgr_services_),
-          .service_names =
-              {
-                  fuchsia::virtualaudio::Control::Name_,
-                  fuchsia::virtualaudio::Input::Name_,
-                  fuchsia::virtualaudio::Output::Name_,
               },
       },
       {

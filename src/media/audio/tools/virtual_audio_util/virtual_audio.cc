@@ -7,6 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fdio/directory.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/media/cpp/timeline_function.h>
 #include <lib/media/cpp/timeline_rate.h>
@@ -149,8 +150,6 @@ class VirtualAudioUtil {
 
   bool ConnectToController();
   bool ConnectToDevice();
-  bool ConnectToInput();
-  bool ConnectToOutput();
   void SetUpEvents();
 
   void ParseAndExecute(fxl::CommandLine* cmdline);
@@ -193,9 +192,11 @@ class VirtualAudioUtil {
   fsl::FDWaiter keystroke_waiter_;
   bool key_quit_ = false;
 
-  fuchsia::virtualaudio::ControlPtr controller_ = nullptr;
-  fuchsia::virtualaudio::InputPtr input_ = nullptr;
-  fuchsia::virtualaudio::OutputPtr output_ = nullptr;
+  fuchsia::virtualaudio::ControlSyncPtr controller_ = nullptr;
+  fuchsia::virtualaudio::DevicePtr input_device_ = nullptr;
+  fuchsia::virtualaudio::DevicePtr output_device_ = nullptr;
+  fuchsia::virtualaudio::Configuration input_config_;
+  fuchsia::virtualaudio::Configuration output_config_;
 
   bool configuring_output_ = true;
   static zx::vmo ring_buffer_vmo_;
@@ -214,14 +215,18 @@ class VirtualAudioUtil {
   static media::TimelineFunction ref_time_to_running_position_[2];
 
  private:
+  fuchsia::virtualaudio::DevicePtr* device() {
+    return configuring_output_ ? &output_device_ : &input_device_;
+  }
+  fuchsia::virtualaudio::Configuration* config() {
+    return configuring_output_ ? &output_config_ : &input_config_;
+  }
+
   static void CallbackReceived();
-  static void EnableCallback();
-  static void DisableCallback();
-  static void NumDevicesCallback(uint32_t num_inputs, uint32_t num_outputs);
   template <bool is_out>
   static void FormatNotification(uint32_t fps, uint32_t fmt, uint32_t chans, zx_duration_t delay);
   template <bool is_out>
-  static void FormatCallback(uint32_t fps, uint32_t fmt, uint32_t chans, zx_duration_t delay);
+  static void FormatCallback(fuchsia::virtualaudio::Device_GetFormat_Result result);
 
   template <bool is_out>
   static void GainNotification(bool current_mute, bool current_agc, float gain_db);
@@ -231,7 +236,7 @@ class VirtualAudioUtil {
   template <bool is_out>
   static void BufferNotification(zx::vmo buff, uint32_t rb_frames, uint32_t notifs);
   template <bool is_out>
-  static void BufferCallback(zx::vmo buff, uint32_t rb_frames, uint32_t notifs);
+  static void BufferCallback(fuchsia::virtualaudio::Device_GetBuffer_Result result);
 
   template <bool is_out>
   static void StartNotification(zx_time_t start_time);
@@ -241,7 +246,7 @@ class VirtualAudioUtil {
   template <bool is_out>
   static void PositionNotification(zx_time_t monotonic_time, uint32_t ring_position);
   template <bool is_out>
-  static void PositionCallback(zx_time_t monotonic_time, uint32_t ring_position);
+  static void PositionCallback(fuchsia::virtualaudio::Device_GetPosition_Result result);
 };
 
 ::async::Loop* VirtualAudioUtil::loop_;
@@ -255,11 +260,6 @@ uint64_t VirtualAudioUtil::running_position_[2];
 uint32_t VirtualAudioUtil::frame_size_[2];
 media::TimelineRate VirtualAudioUtil::ref_time_to_running_position_rate_[2];
 media::TimelineFunction VirtualAudioUtil::ref_time_to_running_position_[2];
-
-int32_t output_clock_domain_ = 0;
-int32_t input_clock_domain_ = 0;
-int32_t output_rate_adjustment_ppm_ = 0;
-int32_t input_rate_adjustment_ppm_ = 0;
 
 enum DeviceType { kOutput = 0u, kInput = 1u };
 uint32_t VirtualAudioUtil::BytesPerSample(uint32_t format_bitfield) {
@@ -288,11 +288,11 @@ void VirtualAudioUtil::Run(fxl::CommandLine* cmdline) {
   ParseAndExecute(cmdline);
 
   // We are done!  Disconnect any error handlers.
-  if (input_.is_bound()) {
-    input_.set_error_handler(nullptr);
+  if (input_device_.is_bound()) {
+    input_device_.set_error_handler(nullptr);
   }
-  if (output_.is_bound()) {
-    output_.set_error_handler(nullptr);
+  if (output_device_.is_bound()) {
+    output_device_.set_error_handler(nullptr);
   }
 
   // If any lingering callbacks were queued, let them drain.
@@ -378,12 +378,13 @@ bool VirtualAudioUtil::ConnectToController() {
     return true;
   }
 
-  component_context_->svc()->Connect(controller_.NewRequest());
-
-  controller_.set_error_handler([this](zx_status_t error) {
-    printf("controller_ disconnected (%d)!\n", error);
-    QuitLoop();
-  });
+  auto status = fdio_service_connect(fuchsia::virtualaudio::CONTROL_NODE_NAME,
+                                     controller_.NewRequest().TakeChannel().release());
+  if (!status) {
+    printf("Failed to connect to '%s', status = %d\n", fuchsia::virtualaudio::CONTROL_NODE_NAME,
+           status);
+    return false;
+  }
 
   // let VirtualAudio disconnect if all is not well.
   bool success = (WaitForNoCallback() && controller_.is_bound());
@@ -394,71 +395,21 @@ bool VirtualAudioUtil::ConnectToController() {
   return success;
 }
 
-bool VirtualAudioUtil::ConnectToDevice() {
-  return (configuring_output_ ? ConnectToOutput() : ConnectToInput());
-}
-
-bool VirtualAudioUtil::ConnectToInput() {
-  if (input_.is_bound()) {
-    return true;
-  }
-
-  component_context_->svc()->Connect(input_.NewRequest());
-
-  input_.set_error_handler([this](zx_status_t error) {
-    printf("input_ disconnected (%d)!\n", error);
-    QuitLoop();
-  });
-
-  SetUpEvents();
-
-  // let VirtualAudio disconnect if all is not well.
-  bool success = (WaitForNoCallback() && input_.is_bound());
-
-  if (!success) {
-    printf("Failed to establish channel to input\n");
-  }
-  return success;
-}
-
-bool VirtualAudioUtil::ConnectToOutput() {
-  if (output_.is_bound()) {
-    return true;
-  }
-
-  component_context_->svc()->Connect(output_.NewRequest());
-
-  output_.set_error_handler([this](zx_status_t error) {
-    printf("output_ disconnected (%d)!\n", error);
-    QuitLoop();
-  });
-
-  SetUpEvents();
-
-  // let VirtualAudio disconnect if all is not well.
-  bool success = (WaitForNoCallback() && output_.is_bound());
-
-  if (!success) {
-    printf("Failed to establish channel to output\n");
-  }
-  return success;
-}
-
 void VirtualAudioUtil::SetUpEvents() {
   if (configuring_output_) {
-    output_.events().OnSetFormat = FormatNotification<true>;
-    output_.events().OnSetGain = GainNotification<true>;
-    output_.events().OnBufferCreated = BufferNotification<true>;
-    output_.events().OnStart = StartNotification<true>;
-    output_.events().OnStop = StopNotification<true>;
-    output_.events().OnPositionNotify = PositionNotification<true>;
+    device()->events().OnSetFormat = FormatNotification<true>;
+    device()->events().OnSetGain = GainNotification<true>;
+    device()->events().OnBufferCreated = BufferNotification<true>;
+    device()->events().OnStart = StartNotification<true>;
+    device()->events().OnStop = StopNotification<true>;
+    device()->events().OnPositionNotify = PositionNotification<true>;
   } else {
-    input_.events().OnSetFormat = FormatNotification<false>;
-    input_.events().OnSetGain = GainNotification<false>;
-    input_.events().OnBufferCreated = BufferNotification<false>;
-    input_.events().OnStart = StartNotification<false>;
-    input_.events().OnStop = StopNotification<false>;
-    input_.events().OnPositionNotify = PositionNotification<false>;
+    device()->events().OnSetFormat = FormatNotification<false>;
+    device()->events().OnSetGain = GainNotification<false>;
+    device()->events().OnBufferCreated = BufferNotification<false>;
+    device()->events().OnStart = StartNotification<false>;
+    device()->events().OnStop = StopNotification<false>;
+    device()->events().OnPositionNotify = PositionNotification<false>;
   }
 }
 
@@ -612,17 +563,11 @@ bool VirtualAudioUtil::ExecuteCommand(Command cmd, const std::string& value) {
 }
 
 bool VirtualAudioUtil::Enable(bool enable) {
-  if (!ConnectToController()) {
-    return false;
-  }
-
   if (enable) {
-    controller_->Enable(EnableCallback);
-  } else {
-    controller_->Disable(DisableCallback);
+    return ConnectToController();
   }
-
-  return WaitForCallback();
+  controller_.Unbind();
+  return true;
 }
 
 bool VirtualAudioUtil::GetNumDevices() {
@@ -630,55 +575,34 @@ bool VirtualAudioUtil::GetNumDevices() {
     return false;
   }
 
-  controller_->GetNumDevices(NumDevicesCallback);
+  uint32_t num_inputs;
+  uint32_t num_outputs;
+  auto status = controller_->GetNumDevices(&num_inputs, &num_outputs);
+  if (status != ZX_OK) {
+    printf("GetNumDevices failed, status = %d", status);
+    return false;
+  }
 
-  return WaitForCallback();
+  printf("--Received NumDevices (%u inputs, %u outputs)\n", num_inputs, num_outputs);
+  return true;
 }
 
 bool VirtualAudioUtil::SetDeviceName(const std::string& name) {
-  if (!ConnectToDevice()) {
-    return false;
-  }
-
-  if (configuring_output_) {
-    output_->SetDeviceName(name == "" ? kDefaultDeviceName : name);
-  } else {
-    input_->SetDeviceName(name == "" ? kDefaultDeviceName : name);
-  }
-  return WaitForNoCallback();
+  config()->set_device_name(name);
+  return true;
 }
 
 bool VirtualAudioUtil::SetManufacturer(const std::string& name) {
-  if (!ConnectToDevice()) {
-    return false;
-  }
-
-  if (configuring_output_) {
-    output_->SetManufacturer(name == "" ? kDefaultManufacturer : name);
-  } else {
-    input_->SetManufacturer(name == "" ? kDefaultManufacturer : name);
-  }
-  return WaitForNoCallback();
+  config()->set_manufacturer_name(name);
+  return true;
 }
 
 bool VirtualAudioUtil::SetProductName(const std::string& name) {
-  if (!ConnectToDevice()) {
-    return false;
-  }
-
-  if (configuring_output_) {
-    output_->SetProduct(name == "" ? kDefaultProductName : name);
-  } else {
-    input_->SetProduct(name == "" ? kDefaultProductName : name);
-  }
-  return WaitForNoCallback();
+  config()->set_product_name(name);
+  return true;
 }
 
 bool VirtualAudioUtil::SetUniqueId(const std::string& unique_id_str) {
-  if (!ConnectToDevice()) {
-    return false;
-  }
-
   std::array<uint8_t, 16> unique_id;
   bool use_default = (unique_id_str == "");
 
@@ -689,62 +613,32 @@ bool VirtualAudioUtil::SetUniqueId(const std::string& unique_id_str) {
             ? 0
             : fxl::StringToNumber<uint8_t>(unique_id_str.substr(index * 2, 2), fxl::Base::k16);
   }
-  if (configuring_output_) {
-    output_->SetUniqueId(unique_id);
-  } else {
-    input_->SetUniqueId(unique_id);
-  }
-  return WaitForNoCallback();
+
+  memcpy(config()->mutable_unique_id()->data(), unique_id.data(), sizeof(unique_id));
+  return true;
 }
 
 bool VirtualAudioUtil::SetClockDomain(const std::string& clock_domain_str) {
-  if (!ConnectToDevice()) {
-    return false;
-  }
-
   auto clock_domain = (clock_domain_str == "" ? kDefaultClockDomain
                                               : fxl::StringToNumber<int32_t>(clock_domain_str));
 
-  auto rate_adjustment_ppm =
-      configuring_output_ ? output_rate_adjustment_ppm_ : input_rate_adjustment_ppm_;
+  auto rate_adjustment_ppm = config()->has_clock_properties()
+                                 ? config()->clock_properties().initial_rate_adjustment_ppm
+                                 : 0;
+
   if (clock_domain == 0 && rate_adjustment_ppm != 0) {
     printf("WARNING: by definition, a clock in domain 0 should never have rate variance!\n");
   }
 
-  if (configuring_output_) {
-    output_clock_domain_ = clock_domain;
-    output_->SetClockProperties(output_clock_domain_, output_rate_adjustment_ppm_);
-  } else {
-    input_clock_domain_ = clock_domain;
-    input_->SetClockProperties(input_clock_domain_, input_rate_adjustment_ppm_);
-  }
-
-  return WaitForNoCallback();
+  config()->mutable_clock_properties()->domain = clock_domain;
+  return true;
 }
 
 bool VirtualAudioUtil::SetInitialClockRate(const std::string& initial_clock_rate_str) {
-  if (!ConnectToDevice()) {
-    return false;
-  }
-
-  auto rate_adjustment_ppm =
+  config()->mutable_clock_properties()->initial_rate_adjustment_ppm =
       (initial_clock_rate_str == "" ? kDefaultInitialClockRatePpm
                                     : fxl::StringToNumber<int32_t>(initial_clock_rate_str));
-
-  auto clock_domain = configuring_output_ ? output_clock_domain_ : input_clock_domain_;
-  if (clock_domain == 0 && rate_adjustment_ppm != 0) {
-    printf("WARNING: by definition, a clock in domain 0 should never have rate variance!\n");
-  }
-
-  if (configuring_output_) {
-    output_rate_adjustment_ppm_ = rate_adjustment_ppm;
-    output_->SetClockProperties(output_clock_domain_, output_rate_adjustment_ppm_);
-  } else {
-    input_rate_adjustment_ppm_ = rate_adjustment_ppm;
-    input_->SetClockProperties(input_clock_domain_, input_rate_adjustment_ppm_);
-  }
-
-  return WaitForNoCallback();
+  return true;
 }
 
 struct Format {
@@ -818,10 +712,6 @@ constexpr Format kFormatSpecs[8] = {
      .rate_family_flags = ASF_RANGE_FLAG_FPS_48000_FAMILY}};
 
 bool VirtualAudioUtil::AddFormatRange(const std::string& format_range_str) {
-  if (!ConnectToDevice()) {
-    return false;
-  }
-
   uint8_t format_option = (format_range_str == "" ? kDefaultFormatRangeOption
                                                   : fxl::StringToNumber<uint8_t>(format_range_str));
   if (format_option >= std::size(kFormatSpecs)) {
@@ -829,63 +719,33 @@ bool VirtualAudioUtil::AddFormatRange(const std::string& format_range_str) {
     return false;
   }
 
-  if (configuring_output_) {
-    output_->AddFormatRange(
-        kFormatSpecs[format_option].flags, kFormatSpecs[format_option].min_rate,
-        kFormatSpecs[format_option].max_rate, kFormatSpecs[format_option].min_chans,
-        kFormatSpecs[format_option].max_chans, kFormatSpecs[format_option].rate_family_flags);
-  } else {
-    input_->AddFormatRange(
-        kFormatSpecs[format_option].flags, kFormatSpecs[format_option].min_rate,
-        kFormatSpecs[format_option].max_rate, kFormatSpecs[format_option].min_chans,
-        kFormatSpecs[format_option].max_chans, kFormatSpecs[format_option].rate_family_flags);
-  }
-  return WaitForNoCallback();
+  config()->mutable_supported_formats()->push_back({
+      .sample_format_flags = kFormatSpecs[format_option].flags,
+      .min_frame_rate = kFormatSpecs[format_option].min_rate,
+      .max_frame_rate = kFormatSpecs[format_option].max_rate,
+      .min_channels = kFormatSpecs[format_option].min_chans,
+      .max_channels = kFormatSpecs[format_option].max_chans,
+      .rate_family_flags = kFormatSpecs[format_option].rate_family_flags,
+  });
+  return true;
 }
 
 bool VirtualAudioUtil::ClearFormatRanges() {
-  if (!ConnectToDevice()) {
-    return false;
-  }
-
-  if (configuring_output_) {
-    output_->ClearFormatRanges();
-  } else {
-    input_->ClearFormatRanges();
-  }
-  return WaitForNoCallback();
+  config()->mutable_supported_formats()->clear();
+  return true;
 }
 
 bool VirtualAudioUtil::SetFifoDepth(const std::string& fifo_str) {
-  if (!ConnectToDevice()) {
-    return false;
-  }
-
-  uint32_t fifo_depth =
-      (fifo_str == "" ? kDefaultFifoDepth : fxl::StringToNumber<uint32_t>(fifo_str));
-  if (configuring_output_) {
-    output_->SetFifoDepth(fifo_depth);
-  } else {
-    input_->SetFifoDepth(fifo_depth);
-  }
-
-  return WaitForNoCallback();
+  config()->set_fifo_depth_bytes(
+      (fifo_str == "" ? kDefaultFifoDepth : fxl::StringToNumber<uint32_t>(fifo_str)));
+  return true;
 }
 
 bool VirtualAudioUtil::SetExternalDelay(const std::string& delay_str) {
-  if (!ConnectToDevice()) {
-    return false;
-  }
+  config()->set_external_delay(delay_str == "" ? kDefaultExternalDelayNsec
+                                               : fxl::StringToNumber<zx_duration_t>(delay_str));
 
-  zx_duration_t external_delay =
-      (delay_str == "" ? kDefaultExternalDelayNsec : fxl::StringToNumber<zx_duration_t>(delay_str));
-  if (configuring_output_) {
-    output_->SetExternalDelay(external_delay);
-  } else {
-    input_->SetExternalDelay(external_delay);
-  }
-
-  return WaitForNoCallback();
+  return true;
 }
 
 struct BufferSpec {
@@ -903,10 +763,6 @@ constexpr BufferSpec kBufferSpecs[4] = {
     {.min_frames = 288000, .max_frames = 288000, .mod_frames = 288000}};
 
 bool VirtualAudioUtil::SetRingBufferRestrictions(const std::string& rb_restr_str) {
-  if (!ConnectToDevice()) {
-    return false;
-  }
-
   uint8_t rb_option =
       (rb_restr_str == "" ? kDefaultRingBufferOption : fxl::StringToNumber<uint8_t>(rb_restr_str));
   if (rb_option >= std::size(kBufferSpecs)) {
@@ -914,17 +770,10 @@ bool VirtualAudioUtil::SetRingBufferRestrictions(const std::string& rb_restr_str
     return false;
   }
 
-  if (configuring_output_) {
-    output_->SetRingBufferRestrictions(kBufferSpecs[rb_option].min_frames,
-                                       kBufferSpecs[rb_option].max_frames,
-                                       kBufferSpecs[rb_option].mod_frames);
-  } else {
-    input_->SetRingBufferRestrictions(kBufferSpecs[rb_option].min_frames,
-                                      kBufferSpecs[rb_option].max_frames,
-                                      kBufferSpecs[rb_option].mod_frames);
-  }
-
-  return WaitForNoCallback();
+  config()->mutable_ring_buffer_constraints()->min_frames = kBufferSpecs[rb_option].min_frames;
+  config()->mutable_ring_buffer_constraints()->max_frames = kBufferSpecs[rb_option].max_frames;
+  config()->mutable_ring_buffer_constraints()->modulo_frames = kBufferSpecs[rb_option].mod_frames;
+  return true;
 }
 
 struct GainSpec {
@@ -977,10 +826,6 @@ constexpr GainSpec kGainSpecs[4] = {{.cur_mute = true,
                                      .gain_step_db = -3.0}};
 
 bool VirtualAudioUtil::SetGainProps(const std::string& gain_props_str) {
-  if (!ConnectToDevice()) {
-    return false;
-  }
-
   uint8_t gain_props_option = (gain_props_str == "" ? kDefaultGainPropsOption
                                                     : fxl::StringToNumber<uint8_t>(gain_props_str));
   if (gain_props_option >= std::size(kGainSpecs)) {
@@ -988,21 +833,17 @@ bool VirtualAudioUtil::SetGainProps(const std::string& gain_props_str) {
     return false;
   }
 
-  if (configuring_output_) {
-    output_->SetGainProperties(
-        kGainSpecs[gain_props_option].min_gain_db, kGainSpecs[gain_props_option].max_gain_db,
-        kGainSpecs[gain_props_option].gain_step_db, kGainSpecs[gain_props_option].cur_gain_db,
-        kGainSpecs[gain_props_option].can_mute, kGainSpecs[gain_props_option].cur_mute,
-        kGainSpecs[gain_props_option].can_agc, kGainSpecs[gain_props_option].cur_agc);
-  } else {
-    input_->SetGainProperties(
-        kGainSpecs[gain_props_option].min_gain_db, kGainSpecs[gain_props_option].max_gain_db,
-        kGainSpecs[gain_props_option].gain_step_db, kGainSpecs[gain_props_option].cur_gain_db,
-        kGainSpecs[gain_props_option].can_mute, kGainSpecs[gain_props_option].cur_mute,
-        kGainSpecs[gain_props_option].can_agc, kGainSpecs[gain_props_option].cur_agc);
-  }
+  auto& props = *config()->mutable_gain_properties();
+  props.min_gain_db = kGainSpecs[gain_props_option].min_gain_db;
+  props.max_gain_db = kGainSpecs[gain_props_option].max_gain_db;
+  props.gain_step_db = kGainSpecs[gain_props_option].gain_step_db;
+  props.current_gain_db = kGainSpecs[gain_props_option].cur_gain_db;
+  props.can_mute = kGainSpecs[gain_props_option].can_mute;
+  props.current_mute = kGainSpecs[gain_props_option].cur_mute;
+  props.can_agc = kGainSpecs[gain_props_option].can_agc;
+  props.current_agc = kGainSpecs[gain_props_option].cur_agc;
 
-  return WaitForNoCallback();
+  return true;
 }
 
 // These preset options represent the following common configurations:
@@ -1020,10 +861,6 @@ constexpr zx_time_t kPlugTime[] = {0, -1, -1, ZX_SEC(1), ZX_SEC(2)};
 static_assert(std::size(kPlugFlags) == std::size(kPlugTime));
 
 bool VirtualAudioUtil::SetPlugProps(const std::string& plug_props_str) {
-  if (!ConnectToDevice()) {
-    return false;
-  }
-
   uint8_t plug_props_option = (plug_props_str == "" ? kDefaultPlugPropsOption
                                                     : fxl::StringToNumber<uint8_t>(plug_props_str));
 
@@ -1032,25 +869,18 @@ bool VirtualAudioUtil::SetPlugProps(const std::string& plug_props_str) {
     return false;
   }
 
-  auto plug_change_time = (kPlugTime[plug_props_option] == -1 ? zx::clock::get_monotonic().get()
-                                                              : kPlugTime[plug_props_option]);
-  bool plugged = (kPlugFlags[plug_props_option] & AUDIO_PDNF_PLUGGED);
-  bool hardwired = (kPlugFlags[plug_props_option] & AUDIO_PDNF_HARDWIRED);
-  bool can_notify = (kPlugFlags[plug_props_option] & AUDIO_PDNF_CAN_NOTIFY);
+  auto& props = *config()->mutable_plug_properties();
+  props.plug_change_time = (kPlugTime[plug_props_option] == -1 ? zx::clock::get_monotonic().get()
+                                                               : kPlugTime[plug_props_option]);
+  props.plugged = (kPlugFlags[plug_props_option] & AUDIO_PDNF_PLUGGED);
+  props.hardwired = (kPlugFlags[plug_props_option] & AUDIO_PDNF_HARDWIRED);
+  props.can_notify = (kPlugFlags[plug_props_option] & AUDIO_PDNF_CAN_NOTIFY);
 
-  if (configuring_output_) {
-    output_->SetPlugProperties(plug_change_time, plugged, hardwired, can_notify);
-  } else {
-    input_->SetPlugProperties(plug_change_time, plugged, hardwired, can_notify);
-  }
-
-  return WaitForNoCallback();
+  return true;
 }
 
 bool VirtualAudioUtil::AdjustClockRate(const std::string& clock_adjust_str) {
-  if (!ConnectToDevice()) {
-    return false;
-  }
+  auto clock_domain = config()->has_clock_properties() ? config()->clock_properties().domain : 0;
 
   auto rate_adjustment_ppm = fxl::StringToNumber<int32_t>(clock_adjust_str);
   if (rate_adjustment_ppm < ZX_CLOCK_UPDATE_MIN_RATE_ADJUST ||
@@ -1060,126 +890,118 @@ bool VirtualAudioUtil::AdjustClockRate(const std::string& clock_adjust_str) {
     return false;
   }
 
-  auto clock_domain = configuring_output_ ? output_clock_domain_ : input_clock_domain_;
   if (clock_domain == 0 && rate_adjustment_ppm != 0) {
     printf("WARNING: by definition, a clock in domain 0 should never have rate variance!\n");
   }
 
-  if (configuring_output_) {
-    output_->AdjustClockRate(rate_adjustment_ppm);
-  } else {
-    input_->AdjustClockRate(rate_adjustment_ppm);
-  }
-
+  (*device())->AdjustClockRate(rate_adjustment_ppm);
   return WaitForNoCallback();
 }
 
 bool VirtualAudioUtil::ResetConfiguration() {
-  if (!ConnectToDevice()) {
-    return false;
-  }
-
-  if (configuring_output_) {
-    output_->ResetConfiguration();
-  } else {
-    input_->ResetConfiguration();
-  }
-
-  return WaitForNoCallback();
+  *config() = fuchsia::virtualaudio::Configuration();
+  return true;
 }
 
 bool VirtualAudioUtil::AddDevice() {
-  if (!ConnectToDevice()) {
+  fuchsia::virtualaudio::Configuration cfg;
+  auto status = config()->Clone(&cfg);
+  FX_CHECK(status == ZX_OK);
+
+  if (configuring_output_) {
+    status = controller_->AddOutput(std::move(cfg), output_device_.NewRequest(), nullptr);
+  } else {
+    status = controller_->AddInput(std::move(cfg), input_device_.NewRequest(), nullptr);
+  }
+  if (status != ZX_OK) {
+    printf("Failed to add %s device, status = %d\n", configuring_output_ ? "output" : "input",
+           status);
+    if (status == ZX_ERR_PEER_CLOSED) {
+      QuitLoop();
+    }
     return false;
   }
 
-  if (configuring_output_) {
-    output_->Add();
-  } else {
-    input_->Add();
-  }
+  device()->set_error_handler([this, is_output = configuring_output_](zx_status_t error) {
+    printf("%s device disconnected (%d)!\n", is_output ? "output" : "input", error);
+    QuitLoop();
+  });
 
-  return WaitForNoCallback();
+  SetUpEvents();
+
+  // let VirtualAudio disconnect if all is not well.
+  bool success = (WaitForNoCallback() && device()->is_bound());
+
+  if (!success) {
+    printf("Failed to establish channel to %s device\n", configuring_output_ ? "output" : "input");
+  }
+  return success;
 }
 
 bool VirtualAudioUtil::RemoveDevice() {
-  if (!ConnectToDevice()) {
-    return false;
-  }
-
-  if (configuring_output_) {
-    output_->Remove();
-  } else {
-    input_->Remove();
-  }
-
+  device()->Unbind();
   return WaitForNoCallback();
 }
 
 bool VirtualAudioUtil::ChangePlugState(const std::string& plug_time_str, bool plugged) {
-  if (!ConnectToDevice()) {
+  if (!device()->is_bound()) {
+    printf("Device not bound yet.\n");
     return false;
   }
 
   auto plug_change_time = (plug_time_str == "" ? zx::clock::get_monotonic().get()
                                                : fxl::StringToNumber<zx_time_t>(plug_time_str));
 
-  if (configuring_output_) {
-    output_->ChangePlugState(plug_change_time, plugged);
-  } else {
-    input_->ChangePlugState(plug_change_time, plugged);
-  }
-
+  (*device())->ChangePlugState(plug_change_time, plugged);
   return WaitForNoCallback();
 }
 
 bool VirtualAudioUtil::GetFormat() {
-  if (!ConnectToDevice()) {
+  if (!device()->is_bound()) {
+    printf("Device not bound yet.\n");
     return false;
   }
 
   if (configuring_output_) {
-    output_->GetFormat(FormatCallback<true>);
+    output_device_->GetFormat(FormatCallback<true>);
   } else {
-    input_->GetFormat(FormatCallback<false>);
+    input_device_->GetFormat(FormatCallback<false>);
   }
 
   return WaitForCallback();
 }
 
 bool VirtualAudioUtil::GetGain() {
-  if (!ConnectToDevice()) {
+  if (!device()->is_bound()) {
+    printf("Device not bound yet.\n");
     return false;
   }
 
   if (configuring_output_) {
-    output_->GetGain(GainCallback<true>);
+    output_device_->GetGain(GainCallback<true>);
   } else {
-    input_->GetGain(GainCallback<false>);
+    input_device_->GetGain(GainCallback<false>);
   }
 
   return WaitForCallback();
 }
 
 bool VirtualAudioUtil::GetBuffer() {
-  if (!ConnectToDevice()) {
+  if (!device()->is_bound()) {
+    printf("Device not bound yet.\n");
     return false;
   }
 
   if (configuring_output_) {
-    output_->GetBuffer(BufferCallback<true>);
+    output_device_->GetBuffer(BufferCallback<true>);
   } else {
-    input_->GetBuffer(BufferCallback<false>);
+    input_device_->GetBuffer(BufferCallback<false>);
   }
 
   return WaitForCallback() && ring_buffer_vmo_.is_valid();
 }
 
 bool VirtualAudioUtil::WriteBuffer(const std::string& write_value_str) {
-  if (!ConnectToDevice()) {
-    return false;
-  }
-
   size_t value_to_write =
       (write_value_str == "" ? kDefaultValueToWrite : fxl::StringToNumber<size_t>(write_value_str));
 
@@ -1200,30 +1022,32 @@ bool VirtualAudioUtil::WriteBuffer(const std::string& write_value_str) {
 }
 
 bool VirtualAudioUtil::GetPosition() {
-  if (!ConnectToDevice()) {
+  if (!device()->is_bound()) {
+    printf("Device not bound yet.\n");
     return false;
   }
 
   if (configuring_output_) {
-    output_->GetPosition(PositionCallback<true>);
+    output_device_->GetPosition(PositionCallback<true>);
   } else {
-    input_->GetPosition(PositionCallback<false>);
+    input_device_->GetPosition(PositionCallback<false>);
   }
 
   return WaitForCallback();
 }
 
 bool VirtualAudioUtil::SetNotificationFrequency(const std::string& notifs_str) {
-  if (!ConnectToDevice()) {
+  if (!device()->is_bound()) {
+    printf("Device not bound yet.\n");
     return false;
   }
 
   uint32_t notifications_per_ring = (notifs_str == "" ? kDefaultNotificationFrequency
                                                       : fxl::StringToNumber<uint32_t>(notifs_str));
   if (configuring_output_) {
-    output_->SetNotificationFrequency(notifications_per_ring);
+    output_device_->SetNotificationFrequency(notifications_per_ring);
   } else {
-    input_->SetNotificationFrequency(notifications_per_ring);
+    input_device_->SetNotificationFrequency(notifications_per_ring);
   }
 
   return WaitForNoCallback();
@@ -1232,24 +1056,6 @@ bool VirtualAudioUtil::SetNotificationFrequency(const std::string& notifs_str) {
 void VirtualAudioUtil::CallbackReceived() {
   VirtualAudioUtil::received_callback_ = true;
   VirtualAudioUtil::loop_->Quit();
-}
-
-void VirtualAudioUtil::EnableCallback() {
-  VirtualAudioUtil::CallbackReceived();
-
-  printf("--Received Enable callback\n");
-}
-
-void VirtualAudioUtil::DisableCallback() {
-  VirtualAudioUtil::CallbackReceived();
-
-  printf("--Received Disable callback\n");
-}
-
-void VirtualAudioUtil::NumDevicesCallback(uint32_t num_inputs, uint32_t num_outputs) {
-  VirtualAudioUtil::CallbackReceived();
-
-  printf("--Received NumDevices (%u inputs, %u outputs)\n", num_inputs, num_outputs);
 }
 
 template <bool is_out>
@@ -1264,10 +1070,15 @@ void VirtualAudioUtil::FormatNotification(uint32_t fps, uint32_t fmt, uint32_t c
       media::TimelineRate(fps * frame_size_[dev_type], ZX_SEC(1));
 }
 template <bool is_out>
-void VirtualAudioUtil::FormatCallback(uint32_t fps, uint32_t fmt, uint32_t chans,
-                                      zx_duration_t delay) {
+void VirtualAudioUtil::FormatCallback(fuchsia::virtualaudio::Device_GetFormat_Result result) {
   VirtualAudioUtil::CallbackReceived();
-  VirtualAudioUtil::FormatNotification<is_out>(fps, fmt, chans, delay);
+  if (!result.is_response()) {
+    printf("GetFormatfailed with error %d\n", static_cast<int32_t>(result.err()));
+    return;
+  }
+  VirtualAudioUtil::FormatNotification<is_out>(
+      result.response().frames_per_second, result.response().sample_format,
+      result.response().num_channels, result.response().external_delay);
 }
 
 template <bool is_out>
@@ -1295,9 +1106,15 @@ void VirtualAudioUtil::BufferNotification(zx::vmo ring_buffer_vmo, uint32_t num_
          (is_out ? "output" : "input"));
 }
 template <bool is_out>
-void VirtualAudioUtil::BufferCallback(zx::vmo buff, uint32_t rb_frames, uint32_t notifs) {
+void VirtualAudioUtil::BufferCallback(fuchsia::virtualaudio::Device_GetBuffer_Result result) {
   VirtualAudioUtil::CallbackReceived();
-  VirtualAudioUtil::BufferNotification<is_out>(std::move(buff), rb_frames, notifs);
+  if (!result.is_response()) {
+    printf("GetBuffer failed with error %d\n", static_cast<int32_t>(result.err()));
+    return;
+  }
+  VirtualAudioUtil::BufferNotification<is_out>(std::move(result.response().ring_buffer),
+                                               result.response().num_ring_buffer_frames,
+                                               result.response().notifications_per_ring);
 }
 
 void VirtualAudioUtil::UpdateRunningPosition(uint32_t rb_pos, bool is_output) {
@@ -1355,9 +1172,14 @@ void VirtualAudioUtil::PositionNotification(zx_time_t time_for_pos, uint32_t rb_
   printf("\n");
 }
 template <bool is_out>
-void VirtualAudioUtil::PositionCallback(zx_time_t time_for_pos, uint32_t rb_pos) {
+void VirtualAudioUtil::PositionCallback(fuchsia::virtualaudio::Device_GetPosition_Result result) {
   VirtualAudioUtil::CallbackReceived();
-  VirtualAudioUtil::PositionNotification<is_out>(time_for_pos, rb_pos);
+  if (!result.is_response()) {
+    printf("GetPosition failed with error %d\n", static_cast<int32_t>(result.err()));
+    return;
+  }
+  VirtualAudioUtil::PositionNotification<is_out>(result.response().monotonic_time,
+                                                 result.response().ring_position);
 }
 
 }  // namespace virtual_audio

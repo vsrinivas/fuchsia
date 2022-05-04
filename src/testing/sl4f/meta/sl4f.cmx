@@ -10,7 +10,8 @@
     },
     "sandbox": {
         "dev": [
-            "class/temperature"
+            "class/temperature",
+            "sys/platform/00:00:2f"
         ],
         "features": [
             "deprecated-global-data",
@@ -76,9 +77,6 @@
             "fuchsia.ui.input.InputDevice",
             "fuchsia.ui.input.InputDeviceRegistry",
             "fuchsia.ui.scenic.Scenic",
-            "fuchsia.virtualaudio.Control",
-            "fuchsia.virtualaudio.Input",
-            "fuchsia.virtualaudio.Output",
             "fuchsia.weave.FactoryDataManager",
             "fuchsia.weave.Stack",
             "fuchsia.web.ContextProvider",

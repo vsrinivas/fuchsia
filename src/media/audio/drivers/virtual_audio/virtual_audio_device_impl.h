@@ -4,8 +4,10 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_VIRTUAL_AUDIO_VIRTUAL_AUDIO_DEVICE_IMPL_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_VIRTUAL_AUDIO_VIRTUAL_AUDIO_DEVICE_IMPL_H_
 
-#include <fuchsia/virtualaudio/cpp/fidl.h>
+#include <fidl/fuchsia.virtualaudio/cpp/wire.h>
 #include <lib/async/cpp/task.h>
+#include <lib/ddk/device.h>
+#include <lib/fitx/result.h>
 #include <lib/zx/clock.h>
 
 #include <memory>
@@ -14,232 +16,112 @@
 #include <audio-proto/audio-proto.h>
 #include <fbl/ref_ptr.h>
 
-#include "src/media/audio/drivers/virtual_audio/virtual_audio_control_impl.h"
-
 namespace virtual_audio {
 
 class VirtualAudioStream;
 
-class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
-                               public fuchsia::virtualaudio::Output,
+// Controller for a `VirtualAudioStream`.
+//
+// Each instance of this class represents a two objects:
+//
+// 1. A virtual audio device in the device tree, represented by a `VirtualAudioStream` object.
+//    This device appears under `/dev/class/audio-{input,output}`.
+//
+// 2. A FIDL channel (`fuchsia.virtualaudio.Device`) which controls and monitors the device.
+//
+// The device lives until the controlling FIDL channel is closed or the device host process decides
+// to remove the `VirtualAudioStream`.
+class VirtualAudioDeviceImpl : public fidl::WireServer<fuchsia_virtualaudio::Device>,
                                public std::enable_shared_from_this<VirtualAudioDeviceImpl> {
  public:
-  static constexpr char kDefaultDeviceName[] = "Virtual_Audio_Device_(default)";
-  static constexpr char kDefaultManufacturerName[] =
-      "Fuchsia Virtual Audio Group (*** default manufacturer name "
-      "********************************************************************************************"
-      "********************************************************************************************"
-      "***********)";
-  static constexpr char kDefaultProductName[] =
-      "Virgil v1, a Virtual Volume Vessel (** default product name "
-      "********************************************************************************************"
-      "********************************************************************************************"
-      "**********)";
+  struct Config {
+    bool is_input;
 
-  static constexpr uint8_t kDefaultUniqueId[16] = {1, 2,  3,  4,  5,  6,  7,  8,
-                                                   9, 10, 11, 12, 13, 14, 15, 0};
+    std::string device_name;
+    std::string manufacturer_name;
+    std::string product_name;
+    std::array<uint8_t, 16> unique_id;
 
-  // One very limited range for basic audio support by default.
-  static constexpr audio_stream_format_range_t kDefaultFormatRange = {
-      .sample_formats = AUDIO_SAMPLE_FORMAT_16BIT,
-      .min_frames_per_second = 48000,
-      .max_frames_per_second = 48000,
-      .min_channels = 2,
-      .max_channels = 2,
-      .flags = ASF_RANGE_FLAG_FPS_48000_FAMILY,
+    uint32_t fifo_depth_bytes;
+    zx::duration external_delay;
+    std::vector<audio_stream_format_range_t> supported_formats;
+
+    fuchsia_virtualaudio::wire::ClockProperties clock;
+    fuchsia_virtualaudio::wire::RingBufferConstraints ring_buffer;
+    fuchsia_virtualaudio::wire::GainProperties gain;
+    fuchsia_virtualaudio::wire::PlugProperties plug;
+    std::optional<uint32_t> initial_notifications_per_ring;
   };
 
-  // Default clock domain is 0, the local system CLOCK_MONOTONIC domain
-  static constexpr int32_t kDefaultClockDomain = 0;
-  static constexpr int32_t kDefaultClockRateAdjustment = 0;
+  static fitx::result<fuchsia_virtualaudio::Error, std::shared_ptr<VirtualAudioDeviceImpl>> Create(
+      const Config& cfg, fidl::ServerEnd<fuchsia_virtualaudio::Device> server,
+      zx_device_t* dev_node, async_dispatcher_t* fidl_dispatcher);
 
-  // Default FIFO is 250 usec, at 48k stereo 16
-  static constexpr uint32_t kDefaultFifoDepthBytes = 48;
-  static constexpr zx_time_t kDefaultExternalDelayNsec = 0;
+  bool is_input() const { return is_input_; }
 
-  // Default ring buffer size is at least 250msec (assuming default rate 48k)
-  static constexpr uint32_t kDefaultMinBufferFrames = 12000;
-  static constexpr uint32_t kDefaultMaxBufferFrames = 1 << 19;  // (10+ sec, at default 48k!)
-  static constexpr uint32_t kDefaultModuloBufferFrames = 1;
-
-  // By default, support a wide gain range with good precision.
-  static constexpr audio::audio_proto::GainState kDefaultGainState = {.cur_mute = false,
-                                                                      .cur_agc = false,
-                                                                      .cur_gain = -0.75f,
-                                                                      .can_mute = true,
-                                                                      .can_agc = false,
-                                                                      .min_gain = -160.0f,
-                                                                      .max_gain = 24.0f,
-                                                                      .gain_step = 0.25f};
-
-  // By default, device is hot-pluggable
-  static constexpr bool kDefaultPlugged = true;
-  static constexpr bool kDefaultHardwired = false;
-  static constexpr bool kDefaultPlugCanNotify = true;
-
-  static std::shared_ptr<VirtualAudioDeviceImpl> Create(VirtualAudioControlImpl* owner,
-                                                        bool is_input);
-
-  // Execute the given task on the FIDL channel's main dispatcher thread. Used to deliver callbacks
-  // or events, from the driver execution domain.
+  // Executes the given task on the FIDL channel's main dispatcher thread.
+  // Used to deliver callbacks or events from the driver execution domain.
   void PostToDispatcher(fit::closure task_to_post);
 
-  void SetBinding(fidl::Binding<fuchsia::virtualaudio::Input,
-                                std::shared_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding);
-  void SetBinding(fidl::Binding<fuchsia::virtualaudio::Output,
-                                std::shared_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding);
+  // Shuts down this server.
+  // Shutdown happens asynchronously, after which `cb` is called from the PostToDispatcher thread.
+  // Must be called from the PostToDispatcher thread.
+  void ShutdownAsync(fit::closure cb);
 
-  virtual bool CreateStream(zx_device_t* devnode);
-  void RemoveStream();
-  void ClearStream();
-  bool IsActive() { return (stream_ != nullptr); }
-
-  void Init();
+  // `VirtualAudioStream` uses this to tell us that the stream has been shut down by an external
+  // entity (such as the device host process). Must be called from a PostToDispatcher closure.
+  void StreamIsShuttingDown();
 
   //
-  // virtualaudio.Configuration interface
+  // Implementation of virtualaudio.Device.
+  // Event triggers (e.g. NotifySetFormat) may be called from any thread.
   //
-  void SetDeviceName(std::string device_name) override;
-  void SetManufacturer(std::string manufacturer_name) override;
-  void SetProduct(std::string product_name) override;
-  void SetUniqueId(std::array<uint8_t, 16> unique_id) override;
 
-  void AddFormatRange(uint32_t format_flags, uint32_t min_rate, uint32_t max_rate,
-                      uint8_t min_chans, uint8_t max_chans, uint16_t rate_family_flags) override;
-  void ClearFormatRanges() override;
+  void GetFormat(GetFormatRequestView request, GetFormatCompleter::Sync& completer) override;
+  void NotifySetFormat(uint32_t frames_per_second, uint32_t sample_format, uint32_t num_channels,
+                       zx_duration_t external_delay);
 
-  void SetClockProperties(int32_t clock_domain, int32_t initial_rate_adjustment_ppm) override;
+  void GetGain(GetGainRequestView request, GetGainCompleter::Sync& completer) override;
+  void NotifySetGain(bool current_mute, bool current_agc, float current_gain_db);
 
-  void SetFifoDepth(uint32_t fifo_depth_bytes) override;
-  void SetExternalDelay(zx_duration_t external_delay) override;
-  void SetRingBufferRestrictions(uint32_t min_frames, uint32_t max_frames,
-                                 uint32_t modulo_frames) override;
+  void GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) override;
+  void NotifyBufferCreated(zx::vmo ring_buffer_vmo, uint32_t num_ring_buffer_frames,
+                           uint32_t notifications_per_ring);
 
-  void SetGainProperties(float min_gain_db, float max_gain_db, float gain_step_db,
-                         float current_gain_db, bool can_mute, bool current_mute, bool can_agc,
-                         bool current_agc) override;
+  void SetNotificationFrequency(SetNotificationFrequencyRequestView request,
+                                SetNotificationFrequencyCompleter::Sync& completer) override;
 
-  void SetPlugProperties(zx_time_t plug_change_time, bool plugged, bool hardwired,
-                         bool can_notify) override;
+  void NotifyStart(zx_time_t start_time);
+  void NotifyStop(zx_time_t stop_time, uint32_t ring_buffer_position);
 
-  void ResetConfiguration() override;
+  void GetPosition(GetPositionRequestView request, GetPositionCompleter::Sync& completer) override;
+  void NotifyPosition(zx_time_t monotonic_time, uint32_t ring_buffer_position);
 
-  //
-  // virtualaudio.Device interface
-  //
-  void Add() override;
-  void Remove() override;
+  void ChangePlugState(ChangePlugStateRequestView request,
+                       ChangePlugStateCompleter::Sync& completer) override;
 
-  void GetFormat(fuchsia::virtualaudio::Device::GetFormatCallback callback) override;
-  virtual void NotifySetFormat(uint32_t frames_per_second, uint32_t sample_format,
-                               uint32_t num_channels, zx_duration_t external_delay);
+  void AdjustClockRate(AdjustClockRateRequestView request,
+                       AdjustClockRateCompleter::Sync& completer) override;
 
-  void GetGain(fuchsia::virtualaudio::Device::GetGainCallback callback) override;
-  virtual void NotifySetGain(bool current_mute, bool current_agc, float current_gain_db);
-
-  void GetBuffer(fuchsia::virtualaudio::Device::GetBufferCallback callback) override;
-  virtual void NotifyBufferCreated(zx::vmo ring_buffer_vmo, uint32_t num_ring_buffer_frames,
-                                   uint32_t notifications_per_ring);
-
-  void SetNotificationFrequency(uint32_t notifications_per_ring) override;
-
-  virtual void NotifyStart(zx_time_t start_time);
-  virtual void NotifyStop(zx_time_t stop_time, uint32_t ring_buffer_position);
-
-  void GetPosition(fuchsia::virtualaudio::Device::GetPositionCallback callback) override;
-  virtual void NotifyPosition(zx_time_t monotonic_time, uint32_t ring_buffer_position);
-
-  void ChangePlugState(zx_time_t plug_change_time, bool plugged) override;
-
-  void AdjustClockRate(int32_t ppm_from_system_monotonic) override;
+  // Public for std::make_shared. Use Create, not this ctor.
+  VirtualAudioDeviceImpl(bool is_input, async_dispatcher_t* fidl_dispatcher);
+  ~VirtualAudioDeviceImpl() override;
 
  private:
-  friend class VirtualAudioStream;
-  friend class std::default_delete<VirtualAudioDeviceImpl>;
+  const bool is_input_;
+  async_dispatcher_t* const fidl_dispatcher_;
 
-  VirtualAudioDeviceImpl(VirtualAudioControlImpl* owner, bool is_input);
-  virtual ~VirtualAudioDeviceImpl();
+  // This is std::optional only to break a circular dependency. In practice this is set during
+  // Create() then never changed, so during normal operation is should never be std::nullopt.
+  std::optional<fidl::ServerBindingRef<fuchsia_virtualaudio::Device>> binding_;
+  bool is_bound_ = true;  // starts bound after Create
 
-  void WarnActiveStreamNotAffected(const char* func_name);
-
-  VirtualAudioControlImpl const* owner_;
+  // This may be nullptr if the underlying stream device is removed before the
+  // fuchsia.virtualaudio.Device FIDL channel is closed.
   fbl::RefPtr<VirtualAudioStream> stream_;
-  bool is_input_;
 
-  // When the binding is closed, it is removed from the (ControlImpl-owned) BindingSet that contains
-  // it, which in turn deletes the associated impl (since the binding holds a shared_ptr<impl>, not
-  // an impl*). Something might get dispatched from other thread at around this time, so we enqueue
-  // them (ClosureQueue) and use StopAndClear to cancel them during ~DeviceImpl (in RemoveStream).
-  fidl::Binding<fuchsia::virtualaudio::Input,
-                std::shared_ptr<virtual_audio::VirtualAudioDeviceImpl>>* input_binding_ = nullptr;
-  fidl::Binding<fuchsia::virtualaudio::Output,
-                std::shared_ptr<virtual_audio::VirtualAudioDeviceImpl>>* output_binding_ = nullptr;
-
-  // Don't initialize here or in ctor; do it all in Init() so ResetConfiguration has same effect.
-  std::string device_name_;
-  std::string mfr_name_;
-  std::string prod_name_;
-  uint8_t unique_id_[16];
-
-  int32_t clock_domain_;
-  int32_t clock_rate_adjustment_;
-
-  std::vector<audio_stream_format_range_t> supported_formats_;
-
-  uint32_t fifo_depth_;
-  zx_duration_t external_delay_nsec_;
-
-  uint32_t min_buffer_frames_;
-  uint32_t max_buffer_frames_;
-  uint32_t modulo_buffer_frames_;
-
-  audio::audio_proto::GainState cur_gain_state_;
-
-  zx_time_t plug_time_;
-  bool plugged_;
-  bool hardwired_;
-  bool async_plug_notify_;
-
-  bool override_notification_frequency_;
-  uint32_t notifications_per_ring_;
-
-  // Mimics <lib/closure-queue/closure_queue.h> but does not require running all tasks from
-  // the same thread. This assumes a "concurrent and synchronized" model -- see RFC 126.
-  // Tasks are run on the given dispatcher in the order they are enqueued.
-  class TaskQueue : public std::enable_shared_from_this<TaskQueue> {
-   public:
-    explicit TaskQueue(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
-
-    void Enqueue(fit::closure fn) {
-      if (stopped_) {
-        return;
-      }
-      // Wrap in an async::TaskClosure so the task can be canceled before it runs,
-      // then wrap with a closure that destroys the async::TaskClosure after the task runs.
-      auto task = std::make_shared<async::TaskClosure>();
-      task->set_handler([this, self = shared_from_this(), task, fn = std::move(fn)]() {
-        fn();
-        pending_.erase(task);
-      });
-      pending_.insert(task);
-      task->Post(dispatcher_);
-    }
-
-    void StopAndClear() {
-      for (auto& task : pending_) {
-        task->Cancel();
-      }
-      pending_.clear();
-      stopped_ = true;
-    }
-
-   private:
-    bool stopped_ = false;
-    async_dispatcher_t* dispatcher_;
-    std::unordered_set<std::shared_ptr<async::TaskClosure>> pending_;
-  };
-
-  std::shared_ptr<TaskQueue> task_queue_;
+  // Callbacks to run on destroy.
+  std::vector<fit::closure> on_destroy_callbacks_;
 };
 
 }  // namespace virtual_audio

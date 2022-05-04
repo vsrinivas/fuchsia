@@ -24,11 +24,6 @@
                 "fuchsia.developer.tiles.Controller", // test-only
                 "fuchsia.input.injection.InputDeviceRegistry", // test-only
                 "fuchsia.ui.input.InputDeviceRegistry", // test-only
-
-                // TODO(yuanzhi) Remove after https://fxrev.dev/670470
-                "fuchsia.virtualaudio.Control", // test-only
-                "fuchsia.virtualaudio.Input", // test-only
-                "fuchsia.virtualaudio.Output", // test-only
             ],
         },
     ],
@@ -182,9 +177,6 @@
                 "fuchsia.ui.composition.ScreenCapture", // #appmgr
                 "fuchsia.ui.input.InputDeviceRegistry", // test-only
                 "fuchsia.ui.scenic.Scenic", // #appmgr
-                "fuchsia.virtualaudio.Control", // test-only
-                "fuchsia.virtualaudio.Input", // test-only
-                "fuchsia.virtualaudio.Output", // test-only
                 "fuchsia.weave.FactoryDataManager", // #appmgr
             ],
             from: "self",
@@ -232,6 +224,13 @@
             as: "dev-temperature",
             to: "#sl4f",
             subdir: "class/temperature",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-virtual-audio",
+            to: "#sl4f",
+            subdir: "sys/platform/00:00:2f",
         },
     ],
 }

@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Error;
+use anyhow::{Context, Error};
 use base64;
+use fdio;
+use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_media::*;
-use fidl_fuchsia_virtualaudio::*;
+use fidl_fuchsia_virtualaudio;
 use fuchsia_async as fasync;
-use fuchsia_component as app;
 use fuchsia_zircon as zx;
 use futures::channel::mpsc;
 use futures::lock::Mutex;
@@ -19,6 +20,16 @@ use std::io::Write;
 use std::sync::Arc;
 
 use fuchsia_syslog::macros::*;
+
+// Fixed configuration for our virtual output device.
+const OUTPUT_SAMPLE_FORMAT: AudioSampleFormat = AudioSampleFormat::Signed16;
+const OUTPUT_CHANNELS: u8 = 2;
+const OUTPUT_FRAMES_PER_SECOND: u32 = 48000;
+
+// Fixed configuration for our virtual input device.
+const INPUT_SAMPLE_FORMAT: AudioSampleFormat = AudioSampleFormat::Signed16;
+const INPUT_CHANNELS: u8 = 2;
+const INPUT_FRAMES_PER_SECOND: u32 = 16000;
 
 // Values found in:
 //   zircon/system/public/zircon/device/audio.h
@@ -61,7 +72,7 @@ enum ExtractMsg {
 
 #[derive(Debug, Default)]
 struct OutputWorker {
-    va_output: Option<OutputProxy>,
+    va_output: Option<fidl_fuchsia_virtualaudio::DeviceProxy>,
     extracted_data: Vec<u8>,
     vmo: Option<zx::Vmo>,
 
@@ -190,7 +201,7 @@ impl OutputWorker {
     async fn run(
         &mut self,
         mut rx: mpsc::Receiver<ExtractMsg>,
-        va_output: OutputProxy,
+        va_output: fidl_fuchsia_virtualaudio::DeviceProxy,
     ) -> Result<(), Error> {
         let mut output_events = va_output.take_event_stream();
         self.va_output = Some(va_output);
@@ -226,26 +237,26 @@ impl OutputWorker {
                 output_msg = output_events.try_next() => {
                     match output_msg? {
                         None => {
-                            return Err(format_err!("Got None OutputEvent Message, exiting worker"));
+                            return Err(format_err!("Got None DeviceEvent Message, exiting worker"));
                         },
-                        Some(OutputEvent::OnSetFormat { frames_per_second, sample_format,
+                        Some(fidl_fuchsia_virtualaudio::DeviceEvent::OnSetFormat { frames_per_second, sample_format,
                                                         num_channels, external_delay}) => {
                             self.on_set_format(frames_per_second, sample_format, num_channels,
                                                external_delay)?;
                         },
-                        Some(OutputEvent::OnBufferCreated { ring_buffer, num_ring_buffer_frames,
+                        Some(fidl_fuchsia_virtualaudio::DeviceEvent::OnBufferCreated { ring_buffer, num_ring_buffer_frames,
                                                             notifications_per_ring }) => {
                             self.on_buffer_created(ring_buffer, num_ring_buffer_frames,
                                                    notifications_per_ring)?;
                         },
-                        Some(OutputEvent::OnStart { start_time }) => {
+                        Some(fidl_fuchsia_virtualaudio::DeviceEvent::OnStart { start_time }) => {
                             if self.capturing && last_timestamp > zx::Time::from_nanos(0) {
                                 fx_log_info!("AudioFacade::OutputWorker: Extraction OnPositionNotify received before OnStart");
                             }
                             last_timestamp = zx::Time::from_nanos(start_time);
                             last_event_time = zx::Time::get_monotonic();
                         },
-                        Some(OutputEvent::OnStop { stop_time: _, ring_position: _ }) => {
+                        Some(fidl_fuchsia_virtualaudio::DeviceEvent::OnStop { stop_time: _, ring_position: _ }) => {
                             if last_timestamp == zx::Time::from_nanos(0) {
                                 fx_log_info!(
                                     "AudioFacade::OutputWorker: Extraction OnPositionNotify timestamp cleared before OnStop");
@@ -253,7 +264,7 @@ impl OutputWorker {
                             last_timestamp = zx::Time::from_nanos(0);
                             last_event_time = zx::Time::from_nanos(0);
                         },
-                        Some(OutputEvent::OnPositionNotify { monotonic_time, ring_position }) => {
+                        Some(fidl_fuchsia_virtualaudio::DeviceEvent::OnPositionNotify { monotonic_time, ring_position }) => {
                             let monotonic_zx_time = zx::Time::from_nanos(monotonic_time);
                             let now = zx::Time::get_monotonic();
 
@@ -297,7 +308,7 @@ impl OutputWorker {
                             self.on_position_notify(monotonic_time, ring_position, self.capturing)?;
                         },
                         Some(evt) => {
-                            fx_log_info!("AudioFacade::OutputWorker: Got unknown OutputEvent {:?}", evt);
+                            fx_log_info!("AudioFacade::OutputWorker: Got unknown DeviceEvent {:?}", evt);
                         }
                     }
                 },
@@ -310,17 +321,11 @@ impl OutputWorker {
 struct VirtualOutput {
     extracted_data: Vec<u8>,
     capturing: Arc<Mutex<bool>>,
-    // TODO(fxbug.dev/84729)
-    #[allow(unused)]
-    have_data: bool,
 
     sample_format: AudioSampleFormat,
     channels: u8,
     frames_per_second: u32,
 
-    // TODO(fxbug.dev/84729)
-    #[allow(unused)]
-    output: Option<OutputProxy>,
     output_sender: Option<mpsc::Sender<ExtractMsg>>,
 }
 
@@ -333,46 +338,60 @@ impl VirtualOutput {
         Ok(VirtualOutput {
             extracted_data: vec![],
             capturing: Arc::new(Mutex::new(false)),
-            have_data: false,
 
             sample_format,
             channels,
             frames_per_second,
 
-            output: None,
             output_sender: None,
         })
     }
 
-    pub fn start_output(&mut self) -> Result<(), Error> {
-        let va_output = app::client::connect_to_protocol::<OutputMarker>()?;
-        va_output.clear_format_ranges()?;
-        va_output.set_fifo_depth(0)?;
-        va_output.set_external_delay(0)?;
-        va_output.set_unique_id(&mut AUDIO_OUTPUT_ID.clone())?;
-
-        let sample_format = get_zircon_sample_format(self.sample_format);
-        va_output.add_format_range(
-            sample_format,
-            self.frames_per_second,
-            self.frames_per_second,
-            self.channels,
-            self.channels,
-            ASF_RANGE_FLAG_FPS_CONTINUOUS,
-        )?;
-
+    pub fn start_output(
+        &mut self,
+        vad_control: &fidl_fuchsia_virtualaudio::ControlSynchronousProxy,
+    ) -> Result<(), Error> {
         // set buffer size to be at least 1s.
         let frames_1ms = self.frames_per_second / 1000;
         let frames_low = 1000 * frames_1ms;
         let frames_high = 2000 * frames_1ms;
         let frames_modulo = 1 * frames_1ms;
-        va_output.set_ring_buffer_restrictions(frames_low, frames_high, frames_modulo)?;
 
+        let config = fidl_fuchsia_virtualaudio::Configuration {
+            unique_id: Some(AUDIO_OUTPUT_ID),
+            fifo_depth_bytes: Some(0),
+            external_delay: Some(0),
+            supported_formats: Some(vec![fidl_fuchsia_virtualaudio::FormatRange {
+                sample_format_flags: get_zircon_sample_format(self.sample_format),
+                min_frame_rate: self.frames_per_second,
+                max_frame_rate: self.frames_per_second,
+                min_channels: self.channels,
+                max_channels: self.channels,
+                rate_family_flags: ASF_RANGE_FLAG_FPS_CONTINUOUS,
+            }]),
+            ring_buffer_constraints: Some(fidl_fuchsia_virtualaudio::RingBufferConstraints {
+                min_frames: frames_low,
+                max_frames: frames_high,
+                modulo_frames: frames_modulo,
+            }),
+            ..fidl_fuchsia_virtualaudio::Configuration::EMPTY
+        };
+
+        // Create the output.
+        let (va_output_client, va_output_server) =
+            create_endpoints::<fidl_fuchsia_virtualaudio::DeviceMarker>()?;
+        vad_control
+            .add_output(config, va_output_server, zx::Time::INFINITE)?
+            .map_err(|status| anyhow!("AddOutput returned error {:?}", status))?;
+
+        // Create a channel for handling requests.
         let (tx, rx) = mpsc::channel(512);
-        va_output.add()?;
         fasync::Task::spawn(
             async move {
                 let mut worker = OutputWorker::default();
+                let va_output = fidl_fuchsia_virtualaudio::DeviceProxy::new(
+                    fasync::Channel::from_channel(va_output_client.into_channel())?,
+                );
                 worker.run(rx, va_output).await?;
                 Ok::<(), Error>(())
             }
@@ -415,7 +434,7 @@ impl VirtualOutput {
 
 #[derive(Debug, Default)]
 struct InputWorker {
-    va_input: Option<InputProxy>,
+    va_input: Option<fidl_fuchsia_virtualaudio::DeviceProxy>,
     inj_data: Vec<u8>,
     vmo: Option<zx::Vmo>,
 
@@ -587,7 +606,7 @@ impl InputWorker {
     async fn run(
         &mut self,
         mut rx: mpsc::Receiver<InjectMsg>,
-        va_input: InputProxy,
+        va_input: fidl_fuchsia_virtualaudio::DeviceProxy,
     ) -> Result<(), Error> {
         let mut input_events = va_input.take_event_stream();
         self.va_input = Some(va_input);
@@ -615,33 +634,33 @@ impl InputWorker {
                 input_msg = input_events.try_next() => {
                     match input_msg? {
                         None => {
-                            return Err(format_err!("Got None InputEvent Message, exiting worker"));
+                            return Err(format_err!("Got None DeviceEvent Message, exiting worker"));
                         },
-                        Some(InputEvent::OnSetFormat { frames_per_second, sample_format,
+                        Some(fidl_fuchsia_virtualaudio::DeviceEvent::OnSetFormat { frames_per_second, sample_format,
                                                        num_channels, external_delay}) => {
                             self.on_set_format(frames_per_second, sample_format, num_channels,
                                                external_delay)?;
                         },
-                        Some(InputEvent::OnBufferCreated { ring_buffer, num_ring_buffer_frames,
-                                                           notifications_per_ring }) => {
+                        Some(fidl_fuchsia_virtualaudio::DeviceEvent::OnBufferCreated { ring_buffer, num_ring_buffer_frames,
+                                                          notifications_per_ring }) => {
                             self.on_buffer_created(ring_buffer, num_ring_buffer_frames,
                                                    notifications_per_ring)?;
                         },
-                        Some(InputEvent::OnStart { start_time }) => {
+                        Some(fidl_fuchsia_virtualaudio::DeviceEvent::OnStart { start_time }) => {
                             if last_timestamp > zx::Time::from_nanos(0) {
                                 fx_log_info!("AudioFacade::InputWorker: Injection OnPositionNotify received before OnStart");
                             }
                             last_timestamp = zx::Time::from_nanos(start_time);
                             last_event_time = zx::Time::get_monotonic();
                         },
-                        Some(InputEvent::OnStop { stop_time: _, ring_position: _ }) => {
+                        Some(fidl_fuchsia_virtualaudio::DeviceEvent::OnStop { stop_time: _, ring_position: _ }) => {
                             if last_timestamp == zx::Time::from_nanos(0) {
                                 fx_log_info!("AudioFacade::InputWorker: Injection OnPositionNotify timestamp cleared before OnStop");
                             }
                             last_timestamp = zx::Time::from_nanos(0);
                             last_event_time = zx::Time::from_nanos(0);
                         },
-                        Some(InputEvent::OnPositionNotify { monotonic_time, ring_position }) => {
+                        Some(fidl_fuchsia_virtualaudio::DeviceEvent::OnPositionNotify { monotonic_time, ring_position }) => {
                             let monotonic_zx_time = zx::Time::from_nanos(monotonic_time);
                             let now = zx::Time::get_monotonic();
 
@@ -682,7 +701,7 @@ impl InputWorker {
                             self.on_position_notify(monotonic_time, ring_position)?;
                         },
                         Some(evt) => {
-                            fx_log_info!("AudioFacade::InputWorker: Got unknown InputEvent {:?}", evt);
+                            fx_log_info!("AudioFacade::InputWorker: Got unknown DeviceEvent {:?}", evt);
                         }
                     }
                 },
@@ -717,34 +736,50 @@ impl VirtualInput {
         }
     }
 
-    pub fn start_input(&mut self) -> Result<(), Error> {
-        let va_input = app::client::connect_to_protocol::<InputMarker>()?;
-        va_input.clear_format_ranges()?;
-        va_input.set_fifo_depth(0)?;
-        va_input.set_external_delay(0)?;
-
-        let sample_format = get_zircon_sample_format(self.sample_format);
-        va_input.add_format_range(
-            sample_format,
-            self.frames_per_second,
-            self.frames_per_second,
-            self.channels,
-            self.channels,
-            ASF_RANGE_FLAG_FPS_CONTINUOUS,
-        )?;
-
+    pub fn start_input(
+        &mut self,
+        vad_control: &fidl_fuchsia_virtualaudio::ControlSynchronousProxy,
+    ) -> Result<(), Error> {
         // set buffer size to be at least 1s.
         let frames_1ms = self.frames_per_second / 1000;
         let frames_low = 1000 * frames_1ms;
         let frames_high = 2000 * frames_1ms;
         let frames_modulo = 1 * frames_1ms;
-        va_input.set_ring_buffer_restrictions(frames_low, frames_high, frames_modulo)?;
 
-        va_input.add()?;
+        let config = fidl_fuchsia_virtualaudio::Configuration {
+            fifo_depth_bytes: Some(0),
+            external_delay: Some(0),
+            supported_formats: Some(vec![fidl_fuchsia_virtualaudio::FormatRange {
+                sample_format_flags: get_zircon_sample_format(self.sample_format),
+                min_frame_rate: self.frames_per_second,
+                max_frame_rate: self.frames_per_second,
+                min_channels: self.channels,
+                max_channels: self.channels,
+                rate_family_flags: ASF_RANGE_FLAG_FPS_CONTINUOUS,
+            }]),
+            ring_buffer_constraints: Some(fidl_fuchsia_virtualaudio::RingBufferConstraints {
+                min_frames: frames_low,
+                max_frames: frames_high,
+                modulo_frames: frames_modulo,
+            }),
+            ..fidl_fuchsia_virtualaudio::Configuration::EMPTY
+        };
+
+        // Create the input.
+        let (va_input_client, va_input_server) =
+            create_endpoints::<fidl_fuchsia_virtualaudio::DeviceMarker>()?;
+        vad_control
+            .add_input(config, va_input_server, zx::Time::INFINITE)?
+            .map_err(|status| anyhow!("AddInput returned error {:?}", status))?;
+
+        // Create a channel for handling requests.
         let (tx, rx) = mpsc::channel(512);
         fasync::Task::spawn(
             async move {
                 let mut worker = InputWorker::default();
+                let va_input = fidl_fuchsia_virtualaudio::DeviceProxy::new(
+                    fasync::Channel::from_channel(va_input_client.into_channel())?,
+                );
                 worker.run(rx, va_input).await?;
                 Ok::<(), Error>(())
             }
@@ -778,50 +813,12 @@ enum InjectMsg {
     Data { data: Vec<u8> },
 }
 
-#[derive(Debug)]
-struct VirtualAudio {
-    // Output is from the AudioCore side, so it's what we'll be capturing and extracting
-    output_sample_format: AudioSampleFormat,
-    output_channels: u8,
-    output_frames_per_second: u32,
-    // TODO(fxbug.dev/84729)
-    #[allow(unused)]
-    output: Option<OutputProxy>,
-
-    // Input is from the AudioCore side, so it's the audio we'll be injecting
-    input_sample_format: AudioSampleFormat,
-    input_channels: u8,
-    input_frames_per_second: u32,
-
-    controller: ControlProxy,
-}
-
-impl VirtualAudio {
-    fn new() -> Result<VirtualAudio, Error> {
-        let va_control = app::client::connect_to_protocol::<ControlMarker>()?;
-        Ok(VirtualAudio {
-            output_sample_format: AudioSampleFormat::Signed16,
-            output_channels: 2,
-            output_frames_per_second: 48000,
-            output: None,
-
-            input_sample_format: AudioSampleFormat::Signed16,
-            input_channels: 2,
-            input_frames_per_second: 16000,
-
-            controller: va_control,
-        })
-    }
-}
-
 /// Perform Audio operations.
 ///
 /// Note this object is shared among all threads created by server.
 #[derive(Debug)]
 pub struct AudioFacade {
-    // TODO(perley): This will be needed after migrating to using virtual audio devices rather than
-    //               renderer+capturer in the facade.
-    vad_control: RwLock<VirtualAudio>,
+    vad_control: fidl_fuchsia_virtualaudio::ControlSynchronousProxy,
     audio_output: RwLock<VirtualOutput>,
     audio_input: RwLock<VirtualInput>,
     initialized: Mutex<bool>,
@@ -831,27 +828,36 @@ impl AudioFacade {
     async fn ensure_initialized(&self) -> Result<(), Error> {
         let mut initialized = self.initialized.lock().await;
         if !*(initialized) {
-            let controller = self.vad_control.read().controller.clone();
-            controller.disable().await?;
-            controller.enable().await?;
-            self.audio_input.write().start_input()?;
-            self.audio_output.write().start_output()?;
+            // Make sure there are no other virtual devices to ensure that audio_core
+            // will connect to our new virtual devices.
+            self.vad_control.remove_all(zx::Time::INFINITE)?;
+            self.audio_input.write().start_input(&self.vad_control)?;
+            self.audio_output.write().start_output(&self.vad_control)?;
             *(initialized) = true;
         }
         Ok(())
     }
 
     pub fn new() -> Result<AudioFacade, Error> {
-        let vad_control = RwLock::new(VirtualAudio::new()?);
+        // Connect to the virtual audio control service.
+        let (control_client, control_server) = zx::Channel::create()?;
+        fdio::service_connect(fidl_fuchsia_virtualaudio::CONTROL_NODE_NAME, control_server)
+            .context(format!(
+                "failed to connect to '{}'",
+                fidl_fuchsia_virtualaudio::CONTROL_NODE_NAME
+            ))?;
+        let vad_control = fidl_fuchsia_virtualaudio::ControlSynchronousProxy::new(control_client);
+
+        // The input and output devices are initialized lazily.
         let audio_output = RwLock::new(VirtualOutput::new(
-            vad_control.read().output_sample_format,
-            vad_control.read().output_channels,
-            vad_control.read().output_frames_per_second,
+            OUTPUT_SAMPLE_FORMAT,
+            OUTPUT_CHANNELS,
+            OUTPUT_FRAMES_PER_SECOND,
         )?);
         let audio_input = RwLock::new(VirtualInput::new(
-            vad_control.read().input_sample_format,
-            vad_control.read().input_channels,
-            vad_control.read().input_frames_per_second,
+            INPUT_SAMPLE_FORMAT,
+            INPUT_CHANNELS,
+            INPUT_FRAMES_PER_SECOND,
         ));
         let initialized = Mutex::new(false);
 

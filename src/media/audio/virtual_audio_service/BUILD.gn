@@ -1,57 +1,6 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-import("//build/components.gni")
-import("//build/config.gni")
-import("//src/sys/core/build/core_shard.gni")
-
-executable("bin") {
-  output_name = "virtual_audio_service"
-
-  sources = [
-    "//src/media/audio/drivers/virtual_audio/virtual_audio.h",
-    "main.cc",
-    "virtual_audio_service_impl.cc",
-    "virtual_audio_service_impl.h",
-  ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.virtualaudio",
-    "//sdk/fidl/fuchsia.virtualaudio:fuchsia.virtualaudio_c_client",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/fxl",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
-}
-
-fuchsia_package_with_single_component("virtual_audio_service") {
-  manifest = "meta/virtual_audio_service.cmx"
-  deps = [ ":bin" ]
-}
-
-fuchsia_component("virtual_audio_service_nodevfs") {
-  manifest = "meta/virtual_audio_service_nodevfs.cmx"
-  deps = [ ":bin" ]
-}
-
-# This package is to be used within hermetic testing environments with an isolated devmgr.
-fuchsia_package("virtual-audio-service-for-test") {
-  deps = [ ":virtual_audio_service_nodevfs" ]
-}
-
-config_data("virtual_audio_config") {
-  for_pkg = "sysmgr"
-  outputs = [ "virtual_audio_service.config" ]
-  sources = [ "service.config" ]
-}
-
-core_shard("virtual_audio_service_shard") {
-  shard_file = "meta/virtual_audio_service.core_shard.cml"
+# TODO(fxbug.dev/95629): remove this after vendored code has been updated.
+group("virtual-audio-service-for-test") {
 }

@@ -60,7 +60,7 @@ class AudioDeviceEnumeratorTest : public HermeticAudioTest {
 
   template <typename CreateDeviceT>
   void TestPlugUnplugDurability(CreateDeviceT create_device) {
-    DevicePlugProperties plug_properties = {
+    VirtualDevice::PlugProperties plug_properties = {
         .plugged = true,
         .hardwired = false,
         .can_notify = true,

@@ -17,13 +17,11 @@
 
 #include <gtest/gtest.h>
 
-#include "src/media/audio/drivers/virtual_audio/virtual_audio.h"
-
 namespace media::audio::test {
 
 namespace {
-void EnableVirtualAudio(component_testing::RealmRoot& root,
-                        fidl::SynchronousInterfacePtr<fuchsia::virtualaudio::Forwarder>& out) {
+void ConnectToVirtualAudio(component_testing::RealmRoot& root,
+                           fidl::SynchronousInterfacePtr<fuchsia::virtualaudio::Control>& out) {
   // Connect to dev.
   fidl::InterfaceHandle<fuchsia::io::Directory> dev;
   zx_status_t status = root.Connect("dev", dev.NewRequest().TakeChannel());
@@ -33,25 +31,20 @@ void EnableVirtualAudio(component_testing::RealmRoot& root,
   status = fdio_fd_create(dev.TakeChannel().release(), dev_fd.reset_and_get_address());
   ASSERT_EQ(status, ZX_OK);
 
-  // This file hosts a fuchsia.virtualaudio.Forwarder channel.
-  ASSERT_EQ(std::string_view(virtual_audio::kCtlNodeName).substr(0, 5), "/dev/")
-      << "unexpected file name: " << virtual_audio::kCtlNodeName;
-  std::string forwarder_file_name = virtual_audio::kCtlNodeName + 5;
+  // This file hosts a fuchsia.virtualaudio.Control channel.
+  std::string_view kControlName(fuchsia::virtualaudio::CONTROL_NODE_NAME);
+  ASSERT_EQ(kControlName.substr(0, 5), "/dev/") << "unexpected file name: " << kControlName;
+  std::string control_file_name(kControlName.substr(5));
 
   // Wait for the driver to load.
   fbl::unique_fd file_fd;
   ASSERT_EQ(ZX_OK,
-            device_watcher::RecursiveWaitForFile(dev_fd, forwarder_file_name.c_str(), &file_fd));
+            device_watcher::RecursiveWaitForFile(dev_fd, control_file_name.c_str(), &file_fd));
 
   // Turn the connection into FIDL.
   zx_handle_t handle;
   ASSERT_EQ(ZX_OK, fdio_fd_clone(file_fd.get(), &handle));
   out.Bind(zx::channel(handle));
-
-  // Enable.
-  fuchsia::virtualaudio::ControlSyncPtr control;
-  ASSERT_EQ(ZX_OK, out->SendControl(control.NewRequest()));
-  ASSERT_EQ(ZX_OK, control->Enable());
 }
 }  // namespace
 
@@ -109,8 +102,8 @@ void HermeticAudioRealm::Create(Options options, async_dispatcher* dispatcher,
   ASSERT_EQ(ZX_OK, driver_test_realm->Start(std::move(realm_args), &realm_result));
   ASSERT_FALSE(realm_result.is_err()) << "status = " << realm_result.err();
 
-  // Hold a reference to fuchsia.virtualaudio.Forwarder.
-  ASSERT_NO_FATAL_FAILURE(EnableVirtualAudio(realm, realm_out->virtual_audio_forwarder_));
+  // Hold a reference to fuchsia.virtualaudio.Control.
+  ASSERT_NO_FATAL_FAILURE(ConnectToVirtualAudio(realm, realm_out->virtual_audio_control_));
 }
 
 HermeticAudioRealm::CtorArgs HermeticAudioRealm::BuildRealm(Options options,

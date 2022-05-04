@@ -34,18 +34,16 @@ fuchsia_driver("virtual_audio_driver-driver") {
     "virtual_audio_device_impl.h",
     "virtual_audio_stream.cc",
     "virtual_audio_stream.h",
-    "virtual_audio_stream_in.h",
-    "virtual_audio_stream_out.h",
   ]
 
   deps = [
     ":virtual_audio_bind",
-    "//sdk/fidl/fuchsia.virtualaudio",
-    "//sdk/fidl/fuchsia.virtualaudio:fuchsia.virtualaudio_c",
+    "//sdk/fidl/fuchsia.virtualaudio:fuchsia.virtualaudio_llcpp",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//src/devices/lib/driver",
     "//src/devices/lib/driver:driver_runtime",
     "//src/lib/ddk",
+    "//src/lib/ddktl",
     "//src/media/audio/drivers/lib/audio-driver-proto",
     "//src/media/audio/lib/simple-audio-stream",
     "//zircon/system/ulib/affine",
@@ -57,10 +55,6 @@ fuchsia_driver("virtual_audio_driver-driver") {
   # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
   # rather than builders.
   configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_driver_component("virtual_audio_driver") {
@@ -72,8 +66,4 @@ fuchsia_driver_component("virtual_audio_driver") {
 
 kernel_cmdline("kernel-logging") {
   args = [ "driver.virtual_audio.log=trace" ]
-}
-
-source_set("virtual_audio_driver_header") {
-  sources = [ "virtual_audio.h" ]
 }

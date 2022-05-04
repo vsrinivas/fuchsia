@@ -60,14 +60,9 @@ class HermeticAudioRealm {
     return root_.Connect(std::move(request));
   }
 
-  // Specializations for fuchsia.virtualaudio.{Input,Output} which are connected in a different way.
-  template <>
-  zx_status_t Connect(fidl::InterfaceRequest<fuchsia::virtualaudio::Input> request) const {
-    return virtual_audio_forwarder_->SendInput(std::move(request));
-  }
-  template <>
-  zx_status_t Connect(fidl::InterfaceRequest<fuchsia::virtualaudio::Output> request) const {
-    return virtual_audio_forwarder_->SendOutput(std::move(request));
+  // Specialization for fuchsia.virtualaudio.Control, which is connected in a different way.
+  fidl::SynchronousInterfacePtr<fuchsia::virtualaudio::Control>& virtual_audio_control() {
+    return virtual_audio_control_;
   }
 
   // Component names which can be passed to ReadInspect;
@@ -90,7 +85,7 @@ class HermeticAudioRealm {
   explicit HermeticAudioRealm(CtorArgs&& args);
 
   component_testing::RealmRoot root_;
-  fidl::SynchronousInterfacePtr<fuchsia::virtualaudio::Forwarder> virtual_audio_forwarder_;
+  fidl::SynchronousInterfacePtr<fuchsia::virtualaudio::Control> virtual_audio_control_;
   std::unique_ptr<LocalProcessorCreator> local_processor_creator_;
 };
 

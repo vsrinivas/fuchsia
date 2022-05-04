@@ -11,69 +11,96 @@
 
 namespace media::audio::test {
 
-template <class Iface>
-VirtualDevice<Iface>::VirtualDevice(TestFixture* fixture, HermeticAudioEnvironment* environment,
-                                    const audio_stream_unique_id_t& device_id, Format format,
-                                    int64_t frame_count, size_t inspect_id,
-                                    std::optional<DevicePlugProperties> plug_properties,
-                                    float expected_gain_db,
-                                    std::optional<DeviceClockProperties> device_clock_properties)
-    : format_(format),
+VirtualDevice::VirtualDevice(TestFixture* fixture, HermeticAudioEnvironment* environment,
+                             bool is_input, const audio_stream_unique_id_t& device_id,
+                             Format format, int64_t frame_count, size_t inspect_id,
+                             std::optional<DevicePlugProperties> plug_properties,
+                             float expected_gain_db,
+                             std::optional<DeviceClockProperties> device_clock_properties)
+    : is_input_(is_input),
+      format_(format),
       frame_count_(frame_count),
       inspect_id_(inspect_id),
       expected_gain_db_(expected_gain_db),
       rb_(format, frame_count) {
-  environment->ConnectToService(fidl_.NewRequest());
-  fixture->AddErrorHandler(fidl_, "VirtualAudioDevice");
-  WatchEvents();
+  // Setup the device's configuration.
+  fuchsia::virtualaudio::Configuration config;
 
-  std::array<uint8_t, 16> device_id_array;
-  std::copy(std::begin(device_id.data), std::end(device_id.data), std::begin(device_id_array));
-  fidl_->SetUniqueId(device_id_array);
+  std::copy(std::begin(device_id.data), std::end(device_id.data),
+            std::begin(*config.mutable_unique_id()));
 
   if (plug_properties) {
-    fidl_->SetPlugProperties(plug_properties->plug_change_time.get(), plug_properties->plugged,
-                             plug_properties->hardwired, plug_properties->can_notify);
+    *config.mutable_plug_properties() = {
+        .plug_change_time = plug_properties->plug_change_time.get(),
+        .plugged = plug_properties->plugged,
+        .hardwired = plug_properties->hardwired,
+        .can_notify = plug_properties->can_notify,
+    };
   }
 
   if (!AudioSampleFormatToDriverSampleFormat(format_.sample_format(), &driver_format_)) {
     FX_CHECK(false) << "Failed to convert Fmt 0x" << std::hex
                     << static_cast<uint32_t>(format_.sample_format()) << " to driver format.";
   }
-  fidl_->ClearFormatRanges();
-  fidl_->AddFormatRange(driver_format_, format_.frames_per_second(), format_.frames_per_second(),
-                        static_cast<int8_t>(format_.channels()),
-                        static_cast<uint8_t>(format_.channels()), ASF_RANGE_FLAG_FPS_CONTINUOUS);
+  config.mutable_supported_formats()->push_back({
+      .sample_format_flags = driver_format_,
+      .min_frame_rate = static_cast<uint32_t>(format_.frames_per_second()),
+      .max_frame_rate = static_cast<uint32_t>(format_.frames_per_second()),
+      .min_channels = static_cast<uint8_t>(format_.channels()),
+      .max_channels = static_cast<uint8_t>(format_.channels()),
+      .rate_family_flags = ASF_RANGE_FLAG_FPS_CONTINUOUS,
+  });
 
-  fidl_->SetFifoDepth(kFifoDepthBytes);
-  fidl_->SetExternalDelay(kExternalDelay.get());
+  config.set_fifo_depth_bytes(kFifoDepthBytes);
+  config.set_external_delay(kExternalDelay.to_nsecs());
 
-  fidl_->SetRingBufferRestrictions(static_cast<uint32_t>(frame_count),
-                                   static_cast<uint32_t>(frame_count),
-                                   static_cast<uint32_t>(frame_count));
+  *config.mutable_ring_buffer_constraints() = {
+      .min_frames = static_cast<uint32_t>(frame_count),
+      .max_frames = static_cast<uint32_t>(frame_count),
+      .modulo_frames = static_cast<uint32_t>(frame_count),
+  };
 
   auto ring_buffer_ms = static_cast<uint32_t>(
       static_cast<double>(frame_count) / static_cast<double>(format_.frames_per_second()) * 1000);
-  fidl_->SetNotificationFrequency(ring_buffer_ms / kNotifyMs);
+  config.set_initial_notifications_per_ring(ring_buffer_ms / kNotifyMs);
 
   if (device_clock_properties) {
-    fidl_->SetClockProperties(device_clock_properties->domain,
-                              device_clock_properties->initial_rate_adjustment_ppm);
+    *config.mutable_clock_properties() = {
+        .domain = device_clock_properties->domain,
+        .initial_rate_adjustment_ppm = device_clock_properties->initial_rate_adjustment_ppm,
+    };
   }
 
-  fidl_->Add();
+  if (is_input) {
+    fuchsia::virtualaudio::Control_AddInput_Result result;
+    auto status = environment->virtual_audio_control()->AddInput(std::move(config),
+                                                                 fidl_.NewRequest(), &result);
+    if (status != ZX_OK) {
+      ADD_FAILURE() << "Failed to call virtualaudio.Control/AddInput, status=%d", result.err();
+    } else if (result.is_err()) {
+      ADD_FAILURE() << "Failed to add input device, status=%d", result.err();
+    }
+  } else {
+    fuchsia::virtualaudio::Control_AddOutput_Result result;
+    auto status = environment->virtual_audio_control()->AddOutput(std::move(config),
+                                                                  fidl_.NewRequest(), &result);
+    if (status != ZX_OK) {
+      ADD_FAILURE() << "Failed to call virtualaudio.Control/AddOutput, status=%d", result.err();
+    } else if (result.is_err()) {
+      ADD_FAILURE() << "Failed to add output device, status=%d", result.err();
+    }
+  }
+
+  fixture->AddErrorHandler(fidl_, "VirtualAudioDevice");
+  WatchEvents();
 }
 
-template <class Iface>
-VirtualDevice<Iface>::~VirtualDevice() {
+VirtualDevice::~VirtualDevice() {
   ResetEvents();
-  if (fidl_.is_bound()) {
-    fidl_->Remove();
-  }
+  // The FIDL connection will be closed when the class is destructed.
 }
 
-template <class Iface>
-void VirtualDevice<Iface>::ResetEvents() {
+void VirtualDevice::ResetEvents() {
   fidl_.events().OnSetFormat = nullptr;
   fidl_.events().OnSetGain = nullptr;
   fidl_.events().OnBufferCreated = nullptr;
@@ -82,8 +109,7 @@ void VirtualDevice<Iface>::ResetEvents() {
   fidl_.events().OnPositionNotify = nullptr;
 }
 
-template <class Iface>
-void VirtualDevice<Iface>::WatchEvents() {
+void VirtualDevice::WatchEvents() {
   fidl_.events().OnSetFormat = [this](int32_t fps, uint32_t fmt, int32_t num_chans,
                                       zx_duration_t ext_delay) {
     received_set_format_ = true;
@@ -144,8 +170,7 @@ void VirtualDevice<Iface>::WatchEvents() {
   };
 }
 
-template <class Iface>
-zx::time VirtualDevice<Iface>::NextSynchronizedTimestamp(zx::time min_time) const {
+zx::time VirtualDevice::NextSynchronizedTimestamp(zx::time min_time) const {
   // Compute the next synchronized position, then iterate until we find a synchronized
   // position at min_time or later.
   int64_t running_pos_sync = ((running_ring_pos_ / rb_.SizeBytes()) + 1) * rb_.SizeBytes();
@@ -158,14 +183,9 @@ zx::time VirtualDevice<Iface>::NextSynchronizedTimestamp(zx::time min_time) cons
   }
 }
 
-template <class Iface>
-int64_t VirtualDevice<Iface>::RingBufferFrameAtTimestamp(zx::time ref_time) const {
+int64_t VirtualDevice::RingBufferFrameAtTimestamp(zx::time ref_time) const {
   int64_t running_pos = running_pos_to_ref_time_.ApplyInverse(ref_time.get());
   return running_pos / format_.bytes_per_frame();
 }
-
-// Only two instantiations are needed.
-template class VirtualDevice<fuchsia::virtualaudio::Output>;
-template class VirtualDevice<fuchsia::virtualaudio::Input>;
 
 }  // namespace media::audio::test

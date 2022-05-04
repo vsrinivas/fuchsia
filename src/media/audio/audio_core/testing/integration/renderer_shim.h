@@ -24,7 +24,6 @@
 
 namespace media::audio::test {
 
-template <class Interface>
 class VirtualDevice;
 
 // This class is thread hostile: none of its methods can be called concurrently.
@@ -58,9 +57,7 @@ class RendererShimImpl {
 
   // Like Play, but aligns the reference_time with the start of output_device's ring buffer.
   // Returns the reference_time at which the audio will start playing.
-  zx::time PlaySynchronized(TestFixture* fixture,
-                            VirtualDevice<fuchsia::virtualaudio::Output>* output_device,
-                            int64_t media_time);
+  zx::time PlaySynchronized(TestFixture* fixture, VirtualDevice* output_device, int64_t media_time);
 
   // Send a Pause command to the renderer and wait until it is processed.
   std::pair<int64_t, int64_t> Pause(TestFixture* fixture);

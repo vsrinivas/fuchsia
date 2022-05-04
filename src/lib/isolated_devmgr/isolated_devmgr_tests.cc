@@ -98,14 +98,12 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
 
     fdio_cpp::UnownedFdioCaller caller(devfs_fd.get());
 
-    fuchsia::virtualaudio::ForwarderPtr virtualaudio;
+    fuchsia::virtualaudio::ControlSyncPtr virtual_audio_control;
     fdio_service_connect_at(caller.borrow_channel(), "sys/platform/00:00:2f/virtual_audio",
-                            virtualaudio.NewRequest().TakeChannel().release());
+                            virtual_audio_control.NewRequest().TakeChannel().release());
 
     // Perform a simple RPC with a reply to sanity check we're talking to the driver.
-    fidl::SynchronousInterfacePtr<fuchsia::virtualaudio::Control> control_sync_ptr;
-    virtualaudio->SendControl(control_sync_ptr.NewRequest());
-    ASSERT_EQ(ZX_OK, control_sync_ptr->Enable());
+    ASSERT_EQ(ZX_OK, virtual_audio_control->RemoveAll());
   }
 };
 

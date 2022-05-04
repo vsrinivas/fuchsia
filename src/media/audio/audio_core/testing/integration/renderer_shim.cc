@@ -101,9 +101,8 @@ void RendererShimImpl::Play(TestFixture* fixture, zx::time reference_time, int64
   }
 }
 
-zx::time RendererShimImpl::PlaySynchronized(
-    TestFixture* fixture, VirtualDevice<fuchsia::virtualaudio::Output>* output_device,
-    int64_t media_time) {
+zx::time RendererShimImpl::PlaySynchronized(TestFixture* fixture, VirtualDevice* output_device,
+                                            int64_t media_time) {
   // Synchronize at some point that is at least min_lead_time + tolerance in the future,
   // where tolerance estimates the maximum execution delay between the time we compute the
   // next synchronized time and the time we call Play.

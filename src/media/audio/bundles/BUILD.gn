@@ -7,18 +7,9 @@ group("services") {
   deps = [ "//src/media/audio/audio_core" ]
 }
 
-group("virtual_audio_service_with_config") {
-  testonly = true
-  deps = [
-    "//src/media/audio/virtual_audio_service",
-    "//src/media/audio/virtual_audio_service:virtual_audio_config",
-  ]
-}
-
 group("tools") {
   testonly = true
   deps = [
-    ":virtual_audio_service_with_config",
     "//src/media/audio/audio_core/mixer/tools:audio_mixer_profiler",
     "//src/media/audio/audio_core/tools",
     "//src/media/audio/tools/signal_generator",

@@ -4,63 +4,37 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_VIRTUAL_AUDIO_VIRTUAL_AUDIO_CONTROL_IMPL_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_VIRTUAL_AUDIO_VIRTUAL_AUDIO_CONTROL_IMPL_H_
 
-#include <fuchsia/virtualaudio/c/fidl.h>
-#include <fuchsia/virtualaudio/cpp/fidl.h>
+#include <fidl/fuchsia.virtualaudio/cpp/wire.h>
 #include <lib/ddk/device.h>
-#include <lib/fidl/cpp/binding_set.h>
 
 #include <memory>
+#include <unordered_set>
 
 namespace virtual_audio {
 
 class VirtualAudioDeviceImpl;
 
-class VirtualAudioControlImpl : public fuchsia::virtualaudio::Control {
+class VirtualAudioControlImpl : public fidl::WireServer<fuchsia_virtualaudio::Control> {
  public:
-  // TODO(mpuryear): Move the three static methods and table over to DDKTL.
-  //
-  // Always called first.
   static zx_status_t DdkBind(void* ctx, zx_device_t* parent_bus);
-  // Always called after DdkUnbind.
   static void DdkRelease(void* ctx);
-  // Always called after our child drivers are unbound and released.
   static void DdkUnbind(void* ctx);
-  // Delivers C-binding-FIDL Forwarder calls to the driver.
   static zx_status_t DdkMessage(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn);
-
-  //
-  // virtualaudio.Forwarder interface
-  //
-  zx_status_t SendControl(zx::channel control_request_channel);
-  zx_status_t SendInput(zx::channel input_request_channel);
-  zx_status_t SendOutput(zx::channel output_request_channelf);
-
-  //
-  // virtualaudio.Control interface
-  //
-  void Enable(EnableCallback callback) override;
-  void Disable(DisableCallback callback) override;
-  void GetNumDevices(GetNumDevicesCallback callback) override;
-
-  void ReleaseBindings();
-  bool enabled() const { return enabled_; }
-  zx_device_t* dev_node() const { return dev_node_; }
-  async_dispatcher_t* dispatcher() const { return dispatcher_; }
 
  private:
   VirtualAudioControlImpl() = default;
 
-  static fuchsia_virtualaudio_Forwarder_ops_t fidl_ops_;
+  // Implements virtualaudio.Control.
+  void AddInput(AddInputRequestView request, AddInputCompleter::Sync& completer) override;
+  void AddOutput(AddOutputRequestView request, AddOutputCompleter::Sync& completer) override;
+  void GetNumDevices(GetNumDevicesRequestView request,
+                     GetNumDevicesCompleter::Sync& completer) override;
+  void RemoveAll(RemoveAllRequestView request, RemoveAllCompleter::Sync& completer) override;
 
   zx_device_t* dev_node_ = nullptr;
   async_dispatcher_t* dispatcher_ = nullptr;
-  bool enabled_ = true;
 
-  fidl::BindingSet<fuchsia::virtualaudio::Control> bindings_;
-  fidl::BindingSet<fuchsia::virtualaudio::Input, std::shared_ptr<VirtualAudioDeviceImpl>>
-      input_bindings_;
-  fidl::BindingSet<fuchsia::virtualaudio::Output, std::shared_ptr<VirtualAudioDeviceImpl>>
-      output_bindings_;
+  std::unordered_set<std::shared_ptr<VirtualAudioDeviceImpl>> devices_;
 };
 
 }  // namespace virtual_audio

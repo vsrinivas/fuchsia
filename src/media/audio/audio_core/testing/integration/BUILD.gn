@@ -54,7 +54,6 @@ source_set("hermetic_audio_test") {
     "//src/devices/bus/drivers/platform",
     "//src/lib/fxl",
     "//src/media/audio/drivers/virtual_audio:virtual_audio_driver",
-    "//src/media/audio/drivers/virtual_audio:virtual_audio_driver_header",
     "//zircon/system/ulib/trace-provider",
   ]
 }

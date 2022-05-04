@@ -10,7 +10,6 @@ group("audio") {
     ":tests",
     ":tools",
     "audio_core",
-    "bundles:virtual_audio_service_with_config",
     "drivers",
     "examples",
     "lib",

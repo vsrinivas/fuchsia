@@ -4,47 +4,87 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_VIRTUAL_AUDIO_VIRTUAL_AUDIO_STREAM_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_VIRTUAL_AUDIO_VIRTUAL_AUDIO_STREAM_H_
 
-#include <fuchsia/virtualaudio/cpp/fidl.h>
+#include <fidl/fuchsia.virtualaudio/cpp/wire.h>
 #include <lib/affine/transform.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/status.h>
 
 #include <deque>
 
 #include <audio-proto/audio-proto.h>
 #include <fbl/ref_ptr.h>
 
-namespace virtual_audio {
+#include "src/media/audio/drivers/virtual_audio/virtual_audio_device_impl.h"
 
-class VirtualAudioDeviceImpl;
+namespace virtual_audio {
 
 class VirtualAudioStream : public audio::SimpleAudioStream {
  public:
-  void EnqueuePlugChange(bool plugged) __TA_EXCLUDES(wakeup_queue_lock_);
-  void EnqueueGainRequest(fuchsia::virtualaudio::Device::GetGainCallback gain_callback)
-      __TA_EXCLUDES(wakeup_queue_lock_);
-  void EnqueueFormatRequest(fuchsia::virtualaudio::Device::GetFormatCallback format_callback)
-      __TA_EXCLUDES(wakeup_queue_lock_);
-  void EnqueueBufferRequest(fuchsia::virtualaudio::Device::GetBufferCallback buffer_callback)
-      __TA_EXCLUDES(wakeup_queue_lock_);
-  void EnqueuePositionRequest(fuchsia::virtualaudio::Device::GetPositionCallback position_callback)
-      __TA_EXCLUDES(wakeup_queue_lock_);
-  void EnqueueNotificationOverride(uint32_t notifications_per_ring)
-      __TA_EXCLUDES(wakeup_queue_lock_);
-  void EnqueueClockRateAdjustment(int32_t ppm_from_monotonic) __TA_EXCLUDES(wakeup_queue_lock_);
+  static fbl::RefPtr<VirtualAudioStream> Create(const VirtualAudioDeviceImpl::Config& cfg,
+                                                std::weak_ptr<VirtualAudioDeviceImpl> owner,
+                                                zx_device_t* dev_node);
 
-  static fbl::RefPtr<VirtualAudioStream> CreateStream(VirtualAudioDeviceImpl* owner,
-                                                      zx_device_t* devnode, bool is_input);
+  using ErrorT = fuchsia_virtualaudio::Error;
 
-  // Only set by DeviceImpl -- on dtor, Disable or Remove
-  bool shutdown_by_parent_ = false;
+  // Expose so that PostToDispatcher callers can use this.
+  using audio::SimpleAudioStream::domain_token;
 
- protected:
+  // Execute the given task on our dispatcher.
+  // Typically callbacks should acquire domain_token() before calling any methods.
+  void PostToDispatcher(fit::closure task_to_post);
+
+  //
+  // The following methods implement getters and setters for fuchsia.virtualaudio.Device.
+  //
+
+  struct CurrentFormat {
+    uint32_t frames_per_second;
+    uint32_t sample_format;
+    uint32_t num_channels;
+    zx::duration external_delay;
+  };
+  fitx::result<ErrorT, CurrentFormat> GetFormatForVA() __TA_REQUIRES(domain_token());
+
+  struct CurrentGain {
+    bool mute;
+    bool agc;
+    float gain_db;
+  };
+  CurrentGain GetGainForVA() __TA_REQUIRES(domain_token());
+
+  struct CurrentBuffer {
+    zx::vmo vmo;
+    uint32_t num_frames;
+    uint32_t notifications_per_ring;
+  };
+  fitx::result<ErrorT, CurrentBuffer> GetBufferForVA() __TA_REQUIRES(domain_token());
+
+  struct CurrentPosition {
+    zx::time monotonic_time;
+    uint32_t ring_position;
+  };
+  fitx::result<ErrorT, CurrentPosition> GetPositionForVA() __TA_REQUIRES(domain_token());
+
+  void SetNotificationFrequencyFromVA(uint32_t notifications_per_ring)
+      __TA_REQUIRES(domain_token());
+  void ChangePlugStateFromVA(bool plugged) __TA_REQUIRES(domain_token());
+  void AdjustClockRateFromVA(int32_t ppm_from_monotonic) __TA_REQUIRES(domain_token());
+
+ private:
   friend class audio::SimpleAudioStream;
   friend class fbl::RefPtr<VirtualAudioStream>;
 
-  VirtualAudioStream(VirtualAudioDeviceImpl* parent, zx_device_t* dev_node, bool is_input)
-      : audio::SimpleAudioStream(dev_node, is_input), parent_(parent) {}
+  VirtualAudioStream(const VirtualAudioDeviceImpl::Config& cfg,
+                     std::weak_ptr<VirtualAudioDeviceImpl> parent, zx_device_t* dev_node)
+      : audio::SimpleAudioStream(dev_node, cfg.is_input),
+        config_(cfg),
+        parent_(std::move(parent)) {}
+
+  //
+  // Implementation of audio::SimpleAudioStream.
+  //
 
   zx_status_t Init() __TA_REQUIRES(domain_token()) override;
   zx_status_t EstablishReferenceClock() __TA_REQUIRES(domain_token());
@@ -68,16 +108,6 @@ class VirtualAudioStream : public audio::SimpleAudioStream {
   void ShutdownHook() __TA_REQUIRES(domain_token()) override;
   // RingBufferShutdown() is unneeded: no hardware shutdown tasks needed...
 
-  enum class PlugType { Plug, Unplug };
-  void HandlePlugChanges() __TA_EXCLUDES(wakeup_queue_lock_);
-  void HandleSetNotifications() __TA_EXCLUDES(wakeup_queue_lock_);
-  void HandleClockRateAdjustments() __TA_EXCLUDES(wakeup_queue_lock_);
-
-  void HandleGainRequests() __TA_EXCLUDES(wakeup_queue_lock_);
-  void HandleFormatRequests() __TA_EXCLUDES(wakeup_queue_lock_);
-  void HandleBufferRequests() __TA_EXCLUDES(wakeup_queue_lock_);
-  void HandlePositionRequests() __TA_EXCLUDES(wakeup_queue_lock_);
-
   void ProcessRingNotification();
   void SetNotificationPeriods() __TA_REQUIRES(domain_token());
   void PostForNotify() __TA_REQUIRES(domain_token());
@@ -88,8 +118,17 @@ class VirtualAudioStream : public audio::SimpleAudioStream {
   void PostForVaClientNotify() __TA_REQUIRES(domain_token());
   void PostForVaClientNotifyAt(zx::time ref_notification_time) __TA_REQUIRES(domain_token());
 
- private:
+  //
+  // Other methods
+  //
+
   static zx::time MonoTimeFromRefTime(const zx::clock& clock, zx::time ref_time);
+
+  const VirtualAudioDeviceImpl::Config config_;
+
+  // This should never be invalid: this VirtualAudioStream should always be destroyed before
+  // its parent. This field is a weak_ptr to avoid a circular reference count.
+  const std::weak_ptr<VirtualAudioDeviceImpl> parent_;
 
   // Accessed in GetBuffer, defended by token.
   fzl::VmoMapper ring_buffer_mapper_ __TA_GUARDED(domain_token());
@@ -131,43 +170,6 @@ class VirtualAudioStream : public audio::SimpleAudioStream {
 
   zx::clock reference_clock_ __TA_GUARDED(domain_token());
   int32_t clock_rate_adjustment_ __TA_GUARDED(domain_token());
-
-  VirtualAudioDeviceImpl* parent_ __TA_GUARDED(domain_token());
-
-  fbl::Mutex wakeup_queue_lock_ __TA_ACQUIRED_AFTER(domain_token());
-
-  // TODO(mpuryear): Refactor to a single queue of lambdas to dedupe this code.
-  async::TaskClosureMethod<VirtualAudioStream, &VirtualAudioStream::HandlePlugChanges>
-      plug_change_wakeup_{this};
-  std::deque<PlugType> plug_queue_ __TA_GUARDED(wakeup_queue_lock_);
-
-  async::TaskClosureMethod<VirtualAudioStream, &VirtualAudioStream::HandleGainRequests>
-      gain_request_wakeup_{this};
-  std::deque<fuchsia::virtualaudio::Device::GetGainCallback> gain_queue_
-      __TA_GUARDED(wakeup_queue_lock_);
-
-  async::TaskClosureMethod<VirtualAudioStream, &VirtualAudioStream::HandleFormatRequests>
-      format_request_wakeup_{this};
-  std::deque<fuchsia::virtualaudio::Device::GetFormatCallback> format_queue_
-      __TA_GUARDED(wakeup_queue_lock_);
-
-  async::TaskClosureMethod<VirtualAudioStream, &VirtualAudioStream::HandleBufferRequests>
-      buffer_request_wakeup_{this};
-  std::deque<fuchsia::virtualaudio::Device::GetBufferCallback> buffer_queue_
-      __TA_GUARDED(wakeup_queue_lock_);
-
-  async::TaskClosureMethod<VirtualAudioStream, &VirtualAudioStream::HandlePositionRequests>
-      position_request_wakeup_{this};
-  std::deque<fuchsia::virtualaudio::Device::GetPositionCallback> position_queue_
-      __TA_GUARDED(wakeup_queue_lock_);
-
-  async::TaskClosureMethod<VirtualAudioStream, &VirtualAudioStream::HandleSetNotifications>
-      set_notifications_wakeup_{this};
-  std::deque<uint32_t> notifs_queue_ __TA_GUARDED(wakeup_queue_lock_);
-
-  async::TaskClosureMethod<VirtualAudioStream, &VirtualAudioStream::HandleClockRateAdjustments>
-      set_clock_rate_wakeup_{this};
-  std::deque<uint32_t> clock_rate_queue_ __TA_GUARDED(wakeup_queue_lock_);
 };
 
 }  // namespace virtual_audio

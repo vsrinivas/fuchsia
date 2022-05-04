@@ -543,7 +543,7 @@ class AdjustableClockPipelineTest : public ClockSyncPipelineTest {
     // Specify the clock rate for the output device.
     constexpr int32_t kMonotonicDomain = 0;
     constexpr int32_t kNonMonotonicDomain = 1;
-    DeviceClockProperties clock_properties = {
+    VirtualDevice::ClockProperties clock_properties = {
         .domain = (clock_slew_ppm ? kNonMonotonicDomain : kMonotonicDomain),
         .initial_rate_adjustment_ppm = clock_slew_ppm,
     };

@@ -37,6 +37,11 @@
             path: "/dev/class/temperature",
         },
         {
+            directory: "dev-virtual-audio",
+            rights: [ "r*" ],
+            path: "/dev/sys/platform/00:00:2f",
+        },
+        {
             protocol: [
                 "fuchsia.bluetooth.avdtp.PeerManager",
                 "fuchsia.bluetooth.avrcp.PeerManager",
@@ -95,9 +100,6 @@
                 "fuchsia.ui.composition.ScreenCapture",
                 "fuchsia.ui.input.InputDeviceRegistry",
                 "fuchsia.ui.scenic.Scenic",
-                "fuchsia.virtualaudio.Control",
-                "fuchsia.virtualaudio.Input",
-                "fuchsia.virtualaudio.Output",
                 "fuchsia.weave.FactoryDataManager",
                 "fuchsia.weave.Stack",
                 "fuchsia.web.ContextProvider",
