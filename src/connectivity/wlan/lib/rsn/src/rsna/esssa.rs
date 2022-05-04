@@ -444,7 +444,8 @@ impl EssSa {
         if let Some((attempt, key_frame)) = self.last_key_frame_buf.as_mut() {
             *attempt += 1;
             if *attempt > MAX_KEY_FRAME_RETRIES {
-                return Err(Error::TooManyKeyFrameRetries);
+                // Only retry a limited number of times before going idle
+                return Ok(());
             }
             update_sink.push(SecAssocUpdate::TxEapolKeyFrame {
                 frame: key_frame.clone(),
@@ -454,6 +455,29 @@ impl EssSa {
             self.updates_awaiting_confirm = Some(Default::default());
         }
         Ok(())
+    }
+
+    pub fn on_establishing_rsna_timeout(&self) -> Error {
+        if let Some(updates) = &self.updates_awaiting_confirm {
+            return Error::NoKeyFrameTransmissionConfirm(updates.len());
+        }
+        match self.ptksa.as_ref() {
+            Ptksa::Uninitialized { .. } => {
+                return Error::EapolHandshakeIncomplete("PTKSA never initialized".to_string());
+            }
+            Ptksa::Initialized { method } | Ptksa::Established { method, .. } => {
+                if let Err(error) = method.on_establishing_rsna_timeout() {
+                    return error;
+                }
+            }
+        }
+        if !matches!(self.gtksa.as_ref(), Gtksa::Established { .. }) {
+            return Error::EapolHandshakeIncomplete("GTKSA never established".to_string());
+        }
+
+        // Unclear how we'd get an establishing RSNA timeout without hitting any of
+        // the previous cases.
+        Error::EapolHandshakeIncomplete("Unexpected timeout while establishing RSNA".to_string())
     }
 
     pub fn on_eapol_frame<B: ByteSlice>(
@@ -1200,11 +1224,92 @@ mod tests {
             assert_eq!(msg2, msg2_retry);
         }
 
-        // Failure on the last retry.
+        // Go idle on the last retry.
         let mut update_sink = vec![];
+        assert_variant!(supplicant.on_eapol_key_frame_timeout(&mut update_sink), Ok(()));
+        assert!(update_sink.is_empty());
+    }
+
+    #[test]
+    fn test_key_frame_timeout_retries_reset() {
+        // Create ESS Security Association
+        let mut supplicant = test_util::get_wpa2_supplicant();
+        supplicant.start().expect("Failed starting Supplicant");
+
+        for _ in 0..3 {
+            // Send the first frame.
+            let updates = send_fourway_msg1(&mut supplicant, |_| {}).1;
+            let msg2 = test_util::expect_eapol_resp(&updates[..]);
+            let mut update_sink = vec![];
+            supplicant
+                .on_eapol_conf(&mut update_sink, EapolResultCode::Success)
+                .expect("Failed to send eapol conf");
+            assert!(update_sink.is_empty());
+
+            // Timeout several times.
+            for _ in 1..MAX_KEY_FRAME_RETRIES {
+                let mut update_sink = vec![];
+                supplicant
+                    .on_eapol_key_frame_timeout(&mut update_sink)
+                    .expect("Failed to send key frame timeout");
+                let msg2_retry = test_util::expect_eapol_resp(&update_sink[..]);
+                supplicant
+                    .on_eapol_conf(&mut update_sink, EapolResultCode::Success)
+                    .expect("Failed to send eapol conf");
+                assert_eq!(msg2, msg2_retry);
+            }
+
+            // Go idle on the last retry.
+            let mut update_sink = vec![];
+            assert_variant!(supplicant.on_eapol_key_frame_timeout(&mut update_sink), Ok(()));
+            assert!(update_sink.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_overall_timeout_before_msg1() {
+        // Create ESS Security Association
+        let mut supplicant = test_util::get_wpa2_supplicant();
+        supplicant.start().expect("Failed starting Supplicant");
+
+        assert_variant!(supplicant.on_establishing_rsna_timeout(), Error::EapolHandshakeNotStarted);
+    }
+
+    #[test]
+    fn test_overall_timeout_after_msg2() {
+        // Create ESS Security Association
+        let mut supplicant = test_util::get_wpa2_supplicant();
+        supplicant.start().expect("Failed starting Supplicant");
+
+        // Send the first frame.
+        let updates = send_fourway_msg1(&mut supplicant, |_| {}).1;
+        let _msg2 = test_util::expect_eapol_resp(&updates[..]);
+        let mut update_sink = vec![];
+        supplicant
+            .on_eapol_conf(&mut update_sink, EapolResultCode::Success)
+            .expect("Failed to send eapol conf");
+        assert!(update_sink.is_empty());
+
+        assert_variant!(supplicant.on_establishing_rsna_timeout(), Error::LikelyWrongCredential);
+    }
+
+    #[test]
+    fn test_overall_timeout_before_conf() {
+        // Create ESS Security Association
+        let mut supplicant = test_util::get_wpa2_supplicant();
+        supplicant.start().expect("Failed starting Supplicant");
+
+        // Send the first frame but don't send a conf in response.
+        let msg = test_util::get_wpa2_4whs_msg1(&ANONCE[..], |_| {});
+        let mut update_sink = UpdateSink::default();
+        supplicant
+            .on_eapol_frame(&mut update_sink, eapol::Frame::Key(msg.keyframe()))
+            .expect("Failed to send eapol frame");
+        let _msg2 = test_util::expect_eapol_resp(&update_sink[..]);
+
         assert_variant!(
-            supplicant.on_eapol_key_frame_timeout(&mut update_sink),
-            Err(Error::TooManyKeyFrameRetries)
+            supplicant.on_establishing_rsna_timeout(),
+            Error::NoKeyFrameTransmissionConfirm(0)
         );
     }
 
