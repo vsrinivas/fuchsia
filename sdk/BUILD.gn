@@ -125,7 +125,7 @@ group("tests") {
   testonly = true
 
   deps = [
-    "cts/plasa:tests",
+    ":tests_no_e2e",
 
     # `testing:tests` contains unit tests for sl4f, which depend on sl4f so it
     # can't live inside `test_no_e2e`.
