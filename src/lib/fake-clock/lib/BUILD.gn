@@ -7,11 +7,16 @@ import("//build/testing/environments.gni")
 import("//tools/cmc/build/expect_includes.gni")
 
 config("rust-link-fake-time") {
+  _dir = rebase_path(get_label_info(":lib($shlib_toolchain)", "root_out_dir"),
+                     root_build_dir)
+  _lib = "$_dir/link_stub/libfake_clock.so"
+
   rustflags = [
+    # Use --no-as-needed to ensure libfake_clock.so is not dropped by
+    # --as-needed analysis if it occurs later in the link arguments.
     "-Clink-args=--push-state",
     "-Clink-args=--no-as-needed",
-    "-Clink-args=-Lnative=$target_out_dir",
-    "-Clink-args=-lfake_clock",
+    "-Clink-arg=$_lib",
     "-Clink-args=--pop-state",
   ]
 }
