@@ -214,6 +214,7 @@ class MsdArmDevice : public msd_device_t,
   static void InitializeHardwareQuirks(GpuFeatures* features, mali::RegisterIo* registers);
   bool PowerDownL2();
   bool PowerDownShaders();
+  bool FlushL2();
   bool ResetDevice();
   void InitInspect();
   void UpdateProtectedModeSupported();
@@ -297,6 +298,8 @@ class MsdArmDevice : public msd_device_t,
   // Triggered on device reset.
   std::unique_ptr<magma::PlatformSemaphore> reset_semaphore_;
   bool assume_reset_happened_ = false;
+
+  std::unique_ptr<magma::PlatformSemaphore> cache_clean_semaphore_;
 
   std::mutex schedule_mutex_;
   __TA_GUARDED(schedule_mutex_) std::vector<std::shared_ptr<MsdArmAtom>> atoms_to_schedule_;

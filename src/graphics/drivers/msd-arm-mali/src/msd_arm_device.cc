@@ -242,6 +242,7 @@ bool MsdArmDevice::Init(std::unique_ptr<magma::PlatformDevice> platform_device,
   UpdateProtectedModeSupported();
 
   reset_semaphore_ = magma::PlatformSemaphore::Create();
+  cache_clean_semaphore_ = magma::PlatformSemaphore::Create();
 
   device_request_semaphore_ = magma::PlatformSemaphore::Create();
   device_port_ = magma::PlatformPort::Create();
@@ -598,6 +599,11 @@ int MsdArmDevice::GpuInterruptThreadLoop() {
       // Don't wait for a reply, to ensure there's no deadlock. Clearing the interrupt flag
       // before the interrupt is actually processed shouldn't matter, because perf_counters_
       // ensures only one request happens at a time.
+    }
+
+    if (irq_status.clean_caches_completed()) {
+      irq_status.set_clean_caches_completed(0);
+      cache_clean_semaphore_->Signal();
     }
 
     if (irq_status.reg_value()) {
@@ -1500,8 +1506,10 @@ void MsdArmDevice::EnterProtectedMode() {
     MAGMA_LOG(ERROR, "Powering down shaders timed out");
     // Keep trying to reset the device, or the job scheduler will hang forever.
   }
-  if (!PowerDownL2()) {
-    MAGMA_LOG(ERROR, "Powering down L2 timed out");
+  // Powering down L2 can fail due to errata 1485982, so flush/invalidate L2
+  // instead. We should be able to enter protected mode with L2 enabled.
+  if (!FlushL2()) {
+    MAGMA_LOG(ERROR, "Flushing L2 timed out");
     // Keep trying to reset the device, or the job scheduler will hang forever.
   }
 
@@ -1530,12 +1538,25 @@ bool MsdArmDevice::ExitProtectedMode() {
     MAGMA_LOG(ERROR, "Powering down shaders timed out");
     // Keep trying to reset the device, or the job scheduler will hang forever.
   }
-  if (!PowerDownL2()) {
-    MAGMA_LOG(ERROR, "Powering down L2 timed out");
+  // Powering down L2 can fail due to errata 1485982, so flush L2 and let the hardware reset deal
+  // with it.
+  if (!FlushL2()) {
+    MAGMA_LOG(ERROR, "Flushing L2 timed out");
     // Keep trying to reset the device, or the job scheduler will hang forever.
   }
 
   return ResetDevice();
+}
+
+bool MsdArmDevice::FlushL2() {
+  cache_clean_semaphore_->Reset();
+  register_io_->Write32(registers::GpuCommand::kCmdCleanAndInvalidateCaches,
+                        registers::GpuCommand::kOffset);
+  if (!cache_clean_semaphore_->Wait(1000).ok()) {
+    MAGMA_LOG(ERROR, "Waiting for cache clean semaphore failed");
+    return false;
+  }
+  return true;
 }
 
 bool MsdArmDevice::ResetDevice() {
