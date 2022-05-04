@@ -38,7 +38,7 @@ blueprint_definition!(
     crate::agent::inspect::setting_proxy::SettingProxyInspectAgent::create
 );
 
-const INSPECT_REQUESTS_COUNT: usize = 25;
+const INSPECT_REQUESTS_COUNT: usize = 15;
 
 /// Information about a setting to be written to inspect.
 #[derive(Default, Inspect)]
@@ -820,7 +820,7 @@ mod tests {
             response_counts: {
                 "Display": {
                     "OkNone": {
-                        count: 26u64,
+                        count: 16u64,
                     },
                 },
                 "Intl": {

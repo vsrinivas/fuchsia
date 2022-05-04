@@ -7,7 +7,7 @@
 use anyhow::{Context, Error};
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol;
-use fuchsia_inspect::component;
+use fuchsia_inspect::{self as inspect, component};
 use fuchsia_syslog::{self as syslog, fx_log_info};
 use lazy_static::lazy_static;
 use settings::agent::storage::storage_factory::StashDeviceStorageFactory;
@@ -38,6 +38,11 @@ fn main() -> Result<(), Error> {
 
     syslog::init_with_tags(&["setui-service"]).expect("Can't init logger");
     fx_log_info!("Starting setui-service...");
+
+    // Serve stats about inspect in a lazy node.
+    let inspector = component::inspector();
+    let node = inspect::stats::Node::new(inspector, inspector.root());
+    inspector.root().record(node.take());
 
     let default_enabled_interfaces_configuration =
         EnabledInterfacesConfiguration::with_interfaces(get_default_interfaces());
