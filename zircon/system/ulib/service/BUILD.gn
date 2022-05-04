@@ -10,12 +10,8 @@ zx_library("service-llcpp") {
     "lib/service/llcpp/constants.h",
     "lib/service/llcpp/service.h",
     "lib/service/llcpp/service_handler.h",
-    "lib/service/llcpp/outgoing_directory.h",
   ]
-  sources = [
-    "llcpp/outgoing_directory.cc",
-    "llcpp/service.cc",
-  ]
+  sources = [ "llcpp/service.cc" ]
   public_deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fit-promise",
