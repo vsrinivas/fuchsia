@@ -209,18 +209,8 @@ func isInstrumented(filepath string) bool {
 		return false
 	}
 	defer file.Close()
-	elfFile, err := elf.NewFile(file)
-	if err != nil {
-		return false
-	}
-	elfSymbols, err := elfFile.Symbols()
-	if err != nil {
-		return false
-	}
-	for _, symbol := range elfSymbols {
-		if symbol.Name == "__llvm_profile_initialize" {
-			return true
-		}
+	if elfFile, err := elf.NewFile(file); err == nil {
+		return elfFile.Section("__llvm_prf_cnts") != nil
 	}
 	return false
 }
