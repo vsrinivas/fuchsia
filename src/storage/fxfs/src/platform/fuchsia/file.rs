@@ -12,6 +12,7 @@ use {
             directory::FxDirectory,
             errors::map_to_status,
             node::{FxNode, OpenedNode},
+            runtime::info_to_filesystem_info,
             volume::FxVolume,
         },
         round::{round_down, round_up},
@@ -516,10 +517,11 @@ impl File for FxFile {
 
     fn query_filesystem(&self) -> Result<fio::FilesystemInfo, Status> {
         let store = self.handle.store();
-        Ok(store
-            .filesystem()
-            .get_info()
-            .to_filesystem_info(store.object_count(), self.handle.owner().id()))
+        Ok(info_to_filesystem_info(
+            store.filesystem().get_info(),
+            store.object_count(),
+            self.handle.owner().id(),
+        ))
     }
 }
 

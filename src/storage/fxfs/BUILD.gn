@@ -143,6 +143,7 @@ if (is_fuchsia) {
     "src/platform/fuchsia/node.rs",
     "src/platform/fuchsia/pager.rs",
     "src/platform/fuchsia/remote_crypt.rs",
+    "src/platform/fuchsia/runtime.rs",
     "src/platform/fuchsia/testing.rs",
     "src/platform/fuchsia/vmo_data_buffer.rs",
     "src/platform/fuchsia/volume.rs",
