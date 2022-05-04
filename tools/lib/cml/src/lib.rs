@@ -35,8 +35,8 @@ use {
 };
 
 pub use cm_types::{
-    AllowedOffers, DependencyType, Durability, Name, OfferAvailability, OnTerminate, ParseError,
-    Path, RelativePath, StartupMode, StorageId, Url, UseAvailability,
+    AllowedOffers, Availability, DependencyType, Durability, Name, OnTerminate, ParseError, Path,
+    RelativePath, StartupMode, StorageId, Url,
 };
 
 pub use crate::translate::compile;
@@ -1972,7 +1972,7 @@ pub struct Use {
 
     /// Determines whether this capability is required to be available, or if its presence is
     /// optional.
-    pub availability: Option<UseAvailability>,
+    pub availability: Option<Availability>,
 }
 
 /// Example:
@@ -2186,7 +2186,7 @@ pub struct Offer {
     pub scope: Option<OneOrMany<EventScope>>,
 
     /// Whether or not this capability must be present. Defaults to `required`.
-    pub availability: Option<OfferAvailability>,
+    pub availability: Option<Availability>,
 
     /// Whether or not the source of this offer must exist. If set to `unknown`, the source of this
     /// offer will be rewritten to `void` if the source does not exist (i.e. is not defined in this

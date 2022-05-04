@@ -23,7 +23,8 @@ type Use = flexible union {
 /// https://fuchsia.dev/fuchsia-src/glossary#service
 type UseService = table {
     /// The provider of the service relative to the component itself. Must
-    /// be `parent` or `framework`.
+    /// be `parent` or `framework`. If the availability is set to `optional`,
+    /// then this must be set to `parent`.
     1: source Ref;
 
     /// Name identifying the service, by which it was presented to this
@@ -45,6 +46,11 @@ type UseService = table {
     /// cause this the child to shut down before its parent. When using a weak
     /// dependency, the parent shuts down before the child.
     4: dependency_type DependencyType;
+
+    /// The availability of this capability. If set to `required`, the component
+    /// is likely to malfunction if this capability is not provided. If set to
+    /// `optional`, the component can handle the capability's absence.
+    5: availability Availability;
 };
 
 /// Declares a protocol used by a component, which was offered to it.
@@ -53,7 +59,8 @@ type UseService = table {
 /// protocol.
 type UseProtocol = table {
     /// The provider of the protocol relative to the component itself.
-    /// Must be `parent`, `framework`, `debug` or `capability`.
+    /// Must be `parent`, `framework`, `debug`, `capability`, or `child`. If the
+    /// availability is set to `optional`, then this must be set to `parent`.
     1: source Ref;
 
     /// Name identifying the protocol, by which it was presented to this
@@ -75,12 +82,18 @@ type UseProtocol = table {
     /// cause this the child to shut down before its parent. When using a weak
     /// dependency, the parent shuts down before the child.
     4: dependency_type DependencyType;
+
+    /// The availability of this capability. If set to `required`, the component
+    /// is likely to malfunction if this capability is not provided. If set to
+    /// `optional`, the component can handle the capability's absence.
+    5: availability Availability;
 };
 
 /// Declares a directory used by a component, which was offered to it.
 type UseDirectory = table {
     /// The provider of the directory relative to the component itself. Must
-    /// be `parent` or `framework`.
+    /// be `parent`, `framework`, or `child`. If the availability is set to
+    /// `optional`, then this must be set to `parent`.
     1: source Ref;
 
     /// Name identifying the directory, by which it was presented to this
@@ -108,12 +121,18 @@ type UseDirectory = table {
     /// cause this the child to shut down before its parent. When using a weak
     /// dependency, the parent shuts down before the child.
     6: dependency_type DependencyType;
+
+    /// The availability of this capability. If set to `required`, the component
+    /// is likely to malfunction if this capability is not provided. If set to
+    /// `optional`, the component can handle the capability's absence.
+    7: availability Availability;
 };
 
 /// Declares storage used by a component, which was offered to it.
 type UseStorage = table {
     /// Name identifying the storage, by which it was presented to this
-    /// component.
+    /// component. If the availability is set to `optional`, then this must
+    /// be set to `parent`.
     1: source_name name;
 
     /// The path where the capability should be installed in the component's
@@ -121,11 +140,17 @@ type UseStorage = table {
     ///
     /// Must be an absolute path starting with /.
     2: target_path string:MAX_PATH_LENGTH;
+
+    /// The availability of this capability. If set to `required`, the component
+    /// is likely to malfunction if this capability is not provided. If set to
+    /// `optional`, the component can handle the capability's absence.
+    3: availability Availability;
 };
 
 /// Declares an event used by a component, which was offered to it.
 type UseEvent = table {
-    /// The provider of the event. Must be |realm| or |framework|.
+    /// The provider of the event. Must be `realm` or `framework`. If the
+    /// availability is set to `optional`, then this must be set to `parent`.
     1: source Ref;
 
     /// Name identifying the event which was presented to this component.
@@ -147,6 +172,11 @@ type UseEvent = table {
     /// cause this the child to shut down before its parent. When using a weak
     /// dependency, the parent shuts down before the child.
     5: dependency_type DependencyType;
+
+    /// The availability of this capability. If set to `required`, the component
+    /// is likely to malfunction if this capability is not provided. If set to
+    /// `optional`, the component can handle the capability's absence.
+    6: availability Availability;
 };
 
 /// Declares a static EventStream used by a component.
@@ -157,6 +187,11 @@ type UseEventStreamDeprecated = table {
     /// The set of events to which this EventStream is subscribed.
     /// Note: This vector must be non-empty.
     2: subscriptions vector<EventSubscription>:MAX_NUM_EVENT_STREAM_SUBSCRIPTIONS;
+
+    /// The availability of this capability. If set to `required`, the component
+    /// is likely to malfunction if this capability is not provided. If set to
+    /// `optional`, the component can handle the capability's absence.
+    3: availability Availability;
 };
 
 /// Declares an EventStream used by a component.
@@ -164,7 +199,9 @@ type UseEventStream = table {
     /// The names of the event streams.
     1: source_name name;
 
-    /// The provider of the event. Must be `parent`, `framework`, or `child`.
+    /// The provider of the event. Must be `parent`, `framework`, or `child`. If
+    /// the availability is set to `optional`, then this must be set to
+    /// `parent`.
     2: source Ref;
 
     /// When an event is used from framework, the scope is required to specify
@@ -177,4 +214,9 @@ type UseEventStream = table {
     /// The path where the capability should be installed in the component's namespace.
     /// Must be an absolute path starting with /.
     4: target_path name;
+
+    /// The availability of this capability. If set to `required`, the component
+    /// is likely to malfunction if this capability is not provided. If set to
+    /// `optional`, the component can handle the capability's absence.
+    5: availability Availability;
 };

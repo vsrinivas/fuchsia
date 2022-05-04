@@ -638,34 +638,18 @@ impl Default for DependencyType {
     }
 }
 
-/// Offered availability. See [`OfferAvailability`].
+/// Capability availability. See [`Availability`].
 ///
-/// [`OfferAvailability`]: ../../fidl_fuchsia_sys2/enum.OfferAvailability.html
+/// [`Availability`]: ../../fidl_fuchsia_sys2/enum.Availability.html
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
-pub enum OfferAvailability {
+pub enum Availability {
     Required,
     Optional,
     SameAsTarget,
 }
 
-impl Default for OfferAvailability {
-    fn default() -> Self {
-        Self::Required
-    }
-}
-
-/// Used availability. See [`UseAvailability`].
-///
-/// [`UseAvailability`]: ../../fidl_fuchsia_sys2/enum.UseAvailability.html
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum UseAvailability {
-    Required,
-    Optional,
-}
-
-impl Default for UseAvailability {
+impl Default for Availability {
     fn default() -> Self {
         Self::Required
     }

@@ -68,6 +68,7 @@ fn main() {
                 source: Some(Ref::Parent(ParentRef {})),
                 source_name: Some("fuchsia.fonts.Provider".to_string()),
                 target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
+                availability: Some(Availability::Required),
                 ..UseService::EMPTY
             }),
             Use::Protocol(UseProtocol {
@@ -75,6 +76,7 @@ fn main() {
                 source: Some(Ref::Parent(ParentRef {})),
                 source_name: Some("fuchsia.fonts.LegacyProvider".to_string()),
                 target_path: Some("/svc/fuchsia.fonts.OldProvider".to_string()),
+                availability: Some(Availability::Optional),
                 ..UseProtocol::EMPTY
             }),
             Use::Protocol(UseProtocol {
@@ -82,6 +84,7 @@ fn main() {
                 source: Some(Ref::Debug(DebugRef {})),
                 source_name: Some("fuchsia.log.LegacyLog".to_string()),
                 target_path: Some("/svc/fuchsia.log.LegacyLog".to_string()),
+                availability: Some(Availability::Required),
                 ..UseProtocol::EMPTY
             }),
             Use::Event(UseEvent {
@@ -90,6 +93,7 @@ fn main() {
                 source_name: Some("started".to_string()),
                 target_name: Some("began".to_string()),
                 filter: None,
+                availability: Some(Availability::Required),
                 ..UseEvent::EMPTY
             }),
             Use::Event(UseEvent {
@@ -98,6 +102,7 @@ fn main() {
                 source_name: Some("destroyed".to_string()),
                 target_name: Some("destroyed".to_string()),
                 filter: None,
+                availability: Some(Availability::Required),
                 ..UseEvent::EMPTY
             }),
             Use::Event(UseEvent {
@@ -106,6 +111,7 @@ fn main() {
                 source_name: Some("stopped".to_string()),
                 target_name: Some("stopped".to_string()),
                 filter: None,
+                availability: Some(Availability::Required),
                 ..UseEvent::EMPTY
             }),
             Use::Event(UseEvent {
@@ -122,6 +128,7 @@ fn main() {
                     }]),
                     ..fdata::Dictionary::EMPTY
                 }),
+                availability: Some(Availability::Optional),
                 ..UseEvent::EMPTY
             }),
             Use::EventStreamDeprecated(UseEventStreamDeprecated {
@@ -140,6 +147,7 @@ fn main() {
                         ..EventSubscription::EMPTY
                     },
                 ]),
+                availability: Some(Availability::Required),
                 ..UseEventStreamDeprecated::EMPTY
             }),
             Use::EventStream(UseEventStream {
@@ -150,6 +158,7 @@ fn main() {
                     collection: None,
                     name: "logger".to_string(),
                 })]),
+                availability: Some(Availability::Required),
                 ..UseEventStream::EMPTY
             }),
             Use::EventStream(UseEventStream {
@@ -160,6 +169,7 @@ fn main() {
                     collection: None,
                     name: "logger".to_string(),
                 })]),
+                availability: Some(Availability::Required),
                 ..UseEventStream::EMPTY
             }),
             Use::EventStream(UseEventStream {
@@ -170,12 +180,14 @@ fn main() {
                     collection: None,
                     name: "logger".to_string(),
                 })]),
+                availability: Some(Availability::Required),
                 ..UseEventStream::EMPTY
             }),
             Use::EventStream(UseEventStream {
                 source_name: Some("filtered".to_string()),
                 source: Some(Ref::Parent(ParentRef {})),
                 target_path: Some("/svc/fuchsia.component.EventStream".to_string()),
+                availability: Some(Availability::Required),
                 ..UseEventStream::EMPTY
             }),
             Use::Protocol(UseProtocol {
@@ -183,6 +195,7 @@ fn main() {
                 source: Some(Ref::Parent(ParentRef {})),
                 source_name: Some("fuchsia.logger.LogSink".to_string()),
                 target_path: Some("/svc/fuchsia.logger.LogSink".to_string()),
+                availability: Some(Availability::Required),
                 ..UseProtocol::EMPTY
             }),
         ];
@@ -239,6 +252,7 @@ fn main() {
                 source_name: Some("fuchsia.logger.Log".to_string()),
                 target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),
                 target_name: Some("fuchsia.logger.Log".to_string()),
+                availability: Some(Availability::Required),
                 ..OfferService::EMPTY
             }),
             Offer::Protocol(OfferProtocol {
@@ -247,6 +261,7 @@ fn main() {
                 target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),
                 target_name: Some("fuchsia.logger.OldLog".to_string()),
                 dependency_type: Some(DependencyType::Strong),
+                availability: Some(Availability::Required),
                 ..OfferProtocol::EMPTY
             }),
             Offer::Event(OfferEvent {
@@ -255,6 +270,7 @@ fn main() {
                 target: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
                 target_name: Some("stopped-logger".to_string()),
                 filter: None,
+                availability: Some(Availability::Required),
                 ..OfferEvent::EMPTY
             }),
             Offer::EventStream(OfferEventStream {
@@ -269,6 +285,7 @@ fn main() {
                     ..Dictionary::EMPTY
                 }),
                 target_name: Some("directory_ready".to_string()),
+                availability: Some(Availability::SameAsTarget),
                 ..OfferEventStream::EMPTY
             }),
             Offer::EventStream(OfferEventStream {
@@ -280,6 +297,7 @@ fn main() {
                     collection: None,
                 })]),
                 target_name: Some("started".to_string()),
+                availability: Some(Availability::Required),
                 ..OfferEventStream::EMPTY
             }),
             Offer::EventStream(OfferEventStream {
@@ -291,7 +309,35 @@ fn main() {
                     collection: None,
                 })]),
                 target_name: Some("stopped".to_string()),
+                availability: Some(Availability::Required),
                 ..OfferEventStream::EMPTY
+            }),
+            Offer::Protocol(OfferProtocol {
+                source: Some(Ref::VoidType(VoidRef {})),
+                source_name: Some("fuchsia.logger.LegacyLog2".to_string()),
+                target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),
+                target_name: Some("fuchsia.logger.OldLog2".to_string()),
+                dependency_type: Some(DependencyType::Strong),
+                availability: Some(Availability::Optional),
+                ..OfferProtocol::EMPTY
+            }),
+            Offer::Protocol(OfferProtocol {
+                source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
+                source_name: Some("fuchsia.logger.LegacyLog3".to_string()),
+                target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),
+                target_name: Some("fuchsia.logger.OldLog3".to_string()),
+                dependency_type: Some(DependencyType::Strong),
+                availability: Some(Availability::Required),
+                ..OfferProtocol::EMPTY
+            }),
+            Offer::Protocol(OfferProtocol {
+                source: Some(Ref::Parent(ParentRef {})),
+                source_name: Some("fuchsia.logger.LegacyLog4".to_string()),
+                target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),
+                target_name: Some("fuchsia.logger.OldLog4".to_string()),
+                dependency_type: Some(DependencyType::Strong),
+                availability: Some(Availability::Optional),
+                ..OfferProtocol::EMPTY
             }),
         ];
         let capabilities = vec![

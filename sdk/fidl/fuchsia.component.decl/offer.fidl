@@ -44,6 +44,13 @@ type NameMapping = struct {
     target_name name;
 };
 
+/// Describes the expected availability of the capability.
+type Availability = strict enum {
+    REQUIRED = 1;
+    OPTIONAL = 2;
+    SAME_AS_TARGET = 3;
+};
+
 /// Declares a service offered by a component to one of its children, which may
 /// have been offered by the component's containing realm, the component itself,
 /// or one of its other children.
@@ -52,7 +59,8 @@ type NameMapping = struct {
 /// https://fuchsia.dev/fuchsia-src/glossary#service
 type OfferService = table {
     /// The provider of the capability relative to the component itself. Must be
-    /// `parent`, `self`, or `child`.
+    /// `parent`, `self`, `child`, or `void`. If set to `void`, then the target
+    /// must offer or use the capability with `optional` availability.
     1: source Ref;
 
     /// Name identifying the service being offered.
@@ -72,6 +80,14 @@ type OfferService = table {
 
     /// List of renamed service instances.
     6: renamed_instances vector<NameMapping>:MAX;
+
+    /// The availability of this capability. If set to `required`, the target
+    /// may use or offer the capability with either `required` or `optional`
+    /// availability. If set to `optional`, the target must use or offer the
+    /// capability with `optional` availability. The `same_as_target` value
+    /// causes this offer's availability to match the availability set in the
+    /// target.
+    7: availability Availability;
 };
 
 /// Declares a protocol offered by a component to one of its children,
@@ -82,7 +98,9 @@ type OfferService = table {
 /// https://fuchsia.dev/fuchsia-src/glossary#protocol
 type OfferProtocol = table {
     /// The provider of the capability relative to the component itself. Must be
-    /// `parent`, `self`, or `child`.
+    /// `parent`, `self`, `child`, `framework`, or `void`. If set to `void`,
+    /// then the target must offer or use the capability with `optional`
+    /// availability.
     1: source Ref;
 
     /// Name identifying the protocol being offered.
@@ -98,6 +116,14 @@ type OfferProtocol = table {
     /// weak offer must support the offered capability being unavailable at any
     /// point.
     5: dependency_type DependencyType;
+
+    /// The availability of this capability. If set to `required`, the target
+    /// may use or offer the capability with either `required` or `optional`
+    /// availability. If set to `optional`, the target must use or offer the
+    /// capability with `optional` availability. The `same_as_target` value
+    /// causes this offer's availability to match the availability set in the
+    /// target.
+    6: availability Availability;
 };
 
 /// Declares a directory offered by a component to one of its children, which
@@ -105,7 +131,9 @@ type OfferProtocol = table {
 /// itself, or one of its other children.
 type OfferDirectory = table {
     /// The provider of the capability relative to the component itself. Must be
-    /// `parent`, `self`, or `child`.
+    /// `parent`, `self`, `child`, `framework`, or `void`. If set to `void`,
+    /// then the target must offer or use the capability with `optional`
+    /// availability.
     1: source Ref;
 
     /// Name identifying the directory being offered.
@@ -129,6 +157,14 @@ type OfferDirectory = table {
     /// weak offer must support the offered capability being unavailable at any
     /// point.
     7: dependency_type DependencyType;
+
+    /// The availability of this capability. If set to `required`, the target
+    /// may use or offer the capability with either `required` or `optional`
+    /// availability. If set to `optional`, the target must use or offer the
+    /// capability with `optional` availability. The `same_as_target` value
+    /// causes this offer's availability to match the availability set in the
+    /// target.
+    8: availability Availability;
 };
 
 /// Declares a storage capability offered by a component to one of its children,
@@ -138,7 +174,9 @@ type OfferStorage = table {
     /// The name of the storage capability being offered
     1: source_name name;
 
-    /// The source of the storage capability. Must be `parent` or `storage`.
+    /// The provider of the capability relative to the component itself. Must be
+    /// `parent`, `storage`, or `void`. If set to `void`, then the target must
+    /// offer or use the capability with `optional` availability.
     2: source Ref;
 
     /// Reference to the target of the capability. Must be `child` or
@@ -147,6 +185,14 @@ type OfferStorage = table {
 
     /// The name the storage capability is being offered as
     4: target_name name;
+
+    /// The availability of this capability. If set to `required`, the target
+    /// may use or offer the capability with either `required` or `optional`
+    /// availability. If set to `optional`, the target must use or offer the
+    /// capability with `optional` availability. The `same_as_target` value
+    /// causes this offer's availability to match the availability set in the
+    /// target.
+    5: availability Availability;
 };
 
 /// Declares a runner offered by a component to one of its children, which may
@@ -189,7 +235,9 @@ type OfferResolver = table {
 
 /// Declares an event offered by a component.
 type OfferEvent = table {
-    /// The provider of the event. Must be `parent`.
+    /// The provider of the capability relative to the component itself. Must be
+    /// `parent` or `void`. If set to `void`, then the target must offer or use
+    /// the capability with `optional` availability.
     1: source Ref;
 
     /// Name of the event being offered.
@@ -204,11 +252,21 @@ type OfferEvent = table {
     /// Filter for the event. The structure of the filter depends on the event type. May be absent
     /// for some events.
     5: filter fuchsia.data.Dictionary;
+
+    /// The availability of this capability. If set to `required`, the target
+    /// may use or offer the capability with either `required` or `optional`
+    /// availability. If set to `optional`, the target must use or offer the
+    /// capability with `optional` availability. The `same_as_target` value
+    /// causes this offer's availability to match the availability set in the
+    /// target.
+    6: availability Availability;
 };
 
 /// Declares an event stream offered by a component.
 type OfferEventStream = table {
-    /// The provider of the event stream. Must be `parent`, `framework` or a child.
+    /// The provider of the capability relative to the component itself. Must be
+    /// `parent`, `framework`, `child`, or `void`. If set to `void`, then the
+    /// target must offer or use the capability with `optional` availability.
     1: source Ref;
 
     /// Name of the event being offered.
@@ -230,4 +288,12 @@ type OfferEventStream = table {
     /// Filter for the event stream. Only present for DirectoryReady events
     /// and CapabilityRequested events
     6: filter fuchsia.data.Dictionary;
+
+    /// The availability of this capability. If set to `required`, the target
+    /// may use or offer the capability with either `required` or `optional`
+    /// availability. If set to `optional`, the target must use or offer the
+    /// capability with `optional` availability. The `same_as_target` value
+    /// causes this offer's availability to match the availability set in the
+    /// target.
+    7: availability Availability;
 };

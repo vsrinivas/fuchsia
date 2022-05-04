@@ -1734,6 +1734,9 @@ impl FidlIntoNative<OfferSource> for fdecl::Ref {
             fdecl::Ref::Collection(c) => OfferSource::Collection(c.name),
             fdecl::Ref::Framework(_) => OfferSource::Framework,
             fdecl::Ref::Capability(c) => OfferSource::Capability(c.name.into()),
+            // TODO: this is invalid, but until cm_rust supports the void source we need to put
+            // _something_ here.
+            fdecl::Ref::VoidType(_) => OfferSource::Framework,
             _ => panic!("invalid OfferSource variant"),
         }
     }

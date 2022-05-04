@@ -4,11 +4,12 @@
 
 use {
     crate::{
-        error::Error, AnyRef, AsClause, Capability, CapabilityClause, Child, Collection, ConfigKey,
-        ConfigNestedValueType, ConfigValueType, DebugRegistration, Document, Environment,
-        EnvironmentExtends, EnvironmentRef, EventScope, EventSubscriptionsClause, Expose,
-        ExposeFromRef, ExposeToRef, FromClause, Offer, OneOrMany, Path, PathClause, Program,
-        ResolverRegistration, RightsClause, RunnerRegistration, Use, UseFromRef,
+        error::Error, AnyRef, AsClause, Availability, Capability, CapabilityClause, Child,
+        Collection, ConfigKey, ConfigNestedValueType, ConfigValueType, DebugRegistration, Document,
+        Environment, EnvironmentExtends, EnvironmentRef, EventScope, EventSubscriptionsClause,
+        Expose, ExposeFromRef, ExposeToRef, FromClause, Offer, OneOrMany, Path, PathClause,
+        Program, ResolverRegistration, RightsClause, RunnerRegistration, SourceAvailability, Use,
+        UseFromRef,
     },
     cm_types::{self as cm, Name},
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
@@ -204,6 +205,7 @@ fn translate_use(
             let target_paths =
                 all_target_use_paths(use_, use_).ok_or_else(|| Error::internal("no capability"))?;
             let source_names = n.to_vec();
+            let availability = extract_use_availability(use_)?;
             for (source_name, target_path) in source_names.into_iter().zip(target_paths.into_iter())
             {
                 out_uses.push(fdecl::Use::Service(fdecl::UseService {
@@ -213,6 +215,7 @@ fn translate_use(
                     dependency_type: Some(
                         use_.dependency.clone().unwrap_or(cm::DependencyType::Strong).into(),
                     ),
+                    availability: Some(availability),
                     ..fdecl::UseService::EMPTY
                 }));
             }
@@ -221,6 +224,7 @@ fn translate_use(
             let target_paths =
                 all_target_use_paths(use_, use_).ok_or_else(|| Error::internal("no capability"))?;
             let source_names = n.to_vec();
+            let availability = extract_use_availability(use_)?;
             for (source_name, target_path) in source_names.into_iter().zip(target_paths.into_iter())
             {
                 out_uses.push(fdecl::Use::Protocol(fdecl::UseProtocol {
@@ -230,6 +234,7 @@ fn translate_use(
                     dependency_type: Some(
                         use_.dependency.clone().unwrap_or(cm::DependencyType::Strong).into(),
                     ),
+                    availability: Some(availability),
                     ..fdecl::UseProtocol::EMPTY
                 }));
             }
@@ -238,6 +243,7 @@ fn translate_use(
             let target_path = one_target_use_path(use_, use_)?;
             let rights = extract_required_rights(use_, "use")?;
             let subdir = extract_use_subdir(use_);
+            let availability = extract_use_availability(use_)?;
             out_uses.push(fdecl::Use::Directory(fdecl::UseDirectory {
                 source: Some(source),
                 source_name: Some(n.clone().into()),
@@ -247,13 +253,16 @@ fn translate_use(
                 dependency_type: Some(
                     use_.dependency.clone().unwrap_or(cm::DependencyType::Strong).into(),
                 ),
+                availability: Some(availability),
                 ..fdecl::UseDirectory::EMPTY
             }));
         } else if let Some(n) = &use_.storage {
             let target_path = one_target_use_path(use_, use_)?;
+            let availability = extract_use_availability(use_)?;
             out_uses.push(fdecl::Use::Storage(fdecl::UseStorage {
                 source_name: Some(n.clone().into()),
                 target_path: Some(target_path.into()),
+                availability: Some(availability),
                 ..fdecl::UseStorage::EMPTY
             }));
         } else if let Some(n) = &use_.event {
@@ -261,6 +270,7 @@ fn translate_use(
             let target_names = all_target_capability_names(use_, use_)
                 .ok_or_else(|| Error::internal("no capability"))?;
             let source_names = n.to_vec();
+            let availability = extract_use_availability(use_)?;
             for target_name in target_names {
                 // When multiple source names are provided, there is no way to alias each one, so
                 // source_name == target_name,
@@ -284,13 +294,16 @@ fn translate_use(
                     dependency_type: Some(
                         use_.dependency.clone().unwrap_or(cm::DependencyType::Strong).into(),
                     ),
+                    availability: Some(availability),
                     ..fdecl::UseEvent::EMPTY
                 }));
             }
         } else if let Some(name) = &use_.event_stream_deprecated {
             let opt_subscriptions = use_.event_subscriptions();
+            let availability = extract_use_availability(use_)?;
             out_uses.push(fdecl::Use::EventStreamDeprecated(fdecl::UseEventStreamDeprecated {
                 name: Some(name.to_string()),
+                availability: Some(availability),
                 subscriptions: opt_subscriptions.map(|subscriptions| {
                     subscriptions
                         .iter()
@@ -310,6 +323,7 @@ fn translate_use(
                     .iter()
                     .map(|name| name.to_string())
                     .collect();
+            let availability = extract_use_availability(use_)?;
             for name in source_names {
                 let scopes = match use_.scope.clone() {
                     Some(value) => Some(annotate_type::<Vec<EventScope>>(value.into())),
@@ -345,6 +359,7 @@ fn translate_use(
                         .as_str()
                         .to_string(),
                     ),
+                    availability: Some(availability),
                     ..fdecl::UseEventStream::EMPTY
                 }));
             }
@@ -500,6 +515,51 @@ fn annotate_type<T>(val: T) -> T {
     val
 }
 
+fn derive_source_and_availability(
+    availability: Option<&Availability>,
+    source: fdecl::Ref,
+    source_availability: Option<&SourceAvailability>,
+    all_capability_names: &HashSet<Name>,
+    all_children: &HashSet<&Name>,
+    all_collections: &HashSet<&Name>,
+) -> (fdecl::Ref, fdecl::Availability) {
+    let availability = availability.map(|a| match a {
+        Availability::Required => fdecl::Availability::Required,
+        Availability::Optional => fdecl::Availability::Optional,
+        Availability::SameAsTarget => fdecl::Availability::SameAsTarget,
+    });
+    if source_availability != Some(&SourceAvailability::Unknown) {
+        return (source, availability.unwrap_or(fdecl::Availability::Required));
+    }
+    match &source {
+        fdecl::Ref::Child(fdecl::ChildRef { name, .. })
+            if !all_children.contains(&Name::new(name.clone()).unwrap()) =>
+        {
+            (
+                fdecl::Ref::VoidType(fdecl::VoidRef {}),
+                availability.unwrap_or(fdecl::Availability::Optional),
+            )
+        }
+        fdecl::Ref::Collection(fdecl::CollectionRef { name, .. })
+            if !all_collections.contains(&Name::new(name.clone()).unwrap()) =>
+        {
+            (
+                fdecl::Ref::VoidType(fdecl::VoidRef {}),
+                availability.unwrap_or(fdecl::Availability::Optional),
+            )
+        }
+        fdecl::Ref::Capability(fdecl::CapabilityRef { name, .. })
+            if !all_capability_names.contains(&Name::new(name.clone()).unwrap()) =>
+        {
+            (
+                fdecl::Ref::VoidType(fdecl::VoidRef {}),
+                availability.unwrap_or(fdecl::Availability::Optional),
+            )
+        }
+        _ => (source, availability.unwrap_or(fdecl::Availability::Required)),
+    }
+}
+
 /// `offer` rules route multiple capabilities from multiple sources to multiple targets.
 fn translate_offer(
     offer_in: &Vec<Offer>,
@@ -518,11 +578,20 @@ fn translate_offer(
                 all_collections,
             )?;
             for (source, source_name, target, target_name) in entries {
+                let (source, availability) = derive_source_and_availability(
+                    offer.availability.as_ref(),
+                    source,
+                    offer.source_availability.as_ref(),
+                    all_capability_names,
+                    all_children,
+                    all_collections,
+                );
                 out_offers.push(fdecl::Offer::Service(fdecl::OfferService {
                     source: Some(source),
                     source_name: Some(source_name.into()),
                     target: Some(target),
                     target_name: Some(target_name.into()),
+                    availability: Some(availability),
                     ..fdecl::OfferService::EMPTY
                 }));
             }
@@ -535,6 +604,14 @@ fn translate_offer(
                 all_collections,
             )?;
             for (source, source_name, target, target_name) in entries {
+                let (source, availability) = derive_source_and_availability(
+                    offer.availability.as_ref(),
+                    source,
+                    offer.source_availability.as_ref(),
+                    all_capability_names,
+                    all_children,
+                    all_collections,
+                );
                 out_offers.push(fdecl::Offer::Protocol(fdecl::OfferProtocol {
                     source: Some(source),
                     source_name: Some(source_name.into()),
@@ -543,6 +620,7 @@ fn translate_offer(
                     dependency_type: Some(
                         offer.dependency.clone().unwrap_or(cm::DependencyType::Strong).into(),
                     ),
+                    availability: Some(availability),
                     ..fdecl::OfferProtocol::EMPTY
                 }));
             }
@@ -555,6 +633,14 @@ fn translate_offer(
                 all_collections,
             )?;
             for (source, source_name, target, target_name) in entries {
+                let (source, availability) = derive_source_and_availability(
+                    offer.availability.as_ref(),
+                    source,
+                    offer.source_availability.as_ref(),
+                    all_capability_names,
+                    all_children,
+                    all_collections,
+                );
                 out_offers.push(fdecl::Offer::Directory(fdecl::OfferDirectory {
                     source: Some(source),
                     source_name: Some(source_name.into()),
@@ -565,6 +651,7 @@ fn translate_offer(
                     dependency_type: Some(
                         offer.dependency.clone().unwrap_or(cm::DependencyType::Strong).into(),
                     ),
+                    availability: Some(availability),
                     ..fdecl::OfferDirectory::EMPTY
                 }));
             }
@@ -577,11 +664,20 @@ fn translate_offer(
                 all_collections,
             )?;
             for (source, source_name, target, target_name) in entries {
+                let (source, availability) = derive_source_and_availability(
+                    offer.availability.as_ref(),
+                    source,
+                    offer.source_availability.as_ref(),
+                    all_capability_names,
+                    all_children,
+                    all_collections,
+                );
                 out_offers.push(fdecl::Offer::Storage(fdecl::OfferStorage {
                     source: Some(source),
                     source_name: Some(source_name.into()),
                     target: Some(target),
                     target_name: Some(target_name.into()),
+                    availability: Some(availability),
                     ..fdecl::OfferStorage::EMPTY
                 }));
             }
@@ -628,6 +724,14 @@ fn translate_offer(
                 all_collections,
             )?;
             for (source, source_name, target, target_name) in entries {
+                let (source, availability) = derive_source_and_availability(
+                    offer.availability.as_ref(),
+                    source,
+                    offer.source_availability.as_ref(),
+                    all_capability_names,
+                    all_children,
+                    all_collections,
+                );
                 out_offers.push(fdecl::Offer::Event(fdecl::OfferEvent {
                     source: Some(source),
                     source_name: Some(source_name.into()),
@@ -639,6 +743,7 @@ fn translate_offer(
                         Some(dict) => Some(dictionary_from_map(dict.clone())?),
                         None => None,
                     },
+                    availability: Some(availability),
                     ..fdecl::OfferEvent::EMPTY
                 }));
             }
@@ -651,6 +756,14 @@ fn translate_offer(
                 all_collections,
             )?;
             for (source, source_name, target, target_name) in entries {
+                let (source, availability) = derive_source_and_availability(
+                    offer.availability.as_ref(),
+                    source,
+                    offer.source_availability.as_ref(),
+                    all_capability_names,
+                    all_children,
+                    all_collections,
+                );
                 let scopes = match offer.scope.clone() {
                     Some(value) => Some(annotate_type::<Vec<EventScope>>(value.into())),
                     None => None,
@@ -680,6 +793,7 @@ fn translate_offer(
                         }
                         None => None,
                     },
+                    availability: Some(availability),
                     ..fdecl::OfferEventStream::EMPTY
                 }));
             }
@@ -965,6 +1079,16 @@ fn extract_use_source(
             }
         }
         None => Ok(fdecl::Ref::Parent(fdecl::ParentRef {})), // Default value.
+    }
+}
+
+fn extract_use_availability(in_obj: &Use) -> Result<fdecl::Availability, Error> {
+    match in_obj.availability.as_ref() {
+        Some(Availability::Required) | None => Ok(fdecl::Availability::Required),
+        Some(Availability::Optional) => Ok(fdecl::Availability::Optional),
+        _ => Err(Error::internal(
+            "availability \"same_as_target\" not supported for use declarations",
+        )),
     }
 }
 
@@ -1508,7 +1632,7 @@ pub fn offer_source_from_ref(
         AnyRef::Debug => Ok(fdecl::Ref::Debug(fdecl::DebugRef {})),
         AnyRef::Parent => Ok(fdecl::Ref::Parent(fdecl::ParentRef {})),
         AnyRef::Self_ => Ok(fdecl::Ref::Self_(fdecl::SelfRef {})),
-        AnyRef::Void => panic!("void is unsupported"),
+        AnyRef::Void => Ok(fdecl::Ref::VoidType(fdecl::VoidRef {})),
     }
 }
 
@@ -1714,11 +1838,15 @@ mod tests {
         test_compile_use => {
             input = json!({
                 "use": [
-                    { "protocol": "LegacyCoolFonts", "path": "/svc/fuchsia.fonts.LegacyProvider" },
+                    {
+                        "protocol": "LegacyCoolFonts",
+                        "path": "/svc/fuchsia.fonts.LegacyProvider",
+                        "availability": "optional",
+                    },
                     { "protocol": "fuchsia.sys2.LegacyRealm", "from": "framework" },
                     { "protocol": "fuchsia.sys2.StorageAdmin", "from": "#data-storage" },
                     { "protocol": "fuchsia.sys2.DebugProto", "from": "debug" },
-                    { "protocol": "fuchsia.sys2.Echo", "from": "self"},
+                    { "protocol": "fuchsia.sys2.Echo", "from": "self", "availability": "optional" },
                     { "directory": "assets", "rights" : ["read_bytes"], "path": "/data/assets" },
                     {
                         "directory": "config",
@@ -1787,6 +1915,7 @@ mod tests {
                             source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                             source_name: Some("LegacyCoolFonts".to_string()),
                             target_path: Some("/svc/fuchsia.fonts.LegacyProvider".to_string()),
+                            availability: Some(fdecl::Availability::Optional),
                             ..fdecl::UseProtocol::EMPTY
                         }
                     ),
@@ -1796,6 +1925,7 @@ mod tests {
                             source: Some(fdecl::Ref::Framework(fdecl::FrameworkRef {})),
                             source_name: Some("fuchsia.sys2.LegacyRealm".to_string()),
                             target_path: Some("/svc/fuchsia.sys2.LegacyRealm".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::UseProtocol::EMPTY
                         }
                     ),
@@ -1805,6 +1935,7 @@ mod tests {
                             source: Some(fdecl::Ref::Capability(fdecl::CapabilityRef { name: "data-storage".to_string() })),
                             source_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
                             target_path: Some("/svc/fuchsia.sys2.StorageAdmin".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::UseProtocol::EMPTY
                         }
                     ),
@@ -1814,6 +1945,7 @@ mod tests {
                             source: Some(fdecl::Ref::Debug(fdecl::DebugRef {})),
                             source_name: Some("fuchsia.sys2.DebugProto".to_string()),
                             target_path: Some("/svc/fuchsia.sys2.DebugProto".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::UseProtocol::EMPTY
                         }
                     ),
@@ -1823,6 +1955,7 @@ mod tests {
                             source: Some(fdecl::Ref::Self_(fdecl::SelfRef {})),
                             source_name: Some("fuchsia.sys2.Echo".to_string()),
                             target_path: Some("/svc/fuchsia.sys2.Echo".to_string()),
+                            availability: Some(fdecl::Availability::Optional),
                             ..fdecl::UseProtocol::EMPTY
                         }
                     ),
@@ -1834,6 +1967,7 @@ mod tests {
                             target_path: Some("/data/assets".to_string()),
                             rights: Some(fio::Operations::READ_BYTES),
                             subdir: None,
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::UseDirectory::EMPTY
                         }
                     ),
@@ -1845,6 +1979,7 @@ mod tests {
                             target_path: Some("/data/config".to_string()),
                             rights: Some(fio::Operations::READ_BYTES),
                             subdir: Some("fonts".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::UseDirectory::EMPTY
                         }
                     ),
@@ -1852,6 +1987,7 @@ mod tests {
                         fdecl::UseStorage {
                             source_name: Some("hippos".to_string()),
                             target_path: Some("/hippos".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::UseStorage::EMPTY
                         }
                     ),
@@ -1859,6 +1995,7 @@ mod tests {
                         fdecl::UseStorage {
                             source_name: Some("cache".to_string()),
                             target_path: Some("/tmp".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::UseStorage::EMPTY
                         }
                     ),
@@ -1869,6 +2006,7 @@ mod tests {
                             source_name: Some("destroyed".to_string()),
                             target_name: Some("destroyed".to_string()),
                             filter: None,
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::UseEvent::EMPTY
                         }
                     ),
@@ -1879,6 +2017,7 @@ mod tests {
                             source_name: Some("started".to_string()),
                             target_name: Some("started".to_string()),
                             filter: None,
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::UseEvent::EMPTY
                         }
                     ),
@@ -1889,6 +2028,7 @@ mod tests {
                             source_name: Some("stopped".to_string()),
                             target_name: Some("stopped".to_string()),
                             filter: None,
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::UseEvent::EMPTY
                         }
                     ),
@@ -1907,6 +2047,7 @@ mod tests {
                                 ]),
                                 ..fdata::Dictionary::EMPTY
                             }),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::UseEvent::EMPTY
                         }
                     ),
@@ -1926,12 +2067,14 @@ mod tests {
                                 ..fdecl::EventSubscription::EMPTY
                             },
                         ]),
+                        availability: Some(fdecl::Availability::Required),
                         ..fdecl::UseEventStreamDeprecated::EMPTY
                     }),
                     fdecl::Use::EventStream(fdecl::UseEventStream {
                         source_name: Some("bar_stream".to_string()),
                         source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
                         target_path: Some("/svc/fuchsia.component.EventStream".to_string()),
+                        availability: Some(fdecl::Availability::Required),
                         ..fdecl::UseEventStream::EMPTY
                     }),
                     fdecl::Use::EventStream(fdecl::UseEventStream {
@@ -1939,6 +2082,7 @@ mod tests {
                         scope: Some(vec![fdecl::Ref::Child(fdecl::ChildRef{name:"logger".to_string(), collection: None}), fdecl::Ref::Collection(fdecl::CollectionRef{name:"modular".to_string()})]),
                         source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
                         target_path: Some("/svc/fuchsia.component.EventStream".to_string()),
+                        availability: Some(fdecl::Availability::Required),
                         ..fdecl::UseEventStream::EMPTY
                     }),
                     fdecl::Use::EventStream(fdecl::UseEventStream {
@@ -1946,6 +2090,7 @@ mod tests {
                         scope: Some(vec![fdecl::Ref::Child(fdecl::ChildRef{name:"logger".to_string(), collection: None}), fdecl::Ref::Collection(fdecl::CollectionRef{name:"modular".to_string()})]),
                         source: Some(fdecl::Ref::Parent(fdecl::ParentRef{})),
                         target_path: Some("/svc/fuchsia.component.EventStream".to_string()),
+                        availability: Some(fdecl::Availability::Required),
                         ..fdecl::UseEventStream::EMPTY
                     })
                 ]),
@@ -2331,12 +2476,22 @@ mod tests {
                         "dependency": "strong"
                     },
                     {
+                        "protocol": "fuchsia.logger.LegacyLog2",
+                        "from": "#non-existent",
+                        "to": [ "#modular" ], // Verifies compilation of "to:" as array of one element.
+                        "as": "fuchsia.logger.LegacySysLog2",
+                        "dependency": "strong",
+                        "availability": "optional",
+                        "source_availability": "unknown"
+                    },
+                    {
                         "protocol": [
                             "fuchsia.setui.SetUiService",
                             "fuchsia.test.service.Name"
                         ],
                         "from": "parent",
-                        "to": [ "#modular" ]
+                        "to": [ "#modular" ],
+                        "availability": "optional"
                     },
                     {
                         "protocol": "fuchsia.sys2.StorageAdmin",
@@ -2347,7 +2502,8 @@ mod tests {
                         "directory": "assets",
                         "from": "parent",
                         "to": [ "#netstack" ],
-                        "dependency": "weak_for_migration"
+                        "dependency": "weak_for_migration",
+                        "availability": "same_as_target"
                     },
                     {
                         "directory": [ "assets2", "assets3" ],
@@ -2482,6 +2638,7 @@ mod tests {
                             })),
                             target_name: Some("fuchsia.logger.LegacyLog".to_string()),
                             dependency_type: Some(fdecl::DependencyType::Weak),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferProtocol::EMPTY
                         }
                     ),
@@ -2497,6 +2654,20 @@ mod tests {
                             })),
                             target_name: Some("fuchsia.logger.LegacySysLog".to_string()),
                             dependency_type: Some(fdecl::DependencyType::Strong),
+                            availability: Some(fdecl::Availability::Required),
+                            ..fdecl::OfferProtocol::EMPTY
+                        }
+                    ),
+                    fdecl::Offer::Protocol (
+                        fdecl::OfferProtocol {
+                            source: Some(fdecl::Ref::VoidType(fdecl::VoidRef {})),
+                            source_name: Some("fuchsia.logger.LegacyLog2".to_string()),
+                            target: Some(fdecl::Ref::Collection(fdecl::CollectionRef {
+                                name: "modular".to_string(),
+                            })),
+                            target_name: Some("fuchsia.logger.LegacySysLog2".to_string()),
+                            dependency_type: Some(fdecl::DependencyType::Strong),
+                            availability: Some(fdecl::Availability::Optional),
                             ..fdecl::OfferProtocol::EMPTY
                         }
                     ),
@@ -2509,6 +2680,7 @@ mod tests {
                             })),
                             target_name: Some("fuchsia.setui.SetUiService".to_string()),
                             dependency_type: Some(fdecl::DependencyType::Strong),
+                            availability: Some(fdecl::Availability::Optional),
                             ..fdecl::OfferProtocol::EMPTY
                         }
                     ),
@@ -2521,6 +2693,7 @@ mod tests {
                             })),
                             target_name: Some("fuchsia.test.service.Name".to_string()),
                             dependency_type: Some(fdecl::DependencyType::Strong),
+                            availability: Some(fdecl::Availability::Optional),
                             ..fdecl::OfferProtocol::EMPTY
                         }
                     ),
@@ -2535,6 +2708,7 @@ mod tests {
                             })),
                             target_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
                             dependency_type: Some(fdecl::DependencyType::Strong),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferProtocol::EMPTY
                         }
                     ),
@@ -2550,6 +2724,7 @@ mod tests {
                             rights: None,
                             subdir: None,
                             dependency_type: Some(fdecl::DependencyType::WeakForMigration),
+                            availability: Some(fdecl::Availability::SameAsTarget),
                             ..fdecl::OfferDirectory::EMPTY
                         }
                     ),
@@ -2564,6 +2739,7 @@ mod tests {
                             rights: None,
                             subdir: None,
                             dependency_type: Some(fdecl::DependencyType::Strong),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferDirectory::EMPTY
                         }
                     ),
@@ -2578,6 +2754,7 @@ mod tests {
                             rights: None,
                             subdir: None,
                             dependency_type: Some(fdecl::DependencyType::Strong),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferDirectory::EMPTY
                         }
                     ),
@@ -2593,6 +2770,7 @@ mod tests {
                             rights: None,
                             subdir: None,
                             dependency_type: Some(fdecl::DependencyType::Strong),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferDirectory::EMPTY
                         }
                     ),
@@ -2608,6 +2786,7 @@ mod tests {
                             rights: None,
                             subdir: None,
                             dependency_type: Some(fdecl::DependencyType::Strong),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferDirectory::EMPTY
                         }
                     ),
@@ -2622,6 +2801,7 @@ mod tests {
                             rights: None,
                             subdir: Some("index/file".to_string()),
                             dependency_type: Some(fdecl::DependencyType::Strong),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferDirectory::EMPTY
                         }
                     ),
@@ -2636,6 +2816,7 @@ mod tests {
                             rights: None,
                             subdir: None,
                             dependency_type: Some(fdecl::DependencyType::Strong),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferDirectory::EMPTY
                         }
                     ),
@@ -2648,6 +2829,7 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some("data".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferStorage::EMPTY
                         }
                     ),
@@ -2659,6 +2841,7 @@ mod tests {
                                 name: "modular".to_string(),
                             })),
                             target_name: Some("data".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferStorage::EMPTY
                         }
                     ),
@@ -2671,6 +2854,7 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some("storage_a".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferStorage::EMPTY
                         }
                     ),
@@ -2683,6 +2867,7 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some("storage_b".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferStorage::EMPTY
                         }
                     ),
@@ -2731,6 +2916,7 @@ mod tests {
                             })),
                             target_name: Some("destroyed_net".to_string()),
                             filter: None,
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferEvent::EMPTY
                         }
                     ),
@@ -2743,6 +2929,7 @@ mod tests {
                             })),
                             target_name: Some("stopped".to_string()),
                             filter: None,
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferEvent::EMPTY
                         }
                     ),
@@ -2755,6 +2942,7 @@ mod tests {
                             })),
                             target_name: Some("started".to_string()),
                             filter: None,
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferEvent::EMPTY
                         }
                     ),
@@ -2778,6 +2966,7 @@ mod tests {
                                 ]),
                                 ..fdata::Dictionary::EMPTY
                             }),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferEvent::EMPTY
                         }
                     ),
@@ -2825,6 +3014,7 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some("running".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferEventStream::EMPTY
                         }
                     ),
@@ -2837,6 +3027,7 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some("started".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferEventStream::EMPTY
                         }
                     ),
@@ -2864,6 +3055,7 @@ mod tests {
                                 ..fdata::Dictionary::EMPTY
                             }),
                             target_name: Some("some_other_event".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferEventStream::EMPTY
                         }
                     ),
@@ -3490,6 +3682,7 @@ mod tests {
                             source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                             source_name: Some("LegacyCoolFonts".to_string()),
                             target_path: Some("/svc/fuchsia.fonts.LegacyProvider".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::UseProtocol::EMPTY
                         }
                     ),
@@ -3499,6 +3692,7 @@ mod tests {
                             source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                             source_name: Some("ReallyGoodFonts".to_string()),
                             target_path: Some("/svc/ReallyGoodFonts".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::UseProtocol::EMPTY
                         }
                     ),
@@ -3508,6 +3702,7 @@ mod tests {
                             source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                             source_name: Some("IWouldNeverUseTheseFonts".to_string()),
                             target_path: Some("/svc/IWouldNeverUseTheseFonts".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::UseProtocol::EMPTY
                         }
                     ),
@@ -3517,6 +3712,7 @@ mod tests {
                             source: Some(fdecl::Ref::Debug(fdecl::DebugRef {})),
                             source_name: Some("DebugProtocol".to_string()),
                             target_path: Some("/svc/DebugProtocol".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::UseProtocol::EMPTY
                         }
                     ),
@@ -3552,6 +3748,7 @@ mod tests {
                             })),
                             target_name: Some("fuchsia.logger.LegacyLog".to_string()),
                             dependency_type: Some(fdecl::DependencyType::Weak),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferProtocol::EMPTY
                         }
                     ),
@@ -3567,6 +3764,7 @@ mod tests {
                             })),
                             target_name: Some("fuchsia.logger.LegacyLog".to_string()),
                             dependency_type: Some(fdecl::DependencyType::Weak),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferProtocol::EMPTY
                         }
                     ),

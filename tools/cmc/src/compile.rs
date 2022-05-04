@@ -216,6 +216,7 @@ mod tests {
                     { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
                     { "service": "fuchsia.component.Realm", "from": "framework" },
                     { "service": [ "myservice", "myservice2" ] },
+                    { "service": "myservice3", "availability": "optional" },
                 ]
             }),
             output = fdecl::Component {
@@ -226,6 +227,7 @@ mod tests {
                             source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                             source_name: Some("CoolFonts".to_string()),
                             target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::UseService::EMPTY
                         }
                     ),
@@ -235,6 +237,7 @@ mod tests {
                             source: Some(fdecl::Ref::Framework(fdecl::FrameworkRef {})),
                             source_name: Some("fuchsia.component.Realm".to_string()),
                             target_path: Some("/svc/fuchsia.component.Realm".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::UseService::EMPTY
                         }
                     ),
@@ -244,6 +247,7 @@ mod tests {
                             source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                             source_name: Some("myservice".to_string()),
                             target_path: Some("/svc/myservice".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::UseService::EMPTY
                         }
                     ),
@@ -253,6 +257,17 @@ mod tests {
                             source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                             source_name: Some("myservice2".to_string()),
                             target_path: Some("/svc/myservice2".to_string()),
+                            availability: Some(fdecl::Availability::Required),
+                            ..fdecl::UseService::EMPTY
+                        }
+                    ),
+                    fdecl::Use::Service (
+                        fdecl::UseService {
+                            dependency_type: Some(fdecl::DependencyType::Strong),
+                            source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                            source_name: Some("myservice3".to_string()),
+                            target_path: Some("/svc/myservice3".to_string()),
+                            availability: Some(fdecl::Availability::Optional),
                             ..fdecl::UseService::EMPTY
                         }
                     ),
@@ -286,6 +301,12 @@ mod tests {
                         "service": "my.service.CollectionService",
                         "from": ["#coll"],
                         "to": [ "#netstack" ],
+                    },
+                    {
+                        "service": "my.service.CollectionService2",
+                        "from": ["#coll"],
+                        "to": [ "#netstack" ],
+                        "availability": "same_as_target",
                     },
                 ],
                 "capabilities": [
@@ -327,6 +348,7 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some("fuchsia.logger.Log".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferService::EMPTY
                         }
                     ),
@@ -341,6 +363,7 @@ mod tests {
                                 name: "coll".to_string(),
                             })),
                             target_name: Some("fuchsia.logger.Log2".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferService::EMPTY
                         }
                     ),
@@ -356,6 +379,7 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some("my.service.Service".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferService::EMPTY
                         }
                     ),
@@ -371,6 +395,7 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some("my.service.Service2".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferService::EMPTY
                         }
                     ),
@@ -383,6 +408,7 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some("my.service.Service".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferService::EMPTY
                         }
                     ),
@@ -395,6 +421,7 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some("my.service.Service2".to_string()),
+                            availability: Some(fdecl::Availability::Required),
                             ..fdecl::OfferService::EMPTY
                         }
                     ),
@@ -407,6 +434,20 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some("my.service.CollectionService".to_string()),
+                            availability: Some(fdecl::Availability::Required),
+                            ..fdecl::OfferService::EMPTY
+                        }
+                    ),
+                    fdecl::Offer::Service (
+                        fdecl::OfferService {
+                            source: Some(fdecl::Ref::Collection(fdecl::CollectionRef { name: "coll".to_string() })),
+                            source_name: Some("my.service.CollectionService2".to_string()),
+                            target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("my.service.CollectionService2".to_string()),
+                            availability: Some(fdecl::Availability::SameAsTarget),
                             ..fdecl::OfferService::EMPTY
                         }
                     ),
@@ -1119,6 +1160,7 @@ mod tests {
                     source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
                     source_name: Some("foo".to_string()),
                     target_path: Some("/svc/foo".to_string()),
+                    availability: Some(fdecl::Availability::Required),
                     ..fdecl::UseProtocol::EMPTY
                 })]),
                 ..default_component_decl()

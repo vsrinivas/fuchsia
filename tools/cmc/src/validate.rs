@@ -442,6 +442,11 @@ impl<'a> ValidationContext<'a> {
         if use_.from == Some(cml::UseFromRef::Self_) && use_.event_stream.is_some() {
             return Err(Error::validate("\"from: self\" cannot be used with \"event_stream\""));
         }
+        if use_.availability == Some(cml::Availability::SameAsTarget) {
+            return Err(Error::validate(
+                "\"availability: same_as_target\" cannot be used with use declarations",
+            ));
+        }
 
         if let Some(source) = DependencyNode::use_from_ref(use_.from.as_ref()) {
             for name in &use_.names() {
@@ -562,7 +567,7 @@ impl<'a> ValidationContext<'a> {
             (Some(cml::UseFromRef::Named(name)), _) => {
                 self.validate_component_child_or_capability_ref(
                     "\"use\" source",
-                    cml::AnyRef::Named(name),
+                    &cml::AnyRef::Named(name),
                 )?;
             }
             (_, Some(cml::DependencyType::Weak) | Some(cml::DependencyType::WeakForMigration)) => {
@@ -732,7 +737,7 @@ impl<'a> ValidationContext<'a> {
 
         // Validate `from` (done last because this validation depends on the capability type, which
         // must be validated first)
-        self.validate_from_clause("expose", expose, &Some(cml::SourceAvailability::Required))?;
+        self.validate_from_clause("expose", expose, &None, &None)?;
 
         Ok(())
     }
@@ -1015,7 +1020,7 @@ impl<'a> ValidationContext<'a> {
 
         // Validate `from` (done last because this validation depends on the capability type, which
         // must be validated first)
-        self.validate_from_clause("offer", offer, &offer.source_availability)?;
+        self.validate_from_clause("offer", offer, &offer.source_availability, &offer.availability)?;
 
         Ok(())
     }
@@ -1062,6 +1067,7 @@ impl<'a> ValidationContext<'a> {
     /// - is applicable to the capability type,
     /// - does not contain duplicates,
     /// - references names that exist.
+    /// - has availability "optional" if the source is "void"
     ///
     /// `verb` is used in any error messages and is expected to be "offer", "expose", etc.
     fn validate_from_clause<T>(
@@ -1069,6 +1075,7 @@ impl<'a> ValidationContext<'a> {
         verb: &str,
         cap: &T,
         source_availability: &Option<cml::SourceAvailability>,
+        availability: &Option<cml::Availability>,
     ) -> Result<(), Error>
     where
         T: cml::CapabilityClause + cml::FromClause,
@@ -1087,26 +1094,47 @@ impl<'a> ValidationContext<'a> {
 
         let reference_description = format!("\"{}\" source", verb);
         for from_clause in from {
-            if source_availability == &Some(cml::SourceAvailability::Unknown) {
-                // We don't need to check if the source exists if the source's availability is
-                // unknown.
-                continue;
-            }
             // If this is a protocol, it could reference either a child or a storage capability
             // (for the storage admin protocol).
-            if cap.protocol().is_some() {
+            let ref_validity_res = if cap.protocol().is_some() {
                 self.validate_component_child_or_capability_ref(
                     &reference_description,
-                    from_clause,
-                )?;
+                    &from_clause,
+                )
             } else if cap.service().is_some() {
                 // Services can also be sourced from collections.
                 self.validate_component_child_or_collection_ref(
                     &reference_description,
                     &from_clause,
-                )?;
+                )
             } else {
-                self.validate_component_child_ref(&reference_description, &from_clause)?;
+                self.validate_component_child_ref(&reference_description, &from_clause)
+            };
+
+            match ref_validity_res {
+                Ok(()) if from_clause == cml::AnyRef::Void => {
+                    // The source is valid and void
+                    if availability != &Some(cml::Availability::Optional) {
+                        return Err(Error::validate(format!(
+                            "capabilities with a source of \"void\" must have an availability of \"optional\"",
+                        )));
+                    }
+                }
+                Ok(()) => {
+                    // The source is valid and not void.
+                }
+                Err(_) if source_availability == &Some(cml::SourceAvailability::Unknown) => {
+                    // The source is invalid, and will be rewritten to void
+                    if availability != &Some(cml::Availability::Optional) && availability != &None {
+                        return Err(Error::validate(format!(
+                            "capabilities with an intentionally missing source must have an availability that is either unset or \"optional\"",
+                        )));
+                    }
+                }
+                Err(e) => {
+                    // The source is invalid, but we're expecting it to be valid.
+                    return Err(e);
+                }
             }
         }
         Ok(())
@@ -1200,10 +1228,10 @@ impl<'a> ValidationContext<'a> {
     fn validate_component_child_or_capability_ref(
         &self,
         reference_description: &str,
-        ref_: cml::AnyRef,
+        ref_: &cml::AnyRef,
     ) -> Result<(), Error> {
-        if self.validate_component_child_ref(reference_description, &ref_).is_err()
-            && self.validate_component_capability_ref(reference_description, &ref_).is_err()
+        if self.validate_component_child_ref(reference_description, ref_).is_err()
+            && self.validate_component_capability_ref(reference_description, ref_).is_err()
         {
             return Err(Error::validate(format!(
                 "{} \"{}\" does not appear in \"children\" or \"capabilities\"",
@@ -1351,11 +1379,7 @@ impl<'a> ValidationContext<'a> {
                         }
                     }
                 }
-                self.validate_from_clause(
-                    "debug",
-                    debug,
-                    &Some(cml::SourceAvailability::Required),
-                )?;
+                self.validate_from_clause("debug", debug, &None, &None)?;
                 // Ensure there are no cycles, such as a debug capability in an environment being
                 // assigned to the child which is providing the capability.
                 if let Some(source) = DependencyNode::offer_from_ref(&debug.from) {
@@ -5213,6 +5237,95 @@ mod tests {
                 ],
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"offer\" source \"#bar\" does not appear in \"children\" or \"capabilities\""
+        ),
+        test_cml_use_invalid_availability(
+            json!({
+                "use": [
+                    {
+                        "protocol": "fuchsia.examples.Echo",
+                        "availability": "same_as_target",
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"availability: same_as_target\" cannot be used with use declarations"
+        ),
+        test_offer_source_void_availability_required(
+            json!({
+                "children": [
+                    {
+                        "name": "foo",
+                        "url": "fuchsia-pkg://foo.com/foo#meta/foo.cm"
+                    },
+                ],
+                "offer": [
+                    {
+                        "protocol": "fuchsia.examples.Echo",
+                        "from": "void",
+                        "to": "#foo",
+                        "availability": "required",
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "capabilities with a source of \"void\" must have an availability of \"optional\""
+        ),
+        test_offer_source_void_availability_same_as_target(
+            json!({
+                "children": [
+                    {
+                        "name": "foo",
+                        "url": "fuchsia-pkg://foo.com/foo#meta/foo.cm"
+                    },
+                ],
+                "offer": [
+                    {
+                        "protocol": "fuchsia.examples.Echo",
+                        "from": "void",
+                        "to": "#foo",
+                        "availability": "same_as_target",
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "capabilities with a source of \"void\" must have an availability of \"optional\""
+        ),
+        test_offer_source_missing_availability_required(
+            json!({
+                "children": [
+                    {
+                        "name": "foo",
+                        "url": "fuchsia-pkg://foo.com/foo#meta/foo.cm"
+                    },
+                ],
+                "offer": [
+                    {
+                        "protocol": "fuchsia.examples.Echo",
+                        "from": "#bar",
+                        "to": "#foo",
+                        "availability": "required",
+                        "source_availability": "unknown",
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "capabilities with an intentionally missing source must have an availability that is either unset or \"optional\""
+        ),
+        test_offer_source_missing_availability_same_as_target(
+            json!({
+                "children": [
+                    {
+                        "name": "foo",
+                        "url": "fuchsia-pkg://foo.com/foo#meta/foo.cm"
+                    },
+                ],
+                "offer": [
+                    {
+                        "protocol": "fuchsia.examples.Echo",
+                        "from": "#bar",
+                        "to": "#foo",
+                        "availability": "same_as_target",
+                        "source_availability": "unknown",
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "capabilities with an intentionally missing source must have an availability that is either unset or \"optional\""
         ),
     }
 

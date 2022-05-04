@@ -569,6 +569,7 @@ impl<'a> ValidationContext<'a> {
                     u.source.as_ref(),
                     u.source_name.as_ref(),
                     u.dependency_type.as_ref(),
+                    u.availability.as_ref(),
                     "UseService",
                     "source",
                 );
@@ -580,6 +581,7 @@ impl<'a> ValidationContext<'a> {
                     u.source.as_ref(),
                     u.source_name.as_ref(),
                     u.dependency_type.as_ref(),
+                    u.availability.as_ref(),
                     "UseProtocol",
                     "source",
                 );
@@ -591,6 +593,7 @@ impl<'a> ValidationContext<'a> {
                     u.source.as_ref(),
                     u.source_name.as_ref(),
                     u.dependency_type.as_ref(),
+                    u.availability.as_ref(),
                     "UseDirectory",
                     "source",
                 );
@@ -606,9 +609,15 @@ impl<'a> ValidationContext<'a> {
             fdecl::Use::Storage(u) => {
                 check_name(u.source_name.as_ref(), "UseStorage", "source_name", &mut self.errors);
                 check_path(u.target_path.as_ref(), "UseStorage", "target_path", &mut self.errors);
+                check_use_availability("UseStorage", u.availability.as_ref(), &mut self.errors);
             }
             fdecl::Use::EventStreamDeprecated(e) => {
                 self.validate_event_stream_deprecated(e);
+                check_use_availability(
+                    "UseEventStreamDeprecated",
+                    e.availability.as_ref(),
+                    &mut self.errors,
+                );
             }
             fdecl::Use::Event(_) => {
                 // Skip events. We must have already validated by this point.
@@ -616,6 +625,7 @@ impl<'a> ValidationContext<'a> {
             }
             fdecl::Use::EventStream(u) => {
                 self.validate_event_stream(u);
+                check_use_availability("UseEventStream", u.availability.as_ref(), &mut self.errors);
             }
             _ => {
                 self.errors.push(Error::invalid_field("Component", "use"));
@@ -753,9 +763,11 @@ impl<'a> ValidationContext<'a> {
             event.source.as_ref(),
             event.source_name.as_ref(),
             event.dependency_type.as_ref(),
+            event.availability.as_ref(),
             "UseEvent",
             "source",
         );
+        check_use_availability("UseEvent", event.availability.as_ref(), &mut self.errors);
         if let Some(fdecl::Ref::Self_(_)) = event.source {
             self.errors.push(Error::invalid_field("UseEvent", "source"));
         }
@@ -814,6 +826,7 @@ impl<'a> ValidationContext<'a> {
         source: Option<&'a fdecl::Ref>,
         source_name: Option<&'a String>,
         dependency_type: Option<&fdecl::DependencyType>,
+        availability: Option<&'a fdecl::Availability>,
         decl: &str,
         field: &str,
     ) {
@@ -851,6 +864,22 @@ impl<'a> ValidationContext<'a> {
                 self.errors.push(Error::missing_field(decl, field));
             }
         };
+        check_use_availability(decl, availability, &mut self.errors);
+
+        match (source, availability) {
+            // Using from a parent can have any availability
+            (Some(&fdecl::Ref::Parent(_)), _) => (),
+            // In all other cases the availability must be required
+            (_, Some(&fdecl::Availability::Required)) => (),
+            // TODO(dgonyeo): we need to handle the availability being unset until we've soft
+            // migrated all manifests
+            (_, None) => (),
+            _ => self.errors.push(Error::availability_must_be_required(
+                decl,
+                "availability",
+                source_name,
+            )),
+        }
 
         let is_use_from_child = match source {
             Some(fdecl::Ref::Child(_)) => true,
@@ -1656,6 +1685,7 @@ impl<'a> ValidationContext<'a> {
                     o.source_name.as_ref(),
                     o.target.as_ref(),
                     o.target_name.as_ref(),
+                    o.availability.as_ref(),
                 );
                 self.validate_filtered_service_fields(
                     decl,
@@ -1693,6 +1723,7 @@ impl<'a> ValidationContext<'a> {
                     o.source_name.as_ref(),
                     o.target.as_ref(),
                     o.target_name.as_ref(),
+                    o.availability.as_ref(),
                 );
                 if o.dependency_type.is_none() {
                     self.errors.push(Error::missing_field(decl, "dependency_type"));
@@ -1735,6 +1766,7 @@ impl<'a> ValidationContext<'a> {
                     o.source_name.as_ref(),
                     o.target.as_ref(),
                     o.target_name.as_ref(),
+                    o.availability.as_ref(),
                 );
                 if o.dependency_type.is_none() {
                     self.errors.push(Error::missing_field(decl, "dependency_type"));
@@ -1774,6 +1806,7 @@ impl<'a> ValidationContext<'a> {
                     o.source_name.as_ref(),
                     o.source.as_ref(),
                     o.target.as_ref(),
+                    o.availability.as_ref(),
                 );
 
                 match offer_type {
@@ -1819,6 +1852,7 @@ impl<'a> ValidationContext<'a> {
                     o.source_name.as_ref(),
                     o.target.as_ref(),
                     o.target_name.as_ref(),
+                    Some(&fdecl::Availability::Required),
                 );
                 match offer_type {
                     OfferType::Static => {
@@ -1850,6 +1884,7 @@ impl<'a> ValidationContext<'a> {
                     o.source_name.as_ref(),
                     o.target.as_ref(),
                     o.target_name.as_ref(),
+                    Some(&fdecl::Availability::Required),
                 );
 
                 match offer_type {
@@ -1927,11 +1962,13 @@ impl<'a> ValidationContext<'a> {
         source_name: Option<&String>,
         target: Option<&'a fdecl::Ref>,
         target_name: Option<&'a String>,
+        availability: Option<&fdecl::Availability>,
     ) {
         match source {
-            Some(fdecl::Ref::Parent(_)) => {}
-            Some(fdecl::Ref::Self_(_)) => {}
-            Some(fdecl::Ref::Framework(_)) => {}
+            Some(fdecl::Ref::Parent(_))
+            | Some(fdecl::Ref::Self_(_))
+            | Some(fdecl::Ref::VoidType(_))
+            | Some(fdecl::Ref::Framework(_)) => {}
             Some(fdecl::Ref::Child(child)) => self.validate_source_child(child, decl, offer_type),
             Some(fdecl::Ref::Capability(c)) => self.validate_source_capability(c, decl, "source"),
             Some(fdecl::Ref::Collection(c)) if collection_source == CollectionSource::Allow => {
@@ -1940,6 +1977,7 @@ impl<'a> ValidationContext<'a> {
             Some(_) => self.errors.push(Error::invalid_field(decl, "source")),
             None => self.errors.push(Error::missing_field(decl, "source")),
         }
+        check_offer_availability(decl, availability, source, source_name, &mut self.errors);
         check_offer_name(source_name, decl, "source_name", &mut self.errors, offer_type);
         match (offer_type, target) {
             (OfferType::Static, Some(fdecl::Ref::Child(c))) => {
@@ -1970,12 +2008,13 @@ impl<'a> ValidationContext<'a> {
         source_name: Option<&'a String>,
         source: Option<&'a fdecl::Ref>,
         target: Option<&'a fdecl::Ref>,
+        availability: Option<&fdecl::Availability>,
     ) {
         if source_name.is_none() {
             self.errors.push(Error::missing_field(decl, "source_name"));
         }
         match source {
-            Some(fdecl::Ref::Parent(_)) => (),
+            Some(fdecl::Ref::Parent(_) | fdecl::Ref::VoidType(_)) => (),
             Some(fdecl::Ref::Self_(_)) => {
                 self.validate_storage_source(source_name.unwrap(), decl);
             }
@@ -1986,6 +2025,7 @@ impl<'a> ValidationContext<'a> {
                 self.errors.push(Error::missing_field(decl, "source"));
             }
         }
+        check_offer_availability(decl, availability, source, source_name, &mut self.errors);
         match offer_type {
             OfferType::Static => {
                 self.validate_storage_target(decl, target);
@@ -2036,11 +2076,14 @@ impl<'a> ValidationContext<'a> {
                 }
             }
         }
-        // Only parent, framework, and child are valid.
+        // Only parent, framework, child, and void are valid.
         match event_stream.source {
-            Some(fdecl::Ref::Parent(_)) => {}
-            Some(fdecl::Ref::Framework(_)) => {}
-            Some(fdecl::Ref::Child(_)) => {}
+            Some(
+                fdecl::Ref::Parent(_)
+                | fdecl::Ref::Framework(_)
+                | fdecl::Ref::Child(_)
+                | fdecl::Ref::VoidType(_),
+            ) => {}
             Some(_) => {
                 self.errors.push(Error::invalid_field(decl, "source"));
             }
@@ -2048,6 +2091,14 @@ impl<'a> ValidationContext<'a> {
                 self.errors.push(Error::missing_field(decl, "source"));
             }
         };
+
+        check_offer_availability(
+            decl,
+            event_stream.availability.as_ref(),
+            event_stream.source.as_ref(),
+            event_stream.source_name.as_ref(),
+            &mut self.errors,
+        );
 
         match offer_type {
             OfferType::Static => {
@@ -2089,10 +2140,9 @@ impl<'a> ValidationContext<'a> {
             offer_type,
         );
 
-        // Only parent and framework are valid.
+        // Only parent, framework, and void are valid.
         match event.source {
-            Some(fdecl::Ref::Parent(_)) => {}
-            Some(fdecl::Ref::Framework(_)) => {}
+            Some(fdecl::Ref::Parent(_) | fdecl::Ref::Framework(_) | fdecl::Ref::VoidType(_)) => {}
             Some(_) => {
                 self.errors.push(Error::invalid_field(decl, "source"));
             }
@@ -2100,6 +2150,14 @@ impl<'a> ValidationContext<'a> {
                 self.errors.push(Error::missing_field(decl, "source"));
             }
         };
+
+        check_offer_availability(
+            decl,
+            event.availability.as_ref(),
+            event.source.as_ref(),
+            event.source_name.as_ref(),
+            &mut self.errors,
+        );
 
         match offer_type {
             OfferType::Static => {
@@ -4561,6 +4619,136 @@ mod tests {
                 Error::invalid_field("UseEvent", "source"),
             ])),
         },
+        test_validate_uses_invalid_source_for_optional => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.capabilities = Some(vec![
+                    fdecl::Capability::Directory(fdecl::Directory {
+                        name: Some("minfs".to_string()),
+                        source_path: Some("/minfs".to_string()),
+                        rights: Some(fio::Operations::CONNECT),
+                        ..fdecl::Directory::EMPTY
+                    }),
+                ]);
+                decl.children = Some(vec![
+                    fdecl::Child {
+                        name: Some("source".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/source#meta/source.cm".to_string()),
+                        startup: Some(fdecl::StartupMode::Lazy),
+                        on_terminate: None,
+                        environment: None,
+                        ..fdecl::Child::EMPTY
+                    },
+                ]);
+                decl.uses = Some(vec![
+                    // These uses are fine, uses with a source of parent can be optional.
+                    fdecl::Use::Service(fdecl::UseService {
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                        source_name: Some("fuchsia.examples.EchoService".to_string()),
+                        target_path: Some("/svc/fuchsia.examples.EchoService".to_string()),
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        availability: Some(fdecl::Availability::Optional),
+                        ..fdecl::UseService::EMPTY
+                    }),
+                    fdecl::Use::Protocol(fdecl::UseProtocol {
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                        source_name: Some("fuchsia.examples.Echo".to_string()),
+                        target_path: Some("/svc/fuchsia.examples.Echo".to_string()),
+                        availability: Some(fdecl::Availability::Optional),
+                        ..fdecl::UseProtocol::EMPTY
+                    }),
+                    fdecl::Use::Directory(fdecl::UseDirectory {
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                        source_name: Some("minfs".to_string()),
+                        target_path: Some("/minfs".to_string()),
+                        rights: Some(fio::Operations::CONNECT),
+                        subdir: None,
+                        availability: Some(fdecl::Availability::Optional),
+                        ..fdecl::UseDirectory::EMPTY
+                    }),
+                    fdecl::Use::Storage(fdecl::UseStorage {
+                        source_name: Some("data".to_string()),
+                        target_path: Some("/data".to_string()),
+                        availability: Some(fdecl::Availability::Optional),
+                        ..fdecl::UseStorage::EMPTY
+                    }),
+                    fdecl::Use::Event(fdecl::UseEvent {
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                        source_name: Some("start".to_string()),
+                        target_name: Some("start".to_string()),
+                        filter: None,
+                        availability: Some(fdecl::Availability::Optional),
+                        ..fdecl::UseEvent::EMPTY
+                    }),
+                    // These uses are not fine, uses with a source other than parent must be
+                    // required.
+                    fdecl::Use::Service(fdecl::UseService {
+                        source: Some(fdecl::Ref::Debug(fdecl::DebugRef {})),
+                        source_name: Some("fuchsia.examples.EchoService".to_string()),
+                        target_path: Some("/svc/fuchsia.examples.EchoService1".to_string()),
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        availability: Some(fdecl::Availability::Optional),
+                        ..fdecl::UseService::EMPTY
+                    }),
+                    fdecl::Use::Protocol(fdecl::UseProtocol {
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        source: Some(fdecl::Ref::Framework(fdecl::FrameworkRef {})),
+                        source_name: Some("fuchsia.examples.Echo".to_string()),
+                        target_path: Some("/svc/fuchsia.examples.Echo1".to_string()),
+                        availability: Some(fdecl::Availability::Optional),
+                        ..fdecl::UseProtocol::EMPTY
+                    }),
+                    fdecl::Use::Directory(fdecl::UseDirectory {
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        source: Some(fdecl::Ref::Self_(fdecl::SelfRef {})),
+                        source_name: Some("minfs".to_string()),
+                        target_path: Some("/minfs1".to_string()),
+                        rights: Some(fio::Operations::CONNECT),
+                        subdir: None,
+                        availability: Some(fdecl::Availability::Optional),
+                        ..fdecl::UseDirectory::EMPTY
+                    }),
+                    fdecl::Use::Event(fdecl::UseEvent {
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        source: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                            name: "source".to_string(),
+                            collection: None,
+                        })),
+                        source_name: Some("start".to_string()),
+                        target_name: Some("start1".to_string()),
+                        filter: None,
+                        availability: Some(fdecl::Availability::Optional),
+                        ..fdecl::UseEvent::EMPTY
+                    }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::availability_must_be_required(
+                    "UseEvent",
+                    "availability",
+                    Some(&"start".to_string()),
+                ),
+                Error::availability_must_be_required(
+                    "UseService",
+                    "availability",
+                    Some(&"fuchsia.examples.EchoService".to_string()),
+                ),
+                Error::availability_must_be_required(
+                    "UseProtocol",
+                    "availability",
+                    Some(&"fuchsia.examples.Echo".to_string()),
+                ),
+                Error::availability_must_be_required(
+                    "UseDirectory",
+                    "availability",
+                    Some(&"minfs".to_string()),
+                ),
+            ])),
+        },
         // exposes
         test_validate_exposes_empty => {
             input = {
@@ -5349,32 +5537,40 @@ mod tests {
                 ]);
                 decl
             },
+            // TODO(dgonyeo): we need to handle the availability being unset until we've soft
+            // migrated all manifests
             result = Err(ErrorList::new(vec![
                 Error::missing_field("OfferService", "source"),
                 Error::missing_field("OfferService", "source_name"),
                 Error::missing_field("OfferService", "target"),
                 Error::missing_field("OfferService", "target_name"),
+                //Error::missing_field("OfferService", "availability"),
                 Error::missing_field("OfferProtocol", "source"),
                 Error::missing_field("OfferProtocol", "source_name"),
                 Error::missing_field("OfferProtocol", "target"),
                 Error::missing_field("OfferProtocol", "target_name"),
                 Error::missing_field("OfferProtocol", "dependency_type"),
+                //Error::missing_field("OfferProtocol", "availability"),
                 Error::missing_field("OfferDirectory", "source"),
                 Error::missing_field("OfferDirectory", "source_name"),
                 Error::missing_field("OfferDirectory", "target"),
                 Error::missing_field("OfferDirectory", "target_name"),
                 Error::missing_field("OfferDirectory", "dependency_type"),
+                //Error::missing_field("OfferDirectory", "availability"),
                 Error::missing_field("OfferStorage", "source_name"),
                 Error::missing_field("OfferStorage", "source"),
                 Error::missing_field("OfferStorage", "target"),
+                //Error::missing_field("OfferStorage", "availability"),
                 Error::missing_field("OfferRunner", "source"),
                 Error::missing_field("OfferRunner", "source_name"),
                 Error::missing_field("OfferRunner", "target"),
                 Error::missing_field("OfferRunner", "target_name"),
+                //Error::missing_field("OfferRunner", "availability"),
                 Error::missing_field("OfferEvent", "source_name"),
                 Error::missing_field("OfferEvent", "source"),
                 Error::missing_field("OfferEvent", "target"),
                 Error::missing_field("OfferEvent", "target_name"),
+                //Error::missing_field("OfferEvent", "availability"),
             ])),
         },
         test_validate_offers_long_identifiers => {
@@ -6668,6 +6864,333 @@ mod tests {
             result = Err(ErrorList::new(vec![
                 Error::dependency_cycle(directed_graph::Error::CyclesDetected([vec!["child a", "child b", "child c", "child a"], vec!["child b", "child d", "child b"]].iter().cloned().collect()).format_cycle()),
             ])),
+        },
+        test_validate_offers_not_required_invalid_source_service => {
+            input = {
+                let mut decl = generate_offer_invalid_source_and_availability_decl(
+                    |source, availability, target_name|
+                        fdecl::Offer::Service(fdecl::OfferService {
+                            source: Some(source),
+                            source_name: Some("fuchsia.examples.Echo".to_string()),
+                            target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                                name: "sink".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some(target_name.into()),
+                            availability: Some(availability),
+                            ..fdecl::OfferService::EMPTY
+                        })
+                );
+                decl.capabilities = Some(vec![
+                    fdecl::Capability::Service(fdecl::Service {
+                        name: Some("fuchsia.examples.Echo".to_string()),
+                        source_path: Some("/svc/fuchsia.examples.Echo".to_string()),
+                        ..fdecl::Service::EMPTY
+                    }),
+                ]);
+                decl
+            },
+            result = {
+                Err(ErrorList::new(vec![
+                    Error::availability_must_be_required(
+                        "OfferService",
+                        "availability",
+                        Some(&"fuchsia.examples.Echo".to_string()),
+                    ),
+                    Error::availability_must_be_required(
+                        "OfferService",
+                        "availability",
+                        Some(&"fuchsia.examples.Echo".to_string()),
+                    ),
+                    Error::availability_must_be_required(
+                        "OfferService",
+                        "availability",
+                        Some(&"fuchsia.examples.Echo".to_string()),
+                    ),
+                    Error::availability_must_be_required(
+                        "OfferService",
+                        "availability",
+                        Some(&"fuchsia.examples.Echo".to_string()),
+                    ),
+                    Error::availability_must_be_required(
+                        "OfferService",
+                        "availability",
+                        Some(&"fuchsia.examples.Echo".to_string()),
+                    ),
+                    Error::availability_must_be_required(
+                        "OfferService",
+                        "availability",
+                        Some(&"fuchsia.examples.Echo".to_string()),
+                    ),
+                    Error::availability_must_be_optional(
+                        "OfferService",
+                        "availability",
+                        Some(&"fuchsia.examples.Echo".to_string()),
+                    ),
+                    Error::availability_must_be_optional(
+                        "OfferService",
+                        "availability",
+                        Some(&"fuchsia.examples.Echo".to_string()),
+                    ),
+                ]))
+            },
+        },
+        test_validate_offers_not_required_invalid_source_protocol => {
+            input = {
+                let mut decl = generate_offer_invalid_source_and_availability_decl(
+                    |source, availability, target_name|
+                        fdecl::Offer::Protocol(fdecl::OfferProtocol {
+                            source: Some(source),
+                            source_name: Some("fuchsia.examples.Echo".to_string()),
+                            target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                                name: "sink".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some(target_name.into()),
+                            dependency_type: Some(fdecl::DependencyType::Strong),
+                            availability: Some(availability),
+                            ..fdecl::OfferProtocol::EMPTY
+                        })
+                );
+                decl.capabilities = Some(vec![
+                    fdecl::Capability::Protocol(fdecl::Protocol {
+                        name: Some("fuchsia.examples.Echo".to_string()),
+                        source_path: Some("/svc/fuchsia.examples.Echo".to_string()),
+                        ..fdecl::Protocol::EMPTY
+                    }),
+                ]);
+                decl
+            },
+            result = {
+                Err(ErrorList::new(vec![
+                    Error::availability_must_be_required(
+                        "OfferProtocol",
+                        "availability",
+                        Some(&"fuchsia.examples.Echo".to_string()),
+                    ),
+                    Error::availability_must_be_required(
+                        "OfferProtocol",
+                        "availability",
+                        Some(&"fuchsia.examples.Echo".to_string()),
+                    ),
+                    Error::availability_must_be_required(
+                        "OfferProtocol",
+                        "availability",
+                        Some(&"fuchsia.examples.Echo".to_string()),
+                    ),
+                    Error::availability_must_be_required(
+                        "OfferProtocol",
+                        "availability",
+                        Some(&"fuchsia.examples.Echo".to_string()),
+                    ),
+                    Error::availability_must_be_required(
+                        "OfferProtocol",
+                        "availability",
+                        Some(&"fuchsia.examples.Echo".to_string()),
+                    ),
+                    Error::availability_must_be_required(
+                        "OfferProtocol",
+                        "availability",
+                        Some(&"fuchsia.examples.Echo".to_string()),
+                    ),
+                    Error::availability_must_be_optional(
+                        "OfferProtocol",
+                        "availability",
+                        Some(&"fuchsia.examples.Echo".to_string()),
+                    ),
+                    Error::availability_must_be_optional(
+                        "OfferProtocol",
+                        "availability",
+                        Some(&"fuchsia.examples.Echo".to_string()),
+                    ),
+                ]))
+            },
+        },
+        test_validate_offers_not_required_invalid_source_directory => {
+            input = {
+                let mut decl = generate_offer_invalid_source_and_availability_decl(
+                    |source, availability, target_name|
+                        fdecl::Offer::Directory(fdecl::OfferDirectory {
+                            source: Some(source),
+                            source_name: Some("assets".to_string()),
+                            target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                                name: "sink".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some(target_name.into()),
+                            rights: Some(fio::Operations::CONNECT),
+                            subdir: None,
+                            dependency_type: Some(fdecl::DependencyType::Weak),
+                            availability: Some(availability),
+                            ..fdecl::OfferDirectory::EMPTY
+                        })
+                );
+                decl.capabilities = Some(vec![
+                    fdecl::Capability::Directory(fdecl::Directory {
+                        name: Some("assets".to_string()),
+                        source_path: Some("/assets".to_string()),
+                        rights: Some(fio::Operations::CONNECT),
+                        ..fdecl::Directory::EMPTY
+                    }),
+                ]);
+                decl
+            },
+            result = {
+                Err(ErrorList::new(vec![
+                    Error::availability_must_be_required(
+                        "OfferDirectory",
+                        "availability",
+                        Some(&"assets".to_string()),
+                    ),
+                    Error::availability_must_be_required(
+                        "OfferDirectory",
+                        "availability",
+                        Some(&"assets".to_string()),
+                    ),
+                    Error::availability_must_be_required(
+                        "OfferDirectory",
+                        "availability",
+                        Some(&"assets".to_string()),
+                    ),
+                    Error::availability_must_be_required(
+                        "OfferDirectory",
+                        "availability",
+                        Some(&"assets".to_string()),
+                    ),
+                    Error::availability_must_be_required(
+                        "OfferDirectory",
+                        "availability",
+                        Some(&"assets".to_string()),
+                    ),
+                    Error::availability_must_be_required(
+                        "OfferDirectory",
+                        "availability",
+                        Some(&"assets".to_string()),
+                    ),
+                    Error::availability_must_be_optional(
+                        "OfferDirectory",
+                        "availability",
+                        Some(&"assets".to_string()),
+                    ),
+                    Error::availability_must_be_optional(
+                        "OfferDirectory",
+                        "availability",
+                        Some(&"assets".to_string()),
+                    ),
+                ]))
+            },
+        },
+        test_validate_offers_not_required_invalid_source_storage => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.children = Some(vec![
+                    fdecl::Child {
+                        name: Some("sink".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/sink#meta/sink.cm".to_string()),
+                        startup: Some(fdecl::StartupMode::Lazy),
+                        on_terminate: None,
+                        environment: None,
+                        ..fdecl::Child::EMPTY
+                    },
+                ]);
+                decl.capabilities = Some(vec![
+                    fdecl::Capability::Storage(fdecl::Storage {
+                        name: Some("data".to_string()),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                        backing_dir: Some("minfs".to_string()),
+                        subdir: None,
+                        storage_id: Some(fdecl::StorageId::StaticInstanceIdOrMoniker),
+                        ..fdecl::Storage::EMPTY
+                    }),
+                ]);
+                let new_offer = |source: fdecl::Ref, availability: fdecl::Availability,
+                                        target_name: &str|
+                {
+                    fdecl::Offer::Storage(fdecl::OfferStorage {
+                        source: Some(source),
+                        source_name: Some("data".to_string()),
+                        target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                            name: "sink".to_string(),
+                            collection: None,
+                        })),
+                        target_name: Some(target_name.into()),
+                        availability: Some(availability),
+                        ..fdecl::OfferStorage::EMPTY
+                    })
+                };
+                decl.offers = Some(vec![
+                    // These offers are fine, offers with a source of parent or void can be
+                    // optional.
+                    new_offer(
+                        fdecl::Ref::Parent(fdecl::ParentRef {}),
+                        fdecl::Availability::Required,
+                        "data0",
+                    ),
+                    new_offer(
+                        fdecl::Ref::Parent(fdecl::ParentRef {}),
+                        fdecl::Availability::Optional,
+                        "data1",
+                    ),
+                    new_offer(
+                        fdecl::Ref::Parent(fdecl::ParentRef {}),
+                        fdecl::Availability::SameAsTarget,
+                        "data2",
+                    ),
+                    new_offer(
+                        fdecl::Ref::VoidType(fdecl::VoidRef {}),
+                        fdecl::Availability::Optional,
+                        "data3",
+                    ),
+                    // These offers are not fine, offers with a source other than parent or void
+                    // must be required.
+                    new_offer(
+                        fdecl::Ref::Self_(fdecl::SelfRef {}),
+                        fdecl::Availability::Optional,
+                        "data4",
+                    ),
+                    new_offer(
+                        fdecl::Ref::Self_(fdecl::SelfRef {}),
+                        fdecl::Availability::SameAsTarget,
+                        "data5",
+                    ),
+                    // These offers are also not fine, offers with a source of void must be optional
+                    new_offer(
+                        fdecl::Ref::VoidType(fdecl::VoidRef {}),
+                        fdecl::Availability::Required,
+                        "data6",
+                    ),
+                    new_offer(
+                        fdecl::Ref::VoidType(fdecl::VoidRef {}),
+                        fdecl::Availability::SameAsTarget,
+                        "data7",
+                    ),
+                ]);
+                decl
+            },
+            result = {
+                Err(ErrorList::new(vec![
+                    Error::availability_must_be_required(
+                        "OfferStorage",
+                        "availability",
+                        Some(&"data".to_string()),
+                    ),
+                    Error::availability_must_be_required(
+                        "OfferStorage",
+                        "availability",
+                        Some(&"data".to_string()),
+                    ),
+                    Error::availability_must_be_optional(
+                        "OfferStorage",
+                        "availability",
+                        Some(&"data".to_string()),
+                    ),
+                    Error::availability_must_be_optional(
+                        "OfferStorage",
+                        "availability",
+                        Some(&"data".to_string()),
+                    ),
+                ]))
+            },
         },
 
         // environments
@@ -8232,6 +8755,98 @@ mod tests {
                 Error::invalid_capability_type("RuntimeConfig", "capability", "storage"),
             ])),
         },
+    }
+
+    fn generate_offer_invalid_source_and_availability_decl(
+        new_offer: impl Fn(fdecl::Ref, fdecl::Availability, &str) -> fdecl::Offer,
+    ) -> fdecl::Component {
+        let mut decl = new_component_decl();
+        decl.children = Some(vec![
+            fdecl::Child {
+                name: Some("source".to_string()),
+                url: Some("fuchsia-pkg://fuchsia.com/source#meta/source.cm".to_string()),
+                startup: Some(fdecl::StartupMode::Lazy),
+                on_terminate: None,
+                environment: None,
+                ..fdecl::Child::EMPTY
+            },
+            fdecl::Child {
+                name: Some("sink".to_string()),
+                url: Some("fuchsia-pkg://fuchsia.com/sink#meta/sink.cm".to_string()),
+                startup: Some(fdecl::StartupMode::Lazy),
+                on_terminate: None,
+                environment: None,
+                ..fdecl::Child::EMPTY
+            },
+        ]);
+        decl.offers = Some(vec![
+            // These offers are fine, offers with a source of parent or void can be
+            // optional.
+            new_offer(
+                fdecl::Ref::Parent(fdecl::ParentRef {}),
+                fdecl::Availability::Required,
+                "fuchsia.examples.Echo0",
+            ),
+            new_offer(
+                fdecl::Ref::Parent(fdecl::ParentRef {}),
+                fdecl::Availability::Optional,
+                "fuchsia.examples.Echo1",
+            ),
+            new_offer(
+                fdecl::Ref::Parent(fdecl::ParentRef {}),
+                fdecl::Availability::SameAsTarget,
+                "fuchsia.examples.Echo2",
+            ),
+            new_offer(
+                fdecl::Ref::VoidType(fdecl::VoidRef {}),
+                fdecl::Availability::Optional,
+                "fuchsia.examples.Echo3",
+            ),
+            // These offers are not fine, offers with a source other than parent or void
+            // must be required.
+            new_offer(
+                fdecl::Ref::Self_(fdecl::SelfRef {}),
+                fdecl::Availability::Optional,
+                "fuchsia.examples.Echo4",
+            ),
+            new_offer(
+                fdecl::Ref::Self_(fdecl::SelfRef {}),
+                fdecl::Availability::SameAsTarget,
+                "fuchsia.examples.Echo5",
+            ),
+            new_offer(
+                fdecl::Ref::Framework(fdecl::FrameworkRef {}),
+                fdecl::Availability::Optional,
+                "fuchsia.examples.Echo6",
+            ),
+            new_offer(
+                fdecl::Ref::Framework(fdecl::FrameworkRef {}),
+                fdecl::Availability::SameAsTarget,
+                "fuchsia.examples.Echo7",
+            ),
+            new_offer(
+                fdecl::Ref::Child(fdecl::ChildRef { name: "source".to_string(), collection: None }),
+                fdecl::Availability::Optional,
+                "fuchsia.examples.Echo8",
+            ),
+            new_offer(
+                fdecl::Ref::Child(fdecl::ChildRef { name: "source".to_string(), collection: None }),
+                fdecl::Availability::SameAsTarget,
+                "fuchsia.examples.Echo9",
+            ),
+            // These offers are also not fine, offers with a source of void must be optional
+            new_offer(
+                fdecl::Ref::VoidType(fdecl::VoidRef {}),
+                fdecl::Availability::Required,
+                "fuchsia.examples.Echo10",
+            ),
+            new_offer(
+                fdecl::Ref::VoidType(fdecl::VoidRef {}),
+                fdecl::Availability::SameAsTarget,
+                "fuchsia.examples.Echo11",
+            ),
+        ]);
+        decl
     }
 
     #[test]

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::error::*, std::collections::HashMap};
+use {crate::error::*, fidl_fuchsia_component_decl as fdecl, std::collections::HashMap};
 
 const MAX_PATH_LENGTH: usize = 1024;
 const MAX_URL_LENGTH: usize = 4096;
@@ -165,6 +165,59 @@ fn check_name_impl(
         errors.push(Error::invalid_field(decl_type, keyword));
     }
     start_err_len == errors.len()
+}
+
+pub(crate) fn check_use_availability(
+    decl_type: &str,
+    availability: Option<&fdecl::Availability>,
+    errors: &mut Vec<Error>,
+) {
+    match availability {
+        Some(fdecl::Availability::Required) | Some(fdecl::Availability::Optional) => {}
+        Some(fdecl::Availability::SameAsTarget) => {
+            errors.push(Error::invalid_field(decl_type, "availability"))
+        }
+        // TODO(dgonyeo): we need to soft migrate the requirement for this field to be set
+        //None => errors.push(Error::missing_field(decl_type, "availability")),
+        None => (),
+    }
+}
+
+pub(crate) fn check_offer_availability(
+    decl: &str,
+    availability: Option<&fdecl::Availability>,
+    source: Option<&fdecl::Ref>,
+    source_name: Option<&String>,
+    errors: &mut Vec<Error>,
+) {
+    match (source, availability) {
+        // The availability can be anything when the source is parent.
+        (Some(fdecl::Ref::Parent(_)), _) => (),
+        // The availability must be optional when the source is void.
+        (Some(fdecl::Ref::VoidType(_)), Some(fdecl::Availability::Optional)) => (),
+        (
+            Some(fdecl::Ref::VoidType(_)),
+            Some(fdecl::Availability::Required | fdecl::Availability::SameAsTarget),
+        ) => errors.push(Error::availability_must_be_optional(decl, "availability", source_name)),
+        // In all other sources the availability must be set to `required` (it's always
+        // available if it comes from something like `self` or `framework`, and there's no
+        // optional exposes so it can't be optional coming from a child).
+        (
+            Some(
+                fdecl::Ref::Self_(_)
+                | fdecl::Ref::Child(_)
+                | fdecl::Ref::Collection(_)
+                | fdecl::Ref::Framework(_)
+                | fdecl::Ref::Capability(_)
+                | fdecl::Ref::Debug(_)
+                | fdecl::RefUnknown!(),
+            )
+            | None,
+            Some(fdecl::Availability::Optional | fdecl::Availability::SameAsTarget),
+        ) => errors.push(Error::availability_must_be_required(decl, "availability", source_name)),
+        // TODO(dgonyeo): we need to soft migrate the requirement for this field to be set
+        (_, Some(fdecl::Availability::Required) | None) => (),
+    }
 }
 
 // TODO: This should probably be checking with the `url` crate

@@ -1,6 +1,10 @@
 enum/member fuchsia.component.decl/AllowedOffers.STATIC_AND_DYNAMIC 2
 enum/member fuchsia.component.decl/AllowedOffers.STATIC_ONLY 1
 strict enum fuchsia.component.decl/AllowedOffers uint32
+enum/member fuchsia.component.decl/Availability.OPTIONAL 2
+enum/member fuchsia.component.decl/Availability.REQUIRED 1
+enum/member fuchsia.component.decl/Availability.SAME_AS_TARGET 3
+strict enum fuchsia.component.decl/Availability uint32
 const fuchsia.component.decl/CONFIG_KEY_MAX_SIZE uint32 64
 union/member fuchsia.component.decl/Capability.directory fuchsia.component.decl/Directory
 union/member fuchsia.component.decl/Capability.event fuchsia.component.decl/Event
@@ -163,6 +167,7 @@ union/member fuchsia.component.decl/Offer.runner fuchsia.component.decl/OfferRun
 union/member fuchsia.component.decl/Offer.service fuchsia.component.decl/OfferService
 union/member fuchsia.component.decl/Offer.storage fuchsia.component.decl/OfferStorage
 flexible union fuchsia.component.decl/Offer
+table/member fuchsia.component.decl/OfferDirectory.availability fuchsia.component.decl/Availability
 table/member fuchsia.component.decl/OfferDirectory.dependency_type fuchsia.component.decl/DependencyType
 table/member fuchsia.component.decl/OfferDirectory.rights fuchsia.io/Operations
 table/member fuchsia.component.decl/OfferDirectory.source fuchsia.component.decl/Ref
@@ -171,12 +176,14 @@ table/member fuchsia.component.decl/OfferDirectory.subdir string:1024
 table/member fuchsia.component.decl/OfferDirectory.target fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/OfferDirectory.target_name string:100
 table fuchsia.component.decl/OfferDirectory
+table/member fuchsia.component.decl/OfferEvent.availability fuchsia.component.decl/Availability
 table/member fuchsia.component.decl/OfferEvent.filter fuchsia.data/Dictionary
 table/member fuchsia.component.decl/OfferEvent.source fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/OfferEvent.source_name string:100
 table/member fuchsia.component.decl/OfferEvent.target fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/OfferEvent.target_name string:100
 table fuchsia.component.decl/OfferEvent
+table/member fuchsia.component.decl/OfferEventStream.availability fuchsia.component.decl/Availability
 table/member fuchsia.component.decl/OfferEventStream.filter fuchsia.data/Dictionary
 table/member fuchsia.component.decl/OfferEventStream.scope vector<fuchsia.component.decl/Ref>
 table/member fuchsia.component.decl/OfferEventStream.source fuchsia.component.decl/Ref
@@ -184,6 +191,7 @@ table/member fuchsia.component.decl/OfferEventStream.source_name string:100
 table/member fuchsia.component.decl/OfferEventStream.target fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/OfferEventStream.target_name string:100
 table fuchsia.component.decl/OfferEventStream
+table/member fuchsia.component.decl/OfferProtocol.availability fuchsia.component.decl/Availability
 table/member fuchsia.component.decl/OfferProtocol.dependency_type fuchsia.component.decl/DependencyType
 table/member fuchsia.component.decl/OfferProtocol.source fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/OfferProtocol.source_name string:100
@@ -200,6 +208,7 @@ table/member fuchsia.component.decl/OfferRunner.source_name string:100
 table/member fuchsia.component.decl/OfferRunner.target fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/OfferRunner.target_name string:100
 table fuchsia.component.decl/OfferRunner
+table/member fuchsia.component.decl/OfferService.availability fuchsia.component.decl/Availability
 table/member fuchsia.component.decl/OfferService.renamed_instances vector<fuchsia.component.decl/NameMapping>
 table/member fuchsia.component.decl/OfferService.source fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/OfferService.source_instance_filter vector<string:100>
@@ -207,6 +216,7 @@ table/member fuchsia.component.decl/OfferService.source_name string:100
 table/member fuchsia.component.decl/OfferService.target fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/OfferService.target_name string:100
 table fuchsia.component.decl/OfferService
+table/member fuchsia.component.decl/OfferStorage.availability fuchsia.component.decl/Availability
 table/member fuchsia.component.decl/OfferStorage.source fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/OfferStorage.source_name string:100
 table/member fuchsia.component.decl/OfferStorage.target fuchsia.component.decl/Ref
@@ -229,6 +239,7 @@ union/member fuchsia.component.decl/Ref.debug fuchsia.component.decl/DebugRef
 union/member fuchsia.component.decl/Ref.framework fuchsia.component.decl/FrameworkRef
 union/member fuchsia.component.decl/Ref.parent fuchsia.component.decl/ParentRef
 union/member fuchsia.component.decl/Ref.self fuchsia.component.decl/SelfRef
+union/member fuchsia.component.decl/Ref.void_type fuchsia.component.decl/VoidRef
 flexible union fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/Resolver.name string:100
 table/member fuchsia.component.decl/Resolver.source_path string:1024
@@ -268,6 +279,7 @@ union/member fuchsia.component.decl/Use.protocol fuchsia.component.decl/UseProto
 union/member fuchsia.component.decl/Use.service fuchsia.component.decl/UseService
 union/member fuchsia.component.decl/Use.storage fuchsia.component.decl/UseStorage
 flexible union fuchsia.component.decl/Use
+table/member fuchsia.component.decl/UseDirectory.availability fuchsia.component.decl/Availability
 table/member fuchsia.component.decl/UseDirectory.dependency_type fuchsia.component.decl/DependencyType
 table/member fuchsia.component.decl/UseDirectory.rights fuchsia.io/Operations
 table/member fuchsia.component.decl/UseDirectory.source fuchsia.component.decl/Ref
@@ -275,31 +287,38 @@ table/member fuchsia.component.decl/UseDirectory.source_name string:100
 table/member fuchsia.component.decl/UseDirectory.subdir string:1024
 table/member fuchsia.component.decl/UseDirectory.target_path string:1024
 table fuchsia.component.decl/UseDirectory
+table/member fuchsia.component.decl/UseEvent.availability fuchsia.component.decl/Availability
 table/member fuchsia.component.decl/UseEvent.dependency_type fuchsia.component.decl/DependencyType
 table/member fuchsia.component.decl/UseEvent.filter fuchsia.data/Dictionary
 table/member fuchsia.component.decl/UseEvent.source fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/UseEvent.source_name string:100
 table/member fuchsia.component.decl/UseEvent.target_name string:100
 table fuchsia.component.decl/UseEvent
+table/member fuchsia.component.decl/UseEventStream.availability fuchsia.component.decl/Availability
 table/member fuchsia.component.decl/UseEventStream.scope vector<fuchsia.component.decl/Ref>
 table/member fuchsia.component.decl/UseEventStream.source fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/UseEventStream.source_name string:100
 table/member fuchsia.component.decl/UseEventStream.target_path string:100
 table fuchsia.component.decl/UseEventStream
+table/member fuchsia.component.decl/UseEventStreamDeprecated.availability fuchsia.component.decl/Availability
 table/member fuchsia.component.decl/UseEventStreamDeprecated.name string:100
 table/member fuchsia.component.decl/UseEventStreamDeprecated.subscriptions vector<fuchsia.component.decl/EventSubscription>:100
 table fuchsia.component.decl/UseEventStreamDeprecated
+table/member fuchsia.component.decl/UseProtocol.availability fuchsia.component.decl/Availability
 table/member fuchsia.component.decl/UseProtocol.dependency_type fuchsia.component.decl/DependencyType
 table/member fuchsia.component.decl/UseProtocol.source fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/UseProtocol.source_name string:100
 table/member fuchsia.component.decl/UseProtocol.target_path string:1024
 table fuchsia.component.decl/UseProtocol
+table/member fuchsia.component.decl/UseService.availability fuchsia.component.decl/Availability
 table/member fuchsia.component.decl/UseService.dependency_type fuchsia.component.decl/DependencyType
 table/member fuchsia.component.decl/UseService.source fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/UseService.source_name string:100
 table/member fuchsia.component.decl/UseService.target_path string:1024
 table fuchsia.component.decl/UseService
+table/member fuchsia.component.decl/UseStorage.availability fuchsia.component.decl/Availability
 table/member fuchsia.component.decl/UseStorage.source_name string:100
 table/member fuchsia.component.decl/UseStorage.target_path string:1024
 table fuchsia.component.decl/UseStorage
+struct fuchsia.component.decl/VoidRef
 library fuchsia.component.decl

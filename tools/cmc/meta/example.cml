@@ -68,6 +68,7 @@
         {
             protocol: "fuchsia.fonts.LegacyProvider",
             path: "/svc/fuchsia.fonts.OldProvider",
+            availability: "optional",
         },
         {
             protocol: "fuchsia.log.LegacyLog",
@@ -90,6 +91,7 @@
             from: "parent",
             as: "diagnostics_ready",
             filter: { path: "diagnostics" },
+            availability: "optional",
         },
         {
             event_stream_deprecated: "my_stream",
@@ -131,12 +133,14 @@
             from: "parent",
             as: "stopped-logger",
             to: "#logger",
+            availability: "required",
         },
         {
             event_stream: "directory_ready",
             from: "parent",
             to: "#logger",
             filter: { name: "diagnostics" },
+            availability: "same_as_target",
         },
         {
             event_stream: [
@@ -146,6 +150,27 @@
             from: "parent",
             to: "#logger",
             scope: [ "#logger" ],
+        },
+        {
+            protocol: "fuchsia.logger.LegacyLog2",
+            from: "#non-existant",
+            as: "fuchsia.logger.OldLog2",
+            to: "#modular",
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.logger.LegacyLog3",
+            from: "#logger",
+            as: "fuchsia.logger.OldLog3",
+            to: "#modular",
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.logger.LegacyLog4",
+            from: "parent",
+            as: "fuchsia.logger.OldLog4",
+            to: "#modular",
+            availability: "optional",
         },
     ],
     expose: [
