@@ -121,7 +121,7 @@ use {
         convert::{TryFrom, TryInto},
         sync::Arc,
     },
-    tracing::{error, info, warn},
+    tracing::{info, warn},
 };
 
 /// An event to be logged to the legacy or cobalt logger. Events are generated first,
@@ -790,8 +790,7 @@ impl ProjectSampler {
         ) {
             self.maybe_update_cache(new_sample, &metric_type, metric_cache_key);
             Ok(Some(if use_legacy_logger {
-                let transformed_payload: EventPayload =
-                    transform_metrics_payload_to_cobalt(payload);
+                let transformed_payload: EventPayload = transform_to_legacy_cobalt(payload);
                 EventToLog::CobaltEvent(CobaltEvent {
                     metric_id,
                     event_codes,
@@ -844,13 +843,15 @@ impl ProjectSampler {
             DataType::Occurrence | DataType::IntHistogram => {
                 self.metric_cache.insert(metric_cache_key, new_sample.clone());
             }
-            DataType::Integer => (),
+            DataType::Integer | DataType::String => (),
         }
     }
 }
 
 /// Transforms a [`MetricEventPayload`] (Cobalt 1.1) to an equivalent [`EventPayload`] (Cobalt 1.0).
-fn transform_metrics_payload_to_cobalt(payload: MetricEventPayload) -> EventPayload {
+/// Only [`MetricEventPayload::Count`], [`MetricEventPayload::IntegerValue`], and
+/// [`MetricEventPayload::Histogram`] are supported.
+fn transform_to_legacy_cobalt(payload: MetricEventPayload) -> EventPayload {
     match payload {
         MetricEventPayload::Count(count) => {
             // Safe to unwrap because we use cobalt v1.0 sanitization when constructing the Count metric event payload.
@@ -891,9 +892,15 @@ fn process_sample_for_data_type(
             // This may be a case of using a single selector for two metrics, one event count
             // and one int.
             if previous_sample_opt.is_some() {
-                error!("Sampler has erroneously cached an Int type metric: {:?}", data_source);
+                warn!("Sampler has erroneously cached an Int type metric: {:?}", data_source);
             }
             process_int(new_sample, data_source)
+        }
+        DataType::String => {
+            if previous_sample_opt.is_some() {
+                warn!("Sampler has erroneously cached a String type metric: {:?}", data_source);
+            }
+            process_string(new_sample, data_source)
         }
     };
 
@@ -1096,6 +1103,28 @@ fn process_int(
     };
 
     Ok(Some(MetricEventPayload::IntegerValue(sampled_int)))
+}
+
+fn process_string(
+    new_sample: &Property,
+    data_source: &MetricCacheKey,
+) -> Result<Option<MetricEventPayload>, Error> {
+    let sampled_string = match new_sample {
+        Property::String(_, val) => val.clone(),
+        _ => {
+            return Err(format_err!(
+                concat!(
+                    "Selector referenced an Inspect property specified as String",
+                    " but property is not type String.",
+                    " Selector: {:?}, Inspect type: {}"
+                ),
+                data_source,
+                new_sample.discriminant_name()
+            ));
+        }
+    };
+
+    Ok(Some(MetricEventPayload::StringValue(sampled_string)))
 }
 
 fn process_occurence(
@@ -1344,7 +1373,7 @@ mod tests {
             _ => panic!("Expecting event counts."),
         }
 
-        let transformed_event = transform_metrics_payload_to_cobalt(event);
+        let transformed_event = transform_to_legacy_cobalt(event);
         match transformed_event {
             EventPayload::EventCount(count_event) => {
                 assert_eq!(count_event.count, params.diff);
@@ -1488,7 +1517,7 @@ mod tests {
             _ => panic!("Expecting event counts."),
         }
 
-        let transformed_event = transform_metrics_payload_to_cobalt(event);
+        let transformed_event = transform_to_legacy_cobalt(event);
         match transformed_event {
             EventPayload::MemoryBytesUsed(value) => {
                 assert_eq!(value, params.sample);
@@ -1555,6 +1584,69 @@ mod tests {
             new_val: Property::Uint("count".to_string(), i64_max_in_u64 + 1),
             process_ok: false,
             sample: -1,
+        });
+    }
+
+    struct StringTesterParams {
+        sample: Property,
+        process_ok: bool,
+        previous_sample: Option<Property>,
+    }
+
+    fn process_string_tester(params: StringTesterParams) {
+        let metric_cache_key = MetricCacheKey {
+            filename: "foo.file".to_string(),
+            selector: "test:root:string_val".to_string(),
+        };
+
+        let event = process_sample_for_data_type(
+            &params.sample,
+            params.previous_sample.as_ref(),
+            &metric_cache_key,
+            &DataType::String,
+        );
+
+        if !params.process_ok {
+            assert!(event.is_none());
+            return;
+        }
+
+        match event.unwrap() {
+            MetricEventPayload::StringValue(val) => {
+                assert_eq!(val.as_str(), params.sample.string().unwrap());
+            }
+            _ => panic!("Expecting event with StringValue."),
+        }
+    }
+
+    #[fuchsia::test]
+    fn test_process_string() {
+        process_string_tester(StringTesterParams {
+            sample: Property::String("string_val".to_string(), "Hello, world!".to_string()),
+            process_ok: true,
+            previous_sample: None,
+        });
+
+        // Ensure any erroneously cached values are ignored (a warning is logged in this case).
+
+        process_string_tester(StringTesterParams {
+            sample: Property::String("string_val".to_string(), "Hello, world!".to_string()),
+            process_ok: true,
+            previous_sample: Some(Property::String("string_val".to_string(), "Uh oh!".to_string())),
+        });
+
+        // Ensure unsupported property types are not erroneously processed.
+
+        process_string_tester(StringTesterParams {
+            sample: Property::Int("string_val".to_string(), 123),
+            process_ok: false,
+            previous_sample: None,
+        });
+
+        process_string_tester(StringTesterParams {
+            sample: Property::Uint("string_val".to_string(), 123),
+            process_ok: false,
+            previous_sample: None,
         });
     }
 
@@ -1632,7 +1724,7 @@ mod tests {
             _ => panic!("Expecting int histogram."),
         }
 
-        let transformed_event = transform_metrics_payload_to_cobalt(event);
+        let transformed_event = transform_to_legacy_cobalt(event);
 
         match transformed_event {
             EventPayload::IntHistogram(histogram_buckets) => {

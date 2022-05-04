@@ -131,12 +131,12 @@ struct MetricTemplate {
     /// the specified metric only once, the first time
     /// it becomes available to the sampler.
     upload_once: Option<bool>,
-    /// Optional boolean specifying whether to use Cobalt v1.0
-    /// protocol. This value may either be absent or true.
+    /// Optional boolean specifying whether to use Cobalt v1.0 protocol. This value
+    /// may either be absent or true. Not all metric types are supported.
     use_legacy_cobalt: Option<bool>,
 }
 
-/// The supported V1.0 Cobalt Metrics
+/// Supported Cobalt Metric types
 #[derive(Deserialize, Debug, PartialEq, Eq, Copy, Clone)]
 pub enum DataType {
     /// Maps cached diffs from Uint or Int Inspect types.
@@ -147,6 +147,8 @@ pub enum DataType {
     Integer,
     /// Maps cached diffs from IntHistogram Inspect type.
     IntHistogram,
+    /// Maps Inspect String type to StringValue (Cobalt 1.1 only).
+    String,
     // TODO(lukenicholson): Expand sampler support for new
     // data types.
     // Maps raw Double Inspect types.
