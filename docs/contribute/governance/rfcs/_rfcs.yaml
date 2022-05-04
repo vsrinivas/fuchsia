@@ -2048,3 +2048,16 @@
   reviewers: ['abarth@google.com', 'enoharemaien@google.com', 'palmer@google.com', 'jfsulliv@google.com', 'jsankey@google.com', 'zarvox@google.com']
   submitted: '2022-04-07'
   reviewed: '2022-04-28'
+
+- name: 'RFC-0158'
+  title: 'Structured Config Accessors'
+  short_description: 'High-level philosophy and requirements for user-facing config accessors.'
+  authors: ['adamperry@google.com']
+  file: '0158_structured_config_accessors.md'
+  area: ['Component Framework']
+  issue: ['95371']
+  gerrit_change_id: ['609977']
+  status: 'Accepted'
+  reviewers: ['geb@google.com', 'jsankey@google.com', 'yifeit@google.com']
+  submitted: '2021-12-20'
+  reviewed: '2022-05-04'

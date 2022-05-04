@@ -330,3 +330,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0156_stream_append_mode.md
   - title: "RFC-0157: Fxfs Encryption and Multi-Volume Support"
     path: /docs/contribute/governance/rfcs/0157_fxfs_encryption_and_multi_volume_support.md
+  - title: "RFC-0158: Structured Config Accessors"
+    path: /docs/contribute/governance/rfcs/0158_structured_config_accessors.md
