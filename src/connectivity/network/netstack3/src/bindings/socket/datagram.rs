@@ -9,7 +9,7 @@ use std::{
     convert::TryInto as _,
     fmt::Debug,
     marker::PhantomData,
-    num::NonZeroU16,
+    num::{NonZeroU16, ParseIntError},
     ops::{Deref as _, DerefMut as _},
 };
 
@@ -19,6 +19,7 @@ use fidl_fuchsia_posix as fposix;
 use fidl_fuchsia_posix_socket as fposix_socket;
 
 use anyhow::{format_err, Error};
+use explicit::ResultExt as _;
 use fidl::{
     endpoints::{RequestStream as _, ServerEnd},
     AsyncChannel,
@@ -34,11 +35,12 @@ use net_types::{
 use netstack3_core::{
     connect_udp, create_udp_unbound, get_udp_conn_info, get_udp_listener_info, icmp, listen_udp,
     remove_udp_conn, remove_udp_listener, remove_udp_unbound, send_udp, send_udp_conn,
-    send_udp_listener, BlanketCoreContext, BufferDispatcher, BufferUdpContext,
-    BufferUdpStateContext, Ctx, EventDispatcher, IdMap, IdMapCollection, IdMapCollectionKey, IpExt,
-    IpSockCreationError, IpSockSendError, LocalAddressError, TransportIpContext, UdpBoundId,
-    UdpConnId, UdpConnInfo, UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError,
-    UdpSendListenerError, UdpSockCreationError, UdpStateContext, UdpUnboundId,
+    send_udp_listener, set_bound_udp_device, set_unbound_udp_device, BlanketCoreContext,
+    BufferDispatcher, BufferUdpContext, BufferUdpStateContext, Ctx, EventDispatcher, IdMap,
+    IdMapCollection, IdMapCollectionKey, IpDeviceIdContext, IpExt, IpSockCreationError,
+    IpSockSendError, LocalAddressError, TransportIpContext, UdpBoundId, UdpConnId, UdpConnInfo,
+    UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError, UdpSendListenerError,
+    UdpSockCreationError, UdpStateContext, UdpUnboundId,
 };
 use packet::{Buf, BufferMut, SerializeError};
 use packet_formats::{
@@ -50,7 +52,11 @@ use packet_formats::{
 };
 use thiserror::Error;
 
-use crate::bindings::{Lockable, LockableContext};
+use crate::bindings::{
+    devices::Devices,
+    util::{DeviceNotFoundError, TryFromFidlWithContext},
+    Lockable, LockableContext,
+};
 
 use super::{
     IntoErrno, IpSockAddrExt, SockAddr, SocketWorkerProperties, ZXSIO_SIGNAL_INCOMING,
@@ -69,11 +75,29 @@ pub(crate) enum DatagramProtocol {
 }
 
 /// A minimal abstraction over transport protocols that allows bindings-side state to be stored.
-pub(crate) trait Transport<I>: Debug {
+pub(crate) trait Transport<I>: Debug + Sized {
     const PROTOCOL: DatagramProtocol;
     type UnboundId: Debug + Copy + IdMapCollectionKey;
     type ConnId: Debug + Copy + IdMapCollectionKey;
     type ListenerId: Debug + Copy + IdMapCollectionKey;
+}
+
+#[derive(Debug)]
+pub(crate) enum BoundSocketId<I, T: Transport<I>> {
+    Connected(T::ConnId),
+    Listener(T::ListenerId),
+}
+
+#[derive(Debug)]
+pub(crate) enum SocketId<I, T: Transport<I>> {
+    Unbound(T::UnboundId),
+    Bound(BoundSocketId<I, T>),
+}
+
+impl<I, T: Transport<I>> From<BoundSocketId<I, T>> for SocketId<I, T> {
+    fn from(id: BoundSocketId<I, T>) -> Self {
+        SocketId::Bound(id)
+    }
 }
 
 pub(crate) struct SocketCollection<I: Ip, T: Transport<I>> {
@@ -171,9 +195,10 @@ pub(crate) trait OptionFromU16: Sized {
 }
 
 /// An abstraction over transport protocols that allows generic manipulation of Core state.
-pub(crate) trait TransportState<I: Ip, C>: Transport<I> {
+pub(crate) trait TransportState<I: Ip, C: IpDeviceIdContext<I>>: Transport<I> {
     type CreateConnError: IntoErrno;
     type CreateListenerError: IntoErrno;
+    type SetSocketDeviceError: IntoErrno;
     type LocalIdentifier: OptionFromU16 + Into<u16>;
     type RemoteIdentifier: OptionFromU16 + Into<u16>;
 
@@ -226,10 +251,18 @@ pub(crate) trait TransportState<I: Ip, C>: Transport<I> {
     ) -> (Option<SpecifiedAddr<I::Addr>>, Self::LocalIdentifier);
 
     fn remove_unbound(ctx: &mut C, id: Self::UnboundId);
+
+    fn set_socket_device(
+        ctx: &mut C,
+        id: SocketId<I, Self>,
+        device: C::DeviceId,
+    ) -> Result<(), Self::SetSocketDeviceError>;
 }
 
 /// An abstraction over transport protocols that allows data to be sent via the Core.
-pub(crate) trait BufferTransportState<I: Ip, B: BufferMut, C>: TransportState<I, C> {
+pub(crate) trait BufferTransportState<I: Ip, B: BufferMut, C: IpDeviceIdContext<I>>:
+    TransportState<I, C>
+{
     type SendError: IntoErrno;
     type SendConnError: IntoErrno;
     type SendListenerError: IntoErrno;
@@ -265,6 +298,15 @@ impl<I: Ip> Transport<I> for Udp {
     type ListenerId = UdpListenerId<I>;
 }
 
+impl<I: Ip> From<BoundSocketId<I, Udp>> for UdpBoundId<I> {
+    fn from(id: BoundSocketId<I, Udp>) -> Self {
+        match id {
+            BoundSocketId::Connected(c) => UdpBoundId::Connected(c),
+            BoundSocketId::Listener(c) => UdpBoundId::Listening(c),
+        }
+    }
+}
+
 impl OptionFromU16 for NonZeroU16 {
     fn from_u16(t: u16) -> Option<Self> {
         Self::new(t)
@@ -274,6 +316,7 @@ impl OptionFromU16 for NonZeroU16 {
 impl<I: IpExt, C: UdpStateContext<I>> TransportState<I, C> for Udp {
     type CreateConnError = UdpSockCreationError;
     type CreateListenerError = LocalAddressError;
+    type SetSocketDeviceError = LocalAddressError;
     type LocalIdentifier = NonZeroU16;
     type RemoteIdentifier = NonZeroU16;
 
@@ -346,6 +389,20 @@ impl<I: IpExt, C: UdpStateContext<I>> TransportState<I, C> for Udp {
 
     fn remove_unbound(ctx: &mut C, id: Self::UnboundId) {
         remove_udp_unbound(ctx, id)
+    }
+
+    fn set_socket_device(
+        ctx: &mut C,
+        id: SocketId<I, Self>,
+        device: C::DeviceId,
+    ) -> Result<(), Self::SetSocketDeviceError> {
+        match id {
+            SocketId::Unbound(id) => {
+                set_unbound_udp_device(ctx, id, device);
+                Ok(())
+            }
+            SocketId::Bound(id) => set_bound_udp_device(ctx, id.into(), device),
+        }
     }
 }
 
@@ -661,6 +718,7 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher, C: BlanketCoreContext> TransportState
 {
     type CreateConnError = icmp::IcmpSockCreationError;
     type CreateListenerError = icmp::IcmpSockCreationError;
+    type SetSocketDeviceError = LocalAddressError;
     type LocalIdentifier = u16;
     type RemoteIdentifier = IcmpRemoteIdentifier;
 
@@ -729,6 +787,14 @@ impl<I: IcmpEchoIpExt, D: EventDispatcher, C: BlanketCoreContext> TransportState
 
     fn remove_unbound(ctx: &mut Ctx<D, C>, id: Self::UnboundId) {
         I::remove_icmp_unbound(ctx, id)
+    }
+
+    fn set_socket_device(
+        _ctx: &mut Ctx<D, C>,
+        _id: SocketId<I, Self>,
+        _device: <Ctx<D, C> as IpDeviceIdContext<I>>::DeviceId,
+    ) -> Result<(), Self::SetSocketDeviceError> {
+        todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 }
 
@@ -992,6 +1058,19 @@ where
         <C as RequestHandlerContext<I, T>>::Dispatcher,
         <C as RequestHandlerContext<I, T>>::Context,
     >: TransportIpContext<I>,
+    <Ctx<
+        <C as RequestHandlerContext<I, T>>::Dispatcher,
+        <C as RequestHandlerContext<I, T>>::Context,
+    > as IpDeviceIdContext<I>>::DeviceId:
+        IdMapCollectionKey + TryFromFidlWithContext<u64, Error = DeviceNotFoundError>,
+    <C as RequestHandlerContext<I, T>>::Dispatcher: AsRef<
+        Devices<
+            <Ctx<
+                <C as RequestHandlerContext<I, T>>::Dispatcher,
+                <C as RequestHandlerContext<I, T>>::Context,
+            > as IpDeviceIdContext<I>>::DeviceId,
+        >,
+    >,
 {
     /// Starts servicing events from the provided event stream.
     fn spawn(
@@ -1361,10 +1440,35 @@ where
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::SetBindToDevice {
-                            value: _,
+                            value,
                             responder,
                         } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                            responder_send!(
+                                responder,
+                                &mut async {
+                                    // This is a hack to allow an application to
+                                    // bind a socket to a device without proper
+                                    // device name support in Netstack3.
+                                    // Instead of a device name, the `value`
+                                    // field in a `SetBindToDevice` call must be
+                                    // specified as "ifindex/{index}", where the
+                                    // placeholder `{index}` is a base-10 string
+                                    // representation of a u64 device index.
+                                    //
+                                    // TODO(https://fxbug.dev/48969): Support
+                                    // real device names once those are
+                                    // available.
+                                    let index = value.split_once("/").and_then(
+                                        |(prefix, index)| if prefix == "ifindex" {
+                                            index.parse().ok_checked::<ParseIntError>()
+                                        } else {
+                                            None
+                                        });
+                                    match index {
+                                        Some(index) => self.make_handler().await.bind_to_device(index),
+                                        None => Err(fposix::Errno::Enodev),
+                                    }
+                                }.await);
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::GetBindToDevice { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
@@ -1613,7 +1717,7 @@ where
 }
 
 pub(crate) trait RequestHandlerDispatcher<I, T>:
-    EventDispatcher + AsRef<SocketCollectionPair<T>> + AsMut<SocketCollectionPair<T>>
+    EventDispatcher + AsRef<SocketCollectionPair<T>> + AsMut<SocketCollectionPair<T>> + AsRef<Devices>
 where
     I: IpExt,
     T: Transport<Ipv4>,
@@ -1629,7 +1733,7 @@ where
     T: Transport<Ipv6>,
     T: Transport<I>,
     D: EventDispatcher,
-    D: AsRef<SocketCollectionPair<T>> + AsMut<SocketCollectionPair<T>>,
+    D: AsRef<SocketCollectionPair<T>> + AsMut<SocketCollectionPair<T>> + AsRef<Devices>,
 {
 }
 
@@ -2031,6 +2135,19 @@ where
         <C as RequestHandlerContext<I, T>>::Dispatcher,
         <C as RequestHandlerContext<I, T>>::Context,
     >: TransportIpContext<I>,
+    <Ctx<
+        <C as RequestHandlerContext<I, T>>::Dispatcher,
+        <C as RequestHandlerContext<I, T>>::Context,
+    > as IpDeviceIdContext<I>>::DeviceId:
+        IdMapCollectionKey + TryFromFidlWithContext<u64, Error = DeviceNotFoundError>,
+    <C as RequestHandlerContext<I, T>>::Dispatcher: AsRef<
+        Devices<
+            <Ctx<
+                <C as RequestHandlerContext<I, T>>::Dispatcher,
+                <C as RequestHandlerContext<I, T>>::Context,
+            > as IpDeviceIdContext<I>>::DeviceId,
+        >,
+    >,
 {
     fn send_msg(
         &mut self,
@@ -2097,6 +2214,20 @@ where
             },
         }
         .map(|()| len)
+    }
+
+    fn bind_to_device(mut self, index: u64) -> Result<(), fposix::Errno> {
+        let device = TryFromFidlWithContext::try_from_fidl_with_ctx(&self.ctx.dispatcher, index)
+            .map_err(|DeviceNotFoundError {}| fposix::Errno::Enodev)?;
+        let id = match self.get_state_mut().info.state {
+            SocketState::Unbound { unbound_id } => SocketId::Unbound(unbound_id),
+            SocketState::BoundListen { listener_id } => BoundSocketId::Listener(listener_id).into(),
+            SocketState::BoundConnect { conn_id, shutdown_read: _, shutdown_write: _ } => {
+                BoundSocketId::Connected(conn_id).into()
+            }
+        };
+
+        T::set_socket_device(self.ctx.deref_mut(), id, device).map_err(IntoErrno::into_errno)
     }
 
     fn shutdown(mut self, how: fposix_socket::ShutdownMode) -> Result<(), fposix::Errno> {

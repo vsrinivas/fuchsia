@@ -4,9 +4,14 @@
 
 #![cfg(test)]
 
+use std::borrow::Cow;
+
 use anyhow::Context as _;
 use assert_matches::assert_matches;
+use async_trait::async_trait;
 use fidl_fuchsia_net as fnet;
+use fidl_fuchsia_net_interfaces as fnet_interfaces;
+use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fidl_fuchsia_posix_socket as fposix_socket;
 use fuchsia_async::{
@@ -23,7 +28,7 @@ use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6, fidl_mac, fidl_subnet};
 use netemul::{RealmTcpListener as _, RealmTcpStream as _, RealmUdpSocket as _, TestInterface};
 use netstack_testing_common::{
     ping,
-    realms::{Netstack, Netstack2, Netstack2WithFastUdp, TestSandboxExt as _},
+    realms::{Netstack, Netstack2, Netstack2WithFastUdp, Netstack3, TestSandboxExt as _},
     Result,
 };
 use netstack_testing_macros::variants_test;
@@ -810,10 +815,27 @@ async fn udpv6_loopback<N: Netstack>(name: &str) {
     run_udp_socket_test(&realm, IPV6_LOOPBACK, &realm, IPV6_LOOPBACK).await
 }
 
-fn to_subnet(
-    fnet::Ipv4AddressWithPrefix { addr, prefix_len }: fnet::Ipv4AddressWithPrefix,
-) -> fnet::Subnet {
-    fnet::Subnet { addr: fnet::IpAddress::Ipv4(addr), prefix_len }
+#[async_trait]
+trait TestNetstackExt: Netstack {
+    /// Returns the name for the given interface that can be passed to a
+    /// BindToDevice (SO_BINDTODEVICE) call.
+    async fn bindtodevice_name<'i>(iface: &netemul::TestInterface<'i>) -> String;
+}
+
+#[async_trait]
+impl TestNetstackExt for Netstack2 {
+    async fn bindtodevice_name<'i>(iface: &netemul::TestInterface<'i>) -> String {
+        iface.get_interface_name().await.expect("get_name failed")
+    }
+}
+
+#[async_trait]
+impl TestNetstackExt for Netstack3 {
+    /// TODO(https://fxbug.dev/48969): Use the actual device name once that is
+    /// supported.
+    async fn bindtodevice_name<'i>(iface: &netemul::TestInterface<'i>) -> String {
+        format!("ifindex/{}", iface.id())
+    }
 }
 
 struct MultiNicAndPeerConfig {
@@ -823,15 +845,60 @@ struct MultiNicAndPeerConfig {
     peer_socket: UdpSocket,
 }
 
+// TODO(https://fxbug.dev/88796): Replace this with TestNetwork::join_network
+// once Netstack3 supports fuchsia.net.interfaces.admin.
+async fn join_network<'a, E: netemul::Endpoint, N: TestNetstackExt, S: Into<Cow<'a, str>>>(
+    realm: &netemul::TestRealm<'a>,
+    network: &netemul::TestNetwork<'a>,
+    ep_name: S,
+    fnet::Ipv4AddressWithPrefix { addr, prefix_len }: fnet::Ipv4AddressWithPrefix,
+) -> Result<TestInterface<'a>> {
+    let endpoint =
+        network.create_endpoint::<E, _>(ep_name).await.context("create endpoint failed")?;
+    let interface =
+        endpoint.into_interface_in_realm(realm).await.context("failed to add endpoint")?;
+    interface.set_link_up(true).await.expect("failed to start endpoint");
+    interface
+        .stack()
+        .enable_interface_deprecated(interface.id())
+        .await
+        .squash_result()
+        .context("failed to enable interface")?;
+    // Netstack3 won't add an address to an interface that's offline, so wait
+    // for it to come up before proceeding.
+    let interface_state = realm
+        .connect_to_protocol::<fnet_interfaces::StateMarker>()
+        .context("failed to connect to fuchsia.net.interfaces/State")?;
+    let () = fnet_interfaces_ext::wait_interface_with_id(
+        fnet_interfaces_ext::event_stream_from_state(&interface_state)?,
+        &mut fnet_interfaces_ext::InterfaceState::Unknown(interface.id()),
+        |&fnet_interfaces_ext::Properties { online, .. }| {
+            // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
+            online.then(|| ())
+        },
+    )
+    .await
+    .context("failed to observe interface up")?;
+    let subnet = fnet::Subnet { addr: fnet::IpAddress::Ipv4(addr), prefix_len };
+    interface
+        .stack()
+        .add_interface_address_deprecated(interface.id(), &mut subnet.clone())
+        .await
+        .squash_result()
+        .context("failed to add address")?;
+    interface.add_subnet_route(subnet).await?;
+    Ok(interface)
+}
+
 /// Sets up [`num_peers`]+1 realms: `num_peers` peers and 1 multi-nic host. Each
 /// peer is connected to the multi-nic host via a different network. Once the
 /// hosts are set up and sockets initialized, the provided callback is called.
 ///
-/// For each NIC, a UDP socket is created, all of which are bound to 0.0.0.0 and
-/// [`port`] in their respective realms. For the multi-NIC host, the sockets are
-/// also bound to individual devices, a la SO_BINDTODEVICE.
+/// When `call_with_sockets` is invoked, all of these sockets are provided as
+/// arguments. The first argument contains the sockets in the multi-NIC realm,
+/// and the second argument is the socket in the peer realm.
 async fn with_multinic_and_peers<
-    N: Netstack,
+    N: Netstack + TestNetstackExt,
     F: FnOnce(Vec<MultiNicAndPeerConfig>) -> R,
     R: Future<Output = ()>,
 >(
@@ -873,24 +940,15 @@ async fn with_multinic_and_peers<
             let peer = sandbox
                 .create_netstack_realm::<N, _>(format!("{name}_peer_{i}"))
                 .expect("create realm");
-            let peer_iface = peer
-                .join_network::<E, _>(
-                    &network,
-                    format!("peer-{i}-ep"),
-                    &netemul::InterfaceConfig::StaticIp(to_subnet(peer_ip)),
-                )
-                .await
-                .expect("install interface in peer netstack");
+            let peer_iface =
+                join_network::<E, N, _>(&peer, &network, format!("peer-{i}-ep"), peer_ip)
+                    .await
+                    .expect("install interface in peer netstack");
             (peer, Interface { iface: peer_iface, ip: peer_ip })
         };
         let multinic_interface = {
             let name = format!("multinic-ep-{i}");
-            let multinic_iface = multinic
-                .join_network::<E, _>(
-                    &network,
-                    name,
-                    &netemul::InterfaceConfig::StaticIp(to_subnet(multinic_ip)),
-                )
+            let multinic_iface = join_network::<E, N, _>(multinic, &network, name, multinic_ip)
                 .await
                 .expect("adding interface failed");
             Interface { iface: multinic_iface, ip: multinic_ip }
@@ -916,13 +974,7 @@ async fn with_multinic_and_peers<
                     .expect("creating UDP datagram socket");
 
                 socket
-                    .bind_device(Some(
-                        multinic_iface
-                            .get_interface_name()
-                            .await
-                            .expect("get_name failed")
-                            .as_bytes(),
-                    ))
+                    .bind_device(Some(N::bindtodevice_name(multinic_iface).await.as_bytes()))
                     .and_then(|()| {
                         socket.as_ref().bind(
                             &std::net::SocketAddr::from((std::net::Ipv4Addr::UNSPECIFIED, port))
@@ -964,11 +1016,10 @@ async fn with_multinic_and_peers<
     call_with_sockets(config).await
 }
 
-// TODO(https://fxbug.dev/96573): Run this test on Netstack3 as well.
-#[fasync::run_singlethreaded(test)]
-async fn receive_on_bound_to_devices() {
-    let name = "receive_on_bound_to_devices";
-    type N = Netstack2;
+// TODO(https://fxbug.dev/48853): parameterize this test over endpoint types
+// once Netstack3 supports netdevice.
+#[variants_test]
+async fn receive_on_bound_to_devices<N: Netstack + TestNetstackExt>(name: &str) {
     const NUM_PEERS: u8 = 3;
     const PORT: u16 = 80;
     const BUFFER_SIZE: usize = 1024;
@@ -1020,11 +1071,10 @@ async fn receive_on_bound_to_devices() {
     .await
 }
 
-// TODO(https://fxbug.dev/96573): Run this test on Netstack3 as well.
-#[fasync::run_singlethreaded(test)]
-async fn send_from_bound_to_device() {
-    let name = "send_from_bound_to_device";
-    type N = Netstack2;
+// TODO(https://fxbug.dev/48853): parameterize this test over endpoint types
+// once Netstack3 supports netdevice.
+#[variants_test]
+async fn send_from_bound_to_device<N: Netstack + TestNetstackExt>(name: &str) {
     const NUM_PEERS: u8 = 3;
     const PORT: u16 = 80;
     const BUFFER_SIZE: usize = 1024;

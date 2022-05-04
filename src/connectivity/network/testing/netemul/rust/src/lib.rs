@@ -1080,6 +1080,11 @@ impl<'a> TestInterface<'a> {
         &self.control
     }
 
+    /// Returns the interface's stack handle.
+    pub fn stack(&self) -> &fnet_stack::StackProxy {
+        &self.stack
+    }
+
     /// Add a direct route from the interface to the given subnet.
     pub async fn add_subnet_route(&self, subnet: fnet::Subnet) -> Result<()> {
         let subnet = fnet_ext::apply_subnet_mask(subnet);

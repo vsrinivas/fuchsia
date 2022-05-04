@@ -24,6 +24,7 @@ rustc_binary("bin") {
     "//src/connectivity/lib/fidl_fuchsia_net_stack_ext",
     "//src/connectivity/lib/net-types",
     "//src/connectivity/lib/packet-formats",
+    "//src/connectivity/network/lib/explicit",
     "//src/connectivity/network/lib/todo_unused",
     "//src/lib/async-utils",
     "//src/lib/fidl/rust/fidl",
