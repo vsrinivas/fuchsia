@@ -359,23 +359,19 @@ class _ListSettings extends StatelessWidget {
                     onTap:
                         appState.settingsState.showDataSharingConsentSettings,
                   ),
-                // Feedback
+                // Feedback (public) or Report an Issue (internal)
                 ListTile(
                   enabled: true,
                   contentPadding: EdgeInsets.symmetric(horizontal: 24),
                   leading: Icon(Icons.feedback_outlined),
-                  title: Text(Strings.feedback),
-                  // TODO(88445): Uncomment when User Feedback is ready
-                  // title: appState.isUserFeedbackEnabled
-                  //     ? Text(Strings.userFeedback)
-                  //     : Text(Strings.feedback),
+                  title: appState.isUserFeedbackEnabled
+                      ? Text(Strings.reportAnIssue)
+                      : Text(Strings.feedback),
                   trailing: OutlinedButton(
                     style: ErmineButtonStyle.outlinedButton(Theme.of(context)),
-                    onPressed: appState.launchFeedback,
-                    // TODO(88445): Uncomment when User Feedback is ready
-                    // appState.isUserFeedbackEnabled
-                    //     ? appState.showUserFeedback
-                    //     : appState.launchFeedback,
+                    onPressed: appState.isUserFeedbackEnabled
+                        ? appState.showUserFeedback
+                        : appState.launchFeedback,
                     child: Text(Strings.open.toUpperCase()),
                   ),
                 ),

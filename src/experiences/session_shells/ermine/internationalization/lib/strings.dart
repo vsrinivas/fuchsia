@@ -782,7 +782,7 @@ class Strings {
         name: 'feedback',
         desc: 'The label for the "feedback" text field.',
       );
-  static String get userFeedback => Intl.message(
+  static String get reportAnIssue => Intl.message(
         'Report an Issue (internal)',
         name: 'user feedback',
         desc: 'The label for the "user feedback" text field.',
