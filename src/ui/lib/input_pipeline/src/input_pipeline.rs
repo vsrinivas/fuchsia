@@ -478,7 +478,7 @@ impl InputPipeline {
     }
 }
 
-/// Adds InputDeviceBindings for devices of tracked `device_types` to `bindings`.
+/// Adds `InputDeviceBinding`s to `bindings` for all `device_types` exposed by `device_proxy`.
 ///
 /// # Parameters
 /// - `device_types`: The types of devices to watch for.
@@ -486,6 +486,16 @@ impl InputPipeline {
 /// - `input_event_sender`: The channel new InputDeviceBindings will send InputEvents to.
 /// - `bindings`: Holds all the InputDeviceBindings associated with the InputPipeline.
 /// - `device_id`: The device id of the associated bindings.
+///
+/// # Note
+/// This will create multiple bindings, in the case where
+/// * `device_proxy().get_descriptor()` returns a `fidl_fuchsia_input_report::DeviceDescriptor`
+///   with multiple table fields populated, and
+/// * multiple populated table fields correspond to device types present in `device_types`
+///
+/// This is used, for example, to support the Atlas touchpad. In that case, a single
+/// node in `/dev/class/input-report` provides both a `fuchsia.input.report.MouseDescriptor` and
+/// a `fuchsia.input.report.TouchDescriptor`.
 async fn add_device_bindings(
     device_types: &Vec<input_device::InputDeviceType>,
     device_proxy: fidl_fuchsia_input_report::InputDeviceProxy,
@@ -496,6 +506,26 @@ async fn add_device_bindings(
     let mut new_bindings: Vec<BoxedInputDeviceBinding> = vec![];
 
     for device_type in device_types {
+        // Clone `device_proxy`, so that multiple bindings (e.g. a `MouseBinding` and a
+        // `TouchBinding`) can read data from the same `/dev/class/input-report` node.
+        //
+        // There's no conflict in having multiple bindings read from the same node,
+        // since:
+        // * each binding will create its own `fuchsia.input.report.InputReportsReader`, and
+        // * the device driver will copy each incoming report to each connected reader.
+        //
+        // This does mean that reports from the Atlas touchpad device get read twice
+        // (by a `MouseBinding` and a `TouchBinding`), regardless of whether the device
+        // is operating in mouse mode or touchpad mode.
+        //
+        // This hasn't been an issue because:
+        // * Semantically: things are fine, because each binding discards irrelevant reports.
+        //   (E.g. `MouseBinding` discards anything that isn't a `MouseInputReport`), and
+        // * Performance wise: things are fine, because the data rate of the touchpad is low
+        //   (125 HZ).
+        //
+        // If we add additional cases where bindings share an underlying `input-report` node,
+        // we might consider adding a multiplexing binding, to avoid reading duplicate reports.
         let proxy = device_proxy.clone();
         if input_device::is_device_type(&proxy, *device_type).await {
             if let Ok(binding) = input_device::get_device_binding(
