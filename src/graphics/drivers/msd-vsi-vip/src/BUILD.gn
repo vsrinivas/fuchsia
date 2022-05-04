@@ -33,6 +33,9 @@ source_set("src") {
     "ringbuffer.cc",
     "ringbuffer.h",
   ]
+
+  configs += [ "..:msd_vsi_vip_config" ]
+
   public_deps = [
     "../include",
     "//src/graphics/lib/magma/include:msd",
