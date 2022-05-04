@@ -37,21 +37,21 @@ zx_koid_t GetKoid(const zx::vmo& vmo) {
 }  // namespace
 
 CustomStage::CustomStage(ProcessorConfiguration config)
-    : PipelineStage("CustomStage", Format::CreateOrDie(config.inputs()[0].format())),
+    : PipelineStage("CustomStage", Format::CreateOrDie(config.outputs()[0].format())),
       block_size_frames_(static_cast<int64_t>(config.block_size_frames())),
       latency_frames_(static_cast<int64_t>(config.outputs()[0].latency_frames())),
       max_frames_per_call_(static_cast<int64_t>(config.max_frames_per_call())),
       fidl_buffers_(config.inputs()[0].buffer(), config.outputs()[0].buffer()),
       fidl_processor_(fidl::BindSyncClient(std::move(config.processor()))),
-      source_(format(),
+      source_(Format::CreateOrDie(config.inputs()[0].format()),
               Fixed(latency_frames_ + static_cast<int64_t>(config.outputs()[0].ring_out_frames())),
               /*round_down_fractional_frames=*/false),
-      source_buffer_(format(), max_frames_per_call_) {
+      source_buffer_(source_.format(), max_frames_per_call_) {
   // Validate processor config.
   FX_CHECK(block_size_frames_ > 0);
   FX_CHECK(max_frames_per_call_ >= block_size_frames_);
   FX_CHECK(max_frames_per_call_ % block_size_frames_ == 0);
-  FX_CHECK(static_cast<uint64_t>(max_frames_per_call_) * format().bytes_per_frame() <=
+  FX_CHECK(static_cast<uint64_t>(max_frames_per_call_) * source_.format().bytes_per_frame() <=
            config.inputs()[0].buffer().size);
 }
 

@@ -322,21 +322,23 @@ class CustomStageTest : public testing::Test {
                                   int64_t read_buffer_frames = 480) {
     const auto input_channels = info.config.inputs()[0].format().channel_count;
     const auto output_channels = info.config.outputs()[0].format().channel_count;
-    const Format source_format = Format::CreateOrDie(info.config.inputs()[0].format());
+    const Format input_format = Format::CreateOrDie(info.config.inputs()[0].format());
+    const Format output_format = Format::CreateOrDie(info.config.outputs()[0].format());
 
-    auto producer_stage = MakePacketQueueProducerStage(source_format);
+    auto producer_stage = MakePacketQueueProducerStage(input_format);
     auto custom_stage = MakeCustomStage(std::move(info.config), producer_stage);
 
     // Push one packet of the requested size.
     std::vector<float> packet_payload(packet_frames * input_channels, 1.0f);
     producer_stage->push(
-        PacketView({source_format, Fixed(0), packet_frames, packet_payload.data()}));
+        PacketView({input_format, Fixed(0), packet_frames, packet_payload.data()}));
 
     {
       // Read the first packet. Since our effect adds 1.0 to each sample, and we populated the
       // packet with 1.0 samples, we expect to see only 2.0 samples in the result.
       const auto packet = custom_stage->Read(Fixed(0), packet_frames);
       ASSERT_TRUE(packet);
+      EXPECT_EQ(packet->format(), output_format);
       EXPECT_EQ(packet->start().Floor(), 0);
       EXPECT_EQ(packet->start().Fraction().raw_value(), 0);
       EXPECT_EQ(packet->length(), read_buffer_frames);

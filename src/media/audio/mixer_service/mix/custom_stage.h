@@ -82,11 +82,11 @@ class CustomStage : public PipelineStage {
   //
   // For example:
   //
-  //   +-----------------------+
-  //   |       `source_`       |
-  //   +-----------------------+
-  //   ^       ^        ^      ^      ^
-  //   A       B        C      D      E
+  //   +------------------------+
+  //   |    `source_buffer_`    |
+  //   +------------------------+
+  //   ^       ^        ^       ^      ^
+  //   A       B        C       D      E
   //
   // 1. Caller asks for frames [A,B). Assume D = A + block_size. We read frames [A,D) from `source_`
   //    into `source_buffer_`, then process those frames, which will fill the processed data into
