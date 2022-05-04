@@ -26,6 +26,7 @@ const CUSTOM_ARTIFACT_DIRECTORY: &str = "custom";
 const DEBUG_ARTIFACT_DIRECTORY: &str = "debug";
 
 const TEST_SUMMARY_TMP_FILE: &str = ".test_summary_tmp.json";
+const SAVE_AFTER_SUITE_COUNT: u32 = 10;
 
 /// A reporter that saves results and artifacts to disk in the Fuchsia test output format.
 pub struct DirectoryReporter {
@@ -37,6 +38,9 @@ pub struct DirectoryReporter {
     entries: Mutex<HashMap<EntityId, EntityEntry>>,
     /// Atomic counter used to generate unique names for custom artifact directories.
     name_counter: AtomicU32,
+    /// Counter for number of completed suites. Used to save complete results after
+    /// SAVE_AFTER_SUITE_COUNT suites complete.
+    suites_finished_counter: AtomicU32,
 }
 
 /// In-memory representation of either a test run, test suite, or test case.
@@ -113,8 +117,13 @@ impl DirectoryReporter {
                 tags: None,
             },
         );
-        let new_self = Self { root, entries: Mutex::new(entries), name_counter: AtomicU32::new(0) };
-        new_self.persist_run_summary()?;
+        let new_self = Self {
+            root,
+            entries: Mutex::new(entries),
+            name_counter: AtomicU32::new(0),
+            suites_finished_counter: AtomicU32::new(1),
+        };
+        new_self.persist_summary()?;
         Ok(new_self)
     }
 
@@ -122,23 +131,30 @@ impl DirectoryReporter {
         self.new_artifact_inner(entity, directory::ArtifactType::Report)
     }
 
-    fn persist_run_summary(&self) -> Result<(), Error> {
+    fn persist_summary(&self) -> Result<(), Error> {
         let entry_lock = self.entries.lock();
         let run_entry =
             entry_lock.get(&EntityId::TestRun).expect("Run entry should always be present");
-        // When saving a run summary, only save references to suite summaries that have already
-        // been saved. This ensures that run_summary.json doesn't contain dangling references.
-        // Here, since we clean up memory for suites that have already been saved to disk, the
-        // set of ready suites is the subset of children of the TestRun that no longer exist in
-        // the entry map.
-        // TODO(satsukiu): consider a more explicit way of expressing these states.
-        let ready_suites: Vec<_> = run_entry
-            .children
-            .iter()
-            .filter(|entity_id| !entry_lock.contains_key(entity_id))
-            .cloned()
-            .collect();
-        let serializable_run = construct_serializable_run(run_entry, ready_suites.as_slice());
+
+        for suite_id in run_entry.children.iter() {
+            let suite_entry = entry_lock.get(suite_id).expect("Suite entry not found");
+            let case_entries = suite_entry
+                .children
+                .iter()
+                .map(|case_id| {
+                    entry_lock.get(case_id).expect("Test case referenced by suite not found")
+                })
+                .collect();
+            let serializable_suite = construct_serializable_suite(suite_entry, case_entries);
+            let inner_suite_id = match suite_id {
+                EntityId::Suite(suite) => suite,
+                _ => panic!("Child of test run should be a suite."),
+            };
+            let summary_path = self.root.join(suite_json_name(inner_suite_id.0));
+            persist_suite_summary(&summary_path, serializable_suite)?;
+        }
+
+        let serializable_run = construct_serializable_run(run_entry);
         // Save to a temp file first then rename. This ensures we at least
         // have the old version if writing the new version fails.
         let tmp_path = self.root.join(TEST_SUMMARY_TMP_FILE);
@@ -254,43 +270,17 @@ impl Reporter for DirectoryReporter {
     /// called once per entity.
     async fn entity_finished(&self, entity: &EntityId) -> Result<(), Error> {
         match entity {
-            EntityId::TestRun => self.persist_run_summary(),
-            EntityId::Suite(suite_id) => {
-                let mut entries = self.entries.lock();
-                let suite_entry = entries
-                    .remove(entity)
-                    .expect("Suite entry not found, was it already recorded?");
-                let case_entries = suite_entry
-                    .children
-                    .iter()
-                    .map(|case_id| {
-                        entries.remove(case_id).expect("Test case referenced by suite not found")
-                    })
-                    .collect();
-                let serializable_suite = construct_serializable_suite(suite_entry, case_entries);
-                let summary_path = self.root.join(suite_json_name(suite_id.0));
-                match persist_suite_summary(&summary_path, serializable_suite) {
-                    Ok(()) => {
-                        drop(entries); // drop lock as persist_run_summary acquires it again.
-                        self.persist_run_summary()
-                    }
-                    Err(e) => {
-                        // If saving suite_summary fails, remove the reference to it from the run
-                        // entry. This way, if saving the run summary succeeds, it won't point to
-                        // a file that doesn't exist. We'll still return an error since this
-                        // indicates only a partial result as been recorded.
-                        entries
-                            .get_mut(&EntityId::TestRun)
-                            .expect("Run entry should always exist")
-                            .children
-                            .retain(|entity_id| *entity_id != EntityId::Suite(*suite_id));
-                        Err(e)
-                    }
+            EntityId::TestRun => self.persist_summary()?,
+            EntityId::Suite(_) => {
+                let num_saved_suites = self.suites_finished_counter.fetch_add(1, Ordering::Relaxed);
+                if num_saved_suites % SAVE_AFTER_SUITE_COUNT == 0 {
+                    self.persist_summary()?;
                 }
             }
             // Cases are saved as part of suites.
-            EntityId::Case { .. } => Ok(()),
+            EntityId::Case { .. } => (),
         }
+        Ok(())
     }
 
     async fn new_artifact(
@@ -414,14 +404,12 @@ fn filename_for_type(artifact_type: &directory::ArtifactType) -> &'static str {
 }
 
 /// Construct a serializable version of a test run.
-fn construct_serializable_run(
-    run_entry: &EntityEntry,
-    ready_suites: &[EntityId],
-) -> directory::TestRunResult {
+fn construct_serializable_run(run_entry: &EntityEntry) -> directory::TestRunResult {
     let duration_milliseconds = run_entry.run_time_millis();
     let start_time = run_entry.start_time_millis();
 
-    let suites = ready_suites
+    let suites = run_entry
+        .children
         .iter()
         .map(|suite_id| {
             let raw_id = match suite_id {
@@ -447,8 +435,8 @@ fn construct_serializable_run(
 
 /// Construct a serializable version of a test suite.
 fn construct_serializable_suite(
-    suite_entry: EntityEntry,
-    case_entries: Vec<EntityEntry>,
+    suite_entry: &EntityEntry,
+    case_entries: Vec<&EntityEntry>,
 ) -> directory::SuiteResult {
     let cases = case_entries
         .into_iter()
@@ -461,11 +449,11 @@ fn construct_serializable_suite(
                     .into_iter()
                     .map(|(name, metadata)| (name.into(), metadata.clone()))
                     .collect(),
-                artifact_dir,
-                outcome,
+                artifact_dir: artifact_dir.to_path_buf(),
+                outcome: *outcome,
                 duration_milliseconds,
                 start_time,
-                name,
+                name: name.to_string(),
             }
         })
         .collect::<Vec<_>>();
@@ -477,13 +465,13 @@ fn construct_serializable_suite(
             .into_iter()
             .map(|(name, metadata)| (name.into(), metadata.clone()))
             .collect(),
-        artifact_dir,
-        outcome,
+        artifact_dir: artifact_dir.to_path_buf(),
+        outcome: *outcome,
         cases,
         duration_milliseconds,
         start_time,
-        name,
-        tags: tags.unwrap_or_default(),
+        name: name.to_string(),
+        tags: tags.clone().unwrap_or_default(),
     }
 }
 
@@ -939,9 +927,9 @@ mod test {
 
     #[fuchsia::test]
     async fn intermediate_results_persisted() {
-        // This test verifies that the results of the test run are persisted after each test suite
-        // finishes. This allows intermediate results to be read even if the command is killed
-        // before completion.
+        // This test verifies that the results of the test run are persisted after every
+        // few suites complete. This ensures that at least some results will be saved even if
+        // ffx test crashes.
         let dir = tempdir().expect("create temp directory");
         let run_reporter = RunReporter::new(
             DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
@@ -957,14 +945,22 @@ mod test {
 
         run_reporter.started(Timestamp::Unknown).await.expect("start test run");
 
-        let suite_reporter =
-            run_reporter.new_suite("suite", &SuiteId(0)).await.expect("create new suite");
-        suite_reporter.started(Timestamp::Unknown).await.expect("start suite");
-        suite_reporter
-            .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
-            .await
-            .expect("stop suite");
-        suite_reporter.finished().await.expect("finish suite");
+        // Create one suite which isn't finished. It should be present in intermediate results too.
+        let incomplete_suite_reporter =
+            run_reporter.new_suite("incomplete", &SuiteId(99)).await.expect("create new suite");
+
+        for i in 0..SAVE_AFTER_SUITE_COUNT {
+            let suite_reporter = run_reporter
+                .new_suite(&format!("suite-{:?}", i), &SuiteId(i))
+                .await
+                .expect("create new suite");
+            suite_reporter.started(Timestamp::Unknown).await.expect("start suite");
+            suite_reporter
+                .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+                .await
+                .expect("stop suite");
+            suite_reporter.finished().await.expect("finish suite");
+        }
 
         let (intermediate_run_result, intermediate_suite_results) =
             parse_json_in_output(dir.path());
@@ -973,11 +969,13 @@ mod test {
             &intermediate_run_result,
             &ExpectedTestRun::new(directory::Outcome::Inconclusive),
         );
-        assert_suite_results(
-            dir.path(),
-            &intermediate_suite_results,
-            &vec![ExpectedSuite::new("suite", directory::Outcome::Passed)],
-        );
+        let mut expected_suites: Vec<_> = (0..SAVE_AFTER_SUITE_COUNT)
+            .map(|i| ExpectedSuite::new(&format!("suite-{:?}", i), directory::Outcome::Passed))
+            .collect();
+        expected_suites.push(ExpectedSuite::new("incomplete", directory::Outcome::NotStarted));
+        assert_suite_results(dir.path(), &intermediate_suite_results, &expected_suites);
+
+        incomplete_suite_reporter.finished().await.expect("finish suite");
 
         run_reporter
             .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
@@ -991,11 +989,7 @@ mod test {
             &final_run_result,
             &ExpectedTestRun::new(directory::Outcome::Passed),
         );
-        assert_suite_results(
-            dir.path(),
-            &final_suite_results,
-            &vec![ExpectedSuite::new("suite", directory::Outcome::Passed)],
-        );
+        assert_suite_results(dir.path(), &final_suite_results, &expected_suites);
     }
 
     #[fuchsia::test]
@@ -1040,143 +1034,6 @@ mod test {
                     .with_case(ExpectedTestCase::new("case", directory::Outcome::Inconclusive)),
                 ExpectedSuite::new("no-start-suite", directory::Outcome::NotStarted),
             ],
-        );
-    }
-
-    fn get_suite_entries(test_result: &directory::TestRunResult) -> &[directory::SuiteEntryV0] {
-        match test_result {
-            directory::TestRunResult::V0 { suites, .. } => suites.as_slice(),
-        }
-    }
-
-    #[fuchsia::test]
-    async fn intermediate_results_dont_reference_unsaved_suites() {
-        // This test verifies that intermediate results in run_summary.json do not reference
-        // suites that haven't been saved yet.
-        let dir = tempdir().expect("create temp directory");
-        let run_reporter = RunReporter::new(
-            DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
-        );
-        run_reporter.started(Timestamp::Unknown).await.expect("start test run");
-
-        let suite_reporter_0 =
-            run_reporter.new_suite("suite-0", &SuiteId(0)).await.expect("create new suite");
-        let suite_reporter_1 =
-            run_reporter.new_suite("suite-1", &SuiteId(1)).await.expect("create new suite");
-
-        let (initial_run_result, initial_suite_results) = parse_json_in_output(dir.path());
-        assert!(get_suite_entries(&initial_run_result).is_empty());
-        assert_run_result(
-            dir.path(),
-            &initial_run_result,
-            &ExpectedTestRun::new(directory::Outcome::NotStarted),
-        );
-        assert!(initial_suite_results.is_empty());
-
-        // creating artifacts doesn't record the suite, so it shouldn't affect what's recorded
-        // in the json summaries.
-        let mut artifact =
-            suite_reporter_0.new_artifact(&ArtifactType::Stderr).await.expect("create artifact");
-        writeln!(artifact, "contents").expect("write to artifact");
-        drop(artifact);
-        let (intermediate_run_result, intermediate_suite_results) =
-            parse_json_in_output(dir.path());
-        assert!(get_suite_entries(&intermediate_run_result).is_empty());
-        assert_run_result(
-            dir.path(),
-            &intermediate_run_result,
-            &ExpectedTestRun::new(directory::Outcome::NotStarted),
-        );
-        assert!(intermediate_suite_results.is_empty());
-
-        // after recording one suite, the other suite should not be referenced
-        suite_reporter_0.finished().await.expect("finish suite");
-        let (intermediate_run_result, intermediate_suite_results) =
-            parse_json_in_output(dir.path());
-        assert_eq!(get_suite_entries(&intermediate_run_result).len(), 1);
-        assert_run_result(
-            dir.path(),
-            &intermediate_run_result,
-            &ExpectedTestRun::new(directory::Outcome::Inconclusive),
-        );
-        assert_suite_results(
-            dir.path(),
-            &intermediate_suite_results,
-            &vec![ExpectedSuite::new("suite-0", directory::Outcome::NotStarted)],
-        );
-
-        suite_reporter_1.finished().await.expect("finish suite");
-        run_reporter.finished().await.expect("finish run");
-        let (final_run_result, final_suite_results) = parse_json_in_output(dir.path());
-        assert_run_result(
-            dir.path(),
-            &final_run_result,
-            &ExpectedTestRun::new(directory::Outcome::Inconclusive),
-        );
-        assert_suite_results(
-            dir.path(),
-            &final_suite_results,
-            &vec![
-                ExpectedSuite::new("suite-0", directory::Outcome::NotStarted),
-                ExpectedSuite::new("suite-1", directory::Outcome::NotStarted),
-            ],
-        );
-    }
-
-    #[fuchsia::test]
-    async fn drop_suites_that_fail_to_save() {
-        // This test verifies that when a suite fails to save, it is not referenced in
-        // run_summary.json, which is needed to keep the output self conistent.
-        let dir = tempdir().expect("create temp directory");
-        let run_reporter = RunReporter::new(
-            DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
-        );
-
-        run_reporter.started(Timestamp::Unknown).await.expect("start test run");
-
-        // Add a suite, and make it fail to persist.
-        let failing_suite_reporter =
-            run_reporter.new_suite("failing", &SuiteId(0)).await.expect("create new suite");
-        failing_suite_reporter.started(Timestamp::Unknown).await.expect("start suite");
-        failing_suite_reporter
-            .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
-            .await
-            .expect("stop suite");
-        // induce the failure by creating a directory where the suite summary should go.
-        std::fs::create_dir(dir.path().join(suite_json_name(0))).expect("create dir");
-        assert!(
-            failing_suite_reporter.finished().await.is_err(),
-            "persisting suite reults should fail"
-        );
-
-        // Add a suite that succeeds.
-        let suite_reporter =
-            run_reporter.new_suite("suite", &SuiteId(1)).await.expect("create new suite");
-        suite_reporter.started(Timestamp::Unknown).await.expect("start suite");
-        suite_reporter
-            .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
-            .await
-            .expect("start suite");
-        suite_reporter.finished().await.expect("finish suite");
-
-        run_reporter.stopped(&ReportedOutcome::Passed, Timestamp::Unknown).await.expect("stop run");
-        run_reporter.finished().await.expect("finish test run");
-
-        // Only json files for suites we successfully saved should be referenced in the
-        // run summary.
-        let (run_result, suite_results) = parse_json_in_output(dir.path());
-        match &run_result {
-            directory::TestRunResult::V0 { suites, .. } => assert_eq!(suites.len(), 1),
-        }
-        assert_run_result(
-            dir.path(),
-            &run_result,
-            &ExpectedTestRun::new(directory::Outcome::Passed),
-        );
-        assert_suite_results(
-            dir.path(),
-            &suite_results,
-            &vec![ExpectedSuite::new("suite", directory::Outcome::Passed)],
         );
     }
 }
