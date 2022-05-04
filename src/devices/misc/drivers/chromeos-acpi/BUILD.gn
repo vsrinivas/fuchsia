@@ -24,7 +24,10 @@ driver_bind_rules("chromeos_acpi_bind") {
   header_output = "chromeos_acpi-bind.h"
   bind_output = "chromeos_acpi.bindbc"
   tests = "bind-tests.json"
-  deps = [ "//src/devices/bind/fuchsia.acpi" ]
+  deps = [
+    "//src/devices/bind/fuchsia.acpi",
+    "//src/devices/bind/fuchsia.driver.framework",
+  ]
 }
 
 common_deps = [
@@ -48,7 +51,6 @@ fuchsia_driver_component("component") {
   component_name = "chromeos-acpi"
   deps = [ ":driver" ]
   info = "component-info.json"
-  colocate = true
 }
 
 fuchsia_driver_package("pkg") {

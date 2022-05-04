@@ -3,10 +3,15 @@
 // found in the LICENSE file.
 
 using fuchsia.acpi;
-
-fuchsia.BIND_COMPOSITE == 1;
+using fuchsia.driver.framework;
 
 accept fuchsia.acpi.hid {
 	"GOOG0016",
 	"GGL0001",
+}
+
+if fuchsia.BIND_COMPOSITE == 1 {
+	true;
+} else {
+	fuchsia.driver.framework.dfv2 == true;
 }
