@@ -439,8 +439,7 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                     fnet::IpAddress::Ipv4(addr) => {
                         fnet::InterfaceAddress::Ipv4(fnet::Ipv4AddressWithPrefix {
                             addr,
-                            prefix_len: prefix
-                                .context("prefix length required for adding IPv4 address")?,
+                            prefix_len: prefix,
                         })
                     }
                     fnet::IpAddress::Ipv6(addr) => fnet::InterfaceAddress::Ipv6(addr),
@@ -490,12 +489,7 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                         connect_with_context::<fstack::StackMarker, _>(connector).await?;
                     let mut forwarding_entry = fstack::ForwardingEntry {
                         subnet: fnet_ext::apply_subnet_mask(
-                            fnet_ext::Subnet {
-                                addr,
-                                prefix_len: prefix
-                                    .context("prefix length required for adding subnet route")?,
-                            }
-                            .into(),
+                            fnet_ext::Subnet { addr, prefix_len: prefix }.into(),
                         ),
                         device_id: id,
                         next_hop: None,
@@ -508,10 +502,7 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                     info!("Added forwarding entry {:?}", forwarding_entry);
                 }
 
-                match prefix {
-                    None => info!("Address {} added to interface {}", addr, id),
-                    Some(prefix) => info!("Address {}/{} added to interface {}", addr, prefix, id),
-                }
+                info!("Address {}/{} added to interface {}", addr, prefix, id);
             }
             opts::IfAddrEnum::Del(opts::IfAddrDel { interface, addr, prefix }) => {
                 let id = interface.find_nicid(connector).await?;
@@ -1684,7 +1675,7 @@ mod tests {
                 addr_cmd: opts::IfAddrEnum::Add(opts::IfAddrAdd {
                     interface: interface1.identifier(false /* use_ifname */),
                     addr: fnet_ext::IpAddress::from(extract_ip(IF_ADDR_V6)).to_string(),
-                    prefix: Some(TEST_PREFIX_LENGTH),
+                    prefix: TEST_PREFIX_LENGTH,
                     no_subnet_route,
                 }),
             }),
