@@ -140,28 +140,26 @@ zx_status_t Device::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
   // MMIO Bars have an associated VMO for the driver to map, whereas IO bars
   // have a Resource corresponding to an IO range for the driver to access.
   // These are mutually exclusive, so only one handle is ever needed.
-  status = ZX_ERR_INTERNAL;
+  zx::status<zx::handle> result;
   if (bar.is_mmio) {
-    zx::vmo vmo = {};
-    if ((status = bar.allocation->CreateVmObject(&vmo)) == ZX_OK) {
-      out_bar->result.vmo = vmo.release();
+    result = bar.allocation->CreateVmo();
+    if (result.is_ok()) {
+      out_bar->result.vmo = result.value().release();
     }
   } else {  // Bar using IOports
-    zx::resource res = {};
-    if (bar.allocation->resource() &&
-        (status = bar.allocation->resource().duplicate(ZX_RIGHT_SAME_RIGHTS, &res)) == ZX_OK) {
-      out_bar->result.io.resource = res.release();
+    result = bar.allocation->CreateResource();
+    if (result.is_ok()) {
+      out_bar->result.io.resource = result.value().release();
       out_bar->result.io.address = bar.address;
     }
   }
 
-  if (status != ZX_OK) {
+  if (!result.is_ok()) {
     zxlogf(ERROR, "[%s] Failed to create %s for BAR %u (type = %s, range = [%#lx, %#lx)): %s",
            cfg_->addr(), (bar.is_mmio) ? "VMO" : "resource", bar_id, (bar.is_mmio) ? "MMIO" : "IO",
            bar.address, bar.address + bar.size, zx_status_get_string(status));
   }
-
-  return LOG_STATUS(DEBUG, status, "%u", bar_id);
+  return LOG_STATUS(DEBUG, result.status_value(), "%u", bar_id);
 }
 
 zx_status_t Device::PciGetBti(uint32_t index, zx::bti* out_bti) {

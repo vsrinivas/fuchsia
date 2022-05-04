@@ -73,7 +73,9 @@ class PciAllocation {
   // Create a VMO bounded by the base/size of this allocation using the
   // provided resource. This is used to provide VMOs for device BAR
   // allocations.
-  virtual zx_status_t CreateVmObject(zx::vmo* out_vmo) const;
+  virtual zx::status<zx::vmo> CreateVmo() const;
+  // Create a resource for use with zx_ioports_request in the device driver.
+  virtual zx::status<zx::resource> CreateResource() const;
 
  protected:
   explicit PciAllocation(zx::resource&& resource) : resource_(std::move(resource)) {}

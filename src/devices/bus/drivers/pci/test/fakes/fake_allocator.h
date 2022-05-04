@@ -4,8 +4,10 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_ALLOCATOR_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_ALLOCATOR_H_
 
+#include <lib/fake-resource/resource.h>
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
+#include <zircon/types.h>
 
 #include <memory>
 #include <optional>
@@ -28,8 +30,20 @@ class FakeAllocation : public PciAllocation {
   }
   zx_paddr_t base() const final { return base_; }
   size_t size() const final { return size_; }
-  zx_status_t CreateVmObject(zx::vmo* out_vmo) const final {
-    return zx::vmo::create(size_, 0, out_vmo);
+  zx::status<zx::vmo> CreateVmo() const final {
+    zx::vmo vmo;
+    zx_status_t status = zx::vmo::create(size_, 0, &vmo);
+    if (status != ZX_OK) {
+      return zx::error(status);
+    }
+    return zx::ok(std::move(vmo));
+  }
+
+  zx::status<zx::resource> CreateResource() const final {
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    ZX_DEBUG_ASSERT(fake_root_resource_create(&handle) == ZX_OK);
+    auto resource = zx::resource(handle);
+    return zx::ok(std::move(resource));
   }
 
  private:

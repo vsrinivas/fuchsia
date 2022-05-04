@@ -34,11 +34,12 @@ test("pci-unit") {
     "//src/devices/bus/drivers/pci:user_pci",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake-msi",
-    "//src/devices/testing/fake-resource",
     "//src/devices/testing/fake_ddk",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/zxtest",
   ]
+
+  public_deps = [ "//src/devices/testing/fake-resource" ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

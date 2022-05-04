@@ -51,7 +51,7 @@ TEST(PciAllocationTest, VmoCreationFailure) {
   PciAllocator* root_ptr = &root;
   auto alloc = root_ptr->Allocate(std::nullopt, zx_system_get_page_size());
   EXPECT_TRUE(alloc.is_ok());
-  EXPECT_OK(alloc->CreateVmObject(&vmo));
+  EXPECT_OK(alloc->CreateVmo().status_value());
 }
 
 }  // namespace pci

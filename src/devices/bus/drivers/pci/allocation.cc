@@ -22,8 +22,25 @@
 
 namespace pci {
 
-zx_status_t PciAllocation::CreateVmObject(zx::vmo* out_vmo) const {
-  return zx::vmo::create_physical(resource(), base(), size(), out_vmo);
+zx::status<zx::vmo> PciAllocation::CreateVmo() const {
+  zx::vmo vmo;
+  zx_status_t status = zx::vmo::create_physical(resource(), base(), size(), &vmo);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+
+  return zx::ok(std::move(vmo));
+}
+
+zx::status<zx::resource> PciAllocation::CreateResource() const {
+  zx::resource resource;
+  // A BAR allocation will already be sized to the BAR, so we can simply
+  // duplicate the resource rather than creating a sub-resource.
+  zx_status_t status = resource_.duplicate(ZX_RIGHT_SAME_RIGHTS, &resource);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(std::move(resource));
 }
 
 zx::status<std::unique_ptr<PciAllocation>> PciRootAllocator::Allocate(

@@ -61,24 +61,26 @@ zx_status_t MsixCapability::Init(const Bar& tbar, const Bar& pbar) {
     return ZX_ERR_BAD_STATE;
   }
 
-  zx::vmo table_vmo;
-  zx_status_t st = tbar.allocation->CreateVmObject(&table_vmo);
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "[%s] Couldn't allocate VMO for MSI-X table bar: %d", addr(), st);
-    return st;
+  zx::status<zx::vmo> result = tbar.allocation->CreateVmo();
+  if (!result.is_ok()) {
+    zxlogf(ERROR, "[%s] Couldn't allocate VMO for MSI-X table bar: %s", addr(),
+           result.status_string());
+    return result.status_value();
   }
+  zx::vmo table_vmo(std::move(result.value()));
 
-  zx::vmo pba_vmo;
-  st = pbar.allocation->CreateVmObject(&pba_vmo);
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "[%s] Couldn't allocate VMO for MSI-X pba bar: %d", addr(), st);
-    return st;
+  result = pbar.allocation->CreateVmo();
+  if (!result.is_ok()) {
+    zxlogf(ERROR, "[%s] Couldn't allocate VMO for MSI-X pba bar: %s", addr(),
+           result.status_string());
+    return result.status_value();
   }
+  zx::vmo pba_vmo(std::move(result.value()));
 
-  st = fdf::MmioBuffer::Create(table_offset_, table_bytes, std::move(table_vmo),
-                               ZX_CACHE_POLICY_UNCACHED_DEVICE, &table_mmio_);
+  zx_status_t st = fdf::MmioBuffer::Create(table_offset_, table_bytes, std::move(table_vmo),
+                                           ZX_CACHE_POLICY_UNCACHED_DEVICE, &table_mmio_);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "[%s] Couldn't map MSI-X table: %d", addr(), st);
+    zxlogf(ERROR, "[%s] Couldn't map MSI-X table: %s", addr(), zx_status_get_string(st));
     return st;
   }
   table_ = static_cast<MMIO_PTR MsixTable*>(table_mmio_->get());
@@ -86,7 +88,7 @@ zx_status_t MsixCapability::Init(const Bar& tbar, const Bar& pbar) {
   st = fdf::MmioBuffer::Create(pba_offset_, pba_bytes, std::move(pba_vmo),
                                ZX_CACHE_POLICY_UNCACHED_DEVICE, &pba_mmio_);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "[%s] Couldn't map MSI-X pba: %d", addr(), st);
+    zxlogf(ERROR, "[%s] Couldn't map MSI-X pba: %s", addr(), zx_status_get_string(st));
     return st;
   }
   pba_ = static_cast<MMIO_PTR uint64_t*>(pba_mmio_->get());
