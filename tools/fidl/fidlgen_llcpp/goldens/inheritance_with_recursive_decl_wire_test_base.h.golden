@@ -15,8 +15,8 @@ class WireTestBase<::test_inheritancewithrecursivedecl::Parent>
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void First(FirstRequestView request,
-                     FirstCompleter::Sync& _completer) override {
-    NotImplemented_("First", _completer);
+                     FirstCompleter::Sync& completer) override {
+    NotImplemented_("First", completer);
   }
 };
 
@@ -39,12 +39,12 @@ class WireTestBase<::test_inheritancewithrecursivedecl::Child>
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void First(FirstRequestView request,
-                     FirstCompleter::Sync& _completer) override {
-    NotImplemented_("First", _completer);
+                     FirstCompleter::Sync& completer) override {
+    NotImplemented_("First", completer);
   }
   virtual void Second(SecondRequestView request,
-                      SecondCompleter::Sync& _completer) override {
-    NotImplemented_("Second", _completer);
+                      SecondCompleter::Sync& completer) override {
+    NotImplemented_("Second", completer);
   }
 };
 

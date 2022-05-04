@@ -7203,7 +7203,7 @@ class ::fidl::WireServer<::test_protocollayouts::MainProtocol>
 
   virtual void OneWayAnonComposed(
       OneWayAnonComposedRequestView request,
-      OneWayAnonComposedCompleter::Sync& _completer) = 0;
+      OneWayAnonComposedCompleter::Sync& completer) = 0;
 
   using TwoWayAnonComposedCompleter = ::fidl::internal::WireCompleter<
       ::test_protocollayouts::MainProtocol::TwoWayAnonComposed>;
@@ -7212,7 +7212,7 @@ class ::fidl::WireServer<::test_protocollayouts::MainProtocol>
 
   virtual void TwoWayAnonComposed(
       TwoWayAnonComposedRequestView request,
-      TwoWayAnonComposedCompleter::Sync& _completer) = 0;
+      TwoWayAnonComposedCompleter::Sync& completer) = 0;
 
   using TwoWayAnonComposedWithErrorCompleter = ::fidl::internal::WireCompleter<
       ::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>;
@@ -7222,7 +7222,7 @@ class ::fidl::WireServer<::test_protocollayouts::MainProtocol>
 
   virtual void TwoWayAnonComposedWithError(
       TwoWayAnonComposedWithErrorRequestView request,
-      TwoWayAnonComposedWithErrorCompleter::Sync& _completer) = 0;
+      TwoWayAnonComposedWithErrorCompleter::Sync& completer) = 0;
 
   using OneWayNamedComposedCompleter = ::fidl::internal::WireCompleter<
       ::test_protocollayouts::MainProtocol::OneWayNamedComposed>;
@@ -7231,7 +7231,7 @@ class ::fidl::WireServer<::test_protocollayouts::MainProtocol>
 
   virtual void OneWayNamedComposed(
       OneWayNamedComposedRequestView request,
-      OneWayNamedComposedCompleter::Sync& _completer) = 0;
+      OneWayNamedComposedCompleter::Sync& completer) = 0;
 
   using TwoWayNamedComposedCompleter = ::fidl::internal::WireCompleter<
       ::test_protocollayouts::MainProtocol::TwoWayNamedComposed>;
@@ -7240,7 +7240,7 @@ class ::fidl::WireServer<::test_protocollayouts::MainProtocol>
 
   virtual void TwoWayNamedComposed(
       TwoWayNamedComposedRequestView request,
-      TwoWayNamedComposedCompleter::Sync& _completer) = 0;
+      TwoWayNamedComposedCompleter::Sync& completer) = 0;
 
   using TwoWayNamedComposedWithErrorCompleter = ::fidl::internal::WireCompleter<
       ::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>;
@@ -7250,7 +7250,7 @@ class ::fidl::WireServer<::test_protocollayouts::MainProtocol>
 
   virtual void TwoWayNamedComposedWithError(
       TwoWayNamedComposedWithErrorRequestView request,
-      TwoWayNamedComposedWithErrorCompleter::Sync& _completer) = 0;
+      TwoWayNamedComposedWithErrorCompleter::Sync& completer) = 0;
 
   using OneWayImportCompleter = ::fidl::internal::WireCompleter<
       ::test_protocollayouts::MainProtocol::OneWayImport>;
@@ -7258,7 +7258,7 @@ class ::fidl::WireServer<::test_protocollayouts::MainProtocol>
       ::test_protocollayouts::MainProtocol::OneWayImport>;
 
   virtual void OneWayImport(OneWayImportRequestView request,
-                            OneWayImportCompleter::Sync& _completer) = 0;
+                            OneWayImportCompleter::Sync& completer) = 0;
 
   using TwoWayImportCompleter = ::fidl::internal::WireCompleter<
       ::test_protocollayouts::MainProtocol::TwoWayImport>;
@@ -7266,7 +7266,7 @@ class ::fidl::WireServer<::test_protocollayouts::MainProtocol>
       ::test_protocollayouts::MainProtocol::TwoWayImport>;
 
   virtual void TwoWayImport(TwoWayImportRequestView request,
-                            TwoWayImportCompleter::Sync& _completer) = 0;
+                            TwoWayImportCompleter::Sync& completer) = 0;
 
   using TwoWayImportWithErrorCompleter = ::fidl::internal::WireCompleter<
       ::test_protocollayouts::MainProtocol::TwoWayImportWithError>;
@@ -7275,7 +7275,7 @@ class ::fidl::WireServer<::test_protocollayouts::MainProtocol>
 
   virtual void TwoWayImportWithError(
       TwoWayImportWithErrorRequestView request,
-      TwoWayImportWithErrorCompleter::Sync& _completer) = 0;
+      TwoWayImportWithErrorCompleter::Sync& completer) = 0;
 
   using OneWayLocalCompleter = ::fidl::internal::WireCompleter<
       ::test_protocollayouts::MainProtocol::OneWayLocal>;
@@ -7283,7 +7283,7 @@ class ::fidl::WireServer<::test_protocollayouts::MainProtocol>
       ::test_protocollayouts::MainProtocol::OneWayLocal>;
 
   virtual void OneWayLocal(OneWayLocalRequestView request,
-                           OneWayLocalCompleter::Sync& _completer) = 0;
+                           OneWayLocalCompleter::Sync& completer) = 0;
 
   using TwoWayLocalCompleter = ::fidl::internal::WireCompleter<
       ::test_protocollayouts::MainProtocol::TwoWayLocal>;
@@ -7291,7 +7291,7 @@ class ::fidl::WireServer<::test_protocollayouts::MainProtocol>
       ::test_protocollayouts::MainProtocol::TwoWayLocal>;
 
   virtual void TwoWayLocal(TwoWayLocalRequestView request,
-                           TwoWayLocalCompleter::Sync& _completer) = 0;
+                           TwoWayLocalCompleter::Sync& completer) = 0;
 
   using TwoWayLocalWithErrorCompleter = ::fidl::internal::WireCompleter<
       ::test_protocollayouts::MainProtocol::TwoWayLocalWithError>;
@@ -7300,7 +7300,7 @@ class ::fidl::WireServer<::test_protocollayouts::MainProtocol>
 
   virtual void TwoWayLocalWithError(
       TwoWayLocalWithErrorRequestView request,
-      TwoWayLocalWithErrorCompleter::Sync& _completer) = 0;
+      TwoWayLocalWithErrorCompleter::Sync& completer) = 0;
 
   using OneWayAnonCompleter = ::fidl::internal::WireCompleter<
       ::test_protocollayouts::MainProtocol::OneWayAnon>;
@@ -7308,7 +7308,7 @@ class ::fidl::WireServer<::test_protocollayouts::MainProtocol>
       ::test_protocollayouts::MainProtocol::OneWayAnon>;
 
   virtual void OneWayAnon(OneWayAnonRequestView request,
-                          OneWayAnonCompleter::Sync& _completer) = 0;
+                          OneWayAnonCompleter::Sync& completer) = 0;
 
   using TwoWayAnonCompleter = ::fidl::internal::WireCompleter<
       ::test_protocollayouts::MainProtocol::TwoWayAnon>;
@@ -7316,7 +7316,7 @@ class ::fidl::WireServer<::test_protocollayouts::MainProtocol>
       ::test_protocollayouts::MainProtocol::TwoWayAnon>;
 
   virtual void TwoWayAnon(TwoWayAnonRequestView request,
-                          TwoWayAnonCompleter::Sync& _completer) = 0;
+                          TwoWayAnonCompleter::Sync& completer) = 0;
 
   using TwoWayAnonWithErrorCompleter = ::fidl::internal::WireCompleter<
       ::test_protocollayouts::MainProtocol::TwoWayAnonWithError>;
@@ -7325,7 +7325,7 @@ class ::fidl::WireServer<::test_protocollayouts::MainProtocol>
 
   virtual void TwoWayAnonWithError(
       TwoWayAnonWithErrorRequestView request,
-      TwoWayAnonWithErrorCompleter::Sync& _completer) = 0;
+      TwoWayAnonWithErrorCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

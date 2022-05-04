@@ -552,7 +552,7 @@ class ::fidl::WireServer<::test_error::Example>
   using FooRequestView =
       ::fidl::internal::WireRequestView<::test_error::Example::Foo>;
 
-  virtual void Foo(FooRequestView request, FooCompleter::Sync& _completer) = 0;
+  virtual void Foo(FooRequestView request, FooCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

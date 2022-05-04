@@ -15,13 +15,13 @@ class WireTestBase<::test_requestflexibleenvelope::Protocol>
                                ::fidl::CompleterBase& completer) = 0;
   virtual void RequestStrictResponseFlexible(
       RequestStrictResponseFlexibleRequestView request,
-      RequestStrictResponseFlexibleCompleter::Sync& _completer) override {
-    NotImplemented_("RequestStrictResponseFlexible", _completer);
+      RequestStrictResponseFlexibleCompleter::Sync& completer) override {
+    NotImplemented_("RequestStrictResponseFlexible", completer);
   }
   virtual void RequestFlexibleResponseStrict(
       RequestFlexibleResponseStrictRequestView request,
-      RequestFlexibleResponseStrictCompleter::Sync& _completer) override {
-    NotImplemented_("RequestFlexibleResponseStrict", _completer);
+      RequestFlexibleResponseStrictCompleter::Sync& completer) override {
+    NotImplemented_("RequestFlexibleResponseStrict", completer);
   }
 };
 

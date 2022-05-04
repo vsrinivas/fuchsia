@@ -34,12 +34,12 @@ class {{ .WireServer }} : public ::fidl::internal::IncomingMessageDispatcher {
   {{ .Docs }}
   virtual void {{ .Name }}(
     {{- if eq .Transport.Name "Driver" }}
-    {{ .WireRequestViewArg }} request, fdf::Arena& arena, {{ .WireCompleterArg }}& _completer)
+    {{ .WireRequestViewArg }} request, fdf::Arena& arena, {{ .WireCompleterArg }}& completer)
     {{- else }}
-    {{ .WireRequestViewArg }} request, {{ .WireCompleterArg }}& _completer)
+    {{ .WireRequestViewArg }} request, {{ .WireCompleterArg }}& completer)
     {{- end }}
       {{- if .Transitional -}}
-        { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
+        { completer.Close(ZX_ERR_NOT_SUPPORTED); }
       {{- else -}}
         = 0;
       {{- end }}

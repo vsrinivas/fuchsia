@@ -366,7 +366,7 @@ class ::fidl::WireServer<::test_inheritancewithrecursivedecl::Parent>
       ::test_inheritancewithrecursivedecl::Parent::First>;
 
   virtual void First(FirstRequestView request,
-                     FirstCompleter::Sync& _completer) = 0;
+                     FirstCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -912,7 +912,7 @@ class ::fidl::WireServer<::test_inheritancewithrecursivedecl::Child>
       ::test_inheritancewithrecursivedecl::Child::First>;
 
   virtual void First(FirstRequestView request,
-                     FirstCompleter::Sync& _completer) = 0;
+                     FirstCompleter::Sync& completer) = 0;
 
   using SecondCompleter = ::fidl::internal::WireCompleter<
       ::test_inheritancewithrecursivedecl::Child::Second>;
@@ -920,7 +920,7 @@ class ::fidl::WireServer<::test_inheritancewithrecursivedecl::Child>
       ::test_inheritancewithrecursivedecl::Child::Second>;
 
   virtual void Second(SecondRequestView request,
-                      SecondCompleter::Sync& _completer) = 0;
+                      SecondCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

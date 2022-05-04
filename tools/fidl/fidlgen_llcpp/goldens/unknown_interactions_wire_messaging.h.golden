@@ -1376,7 +1376,7 @@ class ::fidl::WireServer<::test_unknowninteractions::Example>
       ::test_unknowninteractions::Example::StrictOneWay>;
 
   virtual void StrictOneWay(StrictOneWayRequestView request,
-                            StrictOneWayCompleter::Sync& _completer) = 0;
+                            StrictOneWayCompleter::Sync& completer) = 0;
 
   using FlexibleOneWayCompleter = ::fidl::internal::WireCompleter<
       ::test_unknowninteractions::Example::FlexibleOneWay>;
@@ -1384,7 +1384,7 @@ class ::fidl::WireServer<::test_unknowninteractions::Example>
       ::test_unknowninteractions::Example::FlexibleOneWay>;
 
   virtual void FlexibleOneWay(FlexibleOneWayRequestView request,
-                              FlexibleOneWayCompleter::Sync& _completer) = 0;
+                              FlexibleOneWayCompleter::Sync& completer) = 0;
 
   using StrictTwoWayCompleter = ::fidl::internal::WireCompleter<
       ::test_unknowninteractions::Example::StrictTwoWay>;
@@ -1392,7 +1392,7 @@ class ::fidl::WireServer<::test_unknowninteractions::Example>
       ::test_unknowninteractions::Example::StrictTwoWay>;
 
   virtual void StrictTwoWay(StrictTwoWayRequestView request,
-                            StrictTwoWayCompleter::Sync& _completer) = 0;
+                            StrictTwoWayCompleter::Sync& completer) = 0;
 
   using FlexibleTwoWayCompleter = ::fidl::internal::WireCompleter<
       ::test_unknowninteractions::Example::FlexibleTwoWay>;
@@ -1400,7 +1400,7 @@ class ::fidl::WireServer<::test_unknowninteractions::Example>
       ::test_unknowninteractions::Example::FlexibleTwoWay>;
 
   virtual void FlexibleTwoWay(FlexibleTwoWayRequestView request,
-                              FlexibleTwoWayCompleter::Sync& _completer) = 0;
+                              FlexibleTwoWayCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

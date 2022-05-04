@@ -611,7 +611,7 @@ class ::fidl::WireServer<::test_anonymous::SomeProtocol>
       ::test_anonymous::SomeProtocol::SomeMethod>;
 
   virtual void SomeMethod(SomeMethodRequestView request,
-                          SomeMethodCompleter::Sync& _completer) = 0;
+                          SomeMethodCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

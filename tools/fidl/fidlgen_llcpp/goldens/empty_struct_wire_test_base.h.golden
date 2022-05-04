@@ -14,13 +14,13 @@ class WireTestBase<::test_emptystruct::EmptyProtocol>
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void Send(SendRequestView request,
-                    SendCompleter::Sync& _completer) override {
-    NotImplemented_("Send", _completer);
+                    SendCompleter::Sync& completer) override {
+    NotImplemented_("Send", completer);
   }
   virtual void SendAndReceive(
       SendAndReceiveRequestView request,
-      SendAndReceiveCompleter::Sync& _completer) override {
-    NotImplemented_("SendAndReceive", _completer);
+      SendAndReceiveCompleter::Sync& completer) override {
+    NotImplemented_("SendAndReceive", completer);
   }
 };
 

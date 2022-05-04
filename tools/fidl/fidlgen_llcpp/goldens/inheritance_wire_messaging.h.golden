@@ -558,7 +558,7 @@ class ::fidl::WireServer<::test_inheritance::Super>
   using FooRequestView =
       ::fidl::internal::WireRequestView<::test_inheritance::Super::Foo>;
 
-  virtual void Foo(FooRequestView request, FooCompleter::Sync& _completer) = 0;
+  virtual void Foo(FooRequestView request, FooCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -1095,7 +1095,7 @@ class ::fidl::WireServer<::test_inheritance::Sub>
   using FooRequestView =
       ::fidl::internal::WireRequestView<::test_inheritance::Sub::Foo>;
 
-  virtual void Foo(FooRequestView request, FooCompleter::Sync& _completer) = 0;
+  virtual void Foo(FooRequestView request, FooCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

@@ -16,13 +16,13 @@ class WireTestBase<::test_errorsyntax::ExampleUseOfErrorSyntax>
                                ::fidl::CompleterBase& completer) = 0;
   virtual void ComposedCallWhichMayFail(
       ComposedCallWhichMayFailRequestView request,
-      ComposedCallWhichMayFailCompleter::Sync& _completer) override {
-    NotImplemented_("ComposedCallWhichMayFail", _completer);
+      ComposedCallWhichMayFailCompleter::Sync& completer) override {
+    NotImplemented_("ComposedCallWhichMayFail", completer);
   }
   virtual void CallWhichMayFail(
       CallWhichMayFailRequestView request,
-      CallWhichMayFailCompleter::Sync& _completer) override {
-    NotImplemented_("CallWhichMayFail", _completer);
+      CallWhichMayFailCompleter::Sync& completer) override {
+    NotImplemented_("CallWhichMayFail", completer);
   }
 };
 

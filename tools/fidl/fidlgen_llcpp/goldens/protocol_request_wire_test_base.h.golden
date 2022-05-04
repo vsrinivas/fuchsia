@@ -14,22 +14,22 @@ class WireTestBase<::test_protocolrequest::Parent>
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void GetChild(GetChildRequestView request,
-                        GetChildCompleter::Sync& _completer) override {
-    NotImplemented_("GetChild", _completer);
+                        GetChildCompleter::Sync& completer) override {
+    NotImplemented_("GetChild", completer);
   }
   virtual void GetChildRequest(
       GetChildRequestRequestView request,
-      GetChildRequestCompleter::Sync& _completer) override {
-    NotImplemented_("GetChildRequest", _completer);
+      GetChildRequestCompleter::Sync& completer) override {
+    NotImplemented_("GetChildRequest", completer);
   }
   virtual void TakeChild(TakeChildRequestView request,
-                         TakeChildCompleter::Sync& _completer) override {
-    NotImplemented_("TakeChild", _completer);
+                         TakeChildCompleter::Sync& completer) override {
+    NotImplemented_("TakeChild", completer);
   }
   virtual void TakeChildRequest(
       TakeChildRequestRequestView request,
-      TakeChildRequestCompleter::Sync& _completer) override {
-    NotImplemented_("TakeChildRequest", _completer);
+      TakeChildRequestCompleter::Sync& completer) override {
+    NotImplemented_("TakeChildRequest", completer);
   }
 };
 

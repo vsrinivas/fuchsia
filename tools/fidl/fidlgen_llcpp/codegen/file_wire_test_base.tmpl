@@ -30,8 +30,8 @@ fidl/{{ .LibraryDots }}/cpp/wire_test_base.h
     {{- range .Methods }}
       {{- if .HasRequest }}
       virtual void {{ .Name }}(
-          {{ .WireRequestViewArg }} request, {{ .WireCompleterArg }}& _completer) override {
-            NotImplemented_("{{ .Name }}", _completer); }
+          {{ .WireRequestViewArg }} request, {{ .WireCompleterArg }}& completer) override {
+            NotImplemented_("{{ .Name }}", completer); }
       {{- end }}
     {{- end }}
   };

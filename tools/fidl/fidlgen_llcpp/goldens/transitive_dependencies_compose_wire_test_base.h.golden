@@ -14,8 +14,8 @@ class WireTestBase<::test_transitivedependenciescompose::Top>
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void GetFoo(GetFooRequestView request,
-                      GetFooCompleter::Sync& _completer) override {
-    NotImplemented_("GetFoo", _completer);
+                      GetFooCompleter::Sync& completer) override {
+    NotImplemented_("GetFoo", completer);
   }
 };
 

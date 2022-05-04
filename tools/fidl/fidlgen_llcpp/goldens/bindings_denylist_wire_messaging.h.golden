@@ -673,7 +673,7 @@ class ::fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
 
   virtual void LibfuzzerNeedsNonemptyProtocol(
       LibfuzzerNeedsNonemptyProtocolRequestView request,
-      LibfuzzerNeedsNonemptyProtocolCompleter::Sync& _completer) = 0;
+      LibfuzzerNeedsNonemptyProtocolCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -1291,7 +1291,7 @@ class ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>
       ::test_bindingsdenylist::ImportsSameNameContext::Unattributed>;
 
   virtual void Unattributed(UnattributedRequestView request,
-                            UnattributedCompleter::Sync& _completer) = 0;
+                            UnattributedCompleter::Sync& completer) = 0;
 
   using AlwaysAppearsInImportingLibraryCompleter =
       ::fidl::internal::WireCompleter<
@@ -1304,7 +1304,7 @@ class ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>
 
   virtual void AlwaysAppearsInImportingLibrary(
       AlwaysAppearsInImportingLibraryRequestView request,
-      AlwaysAppearsInImportingLibraryCompleter::Sync& _completer) = 0;
+      AlwaysAppearsInImportingLibraryCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -3975,7 +3975,7 @@ class ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>;
 
   virtual void OnlyDenyDart(OnlyDenyDartRequestView request,
-                            OnlyDenyDartCompleter::Sync& _completer) = 0;
+                            OnlyDenyDartCompleter::Sync& completer) = 0;
 
   using OnlyDenyGoCompleter = ::fidl::internal::WireCompleter<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>;
@@ -3983,7 +3983,7 @@ class ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>;
 
   virtual void OnlyDenyGo(OnlyDenyGoRequestView request,
-                          OnlyDenyGoCompleter::Sync& _completer) = 0;
+                          OnlyDenyGoCompleter::Sync& completer) = 0;
 
   using OnlyDenyLibfuzzerCompleter = ::fidl::internal::WireCompleter<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>;
@@ -3992,7 +3992,7 @@ class ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>
 
   virtual void OnlyDenyLibfuzzer(
       OnlyDenyLibfuzzerRequestView request,
-      OnlyDenyLibfuzzerCompleter::Sync& _completer) = 0;
+      OnlyDenyLibfuzzerCompleter::Sync& completer) = 0;
 
   using OnlyDenyRustCompleter = ::fidl::internal::WireCompleter<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>;
@@ -4000,7 +4000,7 @@ class ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>;
 
   virtual void OnlyDenyRust(OnlyDenyRustRequestView request,
-                            OnlyDenyRustCompleter::Sync& _completer) = 0;
+                            OnlyDenyRustCompleter::Sync& completer) = 0;
 
   using OnlyDenySyzkallerCompleter = ::fidl::internal::WireCompleter<
       ::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>;
@@ -4009,7 +4009,7 @@ class ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>
 
   virtual void OnlyDenySyzkaller(
       OnlyDenySyzkallerRequestView request,
-      OnlyDenySyzkallerCompleter::Sync& _completer) = 0;
+      OnlyDenySyzkallerCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

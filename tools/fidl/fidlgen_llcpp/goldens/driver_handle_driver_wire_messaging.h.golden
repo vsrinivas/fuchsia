@@ -311,7 +311,7 @@ class ::fdf::WireServer<::test_driverhandle::HandlesInProtocol>
       ::test_driverhandle::HandlesInProtocol::SendHandles>;
 
   virtual void SendHandles(SendHandlesRequestView request, fdf::Arena& arena,
-                           SendHandlesCompleter::Sync& _completer) = 0;
+                           SendHandlesCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

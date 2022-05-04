@@ -1194,7 +1194,7 @@ class ::fidl::WireServer<::test_requestflexibleenvelope::Protocol>
 
   virtual void RequestStrictResponseFlexible(
       RequestStrictResponseFlexibleRequestView request,
-      RequestStrictResponseFlexibleCompleter::Sync& _completer) = 0;
+      RequestStrictResponseFlexibleCompleter::Sync& completer) = 0;
 
   using RequestFlexibleResponseStrictCompleter =
       ::fidl::internal::WireCompleter<::test_requestflexibleenvelope::Protocol::
@@ -1206,7 +1206,7 @@ class ::fidl::WireServer<::test_requestflexibleenvelope::Protocol>
 
   virtual void RequestFlexibleResponseStrict(
       RequestFlexibleResponseStrictRequestView request,
-      RequestFlexibleResponseStrictCompleter::Sync& _completer) = 0;
+      RequestFlexibleResponseStrictCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

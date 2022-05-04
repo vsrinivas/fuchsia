@@ -35,8 +35,8 @@ class WireTestBase<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
                                ::fidl::CompleterBase& completer) = 0;
   virtual void LibfuzzerNeedsNonemptyProtocol(
       LibfuzzerNeedsNonemptyProtocolRequestView request,
-      LibfuzzerNeedsNonemptyProtocolCompleter::Sync& _completer) override {
-    NotImplemented_("LibfuzzerNeedsNonemptyProtocol", _completer);
+      LibfuzzerNeedsNonemptyProtocolCompleter::Sync& completer) override {
+    NotImplemented_("LibfuzzerNeedsNonemptyProtocol", completer);
   }
 };
 
@@ -81,13 +81,13 @@ class WireTestBase<::test_bindingsdenylist::ImportsSameNameContext>
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void Unattributed(UnattributedRequestView request,
-                            UnattributedCompleter::Sync& _completer) override {
-    NotImplemented_("Unattributed", _completer);
+                            UnattributedCompleter::Sync& completer) override {
+    NotImplemented_("Unattributed", completer);
   }
   virtual void AlwaysAppearsInImportingLibrary(
       AlwaysAppearsInImportingLibraryRequestView request,
-      AlwaysAppearsInImportingLibraryCompleter::Sync& _completer) override {
-    NotImplemented_("AlwaysAppearsInImportingLibrary", _completer);
+      AlwaysAppearsInImportingLibraryCompleter::Sync& completer) override {
+    NotImplemented_("AlwaysAppearsInImportingLibrary", completer);
   }
 };
 
@@ -110,26 +110,26 @@ class WireTestBase<::test_bindingsdenylist::DenyEachBinding>
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
   virtual void OnlyDenyDart(OnlyDenyDartRequestView request,
-                            OnlyDenyDartCompleter::Sync& _completer) override {
-    NotImplemented_("OnlyDenyDart", _completer);
+                            OnlyDenyDartCompleter::Sync& completer) override {
+    NotImplemented_("OnlyDenyDart", completer);
   }
   virtual void OnlyDenyGo(OnlyDenyGoRequestView request,
-                          OnlyDenyGoCompleter::Sync& _completer) override {
-    NotImplemented_("OnlyDenyGo", _completer);
+                          OnlyDenyGoCompleter::Sync& completer) override {
+    NotImplemented_("OnlyDenyGo", completer);
   }
   virtual void OnlyDenyLibfuzzer(
       OnlyDenyLibfuzzerRequestView request,
-      OnlyDenyLibfuzzerCompleter::Sync& _completer) override {
-    NotImplemented_("OnlyDenyLibfuzzer", _completer);
+      OnlyDenyLibfuzzerCompleter::Sync& completer) override {
+    NotImplemented_("OnlyDenyLibfuzzer", completer);
   }
   virtual void OnlyDenyRust(OnlyDenyRustRequestView request,
-                            OnlyDenyRustCompleter::Sync& _completer) override {
-    NotImplemented_("OnlyDenyRust", _completer);
+                            OnlyDenyRustCompleter::Sync& completer) override {
+    NotImplemented_("OnlyDenyRust", completer);
   }
   virtual void OnlyDenySyzkaller(
       OnlyDenySyzkallerRequestView request,
-      OnlyDenySyzkallerCompleter::Sync& _completer) override {
-    NotImplemented_("OnlyDenySyzkaller", _completer);
+      OnlyDenySyzkallerCompleter::Sync& completer) override {
+    NotImplemented_("OnlyDenySyzkaller", completer);
   }
 };
 

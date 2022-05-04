@@ -1389,7 +1389,7 @@ class ::fidl::WireServer<::test_protocolrequest::Parent>
       ::test_protocolrequest::Parent::GetChild>;
 
   virtual void GetChild(GetChildRequestView request,
-                        GetChildCompleter::Sync& _completer) = 0;
+                        GetChildCompleter::Sync& completer) = 0;
 
   using GetChildRequestCompleter = ::fidl::internal::WireCompleter<
       ::test_protocolrequest::Parent::GetChildRequest>;
@@ -1397,7 +1397,7 @@ class ::fidl::WireServer<::test_protocolrequest::Parent>
       ::test_protocolrequest::Parent::GetChildRequest>;
 
   virtual void GetChildRequest(GetChildRequestRequestView request,
-                               GetChildRequestCompleter::Sync& _completer) = 0;
+                               GetChildRequestCompleter::Sync& completer) = 0;
 
   using TakeChildCompleter = ::fidl::internal::WireCompleter<
       ::test_protocolrequest::Parent::TakeChild>;
@@ -1405,16 +1405,15 @@ class ::fidl::WireServer<::test_protocolrequest::Parent>
       ::test_protocolrequest::Parent::TakeChild>;
 
   virtual void TakeChild(TakeChildRequestView request,
-                         TakeChildCompleter::Sync& _completer) = 0;
+                         TakeChildCompleter::Sync& completer) = 0;
 
   using TakeChildRequestCompleter = ::fidl::internal::WireCompleter<
       ::test_protocolrequest::Parent::TakeChildRequest>;
   using TakeChildRequestRequestView = ::fidl::internal::WireRequestView<
       ::test_protocolrequest::Parent::TakeChildRequest>;
 
-  virtual void TakeChildRequest(
-      TakeChildRequestRequestView request,
-      TakeChildRequestCompleter::Sync& _completer) = 0;
+  virtual void TakeChildRequest(TakeChildRequestRequestView request,
+                                TakeChildRequestCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

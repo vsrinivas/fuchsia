@@ -265,7 +265,7 @@ class ::fdf::WireServer<::test_driveroneway::OneWay>
       ::fidl::internal::WireRequestView<::test_driveroneway::OneWay::Send>;
 
   virtual void Send(SendRequestView request, fdf::Arena& arena,
-                    SendCompleter::Sync& _completer) = 0;
+                    SendCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
