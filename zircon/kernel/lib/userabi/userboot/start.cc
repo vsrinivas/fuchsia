@@ -136,10 +136,57 @@ constexpr uint32_t kChildHandleCount = kHandleCount + 3;
 
 // This is the processargs message the child will receive.
 struct ChildMessageLayout {
-  zx_proc_args_t pargs{};
-  char args[kProcessArgsMaxBytes];
-  uint32_t info[kChildHandleCount];
+  zx_proc_args_t header{};
+  std::array<char, kProcessArgsMaxBytes> args;
+  std::array<uint32_t, kChildHandleCount> info;
 };
+
+static_assert(alignof(std::array<uint32_t, kChildHandleCount>) ==
+              alignof(uint32_t[kChildHandleCount]));
+static_assert(alignof(std::array<char, kChildHandleCount>) == alignof(char[kProcessArgsMaxBytes]));
+
+constexpr std::array<uint32_t, kChildHandleCount> HandleInfoTable() {
+  std::array<uint32_t, kChildHandleCount> info = {};
+  // Fill in the handle info table.
+  info[kBootfsVmo] = PA_HND(PA_VMO_BOOTFS, 0);
+  info[kProcSelf] = PA_HND(PA_PROC_SELF, 0);
+  info[kRootJob] = PA_HND(PA_JOB_DEFAULT, 0);
+  info[kRootResource] = PA_HND(PA_RESOURCE, 0);
+  info[kMmioResource] = PA_HND(PA_MMIO_RESOURCE, 0);
+  info[kIrqResource] = PA_HND(PA_IRQ_RESOURCE, 0);
+#if __x86_64__
+  info[kIoportResource] = PA_HND(PA_IOPORT_RESOURCE, 0);
+#elif __aarch64__
+  info[kSmcResource] = PA_HND(PA_SMC_RESOURCE, 0);
+#endif
+  info[kSystemResource] = PA_HND(PA_SYSTEM_RESOURCE, 0);
+  info[kThreadSelf] = PA_HND(PA_THREAD_SELF, 0);
+  info[kVmarRootSelf] = PA_HND(PA_VMAR_ROOT, 0);
+  info[kZbi] = PA_HND(PA_VMO_BOOTDATA, 0);
+  for (uint32_t i = kFirstVdso; i <= kLastVdso; ++i) {
+    info[i] = PA_HND(PA_VMO_VDSO, i - kFirstVdso);
+  }
+  for (uint32_t i = kFirstKernelFile; i < kHandleCount; ++i) {
+    info[i] = PA_HND(PA_VMO_KERNEL_FILE, i - kFirstKernelFile);
+  }
+  info[kDebugLog] = PA_HND(PA_FD, kFdioFlagUseForStdio);
+  return info;
+}
+
+constexpr ChildMessageLayout CreateChildMessage() {
+  ChildMessageLayout child_message = {
+      .header =
+          {
+              .protocol = ZX_PROCARGS_PROTOCOL,
+              .version = ZX_PROCARGS_VERSION,
+              .handle_info_off = offsetof(ChildMessageLayout, info),
+              .args_off = offsetof(ChildMessageLayout, args),
+          },
+      .info = HandleInfoTable(),
+  };
+
+  return child_message;
+}
 
 std::array<zx_handle_t, kChildHandleCount> ExtractHandles(zx::channel bootstrap) {
   // Default constructed debuglog will force check/fail to fallback to |zx_debug_write|.
@@ -165,8 +212,6 @@ std::array<zx_handle_t, kChildHandleCount> ExtractHandles(zx::channel bootstrap)
 // 5. Start the child process running.
 // 6. Optionally, wait for it to exit and then shut down.
 [[noreturn]] void Bootstrap(zx::channel channel) {
-  ChildMessageLayout child_message;
-
   // We pass all the same handles the kernel gives us along to the child,
   // except replacing our own process/root-VMAR handles with its, and
   // passing along the three extra handles (BOOTFS, thread-self, and a debuglog
@@ -203,44 +248,16 @@ std::array<zx_handle_t, kChildHandleCount> ExtractHandles(zx::channel bootstrap)
                                 nullptr, 0, &power_resource);
   check(log, status, "zx_resource_create");
 
-  // Fill in the child message header.
-  child_message.pargs.protocol = ZX_PROCARGS_PROTOCOL;
-  child_message.pargs.version = ZX_PROCARGS_VERSION;
-  child_message.pargs.args_off = offsetof(ChildMessageLayout, args),
-  child_message.pargs.handle_info_off = offsetof(ChildMessageLayout, info);
+  ChildMessageLayout child_message = CreateChildMessage();
 
   // Fill in any '+' separated arguments provided by `userboot.next`. If arguments are longer than
   // kProcessArgsMaxBytes, this function will fail process creation.
-  ParseNextProcessArguments(log, opts, child_message.pargs.args_num, child_message.args);
-
-  // Fill in the handle info table.
-  child_message.info[kBootfsVmo] = PA_HND(PA_VMO_BOOTFS, 0);
-  child_message.info[kProcSelf] = PA_HND(PA_PROC_SELF, 0);
-  child_message.info[kRootJob] = PA_HND(PA_JOB_DEFAULT, 0);
-  child_message.info[kRootResource] = PA_HND(PA_RESOURCE, 0);
-  child_message.info[kMmioResource] = PA_HND(PA_MMIO_RESOURCE, 0);
-  child_message.info[kIrqResource] = PA_HND(PA_IRQ_RESOURCE, 0);
-#if __x86_64__
-  child_message.info[kIoportResource] = PA_HND(PA_IOPORT_RESOURCE, 0);
-#elif __aarch64__
-  child_message.info[kSmcResource] = PA_HND(PA_SMC_RESOURCE, 0);
-#endif
-  child_message.info[kSystemResource] = PA_HND(PA_SYSTEM_RESOURCE, 0);
-  child_message.info[kThreadSelf] = PA_HND(PA_THREAD_SELF, 0);
-  child_message.info[kVmarRootSelf] = PA_HND(PA_VMAR_ROOT, 0);
-  child_message.info[kZbi] = PA_HND(PA_VMO_BOOTDATA, 0);
-  for (uint32_t i = kFirstVdso; i <= kLastVdso; ++i) {
-    child_message.info[i] = PA_HND(PA_VMO_VDSO, i - kFirstVdso);
-  }
-  for (uint32_t i = kFirstKernelFile; i < kHandleCount; ++i) {
-    child_message.info[i] = PA_HND(PA_VMO_KERNEL_FILE, i - kFirstKernelFile);
-  }
+  ParseNextProcessArguments(log, opts, child_message.header.args_num, child_message.args.data());
 
   zx::debuglog log_dup;
   status = log.duplicate(ZX_RIGHT_SAME_RIGHTS, &log_dup);
   check(log, status, "zx_handle_duplicate failed on debuglog handle");
   handles[kDebugLog] = log_dup.release();
-  child_message.info[kDebugLog] = PA_HND(PA_FD, kFdioFlagUseForStdio);
 
   // Strips any arguments passed along with the filename to userboot.next.
   std::string_view filename = GetUserbootNextFilename(opts);
