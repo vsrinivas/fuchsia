@@ -74,6 +74,7 @@
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.settings.Accessibility",
                 "fuchsia.ui.annotation.Registry",
+                "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.input.accessibility.PointerEventRegistry",
             ],
             from: "parent",

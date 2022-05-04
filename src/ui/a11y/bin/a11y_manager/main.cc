@@ -18,6 +18,7 @@
 #include "src/ui/a11y/lib/semantics/a11y_semantics_event_manager.h"
 #include "src/ui/a11y/lib/util/boot_info_manager.h"
 #include "src/ui/a11y/lib/view/a11y_view_semantics.h"
+#include "src/ui/a11y/lib/view/flatland_accessibility_view.h"
 #include "src/ui/a11y/lib/view/gfx_accessibility_view.h"
 #include "src/ui/a11y/lib/view/view_injector_factory.h"
 
@@ -27,31 +28,58 @@ int run_a11y_manager(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
-  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+  auto context = sys::ComponentContext::Create();
   auto inspector = std::make_unique<sys::ComponentInspector>(context.get());
   inspector->Health().StartingUp();
   inspector->Health().Ok();
 
-  a11y::ViewManager view_manager(std::make_unique<a11y::SemanticTreeServiceFactory>(
-                                     inspector->root().CreateChild("semantic_trees")),
-                                 std::make_unique<a11y::A11yViewSemanticsFactory>(),
-                                 std::make_unique<a11y::AnnotationViewFactory>(),
-                                 std::make_unique<a11y::ViewInjectorFactory>(),
-                                 std::make_unique<a11y::A11ySemanticsEventManager>(),
-                                 std::make_unique<a11y::GfxAccessibilityView>(context.get()),
-                                 context.get(), context->outgoing()->debug_dir());
+  std::unique_ptr<a11y::ViewManager> view_manager;
+  std::unique_ptr<a11y_manager::App> app;
+
   a11y::TtsManager tts_manager(context.get());
   a11y::ColorTransformManager color_transform_manager(context.get());
   a11y::GestureListenerRegistry gesture_listener_registry;
   a11y::BootInfoManager boot_info_manager(context.get());
   a11y::ScreenReaderContextFactory screen_reader_context_factory;
 
-  a11y_manager::App app(context.get(), &view_manager, &tts_manager, &color_transform_manager,
-                        &gesture_listener_registry, &boot_info_manager,
-                        &screen_reader_context_factory,
-                        inspector->root().CreateChild("a11y_manager_app"));
+  // Block until we know which composition API to use.
+  auto scenic = context->svc()->Connect<fuchsia::ui::scenic::Scenic>();
+  scenic.set_error_handler([](zx_status_t status) {
+    FX_LOGS(ERROR) << "Error from fuchsia::ui::scenic::Scenic: " << zx_status_get_string(status);
+  });
+
+  scenic->UsesFlatland([&](bool flatland_enabled) {
+    std::unique_ptr<a11y::AccessibilityViewInterface> a11y_view;
+
+    if (flatland_enabled) {
+      auto flatland = context->svc()->Connect<fuchsia::ui::composition::Flatland>();
+      auto flatland_a11y_view =
+          std::make_unique<a11y::FlatlandAccessibilityView>(std::move(flatland));
+      context->outgoing()->AddPublicService(flatland_a11y_view->GetHandler());
+      a11y_view = std::move(flatland_a11y_view);
+    } else {
+      a11y_view = std::make_unique<a11y::GfxAccessibilityView>(context.get());
+    }
+
+    view_manager = std::make_unique<a11y::ViewManager>(
+        std::make_unique<a11y::SemanticTreeServiceFactory>(
+            inspector->root().CreateChild("semantic_trees")),
+        std::make_unique<a11y::A11yViewSemanticsFactory>(),
+        std::make_unique<a11y::AnnotationViewFactory>(),
+        std::make_unique<a11y::ViewInjectorFactory>(),
+        std::make_unique<a11y::A11ySemanticsEventManager>(), std::move(a11y_view), context.get(),
+        context->outgoing()->debug_dir());
+
+    app = std::make_unique<a11y_manager::App>(context.get(), view_manager.get(), &tts_manager,
+                                              &color_transform_manager, &gesture_listener_registry,
+                                              &boot_info_manager, &screen_reader_context_factory,
+                                              inspector->root().CreateChild("a11y_manager_app"));
+    context->outgoing()->ServeFromStartupInfo();
+  });
 
   loop.Run();
+
+  FX_LOGS(INFO) << "A11y manager exiting";
   return 0;
 }
 

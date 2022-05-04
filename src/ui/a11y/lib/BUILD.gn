@@ -27,7 +27,7 @@ group("tests") {
   deps = [
     ":a11y-lib-tests",
     "semantics/tests:integration",
-    "view/tests:gfx-a11y-view-test",
+    "view/tests:integration-tests",
   ]
 }
 

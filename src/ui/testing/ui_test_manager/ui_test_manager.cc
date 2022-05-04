@@ -68,6 +68,7 @@ constexpr auto kUseFlatlandScenicConfig = R"(
 }
 )";
 
+// Set of low-level system services that components in the realm can consume
 // from parent (test_manager).
 std::vector<std::string> DefaultSystemServices() {
   return {fuchsia::logger::LogSink::Name_, fuchsia::scheduler::ProfileProvider::Name_,
