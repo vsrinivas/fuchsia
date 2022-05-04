@@ -285,7 +285,7 @@ where
                     .find_addr(&addr)
                     .map(|entry| match entry.state {
                         AddressState::Assigned => true,
-                        AddressState::Tentative { .. } | AddressState::Deprecated => false,
+                        AddressState::Tentative { .. } => false,
                     })
                     .unwrap_or(false)
             }),

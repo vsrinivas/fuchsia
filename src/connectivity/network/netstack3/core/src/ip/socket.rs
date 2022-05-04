@@ -19,7 +19,7 @@ use thiserror::Error;
 use crate::{
     context::{CounterContext, InstantContext, RngContext},
     ip::{
-        device::state::{AddressState, IpDeviceStateIpExt, Ipv6AddressEntry},
+        device::state::{IpDeviceStateIpExt, Ipv6AddressEntry},
         forwarding::{Destination, ForwardingTable},
         IpDeviceIdContext, IpExt, SendIpPacketMeta,
     },
@@ -688,7 +688,7 @@ pub(super) mod ipv6_source_address_selection {
             .map(|(addr, _device)| addr.addr_sub().addr())
     }
 
-    /// Comparison operator used by `select_ipv6_source_address_cmp`.
+    /// Comparison operator used by `select_ipv6_source_address`.
     fn select_ipv6_source_address_cmp<Instant, D: Copy + PartialEq>(
         remote_ip: SpecifiedAddr<Ipv6Addr>,
         outbound_device: D,
@@ -699,9 +699,7 @@ pub(super) mod ipv6_source_address_selection {
     ) -> Ordering {
         // TODO(fxbug.dev/46822): Implement rules 2, 4, 5.5, 6, and 7.
 
-        let a_state = a.state;
         let a_addr = a.addr_sub().addr().into_specified();
-        let b_state = b.state;
         let b_addr = b.addr_sub().addr().into_specified();
 
         // Assertions required in order for this implementation to be valid.
@@ -709,12 +707,13 @@ pub(super) mod ipv6_source_address_selection {
         // Required by the implementation of Rule 1.
         debug_assert!(!(a_addr == remote_ip && b_addr == remote_ip));
 
-        // Required by the implementation of Rule 3.
-        debug_assert!(!a_state.is_tentative());
-        debug_assert!(!b_state.is_tentative());
+        // Tentative addresses are not valid source addresses since they are
+        // not considered assigned.
+        debug_assert!(!a.state.is_tentative());
+        debug_assert!(!b.state.is_tentative());
 
         rule_1(remote_ip, a_addr, b_addr)
-            .then_with(|| rule_3(a_state, b_state))
+            .then_with(|| rule_3(a.deprecated, b.deprecated))
             .then_with(|| rule_5(outbound_device, a_device, b_device))
             .then_with(|| rule_8(remote_ip, a, b))
     }
@@ -747,24 +746,11 @@ pub(super) mod ipv6_source_address_selection {
         }
     }
 
-    // Assumes that neither state is tentative.
-    fn rule_3(a_state: AddressState, b_state: AddressState) -> Ordering {
-        if a_state != b_state {
-            // Rule 3: Avoid deprecated addresses.
-            //
-            // Note that, since we've already filtered out tentative addresses,
-            // the only two possible states are deprecated and assigned. Thus,
-            // `a_state != b_state` and `a_state.is_deprecated()` together imply
-            // that `b_state` is assigned. Conversely, `a_state != b_state` and
-            // `!a_state.is_deprecated()` together imply that `b_state` is
-            // deprecated.
-            if a_state.is_deprecated() {
-                Ordering::Less
-            } else {
-                Ordering::Greater
-            }
-        } else {
-            Ordering::Equal
+    fn rule_3(a_deprecated: bool, b_deprecated: bool) -> Ordering {
+        match (a_deprecated, b_deprecated) {
+            (true, false) => Ordering::Less,
+            (true, true) | (false, false) => Ordering::Equal,
+            (false, true) => Ordering::Greater,
         }
     }
 
@@ -824,12 +810,13 @@ pub(super) mod ipv6_source_address_selection {
         use net_types::ip::AddrSubnet;
 
         use super::*;
-        use crate::{device::DeviceId, ip::device::state::AddrConfig};
+        use crate::{
+            device::DeviceId,
+            ip::device::state::{AddrConfig, AddressState},
+        };
 
         #[test]
         fn test_select_ipv6_source_address() {
-            use AddressState::*;
-
             // Test the comparison operator used by `select_ipv6_source_address`
             // by separately testing each comparison condition.
 
@@ -855,10 +842,10 @@ pub(super) mod ipv6_source_address_selection {
             assert_eq!(rule_1(remote, local0, local1), Ordering::Equal);
 
             // Rule 3: Avoid deprecated states
-            assert_eq!(rule_3(Assigned, Deprecated), Ordering::Greater);
-            assert_eq!(rule_3(Deprecated, Assigned), Ordering::Less);
-            assert_eq!(rule_3(Assigned, Assigned), Ordering::Equal);
-            assert_eq!(rule_3(Deprecated, Deprecated), Ordering::Equal);
+            assert_eq!(rule_3(false, true), Ordering::Greater);
+            assert_eq!(rule_3(true, false), Ordering::Less);
+            assert_eq!(rule_3(true, true), Ordering::Equal);
+            assert_eq!(rule_3(false, false), Ordering::Equal);
 
             // Rule 5: Prefer outgoing interface
             assert_eq!(rule_5(dev0, dev0, dev2), Ordering::Greater);
@@ -913,7 +900,7 @@ pub(super) mod ipv6_source_address_selection {
                 let new_addr_entry = |addr| {
                     Ipv6AddressEntry::<()>::new(
                         AddrSubnet::new(addr, 128).unwrap(),
-                        Assigned,
+                        AddressState::Assigned,
                         AddrConfig::Manual,
                     )
                 };

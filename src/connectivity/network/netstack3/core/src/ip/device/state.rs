@@ -359,11 +359,6 @@ pub(crate) enum AddressState {
     /// When `dad_transmits_remaining` is `None`, then no more DAD messages need
     /// to be sent and DAD may be resolved.
     Tentative { dad_transmits_remaining: Option<NonZeroU8> },
-
-    /// The address is considered deprecated on an interface. Existing
-    /// connections using the address will be fine, however new connections
-    /// should not use the deprecated address.
-    Deprecated,
 }
 
 impl AddressState {
@@ -375,14 +370,9 @@ impl AddressState {
     /// Is this address tentative?
     pub(crate) fn is_tentative(self) -> bool {
         match self {
-            AddressState::Assigned | AddressState::Deprecated => false,
+            AddressState::Assigned => false,
             AddressState::Tentative { dad_transmits_remaining: _ } => true,
         }
-    }
-
-    /// Is this address deprecated?
-    pub(crate) fn is_deprecated(self) -> bool {
-        self == AddressState::Deprecated
     }
 }
 
@@ -460,6 +450,7 @@ pub(crate) struct Ipv6AddressEntry<Instant> {
     pub(crate) addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
     pub(crate) state: AddressState,
     pub(crate) config: AddrConfig<Instant>,
+    pub(crate) deprecated: bool,
 }
 
 impl<Instant> Ipv6AddressEntry<Instant> {
@@ -468,7 +459,7 @@ impl<Instant> Ipv6AddressEntry<Instant> {
         state: AddressState,
         config: AddrConfig<Instant>,
     ) -> Self {
-        Self { addr_sub, state, config }
+        Self { addr_sub, state, config, deprecated: false }
     }
 
     pub(crate) fn addr_sub(&self) -> &AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>> {

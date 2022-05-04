@@ -270,7 +270,7 @@ pub(crate) trait NdpContext<D: LinkDevice>:
             .get_ip_device_state(device_id)
             .iter_addrs()
             .filter(|entry| match entry.state {
-                AddressState::Assigned | AddressState::Deprecated => true,
+                AddressState::Assigned => true,
                 AddressState::Tentative { dad_transmits_remaining: _ } => false,
             })
             .map(|entry| entry.addr_sub().addr());
@@ -354,19 +354,6 @@ pub(crate) trait NdpContext<D: LinkDevice>:
         addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
         slaac_config: SlaacConfig<Self::Instant>,
     ) -> Result<(), ExistsError>;
-
-    /// Deprecate the use of an address previously configured via SLAAC.
-    ///
-    /// If `addr` is currently tentative on `device_id`, the address should
-    /// simply be invalidated as new connections should not use a deprecated
-    /// address, and we should have no existing connections using a tentative
-    /// address.
-    ///
-    /// # Panics
-    ///
-    /// May panic if `addr` is not an address configured via SLAAC on
-    /// `device_id`.
-    fn deprecate_slaac_addr(&mut self, device_id: Self::DeviceId, addr: &UnicastAddr<Ipv6Addr>);
 
     /// Completely invalidate an address previously configured via SLAAC.
     ///
@@ -750,7 +737,7 @@ fn handle_timer<D: LinkDevice, C: NdpContext<D>>(sync_ctx: &mut C, id: NdpTimerI
             }
         }
         InnerNdpTimerId::DeprecateSlaacAddress { addr } => {
-            sync_ctx.deprecate_slaac_addr(id.device_id, &addr);
+            set_deprecated_slaac_addr(sync_ctx, id.device_id, &addr, true)
         }
         InnerNdpTimerId::InvalidateSlaacAddress { addr } => {
             sync_ctx.invalidate_slaac_addr(id.device_id, &addr);
@@ -759,6 +746,20 @@ fn handle_timer<D: LinkDevice, C: NdpContext<D>>(sync_ctx: &mut C, id: NdpTimerI
             regenerate_temporary_slaac_addr(sync_ctx, id.device_id, &addr_subnet);
         }
     }
+}
+
+fn set_deprecated_slaac_addr<D: LinkDevice, C: NdpContext<D>>(
+    sync_ctx: &mut C,
+    device_id: C::DeviceId,
+    addr: &UnicastAddr<Ipv6Addr>,
+    deprecated: bool,
+) {
+    let entry = sync_ctx
+        .get_ip_device_state_mut(device_id)
+        .iter_addrs_mut()
+        .find(|a| &a.addr_sub().addr() == addr)
+        .unwrap();
+    entry.deprecated = deprecated;
 }
 
 /// Computes REGEN_ADVANCE as specified in [RFC 8981 Section 3.8].
@@ -1141,10 +1142,10 @@ fn regenerate_temporary_slaac_addr<'a, D: LinkDevice, C: NdpContext<D>>(
     addr_subnet: &AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
 ) {
     let entry = {
-        let mut subnet_addrs =
-            sync_ctx.get_ip_device_state(device_id).iter_global_ipv6_addrs().filter(|entry| {
-                entry.addr_sub().subnet() == addr_subnet.subnet() && !entry.state.is_deprecated()
-            });
+        let mut subnet_addrs = sync_ctx
+            .get_ip_device_state(device_id)
+            .iter_global_ipv6_addrs()
+            .filter(|entry| entry.addr_sub().subnet() == addr_subnet.subnet() && !entry.deprecated);
 
         // It's possible that there are multiple non-deprecated temporary
         // addresses in a subnet for this host (if prefix updates are received
@@ -1180,7 +1181,7 @@ fn regenerate_temporary_slaac_addr<'a, D: LinkDevice, C: NdpContext<D>>(
             None => unreachable!("couldn't find {:?} to regenerate", addr_subnet),
         }
     };
-    assert!(!entry.state.is_deprecated(), "can't regenerate deprecated address {:?}", addr_subnet);
+    assert!(!entry.deprecated, "can't regenerate deprecated address {:?}", addr_subnet);
 
     let TemporarySlaacConfig { creation_time, desync_factor, valid_until, dad_counter: _ } =
         match entry.config {
@@ -1455,10 +1456,15 @@ fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
         //
         // Must not have reached this point if the address was not already
         // assigned to a device.
+        let entry = sync_ctx
+            .get_ip_device_state_mut(device_id)
+            .iter_addrs_mut()
+            .find(|a| a.addr_sub() == entry.addr_sub())
+            .unwrap();
         match preferred_for_and_regen_at {
             None => {
-                if !entry.state.is_deprecated() {
-                    sync_ctx.deprecate_slaac_addr(device_id, &addr);
+                if !entry.deprecated {
+                    entry.deprecated = true;
                     let _: Option<C::Instant> = sync_ctx
                         .cancel_timer(NdpTimerId::new_deprecate_slaac_address(device_id, addr));
                     let _: Option<C::Instant> = sync_ctx.cancel_timer(
@@ -1467,16 +1473,8 @@ fn apply_slaac_update<'a, D: LinkDevice, C: NdpContext<D>>(
                 }
             }
             Some((preferred_for, regen_at)) => {
-                if entry.state.is_deprecated() {
-                    let entry = sync_ctx
-                        .get_ip_device_state_mut(device_id)
-                        .iter_addrs_mut()
-                        .find(|a| a.addr_sub() == entry.addr_sub())
-                        .unwrap();
-                    entry.state = match entry.state {
-                        AddressState::Deprecated => AddressState::Assigned,
-                        state => state,
-                    };
+                if entry.deprecated {
+                    entry.deprecated = false;
                 }
 
                 let timer_id = NdpTimerId::new_deprecate_slaac_address(device_id, addr).into();
@@ -1930,7 +1928,7 @@ fn add_slaac_addr_sub<'a, D: LinkDevice, C: NdpContext<D>>(
                 }
             }
             None => {
-                sync_ctx.deprecate_slaac_addr(device_id, &address.addr());
+                set_deprecated_slaac_addr(sync_ctx, device_id, &address.addr(), true);
                 assert_eq!(sync_ctx.cancel_timer(deprecate_timer_id.into()), None);
             }
         };
@@ -2348,7 +2346,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                     duplicate_address_detected(sync_ctx, device_id, target_address);
                     return;
                 }
-                Some(AddressState::Assigned) | Some(AddressState::Deprecated) => {
+                Some(AddressState::Assigned) => {
                     // RFC 4862 says this situation is out of the scope, so we
                     // just log out the situation for now.
                     //
@@ -4619,6 +4617,7 @@ mod tests {
                 addr_sub: AddrSubnet::new(expected_addr.get(), prefix_length).unwrap(),
                 state: AddressState::Assigned,
                 config: AddrConfig::Slaac(SlaacConfig::Static { valid_until: Lifetime::Infinite }),
+                deprecated: false,
             }]
         );
         ctx.ctx.timer_ctx().assert_no_timers_installed();
@@ -4648,6 +4647,7 @@ mod tests {
             icmpv6_packet.unwrap_ndp(),
         );
         let now = ctx.now();
+        let valid_until = now + Duration::from_secs(valid_lifetime.into());
         assert_eq!(
             NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
                 .iter_global_ipv6_addrs()
@@ -4656,10 +4656,9 @@ mod tests {
                 addr_sub: AddrSubnet::new(expected_addr.get(), prefix_length).unwrap(),
                 state: AddressState::Assigned,
                 config: AddrConfig::Slaac(SlaacConfig::Static {
-                    valid_until: Lifetime::Finite(DummyInstant::from(Duration::from_secs(
-                        valid_lifetime.into()
-                    )))
+                    valid_until: Lifetime::Finite(DummyInstant::from(valid_until))
                 }),
+                deprecated: false,
             }]
         );
         // Timers should have been reset.
@@ -4672,7 +4671,7 @@ mod tests {
             (
                 NdpTimerId::new_invalidate_slaac_address(device.try_into().unwrap(), expected_addr)
                     .into(),
-                now + Duration::from_secs(valid_lifetime.into()),
+                valid_until,
             ),
         ]);
 
@@ -4709,6 +4708,7 @@ mod tests {
                 addr_sub: AddrSubnet::new(expected_addr.get(), prefix_length).unwrap(),
                 state: AddressState::Assigned,
                 config: AddrConfig::Slaac(SlaacConfig::Static { valid_until: Lifetime::Infinite }),
+                deprecated: false,
             }]
         );
         ctx.ctx.timer_ctx().assert_no_timers_installed();
@@ -4728,7 +4728,6 @@ mod tests {
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
         let expected_addr = UnicastAddr::new(Ipv6Addr::from(expected_addr)).unwrap();
-        let expected_subnet = Subnet::from_host(*expected_addr, prefix_length).unwrap();
 
         // Enable DAD for future IPs.
         crate::device::set_ipv6_configuration(&mut ctx, device, {
@@ -4799,16 +4798,24 @@ mod tests {
                 .count(),
             1
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
-        assert_eq!(entry.addr_sub().subnet(), expected_subnet);
-        assert_eq!(entry.state, AddressState::Tentative { dad_transmits_remaining: None });
-        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
+        let now = ctx.now();
+        let valid_until = now + Duration::from_secs(valid_lifetime.into());
+        let expected_address_entry = Ipv6AddressEntry {
+            addr_sub: AddrSubnet::new(expected_addr.get(), prefix_length).unwrap(),
+            state: AddressState::Tentative { dad_transmits_remaining: None },
+            config: AddrConfig::Slaac(SlaacConfig::Static {
+                valid_until: Lifetime::Finite(DummyInstant::from(valid_until)),
+            }),
+            deprecated: false,
+        };
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
+                .iter_global_ipv6_addrs()
+                .collect::<Vec<_>>(),
+            [&expected_address_entry]
+        );
 
         // Make sure deprecate and invalidation timers are set.
-        let now = ctx.now();
         ctx.ctx.timer_ctx().assert_some_timers_installed([
             (
                 NdpTimerId::new_deprecate_slaac_address(device.try_into().unwrap(), expected_addr)
@@ -4818,7 +4825,7 @@ mod tests {
             (
                 NdpTimerId::new_invalidate_slaac_address(device.try_into().unwrap(), expected_addr)
                     .into(),
-                now + Duration::from_secs(valid_lifetime.into()),
+                valid_until,
             ),
         ]);
 
@@ -4828,13 +4835,14 @@ mod tests {
             vec!(dad_timer_id(device_id, expected_addr))
         );
 
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
-        assert_eq!(entry.addr_sub().subnet(), expected_subnet);
-        assert_eq!(entry.state, AddressState::Assigned);
-        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
+        let expected_address_entry =
+            Ipv6AddressEntry { state: AddressState::Assigned, ..expected_address_entry };
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
+                .iter_global_ipv6_addrs()
+                .collect::<Vec<_>>(),
+            [&expected_address_entry]
+        );
 
         // Receive the same RA.
         //
@@ -4859,21 +4867,20 @@ mod tests {
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
-
-        // Should not have changed.
+        let now = ctx.now();
+        let valid_until = now + Duration::from_secs(valid_lifetime.into());
+        let expected_address_entry = Ipv6AddressEntry {
+            config: AddrConfig::Slaac(SlaacConfig::Static {
+                valid_until: Lifetime::Finite(DummyInstant::from(valid_until)),
+            }),
+            ..expected_address_entry
+        };
         assert_eq!(
             NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
                 .iter_global_ipv6_addrs()
-                .count(),
-            1
+                .collect::<Vec<_>>(),
+            [&expected_address_entry]
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
-        assert_eq!(entry.addr_sub().subnet(), expected_subnet);
-        assert_eq!(entry.state, AddressState::Assigned);
-        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         // Timers should have been reset.
         let now = ctx.now();
@@ -4886,7 +4893,7 @@ mod tests {
             (
                 NdpTimerId::new_invalidate_slaac_address(device.try_into().unwrap(), expected_addr)
                     .into(),
-                now + Duration::from_secs(valid_lifetime.into()),
+                valid_until,
             ),
         ]);
 
@@ -4902,12 +4909,12 @@ mod tests {
             ),
             vec!(NdpTimerId::new_deprecate_slaac_address(device_id, expected_addr).into())
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
-        assert_eq!(entry.state, AddressState::Deprecated);
-        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
+                .iter_global_ipv6_addrs()
+                .collect::<Vec<_>>(),
+            [&Ipv6AddressEntry { deprecated: true, ..expected_address_entry }]
+        );
 
         // Valid lifetime expiration.
         //
@@ -4934,7 +4941,7 @@ mod tests {
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
-        crate::device::testutil::enable_device(&mut ctx, device);
+        let device_id = device.try_into().unwrap();
 
         let src_mac = config.remote_mac;
         let src_ip = src_mac.to_ipv6_link_local().addr().get();
@@ -4943,12 +4950,22 @@ mod tests {
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
         let expected_addr = UnicastAddr::new(Ipv6Addr::from(expected_addr)).unwrap();
-
-        // Enable DAD for future IPs.
         crate::device::set_ipv6_configuration(
             &mut ctx,
             device,
-            crate::device::Ipv6DeviceConfiguration::default(),
+            crate::ip::device::state::Ipv6DeviceConfiguration {
+                dad_transmits: NonZeroU8::new(1),
+                max_router_solicitations: None,
+                ip_config: crate::ip::device::state::IpDeviceConfiguration {
+                    ip_enabled: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        );
+        assert_eq!(
+            ctx.trigger_next_timer(crate::handle_timer),
+            Some(dad_timer_id(device_id, config.local_mac.to_ipv6_link_local().addr().get()))
         );
 
         // Receive a new RA with new prefix (autonomous).
@@ -4976,36 +4993,41 @@ mod tests {
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
-        let device_id = device.try_into().unwrap();
-
-        // Should NOT have gotten a new IP.
-        assert_empty(
+        let now = ctx.now();
+        let valid_until = now + Duration::from_secs(valid_lifetime.into());
+        let expected_address_entry = Ipv6AddressEntry {
+            addr_sub: AddrSubnet::new(expected_addr.get(), prefix_length).unwrap(),
+            state: AddressState::Tentative { dad_transmits_remaining: None },
+            config: AddrConfig::Slaac(SlaacConfig::Static {
+                valid_until: Lifetime::Finite(DummyInstant::from(valid_until)),
+            }),
+            deprecated: true,
+        };
+        assert_eq!(
             NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs(),
+                .iter_global_ipv6_addrs()
+                .collect::<Vec<_>>(),
+            [&expected_address_entry]
         );
 
-        // Make sure deprecate and invalidation timers are set.
-        let now = ctx.now();
+        // Make sure that only invalidation timer is set.
+        ctx.ctx.timer_ctx().assert_some_timers_installed([(
+            NdpTimerId::new_invalidate_slaac_address(device.try_into().unwrap(), expected_addr)
+                .into(),
+            valid_until,
+        )]);
         assert_empty(ctx.ctx.timer_ctx().timers().iter().filter(|x| {
             x.1 == NdpTimerId::new_deprecate_slaac_address(device_id, expected_addr).into()
         }));
-        assert_empty(ctx.ctx.timer_ctx().timers().iter().filter(|x| {
-            x.0 == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap()
-                && x.1 == NdpTimerId::new_invalidate_slaac_address(device_id, expected_addr).into()
-        }));
-        assert_empty(
-            ctx.ctx
-                .timer_ctx()
-                .timers()
-                .iter()
-                .filter(|x| x.1 == dad_timer_id(device_id, expected_addr)),
+        assert_eq!(
+            ctx.trigger_next_timer(crate::handle_timer),
+            Some(dad_timer_id(device_id, expected_addr))
         );
-
-        assert_eq!(ctx.trigger_timers_for(Duration::from_secs(1), crate::handle_timer), []);
-
-        assert_empty(
+        assert_eq!(
             NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs(),
+                .iter_global_ipv6_addrs()
+                .collect::<Vec<_>>(),
+            [&Ipv6AddressEntry { state: AddressState::Assigned, ..expected_address_entry }]
         );
     }
 
@@ -5023,7 +5045,6 @@ mod tests {
         let mut expected_addr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         expected_addr[8..].copy_from_slice(&config.local_mac.to_eui64()[..]);
         let expected_addr = UnicastAddr::new(Ipv6Addr::from(expected_addr)).unwrap();
-        let expected_subnet = Subnet::from_host(*expected_addr, prefix_length).unwrap();
 
         // Enable DAD for future IPs.
         crate::device::set_ipv6_configuration(&mut ctx, device, {
@@ -5061,23 +5082,24 @@ mod tests {
         let device_id = device.try_into().unwrap();
 
         // Should have gotten a new IP.
-
+        let now = ctx.now();
+        let valid_until = now + Duration::from_secs(valid_lifetime.into());
+        let expected_address_entry = Ipv6AddressEntry {
+            addr_sub: AddrSubnet::new(expected_addr.get(), prefix_length).unwrap(),
+            state: AddressState::Tentative { dad_transmits_remaining: None },
+            config: AddrConfig::Slaac(SlaacConfig::Static {
+                valid_until: Lifetime::Finite(DummyInstant::from(valid_until)),
+            }),
+            deprecated: false,
+        };
         assert_eq!(
             NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
                 .iter_global_ipv6_addrs()
-                .count(),
-            1
+                .collect::<Vec<_>>(),
+            [&expected_address_entry]
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
-        assert_eq!(entry.addr_sub().subnet(), expected_subnet);
-        assert_eq!(entry.state, AddressState::Tentative { dad_transmits_remaining: None });
-        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         // Make sure deprecate and invalidation timers are set.
-        let now = ctx.now();
         // Use `.as_dyn()` since not all range types are the same.
         ctx.ctx.timer_ctx().assert_timers_installed([
             (
@@ -5088,7 +5110,7 @@ mod tests {
             (
                 NdpTimerId::new_invalidate_slaac_address(device.try_into().unwrap(), expected_addr)
                     .into(),
-                (now + Duration::from_secs(valid_lifetime.into())).as_dyn(),
+                valid_until.as_dyn(),
             ),
             (dad_timer_id(device.try_into().unwrap(), expected_addr), (..).as_dyn()),
         ]);
@@ -5098,13 +5120,14 @@ mod tests {
             vec!(dad_timer_id(device_id, expected_addr))
         );
 
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
-        assert_eq!(entry.addr_sub().subnet(), expected_subnet);
-        assert_eq!(entry.state, AddressState::Assigned);
-        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
+        let expected_address_entry =
+            Ipv6AddressEntry { state: AddressState::Assigned, ..expected_address_entry };
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
+                .iter_global_ipv6_addrs()
+                .collect::<Vec<_>>(),
+            [&expected_address_entry]
+        );
 
         //
         // Receive the same RA, now with preferred_lifetime = 0
@@ -5130,28 +5153,27 @@ mod tests {
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
-
-        // Should not have changed.
+        let valid_until = ctx.now() + Duration::from_secs(valid_lifetime.into());
+        let expected_address_entry = Ipv6AddressEntry {
+            config: AddrConfig::Slaac(SlaacConfig::Static {
+                valid_until: Lifetime::Finite(DummyInstant::from(valid_until)),
+            }),
+            deprecated: true,
+            ..expected_address_entry
+        };
         assert_eq!(
             NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
                 .iter_global_ipv6_addrs()
-                .count(),
-            1
+                .collect::<Vec<_>>(),
+            [&expected_address_entry]
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
-        assert_eq!(entry.addr_sub().subnet(), expected_subnet);
-        assert_eq!(entry.state, AddressState::Deprecated);
-        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         // Timers should have been reset. SLAAC deprecation timer is no longer
         // present.
         ctx.ctx.timer_ctx().assert_timers_installed([(
             NdpTimerId::new_invalidate_slaac_address(device.try_into().unwrap(), expected_addr)
                 .into(),
-            ..,
+            valid_until,
         )]);
 
         //
@@ -5178,31 +5200,28 @@ mod tests {
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
-
-        // Should not have changed.
+        let valid_until = ctx.now() + Duration::from_secs(valid_lifetime.into());
+        let expected_address_entry = Ipv6AddressEntry {
+            config: AddrConfig::Slaac(SlaacConfig::Static {
+                valid_until: Lifetime::Finite(DummyInstant::from(valid_until)),
+            }),
+            ..expected_address_entry
+        };
         assert_eq!(
             NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
                 .iter_global_ipv6_addrs()
-                .count(),
-            1
+                .collect::<Vec<_>>(),
+            [&expected_address_entry]
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
-        assert_eq!(entry.addr_sub().subnet(), expected_subnet);
-        assert_eq!(entry.state, AddressState::Deprecated);
-        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         // Timers should have been reset.
-        let _now = ctx.now();
         assert_empty(ctx.ctx.timer_ctx().timers().iter().filter(|x| {
             x.1 == NdpTimerId::new_deprecate_slaac_address(device_id, expected_addr).into()
         }));
         ctx.ctx.timer_ctx().assert_some_timers_installed([(
             NdpTimerId::new_invalidate_slaac_address(device.try_into().unwrap(), expected_addr)
                 .into(),
-            ctx.now() + Duration::from_secs(valid_lifetime.into()),
+            valid_until,
         )]);
 
         //
@@ -5229,46 +5248,41 @@ mod tests {
             config.local_ip,
             icmpv6_packet.unwrap_ndp(),
         );
-
-        // Should not have changed.
+        let now = ctx.now();
+        let valid_until = now + Duration::from_secs(valid_lifetime.into());
+        let expected_address_entry = Ipv6AddressEntry {
+            config: AddrConfig::Slaac(SlaacConfig::Static {
+                valid_until: Lifetime::Finite(DummyInstant::from(valid_until)),
+            }),
+            deprecated: false,
+            ..expected_address_entry
+        };
         assert_eq!(
             NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
                 .iter_global_ipv6_addrs()
-                .count(),
-            1
+                .collect::<Vec<_>>(),
+            [&expected_address_entry]
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
-        assert_eq!(entry.addr_sub().subnet(), expected_subnet);
-        assert_eq!(entry.state, AddressState::Assigned);
-        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         // Make sure deprecate and invalidation timers are set. DAD timer is no
         // longer installed.
-        let now = ctx.now();
-        // Use `.as_dyn()` since not all range types are the same.
         ctx.ctx.timer_ctx().assert_timers_installed([
             (
                 NdpTimerId::new_deprecate_slaac_address(device_id, expected_addr).into(),
-                (now + Duration::from_secs(preferred_lifetime.into())).as_dyn(),
+                now + Duration::from_secs(preferred_lifetime.into()),
             ),
             (
                 NdpTimerId::new_invalidate_slaac_address(device_id, expected_addr).into(),
-                (now + Duration::from_secs(valid_lifetime.into())).as_dyn(),
+                valid_until,
             ),
         ]);
-
         assert_eq!(ctx.trigger_timers_for(Duration::from_secs(1), crate::handle_timer), vec!());
-
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
-        assert_eq!(entry.addr_sub().subnet(), expected_subnet);
-        assert_eq!(entry.state, AddressState::Assigned);
-        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
+                .iter_global_ipv6_addrs()
+                .collect::<Vec<_>>(),
+            [&expected_address_entry]
+        );
 
         //
         // Preferred lifetime expiration.
@@ -5283,12 +5297,14 @@ mod tests {
             vec!(NdpTimerId::new_deprecate_slaac_address(device_id, expected_addr).into())
         );
 
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
-        assert_eq!(entry.state, AddressState::Deprecated);
-        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
+        let expected_address_entry =
+            Ipv6AddressEntry { deprecated: true, ..expected_address_entry };
+        assert_eq!(
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
+                .iter_global_ipv6_addrs()
+                .collect::<Vec<_>>(),
+            [&expected_address_entry]
+        );
 
         //
         // Valid lifetime expiration.
@@ -5985,9 +6001,6 @@ mod tests {
 
     #[test]
     fn test_host_slaac_address_deprecate_while_tentative() {
-        // Invalidate an address right away if we attempt to deprecate a
-        // tentative address.
-
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
@@ -6039,22 +6052,24 @@ mod tests {
         );
 
         // Should have gotten a new IP.
+        let now = ctx.now();
+        let valid_until = now + Duration::from_secs(valid_lifetime.into());
+        let expected_address_entry = Ipv6AddressEntry {
+            addr_sub: expected_addr_sub,
+            state: AddressState::Tentative { dad_transmits_remaining: None },
+            config: AddrConfig::Slaac(SlaacConfig::Static {
+                valid_until: Lifetime::Finite(DummyInstant::from(valid_until)),
+            }),
+            deprecated: false,
+        };
         assert_eq!(
             NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
                 .iter_global_ipv6_addrs()
-                .count(),
-            1
+                .collect::<Vec<_>>(),
+            [&expected_address_entry]
         );
-        let entry = NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-            .iter_global_ipv6_addrs()
-            .last()
-            .unwrap();
-        assert_eq!(*entry.addr_sub(), expected_addr_sub);
-        assert_eq!(entry.state, AddressState::Tentative { dad_transmits_remaining: None });
-        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         // Make sure deprecate and invalidation timers are set.
-        let now = ctx.now();
         ctx.ctx.timer_ctx().assert_some_timers_installed([
             (
                 NdpTimerId::new_deprecate_slaac_address(device_id, expected_addr).into(),
@@ -6062,7 +6077,7 @@ mod tests {
             ),
             (
                 NdpTimerId::new_invalidate_slaac_address(device_id, expected_addr).into(),
-                now + Duration::from_secs(valid_lifetime.into()),
+                valid_until,
             ),
         ]);
 
@@ -6071,17 +6086,12 @@ mod tests {
             ctx.trigger_next_timer(crate::handle_timer).unwrap(),
             NdpTimerId::new_deprecate_slaac_address(device_id, expected_addr).into()
         );
-
-        // At this point, the address (that was tentative) should just be
-        // invalidated (removed) since we should not have any existing
-        // connections using the tentative address.
-        assert_empty(
+        assert_eq!(
             NdpContext::<EthernetLinkDevice>::get_ip_device_state(&ctx, device_id)
-                .iter_global_ipv6_addrs(),
+                .iter_global_ipv6_addrs()
+                .collect::<Vec<_>>(),
+            [&Ipv6AddressEntry { deprecated: true, ..expected_address_entry }]
         );
-
-        // No more timers.
-        assert_eq!(ctx.trigger_next_timer(crate::handle_timer), None);
     }
 
     fn receive_prefix_update(
@@ -6647,6 +6657,7 @@ mod tests {
             get_matching_slaac_address_entries(&ctx, device, |entry| entry.addr_sub().subnet()
                 == subnet
                 && entry.state == AddressState::Assigned
+                && !entry.deprecated
                 && match entry.config {
                     AddrConfig::Slaac(SlaacConfig::Temporary(_)) => true,
                     AddrConfig::Slaac(SlaacConfig::Static { valid_until: _ }) => false,
@@ -6833,7 +6844,7 @@ mod tests {
         assert_eq!(
             get_matching_slaac_address_entries(&ctx, device, |entry| entry.addr_sub().subnet()
                 == subnet
-                && !entry.state.is_deprecated()
+                && !entry.deprecated
                 && match entry.config {
                     AddrConfig::Slaac(SlaacConfig::Temporary(_)) => true,
                     AddrConfig::Slaac(SlaacConfig::Static { valid_until: _ }) => false,

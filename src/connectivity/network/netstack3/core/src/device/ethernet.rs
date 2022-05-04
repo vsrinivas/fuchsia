@@ -5,9 +5,8 @@
 //! The Ethernet protocol.
 
 use alloc::{collections::HashMap, collections::VecDeque, vec::Vec};
-use core::{fmt::Debug, mem};
+use core::fmt::Debug;
 
-use assert_matches::assert_matches;
 use log::{debug, trace};
 use net_types::{
     ethernet::Mac,
@@ -38,7 +37,7 @@ use crate::{
         IpLinkDeviceContext, RecvIpFrameMeta,
     },
     error::{ExistsError, NotFoundError},
-    ip::device::state::{AddrConfig, AddrConfigType, AddressState, IpDeviceState, SlaacConfig},
+    ip::device::state::{AddrConfig, IpDeviceState, SlaacConfig},
     BlanketCoreContext, Ctx, EventDispatcher, Ipv6DeviceConfiguration,
 };
 
@@ -819,51 +818,6 @@ impl<C: EthernetIpLinkDeviceContext> NdpContext<EthernetLinkDevice> for C {
         );
 
         self.add_ipv6_addr_subnet(device_id, addr_sub.to_witness(), AddrConfig::Slaac(slaac_config))
-    }
-
-    fn deprecate_slaac_addr(&mut self, device_id: Self::DeviceId, addr: &UnicastAddr<Ipv6Addr>) {
-        trace!(
-            "ethernet::deprecate_slaac_addr: deprecating address {:?} on device {:?}",
-            addr,
-            device_id
-        );
-
-        let state = &mut self.get_state_mut_with(device_id).ip;
-
-        let mut addrs = state.ipv6.ip_state.iter_addrs_mut();
-        // The documentation on this method allows it to panic if `addr` is not
-        // configured via SLAAC on `device_id`.
-        let entry = addrs
-            .find(|a| (a.addr_sub().addr() == *addr) && a.config_type() == AddrConfigType::Slaac)
-            .expect("address is not configured via SLAAC on this device");
-        match entry.state {
-            AddressState::Assigned => {
-                entry.state = AddressState::Deprecated;
-            }
-            AddressState::Tentative { dad_transmits_remaining } => {
-                trace!("ethernet::deprecate_slaac_addr: invalidating the deprecated tentative address {:?} on device {:?} with dad_transmits_remaining = {:?}", addr, device_id, dad_transmits_remaining);
-                // If `addr` is currently tentative on `device_id`, the
-                // address should simply be invalidated as new connections
-                // should not use a deprecated address, and we should have
-                // no existing connections using a tentative address.
-
-                mem::drop(addrs);
-
-                // We must have had an invalidation timeout if we just attempted
-                // to deprecate.
-                assert_matches!(
-                    self.cancel_timer(
-                        ndp::NdpTimerId::new_invalidate_slaac_address(device_id, *addr).into()
-                    ),
-                    Some(_)
-                );
-
-                Self::invalidate_slaac_addr(self, device_id, addr);
-            }
-            AddressState::Deprecated => {
-                unreachable!("We should never attempt to deprecate an already deprecated address")
-            }
-        }
     }
 
     fn invalidate_slaac_addr(&mut self, device_id: Self::DeviceId, addr: &UnicastAddr<Ipv6Addr>) {

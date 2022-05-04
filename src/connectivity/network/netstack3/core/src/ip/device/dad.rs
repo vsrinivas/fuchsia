@@ -134,7 +134,7 @@ impl<C: DadContext> DadHandler for C {
 
         let remaining = match state {
             AddressState::Tentative { dad_transmits_remaining } => dad_transmits_remaining,
-            AddressState::Assigned | AddressState::Deprecated => {
+            AddressState::Assigned => {
                 panic!("expected address to be tentative; addr={}", addr)
             }
         };

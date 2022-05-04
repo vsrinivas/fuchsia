@@ -165,7 +165,7 @@ impl<C: device::Ipv6DeviceContext> Ipv6DeviceDadContext for C {
         self.get_ip_device_state_mut(device_id)
             .ip_state
             .find_addr_mut(&addr)
-            .map(|Ipv6AddressEntry { addr_sub: _, state, config: _ }| state)
+            .map(|Ipv6AddressEntry { addr_sub: _, state, config: _, deprecated: _ }| state)
     }
 
     fn retrans_timer(&self, device_id: C::DeviceId) -> Duration {
@@ -333,7 +333,7 @@ impl<C: device::IpDeviceContext<Ipv6>> ip::IpDeviceContext<Ipv6> for C {
                 dev_state.find_addr(&addr).map(|addr| addr.state).map_or(
                     AddressStatus::Unassigned,
                     |state| match state {
-                        AddressState::Assigned | AddressState::Deprecated => {
+                        AddressState::Assigned => {
                             AddressStatus::Present(Ipv6PresentAddressStatus::UnicastAssigned)
                         }
                         AddressState::Tentative { dad_transmits_remaining: _ } => {

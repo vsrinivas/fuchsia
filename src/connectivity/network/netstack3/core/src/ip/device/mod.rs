@@ -305,7 +305,7 @@ fn enable_ipv6_device<C: Ipv6DeviceContext + GmpHandler<Ipv6> + RsHandler + DadH
         .get_ip_device_state_mut(device_id)
         .ip_state
         .iter_addrs_mut()
-        .map(|Ipv6AddressEntry { addr_sub, state, config: _ }| {
+        .map(|Ipv6AddressEntry { addr_sub, state, config: _, deprecated: _ }| {
             *state = AddressState::Tentative { dad_transmits_remaining: dad_transmits };
             addr_sub.ipv6_unicast_addr()
         })
@@ -371,7 +371,7 @@ fn disable_ipv6_device<
         .get_ip_device_state(device_id)
         .ip_state
         .iter_addrs()
-        .map(|Ipv6AddressEntry { addr_sub, state: _, config }| {
+        .map(|Ipv6AddressEntry { addr_sub, state: _, config, deprecated: _ }| {
             (addr_sub.ipv6_unicast_addr(), *config)
         })
         .collect::<Vec<_>>()
@@ -737,7 +737,7 @@ pub(crate) fn del_ipv6_addr<C: Ipv6DeviceContext + GmpHandler<Ipv6> + DadHandler
                 leave_ip_multicast(sync_ctx, device_id, addr.to_solicited_node_address());
 
                 match entry.state {
-                    AddressState::Assigned | AddressState::Deprecated => sync_ctx
+                    AddressState::Assigned => sync_ctx
                         .on_event(IpDeviceEvent::AddressUnassigned { device: device_id, addr }),
                     AddressState::Tentative { .. } => {}
                 }
@@ -895,7 +895,7 @@ mod tests {
                     IpDeviceContext::<Ipv6>::get_ip_device_state(ctx, device_id)
                         .ip_state
                         .iter_addrs()
-                        .map(|Ipv6AddressEntry { addr_sub, state: _, config: _ }| {
+                        .map(|Ipv6AddressEntry { addr_sub, state: _, config: _, deprecated: _ }| {
                             addr_sub.ipv6_unicast_addr()
                         })
                         .collect::<HashSet<_>>(),
@@ -967,7 +967,7 @@ mod tests {
             IpDeviceContext::<Ipv6>::get_ip_device_state(&ctx, device_id)
                 .ip_state
                 .iter_addrs()
-                .map(|Ipv6AddressEntry { addr_sub, state: _, config: _ }| {
+                .map(|Ipv6AddressEntry { addr_sub, state: _, config: _, deprecated: _ }| {
                     addr_sub.ipv6_unicast_addr()
                 })
                 .collect::<HashSet<_>>(),
@@ -980,7 +980,7 @@ mod tests {
             IpDeviceContext::<Ipv6>::get_ip_device_state(&ctx, device_id)
                 .ip_state
                 .iter_addrs()
-                .map(|Ipv6AddressEntry { addr_sub, state: _, config: _ }| {
+                .map(|Ipv6AddressEntry { addr_sub, state: _, config: _, deprecated: _ }| {
                     addr_sub.ipv6_unicast_addr()
                 })
                 .collect::<HashSet<_>>(),
