@@ -5426,10 +5426,10 @@ rust_library("http-body-v0_3_1") {
   visibility = [ ":*" ]
 }
 
-rust_library("httparse-v1_5_1") {
+rust_library("httparse-v1_7_1") {
   crate_name = "httparse"
   crate_root = "//third_party/rust_crates/vendor/httparse/src/lib.rs"
-  output_name = "httparse-68c956610281c40c"
+  output_name = "httparse-80b3f01f6603e0f"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -5442,8 +5442,8 @@ rust_library("httparse-v1_5_1") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=68c956610281c40c",
-    "-Cextra-filename=-68c956610281c40c",
+    "-Cmetadata=80b3f01f6603e0f",
+    "-Cextra-filename=-80b3f01f6603e0f",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
     "--cfg=httparse_simd",
@@ -5515,7 +5515,7 @@ rust_library("hyper-v0_13_10") {
   deps += [ ":h2-v0_2_5" ]
   deps += [ ":http-v0_2_4" ]
   deps += [ ":http-body-v0_3_1" ]
-  deps += [ ":httparse-v1_5_1" ]
+  deps += [ ":httparse-v1_7_1" ]
   deps += [ ":httpdate-v0_3_2" ]
   deps += [ ":itoa-v0_4_3" ]
   deps += [ ":pin-project-v1_0_4" ]

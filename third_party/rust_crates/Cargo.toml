@@ -435,7 +435,7 @@ rustflags = [ "--cfg=relaxed_coherence" ]
 env_vars = [ "CARGO_PKG_NAME=getrandom", "CARGO_PKG_VERSION=0.2.2", "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/getrandom" ]
 rustflags = []
 
-[gn.package.httparse."1.5.1"]
+[gn.package.httparse."1.7.1"]
 rustflags = ["--cfg=httparse_simd"]
 
 [gn.package.js-sys."0.3.39"]
