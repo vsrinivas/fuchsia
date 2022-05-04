@@ -10,9 +10,9 @@
 #include <lib/fdio/directory.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fit/defer.h>
-#include <lib/service/llcpp/outgoing_directory.h>
 #include <lib/service/llcpp/service.h>
-#include <lib/service/llcpp/service_handler.h>
+#include <lib/sys/component/llcpp/handlers.h>
+#include <lib/sys/component/llcpp/outgoing_directory.h>
 #include <lib/zx/channel.h>
 
 #include <iostream>
@@ -67,11 +67,13 @@ fbl::unique_fd OpenAt(const fbl::unique_fd& dirfd, const char* path, int flags) 
 
 class ServerTest : public zxtest::Test {
  protected:
-  ServerTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), outgoing_(loop_.dispatcher()) {}
+  ServerTest()
+      : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+        outgoing_(component::OutgoingDirectory::Create(loop_.dispatcher())) {}
 
-  service::ServiceHandler SetUpInstance(fidl::WireServer<Echo>* foo_impl,
-                                        fidl::WireServer<Echo>* bar_impl) {
-    service::ServiceHandler handler;
+  component::ServiceHandler SetUpInstance(fidl::WireServer<Echo>* foo_impl,
+                                          fidl::WireServer<Echo>* bar_impl) {
+    component::ServiceHandler handler;
     EchoService::Handler my_service(&handler);
 
     auto add_foo_result =
@@ -113,7 +115,7 @@ class ServerTest : public zxtest::Test {
 
   async::Loop loop_;
   zx::channel local_root_;
-  service::OutgoingDirectory outgoing_;
+  component::OutgoingDirectory outgoing_;
 };
 
 TEST_F(ServerTest, ConnectsToDefaultMember) {
@@ -196,11 +198,11 @@ TEST_F(ServerTest, ListsMembers) {
 
   entry = readdir(dir);
   ASSERT_NE(entry, nullptr);
-  ASSERT_EQ(std::string(entry->d_name), "foo");
+  ASSERT_EQ(std::string(entry->d_name), "bar");
 
   entry = readdir(dir);
   ASSERT_NE(entry, nullptr);
-  ASSERT_EQ(std::string(entry->d_name), "bar");
+  ASSERT_EQ(std::string(entry->d_name), "foo");
 
   ASSERT_EQ(readdir(dir), nullptr);
 }
