@@ -249,7 +249,7 @@ pub fn create_zircon_thread(
 /// memory manager to use for the returned thread.
 pub fn create_zircon_process(
     kernel: &Arc<Kernel>,
-    parent: Option<(&Arc<ThreadGroup>, &mut ThreadGroupMutableState)>,
+    parent: Option<&mut ThreadGroupWriteGuard<'_>>,
     pid: pid_t,
     process_group: Arc<ProcessGroup>,
     signal_actions: Arc<SignalActions>,

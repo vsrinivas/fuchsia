@@ -147,7 +147,6 @@ use crate::lock::*;
 ///
 /// For a base struct named `Foo`, the read guard will be a trait named `FooReadGuard` and the
 /// write guard a struct named `FooWriteGuard`.
-#[cfg(test)]
 macro_rules! state_accessor {
     ($base_name:ident, $field_name:ident) => {
         paste::paste! {
@@ -163,7 +162,6 @@ macro_rules! state_accessor {
 
 /// Create the trait and struct for the read and write guards using the methods define inside the
 /// macro.
-#[cfg(test)]
 macro_rules! state_implementation {
     ($base_name:ident, $mutable_name: ident, {
         $(
@@ -208,7 +206,6 @@ pub struct ReadableState<'a, B, S> {
 }
 
 impl<'a, B, S> ReadableState<'a, B, S> {
-    #[cfg(test)]
     pub fn new(base: &'a Arc<B>, state: RwLockReadGuard<'a, S>) -> Self {
         Self { base, state }
     }
@@ -234,7 +231,6 @@ pub struct WritableState<'a, B, S> {
 }
 
 impl<'a, B, S> WritableState<'a, B, S> {
-    #[cfg(test)]
     pub fn new(base: &'a Arc<B>, state: RwLockWriteGuard<'a, S>) -> Self {
         Self { base, state }
     }
@@ -263,7 +259,6 @@ impl<'a, B, S> ops::DerefMut for WritableState<'a, B, S> {
 /// This macro matches the methods inside a `state_implementation!` macro depending on their
 /// visibility and mutability so that the `state_implementation!` might dispatch these to the right
 /// trait or implementation.
-#[cfg(test)]
 macro_rules! filter_methods {
     // No more token.
     ($_:ident, ) => {};
@@ -298,11 +293,8 @@ macro_rules! filter_methods {
 }
 
 // Public re-export of macros allows them to be used like regular rust items.
-#[cfg(test)]
 pub(crate) use filter_methods;
-#[cfg(test)]
 pub(crate) use state_accessor;
-#[cfg(test)]
 pub(crate) use state_implementation;
 
 #[cfg(test)]

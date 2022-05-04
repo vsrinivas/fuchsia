@@ -310,7 +310,7 @@ impl Task {
             let process_group = thread_group_state.process_group.clone();
             create_zircon_process(
                 kernel,
-                Some((&self.thread_group, &mut thread_group_state)),
+                Some(&mut thread_group_state),
                 pid,
                 process_group,
                 signal_actions,

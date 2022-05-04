@@ -10,7 +10,8 @@ use std::sync::{Arc, Weak};
 
 use crate::auth::Credentials;
 use crate::device::terminal::*;
-use crate::lock::{RwLock, RwLockReadGuard, RwLockWriteGuard};
+use crate::lock::RwLock;
+use crate::mutable_state::*;
 use crate::signals::syscalls::WaitingOptions;
 use crate::signals::*;
 use crate::task::*;
@@ -18,10 +19,6 @@ use crate::types::*;
 
 /// The mutable state of the ThreadGroup.
 pub struct ThreadGroupMutableState {
-    /// The identifier of the ThreadGroup. This value is duplicated from ThreadGroup itself because
-    /// it is necessary for most of the internal operations.
-    leader: pid_t,
-
     /// The parent thread group.
     ///
     /// The value needs to be writable so that it can be re-parent to the correct subreaper is the
@@ -112,13 +109,13 @@ pub struct ZombieProcess {
 }
 
 impl ZombieProcess {
-    pub fn new(
-        thread_group: &ThreadGroupMutableState,
+    pub fn new<'a>(
+        thread_group: &impl ThreadGroupReadGuard<'a>,
         credentials: &Credentials,
         exit_status: ExitStatus,
     ) -> Self {
         ZombieProcess {
-            pid: thread_group.leader,
+            pid: thread_group.leader(),
             pgid: thread_group.process_group.leader,
             uid: credentials.uid,
             exit_status,
@@ -158,7 +155,7 @@ impl ThreadGroup {
     pub fn new(
         kernel: Arc<Kernel>,
         process: zx::Process,
-        parent: Option<(&Arc<ThreadGroup>, &mut ThreadGroupMutableState)>,
+        parent: Option<&mut ThreadGroupWriteGuard<'_>>,
         leader: pid_t,
         process_group: Arc<ProcessGroup>,
         signal_actions: Arc<SignalActions>,
@@ -171,8 +168,7 @@ impl ThreadGroup {
             leader,
             signal_actions,
             mutable_state: RwLock::new(ThreadGroupMutableState {
-                leader,
-                parent: parent.as_ref().map(|(p, _)| Arc::clone(p)),
+                parent: parent.as_ref().map(|p| Arc::clone(p.base())),
                 tasks: BTreeMap::new(),
                 children: BTreeMap::new(),
                 process_group: process_group,
@@ -186,23 +182,15 @@ impl ThreadGroup {
             }),
         });
 
-        if let Some((_, parent_tg)) = parent {
-            parent_tg.children.insert(leader, Arc::downgrade(&result));
+        if let Some(parent) = parent {
+            parent.children.insert(leader, Arc::downgrade(&result));
         }
         result
     }
 
-    /// Access mutable state with a read lock.
-    pub fn read(&self) -> RwLockReadGuard<'_, ThreadGroupMutableState> {
-        self.mutable_state.read()
-    }
+    state_accessor!(ThreadGroup, mutable_state);
 
-    /// Access mutable state with a write lock.
-    pub fn write(&self) -> RwLockWriteGuard<'_, ThreadGroupMutableState> {
-        self.mutable_state.write()
-    }
-
-    pub fn exit(&self, exit_status: ExitStatus) {
+    pub fn exit(self: &Arc<ThreadGroup>, exit_status: ExitStatus) {
         let mut state = self.write();
         if state.terminating {
             // The thread group is already terminating and all threads in the thread group have
@@ -218,7 +206,7 @@ impl ThreadGroup {
         }
     }
 
-    pub fn add(&self, task: &Arc<Task>) -> Result<(), Errno> {
+    pub fn add(self: &Arc<ThreadGroup>, task: &Arc<Task>) -> Result<(), Errno> {
         let mut state = self.write();
         if state.terminating {
             return error!(EINVAL);
@@ -227,7 +215,7 @@ impl ThreadGroup {
         Ok(())
     }
 
-    pub fn remove(&self, task: &Arc<Task>) {
+    pub fn remove(self: &Arc<ThreadGroup>, task: &Arc<Task>) {
         let mut pids = self.kernel.pids.write();
         let mut state = self.write();
         if state.remove_internal(task, &mut pids) {
@@ -239,12 +227,12 @@ impl ThreadGroup {
             // passed to the reaper that will capture the state in the correct order.
             let children = state.children().collect::<Vec<_>>();
             std::mem::drop(state);
-            let children_state = children.iter().map(|c| (c, c.write())).collect::<Vec<_>>();
+            let children_state = children.iter().map(|c| c.write()).collect::<Vec<_>>();
             self.write().remove(children_state, &mut pids);
         }
     }
 
-    pub fn setsid(&self) -> Result<(), Errno> {
+    pub fn setsid(self: &Arc<ThreadGroup>) -> Result<(), Errno> {
         let mut pids = self.kernel.pids.write();
         if !pids.get_process_group(self.leader).is_none() {
             return error!(EPERM);
@@ -256,14 +244,14 @@ impl ThreadGroup {
         Ok(())
     }
 
-    pub fn setpgid(&self, target: &Task, pgid: pid_t) -> Result<(), Errno> {
+    pub fn setpgid(self: &Arc<ThreadGroup>, target: &Task, pgid: pid_t) -> Result<(), Errno> {
         let mut pids = self.kernel.pids.write();
 
         // The target process must be either the current process of a child of the current process
         let mut target_thread_group = target.thread_group.write();
         let is_target_current_process_child =
             target_thread_group.parent.as_ref().map(|tg| tg.leader) == Some(self.leader);
-        if target_thread_group.leader != self.leader && !is_target_current_process_child {
+        if target_thread_group.leader() != self.leader && !is_target_current_process_child {
             return error!(ESRCH);
         }
 
@@ -283,13 +271,13 @@ impl ThreadGroup {
             let target_process_group = &target_thread_group.process_group;
 
             // The target process must not be a session leader and must be in the same session as the current process.
-            if target_thread_group.leader == target_process_group.session.leader
+            if target_thread_group.leader() == target_process_group.session.leader
                 || current_process_group.session != target_process_group.session
             {
                 return error!(EPERM);
             }
 
-            let target_pgid = if pgid == 0 { target_thread_group.leader } else { pgid };
+            let target_pgid = if pgid == 0 { target_thread_group.leader() } else { pgid };
             if target_pgid < 0 {
                 return error!(EINVAL);
             }
@@ -300,7 +288,7 @@ impl ThreadGroup {
 
             // If pgid is not equal to the target process id, the associated process group must exist
             // and be in the same session as the target process.
-            if target_pgid != target_thread_group.leader {
+            if target_pgid != target_thread_group.leader() {
                 new_process_group = pids.get_process_group(target_pgid).ok_or(EPERM)?;
                 if new_process_group.session != target_process_group.session {
                     return error!(EPERM);
@@ -318,7 +306,11 @@ impl ThreadGroup {
         Ok(())
     }
 
-    pub fn set_itimer(&self, which: u32, value: itimerval) -> Result<itimerval, Errno> {
+    pub fn set_itimer(
+        self: &Arc<ThreadGroup>,
+        which: u32,
+        value: itimerval,
+    ) -> Result<itimerval, Errno> {
         let mut state = self.write();
         let timer = state.itimers.get_mut(which as usize).ok_or(errno!(EINVAL))?;
         let old_value = *timer;
@@ -327,7 +319,7 @@ impl ThreadGroup {
     }
 
     /// Set the stop status of the process.
-    pub fn set_stopped(&self, stopped: bool, siginfo: SignalInfo) {
+    pub fn set_stopped(self: &Arc<ThreadGroup>, stopped: bool, siginfo: SignalInfo) {
         let mut state = self.write();
         if stopped != state.stopped {
             // TODO(qsr): When task can be running_status inside user code, task will need to be
@@ -348,7 +340,7 @@ impl ThreadGroup {
     ///
     /// - `name`: The name to set for the process. If the length of `name` is >= `ZX_MAX_NAME_LEN`,
     /// a truncated version of the name will be used.
-    pub fn mark_executed(&self, name: &CStr) -> Result<(), Errno> {
+    pub fn mark_executed(self: &Arc<ThreadGroup>, name: &CStr) -> Result<(), Errno> {
         let mut state = self.write();
         state.did_exec = true;
         if name.to_bytes().len() >= sys::ZX_MAX_NAME_LEN {
@@ -368,7 +360,7 @@ impl ThreadGroup {
     ///
     ///Will remove the waitable status from the child depending on `options`.
     pub fn get_waitable_child(
-        &self,
+        self: &Arc<ThreadGroup>,
         selector: ProcessSelector,
         options: &WaitingOptions,
     ) -> Result<WaitableChild, Errno> {
@@ -392,7 +384,7 @@ impl ThreadGroup {
     }
 
     pub fn get_foreground_process_group(
-        &self,
+        self: &Arc<ThreadGroup>,
         terminal: &Arc<Terminal>,
         is_main: bool,
     ) -> Result<pid_t, Errno> {
@@ -409,7 +401,7 @@ impl ThreadGroup {
     }
 
     pub fn set_foreground_process_group(
-        &self,
+        self: &Arc<ThreadGroup>,
         terminal: &Arc<Terminal>,
         is_main: bool,
         pgid: pid_t,
@@ -443,7 +435,7 @@ impl ThreadGroup {
     }
 
     pub fn set_controlling_terminal(
-        &self,
+        self: &Arc<ThreadGroup>,
         current_task: &CurrentTask,
         terminal: &Arc<Terminal>,
         is_main: bool,
@@ -495,7 +487,7 @@ impl ThreadGroup {
     }
 
     pub fn release_controlling_terminal(
-        &self,
+        self: &Arc<ThreadGroup>,
         _current_task: &CurrentTask,
         terminal: &Arc<Terminal>,
         is_main: bool,
@@ -531,23 +523,27 @@ impl ThreadGroup {
     }
 }
 
-impl ThreadGroupMutableState {
-    pub fn children(&self) -> impl Iterator<Item = Arc<ThreadGroup>> + '_ {
-        self.children.values().map(|v| {
-            v.upgrade().expect("Weak references to processes in ThreadGroup must always be valid")
-        })
+state_implementation!(ThreadGroup, ThreadGroupMutableState, {
+    pub fn leader(&self) -> pid_t {
+        self.base().leader
     }
 
-    pub fn tasks(&self) -> impl Iterator<Item = Arc<Task>> + '_ {
-        self.tasks.values().map(|v| {
+    pub fn children(&self) -> Box<dyn Iterator<Item = Arc<ThreadGroup>> + '_> {
+        Box::new(self.children.values().map(|v| {
+            v.upgrade().expect("Weak references to processes in ThreadGroup must always be valid")
+        }))
+    }
+
+    pub fn tasks(&self) -> Box<dyn Iterator<Item = Arc<Task>> + '_> {
+        Box::new(self.tasks.values().map(|v| {
             v.upgrade().expect("Weak references to task in ThreadGroup must always be valid")
-        })
+        }))
     }
 
     pub fn get_ppid(&self) -> pid_t {
         match &self.parent {
             Some(parent) => parent.leader,
-            None => self.leader,
+            None => self.leader(),
         }
     }
 
@@ -557,11 +553,11 @@ impl ThreadGroupMutableState {
         }
         self.leave_process_group(pids);
         self.process_group = process_group;
-        self.process_group.thread_groups.write().insert(self.leader);
+        self.process_group.thread_groups.write().insert(self.leader());
     }
 
     pub fn leave_process_group(&self, pids: &mut PidTable) {
-        if self.process_group.remove(self.leader) {
+        if self.process_group.remove(self.leader()) {
             if self.process_group.session.remove(self.process_group.leader) {
                 // TODO(qsr): Handle signals ?
             }
@@ -573,7 +569,7 @@ impl ThreadGroupMutableState {
         self.tasks.remove(&task.id);
         pids.remove_task(task.id);
 
-        if task.id == self.leader {
+        if task.id == self.leader() {
             let exit_status = task.read().exit_status.clone();
             #[cfg(not(test))]
             let exit_status =
@@ -581,7 +577,7 @@ impl ThreadGroupMutableState {
             #[cfg(test)]
             let exit_status = exit_status.unwrap_or(ExitStatus::Exit(0));
             self.zombie_leader = Some(ZombieProcess {
-                pid: self.leader,
+                pid: self.leader(),
                 pgid: self.process_group.leader,
                 uid: task.read().creds.uid,
                 exit_status,
@@ -596,7 +592,7 @@ impl ThreadGroupMutableState {
     ///Will remove the waitable status from the child depending on `options`.
     pub fn get_waitable_child(
         &mut self,
-        children: Vec<RwLockWriteGuard<'_, ThreadGroupMutableState>>,
+        children: Vec<ThreadGroupWriteGuard<'_>>,
         selector: ProcessSelector,
         options: &WaitingOptions,
         pids: &PidTable,
@@ -629,10 +625,9 @@ impl ThreadGroupMutableState {
         }
 
         // The vector of potential matches.
-        let children_filter = |child: &RwLockWriteGuard<'_, ThreadGroupMutableState>| match selector
-        {
+        let children_filter = |child: &ThreadGroupWriteGuard<'_>| match selector {
             ProcessSelector::Any => true,
-            ProcessSelector::Pid(pid) => child.leader == pid,
+            ProcessSelector::Pid(pid) => child.leader() == pid,
             ProcessSelector::Pgid(pgid) => {
                 pids.get_process_group(pgid).as_ref() == Some(&child.process_group)
             }
@@ -676,21 +671,20 @@ impl ThreadGroupMutableState {
 
     pub fn adopt_children(
         &mut self,
-        thread_group: &Arc<ThreadGroup>,
         other: &mut ThreadGroupMutableState,
-        children: Vec<(&Arc<ThreadGroup>, RwLockWriteGuard<'_, ThreadGroupMutableState>)>,
+        children: Vec<ThreadGroupWriteGuard<'_>>,
         pids: &PidTable,
     ) {
         // TODO(qsr): Implement PR_SET_CHILD_SUBREAPER
 
         // If parent != self, reparent.
         if let Some(parent) = self.parent.as_ref() {
-            parent.write().adopt_children(&parent, other, children, pids);
+            parent.write().adopt_children(other, children, pids);
         } else {
             // Else, act like init.
-            for (child, mut child_state) in children.into_iter() {
-                child_state.parent = Some(Arc::clone(thread_group));
-                self.children.insert(child.leader, Arc::downgrade(child));
+            for mut child in children.into_iter() {
+                child.parent = Some(Arc::clone(self.base()));
+                self.children.insert(child.leader(), Arc::downgrade(child.base()));
             }
 
             other.children.clear();
@@ -698,23 +692,19 @@ impl ThreadGroupMutableState {
         }
     }
 
-    pub fn remove(
-        &mut self,
-        children: Vec<(&Arc<ThreadGroup>, RwLockWriteGuard<'_, ThreadGroupMutableState>)>,
-        pids: &mut PidTable,
-    ) {
+    pub fn remove(&mut self, children: Vec<ThreadGroupWriteGuard<'_>>, pids: &mut PidTable) {
         // Before unregistering this object from other places, register the zombie.
         if let Some(parent) = self.parent.clone() {
             let mut parent_writer = parent.write();
             // Reparent the children.
-            parent_writer.adopt_children(&parent, self, children, &pids);
+            parent_writer.adopt_children(self, children, &pids);
 
             let zombie = self.zombie_leader.take().expect("Failed to capture zombie leader.");
 
-            parent_writer.children.remove(&self.leader);
+            parent_writer.children.remove(&self.leader());
             parent_writer.zombie_children.push(zombie);
         }
-        pids.remove_thread_group(self.leader);
+        pids.remove_thread_group(self.leader());
 
         // Unregister this object.
         self.leave_process_group(pids);
@@ -738,7 +728,7 @@ impl ThreadGroupMutableState {
     /// Returns a task in the current thread group.
     pub fn get_task(&self) -> Result<Arc<Task>, Errno> {
         self.tasks
-            .get(&self.leader)
+            .get(&self.leader())
             .map(|t| {
                 t.upgrade().expect("Weak references to task in ThreadGroup must always be valid")
             })
@@ -761,7 +751,7 @@ impl ThreadGroupMutableState {
             task.interrupt(interruption_type);
         }
     }
-}
+});
 
 #[cfg(test)]
 mod test {

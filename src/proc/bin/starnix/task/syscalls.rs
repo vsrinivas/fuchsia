@@ -13,7 +13,7 @@ use crate::execution::*;
 use crate::logging::{not_implemented, strace};
 use crate::mm::*;
 use crate::syscalls::*;
-use crate::task::{ExitStatus, Task};
+use crate::task::*;
 use crate::types::*;
 
 pub fn sys_clone(
