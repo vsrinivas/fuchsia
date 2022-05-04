@@ -295,6 +295,9 @@ void ViewTree::NewRefNode(ViewTreeNewRefNode new_node) {
   FX_DCHECK(new_node.bounding_box) << "precondition";                // Callback exists.
   FX_DCHECK(new_node.hit_test) << "precondition";                    // Callback exists.
   FX_DCHECK(new_node.add_annotation_view_holder) << "precondition";  // Callback exists.
+  FX_DCHECK(new_node.is_rendering) << "precondition";                // Callback exists.
+  FX_DCHECK(new_node.pixel_scale) << "precondition";                 // Callback exists.
+  FX_DCHECK(new_node.inset) << "precondition";                       // Callback exists.
   FX_DCHECK(new_node.session_id != scheduling::kInvalidSessionId) << "precondition";
 
   if (!IsValid(koid) || IsTracked(koid))
@@ -309,7 +312,10 @@ void ViewTree::NewRefNode(ViewTreeNewRefNode new_node) {
       .bounding_box = std::move(new_node.bounding_box),
       .hit_test = std::move(new_node.hit_test),
       .add_annotation_view_holder = std::move(new_node.add_annotation_view_holder),
-      .session_id = new_node.session_id};
+      .session_id = new_node.session_id,
+      .is_rendering = std::move(new_node.is_rendering),
+      .pixel_scale = std::move(new_node.pixel_scale),
+      .inset = std::move(new_node.inset)};
 
   ref_node_koids_.insert({new_node.session_id, koid});
 
@@ -511,6 +517,9 @@ view_tree::SubtreeSnapshot ViewTree::Snapshot() const {
       it->second.bounding_box = {.min = {bbox.min().x, bbox.min().y},
                                  .max = {bbox.max().x, bbox.max().y}};
       it->second.view_ref = ref_node.view_ref;  // Copy shared_ptr.
+      it->second.gfx_is_rendering = ref_node.is_rendering();
+      it->second.gfx_pixel_scale = ref_node.pixel_scale();
+      it->second.gfx_inset = ref_node.inset();
     }
   }
 

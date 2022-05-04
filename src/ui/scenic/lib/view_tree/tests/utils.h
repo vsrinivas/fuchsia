@@ -38,7 +38,8 @@ std::shared_ptr<const view_tree::Snapshot> FourNodeSnapshot();
 //   / / \ \
 //  B  C  D  E
 // Note: |total_nodes| cannot be 0.
-std::shared_ptr<const view_tree::Snapshot> SingleDepthViewTreeSnapshot(uint64_t total_nodes);
+std::shared_ptr<const view_tree::Snapshot> SingleDepthViewTreeSnapshot(
+    uint64_t total_nodes, std::optional<bool> gfx_is_rendering);
 
 }  // namespace view_tree
 

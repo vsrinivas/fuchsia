@@ -78,6 +78,14 @@ Scene::Scene(Session* session, SessionId session_id, ResourceId node_id,
           }
         };
 
+    fit::function<bool()> is_rendering = [] { return true; };
+
+    fit::function<std::array<float, 2>()> pixel_scale = [] {
+      return std::array<float, 2>{1.f, 1.f};
+    };
+
+    fit::function<fuchsia::math::InsetF()> inset = [] { return fuchsia::math::InsetF(); };
+
     if (view_tree_updater_) {
       FX_DCHECK(session_id != 0u) << "GFX-side invariant for ViewTree";
       view_tree_updater_->AddUpdate(
@@ -90,7 +98,10 @@ Scene::Scene(Session* session, SessionId session_id, ResourceId node_id,
                              .bounding_box = std::move(bounding_box),
                              .hit_test = std::move(hit_test),
                              .add_annotation_view_holder = std::move(add_annotation_view_holder),
-                             .session_id = session_id});
+                             .session_id = session_id,
+                             .is_rendering = std::move(is_rendering),
+                             .pixel_scale = std::move(pixel_scale),
+                             .inset = std::move(inset)});
     }
   }
   // NOTE: Whether or not this Scene is connected to the Compositor CANNOT be determined here (and

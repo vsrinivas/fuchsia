@@ -41,7 +41,16 @@ scenic_impl::gfx::ViewTreeNewRefNode ViewTreeNewRefNodeTemplate(ViewRef view_ref
           .bounding_box = [] { return escher::BoundingBox(); },
           .hit_test = [](auto...) {},
           .add_annotation_view_holder = [](auto) {},
-          .session_id = session_id};
+          .session_id = session_id,
+          .is_rendering = [] { return true; },
+          .pixel_scale =
+              [] {
+                return std::array<float, 2>{1.f, 1.f};
+              },
+          .inset =
+              [] {
+                return fuchsia::math::InsetF{.top = 1.f, .right = 1.f, .bottom = 1.f, .left = 1.f};
+              }};
 }
 
 std::array<float, 16> Mat4ToArray(const glm::mat4& matrix) {
@@ -819,7 +828,16 @@ TEST(ViewTreePrimitive, Snapshot_NodesHaveAllFields) {
               },
           .hit_test = [](auto...) {},
           .add_annotation_view_holder = [](auto) {},
-          .session_id = 1};
+          .session_id = 1,
+          .is_rendering = [] { return true; },
+          .pixel_scale =
+              [] {
+                return std::array<float, 2>{1.f, 1.f};
+              },
+          .inset =
+              [] {
+                return fuchsia::math::InsetF{.top = 1.f, .right = 1.f, .bottom = 1.f, .left = 1.f};
+              }};
       tree.NewRefNode(std::move(node1));
     }
 
@@ -838,7 +856,16 @@ TEST(ViewTreePrimitive, Snapshot_NodesHaveAllFields) {
               },
           .hit_test = [](auto...) {},
           .add_annotation_view_holder = [](auto) {},
-          .session_id = 2};
+          .session_id = 2,
+          .is_rendering = [] { return true; },
+          .pixel_scale =
+              [] {
+                return std::array<float, 2>{1.f, 1.f};
+              },
+          .inset =
+              [] {
+                return fuchsia::math::InsetF{.top = 1.f, .right = 1.f, .bottom = 1.f, .left = 1.f};
+              }};
       tree.NewRefNode(std::move(node2));
     }
 
@@ -867,6 +894,15 @@ TEST(ViewTreePrimitive, Snapshot_NodesHaveAllFields) {
     EXPECT_THAT(Mat4ToArray(node1.local_from_world_transform),
                 testing::ElementsAre(0.5f, 0, 0, 0, 0, 0.5f, 0, 0, 0, 0, 0.5f, 0, 0, 0, 0, 0.5f));
     EXPECT_EQ(utils::ExtractKoid(*node1.view_ref), node1_koid);
+    ASSERT_TRUE(node1.gfx_is_rendering.has_value());
+    EXPECT_TRUE(node1.gfx_is_rendering.value());
+    ASSERT_TRUE(node1.gfx_pixel_scale.has_value());
+    EXPECT_THAT(*node1.gfx_pixel_scale, testing::ElementsAre(1.f, 1.f));
+    ASSERT_TRUE(node1.gfx_inset.has_value());
+    EXPECT_FLOAT_EQ(node1.gfx_inset->top, 1.f);
+    EXPECT_FLOAT_EQ(node1.gfx_inset->left, 1.f);
+    EXPECT_FLOAT_EQ(node1.gfx_inset->bottom, 1.f);
+    EXPECT_FLOAT_EQ(node1.gfx_inset->right, 1.f);
   }
 
   {
@@ -879,6 +915,14 @@ TEST(ViewTreePrimitive, Snapshot_NodesHaveAllFields) {
     EXPECT_THAT(Mat4ToArray(node2.local_from_world_transform),
                 testing::ElementsAre(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1));
     EXPECT_EQ(utils::ExtractKoid(*node2.view_ref), node2_koid);
+    ASSERT_TRUE(node2.gfx_is_rendering.has_value());
+    EXPECT_TRUE(node2.gfx_is_rendering.value());
+    EXPECT_THAT(*node2.gfx_pixel_scale, testing::ElementsAre(1.f, 1.f));
+    ASSERT_TRUE(node2.gfx_inset.has_value());
+    EXPECT_FLOAT_EQ(node2.gfx_inset->top, 1.f);
+    EXPECT_FLOAT_EQ(node2.gfx_inset->left, 1.f);
+    EXPECT_FLOAT_EQ(node2.gfx_inset->bottom, 1.f);
+    EXPECT_FLOAT_EQ(node2.gfx_inset->right, 1.f);
   }
 }
 

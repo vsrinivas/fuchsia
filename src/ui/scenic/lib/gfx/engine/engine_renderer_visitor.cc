@@ -61,6 +61,7 @@ void EngineRendererVisitor::Visit(ViewNode* r) {
   if (r->GetView() && view_is_rendering_element) {
     // TODO(fxbug.dev/24307) Add a test to ensure this signal isn't triggered when this
     // view is not rendering.
+    r->GetView()->set_is_rendering(true);
     r->GetView()->SignalRender();
   }
 

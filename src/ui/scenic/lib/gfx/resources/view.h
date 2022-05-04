@@ -119,6 +119,12 @@ class View final : public Resource {
   // Convenience accessor.
   zx_koid_t view_ref_koid() const;
 
+  bool is_rendering() const { return is_rendering_; }
+
+  void set_is_rendering(bool is_rendering) { is_rendering_ = is_rendering; }
+
+  fuchsia::math::InsetF inset() const { return inset_; }
+
  private:
   // TODO(fxbug.dev/46112): Remove friend usage.
   friend class ViewHolder;
@@ -142,6 +148,9 @@ class View final : public Resource {
 
   // Callback function when annotation ViewHolder is destroyed.
   void OnAnnotationViewHolderDestroyed(ViewHolder* view_holder);
+
+  fuchsia::math::InsetF GetInsetFromViewProperties(
+      const fuchsia::ui::gfx::ViewProperties& view_properties);
 
   std::optional<ViewLinker::ImportLink> link_;
   ViewHolder* view_holder_ = nullptr;
@@ -175,6 +184,14 @@ class View final : public Resource {
   fxl::WeakPtr<ViewTreeUpdater> view_tree_updater_;
 
   std::string debug_name_;
+
+  // Set to true in |EngineRendererVisitor::Visit| if a view has rendered some content. Set to false
+  // when a view is no longer part of the scene or has been destroyed. Used by
+  // GeometryProviderManager to filter rendered views.
+  bool is_rendering_ = false;
+
+  // The offset data for the view's bounding box.
+  fuchsia::math::InsetF inset_;
 
   fxl::WeakPtrFactory<View> weak_factory_;  // must be last
 };

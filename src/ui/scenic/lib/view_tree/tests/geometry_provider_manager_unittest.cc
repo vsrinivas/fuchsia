@@ -26,9 +26,11 @@ const auto fuog_MAX_VIEW_COUNT = fuchsia::ui::observation::geometry::MAX_VIEW_CO
 // Generates |num_snapshots| snapshots with |total_nodes| view nodes and triggers the geometry
 // provider manager to add the newly generated snapshots to all the registered endpoints.
 void PopulateEndpointsWithSnapshots(GeometryProviderManager& geometry_provider_manager,
-                                    uint32_t num_snapshots, uint64_t total_nodes) {
+                                    uint32_t num_snapshots, uint64_t total_nodes,
+                                    std::optional<bool> gfx_is_rendering = std::nullopt) {
   for (uint32_t i = 0; i < num_snapshots; i++) {
-    geometry_provider_manager.OnNewViewTreeSnapshot(SingleDepthViewTreeSnapshot(total_nodes));
+    geometry_provider_manager.OnNewViewTreeSnapshot(
+        SingleDepthViewTreeSnapshot(total_nodes, gfx_is_rendering));
   }
 }
 
@@ -339,22 +341,34 @@ TEST_F(GeometryProviderManagerTest, ExtractObservationSnapshotTest) {
   // Set up node_a.
   {
     const uint32_t width = 10, height = 10;
+    const float pixel_scale_x = 1.f, pixel_scale_y = 1.f;
+    const fuchsia::math::InsetF inset = {.top = 1.f, .right = 1.f, .bottom = 1.f, .left = 1.f};
     view_tree::BoundingBox bounding_box = {.min = {0, 0}, .max = {width, height}};
     node_a.bounding_box = std::move(bounding_box);
+    node_a.gfx_pixel_scale = {pixel_scale_x, pixel_scale_y};
+    node_a.gfx_inset = std::move(inset);
   }
 
   // Set up node_b.
   {
     const uint32_t width = 5, height = 5;
+    const float pixel_scale_x = 2.f, pixel_scale_y = 2.f;
+    const fuchsia::math::InsetF inset = {.top = 2.f, .right = 2.f, .bottom = 2.f, .left = 2.f};
     view_tree::BoundingBox bounding_box = {.min = {0, 0}, .max = {width, height}};
     node_b.bounding_box = std::move(bounding_box);
+    node_b.gfx_pixel_scale = {pixel_scale_x, pixel_scale_y};
+    node_b.gfx_inset = std::move(inset);
   }
 
   // Set up node_c.
   {
     const uint32_t width = 1, height = 1;
+    const float pixel_scale_x = 3.f, pixel_scale_y = 3.f;
+    const fuchsia::math::InsetF inset = {.top = 3.f, .right = 3.f, .bottom = 3.f, .left = 3.f};
     view_tree::BoundingBox bounding_box = {.min = {0, 0}, .max = {width, height}};
     node_c.bounding_box = std::move(bounding_box);
+    node_c.gfx_pixel_scale = {pixel_scale_x, pixel_scale_y};
+    node_c.gfx_inset = std::move(inset);
   }
 
   snapshot->root = node_a_koid;
@@ -385,6 +399,8 @@ TEST_F(GeometryProviderManagerTest, ExtractObservationSnapshotTest) {
           static_cast<float>(snapshot->view_tree[node_a_koid].bounding_box.max[0]);
       auto node_logical_height =
           static_cast<float>(snapshot->view_tree[node_a_koid].bounding_box.max[1]);
+      auto node_pixel_scale = snapshot->view_tree[node_a_koid].gfx_pixel_scale;
+      auto node_inset = snapshot->view_tree[node_a_koid].gfx_inset;
 
       // Minimum coordinates for a layout should be its origin and maximum coordinates should be
       // equal to the node's logical size.
@@ -392,7 +408,11 @@ TEST_F(GeometryProviderManagerTest, ExtractObservationSnapshotTest) {
       EXPECT_FLOAT_EQ(layout.extent.min.y, 0.);
       EXPECT_FLOAT_EQ(layout.extent.max.x, node_logical_width);
       EXPECT_FLOAT_EQ(layout.extent.max.y, node_logical_height);
-      EXPECT_THAT(layout.pixel_scale, testing::ElementsAre(1.f, 1.f));
+      EXPECT_THAT(layout.pixel_scale, testing::ElementsAreArray(*node_pixel_scale));
+      EXPECT_FLOAT_EQ(layout.inset.top, node_inset->top);
+      EXPECT_FLOAT_EQ(layout.inset.right, node_inset->right);
+      EXPECT_FLOAT_EQ(layout.inset.bottom, node_inset->bottom);
+      EXPECT_FLOAT_EQ(layout.inset.left, node_inset->left);
 
       ASSERT_TRUE(vd.has_extent_in_context());
       auto& extent_in_context = vd.extent_in_context();
@@ -431,12 +451,18 @@ TEST_F(GeometryProviderManagerTest, ExtractObservationSnapshotTest) {
           static_cast<float>(snapshot->view_tree[node_b_koid].bounding_box.max[0]);
       auto node_logical_height =
           static_cast<float>(snapshot->view_tree[node_b_koid].bounding_box.max[1]);
+      auto node_pixel_scale = snapshot->view_tree[node_b_koid].gfx_pixel_scale;
+      auto node_inset = snapshot->view_tree[node_b_koid].gfx_inset;
 
       EXPECT_FLOAT_EQ(layout.extent.min.x, 0.);
       EXPECT_FLOAT_EQ(layout.extent.min.y, 0.);
       EXPECT_FLOAT_EQ(layout.extent.max.x, node_logical_width);
       EXPECT_FLOAT_EQ(layout.extent.max.y, node_logical_height);
-      EXPECT_THAT(layout.pixel_scale, testing::ElementsAre(1.f, 1.f));
+      EXPECT_THAT(layout.pixel_scale, testing::ElementsAreArray(*node_pixel_scale));
+      EXPECT_FLOAT_EQ(layout.inset.top, node_inset->top);
+      EXPECT_FLOAT_EQ(layout.inset.right, node_inset->right);
+      EXPECT_FLOAT_EQ(layout.inset.bottom, node_inset->bottom);
+      EXPECT_FLOAT_EQ(layout.inset.left, node_inset->left);
 
       ASSERT_TRUE(vd.has_extent_in_context());
       auto& extent_in_context = vd.extent_in_context();
@@ -475,12 +501,18 @@ TEST_F(GeometryProviderManagerTest, ExtractObservationSnapshotTest) {
           static_cast<float>(snapshot->view_tree[node_c_koid].bounding_box.max[0]);
       auto node_logical_height =
           static_cast<float>(snapshot->view_tree[node_c_koid].bounding_box.max[1]);
+      auto node_pixel_scale = snapshot->view_tree[node_c_koid].gfx_pixel_scale;
+      auto node_inset = snapshot->view_tree[node_c_koid].gfx_inset;
 
       EXPECT_FLOAT_EQ(layout.extent.min.x, 0.);
       EXPECT_FLOAT_EQ(layout.extent.min.y, 0.);
       EXPECT_FLOAT_EQ(layout.extent.max.x, node_logical_width);
       EXPECT_FLOAT_EQ(layout.extent.max.y, node_logical_height);
-      EXPECT_THAT(layout.pixel_scale, testing::ElementsAre(1.f, 1.f));
+      EXPECT_THAT(layout.pixel_scale, testing::ElementsAreArray(*node_pixel_scale));
+      EXPECT_FLOAT_EQ(layout.inset.top, node_inset->top);
+      EXPECT_FLOAT_EQ(layout.inset.right, node_inset->right);
+      EXPECT_FLOAT_EQ(layout.inset.bottom, node_inset->bottom);
+      EXPECT_FLOAT_EQ(layout.inset.left, node_inset->left);
 
       ASSERT_TRUE(vd.has_extent_in_context());
       auto& extent_in_context = vd.extent_in_context();
@@ -546,6 +578,74 @@ TEST_F(GeometryProviderManagerTest, RegisterGlobalGeometryProviderTest) {
   // the global view tree.
   ASSERT_TRUE(client_result->updates()[0].has_views());
   EXPECT_EQ(client_result->updates()[0].views().size(), num_nodes);
+}
+
+// For GFX clients, the response of a Watch() call should only contain fuog_ViewDescriptors for the
+// view nodes that have rendered. However, in the case of flatland as views do not generate a
+// |is_rendering| signal, the view nodes present in a ViewTreeSnapshot will be present in a Watch()
+// call's response.
+TEST_F(GeometryProviderManagerTest, GfxIsRenderingTest) {
+  // |gfx_is_rendering| is not set which means that the view nodes belong to flatland instances.
+  // Hence |num_nodes| fuog_ViewDescriptors are present in the response.
+  {
+    std::optional<fuog_ProviderWatchResponse> client_result;
+    const uint32_t num_snapshots = 1;
+    const uint64_t num_nodes = 1;
+
+    PopulateEndpointsWithSnapshots(geometry_provider_manager_, num_snapshots, num_nodes);
+
+    client_->Watch([&client_result](auto response) { client_result = std::move(response); });
+    RunLoopUntilIdle();
+
+    EXPECT_TRUE(client_.is_bound());
+
+    ASSERT_TRUE(client_result.has_value());
+
+    EXPECT_EQ(client_result->updates().size(), num_snapshots);
+    EXPECT_EQ(client_result->updates()[0].views().size(), num_nodes);
+  }
+
+  // |gfx_is_rendering| is set as false which means the view nodes belonging to GFX instances have
+  // not rendered any content. Hence no fuog_ViewDescriptors are present in the response.
+  {
+    std::optional<fuog_ProviderWatchResponse> client_result;
+    const uint32_t num_snapshots = 1;
+    const uint64_t num_nodes = 1;
+
+    PopulateEndpointsWithSnapshots(geometry_provider_manager_, num_snapshots, num_nodes,
+                                   /*gfx_is_rendering*/ false);
+
+    client_->Watch([&client_result](auto response) { client_result = std::move(response); });
+    RunLoopUntilIdle();
+
+    EXPECT_TRUE(client_.is_bound());
+
+    ASSERT_TRUE(client_result.has_value());
+
+    EXPECT_EQ(client_result->updates().size(), num_snapshots);
+    EXPECT_TRUE(client_result->updates()[0].views().empty());
+  }
+
+  // |gfx_is_rendering| is set as true which means the view nodes belonging to GFX instances have
+  // rendered some content. Hence |num_nodes| fuog_ViewDescriptors are present in the response.
+  {
+    std::optional<fuog_ProviderWatchResponse> client_result;
+    const uint32_t num_snapshots = 1;
+    const uint64_t num_nodes = 1;
+
+    PopulateEndpointsWithSnapshots(geometry_provider_manager_, num_snapshots, num_nodes,
+                                   /*gfx_is_rendering*/ true);
+
+    client_->Watch([&client_result](auto response) { client_result = std::move(response); });
+    RunLoopUntilIdle();
+
+    EXPECT_TRUE(client_.is_bound());
+
+    ASSERT_TRUE(client_result.has_value());
+
+    EXPECT_EQ(client_result->updates().size(), num_snapshots);
+    EXPECT_EQ(client_result->updates()[0].views().size(), num_nodes);
+  }
 }
 
 }  // namespace geometry_provider_manager::test

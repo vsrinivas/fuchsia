@@ -140,6 +140,11 @@ void ViewHolder::OnSceneChanged() {
   } else {
     // View is no longer part of a scene and therefore cannot render to one.
     SetIsViewRendering(false);
+
+    if (view_) {
+      view_->set_is_rendering(false);
+    }
+
     // Reset the render event so that when the View is reattached to the scene
     // and its children render, this ViewHolder will get the signal.
     ResetRenderEvent();

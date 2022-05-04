@@ -8,6 +8,23 @@
 
 #include "src/ui/scenic/lib/utils/math.h"
 
+namespace {
+
+bool CompareInsetValues(std::optional<fuchsia::math::InsetF> inset1,
+                        std::optional<fuchsia::math::InsetF> inset2) {
+  if (!inset1.has_value() && !inset2.has_value()) {
+    return true;
+  } else if ((inset1.has_value() && !inset2.has_value()) ||
+             (!inset1.has_value() && inset2.has_value())) {
+    return false;
+  } else {
+    return inset1->top == inset2->top && inset1->right == inset2->right &&
+           inset1->bottom == inset2->bottom && inset1->left == inset2->left;
+  }
+}
+
+}  // namespace
+
 namespace view_tree {
 
 std::vector<zx_koid_t> Snapshot::HitTest(zx_koid_t start_node, glm::vec2 world_space_point,
@@ -125,6 +142,35 @@ std::ostream& operator<<(std::ostream& os, const Snapshot& snapshot) {
   }
 
   return os;
+}
+
+bool ViewNode::operator==(const ViewNode& other) const {
+  if (parent != other.parent) {
+    return false;
+  } else if (bounding_box != other.bounding_box) {
+    return false;
+  } else if (local_from_world_transform != other.local_from_world_transform) {
+    return false;
+  } else if (is_focusable != other.is_focusable) {
+    return false;
+  } else if (children != other.children) {
+    return false;
+  } else if ((view_ref && !other.view_ref) || (!view_ref && other.view_ref)) {
+    return false;
+  } else if (view_ref && other.view_ref &&
+             utils::ExtractKoid(*view_ref) != utils::ExtractKoid(*other.view_ref)) {
+    return false;
+  } else if (debug_name != other.debug_name) {
+    return false;
+  } else if (gfx_is_rendering != other.gfx_is_rendering) {
+    return false;
+  } else if (gfx_pixel_scale != other.gfx_pixel_scale) {
+    return false;
+  } else if (!CompareInsetValues(gfx_inset, other.gfx_inset)) {
+    return false;
+  } else {
+    return true;
+  }
 }
 
 }  // namespace view_tree

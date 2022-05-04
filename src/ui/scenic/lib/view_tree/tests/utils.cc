@@ -43,7 +43,8 @@ std::shared_ptr<const view_tree::Snapshot> FourNodeSnapshot() {
   return snapshot;
 }
 
-std::shared_ptr<const view_tree::Snapshot> SingleDepthViewTreeSnapshot(uint64_t total_nodes) {
+std::shared_ptr<const view_tree::Snapshot> SingleDepthViewTreeSnapshot(
+    uint64_t total_nodes, std::optional<bool> gfx_is_rendering) {
   FX_DCHECK(total_nodes > 0) << "precondition";
   auto snapshot = std::make_shared<view_tree::Snapshot>();
   const float width = 1, height = 1;
@@ -51,11 +52,17 @@ std::shared_ptr<const view_tree::Snapshot> SingleDepthViewTreeSnapshot(uint64_t 
   auto& view_tree = snapshot->view_tree;
   view_tree[kNodeA] = ViewNode{.parent = ZX_KOID_INVALID, .children = {}};
   view_tree[kNodeA].bounding_box = {.min = {0, 0}, .max = {{width, height}}};
+  if (gfx_is_rendering.has_value()) {
+    view_tree[kNodeA].gfx_is_rendering = gfx_is_rendering;
+  }
   for (zx_koid_t i = 0; i < total_nodes - 1; i++) {
     // The minimum node_id for a child can be 2 since node_id of the root is 1.
     view_tree[kNodeA].children.insert(i + 2);
     view_tree[i + 2] = ViewNode{.parent = kNodeA};
     view_tree[i + 2].bounding_box = {.min = {0, 0}, .max = {{width, height}}};
+    if (gfx_is_rendering.has_value()) {
+      view_tree[i + 2].gfx_is_rendering = gfx_is_rendering;
+    }
   }
   return snapshot;
 }

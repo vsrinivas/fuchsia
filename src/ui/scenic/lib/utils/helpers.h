@@ -11,6 +11,8 @@
 
 namespace utils {
 
+constexpr std::array<float, 2> kDefaultPixelScale = {1.f, 1.f};
+
 // Helper for creating a Present2Args fidl struct.
 fuchsia::ui::scenic::Present2Args CreatePresent2Args(zx_time_t requested_presentation_time,
                                                      std::vector<zx::event> acquire_fences,

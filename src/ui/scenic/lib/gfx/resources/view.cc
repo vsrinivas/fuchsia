@@ -16,6 +16,7 @@
 #include "src/ui/scenic/lib/gfx/resources/view_holder.h"
 #include "src/ui/scenic/lib/gfx/util/validate_eventpair.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -128,6 +129,28 @@ View::View(Session* session, ResourceId id, ViewRefControl control_ref, ViewRef 
           }
         };
 
+    fit::function<bool()> is_rendering = [weak_ptr = GetWeakPtr()] {
+      if (weak_ptr) {
+        return weak_ptr->is_rendering();
+      }
+      return false;
+    };
+
+    fit::function<std::array<float, 2>()> pixel_scale = [weak_ptr = GetWeakPtr()] {
+      if (weak_ptr) {
+        const auto& metrics = weak_ptr->view_holder()->reported_metrics();
+        return std::array<float, 2>{metrics.scale_x, metrics.scale_y};
+      }
+      return utils::kDefaultPixelScale;
+    };
+
+    fit::function<fuchsia::math::InsetF()> inset = [weak_ptr = GetWeakPtr()] {
+      if (weak_ptr) {
+        return weak_ptr->inset();
+      }
+      return fuchsia::math::InsetF();
+    };
+
     FX_DCHECK(session->id() != 0u) << "GFX-side invariant for ViewTree";
     if (view_tree_updater_) {
       view_tree_updater_->AddUpdate(
@@ -140,7 +163,10 @@ View::View(Session* session, ResourceId id, ViewRefControl control_ref, ViewRef 
                              .bounding_box = std::move(bounding_box),
                              .hit_test = std::move(hit_test),
                              .add_annotation_view_holder = std::move(create_callback),
-                             .session_id = session->id()});
+                             .session_id = session->id(),
+                             .is_rendering = std::move(is_rendering),
+                             .pixel_scale = std::move(pixel_scale),
+                             .inset = std::move(inset)});
     }
   }
 
@@ -249,6 +275,8 @@ void View::BroadcastViewPropertiesChangedEvent(fuchsia::ui::gfx::ViewProperties 
     annotation_view_holder->SetViewProperties(new_annotation_view_properties,
                                               error_reporter_.get());
   }
+
+  inset_ = GetInsetFromViewProperties(view_properties);
 }
 
 void View::OnAnnotationViewHolderDestroyed(ViewHolder* view_holder) {
@@ -280,6 +308,14 @@ bool View::RemoveAnnotationViewHolder(ViewHolderPtr view_holder) {
   view_holder->Detach(error_reporter_.get());
   annotation_view_holders_.erase(view_holder);
   return true;
+}
+
+fuchsia::math::InsetF View::GetInsetFromViewProperties(
+    const fuchsia::ui::gfx::ViewProperties& view_properties) {
+  return {.top = view_properties.inset_from_min.y,
+          .right = view_properties.inset_from_max.x,
+          .bottom = view_properties.inset_from_max.y,
+          .left = view_properties.inset_from_min.x};
 }
 
 }  // namespace gfx

@@ -57,14 +57,19 @@ struct ViewNode {
   // Session name that created this view.
   std::string debug_name;
 
-  bool operator==(const ViewNode& other) const {
-    return parent == other.parent && bounding_box == other.bounding_box &&
-           local_from_world_transform == other.local_from_world_transform &&
-           is_focusable == other.is_focusable && children == other.children &&
-           ((!view_ref && !other.view_ref) ||
-            utils::ExtractKoid(*view_ref) == utils::ExtractKoid(*other.view_ref)) &&
-           debug_name == other.debug_name;
-  }
+  // Set to true when a GFX view has generated the |is_rendering| signal. For flatland views, this
+  // field is set to |std::nullopt|.
+  std::optional<bool> gfx_is_rendering;
+
+  // The conversion ratio from physical pixels (of a display) to logical pixels (of the coordinate
+  // system of the view). For flatland views, this field is set to |std::nullopt|.
+  std::optional<std::array<float, 2>> gfx_pixel_scale;
+
+  // The offset data for the view's bounding box, in the coordinate system of that view. For
+  // flatland views, this field is set to |std::nullopt|.
+  std::optional<fuchsia::math::InsetF> gfx_inset;
+
+  bool operator==(const ViewNode& other) const;
 };
 
 // The results of a hit test from a single SubtreeHitTester.

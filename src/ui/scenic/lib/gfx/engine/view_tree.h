@@ -107,6 +107,15 @@ class ViewTree {
     fit::function<void(fxl::RefPtr<ViewHolder>)> add_annotation_view_holder;
 
     scheduling::SessionId session_id = 0u;  // Default value: an invalid ID.
+
+    // Park a callback that returns whether a view has rendered some content.
+    fit::function<bool()> is_rendering;
+
+    // Park a callback that returns the pixel scale for a view.
+    fit::function<std::array<float, 2>()> pixel_scale;
+
+    // Park a callback that returns the inset values for a view's bounding box.
+    fit::function<fuchsia::math::InsetF()> inset;
   };
 
   // Return parent's KOID, if valid. Otherwise return std::nullopt.
@@ -267,6 +276,9 @@ struct ViewTreeNewRefNode {
   // TODO(fxbug.dev/59407): Disentangle the annotation logic from ViewTree.
   fit::function<void(fxl::RefPtr<ViewHolder>)> add_annotation_view_holder;
   scheduling::SessionId session_id = 0u;
+  fit::function<bool()> is_rendering;
+  fit::function<std::array<float, 2>()> pixel_scale;
+  fit::function<fuchsia::math::InsetF()> inset;
 };
 
 struct ViewTreeNewAttachNode {

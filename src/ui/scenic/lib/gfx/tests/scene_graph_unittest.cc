@@ -14,15 +14,19 @@ namespace scenic_impl::gfx::test {
 using SceneGraphTest = SessionTest;
 
 ViewTreeNewRefNode ViewTreeNewRefNodeTemplate() {
-  return {
-      .may_receive_focus = [] { return true; },
-      .is_input_suppressed = [] { return false; },
-      .global_transform = [] { return glm::mat4(1.f); },
-      .bounding_box = [] { return escher::BoundingBox(); },
-      .hit_test = [](auto...) {},
-      .add_annotation_view_holder = [](auto) {},
-      .session_id = 1u,
-  };
+  return {.may_receive_focus = [] { return true; },
+          .is_input_suppressed = [] { return false; },
+          .global_transform = [] { return glm::mat4(1.f); },
+          .bounding_box = [] { return escher::BoundingBox(); },
+          .hit_test = [](auto...) {},
+          .add_annotation_view_holder = [](auto) {},
+          .session_id = 1u,
+          .is_rendering = [] { return true; },
+          .pixel_scale =
+              [] {
+                return std::array<float, 2>{1.f, 1.f};
+              },
+          .inset = [] { return fuchsia::math::InsetF{}; }};
 }
 
 bool ContainsCompositor(const std::vector<CompositorWeakPtr>& compositors, Compositor* compositor) {

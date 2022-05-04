@@ -12,6 +12,7 @@
 #include <measure_tape/hlcpp/measure_tape_for_geometry.h>
 
 #include "src/ui/scenic/lib/gfx/util/time.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 #include "src/ui/scenic/lib/utils/math.h"
 
 namespace view_tree {
@@ -87,6 +88,11 @@ fuog_ViewTreeSnapshotPtr GeometryProviderManager::ExtractObservationSnapshot(
     context_view = snapshot->root;
   }
 
+  // Empty snapshot case.
+  if (context_view == ZX_KOID_INVALID && snapshot->view_tree.empty()) {
+    return view_tree_snapshot;
+  }
+
   // Perform a depth-first search on the view tree to populate |views| with
   // fuog_ViewDescriptors.
   FX_DCHECK(snapshot->view_tree.count(context_view) > 0) << "precondition";
@@ -98,19 +104,28 @@ fuog_ViewTreeSnapshotPtr GeometryProviderManager::ExtractObservationSnapshot(
     stack.pop();
     FX_DCHECK(visited.count(view_node) == 0) << "Cycle detected in the view tree";
     visited.insert(view_node);
+    const auto& view = snapshot->view_tree.at(view_node);
 
     // Do not set a view vector in the |ViewTreeSnapshot| as the size of |views| will exceed
     // fuog_MAX_VIEW_COUNT, since the number of |children| of the |view_node| exceeds
     // fuog_MAX_VIEW_COUNT.
-    if (snapshot->view_tree.at(view_node).children.size() > fuog_MAX_VIEW_COUNT) {
+    if (view.children.size() > fuog_MAX_VIEW_COUNT) {
       views_exceeded = true;
       break;
     }
 
-    for (auto child : snapshot->view_tree.at(view_node).children) {
+    for (auto child : view.children) {
       stack.push(child);
     }
-    views.push_back(ExtractViewDescriptor(view_node, context_view, snapshot));
+
+    // Add |ViewDescriptor|s for nodes created by flatland instances in |views|. For GFX instances,
+    // add the |ViewDescriptor|s for nodes that have generated the |is_rendering| signal.
+    const bool is_flatland_view = !view.gfx_is_rendering.has_value();
+    const bool gfx_rendered_view =
+        view.gfx_is_rendering.has_value() && view.gfx_is_rendering.value();
+    if (is_flatland_view || gfx_rendered_view) {
+      views.push_back(ExtractViewDescriptor(view_node, context_view, snapshot));
+    }
 
     // Do not set a view vector in the |ViewTreeSnapshot| as the size of |views| will exceed
     // fuog_MAX_VIEW_COUNT, since the stack is not empty.
@@ -131,13 +146,22 @@ fuog_ViewDescriptor GeometryProviderManager::ExtractViewDescriptor(
     std::shared_ptr<const view_tree::Snapshot> snapshot) {
   auto& view_node = snapshot->view_tree.at(view_ref_koid);
 
+  std::array<float, 2> pixel_scale = utils::kDefaultPixelScale;
+  if (view_node.gfx_pixel_scale.has_value()) {
+    pixel_scale = view_node.gfx_pixel_scale.value();
+  }
+
+  fuchsia::math::InsetF inset;
+  if (view_node.gfx_inset.has_value()) {
+    inset = view_node.gfx_inset.value();
+  }
+
   // The coordinates of a view_node's bounding box.
   fuog_Layout layout = {
       .extent = {.min = {view_node.bounding_box.min[0], view_node.bounding_box.min[1]},
                  .max = {view_node.bounding_box.max[0], view_node.bounding_box.max[1]}},
-      .pixel_scale = {1.0f, 1.0f},
-      // TODO(fxb/92073): Populate this value from gfx's inset.
-      .inset = {}};
+      .pixel_scale = std::move(pixel_scale),
+      .inset = std::move(inset)};
 
   auto world_from_local_transform = glm::inverse(view_node.local_from_world_transform);
   auto extent_in_context_transform =
