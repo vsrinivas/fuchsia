@@ -90,6 +90,29 @@ type ScanEnd = struct {
     code ScanResultCode;
 };
 
+type ConnectRequest = struct {
+    selected_bss internal.BssDescription;
+    connect_failure_timeout uint32;
+
+    /// Additional parameters specific to the authentication exchange.
+    auth_type AuthenticationTypes;
+    // sae_password is ignored except when SAE_DRIVER_AUTH is enabled and the
+    // auth_type is SAE.
+    sae_password vector<uint8>:MAX;
+
+    /// Additional parameters specific to the association exchange.
+    security_ie vector<uint8>:ieee80211.WLAN_IE_MAX_LEN;
+};
+
+type ConnectConfirm = struct {
+    peer_sta_address ieee80211.MacAddr;
+    result_code ieee80211.StatusCode;
+
+    // These fields are only valid if the result is success.
+    association_id uint16;
+    association_ies vector<uint8>:MAX;
+};
+
 // MLME-JOIN.request (IEEE Std 802.11-2016, 6.3.4.2)
 
 type JoinRequest = struct {
@@ -540,6 +563,12 @@ protocol MLME {
         end ScanEnd;
     });
 
+    ConnectReq(struct {
+        req ConnectRequest;
+    });
+    -> ConnectConf(struct {
+        resp ConnectConfirm;
+    });
     JoinReq(struct {
         req JoinRequest;
     });

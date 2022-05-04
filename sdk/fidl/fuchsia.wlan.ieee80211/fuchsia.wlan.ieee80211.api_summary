@@ -210,5 +210,6 @@ struct/member fuchsia.wlan.ieee80211/VhtCapabilitiesFields.supported_vht_mcs_and
 struct/member fuchsia.wlan.ieee80211/VhtCapabilitiesFields.vht_capability_info uint32
 struct fuchsia.wlan.ieee80211/VhtCapabilitiesFields
 const fuchsia.wlan.ieee80211/WLAN_IE_BODY_MAX_LEN uint32 255
+const fuchsia.wlan.ieee80211/WLAN_IE_MAX_LEN uint32 257
 const fuchsia.wlan.ieee80211/WLAN_MSDU_MAX_LEN uint32 2304
 library fuchsia.wlan.ieee80211

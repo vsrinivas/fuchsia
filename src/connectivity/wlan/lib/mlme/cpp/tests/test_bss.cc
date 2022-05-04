@@ -130,6 +130,17 @@ wlan_mlme::StopRequest CreateStopRequest() {
   return req;
 }
 
+wlan_mlme::ConnectRequest CreateConnectRequest(bool rsne, wlan_channel_t channel) {
+  wlan_mlme::ConnectRequest req;
+  req.selected_bss = CreateBssDescription(rsne, channel);
+  req.connect_failure_timeout = kConnectFailureTimeout;
+  req.auth_type = wlan_mlme::AuthenticationTypes::OPEN_SYSTEM;
+  if (rsne) {
+    req.security_ie = std::vector<uint8_t>(kRsne, kRsne + sizeof(kRsne));
+  }
+  return req;
+}
+
 wlan_mlme::JoinRequest CreateJoinRequest(bool rsn) {
   wlan_mlme::JoinRequest req;
   req.join_failure_timeout = kJoinTimeout;

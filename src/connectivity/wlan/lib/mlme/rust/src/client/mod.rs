@@ -10,6 +10,8 @@ mod lost_bss;
 mod scanner;
 mod state;
 mod stats;
+#[cfg(test)]
+mod test_utils;
 
 use {
     crate::{
@@ -26,14 +28,12 @@ use {
     banjo_fuchsia_wlan_common as banjo_common, banjo_fuchsia_wlan_internal as banjo_internal,
     channel_listener::{ChannelListenerSource, ChannelListenerState},
     channel_scheduler::ChannelScheduler,
-    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
-    fidl_fuchsia_wlan_minstrel as fidl_minstrel, fidl_fuchsia_wlan_mlme as fidl_mlme,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_minstrel as fidl_minstrel,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     ieee80211::{Bssid, MacAddr, Ssid},
     log::{error, warn},
     scanner::Scanner,
     state::States,
-    static_assertions::assert_eq_size,
     std::convert::TryInto,
     wlan_common::{
         appendable::Appendable,
@@ -42,16 +42,15 @@ use {
         capabilities::{derive_join_capabilities, ClientCapabilities},
         channel::Channel,
         data_writer,
-        ie::{self, parse_ht_capabilities, parse_vht_capabilities, rsn::rsne, Id, Reader},
+        ie::{self, rsn::rsne, Id, Reader},
         mac::{self, Aid, CapabilityInfo, PowerState},
         mgmt_writer,
         sequence::SequenceManager,
-        time::TimeUnit,
         timer::{EventId, Timer},
         wmm,
     },
     wlan_frame_writer::{write_frame, write_frame_with_dynamic_buf, write_frame_with_fixed_buf},
-    zerocopy::{AsBytes, ByteSlice},
+    zerocopy::ByteSlice,
 };
 
 pub use scanner::ScanError;
@@ -60,16 +59,39 @@ pub use scanner::ScanError;
 /// TODO(fxbug.dev/34845): Evaluate whether EAPOL size restriction is needed.
 const MAX_EAPOL_FRAME_LEN: usize = 255;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TimedEvent {
-    /// Authentication timed out. AP did not complete authentication in time.
-    Authenticating,
-    /// Association timed out. AP did not complete association in time.
-    Associating,
     ChannelScheduler,
     ScannerProbeDelay(banjo_common::WlanChannel),
+    /// Connecting to AP timed out.
+    Connecting,
+    /// Timeout for reassociating after a disassociation.
+    Reassociating,
     /// Association status update includes checking for auto deauthentication due to beacon loss
     /// and report signal strength
+    AssociationStatusCheck,
+}
+
+#[cfg(test)]
+impl TimedEvent {
+    fn class(&self) -> TimedEventClass {
+        match self {
+            Self::ChannelScheduler => TimedEventClass::ChannelScheduler,
+            Self::ScannerProbeDelay(_) => TimedEventClass::ScannerProbeDelay,
+            Self::Connecting => TimedEventClass::Connecting,
+            Self::Reassociating => TimedEventClass::Reassociating,
+            Self::AssociationStatusCheck => TimedEventClass::AssociationStatusCheck,
+        }
+    }
+}
+
+#[cfg(test)]
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub enum TimedEventClass {
+    ChannelScheduler,
+    ScannerProbeDelay,
+    Connecting,
+    Reassociating,
     AssociationStatusCheck,
 }
 
@@ -217,7 +239,7 @@ impl ClientMlme {
         match msg {
             // Handle non station specific MLME messages first (Join, Scan, etc.)
             MlmeMsg::StartScan { req, .. } => Ok(self.on_sme_scan(req)),
-            MlmeMsg::JoinReq { req, .. } => self.on_sme_join(req),
+            MlmeMsg::ConnectReq { req, .. } => self.on_sme_connect(req),
             MlmeMsg::StatsQueryReq { .. } => self.on_sme_stats_query(),
             MlmeMsg::GetIfaceCounterStats { responder } => {
                 self.on_sme_get_iface_counter_stats(responder)
@@ -289,40 +311,53 @@ impl ClientMlme {
         self.scanner.bind(&mut self.ctx).handle_scan_complete(status, scan_id);
     }
 
-    fn on_sme_join(&mut self, req: fidl_mlme::JoinRequest) -> Result<(), Error> {
-        let bss: BssDescription = req.selected_bss.try_into().map_err(|e| {
-            Error::Status(format!("Error parsing BssDescription: {:?}", e), zx::Status::IO_INVALID)
-        })?;
+    fn on_sme_connect(&mut self, req: fidl_mlme::ConnectRequest) -> Result<(), Error> {
+        let bssid = req.selected_bss.bssid;
+        let result = match req.selected_bss.try_into() {
+            Ok(bss) => {
+                let req = ParsedConnectRequest {
+                    selected_bss: bss,
+                    connect_failure_timeout: req.connect_failure_timeout,
+                    auth_type: req.auth_type,
+                    sae_password: req.sae_password,
+                    security_ie: req.security_ie,
+                };
+                self.join_device(&req.selected_bss).map(|cap| (req, cap))
+            }
+            Err(e) => Err(Error::Status(
+                format!("Error parsing BssDescription: {:?}", e),
+                zx::Status::IO_INVALID,
+            )),
+        };
 
-        match self.join_device(&bss) {
-            Ok(client_capabilities) => {
+        match result {
+            Ok((req, client_capabilities)) => {
                 self.sta.replace(Client::new(
-                    bss.ssid.clone(),
-                    bss.bssid,
+                    req,
                     self.ctx.device.wlan_softmac_info().sta_addr,
-                    bss.beacon_period,
                     client_capabilities,
-                    bss.rsne().is_some()
-                    // TODO (fxb/61020): Add detection of WPA1 in softmac for testing
-                    // purposes only. In particular, connect-to-wpa1-network relies
-                    // on this half of the OR statement.
-                        || bss.find_wpa_ie().is_some(),
                 ));
-                self.ctx
-                    .device
-                    .mlme_control_handle()
-                    .send_join_conf(&mut fidl_mlme::JoinConfirm {
-                        result_code: fidl_ieee80211::StatusCode::Success,
-                    })
-                    .map_err(|e| e.into())
+                if let Some(sta) = &mut self.sta {
+                    sta.bind(
+                        &mut self.ctx,
+                        &mut self.scanner,
+                        &mut self.chan_sched,
+                        &mut self.channel_state,
+                    )
+                    .start_connecting();
+                }
+                Ok(())
             }
             Err(e) => {
                 error!("Error setting up device for join: {}", e);
                 // TODO(fxbug.dev/44317): Only one failure code defined in IEEE 802.11-2016 6.3.4.3
                 // Can we do better?
-                self.ctx.device.mlme_control_handle().send_join_conf(
-                    &mut fidl_mlme::JoinConfirm {
+                self.ctx.device.mlme_control_handle().send_connect_conf(
+                    &mut fidl_mlme::ConnectConfirm {
+                        peer_sta_address: bssid,
                         result_code: fidl_ieee80211::StatusCode::JoinFailure,
+                        association_id: 0,
+                        association_ies: vec![],
                     },
                 )?;
                 Err(e)
@@ -507,32 +542,45 @@ impl ClientMlme {
 /// machine or track negotiated capabilities.
 pub struct Client {
     state: Option<States>,
-    pub ssid: Ssid,
-    pub bssid: Bssid,
+    pub connect_req: ParsedConnectRequest,
     pub iface_mac: MacAddr,
-    beacon_period: u16,
     pub client_capabilities: ClientCapabilities,
-    pub eapol_required: bool,
+    pub connect_timeout: Option<EventId>,
 }
 
 impl Client {
     pub fn new(
-        ssid: Ssid,
-        bssid: Bssid,
+        connect_req: ParsedConnectRequest,
         iface_mac: MacAddr,
-        beacon_period: u16,
         client_capabilities: ClientCapabilities,
-        eapol_required: bool,
     ) -> Self {
         Self {
             state: Some(States::new_initial()),
-            ssid,
-            bssid,
+            connect_req,
             iface_mac,
-            beacon_period,
             client_capabilities,
-            eapol_required,
+            connect_timeout: None,
         }
+    }
+
+    pub fn ssid(&self) -> &Ssid {
+        &self.connect_req.selected_bss.ssid
+    }
+
+    pub fn bssid(&self) -> Bssid {
+        self.connect_req.selected_bss.bssid
+    }
+
+    pub fn beacon_period(&self) -> u16 {
+        self.connect_req.selected_bss.beacon_period
+    }
+
+    pub fn eapol_required(&self) -> bool {
+        self.connect_req.selected_bss.rsne().is_some()
+        // TODO (fxb/61020): Add detection of WPA1 in softmac for testing
+        // purposes only. In particular, connect-to-wpa1-network relies
+        // on this half of the OR statement.
+            || self.connect_req.selected_bss.find_wpa_ie().is_some()
     }
 
     pub fn bind<'a>(
@@ -579,11 +627,11 @@ impl Client {
                         .with_power_mgmt(state)
                         .with_to_ds(true),
                     duration: 0,
-                    addr1: self.bssid.0,
+                    addr1: self.bssid().0,
                     addr2: self.iface_mac,
-                    addr3: self.bssid.0,
+                    addr3: self.bssid().0,
                     seq_ctrl: mac::SequenceControl(0)
-                        .with_seq_num(ctx.seq_mgr.next_sns1(&self.bssid.0) as u16)
+                        .with_seq_num(ctx.seq_mgr.next_sns1(&self.bssid().0) as u16)
                 },
             },
         })?;
@@ -607,7 +655,7 @@ impl Client {
             // Control frames are not supported. Drop them.
             _ => return false,
         };
-        src_addr.map_or(false, |src_addr| src_addr == self.bssid.0)
+        src_addr.map_or(false, |src_addr| src_addr == self.bssid().0)
             && (!is_unicast(dst_addr) || dst_addr == self.iface_mac)
     }
 }
@@ -629,8 +677,6 @@ pub struct BoundClient<'a> {
 }
 
 impl<'a> akm_algorithm::AkmAction for BoundClient<'a> {
-    type EventId = EventId;
-
     fn send_auth_frame(
         &mut self,
         auth_type: mac::AuthAlgorithmNumber,
@@ -652,10 +698,6 @@ impl<'a> akm_algorithm::AkmAction for BoundClient<'a> {
 
     fn forward_sae_handshake_ind(&mut self) {
         self.forward_sae_handshake_ind()
-    }
-
-    fn schedule_auth_timeout(&mut self, duration: TimeUnit) -> EventId {
-        self.ctx.timer.schedule_after(duration.into(), TimedEvent::Authenticating)
     }
 }
 
@@ -696,10 +738,10 @@ impl<'a> BoundClient<'a> {
                     mac::FrameControl(0)
                         .with_frame_type(mac::FrameType::MGMT)
                         .with_mgmt_subtype(mac::MgmtSubtype::AUTH),
-                    self.sta.bssid,
+                    self.sta.bssid(),
                     self.sta.iface_mac,
                     mac::SequenceControl(0)
-                        .with_seq_num(self.ctx.seq_mgr.next_sns1(&self.sta.bssid.0) as u16)
+                        .with_seq_num(self.ctx.seq_mgr.next_sns1(&self.sta.bssid().0) as u16)
                 ),
                 mac::AuthHdr: &mac::AuthHdr {
                     auth_alg_num: auth_type,
@@ -726,25 +768,25 @@ impl<'a> BoundClient<'a> {
 
     /// Sends an association request frame based on device capability.
     // TODO(fxbug.dev/39148): Use an IE set instead of individual IEs.
-    pub fn send_assoc_req_frame(
-        &mut self,
-        capability_info: u16,
-        rates: &[u8],
-        rsne: &[u8],
-        ht_cap: &[u8],
-        vht_cap: &[u8],
-    ) -> Result<(), Error> {
-        let ssid = self.sta.ssid.clone();
+    pub fn send_assoc_req_frame(&mut self) -> Result<(), Error> {
+        let ssid = self.sta.ssid().clone();
+        let cap = &self.sta.client_capabilities.0;
+        let capability_info = cap.capability_info.0;
+        let rates: Vec<u8> = cap.rates.iter().map(|r| r.rate()).collect();
+        let ht_cap = cap.ht_cap;
+        let vht_cap = cap.vht_cap;
+        let security_ie = self.sta.connect_req.security_ie.clone();
+
         let (buf, bytes_written) = write_frame!(&mut self.ctx.buf_provider, {
             headers: {
                 mac::MgmtHdr: &mgmt_writer::mgmt_hdr_to_ap(
                     mac::FrameControl(0)
                         .with_frame_type(mac::FrameType::MGMT)
                         .with_mgmt_subtype(mac::MgmtSubtype::ASSOC_REQ),
-                    self.sta.bssid,
+                    self.sta.bssid(),
                     self.sta.iface_mac,
                     mac::SequenceControl(0)
-                        .with_seq_num(self.ctx.seq_mgr.next_sns1(&self.sta.bssid.0) as u16)
+                        .with_seq_num(self.ctx.seq_mgr.next_sns1(&self.sta.bssid().0) as u16)
                 ),
                 mac::AssocReqHdr: &mac::AssocReqHdr {
                     capabilities: mac::CapabilityInfo(capability_info),
@@ -755,17 +797,13 @@ impl<'a> BoundClient<'a> {
                 ssid: ssid,
                 supported_rates: rates,
                 extended_supported_rates: {/* continue rates */},
-                rsne?: if !rsne.is_empty() {
-                    rsne::from_bytes(rsne)
-                        .map_err(|e| format_err!("error parsing rsne {:?} : {:?}", rsne, e))?
+                rsne?: if !security_ie.is_empty() && security_ie[0] == ie::Id::RSNE.0 {
+                    rsne::from_bytes(&security_ie[..])
+                        .map_err(|e| format_err!("error parsing rsne {:?} : {:?}", security_ie, e))?
                         .1
                 },
-                ht_cap?: if !ht_cap.is_empty() {
-                    *parse_ht_capabilities(ht_cap)?
-                },
-                vht_cap?: if !vht_cap.is_empty() {
-                    *parse_vht_capabilities(vht_cap)?
-                },
+                ht_cap?: ht_cap,
+                vht_cap?: vht_cap,
             },
         })?;
         let out_buf = OutBuf::from(buf, bytes_written);
@@ -785,10 +823,10 @@ impl<'a> BoundClient<'a> {
                     mac::FrameControl(0)
                         .with_frame_type(mac::FrameType::DATA)
                         .with_data_subtype(mac::DataSubtype(0).with_null(true)),
-                    self.sta.bssid,
+                    self.sta.bssid(),
                     self.sta.iface_mac,
                     mac::SequenceControl(0)
-                        .with_seq_num(self.ctx.seq_mgr.next_sns1(&self.sta.bssid.0) as u16)
+                        .with_seq_num(self.ctx.seq_mgr.next_sns1(&self.sta.bssid().0) as u16)
                 ),
             },
         })?;
@@ -806,10 +844,10 @@ impl<'a> BoundClient<'a> {
                     mac::FrameControl(0)
                         .with_frame_type(mac::FrameType::MGMT)
                         .with_mgmt_subtype(mac::MgmtSubtype::DEAUTH),
-                    self.sta.bssid,
+                    self.sta.bssid(),
                     self.sta.iface_mac,
                     mac::SequenceControl(0)
-                        .with_seq_num(self.ctx.seq_mgr.next_sns1(&self.sta.bssid.0) as u16)
+                        .with_seq_num(self.ctx.seq_mgr.next_sns1(&self.sta.bssid().0) as u16)
                 ),
                 mac::DeauthHdr: &mac::DeauthHdr {
                     reason_code,
@@ -855,10 +893,10 @@ impl<'a> BoundClient<'a> {
         let to_ds = true;
         let from_ds = src != self.sta.iface_mac;
         // Detect when SA != TA, in which case we use addr4.
-        let addr1 = self.sta.bssid.0;
+        let addr1 = self.sta.bssid().0;
         let addr2 = self.sta.iface_mac;
         let addr3 = match (to_ds, from_ds) {
-            (false, false) => self.sta.bssid.0,
+            (false, false) => self.sta.bssid().0,
             (false, true) => src,
             (true, _) => dst,
         };
@@ -976,7 +1014,7 @@ impl<'a> BoundClient<'a> {
                     // IEEE 802.11-2016 9.3.1.5 states the ID in the PS-Poll frame is the
                     // association ID with the 2 MSBs set to 1.
                     masked_aid: aid | PS_POLL_ID_MASK,
-                    bssid: self.sta.bssid,
+                    bssid: self.sta.bssid(),
                     ta: self.sta.iface_mac,
                 },
             },
@@ -1009,77 +1047,43 @@ impl<'a> BoundClient<'a> {
         result
     }
 
+    pub fn start_connecting(&mut self) {
+        // Safe: |state| is never None and always replaced with Some(..).
+        let next_state = self.sta.state.take().unwrap().start_connecting(self);
+        self.sta.state.replace(next_state);
+    }
+
     pub fn handle_mlme_msg(&mut self, msg: fidl_mlme::MlmeRequest) {
         // Safe: |state| is never None and always replaced with Some(..).
         let next_state = self.sta.state.take().unwrap().handle_mlme_msg(self, msg);
         self.sta.state.replace(next_state);
     }
 
-    /// Sends an MLME-AUTHENTICATE.confirm message to the SME with authentication type
-    /// `Open System` as only open authentication is supported.
-    fn send_authenticate_conf(
-        &mut self,
-        auth_type: fidl_mlme::AuthenticationTypes,
-        result_code: fidl_ieee80211::StatusCode,
-    ) {
-        let result = self.ctx.device.mlme_control_handle().send_authenticate_conf(
-            &mut fidl_mlme::AuthenticateConfirm {
-                peer_sta_address: self.sta.bssid.0,
-                auth_type,
-                result_code,
-            },
-        );
-        if let Err(e) = result {
-            error!("error sending MLME-AUTHENTICATE.confirm: {}", e);
-        }
-    }
-
-    /// Sends an MLME-ASSOCIATE.confirm message to the SME.
-    fn send_associate_conf_failure(&mut self, result_code: fidl_ieee80211::StatusCode) {
-        // AID used for reporting failed associations to SME.
-        const FAILED_ASSOCIATION_AID: mac::Aid = 0;
-
-        let mut assoc_conf = fidl_mlme::AssociateConfirm {
-            association_id: FAILED_ASSOCIATION_AID,
-            capability_info: 0,
+    fn send_connect_conf_failure(&mut self, result_code: fidl_ieee80211::StatusCode) {
+        self.sta.connect_timeout.take();
+        let mut connect_conf = fidl_mlme::ConnectConfirm {
+            peer_sta_address: self.sta.connect_req.selected_bss.bssid.0,
             result_code,
-            rates: vec![],
-            wmm_param: None,
-            ht_cap: None,
-            vht_cap: None,
+            association_id: 0,
+            association_ies: vec![],
         };
-
-        let result = self.ctx.device.mlme_control_handle().send_associate_conf(&mut assoc_conf);
+        let result = self.ctx.device.mlme_control_handle().send_connect_conf(&mut connect_conf);
         if let Err(e) = result {
-            error!("error sending MLME-AUTHENTICATE.confirm: {}", e);
+            error!("error sending MLME-CONNECT.confirm: {}", e);
         }
     }
 
-    fn send_associate_conf_success(&mut self, parsed_assoc_resp: ParsedAssociateResp) {
-        type HtCapArray = [u8; fidl_internal::HT_CAP_LEN as usize];
-        type VhtCapArray = [u8; fidl_internal::VHT_CAP_LEN as usize];
-
-        let mut assoc_conf = fidl_mlme::AssociateConfirm {
-            association_id: parsed_assoc_resp.association_id,
-            capability_info: parsed_assoc_resp.capabilities.raw(),
+    fn send_connect_conf_success(&mut self, association_id: u16, association_ies: &[u8]) {
+        self.sta.connect_timeout.take();
+        let mut connect_conf = fidl_mlme::ConnectConfirm {
+            peer_sta_address: self.sta.connect_req.selected_bss.bssid.0,
             result_code: fidl_ieee80211::StatusCode::Success,
-            rates: parsed_assoc_resp.rates.iter().map(|r| r.0).collect(),
-            wmm_param: None,
-            ht_cap: parsed_assoc_resp.ht_cap.map(|ht_cap| {
-                assert_eq_size!(ie::HtCapabilities, HtCapArray);
-                let bytes: HtCapArray = ht_cap.as_bytes().try_into().unwrap();
-                Box::new(fidl_internal::HtCapabilities { bytes })
-            }),
-            vht_cap: parsed_assoc_resp.vht_cap.map(|vht_cap| {
-                assert_eq_size!(ie::VhtCapabilities, VhtCapArray);
-                let bytes: VhtCapArray = vht_cap.as_bytes().try_into().unwrap();
-                Box::new(fidl_internal::VhtCapabilities { bytes })
-            }),
+            association_id,
+            association_ies: association_ies.to_vec(),
         };
-
-        let result = self.ctx.device.mlme_control_handle().send_associate_conf(&mut assoc_conf);
+        let result = self.ctx.device.mlme_control_handle().send_connect_conf(&mut connect_conf);
         if let Err(e) = result {
-            error!("error sending MLME-AUTHENTICATE.confirm: {}", e);
+            error!("error sending MLME-CONNECT.confirm: {}", e);
         }
     }
 
@@ -1094,7 +1098,7 @@ impl<'a> BoundClient<'a> {
 
         let result = self.ctx.device.mlme_control_handle().send_deauthenticate_ind(
             &mut fidl_mlme::DeauthenticateIndication {
-                peer_sta_address: self.sta.bssid.0,
+                peer_sta_address: self.sta.bssid().0,
                 reason_code,
                 locally_initiated: locally_initiated.0,
             },
@@ -1112,7 +1116,7 @@ impl<'a> BoundClient<'a> {
     ) {
         let result = self.ctx.device.mlme_control_handle().send_disassociate_ind(
             &mut fidl_mlme::DisassociateIndication {
-                peer_sta_address: self.sta.bssid.0,
+                peer_sta_address: self.sta.bssid().0,
                 reason_code: reason_code,
                 locally_initiated: locally_initiated.0,
             },
@@ -1131,7 +1135,7 @@ impl<'a> BoundClient<'a> {
     ) {
         let result =
             self.ctx.device.mlme_control_handle().send_on_sae_frame_rx(&mut fidl_mlme::SaeFrame {
-                peer_sta_address: self.sta.bssid.0,
+                peer_sta_address: self.sta.bssid().0,
                 seq_num,
                 status_code,
                 sae_fields,
@@ -1143,7 +1147,7 @@ impl<'a> BoundClient<'a> {
 
     fn forward_sae_handshake_ind(&mut self) {
         let result = self.ctx.device.mlme_control_handle().send_on_sae_handshake_ind(
-            &mut fidl_mlme::SaeHandshakeIndication { peer_sta_address: self.sta.bssid.0 },
+            &mut fidl_mlme::SaeHandshakeIndication { peer_sta_address: self.sta.bssid().0 },
         );
         if let Err(e) = result {
             error!("error sending OnSaeHandshakeInd: {}", e);
@@ -1172,6 +1176,14 @@ impl<'a> BoundClient<'a> {
             None => warn!("main channel not set, cannot ensure on channel"),
         }
     }
+}
+
+pub struct ParsedConnectRequest {
+    pub selected_bss: BssDescription,
+    pub connect_failure_timeout: u32,
+    pub auth_type: fidl_mlme::AuthenticationTypes,
+    pub sae_password: Vec<u8>,
+    pub security_ie: Vec<u8>,
 }
 
 pub struct ParsedAssociateResp {
@@ -1235,8 +1247,13 @@ impl<'a> BlockAckTx for BoundClient<'a> {
     fn send_block_ack_frame(&mut self, n: usize, body: &[u8]) -> Result<(), Error> {
         let mut buffer = self.ctx.buf_provider.get_buffer(n)?;
         let mut writer = BufferWriter::new(&mut buffer[..]);
-        write_block_ack_hdr(&mut writer, self.sta.bssid, self.sta.iface_mac, &mut self.ctx.seq_mgr)
-            .and_then(|_| writer.append_bytes(body).map_err(Into::into))?;
+        write_block_ack_hdr(
+            &mut writer,
+            self.sta.bssid(),
+            self.sta.iface_mac,
+            &mut self.ctx.seq_mgr,
+        )
+        .and_then(|_| writer.append_bytes(body).map_err(Into::into))?;
         let n = writer.bytes_written();
         let buffer = OutBuf::from(buffer, n);
         self.send_mgmt_or_ctrl_frame(buffer)
@@ -1283,20 +1300,24 @@ mod tests {
         crate::{
             block_ack::{self, BlockAckState, Closed, ADDBA_REQ_FRAME_LEN, ADDBA_RESP_FRAME_LEN},
             buffer::FakeBufferProvider,
-            client::lost_bss::LostBssCounter,
-            device::FakeDevice,
+            client::{lost_bss::LostBssCounter, test_utils::drain_timeouts},
+            device::{FakeDevice, LinkStatus},
             test_utils::{fake_control_handle, MockWlanRxInfo},
+            MlmeImpl,
         },
         fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync,
+        fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
+        fuchsia_async as fasync,
         futures::{task::Poll, StreamExt},
         std::convert::TryFrom,
         wlan_common::{
-            assert_variant, fake_fidl_bss_description, ie,
+            assert_variant,
+            capabilities::StaCapabilities,
+            channel::Cbw,
+            fake_bss_description, fake_fidl_bss_description, ie,
             stats::SignalStrengthAverage,
             test_utils::{fake_capabilities::fake_client_capabilities, fake_frames::*},
             timer::{create_timer, TimeStream},
-            TimeUnit,
         },
         wlan_statemachine::*,
     };
@@ -1382,19 +1403,34 @@ mod tests {
     }
 
     fn make_client_station() -> Client {
-        Client::new(
-            Ssid::empty(),
-            BSSID,
-            IFACE_MAC,
-            TimeUnit::DEFAULT_BEACON_INTERVAL.0,
-            fake_client_capabilities(),
-            false,
-        )
+        let connect_req = ParsedConnectRequest {
+            selected_bss: fake_bss_description!(Open, bssid: BSSID.0),
+            connect_failure_timeout: 100,
+            auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
+            sae_password: vec![],
+            security_ie: vec![],
+        };
+        Client::new(connect_req, IFACE_MAC, fake_client_capabilities())
+    }
+
+    fn make_client_station_protected() -> Client {
+        let connect_req = ParsedConnectRequest {
+            selected_bss: fake_bss_description!(Wpa2, bssid: BSSID.0),
+            connect_failure_timeout: 100,
+            auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
+            sae_password: vec![],
+            security_ie: vec![],
+        };
+        Client::new(connect_req, IFACE_MAC, fake_client_capabilities())
     }
 
     impl ClientMlme {
         fn make_client_station(&mut self) {
             self.sta.replace(make_client_station());
+        }
+
+        fn make_client_station_protected(&mut self) {
+            self.sta.replace(make_client_station_protected());
         }
 
         fn get_bound_client(&mut self) -> Option<BoundClient<'_>> {
@@ -1414,7 +1450,7 @@ mod tests {
         fn move_to_associated_state(&mut self) {
             use super::state::*;
             let status_check_timeout =
-                schedule_association_status_timeout(self.sta.beacon_period, &mut self.ctx.timer);
+                schedule_association_status_timeout(self.sta.beacon_period(), &mut self.ctx.timer);
             let state =
                 States::from(wlan_statemachine::testing::new_state(Associated(Association {
                     aid: 42,
@@ -1423,7 +1459,7 @@ mod tests {
                     ap_vht_op: None,
                     qos: Qos::Disabled,
                     lost_bss_counter: LostBssCounter::start(
-                        self.sta.beacon_period,
+                        self.sta.beacon_period(),
                         DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT,
                     ),
                     status_check_timeout,
@@ -1434,7 +1470,6 @@ mod tests {
         }
 
         fn close_controlled_port(&mut self, exec: &fasync::TestExecutor) {
-            self.sta.eapol_required = true;
             let (control_handle, _) = fake_control_handle(exec);
             self.handle_mlme_msg(fidl_mlme::MlmeRequest::SetControlledPort {
                 req: fidl_mlme::SetControlledPortRequest {
@@ -1447,18 +1482,19 @@ mod tests {
     }
 
     #[test]
-    fn spawns_new_sta_on_join_request_from_sme() {
+    fn spawns_new_sta_on_connect_request_from_sme() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
-        me.on_sme_join(fidl_mlme::JoinRequest {
+        me.on_sme_connect(fidl_mlme::ConnectRequest {
             selected_bss: fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap()),
-            join_failure_timeout: 42,
-            nav_sync_delay: 42,
-            op_rates: vec![1, 2, 3],
+            connect_failure_timeout: 100,
+            auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
+            sae_password: vec![],
+            security_ie: vec![],
         })
-        .expect("valid JoinRequest should be handled successfully");
+        .expect("valid ConnectRequest should be handled successfully");
         me.get_bound_client().expect("client sta should have been created by now.");
     }
 
@@ -1468,15 +1504,16 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
-        me.on_sme_join(fidl_mlme::JoinRequest {
+        me.on_sme_connect(fidl_mlme::ConnectRequest {
             selected_bss: fake_fidl_bss_description!(Wpa2, ssid: Ssid::try_from("foo").unwrap()),
-            join_failure_timeout: 42,
-            nav_sync_delay: 42,
-            op_rates: vec![1, 2, 3],
+            connect_failure_timeout: 100,
+            auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
+            sae_password: vec![],
+            security_ie: vec![],
         })
-        .expect("valid JoinRequest should be handled successfully");
+        .expect("valid ConnectRequest should be handled successfully");
         let client = me.get_bound_client().expect("client sta should have been created by now.");
-        assert!(client.sta.eapol_required);
+        assert!(client.sta.eapol_required());
     }
 
     #[test]
@@ -1485,15 +1522,16 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
-        me.on_sme_join(fidl_mlme::JoinRequest {
+        me.on_sme_connect(fidl_mlme::ConnectRequest {
             selected_bss: fake_fidl_bss_description!(Wpa1, ssid: Ssid::try_from("foo").unwrap()),
-            join_failure_timeout: 42,
-            nav_sync_delay: 42,
-            op_rates: vec![1, 2, 3],
+            connect_failure_timeout: 100,
+            auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
+            sae_password: vec![],
+            security_ie: vec![],
         })
-        .expect("valid JoinRequest should be handled successfully");
+        .expect("valid ConnectRequest should be handled successfully");
         let client = me.get_bound_client().expect("client sta should have been created by now.");
-        assert!(client.sta.eapol_required);
+        assert!(client.sta.eapol_required());
     }
 
     #[test]
@@ -1502,15 +1540,16 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         assert!(me.get_bound_client().is_none(), "MLME should not contain client, yet");
-        me.on_sme_join(fidl_mlme::JoinRequest {
+        me.on_sme_connect(fidl_mlme::ConnectRequest {
             selected_bss: fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap()),
-            join_failure_timeout: 42,
-            nav_sync_delay: 42,
-            op_rates: vec![1, 2, 3],
+            connect_failure_timeout: 100,
+            auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
+            sae_password: vec![],
+            security_ie: vec![],
         })
-        .expect("valid JoinRequest should be handled successfully");
+        .expect("valid ConnectRequest should be handled successfully");
         let client = me.get_bound_client().expect("client sta should have been created by now.");
-        assert!(!client.sta.eapol_required);
+        assert!(!client.sta.eapol_required());
     }
 
     #[test]
@@ -1833,18 +1872,27 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
-        me.make_client_station();
+        let connect_req = ParsedConnectRequest {
+            selected_bss: fake_bss_description!(Wpa2,
+                ssid: Ssid::try_from([11, 22, 33, 44]).unwrap(),
+                bssid: BSSID.0,
+            ),
+            connect_failure_timeout: 100,
+            auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
+            sae_password: vec![],
+            security_ie: RSNE.to_vec(),
+        };
+        let client_capabilities = ClientCapabilities(StaCapabilities {
+            capability_info: CapabilityInfo(0x1234),
+            rates: vec![8u8, 7, 6, 5, 4, 3, 2, 1, 0].into_iter().map(ie::SupportedRate).collect(),
+            ht_cap: ie::parse_ht_capabilities(&(0..26).collect::<Vec<u8>>()[..]).map(|h| *h).ok(),
+            vht_cap: ie::parse_vht_capabilities(&(100..112).collect::<Vec<u8>>()[..])
+                .map(|v| *v)
+                .ok(),
+        });
+        me.sta.replace(Client::new(connect_req, IFACE_MAC, client_capabilities));
         let mut client = me.get_bound_client().expect("client should be present");
-        client.sta.ssid = Ssid::try_from([11, 22, 33, 44]).unwrap();
-        client
-            .send_assoc_req_frame(
-                0x1234,                               // capability info
-                &[8, 7, 6, 5, 4, 3, 2, 1, 0],         // rates
-                RSNE,                                 // RSNE (including ID and len)
-                &(0..26).collect::<Vec<u8>>()[..],    // HT Capabilities
-                &(100..112).collect::<Vec<u8>>()[..], // VHT Capabilities
-            )
-            .expect("error delivering WLAN frame");
+        client.send_assoc_req_frame().expect("error delivering WLAN frame");
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
         assert_eq!(
             &m.fake_device.wlan_queue[0].0[..],
@@ -2241,7 +2289,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
-        me.make_client_station();
+        me.make_client_station_protected();
         let mut client = me.get_bound_client().expect("client should be present");
         client.move_to_associated_state();
         client.close_controlled_port(&exec);
@@ -2262,7 +2310,7 @@ mod tests {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
-        me.make_client_station();
+        me.make_client_station_protected();
         let mut client = me.get_bound_client().expect("client should be present");
         client.move_to_associated_state();
         client.close_controlled_port(&exec);
@@ -2519,65 +2567,48 @@ mod tests {
     }
 
     #[test]
-    fn client_send_successful_associate_conf() {
+    fn client_send_successful_connect_conf() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
 
-        let parsed_assoc_resp = ParsedAssociateResp {
-            association_id: 42,
-            capabilities: mac::CapabilityInfo(0x1234),
-            rates: vec![9, 10, 1, 2, 3, 4, 5, 6, 7, 8].into_iter().map(ie::SupportedRate).collect(),
-            ht_cap: Some(ie::fake_ht_capabilities()),
-            vht_cap: Some(ie::fake_vht_capabilities()),
-        };
-        client.send_associate_conf_success(parsed_assoc_resp);
-        let associate_conf = m
+        client.send_connect_conf_success(42, &[0, 5, 3, 4, 5, 6, 7]);
+        let connect_conf = m
             .fake_device
-            .next_mlme_msg::<fidl_mlme::AssociateConfirm>()
-            .expect("error reading Associate.confirm");
+            .next_mlme_msg::<fidl_mlme::ConnectConfirm>()
+            .expect("error reading Connect.confirm");
         assert_eq!(
-            associate_conf,
-            fidl_mlme::AssociateConfirm {
-                association_id: 42,
-                capability_info: 0x1234,
+            connect_conf,
+            fidl_mlme::ConnectConfirm {
+                peer_sta_address: BSSID.0,
                 result_code: fidl_ieee80211::StatusCode::Success,
-                rates: vec![9, 10, 1, 2, 3, 4, 5, 6, 7, 8],
-                wmm_param: None,
-                ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
-                    bytes: ie::fake_ht_capabilities().as_bytes().try_into().unwrap()
-                })),
-                vht_cap: Some(Box::new(fidl_internal::VhtCapabilities {
-                    bytes: ie::fake_vht_capabilities().as_bytes().try_into().unwrap()
-                })),
+                association_id: 42,
+                association_ies: vec![0, 5, 3, 4, 5, 6, 7],
             }
         );
     }
 
     #[test]
-    fn client_send_failed_associate_conf() {
+    fn client_send_failed_connect_conf() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
         let mut me = m.make_mlme();
         me.make_client_station();
         let mut client = me.get_bound_client().expect("client should be present");
-        client.send_associate_conf_failure(fidl_ieee80211::StatusCode::DeniedNoMoreStas);
-        let associate_conf = m
+        client.send_connect_conf_failure(fidl_ieee80211::StatusCode::DeniedNoMoreStas);
+        let connect_conf = m
             .fake_device
-            .next_mlme_msg::<fidl_mlme::AssociateConfirm>()
-            .expect("error reading Associate.confirm");
+            .next_mlme_msg::<fidl_mlme::ConnectConfirm>()
+            .expect("error reading Connect.confirm");
         assert_eq!(
-            associate_conf,
-            fidl_mlme::AssociateConfirm {
-                association_id: 0,
-                capability_info: 0,
+            connect_conf,
+            fidl_mlme::ConnectConfirm {
+                peer_sta_address: BSSID.0,
                 result_code: fidl_ieee80211::StatusCode::DeniedNoMoreStas,
-                rates: vec![],
-                wmm_param: None,
-                ht_cap: None,
-                vht_cap: None,
+                association_id: 0,
+                association_ies: vec![],
             }
         );
     }
@@ -2814,6 +2845,461 @@ mod tests {
         assert_variant!(me.handle_mlme_msg(mlme_req), Ok(()));
         let resp = assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Ready(Ok(r)) => r);
         assert_eq!(resp.dfs.supported, true);
+    }
+
+    #[test]
+    fn mlme_connect_unprotected_happy_path() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut me = m.make_mlme();
+        let (control_handle, _) = fake_control_handle(&exec);
+        let connect_req = fidl_mlme::ConnectRequest {
+            selected_bss: fake_fidl_bss_description!(Open,
+                ssid: Ssid::try_from("ssid").unwrap().into(),
+                bssid: BSSID.0,
+                channel: Channel::new(6, Cbw::Cbw40),
+            ),
+            connect_failure_timeout: 100,
+            auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
+            sae_password: vec![],
+            security_ie: vec![],
+        };
+        let result = me.handle_mlme_msg(fidl_mlme::MlmeRequest::ConnectReq {
+            req: connect_req,
+            control_handle,
+        });
+        assert_variant!(result, Ok(()));
+
+        // Verify an event was queued up in the timer.
+        assert_variant!(drain_timeouts(&mut m.time_stream).get(&TimedEventClass::Connecting), Some(ids) => {
+            assert_eq!(ids.len(), 1);
+        });
+
+        // Verify authentication frame was sent to AP.
+        assert_eq!(m.fake_device.wlan_queue.len(), 1);
+        let (frame, _txflags) = m.fake_device.wlan_queue.remove(0);
+        #[rustfmt::skip]
+        let expected = vec![
+            // Mgmt Header:
+            0b1011_00_00, 0b00000000, // Frame Control
+            0, 0, // Duration
+            6, 6, 6, 6, 6, 6, // Addr1
+            7, 7, 7, 7, 7, 7, // Addr2
+            6, 6, 6, 6, 6, 6, // Addr3
+            0x10, 0, // Sequence Control
+            // Auth Header:
+            0, 0, // Algorithm Number (Open)
+            1, 0, // Txn Sequence Number
+            0, 0, // Status Code
+        ];
+        assert_eq!(&frame[..], &expected[..]);
+
+        // Mock auth frame response from the AP
+        #[rustfmt::skip]
+        let auth_resp_success = vec![
+            // Mgmt Header:
+            0b1011_00_00, 0b00000000, // Frame Control
+            0, 0, // Duration
+            7, 7, 7, 7, 7, 7, // Addr1
+            7, 7, 7, 7, 7, 7, // Addr2
+            6, 6, 6, 6, 6, 6, // Addr3
+            0x10, 0, // Sequence Control
+            // Auth Header:
+            0, 0, // Algorithm Number (Open)
+            2, 0, // Txn Sequence Number
+            0, 0, // Status Code
+        ];
+        me.on_mac_frame_rx(&auth_resp_success[..], MockWlanRxInfo::default().into());
+
+        // Verify association request frame was went to AP
+        assert_eq!(m.fake_device.wlan_queue.len(), 1);
+        let (frame, _txflags) = m.fake_device.wlan_queue.remove(0);
+        #[rustfmt::skip]
+        let expected = vec![
+            // Mgmt header:
+            0, 0, // FC
+            0, 0, // Duration
+            6, 6, 6, 6, 6, 6, // addr1
+            7, 7, 7, 7, 7, 7, // addr2
+            6, 6, 6, 6, 6, 6, // addr3
+            0x20, 0, // Sequence Control
+            // Association Request header:
+            0x01, 0x00, // capability info
+            0, 0, // listen interval
+            // IEs
+            0, 4, // SSID id and length
+            0x73, 0x73, 0x69, 0x64, // SSID
+            1, 8, // supp rates id and length
+            2, 4, 11, 22, 12, 18, 24, 36, // supp rates
+            50, 4, // ext supp rates and length
+            48, 72, 96, 108, // ext supp rates
+            45, 26, // HT Cap id and length
+            0x63, 0, 0x17, 0xff, 0, 0, 0, // HT Cap \
+            0, 0, 0, 0, 0, 0, 0, 0, 1, // HT Cap \
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // HT Cap
+        ];
+        assert_eq!(&frame[..], &expected[..]);
+
+        // Mock assoc resp frame from the AP
+        #[rustfmt::skip]
+        let assoc_resp_success = vec![
+            // Mgmt Header:
+            0b0001_00_00, 0b00000000, // Frame Control
+            0, 0, // Duration
+            7, 7, 7, 7, 7, 7, // Addr1 == IFACE_MAC
+            7, 7, 7, 7, 7, 7, // Addr2
+            6, 6, 6, 6, 6, 6, // Addr3
+            0x20, 0, // Sequence Control
+            // Assoc Resp Header:
+            0, 0, // Capabilities
+            0, 0, // Status Code
+            42, 0, // AID
+            // IEs
+            // Basic Rates
+            0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24,
+            // HT Capabilities
+            0x2d, 0x1a, 0xef, 0x09, // HT capabilities info
+            0x17, // A-MPDU parameters
+            0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            // VHT Capabilities
+            0xbf, 0x0c, 0x91, 0x59, 0x82, 0x0f, // VHT capabilities info
+            0xea, 0xff, 0x00, 0x00, 0xea, 0xff, 0x00, 0x00, // VHT supported MCS set
+        ];
+        me.on_mac_frame_rx(&assoc_resp_success[..], MockWlanRxInfo::default().into());
+
+        // Verify a successful connect conf is sent
+        let msg =
+            m.fake_device.next_mlme_msg::<fidl_mlme::ConnectConfirm>().expect("expect ConnectConf");
+        assert_eq!(
+            msg,
+            fidl_mlme::ConnectConfirm {
+                peer_sta_address: BSSID.0,
+                result_code: fidl_ieee80211::StatusCode::Success,
+                association_id: 42,
+                association_ies: vec![
+                    // IEs
+                    // Basic Rates
+                    0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24,
+                    // HT Capabilities
+                    0x2d, 0x1a, 0xef, 0x09, // HT capabilities info
+                    0x17, // A-MPDU parameters
+                    0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, // VHT Capabilities
+                    0xbf, 0x0c, 0x91, 0x59, 0x82, 0x0f, // VHT capabilities info
+                    0xea, 0xff, 0x00, 0x00, 0xea, 0xff, 0x00, 0x00, // VHT supported MCS set
+                ],
+            }
+        );
+
+        // Verify eth link is up
+        assert_eq!(m.fake_device.link_status, LinkStatus::UP);
+    }
+
+    #[test]
+    fn mlme_connect_protected_happy_path() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut me = m.make_mlme();
+        let (control_handle, _) = fake_control_handle(&exec);
+        let connect_req = fidl_mlme::ConnectRequest {
+            selected_bss: fake_fidl_bss_description!(Wpa2,
+                ssid: Ssid::try_from("ssid").unwrap().into(),
+                bssid: BSSID.0,
+                channel: Channel::new(6, Cbw::Cbw40),
+            ),
+            connect_failure_timeout: 100,
+            auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
+            sae_password: vec![],
+            security_ie: vec![
+                48, 18, // RSNE header
+                1, 0, // Version
+                0x00, 0x0F, 0xAC, 4, // Group Cipher: CCMP-128
+                1, 0, 0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
+                1, 0, 0x00, 0x0F, 0xAC, 2, // 1 AKM: PSK
+            ],
+        };
+        let result = me.handle_mlme_msg(fidl_mlme::MlmeRequest::ConnectReq {
+            req: connect_req,
+            control_handle,
+        });
+        assert_variant!(result, Ok(()));
+
+        // Verify an event was queued up in the timer.
+        assert_variant!(drain_timeouts(&mut m.time_stream).get(&TimedEventClass::Connecting), Some(ids) => {
+            assert_eq!(ids.len(), 1);
+        });
+
+        // Verify authentication frame was sent to AP.
+        assert_eq!(m.fake_device.wlan_queue.len(), 1);
+        let (frame, _txflags) = m.fake_device.wlan_queue.remove(0);
+        #[rustfmt::skip]
+        let expected = vec![
+            // Mgmt Header:
+            0b1011_00_00, 0b00000000, // Frame Control
+            0, 0, // Duration
+            6, 6, 6, 6, 6, 6, // Addr1
+            7, 7, 7, 7, 7, 7, // Addr2
+            6, 6, 6, 6, 6, 6, // Addr3
+            0x10, 0, // Sequence Control
+            // Auth Header:
+            0, 0, // Algorithm Number (Open)
+            1, 0, // Txn Sequence Number
+            0, 0, // Status Code
+        ];
+        assert_eq!(&frame[..], &expected[..]);
+
+        // Mock auth frame response from the AP
+        #[rustfmt::skip]
+        let auth_resp_success = vec![
+            // Mgmt Header:
+            0b1011_00_00, 0b00000000, // Frame Control
+            0, 0, // Duration
+            7, 7, 7, 7, 7, 7, // Addr1
+            7, 7, 7, 7, 7, 7, // Addr2
+            6, 6, 6, 6, 6, 6, // Addr3
+            0x10, 0, // Sequence Control
+            // Auth Header:
+            0, 0, // Algorithm Number (Open)
+            2, 0, // Txn Sequence Number
+            0, 0, // Status Code
+        ];
+        me.on_mac_frame_rx(&auth_resp_success[..], MockWlanRxInfo::default().into());
+
+        // Verify association request frame was went to AP
+        assert_eq!(m.fake_device.wlan_queue.len(), 1);
+        let (frame, _txflags) = m.fake_device.wlan_queue.remove(0);
+        #[rustfmt::skip]
+        let expected = vec![
+            // Mgmt header:
+            0, 0, // FC
+            0, 0, // Duration
+            6, 6, 6, 6, 6, 6, // addr1
+            7, 7, 7, 7, 7, 7, // addr2
+            6, 6, 6, 6, 6, 6, // addr3
+            0x20, 0, // Sequence Control
+            // Association Request header:
+            0x01, 0x00, // capability info
+            0, 0, // listen interval
+            // IEs
+            0, 4, // SSID id and length
+            0x73, 0x73, 0x69, 0x64, // SSID
+            1, 8, // supp rates id and length
+            2, 4, 11, 22, 12, 18, 24, 36, // supp rates
+            50, 4, // ext supp rates and length
+            48, 72, 96, 108, // ext supp rates
+            48, 18, // RSNE id and length
+            1, 0, // RSN \
+            0x00, 0x0F, 0xAC, 4, // RSN \
+            1, 0, 0x00, 0x0F, 0xAC, 4, // RSN \
+            1, 0, 0x00, 0x0F, 0xAC, 2, // RSN
+            45, 26, // HT Cap id and length
+            0x63, 0, 0x17, 0xff, 0, 0, 0, // HT Cap \
+            0, 0, 0, 0, 0, 0, 0, 0, 1, // HT Cap \
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // HT Cap
+        ];
+        assert_eq!(&frame[..], &expected[..]);
+
+        // Mock assoc resp frame from the AP
+        #[rustfmt::skip]
+        let assoc_resp_success = vec![
+            // Mgmt Header:
+            0b0001_00_00, 0b00000000, // Frame Control
+            0, 0, // Duration
+            7, 7, 7, 7, 7, 7, // Addr1 == IFACE_MAC
+            7, 7, 7, 7, 7, 7, // Addr2
+            6, 6, 6, 6, 6, 6, // Addr3
+            0x20, 0, // Sequence Control
+            // Assoc Resp Header:
+            0, 0, // Capabilities
+            0, 0, // Status Code
+            42, 0, // AID
+            // IEs
+            // Basic Rates
+            0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24,
+            // RSN
+            0x30, 18, 1, 0, // RSN header and version
+            0x00, 0x0F, 0xAC, 4, // Group Cipher: CCMP-128
+            1, 0, 0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
+            1, 0, 0x00, 0x0F, 0xAC, 2, // 1 AKM: PSK
+            // HT Capabilities
+            0x2d, 0x1a, 0xef, 0x09, // HT capabilities info
+            0x17, // A-MPDU parameters
+            0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Other HT Cap fields
+            // VHT Capabilities
+            0xbf, 0x0c, 0x91, 0x59, 0x82, 0x0f, // VHT capabilities info
+            0xea, 0xff, 0x00, 0x00, 0xea, 0xff, 0x00, 0x00, // VHT supported MCS set
+        ];
+        me.on_mac_frame_rx(&assoc_resp_success[..], MockWlanRxInfo::default().into());
+
+        // Verify a successful connect conf is sent
+        let msg =
+            m.fake_device.next_mlme_msg::<fidl_mlme::ConnectConfirm>().expect("expect ConnectConf");
+        assert_eq!(
+            msg,
+            fidl_mlme::ConnectConfirm {
+                peer_sta_address: BSSID.0,
+                result_code: fidl_ieee80211::StatusCode::Success,
+                association_id: 42,
+                association_ies: vec![
+                    // IEs
+                    // Basic Rates
+                    0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, // RSN
+                    0x30, 18, 1, 0, // RSN header and version
+                    0x00, 0x0F, 0xAC, 4, // Group Cipher: CCMP-128
+                    1, 0, 0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
+                    1, 0, 0x00, 0x0F, 0xAC, 2, // 1 AKM: PSK
+                    // HT Capabilities
+                    0x2d, 0x1a, 0xef, 0x09, // HT capabilities info
+                    0x17, // A-MPDU parameters
+                    0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                    0x00, 0x00, // Other HT Cap fields
+                    // VHT Capabilities
+                    0xbf, 0x0c, 0x91, 0x59, 0x82, 0x0f, // VHT capabilities info
+                    0xea, 0xff, 0x00, 0x00, 0xea, 0xff, 0x00, 0x00, // VHT supported MCS set
+                ],
+            }
+        );
+
+        // Verify that link is still down
+        assert_eq!(m.fake_device.link_status, LinkStatus::DOWN);
+
+        // Send a request to open controlled port
+        let (control_handle, _) = fake_control_handle(&exec);
+        me.handle_mlme_message(fidl_mlme::MlmeRequest::SetControlledPort {
+            req: fidl_mlme::SetControlledPortRequest {
+                peer_sta_address: BSSID.0,
+                state: fidl_mlme::ControlledPortState::Open,
+            },
+            control_handle,
+        })
+        .expect("expect sending msg to succeed");
+
+        // Verify that link is now up
+        assert_eq!(m.fake_device.link_status, LinkStatus::UP);
+    }
+
+    #[test]
+    fn mlme_connect_vht() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut me = m.make_mlme();
+        let (control_handle, _) = fake_control_handle(&exec);
+        let connect_req = fidl_mlme::ConnectRequest {
+            selected_bss: fake_fidl_bss_description!(Open,
+                ssid: Ssid::try_from("ssid").unwrap().into(),
+                bssid: BSSID.0,
+                channel: Channel::new(36, Cbw::Cbw40),
+            ),
+            connect_failure_timeout: 100,
+            auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
+            sae_password: vec![],
+            security_ie: vec![],
+        };
+        let result = me.handle_mlme_msg(fidl_mlme::MlmeRequest::ConnectReq {
+            req: connect_req,
+            control_handle,
+        });
+        assert_variant!(result, Ok(()));
+
+        // Verify an event was queued up in the timer.
+        assert_variant!(drain_timeouts(&mut m.time_stream).get(&TimedEventClass::Connecting), Some(ids) => {
+            assert_eq!(ids.len(), 1);
+        });
+
+        // Auth frame
+        assert_eq!(m.fake_device.wlan_queue.len(), 1);
+        let (_frame, _txflags) = m.fake_device.wlan_queue.remove(0);
+
+        // Mock auth frame response from the AP
+        #[rustfmt::skip]
+        let auth_resp_success = vec![
+            // Mgmt Header:
+            0b1011_00_00, 0b00000000, // Frame Control
+            0, 0, // Duration
+            7, 7, 7, 7, 7, 7, // Addr1
+            7, 7, 7, 7, 7, 7, // Addr2
+            6, 6, 6, 6, 6, 6, // Addr3
+            0x10, 0, // Sequence Control
+            // Auth Header:
+            0, 0, // Algorithm Number (Open)
+            2, 0, // Txn Sequence Number
+            0, 0, // Status Code
+        ];
+        me.on_mac_frame_rx(&auth_resp_success[..], MockWlanRxInfo::default().into());
+
+        // Verify association request frame was went to AP
+        assert_eq!(m.fake_device.wlan_queue.len(), 1);
+        let (frame, _txflags) = m.fake_device.wlan_queue.remove(0);
+        #[rustfmt::skip]
+        let expected = vec![
+            // Mgmt header:
+            0, 0, // FC
+            0, 0, // Duration
+            6, 6, 6, 6, 6, 6, // addr1
+            7, 7, 7, 7, 7, 7, // addr2
+            6, 6, 6, 6, 6, 6, // addr3
+            0x20, 0, // Sequence Control
+            // Association Request header:
+            0x01, 0x00, // capability info
+            0, 0, // listen interval
+            // IEs
+            0, 4, // SSID id and length
+            0x73, 0x73, 0x69, 0x64, // SSID
+            1, 6, // supp rates id and length
+            2, 4, 11, 22, 48, 96, // supp rates
+            45, 26, // HT Cap id and length
+            0x63, 0, 0x17, 0xff, 0, 0, 0, // HT Cap \
+            0, 0, 0, 0, 0, 0, 0, 0, 1, // HT Cap \
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // HT Cap
+            191, 12, // VHT Cap id and length
+            50, 80, 128, 15, 254, 255, 0, 0, 254, 255, 0, 0, // VHT Cap
+        ];
+        assert_eq!(&frame[..], &expected[..]);
+    }
+
+    #[test]
+    fn mlme_connect_timeout() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut me = m.make_mlme();
+        let (control_handle, _) = fake_control_handle(&exec);
+        let connect_req = fidl_mlme::ConnectRequest {
+            selected_bss: fake_fidl_bss_description!(Open, bssid: BSSID.0),
+            connect_failure_timeout: 100,
+            auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
+            sae_password: vec![],
+            security_ie: vec![],
+        };
+        let result = me.handle_mlme_msg(fidl_mlme::MlmeRequest::ConnectReq {
+            req: connect_req,
+            control_handle,
+        });
+        assert_variant!(result, Ok(()));
+
+        // Verify an event was queued up in the timer.
+        let (event, id) = assert_variant!(drain_timeouts(&mut m.time_stream).get(&TimedEventClass::Connecting), Some(events) => {
+            assert_eq!(events.len(), 1);
+            events[0].clone()
+        });
+
+        // Quick check that a frame was sent (this is authentication frame).
+        assert_eq!(m.fake_device.wlan_queue.len(), 1);
+        let (_frame, _txflags) = m.fake_device.wlan_queue.remove(0);
+
+        // Send connect timeout
+        me.handle_timed_event(id, event);
+
+        // Verify a connect confirm message was sent
+        let msg = m.fake_device.next_mlme_msg::<fidl_mlme::ConnectConfirm>().expect("expect msg");
+        assert_eq!(
+            msg,
+            fidl_mlme::ConnectConfirm {
+                peer_sta_address: BSSID.0,
+                result_code: fidl_ieee80211::StatusCode::RejectedSequenceTimeout,
+                association_id: 0,
+                association_ies: vec![],
+            },
+        );
     }
 
     #[test]

@@ -69,6 +69,20 @@ pub fn fake_wmm_param() -> fidl_mlme::WmmParameter {
     wmm_param
 }
 
+pub fn create_connect_conf(
+    bssid: Bssid,
+    result_code: fidl_fuchsia_wlan_ieee80211::StatusCode,
+) -> fidl_mlme::MlmeEvent {
+    fidl_mlme::MlmeEvent::ConnectConf {
+        resp: fidl_mlme::ConnectConfirm {
+            peer_sta_address: bssid.0,
+            result_code,
+            association_id: 42,
+            association_ies: vec![],
+        },
+    }
+}
+
 pub fn create_join_conf(result_code: fidl_ieee80211::StatusCode) -> fidl_mlme::MlmeEvent {
     fidl_mlme::MlmeEvent::JoinConf { resp: fidl_mlme::JoinConfirm { result_code } }
 }

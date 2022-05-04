@@ -40,6 +40,7 @@ pub enum MlmeRequest {
     AuthResponse(fidl_mlme::AuthenticateResponse),
     Associate(fidl_mlme::AssociateRequest),
     AssocResponse(fidl_mlme::AssociateResponse),
+    Connect(fidl_mlme::ConnectRequest),
     Deauthenticate(fidl_mlme::DeauthenticateRequest),
     Eapol(fidl_mlme::EapolRequest),
     SetKeys(fidl_mlme::SetKeysRequest),
@@ -88,6 +89,7 @@ fn mlme_event_name(event: &MlmeEvent) -> &str {
     match event {
         MlmeEvent::OnScanResult { .. } => "OnScanResult",
         MlmeEvent::OnScanEnd { .. } => "OnScanEnd",
+        MlmeEvent::ConnectConf { .. } => "ConnectConf",
         MlmeEvent::JoinConf { .. } => "JoinConf",
         MlmeEvent::AuthenticateConf { .. } => "AuthenticateConf",
         MlmeEvent::AuthenticateInd { .. } => "AuthenticateInd",

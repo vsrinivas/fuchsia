@@ -1065,8 +1065,8 @@ mod tests {
                 Some(ExpectedDynamicActiveScanArgs {
                     channels: vec![36, 40, 100, 108],
                     ies: vec![ 0x01, // Element ID for Supported Rates
-                               0x02, // Length
-                               0x7E, 0x7F // Supported Rates
+                               0x08, // Length
+                               0x02, 0x04, 0x0b, 0x16, 0x30, 0x60, 0x7e, 0x7f // Supported Rates
                     ],
                 }); "multiple channels 5GHz band")]
     #[test_case(&[1, 2, 3, 4, 5, 36, 40, 100, 108],
@@ -1082,8 +1082,8 @@ mod tests {
                 Some(ExpectedDynamicActiveScanArgs {
                     channels: vec![36, 40, 100, 108],
                     ies: vec![ 0x01, // Element ID for Supported Rates
-                               0x02, // Length
-                               0x7E, 0x7F, // Supported Rates
+                               0x08, // Length
+                               0x02, 0x04, 0x0b, 0x16, 0x30, 0x60, 0x7e, 0x7f, // Supported Rates
                     ],
                 }); "multiple bands")]
     fn test_start_active_scan_success(

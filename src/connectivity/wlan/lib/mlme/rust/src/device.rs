@@ -933,6 +933,7 @@ pub(crate) mod test_utils {
             zx::sys::ZX_OK
         }
 
+        #[track_caller]
         pub fn next_mlme_msg<T: fidl::encoding::Decodable>(&mut self) -> Result<T, Error> {
             use fidl::encoding::{decode_transaction_header, Decodable, Decoder};
 
@@ -1036,10 +1037,10 @@ pub(crate) mod test_utils {
         band_cap_list[1] = banjo_wlan_softmac::WlanSoftmacBandCapability {
             band: banjo_common::WlanBand::FIVE_GHZ,
             basic_rate_list: arr!(
-                [0x7E, 0x7F],
+                [0x02, 0x04, 0x0b, 0x16, 0x30, 0x60, 0x7e, 0x7f],
                 banjo_wlan_internal::MAX_SUPPORTED_BASIC_RATES as usize
             ),
-            basic_rate_count: 2,
+            basic_rate_count: 8,
             operating_channel_list: arr!(
                 [36, 40, 44, 48, 149, 153, 157, 161],
                 banjo_ieee80211::MAX_UNIQUE_CHANNEL_NUMBERS as usize,
@@ -1047,7 +1048,7 @@ pub(crate) mod test_utils {
             operating_channel_count: 8,
             ht_supported: true,
             ht_caps: ht_cap(),
-            vht_supported: false,
+            vht_supported: true,
             vht_caps: VhtCapabilitiesFields {
                 vht_capability_info: 0x0f805032,
                 supported_vht_mcs_and_nss_set: 0x0000fffe0000fffe,

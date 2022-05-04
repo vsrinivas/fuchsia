@@ -5,9 +5,9 @@
 use {
     crate::auth,
     anyhow::{bail, Error},
-    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     log::error,
-    wlan_common::{mac, time::TimeUnit},
+    wlan_common::mac,
 };
 
 /// AkmState indicates the current status of authentication after each event is handled by an
@@ -25,8 +25,6 @@ pub enum AkmState {
 /// AkmAction allows an AkmAlgorithm to interact with the rest of MLME without tying the
 /// implementation to a particular type of STA.
 pub trait AkmAction {
-    /// The underlying type used to represent timers.
-    type EventId;
     /// Transmit an auth frame to the peer in this auth exchange.
     fn send_auth_frame(
         &mut self,
@@ -43,20 +41,17 @@ pub trait AkmAction {
         sae_fields: Vec<u8>,
     );
     fn forward_sae_handshake_ind(&mut self);
-    /// Schedule a new timeout that will fire after the given duration has elapsed. The returned
-    /// ID should be unique from any other timeout that has been scheduled but not cancelled.
-    fn schedule_auth_timeout(&mut self, duration: TimeUnit) -> Self::EventId;
 }
 
 /// An algorithm used to perform authentication and optionally generate a PMK.
 #[allow(unused)]
-pub enum AkmAlgorithm<T> {
+pub enum AkmAlgorithm {
     _OpenAp,
-    OpenSupplicant { timeout_timeunit: TimeUnit, timeout: Option<T> },
-    Sae { timeout_timeunit: TimeUnit, timeout: Option<T> },
+    OpenSupplicant,
+    Sae,
 }
 
-impl<T> std::fmt::Debug for AkmAlgorithm<T> {
+impl std::fmt::Debug for AkmAlgorithm {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         f.write_str(match self {
             AkmAlgorithm::_OpenAp { .. } => "Open authentication AP",
@@ -66,54 +61,30 @@ impl<T> std::fmt::Debug for AkmAlgorithm<T> {
     }
 }
 
-impl<T> AkmAlgorithm<T> {
-    pub fn auth_type(&self) -> fidl_mlme::AuthenticationTypes {
-        match self {
-            AkmAlgorithm::_OpenAp { .. } => fidl_mlme::AuthenticationTypes::OpenSystem,
-            AkmAlgorithm::OpenSupplicant { .. } => fidl_mlme::AuthenticationTypes::OpenSystem,
-            AkmAlgorithm::Sae { .. } => fidl_mlme::AuthenticationTypes::Sae,
-        }
-    }
-}
-
-impl<T: Eq + Clone> AkmAlgorithm<T> {
-    pub fn open_supplicant(timeout_timeunit: TimeUnit) -> Self {
-        AkmAlgorithm::OpenSupplicant { timeout_timeunit, timeout: None }
-    }
-
-    #[allow(unused)]
-    pub fn sae_supplicant(timeout_timeunit: TimeUnit) -> Self {
-        AkmAlgorithm::Sae { timeout_timeunit, timeout: None }
-    }
-
-    pub fn initiate<A: AkmAction<EventId = T>>(
-        &mut self,
-        actions: &mut A,
-    ) -> Result<AkmState, Error> {
+impl AkmAlgorithm {
+    pub fn initiate<A: AkmAction>(&mut self, actions: &mut A) -> Result<AkmState, Error> {
         match self {
             AkmAlgorithm::_OpenAp => {
                 error!("OpenAp AKM does not support initiating an auth exchange.");
                 Ok(AkmState::Failed)
             }
-            AkmAlgorithm::OpenSupplicant { timeout_timeunit, timeout } => {
+            AkmAlgorithm::OpenSupplicant => {
                 actions.send_auth_frame(
                     mac::AuthAlgorithmNumber::OPEN,
                     1,
                     fidl_ieee80211::StatusCode::Success.into(),
                     &[],
                 )?;
-                timeout.replace(actions.schedule_auth_timeout(*timeout_timeunit));
                 Ok(AkmState::InProgress)
             }
-            AkmAlgorithm::Sae { timeout_timeunit, timeout } => {
+            AkmAlgorithm::Sae => {
                 actions.forward_sae_handshake_ind();
-                timeout.replace(actions.schedule_auth_timeout(*timeout_timeunit));
                 Ok(AkmState::InProgress)
             }
         }
     }
 
-    pub fn handle_auth_frame<A: AkmAction<EventId = T>>(
+    pub fn handle_auth_frame<A: AkmAction>(
         &mut self,
         actions: &mut A,
         hdr: &mac::AuthHdr,
@@ -121,20 +92,17 @@ impl<T: Eq + Clone> AkmAlgorithm<T> {
     ) -> Result<AkmState, Error> {
         match self {
             AkmAlgorithm::_OpenAp => bail!("OpenAp akm not yet implemented"),
-            AkmAlgorithm::OpenSupplicant { timeout, .. } => {
-                timeout.take(); // Invalidate the timeout.
-                match auth::validate_ap_resp(hdr) {
-                    Ok(auth::ValidFrame::Open) => Ok(AkmState::AuthComplete),
-                    Ok(frame_type) => {
-                        error!("Received unhandled auth frame type {:?}", frame_type);
-                        Ok(AkmState::Failed)
-                    }
-                    Err(e) => {
-                        error!("Received invalid auth frame: {}", e);
-                        Ok(AkmState::Failed)
-                    }
+            AkmAlgorithm::OpenSupplicant { .. } => match auth::validate_ap_resp(hdr) {
+                Ok(auth::ValidFrame::Open) => Ok(AkmState::AuthComplete),
+                Ok(frame_type) => {
+                    error!("Received unhandled auth frame type {:?}", frame_type);
+                    Ok(AkmState::Failed)
                 }
-            }
+                Err(e) => {
+                    error!("Received invalid auth frame: {}", e);
+                    Ok(AkmState::Failed)
+                }
+            },
             AkmAlgorithm::Sae { .. } => {
                 let sae_fields = body.map(|body| body.to_vec()).unwrap_or(vec![]);
                 actions.forward_sme_sae_rx(
@@ -149,7 +117,7 @@ impl<T: Eq + Clone> AkmAlgorithm<T> {
         }
     }
 
-    pub fn handle_sae_resp<A: AkmAction<EventId = T>>(
+    pub fn handle_sae_resp<A: AkmAction>(
         &mut self,
         _actions: &mut A,
         status_code: fidl_ieee80211::StatusCode,
@@ -159,17 +127,14 @@ impl<T: Eq + Clone> AkmAlgorithm<T> {
             AkmAlgorithm::OpenSupplicant { .. } => {
                 bail!("Open supplicant doesn't expect an SaeResp")
             }
-            AkmAlgorithm::Sae { timeout, .. } => {
-                timeout.take();
-                match status_code {
-                    fidl_ieee80211::StatusCode::Success => Ok(AkmState::AuthComplete),
-                    _ => Ok(AkmState::Failed),
-                }
-            }
+            AkmAlgorithm::Sae { .. } => match status_code {
+                fidl_ieee80211::StatusCode::Success => Ok(AkmState::AuthComplete),
+                _ => Ok(AkmState::Failed),
+            },
         }
     }
 
-    pub fn handle_sme_sae_tx<A: AkmAction<EventId = T>>(
+    pub fn handle_sme_sae_tx<A: AkmAction>(
         &mut self,
         actions: &mut A,
         seq_num: u16,
@@ -193,47 +158,17 @@ impl<T: Eq + Clone> AkmAlgorithm<T> {
             }
         }
     }
-
-    pub fn handle_timeout<A: AkmAction<EventId = T>>(
-        &mut self,
-        _actions: &mut A,
-        event: T,
-    ) -> Result<AkmState, Error> {
-        match self {
-            AkmAlgorithm::_OpenAp => bail!("OpenAp akm not yet implemented"),
-            AkmAlgorithm::OpenSupplicant { timeout, .. } | AkmAlgorithm::Sae { timeout, .. } => {
-                if timeout == &Some(event) {
-                    // In the SAE case, this timeout is just a failsafe -- individual frame timeouts are handled by SME.
-                    timeout.take();
-                    Ok(AkmState::Failed)
-                } else {
-                    Ok(AkmState::InProgress)
-                }
-            }
-        }
-    }
-
-    pub fn cancel<A: AkmAction<EventId = T>>(&mut self, _actions: &mut A) {
-        match self {
-            AkmAlgorithm::_OpenAp => (),
-            AkmAlgorithm::OpenSupplicant { timeout, .. } | AkmAlgorithm::Sae { timeout, .. } => {
-                timeout.take();
-            }
-        }
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, wlan_common::assert_variant};
+    use {super::*, fidl_fuchsia_wlan_mlme as fidl_mlme, wlan_common::assert_variant};
 
     struct MockAkmAction {
         sent_frames: Vec<(mac::AuthAlgorithmNumber, u16, mac::StatusCode, Vec<u8>)>,
         sent_sae_rx: Vec<(u16, fidl_ieee80211::StatusCode, Vec<u8>)>,
         accept_frames: bool,
         published_pmks: Vec<fidl_mlme::PmkInfo>,
-        scheduled_timers: Vec<u16>,
-        timer_counter: u16,
         sae_ind_sent: u16,
     }
 
@@ -244,15 +179,12 @@ mod tests {
                 sent_sae_rx: vec![],
                 accept_frames: true,
                 published_pmks: vec![],
-                scheduled_timers: vec![],
-                timer_counter: 0,
                 sae_ind_sent: 0,
             }
         }
     }
 
     impl AkmAction for MockAkmAction {
-        type EventId = u16;
         fn send_auth_frame(
             &mut self,
             auth_type: mac::AuthAlgorithmNumber,
@@ -280,26 +212,12 @@ mod tests {
         fn forward_sae_handshake_ind(&mut self) {
             self.sae_ind_sent += 1
         }
-
-        fn schedule_auth_timeout(&mut self, _duration: TimeUnit) -> Self::EventId {
-            self.timer_counter += 1;
-            self.scheduled_timers.push(self.timer_counter);
-            self.timer_counter
-        }
-    }
-
-    fn test_open_supplicant() -> AkmAlgorithm<u16> {
-        AkmAlgorithm::open_supplicant(TimeUnit::DEFAULT_BEACON_INTERVAL * 10u16)
-    }
-
-    fn test_sae_supplicant() -> AkmAlgorithm<u16> {
-        AkmAlgorithm::sae_supplicant(TimeUnit::DEFAULT_BEACON_INTERVAL * 10u16)
     }
 
     #[test]
     fn open_supplicant_success() {
         let mut actions = MockAkmAction::new();
-        let mut supplicant = test_open_supplicant();
+        let mut supplicant = AkmAlgorithm::OpenSupplicant;
 
         // Initiate sends
         assert_variant!(supplicant.initiate(&mut actions), Ok(AkmState::InProgress));
@@ -308,7 +226,6 @@ mod tests {
             actions.sent_frames.remove(0),
             (mac::AuthAlgorithmNumber::OPEN, 1, fidl_ieee80211::StatusCode::Success.into(), vec![])
         );
-        assert_eq!(actions.scheduled_timers.len(), 1);
 
         // A valid response completes auth.
         let hdr = mac::AuthHdr {
@@ -327,56 +244,14 @@ mod tests {
     }
 
     #[test]
-    fn open_supplicant_cancel() {
-        let mut actions = MockAkmAction::new();
-        let mut supplicant = test_open_supplicant();
-
-        // Initiate sends
-        assert_variant!(supplicant.initiate(&mut actions), Ok(AkmState::InProgress));
-        assert_eq!(actions.sent_frames.len(), 1);
-        assert_eq!(actions.scheduled_timers.len(), 1);
-        actions.sent_frames.clear();
-
-        supplicant.cancel(&mut actions);
-        assert_eq!(actions.sent_frames.len(), 0);
-        assert_eq!(actions.published_pmks.len(), 0);
-    }
-
-    #[test]
-    fn open_supplicant_timeout() {
-        let mut actions = MockAkmAction::new();
-        let mut supplicant = test_open_supplicant();
-
-        assert_variant!(supplicant.initiate(&mut actions), Ok(AkmState::InProgress));
-        assert_eq!(actions.scheduled_timers.len(), 1);
-        let timeout = actions.scheduled_timers[0];
-
-        assert_variant!(supplicant.handle_timeout(&mut actions, timeout), Ok(AkmState::Failed));
-    }
-
-    #[test]
-    fn open_supplicant_ignored_timeout() {
-        let mut actions = MockAkmAction::new();
-        let mut supplicant = test_open_supplicant();
-
-        assert_variant!(supplicant.initiate(&mut actions), Ok(AkmState::InProgress));
-        assert_eq!(actions.scheduled_timers.len(), 1);
-
-        // We do nothing in response to an unrecognized timeout.
-        assert_variant!(supplicant.handle_timeout(&mut actions, 100), Ok(AkmState::InProgress));
-        assert_eq!(actions.scheduled_timers.len(), 1);
-    }
-
-    #[test]
     fn open_supplicant_reject() {
         let mut actions = MockAkmAction::new();
-        let mut supplicant = test_open_supplicant();
+        let mut supplicant = AkmAlgorithm::OpenSupplicant;
 
         // Initiate sends
         assert_variant!(supplicant.initiate(&mut actions), Ok(AkmState::InProgress));
         assert_eq!(actions.sent_frames.len(), 1);
         actions.sent_frames.clear();
-        assert_eq!(actions.scheduled_timers.len(), 1);
 
         // A rejected response ends auth.
         let hdr = mac::AuthHdr {
@@ -397,7 +272,7 @@ mod tests {
     #[test]
     fn sae_supplicant_success() {
         let mut actions = MockAkmAction::new();
-        let mut supplicant = test_sae_supplicant();
+        let mut supplicant = AkmAlgorithm::Sae;
 
         assert_variant!(supplicant.initiate(&mut actions), Ok(AkmState::InProgress));
         assert_eq!(actions.sae_ind_sent, 1);
@@ -450,21 +325,9 @@ mod tests {
     }
 
     #[test]
-    fn sae_supplicant_timeout() {
-        let mut actions = MockAkmAction::new();
-        let mut supplicant = test_sae_supplicant();
-
-        assert_variant!(supplicant.initiate(&mut actions), Ok(AkmState::InProgress));
-        assert_eq!(actions.scheduled_timers.len(), 1);
-        let timeout = actions.scheduled_timers[0];
-
-        assert_variant!(supplicant.handle_timeout(&mut actions, timeout), Ok(AkmState::Failed));
-    }
-
-    #[test]
     fn sae_supplicant_rejected() {
         let mut actions = MockAkmAction::new();
-        let mut supplicant = test_sae_supplicant();
+        let mut supplicant = AkmAlgorithm::Sae;
 
         assert_variant!(supplicant.initiate(&mut actions), Ok(AkmState::InProgress));
         assert_variant!(

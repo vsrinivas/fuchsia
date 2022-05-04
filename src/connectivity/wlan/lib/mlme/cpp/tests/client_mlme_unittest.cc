@@ -85,24 +85,19 @@ struct ClientTest : public ::testing::Test {
   }
 
   void Join(bool rsne = true) {
-    device.sme_->JoinReq(CreateJoinRequest(rsne));
+    device.sme_->ConnectReq(CreateConnectRequest(rsne, kBssChannel));
     client.RunUntilStalled();
-    AssertNextMsgFromSmeChannel<wlan_mlme::JoinConfirm>();
-  }
-
-  void Authenticate() {
-    device.sme_->AuthenticateReq(CreateAuthRequest());
-    client.RunUntilStalled();
-    SendWlanPacket(CreateAuthRespFrame(AuthAlgorithm::kOpenSystem));
-    AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
     device.wlan_queue.clear();
   }
 
-  void Associate(bool rsne = true) {
-    device.sme_->AssociateReq(CreateAssocRequest(rsne));
-    client.RunUntilStalled();
+  void Authenticate() {
+    SendWlanPacket(CreateAuthRespFrame(AuthAlgorithm::kOpenSystem));
+    device.wlan_queue.clear();
+  }
+
+  void Associate() {
     SendWlanPacket(CreateAssocRespFrame());
-    AssertNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>();
+    AssertNextMsgFromSmeChannel<wlan_mlme::ConnectConfirm>();
     device.wlan_queue.clear();
   }
 
@@ -122,7 +117,7 @@ struct ClientTest : public ::testing::Test {
   void Connect(bool rsne = true) {
     Join(rsne);
     Authenticate();
-    Associate(rsne);
+    Associate();
     if (rsne) {
       EstablishRsna();
     }
@@ -169,6 +164,13 @@ struct ClientTest : public ::testing::Test {
 
   void AssertAssocConfirm(MlmeMsg<wlan_mlme::AssociateConfirm> msg, uint16_t aid,
                           wlan_ieee80211::StatusCode result_code) {
+    EXPECT_EQ(msg.body()->association_id, aid);
+    EXPECT_EQ(msg.body()->result_code, result_code);
+  }
+
+  void AssertConnectConfirm(MlmeMsg<wlan_mlme::ConnectConfirm> msg, const uint8_t peer_addr[6],
+                            uint16_t aid, wlan_ieee80211::StatusCode result_code) {
+    EXPECT_EQ(std::memcmp(msg.body()->peer_sta_address.data(), peer_addr, 6), 0);
     EXPECT_EQ(msg.body()->association_id, aid);
     EXPECT_EQ(msg.body()->result_code, result_code);
   }
@@ -252,103 +254,56 @@ struct ClientTest : public ::testing::Test {
   ClientMlme client;
 };
 
-TEST_F(ClientTest, Join) {
-  // (sme->mlme) Send JOIN.request. Verify a JOIN.confirm message was then sent
+TEST_F(ClientTest, Connect_Protected) {
+  // (sme->mlme) Send CONNECT.request. Verify a CONNECT.confirm message was then sent
   // to SME.
-  device.sme_->JoinReq(CreateJoinRequest(true));
-  auto join_confirm = AssertNextMsgFromSmeChannel<wlan_mlme::JoinConfirm>();
-  ASSERT_EQ(join_confirm.body()->result_code, wlan_ieee80211::StatusCode::SUCCESS);
-}
-
-TEST_F(ClientTest, Authenticate) {
-  Join();
-  // (sme->mlme) Send AUTHENTICATION.request. Verify that no confirmation was
-  // sent yet.
-  device.sme_->AuthenticateReq(CreateAuthRequest());
+  device.sme_->ConnectReq(CreateConnectRequest(true, kBssChannel));
   client.RunUntilStalled();
+  ASSERT_FALSE(GetNextMsgFromSmeChannel<wlan_mlme::ConnectConfirm>().has_value());
 
-  // Verify wlan frame sent to AP is correct.
-  ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
-  AssertAuthFrame(std::move(*device.wlan_queue.begin()));
-  // (ap->mlme) Respond with a Authentication frame. Verify a
-  // AUTHENTICATION.confirm message was
-  //            then sent to SME
-  SendWlanPacket(CreateAuthRespFrame(AuthAlgorithm::kOpenSystem));
-  auto auth_confirm = AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
-  AssertAuthConfirm(std::move(auth_confirm), wlan_ieee80211::StatusCode::SUCCESS);
-
-  // Verify a delayed timeout won't cause another confirmation.
-  IncreaseTimeByBeaconPeriods(100);
-  ASSERT_TRUE(device.svc_queue.empty());
-}
-
-TEST_F(ClientTest, Associate_Protected) {
-  Join();
-  Authenticate();
-
-  // (sme->mlme) Send ASSOCIATE.request. Verify that no confirmation was sent
-  // yet.
-  device.sme_->AssociateReq(CreateAssocRequest(true));
-  // Potential false negative if the message arrives after 10ms. Good enough for sanity check.
-  ASSERT_FALSE(GetNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>().has_value());
-
-  // Verify wlan frame sent to AP is correct.
-  ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
-  AssertAssocReqFrame(std::move(*device.wlan_queue.begin()), true);
-
-  // (ap->mlme) Respond with a Association Response frame. Verify a
-  // ASSOCIATE.confirm message was
-  //            then sent to SME.
-  SendWlanPacket(CreateAssocRespFrame());
-  auto assoc_confirm = AssertNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>();
-  AssertAssocConfirm(std::move(assoc_confirm), kAid, wlan_ieee80211::StatusCode::SUCCESS);
-
-  // Verify a delayed timeout won't cause another confirmation.
-  IncreaseTimeByBeaconPeriods(100);
-  // Potential false negative if the message arrives after 10ms. Good enough for sanity check.
-  ASSERT_FALSE(GetNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>().has_value());
-}
-
-TEST_F(ClientTest, Associate_Unprotected) {
-  // (sme->mlme) Send JOIN.request. Verify a JOIN.confirm message was then sent
-  // to SME.
-  Join(false);
-
-  // (sme->mlme) Send AUTHENTICATION.request. Verify that no confirmation was
-  // sent yet.
-  device.sme_->AuthenticateReq(CreateAuthRequest());
-  // Potential false negative if the message arrives after 10ms. Good enough for sanity check.
-  ASSERT_FALSE(GetNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>().has_value());
-
-  // Verify wlan frame sent to AP is correct.
+  // Verify auth frame is sent to AP and that it's correct.
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertAuthFrame(std::move(*device.wlan_queue.begin()));
   device.wlan_queue.clear();
 
-  // (ap->mlme) Respond with a Authentication frame. Verify a
-  // AUTHENTICATION.confirm message was
-  //            then sent to SME
+  // (ap->mlme) Respond with a Authentication frame.
   SendWlanPacket(CreateAuthRespFrame(AuthAlgorithm::kOpenSystem));
 
-  auto auth_conf = AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
-  AssertAuthConfirm(std::move(auth_conf), wlan_ieee80211::StatusCode::SUCCESS);
+  // Verify assoc req frame sent to AP and that it's correct.
+  ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
+  AssertAssocReqFrame(std::move(*device.wlan_queue.begin()), true);
 
-  // (sme->mlme) Send ASSOCIATE.request. Verify that no confirmation was sent
-  // yet.
-  device.sme_->AssociateReq(CreateAssocRequest(false));
-  // Potential false negative if the message arrives after 10ms. Good enough for sanity check.
-  ASSERT_FALSE(GetNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>().has_value());
+  // (ap->mlme) Respond with a Association Response frame and verify a
+  // CONNECT.confirm message was then sent SME.
+  SendWlanPacket(CreateAssocRespFrame());
+  auto connect_conf = AssertNextMsgFromSmeChannel<wlan_mlme::ConnectConfirm>();
+  AssertConnectConfirm(std::move(connect_conf), kBssid1, kAid, wlan_ieee80211::StatusCode::SUCCESS);
+}
 
-  // Verify wlan frame sent to AP is correct.
+TEST_F(ClientTest, Connect_Unprotected) {
+  // (sme->mlme) Send CONNECT.request. Verify a CONNECT.confirm message was then sent
+  // to SME.
+  device.sme_->ConnectReq(CreateConnectRequest(false, kBssChannel));
+  client.RunUntilStalled();
+  ASSERT_FALSE(GetNextMsgFromSmeChannel<wlan_mlme::ConnectConfirm>().has_value());
+
+  // Verify auth frame is sent to AP and that it's correct.
+  ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
+  AssertAuthFrame(std::move(*device.wlan_queue.begin()));
+  device.wlan_queue.clear();
+
+  // (ap->mlme) Respond with a Authentication frame.
+  SendWlanPacket(CreateAuthRespFrame(AuthAlgorithm::kOpenSystem));
+
+  // Verify assoc req frame sent to AP and that it's correct.
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertAssocReqFrame(std::move(*device.wlan_queue.begin()), false);
 
   // (ap->mlme) Respond with a Association Response frame and verify a
-  // ASSOCIATE.confirm message
-  //            was then sent SME.
+  // CONNECT.confirm message was then sent SME.
   SendWlanPacket(CreateAssocRespFrame());
-  auto assoc_conf = AssertNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>();
-  AssertAssocConfirm(std::move(assoc_conf), kAid, wlan_ieee80211::StatusCode::SUCCESS);
+  auto connect_conf = AssertNextMsgFromSmeChannel<wlan_mlme::ConnectConfirm>();
+  AssertConnectConfirm(std::move(connect_conf), kBssid1, kAid, wlan_ieee80211::StatusCode::SUCCESS);
 }
 
 TEST_F(ClientTest, ExchangeEapolFrames) {
@@ -447,42 +402,18 @@ TEST_F(ClientTest, ConstructAssociateContext) {
   EXPECT_FALSE(sta_assoc_ctx->has_vht_op);
 }
 
-TEST_F(ClientTest, AuthTimeout) {
+TEST_F(ClientTest, ConnectTimeout) {
   Join();
 
-  // (sme->mlme) Send AUTHENTICATE.request. Verify that no confirmation was sent
-  // yet.
-  device.sme_->AuthenticateReq(CreateAuthRequest());
-  // Potential false negative if the message arrives after 10ms. Good enough for sanity check.
-  ASSERT_FALSE(GetNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>().has_value());
-
   // Timeout not yet hit.
-  IncreaseTimeByBeaconPeriods(kAuthTimeout - 1);
+  IncreaseTimeByBeaconPeriods(kConnectFailureTimeout - 1);
   ASSERT_TRUE(device.svc_queue.empty());
 
-  // Timeout hit, verify a AUTHENTICATION.confirm message was sent to SME.
-  IncreaseTimeByBeaconPeriods(kAuthTimeout);
-  auto auth_conf = AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
-  AssertAuthConfirm(std::move(auth_conf), wlan_ieee80211::StatusCode::REJECTED_SEQUENCE_TIMEOUT);
-}
-
-TEST_F(ClientTest, AssocTimeout) {
-  Join();
-  Authenticate();
-
-  // (sme->mlme) Send ASSOCIATE.request. Verify that no confirmation was sent
-  // yet.
-  device.sme_->AssociateReq(CreateAssocRequest(false));
-  ASSERT_FALSE(GetNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>().has_value());
-
-  // Timeout not yet hit.
-  IncreaseTimeByBeaconPeriods(10);
-  ASSERT_TRUE(device.svc_queue.empty());
-
-  // Timeout hit, verify a ASSOCIATE.confirm message was sent to SME.
-  IncreaseTimeByBeaconPeriods(40);
-  auto assoc_conf = AssertNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>();
-  AssertAssocConfirm(std::move(assoc_conf), 0, wlan_ieee80211::StatusCode::REFUSED_TEMPORARILY);
+  // Timeout hit, verify a CONNECT.confirm message was sent to SME.
+  IncreaseTimeByBeaconPeriods(kConnectFailureTimeout);
+  auto connect_conf = AssertNextMsgFromSmeChannel<wlan_mlme::ConnectConfirm>();
+  AssertConnectConfirm(std::move(connect_conf), kBssid1, 0,
+                       wlan_ieee80211::StatusCode::REJECTED_SEQUENCE_TIMEOUT);
 }
 
 TEST_F(ClientTest, ReceiveDataAfterAssociation_Protected) {
@@ -579,7 +510,7 @@ TEST_F(ClientTest, ReceiveDataAfterAssociation_Unprotected) {
   ASSERT_TRUE(device.AreQueuesEmpty());
 
   // Associate and verify data frame can be received.
-  Associate(false);
+  Associate();
   SendWlanPacket(CreateDataFrame(kTestPayload));
   auto eth_frames = device.GetEthPackets();
   ASSERT_EQ(eth_frames.size(), static_cast<size_t>(1));
@@ -598,7 +529,7 @@ TEST_F(ClientTest, SendDataAfterAssociation_Unprotected) {
   ASSERT_TRUE(device.AreQueuesEmpty());
 
   // Associate and verify that data frame can be sent out.
-  Associate(false);
+  Associate();
   QueueEthPacket(CreateEthFrame(kTestPayload));
   EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertDataFrameSentToAp(std::move(*device.wlan_queue.begin()), kTestPayload);
@@ -616,7 +547,7 @@ TEST_F(ClientTest, SendKeepAliveFrameAfterAssociation_Unprotected) {
 
   // After association, when client receives null data frame, "Keep Alive"
   // response is sent out
-  Associate(false);
+  Associate();
   SendNullDataFrame();
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   ASSERT_TRUE(device.svc_queue.empty());
@@ -876,30 +807,26 @@ TEST_F(ClientTest, DropFramesWhileOffChannel) {
 TEST_F(ClientTest, InvalidAuthenticationResponse) {
   Join();
 
-  // Send AUTHENTICATION.request. Verify that no confirmation was sent yet.
-  device.sme_->AuthenticateReq(CreateAuthRequest());
-  // Potential false negative if the message arrives after 10ms. Good enough for sanity check.
-  ASSERT_FALSE(GetNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>().has_value());
-
   // Send authentication frame with wrong algorithm.
   SendWlanPacket(CreateAuthRespFrame(AuthAlgorithm::kSae));
 
-  // Verify that AUTHENTICATION.confirm was received.
-  auto auth_conf = AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
-  AssertAuthConfirm(std::move(auth_conf), wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
+  // Verify that CONNECT.confirm was received.
+  auto connect_conf = AssertNextMsgFromSmeChannel<wlan_mlme::ConnectConfirm>();
+  AssertConnectConfirm(std::move(connect_conf), kBssid1, 0,
+                       wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
 
   // Fast forward in time would have caused a timeout.
   // The timeout however should have been canceled and we should not receive
   // and additional confirmation.
-  IncreaseTimeByBeaconPeriods(kAuthTimeout);
+  IncreaseTimeByBeaconPeriods(kConnectFailureTimeout);
   ASSERT_TRUE(device.svc_queue.empty());
 
   // Send a second, now valid authentication frame.
   // This frame should be ignored as the client reset.
   SendWlanPacket(CreateAuthRespFrame(AuthAlgorithm::kOpenSystem));
 
-  // Fast forward in time far beyond an authentication timeout.
-  // There should not be any AUTHENTICATION.confirm sent as the client
+  // Fast forward in time far beyond a connect timeout.
+  // There should not be any CONNECT.confirm sent as the client
   // is expected to have been reset into |idle| state after failing
   // to authenticate.
   IncreaseTimeByBeaconPeriods(1000);

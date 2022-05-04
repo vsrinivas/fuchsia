@@ -337,6 +337,11 @@ void Device::StartScan(wlan_mlme::ScanRequest req) {
   wlan_fullmac_impl_start_scan(&wlan_fullmac_impl_, &impl_req);
 }
 
+void Device::ConnectReq(wlan_mlme::ConnectRequest req) {
+  // TODO(fxbug.dev/66772) - implement this
+  lerror("ConnectConf is not implemented\n");
+}
+
 void Device::JoinReq(wlan_mlme::JoinRequest req) {
   eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
 
@@ -876,6 +881,11 @@ void Device::SendScanEndUnlocked(::fuchsia::wlan::mlme::ScanEnd scan_end) {
     return;
   }
   SendScanEndLockedBindingChecked(std::move(scan_end));
+}
+
+void Device::ConnectConf(const wlan_fullmac_connect_confirm_t* resp) {
+  // TODO(fxbug.dev/66772) - implement this
+  lerror("ConnectConf is not implemented\n");
 }
 
 void Device::JoinConf(const wlan_fullmac_join_confirm_t* resp) {

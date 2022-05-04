@@ -58,6 +58,7 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
 
   // MLME implementation (::fuchsia::wlan::mlme -> wlan_fullmac_impl)
   void StartScan(::fuchsia::wlan::mlme::ScanRequest req) override;
+  void ConnectReq(::fuchsia::wlan::mlme::ConnectRequest req) override;
   void JoinReq(::fuchsia::wlan::mlme::JoinRequest req) override;
   void AuthenticateReq(::fuchsia::wlan::mlme::AuthenticateRequest req) override;
   void AuthenticateResp(::fuchsia::wlan::mlme::AuthenticateResponse resp) override;
@@ -102,6 +103,7 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   // wlan_fullmac_impl_ifc (wlan_fullmac_impl -> ::fuchsia::wlan::mlme)
   void OnScanResult(const wlan_fullmac_scan_result_t* result);
   void OnScanEnd(const wlan_fullmac_scan_end_t* result);
+  void ConnectConf(const wlan_fullmac_connect_confirm_t* resp);
   void JoinConf(const wlan_fullmac_join_confirm_t* resp);
   void AuthenticateConf(const wlan_fullmac_auth_confirm_t* resp);
   void AuthenticateInd(const wlan_fullmac_auth_ind_t* ind);

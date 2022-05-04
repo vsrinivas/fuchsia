@@ -28,9 +28,10 @@ namespace wlan {
 static constexpr uint8_t kBssid1[6] = {0xB7, 0xCD, 0x3F, 0xB0, 0x93, 0x01};
 static constexpr uint8_t kBssid2[6] = {0xAC, 0xBF, 0x34, 0x11, 0x95, 0x02};
 static constexpr uint8_t kBroadcastBssid[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-static constexpr uint32_t kJoinTimeout = 200;        // Beacon Periods
-static constexpr uint32_t kAuthTimeout = 200;        // Beacon Periods
-static constexpr uint32_t kAutoDeauthTimeout = 100;  // Beacon Periods
+static constexpr uint32_t kConnectFailureTimeout = 600;  // Beacon Periods
+static constexpr uint32_t kJoinTimeout = 200;            // Beacon Periods
+static constexpr uint32_t kAuthTimeout = 200;            // Beacon Periods
+static constexpr uint32_t kAutoDeauthTimeout = 100;      // Beacon Periods
 static constexpr uint16_t kAid = 2;
 static constexpr uint16_t kBeaconPeriodTu = 100;
 static constexpr uint16_t kDtimPeriodTu = 2;
@@ -154,6 +155,7 @@ FV TypeCheckWlanFrame(Packet* pkt) {
 ::fuchsia::wlan::mlme::ScanRequest CreatePassiveScanRequest(uint32_t max_channel_time);
 ::fuchsia::wlan::mlme::StartRequest CreateStartRequest(bool protected_ap);
 ::fuchsia::wlan::mlme::StopRequest CreateStopRequest();
+::fuchsia::wlan::mlme::ConnectRequest CreateConnectRequest(bool rsn, wlan_channel_t channel);
 ::fuchsia::wlan::mlme::JoinRequest CreateJoinRequest(bool rsn);
 ::fuchsia::wlan::mlme::AuthenticateRequest CreateAuthRequest();
 ::fuchsia::wlan::mlme::AuthenticateResponse CreateAuthResponse(

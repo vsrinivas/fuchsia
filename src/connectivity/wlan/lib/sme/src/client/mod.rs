@@ -240,6 +240,8 @@ pub enum ConnectFailure {
     // TODO(fxbug.dev/68531): SME no longer performs scans when connecting. Remove the
     //                        `ScanFailure` variant.
     ScanFailure(fidl_mlme::ScanResultCode),
+    // TODO(fxbug.dev/96668): `JoinFailure` and `AuthenticationFailure` no longer needed when
+    //                        state machine is fully transitioned to USME.
     JoinFailure(fidl_ieee80211::StatusCode),
     AuthenticationFailure(fidl_ieee80211::StatusCode),
     AssociationFailure(AssociationFailure),
@@ -1128,13 +1130,19 @@ mod tests {
         let sme_root_node = inspector.root().create_child("sme");
         let (persistence_req_sender, _persistence_receiver) =
             test_utils::create_inspect_persistence_channel();
+        let mut mac_sublayer_support = fake_mac_sublayer_support();
+        // TODO(fxbug.dev/96668) - FullMAC still uses the old state machine. Once FullMAC is
+        //                         fully transitioned, this override will no longer be
+        //                         necessary.
+        mac_sublayer_support.device.mac_implementation_type =
+            fidl_common::MacImplementationType::Fullmac;
         let (mut sme, mut mlme_stream, _time_stream) = ClientSme::new(
             ClientConfig::from_config(SmeConfig::default().with_wep(), false),
             test_utils::fake_device_info(CLIENT_ADDR),
             Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
             WlanHasher::new(DUMMY_HASH_KEY),
             persistence_req_sender,
-            fake_mac_sublayer_support(),
+            mac_sublayer_support,
             fake_security_support(),
             fake_spectrum_management_support_empty(),
         );
@@ -1732,13 +1740,19 @@ mod tests {
         let sme_root_node = inspector.root().create_child("sme");
         let (persistence_req_sender, _persistence_receiver) =
             test_utils::create_inspect_persistence_channel();
+        let mut mac_sublayer_support = fake_mac_sublayer_support();
+        // TODO(fxbug.dev/96668) - FullMAC still uses the old state machine. Once FullMAC is
+        //                         fully transitioned, this override will no longer be
+        //                         necessary.
+        mac_sublayer_support.device.mac_implementation_type =
+            fidl_common::MacImplementationType::Fullmac;
         ClientSme::new(
             ClientConfig::default(),
             test_utils::fake_device_info(CLIENT_ADDR),
             Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
             WlanHasher::new(DUMMY_HASH_KEY),
             persistence_req_sender,
-            fake_mac_sublayer_support(),
+            mac_sublayer_support,
             fake_security_support(),
             fake_spectrum_management_support_empty(),
         )
