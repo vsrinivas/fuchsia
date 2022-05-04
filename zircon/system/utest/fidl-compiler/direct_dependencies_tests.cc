@@ -55,7 +55,6 @@ protocol CapturesDependencyThroughCompose {
 )FIDL");
     ASSERT_COMPILED(lib);
 
-    fidl::ExperimentalFlags flags;
     auto deps = lib.direct_and_composed_dependencies();
     ASSERT_EQ(deps.size(), 2);
     auto iter = deps.cbegin();
@@ -97,7 +96,6 @@ protocol CapturesDependencyThroughCompose {
 )FIDL");
   ASSERT_COMPILED(lib);
 
-  fidl::ExperimentalFlags flags;
   auto deps = lib.direct_and_composed_dependencies();
   ASSERT_EQ(deps.size(), 1);
   auto iter = deps.cbegin();

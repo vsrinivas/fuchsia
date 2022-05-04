@@ -387,6 +387,9 @@ constexpr ErrorDef<const flat::AttributeArg *, std::string_view, const flat::Att
 constexpr ErrorDef<flat::Name> ErrCannotBeNullable("{} cannot be nullable");
 constexpr ErrorDef<flat::Name> ErrMustBeAProtocol("{} must be a protocol");
 constexpr ErrorDef<flat::Name> ErrCannotBoundTwice("{} cannot bound twice");
+constexpr ErrorDef<flat::Name> ErrStructCannotBeOptional(
+    "structs can no longer be marked optional; please use the new syntax, "
+    "`box<{}>`");
 constexpr ErrorDef<flat::Name> ErrCannotIndicateNullabilityTwice(
     "{} cannot indicate nullability twice");
 constexpr ErrorDef<flat::Name> ErrMustHaveNonZeroSize("{} must have non-zero size");

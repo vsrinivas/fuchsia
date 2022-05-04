@@ -16,10 +16,11 @@ class ExperimentalFlags {
   enum class Flag : FlagSet {
     kNewSyntaxOnly = 0b1000,
     kUnknownInteractions = 0b10000,
+    kNoOptionalStructs = 0b100000,
   };
 
-  ExperimentalFlags() : flags_(0) {}
-  ExperimentalFlags(Flag flag) : flags_(static_cast<FlagSet>(flag)) {}
+  ExperimentalFlags() = default;
+  explicit ExperimentalFlags(Flag flag) : flags_(static_cast<FlagSet>(flag)) {}
 
   bool EnableFlagByName(const std::string_view flag);
   void EnableFlag(Flag flag);
@@ -29,7 +30,7 @@ class ExperimentalFlags {
  private:
   static std::map<const std::string_view, const Flag> FLAG_STRINGS;
 
-  FlagSet flags_;
+  FlagSet flags_{0};
 };
 
 }  // namespace fidl

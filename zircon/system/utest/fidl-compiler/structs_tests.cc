@@ -326,21 +326,37 @@ type Foo = struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrBoxCannotBeNullable);
 }
 
-TEST(StructsTests, BadBoxedTypeCannotBeNullable) {
+TEST(StructsTests, GoodWithoutFlagStructCanBeOptional) {
   TestLibrary library(R"FIDL(
 library example;
 
-type BoxedStruct = struct {};
+type SomeStruct = struct {};
 
 type Foo = struct {
-  foo box<Foo:optional>;
+  foo SomeStruct:optional;
 };
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrBoxedTypeCannotBeNullable);
+  ASSERT_COMPILED(library);
+}
+
+TEST(StructsTests, BadWithFlagStructCannotBeOptional) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type SomeStruct = struct {};
+
+type Foo = struct {
+  foo SomeStruct:optional;
+};
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kNoOptionalStructs);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrStructCannotBeOptional);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "box<SomeStruct>");
 }
 
 TEST(StructsTests, BadTypeCannotBeBoxed) {
   for (const std::string& definition : {
+           "type Foo = struct { box_member box<box<struct {}>>; };",
            "type Foo = struct { union_member box<union { 1: data uint8; }>; };",
            "type Foo = struct { table_member box<table { 1: data uint8; }>; };",
            "type Foo = struct { enum_member box<enum { DATA = 1; }>; };",

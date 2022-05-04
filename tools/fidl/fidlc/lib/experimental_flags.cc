@@ -24,6 +24,7 @@ bool ExperimentalFlags::IsFlagEnabled(Flag flag) const {
 std::map<const std::string_view, const ExperimentalFlags::Flag> ExperimentalFlags::FLAG_STRINGS = {
     {"new_syntax_only", Flag::kNewSyntaxOnly},
     {"unknown_interactions", Flag::kUnknownInteractions},
+    {"no_optional_structs", Flag::kNoOptionalStructs},
 };
 
 }  // namespace fidl

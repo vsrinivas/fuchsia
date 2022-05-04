@@ -350,12 +350,29 @@ bool IdentifierType::ApplyConstraints(TypeResolver* resolver, const TypeConstrai
                               layout.resolved().name(), 0, num_constraints);
       }
       break;
+    case Decl::Kind::kStruct:
+      if (resolver->experimental_flags().IsFlagEnabled(
+              ExperimentalFlags::Flag::kNoOptionalStructs)) {
+        // Structs are nullable in the sense that they can be boxed. But we are
+        // disallowing optional to be used on struct.
+        // Assume first constraint is `optional`.
+        if (num_constraints == 1) {
+          return resolver->Fail(ErrStructCannotBeOptional, constraints.items[0]->span,
+                                layout.resolved().name());
+        }
+      }
+
+      // This is always an error
+      if (num_constraints > 1) {
+        return resolver->Fail(ErrTooManyConstraints, constraints.span.value(),
+                              layout.resolved().name(), 0, num_constraints);
+      }
+      break;
 
     // These types have one allowed constraint (`optional`). For type aliases,
     // we need to allow the possibility that the concrete type does allow `optional`,
     // if it doesn't the Type itself will catch the error.
     case Decl::Kind::kTypeAlias:
-    case Decl::Kind::kStruct:
     case Decl::Kind::kUnion:
       if (num_constraints > 1) {
         return resolver->Fail(ErrTooManyConstraints, constraints.span.value(),

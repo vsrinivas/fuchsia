@@ -222,7 +222,7 @@ protocol Protocol {};
 TEST(ResourcenessTests, BadResourceTypesInValueType) {
   for (const std::string& definition : {
            "type Foo = struct { bad_member ResourceStruct; };",
-           "type Foo = struct { bad_member ResourceStruct:optional; };",
+           "type Foo = struct { bad_member box<ResourceStruct>; };",
            "type Foo = struct { bad_member ResourceTable; };",
            "type Foo = struct { bad_member ResourceUnion; };",
            "type Foo = struct { bad_member ResourceUnion:optional; };",
@@ -416,11 +416,11 @@ TEST(ResourcenessTests, BadRecursiveResourceTypes) {
 library example;
 
 type Ouro = resource struct {
-  b Boros:optional;
+  b box<Boros>;
 };
 
 type Boros = struct {
-  bad_member Ouro:optional;
+  bad_member box<Ouro>;
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTypeMustBeResource);

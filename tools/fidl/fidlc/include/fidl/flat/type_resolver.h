@@ -20,6 +20,10 @@ class TypeResolver : private ReporterMixin {
 
   using ReporterMixin::Fail;
 
+  const ExperimentalFlags& experimental_flags() const {
+    return compile_step_->experimental_flags();
+  }
+
   // Top level methods for resolving layout parameters. These are used by
   // TypeTemplates.
   bool ResolveParamAsType(const Reference& layout, const std::unique_ptr<LayoutParameter>& param,
