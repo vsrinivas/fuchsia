@@ -356,8 +356,6 @@ impl Authenticator {
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("unexpected IO error: {}", _0)]
-    UnexpectedIoError(std::io::Error),
     #[error("invalid OUI length; expected 3 bytes but received {}", _0)]
     InvalidOuiLength(usize),
     #[error("invalid PMKID length; expected 16 bytes but received {}", _0)]
@@ -564,12 +562,6 @@ macro_rules! format_rsn_err {
     ($fmt:expr, $($arg:tt)*) => {
         Error::GenericError(format!($fmt, $($arg)*))
     };
-}
-
-impl From<std::io::Error> for Error {
-    fn from(e: std::io::Error) -> Self {
-        Error::UnexpectedIoError(e)
-    }
 }
 
 impl From<eapol::Error> for Error {
