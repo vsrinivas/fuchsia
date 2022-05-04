@@ -42,10 +42,6 @@
             startup: "eager",
         },
         {
-            name: "decompressor",
-            url: "fuchsia-boot:///#meta/decompressor-sandbox.cm",
-        },
-        {
             name: "miscsvc",
             url: "fuchsia-boot:///#meta/miscsvc.cm",
         },
@@ -388,21 +384,10 @@
             from: "#svchost",
             to: [
                 "#boot-drivers",
-                "#decompressor",
                 "#fshost",
                 "#pkg-drivers",
                 "#universe-pkg-drivers",
             ],
-        },
-        {
-            protocol: [ "fuchsia.tracing.provider.Registry" ],
-            from: "parent",
-            to: "#decompressor",
-        },
-        {
-            protocol: [ "fuchsia.blobfs.internal.DecompressorCreator" ],
-            from: "#decompressor",
-            to: "#fshost",
         },
         {
             protocol: [ "fuchsia.virtualconsole.SessionManager" ],
@@ -745,7 +730,6 @@
                 "#boot-drivers",
                 "#console-launcher",
                 "#cr50_agent",
-                "#decompressor",
                 "#device_name_provider",
                 "#driver-hosts",
                 "#driver_index",
