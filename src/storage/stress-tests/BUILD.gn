@@ -21,13 +21,19 @@ fuchsia_component("minfs-no-crash") {
 fuchsia_component("fxfs-crash") {
   testonly = true
   manifest = "fxfs/meta/crash.cml"
-  deps = [ "genericfs:stressor-bin" ]
+  deps = [
+    "genericfs:stressor-bin",
+    "//src/storage/fxfs-crypt",
+  ]
 }
 
 fuchsia_component("fxfs-no-crash") {
   testonly = true
   manifest = "fxfs/meta/no-crash.cml"
-  deps = [ "genericfs:stressor-bin" ]
+  deps = [
+    "genericfs:stressor-bin",
+    "//src/storage/fxfs-crypt",
+  ]
 }
 
 fuchsia_component("blobfs-crash") {
